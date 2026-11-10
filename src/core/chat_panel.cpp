@@ -868,4 +868,40 @@ int scrollAt(const Layout& L, size_t total, float y) {
     return int(std::lround((1 - top / room) * float(total - shownRows)));
 }
 
+View view(const Layout& L, const std::vector<Row>& rows, const Input& in, const Show& sh, const Texts& t,
+          const Measure& m) {
+    View v;
+    const float s = L.s;
+    for (size_t i = 0; i < L.tabs.size(); ++i) v.badges.push_back(badgeBox(L, int(i), sh, t, m));
+    v.chipRgb = chipRgb(in);
+    if (in.whisper.empty() && !in.whisperFocus) {
+        const float icon = 11 * s;
+        v.chevron = panel::Box{L.mode.x + L.mode.w - icon - 6 * s, L.mode.y + (L.mode.h - icon) / 2, icon, icon};
+    }
+    if (in.caretOn && in.whisperFocus) {
+        const float x = L.mode.x + 8 * s + m(chipText(in, t), 12 * s, true) + 1 * s;
+        v.caret = panel::Box{x, L.mode.y + 4 * s, 1.5f * s, L.mode.h - 8 * s};
+        v.caretRgb = kWhisper;
+    } else if (in.caretOn && in.typing && !in.text.empty()) {
+        float caretX = 0;
+        fieldText(L, in, m, caretX);
+        v.caret = panel::Box{L.field.x + caretX, L.field.y + 6 * s, 1.5f * s, L.field.h - 12 * s};
+        v.caretRgb = kText;
+    }
+    v.thumb = barThumb(L, rows.size(), sh.scroll);
+    if (sh.hoverLine >= 0 || sh.hoverLink != 0) {
+        size_t first = 0, count = 0;
+        shown(L, rows, sh.scroll, first, count);
+        const float top = L.lines.y + L.lines.h - float(count) * L.rowH;
+        for (size_t r = first; r < first + count; ++r)
+            for (const Piece& p : rows[r])
+                if ((p.name && p.line == sh.hoverLine) ||
+                    (sh.hoverLink != 0 && (p.item == sh.hoverLink || (p.mob && -p.mob == sh.hoverLink))))
+                    v.underlines.push_back(Underline{
+                        panel::Box{L.lines.x + p.x, top + float(r - first + 1) * L.rowH - 3 * s, p.w - 1, 1 * s},
+                        p.rgb});
+    }
+    return v;
+}
+
 }  // namespace uagfx::chatpanel

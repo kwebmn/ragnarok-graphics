@@ -20,6 +20,8 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::chatwheelwin {
 namespace {
@@ -39,6 +41,9 @@ using SetTextFn = void(__attribute__((thiscall)) *)(uint32_t edit, const char* t
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.32: the wheel drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     bool open = false;
     cw::Page page = cw::Page::Phrases;
     cw::Channel channel = cw::Channel::Near;
@@ -169,6 +174,10 @@ std::vector<Words> gdiWords(const std::vector<cw::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.32: uaUI's wheel says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("the chat wheel", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     const std::vector<std::string>& list = items(s);
@@ -267,7 +276,7 @@ void pad(const Pad& p) {
                                                                    : " to everyone"));
 }
 
-void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     if (!s.open || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) return;
@@ -284,16 +293,74 @@ void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHe
     if (s.page == cw::Page::Emotes && s.icons.size() != s.emotes.size()) emotePictures(s);
     std::string key = std::to_string(int(s.page)) + ',' + std::to_string(int(s.channel)) + ',' +
                       std::to_string(s.hover) + ';' + std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) +
-                      ',' + std::to_string(s.layout.w) + '#' + std::to_string(uistyle::generation());
+                      ',' + std::to_string(s.layout.w) + '#' + std::to_string(uistyle::generation()) +
+                      (uaui::ready() ? "u" : "");
     if (key != s.key) {
         s.key = key;
         render(s);
     }
 }
 
+// 3.0.18-beta.32 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the chat wheel in RmlUi's
+// markup, as core chatwheel paints it - the ring (<ua-ring>s: its ground, the sector pointed at gold, the sectors'
+// borders, the outer line), the middle's disc, the pages' and channels' chips (the chosen gold), the keyboard's and
+// the voice's, an emotion's picture over each label; the words where core chatwheel places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const cw::Layout& L = s.layout;
+    const float sc = L.s, dp = std::max(0.01f, uaui::dp());
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B;
+    const std::vector<std::string>& list = items(s);
+    const int count = int(list.size());
+    c.w = float(L.w), c.h = float(L.h);
+    const auto ring = [&](float radius, float widthPx, float value, float startUp, const Rml::String& fill) {
+        c.rings.push_back(uisheet::Ring{L.cx - radius, L.cy - radius, 2 * radius, value, startUp - 90, widthPx / dp,
+                                        false, fill, "#00000000"});
+    };
+    ring(L.outer, L.outer - L.inner, 1, 0, uisheet::Content::rgba(kCard, 0.90f));  // the ring's ground
+    const float step = count > 0 ? 360.0f / float(count) : 360.0f;
+    if (s.hover >= 0 && s.hover < count)
+        ring(L.outer, L.outer - L.inner, 1.0f / float(std::max(count, 1)), float(s.hover) * step - step / 2,
+             uisheet::Content::rgba(kGold, 0.30f));
+    if (count > 1)
+        for (int i = 0; i < count; ++i) {  // the borders: an arc of two pixels at the ring's middle
+            const float mid = (L.outer + L.inner) / 2, share = 2.0f * sc / (2 * 3.14159265f * mid);
+            ring(L.outer, L.outer - L.inner, share, float(i) * step - step / 2 - share * 180,
+                 uisheet::Content::rgba(kWhite, 0.14f));
+        }
+    ring(L.outer - 1.0f * sc + 0.75f * sc, 1.5f * sc, 1, 0, uisheet::Content::rgba(kWhite, 0.14f));  // the outer line
+    const float disc = L.inner - 6 * sc;  // the middle's own disc
+    c.rect(c.under, panel::Box{L.cx - disc, L.cy - disc, 2 * disc, 2 * disc}, disc, kCard, uistyle::window());
+    auto& o = c.over;
+    const auto chip = [&](const panel::Box& b, bool on) {
+        c.rect(o, b, b.h / 2, on ? kGold : kCard, on ? 0.34f : 0.88f, on ? kGold : kWhite, on ? 0.85f : 0.16f,
+               1.0f * sc);
+    };
+    for (int i = 0; i < 2; ++i) chip(L.pages[i], int(s.page) == i);
+    for (int i = 0; i < cw::kChannels; ++i) chip(L.channels[i], int(s.channel) == i && s.page == cw::Page::Phrases);
+    chip(L.keyboard, false);
+    chip(L.voice, false);
+    if (s.page == cw::Page::Emotes)
+        for (size_t i = 0; i < L.labels.size() && i < s.icons.size(); ++i) {
+            const panel::Picture& ic = s.icons[i];
+            if (ic.width <= 0 || ic.height <= 0) continue;
+            const panel::Box& b = L.labels[i];
+            c.icons.push_back(uisheet::Icon{std::round(b.x + (b.w - float(ic.width)) / 2),
+                                            std::round(b.y + b.h * 0.5f - float(ic.height)), float(ic.width),
+                                            float(ic.height), 1, s.sheet.icon(&ic)});
+        }
+    c.say(cw::words(L, list, s.hover, s.page, s.channel, texts()));
+}
+
+void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("chat wheel", s.open, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.open || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.open || s.sheetShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
 }
 

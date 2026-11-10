@@ -10,7 +10,7 @@ namespace uagfx::win::uisheet {
 namespace {
 
 const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="sh" data-style-width="w + 'px'" data-style-height="h + 'px'">
+<body class="sh" data-style-width="w + 'px'" data-style-height="h + 'px'" data-style-opacity="op">
 <div class="glass" data-if="glass.w > 0" data-style-left="glass.x + 'px'" data-style-top="glass.y + 'px'"
   data-style-width="glass.w + 'px'" data-style-height="glass.h + 'px'" data-style-border-radius="glass.r + 'px'"
   data-style-border-width="glass.e + 'px'" data-style-background-color="ground"></div>
@@ -22,6 +22,10 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
    data-style-border-width="b.e + 'px'" data-style-background-color="b.bg" data-style-border-color="b.bd"></div>
 </div>
+<ua-ring class="a" data-for="r : rings" data-style-left="r.x + 'px'" data-style-top="r.y + 'px'"
+  data-style-width="r.size + 'px'" data-style-height="r.size + 'px'" data-attr-value="r.value" data-attr-start="r.start"
+  data-attr-width="r.width" data-attr-sector="r.sector ? 1 : 0" data-attr-fill="r.fill" data-attr-track="r.track"
+  style="position: absolute;"></ua-ring>
 <div class="clip" data-if="clip.w > 0" data-style-left="clip.x + 'px'" data-style-top="clip.y + 'px'"
   data-style-width="clip.w + 'px'" data-style-height="clip.h + 'px'">
  <div class="a" data-for="b : clipped">
@@ -140,17 +144,31 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
                     t.RegisterMember("colour", &Word::colour);
                     t.RegisterMember("cls", &Word::cls);
                 }
+                if (auto r = m.RegisterStruct<Ring>()) {
+                    r.RegisterMember("x", &Ring::x);
+                    r.RegisterMember("y", &Ring::y);
+                    r.RegisterMember("size", &Ring::size);
+                    r.RegisterMember("value", &Ring::value);
+                    r.RegisterMember("start", &Ring::start);
+                    r.RegisterMember("width", &Ring::width);
+                    r.RegisterMember("sector", &Ring::sector);
+                    r.RegisterMember("fill", &Ring::fill);
+                    r.RegisterMember("track", &Ring::track);
+                }
+                m.RegisterArray<std::vector<Ring>>();
                 m.RegisterArray<std::vector<Box>>();
                 m.RegisterArray<std::vector<Icon>>();
                 m.RegisterArray<std::vector<Word>>();
                 m.Bind("w", &c_.w);
                 m.Bind("h", &c_.h);
+                m.Bind("op", &c_.op);
                 m.Bind("glass", &c_.glass);
                 m.Bind("ground", &c_.ground);
                 m.Bind("under", &c_.under);
                 m.Bind("icons", &c_.icons);
                 m.Bind("over", &c_.over);
                 m.Bind("words", &c_.words);
+                m.Bind("rings", &c_.rings);
                 m.Bind("clip", &c_.clip);
                 m.Bind("clipped", &c_.clipped);
                 m.Bind("clipped_icons", &c_.clippedIcons);

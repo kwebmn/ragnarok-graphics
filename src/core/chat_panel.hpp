@@ -223,4 +223,20 @@ std::string fieldText(const Layout& L, const Input& in, const Measure& m, float&
 
 std::string grouped(long long n);  // 6 140, 1 288
 
+// 3.0.18-beta.32 (uaUI's chat): what paint() decides beyond the layout - each tab's unread badge (w 0 none), the
+// channel chip's colour and its chevron, the caret (the name's or the words'), the scroll's thumb, the underlines of
+// the name or the link pointed at
+struct Underline {
+    panel::Box box;
+    uint32_t rgb = 0;
+};
+struct View {
+    std::vector<panel::Box> badges;
+    uint32_t chipRgb = 0, caretRgb = 0;
+    panel::Box chevron, caret, thumb;
+    std::vector<Underline> underlines;
+};
+View view(const Layout& L, const std::vector<Row>& rows, const Input& in, const Show& sh, const Texts& t,
+          const Measure& m);
+
 }  // namespace uagfx::chatpanel

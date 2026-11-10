@@ -31,13 +31,22 @@ struct Word {
     float x = 0, y = 0, w = 0, h = 0, px = 12, lh = 0;  // lh: the line's height (the box's for one line)
     Rml::String text, colour, cls;
 };
+// 3.0.18-beta.32: an arc (<ua-ring>) - its box, `value` of the circle from `start` degrees clockwise (0 at 3 o'clock),
+// `width` dp at its edge (a pie to the middle with `sector`), the colours #rrggbbaa
+struct Ring {
+    float x = 0, y = 0, size = 0, value = 1, start = 0, width = 4;
+    bool sector = false;
+    Rml::String fill = "#00000000", track = "#00000000";
+};
+
 struct Content {
-    float w = 0, h = 0;
+    float w = 0, h = 0, op = 1;  // op: the whole one's opacity (3.0.18-beta.32: the quiet chat)
     Box glass;  // w 0: none
     Rml::String ground;
     std::vector<Box> under, over;
     std::vector<Icon> icons;
     std::vector<Word> words;
+    std::vector<Ring> rings;  // drawn after `under`, before the clipped view and `icons`
     // 3.0.18-beta.29: a scrolled view (the skills' tree) - its boxes and icons in the window's pixels, cut at `clip`;
     // drawn after `under`, before `icons`
     Box clip;

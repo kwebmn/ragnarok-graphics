@@ -18,6 +18,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::roomwin {
 namespace {
@@ -47,6 +49,9 @@ using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using FriendFn = void(__attribute__((thiscall)) *)(uint32_t manager, const char* name);
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.32: the window drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;
     bool on = false, shown = false, moved = false;
     unsigned codePage = 0;
@@ -188,6 +193,10 @@ std::vector<Words> gdiWords(const std::vector<rc::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.32: uaUI's window says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("the chat room", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     rc::paint(s.picture, s.layout, s.card, s.show);
@@ -268,7 +277,8 @@ void act(State& s, const rc::Hit& h) {
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     s.on = on;
@@ -304,23 +314,68 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(uistyle::generation()) + ';' + std::to_string(c.lines.size());
     if (!c.lines.empty()) key += c.lines.back().text;
     for (const rc::Member& m : c.members) key += ';' + m.name + (m.owner ? "*" : "");
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + (uaui::ready() ? "u" : ""); drawn != s.key) {  // 3.0.18-beta.32
+        s.key = drawn;
         render(s);
     }
     s.shown = true;
     block(s, game);
 }
 
+// 3.0.18-beta.32 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the chat room in RmlUi's
+// markup, line by line as core roomcard paints it - its glass, ✕, the open/closed badge, the lines' ground, the
+// members (chosen or pointed at gold), the input, «Налаштування», «Вийти», «Вигнати», «Власник», «У друзі»; the words
+// where core roomcard places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const rc::Layout& L = s.layout;
+    const rc::Card& d = s.card;
+    const rc::Show& sh = s.show;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kBlack = 0x000000, kGreen = 0x4CAF7A;
+    constexpr uint32_t kRed = 0xD9534F;
+    auto& u = c.under;
+    c.w = float(L.w), c.h = float(L.h);
+    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
+    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
+    const bool closeHot = sh.hover.part == rc::Part::Close;
+    c.rect(u, L.close, 6 * sc, kWhite, closeHot ? 0.14f : 0.0f, kWhite, closeHot ? 0.3f : 0.0f, 1.0f * sc);
+    c.rect(u, L.badge, L.badge.h / 2, d.open ? kGreen : kGold, 0.22f, d.open ? kGreen : kGold, 0.7f, 1.0f * sc);
+    c.rect(u, L.lines, 8 * sc, kBlack, 0.25f, kWhite, 0.06f, 1.0f * sc);
+    for (size_t i = 0; i < L.memberRows.size(); ++i) {
+        const bool chosen = int(i) == d.chosen, hot = sh.hover.part == rc::Part::Member && sh.hover.index == int(i);
+        if (chosen || hot)
+            c.rect(u, L.memberRows[i], 6 * sc, kGold, chosen ? 0.22f : 0.10f, kGold, chosen ? 0.6f : 0.0f, 1.0f * sc);
+    }
+    c.rect(u, L.input, 8 * sc, kBlack, 0.35f, d.focus ? kGold : kWhite, d.focus ? 0.8f : 0.18f, 1.0f * sc);
+    const auto button = [&](const panel::Box& b, rc::Part p, uint32_t rgb, float a) {
+        c.rect(u, b, 7 * sc, rgb, sh.hover.part == p ? a + 0.10f : a, rgb, 0.5f, 1.0f * sc);
+    };
+    button(L.setup, rc::Part::Setup, kGold, 0.16f);
+    button(L.leave, rc::Part::Leave, kWhite, 0.06f);
+    button(L.kick, rc::Part::Kick, kRed, 0.16f);
+    button(L.owner, rc::Part::Owner, kGold, 0.14f);
+    button(L.friendAdd, rc::Part::Friend, kWhite, 0.06f);
+    c.say(rc::words(L, d, sh, texts()));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("room", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (!s.sheetShown) {  // 3.0.18-beta.32: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      12 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

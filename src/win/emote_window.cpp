@@ -25,6 +25,8 @@
 #include "win/ui_cost.hpp"
 #include "win/updates_hook.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::emotewin {
 namespace {
@@ -47,6 +49,9 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 using UseFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y);
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.32: the window drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;
     bool on = false, shown = false, hid = false;
     unsigned codePage = 0;
@@ -172,6 +177,10 @@ std::vector<Words> gdiWords(const std::vector<ec::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.32: uaUI's window says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("the emotions", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     ec::paint(s.picture, s.layout, s.show, s.icons);
@@ -221,7 +230,8 @@ void use(State& s, int i, bool send) {
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     if (on != s.on) {
@@ -276,23 +286,59 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(s.layout.w) + ';' + std::to_string(s.iconSide) + '#' +
                       std::to_string(uistyle::generation());
     for (const std::string& c : s.commands) key += ';' + c;
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + (uaui::ready() ? "u" : ""); drawn != s.key) {  // 3.0.18-beta.32
+        s.key = drawn;
         render(s);
     }
     s.shown = true;
     block(s, game);
 }
 
+// 3.0.18-beta.32 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the emotions in RmlUi's
+// markup, line by line as core emotecard paints it - its glass, ✕, the cells (pointed at gold) with their pictures;
+// the words where core emotecard places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const ec::Layout& L = s.layout;
+    const ec::Show& sh = s.show;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B;
+    auto& u = c.under;
+    c.w = float(L.w), c.h = float(L.h);
+    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
+    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
+    c.rect(u, L.close, 6 * sc, kWhite, sh.hoverClose ? 0.14f : 0.0f, kWhite, sh.hoverClose ? 0.3f : 0.0f, 1.0f * sc);
+    for (size_t i = 0; i < L.cells.size(); ++i) {
+        const bool hot = int(i) == sh.hover;
+        c.rect(u, L.cells[i], 8 * sc, hot ? kGold : kWhite, hot ? 0.20f : 0.04f, hot ? kGold : kWhite,
+               hot ? 0.8f : 0.08f, 1.0f * sc);
+        if (i >= s.icons.size() || s.icons[i].width <= 0 || s.icons[i].height <= 0) continue;
+        const panel::Picture& p = s.icons[i];
+        const panel::Box& b = L.icons[i];
+        c.icons.push_back(uisheet::Icon{std::round(b.x + (b.w - float(p.width)) / 2),
+                                        std::round(b.y + (b.h - float(p.height)) / 2), float(p.width),
+                                        float(p.height), 1, s.sheet.icon(&p)});
+    }
+    c.say(ec::words(L, s.commands, sh, texts()));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("emote", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (!s.sheetShown) {  // 3.0.18-beta.32: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      12 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

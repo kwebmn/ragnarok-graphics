@@ -18,6 +18,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::whispersetupwin {
 namespace {
@@ -35,6 +37,9 @@ constexpr int kButtonMsg = 6, kCheckMsg = 0x93, kCloseButton = 0x87;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.32: the window drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;
     bool on = false, shown = false;
     uint32_t hidden = 0;
@@ -108,6 +113,10 @@ std::vector<Words> gdiWords(const std::vector<sw::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.32: uaUI's window says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("the whisper's settings", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     sw::paint(s.picture, s.layout, s.values, s.show);
@@ -150,7 +159,8 @@ void closeIt(State& s) {
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     (void)codePage;
     if (on != s.on) {
@@ -185,23 +195,56 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(s.show.focus) + ';' + std::to_string(s.layout.x) + ',' +
                       std::to_string(s.layout.y) + '#' + std::to_string(uistyle::generation());
     for (bool b : s.values) key += b ? '1' : '0';
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + (uaui::ready() ? "u" : ""); drawn != s.key) {  // 3.0.18-beta.32
+        s.key = drawn;
         render(s);
     }
     s.shown = true;
     block(s, game);
 }
 
+// 3.0.18-beta.32 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the whisper's settings in
+// RmlUi's markup, line by line as core switchcard paints it - its glass, ✕, each switch (gold on, the controller's
+// frame) and its knob; the words where core switchcard places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const sw::Layout& L = s.layout;
+    const sw::Show& sh = s.show;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B;
+    auto& u = c.under;
+    c.w = float(L.w), c.h = float(L.h);
+    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
+    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
+    c.rect(u, L.close, 6 * sc, kWhite, sh.hoverClose ? 0.14f : 0.06f);
+    for (size_t i = 0; i < L.toggles.size(); ++i) {
+        const panel::Box& b = L.toggles[i];
+        const bool v = i < s.values.size() && s.values[i], hot = sh.hover == int(i), focus = sh.focus == int(i);
+        c.rect(u, b, b.h / 2, v ? kGold : kWhite, v ? (hot ? 0.75f : 0.6f) : (hot ? 0.16f : 0.1f),
+               focus ? kGold : kWhite, focus ? 0.95f : 0.15f, (focus ? 1.5f : 1.0f) * sc);
+        const float knob = b.h - 6 * sc, kx = v ? b.x + b.w - knob - 3 * sc : b.x + 3 * sc;
+        c.rect(u, panel::Box{kx, b.y + 3 * sc, knob, knob}, knob / 2, kWhite, v ? 0.95f : 0.55f);
+    }
+    c.say(sw::words(L, s.values, sh, texts()));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("wsetup", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (!s.sheetShown) {  // 3.0.18-beta.32: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      12 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

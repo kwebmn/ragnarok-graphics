@@ -19,6 +19,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::whisperwin {
 namespace {
@@ -40,6 +42,7 @@ using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
 
 struct One {
+    int sheetGen = 0;  // 3.0.18-beta.32: its uaUI sheet's (State::sheets, by its window)
     uint32_t window = 0;
     int slot = 0;  // its place in the cascade, kept while it lives
     int oldX = 0;
@@ -61,6 +64,10 @@ struct State {
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
     std::vector<One> cards;  // the oldest first; the last drawn on top
+    // 3.0.18-beta.32: the cards drawn by uaUI - a sheet each, by its place in the cascade (kept apart: a card moves in
+    // `cards`; never let go - a uaUI document lives as long as the game)
+    std::map<int, std::unique_ptr<uisheet::Sheet>> sheets;
+    bool sheetsShown = false;
     int told = 0;
 };
 
@@ -183,6 +190,10 @@ std::vector<Words> gdiWords(const std::vector<wc::Words>& in) {
 }
 
 void render(One& o) {
+    if (uaui::ready()) {  // 3.0.18-beta.32: uaUI's card says it all again, no picture
+        ++o.sheetGen;
+        return;
+    }
     const uicost::Paint cost("a whisper", o.layout.w, o.layout.h);
     if (!panel::blank(o.picture, o.layout.w, o.layout.h)) return;
     wc::paint(o.picture, o.layout, o.card, o.hover);
@@ -228,7 +239,7 @@ void act(State& s, One& o, wc::Part p) {
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     if (on != s.on) {
@@ -265,6 +276,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                           std::to_string(o.layout.y) + '#' + std::to_string(uistyle::generation()) + ';' +
                           std::to_string(c.lines.size());
         if (!c.lines.empty()) key += c.lines.back().text;
+        if (uaui::ready()) key += 'u';  // 3.0.18-beta.32
         if (key != o.key) {
             o.key = key;
             render(o);
@@ -273,9 +285,47 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     block(s, game);
 }
 
+// 3.0.18-beta.32 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): a whisper's card in
+// RmlUi's markup, line by line as core whispercard paints it - its glass, ✕, the lines' ground, the input, «Надіслати»;
+// the words where core whispercard places them
+static void fillSheet(const One& o, uisheet::Content& c) {
+    const wc::Layout& L = o.layout;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kBlack = 0x000000;
+    auto& u = c.under;
+    c.w = float(L.w), c.h = float(L.h);
+    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
+    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
+    const bool closeHot = o.hover == wc::Part::Close;
+    c.rect(u, L.close, 6 * sc, kWhite, closeHot ? 0.14f : 0.0f, kWhite, closeHot ? 0.3f : 0.0f, 1.0f * sc);
+    c.rect(u, L.lines, 8 * sc, kBlack, 0.25f, kWhite, 0.06f, 1.0f * sc);
+    c.rect(u, L.input, 8 * sc, kBlack, 0.35f, o.card.focus ? kGold : kWhite, o.card.focus ? 0.8f : 0.18f, 1.0f * sc);
+    c.rect(u, L.send, 8 * sc, kGold, o.hover == wc::Part::Send ? 0.34f : 0.22f, kGold, 0.8f, 1.0f * sc);
+    c.say(wc::words(L, o.card, o.hover, texts()));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetsShown = false;
+    for (auto& [slot, sheet] : s.sheets) {  // the places no card stands in: hidden
+        const int at = slot;
+        if (std::none_of(s.cards.begin(), s.cards.end(), [&](const One& o) { return o.slot == at; }))
+            sheet->frame("whisper", false, true, 0, 0, 0, [](uisheet::Content&) {});
+    }
+    for (const One& o : s.cards) {
+        auto& sheet = s.sheets[o.slot];
+        if (!sheet) sheet = std::make_unique<uisheet::Sheet>();
+        const int gen = int(o.window * 2654435761u) ^ o.sheetGen;  // another card in its place: said again
+        const bool shown = sheet->frame("whisper", s.k > 0, true, o.layout.x, o.layout.y, gen,
+                                        [&](uisheet::Content& c) { fillSheet(o, c); });
+        s.sheetsShown = s.sheetsShown || shown;
+    }
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (s.cards.empty() || s.k <= 0) return;
+    if (s.cards.empty() || s.k <= 0 || s.sheetsShown) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     for (One& o : s.cards) {

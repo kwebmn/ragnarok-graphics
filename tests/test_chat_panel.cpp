@@ -171,6 +171,28 @@ TEST(chat_picture_and_words) {
     CHECK(shown.size() < in.text.size() && shown.rfind("\xE2\x80\xA6", 0) == 0 && caretX <= L.field.w);
 }
 
+// 3.0.18-beta.32 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5): uaUI's chat - the parts paint()
+// decides beyond the layout: the unread badges, the channel chip's colour, the caret, the names' underlines
+TEST(chat_view_for_uaui) {
+    const Texts t = texts();
+    Show sh;
+    sh.unread[3] = 2;
+    Input in;
+    in.text = "привіт";
+    in.typing = true;
+    in.caretOn = true;
+    const Layout L = layout(0, 300, 1.0f, 4, false, sh, in, t, estimate);
+    const Line a = fromGame(Source::Whisper, "( From Nova ) : hey", 0xFFFF, t, 0);
+    const std::vector<const Line*> lines{&a};
+    const std::vector<Row> rows = wrap(lines, L.lines.w, L.px, estimate);
+    View v = view(L, rows, in, sh, t, estimate);
+    CHECK(v.badges.size() == L.tabs.size() && v.badges[3].w > 0 && v.badges[0].w == 0);
+    CHECK(v.caret.w > 0 && v.caret.x >= L.field.x && v.chevron.w > 0 && v.underlines.empty());
+    sh.hoverLine = 0;  // Nova's name pointed at: underlined
+    v = view(L, rows, in, sh, t, estimate);
+    CHECK(!v.underlines.empty());
+}
+
 // 3.0.11-beta.240 (the chat concept, stage 1): the input's own commands - /p, /g, /w Name (a name with spaces in
 // quotes), /r to the last who whispered; their hints while «/» is typed
 TEST(chat_commands_and_their_hints) {

@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "core/chat_panel.hpp"
+#include "core/ui_icons.hpp"
 #include "core/settings/search.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/layout.hpp"
@@ -33,6 +34,8 @@
 #include "win/reference_window.hpp"
 #include "win/target_card.hpp"
 #include "win/ui_cost.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::chatwin {
 namespace {
@@ -97,6 +100,9 @@ struct Raw {
 };
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.32: the chat drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     bool on = false, shown = false, moved = false, forced = false, oldTold = false, folded = false;
     bool inputTold = false, swallowTab = false;
     bool searching = false;  // 3.0.11-beta.284 (the owner's feature 17): Ctrl+F in the field - its words the search's
@@ -642,6 +648,10 @@ std::vector<Words> gdiWords(const std::vector<cp::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.32: uaUI's chat says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("chat", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
     const cp::Texts t = texts();
@@ -760,7 +770,7 @@ void packet(const packets::Event& e) {
     }
 }
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     take(s);  // the lines kept with the chat off too: on, it shows them
@@ -868,7 +878,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         key += s.show.people[i] + ':' + std::to_string(s.show.peopleUnread[i]) + ',';
     key += ';' + in.text + '|' + std::to_string(in.caret) + '|' + in.whisper + '|' + std::to_string(in.mode) +
            (in.whisperFocus ? "f" : "") + (in.battle ? "b" : "") + (in.typing ? "t" : "") + (caret ? "|" : "");
-    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
+        drawn != s.key) {  // its grounds (3.0.18-beta.32: uaUI's or the picture)
         s.key = drawn;
         render(s);
     }
@@ -886,9 +897,103 @@ bool panelBox(int& x, int& y, int& w, int& h) {
     return true;
 }
 
+// 3.0.18-beta.32 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the chat in RmlUi's
+// markup, line by line as core chatpanel paints it - its glass (fainter while quiet), the tabs (the shown one's gold
+// line, the unread badges), the input, the channel's chip and chevron, ✕, the caret, «нові ↓», the hints' card, the
+// whispers' people chips, the corner's grip, the scroll bar, the filters' gear and menu, a name's menu, the name or
+// link pointed at underlined; the words where core chatpanel places them. A part of the screen (not a window)
+static void fillSheet(State& s, uisheet::Content& c) {
+    const cp::Layout& L = s.layout;
+    const cp::Show& sh = s.show;
+    const cp::Input& in = s.input;
+    const cp::Texts t = texts();
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kGold = 0xF3C653, kAccent = 0x5DB2FF;
+    constexpr uint32_t kWhisper = cp::kWhisper, kMuted = cp::kMuted;
+    const cp::View v = cp::view(L, s.rows, in, sh, t, measure);
+    auto& u = c.under;
+    const auto icon = [&](uiicons::Icon which, const panel::Box& b, uint32_t rgb, float alpha, float stroke) {
+        const int px = std::max(4, int(std::ceil(b.w)));
+        const std::string key = "u" + std::to_string(int(which)) + ':' + std::to_string(px) + ':' +
+                                std::to_string(rgb);
+        const std::string src = s.sheet.made(key, px, px, [&](panel::Picture& p) {
+            uiicons::draw(p, which, 0, 0, float(px), rgb, alpha, stroke);
+        });
+        c.icons.push_back(uisheet::Icon{b.x, b.y, float(px), float(px), 1, src});
+    };
+    c.w = float(L.w), c.h = float(L.h);
+    c.op = L.quiet ? 0.72f : 1.0f;
+    c.rect(u, L.glass, 10 * sc, kCard, L.quiet ? uistyle::chat() * 0.45f : uistyle::chat(), kWhite,
+           L.quiet ? 0.04f : 0.09f, 1.0f * sc);
+    for (size_t i = 0; i < L.tabs.size(); ++i) {
+        const panel::Box& b = L.tabs[i];
+        const bool on = int(i) == int(sh.tab);
+        if (on || int(i) == sh.hoverTab) c.rect(u, b, 7 * sc, kWhite, on ? 0.07f : 0.04f);
+        if (on) c.rect(u, panel::Box{b.x + 9 * sc, b.y + b.h - 3 * sc, b.w - 18 * sc, 2 * sc}, 1 * sc, kGold, 0.95f);
+        if (i < v.badges.size()) c.rect(u, v.badges[i], v.badges[i].h / 2, kAccent, 0.95f);
+    }
+    c.rect(u, panel::Box{0, L.tabsRow.h, L.glass.w, 1 * sc}, 0, kWhite, 0.06f);
+    c.rect(u, L.input, 8 * sc, kBlack, 0.38f, kWhite, 0.10f, 1.0f * sc);
+    c.rect(u, L.mode, 6 * sc, v.chipRgb, sh.hoverMode ? 0.28f : 0.16f);
+    if (v.chevron.w > 0) icon(uiicons::Icon::Down, v.chevron, v.chipRgb, 0.9f, 2.4f);
+    if (L.clear.w > 0 && sh.hoverClear) c.rect(u, L.clear, 5 * sc, kWhite, 0.14f);
+    c.rect(u, v.caret, 0, v.caretRgb, 0.95f);
+    if (L.newer.w > 0) c.rect(u, L.newer, 6 * sc, kAccent, sh.hoverNewer ? 0.45f : 0.28f);
+    if (L.hints.w > 0) c.rect(u, L.hints, 8 * sc, kCard, 0.96f, kWhite, 0.14f, 1.0f * sc);
+    for (size_t i = 0; i < L.people.size(); ++i) {
+        const bool on = i == 0 ? sh.person.empty() : sh.person == sh.people[i - 1];
+        c.rect(u, L.people[i], L.people[i].h / 2, on ? kWhisper : kWhite,
+               on ? 0.22f : int(i) == sh.hoverPerson ? 0.10f : 0.05f, on ? kWhisper : kWhite, on ? 0.7f : 0.12f,
+               1.0f * sc);
+    }
+    const float a = sh.hoverGrip ? 0.8f : L.quiet ? 0.15f : 0.35f;  // the corner's grip: two short slants
+    for (int k = 0; k < 2; ++k) {
+        const float d = (5 + 4 * float(k)) * sc;
+        for (float t2 = 0; t2 < d; t2 += 1.0f * sc)
+            c.rect(u, panel::Box{L.grip.x + L.grip.w - 4 * sc - d + t2, L.grip.y + 4 * sc + t2, 1.2f * sc, 1.2f * sc},
+                   0, kWhite, a);
+    }
+    if (v.thumb.w > 0) {
+        c.rect(u, L.bar, L.bar.w / 2, kWhite, 0.05f);
+        c.rect(u, v.thumb, v.thumb.w / 2, kWhite, sh.hoverBar ? 0.45f : 0.25f);
+    }
+    if (L.filtersButton.w > 0) {
+        const panel::Box& b = L.filtersButton;
+        if (sh.hoverFilters || sh.filtersOpen) c.rect(u, b, 6 * sc, kWhite, 0.10f);
+        const float side = 14 * sc;
+        icon(uiicons::Icon::Gear, panel::Box{b.x + (b.w - side) / 2, b.y + (b.h - side) / 2, side, side},
+             sh.hide ? kGold : kMuted, 1.0f, 2.0f);
+    }
+    auto& o = c.over;
+    if (L.filtersMenu.w > 0) {
+        c.rect(o, L.filtersMenu, 8 * sc, kCard, 0.97f, kWhite, 0.16f, 1.0f * sc);
+        for (size_t i = 0; i < L.filters.size(); ++i) {
+            const panel::Box& f = L.filters[i];
+            if (int(i) == sh.hoverFilter) c.rect(o, f, 6 * sc, kWhite, 0.08f);
+            const bool on = !(sh.hide & (1 << i));
+            c.rect(o, panel::Box{f.x + 6 * sc, f.y + (f.h - 12 * sc) / 2, 12 * sc, 12 * sc}, 3 * sc,
+                   on ? kGold : kWhite, on ? 0.9f : 0.05f, on ? kGold : kWhite, 0.6f, 1.0f * sc);
+        }
+    }
+    if (L.menu.w > 0) {
+        c.rect(o, L.menu, 8 * sc, kCard, 0.97f, kWhite, 0.16f, 1.0f * sc);
+        if (sh.hoverItem >= 0 && sh.hoverItem < int(L.items.size()))
+            c.rect(o, L.items[size_t(sh.hoverItem)], 6 * sc, kWhite, 0.10f);
+    }
+    for (const cp::Underline& x : v.underlines) c.rect(o, x.box, 0, x.rgb, 0.8f);
+    c.say(cp::words(L, s.rows, in, sh, t, measure));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("chat", s.shown, false, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.sheetShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
