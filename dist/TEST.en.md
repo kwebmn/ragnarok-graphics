@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.17 — what's new
+
+- **The character block is the first part rewritten on the new library:** with the new interface library on it is built anew - full, compact, rings and the icon, tips for every part, the low HP warning, the gold edge on a new level, the window buttons. The look and the words are the same; turn the switch off for the old block.
+- **Your own theme file `uaro-graphics\ui\theme.rcss` now adds to the built-in theme** instead of replacing it: write only what you want to change.
+
 # uaRO Graphics 3.0.18-beta.16 — what's new
 
 - **Fixed the game closing with the new interface library on:** it could vanish when the in-game reference was opened. The interface parts are drawn as before again; they will move to the new library one by one in the next betas.
