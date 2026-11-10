@@ -19,6 +19,8 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_window.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::padtileswin {
 namespace {
@@ -29,6 +31,10 @@ namespace pt = uagfx::padtiles;
 constexpr int kItems = 0x80, kStats = 0x7E, kSkills = 0x82, kEquip = 0x81, kFriends = 0x85, kOptions = 0x7F;
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.35: drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false, sheetSony = false;
+    std::vector<Words> sheetWords;
     bool open = false, shown = false;
     int focus = 0;
     int count = pt::kTiles;  // 3.0.11-beta.216: ten with a mercenary hired («Найманець»)
@@ -59,8 +65,9 @@ std::vector<Words> gdiWords(const std::vector<pt::Words>& in) {
 }
 
 void render(State& s, bool sony) {
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    pt::paint(s.picture, s.layout, s.focus, sony);
+    const bool byUaui = uaui::ready();  // 3.0.18-beta.35: the words kept for uaUI's sheet, no picture
+    if (!byUaui && !panel::blank(s.picture, s.layout.w, s.layout.h)) return;
+    if (!byUaui) pt::paint(s.picture, s.layout, s.focus, sony);
     using settings::Text;
     const settings::Lang l = language();
     const std::vector<std::string> names = {settings::tr(l, Text::ItemsTitle),   settings::tr(l, Text::StatsTitle),
@@ -68,9 +75,16 @@ void render(State& s, bool sony) {
                                             settings::tr(l, Text::PartyTitle),   settings::tr(l, Text::TileMap),
                                             settings::tr(l, Text::RefTitle),     settings::tr(l, Text::TileOptions),
                                             settings::tr(l, Text::PagePad),      settings::tr(l, Text::MercTile)};
-    drawWords(s.picture, gdiWords(pt::words(s.layout, names, settings::tr(l, Text::TilesTitle),
+    std::vector<Words> words = gdiWords(pt::words(s.layout, names, settings::tr(l, Text::TilesTitle),
                                             settings::tr(l, Text::TilesOpen), settings::tr(l, Text::TilesClose),
-                                            sony)));
+                                            sony));
+    if (byUaui) {
+        s.sheetWords = std::move(words);
+        s.sheetSony = sony;
+        ++s.sheetGen;
+        return;
+    }
+    drawWords(s.picture, words);
     s.upload = true;
 }
 
@@ -148,7 +162,7 @@ void command(Command c) {
     }
 }
 
-void frame(HWND game, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (!s.open || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || readGameMap().empty()) {
         if (s.open && readGameMap().empty()) close(s, "no world");
@@ -165,7 +179,7 @@ void frame(HWND game, double k, int targetWidth, int targetHeight) {
     const bool sony = uapad::runtime::look().sony;
     const std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' +
                             std::to_string(s.focus) + '/' + std::to_string(s.count) + (sony ? "S" : "X") + '#' +
-                            std::to_string(uistyle::generation());
+                            std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
     if (key != s.key) {
         s.key = key;
         render(s, sony);
@@ -174,9 +188,49 @@ void frame(HWND game, double k, int targetWidth, int targetHeight) {
     block(s, game);
 }
 
+// 3.0.18-beta.35 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the controller's tiles
+// in RmlUi's markup, line by line as core padtiles paints them - its glass, the hints' line, the tiles (the focused
+// gold) with their icons, A and B; the words as the part lays them out
+static void fillSheet(State& s, uisheet::Content& c) {
+    const pt::Layout& L = s.layout;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A;
+    constexpr float kGlyph = 20;  // core padtiles'
+    c.w = float(L.w), c.h = float(L.h);
+    c.rect(c.under, L.glass, 14 * sc, kCard, std::max(0.9f, uistyle::panel()), kWhite, 0.10f, 1.0f * sc);
+    c.rect(c.under, panel::Box{L.hints.x, L.hints.y - 6 * sc, L.hints.w, 1 * sc}, 0, kWhite, 0.09f);
+    for (size_t i = 0; i < L.tiles.size(); ++i) {
+        const panel::Box& b = L.tiles[i];
+        const bool on = int(i) == s.focus;
+        c.rect(c.under, b, 12 * sc, on ? kGold : kWhite, on ? 0.13f : 0.045f, on ? kGold2 : kWhite, on ? 1.0f : 0.10f,
+               (on ? 2.0f : 1.0f) * sc);
+        const int px = std::max(4, int(std::ceil(36 * sc)));
+        const uint32_t rgb = on ? kGold2 : 0xC7CCD6;
+        const uiicons::Icon icon = pt::iconOf(int(i));
+        const std::string src = s.sheet.made("t" + std::to_string(int(icon)) + ':' + std::to_string(px) + ':' +
+                                                 std::to_string(rgb),
+                                             px, px, [&](panel::Picture& p) {
+                                                 uiicons::draw(p, icon, 0, 0, float(px), rgb, 1.0f, 1.8f);
+                                             });
+        c.icons.push_back(uisheet::Icon{std::round(b.x + (b.w - float(px)) / 2), std::round(b.y + 16 * sc),
+                                        float(px), float(px), 1, src});
+    }
+    const float y = L.hints.y + (L.hints.h - kGlyph * sc) / 2;
+    s.sheet.glyph(c, int(padglyph::Button::A), s.sheetSony, L.hints.x, y, kGlyph * sc);
+    s.sheet.glyph(c, int(padglyph::Button::B), s.sheetSony, L.hints.x + 130 * sc, y, kGlyph * sc);
+    uisheet::sayGdi(c, s.sheetWords);
+}
+
+void frame(HWND game, double k, int targetWidth, int targetHeight) {
+    frameInner(game, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("pad tiles", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0) return;
+    if (!s.shown || s.sheetShown || s.k <= 0 || s.picture.width <= 0) return;
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
 }
 

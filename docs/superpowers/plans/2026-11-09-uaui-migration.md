@@ -65,7 +65,7 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - [x] login, servers, character select and make — beta.33 by hand on the sheet (uaui::readyAnywhere + Doc::anywhere: before the world; the login's ▾ list still its picture in the sheet's top layer; shelf/continue/site cards next)
 - [x] pet, homunculus, mercenary, options, friends, guild, whisper setup, macros, tip of the day, menu, OSK — beta.32/.34 by hand on the sheet (the mercenary's HUD block still its picture)
 - [ ] «Довідник»
-- [ ] pad tiles / assign / hints, HUD edit
+- [x] pad tiles / assign / hints, HUD edit — beta.35 by hand on the sheet (the editor a full-screen sheet said again each frame; the world's shade the driver's)
 
 ## Stage 6 — themes and cleanup
 
@@ -100,3 +100,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.32: chat, chat wheel, whispers, chat room and its making, popup menu, emotions, commands, whisper setup on the sheet (+ Content::op, rings). Note: uaui::Doc has no destructor - sheets are pooled, never destroyed
 - 2026-11-10 beta.33: login card, servers, characters, character make on the sheet; uaUI runs before the world for Doc::anywhere documents (others hidden there)
 - 2026-11-10 beta.34: pet, homunculus, mercenary, options, friends, guild, macros, tip of the day, menu, keyboard on the sheet - their paint() translated line by line (tools: $S/conv.py)
+- 2026-11-10 beta.35: pad tiles, pad assignment, pad hint line, «Розміщення інтерфейсу» on the sheet (+ say offsets, painted boxes' opacity)

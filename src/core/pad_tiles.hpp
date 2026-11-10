@@ -1,4 +1,5 @@
 #pragma once
+#include "core/ui_icons.hpp"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -42,5 +43,8 @@ struct Words {
 // `names` the tiles' in Tile's order
 std::vector<Words> words(const Layout& L, const std::vector<std::string>& names, const std::string& title,
                          const std::string& open, const std::string& close, bool sony);
+
+// 3.0.18-beta.35 (uaUI's tiles): a tile's icon
+uiicons::Icon iconOf(int tile);
 
 }  // namespace uagfx::padtiles

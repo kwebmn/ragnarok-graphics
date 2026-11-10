@@ -15,6 +15,8 @@
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::padassignwin {
 namespace {
@@ -22,6 +24,10 @@ namespace {
 namespace pa = uagfx::padassign;
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.35: drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false, sheetSony = false;
+    std::vector<Words> sheetWords;
     bool open = false, shown = false;
     std::string value, what;
     int level = 0;
@@ -73,13 +79,21 @@ std::vector<Words> gdiWords(const std::vector<pa::Words>& in) {
 }
 
 void render(State& s, bool sony) {
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    pa::paint(s.picture, s.layout, s.rows, s.focus, sony);
+    const bool byUaui = uaui::ready();  // 3.0.18-beta.35: the words kept for uaUI's sheet, no picture
+    if (!byUaui && !panel::blank(s.picture, s.layout.w, s.layout.h)) return;
+    if (!byUaui) pa::paint(s.picture, s.layout, s.rows, s.focus, sony);
     using settings::Text;
     const settings::Lang l = language();
-    drawWords(s.picture, gdiWords(pa::words(s.layout, s.rows, s.what, settings::tr(l, Text::AssignTitle),
+    std::vector<Words> words = gdiWords(pa::words(s.layout, s.rows, s.what, settings::tr(l, Text::AssignTitle),
                                             settings::tr(l, Text::AssignPut), settings::tr(l, Text::AssignCancel),
-                                            settings::tr(l, Text::AssignEmpty), sony)));
+                                            settings::tr(l, Text::AssignEmpty), sony));
+    if (byUaui) {
+        s.sheetWords = std::move(words);
+        s.sheetSony = sony;
+        ++s.sheetGen;
+        return;
+    }
+    drawWords(s.picture, words);
     s.upload = true;
 }
 
@@ -137,7 +151,7 @@ void command(Command c) {
     }
 }
 
-void frame(HWND game, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (!s.open || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
@@ -152,7 +166,7 @@ void frame(HWND game, double k, int targetWidth, int targetHeight) {
     std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' + std::to_string(s.focus) +
                       (sony ? "S" : "X") + ';' + s.what;
     for (const pa::Row& r : s.rows) key += r.slot + '|' + r.now + ';';
-    key += '#' + std::to_string(uistyle::generation());
+    key += '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
     if (key != s.key) {
         s.key = key;
         render(s, sony);
@@ -161,9 +175,40 @@ void frame(HWND game, double k, int targetWidth, int targetHeight) {
     block(s, game);
 }
 
+// 3.0.18-beta.35 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the controller's button
+// assignment in RmlUi's markup, line by line as core padassign paints it - its glass, the hints' line, the rows (the
+// focused gold) with their buttons, A and B; the words as the part lays them out
+static void fillSheet(State& s, uisheet::Content& c) {
+    const pa::Layout& L = s.layout;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A;
+    constexpr float kGlyph = 20;  // core padassign's
+    c.w = float(L.w), c.h = float(L.h);
+    c.rect(c.under, L.glass, 14 * sc, kCard, std::max(0.92f, uistyle::panel()), kWhite, 0.10f, 1.0f * sc);
+    c.rect(c.under, panel::Box{L.hints.x, L.hints.y - 4 * sc, L.hints.w, 1 * sc}, 0, kWhite, 0.09f);
+    for (size_t i = 0; i < L.rows.size() && i < s.rows.size(); ++i) {
+        const panel::Box& b = L.rows[i];
+        const bool on = int(i) == s.focus;
+        c.rect(c.under, b, 9 * sc, on ? kGold : kWhite, on ? 0.13f : 0.04f, on ? kGold2 : kWhite, on ? 1.0f : 0.08f,
+               (on ? 2.0f : 1.0f) * sc);
+        s.sheet.glyph(c, s.rows[i].button, s.sheetSony, b.x + 8 * sc, b.y + (b.h - kGlyph * sc) / 2, kGlyph * sc);
+    }
+    const float y = L.hints.y + (L.hints.h - kGlyph * sc) / 2;
+    s.sheet.glyph(c, int(padglyph::Button::A), s.sheetSony, L.hints.x, y, kGlyph * sc);
+    s.sheet.glyph(c, int(padglyph::Button::B), s.sheetSony, L.hints.x + 140 * sc, y, kGlyph * sc);
+    uisheet::sayGdi(c, s.sheetWords);
+}
+
+void frame(HWND game, double k, int targetWidth, int targetHeight) {
+    frameInner(game, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("pad assign", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0) return;
+    if (!s.shown || s.sheetShown || s.k <= 0 || s.picture.width <= 0) return;
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
 }
 

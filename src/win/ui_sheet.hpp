@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "core/pad_glyphs.hpp"
 #include "core/ui_icons.hpp"
 #include "core/window_panel.hpp"
 #include "win/picture_draw.hpp"
@@ -59,11 +60,12 @@ struct Content {
     void add(std::vector<Box>& to, const panel::Box& b, float r, const char* cls, float edge = 0, float op = 1) {
         if (b.w > 0 && b.h > 0) to.push_back(Box{b.x, b.y, b.w, b.h, r, edge, op, cls});
     }
-    // a box by its colours, as panel::roundRect(fill, fillA, edge, edgeA, width)
+    // a box by its colours, as panel::roundRect(fill, fillA, edge, edgeA, width); `opacity` the next ones' (all)
+    float opacity = 1;
     void rect(std::vector<Box>& to, const panel::Box& b, float r, uint32_t fill, float fillA, uint32_t edge = 0,
               float edgeA = 0, float width = 0) {
         if (b.w <= 0 || b.h <= 0) return;
-        Box x{b.x, b.y, b.w, b.h, r, edgeA > 0 ? width : 0, 1, "paint"};
+        Box x{b.x, b.y, b.w, b.h, r, edgeA > 0 ? width : 0, opacity, "paint"};
         x.paint = true;
         x.bg = rgba(fill, fillA);
         x.bd = rgba(edge, edgeA);
@@ -77,9 +79,10 @@ struct Content {
     }
     // the words of a window's core (any of its Words: box, text, rgb, px, bold, align)
     template <typename W>
-    void say(const std::vector<W>& in) {
+    void say(const std::vector<W>& in, float dx = 0, float dy = 0) {  // dx, dy: the words' boxes moved
         char colour[16];
-        for (const W& x : in) {
+        for (W x : in) {
+            x.box.x += dx, x.box.y += dy;
             std::snprintf(colour, sizeof colour, "#%06x", unsigned(x.rgb & 0xFFFFFF));
             const char* align = x.align == decltype(x.align)::Right    ? " right"
                                 : x.align == decltype(x.align)::Center ? " centre"

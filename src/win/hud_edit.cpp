@@ -20,6 +20,8 @@
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::hudedit {
 namespace {
@@ -53,6 +55,9 @@ struct Drawn {  // a picture of the editor's, its texture
 };
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.35: the editor drawn by uaUI (said again each frame it shows)
+    int sheetGen = 0;
+    bool sheetShown = false;
     bool read = false;
     hudlayout::Layout layout;
     bool perChar = false;   // 3.0.11-beta.288: [interface] layout_per_char
@@ -388,7 +393,7 @@ void setPerChar(bool on) {  // 3.0.11-beta.288
     if (!name.empty()) LOG_INFO("interface layout: a character's own layout (%s)", layoutPath(s).c_str());
 }
 
-void frame(HWND game, double k, int targetW, int targetH) {
+static void frameInner(HWND game, double k, int targetW, int targetH) {
     State& s = state();
     s.k = float(k);
     s.targetW = targetW;
@@ -505,6 +510,79 @@ void frame(HWND game, double k, int targetW, int targetH) {
     s.shown = true;
 }
 
+// 3.0.18-beta.35 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): «Розміщення інтерфейсу»
+// in RmlUi's markup, as core hudlayout paints it - each part's frame (gold, brighter pointed at or dragged; a part not
+// on the screen now fainter) and its tag, the guides while dragging, the corner's grip and its dots, the bar with
+// «Скинути» and «Готово»; the words where core hudlayout places them. The world's shade stays the driver's
+static void fillSheet(State& s, uisheet::Content& c) {
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kAccent = 0xC9A55B, kAccent2 = 0xE6CB8A;
+    const float scale = uistyle::partScale(s.k);
+    c.w = float(s.targetW), c.h = float(s.targetH);
+    for (int i = 0; i < kParts; ++i) {
+        if (!(s.on ? known(s, i) : i == s.hover)) continue;
+        const hudlayout::Box b = solidOf(s, i);
+        if (b.w <= 0 || b.h <= 0) continue;
+        const hudlayout::Look look = i == s.drag    ? hudlayout::Look::Dragged
+                                     : i == s.hover ? hudlayout::Look::Hover
+                                                    : hudlayout::Look::Idle;
+        const int percent = int(std::lround(s.layout[size_t(i)].size * 100));
+        std::string name = say(kNames[i]);
+        if (!shownNow(s, i)) name += " \xC2\xB7 " + say(settings::Text::HudEditUnseen);
+        const std::vector<hudlayout::Words> words = hudlayout::frameWords(b.w, b.h, scale, name, percent);
+        const float tag = words.empty() ? 0.0f : float(wordsWidth(utf8Wide(words[0].text), words[0].px, words[0].bold));
+        const float sc = std::max(0.5f, scale), edge = std::max(2.0f, 2 * sc);
+        const float fill = look == hudlayout::Look::Dragged ? 0.22f : look == hudlayout::Look::Hover ? 0.16f : 0.08f;
+        const bool idle = look == hudlayout::Look::Idle;
+        c.opacity = shownNow(s, i) ? 1.0f : 0.6f;
+        const float x = float(b.x), y = float(b.y);
+        c.rect(c.under, panel::Box{x, y, float(b.w), float(b.h)}, 8 * sc, kAccent, fill, idle ? kAccent : kAccent2,
+               idle ? 0.75f : 1.0f, edge);
+        if (tag > 0)
+            c.rect(c.under, panel::Box{x + std::round(4 * sc), y + std::round(3 * sc),
+                                       std::min(float(b.w) - std::round(8 * sc), tag + std::round(10 * sc)),
+                                       std::min(std::round(22 * sc), float(b.h) - std::round(6 * sc))},
+                   6 * sc, kCard, 0.92f);
+        c.opacity = 1;
+        c.say(words, x, y);
+    }
+    if (s.drag >= 0) {  // the guides
+        const float thin = float(std::max(1, int(std::lround(s.k))));
+        if (s.guideX >= 0) c.rect(c.over, panel::Box{float(s.guideX) - thin / 2, 0, thin, c.h}, 0, kAccent2, 0.8f);
+        if (s.guideY >= 0) c.rect(c.over, panel::Box{0, float(s.guideY) - thin / 2, c.w, thin}, 0, kAccent2, 0.8f);
+    }
+    if (s.gripPart >= 0) {  // the corner's grip: ⋰
+        const hudlayout::Box g = gripOf(s, s.gripPart);
+        const float f = float(g.w), x = float(g.x), y = float(g.y), sc = std::max(0.5f, float(s.k));
+        c.rect(c.over, panel::Box{x, y, f, f}, f / 4, kCard, s.gripHover ? 0.95f : 0.8f, kAccent2,
+               s.gripHover ? 1.0f : 0.7f, std::max(1.0f, sc));
+        const float r = std::max(0.8f, 1.1f * sc);
+        for (int row = 0; row < 3; ++row)
+            for (int col = 2 - row; col < 3; ++col) {
+                const float cx = x + f * (0.3f + 0.2f * float(col)), cy = y + f * (0.3f + 0.2f * float(row));
+                c.rect(c.over, panel::Box{cx - r, cy - r, 2 * r, 2 * r}, r, kAccent2, s.gripHover ? 1.0f : 0.8f);
+            }
+    }
+    if (s.on) {  // the bar
+        const hudlayout::Bar& b = s.bar;
+        const float sc = b.s, edge = std::max(1.0f, sc), x = float(b.x), y = float(b.y);
+        const auto moved = [&](const panel::Box& in) { return panel::Box{in.x + x, in.y + y, in.w, in.h}; };
+        c.rect(c.over, panel::Box{x, y, float(b.w), float(b.h)}, 12 * sc, kCard, 0.94f, kAccent, 0.55f, edge);
+        c.rect(c.over, moved(b.reset), 8 * sc, kWhite, s.barHover == hudlayout::BarPart::Reset ? 0.16f : 0.08f, kWhite,
+               0.22f, edge);
+        c.rect(c.over, moved(b.done), 8 * sc, s.barHover == hudlayout::BarPart::Done ? kAccent2 : kAccent, 1.0f);
+        const hudlayout::BarTexts t{say(settings::Text::HudEditTitle), say(settings::Text::HudEditHint),
+                                    say(settings::Text::HudEditReset), say(settings::Text::HudEditDone)};
+        c.say(hudlayout::barWords(b, t), x, y);
+    }
+}
+
+void frame(HWND game, double k, int targetW, int targetH) {
+    frameInner(game, k, targetW, targetH);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("hud edit", s.shown && s.k > 0, true, 0, 0, ++s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     if (!s.shown || s.k <= 0) return;
@@ -515,6 +593,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         const size_t added = record.commands().size() - before;
         if (added) record.moveLastBefore(added, world);
     }
+    if (s.sheetShown) return;  // 3.0.18-beta.35: the rest uaUI's
     for (int i = 0; i < kParts; ++i) {
         if (!(s.on ? known(s, i) : i == s.hover) || s.frames[size_t(i)].picture.width <= 0) continue;
         Drawn& d = s.frames[size_t(i)];

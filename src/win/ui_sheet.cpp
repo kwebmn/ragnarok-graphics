@@ -20,7 +20,8 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    data-style-border-width="b.e + 'px'" data-style-opacity="b.op"></div>
  <div data-if="b.paint" class="paint" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
    data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
-   data-style-border-width="b.e + 'px'" data-style-background-color="b.bg" data-style-border-color="b.bd"></div>
+   data-style-border-width="b.e + 'px'" data-style-background-color="b.bg" data-style-border-color="b.bd"
+   data-style-opacity="b.op"></div>
 </div>
 <ua-ring class="a" data-for="r : rings" data-style-left="r.x + 'px'" data-style-top="r.y + 'px'"
   data-style-width="r.size + 'px'" data-style-height="r.size + 'px'" data-attr-value="r.value" data-attr-start="r.start"
@@ -45,7 +46,8 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    data-style-border-width="b.e + 'px'" data-style-opacity="b.op"></div>
  <div data-if="b.paint" class="paint" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
    data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
-   data-style-border-width="b.e + 'px'" data-style-background-color="b.bg" data-style-border-color="b.bd"></div>
+   data-style-border-width="b.e + 'px'" data-style-background-color="b.bg" data-style-border-color="b.bd"
+   data-style-opacity="b.op"></div>
 </div>
 <span data-for="t : words" data-attr-class="t.cls" data-style-left="t.x + 'px'" data-style-top="t.y + 'px'"
   data-style-width="t.w + 'px'" data-style-height="t.h + 'px'"

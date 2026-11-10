@@ -101,4 +101,6 @@ std::vector<Words> words(const Layout& L, const std::vector<std::string>& names,
     return out;
 }
 
+uiicons::Icon iconOf(int tile) { return tile >= 0 && tile < kMostTiles ? kIcons[tile] : uiicons::Icon::Search; }
+
 }  // namespace uagfx::padtiles

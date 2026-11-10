@@ -64,3 +64,9 @@ TEST(pad_tiles_tenth_for_the_mercenary) {
     CHECK_EQ(padtiles::moved(0, 0, -1, 10), 9);
     CHECK_EQ(padtiles::moved(0, 0, -1), 6);  // nine as before
 }
+
+// 3.0.18-beta.35: uaUI's tiles - each tile's icon as the picture's (the first «Речі»'s bag), past the last none
+TEST(pad_tiles_icon_of_a_tile) {
+    CHECK(padtiles::iconOf(0) != padtiles::iconOf(1));
+    CHECK(padtiles::iconOf(-1) == uiicons::Icon::Search);
+}

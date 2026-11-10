@@ -13,6 +13,8 @@
 #include "pad/win/runtime.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::padhintwin {
 namespace {
@@ -20,6 +22,9 @@ namespace {
 namespace ph = uagfx::padhint;
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.35: the hint drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false, sheetSony = false;
     bool shown = false;
     std::vector<ph::Part> parts;
     ph::Layout layout;
@@ -50,7 +55,7 @@ std::vector<Words> gdiWords(const std::vector<ph::Words>& in) {
 
 }  // namespace
 
-void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     State& s = state();
     uapad::runtime::setOwnHints(on);
     s.parts.clear();
@@ -79,10 +84,12 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         key += p.before + '|' + p.words + '|';
         for (int b : p.buttons) key += std::to_string(b) + ',';
     }
-    key += '#' + std::to_string(uistyle::generation());
+    key += '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
     if (key != s.key) {
         s.key = key;
-        if (panel::blank(s.picture, s.layout.w, s.layout.h)) {
+        s.sheetSony = sony;
+        ++s.sheetGen;  // 3.0.18-beta.35: uaUI's line says it all again (no picture then)
+        if (!uaui::ready() && panel::blank(s.picture, s.layout.w, s.layout.h)) {
             ph::paint(s.picture, s.layout, s.parts, sony);
             drawWords(s.picture, gdiWords(ph::words(s.layout, s.parts, sony)));
             s.upload = true;
@@ -92,9 +99,32 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     s.shown = true;
 }
 
+// 3.0.18-beta.35 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the controller's hint line
+// in RmlUi's markup, as core padhint paints it - its pill and each part's buttons; the words where core padhint places
+// them. A part of the screen (not a window)
+static void fillSheet(State& s, uisheet::Content& c) {
+    const ph::Layout& L = s.layout;
+    const float sc = L.s;
+    c.w = float(L.w), c.h = float(L.h);
+    c.rect(c.under, L.glass, L.glass.h / 2, 0x10141C, std::max(0.88f, uistyle::panel()), 0xFFFFFF, 0.10f, 1.0f * sc);
+    for (size_t i = 0; i < L.parts.size() && i < s.parts.size(); ++i)
+        for (size_t g = 0; g < L.parts[i].glyphs.size() && g < s.parts[i].buttons.size(); ++g) {
+            const panel::Box& b = L.parts[i].glyphs[g];
+            s.sheet.glyph(c, s.parts[i].buttons[g], s.sheetSony, b.x, b.y, b.h);
+        }
+    c.say(ph::words(L, s.parts, s.sheetSony));
+}
+
+void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("pad hint", s.shown, false, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0) return;
+    if (!s.shown || s.sheetShown || s.k <= 0 || s.picture.width <= 0) return;
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
 }
 
