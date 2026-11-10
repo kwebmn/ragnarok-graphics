@@ -924,3 +924,17 @@ TEST(minimap_proto_parts_for_uaui) {
     CHECK(bars.size() == 3 && bars[2].box.x + bars[2].box.w == g.x + g.w && bars[2].box.h == g.h);
     CHECK(bars[0].rgb == 0x5FD08Au && bars[0].box.h < g.h && bars[1].box.h == g.h);
 }
+
+// 3.0.18-beta.42: uaUI's big map - the map's square alone, as big as the big map's map box
+TEST(minimap_proto_big_square_for_uaui) {
+    const minimap::MapSize map{100, 100};
+    const minimap::Big b = minimap::bigLayout(1920, 1080, 1.0f, map);
+    minimap::Scene sc;
+    sc.map = map;
+    sc.player = minimap::Cell{50, 50};
+    panel::Picture picture;
+    minimap::paintBigMap(picture, b, sc);
+    panel::Picture square;
+    minimap::paintBigSquare(square, picture, b, sc);
+    CHECK(square.width == int(b.map.w) && square.height == int(b.map.h));
+}

@@ -1375,4 +1375,15 @@ void paintSchemeSign(panel::Picture& out) {
     schemeSign(out, float(out.width) / 2, float(out.height) / 2, 5.5f * float(out.width) / 22, true);
 }
 
+void paintBigSquare(panel::Picture& out, const panel::Picture& map, const Big& b, const Scene& sc) {
+    const int w = int(b.map.w), h = int(b.map.h);
+    panel::blank(out, w, h);
+    if (map.width == w && map.height == h) out.px = map.px;
+    const panel::Box box{0, 0, float(w), float(h)};
+    overMap(out, box, sc, bigView(b, sc), b.s, 1.5f);
+    for (const Label& l : bigLabels(b, sc))
+        panel::roundRect(out, panel::Box{l.box.x - b.map.x, l.box.y - b.map.y, l.box.w, l.box.h}, 6 * b.s, kDark,
+                         0.84f);
+}
+
 }  // namespace uagfx::minimap

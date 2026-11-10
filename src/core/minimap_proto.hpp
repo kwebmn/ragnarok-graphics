@@ -255,6 +255,9 @@ int bigLayerAt(const Big& b, float x, float y);  // 3.0.11-beta.119: the layer's
 // The map's picture alone at the big map's size (made once a map and a size) and the rest over a copy of it
 void paintBigMap(panel::Picture& out, const Big& b, const Scene& sc);
 void paintBig(panel::Picture& out, const panel::Picture& map, const Big& b, const Scene& sc);
+// 3.0.18-beta.42 (uaUI's big map): the map's square alone in `out` (b.map's size: the map's picture, the marks, the
+// labels' grounds - paintBig()'s there)
+void paintBigSquare(panel::Picture& out, const panel::Picture& map, const Big& b, const Scene& sc);
 std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& title, const std::string& cell,
                             const std::string* layerNames = nullptr,  // 3.0.11-beta.119: the chips' words
                             const std::string& styleName = "");       // 3.0.11-beta.120

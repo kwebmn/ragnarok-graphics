@@ -45,6 +45,7 @@
 #include "win/window_stack.hpp"
 #include "win/ui_cost.hpp"
 #include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::minimapproto {
 namespace {
@@ -108,6 +109,12 @@ struct State {
     std::vector<minimap::Words> uiWords;
     std::vector<minimap::NetBar> uiBars;
     bool paintedByUi = false;
+    // 3.0.18-beta.42: uaUI's big map - its square apart, its words
+    uisheet::Sheet bigSheet;
+    panel::Picture bigSquare;
+    int bigGen = 0;
+    bool bigShown = false, bigByUi = false;
+    std::vector<minimap::Words> bigUiWords;
     uint32_t texture = 0;
     int texW = 0, texH = 0, targetW = 0, targetH = 0;
     float k = 0, scale = 1;
@@ -910,8 +917,16 @@ void renderBig(State& s) {
         s.bigMapOf = key;
         minimap::paintBigMap(s.bigMap, s.bigLayout, sc);
     }
-    minimap::paintBig(s.bigPicture, s.bigMap, s.bigLayout, sc);
     const std::string cell = s.cellKnown ? std::to_string(s.cell.x) + ", " + std::to_string(s.cell.y) : "";
+    if (uaui::ready()) {  // 3.0.18-beta.42: the square a picture, the rest uaUI's
+        minimap::paintBigSquare(s.bigSquare, s.bigMap, s.bigLayout, sc);
+        s.bigUiWords = minimap::bigWords(s.bigLayout, sc, shortTitle(s, s.map) + " \xC2\xB7 " + s.map, cell, names,
+                                         styleName);
+        ++s.bigGen;
+        s.bigDirty = false;
+        return;
+    }
+    minimap::paintBig(s.bigPicture, s.bigMap, s.bigLayout, sc);
     drawWords(s.bigPicture, gdiWords(minimap::bigWords(s.bigLayout, sc, shortTitle(s, s.map) + " \xC2\xB7 " + s.map,
                                                        cell, names, styleName)));
     s.bigDirty = false;
@@ -1484,10 +1499,60 @@ bool uiFrame(State& s) {
 
 }  // namespace
 
+// 3.0.18-beta.42 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the big map in RmlUi's
+// markup, as core minimap's paintBig - its card, the header's line, ✕ lit, the map's square (a picture: the map, the
+// marks, the labels' grounds), the layers' chips with their signs, «Схема»; the words where core minimap places them
+static void bigSheet(State& s, uisheet::Content& c) {
+    const minimap::Big& b = s.bigLayout;
+    const float sc = b.s, edge = std::max(1.0f, sc);
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kDark = 0x0B0E14, kAccent = 0xC9A55B;
+    c.w = float(b.w), c.h = float(b.h);
+    c.rect(c.under, panel::Box{0, 0, float(b.w), float(b.h)}, 12 * sc, kCard, 0.96f, kWhite, 0.14f, edge);
+    c.rect(c.under, panel::Box{0, b.header.h - edge, float(b.w), edge}, 0, kWhite, 0.10f);
+    if (s.bigPart == minimap::BigPart::Close) c.rect(c.under, b.close, 9 * sc, kWhite, 0.10f);
+    c.icons.push_back(uisheet::Icon{b.map.x, b.map.y, float(s.bigSquare.width), float(s.bigSquare.height), 1,
+                                    s.bigSheet.icon(&s.bigSquare)});
+    const minimap::Layers layers = layersOf(s.show);
+    const panel::Picture* face = s.kafraFace.width > 0 ? &s.kafraFace : nullptr;
+    for (int i = 0; i < minimap::kLayers; ++i) {
+        const panel::Box& chip = b.chips[i];
+        if (chip.w <= 0) continue;
+        const bool on = layers.on[i], over = s.bigPart == minimap::BigPart::Layer && s.hoverLayer == i;
+        c.rect(c.under, chip, chip.h / 2, on ? kAccent : kDark, on ? (over ? 0.32f : 0.22f) : (over ? 0.9f : 0.7f),
+               on ? kAccent : kWhite, on ? 0.7f : 0.16f, edge);
+        const int side = std::max(4, int(std::ceil(chip.h)));
+        const std::string key = "big" + std::to_string(i) + (on ? "+" : "-") + std::to_string(side) +
+                                (i == int(minimap::Layer::Kafra) && face ? ":" + std::to_string(uaui::stamp(face))
+                                                                         : std::string());
+        const std::string src = s.bigSheet.made(key, side, side, [&](panel::Picture& p) {
+            minimap::paintLayerSign(p, minimap::Layer(i), on, face, sc * 6.0f / 5.5f);
+        });
+        c.icons.push_back(uisheet::Icon{chip.x, chip.y, float(side), float(side), 1, src});
+    }
+    if (b.styleChip.w > 0) {
+        const panel::Box& chip = b.styleChip;
+        const bool scheme = s.show.scheme && !s.scheme.levels.empty(), over = s.bigPart == minimap::BigPart::Style;
+        c.rect(c.under, chip, chip.h / 2, scheme ? kAccent : kDark,
+               scheme ? (over ? 0.42f : 0.32f) : (over ? 0.9f : 0.7f), scheme ? kAccent : kWhite, scheme ? 0.8f : 0.16f,
+               edge);
+        const int side = std::max(4, int(std::ceil(chip.h)));
+        c.icons.push_back(uisheet::Icon{chip.x, chip.y, float(side), float(side), 1,
+                                        s.bigSheet.made("bigscheme" + std::to_string(side), side, side,
+                                                        [&](panel::Picture& p) { minimap::paintSchemeSign(p); })});
+    }
+    c.say(s.bigUiWords);
+}
+
 void frame(HWND game, const Show& show, double k, int targetWidth, int targetHeight) {
     frameInner(game, show, k, targetWidth, targetHeight);
     State& s = state();
     s.uiShown = uiFrame(s);
+    if (uaui::ready() != s.bigByUi) {  // painted for the other way: again
+        s.bigByUi = uaui::ready();
+        s.bigDirty = true;
+    }
+    s.bigShown = s.bigSheet.frame("big map", s.shown && s.big && s.bigSquare.width > 0 && s.bigGen > 0, true,
+                                  s.bigLayout.x, s.bigLayout.y, s.bigGen, [&](uisheet::Content& c) { bigSheet(s, c); });
 }
 
 bool key(unsigned vk) {
@@ -1532,7 +1597,7 @@ void drawBig(FrameRecord& record, gpu::Renderer& renderer, bool over) {
         lastTop = top;
     }
     if (over != s.bigTop) return;
-    if (!s.shown || s.k <= 0 || !s.big || s.bigPicture.width <= 0) return;
+    if (!s.shown || s.k <= 0 || !s.big || s.bigShown || s.bigPicture.width <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     drawPart(record, renderer, s.bigPicture, s.bigTexture, s.bigTexW, s.bigTexH, s.bigUpload, s.bigLayout.x,
