@@ -1,3 +1,5 @@
+- New interface (uaUI): "Скляні вікна" with DLSS - windows were a flat grey instead of the blurred world; the glass now works with DLSS too. Small style errors in the log at start removed.
+
 - New interface (uaUI): the switch "Скляні вікна (нова бібліотека)" under "Інтерфейс" (off by default). With it windows of the new library show the world behind them softly blurred, like frosted glass, with the window's colour laid over. Direct3D 12 only (with DLSS too); on Direct3D 11 the switch changes nothing.
 
 - New interface (uaUI): with "Плавний рух (нова бібліотека)" the HP bars in the party panel glide to their new value too.
