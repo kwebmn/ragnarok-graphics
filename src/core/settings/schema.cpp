@@ -391,7 +391,7 @@ const std::vector<IniSetting>& iniSettings() {
         {"interface", "low_hp_edge", Page::Interface, Control::Slider, 0, 100, 10, {}, {}, Text::InterfaceLowHpEdge,
          Text::InterfaceLowHpEdgeHint, " %"},
         // 3.0.11-beta.49: the world dimmed under the windows
-        {"interface", "dim_world", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceDimWorld,
+        {"interface", "dim_world", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceDimWorld,
          Text::InterfaceDimWorldHint, ""},
         // 3.0.11-beta.48: the cast's label over the hero
         {"interface", "cast", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceCast,
