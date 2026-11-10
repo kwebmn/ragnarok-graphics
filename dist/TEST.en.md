@@ -1,3 +1,7 @@
+- Gamepad: B now closes an NPC talk just as Esc does - on a "Далі" page, in a window with no buttons (it needed holding for a second) and in a number field. The hint line shows it.
+- Gamepad: with the character dead and the death window closed, B opens it again - to go back to the save point.
+- New interface (uaUI): the party panel re-evaluates only the bars while the HP bars glide, not every row.
+
 - Fixed (since 3.0.18-beta.75): on the login screens the game's "Please wait…", "Failed to Connect to Server." and other login errors were not shown - only the background stayed. The developer's answer and the gamepad hint show before entering the game again too.
 
 - New interface (uaUI): the red edges at low HP are lighter still - the clear middle of the screen is no longer cut into small triangles. The FPS drop when they appeared (R-6XYRXP) is gone together with 3.0.18-beta.76.
