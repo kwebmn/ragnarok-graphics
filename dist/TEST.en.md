@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.31 — what's new
+
+- **NPC talk, requests ("Скільки?", invitations), the item choice, the support answer card, item and skill cards now use "Нова бібліотека інтерфейсу (RmlUi)":** the windows, numbered menu options, buttons, fields, lists with icons and scrolling, card slots are drawn by the new library. Clicks, keys and the controller work as before.
+
 # uaRO Graphics 3.0.18-beta.30 — what's new
 
 - **The NPC shop, "Лавка", opening your shop and your own shop now use "Нова бібліотека інтерфейсу (RmlUi)":** tabs, search, the ware list and the cart with − / amount / +, the "Купити" or "Продати" button, keys and controller buttons; the shop rows with "+" and "−", the sums, the price fields are drawn by the new library. Clicks, the wheel, keys and the controller work as before.
