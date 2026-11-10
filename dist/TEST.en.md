@@ -1,3 +1,5 @@
+- Chat: the chat line takes Ctrl+V (paste one line at the end, as much as the field holds), Ctrl+C (copy the line) and Ctrl+X (cut it). The field itself stays the game's - sending, typing in other languages and the battle mode as they were.
+
 - "Довідник": the world map is no longer repainted on every mouse move over its rows - only when something on it changed (less processor work with "Довідник" open).
 
 - New interface (uaUI): the game's "Опції" is a live window of the new library: the music and sound volumes are its sliders, the switches ticks.
