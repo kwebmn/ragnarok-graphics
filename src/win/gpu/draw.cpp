@@ -348,6 +348,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         linearClamp.mipFilter = d3d7::TFP_NONE;
         backdropCopied = ensureScene("glass") && makeRoom(linearClamp, linearClamp, 0, 3) && copySceneColor() ? 1 : -1;
         if (backdropCopied < 0) LOG_INFO("glass: no copy of the picture - the new interface's glass not drawn");
+        static bool told = false;  // 3.0.18-beta.65: the facts for a report
+        if (backdropCopied > 0 && !told) {
+            told = true;
+            LOG_INFO("glass: the new interface's glass reads the %s blurred (%dx%d)",
+                     upscale ? "world before DLSS" : "picture", sceneWidth, sceneHeight);
+        }
     }
     if (s.ui && d.effect == uint8_t(effect_exe::Kind::Backdrop) && !backdrop) return;  // no shader: nothing
     if (backdrop && backdropCopied < 0) return;
