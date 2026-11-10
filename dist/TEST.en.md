@@ -1,3 +1,5 @@
+- "Речі" (items), "Склад" (storage) and "Візок" (cart) are now laid out by the new interface library: the tabs, the search, the cells eight a row and the footer. Clicks, dragging things into other windows, the tip and the controller take the cells' places from that layout, so they land where the cell is seen.
+
 - The item description card and the skill card can now be dragged: press on the title or the text and drag. A new card opens beside the cursor again.
 
 - Every window of the new interface can now be dragged: press its empty part and pull. Added for all live windows (messages, requests, "Опції", the pet, macros, chat rooms, shops, the NPC talk and others), the guild, the homunculus, the mercenary and each whisper card.
