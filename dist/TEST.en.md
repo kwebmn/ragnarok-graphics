@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.20 — what's new
+
+- **The buffs column is on the new library:** with it on, the column is built anew - icons, their times outlined in dark, the spent time darkened, names, the "more" count, the names button and the tip; debuffs in a red frame. What fits and where the rest go stays as before.
+
 # uaRO Graphics 3.0.18-beta.19 — what's new
 
 - **The party panel is on the new library:** with it on, the panel is built anew - faces, the leader's crown, class or cast, HP per cent or the map, the HP bar, the cast line, the arrow to the member, buffs with their times, red and gold rows, the compact view, folding. A click on a member does the same as before.
