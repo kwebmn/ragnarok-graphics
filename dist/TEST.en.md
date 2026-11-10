@@ -1,3 +1,5 @@
+- New interface (uaUI): the red edges at low HP are lighter still - the clear middle of the screen is no longer cut into small triangles. The FPS drop when they appeared (R-6XYRXP) is gone together with 3.0.18-beta.76.
+
 - New interface (uaUI): the red edges at low HP no longer slow things down at 4K (over 100 thousand vertices a frame, now a few thousand). Style errors in the log at start removed.
 
 - The new interface is now drawn by the new library (uaUI) alone: the "new interface library" switch under "Інтерфейс" is gone, the old way of painting windows and panels as pictures has been removed.
