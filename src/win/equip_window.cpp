@@ -35,7 +35,9 @@
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
 #include "uikit/equip_live.hpp"
+#include "win/hero_picture.hpp"
 #include "win/live_part.hpp"
+#include "uikit/hits.hpp"
 #include "win/ui_sheet.hpp"
 #include "win/window_stack.hpp"
 
@@ -116,6 +118,12 @@ struct State {
     ew::Show show;
     ew::Layout layout;
     std::string key, portraitKey;
+    // 3.0.18-beta.111 (the owner: «из спрайтов, настоящего»): the character in the middle from the game's sprites,
+    // the way it faces (◀ ▶), made again when its looks, its way or the size change
+    int heroDir = 0;
+    heropicture::Looks heroLooks;
+    std::string heroKey;
+    panel::Picture hero;
     panel::Picture picture, portrait;
     uint32_t texture = 0;
     int texW = 0, texH = 0;
@@ -316,6 +324,19 @@ void readData(State& s) {
         if (!headpicture::make(sex, head, colour, side, s.portrait)) s.portrait = panel::Picture{};
     }
     d.portrait = s.portrait.width > 0 ? &s.portrait : nullptr;
+    // 3.0.18-beta.111: the character from its sprites (its body by the job it shows, its head, headgear, falcon, cart)
+    const heropicture::Looks looks = heropicture::own();
+    const int hw = int(std::lround(180 * s.scale)), hh = int(std::lround(260 * s.scale));
+    std::string hk;
+    for (const int v : {looks.job, looks.sex, looks.head, looks.colour, looks.low, looks.top, looks.middle,
+                        int(looks.options), s.heroDir, hw, hh})
+        hk += std::to_string(v) + ':';
+    if (hk != s.heroKey) {
+        s.heroKey = hk;
+        std::string from;
+        if (!heropicture::make(looks, s.heroDir, hw, hh, s.hero, &from)) s.hero = panel::Picture{};
+        if (s.told++ < 40) LOG_INFO("equip: the character from its sprites - %s", from.c_str());
+    }
 }
 
 void readPicks(State& s, int slot) {  // what of the bag fits the slot: identified, not worn
@@ -534,7 +555,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
                       (s.show.pad ? (s.show.sony ? "S" : "X") : "") + 'F' + std::to_string(s.show.dropFits) + ';' +
                       s.data.who + ';' +
                       std::to_string(s.data.baseLevel) + '/' + std::to_string(s.data.jobLevel) + ';' +
-                      (s.data.portrait ? "f" : "");
+                      (s.data.portrait ? "f" : "") + s.heroKey;  // 3.0.18-beta.111
     for (const ew::Worn& w : s.data.slots)
         key += std::to_string(w.id) + '+' + std::to_string(w.refine) + 'x' + std::to_string(w.count) + ':' +
                std::to_string(w.cards[0]) + '.' + std::to_string(w.cards[1]) + '.' + std::to_string(w.cards[2]) + '.' +
@@ -565,6 +586,9 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                     m.ground = s.live.ground();
                                     const padglyph::Family f = s.show.sony ? padglyph::Family::Sony
                                                                            : padglyph::Family::Xbox;
+                                    m.turns = s.hero.width > 0;  // 3.0.18-beta.111: its sprites' character
+                                    m.hero = m.turns ? s.live.icon(&s.hero) : "";
+                                    m.heroW = float(s.hero.width), m.heroH = float(s.hero.height);
                                     el::fill(m, s.data, s.show, texts(), s.layout.s,
                                              [&](const panel::Picture* p) { return s.live.icon(p); },
                                              [&](int button, float h, float& w) {
@@ -713,6 +737,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     }
     if (h.part == ew::Part::None || m == WM_MOUSEMOVE) return false;
     result = 0;
+    if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && s.live.shown()) {  // 3.0.18-beta.111: ◀ ▶ turn it
+        const uikit::Hit turn = uikit::hitAt(s.live.doc.doc(), tx - float(s.layout.x), ty - float(s.layout.y));
+        if (turn.part == "turnleft" || turn.part == "turnright") {
+            s.heroDir = (s.heroDir + (turn.part == "turnleft" ? 1 : 7)) % 8;
+            s.key.clear();
+            return true;
+        }
+    }
     if (m == WM_RBUTTONDOWN && h.part == ew::Part::Slot) {  // its card, as a right click in the game's window
         if (s.data.slots[h.index].index > 0) card(s, h.index);
         return true;

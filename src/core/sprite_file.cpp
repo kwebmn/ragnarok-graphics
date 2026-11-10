@@ -144,7 +144,12 @@ bool readAct(const std::string& bytes, Act& out) {
             if (version >= 0x203) {
                 const uint32_t anchors = in.u(4);
                 if (anchors > 64) return false;
-                in.skip(size_t(anchors) * 16);
+                for (uint32_t k = 0; k < anchors && in.ok; ++k) {  // 3.0.18-beta.111: kept (x, y)
+                    in.u(4);
+                    const int ax = in.i32(), ay = in.i32();
+                    in.u(4);
+                    fr.anchors.emplace_back(ax, ay);
+                }
             }
             list.push_back(std::move(fr));
         }
@@ -152,6 +157,88 @@ bool readAct(const std::string& bytes, Act& out) {
     }
     if (!in.ok) return false;
     out = std::move(a);
+    return true;
+}
+
+bool compose(const std::vector<Part>& parts, Image& out, int& footX, int& footY) {
+    struct Placed {
+        const Image* im;
+        const Layer* ly;
+        float x0, y0, w, h;
+    };
+    std::vector<Placed> placed;
+    float left = 1e9f, top = 1e9f, right = -1e9f, bottom = -1e9f;
+    std::pair<int, int> neck{0, 0};
+    bool haveNeck = false;
+    size_t bodyAt = 0;
+    for (size_t p = 0; p < parts.size(); ++p)
+        if (parts[p].body) {
+            bodyAt = p;
+            break;
+        }
+    if (bodyAt < parts.size()) {
+        const Part& b = parts[bodyAt];
+        if (b.act && b.action < b.act->actions.size() && b.frame < b.act->actions[b.action].size() &&
+            !b.act->actions[b.action][b.frame].anchors.empty())
+            neck = b.act->actions[b.action][b.frame].anchors[0], haveNeck = true;
+    }
+    for (size_t p = 0; p < parts.size(); ++p) {
+        const Part& part = parts[p];
+        if (!part.sprite || !part.act || part.action >= part.act->actions.size() ||
+            part.frame >= part.act->actions[part.action].size())
+            continue;
+        const Frame& fr = part.act->actions[part.action][part.frame];
+        int ox = part.dx, oy = part.dy;
+        if (p != bodyAt && part.anchored && haveNeck && !fr.anchors.empty())
+            ox += neck.first - fr.anchors[0].first, oy += neck.second - fr.anchors[0].second;
+        for (const Layer& ly : fr.layers) {
+            const std::vector<Image>& list = ly.type == 1 ? part.sprite->truecolour : part.sprite->palette;
+            if (ly.index < 0 || size_t(ly.index) >= list.size()) continue;
+            const Image& im = list[size_t(ly.index)];
+            const float w = float(im.w) * std::fabs(ly.scaleX), h = float(im.h) * std::fabs(ly.scaleY);
+            if (w < 1 || h < 1) continue;
+            const float x0 = float(ly.x + ox) - w / 2, y0 = float(ly.y + oy) - h / 2;
+            placed.push_back(Placed{&im, &ly, x0, y0, w, h});
+            left = std::min(left, x0);
+            top = std::min(top, y0);
+            right = std::max(right, x0 + w);
+            bottom = std::max(bottom, y0 + h);
+        }
+    }
+    if (placed.empty()) return false;
+    Image o;
+    o.w = std::min(kMostSide, int(std::ceil(right - left)));
+    o.h = std::min(kMostSide, int(std::ceil(bottom - top)));
+    o.argb.assign(size_t(o.w) * size_t(o.h), 0);
+    for (const Placed& p : placed) {
+        const Image& im = *p.im;
+        const uint32_t tint = p.ly->tint;
+        const float ta = float(tint >> 24) / 255, tr = float((tint >> 16) & 0xFF) / 255,
+                    tg = float((tint >> 8) & 0xFF) / 255, tb = float(tint & 0xFF) / 255;
+        for (int y = 0; y < o.h; ++y) {
+            const float sy = (float(y) + 0.5f + top - p.y0) / p.h * float(im.h);
+            if (sy < 0 || sy >= float(im.h)) continue;
+            for (int x = 0; x < o.w; ++x) {
+                float sx = (float(x) + 0.5f + left - p.x0) / p.w * float(im.w);
+                if (sx < 0 || sx >= float(im.w)) continue;
+                if (p.ly->mirror) sx = float(im.w) - sx;
+                const int ix = std::clamp(int(sx), 0, im.w - 1), iy = std::clamp(int(sy), 0, im.h - 1);
+                const uint32_t c = im.argb[size_t(iy) * size_t(im.w) + size_t(ix)];
+                const float alpha = float(c >> 24) / 255 * ta;
+                if (alpha <= 0) continue;
+                uint32_t& d = o.argb[size_t(y) * size_t(o.w) + size_t(x)];
+                const float da = float(d >> 24) / 255, oa = alpha + da * (1 - alpha);
+                auto mix = [&](int shift, float t) {
+                    const float src = float((c >> shift) & 0xFF) * t, dst = float((d >> shift) & 0xFF);
+                    return uint32_t(std::lround((src * alpha + dst * da * (1 - alpha)) / std::max(oa, 1e-6f)));
+                };
+                d = uint32_t(std::lround(oa * 255)) << 24 | mix(16, tr) << 16 | mix(8, tg) << 8 | mix(0, tb);
+            }
+        }
+    }
+    footX = int(std::lround(-left));
+    footY = int(std::lround(-top));
+    out = std::move(o);
     return true;
 }
 

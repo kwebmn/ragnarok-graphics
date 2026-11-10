@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <functional>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -31,6 +32,8 @@ struct Layer {
 };
 struct Frame {
     std::vector<Layer> layers;
+    // 3.0.18-beta.111: its anchors (x, y from the feet) - where the next part fixes (the body's neck, a head's top)
+    std::vector<std::pair<int, int>> anchors;
 };
 struct Act {
     std::vector<std::vector<Frame>> actions;
@@ -39,6 +42,18 @@ bool readAct(const std::string& bytes, Act& out);
 
 // An action's frame put together (its layers in order, over each other) and cut to what it shows; false: nothing
 bool frameImage(const Sprite& s, const Act& a, size_t action, size_t frame, Image& out);
+// 3.0.18-beta.111 (the owner: the character in «Спорядження» from the game's sprites): parts put together in order,
+// each over the ones before - the body where it stands, an anchored one moved by the body's anchor less its own (as
+// the game puts a head and its headgear on the body), then by (dx, dy). `footX`, `footY` where the feet are
+struct Part {
+    const Sprite* sprite = nullptr;
+    const Act* act = nullptr;
+    size_t action = 0, frame = 0;
+    bool anchored = true;
+    int dx = 0, dy = 0;
+    bool body = false;  // the anchors' source (else the first part): one drawn under the body (a cart) may come first
+};
+bool compose(const std::vector<Part>& parts, Image& out, int& footX, int& footY);
 // 3.0.11-beta.76: the same `factor` times its size - each palette layer's picture from `bigger` (its index) when it
 // gives one (factor times that picture: the AI pack's frame), else the picture itself stretched
 bool frameImageScaled(const Sprite& s, const Act& a, size_t action, size_t frame, int factor,

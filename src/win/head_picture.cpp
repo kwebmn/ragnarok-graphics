@@ -32,6 +32,8 @@ std::string readString(uint32_t at) {
     return buf;
 }
 
+}  // namespace
+
 bool readFile(const std::string& entry, std::string& out) {
     if (readGameFile(entry, out)) return true;  // as the game finds it (its zips too)
     static std::unique_ptr<gamefiles::Reader> files;
@@ -42,10 +44,7 @@ bool readFile(const std::string& entry, std::string& out) {
     return true;
 }
 
-}  // namespace
-
-bool make(int sex, int head, int colour, int side, panel::Picture& out, std::string* from) {
-    out = panel::Picture{};
+bool headFiles(int sex, int head, int colour, std::string& spr, std::string& act, std::string* from) {
     sex = sex != 0 ? 1 : 0;  // as FUN_0062e7b0: not 0 - a man
     if (head <= 0) head = 1;  // FUN_00639900's for none
     std::string folder = readString(read32(read32(kFolders) + 4 * uint32_t(sex)));
@@ -57,7 +56,6 @@ bool make(int sex, int head, int colour, int side, panel::Picture& out, std::str
         ending = "_" + folder;
     }
     const std::string base = "data\\sprite\\" + kHuman + folder + "\\" + name + ending;
-    std::string spr, act;
     if (!readFile(base + ".spr", spr) || !readFile(base + ".act", act)) {
         if (from) *from = "no head sprite " + base + ".spr";
         return false;
@@ -67,20 +65,29 @@ bool make(int sex, int head, int colour, int side, panel::Picture& out, std::str
         "data\\palette\\" + kHairPalettes + name + ending + "_" + std::to_string(colour) + ".pal";
     if (colour > 0 && readFile(palName, pal) && pal.size() >= 1024 && spr.size() > 1024)
         spr.replace(spr.size() - 1024, 1024, pal, 0, 1024);  // the hair colour in the sprite's palette, as the game
+    if (from) *from = base + ".spr" + (pal.empty() ? "" : ", the hair colour " + std::to_string(colour));
+    return true;
+}
+
+bool make(int sex, int head, int colour, int side, panel::Picture& out, std::string* from) {
+    out = panel::Picture{};
+    std::string spr, act, base;
+    if (!headFiles(sex, head, colour, spr, act, &base)) {
+        if (from) *from = base;
+        return false;
+    }
     spritefile::Sprite sp;
     spritefile::Act ac;
     spritefile::Image im;
     if (!spritefile::readSpr(spr, sp) || !spritefile::readAct(act, ac) || !spritefile::frameImage(sp, ac, 0, 0, im)) {
-        if (from) *from = "the head sprite " + base + ".spr not read";
+        if (from) *from = "the head sprite " + base + " not read";
         return false;
     }
     const spritefile::Image fit = spritefile::fitted(im, side, side);
     out.width = fit.w;
     out.height = fit.h;
     out.px = fit.argb;
-    if (from)
-        *from = base + ".spr (" + std::to_string(im.w) + "x" + std::to_string(im.h) + ")" +
-                (pal.empty() ? "" : ", the hair colour " + std::to_string(colour));
+    if (from) *from = base + " (" + std::to_string(im.w) + "x" + std::to_string(im.h) + ")";
     return true;
 }
 

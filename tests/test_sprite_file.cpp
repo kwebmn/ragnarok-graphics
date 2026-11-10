@@ -37,8 +37,8 @@ std::string spr() {
     return s + pal;
 }
 
-// AC 2.5: one action, one frame, `layers` layers at (x, 0), the first mirrored when asked
-std::string act(int layers, bool mirror, int x2 = 0) {
+// AC 2.5: one action, one frame, `layers` layers at (x, 0), the first mirrored when asked; an anchor when ax/ay given
+std::string act(int layers, bool mirror, int x2 = 0, bool anchor = false, int ax = 0, int ay = 0) {
     std::string s = "AC";
     put(s, 5, 1);
     put(s, 2, 1);
@@ -64,7 +64,13 @@ std::string act(int layers, bool mirror, int x2 = 0) {
         put(s, 2, 4);
     }
     put(s, 0xFFFFFFFF, 4);  // no sound
-    put(s, 0, 4);           // no anchors
+    put(s, anchor ? 1 : 0, 4);
+    if (anchor) {  // 3.0.18-beta.111: an anchor - 4 unknown bytes, x, y, 4 more
+        put(s, 0, 4);
+        put(s, uint32_t(ax), 4);
+        put(s, uint32_t(ay), 4);
+        put(s, 0, 4);
+    }
     return s;
 }
 
@@ -176,4 +182,24 @@ TEST(sprite_file_top_square) {
     CHECK(b.w == 42 && b.h == 42);
     CHECK(b.argb[0] == wide.argb[19] && b.argb[size_t(41 * 42 + 41)] == wide.argb[size_t(41 * 80 + 60)]);
     CHECK(spritefile::topSquare(spritefile::Image{}, 0.42f).w == 0);
+}
+
+// 3.0.18-beta.111 (the owner: the character in «Спорядження» from the game's sprites): the anchors read; parts put
+// together as the game does - each part moved by the body's anchor less its own (the head on the neck)
+TEST(sprite_file_anchors_put_parts_together) {
+    spritefile::Sprite sp;
+    CHECK(spritefile::readSpr(spr(), sp));
+    spritefile::Act body, head;
+    CHECK(spritefile::readAct(act(1, false, 0, true, 0, -10), body));
+    CHECK(spritefile::readAct(act(1, false, 0, true, 0, 0), head));
+    CHECK_EQ(body.actions[0][0].anchors.size(), size_t(1));
+    CHECK_EQ(body.actions[0][0].anchors[0].second, -10);
+    std::vector<spritefile::Part> parts{{&sp, &body, 0, 0}, {&sp, &head, 0, 0}};
+    spritefile::Image out;
+    int footX = 0, footY = 0;
+    CHECK(spritefile::compose(parts, out, footX, footY));
+    CHECK_EQ(out.w, 3);
+    CHECK_EQ(out.h, 12);  // the body (2 high) and the head 10 above it
+    CHECK(footY > 9);    // the feet at the body's centre, low in the picture
+    CHECK((out.argb[size_t(1)] >> 24) != 0);  // the head's top row drawn at the picture's top
 }
