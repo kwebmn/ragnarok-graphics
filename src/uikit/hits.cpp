@@ -14,6 +14,14 @@ panel::Box boxOf(Rml::ElementDocument* doc, Rml::Element* e) {
     return panel::Box{at.x, at.y, size.x, size.y};
 }
 
+// 3.0.18-beta.107: shown - itself and every parent up to the document laid out (a data-if's display none above it
+// leaves it at 0, 0 with no size; the login's refusal line under the other field)
+bool shown(Rml::ElementDocument* doc, Rml::Element* e) {
+    for (Rml::Element* p = e; p && p != doc; p = p->GetParentNode())
+        if (!p->IsVisible() || p->GetComputedValues().display() == Rml::Style::Display::None) return false;
+    return true;
+}
+
 int indexOf(Rml::Element* e) {
     const Rml::Variant* v = e->GetAttribute("data-index");
     return v ? v->Get<int>(-1) : -1;
@@ -45,7 +53,7 @@ std::vector<Placed> placesOf(Rml::ElementDocument* doc, const char* part) {
     Rml::ElementList found;
     doc->QuerySelectorAll(found, std::string("[data-hit=") + part + "]");
     for (Rml::Element* e : found)
-        if (e->IsVisible()) out.push_back(Placed{indexOf(e), boxOf(doc, e)});
+        if (shown(doc, e)) out.push_back(Placed{indexOf(e), boxOf(doc, e)});
     return out;
 }
 

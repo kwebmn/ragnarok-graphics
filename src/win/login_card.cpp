@@ -44,6 +44,8 @@
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
+#include "uikit/login_live.hpp"
+#include "win/live_part.hpp"
 #include "win/ui_sheet.hpp"
 
 namespace uagfx::win::loginwin {
@@ -94,7 +96,10 @@ struct State {
     uisheet::Sheet veilSheet, toastSheet;
     bool veilShown = false, toastShown = false;
     int veilGen = 0, toastGen = 0;
-    uisheet::Sheet sheet;  // 3.0.18-beta.33: the card drawn by uaUI
+    // 3.0.18-beta.107 (docs/superpowers/plans/2026-11-10-uaui-live-drag.md): the card live - laid out by RmlUi, its
+    // boxes into core logincard's layout by name (refit); `options` what that layout was asked for
+    LivePart<uikit::login::Model> live;
+    lc::Options options;
     uisheet::Sheet chromeSheet;  // 3.0.18-beta.44: the strip at the screen's foot
     int chromeGen = 0;
     bool chromeShown = false;
@@ -1065,6 +1070,8 @@ static void frameInner(HWND game, bool on, bool status, bool news, loginview::Vi
     o.drop = any;
     o.site = s.fields.site != lc::SiteLine::None;
     s.layout = lc::layout(targetWidth, targetHeight, s.scale, o);
+    s.options = o;
+    if (s.live.shown()) uikit::login::refit(s.live.doc.doc(), s.layout);  // 3.0.18-beta.107: x, y core logincard's
     s.show.hover = 0;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy))
@@ -1121,72 +1128,6 @@ static void chromeSheet(State& s, uisheet::Content& c) {
     c.say(loginchrome::words(L, sh));
 }
 
-// 3.0.18-beta.33 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the login in RmlUi's
-// markup, line by line as core logincard paints it - its glass, the account's and the password's fields (gold
-// focused, red refused), the ticks, ▾ of the shelf and the eye (core logincard's shapes as pictures), «Увійти»,
-// «Вийти»; the words where core logincard places them
-static void fillSheet(State& s, uisheet::Content& c) {
-    const lc::Layout& L = s.layout;
-    const lc::Fields& f = s.fields;
-    const lc::Show& sh = s.show;
-    const float sc = L.s;
-    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kMuted = 0x9AA3B5;
-    constexpr uint32_t kBlack = 0x000000, kRed = 0xFF5A4E;
-    auto& u = c.under;
-    c.w = float(L.w), c.h = float(L.h);
-    c.rect(u, L.glass, 14 * sc, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * sc);
-    const auto field = [&](const panel::Box& b, bool focused, bool hot, bool refused) {
-        const float edge = refused ? 0.9f : focused ? 0.85f : hot ? 0.30f : 0.16f;
-        c.rect(u, b, 8 * sc, kBlack, 0.35f, refused ? kRed : focused ? kGold : kWhite, edge,
-               (focused || refused ? 1.5f : 1.0f) * sc);
-    };
-    const bool bad = !f.error.empty();
-    field(L.account, f.focus == lc::Focus::Account, sh.hover == int(lc::Part::Account),
-          bad && f.errorField == loginerr::Field::Account);
-    field(L.password, f.focus == lc::Focus::Password, sh.hover == int(lc::Part::Password),
-          bad && f.errorField == loginerr::Field::Password);
-    const auto box = [&](const panel::Box& b, bool on) {
-        c.rect(u, b, 4 * sc, on ? kGold : kWhite, on ? 0.85f : 0.06f, on ? kGold : kWhite, on ? 1.0f : 0.35f,
-               1.0f * sc);
-    };
-    box(L.tick, f.remember);
-    box(L.addTick, f.addShelf);
-    if (L.drop.w > 0) {  // ▾: core logincard's triangle in a picture of its own
-        const float a = sh.hover == int(lc::Part::Drop) || f.dropOpen ? 1.0f : 0.8f;
-        const int side = std::max(4, int(std::ceil(12 * sc)));
-        const std::string key = "drop" + std::to_string(side) + (a >= 1 ? "+" : "-");
-        const std::string src = s.sheet.made(key, side, side, [&](panel::Picture& p) {
-            lc::paintTriangle(p, float(side) / 2, float(side) / 2, 10 * sc, kGold2, a);
-        });
-        c.icons.push_back(uisheet::Icon{std::round(L.drop.x + L.drop.w / 2 - 2 * sc - float(side) / 2),
-                                        std::round(L.drop.y + L.drop.h / 2 - float(side) / 2), float(side),
-                                        float(side), 1, src});
-    }
-    {  // the eye
-        const float a = !f.passwordShown.empty() ? 1.0f : sh.hover == int(lc::Part::Eye) ? 0.9f : 0.6f;
-        const int w = std::max(4, int(std::ceil(20 * sc))), h = std::max(4, int(std::ceil(14 * sc)));
-        const std::string key = "eye" + std::to_string(w) + ':' + std::to_string(int(a * 10));
-        const std::string src = s.sheet.made(key, w, h, [&](panel::Picture& p) {
-            lc::paintEye(p, panel::Box{0, 0, float(w), float(h)}, kMuted, a, sc);
-        });
-        c.icons.push_back(uisheet::Icon{std::round(L.eye.x + 8 * sc), std::round(L.eye.y + L.eye.h / 2 - 7 * sc),
-                                        float(w), float(h), 1, src});
-    }
-    c.rect(u, L.enter, 9 * sc, kGold, sh.hover == int(lc::Part::Enter) ? 0.36f : 0.24f, kGold, 0.85f, 1.0f * sc);
-    c.rect(u, L.exit, 9 * sc, kWhite, sh.hover == int(lc::Part::Exit) ? 0.12f : 0.06f, kWhite, 0.16f, 1.0f * sc);
-    c.say(lc::words(L, f, sh, texts(s.view)));
-    if (s.dropOpen && s.drop.w > 0) {  // 3.0.18-beta.45: ▾'s list over the card, as core logincard paints it
-        const float x = s.drop.x, y = s.drop.y;
-        c.rect(c.topBoxes, panel::Box{x, y, s.drop.w, s.drop.h}, 10 * sc, 0x161B26, 0.98f, 0xFFFFFF, 0.14f, 1.0f * sc);
-        if (s.dropHover >= 0 && s.dropHover < int(s.drop.rows.size())) {
-            const panel::Box& r = s.drop.rows[size_t(s.dropHover)];
-            c.rect(c.topBoxes, panel::Box{x + r.x - s.drop.x, y + r.y - s.drop.y, r.w, r.h}, 7 * sc, kGold, 0.16f);
-        }
-        c.sayInto(c.topWords,
-                  lc::dropWords(s.drop, s.dropRows, s.dropHover, say(settings::Text::LoginOtherLogin), s.scale), x, y);
-    }
-}
-
 void frame(HWND game, bool on, bool status, bool news, loginview::View view, unsigned codePage, double k,
            int targetWidth, int targetHeight) {
     frameInner(game, on, status, news, view, codePage, k, targetWidth, targetHeight);
@@ -1194,15 +1135,53 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
     s.chromeSheet.anywhere = true;  // 3.0.18-beta.44
     s.chromeShown = s.chromeSheet.frame("login strip", s.shown && s.chrome.w > 0 && s.chromeGen > 0, true, s.chrome.x,
                                         s.chrome.y, s.chromeGen, [&](uisheet::Content& c) { chromeSheet(s, c); });
-    s.sheet.anywhere = true;  // before the world
+    namespace ll = uikit::login;
+    s.live.doc.anywhere = true;  // before the world
     const int gen = s.sheetGen ^ (s.dropOpen ? (s.dropHover + 2) * 7919 : 0);  // ▾'s list and its row lit too
-    s.sheetShown = s.sheet.frame("login", s.shown && s.mode == State::Mode::Card, true, s.layout.x, s.layout.y, gen,
-                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+    s.sheetShown = s.live.frame("login", s.shown && s.mode == State::Mode::Card, s.layout.x, s.layout.y, gen,
+                                ll::rml(), ll::bind, [&](ll::Model& m) {
+        const float sc = s.layout.s;
+        constexpr uint32_t kGold2 = 0xE6CB8A, kMuted = 0x9AA3B5;
+        m.ground = uisheet::Sheet::ground(0x10141C, std::max(0.94f, uistyle::window()));
+        ll::fill(m, s.layout, s.options, s.fields, s.show, texts(s.view));
+        {  // ▾ and the eye: core logincard's shapes as pictures (IBM Plex has neither)
+            const float a = s.show.hover == int(lc::Part::Drop) || s.fields.dropOpen ? 1.0f : 0.8f;
+            const int side = std::max(4, int(std::ceil(12 * sc)));
+            m.dropSide = float(side);
+            m.dropSrc = s.live.made("drop" + std::to_string(side) + (a >= 1 ? "+" : "-"), side, side,
+                                    [&](panel::Picture& p) {
+                                        lc::paintTriangle(p, float(side) / 2, float(side) / 2, 10 * sc, kGold2, a);
+                                    });
+            const float e = !s.fields.passwordShown.empty() ? 1.0f : s.show.hover == int(lc::Part::Eye) ? 0.9f : 0.6f;
+            const int w = std::max(4, int(std::ceil(20 * sc))), h = std::max(4, int(std::ceil(14 * sc)));
+            m.eyeW = float(w), m.eyeH = float(h);
+            m.eyeSrc = s.live.made("eye" + std::to_string(w) + ':' + std::to_string(int(e * 10)), w, h,
+                                   [&](panel::Picture& p) {
+                                       lc::paintEye(p, panel::Box{0, 0, float(w), float(h)}, kMuted, e, sc);
+                                   });
+        }
+        m.layer.w = float(s.layout.w);
+        m.layer.h = float(s.layout.h);
+        uikit::layered::Builder b(m.layer, panel::Box{0, 0, 0, 0});
+        if (s.dropOpen && s.drop.w > 0) {  // ▾'s list over the card, as core logincard paints it
+            b.box(panel::Box{s.drop.x, s.drop.y, s.drop.w, s.drop.h}, 10 * sc, 0x161B26, 0.98f, 0xFFFFFF, 0.14f,
+                  1.0f * sc);
+            if (s.dropHover >= 0 && s.dropHover < int(s.drop.rows.size()))
+                b.box(s.drop.rows[size_t(s.dropHover)], 7 * sc, 0xC9A55B, 0.16f);
+            for (const lc::Words& x :
+                 lc::dropWords(s.drop, s.dropRows, s.dropHover, say(settings::Text::LoginOtherLogin), s.scale))
+                b.word(panel::Box{x.box.x + s.drop.x, x.box.y + s.drop.y, x.box.w, x.box.h}, x.text, x.rgb, x.px,
+                       x.bold,
+                       x.align == lc::Align::Right    ? uikit::layered::Align::Right
+                       : x.align == lc::Align::Center ? uikit::layered::Align::Center
+                                                      : uikit::layered::Align::Left);
+        }
+    });
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    s.live.raise();  // 3.0.18-beta.43: at its place in the windows' stack
     if (!s.shown || s.k <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));

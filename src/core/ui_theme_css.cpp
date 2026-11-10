@@ -1267,6 +1267,65 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .csl .csb.main { border-color: #c9a55bd9; background-color: #c9a55b3d; font-weight: bold; }
 .csl .csb.main.hot { background-color: #c9a55b5c; }
 .csl .csb.off { color: #9aa3b5; background-color: #ffffff05; border-color: #ffffff14; }
+/* 3.0.18-beta.107: the login card live (uikit/login_live) - a form 31.6667rem wide */
+.lw.lgl { width: 31.6667rem; padding: 2rem 2rem 2rem 2rem; font-size: 1rem; box-sizing: border-box; }
+.lgl .back { position: absolute; left: 1.5rem; top: 1.5rem; height: 2rem; line-height: 2rem; padding: 0 0.5rem;
+             font-size: 1.0417rem; color: #8cb8ff; }
+.lgl .back.hot { color: #e6cb8a; }
+.lgl .ttl { display: block; height: 2.8333rem; line-height: 2.8333rem; text-align: center; font-size: 1.8333rem;
+    font-weight: bold;
+            color: #eef2f8; }
+.lgl .sub { display: block; height: 1.6667rem; line-height: 1.6667rem; margin-bottom: 1rem; text-align: center;
+            font-size: 1.0417rem; color: #9aa3b5; }
+.lgl .flbl { display: block; height: 1.5rem; line-height: 1.5rem; font-size: 1rem; font-weight: bold; color: #9aa3b5; }
+.lgl .fld { display: flex; align-items: center; position: relative; height: 3.1667rem; margin-bottom: 0.6667rem;
+            padding: 0 1rem; border-radius: 0.6667rem; border: 0.0833rem #ffffff29; background-color: #00000059;
+            box-sizing: border-box; }
+.lgl .fld.pw { margin-bottom: 0.8333rem; }
+.lgl .fld.hot { border-color: #ffffff4d; }
+.lgl .fld.on { border: 0.125rem #c9a55bd9; }
+.lgl .fld.bad { border: 0.125rem #ff5a4ee6; }
+.lgl .fv { font-size: 1.1667rem; color: #eef2f8; white-space: nowrap; }
+.lgl .caret { display: block; width: 0.125rem; height: 1.5rem; margin-left: 0.0833rem; background-color: #eef2f8; }
+.lgl .drop, .lgl .eye { display: flex; justify-content: center; align-items: center; position: absolute; right: 0;
+                        top: 0; width: 3rem; height: 100%; }
+.lgl .eye { width: 3.1667rem; }
+.lgl .drop img, .lgl .eye img { display: block; }
+.lgl .errs { display: block; margin: -0.3333rem 0 0.3333rem 0; }
+.lgl .err { display: block; height: 1.5rem; line-height: 1.5rem; font-size: 1rem; color: #ff5a4e; white-space: nowrap; }
+.lgl .err.hint { color: #f5bd4f; }
+.lgl .act { display: block; height: 1.5rem; line-height: 1.5rem; font-size: 1rem; color: #8cb8ff; }
+.lgl .act.hot { color: #e6cb8a; }
+.lgl .tk { display: flex; align-items: center; height: 2rem; margin-bottom: 0.3333rem; font-size: 1.0417rem;
+    color: #eef2f8; }
+.lgl .tk .box { display: block; width: 1.5rem; height: 1.5rem; line-height: 1.3333rem; margin-right: 0.8333rem;
+    text-align: center;
+                border-radius: 0.3333rem; border: 0.0833rem #ffffff59; background-color: #ffffff0f;
+                font-size: 1.0833rem;
+                font-weight: bold; color: #000000; box-sizing: border-box; }
+.lgl .tk .box.on { border-color: #c9a55b; background-color: #c9a55bd9; }
+.lgl .lbtns { display: flex; margin-top: 0.6667rem; }
+.lgl .lb { display: block; flex: 1; height: 3.5rem; line-height: 3.3333rem; text-align: center; border-radius: 0.75rem;
+           border: 0.0833rem #ffffff29; background-color: #ffffff0f; font-size: 1.1667rem; color: #eef2f8;
+           box-sizing: border-box; }
+.lgl .lb.go { margin-right: 1rem; border-color: #c9a55bd9; background-color: #c9a55b3d; font-weight: bold; }
+.lgl .lb.hot { background-color: #ffffff1f; }
+.lgl .lb.go.hot { background-color: #c9a55b5c; }
+.lgl .links { display: flex; margin-top: 1rem; height: 1.6667rem; line-height: 1.6667rem; font-size: 1.0417rem; }
+.lgl .lk { display: block; flex: 1; color: #8cb8ff; }
+.lgl .lk.r { text-align: right; }
+.lgl .lk.across { text-align: center; font-size: 1rem; }
+.lgl .lk.hot { color: #e6cb8a; }
+.lgl .note { display: block; margin-top: 0.5rem; text-align: center; font-size: 1rem; color: #9aa3b5; }
+.lgl .site { display: block; height: 1.6667rem; line-height: 1.6667rem; margin-top: 0.6667rem; text-align: center;
+    font-size: 1.0417rem;
+             color: #8cb8ff; }
+.lgl .site.hot { color: #e6cb8a; }
+.lgl .site.chip { display: flex; text-align: left; }
+.lgl .sc { display: block; flex: 1; color: #9aa3b5; }
+.lgl .so { display: block; width: 5.8333rem; text-align: right; color: #8cb8ff; }
+.lgl .so.hot { color: #e6cb8a; }
+.lgl .lay { position: absolute; left: 0; top: 0; z-index: 5; }
 )";
 
 }  // namespace
