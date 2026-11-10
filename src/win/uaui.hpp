@@ -101,6 +101,8 @@ private:
     bool shown_ = false;
     int z_ = -1;
     int marked_ = -1;
+public:
+    std::string name;  // 3.0.18-beta.46: its part's (the log's)
 };
 
 }  // namespace uagfx::win::uaui

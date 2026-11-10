@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cmath>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -232,7 +233,10 @@ public:
     }
     bool LogMessage(Rml::Log::Type type, const Rml::String& message) override {
         State& s = state();
-        if (type <= Rml::Log::LT_WARNING && s.logged < 20) {
+        // 3.0.18-beta.46 (R-4YDWHF: the 20 first ones were the documents' addresses - the chat's never told): each
+        // message once, 300 of them
+        static std::set<std::string> told;
+        if (type <= Rml::Log::LT_WARNING && s.logged < 300 && told.insert(message.substr(0, 200)).second) {
             ++s.logged;
             LOG_INFO("uaui: RmlUi %s: %s", type == Rml::Log::LT_WARNING ? "warns" : "says an error", message.c_str());
         }
@@ -625,7 +629,8 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
             background-color: #10141ccc; transition: border-color 0.3s quadratic-out; }
 .cb.flare .card { border-color: #e6cb8a; }
 .cb .abs { position: absolute; }
-.cb .portrait { position: absolute; border-radius: 50%; background-color: #1b1d24; overflow: hidden; cursor: pointer; }
+.cb .portrait { position: absolute; border-radius: 999px; background-color: #1b1d24; overflow: hidden;
+                cursor: pointer; }
 .cb .portrait img { position: absolute; left: 7%; top: 7%; width: 86%; height: 86%; }
 .cb .letter { display: block; width: 100%; text-align: center; font-weight: bold; color: #eceff5; }
 .cb .name { font-size: 16dp; font-weight: bold; }
@@ -1226,12 +1231,12 @@ bool start(State& s) {
     s.marker = s.context->LoadDocumentFromMemory(
         "<rml><body style=\"position: absolute; left: 0; top: 0; width: 1px; height: 1px; z-index: 5;\">"
         "<ua-split style=\"display: block; width: 1px; height: 1px;\"/></body></rml>",
-        "uaui:split");
+        "uaui://split");
     if (s.marker) s.marker->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
     s.worldMarker = s.context->LoadDocumentFromMemory(
         "<rml><body style=\"position: absolute; left: 0; top: 0; width: 1px; height: 1px; z-index: 2;\">"
         "<ua-split at=\"1\" style=\"display: block; width: 1px; height: 1px;\"/></body></rml>",
-        "uaui:split-world");
+        "uaui://split-world");
     if (s.worldMarker) s.worldMarker->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
     s.started = true;
     LOG_INFO("uaui: RmlUi %s started - its context %dx%d, %.2f target pixels a concept pixel; the theme %s",
@@ -1603,13 +1608,17 @@ bool Doc::make(const char* name, const char* rml, const std::function<void(Rml::
     }
     if (bind) bind(m);
     model_ = m.GetModelHandle();
-    doc_ = s.context->LoadDocumentFromMemory(rml, std::string("uaui:") + name);
+    this->name = name;
+    doc_ = s.context->LoadDocumentFromMemory(rml, std::string("uaui://") + name);
     if (!doc_) {
         LOG_ERROR("uaui: the document «%s» did not load", name);
         return false;
     }
     // 3.0.18-beta.27: drawn with the windows; .38 the world's under the parts (theirs 3, between the markers)
     doc_->SetProperty("z-index", window ? "10" : world ? "1" : "3");
+    // 3.0.18-beta.46 (R-4YDWHF: nothing dragged): a document drawn only never takes the pointer - a screen-wide one
+    // (the experience strip, the interface editor) held the hover over the windows of uaUI under it
+    if (passive) doc_->SetProperty("pointer-events", "none");
     if (Rml::Element* t = doc_->GetElementById("ua-title")) t->SetInnerRML(doc_->GetTitle());
     if (Rml::Element* c = doc_->GetElementById("ua-close")) c->AddEventListener(Rml::EventId::Click, &g_close);
     s.docs.push_back(this);
@@ -1875,6 +1884,24 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
     if (st.since == 0) st.since = now;
     st.worst = std::max(st.worst, spent);
     if (now - st.since >= 10.0 && st.frames > 0) {
+        // 3.0.18-beta.46 (R-4YDWHF: the chat and the hotbar not seen): each document shown - its place, size, opacity,
+        // z-index, whether it fades in still, the elements in it
+        std::string docs;
+        for (Doc* d : s.docs) {
+            if (!d->shown() || !d->doc() || docs.size() > 1500) continue;
+            Rml::ElementDocument* e = d->doc();
+            const Rml::Vector2f at = e->GetAbsoluteOffset(Rml::BoxArea::Border);
+            const Rml::Vector2f size = e->GetBox().GetSize(Rml::BoxArea::Border);
+            char line[200];
+            std::snprintf(line, sizeof line, "%s%s at %.0f,%.0f %.0fx%.0f op %.2f z %d%s%s, %d children",
+                          docs.empty() ? "" : "; ", d->name.c_str(), at.x, at.y, size.x, size.y,
+                          e->GetComputedValues().opacity(), int(e->GetComputedValues().z_index().value),
+                          e->IsClassSet("away") ? " away" : "", e->IsVisible() ? "" : " invisible",
+                          e->GetNumChildren());
+            docs += line;
+        }
+        LOG_INFO("uaui: shown: %s (batches %zu: world %zu, parts to %zu)", docs.empty() ? "none" : docs.c_str(),
+                 s.batches.size(), s.worldSplit, s.split);
         const double n = st.frames;
         if (s.scenesDrawn)
             LOG_INFO("uaui: in %.0f s %d pictures of the parts drawn by their scenes, %.0f vertices a frame; %zu words "

@@ -394,7 +394,8 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
       data-event-mouseover="hover(4, 0)" data-event-mouseout="unhover()">
   <img data-if="portrait != ''" data-attr-src="portrait"/>
   <span class="letter" style="font-size: 22dp; line-height: 54dp;" data-if="portrait == ''">{{letter}}</span></div>
- <div class="line" style="left: 78dp; top: 14dp; height: 20dp;"><span class="name">{{name}}</span><span class="job">{{job}}</span></div>
+ <div class="line" style="left: 78dp; top: 14dp; height: 20dp;"><span class="name">{{name}}</span>
+  <span class="job">{{job_name}}</span></div>
  <span class="levels">{{levels}}</span>
  <div data-if="weight_shown">
   <span class="line muted" style="left: 78dp; top: 36dp;">{{weight_label}}</span>
@@ -463,7 +464,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
  <div class="track" style="left: 10dp; top: 67dp; width: 280dp; height: 3dp;"><div class="fill jobx" data-style-width="job.w + '%'"></div></div>
 </div>
 <div data-if="view == 2 || (view == 1 && look == 1)">
- <div class="abs" style="left: 0; top: 0; border-radius: 50%; background-color: #00000080;"
+ <div class="abs" style="left: 0; top: 0; border-radius: 999px; background-color: #00000080;"
       data-style-width="ring_d + 'dp'" data-style-height="ring_d + 'dp'"></div>
  <ua-ring class="abs" style="left: 0; top: 0;" data-style-width="ring_d + 'dp'" data-style-height="ring_d + 'dp'"
           data-attr-width="ring_hp_w" data-attr-value="hp_w / 100" data-attr-fill="low ? '#ff5a4e' : '#5bd36c'" track="#ffffff1f"></ua-ring>
@@ -560,7 +561,7 @@ bool uiMake() {
         m.Bind("w", &u.w);
         m.Bind("h", &u.h);
         m.Bind("name", &u.m.name);
-        m.Bind("job", &u.m.job);
+        m.Bind("job_name", &u.m.job);  // 3.0.18-beta.46: «job» is the job bar's
         m.Bind("levels", &u.m.levels);
         m.Bind("letter", &u.m.letter);
         m.Bind("badge", &u.m.badge);

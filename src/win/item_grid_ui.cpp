@@ -20,8 +20,9 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <div data-for="b : under" data-attr-class="b.cls" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
   data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
   data-style-border-width="b.e + 'px'" data-style-opacity="b.op"></div>
-<img class="a" data-for="i : icons" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
-  data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/>
+<div class="a" data-for="i : icons">
+ <img class="a" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
+  data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/></div>
 <div data-for="b : over" data-attr-class="b.cls" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
   data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
   data-style-border-width="b.e + 'px'" data-style-opacity="b.op"></div>

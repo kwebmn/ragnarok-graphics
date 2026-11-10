@@ -35,16 +35,18 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
     data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
     data-style-border-width="b.e + 'px'" data-style-background-color="b.bg" data-style-border-color="b.bd"></div>
  </div>
- <img class="a" data-for="i : clipped_icons" data-attr-src="i.src" data-style-left="i.x - clip.x + 'px'"
+ <div class="a" data-for="i : clipped_icons">
+ <img class="a" data-attr-src="i.src" data-style-left="i.x - clip.x + 'px'"
    data-style-top="i.y - clip.y + 'px'" data-style-width="i.w + 'px'" data-style-height="i.h + 'px'"
-   data-style-opacity="i.op"/>
+   data-style-opacity="i.op"/></div>
  <span data-for="t : clipped_words" data-attr-class="t.cls" data-style-left="t.x - clip.x + 'px'"
    data-style-top="t.y - clip.y + 'px'" data-style-width="t.w + 'px'" data-style-height="t.h + 'px'"
    data-style-font-size="t.px + 'px'" data-style-color="t.colour" data-style-line-height="t.lh + 'px'"
    >{{t.text}}</span>
 </div>
-<img class="a" data-for="i : icons" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
-  data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/>
+<div class="a" data-for="i : icons">
+ <img class="a" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
+  data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/></div>
 <div class="a" data-for="b : over">
  <div data-if="!b.paint" data-attr-class="b.cls" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
    data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
@@ -67,8 +69,9 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <span data-for="t : top_words" data-attr-class="t.cls" data-style-left="t.x + 'px'" data-style-top="t.y + 'px'"
   data-style-width="t.w + 'px'" data-style-height="t.h + 'px'" data-style-font-size="t.px + 'px'"
   data-style-color="t.colour" data-style-line-height="t.lh + 'px'">{{t.text}}</span>
-<img class="a" data-for="i : top" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
-  data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/>
+<div class="a" data-for="i : top">
+ <img class="a" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
+  data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/></div>
 </body></rml>)RML";
 
 }  // namespace

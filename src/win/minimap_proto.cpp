@@ -1277,7 +1277,7 @@ namespace {
 // drawn only (passive): its clicks, wheel, drag and blocker stay this part's
 const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="mm" data-model="minimap" data-style-width="w + 'px'" data-style-height="h + 'px'" data-style-opacity="op">
-<img class="a" data-attr-src="square" data-style-left="0px" data-style-top="0px" data-style-width="side + 'px'"
+<img class="a" data-attr-src="square" style="left: 0px; top: 0px;" data-style-width="side + 'px'"
   data-style-height="side + 'px'"/>
 <div data-for="b : cards" data-attr-class="'card ' + b.cls" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
   data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
@@ -1287,8 +1287,9 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-style-border-width="b.e + 'px'"></div>
 <div class="a" data-for="b : bars" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
   data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-background-color="b.cls"></div>
-<img class="a" data-for="i : icons" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
-  data-style-width="i.w + 'px'" data-style-height="i.h + 'px'"/>
+<div class="a" data-for="i : icons">
+ <img class="a" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
+  data-style-width="i.w + 'px'" data-style-height="i.h + 'px'"/></div>
 <span data-for="t : words" data-attr-class="t.cls" data-style-left="t.x + 'px'" data-style-top="t.y + 'px'"
   data-style-width="t.w + 'px'" data-style-height="t.h + 'px'" data-style-line-height="t.h + 'px'"
   data-style-font-size="t.px + 'px'" data-style-color="t.colour">{{t.text}}</span>
