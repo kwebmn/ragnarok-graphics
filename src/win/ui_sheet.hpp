@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/window_panel.hpp"
+#include "win/picture_draw.hpp"
 #include "win/uaui.hpp"
 
 namespace uagfx::win::uisheet {
@@ -27,7 +28,7 @@ struct Icon {
     Rml::String src;
 };
 struct Word {
-    float x = 0, y = 0, w = 0, h = 0, px = 12;
+    float x = 0, y = 0, w = 0, h = 0, px = 12, lh = 0;  // lh: the line's height (the box's for one line)
     Rml::String text, colour, cls;
 };
 struct Content {
@@ -72,11 +73,14 @@ struct Content {
             const char* align = x.align == decltype(x.align)::Right    ? " right"
                                 : x.align == decltype(x.align)::Center ? " centre"
                                                                        : "";
-            words.push_back(Word{x.box.x, x.box.y, x.box.w, x.box.h, x.px, x.text, colour,
+            words.push_back(Word{x.box.x, x.box.y, x.box.w, x.box.h, x.px, x.box.h, x.text, colour,
                                  std::string(x.bold ? "word bold" : "word") + align});
         }
     }
 };
+
+// 3.0.18-beta.31: the words a part builds for GDI (win/picture_draw's: wide, DT_ alignment, broken lines, the halo)
+void sayGdi(Content& c, const std::vector<Words>& in);
 
 class Sheet {
 public:
@@ -88,6 +92,8 @@ public:
     std::string icon(const panel::Picture* p);
     // One made once by its key (`paint` into a w x h picture), as an icon's source
     std::string made(const std::string& key, int w, int h, const std::function<void(panel::Picture&)>& paint);
+    // 3.0.18-beta.31: the controller's button `button` (padglyph::Button) `h` high at (x, y) as an icon
+    void glyph(Content& c, int button, bool sony, float x, float y, float h);
     // The glass's ground: the window's colour at the windows' opacity
     static std::string ground(uint32_t rgb, float opacity);
 

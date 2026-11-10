@@ -113,3 +113,17 @@ TEST(pick_card_single_entry_goes_on_by_itself) {
     CHECK(pickcard::autoChoice(2, 0) == -1);
     CHECK(pickcard::autoChoice(0, -1) == -1);
 }
+
+// 3.0.18-beta.31: uaUI's choice of things - a row's icon square only when its entry has an icon
+TEST(pick_card_icon_of_a_row) {
+    const panel::Box row{10, 20, 300, 40};
+    pickcard::Entry plain;
+    CHECK(pickcard::iconOf(row, plain, 1.0f).w == 0);
+    panel::Picture p;
+    p.width = p.height = 24;
+    p.px.assign(24 * 24, 0xFFFFFFFFu);
+    pickcard::Entry with = plain;
+    with.icon = &p;
+    const panel::Box b = pickcard::iconOf(row, with, 1.0f);
+    CHECK(b.w > 0 && b.x > row.x && b.y >= row.y && b.y + b.h <= row.y + row.h);
+}

@@ -151,4 +151,8 @@ std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, con
     return out;
 }
 
+panel::Box iconOf(const panel::Box& row, const Entry& e, float s) {
+    return hasIcon(e) ? iconBox(row, s) : panel::Box{};
+}
+
 }  // namespace uagfx::pickcard

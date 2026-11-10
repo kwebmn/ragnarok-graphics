@@ -60,7 +60,7 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - [ ] «Речі», storage, cart, trade — beta.27: the three grids by hand (win/item_grid_ui, core itemwin::view), windows' layer; beta.28 trade (win/ui_sheet: the shared passive sheet - glass, boxes by the theme's .sh classes, icons, words; core tradewin::view)
 - [x] «Спорядження», «Характеристики», «Навички» — beta.29 by hand on win/ui_sheet (rect() as roundRect line by line; the tree in a clipped view, core skillwin::treeView, equipwin::view)
 - [x] shop, vending, own shop — beta.30 by hand on the sheet (core shopwin::view; the vending cores' icon squares)
-- [ ] NPC talk, ask / message / pick / count cards, item and skill cards
+- [x] NPC talk, ask / message / pick / count cards, item and skill cards — beta.31 by hand on the sheet (+ answer card; sayGdi for GDI words)
 - [ ] chat, whispers, chat room, popup menu, emotions, commands
 - [ ] login, servers, character select and make
 - [ ] pet, homunculus, mercenary, options, friends, guild, whisper setup, macros, tip of the day, menu, OSK
@@ -96,3 +96,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.28: win/ui_sheet (shared passive window sheet filled by hand per window) + «Обмін» on it (core tradewin::view)
 - 2026-11-10 beta.29: «Спорядження», «Характеристики», «Навички» by hand on the sheet (+ Content::rect colours, clipped view)
 - 2026-11-10 beta.30: the NPC shop, «Лавка», the shop's opening and one's own shop by hand on the sheet
+- 2026-11-10 beta.31: NPC talk, ask/count, pick, answer, item and skill cards by hand on the sheet (Sheet::glyph, sayGdi, line heights)

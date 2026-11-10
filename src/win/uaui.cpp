@@ -845,6 +845,8 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .sh .word.bold { font-weight: bold; }
 .sh .word.right { text-align: right; }
 .sh .word.centre { text-align: center; }
+.sh .word.wrap { white-space: normal; }
+.sh .word.halo { font-effect: outline(2px #000000d9); }
 .ig div, .ig span, .ig .a { position: absolute; }
 .ig .glass { border-color: #ffffff17; }
 .ig .hot { background-color: #ffffff1f; }

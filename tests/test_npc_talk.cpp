@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "core/npc_talk.hpp"
+#include "core/pad_glyphs.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -91,6 +92,9 @@ TEST(npc_talk_layout_words_options_and_buttons) {
     L = npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure);
     w = npctalk::words(L, t, sh, texts(), measure);
     CHECK(!has("1–8 вибір · Enter далі · Esc закрити") && has("Далі"));
+    // 3.0.18-beta.31: uaUI's footer - a button for each of the controller's glyph boxes, A first
+    const std::vector<int> buttons = npctalk::padButtons(t);
+    CHECK(!buttons.empty() && buttons.size() == L.padGlyphs.size() && buttons[0] == int(padglyph::Button::A));
 }
 
 // 3.0.11-beta.195 (the tester: the Kafras' menus «у старому стилі» - in Glast Heim, the voting staff, Prontera's): a

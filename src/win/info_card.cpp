@@ -28,6 +28,8 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 #include "win/window_shadow.hpp"
 
 namespace uagfx::win::infocardwin {
@@ -64,6 +66,9 @@ struct Tables {
 };
 
 struct One {
+    uisheet::Sheet sheet;  // 3.0.18-beta.31: the card drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;
     bool shown = false, hid = false;
     uint32_t window = 0;
@@ -362,6 +367,10 @@ std::vector<Words> gdiWords(const std::vector<ic::Words>& in) {
 }
 
 void render(One& o) {
+    if (uaui::ready()) {  // 3.0.18-beta.31: uaUI's card says it all again, no picture
+        ++o.sheetGen;
+        return;
+    }
     const uicost::Paint cost("a card", o.layout.w, o.layout.h);
     if (!panel::blank(o.picture, o.layout.w, o.layout.h)) return;
     ic::paint(o.picture, o.layout, o.card, o.show);
@@ -392,7 +401,8 @@ One& one(Kind k) { return state().cards[k == Kind::Item ? 0 : 1]; }
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     if (on != s.on) {
@@ -440,7 +450,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                             float(cy) * float(k) - float(o.layout.y)) == ic::Part::Close;
         const std::string key = o.what + ';' + std::to_string(o.layout.x) + ',' + std::to_string(o.layout.y) + ';' +
                                 std::to_string(o.show.scroll) + (o.show.hoverClose ? "c" : "") + '#' +
-                                std::to_string(uistyle::generation());
+                                std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
         if (key != o.key) {
             o.key = key;
             render(o);
@@ -450,10 +460,59 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     }
 }
 
+// 3.0.18-beta.31 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): a thing's or a skill's
+// card in RmlUi's markup, line by line as core infocard paints it - its glass, the title's band, the icon, ✕, the
+// card's own picture, the slots (gold where a card sits); the words where core infocard places them
+static void fillSheet(One& o, uisheet::Content& c) {
+    const ic::Layout& L = o.layout;
+    const ic::Card& d = o.card;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xF3C653, kMuted = 0x9AA3B5;
+    auto& u = c.under;
+    const auto centred = [&](const panel::Picture* p, const panel::Box& b) {
+        if (p && p->width > 0 && b.w > 0)
+            c.icons.push_back(uisheet::Icon{std::round(b.x + (b.w - float(p->width)) / 2),
+                                            std::round(b.y + (b.h - float(p->height)) / 2), float(p->width),
+                                            float(p->height), 1, o.sheet.icon(p)});
+    };
+    c.w = float(L.w), c.h = float(L.h);
+    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
+    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
+    c.rect(u, panel::Box{L.glass.x + 1 * sc, L.glass.y + 1 * sc, L.glass.w - 2 * sc, L.body.y - 6 * sc}, 11 * sc,
+           kWhite, 0.035f);
+    centred(d.icon, L.icon);
+    if (o.show.hoverClose) c.rect(u, L.close, 6 * sc, kWhite, 0.10f);
+    const uint32_t cross = o.show.hoverClose ? kGold : kMuted;
+    const int side = std::max(4, int(std::ceil(L.close.w)));
+    c.icons.push_back(uisheet::Icon{L.close.x, L.close.y, float(side), float(side), 1,
+                                    o.sheet.made("x" + std::to_string(side) + ':' + std::to_string(cross), side, side,
+                                                 [&](panel::Picture& p) {
+                                                     uiicons::draw(p, uiicons::Icon::PadCross, 0, 0, float(side),
+                                                                   cross, 1.0f, 2.0f);
+                                                 })});
+    centred(d.picture, L.picture);
+    for (size_t i = 0; i < L.slots.size(); ++i) {
+        const bool filled = i < d.cards.size() && !d.cards[i].empty();
+        c.rect(u, L.slots[i], 6 * sc, filled ? kGold : kWhite, filled ? 0.10f : 0.04f, filled ? kGold : kWhite,
+               filled ? 0.55f : 0.12f, 1.0f * sc);
+    }
+    c.say(ic::words(L, d, o.show, texts()));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    for (int i = 0; i < 2; ++i) {
+        One& o = s.cards[i];
+        o.sheetShown = o.sheet.frame(i == 0 ? "item card" : "skill card", o.shown, true, o.layout.x, o.layout.y,
+                                     o.sheetGen, [&](uisheet::Content& c) { fillSheet(o, c); });
+    }
+}
+
 void draw(Kind kind, FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     One& o = one(kind);
-    if (!o.shown || s.k <= 0 || o.picture.width <= 0 || o.picture.height <= 0) return;
+    if (!o.shown || o.sheetShown || s.k <= 0 || o.picture.width <= 0 || o.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = o.layout.glass;

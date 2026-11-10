@@ -58,4 +58,7 @@ struct Words {
 };
 std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, const Show& sh, const Texts& t);
 
+// 3.0.18-beta.31 (uaUI's choice of things): a row's icon square (none when its entry has no icon)
+panel::Box iconOf(const panel::Box& row, const Entry& e, float s);
+
 }  // namespace uagfx::pickcard

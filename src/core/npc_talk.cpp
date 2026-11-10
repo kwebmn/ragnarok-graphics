@@ -326,4 +326,10 @@ std::string writeChoices(const std::map<std::string, int>& choices) {
     return out;
 }
 
+std::vector<int> padButtons(const Talk& t) {
+    std::vector<int> out;
+    for (const PadItem& it : padItems(t, Texts{})) out.push_back(int(it.button));
+    return out;
+}
+
 }  // namespace uagfx::npctalk

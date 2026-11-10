@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/pad_glyphs.hpp"
+#include "win/code_page.hpp"
+
 namespace uagfx::win::uisheet {
 namespace {
 
@@ -41,8 +44,9 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    data-style-border-width="b.e + 'px'" data-style-background-color="b.bg" data-style-border-color="b.bd"></div>
 </div>
 <span data-for="t : words" data-attr-class="t.cls" data-style-left="t.x + 'px'" data-style-top="t.y + 'px'"
-  data-style-width="t.w + 'px'" data-style-height="t.h + 'px'" data-style-line-height="t.h + 'px'"
-  data-style-font-size="t.px + 'px'" data-style-color="t.colour">{{t.text}}</span>
+  data-style-width="t.w + 'px'" data-style-height="t.h + 'px'"
+  data-style-font-size="t.px + 'px'" data-style-color="t.colour" data-style-line-height="t.lh + 'px'"
+  >{{t.text}}</span>
 </body></rml>)RML";
 
 }  // namespace
@@ -69,6 +73,29 @@ std::string Sheet::made(const std::string& key, int w, int h, const std::functio
         it = made_.emplace(key, std::move(p)).first;
     }
     return uaui::picture(&it->second, uaui::stamp(&it->second), sources_["m:" + key]);
+}
+
+void sayGdi(Content& c, const std::vector<Words>& in) {
+    char colour[16];
+    for (const Words& x : in) {
+        std::snprintf(colour, sizeof colour, "#%06x", unsigned(x.rgb & 0xFFFFFF));
+        std::string cls = x.bold ? "word bold" : "word";
+        if (x.align & DT_RIGHT) cls += " right";
+        else if (x.align & DT_CENTER) cls += " centre";
+        if (x.wrap) cls += " wrap";
+        if (x.halo) cls += " halo";
+        c.words.push_back(Word{x.box.x, x.box.y, x.box.w, x.box.h, x.px,
+                               x.wrap ? std::round(x.px * 1.3f) : x.box.h, utf8Of(x.text), colour, cls});
+    }
+}
+
+void Sheet::glyph(Content& c, int button, bool sony, float x, float y, float h) {
+    const padglyph::Button b = padglyph::Button(button);
+    const padglyph::Family f = sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
+    const int pw = std::max(1, int(std::ceil(padglyph::widthOf(b, h)))), ph = std::max(1, int(std::ceil(h)));
+    const std::string key = "pad" + std::to_string(button) + (sony ? "s" : "x") + std::to_string(ph);
+    c.icons.push_back(Icon{x, y, float(pw), float(ph), 1,
+                           made(key, pw, ph, [&](panel::Picture& p) { padglyph::paint(p, b, f, 0, 0, h); })});
 }
 
 bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
@@ -108,6 +135,7 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
                     t.RegisterMember("w", &Word::w);
                     t.RegisterMember("h", &Word::h);
                     t.RegisterMember("px", &Word::px);
+                    t.RegisterMember("lh", &Word::lh);
                     t.RegisterMember("text", &Word::text);
                     t.RegisterMember("colour", &Word::colour);
                     t.RegisterMember("cls", &Word::cls);

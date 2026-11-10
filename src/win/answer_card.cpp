@@ -21,6 +21,8 @@
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::answercard {
 namespace {
@@ -31,6 +33,10 @@ constexpr ULONGLONG kReadEveryMs = 2000;  // the file looked at (its time) - the
 constexpr float kLine = 18;               // a line of the developer's words at scale 1 (core/answer_card's)
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.31: the card drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
+    std::vector<Words> words;
     std::vector<reports::Answer> list;  // the file's, newest first
     FILETIME stamp{};
     bool stamped = false;
@@ -154,7 +160,8 @@ void render(State& s) {
     std::vector<std::string> lines = card::fitLines(a.text.empty() ? reporttexts::hint(lang, a) : a.text, 2, fits);
     if (lines.empty()) lines.push_back(reporttexts::hint(lang, a));
     g = card::geometry(sc, s.targetW, int(lines.size()), w);
-    card::paint(s.picture, g, a.status, s.hover);
+    const bool byUaui = uaui::ready();  // 3.0.18-beta.31: uaUI's card - no picture
+    if (!byUaui) card::paint(s.picture, g, a.status, s.hover);
     std::vector<Words> words;
     const float titleW = std::min(float(wordsWidth(title, titlePx, true) + 2), g.title.w);
     words.push_back(Words{panel::Box{g.title.x, g.title.y, titleW, g.title.h}, title, panel::kText, titlePx, true,
@@ -173,10 +180,34 @@ void render(State& s) {
     if (!when.empty() && g.time.w > 0)
         words.push_back(Words{g.time, utf8Wide(settings::fmt(settings::tr(lang, Text::CardFrom), {when})),
                               panel::kMuted, timePx, false, DT_RIGHT});
-    drawWords(s.picture, words);
     s.geometry = g;
     s.dirty = false;
+    if (byUaui) {
+        s.words = std::move(words);
+        ++s.sheetGen;
+        return;
+    }
+    drawWords(s.picture, words);
     s.upload = true;
+}
+
+// 3.0.18-beta.31 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the answer's card in
+// RmlUi's markup, line by line as core answercard paints it - its ground, the status' accent, dot and chip, «Відкрити»
+// blue, «Пізніше»; the words as the card lays them out
+void fillSheet(State& s, uisheet::Content& c) {
+    const card::Geometry& g = s.geometry;
+    const float sc = g.scale, edge = std::max(1.0f, sc);
+    const uint32_t colour = card::statusColour(s.current.status);
+    auto& u = c.under;
+    c.w = float(g.width), c.h = float(g.height);
+    constexpr uint32_t kGround = 0x0E121A, kBlue = 0x2F6FD1, kBlueHover = 0x3D7FE0;  // core card's
+    c.rect(u, panel::Box{0, 0, float(g.width), float(g.height)}, g.radius, kGround, 0.90f, 0xFFFFFF, 0.12f, edge);
+    c.rect(u, g.accent, 1.5f * sc, colour, 1.0f);
+    c.rect(u, g.dot, g.dot.w / 2, colour, 1.0f);
+    c.rect(u, g.chip, 6 * sc, colour, 0.20f);
+    c.rect(u, g.open, 7 * sc, s.hover == card::Part::Open ? kBlueHover : kBlue, 1.0f);
+    c.rect(u, g.later, 7 * sc, 0xFFFFFF, s.hover == card::Part::Later ? 0.10f : 0.0f, 0xFFFFFF, 0.24f, edge);
+    uisheet::sayGdi(c, s.words);
 }
 
 bool toTarget(const State& s, HWND game, int x, int y, float& tx, float& ty) {
@@ -212,7 +243,7 @@ void later(State& s) {
 
 }  // namespace
 
-void frame(HWND game, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, double k, int targetWidth, int targetHeight) {
     State& s = state();
     readFile(s);
     const bool front = game && GetForegroundWindow() == game;
@@ -253,9 +284,18 @@ void behind(HWND game) {
     if (game) tellBehind(s);
 }
 
+void frame(HWND game, double k, int targetWidth, int targetHeight) {
+    frameInner(game, k, targetWidth, targetHeight);
+    State& s = state();
+    if (uaui::ready() && s.shown && s.words.empty()) s.dirty = true;  // painted for the picture before: again
+    if (uaui::ready() && s.dirty && s.shown) render(s);
+    s.sheetShown = s.sheet.frame("answer", s.shown, true, s.x, s.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.picture.width <= 0 || s.picture.height <= 0 || s.k <= 0) return;
+    if (!s.shown || s.sheetShown || s.picture.width <= 0 || s.picture.height <= 0 || s.k <= 0) return;
     // under the game's own cursor, as the windows' panel: the cursor's draw moved to the frame's end
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
