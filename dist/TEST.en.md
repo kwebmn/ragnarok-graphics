@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.53 — what's new
+
+- **With "Нова бібліотека інтерфейсу (RmlUi)": the target card's frame in "Розміщення інтерфейсу" and a click on its edge fit the card exactly.**
+- **The target's HP per cent and "⚔ N" over the character now use the new library** (over the world, under the game's windows, as before).
+- The log: the new library's repeated warnings are written once.
+
 # uaRO Graphics 3.0.18-beta.52 — what's new
 
 - **Fixed with "Нова бібліотека інтерфейсу (RmlUi)": the icons on the minimap's buttons now sit in the buttons' middles.** The buttons' edge was drawn outside them, shifting the button against its icon — the edge is inside again, as it was. The same alignment is fixed in the new library's other windows, cells and panels.
