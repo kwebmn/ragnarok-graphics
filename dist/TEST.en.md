@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.26 — what's new
+
+- **The minimap now uses "Нова бібліотека інтерфейсу (RmlUi)":** the frame with gold corners, the +/−/big map buttons, the layer buttons and "Схема", the map name bar, the search and ping plates with the graph, the route bar and the monster list are drawn by the new library; the map with its marks is as before. Clicks, the wheel and Ctrl+Tab work as before. The big map is still the old one. Without this switch nothing changes.
+
 # uaRO Graphics 3.0.18-beta.25 — what's new
 
 - **The hunt, MVP and tracker panels now use "Нова бібліотека інтерфейсу (RmlUi)":** their cards, lines, hover highlights and buttons are drawn by the new library; clicks work as before. Without this switch nothing changes.
