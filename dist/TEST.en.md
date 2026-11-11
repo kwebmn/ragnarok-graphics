@@ -1,3 +1,8 @@
+- Fixed the game crashing right after entering a map (an error in cps.dll, then a hang): our interface read the game's files at the same time as its map model loader thread. Now it reads under the same lock as the game.
+- Slots in names, as in the old client: "Jur [3]" in the bag, storage, cart and trade (shops since .142).
+- Tracking: with nothing pinned, its icon shows for 8 s what to pin and how.
+- A crash report now keeps the crash's own dump and logs the faulting address.
+
 - Element things in their colour: weapons with an element (Fire Brand, Ice Falchion…), forged ones with an element, armour with an element card (Pasana, Swordfish…) - a coloured line in the bag/storage/cart cell, the name in the tip and in the shop and item choice lists in the element's colour. Switch: Interface → "Element things in their colour".
 
 - My shop: each thing shows "sold N", its slots and what is inside, right click - its card; "Earned" and the Sales list (time · how many × what · +zeny, newest first). The list starts anew each time the shop opens. The server does not name the buyer, so neither do we.
