@@ -328,7 +328,7 @@ void charsFrame(State& s, int targetWidth, int targetHeight) {
     s.charFirst = s.charLayout.first;
     s.charShow = ls::CharShow{};
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const ls::CharHit h = ls::characterHit(s.charLayout, float(cx) * s.k - float(s.charLayout.x),
                                                float(cy) * s.k - float(s.charLayout.y));
         s.charShow.hoverRow = h.row;
@@ -437,7 +437,7 @@ static void frameInner(double k, int targetWidth, int targetHeight, unsigned cod
     s.show.hoverPart = ls::Part::None;
     s.menuShow.hover = -1;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const float x = float(cx) * s.k - float(s.layout.x), y = float(cy) * s.k - float(s.layout.y);
         if (s.menuFor >= 0) s.menuShow.hover = ls::menuHit(s.menuLayout, x, y);
         if (s.menuShow.hover < 0) {

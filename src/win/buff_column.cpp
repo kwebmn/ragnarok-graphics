@@ -655,7 +655,7 @@ void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targ
                      panelLook == bp::Look::Row ? "rows" : "columns", s.layout.slots.size(), s.entries.size(),
                      s.layout.hidden, buffsOverflowToken(s.overflow));
     }
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const bp::Hit h = bp::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == bp::Part::Icon) hover = h.slot;

@@ -391,7 +391,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.hoverRow = -1;
     s.show.hoverPart = 0;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const vs::Hit h = vs::hitTest(s.layout, s.show.scroll, s.rows.size(), float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         s.show.hoverRow = h.row;

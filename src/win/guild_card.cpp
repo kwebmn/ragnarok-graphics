@@ -381,7 +381,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.hoverField = -1;
     s.show.hoverCancel = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const gc::Hit h = gc::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == gc::Part::Tab) s.show.hoverTab = h.index;

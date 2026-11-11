@@ -411,7 +411,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.hoverTab = -1;
     s.show.hoverClose = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy) && !s.moving) {
+    if (readHoverCursor(cx, cy) && !s.moving) {
         const float lx = float(cx) * float(k) - float(s.layout.x), ly = float(cy) * float(k) - float(s.layout.y);
         const iw::Hit h = iw::hitTest(s.layout, s.shownItems.size(), s.show.scroll, lx, ly);
         if (h.part == iw::Part::Cell) s.show.hover = h.index;

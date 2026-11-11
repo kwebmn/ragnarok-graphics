@@ -281,7 +281,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.layout = rc::layout(s.card.limits.size(), targetWidth, targetHeight, s.scale);
     s.show = rc::Show{};
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
+    if (readHoverCursor(cx, cy))
         s.show.hover = rc::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                    float(cy) * float(k) - float(s.layout.y));
     const rc::Card& c = s.card;

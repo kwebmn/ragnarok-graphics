@@ -283,7 +283,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.hoverRow = s.show.hoverButton = s.show.hoverTab = -1;
     s.show.hoverClose = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const float lx = float(cx) * float(k) - float(s.layout.x), ly = float(cy) * float(k) - float(s.layout.y);
         const sc::Hit h = sc::hitTest(s.layout, s.show.scroll, s.entries.size(), lx, ly);
         if (h.part == sc::Part::Row) s.show.hoverRow = h.index;

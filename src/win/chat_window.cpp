@@ -797,7 +797,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     const ULONGLONG now = GetTickCount64();
     int cx = 0, cy = 0;
     cp::Hit hit;
-    if (readGameCursor(cx, cy) && s.layout.w > 0)
+    if (readHoverCursor(cx, cy) && s.layout.w > 0)
         hit = cp::hitTest(s.layout, s.rows, s.show, float(cx) * float(k) - float(s.layout.x),
                           float(cy) * float(k) - float(s.layout.y));
     const bool over = hit.part != cp::Part::None;

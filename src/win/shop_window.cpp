@@ -652,7 +652,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.hoverAmount = s.show.hoverTakeBack = -1;
     s.show.hoverConfirm = s.show.hoverClear = s.show.hoverClose = s.show.hoverSearch = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy) && !s.moving) {
+    if (readHoverCursor(cx, cy) && !s.moving) {
         const sw::Hit h = sw::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         switch (h.part) {

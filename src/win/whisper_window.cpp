@@ -242,7 +242,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     int cx = 0, cy = 0;
-    const bool cursor = readGameCursor(cx, cy);
+    const bool cursor = readHoverCursor(cx, cy);
     bool covered = false;  // the hover only on the topmost card under the cursor
     for (size_t i = s.cards.size(); i-- > 0;) {
         One& o = s.cards[i];

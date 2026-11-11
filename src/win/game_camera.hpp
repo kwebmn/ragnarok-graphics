@@ -64,6 +64,11 @@ bool hideGameMinimap();
 bool showGameMinimap();
 // 2.3, uaRO Studio's pick: the game's own cursor in its pixels; false in another build of the exe.
 bool readGameCursor(int& x, int& y);
+// 3.0.18-beta.130 (the owner: «в окне статов наводка на статах не двигается с
+// джойстика только с мышки, посмотри остальные моменты»): the cursor the
+// parts' hover follows - none while the controller plays (the cursor hidden: its last place kept a row lit over the
+// controller's choice and its tip shown); the mouse's own use brings it back
+bool readHoverCursor(int& x, int& y);
 // 3.0.11-beta.43 (the owner on «Речі»: «крестик не закрывает ... не открывает карточку»): a mouse message's point in
 // the target as the parts take their clicks - where the game's own cursor stands (what the player sees, and what the
 // parts' hover follows), else the message's own (the wheel's from the screen); `fromGame` which one; false none

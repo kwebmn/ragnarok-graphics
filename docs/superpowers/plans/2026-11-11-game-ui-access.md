@@ -70,3 +70,9 @@ Ledger:
   forJob = FUN_005b1ee0's remaps - test) «...<0x7719F8[kind]>»; shield «방패\<+0x890[job]><ending><+0x8F0[n]>»
   (FUN_00639c70). Paths checked in sprite.zip (페코페코_기사_남_1116, _검). Ruling: both over the body in every
   direction, no weapon glow (검광), no dual-wield left hand. Cost: a back view with the weapon in front.
+- 3.0.18-beta.130 (R-DQKNDH; the owner: «в окне статов наводка на статах не двигается с джойстика только с мышки,
+  посмотри остальные моменты», «кнопки rt lt ... не влезли»): readHoverCursor (none while the controller plays) in
+  58 parts' hover (the stats' and skills' lit row and tip then follow the pad's choice); uaUI's documents get the
+  mouse's leave while the pad plays (no :hover kept by the hidden cursor). The hotbar's shoulder badges (LB RB LT
+  RT) as wide as their pills - uaUI's picture was square, the letters cut (test). R-DQKNDH's old stats window: the
+  player's own [interface] status = 0 (no write by «Налаштування» in its logs).

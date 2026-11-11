@@ -515,7 +515,7 @@ static void frameInner(double k, int targetWidth, int targetHeight) {
     sh.loginFree = s.loginFree;
     sh.hover = 0;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
+    if (readHoverCursor(cx, cy))
         sh.hover = int(ss::hitTest(s.layout, float(cx) * s.k - float(s.layout.x), float(cy) * s.k - float(s.layout.y)));
     const std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' +
                             std::to_string(int(sh.way)) + std::to_string(int(sh.focus)) + (sh.caret ? "|" : "") +

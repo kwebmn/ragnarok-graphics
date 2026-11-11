@@ -458,7 +458,7 @@ static void frameInner(HWND game, bool on, double k, int targetWidth, int target
     keepPlans(s);  // .296: written when it changed
     s.show.hoverClose = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy) && !s.moving) {
+    if (readHoverCursor(cx, cy) && !s.moving) {
         const sw::Hit h = sw::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == sw::Part::Row) s.show.hoverRow = h.index;

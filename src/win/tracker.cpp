@@ -320,7 +320,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
     tk::Hit hover;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
+    if (readHoverCursor(cx, cy))
         hover = tk::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                             float(cy) * float(k) - float(s.layout.y));
     s.hover = hover;

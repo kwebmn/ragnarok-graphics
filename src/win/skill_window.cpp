@@ -752,7 +752,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.hoverPlan = s.show.hoverApply = s.show.hoverReset = false;
     s.show.hoverMinus = s.show.hoverChoice = -1;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy) && !s.moving) {
+    if (readHoverCursor(cx, cy) && !s.moving) {
         const kw::Hit h = kw::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         switch (h.part) {

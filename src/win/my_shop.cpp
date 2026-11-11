@@ -246,7 +246,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.scroll = std::clamp(s.show.scroll, 0, ms::mostScroll(s.layout, s.rows.size()));
     s.show.hoverClose = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
+    if (readHoverCursor(cx, cy))
         s.show.hoverClose = ms::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                         float(cy) * float(k) - float(s.layout.y))
                                 .part == ms::Part::Close;

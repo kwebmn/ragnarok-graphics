@@ -223,7 +223,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.hover = -1;
     s.show.hoverClose = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const pt::Hit h = pt::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == pt::Part::Button) s.show.hover = h.index;

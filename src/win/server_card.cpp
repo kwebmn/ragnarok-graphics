@@ -237,7 +237,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.hover = -1;
     s.show.hoverPart = 0;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const float lx = float(cx) * float(k) - float(s.layout.x), ly = float(cy) * float(k) - float(s.layout.y);
         const pc::Hit h = pc::hitTest(s.layout, s.show.scroll, s.entries.size(), lx, ly);
         s.show.hover = h.row;

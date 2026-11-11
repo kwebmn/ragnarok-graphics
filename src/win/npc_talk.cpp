@@ -369,7 +369,7 @@ static void frameInner(HWND game, bool on, bool remember, unsigned codePage, dou
     s.show.hoverOption = -1;
     s.show.hoverButton = s.show.hoverClose = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const nt::Hit h = nt::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == nt::Part::Option) s.show.hoverOption = h.index;

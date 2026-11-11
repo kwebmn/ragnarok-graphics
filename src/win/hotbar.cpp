@@ -1199,9 +1199,12 @@ bool uiFrame(State& s, const hb::Show& show) {
             x.flash = std::min(1.0f, c.flash);
             x.combo = c.combo, x.comboW = c.comboW, x.timerW = c.timerW, x.padless = c.padless;
             if (c.pad >= 0) {  // its button's badge with its letter
-                const int ps = std::max(8, int(std::ceil(c.padBox.w)));
+                // 3.0.18-beta.130 (the owner: «кнопки rt lt ... не влезли»): the picture as wide as the
+                // pill (was square: LB RB LT RT cut at the right)
+                const int ps = std::max(8, int(std::ceil(c.padBox.h)));
+                const int pw = std::max(ps, int(std::ceil(c.padBox.w)));
                 const padglyph::Family f = show.sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
-                x.pad = madeOnce(u, "pad:" + std::to_string(c.pad) + (show.sony ? "s" : "x") + std::to_string(ps), ps,
+                x.pad = madeOnce(u, "pad:" + std::to_string(c.pad) + (show.sony ? "s" : "x") + std::to_string(ps), pw,
                                  ps, [&](panel::Picture& p) {
                                      padglyph::paint(p, padglyph::Button(c.pad), f, 0, 0, float(ps));
                                      const padglyph::Letter l = padglyph::letter(padglyph::Button(c.pad), f, 0, 0,
@@ -1571,7 +1574,7 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
     s.hover = -1;
     s.hoverToggle = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const hb::Hit h = hb::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == hb::Part::Cell) s.hover = h.cell;

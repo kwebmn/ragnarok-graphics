@@ -371,7 +371,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.layout = ac::layout(s.card, targetWidth, targetHeight, s.scale, texts(s));
     s.show.hover = -1;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
+    if (readHoverCursor(cx, cy))
         s.show.hover = ac::buttonAt(s.layout, float(cx) * float(k) - float(s.layout.x),
                                     float(cy) * float(k) - float(s.layout.y));
     const std::string key = std::to_string(int(s.card.kind)) + ';' + s.card.message + ';' +

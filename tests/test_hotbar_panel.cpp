@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "core/hotbar_panel.hpp"
+#include "core/pad_glyphs.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -170,6 +171,12 @@ TEST(hotbar_pad_badges) {
     show.sony = true;
     const std::vector<hotbar::Words> ws = hotbar::words(L, cells, 0, show, texts());
     CHECK(std::find_if(ws.begin(), ws.end(), [](const hotbar::Words& x) { return x.text == "R1"; }) != ws.end());
+    // 3.0.18-beta.130 (the owner: «кнопки rt lt джойстика как-то не влезли»): a
+    // shoulder's badge as wide as its pill (uaUI's picture of it was square: «RB»/«LT» cut at the right); a face
+    // button's square
+    const hotbar::View v = hotbar::view(L, cells, 0, show, texts());
+    CHECK(std::abs(v.cells[3].padBox.w - padglyph::widthOf(padglyph::Button::RB, 18.0f)) < 0.01f);
+    CHECK(std::abs(v.cells[0].padBox.w - 18.0f) < 0.01f);
 }
 
 // The game's tables and the session's slots (win/hotbar reads them out of the client)

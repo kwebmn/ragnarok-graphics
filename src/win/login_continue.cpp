@@ -116,7 +116,7 @@ void dropFrame(State& s, const accounts::Shelf& shelf) {
     }
     s.dropHover = -1;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) s.dropHover = logincard::dropHit(s.drop, float(cx) * s.k, float(cy) * s.k);
+    if (readHoverCursor(cx, cy)) s.dropHover = logincard::dropHit(s.drop, float(cx) * s.k, float(cy) * s.k);
     std::string key = std::to_string(int(s.drop.x)) + ',' + std::to_string(int(s.drop.y)) + ';' +
                       std::to_string(s.dropHover) + '#' + std::to_string(uistyle::generation());
     for (const logincard::DropRow& r : s.rows) key += ';' + r.login + ',' + r.line;
@@ -161,7 +161,7 @@ static void frameInner(double k, int targetWidth, int targetHeight, unsigned cod
     s.layout = lco::layout(targetWidth, targetHeight, s.scale, t);
     s.show.hover = lco::Part::None;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
+    if (readHoverCursor(cx, cy))
         s.show.hover = lco::hitTest(s.layout, float(cx) * s.k - float(s.layout.x), float(cy) * s.k - float(s.layout.y));
     s.show.changeOpen = s.dropOpen;
     const lco::Account& a = s.account;

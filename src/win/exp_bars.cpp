@@ -118,7 +118,7 @@ static void frameInner(State& s, bool on, double k, int targetWidth, int targetH
         }
     }
     int cx = 0, cy = 0;  // pointed at: the bottom 14 px (the strip and a little over it)
-    const bool over = readGameCursor(cx, cy) && float(cy) * float(k) >= float(targetHeight) - 14.0f * scale;
+    const bool over = readHoverCursor(cx, cy) && float(cy) * float(k) >= float(targetHeight) - 14.0f * scale;
     const ULONGLONG now = GetTickCount64();
     if (over != s.hovered) {
         s.hovered = over;

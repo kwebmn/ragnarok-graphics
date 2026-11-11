@@ -1,5 +1,7 @@
 #include "win/game_camera.hpp"
 
+#include "pad/win/runtime.hpp"
+
 #include <windows.h>
 #include <windowsx.h>
 
@@ -414,6 +416,8 @@ void raiseWaterBoxes(bool wanted) {
         LOG_INFO("water: %s - %u of the game's %u parts of the map raised to its water's top (%.1f): its own water up "
                  "to its far plane", readGameMap().c_str(), raised, seen, waterTop);
 }
+
+bool readHoverCursor(int& x, int& y) { return !uapad::runtime::look().shown && readGameCursor(x, y); }
 
 bool readGameCursor(int& x, int& y) {
     int32_t at[2] = {0, 0};

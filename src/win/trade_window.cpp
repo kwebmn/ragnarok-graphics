@@ -381,7 +381,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.hoverButton = -1;
     s.show.hoverClose = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy) && !s.moving) {
+    if (readHoverCursor(cx, cy) && !s.moving) {
         const float lx = float(cx) * float(k) - float(s.layout.x), ly = float(cy) * float(k) - float(s.layout.y);
         const tw::Hit h = tw::hitTest(s.layout, lx, ly);
         if (h.part == tw::Part::Cell) s.show.hover = h.index;

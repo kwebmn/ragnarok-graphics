@@ -240,7 +240,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.layout = mw::layout(kind, targetWidth, targetHeight, s.scale, s.recap.size());
     s.show.hover = -1;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const int row = mw::buttonAt(s.layout, float(cx) * float(k) - float(s.layout.x),
                                      float(cy) * float(k) - float(s.layout.y));
         if (row >= 0) s.show.hover = row;

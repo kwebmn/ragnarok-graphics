@@ -1180,7 +1180,7 @@ static void frameInner(HWND game, const Show& show, double k, int targetWidth, i
     minimap::Part part = minimap::Part::None;
     minimap::BigPart bigPart = minimap::BigPart::None;
     int hoverLayer = -1;  // 3.0.11-beta.119
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const float tx = float(cx) * float(k), ty = float(cy) * float(k);
         const minimap::Scene sc = sceneOf(s);
         if (s.big) {

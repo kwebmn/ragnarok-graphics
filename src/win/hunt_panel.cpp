@@ -225,7 +225,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.reset = panel::Box{float(s.w) - (kPad + 48) * scale, kPad * scale, 22 * scale, 20 * scale};
     s.hoverReset = s.hoverClose = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const float px = float(cx) * float(k) - float(s.x), py = float(cy) * float(k) - float(s.y);
         s.hoverReset = s.reset.contains(px, py);
         s.hoverClose = s.close.contains(px, py);

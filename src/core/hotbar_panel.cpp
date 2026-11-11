@@ -570,7 +570,9 @@ View view(const Layout& L, const std::vector<Cell>& cells, int row, const Show& 
         cv.padless = show.pad && c->pad < 0;
         if (show.pad && c->pad >= 0) {
             cv.pad = c->pad;
-            cv.padBox = panel::Box{b.x - 4 * s, b.y - 5 * s, 18 * s, 18 * s};
+            // 3.0.18-beta.130: a shoulder's (LB RB LT RT) a pill - as wide as it is drawn
+            cv.padBox = panel::Box{b.x - 4 * s, b.y - 5 * s, padglyph::widthOf(padglyph::Button(c->pad), 18 * s),
+                                   18 * s};
         }
         v.cells.push_back(cv);
     }

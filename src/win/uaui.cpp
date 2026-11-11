@@ -1,5 +1,7 @@
 #include "win/uaui.hpp"
 
+#include "pad/win/runtime.hpp"
+
 #include <RmlUi/Core.h>
 
 #include <algorithm>
@@ -1937,7 +1939,10 @@ void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         }
     }
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) s.context->ProcessMouseMove(int(float(cx) * float(k)), int(float(cy) * float(k)), 0);
+    // 3.0.18-beta.130: while the controller plays, the mouse out of every document (no :hover kept by the hidden
+    // cursor's last place)
+    if (readHoverCursor(cx, cy)) s.context->ProcessMouseMove(int(float(cx) * float(k)), int(float(cy) * float(k)), 0);
+    else if (uapad::runtime::look().shown) s.context->ProcessMouseLeave();
 }
 
 void end() {

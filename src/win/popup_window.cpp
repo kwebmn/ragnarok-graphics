@@ -197,7 +197,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     if (!s.shown) LOG_INFO("popups: the game's popup menu (%zu items) - the new card shows it", s.items.size());
     s.hover = -1;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
+    if (readHoverCursor(cx, cy))
         s.hover = pc::rowAt(s.layout, s.items, float(cx) * float(k) - float(s.layout.x),
                             float(cy) * float(k) - float(s.layout.y));
     std::string key = std::to_string(s.hover) + ';' + std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) +

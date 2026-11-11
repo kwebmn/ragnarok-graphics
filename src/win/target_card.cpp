@@ -512,7 +512,7 @@ void frame(HWND game, bool on, bool padHints, double k, int targetWidth, int tar
     s.layout = L;
     int cx = 0, cy = 0;
     bool hover = false, hoverBook = false;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const tc::Part p =
             tc::hitTest(s.layout, float(cx) * kk - float(s.layout.x), float(cy) * kk - float(s.layout.y));
         hover = p != tc::Part::None;

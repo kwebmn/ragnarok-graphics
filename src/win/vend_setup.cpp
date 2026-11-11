@@ -368,7 +368,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     }
     s.show.caret = (GetTickCount64() / kBlinkMs) % 2 == 0;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const vs::Hit h = vs::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == vs::Part::Cart) s.show.hoverCart = h.index;

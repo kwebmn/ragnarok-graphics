@@ -438,7 +438,7 @@ static void frameInner(HWND game, bool on, bool counts, unsigned codePage, doubl
     s.show.hover = -1;
     s.show.quickHover = -1;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const float lx = float(cx) * float(k) - float(s.layout.x), ly = float(cy) * float(k) - float(s.layout.y);
         s.show.hover = ac::buttonAt(s.layout, lx, ly);
         s.show.quickHover = ac::quickAt(s.layout, lx, ly);

@@ -241,7 +241,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     s.close = panel::Box{float(s.w) - (kPad + 22) * scale, (kPad - 1) * scale, 22 * scale, 20 * scale};
     s.hoverClose = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const float lx = float(cx) * float(k) - float(s.x), ly = float(cy) * float(k) - float(s.y);
         s.hoverClose = s.close.contains(lx, ly);
         const float top = (kPad + kTitleH) * scale;

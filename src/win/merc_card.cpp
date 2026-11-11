@@ -288,7 +288,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.move.apply(s.layout.x, s.layout.y, s.layout.w, s.layout.h, targetWidth, targetHeight, k, 48 * s.scale);
     s.show.hover = s.show.hoverSkill = s.show.hoverLess = s.show.hoverMore = -1;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const mc::Hit h = mc::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == mc::Part::Button) s.show.hover = int(h.button);
@@ -579,7 +579,7 @@ static void blockFrameInner(HWND game, bool on, unsigned codePage, double k, int
     s.show.open = gameMerc() != 0;
     s.show.hover = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
+    if (readHoverCursor(cx, cy))
         s.show.hover = mb::hit(s.layout, float(cx) * float(k) - float(s.layout.x), float(cy) * float(k) -
                                                                                   float(s.layout.y));
     const mb::Info& i = s.info;

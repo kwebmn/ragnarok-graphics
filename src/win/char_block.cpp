@@ -1030,7 +1030,7 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     show.warning = now < s.warnUntil;
     show.warningApart = true;  // 3.0.11-beta.46: its own picture
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    if (readHoverCursor(cx, cy)) {
         const cb::Hit h = cb::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == cb::Part::Button) show.hoverButton = h.index;

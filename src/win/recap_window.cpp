@@ -102,7 +102,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     s.close = panel::Box{float(s.w) - (kPad + 22) * s.scale, kPad * s.scale, 22 * s.scale, 20 * s.scale};
     s.hoverClose = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
+    if (readHoverCursor(cx, cy))
         s.hoverClose = s.close.contains(float(cx) * float(k) - float(s.x), float(cy) * float(k) - float(s.y));
     Ui& u = ui();
     if (!u.doc.made()) {

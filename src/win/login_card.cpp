@@ -459,7 +459,7 @@ void chromeFrame(State& s, int targetWidth, int targetHeight) {
     s.chrome = loginchrome::layout(targetWidth, targetHeight, s.scale, c);
     s.chromeShow.hover = 0;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
+    if (readHoverCursor(cx, cy))
         s.chromeShow.hover = int(loginchrome::hitTest(s.chrome, float(cx) * s.k - float(s.chrome.x),
                                                       float(cy) * s.k - float(s.chrome.y)));
     const std::string key = line.text + '#' + std::to_string(line.rgb) + '#' + std::to_string(targetWidth) + 'x' +
@@ -749,7 +749,7 @@ void dropFrame(State& s) {
     s.drop = lc::dropLayout(s.layout, s.dropRows.size());
     s.dropHover = -1;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
+    if (readHoverCursor(cx, cy))
         s.dropHover = lc::dropHit(s.drop, float(cx) * s.k - float(s.layout.x), float(cy) * s.k - float(s.layout.y));
     std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' +
                       std::to_string(s.dropHover) + '#' + std::to_string(uistyle::generation());
@@ -880,7 +880,7 @@ void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight
     if (toastOn) {
         int cx = 0, cy = 0;
         const shelftoast::Layout& L = s.toastLayout;
-        s.toastHot = readGameCursor(cx, cy) &&
+        s.toastHot = readHoverCursor(cx, cy) &&
                      shelftoast::overUndo(L, float(cx) * float(k) - float(L.x), float(cy) * float(k) - float(L.y));
     }
     const float fade = std::clamp(float(s.toastUntil > now ? s.toastUntil - now : 0) / 400.0f, 0.0f, 1.0f);
@@ -1074,7 +1074,7 @@ static void frameInner(HWND game, bool on, bool status, bool news, loginview::Vi
     if (s.live.shown()) uikit::login::refit(s.live.doc.doc(), s.layout);  // 3.0.18-beta.107: x, y core logincard's
     s.show.hover = 0;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
+    if (readHoverCursor(cx, cy))
         s.show.hover = int(lc::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                        float(cy) * float(k) - float(s.layout.y)));
     const lc::Fields& f = s.fields;
@@ -1297,7 +1297,7 @@ void drawToast(FrameRecord& record, gpu::Renderer& renderer) {
     if (s.toastShown || s.toast.empty() || now >= s.toastUntil || s.toastK <= 0 || s.toastLayout.w <= 0) return;
     const shelftoast::Layout& L = s.toastLayout;
     int cx = 0, cy = 0;
-    s.toastHot = readGameCursor(cx, cy) &&
+    s.toastHot = readHoverCursor(cx, cy) &&
                  shelftoast::overUndo(L, float(cx) * s.toastK - float(L.x), float(cy) * s.toastK - float(L.y));
     const std::string undo = say(settings::Text::ShelfUndo);
     const std::string key = s.toast + '#' + undo + (s.toastHot ? "h" : "") + std::to_string(L.w) + 'x' +

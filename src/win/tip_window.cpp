@@ -238,7 +238,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.layout = tc::layout(s.card, targetWidth, targetHeight, s.scale, texts(s));
     s.show.hover = tc::Part::None;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
+    if (readHoverCursor(cx, cy))
         s.show.hover = tc::partAt(s.layout, float(cx) * float(k) - float(s.layout.x),
                                   float(cy) * float(k) - float(s.layout.y));
     const std::string key = std::to_string(s.number) + (s.card.startup ? "S" : "") + ';' +

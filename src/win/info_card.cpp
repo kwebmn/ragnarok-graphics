@@ -487,7 +487,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         o.show.scroll = std::clamp(o.show.scroll, 0, std::max(0, o.layout.rows - o.layout.shownRows));
         o.show.hoverClose = false;
         int cx = 0, cy = 0;
-        if (readGameCursor(cx, cy))
+        if (readHoverCursor(cx, cy))
             o.show.hoverClose = ic::hitTest(o.layout, float(cx) * float(k) - float(o.layout.x),
                                             float(cy) * float(k) - float(o.layout.y)) == ic::Part::Close;
         const std::string key = o.what + ';' + std::to_string(o.layout.x) + ',' + std::to_string(o.layout.y) + ';' +
