@@ -613,6 +613,48 @@ select selectbox option:checked { color: #e6cb8a; }
 .ow { width: 380dp; }
 .ow .orow { display: flex; align-items: center; justify-content: space-between; margin: 4dp 0; min-height: 24dp; }
 .ow .orow input.range { width: 150dp; }
+/* 3.0.18-beta.122 (the concept «Ігровий інтерфейс», mockup S5uscWfANyf6REjTWWm47C): «Налаштування» - the sections on
+   the left, the search over them, a row a setting (a switch, a slider, choices) */
+.ow.sw { width: 760dp; }
+.sw .head .hk { margin-left: 8dp; font-size: 11dp; color: #9aa3b5; }
+.sw .srch { display: block; position: relative; margin: 8dp 12dp 0 12dp; height: 30dp; border-radius: 8dp;
+    border: 1dp #ffffff1a; background-color: #00000066; }
+.sw .srch input { display: block; width: 100%; height: 30dp; padding: 0 10dp; line-height: 30dp; font-size: 13dp;
+    color: #eef2f8; box-sizing: border-box; }
+.sw .srch .ph { position: absolute; left: 10dp; top: 0; line-height: 30dp; font-size: 13dp; color: #9aa3b5; }
+.sw .sbody { display: flex; flex-direction: row; height: 440dp; margin-top: 8dp; border-top: 1dp #ffffff1a; }
+.sw .snav { display: block; width: 190dp; flex: none; padding: 6dp; overflow-y: auto; border-right: 1dp #ffffff1a; }
+.sw .sn { display: flex; flex-direction: row; justify-content: space-between; padding: 7dp 9dp; border-radius: 7dp;
+    font-size: 13dp; color: #cfd3dc; }
+.sw .sn:hover { background-color: #ffffff10; }
+.sw .sn.on { background-color: #e6cb8a22; color: #e6cb8a; }
+.sw .sn .cnt { font-size: 11dp; color: #9aa3b5; }
+.sw .spane { display: block; flex: 1; padding: 4dp 14dp 12dp 14dp; overflow-y: auto; }
+.sw .sgrp { display: block; margin: 14dp 0 2dp 0; font-size: 11dp; color: #9aa3b5; }
+.sw .sro { display: flex; flex-direction: row; align-items: center; padding: 7dp 0; border-bottom: 1dp #ffffff0c; }
+.sw .st { display: block; flex: 1; padding-right: 12dp; }
+.sw .sl { display: block; font-size: 13dp; color: #eef2f8; }
+.sw .shn { display: block; font-size: 11.5dp; color: #9aa3b5; }
+.sw .sctl { display: flex; flex-direction: row; align-items: center; flex: none; }
+.sw .tg { display: block; position: relative; width: 38dp; height: 22dp; border-radius: 11dp;
+    background-color: #ffffff22; }
+.sw .tg .kn { position: absolute; left: 3dp; top: 3dp; width: 16dp; height: 16dp; border-radius: 8dp;
+    background-color: #cfd3dc; }
+.sw .tg.on { background-color: #3f7d53; }
+.sw .tg.on .kn { left: 19dp; background-color: #ffffff; }
+.sw .sctl input.range { width: 140dp; margin-left: 10dp; }
+.sw .sv { display: block; width: 52dp; margin-left: 6dp; font-size: 12dp; color: #cfd3dc; text-align: right; }
+.sw .chs { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; max-width: 330dp; }
+.sw .ch { display: block; margin: 2dp 0 2dp 4dp; padding: 3dp 9dp; border-radius: 6dp; border: 1dp #ffffff1a;
+    font-size: 12dp; color: #cfd3dc; }
+.sw .ch:hover { background-color: #ffffff10; }
+.sw .ch.on { border-color: #e6cb8a; color: #e6cb8a; background-color: #e6cb8a1a; }
+.sw .snone { display: block; margin-top: 20dp; font-size: 13dp; color: #9aa3b5; }
+.sw .sfoot { display: flex; flex-direction: row; justify-content: space-between; align-items: center;
+    padding: 9dp 12dp; border-top: 1dp #ffffff1a; }
+.sw .sfoot .sfh { font-size: 12dp; color: #9aa3b5; }
+.sw .sfoot .btn { display: block; padding: 4dp 10dp; border-radius: 7dp; border: 1dp #e6cb8a66; color: #e6cb8a;
+    font-size: 12dp; }
 .tw { width: 460dp; }
 .tw .count { margin-left: 10dp; font-size: 11.5dp; color: #9aa3b5; }
 .tw .msg { display: block; margin: 2dp 0 12dp 0; font-size: 13dp; line-height: 19dp; }

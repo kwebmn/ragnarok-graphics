@@ -33,3 +33,13 @@ Ledger:
   Report, ours(), firstFocus 6 (test). A press closes the game's menu by its own 0x77, then the context takes it:
   settings -> the console (till stage 5), layout -> hudedit::open, test -> testStart, report -> the Ctrl+Shift+F10
   path 3 presents later (the shot without the menu). The death screens unchanged.
+- Stages 5+6 (3.0.18-beta.122): «Налаштування» = the game's options window (Alt+O, UI 0xD) in a new live look:
+  core/settings_window (sections: «Гра» the game's six, «Як виглядає гра» the three choices, then the app's
+  «Інтерфейс» sections; search by settingMatches/queryMatches - tests); win/setting_edit (the console's write, shared;
+  the console now calls it); options_card's live doc rewritten (nav, search input, rows: switch / slider / choices),
+  ours written to the ini, the context reads it at once (takeChanged); the icon and the menu open it by MakeWindow
+  0xD (the console when [interface] options is off); «Усі налаштування графіки… (Alt+D)» opens the console.
+  Ruling: stages 5 and 6 together - replacing Alt+O without «Гра» would lose the game's options. Cost: none.
+  Ruling: hints over 160 chars left out of the rows (the app shows them). Cost if wrong: a cut-off.
+  Ruling: the pad walks the window's .ctl controls (uilive); the old pad command still works for the game's six.
+  Class names checked against the theme (sro, shn - .lw .srow and the sheet's .sh clashed), probed on the host.

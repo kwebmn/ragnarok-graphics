@@ -8274,13 +8274,18 @@ constexpr Entry kTexts[] = {
     {Text::CharOwnParty, "Party \xC2\xB7 Ctrl+G", "Група \xC2\xB7 Ctrl+G", "Группа \xC2\xB7 Ctrl+G"},
     {Text::CharOwnRecap, "What killed me \xC2\xB7 Ctrl+K", "Що мене вбило \xC2\xB7 Ctrl+K",
      "Что меня убило \xC2\xB7 Ctrl+K"},
-    {Text::CharOwnSettings, "Settings \xC2\xB7 Alt+D", "Налаштування \xC2\xB7 Alt+D",
-     "Настройки \xC2\xB7 Alt+D"},
+    {Text::CharOwnSettings, "Settings \xC2\xB7 Alt+O", "Налаштування \xC2\xB7 Alt+O",
+     "Настройки \xC2\xB7 Alt+O"},
     // 3.0.18-beta.121 (the concept «Ігровий інтерфейс»): the menu's own over the game's
     {Text::MenuSettings, "Settings", "Налаштування", "Настройки"},
     {Text::MenuLayout, "Arrange the interface", "Розмістити інтерфейс", "Разместить интерфейс"},
     {Text::MenuTest, "Graphics test", "Тест графіки", "Тест графики"},
     {Text::MenuReport, "Send a report", "Надіслати звіт", "Отправить отчёт"},
+    // 3.0.18-beta.122 (the concept «Ігровий інтерфейс»): «Налаштування» in place of the game's Alt+O
+    {Text::SettingsWinHint, "Everything changes at once", "Усе змінюється одразу", "Всё меняется сразу"},
+    {Text::SettingsWinNone, "Nothing found", "Нічого не знайдено", "Ничего не найдено"},
+    {Text::SettingsWinConsole, "All graphics settings\xE2\x80\xA6 (Alt+D)",
+     "Усі налаштування графіки\xE2\x80\xA6 (Alt+D)", "Все настройки графики\xE2\x80\xA6 (Alt+D)"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

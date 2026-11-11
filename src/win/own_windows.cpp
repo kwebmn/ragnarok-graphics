@@ -5,6 +5,7 @@
 #include "core/layout.hpp"
 #include "win/console.hpp"
 #include "win/log.hpp"
+#include "win/options_card.hpp"
 #include "win/paths.hpp"
 #include "win/recap_window.hpp"
 #include "win/reference_window.hpp"
@@ -74,7 +75,9 @@ void press(closedwin::Own o, const char* why) {
         case Own::Tracker: trackerwin::toggleHidden(why); break;
         case Own::Party: toggle(closedwin::Window::Party, why); break;
         case Own::Recap: recapwin::toggle(why); break;
-        case Own::Settings: Console::askOpen(); break;  // till «Налаштування» of its own (stage 5)
+        case Own::Settings:  // 3.0.18-beta.122: «Налаштування» (the console while the new options' look is off)
+            if (!optionscardwin::toggleOpen(why)) Console::askOpen();
+            break;
         default: break;
     }
 }

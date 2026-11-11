@@ -1203,6 +1203,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     mobcardwin::frame(window, config.mobCard, pk, pw, ph);  // 3.0.11-beta.279
     mvpwin::frame(window, config.mvpTimers, pk, pw, ph);  // 3.0.11-beta.280
     recapwin::frame(window, config.deathRecap, pk, pw, ph);  // 3.0.18-beta.120: «Що мене вбило» on its own
+    optionscardwin::setSettings(&config, ourFile(layout::File::Ini));  // 3.0.18-beta.122: «Налаштування»
     optionscardwin::frame(window, config.optionsWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.162
     socialcardwin::frame(window, config.socialWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.163
     servercardwin::frame(window, config.serverWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.164
@@ -1435,10 +1436,16 @@ void Context::present(const Rect& source, bool waitForVblank) {
         settingsChecked_ = 0;  // read at once, at the next present
         settingsKnown_ = false;
     }
+    if (optionscardwin::takeChanged()) {  // 3.0.18-beta.122: «Налаштування» wrote the file - read it at once
+        settingsChecked_ = 0;
+        settingsKnown_ = false;
+    }
     if (console_.takeTestAsk()) testStart();  // 3.0.5-beta.6
     if (console_.takeLayoutAsk()) hudedit::open(window, "the console");  // 3.0.11-beta.75
     switch (menuwin::takeAsk()) {  // 3.0.18-beta.121 (the concept «Ігровий інтерфейс»): the menu's own, its card gone
-        case uagfx::menuwin::Action::Settings: Console::askOpen(); break;  // till «Налаштування» of its own
+        case uagfx::menuwin::Action::Settings:  // 3.0.18-beta.122: «Налаштування» (the console while it is off)
+            if (!optionscardwin::toggleOpen("the menu")) Console::askOpen();
+            break;
         case uagfx::menuwin::Action::Layout: hudedit::open(window, "the menu"); break;
         case uagfx::menuwin::Action::Test: testStart(); break;
         case uagfx::menuwin::Action::Report: menuReport_ = 3; break;  // the shot a few frames on: the menu gone

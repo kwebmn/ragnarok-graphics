@@ -10,6 +10,8 @@
 #include "core/window_stack.hpp"
 #include "core/options_card.hpp"
 #include "core/settings/strings.hpp"
+#include "core/settings/schema.hpp"
+#include "core/settings_window.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/code_page.hpp"
@@ -22,6 +24,8 @@
 #include "win/uaui.hpp"
 #include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/console.hpp"
+#include "win/setting_edit.hpp"
 
 namespace uagfx::win::optionscardwin {
 namespace {
@@ -37,18 +41,37 @@ constexpr uint32_t kOptionsSend = 0x473DD0, kShown = 0x38, kSendMsgSlot = 0x94;
 constexpr uint32_t kFlags[6] = {0x772D28, 0x6B8320, 0x77196C, 0x771968, 0x771960, 0x77195C};
 constexpr uint32_t kVolumes[2] = {0x74, 0x70};
 constexpr int kButtonMsg = 6, kRefresh = 0x3C, kPadStep = 8;
+constexpr uint32_t kMakeWindow = 0x4D42D0;  // 3.0.18-beta.122: the windows' manager's MakeWindow (UI window 0xD)
+constexpr int kOptionsWindow = 0xD;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 // 3.0.18-beta.82 (item 4): the game's options a live window - its volumes the library's sliders, its switches
-// ticks
+// ticks. 3.0.18-beta.122 (the concept «Ігровий інтерфейс», stages 5-6: «Налаштування» in place of Alt+O): sections on
+// the left (core settingswin: «Гра» - the game's own as before -, «Як виглядає гра», the settings app's «Інтерфейс»
+// sections), a search over them all, each row a switch, a slider or choices; ours written into uaro-graphics.ini as
+// the console writes them (win/setting_edit)
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="lw ow" data-style-background-color="ground">
-<div class="head"><span class="title">{{title}}</span></div>
+<body class="lw ow sw" data-style-background-color="ground">
+<div class="head"><span class="title">{{title}}</span><span class="hk">Alt+O</span></div>
 <span class="x ctl" data-event-click="opt_close()">&#x2715;</span>
-<div class="orow" data-for="r, i : rows"><span class="tick ctl" data-class-on="r.on" data-event-click="opt_toggle(i)"><span
-  class="box"></span>{{r.label}}</span><input class="ctl" data-if="i < 2" type="range" min="0" max="127" step="1"
-  data-attr-value="r.vol" data-event-change="opt_volume(i)"/></div>
-<div class="hint">{{hint}}</div>
+<div class="srch"><input class="ctl" type="text" data-value="query"/><span class="ph"
+  data-if="query == ''">{{search_hint}}</span></div>
+<div class="sbody">
+ <div class="snav"><div class="sn ctl" data-for="n, i : nav" data-class-on="i == sec && query == ''"
+   data-event-click="sec_go(i)"><span class="nn">{{n.name}}</span><span class="cnt"
+   data-if="n.count > 0">{{n.count}}</span></div></div>
+ <div class="spane"><div data-for="r, i : srows"><div class="sgrp" data-if="r.group != ''">{{r.group}}</div><div
+   class="sro"><div class="st"><span class="sl">{{r.label}}</span><span class="shn"
+   data-if="r.hint != ''">{{r.hint}}</span></div><div class="sctl"><span class="tg ctl" data-if="r.toggle"
+   data-class-on="r.on" data-event-click="set_toggle(i)"><span class="kn"></span></span><input class="ctl"
+   data-if="r.slider" type="range" data-attr-min="r.min" data-attr-max="r.max" data-attr-step="r.step"
+   data-attr-value="r.value" data-event-change="set_slider(i)"/><span class="sv" data-if="r.slider">{{r.vtext}}</span
+   ><div class="chs" data-if="r.choices.size > 0"><span class="ch ctl" data-for="c, j : r.choices"
+   data-class-on="c.on" data-event-click="set_choice(i, j)">{{c.label}}</span></div></div></div></div>
+   <div class="snone" data-if="srows.size == 0">{{none}}</div></div>
+</div>
+<div class="sfoot"><span class="sfh">{{hint}}</span><span class="btn ctl"
+  data-event-click="open_console()">{{console_btn}}</span></div>
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
 struct OptionRowView {
@@ -56,10 +79,33 @@ struct OptionRowView {
     bool on = false;
     int vol = 0;
 };
+struct ChoiceView {
+    Rml::String label;
+    bool on = false;
+};
+struct SetRowView {  // 3.0.18-beta.122
+    Rml::String key, group, label, hint, vtext;
+    bool toggle = false, on = false, slider = false;
+    int value = 0, min = 0, max = 0, step = 1;
+    std::vector<ChoiceView> choices;
+};
+struct NavView {
+    Rml::String name;
+    int count = 0;
+};
 
 struct State {
     uilive::Window live;  // 3.0.18-beta.81
     std::vector<OptionRowView> rowViews;
+    // 3.0.18-beta.122: «Налаштування» - the section, the search, the rows shown, the config and the file they write
+    int sec = 0;
+    Rml::String query, shownQuery, searchHint, none, consoleBtn;
+    std::vector<NavView> navViews;
+    std::vector<SetRowView> setRows;
+    std::string rowsKey;
+    const Config* config = nullptr;
+    std::string iniPath;
+    bool changed = false;
     Rml::String title, hint, ground = "#10141cf0";
     uisheet::Sheet sheet;  // 3.0.18-beta.34: the window drawn by uaUI
     int sheetGen = 0;
@@ -310,48 +356,199 @@ static void fillSheet(State& s, uisheet::Content& ui) {
     ui.say(oc::words(s.layout, s.values, s.show, texts()));
 }
 
+// 3.0.18-beta.122: «Налаштування»'s rows - the section's (or every section's the search finds), as they are now
+static std::vector<SetRowView> buildRows(const State& s) {
+    namespace sw = uagfx::settingswin;
+    const settings::Lang lang = language();
+    const std::vector<sw::Section>& secs = sw::sections();
+    std::vector<sw::Found> list;
+    const bool searching = !s.query.empty();
+    if (searching) {
+        list = sw::find(s.query, lang);
+    } else if (s.sec >= 0 && size_t(s.sec) < secs.size()) {
+        for (const std::string& k : secs[size_t(s.sec)].keys) list.push_back(sw::Found{s.sec, k});
+    }
+    const oc::Texts t = texts();
+    const Config shown = s.config ? settingedit::shown(*s.config) : Config{};
+    std::vector<SetRowView> out;
+    int lastSec = -1;
+    for (const sw::Found& f : list) {
+        SetRowView r;
+        r.key = f.key;
+        if (searching && f.section != lastSec) r.group = say(secs[size_t(f.section)].name);
+        lastSec = f.section;
+        const sw::Kind kind = secs[size_t(f.section)].kind;
+        if (kind == sw::Kind::Game) {
+            const int i = f.key.back() - '0';
+            r.label = t.toggles[i];
+            r.toggle = true, r.on = s.values.on[i];
+            if (i < 2) r.slider = true, r.min = 0, r.max = oc::kVolumeMost, r.value = s.values.volume[i];
+            if (i < 2) r.vtext = std::to_string(s.values.volume[i]);
+            if (i == 2) r.hint = t.snapHint;
+        } else if (kind == sw::Kind::Picture) {
+            const auto c = settings::presets::Choice(f.key.back() - '0');
+            r.label = say(settings::presets::headOf(c));
+            const int now = s.config ? settings::presets::match(c, shown).variant : -1;
+            for (int v = 0; v < settings::presets::variants(c); ++v)
+                r.choices.push_back(ChoiceView{say(settings::presets::nameOf(c, v)), v == now});
+        } else if (const settings::IniSetting* st = settings::findSetting(f.key)) {
+            r.label = say(st->label);
+            r.hint = say(st->hint);
+            if (r.hint.size() > 160) r.hint.clear();  // the long ones stay the app's (a row, not a page)
+            const std::string now = s.config ? settings::tokenOf(*st, shown) : "";
+            if (st->control == settings::Control::Check) {
+                r.toggle = true, r.on = st->tokens.size() > 1 && now == st->tokens[1];
+            } else if (st->control == settings::Control::Slider) {
+                r.slider = true, r.min = st->min, r.max = st->max, r.step = std::max(1, st->step);
+                r.value = std::atoi(now.c_str());
+                r.vtext = now + (st->unit && *st->unit ? std::string(" ") + st->unit : "");
+            } else {
+                for (size_t j = 0; j < st->tokens.size(); ++j)
+                    r.choices.push_back(ChoiceView{j < st->choices.size() ? say(st->choices[j]) : st->tokens[j],
+                                                   now == st->tokens[j]});
+            }
+        }
+        out.push_back(std::move(r));
+    }
+    return out;
+}
+
+static std::string rowsKeyOf(const std::vector<SetRowView>& rows) {
+    std::string k;
+    for (const SetRowView& r : rows) {
+        k += r.key + (r.on ? "+" : "-") + std::to_string(r.value) + r.group;
+        for (const ChoiceView& c : r.choices) k += c.on ? '1' : '0';
+        k += '|';
+    }
+    return k;
+}
+
+// A row's control used: the game's own through its window, ours into uaro-graphics.ini (read again at the next
+// present: `changed`)
+static void useRow(State& s, int row, int what, int value) {
+    if (row < 0 || size_t(row) >= s.setRows.size()) return;
+    const std::string key = s.setRows[size_t(row)].key;
+    if (key.rfind("game.", 0) == 0) {
+        const int i = key.back() - '0';
+        if (what == 0) toggle(s, i);
+        else if (what == 1) setVolume(s, i, value);
+        return;
+    }
+    if (!s.config || s.iniPath.empty()) return;
+    bool wrote = false;
+    if (key.rfind("picture.", 0) == 0) {
+        if (what == 2) wrote = settingedit::setLook(s.iniPath, settings::presets::Choice(key.back() - '0'), value);
+    } else if (const settings::IniSetting* st = settings::findSetting(key)) {
+        if (what == 0 && st->tokens.size() > 1)
+            wrote = settingedit::set(s.iniPath, *s.config, key, st->tokens[s.setRows[size_t(row)].on ? 0 : 1]);
+        else if (what == 1)
+            wrote = settingedit::set(s.iniPath, *s.config, key, std::to_string(std::clamp(value, st->min, st->max)));
+        else if (what == 2 && value >= 0 && size_t(value) < st->tokens.size())
+            wrote = settingedit::set(s.iniPath, *s.config, key, st->tokens[size_t(value)]);
+    }
+    s.changed = s.changed || wrote;
+}
+
 // 3.0.18-beta.81: the live window's model and place
 static void liveFrame(State& s) {
     s.live.make("options", kLive, [&](Rml::DataModelConstructor& m) {
-        if (auto v = m.RegisterStruct<OptionRowView>()) {
-            v.RegisterMember("label", &OptionRowView::label);
-            v.RegisterMember("on", &OptionRowView::on);
-            v.RegisterMember("vol", &OptionRowView::vol);
+        if (auto v = m.RegisterStruct<ChoiceView>()) {
+            v.RegisterMember("label", &ChoiceView::label);
+            v.RegisterMember("on", &ChoiceView::on);
         }
-        m.RegisterArray<std::vector<OptionRowView>>();
-        m.Bind("rows", &s.rowViews);
+        m.RegisterArray<std::vector<ChoiceView>>();
+        if (auto v = m.RegisterStruct<SetRowView>()) {
+            v.RegisterMember("group", &SetRowView::group);
+            v.RegisterMember("label", &SetRowView::label);
+            v.RegisterMember("hint", &SetRowView::hint);
+            v.RegisterMember("vtext", &SetRowView::vtext);
+            v.RegisterMember("toggle", &SetRowView::toggle);
+            v.RegisterMember("on", &SetRowView::on);
+            v.RegisterMember("slider", &SetRowView::slider);
+            v.RegisterMember("value", &SetRowView::value);
+            v.RegisterMember("min", &SetRowView::min);
+            v.RegisterMember("max", &SetRowView::max);
+            v.RegisterMember("step", &SetRowView::step);
+            v.RegisterMember("choices", &SetRowView::choices);
+        }
+        m.RegisterArray<std::vector<SetRowView>>();
+        if (auto v = m.RegisterStruct<NavView>()) {
+            v.RegisterMember("name", &NavView::name);
+            v.RegisterMember("count", &NavView::count);
+        }
+        m.RegisterArray<std::vector<NavView>>();
+        m.Bind("srows", &s.setRows);
+        m.Bind("nav", &s.navViews);
+        m.Bind("sec", &s.sec);
+        m.Bind("query", &s.query);
         m.Bind("title", &s.title);
         m.Bind("hint", &s.hint);
+        m.Bind("search_hint", &s.searchHint);
+        m.Bind("none", &s.none);
+        m.Bind("console_btn", &s.consoleBtn);
         m.Bind("ground", &s.ground);
-        m.BindEventCallback("opt_toggle", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
-            if (!a.empty()) toggle(state(), a[0].Get<int>());
-        });
-        m.BindEventCallback("opt_volume", [](Rml::DataModelHandle, Rml::Event& e, const Rml::VariantList& a) {
+        m.BindEventCallback("sec_go", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
             if (a.empty()) return;
-            const int value = std::atoi(e.GetParameter<Rml::String>("value", "0").c_str());
-            setVolume(state(), a[0].Get<int>(), value);
+            st.sec = a[0].Get<int>();
+            st.query.clear();
+            st.live.doc.dirty("query");
+            st.live.doc.dirty("sec");
+            st.rowsKey.clear();
+        });
+        m.BindEventCallback("set_toggle", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (!a.empty()) useRow(state(), a[0].Get<int>(), 0, 0);
+        });
+        m.BindEventCallback("set_slider", [](Rml::DataModelHandle, Rml::Event& e, const Rml::VariantList& a) {
+            if (a.empty()) return;
+            useRow(state(), a[0].Get<int>(), 1, std::atoi(e.GetParameter<Rml::String>("value", "0").c_str()));
+        });
+        m.BindEventCallback("set_choice", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (a.size() >= 2) useRow(state(), a[0].Get<int>(), 2, a[1].Get<int>());
+        });
+        m.BindEventCallback("open_console", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            Console::askOpen();
+            closeIt(state());
         });
         m.BindEventCallback("opt_close", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
             closeIt(state());
         });
     });
     if (!s.live.made()) return;
-    const oc::Texts t = texts();
-    std::vector<OptionRowView> rows;
-    for (int i = 0; i < 6; ++i)
-        rows.push_back(OptionRowView{t.toggles[i], s.values.on[i], i < 2 ? s.values.volume[i] : 0});
     const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
-    const bool same = rows.size() == s.rowViews.size() &&
-                      std::equal(rows.begin(), rows.end(), s.rowViews.begin(),
-                                 [](const OptionRowView& a, const OptionRowView& b) {
-                                     return a.label == b.label && a.on == b.on && a.vol == b.vol;
-                                 });
-    if (!same) s.rowViews = std::move(rows), s.live.doc.dirty("rows");
-    if (t.title != s.title || t.snapHint != s.hint || ground != s.ground) {
-        s.title = t.title, s.hint = t.snapHint, s.ground = ground;
+    const Rml::String title = say(settings::Text::MenuSettings);
+    if (title != s.title || ground != s.ground) {
+        s.title = title, s.hint = say(settings::Text::SettingsWinHint), s.ground = ground;
+        s.searchHint = say(settings::Text::SearchCue);
+        s.none = say(settings::Text::SettingsWinNone);
+        s.consoleBtn = say(settings::Text::SettingsWinConsole);
+        std::vector<NavView> nav;
+        for (const auto& sec : settingswin::sections()) nav.push_back(NavView{say(sec.name), 0});
+        s.navViews = std::move(nav);
         s.live.doc.dirtyAll();
     }
-    s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Options), ".tick, .x");
+    if (s.query != s.shownQuery) {  // the search's counts on the sections
+        s.shownQuery = s.query;
+        for (NavView& n : s.navViews) n.count = 0;
+        for (const settingswin::Found& f : settingswin::find(s.query, language()))
+            if (size_t(f.section) < s.navViews.size()) ++s.navViews[size_t(f.section)].count;
+        s.live.doc.dirty("nav");
+        s.rowsKey.clear();
+    }
+    std::vector<SetRowView> rows = buildRows(s);
+    const std::string key = rowsKeyOf(rows) + std::to_string(s.sec);
+    if (key != s.rowsKey) {
+        s.rowsKey = key;
+        s.setRows = std::move(rows);
+        s.live.doc.dirty("srows");
+    }
+    int x = s.layout.x, y = s.layout.y;  // the middle of the screen, as wide as its markup makes it
+    int bx = 0, by = 0, bw = 0, bh = 0;
+    if (s.live.doc.box(bx, by, bw, bh) && bw > 0) {
+        x = std::max(0, (s.targetW - bw) / 2);
+        y = std::max(0, (s.targetH - bh) / 3);
+    }
+    s.live.frame(s.shown, x, y, int(winstack::Win::Options), ".ctl");
 }
 
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
@@ -469,6 +666,32 @@ bool box(int& x, int& y, int& w, int& h) {
     y = s.layout.y;
     w = s.layout.w;
     h = s.layout.h;
+    return true;
+}
+
+void setSettings(const Config* config, const std::string& iniPath) {
+    State& s = state();
+    s.config = config;
+    s.iniPath = iniPath;
+}
+
+bool takeChanged() {
+    State& s = state();
+    const bool c = s.changed;
+    s.changed = false;
+    return c;
+}
+
+bool toggleOpen(const char* why) {
+    State& s = state();
+    if (!s.on || !inGameWorld()) return false;
+    if (gameOptions()) {
+        closeIt(s);
+    } else {  // the game's own window made (its Alt+O): the new look shows it
+        using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
+        reinterpret_cast<MakeFn>(uintptr_t(kMakeWindow))(kWindowMgr, kOptionsWindow);
+    }
+    LOG_INFO("options: «Налаштування» %s (%s)", gameOptions() ? "opened" : "closed", why);
     return true;
 }
 

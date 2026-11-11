@@ -1,6 +1,10 @@
 #pragma once
 #include <windows.h>
 
+#include <string>
+
+#include "core/config.hpp"
+
 #include <cstdint>
 
 #include "core/frame.hpp"
@@ -27,5 +31,12 @@ void beforeGameDraw();
 enum class PadCommand : uint8_t { Up, Down, Left, Right, Press, Close };
 void padCommand(PadCommand c);
 bool box(int& x, int& y, int& w, int& h);
+
+// 3.0.18-beta.122 (the concept «Ігровий інтерфейс»: «Налаштування» in place of Alt+O): the config it shows and the file
+// it writes (each frame); true once after it wrote the file (read it again); its window opened (the game's own made,
+// as Alt+O) or closed - false while [interface] options is off
+void setSettings(const Config* config, const std::string& iniPath);
+bool takeChanged();
+bool toggleOpen(const char* why);
 
 }  // namespace uagfx::win::optionscardwin

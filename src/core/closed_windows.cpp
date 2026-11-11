@@ -53,7 +53,7 @@ bool ownOfKey(unsigned vk, Own& out) {
 
 const char* keyName(Own o) {
     static const char* const kNames[size_t(Own::Count)] = {"Ctrl+F", "Ctrl+H", "Ctrl+B", "Ctrl+J",
-                                                          "Ctrl+G", "Ctrl+K", "Alt+D"};
+                                                          "Ctrl+G", "Ctrl+K", "Alt+O"};
     return size_t(o) < size_t(Own::Count) ? kNames[size_t(o)] : "";
 }
 

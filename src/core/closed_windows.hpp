@@ -26,6 +26,6 @@ struct Switches {
 std::vector<Own> row(const Switches& on);
 // Ctrl+letter's window (not «Довідник»'s Ctrl+F - its own); false: none of ours
 bool ownOfKey(unsigned vk, Own& out);
-const char* keyName(Own o);  // "Ctrl+H"; settings "Alt+D" (the console, till its own window)
+const char* keyName(Own o);  // "Ctrl+H"; settings "Alt+O" (3.0.18-beta.122: «Налаштування» in place of the game's)
 
 }  // namespace uagfx::closedwin
