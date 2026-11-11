@@ -1,3 +1,6 @@
+- Equipment: a worn thing with an element shows it in colour beside its name - "Wind", "Fire", "Holy"… (element weapons, forged ones, armour with an element card).
+- Item card: an element thing's first line is "Property: Wind", as in the later clients.
+
 - Fixed the game crashing right after entering a map (an error in cps.dll, then a hang): our interface read the game's files at the same time as its map model loader thread. Now it reads under the same lock as the game.
 - Slots in names, as in the old client: "Jur [3]" in the bag, storage, cart and trade (shops since .142).
 - Tracking: with nothing pinned, its icon shows for 8 s what to pin and how.
