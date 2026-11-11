@@ -61,16 +61,6 @@ TEST(social_card_places_and_the_mouse) {
     CHECK(many.rows.size() == 10 && socialcard::mostScroll(many, 30) == 20 && many.buttons.size() == 3);
 }
 
-// 3.0.18-beta.34: uaUI's friends - the entry chosen, none when nothing is
-TEST(social_card_chosen_entry) {
-    std::vector<socialcard::Entry> entries(2);
-    socialcard::Show sh;
-    sh.selected = -1;
-    CHECK(socialcard::chosenEntry(entries, sh) == nullptr);
-    sh.selected = 1;
-    CHECK(socialcard::chosenEntry(entries, sh) == &entries[1]);
-}
-
 // 3.0.18-beta.141 (the owner: «все» - the card made handier): the friends online first (each kind in the game's own
 // order), the party as the game lists it; the count online
 TEST(social_card_friends_online_first) {

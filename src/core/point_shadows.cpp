@@ -16,19 +16,6 @@ Face face(int f) {
     return out;
 }
 
-bool faceOf(const float d[3], int& f, float& u, float& v) {
-    const float ax = std::fabs(d[0]), ay = std::fabs(d[1]), az = std::fabs(d[2]);
-    int a = 0;
-    if (ay > ax && ay >= az) a = 1;
-    else if (az > ax && az > ay) a = 2;
-    const float m = std::fabs(d[a]);
-    if (!(m > 0.0f)) return false;
-    f = a * 2 + (d[a] >= 0.0f ? 0 : 1);
-    u = d[(a + 1) % 3] / m;
-    v = d[(a + 2) % 3] / m;
-    return true;
-}
-
 bool boxOnFace(const float lo[3], const float hi[3], int f) {
     const int a = std::clamp(f, 0, 5) / 2;
     const bool plus = f % 2 == 0;

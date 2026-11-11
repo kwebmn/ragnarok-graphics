@@ -62,19 +62,6 @@ std::vector<IniEdit> worldScaleReset(const std::map<std::string, std::string>& i
     return e;
 }
 
-const char* tierName(Tier t) {
-    switch (t) {
-        case Tier::NoDriver: return "no driver";
-        case Tier::Old: return "old";
-        case Tier::Low: return "low";
-        case Tier::Middle: return "middle";
-        case Tier::High: return "high";
-        case Tier::IntegratedWeak: return "integrated, weak";
-        case Tier::IntegratedStrong: return "integrated, strong";
-    }
-    return "?";
-}
-
 std::string machineKey(const Machine& m) {
     return m.adapter + "|" + std::to_string(m.vramMb) + "|" + std::to_string(m.screenWidth) + "x" +
            std::to_string(m.screenHeight);

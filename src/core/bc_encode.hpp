@@ -11,9 +11,6 @@ namespace uagfx::bc {
 bool opaque(const uint32_t* argb, int width, int height);
 std::vector<uint8_t> encodeBC1(const uint32_t* argb, int width, int height);
 std::vector<uint8_t> encodeBC3(const uint32_t* argb, int width, int height);
-// For the tests: back to 0xAARRGGBB.
-std::vector<uint32_t> decodeBC1(const uint8_t* blocks, int width, int height);
-std::vector<uint32_t> decodeBC3(const uint8_t* blocks, int width, int height);
 inline int blocksAcross(int side) { return (side + 3) / 4; }
 
 }  // namespace uagfx::bc

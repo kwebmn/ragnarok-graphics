@@ -51,27 +51,6 @@ TEST(game_camera_knows_its_build_and_projects_as_setsize) {
     CHECK_EQ(projectionFor(2195, 1235).cx, 1097.0f);  // whole pixels, as the game's (int) casts make them
 }
 
-TEST(game_camera_moves_a_depth_pixel_where_the_previous_camera_saw_it) {
-    // Part 3 (DLSS): a point the game drew at (sx, sy, sz) with this frame's camera, back where the last frame's camera
-    // put it - the motion vector without any help from the game.
-    const Projection p = projectionFor(2194, 1234);
-    float now[12], before[12];
-    lookAt({300, -250, 100}, {50, 0, 80}, {0, -1, 0}, now);
-    lookAt({310, -255, 140}, {52, 0, 79}, {0, -1, 0}, before);  // walked and turned a little
-    CHECK(plausibleView(now));
-    float r[12];
-    reprojection(now, before, r);
-    for (V3 w : {V3{50, 0, 80}, V3{120, -30, 10}, V3{-40, 5, 160}}) {
-        float sx, sy, sz, ex, ey, ez, px, py;
-        project(p, now, w, sx, sy, sz);
-        project(p, before, w, ex, ey, ez);
-        reproject(p, r, sx, sy, sz, px, py);
-        CHECK(std::fabs(px - ex) < 0.02f && std::fabs(py - ey) < 0.02f);
-    }
-    const float garbage[12] = {2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-    CHECK(!plausibleView(garbage));
-}
-
 TEST(game_camera_clip_matrices_agree_with_the_game) {
     // Streamline's view -> clip, and back, give the same screen point as ProjectVertex.
     const Projection p = projectionFor(1921, 1081);  // odd: the centre is not the middle

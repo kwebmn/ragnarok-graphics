@@ -22,8 +22,6 @@ constexpr int kMostSide = 256;  // corners a side at most: the texture's
 // The normal (up along -y, |n| = 1) as one float a float texture holds exactly: 4096 * (1 + x's 11 bits) + z's 12
 // bits; y is the rest of the unit length, upwards. 0 is no normal.
 float pack(float nx, float nz);
-bool unpack(float v, float& nx, float& ny, float& nz);
-
 // The grid around the triangles' middle, at most kMostSide a side; smoothed once over its neighbours.
 Grid build(const std::vector<seams::Triangle>& ground);
 

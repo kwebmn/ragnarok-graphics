@@ -283,13 +283,6 @@ void noteSentIn(const std::wstring& dir, const std::string& code, const std::str
     writeFileAtomic(sentFile(dir), report::tailOf(text, 16u << 10));
 }
 
-std::vector<std::string> sentCodesIn(const std::wstring& dir, size_t most) {
-    const std::vector<Sent> all = readSent(dir);
-    std::vector<std::string> out;
-    for (auto it = all.rbegin(); it != all.rend() && out.size() < most; ++it) out.push_back(it->code);
-    return out;
-}
-
 long long lastAutomaticIn(const std::wstring& dir) {
     long long last = 0;
     for (const Sent& s : readSent(dir))

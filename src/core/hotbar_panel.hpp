@@ -61,8 +61,6 @@ struct Cell {
     float timer = 0;
     std::string timerText;
 };
-// The plate of a ground skill's time left - the cell's middle
-panel::Box timerBox(const panel::Box& cell, const std::string& text, float s);
 int iconSide(Mode mode, float scale);
 
 // The battle mode's rows as shown, top down (Q, A, Z as on the keyboard), are the game's rows 1, 2, 0
@@ -164,10 +162,6 @@ struct Show {
     int profile = 1;  // 3.0.11-beta.288 (the owner's feature 20): the bar's profile - past the first its number by the
                       // toggle
 };
-// The ammo's pill over the glass's left end (w 0: none worn); a cell's tip over it hides it a while
-panel::Box ammoBox(const Layout& L, const Show& show);
-// 3.0.16-beta.8: the supplies' pills in a row after it (each w 0 when a tip is over it)
-std::vector<panel::Box> supplyBoxes(const Layout& L, const Show& show);
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;

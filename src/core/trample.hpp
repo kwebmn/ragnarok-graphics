@@ -18,10 +18,6 @@ struct Hold {
     float left = 1.0f;
 };
 
-// The hold as grass_ps summed it until now: each step within sqrt(12) units pushes the blades away from it and
-// within 3 treads them down, the newer the more - age (now - born) / life, 0 just left .. 1 gone. life 0: none hold.
-Hold at(const std::deque<footsteps::Step>& steps, float now, float life, float x, float z);
-
 struct Grid {
     static constexpr int kSide = 128;            // texels a side
     static constexpr float kReach = 3.4641016f;  // sqrt(12): how far a step pushes
@@ -40,9 +36,5 @@ void build(const std::deque<footsteps::Step>& steps, float now, float life, Grid
 // 2.7.29: on which rows grass_ps looks for the blades' roots (uiPixels.z): every second at twice the game's size and
 // more - a game pixel two rows and more (4K), the same blades for half the work - else every row.
 inline int rootRows(float scale) { return scale >= 1.5f ? 2 : 1; }
-
-// The grid read at a spot as grass_ps reads it (between the four texel centres around, by how near each is; past
-// the edge its edge) - for the tests; an empty grid holds nothing.
-Hold sample(const Grid& g, float x, float z);
 
 }  // namespace uagfx::trample

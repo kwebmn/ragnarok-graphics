@@ -31,7 +31,6 @@ std::string inside(const int cards[4], int slots, const std::function<std::strin
                    const std::string& freeWord);
 long long total(const std::vector<Row>& rows);                   // each chosen times its price
 bool canAdd(const Row& r, long long purchase, long long zeny);  // the shop has more, the zeny pays for one more
-bool canRemove(const Row& r);
 std::string money(long long zeny);  // "1 500 000"
 constexpr uint32_t kShort = 0xFF6B5E;  // the total's colour when the zeny does not pay for it
 
@@ -74,7 +73,4 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-// 3.0.18-beta.30 (uaUI's «Лавка»): a line's icon square
-panel::Box iconAt(const Layout& L, size_t line);
-
 }  // namespace uagfx::vendshop

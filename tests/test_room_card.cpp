@@ -49,16 +49,6 @@ TEST(room_card_colours) {
     CHECK_EQ(roomcard::rgbOf(0x00808000), 0x008080u);
 }
 
-// The newest lines that fit, the newest last
-TEST(room_card_last_lines) {
-    const std::vector<roomcard::Line> l = card().lines;
-    const std::vector<roomcard::Line> last = roomcard::lastLines(l, 5);
-    CHECK_EQ(int(last.size()), 5);
-    CHECK(last.front().text == "line 25" && last.back().text == "line 29");
-    CHECK_EQ(int(roomcard::lastLines(l, 100).size()), 30);
-    CHECK(roomcard::lastLines({}, 5).empty());
-}
-
 // The parts where they are drawn; the owner's tools only for the owner, a member's actions only when one is chosen
 TEST(room_card_layout_and_hits) {
     roomcard::Card c = card();

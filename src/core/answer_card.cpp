@@ -81,18 +81,6 @@ uint32_t statusColour(reports::Status s) {
     return 0x5B8DEF;
 }
 
-void paint(panel::Picture& out, const Geometry& g, reports::Status st, Part hover) {
-    panel::blank(out, g.width, g.height);  // 3.0.18-beta.14: recorded for uaUI while it is on
-    const float s = g.scale, edge = std::max(1.0f, s);
-    const uint32_t c = statusColour(st);
-    panel::roundRect(out, Box{0, 0, float(g.width), float(g.height)}, g.radius, kGround, 0.90f, kWhite, 0.12f, edge);
-    panel::roundRect(out, g.accent, 1.5f * s, c, 1.0f);
-    panel::circle(out, g.dot.x + g.dot.w / 2, g.dot.y + g.dot.h / 2, g.dot.w / 2, c, 1.0f);
-    panel::roundRect(out, g.chip, 6 * s, c, 0.20f);
-    panel::roundRect(out, g.open, 7 * s, hover == Part::Open ? kBlueHover : kBlue, 1.0f);
-    panel::roundRect(out, g.later, 7 * s, kWhite, hover == Part::Later ? 0.10f : 0.0f, kWhite, 0.24f, edge);
-}
-
 std::vector<std::string> fitLines(const std::string& text, size_t most,
                                   const std::function<bool(const std::string&)>& fits) {
     std::vector<std::string> words;

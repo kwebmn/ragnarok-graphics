@@ -20,12 +20,6 @@ constexpr uint32_t kMuted = 0x9AA3B5, kBlack = 0x000000, kGreen = 0x4CAF7A, kRed
 
 uint32_t rgbOf(uint32_t bgr) { return (bgr & 0xFF) << 16 | (bgr & 0xFF00) | (bgr >> 16 & 0xFF); }
 
-std::vector<Line> lastLines(const std::vector<Line>& lines, int rows) {
-    const size_t n = size_t(std::max(0, rows));
-    if (lines.size() <= n) return lines;
-    return std::vector<Line>(lines.end() - long(n), lines.end());
-}
-
 Layout layout(const Card& c, int targetW, int targetH, float scale) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;

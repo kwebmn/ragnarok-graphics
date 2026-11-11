@@ -69,33 +69,6 @@ std::string maps(const refroute::Route& r) {
 
 }  // namespace
 
-TEST(walk_grid_parts_runs_and_the_file) {
-    const walkgrid::Grid t = tower();
-    CHECK_EQ(t.partCount, 2);
-    CHECK_EQ(int(t.at(0, 0)), 0);
-    CHECK_EQ(int(t.at(9, 9)), 1);
-    CHECK_EQ(int(t.at(5, 3)), int(walkgrid::kWall));
-    CHECK_EQ(int(t.at(-1, 0)), int(walkgrid::kWall));
-    CHECK_EQ(int(t.at(10, 0)), int(walkgrid::kWall));
-    CHECK(t.around(5, 3, 0).empty());                         // on the wall, nothing that near
-    CHECK(t.around(5, 3, 1) == std::vector<uint8_t>({0, 1}));  // both floors one cell away
-    CHECK(t.around(2, 2, 15) == std::vector<uint8_t>({0}));    // the nearest ring only
-    walkgrid::Grids maps;
-    maps["tower"] = t;
-    maps["field"] = open10();
-    walkgrid::Grids back;
-    CHECK(walkgrid::read(walkgrid::payload(maps), back));
-    CHECK_EQ(back.size(), size_t(2));
-    CHECK_EQ(back["tower"].w, 10);
-    CHECK_EQ(back["tower"].partCount, 2);
-    CHECK_EQ(int(back["tower"].at(7, 4)), 1);
-    CHECK_EQ(int(back["field"].at(3, 3)), 0);
-    std::string bad = walkgrid::payload(maps);
-    bad.resize(bad.size() - 2);  // cut
-    CHECK(!walkgrid::read(bad, back));
-    CHECK(!walkgrid::read("not a grid file", back));
-}
-
 // 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment): the player's part (on a wall the one
 // part next to it), a part's cells flat - what the minimap leaves lit
 TEST(walk_grid_the_players_part_and_its_cells) {

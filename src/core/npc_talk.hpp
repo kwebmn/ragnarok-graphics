@@ -102,7 +102,4 @@ std::map<std::string, int> readChoices(const std::string& text);
 std::string writeChoices(const std::map<std::string, int>& choices);
 constexpr size_t kChoicesMost = 400;
 
-// 3.0.18-beta.31 (uaUI's NPC talk): the controller's buttons in the footer, in L.padGlyphs' order (padglyph::Button)
-std::vector<int> padButtons(const Talk& t);
-
 }  // namespace uagfx::npctalk

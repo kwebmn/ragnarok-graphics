@@ -164,7 +164,6 @@ int stamp() {
 }
 
 void setIconsOn(bool on) { g_icons = on; }
-bool iconsOn() { return g_icons; }
 int iconsStamp() { return g_icons ? stamp() : -1; }
 
 bool ofInterface(const uint8_t* bmp, size_t size, std::vector<uint32_t>& argb, int& width, int& height,

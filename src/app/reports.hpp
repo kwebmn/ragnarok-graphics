@@ -56,7 +56,6 @@ int queuedReports(const std::wstring& dir);
 // uaro-graphics\reports.txt (0.51): the codes sent from this computer, newest first; when the last automatic one
 // went (seconds since 1970, 0 never) - the watcher sends one in 6 hours at most.
 void noteSentIn(const std::wstring& dir, const std::string& code, const std::string& reason, bool automatic);
-std::vector<std::string> sentCodesIn(const std::wstring& dir, size_t most);
 long long lastAutomaticIn(const std::wstring& dir);
 
 }  // namespace uagfx::app

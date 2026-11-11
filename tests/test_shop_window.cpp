@@ -190,19 +190,3 @@ TEST(shop_window_which_shop_the_npc_is) {
     CHECK_EQ(shopwin::matchShop(shops, "payon", {501}, 134, 220), -1);  // not on this map
 }
 
-// 3.0.18-beta.30 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5): uaUI's shop - the cart's marks on
-// the list, the controller's glyphs (Start on «Купити», LB/RB at the tabs), the confirm's state
-TEST(shop_window_view_for_uaui) {
-    shopwin::Data d = data();
-    d.cart = {{2, 30}, {1, 50}};
-    const std::vector<int> shown = shopwin::shownOf(d.wares, "");
-    shopwin::Show sh;
-    const shopwin::Layout L = shopwin::layout(0, 0, 1.0f, d, shown, sh, texts(), measure);
-    const shopwin::View v = shopwin::view(L, d, shown, sh, measure);
-    CHECK(v.inCart.size() == L.wares.size() && !v.inCart[0] && v.inCart[1] && v.inCart[2]);
-    CHECK(v.ok && v.glyphs.empty());
-    sh.pad = true;
-    const shopwin::Layout P = shopwin::layout(0, 0, 1.0f, d, shown, sh, texts(), measure);
-    const shopwin::View pv = shopwin::view(P, d, shown, sh, measure);
-    CHECK(pv.glyphs.size() == P.padGlyphs.size() + 3);  // the footer's, Start, LB, RB
-}

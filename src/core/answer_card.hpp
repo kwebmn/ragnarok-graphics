@@ -31,8 +31,6 @@ enum class Part : uint8_t { None, Body, Open, Later };  // Body: the card itself
 Part hitTest(const Geometry& g, float x, float y);
 
 uint32_t statusColour(reports::Status s);  // 0xRRGGBB: orange need_info, green fixed, blue the rest
-void paint(panel::Picture& out, const Geometry& g, reports::Status s, Part hover);
-
 // The developer's words (its line ends as spaces) in `most` lines that `fits` takes whole - a word cut only when it
 // is wider than a line alone - and «…» at the end of the last when more are left
 std::vector<std::string> fitLines(const std::string& text, size_t most,

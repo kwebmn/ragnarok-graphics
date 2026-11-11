@@ -22,38 +22,6 @@ GlyphBitmap glyph(int w, int h, int ox, int oy, std::vector<uint8_t> coverage) {
 }
 }  // namespace
 
-TEST(twin_text_letters_start_at_their_game_pixel_blocks) {
-    CHECK_EQ(letterPen(10, 0, 1.75), 17);    // floor(17.5)
-    CHECK_EQ(letterPen(10, 7, 1.75), 29);    // floor(29.75)
-    CHECK_EQ(letterPen(-3, 0, 1.75), -6);    // a list scrolled left
-    CHECK_EQ(baselineRow(2, 12, 1.75), 24);  // floor(24.5)
-    CHECK_EQ(letterPen(4, 0, 2.0), 8);
-}
-
-TEST(twin_text_letters_centred_in_their_game_places_and_stay_as_text_grows) {
-    // "Command" in the game's hinted 15 px Arial (m 13 px wide) and its large letters at k 1.75 (m 19 px).
-    const std::vector<int> ends = {10, 18, 31, 44, 51, 59, 67};
-    const std::vector<int> advances = {16, 13, 19, 19, 12, 13, 13};
-    const double K = 1.75;
-    const std::vector<int> pens = letterPens(100, ends, advances, K);
-    CHECK_EQ(int(pens.size()), 7);
-    for (size_t i = 0; i < pens.size(); ++i) {  // each within its own game place, in its middle
-        const int from = letterPen(100, i ? ends[i - 1] : 0, K), to = letterPen(100, ends[i], K);
-        const int before = pens[i] - from, after = to - (pens[i] + advances[i]);
-        CHECK(std::abs(before - after) <= 1);
-    }
-    // 1.3.4: typed letter by letter, the ones already there do not move (the login's and the chat's field).
-    for (size_t k = 1; k <= ends.size(); ++k) {
-        const std::vector<int> part = letterPens(100, std::vector<int>(ends.begin(), ends.begin() + long(k)),
-                                                 std::vector<int>(advances.begin(), advances.begin() + long(k)), K);
-        for (size_t i = 0; i < k; ++i) CHECK_EQ(part[i], pens[i]);
-    }
-    // The gap after the m's split either side of it, not all after it (letterPen left 4 px after it).
-    const int mFrom = letterPen(100, ends[2], K), mTo = letterPen(100, ends[3], K);
-    CHECK(pens[3] - mFrom >= 1 && mTo - (pens[3] + advances[3]) <= 3);
-    CHECK(letterPens(0, {}, {}, K).empty());
-}
-
 TEST(twin_text_coverage_becomes_premultiplied_alpha) {
     const std::vector<uint32_t> dib(16, 0xFFFF00FF);  // a transparent picture: a name over the world
     TwinPicture t(dib.data(), 4, 4, 2.0);

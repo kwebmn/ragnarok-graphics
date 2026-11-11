@@ -50,7 +50,6 @@ struct Layout {
     int lineRows = 0;  // the lines that fit
 };
 uint32_t rgbOf(uint32_t bgr);  // the game's 0x00BBGGRR as 0xRRGGBB
-std::vector<Line> lastLines(const std::vector<Line>& lines, int rows);
 // At the screen's left, a sixth down (inside the screen); a tool's box empty (w 0) when it is not shown
 Layout layout(const Card& c, int targetW, int targetH, float scale);
 Hit hitTest(const Layout& L, float x, float y);  // the picture's pixels

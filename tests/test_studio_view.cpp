@@ -19,28 +19,6 @@ TEST(view_zoom_keeps_the_texel_under_the_cursor) {
     CHECK(least.zoom == 0.25f);  // a quarter at least
 }
 
-TEST(view_maps_any_picture_size) {
-    // Review Focus 5: a pane's pixel into a picture of 2x, 4x, 3x and a texel short - never past its edge
-    const studio::View v{3.0f, -2.0f, -1.5f};
-    for (int pw : {64, 128, 97, 127, 31}) {
-        bool all = true;
-        for (int py = 0; py < 120; ++py)
-            for (int px = 0; px < 120; ++px) {
-                int sx = -1, sy = -1;
-                bool inside = false;
-                studio::sourceTexel(v, px, py, 32, 32, pw, pw, sx, sy, inside);
-                all = all && sx >= 0 && sx < pw && sy >= 0 && sy < pw;
-                const float ox = v.x + (float(px) + 0.5f) / v.zoom, oy = v.y + (float(py) + 0.5f) / v.zoom;
-                all = all && inside == (ox >= 0 && oy >= 0 && ox < 32 && oy < 32);
-            }
-        CHECK(all);
-    }
-    int sx = 0, sy = 0;
-    bool inside = false;
-    studio::sourceTexel(studio::View{1.0f, 0.0f, 0.0f}, 5, 7, 32, 32, 128, 128, sx, sy, inside);
-    CHECK(inside && sx == 22 && sy == 30);  // texel (5.5, 7.5) of the original: (22, 30) of its x4 picture
-}
-
 TEST(view_difference_marks_changes) {
     std::vector<uint32_t> a(16 * 16, 0xFF808080u), b(32 * 32, 0xFF808080u);
     b[size_t(10 * 32 + 10)] = 0xFF888080u;  // one texel of the x2 picture eight levels redder

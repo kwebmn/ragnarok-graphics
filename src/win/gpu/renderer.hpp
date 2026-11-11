@@ -109,7 +109,6 @@ public:
     void setCamera(bool valid, const float view[12], float targetZ = 0);  // 1.4.2: targetZ - the character's depth
     // 3.0.13-beta.26: core/model_fade.hpp holeOf (zeros: none); .30 flags: 1 fade_models, 2 silhouette
     void setSeeThrough(const float hole[8], uint8_t flags);
-    bool upscaling() const;
     int samples() const;  // of the target now
     // Stage 4: anisotropic filtering of the world's textures (0 = off, else 2-16), and alpha testing as coverage in
     // draws without blending while the target has several samples.

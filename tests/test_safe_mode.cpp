@@ -16,16 +16,6 @@ TEST(safe_mode_after_two_failed_starts) {
     CHECK(safe::needed(0, true));  // [renderer] safe_mode = 1
 }
 
-TEST(a_crash_after_the_first_picture_is_no_failed_start) {
-    const std::string start = "uaRO Graphics 2.12.0 in C:\\uaRO\\uaRO.exe\n(uaRO renderer)\n";
-    const std::string crash = "crash: exception 0xc0000005 at DDRAW.dll+0x1234\n";
-    CHECK(safe::startFailed(start + crash));                                       // before any picture
-    CHECK(!safe::startFailed(start + std::string(safe::kFirstPicture) + "\n" + crash));  // two hours later
-    CHECK(safe::startFailed(start + "the uaRO renderer could not start\n"));
-    CHECK(!safe::startFailed(start + std::string(safe::kFirstPicture) + "\nDirectDraw released, renderer closed\n"));
-    CHECK(!safe::startFailed(""));  // no game before
-}
-
 TEST(safe_config_turns_the_risky_parts_off) {
     Config c;
     c.api = Api::D3d12;
@@ -65,45 +55,6 @@ TEST(a_start_that_drew_nothing_leaves_the_count) {
     CHECK(safe::judge(std::string("(uaRO renderer)\n") + safe::kFirstPicture + "\n") == safe::Start::Fine);
     CHECK_EQ(safe::failedInRow(1, safe::Start::Failed), 2);
     CHECK_EQ(safe::failedInRow(1, safe::Start::Fine), 0);
-}
-
-// 3.0.11-beta.59 (the autopilot): a game that ended badly within 5 minutes of its first picture counts too - a crash at
-// the login or at a map's loading repeats at every start; a later one, or a log without times, as before
-TEST(safe_mode_a_crash_in_the_first_minutes_counts) {
-    const std::string start = "09:59:58.000 INFO  uaRO Graphics 3.0.11 in C:\\uaRO\\uaRO.exe\n"
-                              "09:59:59.000 INFO  (uaRO renderer)\n";
-    const std::string pic = std::string("10:00:00.100 INFO  ") + safe::kFirstPicture + "\n";
-    const std::string crash = " ERROR crash: exception 0xc0000005 at DDRAW.dll+0x1234\n";
-    CHECK(safe::judge(start + pic + "10:01:30.000" + crash) == safe::Start::FailedEarly);
-    CHECK(safe::judge(start + pic + "10:06:00.000" + crash) == safe::Start::Fine);
-    CHECK(safe::judge(start + pic + "10:02:00.000 INFO  map: prontera\n") == safe::Start::FailedEarly);  // not closed
-    CHECK(safe::judge(start + pic + "10:02:00.000 INFO  map: prontera\n10:30:00.000 INFO  DirectDraw released, "
-                                    "renderer closed\n") == safe::Start::Fine);
-    CHECK(safe::judge(start + pic + "10:02:00.000 ERROR the GPU device was removed (0x887a0006)\n") ==
-          safe::Start::FailedEarly);
-    const std::string late =
-        "23:58:58.000 INFO  (uaRO renderer)\n23:59:00.000 INFO  " + std::string(safe::kFirstPicture) + "\n";
-    CHECK(safe::judge(late + "00:01:00.000" + crash) == safe::Start::FailedEarly);  // past midnight
-    CHECK_EQ(safe::failedInRow(1, safe::Start::FailedEarly), 2);
-    CHECK(safe::startFailed(start + pic + "10:01:30.000" + crash));
-}
-
-// 3.0.11-beta.106 (R-N6M9DY: a game closed a minute after its start crashed in the system's DINPUT.dll 1 ms after
-// «DirectDraw released, renderer closed» - counted as a failed start; two such short games and the safe mode came):
-// a crash after the renderer's last opening was closed is the game's own exit - the start went fine
-TEST(safe_mode_a_crash_after_the_renderer_closed_is_the_games_exit) {
-    const std::string start = "16:26:09.000 INFO  uaRO Graphics 3.0.11 in C:\\uaRO\\uaRO.exe\n"
-                              "16:26:09.500 INFO  (uaRO renderer)\n";
-    const std::string pic = std::string("16:26:10.100 INFO  ") + safe::kFirstPicture + "\n";
-    const std::string closed = "16:27:12.815 INFO  DirectDraw released, renderer closed\n";
-    const std::string crash = "16:27:12.816 ERROR crash: exception 0xc0000005 at DINPUT.dll+0x8ade (thread 23816)\n";
-    CHECK(safe::judge(start + pic + closed + crash) == safe::Start::Fine);
-    CHECK(!safe::startFailed(start + pic + closed + crash));
-    // the game opened DirectDraw again (a mode change) and crashed in it: a failed start still
-    const std::string again = "16:27:13.000 INFO  (uaRO renderer)\n";
-    CHECK(safe::judge(start + pic + closed + again + crash) == safe::Start::FailedEarly);
-    // a crash before the close: as before
-    CHECK(safe::judge(start + pic + crash + closed) == safe::Start::FailedEarly);
 }
 
 // 3.0.11-beta.59: the automatic safe mode's note says which version wrote it - another version tries the normal mode

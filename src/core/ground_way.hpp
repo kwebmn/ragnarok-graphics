@@ -115,8 +115,6 @@ struct Tri {
 };
 constexpr uint32_t kWalkShaft = 0x66FFFFFFu, kWalkEdge = 0xE6E2C27Au, kWalkHead = 0xE6FFFFFFu;
 constexpr uint32_t kWalkCellFill = 0x24FFFFFFu, kWalkCellLine = 0xD9E2C27Au;
-std::vector<Tri> walkArrowShape(float x0, float z0, int toX, int toY, const Heights& g, int cellSize, float sign,
-                                float lift);
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»): the
 // stick's arrow in each look of the doc «Стрелка хода с контроллера - варианты» ([interface] walk_arrow) over the map's
 // heights, drawn along `way` `len` on (as glide() gives them) to a cell-sized end: chevrons running on to a gold

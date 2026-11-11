@@ -171,22 +171,6 @@ TEST(pack_build_status_names_its_work) {
     CHECK(pack::parseStatus("state=done\n", r) && r.work.empty());  // an older builder's
 }
 
-TEST(pack_build_writes_and_reads_the_packs_index) {
-    // index.txt: a line a picture - its name and its kind - so that a pack goes on with its kinds known.
-    std::map<std::string, ai::Kind> kinds = {{"world/256x256/0123456789abcdef.webp", ai::Kind::Ground},
-                                             {"sprites/64x128/fedcba9876543210.webp", ai::Kind::Sprites},
-                                             {"ui/24x24/00000000000000aa.webp", ai::Kind::Icons}};
-    const std::string text = pack::indexText(kinds);
-    CHECK_EQ(text, std::string("sprites/64x128/fedcba9876543210.webp\tsprites\n"
-                               "ui/24x24/00000000000000aa.webp\ticons\n"
-                               "world/256x256/0123456789abcdef.webp\tground\n"));
-    const auto back = pack::parseIndex(text + "broken line\nworld/32x32/1111111111111111.webp\tnonsense\n");
-    CHECK_EQ(back.size(), size_t(4));
-    CHECK(back.at("world/256x256/0123456789abcdef.webp") == ai::Kind::Ground);
-    CHECK(back.at("ui/24x24/00000000000000aa.webp") == ai::Kind::Icons);
-    CHECK(back.at("world/32x32/1111111111111111.webp") == ai::Kind::None);  // a kind it does not know
-}
-
 TEST(pack_build_finds_the_hair_palettes_of_a_head) {
     // 0.49: the game draws a head with the hair colour's palette (uaRO.exe: "머리\머리%s%s_%d.pal"), so its frames in
     // the sprite cache are not the head file's own: the builder makes them with every palette there is.

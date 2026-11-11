@@ -16,7 +16,6 @@ namespace uagfx::win::padassignwin {
 // (the item's number's words, a skill's "##AEGIS") at `level` into that cell (hotbarwin::assign), B cancels. On the
 // game's thread.
 bool isOpen();
-void open(const std::string& value, int level, const std::string& what);
 enum class Command : uint8_t { Up, Down, Enter, Close };
 void command(Command c);
 void frame(HWND game, double k, int targetWidth, int targetHeight);

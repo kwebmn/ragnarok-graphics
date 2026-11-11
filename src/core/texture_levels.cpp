@@ -93,12 +93,6 @@ void TextureLevels::slotWritten(Rect r, uint8_t source, const std::vector<uint32
     slotOwn_.push_back(whole ? *own : std::vector<uint32_t>());
 }
 
-bool TextureLevels::pending() const {
-    for (const Rect& r : dirty_)
-        if (!r.empty()) return true;
-    return false;
-}
-
 void TextureLevels::sync(FrameRecord& record, uint32_t texture) {
     std::vector<uint32_t> argb;
     const PixelFormat f = images_.empty() ? PixelFormat::Unknown : images_[0].format();

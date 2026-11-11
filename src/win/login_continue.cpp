@@ -236,8 +236,6 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
                                  s.layout.x, s.layout.y, gen, [&](uisheet::Content& c) { fillSheet(s, c); });
 }
 
-void hideSheet() { state().sheet.frame("login continue", false, true, 0, 0, 0, [](uisheet::Content&) {}); }
-
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     state().sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
     (void)record;  // the old edition (its picture) gone: uaUI draws it

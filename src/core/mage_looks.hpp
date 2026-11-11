@@ -21,7 +21,7 @@ struct Look {
     Element tone = Element::None;
 };
 Look lookOf(int effectId);
-Element elementOf(int effectId);  // a mage's skill's element (Fire-Spirit), None for the rest
+  // a mage's skill's element (Fire-Spirit), None for the rest
 
 // The element's colours: the core (densest), the edge, the deep (a solid face away from the light)
 struct Palette {

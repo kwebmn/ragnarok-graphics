@@ -593,10 +593,6 @@ const panel::Picture* iconOf(const Look& look, const refpages::Row& row) {
 
 }  // namespace
 
-worldmap::Fit worldFit(const worldmap::Sheet& sheet, const Placed& row) {
-    return worldmap::fit(sheet.w, sheet.h, row.w, row.h);
-}
-
 worldmap::Fit worldView(const WorldLook& w, const Placed& row) {
     return w.sheet ? worldmap::view(w.sheet->w, w.sheet->h, row.w, row.h, w.zoom, w.cx, w.cy) : worldmap::Fit{};
 }
@@ -1152,12 +1148,6 @@ Rect pixelsOf(const Layout& L, const panel::Box& b) {
 }
 
 }  // namespace
-
-bool sameRow(const refpages::Row& a, const refpages::Row& b) {
-    return a.style == b.style && a.left == b.left && a.right == b.right && refpages::sameCard(a.link, b.link) &&
-           a.gold == b.gold && a.dot == b.dot && a.picture == b.picture && a.icon == b.icon && a.fold == b.fold &&
-           a.sub == b.sub && a.share == b.share && a.marks == b.marks && a.subMarks == b.subMarks;
-}
 
 Rect worldArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int row, const WorldLook& w) {
     const worldmap::Tile* t = w.hover.empty() || !w.sheet ? nullptr : worldmap::tileOf(*w.sheet, w.hover);

@@ -22,13 +22,6 @@ View zoomAt(View v, float factor, float cursorX, float cursorY) {
     return View{zoom, tx - cursorX / zoom, ty - cursorY / zoom};
 }
 
-void sourceTexel(const View& v, int paneX, int paneY, int w, int h, int pw, int ph, int& sx, int& sy, bool& inside) {
-    const float ox = v.x + (float(paneX) + 0.5f) / v.zoom, oy = v.y + (float(paneY) + 0.5f) / v.zoom;
-    inside = ox >= 0 && oy >= 0 && ox < float(w) && oy < float(h);
-    sx = std::clamp(int(std::floor(ox * float(pw) / float(w))), 0, std::max(pw - 1, 0));
-    sy = std::clamp(int(std::floor(oy * float(ph) / float(h))), 0, std::max(ph - 1, 0));
-}
-
 std::vector<uint32_t> differenceImage(const uint32_t* a, int aw, int ah, const uint32_t* b, int bw, int bh, int w,
                                       int h) {
     std::vector<uint32_t> out(size_t(std::max(w, 0)) * size_t(std::max(h, 0)), 0xFF000000u);

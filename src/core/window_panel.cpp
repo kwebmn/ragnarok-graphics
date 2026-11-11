@@ -538,8 +538,6 @@ bool g_recording = false;
 }  // namespace
 
 void setRecording(bool on) { g_recording = on; }
-bool recording() { return g_recording; }
-
 bool blank(Picture& p, int w, int h) {
     p.width = std::max(0, w);
     p.height = std::max(0, h);

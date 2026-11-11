@@ -131,38 +131,6 @@ TEST(item_window_search_and_places) {
     CHECK(itemwin::hitTest(L, 2, 0, -1, -1).part == itemwin::Part::None);
 }
 
-// 3.0.18-beta.27 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5): uaUI's grid - every part placed and
-// said as the picture paints it (the cells, their plates, the tip, the scroll, the weight's fill)
-TEST(item_window_view_places_the_pictures_parts) {
-    std::vector<itemwin::Item> items{item(1, 501, 0, 38, "Red Potion"), item(2, 1101, 4, 1, "Sword")};
-    items[1].refine = 7;
-    items[0].fresh = true;
-    itemwin::Texts t = itemTexts();
-    t.fresh = "нове";
-    const itemwin::Measure m(panel::wordsWidth);
-    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, m);
-    itemwin::Show sh;
-    sh.hover = 0;
-    sh.weight = 2300;
-    sh.weightMost = 2430;
-    std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::All, "");
-    const itemwin::View v = itemwin::view(L, items, shown, sh, t, m);
-    CHECK(v.cells.size() == L.cells.size());
-    CHECK(v.cells[0].hot && !v.cells[1].hot && v.cells[2].item < 0);
-    CHECK(v.cells[0].count.w > 0 && v.cells[0].refine.w == 0 && v.cells[0].fresh.w > 0);
-    CHECK(v.cells[1].refine.w > 0 && v.cells[1].count.w == 0);
-    CHECK(v.cells[0].count.x + v.cells[0].count.w <= L.cells[0].x + L.cells[0].w);
-    CHECK(v.tip.w > 0 && v.scroll.w == 0);
-    CHECK(v.fill.w > L.bar.w * 0.9f && v.fillTone == itemwin::Tone::Red);  // 95 %: red
-    // forty-one things: a second page - the scroll's thumb beside the grid
-    std::vector<itemwin::Item> many;
-    for (int i = 0; i < 48; ++i) many.push_back(item(i + 1, 909, 3, 1, "Jellopy"));
-    shown = itemwin::shownOf(many, itemwin::Tab::All, "");
-    sh.hover = -1;
-    const itemwin::View w = itemwin::view(L, many, shown, sh, t, m);
-    CHECK(w.scroll.w > 0 && w.scroll.x > L.grid.x + L.grid.w && w.tip.w == 0);
-}
-
 // 3.0.11-beta.196 (the tester: «ітему має бути можливість тицьнути зірочку - але on hover зникає занадто рано, і до
 // зірочки мишку підвести не можливо»): the pointer on a cell's star still points at the cell - its ☆ stays to be
 // pressed

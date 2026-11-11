@@ -370,11 +370,6 @@ panel::Box tipText(const Layout& L, const std::vector<Entry>& entries, int hover
     return tipLines(L, entries, hover, t, first, second);
 }
 
-panel::Box tipOf(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t) {
-    std::string first, second;
-    return tipLines(L, entries, hover, t, first, second);
-}
-
 panel::Picture iconPicture(const std::vector<uint32_t>& argb, int width, int height, bool alpha, int side,
                            float radius) {
     panel::Picture p;

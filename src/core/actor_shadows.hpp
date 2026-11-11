@@ -118,12 +118,4 @@ std::vector<std::vector<Cast>> castsFor(const std::vector<Blob>& blobs, const st
 // and less, a torch's far edge: no jump), all where none falls.
 std::vector<float> spotShares(const std::vector<ShadowQuad>& quads, size_t blobs, bool spot);
 
-// 2.6.3 (shadow_ps does the same): the ground's view depth at game pixel (x, y) under a character whose feet stand at
-// (feetX, feetY), feetZ deep - along `slope` (view units a pixel down the screen, from the scene's depth just below
-// the feet) but never deeper than the flat ground through the feet (`up`: the world's up in view space; zero, none).
-// The slope's depth fell on the wall below a ledge or on a post in front: the ground looked far deeper there and the
-// shadow falling on it was cut - it blinked as a character walked along a ledge.
-float groundDepth(const camera::Projection& p, const float up[3], float feetX, float feetY, float feetZ, float slope,
-                  float x, float y);
-
 }  // namespace uagfx::actor_shadows

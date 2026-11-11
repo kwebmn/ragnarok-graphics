@@ -16,7 +16,6 @@ namespace uagfx::win::packpictures {
 int stamp();
 // [interface] pack_icons - the panels' icons from the pack (set each frame, win/context)
 void setIconsOn(bool on);
-bool iconsOn();
 // What an icon made now is made of: -1 the game's own (the switch off), else stamp() - the icon made again when it
 // changes
 int iconsStamp();

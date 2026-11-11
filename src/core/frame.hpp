@@ -125,11 +125,6 @@ public:
     // 3.0.11-beta.185: the place of the interface draw after the first `skip` of them (the game's own windows' first,
     // past the faces it filed before them: win/windows_draw); commands().size() when there are not that many
     size_t interfaceDraw(size_t skip) const;
-    // 3.0.11-beta.109 (the concept «Концепция окон и инвентаря», question 5 «да»): the commands from `from` on
-    // taken out (the game's own windows and its cursor) and put back after the driver's interface is drawn - over it;
-    // nothing past the end. generation(): the times the record was emptied (a flush plays and empties it mid-frame) -
-    // a place noted in another generation is not this record's
-    std::vector<Command> takeTail(size_t from);
     // 3.0.11-beta.190: the commands [from, to) taken out (to past the end: the end), the rest kept in order
     std::vector<Command> takeRange(size_t from, size_t to);
     // 3.0.11-beta.294 (R-WTXHXN: monsters and their bars over the driver's chat): the same for the game's windows, but

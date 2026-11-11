@@ -63,8 +63,6 @@ std::string machineKey(const Machine& m);  // "adapter|vramMb|WxH"
 // 3.0.11-beta.60 (the autopilot): `playedHere` - the driver's log is in this folder; another machine recorded where no
 // game was played yet is an installed client copied with its packer's settings: set up silently, not asked
 FirstStart firstStart(bool usedBefore, const std::string& kept, const std::string& now, bool playedHere);
-// "high", "middle", ...: for the log and the tests.
-const char* tierName(Tier t);
 // 3.0.9-beta.7 (the owner, R-3FS6YX «розмазує модель чара»): the world whole for everyone - a [quality] world_scale
 // under 100 (the old cards' 75 % of the automatic setup since 2.5.16) back to 100 once, with [utility]
 // world_scale_reset marking it done, so that a share the player picks after it stays. The edits for a file's keys

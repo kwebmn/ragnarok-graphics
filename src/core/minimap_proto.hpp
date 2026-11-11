@@ -137,13 +137,9 @@ struct Mark {
     const panel::Picture* picture = nullptr;  // 3.0.11-beta.83: a member's face (premultiplied); null: none
     bool dead = false;                        // a member's
 };
-// 3.0.11-beta.119: a mark's layer, the layers on
-Layer layerOf(const Mark& m);
 struct Layers {
     bool on[kLayers] = {true, true, true, true};
 };
-std::vector<Mark> shownMarks(const std::vector<Mark>& marks, const Layers& layers);
-
 // 3.0.13-beta.2 (reports: the minimap the interface's dearest picture - 150-200 paintings in 30 s, 3.2 ms each, half
 // of it the map's pixels made anew for every step): the map's pixels round the view made once, a margin about it -
 // each painting copies its square out; made anew when the view leaves the margin or the picture, zoom or reach change

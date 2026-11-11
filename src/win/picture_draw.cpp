@@ -335,11 +335,6 @@ void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Pict
     drawQuad(record, renderer, pic, texture, texW, texH, upload, x, y, pic.width, pic.height, false, k, opacity);
 }
 
-void drawStretched(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture,
-                   int& texW, int& texH, bool& upload, int x, int y, int w, int h, float k, float opacity) {
-    drawQuad(record, renderer, pic, texture, texW, texH, upload, x, y, w, h, true, k, opacity);
-}
-
 namespace {
 int g_partStretch = 1;  // 3.0.11-beta.54: the game's thread's
 }  // namespace
@@ -351,11 +346,6 @@ void drawPart(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture
               int& texH, bool& upload, int x, int y, float k, float opacity) {
     drawQuad(record, renderer, pic, texture, texW, texH, upload, x, y, pic.width, pic.height, false, k, opacity,
              g_partStretch);
-}
-
-void drawPartStretched(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture,
-                       int& texW, int& texH, bool& upload, int x, int y, int w, int h, float k, float opacity) {
-    drawQuad(record, renderer, pic, texture, texW, texH, upload, x, y, w, h, true, k, opacity, g_partStretch);
 }
 
 void drawShade(FrameRecord& record, int x, int y, int w, int h, float k, float alpha) {

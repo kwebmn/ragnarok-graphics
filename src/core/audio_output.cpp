@@ -22,8 +22,4 @@ Target pick(const std::string& wanted, const std::vector<std::string>& active) {
     return t;
 }
 
-bool reopen(const std::string& openedId, const Target& target, bool lost) {
-    return lost || !sameId(openedId, target.id);
-}
-
 }  // namespace uagfx::audio_output

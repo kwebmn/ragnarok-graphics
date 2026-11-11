@@ -11,10 +11,6 @@ struct TlVertex {
     float u0, v0, u1, v1;
 };
 
-// Direct3D 7 puts pixel centres on integer coordinates, Direct3D 10+ on half-integers: a D3D7 x becomes
-// x + 0.5 in D3D12 pixel space. Returns the normalized device coordinates on a width x height target.
-void tlToNdc(float x, float y, int width, int height, float& ndcX, float& ndcY);
-
 // D3D10: what an uncorrected translation does (negative tests). Ours: what the driver does - a vertex at x goes to
 // x * scale + 0.5 in a target `scale` times the game's size whose pixel centres are on half-integers (stage 3).
 enum class PixelCenters { D3D7, D3D10, Ours };

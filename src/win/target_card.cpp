@@ -438,11 +438,6 @@ void packet(const packets::Event& e) {
     }
 }
 
-uint32_t current() {
-    const State& s = state();
-    return s.shown ? s.target : 0;
-}
-
 uint32_t fighting() {
     const State& s = state();
     return s.target && GetTickCount64() - s.lastAt <= kForgetMs ? s.target : 0;

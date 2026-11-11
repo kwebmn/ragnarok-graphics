@@ -52,32 +52,6 @@ TEST(ui_style_window_shadow_dropped) {
     CHECK(alpha(0, 0) == 0);
 }
 
-// 3.0.11-beta.108 (the concept «Концепция окон и инвентаря», question 6): the top window's gold edge - a rounded ring
-// `width` thick at the box's edge, nothing inside or past its corners
-TEST(ui_style_window_edge) {
-    const panel::Picture p = uistyle::edge(100, 60, 12, 2, 0xE6CB8A, 0.8f);
-    CHECK(p.width == 100 && p.height == 60);
-    const auto alpha = [&](int x, int y) { return int(p.px[size_t(y) * size_t(p.width) + size_t(x)] >> 24); };
-    CHECK(alpha(50, 0) > 150 && alpha(50, 1) > 150);  // the top edge, two pixels
-    CHECK(alpha(50, 3) == 0 && alpha(50, 30) == 0);   // inside: none
-    CHECK(alpha(0, 30) > 150 && alpha(99, 30) > 150 && alpha(50, 59) > 150);
-    CHECK(alpha(0, 0) == 0);  // past the rounded corner
-    CHECK(uistyle::edge(0, 60, 12, 2, 0xE6CB8A, 0.8f).width == 0);
-}
-
-// 3.0.11-beta.50: the low HP edge - red at the screen's edge, none in its middle
-TEST(ui_style_vignette) {
-    const panel::Picture v = uistyle::vignette(160, 90, 0xFF2D23, 0.4f, 0.3f);
-    CHECK(v.width == 160 && v.height == 90);
-    const auto at = [&](int x, int y) { return v.px[size_t(y) * size_t(v.width) + size_t(x)]; };
-    CHECK((at(80, 45) >> 24) == 0 && (at(80, 30) >> 24) == 0);  // the middle clear
-    const uint32_t edge = at(0, 45);
-    CHECK((edge >> 24) > 90 && (edge >> 24) <= 102 && ((edge >> 16) & 0xFF) > ((edge >> 8) & 0xFF) * 3);  // red
-    CHECK((at(10, 45) >> 24) < (edge >> 24) && (at(10, 45) >> 24) > 0);  // fading in
-    CHECK((at(80, 0) >> 24) > 90);                                       // the top edge too
-    CHECK(uistyle::vignette(0, 90, 0xFF2D23, 0.4f, 0.3f).width == 0);
-}
-
 // 3.0.11-beta.54 (R-JK5455): the new interface's size - full at 1280 x 720 and up, smaller on a small game, never under
 // 60 % nor so small its words fall under 11 of the screen's pixels
 TEST(ui_style_size) {

@@ -20,28 +20,10 @@ constexpr float kHintH = 24, kSide = 18, kSidesGap = 16;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kGold = 0xF3C653, kGold2 = 0xC9A55B;
 constexpr uint32_t kText = 0xEEF2F8, kMuted = 0x9AA3B5, kFaint = 0x7E889A, kGreen = 0x5FD08A, kRed = 0xFF7D6E;
 
-const Thing* thingAt(const Side& me, const Side& them, int cell) {
-    if (cell < 0 || cell >= 2 * kSlots) return nullptr;
-    const Thing& x = cell < kSlots ? me.slots[cell] : them.slots[cell - kSlots];
-    return x.count > 0 ? &x : nullptr;
-}
-
 std::string tipFirstOf(const Thing& x) {
     std::string s = x.refine > 0 ? "+" + std::to_string(x.refine) + " " + x.name : x.name;
     if (x.count > 1) s += " \xC3\x97" + itemwin::grouped(x.count);
     return s;
-}
-
-// The pointed cell's tip: under its row (over it on the lower row), inside the glass
-panel::Box tipBox(const Layout& L, const Thing& x, int cell, const Texts& t, const itemwin::Measure& m) {
-    const float s = L.s;
-    const float wide = std::max(m(tipFirstOf(x), 13 * s, true), m(t.info, 11.5f * s, false)) + 22 * s;
-    const float h = 44 * s;
-    const panel::Box& c = L.cells[cell];
-    const float x0 = std::clamp(c.x + c.w / 2 - wide / 2, L.glass.x + 6 * s, L.glass.x + L.glass.w - wide - 6 * s);
-    const bool upper = (cell % kSlots) < kColumns;
-    const float y = upper ? c.y - h - 6 * s : c.y + c.h + 6 * s;
-    return panel::Box{x0, std::max(L.glass.y + 2 * s, y), wide, h};
 }
 
 }  // namespace
@@ -110,55 +92,6 @@ Hit hitTest(const Layout& L, float x, float y) {
         if (L.buttons[i].contains(x, y)) return Hit{Part::Button, i};
     if (y < L.title.y + L.title.h) return Hit{Part::Title, -1};
     return Hit{Part::Body, -1};
-}
-
-View view(const Layout& L, const Side& me, const Side& them, const Show& sh, const Texts& t,
-          const itemwin::Measure& m) {
-    View v;
-    const float s = L.s;
-    const float divider = (L.mineHead.x + L.mineHead.w + L.theirHead.x) / 2;
-    v.divider = panel::Box{divider, L.mineHead.y + 4 * s, 1 * s, L.mineZeny.y + L.mineZeny.h - L.mineHead.y};
-    for (int sideNo = 0; sideNo < 2; ++sideNo) {
-        if (!(sideNo == 0 ? me : them).ready) continue;
-        const panel::Box& head = sideNo == 0 ? L.mineHead : L.theirHead;
-        const float pw = m("\xE2\x9C\x93 " + t.ready, 11 * s, true) + 14 * s;
-        v.ready[sideNo] = panel::Box{head.x + head.w - pw, head.y + 4 * s, pw, head.h - 8 * s};
-    }
-    if (sh.dropping && !me.ready) {
-        const panel::Box& a = L.cells[0];
-        const panel::Box& b = L.cells[kSlots - 1];
-        v.dropping = panel::Box{a.x - 4 * s, a.y - 4 * s, b.x + b.w - a.x + 8 * s, b.y + b.h - a.y + 8 * s};
-    }
-    for (int i = 0; i < 2 * kSlots; ++i) {
-        CellView& c = v.cells[i];
-        const panel::Box& b = L.cells[i];
-        c.box = b;
-        c.late = i >= kSlots && sh.late.slots[i - kSlots];
-        c.hot = i == sh.hover;
-        const Thing* x = thingAt(me, them, i);
-        if (!x) continue;
-        c.thing = true;
-        if (x->icon && x->icon->width > 0) {
-            c.icon = x->icon;
-            c.iconX = std::round(b.x + (b.w - float(x->icon->width)) / 2);
-            c.iconY = std::round(b.y + (b.h - float(x->icon->height)) / 2);
-            c.iconOpacity = x->identified ? 1.0f : 0.45f;
-        }
-        if (x->count > 1) {
-            const float w = m(itemwin::grouped(x->count), 10 * s, true) + 6 * s;
-            c.count = panel::Box{b.x + b.w - w - 2 * s, b.y + b.h - 13 * s, w, 11 * s};
-        }
-    }
-    if (sh.typing && sh.caretOn)
-        v.caret = panel::Box{L.zenyField.x + L.zenyField.w - 10 * s, L.zenyField.y + 7 * s, 1.5f * s,
-                             L.zenyField.h - 14 * s};
-    v.late = sh.late.any();
-    const bool on[3] = {canReady(me), canTrade(me, them, sh.traded), true};
-    for (int i = 0; i < 3; ++i)
-        v.buttons[i] = ButtonView{on[i], (i == 0 && on[0]) || (i == 1 && on[1]), i == sh.hoverButton && on[i]};
-    if (sh.tip && sh.hover >= 0)
-        if (const Thing* x = thingAt(me, them, sh.hover)) v.tip = tipBox(L, *x, sh.hover, t, m);
-    return v;
 }
 
 }  // namespace uagfx::tradewin

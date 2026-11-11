@@ -140,24 +140,4 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{Part::Body, -1};
 }
 
-View view(const Layout& L, const Data& d, const Show& sh) {
-    View v;
-    const float s = L.s;
-    for (int i = 0; i < kSlots; ++i) {
-        const panel::Box& dots = L.dots[i];
-        const Worn& wi = d.slots[i];
-        if (L.slots[i].w <= 0) continue;
-        for (int n = 0; dots.w > 0 && n < std::min(wi.slots, 4); ++n)
-            v.dots.push_back(Dot{i, dots.x + (float(n) * kDotStep + kDot / 2) * s, dots.y + dots.h / 2, kDot / 2 * s,
-                                 wi.cards[n] > 0});
-    }
-    if (sh.pad) {
-        Texts none;
-        const std::vector<PadItem> items = padItems(d, sh, none);
-        for (size_t i = 0; i < items.size() && i < L.padGlyphs.size(); ++i)
-            v.glyphs.push_back(Glyph{int(items[i].button), L.padGlyphs[i]});
-    }
-    return v;
-}
-
 }  // namespace uagfx::equipwin

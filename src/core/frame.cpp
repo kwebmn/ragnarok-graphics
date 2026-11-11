@@ -133,13 +133,6 @@ std::vector<Command> FrameRecord::takeInterface(size_t from, size_t to, size_t& 
     return taken;
 }
 
-std::vector<Command> FrameRecord::takeTail(size_t from) {
-    if (from >= commands_.size()) return {};
-    std::vector<Command> tail(commands_.begin() + std::ptrdiff_t(from), commands_.end());
-    commands_.erase(commands_.begin() + std::ptrdiff_t(from), commands_.end());
-    return tail;
-}
-
 void FrameRecord::putBack(std::vector<Command>& tail) {
     commands_.insert(commands_.end(), tail.begin(), tail.end());
     tail.clear();

@@ -16,10 +16,6 @@ uint32_t le(const std::string& s, size_t at, int bytes) {
     return v;
 }
 
-void put(std::string& s, uint32_t v, int bytes) {
-    for (int i = 0; i < bytes; ++i) s.push_back(char((v >> (8 * i)) & 0xFF));
-}
-
 }  // namespace
 
 uint8_t Grid::at(int x, int y) const {
@@ -176,28 +172,6 @@ Grid fromCells(int w, int h, const std::vector<uint8_t>& walkable) {
         g.rows.push_back(uint32_t(g.runs.size()));
     }
     return g;
-}
-
-std::string payload(const Grids& maps) {
-    std::string out(kMagic, 8);
-    put(out, uint32_t(maps.size()), 4);
-    const std::map<std::string, const Grid*> sorted = [&] {
-        std::map<std::string, const Grid*> s;
-        for (const auto& m : maps) s.emplace(m.first, &m.second);
-        return s;
-    }();
-    for (const auto& [name, g] : sorted) {
-        out.push_back(char(name.size()));
-        out += name;
-        put(out, uint32_t(g->w), 2);
-        put(out, uint32_t(g->h), 2);
-        put(out, uint32_t(g->runs.size()), 4);
-        for (const auto& r : g->runs) {
-            put(out, r.first, 2);
-            out.push_back(char(r.second));
-        }
-    }
-    return out;
 }
 
 }  // namespace uagfx::walkgrid

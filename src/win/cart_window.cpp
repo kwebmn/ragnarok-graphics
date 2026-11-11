@@ -771,8 +771,6 @@ void moveTo(int x, int y, bool keep) {
     if (keep) keepState(s);
 }
 
-bool moving() { return state().shown && state().moving; }
-
 int idAtPlace(int index) {  // 3.0.18-beta.156
     for (const iw::Item& it : state().items)
         if (it.index == index) return it.id;

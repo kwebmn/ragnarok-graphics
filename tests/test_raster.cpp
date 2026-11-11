@@ -36,16 +36,6 @@ int covered(const RefRaster& r) {
 }
 }  // namespace
 
-TEST(raster_ndc_puts_d3d7_pixel_centres_on_d3d12_centres) {
-    float x = 0, y = 0;
-    tlToNdc(0.0f, 0.0f, 4, 4, x, y);  // D3D7 pixel 0 -> D3D12 centre 0.5 -> -0.75
-    CHECK(std::fabs(x - -0.75f) < 1e-6f);
-    CHECK(std::fabs(y - 0.75f) < 1e-6f);
-    tlToNdc(3.0f, 3.0f, 4, 4, x, y);
-    CHECK(std::fabs(x - 0.75f) < 1e-6f);
-    CHECK(std::fabs(y - -0.75f) < 1e-6f);
-}
-
 TEST(raster_quad_covers_exactly_its_16_pixels) {
     RefRaster r(8, 8, PixelCenters::D3D7);
     r.clear(Rgb{0.25, 0.25, 0.25});

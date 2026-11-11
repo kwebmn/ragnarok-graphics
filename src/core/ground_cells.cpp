@@ -69,12 +69,4 @@ Grid build(const std::vector<seams::Triangle>& ground) {
     return g;
 }
 
-bool onGround(const Grid& g, float x, float y, float z, float slack) {
-    if (g.side <= 0.0f) return true;
-    const int ix = floorInt((x - g.originX) / g.side), iz = floorInt((z - g.originZ) / g.side);
-    if (ix < 0 || iz < 0 || ix >= g.width || iz >= g.height) return true;
-    const float* s = &g.span[(size_t(iz) * size_t(g.width) + size_t(ix)) * 2];
-    return s[0] <= s[1] && y >= s[0] - slack && y <= s[1] + slack;
-}
-
 }  // namespace uagfx::ground_cells

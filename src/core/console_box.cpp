@@ -19,9 +19,4 @@ int visibleRows(const Box& b, int footHeight) {
     return std::max(3, (b.h - b.line * 3 / 2 - footHeight - b.line / 4) / b.line);
 }
 
-uint8_t groundAlpha(int panelOpacity) {
-    const float a = std::clamp(float(panelOpacity) * 0.0105f, 0.45f, 0.95f);
-    return uint8_t(a * 255.0f + 0.5f);
-}
-
 }  // namespace uagfx::consolebox

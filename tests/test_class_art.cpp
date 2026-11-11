@@ -50,17 +50,3 @@ TEST(class_art_cover_keeps_the_upper_part) {
     CHECK((out.px[7 * 8 + 0] >> 24) == 0xFF);  // the bottom left kept square
 }
 
-// No portrait for the job: the character's own head in the middle of the place (its picture over what is there)
-TEST(class_art_head_in_the_middle) {
-    panel::Picture head;
-    head.width = 2;
-    head.height = 2;
-    head.px.assign(4, 0xFFFF0000u);
-    panel::Picture out;
-    out.width = 6;
-    out.height = 6;
-    out.px.assign(36, 0xFF000000u);
-    classart::centre(out, panel::Box{0, 0, 6, 6}, head);
-    CHECK(out.px[2 * 6 + 2] == 0xFFFF0000u && out.px[3 * 6 + 3] == 0xFFFF0000u);
-    CHECK(out.px[0] == 0xFF000000u && out.px[5 * 6 + 5] == 0xFF000000u);
-}

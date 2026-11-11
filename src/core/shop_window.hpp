@@ -184,6 +184,4 @@ struct View {
     std::vector<GlyphView> glyphs;
     bool ok = false;
 };
-View view(const Layout& L, const Data& d, const std::vector<int>& shown, const Show& sh, const Measure& m);
-
 }  // namespace uagfx::shopwin

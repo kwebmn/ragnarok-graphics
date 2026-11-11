@@ -30,7 +30,4 @@ struct Pick {
 };
 Pick pick(const std::vector<uint16_t>& barSkills, int spheresNow);
 
-// How low: 0 plenty, 1 ten or fewer (potionwarn::kLow), 2 none
-int level(int count);
-
 }  // namespace uagfx::supplies

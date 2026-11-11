@@ -103,21 +103,6 @@ void reprojection(const float cur[12], const float prev[12], float out[12]) {
         for (int col = 0; col < 3; ++col) out[3 * row + col] = r[4 * row + col];
 }
 
-void reproject(const Projection& p, const float r[12], float sx, float sy, float sz, float& px, float& py) {
-    px = sx;
-    py = sy;
-    const float zc = p.farZ * p.nearZ / (p.farZ - sz * (p.farZ - p.nearZ));
-    if (!(zc > 0.0f) || p.f0 == 0.0f || p.f1 == 0.0f) return;
-    const float xc = (sx - p.cx) * zc / p.f0;
-    const float yc = (sy - p.cy) * zc / p.f1;
-    const float x = xc * r[0] + yc * r[3] + zc * r[6] + r[9];
-    const float y = xc * r[1] + yc * r[4] + zc * r[7] + r[10];
-    const float z = xc * r[2] + yc * r[5] + zc * r[8] + r[11];
-    if (!(z > 1e-4f)) return;  // behind the previous camera: no better guess than staying
-    px = x / z * p.f0 + p.cx;
-    py = y / z * p.f1 + p.cy;
-}
-
 RemixSpace remixSpaceFor(const float m[12]) {
     RemixSpace s;
     // How far down the screen a step along the game's +y goes; about 0 when the camera looks straight down.

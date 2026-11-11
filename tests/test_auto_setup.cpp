@@ -110,29 +110,6 @@ TEST(auto_setup_without_a_graphics_driver) {
     CHECK(autoSetup(Machine()).tier == Tier::NoDriver);
 }
 
-TEST(auto_setup_small_and_middle_cards) {
-    Machine m = rtx5060();
-    m.vendor = 0x8086;  // integrated Intel graphics
-    m.vramMb = 128;
-    AutoSetup a = autoSetup(m);
-    CHECK(a.tier == Tier::Low && a.preset == Preset::Speed);
-    CHECK(valueOf(a, "effects", "ao") == "0" && valueOf(a, "effects", "weather") == "0");
-    CHECK(valueOf(a, "quality", "dlss") == "off");  // not NVIDIA's
-    CHECK(a.ai && !a.aiWorld);
-    m.vendor = 0x1002;
-    m.vramMb = 6144;
-    a = autoSetup(m);
-    CHECK(a.tier == Tier::Middle && a.preset == Preset::Balance);
-    CHECK(valueOf(a, "quality", "render_scale") == "75");  // 0.58: 4K on a middle card - drawn smaller
-    CHECK(valueOf(a, "quality", "sharpen") == "50");
-    CHECK(valueOf(a, "effects", "ao").empty());  // the player's choice stays
-    CHECK(a.aiWorld);
-    CHECK(std::string(tierName(Tier::Old)) == "old");
-    m.vramMb = 3072;  // 0.51.1: DXGI's cap for a 32-bit program, the driver's number unknown
-    m.vramCapped = true;
-    CHECK(autoSetup(m).tier == Tier::Middle);
-}
-
 TEST(auto_setup_taa_for_cards_without_dlss) {
     // 0.75: the renderer's TAA where there is no DLSS - a strong AMD card; not NVIDIA's (DLSS), not the old Radeon.
     Machine amd = rtx5060();

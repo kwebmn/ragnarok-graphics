@@ -1263,8 +1263,6 @@ bool toastMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     return true;
 }
 
-const std::string& loggedIn() { return state().loggedIn; }
-
 bool loginWith(const accounts::Account& a, bool stopAtSelect, const std::string& character) {
     State& s = state();
     const uint32_t window = gameLogin();

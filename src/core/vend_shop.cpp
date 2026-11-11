@@ -17,16 +17,6 @@ constexpr uint32_t kMuted = 0x9AA3B5, kBlack = 0x000000;
 struct Cells {  // a row's inner parts
     panel::Box icon, name, stock, price;
 };
-Cells cells(const panel::Box& line, const panel::Box& minus, float s) {
-    Cells c;
-    c.icon = panel::Box{line.x + 6 * s, line.y + (line.h - kIcon * s) / 2, kIcon * s, kIcon * s};
-    const float nx = c.icon.x + c.icon.w + 10 * s, right = minus.x - 10 * s;
-    c.price = panel::Box{right - 110 * s, line.y, 110 * s, line.h};
-    c.name = panel::Box{nx, line.y + 4 * s, c.price.x - nx - 6 * s, line.h / 2 - 2 * s};
-    c.stock = panel::Box{nx, line.y + line.h / 2, c.price.x - nx - 6 * s, line.h / 2 - 4 * s};
-    return c;
-}
-
 }  // namespace
 
 long long total(const std::vector<Row>& rows) {
@@ -38,8 +28,6 @@ long long total(const std::vector<Row>& rows) {
 bool canAdd(const Row& r, long long purchase, long long zeny) {
     return r.chosen < r.stock && purchase + r.price <= zeny;
 }
-
-bool canRemove(const Row& r) { return r.chosen > 0; }
 
 std::string money(long long zeny) {
     std::string digits = std::to_string(zeny < 0 ? -zeny : zeny), out;
@@ -105,11 +93,6 @@ Hit hitTest(const Layout& L, int scroll, size_t rows, float x, float y) {
     if (L.close.contains(x, y)) return Hit{Part::Close, -1};
     if (L.title.contains(x, y)) return Hit{Part::Title, -1};
     return Hit{};
-}
-
-panel::Box iconAt(const Layout& L, size_t line) {
-    return line < L.lines.size() && line < L.minus.size() ? cells(L.lines[line], L.minus[line], L.s).icon
-                                                          : panel::Box{};
 }
 
 std::string withSlots(const std::string& name, int slots) {

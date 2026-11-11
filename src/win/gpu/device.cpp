@@ -2160,8 +2160,6 @@ void Renderer::setSeeThrough(const float hole[8], uint8_t flags) {
 
 ID3D12Device* Renderer::device() const { return impl_->device; }
 
-bool Renderer::upscaling() const { return impl_->upscale; }
-
 bool Renderer::createTextureAs(uint32_t id, int width, int height, int levels) {
     // uaro-render64.exe's and (2.5.13) Direct3D 11's own thread's: 2.5.12 made none there - the screen was white
     if (d3d11_) return d3d11_->createTextureAs(id, width, height, levels);

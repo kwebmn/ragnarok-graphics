@@ -20,7 +20,7 @@ struct Values {
     bool on[6] = {false, false, false, false, false, false};  // music, sounds, attack / skill / item snap, opaque
     int volume[2] = {0, 0};                                   // the music's, the sounds' (0-127)
 };
-int volumeAt(const panel::Box& slider, float x);  // a slider's place to its volume
+  // a slider's place to its volume
 // 3.0.11-beta.200 (the tester: «непрозорі вікна - тогл не працює ... не повертає прозорі»): uaRO.exe only keeps its
 // «opaque» (m_isOpaque, the session's + 0x814: the registry's, its checkbox's) - nothing draws by it; the interface's
 // windows whole by it, else at «Прозорість вікон»

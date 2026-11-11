@@ -27,18 +27,7 @@ void add(Hold& h, float dx, float dz, float age) {
 // 3.0.5-beta.9 (R-VMPQKX: lroundf a fifth of a Radeon 610M laptop's game thread on «Середні» - two values each of the
 // grid's 16384 texels a frame): roundAway, the same answers without the library's call
 int8_t snorm(float v) { return int8_t(roundAway(std::clamp(v, -1.0f, 1.0f) * 127.0f)); }
-float unsnorm(int8_t b) { return std::max(float(b) / 127.0f, -1.0f); }
-
 }  // namespace
-
-Hold at(const std::deque<footsteps::Step>& steps, float now, float life, float x, float z) {
-    Hold h;
-    for (const footsteps::Step& s : steps) {
-        const float age = ageOf(s, now, life);
-        if (age < 1.0f) add(h, x - s.x, z - s.z, age);
-    }
-    return h;
-}
 
 void build(const std::deque<footsteps::Step>& steps, float now, float life, Grid& out) {
     out.texels.clear();
@@ -88,23 +77,6 @@ void build(const std::deque<footsteps::Step>& steps, float now, float life, Grid
         out.texels[j + 2] = snorm(sums[i + 2]);
         out.texels[j + 3] = 0;
     }
-}
-
-Hold sample(const Grid& g, float x, float z) {
-    constexpr int n = Grid::kSide;
-    if (g.texels.size() < size_t(n) * n * 4) return {};
-    const float gx = (x - g.originX) / g.cell - 0.5f, gz = (z - g.originZ) / g.cell - 0.5f;
-    const float fx = gx - std::floor(gx), fz = gz - std::floor(gz);
-    const int ix = int(std::floor(gx)), iz = int(std::floor(gz));
-    const int ax = std::clamp(ix, 0, n - 1), bx = std::clamp(ix + 1, 0, n - 1);
-    const int az = std::clamp(iz, 0, n - 1), bz = std::clamp(iz + 1, 0, n - 1);
-    const auto texel = [&](int tx, int tz, int c) { return unsnorm(g.texels[(size_t(tz) * n + size_t(tx)) * 4 + c]); };
-    const auto read = [&](int c) {
-        const float top = texel(ax, az, c) + (texel(bx, az, c) - texel(ax, az, c)) * fx;
-        const float bottom = texel(ax, bz, c) + (texel(bx, bz, c) - texel(ax, bz, c)) * fx;
-        return top + (bottom - top) * fz;
-    };
-    return Hold{2.0f * read(0), 2.0f * read(1), read(2)};
 }
 
 }  // namespace uagfx::trample

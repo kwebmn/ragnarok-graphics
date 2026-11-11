@@ -28,16 +28,6 @@ TEST(options_card_the_windows_controls) {
     CHECK(optionscard::kCheckMsg == 0x93 && optionscard::kStepMsg == 8 && optionscard::kVolumeMost == 127);
 }
 
-// A slider's place to its volume: its left end 0, its right end 127, in steps between, outside it clamped
-TEST(options_card_slider_to_volume) {
-    const optionscard::Layout L = optionscard::layout(1920, 1080, 1.0f);
-    const panel::Box& b = L.sliders[0];
-    CHECK(optionscard::volumeAt(b, b.x) == 0 && optionscard::volumeAt(b, b.x + b.w) == 127);
-    CHECK(optionscard::volumeAt(b, b.x - 50) == 0 && optionscard::volumeAt(b, b.x + b.w + 50) == 127);
-    const int half = optionscard::volumeAt(b, b.x + b.w / 2);
-    CHECK(half >= 62 && half <= 65);
-}
-
 TEST(options_card_places_and_the_mouse) {
     const optionscard::Layout L = optionscard::layout(1920, 1080, 1.0f);
     CHECK(L.x + L.w / 2 > 900 && L.x + L.w / 2 < 1020);

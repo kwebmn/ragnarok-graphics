@@ -18,9 +18,6 @@ struct View {
 constexpr float kLeastZoom = 0.25f, kMostZoom = 16.0f;
 // zoom times factor (within the bounds), the texel under the cursor staying under it
 View zoomAt(View v, float factor, float cursorX, float cursorY);
-// The texel of a picture (pw x ph) of an original (w x h) under a pane's pixel, held within the picture; inside: the
-// pixel shows the texture (not the ground about it).
-void sourceTexel(const View& v, int paneX, int paneY, int w, int h, int pw, int ph, int& sx, int& sy, bool& inside);
 // Two pictures (any sizes) at w x h by their nearest texels: |a - b| of each channel times 4, opaque.
 std::vector<uint32_t> differenceImage(const uint32_t* a, int aw, int ah, const uint32_t* b, int bw, int bh, int w,
                                       int h);

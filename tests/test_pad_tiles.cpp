@@ -23,27 +23,6 @@ TEST(pad_tiles_layout_and_moves) {
     CHECK_EQ(padtiles::moved(4, 1, 1), 8);
 }
 
-TEST(pad_tiles_picture_and_words) {
-    const padtiles::Layout L = padtiles::layout(300, 300, 1.0f);
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    padtiles::paint(p, L, 4, false);
-    const auto edge = [&](int i) {
-        const panel::Box& b = L.tiles[size_t(i)];
-        return p.px[size_t(int(b.y + b.h / 2)) * size_t(p.width) + size_t(int(b.x))];
-    };
-    CHECK(((edge(4) >> 16) & 0xFF) > ((edge(0) >> 16) & 0xFF) + 40);  // the chosen one edged gold
-    std::vector<std::string> names;
-    for (int i = 0; i < padtiles::kTiles; ++i) names.push_back("Tile " + std::to_string(i));
-    const std::vector<padtiles::Words> w = padtiles::words(L, names, "Меню", "Відкрити", "Закрити", false);
-    const auto has = [&](const std::string& text) {
-        return std::any_of(w.begin(), w.end(), [&](const padtiles::Words& x) { return x.text == text; });
-    };
-    CHECK(has("Tile 0") && has("Tile 8") && has("Меню") && has("Відкрити") && has("Закрити") && has("A") && has("B"));
-}
-
 // 3.0.11-beta.216 (the owner: «в интерфейсе нету управления наемниками»): a hired mercenary adds a tenth tile,
 // «Найманець», alone in a fourth row under the middle column; the frame reaches it down the middle and comes back up
 TEST(pad_tiles_tenth_for_the_mercenary) {

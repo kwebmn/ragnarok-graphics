@@ -82,22 +82,3 @@ TEST(grass_beds_stand_where_the_map_places_them) {
     CHECK(grass_beds::place(none, at).empty());
 }
 
-// prontera's fountain: the paving at 1.0, the bed's weed at -0.3 - 1.3 over it, past the grass's 0.75
-TEST(grass_beds_tops_are_the_grasss_ground) {
-    std::vector<seams::Triangle> ground;
-    for (int x = 0; x < 4; ++x) cell(ground, x, 0, 1.0f);
-    ground_cells::Grid g = ground_cells::build(ground);
-    CHECK(!ground_cells::onGround(g, 15.0f, -0.3f, 5.0f, 0.75f));
-    grass_beds::Box b;
-    b.lo[0] = 11, b.lo[1] = -0.3f, b.lo[2] = 1;
-    b.hi[0] = 28, b.hi[1] = -0.3f, b.hi[2] = 9;
-    grass_beds::addTo(g, {b});
-    CHECK(ground_cells::onGround(g, 15.0f, -0.3f, 5.0f, 0.75f));  // the bed's top
-    CHECK(ground_cells::onGround(g, 25.0f, -0.3f, 5.0f, 0.75f));
-    CHECK(ground_cells::onGround(g, 15.0f, 1.0f, 5.0f, 0.75f));    // the paving beside it still
-    CHECK(!ground_cells::onGround(g, 35.0f, -0.3f, 5.0f, 0.75f));  // a cell the bed does not reach
-    CHECK(!ground_cells::onGround(g, 5.0f, -0.3f, 5.0f, 0.75f));
-    ground_cells::Grid empty;  // no grid: nothing to do
-    grass_beds::addTo(empty, {b});
-    CHECK(empty.span.empty());
-}

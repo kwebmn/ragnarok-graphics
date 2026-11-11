@@ -55,23 +55,6 @@ TEST(texture_pack_knows_the_key_of_a_picture) {
         CHECK(!pack::keyOfPicture(bad, g, key));
 }
 
-TEST(texture_pack_index_holds_the_lower_details_keys) {
-    // 0.45: a texture at a lower detail (the game's TEXTUREMODE) has a key of its own; the index sends it to the
-    // picture of the whole texture - "=<key>\t<picture>" lines, which the pictures' lines leave alone.
-    const std::map<std::string, ai::Kind> kinds = {{"world/256x256/00000000000000aa.webp", ai::Kind::Objects}};
-    const std::map<std::string, std::string> aliases = {
-        {"128x128\\00000000000000bb", "world/256x256/00000000000000aa.webp"},
-        {"64x64\\00000000000000cc", "world/256x256/00000000000000aa.webp"}};
-    const std::string text = pack::indexText(kinds, aliases);
-    CHECK_EQ(text, std::string("world/256x256/00000000000000aa.webp\tobjects\n"
-                               "=128x128\\00000000000000bb\tworld/256x256/00000000000000aa.webp\n"
-                               "=64x64\\00000000000000cc\tworld/256x256/00000000000000aa.webp\n"));
-    const auto back = pack::parseIndex(text);
-    CHECK(back.size() == 1 && back.at("world/256x256/00000000000000aa.webp") == ai::Kind::Objects);
-    const auto alias = pack::parseAliases(text + "=broken\n=\tworld/1x1/1.webp\n");
-    CHECK(alias == aliases);
-}
-
 TEST(texture_pack_reads_back_what_it_wrote) {
     const std::string path = tempPath();
     std::string error;
@@ -163,35 +146,6 @@ TEST(texture_pack_keeps_the_pictures_of_a_run_that_broke_off) {
     CHECK_EQ(r.sizeOf("world/1x1/none.webp"), uint64_t(0));
     r.close();
     std::remove(path.c_str());
-}
-
-TEST(texture_pack_index_holds_the_maps_of_its_pictures) {
-    // 0.48: the game's own making notes the maps a picture was shown on ("name\tkind\tmap,map"); the builder's
-    // pictures have none. The lower details' keys go with them; a line it cannot read is left out.
-    pack::Index x;
-    x.pictures["world/256x256/00000000000000aa.webp"] = pack::IndexEntry{ai::Kind::Ground, {"prontera", "geffen"}};
-    x.pictures["sprites/64x64/00000000000000bb.webp"] = pack::IndexEntry{ai::Kind::Sprites, {}};
-    x.aliases["128x128\\00000000000000cc"] = "world/256x256/00000000000000aa.webp";
-    const std::string text = pack::indexText(x);
-    CHECK_EQ(text, std::string("sprites/64x64/00000000000000bb.webp\tsprites\n"
-                               "world/256x256/00000000000000aa.webp\tground\tgeffen,prontera\n"
-                               "=128x128\\00000000000000cc\tworld/256x256/00000000000000aa.webp\n"));
-    const pack::Index back = pack::parseIndexFile(text + "no tab\nworld/1x1/1.webp\tnonsense\t,,payon,\n");
-    CHECK_EQ(back.pictures.size(), size_t(3));
-    const std::string aa = "world/256x256/00000000000000aa.webp";
-    CHECK(back.pictures.at(aa) == x.pictures.at(aa));
-    CHECK(back.pictures.at("sprites/64x64/00000000000000bb.webp").maps.empty());
-    const pack::IndexEntry& odd = back.pictures.at("world/1x1/1.webp");
-    CHECK(odd.kind == ai::Kind::None && odd.maps == std::set<std::string>{"payon"});
-    CHECK(back.aliases == x.aliases);
-    // 0.49: the likeness of a picture of a .jpg, on a line of its own.
-    pack::Index withNear = x;
-    withNear.alike["ui/1024x1024/0000000000000001.webp"] = "1024\t1024\t800\t600\tab";
-    const pack::Index nearBack = pack::parseIndexFile(pack::indexText(withNear));
-    CHECK(nearBack.alike == withNear.alike);
-    CHECK(nearBack.pictures.size() == 2 && !nearBack.pictures.count("~ui/1024x1024/0000000000000001.webp"));
-    // The kinds alone, as before (0.43): the maps after the kind do not change it.
-    CHECK(pack::parseIndex(text).at("world/256x256/00000000000000aa.webp") == ai::Kind::Ground);
 }
 
 TEST(texture_pack_rewrites_itself_without_some_pictures) {
@@ -434,18 +388,6 @@ TEST(index_round_trips_its_new_lines) {
     const pack::Index part = pack::parseIndexFile("#1x1\\1\trelief=2\n#\tgloss=1\n!\n");
     CHECK(part.materials.size() == 1 && part.materials.at("1x1\\1").relief == 2.0f);
     CHECK(part.materials.at("1x1\\1").gloss == 1.0f && part.ownAlways.empty());
-}
-
-TEST(index_new_lines_are_no_pictures_to_old_readers) {
-    // a 2.2.5 reader took an unknown line for a picture of no kind the pack has not: nothing found by it
-    pack::Index x;
-    x.pictures["world/256x256/0123456789abcdef.webp"] = pack::IndexEntry{ai::Kind::Ground, {}};
-    x.made["world/256x256/0123456789abcdef.webp"] = pack::Provenance{"a.bmp", "data.grf", 1, "general", "general x4"};
-    x.ownAlways.insert("256x256\\0123456789abcdef");
-    x.materials["256x256\\0123456789abcdef"] = pack::MaterialScales{};
-    const std::map<std::string, ai::Kind> kinds = pack::parseIndex(pack::indexText(x));
-    CHECK_EQ(kinds.size(), size_t(1));
-    CHECK(kinds.at("world/256x256/0123456789abcdef.webp") == ai::Kind::Ground);
 }
 
 TEST(pack_entries_carry_their_time) {

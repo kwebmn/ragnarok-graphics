@@ -20,8 +20,6 @@ struct Face {
     float fwd[3], right[3], up[3];
 };
 Face face(int f);
-// The face a way from the light (world) goes through and where on it, -1..1 each way; false for no way at all
-bool faceOf(const float d[3], int& f, float& u, float& v);
 // Whether a box (its corners less the light's place, world) can show on face f - never false for one that does
 bool boxOnFace(const float lo[3], const float hi[3], int f);
 

@@ -150,11 +150,6 @@ Look lookOf(int id) {
     return Look{};
 }
 
-Element elementOf(int id) {
-    const Look l = lookOf(id);
-    return l.branch == Branch::Mage ? l.tone : Element::None;
-}
-
 Palette paletteOf(Element e) {
     switch (e) {
         case Element::Fire: return {{1.0f, 0.93f, 0.72f}, {1.0f, 0.45f, 0.12f}, {0.55f, 0.16f, 0.05f}};

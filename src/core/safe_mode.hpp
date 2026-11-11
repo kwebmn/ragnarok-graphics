@@ -18,7 +18,7 @@ constexpr const char* kFirstPicture = "renderer: the first picture is on the scr
 enum class Start { Unknown, Fine, Failed, FailedEarly };
 constexpr int kEarlySeconds = 300;
 Start judge(const std::string& previousLog);
-bool startFailed(const std::string& previousLog);  // judge(...) == Failed or FailedEarly
+  // judge(...) == Failed or FailedEarly
 int failedInRow(int before, Start last);
 bool needed(int failedInRow, bool asked);
 // Direct3D 11 (api = system stays), no 64-bit bridge, AI textures, effects, DLSS, frame generation, HDR, Remix or

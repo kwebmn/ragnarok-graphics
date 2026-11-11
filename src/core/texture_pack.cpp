@@ -361,12 +361,6 @@ std::map<std::string, std::string> parseAliases(const std::string& text) {
     return out;
 }
 
-std::map<std::string, ai::Kind> parseIndex(const std::string& text) {
-    std::map<std::string, ai::Kind> out;
-    for (const auto& e : parseIndexFile(text).pictures) out[e.first] = e.second.kind;
-    return out;
-}
-
 std::string indexText(const Index& index) {
     std::string t;
     for (const auto& e : index.pictures) {

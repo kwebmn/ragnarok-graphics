@@ -69,9 +69,6 @@ bool decode(FileEntry& f, const std::vector<std::string>& allNames, const Read& 
 // The maps (GameFiles::maps) each file is on - by their ground and their models - and each ground texture's grid.
 void mapsOf(Catalog& c, const std::vector<std::string>& maps, const Read& read, const std::atomic<bool>* stop);
 
-// A key (or a lower detail's key) to its files' pictures: (file, picture).
-std::unordered_multimap<std::string, std::pair<size_t, size_t>> byKey(const Catalog& c);
-
 // The pack as the catalog meets it: its pictures with their times, its index.
 struct PackView {
     std::unordered_map<std::string, int64_t> pictures;

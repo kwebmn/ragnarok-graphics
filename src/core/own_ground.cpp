@@ -248,26 +248,6 @@ std::vector<float> cornerNormals(const gnd::Ground& g) {
     return n;
 }
 
-void normalAt(const std::vector<float>& corners, int width, int height, float zoom, float x, float z, float out[3]) {
-    out[0] = out[2] = 0.0f, out[1] = -1.0f;
-    if (width <= 0 || height <= 0 || corners.size() < size_t(width + 1) * size_t(height + 1) * 3 || zoom <= 0.0f)
-        return;
-    const float gx = std::clamp(x / zoom + float(width) / 2.0f, 0.0f, float(width));
-    const float gz = std::clamp(z / zoom + float(height) / 2.0f, 0.0f, float(height));
-    const int x0 = std::min(int(gx), width - 1), z0 = std::min(int(gz), height - 1);
-    const float fx = gx - float(x0), fz = gz - float(z0);
-    float n[3] = {0.0f, 0.0f, 0.0f};
-    for (int k = 0; k < 4; ++k) {
-        const int cx = x0 + (k & 1), cz = z0 + (k >> 1);
-        const float w = ((k & 1) ? fx : 1.0f - fx) * ((k >> 1) ? fz : 1.0f - fz);
-        const float* c = &corners[(size_t(cz) * size_t(width + 1) + size_t(cx)) * 3];
-        for (int a = 0; a < 3; ++a) n[a] += c[a] * w;
-    }
-    const float l = std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
-    if (l > 1e-6f)
-        for (int a = 0; a < 3; ++a) out[a] = n[a] / l;
-}
-
 float reliefLight(const float n[3], const float toSun[3], float ambient, float strength) {
     const float sl = std::sqrt(toSun[0] * toSun[0] + toSun[1] * toSun[1] + toSun[2] * toSun[2]);
     if (sl < 1e-6f) return 1.0f;

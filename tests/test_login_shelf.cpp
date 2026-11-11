@@ -64,11 +64,6 @@ TEST(login_shelf_places) {
     CHECK(loginshelf::hitTest(later, mid(later.cards[0]).first, mid(later.cards[0]).second).index == 3);
 }
 
-TEST(login_shelf_first_launch_is_classic) {
-    CHECK(loginshelf::classicInstead(0));
-    CHECK(!loginshelf::classicInstead(1));
-}
-
 // A card's menu: «Одразу в гру», «Зберігати пароль», the label, the login and password, its place, off the shelf; a
 // refused password said on the card in red
 TEST(login_shelf_menu_items) {

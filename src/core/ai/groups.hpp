@@ -45,8 +45,6 @@ constexpr int kModels = 4;
 const char* modelToken(int i);  // "general", "anime", "anime6b", "gameai"
 bool validModel(const std::string& token);
 int modelIndex(const std::string& token);  // -1 for none of them
-// How much work a picture is for each, against anime (the page shows it).
-int modelCost(const std::string& token);
 // 2.5.27: its file in uaro-graphics\\ai, without ".bin"; whether the RRDB engine runs it (else the compact one)
 const char* modelFile(const std::string& token);
 bool rrdbModel(const std::string& token);

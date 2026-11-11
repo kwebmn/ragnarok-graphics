@@ -106,9 +106,6 @@ struct Texts {
     std::string more;              // «ще {1}»
     std::string star, unstar;      // the tip's second line: «клік — в обрані», «клік — прибрати з обраних»
 };
-// The hovered one's tip (the column and the row): its name and time, a favourite's or the rest's click; its ground
-// here, its words in words(); w 0: none
-panel::Box tipOf(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t);
 // 3.0.18-beta.20 (the RML column, win/buff_column): the tip's box and its two lines
 panel::Box tipText(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t, std::string& first,
                    std::string& second);

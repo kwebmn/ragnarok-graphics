@@ -50,11 +50,6 @@ Rgb sample(const RefTexture& t, double u, double v, bool linear, uint32_t addres
 
 }  // namespace
 
-void tlToNdc(float x, float y, int width, int height, float& ndcX, float& ndcY) {
-    ndcX = (x + 0.5f) * 2.0f / float(width) - 1.0f;
-    ndcY = 1.0f - (y + 0.5f) * 2.0f / float(height);
-}
-
 RefRaster::RefRaster(int width, int height, PixelCenters centers, double scale)
     : w_(width), h_(height), centers_(centers), scale_(scale), px_(size_t(width) * size_t(height), Rgb{0, 0, 0}) {}
 

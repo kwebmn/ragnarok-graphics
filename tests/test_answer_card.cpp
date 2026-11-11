@@ -71,21 +71,3 @@ TEST(answer_card_lines_keep_words_whole) {
     if (!two.empty()) CHECK_EQ(two[0], std::string("a b"));
 }
 
-TEST(answer_card_colours_say_the_status) {
-    CHECK_EQ(card::statusColour(reports::Status::NeedInfo), 0xF0A050u);
-    CHECK_EQ(card::statusColour(reports::Status::Fixed), 0x4CAF6Eu);
-    CHECK_EQ(card::statusColour(reports::Status::Read), 0x5B8DEFu);
-    const card::Geometry g = card::geometry(1.0f, 1920, 1, card::Widths{110, 190, 60});
-    panel::Picture p, hovered;
-    card::paint(p, g, reports::Status::NeedInfo, card::Part::None);
-    card::paint(hovered, g, reports::Status::NeedInfo, card::Part::Open);
-    CHECK_EQ(p.width, g.width);
-    CHECK_EQ(p.height, g.height);
-    const size_t mid = size_t(g.open.y + g.open.h / 2) * size_t(p.width) + size_t(g.open.x + g.open.w / 2);
-    CHECK(mid < p.px.size());
-    if (mid >= p.px.size()) return;
-    CHECK_EQ(p.px[mid] >> 24, 0xFFu);  // the button opaque
-    CHECK((p.px[mid] & 0xFF) > ((p.px[mid] >> 16) & 0xFF));  // blue
-    CHECK(hovered.px[mid] != p.px[mid]);  // under the mouse: lighter
-    CHECK_EQ(p.px[0] >> 24, 0u);  // the rounded corner: nothing
-}

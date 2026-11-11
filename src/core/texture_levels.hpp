@@ -28,7 +28,6 @@ public:
     // next upload of level 0 names it. 2.5.23: own - the frame in its sprite's own colours when the game wrote it in
     // a dye (the cell's size; else none).
     void slotWritten(Rect r, uint8_t source = 0, const std::vector<uint32_t>* own = nullptr);
-    bool pending() const;
     void sync(FrameRecord& record, uint32_t texture);  // records the changed rectangles as uploads
     // 2.5.18: the game's own texels of level 0 before it made them 16-bit (core/full_colour.hpp): r of level 0, argb
     // r.width() * r.height() of them; mips - it made its mip levels of level 0 again. The next upload sends them in

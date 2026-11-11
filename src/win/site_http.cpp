@@ -170,6 +170,4 @@ void pump() {
     }
 }
 
-bool busy() { return done().inFlight > 0; }
-
 }  // namespace uagfx::win::sitehttp

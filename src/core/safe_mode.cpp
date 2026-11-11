@@ -42,11 +42,6 @@ Start judge(const std::string& previousLog) {
     return seconds <= kEarlySeconds ? Start::FailedEarly : Start::Fine;
 }
 
-bool startFailed(const std::string& previousLog) {
-    const Start s = judge(previousLog);
-    return s == Start::Failed || s == Start::FailedEarly;
-}
-
 int failedInRow(int before, Start last) {
     return last == Start::Failed || last == Start::FailedEarly ? before + 1 : last == Start::Fine ? 0 : before;
 }

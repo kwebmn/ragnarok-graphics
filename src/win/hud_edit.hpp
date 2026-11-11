@@ -24,12 +24,9 @@ namespace uagfx::win::hudedit {
 // (kept on the screen) - its box known here. k: the target's pixels a game pixel
 float sizeOf(hudlayout::Part part);
 void place(hudlayout::Part part, float k, int targetW, int targetH, int w, int h, int& x, int& y);
-// Changes when the part's place or size does (a part that lays out only when it paints paints again)
-int stampOf(hudlayout::Part part);
 bool movedOf(hudlayout::Part part);  // 3.0.11-beta.79: put elsewhere by the player
 void setLocked(bool locked);  // [interface] lock_layout, each frame
 
-bool on();
 void open(HWND game, const char* by);
 // 3.0.11-beta.288 (the owner's feature 20): [interface] layout_per_char - each character's own layout
 // (uaro-graphics\\layouts), the common one until changed for it; called each frame

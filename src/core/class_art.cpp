@@ -104,22 +104,4 @@ void cover(panel::Picture& out, const panel::Box& to, const std::vector<uint32_t
         }
 }
 
-void centre(panel::Picture& out, const panel::Box& to, const panel::Picture& pic) {
-    const int ox = int(std::lround(to.x + (to.w - float(pic.width)) / 2));
-    const int oy = int(std::lround(to.y + (to.h - float(pic.height)) / 2));
-    for (int y = 0; y < pic.height; ++y)
-        for (int x = 0; x < pic.width; ++x) {
-            const int tx = ox + x, ty = oy + y;
-            if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
-            const uint32_t s = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
-            const uint32_t sa = s >> 24;
-            if (!sa) continue;
-            uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
-            uint32_t r = 0;
-            for (int ch = 0; ch < 32; ch += 8)  // premultiplied: s + d (1 - sa)
-                r |= std::min(255u, ((s >> ch) & 0xFF) + ((d >> ch) & 0xFF) * (255 - sa) / 255) << ch;
-            d = r;
-        }
-}
-
 }  // namespace uagfx::classart

@@ -374,46 +374,6 @@ TEST(minimap_proto_party_members) {
     CHECK(minimap::markAt(L, sc, px + 1, py - 1) == 1);
 }
 
-// 3.0.11-beta.119 (R-5Z6J2S: «потрібно щоб на мінікарті та на великій карті була можливість включати та виключати НПЦ,
-// портали та інше»; the owner «делать»): the map's layers - portals, NPCs, Kafras, the party - each switched by a round
-// button in the minimap's top left and a chip under the big map; a layer off: its marks not drawn nor pointed at
-TEST(minimap_proto_layers_switched) {
-    std::vector<minimap::Mark> marks(4);
-    marks[0].glyph = minimap::Glyph::Warp;
-    marks[1].glyph = minimap::Glyph::Dot;
-    marks[2].glyph = minimap::Glyph::Kafra;
-    marks[3].glyph = minimap::Glyph::Member;
-    CHECK(minimap::layerOf(marks[0]) == minimap::Layer::Warps && minimap::layerOf(marks[1]) == minimap::Layer::Npcs);
-    CHECK(minimap::layerOf(marks[2]) == minimap::Layer::Kafra && minimap::layerOf(marks[3]) == minimap::Layer::Party);
-    minimap::Layers layers;
-    CHECK(minimap::shownMarks(marks, layers).size() == 4);  // all on at first
-    layers.on[int(minimap::Layer::Npcs)] = false;
-    layers.on[int(minimap::Layer::Party)] = false;
-    const std::vector<minimap::Mark> shown = minimap::shownMarks(marks, layers);
-    CHECK(shown.size() == 2 && shown[0].glyph == minimap::Glyph::Warp && shown[1].glyph == minimap::Glyph::Kafra);
-    // the minimap's buttons: a row in the square's top left, apart from the zoom's column
-    const minimap::Layout L = minimap::layout(1920, 1080, 1.0f, false, 0);
-    for (int i = 0; i < minimap::kLayers; ++i) {
-        const panel::Box& b = L.layers[i];
-        CHECK(b.w > 0 && b.y < L.zoomIn.y && b.x + b.w <= L.map.w);
-        CHECK(minimap::partAt(L, b.x + b.w / 2, b.y + b.h / 2) == minimap::Part::Layer);
-        CHECK(minimap::layerAt(L, b.x + b.w / 2, b.y + b.h / 2) == i);
-    }
-    CHECK(L.layers[1].x > L.layers[0].x && minimap::layerAt(L, L.map.w / 2, L.map.h / 2) == -1);
-    // the big map's chips: a row under the map, inside its width, each as wide as asked
-    const float widths[minimap::kLayers] = {90, 70, 80, 75};
-    const minimap::Big b = minimap::bigLayout(1600, 900, 1.0f, minimap::MapSize{312, 392}, widths);
-    for (int i = 0; i < minimap::kLayers; ++i) {
-        const panel::Box& c = b.chips[i];
-        CHECK(c.w == widths[i] && c.y >= b.map.y + b.map.h && c.x >= 0 && c.x + c.w <= float(b.w));
-        CHECK(c.y + c.h <= float(b.h));
-        CHECK(minimap::bigPartAt(b, c.x + c.w / 2, c.y + c.h / 2) == minimap::BigPart::Layer);
-        CHECK(minimap::bigLayerAt(b, c.x + c.w / 2, c.y + c.h / 2) == i);
-    }
-    CHECK(b.chips[1].x > b.chips[0].x + b.chips[0].w);
-    CHECK(b.y + b.h <= 900);
-}
-
 // 3.0.11-beta.120 (the owner: «карту в отчете, она какаято не красивая, может другую попробовать или сделать
 // переключалку слоев разных?»): «Схема» - the map drawn from its walkable cells (walkgrid): the floor light (the part
 // reached on foot lighter), walls dark, a darker rim where the floor meets a wall; `px` pixels a cell, rows north first
@@ -448,39 +408,6 @@ TEST(minimap_proto_style_switch_places) {
     CHECK(b.styleChip.w == 84 && b.styleChip.x > b.chips[minimap::kLayers - 1].x && b.styleChip.y == b.chips[0].y);
     CHECK(b.styleChip.x + b.styleChip.w <= float(b.w));
     CHECK(minimap::bigPartAt(b, b.styleChip.x + 5, b.styleChip.y + 5) == minimap::BigPart::Style);
-}
-
-// 3.0.11-beta.201 (the tester: «ще не видно согільдійців на мінімапі», «була якась команда типу пошук мобів на
-// мінімапі»): a server's mark (an NPC's viewpoint, @showmobs) - always shown, over the rest, in its colour; a guild
-// mate - with the party's layer
-TEST(minimap_proto_spots_and_guild_mates) {
-    minimap::Mark spot{minimap::Cell{40, 40}, 0xFF8000, minimap::Glyph::Spot, ""};
-    minimap::Mark mate{minimap::Cell{60, 40}, 0, minimap::Glyph::Guild, ""};
-    CHECK(minimap::layerOf(mate) == minimap::Layer::Party);
-    minimap::Layers none;
-    for (bool& on : none.on) on = false;
-    const std::vector<minimap::Mark> shown = minimap::shownMarks({spot, mate}, none);
-    CHECK(shown.size() == 1 && shown[0].glyph == minimap::Glyph::Spot);
-    // the server's mark whatever the layers
-
-    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
-    minimap::Scene sc;
-    sc.map = minimap::MapSize{100, 100};
-    sc.player = minimap::Cell{50, 50};
-    const minimap::Mark dot{minimap::Cell{40, 40}, 0x37B24D, minimap::Glyph::Dot, "Guide"};
-    sc.marks = {spot, dot, mate};
-    // the dot after the spot, at its cell
-
-    const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
-    float px = 0, py = 0;
-    minimap::cellToPanel(v, sc.map, minimap::Cell{40, 40}, px, py);
-    // the spot's orange
-
-    // its white middle over the dot under it
-
-    minimap::cellToPanel(v, sc.map, minimap::Cell{60, 40}, px, py);
-    // the mate drawn
-
 }
 
 // 3.0.11-beta.201 (the tester: «великі іконки коли зум максимальний (видно всю мапу ...) і зменшуються коли

@@ -36,9 +36,6 @@ struct Layout {
 };
 Layout layout(int targetW, int targetH, float scale, size_t count);
 int mostScroll(const Layout& L, size_t count);
-// 3.0.11-beta.187 (the tester: «мені не вистачає скрола тут»): the bar's thumb - as long as the share of the rows
-// shown, where `scroll` is; 0 high with no bar
-panel::Box thumb(const Layout& L, int scroll, size_t count);
 enum class Part : uint8_t { None, Row, Ok, Cancel };
 struct Hit {
     Part part = Part::None;
@@ -58,7 +55,4 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-// 3.0.18-beta.31 (uaUI's choice of things): a row's icon square (none when its entry has no icon)
-panel::Box iconOf(const panel::Box& row, const Entry& e, float s);
-
 }  // namespace uagfx::pickcard

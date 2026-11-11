@@ -118,8 +118,6 @@ Chrome chrome(const Layout& L, const refpages::Page& p, const Texts& t);
 // What is under a point of the window (its own pixels); `world`: the world map's tiles under the pointer (at its view)
 Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, const Chrome& c,
             float x, float y, const WorldLook* world = nullptr);
-// The world map's fit in its row (the row's own pixels); 3.0.11-beta.29: at a look's view
-worldmap::Fit worldFit(const worldmap::Sheet& sheet, const Placed& row);
 worldmap::Fit worldView(const WorldLook& w, const Placed& row);
 
 struct Look {
@@ -142,10 +140,6 @@ std::vector<Rect> hotAreas(const Layout& L, const refpages::Page& p, const std::
 // A row's area as hotAreas has it (a row's with its band, a tile's or a chip's its own; empty when the row is not
 // shown whole) - a row whose icon came
 Rect rowArea(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, int i);
-// 3.0.11-beta.25: a row drawn the same as another (its style, words, link, marks, pictures) - and where a map's frame
-// on the world map's row `row` is drawn (empty: the map not on the sheet, the row not shown whole): the world map's
-// pointer moved to another map, its page made again, only what changed is painted again
-bool sameRow(const refpages::Row& a, const refpages::Row& b);
 // 3.0.11-beta.29: of the look's map under the pointer - its frame and its card (empty: none, the row not shown)
 Rect worldArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int row, const WorldLook& w);
 

@@ -38,7 +38,6 @@ public:
     // The next chunk in place, or false when there is none; consume() frees it.
     bool peek(ChunkHeader& h, const uint8_t*& data);
     void consume();
-    bool empty() const;
 
 private:
     RingHeader* h_ = nullptr;

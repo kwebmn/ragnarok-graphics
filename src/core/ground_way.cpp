@@ -601,20 +601,6 @@ std::vector<Tri> onGround(const std::vector<Flat>& flat, const Heights& g, float
 
 }  // namespace
 
-std::vector<Tri> walkArrowShape(float x0, float z0, int toX, int toY, const Heights& g, int cellSize, float sign,
-                                float lift) {
-    if (cellSize <= 0 || g.w <= 0 || g.h <= 0) return {};
-    const float cs = float(cellSize);
-    float cx = 0, cz = 0;
-    cellToWorld(toX, toY, g.w, g.h, cellSize, cx, cz);
-    const float dx = cx - x0, dz = cz - z0, len = std::hypot(dx, dz);
-    if (len < 0.6f * cs) return {};  // where it stands
-    std::vector<Flat> flat;
-    Pen pen{flat, false, 0.0f, 1.0f};
-    conceptLook(pen, Frame{x0, z0, dx / len, dz / len, len, cx, cz, cs}, true);
-    return onGround(flat, g, cs, sign, lift);
-}
-
 std::vector<Tri> walkShape(WalkLook look, const WalkArrow& a, const Heights& g, int cellSize, float sign,
                            float lift) {
     const float way = std::hypot(a.wayX, a.wayZ);

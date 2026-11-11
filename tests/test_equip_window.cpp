@@ -94,23 +94,3 @@ TEST(equip_window_pad_steps_in_the_originals_columns) {
     CHECK_EQ(padStep(HeadMid, 1, 0), int(HeadMid));
 }
 
-// 3.0.18-beta.29 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5): uaUI's «Спорядження» - the card
-// dots (gold where a card sits), the controller's glyphs by the footer's words
-TEST(equip_window_view_places_the_dots_and_glyphs) {
-    const equipwin::Data d = wizard();
-    equipwin::Show sh;
-    const equipwin::Layout L = equipwin::layout(0, 0, 1.0f, d, sh, texts(), measure);
-    const equipwin::View v = equipwin::view(L, d, sh);
-    int weapon = 0, gold = 0;
-    for (const equipwin::Dot& x : v.dots) {
-        weapon += x.slot == equipwin::Weapon;
-        gold += x.card;
-        CHECK(x.cx >= L.dots[x.slot].x && x.cx <= L.dots[x.slot].x + L.dots[x.slot].w && x.r > 0);
-    }
-    CHECK(weapon == 4 && gold == 1 && v.glyphs.empty());
-    sh.pad = true;
-    sh.focus = equipwin::Weapon;
-    const equipwin::Layout P = equipwin::layout(0, 0, 1.0f, d, sh, texts(), measure);
-    const equipwin::View pv = equipwin::view(P, d, sh);
-    CHECK(!pv.glyphs.empty() && pv.glyphs.size() == P.padGlyphs.size() && pv.glyphs[0].box.w > 0);
-}

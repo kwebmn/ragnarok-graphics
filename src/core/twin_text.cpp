@@ -8,8 +8,6 @@
 
 namespace uagfx {
 
-int letterPen(int x, int advance, double K) { return twinEdge(x + advance, K); }
-
 std::vector<int> letterPens(int x, const std::vector<int>& ends, const std::vector<int>& advances, double K) {
     const size_t n = std::min(ends.size(), advances.size());
     std::vector<int> pens(n);

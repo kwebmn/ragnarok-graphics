@@ -94,7 +94,4 @@ struct View {
     ButtonView buttons[3];
     bool late = false;  // the warning's plate
 };
-View view(const Layout& L, const Side& me, const Side& them, const Show& sh, const Texts& t,
-          const itemwin::Measure& m);
-
 }  // namespace uagfx::tradewin

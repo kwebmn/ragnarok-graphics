@@ -164,24 +164,6 @@ TEST(catalog_keeps_what_did_not_change) {
     CHECK(fileOf(now, "data\\texture\\a.bmp")->pictures.size() == 1);
 }
 
-TEST(catalog_joins_the_pack) {
-    const Game g;
-    const catalog::Catalog c = g.build();
-    const catalog::PictureOf& a = fileOf(c, "data\\texture\\a.bmp")->pictures[0];
-    const catalog::PictureOf& bark = fileOf(c, "data\\texture\\bark.bmp")->pictures[0];
-    const catalog::PictureOf& leaf = fileOf(c, "data\\texture\\leaf.bmp")->pictures[0];
-    catalog::PackView v;
-    v.pictures[pack::pictureName(pack::Group::World, a.key)] = 1760000000;
-    v.index.ownAlways.insert(bark.key);
-    CHECK(catalog::stateOf(a, v) == catalog::State::InPack);
-    CHECK(catalog::stateOf(bark, v) == catalog::State::OwnAlways);
-    CHECK(catalog::stateOf(leaf, v) == catalog::State::Missing);
-    v.index.aliases[leaf.key] = pack::pictureName(pack::Group::World, a.key);  // its key another's picture
-    CHECK(catalog::stateOf(leaf, v) == catalog::State::InPack);
-    const auto keys = catalog::byKey(c);
-    CHECK(keys.count(a.key) == 1 && keys.count(a.lowKeys[0]) == 1);
-}
-
 TEST(catalog_finds_orphans) {
     const Game g;
     const catalog::Catalog c = g.build();

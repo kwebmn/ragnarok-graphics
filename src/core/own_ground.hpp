@@ -95,7 +95,6 @@ bool boxInView(const View& v, const camera::Projection& p, int width, int height
 // place between them (file places); the light of a slope against a flat ground's, as the shader works it out: the
 // way to the sun, the light all round (ambient), the strength (0 none, 1 the whole) - 0.6 to 1.4 before the strength
 std::vector<float> cornerNormals(const gnd::Ground& g);
-void normalAt(const std::vector<float>& corners, int width, int height, float zoom, float x, float z, float out[3]);
 float reliefLight(const float n[3], const float toSun[3], float ambient, float strength);
 // 3.0.4-beta.30: that light a corner (made once a light: a map's corners), a place's between its cell's four - the
 // normal and the light at each point cost 73 ns, the light between the corners a few; no corners' lights: 1

@@ -20,7 +20,4 @@ float easeOut(float t);  // 0..1 -> 0..1, cubic: quick, then settling
 float fadeIn(uint64_t now, uint64_t since, uint64_t ms);
 // A part gone at `since`: its opacity at `now` (0 past `ms`, and with the motion off)
 float fadeOut(uint64_t now, uint64_t since, uint64_t ms);
-// A flare at `since`: up in its first fifth, then down to 0 at `ms` - once (0 with the motion off)
-float flare(uint64_t now, uint64_t since, uint64_t ms);
-
 }  // namespace uagfx::motion

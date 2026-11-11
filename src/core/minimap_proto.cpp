@@ -817,25 +817,6 @@ std::vector<uint32_t> schemePixels(const walkgrid::Grid& g, const std::vector<ui
     return out;
 }
 
-Layer layerOf(const Mark& m) {
-    switch (m.glyph) {
-        case Glyph::Warp: return Layer::Warps;
-        case Glyph::Kafra: return Layer::Kafra;
-        case Glyph::Member:
-        case Glyph::Guild: return Layer::Party;  // 3.0.11-beta.201: the guild's mates with the party's
-        case Glyph::Spot:
-        case Glyph::Dot: break;
-    }
-    return Layer::Npcs;
-}
-
-std::vector<Mark> shownMarks(const std::vector<Mark>& marks, const Layers& layers) {
-    std::vector<Mark> out;
-    for (const Mark& m : marks)
-        if (m.glyph == Glyph::Spot || layers.on[int(layerOf(m))]) out.push_back(m);  // .201: a server's always
-    return out;
-}
-
 Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net, bool found, float grow) {
     Layout L;
     const float s = std::max(0.5f, scale);

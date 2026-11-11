@@ -38,18 +38,6 @@ TEST(audio_output_the_default_while_the_chosen_one_is_away) {
     CHECK(audio_output::pick(kPhones, {}).away);
 }
 
-TEST(audio_output_reopened_when_the_target_changes_or_its_device_is_lost) {
-    CHECK(!audio_output::reopen("", audio_output::pick("", {kMonitor, kPhones}), false));
-    CHECK(audio_output::reopen("", audio_output::pick("", {kMonitor, kPhones}), true));  // lost: opened again
-    CHECK(audio_output::reopen("", audio_output::pick(kPhones, {kMonitor, kPhones}), false));  // chosen
-    CHECK(!audio_output::reopen(kPhones, audio_output::pick(kPhones, {kMonitor, kPhones}), false));
-    CHECK(audio_output::reopen(kPhones, audio_output::pick("", {kMonitor, kPhones}), false));  // back to Windows'
-    // the chosen headphones off: Windows' default; back: on them again
-    CHECK(audio_output::reopen(kPhones, audio_output::pick(kPhones, {kMonitor}), true));
-    CHECK(!audio_output::reopen("", audio_output::pick(kPhones, {kMonitor}), false));
-    CHECK(audio_output::reopen("", audio_output::pick(kPhones, {kMonitor, kPhones}), false));
-}
-
 TEST(audio_output_setting_read) {
     CHECK(parseConfig("").sound.output.empty());
     CHECK(parseConfig("[sound]\noutput = auto\n").sound.output.empty());

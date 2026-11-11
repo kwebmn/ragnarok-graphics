@@ -14,12 +14,6 @@ constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kText 
 
 }  // namespace
 
-int volumeAt(const panel::Box& slider, float x) {
-    if (slider.w <= 0) return 0;
-    const float t = std::clamp((x - slider.x) / slider.w, 0.0f, 1.0f);
-    return int(std::lround(t * float(kVolumeMost)));
-}
-
 Layout layout(int targetW, int targetH, float scale) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;

@@ -51,7 +51,6 @@ class WireReader {
 public:
     WireReader(const uint8_t* p, size_t n) : p_(p), end_(p + n) {}
     uint8_t u8();
-    uint16_t u16();  // 2.7.21
     uint32_t u32();
     int32_t i32() { return int32_t(u32()); }
     uint64_t u64();

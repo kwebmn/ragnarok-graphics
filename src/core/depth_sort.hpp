@@ -15,7 +15,4 @@ struct Pair {
 static_assert(sizeof(Pair) == 8, "the game's pair");
 // The pairs' depths that are not numbers made the farthest; how many
 int mend(Pair* first, Pair* last);
-// The game's comparison as it is: the depths (an unordered pair as less), then the faces
-bool gameLess(const Pair& a, const Pair& b);
-
 }  // namespace uagfx::depthsort

@@ -25,13 +25,6 @@ TEST(supplies_by_the_skills_on_the_bar) {
     CHECK(!supplies::pick({}, 0).spheres);
 }
 
-TEST(supplies_level_by_count) {
-    CHECK_EQ(supplies::level(25), 0);
-    CHECK_EQ(supplies::level(10), 1);
-    CHECK_EQ(supplies::level(1), 1);
-    CHECK_EQ(supplies::level(0), 2);
-}
-
 // 3.0.16-beta.13: what one use needs - spheres by the skill (Finger Offensive by its level), Fire Pillar's gem
 TEST(supplies_spheres_and_items_at_a_level) {
     CHECK_EQ(supplies::spheresFor(271, 5), 5);

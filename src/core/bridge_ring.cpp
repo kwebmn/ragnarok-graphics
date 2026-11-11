@@ -77,10 +77,6 @@ void Ring::consume() {
     h_->read.store(r + align16(uint32_t(sizeof(ChunkHeader)) + c.size), std::memory_order_release);
 }
 
-bool Ring::empty() const {
-    return !h_ || h_->read.load(std::memory_order_acquire) == h_->write.load(std::memory_order_acquire);
-}
-
 bool Assembler::feed(const ChunkHeader& h, const uint8_t* data) {
     if (h.offset == 0) {
         reset();

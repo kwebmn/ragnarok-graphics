@@ -24,10 +24,4 @@ int mend(Pair* first, Pair* last) {
     return n;
 }
 
-bool gameLess(const Pair& a, const Pair& b) {
-    if (!(a.depth >= b.depth)) return true;   // fcomp a, b: C0 - below, or unordered
-    if (!(b.depth >= a.depth)) return false;  // fcomp b, a
-    return a.face < b.face;
-}
-
 }  // namespace uagfx::depthsort

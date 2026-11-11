@@ -40,13 +40,6 @@ TEST(my_shop_places_and_the_mouse) {
     CHECK(many.rows.size() == 8 && myshop::mostScroll(many, 20) == 12);
 }
 
-// 3.0.18-beta.30: uaUI's own shop - a row's icon square inside its row
-TEST(my_shop_icon_inside_its_row) {
-    const panel::Box row{10, 20, 300, 40};
-    const panel::Box b = myshop::iconOf(row, 1.0f);
-    CHECK(b.w > 0 && b.x > row.x && b.y >= row.y && b.y + b.h <= row.y + row.h);
-}
-
 // 3.0.18-beta.143 (the windows' audit: «Моя лавка» showed nothing of what sold): the sales as the server tells them
 // (0x0137: a place, how many) matched to the shop's things by their place - each sale's name and zeny, how many of
 // each sold, the zeny earned; a place not known: no sale

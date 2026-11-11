@@ -18,8 +18,6 @@ namespace uagfx::win::targetpanel {
 // reference pack. Under the game's own windows when one stands at the top middle (the hotkeys' bar). On the game's
 // thread.
 void packet(const packets::Event& e);
-// 3.0.11-beta.87: the monster the card shows now (the one the character fights); 0 none
-uint32_t current();
 // 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): the one the character fights,
 // whether the card is on or not (the HP bars' and the ring's target with the mouse); 0 none
 uint32_t fighting();

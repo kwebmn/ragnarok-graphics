@@ -42,46 +42,6 @@ TEST(the_computer_key_is_made_once) {
     CHECK_EQ(app::computerKey(dir), key);
 }
 
-TEST(a_report_without_the_site_waits_and_goes_later) {
-    fake::Windows& w = fake::reset();
-    const std::wstring dir = app::exeFolder();
-    report::Upload u;
-    u.comment = "Вода мерехтить";
-    u.kind = "graphics";
-    u.computer = app::computerKey(dir);
-    app::NewReport r = app::sendNew(dir, u);  // no answer from the site
-    CHECK(r.code.empty() && r.queued && !r.error.empty());
-    CHECK_EQ(queued(), size_t(1));
-    CHECK_EQ(app::queuedReports(dir), 1);
-    CHECK_EQ(app::sendQueued(dir), 0);  // still no answer: it stays
-    CHECK_EQ(queued(), size_t(1));
-
-    w.postAnswers["/api/graphics/reports"] = {201, "{\"code\":\"R-ABCDEF\"}"};
-    CHECK_EQ(app::sendQueued(dir), 1);
-    CHECK_EQ(queued(), size_t(0));
-    CHECK_EQ(w.posts.size(), size_t(3));  // the first try, the one without an answer, the one that went
-    CHECK(w.posts.back().body.find("\"comment\":\"Вода мерехтить\"") != std::string::npos);
-    CHECK(w.posts.back().body.find("\"kind\":\"graphics\"") != std::string::npos);
-    const std::vector<std::string> sent = app::sentCodesIn(dir, 5);
-    CHECK(!sent.empty() && sent[0] == "R-ABCDEF");
-
-    // the site refuses one (too big, a bad field): it never goes, so it is not kept
-    w.postAnswers["/api/graphics/reports"] = {422, "{\"message\":\"bad\"}"};
-    r = app::sendNew(dir, u);
-    CHECK(r.code.empty() && !r.queued && !r.error.empty());
-    CHECK_EQ(queued(), size_t(0));
-    // a full hour (the limit): kept for later
-    w.postAnswers["/api/graphics/reports"] = {429, "{\"message\":\"Too Many Attempts.\"}"};
-    r = app::sendNew(dir, u);
-    CHECK(r.code.empty() && r.queued);
-    CHECK_EQ(queued(), size_t(1));
-    w.postAnswers["/api/graphics/reports"] = {201, "{\"code\":\"R-GHJKMN\"}"};
-    r = app::sendNew(dir, u);  // sent at once, and the waiting one goes with it
-    CHECK_EQ(r.code, std::string("R-GHJKMN"));
-    CHECK(!r.queued);
-    CHECK_EQ(queued(), size_t(0));
-}
-
 TEST(the_list_and_the_conversation_come_from_the_site) {
     fake::Windows& w = fake::reset();
     const std::wstring dir = app::exeFolder();

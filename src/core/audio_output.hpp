@@ -17,9 +17,6 @@ struct Target {
 // `wanted` the setting's, `active` the ids of the output devices connected now
 Target pick(const std::string& wanted, const std::vector<std::string>& active);
 
-// Whether to open again: its device lost, or another target than `openedId` ("" Windows' default)
-bool reopen(const std::string& openedId, const Target& target, bool lost);
-
 // Endpoint ids alike in any case (Windows writes them in capitals in places)
 bool sameId(const std::string& a, const std::string& b);
 

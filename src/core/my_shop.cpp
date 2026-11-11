@@ -15,10 +15,6 @@ constexpr size_t kMostRows = 8;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xEEF2F8;
 constexpr uint32_t kMuted = 0x9AA3B5, kBlack = 0x000000;
 
-panel::Box iconBox(const panel::Box& row, float s) {
-    return panel::Box{row.x + 6 * s, row.y + (row.h - kIcon * s) / 2, kIcon * s, kIcon * s};
-}
-
 }  // namespace
 
 long long worth(const std::vector<Row>& rows) {
@@ -59,8 +55,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     if (L.glass.contains(x, y)) return Hit{Part::Body};
     return Hit{};
 }
-
-panel::Box iconOf(const panel::Box& row, float s) { return iconBox(row, s); }
 
 void Ledger::stock(int index, const std::string& name, long long price) {
     Thing& t = things_[index];

@@ -405,19 +405,6 @@ void onto(Strip& s, const Piece& p) {
     for (size_t i = 0; i < p.indices.size(); ++i) s.indices[at + i] = uint16_t(first + p.indices[i]);
 }
 
-// The pieces into the strips in the order they come: one strip a cell's group and the texture it shows
-void append(std::vector<Strip>& out, std::unordered_map<uint64_t, size_t, Hash64>& strips, const Piece& p) {
-    auto found = strips.find(stripOf(p.inside, p.shows));
-    if (found == strips.end()) {
-        found = strips.emplace(stripOf(p.inside, p.shows), out.size()).first;
-        Strip st;
-        st.inside = p.inside;
-        st.shows = p.shows;
-        out.push_back(std::move(st));
-    }
-    onto(out[found->second], p);
-}
-
 // The ground's cells and the edges between them that get strips, in the order the strips are made: the cells by
 // their places, the four ways each
 struct Edge {
@@ -552,25 +539,6 @@ bool edgesOf(const std::vector<Triangle>& ground, const std::vector<uint32_t>& t
 }
 
 }  // namespace
-
-std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture, float width,
-                         const Laid& laid) {
-    std::vector<Strip> out;
-    std::unordered_map<uint64_t, size_t, Hash64> strips;  // (inside, shows) -> its strip
-    CellMap cells;
-    std::vector<uint32_t> order;
-    Piece piece;
-    Grid grid;
-    if (!gridOf(ground, grid)) return out;
-    edgesOf(ground, texture, laid, grid, cells, order, [&](const Edge& e) {
-        const Inputs in = inputsOf(*e.a, *e.b, e.ta, e.tb, e.nearby, e.creased, e.low, width);
-        makePiece(*e.a, *e.b, *e.w, e.ix, e.iz, in, false, width, piece);
-        append(out, strips, piece);
-        makePiece(*e.a, *e.b, *e.w, e.ix, e.iz, in, true, kBand * 2.0f, piece);
-        append(out, strips, piece);
-    });
-    return out;
-}
 
 // 3.0.5-beta.9: the edges' pieces kept from the last builds, by their cell's place and way; 3.0.5-beta.10: an edge
 // out of view kept kKeptBuilds builds more

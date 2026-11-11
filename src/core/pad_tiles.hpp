@@ -32,9 +32,6 @@ Layout layout(int centreX, int centreY, float scale, int count = kTiles);  // it
 int hitTest(const Layout& L, float x, float y);         // the tile there; -1 none
 int moved(int at, int dx, int dy, int count = kTiles);  // the frame moved round its row or its column
 
-// `tiles`: the tiles in their places (none: Tile's own order)
-void paint(panel::Picture& out, const Layout& L, int focus, bool sony, const std::vector<Tile>* tiles = nullptr);
-
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;

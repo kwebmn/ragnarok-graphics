@@ -83,25 +83,6 @@ int moved(int at, int dx, int dy, int count) {
     return best;
 }
 
-void paint(panel::Picture& out, const Layout& L, int focus, bool sony, const std::vector<Tile>* tiles) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 14 * s, kCard, std::max(0.9f, uistyle::panel()), kWhite, 0.10f, 1.0f * s);
-    panel::roundRect(out, panel::Box{L.hints.x, L.hints.y - 6 * s, L.hints.w, 1 * s}, 0, kWhite, 0.09f);
-    for (size_t i = 0; i < L.tiles.size(); ++i) {
-        const panel::Box& b = L.tiles[i];
-        const bool on = int(i) == focus;
-        panel::roundRect(out, b, 12 * s, on ? kGold : kWhite, on ? 0.13f : 0.045f, on ? kGold2 : kWhite,
-                         on ? 1.0f : 0.10f, (on ? 2.0f : 1.0f) * s);
-        const float icon = 36 * s;
-        const int t = tiles && i < tiles->size() ? int((*tiles)[i]) : int(i);
-        uiicons::draw(out, iconOf(t), b.x + (b.w - icon) / 2, b.y + 16 * s, icon, on ? kGold2 : 0xC7CCD6, 1.0f, 1.8f);
-    }
-    const padglyph::Family f = sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
-    const float y = L.hints.y + (L.hints.h - kGlyph * s) / 2;
-    padglyph::paint(out, padglyph::Button::A, f, L.hints.x, y, kGlyph * s);
-    padglyph::paint(out, padglyph::Button::B, f, L.hints.x + 130 * s, y, kGlyph * s);
-}
-
 std::vector<Words> words(const Layout& L, const std::vector<std::string>& names, const std::string& title,
                          const std::string& open, const std::string& close, bool sony) {
     std::vector<Words> out;

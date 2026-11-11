@@ -22,8 +22,4 @@ constexpr int kMostSide = 256;  // cells a side at most: the texture's
 // The grid about the triangles' middle, at most kMostSide a side.
 Grid build(const std::vector<seams::Triangle>& ground);
 
-// Whether a place of the world (x, y, z; up along -y) lies on the ground: within its cell's heights and `slack`
-// (outside the grid: true - nothing known there).
-bool onGround(const Grid& g, float x, float y, float z, float slack);
-
 }  // namespace uagfx::ground_cells

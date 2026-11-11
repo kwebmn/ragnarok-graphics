@@ -104,9 +104,6 @@ bool plausibleView(const float view[12]);
 // cur -> prev in view space: a point seen by the current camera, as the previous one saw it (inverse(cur) * prev).
 void reprojection(const float cur[12], const float prev[12], float out[12]);
 
-// A screen point (game pixels, the game's depth) moved by `r`: where the previous camera put it.
-void reproject(const Projection& p, const float r[12], float sx, float sy, float sz, float& px, float& py);
-
 // Row-major 4 x 4 for Streamline (row vectors, no jitter): view -> clip as the game projects for its width x height
 // (NDC y up), its inverse, and clip -> previous clip.
 void viewToClip(const Projection& p, int width, int height, float out[16]);

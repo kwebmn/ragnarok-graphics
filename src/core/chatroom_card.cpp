@@ -17,12 +17,6 @@ constexpr uint32_t kMuted = 0x9AA3B5, kBlack = 0x000000;
 
 }  // namespace
 
-std::string masked(size_t n) {
-    std::string out;
-    for (size_t i = 0; i < n; ++i) out += "\xE2\x80\xA2";  // •
-    return out;
-}
-
 Layout layout(size_t limits, int targetW, int targetH, float scale) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;

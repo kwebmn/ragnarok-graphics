@@ -56,9 +56,6 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-// 3.0.18-beta.30 (uaUI's own shop): a row's icon square
-panel::Box iconOf(const panel::Box& row, float s);
-
 // 3.0.18-beta.143 (the windows' audit: «Моя лавка» showed nothing of what sold): the sales - the server's 0x0137 (a
 // place, how many; no buyer) matched to the shop's things by their place (ITEM_INFO +8): each sale's name and zeny,
 // how many of a place sold, the zeny earned since the shop opened; the newest sale first

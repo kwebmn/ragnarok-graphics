@@ -14,10 +14,6 @@ constexpr size_t kMostRows = 10;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xEEF2F8;
 constexpr uint32_t kMuted = 0x9AA3B5, kOnline = 0x4CC777, kOffline = 0x5C6370;
 
-const Entry* chosenOf(const std::vector<Entry>& entries, const Show& sh) {
-    return sh.selected >= 0 && sh.selected < int(entries.size()) ? &entries[size_t(sh.selected)] : nullptr;
-}
-
 }  // namespace
 
 int tabParam(Tab t) { return t == Tab::Friends ? 1 : 2; }
@@ -94,8 +90,6 @@ Hit hitTest(const Layout& L, int scroll, size_t count, float x, float y) {
         if (L.buttons[i].contains(x, y)) return Hit{Part::Button, int(i)};
     return Hit{};
 }
-
-const Entry* chosenEntry(const std::vector<Entry>& entries, const Show& sh) { return chosenOf(entries, sh); }
 
 std::vector<int> order(const std::vector<Entry>& entries, Tab t) {
     std::vector<int> out;

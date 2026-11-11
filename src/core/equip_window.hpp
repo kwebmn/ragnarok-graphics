@@ -114,6 +114,4 @@ struct View {
     std::vector<Dot> dots;
     std::vector<Glyph> glyphs;
 };
-View view(const Layout& L, const Data& d, const Show& sh);
-
 }  // namespace uagfx::equipwin

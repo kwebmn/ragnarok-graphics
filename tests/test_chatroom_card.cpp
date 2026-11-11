@@ -31,12 +31,6 @@ bool has(const std::vector<chatroomcard::Words>& w, const std::string& text) {
 
 }  // namespace
 
-// A password shown as dots only, as long as it is
-TEST(chatroom_card_password_masked) {
-    CHECK(chatroomcard::masked(0).empty());
-    CHECK(chatroomcard::masked(3) == "\xE2\x80\xA2\xE2\x80\xA2\xE2\x80\xA2");
-}
-
 // Each part found where it is drawn: the fields, a chip per place count, open and closed, the buttons, ✕
 TEST(chatroom_card_layout_and_hits) {
     const chatroomcard::Layout L = chatroomcard::layout(6, 1920, 1080, 1.0f);

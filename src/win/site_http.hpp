@@ -14,6 +14,6 @@ using Answer = std::function<void(int status, const std::string& body)>;  // sta
 // `token`: in place of win/site_key's (the cabinet's key tried before it is kept)
 void send(const siteapi::Request& r, Answer answer, const std::string& token = std::string());
 void pump();
-bool busy();  // a request on its way
+  // a request on its way
 
 }  // namespace uagfx::win::sitehttp

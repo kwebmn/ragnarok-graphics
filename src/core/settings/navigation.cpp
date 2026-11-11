@@ -154,22 +154,6 @@ bool mainKey(const std::string& sectionKey) {
     return false;
 }
 
-std::vector<std::string> simpleKeys() {
-    std::vector<std::string> keys(std::begin(kMainKeys), std::end(kMainKeys));
-    for (const IniSetting& s : iniSettings())
-        if (effectsSimple(sectionKey(s))) keys.push_back(sectionKey(s));
-    return keys;
-}
-
-std::vector<std::string> developerKeys() {
-    std::vector<std::string> keys(std::begin(kDeveloperKeys), std::end(kDeveloperKeys));
-    for (const IniSetting& s : iniSettings())
-        if ((s.page == Page::Debug || std::strcmp(s.section, "debug") == 0) &&
-            std::find(keys.begin(), keys.end(), sectionKey(s)) == keys.end())
-            keys.push_back(sectionKey(s));
-    return keys;
-}
-
 Mode levelOf(const IniSetting& s) {
     const std::string k = sectionKey(s);
     // 3.0.11-beta.3: the new interface's switches in every mode (its own item is in the simple list too)

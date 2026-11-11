@@ -117,17 +117,6 @@ void put(State& s) {
 
 bool isOpen() { return state().open; }
 
-void open(const std::string& value, int level, const std::string& what) {
-    State& s = state();
-    s.value = value;
-    s.level = level;
-    s.what = what;
-    s.focus = 0;
-    readRows(s);
-    s.open = !s.rows.empty();
-    LOG_INFO("pad assign: %s - %zu buttons use the bar's cells", value.c_str(), s.rows.size());
-}
-
 void command(Command c) {
     State& s = state();
     if (!s.open) return;

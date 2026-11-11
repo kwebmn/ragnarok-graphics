@@ -39,9 +39,6 @@ struct Strip {
 // with its middle at the world's (x, z) lies in a patch the map's makers laid by hand (core/ground_heights.hpp
 // laidPatches: Prontera's squares of paving, its mats) - no strip at its edges: the game's straight line.
 using Laid = std::function<bool(float x, float z)>;
-std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture, float width,
-                         const Laid& laid = {});
-
 // The cells' side (world units) the triangles show - the median of their extents; 0 when none.
 float cellSide(const std::vector<Triangle>& ground);
 

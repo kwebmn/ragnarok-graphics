@@ -203,8 +203,6 @@ panel::Box ammoShown(const Layout& L, const Show& show, const panel::Box& tip, c
 
 }  // namespace
 
-panel::Box timerBox(const panel::Box& cell, const std::string& text, float s) { return timerPlate(cell, text, s); }
-
 int iconSide(Mode mode, float scale) { return int(std::lround((mode == Mode::Battle ? 30 : 32) * scale)); }
 
 int gameRow(int shownRow) { return shownRow == 0 ? 1 : shownRow == 1 ? 2 : 0; }
@@ -292,10 +290,6 @@ void flip(Layout& L) {
     L.tipRoom.y = L.glass.y + L.glass.h + gap;
     L.below = true;
 }
-
-panel::Box ammoBox(const Layout& L, const Show& show) { return ammoPlace(L, show.ammo); }
-
-std::vector<panel::Box> supplyBoxes(const Layout& L, const Show& show) { return supplyPlaces(L, show); }
 
 Hit hitTest(const Layout& L, float x, float y) {
     if (L.toggle.contains(x, y)) return Hit{Part::Toggle, -1};

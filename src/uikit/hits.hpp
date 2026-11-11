@@ -22,8 +22,6 @@ struct Hit {
     panel::Box box;    // the element's, in the document's pixels
     bool inside = false;  // over the document at all (its ground counts)
 };
-// (x, y) in the document's own pixels (its top left 0, 0)
-Hit hitAt(Rml::ElementDocument* doc, float x, float y);
 // Every element with data-hit = `part` (visible), by its data-index: their boxes in the document's pixels
 struct Placed {
     int index = -1;

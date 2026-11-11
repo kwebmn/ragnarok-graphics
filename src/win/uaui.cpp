@@ -70,17 +70,6 @@ std::wstring wide(const std::u32string& s) {
     return w;
 }
 
-std::string utf8From(const std::string& text, unsigned codePage) {
-    if (text.empty()) return {};
-    const int n = MultiByteToWideChar(codePage, 0, text.data(), int(text.size()), nullptr, 0);
-    std::wstring w(size_t(std::max(n, 0)), L'\0');
-    if (n > 0) MultiByteToWideChar(codePage, 0, text.data(), int(text.size()), w.data(), n);
-    const int m = WideCharToMultiByte(CP_UTF8, 0, w.data(), int(w.size()), nullptr, 0, nullptr, nullptr);
-    std::string out(size_t(std::max(m, 0)), '\0');
-    if (m > 0) WideCharToMultiByte(CP_UTF8, 0, w.data(), int(w.size()), out.data(), m, nullptr, nullptr);
-    return out;
-}
-
 // ---- the glyphs: GDI into one atlas (white, its coverage as alpha, premultiplied) ----
 
 struct Glyph {
@@ -1607,8 +1596,6 @@ bool readyAnywhere() {
 }
 
 float dp() { return uistyle::partScale(state().k); }
-
-std::string utf8(const std::string& gameText) { return utf8From(gameText, state().codePage); }
 
 std::string picture(const panel::Picture* p, int generation, std::string& previous) {
     if (!p) {

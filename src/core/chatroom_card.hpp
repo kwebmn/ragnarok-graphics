@@ -40,7 +40,7 @@ struct Layout {
         cancel;
     std::vector<panel::Box> limits;
 };
-std::string masked(size_t n);  // the password's dots
+  // the password's dots
 // At the screen's middle across, a third down; `limits` the chips' count
 Layout layout(size_t limits, int targetW, int targetH, float scale);
 Hit hitTest(const Layout& L, float x, float y);  // the picture's pixels

@@ -45,7 +45,4 @@ bool read(const std::string& file, Grids& out);
 // A map labelled from its cells (walkable or not, row by row from y 0): its parts side by side (4-connected) - the
 // tool's rule, for the tests and for a map the file lacks
 Grid fromCells(int w, int h, const std::vector<uint8_t>& walkable);
-// The payload of maps (gzip is the tool's): the tests' way to make the file
-std::string payload(const Grids& maps);
-
 }  // namespace uagfx::walkgrid

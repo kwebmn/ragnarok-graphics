@@ -316,8 +316,6 @@ int unreadOn(const Line& line) {
     return line.kind == Kind::Party ? 1 : line.kind == Kind::Guild ? 2 : line.kind == Kind::Whisper ? 3 : -1;
 }
 
-float estimate(const std::string& utf8, float px, bool bold) { return panel::wordsWidth(utf8, px, bold); }
-
 std::vector<Row> wrap(const std::vector<const Line*>& lines, float width, float px, const Measure& m) {
     std::vector<Row> rows;
     const auto box = [&](const std::string& s, bool bold) { return std::ceil(m(s, px, bold)) + 1; };

@@ -195,41 +195,6 @@ TEST(bridge_a_damaged_record_is_refused) {
     CHECK(!readRecord(rd2, r));
 }
 
-TEST(bridge_the_ring_keeps_order_across_its_end_and_2_to_the_32) {
-    std::vector<uint8_t> area(sizeof(RingHeader) + 4096 + 48);
-    Ring ring(area.data(), area.size());
-    ring.init();
-    CHECK_EQ(ring.maxChunk(), uint32_t(4096 / 2 - 16));
-    // Start just below 2^32: the positions wrap during the test.
-    auto* h = reinterpret_cast<RingHeader*>(area.data());
-    h->write.store(0xFFFFF000u);
-    h->read.store(0xFFFFF000u);
-    uint32_t next = 0;  // the next message number to read
-    uint32_t sent = 0;
-    for (int round = 0; round <= 3000; ++round) {
-        const uint32_t size = (round * 97u) % 900u;
-        std::vector<uint8_t> msg(size, uint8_t(round));
-        if (round < 3000 && ring.tryWrite(1 + sent % 5, size, 0, msg.data(), size)) ++sent;
-        if (round % 3 != 0) continue;  // the reader runs a little slower: the ring fills up; the last round drains
-        ChunkHeader c;
-        const uint8_t* data = nullptr;
-        while (ring.peek(c, data)) {
-            CHECK_EQ(c.type, 1 + next % 5);
-            CHECK_EQ(c.size, c.total);
-            bool same = true;
-            for (uint32_t i = 0; i < c.size; ++i) same = same && data[i] == data[0];
-            CHECK(same);
-            ring.consume();
-            ++next;
-        }
-    }
-    CHECK(sent > 1000);
-    CHECK_EQ(next, sent);
-    CHECK(ring.empty());
-    std::vector<uint8_t> big(ring.maxChunk() + 1);
-    CHECK(!ring.tryWrite(1, uint32_t(big.size()), 0, big.data(), uint32_t(big.size())));  // never past maxChunk
-}
-
 TEST(bridge_chunks_make_the_message_again) {
     Assembler a;
     const uint8_t part1[3] = {1, 2, 3};

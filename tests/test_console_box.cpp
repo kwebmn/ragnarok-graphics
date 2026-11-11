@@ -43,10 +43,3 @@ TEST(console_box_rows_over_the_foot) {
     CHECK_EQ(consolebox::visibleRows(consolebox::box(640, 480, 15), 2000), 3);
 }
 
-// The ground as see-through as the panels: 80 % as before (215 of 255), less with less, never fully clear or solid
-TEST(console_box_ground_alpha) {
-    CHECK(consolebox::groundAlpha(80) >= 210 && consolebox::groundAlpha(80) <= 218);
-    CHECK(consolebox::groundAlpha(50) < consolebox::groundAlpha(80));
-    CHECK(consolebox::groundAlpha(50) >= 110);
-    CHECK(consolebox::groundAlpha(100) <= 243);
-}

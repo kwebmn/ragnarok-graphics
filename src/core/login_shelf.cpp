@@ -160,8 +160,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     return {};
 }
 
-bool classicInstead(size_t accounts) { return accounts == 0; }
-
 int padMove(int index, int count, int dir) { return count <= 0 ? 0 : std::clamp(index + dir, 0, count - 1); }
 
 std::string jobLine(const Card& c) {

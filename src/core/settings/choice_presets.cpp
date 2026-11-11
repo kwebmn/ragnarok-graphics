@@ -102,13 +102,4 @@ Match match(Choice c, const Config& config) {
     return best;
 }
 
-std::string apply(const std::string& ini, Choice c, int variant) {
-    std::vector<IniEdit> edits;
-    for (const auto& [key, token] : keysOf(c, variant)) {
-        const size_t dot = key.find('.');
-        edits.push_back(IniEdit{key.substr(0, dot), key.substr(dot + 1), token});
-    }
-    return applyIniEdits(ini, edits);
-}
-
 }  // namespace uagfx::settings::presets

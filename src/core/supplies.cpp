@@ -121,6 +121,4 @@ std::vector<int> itemsAt(uint16_t skill, int level) {
     return itemsOf(skill);
 }
 
-int level(int count) { return count <= 0 ? 2 : potionwarn::low(count) ? 1 : 0; }
-
 }  // namespace uagfx::supplies

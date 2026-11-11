@@ -312,8 +312,6 @@ void place(Part part, float k, int targetW, int targetH, int w, int h, int& x, i
     s.seen[size_t(part)] = s.frameNo;
 }
 
-int stampOf(Part part) { return int(part) < kParts ? state().stamps[size_t(part)] : 0; }
-
 bool movedOf(Part part) {
     State& s = state();
     readLayout(s);
@@ -327,8 +325,6 @@ void setLocked(bool locked) {
     LOG_INFO("interface layout: [interface] lock_layout = %d - the parts %s", locked ? 1 : 0,
              locked ? "stay where they are" : "move with the mouse");
 }
-
-bool on() { return state().on; }
 
 void open(HWND, const char* by) {
     State& s = state();

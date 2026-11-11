@@ -15,13 +15,6 @@ constexpr float kBarW = 4, kBarGap = 8;  // 3.0.11-beta.187: the scroll's bar an
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kText = 0xEEF2F8, kMuted = 0x9AA3B5;
 constexpr uint32_t kBlack = 0x000000;
 
-panel::Box iconBox(const panel::Box& row, float s) {
-    return panel::Box{row.x + 6 * s, row.y + (row.h - kIcon * s) / 2, kIcon * s, kIcon * s};
-}
-
-// 3.0.11-beta.187: a row's icon - none (the servers'): no square, the name from the row's left
-bool hasIcon(const Entry& e) { return e.icon && e.icon->width > 0 && e.icon->height > 0; }
-
 }  // namespace
 
 Layout layout(int targetW, int targetH, float scale, size_t count) {
@@ -55,14 +48,6 @@ Layout layout(int targetW, int targetH, float scale, size_t count) {
 
 int mostScroll(const Layout& L, size_t count) { return std::max(0, int(count) - int(L.rows.size())); }
 
-panel::Box thumb(const Layout& L, int scroll, size_t count) {
-    const int most = mostScroll(L, count);
-    if (L.bar.w <= 0 || count == 0 || most <= 0) return panel::Box{L.bar.x, L.bar.y, L.bar.w, 0};
-    const float h = std::max(L.bar.w * 3, L.bar.h * float(L.rows.size()) / float(count));
-    const float at = float(std::clamp(scroll, 0, most)) / float(most);
-    return panel::Box{L.bar.x, L.bar.y + (L.bar.h - h) * at, L.bar.w, h};
-}
-
 int autoChoice(size_t entries, int chosen) {
     (void)chosen;  // one row: whatever the list says, it is that one
     return entries == 1 ? 0 : -1;
@@ -77,10 +62,6 @@ Hit hitTest(const Layout& L, int scroll, size_t count, float x, float y) {
     if (L.ok.contains(x, y)) return Hit{Part::Ok, -1};
     if (L.cancel.contains(x, y)) return Hit{Part::Cancel, -1};
     return Hit{};
-}
-
-panel::Box iconOf(const panel::Box& row, const Entry& e, float s) {
-    return hasIcon(e) ? iconBox(row, s) : panel::Box{};
 }
 
 }  // namespace uagfx::pickcard

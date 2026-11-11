@@ -288,10 +288,6 @@ static void frameInner(HWND game, MobHp mode, double k, int targetWidth, int tar
         }
         if (key != s.key) {
             s.key = key;
-            const std::wstring wide = utf8Wide(text);
-            const float px = 12 * scale;
-            const int w = wordsWidth(wide, px, true) + int(std::lround(8 * scale));
-            const int h = int(std::lround(16 * scale));
         }
         const int plateH = uaui::ready() ? s.pctH : s.picture.height;
         s.textX = int(std::lround((b.x + b.w) * kk + 4 * scale));

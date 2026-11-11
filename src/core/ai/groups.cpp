@@ -89,13 +89,6 @@ int modelIndex(const std::string& token) {
     return -1;
 }
 
-int modelCost(const std::string& token) {
-    if (token == "general") return 2;   // 32 convolutions against anime's 16
-    if (token == "anime6b") return 14;  // about 5.7 million multiply-adds a pixel and the tiles' margins (1.5)
-    if (token == "gameai") return 44;   // 2.5.27: 23 blocks for 6, about 17.9 million a pixel
-    return 1;
-}
-
 const char* modelFile(const std::string& token) {
     if (token == "anime6b") return "realesrgan-x4plus-anime-6b";  // 1.5
     if (token == "gameai") return "4x-gameai-2.0";                // 2.5.27

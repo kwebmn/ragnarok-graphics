@@ -90,20 +90,6 @@ TEST(nav_start_mode) {
     CHECK(!parseMode("x"));
 }
 
-TEST(nav_levels) {
-    CHECK(levelOf(*findSetting("debug.profile")) == Mode::Developer);
-    CHECK(levelOf(*findSetting("renderer.render_thread")) == Mode::Developer);
-    CHECK(levelOf(*findSetting("quality.dlss")) == Mode::Simple);
-    CHECK(levelOf(*findSetting("effects.preset")) == Mode::Simple);
-    CHECK(levelOf(*findSetting("effects.group_lights")) == Mode::Simple);
-    CHECK(levelOf(*findSetting("effects.torch")) == Mode::Detailed);
-    CHECK(levelOf(*findSetting("quality.msaa")) == Mode::Detailed);
-    CHECK(mainKey("frames.fps_limit") && !mainKey("frames.keep_fps"));
-    // every key the lists name is a row of the schema: a renamed key would quietly fall back to Detailed
-    for (const std::string& k : simpleKeys()) CHECK(findSetting(k) != nullptr);
-    for (const std::string& k : developerKeys()) CHECK(findSetting(k) != nullptr);
-}
-
 TEST(nav_debug_rows_are_developer) {
     int rows = 0;
     for (const IniSetting& s : iniSettings()) {

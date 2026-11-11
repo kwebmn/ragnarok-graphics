@@ -258,17 +258,6 @@ void mapsOf(Catalog& c, const std::vector<std::string>& maps, const Read& read, 
     }
 }
 
-std::unordered_multimap<std::string, std::pair<size_t, size_t>> byKey(const Catalog& c) {
-    std::unordered_multimap<std::string, std::pair<size_t, size_t>> out;
-    for (size_t f = 0; f < c.files.size(); ++f)
-        for (size_t p = 0; p < c.files[f].pictures.size(); ++p) {
-            const PictureOf& pic = c.files[f].pictures[p];
-            out.emplace(pic.key, std::make_pair(f, p));
-            for (const std::string& low : pic.lowKeys) out.emplace(low, std::make_pair(f, p));
-        }
-    return out;
-}
-
 State stateOf(const PictureOf& p, const PackView& v) {
     if (v.index.ownAlways.count(p.key)) return State::OwnAlways;
     if (v.pictures.count(pack::pictureName(pack::Group(p.group), p.key))) return State::InPack;

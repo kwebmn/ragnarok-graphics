@@ -120,7 +120,7 @@ struct Input {
 };
 
 using Measure = std::function<float(const std::string& utf8, float px, bool bold)>;
-float estimate(const std::string& utf8, float px, bool bold);  // panel::wordsWidth
+  // panel::wordsWidth
 
 // A row of the lines' area: its pieces left to right (x from the area's left)
 struct Piece {

@@ -47,16 +47,6 @@ TEST(choice_presets_match_the_settings) {
     CHECK_EQ(presets::match(presets::Choice::Textures, original).variant, int(presets::Textures::Original));
 }
 
-TEST(choice_presets_apply_writes_only_its_keys) {
-    const std::string ini = "[effects]\ngrass = 0\n[interface]\nminimap = 1\n";
-    const std::string out = presets::apply(ini, presets::Choice::Interface, int(presets::Ui::Classic));
-    const Config c = parseConfig(out);
-    CHECK(!c.newMinimap);
-    CHECK(!c.hotbar && !c.itemsWindow);
-    CHECK(out.find("grass = 0") != std::string::npos);  // the other choices' keys stay
-    CHECK_EQ(presets::match(presets::Choice::Interface, c).changed, 0);
-}
-
 TEST(choice_presets_names) {
     CHECK(presets::headOf(presets::Choice::Interface) == Text::LookUi);
     CHECK(presets::nameOf(presets::Choice::Picture, int(presets::Picture::Remaster)) == Text::LookRemaster);

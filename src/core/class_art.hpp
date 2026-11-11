@@ -17,7 +17,4 @@ int resourceOf(const char* picture);   // its RCDATA id in ddraw.dll, 0 none
 constexpr int kTopCorners = 1 | 2, kLeftCorners = 1 | 4;  // top left 1, top right 2, bottom left 4, bottom right 8
 void cover(panel::Picture& out, const panel::Box& to, const std::vector<uint32_t>& argb, int width, int height,
            float radius, int corners);
-// A picture (premultiplied) over the middle of `to`, as it is (the character's head where no portrait is)
-void centre(panel::Picture& out, const panel::Box& to, const panel::Picture& pic);
-
 }  // namespace uagfx::classart

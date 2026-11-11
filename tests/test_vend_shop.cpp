@@ -47,18 +47,6 @@ TEST(vend_shop_zeny_with_spaces) {
     CHECK(vendshop::money(12345) == "12 345");
 }
 
-// The purchase's total (each chosen times its price); one more of a thing: while the shop has more of it and the zeny
-// pays for it (the game's own check: price x count + the total over the zeny refused)
-TEST(vend_shop_total_and_one_more) {
-    const std::vector<vendshop::Row> r = rows();
-    CHECK(vendshop::total(r) == 10 * 50 + 2 * 9000);
-    CHECK(vendshop::canAdd(r[0], vendshop::total(r), 1000000));
-    CHECK(!vendshop::canAdd(r[2], vendshop::total(r), 1000000));  // the shop's two both chosen
-    CHECK(!vendshop::canAdd(r[1], vendshop::total(r), 1000000));  // 1 500 000 over the zeny
-    CHECK(vendshop::canAdd(r[1], vendshop::total(r), 2000000));
-    CHECK(vendshop::canRemove(r[0]) && !vendshop::canRemove(r[1]));
-}
-
 // A card at the middle: a row a thing (as many as fit, 8 at most, the wheel for the rest), each row's − and + at its
 // right end, the total and the zeny under them, «Купити» and «Скасувати»
 TEST(vend_shop_places_and_the_mouse) {
@@ -79,14 +67,6 @@ TEST(vend_shop_places_and_the_mouse) {
     CHECK(many.lines.size() == 8 && vendshop::mostScroll(many, 20) == 12);
     const vendshop::Hit scrolled = vendshop::hitTest(many, 5, 20, mid(many.plus[0]).first, mid(many.plus[0]).second);
     CHECK(scrolled.part == P::Plus && scrolled.row == 5);
-}
-
-// 3.0.18-beta.30: uaUI's «Лавка» - a line's icon square inside its line
-TEST(vend_shop_icon_inside_its_line) {
-    const vendshop::Layout L = vendshop::layout(1920, 1080, 1.0f, 3);
-    const panel::Box b = vendshop::iconAt(L, 1);
-    CHECK(b.w > 0 && b.x > L.lines[1].x && b.y >= L.lines[1].y && b.y + b.h <= L.lines[1].y + L.lines[1].h);
-    CHECK(vendshop::iconAt(L, 9).w == 0);
 }
 
 // 3.0.18-beta.138 (the owner: a vending thing not seen into): a ware's slots

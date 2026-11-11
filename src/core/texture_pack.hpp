@@ -35,7 +35,7 @@ constexpr const char* kWriterMutex = "Local\\uaro-textures-zip";
 std::string indexText(const std::map<std::string, ai::Kind>& kinds);  // 0.43: the names and kinds
 // 0.45: and the keys of the textures at a lower detail, each to its whole texture's picture ("=<key>\t<picture>").
 std::string indexText(const std::map<std::string, ai::Kind>& kinds, const std::map<std::string, std::string>& aliases);
-std::map<std::string, ai::Kind> parseIndex(const std::string& text);  // a kind it does not know: ai::Kind::None
+  // a kind it does not know: ai::Kind::None
 std::map<std::string, std::string> parseAliases(const std::string& text);
 // 0.48: a picture's line whole - its kind and the maps the game showed it on (the game's own making notes them, the
 // builder's pictures have none) - and the index whole: "name\tkind\tmap,map" lines, then the aliases' lines.

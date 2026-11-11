@@ -19,10 +19,6 @@ constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2
 constexpr uint32_t kMuted = 0x9AA3B5, kBlack = 0x000000, kDanger = 0xE0675C;
 constexpr long long kMostPrice = 99990000;  // the game's OK asks past it (msgstringtable 0x398)
 
-panel::Box iconBox(const panel::Box& row, float s) {
-    return panel::Box{row.x + 5 * s, row.y + (row.h - kIcon * s) / 2, kIcon * s, kIcon * s};
-}
-
 }  // namespace
 
 long long priceOf(const std::string& words) {
@@ -111,7 +107,5 @@ Hit hitTest(const Layout& L, float x, float y) {
     if (L.glass.contains(x, y)) return Hit{Part::Body};
     return Hit{};
 }
-
-panel::Box iconOf(const panel::Box& row, float s) { return iconBox(row, s); }
 
 }  // namespace uagfx::vendsetup

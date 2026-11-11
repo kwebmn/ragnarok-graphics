@@ -34,11 +34,4 @@ bool leafyTexture(const uint32_t* argb, int width, int height, bool spriteCache)
     return !spriteCache && leafy(argb, width, height);
 }
 
-float sway(float x, float y, float bottom, float height, float amplitude, float t) {
-    if (height <= 1.0f || amplitude <= 0.0f) return 0.0f;
-    const float up = std::clamp((bottom - y) / height, 0.0f, 1.0f);
-    const float wave = std::sin(t * 1.6f + x * 0.013f + y * 0.007f) * 0.7f + std::sin(t * 2.9f + x * 0.031f) * 0.3f;
-    return amplitude * up * up * wave;  // the top swings, the trunk stays
-}
-
 }  // namespace uagfx::foliage

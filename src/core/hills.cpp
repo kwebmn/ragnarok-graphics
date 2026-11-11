@@ -17,15 +17,6 @@ float pack(float nx, float nz) {
     return a * 4096.0f + b;
 }
 
-bool unpack(float v, float& nx, float& ny, float& nz) {
-    if (v < 4096.0f) return false;
-    const float a = std::floor(v / 4096.0f), b = v - a * 4096.0f;
-    nx = (a - 1.0f) / 2046.0f * 2.0f - 1.0f;
-    nz = b / 4095.0f * 2.0f - 1.0f;
-    ny = -std::sqrt(std::max(0.0f, 1.0f - nx * nx - nz * nz));
-    return true;
-}
-
 Grid build(const std::vector<seams::Triangle>& ground) {
     Grid g;
     const float side = seams::cellSide(ground);

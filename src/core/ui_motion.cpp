@@ -34,10 +34,4 @@ float fadeOut(uint64_t now, uint64_t since, uint64_t ms) {
     return 1 - easeOut(part(now, since, ms));
 }
 
-float flare(uint64_t now, uint64_t since, uint64_t ms) {
-    if (!g_on || !since || now < since || now - since >= ms) return 0;
-    const float t = part(now, since, ms);
-    return t < 0.2f ? t / 0.2f : 1 - easeOut((t - 0.2f) / 0.8f);
-}
-
 }  // namespace uagfx::motion

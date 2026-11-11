@@ -7,31 +7,6 @@
 
 using namespace uagfx;
 
-TEST(point_shadows_a_way_lands_on_the_face_it_points_at) {
-    const float ways[][3] = {{5, 1, -2}, {-5, 1, 2}, {1, 7, 3}, {1, -7, 3}, {2, -1, 9}, {2, 1, -9}};
-    for (int k = 0; k < 6; ++k) {
-        int f = -1;
-        float u = 0, v = 0;
-        CHECK(point_shadows::faceOf(ways[k], f, u, v));
-        CHECK_EQ(f, k);
-        // as the face's rows project it (shadow_vs): x = right, y = up, w = fwd
-        const point_shadows::Face fc = point_shadows::face(f);
-        float x = 0, y = 0, w = 0;
-        for (int i = 0; i < 3; ++i) {
-            x += ways[k][i] * fc.right[i];
-            y += ways[k][i] * fc.up[i];
-            w += ways[k][i] * fc.fwd[i];
-        }
-        CHECK(w > 0);
-        CHECK(std::fabs(x / w - u) < 1e-5f && std::fabs(y / w - v) < 1e-5f);
-        CHECK(std::fabs(u) <= 1.0f && std::fabs(v) <= 1.0f);
-    }
-    float none[3] = {0, 0, 0};
-    int f = 0;
-    float u = 0, v = 0;
-    CHECK(!point_shadows::faceOf(none, f, u, v));
-}
-
 TEST(point_shadows_a_box_beside_a_face_is_left_out) {
     const float lo[3] = {4, -1, -1}, hi[3] = {6, 1, 1};  // ahead along +x
     CHECK(point_shadows::boxOnFace(lo, hi, 0));

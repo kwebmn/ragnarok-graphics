@@ -19,9 +19,6 @@ struct GlyphBitmap {
     std::vector<uint8_t> coverage;  // width x height, row by row
 };
 
-// Stage 6 (spec §4): letter i of a TextOutW at game (x, y) goes where the game drew its small one - to the start of
-// the block of game pixel x + advance, advance being the width of the letters before it in the game's font.
-int letterPen(int x, int advance, double K);
 // 0.41: the pens of a TextOutW's letters at game x - ends the widths of its first 1, 2, ... letters in the game's
 // font, advances the large letters' own. 1.3.4: each large letter centred in its small one's place x K - no gap
 // after m and w all on one side ("Com mand", letterPen's), and no letter moved by those after it (typed text).

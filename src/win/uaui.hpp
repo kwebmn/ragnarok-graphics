@@ -79,7 +79,7 @@ void drawScene(FrameRecord& record, gpu::Renderer& renderer, const panel::Pictur
 // 3.0.18-beta.57: the words' width as uaUI draws them at `px` (< 0: not started)
 float textWidth(const std::string& utf8, float px, bool bold);
 float dp();    // the target's pixels a concept pixel (the theme's 1dp)
-std::string utf8(const std::string& gameText);  // the game's words (its code page) as UTF-8
+  // the game's words (its code page) as UTF-8
 // A picture of the driver's as an <img> source - «pic:<address>:<generation>»; another generation is another texture
 // (the one of `previous` let go when it changes)
 std::string picture(const panel::Picture* p, int generation, std::string& previous);

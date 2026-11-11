@@ -99,7 +99,6 @@ struct Picture {
 };
 // 3.0.18-beta.12: uaUI's - while on, blank() gives each picture its own scene to record into (the game's thread)
 void setRecording(bool on);
-bool recording();
 // `hovered`: the top row's button under the cursor (Close, Layout); `layout`: the cards' now - the button shows the
 // other one
 void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part hovered, Layout layout);

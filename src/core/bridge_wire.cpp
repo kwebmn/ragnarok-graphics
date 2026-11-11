@@ -24,12 +24,6 @@ uint8_t WireReader::u8() {
     return b ? *b : 0;
 }
 
-uint16_t WireReader::u16() {
-    uint16_t v = 0;
-    if (const uint8_t* b = take(2)) std::memcpy(&v, b, 2);
-    return v;
-}
-
 uint32_t WireReader::u32() {
     uint32_t v = 0;
     if (const uint8_t* b = take(4)) std::memcpy(&v, b, 4);

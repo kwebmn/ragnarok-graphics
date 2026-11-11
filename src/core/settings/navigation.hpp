@@ -48,8 +48,8 @@ Place placeOf(const IniSetting& s);  // its page's, the AI models' on the tab of
 // The lowest mode that shows a row of uaro-graphics.ini's schema.
 Mode levelOf(const IniSetting& s);
 bool mainKey(const std::string& sectionKey);  // a row the Main page shows (the Simple ones but the effects')
-std::vector<std::string> simpleKeys();        // the rows of the Simple level
-std::vector<std::string> developerKeys();     // the rows of the Developer level
+        // the rows of the Simple level
+     // the rows of the Developer level
 // A view made of schema rows: "Reset the page to the recommended values" sets them.
 bool resettable(View v, int tab);
 // 2.15: a row this computer can use - DLSS, frame generation and Reflex on an NVIDIA card (the one the game draws

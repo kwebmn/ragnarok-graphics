@@ -23,16 +23,4 @@ json::Value statusJson(const pack::Status& s) {
     return v;
 }
 
-bool statusOfJson(const json::Value& v, pack::Status& out) {
-    std::string text;
-    for (const auto& m : v.members()) {
-        if (m.first == "thread") {
-            for (const json::Value& t : m.second.items()) text += "thread=" + t.asString() + "\n";
-            continue;
-        }
-        text += m.first + "=" + m.second.asString() + "\n";
-    }
-    return pack::parseStatus(text, out);
-}
-
 }  // namespace uagfx::studio

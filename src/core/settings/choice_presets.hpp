@@ -51,7 +51,4 @@ Text kindName(Kind k);  // «Хочу все нове», ...
 Text headOf(Choice c);             // «Картинка», «Інтерфейс», «Текстури»
 Text nameOf(Choice c, int variant);  // the variant's words
 
-// uaro-graphics.ini's text with the variant's keys written (every other byte as it was)
-std::string apply(const std::string& ini, Choice c, int variant);
-
 }  // namespace uagfx::settings::presets

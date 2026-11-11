@@ -14,6 +14,4 @@ struct Box {
 };
 Box box(int clientW, int clientH, int systemFontH);
 int visibleRows(const Box& b, int footHeight);
-uint8_t groundAlpha(int panelOpacity);
-
 }  // namespace uagfx::consolebox
