@@ -4,6 +4,7 @@
 #include "win/hunt_panel.hpp"
 #include "win/mvp_panel.hpp"
 #include "win/my_shop.hpp"
+#include "win/server_card.hpp"
 #include "win/skill_delay_watch.hpp"
 #include "win/sphere_watch.hpp"
 #include "win/combo_watch.hpp"
@@ -110,6 +111,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
         storagewin::packet(e);   // 3.0.11-beta.115: the storage's places used of the most
         vendshopwin::packet(e);  // 3.0.11-beta.156: the shops' signs
         myshopwin::packet(e);    // 3.0.18-beta.143: one's own shop's sales
+        servercardwin::packet(e);  // 3.0.18-beta.153: the servers' players
         worldsigns::packet(e);   // 3.0.16-beta.7: the shops' and the rooms' signs as plates
         minimapproto::packet(e);  // 3.0.11-beta.201: the server's marks, the guild's mates
         charpanel::packet(e);     // 3.0.11-beta.235: the session's kills and deaths

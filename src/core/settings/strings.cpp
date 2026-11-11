@@ -8412,6 +8412,7 @@ constexpr Entry kTexts[] = {
      "Откройте «Справочник» и закрепите квест, вещи для сбора или путь "
      "кнопкой «Отслеживать»"},
     {Text::TrackerEmptyTag, "how", "як", "как"},
+    {Text::ServersPlayers, "{1} playing", "{1} у грі", "{1} в игре"},  // 3.0.18-beta.153
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

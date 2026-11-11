@@ -79,6 +79,14 @@ struct PartyMember {
 struct PartyLeft {
     uint32_t account = 0;
 };
+// 3.0.18-beta.153: the login server's list of the game's servers (0x0069) - each one's name, its players now
+struct ServerList {
+    struct Server {
+        std::string name;  // as it came (the game's code page)
+        int players = 0;
+    };
+    std::vector<Server> servers;
+};
 // 3.0.18-beta.143: a thing sold from one's own shop (0x0137 - its place in the shop, how many; no buyer named)
 struct ShopSold {
     int index = 0, amount = 0;
@@ -217,7 +225,8 @@ struct GuildPos {
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
                            Chat, Status, Pickup, StatusLong, Casting, Appear, PartyPos, ActorInfo, NpcSay, NpcMenu,
-                           StorageCount, ShopSign, Viewpoint, GuildPos, ActorName, RoomSign, PartyExp, ShopSold>;
+                           StorageCount, ShopSign, Viewpoint, GuildPos, ActorName, RoomSign, PartyExp, ShopSold,
+                           ServerList>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).

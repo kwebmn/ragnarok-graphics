@@ -55,6 +55,7 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 struct State {
     uilive::Window live;  // 3.0.18-beta.81
     std::vector<Rml::String> entryViews;  // 3.0.18-beta.106: the live window's
+    std::vector<packets::ServerList::Server> listed;  // 3.0.18-beta.153: the login server's list (its players)
     Rml::String title, message, ok, cancel, empty, ground = "#00000000";
     int selected = -1;
     uisheet::Sheet sheet;  // 3.0.18-beta.33: the window drawn by uaUI
@@ -323,7 +324,18 @@ static void liveFrame(State& s) {
     if (!s.live.made()) return;
     const pc::Texts t = texts();
     std::vector<Rml::String> entries;
-    for (const pc::Entry& e : s.entries) entries.push_back(e.name);
+    for (const pc::Entry& e : s.entries) {
+        std::string row = e.name;
+        for (const auto& t2 : s.listed) {  // 3.0.18-beta.153: its players, as the login server told them
+            const std::string name = utf8Of(widened(t2.name, s.codePage));
+            if (name.empty() || row.rfind(name, 0) != 0) continue;
+            if (row.find(std::to_string(t2.players)) == std::string::npos)
+                row += "  \xC2\xB7  " +
+                       settings::fmt(say(settings::Text::ServersPlayers), {std::to_string(t2.players)});
+            break;
+        }
+        entries.push_back(row);
+    }
     if (entries != s.entryViews) s.entryViews = std::move(entries), s.live.doc.dirty("entries");
     const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
     if (t.title != s.title || t.message != s.message || t.ok != s.ok || t.cancel != s.cancel || t.empty != s.empty ||
@@ -433,6 +445,13 @@ bool box(int& x, int& y, int& w, int& h) {
     w = s.layout.w;
     h = s.layout.h;
     return true;
+}
+
+void packet(const packets::Event& e) {  // 3.0.18-beta.153
+    if (const auto* l = std::get_if<packets::ServerList>(&e)) {
+        state().listed = l->servers;
+        LOG_INFO("servers: the login server's list - %zu server(s)", l->servers.size());
+    }
 }
 
 }  // namespace uagfx::win::servercardwin

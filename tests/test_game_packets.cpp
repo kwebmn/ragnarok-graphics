@@ -493,3 +493,20 @@ TEST(packets_own_shop_sold) {
     CHECK(x && x->index == 3 && x->amount == 12);
     CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 5)));
 }
+
+// 3.0.18-beta.153 (the windows' audit: the server select names only): the login server's list (0x0069: 47 bytes,
+// then 32 a server - its address, port, name of 20, the players on it, maintenance, new)
+TEST(packets_server_list_with_players) {
+    std::vector<uint8_t> p = packet(0x0069, 47 + 2 * 32);
+    put16(p, 2, uint16_t(p.size()));
+    putText(p, 47 + 6, "uaRO");
+    put16(p, 47 + 26, 512);
+    putText(p, 47 + 32 + 6, "uaRO HD");
+    put16(p, 47 + 32 + 26, 7);
+    const packets::Event e = packets::parse(p.data(), p.size());
+    const auto* l = std::get_if<packets::ServerList>(&e);
+    CHECK(l && l->servers.size() == 2);
+    CHECK(l && l->servers[0].name == "uaRO" && l->servers[0].players == 512);
+    CHECK(l && l->servers[1].name == "uaRO HD" && l->servers[1].players == 7);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 40)));
+}

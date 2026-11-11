@@ -162,6 +162,18 @@ Event parse(const uint8_t* p, size_t size) {
             if (size >= 79) m.map = mapAt(p, 63);
             return m;
         }
+        case 0x0069: {  // 3.0.18-beta.153
+            if (size < 47) return {};
+            const size_t len = rd16(p, 2);
+            if (len < 47 || len > size || (len - 47) % 32 != 0) return {};
+            ServerList l;
+            for (size_t at = 47; at + 32 <= len; at += 32) {
+                std::string n(reinterpret_cast<const char*>(p + at + 6), 20);
+                n.resize(std::strlen(n.c_str()));
+                l.servers.push_back(ServerList::Server{n, int(rd16(p, at + 26))});
+            }
+            return l;
+        }
         case 0x0137:  // 3.0.18-beta.143
             if (size < 6) return {};
             return ShopSold{int(int16_t(rd16(p, 2))), int(int16_t(rd16(p, 4)))};
