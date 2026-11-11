@@ -1,3 +1,5 @@
+- Item card: a card in a slot (left or right mouse button) opens in its own window beside it, the item's card stays. The card's window moves by its title and closes by its ✕, Esc or B on the controller.
+
 - Another player's shop: press a thing's name to open its item card (description, slots, the cards in it with their art). On the controller - Y; buying is now Start.
 - A thing's line shows its slots "[3]" and what is inside: the cards' names and how many slots are free.
 
