@@ -930,36 +930,9 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
-    if (s.shown && s.sheetShown && s.k > 0) {  // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
-        const float sc = s.layout.s;
-        s.shadow.draw(record, renderer, s.layout.x, s.layout.y, s.layout.w, s.layout.h, 10 * sc, sc, s.k);
-        return;
-    }
-    if (!s.shown || s.picture.width <= 0 || s.k <= 0) return;
-    int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    // 3.0.11-beta.25 (R-77TCM7): the areas painted again since the last frame - only they go to the card (all of the
-    // picture when its texture is not there yet)
-    if (!s.upload && s.texture && s.texW == s.picture.width && s.texH == s.picture.height) {
-        std::vector<uint32_t> px;
-        for (const Rect& a : s.parts) {
-            if (a.empty()) continue;
-            px.resize(size_t(a.width()) * size_t(a.height()));
-            for (int y = a.top; y < a.bottom; ++y)
-                std::copy_n(s.picture.px.begin() + std::ptrdiff_t(size_t(y) * size_t(s.picture.width) + size_t(a.left)),
-                            a.width(), px.begin() + std::ptrdiff_t(size_t(y - a.top) * size_t(a.width())));
-            record.upload(s.texture, 0, a, px.data());
-        }
-    } else if (!s.parts.empty()) {
-        s.upload = true;
-    }
-    s.parts.clear();
-    const float sc = s.layout.s;  // 3.0.11-beta.49: its shadow under it (its ground the whole picture)
-    s.shadow.draw(record, renderer, s.layout.x, s.layout.y, s.picture.width, s.picture.height, 10 * sc, sc, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-    if (windowstack::marked(winstack::Win::Reference))  // 3.0.11-beta.108: its gold edge, the top of two or more
-        s.edge.draw(record, renderer, s.layout.x, s.layout.y, s.picture.width, s.picture.height, 10 * sc, sc, s.k);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    if (!s.shown || !s.sheetShown || s.k <= 0) return;  // the old edition (its picture) gone: uaUI draws it
+    const float sc = s.layout.s;  // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
+    s.shadow.draw(record, renderer, s.layout.x, s.layout.y, s.layout.w, s.layout.h, 10 * sc, sc, s.k);
 }
 
 bool key(UINT m, WPARAM wp, LPARAM) {

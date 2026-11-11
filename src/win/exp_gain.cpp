@@ -187,11 +187,8 @@ void frame(bool on, double k, int targetWidth, int targetHeight) {
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    if (!s.on || s.k <= 0 || s.uiShown) return;  // 3.0.18-beta.24: uaUI's
-    for (Shown& sh : s.shown)
-        if (sh.alpha > 0 && sh.picture.width > 0)
-            drawPart(record, renderer, sh.picture, sh.texture, sh.texW, sh.texH, sh.upload, sh.x, sh.y, s.k, sh.alpha);
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 expgain::Label label() {

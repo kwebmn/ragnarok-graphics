@@ -267,16 +267,8 @@ void frame(bool on, double k, int targetWidth, int targetHeight) {
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    if (s.uiShown) return;  // 3.0.18-beta.23: drawn by uaUI
-    if (!s.shown || s.k <= 0 || s.strip.width <= 0) return;
-    drawPart(record, renderer, s.strip, s.stripTexture, s.stripW, s.stripH, s.stripUpload, 0,
-             s.targetH - s.strip.height, s.k);
-    if (s.gainAlpha > 0 && s.gain.width > 0)  // 3.0.11-beta.237
-        drawPart(record, renderer, s.gain, s.gainTexture, s.gainW, s.gainH, s.gainUpload, s.gainX, s.gainY, s.k,
-                 s.gainAlpha);
-    if (s.tipShown && s.tip.width > 0)
-        drawPart(record, renderer, s.tip, s.tipTexture, s.tipW, s.tipH, s.tipUpload, s.tipX, s.tipY, s.k);
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 }  // namespace uagfx::win::expbars

@@ -1601,16 +1601,8 @@ bool key(unsigned vk) {
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    if (!s.shown || s.k <= 0) return;
-    int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the answer card
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    size_t mine = 0;
-    if (!s.uiShown && s.look != minimap::Look::Hidden && s.picture.width > 0 && s.picture.height > 0) {
-        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-        ++mine;
-    }
-    if (cursor >= 0 && mine > 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 // 3.0.11-beta.201 (the tester: «мапа має перекривати всі»): the big map apart - drawn after the panels (the chat, the

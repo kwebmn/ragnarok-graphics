@@ -173,16 +173,8 @@ void frame(HWND game, bool names, bool highlight, unsigned codePage, double k, i
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    if (!s.used || s.k <= 0 || s.sheetShown) return;
-    const size_t world = record.firstInterface(), before = record.commands().size();
-    for (size_t i = 0; i < s.used; ++i) {
-        Label& l = s.pool[i];
-        if (l.picture.width > 0)
-            drawPart(record, renderer, l.picture, l.texture, l.texW, l.texH, l.upload, l.x, l.y, s.k);
-    }
-    const size_t added = record.commands().size() - before;
-    if (added) record.moveLastBefore(added, world);
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 }  // namespace uagfx::win::groundwin

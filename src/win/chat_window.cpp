@@ -983,12 +983,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    if (!s.shown || s.sheetShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
-    int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {

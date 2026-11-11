@@ -541,19 +541,8 @@ void frame(HWND game, bool on, bool padHints, double k, int targetWidth, int tar
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     if (!s.shown) ui().doc.show(false);  // 3.0.18-beta.18: gone - its document fades out by the theme
-    if (s.uiShown) return;  // uaUI draws it
-    if (s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
-    // 3.0.11-beta.46: coming, from 4 px over its place; going, 4 px up out of sight ([interface] animations)
-    const ULONGLONG now = GetTickCount64();
-    const float a = s.shown ? motion::fadeIn(now, s.shownAt, motion::kCardMs)
-                            : motion::fadeOut(now, s.goneAt, motion::kCardMs);
-    if (a <= 0) return;
-    const int shift = int(std::lround(-(1 - a) * motion::kCardShift * s.scale));
-    int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y + shift, s.k,
-                a);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 int actorClass(uint32_t id) { return classOf(id); }

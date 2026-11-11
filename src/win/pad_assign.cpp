@@ -208,10 +208,9 @@ void frame(HWND game, double k, int targetWidth, int targetHeight) {
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
-    if (!s.shown || s.sheetShown || s.k <= 0 || s.picture.width <= 0) return;
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    state().sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
