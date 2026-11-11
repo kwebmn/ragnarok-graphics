@@ -58,9 +58,14 @@ std::string named(const std::string& name, const int cards[4], const Tables& t) 
     for (const auto& [card, n] : counted) {
         const auto w = t.words.find(card);
         if (w == t.words.end()) continue;
-        const std::string word = std::string(times(n)) + w->second;
-        if (t.after.count(card)) after += " of " + word;
-        else before += word + " ";
+        if (t.after.count(card)) {  // 3.0.18-beta.113: its word has its «of» already («of Champion»)
+            std::string word = w->second;
+            const bool of = word.rfind("of ", 0) == 0;
+            if (of) word = word.substr(3);
+            after += std::string(of ? " of " : " ") + times(n) + word;
+        } else {
+            before += std::string(times(n)) + w->second + " ";
+        }
     }
     return before + name + after;
 }

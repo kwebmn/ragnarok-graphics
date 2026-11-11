@@ -589,7 +589,15 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                                                            : padglyph::Family::Xbox;
                                     m.turns = s.hero.width > 0;  // 3.0.18-beta.111: its sprites' character
                                     m.hero = m.turns ? s.live.icon(&s.hero) : "";
-                                    m.heroW = float(s.hero.width), m.heroH = float(s.hero.height);
+                                    {  // .113: fitted into the middle's box, its proportions kept
+                                        const float bw = 150 * s.scale, bh = 210 * s.scale;
+                                        const float k = s.hero.width > 0
+                                                            ? std::min({1.0f, bw / float(s.hero.width),
+                                                                        bh / float(s.hero.height)})
+                                                            : 1.0f;
+                                        m.heroW = std::round(float(s.hero.width) * k);
+                                        m.heroH = std::round(float(s.hero.height) * k);
+                                    }
                                     el::fill(m, s.data, s.show, texts(), s.layout.s,
                                              [&](const panel::Picture* p) { return s.live.icon(p); },
                                              [&](int button, float h, float& w) {

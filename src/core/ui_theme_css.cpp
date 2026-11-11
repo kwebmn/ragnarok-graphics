@@ -1347,6 +1347,14 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .right .slot { flex-direction: row-reverse; }
 .eql .left .txt { text-align: left; }
 .eql .right .txt { text-align: right; }
+/* 3.0.18-beta.113 (the owner: «чтобы имена не обрезались и не добавлялись точки»): a long name goes on a second line,
+   its slot grows; the columns and the middle as tall as they need */
+.eql .cols { height: auto; }
+.eql .slot { height: auto; min-height: 3.8333rem; padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.eql .txt { overflow: visible; }
+.eql .nm { height: auto; line-height: 1.4167rem; white-space: normal; }
+.eql .centre { height: auto; min-height: 21.6667rem; }
+.eql .stage { height: 100%; min-height: 21.6667rem; }
 )";
 
 }  // namespace

@@ -1,5 +1,7 @@
 #include "win/hero_picture.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <vector>
 
 #include "core/sprite_file.hpp"
@@ -147,7 +149,11 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
         if (from) *from = "nothing drawn of " + bodyBase;
         return false;
     }
-    const spritefile::Image fit = spritefile::fitted(im, w, h);
+    // 3.0.18-beta.113 (R-55WR4R: a small box left it at its own size): a whole step up to cover the box (sharp
+    // pixels; shown fitted into the box), its own size alone - never padded round
+    const float cover = std::min(float(w) / float(std::max(1, im.w)), float(h) / float(std::max(1, im.h)));
+    const int f = std::clamp(int(std::ceil(cover)), 1, 3);
+    const spritefile::Image fit = spritefile::fitted(im, im.w * f, im.h * f);
     out.width = fit.w;
     out.height = fit.h;
     out.px = fit.argb;

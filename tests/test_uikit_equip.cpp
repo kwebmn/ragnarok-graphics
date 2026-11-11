@@ -96,3 +96,27 @@ TEST(uikit_equip_refit_finds_every_slot_and_the_picks) {
     CHECK_EQ(m.pickTitle, std::string("Що вдягнути: Щит"));
     rmlhost::close(doc);
 }
+
+// 3.0.18-beta.113 (the owner: «чтобы имена не обрезались и не добавлялись точки»): a long name on two lines - its
+// slot taller, the one under it lower, nothing cut
+TEST(uikit_equip_long_names_wrap_and_grow_their_slot) {
+    ew::Data d;
+    d.slots[ew::Weapon].index = 7;
+    d.slots[ew::Weapon].name = "Quadruple Critical Katana of Double Champion";
+    d.slots[ew::Weapon].refine = 9;
+    ew::Show sh;
+    static el::Model m;
+    el::fill(m, d, sh, texts(), 1, none, glyph);
+    std::string error;
+    Rml::ElementDocument* doc =
+        rmlhost::load(el::rml(), [&](Rml::DataModelConstructor& c) { el::bind(c, m); }, 0, 0, &error);
+    CHECK_EQ(error, std::string());
+    ew::Layout L = ew::layout(0, 0, 1, d, sh, texts(), [](const std::string& s, float px, bool) {
+        return float(s.size()) * px * 0.55f;
+    });
+    CHECK(el::refit(doc, L));
+    CHECK(L.slots[ew::Weapon].h > 50);  // two lines
+    CHECK(L.slots[ew::Garment].y >= L.slots[ew::Weapon].y + L.slots[ew::Weapon].h);
+    CHECK(std::abs(L.slots[ew::HeadLow].h - 46) < 1.5f);  // a short one as before
+    rmlhost::close(doc);
+}

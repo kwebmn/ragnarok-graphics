@@ -19,8 +19,9 @@ struct Looks {
 };
 Looks own();  // the player's character now (the game's session)
 int shownJob(int job, uint32_t options);  // FUN_0063b080's: the riding one's
-// The standing frame facing `direction` (0 down, 1 down-left ... 7 down-right: the game's) fitted into w x h (sharp
-// pixels, whole steps), premultiplied. `from` what it was made of, or why not (for the log)
+// The standing frame facing `direction` (0 down, 1 down-left ... 7 down-right: the game's) at the whole step that
+// covers w x h (sharp pixels; the caller shows it fitted into the box), premultiplied. `from` what it was made of,
+// or why not (for the log)
 bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std::string* from = nullptr);
 
 }  // namespace uagfx::win::heropicture
