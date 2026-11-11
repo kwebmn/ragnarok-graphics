@@ -52,8 +52,11 @@ struct Part {
     bool anchored = true;
     int dx = 0, dy = 0;
     bool body = false;  // the anchors' source (else the first part): one drawn under the body (a cart) may come first
+    // 3.0.18-beta.114: a palette layer's picture `factor` times bigger (the AI pack's frame), else its own stretched
+    std::function<const Image*(int index)> bigger;
 };
-bool compose(const std::vector<Part>& parts, Image& out, int& footX, int& footY);
+// `factor`: everything that many times bigger (the feet too)
+bool compose(const std::vector<Part>& parts, Image& out, int& footX, int& footY, int factor = 1);
 // 3.0.11-beta.76: the same `factor` times its size - each palette layer's picture from `bigger` (its index) when it
 // gives one (factor times that picture: the AI pack's frame), else the picture itself stretched
 bool frameImageScaled(const Sprite& s, const Act& a, size_t action, size_t frame, int factor,

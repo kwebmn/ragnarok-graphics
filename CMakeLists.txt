@@ -50,6 +50,22 @@ target_include_directories(uagfx_core PUBLIC src)
 target_compile_options(uagfx_core PRIVATE -Wall -Wextra)
 target_link_libraries(uagfx_core PUBLIC uagfx_miniz uagfx_webp uagfx_stb uagfx_minimp3 uagfx_libdeflate)
 
+# 3.0.18-beta.7: RmlUi 6.3's core (third_party/rmlui, MIT; its FreeType font engine left out - ours is GDI's).
+# 3.0.18-beta.94: built for the host too - src/uikit (the live windows' markup, models and hit places, no Windows
+# headers) is laid out by it in the host tests (tests/rml_host: a stand-in font engine).
+if(NOT (WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8))  # not the 64-bit renderer
+    file(GLOB_RECURSE UAGFX_RMLUI_SOURCES CONFIGURE_DEPENDS third_party/rmlui/Source/Core/*.cpp)
+    add_library(uagfx_rmlui STATIC ${UAGFX_RMLUI_SOURCES})
+    target_include_directories(uagfx_rmlui PUBLIC third_party/rmlui/Include)
+    target_compile_definitions(uagfx_rmlui PUBLIC RMLUI_STATIC_LIB PRIVATE RMLUI_VERSION="6.3")
+    target_compile_options(uagfx_rmlui PRIVATE -w -O2)
+    file(GLOB UAGFX_UIKIT_SOURCES CONFIGURE_DEPENDS src/uikit/*.cpp)
+    add_library(uagfx_uikit STATIC ${UAGFX_UIKIT_SOURCES})
+    target_include_directories(uagfx_uikit PUBLIC src)
+    target_compile_options(uagfx_uikit PRIVATE -Wall -Wextra)
+    target_link_libraries(uagfx_uikit PUBLIC uagfx_core uagfx_rmlui)
+endif()
+
 # 2.9: uaRO Pad's portable core (from uaro-gamepad e59889d): the protocol, the world, the controller's logic. Its
 # Windows part (src/pad/win) is built into ddraw.dll, which mounts the pad itself.
 file(GLOB_RECURSE UAGFX_PAD_SOURCES CONFIGURE_DEPENDS src/pad/core/*.cpp)
@@ -103,11 +119,7 @@ elseif(WIN32)
     # 3.0.11-beta.178: the classes' portraits of the login screen's cards too (src/win/class_art.rc)
     # 3.0.18-beta.7: RmlUi 6.3's core (third_party/rmlui, MIT; its FreeType font engine left out - ours is GDI's):
     # the interface library's spike (win/uaui, Claude Doc «Концепция: единая библиотека интерфейса uaRO Graphics»)
-    file(GLOB_RECURSE UAGFX_RMLUI_SOURCES CONFIGURE_DEPENDS third_party/rmlui/Source/Core/*.cpp)
-    add_library(uagfx_rmlui STATIC ${UAGFX_RMLUI_SOURCES})
-    target_include_directories(uagfx_rmlui PUBLIC third_party/rmlui/Include)
-    target_compile_definitions(uagfx_rmlui PUBLIC RMLUI_STATIC_LIB PRIVATE RMLUI_VERSION="6.3")
-    target_compile_options(uagfx_rmlui PRIVATE -w -O2)
+    # (3.0.18-beta.94: uagfx_rmlui and uagfx_uikit are made with the core, above - the host tests use them too)
     add_library(ddraw SHARED ${UAGFX_WIN_SOURCES} ${UAGFX_PAD_WIN_SOURCES} src/win/ddraw.def src/win/ui_font.rc
                 src/win/class_art.rc)
     target_include_directories(ddraw PRIVATE third_party/plex third_party/class_art)  # the .rc's files
@@ -115,7 +127,7 @@ elseif(WIN32)
     target_compile_definitions(ddraw PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX WIDL_EXPLICIT_AGGREGATE_RETURNS
                                DIRECTINPUT_VERSION=0x0700)
     target_compile_options(ddraw PRIVATE -Wall -Wextra)
-    target_link_libraries(ddraw PRIVATE uagfx_pad uagfx_core uagfx_rmlui uuid)
+    target_link_libraries(ddraw PRIVATE uagfx_pad uagfx_uikit uagfx_core uagfx_rmlui uuid)
     # 2.5.5: its link map beside it - the profile's places in ddraw.dll (offsets) are found in it afterwards
     target_link_options(ddraw PRIVATE -static -static-libgcc -static-libstdc++ -s
                         "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/ddraw.map")
@@ -180,7 +192,7 @@ else()
                    src/app/rebuilds.cpp src/app/mnemonic.cpp src/app/installer.cpp src/app/update_run.cpp src/app/args.cpp
                    src/app/launcher.cpp src/app/reports.cpp src/app/client_patch.cpp src/app/reference_pack.cpp)
     target_include_directories(uagfx_tests PRIVATE tests)
-    target_link_libraries(uagfx_tests PRIVATE uagfx_core uagfx_pad)
+    target_link_libraries(uagfx_tests PRIVATE uagfx_uikit uagfx_core uagfx_pad)
     target_compile_definitions(uagfx_tests PRIVATE UAGFX_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
     add_test(NAME uagfx_tests COMMAND uagfx_tests)
 endif()

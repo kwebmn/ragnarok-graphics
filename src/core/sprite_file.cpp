@@ -160,7 +160,9 @@ bool readAct(const std::string& bytes, Act& out) {
     return true;
 }
 
-bool compose(const std::vector<Part>& parts, Image& out, int& footX, int& footY) {
+bool compose(const std::vector<Part>& parts, Image& out, int& footX, int& footY, int factor) {
+    if (factor < 1) return false;
+    const float f = float(factor);
     struct Placed {
         const Image* im;
         const Layer* ly;
@@ -194,10 +196,12 @@ bool compose(const std::vector<Part>& parts, Image& out, int& footX, int& footY)
         for (const Layer& ly : fr.layers) {
             const std::vector<Image>& list = ly.type == 1 ? part.sprite->truecolour : part.sprite->palette;
             if (ly.index < 0 || size_t(ly.index) >= list.size()) continue;
-            const Image& im = list[size_t(ly.index)];
-            const float w = float(im.w) * std::fabs(ly.scaleX), h = float(im.h) * std::fabs(ly.scaleY);
+            const Image& own = list[size_t(ly.index)];
+            const Image* big = ly.type == 1 || !part.bigger ? nullptr : part.bigger(ly.index);
+            const Image& im = big && big->w > 0 && big->h > 0 ? *big : own;
+            const float w = float(own.w) * f * std::fabs(ly.scaleX), h = float(own.h) * f * std::fabs(ly.scaleY);
             if (w < 1 || h < 1) continue;
-            const float x0 = float(ly.x + ox) - w / 2, y0 = float(ly.y + oy) - h / 2;
+            const float x0 = float(ly.x + ox) * f - w / 2, y0 = float(ly.y + oy) * f - h / 2;
             placed.push_back(Placed{&im, &ly, x0, y0, w, h});
             left = std::min(left, x0);
             top = std::min(top, y0);

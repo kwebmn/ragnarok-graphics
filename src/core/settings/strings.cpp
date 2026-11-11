@@ -8269,6 +8269,10 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceThemeStandard, "Standard", "Стандартна", "Стандартная"},
     {Text::InterfaceThemeClassic, "Classic RO", "Класична RO", "Классическая RO"},
     {Text::InterfaceThemeContrast, "Contrast", "Контрастна", "Контрастная"},
+    // 3.0.18-beta.114 (the owner: «нету кнопки для анманта пеко итд»): the game's own window's one button (its 0xB6)
+    {Text::EquipCartOff, "Remove the cart", "Зняти візок", "Снять тележку"},
+    {Text::EquipFalconOff, "Release the falcon", "Відпустити сокола", "Отпустить сокола"},
+    {Text::EquipPecoOff, "Get off the Peco", "Злізти з Пеко", "Слезть с Пеко"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -36,6 +36,7 @@
 #include "win/uaui.hpp"
 #include "uikit/equip_live.hpp"
 #include "win/hero_picture.hpp"
+#include "win/pack_pictures.hpp"
 #include "win/live_part.hpp"
 #include "uikit/hits.hpp"
 #include "win/ui_sheet.hpp"
@@ -123,6 +124,7 @@ struct State {
     int heroDir = 0;
     heropicture::Looks heroLooks;
     std::string heroKey;
+    bool mountHot = false;  // 3.0.18-beta.114: the cursor over the cart / falcon / Peco button
     panel::Picture hero;
     panel::Picture picture, portrait;
     uint32_t texture = 0;
@@ -330,7 +332,7 @@ void readData(State& s) {
     const int hw = int(std::lround(150 * s.scale)), hh = int(std::lround(210 * s.scale));  // .112: the smaller window
     std::string hk;
     for (const int v : {looks.job, looks.sex, looks.head, looks.colour, looks.low, looks.top, looks.middle,
-                        int(looks.options), s.heroDir, hw, hh})
+                        int(looks.options), s.heroDir, hw, hh, packpictures::iconsStamp()})
         hk += std::to_string(v) + ':';
     if (hk != s.heroKey) {
         s.heroKey = hk;
@@ -442,6 +444,50 @@ bool modeMsg(int msg, int a, int b, int c) {
     return true;
 }
 
+// 3.0.18-beta.114 (the owner: «нету кнопки для анманта пеко итд»): the game's own window's one button (0xB6 in its
+// SendMsg FUN_00470f90; its words by FUN_0046ed20) - by the options (0x77191C): a cart (FUN_0063b1c0: 0x08 0x80 0x100
+// 0x200 0x400) first, then the falcon (0x10), then the Peco (0x20); a press sends the game mode's 0x58, 0x91 or 0x92
+// (each its 0x012a to the server). The own shop open (0x728028): the game's line 0x20d in the chat instead
+constexpr uint32_t kOptions = 0x77191C, kShopOpen = 0x728028, kPush = 0x4DB310, kMsgString = 0x504FB0;
+constexpr int kCartOffMsg = 0x58, kFalconOffMsg = 0x91, kPecoOffMsg = 0x92, kCloseShopLine = 0x20D;
+using PushFn = int(__attribute__((thiscall)) *)(uint32_t manager, int msg, const char* text, int colour, int more);
+using MsgStringFn = const char* (*)(int id);
+
+enum class Mount { None, Cart, Falcon, Peco };
+
+Mount mountNow() {
+    const uint32_t o = read32(kOptions);
+    if (o & (0x08 | 0x80 | 0x100 | 0x200 | 0x400)) return Mount::Cart;
+    if (o & 0x10) return Mount::Falcon;
+    if (o & 0x20) return Mount::Peco;
+    return Mount::None;
+}
+
+std::string mountWords(Mount m) {
+    return m == Mount::Cart     ? say(settings::Text::EquipCartOff)
+           : m == Mount::Falcon ? say(settings::Text::EquipFalconOff)
+           : m == Mount::Peco   ? say(settings::Text::EquipPecoOff)
+                                : std::string();
+}
+
+const char* mountOff(State& s) {
+    const Mount m = mountNow();
+    if (m == Mount::None) return "nothing to take off";
+    if (read32(kShopOpen) != 0) {  // as the game: its chat shown (3), then its line in red
+        const PushFn push = reinterpret_cast<PushFn>(uintptr_t(kPush));
+        push(kWindowMgr, 3, nullptr, 0, 0);
+        const char* line = reinterpret_cast<MsgStringFn>(uintptr_t(kMsgString))(kCloseShopLine);
+        if (line) push(kWindowMgr, 1, line, 0xFF, 0);
+        return "the own shop open - the game's «close the shop» line";
+    }
+    const int msg = m == Mount::Cart ? kCartOffMsg : m == Mount::Falcon ? kFalconOffMsg : kPecoOffMsg;
+    if (!modeMsg(msg, 0, 0, 0)) return "not sent (the game mode not found)";
+    s.key.clear();
+    return m == Mount::Cart     ? "the cart off (0x58)"
+           : m == Mount::Falcon ? "the falcon let go (0x91)"
+                                : "off the Peco (0x92)";
+}
+
 void closeGameWindow() {
     const uint32_t window = gameWindow();
     if (window && read32(read32(window) + kSendMsgSlot) == kEquipSendMsg)
@@ -549,7 +595,13 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         if (h.part == ew::Part::Pick) s.show.hoverPick = h.index;
         s.show.hoverClose = h.part == ew::Part::Close;
     }
-    std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(scale) +
+    s.mountHot = false;
+    if (s.live.shown() && !s.moving && readGameCursor(cx, cy))
+        for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "mountoff"))
+            s.mountHot = s.mountHot || p.box.contains(float(cx) * float(k) - float(s.layout.x),
+                                                      float(cy) * float(k) - float(s.layout.y));
+    std::string key = std::string(s.mountHot ? "m" : "") + std::to_string(s.layout.x) + ',' +
+                      std::to_string(s.layout.y) + ';' + std::to_string(scale) +
                       ';' + std::to_string(s.show.hoverSlot) + ',' + std::to_string(s.show.hoverPick) + ',' +
                       std::to_string(s.show.focus) + ',' + std::to_string(s.show.pickFocus) +
                       (s.show.picking ? "p" + std::to_string(s.show.pickSlot) : "") + (s.show.hoverClose ? "x" : "") +
@@ -588,6 +640,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                     const padglyph::Family f = s.show.sony ? padglyph::Family::Sony
                                                                            : padglyph::Family::Xbox;
                                     m.turns = s.hero.width > 0;  // 3.0.18-beta.111: its sprites' character
+                                    m.mountOff = mountWords(mountNow());  // 3.0.18-beta.114
+                                    m.mountHot = s.mountHot;
                                     m.hero = m.turns ? s.live.icon(&s.hero) : "";
                                     {  // .113: fitted into the middle's box, its proportions kept
                                         const float bw = 150 * s.scale, bh = 210 * s.scale;
@@ -750,6 +804,12 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         // 3.0.18-beta.112 (the owner: «не крутится персонаж стрелками»): by their laid-out boxes - the window is
         // passive (pointer-events none), RmlUi's own point lookup never finds its elements
         const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
+        for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "mountoff"))  // 3.0.18-beta.114
+            if (p.box.contains(lx, ly)) {
+                const char* did = mountOff(s);
+                if (s.told++ < 40) LOG_INFO("equip: its button for the cart, the falcon, the Peco - %s", did);
+                return true;
+            }
         for (const char* part : {"turnleft", "turnright"})
             for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), part))
                 if (p.box.contains(lx, ly)) {

@@ -4,6 +4,7 @@
 #include "rml_host.hpp"
 #include "test.hpp"
 #include "uikit/equip_live.hpp"
+#include "uikit/hits.hpp"
 
 using namespace uagfx;
 namespace ew = uagfx::equipwin;
@@ -118,5 +119,35 @@ TEST(uikit_equip_long_names_wrap_and_grow_their_slot) {
     CHECK(L.slots[ew::Weapon].h > 50);  // two lines
     CHECK(L.slots[ew::Garment].y >= L.slots[ew::Weapon].y + L.slots[ew::Weapon].h);
     CHECK(std::abs(L.slots[ew::HeadLow].h - 46) < 1.5f);  // a short one as before
+    rmlhost::close(doc);
+}
+
+// 3.0.18-beta.114 (the owner: «нету кнопки для анманта пеко итд»): the game's window's one button over the character,
+// found by its box (the window is passive); none when there is nothing to take off
+TEST(uikit_equip_mount_button_in_the_middle) {
+    ew::Data d;
+    ew::Show sh;
+    static el::Model m;
+    el::fill(m, d, sh, texts(), 1, none, glyph);
+    m.mountOff = "Злізти з Пеко";
+    std::string error;
+    Rml::ElementDocument* doc =
+        rmlhost::load(el::rml(), [&](Rml::DataModelConstructor& c) { el::bind(c, m); }, 0, 0, &error);
+    CHECK_EQ(error, std::string());
+    ew::Layout L = ew::layout(0, 0, 1, d, sh, texts(), [](const std::string& s, float px, bool) {
+        return float(s.size()) * px * 0.55f;
+    });
+    CHECK(el::refit(doc, L));
+    const std::vector<uikit::Placed> at = uikit::placesOf(doc, "mountoff");
+    CHECK_EQ(at.size(), size_t(1));
+    if (at.size() == 1) {
+        const panel::Box& b = at[0].box;
+        CHECK(b.w > 40 && b.h > 15);
+        CHECK(b.x >= L.centre.x - 0.5f && b.x + b.w <= L.centre.x + L.centre.w + 0.5f);
+        CHECK(b.y >= L.centre.y - 0.5f && b.y < L.centre.y + 40);
+    }
+    m.mountOff = "";
+    rmlhost::update();
+    CHECK(uikit::placesOf(doc, "mountoff").empty());
     rmlhost::close(doc);
 }

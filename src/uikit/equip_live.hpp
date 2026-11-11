@@ -47,6 +47,9 @@ struct Model {
     Rml::String hero;
     float heroW = 0, heroH = 0;
     bool turns = false;  // ◀ ▶ shown (the sprites' character turns)
+    // 3.0.18-beta.114: the game's window's one button - the cart off, the falcon let go, off the Peco ("" - none)
+    Rml::String mountOff;
+    bool mountHot = false;
     bool closeHot = false, picking = false, pad = false;
     std::vector<SlotV> left, right;
     SlotV ammo;

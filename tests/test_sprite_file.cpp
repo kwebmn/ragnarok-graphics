@@ -203,3 +203,27 @@ TEST(sprite_file_anchors_put_parts_together) {
     CHECK(footY > 9);    // the feet at the body's centre, low in the picture
     CHECK((out.argb[size_t(1)] >> 24) != 0);  // the head's top row drawn at the picture's top
 }
+
+// 3.0.18-beta.114 (the owner: «картинка взята не с апскейленой версии»): parts put together `factor` times bigger -
+// each layer's picture from its part's `bigger` (the AI pack's frame) when given, its place and the anchors scaled
+TEST(sprite_file_compose_scaled_takes_bigger_frames) {
+    spritefile::Sprite sp;
+    CHECK(spritefile::readSpr(spr(), sp));
+    spritefile::Act body, head;
+    CHECK(spritefile::readAct(act(1, false, 0, true, 0, -10), body));
+    CHECK(spritefile::readAct(act(1, false, 0, true, 0, 0), head));
+    spritefile::Image big;  // the frame 4x, all of it one colour
+    big.w = sp.palette[0].w * 4;
+    big.h = sp.palette[0].h * 4;
+    big.argb.assign(size_t(big.w) * size_t(big.h), 0xFF00FF00u);
+    std::vector<spritefile::Part> parts{{&sp, &body, 0, 0}, {&sp, &head, 0, 0}};
+    parts[0].bigger = [&](int) -> const spritefile::Image* { return &big; };
+    spritefile::Image one, four;
+    int fx = 0, fy = 0, fx4 = 0, fy4 = 0;
+    CHECK(spritefile::compose(parts, one, fx, fy));
+    CHECK(spritefile::compose(parts, four, fx4, fy4, 4));
+    CHECK_EQ(four.w, one.w * 4);
+    CHECK_EQ(four.h, one.h * 4);
+    CHECK_EQ(fy4, fy * 4);
+    CHECK_EQ(four.argb[size_t(four.h - 1) * size_t(four.w) + size_t(four.w / 2)], 0xFF00FF00u);  // the body: the pack's
+}

@@ -2,11 +2,13 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <vector>
 
 #include "core/sprite_file.hpp"
 #include "win/game_camera.hpp"
 #include "win/head_picture.hpp"
+#include "win/pack_frames.hpp"
 
 namespace uagfx::win::heropicture {
 namespace {
@@ -46,14 +48,16 @@ std::string nameAt(uint32_t table, int index) {
 struct Loaded {
     spritefile::Sprite sprite;
     spritefile::Act act;
+    std::string spr;  // its file's bytes: the AI pack's frames are found by them
+    packframes::Frames big;
     bool ok = false;
 };
 
 Loaded load(const std::string& base) {
     Loaded l;
-    std::string spr, act;
-    l.ok = headpicture::readFile(base + ".spr", spr) && headpicture::readFile(base + ".act", act) &&
-           spritefile::readSpr(spr, l.sprite) && spritefile::readAct(act, l.act);
+    std::string act;
+    l.ok = headpicture::readFile(base + ".spr", l.spr) && headpicture::readFile(base + ".act", act) &&
+           spritefile::readSpr(l.spr, l.sprite) && spritefile::readAct(act, l.act);
     return l;
 }
 
@@ -109,9 +113,9 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
     }
     Loaded head;
     {
-        std::string spr, act;
-        head.ok = headpicture::headFiles(sex, l.head, l.colour, spr, act) && spritefile::readSpr(spr, head.sprite) &&
-                  spritefile::readAct(act, head.act);
+        std::string act;
+        head.ok = headpicture::headFiles(sex, l.head, l.colour, head.spr, act) &&
+                  spritefile::readSpr(head.spr, head.sprite) && spritefile::readAct(act, head.act);
     }
     std::vector<Loaded> gear;  // the low, the middle, the top headgear (the game's order over the head)
     for (const int view : {l.low, l.middle, l.top}) {
@@ -130,36 +134,61 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
             break;
         }
     if (l.options & 0x10) falcon = load("data\\sprite\\" + kEffect + kFalcon);
+    // 3.0.18-beta.114 (the owner: «картинка взята не с апскейленой версии. тоисть квадратная»): each part's frames from
+    // the AI texture pack (4x, as the game shows them with it), one size for them all; a part without - stretched
+    int factor = 0, bigParts = 0;
+    for (Loaded* p : {&body, &head, &cart, &falcon}) {
+        if (!p->ok) continue;
+        p->big = packframes::of(p->spr, p->sprite, packframes::usedBy(p->sprite, p->act, size_t(dir), 0), factor);
+        if (p->big.factor) factor = p->big.factor, ++bigParts;
+    }
+    for (Loaded& g : gear) {
+        g.big = packframes::of(g.spr, g.sprite, packframes::usedBy(g.sprite, g.act, size_t(dir), 0), factor);
+        if (g.big.factor) factor = g.big.factor, ++bigParts;
+    }
+    const auto from4 = [](const Loaded& p) -> std::function<const spritefile::Image*(int)> {
+        if (!p.big.factor) return nullptr;
+        return [&p](int index) { return p.big.at(index); };
+    };
     std::vector<spritefile::Part> parts;  // under to over: the cart, the body, the head, its headgear, the falcon
-    if (cart.ok) parts.push_back({&cart.sprite, &cart.act, size_t(dir), 0, false, 0, 0, false});
-    parts.push_back({&body.sprite, &body.act, size_t(dir), 0, false, 0, 0, true});
-    if (head.ok) parts.push_back({&head.sprite, &head.act, size_t(dir), 0, true, 0, 0, false});
-    for (const Loaded& g : gear) parts.push_back({&g.sprite, &g.act, size_t(dir), 0, true, 0, 0, false});
+    if (cart.ok) parts.push_back({&cart.sprite, &cart.act, size_t(dir), 0, false, 0, 0, false, from4(cart)});
+    parts.push_back({&body.sprite, &body.act, size_t(dir), 0, false, 0, 0, true, from4(body)});
+    if (head.ok) parts.push_back({&head.sprite, &head.act, size_t(dir), 0, true, 0, 0, false, from4(head)});
+    for (const Loaded& g : gear) parts.push_back({&g.sprite, &g.act, size_t(dir), 0, true, 0, 0, false, from4(g)});
     if (falcon.ok) {  // perched: its feet (its frame's foot, 22 under its origin) on the shoulder beside the neck
         int nx = 0, ny = -70;
         const auto& frames = body.act.actions;
         if (size_t(dir) < frames.size() && !frames[size_t(dir)].empty() && !frames[size_t(dir)][0].anchors.empty())
             nx = frames[size_t(dir)][0].anchors[0].first, ny = frames[size_t(dir)][0].anchors[0].second;
         const int side = dir == 2 || dir == 6 ? 0 : dir >= 3 && dir <= 5 ? -12 : 12;  // the right shoulder
-        parts.push_back({&falcon.sprite, &falcon.act, size_t(dir), 0, false, nx + side, ny + 6 - 22, false});
+        parts.push_back(
+            {&falcon.sprite, &falcon.act, size_t(dir), 0, false, nx + side, ny + 6 - 22, false, from4(falcon)});
     }
     spritefile::Image im;
     int footX = 0, footY = 0;
-    if (!spritefile::compose(parts, im, footX, footY)) {
+    if (!spritefile::compose(parts, im, footX, footY, std::max(1, factor))) {
         if (from) *from = "nothing drawn of " + bodyBase;
         return false;
     }
-    // 3.0.18-beta.113 (R-55WR4R: a small box left it at its own size): a whole step up to cover the box (sharp
-    // pixels; shown fitted into the box), its own size alone - never padded round
-    const float cover = std::min(float(w) / float(std::max(1, im.w)), float(h) / float(std::max(1, im.h)));
-    const int f = std::clamp(int(std::ceil(cover)), 1, 3);
-    const spritefile::Image fit = spritefile::fitted(im, im.w * f, im.h * f);
+    spritefile::Image fit;
+    if (factor > 1) {  // the pack's: shrunk smoothly to the box (never grown past its 4x)
+        fit = spritefile::fitted(im, std::min(w, im.w), std::min(h, im.h));
+    } else {
+        // 3.0.18-beta.113 (R-55WR4R: a small box left it at its own size): a whole step up to cover the box (sharp
+        // pixels; shown fitted into the box), its own size alone - never padded round
+        const float cover = std::min(float(w) / float(std::max(1, im.w)), float(h) / float(std::max(1, im.h)));
+        const int f = std::clamp(int(std::ceil(cover)), 1, 3);
+        fit = spritefile::fitted(im, im.w * f, im.h * f);
+    }
     out.width = fit.w;
     out.height = fit.h;
     out.px = fit.argb;
     if (from)
         *from = bodyBase + (head.ok ? " + head" : "") + " + " + std::to_string(gear.size()) + " headgear(s)" +
-                (cart.ok ? " + cart" : "") + (falcon.ok ? " + falcon" : "");
+                (cart.ok ? " + cart" : "") + (falcon.ok ? " + falcon" : "") +
+                (factor > 1 ? ", the AI pack's frames " + std::to_string(factor) + "x for " + std::to_string(bigParts) +
+                                  " part(s)"
+                            : ", the game's own pixels");
     return out.width > 0;
 }
 
