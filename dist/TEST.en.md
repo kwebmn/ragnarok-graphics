@@ -1,3 +1,5 @@
+- Equipment: sets "1 2 3", as the later clients' Equip Switch - a right click on a number keeps what is worn, a click puts the set on (things found in the bag by number, refine and cards). Each character has its own sets.
+
 - Server select: beside the name - how many are playing now ("uaRO · 512 playing"), as the login server tells.
 
 - Almost every window can now be pulled by its bottom right corner: NPC talk, vending, shop opening, my shop, item choice, friends/party, chat rooms, pet, homunculus, mercenary, settings, macros, whisper settings, the command list - 70-150 %, each keeps its own size.
