@@ -1,3 +1,5 @@
+- Cleanup finished: the rest of the old picture drawing removed - exp bars, the reference's row repaints, the character block's layers and level flare, the login screens (strip, login list, veil, shelf toast), the on-screen keyboard, shop signs over heads, the controller's carry ring, monster and mercenary cards, Start tiles, the low-HP edge, exp over monsters, the layout editor, pickup toasts. Less work every frame; the same look.
+
 - Cleanup continued: the old picture output (GDI) of 17 panels and windows removed - the character block, buffs, party, target, hotbar, chat, minimap, tracker, exp bars, reference, trade, whispers and others. Nothing changes on screen.
 
 - The old edition of the new interface removed from the driver: the fallback sheets of 20 windows, the core's old drawing of windows and panels (GDI pictures) - about 7,000 lines fewer. Nothing changes on screen.
