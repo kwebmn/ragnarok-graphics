@@ -144,4 +144,30 @@ panel::Box iconAt(const Layout& L, size_t line) {
                                                           : panel::Box{};
 }
 
+std::string withSlots(const std::string& name, int slots) {
+    return slots > 0 ? name + " [" + std::to_string(slots) + "]" : name;
+}
+
+std::string inside(const int cards[4], int slots, const std::function<std::string(int)>& cardName,
+                   const std::string& freeWord) {
+    const bool made = cards[0] == 255 || cards[0] == 254 || cards[0] == 0xFF00 || cards[0] == -256;
+    std::string out;
+    int used = 0;
+    if (!made)
+        for (int i = 0; i < 4; ++i) {
+            if (cards[i] <= 0) continue;
+            ++used;
+            std::string n = cardName(cards[i]);
+            if (n.empty()) n = "#" + std::to_string(cards[i]);
+            out += (out.empty() ? "" : " \xC2\xB7 ") + n;
+        }
+    const int free = made ? 0 : slots - used;
+    if (free > 0) {
+        std::string w = freeWord;
+        if (const size_t p = w.find("{1}"); p != std::string::npos) w.replace(p, 3, std::to_string(free));
+        out += (out.empty() ? "" : " \xC2\xB7 ") + w;
+    }
+    return out;
+}
+
 }  // namespace uagfx::vendshop

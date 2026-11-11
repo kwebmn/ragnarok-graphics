@@ -113,3 +113,20 @@ TEST(vend_shop_icon_inside_its_line) {
     CHECK(b.w > 0 && b.x > L.lines[1].x && b.y >= L.lines[1].y && b.y + b.h <= L.lines[1].y + L.lines[1].h);
     CHECK(vendshop::iconAt(L, 9).w == 0);
 }
+
+// 3.0.18-beta.138 (the owner: a vending thing not seen into): a ware's slots
+// in its name and its cards' line under it
+TEST(vend_shop_slots_and_what_is_inside) {
+    const auto name = [](int id) { return id == 4035 ? std::string("Hydra Card") : std::string(); };
+    const int two[4] = {4035, 4035, 0, 0};
+    CHECK_EQ(vendshop::withSlots("Gladius", 3), std::string("Gladius [3]"));
+    CHECK_EQ(vendshop::withSlots("Jellopy", 0), std::string("Jellopy"));
+    CHECK_EQ(vendshop::inside(two, 3, name, "{1} free"), std::string("Hydra Card \xC2\xB7 Hydra Card \xC2\xB7 1 free"));
+    const int none[4] = {};
+    CHECK_EQ(vendshop::inside(none, 2, name, "{1} free"), std::string("2 free"));
+    CHECK_EQ(vendshop::inside(none, 0, name, "{1} free"), std::string());
+    const int forged[4] = {255, 0, 0, 0};  // a forged thing's maker, not cards
+    CHECK_EQ(vendshop::inside(forged, 0, name, "{1} free"), std::string());
+    const int unknownCard[4] = {4999, 0, 0, 0};
+    CHECK_EQ(vendshop::inside(unknownCard, 1, name, "{1} free"), std::string("#4999"));
+}

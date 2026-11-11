@@ -915,6 +915,7 @@ enum class Text : uint16_t {
     CharOwnMore,  // 3.0.18-beta.128
     PadWheelTitle,  // 3.0.18-beta.132
     TileBarProfile,  // 3.0.18-beta.136: the pad's tile, {1} the profile now
+    VendFree, VendCardTip,  // 3.0.18-beta.138: «Лавка» - free slots, a name's press
     Count
 };
 

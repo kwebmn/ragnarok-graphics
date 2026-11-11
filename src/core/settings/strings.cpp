@@ -6436,9 +6436,9 @@ constexpr Entry kTexts[] = {
     {Text::VendTotal, "Total", "Разом", "Итого"},
     {Text::VendZeny, "Your zeny", "Ваші зені", "Ваши зени"},
     {Text::VendBuy, "Buy", "Купити", "Купить"},
-    {Text::VendPadHint, "{1}: +1 \xC2\xB7 {2}: -1 \xC2\xB7 {3}: buy",
-     "{1}: +1 \xC2\xB7 {2}: \xE2\x88\x92" "1 \xC2\xB7 {3}: купити",
-     "{1}: +1 \xC2\xB7 {2}: \xE2\x88\x92" "1 \xC2\xB7 {3}: купить"},
+    {Text::VendPadHint, "{1}: +1 \xC2\xB7 {2}: -1 \xC2\xB7 {3}: its card \xC2\xB7 {4}: buy",  // .138 Y the card
+     "{1}: +1 \xC2\xB7 {2}: \xE2\x88\x92" "1 \xC2\xB7 {3}: картка \xC2\xB7 {4}: купити",
+     "{1}: +1 \xC2\xB7 {2}: \xE2\x88\x92" "1 \xC2\xB7 {3}: карточка \xC2\xB7 {4}: купить"},
     // 3.0.11-beta.157: the choice of things (the magnifier's, a card's)
     {Text::InterfacePicks, "Choice of things", "Вибір речі", "Выбор вещи"},
     {Text::InterfacePicksHint,
@@ -8323,6 +8323,12 @@ constexpr Entry kTexts[] = {
     {Text::CharOwnMore, "Windows of uaRO", "Вікна uaRO", "Окна uaRO"},  // 3.0.18-beta.128
     {Text::PadWheelTitle, "Wheel", "Колесо", "Колесо"},  // 3.0.18-beta.132
     {Text::TileBarProfile, "Bar profile {1}", "Профіль панелі {1}", "Профиль панели {1}"},  // 3.0.18-beta.136
+    {Text::VendFree, "free slots: {1}",  // 3.0.18-beta.138
+     "вільних слотів: {1}",
+     "свободных слотов: {1}"},
+    {Text::VendCardTip, "A thing's name: its card",
+     "Назва речі - її картка",
+     "Название вещи - её карточка"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

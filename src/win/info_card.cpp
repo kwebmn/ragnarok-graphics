@@ -672,4 +672,11 @@ std::vector<std::string> skillDescription(const std::string& aegis, const std::s
     return out;
 }
 
+int slotsOf(int id) {
+    State& s = state();
+    readTables(s);
+    const auto it = s.tables.slots.find(id);
+    return it == s.tables.slots.end() ? 0 : it->second;
+}
+
 }  // namespace uagfx::win::infocardwin

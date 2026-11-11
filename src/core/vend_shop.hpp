@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -18,8 +19,15 @@ struct Row {
     int stock = 0;   // how many the shop has
     int chosen = 0;  // how many of it the purchase has
     std::string name;  // UTF-8
+    std::string inside;  // 3.0.18-beta.138: its cards and free slots («Hydra Card · 1 вільний»), "" none
     const panel::Picture* icon = nullptr;
 };
+// 3.0.18-beta.138 (the owner: things in a shop not seen into): the slots after the name as the game's
+// own windows write them («Gladius [3]», none when 0); what is inside: each card's name, then the free slots by
+// `freeWord` («{1} вільних»); a forged or named thing's makers (255, 254, 0xFF00 first) are no cards
+std::string withSlots(const std::string& name, int slots);
+std::string inside(const int cards[4], int slots, const std::function<std::string(int)>& cardName,
+                   const std::string& freeWord);
 long long total(const std::vector<Row>& rows);                   // each chosen times its price
 bool canAdd(const Row& r, long long purchase, long long zeny);  // the shop has more, the zeny pays for one more
 bool canRemove(const Row& r);

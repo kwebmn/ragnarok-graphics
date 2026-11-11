@@ -28,7 +28,7 @@ bool shown();
 bool close();  // Esc: «Скасувати»
 void beforeGameDraw();
 // The controller: up and down a row, A one more of it, X one less, Y buys, B gives up
-enum class PadCommand : uint8_t { Up, Down, More, Less, Buy, Cancel };
+enum class PadCommand : uint8_t { Up, Down, More, Less, Buy, Cancel, Card };  // .138 Card: its item card
 void padCommand(PadCommand c);
 bool box(int& x, int& y, int& w, int& h);
 

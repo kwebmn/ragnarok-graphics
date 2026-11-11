@@ -21,6 +21,7 @@
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/client_tables.hpp"
+#include "win/info_card.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -63,6 +64,7 @@ struct Thing {
     vs::Row row;
     uint8_t info[kInfoSize] = {};  // its ITEM_INFO as the session has it (its words' pointer the session's)
     std::string digits;            // the item's number as the game keeps it (the purchase matched by it)
+    uint32_t at = 0;               // 3.0.18-beta.138: its ITEM_INFO in the game (the item card shows it)
 };
 
 // 3.0.18-beta.89 (live windows, group 3): another player's shop a live window - its wares by flexbox with − /
@@ -73,7 +75,8 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <span class="x ctl" data-event-click="vs_cancel()">&#x2715;</span>
 <div class="list"><div class="ware" data-for="r, i : rows" data-class-on="r.chosen > 0"><img
   data-if="r.icon != ''" data-attr-src="r.icon"/>
-<div class="wname"><span class="name">{{r.name}}</span><span class="stock">{{r.stock}}</span></div>
+<div class="wname ctl" data-event-click="vs_card(i)"><span class="name">{{r.name}}</span><span class="inside"
+  data-if="r.inside != ''">{{r.inside}}</span><span class="stock">{{r.stock}}</span></div>
 <span class="price">{{r.price}}</span><span class="pm ctl" data-event-click="vs_less(i)">−</span><span
   class="n">{{r.chosen}}</span><span
   class="pm ctl" data-event-click="vs_more(i)">+</span></div></div>
@@ -86,7 +89,7 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
 struct VendRowView {
-    Rml::String name, stock, price, icon;
+    Rml::String name, inside, stock, price, icon;
     int chosen = 0;
 };
 
@@ -118,6 +121,7 @@ struct State {
     bool padNow = false;
     int told = 0;
     int known = -1;  // the purchase's add and take: 1 this build's, 0 not
+    int cardsTold = 0;  // 3.0.18-beta.138
 };
 
 State& state() {
@@ -223,6 +227,18 @@ std::vector<Thing> readList(const State& s, uint32_t headAt) {
         r.name = words.empty() ? "#" + id : utf8Of(widened(hotbar::spaced(words), s.codePage));
         // 3.0.18-beta.118 (the owner: «в вендинге не видно карт»): its cards in its name, as the game names it
         r.name = cardnames::namedFromInfo(r.name, t.info, clienttables::cardWords());
+        // 3.0.18-beta.138 (the owner: things in a shop not seen into): its slots, its cards' line
+        const int slots = identified ? infocardwin::slotsOf(r.id) : 0;
+        r.name = vs::withSlots(r.name, slots);
+        int cards[4] = {};
+        cardnames::cardsOf(t.info, cards);
+        r.inside = identified ? vs::inside(cards, slots, [&](int card) {
+                                    const auto w = names.find(std::to_string(card));
+                                    return w == names.end() ? std::string()
+                                                            : utf8Of(widened(hotbar::spaced(w->second), s.codePage));
+                                }, say(settings::Text::VendFree))
+                              : std::string();
+        t.at = node + kInfo;
         const auto f = files.find(id);
         if (f != files.end()) r.icon = clienttables::icon(f->second, iw::iconSide(s.scale), 4 * s.scale);
         out.push_back(std::move(t));
@@ -243,6 +259,21 @@ void readShop(State& s) {
     }
 }
 
+// 3.0.18-beta.138 (the owner: a thing not seen into): a ware's item card - the game's own (UI window 0xC, its
+// message 0x18 an ITEM_INFO: the session's list node's, as «Обмін» shows its things), drawn in the new look
+constexpr int kItemCard = 0xC, kShowItem = 0x18;
+constexpr uint32_t kMakeWindow = 0x4D42D0;
+using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t mgr, int id);
+using ShowFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
+void card(State& s, int row, const char* by) {
+    if (row < 0 || row >= int(s.things.size()) || !s.things[size_t(row)].at) return;
+    const uint32_t window = reinterpret_cast<MakeFn>(uintptr_t(kMakeWindow))(kWindowMgr, kItemCard);
+    const uint32_t send = window ? read32(read32(window) + kSendMsgSlot) : 0;
+    if (!send) return;
+    reinterpret_cast<ShowFn>(uintptr_t(send))(window, 0, kShowItem, int(s.things[size_t(row)].at), 0, 0);
+    if (s.cardsTold++ < 10) LOG_INFO("vending: %s's card (%s)", s.rows[size_t(row)].name.c_str(), by);
+}
+
 vs::Texts texts(const State& s, uint32_t account) {
     vs::Texts t;
     const auto sign = s.signs.find(account);
@@ -255,11 +286,14 @@ vs::Texts texts(const State& s, uint32_t account) {
     t.cancel = say(settings::Text::MsgCancel);
     if (s.padNow) {
         std::string hint = say(settings::Text::VendPadHint);
-        const char* const labels[3] = {uapad::buttonLabel(0), uapad::buttonLabel(2), uapad::buttonLabel(3)};
-        const char* const marks[3] = {"{1}", "{2}", "{3}"};
-        for (int i = 0; i < 3; ++i)
+        const char* const labels[4] = {uapad::buttonLabel(0), uapad::buttonLabel(2), uapad::buttonLabel(3),
+                                       uapad::runtime::look().sony ? "Options" : "Start"};  // .138: Start buys
+        const char* const marks[4] = {"{1}", "{2}", "{3}", "{4}"};
+        for (int i = 0; i < 4; ++i)
             if (const size_t at = hint.find(marks[i]); at != std::string::npos) hint.replace(at, 3, labels[i]);
         t.hint = hint;
+    } else {
+        t.hint = say(settings::Text::VendCardTip);  // 3.0.18-beta.138: the mouse's way to the card told
     }
     return t;
 }
@@ -468,6 +502,7 @@ static void liveFrame(State& s) {
             v.RegisterMember("stock", &VendRowView::stock);
             v.RegisterMember("price", &VendRowView::price);
             v.RegisterMember("icon", &VendRowView::icon);
+            v.RegisterMember("inside", &VendRowView::inside);
             v.RegisterMember("chosen", &VendRowView::chosen);
         }
         m.RegisterArray<std::vector<VendRowView>>();
@@ -490,6 +525,9 @@ static void liveFrame(State& s) {
         m.BindEventCallback("vs_less", [many](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             if (!a.empty()) less(state(), a[0].Get<int>(), many());
         });
+        m.BindEventCallback("vs_card", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (!a.empty()) card(state(), a[0].Get<int>(), "its name pressed");  // 3.0.18-beta.138
+        });
         m.BindEventCallback("vs_buy", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
             State& st = state();
             if (vs::total(st.rows) > 0 && vs::total(st.rows) <= st.show.zeny) press(st, kBuyButton);
@@ -504,6 +542,7 @@ static void liveFrame(State& s) {
     for (const vs::Row& r : s.rows) {
         VendRowView v;
         v.name = r.refine > 0 ? "+" + std::to_string(r.refine) + " " + r.name : r.name;
+        v.inside = r.inside;
         std::string stock = t.stock;
         if (const size_t p = stock.find("{1}"); p != std::string::npos) stock.replace(p, 3, std::to_string(r.stock));
         v.stock = stock;
@@ -632,6 +671,7 @@ void padCommand(PadCommand c) {
             if (vs::total(s.rows) > 0 && vs::total(s.rows) <= s.show.zeny) press(s, kBuyButton);
             break;
         case PadCommand::Cancel: press(s, kCancelButton); break;
+        case PadCommand::Card: card(s, s.show.focus, "the controller's Y"); break;
     }
     s.key.clear();
 }

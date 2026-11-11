@@ -821,7 +821,7 @@ bool cartPad(const PadState& pad, DWORD now) {
 }
 
 // 3.0.11-beta.156: «Лавка» open - the D-pad (or the left stick) up and down a row, A one more of it, X one less, Y
-// buys, B gives up
+// its item card (3.0.18-beta.138; was buy), Start buys, B gives up
 bool vendPad(const PadState& pad, DWORD now) {
     State& s = S();
     const uint16_t buttons = pad.connected ? pad.buttons : 0;
@@ -830,7 +830,8 @@ bool vendPad(const PadState& pad, DWORD now) {
     using uagfx::win::vendshopwin::PadCommand;
     const std::pair<uint16_t, PadCommand> keys[] = {{kPadUp, PadCommand::Up}, {kPadDown, PadCommand::Down},
                                                     {kPadA, PadCommand::More}, {kPadX, PadCommand::Less},
-                                                    {kPadY, PadCommand::Buy},  {kPadB, PadCommand::Cancel}};
+                                                    {kPadY, PadCommand::Card}, {kPadStart, PadCommand::Buy},
+                                                    {kPadB, PadCommand::Cancel}};  // .138: Y the card, Start buys
     for (const auto& [button, command] : keys)
         if (down & button) uagfx::win::vendshopwin::padCommand(command);
     return true;

@@ -593,6 +593,9 @@ select selectbox option:checked { color: #e6cb8a; }
 .lw .wname { display: block; flex: 1; }
 .lw .wname .name { display: block; font-size: 12.5dp; }
 .lw .wname .stock { display: block; font-size: 10.5dp; color: #9aa3b5; }
+/* 3.0.18-beta.138: a ware's cards and free slots; its name opens its card */
+.vsw .wname .inside { display: block; font-size: 10.5dp; color: #b8c8ff; }
+.vsw .wname:hover .name { color: #e6cb8a; }
 .lw .price { font-size: 12dp; color: #e6cb8a; margin-right: 10dp; }
 .lw .pm { display: block; width: 22dp; height: 22dp; line-height: 22dp; text-align: center; border-radius: 6dp;
           background-color: #ffffff14; font-weight: bold; }
