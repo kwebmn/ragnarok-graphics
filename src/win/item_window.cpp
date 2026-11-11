@@ -570,10 +570,22 @@ bool toastFrame(State& s) {
             }))
             return false;
     }
-    u.w = float(s.toastW), u.h = float(s.toastH), u.s = s.toastScale;
-    u.x = float(x), u.y = float(y), u.tw = float(w), u.th = float(h), u.op = fade;
-    u.text = s.toast;
-    u.doc.dirtyAll();
+    // 3.0.18-beta.173 (R-AKUGNX: «item toast» all its data said again each frame - 85 times a second): only what
+    // changed (its fade's opacity, mostly)
+    const auto said = [&](auto& field, const auto& value, const char* name) {
+        if (field == value) return;
+        field = value;
+        u.doc.dirty(name);
+    };
+    said(u.w, float(s.toastW), "w");
+    said(u.h, float(s.toastH), "h");
+    said(u.s, s.toastScale, "s");
+    said(u.x, float(x), "x");
+    said(u.y, float(y), "y");
+    said(u.tw, float(w), "tw");
+    said(u.th, float(h), "th");
+    said(u.op, fade, "op");
+    said(u.text, Rml::String(s.toast), "text");
     u.doc.place(0, 0);
     u.doc.show(true);
     return true;

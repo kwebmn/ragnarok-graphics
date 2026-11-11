@@ -155,9 +155,13 @@ bool uiFrame(State& s) {
             }))
             return false;
     }
-    u.w = float(s.targetW), u.h = float(s.targetH), u.s = s.scale;
+    // 3.0.18-beta.173 (R-AKUGNX: «exp gain» all its data said again each frame - up to 69 times a second): the
+    // floaters each frame (they rise), the sizes on a change alone
+    if (u.w != float(s.targetW)) u.w = float(s.targetW), u.doc.dirty("w");
+    if (u.h != float(s.targetH)) u.h = float(s.targetH), u.doc.dirty("h");
+    if (u.s != s.scale) u.s = s.scale, u.doc.dirty("s");
     u.floaters = std::move(now);
-    u.doc.dirtyAll();  // they rise each frame
+    u.doc.dirty("floaters");  // they rise each frame
     u.doc.place(0, 0);
     u.doc.show(true);
     return true;

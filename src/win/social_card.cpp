@@ -51,6 +51,7 @@ constexpr int kButtonMsg = 6, kMostFriends = 40;
 constexpr size_t kMostNodes = 100;
 
 struct State {
+    int saidMenuRow = -2, saidMenuFocus = -2;  // 3.0.18-beta.173: the menu's row and focus RmlUi was told last
     uilive::Window live;  // 3.0.18-beta.81
     ul::Model mv;  // 3.0.18-beta.141: the live window's model (uikit/social_live)
     std::vector<int> rowEntry;              // a shown row's entry (the friends online first)
@@ -431,6 +432,11 @@ static void liveFrame(State& s) {
         });
     });
     if (!s.live.made()) return;
+    if (!s.shown) {  // 3.0.18-beta.173 (R-AKUGNX: its data marked changed each frame, closed too): hidden alone
+        s.live.frame(false, s.layout.x, s.layout.y, int(winstack::Win::Social),
+                     ".tab, .row, .btn, .x, .qb, .mi, .sset");
+        return;
+    }
     using settings::Text;
     const sc::Texts t = texts(s);
     const bool party = s.show.tab == sc::Tab::Party;
@@ -505,8 +511,8 @@ static void liveFrame(State& s) {
         v.nameHint = say(Text::SocialNameField), v.add = say(Text::SocialAdd);
         s.live.doc.dirtyAll();
     }
-    s.live.doc.dirty("menu_row");
-    s.live.doc.dirty("menu_focus");
+    if (v.menuRow != s.saidMenuRow) s.saidMenuRow = v.menuRow, s.live.doc.dirty("menu_row");  // .173: on a change
+    if (v.menuFocus != s.saidMenuFocus) s.saidMenuFocus = v.menuFocus, s.live.doc.dirty("menu_focus");
     s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Social), ".tab, .row, .btn, .x, .qb, .mi, .sset");
 }
 
