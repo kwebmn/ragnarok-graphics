@@ -531,8 +531,10 @@ select selectbox option:checked { color: #e6cb8a; }
 .lw .gauge { display: block; height: 7dp; margin-top: 4dp; border-radius: 4dp; background-color: #ffffff1a; }
 .lw .gauge .fill { display: block; height: 7dp; border-radius: 4dp; background-color: #5fd08a; }
 .lw .gauge .fill.love { background-color: #f07aa8; }
-.lw .grid4 { display: flex; flex-wrap: wrap; margin-top: 12dp; }
-.lw .grid4 .btn { width: 46%; margin: 0 4% 6dp 0; text-align: center; }
+/* 3.0.18-beta.140 (R-JA8NME, a clumsy look): two in a row - their padding inside the width (46% + 4% + padding was over
+   100%: one a row, pushed right by .btns) */
+.lw .grid4 { display: flex; flex-wrap: wrap; justify-content: space-between; margin-top: 12dp; }
+.lw .grid4 .btn { box-sizing: border-box; width: 49%; margin: 0 0 6dp 0; text-align: center; }
 .lw .btn.off { color: #9aa3b5; background-color: #ffffff08; }
 .macw { width: 460dp; }
 .macw .mrow { display: flex; align-items: center; margin-bottom: 4dp; }
@@ -563,20 +565,23 @@ select selectbox option:checked { color: #e6cb8a; }
 .roomw .acts { display: flex; flex-wrap: wrap; margin-top: 6dp; }
 .roomw .crown { color: #e6cb8a; }
 .socw { width: 400dp; }
-.socw .list { display: block; height: 260dp; overflow-y: auto; margin: 4dp 0 8dp 0; }
+.socw .list { display: block; min-height: 40dp; max-height: 260dp; overflow-y: auto; margin: 4dp 0 8dp 0; }
 .socw .row { display: flex; justify-content: space-between; font-size: 12.5dp; }
 .socw .row.off { color: #9aa3b5; }
 .socw .where { font-size: 11.5dp; color: #9aa3b5; }
 .pkw { width: 400dp; }
-.pkw .list { display: block; height: 280dp; overflow-y: auto; margin: 4dp 0 8dp 0; }
+.pkw .list { display: block; min-height: 40dp; max-height: 280dp; overflow-y: auto; margin: 4dp 0 8dp 0; }
 .pkw .row { display: flex; align-items: center; font-size: 12.5dp; min-height: 30dp; }
 .pkw .row img { width: 26dp; height: 26dp; margin-right: 8dp; }
 .npw { width: 560dp; }
 .npw .count { margin-left: 10dp; font-size: 11.5dp; color: #9aa3b5; }
 .npw .talk { display: block; margin: 4dp 0 10dp 0; }
 .npw .tline { display: block; font-size: 13.5dp; line-height: 20dp; }
-.npw .opts { display: flex; flex-wrap: wrap; }
-.npw .opt { display: flex; align-items: center; width: 48%; margin: 0 2% 5dp 0; padding: 4dp 8dp; border-radius: 8dp;
+/* 3.0.18-beta.140: two answers a row - padding and border inside the width (48% + 2% + 18dp was over half: one a
+   row, the right half empty) */
+.npw .opts { display: flex; flex-wrap: wrap; justify-content: space-between; }
+.npw .opt { box-sizing: border-box; display: flex; align-items: center; width: 49%; margin: 0 0 5dp 0;
+            padding: 4dp 8dp; border-radius: 8dp;
             background-color: #ffffff0d; border: 1dp #ffffff0f; font-size: 12.5dp; }
 .npw .opt:hover { background-color: #ffffff1a; }
 .npw .opt.on { background-color: #c9a55b29; border-color: #f3c653d9; }
