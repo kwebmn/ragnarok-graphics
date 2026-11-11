@@ -912,6 +912,7 @@ enum class Text : uint16_t {
     InterfaceSecKeys, InterfaceKeyHunt, InterfaceKeyMvp, InterfaceKeyTracker, InterfaceKeyParty, InterfaceKeyRecap,
     InterfaceKeyHint, KeyOff, KeyCtrlB, KeyCtrlD, KeyCtrlG, KeyCtrlH, KeyCtrlI, KeyCtrlJ, KeyCtrlK, KeyCtrlL, KeyCtrlN,
     KeyCtrlU, KeyCtrlY,  // 3.0.18-beta.125
+    CharOwnMore,  // 3.0.18-beta.128
     Count
 };
 

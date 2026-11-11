@@ -354,7 +354,7 @@ float share(int value, int next, int level) {
 // the clicks through RmlUi's events into press() and changeView(); its picture not painted then ----
 
 const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="cb" data-model="charblock" data-style-width="w + 'dp'" data-style-height="h + 'dp'">
+<body class="cb" data-model="charblock" data-style-width="w + extra_w + 'dp'" data-style-height="h + 'dp'">
 <div class="card" data-style-width="w + 'dp'" data-style-height="h + 'dp'" data-if="view != 2 && !(view == 1 && look == 1)"></div>
 <div class="zone" style="left: 0; top: 0;" data-style-width="w + 'dp'" data-style-height="h + 'dp'"
      data-event-mouseover="hover(3, 0)" data-event-mouseout="unhover()"></div>
@@ -452,6 +452,14 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
  <span class="badge" data-style-left="ring_d / 2 - ring_badge_w / 2 + 'dp'" data-style-top="ring_d - ring_badge_h * 0.6 - ring_gap + 'dp'"
        data-style-width="ring_badge_w + 'dp'" data-style-height="ring_badge_h + 'dp'" data-style-line-height="ring_badge_h + 'dp'">{{badge}}</span>
 </div>
+<div data-if="view != 0 && own.size > 0">
+ <div class="button own more" style="width: 30dp; height: 26dp; top: 0;" data-style-left="w + 6 + 'dp'"
+      data-class-lit="own_open" data-event-click="own_more()" data-event-mouseover="hover(7, 0)"
+      data-event-mouseout="unhover()"><span class="dots">&#x2026;</span></div>
+ <div class="button own" style="width: 32dp; height: 26dp; top: 0;" data-if="own_open" data-for="b, i : own"
+      data-style-left="w + 42 + i * 38 + 'dp'" data-class-lit="b.lit" data-event-click="own(i)"
+      data-event-mouseover="hover(6, i)" data-event-mouseout="unhover()"><img data-attr-src="b.icon"/></div>
+</div>
 <span class="warning away" id="warning" data-style-top="h + 8 + 'dp'" style="left: 0;">{{low_text}}</span>
 <div class="tip" data-if="tip.size > 0" data-style-left="tip_left + 'dp'" data-style-top="tip_top + 'dp'">
  <p data-for="l, i : tip" data-class-first="i == 0">{{l}}</p></div>
@@ -478,6 +486,10 @@ struct Ui {
     std::vector<OwnV> own;
     std::vector<closedwin::Own> ownKinds;
     float gameRow = 38;  // the game's row's top from the block's foot (72 over the second row)
+    // 3.0.18-beta.128 (item 7): the small views' «…» right of the block, our windows' row beside it when open; the
+    // body that much wider (its blocker takes their clicks)
+    bool ownOpen = false;
+    float extraW = 0;
     panel::Picture ownIcons[size_t(closedwin::Own::Count)];
     std::string ownSrc[size_t(closedwin::Own::Count)];
     float ownPx = 0;
@@ -550,11 +562,16 @@ void tipFor(int kind, int index) {  // the tip of what the mouse is over (kind: 
     if (kind == 0 && index >= 0 && index < cb::kZones) lines = u.m.zoneTips[index];
     else if (kind == 1) lines = index == 0 ? u.m.baseExp.tip : u.m.jobExp.tip;
     else if (kind == 2 && index >= 0 && index < cb::kButtons) lines = {texts().buttons[index]};
-    else if (kind == 5 && index >= 0 && size_t(index) < u.ownKinds.size()) lines = {ownTip(u.ownKinds[size_t(index)])};
+    else if ((kind == 5 || kind == 6) && index >= 0 && size_t(index) < u.ownKinds.size())
+        lines = {ownTip(u.ownKinds[size_t(index)])};
+    else if (kind == 7) lines = {say(settings::Text::CharOwnMore)};
     else if (kind == 3 && u.view != 0) lines = u.m.bodyTip;
     else if (kind == 4 && !u.m.portraitTip.empty()) lines = {u.m.portraitTip};
     u.tip.assign(lines.begin(), lines.end());
-    u.tipLeft = kind == 2 || kind == 5 ? 12 + float(index) * 38 : 0;
+    u.tipLeft = kind == 2 || kind == 5 ? 12 + float(index) * 38
+                : kind == 6               ? u.w + 42 + float(index) * 38
+                : kind == 7               ? u.w + 6
+                                          : 0;
     u.tipTop = u.h + 6 + (u.warningShown ? 36 : 0);
     u.doc.dirty("tip");
     u.doc.dirty("tip_left");
@@ -633,6 +650,14 @@ bool uiMake() {
         m.RegisterArray<std::vector<Ui::OwnV>>();
         m.Bind("own", &u.own);
         m.Bind("game_row", &u.gameRow);
+        m.Bind("own_open", &u.ownOpen);
+        m.Bind("extra_w", &u.extraW);
+        m.BindEventCallback("own_more", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            Ui& u = ui();
+            u.ownOpen = !u.ownOpen;
+            u.doc.dirty("own_open");
+            u.key.clear();  // its width again
+        });
         m.Bind("tip", &u.tip);
         m.Bind("tip_left", &u.tipLeft);
         m.Bind("tip_top", &u.tipTop);
@@ -765,6 +790,10 @@ bool uiFrame(State& s, const cb::View view, const cb::Look look, const std::stri
         }
         for (size_t i = 0; !changed && i < own.size(); ++i)
             changed = i >= u.own.size() || own[i].lit != u.own[i].lit || own[i].icon != u.own[i].icon;
+        // .128: the small views - «…» and, open, the row beside it
+        const float extra = u.view == 0 || kinds.empty() ? 0.0f
+                                                         : 36.0f + (u.ownOpen ? 38.0f * float(kinds.size()) : 0.0f);
+        if (extra != u.extraW) u.extraW = extra, u.doc.dirty("extra_w");
         if (changed) {
             u.ownKinds = kinds;
             u.own = std::move(own);

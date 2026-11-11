@@ -123,6 +123,7 @@ select selectbox option:checked { color: #e6cb8a; }
 /* 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): the second row - our windows, gold-edged while open */
 .cb .button.own { border-width: 1dp; border-color: #ffffff14; }
 .cb .button.own.lit { border-color: #e6cb8a; background-color: #e6cb8a22; }
+.cb .button.more .dots { display: block; text-align: center; line-height: 24dp; font-size: 16dp; color: #eceff5; }
 .cb .badge { position: absolute; border-radius: 9dp; background-color: #10141c; border: 1dp #c9a55b;
              text-align: center; font-weight: bold; font-size: 12dp; }
 .cb .zone { position: absolute; }

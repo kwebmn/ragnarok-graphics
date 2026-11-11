@@ -61,3 +61,6 @@ Ledger:
   original. Cost if the owner wants them: the weapon sprite tables (weapon view, job weapon names) to find.
 - 3.0.18-beta.127 (item 4): «Картка цілі»'s «lines[4].colour» / «color: ;» (R-7TVEJU) - its details' list never
   shorter than before (at least 12, the spare rows empty and hidden by data-if): no row past the list's end.
+- 3.0.18-beta.128 (owner «1,6,7,8» - item 7): the Alt+V block's small views (compact, rings, icon) - «…» right of the
+  block, a click opens our windows' row beside it (lit while open, tips with keys); the body that much wider so its
+  blocker takes those clicks.
