@@ -1,3 +1,5 @@
+- Cards now show in item names in another's shop and your own, the shop setup, trade, storage and the bag (e.g. "Double Lucky Katana of Counter"), as in "Equipment".
+
 - "Equipment": the cart / falcon / Peco sign asks first ("Get off the Peco?" - "Yes" / "No"); a stray click takes nothing off.
 
 - "Equipment": the button for the cart, the falcon and the Peco is now a round sign between the ◀ ▶ arrows; what it does shows in a tip under the cursor.
