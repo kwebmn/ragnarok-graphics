@@ -48,6 +48,9 @@ struct Model {
 
 const char* rml();
 void bind(Rml::DataModelConstructor& c, Model& m);
+// 3.0.18-beta.175 (R-6PYQQG: «Речі» said all its data again ~60 times a second while open - each use's 0.6 s flash
+// another generation, the whole model to RmlUi): the names (as bind() binds them) of the variables that differ
+std::vector<const char*> changed(const Model& was, const Model& now);
 // A picture's source for <img> ("" none)
 using Source = std::function<std::string(const panel::Picture*)>;
 // The model from the window's things; `L` the window's layout (refit: the flashes found by their cells)

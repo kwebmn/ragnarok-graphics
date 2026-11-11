@@ -71,6 +71,70 @@ std::string hex(uint32_t rgb) {
 
 const char* rml() { return kRml; }
 
+namespace {
+
+bool same(const TabV& a, const TabV& b) {
+    return a.name == b.name && a.fresh == b.fresh && a.on == b.on && a.hot == b.hot;
+}
+
+bool same(const CellV& a, const CellV& b) {
+    return a.index == b.index && a.hit == b.hit && a.icon == b.icon && a.count == b.count && a.refine == b.refine &&
+           a.mark == b.mark && a.markCls == b.markCls && a.fresh == b.fresh && a.star == b.star &&
+           a.rising == b.rising && a.risingColour == b.risingColour && a.ele == b.ele && a.picked == b.picked &&
+           a.hot == b.hot && a.starOn == b.starOn && a.op == b.op && a.iconW == b.iconW && a.iconH == b.iconH &&
+           a.flash == b.flash && a.ring == b.ring && a.rise == b.rise;
+}
+
+template <class T>
+bool sameList(const std::vector<T>& a, const std::vector<T>& b) {
+    if (a.size() != b.size()) return false;
+    for (size_t i = 0; i < a.size(); ++i)
+        if (!same(a[i], b[i])) return false;
+    return true;
+}
+
+}  // namespace
+
+std::vector<const char*> changed(const Model& was, const Model& now) {
+    std::vector<const char*> out;
+    const auto field = [&](const char* name, const auto& a, const auto& b) {
+        if (!(a == b)) out.push_back(name);
+    };
+    field("ground", was.ground, now.ground);
+    field("base", was.base, now.base);
+    field("title", was.title, now.title);
+    field("hotkey", was.hotkey, now.hotkey);
+    field("query", was.query, now.query);
+    field("hint", was.hint, now.hint);
+    field("searchIcon", was.searchIcon, now.searchIcon);
+    field("also", was.also, now.also);
+    field("weightWord", was.weightWord, now.weightWord);
+    field("weightText", was.weightText, now.weightText);
+    field("zeny", was.zeny, now.zeny);
+    field("tone", was.tone, now.tone);
+    field("typing", was.typing, now.typing);
+    field("caret", was.caret, now.caret);
+    field("bar", was.bar, now.bar);
+    field("dropping", was.dropping, now.dropping);
+    field("scrollable", was.scrollable, now.scrollable);
+    field("tip", was.tip, now.tip);
+    field("closeHot", was.closeHot, now.closeHot);
+    field("fill", was.fill, now.fill);
+    field("thumbTop", was.thumbTop, now.thumbTop);
+    field("thumbH", was.thumbH, now.thumbH);
+    field("tipX", was.tipX, now.tipX);
+    field("tipY", was.tipY, now.tipY);
+    field("tip1", was.tip1, now.tip1);
+    field("pickedText", was.pickedText, now.pickedText);
+    field("tipColour", was.tipColour, now.tipColour);
+    field("tip2", was.tip2, now.tip2);
+    field("tip3", was.tip3, now.tip3);
+    field("tip4", was.tip4, now.tip4);
+    if (!sameList(was.tabs, now.tabs)) out.push_back("tabs");
+    if (!sameList(was.cells, now.cells)) out.push_back("cells");
+    return out;
+}
+
 void bind(Rml::DataModelConstructor& c, Model& m) {
     if (auto t = c.RegisterStruct<TabV>()) {
         t.RegisterMember("name", &TabV::name);

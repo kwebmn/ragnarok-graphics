@@ -157,3 +157,32 @@ TEST(uikit_item_grid_takes_the_windows_own_scale) {
     CHECK(std::abs(float(L.w) - 625) < 2.5f);
     rmlhost::close(d);
 }
+
+// 3.0.18-beta.175 (R-6PYQQG: «Речі» said all its data again ~60 times a second while open - each use's 0.6 s flash
+// gave the window another generation, and the whole model went to RmlUi): the model's variables that changed alone
+TEST(uikit_item_grid_tells_the_variables_that_changed_alone) {
+    ig::Model was;
+    was.weightText = "100 / 2000 · 5 %";
+    was.fill = 5;
+    was.cells.assign(4, ig::CellV{});
+    was.tabs.assign(2, ig::TabV{});
+    ig::Model now = was;
+    CHECK(ig::changed(was, now).empty());  // the same: nothing to say
+    now.cells[1].flash = 0.5f;               // a use's flash in its cell
+    std::vector<std::string> names;
+    for (const char* n : ig::changed(was, now)) names.push_back(n);
+    CHECK(names.size() == 1 && names[0] == "cells");
+    now = was;
+    now.weightText = "120 / 2000 · 6 %";
+    now.fill = 6;
+    names.clear();
+    for (const char* n : ig::changed(was, now)) names.push_back(n);
+    CHECK(names.size() == 2);
+    CHECK(std::find(names.begin(), names.end(), "weightText") != names.end());
+    CHECK(std::find(names.begin(), names.end(), "fill") != names.end());
+    now = was;
+    now.tabs[0].hot = true;  // a tab pointed at
+    names.clear();
+    for (const char* n : ig::changed(was, now)) names.push_back(n);
+    CHECK(names.size() == 1 && names[0] == "tabs");
+}

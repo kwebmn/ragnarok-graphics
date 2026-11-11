@@ -41,6 +41,7 @@ bool Ui::frame(const char* name, bool on, int x, int y, int generation, const iw
     }
     if (generation != gen) {
         gen = generation;
+        const ig::Model before = model;  // 3.0.18-beta.175: what changed alone said to RmlUi
         model.ground = hexOf(0x10141C, int(std::lround(uistyle::window() * 255)));
         const int side = std::max(8, int(std::lround(15 * L.s)));
         auto it = made.find("search" + std::to_string(side));
@@ -55,7 +56,8 @@ bool Ui::frame(const char* name, bool on, int x, int y, int generation, const iw
         ig::fill(model, L, items, shown, sh, t, [&](const panel::Picture* p) {
             return source(*this, "i:" + std::to_string(uintptr_t(p)), p);
         });
-        doc.dirtyAll();
+        // 3.0.18-beta.175 (R-6PYQQG: ~60 times a second all of it while open - each use's flash a generation)
+        for (const char* name : ig::changed(before, model)) doc.dirty(name);
     }
     if (model.tip) {  // beside the pointed cell, by the tip's own size as laid out last
         const float tx = model.tipX, ty = model.tipY;

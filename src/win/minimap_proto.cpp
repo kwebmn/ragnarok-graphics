@@ -1310,6 +1310,19 @@ struct WordV {
     Rml::String text, colour = "#eceff5", cls;
 };
 
+// 3.0.18-beta.175 (R-6PYQQG: the minimap said all its data again up to 15 times a second - its map's picture new
+// each time, its buttons and words mostly the same): the lists compared, only the changed ones said to RmlUi
+bool operator==(const BoxV& a, const BoxV& b) {
+    return a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h && a.r == b.r && a.e == b.e && a.cls == b.cls;
+}
+bool operator==(const IconV& a, const IconV& b) {
+    return a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h && a.src == b.src;
+}
+bool operator==(const WordV& a, const WordV& b) {
+    return a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h && a.px == b.px && a.text == b.text &&
+           a.colour == b.colour && a.cls == b.cls;
+}
+
 struct Ui {
     uaui::Doc doc;
     float w = 0, h = 0, side = 0, op = 1;
@@ -1402,6 +1415,12 @@ bool uiFrame(State& s) {
     const float op = s.look == minimap::Look::Faded ? minimap::opacity(s.look) : 1.0f;  // Ctrl+Tab's see-through
     if (s.uiGen != u.gen || op != u.op) {
         u.gen = s.uiGen;
+        // 3.0.18-beta.175: what it said before - only what changed said again
+        const float wasW = u.w, wasH = u.h, wasSide = u.side, wasOp = u.op;
+        const Rml::String wasSquare = u.square, wasGround = u.ground;
+        const std::vector<BoxV> wasCards = u.cards, wasBoxes = u.boxes, wasBars = u.bars;
+        const std::vector<IconV> wasIcons = u.icons;
+        const std::vector<WordV> wasWords = u.words;
         const minimap::Layout& L = s.layout;
         const float sc = L.s, edge = std::max(1.0f, sc);
         u.w = float(L.w), u.h = float(L.h), u.side = L.map.w, u.op = op;
@@ -1493,7 +1512,17 @@ bool uiFrame(State& s) {
             u.words.push_back(WordV{w.box.x, w.box.y, w.box.w, w.box.h, w.px, w.text, hexOf(w.rgb),
                                     std::string(w.bold ? "word bold" : "word") + align});
         }
-        u.doc.dirtyAll();
+        if (u.w != wasW) u.doc.dirty("w");
+        if (u.h != wasH) u.doc.dirty("h");
+        if (u.side != wasSide) u.doc.dirty("side");
+        if (u.op != wasOp) u.doc.dirty("op");
+        if (u.square != wasSquare) u.doc.dirty("square");
+        if (u.ground != wasGround) u.doc.dirty("ground");
+        if (u.cards != wasCards) u.doc.dirty("cards");
+        if (u.boxes != wasBoxes) u.doc.dirty("boxes");
+        if (u.bars != wasBars) u.doc.dirty("bars");
+        if (u.icons != wasIcons) u.doc.dirty("icons");
+        if (u.words != wasWords) u.doc.dirty("words");
     }
     u.doc.place(s.layout.x, s.layout.y);
     u.doc.show(true);
