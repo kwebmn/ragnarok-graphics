@@ -246,6 +246,42 @@ bool compose(const std::vector<Part>& parts, Image& out, int& footX, int& footY,
     return true;
 }
 
+bool readImf(const std::string& bytes, Imf& out) {
+    In in{bytes};
+    if (bytes.size() < 12) return false;
+    in.u(4);  // the version (1.01)
+    in.u(4);  // a checksum
+    const uint32_t last = in.u(4);
+    if (last > 16) return false;
+    Imf imf;
+    for (uint32_t l = 0; l <= last && in.ok; ++l) {
+        const uint32_t actions = in.u(4);
+        if (actions > 1024) return false;
+        std::vector<std::vector<int>> layer;
+        for (uint32_t a = 0; a < actions && in.ok; ++a) {
+            const uint32_t frames = in.u(4);
+            if (frames > 1024) return false;
+            std::vector<int> pr;
+            for (uint32_t f = 0; f < frames && in.ok; ++f) {
+                pr.push_back(in.i32());
+                in.skip(8);  // its point
+            }
+            layer.push_back(std::move(pr));
+        }
+        imf.priority.push_back(std::move(layer));
+    }
+    if (!in.ok) return false;
+    out = std::move(imf);
+    return true;
+}
+
+int imfPriority(const Imf& imf, size_t layer, size_t action, size_t frame) {
+    if (layer >= imf.priority.size() || action >= imf.priority[layer].size() ||
+        frame >= imf.priority[layer][action].size())
+        return -1;
+    return imf.priority[layer][action][frame];
+}
+
 bool frameImage(const Sprite& s, const Act& a, size_t action, size_t frame, Image& out) {
     return frameImageScaled(s, a, action, frame, 1, nullptr, out);
 }

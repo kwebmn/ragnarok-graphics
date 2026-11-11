@@ -245,3 +245,33 @@ TEST(sprite_file_cut_to_what_shows) {
     CHECK_EQ(c.argb[size_t(3 * 4 + 3)], 0xFF445566u);
     CHECK_EQ(spritefile::cutToShown(spritefile::Image{}, 8).w, 0);
 }
+
+// 3.0.18-beta.126 (item 3: «Спорядження»'s character as uaRO.exe FUN_0046fd40 draws it): a job's .imf
+// (data\imf\, FUN_0062e920 "%s%s.imf") - version 1.01, a checksum, the last layer's number, each layer's actions'
+// frames' priority and a point; the body over the head where its priority is the higher (the priestess's veil)
+TEST(sprite_file_imf_priorities) {
+    std::string b;
+    const auto u32 = [&](uint32_t v) { for (int i = 0; i < 4; ++i) b.push_back(char(v >> (8 * i))); };
+    const float version = 1.01f;
+    uint32_t vbits = 0;
+    std::memcpy(&vbits, &version, 4);
+    u32(vbits);
+    u32(0);
+    u32(1);  // layers 0 and 1
+    for (int layer = 0; layer < 2; ++layer) {
+        u32(2);  // two actions
+        for (int a = 0; a < 2; ++a) {
+            u32(1);  // one frame
+            u32(layer == 0 && a == 1 ? 1 : 0);
+            u32(0);
+            u32(0);
+        }
+    }
+    spritefile::Imf imf;
+    CHECK(spritefile::readImf(b, imf));
+    CHECK_EQ(spritefile::imfPriority(imf, 0, 1, 0), 1);
+    CHECK_EQ(spritefile::imfPriority(imf, 1, 1, 0), 0);
+    CHECK_EQ(spritefile::imfPriority(imf, 0, 0, 0), 0);
+    CHECK_EQ(spritefile::imfPriority(imf, 0, 5, 0), -1);  // past its actions: none
+    CHECK(!spritefile::readImf("xx", imf));
+}

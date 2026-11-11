@@ -14,6 +14,7 @@ namespace uagfx::win::heropicture {
 // 0x10 falcon, carts).
 struct Looks {
     int job = 0, sex = 0, head = 0, colour = 0, low = 0, top = 0, middle = 0;
+    int cloth = 0;  // 3.0.18-beta.126: the clothes' dye (0x77190C - the body's palette, FUN_006399e0)
     uint32_t options = 0;
     bool operator==(const Looks& o) const;
 };

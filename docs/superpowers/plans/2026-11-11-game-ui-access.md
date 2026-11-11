@@ -53,3 +53,9 @@ Ledger:
   or Ctrl+B D G H I J K L N U Y (the letters uaRO.exe leaves free with Ctrl; C X Z S the fields'); schema rows, the
   app's «Інтерфейс» section «Клавіші» (so «Налаштування» too), shipped ini, applied at once (tests); the icons' tips
   show the key given. Ruling: one letter for two windows - the first in the row wins (no check). Cost: a confusion.
+- 3.0.18-beta.126 (item 3, «Спорядження»'s character): facts - uaRO.exe FUN_0046fd40 draws the body, the head, the
+  three headgears, the body's palette (0x77190C - the clothes' dye, not the weapon: FUN_006399e0 "몸\%s%s_%d.pal") and
+  the hair's, and the job's .imf (FUN_0062e920, data\imf\) - no weapon, no shield. Built: the clothes' dye
+  (data\palette\몸\<+0x90c name><ending>_<n>.pal), the .imf order (core readImf/imfPriority, test; format checked on
+  UaRO.grf's 성직자_여.imf: the body 1 over the head 0 standing - the veil). Ruling: no weapon / shield, as the
+  original. Cost if the owner wants them: the weapon sprite tables (weapon view, job weapon names) to find.

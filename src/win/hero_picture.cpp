@@ -18,6 +18,11 @@ constexpr uint32_t kBodies = kSession + 0x830, kFolders = kSession + 0x840, kAcc
 constexpr uint32_t kEndings = kSession + 0x8A0;
 constexpr uint32_t kJob = 0x771F8C, kSex = 0x772DEC, kHead = 0x7718F4, kLow = 0x771900, kTop = 0x771904;
 constexpr uint32_t kMiddle = 0x771908, kColour = 0x771910, kOptions = 0x77191C;
+// 3.0.18-beta.126 (item 3: as uaRO.exe FUN_0046fd40 draws it): the clothes' dye (0x77190C) by the session's +0x90c
+// names - "몸\%s%s_%d.pal" (FUN_006399e0) under data\palette\; the job's .imf by its +0x870 names - "%s%s.imf"
+// (FUN_0062e920) under data\imf\: the body over the head where its priority is the higher
+constexpr uint32_t kCloth = 0x77190C, kBodyPalettes = kSession + 0x90C, kImfs = kSession + 0x870;
+const std::string kBodyPal = "\xB8\xF6\\";  // 몸\ (CP949)
 constexpr int kMostView = 4096;
 const std::string kBody = "\xC0\xCE\xB0\xA3\xC1\xB7\\\xB8\xF6\xC5\xEB\\";  // 인간족\몸통\ (CP949)
 const std::string kAccessory = "\xBE\xC7\xBC\xBC\xBB\xE7\xB8\xAE\\";        // 악세사리\ (CP949)
@@ -65,7 +70,7 @@ Loaded load(const std::string& base) {
 
 bool Looks::operator==(const Looks& o) const {
     return job == o.job && sex == o.sex && head == o.head && colour == o.colour && low == o.low && top == o.top &&
-           middle == o.middle && options == o.options;
+           middle == o.middle && options == o.options && cloth == o.cloth;
 }
 
 int shownJob(int job, uint32_t options) {
@@ -92,6 +97,7 @@ Looks own() {
     l.top = int(read32(kTop));
     l.middle = int(read32(kMiddle));
     l.options = read32(kOptions);
+    l.cloth = int(read32(kCloth));
     return l;
 }
 
@@ -106,7 +112,20 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
         return false;
     }
     const std::string bodyBase = "data\\sprite\\" + kBody + folder + "\\" + bodyName + ending;
-    Loaded body = load(bodyBase);
+    Loaded body;
+    {  // 3.0.18-beta.126: the clothes' dye in the body's palette, as the game
+        std::string act;
+        body.ok = headpicture::readFile(bodyBase + ".spr", body.spr) && headpicture::readFile(bodyBase + ".act", act);
+        const std::string palName = nameAt(kBodyPalettes, shownJob(l.job, l.options));
+        std::string pal;
+        if (body.ok && l.cloth > 0 && l.cloth < 1000 && !palName.empty() &&
+            headpicture::readFile("data\\palette\\" + kBodyPal + palName + ending + "_" + std::to_string(l.cloth) +
+                                      ".pal",
+                                  pal) &&
+            pal.size() >= 1024 && body.spr.size() > 1024)
+            body.spr.replace(body.spr.size() - 1024, 1024, pal, 0, 1024);
+        body.ok = body.ok && spritefile::readSpr(body.spr, body.sprite) && spritefile::readAct(act, body.act);
+    }
     if (!body.ok) {
         if (from) *from = "the body " + bodyBase + " not read";
         return false;
@@ -152,8 +171,20 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
     };
     std::vector<spritefile::Part> parts;  // under to over: the cart, the body, the head, its headgear, the falcon
     if (cart.ok) parts.push_back({&cart.sprite, &cart.act, size_t(dir), 0, false, 0, 0, false, from4(cart)});
-    parts.push_back({&body.sprite, &body.act, size_t(dir), 0, false, 0, 0, true, from4(body)});
+    bool bodyOver = false;  // 3.0.18-beta.126: the job's .imf - the body over the head in this frame
+    {
+        const std::string imfName = nameAt(kImfs, shownJob(l.job, l.options));
+        std::string bytes;
+        spritefile::Imf imf;
+        if (!imfName.empty() && headpicture::readFile("data\\imf\\" + imfName + ending + ".imf", bytes) &&
+            spritefile::readImf(bytes, imf))
+            bodyOver = spritefile::imfPriority(imf, 0, size_t(dir), 0) >
+                       spritefile::imfPriority(imf, 1, size_t(dir), 0);
+    }
+    const spritefile::Part bodyPart{&body.sprite, &body.act, size_t(dir), 0, false, 0, 0, true, from4(body)};
+    if (!bodyOver) parts.push_back(bodyPart);
     if (head.ok) parts.push_back({&head.sprite, &head.act, size_t(dir), 0, true, 0, 0, false, from4(head)});
+    if (bodyOver) parts.push_back(bodyPart);
     for (const Loaded& g : gear) parts.push_back({&g.sprite, &g.act, size_t(dir), 0, true, 0, 0, false, from4(g)});
     if (falcon.ok) {  // perched: its feet (its frame's foot, 22 under its origin) on the shoulder beside the neck
         int nx = 0, ny = -70;
@@ -192,7 +223,9 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
     out.height = fit.h;
     out.px = fit.argb;
     if (from)
-        *from = bodyBase + (head.ok ? " + head" : "") + " + " + std::to_string(gear.size()) + " headgear(s)" +
+        *from = bodyBase + (l.cloth > 0 ? " dyed " + std::to_string(l.cloth) : "") +
+                (bodyOver ? " (over the head)" : "") +
+                (head.ok ? " + head" : "") + " + " + std::to_string(gear.size()) + " headgear(s)" +
                 (cart.ok ? " + cart" : "") + (falcon.ok ? " + falcon" : "") +
                 (factor > 1 ? ", the AI pack's frames " + std::to_string(factor) + "x for " + std::to_string(bigParts) +
                                   " part(s)"

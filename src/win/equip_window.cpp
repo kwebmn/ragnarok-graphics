@@ -335,7 +335,7 @@ void readData(State& s) {
     const heropicture::Looks looks = heropicture::own();
     const int hw = int(std::lround(150 * s.scale)), hh = int(std::lround(210 * s.scale));  // .112: the smaller window
     std::string hk;
-    for (const int v : {looks.job, looks.sex, looks.head, looks.colour, looks.low, looks.top, looks.middle,
+    for (const int v : {looks.job, looks.sex, looks.head, looks.colour, looks.cloth, looks.low, looks.top, looks.middle,
                         int(looks.options), s.heroDir, hw, hh, packpictures::iconsStamp()})
         hk += std::to_string(v) + ':';
     if (hk != s.heroKey) {
