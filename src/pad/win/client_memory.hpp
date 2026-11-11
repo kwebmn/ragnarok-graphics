@@ -11,11 +11,13 @@ namespace uapad::clientmem {
 // True when [p, p + n) is committed, readable memory of this process.
 bool readable(uintptr_t p, size_t n);
 
+// 3.0.18-beta.165: [p, p + n) into `out` - the processor's own copy with the driver's fault handler
+// (win/safe_read: no call into Windows), else checked by readable() first as before
+bool copy(uintptr_t p, void* out, size_t n);
+
 template <class T>
 bool load(uintptr_t p, T& out) {
-    if (!readable(p, sizeof(T))) return false;
-    std::memcpy(&out, reinterpret_cast<const void*>(p), sizeof(T));
-    return true;
+    return copy(p, &out, sizeof(T));
 }
 
 // True when [p, p + n) is committed memory of this process that can be written.

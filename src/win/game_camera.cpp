@@ -24,6 +24,7 @@
 #include "core/read_tally.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
+#include "win/safe_read.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -45,19 +46,21 @@ struct Asked {
     }
 };
 
-// ReadProcessMemory on ourselves: an address that is not mapped fails instead of faulting.
+// An address that is not mapped fails instead of faulting: the processor's own copy with our fault handler
+// (win/safe_read, 3.0.18-beta.165), else ReadProcessMemory on ourselves as before.
+bool copyOut(uint32_t address, void* out, size_t size) {
+    if (saferead::ready()) return saferead::copy(out, address, size);
+    SIZE_T got = 0;
+    return ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(address)), out, size, &got) &&
+           got == size;
+}
+
 bool read(uint32_t address, void* out, size_t size) {
     if (!address) return false;
-    SIZE_T got = 0;
-    if (!g_tallyThread || GetCurrentThreadId() != g_tallyThread)
-        return ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(address)), out, size,
-                                 &got) &&
-               got == size;
+    if (!g_tallyThread || GetCurrentThreadId() != g_tallyThread) return copyOut(address, out, size);
     LARGE_INTEGER a, b;
     QueryPerformanceCounter(&a);
-    const bool ok =
-        ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(address)), out, size, &got) &&
-        got == size;
+    const bool ok = copyOut(address, out, size);
     QueryPerformanceCounter(&b);
     g_tally.add(g_asker ? g_asker : uint32_t(uintptr_t(__builtin_return_address(0))),
                 double(b.QuadPart - a.QuadPart) * g_msPerTick);

@@ -136,6 +136,7 @@
 #include "win/sound_hook.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/game_camera.hpp"
+#include "win/safe_read.hpp"
 #include "win/sprite_hook.hpp"
 #include "win/start_screen.hpp"
 #include "win/texture_hook.hpp"
@@ -1857,9 +1858,9 @@ void Context::logStats(bool final) {
         uapad::clientmem::takeQueries(checks, checksMs);
         const std::string reads = takeReadTally();
         LOG_INFO("the driver's frame: %.2f ms of its own work at a present (the renderer's present apart); %s; the "
-                 "controller's memory checks %.0f a frame (%.2f ms)",
+                 "controller's memory checks %.0f a frame (%.2f ms); %u reads of places gone (3.0.18-beta.165)",
                  stats_.ownMs / stats_.frames, reads.empty() ? "game memory: none read" : reads.c_str(),
-                 checks / double(stats_.frames), checksMs / stats_.frames);
+                 checks / double(stats_.frames), checksMs / stats_.frames, saferead::takeFaults());
     }
     // 3.0.11-beta.55 (R-9PP79T): the new interface's pictures painted meanwhile, and what they cost
     if (const std::string paints = uicost::take(); !paints.empty())

@@ -15,7 +15,6 @@ namespace {
 
 using clientmem::load;
 using clientmem::matches;
-using clientmem::readable;
 
 // uaRO.exe / uaRO-1.1.exe: the CSession object and the parts of it we read.
 constexpr uintptr_t kSession = 0x771148;
@@ -46,8 +45,9 @@ bool loadString(uintptr_t obj, std::string& out) {
     if (!load(obj + 4, ptr) || !load(obj + 8, len)) return false;
     out.clear();
     if (ptr == 0 || len == 0) return true;
-    if (len > kMaxName || !readable(ptr, len)) return false;
-    out.assign(reinterpret_cast<const char*>(uintptr_t(ptr)), len);
+    if (len > kMaxName) return false;
+    out.resize(len);
+    if (!clientmem::copy(ptr, &out[0], len)) return false;  // 3.0.18-beta.165: one safe copy
     return true;
 }
 
@@ -74,8 +74,7 @@ std::vector<std::pair<std::string, uint16_t>> inventoryNames() {
     if (!load(kInventory, head) || head == 0 || !load(head, node)) return names;
     for (int i = 0; i < kMaxItems && node != 0 && node != head; ++i) {
         uint8_t raw[kNodeIdentified + 4];
-        if (!readable(node, sizeof raw)) break;
-        std::memcpy(raw, reinterpret_cast<const void*>(uintptr_t(node)), sizeof raw);
+        if (!clientmem::copy(node, raw, sizeof raw)) break;  // 3.0.18-beta.165: one safe copy
         uint32_t next = 0;
         int32_t index = 0;
         uint32_t namePtr = 0;
@@ -84,9 +83,9 @@ std::vector<std::pair<std::string, uint16_t>> inventoryNames() {
         std::memcpy(&index, raw + kNodeIndex, 4);
         std::memcpy(&namePtr, raw + kNodeName + 4, 4);
         std::memcpy(&nameLen, raw + kNodeName + 8, 4);
+        std::string name;
         if (raw[kNodeIdentified] && index > 0 && index < 0x10000 && namePtr && nameLen && nameLen <= kMaxName &&
-            readable(namePtr, nameLen)) {
-            std::string name(reinterpret_cast<const char*>(uintptr_t(namePtr)), nameLen);
+            (name.resize(nameLen), clientmem::copy(namePtr, &name[0], nameLen))) {
             bool seen = false;
             for (const auto& n : names) seen = seen || n.first == name;
             if (!seen) names.emplace_back(std::move(name), uint16_t(index));

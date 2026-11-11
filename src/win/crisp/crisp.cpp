@@ -14,6 +14,7 @@
 #include "win/context.hpp"
 #include "win/crisp/state.hpp"
 #include "win/log.hpp"
+#include "win/safe_read.hpp"
 
 namespace uagfx::win::crisp {
 
@@ -39,14 +40,9 @@ Fn original(int slot) {
 
 Rect whole(const Picture& p) { return Rect{0, 0, p.twin->width(), p.twin->height()}; }
 
-// [at, at + n) lies in committed, readable memory: the game's window lists are walked on its word.
-bool readable(uintptr_t at, size_t n) {
-    MEMORY_BASIC_INFORMATION m{};
-    if (!at || !VirtualQuery(reinterpret_cast<const void*>(at), &m, sizeof m) || m.State != MEM_COMMIT ||
-        (m.Protect & (PAGE_NOACCESS | PAGE_GUARD)))
-        return false;
-    return at + n <= reinterpret_cast<uintptr_t>(m.BaseAddress) + m.RegionSize;
-}
+// [at, at + n) readable: the game's window lists are walked on its word
+// (3.0.18-beta.165: win/safe_read's - no VirtualQuery each time)
+bool readable(uintptr_t at, size_t n) { return saferead::readable(uint32_t(at), n); }
 
 // Writes a pointer into the exe's read-only data: a vtable entry or an import.
 bool write(uintptr_t at, uintptr_t value) {

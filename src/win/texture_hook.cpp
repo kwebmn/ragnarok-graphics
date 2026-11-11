@@ -9,6 +9,7 @@
 #include "core/texture_exe.hpp"
 #include "win/dx7/surface7.hpp"
 #include "win/log.hpp"
+#include "win/safe_read.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -63,14 +64,9 @@ void fastUpdate(uint32_t texture, int x, int y, int width, int height, const uin
     reinterpret_cast<MipsFn>(uintptr_t(texture_exe::kMips))(texture, all);
 }
 
-// [at, at + n) lies in committed, readable memory: the game's objects are read on its word.
-bool readable(uintptr_t at, size_t n) {
-    MEMORY_BASIC_INFORMATION m{};
-    if (!at || !VirtualQuery(reinterpret_cast<const void*>(at), &m, sizeof m) || m.State != MEM_COMMIT ||
-        (m.Protect & (PAGE_NOACCESS | PAGE_GUARD)))
-        return false;
-    return at + n <= reinterpret_cast<uintptr_t>(m.BaseAddress) + m.RegionSize;
-}
+// [at, at + n) readable: the game's objects are read on its word
+// (3.0.18-beta.165: win/safe_read's - no VirtualQuery each time)
+bool readable(uintptr_t at, size_t n) { return saferead::readable(uint32_t(at), n); }
 
 void __attribute__((thiscall)) textureUpdate(uint32_t texture, int x, int y, int width, int height,
                                              const uint32_t* argb, uint32_t key, int pitch) {
