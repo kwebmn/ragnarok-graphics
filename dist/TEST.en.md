@@ -1,3 +1,6 @@
+- The chat no longer gets dearer while hunting: each kill, picked-up thing or experience line made it wrap and measure its whole history again (up to 200 lines) - in three minutes the chat grew from 0.13 to 1.33 ms a frame (R-CD8KCP). Now the lines' rows are kept and only a new or changed line is measured.
+- The closed «Налаштування» window no longer builds its rows every frame (it was 0.14 ms a frame).
+
 - A measurement: every 30 s the log tells what each part of the driver takes a frame (chat, skill bar, HP bars, windows, the interface), the dearest first. In R-45Z47V the driver's own work grew from 2.1 to 4.7 ms a frame in five minutes of hunting - now the part that grows shows. The game memory reads are told by module again.
 
 - The characters' and monsters' index (.166) moves on at the start of every frame, even with the game minimised: otherwise a monster that came while the window was minimised was not found until it was restored.
