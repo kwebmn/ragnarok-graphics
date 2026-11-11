@@ -1,3 +1,7 @@
+- Forged things: named as the game does - "Very Strong Fire Main Gauche" (star crumbs and element) in the bag, storage, cart, trade, vending; under the name and in the card - "Forged by Name" (the game asks the server for the smith's name).
+- Opening a shop: things show their slots "[3]" and what is inside (cards, free slots); right click on a thing - its card; under the list "If all sells: N z".
+- Choosing a thing (a card to insert, the magnifier): slots and what is inside under the name, right click (Y on the controller) - the thing's card.
+
 - Friends / Party renewed: each person with a face, class and level, an HP bar, "near · N cells" or the map's name, "dead".
 - Right click on a person - a menu under the row: whisper, expel (the leader), leave the party (one's own row), add to friends, remove from friends, a route to them, copy the name. On hover - quick whisper / expel buttons.
 - Twice on a person - whisper. Friends online first, "N / M online" in the header; the party's also shows its name, the experience share and a Settings button.
