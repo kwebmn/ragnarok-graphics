@@ -1,3 +1,6 @@
+- Controller: the Start tile now has "Hunt", "Boss timers", "Tracking", "What killed me"; the "Settings" tile opens the new window, walked by its controls.
+- "Settings": - and + buttons by every slider.
+
 - "Party": ✕ is now at the right of its header (it stood over the title).
 
 - A new "Settings" window (Alt+O, the character block's icon, the menu) in place of the game's options: sections on the left - "Game" (music, sounds, volumes, snapping, opaque windows - all it had), "How the game looks" and every interface section; a search on top. Everything changes at once.
