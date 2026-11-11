@@ -580,7 +580,7 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.minimapHd);
         } else if (key == "interface.pack_icons") {  // 3.0.11-beta.74: the panels' icons from the AI pack
             setBool(val, c.packIcons);
-        } else if (key == "interface.lock_layout") {  // 3.0.11-beta.77: the parts kept where they are
+        } else if (key == "interface.lock_parts") {  // 3.0.11-beta.77; 3.0.18-beta.119: hidden, by hand only
             setBool(val, c.lockLayout);
         } else if (key == "interface.hotbar_per_character") {  // 3.0.11-beta.78: each character's own bar
             setBool(val, c.hotbarPerCharacter);

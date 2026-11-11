@@ -265,7 +265,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         n.packIcons = file.packIcons;
     }
     if (file.lockLayout != running.lockLayout) {  // 3.0.11-beta.77: the parts kept where they are, at once
-        u.applied.push_back(change("lock_layout", flag(running.lockLayout), flag(file.lockLayout)));
+        u.applied.push_back(change("lock_parts", flag(running.lockLayout), flag(file.lockLayout)));
         n.lockLayout = file.lockLayout;
     }
     if (file.hotbarPerCharacter != running.hotbarPerCharacter) {  // 3.0.11-beta.78: each character's own bar

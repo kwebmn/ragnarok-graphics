@@ -169,8 +169,6 @@ const std::vector<IniSetting>& iniSettings() {
         {"interface", "pack_icons", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfacePackIcons, Text::InterfacePackIconsHint, ""},
         // 3.0.11-beta.77: the parts kept where they are
-        {"interface", "lock_layout", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
-         Text::InterfaceLockLayout, Text::InterfaceLockLayoutHint, ""},
         // 3.0.11-beta.78: each character's own hotkeys bar
         {"interface", "hotbar_per_character", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceHotbarOwn, Text::InterfaceHotbarOwnHint, ""},
@@ -1317,7 +1315,6 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.minimap_reach") return c.minimapReach ? "1" : "0";  // 3.0.11-beta.65
     if (k == "interface.minimap_hd") return c.minimapHd ? "1" : "0";        // 3.0.11-beta.72
     if (k == "interface.pack_icons") return c.packIcons ? "1" : "0";        // 3.0.11-beta.74
-    if (k == "interface.lock_layout") return c.lockLayout ? "1" : "0";      // 3.0.11-beta.77
     if (k == "interface.hotbar_per_character") return c.hotbarPerCharacter ? "1" : "0";  // 3.0.11-beta.78
     if (k == "interface.hotbar_ammo") return c.hotbarAmmo ? "1" : "0";                    // 3.0.11-beta.125
     if (k == "interface.ammo_sound") return c.ammoSound ? "1" : "0";                      // 3.0.11-beta.129

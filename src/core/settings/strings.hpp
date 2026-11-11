@@ -537,7 +537,6 @@ enum class Text : uint16_t {
     HudPartTracker, HudPartHotbar, HudPartTarget, HudPartParty, HudPartChat, HudPartHunt, HudPartMvp, ConsoleHudEdit,
     InterfaceLayoutNote,
     HudEditUnseen,
-    InterfaceLockLayout, InterfaceLockLayoutHint,  // 3.0.11-beta.77
     InterfaceHotbarOwn, InterfaceHotbarOwnHint, HotbarUnlearned,  // 3.0.11-beta.78
     PartyTitle,  // 3.0.11-beta.79
     PartyDead,   // 3.0.11-beta.81
