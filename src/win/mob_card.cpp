@@ -125,17 +125,12 @@ static void frameInner(HWND game, bool on, double k, int targetWidth, int target
     if (s.y + s.h > targetHeight) s.y = std::max(0, targetHeight - s.h);
     std::string key = std::to_string(s.w) + 'x' + std::to_string(s.h) + '#' + std::to_string(uistyle::generation());
     for (const std::string& line : lines) key += '|' + line;
-    if (uaui::ready()) key += 'u';  // 3.0.18-beta.37
     s.scale = scale;
     if (key != s.key) {
         s.key = key;
         const uicost::Paint cost("the monster's card", s.w, s.h);
-        const bool byUaui = uaui::ready();
-        if (byUaui || panel::blank(s.picture, s.w, s.h)) {
+        {
             const float sc = scale;
-            if (!byUaui)
-                panel::roundRect(s.picture, panel::Box{0, 0, float(s.w), float(s.h)}, 8 * sc, kCard, uistyle::panel(),
-                                 kWhite, 0.09f, 1.0f * sc);
             std::vector<Words> out;
             for (size_t i = 0; i < lines.size(); ++i) {
                 const float y = i == 0 ? kPad * sc : (kPad + kTitleH + float(i - 1) * kLineH) * sc;
@@ -144,13 +139,8 @@ static void frameInner(HWND game, bool on, double k, int targetWidth, int target
                 out.push_back(Words{panel::Box{kPad * sc, y, float(s.w) - 2 * kPad * sc, (i ? kLineH : kTitleH) * sc},
                                     utf8Wide(lines[i]), colour, (i == 0 ? 13 : 12) * sc, i == 0, DT_LEFT, false});
             }
-            if (byUaui) {  // 3.0.18-beta.37: uaUI's card - its words kept, no picture
-                s.words = std::move(out);
-                ++s.sheetGen;
-            } else {
-                drawWords(s.picture, out);
-                s.upload = true;
-            }
+            s.words = std::move(out);  // 3.0.18-beta.37: uaUI's card - its words (.158: no picture)
+            ++s.sheetGen;
         }
         if (s.told++ < 10) LOG_INFO("mob card: %s - %s", lines[0].c_str(), lines.size() > 2 ? lines[2].c_str() : "");
     }

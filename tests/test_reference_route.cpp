@@ -380,9 +380,6 @@ TEST(reference_world_way) {
             CHECK(w.box.x >= box.x && w.box.y >= box.y && w.box.x + w.box.w <= box.x + box.w);
     }
     CHECK(price && here && tip);
-    panel::Picture pic;
-    refwin::paint(pic, L, k, rows, 0, total, look);
-    CHECK_EQ(pic.width, L.w);
 }
 
 // 3.0.11-beta.64 (the concept's v19_route: «Підземелля Glast Heim» - the dungeon's maps in a box at the world map's
@@ -451,13 +448,9 @@ TEST(reference_world_dungeon_chain) {
         CHECK(it->box.x >= box.x && it->box.x + it->box.w <= box.x + box.w / 2);
         CHECK(it->box.y > box.y + box.h / 2 && it->box.y + it->box.h <= box.y + box.h);
     }
-    panel::Picture pic;
-    refwin::paint(pic, L, p, rows, 0, total, look);
-    const auto hall = find("Hall");
+    const auto hall = find("Hall");  // its picture over its name: pointed at, the chain's tile
     if (hall == words.end()) return;
-    // its picture over its name
     const float cx = hall->box.x + hall->box.w / 2, cy = hall->box.y - float(side) / 2 - 6;
-    CHECK(pic.px[size_t(int(cy)) * size_t(pic.width) + size_t(int(cx))] == 0xFFC03030u);
     const refwin::Chrome ch = refwin::chrome(L, p, refwin::Texts{});
     const refwin::Under u = refwin::under(L, p, rows, 0, ch, cx, cy, &look.world);
     CHECK(u.part == refwin::Part::Chain && u.tile == 1);

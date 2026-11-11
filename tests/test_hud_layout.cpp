@@ -99,28 +99,11 @@ TEST(hud_layout_bar_and_frames) {
     CHECK(hudlayout::barHit(b, -3, 3) == hudlayout::BarPart::None);
     const hudlayout::Bar big = hudlayout::barLayout(3840, 2.0f);
     CHECK(big.w >= 2 * b.w - 2 && big.done.w > b.done.w);
-    panel::Picture bar;
-    hudlayout::paintBar(bar, b, hudlayout::BarPart::Done);
-    CHECK(bar.width == b.w && bar.height == b.h && (bar.px[size_t(b.h / 2) * size_t(b.w) + size_t(b.w / 2)] >> 24) > 0);
     const std::vector<hudlayout::Words> bw = hudlayout::barWords(b, {"Розміщення", "тягніть", "Скинути", "Готово"});
     CHECK(bw.size() == 4u && bw[0].text == "Розміщення" && bw[3].text == "Готово");
-    panel::Picture f;
-    hudlayout::paintFrame(f, 300, 200, 1.0f, hudlayout::Look::Hover, 80);
-    CHECK(f.width == 300 && f.height == 200);
-    const uint32_t tag = f.px[size_t(14) * 300 + 40];  // the dark tag under its words
-    CHECK((tag >> 24) > 0xC0 && ((tag >> 16) & 0xFF) < 0x40);
-    CHECK((f.px[size_t(100) * 300 + 1] >> 24) > 0x80);    // its edge
-    CHECK((f.px[size_t(100) * 300 + 150] >> 24) < 0x80);  // its middle: the part shows through
     const std::vector<hudlayout::Words> fw = hudlayout::frameWords(300, 200, 1.0f, "Мінікарта", 110);
     CHECK(!fw.empty() && fw[0].text == "Мінікарта · 110 %");
     CHECK(hudlayout::frameWords(300, 200, 1.0f, "Чат", 100)[0].text == "Чат");
-    // 3.0.11-beta.77: the sizing grip off a part's corner - a dark square, gold dots across it
-    panel::Picture g;
-    hudlayout::paintGrip(g, 28, 2.0f, true);
-    CHECK(g.width == 28 && g.height == 28 && (g.px[size_t(14) * 28 + 14] >> 24) > 0xC0);
-    int gold = 0;
-    for (const uint32_t c : g.px) gold += ((c >> 16) & 0xFF) > 0xA0 && ((c >> 8) & 0xFF) > 0x80;
-    CHECK(gold > 10);
 }
 
 // 3.0.11-beta.77 (the owner: «некоторые окна налазят одно на другое и мешают»): a part let go over another one moves

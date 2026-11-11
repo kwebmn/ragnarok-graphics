@@ -111,7 +111,7 @@ struct DropLayout {
 DropLayout dropLayout(const Layout& L, size_t logins);
 DropLayout dropAt(float x, float y, float w, size_t logins, float scale);  // under any place (x, y its top left)
 int dropHit(const DropLayout& D, float x, float y);  // the row, -1 none
-void paintDrop(panel::Picture& out, const DropLayout& D, int hover, float scale);  // out: D.w x D.h, D at 0, 0
+  // out: D.w x D.h, D at 0, 0
 std::vector<Words> dropWords(const DropLayout& D, const std::vector<DropRow>& rows, int hover, const std::string& other,
                              float scale);  // in the list's own picture
 // A small ▾ and an eye painted (IBM Plex has neither)

@@ -91,21 +91,11 @@ void frame(int strength, double k, int targetWidth, int targetHeight) {
             s.docShown = s.opacity > 0;
         }
     }
-    if (s.opacity > 0 && s.picture.width == 0 && !uaui::ready()) {
-        s.picture = uistyle::vignette(kW, kH, kRed, kAlpha, kDepth);
-        s.upload = true;
-    }
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    if (s.docShown || s.opacity <= 0 || s.k <= 0 || s.targetW <= 0 || s.targetH <= 0 || s.picture.width <= 0) return;
-    const size_t world = record.firstInterface();  // where the world ends: the edge goes there
-    const size_t before = record.commands().size();
-    drawPartStretched(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, 0, 0, s.targetW, s.targetH, s.k,
-                  s.opacity);
-    const size_t added = record.commands().size() - before;  // its upload too, when it went now
-    if (added) record.moveLastBefore(added, world);
+    (void)record;  // the old edition (its picture) gone: uaUI draws the edge
+    (void)renderer;
 }
 
 }  // namespace uagfx::win::lowhpedge

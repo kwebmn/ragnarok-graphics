@@ -95,31 +95,6 @@ Part hitTest(const Layout& L, float x, float y) {
     return Part::None;
 }
 
-void paint(panel::Picture& out, const Layout& L, const Show& sh) {
-    const float s = L.s;
-    if (L.status.w > 0) {
-        panel::roundRect(out, L.status, kPillH * s / 2, kPill, 0.72f, kWhite, 0.10f, 1.0f * s);
-        panel::roundRect(out, L.statusDot, kDot * s / 2, sh.statusRgb, 1.0f, sh.statusRgb, 1.0f, 0.0f);
-    }
-    if (L.news.w > 0)  // 3.0.11-beta.174: the site's item now - its edge in gold, brighter under the mouse
-        panel::roundRect(out, L.news, kNewsH * s / 2, kPill, 0.62f, kGold, sh.hover == int(Part::News) ? 0.55f : 0.30f,
-                         1.0f * s);
-    // 3.0.11-beta.174: a segmented pill - its ground, the chosen one in gold
-    const auto segments = [&](const panel::Box* seg, int chosen, int firstPart) {
-        const panel::Box all{seg[0].x, seg[0].y, seg[2].x + seg[2].w - seg[0].x, seg[0].h};
-        panel::roundRect(out, all, kPillH * s / 2, kPill, 0.72f, kWhite, 0.10f, 1.0f * s);
-        for (int i = 0; i < 3; ++i) {
-            const bool hot = sh.hover == firstPart + i;
-            if (i == chosen)
-                panel::roundRect(out, seg[i], kPillH * s / 2, kGold, 0.26f, kGold, 0.0f, 0.0f);
-            else if (hot)
-                panel::roundRect(out, seg[i], kPillH * s / 2, kWhite, 0.08f, kWhite, 0.0f, 0.0f);
-        }
-    };
-    segments(L.langSeg, sh.lang, int(Part::Lang0));
-    if (sh.views) segments(L.viewSeg, sh.view, int(Part::View0));
-}
-
 std::vector<Words> words(const Layout& L, const Show& sh) {
     std::vector<Words> out;
     if (L.status.w > 0 && !sh.status.empty())

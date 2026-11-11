@@ -36,7 +36,6 @@ struct Show {
     Part hover = Part::None;
     bool changeOpen = false;  // the other logins' list shown
 };
-void paint(panel::Picture& out, const Layout& L, const Account& a, const Show& sh);
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;

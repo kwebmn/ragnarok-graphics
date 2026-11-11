@@ -64,26 +64,6 @@ Part hitTest(const Layout& L, float x, float y) {
     return Part::None;
 }
 
-void paint(panel::Picture& out, const Layout& L, const Account& a, const Show& sh) {
-    const float s = L.s;
-    const panel::Box all{0, 0, float(L.w), float(L.h)};
-    panel::roundRect(out, all, 14 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
-    // its picture: the class's portrait (3.0.11-beta.178), else the character's head on a gold-dark ground
-    const panel::Box pic{1 * s, 1 * s, L.art.w - 1 * s, L.art.h - 2 * s};
-    if (a.art) {
-        classart::cover(out, pic, a.art->px, a.art->width, a.art->height, 13 * s, classart::kLeftCorners);
-    } else {
-        panel::roundRect(out, pic, 13 * s, 0x2A2416, 0.9f);
-        panel::roundRect(out, panel::Box{pic.x + pic.w - 14 * s, pic.y, 14 * s, pic.h}, 0, 0x2A2416, 0.9f);
-        if (a.head) classart::centre(out, pic, *a.head);
-    }
-    const bool hot = sh.hover == Part::Play;
-    panel::roundRect(out, L.play, 9 * s, kGold, hot ? 0.36f : 0.26f, kGold, 0.9f, 1.0f * s);
-    // ▾ after «Змінити акаунт»'s words
-    logincard::paintTriangle(out, L.change.x + L.change.w - kTriangle * s / 2, L.change.y + L.change.h / 2 + 1 * s,
-                             9 * s, sh.hover == Part::Change || sh.changeOpen ? kGold2 : kLink, 0.95f);
-}
-
 std::vector<Words> words(const Layout& L, const Account& a, const Show& sh, const Texts& t) {
     std::vector<Words> out;
     const float s = L.s;

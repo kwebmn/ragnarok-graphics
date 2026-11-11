@@ -24,10 +24,6 @@ TEST(enter_veil_card_in_the_middle) {
         return std::any_of(w.begin(), w.end(), [&](const enterveil::Words& x) { return x.text == s; });
     };
     CHECK(has("Вхід у гру…") && has("Людмила Павличенко") && has("Gunslinger · 64"));
-    panel::Picture p;
-    enterveil::paint(p, L, 1);
-    CHECK(p.width == L.w && p.height == L.h);
-    CHECK((p.px[size_t(L.card.y + L.card.h / 2) * size_t(p.width) + size_t(L.card.x + 8)] >> 24) > 0xC0);  // the card
 }
 
 TEST(enter_veil_ends) {

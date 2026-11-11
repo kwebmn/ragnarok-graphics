@@ -90,7 +90,6 @@ static void frameInner(State& s, bool on, double k, int targetWidth, int targetH
     for (size_t i = fl.size(); i < s.shown.size(); ++i) s.shown[i].alpha = 0;
     const float scale = uistyle::partScale(k);
     s.targetW = targetWidth, s.targetH = targetHeight, s.scale = scale;
-    const bool pictures = !uaui::ready();  // 3.0.18-beta.24: uaUI's floaters need none
     const char decimal = ',';
     for (size_t i = 0; i < fl.size() && i < s.shown.size(); ++i) {
         const expgain::Floater& f = fl[i];
@@ -100,19 +99,9 @@ static void frameInner(State& s, bool on, double k, int targetWidth, int targetH
             ++s.told;
             LOG_INFO("experience gains: %s over the monster", text.c_str());
         }
-        if (pictures && (text != sh.text || sh.picture.width <= 0)) {
-            const std::wstring wide = utf8Wide(text);
-            const float px = 15 * scale;
-            const int w = wordsWidth(wide, px, true) + int(std::lround(12 * scale));
-            const int h = int(std::lround(22 * scale));
-            panel::blank(sh.picture, w, h);  // 3.0.18-beta.14
-            drawWords(sh.picture, {Words{panel::Box{0, 0, float(w), float(h)}, wide, kGold, px, true, DT_CENTER,
-                                         false, true}});
-            sh.upload = true;
-        }
         sh.text = text;
-        sh.x = int(std::lround(f.x * float(k))) - (pictures ? sh.picture.width / 2 : 0);  // uaUI's: its middle
-        sh.y = int(std::lround((f.y - expgain::rise(f, now)) * float(k))) - (pictures ? sh.picture.height : 0);
+        sh.x = int(std::lround(f.x * float(k)));  // uaUI's: its middle
+        sh.y = int(std::lround((f.y - expgain::rise(f, now)) * float(k)));
         sh.alpha = expgain::opacity(f.ms, now, expgain::kFloatMs, expgain::kFadeMs);
     }
 }
@@ -187,7 +176,7 @@ void frame(bool on, double k, int targetWidth, int targetHeight) {
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)record;  // the old edition (its pictures) gone: uaUI draws the floaters
     (void)renderer;
 }
 

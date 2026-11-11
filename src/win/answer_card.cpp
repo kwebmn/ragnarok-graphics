@@ -160,8 +160,6 @@ void render(State& s) {
     std::vector<std::string> lines = card::fitLines(a.text.empty() ? reporttexts::hint(lang, a) : a.text, 2, fits);
     if (lines.empty()) lines.push_back(reporttexts::hint(lang, a));
     g = card::geometry(sc, s.targetW, int(lines.size()), w);
-    const bool byUaui = uaui::readyAnywhere();  // 3.0.18-beta.31: uaUI's card - no picture
-    if (!byUaui) card::paint(s.picture, g, a.status, s.hover);
     std::vector<Words> words;
     const float titleW = std::min(float(wordsWidth(title, titlePx, true) + 2), g.title.w);
     words.push_back(Words{panel::Box{g.title.x, g.title.y, titleW, g.title.h}, title, panel::kText, titlePx, true,
@@ -182,13 +180,8 @@ void render(State& s) {
                               panel::kMuted, timePx, false, DT_RIGHT});
     s.geometry = g;
     s.dirty = false;
-    if (byUaui) {
-        s.words = std::move(words);
-        ++s.sheetGen;
-        return;
-    }
-    drawWords(s.picture, words);
-    s.upload = true;
+    s.words = std::move(words);  // uaUI's card (.158: no picture)
+    ++s.sheetGen;
 }
 
 // 3.0.18-beta.31 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the answer's card in

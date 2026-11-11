@@ -52,16 +52,6 @@ Layout layout(const std::vector<Part>& parts, int centreX, int bottom, float sca
     return L;
 }
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Part>& parts, bool sony) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, L.glass.h / 2, kCard, std::max(0.88f, uistyle::panel()), kWhite, 0.10f, 1.0f * s);
-    for (size_t i = 0; i < L.parts.size() && i < parts.size(); ++i)
-        for (size_t g = 0; g < L.parts[i].glyphs.size() && g < parts[i].buttons.size(); ++g) {
-            const panel::Box& b = L.parts[i].glyphs[g];
-            padglyph::paint(out, padglyph::Button(parts[i].buttons[g]), family(sony), b.x, b.y, b.h);
-        }
-}
-
 std::vector<Words> words(const Layout& L, const std::vector<Part>& parts, bool sony) {
     std::vector<Words> out;
     const float s = L.s;

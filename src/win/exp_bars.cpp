@@ -23,25 +23,16 @@ namespace {
 namespace cb = uagfx::charblock;
 
 constexpr ULONGLONG kTipMs = 300;
-constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kText = 0xECEFF5, kMuted = 0x9AA3B5;
 
 struct State {
     bool on = false, shown = false;
     float k = 0;
     int targetW = 0, targetH = 0;
-    std::string key, tipKey;
-    panel::Picture strip, tip;
-    uint32_t stripTexture = 0, tipTexture = 0;
-    int stripW = 0, stripH = 0, tipW = 0, tipH = 0, tipX = 0, tipY = 0;
-    bool stripUpload = false, tipUpload = false, tipShown = false;
+    int tipX = 0, tipY = 0;
+    bool tipShown = false;
     ULONGLONG hoverSince = 0;
     bool hovered = false;
     // 3.0.11-beta.237: the last gain's label over the bars' right end (win/exp_gain), fading
-    std::string gainKey;
-    panel::Picture gain;
-    uint32_t gainTexture = 0;
-    int gainW = 0, gainH = 0, gainX = 0, gainY = 0;
-    bool gainUpload = false;
     float gainAlpha = 0;
     // 3.0.18-beta.23: what uaUI's strip shows (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 4)
     bool uiShown = false;
@@ -72,24 +63,14 @@ static void frameInner(State& s, bool on, double k, int targetWidth, int targetH
     s.gainText.clear();
     s.tipLines.clear();
     if (!s.shown) return;
-    const bool pictures = !uaui::ready();  // 3.0.18-beta.23: uaUI's strip needs none
     s.k = float(k);
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     const float scale = uistyle::partScale(k);
     const int h = cb::stripHeight(scale);
-    const std::string key = std::to_string(targetWidth) + 'x' + std::to_string(h) + ';' +
-                            std::to_string(int(d.baseExp * 2000)) + ',' + std::to_string(int(d.jobExp * 2000)) + ';' +
-                            std::to_string(d.baseNext) + ',' + std::to_string(d.jobNext);
     s.scale = scale;
     s.stripPx = h;
     s.bars = cb::stripBars(d);
-    if (pictures && key != s.key) {
-        s.key = key;
-        panel::blank(s.strip, targetWidth, h);  // 3.0.18-beta.14
-        cb::paintStrip(s.strip, d, scale);
-        s.stripUpload = true;
-    }
     s.gainAlpha = 0;  // 3.0.11-beta.237: the last gain by the bars, its part of each level
     const expgain::Label g = expgainwin::label();
     if (g.ms) {
@@ -99,22 +80,6 @@ static void frameInner(State& s, bool on, double k, int targetWidth, int targetH
         if (!text.empty()) {
             s.gainText = text;
             s.gainAlpha = expgain::opacity(g.ms, GetTickCount64(), expgain::kLabelMs, expgain::kFadeMs);
-        }
-        if (!text.empty() && pictures) {
-            const std::string gkey = text + '@' + std::to_string(scale);
-            if (gkey != s.gainKey) {
-                s.gainKey = gkey;
-                const std::wstring wide = utf8Wide(text);
-                const float px = 13 * scale;
-                const int w = wordsWidth(wide, px, true) + int(std::lround(12 * scale));
-                const int hh = int(std::lround(20 * scale));
-                panel::blank(s.gain, w, hh);  // 3.0.18-beta.14
-                drawWords(s.gain, {Words{panel::Box{0, 0, float(w), float(hh)}, wide, 0xF3D27A, px, true, DT_CENTER,
-                                         false, true}});
-                s.gainUpload = true;
-            }
-            s.gainX = targetWidth - s.gain.width - int(12 * scale);
-            s.gainY = targetHeight - h - s.gain.height - int(2 * scale);
         }
     }
     int cx = 0, cy = 0;  // pointed at: the bottom 14 px (the strip and a little over it)
@@ -134,23 +99,7 @@ static void frameInner(State& s, bool on, double k, int targetWidth, int targetH
     s.tipWpx = tw;
     s.tipX = std::clamp(int(float(cx) * float(k)) - tw / 2, 0, std::max(0, targetWidth - tw));
     s.tipShown = true;
-    if (!pictures) return;
-    std::string tipKey = std::to_string(tw) + 'x' + std::to_string(th);
-    for (const std::string& l : lines) tipKey += ';' + l;
-    if (tipKey != s.tipKey) {
-        s.tipKey = tipKey;
-        panel::blank(s.tip, tw, th);  // 3.0.18-beta.14
-        panel::roundRect(s.tip, panel::Box{0, 0, float(tw), float(th)}, 8 * scale, kCard, 0.94f, kWhite, 0.12f,
-                         1.0f * scale);
-        std::vector<Words> words;
-        for (size_t i = 0; i < lines.size(); ++i)
-            words.push_back(Words{
-                panel::Box{10 * scale, (4 + 17 * float(i)) * scale, float(tw) - 20 * scale, 17 * scale},
-                utf8Wide(lines[i]), i == 0 ? kText : kMuted, 13 * scale, true, DT_LEFT, false, false});
-        drawWords(s.tip, words);
-        s.tipUpload = true;
-    }
-    s.tipY = targetHeight - h - th - int(6 * scale);
+    s.tipY = targetHeight - h - th - int(6 * scale);  // .158: uaUI's tip alone (no picture)
 }
 
 namespace {

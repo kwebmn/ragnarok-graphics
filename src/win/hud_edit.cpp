@@ -46,14 +46,6 @@ const Blocker kWindows[] = {Blocker::Panel, Blocker::Card, Blocker::Reference, B
                             Blocker::Stats};
 constexpr float kGripGame = 14;  // the grip's side, off the part's bottom right corner
 
-struct Drawn {  // a picture of the editor's, its texture
-    panel::Picture picture;
-    uint32_t texture = 0;
-    int texW = 0, texH = 0;
-    bool upload = true;
-    std::string key;
-};
-
 struct State {
     uisheet::Sheet sheet;  // 3.0.18-beta.35: the editor drawn by uaUI (said again each frame it shows)
     int sheetGen = 0;
@@ -92,8 +84,6 @@ struct State {
     int hover = -1;
     hudlayout::BarPart barHover = hudlayout::BarPart::None;
     hudlayout::Bar bar;
-    Drawn barPicture, guide, grip;
-    std::array<Drawn, kParts> frames;
 };
 
 State& state() {
@@ -190,17 +180,6 @@ hudlayout::Box gripOf(const State& s, int i) {
     const hudlayout::Box b = solidOf(s, i);
     const int side = std::max(8, int(std::lround(kGripGame * s.k)));
     return hudlayout::Box{b.x + b.w - side / 3, b.y + b.h - side / 3, side, side};
-}
-
-std::vector<Words> gdiWords(const std::vector<hudlayout::Words>& in) {
-    std::vector<Words> out;
-    for (const hudlayout::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == hudlayout::Align::Right    ? DT_RIGHT
-                                 : w.align == hudlayout::Align::Center ? DT_CENTER
-                                                                       : DT_LEFT),
-                            false});
-    return out;
 }
 
 bool cursor(const State& s, int& x, int& y) {
@@ -314,27 +293,6 @@ void resize(State& s, int cx, int cy) {
                                           int(std::lround(float(s.picH) * grow))},
                            s.k, s.targetW, s.targetH, size);
     touch(s, Part(s.sizing));
-}
-
-void paintFrame(State& s, int i, float scale) {
-    const hudlayout::Box b = solidOf(s, i);
-    const hudlayout::Look look = i == s.drag    ? hudlayout::Look::Dragged
-                                 : i == s.hover ? hudlayout::Look::Hover
-                                                : hudlayout::Look::Idle;
-    const int percent = int(std::lround(s.layout[size_t(i)].size * 100));
-    const bool live = shownNow(s, i);
-    const std::string key = std::to_string(b.w) + 'x' + std::to_string(b.h) + ';' + std::to_string(int(look)) + ';' +
-                            std::to_string(percent) + (live ? ";" : ";u") + std::to_string(int(language()));
-    Drawn& d = s.frames[size_t(i)];
-    if (key == d.key) return;
-    d.key = key;
-    std::string name = say(kNames[i]);
-    if (!live) name += " \xC2\xB7 " + say(settings::Text::HudEditUnseen);
-    const std::vector<hudlayout::Words> words = hudlayout::frameWords(b.w, b.h, scale, name, percent);
-    const float tag = words.empty() ? 0.0f : float(wordsWidth(utf8Wide(words[0].text), words[0].px, words[0].bold));
-    hudlayout::paintFrame(d.picture, b.w, b.h, scale, look, tag);
-    drawWords(d.picture, gdiWords(words));
-    d.upload = true;
 }
 
 }  // namespace
@@ -477,35 +435,8 @@ static void frameInner(HWND game, double k, int targetW, int targetH) {
         s.hover = s.drag >= 0                                                      ? s.drag
                   : s.barHover == hudlayout::BarPart::None && pointer ? partAt(s, cx, cy, false)
                                                                       : -1;
-        const std::string barKey = std::to_string(s.bar.w) + ';' + std::to_string(int(s.barHover)) + ';' +
-                                   std::to_string(int(language()));
-        if (barKey != s.barPicture.key) {
-            s.barPicture.key = barKey;
-            hudlayout::paintBar(s.barPicture.picture, s.bar, s.barHover);
-            const hudlayout::BarTexts t{say(settings::Text::HudEditTitle), say(settings::Text::HudEditHint),
-                                        say(settings::Text::HudEditReset), say(settings::Text::HudEditDone)};
-            drawWords(s.barPicture.picture, gdiWords(hudlayout::barWords(s.bar, t)));
-            s.barPicture.upload = true;
-        }
-        for (int i = 0; i < kParts; ++i)
-            if (known(s, i)) paintFrame(s, i, scale);
     } else {
         s.hover = s.drag >= 0 ? s.drag : s.sizing;
-        if (s.hover >= 0) paintFrame(s, s.hover, scale);
-    }
-    if (s.gripPart >= 0) {  // a small handle off the corner
-        const int side = gripOf(s, s.gripPart).w;
-        const std::string key = std::to_string(side) + (s.gripHover ? "h" : "");
-        if (key != s.grip.key) {
-            s.grip.key = key;
-            hudlayout::paintGrip(s.grip.picture, side, s.k, s.gripHover);
-            s.grip.upload = true;
-        }
-    }
-    if (s.guide.picture.width == 0) {  // a gold pixel, stretched into the guides
-        s.guide.picture.width = s.guide.picture.height = 1;
-        s.guide.picture.px.assign(1, 0xFFE6CB8Au);
-        s.guide.upload = true;
     }
     s.shown = true;
 }
@@ -586,6 +517,7 @@ void frame(HWND game, double k, int targetW, int targetH) {
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
+    (void)renderer;
     State& s = state();
     if (!s.shown || s.k <= 0) return;
     if (s.on) {  // the world dimmed under the interface
@@ -595,31 +527,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         const size_t added = record.commands().size() - before;
         if (added) record.moveLastBefore(added, world);
     }
-    if (s.sheetShown) return;  // 3.0.18-beta.35: the rest uaUI's
-    for (int i = 0; i < kParts; ++i) {
-        if (!(s.on ? known(s, i) : i == s.hover) || s.frames[size_t(i)].picture.width <= 0) continue;
-        Drawn& d = s.frames[size_t(i)];
-        const hudlayout::Box b = solidOf(s, i);
-        drawPart(record, renderer, d.picture, d.texture, d.texW, d.texH, d.upload, b.x, b.y, s.k,
-                 shownNow(s, i) ? 1.0f : 0.6f);
-    }
-    if (s.drag >= 0) {
-        const int thin = std::max(1, int(std::lround(s.k)));
-        if (s.guideX >= 0)
-            drawPartStretched(record, renderer, s.guide.picture, s.guide.texture, s.guide.texW, s.guide.texH,
-                              s.guide.upload, s.guideX - thin / 2, 0, thin, s.targetH, s.k, 0.8f);
-        if (s.guideY >= 0)
-            drawPartStretched(record, renderer, s.guide.picture, s.guide.texture, s.guide.texW, s.guide.texH,
-                              s.guide.upload, 0, s.guideY - thin / 2, s.targetW, thin, s.k, 0.8f);
-    }
-    if (s.gripPart >= 0 && s.grip.picture.width > 0) {
-        const hudlayout::Box g = gripOf(s, s.gripPart);
-        drawPart(record, renderer, s.grip.picture, s.grip.texture, s.grip.texW, s.grip.texH, s.grip.upload, g.x, g.y,
-                 s.k);
-    }
-    if (s.on)
-        drawPart(record, renderer, s.barPicture.picture, s.barPicture.texture, s.barPicture.texW, s.barPicture.texH,
-                 s.barPicture.upload, s.bar.x, s.bar.y, s.k);
+    // the rest uaUI's (.158: the old edition's pictures - frames, guides, grip, bar - gone)
 }
 
 bool mouse(HWND, UINT m, WPARAM wp, LPARAM, LRESULT& result) {

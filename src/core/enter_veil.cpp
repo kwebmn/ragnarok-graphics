@@ -28,15 +28,6 @@ Layout layout(int targetW, int targetH, float scale) {
     return L;
 }
 
-void paint(panel::Picture& out, const Layout& L, int phase) {
-    panel::blank(out, L.w, L.h);  // 3.0.18-beta.14: recorded for uaUI while it is on
-    const float s = L.s;
-    panel::roundRect(out, L.card, 14 * s, kCard, 0.97f, kWhite, 0.14f, std::max(1.0f, s));
-    for (int i = 0; i < 3; ++i)
-        panel::circle(out, L.dots.x + (7 + 15 * float(i)) * s, L.dots.y + L.dots.h / 2, 3.2f * s, kGold,
-                      i <= phase ? 0.95f : 0.25f);
-}
-
 std::vector<Words> words(const Layout& L, const Texts& t) {
     const float s = L.s;
     std::vector<Words> out{Words{L.title, t.title, kGold, 18 * s, true, Align::Center}};

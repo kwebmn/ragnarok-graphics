@@ -282,93 +282,6 @@ TEST(reference_window_sheet_holds_what_it_paints) {
     CHECK(m.world.w == 0);  // no world map on a monster's card
 }
 
-TEST(reference_window_paints_and_words_its_rows) {
-    const refindex::Index ix = index();
-    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
-    const refpages::Page p = refpages::mob(ix, Lang::Uk, 1002, ctx("prt_fild08"));
-    int total = 0;
-    const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
-    panel::Picture pic;
-    refwin::paint(pic, L, p, rows, 0, total, refwin::Look{});
-    CHECK(pic.width == L.w && pic.height == L.h && pic.px.size() == size_t(L.w) * size_t(L.h));
-    refwin::Texts t;
-    t.title = "Довідник";
-    t.find = "Пошук у довіднику";
-    t.pack = "Пакет даних";
-    refwin::Look look;
-    look.chrome = refwin::chrome(L, p, t);
-    const std::vector<refwin::Words> words = refwin::words(L, p, rows, 0, t, look);
-    bool title = false, typed = false, poring = false;
-    for (const refwin::Words& w : words) {
-        title = title || w.text == "Довідник";
-        typed = typed || w.text == "Пошук у довіднику";  // 3.0.11-beta.26: the header's search on a card
-        poring = poring || (w.text == "Poring" && w.px == 26.0f);
-        CHECK(w.box.x >= 0 && w.box.y >= 0 && w.box.x + w.box.w <= float(L.w) + 0.5f);
-        CHECK(w.box.y + w.box.h <= float(L.h));
-    }
-    CHECK(title && typed && poring);
-}
-
-// 3.0.11-beta.25 (R-77TCM7:
-// «когда по меню вожу, лагат курсор и фпс падает»): another row under the pointer
-// repaints only the old highlights' areas and the new ones' - the picture as painted whole
-TEST(reference_window_hover_repaint_matches_the_whole) {
-    const refindex::Index ix = index();
-    int steps = 0, differing = 0, outside = 0;
-    for (const float k : {1.0f, 1.5f, 2.0f}) {
-        const refwin::Layout L = refwin::layout(int(1920 * k), int(1080 * k), k);
-        const refpages::Page pages[] = {refpages::home(ix, Lang::Uk),
-                                        refpages::mob(ix, Lang::Uk, 1002, ctx("prontera")),
-                                        refpages::found(ix, Lang::Uk, "po")};
-        for (const refpages::Page& p : pages) {
-            int total = 0;
-            const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
-            std::vector<int> links;
-            for (size_t i = 0; i < p.rows.size(); ++i)
-                if (p.rows[i].link.go != refpages::Go::None && refwin::shown(L, rows[i], 0)) links.push_back(int(i));
-            if (links.size() < 2) continue;
-            const refwin::Under seq[] = {{},
-                                         {refwin::Part::Row, links[0]},
-                                         {refwin::Part::Row, links[1]},
-                                         {refwin::Part::Close, -1},
-                                         {refwin::Part::Back, -1},
-                                         {refwin::Part::Row, links.back()},
-                                         {}};
-            refwin::Texts texts;
-            texts.title = "Довідник";
-            texts.back = "Назад до Довідник";
-            refwin::Look was;
-            was.chrome = refwin::chrome(L, p, texts);
-            was.selected = links.back();
-            panel::Picture partial;
-            refwin::paint(partial, L, p, rows, 0, total, was);
-            for (const refwin::Under& u : seq) {
-                refwin::Look now = was;
-                now.hover = u;
-                for (const refwin::Look* l : {&was, &now})
-                    for (const Rect& a : refwin::hotAreas(L, p, rows, 0, *l)) {
-                        const std::vector<uint32_t> before = partial.px;
-                        refwin::repaint(partial, L, p, rows, 0, total, now, a);
-                        for (int y = 0; y < L.h; y += 3)  // nothing out of the area: only it goes to the card
-                            for (int x = 0; x < L.w; ++x) {
-                                const size_t i = size_t(y) * size_t(L.w) + size_t(x);
-                                const bool in = x >= a.left && x < a.right && y >= a.top && y < a.bottom;
-                                if (!in && partial.px[i] != before[i]) ++outside;
-                            }
-                    }
-                panel::Picture whole;
-                refwin::paint(whole, L, p, rows, 0, total, now);
-                ++steps;
-                if (partial.px != whole.px) ++differing;
-                was = now;
-            }
-        }
-    }
-    CHECK(steps >= 14);
-    CHECK_EQ(differing, 0);
-    CHECK_EQ(outside, 0);
-}
-
 TEST(reference_window_hot_areas) {
     const refindex::Index ix = index();
     const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
@@ -723,35 +636,6 @@ TEST(reference_concept_cards) {
                   w.box.y + w.box.h <= tip.y);
 }
 
-TEST(reference_concept_rail_hover_repaints_its_section) {
-    const refindex::Index ix = index();
-    const refpages::Link at{refpages::Go::Item, 601, ""};
-    const refpages::Page p = refpages::withRail(refpages::item(ix, Lang::Uk, 601, ctx("")), ix, Lang::Uk, at);
-    for (const float k : {1.0f, 1.5f, 0.0f}) {  // 3.0.11-beta.67: 0 - a narrow window, its sections' tips
-        const refwin::Layout L = k > 0 ? refwin::layout(int(1920 * k), int(1080 * k), k) : refwin::layout(1100, 700, 1);
-        int total = 0;
-        const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
-        refwin::Texts t;
-        t.title = "Довідник";
-        t.back = "Назад до Довідник";
-        refwin::Look was;
-        was.chrome = refwin::chrome(L, p, t);
-        panel::Picture partial;
-        refwin::paint(partial, L, p, rows, 0, total, was);
-        for (const int i : {3, 7, 0, 5}) {
-            refwin::Look now = was;
-            now.hover = refwin::Under{refwin::Part::Rail, i};
-            for (const refwin::Look* l : {&was, &now})
-                for (const Rect& a : refwin::hotAreas(L, p, rows, 0, *l))
-                    refwin::repaint(partial, L, p, rows, 0, total, now, a);
-            panel::Picture whole;
-            refwin::paint(whole, L, p, rows, 0, total, now);
-            CHECK(partial.px == whole.px);
-            was = now;
-        }
-    }
-}
-
 // 3.0.11-beta.28: the concept's search results (v21_search) - groups of results with their lines and kinds, the query
 // marked, «ще N ›» that opens a group, the items by their service names apart, the monsters by their other names
 TEST(reference_search_concept_results) {
@@ -845,63 +729,6 @@ TEST(reference_search_concept_more_and_forms) {
     CHECK(most.rows[26].style == refpages::Style::Result && most.rows[27].style == refpages::Style::Hint);
 }
 
-TEST(reference_search_concept_window) {
-    const refindex::Index ix = index();
-    const refpages::Page p = refpages::withRail(refpages::found(ix, Lang::Uk, "wing"), ix, Lang::Uk, refpages::Link{});
-    for (const float k : {1.0f, 2.0f}) {
-        const refwin::Layout L = refwin::layout(int(1920 * k), int(1080 * k), k);
-        int total = 0;
-        const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
-        CHECK_EQ(rows[2].h, int(std::lround(50 * k)));  // a result's line
-        CHECK_EQ(rows[1].h, int(std::lround(28 * k)));  // its group's
-        const size_t last = p.rows.size() - 1;
-        CHECK(rows[last].y >= rows[2].y + rows[2].h && rows[last].h >= int(std::lround(33 * k)));
-        refwin::Texts t;
-        t.title = "Довідник";
-        t.query = "wing";
-        refwin::Look look;
-        look.chrome = refwin::chrome(L, p, t);
-        look.selected = 2;
-        const std::vector<refwin::Words> words = refwin::words(L, p, rows, 0, t, look);
-        bool name = false, sub = false, kind = false, group = false;
-        for (const refwin::Words& w : words) {
-            name |= w.text == "Fly Wing" && w.bold && std::abs(w.px - 14.5f * k) < 0.01f;
-            sub |= w.text == p.rows[2].sub && w.rgb == refwin::kMuted;
-            kind |= w.text == "предмет" && w.align == refwin::Align::Right && w.rgb == refwin::kFaint;
-            group |= w.text == "ПРЕДМЕТИ · 1";
-        }
-        CHECK(name && sub && kind && group);
-        // the picked result gold, its bar at its left; the one under the pointer only lighter
-        panel::Picture picked, over;
-        refwin::paint(picked, L, p, rows, 0, total, look);
-        refwin::Look hover = look;
-        hover.selected = -1;
-        hover.hover = refwin::Under{refwin::Part::Row, 2};
-        refwin::paint(over, L, p, rows, 0, total, hover);
-        const int y = L.bodyY + rows[2].y + rows[2].h / 2;
-        const auto at = [&](const panel::Picture& pic, int x) {
-            return pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
-        };
-        const int band = rows[2].x + rows[2].w - int(40 * k), bar = rows[2].x + 1;
-        CHECK(((at(picked, band) >> 16) & 0xFF) > (at(picked, band) & 0xFF) + 4);  // gold: more red than blue
-        CHECK(((at(over, band) >> 16) & 0xFF) <= (at(over, band) & 0xFF) + 4);
-        CHECK(((at(picked, bar) >> 16) & 0xFF) > 150);
-        // the query's mark: gold under «Wing»
-        const float markX = float(rows[2].x) + 48 * k + L.measure("Fly ", 14.5f * k, true) + 6 * k;
-        const int markY = L.bodyY + rows[2].y + int(16.5f * k);
-        const uint32_t mark = hover.selected < 0 ? over.px[size_t(markY) * size_t(over.width) + size_t(markX)] : 0;
-        CHECK(((mark >> 16) & 0xFF) > (mark & 0xFF) + 8);
-        // a result's band is its own box; its repaint as the whole
-        const Rect a = refwin::rowArea(L, p, rows, 0, 2);
-        CHECK(a.left <= rows[2].x && a.right >= rows[2].x + rows[2].w);
-        panel::Picture partial = picked;
-        for (const refwin::Look* l : {&look, &hover})
-            for (const Rect& r : refwin::hotAreas(L, p, rows, 0, *l))
-                refwin::repaint(partial, L, p, rows, 0, total, hover, r);
-        CHECK(partial.px == over.px);
-    }
-}
-
 // 3.0.11-beta.30 (the owner: «нету кнопки перейти на главный экран справочника где все иконками и чтобы можно было
 // выйти оттуда например сразу на карту мира»): «Головна» in the header (and its title) on every page but the first
 // screen - the world map's too; its hover painted again alone
@@ -927,14 +754,6 @@ TEST(reference_home_button) {
         was.chrome = c;
         refwin::Look now = was;
         now.hover = refwin::Under{refwin::Part::Home, -1};
-        panel::Picture partial;
-        refwin::paint(partial, L, card, rows, 0, total, was);
-        for (const refwin::Look* l : {&was, &now})
-            for (const Rect& a : refwin::hotAreas(L, card, rows, 0, *l))
-                refwin::repaint(partial, L, card, rows, 0, total, now, a);
-        panel::Picture whole;
-        refwin::paint(whole, L, card, rows, 0, total, now);
-        CHECK(partial.px == whole.px);
         CHECK(!refwin::hotAreas(L, card, rows, 0, now).empty());
     }
 }

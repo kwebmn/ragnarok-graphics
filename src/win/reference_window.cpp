@@ -72,7 +72,7 @@ struct State {
     std::vector<Words> sheetWords;
     WindowShadow shadow;  // 3.0.11-beta.49
     WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
-    bool enabled = false, open = false, shown = false, dirty = true, upload = true, wantPage = true;
+    bool enabled = false, open = false, shown = false, dirty = true, wantPage = true;
     int style = -1;  // 3.0.11-beta.47: core/ui_style's generation painted
     int iconsMade = -2;  // 3.0.11-beta.74: win/pack_pictures' iconsStamp() the pictures were made for
     WPARAM skipChar = 0;  // the character of the key that opened or closed it: neither typed nor the game's
@@ -117,13 +117,11 @@ struct State {
     // 3.0.11-beta.18: the cards opened lately (the latest first) and the starred ones, kept in files
     std::vector<refpages::Link> recent, favourites;
     int sel = -1;  // 3.0.11-beta.21: the row picked by the arrows (or the pad's D-pad), -1 none
-    // 3.0.11-beta.25 (R-77TCM7): the highlights' areas to paint again, and those painted but not on the card yet
-    std::vector<Rect> hot, parts;
+    // 3.0.11-beta.25 (R-77TCM7): the highlights' areas - uaUI's words said again (.158: no picture repainted)
+    std::vector<Rect> hot;
     refwin::Chrome chrome;  // 3.0.11-beta.26: the header's and the bottom's places, as the picture has them
     std::string here;
-    panel::Picture picture;
-    uint32_t texture = 0;
-    int texW = 0, texH = 0, targetW = 0, targetH = 0;
+    int targetW = 0, targetH = 0;
     float k = 0, scale = 0;  // 3.0.11-beta.67: the layout's (uistyle::readingScale)
     std::vector<barhint::Skill> bar;  // 3.0.11-beta.68: the hotbar's skills, read with each page
 };
@@ -737,20 +735,6 @@ void render(State& s) {
     ++s.sheetGen;
     s.dirty = false;
     s.hot.clear();
-    s.parts.clear();
-}
-
-// 3.0.11-beta.25: the highlights' areas only (highlight) - painted again, their words, sent to the card by draw
-void renderHot(State& s) {
-    const uicost::Paint cost("«Довідник»'s rows", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    const refwin::Look look = lookOf(s);
-    const std::vector<Words> gdi = wordsOf(s, look);
-    for (const Rect& a : s.hot) {
-        refwin::repaint(s.picture, s.layout, s.page, s.rows, s.scroll, s.total, look, a);
-        drawWords(s.picture, gdi, a);
-        s.parts.push_back(a);
-    }
-    s.hot.clear();
 }
 
 bool toWindow(const State& s, HWND game, POINT client, float& wx, float& wy) {
@@ -899,10 +883,7 @@ static void frameInner(HWND game, bool enabled, double k, int targetWidth, int t
         s.dirty = true;
     }
     if (uaui::ready() != (s.sheetGen > 0 && s.sheetShown)) s.dirty = true;  // 3.0.18-beta.36: drawn the other way
-    if (s.dirty || (uaui::ready() && !s.hot.empty()))  // uaUI's: said again whole
-        render(s);
-    else if (!s.hot.empty())
-        renderHot(s);
+    if (s.dirty || !s.hot.empty()) render(s);  // uaUI's: said again whole (.158: the picture's repaint gone)
     s.shown = true;
     block(s, game);
 }

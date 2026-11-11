@@ -135,15 +135,6 @@ struct Look {
 // "icon:" + the row's icon)
 int portraitSide(const Layout& L);
 int iconSide(const Layout& L);
-// The window's shapes (premultiplied): its ground and frame, the header, the search field, the rows' grounds (the
-// tiles, the row under the pointer, the headings' rules, the NPCs' dots), the footer, the scroll bar
-void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
-           int total, const Look& look);
-// 3.0.11-beta.25 (R-77TCM7: «когда по меню вожу, лагат курсор и фпс падает» -
-// the whole window painted again, 290 ms at 4K, for each row the pointer went to): what paint makes, made again only
-// in `area` of a picture paint made at this layout (else all of it) - the rest kept
-void repaint(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows,
-             int scroll, int total, const Look& look, const Rect& area);
 // Where a look's highlights are drawn, the window's pixels: «back» and the cross under the pointer, the row under it
 // and the one the arrows picked (with its band). Another hover changes these of the old look and the new one only.
 std::vector<Rect> hotAreas(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,

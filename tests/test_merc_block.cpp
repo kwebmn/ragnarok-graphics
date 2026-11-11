@@ -41,15 +41,6 @@ TEST(merc_block_picture_and_words) {
     i.maxSp = 100;
     i.secondsLeft = 3 * 60;
     i.loyalty = 12;
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    mercblock::Show sh;
-    mercblock::paint(p, L, i, sh);
-    const auto at = [&](float x, float y) { return p.px[size_t(int(y)) * size_t(p.width) + size_t(int(x))]; };
-    const uint32_t hpLeft = at(L.hp.x + 4, L.hp.y + L.hp.h / 2), hpRight = at(L.hp.x + L.hp.w - 4, L.hp.y + L.hp.h / 2);
-    CHECK(((hpLeft >> 8) & 0xFF) > ((hpRight >> 8) & 0xFF) + 40);  // a quarter filled: green on its left only
     mercblock::Texts t;
     t.kinds[0] = "Найманець-лучник";
     t.level = "Рв. {1}";

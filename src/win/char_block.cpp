@@ -88,10 +88,6 @@ struct State {
     std::string key;  // what the picture shows
     std::string portraitKey;
     panel::Picture portrait;
-    panel::Picture picture;
-    uint32_t texture = 0;
-    int texW = 0, texH = 0;
-    bool upload = false;
     int clicksLogged = 0;
     // 3.0.11-beta.235: this session (from the character's first frame): its start, its zeny then, the monsters it hit
     // (the recent ones), those of them that died, its deaths
@@ -107,17 +103,7 @@ struct State {
     int fightHp = 0, fightSp = 0;
     ULONGLONG lastHitAt = 0, costAt = 0;
     float hpCost = -1, spCost = -1;
-    // 3.0.11-beta.46 (the concept's motion): a picture of its own with its texture - the view before a change (fading
-    // out under the new one), the low HP warning (sliding in, fading out), a new level's gold edge (flaring once)
-    struct Layer {
-        panel::Picture picture;
-        uint32_t texture = 0;
-        int texW = 0, texH = 0, x = 0, y = 0;
-        bool upload = false;
-        std::string key;
-    };
-    Layer before, warning, flare;
-    ULONGLONG changedAt = 0, warnAt = 0, levelAt = 0;
+    ULONGLONG warnAt = 0, levelAt = 0;
     int lastBase = 0, lastJob = 0;
     cb::View shownView = cb::View::Full;  // 3.0.11-beta.49: compact while the windows are open
     int hoverId = 0, pressedButton = -1;  // 3.0.11-beta.51: what is pointed at since when (its tip after 0.4 s)
@@ -220,13 +206,6 @@ void keepState(const State& s) {
 // Another view (a click on the portrait, Alt+V): the one before fades out under it (3.0.11-beta.46), kept for the
 // next start
 void changeView(State& s, cb::View v) {
-    if (motion::on() && s.picture.width > 0) {
-        s.before.picture = s.picture;
-        s.before.x = s.layout.x;
-        s.before.y = s.layout.y;
-        s.before.upload = true;
-        s.changedAt = GetTickCount64();
-    }
     s.view = v;
     if (v != cb::View::Full) s.small = v;
     s.shownView = s.view;
@@ -310,18 +289,6 @@ cb::Texts texts() {
     for (int i = 0; i < cb::kButtons; ++i) t.buttons[i] = say(names[i]);
     t.decimal = language() == settings::Lang::En ? '.' : ',';
     return t;
-}
-
-void renderFlare(State& s) {
-    const uicost::Paint cost("character block's flare", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    const std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' +
-                            std::to_string(int(s.layout.view)) + ',' + std::to_string(int(s.layout.look));
-    if (key == s.flare.key) return;
-    s.flare.key = key;
-    panel::Picture& p = s.flare.picture;
-    panel::blank(p, s.layout.w, s.layout.h);  // 3.0.18-beta.14
-    cb::paintFlare(p, s.layout);
-    s.flare.upload = true;
 }
 
 void uiRect(float& x, float& y, float& w, float& h);
@@ -863,13 +830,6 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     // «Характеристики» and «Довідник» alone, its buttons gone with it (the one that opened the window among them)
     const cb::View view = s.view;
     if (view != s.shownView) {
-        if (motion::on() && s.picture.width > 0) {  // the look before fades out, as after a click
-            s.before.picture = s.picture;
-            s.before.x = s.layout.x;
-            s.before.y = s.layout.y;
-            s.before.upload = true;
-            s.changedAt = GetTickCount64();
-        }
         s.shownView = view;
     }
     // 3.0.11-beta.235: the session's rows at the last levels (as the last frame's numbers had them)
@@ -1090,7 +1050,6 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
     }
-    if (now - s.levelAt < motion::kLevelMs) renderFlare(s);
     s.shown = true;
     block(s, game);
 }
@@ -1106,71 +1065,14 @@ bool panelBox(int& x, int& y, int& w, int& h) {
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    if (s.uiShown) return;  // 3.0.18-beta.17: uaUI draws it
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
-    int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    const ULONGLONG now = GetTickCount64();
-    const auto layer = [&](State::Layer& l, int x, int y, float a) {
-        drawPart(record, renderer, l.picture, l.texture, l.texW, l.texH, l.upload, x, y, s.k, a);
-    };
-    // 3.0.11-beta.46: a view changed - the one before fading out under the new one coming in (160 ms)
-    const float a = motion::fadeIn(now, s.changedAt, motion::kBlockMs);
-    if (a < 1 && s.before.picture.width > 0) layer(s.before, s.before.x, s.before.y, 1 - a);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k, a);
-    if (now < s.warnUntil && s.warning.picture.width > 0) {  // from 8 px over its place in 180 ms; its last 240 out
-        float w = 1, shift = 0;
-        const ULONGLONG outAt = s.warnUntil - motion::kToastOutMs;
-        if (motion::on() && now < outAt) {
-            w = motion::fadeIn(now, s.warnAt, motion::kToastInMs);
-            shift = -(1 - w) * 8 * s.scale;
-        } else if (motion::on()) {
-            w = motion::fadeOut(now, outAt, motion::kToastOutMs);
-        }
-        if (w > 0) layer(s.warning, s.layout.x, s.layout.y + int(std::lround(shift)), w);
-    }
-    const float f = motion::flare(now, s.levelAt, motion::kLevelMs);  // a new level: once, 600 ms
-    if (f > 0 && s.flare.picture.width > 0) layer(s.flare, s.layout.x, s.layout.y, f);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    (void)record;  // the old edition (its pictures) gone: uaUI draws it
+    (void)renderer;
 }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
-    State& s = state();
-    if (!s.shown || s.uiShown) return false;  // 3.0.18-beta.17: uaUI's events take its clicks
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
-    if (!button && m != WM_MOUSEWHEEL) return false;
-    (void)wp;
-    // 3.0.11-beta.235: the press where the game's own cursor stands, as the hover (game_camera pointerInTarget)
-    float tx = 0, ty = 0;
-    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
-    const cb::Hit h = cb::hitTest(s.layout, tx - float(s.layout.x), ty - float(s.layout.y));
-    if (h.part == cb::Part::None) return false;
-    if (m == WM_LBUTTONDOWN) {
-        if (h.part == cb::Part::Portrait) {  // full, compact, the icon, full again
-            changeView(s, cb::nextView(s.view));
-            LOG_INFO("character: the block %s", s.view == cb::View::Full      ? "full"
-                                                : s.view == cb::View::Compact ? "compact"
-                                                                              : "folded to its icon");
-        } else if (h.part == cb::Part::Zone && h.index >= 0 &&
-                   (cb::opensStats(cb::Zone(h.index)) || h.index == int(cb::Zone::Points))) {
-            // 3.0.11-beta.235: the battle's numbers - «Характеристики»
-            const bool sent = press(cb::kButton[0].command);
-            if (s.clicksLogged++ < 10)
-                LOG_INFO("character: the battle's line - «Характеристики» %s", sent ? "opened" : "not opened");
-        } else if (h.part == cb::Part::Button && h.index >= 0 && h.index < cb::kButtons) {
-            s.pressedButton = h.index;  // 3.0.11-beta.51: shown pressed a moment
-            s.pressedUntil = GetTickCount64() + kPressMs;
-            const bool sent = press(cb::kButton[h.index].command);
-            if (s.clicksLogged++ < 10)
-                LOG_INFO("character: the Basic Info window's button 0x%X %s", cb::kButton[h.index].command,
-                         sent ? "pressed through the window"
-                              : "not pressed - the window is not where this build has it");
-        }
-    }
-    result = 0;
-    return true;
+    // the old edition (its picture's own clicks) gone: uaUI's events take its clicks (press, changeView)
+    (void)game, (void)m, (void)wp, (void)lp, (void)result;
+    return false;
 }
 
 bool key(UINT m, WPARAM wp, LPARAM lp) {

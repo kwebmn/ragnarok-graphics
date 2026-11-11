@@ -328,32 +328,6 @@ CharHit characterHit(const CharLayout& L, float x, float y) {
     return h;
 }
 
-void paintCharacters(panel::Picture& out, const CharLayout& L, const std::vector<CharLogin>& logins,
-                     const CharShow& sh) {
-    const float s = L.s;
-    for (size_t i = 0; i < L.rows.size(); ++i) {
-        const int login = L.first + int(i);
-        const CharRow& r = L.rows[i];
-        for (size_t c = 0; c < r.cards.size(); ++c) {
-            const panel::Box& b = r.cards[c];
-            const bool hot = sh.hoverRow == login && sh.hoverCard == int(c);
-            panel::roundRect(out, b, 12 * s, kCard, 0.94f, hot ? kGold : kWhite, hot ? 0.9f : 0.12f, 1.0f * s);
-            const panel::Picture* art = size_t(login) < logins.size() && c < logins[size_t(login)].art.size()
-                                            ? logins[size_t(login)].art[c]
-                                            : nullptr;
-            const panel::Box pic{b.x + 1 * s, b.y + 1 * s, b.h - 2 * s, b.h - 2 * s};  // a square at its left
-            if (art)
-                classart::cover(out, pic, art->px, art->width, art->height, 11 * s, classart::kLeftCorners);
-            else
-                panel::roundRect(out, pic, 11 * s, 0x2A2416, 0.9f);
-        }
-        const bool hot = sh.hoverRow == login && sh.hoverCard < 0;
-        panel::roundRect(out, r.newChar, 12 * s, kCard, 0.70f, kWhite, hot ? 0.45f : 0.28f, 1.5f * s);
-    }
-    for (const panel::Box* a : {&L.up, &L.down})
-        if (a->w > 0) panel::roundRect(out, *a, 8 * s, kPill, 0.72f, kWhite, 0.14f, 1.0f * s);
-}
-
 std::vector<Words> characterWords(const CharLayout& L, const std::vector<CharLogin>& logins, const CharShow& sh,
                                   const CharTexts& t) {
     std::vector<Words> out;
@@ -413,13 +387,6 @@ int menuHit(const MenuLayout& M, float x, float y) {
     for (size_t i = 0; i < M.rows.size(); ++i)
         if (M.rows[i].contains(x, y)) return int(i);
     return -1;
-}
-
-void paintMenu(panel::Picture& out, const Layout& L, const MenuLayout& M, const MenuShow& sh) {
-    const float s = L.s;
-    panel::roundRect(out, panel::Box{M.x, M.y, M.w, M.h}, 10 * s, kPill, 0.97f, kWhite, 0.16f, 1.0f * s);
-    if (sh.hover >= 0 && sh.hover < int(M.rows.size()))
-        panel::roundRect(out, M.rows[size_t(sh.hover)], 7 * s, kWhite, 0.08f);
 }
 
 std::vector<Words> menuWords(const MenuLayout& M, const std::vector<MenuItem>& items, const MenuShow& sh,

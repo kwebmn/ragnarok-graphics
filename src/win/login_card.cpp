@@ -296,17 +296,6 @@ lc::Texts texts(loginview::View view) {
     return t;
 }
 
-std::vector<Words> gdiWords(const std::vector<lc::Words>& in) {
-    std::vector<Words> out;
-    for (const lc::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == lc::Align::Right    ? DT_RIGHT
-                                 : w.align == lc::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
 void render(State& s) {
     ++s.sheetGen;
 }
@@ -469,15 +458,6 @@ void chromeFrame(State& s, int targetWidth, int targetHeight) {
     if (key + (uaui::readyAnywhere() ? "u" : "") == s.chromeKey) return;
     s.chromeKey = key + (uaui::readyAnywhere() ? "u" : "");
     ++s.chromeGen;  // 3.0.18-beta.44: uaUI's strip said again (no picture then)
-    if (uaui::readyAnywhere()) return;
-    if (!panel::blank(s.chromePicture, s.chrome.w, s.chrome.h)) return;
-    loginchrome::paint(s.chromePicture, s.chrome, s.chromeShow);
-    std::vector<Words> words;
-    for (const loginchrome::Words& w : loginchrome::words(s.chrome, s.chromeShow))
-        words.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                              UINT(w.align == loginchrome::Align::Center ? DT_CENTER : DT_LEFT), false});
-    drawWords(s.chromePicture, words);
-    s.chromeUpload = true;
 }
 
 // 3.0.11-beta.174: a language picked on the strip - kept in uaro-graphics.ini ([utility] language, as the settings
@@ -751,16 +731,6 @@ void dropFrame(State& s) {
     int cx = 0, cy = 0;
     if (readHoverCursor(cx, cy))
         s.dropHover = lc::dropHit(s.drop, float(cx) * s.k - float(s.layout.x), float(cy) * s.k - float(s.layout.y));
-    std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' +
-                      std::to_string(s.dropHover) + '#' + std::to_string(uistyle::generation());
-    for (const lc::DropRow& r : s.dropRows) key += ';' + r.login + ',' + r.line;
-    if (key == s.dropKey) return;
-    s.dropKey = key;
-    if (!panel::blank(s.dropPicture, int(s.drop.w + 0.5f), int(s.drop.h + 0.5f))) return;
-    lc::paintDrop(s.dropPicture, s.drop, s.dropHover, s.scale);
-    drawWords(s.dropPicture,
-              gdiWords(lc::dropWords(s.drop, s.dropRows, s.dropHover, say(settings::Text::LoginOtherLogin), s.scale)));
-    s.dropUpload = true;
 }
 
 // 3.0.11-beta.177: a saved login picked in ▾'s list - its login and password into the fields (not sent: «Увійти»
@@ -1267,54 +1237,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 
 bool shown() { return state().shown; }
 
-void drawVeil(FrameRecord& record, gpu::Renderer& renderer) {  // 3.0.11-beta.203
-    Veil& v = state().veil;
-    if (state().veilShown || !v.on || v.k <= 0 || v.w <= 0 || v.h <= 0) return;  // 3.0.18-beta.69: or by uaUI
-    drawShade(record, 0, 0, v.w, v.h, v.k, 0.94f);
-    const float scale = uistyle::readingScale(v.k);
-    const int phase = int((GetTickCount64() - v.since) / 350 % 3);
-    const enterveil::Layout L = enterveil::layout(v.w, v.h, scale);
-    if (phase != v.phase || L.w != v.layout.w || L.h != v.layout.h) {
-        v.phase = phase;
-        v.layout = L;
-        enterveil::paint(v.picture, L, phase);
-        std::vector<Words> words;
-        for (const enterveil::Words& w : enterveil::words(L, v.texts))
-            words.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                                  UINT(w.align == enterveil::Align::Left    ? DT_LEFT
-                                       : w.align == enterveil::Align::Right ? DT_RIGHT
-                                                                            : DT_CENTER),
-                                  false});
-        drawWords(v.picture, words);
-        v.upload = true;
-    }
-    drawPart(record, renderer, v.picture, v.texture, v.texW, v.texH, v.upload, L.x, L.y, v.k);
+void drawVeil(FrameRecord& record, gpu::Renderer& renderer) {
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 void drawToast(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    const ULONGLONG now = GetTickCount64();
-    if (s.toastShown || s.toast.empty() || now >= s.toastUntil || s.toastK <= 0 || s.toastLayout.w <= 0) return;
-    const shelftoast::Layout& L = s.toastLayout;
-    int cx = 0, cy = 0;
-    s.toastHot = readHoverCursor(cx, cy) &&
-                 shelftoast::overUndo(L, float(cx) * s.toastK - float(L.x), float(cy) * s.toastK - float(L.y));
-    const std::string undo = say(settings::Text::ShelfUndo);
-    const std::string key = s.toast + '#' + undo + (s.toastHot ? "h" : "") + std::to_string(L.w) + 'x' +
-                            std::to_string(L.h) + '#' + std::to_string(uistyle::generation());
-    if (key != s.toastKey) {
-        s.toastKey = key;
-        if (!panel::blank(s.toastPicture, L.w, L.h)) return;
-        shelftoast::paint(s.toastPicture, L, s.toastHot);
-        std::vector<Words> words;
-        for (const shelftoast::Words& w : shelftoast::words(L, s.toast, undo, s.toastHot))
-            words.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold, UINT(DT_LEFT), false});
-        drawWords(s.toastPicture, words);
-        s.toastUpload = true;
-    }
-    const float fade = std::clamp(float(s.toastUntil - now) / 400.0f, 0.0f, 1.0f);  // its last 0.4 s fading
-    drawPart(record, renderer, s.toastPicture, s.toastTexture, s.toastTexW, s.toastTexH, s.toastUpload, L.x, L.y,
-             s.toastK, fade);
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 bool toastMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {

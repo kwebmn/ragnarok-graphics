@@ -157,15 +157,6 @@ int dropHit(const DropLayout& D, float x, float y) {
     return -1;
 }
 
-void paintDrop(panel::Picture& out, const DropLayout& D, int hover, float scale) {
-    const float s = scale;
-    panel::roundRect(out, panel::Box{0, 0, D.w, D.h}, 10 * s, 0x161B26, 0.98f, kWhite, 0.14f, 1.0f * s);
-    if (hover >= 0 && hover < int(D.rows.size())) {
-        const panel::Box& r = D.rows[size_t(hover)];
-        panel::roundRect(out, panel::Box{r.x - D.x, r.y - D.y, r.w, r.h}, 7 * s, kGold, 0.16f);
-    }
-}
-
 std::vector<Words> dropWords(const DropLayout& D, const std::vector<DropRow>& rows, int hover, const std::string& other,
                              float scale) {
     std::vector<Words> out;

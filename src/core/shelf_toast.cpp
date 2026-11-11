@@ -36,10 +36,6 @@ bool overUndo(const Layout& L, float x, float y) {
     return b.contains(x, y);
 }
 
-void paint(panel::Picture& out, const Layout& L, bool hot) {
-    panel::roundRect(out, L.pill, L.pill.h / 2, kGround, 0.94f, kGold, hot ? 0.75f : 0.55f, 1.0f * L.s);
-}
-
 std::vector<Words> words(const Layout& L, const std::string& text, const std::string& undo, bool hot) {
     const float px = kPx * L.s;
     const panel::Box dot{L.text.x + L.text.w, 0, L.undo.x - (L.text.x + L.text.w), float(L.h)};

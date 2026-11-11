@@ -16,8 +16,6 @@ constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2
 constexpr uint32_t kMuted = 0x9AA3B5, kHp = 0x5BC07A, kSp = 0x5B8CE0, kWarm = 0xE8A25B;
 constexpr int kEndingSeconds = 5 * 60;
 
-float share(int now, int most) { return most > 0 ? std::clamp(float(now) / float(most), 0.0f, 1.0f) : 0.0f; }
-
 }  // namespace
 
 std::string leftText(int seconds, const std::string& minutes, const std::string& hours) {
@@ -55,20 +53,6 @@ Layout layout(int left, int top, int width, float scale) {
 }
 
 bool hit(const Layout& L, float x, float y) { return L.glass.contains(x, y); }
-
-void paint(panel::Picture& out, const Layout& L, const Info& i, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.85f, uistyle::panel()), sh.open ? kGold2 : kWhite,
-                     sh.open ? 0.9f : sh.hover ? 0.22f : 0.10f, (sh.open ? 1.6f : 1.0f) * s);
-    uiicons::draw(out, uiicons::Icon::Battle, L.icon.x, L.icon.y, L.icon.w, sh.open || sh.hover ? kGold2 : kGold, 1.0f,
-                  1.8f);
-    const auto bar = [&](const panel::Box& b, float part, uint32_t rgb) {
-        panel::roundRect(out, b, b.h / 2, kWhite, 0.08f);
-        if (part > 0) panel::roundRect(out, panel::Box{b.x, b.y, std::max(b.h, b.w * part), b.h}, b.h / 2, rgb, 0.92f);
-    };
-    bar(L.hp, share(i.hp, i.maxHp), kHp);
-    bar(L.sp, share(i.sp, i.maxSp), kSp);
-}
 
 std::vector<Words> words(const Layout& L, const Info& i, const Texts& t) {
     std::vector<Words> out;

@@ -115,18 +115,6 @@ bool put(State& s, const pc::Place& p) {
     return false;
 }
 
-void paintRing(State& s, const pc::Place& p) {
-    const float m = std::round(4 * s.scale), t = std::max(2.0f, std::round(2 * s.scale));
-    const int w = int(std::ceil(p.w + 2 * m)), h = int(std::ceil(p.h + 2 * m));
-    const std::string key = std::to_string(w) + 'x' + std::to_string(h);
-    if (key == s.ring.key) return;
-    s.ring.key = key;
-    panel::blank(s.ring.picture, w, h);  // 3.0.18-beta.14
-    panel::roundRect(s.ring.picture, panel::Box{t / 2, t / 2, float(w) - t, float(h) - t}, 9 * s.scale, kGold, 0.10f,
-                     kGold, 0.95f, t);
-    s.ring.upload = true;
-}
-
 void paintHint(State& s, bool nowhere) {
     const std::string text = nowhere ? say(settings::Text::PadCarryNowhere) + "  \xC2\xB7  " +
                                            std::string(uapad::buttonLabel(1)) + ": " +
@@ -142,12 +130,6 @@ void paintHint(State& s, bool nowhere) {
     if (key == s.hint.key) return;
     s.hint.key = key;
     s.hintW = w, s.hintH = h;
-    const bool byUaui = uaui::ready();  // 3.0.18-beta.39: uaUI's - the words kept, no picture
-    if (!byUaui) {
-        panel::blank(s.hint.picture, w, h);  // 3.0.18-beta.14
-        panel::roundRect(s.hint.picture, panel::Box{0, 0, float(w), float(h)}, float(h) / 2, kCard, 0.94f, kGold,
-                         0.6f, std::max(1.0f, s.scale));
-    }
     std::vector<Words> words;
     float x = 14 * s.scale;
     if (!s.name.empty()) {
@@ -158,12 +140,7 @@ void paintHint(State& s, bool nowhere) {
     }
     words.push_back(Words{panel::Box{x, 0, float(w) - x, float(h)}, utf8Wide(text), nowhere ? kMuted : kText, px, true,
                           DT_LEFT, false});
-    if (byUaui) {
-        s.hintWords = std::move(words);
-        return;
-    }
-    drawWords(s.hint.picture, words);
-    s.hint.upload = true;
+    s.hintWords = std::move(words);  // 3.0.18-beta.39: uaUI's - the words kept (.158: no picture)
 }
 
 }  // namespace
@@ -240,7 +217,6 @@ static void frameInner(HWND game, double k, int targetWidth, int targetHeight) {
         s.focusTo = s.places[size_t(s.focus)].to;
         s.focusIndex = s.places[size_t(s.focus)].index;
     }
-    if (s.focus >= 0) paintRing(s, s.places[size_t(s.focus)]);
     paintHint(s, s.focus < 0);
     s.shown = true;
 }
@@ -285,29 +261,8 @@ void frame(HWND game, double k, int targetWidth, int targetHeight) {
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    if (!s.shown || s.k <= 0 || s.sheetShown) return;
-    float hx = s.fromX, hy = s.fromY;  // the hint under the focused place (or where it was taken)
-    if (s.focus >= 0 && s.focus < int(s.places.size())) {
-        const pc::Place& p = s.places[size_t(s.focus)];
-        const float m = std::round(4 * s.scale);
-        drawPart(record, renderer, s.ring.picture, s.ring.texture, s.ring.texW, s.ring.texH, s.ring.upload,
-                 int(std::lround(p.x - m)), int(std::lround(p.y - m)), s.k);
-        if (s.iconOf && s.icon.picture.width > 0) {  // the thing over the place's top right corner
-            const int ix = int(std::lround(p.x + p.w - float(s.icon.picture.width) * 0.55f));
-            const int iy = int(std::lround(p.y - float(s.icon.picture.height) * 0.45f));
-            drawPart(record, renderer, s.icon.picture, s.icon.texture, s.icon.texW, s.icon.texH, s.icon.upload, ix,
-                     iy, s.k);
-        }
-        hx = p.x + p.w / 2;
-        hy = p.y + p.h + 10 * s.scale;
-        if (hy + float(s.hint.picture.height) > float(s.targetH) - 4)  // no room under it: over it
-            hy = p.y - 10 * s.scale - float(s.hint.picture.height);
-    }
-    const int w = s.hint.picture.width, h = s.hint.picture.height;
-    const int x = std::clamp(int(std::lround(hx - float(w) / 2)), 0, std::max(0, s.targetW - w));
-    const int y = std::clamp(int(std::lround(hy)), 0, std::max(0, s.targetH - h));
-    drawPart(record, renderer, s.hint.picture, s.hint.texture, s.hint.texW, s.hint.texH, s.hint.upload, x, y, s.k);
+    (void)record;  // the old edition (its pictures) gone: uaUI draws the ring and the hint
+    (void)renderer;
 }
 
 }  // namespace uagfx::win::padcarrywin

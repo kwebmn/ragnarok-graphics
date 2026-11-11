@@ -36,49 +36,12 @@ BarPart barHit(const Bar& b, float x, float y) {
     return BarPart::Body;
 }
 
-void paintBar(panel::Picture& out, const Bar& b, BarPart hover) {
-    out.width = b.w;
-    out.height = b.h;
-    out.px.assign(size_t(b.w) * size_t(b.h), 0u);
-    const float s = b.s, edge = std::max(1.0f, s);
-    panel::roundRect(out, panel::Box{0, 0, float(b.w), float(b.h)}, 12 * s, kCard, 0.94f, kAccent, 0.55f, edge);
-    panel::roundRect(out, b.reset, 8 * s, kWhite, hover == BarPart::Reset ? 0.16f : 0.08f, kWhite, 0.22f, edge);
-    panel::roundRect(out, b.done, 8 * s, hover == BarPart::Done ? kAccent2 : kAccent, 1.0f);
-}
-
 std::vector<Words> barWords(const Bar& b, const BarTexts& t) {
     const float s = b.s, left = px(16, s), room = b.reset.x - left - px(10, s);
     return {Words{panel::Box{left, px(7, s), room, px(20, s)}, t.title, kAccent2, 14 * s, true, Align::Left},
             Words{panel::Box{left, px(27, s), room, px(18, s)}, t.hint, kMuted, 11.5f * s, false, Align::Left},
             Words{b.reset, t.reset, kText, 12.5f * s, false, Align::Center},
             Words{b.done, t.done, kOnGold, 12.5f * s, true, Align::Center}};
-}
-
-void paintFrame(panel::Picture& out, int w, int h, float scale, Look look, float tagWidth) {
-    panel::blank(out, w, h);  // 3.0.18-beta.14: recorded for uaUI while it is on
-    if (w <= 0 || h <= 0) return;
-    const float s = std::max(0.5f, scale), edge = std::max(2.0f, 2 * s);
-    const float fill = look == Look::Dragged ? 0.22f : look == Look::Hover ? 0.16f : 0.08f;
-    const bool idle = look == Look::Idle;
-    panel::roundRect(out, panel::Box{0, 0, float(w), float(h)}, 8 * s, kAccent, fill, idle ? kAccent : kAccent2,
-                     idle ? 0.75f : 1.0f, edge);
-    if (tagWidth > 0)
-        panel::roundRect(out, panel::Box{px(4, s), px(3, s), std::min(float(w) - px(8, s), tagWidth + px(10, s)),
-                                         std::min(px(22, s), float(h) - px(6, s))},
-                         6 * s, kCard, 0.92f);
-}
-
-void paintGrip(panel::Picture& out, int side, float scale, bool hover) {
-    panel::blank(out, side, side);  // 3.0.18-beta.14
-    if (side <= 0) return;
-    const float s = std::max(0.5f, scale), f = float(side);
-    panel::roundRect(out, panel::Box{0, 0, f, f}, f / 4, kCard, hover ? 0.95f : 0.8f, kAccent2, hover ? 1.0f : 0.7f,
-                     std::max(1.0f, s));
-    const float r = std::max(0.8f, 1.1f * s);
-    for (int row = 0; row < 3; ++row)  // ⋰ - the three corners' dots of a resize handle
-        for (int col = 2 - row; col < 3; ++col)
-            panel::circle(out, f * (0.3f + 0.2f * float(col)), f * (0.3f + 0.2f * float(row)), r, kAccent2,
-                          hover ? 1.0f : 0.8f);
 }
 
 std::vector<Words> frameWords(int w, int h, float scale, const std::string& name, int percent) {

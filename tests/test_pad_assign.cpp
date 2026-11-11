@@ -16,16 +16,6 @@ TEST(pad_assign_rows) {
     CHECK_EQ(L.rows.size(), size_t(3));
     CHECK(L.rows[1].y > L.rows[0].y && L.x + L.w / 2 == 960);
     CHECK_EQ(padassign::hitTest(L, L.rows[2].x + 5, L.rows[2].y + 5), 2);
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    padassign::paint(p, L, rows, 1, false);
-    const auto edge = [&](int i) {
-        const panel::Box& b = L.rows[size_t(i)];
-        return p.px[size_t(int(b.y + b.h / 2)) * size_t(p.width) + size_t(int(b.x))];
-    };
-    CHECK(((edge(1) >> 16) & 0xFF) > ((edge(0) >> 16) & 0xFF) + 40);  // the chosen row edged gold
     const std::vector<padassign::Words> w = padassign::words(L, rows, "Red Potion", "Призначити на кнопку", "Поставити",
                                                             "Скасувати", "порожньо", false);
     const auto has = [&](const std::string& text) {

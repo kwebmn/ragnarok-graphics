@@ -175,9 +175,6 @@ struct Show {
     int hoverZone = -1;         // 3.0.11-beta.235: the Zone pointed at (its tip)
     bool hoverPortrait = false;  // 3.0.11-beta.141: the portrait pointed at (its tip tells Alt+V)
 };
-// A new level: the block's edge in gold (the rings: a gold ring round them), drawn over the block flaring once
-void paintFlare(panel::Picture& out, const Layout& L);
-
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;
@@ -225,14 +222,13 @@ struct Model {
     std::string portraitTip;
 };
 Model model(const Data& d, const Texts& t, View view, Look look, bool sessionRows);
-std::vector<Words> warningWords(const Layout& L, const Data& d, const Texts& t);  // paintWarning's
+  // paintWarning's
 
 // 3.0.11-beta.236 (the concept «Блок персонажа»: «внизу экрана показывать опыт бейз/джоб полосками» - «включить»): the
 // experience's strip at the screen's bottom edge - its height at `scale`, its picture (`out` as wide as the screen and
 // that high: the base's bar over the job's on a dark band), its tip's lines (each experience's per cent and numbers,
 // its pace and the time to the level)
 int stripHeight(float scale);
-void paintStrip(panel::Picture& out, const Data& d, float scale);
 // 3.0.18-beta.23: the strip's two bars (the base's, the job's): each one's lit share, colour and opacity
 struct StripBar {
     float fill = 0, alpha = 1;

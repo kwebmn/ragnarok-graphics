@@ -20,10 +20,4 @@ TEST(shelf_toast_places_and_undo) {
     CHECK(std::any_of(w.begin(), w.end(), [&](const shelftoast::Words& x) { return x.text == text; }));
     CHECK(std::any_of(w.begin(), w.end(), [&](const shelftoast::Words& x) { return x.text == undo; }));
     CHECK(shelftoast::kShowMs == 6000);
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    shelftoast::paint(p, L, false);
-    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);  // its ground
 }

@@ -40,7 +40,6 @@ struct Show {
     std::string news, allNews;  // 3.0.11-beta.174: the site's item now, its link's words
     int hover = 0;           // a Part's number, 0 none
 };
-void paint(panel::Picture& out, const Layout& L, const Show& sh);
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;

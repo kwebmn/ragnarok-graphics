@@ -47,23 +47,6 @@ int hitTest(const Layout& L, float x, float y) {
     return -1;
 }
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& rows, int focus, bool sony) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 14 * s, kCard, std::max(0.92f, uistyle::panel()), kWhite, 0.10f, 1.0f * s);
-    panel::roundRect(out, panel::Box{L.hints.x, L.hints.y - 4 * s, L.hints.w, 1 * s}, 0, kWhite, 0.09f);
-    for (size_t i = 0; i < L.rows.size() && i < rows.size(); ++i) {
-        const panel::Box& b = L.rows[i];
-        const bool on = int(i) == focus;
-        panel::roundRect(out, b, 9 * s, on ? kGold : kWhite, on ? 0.13f : 0.04f, on ? kGold2 : kWhite,
-                         on ? 1.0f : 0.08f, (on ? 2.0f : 1.0f) * s);
-        padglyph::paint(out, padglyph::Button(rows[i].button), family(sony), b.x + 8 * s, b.y + (b.h - kGlyph * s) / 2,
-                        kGlyph * s);
-    }
-    const float y = L.hints.y + (L.hints.h - kGlyph * s) / 2;
-    padglyph::paint(out, padglyph::Button::A, family(sony), L.hints.x, y, kGlyph * s);
-    padglyph::paint(out, padglyph::Button::B, family(sony), L.hints.x + 140 * s, y, kGlyph * s);
-}
-
 std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const std::string& what,
                          const std::string& title, const std::string& put, const std::string& cancel,
                          const std::string& empty, bool sony) {

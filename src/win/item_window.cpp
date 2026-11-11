@@ -113,19 +113,15 @@ struct State {
     std::set<int> fresh;
     std::set<int> starred;    // 3.0.11-beta.113: the items' numbers in «★» (this character's)
     std::string starredOf;    // whose they are
-    std::string toast, toastPainted;
+    std::string toast;
     ULONGLONG toastUntil = 0;
     bool toastOn = true, noticeHidden = false;  // 3.0.11-beta.186: [interface] item_toast; the game's box hidden once
     float toastK = 0, toastScale = 1;
     int toastW = 0, toastH = 0;  // the target's
-    panel::Picture toastPicture;
     bool toastUi = false;  // 3.0.18-beta.24: drawn by uaUI
     itemgridui::Ui grid;  // 3.0.18-beta.27: the window drawn by uaUI
     int gridGen = 0;
     bool gridShown = false;
-    uint32_t toastTexture = 0;
-    int toastTexW = 0, toastTexH = 0;
-    bool toastUpload = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
     float fx = 0.08f, fy = 0.23f;  // its place: a share of the free room to its left and above it (the concept's)
@@ -1043,26 +1039,8 @@ bool giveDrag(uint32_t drag) {  // 3.0.11-beta.115
 }
 
 void drawToast(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    const ULONGLONG now = GetTickCount64();
-    if (s.toastUi) return;  // 3.0.18-beta.24: drawn by uaUI
-    int x = 0, y = 0, w = 0, h = 0;
-    float fade = 0;
-    if (!toastPlace(s, now, x, y, w, h, fade)) return;
-    const float sc = s.toastScale;
-    if (s.toast != s.toastPainted) {
-        s.toastPainted = s.toast;
-        panel::Picture& p = s.toastPicture;
-        p.width = int(std::ceil(measure(s.toast, 13 * sc, true) + 24 * sc));
-        p.height = int(std::ceil(26 * sc));
-        p.px.assign(size_t(p.width) * size_t(p.height), 0u);
-        const panel::Box all{0, 0, float(p.width), float(p.height)};
-        panel::roundRect(p, all, all.h / 2, 0x10141C, 0.92f, 0xF3C653, 0.7f, 1.0f * sc);
-        drawWords(p, {Words{all, utf8Wide(s.toast), 0xF3C653, 13 * sc, true, UINT(DT_CENTER), false}});
-        s.toastUpload = true;
-    }
-    drawPicture(record, renderer, s.toastPicture, s.toastTexture, s.toastTexW, s.toastTexH, s.toastUpload, x, y,
-                s.toastK, fade);
+    (void)record;  // the old edition (its picture) gone: uaUI draws the toast (.158)
+    (void)renderer;
 }
 
 void packet(const packets::Event& e) {

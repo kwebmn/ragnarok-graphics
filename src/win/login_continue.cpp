@@ -117,16 +117,6 @@ void dropFrame(State& s, const accounts::Shelf& shelf) {
     s.dropHover = -1;
     int cx = 0, cy = 0;
     if (readHoverCursor(cx, cy)) s.dropHover = logincard::dropHit(s.drop, float(cx) * s.k, float(cy) * s.k);
-    std::string key = std::to_string(int(s.drop.x)) + ',' + std::to_string(int(s.drop.y)) + ';' +
-                      std::to_string(s.dropHover) + '#' + std::to_string(uistyle::generation());
-    for (const logincard::DropRow& r : s.rows) key += ';' + r.login + ',' + r.line;
-    if (key == s.dropKey) return;
-    s.dropKey = key;
-    if (!panel::blank(s.dropPicture, int(s.drop.w + 0.5f), int(s.drop.h + 0.5f))) return;
-    logincard::paintDrop(s.dropPicture, s.drop, s.dropHover, s.scale);
-    drawWords(s.dropPicture,
-              gdi(logincard::dropWords(s.drop, s.rows, s.dropHover, say(settings::Text::LoginOtherLogin), s.scale)));
-    s.dropUpload = true;
 }
 
 }  // namespace
@@ -174,14 +164,8 @@ static void frameInner(double k, int targetWidth, int targetHeight, unsigned cod
                             std::to_string(uistyle::generation()) + (uaui::readyAnywhere() ? "u" : "");
     if (key != s.key) {
         s.key = key;
-        if (uaui::readyAnywhere()) {  // 3.0.18-beta.40: uaUI's card - its words kept, no picture
-            s.words = gdi(lco::words(s.layout, a, s.show, t));
-            ++s.sheetGen;
-        } else if (panel::blank(s.picture, s.layout.w, s.layout.h)) {
-            lco::paint(s.picture, s.layout, a, s.show);
-            drawWords(s.picture, gdi(lco::words(s.layout, a, s.show, t)));
-            s.upload = true;
-        }
+        s.words = gdi(lco::words(s.layout, a, s.show, t));  // 3.0.18-beta.40: uaUI's card - its words, no picture
+        ++s.sheetGen;
     }
     if (s.dropOpen) dropFrame(s, shelf);
 }

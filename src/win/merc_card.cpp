@@ -481,9 +481,6 @@ mb::Info blockInfo(unsigned codePage) {
 
 void blockRender(BlockState& s) {
     const uicost::Paint cost("the mercenary's block", s.layout.w, s.layout.h);
-    const bool byUaui = uaui::ready();  // 3.0.18-beta.39: uaUI's block - the words kept, no picture
-    if (!byUaui && !panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    if (!byUaui) mb::paint(s.picture, s.layout, s.info, s.show);
     mb::Texts t;
     t.kinds[0] = say(settings::Text::MercArcher);
     t.kinds[1] = say(settings::Text::MercSpearman);
@@ -499,13 +496,8 @@ void blockRender(BlockState& s) {
                                  : w.align == mb::Align::Center ? DT_CENTER
                                                                 : DT_LEFT),
                             false});
-    if (byUaui) {
-        s.words = std::move(out);
-        ++s.sheetGen;
-        return;
-    }
-    drawWords(s.picture, out);
-    s.upload = true;
+    s.words = std::move(out);  // 3.0.18-beta.39: uaUI's block - its words (.158: no picture)
+    ++s.sheetGen;
 }
 
 void blockHide(BlockState& s) {
@@ -643,12 +635,8 @@ void blockFrame(HWND game, bool on, unsigned codePage, double k, int targetWidth
 }
 
 void blockDraw(FrameRecord& record, gpu::Renderer& renderer) {
-    BlockState& s = blockState();
-    if (!s.shown || s.sheetShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
-    int cursor = -1, cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 bool blockMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {

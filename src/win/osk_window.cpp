@@ -171,17 +171,6 @@ osk::Texts texts(const State& s) {
     return t;
 }
 
-std::vector<Words> gdiWords(const std::vector<osk::Words>& in) {
-    std::vector<Words> out;
-    for (const osk::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == osk::Align::Right    ? DT_RIGHT
-                                 : w.align == osk::Align::Center ? DT_CENTER
-                                                                 : DT_LEFT),
-                            false});
-    return out;
-}
-
 void press(State& s) {
     const osk::Grid g = osk::rows(s.lang, s.shift);
     const osk::Key& k = osk::keyAt(g, s.focus);
@@ -269,14 +258,6 @@ static void frameInner(HWND game, unsigned codePage, double k, int targetWidth, 
         ++s.sheetGen;
         s.sheetGrid = g;
         s.sheetCaret = caret;
-    } else if (key != s.key) {
-        s.key = key;
-        const uicost::Paint cost("the keyboard", s.layout.w, s.layout.h);
-        if (panel::blank(s.picture, s.layout.w, s.layout.h)) {
-            osk::paint(s.picture, s.layout, g, s.focus, s.shift);
-            drawWords(s.picture, gdiWords(osk::words(s.layout, g, s.focus, s.line, caret, texts(s))));
-            s.upload = true;
-        }
     }
 }
 

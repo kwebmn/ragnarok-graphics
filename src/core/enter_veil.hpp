@@ -21,7 +21,7 @@ struct Layout {
     panel::Box card, title, name, line, dots;
 };
 Layout layout(int targetW, int targetH, float scale);
-void paint(panel::Picture& out, const Layout& L, int phase);  // the card; its dots lit up to `phase` (0-2)
+  // the card; its dots lit up to `phase` (0-2)
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

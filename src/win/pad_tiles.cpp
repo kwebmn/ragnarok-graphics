@@ -71,9 +71,6 @@ std::vector<Words> gdiWords(const std::vector<pt::Words>& in) {
 }
 
 void render(State& s, bool sony) {
-    const bool byUaui = uaui::ready();  // 3.0.18-beta.35: the words kept for uaUI's sheet, no picture
-    if (!byUaui && !panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    if (!byUaui) pt::paint(s.picture, s.layout, s.focus, sony, &s.list);
     using settings::Text;
     const settings::Lang l = language();
     const Text byTile[int(pt::Tile::Count)] = {Text::ItemsTitle, Text::StatsTitle, Text::TileSkills, Text::TileEquip,
@@ -88,14 +85,9 @@ void render(State& s, bool sony) {
     std::vector<Words> words = gdiWords(pt::words(s.layout, names, settings::tr(l, Text::TilesTitle),
                                             settings::tr(l, Text::TilesOpen), settings::tr(l, Text::TilesClose),
                                             sony));
-    if (byUaui) {
-        s.sheetWords = std::move(words);
-        s.sheetSony = sony;
-        ++s.sheetGen;
-        return;
-    }
-    drawWords(s.picture, words);
-    s.upload = true;
+    s.sheetWords = std::move(words);  // 3.0.18-beta.35: the words for uaUI's sheet (.158: no picture)
+    s.sheetSony = sony;
+    ++s.sheetGen;
 }
 
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own

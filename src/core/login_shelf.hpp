@@ -136,8 +136,6 @@ struct CharShow {
     int hoverRow = -1, hoverCard = -1;  // hoverCard -1 with a row: its «Новий персонаж»
     bool hoverBack = false;
 };
-void paintCharacters(panel::Picture& out, const CharLayout& L, const std::vector<CharLogin>& logins,
-                     const CharShow& sh);
 std::vector<Words> characterWords(const CharLayout& L, const std::vector<CharLogin>& logins, const CharShow& sh,
                                   const CharTexts& t);
 
@@ -158,7 +156,6 @@ struct MenuShow {
     int hover = -1;
     bool autoEnter = true, keepPassword = true, removeSure = false;
 };
-void paintMenu(panel::Picture& out, const Layout& L, const MenuLayout& M, const MenuShow& sh);
 std::vector<Words> menuWords(const MenuLayout& M, const std::vector<MenuItem>& items, const MenuShow& sh,
                              const MenuTexts& t, float scale);
 

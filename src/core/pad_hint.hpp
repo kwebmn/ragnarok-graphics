@@ -28,8 +28,6 @@ struct Layout {
 };
 // Its bottom middle at (centreX, bottom); `width` measures words (panel::wordsWidth)
 Layout layout(const std::vector<Part>& parts, int centreX, int bottom, float scale);
-void paint(panel::Picture& out, const Layout& L, const std::vector<Part>& parts, bool sony);
-
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;

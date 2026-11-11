@@ -24,8 +24,6 @@ struct Layout {
 };
 Layout layout(size_t rows, int centreX, int centreY, float scale);
 int hitTest(const Layout& L, float x, float y);
-void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& rows, int focus, bool sony);
-
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;

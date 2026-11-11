@@ -18,7 +18,6 @@ struct Layout {
 };
 Layout layout(int targetW, int targetH, float scale, const std::string& text, const std::string& undo);
 bool overUndo(const Layout& L, float x, float y);  // in the pill's pixels
-void paint(panel::Picture& out, const Layout& L, bool hot);
 struct Words {
     panel::Box box;
     std::string text;  // UTF-8

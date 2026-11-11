@@ -30,26 +30,6 @@ constexpr uint32_t kFight = 0xF3D27A;  // 3.0.11-beta.238: the last fight's cost
 
 float part(int value, int most) { return most > 0 ? std::clamp(float(value) / float(most), 0.0f, 1.0f) : 0.0f; }
 
-float cover(float d) { return std::clamp(0.5f - d, 0.0f, 1.0f); }
-
-// A ring `width` wide inside `outer` round (cx, cy): from twelve o'clock round to `share` of it
-void ring(panel::Picture& p, float cx, float cy, float outer, float width, float share, uint32_t rgb, float a) {
-    if (share <= 0) return;
-    for (int y = std::max(0, int(cy - outer) - 1); y < std::min(p.height, int(cy + outer) + 2); ++y)
-        for (int x = std::max(0, int(cx - outer) - 1); x < std::min(p.width, int(cx + outer) + 2); ++x) {
-            const float px = float(x) + 0.5f, py = float(y) + 0.5f, r = panel::length(px - cx, py - cy);
-            const float k = cover(r - outer) * cover(outer - width - r);
-            if (k <= 0) continue;
-            float soft = 1;
-            if (share < 1) {
-                float turn = std::atan2(px - cx, cy - py) / 6.2831853f;  // clockwise from twelve o'clock
-                if (turn < 0) turn += 1;
-                soft = std::clamp((share - turn) * 6.2831853f * std::max(r, 1.0f) + 0.5f, 0.0f, 1.0f);
-            }
-            if (soft > 0) panel::over(p.px[size_t(y) * size_t(p.width) + size_t(x)], rgb, a * k * soft);
-        }
-}
-
 std::string replaced(std::string text, const std::string& value) {
     const size_t at = text.find("{1}");
     if (at != std::string::npos) text.replace(at, 3, value);
@@ -296,12 +276,6 @@ std::vector<std::string> tipLines(const Layout& L, const Data& d, const Texts& t
     return {};
 }
 
-panel::Box warnBox(const Layout& L, const Data& d, const Texts& t, const Show& show) {
-    if (!show.warning || !lowHp(d)) return panel::Box{};
-    const std::string text = "! " + replaced(t.lowHp, std::to_string(lowPercent(d)));
-    return panel::Box{L.under.x, L.under.y, panel::wordsWidth(text, 13 * L.s, true) + 24 * L.s, kWarnH * L.s};
-}
-
 }  // namespace
 
 View nextView(View v) { return v == View::Full ? View::Compact : v == View::Compact ? View::Icon : View::Full; }
@@ -502,18 +476,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{Part::Body, -1};
 }
 
-void paintFlare(panel::Picture& out, const Layout& L) {
-    const float s = L.s;
-    if (rings(L)) {
-        ring(out, L.cx, L.cy, L.hpR + 2 * s, 2.5f * s, 1, kGold2, 1.0f);
-        ring(out, L.cx, L.cy, L.hpR - L.hpW, 1.5f * s, 1, kGold2, 0.5f);
-        return;
-    }
-    panel::roundRect(out, L.block, kRadius * s, kGold, 0.0f, kGold2, 1.0f, 2.0f * s);
-    const panel::Box in{L.block.x + 2 * s, L.block.y + 2 * s, L.block.w - 4 * s, L.block.h - 4 * s};
-    panel::roundRect(out, in, (kRadius - 2) * s, kGold, 0.10f, kGold, 0.45f, 2.0f * s);
-}
-
 Model model(const Data& d, const Texts& t, View view, Look look, bool sessionRows) {
     Model m;
     const Layout L = layout(view, look, 0, 0, 1.0f, sessionRows);
@@ -640,30 +602,7 @@ Model model(const Data& d, const Texts& t, View view, Look look, bool sessionRow
     return m;
 }
 
-std::vector<Words> warningWords(const Layout& L, const Data& d, const Texts& t) {
-    Show show;
-    show.warning = true;
-    const panel::Box warn = warnBox(L, d, t, show);
-    if (warn.w <= 0) return {};
-    return {Words{warn, "! " + replaced(t.lowHp, std::to_string(lowPercent(d))), kText, 13 * L.s, true,
-                  Align::Center}};
-}
-
 int stripHeight(float scale) { return std::max(5, int(std::lround(8 * (scale > 0 ? scale : 1.0f)))); }
-
-void paintStrip(panel::Picture& out, const Data& d, float scale) {
-    const float s = scale > 0 ? scale : 1.0f, w = float(out.width), h = float(out.height);
-    panel::roundRect(out, panel::Box{0, 0, w, h}, 0, kBlack, 0.55f);
-    const float barH = (h - 3 * s) / 2;
-    const std::array<StripBar, 2> bars = stripBars(d);
-    for (int b = 0; b < 2; ++b) {
-        const float y = b == 0 ? 1 * s : 2 * s + barH;
-        if (bars[b].fill > 0)
-            panel::roundRect(out, panel::Box{0, y, w * bars[b].fill, barH}, 0, bars[b].rgb, bars[b].alpha);
-        for (int i = 1; i < 10; ++i)  // a tick each 10 %
-            panel::roundRect(out, panel::Box{w * float(i) / 10, y, 1.0f * s, barH}, 0, kBlack, 0.6f);
-    }
-}
 
 std::array<StripBar, 2> stripBars(const Data& d) {
     const auto one = [](const Exp& e, uint32_t rgb) {

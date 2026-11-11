@@ -23,7 +23,6 @@ namespace ws = uagfx::worldsigns;
 namespace {
 
 constexpr size_t kTitleLetters = 30;  // a longer title cut with an ellipsis
-constexpr int kKeepFrames = 240;      // a plate not shown this long: its texture freed
 constexpr size_t kMostPlates = 96;
 
 struct Room {
@@ -36,14 +35,6 @@ struct Seen {  // a sign window noted in the game's windows' draw
     bool shop = false;
     uint32_t key = 0;  // the merchant's account, the room's id
     int type = 1;      // a room's (its window's + 0x6C)
-};
-
-struct Plate {
-    panel::Picture picture;
-    uint32_t texture = 0;
-    int texW = 0, texH = 0;
-    bool upload = false;
-    int idle = 0;
 };
 
 struct Shown {
@@ -68,7 +59,6 @@ struct State {
     std::unordered_map<uint32_t, std::string> shops;
     std::unordered_map<uint32_t, Room> rooms;
     std::vector<Seen> seen;  // this frame's
-    std::unordered_map<std::string, Plate> plates;
     std::vector<Shown> shown;
     int shopsTold = 0, roomsTold = 0, missTold = 0;
 };
@@ -96,26 +86,6 @@ Measures measures(const std::wstring& title, const std::wstring& places, float s
     m.w = int(std::lround(m.pad + m.dot + m.gap + float(m.titleW) + (m.placesW ? m.gap + float(m.placesW) : 0) +
                           m.pad));
     return m;
-}
-
-// A plate painted: a dark rounded plate with a thin edge and a dot in its kind's colour, the title, a room's places
-void paint(Plate& p, ws::Kind kind, const std::wstring& title, const std::wstring& places, float scale) {
-    const Measures m = measures(title, places, scale);
-    const float px = m.px, pad = m.pad, dot = m.dot, gap = m.gap;
-    const int titleW = m.titleW, placesW = m.placesW, h = m.h, w = m.w;
-    if (!panel::blank(p.picture, w, h)) return;
-    const uint32_t accent = ws::accent(kind);
-    panel::roundRect(p.picture, panel::Box{0, 0, float(w), float(h)}, 6 * scale, 0x15181F, 0.86f, accent, 0.55f,
-                     std::max(1.0f, scale));
-    panel::roundRect(p.picture, panel::Box{pad, (float(h) - dot) / 2, dot, dot}, dot / 2, accent, 1.0f);
-    std::vector<Words> words;
-    const float tx = pad + dot + gap;
-    words.push_back(Words{panel::Box{tx, 0, float(titleW) + 2, float(h)}, title, 0xECEFF5, px, true, DT_LEFT});
-    if (placesW)
-        words.push_back(Words{panel::Box{tx + float(titleW) + gap, 0, float(placesW) + 2, float(h)}, places, accent,
-                              px, true, DT_LEFT});
-    drawWords(p.picture, words);
-    p.upload = true;
 }
 
 }  // namespace
@@ -187,25 +157,10 @@ static void frameInner(bool on, unsigned codePage, double k, int targetWidth, in
         const std::string text = ws::shortTitle(utf8Of(widened(title, s.codePage)), kTitleLetters);
         const std::string key = std::to_string(int(kind)) + '|' + text + '|' + places + '|' + std::to_string(scale);
         const float cx = (float(n.x) + float(n.w) / 2) * s.k, cy = (float(n.y) + float(n.h) / 2) * s.k;
-        if (uaui::ready()) {  // 3.0.18-beta.38: uaUI's plate - no picture
-            const Measures m = measures(utf8Wide(text), utf8Wide(places), scale);
-            s.shown.push_back(Shown{key, int(std::lround(cx - float(m.w) / 2)), int(std::lround(cy - float(m.h) / 2)),
-                                    kind, text, places, m.w, m.h});
-            continue;
-        }
-        Plate& p = s.plates[key];
-        p.idle = 0;
-        if (p.picture.width == 0) paint(p, kind, utf8Wide(text), utf8Wide(places), scale);
-        if (p.picture.width == 0) continue;
-        s.shown.push_back(Shown{key, int(std::lround(cx - float(p.picture.width) / 2)),
-                                int(std::lround(cy - float(p.picture.height) / 2)), kind, {}, {}, 0, 0});
-        int& told = n.shop ? s.shopsTold : s.roomsTold;
-        if (told < 3) {
-            ++told;
-            LOG_INFO("signs: %s «%s»%s%s at the game's %d, %d (%dx%d) - a %dx%d plate", n.shop ? "a shop" : "a room",
-                     text.c_str(), places.empty() ? "" : " ", places.c_str(), n.x, n.y, n.w, n.h,
-                     p.picture.width, p.picture.height);
-        }
+        if (!uaui::ready()) continue;  // 3.0.18-beta.38: uaUI's plate (.158: the old picture plates gone)
+        const Measures m = measures(utf8Wide(text), utf8Wide(places), scale);
+        s.shown.push_back(Shown{key, int(std::lround(cx - float(m.w) / 2)), int(std::lround(cy - float(m.h) / 2)),
+                                kind, text, places, m.w, m.h});
     }
 }
 
@@ -244,27 +199,8 @@ void frame(bool on, unsigned codePage, double k, int targetWidth, int targetHeig
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    for (auto it = s.plates.begin(); it != s.plates.end();) {  // the ones not shown of late freed
-        if (++it->second.idle > kKeepFrames || (!s.on && s.shown.empty())) {
-            if (it->second.texture) renderer.releaseTexture(it->second.texture);
-            it = s.plates.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    if (s.shown.empty() || s.k <= 0 || s.sheetShown) return;
-    // where the world ends - under the game's own windows, as its signs were
-    const size_t world = record.firstInterface(), before = record.commands().size();
-    for (const Shown& sh : s.shown) {
-        const auto it = s.plates.find(sh.key);
-        if (it == s.plates.end()) continue;
-        Plate& p = it->second;
-        p.idle = 0;
-        drawPart(record, renderer, p.picture, p.texture, p.texW, p.texH, p.upload, sh.x, sh.y, s.k);
-    }
-    const size_t added = record.commands().size() - before;
-    if (added) record.moveLastBefore(added, world);
+    (void)record;  // the old edition (its picture plates) gone: uaUI draws them
+    (void)renderer;
 }
 
 }  // namespace uagfx::win::worldsigns

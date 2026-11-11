@@ -40,8 +40,6 @@ struct Layout {
     std::vector<std::vector<panel::Box>> keys;  // as the grid's
 };
 Layout layout(const Grid& g, int targetW, int targetH, float scale);
-void paint(panel::Picture& out, const Layout& L, const Grid& g, Focus f, bool shift);
-
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;

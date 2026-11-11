@@ -79,22 +79,14 @@ std::vector<Words> gdiWords(const std::vector<pa::Words>& in) {
 }
 
 void render(State& s, bool sony) {
-    const bool byUaui = uaui::ready();  // 3.0.18-beta.35: the words kept for uaUI's sheet, no picture
-    if (!byUaui && !panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    if (!byUaui) pa::paint(s.picture, s.layout, s.rows, s.focus, sony);
     using settings::Text;
     const settings::Lang l = language();
     std::vector<Words> words = gdiWords(pa::words(s.layout, s.rows, s.what, settings::tr(l, Text::AssignTitle),
                                             settings::tr(l, Text::AssignPut), settings::tr(l, Text::AssignCancel),
                                             settings::tr(l, Text::AssignEmpty), sony));
-    if (byUaui) {
-        s.sheetWords = std::move(words);
-        s.sheetSony = sony;
-        ++s.sheetGen;
-        return;
-    }
-    drawWords(s.picture, words);
-    s.upload = true;
+    s.sheetWords = std::move(words);  // 3.0.18-beta.35: the words for uaUI's sheet (.158: no picture)
+    s.sheetSony = sony;
+    ++s.sheetGen;
 }
 
 void block(const State& s, HWND game) {

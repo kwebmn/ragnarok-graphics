@@ -139,20 +139,6 @@ Layout layout(const Grid& g, int targetW, int targetH, float scale) {
     return L;
 }
 
-void paint(panel::Picture& out, const Layout& L, const Grid& g, Focus f, bool shift) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    panel::roundRect(out, L.line, 8 * s, kBlack, 0.35f, kGold, 0.6f, 1.0f * s);
-    for (size_t r = 0; r < L.keys.size() && r < g.size(); ++r)
-        for (size_t c = 0; c < L.keys[r].size() && c < g[r].size(); ++c) {
-            const Key& k = g[r][c];
-            const bool on = int(r) == f.row && int(c) == f.col;
-            const bool lit = k.special == Special::Send || (k.special == Special::Shift && shift);
-            panel::roundRect(out, L.keys[r][c], 8 * s, on ? kGold : lit ? kGold : kWhite,
-                             on ? 0.34f : lit ? 0.16f : 0.06f, on ? kGold : kWhite, on ? 0.9f : 0.14f, 1.0f * s);
-        }
-}
-
 std::vector<Words> words(const Layout& L, const Grid& g, Focus f, const std::string& line, bool caret,
                          const Texts& t) {
     std::vector<Words> out;
