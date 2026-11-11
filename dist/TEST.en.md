@@ -1,3 +1,5 @@
+- Measurements in the log: the driver's own work per frame, our interface parts apart from the interface library itself, how many times per frame the game's memory is read and what it costs (the controller's too). Needed before speeding up the work with the game; the same look and behaviour.
+
 - Unused code removed across all programs (game, settings, studio, renderer): about 3,200 lines - over 200 functions no call reached, with their tests. Found by tracing the links of every program; each one built and checked by the tests. ddraw.dll is 72 KB smaller again; the same look and behaviour.
 
 - Cleanup finished: the rest of the old picture drawing removed - exp bars, the reference's row repaints, the character block's layers and level flare, the login screens (strip, login list, veil, shelf toast), the on-screen keyboard, shop signs over heads, the controller's carry ring, monster and mercenary cards, Start tiles, the low-HP edge, exp over monsters, the layout editor, pickup toasts. Less work every frame; the same look.
