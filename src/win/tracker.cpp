@@ -352,6 +352,46 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 
+// A press on a part of the panel: the mouse, 3.0.18-beta.135 the pad (win/pad_panels)
+static void pressPart(State& s, tk::Part part, int entry) {
+    const bool known = entry >= 0 && size_t(entry) < s.entries.size();
+    const tk::Entry* e = known ? &s.entries[size_t(entry)] : nullptr;
+    if (part == tk::Part::Fold) {
+        s.folded = !s.folded;
+        keepState(s);
+    } else if (part == tk::Part::Hide) {
+        s.hidden = true;
+        keepState(s);
+        LOG_INFO("tracker: hidden - shown again by the next pin");
+    } else if (part == tk::Part::Close && e) {
+        if (e->kind == tk::Kind::Route && s.routeOf[size_t(entry)] == kPlotted) {
+            minimapproto::clearPlot();  // 3.0.11-beta.71
+        } else if (e->kind == tk::Kind::Route) {
+            minimapproto::unfollow();
+        } else if (e->kind == tk::Kind::Quest) {
+            size_t q = 0;  // the quests come first, in the pins' order
+            for (size_t i = 0; i < size_t(entry); ++i) q += s.entries[i].kind == tk::Kind::Quest;
+            if (q < s.quests.size()) s.quests.erase(s.quests.begin() + std::ptrdiff_t(q));
+        } else {
+            size_t n = 0;
+            for (size_t i = 0; i < size_t(entry); ++i) n += s.entries[i].kind == tk::Kind::Item;
+            if (n < s.items.size()) s.items.erase(s.items.begin() + std::ptrdiff_t(n));
+        }
+        keepState(s);
+    } else if (part == tk::Part::Head && e) {
+        size_t n = 0;  // the entry's own pin, by its kind's order
+        for (size_t i = 0; i < size_t(entry); ++i) n += s.entries[i].kind == e->kind;
+        if (e->kind == tk::Kind::Route && !s.routeOf[size_t(entry)].empty() &&
+            s.routeOf[size_t(entry)] != kPlotted)
+            referencewin::openMap(s.routeOf[size_t(entry)]);
+        else if (e->kind == tk::Kind::Quest && n < s.quests.size())
+            referencewin::openQuest(s.quests[n]);
+        else if (e->kind == tk::Kind::Item && n < s.items.size())
+            referencewin::openItem(s.items[n]);
+    }
+    s.key.clear();
+}
+
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
@@ -364,41 +404,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     const tk::Hit h = tk::hitTest(s.layout, tx - float(s.layout.x), ty - float(s.layout.y));
     if (h.part == tk::Part::None) return false;
     if (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) {
-        const bool known = h.entry >= 0 && size_t(h.entry) < s.entries.size();
-        const tk::Entry* e = known ? &s.entries[size_t(h.entry)] : nullptr;
-        if (h.part == tk::Part::Fold) {
-            s.folded = !s.folded;
-            keepState(s);
-        } else if (h.part == tk::Part::Hide) {
-            s.hidden = true;
-            keepState(s);
-            LOG_INFO("tracker: hidden - shown again by the next pin");
-        } else if (h.part == tk::Part::Close && e) {
-            if (e->kind == tk::Kind::Route && s.routeOf[size_t(h.entry)] == kPlotted) {
-                minimapproto::clearPlot();  // 3.0.11-beta.71
-            } else if (e->kind == tk::Kind::Route) {
-                minimapproto::unfollow();
-            } else if (e->kind == tk::Kind::Quest) {
-                size_t q = 0;  // the quests come first, in the pins' order
-                for (size_t i = 0; i < size_t(h.entry); ++i) q += s.entries[i].kind == tk::Kind::Quest;
-                if (q < s.quests.size()) s.quests.erase(s.quests.begin() + std::ptrdiff_t(q));
-            } else {
-                size_t n = 0;
-                for (size_t i = 0; i < size_t(h.entry); ++i) n += s.entries[i].kind == tk::Kind::Item;
-                if (n < s.items.size()) s.items.erase(s.items.begin() + std::ptrdiff_t(n));
-            }
-            keepState(s);
-        } else if (h.part == tk::Part::Head && e) {
-            size_t n = 0;  // the entry's own pin, by its kind's order
-            for (size_t i = 0; i < size_t(h.entry); ++i) n += s.entries[i].kind == e->kind;
-            if (e->kind == tk::Kind::Route && !s.routeOf[size_t(h.entry)].empty() &&
-                s.routeOf[size_t(h.entry)] != kPlotted)
-                referencewin::openMap(s.routeOf[size_t(h.entry)]);
-            else if (e->kind == tk::Kind::Quest && n < s.quests.size())
-                referencewin::openQuest(s.quests[n]);
-            else if (e->kind == tk::Kind::Item && n < s.items.size())
-                referencewin::openItem(s.items[n]);
-        }
+        pressPart(s, h.part, h.entry);
         if (s.clicksLogged++ < 12)
             LOG_INFO("tracker: a click on part %d of entry %d", int(h.part), h.entry);
         s.key.clear();
@@ -460,6 +466,25 @@ const std::vector<int>& items() {
     State& s = state();
     readState(s);
     return s.items;
+}
+
+std::vector<padpanels::Button> padButtons() {
+    State& s = state();
+    std::vector<padpanels::Button> out;
+    if (!s.shown) return out;
+    const tk::Layout& l = s.layout;
+    const auto add = [&](const panel::Box& b, tk::Part part, int entry) {
+        if (b.w <= 0 || b.h <= 0) return;
+        out.push_back({panel::Box{float(l.x) + b.x, float(l.y) + b.y, b.w, b.h},
+                       [part, entry] { pressPart(state(), part, entry); }});
+    };
+    add(l.fold, tk::Part::Fold, -1);
+    add(l.hide, tk::Part::Hide, -1);
+    for (size_t i = 0; i < l.entries.size(); ++i) {
+        add(l.entries[i].head, tk::Part::Head, int(i));
+        add(l.entries[i].close, tk::Part::Close, int(i));
+    }
+    return out;
 }
 
 }  // namespace uagfx::win::trackerwin

@@ -1,8 +1,11 @@
 #pragma once
 #include <windows.h>
 
+#include <vector>
+
 #include "core/frame.hpp"
 #include "core/game_packets.hpp"
+#include "win/pad_panels.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -19,5 +22,8 @@ void packet(const packets::Event& e);
 void frame(HWND game, bool on, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
+
+// 3.0.18-beta.135 (win/pad_panels): each timer's row (forgotten by a press) and ✕ for the controller
+std::vector<padpanels::Button> padButtons();
 
 }  // namespace uagfx::win::mvpwin

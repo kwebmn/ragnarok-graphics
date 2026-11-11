@@ -78,6 +78,7 @@
 #include "win/msg_box.hpp"
 #include "win/chat_window.hpp"
 #include "win/minimap_proto.hpp"
+#include "win/pad_panels.hpp"
 #include "win/net_predict.hpp"
 #include "win/equip_window.hpp"
 #include "win/skill_window.hpp"
@@ -495,6 +496,21 @@ bool bigMapPad(const PadState& pad, DWORD now) {
     p.clear = (down & kPadY) != 0;
     p.close = (down & kPadB) != 0;
     return uagfx::win::minimapproto::padBig(p);
+}
+
+// 3.0.18-beta.135: an open panel's buttons on the controller (win/pad_panels) - the D-pad or the left stick walks
+// them, A presses, B leaves
+bool panelsPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    namespace pp = uagfx::win::padpanels;
+    if (down & (kPadUp | kPadLeft)) pp::command(pp::Command::Prev);
+    if (down & (kPadDown | kPadRight)) pp::command(pp::Command::Next);
+    if (down & kPadA) pp::command(pp::Command::Press);
+    if (down & (kPadB | kPadStart)) pp::command(pp::Command::Leave);
+    return true;
 }
 
 // 3.0.11-beta.214: the chat wheel open - the right stick points, the Talk button let go sends, LB/RB the page, LT/RT
@@ -1487,6 +1503,8 @@ void tick() {
                   : drive && *top == Win::Tip                      ? tipPad(pad, now)           // .204
                   : drive && *top == Win::VendSetup                ? vendSetupPad(pad, now)     // 3.0.16-beta.39
                   : drive && uagfx::win::uisheet::hasNav(int(*top)) ? walkPad(int(*top), pad, now)  // .18-beta.60
+                  : !drive && !menuOpen && pad.connected && uagfx::win::padpanels::active()
+                      ? panelsPad(pad, now)  // 3.0.18-beta.135
                   : !drive && !menuOpen && pad.connected && uagfx::win::minimapproto::bigShown()
                       ? bigMapPad(pad, now)  // 3.0.18-beta.133
                                                                    : runMenu(pad, view, now);

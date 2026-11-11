@@ -1,6 +1,10 @@
 #pragma once
 #include <windows.h>
 
+#include <vector>
+
+#include "win/pad_panels.hpp"
+
 namespace uagfx::win::recapwin {
 
 // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»: «Що мене вбило» from the character block and Ctrl+K): the last
@@ -12,5 +16,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool key(UINT m, WPARAM wp, LPARAM lp);  // Esc while it is open
 bool isOpen();
 void toggle(const char* why);
+// 3.0.18-beta.135 (win/pad_panels): its ✕ for the controller
+std::vector<padpanels::Button> padButtons();
 
 }  // namespace uagfx::win::recapwin

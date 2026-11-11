@@ -171,4 +171,11 @@ bool key(UINT m, WPARAM wp, LPARAM) {
     return true;
 }
 
+std::vector<padpanels::Button> padButtons() {
+    State& s = state();
+    if (!s.shown) return {};
+    return {{panel::Box{float(s.x) + s.close.x, float(s.y) + s.close.y, s.close.w, s.close.h},
+             [] { state().open = false; }}};
+}
+
 }  // namespace uagfx::win::recapwin

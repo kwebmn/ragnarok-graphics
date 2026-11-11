@@ -339,4 +339,24 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     return true;
 }
 
+std::vector<padpanels::Button> padButtons() {
+    State& s = state();
+    std::vector<padpanels::Button> out;
+    if (!s.shown) return out;
+    for (size_t i = 0; i < s.rows.size(); ++i) {
+        const float y = float(s.y) + (kPad + kTitleH + float(i) * kLineH) * s.scale;
+        const mvptimers::Timer t = s.rows[i];
+        out.push_back({panel::Box{float(s.x) + 4 * s.scale, y, float(s.w) - 8 * s.scale, kLineH * s.scale}, [t] {
+                           State& st = state();
+                           LOG_INFO("mvp: %s on %s forgotten (the pad)", mobName(t.mob).c_str(), t.map.c_str());
+                           st.timers.remove(t.mob, t.map);
+                           save(st);
+                           st.key.clear();
+                       }});
+    }
+    out.push_back({panel::Box{float(s.x) + s.close.x, float(s.y) + s.close.y, s.close.w, s.close.h},
+                   [] { ownwin::setClosed(closedwin::Window::Mvp, true, "the pad"); }});
+    return out;
+}
+
 }  // namespace uagfx::win::mvpwin

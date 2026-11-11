@@ -24,6 +24,7 @@
 
 #include "win/options_card.hpp"
 #include "win/own_windows.hpp"
+#include "win/pad_panels.hpp"
 
 namespace uagfx::win::padtileswin {
 namespace {
@@ -115,6 +116,13 @@ void close(State& s, const char* why) {
 }
 
 // The framed tile's window: the game's own through its Basic Info window, the new big map, «Довідник», the pad's menu
+// 3.0.18-beta.135 (the pad analysis, item 4): an open panel's tile gives the controller its buttons (its ✕ among
+// them); a closed one's opens it
+void ownTile(closedwin::Own o) {
+    if (ownwin::lit(o) && padpanels::focus(o)) return;
+    ownwin::press(o, "the pad's tile");
+}
+
 void run(State& s) {
     if (s.focus < 0 || size_t(s.focus) >= s.list.size()) return;
     const pt::Tile tile = s.list[size_t(s.focus)];
@@ -143,10 +151,10 @@ void run(State& s) {
         case pt::Tile::Reference: what = "«Довідник»"; referencewin::toggleFromPad(); break;
         case pt::Tile::Pad: what = "the controller's own menu"; uapad::runtime::openPadMenu(); break;
         case pt::Tile::Merc: what = "the mercenary's card"; done = merccardwin::toggleCard(); break;  // .216
-        case pt::Tile::Hunt: what = "«Полювання»"; ownwin::press(closedwin::Own::Hunt, "the pad's tile"); break;
-        case pt::Tile::Mvp: what = "«Таймери босів»"; ownwin::press(closedwin::Own::Mvp, "the pad's tile"); break;
-        case pt::Tile::Tracker: what = "«Відстеження»"; ownwin::press(closedwin::Own::Tracker, "the pad's tile"); break;
-        case pt::Tile::Recap: what = "«Що мене вбило»"; ownwin::press(closedwin::Own::Recap, "the pad's tile"); break;
+        case pt::Tile::Hunt: what = "«Полювання»"; ownTile(closedwin::Own::Hunt); break;
+        case pt::Tile::Mvp: what = "«Таймери босів»"; ownTile(closedwin::Own::Mvp); break;
+        case pt::Tile::Tracker: what = "«Відстеження»"; ownTile(closedwin::Own::Tracker); break;
+        case pt::Tile::Recap: what = "«Що мене вбило»"; ownTile(closedwin::Own::Recap); break;
         default: break;
     }
     LOG_INFO("pad tile: %s%s", what, done ? "" : " - not possible now");

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "core/frame.hpp"
+#include "win/pad_panels.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -25,6 +26,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // turns it round (kept as its ✕ keeps it)
 bool hiddenNow();
 void toggleHidden(const char* why);
+// 3.0.18-beta.135 (win/pad_panels): fold, hide, each entry's name and ✕ for the controller
+std::vector<padpanels::Button> padButtons();
 void toggleQuest(const std::string& slug);
 void toggleItem(int id);
 const std::vector<std::string>& quests();

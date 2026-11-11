@@ -313,4 +313,19 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     return true;
 }
 
+std::vector<padpanels::Button> padButtons() {
+    State& s = state();
+    std::vector<padpanels::Button> out;
+    if (!s.shown) return out;
+    const auto at = [&](const panel::Box& b) { return panel::Box{float(s.x) + b.x, float(s.y) + b.y, b.w, b.h}; };
+    out.push_back({at(s.reset), [] {
+                       State& st = state();
+                       st.stats.reset(GetTickCount64());
+                       st.fought.clear();
+                       st.key.clear();
+                   }});
+    out.push_back({at(s.close), [] { ownwin::setClosed(closedwin::Window::Hunt, true, "the pad"); }});
+    return out;
+}
+
 }  // namespace uagfx::win::huntwin

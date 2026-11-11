@@ -62,6 +62,7 @@
 #include "win/homun_ai_files.hpp"
 #include "win/hunt_panel.hpp"
 #include "win/own_windows.hpp"
+#include "win/pad_panels.hpp"
 #include "win/recap_window.hpp"
 #include "win/skill_wheel.hpp"
 #include "win/mob_card.hpp"
@@ -1205,6 +1206,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     mobcardwin::frame(window, config.mobCard, pk, pw, ph);  // 3.0.11-beta.279
     mvpwin::frame(window, config.mvpTimers, pk, pw, ph);  // 3.0.11-beta.280
     recapwin::frame(window, config.deathRecap, pk, pw, ph);  // 3.0.18-beta.120: «Що мене вбило» on its own
+    padpanels::frame();  // 3.0.18-beta.135: the pad's ring on a panel's button
     {  // 3.0.18-beta.132: the pad's skill wheel held
         int wheel = -1, sector = -1;
         if (!uapad::runtime::wheelNow(wheel, sector)) wheel = -1;
