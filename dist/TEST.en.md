@@ -1,3 +1,5 @@
+- "Equipment": the cart / falcon / Peco sign asks first ("Get off the Peco?" - "Yes" / "No"); a stray click takes nothing off.
+
 - "Equipment": the button for the cart, the falcon and the Peco is now a round sign between the ◀ ▶ arrows; what it does shows in a tip under the cursor.
 
 - "Equipment": the character fills the middle again (it stayed small at the top); the ◀ ▶ arrows light up under the cursor.
