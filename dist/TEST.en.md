@@ -1,3 +1,5 @@
+- Equipment: the character is big and centred again (after the window shrank it stayed small at the top); long item names are not cut - they go onto a second line and the slot grows; "Clip of of Counter" is now "Clip of Counter".
+
 - Things with cards are named as in the game: the card's word before the name ("Saharic Jur", "Double Bloody Katana"), some cards after it ("Clip of Counter") - in the equipment window and the item card.
 - Equipment: the ◀ ▶ arrows now turn the character; the window is smaller (640 instead of 880).
 
