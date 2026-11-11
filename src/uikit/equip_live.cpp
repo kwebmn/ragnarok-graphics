@@ -27,8 +27,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-attr-data-index="sl.index"><img data-if="sl.icon != ''" data-attr-src="sl.icon"
   data-style-width="sl.iconW + 'px'" data-style-height="sl.iconH + 'px'" data-style-opacity="sl.op"/></div><div
   class="txt"><div class="lbl">{{sl.label}}</div><div class="nm" data-class-worn="sl.worn"
-  data-class-spill="sl.spill"><span>{{sl.name}}</span><span class="elw" data-if="sl.eleWord != ''"
-  data-style-color="sl.ele">{{sl.eleWord}}</span><span class="dot" data-for="d : sl.dots"
+  data-class-spill="sl.spill"><span data-if="sl.eleWord == ''">{{sl.name}}</span><span data-if="sl.eleWord != ''"
+  data-style-color="sl.ele">{{sl.name}}</span><span class="dot" data-for="d : sl.dots"
   data-class-card="d > 0"></span></div></div></div></div>
 <div class="centre" data-hit="centre"><div class="stage"><img data-if="hero != ''" data-attr-src="hero"
   data-style-width="heroW + 'px'" data-style-height="heroH + 'px'"/><div class="turn"
@@ -53,8 +53,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-style-width="sl.iconW + 'px'" data-style-height="sl.iconH + 'px'" data-style-opacity="sl.op"/></div><div
   class="txt"><div class="lbl">{{sl.label}}</div><div class="nm" data-class-worn="sl.worn"
   data-class-spill="sl.spill"><span class="dot" data-for="d : sl.dots" data-class-card="d > 0"></span><span
-  class="elw" data-if="sl.eleWord != ''" data-style-color="sl.ele">{{sl.eleWord}}</span><span
-  >{{sl.name}}</span></div></div></div></div>
+  data-if="sl.eleWord == ''">{{sl.name}}</span><span data-if="sl.eleWord != ''"
+  data-style-color="sl.ele">{{sl.name}}</span></div></div></div></div>
 </div>
 <div class="ammorow"><div class="slot ammo" data-hit="slot" data-attr-data-index="ammo.index" data-class-hot="ammo.hot"
   data-class-focus="ammo.focus" data-class-fits="ammo.fits"><div class="tile" data-hit="tile"
