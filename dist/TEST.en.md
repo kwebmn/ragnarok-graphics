@@ -1,3 +1,7 @@
+- The character block (Alt+V) has a second row of icons: "Reference", "Hunt", "Boss timers", "Tracking", "Party", "What killed me", "Settings"; an open window's icon glows gold. Keys: Ctrl+H, Ctrl+B, Ctrl+J, Ctrl+G, Ctrl+K.
+- ✕ on "Hunt", "Boss timers", "Party" and the target card: hides the window without switching it off; bring it back with its icon or key. The game remembers hidden windows.
+- "What killed me" is a window of its own with the last death's hits (Ctrl+K).
+
 - "Lock the parts' places" removed: the interface's parts can always be dragged now (hold 0.3 s and move). Anyone who had the lock on has it off now.
 
 - Cards now show in item names in another's shop and your own, the shop setup, trade, storage and the bag (e.g. "Double Lucky Katana of Counter"), as in "Equipment".
