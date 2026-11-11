@@ -51,3 +51,21 @@ div { display: block; }
     CHECK_EQ(uikit::placesOf(d, "cell").size(), size_t(6));
     rmlhost::close(d);
 }
+
+// 3.0.18-beta.112 (R-GXZU9X: «не крутится персонаж стрелками»): a passive document (pointer-events none) - its parts
+// found by their boxes all the same
+TEST(uikit_hit_finds_parts_of_a_passive_document) {
+    const char* rml = R"(<rml><head><style>
+body { width: 200px; height: 100px; font-family: Plex; font-size: 14px; pointer-events: none; }
+div { display: block; }
+.a { position: absolute; left: 10px; top: 10px; width: 30px; height: 30px; }
+.b { position: absolute; left: 100px; top: 10px; width: 30px; height: 30px; }
+</style></head><body><div class="a" data-hit="turnleft"></div><div class="b" data-hit="turnright"></div>
+</body></rml>)";
+    Rml::ElementDocument* d = rmlhost::load(rml, nullptr, 50, 50);
+    CHECK(d != nullptr);
+    CHECK_EQ(uikit::hitAt(d, 20, 20).part, std::string("turnleft"));
+    CHECK_EQ(uikit::hitAt(d, 110, 20).part, std::string("turnright"));
+    CHECK_EQ(uikit::hitAt(d, 70, 70).part, std::string());
+    rmlhost::close(d);
+}

@@ -10,8 +10,9 @@ namespace uagfx::equipwin {
 namespace {
 
 // The concept's sizes at scale 1: 880 wide, the title 46, a slot 56 high every 64, the middle 220, the footer 40
-constexpr float kW = 880, kTitleH = 46, kSide = 16, kSlotH = 56, kSlotStep = 64, kColumnW = 314, kIcon = 44;
-constexpr float kCentreW = 220, kPortrait = 96, kFooterH = 40, kPickH = 34, kDot = 7, kDotStep = 10, kGlyph = 17;
+// 3.0.18-beta.112 (the owner: «сам диалог можно меньше сделать»): 640 wide (was 880), slots 46 every 52
+constexpr float kW = 640, kTitleH = 46, kSide = 16, kSlotH = 46, kSlotStep = 52, kColumnW = 228, kIcon = 36;
+constexpr float kCentreW = 152, kPortrait = 96, kFooterH = 40, kPickH = 34, kDot = 7, kDotStep = 10, kGlyph = 17;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xF3C653, kGold2 = 0xC9A55B, kTile = 0x1B1D24;
 constexpr uint32_t kText = 0xEEF2F8, kMuted = 0x9AA3B5, kFaint = 0x7E889A, kBlue = 0x8FB8F0;
 

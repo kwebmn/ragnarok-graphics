@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <map>
 #include <string>
+
+#include "core/card_names.hpp"
 #include <vector>
 
 #include "core/window_panel.hpp"
@@ -38,5 +40,8 @@ std::string skillAegis(int id);
 std::string skillWords(int id, unsigned codePage);
 // A client's file as the game finds it (its zips and updates too), else from the game's folder's archives
 bool readClientFile(const std::string& entry, std::string& out);
+// 3.0.18-beta.112: the cards' words in things' names (data\cardprefixnametable.txt, cardpostfixnametable.txt),
+// read once
+const cardnames::Tables& cardWords();
 
 }  // namespace uagfx::win::clienttables

@@ -64,7 +64,7 @@ TEST(uikit_equip_refit_finds_every_slot_and_the_picks) {
         return float(s.size()) * px * 0.55f;
     });
     CHECK(el::refit(doc, L));
-    CHECK(std::abs(float(L.w) - 880) < 2.5f);
+    CHECK(std::abs(float(L.w) - 640) < 2.5f);  // 3.0.18-beta.112: smaller (was 880)
     for (int i = 0; i < ew::kSlots; ++i) {
         const panel::Box p = mid(L.slots[i]);
         const ew::Hit h = ew::hitTest(L, p.x, p.y);
@@ -72,8 +72,8 @@ TEST(uikit_equip_refit_finds_every_slot_and_the_picks) {
         CHECK_EQ(h.index, i);
     }
     CHECK(L.slots[ew::HeadTop].x < L.centre.x);              // 3.0.18-beta.110: the original's left column
-    CHECK(L.slots[ew::HeadMid].x >= L.centre.x + L.centre.w);  // and its right
-    CHECK(std::abs(L.slots[ew::HeadLow].y - L.slots[ew::HeadTop].y - 64) < 0.5f);
+    CHECK(L.slots[ew::HeadMid].x >= L.centre.x + L.centre.w - 0.5f);  // and its right (rem rounding)
+    CHECK(std::abs(L.slots[ew::HeadLow].y - L.slots[ew::HeadTop].y - 52) < 0.5f);
     CHECK(L.slots[ew::Ammo].y > L.slots[ew::AccR].y + L.slots[ew::AccR].h);  // the ammo in the strip under
     CHECK(L.icons[ew::HeadTop].x < L.slots[ew::HeadTop].x + L.slots[ew::HeadTop].w / 2);  // the outer edges
     CHECK(L.icons[ew::HeadMid].x > L.slots[ew::HeadMid].x + L.slots[ew::HeadMid].w / 2);

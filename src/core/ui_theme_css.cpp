@@ -803,7 +803,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .trl .tip .t2 { display: block; font-size: 0.9583rem; color: #9aa3b5; line-height: 1.4167rem; }
 /* 3.0.18-beta.96: «Спорядження» live (uikit/equip_live) - 880dp: two columns of five slots (56dp every 64dp) round
    a 220dp middle; its boxes are its hit places */
-.lw.eql { width: 73.3333rem; padding: 0; font-size: 1rem; box-sizing: border-box; }
+.lw.eql { width: 53.3333rem; padding: 0; font-size: 1rem; box-sizing: border-box; }
 .eql .head { display: flex; align-items: center; height: 3.8333rem; padding: 0 4.3333rem 0 1.3333rem; }
 .eql .head .title { font-size: 1.25rem; font-weight: bold; color: #eef2f8; }
 .eql .hk { margin-left: 0.6667rem; font-size: 0.9167rem; color: #7e889a; }
@@ -811,17 +811,18 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
     line-height: 2.1667rem;
           text-align: center; border-radius: 0.5833rem; color: #9aa3b5; font-size: 1.0833rem; }
 .eql .x.hot { background-color: #ffffff24; color: #ffffff; }
-.eql .cols { display: flex; justify-content: space-between; padding: 0.8333rem 1.3333rem 0 1.3333rem; height: 26rem; }
-.eql .col { display: block; width: 26.1667rem; }
-.eql .slot { display: flex; align-items: center; box-sizing: border-box; height: 4.6667rem; margin-bottom: 0.6667rem;
+.eql .cols { display: flex; justify-content: space-between; padding: 0.8333rem 1.3333rem 0 1.3333rem;
+    height: 21.6667rem; }
+.eql .col { display: block; width: 19rem; }
+.eql .slot { display: flex; align-items: center; box-sizing: border-box; height: 3.8333rem; margin-bottom: 0.5rem;
              padding: 0 0.5rem; border-radius: 0.6667rem; border: 0.125rem #00000000;
              transition: background-color border-color 0.12s quadratic-out; }
 .eql .left .slot { flex-direction: row-reverse; }
 .eql .slot.hot { background-color: #ffffff0f; }
 .eql .slot.focus { border-color: #f3c653e6; background-color: #c9a55b14; }
 .eql .slot.fits { border: 0.1667rem #f3c653f2; background-color: #c9a55b1f; }
-.eql .tile { display: flex; justify-content: center; align-items: center; box-sizing: border-box; width: 3.6667rem;
-             height: 3.6667rem; margin: 0 0.1667rem; border-radius: 0.6667rem; border: 0.0833rem #ffffff14;
+.eql .tile { display: flex; justify-content: center; align-items: center; box-sizing: border-box; width: 3rem;
+             height: 3rem; margin: 0 0.1667rem; border-radius: 0.6667rem; border: 0.0833rem #ffffff14;
              background-color: #1b1d24e6; }
 .eql .tile img { display: block; }
 .eql .txt { display: block; flex: 1; margin: 0 0.8333rem; overflow: hidden; }
@@ -837,7 +838,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .dot { display: block; width: 0.5833rem; height: 0.5833rem; margin-right: 0.25rem; border-radius: 0.2917rem;
             border: 0.0833rem #ffffff40; box-sizing: border-box; }
 .eql .dot.card { background-color: #f3c653; border-color: #f3c653; }
-.eql .centre { display: block; position: relative; width: 18.3333rem; height: 26rem; }
+.eql .centre { display: block; position: relative; width: 12.6667rem; height: 21.6667rem; }
 .eql .me { display: flex; flex-direction: column; align-items: center; padding-top: 0.3333rem; }
 .eql .face { display: flex; justify-content: center; align-items: center; width: 8rem; height: 8rem;
              border-radius: 4rem; background-color: #1b1d24e6; border: 0.0833rem #ffffff14; box-sizing: border-box; }
@@ -1329,7 +1330,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 /* 3.0.18-beta.110 (the owner: «максимально похожем на оригинальный вариант»): the original window's places - the
    character in the middle (no numbers), the cards' dots after a thing's name, the ammo in the strip under */
 .eql .stage { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative;
-              height: 26rem; padding-bottom: 2.8333rem; box-sizing: border-box; }
+              height: 21.6667rem; padding-bottom: 2.8333rem; box-sizing: border-box; }
 .eql .stage img { display: block; }
 .eql .turn { position: absolute; left: 0.5rem; right: 0.5rem; bottom: 0.1667rem; display: flex;
     justify-content: space-between; }
@@ -1340,8 +1341,8 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .nm .dot { display: inline-block; width: 0.5833rem; height: 0.5833rem; margin: 0 0 0.0833rem 0.3333rem;
     vertical-align: middle; }
 .eql .right .nm .dot { margin: 0 0.3333rem 0.0833rem 0; }
-.eql .ammorow { display: block; margin: 0.6667rem 1.3333rem 0 1.3333rem; width: 26.1667rem; }
-.eql .ammorow .slot.ammo { position: static; height: 4rem; margin: 0; padding: 0 0.5rem; }
+.eql .ammorow { display: block; margin: 0.5rem 1.3333rem 0 1.3333rem; width: 19rem; }
+.eql .ammorow .slot.ammo { position: static; height: 3.8333rem; margin: 0; padding: 0 0.5rem; }
 .eql .left .slot { flex-direction: row; }
 .eql .right .slot { flex-direction: row-reverse; }
 .eql .left .txt { text-align: left; }

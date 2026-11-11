@@ -105,6 +105,20 @@ bool uiPixels(const char* folder, const std::string& file, std::vector<uint32_t>
 }
 }  // namespace
 
+const cardnames::Tables& cardWords() {
+    static cardnames::Tables t;
+    static bool read = false;
+    if (!read) {
+        read = true;
+        std::string prefix, postfix;
+        readClientFile("data\\cardprefixnametable.txt", prefix);
+        readClientFile("data\\cardpostfixnametable.txt", postfix);
+        t = cardnames::read(prefix, postfix);
+        LOG_INFO("cards: the cards' words in names %zu, after the name %zu", t.words.size(), t.after.size());
+    }
+    return t;
+}
+
 bool collectionPixels(const std::string& file, std::vector<uint32_t>& argb, int& width, int& height) {
     return uiPixels("collection", file, argb, width, height);
 }

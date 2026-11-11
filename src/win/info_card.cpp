@@ -256,7 +256,10 @@ void itemCard(State& s, One& o, uint32_t window) {
     const int id = std::atoi(number.c_str());
     const auto slots = s.tables.slots.find(id);
     const int slotCount = known && slots != s.tables.slots.end() ? std::clamp(slots->second, 0, 4) : 0;
-    c.title = (known && refine > 0 ? "+" + std::to_string(refine) + " " : "") + itemName(s, number, known != 0) +
+    // 3.0.18-beta.112: its cards' words in its name as the game names it («Saharic Jur», «Clip of Counter»)
+    const std::string base = itemName(s, number, known != 0);
+    c.title = (known && refine > 0 ? "+" + std::to_string(refine) + " " : "") +
+              (known ? cardnames::named(base, cards, clienttables::cardWords()) : base) +
               (slotCount > 0 ? " [" + std::to_string(slotCount) + "]" : "");
     c.note = count > 1 ? "\xC3\x97" + std::to_string(count) : known ? "" : say(settings::Text::CardUnknown);
     const auto& table = known ? s.tables.items : s.tables.unknown;

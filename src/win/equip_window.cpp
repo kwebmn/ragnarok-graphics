@@ -292,6 +292,7 @@ void readData(State& s) {
             w.identified = t.identified;
             w.spill = n > 0;
             w.name = nameOf(s, t.id, t.identified);
+            if (t.identified) w.name = cardnames::named(w.name, w.cards, clienttables::cardWords());  // .112
             w.icon = iconOf(s, t.id);
             if (refs) {
                 const auto it = refs->items.find(t.id);
@@ -326,7 +327,7 @@ void readData(State& s) {
     d.portrait = s.portrait.width > 0 ? &s.portrait : nullptr;
     // 3.0.18-beta.111: the character from its sprites (its body by the job it shows, its head, headgear, falcon, cart)
     const heropicture::Looks looks = heropicture::own();
-    const int hw = int(std::lround(180 * s.scale)), hh = int(std::lround(260 * s.scale));
+    const int hw = int(std::lround(150 * s.scale)), hh = int(std::lround(210 * s.scale));  // .112: the smaller window
     std::string hk;
     for (const int v : {looks.job, looks.sex, looks.head, looks.colour, looks.low, looks.top, looks.middle,
                         int(looks.options), s.heroDir, hw, hh})
@@ -738,12 +739,17 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (h.part == ew::Part::None || m == WM_MOUSEMOVE) return false;
     result = 0;
     if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && s.live.shown()) {  // 3.0.18-beta.111: ◀ ▶ turn it
-        const uikit::Hit turn = uikit::hitAt(s.live.doc.doc(), tx - float(s.layout.x), ty - float(s.layout.y));
-        if (turn.part == "turnleft" || turn.part == "turnright") {
-            s.heroDir = (s.heroDir + (turn.part == "turnleft" ? 1 : 7)) % 8;
-            s.key.clear();
-            return true;
-        }
+        // 3.0.18-beta.112 (the owner: «не крутится персонаж стрелками»): by their laid-out boxes - the window is
+        // passive (pointer-events none), RmlUi's own point lookup never finds its elements
+        const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
+        for (const char* part : {"turnleft", "turnright"})
+            for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), part))
+                if (p.box.contains(lx, ly)) {
+                    s.heroDir = (s.heroDir + (part[4] == 'l' ? 1 : 7)) % 8;
+                    s.key.clear();
+                    if (s.told++ < 40) LOG_INFO("equip: the character turned to %d", s.heroDir);
+                    return true;
+                }
     }
     if (m == WM_RBUTTONDOWN && h.part == ew::Part::Slot) {  // its card, as a right click in the game's window
         if (s.data.slots[h.index].index > 0) card(s, h.index);
