@@ -1,3 +1,5 @@
+- "Equipment": the character now holds its weapon and shield (as in the game's world).
+
 - The character block folded: a "…" button on its right opens the row of uaRO's windows (hunt, bosses, tracking and so on).
 
 - The target card: a log warning on a target change removed.
