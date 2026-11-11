@@ -1,3 +1,6 @@
+- Fixed the game freezing on entering a map in .145-.146 (R-STGQE9): our interface waited for the game to finish loading the map's models while the game waited for it. Now it never waits - with the game's files busy it reads the archives with its own reader. The .145 crash fix stays.
+- Chat room: actions right under the chosen person; right click chooses; twice on a person or "Whisper" - a whisper in the chat.
+
 - Equipment: a worn thing with an element shows it in colour beside its name - "Wind", "Fire", "Holy"… (element weapons, forged ones, armour with an element card).
 - Item card: an element thing's first line is "Property: Wind", as in the later clients.
 
