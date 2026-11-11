@@ -1,3 +1,5 @@
+- The old edition of the new interface removed from the driver: the fallback sheets of 20 windows, the core's old drawing of windows and panels (GDI pictures) - about 7,000 lines fewer. Nothing changes on screen.
+
 - The "how many" window moving into the bag (from the storage or the cart) counts what the weight lets in: "The weight lets in 142 of 300", an empty field and "All" take that many. Batch moves take no more than fits too.
 - Several things picked now also in the cart (taken into the bag) and in the bag: with the storage or the cart open - Ctrl+click / Shift+click / Ctrl+A, "Put the picked (N)" or drag the picked onto the storage or the cart.
 
