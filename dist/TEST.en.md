@@ -1,3 +1,5 @@
+- Buffs the server keeps on by itself no longer show a timer or warn that they are ending: Maximize Power and Cloaking (while SP lasts), Chase Walk, Relax, Frenzy, Play Dead, Running, Lex Aeterna, Mystical Amplification, Counter Instinct, Signum Crucis, taekwon stances. Their skill database numbers were not durations (Maximize Power's 1-5 s instead of "until switched off").
+
 - Wind is now lightning yellow; holy near white so they are not mixed up.
 
 - Equipment: a worn thing's element now as in the later clients - its name itself in the element's colour (no separate "Wind" mark).
