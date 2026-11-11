@@ -193,12 +193,13 @@ select selectbox option:checked { color: #e6cb8a; }
             font-size: 12dp; color: #9aa3b5; }
 .pp .head.folded { border-bottom-width: 0; }
 .pp .title { position: absolute; left: 4dp; font-weight: bold; }
-.pp .count { position: absolute; right: 56dp; }
+.pp .count { position: absolute; right: 82dp; }
 .pp .hbtn { position: absolute; top: 3dp; width: 22dp; height: 20dp; line-height: 20dp; text-align: center;
             border-radius: 5dp; color: #eceff5; cursor: pointer; }
 .pp .hbtn:hover { background-color: #ffffff18; }
-.pp .viewb { right: 26dp; }
-.pp .foldb { right: 2dp; }
+.pp .viewb { right: 52dp; }  /* 3.0.18-beta.123: room for ✕ (R-7TVEJU: it stood over the title) */
+.pp .foldb { right: 28dp; }
+.pp .closeb { right: 2dp; }
 .pp .row { display: block; position: relative; height: 40dp; border-radius: 7dp; border: 1dp #00000000;
     cursor: pointer; }
 .pp .row.buffs { height: 58dp; }

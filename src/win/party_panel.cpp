@@ -354,7 +354,8 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <div class="glass">
  <div class="head" data-class-folded="folded"><span class="title">{{title}}</span><span class="count">{{count}}</span>
   <span class="hbtn viewb" data-event-click="view()">{{view_sign}}</span><span class="hbtn foldb"
-  data-event-click="fold()">{{fold_sign}}</span><span class="hbtn" data-event-click="close()">&#x2715;</span></div>
+  data-event-click="fold()">{{fold_sign}}</span><span class="hbtn closeb"
+  data-event-click="close()">&#x2715;</span></div>
  <div data-if="!folded && !compact">
   <div class="row" data-for="r, i : rows" data-class-buffs="r.buffs.size > 0" data-class-low="r.low"
        data-class-target="r.target" data-class-chosen="r.chosen" data-class-dead="r.dead"
