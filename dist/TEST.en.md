@@ -1,3 +1,5 @@
+- The characters' and monsters' index (.166) moves on at the start of every frame, even with the game minimised: otherwise a monster that came while the window was minimised was not found until it was restored.
+
 - The driver's work with the game's memory is in one place: shared functions instead of 60 copies of the read and 43 of the write (each write a call into Windows), the writes into the game's data without a call into Windows too. Likewise one shared function instead of 55 copies of the interface's texts, 49 copies of a window's place over the game and 37 copies of the mouse buttons' check. About 540 lines of code fewer; the same look and behaviour.
 
 - Characters and monsters are found by their numbers through an index read in one pass a frame (before, each look-up walked the game's whole list: the monsters' move smoothing made up to ~390 reads a frame, R-C8GVNT). The move smoothing also writes a monster's place without a call into Windows.
