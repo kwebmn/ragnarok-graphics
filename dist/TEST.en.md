@@ -1,3 +1,6 @@
+- The panels that run every frame (the skill bar, chat, party, HP bars, buffs, signs in the world, the controller) are built at full speed again: in .162 the interface was slower (R-MBCDBU: 1.9–2.4 ms a frame against 1.3). Only what opens now and then is built compact: storage, shops, trade, equipment, settings, login, reports, «Довідник». ddraw.dll 17.6 MB (was 20.5), the settings app 4.0 MB.
+- In the log the game memory reads are grouped by the driver's functions: it shows who reads the most.
+
 - A smaller update: ddraw.dll 20.5 → 16.0 MB, the settings app 5.6 → 4.0 MB (about 2.3 MB less to download). The code of the windows, settings and reports is now built for size; drawing, textures, the game's hooks, sound and map loading stay at full speed as before. To check: «Тест графіки» or a usual report - the speed is compared with the previous beta.
 
 - Measurements in the log: the driver's own work per frame, our interface parts apart from the interface library itself, how many times per frame the game's memory is read and what it costs (the controller's too). Needed before speeding up the work with the game; the same look and behaviour.
