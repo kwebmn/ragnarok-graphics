@@ -1,3 +1,5 @@
+- Controller: "Skill wheel 1" and "2" - bind them in the controller menu to any button: hold it, pick one of eight cells of the skill bar's second (third) row with the right stick, let go - the skill. "Settings": choosing "Interface" -> "New screen, game windows" no longer turns the settings window itself off.
+
 - Controller: the attack button with no target picks up loot beside you (within 2 cells), and with no monsters around talks to the NPC near.
 
 - Controller: the highlight and tips in windows (Stats, Skills, Items, shops and others) now follow the controller's choice, not the hidden mouse cursor. On the skill bar the LB, RB, LT, RT badges are no longer cut.
