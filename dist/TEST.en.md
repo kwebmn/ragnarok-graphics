@@ -1,3 +1,5 @@
+- Controller on the big map: the left stick moves a cross, X the next NPC / warp / Kafra (named beside it), A plots the way there, Y clears it, B closes.
+
 - Controller: "Skill wheel 1" and "2" - bind them in the controller menu to any button: hold it, pick one of eight cells of the skill bar's second (third) row with the right stick, let go - the skill. "Settings": choosing "Interface" -> "New screen, game windows" no longer turns the settings window itself off.
 
 - Controller: the attack button with no target picks up loot beside you (within 2 cells), and with no monsters around talks to the NPC near.
