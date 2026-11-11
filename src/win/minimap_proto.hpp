@@ -88,4 +88,14 @@ bool plotTo(int x, int y);
 std::vector<std::pair<std::string, std::string>> plotLines();
 void clearPlot();
 
+// 3.0.18-beta.133 (the pad analysis: the big map on the controller): while it is open - the left stick moves a
+// cross over its cells (from the character's), X jumps to the next NPC / warp / Kafra, A plots the way there, Y
+// clears it, B closes; false - the big map is not open. The cross's middle in the target and its side (none: false)
+struct BigPad {
+    float lx = 0, ly = 0, seconds = 0;
+    bool plot = false, next = false, clear = false, close = false;
+};
+bool padBig(const BigPad& p);
+bool padCross(int& x, int& y, float& side);
+
 }  // namespace uagfx::win::minimapproto

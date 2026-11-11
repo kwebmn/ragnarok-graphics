@@ -64,6 +64,11 @@ struct Line {  // a monster under the map: its name, its count (a boss's respawn
 };
 
 struct State {
+    // 3.0.18-beta.133 (the pad analysis, item 2: the big map on the controller): its cross - the cell, the moves'
+    // fractions, whether the pad drives it now
+    bool padCross = false;
+    minimap::Cell padCell;
+    float padFx = 0, padFy = 0;
     minimap::MapCache mapCache;  // 3.0.13-beta.2
     int cacheTold = 0;
     // 3.0.11-beta.119 (R-5Z6J2S): a layer switched on the map - wanted so until the settings read again say it
@@ -1201,6 +1206,16 @@ static void frameInner(HWND game, const Show& show, double k, int targetWidth, i
         s.dirty = true;
         if (s.big) s.bigDirty = true;
     }
+    if (s.big && s.padCross) {  // 3.0.18-beta.133: the pad's cross - the mark within 3 cells of it named
+        int best = -1, bestD = 4;
+        for (size_t i = 0; i < s.marks.size(); ++i) {
+            const int d =
+                std::max(std::abs(s.marks[i].cell.x - s.padCell.x), std::abs(s.marks[i].cell.y - s.padCell.y));
+            if (d < bestD) bestD = d, best = int(i);
+        }
+        hover = best;
+        bigPart = minimap::BigPart::Map;
+    }
     if (s.big && (bigPart != s.bigPart || hover != s.hover)) s.bigDirty = true;
     s.bigPart = bigPart;
     if (hover != s.hover || part != s.part) {
@@ -1531,6 +1546,32 @@ static void bigSheet(State& s, uisheet::Content& c) {
     c.say(s.bigUiWords);
 }
 
+// 3.0.18-beta.133: the pad's cross over the big map - a gold ring at its cell, drawn by uaUI over the map's sheet
+static void crossFrame() {
+    static uaui::Doc doc;
+    static float side = 0;
+    int x = 0, y = 0;
+    float sd = 0;
+    const bool on = uaui::ready() && padCross(x, y, sd);
+    if (!on) {
+        doc.show(false);
+        return;
+    }
+    if (!doc.made()) {
+        doc.passive = true;
+        doc.top = true;
+        if (!doc.make("big map cross", R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="bmx" data-model="bigcross" data-style-width="side + 'px'" data-style-height="side + 'px'">
+<div class="r" data-style-width="side + 'px'" data-style-height="side + 'px'"
+  data-style-border-radius="side / 2 + 'px'"></div><div class="d"></div></body></rml>)RML",
+                      [&](Rml::DataModelConstructor& m) { m.Bind("side", &side); }))
+            return;
+    }
+    if (sd != side) side = sd, doc.dirtyAll();
+    doc.place(x - int(sd / 2), y - int(sd / 2));
+    doc.show(true);
+}
+
 void frame(HWND game, const Show& show, double k, int targetWidth, int targetHeight) {
     frameInner(game, show, k, targetWidth, targetHeight);
     State& s = state();
@@ -1541,6 +1582,7 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
     }
     s.bigShown = s.bigSheet.frame("big map", s.shown && s.big && s.bigSquare.width > 0 && s.bigGen > 0, true,
                                   s.bigLayout.x, s.bigLayout.y, s.bigGen, [&](uisheet::Content& c) { bigSheet(s, c); });
+    crossFrame();  // 3.0.18-beta.133
 }
 
 bool key(unsigned vk) {
@@ -1844,6 +1886,62 @@ void packet(const packets::Event& e) {
         readGame(kOwnAccount, &own, sizeof own);
         if (g->account != own) s.mates[g->account] = State::Mate{g->x, g->y, GetTickCount64()};
     }
+}
+
+bool padBig(const BigPad& p) {
+    State& s = state();
+    if (!s.shown || !s.big || s.size.w <= 0 || s.size.h <= 0) {
+        s.padCross = false;
+        return false;
+    }
+    if (!s.padCross) {  // from the character's own cell
+        s.padCross = true;
+        s.padCell = s.cellKnown ? minimap::Cell{s.cell.x, s.cell.y} : minimap::Cell{s.size.w / 2, s.size.h / 2};
+        s.padFx = s.padFy = 0;
+    }
+    const float mag = std::hypot(p.lx, p.ly);
+    if (mag > 0.2f) {  // 12 to 60 cells a second by how far the stick is pushed
+        const float speed = (12.0f + 48.0f * std::min(1.0f, (mag - 0.2f) / 0.8f)) * p.seconds;
+        s.padFx += p.lx / mag * speed;
+        s.padFy += p.ly / mag * speed;  // the stick's up is north
+        const int dx = int(s.padFx), dy = int(s.padFy);
+        s.padFx -= float(dx), s.padFy -= float(dy);
+        s.padCell.x = std::clamp(s.padCell.x + dx, 0, s.size.w - 1);
+        s.padCell.y = std::clamp(s.padCell.y + dy, 0, s.size.h - 1);
+    }
+    if (p.next && !s.marks.empty()) {  // the next NPC, warp or Kafra round the map
+        std::vector<size_t> order;
+        for (size_t i = 0; i < s.marks.size(); ++i)
+            if (s.marks[i].glyph != minimap::Glyph::Member) order.push_back(i);
+        if (!order.empty()) {
+            size_t at = 0;
+            for (size_t k = 0; k < order.size(); ++k)
+                if (s.marks[order[k]].cell.x == s.padCell.x && s.marks[order[k]].cell.y == s.padCell.y)
+                    at = (k + 1) % order.size();
+            s.padCell = s.marks[order[at]].cell;
+        }
+    }
+    if (p.plot) {
+        setPlot(s, s.padCell, false);
+        plotFrame(s);
+        LOG_INFO("minimap: the way to %d, %d (the pad's cross)", s.padCell.x, s.padCell.y);
+    }
+    if (p.clear) clearPlot(s);
+    if (p.close) {
+        s.padCross = false;
+        setBig(s, false);
+    }
+    return true;
+}
+
+bool padCross(int& x, int& y, float& side) {
+    const State& s = state();
+    if (!s.big || !s.padCross || s.size.w <= 0) return false;
+    const float cellPx = s.bigLayout.map.w / float(s.size.w);
+    x = int(float(s.bigLayout.x) + s.bigLayout.map.x + (float(s.padCell.x) + 0.5f) * cellPx);
+    y = int(float(s.bigLayout.y) + s.bigLayout.map.y + (float(s.size.h) - (float(s.padCell.y) + 0.5f)) * cellPx);
+    side = std::max(14.0f, 22.0f * s.scale);
+    return true;
 }
 
 }  // namespace uagfx::win::minimapproto

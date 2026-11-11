@@ -1436,6 +1436,11 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 /* 3.0.18-beta.132 (the pad analysis, variant A): the skill wheel - eight cells round a dark ring, the pointed one
    gold, its name in the middle */
 .swh { position: absolute; font-family: Plex; }
+/* 3.0.18-beta.133: the pad's cross on the big map */
+.bmx { position: absolute; }
+.bmx .r { position: absolute; left: 0; top: 0; border-width: 2px; border-color: #e6cb8a; background-color: #e6cb8a26; }
+.bmx .d { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px;
+    border-radius: 2px; background-color: #e6cb8a; }
 .swh .ring { position: absolute; left: 0; top: 0; background-color: #10141cb8; border-width: 1px;
     border-color: #ffffff1f; }
 .swh .cell { position: absolute; display: flex; align-items: center; justify-content: center;

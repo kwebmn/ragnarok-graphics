@@ -100,6 +100,7 @@ namespace {
 constexpr DWORD kTalkHoldMs = 350;  // 3.0.11-beta.214: the Talk button held this long - the chat wheel
 
 struct State {
+    DWORD bigPadAt = 0;  // 3.0.18-beta.133: the big map's cross moved last
     bool controllerAllowed = true;  // 3.0.12-beta.1: [pad] enabled = 0 - false: the mouse's part only
     bool initDone = false;
     bool failed = false;
@@ -474,6 +475,25 @@ bool referencePad(const PadState& pad) {
 // 3.0.11-beta.90 (the concept's stage 6): the windows' tile open - the pad's buttons are its: the D-pad (or the left
 // stick) moves its frame, A opens, B or Start closes; the character waits meanwhile
 uint16_t stickSteps(const PadState& pad, DWORD now);
+
+// 3.0.18-beta.133 (the pad analysis: the big map on the controller): the big map open, no window over it - the left
+// stick moves its cross, X the next NPC / warp, A plots the way there, Y clears it, B closes; the character waits
+bool bigMapPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t(buttons & ~s.prevPadButtons);
+    s.prevPadButtons = buttons;
+    uagfx::win::minimapproto::BigPad p;
+    p.lx = pad.lx;
+    p.ly = pad.ly;
+    p.seconds = s.bigPadAt && now > s.bigPadAt ? std::min(0.1f, float(now - s.bigPadAt) / 1000.0f) : 0.0f;
+    s.bigPadAt = now;
+    p.plot = (down & kPadA) != 0;
+    p.next = (down & kPadX) != 0;
+    p.clear = (down & kPadY) != 0;
+    p.close = (down & kPadB) != 0;
+    return uagfx::win::minimapproto::padBig(p);
+}
 
 // 3.0.11-beta.214: the chat wheel open - the right stick points, the Talk button let go sends, LB/RB the page, LT/RT
 // the channel, Y the voice, B closes; the character waits meanwhile
@@ -1455,6 +1475,8 @@ void tick() {
                   : drive && *top == Win::Tip                      ? tipPad(pad, now)           // .204
                   : drive && *top == Win::VendSetup                ? vendSetupPad(pad, now)     // 3.0.16-beta.39
                   : drive && uagfx::win::uisheet::hasNav(int(*top)) ? walkPad(int(*top), pad, now)  // .18-beta.60
+                  : !drive && !menuOpen && pad.connected && uagfx::win::minimapproto::bigShown()
+                      ? bigMapPad(pad, now)  // 3.0.18-beta.133
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;
