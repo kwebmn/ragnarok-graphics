@@ -24,8 +24,9 @@ int ofThing(int id, const int cards[4]) {
 }
 
 uint32_t colour(int element) {
-    static const uint32_t kColours[10] = {0,        0x5AB4FF, 0xD2A15C, 0xFF6B45, 0x84E06E,
-                                          0xB98AF0, 0xF5E7A1, 0x9C8CFF, 0xC8D4E4, 0x8FB3A6};
+    // 3.0.18-beta.149 (the owner: wind as «желтые молнии»): wind lightning yellow, holy near white beside it
+    static const uint32_t kColours[10] = {0,        0x5AB4FF, 0xD2A15C, 0xFF6B45, 0xFFE14A,
+                                          0xB98AF0, 0xFFF8E6, 0x9C8CFF, 0xC8D4E4, 0x8FB3A6};
     return element >= 1 && element <= 9 ? kColours[element] : 0;
 }
 

@@ -24,3 +24,9 @@ TEST(item_elements_by_table_forge_and_card) {
     CHECK_EQ(std::string(itemelements::word(4)), std::string("Wind"));
     CHECK_EQ(std::string(itemelements::word(0)), std::string(""));
 }
+
+// 3.0.18-beta.149 (the owner: «желтые молнии»): wind yellow as its lightning, holy apart from it (near white)
+TEST(item_elements_wind_is_lightning_yellow) {
+    CHECK_EQ(itemelements::colour(4), 0xFFE14Au);
+    CHECK(itemelements::colour(6) != itemelements::colour(4));
+}
