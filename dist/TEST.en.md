@@ -1,3 +1,5 @@
+- My shop: each thing shows "sold N", its slots and what is inside, right click - its card; "Earned" and the Sales list (time · how many × what · +zeny, newest first). The list starts anew each time the shop opens. The server does not name the buyer, so neither do we.
+
 - Forged things: named as the game does - "Very Strong Fire Main Gauche" (star crumbs and element) in the bag, storage, cart, trade, vending; under the name and in the card - "Forged by Name" (the game asks the server for the smith's name).
 - Opening a shop: things show their slots "[3]" and what is inside (cards, free slots); right click on a thing - its card; under the list "If all sells: N z".
 - Choosing a thing (a card to insert, the magnifier): slots and what is inside under the name, right click (Y on the controller) - the thing's card.
