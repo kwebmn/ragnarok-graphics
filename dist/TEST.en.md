@@ -1,3 +1,6 @@
+- «Налаштування» and the Alt+D console no longer look for the settings file on the disk every frame (it was 0.11 ms a frame even with the window closed, R-2CKVU6): its place is found once a second.
+- A measurement: the log shows the interface's parts that change their data the most - each change gives work to the interface library, the dearest part of a frame (0.7-1.2 ms).
+
 - A measurement: the chat's time a frame split into its steps (the game's lines, the input field, the mouse over it, the layout, the history's rows, the redraw, the mouse's bounds) - in R-UT4N5V the chat no longer grows but stays at 0.7 ms a frame; now the step that takes it shows.
 
 - The chat no longer gets dearer while hunting: each kill, picked-up thing or experience line made it wrap and measure its whole history again (up to 200 lines) - in three minutes the chat grew from 0.13 to 1.33 ms a frame (R-CD8KCP). Now the lines' rows are kept and only a new or changed line is measured.
