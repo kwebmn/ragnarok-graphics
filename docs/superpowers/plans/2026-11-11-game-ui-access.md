@@ -29,3 +29,7 @@ Ledger:
   settings icon opens the console until stage 5. Second row in the full view only (the game's row is there too);
   the pad gets it with stage 5's work. uaUI's look only (always on) - the old sheet of the block unchanged.
   Ctrl+H/B/J/G/K checked in uaRO.exe FUN_004d96e0: G/H/J taken with Alt only, B/K never.
+- Stage 4 (3.0.18-beta.121): the menu (alive) gets ours over the game's - core menuwin Action Settings, Layout, Test,
+  Report, ours(), firstFocus 6 (test). A press closes the game's menu by its own 0x77, then the context takes it:
+  settings -> the console (till stage 5), layout -> hudedit::open, test -> testStart, report -> the Ctrl+Shift+F10
+  path 3 presents later (the shot without the menu). The death screens unchanged.

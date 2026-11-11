@@ -15,7 +15,10 @@ namespace uagfx::menuwin {
 // window's own (message 6 with their ids) - the game does what its own did. The parts that need no Windows; the words
 // by GDI (win/menu_window).
 enum class Kind : uint8_t { Alive, Dead, DeadToken };
-enum class Action : uint8_t { Revive, SavePoint, CharSelect, Exit, Back };
+// 3.0.18-beta.121 (the concept «Ігровий інтерфейс», stage 4): ours over the game's in the menu - «Налаштування»,
+// «Розмістити інтерфейс», «Тест графіки», «Надіслати звіт» (not the game's buttons: the driver does them)
+enum class Action : uint8_t { Revive, SavePoint, CharSelect, Exit, Back, Settings, Layout, Test, Report };
+bool ours(Action a);
 std::vector<Action> actions(Kind k);  // as shown, top down
 int buttonId(Kind k, Action a);       // the game's window's own button; 0 not in it
 int firstFocus(Kind k);               // «Повернутися до гри» - Enter by chance changes nothing
@@ -23,6 +26,7 @@ int firstFocus(Kind k);               // «Повернутися до гри» 
 struct Texts {
     std::string menu, dead;  // the title: «Меню», «Ви загинули»
     std::string revive, savePoint, charSelect, exit, back;
+    std::string settings, layout, test, report;  // 3.0.18-beta.121
     std::string enter, esc;  // the keys' hints (the controller's buttons while played with it)
     // 3.0.11-beta.277 (the owner's feature 8): the death's last hits - «Останні удари · {1} шкоди», their lines
     std::string recapTitle;

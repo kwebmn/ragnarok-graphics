@@ -123,6 +123,10 @@ mw::Texts texts(bool pad) {
     t.charSelect = say(settings::Text::MenuCharSelect);
     t.exit = say(settings::Text::MenuExit);
     t.back = say(settings::Text::MenuBack);
+    t.settings = say(settings::Text::MenuSettings);  // 3.0.18-beta.121
+    t.layout = say(settings::Text::MenuLayout);
+    t.test = say(settings::Text::MenuTest);
+    t.report = say(settings::Text::MenuReport);
     t.enter = pad ? uapad::buttonLabel(0) : "Enter";
     t.esc = pad ? uapad::buttonLabel(1) : "Esc";
     t.recapTitle = state().recapTitle;  // 3.0.11-beta.277
@@ -154,12 +158,21 @@ void hide(State& s) {
     s.shown = false;
 }
 
+mw::Action& asked() {  // 3.0.18-beta.121: one of ours pressed, till the context takes it (Back: none)
+    static mw::Action a = mw::Action::Back;
+    return a;
+}
+
 const char* nameOf(mw::Action a) {
     switch (a) {
         case mw::Action::Revive: return "revive here (Token of Siegfried)";
         case mw::Action::SavePoint: return "the save point";
         case mw::Action::CharSelect: return "character select";
         case mw::Action::Exit: return "exit";
+        case mw::Action::Settings: return "settings";
+        case mw::Action::Layout: return "arrange the interface";
+        case mw::Action::Test: return "the graphics test";
+        case mw::Action::Report: return "send a report";
         case mw::Action::Back: break;
     }
     return "back to the game";
@@ -171,10 +184,14 @@ void press(State& s, int row) {
     const uint32_t window = gameWindow(kind);
     const std::vector<mw::Action> as = mw::actions(kind);
     if (!window || row < 0 || row >= int(as.size())) return;
-    const int id = mw::buttonId(kind, as[size_t(row)]);
+    const mw::Action a = as[size_t(row)];
+    // 3.0.18-beta.121 (the concept «Ігровий інтерфейс», stage 4): ours - the game's menu closed as by «Повернутися до
+    // гри» (its 0x77), then the driver does it (the context takes it: takeAsk)
+    const int id = mw::ours(a) ? mw::buttonId(kind, mw::Action::Back) : mw::buttonId(kind, a);
     if (!id) return;
+    if (mw::ours(a)) asked() = a;
     const uint32_t send = read32(read32(window) + kSendMsgSlot);
-    if (s.told++ < 30) LOG_INFO("menu: «%s» pressed - the game's button 0x%X", nameOf(as[size_t(row)]), unsigned(id));
+    if (s.told++ < 30) LOG_INFO("menu: «%s» pressed - the game's button 0x%X", nameOf(a), unsigned(id));
     reinterpret_cast<SendMsgFn>(uintptr_t(send))(window, 0, kButtonMsg, id, 0, 0);
     s.key.clear();
 }
@@ -382,6 +399,12 @@ bool box(int& x, int& y, int& w, int& h) {
     w = s.layout.w;
     h = s.layout.h;
     return true;
+}
+
+uagfx::menuwin::Action takeAsk() {
+    const mw::Action a = asked();
+    asked() = mw::Action::Back;
+    return a;
 }
 
 }  // namespace uagfx::win::menuwin

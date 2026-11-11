@@ -242,6 +242,7 @@ private:
     void writeUsage(const std::string& lines);
     ToggleKey shotKey_;  // 0.54: Ctrl+Shift+F12 - a screenshot at the picture's full size
     ToggleKey reportKey_;  // 2.13: Ctrl+Shift+F10 - the same, and «Нове звернення» with it
+    int menuReport_ = 0;   // 3.0.18-beta.121: «Надіслати звіт» in the menu - presents left before its shot
     ToggleKey xrayKey_;  // 2.3: Ctrl+Shift+F9, uaRO Studio's X-ray
     ToggleKey pickKey_, abKey_;  // 2.3: Ctrl+Shift+F8 the texture under the cursor, Ctrl+Shift+F7 its A/B
     uint8_t studioSent_ = 0xFF;  // 2.3: the studio's keys the renderer has

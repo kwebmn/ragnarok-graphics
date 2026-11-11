@@ -1,6 +1,8 @@
 #pragma once
 #include <windows.h>
 
+#include "core/menu_window.hpp"
+
 #include <cstdint>
 
 #include "core/frame.hpp"
@@ -25,6 +27,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool key(UINT m, WPARAM wp, LPARAM lp);  // ↑ ↓ choose, Enter presses - while it shows
 bool shown();
 void beforeGameDraw();  // its game's window hidden
+// 3.0.18-beta.121 (the concept «Ігровий інтерфейс»): one of ours pressed in the menu (Settings, Layout, Test, Report),
+// once; Back - none
+uagfx::menuwin::Action takeAsk();
 // Played with the controller: the D-pad chooses, A presses, B «Повернутися до гри»
 enum class PadCommand : uint8_t { Up, Down, Press, Back };
 void padCommand(PadCommand c);

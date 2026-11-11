@@ -907,6 +907,7 @@ enum class Text : uint16_t {
     EquipCartOff, EquipFalconOff, EquipPecoOff,  // 3.0.18-beta.114
     RecapNone, CharOwnReference, CharOwnHunt, CharOwnMvp, CharOwnTracker, CharOwnParty, CharOwnRecap,
     CharOwnSettings,  // 3.0.18-beta.120
+    MenuSettings, MenuLayout, MenuTest, MenuReport,  // 3.0.18-beta.121
     Count
 };
 

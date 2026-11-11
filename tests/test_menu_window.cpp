@@ -39,7 +39,10 @@ float measure(const std::string& s, float px, bool) {
 // first
 TEST(menu_window_buttons_of_each_window) {
     using A = menuwin::Action;
-    CHECK((menuwin::actions(menuwin::Kind::Alive) == std::vector<A>{A::CharSelect, A::Exit, A::Back}));
+    CHECK((menuwin::actions(menuwin::Kind::Alive) ==  // 3.0.18-beta.121: ours over the game's
+           std::vector<A>{A::Settings, A::Layout, A::Test, A::Report, A::CharSelect, A::Exit, A::Back}));
+    CHECK(menuwin::ours(A::Settings) && menuwin::ours(A::Report) && !menuwin::ours(A::Exit));
+    CHECK(menuwin::buttonId(menuwin::Kind::Alive, A::Settings) == 0);
     CHECK((menuwin::actions(menuwin::Kind::Dead) == std::vector<A>{A::SavePoint, A::CharSelect, A::Exit, A::Back}));
     CHECK((menuwin::actions(menuwin::Kind::DeadToken) ==
            std::vector<A>{A::Revive, A::SavePoint, A::CharSelect, A::Exit, A::Back}));
@@ -64,8 +67,10 @@ TEST(menu_window_places_and_the_mouse) {
     const panel::Box& b = L.buttons[2];
     CHECK(menuwin::buttonAt(L, b.x + b.w / 2, b.y + b.h / 2) == 2);
     CHECK(menuwin::buttonAt(L, -5, -5) == -1);
-    CHECK(menuwin::firstFocus(menuwin::Kind::Dead) == 3 && menuwin::firstFocus(menuwin::Kind::Alive) == 2);
-    CHECK(menuwin::layout(menuwin::Kind::Alive, 1920, 1080, 1.0f).buttons.size() == 3);
+    CHECK(menuwin::firstFocus(menuwin::Kind::Dead) == 3 && menuwin::firstFocus(menuwin::Kind::Alive) == 6);
+    const menuwin::Layout alive = menuwin::layout(menuwin::Kind::Alive, 1920, 1080, 1.0f);
+    CHECK(alive.buttons.size() == 7);
+    CHECK(alive.y + alive.h <= 1080);  // 3.0.18-beta.121: the taller card still on the screen
     CHECK(menuwin::layout(menuwin::Kind::DeadToken, 1920, 1080, 1.0f).h > L.h);
 }
 

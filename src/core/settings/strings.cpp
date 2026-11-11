@@ -8276,6 +8276,11 @@ constexpr Entry kTexts[] = {
      "Что меня убило \xC2\xB7 Ctrl+K"},
     {Text::CharOwnSettings, "Settings \xC2\xB7 Alt+D", "Налаштування \xC2\xB7 Alt+D",
      "Настройки \xC2\xB7 Alt+D"},
+    // 3.0.18-beta.121 (the concept «Ігровий інтерфейс»): the menu's own over the game's
+    {Text::MenuSettings, "Settings", "Налаштування", "Настройки"},
+    {Text::MenuLayout, "Arrange the interface", "Розмістити інтерфейс", "Разместить интерфейс"},
+    {Text::MenuTest, "Graphics test", "Тест графіки", "Тест графики"},
+    {Text::MenuReport, "Send a report", "Надіслати звіт", "Отправить отчёт"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -983,7 +983,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
                             GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F10) < 0;
     const bool shotNow = shotKey_.pressed(shotDown);
     // 3.0.9-beta.4: while the answer card shows, the same key opens the answer - no «Нове звернення» then
-    const bool reportNow = reportKey_.pressed(reportDown) && !answercard::openByKey();
+    bool reportNow = reportKey_.pressed(reportDown) && !answercard::openByKey();
+    if (menuReport_ > 0 && --menuReport_ == 0) reportNow = true;  // 3.0.18-beta.121: «Надіслати звіт» in the menu
     std::string screenshot;
     const bool bigNow = bigShot_ == 1;  // 3.0.13-beta.16: the big shot's last frame
     if (shotNow || reportNow || bigNow) {
@@ -1436,6 +1437,13 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     if (console_.takeTestAsk()) testStart();  // 3.0.5-beta.6
     if (console_.takeLayoutAsk()) hudedit::open(window, "the console");  // 3.0.11-beta.75
+    switch (menuwin::takeAsk()) {  // 3.0.18-beta.121 (the concept «Ігровий інтерфейс»): the menu's own, its card gone
+        case uagfx::menuwin::Action::Settings: Console::askOpen(); break;  // till «Налаштування» of its own
+        case uagfx::menuwin::Action::Layout: hudedit::open(window, "the menu"); break;
+        case uagfx::menuwin::Action::Test: testStart(); break;
+        case uagfx::menuwin::Action::Report: menuReport_ = 3; break;  // the shot a few frames on: the menu gone
+        default: break;
+    }
     ++stats_.frames;
     logStats(false);
 }
