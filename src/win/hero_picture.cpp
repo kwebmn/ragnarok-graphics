@@ -9,6 +9,7 @@
 #include "win/game_camera.hpp"
 #include "win/head_picture.hpp"
 #include "win/pack_frames.hpp"
+#include "core/weapon_look.hpp"
 
 namespace uagfx::win::heropicture {
 namespace {
@@ -23,6 +24,16 @@ constexpr uint32_t kMiddle = 0x771908, kColour = 0x771910, kOptions = 0x77191C;
 // (FUN_0062e920) under data\imf\: the body over the head where its priority is the higher
 constexpr uint32_t kCloth = 0x77190C, kBodyPalettes = kSession + 0x90C, kImfs = kSession + 0x870;
 const std::string kBodyPal = "\xB8\xF6\\";  // 몸\ (CP949)
+// 3.0.18-beta.129 (item 6, the owner's own - the game's equipment window draws none): the weapon and the shield as the
+// world draws them - the player's actor (the game mode 0x74B57C, its world +0xC4, the player +0x3C): its weapon
+// (+0x368, the item's number in the low half) and shield (+0x378); the weapon's sprite «인간족\<job
+// folder><sex>_<n>», else by its kind (FUN_005b1ee0: the globals 0x7719D8 folders, 0x7719E8 sexes, 0x7719F8 kinds'
+// names); the shield's «방패\<folder><sex><name>» (FUN_00639c70: the session's +0x890 folders, +0x8F0 names)
+constexpr uint32_t kModeNow = 0x74B57C, kModeWorld = 0xC4, kWorldPlayer = 0x3C, kActorWeapon = 0x368;
+constexpr uint32_t kActorShield = 0x378, kWeaponFolders = 0x7719D8, kWeaponSexes = 0x7719E8, kWeaponKinds = 0x7719F8;
+constexpr uint32_t kShieldFolders = kSession + 0x890, kShieldNames = kSession + 0x8F0;
+const std::string kHumanRace = "\xC0\xCE\xB0\xA3\xC1\xB7\\";  // 인간족\ (CP949)
+const std::string kShieldDir = "\xB9\xE6\xC6\xD0\\";           // 방패\ (CP949)
 constexpr int kMostView = 4096;
 const std::string kBody = "\xC0\xCE\xB0\xA3\xC1\xB7\\\xB8\xF6\xC5\xEB\\";  // 인간족\몸통\ (CP949)
 const std::string kAccessory = "\xBE\xC7\xBC\xBC\xBB\xE7\xB8\xAE\\";        // 악세사리\ (CP949)
@@ -50,6 +61,14 @@ std::string nameAt(uint32_t table, int index) {
     return base ? readString(read32(base + 4 * uint32_t(at))) : "";
 }
 
+// A global table of names (a pointer to its array; past 0xF6F its index less 0xF6E)
+std::string globalAt(uint32_t table, int index) {
+    if (index < 0 || index > 0x2000) return "";
+    const int at = index < 0xF6F ? index : index - 0xF6E;
+    const uint32_t base = read32(table);
+    return base ? readString(read32(base + 4 * uint32_t(at))) : "";
+}
+
 struct Loaded {
     spritefile::Sprite sprite;
     spritefile::Act act;
@@ -70,7 +89,8 @@ Loaded load(const std::string& base) {
 
 bool Looks::operator==(const Looks& o) const {
     return job == o.job && sex == o.sex && head == o.head && colour == o.colour && low == o.low && top == o.top &&
-           middle == o.middle && options == o.options && cloth == o.cloth;
+           middle == o.middle && options == o.options && cloth == o.cloth && weapon == o.weapon &&
+           shield == o.shield;
 }
 
 int shownJob(int job, uint32_t options) {
@@ -98,6 +118,12 @@ Looks own() {
     l.middle = int(read32(kMiddle));
     l.options = read32(kOptions);
     l.cloth = int(read32(kCloth));
+    const uint32_t mode = read32(kModeNow), world = mode ? read32(mode + kModeWorld) : 0;
+    const uint32_t player = world ? read32(world + kWorldPlayer) : 0;
+    if (player) {  // 3.0.18-beta.129
+        l.weapon = int(read32(player + kActorWeapon) & 0xFFFF);
+        l.shield = int(read32(player + kActorShield));
+    }
     return l;
 }
 
@@ -169,6 +195,31 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
         if (!p.big.factor) return nullptr;
         return [&p](int index) { return p.big.at(index); };
     };
+    // 3.0.18-beta.129: the weapon (its own sprite, else its kind's) and the shield
+    Loaded weapon, shield;
+    if (l.weapon > 0) {
+        const int job = shownJob(l.job, l.options);
+        const std::string folder = globalAt(kWeaponFolders, job), sx = globalAt(kWeaponSexes, sex);
+        if (!folder.empty()) {
+            weapon = load("data\\sprite\\" + kHumanRace + folder + sx + "_" + std::to_string(l.weapon));
+            const int kind = weaponlook::forJob(job, weaponlook::kindOf(l.weapon));
+            if (!weapon.ok && kind > 0) {
+                const std::string kindName = globalAt(kWeaponKinds, kind);
+                if (!kindName.empty()) weapon = load("data\\sprite\\" + kHumanRace + folder + sx + kindName);
+            }
+        }
+    }
+    if (l.shield > 0) {
+        const int job = shownJob(l.job, l.options);
+        const std::string folder = nameAt(kShieldFolders, job), name = nameAt(kShieldNames, l.shield);
+        if (!folder.empty() && !name.empty())
+            shield = load("data\\sprite\\" + kShieldDir + folder + ending + name);
+    }
+    for (Loaded* p : {&weapon, &shield}) {
+        if (!p->ok) continue;
+        p->big = packframes::of(p->spr, p->sprite, packframes::usedBy(p->sprite, p->act, size_t(dir), 0), factor);
+        if (p->big.factor) factor = p->big.factor, ++bigParts;
+    }
     std::vector<spritefile::Part> parts;  // under to over: the cart, the body, the head, its headgear, the falcon
     if (cart.ok) parts.push_back({&cart.sprite, &cart.act, size_t(dir), 0, false, 0, 0, false, from4(cart)});
     bool bodyOver = false;  // 3.0.18-beta.126: the job's .imf - the body over the head in this frame
@@ -186,6 +237,9 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
     if (head.ok) parts.push_back({&head.sprite, &head.act, size_t(dir), 0, true, 0, 0, false, from4(head)});
     if (bodyOver) parts.push_back(bodyPart);
     for (const Loaded& g : gear) parts.push_back({&g.sprite, &g.act, size_t(dir), 0, true, 0, 0, false, from4(g)});
+    // 3.0.18-beta.129: the weapon and the shield where the body stands (their frames share its origin), over it
+    if (weapon.ok) parts.push_back({&weapon.sprite, &weapon.act, size_t(dir), 0, false, 0, 0, false, from4(weapon)});
+    if (shield.ok) parts.push_back({&shield.sprite, &shield.act, size_t(dir), 0, false, 0, 0, false, from4(shield)});
     if (falcon.ok) {  // perched: its feet (its frame's foot, 22 under its origin) on the shoulder beside the neck
         int nx = 0, ny = -70;
         const auto& frames = body.act.actions;
@@ -227,6 +281,10 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
                 (bodyOver ? " (over the head)" : "") +
                 (head.ok ? " + head" : "") + " + " + std::to_string(gear.size()) + " headgear(s)" +
                 (cart.ok ? " + cart" : "") + (falcon.ok ? " + falcon" : "") +
+                (weapon.ok  ? " + weapon " + std::to_string(l.weapon)
+                 : l.weapon ? " (weapon " + std::to_string(l.weapon) + " not found)"
+                            : "") +
+                (shield.ok ? " + shield" : l.shield ? " (shield " + std::to_string(l.shield) + " not found)" : "") +
                 (factor > 1 ? ", the AI pack's frames " + std::to_string(factor) + "x for " + std::to_string(bigParts) +
                                   " part(s)"
                             : ", the game's own pixels") +

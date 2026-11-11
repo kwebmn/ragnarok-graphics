@@ -65,11 +65,11 @@ constexpr int kDropMsg = 0x12;
 constexpr uint32_t kBag = 0x771148 + 0xF1C, kInfo = 8;
 constexpr size_t kInfoSize = 0x48, kMostNodes = 256;
 // 3.0.11-beta.118 (R-2YRWU2 «1 thing(s) worn» - the arrows alone - and R-8YW96B «0 worn» on a dressed Paladin; the
-// owner's «шмоток нету»): the worn gear is not in the bag - the session keeps it apart, an ITEM_INFO for each of the
-// ten places by its bit (+0xFC0, 72 bytes apart: FUN_00628e50 at the equipment's list 0x00a4 and at the wear's
-// answer 0x00aa; a two-hander or a full helm in each of its places); the arrows worn stay in the bag - their place at
-// +0xEEC (0x013c, at the login too). 3.0.11-beta.120 (R-4T7N4D: Sleep Arrow shown while plain arrows were worn): the
-// place alone - the login list's worn 0x8000 stays on the first arrows after others are worn
+// owner's «шмоток нету»): the worn gear is not in the bag - the session keeps it apart, an ITEM_INFO for
+// each of the ten places by its bit (+0xFC0, 72 bytes apart: FUN_00628e50 at the equipment's list 0x00a4 and at the
+// wear's answer 0x00aa; a two-hander or a full helm in each of its places); the arrows worn stay in the bag - their
+// place at +0xEEC (0x013c, at the login too). 3.0.11-beta.120 (R-4T7N4D: Sleep Arrow shown while plain arrows were
+// worn): the place alone - the login list's worn 0x8000 stays on the first arrows after others are worn
 constexpr uint32_t kWorn = 0x771148 + 0xFC0, kAmmoNow = 0x771148 + 0xEEC, kAmmoBit = 0x8000;
 constexpr int kWornPlaces = 10;
 // The character: its job, sex, hair style and colour (the character block's)
@@ -97,9 +97,10 @@ struct State {
     bool sheetShown = false;
     WindowShadow shadow;
     WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
-    // 3.0.11-beta.110 (the concept «Концепция окон и инвентаря», stage 2): the game's drag of a worn thing begun at
-    // the press never saw its button come up (the press and the release are the window's) - a drag of its own now, its
-    // icon under the cursor, the game's drag begun and let go only when the button comes up (as «Речі»)
+    // 3.0.11-beta.110 (the concept «Концепция окон и инвентаря», stage 2): the game's drag of
+    // a worn thing begun at the press never saw its button come up (the press and the release are the window's) - a
+    // drag of its own now, its icon under the cursor, the game's drag begun and let go only when the button comes up
+    // (as «Речі»)
     windrag::Press press;
     panel::Picture dragIcon;
     const panel::Picture* dragOf = nullptr;
@@ -120,8 +121,8 @@ struct State {
     ew::Show show;
     ew::Layout layout;
     std::string key, portraitKey;
-    // 3.0.18-beta.111 (the owner: «из спрайтов, настоящего»): the character in the middle from the game's sprites,
-    // the way it faces (◀ ▶), made again when its looks, its way or the size change
+    // 3.0.18-beta.111 (the owner: «из спрайтов, настоящего»): the character in the middle from
+    // the game's sprites, the way it faces (◀ ▶), made again when its looks, its way or the size change
     int heroDir = 0;
     heropicture::Looks heroLooks;
     std::string heroKey;
@@ -335,7 +336,8 @@ void readData(State& s) {
     const heropicture::Looks looks = heropicture::own();
     const int hw = int(std::lround(150 * s.scale)), hh = int(std::lround(210 * s.scale));  // .112: the smaller window
     std::string hk;
-    for (const int v : {looks.job, looks.sex, looks.head, looks.colour, looks.cloth, looks.low, looks.top, looks.middle,
+    for (const int v : {looks.job, looks.sex, looks.head, looks.colour, looks.cloth, looks.weapon, looks.shield,
+                        looks.low, looks.top, looks.middle,
                         int(looks.options), s.heroDir, hw, hh, packpictures::iconsStamp()})
         hk += std::to_string(v) + ':';
     if (hk != s.heroKey) {
@@ -448,10 +450,11 @@ bool modeMsg(int msg, int a, int b, int c) {
     return true;
 }
 
-// 3.0.18-beta.114 (the owner: «нету кнопки для анманта пеко итд»): the game's own window's one button (0xB6 in its
-// SendMsg FUN_00470f90; its words by FUN_0046ed20) - by the options (0x77191C): a cart (FUN_0063b1c0: 0x08 0x80 0x100
-// 0x200 0x400) first, then the falcon (0x10), then the Peco (0x20); a press sends the game mode's 0x58, 0x91 or 0x92
-// (each its 0x012a to the server). The own shop open (0x728028): the game's line 0x20d in the chat instead
+// 3.0.18-beta.114 (the owner: «нету кнопки для анманта пеко итд»): the game's own window's
+// one button (0xB6 in its SendMsg FUN_00470f90; its words by FUN_0046ed20) - by the options (0x77191C): a cart
+// (FUN_0063b1c0: 0x08 0x80 0x100 0x200 0x400) first, then the falcon (0x10), then the Peco (0x20); a press sends the
+// game mode's 0x58, 0x91 or 0x92 (each its 0x012a to the server). The own shop open (0x728028): the game's line 0x20d
+// in the chat instead
 constexpr uint32_t kOptions = 0x77191C, kShopOpen = 0x728028, kPush = 0x4DB310, kMsgString = 0x504FB0;
 constexpr int kCartOffMsg = 0x58, kFalconOffMsg = 0x91, kPecoOffMsg = 0x92, kCloseShopLine = 0x20D;
 using PushFn = int(__attribute__((thiscall)) *)(uint32_t manager, int msg, const char* text, int colour, int more);
@@ -837,11 +840,12 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (h.part == ew::Part::None || m == WM_MOUSEMOVE) return false;
     result = 0;
     if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && s.live.shown()) {  // 3.0.18-beta.111: ◀ ▶ turn it
-        // 3.0.18-beta.112 (the owner: «не крутится персонаж стрелками»): by their laid-out boxes - the window is
-        // passive (pointer-events none), RmlUi's own point lookup never finds its elements
+        // 3.0.18-beta.112 (the owner: «не крутится персонаж стрелками»): by their laid-out
+        // boxes - the window is passive (pointer-events none), RmlUi's own point lookup never finds its elements
         const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
-        // 3.0.18-beta.117 (the owner: «при анмаунте надо сделать подтверждение да нет, потому что нажав случайно
-        // может быть проблема»): the sign asks, Yes does it, No or a press anywhere else forgets the question
+        // 3.0.18-beta.117 (the owner: «при анмаунте надо сделать подтверждение да
+        // нет, потому что нажав случайно может быть проблема»): the sign
+        // asks, Yes does it, No or a press anywhere else forgets the question
         if (s.mountAsk) {
             const auto on = [&](const char* part) {
                 for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), part))

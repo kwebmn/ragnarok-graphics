@@ -64,3 +64,9 @@ Ledger:
 - 3.0.18-beta.128 (owner «1,6,7,8» - item 7): the Alt+V block's small views (compact, rings, icon) - «…» right of the
   block, a click opens our windows' row beside it (lit while open, tips with keys); the body that much wider so its
   blocker takes those clicks.
+- 3.0.18-beta.129 (item 6, the owner's own beyond the original): the weapon and the shield on «Спорядження»'s
+  character as the world draws them - the player actor (mode 0x74B57C +0xC4 +0x3C) weapon +0x368 low half, shield
+  +0x378; weapon «인간족\<0x7719D8[job]><0x7719E8[sex]>_<n>», else by kind (core/weapon_look kindOf = FUN_0064bc50,
+  forJob = FUN_005b1ee0's remaps - test) «...<0x7719F8[kind]>»; shield «방패\<+0x890[job]><ending><+0x8F0[n]>»
+  (FUN_00639c70). Paths checked in sprite.zip (페코페코_기사_남_1116, _검). Ruling: both over the body in every
+  direction, no weapon glow (검광), no dual-wield left hand. Cost: a back view with the weapon in front.
