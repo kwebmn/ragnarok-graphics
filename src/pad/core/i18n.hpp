@@ -69,6 +69,7 @@ enum class Text : uint16_t {
     // the question before leaving the game
     HintLoginShelf, HintLoginMenu, HintLoginCard, HintLoginCardBack, HintLoginContinue, HintLoginExit,
     HintDead,  // 3.0.18-beta.80: dead, the death window closed - {B} opens it again
+    Wheel,  // 3.0.18-beta.132: the action «Колесо навичок» (its number after it)
     Count
 };
 

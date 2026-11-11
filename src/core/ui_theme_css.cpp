@@ -1433,6 +1433,19 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .ay { color: #e6cb8a; border-color: #e6cb8a88; }
 .eql .an { color: #c9cfdb; }
 .eql .ay.hot, .eql .an.hot { background-color: #ffffff24; }
+/* 3.0.18-beta.132 (the pad analysis, variant A): the skill wheel - eight cells round a dark ring, the pointed one
+   gold, its name in the middle */
+.swh { position: absolute; font-family: Plex; }
+.swh .ring { position: absolute; left: 0; top: 0; background-color: #10141cb8; border-width: 1px;
+    border-color: #ffffff1f; }
+.swh .cell { position: absolute; display: flex; align-items: center; justify-content: center;
+    background-color: #ffffff12; border-width: 1px; border-color: #ffffff22; }
+.swh .cell.lit { background-color: #e6cb8a3a; border-color: #e6cb8a; }
+.swh .cell .fk { position: absolute; left: 3px; top: 1px; font-size: 10px; color: #e6cb8a; }
+.swh .mid { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background-color: #00000066; }
+.swh .mid .name { display: block; font-size: 13px; font-weight: bold; color: #eef2f8; text-align: center; }
+.swh .mid .title { display: block; font-size: 11px; color: #9aa3b5; }
 )";
 
 }  // namespace

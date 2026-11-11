@@ -913,6 +913,7 @@ enum class Text : uint16_t {
     InterfaceKeyHint, KeyOff, KeyCtrlB, KeyCtrlD, KeyCtrlG, KeyCtrlH, KeyCtrlI, KeyCtrlJ, KeyCtrlK, KeyCtrlL, KeyCtrlN,
     KeyCtrlU, KeyCtrlY,  // 3.0.18-beta.125
     CharOwnMore,  // 3.0.18-beta.128
+    PadWheelTitle,  // 3.0.18-beta.132
     Count
 };
 

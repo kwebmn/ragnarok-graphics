@@ -60,17 +60,19 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
  <div class="snav"><div class="sn ctl" data-for="n, i : nav" data-class-on="i == sec && query == ''"
    data-event-click="sec_go(i)"><span class="nn">{{n.name}}</span><span class="cnt"
    data-if="n.count > 0">{{n.count}}</span></div></div>
- <div class="spane"><div data-for="r, i : srows"><div class="sgrp" data-if="r.group != ''">{{r.group}}</div><div
-   class="sro"><div class="st"><span class="sl">{{r.label}}</span><span class="shn"
-   data-if="r.hint != ''">{{r.hint}}</span></div><div class="sctl"><span class="tg ctl" data-if="r.toggle"
-   data-class-on="r.on" data-event-click="set_toggle(i)"><span class="kn"></span></span><input class="ctl"
-   data-if="r.slider" type="range" data-attr-min="r.min" data-attr-max="r.max" data-attr-step="r.step"
-   data-attr-value="r.value" data-event-change="set_slider(i)"/><span class="ch ctl" data-if="r.slider"
+ <div class="spane"><div data-for="r, i : srows" data-if="r.label != ''"><div class="sgrp"
+   data-if="r.group != ''">{{r.group}}</div><div class="sro"><div class="st"><span
+   class="sl">{{r.label}}</span><span class="shn" data-if="r.hint != ''">{{r.hint}}</span></div><div
+   class="sctl"><span class="tg ctl" data-if="r.toggle" data-class-on="r.on"
+   data-event-click="set_toggle(i)"><span class="kn"></span></span><input class="ctl" data-if="r.slider"
+   type="range" data-attr-min="r.min" data-attr-max="r.max" data-attr-step="r.step" data-attr-value="r.value"
+   data-event-change="set_slider(i)"/><span class="ch ctl" data-if="r.slider"
    data-event-click="set_step(i, -1)">&#x2212;</span><span class="sv" data-if="r.slider">{{r.vtext}}</span><span
-   class="ch ctl" data-if="r.slider" data-event-click="set_step(i, 1)">+</span
-   ><div class="chs" data-if="r.choices.size > 0"><span class="ch ctl" data-for="c, j : r.choices"
-   data-class-on="c.on" data-event-click="set_choice(i, j)">{{c.label}}</span></div></div></div></div>
-   <div class="snone" data-if="srows.size == 0">{{none}}</div></div>
+   class="ch ctl" data-if="r.slider" data-event-click="set_step(i, 1)">+</span><div class="chs"
+   data-if="r.choices.size > 0 && r.choices[0].label != ''"><span class="ch ctl"
+   data-for="c, j : r.choices" data-if="c.label != ''" data-class-on="c.on"
+   data-event-click="set_choice(i, j)">{{c.label}}</span></div></div></div></div>
+   <div class="snone" data-if="shown_rows == 0">{{none}}</div></div>
 </div>
 <div class="sfoot"><span class="sfh">{{hint}}</span><span class="btn ctl"
   data-event-click="open_console()">{{console_btn}}</span></div>
@@ -91,6 +93,8 @@ struct SetRowView {  // 3.0.18-beta.122
     int value = 0, min = 0, max = 0, step = 1;
     std::vector<ChoiceView> choices;
 };
+constexpr size_t kMostChoices = 12, kMostRows = 24;  // 3.0.18-beta.132
+
 struct NavView {
     Rml::String name;
     int count = 0;
@@ -104,6 +108,7 @@ struct State {
     Rml::String query, shownQuery, searchHint, none, consoleBtn;
     std::vector<NavView> navViews;
     std::vector<SetRowView> setRows;
+    int shownRows = 0;  // 3.0.18-beta.132: the rows with words (the list padded)
     std::string rowsKey;
     const Config* config = nullptr;
     std::string iniPath;
@@ -439,7 +444,12 @@ static void useRow(State& s, int row, int what, int value) {
     if (!s.config || s.iniPath.empty()) return;
     bool wrote = false;
     if (key.rfind("picture.", 0) == 0) {
-        if (what == 2) wrote = settingedit::setLook(s.iniPath, settings::presets::Choice(key.back() - '0'), value);
+        // 3.0.18-beta.132 (R-4BXZPM «пропал новый интерфейс на настройках»):
+        // «Новий екран, вікна гри» or «Класичний» chosen here turned [interface] options
+        // off - this very window gone; it stays (the game's other windows as chosen)
+        if (what == 2)
+            wrote = settingedit::setLook(s.iniPath, settings::presets::Choice(key.back() - '0'), value,
+                                         {"interface.options"});
     } else if (const settings::IniSetting* st = settings::findSetting(key)) {
         if (what == 0 && st->tokens.size() > 1)
             wrote = settingedit::set(s.iniPath, *s.config, key, st->tokens[s.setRows[size_t(row)].on ? 0 : 1]);
@@ -481,6 +491,7 @@ static void liveFrame(State& s) {
         }
         m.RegisterArray<std::vector<NavView>>();
         m.Bind("srows", &s.setRows);
+        m.Bind("shown_rows", &s.shownRows);
         m.Bind("nav", &s.navViews);
         m.Bind("sec", &s.sec);
         m.Bind("query", &s.query);
@@ -549,11 +560,19 @@ static void liveFrame(State& s) {
         s.rowsKey.clear();
     }
     std::vector<SetRowView> rows = buildRows(s);
+    // 3.0.18-beta.132 (R-4BXZPM «srows[1].choices[10].on»): never shorter lists than before - a shorter one left
+    // RmlUi rows past its end for a frame; the spare rows and choices empty and hidden
+    for (SetRowView& r : rows)
+        while (r.choices.size() < kMostChoices) r.choices.push_back(ChoiceView{});
+    while (rows.size() < std::max(s.setRows.size(), size_t(kMostRows))) rows.push_back(SetRowView{});
     const std::string key = rowsKeyOf(rows) + std::to_string(s.sec);
     if (key != s.rowsKey) {
         s.rowsKey = key;
+        s.shownRows =
+            int(std::count_if(rows.begin(), rows.end(), [](const SetRowView& r) { return !r.label.empty(); }));
         s.setRows = std::move(rows);
         s.live.doc.dirty("srows");
+        s.live.doc.dirty("shown_rows");
     }
     int x = s.layout.x, y = s.layout.y;  // the middle of the screen, as wide as its markup makes it
     int bx = 0, by = 0, bw = 0, bh = 0;

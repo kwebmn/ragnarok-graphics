@@ -99,6 +99,14 @@ public:
         uint16_t button = 0;  // its own button (let go: cast)
     };
     std::optional<AimView> aimView() const;
+    // 3.0.18-beta.132 (the pad analysis, variant A): a skill wheel open - which (0, 1) and the sector the right stick
+    // points at (-1 none); its slot: (index + 1) * 9 + sector (the second or third hotbar row's F1-F8)
+    struct WheelView {
+        int index = 0, sector = -1;
+        uint16_t button = 0;
+    };
+    std::optional<WheelView> wheelView() const { return wheel_; }
+    static int wheelSlot(int index, int sector) { return (index + 1) * 9 + sector; }
 
     bool enabled() const { return enabled_; }
     bool walking() const { return walking_; }  // the left stick holds the virtual mouse
@@ -158,6 +166,8 @@ public:
     std::optional<uint32_t> following() const { return followId_; }
 
 private:
+    std::optional<WheelView> wheel_;  // 3.0.18-beta.132
+    float wheelRx_ = 0, wheelRy_ = 0;
     void followStep(const WorldState& world, uint32_t now, TickOutput& out);
     std::optional<uint32_t> followId_;  // 3.0.13-beta.11
     uint32_t followSeenMs_ = 0;

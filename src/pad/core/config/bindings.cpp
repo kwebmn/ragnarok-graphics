@@ -11,7 +11,8 @@ namespace uapad {
 namespace {
 
 constexpr int kSlots = 27;
-constexpr int kRing = 2 + kSlots + 6;  // none, attack, 27 slots, pickup, sit, untarget, camera, talk, reference
+// none, attack, 27 slots, pickup, sit, untarget, camera, talk, reference, wheel 1, wheel 2 (3.0.18-beta.132)
+constexpr int kRing = 2 + kSlots + 8;
 
 const char* const kTokens[kBindableCount] = {"A",  "B",  "X",  "Y",     "LB",   "RB",   "LT",
                                              "RT", "UP", "RIGHT", "DOWN", "LEFT", "L3", "R3"};
@@ -29,6 +30,7 @@ int ringIndex(Action a) {
         case Action::Kind::CameraToggle: return 5 + kSlots;
         case Action::Kind::Talk: return 6 + kSlots;
         case Action::Kind::Reference: return 7 + kSlots;
+        case Action::Kind::Wheel: return 8 + kSlots + std::min<int>(a.slot, 1);
     }
     return 0;
 }
@@ -42,7 +44,8 @@ Action fromRing(int i) {
     if (i == 4 + kSlots) return Action{Action::Kind::ClearTarget, 0};
     if (i == 5 + kSlots) return Action{Action::Kind::CameraToggle, 0};
     if (i == 6 + kSlots) return Action{Action::Kind::Talk, 0};
-    return Action{Action::Kind::Reference, 0};
+    if (i == 7 + kSlots) return Action{Action::Kind::Reference, 0};
+    return Action{Action::Kind::Wheel, uint8_t(i - 8 - kSlots)};
 }
 
 std::string trim(const std::string& s) {
@@ -173,6 +176,7 @@ std::string actionToken(Action a) {
         case Action::Kind::CameraToggle: return "camera";
         case Action::Kind::Talk: return "talk";
         case Action::Kind::Reference: return "reference";
+        case Action::Kind::Wheel: return "wheel " + std::to_string(int(a.slot) + 1);
     }
     return "none";
 }
@@ -187,6 +191,8 @@ std::optional<Action> parseAction(const std::string& token) {
     if (t == "camera") return Action{Action::Kind::CameraToggle, 0};
     if (t == "talk") return Action{Action::Kind::Talk, 0};
     if (t == "reference") return Action{Action::Kind::Reference, 0};
+    if (t == "wheel 1") return Action{Action::Kind::Wheel, 0};  // 3.0.18-beta.132
+    if (t == "wheel 2") return Action{Action::Kind::Wheel, 1};
     if (t.rfind("slot ", 0) == 0) {
         const std::string digits = trim(t.substr(5));
         char* end = nullptr;
@@ -213,6 +219,7 @@ std::string actionLabel(Action a, Lang lang) {
         case Action::Kind::CameraToggle: return tr(lang, Text::CameraToggle);
         case Action::Kind::Talk: return tr(lang, Text::Talk);
         case Action::Kind::Reference: return tr(lang, Text::Reference);
+        case Action::Kind::Wheel: return std::string(tr(lang, Text::Wheel)) + " " + std::to_string(int(a.slot) + 1);
     }
     return "—";
 }

@@ -63,6 +63,7 @@
 #include "win/hunt_panel.hpp"
 #include "win/own_windows.hpp"
 #include "win/recap_window.hpp"
+#include "win/skill_wheel.hpp"
 #include "win/mob_card.hpp"
 #include "win/mvp_panel.hpp"
 #include "win/chat_window.hpp"
@@ -1204,6 +1205,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
     mobcardwin::frame(window, config.mobCard, pk, pw, ph);  // 3.0.11-beta.279
     mvpwin::frame(window, config.mvpTimers, pk, pw, ph);  // 3.0.11-beta.280
     recapwin::frame(window, config.deathRecap, pk, pw, ph);  // 3.0.18-beta.120: «Що мене вбило» on its own
+    {  // 3.0.18-beta.132: the pad's skill wheel held
+        int wheel = -1, sector = -1;
+        if (!uapad::runtime::wheelNow(wheel, sector)) wheel = -1;
+        skillwheelwin::frame(wheel, sector, pk, pw, ph);
+    }
     optionscardwin::setSettings(&config, ourFile(layout::File::Ini));  // 3.0.18-beta.122: «Налаштування»
     optionscardwin::frame(window, config.optionsWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.162
     socialcardwin::frame(window, config.socialWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.163

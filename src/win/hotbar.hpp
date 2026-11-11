@@ -6,6 +6,7 @@
 
 #include "core/bar_hint.hpp"
 #include "core/frame.hpp"
+#include "core/hotbar_panel.hpp"
 #include "core/pad_carry.hpp"
 
 namespace uagfx::gpu {
@@ -76,6 +77,8 @@ std::vector<barhint::Skill> barSkills();
 // kept as the other changes are); its words now («Red Potion», «Double Strafe»; "" empty). On the game's thread
 bool assign(int slot, const std::string& value, int level);
 std::string slotWords(int slot);
+// 3.0.18-beta.132 (the pad's skill wheels): a slot's cell as the bar would show it (its icon, its words; "" empty)
+hotbar::Cell slotCell(int slot);
 
 // 3.0.11-beta.121 (the concept's stage 5): its cells shown as places on the target, each with the game's slot it
 // keeps (assign's: the row shown, the battle mode's three rows); none while not shown

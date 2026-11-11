@@ -35,28 +35,34 @@ TEST(bindings_default_is_the_hunter_layout) {
 }
 
 TEST(bindings_action_ring_wraps) {
-    CHECK(nextAction(kind(Action::Kind::None), -1) == kind(Action::Kind::Reference));  // 3.0.11-beta.22: the last
+    // 3.0.18-beta.132 (the pad analysis, variant A): the two skill wheels after «Довідник», the ring's last
+    CHECK(nextAction(kind(Action::Kind::None), -1) == (Action{Action::Kind::Wheel, 1}));
     CHECK(nextAction(kind(Action::Kind::Attack), +1) == slot(0));
     CHECK(nextAction(slot(0), -1) == kind(Action::Kind::Attack));
     CHECK(nextAction(slot(26), +1) == kind(Action::Kind::Pickup));
     CHECK(nextAction(kind(Action::Kind::ClearTarget), +1) == kind(Action::Kind::CameraToggle));
     CHECK(nextAction(kind(Action::Kind::CameraToggle), +1) == kind(Action::Kind::Talk));
     CHECK(nextAction(kind(Action::Kind::Talk), +1) == kind(Action::Kind::Reference));
-    CHECK(nextAction(kind(Action::Kind::Reference), +1) == kind(Action::Kind::None));
+    CHECK(nextAction(kind(Action::Kind::Reference), +1) == (Action{Action::Kind::Wheel, 0}));
+    CHECK(nextAction(Action{Action::Kind::Wheel, 0}, +1) == (Action{Action::Kind::Wheel, 1}));
+    CHECK(nextAction(Action{Action::Kind::Wheel, 1}, +1) == kind(Action::Kind::None));
+    CHECK((Action{Action::Kind::Wheel, 0} != Action{Action::Kind::Wheel, 1}));
     Action a = kind(Action::Kind::None);
-    for (int i = 0; i < 35; ++i) a = nextAction(a, +1);
-    CHECK(a == kind(Action::Kind::None));  // 35 actions in the ring
+    for (int i = 0; i < 37; ++i) a = nextAction(a, +1);
+    CHECK(a == kind(Action::Kind::None));  // 37 actions in the ring
 }
 
 TEST(bindings_tokens_round_trip) {
     Action a = kind(Action::Kind::None);
-    for (int i = 0; i < 35; ++i) {
+    for (int i = 0; i < 37; ++i) {
         const auto back = parseAction(actionToken(a));
         CHECK(back && *back == a);
         a = nextAction(a, +1);
     }
     CHECK(actionToken(slot(11)) == "slot 12");
     CHECK(actionToken(kind(Action::Kind::Reference)) == "reference");  // 3.0.11-beta.22
+    CHECK(actionToken(Action{Action::Kind::Wheel, 1}) == "wheel 2");     // 3.0.18-beta.132
+    CHECK(!parseAction("wheel 3"));
     CHECK(!parseAction("slot 0"));
     CHECK(!parseAction("slot 28"));
     CHECK(!parseAction("jump"));

@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 
 #include "core/config.hpp"
 #include "core/settings/choice_presets.hpp"
@@ -12,7 +13,9 @@ namespace uagfx::win::settingedit {
 // already, not a key of the schema, the file not writable)
 bool set(const std::string& iniPath, const Config& config, const std::string& key, const std::string& token);
 // One of «Як виглядає гра»'s choices - its variant's keys written
-bool setLook(const std::string& iniPath, settings::presets::Choice c, int variant);
+// (3.0.18-beta.132: `keep` - its keys left as they are, "interface.options" by «Налаштування» itself)
+bool setLook(const std::string& iniPath, settings::presets::Choice c, int variant,
+             const std::vector<std::string>& keep = {});
 // The settings as the console shows them - each effect's switch as the set has it (the AI pictures as the file says)
 Config shown(const Config& c);
 

@@ -41,7 +41,15 @@ constexpr uint32_t kPickupGiveUpMs = 1000;  // still on the ground a second afte
 constexpr int kStopAhead = 2;
 constexpr int kPickupRadius = 10;
 constexpr int kPickupReach = 1;
-constexpr int kLootNear = 2;  // 3.0.18-beta.131: the attack button takes loot this near first
+constexpr int kLootNear = 2;
+// 3.0.18-beta.132: the right stick (x right, y up) at one of the wheel's eight sectors, the first at the top, then
+// clockwise; -1 within the dead middle
+int wheelSector(float x, float y) {
+    if (std::hypot(double(x), double(y)) < 0.5) return -1;
+    double deg = std::atan2(double(x), double(y)) * 180.0 / 3.14159265358979;  // 0 up, 90 right
+    if (deg < 0) deg += 360.0;
+    return int((deg + 22.5) / 45.0) % 8;
+}  // 3.0.18-beta.131: the attack button takes loot this near first
 constexpr uint32_t kDialogRepeatFirstMs = 400;  // a held D-pad in an NPC window: first repeat, then every
 constexpr uint32_t kDialogRepeatMs = 120;
 constexpr uint32_t kDialogForceCloseMs = 1000;  // B held this long closes a window the NPC left without a button
@@ -319,9 +327,10 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
     walk(pad, world, view, now, out);
     for (size_t i = 0; i < kBindableButtons.size(); ++i)  // before the stick: this tick's push goes to the new mode
         if ((down & kBindableButtons[i]) && bindings_[i].kind == Action::Kind::CameraToggle) toggleCamera(out);
+    wheelRx_ = pad.rx, wheelRy_ = pad.ry;  // 3.0.18-beta.132: a wheel open takes the right stick
     if (cameraMode_)
         steerCamera(pad, now, out);
-    else
+    else if (!wheel_)
         aim(pad, world, now, out);
     talkDirX_ = talkDirY_ = 0;  // talk: the NPC the right stick points at, or the nearest
     if (!cameraMode_ && std::hypot(double(pad.rx), double(pad.ry)) > kAimOn)
@@ -503,6 +512,10 @@ void Controller::handleButtons(uint16_t held, uint16_t down, const WorldState& w
         if (a.kind == Action::Kind::None) continue;
         const size_t bit = bitIndex(button);
         const bool ground = a.kind == Action::Kind::Slot && groundSlot(int(a.slot), world);  // 3.0.11-beta.145
+        if (a.kind == Action::Kind::Wheel) {  // 3.0.18-beta.132: held - the wheel; its use at the release (below)
+            if ((down & button) && !wheel_) wheel_ = WheelView{int(a.slot), -1, button};
+            continue;
+        }
         if (down & button) {
             if (ground) {  // a tap at the release, an aim if held
                 groundPress_ = GroundPress{button, int(a.slot), now};
@@ -519,6 +532,19 @@ void Controller::handleButtons(uint16_t held, uint16_t down, const WorldState& w
             int32_t(now - repeatAtMs_[bit]) >= 0) {
             fire(a, true, world, now, out);
             repeatAtMs_[bit] = now + uint32_t(cfg_.repeatMs);
+        }
+    }
+    if (wheel_) {  // 3.0.18-beta.132: the right stick points at a sector; let go - the one pointed at used
+        if (held & wheel_->button) {
+            wheel_->sector = wheelSector(wheelRx_, wheelRy_);
+        } else {
+            const WheelView w = *wheel_;
+            wheel_.reset();
+            if (w.sector >= 0) {
+                const int slot = wheelSlot(w.index, w.sector);
+                out.notes.push_back("wheel " + std::to_string(w.index + 1) + ": " + hotkeyName(slot));
+                useSlot(slot, false, world, now, out);
+            }
         }
     }
     if (groundPress_) {  // 3.0.11-beta.145: a ground skill's press - a tap at the release, an aim once held
@@ -676,6 +702,8 @@ void Controller::fire(const Action& a, bool repeat, const WorldState& world, uin
             break;
         case Action::Kind::Reference:
             if (!repeat) out.reference = true;
+            break;
+        case Action::Kind::Wheel:  // held and let go in handleButtons
             break;
     }
 }

@@ -1822,6 +1822,12 @@ bool assign(int slot, const std::string& value, int level) {
     return true;
 }
 
+hb::Cell slotCell(int slot) {
+    State& s = state();
+    if (slot < 0 || slot >= kSlots) return hb::Cell{};
+    return cellOf(s, slot, "", s.codePage);
+}
+
 std::string slotWords(int slot) {
     State& s = state();
     if (slot < 0 || slot >= kSlots) return "";

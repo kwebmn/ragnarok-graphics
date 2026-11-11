@@ -1528,6 +1528,15 @@ std::vector<uint32_t> npcNear() {
     return out;
 }
 
+bool wheelNow(int& index, int& sector) {
+    if (!healthy() || !S().session) return false;
+    const auto w = S().session->controller().wheelView();
+    if (!w) return false;
+    index = w->index;
+    sector = w->sector;
+    return true;
+}
+
 uint16_t talkButtonBit() { return healthy() && S().session ? talkButton(S()) : 0; }
 
 bool aimCells(uint16_t& skill, int& lv, int& x, int& y) {

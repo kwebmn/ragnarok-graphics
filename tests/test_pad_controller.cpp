@@ -2186,3 +2186,38 @@ TEST(ctl_attack_button_takes_loot_or_talks_when_nothing_to_fight) {
     o = m.tick(pad(kPadA), npcWorld(), view(), 1000);  // a monster beside the NPC: fought, as before
     CHECK(m.attacking());
 }
+
+// 3.0.18-beta.132 (the pad analysis, variant A): a wheel's button held opens a ring of eight - wheel 1 the hotbar's
+// second row F1-F8 -, the right stick points (the first at the top, clockwise), let go uses the one pointed at; the
+// right stick picks no target meanwhile; let go pointing nowhere uses nothing
+TEST(ctl_skill_wheel_picks_with_the_right_stick_and_uses_at_the_release) {
+    WorldState w = slotWorld();
+    EvHotkeys hk;
+    hk.keys[11] = Hotkey{0, 501, 0};  // the second row's F3: Red Potion
+    w.apply(hk, 0);
+    w.apply(EvInventory{{InvEntry{2, 501, 15, false}}}, 0);
+    addMob(w, 110000001, Cell{103, 100});
+    Bindings b = defaultBindings();
+    b[bindIndex(kPadX)] = Action{Action::Kind::Slot, 11};
+    Controller direct(Config{});
+    direct.setBindings(b);
+    const TickOutput used = direct.tick(pad(kPadX), w, view(), 1000);  // the potion straight from a button
+    CHECK_EQ(used.packets.size(), 1u);
+    b[bindIndex(kPadLB)] = Action{Action::Kind::Wheel, 0};
+    Controller c(Config{});
+    c.setBindings(b);
+    TickOutput o = c.tick(pad(kPadLB), w, view(), 1000);
+    CHECK(o.packets.empty());
+    CHECK(c.wheelView() && c.wheelView()->index == 0 && c.wheelView()->sector == -1);
+    o = c.tick(padR(1, 0, kPadLB), w, view(), 1100);  // pointing right: the third
+    CHECK(c.wheelView() && c.wheelView()->sector == 2);
+    CHECK_EQ(c.target(), 0u);  // no target picked by the stick
+    o = c.tick(padR(1, 0), w, view(), 1200);  // let go
+    CHECK(!c.wheelView());
+    CHECK_EQ(o.packets.size(), used.packets.size());
+    if (!o.packets.empty() && !used.packets.empty()) CHECK(pkt(o, 0) == pkt(used, 0));
+    o = c.tick(pad(kPadLB), w, view(), 1300);
+    o = c.tick(pad(), w, view(), 1400);  // let go pointing nowhere
+    CHECK(o.packets.empty());
+    CHECK_EQ(Controller::wheelSlot(1, 7), 25);  // wheel 2: the third row's F8
+}

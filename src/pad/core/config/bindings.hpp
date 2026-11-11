@@ -14,12 +14,16 @@ namespace uapad {
 // What a gamepad button does.
 struct Action {
     // Reference (3.0.11-beta.22): uaRO Graphics' «Довідник» window opened or closed (win/reference_window)
-    enum class Kind : uint8_t { None, Attack, Slot, Pickup, SitStand, ClearTarget, CameraToggle, Talk, Reference };
+    // Wheel (3.0.18-beta.132, the pad analysis, variant A): held - a ring of 8 skills (a hotbar row's F1-F8: wheel 1
+    // the second row, wheel 2 the third), the right stick picks, let go uses it
+    enum class Kind : uint8_t {
+        None, Attack, Slot, Pickup, SitStand, ClearTarget, CameraToggle, Talk, Reference, Wheel
+    };
     Kind kind = Kind::None;
-    uint8_t slot = 0;  // Kind::Slot: hotkey index 0-26 (row slot / 9 + 1, key F(slot % 9 + 1))
+    uint8_t slot = 0;  // Kind::Slot: hotkey index 0-26 (row slot / 9 + 1, key F(slot % 9 + 1)); Kind::Wheel: 0 or 1
 };
 inline bool operator==(const Action& a, const Action& b) {
-    return a.kind == b.kind && (a.kind != Action::Kind::Slot || a.slot == b.slot);
+    return a.kind == b.kind && ((a.kind != Action::Kind::Slot && a.kind != Action::Kind::Wheel) || a.slot == b.slot);
 }
 inline bool operator!=(const Action& a, const Action& b) { return !(a == b); }
 
