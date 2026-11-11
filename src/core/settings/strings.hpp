@@ -916,6 +916,9 @@ enum class Text : uint16_t {
     PadWheelTitle,  // 3.0.18-beta.132
     TileBarProfile,  // 3.0.18-beta.136: the pad's tile, {1} the profile now
     VendFree, VendCardTip,  // 3.0.18-beta.138: «Лавка» - free slots, a name's press
+    SocialOnline, SocialNearCells, SocialNear, SocialDeadNow, SocialRoute, SocialAddFriend, SocialCopy,  // .141
+    SocialExpEven, SocialExpEach, SocialNoPartyHint, SocialNoFriendsHint, SocialNameField, SocialAdd,
+    SocialMouseHint, SocialPadHint,
     Count
 };
 

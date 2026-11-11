@@ -36,6 +36,7 @@ struct Show {
     int hoverRow = -1, hoverButton = -1, hoverTab = -1;
     bool hoverClose = false;
     int focus = -1;  // the controller's button
+    int focusRow = -1;  // 3.0.18-beta.141: the controller's row (of the rows shown, in their order)
 };
 struct Layout {
     float s = 1;
@@ -65,6 +66,15 @@ struct Words {
     Align align = Align::Left;
 };
 std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, const Show& sh, const Texts& t);
+
+// 3.0.18-beta.141 (the owner: «все» - the card handier): the rows' order - the friends online first (each kind in
+// the game's order), the party as the game lists it - as indices into `entries`; how many are online
+std::vector<int> order(const std::vector<Entry>& entries, Tab t);
+int onlineCount(const std::vector<Entry>& entries);
+// A person's menu (a right click, the controller's A): what may be done to them - `leader` the character leads the
+// party, `elsewhere` they are on another map (a way there)
+enum class Item : uint8_t { Whisper, Expel, Leave, RemoveFriend, AddFriend, Route, CopyName };
+std::vector<Item> menu(Tab t, const Entry& e, bool leader, bool elsewhere);
 
 // 3.0.18-beta.34 (uaUI's friends and party): the entry chosen in the shown list (none: nullptr)
 const Entry* chosenEntry(const std::vector<Entry>& entries, const Show& sh);

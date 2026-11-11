@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <map>
 #include <vector>
 
 #include "core/window_stack.hpp"
@@ -16,7 +17,12 @@
 #include "win/card_drag.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "uikit/social_live.hpp"
 #include "win/log.hpp"
+#include "win/party_panel.hpp"
+#include "win/ui_field.hpp"
+#include "pad/core/config/bindings.hpp"
+#include "pad/win/runtime.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -29,6 +35,7 @@ namespace uagfx::win::socialcardwin {
 namespace {
 
 namespace sc = uagfx::socialcard;
+namespace ul = uagfx::uikit::social;
 using uapad::gamewindow::Blocker;
 
 // uaRO.exe's: the friends and party window (where the manager keeps it, its class's vtable, its SendMsg), a window's
@@ -41,34 +48,12 @@ constexpr int kButtonMsg = 6, kMostFriends = 40;
 constexpr size_t kMostNodes = 100;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
-// 3.0.18-beta.87 (live windows, group 2): friends and the party a live window - tabs, rows and buttons by
-// flexbox, RmlUi's clicks
-const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="lw socw" data-style-background-color="ground">
-<div class="tabs"><span class="tab ctl" data-for="t, i : tabs" data-class-on="i == tab"
-  data-event-click="so_tab(i)">{{t}}</span></div>
-<span class="x ctl" data-event-click="so_close()">&#x2715;</span>
-<div class="lbl">{{header}}</div>
-<div class="list"><div class="row ctl" data-for="e, i : entries" data-class-on="i == selected"
-  data-class-off="!e.online"
-  data-event-click="so_choose(i)" data-event-dblclick="so_act(0)"><span class="name">{{e.name}}</span><span
-  class="crown"
-  data-if="e.leader"> ★</span><span class="where">{{e.online ? e.map : offline}}</span></div>
-<div class="hint" data-if="entries.size == 0">{{empty}}</div></div>
-<div class="btns grid4"><div class="btn ctl" data-for="a, i : actions" data-event-click="so_act(i)">{{a}}</div></div>
-<div id="ring" class="ring"></div>
-</body></rml>)RML";
-struct SocialEntryView {
-    Rml::String name, map;
-    bool online = false, leader = false;
-};
-
 struct State {
     uilive::Window live;  // 3.0.18-beta.81
-    std::vector<SocialEntryView> entryViews;
-    std::vector<Rml::String> tabViews, actionViews;
-    Rml::String header, offline, empty, ground = "#10141cf0";
-    int tabNo = 0, selected = -1;
+    ul::Model mv;  // 3.0.18-beta.141: the live window's model (uikit/social_live)
+    std::vector<int> rowEntry;              // a shown row's entry (the friends online first)
+    std::vector<sc::Item> menuItems;        // the open menu's
+    std::map<const panel::Picture*, std::string> facePrev;
     uisheet::Sheet sheet;  // 3.0.18-beta.34: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -382,62 +367,234 @@ static void fillSheet(State& s, uisheet::Content& ui) {
     ui.say(uagfx::socialcard::words(s.layout, s.entries, s.show, texts(s)));
 }
 
+// 3.0.18-beta.141: the game's friend request by a name (FUN_004cec50, stdcall: the name's 24 bytes - the packet
+// 0x0202, as its own menu over a player sends it)
+constexpr uint32_t kAddFriend = 0x4CEC50;
+using AddFriendFn = void(__attribute__((stdcall)) *)(const char* name24);
+
+static bool leading(const State& s) {
+    for (const sc::Entry& e : s.entries)
+        if (e.self) return e.leader;
+    return false;
+}
+
+static const partywin::Person* personOf(const std::vector<partywin::Person>& people, const std::string& name) {
+    for (const partywin::Person& p : people)
+        if (p.name == name) return &p;
+    return nullptr;
+}
+
+static void askFriend(State& s, const std::string& utf8) {
+    std::string name = narrowed(widened(utf8, CP_UTF8), s.codePage);
+    while (!name.empty() && name.back() == ' ') name.pop_back();
+    while (!name.empty() && name.front() == ' ') name.erase(0, 1);
+    if (name.empty() || name.size() > 23) return;
+    char buf[24] = {};
+    std::memcpy(buf, name.data(), name.size());
+    reinterpret_cast<AddFriendFn>(uintptr_t(kAddFriend))(buf);
+    LOG_INFO("social: a friend request to %s (the game's 0x0202)", utf8.c_str());
+}
+
+static void closeMenu(State& s) {
+    s.mv.menuRow = -1;
+    s.menuItems.clear();
+    s.mv.menuFocus = 0;
+}
+
+static void openMenu(State& s, int row) {
+    if (row < 0 || row >= int(s.rowEntry.size())) return;
+    const int at = s.rowEntry[size_t(row)];
+    choose(s, at);
+    const sc::Entry& e = s.entries[size_t(at)];
+    const std::vector<partywin::Person> people = partywin::people();
+    const partywin::Person* p = personOf(people, e.name);
+    const bool elsewhere = p ? !p->where.empty() : (!e.map.empty() && e.map != readGameMap());
+    s.menuItems = sc::menu(s.show.tab, e, leading(s), elsewhere);
+    s.mv.menuRow = s.menuItems.empty() ? -1 : row;
+    s.mv.menuFocus = 0;
+}
+
+static void doItem(State& s, sc::Item item) {
+    if (s.mv.menuRow < 0 || s.mv.menuRow >= int(s.rowEntry.size())) return;
+    const int at = s.rowEntry[size_t(s.mv.menuRow)];
+    const std::string name = s.entries[size_t(at)].name;
+    choose(s, at);
+    switch (item) {
+        case sc::Item::Whisper: send(s, sc::gameButton(sc::Action::Whisper), 0, "whisper (its menu)"); break;
+        case sc::Item::Expel:
+        case sc::Item::RemoveFriend: send(s, sc::gameButton(sc::Action::Remove), 0, "remove (the game asks)"); break;
+        case sc::Item::Leave: act(s, 2); break;
+        case sc::Item::AddFriend: askFriend(s, name); break;
+        case sc::Item::Route:
+            if (!partywin::routeTo(name)) LOG_INFO("social: no way to %s known", name.c_str());
+            break;
+        case sc::Item::CopyName: uifield::setClipboard(name); break;
+    }
+    closeMenu(s);
+}
+
+static Rml::String itemWord(sc::Item i) {
+    using settings::Text;
+    switch (i) {
+        case sc::Item::Whisper: return say(Text::SocialWhisper);
+        case sc::Item::Expel: return say(Text::SocialExpel);
+        case sc::Item::Leave: return say(Text::SocialLeave);
+        case sc::Item::RemoveFriend: return say(Text::SocialDelete);
+        case sc::Item::AddFriend: return say(Text::SocialAddFriend);
+        case sc::Item::Route: return say(Text::SocialRoute);
+        case sc::Item::CopyName: return say(Text::SocialCopy);
+    }
+    return "";
+}
+
+// A row's quick buttons (shown on hover): the whisper and the leader's expel - one's own row: leave
+static void quickOf(const State& s, const sc::Entry& e, sc::Item q[2]) {
+    q[0] = q[1] = sc::Item::CopyName;  // CopyName here: none
+    if (e.self) {
+        if (s.show.tab == sc::Tab::Party) q[0] = sc::Item::Leave;
+        return;
+    }
+    if (e.online) q[0] = sc::Item::Whisper;
+    if (s.show.tab == sc::Tab::Party && leading(s)) (q[0] == sc::Item::CopyName ? q[0] : q[1]) = sc::Item::Expel;
+}
+
 // 3.0.18-beta.81: the live window's model and place
 static void liveFrame(State& s) {
     s.live.ownDrag = true;  // 3.0.18-beta.92: its own drag
-    s.live.make("social", kLive, [&](Rml::DataModelConstructor& m) {
-        if (auto v = m.RegisterStruct<SocialEntryView>()) {
-            v.RegisterMember("name", &SocialEntryView::name);
-            v.RegisterMember("map", &SocialEntryView::map);
-            v.RegisterMember("online", &SocialEntryView::online);
-            v.RegisterMember("leader", &SocialEntryView::leader);
-        }
-        m.RegisterArray<std::vector<SocialEntryView>>();
-        m.RegisterArray<std::vector<Rml::String>>();
-        m.Bind("entries", &s.entryViews);
-        m.Bind("tabs", &s.tabViews);
-        m.Bind("actions", &s.actionViews);
-        m.Bind("header", &s.header);
-        m.Bind("offline", &s.offline);
-        m.Bind("empty", &s.empty);
-        m.Bind("tab", &s.tabNo);
-        m.Bind("selected", &s.selected);
-        m.Bind("ground", &s.ground);
+    s.live.make("social", ul::rml(), [&](Rml::DataModelConstructor& m) {
+        ul::bind(m, s.mv);
         m.BindEventCallback("so_tab", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
-            if (!a.empty()) showTab(state(), sc::Tab(std::clamp(a[0].Get<int>(), 0, 1)));
+            if (a.empty()) return;
+            closeMenu(state());
+            showTab(state(), sc::Tab(std::clamp(a[0].Get<int>(), 0, 1)));
         });
         m.BindEventCallback("so_choose", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
-            if (!a.empty()) choose(state(), a[0].Get<int>());
+            State& st = state();
+            if (a.empty()) return;
+            const int row = a[0].Get<int>();
+            if (row >= 0 && row < int(st.rowEntry.size())) choose(st, st.rowEntry[size_t(row)]);
+            if (st.mv.menuRow != row) closeMenu(st);
         });
-        m.BindEventCallback("so_act", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
-            if (!a.empty()) act(state(), a[0].Get<int>());
+        m.BindEventCallback("so_down", [](Rml::DataModelHandle, Rml::Event& ev, const Rml::VariantList& a) {
+            if (!a.empty() && ev.GetParameter<int>("button", 0) == 1) openMenu(state(), a[0].Get<int>());
+        });
+        m.BindEventCallback("so_whisper", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
+            if (a.empty()) return;
+            const int row = a[0].Get<int>();
+            if (row < 0 || row >= int(st.rowEntry.size())) return;
+            const sc::Entry& e = st.entries[size_t(st.rowEntry[size_t(row)])];
+            if (e.self || !e.online) return;
+            choose(st, st.rowEntry[size_t(row)]);
+            send(st, sc::gameButton(sc::Action::Whisper), 0, "whisper (twice on a person)");
+        });
+        m.BindEventCallback("so_quick", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
+            if (a.size() < 2) return;
+            const int row = a[0].Get<int>(), which = a[1].Get<int>();
+            if (row < 0 || row >= int(st.rowEntry.size())) return;
+            sc::Item q[2];
+            quickOf(st, st.entries[size_t(st.rowEntry[size_t(row)])], q);
+            if (which < 0 || which > 1 || q[which] == sc::Item::CopyName) return;
+            st.mv.menuRow = row;  // as the menu's: the same doing
+            doItem(st, q[which]);
+        });
+        m.BindEventCallback("so_item", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
+            if (!a.empty() && a[0].Get<int>() >= 0 && a[0].Get<int>() < int(st.menuItems.size()))
+                doItem(st, st.menuItems[size_t(a[0].Get<int>())]);
+        });
+        m.BindEventCallback("so_settings", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            send(state(), sc::gameButton(sc::Action::Settings), 0, "settings (the header)");
+        });
+        m.BindEventCallback("so_add", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            State& st = state();
+            askFriend(st, st.mv.addName);
+            st.mv.addName.clear();
+            st.live.doc.dirty("add_name");
         });
         m.BindEventCallback("so_close", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
             send(state(), sc::gameButton(sc::Action::Close), 0, "close");
         });
     });
     if (!s.live.made()) return;
+    using settings::Text;
     const sc::Texts t = texts(s);
-    std::vector<SocialEntryView> entries;
-    for (const sc::Entry& e : s.entries) entries.push_back(SocialEntryView{e.name, e.map, e.online, e.leader});
-    std::vector<Rml::String> actions;
-    for (size_t i = 0; i < sc::actions(s.show.tab).size() && i < 4; ++i) actions.push_back(t.actions[i]);
+    const bool party = s.show.tab == sc::Tab::Party;
+    const std::vector<partywin::Person> people = party ? partywin::people() : std::vector<partywin::Person>{};
+    s.rowEntry = sc::order(s.entries, s.show.tab);
+    std::vector<ul::RowV> rows;
+    for (const int at : s.rowEntry) {
+        const sc::Entry& e = s.entries[size_t(at)];
+        ul::RowV v;
+        v.idx = at;
+        v.name = e.name;
+        v.online = e.online;
+        v.leader = e.leader;
+        const std::wstring wide = widened(e.name, CP_UTF8);
+        v.letter = wide.empty() ? "?" : utf8Of(wide.substr(0, 1));
+        v.where = e.online ? e.map : t.offline;
+        if (const partywin::Person* p = personOf(people, e.name)) {
+            v.job = p->job;
+            v.dead = p->dead && p->online;
+            if (p->online && p->where.empty()) {
+                v.hp = p->dead ? 0 : p->percent;
+                v.where = p->cells >= 0 ? settings::fmt(say(Text::SocialNearCells), {std::to_string(p->cells)})
+                                        : say(Text::SocialNear);
+            } else if (p->online) {
+                v.where = p->where;
+            }
+            if (v.dead) v.where = say(Text::SocialDeadNow);
+            if (p->face && p->face->width > 0)
+                v.face = uaui::picture(p->face, uaui::stamp(p->face), s.facePrev[p->face]);
+        }
+        sc::Item q[2];
+        quickOf(s, e, q);
+        v.q0 = q[0] == sc::Item::CopyName ? "" : itemWord(q[0]);
+        v.q1 = q[1] == sc::Item::CopyName ? "" : itemWord(q[1]);
+        rows.push_back(std::move(v));
+    }
+    if (s.mv.menuRow >= int(rows.size())) closeMenu(s);
+    std::vector<Rml::String> menu;
+    for (const sc::Item i : s.menuItems) menu.push_back(itemWord(i));
     const std::vector<Rml::String> tabs{t.tabs[0], t.tabs[1]};
     const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
-    const bool same = entries.size() == s.entryViews.size() &&
-                      std::equal(entries.begin(), entries.end(), s.entryViews.begin(),
-                                 [](const SocialEntryView& a, const SocialEntryView& b) {
-                                     return a.name == b.name && a.map == b.map && a.online == b.online &&
-                                            a.leader == b.leader;
-                                 });
-    if (!same) s.entryViews = std::move(entries), s.live.doc.dirty("entries");
-    if (tabs != s.tabViews || actions != s.actionViews || t.header != s.header || t.offline != s.offline ||
-        t.empty != s.empty || int(s.show.tab) != s.tabNo || s.show.selected != s.selected || ground != s.ground) {
-        s.tabViews = tabs, s.actionViews = actions, s.header = t.header, s.offline = t.offline, s.empty = t.empty;
-        s.tabNo = int(s.show.tab), s.selected = s.show.selected, s.ground = ground;
+    const int online = sc::onlineCount(s.entries);
+    const Rml::String count = s.entries.empty() || (party && s.partyName.empty())
+                                  ? ""
+                                  : settings::fmt(say(Text::SocialOnline),
+                                                  {std::to_string(online), std::to_string(s.entries.size())});
+    const int share = party && !s.partyName.empty() ? partywin::expShare() : -1;
+    const Rml::String exp = share < 0 ? "" : say(share ? Text::SocialExpEven : Text::SocialExpEach);
+    const Rml::String header = party ? (s.partyName.empty() ? say(Text::SocialNoParty) : s.partyName)
+                                     : t.tabs[0];
+    const Rml::String settingsWord = party && !s.partyName.empty() ? say(Text::SocialSettings) : "";
+    const Rml::String empty = party ? say(Text::SocialNoPartyHint) : say(Text::SocialNoFriendsHint);
+    Rml::String hint = say(Text::SocialMouseHint);
+    if (uapad::runtime::look().shown) {
+        hint = say(Text::SocialPadHint);
+        const char* const labels[4] = {uapad::buttonLabel(0), uapad::buttonLabel(4), uapad::buttonLabel(5),
+                                       uapad::buttonLabel(1)};
+        const char* const marks[4] = {"{1}", "{2}", "{3}", "{4}"};
+        for (int i = 0; i < 4; ++i)
+            if (const size_t at = hint.find(marks[i]); at != Rml::String::npos) hint.replace(at, 3, labels[i]);
+    }
+    const int padRow = uapad::runtime::look().shown ? s.show.focusRow : -1;
+    ul::Model& v = s.mv;
+    if (rows != v.rows) v.rows = std::move(rows), s.live.doc.dirty("rows");
+    if (menu != v.menu) v.menu = std::move(menu), s.live.doc.dirty("menu");
+    if (tabs != v.tabs || header != v.header || count != v.count || exp != v.exp || settingsWord != v.settings ||
+        empty != v.empty || hint != v.hint || int(s.show.tab) != v.tab || s.show.selected != v.selected ||
+        ground != v.ground || padRow != v.padRow) {
+        v.tabs = tabs, v.header = header, v.count = count, v.exp = exp, v.settings = settingsWord;
+        v.empty = empty, v.hint = hint, v.tab = int(s.show.tab), v.selected = s.show.selected;
+        v.ground = ground, v.padRow = padRow;
+        v.nameHint = say(Text::SocialNameField), v.add = say(Text::SocialAdd);
         s.live.doc.dirtyAll();
     }
-    s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Social), ".tab, .row, .btn, .x");
+    s.live.doc.dirty("menu_row");
+    s.live.doc.dirty("menu_focus");
+    s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Social), ".tab, .row, .btn, .x, .qb, .mi, .sset");
 }
 
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
@@ -527,29 +684,45 @@ void beforeGameDraw() {
     if (s.on && inGameWorld()) hold(s, gameSocial(), true);
 }
 
+// 3.0.18-beta.141: the controller walks the people (up / down), A opens one's menu - left / right its items, A
+// does one, B shuts it (B again closes the card); LB / RB the tabs
 void padCommand(PadCommand c) {
     State& s = state();
     if (!s.shown) return;
-    const int rows = int(s.entries.size()), buttons = int(sc::actions(s.show.tab).size());
-    int& f = s.show.focus;
-    if (f < 0) f = 0;
+    const int rows = int(s.rowEntry.size());
+    int& r = s.show.focusRow;
+    if (r >= rows) r = rows - 1;
+    const bool menu = s.mv.menuRow >= 0 && s.mv.menuRow == r;
     switch (c) {
-        case PadCommand::Up: choose(s, std::max(0, s.show.selected - 1)); break;
-        case PadCommand::Down: choose(s, std::min(rows - 1, s.show.selected + 1)); break;
-        case PadCommand::Left: f = std::max(0, f - 1); break;
-        case PadCommand::Right: f = std::min(buttons - 1, f + 1); break;
-        case PadCommand::Press: act(s, f); break;
+        case PadCommand::Up:
+        case PadCommand::Down:
+            if (rows == 0) break;
+            r = std::clamp(r < 0 ? 0 : r + (c == PadCommand::Up ? -1 : 1), 0, rows - 1);
+            choose(s, s.rowEntry[size_t(r)]);
+            closeMenu(s);
+            break;
+        case PadCommand::Left:
+            if (menu) s.mv.menuFocus = std::max(0, s.mv.menuFocus - 1);
+            break;
+        case PadCommand::Right:
+            if (menu) s.mv.menuFocus = std::min(int(s.menuItems.size()) - 1, s.mv.menuFocus + 1);
+            break;
+        case PadCommand::Press:
+            if (menu && s.mv.menuFocus >= 0 && s.mv.menuFocus < int(s.menuItems.size()))
+                doItem(s, s.menuItems[size_t(s.mv.menuFocus)]);
+            else if (r >= 0)
+                openMenu(s, r);
+            break;
         case PadCommand::TabBack:
         case PadCommand::TabOn:
+            closeMenu(s);
             showTab(s, s.show.tab == sc::Tab::Party ? sc::Tab::Friends : sc::Tab::Party);
-            f = 0;
+            r = -1;
             break;
-        case PadCommand::Close: send(s, sc::gameButton(sc::Action::Close), 0, "the controller's close"); break;
-    }
-    if (s.show.selected >= 0) {
-        if (s.show.selected < s.show.scroll) s.show.scroll = s.show.selected;
-        if (s.show.selected >= s.show.scroll + int(s.layout.rows.size()))
-            s.show.scroll = s.show.selected - int(s.layout.rows.size()) + 1;
+        case PadCommand::Close:
+            if (s.mv.menuRow >= 0) closeMenu(s);
+            else send(s, sc::gameButton(sc::Action::Close), 0, "the controller's close");
+            break;
     }
     s.key.clear();
 }

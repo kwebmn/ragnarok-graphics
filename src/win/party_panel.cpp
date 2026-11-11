@@ -635,7 +635,15 @@ bool uiFrame(State& s) {
 
 }  // namespace
 
+static int g_expShare = -1;  // 3.0.18-beta.141
+
 void packet(const packets::Event& e) {
+    if (const auto* x = std::get_if<packets::PartyExp>(&e)) {  // 3.0.18-beta.141
+        if (g_expShare != int(x->even))
+            LOG_INFO("party: the experience %s", x->even ? "shared evenly" : "each one's own");
+        g_expShare = x->even ? 1 : 0;
+        return;
+    }
     State& s = state();
     const uint32_t me = own();
     if (const auto* l = std::get_if<packets::PartyList>(&e)) {  // the whole list anew: the HP known stays
@@ -980,5 +988,29 @@ std::vector<OnMap> onMap(int faceSide) {
     }
     return out;
 }
+
+std::vector<Person> people() {
+    const State& s = state();
+    std::vector<Person> out;
+    for (const pp::Member& m : s.members) {
+        Person p;
+        p.name = m.name, p.job = m.job, p.where = m.where;
+        p.percent = m.percent, p.cells = m.cells, p.dead = m.dead, p.online = m.online, p.face = m.face;
+        out.push_back(std::move(p));
+    }
+    return out;
+}
+
+bool routeTo(const std::string& name) {
+    State& s = state();
+    for (size_t i = 0; i < s.members.size(); ++i)
+        if (s.members[i].name == name) {
+            rowClicked(s, int(i));
+            return true;
+        }
+    return false;
+}
+
+int expShare() { return g_expShare; }
 
 }  // namespace uagfx::win::partywin

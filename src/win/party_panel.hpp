@@ -46,5 +46,17 @@ bool panelBox(int& x, int& y, int& w, int& h);
 // 3.0.11-beta.235 (the character block's party line): the party's members in the game and all, the character with
 // them, as the panel last read them; false none known
 bool counts(int& online, int& total);
+// 3.0.18-beta.141 (the friends and party card made richer): the others as the panel last read them - face, class and
+// level, HP, dead, here (cells away) or elsewhere (the map's words); a way to one (as a click on their row); the
+// experience share as the server told it (0x0101: -1 not told, 0 each, 1 even)
+struct Person {
+    std::string name, job, where;  // UTF-8; where "" here
+    int percent = -1, cells = -1;
+    bool dead = false, online = true;
+    const panel::Picture* face = nullptr;
+};
+std::vector<Person> people();
+bool routeTo(const std::string& name);
+int expShare();
 
 }  // namespace uagfx::win::partywin

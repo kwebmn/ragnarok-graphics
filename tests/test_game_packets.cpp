@@ -468,3 +468,17 @@ TEST(game_packets_viewpoint_and_guild_pos) {
     const auto* q = std::get_if<packets::GuildPos>(&g);
     CHECK(q && q->account == 0x3039 && q->x == 42 && q->y == 69);
 }
+
+// 3.0.18-beta.141 (the friends and party card's header): the party's experience share (0x0101: 0 each, 1 even)
+TEST(packets_party_experience_share) {
+    std::vector<uint8_t> p = packet(0x0101, 6);
+    put32(p, 2, 1);
+    const packets::Event e = packets::parse(p.data(), p.size());
+    const auto* x = std::get_if<packets::PartyExp>(&e);
+    CHECK(x && x->even);
+    put32(p, 2, 0);
+    const packets::Event e0 = packets::parse(p.data(), p.size());
+    const auto* x0 = std::get_if<packets::PartyExp>(&e0);
+    CHECK(x0 && !x0->even);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 4)));
+}

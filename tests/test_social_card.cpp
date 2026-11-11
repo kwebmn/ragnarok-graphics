@@ -102,3 +102,38 @@ TEST(social_card_chosen_entry) {
     sh.selected = 1;
     CHECK(socialcard::chosenEntry(entries, sh) == &entries[1]);
 }
+
+// 3.0.18-beta.141 (the owner: «все» - the card made handier): the friends online first (each kind in the game's own
+// order), the party as the game lists it; the count online
+TEST(social_card_friends_online_first) {
+    std::vector<socialcard::Entry> e(4);
+    e[0].name = "A", e[1].name = "B", e[2].name = "C", e[3].name = "D";
+    e[1].online = e[3].online = true;
+    const std::vector<int> f = socialcard::order(e, socialcard::Tab::Friends);
+    CHECK(f == std::vector<int>({1, 3, 0, 2}));
+    const std::vector<int> p = socialcard::order(e, socialcard::Tab::Party);
+    CHECK(p == std::vector<int>({0, 1, 2, 3}));
+    CHECK_EQ(socialcard::onlineCount(e), 2);
+}
+
+// A person's menu: the whisper to one online, the leader's expel, one's own leave, the friend's remove, the party
+// member added to friends, the way to one elsewhere, the name copied
+TEST(social_card_person_menu) {
+    using socialcard::Item;
+    socialcard::Entry me, other;
+    me.self = me.online = true;
+    other.online = true;
+    other.name = "Sage";
+    auto has = [](const std::vector<Item>& v, Item i) { return std::find(v.begin(), v.end(), i) != v.end(); };
+    std::vector<Item> m = socialcard::menu(socialcard::Tab::Party, other, true, true);
+    CHECK(has(m, Item::Whisper) && has(m, Item::Expel) && has(m, Item::AddFriend) && has(m, Item::Route) &&
+          has(m, Item::CopyName));
+    CHECK(!has(m, Item::Leave) && !has(m, Item::RemoveFriend));
+    m = socialcard::menu(socialcard::Tab::Party, other, false, false);  // not the leader, the member here
+    CHECK(!has(m, Item::Expel) && !has(m, Item::Route));
+    m = socialcard::menu(socialcard::Tab::Party, me, true, false);
+    CHECK(has(m, Item::Leave) && !has(m, Item::Whisper) && !has(m, Item::Expel) && !has(m, Item::AddFriend));
+    other.online = false;
+    m = socialcard::menu(socialcard::Tab::Friends, other, false, false);
+    CHECK(has(m, Item::RemoveFriend) && !has(m, Item::Whisper) && !has(m, Item::AddFriend) && has(m, Item::CopyName));
+}

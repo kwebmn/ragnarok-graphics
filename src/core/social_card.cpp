@@ -126,4 +126,36 @@ std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, con
 
 const Entry* chosenEntry(const std::vector<Entry>& entries, const Show& sh) { return chosenOf(entries, sh); }
 
+std::vector<int> order(const std::vector<Entry>& entries, Tab t) {
+    std::vector<int> out;
+    for (int pass = 0; pass < 2; ++pass)
+        for (size_t i = 0; i < entries.size(); ++i)
+            if (t == Tab::Party ? pass == 0 : entries[i].online == (pass == 0)) out.push_back(int(i));
+    return out;
+}
+
+int onlineCount(const std::vector<Entry>& entries) {
+    int n = 0;
+    for (const Entry& e : entries) n += e.online;
+    return n;
+}
+
+std::vector<Item> menu(Tab t, const Entry& e, bool leader, bool elsewhere) {
+    std::vector<Item> out;
+    if (e.self) {
+        if (t == Tab::Party) out.push_back(Item::Leave);
+        return out;
+    }
+    if (e.online) out.push_back(Item::Whisper);
+    if (t == Tab::Party) {
+        if (leader) out.push_back(Item::Expel);
+        out.push_back(Item::AddFriend);
+        if (e.online && elsewhere) out.push_back(Item::Route);
+    } else {
+        out.push_back(Item::RemoveFriend);
+    }
+    out.push_back(Item::CopyName);
+    return out;
+}
+
 }  // namespace uagfx::socialcard

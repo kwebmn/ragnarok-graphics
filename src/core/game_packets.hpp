@@ -79,6 +79,10 @@ struct PartyMember {
 struct PartyLeft {
     uint32_t account = 0;
 };
+// 3.0.18-beta.141: the party's experience share (0x0101 - 0 each takes, 1 shared evenly)
+struct PartyExp {
+    bool even = false;
+};
 struct PartyHp {
     uint32_t account = 0;
     uint16_t hp = 0, most = 0;
@@ -209,7 +213,7 @@ struct GuildPos {
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
                            Chat, Status, Pickup, StatusLong, Casting, Appear, PartyPos, ActorInfo, NpcSay, NpcMenu,
-                           StorageCount, ShopSign, Viewpoint, GuildPos, ActorName, RoomSign>;
+                           StorageCount, ShopSign, Viewpoint, GuildPos, ActorName, RoomSign, PartyExp>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).
