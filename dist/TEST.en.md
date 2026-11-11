@@ -1,3 +1,5 @@
+- Damage numbers, Miss, Guard, Critical!!, Lucky and the crits' stars are sharp now. They are the game's own pictures (`숫자.spr`, `msg.spr`, `bluemsg.spr`), made four times larger by xBR (as the windows' buttons and labels) instead of stretched and blurred. The game places, colours, scales and moves them as before. The switch: Graphics → Quality → "Crisp damage numbers" (on); Pause shows the old look. The log tells when a number is first drawn from its copy, and every 30 s how many times.
+
 - A text's width is measured through Windows only once for each label at its size: then it comes from memory (R-B8SDEK: measuring text took 13.7 % of the game's thread, the chat's layout 0.65 ms a frame). The stock of fonts for measuring is larger (64), and the one unused longest goes first. The log tells every 30 s how many measures and how many fonts were made.
 
 - By the profiler's measurement (R-XZGR7R) needless work every frame removed:
