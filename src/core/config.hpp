@@ -3,6 +3,7 @@
 #include <string>
 
 #include "core/ai/groups.hpp"
+#include "core/closed_windows.hpp"
 #include "core/login_view.hpp"
 #include "core/roext.hpp"
 
@@ -743,6 +744,10 @@ struct Config {
     PadWalk padWalk = PadWalk::Arrow;  // 3.0.11-beta.102: by the map's cells by default (core/stick_walk)
     // 3.0.11-beta.103: [interface] walk_arrow - how the arrow of pad_walk = arrow looks (core/ground_way walkShape)
     WalkLook walkArrow = WalkLook::Chevrons;
+    // 3.0.18-beta.125 (the concept «Ігровий інтерфейс»: «Клавіші»): [interface] key_hunt,
+    // key_mvp, key_tracker, key_party, key_recap - our windows' Ctrl letters (by closedwin::Own; 0 none), one of
+    // closedwin::kFreeLetters
+    closedwin::Keys ownKeys = closedwin::kDefaultKeys;
     CursorLook cursorLook = CursorLook::Game;  // 3.0.11-beta.198: [interface] cursor
     // 3.0.11-beta.105 (the owner: «а можно клетку куда идти над стрелкой не рисовать?»): [interface] walk_mark - the
     // mark at the arrow's end where the character goes (a diamond, a cell's corners or frame, a small ring)

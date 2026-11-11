@@ -1,5 +1,7 @@
 #include "core/settings/schema.hpp"
 
+#include <cctype>
+
 #include "core/effect_groups.hpp"
 
 #include <algorithm>
@@ -32,6 +34,12 @@ Text pageName(Page p) {
     }
     return Text::PageService;
 }
+
+// 3.0.18-beta.125: a window key's choices - none, or Ctrl and a letter the game leaves free (closedwin::kFreeLetters)
+const std::vector<const char*> kKeyTokens = {"off", "b", "d", "g", "h", "i", "j", "k", "l", "n", "u", "y"};
+const std::vector<Text> kKeyChoices = {Text::KeyOff,   Text::KeyCtrlB, Text::KeyCtrlD, Text::KeyCtrlG,
+                                       Text::KeyCtrlH, Text::KeyCtrlI, Text::KeyCtrlJ, Text::KeyCtrlK,
+                                       Text::KeyCtrlL, Text::KeyCtrlN, Text::KeyCtrlU, Text::KeyCtrlY};
 
 const std::vector<IniSetting>& iniSettings() {
     using E = EffectSettings;  // 2.2.2: [effects] entries bound to their fields
@@ -220,6 +228,18 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::InterfacePadWalkMouse, Text::InterfacePadWalkArrow}, Text::InterfacePadWalk, Text::InterfacePadWalkHint,
          ""},
         // 3.0.11-beta.103: the look of the stick's arrow - the doc's variants
+        // 3.0.18-beta.125 (the concept «Ігровий інтерфейс»: «Клавіші»): our windows' Ctrl
+        // letters
+        {"interface", "key_hunt", Page::Interface, Control::Choice, 0, 0, 0, kKeyTokens, kKeyChoices,
+         Text::InterfaceKeyHunt, Text::InterfaceKeyHint, ""},
+        {"interface", "key_mvp", Page::Interface, Control::Choice, 0, 0, 0, kKeyTokens, kKeyChoices,
+         Text::InterfaceKeyMvp, Text::InterfaceKeyHint, ""},
+        {"interface", "key_tracker", Page::Interface, Control::Choice, 0, 0, 0, kKeyTokens, kKeyChoices,
+         Text::InterfaceKeyTracker, Text::InterfaceKeyHint, ""},
+        {"interface", "key_party", Page::Interface, Control::Choice, 0, 0, 0, kKeyTokens, kKeyChoices,
+         Text::InterfaceKeyParty, Text::InterfaceKeyHint, ""},
+        {"interface", "key_recap", Page::Interface, Control::Choice, 0, 0, 0, kKeyTokens, kKeyChoices,
+         Text::InterfaceKeyRecap, Text::InterfaceKeyHint, ""},
         {"interface", "walk_arrow", Page::Interface, Control::Choice, 0, 0, 0,
          {"chevrons", "slim", "concept", "ring", "dots", "cell", "off"},
          {Text::WalkArrowChevrons, Text::WalkArrowSlim, Text::WalkArrowConcept, Text::WalkArrowRing,
@@ -1330,6 +1350,14 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.boss_bars") return c.bossBars ? "1" : "0";                         // 3.0.13-beta.3
     if (k == "interface.pad_walk") return padWalkToken(c.padWalk);                         // 3.0.11-beta.88
     if (k == "interface.walk_arrow") return walkLookToken(c.walkArrow);                    // 3.0.11-beta.103
+    if (k.rfind("interface.key_", 0) == 0) {  // 3.0.18-beta.125: our windows' Ctrl letters
+        const std::string w = k.substr(14);
+        const closedwin::Own o = w == "hunt" ? closedwin::Own::Hunt : w == "mvp" ? closedwin::Own::Mvp
+                                 : w == "tracker" ? closedwin::Own::Tracker : w == "party" ? closedwin::Own::Party
+                                                                                : closedwin::Own::Recap;
+        const char ch = c.ownKeys[size_t(o)];
+        return ch ? std::string(1, char(std::tolower(ch))) : std::string("off");
+    }
     if (k == "interface.cursor") return cursorLookToken(c.cursorLook);                     // 3.0.11-beta.198
     if (k == "interface.walk_mark") return c.walkMark ? "1" : "0";                         // 3.0.11-beta.105
     if (k == "interface.pad_tiles") return c.padTiles ? "1" : "0";                         // 3.0.11-beta.90

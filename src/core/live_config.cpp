@@ -293,6 +293,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("pad_walk", padWalkToken(running.padWalk), padWalkToken(file.padWalk)));
         n.padWalk = file.padWalk;
     }
+    if (file.ownKeys != running.ownKeys) {  // 3.0.18-beta.125: our windows' Ctrl letters, at once
+        u.applied.push_back(change("key_*", "", ""));
+        n.ownKeys = file.ownKeys;
+    }
     if (file.walkArrow != running.walkArrow) {  // 3.0.11-beta.103: the look of the stick's arrow
         u.applied.push_back(change("walk_arrow", walkLookToken(running.walkArrow), walkLookToken(file.walkArrow)));
         n.walkArrow = file.walkArrow;

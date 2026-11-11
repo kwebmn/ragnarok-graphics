@@ -909,6 +909,9 @@ enum class Text : uint16_t {
     CharOwnSettings,  // 3.0.18-beta.120
     MenuSettings, MenuLayout, MenuTest, MenuReport,  // 3.0.18-beta.121
     SettingsWinHint, SettingsWinNone, SettingsWinConsole,  // 3.0.18-beta.122
+    InterfaceSecKeys, InterfaceKeyHunt, InterfaceKeyMvp, InterfaceKeyTracker, InterfaceKeyParty, InterfaceKeyRecap,
+    InterfaceKeyHint, KeyOff, KeyCtrlB, KeyCtrlD, KeyCtrlG, KeyCtrlH, KeyCtrlI, KeyCtrlJ, KeyCtrlK, KeyCtrlL, KeyCtrlN,
+    KeyCtrlU, KeyCtrlY,  // 3.0.18-beta.125
     Count
 };
 

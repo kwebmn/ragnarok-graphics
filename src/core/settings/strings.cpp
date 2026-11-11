@@ -8262,30 +8262,59 @@ constexpr Entry kTexts[] = {
     {Text::EquipCartOff, "Remove the cart", "Зняти візок", "Снять тележку"},
     {Text::EquipFalconOff, "Release the falcon", "Відпустити сокола", "Отпустить сокола"},
     {Text::EquipPecoOff, "Get off the Peco", "Злізти з Пеко", "Слезть с Пеко"},
-    // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): «Що мене вбило» on its own; the character block's second row
+    // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): «Що мене вбило» on its own; the
+    // character block's second row
     {Text::RecapNone, "No death yet since the game started", "Від запуску гри смертей ще не було",
      "С запуска игры смертей ещё не было"},
-    {Text::CharOwnReference, "Reference \xC2\xB7 Ctrl+F", "Довідник \xC2\xB7 Ctrl+F", "Справочник \xC2\xB7 Ctrl+F"},
-    {Text::CharOwnHunt, "Hunt \xC2\xB7 Ctrl+H", "Полювання \xC2\xB7 Ctrl+H", "Охота \xC2\xB7 Ctrl+H"},
-    {Text::CharOwnMvp, "Boss timers \xC2\xB7 Ctrl+B", "Таймери босів \xC2\xB7 Ctrl+B",
-     "Таймеры боссов \xC2\xB7 Ctrl+B"},
-    {Text::CharOwnTracker, "Tracking \xC2\xB7 Ctrl+J", "Відстеження \xC2\xB7 Ctrl+J",
-     "Отслеживание \xC2\xB7 Ctrl+J"},
-    {Text::CharOwnParty, "Party \xC2\xB7 Ctrl+G", "Група \xC2\xB7 Ctrl+G", "Группа \xC2\xB7 Ctrl+G"},
-    {Text::CharOwnRecap, "What killed me \xC2\xB7 Ctrl+K", "Що мене вбило \xC2\xB7 Ctrl+K",
-     "Что меня убило \xC2\xB7 Ctrl+K"},
-    {Text::CharOwnSettings, "Settings \xC2\xB7 Alt+O", "Налаштування \xC2\xB7 Alt+O",
-     "Настройки \xC2\xB7 Alt+O"},
+    {Text::CharOwnReference, "Reference", "Довідник", "Справочник"},
+    {Text::CharOwnHunt, "Hunt", "Полювання", "Охота"},
+    {Text::CharOwnMvp, "Boss timers", "Таймери босів",
+     "Таймеры боссов"},
+    {Text::CharOwnTracker, "Tracking", "Відстеження",
+     "Отслеживание"},
+    {Text::CharOwnParty, "Party", "Група", "Группа"},
+    {Text::CharOwnRecap, "What killed me", "Що мене вбило",
+     "Что меня убило"},
+    {Text::CharOwnSettings, "Settings", "Налаштування",
+     "Настройки"},
     // 3.0.18-beta.121 (the concept «Ігровий інтерфейс»): the menu's own over the game's
     {Text::MenuSettings, "Settings", "Налаштування", "Настройки"},
     {Text::MenuLayout, "Arrange the interface", "Розмістити інтерфейс", "Разместить интерфейс"},
     {Text::MenuTest, "Graphics test", "Тест графіки", "Тест графики"},
     {Text::MenuReport, "Send a report", "Надіслати звіт", "Отправить отчёт"},
-    // 3.0.18-beta.122 (the concept «Ігровий інтерфейс»): «Налаштування» in place of the game's Alt+O
+    // 3.0.18-beta.122 (the concept «Ігровий інтерфейс»): «Налаштування» in place of the
+    // game's Alt+O
     {Text::SettingsWinHint, "Everything changes at once", "Усе змінюється одразу", "Всё меняется сразу"},
     {Text::SettingsWinNone, "Nothing found", "Нічого не знайдено", "Ничего не найдено"},
     {Text::SettingsWinConsole, "All graphics settings\xE2\x80\xA6 (Alt+D)",
      "Усі налаштування графіки\xE2\x80\xA6 (Alt+D)", "Все настройки графики\xE2\x80\xA6 (Alt+D)"},
+    // 3.0.18-beta.125 (the concept «Ігровий інтерфейс»: «Клавіші»): our windows' keys
+    {Text::InterfaceSecKeys, "Keys", "Клавіші", "Клавиши"},
+    {Text::InterfaceKeyHunt, "Key: Hunt", "Клавіша: Полювання", "Клавиша: Охота"},
+    {Text::InterfaceKeyMvp, "Key: Boss timers", "Клавіша: Таймери босів",
+     "Клавиша: Таймеры боссов"},
+    {Text::InterfaceKeyTracker, "Key: Tracking", "Клавіша: Відстеження",
+     "Клавиша: Отслеживание"},
+    {Text::InterfaceKeyParty, "Key: Party", "Клавіша: Група", "Клавиша: Группа"},
+    {Text::InterfaceKeyRecap, "Key: What killed me", "Клавіша: Що мене вбило",
+     "Клавиша: Что меня убило"},
+    {Text::InterfaceKeyHint, "Opens and hides the window; only letters the game leaves free with Ctrl",
+     "Відкриває й ховає вікно; лише букви, які гра "
+     "лишає вільними з Ctrl",
+     "Открывает и прячет окно; только буквы, которые "
+     "игра оставляет свободными с Ctrl"},
+    {Text::KeyOff, "No key", "Без клавіші", "Без клавиши"},
+    {Text::KeyCtrlB, "Ctrl+B", "Ctrl+B", "Ctrl+B"},
+    {Text::KeyCtrlD, "Ctrl+D", "Ctrl+D", "Ctrl+D"},
+    {Text::KeyCtrlG, "Ctrl+G", "Ctrl+G", "Ctrl+G"},
+    {Text::KeyCtrlH, "Ctrl+H", "Ctrl+H", "Ctrl+H"},
+    {Text::KeyCtrlI, "Ctrl+I", "Ctrl+I", "Ctrl+I"},
+    {Text::KeyCtrlJ, "Ctrl+J", "Ctrl+J", "Ctrl+J"},
+    {Text::KeyCtrlK, "Ctrl+K", "Ctrl+K", "Ctrl+K"},
+    {Text::KeyCtrlL, "Ctrl+L", "Ctrl+L", "Ctrl+L"},
+    {Text::KeyCtrlN, "Ctrl+N", "Ctrl+N", "Ctrl+N"},
+    {Text::KeyCtrlU, "Ctrl+U", "Ctrl+U", "Ctrl+U"},
+    {Text::KeyCtrlY, "Ctrl+Y", "Ctrl+Y", "Ctrl+Y"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -40,21 +40,20 @@ std::vector<Own> row(const Switches& on) {
     return out;
 }
 
-bool ownOfKey(unsigned vk, Own& out) {
-    switch (vk) {
-        case 'H': out = Own::Hunt; return true;
-        case 'B': out = Own::Mvp; return true;
-        case 'J': out = Own::Tracker; return true;
-        case 'G': out = Own::Party; return true;
-        case 'K': out = Own::Recap; return true;
-        default: return false;
-    }
+bool ownOfKey(unsigned vk, const Keys& keys, Own& out) {
+    for (const Own o : {Own::Hunt, Own::Mvp, Own::Tracker, Own::Party, Own::Recap})
+        if (keys[size_t(o)] && unsigned(keys[size_t(o)]) == vk) {
+            out = o;
+            return true;
+        }
+    return false;
 }
 
-const char* keyName(Own o) {
-    static const char* const kNames[size_t(Own::Count)] = {"Ctrl+F", "Ctrl+H", "Ctrl+B", "Ctrl+J",
-                                                          "Ctrl+G", "Ctrl+K", "Alt+O"};
-    return size_t(o) < size_t(Own::Count) ? kNames[size_t(o)] : "";
+std::string keyName(Own o, const Keys& keys) {
+    if (o == Own::Reference) return "Ctrl+F";
+    if (o == Own::Settings) return "Alt+O";
+    const char c = size_t(o) < keys.size() ? keys[size_t(o)] : 0;
+    return c ? std::string("Ctrl+") + c : std::string();
 }
 
 }  // namespace uagfx::closedwin

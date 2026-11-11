@@ -1,5 +1,8 @@
 #include "core/config.hpp"
 
+#include <cctype>
+#include <cstring>
+
 #include "core/ai/kinds.hpp"
 #include "core/daylight.hpp"
 #include "core/effect_groups.hpp"
@@ -640,6 +643,19 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.cursor") {  // 3.0.11-beta.198: the cursor's look
             for (const CursorLook l : {CursorLook::Game, CursorLook::Dark, CursorLook::Light})
                 if (val == cursorLookToken(l)) c.cursorLook = l;
+        } else if (key.rfind("interface.key_", 0) == 0) {  // 3.0.18-beta.125: our windows' Ctrl letters
+            const std::string which = key.substr(14);
+            const closedwin::Own o = which == "hunt"      ? closedwin::Own::Hunt
+                                     : which == "mvp"     ? closedwin::Own::Mvp
+                                     : which == "tracker" ? closedwin::Own::Tracker
+                                     : which == "party"   ? closedwin::Own::Party
+                                     : which == "recap"   ? closedwin::Own::Recap
+                                                          : closedwin::Own::Count;
+            if (o != closedwin::Own::Count) {
+                if (val == "off") c.ownKeys[size_t(o)] = 0;
+                else if (val.size() == 1 && std::strchr(closedwin::kFreeLetters, std::toupper(val[0])))
+                    c.ownKeys[size_t(o)] = char(std::toupper(val[0]));
+            }
         } else if (key == "interface.walk_arrow") {  // 3.0.11-beta.103: the look of the stick's arrow
             for (const WalkLook w : {WalkLook::Off, WalkLook::Chevrons, WalkLook::Slim, WalkLook::Concept,
                                      WalkLook::Ring, WalkLook::Dots, WalkLook::Cell})

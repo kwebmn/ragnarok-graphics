@@ -1117,6 +1117,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         own.reference = config.referenceWindow, own.hunt = config.huntPanel, own.mvp = config.mvpTimers;
         own.tracker = config.tracker, own.party = config.partyPanel, own.recap = config.deathRecap;
         ownwin::setSwitches(own);
+        ownwin::setKeys(config.ownKeys);  // 3.0.18-beta.125
     }
     charpanel::frame(window, config.character, gameCodePage(config), pk, pw, ph);
     chardiarywin::frame(gameCodePage(config));  // 3.0.11-beta.273: the characters' diary

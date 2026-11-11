@@ -31,6 +31,11 @@ closedwin::Switches& switches() {
     return on;
 }
 
+closedwin::Keys& keys() {  // 3.0.18-beta.125: [interface] key_* (each frame from the config)
+    static closedwin::Keys k = closedwin::kDefaultKeys;
+    return k;
+}
+
 unsigned& skipChar() {
     static unsigned c = 0;
     return c;
@@ -50,6 +55,8 @@ void setClosed(closedwin::Window w, bool closed, const char* why) {
 }
 
 void setSwitches(const closedwin::Switches& on) { switches() = on; }
+void setKeys(const closedwin::Keys& k) { keys() = k; }
+std::string keyOf(closedwin::Own o) { return closedwin::keyName(o, keys()); }
 
 std::vector<closedwin::Own> row() { return closedwin::row(switches()); }
 
@@ -90,12 +97,13 @@ bool key(UINT m, WPARAM wp, LPARAM) {
     if (m != WM_KEYDOWN || GetKeyState(VK_CONTROL) >= 0 || GetKeyState(VK_MENU) < 0 || GetKeyState(VK_SHIFT) < 0)
         return false;
     closedwin::Own o{};
-    if (!closedwin::ownOfKey(unsigned(wp), o)) return false;
+    if (!closedwin::ownOfKey(unsigned(wp), keys(), o)) return false;
     const std::vector<closedwin::Own> shown = row();
     bool on = false;
     for (const closedwin::Own x : shown) on = on || x == o;
     if (!on) return false;  // its switch off: the key stays the game's
-    press(o, closedwin::keyName(o));
+    const std::string name = closedwin::keyName(o, keys());
+    press(o, name.c_str());
     skipChar() = unsigned(wp) - 'A' + 1;  // Ctrl+letter's own character
     return true;
 }

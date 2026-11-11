@@ -2011,3 +2011,21 @@ TEST(config_has_the_new_interface_library_on_by_default) {
     // 3.0.18-beta.75 (stage 6): no switch in the app - uaUI draws the new interface always
     CHECK(settings::findSetting("interface.uaui") == nullptr);
 }
+
+// 3.0.18-beta.125 (the concept «Ігровий інтерфейс», item 2: «Клавіші»): [interface]
+// key_hunt, key_mvp, key_tracker, key_party, key_recap - Ctrl and a letter the game leaves free, or off; rows of the
+// schema, applied at once
+TEST(config_reads_our_windows_keys) {
+    const Config d = noUi("");
+    CHECK(d.ownKeys[size_t(closedwin::Own::Hunt)] == 'H' && d.ownKeys[size_t(closedwin::Own::Recap)] == 'K');
+    const Config c = noUi("key_hunt = u\nkey_recap = off\n");
+    CHECK(c.ownKeys[size_t(closedwin::Own::Hunt)] == 'U' && c.ownKeys[size_t(closedwin::Own::Recap)] == 0);
+    CHECK(noUi("key_hunt = a\n").ownKeys[size_t(closedwin::Own::Hunt)] == 'H');  // the game's Ctrl+A: not taken
+    const settings::IniSetting* s = settings::findSetting("interface.key_hunt");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->control == settings::Control::Choice && s->tokens.size() == s->choices.size());
+    CHECK_EQ(settings::tokenOf(*s, c), std::string("u"));
+    CHECK(appliesNow("interface.key_party"));
+    CHECK(liveUpdate(noUi(""), c).next.ownKeys[size_t(closedwin::Own::Hunt)] == 'U');
+}

@@ -49,3 +49,7 @@ Ledger:
   «Таймери босів», «Відстеження», «Що мене вбило») - core padtiles any count, three a row, a short last row in the
   middle, up/down to the nearest column (test); its «Налаштування» tile opens the new window; «Налаштування» on the
   pad walks its controls (the runtime's optionsPad only for the old look); − and + by every slider (pad and mouse).
+- 3.0.18-beta.125 (item 2, «Клавіші»): [interface] key_hunt, key_mvp, key_tracker, key_party, key_recap - choices off
+  or Ctrl+B D G H I J K L N U Y (the letters uaRO.exe leaves free with Ctrl; C X Z S the fields'); schema rows, the
+  app's «Інтерфейс» section «Клавіші» (so «Налаштування» too), shipped ini, applied at once (tests); the icons' tips
+  show the key given. Ruling: one letter for two windows - the first in the row wins (no check). Cost: a confusion.

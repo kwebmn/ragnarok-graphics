@@ -3,8 +3,9 @@
 
 using namespace uagfx;
 
-// 3.0.18-beta.120 (the concept «Ігровий інтерфейс», stage 2: «✕ на каждом окне»): our windows closed by ✕ - kept by
-// their keys, a line each, across the game's starts; unknown words and blanks left out, each once
+// 3.0.18-beta.120 (the concept «Ігровий інтерфейс», stage 2: «✕ на каждом окне»): our
+// windows closed by ✕ - kept by their keys, a line each, across the game's starts; unknown words and blanks left out,
+// each once
 TEST(closed_windows_read_and_written) {
     const closedwin::Set s = closedwin::read("hunt\r\n\nmvp\nnot-a-window\nhunt\n");
     CHECK(closedwin::has(s, closedwin::Window::Hunt));
@@ -32,12 +33,22 @@ TEST(closed_windows_own_row_and_keys) {
     const std::vector<closedwin::Own> few = closedwin::row(some);
     CHECK(few.size() == 2 && few[0] == closedwin::Own::Hunt && few[1] == closedwin::Own::Settings);
     closedwin::Own o{};
-    CHECK(closedwin::ownOfKey('H', o) && o == closedwin::Own::Hunt);
-    CHECK(closedwin::ownOfKey('B', o) && o == closedwin::Own::Mvp);
-    CHECK(closedwin::ownOfKey('J', o) && o == closedwin::Own::Tracker);
-    CHECK(closedwin::ownOfKey('G', o) && o == closedwin::Own::Party);
-    CHECK(closedwin::ownOfKey('K', o) && o == closedwin::Own::Recap);
-    CHECK(!closedwin::ownOfKey('F', o));  // «Довідник» keeps its own Ctrl+F
-    CHECK(!closedwin::ownOfKey('A', o));
-    CHECK_EQ(std::string(closedwin::keyName(closedwin::Own::Hunt)), std::string("Ctrl+H"));
+    const closedwin::Keys& k = closedwin::kDefaultKeys;
+    CHECK(closedwin::ownOfKey('H', k, o) && o == closedwin::Own::Hunt);
+    CHECK(closedwin::ownOfKey('B', k, o) && o == closedwin::Own::Mvp);
+    CHECK(closedwin::ownOfKey('J', k, o) && o == closedwin::Own::Tracker);
+    CHECK(closedwin::ownOfKey('G', k, o) && o == closedwin::Own::Party);
+    CHECK(closedwin::ownOfKey('K', k, o) && o == closedwin::Own::Recap);
+    CHECK(!closedwin::ownOfKey('F', k, o));  // «Довідник» keeps its own Ctrl+F
+    CHECK(!closedwin::ownOfKey('A', k, o));
+    CHECK_EQ(closedwin::keyName(closedwin::Own::Hunt, k), std::string("Ctrl+H"));
+    CHECK_EQ(closedwin::keyName(closedwin::Own::Reference, k), std::string("Ctrl+F"));
+    // 3.0.18-beta.125 (item 2: «Клавіші»): the player's own letters; none - no key
+    closedwin::Keys mine = k;
+    mine[size_t(closedwin::Own::Hunt)] = 'U';
+    mine[size_t(closedwin::Own::Recap)] = 0;
+    CHECK(closedwin::ownOfKey('U', mine, o) && o == closedwin::Own::Hunt);
+    CHECK(!closedwin::ownOfKey('H', mine, o));
+    CHECK(!closedwin::ownOfKey('K', mine, o));
+    CHECK_EQ(closedwin::keyName(closedwin::Own::Recap, mine), std::string());
 }

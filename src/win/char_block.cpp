@@ -469,7 +469,8 @@ struct Ui {
         float w = 0;
     } base, job;
     std::vector<Rml::String> buttons, tip;
-    // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): the second row - our windows (ownwin::row), lit while open
+    // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): the second row - our windows (ownwin::row),
+    // lit while open
     struct OwnV {
         Rml::String icon;
         bool lit = false;
@@ -537,7 +538,9 @@ std::string ownTip(closedwin::Own o) {
         settings::Text::CharOwnReference, settings::Text::CharOwnHunt,  settings::Text::CharOwnMvp,
         settings::Text::CharOwnTracker,   settings::Text::CharOwnParty, settings::Text::CharOwnRecap,
         settings::Text::CharOwnSettings};
-    return size_t(o) < size_t(Own::Count) ? say(kTips[size_t(o)]) : "";
+    if (size_t(o) >= size_t(Own::Count)) return "";
+    const std::string key = ownwin::keyOf(o);  // 3.0.18-beta.125: the key the player gave it
+    return say(kTips[size_t(o)]) + (key.empty() ? "" : " \xC2\xB7 " + key);
 }
 
 void tipFor(int kind, int index) {  // the tip of what the mouse is over (kind: 0 zone, 1 exp row, 2 button, 3 body,
