@@ -6882,9 +6882,14 @@ constexpr Entry kTexts[] = {
      "игры."},
     {Text::OskSpace, "space", "пробіл", "пробел"},
     {Text::OskSend, "Send", "Надіслати", "Отправить"},
-    {Text::OskHint, "{1} type · {2} erase · {3} space · {4}/{5} language · {6} Shift · Start send · {7} close",
-     "{1} ввести · {2} стерти · {3} пробіл · {4}/{5} мова · {6} Shift · Start надіслати · {7} закрити",
-     "{1} ввести · {2} стереть · {3} пробел · {4}/{5} язык · {6} Shift · Start отправить · {7} закрыть"},
+    // 3.0.18-beta.134 (the pad analysis: chat): {8} the channel, {9} the reply, the right stick the history
+    {Text::OskHint,
+     "{1} type · {2} erase · {3} space · {4}/{5} language · {6} Shift · Start send · {7} close · {8} channel · "
+     "{9} reply · right stick: history",
+     "{1} ввести · {2} стерти · {3} пробіл · {4}/{5} мова · {6} Shift · "
+     "Start надіслати · {7} закрити · {8} канал · {9} відповісти · правий стик: історія",
+     "{1} ввести · {2} стереть · {3} пробел · {4}/{5} язык · {6} Shift · "
+     "Start отправить · {7} закрыть · {8} канал · {9} ответить · правый стик: история"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

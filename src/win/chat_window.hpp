@@ -36,6 +36,10 @@ bool searchKey(UINT m, WPARAM wp, LPARAM lp);
 bool key(UINT m, WPARAM wp, LPARAM lp);
 // 3.0.11-beta.98: the game's chat line holds no words (the NPC talk's keys 1-9, Enter, Esc are its own then)
 bool inputEmpty();
+// 3.0.18-beta.134 (the pad analysis: chat on the controller): the channel round (near, party, guild - as Tab), the
+// history scrolled `by` lines (up +)
+void padChannel();
+void padScroll(int by);
 // Its box in the target while it shows (the hotbar keeps clear of it); false: not shown
 bool panelBox(int& x, int& y, int& w, int& h);
 // 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its own chat kept out of sight

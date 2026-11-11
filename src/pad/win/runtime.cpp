@@ -76,6 +76,7 @@
 #include "win/info_card.hpp"
 #include "win/menu_window.hpp"
 #include "win/msg_box.hpp"
+#include "win/chat_window.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/net_predict.hpp"
 #include "win/equip_window.hpp"
@@ -101,6 +102,7 @@ constexpr DWORD kTalkHoldMs = 350;  // 3.0.11-beta.214: the Talk button held thi
 
 struct State {
     DWORD bigPadAt = 0;  // 3.0.18-beta.133: the big map's cross moved last
+    DWORD chatScrollAt = 0;  // 3.0.18-beta.134: the chat's history scrolled last by the right stick
     bool controllerAllowed = true;  // 3.0.12-beta.1: [pad] enabled = 0 - false: the mouse's part only
     bool initDone = false;
     bool failed = false;
@@ -538,6 +540,16 @@ bool keyboardPad(const PadState& pad, DWORD now) {
         if (down & button) uagfx::win::oskwin::command(c);
     if (lt && !s.wheelLt) uagfx::win::oskwin::command(Command::Shift);
     s.wheelLt = lt;
+    // 3.0.18-beta.134 (the pad analysis: chat): RT the channel round (near, party, guild), R3 «/r » - the
+    // reply to the last whisper, the right stick up and down the history
+    const bool rt = pad.rt > 0.5f;
+    if (rt && !s.wheelRt) uagfx::win::chatwin::padChannel();
+    s.wheelRt = rt;
+    if (down & kPadR3) uagfx::win::oskwin::command(Command::Reply);
+    if (std::fabs(pad.ry) > 0.5f && now - s.chatScrollAt >= 120) {
+        s.chatScrollAt = now;
+        uagfx::win::chatwin::padScroll(pad.ry > 0 ? 1 : -1);
+    }
     return true;
 }
 

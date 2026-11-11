@@ -19,7 +19,11 @@ namespace uagfx::win::oskwin {
 void open();
 bool isOpen();
 void close();
-enum class Command : uint8_t { Left, Right, Up, Down, Press, Erase, Space, LangBack, LangOn, Shift, Send, Close };
+// Reply (3.0.18-beta.134, the pad analysis: chat): «/r » put before the line's words - the chat whispers back to the
+// last whisperer
+enum class Command : uint8_t {
+    Left, Right, Up, Down, Press, Erase, Space, LangBack, LangOn, Shift, Send, Close, Reply
+};
 void command(Command c);
 void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);

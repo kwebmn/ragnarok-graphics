@@ -161,7 +161,7 @@ osk::Texts texts(const State& s) {
     std::string hint = say(settings::Text::OskHint);
     const std::string names[] = {uapad::buttonLabel(0), uapad::buttonLabel(2), uapad::buttonLabel(3),
                                  uapad::buttonLabel(4), uapad::buttonLabel(5), uapad::buttonLabel(6),
-                                 uapad::buttonLabel(1)};
+                                 uapad::buttonLabel(1),  uapad::buttonLabel(7), uapad::buttonLabel(13)};
     for (size_t i = 0; i < std::size(names); ++i) {
         const std::string key = "{" + std::to_string(i + 1) + "}";
         const size_t at = hint.find(key);
@@ -239,6 +239,9 @@ void command(Command c) {
         case Command::Shift: s.shift = !s.shift; break;
         case Command::Send: send(s); return;
         case Command::Close: close(); return;
+        case Command::Reply:  // 3.0.18-beta.134
+            if (s.edit && gameText(s.edit).rfind("/r ", 0) != 0) setText(s.edit, "/r " + gameText(s.edit));
+            break;
     }
     s.key.clear();
 }

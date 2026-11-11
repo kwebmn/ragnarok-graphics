@@ -1338,6 +1338,20 @@ void beforeGameDraw() {
     if (s.on && inGameWorld()) holdOldChat(s, true);
 }
 
+void padChannel() {
+    State& s = state();
+    if (!s.shown) return;
+    nextChannel(s);
+    s.key.clear();
+}
+
+void padScroll(int by) {
+    State& s = state();
+    if (!s.shown || by == 0) return;
+    s.show.scroll = std::clamp(s.show.scroll + by, 0, mostScroll(s));
+    s.key.clear();
+}
+
 void setColours(const std::string& party, const std::string& guild, const std::string& own,
                 const std::string& others) {  // 3.0.13-beta.3
     State& s = state();
