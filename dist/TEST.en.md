@@ -1,3 +1,5 @@
+- "Lock the parts' places" removed: the interface's parts can always be dragged now (hold 0.3 s and move). Anyone who had the lock on has it off now.
+
 - Cards now show in item names in another's shop and your own, the shop setup, trade, storage and the bag (e.g. "Double Lucky Katana of Counter"), as in "Equipment".
 
 - "Equipment": the cart / falcon / Peco sign asks first ("Get off the Peco?" - "Yes" / "No"); a stray click takes nothing off.
