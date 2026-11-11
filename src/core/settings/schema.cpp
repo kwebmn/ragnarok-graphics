@@ -563,6 +563,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::QualityUiNativeHint, ""},
         {"display", "crisp_text", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityCrispText,
          Text::QualityCrispTextHint, ""},
+        {"display", "crisp_numbers", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.18-beta.178
+         Text::QualityCrispNumbers, Text::QualityCrispNumbersHint, ""},
         {"display", "window_art", Page::Quality, Control::Choice, 0, 0, 0, {"xbr", "ai", "pixels"},
          {Text::WindowArtXbr, Text::WindowArtAi, Text::WindowArtPixels}, Text::QualityWindowArt,
          Text::QualityWindowArtHint, ""},
@@ -1492,6 +1494,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "display.ui_filter") return uiFilterToken(c.uiFilter);
     if (k == "display.window_art") return windowArtToken(c.windowArt);
     if (k == "display.crisp_text") return c.crispText ? "1" : "0";
+    if (k == "display.crisp_numbers") return c.crispNumbers ? "1" : "0";  // 3.0.18-beta.178
     if (k == "quality.dlss") return c.dlss;
     if (k == "quality.dlss_scale") return std::to_string(c.dlssScale);  // 2.4.2
     if (k == "quality.dlss_width") return std::to_string(c.dlssWidth);

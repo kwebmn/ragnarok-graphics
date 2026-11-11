@@ -1234,7 +1234,8 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
         const bool whole = u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height;
         it->second.transparent = clear || (!whole && it->second.transparent);
     }
-    if (level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height) {
+    if (level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height &&
+        !u.own) {  // 3.0.18-beta.178: a number's sharp copy - no fire, light or leaves, as the game's cell
         it->second.leafy = foliage::leafyTexture(rec.pixels().data() + u.pixels, t.width, t.height,  // 0.64
                                                  u.slotCount > 0 || !it->second.cells.empty());  // 2.6.19
         // 2.5.1: a whole picture - how much it looks like fire, or lights in its own colour (as device.cpp upload)
@@ -1244,7 +1245,7 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
                                                  it->second.lightColour);
     }
     if (u.slotCount) spriteCellsWritten(it->second.cells, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.60.1
-    if (ai_) {  // 0.47: its key, or the sprite cache's new frames with their sources
+    if (ai_ && !u.own) {  // 0.47: its key, or the sprite cache's new frames with their sources
         std::vector<uint32_t> game;  // 2.5.18: the texels the pack knows it by
         ai_->noteUpload(u.texture, t.width, t.height, u, full_colour::aiTexels(u, rec.pixels().data() + u.pixels, game),
                         u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount,
@@ -1522,7 +1523,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.fogColor[3] = 1.0f;
     c.colorKey = s.colorKey ? 1u : 0u;
     c.uiMode = uint32_t(uiFilterMode(s.ui, scale_, uiSharp_ ? UiFilter::Sharp : UiFilter::Smooth));
-    if (aiDrawn[0]) c.uiMode = 0;  // the AI's picture has the detail the game's pixels lack: sampled as it is
+    // the AI's picture has the detail the game's pixels lack: sampled as it is; 3.0.18-beta.178: a sharp copy too
+    if (aiDrawn[0] || d.sharpCopy) c.uiMode = 0;
     if (d.effect == uint8_t(effect_exe::Kind::Panel)) c.uiMode = 0;  // 3.0.3-beta.8: at the target's pixels
     if (twin) {  // the tile's first game pixel is the window's place plus the tile's (spec §6)
         float quad[4];

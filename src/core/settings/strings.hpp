@@ -37,7 +37,7 @@ enum class Text : uint16_t {
     QualityRenderScaleHint, QualityWorldScale,
     QualityWorldScaleHint, QualityFullColour, QualityFullColourHint, QualitySharpen,
     QualitySharpenHint, QualityUiFilter, QualityUiFilterHint, UiSharp, UiSmooth, QualityCrispText,
-    QualityCrispTextHint,
+    QualityCrispTextHint, QualityCrispNumbers, QualityCrispNumbersHint,
     FramesVsync, FramesVsyncHint, FramesFpsLimit, FramesFpsLimitHint, FramesTearing, FramesTearingHint,
     DiagCheck, DiagResult, DiagFix, DiagOpenLog, DiagOpenFolder, DiagReport, DiagRecheck, DiagVerboseLog,
     DiagVerboseLogHint, DiagReportDone, DiagWindows, DiagWindowsValue, DiagWindowsOld, DiagGpu, DiagGpuValue,

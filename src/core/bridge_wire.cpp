@@ -80,7 +80,7 @@ uint8_t* putRect(uint8_t* p, const Rect& r) {
 }
 
 // The bytes of each kind's item, as written: the reader counts with them too
-constexpr size_t kCommandBytes = 5, kClearBytes = 28, kViewportBytes = 24, kDrawBytes = 62, kUploadBytes = 37,
+constexpr size_t kCommandBytes = 5, kClearBytes = 28, kViewportBytes = 24, kDrawBytes = 63, kUploadBytes = 38,
                  kSlotBytes = 21, kWriteBytes = 20, kStageBytes = 16, kSetupBytes = 17 + 2 * kStageBytes;
 
 uint8_t* putStage(uint8_t* p, const StageSetup& s) {
@@ -194,6 +194,7 @@ void writeRecord(WireWriter& w, const FrameRecord& r) {
         p = put(p, int32_t(d.twinTile[0]));
         p = put(p, int32_t(d.twinTile[1]));
         p = put(p, d.twinScale);
+        *p++ = d.sharpCopy ? 1 : 0;  // 3.0.18-beta.178
     }
     w.u32(uint32_t(r.uploads().size()));
     p = w.grow(r.uploads().size() * kUploadBytes);
@@ -205,6 +206,7 @@ void writeRecord(WireWriter& w, const FrameRecord& r) {
         p = put(p, u.firstSlot);
         p = put(p, u.slotCount);
         *p++ = u.fullFrom;
+        *p++ = u.own;  // 3.0.18-beta.178
     }
     w.u32(uint32_t(r.slots().size()));
     p = w.grow(r.slots().size() * kSlotBytes);
@@ -295,6 +297,7 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
         p = get(p, d.twinTile[0]);
         p = get(p, d.twinTile[1]);
         p = get(p, d.twinScale);
+        d.sharpCopy = *p++ != 0;
     }
     if (!items(kUploadBytes)) return fail();
     r.uploads_.resize(n);
@@ -306,6 +309,7 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
         p = get(p, u.firstSlot);
         p = get(p, u.slotCount);
         u.fullFrom = *p++;
+        u.own = *p++;
     }
     if (!items(kSlotBytes)) return fail();
     r.slots_.resize(n);

@@ -72,6 +72,7 @@ private:
     SceneTracker scene_;  // which draws are interface (stage 3)
     D3DVIEWPORT7 viewport_{};
     std::vector<uint8_t> soft_;  // 0.27: a draw of the level 99 aura's vertices, softer
+    std::vector<uint8_t> sharp_;  // 3.0.18-beta.178: a number's draw moved into its sharp copy (win/sharp_frames)
     auraportal::Portals portals_;
     // 3.0.13-beta.17: [effects] fade_models - the character's body on the screen this frame, the camera, each model's
     // see-through

@@ -25,6 +25,7 @@
 #include "win/net_predict.hpp"
 #include "win/net_smooth.hpp"
 #include "win/paths.hpp"
+#include "win/sharp_frames.hpp"
 #include "win/skill_delay_watch.hpp"
 #include "win/buff_overlay.hpp"
 #include "win/combo_watch.hpp"
@@ -331,6 +332,21 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // alpha is not 0 - uaRO.exe 0x40E4D0: ZWRITEENABLE on, ALPHAREF 1 - so Ruwach's sprites hide each other, a line;
     // without it they piled up into a ball, the user: «всё равно какой-то шар крутится». Their light is a ground
     // light instead: effect_light::kGroundLight.)
+    // 3.0.18-beta.178: [display] crisp_numbers - a damage digit's, Miss's, Critical's, Lucky's frame from its sharp
+    // copy (win/sharp_frames): its texture and coordinates, the quad and its colours the game's
+    if (textures_[0] && c.config.crispNumbers && textures_[0]->anySpriteNumber() && setup.stage[0].texCoord == 0) {
+        const size_t stride = FrameRecord::stride(fvf);
+        const auto* v = static_cast<const uint8_t*>(vertices);
+        float u0 = 1e9f, v0 = 1e9f, u1 = -1e9f, v1 = -1e9f;
+        for (DWORD i = 0; i < vertexCount; ++i) {
+            float uv[2];
+            std::memcpy(uv, v + i * stride + 24, sizeof uv);
+            u0 = std::min(u0, uv[0]), u1 = std::max(u1, uv[0]), v0 = std::min(v0, uv[1]), v1 = std::max(v1, uv[1]);
+        }
+        int texW = 0, texH = 0;
+        if (const sprite_cells::Cell* n = textures_[0]->spriteNumberAt((u0 + u1) / 2, (v0 + v1) / 2, texW, texH))
+            win::sharpframes::swap(*n, texW, texH, cmd, setup, vertices, vertexCount, fvf, sharp_);
+    }
     cmd.state = c.record.addState(setup);
     cmd.primitive = uint32_t(type);
     cmd.fvf = fvf;

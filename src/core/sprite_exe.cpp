@@ -71,6 +71,18 @@ objects::File objectFile(const char* path) {
     return objects::File::None;
 }
 
+bool numberFile(const char* path) {
+    if (!path) return false;
+    const std::string p = normal(path);
+    for (const char* name : {"\xBC\xFD\xC0\xDA.spr", "msg.spr", "bluemsg.spr"}) {  // 숫자.spr
+        const std::string file = kEffect + "\\" + name;
+        if (p.size() >= file.size() && p.compare(p.size() - file.size(), file.size(), file) == 0 &&
+            (p.size() == file.size() || p[p.size() - file.size() - 1] == '\\'))
+            return true;
+    }
+    return false;
+}
+
 Source sourceOf(const char* path) {
     if (!path) return Source::Unknown;
     const std::string p = normal(path);

@@ -10,6 +10,7 @@
 #include "win/crisp/crisp.hpp"
 #include "win/dx7/formats.hpp"
 #include "win/log.hpp"
+#include "win/sharp_frames.hpp"
 #include "win/sprite_hook.hpp"
 
 namespace uagfx::dx7 {
@@ -121,6 +122,14 @@ Surface7* Surface7::create(const SurfacePlan& plan, DWORD caps, std::string& err
 }
 
 uint8_t Surface7::spriteAt(float x, float y, bool* card) const { return top()->cells_.at(x, y, card); }
+
+const sprite_cells::Cell* Surface7::spriteNumberAt(float u, float v, int& width, int& height) const {
+    const Surface7* t = top();
+    if (!t->cells_.anyNumber()) return nullptr;
+    width = t->width_;
+    height = t->height_;
+    return t->cells_.number(u * float(width), v * float(height));
+}
 
 Surface7* Surface7::from(IDirectDrawSurface7* s) {
     Surface7* p = static_cast<Surface7*>(s);
@@ -537,8 +546,26 @@ HRESULT STDMETHODCALLTYPE Surface7::Unlock(LPRECT) {
                     rowToArgb8(f, bytes, own.data(), int(own.size()));
             }
             top()->levels_->slotWritten(cell, source, own.empty() ? nullptr : &own);
+            // 3.0.18-beta.178: a number's frame (win/sharp_frames) - its texels as the card gets them, for its copy
+            int fw = 0, fh = 0;
+            uint64_t sharp = 0;
+            if (win::spriteCellNumber(fw, fh) && cell.left + fw <= lv.level(0).width() &&
+                cell.top + fh <= lv.level(0).height()) {
+                std::vector<uint32_t> argb(size_t(fw) * size_t(fh));
+                const Image& img = lv.level(0);
+                const int bpp = bytesPerPixel(f);
+                for (int y = 0; y < fh; ++y) {
+                    const uint8_t* row = img.row(cell.top + y) + size_t(cell.left) * size_t(bpp);
+                    uint32_t* out = argb.data() + size_t(y) * size_t(fw);
+                    if (lv.key().enabled)
+                        rowToArgb8Keyed(f, row, out, fw, lv.key().low, lv.key().high);
+                    else
+                        rowToArgb8(f, row, out, fw);
+                }
+                sharp = win::sharpframes::note(argb.data(), fw, fh);
+            }
             // 0.93; 2.7.12: the frame takes the place of those it lies over (sprite_cells)
-            top()->cells_.written(cell, source, win::spriteCellCard());
+            top()->cells_.written(cell, source, win::spriteCellCard(), sharp, fw, fh);
         }
     }
     if (role_ == SurfaceRole::RenderTarget) {

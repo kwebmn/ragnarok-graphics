@@ -73,6 +73,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("crisp_text", flag(running.crispText), flag(file.crispText)));
         n.crispText = file.crispText;
     }
+    if (file.crispNumbers != running.crispNumbers) {  // 3.0.18-beta.178: read at every draw
+        u.applied.push_back(change("crisp_numbers", flag(running.crispNumbers), flag(file.crispNumbers)));
+        n.crispNumbers = file.crispNumbers;
+    }
     if (file.windowArt != running.windowArt) {
         u.applied.push_back(
             change("window_art", windowArtToken(running.windowArt), windowArtToken(file.windowArt)));
@@ -850,6 +854,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
 
 bool appliesNow(const std::string& k) {
     return k == "display.high_resolution" || k == "display.ui_filter" || k == "display.crisp_text" ||
+           k == "display.crisp_numbers" ||
            k == "display.window_art" ||
            k == "quality.render_scale" || k == "quality.world_scale" || k == "quality.full_colour" ||
            k == "quality.super_light" || k == "frames.battery_saver" || k == "frames.battery_fps" ||

@@ -30,6 +30,11 @@ uint8_t g_source = 0;
 std::unordered_map<uint32_t, uint8_t> g_frames;
 std::unordered_map<uint32_t, bool> g_cards;  // 0.95: the frames of a card lying on the ground
 bool g_card = false;
+// 3.0.18-beta.178: the palette frames of the numbers' sprites (sprite_exe::numberFile) - another file's load takes a
+// freed one's address out again
+std::unordered_map<uint32_t, bool> g_numbers;
+bool g_number = false;
+int g_numberW = 0, g_numberH = 0;
 // 2.5.23: every palette frame -> its sprite (CSprRes, whose own palette is at sprite_exe::kPalette); the frame being
 // written in a dye, in the sprite's own colours
 std::unordered_map<uint32_t, uint32_t> g_owners;
@@ -134,6 +139,20 @@ uint32_t __attribute__((thiscall)) spriteLoad(uint32_t sprite, const char* name)
             for (const uint32_t* f = begin; f != end; ++f)
                 if (*f) g_owners[*f] = sprite;
     }
+    {  // 3.0.18-beta.178: the numbers' frames (sharp copies, win/sharp_frames)
+        const bool number = sprite_exe::numberFile(name);
+        const uint32_t list = sprite + sprite_exe::kImages;
+        const uint32_t* begin = *reinterpret_cast<uint32_t* const*>(uintptr_t(list));
+        const uint32_t* end = *reinterpret_cast<uint32_t* const*>(uintptr_t(list) + 4);
+        if ((number || !g_numbers.empty()) && begin && end >= begin && end - begin <= 65536)
+            for (const uint32_t* f = begin; f != end; ++f) {
+                if (!*f) continue;
+                if (number)
+                    g_numbers[*f] = true;
+                else
+                    g_numbers.erase(*f);
+            }
+    }
     if (source == uint8_t(sprite_exe::Source::Item)) {  // 0.95: whether it is a card's, every frame of it
         const bool card = sprite_exe::cardOnGround(name);
         const uint32_t list = sprite + sprite_exe::kImages;
@@ -155,6 +174,14 @@ void __attribute__((thiscall)) spriteWrite(uint32_t texture, int x, int y, unsig
     g_source = f == g_frames.end() ? 0 : f->second;
     const auto c = g_cards.find(uint32_t(reinterpret_cast<uintptr_t>(image)));
     g_card = c != g_cards.end() && c->second;
+    // 3.0.18-beta.178: a number's frame - its size (SprImg: 16-bit width and height first) inside the cell
+    g_number = false;
+    if (image && g_numbers.count(uint32_t(reinterpret_cast<uintptr_t>(image)))) {
+        const auto* wh = static_cast<const uint16_t*>(image);
+        g_numberW = wh[0];
+        g_numberH = wh[1];
+        g_number = g_numberW > 0 && g_numberH > 0 && g_numberW <= int(width) && g_numberH <= height;
+    }
     g_ownValid = false;
     if (g_dyes.load() && image && palette) ownColours(image, palette, int(width), height);
     g_writing = true;
@@ -211,6 +238,13 @@ bool spriteCell(Rect& cell, uint8_t& source) {
 }
 
 bool spriteCellCard() { return g_writing && g_card; }
+
+bool spriteCellNumber(int& frameW, int& frameH) {
+    if (!g_writing || !g_number) return false;
+    frameW = g_numberW;
+    frameH = g_numberH;
+    return true;
+}
 
 const std::vector<uint16_t>* spriteCellOwn() { return g_writing && g_ownValid ? &g_own : nullptr; }
 

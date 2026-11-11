@@ -32,6 +32,7 @@ std::vector<IniEdit> presetEdits(Preset p) {
                               {"quality", "sharpen", std::to_string(v.sharpen)},
                               {"display", "ui_filter", "sharp"},
                               {"display", "crisp_text", v.crispText ? "1" : "0"},
+                              {"display", "crisp_numbers", v.crispText ? "1" : "0"},  // 3.0.18-beta.178
                               {"quality", "msaa", std::to_string(v.msaa)},
                               {"quality", "alpha_to_coverage", v.alphaToCoverage ? "1" : "0"},
                               {"quality", "anisotropy", std::to_string(v.anisotropy)},

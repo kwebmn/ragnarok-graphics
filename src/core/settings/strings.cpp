@@ -170,6 +170,15 @@ constexpr Entry kTexts[] = {
      "The game's text, window frames and fills at the screen's real pixels when the game is enlarged.",
      "Текст, рамки й заливки вікон гри в справжніх точках екрана, коли гру збільшено.",
      "Текст, рамки и заливки окон игры в настоящих точках экрана, когда игра увеличена."},
+    // 3.0.18-beta.178
+    {Text::QualityCrispNumbers, "Crisp damage numbers", "Чіткі цифри урону", "Чёткие цифры урона"},
+    {Text::QualityCrispNumbersHint,
+     "Damage numbers, Miss, Guard, Critical and Lucky: the game's own pictures, enlarged sharp (xBR) instead of "
+     "blurred. The game moves them as always.",
+     "Цифри урону, Miss, Guard, Critical і Lucky: власні картинки гри, збільшені чітко (xBR), а не розмито. Рухає "
+     "їх гра, як завжди.",
+     "Цифры урона, Miss, Guard, Critical и Lucky: собственные картинки игры, увеличенные чётко (xBR), а не размыто. "
+     "Двигает их игра, как всегда."},
     {Text::FramesVsync,
      "Vertical sync (VSync)", "Вертикальна синхронізація (VSync)", "Вертикальная синхронизация (VSync)"},
     {Text::FramesVsyncHint,

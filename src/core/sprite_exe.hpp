@@ -52,5 +52,9 @@ const char* sourceName(uint8_t source);
 // 0.23, 0.24: the maps' objects the driver draws anew (core/map_objects.hpp), by their files in the effects' folder:
 // torch_01.spr, 굴뚝연기.spr (the chimneys' smoke).
 objects::File objectFile(const char* path);
+// 3.0.18-beta.178: the frames uaRO.exe shows as numbers and words over the fighters - 이팩트\숫자.spr (the damage
+// digits), 이팩트\msg.spr and 이팩트\bluemsg.spr (Miss, Guard, Critical!!, the crits' stars, Lucky): drawn from their
+// sharp copies (core/sharp_frames.hpp)
+bool numberFile(const char* path);
 
 }  // namespace uagfx::sprite_exe

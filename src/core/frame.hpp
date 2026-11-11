@@ -43,6 +43,9 @@ struct DrawCmd {
     uint32_t twin = 0;
     int32_t twinTile[2] = {0, 0};
     double twinScale = 0.0;
+    // 3.0.18-beta.178: a number's frame drawn from its sharp copy (win/sharp_frames) - sampled as it is, not one tap
+    // a game pixel as the interface's magnified pictures are
+    bool sharpCopy = false;
 };
 
 // AI textures (0.13): a cell of the game's sprite cache that got a new frame - the whole cell, the frame in its top
@@ -80,6 +83,8 @@ struct UploadCmd {  // texture pixels, ARGB8, rect.width() * rect.height() value
     // 2.5.18: the game's 16-bit format (a PixelFormat) when the pixels hold its texture's own full colours
     // (core/full_colour.hpp) - the AI textures take the texture by its 16-bit texels; 0: as the texture has them.
     uint8_t fullFrom = 0;
+    // 3.0.18-beta.178: a picture of the driver's own (a number's sharp copy), not the game's: never the AI textures'
+    uint8_t own = 0;
 };
 
 struct WriteTargetCmd {  // CPU pixels written into the render target (Unlock after a write, Blt from memory)
@@ -110,6 +115,9 @@ public:
     void upload(uint32_t texture, uint32_t level, const Rect& rect, const uint32_t* argb,
                 const std::vector<SpriteCell>& slots = {}, PixelFormat fullFrom = PixelFormat::Unknown,
                 const std::vector<std::vector<uint32_t>>& own = {});
+    // 3.0.18-beta.178: the driver's own picture (UploadCmd::own), slots as the game's sprite cells have them
+    void uploadOwn(uint32_t texture, uint32_t level, const Rect& rect, const uint32_t* argb,
+                   const std::vector<SpriteCell>& slots = {});
     void writeTarget(const Rect& rect, const uint32_t* argb);
     bool empty() const { return commands_.empty(); }
     // 3.0.3-beta.9: the last `count` commands moved before the one at `position` (the windows' panel under the game's

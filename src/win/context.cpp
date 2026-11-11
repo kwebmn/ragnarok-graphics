@@ -39,6 +39,7 @@
 #include "win/map_start.hpp"
 #include "win/map_entry_hook.hpp"
 #include "win/pick_hook.hpp"
+#include "win/sharp_frames.hpp"
 #include "win/sort_guard.hpp"
 #include "win/world_mouse.hpp"
 #include "win/server_night.hpp"
@@ -475,6 +476,12 @@ bool Context::open(std::string& error) {
                         (renderer->remote() || renderer->startAiTextures(gameDir(), config.ai));
     crisp::setWindowArt(config.windowArt);  // 0.41: before the first twin
     crisp::install(config.crispText);
+    // 3.0.18-beta.178 (the owner: «как в игре, только чётко»): the numbers' frames from sharp copies (win/sharp_frames)
+    if (config.crispNumbers)
+        LOG_INFO("sharp numbers: on - the damage digits, Miss, Guard, Critical!! and Lucky from the game's own "
+                 "pictures, xBR four times larger");
+    else
+        LOG_INFO("sharp numbers: off (crisp_numbers = 0)");
     // AI textures (0.13): sprites through the game's sprite cache, cell by cell (sprite_hook.hpp); (0.14) the windows'
     // icons through crisp text's twins. 0.23: the torches' frames are known through it too - whenever the picture is
     // ours (not RTX Remix's), as the torches can be turned on in a running game.
@@ -485,7 +492,8 @@ bool Context::open(std::string& error) {
     const EffectSettings drawn = effects();
     const bool d3d11Hook = (aiHere && cells) || drawn.actorShadows || drawn.torch || drawn.glint ||
                            drawn.hitFlash || drawn.deathFlash ||
-                           drawn.bodyTints;  // 0.95, 0.96, 3.0.16-beta.7, .13: the sprites' kinds
+                           drawn.bodyTints ||  // 0.95, 0.96, 3.0.16-beta.7, .13: the sprites' kinds
+                           config.crispNumbers;  // 3.0.18-beta.178: the numbers' frames as the game writes them
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     setFullColour(config.fullColour);  // 2.5.18: the textures in their pictures' own colours
@@ -2002,9 +2010,9 @@ void Context::logStats(bool final) {
         std::snprintf(full, sizeof full, "; %u textures written in full colour so far (%u MB waiting)",
                       fullColourTextures(), unsigned(TextureLevels::fullBytes() >> 20));
     if (stats_.frames || stats_.readBacks)
-        LOG_INFO("%u frames in %.1f s (%.1f fps), %u reads of the frame from the GPU%s%s%s", stats_.frames,
-                 ms / 1000.0, ms ? stats_.frames * 1000.0 / ms : 0.0, stats_.readBacks, crisp::stats().c_str(), busy,
-                 full);
+        LOG_INFO("%u frames in %.1f s (%.1f fps), %u reads of the frame from the GPU%s%s%s%s", stats_.frames,
+                 ms / 1000.0, ms ? stats_.frames * 1000.0 / ms : 0.0, stats_.readBacks, crisp::stats().c_str(),
+                 sharpframes::stats().c_str(), busy, full);
     // 3.0.18-beta.161 (the owner: «делай 1 и 2» - the costs measured before the game's access is redone): the
     // driver's own work at a present, the game's memory it read (each read a call into Windows) and the controller's
     // checks of that memory (a VirtualQuery each)

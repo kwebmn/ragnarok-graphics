@@ -15,6 +15,8 @@ bool installSpriteHook();
 // false at any other time.
 bool spriteCell(Rect& cell, uint8_t& source);
 bool spriteCellCard();  // 0.95: ... and it is a card lying on the ground
+// 3.0.18-beta.178: ... and it is a number's frame (sprite_exe::numberFile) - its size, in the cell's top left corner
+bool spriteCellNumber(int& frameW, int& frameH);
 // 2.5.23: ... and the game writes it in a dye (a palette other than its sprite's own: the clothes', the hair's) - the
 // cell's texels as the game would write them in the sprite's own colours (its 16-bit values, the cell's size; the AI
 // textures find the pack's picture by them and colour it as the dye); nullptr otherwise.

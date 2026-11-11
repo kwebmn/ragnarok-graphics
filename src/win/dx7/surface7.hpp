@@ -66,6 +66,10 @@ public:
     void sync(FrameRecord& record);
     // 0.93: a sprite cache's: what the game wrote into the cell at texel (x, y) - sprite_exe::Source, 0 none.
     uint8_t spriteAt(float x, float y, bool* card = nullptr) const;  // 0.95: a card on the ground
+    // 3.0.18-beta.178: ... the cell at texture coordinates (u, v) when it holds a number's frame (win/sharp_frames),
+    // the cache's size in texels with it; nullptr otherwise. anySpriteNumber: whether any cell does (a draw's check)
+    const sprite_cells::Cell* spriteNumberAt(float u, float v, int& width, int& height) const;
+    bool anySpriteNumber() const { return top()->cells_.anyNumber(); }
     // 2.5.18: what CTexture::Update just wrote into this texture (win/texture_hook.hpp) as its picture had it - w x h
     // texels at (x, y), pitch in texels - kept to go up in full colour; false: not kept.
     bool fullColour(int x, int y, int w, int h, const uint32_t* picture, int pitch);

@@ -144,8 +144,10 @@ uint64_t fnv(const std::vector<uint8_t>& b) {
 // calls a draw): the record written by kinds at once is the same bytes as written field by field before
 TEST(bridge_a_busy_record_writes_the_same_bytes_as_before) {
     const std::vector<uint8_t> bytes = bytesOf(busyRecord());
-    CHECK_EQ(bytes.size(), size_t(12655));                // as written field by field (3.0.6-beta.2)
-    CHECK_EQ(fnv(bytes), uint64_t(0xe639f9cd2a840b64ull));
+    // as written field by field (3.0.6-beta.2: 12655 bytes); 3.0.18-beta.178: a byte more a draw (sharpCopy) and an
+    // upload (own)
+    CHECK_EQ(bytes.size(), size_t(12698));
+    CHECK_EQ(fnv(bytes), uint64_t(0x432f44fc9b030f0eull));
 
     FrameRecord back;
     WireReader rd(bytes.data(), bytes.size());

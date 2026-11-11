@@ -899,7 +899,9 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     profileMark("the game's textures written");  // 3.0.5-beta.2
     Texture& t = it->second;
     // 0.26: a whole picture - how much it looks like fire (an effect drawn from it lights around it).
-    if (u.level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height) {
+    // 3.0.18-beta.178: not the driver's own (a number's sharp copy): no fire, light or leaves - as the game's cell
+    if (u.level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height &&
+        !u.own) {
         t.fire = effect_light::fireOf(rec.pixels().data() + u.pixels, t.width, t.height, t.fireColour);
         t.light = effect_light::lightOf(rec.pixels().data() + u.pixels, t.width, t.height, t.lightColour);  // 0.36
         t.leafy = foliage::leafyTexture(rec.pixels().data() + u.pixels, t.width, t.height,  // 0.64
@@ -916,7 +918,7 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     dst.SubresourceIndex = u.level;
     list->CopyTextureRegion(&dst, UINT(u.rect.left), UINT(u.rect.top), 0, &src, nullptr);
     if (u.slotCount) noteSpriteCells(t, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.32
-    if (ai) {
+    if (ai && !u.own) {  // 3.0.18-beta.178: the driver's own picture is none of the pack's
         std::vector<uint32_t> game;  // 2.5.18: the texels the pack knows it by
         ai->noteUpload(u.texture, t, u, full_colour::aiTexels(u, rec.pixels().data() + u.pixels, game),
                        u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount,  // with their sources

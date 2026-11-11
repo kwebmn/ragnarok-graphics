@@ -583,7 +583,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.colorKey = s.colorKey ? 1u : 0u;
     c.uiMode = uint32_t(uiFilterMode(s.ui, scale, uiSharp ? UiFilter::Sharp : UiFilter::Smooth));
     // The AI's picture has the detail the game pixels lack: sampled as it is, not one tap per game pixel.
-    if (aiDrawn[0]) c.uiMode = 0;
+    if (aiDrawn[0] || d.sharpCopy) c.uiMode = 0;  // 3.0.18-beta.178: a number's sharp copy likewise
     if (d.effect == uint8_t(effect_exe::Kind::Panel) || d.effect == uint8_t(effect_exe::Kind::Backdrop))
         c.uiMode = 0;  // 3.0.3-beta.8: at the target's pixels (3.0.18-beta.64: the glass too)
     if (twin) {  // the tile's first game pixel is the window's place plus the tile's (spec §6)

@@ -973,6 +973,8 @@ Config parseConfig(const std::string& text) {
             if (val == "pixels") c.windowArt = WindowArt::Pixels;
         } else if (key == "display.crisp_text") {
             setBool(val, c.crispText);
+        } else if (key == "display.crisp_numbers") {
+            setBool(val, c.crispNumbers);  // 3.0.18-beta.178
         } else if (key == "quality.render_scale") {
             toInt(val, 50, 200, c.renderScale);  // 0.58: from 50 % (drawn smaller, made larger sharply)
         } else if (key == "quality.world_scale") {

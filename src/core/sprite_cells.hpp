@@ -16,18 +16,28 @@ struct Cell {
     Rect rect;
     uint8_t source = 0;
     bool card = false;
+    // 3.0.18-beta.178: a number's frame (core/sharp_frames.hpp) - its sharp copy's key and the frame's size, the
+    // frame in the cell's top left corner; 0: none
+    uint64_t sharp = 0;
+    int16_t frameW = 0, frameH = 0;
 };
 
 class Cells {
 public:
     static constexpr int kMost = 1024;
-    void written(const Rect& r, uint8_t source, bool card);
+    void written(const Rect& r, uint8_t source, bool card, uint64_t sharp = 0, int frameW = 0, int frameH = 0);
+    // 3.0.18-beta.178: the cell at (x, y) of the texture; nullptr where none is known
+    const Cell* find(float x, float y) const;
+    // ... among the numbers' cells alone (a few: every sprite's draw from the cache asks)
+    const Cell* number(float x, float y) const;
+    bool anyNumber() const { return !numbers_.empty(); }
     // The kind of the frame at (x, y) of the texture, 0 where none is known; card: whether it is a card
     uint8_t at(float x, float y, bool* card) const;
     size_t size() const { return cells_.size(); }
 
 private:
     std::vector<Cell> cells_;
+    std::vector<Cell> numbers_;  // 3.0.18-beta.178: the cells with a sharp copy, as cells_ has them
 };
 
 }  // namespace uagfx::sprite_cells

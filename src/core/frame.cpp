@@ -71,6 +71,12 @@ void FrameRecord::upload(uint32_t texture, uint32_t level, const Rect& rect, con
     commands_.push_back({Cmd::Upload, uint32_t(uploads_.size() - 1)});
 }
 
+void FrameRecord::uploadOwn(uint32_t texture, uint32_t level, const Rect& rect, const uint32_t* argb,
+                            const std::vector<SpriteCell>& slots) {
+    upload(texture, level, rect, argb, slots);
+    uploads_.back().own = 1;
+}
+
 void FrameRecord::writeTarget(const Rect& rect, const uint32_t* argb) {
     ++work_;
     WriteTargetCmd w;

@@ -998,6 +998,9 @@ struct Config {
     bool dpiAware = false;
     UiFilter uiFilter = UiFilter::Sharp;
     bool crispText = true;       // window text and lines at the window's real pixels when k > 1 (stage 6)
+    // 3.0.18-beta.178: the damage digits, Miss, Guard, Critical!!, Lucky and the crits' stars from sharp copies of
+    // the game's own frames (core/sharp_frames.hpp) - as the game has them, xBR four times larger
+    bool crispNumbers = true;
     WindowArt windowArt = WindowArt::Xbr;  // 0.41
     int renderScale = 100;       // %, 100-200: the frame is drawn this much larger and shrunk when shown
     int sharpen = 50;            // 0-100: contrast adaptive sharpening of the picture on screen; 0 = off
