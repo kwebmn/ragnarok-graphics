@@ -793,7 +793,22 @@ std::string takeReadTally() {
     HMODULE self = nullptr;  // the driver's own module (the system's ddraw.dll may be loaded under the same name)
     GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                        reinterpret_cast<LPCWSTR>(&takeReadTally), &self);
-    return g_tally.take(uint32_t(uintptr_t(self)));
+    const uint32_t base = uint32_t(uintptr_t(self));
+    // 3.0.18-beta.163: the places summed by the driver's functions (its unwind table, read once - the module stays)
+    static std::vector<pe::Function> functions;
+    static bool read = false;
+    if (!read && base) {
+        read = true;
+        const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(self);
+        const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS32*>(uintptr_t(base) + uintptr_t(dos->e_lfanew));
+        const uint32_t size = nt->OptionalHeader.SizeOfImage;
+        functions = pe::functionsOf([base, size](uint32_t rva, void* out, size_t n) {
+            if (rva > size || n > size - rva) return false;
+            std::memcpy(out, reinterpret_cast<const void*>(uintptr_t(base) + rva), n);
+            return true;
+        });
+    }
+    return g_tally.take(base, 6, functions.empty() ? nullptr : &functions);
 }
 
 }  // namespace uagfx::win

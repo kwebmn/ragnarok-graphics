@@ -13,50 +13,56 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
 endif()
 
 # 3.0.18-beta.162 (the owner: «делай 1 и 2» - the update smaller without the game slower): in the 32-bit build the
-# interface's windows, cards and panels, the settings, the reports and the site's parts are compiled for size (-Os);
-# the drawing, the textures and pictures, the hooks into uaRO.exe, the sound, the files and the map's loading stay
-# at full speed (-O3, as before) - the samples of R-U75M35's test put the game's thread there. ddraw.dll 20.5 MB ->
-# about 15. The 64-bit build (uaro-render64.exe draws every frame) is left as it was.
+# code that runs now and then - the windows opened for a while (storage, shops, trade, equipment, skills, options...),
+# the login and the character screens, the settings, the reports, the site's parts, «Довідник»'s pages - is compiled
+# for size (-Os); everything that runs each frame (the panels, the bar, the chat, the party, the HP bars, the buffs,
+# the world's signs, the pad, uaUI's plumbing) and the drawing, the textures, the hooks, the sound, the files and the
+# map's loading stay at full speed (-O3). 3.0.18-beta.163: the panels taken out of it - beta.162's -Os for them made
+# R-MBCDBU's interface 1.85-2.36 ms a frame at 55-90 draws where -O3's took 1.31. The 64-bit build is left as it was.
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "i686" AND CMAKE_BUILD_TYPE STREQUAL "Release")
     file(GLOB UAGFX_SMALL_SOURCES CONFIGURE_DEPENDS
-        src/app/*.cpp src/uikit/*.cpp src/core/settings/*.cpp src/pad/core/*.cpp src/pad/core/*/*.cpp
-        src/win/*_window.cpp src/win/*_card.cpp src/win/*_panel.cpp src/win/*_watch.cpp src/win/login_*.cpp
-        src/win/char_*.cpp src/win/pad_*.cpp src/win/site_*.cpp src/win/exp_*.cpp src/win/ui_live.cpp
-        src/win/ui_sheet.cpp src/win/ui_field.cpp src/win/accounts_store.cpp src/win/ammo_sound.cpp
-        src/win/buff_column.cpp src/win/carry_icon.cpp src/win/cast_bar.cpp src/win/chat_wheel.cpp
-        src/win/console.cpp src/win/console_hint.cpp src/win/game_logins.cpp src/win/homun_ai_files.cpp
-        src/win/hotbar.cpp src/win/hud_edit.cpp src/win/low_hp_edge.cpp src/win/mob_hp.cpp src/win/msg_box.cpp
-        src/win/my_shop.cpp src/win/notifier.cpp src/win/npc_tag.cpp src/win/npc_talk.cpp src/win/old_windows.cpp
-        src/win/open_page.cpp src/win/own_windows.cpp src/win/party_setup.cpp src/win/portrait.cpp
-        src/win/reference_load.cpp src/win/server_probe.cpp src/win/setting_edit.cpp src/win/several_windows.cpp
-        src/win/start_screen.cpp src/win/system_probe.cpp src/win/tracker.cpp src/win/uaui_showcase.cpp
-        src/win/user_files.cpp src/win/vend_setup.cpp src/win/vend_shop.cpp src/win/weight_rules.cpp
-        src/win/whisper_setup.cpp src/win/window_stack.cpp src/win/window_switch.cpp src/win/world_signs.cpp
-        src/core/*_card.cpp src/core/*_window.cpp src/core/*_panel.cpp src/core/login_*.cpp src/core/char_*.cpp
-        src/core/pad_*.cpp src/core/report*.cpp src/core/skill_*.cpp src/core/window_*.cpp src/core/reference_live.cpp
-        src/core/reference_now.cpp src/core/reference_pack.cpp src/core/reference_pages.cpp
-        src/core/reference_quests.cpp src/core/accounts.cpp src/core/bar_hint.cpp src/core/buff_table_data.cpp
-        src/core/card_names.cpp src/core/chat_panel.cpp src/core/chat_wheel.cpp src/core/client_patch.cpp
-        src/core/closed_windows.cpp src/core/combo.cpp src/core/companion_skills.cpp src/core/computer.cpp
+        src/app/*.cpp src/core/settings/*.cpp
+        src/win/accounts_store.cpp src/win/answer_card.cpp src/win/ask_card.cpp src/win/cart_window.cpp
+        src/win/char_diary.cpp src/win/char_make.cpp src/win/char_select.cpp src/win/chatroom_window.cpp
+        src/win/command_window.cpp src/win/console.cpp src/win/detail_window.cpp src/win/emote_window.cpp
+        src/win/equip_window.cpp src/win/game_logins.cpp src/win/guild_card.cpp src/win/homun_ai_files.cpp
+        src/win/homun_card.cpp src/win/hud_edit.cpp src/win/info_card.cpp src/win/item_window.cpp
+        src/win/login_*.cpp src/win/macro_card.cpp src/win/menu_window.cpp src/win/merc_card.cpp
+        src/win/mob_card.cpp src/win/msg_box.cpp src/win/my_shop.cpp src/win/npc_talk.cpp src/win/old_windows.cpp
+        src/win/open_page.cpp src/win/options_card.cpp src/win/own_windows.cpp src/win/party_setup.cpp
+        src/win/pet_card.cpp src/win/pick_card.cpp src/win/popup_window.cpp src/win/portrait.cpp
+        src/win/recap_window.cpp src/win/reference_load.cpp src/win/reference_window.cpp src/win/room_window.cpp
+        src/win/server_card.cpp src/win/server_probe.cpp src/win/setting_edit.cpp src/win/several_windows.cpp
+        src/win/shop_window.cpp src/win/site_*.cpp src/win/skill_window.cpp src/win/social_card.cpp
+        src/win/start_screen.cpp src/win/stat_window.cpp src/win/storage_window.cpp src/win/system_probe.cpp
+        src/win/text_window.cpp src/win/tip_window.cpp src/win/trade_window.cpp src/win/uaui_showcase.cpp
+        src/win/user_files.cpp src/win/vend_setup.cpp src/win/vend_shop.cpp src/win/whisper_setup.cpp
+        src/win/whisper_window.cpp
+        src/core/accounts.cpp src/core/answer_card.cpp src/core/ask_card.cpp src/core/card_names.cpp
+        src/core/cart_window.cpp src/core/char_diary.cpp src/core/char_make.cpp src/core/char_select.cpp
+        src/core/chatroom_card.cpp src/core/client_patch.cpp src/core/command_card.cpp src/core/computer.cpp
         src/core/config.cpp src/core/console_box.cpp src/core/console_pins.cpp src/core/console_tiles.cpp
-        src/core/death_recap.cpp src/core/equip_sets.cpp src/core/exp_gain.cpp src/core/exp_rate.cpp
-        src/core/first_game.cpp src/core/gear_compare.cpp src/core/graphics_test.cpp src/core/guild_tabs.cpp
-        src/core/homun_ai.cpp src/core/hotbar_bars.cpp src/core/hud_layout.cpp src/core/hunt_stats.cpp
-        src/core/ini_upgrade.cpp src/core/install_ping.cpp src/core/item_elements.cpp
-        src/core/item_elements_data.cpp src/core/item_pick.cpp src/core/launcher.cpp src/core/layout_migration.cpp
-        src/core/live_config.cpp src/core/log_files.cpp src/core/merc_ai.cpp src/core/merc_block.cpp
-        src/core/mob_hp.cpp src/core/mob_search.cpp src/core/mount_icon.cpp src/core/mvp_timers.cpp
-        src/core/my_shop.cpp src/core/notify.cpp src/core/npc_talk.cpp src/core/osk.cpp src/core/party_alarm.cpp
-        src/core/party_setup.cpp src/core/party_watch.cpp src/core/potion_warn.cpp src/core/register_form.cpp
-        src/core/renderer_choice.cpp src/core/safe_mode.cpp src/core/server_status.cpp src/core/shelf_merge.cpp
-        src/core/shelf_toast.cpp src/core/shot_spec.cpp src/core/site_api.cpp src/core/site_signin.cpp
-        src/core/start_failures.cpp src/core/start_screen.cpp src/core/stash_book.cpp src/core/stat_math.cpp
-        src/core/studio_link.cpp src/core/studio_state.cpp src/core/studio_status.cpp src/core/supplies.cpp
-        src/core/text_field.cpp src/core/tip_texts.cpp src/core/ui_chime.cpp src/core/ui_glide.cpp
-        src/core/ui_icons.cpp src/core/ui_motion.cpp src/core/ui_sheet_model.cpp src/core/ui_style.cpp
-        src/core/ui_theme.cpp src/core/ui_theme_css.cpp src/core/update_check.cpp src/core/usage.cpp
-        src/core/version.cpp src/core/weight_fit.cpp src/core/weight_rules.cpp src/core/world_signs.cpp
-        src/core/world_windows.cpp)
+        src/core/death_recap.cpp src/core/emote_card.cpp src/core/equip_sets.cpp src/core/equip_window.cpp
+        src/core/first_game.cpp src/core/gear_compare.cpp src/core/graphics_test.cpp src/core/guild_card.cpp
+        src/core/guild_tabs.cpp src/core/homun_ai.cpp src/core/homun_card.cpp src/core/hud_layout_panel.cpp
+        src/core/info_card.cpp src/core/ini_upgrade.cpp src/core/install_ping.cpp src/core/item_elements.cpp
+        src/core/item_elements_data.cpp src/core/item_pick.cpp src/core/item_window.cpp src/core/launcher.cpp
+        src/core/layout_migration.cpp src/core/log_files.cpp src/core/login_*.cpp src/core/macro_card.cpp
+        src/core/menu_window.cpp src/core/merc_ai.cpp src/core/merc_card.cpp src/core/mob_search.cpp
+        src/core/my_shop.cpp src/core/npc_talk.cpp src/core/options_card.cpp src/core/party_setup.cpp
+        src/core/pet_card.cpp src/core/pick_card.cpp src/core/popup_card.cpp src/core/reference_live.cpp
+        src/core/reference_now.cpp src/core/reference_pack.cpp src/core/reference_pages.cpp
+        src/core/reference_quests.cpp src/core/reference_window.cpp src/core/register_form.cpp
+        src/core/renderer_choice.cpp src/core/report*.cpp src/core/room_card.cpp src/core/safe_mode.cpp
+        src/core/server_status.cpp src/core/settings_window.cpp src/core/shelf_merge.cpp src/core/shelf_toast.cpp
+        src/core/shop_window.cpp src/core/shot_spec.cpp src/core/site_api.cpp src/core/site_signin.cpp
+        src/core/skill_info.cpp src/core/skill_plan.cpp src/core/skill_tree.cpp src/core/skill_tree_view.cpp
+        src/core/skill_window.cpp src/core/social_card.cpp src/core/start_failures.cpp src/core/start_screen.cpp
+        src/core/stash_book.cpp src/core/stat_math.cpp src/core/stat_window.cpp src/core/studio_link.cpp
+        src/core/studio_state.cpp src/core/studio_status.cpp src/core/switch_card.cpp src/core/text_field.cpp
+        src/core/tip_card.cpp src/core/tip_texts.cpp src/core/trade_window.cpp src/core/update_check.cpp
+        src/core/usage.cpp src/core/vend_setup.cpp src/core/vend_shop.cpp src/core/version.cpp
+        src/core/weight_fit.cpp src/core/whisper_card.cpp src/core/window_plan.cpp)
     set_source_files_properties(${UAGFX_SMALL_SOURCES} PROPERTIES COMPILE_OPTIONS "-Os")
 endif()
 

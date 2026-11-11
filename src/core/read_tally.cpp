@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <map>
 #include <vector>
 
 namespace uagfx::readtally {
@@ -13,9 +14,10 @@ void Tally::add(uint32_t from, double ms) {
         ++unknown_;
         return;
     }
-    // open addressing: the place's slot by its hash, the next free one when taken; a full table - elsewhere
-    uint32_t slot = ((from >> 2) * 2654435761u) >> 26;  // 6 bits: kPlaces
-    for (int probe = 0; probe < kPlaces; ++probe, slot = (slot + 1) & (kPlaces - 1)) {
+    // open addressing: the place's slot by its hash, the next free one when taken; none free in 32 - elsewhere (a
+    // read costs a few steps however full the table is)
+    uint32_t slot = ((from >> 2) * 2654435761u) >> 22;  // 10 bits: kPlaces
+    for (int probe = 0; probe < 32; ++probe, slot = (slot + 1) & (kPlaces - 1)) {
         Place& p = places_[slot];
         if (p.at == from || p.at == 0) {
             p.at = from;
@@ -27,16 +29,26 @@ void Tally::add(uint32_t from, double ms) {
     ++elsewhere_;
 }
 
-std::string Tally::take(uint32_t base, int top) {
+std::string Tally::take(uint32_t base, int top, const std::vector<pe::Function>* functions) {
     std::string line;
     if (frames_) {
         const double f = double(frames_);
         char head[96];
         std::snprintf(head, sizeof head, "game memory: %.0f reads a frame (%.2f ms)", double(reads_) / f, ms_ / f);
         line = head;
+        std::map<uint32_t, Place> byKey;  // a place, or the start of the function it is in
+        for (const Place& p : places_) {
+            if (!p.at) continue;
+            uint32_t key = p.at;
+            if (functions && p.at >= base)
+                if (const pe::Function* fn = pe::functionAt(*functions, p.at - base)) key = base + fn->rva;
+            Place& sum = byKey[key];
+            sum.at = key;
+            sum.reads += p.reads;
+            sum.ms += p.ms;
+        }
         std::vector<const Place*> kept;
-        for (const Place& p : places_)
-            if (p.at) kept.push_back(&p);
+        for (const auto& [key, p] : byKey) kept.push_back(&p);
         std::sort(kept.begin(), kept.end(), [](const Place* a, const Place* b) {
             return a->reads != b->reads ? a->reads > b->reads : a->at < b->at;
         });
