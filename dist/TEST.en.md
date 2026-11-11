@@ -1,3 +1,5 @@
+- Almost every window can now be pulled by its bottom right corner: NPC talk, vending, shop opening, my shop, item choice, friends/party, chat rooms, pet, homunculus, mercenary, settings, macros, whisper settings, the command list - 70-150 %, each keeps its own size.
+
 - Window size by the mouse: Items, Equipment, Stats, Skills, storage, cart, trade, the NPC shop and the guild - take the bottom right corner (a gold corner shows under the pointer) and pull: 70-150 %. Each window keeps its own size (uaro-graphics\window-sizes.txt).
 
 - Buffs the server keeps on by itself no longer show a timer or warn that they are ending: Maximize Power and Cloaking (while SP lasts), Chase Walk, Relax, Frenzy, Play Dead, Running, Lex Aeterna, Mystical Amplification, Counter Instinct, Signum Crucis, taekwon stances. Their skill database numbers were not durations (Maximize Power's 1-5 s instead of "until switched off").
