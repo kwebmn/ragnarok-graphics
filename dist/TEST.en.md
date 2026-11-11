@@ -1,3 +1,5 @@
+- A text's width is measured through Windows only once for each label at its size: then it comes from memory (R-B8SDEK: measuring text took 13.7 % of the game's thread, the chat's layout 0.65 ms a frame). The stock of fonts for measuring is larger (64), and the one unused longest goes first. The log tells every 30 s how many measures and how many fonts were made.
+
 - By the profiler's measurement (R-XZGR7R) needless work every frame removed:
   - the interface library no longer visits every element of the hidden windows each frame (about 70 of them) - a hidden document is updated and laid out when it shows;
   - the controller asked Windows which window is under the cursor at each mouse poll - now only when the cursor moved or every 100 ms;
