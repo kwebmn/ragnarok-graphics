@@ -22,6 +22,9 @@
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
 
+#include "win/options_card.hpp"
+#include "win/own_windows.hpp"
+
 namespace uagfx::win::padtileswin {
 namespace {
 
@@ -38,6 +41,7 @@ struct State {
     bool open = false, shown = false;
     int focus = 0;
     int count = pt::kTiles;  // 3.0.11-beta.216: ten with a mercenary hired («Найманець»)
+    std::vector<pt::Tile> list;  // 3.0.18-beta.124: the tiles in their places (ours switched on, the mercenary)
     pt::Layout layout;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -67,14 +71,15 @@ std::vector<Words> gdiWords(const std::vector<pt::Words>& in) {
 void render(State& s, bool sony) {
     const bool byUaui = uaui::ready();  // 3.0.18-beta.35: the words kept for uaUI's sheet, no picture
     if (!byUaui && !panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    if (!byUaui) pt::paint(s.picture, s.layout, s.focus, sony);
+    if (!byUaui) pt::paint(s.picture, s.layout, s.focus, sony, &s.list);
     using settings::Text;
     const settings::Lang l = language();
-    const std::vector<std::string> names = {settings::tr(l, Text::ItemsTitle),   settings::tr(l, Text::StatsTitle),
-                                            settings::tr(l, Text::TileSkills),   settings::tr(l, Text::TileEquip),
-                                            settings::tr(l, Text::PartyTitle),   settings::tr(l, Text::TileMap),
-                                            settings::tr(l, Text::RefTitle),     settings::tr(l, Text::TileOptions),
-                                            settings::tr(l, Text::PagePad),      settings::tr(l, Text::MercTile)};
+    const Text byTile[int(pt::Tile::Count)] = {Text::ItemsTitle, Text::StatsTitle, Text::TileSkills, Text::TileEquip,
+                                               Text::PartyTitle, Text::TileMap, Text::RefTitle, Text::TileOptions,
+                                               Text::PagePad, Text::MercTile, Text::HudPartHunt, Text::InterfaceMvp,
+                                               Text::TrackerTitle, Text::InterfaceDeathRecap};
+    std::vector<std::string> names;
+    for (const pt::Tile t : s.list) names.push_back(settings::tr(l, byTile[int(t)]));
     std::vector<Words> words = gdiWords(pt::words(s.layout, names, settings::tr(l, Text::TilesTitle),
                                             settings::tr(l, Text::TilesOpen), settings::tr(l, Text::TilesClose),
                                             sony));
@@ -111,7 +116,8 @@ void close(State& s, const char* why) {
 
 // The framed tile's window: the game's own through its Basic Info window, the new big map, «Довідник», the pad's menu
 void run(State& s) {
-    const pt::Tile tile = pt::Tile(s.focus);
+    if (s.focus < 0 || size_t(s.focus) >= s.list.size()) return;
+    const pt::Tile tile = s.list[size_t(s.focus)];
     close(s, "a tile chosen");
     bool done = true;
     const char* what = "";
@@ -121,7 +127,10 @@ void run(State& s) {
         case pt::Tile::Skills: what = "the game's skills"; done = charpanel::pressGame(kSkills); break;
         case pt::Tile::Equip: what = "the game's equipment"; done = charpanel::pressGame(kEquip); break;
         case pt::Tile::Party: what = "the game's party and friends"; done = charpanel::pressGame(kFriends); break;
-        case pt::Tile::Options: what = "the game's options"; done = charpanel::pressGame(kOptions); break;
+        case pt::Tile::Options:  // 3.0.18-beta.124: «Налаштування» (the game's options in the new look)
+            what = "«Налаштування»";
+            done = optionscardwin::toggleOpen("the pad's tile") || charpanel::pressGame(kOptions);
+            break;
         case pt::Tile::Map:
             what = "the big map";
             done = minimapproto::showBig(true);
@@ -134,6 +143,11 @@ void run(State& s) {
         case pt::Tile::Reference: what = "«Довідник»"; referencewin::toggleFromPad(); break;
         case pt::Tile::Pad: what = "the controller's own menu"; uapad::runtime::openPadMenu(); break;
         case pt::Tile::Merc: what = "the mercenary's card"; done = merccardwin::toggleCard(); break;  // .216
+        case pt::Tile::Hunt: what = "«Полювання»"; ownwin::press(closedwin::Own::Hunt, "the pad's tile"); break;
+        case pt::Tile::Mvp: what = "«Таймери босів»"; ownwin::press(closedwin::Own::Mvp, "the pad's tile"); break;
+        case pt::Tile::Tracker: what = "«Відстеження»"; ownwin::press(closedwin::Own::Tracker, "the pad's tile"); break;
+        case pt::Tile::Recap: what = "«Що мене вбило»"; ownwin::press(closedwin::Own::Recap, "the pad's tile"); break;
+        default: break;
     }
     LOG_INFO("pad tile: %s%s", what, done ? "" : " - not possible now");
 }
@@ -173,7 +187,16 @@ static void frameInner(HWND game, double k, int targetWidth, int targetHeight) {
     s.k = float(k);
     s.targetW = targetWidth;
     s.targetH = targetHeight;
-    s.count = merccardwin::hired() ? pt::kMostTiles : pt::kTiles;
+    s.list.clear();  // 3.0.18-beta.124: the nine, ours switched on, the mercenary hired
+    for (int t = 0; t < pt::kTiles; ++t) s.list.push_back(pt::Tile(t));
+    for (const closedwin::Own o : ownwin::row()) {
+        if (o == closedwin::Own::Hunt) s.list.push_back(pt::Tile::Hunt);
+        if (o == closedwin::Own::Mvp) s.list.push_back(pt::Tile::Mvp);
+        if (o == closedwin::Own::Tracker) s.list.push_back(pt::Tile::Tracker);
+        if (o == closedwin::Own::Recap) s.list.push_back(pt::Tile::Recap);
+    }
+    if (merccardwin::hired()) s.list.push_back(pt::Tile::Merc);
+    s.count = int(s.list.size());
     if (s.focus >= s.count) s.focus = 0;
     s.layout = pt::layout(targetWidth / 2, targetHeight / 2, scale, s.count);
     const bool sony = uapad::runtime::look().sony;
@@ -206,7 +229,7 @@ static void fillSheet(State& s, uisheet::Content& c) {
                (on ? 2.0f : 1.0f) * sc);
         const int px = std::max(4, int(std::ceil(36 * sc)));
         const uint32_t rgb = on ? kGold2 : 0xC7CCD6;
-        const uiicons::Icon icon = pt::iconOf(int(i));
+        const uiicons::Icon icon = pt::iconOf(i < s.list.size() ? int(s.list[i]) : int(i));
         const std::string src = s.sheet.made("t" + std::to_string(int(icon)) + ':' + std::to_string(px) + ':' +
                                                  std::to_string(rgb),
                                              px, px, [&](panel::Picture& p) {

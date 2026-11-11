@@ -643,8 +643,8 @@ select selectbox option:checked { color: #e6cb8a; }
     background-color: #cfd3dc; }
 .sw .tg.on { background-color: #3f7d53; }
 .sw .tg.on .kn { left: 19dp; background-color: #ffffff; }
-.sw .sctl input.range { width: 140dp; margin-left: 10dp; }
-.sw .sv { display: block; width: 52dp; margin-left: 6dp; font-size: 12dp; color: #cfd3dc; text-align: right; }
+.sw .sctl input.range { width: 140dp; margin: 0 6dp 0 10dp; }
+.sw .sv { display: block; width: 52dp; font-size: 12dp; color: #cfd3dc; text-align: center; }
 .sw .chs { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; max-width: 330dp; }
 .sw .ch { display: block; margin: 2dp 0 2dp 4dp; padding: 3dp 9dp; border-radius: 6dp; border: 1dp #ffffff1a;
     font-size: 12dp; color: #cfd3dc; }

@@ -70,3 +70,21 @@ TEST(pad_tiles_icon_of_a_tile) {
     CHECK(padtiles::iconOf(0) != padtiles::iconOf(1));
     CHECK(padtiles::iconOf(-1) == uiicons::Icon::Search);
 }
+
+// 3.0.18-beta.124 (the concept «Ігровий інтерфейс»: the second row's windows on the controller too): any number of
+// tiles three to a row, a short last row in the middle; up and down to the nearest column; our windows' icons
+TEST(pad_tiles_any_count) {
+    const padtiles::Layout L = padtiles::layout(960, 540, 1.0f, 13);
+    CHECK_EQ(L.tiles.size(), size_t(13));
+    CHECK(std::abs(L.tiles[12].x - L.tiles[1].x) < 1.0f);  // alone: the middle column
+    CHECK_EQ(padtiles::moved(9, 0, 1, 13), 12);
+    CHECK_EQ(padtiles::moved(11, 0, 1, 13), 12);
+    CHECK_EQ(padtiles::moved(12, 0, 1, 13), 1);
+    CHECK_EQ(padtiles::moved(12, 0, -1, 13), 10);
+    const padtiles::Layout two = padtiles::layout(960, 540, 1.0f, 14);  // two in the last row, between the columns
+    CHECK(two.tiles[12].x > two.tiles[9].x && two.tiles[13].x < two.tiles[11].x);
+    CHECK_EQ(padtiles::moved(12, 1, 0, 14), 13);
+    CHECK_EQ(padtiles::moved(13, 1, 0, 14), 12);
+    CHECK(padtiles::iconOf(int(padtiles::Tile::Hunt)) == uiicons::Icon::Battle);
+    CHECK(padtiles::iconOf(int(padtiles::Tile::Recap)) == uiicons::Icon::Warn);
+}

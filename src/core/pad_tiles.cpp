@@ -13,11 +13,19 @@ namespace {
 constexpr float kTileW = 112, kTileH = 100, kGap = 10, kPad = 18, kTitleH = 34, kHintsH = 36, kGlyph = 20;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xECEFF5;
 constexpr uint32_t kMuted = 0x9AA3B5;
-constexpr uiicons::Icon kIcons[kMostTiles] = {
+constexpr uiicons::Icon kIcons[int(Tile::Count)] = {
     uiicons::Icon::Bag,   uiicons::Icon::Stats, uiicons::Icon::Skill, uiicons::Icon::Equip,   uiicons::Icon::Friends,
-    uiicons::Icon::Location, uiicons::Icon::Quest, uiicons::Icon::Gear, uiicons::Icon::Gamepad, uiicons::Icon::Battle};
+    uiicons::Icon::Location, uiicons::Icon::Quest, uiicons::Icon::Gear, uiicons::Icon::Gamepad, uiicons::Icon::Battle,
+    uiicons::Icon::Battle, uiicons::Icon::Mvp, uiicons::Icon::Quest, uiicons::Icon::Warn};  // .124: ours
 
-int countOf(int count) { return count > kTiles ? kMostTiles : kTiles; }
+int countOf(int count) { return std::max(1, count); }
+
+// 3.0.18-beta.124: a tile's row and its column as drawn (a short last row in the middle: 0.5 or 1)
+void placeOf(int i, int n, int& row, float& col) {
+    row = i / 3;
+    const int inRow = std::min(3, n - row * 3);
+    col = float(i % 3) + float(3 - inRow) / 2;
+}
 
 }  // namespace
 
@@ -30,9 +38,11 @@ Layout layout(int centreX, int centreY, float scale, int count) {
     L.glass = panel::Box{0, 0, (gridW + 2 * kPad) * s, (kPad + kTitleH + gridH + 12 + kHintsH + 10) * s};
     L.title = panel::Box{kPad * s, kPad * s, gridW * s, kTitleH * s};
     for (int i = 0; i < n; ++i) {
-        const int col = i < kTiles ? i % 3 : 1;  // the mercenary's under the middle
-        L.tiles.push_back(panel::Box{(kPad + float(col) * (kTileW + kGap)) * s,
-                                     (kPad + kTitleH + float(i / 3) * (kTileH + kGap)) * s, kTileW * s, kTileH * s});
+        int row = 0;
+        float col = 0;
+        placeOf(i, n, row, col);  // .124: a short last row in the middle (the mercenary's alone under the middle)
+        L.tiles.push_back(panel::Box{(kPad + col * (kTileW + kGap)) * s,
+                                     (kPad + kTitleH + float(row) * (kTileH + kGap)) * s, kTileW * s, kTileH * s});
     }
     L.hints = panel::Box{kPad * s, (kPad + kTitleH + gridH + 12) * s, gridW * s, kHintsH * s};
     L.w = int(std::ceil(L.glass.w));
@@ -49,18 +59,30 @@ int hitTest(const Layout& L, float x, float y) {
 }
 
 int moved(int at, int dx, int dy, int count) {
-    const int rows = (countOf(count) + 2) / 3;
-    if (at >= kTiles) {  // the mercenary's, alone in its row: up and down by the middle column
-        if (dy == 0) return at;
-        const int row = (3 + dy + rows) % rows;
-        return row == 3 ? at : row * 3 + 1;
+    const int n = countOf(count), rows = (n + 2) / 3;
+    if (at < 0 || at >= n) return 0;
+    int row = 0;
+    float col = 0;
+    placeOf(at, n, row, col);
+    if (dx != 0) {  // round its row
+        const int first = row * 3, inRow = std::min(3, n - first);
+        at = first + ((at - first + dx) % inRow + inRow) % inRow;
+        placeOf(at, n, row, col);
     }
-    const int row = ((at / 3) + dy + rows) % rows;
-    if (row == 3) return kTiles;
-    return row * 3 + ((at % 3) + dx + 3) % 3;
+    if (dy == 0) return at;
+    const int to = ((row + dy) % rows + rows) % rows;  // .124: round its column, to the nearest tile of that row
+    int best = to * 3;
+    float bestBy = 1e9f;
+    for (int i = to * 3; i < std::min(n, to * 3 + 3); ++i) {
+        int r = 0;
+        float c = 0;
+        placeOf(i, n, r, c);
+        if (std::fabs(c - col) < bestBy - 1e-3f) bestBy = std::fabs(c - col), best = i;
+    }
+    return best;
 }
 
-void paint(panel::Picture& out, const Layout& L, int focus, bool sony) {
+void paint(panel::Picture& out, const Layout& L, int focus, bool sony, const std::vector<Tile>* tiles) {
     const float s = L.s;
     panel::roundRect(out, L.glass, 14 * s, kCard, std::max(0.9f, uistyle::panel()), kWhite, 0.10f, 1.0f * s);
     panel::roundRect(out, panel::Box{L.hints.x, L.hints.y - 6 * s, L.hints.w, 1 * s}, 0, kWhite, 0.09f);
@@ -70,7 +92,8 @@ void paint(panel::Picture& out, const Layout& L, int focus, bool sony) {
         panel::roundRect(out, b, 12 * s, on ? kGold : kWhite, on ? 0.13f : 0.045f, on ? kGold2 : kWhite,
                          on ? 1.0f : 0.10f, (on ? 2.0f : 1.0f) * s);
         const float icon = 36 * s;
-        uiicons::draw(out, kIcons[i], b.x + (b.w - icon) / 2, b.y + 16 * s, icon, on ? kGold2 : 0xC7CCD6, 1.0f, 1.8f);
+        const int t = tiles && i < tiles->size() ? int((*tiles)[i]) : int(i);
+        uiicons::draw(out, iconOf(t), b.x + (b.w - icon) / 2, b.y + 16 * s, icon, on ? kGold2 : 0xC7CCD6, 1.0f, 1.8f);
     }
     const padglyph::Family f = sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
     const float y = L.hints.y + (L.hints.h - kGlyph * s) / 2;
@@ -101,6 +124,8 @@ std::vector<Words> words(const Layout& L, const std::vector<std::string>& names,
     return out;
 }
 
-uiicons::Icon iconOf(int tile) { return tile >= 0 && tile < kMostTiles ? kIcons[tile] : uiicons::Icon::Search; }
+uiicons::Icon iconOf(int tile) {
+    return tile >= 0 && tile < int(Tile::Count) ? kIcons[tile] : uiicons::Icon::Search;
+}
 
 }  // namespace uagfx::padtiles

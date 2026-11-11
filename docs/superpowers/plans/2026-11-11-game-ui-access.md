@@ -45,3 +45,7 @@ Ledger:
   Class names checked against the theme (sro, shn - .lw .srow and the sheet's .sh clashed), probed on the host.
 - 3.0.18-beta.123 (R-7TVEJU): «Група»'s ✕ stood over its title (no place class) - .closeb right 2dp, the fold/view and
   the count moved left 26dp. The report itself sent by the menu's «Надіслати звіт» (works, no menu in the shot).
+- 3.0.18-beta.124 (owner «1,2,3,4,5,6» - item 1, the pad): the Start tile takes our windows switched on («Полювання»,
+  «Таймери босів», «Відстеження», «Що мене вбило») - core padtiles any count, three a row, a short last row in the
+  middle, up/down to the nearest column (test); its «Налаштування» tile opens the new window; «Налаштування» on the
+  pad walks its controls (the runtime's optionsPad only for the old look); − and + by every slider (pad and mouse).

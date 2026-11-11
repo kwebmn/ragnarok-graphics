@@ -65,7 +65,9 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
    data-if="r.hint != ''">{{r.hint}}</span></div><div class="sctl"><span class="tg ctl" data-if="r.toggle"
    data-class-on="r.on" data-event-click="set_toggle(i)"><span class="kn"></span></span><input class="ctl"
    data-if="r.slider" type="range" data-attr-min="r.min" data-attr-max="r.max" data-attr-step="r.step"
-   data-attr-value="r.value" data-event-change="set_slider(i)"/><span class="sv" data-if="r.slider">{{r.vtext}}</span
+   data-attr-value="r.value" data-event-change="set_slider(i)"/><span class="ch ctl" data-if="r.slider"
+   data-event-click="set_step(i, -1)">&#x2212;</span><span class="sv" data-if="r.slider">{{r.vtext}}</span><span
+   class="ch ctl" data-if="r.slider" data-event-click="set_step(i, 1)">+</span
    ><div class="chs" data-if="r.choices.size > 0"><span class="ch ctl" data-for="c, j : r.choices"
    data-class-on="c.on" data-event-click="set_choice(i, j)">{{c.label}}</span></div></div></div></div>
    <div class="snone" data-if="srows.size == 0">{{none}}</div></div>
@@ -470,6 +472,7 @@ static void liveFrame(State& s) {
             v.RegisterMember("max", &SetRowView::max);
             v.RegisterMember("step", &SetRowView::step);
             v.RegisterMember("choices", &SetRowView::choices);
+            v.RegisterMember("key", &SetRowView::key);
         }
         m.RegisterArray<std::vector<SetRowView>>();
         if (auto v = m.RegisterStruct<NavView>()) {
@@ -502,6 +505,16 @@ static void liveFrame(State& s) {
         m.BindEventCallback("set_slider", [](Rml::DataModelHandle, Rml::Event& e, const Rml::VariantList& a) {
             if (a.empty()) return;
             useRow(state(), a[0].Get<int>(), 1, std::atoi(e.GetParameter<Rml::String>("value", "0").c_str()));
+        });
+        // 3.0.18-beta.124: − and + by a slider (the pad's way to it): a step of its own (the volumes 8)
+        m.BindEventCallback("set_step", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
+            if (a.size() < 2) return;
+            const int i = a[0].Get<int>(), by = a[1].Get<int>();
+            if (i < 0 || size_t(i) >= st.setRows.size()) return;
+            const SetRowView& r = st.setRows[size_t(i)];
+            const int step = r.key.rfind("game.", 0) == 0 ? kPadStep : std::max(1, r.step);
+            useRow(st, i, 1, std::clamp(r.value + by * step, r.min, r.max));
         });
         m.BindEventCallback("set_choice", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             if (a.size() >= 2) useRow(state(), a[0].Get<int>(), 2, a[1].Get<int>());

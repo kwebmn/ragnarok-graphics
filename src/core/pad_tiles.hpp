@@ -17,7 +17,10 @@ constexpr int kTiles = 9;
 // 3.0.11-beta.216 (the owner: «в интерфейсе нету управления наемниками»): a hired mercenary adds «Найманець», alone
 // in a fourth row under the middle column (`count` kMostTiles)
 constexpr int kMostTiles = 10;
-enum class Tile : uint8_t { Items, Stats, Skills, Equip, Party, Map, Reference, Options, Pad, Merc };
+// 3.0.18-beta.124 (the concept «Ігровий інтерфейс»): our windows of the character block's second row too,
+// those switched on - any count, three to a row, a short last row in the middle
+enum class Tile : uint8_t { Items, Stats, Skills, Equip, Party, Map, Reference, Options, Pad, Merc, Hunt, Mvp, Tracker,
+                            Recap, Count };
 
 struct Layout {
     float s = 1;
@@ -29,7 +32,8 @@ Layout layout(int centreX, int centreY, float scale, int count = kTiles);  // it
 int hitTest(const Layout& L, float x, float y);         // the tile there; -1 none
 int moved(int at, int dx, int dy, int count = kTiles);  // the frame moved round its row or its column
 
-void paint(panel::Picture& out, const Layout& L, int focus, bool sony);
+// `tiles`: the tiles in their places (none: Tile's own order)
+void paint(panel::Picture& out, const Layout& L, int focus, bool sony, const std::vector<Tile>* tiles = nullptr);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

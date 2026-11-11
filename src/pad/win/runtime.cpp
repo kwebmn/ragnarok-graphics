@@ -1445,7 +1445,8 @@ void tick() {
                   : drive && *top == Win::Pet                      ? petPad(pad, now)         // .159
                   : drive && *top == Win::Homun                    ? homunPad(pad, now)       // .160
                   : drive && *top == Win::Merc                     ? mercPad(pad, now)        // .161
-                  : drive && *top == Win::Options                  ? optionsPad(pad, now)     // .162
+                  // .162; 3.0.18-beta.124: «Налаштування» (live) walked by its own controls
+                  : drive && *top == Win::Options && !uagfx::win::uisheet::hasNav(int(*top)) ? optionsPad(pad, now)
                   : drive && *top == Win::Social                   ? socialPad(pad, now)      // .163
                   : drive && *top == Win::Servers                  ? serversPad(pad, now)     // .164
                   : drive && *top == Win::Guild                    ? guildPad(pad, now)       // .165
