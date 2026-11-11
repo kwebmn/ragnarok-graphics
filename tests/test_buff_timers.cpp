@@ -134,3 +134,13 @@ TEST(buff_timers_an_icon_on_now) {
     t.icon(36, true, 2000);
     CHECK(!t.on(35) && t.on(36));
 }
+
+// 3.0.18-beta.150 (the owner: on a merchant «павертраст заканчивается, а он там бесконечен»): the buffs the server
+// keeps on by itself (status_change_timer re-arms them: Maximize Power and Cloaking while the SP lasts, Play Dead,
+// Running ... till cancelled) have no time - no countdown, nothing «ending»; Power-Thrust keeps its own
+TEST(buff_timers_server_kept_buffs_have_no_end) {
+    CHECK_EQ(buffs::duration(26, 114, 5), 0u);   // Maximize Power: its cast_db 1-5 s is the SP drain's
+    CHECK_EQ(buffs::duration(5, 135, 10), 0u);   // Cloaking
+    CHECK_EQ(buffs::duration(29, 143, 1), 0u);   // Play Dead
+    CHECK_EQ(buffs::duration(25, 113, 5), 100000u);  // Power-Thrust: 100 s at level 5
+}
