@@ -28,6 +28,7 @@
 #include "win/game_memory.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
+#include "win/part_marks.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
@@ -748,6 +749,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     State& s = state();
     s.codePage = codePage;
     take(s);  // the lines kept with the chat off too: on, it shows them
+    partMark("chat take");  // 3.0.18-beta.171: its part split
     if (on != s.on) {
         s.on = on;
         s.key.clear();
@@ -766,6 +768,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     readInput(s);
+    partMark("chat input");
     // 3.0.11-beta.240: a command's words sent (the field empty again) - its channel and whisper put back
     if (s.restoreOn && (s.input.text.empty() || GetTickCount64() - s.restoreAt > 3000)) {
         s.restoreOn = false;
@@ -793,6 +796,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         hit = cp::hitTest(s.layout, s.rows, s.show, float(cx) * float(k) - float(s.layout.x),
                           float(cy) * float(k) - float(s.layout.y));
     const bool over = hit.part != cp::Part::None;
+    partMark("chat hover");
     const bool busy = !s.input.text.empty() || s.input.whisperFocus || (s.input.battle && s.input.typing);
     if (s.folded && !busy) {  // Alt+F10: out of sight until one types
         hide(s);
@@ -828,7 +832,9 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
                           s.input, texts(), measure, s.width);
     hudedit::place(hudlayout::Part::Chat, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
+    partMark("chat layout");
     makeRows(s);
+    partMark("chat rows");
     s.show.lineTimes.clear();  // 3.0.11-beta.243: the rows' lines' times (the one pointed at shows its own)
     if (s.rowsVersion == s.version)
         for (const cp::Line* l : s.rowLines) s.show.lineTimes.push_back(l->ms);
@@ -858,9 +864,13 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         drawn != s.key) {  // its grounds (3.0.18-beta.32: uaUI's or the picture)
         s.key = drawn;
         render(s);
+        partMark("chat key, drawn anew");
+    } else {
+        partMark("chat key");
     }
     s.shown = true;
     block(s, game);
+    partMark("chat block");
 }
 
 bool panelBox(int& x, int& y, int& w, int& h) {

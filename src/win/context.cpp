@@ -137,6 +137,7 @@
 #include "win/sound_hook.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/game_camera.hpp"
+#include "win/part_marks.hpp"
 #include "win/safe_read.hpp"
 #include "win/sprite_hook.hpp"
 #include "win/start_screen.hpp"
@@ -163,6 +164,14 @@ namespace {
 // 3.0.18-beta.169 (R-45Z47V: the driver's own work at a present grew 2.1 -> 4.7 ms in five minutes): each part of a
 // present timed (core/part_clock), the dearest told every 30 s
 partclock::Clock g_parts;
+
+double partNow() {
+    static LARGE_INTEGER freq{};
+    if (!freq.QuadPart) QueryPerformanceFrequency(&freq);
+    LARGE_INTEGER t;
+    QueryPerformanceCounter(&t);
+    return double(t.QuadPart) * 1000.0 / double(freq.QuadPart);
+}
 
 std::wstring wideOf(const std::string& utf8) {  // 2.15: a text of strings.cpp for the overlay
     const int n = MultiByteToWideChar(CP_UTF8, 0, utf8.data(), int(utf8.size()), nullptr, 0);
@@ -317,6 +326,8 @@ const EffectSettings& Context::effects() const {
     }
     return effects_;
 }
+
+void partMark(std::string_view name) { g_parts.mark(name, partNow()); }  // 3.0.18-beta.171
 
 Context& Context::get() {
     static Context c;
@@ -1992,7 +2003,7 @@ void Context::logStats(bool final) {
         double checksMs = 0;
         uapad::clientmem::takeQueries(checks, checksMs);
         const std::string reads = takeReadTally();
-        if (const std::string parts = g_parts.take(12); !parts.empty()) LOG_INFO("%s", parts.c_str());
+        if (const std::string parts = g_parts.take(18); !parts.empty()) LOG_INFO("%s", parts.c_str());
         LOG_INFO("the driver's frame: %.2f ms of its own work at a present (the renderer's present apart); %s; the "
                  "controller's memory checks %.0f a frame (%.2f ms); %u reads of places gone (3.0.18-beta.165)",
                  stats_.ownMs / stats_.frames, reads.empty() ? "game memory: none read" : reads.c_str(),
