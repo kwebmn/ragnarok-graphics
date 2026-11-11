@@ -11,6 +11,7 @@ namespace {
 
 LPTOP_LEVEL_EXCEPTION_FILTER g_previous = nullptr;
 char g_dump[MAX_PATH] = {};
+volatile bool g_crashDumped = false;  // 3.0.18-beta.145: a crash's dump written this run
 LONG g_once = 0;
 
 LONG WINAPI onCrash(EXCEPTION_POINTERS* e) {
@@ -32,6 +33,11 @@ LONG WINAPI onCrash(EXCEPTION_POINTERS* e) {
                                                                 reinterpret_cast<uintptr_t>(module));
         LOG_ERROR("crash: exception 0x%08lx at %s+0x%lx (thread %lu)", static_cast<unsigned long>(r->ExceptionCode),
                   name, module ? offset : 0ul, GetCurrentThreadId());
+        if (r->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && r->NumberParameters >= 2)  // 3.0.18-beta.145
+            LOG_ERROR("crash: %s at 0x%08lx", r->ExceptionInformation[0] == 1   ? "a write"
+                                                : r->ExceptionInformation[0] == 8 ? "an execution"
+                                                                                  : "a read",
+                      static_cast<unsigned long>(r->ExceptionInformation[1]));
         using WriteFn = BOOL(WINAPI*)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE, PMINIDUMP_EXCEPTION_INFORMATION,
                                       PMINIDUMP_USER_STREAM_INFORMATION, PMINIDUMP_CALLBACK_INFORMATION);
         HMODULE help = LoadLibraryA("dbghelp.dll");
@@ -49,6 +55,7 @@ LONG WINAPI onCrash(EXCEPTION_POINTERS* e) {
             const BOOL ok = write(GetCurrentProcess(), GetCurrentProcessId(), file,
                                   MINIDUMP_TYPE(MiniDumpNormal | MiniDumpWithThreadInfo), &info, nullptr, nullptr);
             CloseHandle(file);
+            if (ok) g_crashDumped = true;  // 3.0.18-beta.145: a hang after it keeps it (the cause is in it)
             if (ok)
                 LOG_ERROR("crash: a minidump is in uaro-graphics\\crash.dmp");
             else
@@ -61,7 +68,7 @@ LONG WINAPI onCrash(EXCEPTION_POINTERS* e) {
 }  // namespace
 
 bool writeHangDump() {
-    if (!g_dump[0]) return false;
+    if (!g_dump[0] || g_crashDumped) return false;  // 3.0.18-beta.145: the crash's dump kept
     using WriteFn = BOOL(WINAPI*)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE, PMINIDUMP_EXCEPTION_INFORMATION,
                                   PMINIDUMP_USER_STREAM_INFORMATION, PMINIDUMP_CALLBACK_INFORMATION);
     HMODULE help = LoadLibraryA("dbghelp.dll");

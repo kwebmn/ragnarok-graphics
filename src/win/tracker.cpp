@@ -54,6 +54,9 @@ struct State {
     bool upload = false;
     int clicksLogged = 0;
     bool uiShown = false;  // 3.0.18-beta.25: drawn by uaUI
+    // 3.0.18-beta.145 (the tester did not see what it is for): shown by its icon with nothing pinned - what to
+    // pin, for 8 s
+    ULONGLONG emptyHintUntil = 0;
     std::string viewKey;
 };
 
@@ -308,6 +311,15 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     build(s);
+    if (s.entries.empty() && GetTickCount64() < s.emptyHintUntil) {  // 3.0.18-beta.145: what to pin, a while
+        tk::Entry e;
+        e.kind = tk::Kind::Route;
+        e.title = say(settings::Text::TrackerEmptyTitle);
+        e.tag = say(settings::Text::TrackerEmptyTag);
+        e.lines.push_back(tk::Line{say(settings::Text::TrackerEmptyHint), "", false});
+        s.entries.push_back(std::move(e));
+        s.routeOf.push_back("");
+    }
     if (s.entries.empty()) {  // nothing pinned: no panel
         hide(s);
         uiFrame(s);
@@ -364,7 +376,9 @@ static void pressPart(State& s, tk::Part part, int entry) {
         keepState(s);
         LOG_INFO("tracker: hidden - shown again by the next pin");
     } else if (part == tk::Part::Close && e) {
-        if (e->kind == tk::Kind::Route && s.routeOf[size_t(entry)] == kPlotted) {
+        if (e->kind == tk::Kind::Route && s.routeOf[size_t(entry)].empty() && s.emptyHintUntil) {
+            s.emptyHintUntil = 0;  // 3.0.18-beta.145: the hint of what to pin, shut
+        } else if (e->kind == tk::Kind::Route && s.routeOf[size_t(entry)] == kPlotted) {
             minimapproto::clearPlot();  // 3.0.11-beta.71
         } else if (e->kind == tk::Kind::Route) {
             minimapproto::unfollow();
@@ -425,6 +439,7 @@ void toggleHidden(const char* why) {
     s.hidden = !s.hidden;
     keepState(s);
     s.key.clear();
+    s.emptyHintUntil = s.hidden ? 0 : GetTickCount64() + 8000;  // 3.0.18-beta.145: nothing pinned - what to pin
     LOG_INFO("tracker: %s (%s)", s.hidden ? "hidden" : "shown", why);
 }
 

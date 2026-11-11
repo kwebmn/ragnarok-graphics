@@ -816,4 +816,11 @@ std::string elementHex(int id, const uint8_t* itemInfo) {
     return b;
 }
 
+std::string withSlots(const std::string& name, int id, const uint8_t* itemInfo) {
+    if (!itemInfo || itemInfo[0x3C] == 0) return name;
+    int cards[4] = {};
+    cardnames::cardsOf(itemInfo, cards);
+    return cardnames::forged(cards) ? name : vendshop::withSlots(name, slotsOf(id));
+}
+
 }  // namespace uagfx::win::infocardwin

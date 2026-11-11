@@ -22,6 +22,7 @@
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/client_tables.hpp"
+#include "win/info_card.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/item_window.hpp"
@@ -210,6 +211,7 @@ void readSide(State& s, uint32_t base, tw::Side& side) {
         x.name = words.empty() ? "#" + id : utf8Of(widened(hotbar::spaced(words), s.codePage));
         // 3.0.18-beta.118 (the owner: «в вендинге не видно карт»): its cards in its name, as the game names it
         x.name = cardnames::namedFromInfo(x.name, raw, clienttables::cardWords());
+        x.name = infocardwin::withSlots(x.name, x.id, raw);  // 3.0.18-beta.145: «Jur [3]»
         const auto f = files.find(id);
         if (f != files.end()) x.icon = clienttables::icon(f->second, iw::iconSide(s.scale * 0.85f), 4 * s.scale);
     }

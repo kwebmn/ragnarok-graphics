@@ -48,5 +48,8 @@ std::string elementHex(int id, const uint8_t* itemInfo);
 // A thing's name made full and what is inside it, from its ITEM_INFO (72 bytes): its cards' words in the name, its
 // slots after it («[3]»), its cards and free slots in `inside` (core vendshop::inside) - only for one identified
 void describe(const uint8_t* itemInfo, int id, unsigned codePage, std::string& name, std::string& inside);
+// 3.0.18-beta.145 (the tester: no slots seen - "Jur", the old client "Jur [3]"): the name with its
+// slots as the game writes it, for one identified and not forged
+std::string withSlots(const std::string& name, int id, const uint8_t* itemInfo);
 
 }  // namespace uagfx::win::infocardwin

@@ -8403,6 +8403,15 @@ constexpr Entry kTexts[] = {
     {Text::MyShopEarned, "Earned", "Зароблено", "Заработано"},
     {Text::MyShopSales, "Sales", "Продажі", "Продажи"},
     {Text::MyShopNoSales, "Nothing sold yet", "Поки нічого не продано", "Пока ничего не продано"},
+    {Text::TrackerEmptyTitle, "Nothing tracked yet",  // 3.0.18-beta.145
+     "Поки нічого не відстежується",
+     "Пока ничего не отслеживается"},
+    {Text::TrackerEmptyHint, "Open «Reference» and pin a quest, things to collect or a way with «Track»",
+     "Відкрийте «Довідник» і закріпіть квест, речі для збору чи шлях "
+     "кнопкою «Відстежувати»",
+     "Откройте «Справочник» и закрепите квест, вещи для сбора или путь "
+     "кнопкой «Отслеживать»"},
+    {Text::TrackerEmptyTag, "how", "як", "как"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -197,11 +197,19 @@ bool readGameFile(const std::string& name, std::string& out) {
     void* const self = reinterpret_cast<void*>(kFileMgr);
     uint32_t size = 0;
     void* data = nullptr;
+    if (!g_getData && !knownBuild) return false;
+    // 3.0.18-beta.145 (the tester's crashes in cps.dll right after a map's start, R-MUC6HW, R-7FSHCZ: the game's
+    // thread then stuck at 0x513220): the game reads its files under its resource manager's lock (g_resMgr 0x74BAD8,
+    // its critical section at +0x40, FUN_005131f0) - the map's model loader thread FUN_004ea130 reads while the map
+    // starts. Ours took the files beside that lock: two readers in the game's archives at once. Now under it too (once
+    // the manager is made: 0x74BB84 bit 0).
+    constexpr uintptr_t kResLock = 0x74BB18, kResMade = 0x74BB84;
+    const bool made = knownBuild && (*reinterpret_cast<volatile uint32_t*>(kResMade) & 1);
+    CRITICAL_SECTION* const lock = made ? reinterpret_cast<CRITICAL_SECTION*>(kResLock) : nullptr;
+    if (lock) EnterCriticalSection(lock);
     if (g_getData) data = getData(self, name.c_str(), &size);  // hooked: the updates, then the game's own
-    else if (knownBuild)
-        data = reinterpret_cast<GetDataFn>(uintptr_t(updates_exe::kGetData))(self, name.c_str(), &size);
-    else
-        return false;
+    else data = reinterpret_cast<GetDataFn>(uintptr_t(updates_exe::kGetData))(self, name.c_str(), &size);
+    if (lock) LeaveCriticalSection(lock);
     if (!data) return false;
     out.assign(static_cast<const char*>(data), size);
     VirtualFree(data, 0, MEM_RELEASE);  // as the game's own FUN_0050d080

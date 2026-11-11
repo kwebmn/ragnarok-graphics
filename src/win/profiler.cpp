@@ -412,7 +412,7 @@ void Profiler::sampleLoop() {
                 for (const std::string& line : still.report("hang: the game's thread", head))
                     LOG_INFO("%s", line.c_str());
             LOG_INFO("hang: %s", writeHangDump() ? "a minidump of every thread is in uaro-graphics\\crash.dmp"
-                                                 : "no minidump (dbghelp.dll or the file)");
+                                                 : "no minidump (dbghelp.dll, the file, or a crash's kept)");
         }
         if (!on && !open && !stillLive) {
             WaitForSingleObject(wake_, watching_ ? 250 : 1000);

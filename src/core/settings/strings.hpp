@@ -924,6 +924,7 @@ enum class Text : uint16_t {
     ThingForgedBy, ThingForged,  // 3.0.18-beta.142: a forged thing's maker
     VendPadCard,  // 3.0.18-beta.142: «картка» after the controller's button
     MyShopSoldCount, MyShopEarned, MyShopSales, MyShopNoSales,  // 3.0.18-beta.143: «Моя лавка»'s sales
+    TrackerEmptyTitle, TrackerEmptyHint, TrackerEmptyTag,  // 3.0.18-beta.145: the tracker with nothing pinned
     Count
 };
 

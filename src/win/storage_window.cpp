@@ -241,6 +241,7 @@ void readStorage(State& s) {
         it.name = words.empty() ? "#" + id : utf8Of(widened(hotbar::spaced(words), s.codePage));
         // 3.0.18-beta.118 (the owner: «в вендинге не видно карт»): its cards in its name, as the game names it
         it.name = cardnames::namedFromInfo(it.name, raw, clienttables::cardWords());
+        it.name = infocardwin::withSlots(it.name, it.id, raw);  // 3.0.18-beta.145: «Jur [3]»
         it.elementRgb = infocardwin::elementColour(it.id, raw);  // 3.0.18-beta.144
         const auto f = files.find(id);
         if (f != files.end()) it.icon = clienttables::icon(f->second, iw::iconSide(s.scale), 4 * s.scale);
