@@ -1,3 +1,7 @@
+- Hotbar profiles from the controller: the Start menu's "Bar profile N" tile switches 1 → 2 → 3 (as Ctrl+Shift+1..3, with the character's own bar on).
+- The controller's button badges in windows (shop, skills, equipment, hints) have their letters again: A, B, LB, RT, Start and so on.
+- Shop: when Start bought nothing, the log says why.
+
 - Our panels from the controller: in the Start menu an open panel's tile (Hunt, Boss timers, Tracking, What killed me) gives its buttons - the D-pad or the left stick walks them (a gold ring), A presses, B leaves. The ✕ is among them.
 
 - Controller in the chat (on-screen keyboard): RT the channel (all, party, guild), R3 reply to the last whisper, the right stick scrolls the history.
