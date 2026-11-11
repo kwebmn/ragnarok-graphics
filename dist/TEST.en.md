@@ -1,3 +1,5 @@
+- Our panels from the controller: in the Start menu an open panel's tile (Hunt, Boss timers, Tracking, What killed me) gives its buttons - the D-pad or the left stick walks them (a gold ring), A presses, B leaves. The ✕ is among them.
+
 - Controller in the chat (on-screen keyboard): RT the channel (all, party, guild), R3 reply to the last whisper, the right stick scrolls the history.
 
 - Controller on the big map: the left stick moves a cross, X the next NPC / warp / Kafra (named beside it), A plots the way there, Y clears it, B closes.
