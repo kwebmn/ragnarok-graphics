@@ -725,6 +725,19 @@ bool cardPad(bool item, const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.18-beta.139: a slot's card in its own window on top - the same buttons as the item card's
+bool slotCardPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    namespace ic = uagfx::win::infocardwin;
+    if (down & kPadUp) ic::padCommand(ic::Kind::Card, ic::PadCommand::Up);
+    if (down & kPadDown) ic::padCommand(ic::Kind::Card, ic::PadCommand::Down);
+    if (down & (kPadB | kPadA | kPadStart)) ic::padCommand(ic::Kind::Card, ic::PadCommand::Close);
+    return true;
+}
+
 // 3.0.11-beta.150: a request on top (a trade's, a party's, a guild's, a friend's) - A accepts, B declines; an NPC's
 // number or words to type left to the game's own field (the pad's NPC typing), so not paused
 bool askPad(const PadState& pad) {
@@ -1390,7 +1403,7 @@ constexpr const char* kTopNames[] = {"«Речі»",  "«Характерист�
                                      "the guild", "one's own shop", "the whisper's settings", "the chat's macros",
                                      "the tip of the day", "the emotions", "the command list", "the chat room",
                                      "the chat room's own", "a popup menu", "the whisper cards",
-                                  "the shop's opening"};
+                                  "the shop's opening", "a slot's card"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -1482,6 +1495,7 @@ void tick() {
                   : drive && *top == Win::Menu                     ? menuPad(pad, now)     // .140
                   : drive && *top == Win::ItemCard                 ? cardPad(true, pad, now)   // .149
                   : drive && *top == Win::SkillCard                ? cardPad(false, pad, now)
+                  : drive && *top == Win::SlotCard                 ? slotCardPad(pad, now)  // 3.0.18-beta.139
                   : drive && *top == Win::Ask                      ? askPad(pad)  // .150: an input's - the game's
                   : drive && *top == Win::Message                  ? messagePad(pad)  // .151
                   : drive && *top == Win::Login                    ? loginPad(pad, now)       // .179

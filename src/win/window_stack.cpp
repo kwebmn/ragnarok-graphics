@@ -64,7 +64,7 @@ constexpr const char* kNames[] = {"«Речі»",  "«Характеристик
                                   "the whisper's settings", "the chat's macros", "the tip of the day",
                                   "the emotions", "the command list", "the chat room",
                                   "the chat room's own", "a popup menu", "the whisper cards",
-                                  "the shop's opening"};
+                                  "the shop's opening", "a slot's card"};
 static_assert(std::size(kNames) == size_t(winstack::kWins), "a name for each window");
 constexpr int kMostTold = 40;
 
@@ -136,6 +136,7 @@ bool shown(Win w) {
         case Win::Popup: return popupwin::shown();  // 3.0.11-beta.211
         case Win::Whispers: return whisperwin::shown();  // 3.0.11-beta.212
         case Win::VendSetup: return vendsetupwin::shown();  // 3.0.16-beta.33
+        case Win::SlotCard: return infocardwin::shown(infocardwin::Kind::Card);  // 3.0.18-beta.139
     }
     return false;
 }
@@ -180,6 +181,7 @@ Blocker blockerOf(Win w) {
         case Win::Popup: return Blocker::Popup;
         case Win::Whispers: return Blocker::Whispers;
         case Win::VendSetup: return Blocker::VendSetup;
+        case Win::SlotCard: return Blocker::SlotCard;
         case Win::Reference: break;
     }
     return Blocker::Reference;
@@ -226,6 +228,7 @@ void drawOne(Win w, FrameRecord& record, gpu::Renderer& renderer) {
         case Win::Popup: popupwin::draw(record, renderer); break;
         case Win::Whispers: whisperwin::draw(record, renderer); break;
         case Win::VendSetup: vendsetupwin::draw(record, renderer); break;
+        case Win::SlotCard: infocardwin::draw(infocardwin::Kind::Card, record, renderer); break;
     }
 }
 
@@ -270,6 +273,7 @@ bool mouseOne(Win w, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case Win::Popup: return popupwin::mouse(game, m, wp, lp, result);
         case Win::Whispers: return whisperwin::mouse(game, m, wp, lp, result);
         case Win::VendSetup: return vendsetupwin::mouse(game, m, wp, lp, result);
+        case Win::SlotCard: return infocardwin::mouse(infocardwin::Kind::Card, game, m, wp, lp, result);
     }
     return false;
 }
@@ -290,6 +294,7 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
         case Win::Cart: return cartwin::key(m, wp, lp);       // 3.0.11-beta.154: its search's
         case Win::Tip: return tipwin::key(m, wp, lp);         // 3.0.11-beta.204: ← →
         case Win::Guild: return guildcardwin::key(m, wp, lp);  // 3.0.11-beta.271: the notice's fields
+        case Win::SlotCard: return infocardwin::key(infocardwin::Kind::Card, m, wp, lp);
         case Win::VendSetup: return vendsetupwin::key(m, wp, lp);  // 3.0.18-beta.105: Tab / Enter between fields
         default: return false;
     }
@@ -302,7 +307,7 @@ bool movable(Win w) {  // .140: the menu centred; .149: a card beside the cursor
            w != Win::Merc && w != Win::Options && w != Win::Social && w != Win::Servers && w != Win::Guild &&
            w != Win::MyShop && w != Win::WhisperSetup && w != Win::Macros && w != Win::Tip &&
            w != Win::Emotes && w != Win::Commands && w != Win::ChatRoom && w != Win::Room && w != Win::Popup &&
-           w != Win::Whispers && w != Win::VendSetup;
+           w != Win::Whispers && w != Win::VendSetup && w != Win::SlotCard;
 }
 
 bool boxOf(Win w, winstack::Box& b) {
@@ -346,6 +351,7 @@ bool boxOf(Win w, winstack::Box& b) {
         case Win::Popup: return popupwin::box(b.x, b.y, b.w, b.h);
         case Win::Whispers: return whisperwin::box(b.x, b.y, b.w, b.h);
         case Win::VendSetup: return vendsetupwin::box(b.x, b.y, b.w, b.h);
+        case Win::SlotCard: return infocardwin::box(infocardwin::Kind::Card, b.x, b.y, b.w, b.h);
     }
     return false;
 }
@@ -468,6 +474,7 @@ bool close(Win w) {
         case Win::Commands: return commandwin::close();         // 3.0.11-beta.206
         case Win::Popup: return popupwin::close();              // 3.0.11-beta.211
         case Win::Whispers: return whisperwin::close();         // 3.0.11-beta.212
+        case Win::SlotCard: infocardwin::close(infocardwin::Kind::Card); return true;  // 3.0.18-beta.139
         case Win::VendSetup: return vendsetupwin::close();      // 3.0.16-beta.33: «Скасувати»
         case Win::ChatRoom: return chatroomwin::close();        // 3.0.11-beta.207
         default: return false;
@@ -521,7 +528,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         // 3.0.11-beta.229 (R-ZUY4CM: «описание под плашкой меню»): a right click that showed a card (a skill's, a
         // thing's) keeps the card over the window clicked, also when the card was open already and only changed
         if (m == WM_RBUTTONDOWN)
-            for (const Win card : {Win::SkillCard, Win::ItemCard})
+            for (const Win card : {Win::SkillCard, Win::ItemCard, Win::SlotCard})
                 if (card != w && shown(card) && s.stack.top() != card) {
                     s.stack.raise(card);
                     s.told = card;

@@ -19,7 +19,9 @@ namespace uagfx::win::infocardwin {
 // (core/info_card) beside the cursor that opened them; the game's windows stay made, their shown flags held at 0, our
 // ✕ (or Esc, or the controller's B) presses their own close (message 6, 0x87). The descriptions from the game's own
 // tables in the folder it reads them from (data\english\ for most). On the game's thread.
-enum class Kind : uint8_t { Item, Skill };
+// 3.0.18-beta.139 (the owner: a slot's card opened over the thing's own words, not moved): Card - a slot's card in
+// its own window beside the item card (either button on the slot), moved by its title, its own ✕
+enum class Kind : uint8_t { Item, Skill, Card };
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
 void draw(Kind kind, FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(Kind kind, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);

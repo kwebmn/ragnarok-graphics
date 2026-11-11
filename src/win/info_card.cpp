@@ -99,8 +99,10 @@ struct State {
     unsigned codePage = 0;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
-    One cards[2];
+    One cards[3];  // the item card, the skill card, 3.0.18-beta.139 a slot's card
     Tables tables;
+    bool slotOpen = false;  // 3.0.18-beta.139: the slot's card's window
+    int slotCard = 0;
     int told = 0;
 };
 
@@ -129,7 +131,9 @@ std::string text(uint32_t at, uint32_t len) {
 
 std::string utf8(const State& s, const std::string& game) { return utf8Of(widened(game, s.codePage)); }
 
-const char* nameOf(Kind k) { return k == Kind::Item ? "the item card" : "the skill card"; }
+const char* nameOf(Kind k) {
+    return k == Kind::Item ? "the item card" : k == Kind::Skill ? "the skill card" : "a slot's card";
+}
 
 uint32_t gameCard(int i) {
     const uint32_t w = read32(kGame[i].at);
@@ -286,29 +290,34 @@ void itemCard(State& s, One& o, uint32_t window) {
         }
         c.cardIcons.push_back(pic);
     }
-    // 3.0.18-beta.109: a slot's card opened - its own name, words and pictures; the thing's name under it to go back
-    if (o.viewing >= 0 && o.viewing < 4 && cards[o.viewing] > 0) {
-        const std::string card = std::to_string(cards[o.viewing]);
-        ic::Card v;
-        v.title = itemName(s, card, true);
-        v.note = "\xE2\x80\xB9 " + c.title;  // ‹ +7 Blade [4]
-        const auto cd = s.tables.items.find(card);
-        if (cd != s.tables.items.end()) v.lines = utf8Lines(s, cd->second);
-        const auto cf = clienttables::itemFiles().find(card);
-        if (cf != clienttables::itemFiles().end())
-            v.icon = clienttables::icon(cf->second, ic::iconSide(s.scale), 4 * s.scale);
-        // 3.0.18-beta.110 (the owner: «окно карты как в оригинале»): its illustration big over its words
-        const auto art = s.tables.cardArt.find(card);
-        if (art != s.tables.cardArt.end()) v.picture = cardArt(s, o, art->second);
-        v.art = v.picture != nullptr;
-        if (!v.picture && cf != clienttables::itemFiles().end()) v.picture = bigPicture(s, o, cf->second);
-        c = v;
-    }
     o.card = c;
     if (s.told++ < 40)
         LOG_INFO("cards: the item card shows %s (#%s%s, refined %d, %d slot(s), %zu description line(s)%s)",
                  c.title.c_str(), number.c_str(), known ? "" : ", not identified", refine, slotCount, c.lines.size(),
                  c.picture ? ", its big picture" : "");
+}
+
+// 3.0.18-beta.109/.139: a card's own card - its name, words, its illustration big over them (3.0.18-beta.110, the
+// owner: «окно карты как в оригинале»), else its item picture
+void cardCard(State& s, One& o, int id) {
+    const std::string card = std::to_string(id);
+    const std::string what = "card " + card + '@' + std::to_string(s.scale);
+    if (what == o.what) return;
+    o.what = what;
+    o.show.scroll = 0;
+    ic::Card v;
+    v.title = itemName(s, card, true);
+    const auto cd = s.tables.items.find(card);
+    if (cd != s.tables.items.end()) v.lines = utf8Lines(s, cd->second);
+    const auto cf = clienttables::itemFiles().find(card);
+    if (cf != clienttables::itemFiles().end())
+        v.icon = clienttables::icon(cf->second, ic::iconSide(s.scale), 4 * s.scale);
+    const auto art = s.tables.cardArt.find(card);
+    if (art != s.tables.cardArt.end()) v.picture = cardArt(s, o, art->second);
+    v.art = v.picture != nullptr;
+    if (!v.picture && cf != clienttables::itemFiles().end()) v.picture = bigPicture(s, o, cf->second);
+    o.card = v;
+    LOG_INFO("cards: a slot's card shows %s (#%d) in its own window", v.title.c_str(), id);
 }
 
 // The character's skills: their AEGIS names and levels (the session's list, as «Навички» reads it)
@@ -418,7 +427,9 @@ void render(One& o) {
     ++o.sheetGen;
 }
 
-Blocker blockerOf(Kind k) { return k == Kind::Item ? Blocker::ItemCard : Blocker::SkillCard; }
+Blocker blockerOf(Kind k) {
+    return k == Kind::Item ? Blocker::ItemCard : k == Kind::Skill ? Blocker::SkillCard : Blocker::SlotCard;
+}
 
 void block(const State& s, const One& o, HWND game, Kind kind) {
     RECT client{};
@@ -437,7 +448,7 @@ void hide(One& o, Kind kind) {
     o.what.clear();
 }
 
-One& one(Kind k) { return state().cards[k == Kind::Item ? 0 : 1]; }
+One& one(Kind k) { return state().cards[k == Kind::Item ? 0 : k == Kind::Skill ? 1 : 2]; }
 
 }  // namespace
 
@@ -500,6 +511,31 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         o.shown = true;
         block(s, o, game, kind);
     }
+    One& c = s.cards[2];  // 3.0.18-beta.139: a slot's card, its own window
+    if (!on || !world || !s.slotOpen || s.slotCard <= 0 || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
+        if (!world) s.slotOpen = false;
+        hide(c, Kind::Card);
+        return;
+    }
+    readTables(s);
+    cardCard(s, c, s.slotCard);
+    c.layout = ic::layout(c.card, c.atX, c.atY, targetWidth, targetHeight, s.scale, c.show, texts(), measure);
+    c.move.apply(c.layout.x, c.layout.y, c.layout.w, c.layout.h, targetWidth, targetHeight, k, 48 * s.scale);
+    c.show.scroll = std::clamp(c.show.scroll, 0, std::max(0, c.layout.rows - c.layout.shownRows));
+    c.show.hoverClose = false;
+    int cx = 0, cy = 0;
+    if (readHoverCursor(cx, cy))
+        c.show.hoverClose = ic::hitTest(c.layout, float(cx) * float(k) - float(c.layout.x),
+                                        float(cy) * float(k) - float(c.layout.y)) == ic::Part::Close;
+    const std::string key = c.what + ';' + std::to_string(c.layout.x) + ',' + std::to_string(c.layout.y) + ';' +
+                            std::to_string(c.show.scroll) + (c.show.hoverClose ? "c" : "") + '#' +
+                            std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
+    if (key != c.key) {
+        c.key = key;
+        render(c);
+    }
+    c.shown = true;
+    block(s, c, game, Kind::Card);
 }
 
 // 3.0.18-beta.31 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): a thing's or a skill's
@@ -547,9 +583,10 @@ static void fillSheet(One& o, uisheet::Content& c) {
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < 3; ++i) {
         One& o = s.cards[i];
-        o.sheetShown = o.sheet.frame(i == 0 ? "item card" : "skill card", o.shown, true, o.layout.x, o.layout.y,
+        const char* name = i == 0 ? "item card" : i == 1 ? "skill card" : "slot card";
+        o.sheetShown = o.sheet.frame(name, o.shown, true, o.layout.x, o.layout.y,
                                      o.sheetGen, [&](uisheet::Content& c) { fillSheet(o, c); });
     }
 }
@@ -592,16 +629,19 @@ bool mouse(Kind kind, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) 
     } else if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && part == ic::Part::Close) {
         close(kind);
     } else if (const int slot = ic::slotAt(o.layout, tx - float(o.layout.x), ty - float(o.layout.y));
-               m == WM_LBUTTONDOWN && kind == Kind::Item && o.viewing < 0 && slot >= 0 && slot < 4 &&
-               o.cardIds[slot] > 0) {  // 3.0.18-beta.109: a slot's card - its own words in the card
-        o.viewing = slot;
-        o.what.clear();
-        o.show.scroll = 0;
-        if (s.told++ < 40) LOG_INFO("cards: the card in slot %d opened (#%d)", slot + 1, o.cardIds[slot]);
-    } else if (m == WM_LBUTTONDOWN && o.viewing >= 0 && part == ic::Part::Title) {  // ‹ the thing again
-        o.viewing = -1;
-        o.what.clear();
-        o.show.scroll = 0;
+               (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN) && kind == Kind::Item && slot >= 0 && slot < 4 &&
+               o.cardIds[slot] > 0) {  // 3.0.18-beta.139: a slot's card in its own window (was in this one)
+        One& c = s.cards[2];
+        if (!s.slotOpen || s.slotCard != o.cardIds[slot]) {
+            c.atX = o.layout.x + o.layout.w + int(12 * s.scale);  // beside the thing's card, else left of it
+            if (c.atX + int(300 * s.scale) > s.targetW) c.atX = std::max(0, o.layout.x - int(312 * s.scale));
+            c.atY = o.layout.y;
+            c.move = CardDrag{};
+            c.what.clear();
+        }
+        s.slotOpen = true;
+        s.slotCard = o.cardIds[slot];
+        if (s.told++ < 40) LOG_INFO("cards: the card in slot %d opened in its own window (#%d)", slot + 1, s.slotCard);
     } else if (m == WM_LBUTTONDOWN) {  // 3.0.18-beta.93: the title or the body - the card follows the cursor
         o.move.begin(tx, ty);
     }
@@ -624,6 +664,11 @@ bool shown(Kind kind) { return one(kind).shown; }
 
 void close(Kind kind) {
     One& o = one(kind);
+    if (kind == Kind::Card) {  // 3.0.18-beta.139: ours alone - no game window behind it
+        state().slotOpen = false;
+        hide(o, kind);
+        return;
+    }
     const uint32_t window = gameCard(kind == Kind::Item ? 0 : 1);
     if (!window) return;
     const uint32_t send = read32(read32(window) + kSendMsgSlot);
