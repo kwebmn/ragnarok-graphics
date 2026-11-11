@@ -1,3 +1,5 @@
+- The interface library does less work for nothing (R-AKUGNX): the friends and party window told it of changes every frame even closed - now a closed one only hides; the picked-up thing's toast and the experience numbers gave all their data every frame (up to 85 times a second) - now only what changed.
+
 - «Налаштування» and the Alt+D console no longer look for the settings file on the disk every frame (it was 0.11 ms a frame even with the window closed, R-2CKVU6): its place is found once a second.
 - A measurement: the log shows the interface's parts that change their data the most - each change gives work to the interface library, the dearest part of a frame (0.7-1.2 ms).
 
