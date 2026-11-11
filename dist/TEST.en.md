@@ -1,3 +1,5 @@
+- "Equipment": the character fills the middle again (it stayed small at the top); the ◀ ▶ arrows light up under the cursor.
+
 - "Equipment": the character is now made of the texture pack's improved frames (4x), no more "squares"; a button over the character, as in the game: "Remove the cart", "Release the falcon" or "Get off the Peco" (with your own shop open the game asks to close it first).
 
 - Equipment: the character is big and centred again (after the window shrank it stayed small at the top); long item names are not cut - they go onto a second line and the slot grows; "Clip of of Counter" is now "Clip of Counter".
