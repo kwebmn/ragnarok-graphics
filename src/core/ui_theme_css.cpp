@@ -1337,7 +1337,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .tb { display: block; width: 2.3333rem; height: 2.3333rem; line-height: 2.3333rem; text-align: center;
     border-radius: 0.6667rem;
            border: 0.0833rem #ffffff22; background-color: #ffffff0d; font-size: 1rem; }
-.eql .tb:hover { background-color: #ffffff24; }
+.eql .tb:hover, .eql .tb.hot { background-color: #ffffff24; border-color: #e6cb8a88; color: #e6cb8a; }
 .eql .nm .dot { display: inline-block; width: 0.5833rem; height: 0.5833rem; margin: 0 0 0.0833rem 0.3333rem;
     vertical-align: middle; }
 .eql .right .nm .dot { margin: 0 0.3333rem 0.0833rem 0; }

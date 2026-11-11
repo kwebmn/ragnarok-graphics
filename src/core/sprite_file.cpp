@@ -353,6 +353,28 @@ Image fitted(const Image& in, int w, int h, int most) {
     return o;
 }
 
+Image cutToShown(const Image& in, int least) {
+    Image out;
+    if (in.w <= 0 || in.h <= 0 || in.argb.size() < size_t(in.w) * size_t(in.h)) return out;
+    int left = in.w, top = in.h, right = -1, bottom = -1;
+    for (int y = 0; y < in.h; ++y)
+        for (int x = 0; x < in.w; ++x)
+            if (int(in.argb[size_t(y) * size_t(in.w) + size_t(x)] >> 24) > least) {
+                left = std::min(left, x);
+                right = std::max(right, x);
+                top = std::min(top, y);
+                bottom = std::max(bottom, y);
+            }
+    if (right < 0) return out;
+    out.w = right - left + 1;
+    out.h = bottom - top + 1;
+    out.argb.resize(size_t(out.w) * size_t(out.h));
+    for (int y = 0; y < out.h; ++y)
+        std::copy_n(in.argb.begin() + std::ptrdiff_t(size_t(top + y) * size_t(in.w) + size_t(left)), out.w,
+                    out.argb.begin() + std::ptrdiff_t(size_t(y) * size_t(out.w)));
+    return out;
+}
+
 Image topSquare(const Image& in, float share) {
     Image out;
     if (in.w <= 0 || in.h <= 0 || in.argb.size() < size_t(in.w) * size_t(in.h)) return out;

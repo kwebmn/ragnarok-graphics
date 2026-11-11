@@ -67,5 +67,7 @@ Image fitted(const Image& in, int w, int h, int most = 3);
 // 3.0.11-beta.196: a face from an NPC's whole picture - the square at its top, as wide as the picture or `share` of its
 // height (the narrower), in its middle
 Image topSquare(const Image& in, float share);
+// 3.0.18-beta.115: the picture cut to its pixels with alpha over `least` (none: an empty picture)
+Image cutToShown(const Image& in, int least);
 
 }  // namespace uagfx::spritefile

@@ -125,6 +125,7 @@ struct State {
     heropicture::Looks heroLooks;
     std::string heroKey;
     bool mountHot = false;  // 3.0.18-beta.114: the cursor over the cart / falcon / Peco button
+    int turnHot = -1;       // 3.0.18-beta.115: over ◀ (0) or ▶ (1)
     panel::Picture hero;
     panel::Picture picture, portrait;
     uint32_t texture = 0;
@@ -596,11 +597,17 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         s.show.hoverClose = h.part == ew::Part::Close;
     }
     s.mountHot = false;
-    if (s.live.shown() && !s.moving && readGameCursor(cx, cy))
+    s.turnHot = -1;
+    if (s.live.shown() && !s.moving && readGameCursor(cx, cy)) {
+        const float px = float(cx) * float(k) - float(s.layout.x), py = float(cy) * float(k) - float(s.layout.y);
         for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "mountoff"))
-            s.mountHot = s.mountHot || p.box.contains(float(cx) * float(k) - float(s.layout.x),
-                                                      float(cy) * float(k) - float(s.layout.y));
-    std::string key = std::string(s.mountHot ? "m" : "") + std::to_string(s.layout.x) + ',' +
+            s.mountHot = s.mountHot || p.box.contains(px, py);
+        for (int i = 0; i < 2; ++i)  // 3.0.18-beta.115 (R-RJBU55 «не активні при наведении»)
+            for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), i ? "turnright" : "turnleft"))
+                if (p.box.contains(px, py)) s.turnHot = i;
+    }
+    std::string key = std::string(s.mountHot ? "m" : "") + "t" + std::to_string(s.turnHot) +
+                      std::to_string(s.layout.x) + ',' +
                       std::to_string(s.layout.y) + ';' + std::to_string(scale) +
                       ';' + std::to_string(s.show.hoverSlot) + ',' + std::to_string(s.show.hoverPick) + ',' +
                       std::to_string(s.show.focus) + ',' + std::to_string(s.show.pickFocus) +
@@ -642,6 +649,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                     m.turns = s.hero.width > 0;  // 3.0.18-beta.111: its sprites' character
                                     m.mountOff = mountWords(mountNow());  // 3.0.18-beta.114
                                     m.mountHot = s.mountHot;
+                                    m.turnHot = s.turnHot;
                                     m.hero = m.turns ? s.live.icon(&s.hero) : "";
                                     {  // .113: fitted into the middle's box, its proportions kept
                                         const float bw = 150 * s.scale, bh = 210 * s.scale;

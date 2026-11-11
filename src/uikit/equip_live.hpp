@@ -50,6 +50,7 @@ struct Model {
     // 3.0.18-beta.114: the game's window's one button - the cart off, the falcon let go, off the Peco ("" - none)
     Rml::String mountOff;
     bool mountHot = false;
+    int turnHot = -1;  // 3.0.18-beta.115: the cursor over ◀ (0) or ▶ (1)
     bool closeHot = false, picking = false, pad = false;
     std::vector<SlotV> left, right;
     SlotV ammo;

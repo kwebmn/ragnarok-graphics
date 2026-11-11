@@ -227,3 +227,21 @@ TEST(sprite_file_compose_scaled_takes_bigger_frames) {
     CHECK_EQ(fy4, fy * 4);
     CHECK_EQ(four.argb[size_t(four.h - 1) * size_t(four.w) + size_t(four.w / 2)], 0xFF00FF00u);  // the body: the pack's
 }
+
+// 3.0.18-beta.115 (R-RJBU55 «спрайт маленький»): a picture cut to what shows (alpha past `least`) - the parts' empty
+// room round it never shrinks the character in its box
+TEST(sprite_file_cut_to_what_shows) {
+    spritefile::Image im;
+    im.w = 10;
+    im.h = 8;
+    im.argb.assign(80, 0);
+    im.argb[size_t(2 * 10 + 3)] = 0xFF112233u;
+    im.argb[size_t(5 * 10 + 6)] = 0xFF445566u;
+    im.argb[size_t(7 * 10 + 9)] = 0x05000000u;  // all but clear: left out
+    const spritefile::Image c = spritefile::cutToShown(im, 8);
+    CHECK_EQ(c.w, 4);
+    CHECK_EQ(c.h, 4);
+    CHECK_EQ(c.argb[0], 0xFF112233u);
+    CHECK_EQ(c.argb[size_t(3 * 4 + 3)], 0xFF445566u);
+    CHECK_EQ(spritefile::cutToShown(spritefile::Image{}, 8).w, 0);
+}

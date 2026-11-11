@@ -170,6 +170,14 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
         if (from) *from = "nothing drawn of " + bodyBase;
         return false;
     }
+    // 3.0.18-beta.115 (R-RJBU55 «спрайт маленький», small at the top of its box in .113 too): cut to what shows - the
+    // parts' frames' empty room round it was fitted into the box with it
+    const int madeW = im.w, madeH = im.h;
+    im = spritefile::cutToShown(im, 8);
+    if (im.w <= 0) {
+        if (from) *from = "nothing shows of " + bodyBase;
+        return false;
+    }
     spritefile::Image fit;
     if (factor > 1) {  // the pack's: shrunk smoothly to the box (never grown past its 4x)
         fit = spritefile::fitted(im, std::min(w, im.w), std::min(h, im.h));
@@ -188,7 +196,9 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
                 (cart.ok ? " + cart" : "") + (falcon.ok ? " + falcon" : "") +
                 (factor > 1 ? ", the AI pack's frames " + std::to_string(factor) + "x for " + std::to_string(bigParts) +
                                   " part(s)"
-                            : ", the game's own pixels");
+                            : ", the game's own pixels") +
+                ", made " + std::to_string(madeW) + "x" + std::to_string(madeH) + ", shows " + std::to_string(im.w) +
+                "x" + std::to_string(im.h) + ", drawn " + std::to_string(out.width) + "x" + std::to_string(out.height);
     return out.width > 0;
 }
 

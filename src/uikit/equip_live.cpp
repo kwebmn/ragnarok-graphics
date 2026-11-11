@@ -29,7 +29,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   class="mb" data-hit="mountoff" data-class-hot="mountHot">{{mountOff}}</span></div><img data-if="hero != ''"
   data-attr-src="hero"
   data-style-width="heroW + 'px'" data-style-height="heroH + 'px'"/><div class="turn" data-if="turns"><span
-  class="tb" data-hit="turnleft">&#x25C0;</span><span class="tb" data-hit="turnright">&#x25B6;</span></div></div>
+  class="tb" data-hit="turnleft" data-class-hot="turnHot == 0">&#x25C0;</span><span class="tb" data-hit="turnright"
+  data-class-hot="turnHot == 1">&#x25B6;</span></div></div>
 <div class="picks" data-if="picking" data-hit="picklist"><div class="ptitle">{{pickTitle}}</div><div class="pnone"
   data-if="picks.size == 0">{{pickNone}}</div><div class="pick" data-for="p : picks" data-hit="pick"
   data-attr-data-index="p.index" data-class-hot="p.hot" data-class-focus="p.focus"><div class="pic"><img
@@ -125,6 +126,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("turns", &m.turns);
     c.Bind("mountOff", &m.mountOff);
     c.Bind("mountHot", &m.mountHot);
+    c.Bind("turnHot", &m.turnHot);
     c.Bind("cards", &m.cards);
     c.Bind("drag", &m.drag);
     c.Bind("pickTitle", &m.pickTitle);
