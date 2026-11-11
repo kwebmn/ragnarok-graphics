@@ -4,9 +4,10 @@
 
 #include "win/log.hpp"
 
-// The copy: rep movsb between two labels. A fault comes with EIP at its rep movsb (a string instruction faults before
-// its step, ECX/ESI/EDI telling how far it got); the handler then moves EIP to the fault's way out, which pops what
-// the entry pushed and answers 0. The names are given whole (asm labels): no underscore of the C names in between.
+// The copy: rep movsb between two labels. A fault - of its reads or its writes - comes with EIP at its rep movsb (a
+// string instruction faults before its step, ECX/ESI/EDI telling how far it got); the handler then moves EIP to the
+// fault's way out, which pops what the entry pushed and answers 0. The names are given whole (asm labels): no
+// underscore of the C names in between.
 extern "C" int uagfx_safe_copy(void* out, const void* from, size_t size) asm("uagfx_safe_copy");
 extern "C" const char uagfx_safe_copy_at[] asm("uagfx_safe_copy_at");
 extern "C" const char uagfx_safe_copy_fault[] asm("uagfx_safe_copy_fault");
@@ -79,6 +80,10 @@ bool ready() {
 
 bool copy(void* out, uint32_t from, size_t size) {
     return uagfx_safe_copy(out, reinterpret_cast<const void*>(uintptr_t(from)), size) != 0;
+}
+
+bool put(uint32_t to, const void* in, size_t size) {
+    return uagfx_safe_copy(reinterpret_cast<void*>(uintptr_t(to)), in, size) != 0;
 }
 
 unsigned takeFaults() { return unsigned(InterlockedExchange(&g_faults, 0)); }

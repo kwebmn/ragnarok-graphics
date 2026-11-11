@@ -14,6 +14,10 @@ bool ready();
 // `size` bytes from the game's `from` into `out`; false when one of them is not readable (out partly written then).
 // Only when ready().
 bool copy(void* out, uint32_t from, size_t size);
+// 3.0.18-beta.166: the same copy the other way - `size` bytes into the game's data at `to` (its heap: an actor's place,
+// not its code - a page that is not writable answers false where WriteProcessMemory would change its protection).
+// Only when ready().
+bool put(uint32_t to, const void* in, size_t size);
 // [at, at + size) readable now: a byte of each page it touches tried by that copy; without ready() by VirtualQuery
 // (committed, readable, no guard) as the callers did before - one place for what win/texture_hook, win/crisp and
 // pad/win/client_memory each had

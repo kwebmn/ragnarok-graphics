@@ -13,6 +13,7 @@
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/net_watch.hpp"
+#include "win/safe_read.hpp"
 
 namespace uagfx::win::netsmoothwin {
 namespace {
@@ -87,7 +88,8 @@ Kept& keep(State& s, uint32_t id) {
     return s.kept.back();
 }
 
-bool writeFloat(uint32_t at, float v) {
+bool writeFloat(uint32_t at, float v) {  // 3.0.18-beta.166: a safe store (win/safe_read) - no call into Windows
+    if (saferead::ready()) return saferead::put(at, &v, 4);
     SIZE_T n = 0;
     return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }

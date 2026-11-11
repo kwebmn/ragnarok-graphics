@@ -547,38 +547,74 @@ bool readPlayerWorld(float at[3], int& width, int& height, int& cellSize) {
     return std::isfinite(at[0]) && std::isfinite(at[1]) && std::isfinite(at[2]);
 }
 
+namespace {
+
+// 3.0.18-beta.166 (step 3; R-C8GVNT: netsmoothwin::beginScene up to 392 reads a frame - a walk of the world's actors
+// for each pending move, the same for each HP bar and NPC dot): the world's actors and the pick list's records by
+// their ids, read in one walk the first time a frame asks; each answer checked by the id at its place, the list read
+// once more in the frame when a place no longer says it (or the id is not in it), then «none»
+constexpr uint32_t kWorldActors = 0x18, kActorId = 0x208;
+constexpr uint32_t kPickList = 0x74B5F0 + 0x28, kRecordId = 0x18;
+
+struct IdIndex {
+    uint32_t frame = ~0u, owner = 0;  // the frame it was read in and the world it is of (the pick list: 0)
+    bool again = false;              // read once more this frame already
+    std::unordered_map<uint32_t, uint32_t> byId;  // the id -> the actor's (the record's) place
+};
+uint32_t g_frame = 0;  // the presents so far (readTallyFrame)
+IdIndex g_actors, g_picks;
+
+// A list of the game's (a node: its next at +0, its object at +8) into `out` by the id at `idAt` of each object - the
+// first one of an id kept, as a walk for one id found it
+void walkIds(uint32_t headAt, uint32_t idAt, std::unordered_map<uint32_t, uint32_t>& out) {
+    out.clear();
+    uint32_t head = 0, node = 0;
+    if (!read(headAt, &head, 4) || !head || !read(head, &node, 4)) return;
+    for (size_t n = 0; node && node != head && n < 4096; ++n) {
+        uint32_t object = 0, id = 0;
+        if (!read(node + 8, &object, 4)) return;
+        if (object && read(object + idAt, &id, 4) && id) out.emplace(id, object);
+        if (!read(node, &node, 4)) return;
+    }
+}
+
+uint32_t indexed(IdIndex& ix, uint32_t owner, uint32_t headAt, uint32_t idAt, uint32_t id) {
+    const auto says = [&](uint32_t at) {
+        uint32_t got = 0;
+        return at && read(at + idAt, &got, 4) && got == id;
+    };
+    if (ix.frame != g_frame || ix.owner != owner) {
+        ix.frame = g_frame;
+        ix.owner = owner;
+        ix.again = false;
+        walkIds(headAt, idAt, ix.byId);
+    }
+    auto it = ix.byId.find(id);
+    if (it != ix.byId.end() && says(it->second)) return it->second;
+    if (ix.again) return 0;
+    ix.again = true;
+    walkIds(headAt, idAt, ix.byId);
+    it = ix.byId.find(id);
+    return it != ix.byId.end() && says(it->second) ? it->second : 0;
+}
+
+}  // namespace
+
 uint32_t actorAddress(uint32_t id) {
     const Asked asked(__builtin_return_address(0));
-    constexpr uint32_t kWorldActors = 0x18, kActorId = 0x208, kOwnAccount = 0x771F7C;
-    uint32_t world = 0, head = 0, node = 0, own = 0;
+    constexpr uint32_t kOwnAccount = 0x771F7C;
+    uint32_t world = 0, own = 0;
     const uint32_t mode = gameMode();
     if (!id || !mode || !read(mode + kModeWorld, &world, 4) || !world) return 0;
     if (read(kOwnAccount, &own, 4) && own == id) {  // the character: the world's player, not in the list
         uint32_t player = 0;
         return read(world + kWorldPlayer, &player, 4) ? player : 0;
     }
-    // the last one found: still it while its id reads the same - 3.0.11-beta.272 (R-EP778D, a crash after a warp: an
-    // actor's freed memory still read its id, its SendMsg called through garbage) only in the same world, its
-    // vtable still the game's
-    static uint32_t cachedId = 0, cachedActor = 0, cachedWorld = 0;
-    uint32_t actor = 0, aid = 0;
-    if (cachedId == id && cachedActor && cachedWorld == world && gameObject(cachedActor) &&
-        read(cachedActor + kActorId, &aid, 4) && aid == id)
-        actor = cachedActor;
-    if (!actor) {
-        if (!read(world + kWorldActors, &head, 4) || !head || !read(head, &node, 4)) return 0;
-        for (size_t n = 0; node && node != head && n < 4096 && !actor; ++n) {
-            uint32_t a = 0;
-            if (!read(node + 8, &a, 4)) return 0;
-            if (a && read(a + kActorId, &aid, 4) && aid == id) actor = a;
-            if (!actor && !read(node, &node, 4)) return 0;
-        }
-        if (!actor || !gameObject(actor)) return 0;
-        cachedId = id;
-        cachedActor = actor;
-        cachedWorld = world;
-    }
-    return actor;
+    // 3.0.18-beta.166: by the frame's index of the world's actors (its place checked by the id there); the vtable
+    // still the game's - 3.0.11-beta.272 (R-EP778D, a crash after a warp: an actor's freed memory still read its id,
+    // its SendMsg called through garbage)
+    const uint32_t actor = indexed(g_actors, world, world + kWorldActors, kActorId, id);
+    return actor && gameObject(actor) ? actor : 0;
 }
 
 bool gameObject(uint32_t object) {
@@ -598,7 +634,6 @@ bool readActorWorld(uint32_t id, float at[3]) {
 
 void readActorPlaces(std::unordered_map<uint32_t, std::array<float, 3>>& out) {
     const Asked asked(__builtin_return_address(0));
-    constexpr uint32_t kWorldActors = 0x18, kActorId = 0x208;
     out.clear();
     uint32_t world = 0, head = 0, node = 0;
     const uint32_t mode = gameMode();
@@ -618,7 +653,6 @@ void readActorPlaces(std::unordered_map<uint32_t, std::array<float, 3>>& out) {
 
 int actorsOfId(uint32_t id, uint32_t actor, bool& listed) {
     const Asked asked(__builtin_return_address(0));
-    constexpr uint32_t kWorldActors = 0x18, kActorId = 0x208;
     listed = false;
     uint32_t world = 0, head = 0, node = 0;
     const uint32_t mode = gameMode();
@@ -640,24 +674,16 @@ int actorsOfId(uint32_t id, uint32_t actor, bool& listed) {
 
 bool readActorBox(uint32_t id, float box[4]) {
     const Asked asked(__builtin_return_address(0));
-    constexpr uint32_t kPickList = 0x74B5F0 + 0x28, kRecordId = 0x18;
-    uint32_t head = 0, node = 0;
-    if (!id || !gameMode() || !read(kPickList, &head, 4) || !head || !read(head, &node, 4)) return false;
-    for (size_t n = 0; node && node != head && n < 4096; ++n) {
-        uint32_t record = 0, rid = 0;
-        float f[5];
-        if (!read(node + 8, &record, 4)) return false;
-        if (record && read(record + kRecordId, &rid, 4) && rid == id && read(record, f, sizeof f)) {
-            box[0] = f[0];
-            box[1] = f[1];
-            box[2] = f[3];
-            box[3] = f[4];
-            return std::isfinite(box[0]) && std::isfinite(box[1]) && std::isfinite(box[2]) && std::isfinite(box[3]) &&
-                   box[2] > box[0] && box[3] > box[1];
-        }
-        if (!read(node, &node, 4)) return false;
-    }
-    return false;
+    if (!id || !gameMode()) return false;
+    const uint32_t record = indexed(g_picks, 0, kPickList, kRecordId, id);  // 3.0.18-beta.166: the frame's index
+    float f[5];
+    if (!record || !read(record, f, sizeof f)) return false;
+    box[0] = f[0];
+    box[1] = f[1];
+    box[2] = f[3];
+    box[3] = f[4];
+    return std::isfinite(box[0]) && std::isfinite(box[1]) && std::isfinite(box[2]) && std::isfinite(box[3]) &&
+           box[2] > box[0] && box[3] > box[1];
 }
 
 void readActorBoxes(std::unordered_map<uint32_t, std::array<float, 4>>& out,
@@ -665,7 +691,7 @@ void readActorBoxes(std::unordered_map<uint32_t, std::array<float, 4>>& out,
     const Asked asked(__builtin_return_address(0));
     out.clear();
     if (classes) classes->clear();
-    constexpr uint32_t kPickList = 0x74B5F0 + 0x28, kRecordId = 0x18, kRecordClass = 0x1C;
+    constexpr uint32_t kRecordClass = 0x1C;
     uint32_t head = 0, node = 0;
     if (!gameMode() || !read(kPickList, &head, 4) || !head || !read(head, &node, 4)) return;
     for (size_t n = 0; node && node != head && n < 4096; ++n) {
@@ -790,6 +816,7 @@ void readTallyFrame(uint32_t gameThread) {
     }
     g_tallyThread = gameThread;
     g_tally.frame();
+    ++g_frame;  // 3.0.18-beta.166: the actors' and the pick list's indexes read again at the next frame's first ask
 }
 
 std::string takeReadTally() {
