@@ -1,3 +1,5 @@
+- A measurement: every 30 s the log tells what each part of the driver takes a frame (chat, skill bar, HP bars, windows, the interface), the dearest first. In R-45Z47V the driver's own work grew from 2.1 to 4.7 ms a frame in five minutes of hunting - now the part that grows shows. The game memory reads are told by module again.
+
 - The characters' and monsters' index (.166) moves on at the start of every frame, even with the game minimised: otherwise a monster that came while the window was minimised was not found until it was restored.
 
 - The driver's work with the game's memory is in one place: shared functions instead of 60 copies of the read and 43 of the write (each write a call into Windows), the writes into the game's data without a call into Windows too. Likewise one shared function instead of 55 copies of the interface's texts, 49 copies of a window's place over the game and 37 copies of the mouse buttons' check. About 540 lines of code fewer; the same look and behaviour.
