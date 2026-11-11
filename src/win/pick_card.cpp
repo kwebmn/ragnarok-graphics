@@ -309,6 +309,7 @@ std::vector<pc::Entry> readList(const State& s, uint32_t window) {
             if (w != names.end()) words = w->second;
         }
         e.name = words.empty() ? "#" + id : utf8Of(widened(hotbar::spaced(words), s.codePage));
+        e.name = cardnames::namedFromInfo(e.name, raw, clienttables::cardWords());  // 3.0.18-beta.137: its cards
         const int refine = int(rd32(raw, 0x40));
         e.refine = refine > 0 && refine <= 20 ? refine : 0;
         const auto f = files.find(id);

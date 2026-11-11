@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "core/card_names.hpp"
 #include "core/cart_window.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/item_window.hpp"
@@ -244,6 +245,8 @@ void readCart(State& s) {
             if (w != names.end()) words = w->second;
         }
         it.name = words.empty() ? "#" + id : utf8Of(widened(hotbar::spaced(words), s.codePage));
+        // 3.0.18-beta.137 (players: «в тележке слотов не видно»): its cards in its name, as .118 gave the others
+        it.name = cardnames::namedFromInfo(it.name, raw, clienttables::cardWords());
         const auto f = files.find(id);
         if (f != files.end()) it.icon = clienttables::icon(f->second, iw::iconSide(s.scale), 4 * s.scale);
         it.starred = stars.count(it.id) > 0;
