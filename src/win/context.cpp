@@ -136,6 +136,7 @@
 #include "win/sound_engine.hpp"
 #include "win/sound_hook.hpp"
 #include "win/gpu/adapters.hpp"
+#include "win/equip_patch.hpp"
 #include "win/game_camera.hpp"
 #include "win/part_marks.hpp"
 #include "win/safe_read.hpp"
@@ -504,6 +505,7 @@ bool Context::open(std::string& error) {
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
     installChatFix();                  // 2.6.12: Enter in the chat box while a map loads (R-PVF8AV)
     installShadowFix();                // 3.0.4-beta.9: a shadow drawn while a map loads (R-VBDSCP)
+    installWearGuard();                // 3.0.18-beta.174: an item worn at more places than the game takes (R-ZGN2US)
     installBlindFix();                 // 2.6.18: blindness's darkness over the whole screen (R-MCVUC8)
     installGridCell();                 // 3.0.11-beta.215: no cell under the mouse while the controller plays
     ensureMercAi();                    // 3.0.11-beta.217: AI\AI_M.lua - hiring a mercenary errored without it
