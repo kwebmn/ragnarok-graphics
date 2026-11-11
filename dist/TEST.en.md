@@ -1,3 +1,5 @@
+- «Речі», storage and the cart, while open, no longer give the interface library all their data every frame (about 60 times a second during a used thing's flash, R-6PYQQG): only what changed. The minimap likewise - its changed parts alone, not everything up to 15 times a second.
+
 - The game no longer crashes when the server says an item is worn at more than three of the ten equipment places, or only at places this client does not know (R-ZGN2US: a crash entering moc_fild02): the game itself wrote such places past its own array and spoiled its memory. The driver now leaves such an item out and tells it in the log.
 
 - The interface library does less work for nothing (R-AKUGNX): the friends and party window told it of changes every frame even closed - now a closed one only hides; the picked-up thing's toast and the experience numbers gave all their data every frame (up to 85 times a second) - now only what changed.
