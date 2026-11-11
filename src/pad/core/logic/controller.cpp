@@ -41,6 +41,7 @@ constexpr uint32_t kPickupGiveUpMs = 1000;  // still on the ground a second afte
 constexpr int kStopAhead = 2;
 constexpr int kPickupRadius = 10;
 constexpr int kPickupReach = 1;
+constexpr int kLootNear = 2;  // 3.0.18-beta.131: the attack button takes loot this near first
 constexpr uint32_t kDialogRepeatFirstMs = 400;  // a held D-pad in an NPC window: first repeat, then every
 constexpr uint32_t kDialogRepeatMs = 120;
 constexpr uint32_t kDialogForceCloseMs = 1000;  // B held this long closes a window the NPC left without a button
@@ -840,9 +841,25 @@ void Controller::attack(const WorldState& world, uint32_t now, TickOutput& out) 
                             (picked_ ? " (picked with the right stick)"
                                      : wantAttack_ ? " (being fought)" : " (fought before the walk)") +
                             (pos ? " at " + cellText(*pos) : std::string()));
-    } else if (takeNearest(world, now, "attack", out) == 0) {
-        deny(out, "no monsters around");
-        return;
+    } else {
+        // 3.0.18-beta.131 (the pad analysis, variant C): no target kept - loot within 2 cells taken first, else the
+        // nearest monster, else the NPC within reach talked to (one button, as Diablo's)
+        const Cell me = world.selfPos(now);
+        for (const auto& entry : world.groundItems())
+            if (cellDistance(me, entry.second.pos) <= kLootNear) {
+                out.notes.push_back("attack button: loot beside - picked up");
+                pickup(false, world, now, out);
+                return;
+            }
+        if (takeNearest(world, now, "attack", out) == 0) {
+            if (pickNpc(world, now) != 0) {
+                out.notes.push_back("attack button: no monster - the NPC near talked to");
+                talk(world, now, out);
+                return;
+            }
+            deny(out, "no monsters around");
+            return;
+        }
     }
     wantAttack_ = true;
     attackSent_ = false;

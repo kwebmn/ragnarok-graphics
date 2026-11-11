@@ -2163,3 +2163,26 @@ TEST(ctl_dead_hint_names_b) {
     const std::vector<HintPart> p = deadHintParts(Lang::En);
     CHECK(p.size() == 1 && p[0].buttons == std::vector<uint16_t>({kPadB}));
 }
+
+// 3.0.18-beta.131 (the pad analysis, «делай все» - variant C): A with no target kept - an item within 2 cells
+// taken first (after a kill its loot), else the nearest monster fought, else the NPC within reach talked to; one button
+TEST(ctl_attack_button_takes_loot_or_talks_when_nothing_to_fight) {
+    Controller c(Config{});
+    WorldState w = world();
+    w.apply(EvGroundItem{4243, 909, Cell{100, 101}}, 0);  // distance 1
+    TickOutput o = c.tick(pad(kPadA), w, view(), 1000);
+    CHECK_EQ(o.packets.size(), 1u);
+    if (!o.packets.empty()) CHECK_EQ(pid(pkt(o, 0)), 0x00f5);
+    c.tick(pad(), w, view(), 1100);
+    Controller t(Config{});
+    WorldState n = world();  // a town NPC 3 cells east, no monster
+    n.apply(EvActor{110000101, 86, 0, 200, Cell{103, 100}, Cell{103, 100}}, 0);
+    o = t.tick(pad(kPadA), n, view(), 1000);
+    CHECK_EQ(o.packets.size(), 1u);
+    if (!o.packets.empty()) CHECK_EQ(pid(pkt(o, 0)), 0x0090);  // the NPC clicked
+    o = t.tick(pad(), n, view(), 1100);  // let go: nothing more sent (no attack)
+    CHECK(o.packets.empty());
+    Controller m(Config{});
+    o = m.tick(pad(kPadA), npcWorld(), view(), 1000);  // a monster beside the NPC: fought, as before
+    CHECK(m.attacking());
+}
