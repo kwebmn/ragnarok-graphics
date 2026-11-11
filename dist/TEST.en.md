@@ -1,3 +1,5 @@
+- Storage: several things at once - Ctrl+click picks a thing (a gold edge), Shift+click a run, Ctrl+A all on the tab, Esc lets go. Take the picked into the bag by the footer's "Take the picked (N)", a double click on a picked one, or dragging the picked out of the storage. Stacks go whole (the "how many" window confirms itself).
+
 - Equipment: sets "1 2 3", as the later clients' Equip Switch - a right click on a number keeps what is worn, a click puts the set on (things found in the bag by number, refine and cards). Each character has its own sets.
 
 - Server select: beside the name - how many are playing now ("uaRO · 512 playing"), as the login server tells.
