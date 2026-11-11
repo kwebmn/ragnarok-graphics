@@ -1,3 +1,9 @@
+- Friends / Party renewed: each person with a face, class and level, an HP bar, "near · N cells" or the map's name, "dead".
+- Right click on a person - a menu under the row: whisper, expel (the leader), leave the party (one's own row), add to friends, remove from friends, a route to them, copy the name. On hover - quick whisper / expel buttons.
+- Twice on a person - whisper. Friends online first, "N / M online" in the header; the party's also shows its name, the experience share and a Settings button.
+- Friends: a player's name field + Add - a friend request by name. Empty tabs say what to do.
+- Controller: the D-pad walks people, A opens the menu (left/right its items, A does one), B closes the menu, LB/RB the tabs.
+
 - NPC talk: the answers are two a row again, as meant (each stood on its own line over half the window).
 - Friends / Party and the pet's card: the buttons two a row, not a column on the right; the party's list no longer keeps empty room when the party is small. The same for the list in the item choice window.
 
