@@ -1,3 +1,5 @@
+- "Settings" -> "Keys": the keys of "Hunt", "Boss timers", "Tracking", "Party", "What killed me" can be changed (Ctrl and a free letter) or removed.
+
 - Controller: the Start tile now has "Hunt", "Boss timers", "Tracking", "What killed me"; the "Settings" tile opens the new window, walked by its controls.
 - "Settings": - and + buttons by every slider.
 
