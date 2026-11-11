@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "core/card_names.hpp"
 #include "test.hpp"
 
@@ -23,4 +24,24 @@ TEST(card_names_as_the_game_names_them) {
     CHECK_EQ(cardnames::named("Katana", forged, t), std::string("Katana"));
     const int unknown[4] = {9999, 0, 0, 0};
     CHECK_EQ(cardnames::named("Katana", unknown, t), std::string("Katana"));
+}
+
+// 3.0.18-beta.118 (the owner: «говорят что в вендинге не видно карт»): a thing's cards from its ITEM_INFO (+0x1C, four
+// ints - the server's 0x0133 put there by FUN_0058aa10, the bag's and the storage's alike), its name with them only
+// when identified (+0x3C)
+TEST(card_names_from_item_info) {
+    uint8_t info[0x48] = {};
+    const auto put = [&](size_t at, int v) {
+        for (int b = 0; b < 4; ++b) info[at + size_t(b)] = uint8_t(uint32_t(v) >> (8 * b));
+    };
+    put(0x1C, 4001);
+    put(0x20, 4001);
+    put(0x24, 4014);
+    cardnames::Tables t = cardnames::read("4001#Lucky#\n4014#of Counter#\n", "4014#\n");
+    int cards[4] = {9, 9, 9, 9};
+    cardnames::cardsOf(info, cards);
+    CHECK(cards[0] == 4001 && cards[1] == 4001 && cards[2] == 4014 && cards[3] == 0);
+    CHECK_EQ(cardnames::namedFromInfo("Katana", info, t), std::string("Katana"));  // not identified: as it is
+    info[0x3C] = 1;
+    CHECK_EQ(cardnames::namedFromInfo("Katana", info, t), std::string("Double Lucky Katana of Counter"));
 }

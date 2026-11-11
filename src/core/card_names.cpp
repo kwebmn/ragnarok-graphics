@@ -70,4 +70,19 @@ std::string named(const std::string& name, const int cards[4], const Tables& t) 
     return before + name + after;
 }
 
+void cardsOf(const uint8_t* itemInfo, int cards[4]) {
+    for (int c = 0; c < 4; ++c) {
+        uint32_t v = 0;
+        for (int b = 0; b < 4; ++b) v |= uint32_t(itemInfo[0x1C + 4 * c + b]) << (8 * b);
+        cards[c] = int32_t(v);
+    }
+}
+
+std::string namedFromInfo(const std::string& name, const uint8_t* itemInfo, const Tables& t) {
+    if (!itemInfo || !itemInfo[0x3C]) return name;
+    int cards[4];
+    cardsOf(itemInfo, cards);
+    return named(name, cards, t);
+}
+
 }  // namespace uagfx::cardnames

@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "core/card_names.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
@@ -207,6 +208,8 @@ void readSide(State& s, uint32_t base, tw::Side& side) {
             if (w != names.end()) words = w->second;
         }
         x.name = words.empty() ? "#" + id : utf8Of(widened(hotbar::spaced(words), s.codePage));
+        // 3.0.18-beta.118 (the owner: «в вендинге не видно карт»): its cards in its name, as the game names it
+        x.name = cardnames::namedFromInfo(x.name, raw, clienttables::cardWords());
         const auto f = files.find(id);
         if (f != files.end()) x.icon = clienttables::icon(f->second, iw::iconSide(s.scale * 0.85f), 4 * s.scale);
     }

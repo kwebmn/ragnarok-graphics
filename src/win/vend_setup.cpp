@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "core/card_names.hpp"
 #include "core/window_stack.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/item_window.hpp"
@@ -215,6 +216,8 @@ void readList(const State& s, uint32_t listAt, std::vector<vs::Row>& rows, std::
             if (w != names.end()) words = w->second;
         }
         r.name = words.empty() ? "#" + id : utf8Of(widened(hotbar::spaced(words), s.codePage));
+        // 3.0.18-beta.118 (the owner: «в вендинге не видно карт»): its cards in its name, as the game names it
+        r.name = cardnames::namedFromInfo(r.name, raw, clienttables::cardWords());
         r.count = int(rd32(raw, 0x10));
         r.id = std::atoi(id.c_str());
         const int refine = int(rd32(raw, 0x40));

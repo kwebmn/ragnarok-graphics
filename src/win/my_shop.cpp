@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "core/card_names.hpp"
 #include "core/char_block.hpp"
 #include "core/window_stack.hpp"
 #include "core/hotbar_panel.hpp"
@@ -160,6 +161,8 @@ void readShop(State& s) {
                 if (w != names.end()) words = w->second;
             }
             r.name = words.empty() ? "#" + id : utf8Of(widened(hotbar::spaced(words), s.codePage));
+            // 3.0.18-beta.118 (the owner: «в вендинге не видно карт»): its cards in its name, as the game names it
+            r.name = cardnames::namedFromInfo(r.name, raw, clienttables::cardWords());
             r.left = int(rd32(raw, 0x10));
             r.price = int32_t(rd32(raw, 0x18));
             const int refine = int(rd32(raw, 0x40));
