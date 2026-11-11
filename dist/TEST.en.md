@@ -1,3 +1,5 @@
+- Wind is now lightning yellow; holy near white so they are not mixed up.
+
 - Equipment: a worn thing's element now as in the later clients - its name itself in the element's colour (no separate "Wind" mark).
 
 - Fixed the game freezing on entering a map in .145-.146 (R-STGQE9): our interface waited for the game to finish loading the map's models while the game waited for it. Now it never waits - with the game's files busy it reads the archives with its own reader. The .145 crash fix stays.
