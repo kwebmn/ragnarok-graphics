@@ -1367,6 +1367,16 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .tp { display: block; height: 1.8333rem; line-height: 1.8333rem; padding: 0 0.6667rem; font-size: 0.9167rem;
     border-radius: 0.5rem; border: 0.0833rem #ffffff22; background-color: #000000cc; color: #e9e4ea;
     white-space: nowrap; }
+/* 3.0.18-beta.117 (the owner: «при анмаунте надо сделать подтверждение да нет»): asked over the sign */
+.eql .ask { display: block; padding: 0.5rem 0.6667rem; border-radius: 0.5833rem; border: 0.0833rem #e6cb8a66;
+    background-color: #000000e0; text-align: center; }
+.eql .aq { display: block; font-size: 0.9167rem; color: #e9e4ea; white-space: nowrap; margin-bottom: 0.4167rem; }
+.eql .ab { display: flex; justify-content: center; }
+.eql .ay, .eql .an { display: block; width: 3.6667rem; height: 1.8333rem; line-height: 1.8333rem; margin: 0 0.25rem;
+    border-radius: 0.5rem; text-align: center; font-size: 0.9167rem; border: 0.0833rem #ffffff22; }
+.eql .ay { color: #e6cb8a; border-color: #e6cb8a88; }
+.eql .an { color: #c9cfdb; }
+.eql .ay.hot, .eql .an.hot { background-color: #ffffff24; }
 )";
 
 }  // namespace

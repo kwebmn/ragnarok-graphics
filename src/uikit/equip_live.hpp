@@ -52,6 +52,10 @@ struct Model {
     bool mountHot = false;
     Rml::String mountIcon;  // 3.0.18-beta.116: its sign (the owner chose «2 Значок між стрілками»), its words a tip
     float mountIconSide = 0;
+    // 3.0.18-beta.117 (the owner: «подтверждение да нет»): the sign pressed - its words with «?», Yes / No over it
+    bool mountAsk = false;
+    int askHot = -1;  // the cursor over Yes (0) or No (1)
+    Rml::String askYes, askNo;
     int turnHot = -1;  // 3.0.18-beta.115: the cursor over ◀ (0) or ▶ (1)
     bool closeHot = false, picking = false, pad = false;
     std::vector<SlotV> left, right;

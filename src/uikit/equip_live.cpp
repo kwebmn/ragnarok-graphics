@@ -33,7 +33,10 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-attr-src="mountIcon" data-style-width="mountIconSide + 'px'"
   data-style-height="mountIconSide + 'px'"/></span><span
   class="tb" data-if="turns" data-hit="turnright" data-class-hot="turnHot == 1">&#x25B6;</span></div><div class="mtip"
-  data-if="mountHot" data-hit="mounttip"><span class="tp">{{mountOff}}</span></div></div>
+  data-if="mountHot && !mountAsk" data-hit="mounttip"><span class="tp">{{mountOff}}</span></div><div class="mtip"
+  data-if="mountAsk"><div class="ask"><span class="aq">{{mountOff}}?</span><div class="ab"><span class="ay"
+  data-hit="mountyes" data-class-hot="askHot == 0">{{askYes}}</span><span class="an" data-hit="mountno"
+  data-class-hot="askHot == 1">{{askNo}}</span></div></div></div></div>
 <div class="picks" data-if="picking" data-hit="picklist"><div class="ptitle">{{pickTitle}}</div><div class="pnone"
   data-if="picks.size == 0">{{pickNone}}</div><div class="pick" data-for="p : picks" data-hit="pick"
   data-attr-data-index="p.index" data-class-hot="p.hot" data-class-focus="p.focus"><div class="pic"><img
@@ -132,6 +135,10 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("turnHot", &m.turnHot);
     c.Bind("mountIcon", &m.mountIcon);
     c.Bind("mountIconSide", &m.mountIconSide);
+    c.Bind("mountAsk", &m.mountAsk);
+    c.Bind("askHot", &m.askHot);
+    c.Bind("askYes", &m.askYes);
+    c.Bind("askNo", &m.askNo);
     c.Bind("cards", &m.cards);
     c.Bind("drag", &m.drag);
     c.Bind("pickTitle", &m.pickTitle);

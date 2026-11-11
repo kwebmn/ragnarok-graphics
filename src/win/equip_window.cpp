@@ -127,6 +127,8 @@ struct State {
     std::string heroKey;
     bool mountHot = false;  // 3.0.18-beta.114: the cursor over the cart / falcon / Peco button
     int turnHot = -1;       // 3.0.18-beta.115: over ◀ (0) or ▶ (1)
+    bool mountAsk = false;  // 3.0.18-beta.117: the sign pressed - Yes / No asked
+    int askHot = -1;        // over Yes (0) or No (1)
     panel::Picture hero;
     panel::Picture picture, portrait;
     uint32_t texture = 0;
@@ -603,11 +605,17 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         const float px = float(cx) * float(k) - float(s.layout.x), py = float(cy) * float(k) - float(s.layout.y);
         for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "mountoff"))
             s.mountHot = s.mountHot || p.box.contains(px, py);
+        s.askHot = -1;
+        for (int i = 0; s.mountAsk && i < 2; ++i)  // 3.0.18-beta.117
+            for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), i ? "mountno" : "mountyes"))
+                if (p.box.contains(px, py)) s.askHot = i;
         for (int i = 0; i < 2; ++i)  // 3.0.18-beta.115 (R-RJBU55 «не активні при наведении»)
             for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), i ? "turnright" : "turnleft"))
                 if (p.box.contains(px, py)) s.turnHot = i;
     }
-    std::string key = std::string(s.mountHot ? "m" : "") + "t" + std::to_string(s.turnHot) +
+    if (s.mountAsk && (mountNow() == Mount::None || !s.shown)) s.mountAsk = false;  // nothing left to ask about
+    std::string key = std::string(s.mountHot ? "m" : "") + (s.mountAsk ? "a" + std::to_string(s.askHot) : "") + "t" +
+                      std::to_string(s.turnHot) +
                       std::to_string(s.layout.x) + ',' +
                       std::to_string(s.layout.y) + ';' + std::to_string(scale) +
                       ';' + std::to_string(s.show.hoverSlot) + ',' + std::to_string(s.show.hoverPick) + ',' +
@@ -662,6 +670,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                         m.mountIcon.clear();
                                     }
                                     m.turnHot = s.turnHot;
+                                    m.mountAsk = s.mountAsk && !m.mountOff.empty();  // 3.0.18-beta.117
+                                    m.askHot = s.askHot;
+                                    m.askYes = say(settings::Text::MsgYes);
+                                    m.askNo = say(settings::Text::MsgNo);
                                     m.hero = m.turns ? s.live.icon(&s.hero) : "";
                                     {  // .113: fitted into the middle's box, its proportions kept
                                         const float bw = 150 * s.scale, bh = 210 * s.scale;
@@ -818,16 +830,43 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                  fromGame ? "game's cursor" : "message's point", s.layout.x, s.layout.y, s.layout.w, s.layout.h,
                  int(h.part), h.index);
     }
+    if (h.part == ew::Part::None && s.mountAsk && (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN)) {
+        s.mountAsk = false;  // 3.0.18-beta.117: a press past the window forgets the question
+        s.key.clear();
+    }
     if (h.part == ew::Part::None || m == WM_MOUSEMOVE) return false;
     result = 0;
     if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && s.live.shown()) {  // 3.0.18-beta.111: ◀ ▶ turn it
         // 3.0.18-beta.112 (the owner: «не крутится персонаж стрелками»): by their laid-out boxes - the window is
         // passive (pointer-events none), RmlUi's own point lookup never finds its elements
         const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
+        // 3.0.18-beta.117 (the owner: «при анмаунте надо сделать подтверждение да нет, потому что нажав случайно
+        // может быть проблема»): the sign asks, Yes does it, No or a press anywhere else forgets the question
+        if (s.mountAsk) {
+            const auto on = [&](const char* part) {
+                for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), part))
+                    if (p.box.contains(lx, ly)) return true;
+                return false;
+            };
+            const bool yes = on("mountyes"), no = on("mountno");
+            s.mountAsk = false;
+            s.key.clear();
+            if (yes) {
+                const char* did = mountOff(s);
+                if (s.told++ < 40) LOG_INFO("equip: the cart, the falcon, the Peco - yes: %s", did);
+                return true;
+            }
+            if (no) {
+                if (s.told++ < 40) LOG_INFO("equip: the cart, the falcon, the Peco - no");
+                return true;
+            }
+            if (on("mountoff")) return true;  // the sign again: the question closed
+        }
         for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "mountoff"))  // 3.0.18-beta.114
             if (p.box.contains(lx, ly)) {
-                const char* did = mountOff(s);
-                if (s.told++ < 40) LOG_INFO("equip: its button for the cart, the falcon, the Peco - %s", did);
+                s.mountAsk = mountNow() != Mount::None;
+                s.key.clear();
+                if (s.told++ < 40) LOG_INFO("equip: the sign for the cart, the falcon, the Peco - asked");
                 return true;
             }
         for (const char* part : {"turnleft", "turnright"})

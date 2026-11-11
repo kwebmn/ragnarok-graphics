@@ -163,3 +163,39 @@ TEST(uikit_equip_mount_button_between_the_arrows) {
     CHECK(uikit::placesOf(doc, "mountoff").empty());
     rmlhost::close(doc);
 }
+
+// 3.0.18-beta.117 (the owner: «при анмаунте надо сделать подтверждение да нет»): the sign pressed asks first - its
+// words with «?» and Yes / No over it, both found by their boxes; no tip while asking
+TEST(uikit_equip_mount_asks_yes_or_no) {
+    ew::Data d;
+    ew::Show sh;
+    static el::Model m;
+    el::fill(m, d, sh, texts(), 1, none, glyph);
+    m.turns = true;
+    m.mountOff = "Злізти з Пеко";
+    std::string error;
+    Rml::ElementDocument* doc =
+        rmlhost::load(el::rml(), [&](Rml::DataModelConstructor& c) { el::bind(c, m); }, 0, 0, &error);
+    CHECK_EQ(error, std::string());
+    ew::Layout L = ew::layout(0, 0, 1, d, sh, texts(), [](const std::string& s, float px, bool) {
+        return float(s.size()) * px * 0.55f;
+    });
+    CHECK(el::refit(doc, L));
+    CHECK(uikit::placesOf(doc, "mountyes").empty());
+    m.mountAsk = true;
+    m.mountHot = true;
+    m.askYes = "Так";
+    m.askNo = "Ні";
+    rmlhost::update();
+    const auto yes = uikit::placesOf(doc, "mountyes"), no = uikit::placesOf(doc, "mountno");
+    const auto sign = uikit::placesOf(doc, "mountoff");
+    CHECK(yes.size() == 1 && no.size() == 1 && sign.size() == 1);
+    CHECK(uikit::placesOf(doc, "mounttip").empty());
+    if (yes.size() == 1 && no.size() == 1 && sign.size() == 1) {
+        CHECK(yes[0].box.w > 10 && no[0].box.w > 10);
+        CHECK(yes[0].box.x + yes[0].box.w <= no[0].box.x + 0.5f);       // Yes, then No
+        CHECK(yes[0].box.y + yes[0].box.h <= sign[0].box.y + 0.5f);      // over the sign
+        CHECK(yes[0].box.x >= L.centre.x - 0.5f && no[0].box.x + no[0].box.w <= L.centre.x + L.centre.w + 0.5f);
+    }
+    rmlhost::close(doc);
+}
