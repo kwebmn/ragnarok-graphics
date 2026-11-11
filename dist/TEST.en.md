@@ -1,3 +1,5 @@
+- Cart (Alt+W): the cards in a thing show in its name, as in the bag, storage, trade and vending (Lucky …, Double …, … of Counter). The same in the item pick window.
+
 - Hotbar profiles from the controller: the Start menu's "Bar profile N" tile switches 1 → 2 → 3 (as Ctrl+Shift+1..3, with the character's own bar on).
 - The controller's button badges in windows (shop, skills, equipment, hints) have their letters again: A, B, LB, RT, Start and so on.
 - Shop: when Start bought nothing, the log says why.
