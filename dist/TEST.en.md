@@ -1,3 +1,5 @@
+- Element things in their colour: weapons with an element (Fire Brand, Ice Falchion…), forged ones with an element, armour with an element card (Pasana, Swordfish…) - a coloured line in the bag/storage/cart cell, the name in the tip and in the shop and item choice lists in the element's colour. Switch: Interface → "Element things in their colour".
+
 - My shop: each thing shows "sold N", its slots and what is inside, right click - its card; "Earned" and the Sales list (time · how many × what · +zeny, newest first). The list starts anew each time the shop opens. The server does not name the buyer, so neither do we.
 
 - Forged things: named as the game does - "Very Strong Fire Main Gauche" (star crumbs and element) in the bag, storage, cart, trade, vending; under the name and in the card - "Forged by Name" (the game asks the server for the smith's name).
