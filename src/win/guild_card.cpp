@@ -23,6 +23,7 @@
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
+#include "win/window_stack.hpp"
 #include "uikit/guild_live.hpp"
 #include "win/live_part.hpp"
 #include "win/ui_sheet.hpp"
@@ -360,7 +361,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.rights = read32(kRights);
     if (!s.shown) LOG_INFO("guild: the game's guild window - the new card shows it");
     s.k = float(k);
-    s.scale = uistyle::readingScale(k);
+    // 3.0.18-beta.151: times its own size (its corner pulled)
+    s.scale = uistyle::readingScale(k) * windowstack::sizeOf(winstack::Win::Guild);
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     readGuild(s);

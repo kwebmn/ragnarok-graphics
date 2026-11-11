@@ -601,7 +601,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         return;
     }
     readState(s);
-    const float scale = uistyle::readingScale(k);
+    // 3.0.18-beta.151: times its own size (its corner pulled)
+    const float scale = uistyle::readingScale(k) * windowstack::sizeOf(winstack::Win::Shop);
     const bool fresh = scale != s.scale || codePage != s.codePage;
     s.k = float(k);
     s.scale = scale;

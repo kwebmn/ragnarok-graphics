@@ -624,7 +624,8 @@ void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth
         return;
     }
     readState(s);
-    const float scale = uistyle::itemScale(k);  // 3.0.11-beta.67: [interface] text_size's too
+    // 3.0.18-beta.151: times its own size (its corner pulled)
+    const float scale = uistyle::itemScale(k) * windowstack::sizeOf(winstack::Win::Items);
     s.k = float(k);
     s.scale = scale;
     s.targetW = targetWidth;

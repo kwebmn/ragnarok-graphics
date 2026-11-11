@@ -6,7 +6,14 @@
 #include <iterator>
 #include <vector>
 
+#include <optional>
+#include <string>
+
+#include "core/window_sizes.hpp"
 #include "pad/win/game_window.hpp"
+#include "win/game_camera.hpp"
+#include "win/log.hpp"
+#include "win/paths.hpp"
 #include "win/cart_window.hpp"
 #include "win/char_make.hpp"
 #include "win/char_select.hpp"
@@ -81,6 +88,44 @@ struct State {
     std::optional<Win> told;  // the top the log named last
     int tells = 0;
 };
+
+// 3.0.18-beta.151: the windows one can size by their corner - those laid out in rem by their own scale
+const char* sizeKey(Win w) {
+    switch (w) {
+        case Win::Items: return "items";
+        case Win::Equip: return "equip";
+        case Win::Stats: return "stats";
+        case Win::Skills: return "skills";
+        case Win::Storage: return "storage";
+        case Win::Cart: return "cart";
+        case Win::Trade: return "trade";
+        case Win::Shop: return "shop";
+        case Win::Guild: return "guild";
+        default: return nullptr;
+    }
+}
+
+struct Sizing {
+    bool read = false;
+    windowsizes::Sizes sizes;
+    std::optional<Win> pulling;  // its corner held
+    float from = 1, w0 = 0, h0 = 0, x0 = 0, y0 = 0;
+    int targetW = 0, targetH = 0;
+    double k = 0;
+    std::optional<Win> hot;  // the corner under the pointer
+    winstack::Box hotBox{};
+};
+
+Sizing& sizing() {
+    static Sizing z;
+    if (!z.read) {
+        z.read = true;
+        std::string text;
+        if (readTextFile(gameDir() + "\\uaro-graphics\\window-sizes.txt", text))
+            z.sizes = windowsizes::Sizes::parse(text);
+    }
+    return z;
+}
 
 State& state() {
     static State s;
@@ -483,6 +528,73 @@ bool close(Win w) {
 
 }  // namespace
 
+// 3.0.18-beta.151: the corner of a window one can size - the box's bottom right, 18 of the game's pixels
+static bool inCorner(const winstack::Box& b, float x, float y, double k) {
+    const float g = float(18 * (k > 0 ? k : 1));
+    return x >= b.x + b.w - g && x <= b.x + b.w + 2 && y >= b.y + b.h - g && y <= b.y + b.h + 2;
+}
+
+static void gripDoc(const winstack::Box* b, double k) {
+    static uaui::Doc doc;
+    static float side = 0;
+    if (!b || !uaui::ready()) {
+        doc.show(false);
+        return;
+    }
+    if (!doc.made()) {
+        doc.passive = true;
+        doc.top = true;
+        if (!doc.make("window size grip", R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="wgr" data-model="wgrip" data-style-width="side + 'px'" data-style-height="side + 'px'"><div class="c"
+  data-style-width="side + 'px'" data-style-height="side + 'px'"></div></body></rml>)RML",
+                      [&](Rml::DataModelConstructor& m) { m.Bind("side", &side); }))
+            return;
+    }
+    const float g = float(16 * (k > 0 ? k : 1));
+    if (std::fabs(g - side) > 0.5f) side = g, doc.dirtyAll();
+    doc.place(int(std::lround(b->x + b->w - g - 3)), int(std::lround(b->y + b->h - g - 3)));
+    doc.show(true);
+}
+
+static void sizingFrame(State& s, int targetWidth, int targetHeight, double k) {
+    Sizing& z = sizing();
+    z.targetW = targetWidth, z.targetH = targetHeight, z.k = k;
+    int cx = 0, cy = 0;
+    if (z.pulling) {
+        const int button = GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON;
+        const char* key = sizeKey(*z.pulling);
+        if (!key || !shown(*z.pulling) || !readGameCursor(cx, cy) || GetAsyncKeyState(button) >= 0) {
+            if (key) {
+                writeFileAtomic(gameDir() + "\\uaro-graphics\\window-sizes.txt", z.sizes.text());
+                LOG_INFO("windows: %s sized to %.0f %%", key, double(z.sizes.of(key) * 100));
+            }
+            z.pulling.reset();
+        } else {
+            const float x = float(cx * k), y = float(cy * k);
+            z.sizes.set(key, windowsizes::pulled(z.from, z.w0, z.h0, z.w0 + (x - z.x0), z.h0 + (y - z.y0)));
+        }
+    }
+    z.hot.reset();
+    if (!z.pulling && readHoverCursor(cx, cy)) {
+        const float x = float(cx * k), y = float(cy * k);
+        for (const Win w : s.stack.topDown()) {
+            winstack::Box b{};
+            if (!boxOf(w, b) || x < b.x || y < b.y || x > b.x + b.w + 2 || y > b.y + b.h + 2) continue;
+            if (sizeKey(w) && inCorner(b, x, y, k)) z.hot = w, z.hotBox = b;
+            break;  // the top one under the pointer alone
+        }
+    } else if (z.pulling) {
+        winstack::Box b{};
+        if (boxOf(*z.pulling, b)) z.hot = z.pulling, z.hotBox = b;
+    }
+    gripDoc(z.hot ? &z.hotBox : nullptr, k);
+}
+
+float sizeOf(winstack::Win w) {
+    const char* key = sizeKey(w);
+    return key ? sizing().sizes.of(key) : 1.0f;
+}
+
 void frame(int targetWidth, int targetHeight, double k) {
     State& s = state();
     bool pairOpened = false;  // 3.0.11-beta.111: «Речі» or «Спорядження» opened this frame
@@ -503,6 +615,7 @@ void frame(int targetWidth, int targetHeight, double k) {
     const std::optional<Win> t = s.stack.top();
     if (t != s.told && t && s.stack.bottomUp().size() >= 2) tell(s, "on top", *t);
     s.told = t;
+    sizingFrame(s, targetWidth, targetHeight, k);  // 3.0.18-beta.151
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
@@ -516,6 +629,29 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
+    {  // 3.0.18-beta.151: a press on a window's corner - its size pulled till let go
+        Sizing& z = sizing();
+        if (z.pulling) {
+            result = 0;
+            return true;
+        }
+        float x = 0, y = 0;
+        if (m == WM_LBUTTONDOWN && z.k > 0 &&
+            pointerInTarget(game, m, lp, z.k, z.targetW, z.targetH, x, y, nullptr))
+            for (const Win w : s.stack.topDown()) {
+                winstack::Box b{};
+                if (!boxOf(w, b) || x < b.x || y < b.y || x > b.x + b.w + 2 || y > b.y + b.h + 2) continue;
+                if (sizeKey(w) && inCorner(b, x, y, z.k)) {
+                    z.pulling = w;
+                    z.from = z.sizes.of(sizeKey(w));
+                    z.w0 = b.w, z.h0 = b.h, z.x0 = x, z.y0 = y;
+                    s.stack.raise(w);
+                    result = 0;
+                    return true;
+                }
+                break;
+            }
+    }
     const bool press = m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN || m == WM_RBUTTONDBLCLK ||
                        m == WM_MBUTTONDOWN;
     for (const Win w : s.stack.topDown()) {

@@ -358,7 +358,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     }
     readState(s);
     s.k = float(k);
-    s.scale = uistyle::readingScale(k);
+    // 3.0.18-beta.151: times its own size (its corner pulled)
+    s.scale = uistyle::readingScale(k) * windowstack::sizeOf(winstack::Win::Trade);
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     const ULONGLONG now = GetTickCount64();

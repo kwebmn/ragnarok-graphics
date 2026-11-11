@@ -1506,6 +1506,10 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .bmx .r { position: absolute; left: 0; top: 0; border-width: 2px; border-color: #e6cb8a; background-color: #e6cb8a26; }
 .bmx .d { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px;
     border-radius: 2px; background-color: #e6cb8a; }
+/* 3.0.18-beta.151: a window's size grip - its bottom right corner under the pointer */
+.wgr { position: absolute; }
+.wgr .c { position: absolute; left: 0; top: 0; border-right-width: 3px; border-bottom-width: 3px;
+    border-color: #e6cb8a; border-bottom-right-radius: 6px; }
 /* 3.0.18-beta.135: the pad's ring on our panels' buttons */
 .ppr { position: absolute; }
 .ppr .r { position: absolute; left: 0; top: 0; border-width: 2px; border-color: #e6cb8a; border-radius: 6px;

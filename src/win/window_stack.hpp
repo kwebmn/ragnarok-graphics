@@ -30,5 +30,9 @@ bool marked(winstack::Win w);  // its gold edge now
 // edge toward the window docked beside it (`right` - its right edge) - that one raised, the controller's now; false:
 // none docked there
 bool padCross(winstack::Win from, bool right);
+// 3.0.18-beta.151 (the owner: the equipment window not sized by pulling): a window's own size - its
+// bottom right corner pulled with the mouse (a gold corner under the pointer there), kept in
+// uaro-graphics\window-sizes.txt; 1 for one never pulled or not sized so (its own scale times this)
+float sizeOf(winstack::Win w);
 
 }  // namespace uagfx::win::windowstack
