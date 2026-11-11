@@ -1,3 +1,6 @@
+- NPC talk: the answers are two a row again, as meant (each stood on its own line over half the window).
+- Friends / Party and the pet's card: the buttons two a row, not a column on the right; the party's list no longer keeps empty room when the party is small. The same for the list in the item choice window.
+
 - Item card: a card in a slot (left or right mouse button) opens in its own window beside it, the item's card stays. The card's window moves by its title and closes by its ✕, Esc or B on the controller.
 
 - Another player's shop: press a thing's name to open its item card (description, slots, the cards in it with their art). On the controller - Y; buying is now Start.
