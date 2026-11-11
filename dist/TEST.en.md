@@ -1,3 +1,5 @@
+- Server select: beside the name - how many are playing now ("uaRO · 512 playing"), as the login server tells.
+
 - Almost every window can now be pulled by its bottom right corner: NPC talk, vending, shop opening, my shop, item choice, friends/party, chat rooms, pet, homunculus, mercenary, settings, macros, whisper settings, the command list - 70-150 %, each keeps its own size.
 
 - Window size by the mouse: Items, Equipment, Stats, Skills, storage, cart, trade, the NPC shop and the guild - take the bottom right corner (a gold corner shows under the pointer) and pull: 70-150 %. Each window keeps its own size (uaro-graphics\window-sizes.txt).
