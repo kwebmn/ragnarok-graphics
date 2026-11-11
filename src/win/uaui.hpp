@@ -95,8 +95,15 @@ public:
     bool made() const { return doc_ != nullptr; }
     void show(bool on);  // shown with the theme's fade in (its body's class «away» taken off the next frame)
     bool shown() const { return shown_; }
-    void dirty(const char* variable) { model_.DirtyVariable(variable); }
-    void dirtyAll() { model_.DirtyAllVariables(); }
+    // 3.0.18-beta.172: each one counted - the log's uaUI line tells the parts that change their data the most
+    void dirty(const char* variable) {
+        ++dirties;
+        model_.DirtyVariable(variable);
+    }
+    void dirtyAll() {
+        ++dirtyAlls;
+        model_.DirtyAllVariables();
+    }
     void place(int x, int y);  // its box's top left in the target's pixels (3.0.18-beta.70: set only when it moves)
     // 3.0.18-beta.70 (the big six, C): a property of its body set only when its value changes
     void prop(const std::string& name, const std::string& value);
@@ -128,6 +135,7 @@ public:
     void lookAtFile();  // 3.0.18-beta.59: uaro-graphics\ui\<name>.rml changed - loaded over the built-in markup
     bool fadePending = false;
     unsigned wantedAt = 0;  // 3.0.18-beta.40: the frame show(true) was last asked in
+    unsigned dirties = 0, dirtyAlls = 0;  // 3.0.18-beta.172: since the uaUI line's last count
 
 private:
     Rml::ElementDocument* doc_ = nullptr;

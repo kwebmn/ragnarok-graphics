@@ -2187,6 +2187,25 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
                  st.render * 1000 / n, st.emit * 1000 / n, st.worst * 1000, st.draws / n, st.vertices / n,
                  double(st.remeshed) / n, s.atlas.glyphs, kAtlas, kAtlas, s.atlas.full ? " (full)" : "",
                  s.atlas.uploads);
+        // 3.0.18-beta.172: the parts whose data changed the most (each change RmlUi's work in its next update)
+        {
+            std::vector<std::pair<double, const Doc*>> most;
+            for (Doc* d : s.docs) {
+                if (d->dirties || d->dirtyAlls) most.emplace_back(double(d->dirties) + 10.0 * d->dirtyAlls, d);
+            }
+            std::sort(most.begin(), most.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+            std::string line;
+            for (size_t i = 0; i < most.size() && i < 8; ++i) {
+                char part[96];
+                std::snprintf(part, sizeof part, "%s%s %.2f%s", i ? ", " : "", most[i].second->name.c_str(),
+                              double(most[i].second->dirties) / n,
+                              most[i].second->dirtyAlls ? (" (all " + std::to_string(most[i].second->dirtyAlls) +
+                                                           ")").c_str() : "");
+                line += part;
+            }
+            for (Doc* d : s.docs) d->dirties = d->dirtyAlls = 0;
+            if (!line.empty()) LOG_INFO("uaui: data changed a frame - %s", line.c_str());
+        }
         st = Stats{};
         st.since = now;
     }

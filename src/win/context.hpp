@@ -123,6 +123,9 @@ private:
     // Stage 2 (spec §3.4): uaro-graphics.ini is looked at once a second while the game runs, and what applies now
     // is applied at once.
     void watchSettings();
+    // 3.0.18-beta.172: uaro-graphics.ini's place - found once a second by watchSettings, not on the disk each frame
+    const std::string& iniPath();
+    std::string iniPath_;
     void noteWindow(bool minimized, bool foreground);  // a line when the game's window changes (0.10.1)
     struct Stats {
         unsigned frames = 0;

@@ -1333,7 +1333,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
         skillwheelwin::frame(wheel, sector, pk, pw, ph);
         g_parts.mark("skillwheelwin", nowMs());
     }
-    optionscardwin::setSettings(&config, ourFile(layout::File::Ini));  // 3.0.18-beta.122: «Налаштування»
+    // 3.0.18-beta.122: «Налаштування»; 3.0.18-beta.172 (R-2CKVU6: 0.11 ms a frame closed - ourFile looked
+    // for the file on the disk each frame) the path watchSettings found
+    optionscardwin::setSettings(&config, iniPath());
     optionscardwin::frame(window, config.optionsWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.162
     g_parts.mark("optionscardwin", nowMs());
     socialcardwin::frame(window, config.socialWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.163
@@ -1590,7 +1592,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     } else {
         noteUsage(foreground, out.cx, out.cy, timed ? &gpuNow : nullptr);  // 2.2.1
     }
-    if (console_.present(window, foreground, ourFile(layout::File::Ini), config, map_,
+    if (console_.present(window, foreground, iniPath(), config, map_,
                          timed ? &gpuNow : nullptr)) {  // 1.9.3; 2.6.22: the map for «Только на этой карте»
         settingsChecked_ = 0;  // read at once, at the next present
         settingsKnown_ = false;
@@ -1880,11 +1882,17 @@ void Context::noteFirstGame(const Config& config, double fps) {
     LOG_INFO("first game: a minute on the maps - %d frames a second (the median), the effects set %d", o.fps, o.level);
 }
 
+const std::string& Context::iniPath() {
+    if (iniPath_.empty()) iniPath_ = ourFile(layout::File::Ini);
+    return iniPath_;
+}
+
 void Context::watchSettings() {
     const uint64_t now = GetTickCount64();
     if (settingsChecked_ && now - settingsChecked_ < 1000) return;
     settingsChecked_ = now;
     const std::string path = ourFile(layout::File::Ini);
+    iniPath_ = path;  // 3.0.18-beta.172: the frame's users take it from here - not a file lookup each frame
     WIN32_FILE_ATTRIBUTE_DATA a{};
     if (!GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &a)) return;  // no file: the defaults stay
     const uint64_t size = (uint64_t(a.nFileSizeHigh) << 32) | a.nFileSizeLow;
