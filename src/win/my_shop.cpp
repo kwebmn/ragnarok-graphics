@@ -59,7 +59,7 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <span class="x ctl" data-event-click="ms_close()">&#x2715;</span>
 <div class="list"><div class="ware ctl" data-for="r, i : rows" data-event-mousedown="ms_card(i)"><img
   data-if="r.icon != ''" data-attr-src="r.icon"/>
-<div class="wname"><span class="name">{{r.name}}</span><span class="inside"
+<div class="wname"><span class="name" data-style-color="r.colour">{{r.name}}</span><span class="inside"
   data-if="r.inside != ''">{{r.inside}}</span><span class="stock">{{r.left}}<span class="sold"
   data-if="r.sold != ''"> &#xB7; {{r.sold}}</span></span></div>
 <span class="price">{{r.price}}</span></div>
@@ -76,10 +76,10 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
 struct OwnWareView {
-    Rml::String name, left, price, icon, inside, sold;
+    Rml::String name, left, price, icon, inside, sold, colour = "#eef2f8";
     bool operator==(const OwnWareView& o) const {
         return name == o.name && left == o.left && price == o.price && icon == o.icon && inside == o.inside &&
-               sold == o.sold;
+               sold == o.sold && colour == o.colour;
     }
 };
 struct SaleView {  // 3.0.18-beta.143
@@ -196,6 +196,7 @@ void readShop(State& s) {
             r.index = int(rd32(raw, 0x08));  // 3.0.18-beta.143
             r.info = node + kInfo;
             infocardwin::describe(raw, std::atoi(id.c_str()), s.codePage, r.name, r.inside);
+            if (const std::string e = infocardwin::elementHex(std::atoi(id.c_str()), raw); !e.empty()) r.colour = e;
             s.ledger.stock(r.index, r.refine > 0 ? "+" + std::to_string(r.refine) + " " + r.name : r.name, r.price);
             s.rows.push_back(std::move(r));
         }
@@ -337,6 +338,7 @@ static void liveFrame(State& s) {
             v.RegisterMember("icon", &OwnWareView::icon);
             v.RegisterMember("inside", &OwnWareView::inside);
             v.RegisterMember("sold", &OwnWareView::sold);
+            v.RegisterMember("colour", &OwnWareView::colour);
         }
         m.RegisterArray<std::vector<OwnWareView>>();
         if (auto v = m.RegisterStruct<SaleView>()) {
@@ -380,6 +382,7 @@ static void liveFrame(State& s) {
         v.left = left;
         v.price = money(r.price);
         v.inside = r.inside;
+        v.colour = r.colour;
         const int sold = s.ledger.soldOf(r.index);
         v.sold = sold > 0 ? settings::fmt(say(settings::Text::MyShopSoldCount), {std::to_string(sold)}) : "";
         if (r.icon && r.icon->width > 0) v.icon = uaui::picture(r.icon, uaui::stamp(r.icon), s.iconPrev[r.icon]);

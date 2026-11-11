@@ -528,6 +528,7 @@ enum class Text : uint16_t {
     InterfaceHotbarAmmo, InterfaceHotbarAmmoHint, InterfaceHotbarSupplies, InterfaceHotbarSuppliesHint,
    HotbarAmmoLow, HotbarAmmoOut,
     InterfaceAmmoSound, InterfaceAmmoSoundHint,  // 3.0.11-beta.129
+    InterfaceElementColours, InterfaceElementColoursHint,  // 3.0.18-beta.144
     CharOverweight1, CharOverweight2,            // 3.0.11-beta.139
     InterfaceMinimapReach, InterfaceMinimapReachHint,  // 3.0.11-beta.65
     InterfaceMinimapHd, InterfaceMinimapHdHint,        // 3.0.11-beta.72

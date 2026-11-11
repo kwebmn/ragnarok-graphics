@@ -27,6 +27,7 @@ struct CellV {
     int index = -1;            // of the shown, the scroll counted
     Rml::String hit = "grid";  // "cell" a thing's, "grid" an empty one
     Rml::String icon, count, refine, mark, markCls, fresh, star, rising, risingColour = "#00000000";
+    Rml::String ele = "#00000000";  // 3.0.18-beta.144: its element's colour (clear: none) - a line
     bool hot = false, starOn = false;
     float op = 1, iconW = 0, iconH = 0, flash = 0, ring = 0, rise = 0;
 };
@@ -38,6 +39,7 @@ struct Model {
     bool closeHot = false, typing = false, caret = false, bar = true, dropping = false, scrollable = false, tip = false;
     float fill = 0, thumbTop = 0, thumbH = 0, tipX = 0, tipY = 0;
     Rml::String tip1, tip2, tip3, tip4, searchIcon;
+    Rml::String tipColour = "#eef2f8";  // 3.0.18-beta.144: the tip's name - its element's colour, else its own
     std::vector<TabV> tabs;
     std::vector<CellV> cells;
 };

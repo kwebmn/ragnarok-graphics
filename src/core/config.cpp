@@ -603,6 +603,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.groundTimers);
         } else if (key == "interface.ammo_sound") {  // 3.0.11-beta.129: the chime at 10 left and at none
             setBool(val, c.ammoSound);
+        } else if (key == "interface.element_colours") {  // 3.0.18-beta.144
+            setBool(val, c.elementColours);
         } else if (key == "interface.pad_hints") {  // 3.0.11-beta.86: the controller's buttons on the interface
             setBool(val, c.padHints);
         } else if (key == "interface.target_ring") {  // 3.0.11-beta.87: the target's ring on the ground

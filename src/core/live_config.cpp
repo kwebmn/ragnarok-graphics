@@ -277,6 +277,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("hotbar_ammo", flag(running.hotbarAmmo), flag(file.hotbarAmmo)));
         n.hotbarAmmo = file.hotbarAmmo;
     }
+    if (file.elementColours != running.elementColours) {  // 3.0.18-beta.144: the things' element colours
+        u.applied.push_back(change("element_colours", flag(running.elementColours), flag(file.elementColours)));
+        n.elementColours = file.elementColours;
+    }
     if (file.ammoSound != running.ammoSound) {  // 3.0.11-beta.129: the chime at 10 left and at none, at once
         u.applied.push_back(change("ammo_sound", flag(running.ammoSound), flag(file.ammoSound)));
         n.ammoSound = file.ammoSound;

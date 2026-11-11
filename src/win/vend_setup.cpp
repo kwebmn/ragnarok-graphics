@@ -70,13 +70,15 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div class="cols"><div class="col"><div class="lbl">{{cart_word}}</div><div class="list">
 <div class="ware ctl" data-for="r, i : cart" data-event-click="vt_cart(i)"
   data-event-mousedown="vt_card(0, i)"><img data-if="r.icon != ''"
-  data-attr-src="r.icon"/><div class="wname"><span class="name">{{r.name}}</span><span class="inside"
+  data-attr-src="r.icon"/><div class="wname"><span class="name" data-style-color="r.colour">{{r.name}}</span><span
+  class="inside"
   data-if="r.inside != ''">{{r.inside}}</span><span
   class="stock">{{r.count}}</span><span class="mkt" data-if="r.market != ''">{{r.market}}</span></div></div>
 <div class="hint" data-if="cart.size == 0">{{empty}}</div></div></div>
 <div class="col"><div class="lbl">{{sale_word}}</div><div class="list">
 <div class="ware ctl" data-for="r, i : sale" data-event-mousedown="vt_card(1, i)"><img data-if="r.icon != ''"
-  data-attr-src="r.icon"/><div class="wname"><span class="name">{{r.name}}</span><span class="inside"
+  data-attr-src="r.icon"/><div class="wname"><span class="name" data-style-color="r.colour">{{r.name}}</span><span
+  class="inside"
   data-if="r.inside != ''">{{r.inside}}</span><span class="stock">{{r.count}}</span><span class="mkt"
   data-if="r.market != ''">{{r.market}}</span></div><div class="field price ctl"
   data-class-typing="focus == i + 1" data-event-click="vt_price(i)">{{r.price}}<span class="caret"
@@ -92,6 +94,7 @@ struct SetupWareView {
     Rml::String name, count, price, icon;
     Rml::String market;  // 3.0.18-beta.104: the site's market line ("" none)
     Rml::String inside;  // 3.0.18-beta.142: its cards and free slots
+    Rml::String colour = "#eef2f8";  // 3.0.18-beta.144: its name's
 };
 
 struct State {
@@ -234,6 +237,7 @@ void readList(const State& s, uint32_t listAt, std::vector<vs::Row>& rows, std::
         const auto f = files.find(id);
         if (f != files.end()) r.icon = clienttables::icon(f->second, iw::iconSide(s.scale) * 3 / 4, 4 * s.scale);
         infocardwin::describe(raw, r.id, s.codePage, r.name, r.inside);  // 3.0.18-beta.142: [slots], what is inside
+        if (const std::string e = infocardwin::elementHex(r.id, raw); !e.empty()) r.colour = e;  // .144
         rows.push_back(std::move(r));
         places.push_back(int(rd32(raw, 0x08)));
         infos.push_back(node + kInfo);
@@ -471,6 +475,7 @@ static void liveFrame(State& s) {
             v.RegisterMember("icon", &SetupWareView::icon);
             v.RegisterMember("market", &SetupWareView::market);
             v.RegisterMember("inside", &SetupWareView::inside);
+            v.RegisterMember("colour", &SetupWareView::colour);
         }
         m.RegisterArray<std::vector<SetupWareView>>();
         m.Bind("cart", &s.cartViews);
@@ -533,6 +538,7 @@ static void liveFrame(State& s) {
         v.name = r.refine > 0 ? "+" + std::to_string(r.refine) + " " + r.name : r.name;
         v.count = "\xC3\x97" + std::to_string(r.count);
         v.inside = r.inside;
+        v.colour = r.colour;
         // 3.0.18-beta.104 (R-K5QG6Z «окно с ценой маленькое»): the price grouped, the stack's sum beside the count, the
         // site's market under it
         const long long price = vs::priceOf(r.price);
@@ -559,7 +565,7 @@ static void liveFrame(State& s) {
     const auto same = [](const std::vector<SetupWareView>& a, const std::vector<SetupWareView>& b) {
         return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](const auto& x, const auto& y) {
                    return x.name == y.name && x.count == y.count && x.price == y.price && x.icon == y.icon &&
-                          x.market == y.market;
+                          x.market == y.market && x.inside == y.inside && x.colour == y.colour;
                });
     };
     if (!same(cart, s.cartViews)) s.cartViews = std::move(cart), s.live.doc.dirty("cart");

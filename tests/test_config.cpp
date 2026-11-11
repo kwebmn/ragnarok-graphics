@@ -2029,3 +2029,14 @@ TEST(config_reads_our_windows_keys) {
     CHECK(appliesNow("interface.key_party"));
     CHECK(liveUpdate(noUi(""), c).next.ownKeys[size_t(closedwin::Own::Hunt)] == 'U');
 }
+
+// 3.0.18-beta.144 (the owner: element things in their colour): [interface] element_colours - a thing with an
+// element its colour (its name, a line in its cell); on at first, a box of «Інтерфейс», at once
+TEST(config_interface_element_colours) {
+    CHECK(noUi("").elementColours);
+    CHECK(!noUi("element_colours = 0\n").elementColours);
+    const settings::IniSetting* s = settings::findSetting("interface.element_colours");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.element_colours"));
+    CHECK(!liveUpdate(noUi(""), noUi("element_colours = 0\n")).next.elementColours);
+}

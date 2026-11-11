@@ -5487,6 +5487,18 @@ constexpr Entry kTexts[] = {
      "у звуків гри, з вимкненим звуком гри сигналу немає.",
      "Короткий тихий сигнал, когда остаётся 10 стрел (пуль, сюрикенов), и более низкий, когда они закончились, — "
      "громкость как у звуков игры, при выключенном звуке игры сигнала нет."},
+    {Text::InterfaceElementColours, "Element things in their colour",
+     "Стихійні речі своїм кольором",
+     "Стихийные вещи своим цветом"},
+    {Text::InterfaceElementColoursHint,
+     "A weapon or armour with an element (Fire Brand, a forged wind knife, an armour with Pasana Card) shows its "
+     "element's colour - its name in the lists and the tip, a line in its cell.",
+     "Зброя чи броня зі стихією (Fire Brand, кований ніж вітру, "
+     "броня з Pasana Card) має колір своєї стихії — назва в списках "
+     "і підказці, риска в клітинці.",
+     "Оружие или броня со стихией (Fire Brand, кованый нож ветра, "
+     "броня с Pasana Card) имеет цвет своей стихии — название в "
+     "списках и подсказке, черта в ячейке."},
     // 3.0.11-beta.139 (the owner: «пишет что 60% но хп воостанавливается»): the server's overweight states
     {Text::CharOverweight1, "Overweight: HP and SP do not recover", "Перевантаження: HP і SP не відновлюються",
      "Перегруз: HP и SP не восстанавливаются"},

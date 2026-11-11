@@ -29,7 +29,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-style-width="c.iconW + 'px'" data-style-height="c.iconH + 'px'" data-style-opacity="c.op"/><span class="cnt"
   data-if="c.count != ''">{{c.count}}</span><span class="ref" data-if="c.refine != ''">{{c.refine}}</span><span
   data-if="c.mark != ''" data-attr-class="c.markCls">{{c.mark}}</span><span class="fresh"
-  data-if="c.fresh != ''">{{c.fresh}}</span><span class="star" data-if="c.star != ''"
+  data-if="c.fresh != ''">{{c.fresh}}</span><span class="ele" data-if="c.ele != '#00000000'"
+  data-style-background-color="c.ele"></span><span class="star" data-if="c.star != ''"
   data-class-on="c.starOn">{{c.star}}</span><div class="ring" data-if="c.ring > 0"
   data-style-opacity="c.ring"></div><span class="rise" data-if="c.rising != ''" data-style-color="c.risingColour"
   data-style-margin-top="((-4 - c.rise) / 12) + 'rem'">{{c.rising}}</span></div></div>
@@ -41,9 +42,12 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-if="weightText != '' && also == ''">{{weightText}}</span><span class="z"
   data-if="zeny != '' && also == ''">{{zeny}}</span></div>
 <div class="tip" data-hit="tip" data-if="tip" data-style-left="tipX + 'px'" data-style-top="tipY + 'px'"><div
-  class="t1">{{tip1}}</div><div class="t2">{{tip2}}</div><div class="t3" data-if="tip3 != ''">{{tip3}}</div><div
+  class="t1" data-style-color="tipColour">{{tip1}}</div><div class="t2">{{tip2}}</div><div class="t3"
+  data-if="tip3 != ''">{{tip3}}</div><div
   class="t4" data-if="tip4 != ''">{{tip4}}</div></div>
 </body></rml>)RML";
+
+constexpr const char* kTipName = "#eef2f8";  // 3.0.18-beta.144: the tip's name without an element
 
 uint32_t toward(uint32_t from, uint32_t to, float t) {
     uint32_t out = 0;
@@ -83,6 +87,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         e.RegisterMember("star", &CellV::star);
         e.RegisterMember("rising", &CellV::rising);
         e.RegisterMember("risingColour", &CellV::risingColour);
+        e.RegisterMember("ele", &CellV::ele);
         e.RegisterMember("hot", &CellV::hot);
         e.RegisterMember("starOn", &CellV::starOn);
         e.RegisterMember("op", &CellV::op);
@@ -119,6 +124,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("tipX", &m.tipX);
     c.Bind("tipY", &m.tipY);
     c.Bind("tip1", &m.tip1);
+    c.Bind("tipColour", &m.tipColour);
     c.Bind("tip2", &m.tip2);
     c.Bind("tip3", &m.tip3);
     c.Bind("tip4", &m.tip4);
@@ -168,6 +174,7 @@ void fill(Model& m, const iw::Layout& L, const std::vector<iw::Item>& items, con
         if (!it.identified) c.mark = "?", c.markCls = "mk q";
         else if (it.worn) c.mark = "E", c.markCls = "mk e";  // 3.0.11-beta.118: the arrows worn
         if (it.fresh && !t.fresh.empty()) c.fresh = t.fresh;
+        c.ele = it.elementRgb ? hex(it.elementRgb) : "#00000000";  // 3.0.18-beta.144
         if (it.starred) c.star = "\xE2\x98\x85", c.starOn = true;
         else if (at == sh.hover) c.star = "\xE2\x98\x86";
     }
@@ -215,9 +222,11 @@ void fill(Model& m, const iw::Layout& L, const std::vector<iw::Item>& items, con
                                                                          : "green";
     m.zeny = sh.zeny >= 0 ? iw::grouped(sh.zeny) + " z" : "";
     m.tip = sh.tip && sh.hover >= 0 && sh.hover < int(shown.size());
+    m.tipColour = kTipName;
     if (m.tip) {
         const iw::Item& it = items[size_t(shown[size_t(sh.hover)])];
         m.tip1 = iw::tipFirst(it);
+        m.tipColour = it.elementRgb ? hex(it.elementRgb) : kTipName;
         m.tip2 = iw::tipSecond(it, t);
         m.tip3 = it.compare;
         m.tip4 = it.market;

@@ -30,6 +30,7 @@
 #include "win/pad_carry.hpp"
 #include "win/buff_overlay.hpp"
 #include "win/client_tables.hpp"
+#include "win/info_card.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -314,6 +315,7 @@ void readBag(State& s) {
         it.name = words.empty() ? "#" + id : utf8Of(widened(hotbar::spaced(words), s.codePage));
         // 3.0.18-beta.118 (the owner: «в вендинге не видно карт»): its cards in its name, as the game names it
         it.name = cardnames::namedFromInfo(it.name, raw, clienttables::cardWords());
+        it.elementRgb = infocardwin::elementColour(it.id, raw);  // 3.0.18-beta.144
         const auto f = files.find(id);
         if (f != files.end()) it.icon = clienttables::icon(f->second, iw::iconSide(s.scale), 4 * s.scale);
         s.items.push_back(it);

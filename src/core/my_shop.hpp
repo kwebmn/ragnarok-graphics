@@ -20,6 +20,7 @@ struct Row {
     const panel::Picture* icon = nullptr;
     int index = 0;        // 3.0.18-beta.143: its place in the shop (the server's 0x0137 names it)
     std::string inside;   // its cards and free slots, a forged one's maker
+    std::string colour = "#eef2f8";  // 3.0.18-beta.144: its name's (its element's)
     uint32_t info = 0;    // its ITEM_INFO in the game (its card)
 };
 long long worth(const std::vector<Row>& rows);

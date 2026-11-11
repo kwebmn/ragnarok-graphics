@@ -116,7 +116,8 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div class="list"><div class="row ctl" data-for="e, i : entries" data-class-on="i == selected"
   data-event-click="pk_choose(i)"
   data-event-dblclick="pk_ok()" data-event-mousedown="pk_card(i)"><img data-if="e.icon != ''"
-  data-attr-src="e.icon"/><div class="pwho"><span class="name">{{e.name}}</span><span class="inside"
+  data-attr-src="e.icon"/><div class="pwho"><span class="name" data-style-color="e.colour">{{e.name}}</span><span
+  class="inside"
   data-if="e.inside != ''">{{e.inside}}</span></div></div>
 <div class="hint" data-if="entries.size == 0">{{empty}}</div></div>
 <div class="hint" data-if="hint != ''">{{hint}}</div>
@@ -125,7 +126,7 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
 struct PickEntryView {
-    Rml::String name, icon, inside;
+    Rml::String name, icon, inside, colour = "#eef2f8";
 };
 
 struct State {
@@ -314,6 +315,7 @@ std::vector<pc::Entry> readList(const State& s, uint32_t window) {
         e.name = cardnames::namedFromInfo(e.name, raw, clienttables::cardWords());  // 3.0.18-beta.137: its cards
         infocardwin::describe(raw, std::atoi(id.c_str()), s.codePage, e.name, e.inside);  // .142: [slots], inside
         e.info = node + kInfo;
+        if (const std::string c = infocardwin::elementHex(std::atoi(id.c_str()), raw); !c.empty()) e.colour = c;
         const int refine = int(rd32(raw, 0x40));
         e.refine = refine > 0 && refine <= 20 ? refine : 0;
         const auto f = files.find(id);
@@ -530,6 +532,7 @@ static void liveFrame(State& s) {
     s.live.make("pick", kLive, [&](Rml::DataModelConstructor& m) {
         if (auto v = m.RegisterStruct<PickEntryView>()) {
             v.RegisterMember("inside", &PickEntryView::inside);
+            v.RegisterMember("colour", &PickEntryView::colour);
             v.RegisterMember("name", &PickEntryView::name);
             v.RegisterMember("icon", &PickEntryView::icon);
         }
@@ -566,6 +569,7 @@ static void liveFrame(State& s) {
         PickEntryView v;
         v.name = e.refine > 0 ? "+" + std::to_string(e.refine) + " " + e.name : e.name;
         v.inside = e.inside;
+        v.colour = e.colour;
         if (e.icon && e.icon->width > 0) v.icon = uaui::picture(e.icon, uaui::stamp(e.icon), s.iconPrev[e.icon]);
         entries.push_back(v);
     }
@@ -573,7 +577,8 @@ static void liveFrame(State& s) {
     const bool same = entries.size() == s.entryViews.size() &&
                       std::equal(entries.begin(), entries.end(), s.entryViews.begin(),
                                  [](const PickEntryView& a, const PickEntryView& b) {
-                                     return a.name == b.name && a.icon == b.icon && a.inside == b.inside;
+                                     return a.name == b.name && a.icon == b.icon && a.inside == b.inside &&
+                                            a.colour == b.colour;
                                  });
     if (!same) s.entryViews = std::move(entries), s.live.doc.dirty("entries");
     if (t.title != s.title || t.message != s.message || t.ok != s.ok || t.cancel != s.cancel || t.empty != s.empty ||

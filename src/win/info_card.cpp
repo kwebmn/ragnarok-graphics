@@ -1,11 +1,13 @@
 #include "win/info_card.hpp"
 
+#include "core/item_elements.hpp"
 #include "core/vend_shop.hpp"
 
 #include <windowsx.h>
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <initializer_list>
@@ -790,6 +792,28 @@ void describe(const uint8_t* itemInfo, int id, unsigned codePage, std::string& n
         const auto w = names.find(std::to_string(card));
         return w == names.end() ? std::string() : utf8Of(widened(hotbar::spaced(w->second), codePage));
     }, say(settings::Text::VendFree));
+}
+
+static bool g_elementColours = true;  // 3.0.18-beta.144
+
+void setElementColours(bool on) {
+    if (on != g_elementColours) LOG_INFO("cards: [interface] element_colours = %d", on ? 1 : 0);
+    g_elementColours = on;
+}
+
+uint32_t elementColour(int id, const uint8_t* itemInfo) {
+    if (!g_elementColours || (itemInfo && itemInfo[0x3C] == 0)) return 0;
+    int cards[4] = {};
+    if (itemInfo) cardnames::cardsOf(itemInfo, cards);
+    return itemelements::colour(itemelements::ofThing(id, cards));
+}
+
+std::string elementHex(int id, const uint8_t* itemInfo) {
+    const uint32_t c = elementColour(id, itemInfo);
+    if (!c) return "";
+    char b[8];
+    std::snprintf(b, sizeof b, "#%06x", unsigned(c));
+    return b;
 }
 
 }  // namespace uagfx::win::infocardwin

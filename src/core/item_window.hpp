@@ -38,6 +38,7 @@ struct Item {
     std::string compare;
     // 3.0.11-beta.287 (the owner's feature 14): the site's market - «Ринок: від 12 000 z · лотів 3»
     std::string market;
+    uint32_t elementRgb = 0;  // 3.0.18-beta.144: its element's colour (0 none) - a dot in its cell, its tip's name
 };
 
 // 3.0.11-beta.113 (the concept «Концепция окон и инвентаря», question 9 «давай»): «Усе», «Витратне» (potions, food,

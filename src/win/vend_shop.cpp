@@ -75,7 +75,9 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <span class="x ctl" data-event-click="vs_cancel()">&#x2715;</span>
 <div class="list"><div class="ware" data-for="r, i : rows" data-class-on="r.chosen > 0"><img
   data-if="r.icon != ''" data-attr-src="r.icon"/>
-<div class="wname ctl" data-event-click="vs_card(i)"><span class="name">{{r.name}}</span><span class="inside"
+<div class="wname ctl" data-event-click="vs_card(i)"><span class="name"
+  data-style-color="r.colour">{{r.name}}</span><span
+  class="inside"
   data-if="r.inside != ''">{{r.inside}}</span><span class="stock">{{r.stock}}</span></div>
 <span class="price">{{r.price}}</span><span class="pm ctl" data-event-click="vs_less(i)">−</span><span
   class="n">{{r.chosen}}</span><span
@@ -89,7 +91,7 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
 struct VendRowView {
-    Rml::String name, inside, stock, price, icon;
+    Rml::String name, inside, stock, price, icon, colour = "#eef2f8";
     int chosen = 0;
 };
 
@@ -230,6 +232,7 @@ std::vector<Thing> readList(const State& s, uint32_t headAt) {
         // 3.0.18-beta.138 (the owner: things in a shop not seen into): its slots, its cards' line; .142 the forged's
         // maker (win/info_card describe)
         infocardwin::describe(t.info, r.id, s.codePage, r.name, r.inside);
+        if (const std::string e = infocardwin::elementHex(r.id, t.info); !e.empty()) r.colour = e;  // .144
         t.at = node + kInfo;
         const auto f = files.find(id);
         if (f != files.end()) r.icon = clienttables::icon(f->second, iw::iconSide(s.scale), 4 * s.scale);
@@ -495,6 +498,7 @@ static void liveFrame(State& s) {
             v.RegisterMember("price", &VendRowView::price);
             v.RegisterMember("icon", &VendRowView::icon);
             v.RegisterMember("inside", &VendRowView::inside);
+            v.RegisterMember("colour", &VendRowView::colour);
             v.RegisterMember("chosen", &VendRowView::chosen);
         }
         m.RegisterArray<std::vector<VendRowView>>();
@@ -535,6 +539,7 @@ static void liveFrame(State& s) {
         VendRowView v;
         v.name = r.refine > 0 ? "+" + std::to_string(r.refine) + " " + r.name : r.name;
         v.inside = r.inside;
+        v.colour = r.colour;
         std::string stock = t.stock;
         if (const size_t p = stock.find("{1}"); p != std::string::npos) stock.replace(p, 3, std::to_string(r.stock));
         v.stock = stock;
@@ -551,7 +556,8 @@ static void liveFrame(State& s) {
                       std::equal(rows.begin(), rows.end(), s.rowViews.begin(),
                                  [](const VendRowView& a, const VendRowView& b) {
                                      return a.name == b.name && a.stock == b.stock && a.price == b.price &&
-                                            a.icon == b.icon && a.chosen == b.chosen;
+                                            a.icon == b.icon && a.chosen == b.chosen && a.inside == b.inside &&
+                                            a.colour == b.colour;
                                  });
     if (!same) s.rowViews = std::move(rows), s.live.doc.dirty("rows");
     if (t.title != s.title || t.total != s.totalWord || total != s.total || t.zeny != s.zenyWord || zeny != s.zeny ||

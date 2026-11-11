@@ -706,6 +706,10 @@ struct Config {
     // 3.0.11-beta.129 (the owner «делай»): [interface] ammo_sound - a short soft chime when 10 arrows are left and
     // when none are (core/ui_chime, win/ammo_sound through the game's own sound player); on
     bool ammoSound = true;
+    // 3.0.18-beta.144 (the owner: element things such as a wind weapon in their own colour): [interface]
+    // element_colours - a thing with an element (core/item_elements: the server's table, a forged one's, an armour
+    // card's) in its colour - its name in the lists and the tip, a dot in its cell; on
+    bool elementColours = true;
     // 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», stage 2): [interface] pad_hints - played with the
     // controller (core/input_mode), its buttons on the interface instead of the keys' names (core/pad_glyphs); on
     bool padHints = true;

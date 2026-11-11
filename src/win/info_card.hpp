@@ -40,6 +40,11 @@ int slotsOf(int id);
 // 3.0.18-beta.142 (the owner: «все» - the windows' audit): a thing's item card by its ITEM_INFO in the game (a list
 // node's +8) - the game's own card (UI window 0xC, its message 0x18), drawn in the new look; false: not made
 bool showItem(uint32_t itemInfo);
+// 3.0.18-beta.144: [interface] element_colours - a thing's element colour (core/item_elements; 0 none or off) by its
+// number and its ITEM_INFO (its cards: a forged one's own, an armour card's); as "#rrggbb" ("" none)
+void setElementColours(bool on);
+uint32_t elementColour(int id, const uint8_t* itemInfo);
+std::string elementHex(int id, const uint8_t* itemInfo);
 // A thing's name made full and what is inside it, from its ITEM_INFO (72 bytes): its cards' words in the name, its
 // slots after it («[3]»), its cards and free slots in `inside` (core vendshop::inside) - only for one identified
 void describe(const uint8_t* itemInfo, int id, unsigned codePage, std::string& name, std::string& inside);

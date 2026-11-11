@@ -816,6 +816,9 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
     line-height: 1.0833rem;
                    text-align: center; font-size: 0.9167rem; color: #9aa3b5; }
 .igl .cell .star.on { color: #f3c653; }
+/* 3.0.18-beta.144: a thing's element - a short line in its colour along the cell's top */
+.igl .cell .ele { position: absolute; left: 25%; top: 0.0833rem; width: 50%; height: 0.1667rem;
+                  border-radius: 0.0833rem; }
 .igl .cell .flash { position: absolute; left: 0; top: 0; right: 0; bottom: 0; border-radius: 0.6667rem;
                     background-color: #f3c6534d; }
 .igl .cell .ring { display: block; position: absolute; left: -0.3333rem; top: -0.3333rem; right: -0.3333rem;

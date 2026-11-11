@@ -18,6 +18,7 @@ struct Entry {
     const panel::Picture* icon = nullptr;
     std::string inside;  // 3.0.18-beta.142: its cards and free slots, a forged one's maker ("" none)
     uint32_t info = 0;   // its ITEM_INFO in the game (its card)
+    std::string colour = "#eef2f8";  // 3.0.18-beta.144: its name's (its element's)
 };
 struct Texts {
     std::string title, message, ok, cancel, empty, hint;  // hint: the controller's buttons, "" none

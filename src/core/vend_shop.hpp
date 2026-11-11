@@ -20,6 +20,7 @@ struct Row {
     int chosen = 0;  // how many of it the purchase has
     std::string name;  // UTF-8
     std::string inside;  // 3.0.18-beta.138: its cards and free slots («Hydra Card · 1 вільний»), "" none
+    std::string colour = "#eef2f8";  // 3.0.18-beta.144: its name's - its element's, else the plain one
     const panel::Picture* icon = nullptr;
 };
 // 3.0.18-beta.138 (the owner: things in a shop not seen into): the slots after the name as the game's

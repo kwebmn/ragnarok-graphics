@@ -205,7 +205,7 @@ const std::vector<InterfaceSection>& interfaceSections() {
          {"interface.character", "interface.target", "interface.party", "interface.buffs", "interface.buffs_overflow",
           "interface.hotbar", "interface.hotbar_per_character", "interface.hotbar_ammo", "interface.hotbar_supplies",
           "interface.skill_needs", "interface.combo_window", "interface.broken_gear", "interface.pet_hunger",
-          "interface.ammo_sound",
+          "interface.ammo_sound", "interface.element_colours",
           "interface.chat", "interface.chat_fade", "interface.chat_log", "interface.long_chat", "interface.skill_jokes",
           "interface.swear_filter", "interface.chat_party", "interface.chat_guild",
           "interface.chat_own", "interface.chat_others", "interface.tracker", "interface.cast", "interface.exp_bars",
