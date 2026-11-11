@@ -23,6 +23,7 @@
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/client_tables.hpp"
+#include "win/info_card.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/head_picture.hpp"
@@ -300,6 +301,7 @@ void readData(State& s) {
             w.spill = n > 0;
             w.name = nameOf(s, t.id, t.identified);
             if (t.identified) w.name = cardnames::named(w.name, w.cards, clienttables::cardWords());  // .112
+            w.element = t.identified ? infocardwin::elementOf(t.id, w.cards) : 0;  // 3.0.18-beta.146
             w.icon = iconOf(s, t.id);
             if (refs) {
                 const auto it = refs->items.find(t.id);

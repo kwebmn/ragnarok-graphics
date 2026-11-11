@@ -37,6 +37,7 @@ struct Worn {
     bool spill = false;  // shown in another slot already (a two-handed weapon's shield): dimmed here
     std::string name;
     const panel::Picture* icon = nullptr;
+    int element = 0;  // 3.0.18-beta.146 (the owner: worn things' elements not seen): core/item_elements, 0 none
 };
 struct Pick {  // a thing of the bag that fits the slot being filled
     int index = 0, id = 0, refine = 0;

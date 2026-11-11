@@ -1,6 +1,10 @@
 #include "uikit/equip_live.hpp"
 
+#include "core/item_elements.hpp"
+
 #include <RmlUi/Core.h>
+
+#include <cstdio>
 
 #include <algorithm>
 #include <cmath>
@@ -23,7 +27,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-attr-data-index="sl.index"><img data-if="sl.icon != ''" data-attr-src="sl.icon"
   data-style-width="sl.iconW + 'px'" data-style-height="sl.iconH + 'px'" data-style-opacity="sl.op"/></div><div
   class="txt"><div class="lbl">{{sl.label}}</div><div class="nm" data-class-worn="sl.worn"
-  data-class-spill="sl.spill"><span>{{sl.name}}</span><span class="dot" data-for="d : sl.dots"
+  data-class-spill="sl.spill"><span>{{sl.name}}</span><span class="elw" data-if="sl.eleWord != ''"
+  data-style-color="sl.ele">{{sl.eleWord}}</span><span class="dot" data-for="d : sl.dots"
   data-class-card="d > 0"></span></div></div></div></div>
 <div class="centre" data-hit="centre"><div class="stage"><img data-if="hero != ''" data-attr-src="hero"
   data-style-width="heroW + 'px'" data-style-height="heroH + 'px'"/><div class="turn"
@@ -48,6 +53,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-style-width="sl.iconW + 'px'" data-style-height="sl.iconH + 'px'" data-style-opacity="sl.op"/></div><div
   class="txt"><div class="lbl">{{sl.label}}</div><div class="nm" data-class-worn="sl.worn"
   data-class-spill="sl.spill"><span class="dot" data-for="d : sl.dots" data-class-card="d > 0"></span><span
+  class="elw" data-if="sl.eleWord != ''" data-style-color="sl.ele">{{sl.eleWord}}</span><span
   >{{sl.name}}</span></div></div></div></div>
 </div>
 <div class="ammorow"><div class="slot ammo" data-hit="slot" data-attr-data-index="ammo.index" data-class-hot="ammo.hot"
@@ -89,6 +95,8 @@ void registerSlot(Rml::DataModelConstructor& c) {
         e.RegisterMember("iconW", &SlotV::iconW);
         e.RegisterMember("iconH", &SlotV::iconH);
         e.RegisterMember("dots", &SlotV::dots);
+        e.RegisterMember("eleWord", &SlotV::eleWord);
+        e.RegisterMember("ele", &SlotV::ele);
     }
 }
 
@@ -185,6 +193,12 @@ void fill(Model& m, const ew::Data& d, const ew::Show& sh, const ew::Texts& t, f
         }
         if (v.worn && !w.spill)
             for (int n = 0; n < std::min(w.slots, 4); ++n) v.dots.push_back(w.cards[n] > 0 ? 1 : 0);
+        if (v.worn && w.element > 0) {  // 3.0.18-beta.146
+            v.eleWord = itemelements::word(w.element);
+            char hexc[8];
+            std::snprintf(hexc, sizeof hexc, "#%06x", unsigned(itemelements::colour(w.element)));
+            v.ele = hexc;
+        }
         return v;
     };
     m.left.clear();

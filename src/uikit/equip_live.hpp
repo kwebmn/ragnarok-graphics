@@ -24,6 +24,9 @@ struct SlotV {
     bool worn = false, spill = false, hot = false, focus = false, fits = false;
     float op = 1, iconW = 0, iconH = 0;
     std::vector<int> dots;  // a card slot each: 1 a card sits there
+    // 3.0.18-beta.146 (the owner: worn things' elements not seen; the later clients' «Property: Wind»): its element's
+    // word in its colour beside the name ("" none)
+    Rml::String eleWord, ele = "#00000000";
 };
 struct StatV {
     Rml::String name, value;

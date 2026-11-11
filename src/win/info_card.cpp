@@ -38,6 +38,7 @@
 #include "win/window_shadow.hpp"
 
 namespace uagfx::win::infocardwin {
+static bool g_elementColours = true;  // 3.0.18-beta.144: [interface] element_colours
 namespace {
 
 namespace ic = uagfx::infocard;
@@ -305,6 +306,10 @@ void itemCard(State& s, One& o, uint32_t window) {
     const auto& table = known ? s.tables.items : s.tables.unknown;
     const auto d = table.find(number);
     if (d != table.end()) c.lines = utf8Lines(s, d->second);
+    // 3.0.18-beta.146 (the owner: as the later clients - «Property: Wind» in a thing's words): its element first
+    if (known && g_elementColours)
+        if (const int e = itemelements::ofThing(id, cards))
+            c.lines.insert(c.lines.begin(), std::string("Property: ") + itemelements::word(e));
     // a forged or a named thing keeps its maker in the cards' places (255, 254, 0xFF00): no cards shown then
     const bool special = cards[0] == 0xFF || cards[0] == 0xFE || cards[0] == 0xFF00 || cards[0] < 0;
     if (known && !special)
@@ -794,12 +799,13 @@ void describe(const uint8_t* itemInfo, int id, unsigned codePage, std::string& n
     }, say(settings::Text::VendFree));
 }
 
-static bool g_elementColours = true;  // 3.0.18-beta.144
 
 void setElementColours(bool on) {
     if (on != g_elementColours) LOG_INFO("cards: [interface] element_colours = %d", on ? 1 : 0);
     g_elementColours = on;
 }
+
+int elementOf(int id, const int cards[4]) { return g_elementColours ? itemelements::ofThing(id, cards) : 0; }
 
 uint32_t elementColour(int id, const uint8_t* itemInfo) {
     if (!g_elementColours || (itemInfo && itemInfo[0x3C] == 0)) return 0;

@@ -953,6 +953,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .nm { display: block; height: 1.6667rem; line-height: 1.6667rem; font-size: 1.0833rem; color: #7e889a;
     white-space: nowrap; }
 .eql .nm.worn { font-weight: bold; color: #eef2f8; }
+.eql .nm .elw { margin: 0 0.4167rem; font-size: 0.9167rem; font-weight: bold; }  /* 3.0.18-beta.146: its element */
 .eql .nm.spill { font-weight: normal; color: #7e889a; }
 .eql .dots { display: flex; height: 0.5833rem; margin-top: 0.0833rem; }
 .eql .left .dots { justify-content: flex-end; }

@@ -43,6 +43,7 @@ bool showItem(uint32_t itemInfo);
 // 3.0.18-beta.144: [interface] element_colours - a thing's element colour (core/item_elements; 0 none or off) by its
 // number and its ITEM_INFO (its cards: a forged one's own, an armour card's); as "#rrggbb" ("" none)
 void setElementColours(bool on);
+int elementOf(int id, const int cards[4]);  // 3.0.18-beta.146: the element (0 none or the switch off)
 uint32_t elementColour(int id, const uint8_t* itemInfo);
 std::string elementHex(int id, const uint8_t* itemInfo);
 // A thing's name made full and what is inside it, from its ITEM_INFO (72 bytes): its cards' words in the name, its
