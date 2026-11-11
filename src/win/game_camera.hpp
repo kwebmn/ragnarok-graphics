@@ -123,6 +123,9 @@ bool readGame(uint32_t address, void* out, size_t size);
 // tells the thread and a frame shown; the log's line every 30 s («game memory: N reads a frame (X ms) - the most
 // from ddraw+0x...»), the tally then started again
 void readTallyFrame(uint32_t gameThread);
+// 3.0.18-beta.168: a present begins - the world's actors' and the pick list's indexes (3.0.18-beta.166) are read again
+// at their next ask; at its very start, so a minimised game (whose presents end early) still moves them on
+void actorIndexFrame();
 std::string takeReadTally();
 // 3.0.3-beta.2: the name of the character in the game (core/char_name), as the game spells it; "" at the login and the
 // character select, or in another build of the exe (GetCharName's bytes are checked once)

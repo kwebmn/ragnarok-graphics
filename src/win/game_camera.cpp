@@ -561,7 +561,7 @@ struct IdIndex {
     bool again = false;              // read once more this frame already
     std::unordered_map<uint32_t, uint32_t> byId;  // the id -> the actor's (the record's) place
 };
-uint32_t g_frame = 0;  // the presents so far (readTallyFrame)
+uint32_t g_frame = 0;  // the presents so far (actorIndexFrame)
 IdIndex g_actors, g_picks;
 
 // A list of the game's (a node: its next at +0, its object at +8) into `out` by the id at `idAt` of each object - the
@@ -816,8 +816,9 @@ void readTallyFrame(uint32_t gameThread) {
     }
     g_tallyThread = gameThread;
     g_tally.frame();
-    ++g_frame;  // 3.0.18-beta.166: the actors' and the pick list's indexes read again at the next frame's first ask
 }
+
+void actorIndexFrame() { ++g_frame; }  // 3.0.18-beta.168: each present's start, minimised or not
 
 std::string takeReadTally() {
     HMODULE self = nullptr;  // the driver's own module (the system's ddraw.dll may be loaded under the same name)

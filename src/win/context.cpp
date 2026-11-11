@@ -805,6 +805,7 @@ void Context::behind() {
 
 void Context::present(const Rect& source, bool waitForVblank) {
     const double presentFrom = nowMs();  // 3.0.18-beta.161: the driver's own work at a present (logStats)
+    actorIndexFrame();                     // 3.0.18-beta.168: the actors' index read again at its next ask
     // 3.0.3-beta.8: whether the game drew this picture anew - the windows' panel goes over such a one alone: the
     // target keeps its pixels across a present, and over the same picture again the panel would darken itself.
     // 3.0.3-beta.12: put into the game's scene at its EndScene; here only into a picture drawn without one
