@@ -1,3 +1,10 @@
+- By the profiler's measurement (R-XZGR7R) needless work every frame removed:
+  - the interface library no longer visits every element of the hidden windows each frame (about 70 of them) - a hidden document is updated and laid out when it shows;
+  - the controller asked Windows which window is under the cursor at each mouse poll - now only when the cursor moved or every 100 ms;
+  - the game's picture memory is no longer opened and closed twice every frame while the game does not touch it;
+  - the magic effects' looks are found by their number at once, not by walking the table at each draw;
+  - small frame fields go into the bridge to the renderer without an extra call.
+
 - «Речі», storage and the cart, while open, no longer give the interface library all their data every frame (about 60 times a second during a used thing's flash, R-6PYQQG): only what changed. The minimap likewise - its changed parts alone, not everything up to 15 times a second.
 
 - The game no longer crashes when the server says an item is worn at more than three of the ten equipment places, or only at places this client does not know (R-ZGN2US: a crash entering moc_fild02): the game itself wrote such places past its own array and spoiled its memory. The driver now leaves such an item out and tells it in the log.
