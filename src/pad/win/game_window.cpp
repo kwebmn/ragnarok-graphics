@@ -1,5 +1,7 @@
 #include "pad/win/game_window.hpp"
 
+#include <climits>
+
 #include "pad/core/logic/mouse_gate.hpp"
 
 namespace uapad::gamewindow {
@@ -190,11 +192,22 @@ bool cursorOverGame(HWND game, POINT screen) {
     partsNow(now, SIZE{client.right, client.bottom});
     if (blockedAtOrdered(now, kBlockers, g_order, p.x, p.y) >= 0) return false;
     // Any window of the client's own process counts: a graphics wrapper may present the picture in a window
-    // of its own over the game's. A window of another program on top does not.
-    const HWND under = WindowFromPoint(screen);
-    DWORD pid = 0;
-    if (under) GetWindowThreadProcessId(under, &pid);
-    return pid == GetCurrentProcessId();
+    // of its own over the game's. A window of another program on top does not. 3.0.18-beta.176 (R-XZGR7R:
+    // NtUserWindowFromPoint 1.4 % of the game's thread - asked at each mouse poll): asked again when the cursor
+    // moved, else every 100 ms
+    static POINT askedAt{LONG_MIN, LONG_MIN};
+    static ULONGLONG askedMs = 0;
+    static bool ours = false;
+    const ULONGLONG nowMs = GetTickCount64();
+    if (screen.x != askedAt.x || screen.y != askedAt.y || nowMs - askedMs >= 100) {
+        const HWND under = WindowFromPoint(screen);
+        DWORD pid = 0;
+        if (under) GetWindowThreadProcessId(under, &pid);
+        ours = pid == GetCurrentProcessId();
+        askedAt = screen;
+        askedMs = nowMs;
+    }
+    return ours;
 }
 
 void sendFKey(int key, bool down) {

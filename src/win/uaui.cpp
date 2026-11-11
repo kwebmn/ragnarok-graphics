@@ -1792,7 +1792,8 @@ bool Doc::pointer(HWND game, UINT m, WPARAM wp, LPARAM lp, bool& onControl) {
 
 std::vector<panel::Box> Doc::boxesOf(const char* selector) const {
     std::vector<panel::Box> out;
-    if (!doc_) return out;
+    // 3.0.18-beta.176: a hidden document is not laid out (RmlUi's Update and layout leave it until it shows) - none
+    if (!doc_ || !shown_) return out;
     Rml::ElementList found;
     doc_->QuerySelectorAll(found, selector);
     const Rml::Vector2f origin = doc_->GetAbsoluteOffset(Rml::BoxArea::Border);

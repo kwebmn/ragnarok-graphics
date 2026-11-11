@@ -32,12 +32,18 @@ public:
     void toArgb(std::vector<uint32_t>& argb) const;  // memory -> GPU target
     bool contains(const void* p) const;
     void fault(bool write);  // called by the exception handler, under the global lock
+    // 3.0.18-beta.176: a touch while not locked (the pages kept closed since an untouched lock) - opened for it, as
+    // they were after each unlock before
+    void openUnlocked() { protect(PAGE_READWRITE); }
 
 private:
     void protect(DWORD mode);
 
     uint8_t* mem_ = nullptr;
     size_t size_ = 0;
+    // 3.0.18-beta.176 (R-XZGR7R: VirtualProtect 1.1 % of the game's thread - the target's pages closed at each lock
+    // and opened at each unlock, the game touching them hardly ever): their protection now - set only when it changes
+    DWORD mode_ = PAGE_READWRITE;
     int w_ = 0;
     int h_ = 0;
     int pitch_ = 0;

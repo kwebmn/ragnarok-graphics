@@ -145,6 +145,14 @@ void Element::Update(float dp_ratio, Vector2f vp_dimensions)
 
 	meta->effects.InstanceEffects();
 
+	// uaRO Graphics 3.0.18-beta.176 (R-XZGR7R: RmlUi's own update 0.2-0.5 ms a frame - every element of every
+	// document visited each frame, ~70 documents made once and kept hidden): a hidden document updates its own
+	// properties (its visibility noticed) and leaves its elements until it shows - their dirt kept for that frame
+	if (static_cast<const Element*>(owner_document) == this &&
+		(meta->computed_values.visibility() != Style::Visibility::Visible ||
+			meta->computed_values.display() == Style::Display::None))
+		return;
+
 	for (size_t i = 0; i < children.size(); i++)
 		children[i]->Update(dp_ratio, vp_dimensions);
 

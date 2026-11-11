@@ -1,5 +1,8 @@
 #include "core/mage_looks.hpp"
 
+#include <algorithm>
+#include <vector>
+
 namespace uagfx::magelook {
 namespace {
 
@@ -145,9 +148,18 @@ constexpr Entry kLooks[] = {
 }  // namespace
 
 Look lookOf(int id) {
-    for (const Entry& e : kLooks)
-        if (e.id == id) return Look{e.branch, e.tone};
-    return Look{};
+    // 3.0.18-beta.176 (R-XZGR7R: 1.7 % of the game's thread - the table walked at each effect's draw): by an array
+    // of the ids, made once - the first entry of an id the one, as the walk found it
+    static const std::vector<Look> byId = [] {
+        int most = 0;
+        for (const Entry& e : kLooks) most = std::max(most, e.id);
+        std::vector<Look> t(size_t(most) + 1);
+        std::vector<bool> set(t.size(), false);
+        for (const Entry& e : kLooks)
+            if (e.id >= 0 && !set[size_t(e.id)]) t[size_t(e.id)] = Look{e.branch, e.tone}, set[size_t(e.id)] = true;
+        return t;
+    }();
+    return id >= 0 && size_t(id) < byId.size() ? byId[size_t(id)] : Look{};
 }
 
 Palette paletteOf(Element e) {

@@ -477,6 +477,11 @@ void ElementDocument::UpdateLayout()
 {
 	// Note: Carefully consider when to call this function for performance reasons.
 	// Ideally, only called once per update loop.
+	// uaRO Graphics 3.0.18-beta.176: a hidden document laid out when it shows (its elements not updated meanwhile -
+	// Element::Update), its layout kept dirty till then
+	const Style::ComputedValues& cv = GetComputedValues();
+	if (cv.visibility() != Style::Visibility::Visible || cv.display() == Style::Display::None)
+		return;
 	if (layout_dirty)
 	{
 		RMLUI_ZoneScoped;

@@ -15,7 +15,11 @@ LONG CALLBACK onFault(EXCEPTION_POINTERS* e) {
     // first, then take the lock and check again.
     if (!c.shadow.contains(address)) return EXCEPTION_CONTINUE_SEARCH;
     Guard guard;
-    if (!c.shadow.contains(address) || !c.shadow.locked()) return EXCEPTION_CONTINUE_SEARCH;
+    if (!c.shadow.contains(address)) return EXCEPTION_CONTINUE_SEARCH;
+    if (!c.shadow.locked()) {  // 3.0.18-beta.176: the pages kept closed after an untouched lock - open, go on
+        c.shadow.openUnlocked();
+        return EXCEPTION_CONTINUE_EXECUTION;
+    }
     c.shadow.fault(r->ExceptionInformation[0] == 1);
     return EXCEPTION_CONTINUE_EXECUTION;
 }
@@ -43,12 +47,13 @@ bool Shadow::resize(int width, int height, PixelFormat format) {
     size_ = (size_t(pitch_) * size_t(height) + 4095) & ~size_t(4095);
     state_ = ShadowState{};
     mem_ = static_cast<uint8_t*>(VirtualAlloc(nullptr, size_, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+    mode_ = PAGE_READWRITE;
     return mem_ != nullptr;
 }
 
 void Shadow::protect(DWORD mode) {
     DWORD old = 0;
-    if (mem_) VirtualProtect(mem_, size_, mode, &old);
+    if (mem_ && mode != mode_ && VirtualProtect(mem_, size_, mode, &old)) mode_ = mode;
 }
 
 uint8_t* Shadow::lock() {
@@ -58,9 +63,9 @@ uint8_t* Shadow::lock() {
 }
 
 bool Shadow::unlock() {
-    const bool written = state_.unlock();
-    protect(PAGE_READWRITE);
-    return written;
+    // 3.0.18-beta.176: the pages left as the lock found them - closed if the game did not touch them (the next lock
+    // then calls nothing; a touch before it opens them through the handler), open as its touch made them otherwise
+    return state_.unlock();
 }
 
 bool Shadow::contains(const void* p) const {

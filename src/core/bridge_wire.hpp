@@ -24,6 +24,13 @@ public:
     void f32(float v) { bytes(&v, 4); }
     void f64(double v) { bytes(&v, 8); }
     void bytes(const void* p, size_t n) {  // resize and copy: GCC 12 warns falsely of insert's inlined memcpy
+        // 3.0.18-beta.176 (R-XZGR7R: vector::_M_default_append 1.1 % of the game's thread - a call, and its zeros,
+        // for each field): a field into room already there by push_back, inlined
+        if (n <= 8 && out_.capacity() - out_.size() >= n) {
+            const auto* b = static_cast<const uint8_t*>(p);
+            for (size_t i = 0; i < n; ++i) out_.push_back(b[i]);
+            return;
+        }
         const size_t at = out_.size();
         out_.resize(at + n);
         if (n) std::memcpy(out_.data() + at, p, n);
