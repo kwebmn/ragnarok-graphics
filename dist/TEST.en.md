@@ -1,3 +1,5 @@
+- A smaller update: ddraw.dll 20.5 → 16.0 MB, the settings app 5.6 → 4.0 MB (about 2.3 MB less to download). The code of the windows, settings and reports is now built for size; drawing, textures, the game's hooks, sound and map loading stay at full speed as before. To check: «Тест графіки» or a usual report - the speed is compared with the previous beta.
+
 - Measurements in the log: the driver's own work per frame, our interface parts apart from the interface library itself, how many times per frame the game's memory is read and what it costs (the controller's too). Needed before speeding up the work with the game; the same look and behaviour.
 
 - Unused code removed across all programs (game, settings, studio, renderer): about 3,200 lines - over 200 functions no call reached, with their tests. Found by tracing the links of every program; each one built and checked by the tests. ddraw.dll is 72 KB smaller again; the same look and behaviour.
