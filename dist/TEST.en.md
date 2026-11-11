@@ -1,3 +1,5 @@
+- The character block folded: a "…" button on its right opens the row of uaRO's windows (hunt, bosses, tracking and so on).
+
 - The target card: a log warning on a target change removed.
 
 - "Equipment": the character in its clothes' dye and with the head and body layers in the game's order (a priestess's veil over her hair), as the game draws it.
