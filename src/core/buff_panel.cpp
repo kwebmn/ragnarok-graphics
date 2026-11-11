@@ -123,13 +123,6 @@ Plan planOf(const std::vector<Entry>& e, Look look, Overflow overflow, float roo
     return p;
 }
 
-std::string fmtCount(const std::string& text, int n) {
-    std::string out = text;
-    const size_t at = out.find("{1}");
-    if (at != std::string::npos) out.replace(at, 3, std::to_string(n));
-    return out;
-}
-
 }  // namespace
 
 bool debuff(uint16_t icon) {
@@ -371,32 +364,6 @@ panel::Box tipLines(const Layout& L, const std::vector<Entry>& entries, int hove
 }
 
 }  // namespace
-
-std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t) {
-    std::vector<Words> out;
-    const float s = L.s;
-    if (L.more.w > 0)  // 3.0.11-beta.231: on the picture, its dark outline round the words
-        out.push_back(Words{L.more, fmtCount(t.more, L.hidden), kText, 12 * s, true, Align::Center, true});
-    for (const Slot& slot : L.slots) {
-        const Entry& e = entries[size_t(slot.entry)];
-        const bool bad = e.kind == Kind::Debuff;
-        const uint32_t timeRgb = bad ? kRedText : e.warn ? kWarn : kText;
-        if (L.look == Look::Names)  // left of its icon, right-aligned, outlined
-            out.push_back(Words{slot.name, e.name, bad ? kRedText : kText, 13 * s, true, Align::Right, true});
-        if (!e.time.empty())  // over the icon's foot, outlined
-            out.push_back(Words{slot.time, e.time, timeRgb, 11.5f * s, true, Align::Center, true});
-    }
-    std::string first, second;
-    const panel::Box b = tipLines(L, entries, hover, t, first, second);
-    if (b.w > 0) {
-        out.push_back(Words{panel::Box{b.x + 10 * s, b.y + 4 * s, b.w - 20 * s, 18 * s}, first, kText, 13 * s, true,
-                            Align::Left});
-        if (!second.empty())
-            out.push_back(Words{panel::Box{b.x + 10 * s, b.y + 22 * s, b.w - 20 * s, 15 * s}, second, kMuted,
-                                11.5f * s, false, Align::Left});
-    }
-    return out;
-}
 
 panel::Box tipText(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t, std::string& first,
                    std::string& second) {

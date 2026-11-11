@@ -66,33 +66,4 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, const Show& sh, const Texts& t) {
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, t.title, kText, 15 * s, true, Align::Left});
-    out.push_back(Words{L.close, "\xE2\x9C\x95", sh.hoverClose ? kText : kMuted, 13 * s, false, Align::Center});  // ✕
-    for (size_t i = 0; i < L.tabs.size(); ++i)
-        out.push_back(Words{L.tabs[i], t.tabs[i], int(i) == int(sh.tab) ? kGold2 : kText, 12.5f * s,
-                            int(i) == int(sh.tab), Align::Center});
-    const bool keys = sh.tab == Tab::Windows;
-    for (size_t i = 0; i < L.rows.size() && i < entries.size(); ++i) {
-        const panel::Box& r = L.rows[i];
-        const Entry& e = entries[i];
-        const bool hot = int(i) == sh.hover;
-        float left = r.x + 10 * s;
-        if (keys) {  // the window's key first, then its name
-            out.push_back(Words{panel::Box{left, r.y, 52 * s, r.h}, keyName(e.code), kGold2, 12 * s, true,
-                                Align::Left});
-            left += 56 * s;
-        }
-        const float right = e.state >= 0 ? r.x + r.w - 62 * s : r.x + r.w - 8 * s;
-        out.push_back(Words{panel::Box{left, r.y, right - left, r.h}, e.text, hot ? kGold2 : kText, 12.5f * s, hot,
-                            Align::Left});
-        if (e.state >= 0)
-            out.push_back(Words{panel::Box{r.x + r.w - 58 * s, r.y, 50 * s, r.h}, e.state > 0 ? t.on : t.off,
-                                e.state > 0 ? kText : kMuted, 11 * s, e.state > 0, Align::Center});
-    }
-    return out;
-}
-
 }  // namespace uagfx::commandcard

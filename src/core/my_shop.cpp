@@ -60,34 +60,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const Show& sh, const Texts& t) {
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, t.title, kText, 15 * s, true, Align::Left});
-    out.push_back(Words{L.cross, "\xC3\x97", kText, 14 * s, false, Align::Center});  // ×
-    if (L.rows.empty()) out.push_back(Words{L.list, t.empty, kMuted, 13 * s, false, Align::Center});
-    for (size_t i = 0; i < L.rows.size(); ++i) {
-        const size_t at = i + size_t(std::max(0, sh.scroll));
-        if (at >= rows.size()) break;
-        const Row& r = rows[at];
-        const panel::Box icon = iconBox(L.rows[i], s);
-        const float nx = icon.x + icon.w + 10 * s, right = L.rows[i].x + L.rows[i].w - 8 * s;
-        const panel::Box name{nx, L.rows[i].y + 3 * s, right - nx - 120 * s, L.rows[i].h / 2};
-        const panel::Box left{nx, L.rows[i].y + L.rows[i].h / 2, right - nx - 120 * s, L.rows[i].h / 2 - 3 * s};
-        const panel::Box price{right - 116 * s, L.rows[i].y, 116 * s, L.rows[i].h};
-        out.push_back(Words{name, r.refine > 0 ? "+" + std::to_string(r.refine) + " " + r.name : r.name, kText,
-                            13 * s, true, Align::Left});
-        std::string l = t.left;
-        if (const size_t p = l.find("{1}"); p != std::string::npos) l.replace(p, 3, std::to_string(r.left));
-        out.push_back(Words{left, l, kMuted, 11.5f * s, false, Align::Left});
-        out.push_back(Words{price, vendshop::money(r.price) + " z", kGold2, 13 * s, true, Align::Right});
-    }
-    out.push_back(Words{L.sum, t.worth, kMuted, 12 * s, false, Align::Left});
-    out.push_back(Words{L.sum, vendshop::money(worth(rows)) + " z", kGold2, 13 * s, true, Align::Right});
-    out.push_back(Words{L.close, t.close, kText, 13.5f * s, true, Align::Center});
-    return out;
-}
-
 panel::Box iconOf(const panel::Box& row, float s) { return iconBox(row, s); }
 
 void Ledger::stock(int index, const std::string& name, long long price) {

@@ -36,23 +36,3 @@ TEST(macro_card_places_and_the_mouse) {
     CHECK(macrocard::hitTest(L, -5, -5).part == P::None);
 }
 
-TEST(macro_card_words_and_picture) {
-    const macrocard::Layout L = macrocard::layout(1920, 1080, 1.0f);
-    std::vector<std::string> texts(10);
-    texts[0] = "/!";
-    texts[3] = "Heal please";
-    macrocard::Show sh;
-    sh.focus = 3;
-    sh.caret = true;
-    macrocard::Texts t;
-    t.title = "Макроси чату";
-    t.hint = "Alt+цифра пише рядок у чат";
-    t.save = "Зберегти";
-    const std::vector<macrocard::Words> w = macrocard::words(L, texts, sh, t);
-    const auto has = [&](const std::string& s) {
-        return std::any_of(w.begin(), w.end(), [&](const macrocard::Words& x) { return x.text == s; });
-    }
-    ;
-    CHECK(has("Макроси чату") && has("Alt+1") && has("Alt+0") && has("/!") && has("Heal please|"));
-    CHECK(has("Зберегти"));
-}

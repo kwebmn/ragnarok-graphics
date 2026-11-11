@@ -56,8 +56,6 @@ Layout layout(const Data& d, const Texts& t, int centreX, int top, float scale, 
 enum class Part : uint8_t { None, Card, Book };
 Part hitTest(const Layout& L, float x, float y);  // the picture's pixels
 
-void paint(panel::Picture& out, const Layout& L, const Data& d, bool hoverBook);
-
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;
@@ -67,7 +65,6 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, bool hoverBook);
 // 3.0.18-beta.18 (the RML card, win/target_card): the details' lines and their colours (0xRRGGBB), the first bold
 std::vector<std::pair<std::string, uint32_t>> detailLines(const Data& d, const Texts& t);
 

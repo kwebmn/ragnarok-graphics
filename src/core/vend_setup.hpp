@@ -67,9 +67,6 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-std::vector<Words> words(const Layout& L, const std::vector<Row>& cart, const std::vector<Row>& sale,
-                         const std::string& sign, const Show& sh, const Texts& t);
-
 // 3.0.18-beta.30 (uaUI's shop opening): a row's icon square
 panel::Box iconOf(const panel::Box& row, float s);
 

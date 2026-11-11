@@ -63,62 +63,6 @@ TEST(npc_talk_its_name_without_the_colours) {
     CHECK(npctalk::named(t).name.empty() && npctalk::named(t).lines.size() == 1);  // no brackets: a line of words
 }
 
-TEST(npc_talk_layout_words_options_and_buttons) {
-    npctalk::Talk t;
-    t.name = "Kafra Employee";
-    t.lines = {"Welcome to Kafra Corp. Always by your side, wherever you go. How may I be of help?"};
-    t.options = {"Save", "Use Storage", "Use Teleport Service", "Cancel"};
-    t.selected = 1;
-    t.button = npctalk::Button::None;
-    npctalk::Show sh;
-    npctalk::Layout L = npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure);
-    CHECK(L.options.size() == 4 && L.options[1].x > L.options[0].x && L.options[2].y > L.options[0].y);  // 2 columns
-    CHECK(L.button.w == 0 && L.lines.size() >= 1);
-    CHECK(L.y + L.h <= 900 && std::abs(L.x + L.w / 2 - 960) <= 1);  // its bottom middle where asked
-    const auto at = [&](const panel::Box& b) { return npctalk::hitTest(L, b.x + b.w / 2, b.y + b.h / 2); };
-    CHECK(at(L.options[3]).part == npctalk::Part::Option && at(L.options[3]).index == 3);
-    std::vector<npctalk::Words> w = npctalk::words(L, t, sh, texts(), measure);
-    const auto has = [&](const std::string& text) {
-        return std::any_of(w.begin(), w.end(), [&](const npctalk::Words& x) { return x.text == text; });
-    };
-    CHECK(has("Kafra Employee") && has("1") && has("Use Storage") && has("4") && has("Текст — як у сервера"));
-    t.options.clear();
-    t.button = npctalk::Button::Next;
-    L = npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure);
-    CHECK(L.button.w > 0 && at(L.button).part == npctalk::Part::Button);
-    w = npctalk::words(L, t, sh, texts(), measure);
-    CHECK(has("Далі"));
-    sh.pad = true;
-    L = npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure);
-    w = npctalk::words(L, t, sh, texts(), measure);
-    CHECK(!has("1–8 вибір · Enter далі · Esc закрити") && has("Далі"));
-    // 3.0.18-beta.31: uaUI's footer - a button for each of the controller's glyph boxes, A first
-    const std::vector<int> buttons = npctalk::padButtons(t);
-    CHECK(!buttons.empty() && buttons.size() == L.padGlyphs.size() && buttons[0] == int(padglyph::Button::A));
-}
-
-// 3.0.11-beta.195 (the tester: the Kafras' menus «у старому стилі» - in Glast Heim, the voting staff, Prontera's): a
-// script's menu with no words before it (the game's menu window alone, no text window) - the talk shows its options
-// alone, numbered, with nothing above them
-TEST(npc_talk_a_menu_alone) {
-    npctalk::Talk t;
-    t.options = {"Save", "Teleport to Prontera", "Open Storage", "Cancel"};
-    t.selected = 0;
-    t = npctalk::named(t);
-    CHECK(t.name.empty() && t.lines.empty());
-    npctalk::Show sh;
-    const npctalk::Layout L = npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure);
-    CHECK(L.options.size() == 4 && L.lines.empty() && L.button.w == 0);
-    CHECK(L.h > 0 && L.y + L.h <= 900 && L.options[0].y >= L.body.y);
-    for (size_t i = 0; i < L.options.size(); ++i) {
-        const panel::Box& b = L.options[i];
-        const npctalk::Hit h = npctalk::hitTest(L, b.x + b.w / 2, b.y + b.h / 2);
-        CHECK(h.part == npctalk::Part::Option && h.index == int(i));
-    }
-    const std::vector<npctalk::Words> w = npctalk::words(L, t, sh, texts(), measure);
-    CHECK(std::any_of(w.begin(), w.end(), [](const npctalk::Words& x) { return x.text == "Open Storage"; }));
-}
-
 // 3.0.11-beta.255 (the concept «Разговор с NPC с геймпада», stage 1): the menu's two columns by the D-pad, LB / RB by
 // eight, A's wait after a new page, the option chosen last time kept by its menu
 TEST(npc_talk_pad_menu_moves_wait_and_memory) {

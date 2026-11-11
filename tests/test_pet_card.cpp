@@ -51,31 +51,3 @@ TEST(pet_card_places_and_the_mouse) {
     CHECK(petcard::hitTest(L, -5, -5).part == P::None);
 }
 
-// Its words: the name, «Рівень 12», each bar's name and the state's word, the buttons'; its ground painted
-TEST(pet_card_words_and_picture) {
-    const petcard::Layout L = petcard::layout(1920, 1080, 1.0f);
-    petcard::Info i;
-    i.name = "Poring";
-    i.level = 12;
-    i.hunger = 80;
-    i.intimacy = 950;
-    petcard::Texts t;
-    t.title = "Улюбленець";
-    t.level = "Рівень {1}";
-    t.hunger = "Ситість";
-    t.intimacy = "Близькість";
-    const char* const h[5] = {"Дуже голодний", "Голодний", "Звичайно", "Ситий", "Переїв"};
-    const char* const c[5] = {"Неприязний", "Сором'язливий", "Звичайний", "Довіряє", "Відданий"};
-    const char* const b[4] = {"Нагодувати", "Трюк", "Зняти прикрасу", "У яйце"};
-    for (int k = 0; k < 5; ++k) {
-        t.hungerStates[k] = h[k];
-        t.intimacyStates[k] = c[k];
-    }
-    for (int k = 0; k < 4; ++k) t.commands[k] = b[k];
-    const std::vector<petcard::Words> w = petcard::words(L, i, petcard::Show{}, t);
-    const auto has = [&](const std::string& s) {
-        return std::any_of(w.begin(), w.end(), [&](const petcard::Words& x) { return x.text == s; });
-    }
-    ;
-    CHECK(has("Poring") && has("Рівень 12") && has("Ситий") && has("Відданий") && has("У яйце"));
-}

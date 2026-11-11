@@ -128,36 +128,6 @@ TEST(skill_window_scrolls_past_eight_rows) {
     CHECK_EQ(skillwin::keepInSight(5, 4, 12), 4);   // in sight: kept
 }
 
-TEST(skill_window_words_dots_and_pad_hints) {
-    const skillwin::Data d = knight();
-    skillwin::Show sh;
-    sh.tab = 1;
-    const skillwin::Texts t = texts();
-    skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
-    std::vector<skillwin::Words> w = skillwin::words(L, d, sh, t, measure);
-    const auto has = [&](const std::string& text) {
-        return std::any_of(w.begin(), w.end(), [&](const skillwin::Words& x) { return x.text == text; });
-    };
-    CHECK(has("Навички") && has("Alt+S") && has("Provoke") && has("5/10") && has("Вільних очок: 1") &&
-          has("Swordman") && has(t.drag));
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    skillwin::paint(p, L, d, sh);
-    const panel::Box& dots = L.dots[1];  // Provoke: 5 of 10 lit
-    const float step = dots.w / 10.0f;
-    const auto at = [&](float x, float y) { return p.px[size_t(int(y)) * size_t(p.width) + size_t(int(x))]; };
-    const uint32_t lit = at(dots.x + step * 4.5f - 1, dots.y + dots.h / 2), dark = at(dots.x + step * 5.5f - 1,
-                                                                                         dots.y + dots.h / 2);
-    CHECK(((lit >> 16) & 0xFF) > 0xA0 && ((dark >> 16) & 0xFF) < 0x80);
-    sh.pad = true;
-    sh.focus = 1;
-    L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
-    w = skillwin::words(L, d, sh, t, measure);
-    CHECK(has("Застосувати") && has("+1 рівень") && has("Призначити") && has("Закрити") && !has(t.drag));
-}
-
 // 3.0.11-beta.106 (R-WCXUQP: «глюк с переносом скилов на панель, не переносятся» - the game's drag begun at the press
 // never saw its button come up, the press and the release being the driver's): a press on a skill becomes a drag of
 // the window's own once the cursor moved past 10 pixels (times its scale); let go, a drag gives its skill (the game's

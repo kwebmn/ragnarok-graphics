@@ -262,34 +262,6 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     s.back.clear();
     for (const mvptimers::Timer& t : s.rows) s.back.push_back(t.back() <= now);
     s.viewKey = key;
-    if (key != s.key && !uaui::ready()) {  // 3.0.18-beta.25: uaUI's panel needs no picture
-        s.key = key;
-        const uicost::Paint cost("the MVP panel", s.w, s.h);
-        if (panel::blank(s.picture, s.w, s.h)) {
-            const float sc = scale;
-            panel::roundRect(s.picture, panel::Box{0, 0, float(s.w), float(s.h)}, 10 * sc, kCard, uistyle::panel(),
-                             kWhite, 0.09f, 1.0f * sc);
-            std::vector<Words> out;
-            out.push_back(Words{panel::Box{kPad * sc, kPad * sc, float(s.w) - (2 * kPad + 26) * sc, (kTitleH - 4) * sc},
-                                utf8Wide(say(settings::Text::MvpTitle)), kGold, 13 * sc, true, DT_LEFT, false});
-            panel::roundRect(s.picture, s.close, 6 * sc, kWhite, s.hoverClose ? 0.16f : 0.06f);
-            out.push_back(Words{s.close, L"\x2715", kText, 12 * sc, true, DT_CENTER, false});
-            for (size_t i = 0; i < lines.size(); ++i) {
-                const float y = (kPad + kTitleH + float(i) * kLineH) * sc;
-                if (int(i) == s.hover)
-                    panel::roundRect(s.picture, panel::Box{4 * sc, y, float(s.w) - 8 * sc, kLineH * sc}, 5 * sc,
-                                     kWhite, 0.08f);
-                const bool back = s.rows[i].back() <= now;
-                out.push_back(Words{panel::Box{kPad * sc, y, float(s.w) - (2 * kPad + 64) * sc, kLineH * sc},
-                                    utf8Wide(lines[i].first), int(i) == s.hover ? kText : kMuted, 12 * sc, false,
-                                    DT_LEFT, false});
-                out.push_back(Words{panel::Box{float(s.w) - (kPad + 64) * sc, y, 64 * sc, kLineH * sc},
-                                    utf8Wide(lines[i].second), back ? kBack : kText, 12 * sc, true, DT_RIGHT, false});
-            }
-            drawWords(s.picture, out);
-            s.upload = true;
-        }
-    }
     s.shown = true;
     s.uiShown = uiFrame(s);
     RECT client{};
@@ -301,12 +273,8 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    if (!s.shown || s.uiShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
-    int cursor = -1, cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.x, s.y, s.k);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {

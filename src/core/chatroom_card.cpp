@@ -75,32 +75,4 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const Texts& t) {
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.heading, t.heading, kText, 15 * s, true, Align::Left});
-    out.push_back(Words{L.close, "\xE2\x9C\x95", sh.hover.part == Part::Close ? kText : kMuted, 13 * s, false,
-                        Align::Center});  // ✕
-    out.push_back(Words{L.titleLabel, t.titleLabel, kMuted, 11.5f * s, false, Align::Left});
-    const std::string caret = c.caret ? "|" : "";
-    out.push_back(Words{panel::Box{L.title.x + 10 * s, L.title.y, L.title.w - 20 * s, L.title.h},
-                        c.title + (c.focus == Field::Title ? caret : ""), kText, 13.5f * s, false, Align::Left});
-    out.push_back(Words{L.limitLabel, t.limitLabel, kMuted, 11.5f * s, false, Align::Left});
-    for (size_t i = 0; i < L.limits.size() && i < c.limits.size(); ++i) {
-        const bool on = c.limits[i] == c.limit;
-        out.push_back(Words{L.limits[i], std::to_string(c.limits[i]), on ? kGold2 : kText, 12.5f * s, on,
-                            Align::Center});
-    }
-    out.push_back(Words{L.open, t.open, !c.closed ? kGold2 : kText, 12.5f * s, !c.closed, Align::Center});
-    out.push_back(Words{L.closed, t.closed, c.closed ? kGold2 : kText, 12.5f * s, c.closed, Align::Center});
-    out.push_back(Words{L.passwordLabel, t.passwordLabel, c.closed ? kMuted : 0x5E6575, 11.5f * s, false,
-                        Align::Left});
-    out.push_back(Words{panel::Box{L.password.x + 10 * s, L.password.y, L.password.w - 20 * s, L.password.h},
-                        masked(c.passwordLength) + (c.focus == Field::Password ? caret : ""), kText, 13.5f * s,
-                        false, Align::Left});
-    out.push_back(Words{L.create, t.create, kText, 13 * s, true, Align::Center});
-    out.push_back(Words{L.cancel, t.cancel, kText, 13 * s, false, Align::Center});
-    return out;
-}
-
 }  // namespace uagfx::chatroomcard

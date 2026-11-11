@@ -157,8 +157,6 @@ void barTo(Show& sh, const Layout& L, const Data& d, bool horizontal, float x, f
 // that way (dx, dy: -1, 0, 1), across counted twice; `from` when none
 int treeStep(const Layout& L, int from, int dx, int dy);
 
-void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh);
-
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;

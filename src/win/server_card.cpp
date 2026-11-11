@@ -257,47 +257,6 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     block(s, game);
 }
 
-// 3.0.18-beta.31 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): a choice of things (the
-// game's lists: a card into a slot, an arrow to make, a pet's egg ...) in RmlUi's markup, line by line as core
-// pickcard paints it - its glass, the empty list's ground, the rows (the chosen gold) with their icons, the scroll's
-// bar and thumb, «Гаразд» gold once one is chosen, «Скасувати»; the words where core pickcard places them
-static void fillSheet(State& s, uisheet::Content& c) {  // the server select: the choice of things' look
-    const pc::Layout& L = s.layout;
-    const pc::Show& sh = s.show;
-    const float sc = L.s;
-    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kGold = 0xF3C653;
-    auto& u = c.under;
-    c.w = float(L.w), c.h = float(L.h);
-    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
-    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
-    if (L.rows.empty()) c.rect(u, L.list, 9 * sc, kBlack, 0.20f);
-    for (size_t i = 0; i < L.rows.size(); ++i) {
-        const size_t at = i + size_t(std::max(0, sh.scroll));
-        if (at >= s.entries.size()) break;
-        const bool chosen = int(at) == sh.selected, hot = int(at) == sh.hover;
-        c.rect(u, L.rows[i], 8 * sc, chosen ? kGold : kWhite, chosen ? 0.16f : hot ? 0.07f : 0.035f,
-               chosen ? kGold : kWhite, chosen ? 0.9f : 0.08f, (chosen ? 1.5f : 1.0f) * sc);
-        const panel::Box icon = pc::iconOf(L.rows[i], s.entries[at], sc);
-        if (icon.w <= 0) continue;
-        c.rect(u, icon, 6 * sc, kBlack, 0.30f);
-        const panel::Picture* p = s.entries[at].icon;
-        c.icons.push_back(uisheet::Icon{std::round(icon.x + (icon.w - float(p->width)) / 2),
-                                        std::round(icon.y + (icon.h - float(p->height)) / 2), float(p->width),
-                                        float(p->height), 1, s.sheet.icon(p)});
-    }
-    if (L.bar.w > 0) {
-        c.rect(u, L.bar, L.bar.w / 2, kWhite, 0.06f);
-        const panel::Box t = pc::thumb(L, sh.scroll, s.entries.size());
-        if (t.h > 0) c.rect(u, t, L.bar.w / 2, kWhite, 0.40f);
-    }
-    const bool can = sh.selected >= 0 && sh.selected < int(s.entries.size());
-    c.rect(u, L.ok, 8 * sc, kGold, !can ? 0.05f : sh.hoverPart == int(pc::Part::Ok) ? 0.34f : 0.22f, kGold,
-           can ? 0.8f : 0.25f, 1.0f * sc);
-    c.rect(u, L.cancel, 8 * sc, kWhite, sh.hoverPart == int(pc::Part::Cancel) ? 0.12f : 0.06f, kWhite, 0.16f,
-           1.0f * sc);
-    c.say(pc::words(L, s.entries, sh, texts()));
-}
-
 // 3.0.18-beta.81: the live window's model and place
 static void liveFrame(State& s) {
     s.live.anywhere = true;  // before the world
@@ -352,33 +311,13 @@ static void liveFrame(State& s) {
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
-    if (uaui::readyAnywhere()) {  // 3.0.18-beta.81: the live window in place of the sheet
-        s.sheet.frame("server", false, true, 0, 0, 0, [](uisheet::Content&) {});
-        s.sheetShown = false;
-        liveFrame(s);
-        return;
-    }
-    s.live.frame(false, 0, 0, 0, nullptr);
-    s.sheet.anywhere = true;  // 3.0.18-beta.33: before the world
-    s.sheetShown = s.sheet.frame("server", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
-                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+    liveFrame(s);  // the old edition (the sheet) gone: the live window alone
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
-    if (s.live.shown) {  // 3.0.18-beta.81
-        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
-        return;
-    }
-    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
-    int cursor = -1, cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    const panel::Box& g = s.layout.glass;
-    // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
-                  12 * s.scale, s.scale, s.k);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    if (!s.live.shown) return;  // 3.0.18-beta.81
+    s.live.draw(s.shadow, record, renderer, s.scale, s.k);
 }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
@@ -388,33 +327,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         result = 0;
         return true;
     }
-    if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
-    if (!button && m != WM_MOUSEWHEEL) return false;
-    float tx = 0, ty = 0;
-    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;
-    const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
-    if (!s.layout.glass.contains(lx, ly)) return false;
-    result = 0;
-    if (m == WM_MOUSEWHEEL) {
-        const int by = GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -1 : 1;
-        s.show.scroll = std::clamp(s.show.scroll + by, 0, pc::mostScroll(s.layout, s.entries.size()));
-        s.key.clear();
-        return true;
-    }
-    if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
-    const pc::Hit h = pc::hitTest(s.layout, s.show.scroll, s.entries.size(), lx, ly);
-    switch (h.part) {
-        case pc::Part::Row:
-            choose(s, h.row);
-            if (m == WM_LBUTTONDBLCLK) press(s, pc::kOkButton);
-            break;
-        case pc::Part::Ok: press(s, pc::kOkButton); break;
-        case pc::Part::Cancel: press(s, pc::kCancelButton); break;
-        case pc::Part::None: break;
-    }
-    return true;
+    return false;  // the old edition gone: the live window alone
 }
 
 bool shown() { return state().shown; }

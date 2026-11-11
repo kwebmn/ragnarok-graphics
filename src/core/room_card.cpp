@@ -89,41 +89,4 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const Texts& t) {
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.badge, c.open ? t.open : t.locked, kText, 11 * s, true, Align::Center});
-    out.push_back(Words{L.title, c.title, kText, 15 * s, true, Align::Left});
-    out.push_back(Words{L.count, std::to_string(c.count) + "/" + std::to_string(c.limit), kMuted, 12 * s, false,
-                        Align::Right});
-    out.push_back(Words{L.close, "\xE2\x9C\x95", sh.hover.part == Part::Close ? kText : kMuted, 13 * s, false,
-                        Align::Center});  // ✕
-    const std::vector<Line> shown = lastLines(c.lines, L.lineRows);
-    float y = L.lines.y + L.lines.h - float(shown.size()) * kRowH * s - 4 * s;
-    for (const Line& l : shown) {
-        out.push_back(Words{panel::Box{L.lines.x + 8 * s, y, L.lines.w - 16 * s, kRowH * s}, l.text,
-                            l.rgb ? l.rgb : kText, 12 * s, false, Align::Left});
-        y += kRowH * s;
-    }
-    out.push_back(Words{L.membersHead, t.members, kMuted, 11 * s, false, Align::Left});
-    for (size_t i = 0; i < L.memberRows.size() && i < c.members.size(); ++i) {
-        const panel::Box& r = L.memberRows[i];
-        const Member& m = c.members[i];
-        out.push_back(Words{panel::Box{r.x + 8 * s, r.y, r.w - 12 * s, r.h},
-                            m.owner ? "\xE2\x98\x85 " + m.name : m.name, m.owner ? kGold2 : kText, 12.5f * s,
-                            m.owner, Align::Left});  // ★ the owner
-    }
-    out.push_back(Words{panel::Box{L.input.x + 10 * s, L.input.y, L.input.w - 20 * s, L.input.h},
-                        c.input + (c.focus && c.caret ? "|" : ""), kText, 13 * s, false, Align::Left});
-    const auto label = [&](const panel::Box& b, const std::string& text) {
-        if (b.w > 0) out.push_back(Words{b, text, kText, 12 * s, false, Align::Center});
-    };
-    label(L.setup, t.setup);
-    label(L.leave, t.leave);
-    label(L.kick, t.kick);
-    label(L.owner, t.owner);
-    label(L.friendAdd, t.friendAdd);
-    return out;
-}
-
 }  // namespace uagfx::roomcard

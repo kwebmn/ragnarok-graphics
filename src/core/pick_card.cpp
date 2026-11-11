@@ -79,28 +79,6 @@ Hit hitTest(const Layout& L, int scroll, size_t count, float x, float y) {
     return Hit{};
 }
 
-std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, const Show& sh, const Texts& t) {
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, t.title, kText, 15 * s, true, Align::Left});
-    out.push_back(Words{L.message, t.message, kMuted, 12.5f * s, false, Align::Left});
-    if (L.rows.empty()) out.push_back(Words{L.list, t.empty, kMuted, 13 * s, false, Align::Center});
-    for (size_t i = 0; i < L.rows.size(); ++i) {
-        const size_t at = i + size_t(std::max(0, sh.scroll));
-        if (at >= entries.size()) break;
-        const Entry& e = entries[at];
-        const panel::Box icon = iconBox(L.rows[i], s);
-        const float from = hasIcon(e) ? icon.x + icon.w + 10 * s : L.rows[i].x + 12 * s;
-        const panel::Box name{from, L.rows[i].y, L.rows[i].x + L.rows[i].w - 6 * s - from, L.rows[i].h};
-        out.push_back(Words{name, e.refine > 0 ? "+" + std::to_string(e.refine) + " " + e.name : e.name, kText,
-                            13 * s, int(at) == sh.selected, Align::Left});
-    }
-    if (!t.hint.empty()) out.push_back(Words{L.hint, t.hint, kMuted, 11 * s, false, Align::Center});
-    out.push_back(Words{L.ok, t.ok, kText, 13.5f * s, true, Align::Center});
-    out.push_back(Words{L.cancel, t.cancel, kText, 13.5f * s, false, Align::Center});
-    return out;
-}
-
 panel::Box iconOf(const panel::Box& row, const Entry& e, float s) {
     return hasIcon(e) ? iconBox(row, s) : panel::Box{};
 }

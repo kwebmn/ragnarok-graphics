@@ -322,58 +322,6 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     block(s, game);
 }
 
-// 3.0.18-beta.33 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the character make in
-// RmlUi's markup, line by line as core charmake paints it - its glass, the face's circle and picture, the hair's and
-// the colour's arrows, the controller's frames, the name's field, the stat pairs' arrows and bars (gold the left's
-// share), «Створити», «Скасувати»; the words where core charmake places them
-static void fillSheet(State& s, uisheet::Content& c) {
-    const cm::Layout& L = s.layout;
-    const cm::Fields& f = s.fields;
-    const cm::Show& sh = s.show;
-    const float sc = L.s;
-    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kBlue = 0x3D7EEB, kBlack = 0x000000;
-    auto& u = c.under;
-    c.w = float(L.w), c.h = float(L.h);
-    c.rect(u, L.glass, 14 * sc, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * sc);
-    c.rect(u, L.face, L.face.w / 2, kBlack, 0.30f, kWhite, 0.12f, 1.0f * sc);
-    if (f.face && f.face->width > 0)
-        c.icons.push_back(uisheet::Icon{std::round(L.face.x + (L.face.w - float(f.face->width)) / 2),
-                                        std::round(L.face.y + (L.face.h - float(f.face->height)) / 2),
-                                        float(f.face->width), float(f.face->height), 1, s.sheet.icon(f.face)});
-    const auto arrow = [&](const panel::Box& b, cm::Part p, int index, bool can) {
-        const bool hot = sh.hover == p && sh.hoverIndex == index;
-        c.rect(u, b, 7 * sc, kWhite, !can ? 0.02f : hot ? 0.14f : 0.06f);
-    };
-    const auto focused = [&](const panel::Box& b, int row) {
-        if (sh.focusRow == row)
-            c.rect(c.over, panel::Box{b.x - 4 * sc, b.y - 2 * sc, b.w + 8 * sc, b.h + 4 * sc}, 9 * sc, kGold, 0.0f,
-                   kGold, 0.8f, 1.5f * sc);
-    };
-    arrow(L.hairBefore, cm::Part::HairBefore, -1, true);
-    arrow(L.hairAfter, cm::Part::HairAfter, -1, true);
-    arrow(L.colourBefore, cm::Part::ColourBefore, -1, true);
-    arrow(L.colourAfter, cm::Part::ColourAfter, -1, true);
-    focused(panel::Box{L.hairBefore.x, L.hairValue.y, L.hairAfter.x + L.hairAfter.w - L.hairBefore.x, L.hairValue.h},
-            0);
-    focused(panel::Box{L.colourBefore.x, L.colourValue.y, L.colourAfter.x + L.colourAfter.w - L.colourBefore.x,
-                       L.colourValue.h},
-            1);
-    c.rect(u, L.name, 9 * sc, kBlack, 0.35f, f.focus ? kGold : kWhite, f.focus ? 0.85f : 0.16f, 1.0f * sc);
-    for (int i = 0; i < 3; ++i) {
-        arrow(L.pairLeft[i], cm::Part::PairLeft, i, cm::canMove(f, i, true));
-        arrow(L.pairRight[i], cm::Part::PairRight, i, cm::canMove(f, i, false));
-        const panel::Box& bar = L.pairBar[i];
-        const int left = f.stats[cm::kPairs[i].left], right = f.stats[cm::kPairs[i].right];
-        const float share = left + right > 0 ? float(left) / float(left + right) : 0.5f;
-        c.rect(u, bar, bar.h / 2, kBlue, 0.75f);
-        c.rect(u, panel::Box{bar.x, bar.y, bar.w * share, bar.h}, bar.h / 2, kGold, 0.9f);
-        focused(L.pairs[i], 2 + i);
-    }
-    c.rect(u, L.make, 9 * sc, kGold, sh.hover == cm::Part::Make ? 0.36f : 0.24f, kGold, 0.85f, 1.0f * sc);
-    c.rect(u, L.cancel, 9 * sc, kWhite, sh.hover == cm::Part::Cancel ? 0.12f : 0.06f, kWhite, 0.16f, 1.0f * sc);
-    c.say(cm::words(L, f, sh, texts()));
-}
-
 // 3.0.18-beta.81: the live window's model and place
 static void liveFrame(State& s) {
     s.live.anywhere = true;  // before the world
@@ -442,33 +390,13 @@ static void liveFrame(State& s) {
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
-    if (uaui::readyAnywhere()) {  // 3.0.18-beta.81: the live window in place of the sheet
-        s.sheet.frame("charmake", false, true, 0, 0, 0, [](uisheet::Content&) {});
-        s.sheetShown = false;
-        liveFrame(s);
-        return;
-    }
-    s.live.frame(false, 0, 0, 0, nullptr);
-    s.sheet.anywhere = true;  // 3.0.18-beta.33: before the world
-    s.sheetShown = s.sheet.frame("charmake", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
-                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+    liveFrame(s);  // the old edition (the sheet) gone: the live window alone
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
-    if (s.live.shown) {  // 3.0.18-beta.81
-        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
-        return;
-    }
-    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
-    int cursor = -1, cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    const panel::Box& g = s.layout.glass;
-    // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
-                  14 * s.scale, s.scale, s.k);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    if (!s.live.shown) return;  // 3.0.18-beta.81
+    s.live.draw(s.shadow, record, renderer, s.scale, s.k);
 }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
@@ -478,21 +406,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         result = 0;
         return true;
     }
-    if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
-    if (!button && m != WM_MOUSEWHEEL) return false;
-    float tx = 0, ty = 0;
-    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;
-    const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
-    if (!s.layout.glass.contains(lx, ly)) return false;
-    result = 0;
-    if (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) {
-        const cm::Hit h = cm::hitTest(s.layout, lx, ly);
-        s.show.focusRow = -1;  // the mouse leads now
-        act(s, h.part, h.index);
-    }
-    return true;
+    return false;  // the old edition gone: the live window alone
 }
 
 bool shown() { return state().shown; }

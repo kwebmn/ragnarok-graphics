@@ -74,8 +74,6 @@ struct Hit {
 };
 Hit hitTest(const Layout& L, float x, float y);
 
-void paint(panel::Picture& out, const Layout& L, const Talk& t, const Show& sh);
-
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;
@@ -85,8 +83,6 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-std::vector<Words> words(const Layout& L, const Talk& t, const Show& sh, const Texts& tx, const Measure& m);
-
 // 3.0.11-beta.255 (the concept «Разговор с NPC с геймпада», stage 1; the owner: «8. вверхвниз ходить тоже надо»): the
 // menu's options in two columns row by row (1 2 / 3 4) - the controller's D-pad moves the choice as it looks: up and
 // down by a row, left and right in the row; LB / RB by kPage options

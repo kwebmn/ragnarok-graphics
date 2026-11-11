@@ -311,9 +311,8 @@ void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHe
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    if (!s.open || s.sheetShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 }  // namespace uagfx::win::oskwin

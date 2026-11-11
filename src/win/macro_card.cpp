@@ -233,60 +233,6 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     block(s, game);
 }
 
-// 3.0.18-beta.34 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): this window in RmlUi's
-// markup, line by line as core macrocard paints it (its boxes, icons, circles); the words where it places them
-static void fillSheet(State& s, uisheet::Content& ui) {
-    using namespace uagfx::macrocard;
-    const auto& L = s.layout;
-    const auto& sh = s.show;
-    [[maybe_unused]] constexpr uint32_t kCard = 0x10141C;
-    [[maybe_unused]] constexpr uint32_t kWhite = 0xFFFFFF;
-    [[maybe_unused]] constexpr uint32_t kGold = 0xC9A55B;
-    [[maybe_unused]] constexpr uint32_t kGold2 = 0xE6CB8A;
-    [[maybe_unused]] constexpr uint32_t kText = 0xEEF2F8;
-    [[maybe_unused]] constexpr uint32_t kMuted = 0x9AA3B5;
-    [[maybe_unused]] constexpr uint32_t kBlack = 0x000000;
-    [[maybe_unused]] constexpr float kW = 440;
-    [[maybe_unused]] constexpr float kPad = 18;
-    [[maybe_unused]] constexpr float kTitleH = 30;
-    [[maybe_unused]] constexpr float kHintH = 20;
-    [[maybe_unused]] constexpr float kRowH = 30;
-    [[maybe_unused]] constexpr float kKeyW = 56;
-    [[maybe_unused]] constexpr float kButtonH = 36;
-    ui.w = float(L.w), ui.h = float(L.h);
-    const auto put = [&](const panel::Picture& p, const panel::Box& box, float k = 1.0f) {
-        if (p.width > 0)
-            ui.icons.push_back(uisheet::Icon{std::round(box.x + (box.w - float(p.width)) / 2),
-                                            std::round(box.y + (box.h - float(p.height)) / 2), float(p.width),
-                                            float(p.height), k, s.sheet.icon(&p)});
-    };
-    [[maybe_unused]] const auto circle = [&](float cx, float cy, float r, uint32_t rgb, float a) {
-        ui.rect(ui.under, panel::Box{cx - r, cy - r, 2 * r, 2 * r}, r, rgb, a);
-    };
-    [[maybe_unused]] const auto icon = [&](uiicons::Icon which, float x, float y, float side, uint32_t rgb, float a,
-                                           float stroke) {
-        const int px = std::max(4, int(std::ceil(side)));
-        const std::string key = "u" + std::to_string(int(which)) + ':' + std::to_string(px) + ':' +
-                                std::to_string(rgb) + ':' + std::to_string(int(a * 100));
-        const std::string src = s.sheet.made(key, px, px, [&](panel::Picture& p) {
-            uiicons::draw(p, which, 0, 0, float(px), rgb, a, stroke);
-        });
-        ui.icons.push_back(uisheet::Icon{x, y, float(px), float(px), 1, src});
-    };
-    (void)put;
-
-    const float sc = L.s;
-    ui.rect(ui.under, L.glass, 12 * sc, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * sc);
-    ui.rect(ui.under, L.close, 6 * sc, kWhite, sh.hoverClose ? 0.14f : 0.06f);
-    for (size_t i = 0; i < L.fields.size(); ++i) {
-        const bool focus = sh.focus == int(i), hot = sh.hover == int(i);
-        ui.rect(ui.under, L.fields[i], 7 * sc, kBlack, focus ? 0.42f : hot ? 0.34f : 0.28f, focus ? kGold : kWhite,
-                focus ? 0.85f : 0.12f, 1.0f * sc);
-    }
-    ui.rect(ui.under, L.save, 8 * sc, kGold, sh.hoverSave ? 0.34f : 0.22f, kGold, 0.8f, 1.0f * sc);
-    ui.say(mc::words(s.layout, s.texts, s.show, texts()));
-}
-
 // 3.0.18-beta.81: the live window's model and place
 static void liveFrame(State& s) {
     s.live.make("macro", kLive, [&](Rml::DataModelConstructor& m) {
@@ -335,15 +281,7 @@ static void liveFrame(State& s) {
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
-    if (uaui::readyAnywhere()) {  // 3.0.18-beta.81: the live window in place of the sheet
-        s.sheet.frame("macro", false, true, 0, 0, 0, [](uisheet::Content&) {});
-        s.sheetShown = false;
-        liveFrame(s);
-        return;
-    }
-    s.live.frame(false, 0, 0, 0, nullptr);
-    s.sheetShown = s.sheet.frame("macro", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
-                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+    liveFrame(s);  // the old edition (the sheet) gone: the live window alone
     if (s.sheetShown) {  // 3.0.18-beta.60: the pad walks its boxes (A clicks one)
         std::vector<panel::Box> targets;
         for (const auto& part : std::initializer_list<std::vector<panel::Box>>{s.layout.keys, s.layout.fields, {s.layout.save, s.layout.close}})
@@ -354,19 +292,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
-    if (s.live.shown) {  // 3.0.18-beta.81
-        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
-        return;
-    }
-    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
-    int cursor = -1, cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    const panel::Box& g = s.layout.glass;
-    // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
-                  12 * s.scale, s.scale, s.k);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    if (!s.live.shown) return;  // 3.0.18-beta.81
+    s.live.draw(s.shadow, record, renderer, s.scale, s.k);
 }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
@@ -376,24 +303,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         result = 0;
         return true;
     }
-    if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
-    if (!button && m != WM_MOUSEWHEEL) return false;
-    float tx = 0, ty = 0;
-    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;
-    const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
-    if (!s.layout.glass.contains(lx, ly)) return false;
-    result = 0;
-    if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
-    const mc::Hit h = mc::hitTest(s.layout, lx, ly);
-    switch (h.part) {
-        case mc::Part::Field: focusField(s, h.index); break;
-        case mc::Part::Save: send(s, mc::kSaveMsg, 0, "«Зберегти» - the window's Enter (it writes the macros)"); break;
-        case mc::Part::Close: send(s, kButtonMsg, mc::kCloseButton, "closed (the window's 0x87)"); break;
-        case mc::Part::None: break;
-    }
-    return true;
+    return false;  // the old edition gone: the live window alone
 }
 
 bool shown() { return state().shown; }

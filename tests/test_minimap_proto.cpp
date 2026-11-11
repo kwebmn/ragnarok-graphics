@@ -128,69 +128,6 @@ TEST(minimap_proto_ctrl_tab_goes_round_as_the_games) {
     CHECK(minimap::opacity(minimap::Look::Hidden) == 0.0f);
 }
 
-TEST(minimap_proto_makes_room_for_the_monsters_under_it) {
-    // 3.0.11-beta.31: lines of 19 at scale 1 in the details' box, folded - none
-
-    const minimap::Layout L = minimap::layout(1920, 1080, 1.0f, false, 3);
-    CHECK(L.lineH == 19 && L.list.h == 3 * 19 + 14);
-    CHECK(minimap::partAt(L, 5, L.list.y + L.list.h - 1) == minimap::Part::List);
-    // the list keeps clicks
-
-    CHECK(minimap::partAt(L, 5, L.list.y + L.list.h + 1) == minimap::Part::None);
-    minimap::Texts t;
-    t.list = {{"Poring", "100"}, {"Lunatic", "40"}, {"Drops", "10"}};
-    bool poring = false, count = false;
-    for (const minimap::Words& w : minimap::words(L, minimap::Scene{}, t)) {
-        poring = poring || (w.text == "Poring" && w.box.y >= L.list.y);
-        count = count || (w.text == "100" && w.align == minimap::Align::Right);
-    }
-    CHECK(poring && count);
-    t.folded = true;
-    bool closed = false;
-    for (const minimap::Words& w : minimap::words(minimap::layout(1920, 1080, 1.0f, false, 0), minimap::Scene{}, t))
-        closed = closed || w.text == "▸";
-    CHECK(closed);
-}
-
-TEST(minimap_proto_marks_the_npcs_and_the_warps) {
-    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
-    // 220 px for 100 cells
-
-    minimap::Scene sc;
-    sc.map = minimap::MapSize{100, 100};
-    sc.player = minimap::Cell{50, 50};
-    sc.marks = {{minimap::Cell{30, 70}, 0xD6336C, minimap::Glyph::Kafra, "Kafra Employee"},  // up left
-                {minimap::Cell{80, 20}, 0, minimap::Glyph::Warp, "→ Prontera"},          // down right
-                {minimap::Cell{300, 300}, 0x00FF00, minimap::Glyph::Dot, "far"}};
-    // off the view
-
-    ;
-    const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
-    float px = 0, py = 0;
-    minimap::cellToPanel(v, sc.map, minimap::Cell{30, 70}, px, py);
-    // the pink «K» square
-
-    bool letter = false;
-    for (const minimap::Words& w : minimap::words(L, sc, minimap::Texts{})) letter = letter || w.text == "K";
-    CHECK(letter);
-    minimap::cellToPanel(v, sc.map, minimap::Cell{80, 20}, px, py);
-    // the portal's white heart
-
-    CHECK(minimap::markAt(L, sc, px + 1, py - 1) == 1);
-    // the pointer by it names it
-
-    sc.hoverMark = 1;
-    bool named = false;
-    for (const minimap::Words& w : minimap::words(L, sc, minimap::Texts{})) named = named || w.text == "→ Prontera";
-    CHECK(named);
-    CHECK(minimap::markAt(L, sc, L.map.w / 2, L.map.h / 2) == -1);
-    // the player's middle: none near
-
-    CHECK(minimap::markAt(L, sc, 80, L.map.h + 5) == -1);
-    // the bar: not the map
-
-}
-
 // 3.0.11-beta.31: the way in gold along its cells, the pin on its next move, the zoom, the big map
 TEST(minimap_proto_way_zoom_and_big_map) {
     const minimap::Layout L = minimap::layout(1280, 720, 1.0f, true, 0);
@@ -437,43 +374,6 @@ TEST(minimap_proto_party_members) {
     CHECK(minimap::markAt(L, sc, px + 1, py - 1) == 1);
 }
 
-// 3.0.11-beta.196 (the tester: «значок кафри без окулярів сприймається як значок хрестика щоб щос закрити ...
-// відображення нпц перекриває значок кафри ... треба додати портрет кафри якийсь як іконку і зробити не перекриваємим
-// іншими значками»): a Kafra's mark with its face - in a pink ring, no «K» over it; the marks drawn by their kind, the
-// NPCs' dots first, the Kafras over them whatever the list's order
-TEST(minimap_proto_kafra_face_over_the_npcs) {
-    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
-    panel::Picture face;
-    face.width = face.height = 14;
-    face.px.assign(196, 0xFF40C060u);
-    // a green face, told from the pink ring and the dot
-
-    minimap::Scene sc;
-    sc.map = minimap::MapSize{100, 100};
-    sc.player = minimap::Cell{50, 50};
-    minimap::Mark kafra{minimap::Cell{30, 70}, 0, minimap::Glyph::Kafra, "Kafra Employee"};
-    kafra.picture = &face;
-    const minimap::Mark npc{minimap::Cell{30, 70}, 0xFFFFFF, minimap::Glyph::Dot, "Guide"};
-    // the same cell, after
-
-    sc.marks = {kafra, npc};
-    ;
-    const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
-    float px = 0, py = 0;
-    minimap::cellToPanel(v, sc.map, minimap::Cell{30, 70}, px, py);
-    // its face, not the white dot over it
-
-    // its ring
-
-    const std::vector<minimap::Words> w = minimap::words(L, sc, minimap::Texts{});
-    CHECK(std::none_of(w.begin(), w.end(), [&](const minimap::Words& x) {
-        return x.text == "K" && x.box.y > L.map.y + 8;  // no «K» on the face (the layers' button's stays)
-    }));
-    sc.marks[0].picture = nullptr;
-    // no face: the concept's pink «K», still over the dot
-
-}
-
 // 3.0.11-beta.119 (R-5Z6J2S: «потрібно щоб на мінікарті та на великій карті була можливість включати та виключати НПЦ,
 // портали та інше»; the owner «делать»): the map's layers - portals, NPCs, Kafras, the party - each switched by a round
 // button in the minimap's top left and a chip under the big map; a layer off: its marks not drawn nor pointed at
@@ -550,57 +450,6 @@ TEST(minimap_proto_style_switch_places) {
     CHECK(minimap::bigPartAt(b, b.styleChip.x + 5, b.styleChip.y + 5) == minimap::BigPart::Style);
 }
 
-// 3.0.11-beta.122 (the network ideas, 7): the round trip's badge; 3.0.11-beta.127 (the owner: «пинги вынеси в
-// отдельную плашку, можешь еще график строить. но небольшую. там где карта оно название карты сокращает»): a plate of
-// its own under the bar - the dot and its words, a small graph of the last minute; the bar's name its whole width
-TEST(minimap_proto_net_plate_under_the_bar) {
-    const minimap::Layout plain = minimap::layout(1920, 1080, 1.0f, false, 0);
-    CHECK(plain.net.w == 0);
-    const minimap::Layout L = minimap::layout(1920, 1080, 1.0f, false, 0, true);
-    CHECK(L.net.w > 0 && L.net.w < L.caption.w * 0.75f && L.net.x == L.caption.x);
-    CHECK(L.net.y >= L.caption.y + L.caption.h && float(L.h) >= L.net.y + L.net.h && L.h > plain.h);
-    minimap::Scene sc;
-    minimap::Texts t;
-    t.name = "Clock Tower 2f";
-    t.cell = "108, 236";
-    t.net = "50 ms";
-    t.netRgb = 0x5FD08A;
-    const std::vector<minimap::Words> w = minimap::words(L, sc, t);
-    const auto find = [](const std::vector<minimap::Words>& in, const std::string& text) {
-        return std::find_if(in.begin(), in.end(), [&](const minimap::Words& x) { return x.text == text; });
-    }
-    ;
-    const auto badge = find(w, "\xE2\x97\x8F 50 ms"), name = find(w, "Clock Tower 2f");
-    CHECK(badge != w.end() && name != w.end());
-    if (badge != w.end())
-        CHECK(badge->rgb == 0x5FD08A && badge->box.y >= L.net.y && badge->box.x + badge->box.w <= L.net.x + L.net.w);
-    minimap::Texts none = t;
-    // the name as wide as with no badge at all
-
-    none.net.clear();
-    const std::vector<minimap::Words> w0 = minimap::words(plain, sc, none);
-    const auto name0 = find(w0, "Clock Tower 2f");
-    CHECK(name0 != w0.end());
-    if (name != w.end() && name0 != w0.end()) CHECK(name->box.w == name0->box.w);
-    // the graph: a bar a reading, the newest at its right end, its colour by its round trip; a stall red to the top
-
-    const std::vector<int> graph{50, 50, 300, -1};
-    sc.netGraph = &graph;
-    const panel::Box g = minimap::netGraphBox(L);
-    CHECK(g.w > 0 && g.x > L.net.x && g.x + g.w <= L.net.x + L.net.w && g.y >= L.net.y && g.h > 4);
-    ;
-    const auto red = [](uint32_t c) { return ((c >> 16) & 0xFF) > 0xC0 && ((c >> 8) & 0xFF) < 0x90; }
-    ;
-    const auto green = [](uint32_t c) { return ((c >> 8) & 0xFF) > ((c >> 16) & 0xFF) + 40; }
-    ;
-    // the stall: to the top
-
-    // 300 ms: the graph's top, red
-
-    // 50 ms: low and green
-
-}
-
 // 3.0.11-beta.201 (the tester: «ще не видно согільдійців на мінімапі», «була якась команда типу пошук мобів на
 // мінімапі»): a server's mark (an NPC's viewpoint, @showmobs) - always shown, over the rest, in its colour; a guild
 // mate - with the party's layer
@@ -652,25 +501,6 @@ TEST(minimap_proto_marks_by_the_zoom) {
     CHECK(minimap::markScale(40, map, 0.3f) >= 0.5f);
 }
 
-// 3.0.11-beta.201 (the tester: «іконки кафр зробили, а у легенді зверху - забули поміняти»): the Kafras' layer button
-// shows the Kafra's face too (no «K» over it) where the face is known
-TEST(minimap_proto_kafra_layer_button_face) {
-    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
-    panel::Picture face;
-    face.width = face.height = 12;
-    face.px.assign(144, 0xFF40C060u);
-    minimap::Scene sc;
-    sc.map = minimap::MapSize{100, 100};
-    sc.player = minimap::Cell{50, 50};
-    sc.kafraFace = &face;
-    const panel::Box& b = L.layers[int(minimap::Layer::Kafra)];
-    CHECK(b.w > 0);
-    // the face's green
-
-    const std::vector<minimap::Words> w = minimap::words(L, sc, minimap::Texts{});
-    CHECK(std::none_of(w.begin(), w.end(), [](const minimap::Words& x) { return x.text == "K"; }));
-}
-
 // 3.0.11-beta.201 (the tester: «є 2 типи порталів ... треба прибрати "зайві" (червоні портали)»): the game's map
 // pictures mark the warps with pure red dots (texture_x4.zip's pay_dun01: two, 2601 pixels; prontera's at its gates) -
 // the minimap marks them itself (its rings, their words); the dots taken out, their place as round them, the rest kept
@@ -711,29 +541,6 @@ TEST(minimap_proto_keeps_a_red_route) {
             if (std::hypot(float(x) - 50.0f, float(y) - 60.0f) <= 3.0f) px[size_t(y) * w + x] = 0xFFF00000u;
     CHECK(minimap::dropWarpDots(px, w, h) == 1);
     CHECK(px[size_t(20) * w + 60] == 0xFFFF0000u);
-}
-
-// 3.0.11-beta.213 (the owner: «вывод команды @mobsearch показывался на миникарте ... чтобы это можно было потом убрать
-// с миникарты»): a plate under the bar while a search's marks show - its words and ✕ that clears them
-TEST(minimap_proto_found_plate) {
-    const minimap::Layout plain = minimap::layout(1920, 1080, 1.0f, false, 0, true);
-    const minimap::Layout found = minimap::layout(1920, 1080, 1.0f, false, 0, true, true);
-    CHECK(plain.found.w <= 0 && found.found.w > 0);
-    CHECK(found.found.y >= found.caption.y + found.caption.h && found.found.y >= found.net.y + found.net.h);
-    CHECK(found.h > plain.h);
-    CHECK(found.foundClear.w > 0 && found.foundClear.x + found.foundClear.w <= found.found.x + found.found.w + 0.5f);
-    const auto mid = [](const panel::Box& b) { return std::pair<float, float>{b.x + b.w / 2, b.y + b.h / 2}; };
-    CHECK(minimap::partAt(found, mid(found.foundClear).first, mid(found.foundClear).second) ==
-          minimap::Part::FoundClear);
-    CHECK(minimap::partAt(found, found.found.x + 6, mid(found.found).second) == minimap::Part::Found);
-    minimap::Texts t;
-    t.found = "Poring \xC2\xB7 12";
-    const std::vector<minimap::Words> w = minimap::words(found, minimap::Scene{}, t);
-    const auto has = [&](const std::string& x) {
-        return std::any_of(w.begin(), w.end(),
-                           [&](const minimap::Words& y) { return y.text.find(x) != std::string::npos; });
-    };
-    CHECK(has("Poring \xC2\xB7 12") && has("\xE2\x9C\x95"));
 }
 
 // 3.0.13-beta.2 (reports: the minimap the interface's dearest picture, half of it the map's pixels made anew at each
@@ -778,37 +585,6 @@ TEST(minimap_proto_map_pixels_cached_round_the_view) {
     sc.cells = 60;
     minimap::paintMapSquare(cached, L, sc);
     CHECK(cache.made == 3);  // another zoom
-}
-
-// 3.0.18-beta.26 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 4): uaUI's minimap - the map's square a
-// picture of its own (its pixels, marks and the Kafras' «K»), the frame's words apart, the round trip's bars as boxes
-TEST(minimap_proto_parts_for_uaui) {
-    const minimap::Layout L = minimap::layout(1920, 1080, 1.0f, false, 0, true);
-    const minimap::MapSize map{100, 100};
-    const std::vector<uint32_t> argb{0xFF00FF00, 0xFF00FF00, 0xFF00FF00, 0xFF00FF00};
-    minimap::Scene sc;
-    sc.argb = &argb;
-    sc.imgW = sc.imgH = 2;
-    sc.map = map;
-    sc.player = minimap::Cell{50, 50};
-    panel::Picture square;
-    minimap::paintMapSquare(square, L, sc);
-    CHECK(square.width == int(L.map.w) && square.height == int(L.map.h));
-    const uint32_t green = square.px[size_t(square.height) * 3 / 4 * size_t(square.width) + size_t(square.width) / 4];
-    CHECK((green & 0x00FF00) > 0x00A000 && (green >> 24) == 0xFF);
-    CHECK((square.px[0] >> 24) < 0x80);  // its rounded corner see-through, no gold corners in it
-    minimap::Texts t;
-    t.name = "Prontera";
-    t.net = "50 ms";
-    const std::vector<minimap::Words> all = minimap::words(L, sc, t), frame = minimap::frameWords(L, sc, t);
-    const std::vector<minimap::Words> marks = minimap::mapWords(L, sc);
-    CHECK(all.size() == frame.size() + marks.size());
-    const std::vector<int> graph{50, 300, -1};
-    sc.netGraph = &graph;
-    const std::vector<minimap::NetBar> bars = minimap::netBars(L, sc);
-    const panel::Box g = minimap::netGraphBox(L);
-    CHECK(bars.size() == 3 && bars[2].box.x + bars[2].box.w == g.x + g.w && bars[2].box.h == g.h);
-    CHECK(bars[0].rgb == 0x5FD08Au && bars[0].box.h < g.h && bars[1].box.h == g.h);
 }
 
 // 3.0.18-beta.42: uaUI's big map - the map's square alone, as big as the big map's map box

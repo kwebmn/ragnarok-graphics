@@ -924,13 +924,6 @@ int lineAt(const Layout& L, float y) {
     return float(i) * L.lineH + top < L.list.y + L.list.h ? i : -1;
 }
 
-std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t) {
-    std::vector<Words> out = mapWords(L, sc);
-    const std::vector<Words> rest = frameWords(L, sc, t);
-    out.insert(out.end(), rest.begin(), rest.end());
-    return out;
-}
-
 std::vector<Words> mapWords(const Layout& L, const Scene& sc) {
     std::vector<Words> out;
     const float s = L.s;

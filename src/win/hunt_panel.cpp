@@ -244,29 +244,6 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(uistyle::generation());
     for (const std::string& l : lines) key += '|' + l;
     s.lines = lines;
-    if (key != s.key && !uaui::ready()) {  // 3.0.18-beta.25: uaUI's panel needs no picture
-        s.key = key;
-        const uicost::Paint cost("the hunt's panel", s.w, s.h);
-        if (panel::blank(s.picture, s.w, s.h)) {
-            const float sc = scale;
-            panel::roundRect(s.picture, panel::Box{0, 0, float(s.w), float(s.h)}, 10 * sc, kCard, uistyle::panel(),
-                             kWhite, 0.09f, 1.0f * sc);
-            panel::roundRect(s.picture, s.reset, 6 * sc, kWhite, s.hoverReset ? 0.16f : 0.06f);
-            panel::roundRect(s.picture, s.close, 6 * sc, kWhite, s.hoverClose ? 0.16f : 0.06f);
-            std::vector<Words> out;
-            for (size_t i = 0; i < lines.size(); ++i) {
-                const float y = i == 0 ? kPad * sc : (kPad + kTitleH + float(i - 1) * kLineH) * sc;
-                out.push_back(Words{panel::Box{kPad * sc, y, float(s.w) - (2 * kPad + (i ? 0 : 52)) * sc,
-                                               (i ? kLineH : kTitleH - 4) * sc},
-                                    utf8Wide(lines[i]), i == 0 ? kGold : i == 1 ? kText : kMuted,
-                                    (i == 0 ? 13 : 12) * sc, i < 2, DT_LEFT, false});
-            }
-            out.push_back(Words{s.reset, L"↺", kText, 13 * sc, true, DT_CENTER, false});
-            out.push_back(Words{s.close, L"\x2715", kText, 12 * sc, true, DT_CENTER, false});
-            drawWords(s.picture, out);
-            s.upload = true;
-        }
-    }
     s.viewKey = key;
     s.shown = true;
     s.uiShown = uiFrame(s);
@@ -279,12 +256,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    if (!s.shown || s.uiShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
-    int cursor = -1, cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.x, s.y, s.k);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {

@@ -100,49 +100,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& members, const Show& sh) {
-    paint(out, L, members, More{}, sh);
-}
-
-void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& members, const More& more,
-           const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    panel::roundRect(out, L.close, 6 * s, kWhite, sh.hoverClose ? 0.14f : 0.06f);
-    for (int i = 0; i < kTabs; ++i) {
-        const bool on = int(sh.tab) == i, hot = sh.hoverTab == i && allowed(i, sh.rights);
-        panel::roundRect(out, L.tabs[i], 8 * s, on ? kGold : kWhite, on ? 0.24f : hot ? 0.10f : 0.04f,
-                         on ? kGold : kWhite, on ? 0.8f : 0.12f, 1.0f * s);
-    }
-    panel::roundRect(out, L.list, 8 * s, 0x000000, 0.16f);
-    if (L.edit.w > 0 && sh.canEdit)
-        panel::roundRect(out, L.edit, 8 * s, kGold, sh.hoverEdit ? 0.34f : 0.22f, kGold, 0.8f, 1.0f * s);
-    if (sh.editing && sh.tab == Tab::Notice) {  // .271: the fields, the one typed into in gold; «Скасувати»
-        for (int i = 0; i < 2; ++i)
-            if (L.fields[i].w > 0)
-                panel::roundRect(out, L.fields[i], 6 * s, kWhite, sh.hoverField == i ? 0.10f : 0.06f,
-                                 sh.field == i ? kGold : kWhite, sh.field == i ? 0.8f : 0.16f, 1.0f * s);
-        if (L.cancel.w > 0)
-            panel::roundRect(out, L.cancel, 8 * s, kWhite, sh.hoverCancel ? 0.14f : 0.06f, kWhite, 0.18f, 1.0f * s);
-    }
-    if (sh.tab != Tab::Members) {  // 3.0.11-beta.220: tabs 2-5 - a skill's «+» where it can rise
-        for (size_t i = 0; i < L.plus.size(); ++i) {
-            const size_t at = i + size_t(std::max(0, sh.scroll));
-            if (at < more.lines.size() && more.lines[at].plus)
-                panel::roundRect(out, L.plus[i], 6 * s, kGold, sh.hoverPlus == int(i) ? 0.45f : 0.28f, kGold, 0.85f,
-                                 1.0f * s);
-        }
-        return;
-    }
-    for (size_t i = 0; i < L.rows.size(); ++i) {
-        const size_t at = i + size_t(std::max(0, sh.scroll));
-        if (at >= members.size()) break;
-        const float d = 8 * s;
-        panel::roundRect(out, panel::Box{L.rows[i].x + 8 * s, L.rows[i].y + (L.rows[i].h - d) / 2, d, d}, d / 2,
-                         members[at].online ? kOnline : kOffline, 0.95f);
-    }
-}
-
 std::vector<Words> words(const Layout& L, const Info& g, const std::vector<Member>& members, const Show& sh,
                          const Texts& t) {
     return words(L, g, members, More{}, sh, t);

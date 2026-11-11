@@ -99,8 +99,6 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-std::vector<Words> words(const Layout& L, const Fields& f, const Show& sh, const Texts& t);
-
 // 3.0.11-beta.177: the saved logins' list under the account's field (▾) - a row a login (its character's line under
 // it), «+ Інший логін» last; in the card's picture's pixels (it may go past the card's foot: its own picture then)
 struct DropRow {

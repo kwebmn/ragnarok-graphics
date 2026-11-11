@@ -43,6 +43,4 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-std::vector<Words> words(const Layout& L, const std::vector<Item>& items, int hover);
-
 }  // namespace uagfx::popupcard

@@ -187,8 +187,6 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const Show& show);
-
 // 3.0.18-beta.17 (the owner: «Переписывать 73 части в разметку RmlUi вручную»; win/char_block_ui): what the block
 // shows, as words and shares for its RML document - the same words as words() writes, none of the places. A tone
 // is a class of the theme: "" the text's, "muted", "gold", "warn", "bad", "fight"

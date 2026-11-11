@@ -116,28 +116,4 @@ int gameButton(Part p) {
     return 0;
 }
 
-std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const Texts& t) {
-    (void)sh;
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, t.title, kText, 15 * s, true, Align::Left});
-    const std::string n = counter(c.number, c.count);
-    if (!n.empty()) out.push_back(Words{L.counter, n, kMuted, 12 * s, false, Align::Right});
-    std::string text;
-    for (const std::string& p : c.paragraphs) text += (text.empty() ? "" : "\n") + p;
-    out.push_back(Words{L.text, text, kText, 13 * s, false, Align::Left, true});
-    if (c.startup) out.push_back(Words{L.tick, "\xE2\x9C\x93", kBlack, 13 * s, true, Align::Center});  // ✓
-    out.push_back(Words{L.tickLabel, t.startup, kMuted, 12.5f * s, false, Align::Left});
-    const auto button = [&](const panel::Box& b, const std::string& label, const std::string& key, bool primary) {
-        out.push_back(Words{b, label, kText, 13 * s, primary, Align::Center});
-        if (!key.empty())
-            out.push_back(Words{panel::Box{b.x + b.w - 40 * s, b.y, 34 * s, b.h}, key, kMuted, 11 * s, false,
-                                Align::Right});
-    };
-    button(L.back, t.back, t.backKey, false);
-    button(L.next, t.next, t.nextKey, true);
-    button(L.close, t.close, t.closeKey, false);
-    return out;
-}
-
 }  // namespace uagfx::tipcard

@@ -102,39 +102,4 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-std::vector<Words> words(const Layout& L, const Fields& f, const Show& sh, const Texts& t) {
-    (void)sh;
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, t.title, kText, 18 * s, true, Align::Left});
-    out.push_back(Words{L.hairLabel, t.hair, kMuted, 12 * s, false, Align::Center});
-    out.push_back(Words{L.hairValue, std::to_string(f.hair), kText, 15 * s, true, Align::Center});
-    out.push_back(Words{L.colourLabel, t.colour, kMuted, 12 * s, false, Align::Center});
-    out.push_back(Words{L.colourValue, std::to_string(f.colour), kText, 15 * s, true, Align::Center});
-    for (const panel::Box* b : {&L.hairBefore, &L.colourBefore})
-        out.push_back(Words{*b, "\xE2\x80\xB9", kText, 16 * s, true, Align::Center});  // ‹
-    for (const panel::Box* b : {&L.hairAfter, &L.colourAfter})
-        out.push_back(Words{*b, "\xE2\x80\xBA", kText, 16 * s, true, Align::Center});  // ›
-    out.push_back(Words{L.nameLabel, t.name, kMuted, 12 * s, false, Align::Left});
-    const panel::Box field{L.name.x + 12 * s, L.name.y, L.name.w - 24 * s, L.name.h};
-    if (f.name.empty() && !f.focus)
-        out.push_back(Words{field, t.nameHint, kMuted, 14 * s, false, Align::Left});
-    else
-        out.push_back(Words{field, f.name + (f.focus && f.caret ? "|" : ""), kText, 15 * s, true, Align::Left});
-    for (int i = 0; i < 3; ++i) {
-        const int a = kPairs[i].left, b = kPairs[i].right;
-        out.push_back(Words{L.leftWords[i], t.stats[a] + " " + std::to_string(f.stats[a]), kGold2, 13 * s, true,
-                            Align::Left});
-        out.push_back(Words{L.rightWords[i], std::to_string(f.stats[b]) + " " + t.stats[b], kText, 13 * s, true,
-                            Align::Right});
-        out.push_back(Words{L.pairLeft[i], "+", canMove(f, i, true) ? kText : kMuted, 16 * s, true, Align::Center});
-        out.push_back(Words{L.pairRight[i], "+", canMove(f, i, false) ? kText : kMuted, 16 * s, true,
-                            Align::Center});
-    }
-    out.push_back(Words{L.pairsHint, t.pairsHint, kMuted, 11.5f * s, false, Align::Left});
-    out.push_back(Words{L.make, t.make, kText, 14 * s, true, Align::Center});
-    out.push_back(Words{L.cancel, t.cancel, kText, 14 * s, false, Align::Center});
-    return out;
-}
-
 }  // namespace uagfx::charmake

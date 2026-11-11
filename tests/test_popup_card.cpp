@@ -60,17 +60,6 @@ TEST(popup_card_layout_and_rows) {
     CHECK(L.x + L.w <= 1920 && L.y + L.h <= 1080);
 }
 
-// The words: each item's text, the hovered one marked
-TEST(popup_card_words) {
-    const std::vector<popupcard::Item> it = popupcard::items(raw(), kSep);
-    const popupcard::Layout L = popupcard::layout(it, 300, 200, 1920, 1080, 1.0f, 150.0f);
-    const std::vector<popupcard::Words> w = popupcard::words(L, it, 3);
-    CHECK_EQ(int(w.size()), 4);
-    const auto f = std::find_if(w.begin(), w.end(), [](const popupcard::Words& x) { return x.text == "Friend"; });
-    const auto d = std::find_if(w.begin(), w.end(), [](const popupcard::Words& x) { return x.text == "Deal"; });
-    CHECK(f != w.end() && d != w.end() && f->rgb != d->rgb);
-}
-
 // 3.0.16-beta.17 (the tester: the pet's menu «без укр перекладу»): the game's pet lines in the player's language
 TEST(popup_card_the_pets_menu_translated) {
     CHECK(popupcard::translated("Feed Pet", settings::Lang::Uk) == "Нагодувати");

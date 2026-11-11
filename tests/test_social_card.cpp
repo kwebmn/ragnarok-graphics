@@ -61,38 +61,6 @@ TEST(social_card_places_and_the_mouse) {
     CHECK(many.rows.size() == 10 && socialcard::mostScroll(many, 30) == 20 && many.buttons.size() == 3);
 }
 
-TEST(social_card_words_and_picture) {
-    std::vector<socialcard::Entry> e(2);
-    e[0].name = "Ann";
-    e[0].map = "prontera";
-    e[0].online = true;
-    e[0].leader = true;
-    e[1].name = "Bob";
-    const socialcard::Layout L = socialcard::layout(1920, 1080, 1.0f, socialcard::Tab::Party, e.size());
-    socialcard::Texts t;
-    t.tabs[0] = "Друзі";
-    t.tabs[1] = "Група";
-    t.header = "Група: Heroes";
-    t.offline = "не в грі";
-    t.actions[0] = "Шепіт";
-    t.actions[1] = "Вигнати";
-    t.actions[2] = "Вийти з групи";
-    t.actions[3] = "Налаштування";
-    t.empty = "Нікого немає";
-    socialcard::Show sh;
-    sh.tab = socialcard::Tab::Party;
-    sh.selected = 0;
-    const std::vector<socialcard::Words> w = socialcard::words(L, e, sh, t);
-    const auto has = [&](const std::string& s) {
-        return std::any_of(w.begin(), w.end(), [&](const socialcard::Words& x) { return x.text == s; });
-    }
-    ;
-    CHECK(has("Друзі") && has("Група") && has("Група: Heroes") && has("Ann") && has("prontera") && has("Bob"));
-    CHECK(has("не в грі") && has("Вийти з групи") && has("\xE2\x99\x9B"));
-    // ♛ the leader
-
-}
-
 // 3.0.18-beta.34: uaUI's friends - the entry chosen, none when nothing is
 TEST(social_card_chosen_entry) {
     std::vector<socialcard::Entry> entries(2);

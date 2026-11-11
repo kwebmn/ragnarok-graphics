@@ -91,8 +91,6 @@ struct Hit {
 };
 Hit hitTest(const Layout& L, float x, float y);
 
-void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh);
-
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;
@@ -102,8 +100,6 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const Texts& t, const Measure& m);
-
 // 3.0.18-beta.29 (uaUI's «Спорядження»): the card dots (gold where a card sits) and the controller's glyphs
 struct Dot {
     int slot = 0;

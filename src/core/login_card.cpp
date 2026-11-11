@@ -18,27 +18,6 @@ constexpr float kErrorH = 18;  // 3.0.11-beta.172: a refusal's line and its acti
 constexpr uint32_t kAmber = 0xF2C46B;  // 3.0.11-beta.172: a hint's words
 constexpr float kNoteLine = 17;         // 3.0.11-beta.176: the first launch's note, two lines
 
-// Words broken at spaces into lines `room` wide at most (a word longer than that alone on its line)
-std::vector<std::string> lines(const std::string& text, float px, float room) {
-    std::vector<std::string> out;
-    std::string line;
-    size_t at = 0;
-    while (at < text.size()) {
-        const size_t end = std::min(text.find(' ', at), text.size());
-        const std::string word = text.substr(at, end - at);
-        const std::string longer = line.empty() ? word : line + ' ' + word;
-        if (!line.empty() && panel::wordsWidth(longer, px, false) > room) {
-            out.push_back(line);
-            line = word;
-        } else {
-            line = longer;
-        }
-        at = end + 1;
-    }
-    if (!line.empty()) out.push_back(line);
-    return out;
-}
-
 }  // namespace
 
 Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt) {
@@ -148,75 +127,6 @@ int gameButton(Part p) {
         case Part::Remember: return 0x93;
         default: return 0;
     }
-}
-
-std::vector<Words> words(const Layout& L, const Fields& f, const Show& sh, const Texts& t) {
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, t.title, kText, 22 * s, true, Align::Center});
-    out.push_back(Words{L.subtitle, t.subtitle, kMuted, 12.5f * s, false, Align::Center});
-    out.push_back(Words{L.accountLabel, t.account, kMuted, 12 * s, true, Align::Left});
-    out.push_back(Words{L.passwordLabel, t.password, kMuted, 12 * s, true, Align::Left});
-    const auto inside = [&](const panel::Box& b) { return panel::Box{b.x + 12 * s, b.y, b.w - 24 * s, b.h}; };
-    std::string dots;
-    for (int i = 0; i < std::clamp(f.passwordLength, 0, 24); ++i) dots += "\xE2\x80\xA2";
-    out.push_back(Words{inside(L.account), f.account + (f.focus == Focus::Account && f.caret ? "|" : ""), kText,
-                        14 * s, false, Align::Left});
-    const std::string secret = f.passwordShown.empty() ? dots : f.passwordShown;  // 3.0.11-beta.177: the eye held
-    const panel::Box pass = inside(L.password);
-    out.push_back(Words{panel::Box{pass.x, pass.y, pass.w - (L.eye.w > 0 ? 26 * s : 0), pass.h},
-                        secret + (f.focus == Focus::Password && f.caret ? "|" : ""), kText, 14 * s, false,
-                        Align::Left});
-    if (f.remember)
-        out.push_back(Words{L.tick, "\xE2\x9C\x93", kBlack, 13 * s, true, Align::Center});  // ✓
-    out.push_back(Words{panel::Box{L.remember.x + 28 * s, L.remember.y, L.remember.w - 28 * s, L.remember.h},
-                        t.remember, kText, 12.5f * s, false, Align::Left});
-    if (f.addShelf)  // 3.0.11-beta.175
-        out.push_back(Words{L.addTick, "\xE2\x9C\x93", kBlack, 13 * s, true, Align::Center});
-    out.push_back(Words{panel::Box{L.addShelf.x + 28 * s, L.addShelf.y, L.addShelf.w - 28 * s, L.addShelf.h},
-                        t.addShelf, kText, 12.5f * s, false, Align::Left});
-    out.push_back(Words{L.enter, t.enter, kText, 14 * s, true, Align::Center});
-    out.push_back(Words{L.exit, t.exit, kText, 14 * s, false, Align::Center});
-    if (t.forgot.empty()) {  // the one link across (3.0.11-beta.151)
-        const panel::Box across{L.link.x, L.link.y, L.link.w + L.forgot.w, L.link.h};
-        out.push_back(Words{across, t.register_, sh.hover == int(Part::Register) ? kGold2 : kLink, 12 * s, false,
-                            Align::Center});
-    } else {  // 3.0.11-beta.177: «Створити акаунт» at the left, «Забули пароль?» at the right
-        out.push_back(Words{L.link, t.register_, sh.hover == int(Part::Register) ? kGold2 : kLink, 12.5f * s, false,
-                            Align::Left});
-        out.push_back(Words{L.forgot, t.forgot, sh.hover == int(Part::Forgot) ? kGold2 : kLink, 12.5f * s, false,
-                            Align::Right});
-    }
-    if (f.shelfBack && L.back.w > 0)  // 3.0.11-beta.176
-        out.push_back(Words{panel::Box{L.back.x + 6 * s, L.back.y, L.back.w - 6 * s, L.back.h}, t.shelf,
-                            sh.hover == int(Part::Shelf) ? kGold2 : kLink, 12.5f * s, false, Align::Left});
-    if (!f.note.empty() && L.note.h > 0) {
-        const std::vector<std::string> ls = lines(f.note, 12 * s, L.note.w);
-        for (size_t i = 0; i < ls.size() && i < 2; ++i)
-            out.push_back(Words{panel::Box{L.note.x, L.note.y + float(i) * kNoteLine * s, L.note.w, kNoteLine * s},
-                                ls[i], kMuted, 12 * s, false, Align::Center});
-    }
-    if (L.site.h > 0 && f.site == SiteLine::Offer)  // 3.0.11-beta.180
-        out.push_back(Words{L.site, t.siteOffer, sh.hover == int(Part::Site) ? kGold2 : kLink, 12.5f * s, false,
-                            Align::Center});
-    if (L.site.h > 0 && f.site == SiteLine::Chip) {
-        out.push_back(Words{panel::Box{L.site.x, L.site.y, L.site.w - L.siteOut.w, L.site.h}, f.siteChip, kMuted,
-                            12.5f * s, false, Align::Left});
-        out.push_back(Words{L.siteOut, t.siteOut, sh.hover == int(Part::SiteOut) ? kGold2 : kLink, 12.5f * s, false,
-                            Align::Right});
-    }
-    if (f.error.empty() && !f.hint.empty() && L.error.h > 0)
-        out.push_back(Words{L.error, f.hint, kAmber, 12 * s, false, Align::Left});
-    if (!f.error.empty() && L.error.h > 0) {
-        out.push_back(Words{L.error, f.error, kRed, 12 * s, false, Align::Left});
-        const std::string& act = f.errorAction == loginerr::Action::CreateAccount   ? t.createAccount
-                                 : f.errorAction == loginerr::Action::ResetPassword ? t.resetPassword
-                                                                                    : std::string();
-        if (!act.empty())
-            out.push_back(Words{L.errorAction, act, sh.hover == int(Part::ErrorAction) ? kGold2 : kLink, 12 * s,
-                                false, Align::Left});
-    }
-    return out;
 }
 
 DropLayout dropLayout(const Layout& L, size_t logins) {

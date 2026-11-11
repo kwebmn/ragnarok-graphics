@@ -158,9 +158,6 @@ struct Hit {
 };
 Hit hitTest(const Layout& L, float x, float y);
 
-void paint(panel::Picture& out, const Layout& L, const Data& d, const std::vector<int>& shown, const Show& sh,
-           const Measure& m);
-
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;
@@ -170,9 +167,6 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-std::vector<Words> words(const Layout& L, const Data& d, const std::vector<int>& shown, const Show& sh,
-                         const Texts& t, const Measure& m);
-
 // 3.0.18-beta.30 (uaUI's shop): what paint() decides beyond the layout - each list row's thing in the cart, the
 // rows' and the cart's icons, the confirm pressable, the controller's glyphs (the footer's, Start, LB, RB)
 struct IconView {

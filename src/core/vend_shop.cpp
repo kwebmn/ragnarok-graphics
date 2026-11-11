@@ -107,38 +107,6 @@ Hit hitTest(const Layout& L, int scroll, size_t rows, float x, float y) {
     return Hit{};
 }
 
-std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const Show& sh, const Texts& t) {
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, t.title, kText, 16 * s, true, Align::Left});
-    out.push_back(Words{L.close, "\xC3\x97", kText, 15 * s, false, Align::Center});  // ×
-    for (size_t i = 0; i < L.lines.size(); ++i) {
-        const size_t at = i + size_t(std::max(0, sh.scroll));
-        if (at >= rows.size()) break;
-        const Row& r = rows[at];
-        const Cells c = cells(L.lines[i], L.minus[i], s);
-        const std::string name = r.refine > 0 ? "+" + std::to_string(r.refine) + " " + r.name : r.name;
-        out.push_back(Words{c.name, name, kText, 13 * s, true, Align::Left});
-        std::string stock = t.stock;
-        if (const size_t p = stock.find("{1}"); p != std::string::npos) stock.replace(p, 3, std::to_string(r.stock));
-        out.push_back(Words{c.stock, stock, kMuted, 11.5f * s, false, Align::Left});
-        out.push_back(Words{c.price, money(r.price) + " z", kGold2, 13 * s, true, Align::Right});
-        out.push_back(Words{L.counts[i], std::to_string(r.chosen), r.chosen > 0 ? kText : kMuted, 13 * s, r.chosen > 0,
-                            Align::Center});
-        out.push_back(Words{L.minus[i], "\xE2\x88\x92", kText, 15 * s, true, Align::Center});  // −
-        out.push_back(Words{L.plus[i], "+", kText, 15 * s, true, Align::Center});
-    }
-    const long long sum = total(rows);
-    out.push_back(Words{L.total, t.total, kMuted, 12.5f * s, false, Align::Left});
-    out.push_back(Words{L.total, money(sum) + " z", sum > sh.zeny ? kShort : kGold2, 14 * s, true, Align::Right});
-    out.push_back(Words{L.zeny, t.zeny, kMuted, 12 * s, false, Align::Left});
-    out.push_back(Words{L.zeny, money(sh.zeny) + " z", kText, 12.5f * s, false, Align::Right});
-    if (!t.hint.empty()) out.push_back(Words{L.hint, t.hint, kMuted, 11 * s, false, Align::Center});
-    out.push_back(Words{L.buy, t.buy, kText, 14 * s, true, Align::Center});
-    out.push_back(Words{L.cancel, t.cancel, kText, 14 * s, false, Align::Center});
-    return out;
-}
-
 panel::Box iconAt(const Layout& L, size_t line) {
     return line < L.lines.size() && line < L.minus.size() ? cells(L.lines[line], L.minus[line], L.s).icon
                                                           : panel::Box{};

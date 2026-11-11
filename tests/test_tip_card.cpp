@@ -93,26 +93,6 @@ TEST(tip_card_layout_and_parts) {
     CHECK(big.y + big.h <= 2160);
 }
 
-// The words: the title, the number of all, the tip's paragraphs (broken into rows at the box), the buttons; the box's
-// tick only while the game shows the tips at the start
-TEST(tip_card_words) {
-    tipcard::Card c = card(2);
-    c.paragraphs = {"Камера.", "Двойной щелчок."};
-    const tipcard::Layout L = tipcard::layout(c, 1920, 1080, 1.0f, texts());
-    std::vector<tipcard::Words> w = tipcard::words(L, c, tipcard::Show{}, texts());
-    CHECK(has(w, "Порада дня"));
-    CHECK(has(w, "3 / 42"));
-    CHECK(has(w, "Камера.\nДвойной щелчок."));
-    CHECK(has(w, "Назад") && has(w, "Далі") && has(w, "Закрити"));
-    CHECK(has(w, "Показувати під час входу в гру"));
-    CHECK(has(w, "\xE2\x9C\x93"));
-    const auto text = std::find_if(w.begin(), w.end(), [](const tipcard::Words& x) { return x.wrap; });
-    CHECK(text != w.end() && text->box.w == L.text.w);
-    c.startup = false;
-    w = tipcard::words(L, c, tipcard::Show{}, texts());
-    CHECK(!has(w, "\xE2\x9C\x93"));
-}
-
 // The words' room across (their rows measured against it by the window part)
 TEST(tip_card_text_width) {
     CHECK(tipcard::textWidth(1.0f) > 300);

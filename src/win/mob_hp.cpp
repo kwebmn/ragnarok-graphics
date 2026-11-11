@@ -207,12 +207,6 @@ static void frameInner(HWND game, MobHp mode, double k, int targetWidth, int tar
             const float px = 13 * scale;
             const int w = wordsWidth(wide, px, true) + int(std::lround(12 * scale)), h = int(std::lround(18 * scale));
             s.countText = text, s.countWide = w, s.countHigh = h;  // 3.0.18-beta.53
-            if (!uaui::ready() && panel::blank(s.countPic, w, h)) {
-                panel::roundRect(s.countPic, panel::Box{0, 0, float(w), float(h)}, float(h) / 2, 0xC62828, 0.85f);
-                drawWords(s.countPic,
-                          {Words{panel::Box{0, 0, float(w), float(h)}, wide, 0xFFFFFF, px, true, DT_CENTER}});
-                s.countUpload = true;
-            }
             s.countX = targetWidth / 2 - w / 2;
             s.countY = targetHeight / 2 - int(std::lround(130 * scale)) - h;
             s.countShown = n;
@@ -298,12 +292,6 @@ static void frameInner(HWND game, MobHp mode, double k, int targetWidth, int tar
             const float px = 12 * scale;
             const int w = wordsWidth(wide, px, true) + int(std::lround(8 * scale));
             const int h = int(std::lround(16 * scale));
-            if (!uaui::ready() && panel::blank(s.picture, w, h)) {
-                panel::roundRect(s.picture, panel::Box{0, 0, float(w), float(h)}, float(h) / 2, 0x000000, 0.5f);
-                drawWords(s.picture, {Words{panel::Box{0, 0, float(w), float(h)}, wide, 0xECEFF5, px, true,
-                                            DT_CENTER}});
-                s.upload = true;
-            }
         }
         const int plateH = uaui::ready() ? s.pctH : s.picture.height;
         s.textX = int(std::lround((b.x + b.w) * kk + 4 * scale));

@@ -138,13 +138,6 @@ static void frameInner(HWND game, bool names, bool highlight, unsigned codePage,
             const int lw = int(std::ceil(panel::wordsWidth(text, px, true) + 12 * scale));
             const int lh = int(std::ceil(17 * scale));
             l.text = text, l.rgb = rgbOf(worth), l.plain = worth == gi::Worth::Plain, l.w = lw, l.h = lh;
-            if (!uaui::ready() && panel::blank(l.picture, lw, lh)) {
-                panel::roundRect(l.picture, panel::Box{0, 0, float(lw), float(lh)}, 5 * scale, kGround, 0.72f,
-                                 rgbOf(worth), worth == gi::Worth::Plain ? 0.0f : 0.9f, 1.0f * scale);
-                drawWords(l.picture, {Words{panel::Box{0, 0, float(lw), float(lh)}, utf8Wide(text), rgbOf(worth), px,
-                                            true, DT_CENTER, false}});
-                l.upload = true;
-            }
         }
         l.x = int(sx * float(k)) - l.w / 2;
         l.y = int(sy * float(k)) - l.h - int(4 * scale);

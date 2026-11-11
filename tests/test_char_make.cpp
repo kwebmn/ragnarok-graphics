@@ -79,27 +79,3 @@ TEST(char_make_places_and_the_mouse) {
     CHECK(charmake::hitTest(L, -5, -5).part == P::None);
 }
 
-// Its words: the title, the name typed (or the hint while empty), each pair's stats with their numbers, the hair's
-// style and colour numbers; its ground painted
-TEST(char_make_words_and_picture) {
-    const charmake::Layout L = charmake::layout(1920, 1080, 1.0f);
-    charmake::Fields f;
-    f.stats[0] = 7;
-    f.stats[3] = 3;
-    f.hair = 12;
-    f.colour = 4;
-    const charmake::Texts t = texts();
-    const auto has = [](const std::vector<charmake::Words>& w, const std::string& s) {
-        return std::any_of(w.begin(), w.end(), [&](const charmake::Words& x) { return x.text == s; });
-    }
-    ;
-    std::vector<charmake::Words> w = charmake::words(L, f, charmake::Show{}, t);
-    CHECK(has(w, "Новий персонаж") && has(w, "4–23 літери"));
-    // nothing typed: the hint
-
-    CHECK(has(w, "STR 7") && has(w, "3 INT") && has(w, "AGI 5") && has(w, "5 LUK"));
-    CHECK(has(w, "12") && has(w, "4") && has(w, "Створити") && has(w, "Скасувати"));
-    f.name = "Ліра";
-    w = charmake::words(L, f, charmake::Show{}, t);
-    CHECK(has(w, "Ліра") && !has(w, "4–23 літери"));
-}

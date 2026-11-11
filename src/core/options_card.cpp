@@ -65,19 +65,4 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-std::vector<Words> words(const Layout& L, const Values& v, const Show& sh, const Texts& t) {
-    (void)sh;
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, t.title, kText, 15 * s, true, Align::Left});
-    out.push_back(Words{L.close, "\xC3\x97", kText, 14 * s, false, Align::Center});  // ×
-    for (int i = 0; i < 6; ++i) out.push_back(Words{L.labels[i], t.toggles[i], kText, 13 * s, i < 2, Align::Left});
-    for (int i = 0; i < 2; ++i) {
-        const int share = int(std::lround(100.0 * double(std::clamp(v.volume[i], 0, kVolumeMost)) / kVolumeMost));
-        out.push_back(Words{L.shares[i], std::to_string(share) + "%", kMuted, 11.5f * s, false, Align::Right});
-    }
-    out.push_back(Words{L.hint, t.snapHint, kMuted, 11 * s, false, Align::Left});
-    return out;
-}
-
 }  // namespace uagfx::optionscard

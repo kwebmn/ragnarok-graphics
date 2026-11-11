@@ -40,27 +40,6 @@ TEST(my_shop_places_and_the_mouse) {
     CHECK(many.rows.size() == 8 && myshop::mostScroll(many, 20) == 12);
 }
 
-TEST(my_shop_words_and_picture) {
-    std::vector<myshop::Row> r(1);
-    r[0].name = "Red Potion";
-    r[0].price = 1500;
-    r[0].left = 12;
-    const myshop::Layout L = myshop::layout(1920, 1080, 1.0f, r.size());
-    myshop::Texts t;
-    t.title = "Моя лавка: Cheap pots";
-    t.left = "лишилось {1}";
-    t.worth = "Ще на продаж";
-    t.close = "Закрити лавку";
-    t.empty = "Усе продано";
-    const std::vector<myshop::Words> w = myshop::words(L, r, myshop::Show{}, t);
-    const auto has = [&](const std::string& s) {
-        return std::any_of(w.begin(), w.end(), [&](const myshop::Words& x) { return x.text == s; });
-    }
-    ;
-    CHECK(has("Моя лавка: Cheap pots") && has("Red Potion") && has("1 500 z") && has("лишилось 12"));
-    CHECK(has("18 000 z") && has("Закрити лавку"));
-}
-
 // 3.0.18-beta.30: uaUI's own shop - a row's icon square inside its row
 TEST(my_shop_icon_inside_its_row) {
     const panel::Box row{10, 20, 300, 40};

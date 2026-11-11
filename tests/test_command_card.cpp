@@ -74,20 +74,3 @@ TEST(command_card_layout_and_hits) {
     CHECK(small.y >= 0 && small.y + small.h <= 600);
 }
 
-// The words: the title, the tabs, each entry's words; a toggle's state beside it; the windows' tab its keys
-TEST(command_card_words) {
-    const commandcard::Layout L = commandcard::layout(4, 1920, 1080, 1.0f);
-    std::vector<commandcard::Entry> e = entries(4);
-    e[1].state = 1;
-    e[2].state = 0;
-    commandcard::Show sh;
-    std::vector<commandcard::Words> w = commandcard::words(L, e, sh, texts());
-    CHECK(has(w, "Список команд") && has(w, "Перемикачі") && has(w, "Команди") && has(w, "Вікна"));
-    CHECK(has(w, "/c0") && has(w, "/c3"));
-    CHECK(has(w, "увімк.") && has(w, "вимк."));
-    sh.tab = commandcard::Tab::Windows;
-    std::vector<commandcard::Entry> keys = {{"Чат-кімната", 0x43, -1}, {"Улюбленець", 0x4A, -1}};
-    w = commandcard::words(L, keys, sh, texts());
-    CHECK(has(w, "Alt+C") && has(w, "Чат-кімната") && has(w, "Alt+J"));
-    CHECK(!has(w, "увімк."));
-}

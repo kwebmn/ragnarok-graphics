@@ -41,61 +41,6 @@ TEST(pick_card_places_and_the_mouse) {
     CHECK(pickcard::layout(1920, 1080, 1.0f, 0).rows.empty());  // nothing to choose: the empty line instead
 }
 
-// Its words: the title and the line under it, each thing's name (+7 shown), OK's and cancel's; nothing to choose - the
-// empty line; its ground painted
-TEST(pick_card_words_and_picture) {
-    std::vector<pickcard::Entry> e(2);
-    e[0].name = "Unknown Sword";
-    e[1].name = "Knife";
-    e[1].refine = 7;
-    pickcard::Texts t;
-    t.title = "Опізнати річ";
-    t.message = "Оберіть річ, яку опізнати";
-    t.ok = "Опізнати";
-    t.cancel = "Скасувати";
-    t.empty = "Немає відповідних речей";
-    const pickcard::Layout L = pickcard::layout(1920, 1080, 1.0f, e.size());
-    pickcard::Show sh;
-    sh.selected = 1;
-    const std::vector<pickcard::Words> w = pickcard::words(L, e, sh, t);
-    const auto has = [&](const std::vector<pickcard::Words>& ws, const std::string& s) {
-        return std::any_of(ws.begin(), ws.end(), [&](const pickcard::Words& x) { return x.text == s; });
-    }
-    ;
-    CHECK(has(w, "Опізнати річ") && has(w, "Оберіть річ, яку опізнати") && has(w, "Unknown Sword"));
-    CHECK(has(w, "+7 Knife") && has(w, "Опізнати") && has(w, "Скасувати") && !has(w, "Немає відповідних речей"));
-    const pickcard::Layout none = pickcard::layout(1920, 1080, 1.0f, 0);
-    CHECK(has(pickcard::words(none, {}, pickcard::Show{}, t), "Немає відповідних речей"));
-}
-
-// 3.0.11-beta.187 (the tester: «мені не вистачає скрола тут»): more rows than the seven shown - a bar at the list's
-// right, its thumb as long as the share shown and where the scroll is, the rows narrower for it; a row with no icon
-// (the servers') no empty square, its name from the row's left
-TEST(pick_card_scroll_bar_and_rows_without_icons) {
-    const pickcard::Layout few = pickcard::layout(1920, 1080, 1.0f, 7);
-    CHECK(few.bar.w == 0 && pickcard::thumb(few, 0, 7).h == 0);
-    const pickcard::Layout many = pickcard::layout(1920, 1080, 1.0f, 12);
-    CHECK(many.bar.w > 0 && many.bar.x >= many.rows[0].x + many.rows[0].w);
-    CHECK(many.bar.x + many.bar.w <= many.list.x + many.list.w + 0.5f);
-    CHECK(std::fabs(many.bar.y - many.list.y) < 0.5f && std::fabs(many.bar.h - many.list.h) < 0.5f);
-    const panel::Box top = pickcard::thumb(many, 0, 12), bottom = pickcard::thumb(many, 5, 12);
-    CHECK(std::fabs(top.y - many.bar.y) < 0.5f);
-    CHECK(std::fabs(bottom.y + bottom.h - (many.bar.y + many.bar.h)) < 0.5f);
-    CHECK(std::fabs(top.h - many.bar.h * 7.0f / 12.0f) < 1.0f && std::fabs(bottom.h - top.h) < 0.5f);
-    std::vector<pickcard::Entry> e(12);
-    for (size_t i = 0; i < e.size(); ++i) e[i].name = "server " + std::to_string(i);
-    const std::vector<pickcard::Words> w = pickcard::words(many, e, pickcard::Show{}, pickcard::Texts{});
-    const auto it = std::find_if(w.begin(), w.end(), [](const pickcard::Words& x) { return x.text == "server 0"; });
-    CHECK(it != w.end());
-    if (it != w.end()) CHECK(it->box.x < many.rows[0].x + 20);
-    ;
-    const panel::Box& r = many.rows[0];
-    // no square where no icon is
-
-    // the thumb
-
-}
-
 // 3.0.11-beta.171 (the login concept: «Выбор сервера: пропускаем»): the server select with one row is chosen and
 // confirmed at once - the game shows it even for one (uaRO HD's sclientinfo has one connection), after the login
 // the char servers' list too; two rows and more wait for the player

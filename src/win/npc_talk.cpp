@@ -398,45 +398,6 @@ static void frameInner(HWND game, bool on, bool remember, unsigned codePage, dou
     block(s, game);
 }
 
-// 3.0.18-beta.31 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the NPC talk in RmlUi's
-// markup, line by line as core npctalk paints it - its glass, ×, the line under the name, the menu's options (the
-// chosen one gold) with their number chips, «Далі»/«Закрити», the footer's line, the controller's glyphs (A dimmed
-// while its hold is not over); the words where core npctalk places them
-static void fillSheet(State& s, uisheet::Content& c) {
-    const nt::Layout& L = s.layout;
-    const nt::Talk& t = s.talk;
-    const nt::Show& sh = s.show;
-    const float sc = L.s;
-    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xF3C653, kGold2 = 0xC9A55B, kTile = 0x1B1D24;
-    constexpr float kSide = 18, kGlyph = 16;  // core npctalk's
-    auto& u = c.under;
-    c.w = float(L.w), c.h = float(L.h);
-    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
-    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
-    if (sh.hoverClose) c.rect(u, L.close, 7 * sc, kWhite, 0.12f);
-    c.rect(u, panel::Box{kSide * sc, L.title.h, L.glass.w - 2 * kSide * sc, 1 * sc}, 0, kWhite, 0.07f);
-    for (size_t i = 0; i < L.options.size(); ++i) {
-        const panel::Box& b = L.options[i];
-        const bool on = int(i) == t.selected, hover = int(i) == sh.hoverOption;
-        c.rect(u, b, 8 * sc, on ? kGold2 : kWhite, on ? 0.16f : hover ? 0.10f : 0.05f, on ? kGold : kWhite,
-               on ? 0.85f : 0.06f, 1.0f * sc);
-        c.rect(u, panel::Box{b.x + 6 * sc, b.y + (b.h - 22 * sc) / 2, 22 * sc, 22 * sc}, 6 * sc, kTile, 0.95f, kWhite,
-               0.10f, 1.0f * sc);
-    }
-    if (L.button.w > 0)
-        c.rect(u, L.button, 8 * sc, kGold, sh.hoverButton ? 0.32f : 0.20f, kGold, 0.8f, 1.0f * sc);
-    c.rect(u, panel::Box{0, L.footer.y, L.glass.w, 1 * sc}, 0, kWhite, 0.07f);
-    if (sh.pad) {
-        const std::vector<int> buttons = nt::padButtons(t);
-        for (size_t i = 0; i < buttons.size() && i < L.padGlyphs.size(); ++i) {
-            s.sheet.glyph(c, buttons[i], sh.sony, L.padGlyphs[i].x, L.padGlyphs[i].y, kGlyph * sc);
-            if (buttons[i] == int(padglyph::Button::A) && sh.waitA > 0)
-                c.rect(c.over, L.padGlyphs[i], L.padGlyphs[i].h / 2, 0x0B0E14, 0.7f * sh.waitA);
-        }
-    }
-    c.say(nt::words(L, t, sh, texts(), measure));
-}
-
 // 3.0.18-beta.88: the live talk's model and place
 static void liveFrame(State& s) {
     s.live.ownDrag = true;  // 3.0.18-beta.92: its own drag
@@ -519,32 +480,13 @@ static void liveFrame(State& s) {
 void frame(HWND game, bool on, bool remember, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, remember, codePage, k, targetWidth, targetHeight);
     State& s = state();
-    if (uaui::readyAnywhere()) {  // 3.0.18-beta.88: the live talk in place of the sheet
-        s.sheet.frame("npc", false, true, 0, 0, 0, [](uisheet::Content&) {});
-        s.sheetShown = false;
-        liveFrame(s);
-        return;
-    }
-    s.live.frame(false, 0, 0, 0, nullptr);
-    s.sheetShown = s.sheet.frame("npc", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
-                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+    liveFrame(s);  // the old edition (the sheet) gone: the live window alone
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
-    if (s.live.shown) {  // 3.0.18-beta.88
-        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
-        return;
-    }
-    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
-    int cursor = -1, cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    const panel::Box& g = s.layout.glass;
-    // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
-                  12 * s.scale, s.scale, s.k);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    if (!s.live.shown) return;  // 3.0.18-beta.88
+    s.live.draw(s.shadow, record, renderer, s.scale, s.k);
 }
 
 bool shown() { return state().shown; }
@@ -607,30 +549,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         result = 0;
         return true;
     }
-    const nt::Hit h = nt::hitTest(s.layout, tx - float(s.layout.x), ty - float(s.layout.y));
-    if (h.part == nt::Part::None || m == WM_MOUSEMOVE) return false;
-    result = 0;
-    if (m == WM_LBUTTONUP) s.drag.end();
-    if (m != WM_LBUTTONDOWN) return true;
-    switch (h.part) {
-        case nt::Part::Title:
-        case nt::Part::Body:  // 3.0.12-beta.2: dragged by its empty part
-            if (s.dragTold < 5) {
-                ++s.dragTold;
-                LOG_INFO("npc: the talk's window dragged");
-            }
-            s.drag.begin(tx, ty);
-            break;
-        case nt::Part::Option: choose(s, h.index, "a click"); break;
-        case nt::Part::Button:
-            press(s, s.talk.button == nt::Button::Next ? uapad::DialogCommand::Next : uapad::DialogCommand::Close,
-                  "a click");
-            break;
-        case nt::Part::Close: closeOrCancel(s, "its close"); break;
-        default: break;
-    }
-    s.key.clear();
-    return true;
+    return false;  // the old edition gone: the live window alone
 }
 
 namespace {

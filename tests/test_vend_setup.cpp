@@ -42,26 +42,6 @@ TEST(vend_setup_card_parts) {
     CHECK_EQ(vendsetup::mostScroll(L, true, 12), 12 - int(L.saleRows.size()));
 }
 
-TEST(vend_setup_words) {
-    const vendsetup::Layout L = vendsetup::layout(1920, 1080, 1.0f);
-    std::vector<vendsetup::Row> cart(1), sale(1);
-    cart[0].name = "Red Potion";
-    cart[0].count = 20;
-    sale[0].name = "Knife";
-    sale[0].price = "1500";
-    vendsetup::Show sh;
-    sh.most = 4;
-    vendsetup::Texts t;
-    t.sale = "For sale {1} / {2}";
-    bool head = false, potion = false, price = false;
-    for (const vendsetup::Words& w : vendsetup::words(L, cart, sale, "", sh, t)) {
-        head = head || w.text == "For sale 1 / 4";
-        potion = potion || w.text == "Red Potion \xC3\x97" "20";
-        price = price || w.text == "1 500";
-    }
-    CHECK(head && potion && price);
-}
-
 // 3.0.16-beta.39: the pad's price steps - a power of ten 1-10 % of it, rounded, 10 from nothing, the game's most
 TEST(vend_setup_price_steps) {
     CHECK(vendsetup::stepPrice("", 1) == "10");

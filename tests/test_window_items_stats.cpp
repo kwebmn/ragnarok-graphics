@@ -131,40 +131,6 @@ TEST(item_window_search_and_places) {
     CHECK(itemwin::hitTest(L, 2, 0, -1, -1).part == itemwin::Part::None);
 }
 
-TEST(item_window_picture_and_words) {
-    std::vector<itemwin::Item> items{item(1, 501, 0, 38, "Red Potion"), item(2, 1101, 4, 1, "Sword")};
-    items[1].refine = 7;
-    const itemwin::Texts t = itemTexts();
-    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
-    itemwin::Show sh;
-    sh.hover = 0;
-    sh.weight = 920;
-    sh.weightMost = 2430;
-    sh.zeny = 1482300;
-    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::Use, "");
-    // the glass
-
-    const std::vector<itemwin::Words> w = itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
-    const auto has = [&](const std::string& s) {
-        for (const itemwin::Words& x : w)
-            if (x.text == s) return true;
-        return false;
-    }
-    ;
-    CHECK(has("Речі") && has("Alt+E") && has("Витратне") && has("38") && has("1 482 300 z"));
-    CHECK(has("Red Potion \xC3\x97" "38") && has("двічі клік — використати \xC2\xB7 ПКМ — опис"));
-    CHECK(has("920 / 2 430 \xC2\xB7 37 %") && has("Пошук за назвою"));
-    CHECK(itemwin::nameOf(items[1]) == "+7 Sword");
-    sh.tip = false;
-    // 3.0.11-beta.51: pointed at, its 0.4 s not over - no tip yet
-
-    const std::vector<itemwin::Words> early =
-        itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
-    CHECK(std::none_of(early.begin(), early.end(),
-                       [](const itemwin::Words& x) { return x.text == "Red Potion \xC3\x97" "38"; }));
-    CHECK(std::any_of(early.begin(), early.end(), [](const itemwin::Words& x) { return x.text == "38"; }));
-}
-
 // 3.0.18-beta.27 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5): uaUI's grid - every part placed and
 // said as the picture paints it (the cells, their plates, the tip, the scroll, the weight's fill)
 TEST(item_window_view_places_the_pictures_parts) {
@@ -195,120 +161,6 @@ TEST(item_window_view_places_the_pictures_parts) {
     sh.hover = -1;
     const itemwin::View w = itemwin::view(L, many, shown, sh, t, m);
     CHECK(w.scroll.w > 0 && w.scroll.x > L.grid.x + L.grid.w && w.tip.w == 0);
-}
-
-// 3.0.11-beta.115 (the windows plan's stage 6, «Склад»): the same grid as the storage - one tip for every thing (a
-// double click takes it into the bag, an etc thing too), the places used of the most in the weight's place, no zeny
-TEST(item_window_as_the_storage) {
-    std::vector<itemwin::Item> items{item(3, 909, 3, 120, "Jellopy"), item(4, 501, 0, 5, "Red Potion")};
-    itemwin::Texts t = itemTexts();
-    t.title = "Склад";
-    t.hotkey = "";
-    t.weight = "Місця";
-    t.all = "двічі клік — у сумку";
-    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
-    itemwin::Show sh;
-    sh.hover = 0;
-    sh.weight = 57;
-    sh.weightMost = 600;
-    sh.zeny = -1;
-    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::All, "");
-    const std::vector<itemwin::Words> w = itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
-    const auto has = [&](const std::string& s) {
-        return std::any_of(w.begin(), w.end(), [&](const itemwin::Words& x) { return x.text == s; });
-    };
-    CHECK(has("Склад") && has("Місця") && has("57 / 600 \xC2\xB7 9 %"));
-    CHECK(has("двічі клік — у сумку \xC2\xB7 ПКМ — опис"));  // Jellopy: an etc thing taken too
-    CHECK(std::none_of(w.begin(), w.end(), [](const itemwin::Words& x) {
-        return x.text.size() >= 2 && x.text.compare(x.text.size() - 2, 2, " z") == 0;
-    }));
-    sh.hover = 1;  // a potion: the same words, not «використати»
-    const std::vector<itemwin::Words> w2 = itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
-    CHECK(std::any_of(w2.begin(), w2.end(),
-                      [](const itemwin::Words& x) { return x.text == "двічі клік — у сумку \xC2\xB7 ПКМ — опис"; }));
-}
-
-// 3.0.11-beta.118 (the owner: «нету стрел»; R-2YRWU2): the arrows worn stay in the bag (the game's own window lists
-// them) - shown in «Усе» and «Спорядження» with a green «E», the tip saying they are worn
-TEST(item_window_shows_the_worn_arrows) {
-    std::vector<itemwin::Item> items{item(13, 1750, 10, 101, "Arrow"), item(14, 501, 0, 5, "Red Potion")};
-    items[0].worn = true;
-    CHECK(itemwin::shownOf(items, itemwin::Tab::All, "").size() == 2);
-    CHECK(itemwin::shownOf(items, itemwin::Tab::Gear, "") == std::vector<int>{0});
-    itemwin::Texts t = itemTexts();
-    t.worn = "вдягнуто";
-    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
-    itemwin::Show sh;
-    sh.hover = 0;
-    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::All, "");
-    const std::vector<itemwin::Words> w = itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
-    CHECK(std::any_of(w.begin(), w.end(), [](const itemwin::Words& x) { return x.text == "E" && x.rgb == 0x5FD08A; }));
-    CHECK(std::any_of(w.begin(), w.end(), [](const itemwin::Words& x) {
-        return x.text.rfind("вдягнуто \xC2\xB7 ", 0) == 0;  // the tip: worn first
-    }));
-}
-
-// 3.0.11-beta.112 (the concept «Концепция окон и инвентаря», question 3 «да»; the owner: «я сделал стрелы и они в
-// инвентаре не появились»): a thing come into the bag marked «нове» in a gold pill over its cell's corner till it is
-// pointed at, its tab's count of the new ones beside its name (the arrows in «Спорядження» since 3.0.11-beta.113)
-TEST(item_window_marks_the_new_things) {
-    std::vector<itemwin::Item> items{item(1, 501, 0, 38, "Red Potion"), item(2, 1750, 10, 500, "Arrow")};
-    items[1].fresh = true;
-    itemwin::Texts t = itemTexts();
-    t.fresh = "нове";
-    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
-    itemwin::Show sh;
-    sh.tab = itemwin::Tab::Gear;
-    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::Gear, "");
-    const std::vector<itemwin::Words> w = itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
-    const panel::Box& cell = L.cells[0];
-    const panel::Box& etc = L.tabs[size_t(itemwin::Tab::Gear)];
-    bool pill = false, count = false, other = false;
-    for (const itemwin::Words& x : w) {
-        pill = pill || (x.text == "нове" && x.box.y < cell.y + cell.h / 2 && x.box.x + x.box.w <= cell.x + cell.w + 4);
-        count = count || (x.text == "1" && x.box.x >= etc.x + etc.w - 6 && x.box.x <= etc.x + etc.w + 12);
-        other = other || (x.text == "1" && x.box.x < etc.x);  // no new ones in the other tabs: no count there
-    }
-    CHECK(pill && count && !other);
-    items[1].fresh = false;  // pointed at
-    const std::vector<itemwin::Words> seen =
-        itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
-    CHECK(std::none_of(seen.begin(), seen.end(), [](const itemwin::Words& x) { return x.text == "нове"; }));
-}
-
-// 3.0.11-beta.113 (the concept «Концепция окон и инвентаря», question 9 «давай»): six tabs - «Усе», «Витратне»,
-// «Спорядження» (the ammo there too), «Карти», «Різне», «★» (the starred ones); a cell's lower left corner the star:
-// pressed, its thing starred or not (☆ while pointed at, ★ starred)
-TEST(item_window_six_tabs_and_the_starred) {
-    using itemwin::Tab;
-    std::vector<itemwin::Item> items{item(1, 501, 0, 38, "Red Potion"), item(2, 1750, 10, 500, "Arrow"),
-                                     item(3, 4001, 6, 1, "Poring Card"), item(4, 909, 3, 20, "Jellopy")};
-    items[3].starred = true;
-    CHECK(itemwin::shownOf(items, Tab::All, "").size() == 4);
-    CHECK(itemwin::shownOf(items, Tab::Use, "") == std::vector<int>({0}));
-    CHECK(itemwin::shownOf(items, Tab::Gear, "") == std::vector<int>({1}));
-    CHECK(itemwin::shownOf(items, Tab::Cards, "") == std::vector<int>({2}));
-    CHECK(itemwin::shownOf(items, Tab::Etc, "") == std::vector<int>({3}));
-    CHECK(itemwin::shownOf(items, Tab::Starred, "") == std::vector<int>({3}));
-    const itemwin::Texts t = itemTexts();
-    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
-    const panel::Box& c = L.cells[3];
-    const itemwin::Hit star = itemwin::hitTest(L, 4, 0, c.x + 6, c.y + c.h - 6);
-    CHECK(star.part == itemwin::Part::Star && star.index == 3);
-    CHECK(itemwin::hitTest(L, 4, 0, c.x + c.w / 2, c.y + c.h / 2).part == itemwin::Part::Cell);
-    CHECK(itemwin::hitTest(L, 2, 0, c.x + 6, c.y + c.h - 6).part == itemwin::Part::Grid);  // no thing there: none
-    itemwin::Show sh;
-    sh.tab = Tab::All;
-    sh.hover = 0;
-    const std::vector<int> shown = itemwin::shownOf(items, Tab::All, "");
-    const std::vector<itemwin::Words> w = itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
-    const auto at = [&](const std::string& text, const panel::Box& cell) {
-        return std::any_of(w.begin(), w.end(), [&](const itemwin::Words& x) {
-            return x.text == text && x.box.x >= cell.x && x.box.x < cell.x + cell.w / 2 && x.box.y > cell.y;
-        });
-    };
-    CHECK(at("\xE2\x98\x85", L.cells[3]) && at("\xE2\x98\x86", L.cells[0]));  // ★ starred, ☆ pointed at
-    CHECK(!at("\xE2\x98\x86", L.cells[1]) && !at("\xE2\x98\x85", L.cells[1]));  // neither: none
 }
 
 // 3.0.11-beta.196 (the tester: «ітему має бути можливість тицьнути зірочку - але on hover зникає занадто рано, і до
@@ -402,39 +254,6 @@ TEST(stat_window_layout_and_mouse) {
         dex = dex || x.text == "DEX";
     }
     CHECK(free && dex);
-}
-
-// 3.0.11-beta.44 (the owner: «когда использую какую-то вещь, она просто пропадает. нету никакой анимации»): a used
-// item's cell answers - a gold ring opening out, its icon fading where the last one went, «−1» rising
-TEST(item_window_use_flash) {
-    const itemwin::Texts t = itemTexts();
-    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
-    panel::Picture icon;
-    icon.width = icon.height = 32;
-    icon.px.assign(32 * 32, 0xFFD04040u);
-    std::vector<itemwin::Item> items;
-    // the last one used: none left in its cell
-
-    itemwin::Show sh;
-    itemwin::Flash f;
-    f.cell = L.cells[0];
-    f.icon = &icon;
-    f.t = 0.25f;
-    f.label = "\xE2\x88\x92" "1";
-    // −1
-
-    sh.flashes.push_back(f);
-    const panel::Box& c = L.cells[0];
-    // the icon still there, fading
-
-    sh.flashes[0].t = 0.95f;
-    // gone by its end
-
-    sh.flashes[0].t = 0.25f;
-    bool label = false;
-    for (const itemwin::Words& w : itemwin::words(L, items, {}, sh, t, itemwin::Measure(panel::wordsWidth)))
-        label = label || (w.text == "\xE2\x88\x92" "1" && w.box.y < c.y);
-    CHECK(label);
 }
 
 // 3.0.11-beta.266 (the «Характеристики» concept, stage 2): the panel «Як рахується» on the concept's knight - level

@@ -411,60 +411,6 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     block(s, game);
 }
 
-// 3.0.18-beta.30 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the shop's opening in
-// RmlUi's markup, line by line as core vendsetup paints it - its glass, ✕, the sign's field, the lists' gold head
-// lines and grounds, the cart's rows (the controller's frame), the sale's rows with their price fields (red without a
-// price) and ✕, «Скасувати», «Відкрити»; the words where core vendsetup places them
-static void fillSheet(State& s, uisheet::Content& c) {
-    const vs::Layout& L = s.layout;
-    const vs::Show& sh = s.show;
-    const float sc = L.s;
-    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kGold = 0xF3C653, kDanger = 0xE0675C;
-    auto& u = c.under;
-    const auto icon = [&](const panel::Picture* p, const panel::Box& b) {
-        if (p && p->width > 0)
-            c.icons.push_back(uisheet::Icon{std::round(b.x + (b.w - float(p->width)) / 2),
-                                            std::round(b.y + (b.h - float(p->height)) / 2), float(p->width),
-                                            float(p->height), 1, s.sheet.icon(p)});
-    };
-    c.w = float(L.w), c.h = float(L.h);
-    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
-    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
-    c.rect(u, L.cross, 6 * sc, kWhite, sh.hoverButton == 2 ? 0.14f : 0.06f);
-    c.rect(u, L.sign, 7 * sc, kBlack, 0.30f, sh.focus == 0 ? kGold : kWhite, sh.focus == 0 ? 0.9f : 0.18f, 1.0f * sc);
-    for (const panel::Box* head : {&L.cartHead, &L.saleHead})
-        c.rect(u, panel::Box{head->x, head->y + head->h - 1 * sc, head->w, 1 * sc}, 0, kGold, 0.45f);
-    c.rect(u, L.cartList, 8 * sc, kBlack, 0.14f);
-    c.rect(u, L.saleList, 8 * sc, kBlack, 0.14f);
-    for (size_t i = 0; i < L.cartRows.size(); ++i) {
-        const size_t at = i + size_t(std::max(0, sh.cartScroll));
-        if (at >= s.cart.size()) break;
-        const bool full = sh.most > 0 && int(s.sale.size()) >= sh.most;
-        c.rect(u, L.cartRows[i], 7 * sc, kWhite, sh.hoverCart == int(i) && !full ? 0.10f : 0.035f);
-        if (sh.padCart == int(i)) c.rect(u, L.cartRows[i], 7 * sc, kWhite, 0.0f, kGold, 0.9f, 1.5f * sc);
-        const panel::Box b = vs::iconOf(L.cartRows[i], sc);
-        c.rect(u, b, 6 * sc, kBlack, 0.30f);
-        icon(s.cart[at].icon, b);
-    }
-    for (size_t i = 0; i < L.saleRows.size(); ++i) {
-        const size_t at = i + size_t(std::max(0, sh.saleScroll));
-        if (at >= s.sale.size()) break;
-        c.rect(u, L.saleRows[i], 7 * sc, kWhite, sh.hoverSale == int(i) ? 0.07f : 0.035f);
-        if (sh.padSale == int(i)) c.rect(u, L.saleRows[i], 7 * sc, kWhite, 0.0f, kGold, 0.9f, 1.5f * sc);
-        const panel::Box b = vs::iconOf(L.saleRows[i], sc);
-        c.rect(u, b, 6 * sc, kBlack, 0.30f);
-        icon(s.sale[at].icon, b);
-        const bool focused = sh.focus == 1 + int(at);
-        const bool none = vs::priceOf(s.sale[at].price) <= 0;
-        c.rect(u, L.prices[i], 6 * sc, kBlack, 0.35f, focused ? kGold : none ? kDanger : kWhite,
-               focused ? 0.9f : none ? 0.55f : 0.18f, 1.0f * sc);
-        c.rect(u, L.removes[i], 6 * sc, kDanger, sh.hoverRemove == int(i) ? 0.30f : 0.10f);
-    }
-    c.rect(u, L.cancel, 8 * sc, kWhite, sh.hoverButton == 1 ? 0.14f : 0.07f);
-    c.rect(u, L.open, 8 * sc, kGold, sh.hoverButton == 0 ? 0.40f : 0.26f, kGold, 0.85f, 1.0f * sc);
-    c.say(vs::words(L, s.cart, s.sale, s.sign, sh, texts(s)));
-}
-
 // 3.0.18-beta.81: the live window's model and place
 static void liveFrame(State& s) {
     s.live.make("vend setup", kLive, [&](Rml::DataModelConstructor& m) {
@@ -586,32 +532,13 @@ static void liveFrame(State& s) {
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
-    if (uaui::readyAnywhere()) {  // 3.0.18-beta.81: the live window in place of the sheet
-        s.sheet.frame("vend setup", false, true, 0, 0, 0, [](uisheet::Content&) {});
-        s.sheetShown = false;
-        liveFrame(s);
-        return;
-    }
-    s.live.frame(false, 0, 0, 0, nullptr);
-    s.sheetShown = s.sheet.frame("vend_setup", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
-                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+    liveFrame(s);  // the old edition (the sheet) gone: the live window alone
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
-    if (s.live.shown) {  // 3.0.18-beta.81
-        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
-        return;
-    }
-    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
-    int cursor = -1, cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    const panel::Box& g = s.layout.glass;
-    // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
-                  12 * s.scale, s.scale, s.k);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    if (!s.live.shown) return;  // 3.0.18-beta.81
+    s.live.draw(s.shadow, record, renderer, s.scale, s.k);
 }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
@@ -621,53 +548,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         result = 0;
         return true;
     }
-    if (!s.shown) return false;
-    const bool pressed = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK ||
-                         m == WM_RBUTTONDOWN || m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK ||
-                         m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
-    if (!pressed && m != WM_MOUSEWHEEL) return false;
-    float tx = 0, ty = 0;
-    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;
-    const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
-    if (!s.layout.glass.contains(lx, ly)) return false;
-    result = 0;
-    if (m == WM_MOUSEWHEEL) {
-        const int by = GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -1 : 1;
-        const bool onSale = lx >= s.layout.saleList.x;
-        int& scroll = onSale ? s.show.saleScroll : s.show.cartScroll;
-        scroll = std::clamp(scroll + by, 0, vs::mostScroll(s.layout, onSale, onSale ? s.sale.size() : s.cart.size()));
-        s.key.clear();
-        return true;
-    }
-    if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
-    s.pad = false;  // 3.0.16-beta.39
-    const vs::Hit h = vs::hitTest(s.layout, lx, ly);
-    const uint32_t window = gameSale();
-    switch (h.part) {
-        case vs::Part::Open: button(s, kOk); break;
-        case vs::Part::Cancel:
-        case vs::Part::Cross: button(s, kCancel); break;
-        case vs::Part::Sign: focus(s, window ? read32(window + kSignEdit) : 0, "the sign"); break;
-        case vs::Part::Cart: {
-            const int at = h.index + s.show.cartScroll;
-            if (at >= 0 && size_t(at) < s.cartPlaces.size() && int(s.sale.size()) < s.show.most)
-                move(s, true, s.cartPlaces[size_t(at)]);
-            break;
-        }
-        case vs::Part::Sale:
-        case vs::Part::Price: {
-            const int at = h.index + s.show.saleScroll;
-            if (at >= 0 && size_t(at) < s.sale.size()) focus(s, priceEdit(window, at), "a price");
-            break;
-        }
-        case vs::Part::Remove: {
-            const int at = h.index + s.show.saleScroll;
-            if (at >= 0 && size_t(at) < s.salePlaces.size()) move(s, false, s.salePlaces[size_t(at)]);
-            break;
-        }
-        default: break;
-    }
-    return true;
+    return false;  // the old edition gone: the live window alone
 }
 
 bool shown() { return state().shown; }

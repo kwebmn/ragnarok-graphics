@@ -68,25 +68,4 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-std::vector<Words> words(const Layout& L, const Info& i, const Show& sh, const Texts& t) {
-    (void)sh;
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, t.title, kText, 15 * s, true, Align::Left});
-    out.push_back(Words{L.close, "\xC3\x97", kText, 14 * s, false, Align::Center});  // ×
-    out.push_back(Words{L.name, i.name, kGold2, 15 * s, true, Align::Left});
-    std::string level = t.level;
-    if (const size_t p = level.find("{1}"); p != std::string::npos) level.replace(p, 3, std::to_string(i.level));
-    out.push_back(Words{L.level, level, kMuted, 12.5f * s, false, Align::Right});
-    out.push_back(Words{L.hungerLabel, t.hunger, kMuted, 12 * s, false, Align::Left});
-    out.push_back(Words{L.hungerState, t.hungerStates[hungerState(i.hunger)], kText, 12 * s, true, Align::Right});
-    out.push_back(Words{L.intimacyLabel, t.intimacy, kMuted, 12 * s, false, Align::Left});
-    out.push_back(
-        Words{L.intimacyState, t.intimacyStates[intimacyState(i.intimacy)], kText, 12 * s, true, Align::Right});
-    for (int k = 0; k < 4; ++k)
-        out.push_back(Words{L.buttons[k], t.commands[k], allowed(i, Command(k)) ? kText : kMuted, 12.5f * s, k == 0,
-                            Align::Center});
-    return out;
-}
-
 }  // namespace uagfx::petcard

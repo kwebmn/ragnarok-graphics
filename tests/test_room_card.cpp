@@ -84,18 +84,3 @@ TEST(room_card_layout_and_hits) {
     CHECK(L.setup.w == 0 && L.kick.w == 0 && L.owner.w == 0 && L.friendAdd.w > 0);
 }
 
-// The words: the kind, the title with its count, the lines that fit, the members (the owner ★), the line typed with
-// its caret
-TEST(room_card_words) {
-    roomcard::Card c = card();
-    c.input = "привіт";
-    c.focus = true;
-    c.caret = true;
-    const roomcard::Layout L = roomcard::layout(c, 1920, 1080, 1.0f);
-    const std::vector<roomcard::Words> w = roomcard::words(L, c, roomcard::Show{}, texts());
-    CHECK(has(w, "Відкрита") && has(w, "Торгую") && has(w, "2/20"));
-    CHECK(has(w, "line 29") && !has(w, "line 0"));
-    CHECK(has(w, "\xE2\x98\x85 Ann") && has(w, "Bob"));
-    CHECK(has(w, "привіт|"));
-    CHECK(has(w, "Вийти") && !has(w, "Налаштування"));
-}

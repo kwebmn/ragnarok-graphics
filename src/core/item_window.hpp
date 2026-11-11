@@ -144,8 +144,6 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const std::vector<int>& shown,
-                         const Show& sh, const Texts& t, const Measure& m);
 // 3.0.18-beta.27 (uaUI's grid, docs/superpowers/plans/2026-11-09-uaui-migration.md stage 5): every part paint()
 // draws, placed - the window's pixels; w 0: not there
 enum class Tone : uint8_t { Green, Gold, Red };

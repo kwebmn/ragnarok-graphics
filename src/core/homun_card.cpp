@@ -18,8 +18,6 @@ constexpr uint32_t kMuted = 0x9AA3B5, kHp = 0x4CC777, kSp = 0x3D7EEB, kExp = 0xC
 constexpr uint32_t kLove = 0xF06B8B, kDanger = 0xE0675C;
 const char* const kStatNames[8] = {"ATK", "MATK", "HIT", "CRIT", "DEF", "MDEF", "FLEE", "ASPD"};
 
-std::string ofMost(long long now, long long most) { return std::to_string(now) + " / " + std::to_string(most); }
-
 }  // namespace
 
 int intimacyState(int intimacy) {
@@ -122,62 +120,6 @@ Hit hitTest(const Layout& L, float x, float y) {
             if (L.skillRows[k].contains(x, y)) return Hit{Part::Skill, Button::Close, int(k)};
     if (L.remove.contains(x, y)) return Hit{Part::Button, Button::Delete};
     return Hit{};
-}
-
-std::vector<Words> words(const Layout& L, const Info& i, const Show& sh, const Texts& t) {
-    (void)sh;
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, t.title, kText, 15 * s, true, Align::Left});
-    out.push_back(Words{L.close, "\xC3\x97", kText, 14 * s, false, Align::Center});  // ×
-    out.push_back(Words{L.name, i.name, kGold2, 15 * s, true, Align::Left});
-    std::string level = t.level;
-    if (const size_t p = level.find("{1}"); p != std::string::npos) level.replace(p, 3, std::to_string(i.level));
-    out.push_back(Words{L.level, level, kMuted, 12.5f * s, false, Align::Right});
-    out.push_back(Words{L.hpLabel, "HP", kMuted, 11.5f * s, false, Align::Left});
-    out.push_back(Words{L.hpLabel, ofMost(i.hp, i.maxHp), kText, 11.5f * s, false, Align::Right});
-    out.push_back(Words{L.spLabel, "SP", kMuted, 11.5f * s, false, Align::Left});
-    out.push_back(Words{L.spLabel, ofMost(i.sp, i.maxSp), kText, 11.5f * s, false, Align::Right});
-    out.push_back(Words{L.expLabel, "EXP", kMuted, 11.5f * s, false, Align::Left});
-    out.push_back(Words{L.expLabel, ofMost(i.exp, i.maxExp), kText, 11.5f * s, false, Align::Right});
-    out.push_back(Words{L.hungerLabel, t.hunger, kMuted, 11.5f * s, false, Align::Left});
-    out.push_back(Words{L.hungerLabel, ofMost(i.hunger, 100), kText, 11.5f * s, false, Align::Right});
-    out.push_back(Words{L.intimacyLabel, t.intimacy, kMuted, 11.5f * s, false, Align::Left});
-    out.push_back(
-        Words{L.intimacy, t.intimacyStates[intimacyState(i.intimacy)], kLove, 12 * s, true, Align::Right});
-    for (int k = 0; k < 8; ++k) {
-        out.push_back(Words{L.stats[k], kStatNames[k], kMuted, 11.5f * s, false, Align::Left});
-        out.push_back(Words{L.stats[k], std::to_string(k < 7 ? i.stats[k] : aspd(i.aspd)), kText, 12 * s, true,
-                            Align::Right});
-    }
-    out.push_back(Words{L.buttons[0], t.feed, kText, 12.5f * s, true, Align::Center});
-    out.push_back(Words{L.skillsHead, settings::fmt(t.skillsHead, {std::to_string(i.points)}), kGold2, 12 * s, true,
-                        Align::Left});
-    for (size_t k = 0; k < L.skillRows.size(); ++k) {
-        const panel::Box& r = L.skillRows[k];
-        if (k >= i.skills.size()) {
-            if (i.skills.empty()) out.push_back(Words{r, "\xE2\x80\x94", kMuted, 12 * s, false, Align::Left});  // —
-            continue;
-        }
-        const float nameW = k < L.skillLess.size() ? L.skillLess[k].x - r.x - 10 * s : r.w * 0.6f;
-        out.push_back(Words{panel::Box{r.x + 6 * s, r.y, nameW, r.h}, i.skills[k].name, kText, 12 * s, false,
-                            Align::Left});
-        // 3.0.16-beta.31: «Рів. 3/5» while it is used below its level, ‹ › about it
-        const SkillRow& sk = i.skills[k];
-        const int use = companion::useOf(sk.use, sk.level);
-        const std::string lv = use < sk.level ? std::to_string(use) + "/" + std::to_string(sk.level)
-                                              : std::to_string(sk.level);
-        out.push_back(Words{k < L.skillLevel.size() ? L.skillLevel[k] : r, settings::fmt(t.skillLevel, {lv}),
-                            use < sk.level ? kGold2 : kMuted, 11.5f * s, false, Align::Center});
-        if (k < L.skillLess.size() && sk.level > 1) {
-            out.push_back(Words{L.skillLess[k], "\xE2\x80\xB9", kText, 12 * s, true, Align::Center});  // ‹
-            out.push_back(Words{L.skillMore[k], "\xE2\x80\xBA", kText, 12 * s, true, Align::Center});  // ›
-        }
-        if (k < L.skillPlus.size() && i.skills[k].up && i.points > 0)
-            out.push_back(Words{L.skillPlus[k], "+", kText, 13 * s, true, Align::Center});
-    }
-    out.push_back(Words{L.remove, t.remove, kDanger, 11 * s, false, Align::Center});
-    return out;
 }
 
 }  // namespace uagfx::homuncard

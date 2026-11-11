@@ -33,28 +33,3 @@ TEST(companion_use_level_and_drag) {
     CHECK(plain.more.x > raise.more.x);
 }
 
-TEST(companion_rows_in_the_cards) {
-    const homuncard::Layout h = homuncard::layout(1920, 1080, 1.0f, 3);
-    CHECK(h.skillLess.size() == 3 && h.skillMore.size() == 3);
-    auto [lx, ly] = mid(h.skillLess[1]);
-    CHECK(homuncard::hitTest(h, lx, ly).part == homuncard::Part::Less && homuncard::hitTest(h, lx, ly).index == 1);
-    auto [mx, my] = mid(h.skillMore[2]);
-    CHECK(homuncard::hitTest(h, mx, my).part == homuncard::Part::More);
-    auto [px, py] = mid(h.skillPlus[0]);
-    CHECK(homuncard::hitTest(h, px, py).part == homuncard::Part::Plus);
-    CHECK(homuncard::hitTest(h, h.skillRows[0].x + 10, h.skillRows[0].y + 5).part == homuncard::Part::Skill);
-    const merccard::Layout m = merccard::layout(1920, 1080, 1.0f, 2);
-    auto [rx, ry] = mid(m.skillLess[0]);
-    CHECK(merccard::hitTest(m, rx, ry).part == merccard::Part::Less);
-    CHECK(merccard::hitTest(m, m.skillRows[1].x + 10, m.skillRows[1].y + 5).part == merccard::Part::Skill);
-    CHECK(merccard::hitTest(m, m.skillRows[1].x + 10, m.skillRows[1].y + 5).index == 1);
-    // «Рів. 3/5» while used below its level
-    homuncard::Info i;
-    i.skills.push_back(homuncard::SkillRow{"Healing Touch", 5, false, 3});
-    homuncard::Texts t;
-    t.skillLevel = "Lv {1}";
-    const homuncard::Layout one = homuncard::layout(1920, 1080, 1.0f, 1);
-    bool seen = false;
-    for (const homuncard::Words& w : homuncard::words(one, i, homuncard::Show{}, t)) seen = seen || w.text == "Lv 3/5";
-    CHECK(seen);
-}

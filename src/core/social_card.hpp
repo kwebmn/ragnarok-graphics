@@ -65,8 +65,6 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, const Show& sh, const Texts& t);
-
 // 3.0.18-beta.141 (the owner: «все» - the card handier): the rows' order - the friends online first (each kind in
 // the game's order), the party as the game lists it - as indices into `entries`; how many are online
 std::vector<int> order(const std::vector<Entry>& entries, Tab t);

@@ -80,6 +80,28 @@ def item_times(item_dbs):
     return out
 
 
+def kept_on(status_c):
+    """3.0.18-beta.150: the statuses the server keeps on by itself - status_change_timer re-arms them: every 10
+    minutes till cancelled (`1000*600+tick`: Play Dead, Running, Lex Aeterna ...) or each SP drain while the SP lasts
+    (`val2+tick` / `val4+tick`: Maximize Power, Cloaking, Chase Walk, Relax) - their skill_cast_db times are no end"""
+    text = re.sub(r"//[^\n]*", "", status_c)
+    i = text.index("int status_change_timer(")
+    body = text[i:text.index("\n}\n", i)]
+    out, labels, open_case = set(), [], False
+    token = re.compile(r"case\s+(SC_\w+)\s*:|add_timer\s*\((.*?),\s*status_change_timer|\bbreak\s*;|\breturn\b", re.S)
+    for m in token.finditer(body):
+        if m.group(1):
+            labels = labels + [m.group(1)] if open_case else [m.group(1)]
+            open_case = True
+        elif m.group(2) is not None:
+            if re.search(r"1000\s*\*\s*600\s*\+\s*tick|val[24]\s*\+\s*tick", m.group(2)):
+                out.update(labels)
+            open_case = False
+        else:
+            open_case = False
+    return out
+
+
 def literal(text):
     return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
@@ -92,11 +114,15 @@ def main():
     ids = skill_ids(read("db/skill_db.txt"))
     times = durations(read("db/skill_cast_db.txt"))
     items = item_times([read(p) for p in ("db/item_db.txt", "db/item_db2.txt") if (root / p).exists()])
+    kept = kept_on(read("src/map/status.c"))
     skills = []
     for skill, sc, icon in by_skill:
         if icon not in si or si[icon] < 0 or skill not in ids:
             continue
         sid, words = ids[skill]
+        if sc in kept:  # 3.0.18-beta.150: no end - kept for its name, its time none
+            skills.append((si[icon], sid, [0] * 10, skill, words))
+            continue
         ms = [v for v in times.get(sid, []) if v > 0]
         if not ms or max(ms) > MOST_MS:
             continue

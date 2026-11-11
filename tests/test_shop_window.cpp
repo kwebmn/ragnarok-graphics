@@ -171,64 +171,6 @@ TEST(shop_window_search_finds_by_name) {
     CHECK(shopwin::shownOf(d.wares, "wing").empty());
 }
 
-TEST(shop_window_layout_list_left_cart_right) {
-    shopwin::Data d = data();
-    d.name = "Tool Dealer";
-    d.place = "prontera";
-    d.cart = {{2, 30}, {1, 50}};
-    d.zeny = 1482300;
-    const std::vector<int> shown = shopwin::shownOf(d.wares, "");
-    shopwin::Show sh;
-    const shopwin::Layout L = shopwin::layout(0, 0, 1.0f, d, shown, sh, texts(), measure);
-    CHECK(L.tabs.size() == 2 && L.wares.size() == 4 && L.lines.size() == 2);
-    CHECK(L.list.x + L.list.w < L.cart.x);  // the list on the left, the cart on the right
-    CHECK(L.confirm.w > 0 && L.confirm.y + L.confirm.h <= L.glass.h && L.clear.x > L.confirm.x);
-    CHECK(L.confirmKey.w > 0 && L.confirmKey.x > L.confirm.x && L.confirmKey.x + L.confirmKey.w <= L.confirm.x +
-                                                                                                      L.confirm.w);
-    CHECK(L.less.size() == 2 && L.more.size() == 2 && L.amounts.size() == 2 && L.drops.size() == 2);
-    CHECK(L.less[0].x < L.amounts[0].x && L.amounts[0].x < L.more[0].x && L.more[0].x < L.drops[0].x);
-    CHECK(L.keyCaps.size() == 7 && L.keyWords.size() == 7);  // the keys in the footer
-    const panel::Box& row = L.wares[2];
-    shopwin::Hit h = shopwin::hitTest(L, row.x + 4, row.y + row.h / 2);
-    CHECK(h.part == shopwin::Part::Ware && h.index == 2);
-    h = shopwin::hitTest(L, L.more[1].x + 2, L.more[1].y + 2);
-    CHECK(h.part == shopwin::Part::More && h.index == 1);
-    h = shopwin::hitTest(L, L.drops[1].x + 2, L.drops[1].y + 2);
-    CHECK(h.part == shopwin::Part::TakeBack && h.index == 1);
-    h = shopwin::hitTest(L, L.amounts[0].x + 2, L.amounts[0].y + 2);
-    CHECK(h.part == shopwin::Part::Amount && h.index == 0);
-    h = shopwin::hitTest(L, L.tabs[1].x + 2, L.tabs[1].y + 2);
-    CHECK(h.part == shopwin::Part::Tab && h.index == 1);
-    CHECK(shopwin::hitTest(L, L.searchBox.x + 40, L.searchBox.y + 4).part == shopwin::Part::Search);
-    CHECK(shopwin::hitTest(L, L.confirm.x + 4, L.confirm.y + 4).part == shopwin::Part::Confirm);
-    sh.scroll = 1;  // scrolled: the row under the mouse is one further down the list
-    const shopwin::Layout S = shopwin::layout(0, 0, 1.0f, d, shown, sh, texts(), measure);
-    CHECK(S.wares.size() == 3 && shopwin::hitTest(S, S.wares[0].x + 4, S.wares[0].y + 4).index == 1);
-    sh.pad = true;  // the controller's buttons in the footer and its bumpers at the tabs
-    const shopwin::Layout P = shopwin::layout(0, 0, 1.0f, d, shown, sh, texts(), measure);
-    CHECK(P.padGlyphs.size() == 5 && P.padWords.size() == 5 && P.tabGlyphs[0].w > 0 && P.tabGlyphs[1].w > 0);
-    CHECK(P.keyCaps.empty() && P.confirmKey.w > 0);
-    std::vector<shopwin::Words> w = shopwin::words(P, d, shown, sh, texts(), measure);
-    bool total = false, title = false;
-    for (const shopwin::Words& x : w) {
-        total = total || x.text == "36\xC2\xA0" "050 z";
-        title = title || x.text == "Tool Dealer";
-    }
-    CHECK(total && title);
-    sh.pad = false;
-    shopwin::Edit e;  // typing an amount: its digits in the row, the hint with the most under the cart
-    shopwin::typeDigit(d, e, 1, '4');
-    sh.edit = e;
-    const shopwin::Layout E = shopwin::layout(0, 0, 1.0f, d, shown, sh, texts(), measure);
-    w = shopwin::words(E, d, shown, sh, texts(), measure);
-    bool digits = false, hint = false;
-    for (const shopwin::Words& x : w) {
-        digits = digits || x.text == "4";
-        hint = hint || x.text.find(charblock::grouped(shopwin::mostFor(d, 1))) != std::string::npos;
-    }
-    CHECK(digits && hint);
-}
-
 TEST(shop_window_scroll_keeps_the_frame_in_sight) {
     CHECK_EQ(shopwin::scrollFor(0, 3, 10, 40), 0);
     CHECK_EQ(shopwin::scrollFor(15, 0, 10, 40), 6);

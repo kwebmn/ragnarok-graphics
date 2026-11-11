@@ -50,21 +50,4 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-std::vector<Words> words(const Layout& L, const std::vector<std::string>& texts, const Show& sh, const Texts& t) {
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, t.title, kText, 15 * s, true, Align::Left});
-    out.push_back(Words{L.close, "\xC3\x97", kText, 14 * s, false, Align::Center});  // ×
-    out.push_back(Words{L.hint, t.hint, kMuted, 11.5f * s, false, Align::Left});
-    for (size_t i = 0; i < L.fields.size(); ++i) {
-        out.push_back(Words{L.keys[i], keyName(int(i)), kGold2, 12 * s, true, Align::Left});
-        const std::string text = i < texts.size() ? texts[i] : "";
-        const bool focus = sh.focus == int(i);
-        const panel::Box field{L.fields[i].x + 8 * s, L.fields[i].y, L.fields[i].w - 16 * s, L.fields[i].h};
-        out.push_back(Words{field, text + (focus && sh.caret ? "|" : ""), kText, 12.5f * s, false, Align::Left});
-    }
-    out.push_back(Words{L.save, t.save, kText, 13.5f * s, true, Align::Center});
-    return out;
-}
-
 }  // namespace uagfx::macrocard

@@ -58,6 +58,4 @@ struct Words {
     Align align = Align::Left;
     bool wrap = false;  // broken into rows at its box's width (the tip)
 };
-std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const Texts& t);
-
 }  // namespace uagfx::tipcard

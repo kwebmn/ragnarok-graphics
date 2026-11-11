@@ -54,48 +54,6 @@ TEST(guild_card_places_and_the_mouse) {
     CHECK(info.rows.empty() && info.facts[6].y > info.facts[0].y);
 }
 
-TEST(guild_card_words_and_picture) {
-    guildcard::Info g;
-    g.name = "Heroes";
-    g.master = "Ann";
-    g.level = 12;
-    g.members = 18;
-    g.most = 36;
-    g.average = 81;
-    g.exp = 1500;
-    g.nextExp = 4000;
-    g.tax = 7;
-    std::vector<guildcard::Member> m(2);
-    m[0].name = "Ann";
-    m[0].title = "Master";
-    m[0].job = "High Wizard";
-    m[0].level = 99;
-    m[0].online = true;
-    m[1].name = "Bob";
-    m[1].job = "Knight";
-    m[1].level = 80;
-    const guildcard::Texts t = texts();
-    guildcard::Show sh;
-    const guildcard::Layout info = guildcard::layout(1920, 1080, 1.0f, guildcard::Tab::Info, m.size());
-    std::vector<guildcard::Words> w = guildcard::words(info, g, m, sh, t);
-    const auto has = [&](const std::vector<guildcard::Words>& ws, const std::string& s) {
-        return std::any_of(ws.begin(), ws.end(), [&](const guildcard::Words& x) { return x.text == s; });
-    };
-    CHECK(has(w, "Heroes") && has(w, "Ann") && has(w, "12") && has(w, "18 / 36") && has(w, "81"));
-    CHECK(has(w, "1500 / 4000") && has(w, "7") && has(w, "немає"));  // no territory
-    sh.tab = guildcard::Tab::Members;
-    const guildcard::Layout L = guildcard::layout(1920, 1080, 1.0f, guildcard::Tab::Members, m.size());
-    w = guildcard::words(L, g, m, sh, t);
-    CHECK(has(w, "Ann") && has(w, "Master") && has(w, "High Wizard 99") && has(w, "Knight 80"));
-    CHECK(has(w, "1 з 2 у грі"));
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    guildcard::paint(p, L, m, sh);
-    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
-}
-
 // 3.0.11-beta.210 (the tester: «alt g відкриває режим гільди, але у ГМа немає купи функцій»): all six of the game's
 // tabs on the card, two rows of three; the game's own rights for four of them (its 0x0168 bits: members 1, positions
 // 2, the expelled 0x10, the notice 0x80); the information and the members drawn by the card, the rest the game's own

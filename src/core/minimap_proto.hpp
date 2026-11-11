@@ -222,7 +222,6 @@ struct Texts {
     std::string found;            // 3.0.11-beta.213: the search's plate («Poring · 12»); "" none
 };
 constexpr uint32_t kFoundRgb = 0xFF8A3D;  // 3.0.11-beta.213: a search's marks and its plate's words
-std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t);
 // 3.0.18-beta.26 (uaUI's minimap): the map's square alone in `out` (L.map's size: its pixels, the marks, the rounded
 // corners); words() split - the Kafras' «K» on the map (the square's pixels) and the rest (the panel's)
 void paintMapSquare(panel::Picture& out, const Layout& L, const Scene& sc);

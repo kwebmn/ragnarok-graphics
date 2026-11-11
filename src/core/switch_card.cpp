@@ -45,17 +45,4 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-std::vector<Words> words(const Layout& L, const std::vector<bool>& on, const Show& sh, const Texts& t) {
-    (void)on;
-    (void)sh;
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, t.title, kText, 15 * s, true, Align::Left});
-    out.push_back(Words{L.close, "\xC3\x97", kText, 14 * s, false, Align::Center});  // ×
-    if (!t.hint.empty()) out.push_back(Words{L.hint, t.hint, kMuted, 11.5f * s, false, Align::Left});
-    for (size_t i = 0; i < L.labels.size() && i < t.labels.size(); ++i)
-        out.push_back(Words{L.labels[i], t.labels[i], kText, 13 * s, false, Align::Left});
-    return out;
-}
-
 }  // namespace uagfx::switchcard

@@ -168,8 +168,6 @@ struct Show {
 panel::Box ammoBox(const Layout& L, const Show& show);
 // 3.0.16-beta.8: the supplies' pills in a row after it (each w 0 when a tip is over it)
 std::vector<panel::Box> supplyBoxes(const Layout& L, const Show& show);
-void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells, const Show& show, const Texts& t);
-
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;
@@ -179,9 +177,6 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-// `row`: the game's row shown in the normal mode (0-2)
-std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int row, const Show& show, const Texts& t);
-
 // 3.0.18-beta.21 (the owner: «Переписывать 73 части в разметку RmlUi вручную»; win/hotbar's RML bar): every part the
 // picture shows, placed (the picture's pixels) and said as paint() and words() do - for the document to stand them
 struct Plate {

@@ -80,41 +80,6 @@ TEST(trade_window_the_partners_changes_after_your_ready) {
     CHECK(late.slots[1] && late.zeny);
 }
 
-TEST(trade_window_words) {
-    const tradewin::Layout L = tradewin::layout(0, 0, 1.0f);
-    const tradewin::Texts t = tradeTexts();
-    tradewin::Side me, them;
-    me.slots[0] = thing(501, 38, "Red Potion");
-    me.zeny = 12000;
-    them.slots[0] = thing(1101, 1, "Sword");
-    them.zeny = 1482300;
-    them.ready = true;
-    tradewin::Show sh;
-    const itemwin::Measure m(panel::wordsWidth);
-    std::vector<itemwin::Words> w = tradewin::words(L, me, them, sh, t, m);
-    CHECK(hasWords(w, "Обмін") && hasWords(w, "Ліра") && hasWords(w, "Ви") && hasWords(w, "Скасувати"));
-    CHECK(hasWords(w, "38") && hasWords(w, "12 000") && hasWords(w, "1 482 300"));
-    CHECK(hasWords(w, "\xE2\x9C\x93 Готово"));
-    // the partner's mark
-
-    CHECK(hasWords(w, t.hint) && !hasWords(w, "\xE2\x9A\xA0 " + t.late));
-    me.ready = true;
-    sh.late.zeny = true;
-    w = tradewin::words(L, me, them, sh, t, m);
-    CHECK(!hasWords(w, t.hint) && hasWords(w, "\xE2\x9A\xA0 " + t.late));
-    const auto zeny = std::find_if(w.begin(), w.end(), [](const itemwin::Words& x) { return x.text == "1 482 300"; });
-    CHECK(zeny != w.end() && zeny->rgb == 0xFF7D6E);
-    // changed after your «Готово»: red
-
-    sh.hover = 10;
-    // the partner's sword pointed at: its tip
-
-    w = tradewin::words(L, me, them, sh, t, m);
-    CHECK(hasWords(w, "Sword") && hasWords(w, t.info));
-    // the glass
-
-}
-
 // 3.0.18-beta.28 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5): uaUI's trade - the parts paint()
 // draws, placed: the ready pill, the cells (late in red), the count plates, the buttons by the trade's state, the tip
 TEST(trade_window_view_places_the_pictures_parts) {

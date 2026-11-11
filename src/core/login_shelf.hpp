@@ -90,7 +90,6 @@ struct Show {
     bool caret = false;
     std::string search;  // 3.0.11-beta.189: typed into the search (the caret's blink: caret, editing -1)
 };
-void paint(panel::Picture& out, const Layout& L, const std::vector<Card>& cards, const Show& sh, const Texts& t);
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;

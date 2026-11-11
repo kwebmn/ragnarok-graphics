@@ -299,42 +299,6 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     block(s, game);
 }
 
-// 3.0.18-beta.32 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): a chat room's making in
-// RmlUi's markup, line by line as core chatroomcard paints it - its glass, ✕, the title's and the password's fields
-// (the password dim while open), the limits' and open/closed chips (the chosen gold), «Створити», «Скасувати»; the
-// words where core chatroomcard places them
-static void fillSheet(State& s, uisheet::Content& c) {
-    const rc::Layout& L = s.layout;
-    const rc::Card& d = s.card;
-    const rc::Show& sh = s.show;
-    const float sc = L.s;
-    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kBlack = 0x000000;
-    auto& u = c.under;
-    c.w = float(L.w), c.h = float(L.h);
-    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
-    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
-    const bool closeHot = sh.hover.part == rc::Part::Close;
-    c.rect(u, L.close, 6 * sc, kWhite, closeHot ? 0.14f : 0.0f, kWhite, closeHot ? 0.3f : 0.0f, 1.0f * sc);
-    const auto field = [&](const panel::Box& b, bool focused, bool dim) {
-        c.rect(u, b, 8 * sc, kBlack, dim ? 0.15f : 0.35f, focused ? kGold : kWhite,
-               focused ? 0.8f : (dim ? 0.08f : 0.18f), 1.0f * sc);
-    };
-    field(L.title, d.focus == rc::Field::Title, false);
-    field(L.password, d.focus == rc::Field::Password, !d.closed);
-    const auto chip = [&](const panel::Box& b, bool on, bool hot) {
-        c.rect(u, b, 7 * sc, on ? kGold : kWhite, on ? 0.26f : (hot ? 0.12f : 0.05f), on ? kGold : kWhite,
-               on ? 0.8f : 0.14f, 1.0f * sc);
-    };
-    for (size_t i = 0; i < L.limits.size(); ++i)
-        chip(L.limits[i], i < d.limits.size() && d.limits[i] == d.limit,
-             sh.hover.part == rc::Part::Limit && sh.hover.index == int(i));
-    chip(L.open, !d.closed, sh.hover.part == rc::Part::Open);
-    chip(L.closed, d.closed, sh.hover.part == rc::Part::Closed);
-    c.rect(u, L.create, 8 * sc, kGold, sh.hover.part == rc::Part::Create ? 0.34f : 0.22f, kGold, 0.8f, 1.0f * sc);
-    c.rect(u, L.cancel, 8 * sc, kWhite, sh.hover.part == rc::Part::Cancel ? 0.12f : 0.06f, kWhite, 0.16f, 1.0f * sc);
-    c.say(rc::words(L, d, sh, texts(s)));
-}
-
 // 3.0.18-beta.81: the live window's model and place
 static void liveFrame(State& s) {
     s.live.make("chat room setup", kLive, [&](Rml::DataModelConstructor& m) {
@@ -386,15 +350,7 @@ static void liveFrame(State& s) {
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
-    if (uaui::readyAnywhere()) {  // 3.0.18-beta.81: the live window in place of the sheet
-        s.sheet.frame("chatroom", false, true, 0, 0, 0, [](uisheet::Content&) {});
-        s.sheetShown = false;
-        liveFrame(s);
-        return;
-    }
-    s.live.frame(false, 0, 0, 0, nullptr);
-    s.sheetShown = s.sheet.frame("chatroom", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
-                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+    liveFrame(s);  // the old edition (the sheet) gone: the live window alone
     if (s.sheetShown) {  // 3.0.18-beta.60: the pad walks its boxes (A clicks one)
         std::vector<panel::Box> targets;
         for (const auto& part : std::initializer_list<std::vector<panel::Box>>{s.layout.limits, {s.layout.title, s.layout.open, s.layout.closed, s.layout.password, s.layout.create, s.layout.cancel, s.layout.close}})
@@ -405,19 +361,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
-    if (s.live.shown) {  // 3.0.18-beta.81
-        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
-        return;
-    }
-    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
-    int cursor = -1, cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    const panel::Box& g = s.layout.glass;
-    // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
-                  12 * s.scale, s.scale, s.k);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    if (!s.live.shown) return;  // 3.0.18-beta.81
+    s.live.draw(s.shadow, record, renderer, s.scale, s.k);
 }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
@@ -427,17 +372,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         result = 0;
         return true;
     }
-    if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
-    if (!button && m != WM_MOUSEWHEEL) return false;
-    float tx = 0, ty = 0;
-    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;
-    const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
-    if (!s.layout.glass.contains(lx, ly)) return false;
-    result = 0;
-    if (m == WM_LBUTTONDOWN) pick(s, rc::hitTest(s.layout, lx, ly));
-    return true;
+    return false;  // the old edition gone: the live window alone
 }
 
 bool shown() { return state().shown; }

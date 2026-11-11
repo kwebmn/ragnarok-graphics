@@ -51,29 +51,6 @@ TEST(options_card_places_and_the_mouse) {
     CHECK(optionscard::hitTest(L, -5, -5).part == P::None);
 }
 
-TEST(options_card_words_and_picture) {
-    const optionscard::Layout L = optionscard::layout(1920, 1080, 1.0f);
-    optionscard::Values v;
-    v.on[0] = true;
-    v.volume[0] = 64;
-    v.volume[1] = 127;
-    optionscard::Texts t;
-    t.title = "Налаштування гри";
-    const char* const names[6] = {"Музика", "Звуки", "Прилипання: атака", "Прилипання: навички", "Прилипання: речі",
-                                  "Непрозорі вікна"};
-    for (int i = 0; i < 6; ++i) t.toggles[i] = names[i];
-    t.snapHint = "Курсор сам наводиться на найближчу ціль";
-    const std::vector<optionscard::Words> w = optionscard::words(L, v, optionscard::Show{}, t);
-    const auto has = [&](const std::string& s) {
-        return std::any_of(w.begin(), w.end(), [&](const optionscard::Words& x) { return x.text == s; });
-    }
-    ;
-    CHECK(has("Налаштування гри") && has("Музика") && has("Прилипання: речі") && has("Непрозорі вікна"));
-    CHECK(has("50%") && has("100%"));
-    // the volumes as shares
-
-}
-
 // 3.0.11-beta.200 (the tester: «непрозорі вікна - тогл не працює, робить непрозорі але не повертає прозорі»): uaRO.exe
 // only keeps its «opaque» (m_isOpaque, the session's + 0x814) - nothing draws by it; on, the interface's windows are
 // whole (100 %), off, as «Прозорість вікон» has them

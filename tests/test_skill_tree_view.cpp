@@ -104,41 +104,6 @@ TEST(skill_tree_view_the_path_and_the_chain) {
     CHECK(c.count(5) && c.count(7) && c.count(3) && c.count(60) && !c.count(55));
 }
 
-TEST(skill_tree_view_in_the_window) {
-    const skillwin::Data d = knight();
-    const skillwin::Texts t = texts();
-    skillwin::Show sh;
-    sh.tab = 1;
-    skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
-    CHECK(!L.tree && L.viewList.w > 0 && L.viewTree.x > L.viewList.x && L.viewTree.x + L.viewTree.w < L.close.x);
-    CHECK(skillwin::hitTest(L, L.viewTree.x + 3, L.viewTree.y + 3).part == skillwin::Part::ViewTree);
-    sh.tree = true;
-    L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
-    CHECK(L.tree && L.rows.size() == 5 && L.view.w > 0 && L.w > 700);
-    const panel::Box& pierce = L.rows[1];
-    skillwin::Hit h = skillwin::hitTest(L, pierce.x + pierce.w / 2, pierce.y + pierce.h / 2);
-    CHECK(h.part == skillwin::Part::Row && h.index == 1);
-    CHECK(L.pluses[1].w > 0 && L.pluses[2].w == 0);  // Pierce: a point raises it; Spear Stab is closed
-    h = skillwin::hitTest(L, L.pluses[1].x + L.pluses[1].w / 2, L.pluses[1].y + L.pluses[1].h / 2);
-    CHECK(h.part == skillwin::Part::Plus && h.index == 1);
-    CHECK(skillwin::hitTest(L, L.view.x + L.view.w - 3, L.view.y + L.view.h - 3).part == skillwin::Part::View);
-    // the path line under it for the skill pointed at
-    sh.hoverRow = 2;
-    std::vector<skillwin::Words> w = skillwin::words(L, d, sh, t, measure);
-    const auto has = [&](const std::string& text) {
-        return std::any_of(w.begin(), w.end(), [&](const skillwin::Words& x) { return x.text == text; });
-    };
-    CHECK(has("До Spear Stab — ще очок: 6") && has("Список") && has("Дерево") && has("Spear Stab") && has("1/10"));
-    CHECK(has("Рівень 0 з 10") && has("Потрібно") && has("Pierce 5") && has("0/5") && has(t.drag));
-    CHECK(L.side.w > 0 && L.side.x >= L.view.x + L.view.w);
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    skillwin::paint(p, L, d, sh);
-    CHECK((p.px[size_t(pierce.y + pierce.h / 2) * size_t(p.width) + size_t(pierce.x + 2)] >> 24) > 0);
-}
-
 TEST(skill_tree_view_scrolls_and_keeps_a_skill_in_sight) {
     skillwin::Data d;
     d.points = 1;

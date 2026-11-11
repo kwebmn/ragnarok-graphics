@@ -84,7 +84,4 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-std::vector<Words> words(const Layout& L, const std::vector<Member>& members, int threshold,
-                         const std::string& offline, const std::string& title = "", const std::string& dead = "");
-
 }  // namespace uagfx::partypanel

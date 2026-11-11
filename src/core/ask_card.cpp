@@ -107,37 +107,4 @@ int quickValue(Quick q, int most) {
     return m;
 }
 
-std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const Texts& t) {
-    (void)sh;
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, c.title, kText, 15 * s, true, Align::Left});
-    if (L.message.w > 0) out.push_back(Words{L.message, c.message, kText, 13 * s, false, Align::Left, true});
-    if (L.field.w > 0)
-        out.push_back(Words{panel::Box{L.field.x + 10 * s, L.field.y, L.field.w - 20 * s, L.field.h},
-                            c.field + (c.caret ? "|" : ""), kText, 14 * s, true, Align::Left});
-    for (size_t i = 0; i < L.quick.size() && i < 3; ++i)
-        out.push_back(Words{L.quick[i], t.quick[i], kText, 12.5f * s, false, Align::Center});
-    const std::vector<Button> bs = buttons(c.kind);
-    for (size_t i = 0; i < L.buttons.size() && i < bs.size(); ++i) {
-        const Button b = bs[i];
-        const std::string& words = b == Button::Accept    ? t.accept
-                                   : b == Button::Decline ? t.decline
-                                   : b == Button::Yes     ? t.yes
-                                   : b == Button::No      ? t.no
-                                   : b == Button::Cancel  ? t.cancel
-                                                          : t.ok;
-        const bool second = b == Button::Decline || b == Button::No || b == Button::Cancel;
-        const std::string& key = b == Button::Accept || b == Button::Yes ? t.acceptKey
-                                 : second                                ? t.declineKey
-                                                                         : t.okKey;
-        out.push_back(Words{L.buttons[i], words, kText, 13 * s, !second, Align::Center});
-        if (!key.empty())
-            out.push_back(Words{panel::Box{L.buttons[i].x + L.buttons[i].w - 46 * s, L.buttons[i].y, 40 * s,
-                                           L.buttons[i].h},
-                                key, kMuted, 11 * s, false, Align::Right});
-    }
-    return out;
-}
-
 }  // namespace uagfx::askcard

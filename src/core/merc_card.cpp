@@ -16,8 +16,6 @@ constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2
 constexpr uint32_t kMuted = 0x9AA3B5, kHp = 0x4CC777, kSp = 0x3D7EEB, kDanger = 0xE0675C;
 const char* const kStatNames[8] = {"ATK", "MATK", "HIT", "CRIT", "DEF", "MDEF", "FLEE", "ASPD"};
 
-std::string ofMost(int now, int most) { return std::to_string(now) + " / " + std::to_string(most); }
-
 }  // namespace
 
 Kind kindOf(int cls) {
@@ -93,59 +91,6 @@ Hit hitTest(const Layout& L, float x, float y) {
         if (L.skillRows[k].contains(x, y)) return Hit{Part::Skill, Button::Close, int(k)};
     }
     return Hit{};
-}
-
-std::vector<Words> words(const Layout& L, const Info& i, const Show& sh, const Texts& t) {
-    (void)sh;
-    std::vector<Words> out;
-    const float s = L.s;
-    out.push_back(Words{L.title, t.kinds[int(i.kind)], kText, 15 * s, true, Align::Left});
-    out.push_back(Words{L.close, "\xC3\x97", kText, 14 * s, false, Align::Center});  // ×
-    out.push_back(Words{L.name, i.name, kGold2, 15 * s, true, Align::Left});
-    std::string level = t.level;
-    if (const size_t p = level.find("{1}"); p != std::string::npos) level.replace(p, 3, std::to_string(i.level));
-    out.push_back(Words{L.level, level, kMuted, 12.5f * s, false, Align::Right});
-    out.push_back(Words{L.hpLabel, "HP", kMuted, 11.5f * s, false, Align::Left});
-    out.push_back(Words{L.hpLabel, ofMost(i.hp, i.maxHp), kText, 11.5f * s, false, Align::Right});
-    out.push_back(Words{L.spLabel, "SP", kMuted, 11.5f * s, false, Align::Left});
-    out.push_back(Words{L.spLabel, ofMost(i.sp, i.maxSp), kText, 11.5f * s, false, Align::Right});
-    const std::string facts[4] = {i.ends, std::to_string(i.loyalty), std::to_string(i.summons),
-                                  std::to_string(i.kills)};
-    for (int k = 0; k < 4; ++k) {
-        out.push_back(Words{L.facts[k], t.facts[k], kMuted, 11.5f * s, false, Align::Left});
-        out.push_back(Words{L.facts[k], facts[k], k == 0 ? kGold2 : kText, 12 * s, k == 0, Align::Right});
-    }
-    for (int k = 0; k < 8; ++k) {
-        out.push_back(Words{L.stats[k], kStatNames[k], kMuted, 11.5f * s, false, Align::Left});
-        out.push_back(Words{L.stats[k], std::to_string(k < 7 ? i.stats[k] : (2000 - i.aspd) / 10), kText, 12 * s,
-                            true, Align::Right});
-    }
-    out.push_back(Words{L.skills, t.skills, kGold2, 12.5f * s, true, Align::Left});
-    for (size_t k = 0; k < L.skillRows.size(); ++k) {
-        if (k >= i.skills.size()) {
-            if (i.skills.empty()) out.push_back(Words{L.skillRows[k], "\xE2\x80\x94", kMuted, 12 * s, false,
-                                                      Align::Left});  // —
-            continue;
-        }
-        const SkillRow& sk = i.skills[k];
-        const panel::Box& r = L.skillRows[k];
-        out.push_back(Words{panel::Box{r.x + 6 * s, r.y, L.skillLess[k].x - r.x - 10 * s, r.h}, sk.name, kText,
-                            12 * s, false, Align::Left});
-        // 3.0.16-beta.31: «Рів. 3/5» while it is used below its level, ‹ › about it (the game's own list's only)
-        const int use = sk.usable ? companion::useOf(sk.use, sk.level) : sk.level;
-        std::string lv = t.skillLevel;
-        if (const size_t p = lv.find("{1}"); p != std::string::npos)
-            lv.replace(p, 3, use < sk.level ? std::to_string(use) + "/" + std::to_string(sk.level)
-                                            : std::to_string(sk.level));
-        out.push_back(Words{L.skillLevel[k], lv, use < sk.level ? kGold2 : kMuted, 11.5f * s, false,
-                            Align::Center});
-        if (sk.usable && sk.level > 1) {
-            out.push_back(Words{L.skillLess[k], "\xE2\x80\xB9", kText, 12 * s, true, Align::Center});  // ‹
-            out.push_back(Words{L.skillMore[k], "\xE2\x80\xBA", kText, 12 * s, true, Align::Center});  // ›
-        }
-    }
-    out.push_back(Words{L.dismiss, t.dismiss, kDanger, 11 * s, false, Align::Center});
-    return out;
 }
 
 }  // namespace uagfx::merccard

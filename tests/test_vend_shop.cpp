@@ -81,31 +81,6 @@ TEST(vend_shop_places_and_the_mouse) {
     CHECK(scrolled.part == P::Plus && scrolled.row == 5);
 }
 
-// Its words: the shop's title, each thing's name (+7 shown), its price, how many the shop has, the chosen count, the
-// total and the zeny (the total red when it is more than the zeny)
-TEST(vend_shop_words_and_picture) {
-    const std::vector<vendshop::Row> r = rows();
-    const vendshop::Layout L = vendshop::layout(1920, 1080, 1.0f, r.size());
-    vendshop::Texts t;
-    t.title = "Лавка";
-    t.stock = "є {1}";
-    t.total = "Разом";
-    t.zeny = "Ваші зені";
-    t.buy = "Купити";
-    t.cancel = "Скасувати";
-    vendshop::Show sh;
-    sh.zeny = 100;
-    const std::vector<vendshop::Words> w = vendshop::words(L, r, sh, t);
-    const auto find = [&](const std::string& s) {
-        return std::find_if(w.begin(), w.end(), [&](const vendshop::Words& x) { return x.text == s; });
-    }
-    ;
-    CHECK(find("Лавка") != w.end() && find("Red Potion") != w.end() && find("+7 Knife") != w.end());
-    CHECK(find("1 500 000 z") != w.end() && find("є 100") != w.end() && find("10") != w.end());
-    CHECK(find("18 500 z") != w.end() && find("100 z") != w.end());
-    CHECK(find("18 500 z") != w.end() && find("18 500 z")->rgb == vendshop::kShort);
-}
-
 // 3.0.18-beta.30: uaUI's «Лавка» - a line's icon square inside its line
 TEST(vend_shop_icon_inside_its_line) {
     const vendshop::Layout L = vendshop::layout(1920, 1080, 1.0f, 3);

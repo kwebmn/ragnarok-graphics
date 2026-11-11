@@ -77,17 +77,4 @@ int rowAt(const Layout& L, const std::vector<Item>& items, float x, float y) {
     return -1;
 }
 
-std::vector<Words> words(const Layout& L, const std::vector<Item>& items, int hover) {
-    std::vector<Words> out;
-    const float s = L.s;
-    for (size_t i = 0; i < L.rows.size() && i < items.size(); ++i) {
-        if (items[i].separator) continue;
-        const panel::Box& r = L.rows[i];
-        const bool hot = int(i) == hover;
-        out.push_back(Words{panel::Box{r.x + kInset * s, r.y, r.w - 2 * kInset * s, r.h}, items[i].text,
-                            hot ? kGold2 : kText, 13 * s, hot, Align::Left});
-    }
-    return out;
-}
-
 }  // namespace uagfx::popupcard

@@ -30,17 +30,3 @@ TEST(switch_card_places_and_the_mouse) {
     CHECK(switchcard::hitTest(L, -5, -5).part == P::None);
 }
 
-TEST(switch_card_words_and_picture) {
-    const switchcard::Layout L = switchcard::layout(1920, 1080, 1.0f, 2);
-    switchcard::Texts t;
-    t.title = "Налаштування шепоту";
-    t.labels = {"Окреме вікно для незнайомих", "Звук нового шепоту"};
-    t.hint = "Шепіт друзів";
-    std::vector<bool> on{true, false};
-    const std::vector<switchcard::Words> w = switchcard::words(L, on, switchcard::Show{}, t);
-    const auto has = [&](const std::string& s) {
-        return std::any_of(w.begin(), w.end(), [&](const switchcard::Words& x) { return x.text == s; });
-    }
-    ;
-    CHECK(has("Налаштування шепоту") && has("Окреме вікно для незнайомих") && has("Звук нового шепоту"));
-}

@@ -95,35 +95,6 @@ Hit hitTest(const Layout& L, int scroll, size_t count, float x, float y) {
     return Hit{};
 }
 
-std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, const Show& sh, const Texts& t) {
-    std::vector<Words> out;
-    const float s = L.s;
-    for (int i = 0; i < 2; ++i)
-        out.push_back(Words{L.tabs[i], t.tabs[i], kText, 13 * s, int(sh.tab) == i, Align::Center});
-    out.push_back(Words{L.close, "\xC3\x97", kText, 14 * s, false, Align::Center});  // ×
-    out.push_back(Words{L.header, t.header, kMuted, 12 * s, false, Align::Left});
-    if (L.rows.empty()) out.push_back(Words{L.list, t.empty, kMuted, 12.5f * s, false, Align::Center});
-    for (size_t i = 0; i < L.rows.size(); ++i) {
-        const size_t at = i + size_t(std::max(0, sh.scroll));
-        if (at >= entries.size()) break;
-        const Entry& e = entries[at];
-        const panel::Box& r = L.rows[i];
-        const panel::Box name{r.x + 22 * s, r.y, r.w * 0.55f - 22 * s, r.h};
-        out.push_back(Words{name, e.name, e.online ? kText : kMuted, 13 * s, e.self, Align::Left});
-        if (e.leader)
-            out.push_back(Words{panel::Box{r.x + r.w * 0.55f - 18 * s, r.y, 16 * s, r.h}, "\xE2\x99\x9B", kGold2,
-                                12 * s, false, Align::Center});  // ♛
-        const panel::Box where{r.x + r.w * 0.55f, r.y, r.w * 0.45f - 8 * s, r.h};
-        out.push_back(Words{where, e.online ? e.map : t.offline, kMuted, 11.5f * s, false, Align::Right});
-    }
-    const std::vector<Action> acts = actions(sh.tab);
-    const Entry* chosen = chosenOf(entries, sh);
-    for (size_t i = 0; i < L.buttons.size() && i < acts.size() && i < 4; ++i)
-        out.push_back(Words{L.buttons[i], t.actions[i], allowed(sh.tab, acts[i], chosen) ? kText : kMuted, 12 * s,
-                            false, Align::Center});
-    return out;
-}
-
 const Entry* chosenEntry(const std::vector<Entry>& entries, const Show& sh) { return chosenOf(entries, sh); }
 
 std::vector<int> order(const std::vector<Entry>& entries, Tab t) {

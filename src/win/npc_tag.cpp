@@ -71,17 +71,6 @@ uint32_t read32(uint32_t at) {
     return readGame(at, &v, 4) ? v : 0;
 }
 
-std::vector<Words> gdiWords(const std::vector<ph::Words>& in) {
-    std::vector<Words> out;
-    for (const ph::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == ph::Align::Right    ? DT_RIGHT
-                                 : w.align == ph::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
 void want(State& s, uint32_t id) {
     if (s.names.count(id)) return;
     const DWORD now = GetTickCount();
@@ -141,11 +130,6 @@ static void frameInner(HWND game, unsigned codePage, double k, int targetWidth, 
         s.key = key;
         s.sheetSony = look.sony;
         ++s.sheetGen;  // 3.0.18-beta.38: uaUI's plate said again (no picture then)
-        if (!uaui::ready() && panel::blank(s.picture, s.layout.w, s.layout.h)) {
-            ph::paint(s.picture, s.layout, s.parts, look.sony);
-            drawWords(s.picture, gdiWords(ph::words(s.layout, s.parts, look.sony)));
-            s.upload = true;
-        }
     }
     s.shown = true;
 }

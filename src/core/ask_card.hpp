@@ -73,6 +73,4 @@ struct Words {
     Align align = Align::Left;
     bool wrap = false;  // 3.0.11-beta.151: broken into rows at its box's width (a message)
 };
-std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const Texts& t);
-
 }  // namespace uagfx::askcard

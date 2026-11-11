@@ -42,17 +42,6 @@ State& state() {
     return s;
 }
 
-std::vector<Words> gdiWords(const std::vector<ph::Words>& in) {
-    std::vector<Words> out;
-    for (const ph::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == ph::Align::Right    ? DT_RIGHT
-                                 : w.align == ph::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
 }  // namespace
 
 static void frameInner(HWND game, bool on, double k, int targetWidth, int targetHeight) {
@@ -89,11 +78,6 @@ static void frameInner(HWND game, bool on, double k, int targetWidth, int target
         s.key = key;
         s.sheetSony = sony;
         ++s.sheetGen;  // 3.0.18-beta.35: uaUI's line says it all again (no picture then)
-        if (!uaui::readyAnywhere() && panel::blank(s.picture, s.layout.w, s.layout.h)) {
-            ph::paint(s.picture, s.layout, s.parts, sony);
-            drawWords(s.picture, gdiWords(ph::words(s.layout, s.parts, sony)));
-            s.upload = true;
-        }
         if (s.told++ < 10) LOG_INFO("pad hint: a line of %zu parts in the interface's style", s.parts.size());
     }
     s.shown = true;
@@ -125,9 +109,8 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    State& s = state();
-    if (!s.shown || s.sheetShown || s.k <= 0 || s.picture.width <= 0) return;
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    (void)record;  // the old edition (its picture) gone: uaUI draws it
+    (void)renderer;
 }
 
 }  // namespace uagfx::win::padhintwin

@@ -56,24 +56,3 @@ TEST(chatroom_card_layout_and_hits) {
           L.password.y < L.create.y);
 }
 
-// The words: the fields' own words (the password dotted), the chosen count and kind marked, the caret in the focused
-TEST(chatroom_card_words) {
-    const chatroomcard::Layout L = chatroomcard::layout(6, 1920, 1080, 1.0f);
-    chatroomcard::Card c;
-    c.title = "Торгую";
-    c.passwordLength = 4;
-    c.limits = {2, 3, 5, 10, 15, 20};
-    c.limit = 20;
-    c.closed = true;
-    c.focus = chatroomcard::Field::Title;
-    c.caret = true;
-    std::vector<chatroomcard::Words> w = chatroomcard::words(L, c, chatroomcard::Show{}, texts());
-    CHECK(has(w, "Торгую|"));
-    CHECK(has(w, chatroomcard::masked(4)));
-    CHECK(!has(w, "abcd"));
-    CHECK(has(w, "20") && has(w, "2"));
-    CHECK(has(w, "Створити") && has(w, "Скасувати") && has(w, "Нова чат-кімната"));
-    c.focus = chatroomcard::Field::Password;
-    w = chatroomcard::words(L, c, chatroomcard::Show{}, texts());
-    CHECK(has(w, "Торгую") && has(w, chatroomcard::masked(4) + "|"));
-}

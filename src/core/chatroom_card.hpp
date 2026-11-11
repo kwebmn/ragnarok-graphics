@@ -55,6 +55,4 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
-std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const Texts& t);
-
 }  // namespace uagfx::chatroomcard
