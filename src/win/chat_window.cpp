@@ -118,6 +118,8 @@ struct State {
     std::vector<Raw> pending;
     std::deque<cp::Line> lines, battle;
     uint64_t version = 0;
+    uint32_t serials = 0;     // 3.0.18-beta.170: each line's own number (the wrap cache's key)
+    cp::WrapCache wrapCache;  // 3.0.18-beta.170 (R-CD8KCP): the lines' rows kept - a new or changed one alone wrapped
     ULONGLONG lastLine = 0;
     cp::Show show;
     int height = 0;
@@ -296,6 +298,7 @@ void add(State& s, cp::Line line) {
     if (u >= 0 && u != int(s.show.tab)) ++s.show.unread[u];
     if (cp::shows(s.show.tab, line)) s.lastLine = now;
     std::deque<cp::Line>& to = line.kind == cp::Kind::Battle ? s.battle : s.lines;
+    line.serial = ++s.serials;
     to.push_back(std::move(line));
     if (to.size() > (&to == &s.battle ? kMostBattle : kMostLines)) {
         if (&to.front() == s.killLine) s.killLine = nullptr;
@@ -665,7 +668,7 @@ void makeRows(State& s) {
                                         [&](const cp::Line* l) { return !cp::matches(*l, folded); }),
                          s.rowLines.end());
     if (s.rowLines.size() > 200) s.rowLines.erase(s.rowLines.begin(), s.rowLines.end() - 200);
-    s.rows = cp::wrap(s.rowLines, s.layout.lines.w, s.layout.px, measure);
+    s.rows = s.wrapCache.wrap(s.rowLines, s.layout.lines.w, s.layout.px, measure, uistyle::generation());
 }
 
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own, not the world's

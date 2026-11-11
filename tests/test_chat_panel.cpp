@@ -159,3 +159,62 @@ TEST(chat_long_line_cut_between_words) {
     CHECK(word.size() == 3 && word[0].size() == kChatPiece && word[2].size() == 150 - 2 * kChatPiece);
 }
 
+
+// 3.0.18-beta.170 (R-CD8KCP: the chat's frame grew from 0.13 to 1.33 ms in three minutes of hunting - each kill,
+// pick-up or experience line wrapped all its up to 200 lines again, every word measured): a line's rows kept while it
+// stays the same - its number, its spans' count, its repeats - and the width, the size and the look do too
+TEST(chat_panel_wrap_cache_measures_only_new_or_changed_lines) {
+    int calls = 0;
+    const Measure m = [&](const std::string& s, float px, bool) {
+        ++calls;
+        return float(s.size()) * px * 0.5f;
+    };
+    Line a, b;
+    a.serial = 1;
+    a.spans = {Span{"Poring dropped Jellopy ", kText, false, false}};
+    b.serial = 2;
+    b.spans = {Span{"Base EXP +12", kText, true, false}};
+    const std::vector<const Line*> both = {&a, &b};
+    WrapCache cache;
+    const std::vector<Row> first = cache.wrap(both, 120, 10, m, 1);
+    CHECK(first.size() == wrap(both, 120, 10, m).size());  // the same rows as the whole wrap
+    const int afterFirst = calls;
+    const std::vector<Row> again = cache.wrap(both, 120, 10, m, 1);
+    CHECK_EQ(calls, afterFirst);  // nothing measured again
+    CHECK(again.size() == first.size());
+    b.spans.push_back(Span{" · Job EXP +4", kText, true, false});  // the kill's line got its experience
+    calls = 0;
+    cache.wrap(both, 120, 10, m, 1);
+    CHECK(calls > 0);
+    const int changedOnly = calls;
+    calls = 0;
+    wrap(std::vector<const Line*>{&b}, 120, 10, m);
+    CHECK_EQ(changedOnly, calls);  // the changed line alone measured
+    calls = 0;
+    cache.wrap(both, 200, 10, m, 1);  // another width: all again
+    CHECK(calls > 0);
+    calls = 0;
+    cache.wrap(both, 200, 10, m, 2);  // another look (the words' sizes may differ): all again
+    CHECK(calls > 0);
+}
+
+TEST(chat_panel_wrap_cache_keeps_each_piece_on_its_line_of_the_list) {
+    const Measure m = [](const std::string& s, float px, bool) { return float(s.size()) * px * 0.5f; };
+    Line a, b, c;
+    a.serial = 1;
+    a.spans = {Span{"one", kText, false, false}};
+    b.serial = 2;
+    b.spans = {Span{"two", kText, false, false}};
+    c.serial = 3;
+    c.spans = {Span{"three", kText, false, false}};
+    WrapCache cache;
+    cache.wrap({&a, &b, &c}, 200, 10, m, 1);
+    const std::vector<Row> rows = cache.wrap({&b, &c}, 200, 10, m, 1);  // a filtered out: b first now
+    CHECK(rows.size() == 2);
+    CHECK(rows[0][0].text == "two" && rows[0][0].line == 0);
+    CHECK(rows[1][0].text == "three" && rows[1][0].line == 1);
+    Line d;  // no number (0): never kept, always wrapped
+    d.spans = {Span{"four", kText, false, false}};
+    const std::vector<Row> withD = cache.wrap({&d}, 200, 10, m, 1);
+    CHECK(withD.size() == 1 && withD[0][0].text == "four" && withD[0][0].line == 0);
+}

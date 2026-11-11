@@ -380,6 +380,35 @@ std::vector<Row> wrap(const std::vector<const Line*>& lines, float width, float 
     return rows;
 }
 
+std::vector<Row> WrapCache::wrap(const std::vector<const Line*>& lines, float width, float px, const Measure& m,
+                                 int generation) {
+    if (width != width_ || px != px_ || generation != generation_) {
+        kept_.clear();
+        width_ = width;
+        px_ = px;
+        generation_ = generation;
+    }
+    std::vector<Row> rows;
+    std::unordered_map<uint32_t, Kept> next;
+    next.reserve(lines.size());
+    for (size_t li = 0; li < lines.size(); ++li) {
+        const Line& l = *lines[li];
+        Kept own;
+        const auto it = l.serial ? kept_.find(l.serial) : kept_.end();
+        if (it != kept_.end() && it->second.spans == l.spans.size() && it->second.repeat == l.repeat)
+            own = std::move(it->second);
+        else
+            own = Kept{l.spans.size(), l.repeat, chatpanel::wrap(std::vector<const Line*>{&l}, width, px, m)};
+        for (const Row& r : own.rows) {  // its pieces on its place in this list
+            rows.push_back(r);
+            for (Piece& p : rows.back()) p.line = int(li);
+        }
+        if (l.serial) next[l.serial] = std::move(own);
+    }
+    kept_ = std::move(next);
+    return rows;
+}
+
 Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Show& sh, const Input& in, const Texts& t,
               const Measure& m, int width) {
     Layout L;

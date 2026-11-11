@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "core/window_panel.hpp"
@@ -38,6 +39,7 @@ struct Line {
     bool trade = false;  // one near selling or buying
     uint64_t ms = 0;
     int repeat = 1;      // 3.0.11-beta.243: the same line again right after: «×N»
+    uint32_t serial = 0;  // 3.0.18-beta.170: its own number (WrapCache's key); 0 - none, never kept
 };
 
 struct Texts {
@@ -134,6 +136,26 @@ struct Piece {
 using Row = std::vector<Piece>;
 // The lines as rows `width` wide at `px`, broken at spaces (a word wider than a row by its letters)
 std::vector<Row> wrap(const std::vector<const Line*>& lines, float width, float px, const Measure& m);
+
+// 3.0.18-beta.170 (R-CD8KCP: the chat's frame grew from 0.13 to 1.33 ms in three minutes of hunting - each kill,
+// pick-up or experience line wrapped all its up to 200 lines again, every word measured): wrap's rows of each line
+// kept while it stays the same (its number, its spans' count, its repeats), and the width, the size and the look
+// (`generation`) do too - only a new or changed line measured; the lines no longer given let go
+class WrapCache {
+public:
+    std::vector<Row> wrap(const std::vector<const Line*>& lines, float width, float px, const Measure& m,
+                          int generation);
+
+private:
+    struct Kept {
+        size_t spans = 0;
+        int repeat = 0;
+        std::vector<Row> rows;
+    };
+    std::unordered_map<uint32_t, Kept> kept_;
+    float width_ = -1, px_ = -1;
+    int generation_ = 0;
+};
 
 struct Show {
     Tab tab = Tab::All;

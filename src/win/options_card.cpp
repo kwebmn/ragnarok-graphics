@@ -462,6 +462,10 @@ static void liveFrame(State& s) {
         });
     });
     if (!s.live.made()) return;
+    if (!s.shown) {  // 3.0.18-beta.170 (R-CD8KCP: 0.14 ms a frame while closed): nothing built for a hidden card
+        s.live.frame(false, s.layout.x, s.layout.y, int(winstack::Win::Options), ".ctl");
+        return;
+    }
     const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
     const Rml::String title = say(settings::Text::MenuSettings);
     if (title != s.title || ground != s.ground) {
