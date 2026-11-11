@@ -1,3 +1,5 @@
+- Entering the game after a disconnect (R-CFNPF6): while the server still holds the last entry and the character's selection waits, the «Вхід у гру…» card no longer goes away after 30 s and shows the time left itself: «The server still holds the last entry · 2:27». Before, only a small line at the top of the screen told it, and the wait looked like endless loading.
+
 - The panels that run every frame (the skill bar, chat, party, HP bars, buffs, signs in the world, the controller) are built at full speed again: in .162 the interface was slower (R-MBCDBU: 1.9–2.4 ms a frame against 1.3). Only what opens now and then is built compact: storage, shops, trade, equipment, settings, login, reports, «Довідник». ddraw.dll 17.6 MB (was 20.5), the settings app 4.0 MB.
 - In the log the game memory reads are grouped by the driver's functions: it shows who reads the most.
 
