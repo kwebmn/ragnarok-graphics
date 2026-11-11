@@ -1,3 +1,5 @@
+- The target card: a log warning on a target change removed.
+
 - "Equipment": the character in its clothes' dye and with the head and body layers in the game's order (a priestess's veil over her hair), as the game draws it.
 
 - "Settings" -> "Keys": the keys of "Hunt", "Boss timers", "Tracking", "Party", "What killed me" can be changed (Ctrl and a free letter) or removed.
