@@ -1,3 +1,4 @@
+#include "win/window_stack.hpp"
 #include "win/card_drag.hpp"
 #include "win/merc_card.hpp"
 
@@ -277,7 +278,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         LOG_INFO("merc: the game's mercenary window - the new card shows it");
     }
     s.k = float(k);
-    s.scale = uistyle::readingScale(k);
+    // 3.0.18-beta.152: times its own size (its corner pulled)
+    s.scale = uistyle::readingScale(k) * windowstack::sizeOf(winstack::Win::Merc);
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     s.info = infoOf(s);

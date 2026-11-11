@@ -45,3 +45,24 @@ TEST(uikit_npc_answers_and_button_grids_two_a_row) {
     CHECK(at(g, "btn", 0).x < 100 + 40);  // the first at the left (the body at 100), not pushed right
     rmlhost::close(g);
 }
+
+// 3.0.18-beta.152 (the owner: every window sized by its corner): a live window's document scaled from its top left
+// (win/uaui Doc::zoom - RCSS transform) - RmlUi finds its button where it is drawn, not where it was laid out
+TEST(uikit_zoomed_window_hit_where_drawn) {
+    std::string error;
+    Rml::ElementDocument* d = rmlhost::load(R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="lw" style="width: 400px; height: 300px;"><div id="b" style="position: absolute; left: 200px; top: 200px;
+width: 100px; height: 50px; background-color: #fff;"></div></body></rml>)RML",
+                                            [](Rml::DataModelConstructor&) {}, 100, 100, &error);
+    CHECK_EQ(error, std::string());
+    d->SetProperty("transform-origin", "left top");
+    d->SetProperty("transform", "scale(0.5)");
+    rmlhost::update();
+    rmlhost::context()->Render();  // RmlUi makes the transforms' state as it draws (the game draws every frame)
+    Rml::Context* c = rmlhost::context();
+    Rml::Element* at = c->GetElementAtPoint(Rml::Vector2f(100 + 125, 100 + 110));  // 200*0.5+25, 200*0.5+10
+    CHECK(at && at->GetId() == "b");
+    Rml::Element* old = c->GetElementAtPoint(Rml::Vector2f(100 + 250, 100 + 225));  // where it was laid out
+    CHECK(!old || old->GetId() != "b");
+    rmlhost::close(d);
+}

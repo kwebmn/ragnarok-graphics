@@ -101,6 +101,22 @@ const char* sizeKey(Win w) {
         case Win::Trade: return "trade";
         case Win::Shop: return "shop";
         case Win::Guild: return "guild";
+        // 3.0.18-beta.152: the companions (their own scale) and the live windows (their document zoomed)
+        case Win::Homun: return "homun";
+        case Win::Merc: return "merc";
+        case Win::Npc: return "npc";
+        case Win::Vending: return "vending";
+        case Win::VendSetup: return "shop_setup";
+        case Win::MyShop: return "my_shop";
+        case Win::Pick: return "pick";
+        case Win::Pet: return "pet";
+        case Win::Options: return "options";
+        case Win::Social: return "social";
+        case Win::Room: return "chat_room";
+        case Win::ChatRoom: return "chat_room_make";
+        case Win::Macros: return "macros";
+        case Win::WhisperSetup: return "whisper_setup";
+        case Win::Commands: return "commands";
         default: return nullptr;
     }
 }

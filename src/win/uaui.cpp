@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cmath>
+#include <cstdio>
 #include <cctype>
 #include <set>
 #include <string>
@@ -1810,7 +1811,7 @@ std::vector<panel::Box> Doc::boxesOf(const char* selector) const {
         if (!e->IsVisible()) continue;
         const Rml::Vector2f at = e->GetAbsoluteOffset(Rml::BoxArea::Border) - origin;
         const Rml::Vector2f size = e->GetBox().GetSize(Rml::BoxArea::Border);
-        out.push_back(panel::Box{at.x, at.y, size.x, size.y});
+        out.push_back(panel::Box{at.x * zoom_, at.y * zoom_, size.x * zoom_, size.y * zoom_});  // .152: as drawn
     }
     return out;
 }
@@ -1819,8 +1820,22 @@ bool Doc::box(int& x, int& y, int& w, int& h) const {
     if (!doc_ || !shown_) return false;
     const Rml::Vector2f at = doc_->GetAbsoluteOffset(Rml::BoxArea::Border);
     const Rml::Vector2f size = doc_->GetBox().GetSize(Rml::BoxArea::Border);
-    x = int(at.x), y = int(at.y), w = int(size.x), h = int(size.y);
+    x = int(at.x), y = int(at.y), w = int(size.x * zoom_), h = int(size.y * zoom_);  // .152: as drawn
     return w > 0 && h > 0;
+}
+
+void Doc::zoom(float z) {
+    if (!doc_ || std::fabs(z - zoom_) < 0.001f) return;
+    zoom_ = z;
+    if (std::fabs(z - 1) < 0.001f) {
+        doc_->RemoveProperty("transform");
+        doc_->RemoveProperty("transform-origin");
+        return;
+    }
+    char t[48];
+    std::snprintf(t, sizeof t, "scale(%.3f)", double(z));
+    doc_->SetProperty("transform-origin", "left top");
+    doc_->SetProperty("transform", t);
 }
 
 namespace {

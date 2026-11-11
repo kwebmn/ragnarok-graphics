@@ -103,6 +103,10 @@ public:
     void raise(int z);  // 3.0.18-beta.43: its z-index (a window's: 10 + its place in the stack)
     void mark(bool on);  // 3.0.18-beta.44: its body's class «marked» (the theme's gold edge)
     bool box(int& x, int& y, int& w, int& h) const;  // false while not shown
+    // 3.0.18-beta.152 (the owner: every window sized by its corner): the whole document scaled from its top left
+    // (RCSS transform) - box() and boxesOf() in the target's pixels as drawn; 1 as laid out
+    void zoom(float z);
+    float zoomed() const { return zoom_; }
     // 3.0.18-beta.73 (the big six, F: input through the library): a window's mouse message given to RmlUi when the
     // pointer is over this document - false otherwise (another's then). `onControl`: over an element of class «ctl»
     // (a button, a cell: its own events) - else over its ground (the part drags the window by it)
@@ -133,6 +137,7 @@ private:
     int marked_ = -1;
     int px_ = INT_MIN, py_ = INT_MIN;  // 3.0.18-beta.70: where it was placed
     bool pressedIn_ = false;           // 3.0.18-beta.82: its left button's press taken (its release is its own)
+    float zoom_ = 1;                   // 3.0.18-beta.152
     std::map<std::string, std::string> props_;
     // 3.0.18-beta.59: its markup - the built-in one, its model's name; the player's file's time (0 none)
     std::string builtin_, model_name_;

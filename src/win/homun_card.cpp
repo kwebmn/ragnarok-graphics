@@ -1,3 +1,4 @@
+#include "win/window_stack.hpp"
 #include "win/card_drag.hpp"
 #include "win/homun_card.hpp"
 
@@ -284,7 +285,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         LOG_INFO("homun: the game's homunculus window - the new card shows it");
     }
     s.k = float(k);
-    s.scale = uistyle::readingScale(k);
+    // 3.0.18-beta.152: times its own size (its corner pulled)
+    s.scale = uistyle::readingScale(k) * windowstack::sizeOf(winstack::Win::Homun);
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     s.info = infoOf(s);
