@@ -1698,7 +1698,7 @@ bool drop(int x, int y, uint32_t drag) {
     return true;
 }
 
-void draw(FrameRecord& record, gpu::Renderer& renderer) {
+void draw(FrameRecord& record, gpu::Renderer&) {
     State& s = state();
     if (!s.shown) ui().doc.show(false);  // 3.0.18-beta.21
     const bool byUaui = s.uiShown && s.shown;  // uaUI draws the bar; the lifted icon stays this part's

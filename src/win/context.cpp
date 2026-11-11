@@ -72,6 +72,7 @@
 #include "win/item_window.hpp"
 #include "win/stat_window.hpp"
 #include "win/window_stack.hpp"
+#include "pad/win/client_memory.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/ground_marks.hpp"
 #include "win/pad_assign.hpp"
@@ -802,6 +803,7 @@ void Context::behind() {
 }
 
 void Context::present(const Rect& source, bool waitForVblank) {
+    const double presentFrom = nowMs();  // 3.0.18-beta.161: the driver's own work at a present (logStats)
     // 3.0.3-beta.8: whether the game drew this picture anew - the windows' panel goes over such a one alone: the
     // target keeps its pixels across a present, and over the same picture again the panel would darken itself.
     // 3.0.3-beta.12: put into the game's scene at its EndScene; here only into a picture drawn without one
@@ -1422,7 +1424,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
             ++loadShown_;
         }
     }
+    const double rendererFrom = nowMs();  // 3.0.18-beta.161: the renderer's present apart from our own work
     if (shown) renderer->present(window, out.cx, out.cy, source, o);
+    const double rendererMs = nowMs() - rendererFrom;
     windowSwitch_.presented(light_.other);  // 3.0.3-beta.9: asked to be shown next - its whole picture answers
     if (!firstPicture_) {  // 2.12: the start went well (core/safe_mode)
         firstPicture_ = true;
@@ -1462,6 +1466,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
         default: break;
     }
     ++stats_.frames;
+    stats_.ownMs += nowMs() - presentFrom - rendererMs;  // 3.0.18-beta.161
+    readTallyFrame(GetCurrentThreadId());                // the reads of the game's memory: this thread's, a frame
+    uapad::clientmem::countOn(GetCurrentThreadId());     // the controller's checks of it likewise
     logStats(false);
 }
 
@@ -1841,6 +1848,19 @@ void Context::logStats(bool final) {
         LOG_INFO("%u frames in %.1f s (%.1f fps), %u reads of the frame from the GPU%s%s%s", stats_.frames,
                  ms / 1000.0, ms ? stats_.frames * 1000.0 / ms : 0.0, stats_.readBacks, crisp::stats().c_str(), busy,
                  full);
+    // 3.0.18-beta.161 (the owner: «делай 1 и 2» - the costs measured before the game's access is redone): the
+    // driver's own work at a present, the game's memory it read (each read a call into Windows) and the controller's
+    // checks of that memory (a VirtualQuery each)
+    if (stats_.frames) {
+        uint32_t checks = 0;
+        double checksMs = 0;
+        uapad::clientmem::takeQueries(checks, checksMs);
+        const std::string reads = takeReadTally();
+        LOG_INFO("the driver's frame: %.2f ms of its own work at a present (the renderer's present apart); %s; the "
+                 "controller's memory checks %.0f a frame (%.2f ms)",
+                 stats_.ownMs / stats_.frames, reads.empty() ? "game memory: none read" : reads.c_str(),
+                 checks / double(stats_.frames), checksMs / stats_.frames);
+    }
     // 3.0.11-beta.55 (R-9PP79T): the new interface's pictures painted meanwhile, and what they cost
     if (const std::string paints = uicost::take(); !paints.empty())
         LOG_INFO("interface: pictures painted in %.0f s - %s", ms / 1000.0, paints.c_str());

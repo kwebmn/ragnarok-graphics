@@ -21,6 +21,11 @@ bool load(uintptr_t p, T& out) {
 // True when [p, p + n) is committed memory of this process that can be written.
 bool writable(uintptr_t p, size_t n);
 
+// 3.0.18-beta.161: the checks above counted on the game's thread (each a VirtualQuery) - the driver's 30 s line takes
+// their count and time, the count then started again
+void countOn(DWORD gameThread);
+void takeQueries(uint32_t& count, double& ms);
+
 // The client's code at `at` is byte for byte `sig`.
 bool matches(const uint8_t* sig, size_t n, uintptr_t at);
 

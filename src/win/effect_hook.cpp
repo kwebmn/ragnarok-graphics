@@ -6,6 +6,7 @@
 #include <cstring>
 
 #include "win/context.hpp"
+#include "win/game_camera.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win {
@@ -35,16 +36,10 @@ effect_exe::Faces g_faces;
 effect_exe::Owner g_owner;
 
 // 3.0.13-beta.20: the id of the actor an effect is on - read carefully, the actor may be gone
-uint32_t ownerOf(uint32_t effect) {
+uint32_t ownerOf(uint32_t effect) {  // 3.0.18-beta.161: by readGame - its reads counted with the others
     uint32_t actor = 0, id = 0;
-    SIZE_T n = 0;
-    const auto* at = reinterpret_cast<const void*>(uintptr_t(effect + effect_exe::kEffectMaster));
-    if (!ReadProcessMemory(GetCurrentProcess(), at, &actor, 4, &n) || n != 4 || !actor)
-        return 0;
-    if (!ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(actor + effect_exe::kActorId)),
-                           &id, 4, &n) || n != 4)
-        return 0;
-    return id;
+    if (!readGame(effect + effect_exe::kEffectMaster, &actor, 4) || !actor) return 0;
+    return readGame(actor + effect_exe::kActorId, &id, 4) ? id : 0;
 }
 
 void __attribute__((thiscall)) primRender(uint32_t prim, void* matrix) {

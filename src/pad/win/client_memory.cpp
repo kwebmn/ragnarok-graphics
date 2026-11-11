@@ -1,6 +1,38 @@
 #include "pad/win/client_memory.hpp"
 
 namespace uapad::clientmem {
+namespace {
+
+// 3.0.18-beta.161 (the owner: «делай 1 и 2»): each check below is a call into Windows (VirtualQuery) - counted on the
+// game's thread, its time summed, for the driver's 30 s line
+DWORD g_countedThread = 0;
+uint32_t g_queries = 0;
+LONGLONG g_ticks = 0;
+
+SIZE_T query(uintptr_t at, MEMORY_BASIC_INFORMATION& mbi) {
+    if (!g_countedThread || GetCurrentThreadId() != g_countedThread)
+        return VirtualQuery(reinterpret_cast<LPCVOID>(at), &mbi, sizeof mbi);
+    LARGE_INTEGER a, b;
+    QueryPerformanceCounter(&a);
+    const SIZE_T got = VirtualQuery(reinterpret_cast<LPCVOID>(at), &mbi, sizeof mbi);
+    QueryPerformanceCounter(&b);
+    ++g_queries;
+    g_ticks += b.QuadPart - a.QuadPart;
+    return got;
+}
+
+}  // namespace
+
+void countOn(DWORD gameThread) { g_countedThread = gameThread; }
+
+void takeQueries(uint32_t& count, double& ms) {
+    LARGE_INTEGER f;
+    QueryPerformanceFrequency(&f);
+    count = g_queries;
+    ms = f.QuadPart ? double(g_ticks) * 1000.0 / double(f.QuadPart) : 0.0;
+    g_queries = 0;
+    g_ticks = 0;
+}
 
 bool readable(uintptr_t p, size_t n) {
     if (p == 0 || n == 0 || p + n < p) return false;
@@ -8,7 +40,7 @@ bool readable(uintptr_t p, size_t n) {
                         PAGE_EXECUTE_WRITECOPY;
     for (uintptr_t at = p; at < p + n;) {
         MEMORY_BASIC_INFORMATION mbi{};
-        if (VirtualQuery(reinterpret_cast<LPCVOID>(at), &mbi, sizeof mbi) == 0) return false;
+        if (query(at, mbi) == 0) return false;
         if (mbi.State != MEM_COMMIT || (mbi.Protect & (PAGE_GUARD | PAGE_NOACCESS)) || !(mbi.Protect & kRead))
             return false;
         at = reinterpret_cast<uintptr_t>(mbi.BaseAddress) + mbi.RegionSize;
@@ -21,7 +53,7 @@ bool writable(uintptr_t p, size_t n) {
     const DWORD kWrite = PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
     for (uintptr_t at = p; at < p + n;) {
         MEMORY_BASIC_INFORMATION mbi{};
-        if (VirtualQuery(reinterpret_cast<LPCVOID>(at), &mbi, sizeof mbi) == 0) return false;
+        if (query(at, mbi) == 0) return false;
         if (mbi.State != MEM_COMMIT || (mbi.Protect & (PAGE_GUARD | PAGE_NOACCESS)) || !(mbi.Protect & kWrite))
             return false;
         at = reinterpret_cast<uintptr_t>(mbi.BaseAddress) + mbi.RegionSize;

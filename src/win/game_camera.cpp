@@ -21,18 +21,47 @@
 #include "core/camera_memory.hpp"
 #include "core/layout.hpp"
 #include "core/minimap_proto.hpp"
+#include "core/read_tally.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 
 namespace uagfx::win {
 namespace {
 
+// 3.0.18-beta.161 (the owner: «делай 1 и 2»): the reads on the game's thread counted (core/read_tally) - each one a
+// call into Windows - by the place outside this file that asked: the outermost of its functions (Asked) while it runs
+readtally::Tally g_tally;
+DWORD g_tallyThread = 0;
+uint32_t g_asker = 0;
+double g_msPerTick = 0;
+
+struct Asked {
+    bool outer;
+    explicit Asked(void* from) : outer(g_asker == 0 && g_tallyThread && GetCurrentThreadId() == g_tallyThread) {
+        if (outer) g_asker = uint32_t(uintptr_t(from));
+    }
+    ~Asked() {
+        if (outer) g_asker = 0;
+    }
+};
+
 // ReadProcessMemory on ourselves: an address that is not mapped fails instead of faulting.
 bool read(uint32_t address, void* out, size_t size) {
+    if (!address) return false;
     SIZE_T got = 0;
-    return address && ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(address)), out,
-                                        size, &got) &&
-           got == size;
+    if (!g_tallyThread || GetCurrentThreadId() != g_tallyThread)
+        return ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(address)), out, size,
+                                 &got) &&
+               got == size;
+    LARGE_INTEGER a, b;
+    QueryPerformanceCounter(&a);
+    const bool ok =
+        ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(address)), out, size, &got) &&
+        got == size;
+    QueryPerformanceCounter(&b);
+    g_tally.add(g_asker ? g_asker : uint32_t(uintptr_t(__builtin_return_address(0))),
+                double(b.QuadPart - a.QuadPart) * g_msPerTick);
+    return ok;
 }
 
 // WriteProcessMemory likewise: a place that is not mapped (or not writable) fails
@@ -136,6 +165,7 @@ void freeBuilding(uint32_t mode, const char* why) {
 }  // namespace
 
 bool readGameCamera(float view[12]) {
+    const Asked asked(__builtin_return_address(0));
     uint32_t cview = 0;
     const uint32_t mode = gameMode();
     if (!mode || !read(mode + camera::kModeView, &cview, 4) || !read(cview + camera::kViewMatrix, view, 12 * 4))
@@ -144,6 +174,7 @@ bool readGameCamera(float view[12]) {
 }
 
 bool readCameraTargetDepth(float& z) {
+    const Asked asked(__builtin_return_address(0));
     uint32_t cview = 0;
     float view[12];
     float at[3];
@@ -156,6 +187,7 @@ bool readCameraTargetDepth(float& z) {
 }
 
 bool readCameraAndTarget(float view[12], float at[3]) {
+    const Asked asked(__builtin_return_address(0));
     uint32_t cview = 0;
     const uint32_t mode = gameMode();
     return mode && read(mode + camera::kModeView, &cview, 4) && read(cview + camera::kViewMatrix, view, 12 * 4) &&
@@ -164,13 +196,23 @@ bool readCameraAndTarget(float view[12], float at[3]) {
 
 bool knownGameBuild() { return knownBuild(); }
 
-bool inGameWorld() { return gameMode() != 0; }
+bool inGameWorld() {
+    const Asked asked(__builtin_return_address(0));
+    return gameMode() != 0;
+}
 
-uint32_t readGameMode() { return gameMode(); }
+uint32_t readGameMode() {
+    const Asked asked(__builtin_return_address(0));
+    return gameMode();
+}
 
-bool readGame(uint32_t address, void* out, size_t size) { return read(address, out, size); }
+bool readGame(uint32_t address, void* out, size_t size) {
+    const Asked asked(__builtin_return_address(0));
+    return read(address, out, size);
+}
 
 bool readCameraPose(float& yaw, float& distance) {
+    const Asked asked(__builtin_return_address(0));
     uint32_t cview = 0;
     const uint32_t mode = gameMode();
     float y = 0.0f, d = 0.0f;
@@ -183,6 +225,7 @@ bool readCameraPose(float& yaw, float& distance) {
 }
 
 bool writeCameraPose(float yaw, float distance, bool exact) {
+    const Asked asked(__builtin_return_address(0));
     uint32_t cview = 0;
     const uint32_t mode = gameMode();
     if (!mode || !read(mode + camera::kModeView, &cview, 4) || !cview) return false;
@@ -193,6 +236,7 @@ bool writeCameraPose(float yaw, float distance, bool exact) {
 }
 
 bool readCameraLimits(bool& outdoor, bool& ownLimits, int& limitFrom, int& limitSpan) {
+    const Asked asked(__builtin_return_address(0));
     const uint32_t mode = gameMode();
     int32_t flag = 1, own = 0;
     int16_t from = 0, span = 0;
@@ -207,6 +251,7 @@ bool readCameraLimits(bool& outdoor, bool& ownLimits, int& limitFrom, int& limit
 }
 
 bool keepCameraFree(bool wanted) {
+    const Asked asked(__builtin_return_address(0));
     g_freeWanted = wanted;
     const uint32_t mode = gameMode();
     if (!mode || mode != g_startedMode || g_startedOutdoor) return false;  // not a building whose start was seen
@@ -417,9 +462,13 @@ void raiseWaterBoxes(bool wanted) {
                  "to its far plane", readGameMap().c_str(), raised, seen, waterTop);
 }
 
-bool readHoverCursor(int& x, int& y) { return !uapad::runtime::look().shown && readGameCursor(x, y); }
+bool readHoverCursor(int& x, int& y) {
+    const Asked asked(__builtin_return_address(0));
+    return !uapad::runtime::look().shown && readGameCursor(x, y);
+}
 
 bool readGameCursor(int& x, int& y) {
+    const Asked asked(__builtin_return_address(0));
     int32_t at[2] = {0, 0};
     if (!knownBuild() || !read(camera::kMouse + camera::kMouseX, &at[0], 4) ||
         !read(camera::kMouse + camera::kMouseY, &at[1], 4))
@@ -462,6 +511,7 @@ bool knownWindowCalls() {
 }  // namespace
 
 bool readPlayerCell(int& x, int& y, int& width, int& height) {
+    const Asked asked(__builtin_return_address(0));
     uint32_t world = 0, player = 0, cells = 0;
     float at[3];
     int size[3];
@@ -480,6 +530,7 @@ bool readPlayerCell(int& x, int& y, int& width, int& height) {
 }
 
 bool readPlayerWorld(float at[3], int& width, int& height, int& cellSize) {
+    const Asked asked(__builtin_return_address(0));
     uint32_t world = 0, player = 0, cells = 0;
     int size[3];
     const uint32_t mode = gameMode();
@@ -494,6 +545,7 @@ bool readPlayerWorld(float at[3], int& width, int& height, int& cellSize) {
 }
 
 uint32_t actorAddress(uint32_t id) {
+    const Asked asked(__builtin_return_address(0));
     constexpr uint32_t kWorldActors = 0x18, kActorId = 0x208, kOwnAccount = 0x771F7C;
     uint32_t world = 0, head = 0, node = 0, own = 0;
     const uint32_t mode = gameMode();
@@ -527,6 +579,7 @@ uint32_t actorAddress(uint32_t id) {
 }
 
 bool gameObject(uint32_t object) {
+    const Asked asked(__builtin_return_address(0));
     uint32_t vtable = 0;
     return object && read(object, &vtable, 4) && vtable >= kGameRdataFrom && vtable < kGameRdataTo;
 }
@@ -534,12 +587,14 @@ bool gameObject(uint32_t object) {
 bool gameCode(uint32_t function) { return function >= kGameTextFrom && function < kGameTextTo; }
 
 bool readActorWorld(uint32_t id, float at[3]) {
+    const Asked asked(__builtin_return_address(0));
     const uint32_t actor = actorAddress(id);
     return actor && read(actor + 4, at, 3 * sizeof(float)) && std::isfinite(at[0]) && std::isfinite(at[1]) &&
            std::isfinite(at[2]);
 }
 
 void readActorPlaces(std::unordered_map<uint32_t, std::array<float, 3>>& out) {
+    const Asked asked(__builtin_return_address(0));
     constexpr uint32_t kWorldActors = 0x18, kActorId = 0x208;
     out.clear();
     uint32_t world = 0, head = 0, node = 0;
@@ -559,6 +614,7 @@ void readActorPlaces(std::unordered_map<uint32_t, std::array<float, 3>>& out) {
 }
 
 int actorsOfId(uint32_t id, uint32_t actor, bool& listed) {
+    const Asked asked(__builtin_return_address(0));
     constexpr uint32_t kWorldActors = 0x18, kActorId = 0x208;
     listed = false;
     uint32_t world = 0, head = 0, node = 0;
@@ -580,6 +636,7 @@ int actorsOfId(uint32_t id, uint32_t actor, bool& listed) {
 }
 
 bool readActorBox(uint32_t id, float box[4]) {
+    const Asked asked(__builtin_return_address(0));
     constexpr uint32_t kPickList = 0x74B5F0 + 0x28, kRecordId = 0x18;
     uint32_t head = 0, node = 0;
     if (!id || !gameMode() || !read(kPickList, &head, 4) || !head || !read(head, &node, 4)) return false;
@@ -602,6 +659,7 @@ bool readActorBox(uint32_t id, float box[4]) {
 
 void readActorBoxes(std::unordered_map<uint32_t, std::array<float, 4>>& out,
                     std::unordered_map<uint32_t, int>* classes) {
+    const Asked asked(__builtin_return_address(0));
     out.clear();
     if (classes) classes->clear();
     constexpr uint32_t kPickList = 0x74B5F0 + 0x28, kRecordId = 0x18, kRecordClass = 0x1C;
@@ -622,6 +680,7 @@ void readActorBoxes(std::unordered_map<uint32_t, std::array<float, 4>>& out,
 }
 
 bool readPlayerFacing(float& degrees) {
+    const Asked asked(__builtin_return_address(0));
     uint32_t world = 0, player = 0;
     const uint32_t mode = gameMode();
     return mode && read(mode + kModeWorld, &world, 4) && world && read(world + kWorldPlayer, &player, 4) && player &&
@@ -629,17 +688,20 @@ bool readPlayerFacing(float& degrees) {
 }
 
 bool gameMinimapShown() {
+    const Asked asked(__builtin_return_address(0));
     uint32_t window = 0;
     return gameMode() && read(kMinimapWindow, &window, 4) && window != 0;
 }
 
 bool hideGameMinimap() {
+    const Asked asked(__builtin_return_address(0));
     if (!knownWindowCalls() || !gameMinimapShown()) return false;
     reinterpret_cast<WindowFn>(uintptr_t(kDeleteWindow))(reinterpret_cast<void*>(uintptr_t(kWindowMgr)), kMinimapId);
     return !gameMinimapShown();
 }
 
 bool showGameMinimap() {
+    const Asked asked(__builtin_return_address(0));
     uint32_t allowed = 0;
     const uint32_t mode = gameMode();
     if (!knownWindowCalls() || !mode || gameMinimapShown() || !read(mode + kModeMinimapAllowed, &allowed, 4) ||
@@ -650,6 +712,7 @@ bool showGameMinimap() {
 }
 
 std::string readGameMap() {
+    const Asked asked(__builtin_return_address(0));
     char name[48] = {};
     const uint32_t mode = gameMode();
     if (!mode || !read(mode + camera::kModeMap, name, sizeof name - 1)) return "";
@@ -657,6 +720,7 @@ std::string readGameMap() {
 }
 
 std::string readOwnName() {
+    const Asked asked(__builtin_return_address(0));
     static int known = -1;  // GetCharName as this build has it: the name's place and its key are where they are read
     if (known < 0) {
         uint8_t code[charname::kCodeSize];
@@ -672,6 +736,7 @@ std::string readOwnName() {
 }
 
 bool readOwnStatus(charstatus::Status& s) {
+    const Asked asked(__builtin_return_address(0));
     static int known = -1;  // the handlers and the unmasking as this build has them: the numbers are where read
     if (known < 0) {
         known = knownBuild() ? 1 : 0;
@@ -712,6 +777,23 @@ bool pointerInTarget(HWND game, UINT m, LPARAM lp, double k, int targetWidth, in
     ty = float(p.y) * float(targetHeight) / float(client.bottom);
     if (fromGame) *fromGame = false;
     return true;
+}
+
+void readTallyFrame(uint32_t gameThread) {
+    if (!g_msPerTick) {
+        LARGE_INTEGER f;
+        QueryPerformanceFrequency(&f);
+        g_msPerTick = f.QuadPart ? 1000.0 / double(f.QuadPart) : 0.0;
+    }
+    g_tallyThread = gameThread;
+    g_tally.frame();
+}
+
+std::string takeReadTally() {
+    HMODULE self = nullptr;  // the driver's own module (the system's ddraw.dll may be loaded under the same name)
+    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                       reinterpret_cast<LPCWSTR>(&takeReadTally), &self);
+    return g_tally.take(uint32_t(uintptr_t(self)));
 }
 
 }  // namespace uagfx::win

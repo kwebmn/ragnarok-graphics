@@ -119,6 +119,11 @@ bool writeCameraPose(float yaw, float distance, bool exact);
 bool readCameraLimits(bool& outdoor, bool& ownLimits, int& limitFrom, int& limitSpan);
 // The game's memory read without a fault where nothing is mapped
 bool readGame(uint32_t address, void* out, size_t size);
+// 3.0.18-beta.161 (the owner: «делай 1 и 2»): the reads of the game's memory on its thread counted - each present
+// tells the thread and a frame shown; the log's line every 30 s («game memory: N reads a frame (X ms) - the most
+// from ddraw+0x...»), the tally then started again
+void readTallyFrame(uint32_t gameThread);
+std::string takeReadTally();
 // 3.0.3-beta.2: the name of the character in the game (core/char_name), as the game spells it; "" at the login and the
 // character select, or in another build of the exe (GetCharName's bytes are checked once)
 std::string readOwnName();

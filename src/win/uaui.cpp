@@ -102,6 +102,7 @@ struct Stats {
     int frames = 0, draws = 0, vertices = 0;
     long remeshed = 0;  // 3.0.18-beta.70: geometries meshed anew (the rest reused)
     double update = 0, render = 0, emit = 0, worst = 0;
+    double ours = 0;  // 3.0.18-beta.161: of `update`, our parts' frames before RmlUi's own (begin to its Update)
     double since = 0;
 };
 
@@ -1969,6 +1970,7 @@ void end() {
     }
     for (Doc* d : s.docs)  // a frame after showing: the fade in runs (the theme's transition)
         if (d->fadePending && d->shown()) d->doc()->SetClass("away", false), d->fadePending = false;
+    const double t0 = clockNow();  // 3.0.18-beta.161: our parts' frames so far, RmlUi's own update next
     s.context->Update();
     // 3.0.18-beta.10 (the owner: «когда мышкой колесиком скролю мир увеличивается и уменьшается»): the document under
     // the game's cursor a window for the game (win/world_mouse)
@@ -1993,6 +1995,7 @@ void end() {
     if (!s.cursorSeen) s.cursorSplit = s.batches.size();
     const double t2 = clockNow();
     s.stats.update += t1 - s.frameStart;
+    s.stats.ours += t0 - s.frameStart;
     s.stats.render += t2 - t1;
 }
 
@@ -2177,9 +2180,11 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
         for (auto it = s.icons.begin(); it != s.icons.end();)
             if (it->second.used < old) renderer.releaseTexture(it->second.id), it = s.icons.erase(it);
             else ++it;
-        LOG_INFO("uaui: in %.0f s %d frames - RmlUi's update %.3f ms, its render %.3f ms, ours into the bridge %.3f ms "
-                 "(at most %.3f) a frame; %.1f draws, %.0f vertices a frame (%.1f geometries meshed anew); %d letters in "
-                 "the %dx%d atlas%s, sent %d times", now - st.since, st.frames, st.update * 1000 / n,
+        // 3.0.18-beta.161: «RmlUi's update» as before (our parts' frames in it), then the two apart
+        LOG_INFO("uaui: in %.0f s %d frames - RmlUi's update %.3f ms (our parts %.3f, RmlUi's own %.3f), its render "
+                 "%.3f ms, ours into the bridge %.3f ms (at most %.3f) a frame; %.1f draws, %.0f vertices a frame "
+                 "(%.1f geometries meshed anew); %d letters in the %dx%d atlas%s, sent %d times",
+                 now - st.since, st.frames, st.update * 1000 / n, st.ours * 1000 / n, (st.update - st.ours) * 1000 / n,
                  st.render * 1000 / n, st.emit * 1000 / n, st.worst * 1000, st.draws / n, st.vertices / n,
                  double(st.remeshed) / n, s.atlas.glyphs, kAtlas, kAtlas, s.atlas.full ? " (full)" : "",
                  s.atlas.uploads);

@@ -129,6 +129,7 @@ private:
         unsigned readBacks = 0;
         DWORD since = 0;
         double cpuMs = -1.0;  // 2.5.15: the game's thread's processor time at the window's start (threadCpuMs)
+        double ownMs = 0.0;   // 3.0.18-beta.161: the driver's own work at its presents (the renderer's present apart)
     };
 
     CRITICAL_SECTION cs_;
