@@ -67,3 +67,30 @@ TEST(my_shop_icon_inside_its_row) {
     const panel::Box b = myshop::iconOf(row, 1.0f);
     CHECK(b.w > 0 && b.x > row.x && b.y >= row.y && b.y + b.h <= row.y + row.h);
 }
+
+// 3.0.18-beta.143 (the windows' audit: «Моя лавка» showed nothing of what sold): the sales as the server tells them
+// (0x0137: a place, how many) matched to the shop's things by their place - each sale's name and zeny, how many of
+// each sold, the zeny earned; a place not known: no sale
+TEST(my_shop_sales_ledger) {
+    myshop::Ledger l;
+    l.stock(2, "Arrow of Wind", 3);
+    l.stock(5, "Jellopy", 10);
+    myshop::Sale sale;
+    CHECK(l.sold(2, 100, "10:42", sale));
+    CHECK_EQ(sale.name, std::string("Arrow of Wind"));
+    CHECK_EQ(sale.amount, 100);
+    CHECK_EQ(sale.zeny, 300LL);
+    CHECK_EQ(sale.time, std::string("10:42"));
+    CHECK(l.sold(2, 5, "10:43", sale));
+    CHECK_EQ(l.soldOf(2), 105);
+    CHECK_EQ(l.soldOf(5), 0);
+    CHECK_EQ(l.earned(), 315LL);
+    CHECK(!l.sold(9, 1, "10:44", sale));
+    CHECK_EQ(l.sales().size(), size_t(2));
+    CHECK_EQ(l.sales().front().amount, 5);  // the newest first
+    l.stock(2, "Arrow of Wind", 3);  // the list read again keeps the counts
+    CHECK_EQ(l.soldOf(2), 105);
+    l.clear();
+    CHECK_EQ(l.earned(), 0LL);
+    CHECK(l.sales().empty());
+}

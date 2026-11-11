@@ -482,3 +482,14 @@ TEST(packets_party_experience_share) {
     CHECK(x0 && !x0->even);
     CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 4)));
 }
+
+// 3.0.18-beta.143 («Моя лавка»'s sales): a thing sold from one's own shop (0x0137: its place, how many)
+TEST(packets_own_shop_sold) {
+    std::vector<uint8_t> p = packet(0x0137, 6);
+    put16(p, 2, 3);
+    put16(p, 4, 12);
+    const packets::Event e = packets::parse(p.data(), p.size());
+    const auto* x = std::get_if<packets::ShopSold>(&e);
+    CHECK(x && x->index == 3 && x->amount == 12);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 5)));
+}

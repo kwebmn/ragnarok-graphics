@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "core/frame.hpp"
+#include "core/game_packets.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -20,6 +21,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
+// 3.0.18-beta.143: the server's sales from one's own shop (0x0137) into «Продажі»
+void packet(const packets::Event& e);
 void beforeGameDraw();
 enum class PadCommand : uint8_t { Up, Down, Close };
 void padCommand(PadCommand c);

@@ -4,6 +4,7 @@
 #include <windowsx.h>
 
 #include <algorithm>
+#include <cstdio>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -20,6 +21,7 @@
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/client_tables.hpp"
+#include "win/info_card.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -49,27 +51,49 @@ constexpr size_t kInfoSize = 0x48, kMostNodes = 100;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 // 3.0.18-beta.90 (live windows, group 3): one's own open shop a live window - what is left by flexbox, its worth,
-// «Закрити лавку»
+// «Закрити лавку». 3.0.18-beta.143 (the windows' audit): each thing's sold count, what is inside it, its card by a
+// right click; «Зароблено» and the sales as the server tells them (0x0137, the newest first)
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw vsw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span></div>
 <span class="x ctl" data-event-click="ms_close()">&#x2715;</span>
-<div class="list"><div class="ware" data-for="r : rows"><img data-if="r.icon != ''" data-attr-src="r.icon"/>
-<div class="wname"><span class="name">{{r.name}}</span><span class="stock">{{r.left}}</span></div>
+<div class="list"><div class="ware ctl" data-for="r, i : rows" data-event-mousedown="ms_card(i)"><img
+  data-if="r.icon != ''" data-attr-src="r.icon"/>
+<div class="wname"><span class="name">{{r.name}}</span><span class="inside"
+  data-if="r.inside != ''">{{r.inside}}</span><span class="stock">{{r.left}}<span class="sold"
+  data-if="r.sold != ''"> &#xB7; {{r.sold}}</span></span></div>
 <span class="price">{{r.price}}</span></div>
 <div class="hint" data-if="rows.size == 0">{{empty}}</div></div>
 <div class="sums"><div class="srow"><span class="lbl">{{worth_word}}</span><span
-  class="val">{{worth}}</span></div></div>
+  class="val">{{worth}}</span></div><div class="srow"><span class="lbl">{{earned_word}}</span><span
+  class="val good">{{earned}}</span></div></div>
+<div class="lbl">{{sales_word}}</div>
+<div class="sales"><div class="sale" data-for="x : sales"><span class="t">{{x.time}}</span><span
+  class="what">{{x.what}}</span><span class="z">{{x.zeny}}</span></div>
+<div class="hint" data-if="sales.size == 0">{{no_sales}}</div></div>
+<div class="hint">{{tip}}</div>
 <div class="btns"><div class="btn main ctl" data-event-click="ms_close()">{{close}}</div></div>
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
 struct OwnWareView {
-    Rml::String name, left, price, icon;
+    Rml::String name, left, price, icon, inside, sold;
+    bool operator==(const OwnWareView& o) const {
+        return name == o.name && left == o.left && price == o.price && icon == o.icon && inside == o.inside &&
+               sold == o.sold;
+    }
+};
+struct SaleView {  // 3.0.18-beta.143
+    Rml::String time, what, zeny;
+    bool operator==(const SaleView& o) const { return time == o.time && what == o.what && zeny == o.zeny; }
 };
 
 struct State {
     uilive::Window live;  // 3.0.18-beta.81
     std::vector<OwnWareView> rowViews;
+    std::vector<SaleView> saleViews;  // 3.0.18-beta.143
+    Rml::String earnedWord, earned, salesWord, noSales, tip;
+    ms::Ledger ledger;
+    bool open = false;  // the shop seen open (its sales kept till it closes)
     std::map<const panel::Picture*, std::string> iconPrev;
     Rml::String title, worthWord, worth, close, empty, ground = "#10141cf0";
     uisheet::Sheet sheet;  // 3.0.18-beta.30: the window drawn by uaUI
@@ -169,6 +193,10 @@ void readShop(State& s) {
             r.refine = refine > 0 && refine <= 20 ? refine : 0;
             const auto f = files.find(id);
             if (f != files.end()) r.icon = clienttables::icon(f->second, iw::iconSide(s.scale) * 7 / 8, 4 * s.scale);
+            r.index = int(rd32(raw, 0x08));  // 3.0.18-beta.143
+            r.info = node + kInfo;
+            infocardwin::describe(raw, std::atoi(id.c_str()), s.codePage, r.name, r.inside);
+            s.ledger.stock(r.index, r.refine > 0 ? "+" + std::to_string(r.refine) + " " + r.name : r.name, r.price);
             s.rows.push_back(std::move(r));
         }
     }
@@ -232,6 +260,12 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     const bool world = inGameWorld();
     const uint32_t window = world ? gameShop() : 0;
     if (world) hold(s, window, on);
+    if (window && !s.open) {  // 3.0.18-beta.143: the shop opened - its sales from none
+        s.open = true;
+        s.ledger.clear();
+    } else if (!window && world) {
+        s.open = false;
+    }
     if (!on || !window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         return;
@@ -301,8 +335,28 @@ static void liveFrame(State& s) {
             v.RegisterMember("left", &OwnWareView::left);
             v.RegisterMember("price", &OwnWareView::price);
             v.RegisterMember("icon", &OwnWareView::icon);
+            v.RegisterMember("inside", &OwnWareView::inside);
+            v.RegisterMember("sold", &OwnWareView::sold);
         }
         m.RegisterArray<std::vector<OwnWareView>>();
+        if (auto v = m.RegisterStruct<SaleView>()) {
+            v.RegisterMember("time", &SaleView::time);
+            v.RegisterMember("what", &SaleView::what);
+            v.RegisterMember("zeny", &SaleView::zeny);
+        }
+        m.RegisterArray<std::vector<SaleView>>();
+        m.Bind("sales", &s.saleViews);
+        m.Bind("earned_word", &s.earnedWord);
+        m.Bind("earned", &s.earned);
+        m.Bind("sales_word", &s.salesWord);
+        m.Bind("no_sales", &s.noSales);
+        m.Bind("tip", &s.tip);
+        m.BindEventCallback("ms_card", [](Rml::DataModelHandle, Rml::Event& ev, const Rml::VariantList& a) {
+            State& st = state();  // 3.0.18-beta.143: a right click - the thing's card
+            if (a.empty() || ev.GetParameter<int>("button", 0) != 1) return;
+            const int at = a[0].Get<int>();
+            if (at >= 0 && size_t(at) < st.rows.size()) infocardwin::showItem(st.rows[size_t(at)].info);
+        });
         m.Bind("rows", &s.rowViews);
         m.Bind("title", &s.title);
         m.Bind("worth_word", &s.worthWord);
@@ -325,18 +379,30 @@ static void liveFrame(State& s) {
         if (const size_t p = left.find("{1}"); p != std::string::npos) left.replace(p, 3, std::to_string(r.left));
         v.left = left;
         v.price = money(r.price);
+        v.inside = r.inside;
+        const int sold = s.ledger.soldOf(r.index);
+        v.sold = sold > 0 ? settings::fmt(say(settings::Text::MyShopSoldCount), {std::to_string(sold)}) : "";
         if (r.icon && r.icon->width > 0) v.icon = uaui::picture(r.icon, uaui::stamp(r.icon), s.iconPrev[r.icon]);
         rows.push_back(v);
     }
     const Rml::String worth = money(ms::worth(s.rows));
     const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
-    const bool same = rows.size() == s.rowViews.size() &&
-                      std::equal(rows.begin(), rows.end(), s.rowViews.begin(),
-                                 [](const OwnWareView& a, const OwnWareView& b) {
-                                     return a.name == b.name && a.left == b.left && a.price == b.price &&
-                                            a.icon == b.icon;
-                                 });
-    if (!same) s.rowViews = std::move(rows), s.live.doc.dirty("rows");
+    if (rows != s.rowViews) s.rowViews = std::move(rows), s.live.doc.dirty("rows");
+    {  // 3.0.18-beta.143: the sales, the newest first (8 shown), the zeny earned
+        std::vector<SaleView> sales;
+        for (const ms::Sale& x : s.ledger.sales()) {
+            if (sales.size() >= 8) break;
+            sales.push_back(SaleView{x.time, std::to_string(x.amount) + " \xC3\x97 " + x.name, "+" + money(x.zeny)});
+        }
+        if (sales != s.saleViews) s.saleViews = std::move(sales), s.live.doc.dirty("sales");
+        const Rml::String earned = money(s.ledger.earned());
+        if (earned != s.earned || s.earnedWord.empty()) {
+            s.earned = earned;
+            s.earnedWord = say(settings::Text::MyShopEarned), s.salesWord = say(settings::Text::MyShopSales);
+            s.noSales = say(settings::Text::MyShopNoSales), s.tip = say(settings::Text::ThingCardTip);
+            s.live.doc.dirtyAll();
+        }
+    }
     if (t.title != s.title || t.worth != s.worthWord || worth != s.worth || t.close != s.close ||
         t.empty != s.empty || ground != s.ground) {
         s.title = t.title, s.worthWord = t.worth, s.worth = worth, s.close = t.close, s.empty = t.empty;
@@ -433,6 +499,22 @@ bool box(int& x, int& y, int& w, int& h) {
     w = s.layout.w;
     h = s.layout.h;
     return true;
+}
+
+void packet(const packets::Event& e) {  // 3.0.18-beta.143: a sale from the shop - its line in «Продажі»
+    const auto* x = std::get_if<packets::ShopSold>(&e);
+    if (!x) return;
+    State& s = state();
+    SYSTEMTIME t{};
+    GetLocalTime(&t);
+    char hm[8];
+    std::snprintf(hm, sizeof hm, "%02u:%02u", unsigned(t.wHour), unsigned(t.wMinute));
+    ms::Sale sale;
+    if (s.ledger.sold(x->index, x->amount, hm, sale))
+        LOG_INFO("my shop: sold %d x %s for %lld z (%lld z in all)", sale.amount, sale.name.c_str(), sale.zeny,
+                 s.ledger.earned());
+    else
+        LOG_INFO("my shop: a sale of place %d (%d) not matched to a thing", x->index, x->amount);
 }
 
 }  // namespace uagfx::win::myshopwin

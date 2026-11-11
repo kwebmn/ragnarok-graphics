@@ -922,6 +922,7 @@ enum class Text : uint16_t {
     VendSetupAll, ThingCardTip,  // 3.0.18-beta.142: «Відкрити лавку» - all sold, a right click's card
     ThingForgedBy, ThingForged,  // 3.0.18-beta.142: a forged thing's maker
     VendPadCard,  // 3.0.18-beta.142: «картка» after the controller's button
+    MyShopSoldCount, MyShopEarned, MyShopSales, MyShopNoSales,  // 3.0.18-beta.143: «Моя лавка»'s sales
     Count
 };
 

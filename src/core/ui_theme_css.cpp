@@ -645,6 +645,14 @@ select selectbox option:checked { color: #e6cb8a; }
 .lw .wname .stock { display: block; font-size: 10.5dp; color: #9aa3b5; }
 /* 3.0.18-beta.138: a ware's cards and free slots; its name opens its card */
 .vsw .wname .inside, .vstw .wname .inside { display: block; font-size: 10.5dp; color: #b8c8ff; }
+/* 3.0.18-beta.143: «Моя лавка» - sold counts, the sales */
+.vsw .wname .sold { color: #9fe07c; }
+.vsw .srow .val.good { color: #9fe07c; }
+.vsw .sales { display: block; max-height: 150dp; overflow-y: auto; margin: 2dp 0 6dp 0; }
+.vsw .sale { display: flex; font-size: 11.5dp; padding: 2dp 4dp; }
+.vsw .sale .t { width: 40dp; color: #9aa3b5; }
+.vsw .sale .what { flex: 1; }
+.vsw .sale .z { color: #9fe07c; }
 .vstw .all { display: block; margin-top: 4dp; font-size: 12dp; font-weight: bold; color: #e6cb8a; }
 .vsw .wname:hover .name { color: #e6cb8a; }
 .lw .price { font-size: 12dp; color: #e6cb8a; margin-right: 10dp; }

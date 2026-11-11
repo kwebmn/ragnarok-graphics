@@ -90,4 +90,32 @@ std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const Sh
 
 panel::Box iconOf(const panel::Box& row, float s) { return iconBox(row, s); }
 
+void Ledger::stock(int index, const std::string& name, long long price) {
+    Thing& t = things_[index];
+    t.name = name;
+    t.price = price;
+}
+
+bool Ledger::sold(int index, int amount, const std::string& time, Sale& out) {
+    const auto it = things_.find(index);
+    if (it == things_.end() || amount <= 0) return false;
+    it->second.sold += amount;
+    out = Sale{time, it->second.name, amount, it->second.price * amount};
+    earned_ += out.zeny;
+    sales_.insert(sales_.begin(), out);
+    if (sales_.size() > 50) sales_.pop_back();
+    return true;
+}
+
+int Ledger::soldOf(int index) const {
+    const auto it = things_.find(index);
+    return it == things_.end() ? 0 : it->second.sold;
+}
+
+void Ledger::clear() {
+    things_.clear();
+    sales_.clear();
+    earned_ = 0;
+}
+
 }  // namespace uagfx::myshop

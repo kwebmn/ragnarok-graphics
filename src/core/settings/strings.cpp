@@ -8387,6 +8387,10 @@ constexpr Entry kTexts[] = {
      "Кована",
      "Кованая"},
     {Text::VendPadCard, "its card", "картка", "карточка"},
+    {Text::MyShopSoldCount, "sold {1}", "продано {1}", "продано {1}"},  // 3.0.18-beta.143
+    {Text::MyShopEarned, "Earned", "Зароблено", "Заработано"},
+    {Text::MyShopSales, "Sales", "Продажі", "Продажи"},
+    {Text::MyShopNoSales, "Nothing sold yet", "Поки нічого не продано", "Пока ничего не продано"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

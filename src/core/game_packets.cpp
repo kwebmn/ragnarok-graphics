@@ -162,6 +162,9 @@ Event parse(const uint8_t* p, size_t size) {
             if (size >= 79) m.map = mapAt(p, 63);
             return m;
         }
+        case 0x0137:  // 3.0.18-beta.143
+            if (size < 6) return {};
+            return ShopSold{int(int16_t(rd16(p, 2))), int(int16_t(rd16(p, 4)))};
         case 0x0101:  // 3.0.18-beta.141
             if (size < 6) return {};
             return PartyExp{rd32(p, 2) != 0};
