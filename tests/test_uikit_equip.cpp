@@ -122,14 +122,17 @@ TEST(uikit_equip_long_names_wrap_and_grow_their_slot) {
     rmlhost::close(doc);
 }
 
-// 3.0.18-beta.114 (the owner: «нету кнопки для анманта пеко итд»): the game's window's one button over the character,
-// found by its box (the window is passive); none when there is nothing to take off
-TEST(uikit_equip_mount_button_in_the_middle) {
+// 3.0.18-beta.114 (the owner: «нету кнопки для анманта пеко итд»), .116 (the owner chose «2 Значок між стрілками»): a
+// sign between ◀ and ▶, found by its box (the window is passive); its words in a tip over it while the cursor is on
+// it; none when there is nothing to take off
+TEST(uikit_equip_mount_button_between_the_arrows) {
     ew::Data d;
     ew::Show sh;
     static el::Model m;
     el::fill(m, d, sh, texts(), 1, none, glyph);
+    m.turns = true;
     m.mountOff = "Злізти з Пеко";
+    m.mountIcon = "";
     std::string error;
     Rml::ElementDocument* doc =
         rmlhost::load(el::rml(), [&](Rml::DataModelConstructor& c) { el::bind(c, m); }, 0, 0, &error);
@@ -139,14 +142,23 @@ TEST(uikit_equip_mount_button_in_the_middle) {
     });
     CHECK(el::refit(doc, L));
     const std::vector<uikit::Placed> at = uikit::placesOf(doc, "mountoff");
+    const std::vector<uikit::Placed> left = uikit::placesOf(doc, "turnleft"), right = uikit::placesOf(doc, "turnright");
     CHECK_EQ(at.size(), size_t(1));
-    if (at.size() == 1) {
+    CHECK(left.size() == 1 && right.size() == 1);
+    if (at.size() == 1 && left.size() == 1 && right.size() == 1) {
         const panel::Box& b = at[0].box;
-        CHECK(b.w > 40 && b.h > 15);
-        CHECK(b.x >= L.centre.x - 0.5f && b.x + b.w <= L.centre.x + L.centre.w + 0.5f);
-        CHECK(b.y >= L.centre.y - 0.5f && b.y < L.centre.y + 40);
+        CHECK(b.x >= left[0].box.x + left[0].box.w && b.x + b.w <= right[0].box.x);  // between them
+        CHECK(std::abs((b.y + b.h / 2) - (left[0].box.y + left[0].box.h / 2)) < 1.5f);  // in their row
+        CHECK(std::abs(b.w - b.h) < 0.5f);  // round: a sign alone
     }
+    CHECK(uikit::placesOf(doc, "mounttip").empty());  // the words only under the cursor
+    m.mountHot = true;
+    rmlhost::update();
+    const std::vector<uikit::Placed> tip = uikit::placesOf(doc, "mounttip");
+    CHECK_EQ(tip.size(), size_t(1));
+    if (tip.size() == 1 && at.size() == 1) CHECK(tip[0].box.y + tip[0].box.h <= at[0].box.y + 0.5f);  // over it
     m.mountOff = "";
+    m.mountHot = false;
     rmlhost::update();
     CHECK(uikit::placesOf(doc, "mountoff").empty());
     rmlhost::close(doc);

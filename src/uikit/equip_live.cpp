@@ -25,12 +25,15 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   class="txt"><div class="lbl">{{sl.label}}</div><div class="nm" data-class-worn="sl.worn"
   data-class-spill="sl.spill"><span>{{sl.name}}</span><span class="dot" data-for="d : sl.dots"
   data-class-card="d > 0"></span></div></div></div></div>
-<div class="centre" data-hit="centre"><div class="stage"><div class="mount" data-if="mountOff != ''"><span
-  class="mb" data-hit="mountoff" data-class-hot="mountHot">{{mountOff}}</span></div><img data-if="hero != ''"
-  data-attr-src="hero"
-  data-style-width="heroW + 'px'" data-style-height="heroH + 'px'"/><div class="turn" data-if="turns"><span
-  class="tb" data-hit="turnleft" data-class-hot="turnHot == 0">&#x25C0;</span><span class="tb" data-hit="turnright"
-  data-class-hot="turnHot == 1">&#x25B6;</span></div></div>
+<div class="centre" data-hit="centre"><div class="stage"><img data-if="hero != ''" data-attr-src="hero"
+  data-style-width="heroW + 'px'" data-style-height="heroH + 'px'"/><div class="turn"
+  data-if="turns || mountOff != ''"><span
+  class="tb" data-if="turns" data-hit="turnleft" data-class-hot="turnHot == 0">&#x25C0;</span><span class="mi"
+  data-if="mountOff != ''" data-hit="mountoff" data-class-hot="mountHot"><img data-if="mountIcon != ''"
+  data-attr-src="mountIcon" data-style-width="mountIconSide + 'px'"
+  data-style-height="mountIconSide + 'px'"/></span><span
+  class="tb" data-if="turns" data-hit="turnright" data-class-hot="turnHot == 1">&#x25B6;</span></div><div class="mtip"
+  data-if="mountHot" data-hit="mounttip"><span class="tp">{{mountOff}}</span></div></div>
 <div class="picks" data-if="picking" data-hit="picklist"><div class="ptitle">{{pickTitle}}</div><div class="pnone"
   data-if="picks.size == 0">{{pickNone}}</div><div class="pick" data-for="p : picks" data-hit="pick"
   data-attr-data-index="p.index" data-class-hot="p.hot" data-class-focus="p.focus"><div class="pic"><img
@@ -127,6 +130,8 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("mountOff", &m.mountOff);
     c.Bind("mountHot", &m.mountHot);
     c.Bind("turnHot", &m.turnHot);
+    c.Bind("mountIcon", &m.mountIcon);
+    c.Bind("mountIconSide", &m.mountIconSide);
     c.Bind("cards", &m.cards);
     c.Bind("drag", &m.drag);
     c.Bind("pickTitle", &m.pickTitle);

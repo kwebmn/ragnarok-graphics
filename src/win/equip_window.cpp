@@ -35,6 +35,7 @@
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
 #include "uikit/equip_live.hpp"
+#include "core/mount_icon.hpp"
 #include "win/hero_picture.hpp"
 #include "win/pack_pictures.hpp"
 #include "win/live_part.hpp"
@@ -649,6 +650,17 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                     m.turns = s.hero.width > 0;  // 3.0.18-beta.111: its sprites' character
                                     m.mountOff = mountWords(mountNow());  // 3.0.18-beta.114
                                     m.mountHot = s.mountHot;
+                                    if (!m.mountOff.empty()) {  // .116: its sign, made for the window's size
+                                        const int side = std::max(8, int(std::lround(16 * s.scale)));
+                                        m.mountIconSide = float(side);
+                                        m.mountIcon = s.live.made("mount" + std::to_string(side), side, side,
+                                                                  [&](panel::Picture& p) {
+                                                                      mounticon::paint(p.px, p.width, p.height,
+                                                                                       0xE6CB8A);
+                                                                  });
+                                    } else {
+                                        m.mountIcon.clear();
+                                    }
                                     m.turnHot = s.turnHot;
                                     m.hero = m.turns ? s.live.icon(&s.hero) : "";
                                     {  // .113: fitted into the middle's box, its proportions kept

@@ -1355,12 +1355,18 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .nm { height: auto; line-height: 1.4167rem; white-space: normal; }
 .eql .centre { height: auto; min-height: 21.6667rem; }
 .eql .stage { height: 100%; min-height: 21.6667rem; }
-/* 3.0.18-beta.114 (the owner: «нету кнопки для анманта пеко итд»): the game's window's button over the character */
-.eql .mount { position: absolute; left: 0; right: 0; top: 0.3333rem; display: flex; justify-content: center;
-    z-index: 2; }
-.eql .mb { display: block; height: 1.8333rem; line-height: 1.8333rem; padding: 0 0.6667rem; font-size: 0.9167rem;
-    border-radius: 0.6667rem; border: 0.0833rem #ffffff22; background-color: #00000066; color: #e6cb8a; }
-.eql .mb.hot, .eql .mb:hover { background-color: #ffffff24; }
+/* 3.0.18-beta.114 (the owner: «нету кнопки для анманта пеко итд»), .116 (the owner chose «2 Значок між стрілками»):
+   a round sign between ◀ and ▶, its words in a tip over it */
+.eql .turn { align-items: center; }
+.eql .mi { display: flex; justify-content: center; align-items: center; width: 2.3333rem; height: 2.3333rem;
+    border-radius: 1.1667rem; border: 0.0833rem #e6cb8a88; background-color: #00000066; }
+.eql .mi.hot, .eql .mi:hover { background-color: #ffffff24; border-color: #e6cb8a; }
+.eql .mi img { display: block; }
+.eql .mtip { position: absolute; left: 0; right: 0; bottom: 2.9167rem; display: flex; justify-content: center;
+    z-index: 3; }
+.eql .tp { display: block; height: 1.8333rem; line-height: 1.8333rem; padding: 0 0.6667rem; font-size: 0.9167rem;
+    border-radius: 0.5rem; border: 0.0833rem #ffffff22; background-color: #000000cc; color: #e9e4ea;
+    white-space: nowrap; }
 )";
 
 }  // namespace
