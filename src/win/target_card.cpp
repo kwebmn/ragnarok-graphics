@@ -232,7 +232,8 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
  <div class="tcx" data-event-click="close()">&#x2715;</div>
  <div class="hints" data-if="pad"><div><img data-attr-src="pad_a"/>{{attack}}</div><div><img data-attr-src="pad_r"/>{{next}}</div></div>
 </div><br/>
-<div class="details"><p data-for="l, i : lines" data-style-color="l.colour" data-class-first="i == 0">{{l.text}}</p></div>
+<div class="details"><p data-for="l, i : lines" data-if="l.text != ''" data-style-color="l.colour"
+  data-class-first="i == 0">{{l.text}}</p></div>
 </body></rml>)RML";
 
 struct Line {
@@ -359,8 +360,12 @@ bool uiFrame(State& s) {
         u.pad = d.pad && !t.attack.empty();
         u.attack = t.attack;
         u.next = t.next;
+        // 3.0.18-beta.127 (R-7TVEJU «lines[4].colour», «color: ;»): never fewer rows than before - a shorter list
+        // left RmlUi a row past its end for a frame; the rows over the words empty and hidden
+        const size_t had = u.lines.size();
         u.lines.clear();
         for (const auto& [text, rgb] : tc::detailLines(d, t)) u.lines.push_back({text, colourOf(rgb)});
+        while (u.lines.size() < std::max<size_t>(had, 12)) u.lines.push_back(Line{});
         u.doc.dirtyAll();
     }
     // the monster's picture, the book's icon (dim and lit), the controller's buttons - pictures of the driver's

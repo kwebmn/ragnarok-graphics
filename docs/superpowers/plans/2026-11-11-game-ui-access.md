@@ -59,3 +59,5 @@ Ledger:
   (data\palette\몸\<+0x90c name><ending>_<n>.pal), the .imf order (core readImf/imfPriority, test; format checked on
   UaRO.grf's 성직자_여.imf: the body 1 over the head 0 standing - the veil). Ruling: no weapon / shield, as the
   original. Cost if the owner wants them: the weapon sprite tables (weapon view, job weapon names) to find.
+- 3.0.18-beta.127 (item 4): «Картка цілі»'s «lines[4].colour» / «color: ;» (R-7TVEJU) - its details' list never
+  shorter than before (at least 12, the spare rows empty and hidden by data-if): no row past the list's end.
