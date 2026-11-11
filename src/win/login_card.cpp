@@ -27,6 +27,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/map_entry_hook.hpp"
 #include "win/msg_box.hpp"
 #include "win/game_logins.hpp"
 #include "win/login_continue.hpp"
@@ -80,29 +81,22 @@ using SetTextFn = void(__attribute__((thiscall)) *)(uint32_t edit, const char* t
 // 3.0.11-beta.203: the veil while the login enters the game by itself (core/enter_veil)
 struct Veil {
     bool on = false;
+    bool held = false;  // 3.0.18-beta.164: the map entry's pause held the selection at the last frame
     ULONGLONG since = 0;
     enterveil::Texts texts;
-    enterveil::Layout layout;
     float k = 0;
-    int w = 0, h = 0, phase = -1;
-    panel::Picture picture;
-    uint32_t texture = 0;
-    int texW = 0, texH = 0;
-    bool upload = false;
+    int w = 0, h = 0;
 };
 
 struct State {
     // 3.0.18-beta.69 (the big six, B): the veil and the shelf's note drawn by uaUI over its windows
     uisheet::Sheet veilSheet, toastSheet;
-    bool veilShown = false, toastShown = false;
-    int veilGen = 0, toastGen = 0;
     // 3.0.18-beta.107 (docs/superpowers/plans/2026-11-10-uaui-live-drag.md): the card live - laid out by RmlUi, its
     // boxes into core logincard's layout by name (refit); `options` what that layout was asked for
     LivePart<uikit::login::Model> live;
     lc::Options options;
     uisheet::Sheet chromeSheet;  // 3.0.18-beta.44: the strip at the screen's foot
     int chromeGen = 0;
-    bool chromeShown = false;
     int sheetGen = 0;
     bool sheetShown = false;
     Veil veil;  // 3.0.11-beta.203
@@ -119,10 +113,6 @@ struct State {
     lc::Show show;
     lc::Layout layout;
     std::string key;
-    panel::Picture picture;
-    uint32_t texture = 0;
-    int texW = 0, texH = 0;
-    bool upload = false;
     int told = 0;
     // 3.0.11-beta.172: the server's refusal shown under its field until the player changes that field
     std::string lastTyped;  // the login last seen in the game's field, not empty (a refused one: its window gone)
@@ -181,10 +171,6 @@ struct State {
     shelftoast::Layout toastLayout;
     bool toastHot = false, toastBlocked = false;
     std::string toastKey;
-    panel::Picture toastPicture;
-    uint32_t toastTexture = 0;
-    int toastTexW = 0, toastTexH = 0;
-    bool toastUpload = false;
 };
 
 State& state() {
@@ -759,8 +745,13 @@ void dropPick(State& s, int row) {
 void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight) {
     if (s.veil.on) {  // 3.0.11-beta.203: the veil's end
         const ULONGLONG now = GetTickCount64();
+        // 3.0.18-beta.164 (R-CFNPF6): while the map entry's pause holds the selection the veil stays (its card tells
+        // the time left); let go, its 30 s from then
+        const bool held = mapEntryHeldSeconds() > 0;
+        if (s.veil.held && !held) s.veil.since = now;
+        s.veil.held = held;
         const enterveil::End end = enterveil::ending(!readGameMap().empty(), msgboxwin::asking(),
-                                                     s.shown && now - s.veil.since > 1500, s.veil.since, now);
+                                                     s.shown && now - s.veil.since > 1500, s.veil.since, now, held);
         if (end != enterveil::End::No) {
             s.veil.on = false;
             static const char* const kWhy[] = {"", "the map started", "a box asks", "the login card back", "30 s"};
@@ -818,33 +809,36 @@ void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight
     s.veilSheet.top = s.toastSheet.top = true;
     const Veil& v = s.veil;
     const int phase = v.on ? int((GetTickCount64() - v.since) / 350 % 3) : 0;
-    s.veilShown = s.veilSheet.frame("enter veil", v.on && k > 0 && targetWidth > 0, true, 0, 0,
-                                    phase * 131 + targetWidth * 7 + targetHeight + (v.on ? 1 : 0),
-                                    [&](uisheet::Content& c) {
-                                        c.w = float(targetWidth), c.h = float(targetHeight);
-                                        c.rect(c.under, panel::Box{0, 0, c.w, c.h}, 0, 0x000000, 0.94f);
-                                        const enterveil::Layout L =
-                                            enterveil::layout(targetWidth, targetHeight, uistyle::readingScale(k));
-                                        const float sc = L.s, x = float(L.x), y = float(L.y);
-                                        panel::Box card = L.card;
-                                        card.x += x, card.y += y;
-                                        c.rect(c.over, card, 14 * sc, 0x10141C, 0.97f, 0xFFFFFF, 0.14f,
-                                               std::max(1.0f, sc));
-                                        for (int i = 0; i < 3; ++i) {
-                                            const float cx = x + L.dots.x + (7 + 15 * float(i)) * sc,
-                                                        cy = y + L.dots.y + L.dots.h / 2, r = 3.2f * sc;
-                                            c.rect(c.over, panel::Box{cx - r, cy - r, 2 * r, 2 * r}, r, 0xE6CB8A,
-                                                   i <= phase ? 0.95f : 0.25f);
-                                        }
-                                        for (const enterveil::Words& w : enterveil::words(L, v.texts))
-                                            c.words.push_back(uisheet::Word{
-                                                x + w.box.x, y + w.box.y, w.box.w, w.box.h, w.px, w.box.h, w.text,
-                                                uisheet::Content::rgba(w.rgb, 1),
-                                                std::string(w.bold ? "word bold" : "word") +
-                                                    (w.align == enterveil::Align::Left    ? ""
-                                                     : w.align == enterveil::Align::Right ? " right"
-                                                                                          : " centre")});
-                                    });
+    const unsigned wait = v.on ? mapEntryHeldSeconds() : 0;  // 3.0.18-beta.164 (R-CFNPF6): the pause's time left
+    enterveil::Texts texts = v.texts;
+    if (wait) texts.line = settings::fmt(say(settings::Text::ConnEntryWaitCard), {enterveil::clock(wait)});
+    s.veilSheet.frame("enter veil", v.on && k > 0 && targetWidth > 0, true, 0, 0,
+                      phase * 131 + targetWidth * 7 + targetHeight + (v.on ? 1 : 0) + int(wait) * 7919,
+                      [&](uisheet::Content& c) {
+                          c.w = float(targetWidth), c.h = float(targetHeight);
+                          c.rect(c.under, panel::Box{0, 0, c.w, c.h}, 0, 0x000000, 0.94f);
+                          const enterveil::Layout L =
+                              enterveil::layout(targetWidth, targetHeight, uistyle::readingScale(k));
+                          const float sc = L.s, x = float(L.x), y = float(L.y);
+                          panel::Box card = L.card;
+                          card.x += x, card.y += y;
+                          c.rect(c.over, card, 14 * sc, 0x10141C, 0.97f, 0xFFFFFF, 0.14f,
+                                 std::max(1.0f, sc));
+                          for (int i = 0; i < 3; ++i) {
+                              const float cx = x + L.dots.x + (7 + 15 * float(i)) * sc,
+                                          cy = y + L.dots.y + L.dots.h / 2, r = 3.2f * sc;
+                              c.rect(c.over, panel::Box{cx - r, cy - r, 2 * r, 2 * r}, r, 0xE6CB8A,
+                                     i <= phase ? 0.95f : 0.25f);
+                          }
+                          for (const enterveil::Words& w : enterveil::words(L, texts))
+                              c.words.push_back(uisheet::Word{
+                                  x + w.box.x, y + w.box.y, w.box.w, w.box.h, w.px, w.box.h, w.text,
+                                  uisheet::Content::rgba(w.rgb, 1),
+                                  std::string(w.bold ? "word bold" : "word") +
+                                      (w.align == enterveil::Align::Left    ? ""
+                                       : w.align == enterveil::Align::Right ? " right"
+                                                                            : " centre")});
+                      });
     const ULONGLONG now = GetTickCount64();
     const bool toastOn = !s.toast.empty() && now < s.toastUntil && k > 0 && s.toastLayout.w > 0;
     if (toastOn) {
@@ -854,7 +848,7 @@ void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight
                      shelftoast::overUndo(L, float(cx) * float(k) - float(L.x), float(cy) * float(k) - float(L.y));
     }
     const float fade = std::clamp(float(s.toastUntil > now ? s.toastUntil - now : 0) / 400.0f, 0.0f, 1.0f);
-    s.toastShown = s.toastSheet.frame(
+    s.toastSheet.frame(
         "shelf toast", toastOn, true, s.toastLayout.x, s.toastLayout.y,
         int(std::hash<std::string>()(s.toast)) ^ (s.toastHot ? 1 : 0) ^ int(fade * 20) * 977 ^ s.toastLayout.w,
         [&](uisheet::Content& c) {
@@ -1103,8 +1097,8 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
     frameInner(game, on, status, news, view, codePage, k, targetWidth, targetHeight);
     State& s = state();
     s.chromeSheet.anywhere = true;  // 3.0.18-beta.44
-    s.chromeShown = s.chromeSheet.frame("login strip", s.shown && s.chrome.w > 0 && s.chromeGen > 0, true, s.chrome.x,
-                                        s.chrome.y, s.chromeGen, [&](uisheet::Content& c) { chromeSheet(s, c); });
+    s.chromeSheet.frame("login strip", s.shown && s.chrome.w > 0 && s.chromeGen > 0, true, s.chrome.x,
+                        s.chrome.y, s.chromeGen, [&](uisheet::Content& c) { chromeSheet(s, c); });
     namespace ll = uikit::login;
     s.live.doc.anywhere = true;  // before the world
     const int gen = s.sheetGen ^ (s.dropOpen ? (s.dropHover + 2) * 7919 : 0);  // ▾'s list and its row lit too
@@ -1161,7 +1155,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         logincontinuewin::draw(record, renderer);
     } else if (s.mode == State::Mode::Site) {  // 3.0.11-beta.180: the site sign-in card
         sitesigninwin::draw(record, renderer);
-    } else if (s.sheetShown || (s.picture.width > 0 && s.picture.height > 0)) {
+    } else if (s.sheetShown) {
         const panel::Box& g = s.layout.glass;
         s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
                       14 * s.scale, s.scale, s.k);  // 3.0.18-beta.43: under uaUI's card too
@@ -1300,12 +1294,13 @@ bool loginWith(const accounts::Account& a, bool stopAtSelect, const std::string&
         v.texts.line = s.autoName == a.last.name
                            ? a.last.job + (a.last.level > 0 ? " \xC2\xB7 " + std::to_string(a.last.level) : "")
                            : std::string();
-        v.phase = -1;
         LOG_INFO("login: the veil «%s» over the way into the game", v.texts.title.c_str());
     }
     pressEnter(window);
     return true;
 }
+
+bool veilOn() { return state().veil.on; }
 
 void veilOver(const std::string& name, const std::string& line) {
     State& s = state();
@@ -1316,7 +1311,6 @@ void veilOver(const std::string& name, const std::string& line) {
     v.texts.title = say(settings::Text::EnterVeilTitle);
     v.texts.name = name;
     v.texts.line = line;
-    v.phase = -1;
     LOG_INFO("login: the veil «%s» over the way into the game («Увійти» in the character select)",
              v.texts.title.c_str());
 }

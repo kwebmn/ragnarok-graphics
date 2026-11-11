@@ -36,6 +36,9 @@ std::vector<Words> words(const Layout& L, const Texts& t);
 
 enum class End : uint8_t { No, World, Box, Login, Late };
 constexpr uint64_t kMostMs = 30000;
-End ending(bool mapStarted, bool boxAsks, bool loginBack, uint64_t since, uint64_t now);
+// 3.0.18-beta.164 (R-CFNPF6): `held` - the map entry's pause holds the character's selection (win/map_entry_hook):
+// no 30 s then, the veil tells the time left
+End ending(bool mapStarted, bool boxAsks, bool loginBack, uint64_t since, uint64_t now, bool held = false);
+std::string clock(unsigned seconds);  // «2:27»
 
 }  // namespace uagfx::enterveil

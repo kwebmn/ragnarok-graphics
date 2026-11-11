@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 
 namespace uagfx::enterveil {
 namespace {
@@ -36,12 +37,18 @@ std::vector<Words> words(const Layout& L, const Texts& t) {
     return out;
 }
 
-End ending(bool mapStarted, bool boxAsks, bool loginBack, uint64_t since, uint64_t now) {
+End ending(bool mapStarted, bool boxAsks, bool loginBack, uint64_t since, uint64_t now, bool held) {
     if (mapStarted) return End::World;
     if (boxAsks) return End::Box;
     if (loginBack) return End::Login;
-    if (now - since > kMostMs) return End::Late;
+    if (!held && now - since > kMostMs) return End::Late;
     return End::No;
+}
+
+std::string clock(unsigned seconds) {
+    char text[16];
+    std::snprintf(text, sizeof text, "%u:%02u", seconds / 60, seconds % 60);
+    return text;
 }
 
 }  // namespace uagfx::enterveil

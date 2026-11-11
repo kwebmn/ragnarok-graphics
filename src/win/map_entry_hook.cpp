@@ -7,10 +7,12 @@
 #include <string>
 
 #include "core/layout.hpp"
+#include "core/enter_veil.hpp"
 #include "core/login_exe.hpp"
 #include "core/map_entry.hpp"
 #include "core/settings/strings.hpp"
 #include "win/log.hpp"
+#include "win/login_card.hpp"
 #include "win/paths.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/text_window.hpp"
@@ -42,6 +44,7 @@ struct Held {  // a character's selection held back (CH_SELECT_CHAR)
     uint64_t nextPing = 0;
     settings::Lang lang = settings::Lang::En;
 } g_held;
+unsigned g_heldSeconds = 0;  // 3.0.18-beta.164: the time left while it is held (the login's veil shows it)
 HWND g_notice = nullptr;
 std::wstring g_noticeText;
 bool g_loaded = false;    // the file's hold taken
@@ -225,9 +228,15 @@ void mapEntryFrame(const ConnectionSettings& settings, HWND game) {
         g_held.nextPing = now + 10000;
     }
     const unsigned left = unsigned((g_guard.holdUntil() - now + 999) / 1000);
-    char clock[16];
-    std::snprintf(clock, sizeof clock, "%u:%02u", left / 60, left % 60);
-    showNotice(game, wide(settings::fmt(settings::tr(g_held.lang, settings::Text::ConnEntryWait), {clock})));
+    g_heldSeconds = left;
+    if (loginwin::veilOn()) {  // 3.0.18-beta.164 (R-CFNPF6): the veil's card tells it, big - not this line
+        hideNotice();
+        return;
+    }
+    showNotice(game, wide(settings::fmt(settings::tr(g_held.lang, settings::Text::ConnEntryWait),
+                                        {enterveil::clock(left)})));
 }
+
+unsigned mapEntryHeldSeconds() { return g_held.on ? g_heldSeconds : 0; }
 
 }  // namespace uagfx::win

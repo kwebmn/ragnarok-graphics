@@ -34,3 +34,19 @@ TEST(enter_veil_ends) {
     CHECK(enterveil::ending(false, false, true, 1000, 5000) == E::Login);  // the login card back (not entered)
     CHECK(enterveil::ending(false, false, false, 1000, 31001) == E::Late);
 }
+
+// 3.0.18-beta.164 (R-CFNPF6, the tester: «не пускает в игру ... будет такая загрузка вечно»): the map entry's pause
+// held the character's selection 160 s while the veil went at 30 s and a small line at the screen's top alone told
+// why - while the pause holds, the veil stays past its 30 s (a box or the login card back still end it), its line the
+// time left
+TEST(enter_veil_stays_while_the_map_entry_pause_holds) {
+    using E = enterveil::End;
+    CHECK(enterveil::ending(false, false, false, 1000, 200000, true) == E::No);  // no 30 s while held
+    CHECK(enterveil::ending(false, true, false, 1000, 200000, true) == E::Box);  // a box asks: shown all the same
+    CHECK(enterveil::ending(false, false, true, 1000, 5000, true) == E::Login);
+    CHECK(enterveil::ending(true, false, false, 1000, 5000, true) == E::World);
+    CHECK(enterveil::ending(false, false, false, 1000, 31001, false) == E::Late);  // let go: its 30 s again
+    CHECK(enterveil::clock(147) == "2:27");
+    CHECK(enterveil::clock(5) == "0:05");
+    CHECK(enterveil::clock(0) == "0:00");
+}

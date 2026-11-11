@@ -8001,6 +8001,9 @@ constexpr Entry kTexts[] = {
     {Text::ConnEntryWait, "Onto the map in {1}: the server has not let go of the last entry yet",
      "Вхід на карту через {1}: сервер ще не відпустив минулий вхід",
      "Вход на карту через {1}: сервер ещё не отпустил прошлый вход"},
+    // 3.0.18-beta.164 (R-CFNPF6, the tester: «загрузка вечно»): the time left on the veil's card itself
+    {Text::ConnEntryWaitCard, "The server still holds the last entry · {1}", "Сервер ще тримає минулий вхід · {1}",
+     "Сервер ещё держит прошлый вход · {1}"},
     // 3.0.11-beta.184 (R-ANMTEJ): the camera's zoom and tilt kept between the games
     {Text::CameraTilt, "Camera tilt", "Нахил камери", "Наклон камеры"},  // 3.0.13-beta.5
     {Text::CameraTiltHint,

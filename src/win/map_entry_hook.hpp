@@ -14,5 +14,8 @@ void mapEntryFrame(const ConnectionSettings& settings, HWND game);
 // The game closing (DllMain): the next start within map_entry::kAfterExitMs holds its first selection - the hold
 // lives in uaro-graphics\map-entry.txt, a failed entry's too, so it outlives a client closed and opened again.
 void mapEntryAtExit();
+// 3.0.18-beta.164 (R-CFNPF6): the seconds the character's selection is still held (0: none held) - the login's veil
+// shows them on its card (win/login_card) and stays meanwhile; the line over the game is for the screens without it
+unsigned mapEntryHeldSeconds();
 
 }  // namespace uagfx::win

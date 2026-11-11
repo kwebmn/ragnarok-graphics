@@ -46,6 +46,7 @@ void drawVeil(FrameRecord& record, gpu::Renderer& renderer);
 // 3.0.11-beta.261 (the tester: «після вибору персонажа, 2 вікна завантаження. 1 в новому стилі, після нього в
 // старому»): the veil over the way in after «Увійти» in the character select too - its name and «job · level» (UTF-8)
 void veilOver(const std::string& name, const std::string& line);
+bool veilOn();  // 3.0.18-beta.164: the veil shows (win/map_entry_hook tells its wait on it then)
 bool toastMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.176 (a click on the shelf enters): a shelf row's login and password into the game's fields, sent at
 // once as accounts::planFor says (Shift held: the character select shown; no password, or refused: the keys to the
