@@ -1,3 +1,5 @@
+- Characters and monsters are found by their numbers through an index read in one pass a frame (before, each look-up walked the game's whole list: the monsters' move smoothing made up to ~390 reads a frame, R-C8GVNT). The move smoothing also writes a monster's place without a call into Windows.
+
 - Reading the game's memory without a call into Windows: the processor copies by itself, and an address that is gone is caught by the driver's handler (before, each of ~1000 reads a frame was its own call into Windows - 0.8-1.3 ms a frame by R-MBCDBU). The controller's, the crisp text's and the textures' memory checks are faster the same way. At start the driver checks the new way itself and goes back to the old one if needed (the «game memory: …» line in the log).
 
 - Entering the game after a disconnect (R-CFNPF6): while the server still holds the last entry and the character's selection waits, the «Вхід у гру…» card no longer goes away after 30 s and shows the time left itself: «The server still holds the last entry · 2:27». Before, only a small line at the top of the screen told it, and the wait looked like endless loading.
