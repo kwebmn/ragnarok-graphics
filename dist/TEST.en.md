@@ -1,3 +1,5 @@
+- Controller: the highlight and tips in windows (Stats, Skills, Items, shops and others) now follow the controller's choice, not the hidden mouse cursor. On the skill bar the LB, RB, LT, RT badges are no longer cut.
+
 - "Equipment": the character now holds its weapon and shield (as in the game's world).
 
 - The character block folded: a "…" button on its right opens the row of uaRO's windows (hunt, bosses, tracking and so on).
