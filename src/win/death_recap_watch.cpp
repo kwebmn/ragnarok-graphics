@@ -23,6 +23,8 @@ struct State {
     deathrecap::Log log;
     std::unordered_map<uint32_t, std::string> names;  // told by 0x0095
     int told = 0;
+    std::string lastTitle;  // 3.0.18-beta.120: the last death's
+    std::vector<std::string> lastLines;
 };
 
 State& state() {
@@ -76,7 +78,17 @@ std::vector<std::string> lines(std::string& title) {
     if (s.told++ < 20) LOG_INFO("death: %zu hits in its last 10 s (%lld damage) on the death screen", hits.size(),
                                 deathrecap::total(hits));
     s.log.clear();
+    s.lastTitle = title;  // 3.0.18-beta.120: kept for «Що мене вбило» on its own
+    s.lastLines = out;
     return out;
+}
+
+bool last(std::string& title, std::vector<std::string>& lines) {
+    const State& s = state();
+    if (s.lastLines.empty()) return false;
+    title = s.lastTitle;
+    lines = s.lastLines;
+    return true;
 }
 
 }  // namespace uagfx::win::deathrecapwin

@@ -905,6 +905,8 @@ enum class Text : uint16_t {
     InterfaceUauiGlass, InterfaceUauiGlassHint,  // 3.0.18-beta.64
     InterfaceTheme, InterfaceThemeHint, InterfaceThemeStandard, InterfaceThemeClassic, InterfaceThemeContrast,  // .13
     EquipCartOff, EquipFalconOff, EquipPecoOff,  // 3.0.18-beta.114
+    RecapNone, CharOwnReference, CharOwnHunt, CharOwnMvp, CharOwnTracker, CharOwnParty, CharOwnRecap,
+    CharOwnSettings,  // 3.0.18-beta.120
     Count
 };
 

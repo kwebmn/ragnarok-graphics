@@ -407,6 +407,21 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     return true;
 }
 
+bool hiddenNow() {
+    State& s = state();
+    readState(s);
+    return s.hidden;
+}
+
+void toggleHidden(const char* why) {
+    State& s = state();
+    readState(s);
+    s.hidden = !s.hidden;
+    keepState(s);
+    s.key.clear();
+    LOG_INFO("tracker: %s (%s)", s.hidden ? "hidden" : "shown", why);
+}
+
 void toggleQuest(const std::string& slug) {
     State& s = state();
     readState(s);

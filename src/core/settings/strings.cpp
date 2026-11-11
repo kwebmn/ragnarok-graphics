@@ -8262,6 +8262,20 @@ constexpr Entry kTexts[] = {
     {Text::EquipCartOff, "Remove the cart", "Зняти візок", "Снять тележку"},
     {Text::EquipFalconOff, "Release the falcon", "Відпустити сокола", "Отпустить сокола"},
     {Text::EquipPecoOff, "Get off the Peco", "Злізти з Пеко", "Слезть с Пеко"},
+    // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): «Що мене вбило» on its own; the character block's second row
+    {Text::RecapNone, "No death yet since the game started", "Від запуску гри смертей ще не було",
+     "С запуска игры смертей ещё не было"},
+    {Text::CharOwnReference, "Reference \xC2\xB7 Ctrl+F", "Довідник \xC2\xB7 Ctrl+F", "Справочник \xC2\xB7 Ctrl+F"},
+    {Text::CharOwnHunt, "Hunt \xC2\xB7 Ctrl+H", "Полювання \xC2\xB7 Ctrl+H", "Охота \xC2\xB7 Ctrl+H"},
+    {Text::CharOwnMvp, "Boss timers \xC2\xB7 Ctrl+B", "Таймери босів \xC2\xB7 Ctrl+B",
+     "Таймеры боссов \xC2\xB7 Ctrl+B"},
+    {Text::CharOwnTracker, "Tracking \xC2\xB7 Ctrl+J", "Відстеження \xC2\xB7 Ctrl+J",
+     "Отслеживание \xC2\xB7 Ctrl+J"},
+    {Text::CharOwnParty, "Party \xC2\xB7 Ctrl+G", "Група \xC2\xB7 Ctrl+G", "Группа \xC2\xB7 Ctrl+G"},
+    {Text::CharOwnRecap, "What killed me \xC2\xB7 Ctrl+K", "Що мене вбило \xC2\xB7 Ctrl+K",
+     "Что меня убило \xC2\xB7 Ctrl+K"},
+    {Text::CharOwnSettings, "Settings \xC2\xB7 Alt+D", "Налаштування \xC2\xB7 Alt+D",
+     "Настройки \xC2\xB7 Alt+D"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

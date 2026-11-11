@@ -12,5 +12,8 @@ namespace uagfx::win::deathrecapwin {
 void packet(const packets::Event& e);
 // «Останні удари · 1 234 шкоди» and the lines, the last first; empty: nothing hit it the last 10 s
 std::vector<std::string> lines(std::string& title);
+// 3.0.18-beta.120 (the concept «Ігровий інтерфейс»: «Що мене вбило» on its own): the last death's, as the death screen
+// showed them (this game's run); false - no death yet
+bool last(std::string& title, std::vector<std::string>& lines);
 
 }  // namespace uagfx::win::deathrecapwin

@@ -1,4 +1,5 @@
 #include "win/mvp_panel.hpp"
+#include "win/own_windows.hpp"
 
 #include <windowsx.h>
 
@@ -42,6 +43,8 @@ struct State {
     std::vector<mvptimers::Timer> rows;
     float k = 0;
     int targetW = 0, targetH = 0, x = 0, y = 0, w = 0, h = 0, hover = -1;
+    panel::Box close;         // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): ✕
+    bool hoverClose = false;
     float scale = 1;
     std::string key;
     panel::Picture picture;
@@ -95,9 +98,13 @@ std::string mobName(int mob) {
 const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="mp" data-model="mvp" data-style-width="w + 'px'" data-style-height="h + 'px'"
   data-style-border-radius="10 * s + 'px'" data-style-border-width="s + 'px'" data-style-background-color="ground">
-<span class="title" data-style-left="9 * s + 'px'" data-style-top="9 * s + 'px'" data-style-width="w - 18 * s + 'px'"
+<span class="title" data-style-left="9 * s + 'px'" data-style-top="9 * s + 'px'" data-style-width="w - 44 * s + 'px'"
   data-style-height="18 * s + 'px'" data-style-line-height="18 * s + 'px'" data-style-font-size="13 * s + 'px'"
   >{{title}}</span>
+<span data-attr-class="closeHot ? 'ownx hot' : 'ownx'" data-style-left="w - 31 * s + 'px'"
+  data-style-top="8 * s + 'px'" data-style-width="22 * s + 'px'" data-style-height="20 * s + 'px'"
+  data-style-line-height="20 * s + 'px'" data-style-border-radius="6 * s + 'px'"
+  data-style-font-size="12 * s + 'px'">&#x2715;</span>
 <div data-for="r, i : rows">
  <div class="lit" data-if="i == hover" data-style-left="4 * s + 'px'" data-style-top="(31 + 19 * i) * s + 'px'"
    data-style-width="w - 8 * s + 'px'" data-style-height="19 * s + 'px'" data-style-border-radius="5 * s + 'px'"></div>
@@ -119,6 +126,7 @@ struct Ui {
     uaui::Doc doc;
     float w = 0, h = 0, s = 1;
     int hover = -1;
+    bool closeHot = false;
     Rml::String title, ground = "#00000000";  // 3.0.18-beta.76: never an empty style value
     std::vector<RowV> rows;
     std::string key;
@@ -148,6 +156,7 @@ bool uiFrame(State& s) {
                 m.Bind("h", &u.h);
                 m.Bind("s", &u.s);
                 m.Bind("hover", &u.hover);
+                m.Bind("closeHot", &u.closeHot);
                 m.Bind("title", &u.title);
                 m.Bind("ground", &u.ground);
                 m.Bind("rows", &u.rows);
@@ -156,7 +165,7 @@ bool uiFrame(State& s) {
     }
     if (s.viewKey != u.key) {
         u.key = s.viewKey;
-        u.w = float(s.w), u.h = float(s.h), u.s = s.scale, u.hover = s.hover;
+        u.w = float(s.w), u.h = float(s.h), u.s = s.scale, u.hover = s.hover, u.closeHot = s.hoverClose;
         char g[16];
         std::snprintf(g, sizeof g, "#%06x%02x", unsigned(uaui::themed(0x10141C)),
                       int(std::lround(uistyle::panel() * 255)) & 0xFF);
@@ -212,6 +221,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         s.uiShown = uiFrame(s);
     };
     if (!on || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !inGameWorld()) return hide();
+    if (ownwin::closed(closedwin::Window::Mvp)) return hide();  // 3.0.18-beta.120: ✕
     load(s);
     const long long now = chardiarywin::nowUnix();
     s.rows = s.timers.shown(now);
@@ -228,16 +238,20 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     s.y = int(targetHeight * 0.30f);
     hudedit::place(hudlayout::Part::Mvp, float(k), targetWidth, targetHeight, s.w, s.h, s.x, s.y);
     s.hover = -1;
+    s.close = panel::Box{float(s.w) - (kPad + 22) * scale, (kPad - 1) * scale, 22 * scale, 20 * scale};
+    s.hoverClose = false;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) {
         const float lx = float(cx) * float(k) - float(s.x), ly = float(cy) * float(k) - float(s.y);
+        s.hoverClose = s.close.contains(lx, ly);
         const float top = (kPad + kTitleH) * scale;
         if (lx >= 0 && lx < float(s.w) && ly >= top) {
             const int row = int((ly - top) / (kLineH * scale));
             if (row < int(s.rows.size())) s.hover = row;
         }
     }
-    std::string key = std::to_string(s.w) + 'x' + std::to_string(s.h) + 'h' + std::to_string(s.hover) + '#' +
+    std::string key = std::to_string(s.w) + 'x' + std::to_string(s.h) + 'h' + std::to_string(s.hover) +
+                      (s.hoverClose ? "c" : "") + '#' +
                       std::to_string(uistyle::generation());
     std::vector<std::pair<std::string, std::string>> lines;
     for (const mvptimers::Timer& t : s.rows) {
@@ -256,8 +270,10 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
             panel::roundRect(s.picture, panel::Box{0, 0, float(s.w), float(s.h)}, 10 * sc, kCard, uistyle::panel(),
                              kWhite, 0.09f, 1.0f * sc);
             std::vector<Words> out;
-            out.push_back(Words{panel::Box{kPad * sc, kPad * sc, float(s.w) - 2 * kPad * sc, (kTitleH - 4) * sc},
+            out.push_back(Words{panel::Box{kPad * sc, kPad * sc, float(s.w) - (2 * kPad + 26) * sc, (kTitleH - 4) * sc},
                                 utf8Wide(say(settings::Text::MvpTitle)), kGold, 13 * sc, true, DT_LEFT, false});
+            panel::roundRect(s.picture, s.close, 6 * sc, kWhite, s.hoverClose ? 0.16f : 0.06f);
+            out.push_back(Words{s.close, L"\x2715", kText, 12 * sc, true, DT_CENTER, false});
             for (size_t i = 0; i < lines.size(); ++i) {
                 const float y = (kPad + kTitleH + float(i) * kLineH) * sc;
                 if (int(i) == s.hover)
@@ -305,6 +321,11 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     const float lx = tx - float(s.x), ly = ty - float(s.y);
     if (lx < 0 || ly < 0 || lx >= float(s.w) || ly >= float(s.h)) return false;
     result = 0;
+    if (m == WM_LBUTTONDOWN && s.close.contains(lx, ly)) {  // 3.0.18-beta.120: ✕
+        ownwin::setClosed(closedwin::Window::Mvp, true, "its ✕");
+        s.key.clear();
+        return true;
+    }
     const float top = (kPad + kTitleH) * s.scale;
     if (m == WM_LBUTTONDOWN && ly >= top) {
         const int row = int((ly - top) / (kLineH * s.scale));

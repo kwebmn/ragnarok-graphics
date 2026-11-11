@@ -1,4 +1,5 @@
 #include "win/target_card.hpp"
+#include "win/own_windows.hpp"
 
 #include <windowsx.h>
 
@@ -51,6 +52,7 @@ constexpr size_t kMostNodes = 4096;
 
 struct State {
     uint32_t target = 0;  // the actor's id
+    uint32_t dismissed = 0;  // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): ✕ - hidden for this target
     bool mine = false;    // the character hit it (not only it the character)
     ULONGLONG lastAt = 0;
     bool on = false, shown = false;
@@ -227,6 +229,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    data-style-width="hp_bar + '%'"></span></span><span class="pct">{{hp}}%</span></div>
  </div>
  <div class="book"><img class="dim" data-attr-src="book"/><img class="lit" data-attr-src="book_lit"/></div>
+ <div class="tcx" data-event-click="close()">&#x2715;</div>
  <div class="hints" data-if="pad"><div><img data-attr-src="pad_a"/>{{attack}}</div><div><img data-attr-src="pad_r"/>{{next}}</div></div>
 </div><br/>
 <div class="details"><p data-for="l, i : lines" data-style-color="l.colour" data-class-first="i == 0">{{l.text}}</p></div>
@@ -317,6 +320,15 @@ bool uiFrame(State& s) {
             m.Bind("attack", &u.attack);
             m.Bind("next", &u.next);
             m.Bind("lines", &u.lines);
+            m.BindEventCallback("close", [](Rml::DataModelHandle, Rml::Event& e, const Rml::VariantList&) {
+                State& s = state();  // 3.0.18-beta.120: ✕ - hidden till the next target
+                s.dismissed = s.target;
+                e.StopPropagation();
+                if (s.told < 40) {
+                    ++s.told;
+                    LOG_INFO("target: the card closed by its ✕ for the actor %u", s.target);
+                }
+            });
             m.BindEventCallback("open", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
                 State& s = state();
                 if (s.mob <= 0) return;
@@ -444,7 +456,8 @@ void frame(HWND game, bool on, bool padHints, double k, int targetWidth, int tar
     const ULONGLONG now = GetTickCount64();
     if (s.target && now - s.lastAt > kForgetMs) forget(s, "left alone");
     const auto index = reference::index();
-    if (!s.target || !index) {
+    if (!s.target || !index || s.target == s.dismissed ||
+        ownwin::closed(closedwin::Window::Target)) {  // 3.0.18-beta.120: ✕ for this one; or closed by its icon
         hide(s);
         return;
     }

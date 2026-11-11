@@ -61,6 +61,8 @@
 #include "win/ground_items.hpp"
 #include "win/homun_ai_files.hpp"
 #include "win/hunt_panel.hpp"
+#include "win/own_windows.hpp"
+#include "win/recap_window.hpp"
 #include "win/mob_card.hpp"
 #include "win/mvp_panel.hpp"
 #include "win/chat_window.hpp"
@@ -1109,6 +1111,12 @@ void Context::present(const Rect& source, bool waitForVblank) {
     readGame(optionscard::kOpaqueFlag, &opaque, sizeof opaque);
     uistyle::set(config.hudOpacity, optionscard::windowOpacity(config.windowOpacity, opaque != 0));
     // 3.0.11-beta.36: [interface] character - the character block at the top left, the game's Basic Info hidden
+    {  // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): the character block's second row - the windows switched on
+        closedwin::Switches own;
+        own.reference = config.referenceWindow, own.hunt = config.huntPanel, own.mvp = config.mvpTimers;
+        own.tracker = config.tracker, own.party = config.partyPanel, own.recap = config.deathRecap;
+        ownwin::setSwitches(own);
+    }
     charpanel::frame(window, config.character, gameCodePage(config), pk, pw, ph);
     chardiarywin::frame(gameCodePage(config));  // 3.0.11-beta.273: the characters' diary
     expgainwin::frame(config.expGain, pk, pw, ph);  // 3.0.11-beta.237: [interface] exp_gain (the bars' label)
@@ -1193,6 +1201,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     huntwin::frame(window, config.huntPanel, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.278
     mobcardwin::frame(window, config.mobCard, pk, pw, ph);  // 3.0.11-beta.279
     mvpwin::frame(window, config.mvpTimers, pk, pw, ph);  // 3.0.11-beta.280
+    recapwin::frame(window, config.deathRecap, pk, pw, ph);  // 3.0.18-beta.120: «Що мене вбило» on its own
     optionscardwin::frame(window, config.optionsWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.162
     socialcardwin::frame(window, config.socialWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.163
     servercardwin::frame(window, config.serverWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.164

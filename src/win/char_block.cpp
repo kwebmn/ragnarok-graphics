@@ -1,5 +1,6 @@
 #include "win/upkeep_watch.hpp"
 #include "win/char_block.hpp"
+#include "win/own_windows.hpp"
 
 #include <windowsx.h>
 
@@ -416,8 +417,12 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
  <div class="zone" style="left: 48dp; top: 109dp; width: 312dp; height: 13dp;" data-event-mouseover="hover(0, 4)" data-event-mouseout="unhover()"></div>
  <div class="zone" style="left: 48dp; top: 141dp; width: 312dp; height: 13dp;" data-event-mouseover="hover(0, 5)" data-event-mouseout="unhover()"></div>
  <div class="button" style="width: 32dp; height: 26dp;" data-for="b, i : buttons" data-style-left="12 + i * 38 + 'dp'"
-      data-style-top="h - 38 + 'dp'" data-event-click="press(i)" data-event-mouseover="hover(2, i)" data-event-mouseout="unhover()">
+      data-style-top="h - game_row + 'dp'" data-event-click="press(i)" data-event-mouseover="hover(2, i)"
+      data-event-mouseout="unhover()">
   <img data-attr-src="b"/></div>
+ <div class="button own" style="width: 32dp; height: 26dp;" data-for="b, i : own" data-style-left="12 + i * 38 + 'dp'"
+      data-style-top="h - 38 + 'dp'" data-class-lit="b.lit" data-event-click="own(i)" data-event-mouseover="hover(5, i)"
+      data-event-mouseout="unhover()"><img data-attr-src="b.icon"/></div>
 </div>
 <div data-if="view == 1 && look == 0">
  <div class="portrait" style="left: 10dp; top: 10dp; width: 46dp; height: 46dp;" data-event-click="portrait()"
@@ -464,6 +469,18 @@ struct Ui {
         float w = 0;
     } base, job;
     std::vector<Rml::String> buttons, tip;
+    // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): the second row - our windows (ownwin::row), lit while open
+    struct OwnV {
+        Rml::String icon;
+        bool lit = false;
+    };
+    std::vector<OwnV> own;
+    std::vector<closedwin::Own> ownKinds;
+    float gameRow = 38;  // the game's row's top from the block's foot (72 over the second row)
+    panel::Picture ownIcons[size_t(closedwin::Own::Count)];
+    std::string ownSrc[size_t(closedwin::Own::Count)];
+    float ownPx = 0;
+    int ownGen = 0;
     Rml::String portrait, portraitSrc;
     float tipLeft = 0, tipTop = 0;
     float ringD = 98, ringGap = 7, ringPic = 31, ringBadgeW = 32, ringBadgeH = 18, ringHpW = 5, ringSpW = 4;
@@ -500,6 +517,29 @@ void uiRect(float& x, float& y, float& w, float& h) {
     x = float(dx), y = float(dy), w = float(dw) * size, h = float(dh) * size;
 }
 
+// 3.0.18-beta.120: the second row's icons and tips
+uiicons::Icon ownIcon(closedwin::Own o) {
+    using closedwin::Own;
+    switch (o) {
+        case Own::Reference: return uiicons::Icon::Search;
+        case Own::Hunt: return uiicons::Icon::Battle;
+        case Own::Mvp: return uiicons::Icon::Mvp;
+        case Own::Tracker: return uiicons::Icon::Quest;
+        case Own::Party: return uiicons::Icon::Npc;
+        case Own::Recap: return uiicons::Icon::Warn;
+        default: return uiicons::Icon::Tables;
+    }
+}
+
+std::string ownTip(closedwin::Own o) {
+    using closedwin::Own;
+    static const settings::Text kTips[size_t(Own::Count)] = {
+        settings::Text::CharOwnReference, settings::Text::CharOwnHunt,  settings::Text::CharOwnMvp,
+        settings::Text::CharOwnTracker,   settings::Text::CharOwnParty, settings::Text::CharOwnRecap,
+        settings::Text::CharOwnSettings};
+    return size_t(o) < size_t(Own::Count) ? say(kTips[size_t(o)]) : "";
+}
+
 void tipFor(int kind, int index) {  // the tip of what the mouse is over (kind: 0 zone, 1 exp row, 2 button, 3 body,
     Ui& u = ui();                    // 4 portrait)
     u.hoverKind = kind, u.hoverIndex = index;
@@ -507,10 +547,11 @@ void tipFor(int kind, int index) {  // the tip of what the mouse is over (kind: 
     if (kind == 0 && index >= 0 && index < cb::kZones) lines = u.m.zoneTips[index];
     else if (kind == 1) lines = index == 0 ? u.m.baseExp.tip : u.m.jobExp.tip;
     else if (kind == 2 && index >= 0 && index < cb::kButtons) lines = {texts().buttons[index]};
+    else if (kind == 5 && index >= 0 && size_t(index) < u.ownKinds.size()) lines = {ownTip(u.ownKinds[size_t(index)])};
     else if (kind == 3 && u.view != 0) lines = u.m.bodyTip;
     else if (kind == 4 && !u.m.portraitTip.empty()) lines = {u.m.portraitTip};
     u.tip.assign(lines.begin(), lines.end());
-    u.tipLeft = kind == 2 ? 12 + float(index) * 38 : 0;
+    u.tipLeft = kind == 2 || kind == 5 ? 12 + float(index) * 38 : 0;
     u.tipTop = u.h + 6 + (u.warningShown ? 36 : 0);
     u.doc.dirty("tip");
     u.doc.dirty("tip_left");
@@ -582,6 +623,13 @@ bool uiMake() {
         m.Bind("base", &u.base);
         m.Bind("job", &u.job);
         m.Bind("buttons", &u.buttons);
+        if (auto o = m.RegisterStruct<Ui::OwnV>()) {
+            o.RegisterMember("icon", &Ui::OwnV::icon);
+            o.RegisterMember("lit", &Ui::OwnV::lit);
+        }
+        m.RegisterArray<std::vector<Ui::OwnV>>();
+        m.Bind("own", &u.own);
+        m.Bind("game_row", &u.gameRow);
         m.Bind("tip", &u.tip);
         m.Bind("tip_left", &u.tipLeft);
         m.Bind("tip_top", &u.tipTop);
@@ -607,6 +655,12 @@ bool uiMake() {
             if (s.clicksLogged++ < 10)
                 LOG_INFO("character: the Basic Info window's button 0x%X %s (uaUI)", cb::kButton[i].command,
                          sent ? "pressed through the window" : "not pressed - the window is not where this build has it");
+        });
+        m.BindEventCallback("own", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            Ui& u = ui();
+            const int i = a.empty() ? -1 : a[0].Get<int>();
+            if (i < 0 || size_t(i) >= u.ownKinds.size()) return;
+            ownwin::press(u.ownKinds[size_t(i)], "the character block's icon");
         });
         m.BindEventCallback("zone", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             const int z = a.empty() ? -1 : a[0].Get<int>();
@@ -640,7 +694,7 @@ bool uiFrame(State& s, const cb::View view, const cb::Look look, const std::stri
         u.look = int(look);
         const bool session = u.m.sessionShown;
         u.w = view == cb::View::Full ? 372 : view == cb::View::Compact && look == cb::Look::Bars ? 300 : 0;
-        u.h = view == cb::View::Full ? (session ? 250.0f : 264.0f) + 10 + 26 + 12
+        u.h = view == cb::View::Full ? (session ? 250.0f : 264.0f) + 10 + 26 + 12 + 34  // .120: + our row
               : view == cb::View::Compact && look == cb::Look::Bars ? 74
                                                                     : 0;
         const bool icon = view == cb::View::Icon;
@@ -689,6 +743,31 @@ bool uiFrame(State& s, const cb::View view, const cb::Look look, const std::stri
             u.buttons.push_back(uaui::picture(&p, u.iconsGen, u.iconSrc[i]));
         }
         u.doc.dirty("buttons");
+    }
+    {  // 3.0.18-beta.120: the second row - which windows, their icons, lit while open
+        u.gameRow = 72;
+        const std::vector<closedwin::Own> kinds = ownwin::row();
+        bool changed = kinds != u.ownKinds || iconPx != u.ownPx;
+        if (iconPx != u.ownPx) u.ownPx = iconPx, ++u.ownGen;
+        std::vector<Ui::OwnV> own;
+        for (const closedwin::Own o : kinds) {
+            panel::Picture& p = u.ownIcons[size_t(o)];
+            const int side = std::max(8, int(std::ceil(iconPx)));
+            if (p.width != side) {
+                p.width = p.height = side;
+                p.px.assign(size_t(side) * size_t(side), 0u);
+                uiicons::draw(p, ownIcon(o), 0, 0, float(side), 0xECEFF5, 0.9f);
+            }
+            own.push_back(Ui::OwnV{uaui::picture(&p, u.ownGen, u.ownSrc[size_t(o)]), ownwin::lit(o)});
+        }
+        for (size_t i = 0; !changed && i < own.size(); ++i)
+            changed = i >= u.own.size() || own[i].lit != u.own[i].lit || own[i].icon != u.own[i].icon;
+        if (changed) {
+            u.ownKinds = kinds;
+            u.own = std::move(own);
+            u.doc.dirty("own");
+            u.doc.dirty("game_row");
+        }
     }
     // the low HP warning slides in and out by the theme
     const bool warn = s.show.warning && u.m.low;

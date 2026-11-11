@@ -14,6 +14,8 @@
 #include "win/char_block.hpp"
 #include "win/uaui.hpp"
 #include "win/hunt_panel.hpp"
+#include "win/own_windows.hpp"
+#include "win/recap_window.hpp"
 #include "win/mvp_panel.hpp"
 #include "win/merc_card.hpp"
 #include "win/party_panel.hpp"
@@ -95,6 +97,7 @@ bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
            targetpanel::mouse(w, m, wp, lp, answer) ||   // 3.0.11-beta.38: the target's card's
            partywin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.39: the party's panel's
            mvpwin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.280: the bosses' timers
+           recapwin::mouse(w, m, wp, lp, answer) ||  // 3.0.18-beta.120
            huntwin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.278: «Полювання»
            merccardwin::blockMouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.216: the mercenary's block's
            hotbarwin::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.40: the hotbar's
@@ -202,6 +205,8 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if (uaui::key(m, wp, lp)) return 0;  // 3.0.18-beta.59: a field of uaUI's has the focus  // 3.0.11-beta.75: Ctrl+Shift+L - «Розміщення інтерфейсу», its Esc
         // 3.0.11-beta.108: the windows' keys, the top one's first (Ctrl+F «Довідник», «Речі»'s search, the shop's
         // and the NPC talk's keys); Esc closes the top one
+        if (recapwin::key(m, wp, lp)) return 0;  // 3.0.18-beta.120: Esc closes «Що мене вбило»
+        if (ownwin::key(m, wp, lp)) return 0;    // 3.0.18-beta.120: Ctrl+H/B/J/G/K - our windows
         if (hotbarwin::profileKeyPress(m, wp, lp)) return 0;  // 3.0.11-beta.288: Ctrl+Shift+1..3, the bar's profiles
         if (chatwin::searchKey(m, wp, lp)) return 0;  // 3.0.11-beta.284: Ctrl+F in the chat's field, its search
         npcwin::cutinEsc(m, wp);  // 3.0.13-beta.10: Esc closes the NPC's picture too (the key goes on)

@@ -60,6 +60,7 @@ enum class Blocker { Panel, Card, Minimap, Reference, BigMap, Buffs, Character, 
                      Hunt,  // 3.0.11-beta.278
                      Mvp,  // 3.0.11-beta.280
                      VendSetup,  // 3.0.16-beta.33
+                     Recap,  // 3.0.18-beta.120: «Що мене вбило» on its own (win/recap_window)
                      Uaui };  // 3.0.18-beta.10: uaUI's windows (win/uaui)
 // 3.0.11-beta.33: their number (win/world_mouse names each)
 constexpr int kBlockerCount = int(Blocker::Uaui) + 1;

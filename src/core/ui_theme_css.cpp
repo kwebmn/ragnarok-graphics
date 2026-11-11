@@ -120,6 +120,9 @@ select selectbox option:checked { color: #e6cb8a; }
 .cb .button:hover { background-color: #2a2f3a; }
 .cb .button:active { background-color: #3a3f4c; }
 .cb .button img { position: absolute; left: 7dp; top: 4dp; width: 18dp; height: 18dp; }
+/* 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): the second row - our windows, gold-edged while open */
+.cb .button.own { border-width: 1dp; border-color: #ffffff14; }
+.cb .button.own.lit { border-color: #e6cb8a; background-color: #e6cb8a22; }
 .cb .badge { position: absolute; border-radius: 9dp; background-color: #10141c; border: 1dp #c9a55b;
              text-align: center; font-weight: bold; font-size: 12dp; }
 .cb .zone { position: absolute; }
@@ -160,6 +163,11 @@ select selectbox option:checked { color: #e6cb8a; }
 .tc .hpfill { display: block; height: 5dp; border-radius: 3dp; background-color: #5bd36c; }
 .tc .hpfill.low { background-color: #e5534b; }
 .tc .pct { margin-left: 6dp; font-size: 12dp; font-weight: bold; }
+/* 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): ✕ - the card hidden till the next target */
+.tc .tcx { display: inline-block; vertical-align: top; margin: 13dp 0 0 8dp; width: 22dp; height: 22dp;
+    line-height: 22dp; border-radius: 6dp; font-size: 12dp; font-weight: bold; color: #c9cfdb;
+    background-color: #ffffff0f; }
+.tc .tcx:hover { background-color: #ffffff29; color: #ffffff; }
 .tc .book { display: inline-block; vertical-align: top; margin: 9dp 0 0 12dp; width: 30dp; height: 30dp;
             border-radius: 7dp; background-color: #ffffff0f; border: 1dp #c9a55b00;
             transition: background-color border-color 0.1s; }
@@ -395,6 +403,10 @@ select selectbox option:checked { color: #e6cb8a; }
 .hp .line.first { font-weight: bold; color: #eef2f8; }
 .hp .reset { text-align: center; font-weight: bold; color: #eef2f8; background-color: #ffffff0f; }
 .hp .reset.hot { background-color: #ffffff29; }
+/* 3.0.18-beta.120 (the concept «Ігровий інтерфейс»: «✕ на каждом окне»): our panels' close, one look for them all */
+.ownx { position: absolute; text-align: center; font-weight: bold; color: #eef2f8; background-color: #ffffff0f;
+    white-space: nowrap; }
+.ownx.hot { background-color: #ffffff29; }
 .it .toast { position: absolute; box-sizing: border-box; text-align: center; font-weight: bold; color: #f3c653;
              white-space: nowrap; background-color: #10141ceb; border-color: #f3c653b3; }
 .xg .gain { position: absolute; width: 600dp; height: 22dp; line-height: 22dp; text-align: center; font-size: 15dp;

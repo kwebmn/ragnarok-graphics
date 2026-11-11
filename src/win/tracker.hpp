@@ -21,6 +21,10 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // The pins («Довідник»'s cards): another pin shows the panel again
+// 3.0.18-beta.120 (the concept «Ігровий інтерфейс»: the character block's icon): hidden by its own ✕ or not; the icon
+// turns it round (kept as its ✕ keeps it)
+bool hiddenNow();
+void toggleHidden(const char* why);
 void toggleQuest(const std::string& slug);
 void toggleItem(int id);
 const std::vector<std::string>& quests();

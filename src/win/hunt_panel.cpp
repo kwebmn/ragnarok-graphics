@@ -1,4 +1,5 @@
 #include "win/hunt_panel.hpp"
+#include "win/own_windows.hpp"
 
 #include <windowsx.h>
 
@@ -44,6 +45,8 @@ struct State {
     int targetW = 0, targetH = 0, x = 0, y = 0, w = 0, h = 0;
     panel::Box reset;
     bool hoverReset = false;
+    panel::Box close;         // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): ✕ - hidden till its icon or key
+    bool hoverClose = false;
     std::string key;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -82,13 +85,17 @@ std::string monsterName(uint32_t id) {
 const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="hp" data-model="hunt" data-style-width="w + 'px'" data-style-height="h + 'px'"
   data-style-border-radius="10 * s + 'px'" data-style-border-width="s + 'px'" data-style-background-color="ground">
-<span class="title" data-style-left="10 * s + 'px'" data-style-top="10 * s + 'px'" data-style-width="w - 46 * s + 'px'"
+<span class="title" data-style-left="10 * s + 'px'" data-style-top="10 * s + 'px'" data-style-width="w - 72 * s + 'px'"
   data-style-height="20 * s + 'px'" data-style-line-height="20 * s + 'px'" data-style-font-size="13 * s + 'px'"
   >{{title}}</span>
+<span data-attr-class="closeHot ? 'ownx hot' : 'ownx'" data-style-left="w - 32 * s + 'px'"
+  data-style-top="10 * s + 'px'" data-style-width="22 * s + 'px'" data-style-height="20 * s + 'px'"
+  data-style-line-height="20 * s + 'px'" data-style-border-radius="6 * s + 'px'"
+  data-style-font-size="12 * s + 'px'">&#x2715;</span>
 <span data-for="l, i : lines" data-attr-class="i == 0 ? 'line first' : 'line'" data-style-left="10 * s + 'px'"
   data-style-top="(34 + 19 * i) * s + 'px'" data-style-width="w - 20 * s + 'px'" data-style-height="19 * s + 'px'"
   data-style-line-height="19 * s + 'px'" data-style-font-size="12 * s + 'px'">{{l}}</span>
-<span data-attr-class="hot ? 'reset hot' : 'reset'" data-style-left="w - 32 * s + 'px'" data-style-top="10 * s + 'px'"
+<span data-attr-class="hot ? 'reset hot' : 'reset'" data-style-left="w - 58 * s + 'px'" data-style-top="10 * s + 'px'"
   data-style-width="22 * s + 'px'" data-style-height="20 * s + 'px'" data-style-line-height="20 * s + 'px'"
   data-style-border-radius="6 * s + 'px'" data-style-font-size="13 * s + 'px'">↺</span>
 </body></rml>)RML";
@@ -96,7 +103,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 struct Ui {
     uaui::Doc doc;
     float w = 0, h = 0, s = 1;
-    bool hot = false;
+    bool hot = false, closeHot = false;
     Rml::String title, ground = "#00000000";  // 3.0.18-beta.76: never an empty style value
     std::vector<Rml::String> lines;
     std::string key;
@@ -121,6 +128,7 @@ bool uiFrame(State& s) {
                 m.Bind("h", &u.h);
                 m.Bind("s", &u.s);
                 m.Bind("hot", &u.hot);
+                m.Bind("closeHot", &u.closeHot);
                 m.Bind("title", &u.title);
                 m.Bind("ground", &u.ground);
                 m.Bind("lines", &u.lines);
@@ -129,7 +137,7 @@ bool uiFrame(State& s) {
     }
     if (s.viewKey != u.key) {
         u.key = s.viewKey;
-        u.w = float(s.w), u.h = float(s.h), u.s = s.scale, u.hot = s.hoverReset;
+        u.w = float(s.w), u.h = float(s.h), u.s = s.scale, u.hot = s.hoverReset, u.closeHot = s.hoverClose;
         char g[16];
         std::snprintf(g, sizeof g, "#%06x%02x", unsigned(uaui::themed(0x10141C)),
                       int(std::lround(uistyle::panel() * 255)) & 0xFF);
@@ -197,6 +205,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.uiShown = uiFrame(s);
     };
     if (!on || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !inGameWorld()) return hide();
+    if (ownwin::closed(closedwin::Window::Hunt)) return hide();  // 3.0.18-beta.120: ✕
     const uint64_t now = GetTickCount64();
     charstatus::Status st;
     if (readOwnStatus(st)) s.stats.status(st.baseLevel, st.baseExp, st.baseNext, st.zeny, now);
@@ -212,11 +221,15 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.x = targetWidth - s.w - int(std::lround(12 * scale));
     s.y = int(targetHeight * 0.52f);
     hudedit::place(hudlayout::Part::Hunt, float(k), targetWidth, targetHeight, s.w, s.h, s.x, s.y);
-    s.reset = panel::Box{float(s.w) - (kPad + 22) * scale, kPad * scale, 22 * scale, 20 * scale};
-    s.hoverReset = false;
+    s.close = panel::Box{float(s.w) - (kPad + 22) * scale, kPad * scale, 22 * scale, 20 * scale};
+    s.reset = panel::Box{float(s.w) - (kPad + 48) * scale, kPad * scale, 22 * scale, 20 * scale};
+    s.hoverReset = s.hoverClose = false;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
-        s.hoverReset = s.reset.contains(float(cx) * float(k) - float(s.x), float(cy) * float(k) - float(s.y));
+    if (readGameCursor(cx, cy)) {
+        const float px = float(cx) * float(k) - float(s.x), py = float(cy) * float(k) - float(s.y);
+        s.hoverReset = s.reset.contains(px, py);
+        s.hoverClose = s.close.contains(px, py);
+    }
     const hunt::Texts t{say(settings::Text::HuntTitle),  say(settings::Text::HuntDps),
                         say(settings::Text::RecapAttack), say(settings::Text::HuntExp),
                         say(settings::Text::HuntToLevel), say(settings::Text::HuntZeny),
@@ -226,7 +239,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     std::vector<std::string> names;
     for (const auto& [skill, share] : v.skills) names.push_back(skill ? skillinfo::name(skill) : "");
     const std::vector<std::string> lines = hunt::lines(v, t, names);
-    std::string key = std::to_string(s.w) + 'x' + std::to_string(s.h) + (s.hoverReset ? "r" : "") + '#' +
+    std::string key = std::to_string(s.w) + 'x' + std::to_string(s.h) + (s.hoverReset ? "r" : "") +
+                      (s.hoverClose ? "c" : "") + '#' +
                       std::to_string(uistyle::generation());
     for (const std::string& l : lines) key += '|' + l;
     s.lines = lines;
@@ -238,15 +252,17 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
             panel::roundRect(s.picture, panel::Box{0, 0, float(s.w), float(s.h)}, 10 * sc, kCard, uistyle::panel(),
                              kWhite, 0.09f, 1.0f * sc);
             panel::roundRect(s.picture, s.reset, 6 * sc, kWhite, s.hoverReset ? 0.16f : 0.06f);
+            panel::roundRect(s.picture, s.close, 6 * sc, kWhite, s.hoverClose ? 0.16f : 0.06f);
             std::vector<Words> out;
             for (size_t i = 0; i < lines.size(); ++i) {
                 const float y = i == 0 ? kPad * sc : (kPad + kTitleH + float(i - 1) * kLineH) * sc;
-                out.push_back(Words{panel::Box{kPad * sc, y, float(s.w) - (2 * kPad + (i ? 0 : 26)) * sc,
+                out.push_back(Words{panel::Box{kPad * sc, y, float(s.w) - (2 * kPad + (i ? 0 : 52)) * sc,
                                                (i ? kLineH : kTitleH - 4) * sc},
                                     utf8Wide(lines[i]), i == 0 ? kGold : i == 1 ? kText : kMuted,
                                     (i == 0 ? 13 : 12) * sc, i < 2, DT_LEFT, false});
             }
             out.push_back(Words{s.reset, L"↺", kText, 13 * sc, true, DT_CENTER, false});
+            out.push_back(Words{s.close, L"\x2715", kText, 12 * sc, true, DT_CENTER, false});
             drawWords(s.picture, out);
             s.upload = true;
         }
@@ -283,6 +299,11 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     const float lx = tx - float(s.x), ly = ty - float(s.y);
     if (lx < 0 || ly < 0 || lx >= float(s.w) || ly >= float(s.h)) return false;
     result = 0;
+    if (m == WM_LBUTTONDOWN && s.close.contains(lx, ly)) {  // 3.0.18-beta.120: ✕
+        ownwin::setClosed(closedwin::Window::Hunt, true, "its ✕");
+        s.key.clear();
+        return true;
+    }
     if (m == WM_LBUTTONDOWN && s.reset.contains(lx, ly)) {
         s.stats.reset(GetTickCount64());
         s.fought.clear();

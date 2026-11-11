@@ -1,5 +1,6 @@
 #include "win/sound_hook.hpp"
 #include "win/party_panel.hpp"
+#include "win/own_windows.hpp"
 
 #include <windowsx.h>
 
@@ -352,7 +353,8 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <body class="pp" data-model="party">
 <div class="glass">
  <div class="head" data-class-folded="folded"><span class="title">{{title}}</span><span class="count">{{count}}</span>
-  <span class="hbtn viewb" data-event-click="view()">{{view_sign}}</span><span class="hbtn foldb" data-event-click="fold()">{{fold_sign}}</span></div>
+  <span class="hbtn viewb" data-event-click="view()">{{view_sign}}</span><span class="hbtn foldb"
+  data-event-click="fold()">{{fold_sign}}</span><span class="hbtn" data-event-click="close()">&#x2715;</span></div>
  <div data-if="!folded && !compact">
   <div class="row" data-for="r, i : rows" data-class-buffs="r.buffs.size > 0" data-class-low="r.low"
        data-class-target="r.target" data-class-chosen="r.chosen" data-class-dead="r.dead"
@@ -490,6 +492,11 @@ bool uiFrame(State& s) {
             });
             m.BindEventCallback("view", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
                 toggleView(state());
+            });
+            // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»: «✕ на каждом окне»): hidden till its icon or key
+            m.BindEventCallback("close", [](Rml::DataModelHandle, Rml::Event& e, const Rml::VariantList&) {
+                ownwin::setClosed(closedwin::Window::Party, true, "its ✕");
+                e.StopPropagation();
             });
             m.BindEventCallback("row", [](Rml::DataModelHandle, Rml::Event& e, const Rml::VariantList& a) {
                 if (!a.empty()) rowClicked(state(), a[0].Get<int>());
@@ -726,7 +733,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.on = on;
         LOG_INFO("party: [interface] party = %d", on ? 1 : 0);
     }
-    if (!on || s.order.empty() || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !inGameWorld()) {
+    if (!on || s.order.empty() || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !inGameWorld() ||
+        ownwin::closed(closedwin::Window::Party)) {  // 3.0.18-beta.120: ✕
         hide(s);
         return;
     }
