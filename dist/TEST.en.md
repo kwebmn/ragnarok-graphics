@@ -1,3 +1,5 @@
+- A new "Settings" window (Alt+O, the character block's icon, the menu) in place of the game's options: sections on the left - "Game" (music, sounds, volumes, snapping, opaque windows - all it had), "How the game looks" and every interface section; a search on top. Everything changes at once.
+
 - The menu (Esc) has new items at the top: "Settings", "Arrange the interface", "Graphics test", "Send a report"; the game's buttons below, as before.
 
 - The character block (Alt+V) has a second row of icons: "Reference", "Hunt", "Boss timers", "Tracking", "Party", "What killed me", "Settings"; an open window's icon glows gold. Keys: Ctrl+H, Ctrl+B, Ctrl+J, Ctrl+G, Ctrl+K.
