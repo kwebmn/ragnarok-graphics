@@ -20,6 +20,7 @@
 #include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/client_tables.hpp"
+#include "win/info_card.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -67,18 +68,21 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div class="field ctl" data-class-typing="focus == 0" data-event-click="vt_sign()">{{sign}}<span class="caret"
   data-if="focus == 0 && caret"></span></div>
 <div class="cols"><div class="col"><div class="lbl">{{cart_word}}</div><div class="list">
-<div class="ware ctl" data-for="r, i : cart" data-event-click="vt_cart(i)"><img data-if="r.icon != ''"
-  data-attr-src="r.icon"/><div class="wname"><span class="name">{{r.name}}</span><span
+<div class="ware ctl" data-for="r, i : cart" data-event-click="vt_cart(i)"
+  data-event-mousedown="vt_card(0, i)"><img data-if="r.icon != ''"
+  data-attr-src="r.icon"/><div class="wname"><span class="name">{{r.name}}</span><span class="inside"
+  data-if="r.inside != ''">{{r.inside}}</span><span
   class="stock">{{r.count}}</span><span class="mkt" data-if="r.market != ''">{{r.market}}</span></div></div>
 <div class="hint" data-if="cart.size == 0">{{empty}}</div></div></div>
 <div class="col"><div class="lbl">{{sale_word}}</div><div class="list">
-<div class="ware" data-for="r, i : sale"><img data-if="r.icon != ''" data-attr-src="r.icon"/><div class="wname"><span
-  class="name">{{r.name}}</span><span class="stock">{{r.count}}</span><span class="mkt"
+<div class="ware ctl" data-for="r, i : sale" data-event-mousedown="vt_card(1, i)"><img data-if="r.icon != ''"
+  data-attr-src="r.icon"/><div class="wname"><span class="name">{{r.name}}</span><span class="inside"
+  data-if="r.inside != ''">{{r.inside}}</span><span class="stock">{{r.count}}</span><span class="mkt"
   data-if="r.market != ''">{{r.market}}</span></div><div class="field price ctl"
   data-class-typing="focus == i + 1" data-event-click="vt_price(i)">{{r.price}}<span class="caret"
   data-if="focus == i + 1 && caret"></span></div><span class="pm ctl"
   data-event-click="vt_remove(i)">&#x2715;</span></div>
-</div><div class="hint">{{price_hint}}</div></div></div>
+</div><div class="hint">{{price_hint}}</div><div class="all" data-if="all != ''">{{all}}</div></div></div>
 <div class="hint" data-if="hint != ''">{{hint}}</div>
 <div class="btns"><div class="btn ctl" data-event-click="vt_cancel()">{{cancel}}</div>
 <div class="btn main ctl" data-event-click="vt_open()">{{open}}</div></div>
@@ -87,6 +91,7 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 struct SetupWareView {
     Rml::String name, count, price, icon;
     Rml::String market;  // 3.0.18-beta.104: the site's market line ("" none)
+    Rml::String inside;  // 3.0.18-beta.142: its cards and free slots
 };
 
 struct State {
@@ -108,6 +113,8 @@ struct State {
     int targetW = 0, targetH = 0;
     std::vector<vs::Row> cart, sale;
     std::vector<int> cartPlaces, salePlaces;  // each row's place (ITEM_INFO + 8)
+    std::vector<uint32_t> cartInfos, saleInfos;  // 3.0.18-beta.142: each row's ITEM_INFO in the game (its card)
+    Rml::String allWord;                         // «Якщо продати все: N z»
     std::string sign;
     vs::Show show;
     vs::Layout layout;
@@ -189,9 +196,11 @@ uint32_t priceEdit(uint32_t window, int place) {
     return window && place >= 0 && place < kMostPlaces ? read32(window + kPriceEdits + 4 * uint32_t(place)) : 0;
 }
 
-void readList(const State& s, uint32_t listAt, std::vector<vs::Row>& rows, std::vector<int>& places) {
+void readList(const State& s, uint32_t listAt, std::vector<vs::Row>& rows, std::vector<int>& places,
+              std::vector<uint32_t>& infos) {
     rows.clear();
     places.clear();
+    infos.clear();
     const auto& names = clienttables::itemNames();
     const auto& unknown = clienttables::unknownNames();
     const auto& files = clienttables::itemFiles();
@@ -224,14 +233,16 @@ void readList(const State& s, uint32_t listAt, std::vector<vs::Row>& rows, std::
         r.refine = refine > 0 && refine <= 20 ? refine : 0;
         const auto f = files.find(id);
         if (f != files.end()) r.icon = clienttables::icon(f->second, iw::iconSide(s.scale) * 3 / 4, 4 * s.scale);
+        infocardwin::describe(raw, r.id, s.codePage, r.name, r.inside);  // 3.0.18-beta.142: [slots], what is inside
         rows.push_back(std::move(r));
         places.push_back(int(rd32(raw, 0x08)));
+        infos.push_back(node + kInfo);
     }
 }
 
 void read(State& s, uint32_t window) {
-    readList(s, kCartList, s.cart, s.cartPlaces);
-    readList(s, kSaleList, s.sale, s.salePlaces);
+    readList(s, kCartList, s.cart, s.cartPlaces, s.cartInfos);
+    readList(s, kSaleList, s.sale, s.salePlaces, s.saleInfos);
     for (size_t i = 0; i < s.sale.size(); ++i) s.sale[i].price = wordsOf(priceEdit(window, int(i)), s.codePage);
     s.sign = wordsOf(window ? read32(window + kSignEdit) : 0, s.codePage);
     s.show.most = std::clamp(int32_t(read32(window + kPlaces)), 0, kMostPlaces);
@@ -253,7 +264,7 @@ vs::Texts texts(const State& s) {
     t.open = say(settings::Text::VendSetupOpen);
     t.cancel = say(settings::Text::VendSetupCancel);
     t.empty = say(settings::Text::VendSetupEmpty);
-    t.priceHint = say(settings::Text::VendSetupHint);
+    t.priceHint = say(settings::Text::VendSetupHint) + " \xC2\xB7 " + say(settings::Text::ThingCardTip);  // .142
     if (s.pad) {  // 3.0.16-beta.39: the controller's buttons (A, B, X, Y, LB, RB as uaRO Pad's menu names them)
         const auto b = [](size_t i) { return std::string(uapad::buttonLabel(i)); };
         t.hint = b(0) + " " + say(settings::Text::VendSetupPadPut) + " \xC2\xB7 " + b(2) + " " +
@@ -459,6 +470,7 @@ static void liveFrame(State& s) {
             v.RegisterMember("price", &SetupWareView::price);
             v.RegisterMember("icon", &SetupWareView::icon);
             v.RegisterMember("market", &SetupWareView::market);
+            v.RegisterMember("inside", &SetupWareView::inside);
         }
         m.RegisterArray<std::vector<SetupWareView>>();
         m.Bind("cart", &s.cartViews);
@@ -472,6 +484,14 @@ static void liveFrame(State& s) {
         m.Bind("cancel", &s.cancel);
         m.Bind("empty", &s.empty);
         m.Bind("price_hint", &s.priceHint);
+        m.Bind("all", &s.allWord);
+        m.BindEventCallback("vt_card", [](Rml::DataModelHandle, Rml::Event& ev, const Rml::VariantList& a) {
+            State& st = state();  // 3.0.18-beta.142: a right click - the thing's card
+            if (a.size() < 2 || ev.GetParameter<int>("button", 0) != 1) return;
+            const std::vector<uint32_t>& infos = a[0].Get<int>() ? st.saleInfos : st.cartInfos;
+            const int at = a[1].Get<int>();
+            if (at >= 0 && size_t(at) < infos.size()) infocardwin::showItem(infos[size_t(at)]);
+        });
         m.Bind("hint", &s.hint);
         m.Bind("focus", &s.focusNo);
         m.Bind("caret", &s.caretOn);
@@ -512,6 +532,7 @@ static void liveFrame(State& s) {
         SetupWareView v;
         v.name = r.refine > 0 ? "+" + std::to_string(r.refine) + " " + r.name : r.name;
         v.count = "\xC3\x97" + std::to_string(r.count);
+        v.inside = r.inside;
         // 3.0.18-beta.104 (R-K5QG6Z «окно с ценой маленькое»): the price grouped, the stack's sum beside the count, the
         // site's market under it
         const long long price = vs::priceOf(r.price);
@@ -526,6 +547,12 @@ static void liveFrame(State& s) {
         if (r.icon && r.icon->width > 0) v.icon = uaui::picture(r.icon, uaui::stamp(r.icon), s.iconPrev[r.icon]);
         return v;
     };
+    {  // 3.0.18-beta.142: what the whole sale brings at its prices
+        long long all = 0;
+        for (const vs::Row& r : s.sale) all += vs::priceOf(r.price) * std::max(1, r.count);
+        const Rml::String word = all > 0 ? settings::fmt(say(settings::Text::VendSetupAll), {iw::grouped(all)}) : "";
+        if (word != s.allWord) s.allWord = word, s.live.doc.dirty("all");
+    }
     std::vector<SetupWareView> cart, sale;
     for (const vs::Row& r : s.cart) cart.push_back(viewOf(r, false));
     for (const vs::Row& r : s.sale) sale.push_back(viewOf(r, true));

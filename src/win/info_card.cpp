@@ -1,5 +1,7 @@
 #include "win/info_card.hpp"
 
+#include "core/vend_shop.hpp"
+
 #include <windowsx.h>
 
 #include <algorithm>
@@ -237,6 +239,37 @@ std::string itemName(const State& s, const std::string& number, bool known) {
     return n != names.end() ? utf8(s, hotbar::spaced(n->second)) : "#" + number;
 }
 
+// 3.0.18-beta.142: a forged thing's maker by the character's id, as the game names it (FUN_004fef70: the session's
+// names, 0x74B578 +4 while +0x58 is 1, FUN_00560c30 - it asks the server once for one not known); asked again at
+// most each 5 s, a name known kept
+std::string makerName(int cid, unsigned codePage) {
+    using NameFn = uint32_t(__attribute__((thiscall)) *)(uint32_t self, uint32_t cid);
+    constexpr uint32_t kNames = 0x74B578, kNameOf = 0x560C30;
+    static std::map<int, std::string> known;
+    static std::map<int, ULONGLONG> asked;
+    if (cid <= 0) return "";
+    if (const auto k = known.find(cid); k != known.end()) return k->second;
+    const ULONGLONG now = GetTickCount64();
+    if (const auto a = asked.find(cid); a != asked.end() && now - a->second < 5000) return "";
+    asked[cid] = now;
+    const uint32_t self = read32(kNames + 0x58) == 1 ? read32(kNames + 4) : 0;
+    if (!self) return "";
+    const uint32_t entry = reinterpret_cast<NameFn>(uintptr_t(kNameOf))(self, uint32_t(cid));
+    const uint32_t text = entry ? read32(entry + 4) : 0;
+    char buf[32] = {};
+    if (!text || !readGame(text, buf, sizeof buf - 1) || !buf[0]) return "";
+    const std::string name = utf8Of(widened(buf, codePage));
+    known[cid] = name;
+    LOG_INFO("cards: a forged thing's maker #%d - %s", cid, name.c_str());
+    return name;
+}
+
+std::string forgedLine(const int cards[4], unsigned codePage) {
+    const std::string maker = makerName(cardnames::makerOf(cards), codePage);
+    if (maker.empty()) return say(settings::Text::ThingForged);
+    return settings::fmt(say(settings::Text::ThingForgedBy), {maker});
+}
+
 // The item card's thing: its title (+refined, [slots]), its count or «Не опізнано», its description, its slots' cards
 void itemCard(State& s, One& o, uint32_t window) {
     const std::string number = text(read32(window + kNameText), read32(window + kNameLen));
@@ -266,6 +299,7 @@ void itemCard(State& s, One& o, uint32_t window) {
               (known ? cardnames::named(base, cards, clienttables::cardWords()) : base) +
               (slotCount > 0 ? " [" + std::to_string(slotCount) + "]" : "");
     c.note = count > 1 ? "\xC3\x97" + std::to_string(count) : known ? "" : say(settings::Text::CardUnknown);
+    if (known && cardnames::forged(cards) && c.note.empty()) c.note = forgedLine(cards, s.codePage);  // .142
     const auto& table = known ? s.tables.items : s.tables.unknown;
     const auto d = table.find(number);
     if (d != table.end()) c.lines = utf8Lines(s, d->second);
@@ -722,6 +756,40 @@ int slotsOf(int id) {
     readTables(s);
     const auto it = s.tables.slots.find(id);
     return it == s.tables.slots.end() ? 0 : it->second;
+}
+
+bool showItem(uint32_t itemInfo) {
+    using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t mgr, int id);
+    constexpr uint32_t kMakeWindow = 0x4D42D0;
+    constexpr int kItemCardWindow = 0xC, kShowItem = 0x18;
+    if (!itemInfo) return false;
+    const uint32_t window = reinterpret_cast<MakeFn>(uintptr_t(kMakeWindow))(kWindowMgr, kItemCardWindow);
+    const uint32_t send = window ? read32(read32(window) + kSendMsgSlot) : 0;
+    if (!send) return false;
+    reinterpret_cast<SendMsgFn>(uintptr_t(send))(window, 0, kShowItem, int(itemInfo), 0, 0);
+    return true;
+}
+
+void describe(const uint8_t* itemInfo, int id, unsigned codePage, std::string& name, std::string& inside) {
+    inside.clear();
+    if (!itemInfo || itemInfo[0x3C] == 0) return;
+    {
+        int cards[4] = {};
+        cardnames::cardsOf(itemInfo, cards);
+        if (cardnames::forged(cards)) {  // 3.0.18-beta.142: its maker under the name (the name has its words)
+            inside = forgedLine(cards, codePage);
+            return;
+        }
+    }
+    const int slots = slotsOf(id);
+    name = vendshop::withSlots(name, slots);
+    int cards[4] = {};
+    cardnames::cardsOf(itemInfo, cards);
+    const auto& names = clienttables::itemNames();
+    inside = vendshop::inside(cards, slots, [&](int card) {
+        const auto w = names.find(std::to_string(card));
+        return w == names.end() ? std::string() : utf8Of(widened(hotbar::spaced(w->second), codePage));
+    }, say(settings::Text::VendFree));
 }
 
 }  // namespace uagfx::win::infocardwin

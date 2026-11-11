@@ -18,6 +18,12 @@ Tables read(const std::string& prefixText, const std::string& postfixText);
 // `name` without its refine; `cards` its four card places (0 none; a forged or named thing's makers are not cards:
 // 255, 254, 0xFF00 in the first place - its name as it is)
 std::string named(const std::string& name, const int cards[4], const Tables& t);
+// 3.0.18-beta.142 (the owner asked about things forged by a smith): a forged thing - 255 in its first place
+// (uaRO.exe FUN_005000f0); named by the game's words (FUN_004feef0, FUN_004fefe0): "Very Strong" for its star
+// crumbs (the second place's high byte 5, 10, 15), "Ice" / "Earth" / "Fire" / "Wind" its element (low byte 1-4);
+// its maker's character id: the fourth place * 0x10000 + the third (FUN_004fef70)
+bool forged(const int cards[4]);
+int makerOf(const int cards[4]);
 // 3.0.18-beta.118: a thing's four card places from its ITEM_INFO (72 bytes: +0x1C, ints)
 void cardsOf(const uint8_t* itemInfo, int cards[4]);
 // Its name with its cards when it is identified (ITEM_INFO +0x3C), else `name` as it is

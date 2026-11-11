@@ -24,7 +24,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
 bool close();  // Esc: cancel
 void beforeGameDraw();
-enum class PadCommand : uint8_t { Up, Down, Ok, Cancel };
+enum class PadCommand : uint8_t { Up, Down, Ok, Cancel, Card };  // .142 Card: Y
 void padCommand(PadCommand c);
 bool box(int& x, int& y, int& w, int& h);
 

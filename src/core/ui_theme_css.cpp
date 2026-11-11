@@ -615,6 +615,9 @@ select selectbox option:checked { color: #e6cb8a; }
 .pkw .list { display: block; min-height: 40dp; max-height: 280dp; overflow-y: auto; margin: 4dp 0 8dp 0; }
 .pkw .row { display: flex; align-items: center; font-size: 12.5dp; min-height: 30dp; }
 .pkw .row img { width: 26dp; height: 26dp; margin-right: 8dp; }
+.pkw .pwho { display: block; flex: 1; }  /* 3.0.18-beta.142: the name, what is inside under it */
+.pkw .pwho .name { display: block; font-size: 12.5dp; font-weight: normal; color: #eef2f8; }
+.pkw .pwho .inside { display: block; font-size: 10.5dp; color: #b8c8ff; }
 .npw { width: 560dp; }
 .npw .count { margin-left: 10dp; font-size: 11.5dp; color: #9aa3b5; }
 .npw .talk { display: block; margin: 4dp 0 10dp 0; }
@@ -641,7 +644,8 @@ select selectbox option:checked { color: #e6cb8a; }
 .lw .wname .name { display: block; font-size: 12.5dp; }
 .lw .wname .stock { display: block; font-size: 10.5dp; color: #9aa3b5; }
 /* 3.0.18-beta.138: a ware's cards and free slots; its name opens its card */
-.vsw .wname .inside { display: block; font-size: 10.5dp; color: #b8c8ff; }
+.vsw .wname .inside, .vstw .wname .inside { display: block; font-size: 10.5dp; color: #b8c8ff; }
+.vstw .all { display: block; margin-top: 4dp; font-size: 12dp; font-weight: bold; color: #e6cb8a; }
 .vsw .wname:hover .name { color: #e6cb8a; }
 .lw .price { font-size: 12dp; color: #e6cb8a; margin-right: 10dp; }
 .lw .pm { display: block; width: 22dp; height: 22dp; line-height: 22dp; text-align: center; border-radius: 6dp;

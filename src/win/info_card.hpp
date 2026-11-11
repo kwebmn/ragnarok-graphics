@@ -37,5 +37,11 @@ bool box(Kind kind, int& x, int& y, int& w, int& h);
 std::vector<std::string> skillDescription(const std::string& aegis, const std::string& name);
 // 3.0.18-beta.138: an item's slots as the game's itemslotcounttable.txt has them (0 none)
 int slotsOf(int id);
+// 3.0.18-beta.142 (the owner: «все» - the windows' audit): a thing's item card by its ITEM_INFO in the game (a list
+// node's +8) - the game's own card (UI window 0xC, its message 0x18), drawn in the new look; false: not made
+bool showItem(uint32_t itemInfo);
+// A thing's name made full and what is inside it, from its ITEM_INFO (72 bytes): its cards' words in the name, its
+// slots after it («[3]»), its cards and free slots in `inside` (core vendshop::inside) - only for one identified
+void describe(const uint8_t* itemInfo, int id, unsigned codePage, std::string& name, std::string& inside);
 
 }  // namespace uagfx::win::infocardwin

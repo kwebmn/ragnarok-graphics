@@ -19,6 +19,7 @@ struct Row {
     int id = 0;  // 3.0.18-beta.104: the item's number (its market line)
     const panel::Picture* icon = nullptr;
     std::string price;  // the sale's: its field's words (digits)
+    std::string inside;  // 3.0.18-beta.142: its cards and free slots (win/info_card describe), "" none
 };
 // A price as the game takes it (FUN_0062a7b0 then the OK's checks): its digits, at most 99 990 000; 0 none
 long long priceOf(const std::string& words);

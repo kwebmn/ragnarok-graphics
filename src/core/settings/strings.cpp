@@ -8374,6 +8374,19 @@ constexpr Entry kTexts[] = {
     {Text::SocialPadHint, "{1}: what to do \xC2\xB7 {2} / {3}: tabs \xC2\xB7 {4}: close",
      "{1}: дії \xC2\xB7 {2} / {3}: вкладки \xC2\xB7 {4}: закрити",
      "{1}: действия \xC2\xB7 {2} / {3}: вкладки \xC2\xB7 {4}: закрыть"},
+    {Text::VendSetupAll, "If all sells: {1} z",  // 3.0.18-beta.142
+     "Якщо продати все: {1} z",
+     "Если продать всё: {1} z"},
+    {Text::ThingCardTip, "Right click on a thing: its card",
+     "Права кнопка по речі - її картка",
+     "Правая кнопка по вещи - её карточка"},
+    {Text::ThingForgedBy, "Forged by {1}",
+     "Викував {1}",
+     "Выковал {1}"},
+    {Text::ThingForged, "Forged",
+     "Кована",
+     "Кованая"},
+    {Text::VendPadCard, "its card", "картка", "карточка"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

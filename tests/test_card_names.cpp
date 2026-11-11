@@ -20,7 +20,7 @@ TEST(card_names_as_the_game_names_them) {
     CHECK_EQ(cardnames::named("Clip", after, t), std::string("Clip of Champion"));
     const int twice[4] = {4014, 4014, 0, 0};
     CHECK_EQ(cardnames::named("Clip", twice, t), std::string("Clip of Double Champion"));
-    const int forged[4] = {0xFF, 4035, 0, 0};  // a forged thing's maker: its own name
+    const int forged[4] = {0xFF, 0, 4035, 0};  // a forged thing, no crumbs, no element: its own name (.142)
     CHECK_EQ(cardnames::named("Katana", forged, t), std::string("Katana"));
     const int unknown[4] = {9999, 0, 0, 0};
     CHECK_EQ(cardnames::named("Katana", unknown, t), std::string("Katana"));
@@ -44,4 +44,23 @@ TEST(card_names_from_item_info) {
     CHECK_EQ(cardnames::namedFromInfo("Katana", info, t), std::string("Katana"));  // not identified: as it is
     info[0x3C] = 1;
     CHECK_EQ(cardnames::namedFromInfo("Katana", info, t), std::string("Double Lucky Katana of Counter"));
+}
+
+// 3.0.18-beta.142 (the owner asked about things forged by a smith): a forged thing (255 in its first place) named
+// as the game's own words have it - its star crumbs (the second place's high byte 5 / 10 / 15: «Very Strong» ...)
+// and its element (its low byte: 1 water «Ice», 2 earth, 3 fire, 4 wind); its maker's character in the last two
+TEST(card_names_forged_things) {
+    const cardnames::Tables t;
+    const int fire2[4] = {255, (10 << 8) | 3, 150001, 0};
+    CHECK_EQ(cardnames::named("Main Gauche", fire2, t), std::string("Very Very Strong Fire Main Gauche"));
+    const int plain[4] = {255, 0, 7, 1};
+    CHECK_EQ(cardnames::named("Knife", plain, t), std::string("Knife"));
+    const int ice3[4] = {255, (15 << 8) | 1, 0, 0};
+    CHECK_EQ(cardnames::named("Axe", ice3, t), std::string("Very Very Very Strong Ice Axe"));
+    const int wind[4] = {255, 4, 0, 0};
+    CHECK_EQ(cardnames::named("Sword", wind, t), std::string("Wind Sword"));
+    CHECK(cardnames::forged(fire2) && cardnames::forged(plain));
+    const int none[4] = {4001, 0, 0, 0};
+    CHECK(!cardnames::forged(none));
+    CHECK_EQ(cardnames::makerOf(plain), 1 * 0x10000 + 7);  // the third place low, the fourth high
 }

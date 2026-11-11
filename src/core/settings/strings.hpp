@@ -919,6 +919,9 @@ enum class Text : uint16_t {
     SocialOnline, SocialNearCells, SocialNear, SocialDeadNow, SocialRoute, SocialAddFriend, SocialCopy,  // .141
     SocialExpEven, SocialExpEach, SocialNoPartyHint, SocialNoFriendsHint, SocialNameField, SocialAdd,
     SocialMouseHint, SocialPadHint,
+    VendSetupAll, ThingCardTip,  // 3.0.18-beta.142: «Відкрити лавку» - all sold, a right click's card
+    ThingForgedBy, ThingForged,  // 3.0.18-beta.142: a forged thing's maker
+    VendPadCard,  // 3.0.18-beta.142: «картка» after the controller's button
     Count
 };
 

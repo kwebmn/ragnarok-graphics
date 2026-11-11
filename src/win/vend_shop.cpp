@@ -227,17 +227,9 @@ std::vector<Thing> readList(const State& s, uint32_t headAt) {
         r.name = words.empty() ? "#" + id : utf8Of(widened(hotbar::spaced(words), s.codePage));
         // 3.0.18-beta.118 (the owner: «в вендинге не видно карт»): its cards in its name, as the game names it
         r.name = cardnames::namedFromInfo(r.name, t.info, clienttables::cardWords());
-        // 3.0.18-beta.138 (the owner: things in a shop not seen into): its slots, its cards' line
-        const int slots = identified ? infocardwin::slotsOf(r.id) : 0;
-        r.name = vs::withSlots(r.name, slots);
-        int cards[4] = {};
-        cardnames::cardsOf(t.info, cards);
-        r.inside = identified ? vs::inside(cards, slots, [&](int card) {
-                                    const auto w = names.find(std::to_string(card));
-                                    return w == names.end() ? std::string()
-                                                            : utf8Of(widened(hotbar::spaced(w->second), s.codePage));
-                                }, say(settings::Text::VendFree))
-                              : std::string();
+        // 3.0.18-beta.138 (the owner: things in a shop not seen into): its slots, its cards' line; .142 the forged's
+        // maker (win/info_card describe)
+        infocardwin::describe(t.info, r.id, s.codePage, r.name, r.inside);
         t.at = node + kInfo;
         const auto f = files.find(id);
         if (f != files.end()) r.icon = clienttables::icon(f->second, iw::iconSide(s.scale), 4 * s.scale);

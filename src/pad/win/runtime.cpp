@@ -858,7 +858,8 @@ bool pickPad(const PadState& pad, DWORD now) {
     s.prevPadButtons = buttons;
     using uagfx::win::pickcardwin::PadCommand;
     const std::pair<uint16_t, PadCommand> keys[] = {{kPadUp, PadCommand::Up}, {kPadDown, PadCommand::Down},
-                                                    {kPadA, PadCommand::Ok},  {kPadB, PadCommand::Cancel}};
+                                                    {kPadA, PadCommand::Ok},  {kPadB, PadCommand::Cancel},
+                                                    {kPadY, PadCommand::Card}};  // 3.0.18-beta.142
     for (const auto& [button, command] : keys)
         if (down & button) uagfx::win::pickcardwin::padCommand(command);
     return true;

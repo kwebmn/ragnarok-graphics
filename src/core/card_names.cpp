@@ -44,8 +44,19 @@ Tables read(const std::string& prefixText, const std::string& postfixText) {
     return t;
 }
 
+bool forged(const int cards[4]) { return cards[0] == 0xFF; }
+
+int makerOf(const int cards[4]) { return int(uint32_t(cards[3]) * 0x10000u + uint32_t(cards[2] & 0xFFFF)); }
+
 std::string named(const std::string& name, const int cards[4], const Tables& t) {
-    if (cards[0] == 0xFF || cards[0] == 0xFE || cards[0] == 0xFF00 || cards[0] < 0) return name;
+    if (forged(cards)) {  // 3.0.18-beta.142
+        const int stars = (cards[1] >> 8) & 0xFF, element = cards[1] & 0xFF;
+        static const char* const kStrong[3] = {"Very Strong ", "Very Very Strong ", "Very Very Very Strong "};
+        static const char* const kElement[5] = {"", "Ice ", "Earth ", "Fire ", "Wind "};
+        const std::string strong = stars == 5 ? kStrong[0] : stars == 10 ? kStrong[1] : stars == 15 ? kStrong[2] : "";
+        return strong + (element >= 1 && element <= 4 ? kElement[element] : "") + name;
+    }
+    if (cards[0] == 0xFE || cards[0] == 0xFF00 || cards[0] < 0) return name;
     std::vector<std::pair<int, int>> counted;  // a card, how many times - in the order they sit
     for (int i = 0; i < 4; ++i) {
         if (cards[i] <= 0) continue;

@@ -21,6 +21,7 @@
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/client_tables.hpp"
+#include "win/info_card.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -114,8 +115,9 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div class="msg" data-if="message != ''">{{message}}</div>
 <div class="list"><div class="row ctl" data-for="e, i : entries" data-class-on="i == selected"
   data-event-click="pk_choose(i)"
-  data-event-dblclick="pk_ok()"><img data-if="e.icon != ''" data-attr-src="e.icon"/><span
-  class="name">{{e.name}}</span></div>
+  data-event-dblclick="pk_ok()" data-event-mousedown="pk_card(i)"><img data-if="e.icon != ''"
+  data-attr-src="e.icon"/><div class="pwho"><span class="name">{{e.name}}</span><span class="inside"
+  data-if="e.inside != ''">{{e.inside}}</span></div></div>
 <div class="hint" data-if="entries.size == 0">{{empty}}</div></div>
 <div class="hint" data-if="hint != ''">{{hint}}</div>
 <div class="btns"><div class="btn ctl" data-event-click="pk_cancel()">{{cancel}}</div>
@@ -123,7 +125,7 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
 struct PickEntryView {
-    Rml::String name, icon;
+    Rml::String name, icon, inside;
 };
 
 struct State {
@@ -310,6 +312,8 @@ std::vector<pc::Entry> readList(const State& s, uint32_t window) {
         }
         e.name = words.empty() ? "#" + id : utf8Of(widened(hotbar::spaced(words), s.codePage));
         e.name = cardnames::namedFromInfo(e.name, raw, clienttables::cardWords());  // 3.0.18-beta.137: its cards
+        infocardwin::describe(raw, std::atoi(id.c_str()), s.codePage, e.name, e.inside);  // .142: [slots], inside
+        e.info = node + kInfo;
         const int refine = int(rd32(raw, 0x40));
         e.refine = refine > 0 && refine <= 20 ? refine : 0;
         const auto f = files.find(id);
@@ -349,9 +353,11 @@ pc::Texts texts(const State& s) {
     }
     t.cancel = say(settings::Text::MsgCancel);
     t.empty = say(settings::Text::PickEmpty);
-    if (s.padNow)
-        t.hint = std::string(uapad::buttonLabel(0)) + ": " + t.ok + " \xC2\xB7 " + uapad::buttonLabel(1) + ": " +
-                 t.cancel;
+    if (s.padNow)  // 3.0.18-beta.142: Y the thing's card
+        t.hint = std::string(uapad::buttonLabel(0)) + ": " + t.ok + " \xC2\xB7 " + uapad::buttonLabel(3) + ": " +
+                 say(settings::Text::VendPadCard) + " \xC2\xB7 " + uapad::buttonLabel(1) + ": " + t.cancel;
+    else
+        t.hint = say(settings::Text::ThingCardTip);
     return t;
 }
 
@@ -523,6 +529,7 @@ static void fillSheet(State& s, uisheet::Content& c) {
 static void liveFrame(State& s) {
     s.live.make("pick", kLive, [&](Rml::DataModelConstructor& m) {
         if (auto v = m.RegisterStruct<PickEntryView>()) {
+            v.RegisterMember("inside", &PickEntryView::inside);
             v.RegisterMember("name", &PickEntryView::name);
             v.RegisterMember("icon", &PickEntryView::icon);
         }
@@ -539,6 +546,12 @@ static void liveFrame(State& s) {
         m.BindEventCallback("pk_choose", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             if (!a.empty()) choose(state(), a[0].Get<int>());
         });
+        m.BindEventCallback("pk_card", [](Rml::DataModelHandle, Rml::Event& ev, const Rml::VariantList& a) {
+            State& st = state();  // 3.0.18-beta.142: a right click - the thing's card
+            if (a.empty() || ev.GetParameter<int>("button", 0) != 1) return;
+            const int at = a[0].Get<int>();
+            if (at >= 0 && size_t(at) < st.entries.size()) infocardwin::showItem(st.entries[size_t(at)].info);
+        });
         m.BindEventCallback("pk_ok", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
             press(state(), pc::kOkButton);
         });
@@ -552,6 +565,7 @@ static void liveFrame(State& s) {
     for (const pc::Entry& e : s.entries) {
         PickEntryView v;
         v.name = e.refine > 0 ? "+" + std::to_string(e.refine) + " " + e.name : e.name;
+        v.inside = e.inside;
         if (e.icon && e.icon->width > 0) v.icon = uaui::picture(e.icon, uaui::stamp(e.icon), s.iconPrev[e.icon]);
         entries.push_back(v);
     }
@@ -559,7 +573,7 @@ static void liveFrame(State& s) {
     const bool same = entries.size() == s.entryViews.size() &&
                       std::equal(entries.begin(), entries.end(), s.entryViews.begin(),
                                  [](const PickEntryView& a, const PickEntryView& b) {
-                                     return a.name == b.name && a.icon == b.icon;
+                                     return a.name == b.name && a.icon == b.icon && a.inside == b.inside;
                                  });
     if (!same) s.entryViews = std::move(entries), s.live.doc.dirty("entries");
     if (t.title != s.title || t.message != s.message || t.ok != s.ok || t.cancel != s.cancel || t.empty != s.empty ||
@@ -665,6 +679,10 @@ void padCommand(PadCommand c) {
         case PadCommand::Down: choose(s, std::min(n - 1, s.show.selected + 1)); break;
         case PadCommand::Ok: press(s, pc::kOkButton); break;
         case PadCommand::Cancel: press(s, pc::kCancelButton); break;
+        case PadCommand::Card:  // 3.0.18-beta.142
+            if (s.show.selected >= 0 && s.show.selected < n)
+                infocardwin::showItem(s.entries[size_t(s.show.selected)].info);
+            break;
     }
     if (s.show.selected >= 0) {  // the chosen row in sight
         if (s.show.selected < s.show.scroll) s.show.scroll = s.show.selected;
