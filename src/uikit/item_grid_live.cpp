@@ -24,7 +24,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-attr-src="searchIcon"/><span class="q" data-if="query != ''">{{query}}</span><span class="caret"
   data-if="caret"></span><span class="q qh" data-if="hint != ''">{{hint}}</span></div>
 <div class="gridbox" data-hit="grid"><div class="grid"><div class="cell" data-for="c : cells" data-hit="cellbox"
-  data-attr-data-index="c.index" data-class-hot="c.hot" data-class-thing="c.hit == 'cell'"><div class="flash"
+  data-attr-data-index="c.index" data-class-hot="c.hot" data-class-thing="c.hit == 'cell'"
+  data-class-picked="c.picked"><div class="flash"
   data-if="c.flash > 0" data-style-opacity="c.flash"></div><img data-if="c.icon != ''" data-attr-src="c.icon"
   data-style-width="c.iconW + 'px'" data-style-height="c.iconH + 'px'" data-style-opacity="c.op"/><span class="cnt"
   data-if="c.count != ''">{{c.count}}</span><span class="ref" data-if="c.refine != ''">{{c.refine}}</span><span
@@ -36,7 +37,9 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-style-margin-top="((-4 - c.rise) / 12) + 'rem'">{{c.rising}}</span></div></div>
 <div class="thumb" data-if="scrollable" data-style-top="thumbTop + '%'" data-style-height="thumbH + '%'"></div>
 <div class="drop" data-if="dropping"></div></div>
-<div class="foot" data-hit="footer"><span class="also" data-if="also != ''">{{also}}</span><span class="w"
+<div class="foot" data-hit="footer"><span class="pk" data-hit="picked"
+  data-if="pickedText != ''">{{pickedText}}</span><span
+  class="also" data-if="also != ''">{{also}}</span><span class="w"
   data-if="also == ''">{{weightWord}}</span><div class="bar" data-hit="bar" data-if="bar"><div
   data-attr-class="'fill ' + tone" data-style-width="fill + '%'"></div></div><span class="wt"
   data-if="weightText != '' && also == ''">{{weightText}}</span><span class="z"
@@ -88,6 +91,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         e.RegisterMember("rising", &CellV::rising);
         e.RegisterMember("risingColour", &CellV::risingColour);
         e.RegisterMember("ele", &CellV::ele);
+        e.RegisterMember("picked", &CellV::picked);
         e.RegisterMember("hot", &CellV::hot);
         e.RegisterMember("starOn", &CellV::starOn);
         e.RegisterMember("op", &CellV::op);
@@ -124,6 +128,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("tipX", &m.tipX);
     c.Bind("tipY", &m.tipY);
     c.Bind("tip1", &m.tip1);
+    c.Bind("pickedText", &m.pickedText);
     c.Bind("tipColour", &m.tipColour);
     c.Bind("tip2", &m.tip2);
     c.Bind("tip3", &m.tip3);
@@ -175,6 +180,7 @@ void fill(Model& m, const iw::Layout& L, const std::vector<iw::Item>& items, con
         else if (it.worn) c.mark = "E", c.markCls = "mk e";  // 3.0.11-beta.118: the arrows worn
         if (it.fresh && !t.fresh.empty()) c.fresh = t.fresh;
         c.ele = it.elementRgb ? hex(it.elementRgb) : "#00000000";  // 3.0.18-beta.144
+        c.picked = std::find(sh.picked.begin(), sh.picked.end(), it.index) != sh.picked.end();  // 3.0.18-beta.155
         if (it.starred) c.star = "\xE2\x98\x85", c.starOn = true;
         else if (at == sh.hover) c.star = "\xE2\x98\x86";
     }
@@ -221,6 +227,7 @@ void fill(Model& m, const iw::Layout& L, const std::vector<iw::Item>& items, con
              : (sh.overweight >= 0 ? sh.overweight == 1 : share >= 0.5f) ? "gold"
                                                                          : "green";
     m.zeny = sh.zeny >= 0 ? iw::grouped(sh.zeny) + " z" : "";
+    m.pickedText = sh.pickedText;  // 3.0.18-beta.155
     m.tip = sh.tip && sh.hover >= 0 && sh.hover < int(shown.size());
     m.tipColour = kTipName;
     if (m.tip) {
@@ -255,6 +262,7 @@ bool refit(Rml::ElementDocument* doc, iw::Layout& L) {
     one("grid", L.grid);
     one("footer", L.footer);
     one("bar", L.bar);
+    one("picked", L.picked);  // 3.0.18-beta.155
     const std::vector<Placed> tabs = placesOf(doc, "tab");
     L.tabs.clear();
     for (const Placed& t : tabs) L.tabs.push_back(t.box);

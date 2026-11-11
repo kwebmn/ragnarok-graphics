@@ -107,6 +107,10 @@ struct Show {
     // colour; < 0 not known (and «Склад»): by the share, 50 % and 90 %
     int overweight = -1;
     long long zeny = 0;              // < 0: none shown («Склад»)
+    // 3.0.18-beta.155 (the owner: things picked with Ctrl and moved together): the picked ones' places (each cell's
+    // gold mark) and the footer's button for them («Забрати вибране (3)»; "" none)
+    std::vector<int> picked;
+    std::string pickedText;
 };
 
 struct Layout {
@@ -114,12 +118,14 @@ struct Layout {
     int x = 0, y = 0, w = 0, h = 0;  // the picture in the target
     int columns = 8, rows = 5;
     panel::Box glass, title, close, tabsRow, search, grid, footer, bar;
+    panel::Box picked;  // 3.0.18-beta.155: the footer's button for the things picked (0 wide: none)
     std::vector<panel::Box> tabs, cells;  // the cells shown (columns x rows)
 };
 Layout layout(int x, int y, float scale, const Texts& t, const Measure& m);
 int mostScroll(const Layout& L, size_t count);
 
-enum class Part : uint8_t { None, Close, Tab, Search, Cell, Grid, Title, Body, Star };  // 3.0.11-beta.113: Star
+// 3.0.11-beta.113: Star; 3.0.18-beta.155: Picked - the footer's button for the things picked
+enum class Part : uint8_t { None, Close, Tab, Search, Cell, Grid, Title, Body, Star, Picked };
 struct Hit {
     Part part = Part::None;
     int index = -1;  // a tab's; a cell's (of the shown, the scroll counted)

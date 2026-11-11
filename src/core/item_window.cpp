@@ -238,6 +238,7 @@ Hit hitTest(const Layout& L, size_t shownCount, int scroll, float x, float y) {
     for (size_t i = 0; i < L.tabs.size(); ++i)
         if (L.tabs[i].contains(x, y)) return Hit{Part::Tab, int(i)};
     if (L.search.contains(x, y)) return Hit{Part::Search, -1};
+    if (L.picked.w > 0 && L.picked.contains(x, y)) return Hit{Part::Picked, -1};  // 3.0.18-beta.155
     for (size_t i = 0; i < L.cells.size(); ++i)
         if (L.cells[i].contains(x, y)) {
             const int at = int(i) + scroll * L.columns;

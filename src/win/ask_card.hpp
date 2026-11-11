@@ -26,7 +26,10 @@ void frame(HWND game, bool on, bool counts, unsigned codePage, double k, int tar
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
-bool asking();  // a request or a count shown (an NPC's input the controller leaves to the game's own field)
+bool asking();
+// 3.0.18-beta.155: the game's «how many» just made (a stack moved in a batch) - its whole count set and its OK
+// pressed; false: none shown
+bool countAll();  // a request or a count shown (an NPC's input the controller leaves to the game's own field)
 bool close();   // Esc: a request declined, a count given up (true); an NPC's input left to the game
 void beforeGameDraw();
 enum class PadCommand : uint8_t { Accept, Decline };

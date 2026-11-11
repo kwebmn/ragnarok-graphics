@@ -816,6 +816,10 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
     line-height: 1.0833rem;
                    text-align: center; font-size: 0.9167rem; color: #9aa3b5; }
 .igl .cell .star.on { color: #f3c653; }
+/* 3.0.18-beta.155: things picked with Ctrl / Shift, the footer's button for them */
+.igl .cell.picked { border-color: #f3c653; background-color: #c9a55b2e; }
+.igl .foot .pk { margin-right: 0.6667rem; padding: 0.1667rem 0.6667rem; border-radius: 0.5rem;
+    background-color: #c9a55b40; color: #f3c653; font-weight: bold; }
 /* 3.0.18-beta.144: a thing's element - a short line in its colour along the cell's top */
 .igl .cell .ele { position: absolute; left: 25%; top: 0.0833rem; width: 50%; height: 0.1667rem;
                   border-radius: 0.0833rem; }

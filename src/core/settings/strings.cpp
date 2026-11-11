@@ -8417,6 +8417,15 @@ constexpr Entry kTexts[] = {
      "комплекти: клік — вдягти, "
      "права кнопка — запам'ятати вдягнене",
      "комплекты: клик — надеть, правая кнопка — запомнить надетое"},
+    {Text::StorageTakePicked, "Take the picked ({1})",
+     "Забрати вибране ({1})",
+     "Забрать выбранное ({1})"},
+    {Text::PickedPut, "Put the picked ({1})",
+     "Покласти вибране ({1})",
+     "Положить выбранное ({1})"},
+    {Text::PickedHint, "Ctrl+click picks, Shift+click a run, Ctrl+A all",
+     "Ctrl+клік — вибрати, Shift+клік — підряд, Ctrl+A — усе",
+     "Ctrl+клик — выбрать, Shift+клик — подряд, Ctrl+A — всё"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

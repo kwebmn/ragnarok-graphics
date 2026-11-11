@@ -17,6 +17,7 @@
 
 #include "core/card_names.hpp"
 #include "core/hotbar_panel.hpp"
+#include "core/item_pick.hpp"
 #include "core/item_window.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
@@ -25,6 +26,7 @@
 #include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
+#include "win/ask_card.hpp"
 #include "win/client_tables.hpp"
 #include "win/info_card.hpp"
 #include "win/code_page.hpp"
@@ -71,6 +73,11 @@ using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
 
 struct State {
+    // 3.0.18-beta.155 (the owner: several things picked with Ctrl and taken together): the things picked
+    // (Ctrl / Shift / Ctrl+A), those being taken into the bag (one each 250 ms, a stack's count all)
+    itempick::Picked picked;
+    std::vector<int> takeQueue;
+    ULONGLONG takeAt = 0;
     bool searchAll = false;  // 3.0.18-beta.72: Ctrl+A in the search
     itemgridui::Ui grid;  // 3.0.18-beta.27: the window drawn by uaUI
     int gridGen = 0;
@@ -355,6 +362,38 @@ bool closeGameWindow() {
     return true;
 }
 
+// 3.0.18-beta.155: the picked ones into the bag, one a step
+void takePicked(State& s, const char* how) {
+    if (!s.picked.count()) return;
+    s.takeQueue = s.picked.list();
+    s.takeAt = 0;
+    s.picked.clear();
+    if (s.told++ < 30) LOG_INFO("storage: %s - %zu picked thing(s) into the bag", how, s.takeQueue.size());
+    s.key.clear();
+}
+
+void takeSteps(State& s) {
+    if (s.takeQueue.empty() || GetTickCount64() < s.takeAt) return;
+    if (askcardwin::countAll()) {  // the last one's «how many» - all of it
+        s.takeAt = GetTickCount64() + 250;
+        return;
+    }
+    const int index = s.takeQueue.front();
+    s.takeQueue.erase(s.takeQueue.begin());
+    for (const iw::Item& it : s.items)
+        if (it.index == index) {
+            take(s, it);
+            break;
+        }
+    s.takeAt = GetTickCount64() + 250;
+}
+
+std::vector<int> shownPlaces(const State& s) {
+    std::vector<int> out;
+    for (const int i : s.shownItems) out.push_back(s.items[size_t(i)].index);
+    return out;
+}
+
 void takeCell(State& s, int shownIndex, const char* how) {
     if (shownIndex < 0 || shownIndex >= int(s.shownItems.size())) return;
     const iw::Item it = s.items[size_t(s.shownItems[size_t(shownIndex)])];
@@ -405,6 +444,17 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.weight = s.places;
     s.show.weightMost = s.most;
     s.show.zeny = -1;
+    {  // 3.0.18-beta.155: the picks - those gone let go, the footer's button, a batch being taken
+        std::vector<int> there;
+        for (const iw::Item& it : s.items) there.push_back(it.index);
+        s.picked.keepOnly(there);
+        s.show.picked = s.picked.list();
+        s.show.pickedText = s.picked.count()
+                                ? settings::fmt(say(settings::Text::StorageTakePicked),
+                                                {std::to_string(s.picked.count())})
+                                : "";
+        takeSteps(s);
+    }
     place(s);
     s.shownItems = iw::shownOf(s.items, s.show.tab, s.show.search);
     s.show.also =  // 3.0.11-beta.286
@@ -583,7 +633,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         s.press = -1;
         s.dragging = false;
         s.key.clear();
-        if (dragged) {
+        if (dragged && s.picked.has(it.index) && s.picked.count() > 1 &&
+            !s.layout.glass.contains(tx - float(s.layout.x), ty - float(s.layout.y))) {
+            takePicked(s, "the picked dragged out");  // 3.0.18-beta.155: the whole pick
+        } else if (dragged) {
             const char* did = dropAt(it);
             s.lastCell = -1;
             s.readAt = 0;
@@ -647,8 +700,24 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                 s.readAt = 0;
             }
             break;
+        case iw::Part::Picked: takePicked(s, "its footer button"); break;  // 3.0.18-beta.155
         case iw::Part::Cell: {
             if (h.index >= int(s.shownItems.size())) break;
+            const int place = s.items[size_t(s.shownItems[size_t(h.index)])].index;
+            if (GetKeyState(VK_CONTROL) < 0 || GetKeyState(VK_SHIFT) < 0) {  // 3.0.18-beta.155: picked
+                if (GetKeyState(VK_SHIFT) < 0) s.picked.range(shownPlaces(s), place);
+                else s.picked.toggle(place);
+                s.lastCell = -1;
+                break;
+            }
+            const bool twice = m == WM_LBUTTONDBLCLK ||
+                               (h.index == s.lastCell && GetTickCount64() - s.lastClick <= GetDoubleClickTime());
+            if (s.picked.has(place) && twice) {
+                takePicked(s, "a double click on one picked");
+                s.lastCell = -1;
+                break;
+            }
+            if (!s.picked.has(place)) s.picked.clear();  // a plain click elsewhere: the picks let go
             const ULONGLONG now = GetTickCount64();
             if ((h.index == s.lastCell && now - s.lastClick <= GetDoubleClickTime()) || m == WM_LBUTTONDBLCLK) {
                 takeCell(s, h.index, "a double click");
@@ -679,6 +748,16 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 bool key(UINT m, WPARAM wp, LPARAM lp) {
     State& s = state();
     (void)lp;
+    if (s.shown && !s.show.typing && m == WM_KEYDOWN && wp == 'A' && GetKeyState(VK_CONTROL) < 0) {
+        s.picked.all(shownPlaces(s));  // 3.0.18-beta.155: all the tab shows picked
+        s.key.clear();
+        return true;
+    }
+    if (s.shown && !s.show.typing && m == WM_KEYDOWN && wp == VK_ESCAPE && s.picked.count()) {
+        s.picked.clear();  // Esc: the picks let go first
+        s.key.clear();
+        return true;
+    }
     if (!s.shown || !s.show.typing) return false;
     // 3.0.18-beta.72 (the big six, E): the new interface's field - any language, the clipboard, every key its own
     textfield::Field field{s.show.search, s.searchAll};

@@ -605,6 +605,15 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     return true;
 }
 
+bool countAll() {
+    const uint32_t window = gameCount(), mode = read32(kModeNow);
+    const int most = mode ? int(read32(mode + kDragCount)) : 0;
+    if (!window || most <= 0) return false;
+    setCountField(window, std::to_string(most));
+    reinterpret_cast<SendMsgFn>(uintptr_t(kCountSend))(window, 0, kButtonMsg, 0x76, 0, 0);
+    return true;
+}
+
 bool shown() { return state().shown; }
 
 bool asking() {
