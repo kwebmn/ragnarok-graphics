@@ -1,3 +1,5 @@
+- The menu (Esc) has new items at the top: "Settings", "Arrange the interface", "Graphics test", "Send a report"; the game's buttons below, as before.
+
 - The character block (Alt+V) has a second row of icons: "Reference", "Hunt", "Boss timers", "Tracking", "Party", "What killed me", "Settings"; an open window's icon glows gold. Keys: Ctrl+H, Ctrl+B, Ctrl+J, Ctrl+G, Ctrl+K.
 - ✕ on "Hunt", "Boss timers", "Party" and the target card: hides the window without switching it off; bring it back with its icon or key. The game remembers hidden windows.
 - "What killed me" is a window of its own with the last death's hits (Ctrl+K).
