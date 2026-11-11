@@ -55,6 +55,8 @@ void drawShade(FrameRecord& record, int x, int y, int w, int h, float k, float a
 void drawFill(FrameRecord& record, float x, float y, float w, float h, float k, uint32_t argb);
 // The words' width at a size (the target's pixels), as drawWords draws them
 int wordsWidth(const std::wstring& text, float px, bool bold);
+// 3.0.18-beta.177: «words measured N (K kept), fonts made M» since the last take - the driver's 30 s line
+std::string takeWordsCounts();
 std::wstring utf8Wide(const std::string& s);
 // 3.0.18-beta.136 (R-GSUTKG: the shop's badges empty): a controller button's badge with its letter (A, LB, RT, the
 // Start / View marks) at (0, 0), `side` tall - what uaUI's windows show (core/pad_glyphs paints the badge alone)

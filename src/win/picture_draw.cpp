@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <string>
 #include <unordered_map>
@@ -397,9 +398,28 @@ void drawFill(FrameRecord& record, float x, float y, float w, float h, float k, 
     record.draw(cmd, v, 6, nullptr, 0);
 }
 
+namespace {
+// 3.0.18-beta.177: wordsWidth's counts for the driver's 30 s line (the game's thread: no lock)
+unsigned g_widthsMeasured = 0, g_widthsKept = 0, g_fontsMade = 0;
+}  // namespace
+
 int wordsWidth(const std::wstring& text, float px, bool bold) {
     if (text.empty()) return 0;
-    // 3.0.11-beta.28: the DC and each size's font kept (the search's marks measure their words on every paint)
+    const int height = std::max(8, int(std::lround(px)));
+    // 3.0.18-beta.177 (R-B8SDEK: GetTextExtentPoint32W 13.7 % of the game's thread, the chat's layout 0.65 ms a
+    // frame - the same labels measured with GDI every frame): the widths kept by the words, their size and weight
+    // (all let go past 8192 of them)
+    thread_local std::unordered_map<std::wstring, int> widths;
+    std::wstring key = text;
+    key += wchar_t(0);
+    key += wchar_t(height);
+    key += bold ? L'b' : L'r';
+    if (const auto known = widths.find(key); known != widths.end()) {
+        ++g_widthsKept;
+        return known->second;
+    }
+    // 3.0.11-beta.28: the DC and each size's font kept (the search's marks measure their words on every paint);
+    // 3.0.18-beta.177: 64 of them, the one used last kept longest (it was 32 in the order made)
     struct Kept {
         int height;
         bool bold;
@@ -408,16 +428,20 @@ int wordsWidth(const std::wstring& text, float px, bool bold) {
     };
     thread_local HDC dc = CreateCompatibleDC(nullptr);
     thread_local std::vector<Kept> fonts;
-    const int height = std::max(8, int(std::lround(px)));
     const uifont::Face face = uifont::faceFor(text, bold);
     HFONT font = nullptr;
-    for (const Kept& k : fonts)
-        if (k.height == height && k.bold == bold && k.face == face.name) font = k.font;
+    for (size_t i = 0; i < fonts.size(); ++i)
+        if (fonts[i].height == height && fonts[i].bold == bold && fonts[i].face == face.name) {
+            font = fonts[i].font;
+            if (i + 1 != fonts.size()) std::rotate(fonts.begin() + long(i), fonts.begin() + long(i) + 1, fonts.end());
+            break;
+        }
     if (!font) {
         font = CreateFontW(-height, 0, 0, 0, face.weight, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                            CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH, face.name);
         if (!font) return 0;
-        if (fonts.size() >= 32) {  // never one selected: each measure puts the stock font back
+        ++g_fontsMade;
+        if (fonts.size() >= 64) {  // never one selected: each measure puts the stock font back
             DeleteObject(fonts.front().font);
             fonts.erase(fonts.begin());
         }
@@ -428,7 +452,18 @@ int wordsWidth(const std::wstring& text, float px, bool bold) {
     SIZE size{};
     GetTextExtentPoint32W(dc, text.c_str(), int(text.size()), &size);
     SelectObject(dc, GetStockObject(SYSTEM_FONT));
+    ++g_widthsMeasured;
+    if (widths.size() >= 8192) widths.clear();
+    widths.emplace(std::move(key), int(size.cx));
     return int(size.cx);
+}
+
+std::string takeWordsCounts() {
+    char line[128];
+    std::snprintf(line, sizeof line, "words measured %u (%u kept), fonts made %u", g_widthsMeasured, g_widthsKept,
+                  g_fontsMade);
+    g_widthsMeasured = g_widthsKept = g_fontsMade = 0;
+    return line;
 }
 
 }  // namespace uagfx::win

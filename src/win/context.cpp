@@ -2013,7 +2013,8 @@ void Context::logStats(bool final) {
         double checksMs = 0;
         uapad::clientmem::takeQueries(checks, checksMs);
         const std::string reads = takeReadTally();
-        if (const std::string parts = g_parts.take(18); !parts.empty()) LOG_INFO("%s", parts.c_str());
+        if (const std::string parts = g_parts.take(18); !parts.empty())
+            LOG_INFO("%s; %s", parts.c_str(), takeWordsCounts().c_str());  // 3.0.18-beta.177: GDI's measures
         LOG_INFO("the driver's frame: %.2f ms of its own work at a present (the renderer's present apart); %s; the "
                  "controller's memory checks %.0f a frame (%.2f ms); %u reads of places gone (3.0.18-beta.165)",
                  stats_.ownMs / stats_.frames, reads.empty() ? "game memory: none read" : reads.c_str(),
