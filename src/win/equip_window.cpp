@@ -656,8 +656,6 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.sheetShown = s.live.frame("equip", s.shown, s.layout.x, s.layout.y, s.sheetGen, el::rml(), el::bind,
                                 [&](el::Model& m) {
                                     m.ground = s.live.ground();
-                                    const padglyph::Family f = s.show.sony ? padglyph::Family::Sony
-                                                                           : padglyph::Family::Xbox;
                                     m.turns = s.hero.width > 0;  // 3.0.18-beta.111: its sprites' character
                                     m.mountOff = mountWords(mountNow());  // 3.0.18-beta.114
                                     m.mountHot = s.mountHot;
@@ -696,7 +694,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                                                          (s.show.sony ? "s" : "x") +
                                                                          std::to_string(iw) + 'x' + std::to_string(ih);
                                                  return s.live.made(key, iw, ih, [&](panel::Picture& p) {
-                                                     padglyph::paint(p, padglyph::Button(button), f, 0, 0, h);
+                                                     paintPadBadge(p, button, s.show.sony, h);  // .136
                                                  });
                                              });
                                 });

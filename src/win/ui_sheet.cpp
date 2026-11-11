@@ -184,11 +184,10 @@ void fromModel(Content& c, const sheet::Model& m, Sheet& sheet) {
 
 void Sheet::glyph(Content& c, int button, bool sony, float x, float y, float h) {
     const padglyph::Button b = padglyph::Button(button);
-    const padglyph::Family f = sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
     const int pw = std::max(1, int(std::ceil(padglyph::widthOf(b, h)))), ph = std::max(1, int(std::ceil(h)));
     const std::string key = "pad" + std::to_string(button) + (sony ? "s" : "x") + std::to_string(ph);
     c.icons.push_back(Icon{x, y, float(pw), float(ph), 1,
-                           made(key, pw, ph, [&](panel::Picture& p) { padglyph::paint(p, b, f, 0, 0, h); })});
+                           made(key, pw, ph, [&](panel::Picture& p) { paintPadBadge(p, button, sony, h); })});
 }
 
 // 3.0.18-beta.57 (docs/superpowers/plans/2026-11-10-uaui-possibilities.md, stage 1: «текст всегда влезает»): a line

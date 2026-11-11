@@ -97,6 +97,7 @@ struct Deal {  // the game's deal windows now (0: none)
 };
 
 struct State {
+    int notSentTold = 0;  // 3.0.18-beta.136
     // 3.0.18-beta.99 (docs/superpowers/plans/2026-11-10-uaui-live-drag.md): live - laid out by RmlUi
     LivePart<uikit::shop::Model> live;
     int sheetGen = 0;
@@ -385,7 +386,12 @@ void confirm(State& s, const char* by) {
     readDeal(s, s.data.tab);  // the ITEM_INFOs as the game keeps them now (a new list empties the cart)
     const sw::Sums sum =
         sw::sums(s.data.tab, s.data.cart, s.data.wares, s.data.zeny, s.data.weight, s.data.weightMost);
-    if (!cart || !sum.ok || s.data.waiting) return;
+    if (!cart || !sum.ok || s.data.waiting) {  // 3.0.18-beta.136 (R-GSUTKG): why nothing was sent, told
+        if (s.notSentTold++ < 8)
+            LOG_INFO("shop: %s - nothing sent (the game's deal window %s, the cart %s, %s)", by, cart ? "open" : "none",
+                     sum.ok ? "fits" : "empty or past the money/weight", s.data.waiting ? "the list awaited" : "ready");
+        return;
+    }
     const uint32_t add = buy ? kAddPurchase : kAddSale;
     const bool known = buy ? codeIs(add, kAddPurchaseCode, sizeof kAddPurchaseCode)
                            : codeIs(add, kAddSaleCode, sizeof kAddSaleCode);
@@ -710,8 +716,6 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.sheetShown = s.live.frame("shop", s.shown, s.layout.x, s.layout.y, s.sheetGen, sl::rml(), sl::bind,
                                 [&](sl::Model& m) {
                                     m.ground = s.live.ground();
-                                    const padglyph::Family f = s.show.sony ? padglyph::Family::Sony
-                                                                           : padglyph::Family::Xbox;
                                     const int side = std::max(8, int(std::lround(15 * s.layout.s)));
                                     m.searchIcon = s.live.made("search" + std::to_string(side), side, side,
                                                                [&](panel::Picture& p) {
@@ -727,7 +731,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                                                          (s.show.sony ? "s" : "x") +
                                                                          std::to_string(iw) + 'x' + std::to_string(ih);
                                                  return s.live.made(key, iw, ih, [&](panel::Picture& p) {
-                                                     padglyph::paint(p, padglyph::Button(button), f, 0, 0, h);
+                                                     paintPadBadge(p, button, s.show.sony, h);  // .136
                                                  });
                                              });
                                 });

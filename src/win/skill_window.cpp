@@ -813,8 +813,6 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.sheetShown = s.live.frame("skills", s.shown, s.layout.x, s.layout.y, s.sheetGen, sl::rml(), sl::bind,
                                 [&](sl::Model& m) {
                                     m.ground = s.live.ground();
-                                    const padglyph::Family f = s.show.sony ? padglyph::Family::Sony
-                                                                           : padglyph::Family::Xbox;
                                     sl::fill(m, s.layout, s.data, s.show, texts(), measure,
                                              [&](const panel::Picture* p) { return s.live.icon(p); },
                                              [&](int button, float h, float& w) {
@@ -824,7 +822,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                                                          (s.show.sony ? "s" : "x") +
                                                                          std::to_string(iw) + 'x' + std::to_string(ih);
                                                  return s.live.made(key, iw, ih, [&](panel::Picture& p) {
-                                                     padglyph::paint(p, padglyph::Button(button), f, 0, 0, h);
+                                                     paintPadBadge(p, button, s.show.sony, h);  // .136
                                                  });
                                              });
                                 });

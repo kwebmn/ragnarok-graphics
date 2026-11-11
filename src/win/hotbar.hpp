@@ -49,6 +49,10 @@ void setPotionWarn(bool on);
 // [interface] hotbar_per_character); true: the key was theirs
 bool profileKeyPress(UINT m, WPARAM wp, LPARAM lp);
 int profileNow();
+// 3.0.18-beta.136 (the pad analysis: profiles on the pad): the bar's profiles in use (the character's own bar kept,
+// in the world); switchProfile the same as Ctrl+Shift+1..3
+bool profilesReady();
+bool switchProfile(int want, const char* why);
 void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool counts, unsigned codePage, double k,
            int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);

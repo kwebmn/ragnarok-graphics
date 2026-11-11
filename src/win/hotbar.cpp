@@ -1445,13 +1445,21 @@ std::vector<barhint::Skill> barSkills() {
 // 3.0.11-beta.288 (the owner's feature 20): Ctrl+Shift+1..3 - the character's bar's profile: the bar now kept as the
 // profile it was, the one asked put in (met the first time: the bar now copied to it)
 bool profileKeyPress(UINT m, WPARAM wp, LPARAM lp) {
-    State& s = state();
     (void)lp;
     if (m != WM_KEYDOWN || wp < '1' || wp > '3' || GetKeyState(VK_CONTROL) >= 0 || GetKeyState(VK_SHIFT) >= 0 ||
         GetKeyState(VK_MENU) < 0)
         return false;
-    if (s.barStep != State::BarStep::Kept || s.barOf.empty() || !inGameWorld()) return false;
-    const int want = int(wp - '0');
+    return switchProfile(int(wp - '0'), "Ctrl+Shift");
+}
+
+bool profilesReady() {
+    const State& s = state();
+    return s.barStep == State::BarStep::Kept && !s.barOf.empty() && inGameWorld();
+}
+
+bool switchProfile(int want, const char* why) {
+    State& s = state();
+    if (want < 1 || want > 3 || !profilesReady()) return false;
     if (want == s.profile) return true;
     const hb::Bar now = barNow();
     keepBar(s, profileKey(s.barOf, s.profile), now);
@@ -1462,8 +1470,8 @@ bool profileKeyPress(UINT m, WPARAM wp, LPARAM lp) {
     else keepBar(s, profileKey(s.barOf, want), next);
     s.barKept = next;
     s.barChangedAt = 0;
-    LOG_INFO("hotbar: profile %d -> %d (%s, %d cells)", s.profile, want, known ? "put in" : "new - the bar copied",
-             filled(next));
+    LOG_INFO("hotbar: profile %d -> %d (%s, %d cells, %s)", s.profile, want, known ? "put in" : "new - the bar copied",
+             filled(next), why);
     s.profile = want;
     s.profileShownAt = GetTickCount64();
     return true;

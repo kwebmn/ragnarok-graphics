@@ -20,7 +20,7 @@ constexpr int kMostTiles = 10;
 // 3.0.18-beta.124 (the concept «Ігровий інтерфейс»): our windows of the character block's second row too,
 // those switched on - any count, three to a row, a short last row in the middle
 enum class Tile : uint8_t { Items, Stats, Skills, Equip, Party, Map, Reference, Options, Pad, Merc, Hunt, Mvp, Tracker,
-                            Recap, Count };
+                            Recap, Profile, Count };  // .136 Profile: the hotbar's profile
 
 struct Layout {
     float s = 1;

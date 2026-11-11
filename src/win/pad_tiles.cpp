@@ -23,6 +23,7 @@
 #include "win/ui_sheet.hpp"
 
 #include "win/options_card.hpp"
+#include "win/hotbar.hpp"
 #include "win/own_windows.hpp"
 #include "win/pad_panels.hpp"
 
@@ -78,9 +79,12 @@ void render(State& s, bool sony) {
     const Text byTile[int(pt::Tile::Count)] = {Text::ItemsTitle, Text::StatsTitle, Text::TileSkills, Text::TileEquip,
                                                Text::PartyTitle, Text::TileMap, Text::RefTitle, Text::TileOptions,
                                                Text::PagePad, Text::MercTile, Text::HudPartHunt, Text::InterfaceMvp,
-                                               Text::TrackerTitle, Text::InterfaceDeathRecap};
+                                               Text::TrackerTitle, Text::InterfaceDeathRecap, Text::TileBarProfile};
     std::vector<std::string> names;
-    for (const pt::Tile t : s.list) names.push_back(settings::tr(l, byTile[int(t)]));
+    for (const pt::Tile t : s.list)
+        names.push_back(t == pt::Tile::Profile  // 3.0.18-beta.136: the profile now named
+                            ? settings::fmt(settings::tr(l, byTile[int(t)]), {std::to_string(hotbarwin::profileNow())})
+                            : std::string(settings::tr(l, byTile[int(t)])));
     std::vector<Words> words = gdiWords(pt::words(s.layout, names, settings::tr(l, Text::TilesTitle),
                                             settings::tr(l, Text::TilesOpen), settings::tr(l, Text::TilesClose),
                                             sony));
@@ -155,6 +159,10 @@ void run(State& s) {
         case pt::Tile::Mvp: what = "«Таймери босів»"; ownTile(closedwin::Own::Mvp); break;
         case pt::Tile::Tracker: what = "«Відстеження»"; ownTile(closedwin::Own::Tracker); break;
         case pt::Tile::Recap: what = "«Що мене вбило»"; ownTile(closedwin::Own::Recap); break;
+        case pt::Tile::Profile:  // 3.0.18-beta.136: the hotbar's next profile, 1-2-3 round
+            what = "the hotbar's next profile";
+            done = hotbarwin::switchProfile(hotbarwin::profileNow() % 3 + 1, "the pad's tile");
+            break;
         default: break;
     }
     LOG_INFO("pad tile: %s%s", what, done ? "" : " - not possible now");
@@ -204,6 +212,7 @@ static void frameInner(HWND game, double k, int targetWidth, int targetHeight) {
         if (o == closedwin::Own::Recap) s.list.push_back(pt::Tile::Recap);
     }
     if (merccardwin::hired()) s.list.push_back(pt::Tile::Merc);
+    if (hotbarwin::profilesReady()) s.list.push_back(pt::Tile::Profile);  // 3.0.18-beta.136
     s.count = int(s.list.size());
     if (s.focus >= s.count) s.focus = 0;
     s.layout = pt::layout(targetWidth / 2, targetHeight / 2, scale, s.count);

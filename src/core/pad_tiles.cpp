@@ -16,7 +16,8 @@ constexpr uint32_t kMuted = 0x9AA3B5;
 constexpr uiicons::Icon kIcons[int(Tile::Count)] = {
     uiicons::Icon::Bag,   uiicons::Icon::Stats, uiicons::Icon::Skill, uiicons::Icon::Equip,   uiicons::Icon::Friends,
     uiicons::Icon::Location, uiicons::Icon::Quest, uiicons::Icon::Gear, uiicons::Icon::Gamepad, uiicons::Icon::Battle,
-    uiicons::Icon::Battle, uiicons::Icon::Mvp, uiicons::Icon::Quest, uiicons::Icon::Warn};  // .124: ours
+    uiicons::Icon::Battle, uiicons::Icon::Mvp, uiicons::Icon::Quest, uiicons::Icon::Warn,  // .124: ours
+    uiicons::Icon::Edit};  // 3.0.18-beta.136: the hotbar's profile
 
 int countOf(int count) { return std::max(1, count); }
 

@@ -914,6 +914,7 @@ enum class Text : uint16_t {
     KeyCtrlU, KeyCtrlY,  // 3.0.18-beta.125
     CharOwnMore,  // 3.0.18-beta.128
     PadWheelTitle,  // 3.0.18-beta.132
+    TileBarProfile,  // 3.0.18-beta.136: the pad's tile, {1} the profile now
     Count
 };
 

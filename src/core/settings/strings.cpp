@@ -8322,6 +8322,7 @@ constexpr Entry kTexts[] = {
     {Text::KeyCtrlY, "Ctrl+Y", "Ctrl+Y", "Ctrl+Y"},
     {Text::CharOwnMore, "Windows of uaRO", "Вікна uaRO", "Окна uaRO"},  // 3.0.18-beta.128
     {Text::PadWheelTitle, "Wheel", "Колесо", "Колесо"},  // 3.0.18-beta.132
+    {Text::TileBarProfile, "Bar profile {1}", "Профіль панелі {1}", "Профиль панели {1}"},  // 3.0.18-beta.136
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

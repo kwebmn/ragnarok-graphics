@@ -87,4 +87,7 @@ TEST(pad_tiles_any_count) {
     CHECK_EQ(padtiles::moved(13, 1, 0, 14), 12);
     CHECK(padtiles::iconOf(int(padtiles::Tile::Hunt)) == uiicons::Icon::Battle);
     CHECK(padtiles::iconOf(int(padtiles::Tile::Recap)) == uiicons::Icon::Warn);
+    // 3.0.18-beta.136: the hotbar's profile tile - fifteen in all
+    CHECK(padtiles::iconOf(int(padtiles::Tile::Profile)) == uiicons::Icon::Edit);
+    CHECK_EQ(padtiles::layout(960, 540, 1.0f, 15).tiles.size(), size_t(15));
 }

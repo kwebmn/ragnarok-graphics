@@ -10,6 +10,7 @@
 
 #include "core/d3d7.hpp"
 #include "core/effect_exe.hpp"
+#include "core/pad_glyphs.hpp"
 #include "core/glint.hpp"
 #include "core/states.hpp"
 #include "win/code_page.hpp"
@@ -173,6 +174,14 @@ void forgetOld(WordsGdi& g) {
 
 void drawWords(panel::Picture& pic, const std::vector<Words>& words) {
     drawWords(pic, words, Rect{0, 0, pic.width, pic.height});
+}
+
+void paintPadBadge(panel::Picture& pic, int button, bool sony, float side) {
+    const padglyph::Button b = padglyph::Button(button);
+    const padglyph::Family f = sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
+    padglyph::paint(pic, b, f, 0, 0, side);
+    const padglyph::Letter l = padglyph::letter(b, f, 0, 0, side);
+    if (!l.text.empty()) drawWords(pic, {Words{l.box, utf8Wide(l.text), l.rgb, l.px, true, DT_CENTER, false}});
 }
 
 void drawWords(panel::Picture& pic, const std::vector<Words>& words, const Rect& area) {
