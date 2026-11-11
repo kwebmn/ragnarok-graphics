@@ -1,3 +1,5 @@
+- A measurement: the chat's time a frame split into its steps (the game's lines, the input field, the mouse over it, the layout, the history's rows, the redraw, the mouse's bounds) - in R-UT4N5V the chat no longer grows but stays at 0.7 ms a frame; now the step that takes it shows.
+
 - The chat no longer gets dearer while hunting: each kill, picked-up thing or experience line made it wrap and measure its whole history again (up to 200 lines) - in three minutes the chat grew from 0.13 to 1.33 ms a frame (R-CD8KCP). Now the lines' rows are kept and only a new or changed line is measured.
 - The closed «Налаштування» window no longer builds its rows every frame (it was 0.14 ms a frame).
 
