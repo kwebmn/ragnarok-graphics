@@ -12,6 +12,7 @@
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "win/chat_window.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -61,13 +62,14 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div class="field ctl" data-class-typing="focus" data-event-click="rm_act(2, 0)">{{input}}<span
   class="caret" data-if="focus && caret"></span></div></div>
 <div class="right"><div class="lbl">{{members_word}}</div>
-<div class="row ctl" data-for="m, i : members" data-class-on="i == chosen"
-  data-event-click="rm_act(1, i)">{{m.name}}<span class="crown" data-if="m.owner"> ★</span></div>
-<div class="acts" data-if="chosen >= 0 && mine"><span class="chip ctl"
-  data-event-click="rm_act(5, 0)">{{kick}}</span><span class="chip ctl"
-  data-event-click="rm_act(6, 0)">{{owner}}</span></div>
-<div class="acts" data-if="chosen >= 0"><span class="chip ctl"
-  data-event-click="rm_act(7, 0)">{{friend_add}}</span></div>
+<div data-for="m, i : members"><div class="row ctl" data-class-on="i == chosen" data-event-click="rm_act(1, i)"
+  data-event-dblclick="rm_whisper(i)" data-event-mousedown="rm_down(i)">{{m.name}}<span class="crown"
+  data-if="m.owner"> ★</span></div>
+<div class="acts" data-if="i == chosen"><span class="chip ctl" data-if="!m.self"
+  data-event-click="rm_whisper(i)">{{whisper}}</span><span class="chip ctl" data-if="mine && !m.self"
+  data-event-click="rm_act(5, 0)">{{kick}}</span><span class="chip ctl" data-if="mine && !m.self"
+  data-event-click="rm_act(6, 0)">{{owner}}</span><span class="chip ctl" data-if="!m.self"
+  data-event-click="rm_act(7, 0)">{{friend_add}}</span></div></div>
 <div class="btns"><div class="btn ctl" data-if="mine" data-event-click="rm_act(3, 0)">{{setup}}</div><div
   class="btn ctl" data-event-click="rm_act(4, 0)">{{leave}}</div></div></div></div>
 <div id="ring" class="ring"></div>
@@ -77,7 +79,7 @@ struct RoomLineView {
 };
 struct RoomMemberView {
     Rml::String name;
-    bool owner = false;
+    bool owner = false, self = false;  // 3.0.18-beta.147: one's own row (no whisper to oneself)
 };
 
 struct State {
@@ -85,6 +87,7 @@ struct State {
     std::vector<RoomLineView> lineViews;
     std::vector<RoomMemberView> memberViews;
     Rml::String title, countText, stateText, input, membersWord, kick, owner, friendAdd, setup, leave;
+    Rml::String whisperWord;  // 3.0.18-beta.147
     Rml::String ground = "#10141cf0";
     bool focusOn = false, caretOn = false, mineOn = false;
     int chosen = -1;
@@ -247,6 +250,8 @@ uint32_t gameMode() {
     return mode && read32(read32(mode) + kModeMsgSlot) == kModeMsg ? mode : 0;
 }
 
+std::string readOwnNameUtf8(const State& s) { return utf8Of(widened(readOwnName(), s.codePage)); }  // .147
+
 void act(State& s, const rc::Hit& h) {
     const uint32_t w = gameRoom();
     if (!w) return;
@@ -389,6 +394,7 @@ static void liveFrame(State& s) {
         }
         if (auto v = m.RegisterStruct<RoomMemberView>()) {
             v.RegisterMember("name", &RoomMemberView::name);
+            v.RegisterMember("self", &RoomMemberView::self);
             v.RegisterMember("owner", &RoomMemberView::owner);
         }
         m.RegisterArray<std::vector<RoomLineView>>();
@@ -403,6 +409,23 @@ static void liveFrame(State& s) {
         m.Bind("kick", &s.kick);
         m.Bind("owner", &s.owner);
         m.Bind("friend_add", &s.friendAdd);
+        m.Bind("whisper", &s.whisperWord);
+        m.BindEventCallback("rm_down", [](Rml::DataModelHandle, Rml::Event& ev, const Rml::VariantList& a) {
+            if (a.empty() || ev.GetParameter<int>("button", 0) != 1) return;  // 3.0.18-beta.147: a right click chooses
+            State& st = state();
+            st.card.chosen = a[0].Get<int>();
+            st.key.clear();
+        });
+        m.BindEventCallback("rm_whisper", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();  // 3.0.18-beta.147: twice on a member, or its whisper chip - the chat's whisper
+            const int at = a.empty() ? -1 : a[0].Get<int>();
+            if (at < 0 || at >= int(st.card.members.size())) return;
+            const std::string name = st.card.members[size_t(at)].name;
+            if (name == readOwnNameUtf8(st)) return;
+            if (chatwin::whisperTo(name)) LOG_INFO("chat rooms: a whisper to a member");
+            st.card.chosen = -1;
+            st.key.clear();
+        });
         m.Bind("setup", &s.setup);
         m.Bind("leave", &s.leave);
         m.Bind("focus", &s.focusOn);
@@ -429,7 +452,8 @@ static void liveFrame(State& s) {
         lines.push_back(RoomLineView{c.lines[i].text, col});
     }
     std::vector<RoomMemberView> members;
-    for (const rc::Member& mb : c.members) members.push_back(RoomMemberView{mb.name, mb.owner});
+    const std::string own = readOwnNameUtf8(s);
+    for (const rc::Member& mb : c.members) members.push_back(RoomMemberView{mb.name, mb.owner, mb.name == own});
     const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
     const Rml::String count = std::to_string(c.count) + " / " + std::to_string(c.limit);
     const Rml::String state = c.open ? t.open : t.locked;
@@ -442,7 +466,7 @@ static void liveFrame(State& s) {
     const bool sameMembers = members.size() == s.memberViews.size() &&
                              std::equal(members.begin(), members.end(), s.memberViews.begin(),
                                         [](const RoomMemberView& a, const RoomMemberView& b) {
-                                            return a.name == b.name && a.owner == b.owner;
+                                            return a.name == b.name && a.owner == b.owner && a.self == b.self;
                                         });
     if (!sameMembers) s.memberViews = std::move(members), s.live.doc.dirty("members");
     if (c.title != s.title || count != s.countText || state != s.stateText || c.input != s.input ||
@@ -451,6 +475,7 @@ static void liveFrame(State& s) {
         c.mine != s.mineOn || c.chosen != s.chosen || ground != s.ground) {
         s.title = c.title, s.countText = count, s.stateText = state, s.input = c.input, s.membersWord = t.members;
         s.kick = t.kick, s.owner = t.owner, s.friendAdd = t.friendAdd, s.setup = t.setup, s.leave = t.leave;
+        s.whisperWord = say(settings::Text::SocialWhisper);  // 3.0.18-beta.147
         s.focusOn = c.focus, s.caretOn = c.caret, s.mineOn = c.mine, s.chosen = c.chosen, s.ground = ground;
         s.live.doc.dirtyAll();
     }

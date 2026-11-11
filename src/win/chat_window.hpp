@@ -39,6 +39,8 @@ bool inputEmpty();
 // 3.0.18-beta.134 (the pad analysis: chat on the controller): the channel round (near, party, guild - as Tab), the
 // history scrolled `by` lines (up +)
 void padChannel();
+// 3.0.18-beta.147: a whisper to this one (UTF-8) - its name in the game's field, the words' field takes the keys
+bool whisperTo(const std::string& utf8Name);
 void padScroll(int by);
 // Its box in the target while it shows (the hotbar keeps clear of it); false: not shown
 bool panelBox(int& x, int& y, int& w, int& h);

@@ -1398,4 +1398,11 @@ bool ownsPress(HWND game, LPARAM lp) {  // 3.0.11-beta.241: its corner - its siz
     return p == cp::Part::Grip || p == cp::Part::Bar;  // 3.0.11-beta.245: its scroll bar too
 }
 
+bool whisperTo(const std::string& utf8Name) {
+    State& s = state();
+    if (utf8Name.empty() || !setName(s, utf8Name)) return false;
+    giveKeys(wordsEdit());
+    return true;
+}
+
 }  // namespace uagfx::win::chatwin

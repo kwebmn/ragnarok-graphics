@@ -206,7 +206,15 @@ bool readGameFile(const std::string& name, std::string& out) {
     constexpr uintptr_t kResLock = 0x74BB18, kResMade = 0x74BB84;
     const bool made = knownBuild && (*reinterpret_cast<volatile uint32_t*>(kResMade) & 1);
     CRITICAL_SECTION* const lock = made ? reinterpret_cast<CRITICAL_SECTION*>(kResLock) : nullptr;
-    if (lock) EnterCriticalSection(lock);
+    // 3.0.18-beta.147 (R-STGQE9: .145's wait froze the game entering comodo - the loader holds the lock and waits for
+    // the driver, the driver's frame waited for the lock): never waited - taken now or not at all; not: false, the
+    // caller's own reader of the archives (readClientFile) takes the file instead
+    if (lock && !TryEnterCriticalSection(lock)) {
+        static int told = 0;
+        if (told++ < 5)
+            LOG_INFO("files: %s read by our own reader - the game's files busy (a map loading)", name.c_str());
+        return false;
+    }
     if (g_getData) data = getData(self, name.c_str(), &size);  // hooked: the updates, then the game's own
     else data = reinterpret_cast<GetDataFn>(uintptr_t(updates_exe::kGetData))(self, name.c_str(), &size);
     if (lock) LeaveCriticalSection(lock);
