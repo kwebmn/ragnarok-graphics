@@ -19,6 +19,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/char_diary.hpp"
+#include "win/game_memory.hpp"
 #include "win/portrait.hpp"
 #include "win/head_picture.hpp"
 #include "win/login_card.hpp"
@@ -26,11 +27,13 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
 #include "uikit/charselect_live.hpp"
 #include "win/live_part.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::charselectwin {
 namespace {
@@ -49,7 +52,6 @@ constexpr int kButtonMsg = 6, kPlaceClick = 0x8A, kInfoMsg = 8, kAway = -4000;
 // CHARACTER_INFO (108 bytes): the job level + 0x10, HP + 0x2A, its most + 0x2C, SP + 0x2E, its most + 0x30, the job
 // + 0x34, the hair + 0x36, the level + 0x3A, the hair's colour + 0x46, the name + 0x4A (24), the six stats + 0x62
 constexpr size_t kInfoSize = 108;
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using ModeMsgFn = uint32_t(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 
 struct State {
@@ -88,18 +90,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
 uint32_t gameSelect() {
@@ -204,9 +194,7 @@ void block(const State& s, HWND game) {
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
     const panel::Box& b = s.layout.glass;
     const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(Blocker::CharSelect, game, &r, false);
 }
 
@@ -462,8 +450,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     if (m == WM_MOUSEWHEEL && s.carousel) {  // 3.0.11-beta.275: the wheel goes round the carousel
         float wx = 0, wy = 0;

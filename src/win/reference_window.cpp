@@ -37,6 +37,7 @@
 #include "win/tracker.hpp"
 #include "win/ui_cost.hpp"
 #include "win/updates_hook.hpp"
+#include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
 #include "win/window_stack.hpp"
 #include "win/uaui.hpp"
@@ -753,9 +754,7 @@ void block(const State& s, HWND game) {
     RECT client{};
     if (!GetClientRect(game, &client) || s.targetW <= 0 || s.targetH <= 0) return;
     const refwin::Layout& L = s.layout;
-    const RECT r{LONG(int64_t(L.x) * client.right / s.targetW), LONG(int64_t(L.y) * client.bottom / s.targetH),
-                 LONG(int64_t(L.x + L.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(L.y + L.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, L.x, L.y, L.w, L.h);
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Reference, game, &r, false);
 }
 

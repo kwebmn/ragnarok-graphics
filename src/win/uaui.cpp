@@ -40,6 +40,7 @@
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/ui_font.hpp"
+#include "win/window_input.hpp"
 
 namespace uagfx::win::uaui {
 namespace {
@@ -1978,9 +1979,7 @@ void end() {
     int x = 0, y = 0, w = 0, h = 0;
     Doc* under = docUnder(s);
     if (under && under->box(x, y, w, h) && GetClientRect(s.game, &client)) {
-        const RECT r{LONG(int64_t(x) * client.right / s.targetW), LONG(int64_t(y) * client.bottom / s.targetH),
-                     LONG(int64_t(x + w) * client.right / s.targetW + 1),
-                     LONG(int64_t(y + h) * client.bottom / s.targetH + 1)};
+        const RECT r = clientBox(client, s.targetW, s.targetH, x, y, w, h);
         uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, s.game, &r, false);
     } else {
         uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, nullptr, nullptr, false);

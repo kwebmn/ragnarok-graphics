@@ -16,16 +16,19 @@
 #include "pad/win/game_window.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
 #include "win/console.hpp"
 #include "win/setting_edit.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::optionscardwin {
 namespace {
@@ -43,7 +46,6 @@ constexpr uint32_t kVolumes[2] = {0x74, 0x70};
 constexpr int kButtonMsg = 6, kRefresh = 0x3C, kPadStep = 8;
 constexpr uint32_t kMakeWindow = 0x4D42D0;  // 3.0.18-beta.122: the windows' manager's MakeWindow (UI window 0xD)
 constexpr int kOptionsWindow = 0xD;
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 // 3.0.18-beta.82 (item 4): the game's options a live window - its volumes the library's sliders, its switches
 // ticks. 3.0.18-beta.122 (the concept «Ігровий інтерфейс», stages 5-6: «Налаштування» in place of Alt+O): sections on
@@ -139,18 +141,6 @@ State& state() {
     return s;
 }
 
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
-}
-
 uint32_t gameOptions() {
     const uint32_t w = read32(kOptionsAt);
     return w && read32(w) == kOptionsClass && read32(read32(w) + kSendMsgSlot) == kOptionsSend ? w : 0;
@@ -201,9 +191,7 @@ void block(const State& s, HWND game) {
     float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
     int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.81: the live window's own box
     if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(Blocker::Options, game, &r, false);
 }
 

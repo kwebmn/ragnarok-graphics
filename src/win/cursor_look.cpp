@@ -10,6 +10,7 @@
 #include "core/ui_style.hpp"
 #include "core/window_panel.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 
@@ -48,11 +49,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
 }
 
 // The game's cursor's faces near its point (x, y): small interface faces all of its colour, the last ones first

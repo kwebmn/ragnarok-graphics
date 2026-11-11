@@ -20,6 +20,7 @@
 #include "core/class_art.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::logincontinuewin {
 namespace {
@@ -60,8 +61,6 @@ State& state() {
     static State s;
     return s;
 }
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 lco::Texts texts() {
     lco::Texts t;

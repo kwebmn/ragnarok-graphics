@@ -14,6 +14,7 @@
 #include "core/merc_packet.hpp"
 #include "core/minimap_proto.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/guild_card.hpp"
 #include "win/log.hpp"
 #include "win/merc_card.hpp"
@@ -91,11 +92,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
 }
 
 int rd16(const uint8_t* p, size_t at) { return int(uint16_t(p[at] | p[at + 1] << 8)); }

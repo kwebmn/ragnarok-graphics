@@ -25,6 +25,7 @@
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/minimap_proto.hpp"
@@ -37,6 +38,8 @@
 #include "win/ui_cost.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/window_input.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::chatwin {
 namespace {
@@ -184,18 +187,6 @@ int __attribute__((thiscall)) pushed(uint32_t manager, int msg, const char* text
         minimapproto::heard(utf8Of(widened(p.back().text, state().codePage)), p.back().ms);
     }
     return reinterpret_cast<PushFn>(g_push)(manager, msg, text, colour, more);
-}
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
 // 3.0.13-beta.12: an edit's SetText as its own class has it (the words' 0x4431C0, the name's 0x446210); 0 another
@@ -682,9 +673,7 @@ void block(const State& s, HWND game) {  // the mouse's clicks over it are its o
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
     const panel::Box& b = s.layout.glass;
     const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Chat, game, &r, false);
 }
 
@@ -990,8 +979,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL && !(m == WM_MOUSEMOVE && (s.sizing || s.barDrag))) return false;
     float tx = 0, ty = 0;  // 3.0.11-beta.43: where the game's cursor stands, as the hover
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;

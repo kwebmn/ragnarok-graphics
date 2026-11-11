@@ -29,13 +29,16 @@
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::infocardwin {
 static bool g_elementColours = true;  // 3.0.18-beta.144: [interface] element_colours
@@ -62,7 +65,6 @@ constexpr uint32_t kAegisText = 0x78, kAegisLen = 0x7C;
 // The session's skills (a list: a node's next +0, its level +0x14, its AEGIS name's char* +0x24)
 constexpr uint32_t kSkills = 0x771148 + 0x2D8, kSkillLevel = 0x14, kSkillName = 0x24;
 constexpr size_t kMostNodes = 1024;
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 struct Tables {
     bool read = false;
@@ -114,18 +116,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
 std::string text(uint32_t at, uint32_t len) {
@@ -477,9 +467,7 @@ void block(const State& s, const One& o, HWND game, Kind kind) {
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
     const panel::Box& b = o.layout.glass;
     const float x0 = float(o.layout.x) + b.x, y0 = float(o.layout.y) + b.y;
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(blockerOf(kind), game, &r, false);
 }
 
@@ -656,8 +644,7 @@ bool mouse(Kind kind, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) 
     One& o = one(kind);
     if (!o.shown) return false;
     if (m == WM_LBUTTONUP) o.move.end();  // 3.0.18-beta.93
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;

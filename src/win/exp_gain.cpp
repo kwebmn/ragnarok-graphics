@@ -9,6 +9,7 @@
 
 #include "core/ui_style.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/uaui.hpp"
@@ -43,11 +44,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
 }
 
 }  // namespace

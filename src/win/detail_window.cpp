@@ -6,6 +6,7 @@
 
 #include "win/console.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win::detailwin {
@@ -19,11 +20,6 @@ using DeleteFn = char(__attribute__((thiscall)) *)(uint32_t manager, int id);
 
 bool g_on = false;
 int g_told = 0;
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
 
 }  // namespace
 

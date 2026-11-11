@@ -14,10 +14,12 @@
 #include "pad/win/game_window.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_live.hpp"
@@ -39,7 +41,6 @@ constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0
 constexpr int kPopupWindow = 0x12, kPickMsg = 0x30, kWorldOwner = 0x89, kWorldPick = 0x1A, kMostItems = 40;
 using FindFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using DeleteFn = char(__attribute__((thiscall)) *)(uint32_t manager, int id);
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 
 // 3.0.18-beta.73 (the big six, F): the menu a live document - its rows one under another, RmlUi's clicks
@@ -84,16 +85,6 @@ State& state() {
     return s;
 }
 
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
-}
-
 uint32_t gamePopup() {
     const uint32_t w = read32(kPopupAt);
     return w && read32(w) == kPopupClass ? w : 0;
@@ -126,9 +117,7 @@ void block(const State& s, HWND game) {
     float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
     int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.73: the live menu's own box
     if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(Blocker::Popup, game, &r, false);
 }
 
@@ -259,8 +248,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     if (s.live.shown) {  // 3.0.18-beta.73: RmlUi's; a press elsewhere closes it, the press going on
         if (!s.live.mouse(game, m, wp, lp)) {

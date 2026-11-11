@@ -19,6 +19,7 @@
 #include "win/reference_load.hpp"
 #include "win/target_card.hpp"
 #include "win/ui_cost.hpp"
+#include "win/words.hpp"
 #include "win/world_mouse.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
@@ -53,8 +54,6 @@ State& state() {
     static State s;
     return s;
 }
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 }  // namespace
 

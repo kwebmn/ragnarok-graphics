@@ -16,15 +16,18 @@
 #include "pad/win/game_window.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/head_picture.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::charmakewin {
 namespace {
@@ -43,7 +46,6 @@ constexpr int kButtonMsg = 6, kAway = -4000;
 constexpr size_t kMostWindows = 128;
 constexpr ULONGLONG kBlinkMs = 530;
 constexpr int kRows = 5;  // the controller's: the hair, its colour, the three pairs
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
 
@@ -112,18 +114,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
 // The character make in the manager's list (it is kept nowhere else); none in the world
@@ -219,9 +209,7 @@ void block(const State& s, HWND game) {
     float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
     int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.81: the live window's own box
     if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(Blocker::CharMake, game, &r, false);
 }
 

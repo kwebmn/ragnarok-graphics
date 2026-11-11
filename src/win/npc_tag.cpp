@@ -14,6 +14,7 @@
 #include "pad/win/runtime.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/npc_talk.hpp"
 #include "win/picture_draw.hpp"
@@ -64,11 +65,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
 }
 
 void want(State& s, uint32_t id) {

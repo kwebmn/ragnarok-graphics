@@ -24,16 +24,19 @@
 #include "win/chat_window.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
 #include "win/window_stack.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::npcwin {
 namespace {
@@ -121,18 +124,6 @@ State& state() {
     return s;
 }
 
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
-}
-
 uint32_t window(uint32_t slot, uint32_t cls) {
     const uint32_t w = read32(slot);
     return w && read32(w) == cls ? w : 0;
@@ -185,9 +176,7 @@ void block(const State& s, HWND game) {
     float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
     int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.88: the live talk's own box
     if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Npc, game, &r, false);
 }
 
@@ -535,8 +524,7 @@ bool padCommand(uapad::DialogCommand c) {
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL && m != WM_MOUSEMOVE) return false;
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;

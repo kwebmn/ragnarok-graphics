@@ -20,6 +20,7 @@
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/window_input.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -252,9 +253,7 @@ panel::Hit WindowPanel::hitAt(float tx, float ty) const {
 void WindowPanel::block(HWND game) {
     RECT client{};
     if (!GetClientRect(game, &client) || targetW_ <= 0 || targetH_ <= 0) return;
-    const RECT r{LONG(int64_t(x_) * client.right / targetW_), LONG(int64_t(y_) * client.bottom / targetH_),
-                 LONG(int64_t(x_ + geometry_.width) * client.right / targetW_ + 1),
-                 LONG(int64_t(y_ + geometry_.height) * client.bottom / targetH_ + 1)};
+    const RECT r = clientBox(client, targetW_, targetH_, x_, y_, geometry_.width, geometry_.height);
     // its menu open: every click is its or closes it
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Panel, game, &r, dragging_ || menuOpen_);
 }
@@ -284,8 +283,7 @@ bool WindowPanel::mouse(HWND game, UINT m, LPARAM lp, LRESULT& result) {
         result = TRUE;
         return true;
     }
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if ((m != WM_MOUSEMOVE && !button) || !toTarget(game, GET_X_LPARAM(lp), GET_Y_LPARAM(lp), tx, ty)) return false;
     const bool over = tx >= float(x_) && ty >= float(y_) && tx < float(x_ + geometry_.width) &&
                       ty < float(y_ + geometry_.height);

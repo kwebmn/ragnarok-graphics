@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win::oldwindows {
@@ -26,11 +27,6 @@ bool g_told[sizeof kOld / sizeof kOld[0]] = {};
 constexpr size_t kMostListed = 512, kMostClasses = 64;
 uint32_t g_classes[kMostClasses] = {};
 size_t g_classCount = 0;
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
 
 }  // namespace
 

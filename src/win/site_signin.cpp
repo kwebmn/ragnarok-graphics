@@ -22,6 +22,7 @@
 #include "win/site_key.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::sitesigninwin {
 namespace {
@@ -73,8 +74,6 @@ State& state() {
     static State s;
     return s;
 }
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 void wipe(std::string& t) {
     if (!t.empty()) SecureZeroMemory(t.data(), t.size());

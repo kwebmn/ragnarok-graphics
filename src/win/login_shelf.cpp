@@ -22,6 +22,7 @@
 #include "win/site_key.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::loginshelfwin {
 namespace {
@@ -75,8 +76,6 @@ State& state() {
     static State s;
     return s;
 }
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 ls::Texts texts() {
     ls::Texts t;

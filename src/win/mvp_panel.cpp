@@ -27,6 +27,8 @@
 #include "win/target_card.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_cost.hpp"
+#include "win/window_input.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::mvpwin {
 namespace {
@@ -62,7 +64,6 @@ State& state() {
     return s;
 }
 
-std::string say(settings::Text t) { return settings::tr(language(), t); }
 std::string path() { return layout::join(gameDir(), layout::kMvpTimers); }
 
 void load(State& s) {
@@ -266,9 +267,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     s.uiShown = uiFrame(s);
     RECT client{};
     if (!GetClientRect(game, &client)) return;
-    const RECT r{LONG(int64_t(s.x) * client.right / targetWidth), LONG(int64_t(s.y) * client.bottom / targetHeight),
-                 LONG(int64_t(s.x + s.w) * client.right / targetWidth + 1),
-                 LONG(int64_t(s.y + s.h) * client.bottom / targetHeight + 1)};
+    const RECT r = clientBox(client, targetWidth, targetHeight, s.x, s.y, s.w, s.h);
     uapad::gamewindow::setBlocked(Blocker::Mvp, game, &r, false);
 }
 
@@ -281,8 +280,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     (void)wp;
     if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;

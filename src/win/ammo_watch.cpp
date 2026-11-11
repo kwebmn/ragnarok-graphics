@@ -5,6 +5,7 @@
 
 #include "core/char_block.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win::ammowatch {
@@ -29,11 +30,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
 }
 
 uint32_t rd32(const uint8_t* p, size_t at) {

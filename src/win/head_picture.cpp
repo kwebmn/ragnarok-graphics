@@ -6,6 +6,7 @@
 #include "core/sprite_file.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
+#include "win/game_memory.hpp"
 #include "win/paths.hpp"
 #include "win/updates_hook.hpp"
 
@@ -19,11 +20,6 @@ constexpr uint32_t kEndings = kSession + 0x8A0;
 const std::string kHuman = "\xC0\xCE\xB0\xA3\xC1\xB7\\\xB8\xD3\xB8\xAE\xC5\xEB\\";  // 인간족\머리통\ (CP949)
 const std::string kHairPalettes = "\xB8\xD3\xB8\xAE\\\xB8\xD3\xB8\xAE";            // 머리\머리
 const std::string kMan = "\xB3\xB2", kWoman = "\xBF\xA9";                            // 남, 여
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
 
 std::string readString(uint32_t at) {
     char buf[64] = {};

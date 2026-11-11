@@ -18,14 +18,17 @@
 #include "win/chat_window.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::tipwin {
 namespace {
@@ -40,7 +43,6 @@ constexpr uint32_t kWindowMgr = 0x727ED8, kTipAt = kWindowMgr + 0x13C, kTipClass
 constexpr uint32_t kSendMsgSlot = 0x94, kShown = 0x38, kNumber = 0x64, kStartup = 0x68;
 constexpr uint32_t kTips = 0x74B9F8;
 constexpr int kButtonMsg = 6, kMostTips = 5000, kMostLines = 40;
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 // 3.0.18-beta.81 (the big six round 2, item 4): the tip a live window - its paragraphs wrapped by RmlUi, its
 // buttons a flex row
@@ -85,18 +87,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
 uint32_t gameTip() {
@@ -149,9 +139,7 @@ void block(const State& s, HWND game) {
     float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
     int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.81: the live window's own box
     if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(Blocker::Tip, game, &r, false);
 }
 

@@ -13,6 +13,7 @@
 #include "win/log.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::deathrecapwin {
 namespace {
@@ -31,8 +32,6 @@ State& state() {
     static State s;
     return s;
 }
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 std::string nameOf(State& s, uint32_t id) {
     const uint32_t actor = actorAddress(id);

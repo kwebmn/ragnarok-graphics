@@ -1,4 +1,5 @@
 #include "win/card_drag.hpp"
+#include "win/game_memory.hpp"
 #include "win/whisper_window.hpp"
 
 #include <windowsx.h>
@@ -20,9 +21,11 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::whisperwin {
 namespace {
@@ -39,7 +42,6 @@ constexpr uint32_t kLinesBox = 0x88, kWords = 0x58, kColours = 0x94;
 constexpr uint32_t kGetText = 0x443300, kFocus = kWindowMgr + 0x6C, kSetFocus = 0x4CE510;
 constexpr int kButtonMsg = 6, kSend = 0x76, kClose = 0x87, kAway = -4000, kMostWindows = 512, kMostLines = 120;
 constexpr ULONGLONG kBlinkMs = 530;
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
 
@@ -77,18 +79,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
 std::string text(const State& s, uint32_t at) {
@@ -329,8 +319,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (s.cards.empty()) return false;
     if (m == WM_LBUTTONUP)
         for (One& o : s.cards) o.move.end();  // 3.0.18-beta.92
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;

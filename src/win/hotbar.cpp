@@ -1,4 +1,5 @@
 #include "win/carry_icon.hpp"
+#include "win/game_memory.hpp"
 #include "win/hotbar.hpp"
 
 #include <windowsx.h>
@@ -48,6 +49,8 @@
 #include "win/reference_load.hpp"
 #include "win/ui_cost.hpp"
 #include "win/uaui.hpp"
+#include "win/window_input.hpp"
+#include "win/words.hpp"
 #include "core/pad_glyphs.hpp"
 #include "core/ui_icons.hpp"
 
@@ -105,7 +108,6 @@ constexpr ULONGLONG kTipMs = 400;  // the concept's: a tip after 0.4 s
 constexpr ULONGLONG kReadMs = 150, kPressMs = 160;
 constexpr size_t kMostNodes = 1024;
 constexpr ULONGLONG kAsideMs = 1500;  // 3.0.11-beta.117: a window over its place this long moves it aside
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 // 3.0.11-beta.78 (the owner: «на панели скилов не те скилы появляются, с других аккаунтов, плюс появляются те которых
 // на чаре нету»): the game keeps its bar in the registry by the character's place on the selection screen
 // (FUN_004d0500: SITEM<slot><langtype><page x 3 + index>), every account's alike - each character's own is put into
@@ -253,18 +255,6 @@ void potionsLow(State& s) {
     if (s.potionTold++ < 20)
         LOG_INFO("hotbar: a healing item %s - the chime %s", fresh == 3 ? "ran out" : "fell to 10 or fewer",
                  played ? "played" : "not played: the game's sound is off");
-}
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
 bool write8(uint32_t at, uint8_t v) {
@@ -1268,9 +1258,7 @@ void block(const State& s, HWND game) {  // the mouse's clicks over it are its o
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
     const panel::Box& b = s.layout.glass;
     const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Hotbar, game, &r, false);
 }
 
@@ -1746,8 +1734,7 @@ void wheelLevel(State& s, int cell, int step) {
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     float tx = 0, ty = 0;  // 3.0.11-beta.43: where the game's cursor stands, as the hover
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
@@ -1792,8 +1779,7 @@ bool ownsPress(HWND game, LPARAM lp) {
 bool held(HWND game, UINT m, WPARAM, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (s.lift.cell < 0) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button) return false;
     if (m == WM_LBUTTONUP) {
         float tx = 0, ty = 0;

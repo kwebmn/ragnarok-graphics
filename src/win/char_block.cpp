@@ -1,5 +1,6 @@
 #include "win/upkeep_watch.hpp"
 #include "win/char_block.hpp"
+#include "win/game_memory.hpp"
 #include "win/own_windows.hpp"
 
 #include <windowsx.h>
@@ -42,6 +43,8 @@
 #include "win/ui_cost.hpp"
 #include "win/updates_hook.hpp"
 #include "win/uaui.hpp"
+#include "win/window_input.hpp"
+#include "win/words.hpp"
 #include "core/ui_icons.hpp"
 
 namespace uagfx::win::charpanel {
@@ -54,7 +57,6 @@ namespace cb = uagfx::charblock;
 constexpr uint32_t kWindowMgr = 0x727ED8, kBasicInfo = kWindowMgr + 0x90, kBasicInfoClass = 0x6984A0;
 constexpr uint32_t kShown = 0x38, kSendMsgSlot = 0x94, kSendMsg = 0x46C980;
 constexpr int kButtonMsg = 6;
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 // The session's character: its class, its sex (+0x1CA4, which GetSex FUN_006425b0 keeps in +0x770), its head and
 // hair colour (its head's sprite: win/head_picture)
 constexpr uint32_t kJob = 0x771F8C, kSex = 0x772DEC, kHead = 0x7718F4, kHairColour = 0x771910;
@@ -127,8 +129,6 @@ State& state() {
     return s;
 }
 
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
 // 3.0.11-beta.139 (the owner: «пишет что 60% но хп воостанавливается»): the server's own overweight state - its status
 // icons SI_WEIGHT90 (36: no attacks nor skills, 90 %) and SI_WEIGHT50 (35: no natural regen - uaRO's
 // natural_heal_weight_rate is 70 %, not the classic 50)
@@ -137,20 +137,10 @@ int ownOverweight() {
     return t.on(36) ? 2 : t.on(35) ? 1 : 0;
 }
 
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
 // UI window 0 when it is the Basic Info window of this build
 uint32_t basicInfo() {
     const uint32_t window = read32(kBasicInfo);
     return window && read32(window) == kBasicInfoClass ? window : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
 // Its shown flag held: 0 while the block shows (each frame - the game shows it again on a new map), 1 back
@@ -299,9 +289,7 @@ void block(const State& s, HWND game) {  // the mouse's clicks over it are its o
     panel::Box b = s.layout.block;
     float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
     uiRect(x0, y0, b.w, b.h);  // 3.0.18-beta.50 (R-VMGJE8): as uaUI draws it - its clicks and the editor's frame
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Character, game, &r, false);
 }
 

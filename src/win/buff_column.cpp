@@ -23,6 +23,7 @@
 #include "win/buff_overlay.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
+#include "win/game_memory.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/pack_pictures.hpp"
@@ -33,6 +34,8 @@
 #include "win/ui_cost.hpp"
 #include "win/uaui.hpp"
 #include "win/updates_hook.hpp"
+#include "win/window_input.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::buffcolumn {
 namespace {
@@ -52,7 +55,6 @@ constexpr uint32_t kIconsBegin = 0x728484, kIconsEnd = 0x728488;  // the player'
 constexpr size_t kMostIcons = 64;
 // The player's icon effect (FUN_005b71a0: player + 0x428 = the effect 0xa4 laying the icons out) and the message that
 // lays them out again - FUN_00593d00 sends it on each status icon packet: mode + 0xC4 the world, + 0x3C the player
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 constexpr uint32_t kWorld = 0xC4, kPlayer = 0x3C, kIconEffect = 0x428;
 constexpr int kRelayout = 0x2C;
 constexpr ULONGLONG kRepaintMs = 100;  // the times and the rings painted again at most this often
@@ -144,8 +146,6 @@ State& state() {
     static State s;
     return s;
 }
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 void readState(State& s) {
     if (s.stateRead) return;
@@ -698,8 +698,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown || s.uiShown) return false;  // 3.0.18-beta.20: uaUI's events take its clicks
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     (void)wp;
     // 3.0.11-beta.233 (the owner: «на иконку бургера нажимаю и оно не срабатывает на второй третий раз»): the press

@@ -42,10 +42,12 @@
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
 #include "win/reference_window.hpp"
+#include "win/window_input.hpp"
 #include "win/window_stack.hpp"
 #include "win/ui_cost.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::minimapproto {
 namespace {
@@ -249,8 +251,6 @@ void readNames(State& s) {
         s.mapNames = refindex::mapNames(std::string(bytes.begin(), bytes.end()));
     LOG_INFO("minimap: %zu names of maps from the client's mapnametable.txt", s.mapNames.size());
 }
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 // 3.0.11-beta.9: a map's short name: the client's, else its code
 std::string shortTitle(State& s, const std::string& code) {
@@ -1653,8 +1653,7 @@ namespace {
 bool mouseOf(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result, bool bigOnly) {
     State& s = state();
     if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
     if (m == WM_MOUSEWHEEL && !ScreenToClient(game, &p)) return false;  // the wheel's point is the screen's

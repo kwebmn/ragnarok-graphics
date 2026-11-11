@@ -16,6 +16,7 @@
 #include "core/ui_style.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/reference_load.hpp"
@@ -100,11 +101,6 @@ const uint8_t kAskNameCode[] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x24, 0x8B, 0x45,
                                 0x08, 0x53, 0x56, 0x57, 0x85, 0xC0, 0x8B, 0xF9};
 using AskNameFn = void(__attribute__((thiscall)) *)(uint32_t mode, uint32_t id);
 constexpr int kFirstMonster = 1001, kLastMonster = 3999;  // the classes the game names as monsters
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
 
 uint32_t targetNow(State& s) {
     const bool pad = uapad::runtime::look().shown;

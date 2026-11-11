@@ -23,6 +23,7 @@
 #include "win/real_ddraw.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/window_input.hpp"
 
 namespace uagfx::win::answercard {
 namespace {
@@ -214,9 +215,7 @@ bool toTarget(const State& s, HWND game, int x, int y, float& tx, float& ty) {
 void block(const State& s, HWND game) {  // the pad's clicks there are the card's
     RECT client{};
     if (!GetClientRect(game, &client) || s.targetW <= 0 || s.targetH <= 0) return;
-    const RECT r{LONG(int64_t(s.x) * client.right / s.targetW), LONG(int64_t(s.y) * client.bottom / s.targetH),
-                 LONG(int64_t(s.x + s.geometry.width) * client.right / s.targetW + 1),
-                 LONG(int64_t(s.y + s.geometry.height) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, s.x, s.y, s.geometry.width, s.geometry.height);
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Card, game, &r, false);
 }
 

@@ -8,6 +8,7 @@
 #include "core/char_status.hpp"
 #include "core/net_predict.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/net_watch.hpp"
 
@@ -21,7 +22,6 @@ namespace np = uagfx::netpredict;
 // casts (win/cast_bar's)
 constexpr uint32_t kOwnAccount = 0x771F7C, kSendMsgSlot = 8, kGauge = 0x220, kGaugeClass = 0x696C18;
 constexpr int kWalkMsg = 0, kPutMsg = 0x13;
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 constexpr uint64_t kStillMs = 150;  // standing so long - not walking, not stepping
 
 struct State {
@@ -54,11 +54,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
 }
 
 uint32_t player() {

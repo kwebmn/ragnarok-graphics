@@ -22,6 +22,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/window_input.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::hudedit {
 namespace {
@@ -90,8 +92,6 @@ State& state() {
     static State s;
     return s;
 }
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 // 3.0.11-beta.288 (the owner's feature 20): [interface] layout_per_char - each character's own layout
 // (uaro-graphics\layouts\<its name's bytes in hex>.txt), the common one until it is changed for it
@@ -529,8 +529,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 bool mouse(HWND, UINT m, WPARAM wp, LPARAM, LRESULT& result) {
     State& s = state();
     if (!s.on) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     result = 0;
     int cx = 0, cy = 0;

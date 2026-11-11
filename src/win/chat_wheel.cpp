@@ -15,6 +15,7 @@
 #include "win/code_page.hpp"
 #include "win/emote_window.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/osk_window.hpp"
 #include "win/picture_draw.hpp"
@@ -22,6 +23,7 @@
 #include "win/ui_cost.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::chatwheelwin {
 namespace {
@@ -35,7 +37,6 @@ constexpr uint32_t kWindowMgr = 0x727ED8, kChatAt = kWindowMgr + 0x84, kChatClas
 constexpr uint32_t kWords = 0x68, kName = 0x6C, kGetText = 0x443300, kSetTextSlot = 0x98, kSendMode = 0x772D60;
 constexpr uint32_t kSetFocus = 0x4CE510, kSendMsgSlot = 0x94;
 constexpr int kButtonMsg = 6, kEnter = 0x76;
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using SetTextFn = void(__attribute__((thiscall)) *)(uint32_t edit, const char* text);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
@@ -68,8 +69,6 @@ State& state() {
     return s;
 }
 
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
 std::string fmt(std::string form, const std::vector<std::string>& v) {
     for (size_t i = 0; i < v.size(); ++i) {
         const std::string key = "{" + std::to_string(i + 1) + "}";
@@ -77,16 +76,6 @@ std::string fmt(std::string form, const std::vector<std::string>& v) {
             form.replace(at, key.size(), v[i]);
     }
     return form;
-}
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
 uint32_t gameChat() {

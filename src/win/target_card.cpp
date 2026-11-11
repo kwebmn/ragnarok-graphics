@@ -1,4 +1,5 @@
 #include "win/target_card.hpp"
+#include "win/game_memory.hpp"
 #include "win/own_windows.hpp"
 
 #include <windowsx.h>
@@ -33,6 +34,7 @@
 #include "win/reference_window.hpp"
 #include "win/ui_cost.hpp"
 #include "win/uaui.hpp"
+#include "win/window_input.hpp"
 #include "core/pad_glyphs.hpp"
 #include "core/ui_icons.hpp"
 
@@ -77,11 +79,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
 }
 
 uint32_t own() { return read32(kOwnAccount); }
@@ -159,9 +156,7 @@ void block(const State& s, HWND game) {  // the mouse's clicks on the card are i
     panel::Box b = s.layout.card;
     float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
     uiRect(x0, y0, b.w, b.h);  // 3.0.18-beta.53: as uaUI draws it - its clicks and the editor's frame
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Target, game, &r, false);
 }
 
@@ -545,8 +540,7 @@ int actorClass(uint32_t id) { return classOf(id); }
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown || s.uiShown) return false;  // 3.0.18-beta.18: uaUI's events take its clicks
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     (void)wp;
     POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};

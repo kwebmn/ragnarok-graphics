@@ -12,12 +12,14 @@
 #include "pad/core/config/bindings.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::oskwin {
 namespace {
@@ -32,7 +34,6 @@ constexpr uint32_t kFocus = kWindowMgr + 0x6C, kSetFocus = 0x4CE510, kGetText = 
 constexpr uint32_t kSetTextSlot = 0x98, kSendMsgSlot = 0x94;
 constexpr int kButtonMsg = 6, kEnter = 0x76;
 constexpr ULONGLONG kBlinkMs = 530;
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using SetTextFn = void(__attribute__((thiscall)) *)(uint32_t edit, const char* text);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
@@ -62,13 +63,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
 }
 
 uint32_t chatWindow() {

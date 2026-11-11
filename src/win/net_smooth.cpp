@@ -11,6 +11,7 @@
 #include "core/minimap_proto.hpp"
 #include "core/net_smooth.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/net_watch.hpp"
 #include "win/safe_read.hpp"
@@ -26,7 +27,6 @@ constexpr uint32_t kSendMsgSlot = 8;
 constexpr int kPutMsg = 0x13;
 constexpr int kWalkMsg = 0;  // 3.0.11-beta.251: a walk - <tick, from x, y, sub x, sub y, to x, y> (FUN_0057e1f0's)
 constexpr uint32_t kOwnAccount = 0x771F7C;
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 struct Glide {
     ns::Glide g;
@@ -70,11 +70,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
 }
 
 bool samePlace(float a, float b) { return std::fabs(a - b) < 0.01f; }

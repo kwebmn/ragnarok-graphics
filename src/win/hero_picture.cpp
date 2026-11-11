@@ -7,6 +7,7 @@
 
 #include "core/sprite_file.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/head_picture.hpp"
 #include "win/pack_frames.hpp"
 #include "core/weapon_look.hpp"
@@ -40,11 +41,6 @@ const std::string kAccessory = "\xBE\xC7\xBC\xBC\xBB\xE7\xB8\xAE\\";        // �
 const std::string kEffect = "\xC0\xCC\xC6\xD1\xC6\xAE\\";                   // 이팩트\ (CP949)
 const std::string kFalcon = "\xB8\xC5";                                      // 매
 const std::string kCart = "\xBC\xD5\xBC\xF6\xB7\xB9";                        // 손수레
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
 
 std::string readString(uint32_t at) {
     char buf[96] = {};

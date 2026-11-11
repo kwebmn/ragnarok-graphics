@@ -27,6 +27,7 @@
 #include "win/setting_edit.hpp"
 #include "win/paths.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/window_input.hpp"
 
 namespace uagfx::win {
 
@@ -585,8 +586,7 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
 bool Console::mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     Console* c = active_;
     if (!c || !c->open_ || c->game_ != game || c->drawnLine_ <= 0) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
     if (m == WM_MOUSEWHEEL && !ScreenToClient(game, &p)) return false;  // the wheel's point is the screen's

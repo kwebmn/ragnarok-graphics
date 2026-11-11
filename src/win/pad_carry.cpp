@@ -19,6 +19,7 @@
 #include "win/trade_window.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::padcarrywin {
 namespace {
@@ -60,8 +61,6 @@ State& state() {
     static State s;
     return s;
 }
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 const char* placeName(pc::To to) {
     switch (to) {

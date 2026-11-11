@@ -14,13 +14,16 @@
 #include "win/card_drag.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::partysetupwin {
 namespace {
@@ -33,7 +36,6 @@ using uapad::gamewindow::Blocker;
 constexpr uint32_t kWindowMgr = 0x727ED8, kSetupAt = kWindowMgr + 0x158, kSetupClass = 0x699B30, kSetupSend = 0x485650;
 constexpr uint32_t kShown = 0x38, kSendMsgSlot = 0x94, kParty = 0x771148 + 0xFB0, kLeader = 0x772D34;
 constexpr int kButtonMsg = 6;
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 struct State {
     uisheet::Sheet sheet;  // 3.0.18-beta.37: the window drawn by uaUI
@@ -58,18 +60,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
 uint32_t gameSetup() {
@@ -119,9 +109,7 @@ void block(const State& s, HWND game) {
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
     const panel::Box& b = s.layout.glass;
     const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(Blocker::PartySetup, game, &r, false);
 }
 
@@ -292,8 +280,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     (void)wp;
     if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;

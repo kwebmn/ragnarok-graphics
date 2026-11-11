@@ -1,4 +1,5 @@
 #include "win/carry_icon.hpp"
+#include "win/game_memory.hpp"
 #include "win/ui_field.hpp"
 #include "win/stash_watch.hpp"
 #include "win/storage_window.hpp"
@@ -38,10 +39,12 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
 #include "win/item_grid_ui.hpp"
 #include "win/uaui.hpp"
 #include "win/window_stack.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::storagewin {
 namespace {
@@ -67,7 +70,6 @@ constexpr size_t kInfoSize = 0x48, kMostNodes = 1000;
 constexpr ULONGLONG kReadMs = 500, kBlinkMs = 530, kTipMs = 400;
 constexpr size_t kMostTyped = 72;  // bytes (3.0.18-beta.72: UTF-8 - 24 letters of any language)
 
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
@@ -124,18 +126,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
 uint32_t rd32(const uint8_t* p, size_t at) {
@@ -297,9 +287,7 @@ void block(const State& s, HWND game) {  // the mouse's clicks over it are its o
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
     const panel::Box& b = s.layout.glass;
     const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Storage, game, &r, false);
 }
 
@@ -599,8 +587,7 @@ bool padThing(uagfx::padcarry::Thing& t, float& x, float& y, const panel::Pictur
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL && m != WM_MOUSEMOVE) return false;
     float tx = 0, ty = 0;
     bool fromGame = false;

@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win::gamepress {
@@ -19,11 +20,6 @@ constexpr int kMostTold = 8;
 using HitFn = uint32_t(__attribute__((thiscall)) *)(uint32_t window, int x, int y);
 
 int g_told = 0;
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
 
 bool known() {
     static int k = -1;  // 1 this build's, 0 not

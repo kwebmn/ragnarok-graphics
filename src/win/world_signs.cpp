@@ -12,6 +12,7 @@
 #include "core/world_signs.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
@@ -66,11 +67,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
 }
 
 // A plate's measures (3.0.18-beta.38: uaUI's too): its size, the title's and the places' widths

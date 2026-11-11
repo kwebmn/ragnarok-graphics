@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 
 namespace uagfx::win::companionwin {
 namespace {
@@ -14,16 +15,6 @@ constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0
 constexpr int kUseMsg = 0x7E, kHomunDrag = 0xCB, kMercDrag = 0x10B, kDropMsg = 0x12;
 constexpr size_t kMostSkills = 40;
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
-}
 
 bool modeMsg(int msg, int a, int b, int c) {
     const uint32_t mode = read32(kModeNow);

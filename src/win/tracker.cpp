@@ -28,6 +28,8 @@
 #include "win/reference_window.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_cost.hpp"
+#include "win/window_input.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::trackerwin {
 namespace {
@@ -64,8 +66,6 @@ State& state() {
     static State s;
     return s;
 }
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 void readState(State& s) {
     if (s.stateRead) return;
@@ -405,8 +405,7 @@ static void pressPart(State& s, tk::Part part, int entry) {
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     (void)wp;
     float tx = 0, ty = 0;  // where the game's cursor stands, as the hover (3.0.11-beta.43's)

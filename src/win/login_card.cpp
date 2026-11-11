@@ -26,6 +26,7 @@
 #include "win/char_select.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/map_entry_hook.hpp"
 #include "win/msg_box.hpp"
@@ -43,11 +44,13 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
 #include "uikit/login_live.hpp"
 #include "win/live_part.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/words.hpp"
 
 namespace uagfx::win::loginwin {
 namespace {
@@ -72,7 +75,6 @@ constexpr int kAway = -4000;
 constexpr ULONGLONG kBlinkMs = 530;
 const wchar_t kRegister[] = L"https://uaro.kiev.ua/account/register";
 const wchar_t kForgot[] = L"https://uaro.kiev.ua/account/forgot";  // 3.0.11-beta.172: a refused password's action
-using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using LengthFn = int(__attribute__((thiscall)) *)(uint32_t edit);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
@@ -176,18 +178,6 @@ struct State {
 State& state() {
     static State s;
     return s;
-}
-
-std::string say(settings::Text t) { return settings::tr(language(), t); }
-
-uint32_t read32(uint32_t at) {
-    uint32_t v = 0;
-    return readGame(at, &v, 4) ? v : 0;
-}
-
-bool write32(uint32_t at, uint32_t v) {
-    SIZE_T n = 0;
-    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
 uint32_t gameLogin() {
@@ -301,9 +291,7 @@ void block(const State& s, HWND game) {
         x0 = float(sx);
         y0 = float(sy);
     }
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(Blocker::Login, game, &r, false);
 }
 
@@ -794,9 +782,7 @@ void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight
         s.toastLayout =
             shelftoast::layout(targetWidth, targetHeight, s.toastScale, s.toast, say(settings::Text::ShelfUndo));
         const shelftoast::Layout& L = s.toastLayout;
-        const RECT r{LONG(int64_t(L.x) * client.right / targetWidth), LONG(int64_t(L.y) * client.bottom / targetHeight),
-                     LONG(int64_t(L.x + L.w) * client.right / targetWidth + 1),
-                     LONG(int64_t(L.y + L.h) * client.bottom / targetHeight + 1)};
+        const RECT r = clientBox(client, targetWidth, targetHeight, L.x, L.y, L.w, L.h);
         uapad::gamewindow::setBlocked(Blocker::ShelfToast, game, &r, false);
         s.toastBlocked = true;
     } else if (s.toastBlocked) {
@@ -1166,8 +1152,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
-    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
-                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    const bool button = mouseButton(m);
     if (!button && m != WM_MOUSEWHEEL) return false;
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;
