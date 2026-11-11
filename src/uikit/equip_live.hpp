@@ -66,6 +66,13 @@ struct Model {
     std::vector<StatV> stats;
     std::vector<PickV> picks;
     std::vector<PadV> padItems;
+    // 3.0.18-beta.154 (the later clients' Equip Switch): the sets «1 2 3» in the footer - kept ones bright
+    struct SetV {
+        Rml::String label;
+        bool saved = false, hot = false;
+    };
+    std::vector<SetV> sets;
+    Rml::String setsHint;
 };
 
 const char* rml();

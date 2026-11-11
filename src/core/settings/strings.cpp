@@ -8413,6 +8413,10 @@ constexpr Entry kTexts[] = {
      "кнопкой «Отслеживать»"},
     {Text::TrackerEmptyTag, "how", "як", "как"},
     {Text::ServersPlayers, "{1} playing", "{1} у грі", "{1} в игре"},  // 3.0.18-beta.153
+    {Text::EquipSetsHint, "sets: a click puts on, a right click keeps what is worn",  // 3.0.18-beta.154
+     "комплекти: клік — вдягти, "
+     "права кнопка — запам'ятати вдягнене",
+     "комплекты: клик — надеть, правая кнопка — запомнить надетое"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

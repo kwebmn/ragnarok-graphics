@@ -26,6 +26,7 @@
 #include "win/info_card.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "core/equip_sets.hpp"
 #include "win/head_picture.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -94,6 +95,13 @@ struct Thing {  // a thing of the bag as the game keeps it
 struct State {
     // 3.0.18-beta.96 (docs/superpowers/plans/2026-11-10-uaui-live-drag.md): live - laid out by RmlUi
     LivePart<uikit::equip::Model> live;
+    // 3.0.18-beta.154 (the later clients' Equip Switch): the character's sets, their file's character, the steps
+    // to put one on (one each 150 ms), the set under the cursor
+    equipsets::Set sets[equipsets::kSets];
+    std::string setsOf;
+    std::vector<equipsets::Step> setQueue;
+    ULONGLONG setStepAt = 0;
+    int setHot = -1;
     int sheetGen = 0;
     bool sheetShown = false;
     WindowShadow shadow;
@@ -515,6 +523,71 @@ void takeOff(State& s, int slot, const char* by) {
                  sent ? "(the game mode's 0x15, as its own window)" : "- not sent");
 }
 
+// 3.0.18-beta.154: the sets' file - uaro-graphics\equip-sets\<the character's name as hex>.txt, «#1» before each
+std::string setsFile(const std::string& who) {
+    std::string hex;
+    char b[3];
+    for (unsigned char c : who) std::snprintf(b, sizeof b, "%02x", c), hex += b;
+    return gameDir() + "\\uaro-graphics\\equip-sets\\" + hex + ".txt";
+}
+
+void readSets(State& s) {
+    const std::string who = readOwnName();
+    if (who.empty() || who == s.setsOf) return;
+    s.setsOf = who;
+    for (equipsets::Set& x : s.sets) x = equipsets::Set{};
+    std::string text;
+    if (!readTextFile(setsFile(who), text)) return;
+    int at = -1;
+    std::string part[equipsets::kSets];
+    size_t from = 0;
+    while (from <= text.size()) {
+        size_t end = text.find('\n', from);
+        if (end == std::string::npos) end = text.size();
+        const std::string line = text.substr(from, end - from);
+        from = end + 1;
+        if (line.size() >= 2 && line[0] == '#') at = std::atoi(line.c_str() + 1) - 1;
+        else if (at >= 0 && at < equipsets::kSets) part[at] += line + "\n";
+    }
+    for (int i = 0; i < equipsets::kSets; ++i) s.sets[i] = equipsets::Set::parse(part[i]);
+}
+
+void keepSet(State& s, int i) {
+    s.sets[i] = equipsets::capture(s.data.slots);
+    std::string text;
+    for (int n = 0; n < equipsets::kSets; ++n) text += "#" + std::to_string(n + 1) + "\n" + s.sets[n].text();
+    CreateDirectoryA((gameDir() + "\\uaro-graphics\\equip-sets").c_str(), nullptr);
+    writeFileAtomic(setsFile(s.setsOf), text);
+    LOG_INFO("equip: the set %d kept - %zu thing(s)", i + 1, s.sets[i].things.size());
+    s.key.clear();
+}
+
+void putSet(State& s, int i) {
+    if (s.sets[i].things.empty()) return;
+    std::vector<equipsets::Owned> bag;
+    for (const Thing& t : s.bag) {
+        equipsets::Owned o;
+        o.index = t.index, o.id = t.id, o.refine = t.refine, o.worn = t.worn != 0;
+        for (int c = 0; c < 4; ++c) o.cards[c] = t.cards[c];
+        bag.push_back(o);
+    }
+    s.setQueue = equipsets::plan(s.sets[i], bag, s.data.slots);
+    s.setStepAt = 0;
+    LOG_INFO("equip: the set %d put on - %zu thing(s) to wear", i + 1, s.setQueue.size());
+}
+
+void setSteps(State& s) {  // one thing a step, as the game's own window wears them
+    if (s.setQueue.empty() || GetTickCount64() < s.setStepAt) return;
+    const equipsets::Step st = s.setQueue.front();
+    s.setQueue.erase(s.setQueue.begin());
+    bool ammo = false;
+    for (const Thing& t : s.bag)
+        if (t.index == st.index) ammo = isAmmo(t.type);
+    modeMsg(ammo ? kAmmoMsg : kWearMsg, st.index, int(st.at), 0);
+    s.setStepAt = GetTickCount64() + 150;
+    s.readAt = 0;
+}
+
 void wear(State& s, int pick, const char* by) {
     if (pick < 0 || pick >= int(s.pickBag.size())) return;
     const Thing& t = s.bag[size_t(s.pickBag[size_t(pick)])];
@@ -649,6 +722,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         LOG_INFO("equip: «Спорядження» open - %d thing(s) worn, %zu in the bag", worn, s.bag.size());
     }
     s.shown = true;
+    readSets(s);   // 3.0.18-beta.154: the character's sets
+    setSteps(s);   // a set being put on, a thing a step
     block(s, game);
 }
 
@@ -677,6 +752,11 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                     m.mountAsk = s.mountAsk && !m.mountOff.empty();  // 3.0.18-beta.117
                                     m.askHot = s.askHot;
                                     m.askYes = say(settings::Text::MsgYes);
+                                    m.sets.clear();  // 3.0.18-beta.154: the sets «1 2 3»
+                                    for (int i = 0; i < equipsets::kSets; ++i)
+                                        m.sets.push_back(el::Model::SetV{std::to_string(i + 1),
+                                                                         !s.sets[i].things.empty(), i == s.setHot});
+                                    m.setsHint = say(settings::Text::EquipSetsHint);
                                     m.askNo = say(settings::Text::MsgNo);
                                     m.hero = m.turns ? s.live.icon(&s.hero) : "";
                                     {  // .113: fitted into the middle's box, its proportions kept
@@ -867,6 +947,11 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             }
             if (on("mountoff")) return true;  // the sign again: the question closed
         }
+        for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "set"))  // 3.0.18-beta.154: a set put on
+            if (p.box.contains(lx, ly) && p.index >= 0 && p.index < equipsets::kSets) {
+                putSet(s, p.index);
+                return true;
+            }
         for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "mountoff"))  // 3.0.18-beta.114
             if (p.box.contains(lx, ly)) {
                 s.mountAsk = mountNow() != Mount::None;
@@ -882,6 +967,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                     if (s.told++ < 40) LOG_INFO("equip: the character turned to %d", s.heroDir);
                     return true;
                 }
+    }
+    if (m == WM_RBUTTONDOWN && s.live.shown()) {  // 3.0.18-beta.154: a set's right click - what is worn kept in it
+        const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
+        for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "set"))
+            if (p.box.contains(lx, ly) && p.index >= 0 && p.index < equipsets::kSets && !s.setsOf.empty()) {
+                keepSet(s, p.index);
+                return true;
+            }
     }
     if (m == WM_RBUTTONDOWN && h.part == ew::Part::Slot) {  // its card, as a right click in the game's window
         if (s.data.slots[h.index].index > 0) card(s, h.index);

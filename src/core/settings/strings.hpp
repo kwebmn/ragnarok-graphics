@@ -926,6 +926,7 @@ enum class Text : uint16_t {
     MyShopSoldCount, MyShopEarned, MyShopSales, MyShopNoSales,  // 3.0.18-beta.143: «Моя лавка»'s sales
     TrackerEmptyTitle, TrackerEmptyHint, TrackerEmptyTag,  // 3.0.18-beta.145: the tracker with nothing pinned
     ServersPlayers,  // 3.0.18-beta.153: a server's players now
+    EquipSetsHint,   // 3.0.18-beta.154: the equipment sets
     Count
 };
 

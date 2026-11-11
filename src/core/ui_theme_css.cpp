@@ -953,6 +953,14 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .nm { display: block; height: 1.6667rem; line-height: 1.6667rem; font-size: 1.0833rem; color: #7e889a;
     white-space: nowrap; }
 .eql .nm.worn { font-weight: bold; color: #eef2f8; }
+/* 3.0.18-beta.154: the sets «1 2 3» (the later clients' Equip Switch) */
+.eql .sets { display: flex; align-items: center; margin-top: 0.5rem; }
+.eql .sets .set { display: block; width: 2rem; height: 1.8333rem; line-height: 1.8333rem; margin-right: 0.4167rem;
+    text-align: center; border-radius: 0.5rem; border-width: 1px; border-color: #ffffff1f; color: #7e889a;
+    background-color: #ffffff0a; font-weight: bold; }
+.eql .sets .set.saved { color: #e6cb8a; border-color: #c9a55b80; }
+.eql .sets .set.hot { background-color: #ffffff24; }
+.eql .sets .sh { margin-left: 0.4167rem; font-size: 0.9167rem; color: #7e889a; }
 .eql .nm.spill { font-weight: normal; color: #7e889a; }
 .eql .dots { display: flex; height: 0.5833rem; margin-top: 0.0833rem; }
 .eql .left .dots { justify-content: flex-end; }
