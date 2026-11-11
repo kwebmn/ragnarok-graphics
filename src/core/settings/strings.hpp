@@ -928,6 +928,7 @@ enum class Text : uint16_t {
     ServersPlayers,  // 3.0.18-beta.153: a server's players now
     EquipSetsHint,   // 3.0.18-beta.154: the equipment sets
     StorageTakePicked, PickedPut, PickedHint,  // 3.0.18-beta.155: things picked with Ctrl / Shift
+    CountFits,  // 3.0.18-beta.156: «how many» - what the weight lets in
     Count
 };
 

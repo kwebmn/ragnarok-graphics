@@ -29,6 +29,8 @@ struct Card {
     bool caret = false;  // its caret shown now (it blinks)
     int messageLines = 2;  // 3.0.11-beta.151: the rows its message takes at the card's width (the words by GDI)
     int most = 0;          // 3.0.11-beta.155: a count's most (its quick choices')
+    // 3.0.18-beta.156 (the owner: how many go in counted ahead): into the bag - how many the weight lets in (-1 not
+    // known); `most` then the least of the two
 };
 struct Texts {
     std::string accept, decline, ok;  // «Прийняти», «Відмовити», «Готово»

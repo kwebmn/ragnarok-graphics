@@ -39,4 +39,8 @@ bool box(int& x, int& y, int& w, int& h);
 void moveTo(int x, int y, bool keep = true);
 bool moving();
 
+// 3.0.18-beta.156: the item number at a place of it (0 none) - the «how many» counted by weight
+int idAtPlace(int index);
+bool put(int index, int count);  // 3.0.18-beta.156: a bag thing put into the cart (the game's own drop)
+
 }  // namespace uagfx::win::cartwin

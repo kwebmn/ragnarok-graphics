@@ -54,4 +54,7 @@ bool box(int& x, int& y, int& w, int& h);
 void moveTo(int x, int y, bool keep = true);  // `keep` false: it follows «Речі» being dragged
 bool moving();  // its title dragged now
 
+// 3.0.18-beta.156: the item number at a place of it (0 none) - the «how many» counted by weight
+int idAtPlace(int index);
+
 }  // namespace uagfx::win::storagewin

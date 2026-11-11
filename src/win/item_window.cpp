@@ -19,6 +19,7 @@
 #include "core/gear_compare.hpp"
 #include "core/char_status.hpp"
 #include "core/hotbar_panel.hpp"
+#include "core/item_pick.hpp"
 #include "core/item_window.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
@@ -27,6 +28,8 @@
 #include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
+#include "win/cart_window.hpp"
+#include "win/ask_card.hpp"
 #include "win/pad_carry.hpp"
 #include "win/buff_overlay.hpp"
 #include "win/client_tables.hpp"
@@ -91,6 +94,12 @@ using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
 
 struct State {
+    // 3.0.18-beta.156 (the owner: the storage's picks, and so everywhere): the bag's things picked (Ctrl /
+    // Shift / Ctrl+A) put together into the storage or the cart when one is open (one a step, a stack all of it)
+    itempick::Picked picked;
+    std::vector<std::pair<int, int>> putQueue;  // place, count
+    bool putToCart = false;
+    ULONGLONG putAt = 0;
     bool searchAll = false;  // 3.0.18-beta.72: Ctrl+A in the search
     WindowShadow shadow;  // 3.0.11-beta.49
     WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
@@ -590,6 +599,44 @@ void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth
 
 }  // namespace
 
+// 3.0.18-beta.156: where the bag's picked go - the storage open, else the cart open; none
+static int putTarget() { return storagewin::shown() ? 1 : cartwin::shown() ? 2 : 0; }
+
+static std::vector<int> shownPlaces(const State& s) {
+    std::vector<int> out;
+    for (const int i : s.shownItems) out.push_back(s.items[size_t(i)].index);
+    return out;
+}
+
+static void putPicked(State& s, const char* how) {
+    const int to = putTarget();
+    if (!s.picked.count() || !to) return;
+    s.putQueue.clear();
+    for (const int place : s.picked.list())
+        for (const iw::Item& it : s.items)
+            if (it.index == place && !it.worn) s.putQueue.emplace_back(place, it.count);
+    s.putToCart = to == 2;
+    s.putAt = 0;
+    s.picked.clear();
+    if (s.told++ < 20)
+        LOG_INFO("items: %s - %zu picked thing(s) into the %s", how, s.putQueue.size(),
+                 s.putToCart ? "cart" : "storage");
+    s.key.clear();
+}
+
+static void putSteps(State& s) {
+    if (s.putQueue.empty() || GetTickCount64() < s.putAt) return;
+    if (askcardwin::countAll()) {  // the last one's «how many» - all of it
+        s.putAt = GetTickCount64() + 250;
+        return;
+    }
+    const auto [place, count] = s.putQueue.front();
+    s.putQueue.erase(s.putQueue.begin());
+    if (s.putToCart) cartwin::put(place, count);
+    else storagewin::put(place, count);
+    s.putAt = GetTickCount64() + 250;
+}
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight, bool toast) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight, toast);
     State& s = state();
@@ -644,6 +691,17 @@ void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth
             s.show.overweight = icons.on(36) ? 2 : icons.on(35) ? 1 : 0;
             s.show.zeny = st.zeny;
         }
+    }
+    {  // 3.0.18-beta.156: the picks - the storage or the cart open, else none
+        std::vector<int> there;
+        if (putTarget())
+            for (const iw::Item& it : s.items) there.push_back(it.index);
+        s.picked.keepOnly(there);
+        s.show.picked = s.picked.list();
+        s.show.pickedText = s.picked.count() ? settings::fmt(say(settings::Text::PickedPut),
+                                                             {std::to_string(s.picked.count())})
+                                             : "";
+        putSteps(s);
     }
     place(s);
     s.show.flashes.clear();  // 3.0.11-beta.44: the uses still answering in their cells
@@ -803,7 +861,12 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         s.press = -1;
         s.dragging = false;
         s.key.clear();
-        if (dragged) {
+        int bx = 0, by = 0, bw = 0, bh = 0;  // 3.0.18-beta.156: the picked let go over the storage or the cart
+        const bool overTarget = (storagewin::box(bx, by, bw, bh) || cartwin::box(bx, by, bw, bh)) &&
+                                tx >= float(bx) && ty >= float(by) && tx < float(bx + bw) && ty < float(by + bh);
+        if (dragged && s.picked.has(it.index) && s.picked.count() > 1 && overTarget) {
+            putPicked(s, "the picked dragged over");
+        } else if (dragged) {
             const char* did = dropAt(s, it);
             s.lastCell = -1;
             s.readAt = 0;
@@ -865,9 +928,18 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case iw::Part::Star:  // 3.0.11-beta.113: starred or not - «★»
             if (h.index < int(s.shownItems.size())) flipStar(s, s.items[size_t(s.shownItems[size_t(h.index)])].id);
             break;
+        case iw::Part::Picked: putPicked(s, "its footer button"); break;  // 3.0.18-beta.156
         case iw::Part::Cell: {
             if (h.index >= int(s.shownItems.size())) break;
             const int at = s.shownItems[size_t(h.index)];
+            if (putTarget() && (GetKeyState(VK_CONTROL) < 0 || GetKeyState(VK_SHIFT) < 0)) {  // .156: picked
+                const int place = s.items[size_t(at)].index;
+                if (GetKeyState(VK_SHIFT) < 0) s.picked.range(shownPlaces(s), place);
+                else s.picked.toggle(place);
+                s.lastCell = -1;
+                break;
+            }
+            if (!s.picked.has(s.items[size_t(at)].index)) s.picked.clear();
             const ULONGLONG now = GetTickCount64();
             if ((h.index == s.lastCell && now - s.lastClick <= GetDoubleClickTime()) || m == WM_LBUTTONDBLCLK) {
                 useCell(s, h.index, now, "a double click");
@@ -898,6 +970,17 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 bool key(UINT m, WPARAM wp, LPARAM lp) {
     State& s = state();
     (void)lp;
+    if (s.shown && !s.show.typing && putTarget() && m == WM_KEYDOWN && wp == 'A' && GetKeyState(VK_CONTROL) < 0 &&
+        !storagewin::shown()) {  // 3.0.18-beta.156: all the tab shows (the storage's own Ctrl+A first when open)
+        s.picked.all(shownPlaces(s));
+        s.key.clear();
+        return true;
+    }
+    if (s.shown && !s.show.typing && m == WM_KEYDOWN && wp == VK_ESCAPE && s.picked.count()) {
+        s.picked.clear();
+        s.key.clear();
+        return true;
+    }
     if (!s.shown || !s.show.typing) return false;
     // 3.0.18-beta.72 (the big six, E): the new interface's field - any language, the clipboard, every key its own
     textfield::Field field{s.show.search, s.searchAll};

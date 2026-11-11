@@ -8426,6 +8426,9 @@ constexpr Entry kTexts[] = {
     {Text::PickedHint, "Ctrl+click picks, Shift+click a run, Ctrl+A all",
      "Ctrl+клік — вибрати, Shift+клік — підряд, Ctrl+A — усе",
      "Ctrl+клик — выбрать, Shift+клик — подряд, Ctrl+A — всё"},
+    {Text::CountFits, "The weight lets in {1} of {2} - empty: {1}",
+     "За вагою влізе {1} з {2} — порожнє поле: {1}",
+     "По весу влезет {1} из {2} — пустое поле: {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

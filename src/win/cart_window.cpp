@@ -18,6 +18,7 @@
 #include "core/card_names.hpp"
 #include "core/cart_window.hpp"
 #include "core/hotbar_panel.hpp"
+#include "core/item_pick.hpp"
 #include "core/item_window.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
@@ -25,6 +26,7 @@
 #include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
+#include "win/ask_card.hpp"
 #include "win/client_tables.hpp"
 #include "win/info_card.hpp"
 #include "win/code_page.hpp"
@@ -57,7 +59,7 @@ constexpr int kButtonMsg = 6, kCloseButton = 0x87, kItemCard = 0xC, kShowItem = 
 // The game mode (its SendMsg FUN_005707d0 at vtable + 0x14): 0x59 a cart thing's drag begun (its place - the cart
 // window's press FUN_004b7850), 0x12 let go at the cursor's x, y, 0x13 the drag ended; its drag at +0x32C (the kind)
 constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0, kDragInfo = 0x32C;
-constexpr int kDropMsg = 0x12, kEndDragMsg = 0x13;
+constexpr int kDropMsg = 0x12, kEndDragMsg = 0x13, kBagDragMsg = 0x11;  // .156: the bag's drag
 // The cart: the session's list (each node's ITEM_INFO at +8 as the bag's); the server's 0x0121 as the game keeps it:
 // the things, their most, the weight and its most (in tenths already)
 constexpr uint32_t kSession = 0x771148, kCart = kSession + cw::kSessionList, kCartCount = kSession + cw::kSessionCount;
@@ -71,6 +73,10 @@ using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
 
 struct State {
+    // 3.0.18-beta.156 (the owner: the storage's picks, and so everywhere): the things picked, those being taken
+    itempick::Picked picked;
+    std::vector<int> takeQueue;
+    ULONGLONG takeAt = 0;
     bool searchAll = false;  // 3.0.18-beta.72: Ctrl+A in the search
     itemgridui::Ui grid;  // 3.0.18-beta.27: the window drawn by uaUI
     int gridGen = 0;
@@ -358,6 +364,38 @@ bool closeGameWindow() {
     return true;
 }
 
+// 3.0.18-beta.156: the picked ones into the bag, one a step (a stack's «how many»: all the weight lets in)
+void takePicked(State& s, const char* how) {
+    if (!s.picked.count()) return;
+    s.takeQueue = s.picked.list();
+    s.takeAt = 0;
+    s.picked.clear();
+    if (s.told++ < 30) LOG_INFO("cart: %s - %zu picked thing(s) into the bag", how, s.takeQueue.size());
+    s.key.clear();
+}
+
+void takeSteps(State& s) {
+    if (s.takeQueue.empty() || GetTickCount64() < s.takeAt) return;
+    if (askcardwin::countAll()) {
+        s.takeAt = GetTickCount64() + 250;
+        return;
+    }
+    const int index = s.takeQueue.front();
+    s.takeQueue.erase(s.takeQueue.begin());
+    for (const iw::Item& it : s.items)
+        if (it.index == index) {
+            take(s, it);
+            break;
+        }
+    s.takeAt = GetTickCount64() + 250;
+}
+
+std::vector<int> shownPlaces(const State& s) {
+    std::vector<int> out;
+    for (const int i : s.shownItems) out.push_back(s.items[size_t(i)].index);
+    return out;
+}
+
 void takeCell(State& s, int shownIndex, const char* how) {
     if (shownIndex < 0 || shownIndex >= int(s.shownItems.size())) return;
     const iw::Item it = s.items[size_t(s.shownItems[size_t(shownIndex)])];
@@ -406,6 +444,16 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.weight = s.weight;
     s.show.weightMost = s.weightMost;
     s.show.zeny = -1;
+    {  // 3.0.18-beta.156: the picks
+        std::vector<int> there;
+        for (const iw::Item& it : s.items) there.push_back(it.index);
+        s.picked.keepOnly(there);
+        s.show.picked = s.picked.list();
+        s.show.pickedText = s.picked.count() ? settings::fmt(say(settings::Text::StorageTakePicked),
+                                                             {std::to_string(s.picked.count())})
+                                             : "";
+        takeSteps(s);
+    }
     place(s);
     s.shownItems = iw::shownOf(s.items, s.show.tab, s.show.search);
     s.show.also =  // 3.0.11-beta.286
@@ -538,7 +586,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         s.press = -1;
         s.dragging = false;
         s.key.clear();
-        if (dragged) {
+        if (dragged && s.picked.has(it.index) && s.picked.count() > 1 &&
+            !s.layout.glass.contains(tx - float(s.layout.x), ty - float(s.layout.y))) {
+            takePicked(s, "the picked dragged out");  // 3.0.18-beta.156
+        } else if (dragged) {
             const char* did = dropAt(it);
             s.lastCell = -1;
             s.readAt = 0;
@@ -593,10 +644,26 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                 s.readAt = 0;
             }
             break;
+        case iw::Part::Picked: takePicked(s, "its footer button"); break;  // 3.0.18-beta.156
         case iw::Part::Cell: {
             if (h.index >= int(s.shownItems.size())) break;
+            const int place = s.items[size_t(s.shownItems[size_t(h.index)])].index;
+            if (GetKeyState(VK_CONTROL) < 0 || GetKeyState(VK_SHIFT) < 0) {  // 3.0.18-beta.156: picked
+                if (GetKeyState(VK_SHIFT) < 0) s.picked.range(shownPlaces(s), place);
+                else s.picked.toggle(place);
+                s.lastCell = -1;
+                break;
+            }
             const ULONGLONG now = GetTickCount64();
-            if ((h.index == s.lastCell && now - s.lastClick <= GetDoubleClickTime()) || m == WM_LBUTTONDBLCLK) {
+            const bool twice = (h.index == s.lastCell && now - s.lastClick <= GetDoubleClickTime()) ||
+                               m == WM_LBUTTONDBLCLK;
+            if (s.picked.has(place) && twice) {
+                takePicked(s, "a double click on one picked");
+                s.lastCell = -1;
+                break;
+            }
+            if (!s.picked.has(place)) s.picked.clear();
+            if (twice) {
                 takeCell(s, h.index, "a double click");
                 s.lastCell = -1;
                 s.press = -1;
@@ -625,6 +692,16 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 bool key(UINT m, WPARAM wp, LPARAM lp) {
     State& s = state();
     (void)lp;
+    if (s.shown && !s.show.typing && m == WM_KEYDOWN && wp == 'A' && GetKeyState(VK_CONTROL) < 0) {
+        s.picked.all(shownPlaces(s));  // 3.0.18-beta.156
+        s.key.clear();
+        return true;
+    }
+    if (s.shown && !s.show.typing && m == WM_KEYDOWN && wp == VK_ESCAPE && s.picked.count()) {
+        s.picked.clear();
+        s.key.clear();
+        return true;
+    }
     if (!s.shown || !s.show.typing) return false;
     // 3.0.18-beta.72 (the big six, E): the new interface's field - any language, the clipboard, every key its own
     textfield::Field field{s.show.search, s.searchAll};
@@ -695,5 +772,22 @@ void moveTo(int x, int y, bool keep) {
 }
 
 bool moving() { return state().shown && state().moving; }
+
+int idAtPlace(int index) {  // 3.0.18-beta.156
+    for (const iw::Item& it : state().items)
+        if (it.index == index) return it.id;
+    return 0;
+}
+
+bool put(int index, int count) {  // 3.0.18-beta.156: a bag thing into the cart, as a drag of it let go over it
+    State& s = state();
+    const uint32_t window = s.shown ? gameWindow() : 0;
+    const uint32_t mode = modeNow();
+    if (!window || !mode || read32(read32(window) + kDropSlot) != kCartDrop) return false;
+    if (!modeMsg(kBagDragMsg, index, count) || read32(mode + kDragInfo) != 1) return false;
+    reinterpret_cast<DropFn>(uintptr_t(kCartDrop))(window, 0, 0, mode + kDragInfo);
+    s.readAt = 0;
+    return true;
+}
 
 }  // namespace uagfx::win::cartwin

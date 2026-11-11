@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "core/char_status.hpp"
+#include "core/weight_fit.hpp"
 #include "core/window_stack.hpp"
 #include "core/ask_card.hpp"
 #include "core/settings/strings.hpp"
@@ -14,6 +16,9 @@
 #include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
+#include "win/reference_load.hpp"
+#include "win/cart_window.hpp"
+#include "win/storage_window.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -54,6 +59,7 @@ constexpr ULONGLONG kNameMs = 60000, kBlinkMs = 530;
 // drag (its count + 0x33C, as the game fills the field); an edit's SetText at its vtable + 0x98
 constexpr uint32_t kCountAt = kWindowMgr + 0xA0, kCountClass = 0x69B2B0, kCountSend = 0x4AD2E0, kCountFor = 0x30;
 constexpr uint32_t kShowWindow = 0x4D4090, kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kDragCount = 0x33C;
+constexpr uint32_t kDragPlace = 0x330;  // 3.0.18-beta.156: the drag's thing's place (FUN_005707d0 0x3C: [0xCC])
 constexpr uint32_t kSetTextSlot = 0x98;
 constexpr int kCountWindow = 0xF, kEndDragMsg = 0x13;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
@@ -208,6 +214,22 @@ void holdCount(State& s, uint32_t window, bool on) {
     }
 }
 
+// 3.0.18-beta.156 (the owner: how many can be carried counted ahead, potions by weight): a stack taken into the bag
+// (the count's purpose 6) - how many of it the bag's weight takes: the thing by the game mode's drag (its place
+// +0x330) in the storage or the cart, its weight the item DB's (the reference pack); -1 unknown
+int fitNow(uint32_t mode, uint32_t purpose) {
+    if (!mode || purpose != 6) return -1;
+    const int place = int(read32(mode + kDragPlace));
+    int id = storagewin::idAtPlace(place);
+    if (!id) id = cartwin::idAtPlace(place);
+    const auto refs = reference::index();
+    if (!id || !refs) return -1;
+    const auto it = refs->items.find(id);
+    charstatus::Status st;
+    if (it == refs->items.end() || !readOwnStatus(st)) return -1;
+    return weightfit::fits(st.weight, st.weightMost, it->second.weight);
+}
+
 settings::Text countTitle(uint32_t purpose) {
     switch (purpose) {
         case 0: return settings::Text::CountDrop;
@@ -270,6 +292,11 @@ ac::Card cardOf(State& s, ac::Kind kind, uint32_t window) {
         const uint32_t mode = read32(kModeNow);
         c.most = mode ? int(read32(mode + kDragCount)) : 0;
         c.message = settings::fmt(say(settings::Text::CountHint), {std::to_string(c.most)});
+        const int fit = fitNow(mode, read32(window + kCountFor));  // 3.0.18-beta.156: by the weight
+        if (fit >= 0 && fit < c.most) {
+            c.message = settings::fmt(say(settings::Text::CountFits), {std::to_string(fit), std::to_string(c.most)});
+            c.most = fit;
+        }
     } else {
         c.title = say(kind == ac::Kind::Number ? settings::Text::AskNumberTitle : settings::Text::AskTextTitle);
         c.message = say(settings::Text::AskTypeHint);
@@ -607,7 +634,13 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 
 bool countAll() {
     const uint32_t window = gameCount(), mode = read32(kModeNow);
-    const int most = mode ? int(read32(mode + kDragCount)) : 0;
+    int most = mode ? int(read32(mode + kDragCount)) : 0;
+    const int fit = window ? fitNow(mode, read32(window + kCountFor)) : -1;  // 3.0.18-beta.156: what the weight lets
+    if (fit >= 0 && fit < most) most = fit;
+    if (window && fit == 0) {  // nothing more goes in: the game's «how many» given up
+        cancelCount(state());
+        return true;
+    }
     if (!window || most <= 0) return false;
     setCountField(window, std::to_string(most));
     reinterpret_cast<SendMsgFn>(uintptr_t(kCountSend))(window, 0, kButtonMsg, 0x76, 0, 0);
