@@ -175,9 +175,39 @@ std::vector<std::string> Archive::names() const {
     return out;
 }
 
+namespace {
+
+// 3.0.18-beta.187: a name as uaRO.exe compares them - its Latin letters small, «/» as «\»; a cp949 pair (a lead byte
+// 0x81 and up, its second byte maybe in 0x41-0x5A) left as it is
+std::string folded(const std::string& name) {
+    std::string out;
+    out.reserve(name.size());
+    for (size_t i = 0; i < name.size(); ++i) {
+        const unsigned char c = static_cast<unsigned char>(name[i]);
+        if (c >= 0x81 && i + 1 < name.size()) {
+            out += name[i];
+            out += name[++i];
+            continue;
+        }
+        out += c >= 'A' && c <= 'Z' ? char(c - 'A' + 'a') : c == '/' ? '\\' : char(c);
+    }
+    return out;
+}
+
+}  // namespace
+
 const Entry* Archive::find(const std::string& name) const {
     const auto it = entries_->find(name);
-    return it == entries_->end() ? nullptr : &it->second;
+    if (it != entries_->end()) return &it->second;
+    // 3.0.18-beta.187 (the tester's Wind Walk: the game asks «effect\ICON06.tga», the archive holds «icon06.tga»)
+    if (foldedFor_ != entries_.get() || foldedSize_ != entries_->size()) {
+        folded_.clear();
+        for (const auto& [stored, entry] : *entries_) folded_.emplace(folded(stored), &entry);
+        foldedFor_ = entries_.get();
+        foldedSize_ = entries_->size();
+    }
+    const auto f = folded_.find(folded(name));
+    return f == folded_.end() ? nullptr : f->second;
 }
 
 bool Archive::read(const std::string& name, std::vector<uint8_t>& out, std::string& error) {

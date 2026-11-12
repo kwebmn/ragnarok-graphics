@@ -107,7 +107,13 @@ struct Icon {  // a status icon's .tga as the game's files have it, and its pict
     int w = 0, h = 0;
     bool alpha = false;
     std::map<int, panel::Picture> sized;  // made again in their places
+    // 3.0.18-beta.187 (the tester: Wind Walk's «зараз сірим»): its file not read (the game's files busy, a map
+    // loading) - read again a while later, a few times, not a dark tile for the rest of the game
+    ULONGLONG retryAt = 0;
+    int retries = 0;
 };
+constexpr ULONGLONG kIconRetryMs = 3000;
+constexpr int kIconRetries = 5;
 
 struct GameIcon {
     uint16_t icon = 0;
@@ -256,8 +262,11 @@ const panel::Picture* pictureOf(State& s, const GameIcon& g, int side) {
     Icon& ic = s.icons[g.file];
     // 3.0.11-beta.74: the AI texture pack's picture when it has one ([interface] pack_icons), read again when that
     // changes (the pack read, the switch)
-    if (const int want = packpictures::iconsStamp(); want != ic.madeFor) {
+    const ULONGLONG now = GetTickCount64();
+    if (const int want = packpictures::iconsStamp(); want != ic.madeFor || (ic.retryAt && now >= ic.retryAt)) {
         const bool first = ic.madeFor == -2;
+        const bool retry = ic.retryAt != 0;
+        ic.retryAt = 0;
         ic.madeFor = want;
         ic.argb.clear();
         ic.w = ic.h = 0;
@@ -276,11 +285,19 @@ const panel::Picture* pictureOf(State& s, const GameIcon& g, int side) {
             }
         } else if (!read || !pack::decodeTga(data, bytes.size(), ic.argb, ic.w, ic.h, ic.alpha)) {
             ic.argb.clear();
+            if (!read && ic.retries < kIconRetries) {  // 3.0.18-beta.187: again a while later
+                ++ic.retries;
+                ic.retryAt = now + kIconRetryMs;
+            }
             if (first && s.iconsLogged < 40) {
                 ++s.iconsLogged;
-                LOG_INFO("buffs: icon %u's picture %s %s - a dark tile in its place", g.icon, entry.c_str(),
-                         read ? "not a .tga the driver reads" : "not found");
+                LOG_INFO("buffs: icon %u's picture %s %s - a dark tile in its place%s", g.icon, entry.c_str(),
+                         read ? "not a .tga the driver reads" : "not found", ic.retryAt ? " (read again in 3 s)" : "");
             }
+        } else if (retry && s.iconsLogged < 40) {  // 3.0.18-beta.187
+            ++s.iconsLogged;
+            LOG_INFO("buffs: icon %u (%s) - %s %dx%d read on another try", g.icon, nameOf(g).c_str(), entry.c_str(),
+                     ic.w, ic.h);
         } else if (first && s.iconsLogged < 40) {
             ++s.iconsLogged;
             LOG_INFO("buffs: icon %u (%s) - %s %dx%d%s", g.icon, nameOf(g).c_str(), entry.c_str(), ic.w, ic.h,

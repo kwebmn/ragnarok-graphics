@@ -186,3 +186,31 @@ TEST(grf_open_to_read_asks_no_write_access) {
     CHECK(!none.openToRead(path + ".none", error));
     std::remove(path.c_str());
 }
+
+// 3.0.18-beta.187 (the tester: Wind Walk's buff «вчора оранжевим, зараз сірим»): uaRO.exe asks for
+// «effect\ICON06.tga», the archive holds «icon06.tga» - the game's own reader finds it whatever the letters' case, so
+// does ours (the buffs' column reads by it while the game's files are busy, a map loading). The Korean names' second
+// bytes (cp949: 0x41-0x5A among them) are not letters: «\xb0\x41» and «\xb0\x61» stay two names.
+TEST(grf_finds_a_name_whatever_its_letters_case) {
+    const std::string path = tempPath();
+    std::string error;
+    {
+        Archive a;
+        CHECK(a.open(path, true, error));
+        CHECK(a.append({{"data\\texture\\effect\\icon06.tga", bytes(40, 1)},
+                        {"data\\texture\\\xb0\x41.bmp", bytes(8, 2)},
+                        {"data\\texture\\\xb0\x61.bmp", bytes(8, 3)}},
+                       error));
+    }
+    Archive r;
+    CHECK(r.openToRead(path, error));
+    std::vector<uint8_t> out;
+    CHECK(r.find("data\\texture\\effect\\ICON06.tga") != nullptr);
+    CHECK(r.read("data\\texture\\effect\\ICON06.tga", out, error) && out == bytes(40, 1));
+    CHECK(r.read("DATA\\Texture\\Effect\\Icon06.TGA", out, error) && out == bytes(40, 1));
+    CHECK(r.read("data\\texture\\\xb0\x41.bmp", out, error) && out == bytes(8, 2));
+    CHECK(r.read("data\\texture\\\xb0\x61.bmp", out, error) && out == bytes(8, 3));
+    CHECK(r.find("data\\texture\\\xb0\x42.bmp") == nullptr);
+    CHECK(r.find("data\\texture\\effect\\icon07.tga") == nullptr);
+    std::remove(path.c_str());
+}

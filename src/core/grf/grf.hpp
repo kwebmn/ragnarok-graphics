@@ -27,7 +27,8 @@ public:
     Archive(const Archive&) = delete;
     Archive& operator=(const Archive&) = delete;
 
-    // An existing archive, or a new empty one when create and the file is not there. Names are compared as stored.
+    // An existing archive, or a new empty one when create and the file is not there. Names are compared as stored;
+    // 3.0.18-beta.187: then, as uaRO.exe finds them, whatever their letters' case (find)
     bool open(const std::string& path, bool create, std::string& error);
     // An archive in a file the caller opened ("rb", or "r+b" when writable; the settings app opens UTF-16 paths):
     // the archive closes it.
@@ -67,6 +68,11 @@ private:
     std::string path_;  // 2.3: "" when opened by a FILE*
     std::shared_ptr<Table> entries_ = std::make_shared<Table>();
     uint64_t end_ = 46;  // end of the last table written or read
+    // 3.0.18-beta.187: the names folded (Latin letters small, «/» as «\», cp949's pairs as they are) - made at the
+    // first name not found as stored, made again when the table is another or grew; this reader's own
+    mutable std::map<std::string, const Entry*> folded_;
+    mutable const Table* foldedFor_ = nullptr;
+    mutable size_t foldedSize_ = 0;
 };
 
 }  // namespace uagfx::grf
