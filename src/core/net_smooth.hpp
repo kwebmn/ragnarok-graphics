@@ -21,6 +21,13 @@ struct Glide {
 };
 // Where the unit is drawn at `nowMs`; false when the glide is over (there: its cell)
 bool at(const Glide& g, uint64_t nowMs, float& x, float& z);
+// 3.0.18-beta.201 (R-SHXHET: «після Телепорту 1 лвл ... персонаж зависає у повітрі і не дає рухатись»): whether a
+// glide is still the driver's - the unit (its world place at) where the glide drew it last (wrote) or, before its first
+// frame, where it stood when the fix came (from), or on the cell the game was told (rest); anywhere else the game moved
+// it itself (a walk on; Teleport's stop and its warp in one burst, before the glide's first frame): the game's again,
+// nothing drawn, no cell told
+bool holds(bool wrote, float atX, float atZ, float lastX, float lastZ, float fromX, float fromZ, float restX,
+           float restZ);
 
 // 3.0.11-beta.124 (step 4): a move come late - the game walks the unit on from where it should be by now (its server
 // clock, FUN_0062dbb0: more than 144 ms late) - or from a cell other than the one shown: a jump of 0.4 to 4 cells

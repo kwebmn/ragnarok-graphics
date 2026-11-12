@@ -233,10 +233,12 @@ std::wstring upper(std::wstring s) {
     return s;
 }
 
-const Part kDockParts[launcherview::kDockIcons] = {Part::Settings, Part::Reports, Part::Site, Part::Forum};
+const Part kDockParts[launcherview::kDockIcons] = {Part::Settings, Part::Reports, Part::Site, Part::Forum,
+                                                   Part::Check};
 const Text kDockWords[launcherview::kDockIcons] = {Text::LauncherSettings, Text::LauncherReports, Text::LauncherSite,
-                                                   Text::LauncherForum};
-const wchar_t* const kDockGlyphs[launcherview::kDockIcons] = {L"\xE713", L"\xE8BD", L"\xE774", L"\xE716"};
+                                                   Text::LauncherForum, Text::LauncherUpdates};
+const wchar_t* const kDockGlyphs[launcherview::kDockIcons] = {L"\xE713", L"\xE8BD", L"\xE774", L"\xE716",
+                                                              L"\xE895"};  // .201: Sync
 
 }  // namespace
 
@@ -824,7 +826,9 @@ void LauncherView::words(HDC dc) {
         const Box& d = L.dock[i];
         const bool on = hovered(kDockParts[i]);
         const float cx = d.x + d.w / 2;
-        const std::wstring word = t(kDockWords[i]);
+        // 3.0.18-beta.201: «Оновлення» says «Перевіряю…» while the check asks
+        const bool asking = kDockParts[i] == Part::Check && data_.update.kind == UpdateState::Checking;
+        const std::wstring word = t(asking ? Text::LauncherCheckingNow : kDockWords[i]);
         if (glyphs) {
             const Style st{Face::Icons, 20, on ? kGoldHi : kIconRgb};
             line(dc, st, kDockGlyphs[i], cx, d.y + 22 * s + ascentOf(dc, st) * 0.5f, 0);

@@ -20,6 +20,10 @@ void moveSeen(uint32_t id);
 // give the walk to the game again when its shown hit's flinch left the unit standing (core/net_smooth stranded)
 void walkSeen(uint32_t id, const uint8_t* packet);
 void gone(uint32_t id);
+// 3.0.18-beta.201 (R-SHXHET: after Teleport Lv1 the character drawn on its old place, put back on its old cell): a map
+// change or a warp on the same map (0x0091, 0x0092) - every glide, fade and kept walk forgotten, before the game reads
+// it: the units' places are the server's new ones
+void mapChange();
 void beginScene();
 
 }  // namespace uagfx::win::netsmoothwin

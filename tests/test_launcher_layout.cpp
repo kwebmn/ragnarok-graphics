@@ -74,6 +74,8 @@ TEST(launcher_layout_hits) {
     CHECK(launcherview::hitAt(L, cx(L.dock[1]), cy(L.dock[1])).part == Part::Reports);
     CHECK(launcherview::hitAt(L, cx(L.dock[2]), cy(L.dock[2])).part == Part::Site);
     CHECK(launcherview::hitAt(L, cx(L.dock[3]), cy(L.dock[3])).part == Part::Forum);
+    // 3.0.18-beta.201 (the owner: «еще проверить обновление сделай»): «Оновлення» - the check in sight, the 5th icon
+    CHECK(launcherview::hitAt(L, cx(L.dock[4]), cy(L.dock[4])).part == Part::Check);
     CHECK(launcherview::hitAt(L, cx(L.version), cy(L.version)).part == Part::Version);
     CHECK(launcherview::hitAt(L, cx(L.language), cy(L.language)).part == Part::Language);
     CHECK(launcherview::hitAt(L, cx(L.plate), cy(L.plate)).part == Part::Plate);

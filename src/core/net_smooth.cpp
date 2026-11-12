@@ -1,6 +1,7 @@
 #include "core/net_smooth.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 
 namespace uagfx::netsmooth {
@@ -25,6 +26,13 @@ bool at(const Glide& g, uint64_t nowMs, float& x, float& z) {
     x = g.fromX + (g.toX - g.fromX) * k;
     z = g.fromZ + (g.toZ - g.fromZ) * k;
     return true;
+}
+
+bool holds(bool wrote, float atX, float atZ, float lastX, float lastZ, float fromX, float fromZ, float restX,
+           float restZ) {
+    const auto same = [](float a, float b) { return std::fabs(a - b) < 0.01f; };
+    const bool left = wrote ? same(atX, lastX) && same(atZ, lastZ) : same(atX, fromX) && same(atZ, fromZ);
+    return left || (same(atX, restX) && same(atZ, restZ));
 }
 
 bool easesJump(float cells) { return cells >= 0.4f && cells <= 4.0f; }

@@ -1558,6 +1558,10 @@ void MainWindow::refreshLauncher() {
                                          ? wtr(lang_, Text::MainUpdateNone)
                                          : wtrf(lang_, d.update.back ? Text::MainUpdateBack : Text::MainUpdateNew,
                                                 {d.update.offer}));
+    else if (d.update.kind == UpdateState::Checking)  // 3.0.18-beta.201
+        state += " \xC2\xB7 " + utf8(wtr(lang_, Text::LauncherChecking));
+    else if (d.update.kind == UpdateState::Failed)
+        state += " \xC2\xB7 " + utf8(wtr(lang_, Text::LauncherCheckFailed));
     d.version = wtrf(lang_, Text::LauncherVersionLine, {kVersion, state});
     // a plate: two failed starts of this version (the way back), the safe mode, uaRO Graphics off
     plate_ = Plate::None;
@@ -1668,6 +1672,10 @@ void MainWindow::launcherAction(launcherview::Part part, int index) {
         }
         case Part::NoUpdate:  // 3.0.18-beta.199: the game as it is, the update left for later
             doApply(true, false, true);
+            refreshLauncher();
+            return;
+        case Part::Check:  // 3.0.18-beta.201 (the owner: «еще проверить обновление сделай»): the check in sight
+            if (updateState().kind != UpdateState::Checking) startUpdateCheck();
             refreshLauncher();
             return;
         case Part::Settings:

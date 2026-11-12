@@ -70,7 +70,7 @@ Hit hitAt(const Layout& L, float x, float y) {
     if (L.update.contains(x, y)) return Hit{Part::Changelog};
     for (int i = 0; i < L.newsShown; ++i)
         if (L.news[i].contains(x, y)) return Hit{Part::News, i};
-    static const Part kDock[kDockIcons] = {Part::Settings, Part::Reports, Part::Site, Part::Forum};
+    static const Part kDock[kDockIcons] = {Part::Settings, Part::Reports, Part::Site, Part::Forum, Part::Check};
     for (int i = 0; i < kDockIcons; ++i)
         if (L.dock[i].contains(x, y)) return Hit{kDock[i]};
     if (L.plate.w > 0 && L.plate.contains(x, y)) return Hit{Part::Plate};

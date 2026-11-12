@@ -72,3 +72,19 @@ TEST(net_smooth_a_walk_of_no_length_is_a_stop) {
     CHECK(!netsmooth::standsStill(63, 196, 60, 196));
     CHECK(!netsmooth::standsStill(62, 196, 62, 197));
 }
+
+// 3.0.18-beta.201 (R-SHXHET: «після використання телепорту 1 лвл ... персонаж зависає у повітрі і не дає рухатись»):
+// Teleport's stop (0x0088) and its warp (0x0091) come in one burst - the game moved the character far before the
+// glide's first frame; the glide must leave it to the game then, not draw it back and put it on the old cell
+TEST(net_smooth_glide_left_when_the_game_moved_the_unit) {
+    // before its first frame: where the unit stood when the fix came, or the cell the game was told - still ours
+    CHECK(netsmooth::holds(false, 100, 100, 0, 0, 100, 100, 105, 105));
+    CHECK(netsmooth::holds(false, 105, 105, 0, 0, 100, 100, 105, 105));
+    // warped away in the same burst, before the first frame: the game's
+    CHECK(!netsmooth::holds(false, 900, 900, 0, 0, 100, 100, 105, 105));
+    // after frames: where it was drawn last, or the told cell - ours; anywhere else - the game moved it
+    CHECK(netsmooth::holds(true, 102, 103, 102, 103, 100, 100, 105, 105));
+    CHECK(netsmooth::holds(true, 105, 105, 102, 103, 100, 100, 105, 105));
+    CHECK(!netsmooth::holds(true, 900, 900, 102, 103, 100, 100, 105, 105));
+    CHECK(!netsmooth::holds(true, 100, 100, 102, 103, 100, 100, 105, 105));  // back where it stood: the game's doing
+}

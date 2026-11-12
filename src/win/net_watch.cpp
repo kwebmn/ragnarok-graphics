@@ -280,6 +280,7 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
         if (id != 0x016F) std::memcpy(&len, data + 2, 2);
         guildcardwin::packet(id, data, len);
     }
+    if (id == 0x0091 || id == 0x0092) netsmoothwin::mapChange();  // 3.0.18-beta.201 (R-SHXHET): a warp - no glide on
     if (id == mercpacket::kSkills && data) {  // 3.0.11-beta.218: the mercenary's skills, for its card's list
         uint16_t len = 0;
         std::memcpy(&len, data + 2, 2);

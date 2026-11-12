@@ -8563,6 +8563,10 @@ constexpr Entry kTexts[] = {
     {Text::LauncherUpdateWhat, "{1} · {2} MB", "{1} · {2} МБ", "{1} · {2} МБ"},
     {Text::LauncherFirstFound, "Already chosen for {1}: {2} · {3}", "Уже підібрано для {1}: {2} · {3}",
      "Уже подобрано для {1}: {2} · {3}"},
+    {Text::LauncherUpdates, "Updates", "Оновлення", "Обновления"},
+    {Text::LauncherCheckingNow, "Checking…", "Перевіряю…", "Проверяю…"},
+    {Text::LauncherChecking, "checking…", "перевіряю…", "проверяю…"},
+    {Text::LauncherCheckFailed, "not checked", "не вдалося перевірити", "не удалось проверить"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

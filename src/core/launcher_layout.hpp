@@ -11,7 +11,8 @@ namespace uagfx::launcherview {
 
 enum class Part : uint8_t {
     None, Play, PlayMore, Look, Changelog, News, Settings, Reports, Site, Forum, Version, Language, Plate,
-    NoUpdate  // 3.0.18-beta.199: «Грати без оновлення» under the big button while an update is offered
+    NoUpdate,  // 3.0.18-beta.199: «Грати без оновлення» under the big button while an update is offered
+    Check      // 3.0.18-beta.201: «Оновлення» in the dock - the update check
 };
 
 struct Box {
@@ -20,7 +21,7 @@ struct Box {
 };
 
 constexpr int kMostNews = 3;
-constexpr int kDockIcons = 4;  // «Налаштування», «Звернення», «Сайт», «Форум»
+constexpr int kDockIcons = 5;  // «Налаштування», «Звернення», «Сайт», «Форум», .201 «Оновлення»
 
 struct Layout {
     float s = 1;

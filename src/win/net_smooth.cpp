@@ -255,6 +255,14 @@ void walkSeen(uint32_t id, const uint8_t* p) {
     k.resent = 0;
 }
 
+void mapChange() {
+    State& s = state();
+    s.glides.clear();
+    s.pending.clear();
+    s.fades.clear();
+    s.kept.clear();
+}
+
 void gone(uint32_t id) {
     State& s = state();
     s.kept.erase(std::remove_if(s.kept.begin(), s.kept.end(), [&](const Kept& k) { return k.id == id; }),
@@ -341,11 +349,11 @@ void beginScene() {
             it = s.glides.erase(it);
             continue;
         }
-        // where we left it or where the game stood it (the cell it was told): still ours; elsewhere - walking on, put
-        // there by the game: its own again
-        const bool ours = (samePlace(at[0], gl.lastX) && samePlace(at[2], gl.lastZ)) ||
-                          (samePlace(at[0], gl.restX) && samePlace(at[2], gl.restZ));
-        if (gl.wrote && !ours) {
+        // where we left it (before the first frame: where it stood at the fix) or where the game stood it (the cell it
+        // was told): still ours; elsewhere - walking on, put there by the game: its own again. 3.0.18-beta.201
+        // (R-SHXHET): before the first frame too - Teleport's warp in the fix's burst moved the character far, and the
+        // glide drew it back and told the game its old cell (the server's place elsewhere: stuck, «in the air»)
+        if (!ns::holds(gl.wrote, at[0], at[2], gl.lastX, gl.lastZ, gl.g.fromX, gl.g.fromZ, gl.restX, gl.restZ)) {
             // 3.0.11-beta.248 (R-AMNV99 «моб бьет стоя гдето далеко»): the game moved it before the end - the
             // server's cell never told by us then
             if (s.leftTold < 20) {
