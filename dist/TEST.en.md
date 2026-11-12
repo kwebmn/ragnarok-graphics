@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.18-beta.225 — what's new · 2026-11-12
+
+- The keys' cheat sheet in the game: the menu (Esc) has «Клавіші». The menu card shows every key of uaRO Graphics (the same list as the app's «Головне»): the keys in gold on the left, what they do on the right; «Назад» or Esc bring the menu's buttons back.
+- Ctrl+Home (the chat line empty) - the camera eases back to the one the game starts with: not turned, tilted -45, 300 away.
+- The sets in «Спорядження» by the controller and the keys: down from «Набої» into the sets' rows (the focus frame on the row). A (Enter) - «Надягти» (an empty set: keep what is worn), X - «Зберегти надіте», Y (the menu key or Shift+F10) - «Очистити»; the button hints at the window's bottom say what each does.
+- To check: Esc → «Клавіші» - the list reads, long lines wrap, «Назад» and Esc bring the menu back; Ctrl+Home after turning the camera; in «Спорядження» the arrows down to the sets, Enter puts one on.
+
 # uaRO Graphics 3.0.18-beta.224 — what's new · 2026-11-12
 
 - «Навички» → «Дерево» (R-3ZE2X9: «the rogue's Plagiarism is not shown, the skills go past the list's frame»): the Rogue's tree is wider than the window and its right columns were drawn on past its edge - under the skill's side panel, without names. The tree is now cut at its edge, and the mouse wheel, when there is no room up and down, scrolls it sideways (as Shift did). Plagiarism is in the Rogue tree's sixth column; the client's English names call it «Intimidate» (the real Intimidate being «Snatch»).
