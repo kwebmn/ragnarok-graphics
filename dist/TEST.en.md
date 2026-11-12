@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.202 — what's new · 2026-11-12
+
+- After an update the program opens the first screen again, and the game starts only by «PLAY» - after «UPDATE» and after an update at the game's start alike.
+- «Check» now stands beside «PLAY» («Checking…» while it asks); the «Updates» icon at the bottom is gone.
+- Under the button the update channel switch «Release | Beta»: a click changes the channel and checks for updates at once; the version line beside it says what is out.
+
 # uaRO Graphics 3.0.18-beta.201 — what's new · 2026-11-12
 
 - Fixed: after Teleport level 1 (while the character walked) the game left it on its old place - «hanging in the air» over its shadow, not moving, the minimap showing the old position. The server stops the character and moves it at the same moment; the smooth easing to the stop's cell no longer undoes the move.
