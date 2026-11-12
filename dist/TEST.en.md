@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.208 — what's new · 2026-11-12
+
+- Walk mode (the owner's idea): the ` key (left of 1, in any layout) switches it on while the chat line is empty. Then the letters do not type into the chat; W A S D, the arrows and the numpad (7 9 1 3 diagonally, 5 stops) walk the character; Enter opens the chat line, Enter again sends it and goes back to walking, Esc clears the line. The chat line says «Walking · Enter: type · `: off». Alt+letters, Ctrl+digits, F1-F9, Insert and Esc work as always. The mode is kept between starts; the switch: «Interface» → «Walk mode (` key)». Quick keys (target, attack, pick up) come in the next beta.
+
 # uaRO Graphics 3.0.18-beta.207 — what's new · 2026-11-12
 
 - Walking with the arrows (testers: «control with the keyboard's up, down, left, right»): while the chat line is empty the arrow keys walk the character - up is away from the camera, two arrows go diagonally; let go and it stops at the nearest cell. The same arrow as the gamepad's shows on the ground, and by a wall the character slides along it. With text in the chat line the arrows move its caret as before; in an NPC menu, a shop and «Reference» they belong to the window. The switch: «Interface» → «Walking with the arrows».
