@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.233 — what's new · 2026-11-13
+
+- Wings: for players with uaRO Graphics the wings' items (Angel Blessing, Helm of Darkness, Wings of Diablo, Phoenix Crown, Soul Wing, Soul Ring, Valkyrie Feather Band, Emperor's Laurel Crown, Sacred Palma, Emperor Wreath, Flower Crown, Red Deviruchi Hat) no longer draw their own headgear - the big wings on the back alone. The character in «Спорядження» (Alt+Q) wears none of it either. Players without the driver see the usual headgear.
+- To check: put on any of these items - nothing on the head, big wings on the back.
+
 # uaRO Graphics 3.0.18-beta.232 — what's new · 2026-11-13
 
 - Wings: a new list of items - only ones the 2007 game knows, so players without the driver get no error boxes and nothing odd (they see the usual headgear). Angel Blessing - angel, Helm of Darkness - fallen angel, Wings of Diablo (and Refined) - demon, Phoenix Crown - fire, Soul Wing and Soul Ring - ice, Valkyrie Feather Band - valkyrie, Emperor's Laurel Crown, Sacred Palma and Emperor Wreath - gold, Flower Crown - sakura, Red Deviruchi Hat - crimson demon. Only the GM hands them out. The .230 items (Wings Of Victory and the others) give no wings any more - do not hand them out.

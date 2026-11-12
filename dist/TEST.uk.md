@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.233 — що нового · 2026-11-13
+
+- Крила: у гравців з uaRO Graphics речі з крилами (Angel Blessing, Helm of Darkness, Wings of Diablo, Phoenix Crown, Soul Wing, Soul Ring, Valkyrie Feather Band, Emperor's Laurel Crown, Sacred Palma, Emperor Wreath, Flower Crown, Red Deviruchi Hat) більше не малюють свого убору на голові — лише великі крила за спиною. І в «Спорядженні» (Alt+Q) персонаж без цього убору. Гравці без програми бачать звичайний убор.
+- Що перевірити: надіти будь-яку з цих речей — на голові нічого, за спиною великі крила.
+
 # uaRO Graphics 3.0.18-beta.232 — що нового · 2026-11-13
 
 - Крила: новий список речей — лише ті, які гра 2007 року знає, тож у гравців без програми не буде ні вікон помилок, ні дивного (вони бачать звичайний убір на голові). Angel Blessing — ангельські, Helm of Darkness — падшого ангела, Wings of Diablo (і Refined) — демонічні, Phoenix Crown — вогняні, Soul Wing і Soul Ring — крижані, Valkyrie Feather Band — валькірії, Emperor's Laurel Crown, Sacred Palma та Emperor Wreath — золоті, Flower Crown — сакура, Red Deviruchi Hat — кривавого демона. Усі ці речі видає тільки ГМ. Речі з бети .230 (Wings Of Victory та інші) крил більше не дають — не роздавайте їх.
