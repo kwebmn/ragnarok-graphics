@@ -82,6 +82,21 @@ TEST(wings_garment_names) {
           "angel\\" + male + "\\a_b.act");
     CHECK(wings::garmentEntry(Set::Angel, "data\\sprite\\monster\\poring.spr", "act").empty());  // not a body
     CHECK(wings::garmentEntry(Set::Dark, "data\\sprite\\monster\\poring.spr", "act").empty());
+    // 3.0.18-beta.235 (R-TT95RZ: Angel Blessing on, no wings, no line of why): the game's resource keeps its name
+    // without data\ («sprite\악세사리\...» in its error boxes) - the body found by its folder wherever it starts
+    const std::string relative = "sprite\\" + bodies + male + "\\" + knight + ".spr";
+    CHECK(wings::garmentEntry(Set::Angel, relative, "act") == "angel\\" + male + "\\" + knight + ".act");
+    CHECK(wings::garmentEntry(Set::Angel, bodies + male + "\\" + knight + ".spr", "act") ==
+          "angel\\" + male + "\\" + knight + ".act");
+}
+
+// .235: a resource's name as the game's files know it (gamefiles::Reader: "data\...")
+TEST(wings_data_paths) {
+    CHECK(wings::dataPath("sprite\\a\\b.act") == "data\\sprite\\a\\b.act");
+    CHECK(wings::dataPath("data\\sprite\\a\\b.act") == "data\\sprite\\a\\b.act");
+    CHECK(wings::dataPath("DATA\\Sprite\\a.act") == "DATA\\Sprite\\a.act");
+    CHECK(wings::dataPath("a\\b.act") == "data\\sprite\\a\\b.act");  // a sprite's resource, relative to its folder
+    CHECK(wings::dataPath("").empty());
 }
 
 namespace {

@@ -32,7 +32,6 @@ namespace cw = uagfx::wings;
 // first 9 bytes (push ebp; mov ebp, esp; sub esp, 0x6F4)
 constexpr uint32_t kRender = 0x5AECC0;
 constexpr uint8_t kRenderBytes[9] = {0x55, 0x8B, 0xEC, 0x81, 0xEC, 0xF4, 0x06, 0x00, 0x00};
-constexpr uint32_t kPlayerVtables[3] = {0x69F604, 0x69F778, 0x69F8F8};
 constexpr uint32_t kViews[3] = {0x36C, 0x370, 0x374};  // its headgears' views
 // its layers' sprite and act resources (8 each, the body first), a resource's name, its action and frame, its size
 constexpr uint32_t kSprites = 0x3C4, kActs = 0x3B4, kResName = 0x14, kAction = 0x24, kFrame = 0x28, kSize = 0x3C;
@@ -60,6 +59,7 @@ struct Job {
     Garment* garment = nullptr;
     std::vector<cw::Quad> quads;
     std::vector<Quad> ready;  // with their textures, made at its first draw
+    bool drawn = false;       // .235: its wings went to a draw this frame
 };
 struct State {
     uintptr_t render = 0;
@@ -73,6 +73,7 @@ struct State {
     std::vector<Job> jobs;  // as the frame's jobs
     int current = -1;       // the wearer whose render runs now
     std::set<std::string> told;
+    bool renderSeen = false, firstDrawn = false;  // .235: the log's proofs - the hook runs, the wings reach a draw
 };
 
 State& state() {
@@ -116,7 +117,12 @@ bool packRead(State& s, const std::string& name, std::string& out) {
 Garment* garmentFor(State& s, cw::Look look, const std::string& body) {
     const cw::Set set = cw::setOf(look);
     const std::string spr = cw::garmentEntry(set, body, "spr"), act = cw::garmentEntry(set, body, "act");
-    if (spr.empty()) return nullptr;
+    if (spr.empty()) {  // .235: told - R-TT95RZ had no line of why
+        if (s.told.insert("not a body " + body).second)
+            LOG_INFO("wings: %s worn on the body «%s» - not a human body's sprite, none drawn", cw::lookName(look),
+                     body.c_str());
+        return nullptr;
+    }
     auto [it, fresh] = s.garments.try_emplace(std::string(cw::lookName(look)) + "|" + spr);
     Garment& g = it->second;
     if (fresh) {
@@ -139,7 +145,7 @@ const spritefile::Act* bodyAct(State& s, const std::string& name) {
         if (!s.files) s.files = std::make_unique<gamefiles::Reader>(gameDir());
         std::vector<uint8_t> bytes;
         auto act = std::make_unique<spritefile::Act>();
-        if (!name.empty() && s.files->read(name, bytes) &&
+        if (!name.empty() && s.files->read(cw::dataPath(name), bytes) &&  // .235: the game keeps "sprite\..."
             spritefile::readAct(std::string(bytes.begin(), bytes.end()), *act))
             it->second = std::move(act);
         else if (s.told.insert("body " + name).second)
@@ -148,18 +154,16 @@ const spritefile::Act* bodyAct(State& s, const std::string& name) {
     return it->second.get();
 }
 
-bool isPlayer(uint32_t actor) {
-    const uint32_t vtable = read32(actor);
-    for (const uint32_t v : kPlayerVtables)
-        if (vtable == v) return true;
-    return false;
-}
-
 // A wearer's wings at the start of its render: where the game puts it now, its garment's frame at its action and frame
 void startJob(State& s, uint32_t actor, uint32_t matrix) {
-    if (!Context::get().enhanced() || !isPlayer(actor)) return;
+    if (!Context::get().enhanced()) return;
     int views[3];
     for (int i = 0; i < 3; ++i) views[i] = int(read32(actor + kViews[i]));
+    if (!s.renderSeen) {  // .235: the hook's proof (FUN_005AECC0 draws the players alone: no vtable asked any more)
+        s.renderSeen = true;
+        LOG_INFO("wings: the players' render runs (the first: vtable 0x%X, headgear views %d, %d, %d)",
+                 read32(actor), views[0], views[1], views[2]);
+    }
     const cw::Look look = cw::lookOfViews(views);
     if (look == cw::Look::None) return;
     const std::string body = resName(actor, kSprites);
@@ -167,21 +171,38 @@ void startJob(State& s, uint32_t actor, uint32_t matrix) {
     const spritefile::Act* bact = g ? bodyAct(s, resName(actor, kActs)) : nullptr;
     const uint32_t view = read32(kViewObject);
     float size = 0;
-    if (!bact || !view || !readGame(actor + kSize, &size, 4) || !(size > 0.0f && size < 100.0f)) return;
+    if (!bact) return;
+    if (!view || !readGame(actor + kSize, &size, 4) || !(size > 0.0f && size < 100.0f)) {
+        if (s.told.insert("no size").second)
+            LOG_INFO("wings: %s on «%s» - no size (%.3f) or view (0x%X) to place it, none drawn", cw::lookName(look),
+                     body.c_str(), double(size), view);
+        return;
+    }
     float x = 0, y = 0, depth = 0;
     reinterpret_cast<ProjectFn>(uintptr_t(kProject))(view, actor + 4, matrix, &x, &y, &depth);
     const float scale = size * reinterpret_cast<DepthScaleFn>(uintptr_t(kDepthScale))(view, depth);
-    if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(scale) || !(scale > 0.0f)) return;
+    if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(scale) || !(scale > 0.0f)) {
+        if (s.told.insert("no place").second)
+            LOG_INFO("wings: %s on «%s» - the game gave no screen place (%.1f, %.1f, scale %.3f), none drawn",
+                     cw::lookName(look), body.c_str(), double(x), double(y), double(scale));
+        return;
+    }
     const uint32_t action = read32(actor + kAction), frame = read32(actor + kFrame);
     Job job;
     job.garment = g;
     job.quads = cw::quads(g->act, *bact, g->sprite, action, frame, cw::Transform{x, y, scale});
-    if (job.quads.empty()) return;
+    if (job.quads.empty()) {
+        if (s.told.insert("no frame " + std::to_string(action)).second)
+            LOG_INFO("wings: %s on «%s» - its garment has no frame for action %u frame %u, none drawn",
+                     cw::lookName(look), body.c_str(), action, frame);
+        return;
+    }
     s.current = s.frame.begin(actor, cw::facesAway(action));
     s.jobs.push_back(std::move(job));
     if (s.told.insert(std::string("on ") + cw::lookName(look) + "|" + body).second)
-        LOG_INFO("wings: %s on %s (views %d, %d, %d) - drawn", cw::lookName(look), body.c_str(), views[0], views[1],
-                 views[2]);
+        LOG_INFO("wings: %s on %s (views %d, %d, %d) at %.0f, %.0f scale %.2f, %u pictures - waiting for its faces",
+                 cw::lookName(look), body.c_str(), views[0], views[1], views[2], double(x), double(y), double(scale),
+                 unsigned(s.jobs.back().quads.size()));
 }
 
 void __attribute__((thiscall)) playerRender(uint32_t actor, uint32_t matrix, int flag) {
@@ -231,6 +252,12 @@ uint32_t textureOf(Garment& g, const cw::Quad& q) {
 }
 
 const std::vector<Quad>& ready(Job& j) {
+    j.drawn = true;
+    State& s = state();
+    if (!s.firstDrawn) {
+        s.firstDrawn = true;
+        LOG_INFO("wings: the first wings drawn with a wearer's faces");
+    }
     if (j.ready.empty())
         for (const cw::Quad& q : j.quads)
             if (const uint32_t tex = textureOf(*j.garment, q)) j.ready.push_back(Quad{q.x0, q.y0, q.x1, q.y1, tex,
@@ -267,6 +294,9 @@ void noteFace(uint32_t vertices) {
 
 void frameStart() {
     State& s = state();
+    for (const Job& j : s.jobs)  // .235: worked out but never drawn - its faces unseen (the face sort hook's)
+        if (!j.drawn && s.told.insert("undrawn").second)
+            LOG_INFO("wings: a wearer's wings were worked out but none of its faces came to a draw - none drawn");
     s.frame.clear();
     s.jobs.clear();
     s.current = -1;

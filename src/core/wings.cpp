@@ -51,7 +51,7 @@ float brightness(uint32_t argb) {
 }
 
 // CP949: 인간족\몸통 - the human bodies' folder (under data\sprite)
-const std::string kBodies = "data\\sprite\\\xC0\xCE\xB0\xA3\xC1\xB7\\\xB8\xF6\xC5\xEB\\";
+const std::string kBodies = "\xC0\xCE\xB0\xA3\xC1\xB7\\\xB8\xF6\xC5\xEB\\";
 
 }  // namespace
 
@@ -112,14 +112,23 @@ void recolour(spritefile::Sprite& s, Look look) {
 }
 
 std::string garmentEntry(Set set, const std::string& bodySprite, const char* ext) {
-    const std::string key = updates::lookupKey(bodySprite), prefix = updates::lookupKey(kBodies);
-    if (key.compare(0, prefix.size(), prefix) != 0) return {};
-    std::string rest = bodySprite.substr(prefix.size());  // <sex>\<body>.spr
+    const std::string key = updates::lookupKey(bodySprite), folder = updates::lookupKey(kBodies);
+    const size_t at = key.find(folder);  // .235: wherever it starts (lookupKey keeps the length)
+    if (at == std::string::npos || (at > 0 && key[at - 1] != '\\')) return {};
+    std::string rest = bodySprite.substr(at + folder.size());  // <sex>\<body>.spr
     const size_t dot = rest.rfind('.');
     if (dot == std::string::npos || rest.find('\\') == std::string::npos) return {};
     rest = rest.substr(0, dot);
     if (set == Set::Dark) return std::string("dark.") + ext;
     return std::string(set == Set::Fallen ? "fallen\\" : "angel\\") + rest + "." + ext;
+}
+
+std::string dataPath(const std::string& resource) {
+    if (resource.empty()) return {};
+    const std::string key = updates::lookupKey(resource);
+    if (key.compare(0, 5, "data\\") == 0) return resource;
+    if (key.compare(0, 7, "sprite\\") == 0) return "data\\" + resource;
+    return "data\\sprite\\" + resource;
 }
 
 bool pastTable(int view, uint32_t first, uint32_t last) {

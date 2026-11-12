@@ -24,8 +24,12 @@ Set setOf(Look look);  // the garment set a look draws (a recolour: its source's
 // (none for the sets' own looks)
 void recolour(spritefile::Sprite& s, Look look);
 // The pack's name of a set's file for a body: "angel\<sex>\<body>.<ext>", "fallen\...", "dark.<ext>" (one for every
-// body); "" when `bodySprite` is not a human body's sprite ("data\sprite\인간족\몸통\<sex>\<body>.spr", CP949, any case)
+// body); "" when `bodySprite` is not a human body's sprite (its folder 인간족\몸통\<sex>\<body>.spr, CP949, any case;
+// .235: whatever comes before it - the game's resources keep "sprite\..." without data\)
 std::string garmentEntry(Set set, const std::string& bodySprite, const char* ext);
+// .235: a sprite resource's name as the game's files know it: "data\sprite\..." ("sprite\..." gets data\, a name
+// relative to the sprites' folder both)
+std::string dataPath(const std::string& resource);
 // 3.0.18-beta.231: a headgear view past the game's own table of their names (a vector of name pointers, its first and
 // last at uaRO.exe's session +0x880/+0x884) - the game would read another table's word for it and ask for a sprite
 // that is not there; none (0) is the game's own
