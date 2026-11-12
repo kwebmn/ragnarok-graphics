@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.214 — what's new · 2026-11-12
+
+- Report R-CX44S5 («the awakening potion button got stuck»): Space in «Речі» acted as the pad's X and took the item up to put it on the bar, and the keyboard could not finish that. Space is now no window button. When the pad carries a thing to the bar, the keys work too: the arrows pick the place, Enter puts it, Esc cancels, and the hint names the keys.
+- The walk mode (`) no longer turns itself back on or off right after the key: the driver's own write of the setting, read back, is no longer taken for a change made in «Налаштування».
+- To check: in «Речі» press an arrow, then Space - nothing is taken up; X on an item with the pad, then Esc on the keyboard - the carry is cancelled; ` twice in a row - the mode stays as pressed.
+
 # uaRO Graphics 3.0.18-beta.213 — what's new · 2026-11-12
 
 - The character select's carousel (the owner: «hold left/right and it spins endlessly and cannot be stopped»): each left/right is now a step from the place shown, not from the one already asked for - a held key turns the carousel at the game's pace and stops as soon as it is let go; a place the game does not move to is left after 4 s (and the log says so).
