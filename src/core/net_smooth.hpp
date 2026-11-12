@@ -42,6 +42,10 @@ bool offsetAt(const Offset& o, uint64_t nowMs, float& x, float& z);
 constexpr uint64_t kStrandMs = 300;
 bool stranded(int shownX, int shownY, int toX, int toY, uint64_t stillMs);
 constexpr int kResendMost = 2;  // a walk or stop given again at most this many times
+// 3.0.18-beta.179 (R-WKEDPY, the .177 log the same: a Minorous shown 2 cells off for 8 s, its walk given again 20
+// times in vain): the server's walk from a cell to the same one - its chase on after a flinch, its target next to it -
+// says the unit stands there; the game takes no walk of no length, so it is given again as a stop on that cell
+bool standsStill(int fromX, int fromY, int toX, int toY);
 bool easesFar(float cells);     // a stranded unit put back: 0.4-12 cells drawn away
 uint32_t farFadeMs(float cells);
 

@@ -49,11 +49,9 @@ std::vector<PadItem> padItems(const Talk& t, const Texts& tx) {  // 3.0.11-beta.
     return {{padglyph::Button::B, tx.close}};
 }
 
-}  // namespace
-
-std::vector<Run> colours(const std::string& utf8, uint32_t base) {
+// A line's runs from the colour `now` on (left at the line's last colour)
+std::vector<Run> runsFrom(const std::string& utf8, uint32_t base, uint32_t& now) {
     std::vector<Run> out;
-    uint32_t now = base;
     std::string run;
     for (size_t i = 0; i < utf8.size();) {
         if (utf8[i] == '^' && i + 6 < utf8.size() + 0 && i + 7 <= utf8.size()) {
@@ -75,6 +73,20 @@ std::vector<Run> colours(const std::string& utf8, uint32_t base) {
         run += utf8[i++];
     }
     if (!run.empty() || out.empty()) out.push_back(Run{run, now});
+    return out;
+}
+
+}  // namespace
+
+std::vector<Run> colours(const std::string& utf8, uint32_t base) {
+    uint32_t now = base;
+    return runsFrom(utf8, base, now);
+}
+
+std::vector<std::vector<Run>> optionRuns(const std::vector<std::string>& options, uint32_t base) {
+    std::vector<std::vector<Run>> out;
+    uint32_t now = base;
+    for (const std::string& o : options) out.push_back(runsFrom(o, base, now));
     return out;
 }
 
@@ -103,7 +115,11 @@ Layout layout(int centreX, int bottom, float scale, const Talk& t, const Show& s
         need = std::max(need, lw + 2 * side + 4 * s);
     }
     float option = 0;
-    for (const std::string& o : t.options) option = std::max(option, m(o, px, false) + kOptionRoom * s);
+    for (const std::vector<Run>& runs : optionRuns(t.options, kText)) {  // 3.0.18-beta.179: the words, no codes
+        float ow = 0;
+        for (const Run& r : runs) ow += m(r.text, px, false);
+        option = std::max(option, ow + kOptionRoom * s);
+    }
     if (!t.options.empty())
         need = std::max(need, 2 * side + (t.options.size() > 1 ? 2 * option + kOptionGap * s : option));
     const float w = std::clamp(std::ceil(need), kMinW * s, kW * s);

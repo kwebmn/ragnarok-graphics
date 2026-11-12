@@ -45,6 +45,7 @@ struct Pending {  // 3.0.11-beta.124: a move seen - where the unit was shown bef
 struct Kept {
     uint32_t id = 0;
     bool walking = false;
+    bool still = false;  // 3.0.18-beta.179: its walk of no length - a stop
     uint32_t block[7] = {};  // the game's walk message: tick, from x, y, sub x, sub y, to x, y
     int toX = 0, toY = 0;
     uint64_t seenMs = 0, stillSince = 0;
@@ -124,6 +125,7 @@ int fix(uint32_t id, uint8_t* packet) {
     if (s.on && id != read32(kOwnAccount)) {  // 3.0.11-beta.251: where the server stopped it
         Kept& k = keep(s, id);
         k.walking = false;
+        k.still = false;
         k.toX = x;
         k.toY = y;
         k.seenMs = GetTickCount64();
@@ -233,7 +235,6 @@ void walkSeen(uint32_t id, const uint8_t* p) {
     State& s = state();
     if (!s.on || !id || !p || id == read32(kOwnAccount)) return;
     Kept& k = keep(s, id);
-    k.walking = true;
     uint32_t tick = 0;
     std::memcpy(&tick, p + 12, 4);
     const uint8_t* w = p + 6;  // FUN_0057d420's way
@@ -246,6 +247,9 @@ void walkSeen(uint32_t id, const uint8_t* p) {
     k.block[6] = uint32_t(((w[3] & 0x03) << 8) | w[4]);
     k.toX = int(k.block[5]);
     k.toY = int(k.block[6]);
+    // 3.0.18-beta.179: a walk of no length - the server's stop there (the game never walks it)
+    k.still = ns::standsStill(int(k.block[1]), int(k.block[2]), k.toX, k.toY);
+    k.walking = !k.still;
     k.seenMs = GetTickCount64();
     k.stillSince = 0;
     k.resent = 0;
@@ -311,7 +315,9 @@ void strandFrame(State& s, uint64_t now) {
         if (s.strandedTold < 20) {
             ++s.strandedTold;
             LOG_INFO("net: %u left standing by the game at %d, %d - %s %d, %d given again (%d so far)", k.id, shown.x,
-                     shown.y, k.walking ? "its walk to" : "the server's stop on", k.toX, k.toY, ++s.stranded);
+                     shown.y,
+                     k.walking ? "its walk to" : k.still ? "its walk of no length, a stop on" : "the server's stop on",
+                     k.toX, k.toY, ++s.stranded);
         } else {
             ++s.stranded;
         }

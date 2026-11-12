@@ -64,3 +64,11 @@ TEST(net_smooth_stranded_units) {
     CHECK(netsmooth::easesFar(7) && !netsmooth::easesFar(13) && !netsmooth::easesFar(0.2f));
     CHECK(netsmooth::farFadeMs(7) > netsmooth::farFadeMs(1) && netsmooth::farFadeMs(30) == netsmooth::farFadeMs(10));
 }
+
+// 3.0.18-beta.179 (R-WKEDPY, the .177 log the same: a Minorous shown 2 cells off for 8 s, «62, 196 -> 62, 196» given
+// again 20 times in vain): the server's walk from a cell to the same one says the unit stands there - a stop
+TEST(net_smooth_a_walk_of_no_length_is_a_stop) {
+    CHECK(netsmooth::standsStill(62, 196, 62, 196));
+    CHECK(!netsmooth::standsStill(63, 196, 60, 196));
+    CHECK(!netsmooth::standsStill(62, 196, 62, 197));
+}

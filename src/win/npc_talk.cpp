@@ -63,7 +63,8 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
   data-style-color="r.colour">{{r.text}}</span></div></div>
 <div class="opts"><div class="opt ctl" data-for="o, i : options" data-class-on="i == selected"
   data-event-click="np_choose(i)"><span
-  class="num">{{i + 1}}</span><span class="otext">{{o.text}}</span><span class="last"
+  class="num">{{i + 1}}</span><span class="otext"><span data-for="r : o.runs"
+  data-style-color="r.colour">{{r.text}}</span></span><span class="last"
   data-if="o.last">{{last_time}}</span></div></div>
 <div class="btns" data-if="button != ''"><div class="btn main ctl" data-event-click="np_button()">{{button}}</div></div>
 <div class="foot"><span class="hint">{{keys}}</span><span class="hint">{{server}}</span></div>
@@ -77,9 +78,10 @@ struct NpcLineView {
     std::vector<NpcRunView> runs;
 };
 struct NpcOptionView {
-    Rml::String text;
+    std::vector<NpcRunView> runs;  // 3.0.18-beta.179 (R-P7RFV2): its colours as the game's list draws them
     bool last = false;
 };
+bool operator==(const NpcRunView& a, const NpcRunView& b) { return a.text == b.text && a.colour == b.colour; }
 
 struct State {
     uilive::Window live;  // 3.0.18-beta.88
@@ -398,7 +400,7 @@ static void liveFrame(State& s) {
         m.RegisterArray<std::vector<NpcRunView>>();
         if (auto v = m.RegisterStruct<NpcLineView>()) v.RegisterMember("runs", &NpcLineView::runs);
         if (auto v = m.RegisterStruct<NpcOptionView>()) {
-            v.RegisterMember("text", &NpcOptionView::text);
+            v.RegisterMember("runs", &NpcOptionView::runs);
             v.RegisterMember("last", &NpcOptionView::last);
         }
         m.RegisterArray<std::vector<NpcLineView>>();
@@ -428,33 +430,31 @@ static void liveFrame(State& s) {
     if (!s.live.made()) return;
     const nt::Texts tx = texts();
     const nt::Talk& t = s.talk;
-    std::vector<NpcLineView> lines;
-    for (const std::string& l : t.lines) {
-        NpcLineView v;
-        for (const nt::Run& r : nt::colours(l, 0xEEF2F8)) {
+    const auto views = [](const std::vector<nt::Run>& runs) {
+        std::vector<NpcRunView> out;
+        for (const nt::Run& r : runs) {
             char col[16];
             std::snprintf(col, sizeof col, "#%06x", unsigned(uaui::themed(r.rgb) & 0xFFFFFF));
-            v.runs.push_back(NpcRunView{r.text, col});
+            out.push_back(NpcRunView{r.text, col});
         }
-        lines.push_back(std::move(v));
-    }
+        return out;
+    };
+    std::vector<NpcLineView> lines;
+    for (const std::string& l : t.lines) lines.push_back(NpcLineView{views(nt::colours(l, 0xEEF2F8))});
     std::vector<NpcOptionView> options;
-    for (size_t i = 0; i < t.options.size(); ++i)
-        options.push_back(NpcOptionView{t.options[i], int(i) == s.show.remembered});
+    const std::vector<std::vector<nt::Run>> optionRuns = nt::optionRuns(t.options, 0xEEF2F8);
+    for (size_t i = 0; i < optionRuns.size(); ++i)
+        options.push_back(NpcOptionView{views(optionRuns[i]), int(i) == s.show.remembered});
     const Rml::String button = t.button == nt::Button::Next ? tx.next : t.button == nt::Button::Close ? tx.close : "";
     const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
-    bool sameLines = lines.size() == s.lineViews.size();
-    for (size_t i = 0; sameLines && i < lines.size(); ++i) {
-        sameLines = lines[i].runs.size() == s.lineViews[i].runs.size();
-        for (size_t j = 0; sameLines && j < lines[i].runs.size(); ++j)
-            sameLines = lines[i].runs[j].text == s.lineViews[i].runs[j].text &&
-                        lines[i].runs[j].colour == s.lineViews[i].runs[j].colour;
-    }
+    const bool sameLines = lines.size() == s.lineViews.size() &&
+                           std::equal(lines.begin(), lines.end(), s.lineViews.begin(),
+                                      [](const NpcLineView& a, const NpcLineView& b) { return a.runs == b.runs; });
     if (!sameLines) s.lineViews = std::move(lines), s.live.doc.dirty("lines");
     const bool sameOptions = options.size() == s.optionViews.size() &&
                              std::equal(options.begin(), options.end(), s.optionViews.begin(),
                                         [](const NpcOptionView& a, const NpcOptionView& b) {
-                                            return a.text == b.text && a.last == b.last;
+                                            return a.runs == b.runs && a.last == b.last;
                                         });
     if (!sameOptions) s.optionViews = std::move(options), s.live.doc.dirty("options");
     if (t.name != s.name || t.place != s.place || button != s.buttonWord || tx.keys != s.keys ||

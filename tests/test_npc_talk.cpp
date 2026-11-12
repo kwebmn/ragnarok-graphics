@@ -124,3 +124,26 @@ TEST(npc_talk_drops_a_lines_leading_spaces) {
         if (p.text == "Red") red = p.box.x == L.lines[0].box.x;  // its colour made readable, its place the edge
     CHECK(red);
 }
+
+// 3.0.18-beta.179 (R-P7RFV2, the tester: «резетер з опечатками» - «^FF3355Reset Skills», «Reset Both^000000»): the
+// menu's options by their ^RRGGBB colours as the game's list draws them (FUN_0044ae50: one colour for all its rows,
+// black at the first) - a colour begun in one option goes on in the next ones until another; the options' width
+// without the codes
+TEST(npc_talk_options_coloured_as_the_games_list) {
+    const std::vector<std::string> menu = {"^FF3355Reset Skills", "Reset Stats", "Reset Both^000000", "Quit"};
+    const std::vector<std::vector<npctalk::Run>> runs = npctalk::optionRuns(menu, 0xEEF2F8);
+    CHECK(runs.size() == 4);
+    CHECK(runs[0].size() == 1 && runs[0][0].text == "Reset Skills" && runs[0][0].rgb == 0xFF3355u);
+    CHECK(runs[1].size() == 1 && runs[1][0].text == "Reset Stats" && runs[1][0].rgb == 0xFF3355u);
+    CHECK(runs[2].size() == 1 && runs[2][0].text == "Reset Both" && runs[2][0].rgb == 0xFF3355u);
+    CHECK(runs[3].size() == 1 && runs[3][0].text == "Quit" && runs[3][0].rgb == 0xEEF2F8u);
+    CHECK(npctalk::optionRuns({"Plain"}, 0xEEF2F8)[0][0].rgb == 0xEEF2F8u);
+    CHECK(npctalk::optionRuns({"^00FF00"}, 0xEEF2F8)[0].size() == 1);  // a colour alone: one empty run
+    npctalk::Talk t;
+    t.lines = {"Hi"};
+    t.options = {"^FF3355" + std::string(40, 'o') + "^000000", "Cancel"};
+    npctalk::Show sh;
+    const float coded = npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure).w;
+    t.options = {std::string(40, 'o'), "Cancel"};
+    CHECK(coded == npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure).w);
+}

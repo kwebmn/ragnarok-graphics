@@ -23,6 +23,10 @@ struct Run {
 // A line's runs by its ^RRGGBB colours; black and the near black (the game's window was white) take `base`, the dark
 // ones are lit so they read on the dark glass
 std::vector<Run> colours(const std::string& utf8, uint32_t base);
+// 3.0.18-beta.179 (R-P7RFV2: «^FF3355Reset Skills» shown as it came): the menu's options by their colours as the
+// game's list draws them (FUN_0044ae50 keeps one colour for all its rows, black at the first) - a colour begun in an
+// option goes on in the next ones until another
+std::vector<std::vector<Run>> optionRuns(const std::vector<std::string>& options, uint32_t base);
 
 enum class Button : uint8_t { None, Next, Close };
 struct Talk {
