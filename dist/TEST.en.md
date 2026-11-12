@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.197 — what's new · 2026-11-12
+
+- The first start of a freshly unpacked game: the card picked (or «Skip») is now remembered at once - before, until the game's first start, the cards could come back at every opening of the app.
+
 # uaRO Graphics 3.0.18-beta.196 — what's new · 2026-11-12
 
 - The first start shows the game instead of the settings: four cards with pictures, «How do you want to play?» - «I want everything new», «New picture, the old interface», «A weak computer, but sharp», «As in 2004». Under each: the picture, the interface and the textures it sets; the one for your card is marked «for your graphics card». One click and it is set; «Skip - the app chooses itself» keeps the automatic choice. Change it any time by the look line over «PLAY».
