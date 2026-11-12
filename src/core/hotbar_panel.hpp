@@ -213,6 +213,8 @@ View view(const Layout& L, const std::vector<Cell>& cells, int row, const Show& 
 // The game's tables of a key and its words a line (data\skillnametable.txt "AC_DOUBLE#Double_Strafe#",
 // data\idnum2itemdisplaynametable.txt and idnum2itemresnametable.txt "501#Red_Potion#"); the "//" lines skipped
 std::map<std::string, std::string> nameTable(const std::string& text);
+// 3.0.18-beta.217: another table's entries `into` lacks put in (one it has never changed); how many
+size_t fillMissing(std::map<std::string, std::string>& into, const std::map<std::string, std::string>& from);
 std::string spaced(std::string words);  // a table's words as shown: "Double_Strafe" -> "Double Strafe"
 std::string lowered(std::string text);  // a skill's icon is its name in small letters: "ac_double.bmp"
 // A slot as the game's session keeps it (CSession + 0x314, 16 bytes a slot): "##AC_DOUBLE" a skill, "501" an item (its

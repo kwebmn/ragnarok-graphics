@@ -7,6 +7,7 @@
 
 #include "core/buff_panel.hpp"
 #include "core/hotbar_panel.hpp"
+#include "core/info_card.hpp"
 #include "core/pack_source.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
@@ -21,6 +22,7 @@ namespace {
 
 struct Tables {
     std::map<std::string, std::string> skills, items, files, unknown;
+    bool filled = false;  // 3.0.18-beta.217: the language folder's tables read in
 };
 
 // 3.0.18-beta.188 (as Wind Walk's icon, R-.187): a table not read (the game's files busy, a map loading) read again a
@@ -32,7 +34,7 @@ const Tables& tables() {
     static Tables t;
     static int reads = 0;
     static ULONGLONG lastRead = 0;
-    const bool whole = !t.skills.empty() && !t.items.empty() && !t.files.empty() && !t.unknown.empty();
+    const bool whole = !t.skills.empty() && !t.items.empty() && !t.files.empty() && !t.unknown.empty() && t.filled;
     const ULONGLONG now = GetTickCount64();
     if (reads > 0 && (whole || reads >= kMostReads || now - lastRead < kReadAgainMs)) return t;
     ++reads;
@@ -45,6 +47,26 @@ const Tables& tables() {
     readInto(t.items, "data\\idnum2itemdisplaynametable.txt");
     readInto(t.files, "data\\idnum2itemresnametable.txt");
     readInto(t.unknown, "data\\num2itemdisplaynametable.txt");
+    // 3.0.18-beta.217 (the owner on R-RASZHM: «а картинка у нас есть той шмотки?» - uaRO HD's own 15001-15003 have
+    // pictures, named in data\english\idnum2itemresnametable.txt alone): the tables of the folder the game reads its
+    // language's from (uaRO.exe 0x4EF2xx) fill what data\'s lack - an entry data\'s has is never changed
+    if (!t.filled && !t.files.empty()) {
+        const std::string folder = "data\\" + infocard::languageFolder(unsigned(GetUserDefaultLangID()));
+        std::string body;
+        if (readClientFile(folder + "idnum2itemresnametable.txt", body)) {
+            t.filled = true;
+            const size_t icons = hotbar::fillMissing(t.files, hotbar::nameTable(body));
+            size_t names = 0, unknown = 0;
+            if (readClientFile(folder + "idnum2itemdisplaynametable.txt", body))
+                names = hotbar::fillMissing(t.items, hotbar::nameTable(body));
+            if (readClientFile(folder + "num2itemdisplaynametable.txt", body))
+                unknown = hotbar::fillMissing(t.unknown, hotbar::nameTable(body));
+            LOG_INFO("client tables: %s gave %zu items' icons, %zu names, %zu unidentified names more than data\\",
+                     folder.c_str(), icons, names, unknown);
+        } else if (reads >= kMostReads) {
+            t.filled = true;  // no such folder's table (a client without it)
+        }
+    }
     LOG_INFO("client tables: %zu skills' names, %zu items' names (%zu unidentified), %zu items' icons%s",
              t.skills.size(), t.items.size(), t.unknown.size(), t.files.size(), reads > 1 ? " (read again)" : "");
     return t;

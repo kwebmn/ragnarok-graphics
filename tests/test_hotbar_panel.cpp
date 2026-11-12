@@ -264,3 +264,17 @@ TEST(hotbar_lifted_icon_picture) {
     CHECK(hotbar::liftedSide(hotbar::Mode::Normal, 2.0f) == 2 * side);
 }
 
+
+// 3.0.18-beta.217 (the owner on R-RASZHM: «а картинка у нас есть той шмотки?»): uaRO HD names the pictures of its
+// own items 15001-15003 (Familiar Power ...) in data\english\idnum2itemresnametable.txt only - the language folder's
+// table fills what data\'s lacks, an entry data\ has is never changed
+TEST(hotbar_table_filled_from_the_language_folder) {
+    auto table = hotbar::nameTable("501#Red_Potion#\n601#Fly_Wing#");
+    const auto english = hotbar::nameTable("501#Other_Potion#\n15001#Familiar_Power#\n15002#Lycan_Fury#");
+    CHECK_EQ(int(hotbar::fillMissing(table, english)), 2);
+    CHECK(table.at("501") == "Red_Potion");  // data\'s own stays
+    CHECK(table.at("15001") == "Familiar_Power");
+    CHECK(table.at("15002") == "Lycan_Fury");
+    CHECK_EQ(int(table.size()), 4);
+    CHECK_EQ(int(hotbar::fillMissing(table, english)), 0);  // again: nothing new
+}

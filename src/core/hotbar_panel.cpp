@@ -412,6 +412,12 @@ View view(const Layout& L, const std::vector<Cell>& cells, int row, const Show& 
     return v;
 }
 
+size_t fillMissing(std::map<std::string, std::string>& into, const std::map<std::string, std::string>& from) {
+    size_t added = 0;
+    for (const auto& [key, words] : from) added += into.emplace(key, words).second ? 1 : 0;
+    return added;
+}
+
 std::map<std::string, std::string> nameTable(const std::string& text) {
     std::map<std::string, std::string> out;
     size_t at = 0;

@@ -111,8 +111,6 @@ struct State {
     // 3.0.11-beta.14: the cards' pictures - the client's sprites and item icons, found once each (none: an empty one)
     std::unique_ptr<gamefiles::Reader> files;
     std::map<std::string, panel::Picture> pictures;
-    std::map<int, std::string> itemFiles;  // the client's data\idnum2itemresnametable.txt: item -> its icon's name
-    bool itemFilesRead = false;
     unsigned folded = 0;  // 3.0.11-beta.17: the sections the player folded (refpages::Part bits), kept in a file
     bool foldedRead = false;
     // 3.0.11-beta.18: the cards opened lately (the latest first) and the starred ones, kept in files
@@ -212,25 +210,11 @@ void loadPicture(State& s, const std::string& key, int side) {
     }
     const bool icon = key.rfind("icon:item:", 0) == 0;  // 3.0.11-beta.15: a row's icon, its own size
     if (key.rfind("item:", 0) == 0 || icon) {
-        if (!s.itemFilesRead) {  // «501#빨간포션#» a line
-            s.itemFilesRead = true;
-            std::string text;
-            if (readFile(s, "data\\idnum2itemresnametable.txt", text)) {
-                size_t at = 0;
-                while (at < text.size()) {
-                    size_t end = text.find('\n', at);
-                    if (end == std::string::npos) end = text.size();
-                    const std::string line = text.substr(at, end - at);
-                    at = end + 1;
-                    const size_t a = line.find('#'), b = a == std::string::npos ? a : line.find('#', a + 1);
-                    if (b != std::string::npos && a > 0)
-                        s.itemFiles[std::atoi(line.c_str())] = line.substr(a + 1, b - a - 1);
-                }
-            }
-            LOG_INFO("reference: %zu item icons named by the client's idnum2itemresnametable.txt", s.itemFiles.size());
-        }
-        const auto f = s.itemFiles.find(std::atoi(key.c_str() + (icon ? 10 : 5)));
-        if (f == s.itemFiles.end()) return;
+        // 3.0.18-beta.217: the client tables' item -> icon (data\idnum2itemresnametable.txt filled from the language
+        // folder's: uaRO HD's own 15001-15003), no copy of its own
+        const auto& files = clienttables::itemFiles();
+        const auto f = files.find(std::to_string(std::atoi(key.c_str() + (icon ? 10 : 5))));
+        if (f == files.end()) return;
         // 3.0.11-beta.74: the AI texture pack's icon when it has one (win/client_tables), else the game's
         spritefile::Image im;
         if (!clienttables::iconPixels(f->second, im.argb, im.w, im.h)) return;
