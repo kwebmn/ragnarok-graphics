@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.204 — what's new · 2026-11-12
+
+- «Items», «Storage» and «Cart»: the scroll bar right of the cells can now be dragged with the mouse, and a click on the bar moves there (it only showed where you are in the list before).
+- White ground (R-7XY449, «logged in and it went white at once»): an «Own ground» texture that was not read (the game was loading the map) is read again; one still not read, or with no room on the card, gives the game's own ground on that map instead of a white one. The log now names the texture not read and the one drawn white.
+
 # uaRO Graphics 3.0.18-beta.203 — what's new · 2026-11-12
 
 - The first screen shows the logo from the game's own login picture (the wings, the crystal, «UARO», «RAGNAROK ONLINE») in place of the «uaRO» words.
