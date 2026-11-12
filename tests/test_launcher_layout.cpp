@@ -74,8 +74,12 @@ TEST(launcher_layout_hits) {
     CHECK(launcherview::hitAt(L, cx(L.dock[1]), cy(L.dock[1])).part == Part::Reports);
     CHECK(launcherview::hitAt(L, cx(L.dock[2]), cy(L.dock[2])).part == Part::Site);
     CHECK(launcherview::hitAt(L, cx(L.dock[3]), cy(L.dock[3])).part == Part::Forum);
-    // 3.0.18-beta.201 (the owner: «еще проверить обновление сделай»): «Оновлення» - the check in sight, the 5th icon
-    CHECK(launcherview::hitAt(L, cx(L.dock[4]), cy(L.dock[4])).part == Part::Check);
+    // 3.0.18-beta.202 (the owner: «кнопку проверить обновления рядом с кнопкой играть», «кнопку выбора канала»): the
+    // check beside the big button, the channel's two halves beside the version
+    CHECK(launcherview::hitAt(L, cx(L.check), cy(L.check)).part == Part::Check);
+    const launcherview::Hit beta = launcherview::hitAt(L, cx(L.channel[1]), cy(L.channel[1]));
+    CHECK(beta.part == Part::Channel && beta.index == 1);
+    CHECK(launcherview::hitAt(L, cx(L.channel[0]), cy(L.channel[0])).index == 0);
     CHECK(launcherview::hitAt(L, cx(L.version), cy(L.version)).part == Part::Version);
     CHECK(launcherview::hitAt(L, cx(L.language), cy(L.language)).part == Part::Language);
     CHECK(launcherview::hitAt(L, cx(L.plate), cy(L.plate)).part == Part::Plate);
@@ -151,7 +155,7 @@ TEST(launcher_layout_update_offered_shows_play_without_it) {
         CHECK(L.noUpdate.y + L.noUpdate.h <= L.version.y);    // over the version
         CHECK(L.look.y + L.look.h <= L.play.y);
         CHECK(L.look.y >= L.bar.y + L.bar.h);
-        CHECK(L.noUpdate.x >= L.play.x && L.noUpdate.x + L.noUpdate.w <= L.playMore.x + L.playMore.w + 0.01f);
+        CHECK(L.noUpdate.x >= L.check.x && L.noUpdate.x + L.noUpdate.w <= L.playMore.x + L.playMore.w + 0.01f);
         const launcherview::Hit h =
             launcherview::hitAt(L, L.noUpdate.x + L.noUpdate.w / 2, L.noUpdate.y + L.noUpdate.h / 2);
         CHECK(h.part == Part::NoUpdate);
@@ -159,4 +163,26 @@ TEST(launcher_layout_update_offered_shows_play_without_it) {
     const launcherview::Layout plain = launcherview::layoutFor(1280, 720, 1.0f, 3, false);  // nothing offered
     CHECK_EQ(plain.noUpdate.w, 0.0f);
     CHECK(launcherview::hitAt(plain, 1100, plain.version.y - 20).part != Part::NoUpdate);
+}
+
+// 3.0.18-beta.202: «Перевірити» a square beside «ГРАТИ», the same height; «Реліз | Бета» left of the version in its row
+TEST(launcher_layout_check_and_channel_by_the_button) {
+    struct Size {
+        int w, h;
+        float s;
+    };
+    const Size sizes[] = {Size{960, 560, 1.0f}, Size{1280, 720, 1.0f}, Size{3360, 1890, 1.75f}};
+    for (const Size z : sizes)
+        for (const bool offered : {false, true}) {
+            const launcherview::Layout L = launcherview::layoutFor(z.w, z.h, z.s, 3, false, offered);
+            CHECK(L.check.w > 0 && L.check.h == L.play.h && L.check.y == L.play.y);
+            CHECK(L.check.x + L.check.w <= L.play.x);  // beside it, at its left
+            CHECK(L.channel[0].x + L.channel[0].w <= L.channel[1].x);
+            CHECK(L.channel[1].x + L.channel[1].w <= L.version.x);
+            CHECK(L.channel[0].y == L.version.y && L.channel[0].h > 0);
+            CHECK(L.channel[0].x >= L.check.x);  // in the play column
+            CHECK(L.version.x + L.version.w <= float(z.w));
+            CHECK(L.play.y + L.play.h <= (offered ? L.noUpdate.y : L.version.y));
+            CHECK(L.look.y + L.look.h <= L.play.y);
+        }
 }

@@ -191,7 +191,7 @@ int askAtGameStart(const std::wstring& dir, const Args& a, settings::Lang l) {
     Args run;
     run.mode = Args::Mode::Update;
     run.pid = a.pid;  // the game
-    run.then = Args::Then::Game;
+    run.then = Args::Then::App;  // 3.0.18-beta.202 (the owner): the launcher after the update, the game by its «ГРАТИ»
     run.gameArgs = a.gameArgs;
     const bool admin = !folderWritable(dir) && !elevatedNow();
     if (launchArgs(selfPath(), argsLine(run), dir, admin) != 0) return 0;  // no update: play
@@ -348,7 +348,9 @@ std::wstring playNow(Model& m, const std::string& offer, settings::Lang l, bool&
     if (offer.empty()) return m.launchGame(l);
     Args a;
     a.mode = Args::Mode::Update;
-    a.then = Args::Then::Game;
+    // 3.0.18-beta.202 (the owner: «пускай сначала лаунчер запускает и потом уже по кнопке играть»): after the update
+    // the app's first screen, the game by «ГРАТИ» - not the game at once
+    a.then = Args::Then::App;
     const std::string err = startMode(a);
     if (!err.empty()) return wtrf(l, Text::UpdateError, {err});
     closing = true;

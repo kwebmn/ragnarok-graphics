@@ -233,12 +233,10 @@ std::wstring upper(std::wstring s) {
     return s;
 }
 
-const Part kDockParts[launcherview::kDockIcons] = {Part::Settings, Part::Reports, Part::Site, Part::Forum,
-                                                   Part::Check};
+const Part kDockParts[launcherview::kDockIcons] = {Part::Settings, Part::Reports, Part::Site, Part::Forum};
 const Text kDockWords[launcherview::kDockIcons] = {Text::LauncherSettings, Text::LauncherReports, Text::LauncherSite,
-                                                   Text::LauncherForum, Text::LauncherUpdates};
-const wchar_t* const kDockGlyphs[launcherview::kDockIcons] = {L"\xE713", L"\xE8BD", L"\xE774", L"\xE716",
-                                                              L"\xE895"};  // .201: Sync
+                                                   Text::LauncherForum};
+const wchar_t* const kDockGlyphs[launcherview::kDockIcons] = {L"\xE713", L"\xE8BD", L"\xE774", L"\xE716"};
 
 }  // namespace
 
@@ -429,6 +427,17 @@ std::wstring LauncherView::fit(HDC dc, const Style& st, const std::wstring& s, i
     std::wstring cut = s.substr(0, lo);
     while (!cut.empty() && cut.back() == L' ') cut.pop_back();
     return cut + L"\x2026";
+}
+
+// 3.0.18-beta.202: the words a size smaller, down to three quarters of it, until they fit - before «…» cuts them
+// (the big button narrower with «Перевірити» at its left)
+LauncherView::Style LauncherView::shrunk(HDC dc, Style st, const std::wstring& s, int width) {
+    const float least = st.px * 0.75f;
+    while (st.px - 1 >= least && widthOf(dc, st, s) > width) {
+        st.spacing *= (st.px - 1) / st.px;
+        st.px -= 1;
+    }
+    return st;
 }
 
 std::vector<std::wstring> LauncherView::wrap(HDC dc, const Style& st, const std::wstring& s, int width, int most) {
@@ -709,6 +718,20 @@ void LauncherView::compose() {
         const bool on = hovered(Part::NoUpdate);
         panel::roundRect(pic_, pb(L.noUpdate), 8 * s, on ? kRaise : kCard, 0.88f, kGold, on ? 0.9f : 0.5f, edge);
     }
+    // 3.0.18-beta.202: «Перевірити» a square at the big button's left; «Реліз | Бета» at the version's left
+    {
+        const bool on = hovered(Part::Check);
+        panel::roundRect(pic_, pb(L.check), 10 * s, on ? kRaise : kCard, 0.9f, kGold, on ? 0.9f : 0.55f, edge);
+        for (int i = 0; i < 2; ++i) {
+            const Box& b = L.channel[i];
+            if ((i == 1) == data_.beta) {
+                panel::roundRect(pic_, pb(b), b.h / 2, kGold, 1.0f);
+            } else {
+                const bool hot = hovered(Part::Channel, i);
+                panel::roundRect(pic_, pb(b), b.h / 2, kCard, 0.82f, hot ? kGold : kLine, hot ? 0.7f : 1.0f, edge);
+            }
+        }
+    }
     // the plate over the icons, its button at its right
     plateButton_ = Box{};
     if (L.plate.w > 0) {
@@ -826,9 +849,7 @@ void LauncherView::words(HDC dc) {
         const Box& d = L.dock[i];
         const bool on = hovered(kDockParts[i]);
         const float cx = d.x + d.w / 2;
-        // 3.0.18-beta.201: «Оновлення» says «Перевіряю…» while the check asks
-        const bool asking = kDockParts[i] == Part::Check && data_.update.kind == UpdateState::Checking;
-        const std::wstring word = t(asking ? Text::LauncherCheckingNow : kDockWords[i]);
+        const std::wstring word = t(kDockWords[i]);
         if (glyphs) {
             const Style st{Face::Icons, 20, on ? kGoldHi : kIconRgb};
             line(dc, st, kDockGlyphs[i], cx, d.y + 22 * s + ascentOf(dc, st) * 0.5f, 0);
@@ -867,13 +888,15 @@ void LauncherView::words(HDC dc) {
             st = Style{Face::ExtraBold, 28, kOnGold, 5};
             said = t(Text::LauncherPlay);
         } else if (state == PlayState::Update) {  // 3.0.18-beta.199/.200: «ОНОВИТИ», the version and its size under
-            const Style big{Face::ExtraBold, 18, kOnBlue, 1.5f}, small{Face::SemiBold, 11.5f, kOnBlue};
+            const int room = int(L.play.w - 24 * s);
+            const std::wstring word = t(Text::LauncherUpdate),
+                               what = tf(Text::LauncherUpdateWhat,
+                                         {data_.update.offer, megabytes(data_.update.branch.package.size)});
+            const Style big = shrunk(dc, Style{Face::ExtraBold, 18, kOnBlue, 1.5f}, word, room),
+                        small = shrunk(dc, Style{Face::SemiBold, 11.5f, kOnBlue}, what, room);
             const float cx = L.play.x + L.play.w / 2;
-            line(dc, big, fit(dc, big, t(Text::LauncherUpdate), int(L.play.w - 24 * s)), cx + 0.75f * s,
-                 L.play.y + 30 * s, 0);
-            const std::wstring what =
-                tf(Text::LauncherUpdateWhat, {data_.update.offer, megabytes(data_.update.branch.package.size)});
-            line(dc, small, fit(dc, small, what, int(L.play.w - 24 * s)), cx, L.play.y + 48 * s, 0);
+            line(dc, big, fit(dc, big, word, room), cx + 0.75f * s, L.play.y + 30 * s, 0);
+            line(dc, small, fit(dc, small, what, room), cx, L.play.y + 48 * s, 0);
         } else if (state == PlayState::Updating) {
             st = Style{Face::SemiBold, 16, kText, 0.5f};
             said = tf(Text::LauncherUpdating, {std::to_string(int(share_ * 100)), oneDecimal(speed_ / 1048576.0)});
@@ -882,6 +905,7 @@ void LauncherView::words(HDC dc) {
             said = t(Text::LauncherRunning);
         }
         if (state != PlayState::Update) {
+            st = shrunk(dc, st, said, int(L.play.w - 24 * s));
             const std::wstring shown = fit(dc, st, said, int(L.play.w - 24 * s));
             const float base = L.play.y + L.play.h / 2 + ascentOf(dc, st) * 0.36f;
             line(dc, st, shown, L.play.x + L.play.w / 2 + st.spacing * s / 2, base, 0);
@@ -892,10 +916,35 @@ void LauncherView::words(HDC dc) {
         line(dc, st, fit(dc, st, t(Text::LauncherNoUpdate), int(L.noUpdate.w - 20 * s)),
              L.noUpdate.x + L.noUpdate.w / 2, L.noUpdate.y + L.noUpdate.h / 2 + ascentOf(dc, st) * 0.36f, 0);
     }
+    // 3.0.18-beta.202: «Перевірити» (its glyph, «Перевіряю…» while the check asks) and «Реліз | Бета»
+    {
+        const bool on = hovered(Part::Check), asking = data_.update.kind == UpdateState::Checking;
+        const float cx = L.check.x + L.check.w / 2;
+        if (hasIcons()) {
+            const Style glyph{Face::Icons, 19, asking ? kMuted : on ? kWhite : kGoldHi};
+            line(dc, glyph, L"\xE895", cx, L.check.y + 25 * s + ascentOf(dc, glyph) * 0.5f, 0);
+        } else {
+            const Style glyph{Face::Other, 20, asking ? kMuted : on ? kWhite : kGoldHi};
+            line(dc, glyph, L"\x21BB", cx, L.check.y + 27 * s + ascentOf(dc, glyph) * 0.36f, 0);
+        }
+        const std::wstring said = t(asking ? Text::LauncherCheckingNow : Text::LauncherCheck);
+        const Style label = shrunk(dc, Style{Face::SemiBold, 10, on ? kText : kMuted}, said, int(L.check.w - 4 * s));
+        line(dc, label, fit(dc, label, said, int(L.check.w - 4 * s)), cx, L.check.y + L.check.h - 9 * s, 0);
+        for (int i = 0; i < 2; ++i) {
+            const Box& b = L.channel[i];
+            const bool lit = (i == 1) == data_.beta;
+            const Style st{Face::SemiBold, 12, lit ? kOnGold : hovered(Part::Channel, i) ? kText : kMuted};
+            const std::wstring word = t(i == 0 ? Text::UpdateChannelRelease : Text::LauncherChannelBeta);
+            line(dc, st, fit(dc, st, word, int(b.w - 10 * s)), b.x + b.w / 2,
+                 b.y + b.h / 2 + ascentOf(dc, st) * 0.36f, 0);
+        }
+    }
     // the version, at the right under the button
     {
-        const Style st{Face::Medium, 12, hovered(Part::Version) ? kText : kMuted};
-        line(dc, st, fit(dc, st, data_.version, int(L.version.w)), L.version.x + L.version.w, L.version.y + 13 * s, 1);
+        const Style want{Face::Medium, 12, hovered(Part::Version) ? kText : kMuted};
+        const Style st = shrunk(dc, want, data_.version, int(L.version.w));
+        line(dc, st, fit(dc, st, data_.version, int(L.version.w)), L.version.x + L.version.w,
+             L.version.y + L.version.h / 2 + ascentOf(dc, st) * 0.36f, 1);
     }
     // the plate's words (two lines at most) and its button's
     if (L.plate.w > 0) {
@@ -1659,12 +1708,14 @@ Hit LauncherView::hitAt(int x, int y) const {
 }
 
 std::vector<Hit> LauncherView::focusOrder() const {
-    std::vector<Hit> order{Hit{Part::Play}, Hit{Part::PlayMore}};
+    std::vector<Hit> order{Hit{Part::Check}, Hit{Part::Play}, Hit{Part::PlayMore}};  // .202: the check first
     if (layout_.noUpdate.w > 0) order.push_back(Hit{Part::NoUpdate});  // 3.0.18-beta.199
     order.push_back(Hit{Part::Look});
     if (layout_.update.w > 0) order.push_back(Hit{Part::Changelog});
     for (int i = 0; i < layout_.newsShown; ++i) order.push_back(Hit{Part::News, i});
     for (Part p : kDockParts) order.push_back(Hit{p});
+    order.push_back(Hit{Part::Channel, 0});  // 3.0.18-beta.202
+    order.push_back(Hit{Part::Channel, 1});
     order.push_back(Hit{Part::Version});
     if (layout_.plate.w > 0) order.push_back(Hit{Part::Plate});
     order.push_back(Hit{Part::Language});
@@ -1681,6 +1732,8 @@ Box LauncherView::boxOf(Hit hit) const {
     case Part::News: return hit.index >= 0 && hit.index < L.newsShown ? L.news[hit.index] : Box{};
     case Part::Version: return L.version;
     case Part::NoUpdate: return L.noUpdate;
+    case Part::Check: return L.check;  // 3.0.18-beta.202
+    case Part::Channel: return hit.index >= 0 && hit.index < 2 ? L.channel[hit.index] : Box{};
     case Part::Language: return L.language;
     case Part::Plate: return plateButton_;
     default: break;

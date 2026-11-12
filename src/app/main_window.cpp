@@ -1550,19 +1550,18 @@ void MainWindow::refreshLauncher() {
                                  utf8(wtr(lang_, presets::nameOf(presets::Choice::Textures,
                                                                  d.looks[int(presets::Choice::Textures)].variant)))});
     }
-    // the version: the channel, the update's word
-    const bool beta = m.channel() == update::Channel::Beta;
-    std::string state = utf8(wtr(lang_, beta ? Text::LauncherBeta : Text::LauncherRelease));
+    // the version and the update's word; 3.0.18-beta.202: the channel its own switch beside it
+    d.beta = m.channel() == update::Channel::Beta;
+    std::string state;
     if (d.update.kind == UpdateState::Done)
-        state += " \xC2\xB7 " + utf8(d.update.offer.empty()
-                                         ? wtr(lang_, Text::MainUpdateNone)
-                                         : wtrf(lang_, d.update.back ? Text::MainUpdateBack : Text::MainUpdateNew,
-                                                {d.update.offer}));
+        state = utf8(d.update.offer.empty() ? wtr(lang_, Text::MainUpdateNone)
+                                            : wtrf(lang_, d.update.back ? Text::MainUpdateBack : Text::MainUpdateNew,
+                                                   {d.update.offer}));
     else if (d.update.kind == UpdateState::Checking)  // 3.0.18-beta.201
-        state += " \xC2\xB7 " + utf8(wtr(lang_, Text::LauncherChecking));
+        state = utf8(wtr(lang_, Text::LauncherChecking));
     else if (d.update.kind == UpdateState::Failed)
-        state += " \xC2\xB7 " + utf8(wtr(lang_, Text::LauncherCheckFailed));
-    d.version = wtrf(lang_, Text::LauncherVersionLine, {kVersion, state});
+        state = utf8(wtr(lang_, Text::LauncherCheckFailed));
+    d.version = state.empty() ? wide(kVersion) : wtrf(lang_, Text::LauncherVersionLine, {kVersion, state});
     // a plate: two failed starts of this version (the way back), the safe mode, uaRO Graphics off
     plate_ = Plate::None;
     rollBack_.clear();
@@ -1601,7 +1600,8 @@ void MainWindow::refreshLauncher() {
                        L"|" + std::to_wstring(changelog_.size()) + L"|" + d.cardName + L"|" +
                        std::to_wstring(int(d.fitsCard)) + L"|" + std::to_wstring(int(d.undoable)) + L"|" +
                        wide(d.seen) + L"|" + std::to_wstring(int(d.firstRun)) + L"." +
-                       std::to_wstring(d.suggestedKind) + L"|" + d.cardCheck + L"|" + d.firstFound;
+                       std::to_wstring(d.suggestedKind) + L"|" + d.cardCheck + L"|" + d.firstFound + L"|" +
+                       std::to_wstring(int(d.beta));
     for (const LauncherData::Look& l : d.looks)
         sig += L"|" + std::to_wstring(l.variant) + L"." + std::to_wstring(l.changed);
     for (const launcher::News& n : d.info.news) sig += L"|" + wide(n.title);
@@ -1674,10 +1674,20 @@ void MainWindow::launcherAction(launcherview::Part part, int index) {
             doApply(true, false, true);
             refreshLauncher();
             return;
-        case Part::Check:  // 3.0.18-beta.201 (the owner: «еще проверить обновление сделай»): the check in sight
+        case Part::Check:  // 3.0.18-beta.201/.202 (the owner): the check beside «ГРАТИ»
             if (updateState().kind != UpdateState::Checking) startUpdateCheck();
             refreshLauncher();
             return;
+        case Part::Channel: {  // 3.0.18-beta.202 (the owner: «кнопку выбора канала обновлений»): «Реліз» or «Бета»
+            const update::Channel want = index == 1 ? update::Channel::Beta : update::Channel::Release;
+            if (want != m.channel()) {
+                const std::wstring err = m.setChannel(want, lang_);
+                if (!err.empty()) message(err, true);
+                startUpdateCheck();
+            }
+            refreshLauncher();
+            return;
+        }
         case Part::Settings:
             showLauncher(false);
             return;

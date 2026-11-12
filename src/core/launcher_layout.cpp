@@ -8,8 +8,8 @@ namespace {
 // At scale 1 (the design 1280 x 720)
 constexpr float kBar = 64, kLeft = 22, kRight = 26, kBottom = 26, kFeedTop = 80, kFeedW = 380, kLabel = 28;
 constexpr float kUpdateH = 150, kNewsH = 84, kGap = 10, kIcon = 64, kIconGap = 12, kDockBottom = 22;
-constexpr float kPlayW = 336, kLookH = 52, kButtonH = 64, kMoreW = 56, kVersionH = 18, kPlateH = 44, kPlateW = 560;
-constexpr float kNoUpdateH = 32;
+constexpr float kPlayW = 336, kLookH = 52, kButtonH = 64, kMoreW = 56, kPlateH = 44, kPlateW = 560;
+constexpr float kNoUpdateH = 32, kRowH = 22, kChanW = 60, kCheckW = 64;
 
 }  // namespace
 
@@ -27,14 +27,21 @@ Layout layoutFor(int width, int height, float scale, int newsCount, bool plate, 
     // the play column: the version at the bottom, the button over it, the look line over that
     const float playW = std::min(kPlayW * s, W * 0.4f);
     const float px = W - kRight * s - playW;
-    L.version = Box{px, H - kBottom * s - kVersionH * s, playW, kVersionH * s};
-    float above = L.version.y;  // what the button stands on: the version, or «Грати без оновлення» over it
+    // 3.0.18-beta.202: the bottom row - «Реліз | Бета», the version at its right
+    const float rowY = H - kBottom * s - kRowH * s;
+    L.channel[0] = Box{px, rowY, kChanW * s, kRowH * s};
+    L.channel[1] = Box{px + (kChanW + 4) * s, rowY, kChanW * s, kRowH * s};
+    const float vx = px + (2 * kChanW + 12) * s;
+    L.version = Box{vx, rowY, std::max(0.0f, px + playW - vx), kRowH * s};
+    float above = rowY;  // what the button stands on: the row, or «Грати без оновлення» over it
     if (offered) {
-        L.noUpdate = Box{px, L.version.y - 8 * s - kNoUpdateH * s, playW, kNoUpdateH * s};
+        L.noUpdate = Box{px, rowY - 8 * s - kNoUpdateH * s, playW, kNoUpdateH * s};
         above = L.noUpdate.y;
     }
     const float by = above - 8 * s - kButtonH * s;
-    L.play = Box{px, by, playW - kMoreW * s, kButtonH * s};
+    L.check = Box{px, by, kCheckW * s, kButtonH * s};  // «Перевірити» at the big button's left
+    const float bx = px + (kCheckW + 8) * s;
+    L.play = Box{bx, by, std::max(0.0f, px + playW - kMoreW * s - bx), kButtonH * s};
     L.playMore = Box{px + playW - kMoreW * s, by, kMoreW * s, kButtonH * s};
     L.look = Box{px, by - kGap * s - kLookH * s, playW, kLookH * s};
     // the icons at the bottom left, a plate over them when asked
@@ -66,11 +73,14 @@ Hit hitAt(const Layout& L, float x, float y) {
     if (L.play.contains(x, y)) return Hit{Part::Play};
     if (L.look.contains(x, y)) return Hit{Part::Look};
     if (L.noUpdate.w > 0 && L.noUpdate.contains(x, y)) return Hit{Part::NoUpdate};
+    if (L.check.contains(x, y)) return Hit{Part::Check};  // 3.0.18-beta.202
+    for (int i = 0; i < 2; ++i)
+        if (L.channel[i].contains(x, y)) return Hit{Part::Channel, i};
     if (L.version.contains(x, y)) return Hit{Part::Version};
     if (L.update.contains(x, y)) return Hit{Part::Changelog};
     for (int i = 0; i < L.newsShown; ++i)
         if (L.news[i].contains(x, y)) return Hit{Part::News, i};
-    static const Part kDock[kDockIcons] = {Part::Settings, Part::Reports, Part::Site, Part::Forum, Part::Check};
+    static const Part kDock[kDockIcons] = {Part::Settings, Part::Reports, Part::Site, Part::Forum};
     for (int i = 0; i < kDockIcons; ++i)
         if (L.dock[i].contains(x, y)) return Hit{kDock[i]};
     if (L.plate.w > 0 && L.plate.contains(x, y)) return Hit{Part::Plate};

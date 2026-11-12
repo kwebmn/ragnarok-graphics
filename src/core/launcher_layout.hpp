@@ -12,7 +12,8 @@ namespace uagfx::launcherview {
 enum class Part : uint8_t {
     None, Play, PlayMore, Look, Changelog, News, Settings, Reports, Site, Forum, Version, Language, Plate,
     NoUpdate,  // 3.0.18-beta.199: «Грати без оновлення» under the big button while an update is offered
-    Check      // 3.0.18-beta.201: «Оновлення» in the dock - the update check
+    Check,     // 3.0.18-beta.202: «Перевірити» beside the big button - the update check
+    Channel    // 3.0.18-beta.202: «Реліз» (index 0) or «Бета» (1) beside the version
 };
 
 struct Box {
@@ -21,7 +22,7 @@ struct Box {
 };
 
 constexpr int kMostNews = 3;
-constexpr int kDockIcons = 5;  // «Налаштування», «Звернення», «Сайт», «Форум», .201 «Оновлення»
+constexpr int kDockIcons = 4;  // «Налаштування», «Звернення», «Сайт», «Форум»
 
 struct Layout {
     float s = 1;
@@ -34,6 +35,10 @@ struct Layout {
     Box look, play, playMore, version;
     Box plate;     // w 0: none
     Box noUpdate;  // w 0: none (no update offered)
+    // 3.0.18-beta.202 (the owner: «кнопку проверить обновления рядом с кнопкой играть», «кнопку выбора канала»): the
+    // check a square at the big button's left, the channel's two halves at the version's left in its row
+    Box check;
+    Box channel[2];
 };
 
 // newsCount: the site's news at hand; plate: a plate is shown (the safe mode, uaRO Graphics off, a roll back);

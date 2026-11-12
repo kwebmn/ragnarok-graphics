@@ -48,6 +48,7 @@ struct LauncherData {
     std::string seen;       // 3.0.18-beta.195: the version the player last saw the news of ("" none)
     std::wstring cardCheck;  // 3.0.18-beta.198: «Перевірити відеокарту»'s finding, "" not checked yet
     std::wstring firstFound;  // 3.0.18-beta.199: the first start's set chosen for the card at once, "" none
+    bool beta = false;        // 3.0.18-beta.202: the update channel - «Бета» lit, else «Реліз»
     // 3.0.18-beta.196: the first start (no version seen, no game here) - the players' cards over the launcher: the
     // one for the card, each card's three looks in words
     bool firstRun = false;
@@ -162,6 +163,7 @@ private:
     void dropFonts();
     int widthOf(HDC dc, const Style& st, const std::wstring& s);
     std::wstring fit(HDC dc, const Style& st, const std::wstring& s, int width);
+    Style shrunk(HDC dc, Style st, const std::wstring& s, int width);  // .202: smaller until it fits (to 3/4)
     std::vector<std::wstring> wrap(HDC dc, const Style& st, const std::wstring& s, int width, int most);
     void line(HDC dc, const Style& st, const std::wstring& s, float x, float baseline, int align = 0);  // -1 0 1
     float ascentOf(HDC dc, const Style& st);
