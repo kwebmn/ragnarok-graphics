@@ -8499,7 +8499,7 @@ constexpr Entry kTexts[] = {
      "За вагою влізе {1} з {2} — порожнє поле: {1}",
      "По весу влезет {1} из {2} — пустое поле: {1}"},
     {Text::LauncherPlay, "PLAY", "ГРАТИ", "ИГРАТЬ"},
-    {Text::LauncherUpdate, "UPDATE AND PLAY", "ОНОВИТИ Й ГРАТИ", "ОБНОВИТЬ И ИГРАТЬ"},
+    {Text::LauncherUpdate, "UPDATE", "ОНОВИТИ", "ОБНОВИТЬ"},
     {Text::LauncherUpdating, "Updating {1} % · {2} MB/s", "Оновлення {1} % · {2} МБ/с", "Обновление {1} % · {2} МБ/с"},
     {Text::LauncherRunning, "GAME RUNNING · + WINDOW", "ГРА ЗАПУЩЕНА · + ВІКНО", "ИГРА ЗАПУЩЕНА · + ОКНО"},
     {Text::LauncherServer, "Server up · {1} online", "Сервер працює · {1} онлайн", "Сервер работает · {1} онлайн"},

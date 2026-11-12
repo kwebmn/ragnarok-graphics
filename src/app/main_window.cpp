@@ -1134,7 +1134,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 model_->load();
                 reload();
             } else if (id == kCloseButton && code == BN_CLICKED) {
-                PostMessageW(hwnd_, WM_CLOSE, 0, 0);
+                showLauncher(true);  // 3.0.18-beta.200 (the owner): «Закрити» closes the settings, not the launcher
             } else if (id == IDOK && GetFocus() == search_) {  // 2.6: Enter in the search - the first one's page
                 const auto hits = findSettings(utf8(searchText()), lang_, mode_);
                 if (!hits.empty()) {
@@ -1152,8 +1152,11 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                     current_->command(focusId, EN_KILLFOCUS);
                     updateStatus();
                 }
-            } else if (id == IDCANCEL) {
-                PostMessageW(hwnd_, WM_CLOSE, 0, 0);
+            } else if (id == IDCANCEL) {  // 3.0.18-beta.200: Esc in the settings - back to the launcher
+                if (!launcherOn_)
+                    showLauncher(true);
+                else
+                    PostMessageW(hwnd_, WM_CLOSE, 0, 0);
             } else if (id >= 1000 && current_ && !rebuilds_.quiet()) {
                 // A number being typed counts for Apply, which takes it first: the field loses the focus to the
                 // button and takes the number (0.6.0 review M5).
@@ -1628,15 +1631,23 @@ void MainWindow::launcherAction(launcherview::Part part, int index) {
     Model& m = *model_;
     const bool running = m.now().gameRunning;
     switch (part) {
-        case Part::Play:  // the game running: another window of it (never an update over it)
+        case Part::Play: {  // the game running: another window of it (never an update over it)
+            const UpdateState u = channelUpdate(m);
             if (running) {
                 const std::wstring err = m.launchGame(lang_);
                 if (!err.empty()) message(err, true);
                 refreshLauncher();
+            } else if (u.kind == UpdateState::Done && !u.offer.empty()) {
+                // 3.0.18-beta.200 (the owner: «когда нажимаю обновить то сразу запускается игра»): «ОНОВИТИ» updates
+                // and opens the launcher again - no game; «Грати без оновлення» plays as it is
+                const std::wstring err = m.apply(lang_);  // the settings' changes kept, no question at the close
+                if (!err.empty()) message(err, true);
+                updateAndReopen(*this, false);
             } else {
                 play();
             }
             return;
+        }
         case Part::PlayMore: {  // ▾: another window, the safe start (.199: «Грати без оновлення» in sight, not here)
             enum { kAnother = 1, kSafe };
             std::vector<MenuItem> items{{kAnother, wtr(lang_, Text::LauncherAnother)},

@@ -862,7 +862,7 @@ void LauncherView::words(HDC dc) {
         if (state == PlayState::Play) {
             st = Style{Face::ExtraBold, 28, kOnGold, 5};
             said = t(Text::LauncherPlay);
-        } else if (state == PlayState::Update) {  // 3.0.18-beta.199: «ОНОВИТИ Й ГРАТИ», the version and its size under
+        } else if (state == PlayState::Update) {  // 3.0.18-beta.199/.200: «ОНОВИТИ», the version and its size under
             const Style big{Face::ExtraBold, 18, kOnBlue, 1.5f}, small{Face::SemiBold, 11.5f, kOnBlue};
             const float cx = L.play.x + L.play.w / 2;
             line(dc, big, fit(dc, big, t(Text::LauncherUpdate), int(L.play.w - 24 * s)), cx + 0.75f * s,
