@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.235 — what's new · 2026-11-13
+
+- The wings were not drawn (R-TT95RZ: Angel Blessing on, no wings): the game keeps a body sprite's name without «data\», and the driver did not know the body. Now the body is known by its folder however the name starts. The log has a line for each step («wings: the players' render runs…», «… waiting for its faces», «the first wings drawn…» or why not).
+- To check: put on Angel Blessing (5207) or another item of the list - big wings on the back; if not, send a report at once, without restarting the game.
+
 # uaRO Graphics 3.0.18-beta.234 — what's new · 2026-11-13
 
 - Wings: the wings' items draw their own headgear on the head again, as always (the owner's call); the big wings on the back come from the driver as before.
