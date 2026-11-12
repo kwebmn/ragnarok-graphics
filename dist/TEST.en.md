@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.209 — what's new · 2026-11-12
+
+- Quick keys: Space with the chat line empty does what the gamepad's A does - attacks the target, else picks up loot beside, else attacks the nearest monster, else talks to the NPC near. Ctrl+←/→ turns the camera 45°, Ctrl+↑/↓ zooms it in and out. The switch: «Interface» → «Space acts». In the game's battle mode (/bm) Space still opens the chat.
+- In the walk mode (`): Tab and Shift+Tab pick the next and the previous target (the nearest first, with the gold ring), Space attacks, F picks up, R talks to an NPC, C sits or stands, Q and E turn the camera, 1-9 use the cells of the bar row shown now (F12 turns the row). Skills from the keys hit the chosen target without the mouse.
+
 # uaRO Graphics 3.0.18-beta.208 — what's new · 2026-11-12
 
 - Walk mode (the owner's idea): the ` key (left of 1, in any layout) switches it on while the chat line is empty. Then the letters do not type into the chat; W A S D, the arrows and the numpad (7 9 1 3 diagonally, 5 stops) walk the character; Enter opens the chat line, Enter again sends it and goes back to walking, Esc clears the line. The chat line says «Walking · Enter: type · `: off». Alt+letters, Ctrl+digits, F1-F9, Insert and Esc work as always. The mode is kept between starts; the switch: «Interface» → «Walk mode (` key)». Quick keys (target, attack, pick up) come in the next beta.
