@@ -15,6 +15,7 @@
 #include "win/pad_mount.hpp"
 #include "win/roext.hpp"
 #include "win/stall_watch.hpp"
+#include "win/start_watch.hpp"
 #include "win/updates_hook.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/window_mode.hpp"
@@ -52,6 +53,7 @@ HRESULT createUaro(REFIID iid, LPVOID* out, IUnknown* outer) {
 // with the hot-patch prologue (mov edi,edi / push ebp / mov ebp,esp) that hooks expect.
 extern "C" __attribute__((ms_hook_prologue)) HRESULT WINAPI Proxy_DirectDrawCreateEx(GUID* guid, LPVOID* out,
                                                                                     REFIID iid, IUnknown* outer) {
+    uagfx::win::startwatch::passed();  // 3.0.18-beta.223: the game came to its DirectDraw
     if (uagfx::win::startup().choice.renderer == uagfx::Renderer::Uaro && !g_uaroFailed) {
         const HRESULT hr = createUaro(iid, out, outer);
         if (hr != S_FALSE) return hr;
@@ -203,6 +205,7 @@ extern "C" HRESULT WINAPI Proxy_SetAppCompatData(DWORD a, DWORD b) {
 BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(inst);
+        uagfx::win::startwatch::install();  // 3.0.18-beta.223: a start that never comes to the window told
         uagfx::win::installGameScreen();  // 3.0.17-beta.18: uaRO HD's screen from its file - two import slots only
         uagfx::win::installSoundHooks();  // 0.91: before the game opens its sound (its import slots only)
         uagfx::win::installPacketTap();   // 3.0.4-beta.3: the game's packets read (notifications)
