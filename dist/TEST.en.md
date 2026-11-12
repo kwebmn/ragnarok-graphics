@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.217 — what's new · 2026-11-12
+
+- uaRO HD's own things - Familiar Power (#15001), Lycan Fury (#15002), Holy Order Relic (#15003) - have pictures in the client, but their files are named only in the English table (data\english\idnum2itemresnametable.txt), and our windows read data\'s alone. Now the tables of the language folder the game reads its own from (data\english\ for Ukrainian and Russian Windows) fill data\'s: these things show their pictures in «Речі», «Спорядження», the hotbar, the shop, the trade and «Довідник». Entries data\ already has are never changed; the log says how many were added.
+- To check: Familiar Power in «Речі» and in «Спорядження» («Низ голови») - with its mask picture.
+
 # uaRO Graphics 3.0.18-beta.216 — what's new · 2026-11-12
 
 - Report R-JPMWSD («moving the cursor, it lands on a letter, not between letters»): the chat line's caret was put by the text's width as GDI measured the whole line at once, while the new interface draws the letters one by one, and in Latin text the two widths came half a letter apart. The chat now measures its words the way the new interface draws them, so the caret stands between the letters (in the message line and in a whisper's name). Once a session the log gives both widths of the line, not its words.
