@@ -25,6 +25,7 @@
 #include "win/net_predict.hpp"
 #include "win/net_smooth.hpp"
 #include "win/paths.hpp"
+#include "core/sharp_specks.hpp"
 #include "win/sharp_frames.hpp"
 #include "win/sharp_specks.hpp"
 #include "win/skill_delay_watch.hpp"
@@ -299,9 +300,13 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // 0.28: the renderer learns what effect a draw is of (the fireflies are drawn anew). 3.0.18-beta.181: found first
     const effect_exe::Tag tag = win::drawnEffect(vertices);
     // 3.0.18-beta.181: [effects] crisp_storm_gust - Storm Gust's texture looked at before it goes up (its texels then
-    // as the game last wrote them): a sheet of its snow gets a copy at real resolution (win/sharp_specks)
+    // as the game last wrote them): a sheet of its snow gets a copy at real resolution (win/sharp_specks).
+    // 3.0.18-beta.182: in the mages' new look too (core/sharp_specks stormSnowSharp)
+    const EffectSettings& look0 = c.effects();
     const bool crispStorm = tag.kind == effect_exe::Kind::Skill && tag.id == win::sharpspecks::kStormGust &&
-                            textures_[0] && c.effects().crispStormGust && c.enhanced();
+                            textures_[0] && c.enhanced() &&
+                            ::uagfx::sharpspecks::stormSnowSharp(look0.crispStormGust, look0.mageEffects,
+                                                                 look0.mageWater);
     if (crispStorm) {
         Surface7* t = textures_[0];
         if (win::sharpspecks::wanted(t->gpuTexture(), t->topDirty()) && t->topArgb(specks_) &&
@@ -358,7 +363,8 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         if (const sprite_cells::Cell* n = textures_[0]->spriteNumberAt((u0 + u1) / 2, (v0 + v1) / 2, texW, texH))
             win::sharpframes::swap(*n, texW, texH, cmd, setup, vertices, vertexCount, fvf, sharp_);
     }
-    if (crispStorm && !setup.ui) win::sharpspecks::swap(cmd, setup);  // 3.0.18-beta.181: its snow from its copy
+    if (crispStorm && !setup.ui)  // 3.0.18-beta.181: its snow from its copy (.182: in either look)
+        win::sharpspecks::swap(cmd, setup, look0.crispStormGust ? "the game's look" : "the mages' look");
     cmd.state = c.record.addState(setup);
     cmd.primitive = uint32_t(type);
     cmd.fvf = fvf;

@@ -19,7 +19,7 @@ bool wanted(uint32_t texture, bool changed);
 void note(uint32_t texture, const uint32_t* argb, int w, int h);
 // A draw of Storm Gust's adding light from a texture with a copy: drawn from the copy (its texture in cmd, sharpCopy;
 // filtered smoothly through its levels). False - as the game draws it.
-bool swap(DrawCmd& cmd, DrawSetup& setup);
+bool swap(DrawCmd& cmd, DrawSetup& setup, const char* look);  // look: told once, in the first draw's line
 // The 30-second line's part ("; storm gust's snow: ..."); "" until a sheet was seen
 std::string stats();
 

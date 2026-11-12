@@ -1038,9 +1038,13 @@ constexpr Entry kTexts[] = {
      "Fire Bolt, Fire Ball, Fire Wall, Fire Pillar, Meteor Storm, Sightrasher, Volcano.",
      "Fire Bolt, Fire Ball, Fire Wall, Fire Pillar, Meteor Storm, Sightrasher, Volcano."},
     {Text::FxMageWater, "Water and ice", "Вода й лід", "Вода и лёд"},
-    {Text::FxMageWaterHint, "Cold Bolt, Frost Diver, Ice Wall, Storm Gust, Water Ball, Frost Nova, Deluge.",
-     "Cold Bolt, Frost Diver, Ice Wall, Storm Gust, Water Ball, Frost Nova, Deluge.",
-     "Cold Bolt, Frost Diver, Ice Wall, Storm Gust, Water Ball, Frost Nova, Deluge."},
+    {Text::FxMageWaterHint,
+     "Cold Bolt, Frost Diver, Ice Wall, Storm Gust, Water Ball, Frost Nova, Deluge. Storm Gust's snowflakes drawn "
+     "at the screen's resolution.",
+     "Cold Bolt, Frost Diver, Ice Wall, Storm Gust, Water Ball, Frost Nova, Deluge. Сніжинки Storm Gust намальовано "
+     "в роздільності екрана.",
+     "Cold Bolt, Frost Diver, Ice Wall, Storm Gust, Water Ball, Frost Nova, Deluge. Снежинки Storm Gust нарисованы "
+     "в разрешении экрана."},
     {Text::FxMageWind, "Wind", "Вітер", "Ветер"},
     {Text::FxMageWindHint, "Lightning Bolt, Thunderstorm, Jupitel Thunder, Lord of Vermilion, Violent Gale.",
      "Lightning Bolt, Thunderstorm, Jupitel Thunder, Lord of Vermilion, Violent Gale.",
@@ -1068,13 +1072,13 @@ constexpr Entry kTexts[] = {
     {Text::FxCrispStormGustHint,
      "Storm Gust in the game's own colours and light, its snowflakes drawn anew at the screen's resolution: each one "
      "sharp, in its place, size and brightness, instead of a stretched blot. Its cloud, whirl, lightning and ice stay "
-     "the game's. Over the mages' new look for it.",
+     "the game's. Off: the mages' new look for it (when on), its snowflakes sharp there too.",
      "Storm Gust у власних кольорах і світлі гри, його сніжинки намальовано заново в роздільності екрана: кожна "
      "чітка, на своєму місці, свого розміру й яскравості, замість розтягнутої плями. Хмара, вихор, блискавки й лід — "
-     "як у грі. Замість нового вигляду магів для нього.",
+     "як у грі. Вимкнено: новий вигляд магів для нього (якщо увімкнено), сніжинки там теж чіткі.",
      "Storm Gust в собственных цветах и свете игры, его снежинки нарисованы заново в разрешении экрана: каждая "
      "чёткая, на своём месте, своего размера и яркости, вместо растянутого пятна. Облако, вихрь, молнии и лёд — как "
-     "в игре. Вместо нового вида магов для него."},
+     "в игре. Выключено: новый вид магов для него (если включён), снежинки там тоже чёткие."},
     {Text::FxSword, "Swordsmen's new effects", "Нові ефекти мечників", "Новые эффекты мечников"},
     {Text::FxSwordHint,
      "Swordsman, Knight, Crusader: Bash, Magnum Break, Bowling Bash, Brandish Spear, Grand Cross, Shield Boomerang.",

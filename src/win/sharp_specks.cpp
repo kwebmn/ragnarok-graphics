@@ -79,7 +79,7 @@ void note(uint32_t texture, const uint32_t* argb, int w, int h) {
     }
 }
 
-bool swap(DrawCmd& cmd, DrawSetup& setup) {
+bool swap(DrawCmd& cmd, DrawSetup& setup, const char* look) {
     Context& c = Context::get();
     if (!cmd.texture[0] || !c.renderer || !c.enhanced()) return false;
     // the snow is light added on (SRCALPHA, ONE); anything else of it as the game draws it
@@ -98,8 +98,9 @@ bool swap(DrawCmd& cmd, DrawSetup& setup) {
     ++g_drawn;
     if (!g_toldDraw) {  // the proof
         g_toldDraw = true;
-        LOG_INFO("storm gust: the first snow drawn from its copy - the game's %dx%d sheet, %d flakes, its copy %dx%d",
-                 e.w, e.h, e.specks, e.copyW, e.copyH);
+        LOG_INFO("storm gust: the first snow drawn from its copy - the game's %dx%d sheet, %d flakes, its copy %dx%d "
+                 "(%s)",
+                 e.w, e.h, e.specks, e.copyW, e.copyH, look ? look : "");
     }
     return true;
 }

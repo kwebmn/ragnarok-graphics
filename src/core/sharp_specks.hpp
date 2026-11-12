@@ -34,4 +34,10 @@ struct Copy {
 };
 Copy makeCopy(const uint32_t* argb, int w, int h);
 
+// 3.0.18-beta.182 (the owner, of both looks: «нравится и тот и тот»): Storm Gust's snow sharp in the game's look
+// ([effects] crisp_storm_gust) and in the mages' new one (mage_effects with its water skills) alike
+inline bool stormSnowSharp(bool crispStormGust, bool mageEffects, bool mageWater) {
+    return crispStormGust || (mageEffects && mageWater);
+}
+
 }  // namespace uagfx::sharpspecks
