@@ -1,5 +1,6 @@
 #include "core/sharp_frames.hpp"
 
+#include <algorithm>
 #include <cstring>
 
 #include "core/full_colour.hpp"
@@ -10,9 +11,12 @@ namespace uagfx::sharpframes {
 Copy makeCopy(const uint32_t* argb, int w, int h) {
     Copy c;
     if (!argb || w <= 0 || h <= 0 || w > kMostSide || h > kMostSide) return c;
-    c.width = w * kScale;
-    c.height = h * kScale;
-    c.levels.push_back(xbr::scale4(argb, w, h));
+    const bool small = std::max(w, h) <= kSmallSide;  // 3.0.18-beta.185: twice
+    c.width = w * kScale * (small ? kScale : 1);
+    c.height = h * kScale * (small ? kScale : 1);
+    std::vector<uint32_t> top = xbr::scale4(argb, w, h);
+    if (small) top = xbr::scale4(top.data(), w * kScale, h * kScale);
+    c.levels.push_back(std::move(top));
     int lw = c.width, lh = c.height;
     while (lw > w || lh > h) {  // 2x, then the frame's own size
         std::vector<uint32_t> next;

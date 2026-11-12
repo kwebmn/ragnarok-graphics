@@ -24,7 +24,7 @@ struct Entry {
     int w = 0, h = 0;
     std::vector<uint32_t> argb;  // the frame as the game wrote it, until its copy is made
     uint32_t texture = 0;
-    int levels = 0;
+    int levels = 0, copyW = 0, copyH = 0;  // 3.0.18-beta.185: the copy's size (16 or 4 times the frame's)
     bool failed = false;  // no copy or no texture: drawn as the game's
 };
 
@@ -53,6 +53,7 @@ bool send(Context& c, Entry& e) {
         lh = std::max(1, lh / 2);
     }
     e.levels = int(copy.levels.size());
+    e.copyW = copy.width, e.copyH = copy.height;
     e.argb.clear();
     e.argb.shrink_to_fit();
     return true;
@@ -120,7 +121,7 @@ bool swap(const sprite_cells::Cell& cell, int texW, int texH, DrawCmd& cmd, Draw
         }
         LOG_INFO("sharp numbers: the first drawn from its copy - the game's %dx%d frame, its copy %dx%d in %d "
                  "levels, the quad %.0fx%.0f of the game's pixels (%s)",
-                 e.w, e.h, e.w * sf::kScale, e.h * sf::kScale, e.levels, x1 - x0, y1 - y0,
+                 e.w, e.h, e.copyW, e.copyH, e.levels, x1 - x0, y1 - y0,
                  setup.ui ? "with the interface" : "with the world");
     }
     return true;

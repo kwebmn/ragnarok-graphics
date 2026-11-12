@@ -87,7 +87,7 @@ TEST(sharp_frames_the_numbers_cells_go_with_the_oldest) {
     CHECK(!c.anyNumber());
 }
 
-TEST(sharp_frames_a_copy_four_times_larger_with_its_smaller_levels) {
+TEST(sharp_frames_a_copy_larger_with_its_smaller_levels) {
     // a digit's frame: 10 x 13, a white body in a black outline, transparent round it
     const int w = 10, h = 13;
     std::vector<uint32_t> argb(size_t(w) * h, 0x00000000u);
@@ -96,17 +96,22 @@ TEST(sharp_frames_a_copy_four_times_larger_with_its_smaller_levels) {
             const bool edge = x == 2 || x == 7 || y == 2 || y == 10;
             argb[size_t(y) * w + x] = edge ? 0xFF000000u : 0xFFFFFFFFu;
         }
+    // 3.0.18-beta.185: a small frame (a digit, on a 4K screen 12 times its size) xBR'd twice - 16 times its size
     const sharpframes::Copy c = sharpframes::makeCopy(argb.data(), w, h);
-    CHECK_EQ(c.width, 40);
-    CHECK_EQ(c.height, 52);
-    CHECK_EQ(int(c.levels.size()), 3);  // 4x, 2x and the game's own size: the card picks by how large it shows
-    CHECK_EQ(c.levels[0].size(), size_t(40 * 52));
-    CHECK_EQ(c.levels[1].size(), size_t(20 * 26));
-    CHECK_EQ(c.levels[2].size(), size_t(10 * 13));
-    CHECK_EQ(c.levels[0][0] >> 24, 0u);                    // the transparent corner stays so
-    CHECK_EQ(c.levels[0][size_t(24) * 40 + 20], 0xFFFFFFFFu);  // the body's middle: the game's white
-    CHECK_EQ(c.levels[2][size_t(6) * 10 + 5], 0xFFFFFFFFu);
-    CHECK_EQ(c.levels[2][0] >> 24, 0u);
+    CHECK_EQ(c.width, 160);
+    CHECK_EQ(c.height, 208);
+    CHECK_EQ(int(c.levels.size()), 5);  // 16x, 8x, 4x, 2x and the game's own size: the card picks by how large it shows
+    CHECK_EQ(c.levels[0].size(), size_t(160 * 208));
+    CHECK_EQ(c.levels[2].size(), size_t(40 * 52));
+    CHECK_EQ(c.levels[4].size(), size_t(10 * 13));
+    CHECK_EQ(c.levels[0][0] >> 24, 0u);                         // the transparent corner stays so
+    CHECK_EQ(c.levels[0][size_t(96) * 160 + 80], 0xFFFFFFFFu);  // the body's middle: the game's white
+    CHECK_EQ(c.levels[4][size_t(6) * 10 + 5], 0xFFFFFFFFu);
+    CHECK_EQ(c.levels[4][0] >> 24, 0u);
+    // a larger frame (Critical!!, the crit's star): four times, as before
+    std::vector<uint32_t> wide(size_t(70) * 60, 0xFFFFFFFFu);
+    const sharpframes::Copy big = sharpframes::makeCopy(wide.data(), 70, 60);
+    CHECK(big.width == 280 && big.height == 240 && big.levels.size() == 3);
     // an empty or too large frame: no copy
     CHECK(sharpframes::makeCopy(argb.data(), 0, 13).levels.empty());
     CHECK(sharpframes::makeCopy(argb.data(), 2000, 13).levels.empty());

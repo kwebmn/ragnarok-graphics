@@ -15,9 +15,12 @@ namespace uagfx::sharpframes {
 
 constexpr int kScale = 4;
 constexpr int kMostSide = 256;  // a frame larger than this is none of theirs
+// 3.0.18-beta.185: a frame this small at most (the digits, 6 x 11 to 10 x 13 - a 4K screen shows them 12 times their
+// size) xBR'd twice: 16 times; the larger ones (Miss, Critical!!, the star) 4 times
+constexpr int kSmallSide = 32;
 
-// The copy: kScale times the frame's size, then its halves down to the frame's own size - the card takes the level
-// that fits how large the game shows it. Empty levels: no copy (no size, or too large).
+// The copy: kScale times the frame's size (a small frame's kScale squared), then its halves down to the frame's own
+// size - the card takes the level that fits how large the game shows it. Empty levels: no copy (no size, too large).
 struct Copy {
     int width = 0, height = 0;  // of level 0
     std::vector<std::vector<uint32_t>> levels;
