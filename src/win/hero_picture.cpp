@@ -11,6 +11,7 @@
 #include "win/head_picture.hpp"
 #include "win/pack_frames.hpp"
 #include "core/weapon_look.hpp"
+#include "core/wings.hpp"
 
 namespace uagfx::win::heropicture {
 namespace {
@@ -162,7 +163,8 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
     int gears = 0;
     for (int i = 0; i < 3; ++i) {
         const int view = i == 0 ? l.low : i == 1 ? l.middle : l.top;
-        if (view <= 0 || view > kMostView) continue;
+        // 3.0.18-beta.233: the wings' items show no headgear of their own (core/wings)
+        if (view <= 0 || view > kMostView || uagfx::wings::lookOfView(view) != uagfx::wings::Look::None) continue;
         const std::string acc = nameAt(kAccessories, view);
         if (acc.empty()) continue;
         gear[i] = load("data\\sprite\\" + kAccessory + folder + "\\" + folder + acc);

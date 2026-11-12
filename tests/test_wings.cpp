@@ -207,3 +207,13 @@ TEST(wings_views_past_the_table) {
     CHECK(wings::pastTable(5, 0, 0));           // no table: nothing to name it by
     CHECK(wings::pastTable(5, first, first - 4));  // a broken one
 }
+
+// 3.0.18-beta.233 (the owner: «мне надо было именно эти большие крылья, которые со спины рисуются»): the nine items'
+// own headgear not drawn - the big wings alone; any view past the game's names neither (.231)
+TEST(wings_items_show_no_headgear) {
+    const uint32_t first = 0x1000, last = first + 4 * 327;
+    for (int v : {260, 233, 129, 221, 301, 300, 261, 325, 271}) CHECK(wings::noSprite(v, first, last));
+    CHECK(!wings::noSprite(38, first, last));   // Angel Wing: the game's own picture
+    CHECK(!wings::noSprite(0, first, last));    // none worn
+    CHECK(wings::noSprite(365, first, last));   // past the names
+}
