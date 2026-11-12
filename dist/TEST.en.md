@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.236 — what's new · 2026-11-13
+
+- Wings (R-4U3RD7): the .235 log showed where they stopped - the driver read the body's animation from the wrong file (.spr, not .act). Now the body's animation is found by its sprite's name, and the wings should show on the back.
+- To check: restart the game (it updates to .236), put on Angel Blessing (5207) - big wings on the back; if not, a new report (not a reply to the old one) with the «wings: …» lines in its log.
+
 # uaRO Graphics 3.0.18-beta.235 — what's new · 2026-11-13
 
 - The wings were not drawn (R-TT95RZ: Angel Blessing on, no wings): the game keeps a body sprite's name without «data\», and the driver did not know the body. Now the body is known by its folder however the name starts. The log has a line for each step («wings: the players' render runs…», «… waiting for its faces», «the first wings drawn…» or why not).
