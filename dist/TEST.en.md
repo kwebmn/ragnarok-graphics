@@ -1,3 +1,5 @@
+- The map loading bar is in the new look. It was the last old window of the game seen at every map change (in 57 of 70 reports): a yellow frame, a grey track and the per cent in the game's small font. Now a sharp bar in the interface's style stands at the same place under the loading picture, with the same per cent the game counts. The switch: Interface → "Windows in the new look" → "Map loading bar" (on with the new interface).
+
 - The NPC menu colours its options with the server's colours as the game's window does, instead of showing codes like "^FF3355" in the text (R-P7RFV2, Reset Girl: "^FF3355Reset Skills", "Reset Both^000000"). A colour begun in one option goes on in the next ones until another, as the game's list draws it.
 - A monster the game left standing 2 cells off its place on the server is put back on it (R-WKEDPY: a Minorous stood elsewhere for 8 s). With its target next to it, the server sends a "walk" from a cell to the same cell; the game makes no such walk, so it is now given as a stop on that cell. The log says "its walk of no length, a stop on".
 
