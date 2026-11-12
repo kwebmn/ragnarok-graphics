@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.18-beta.193 — what's new · 2026-11-12
+
+- A new first screen: the game's launcher. uaRO HD's art over the whole window (Prontera's fountain at dawn, by day, at sunset and in winter; the pictures change slowly while the window is in front and the game is not running), the big «PLAY» button, how the game looks over it, the version under it. On the left «What's new»: the update's card with its first points and the site's news. At the top: the server and the players online, the language.
+- «PLAY» says what it will do: «UPDATE · N MB» when a new version is out, «GAME RUNNING · + WINDOW» while the game runs (one more window). The «▾» beside it: «One more game window», «Safe start», «Play without the update». Enter is «PLAY».
+- All the settings are behind the «Settings» icon (every page, as before), back with «← To the game». Beside it: «Reports» (with the red count of new answers), «Site», «Forum».
+- A click on the version under the button: the channel «Release» / «Beta (testing)», «Check for updates», «Another version…». The safe mode, uaRO Graphics switched off and the way back after two failed starts show as a plate over the icons, with one button.
+- The settings' list has no «Play» page any more: «Graphics test», «Start the game at once» and the update channel are in «Service», «★ New features» and «Changed only» on «Main». The window's frame is dark.
+- «What's new» no longer opens by itself after an update: the «Updated to …» card tells it (a click shows its notes).
+
 # uaRO Graphics 3.0.18-beta.192 — what's new · 2026-11-12
 
 - «What's new» shows your version's changes again: since 3.0.18-beta.56 the betas' notes had no version headings and the button opened an empty window. Each beta now has its heading and date - the ground for the «Changelog» of the new first screen.
