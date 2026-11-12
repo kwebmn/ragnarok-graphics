@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.224 — what's new · 2026-11-12
+
+- «Навички» → «Дерево» (R-3ZE2X9: «the rogue's Plagiarism is not shown, the skills go past the list's frame»): the Rogue's tree is wider than the window and its right columns were drawn on past its edge - under the skill's side panel, without names. The tree is now cut at its edge, and the mouse wheel, when there is no room up and down, scrolls it sideways (as Shift did). Plagiarism is in the Rogue tree's sixth column; the client's English names call it «Intimidate» (the real Intimidate being «Snatch»).
+- «Речі» (R-5K5NRW: «says success but it is not put on»): after a double click on a thing, the green «вдягнуто» rose at once, before the server answered - even when the server refused (a level or a job short). The word now waits for the answer: green «вдягнуто» when the thing is on, red «не вдягнуто» when the server refused (why - the game's own chat line says).
+- To check: a Rogue → «Навички» → «Дерево» - the right skills stay out of the side panel, the wheel scrolls sideways to Plagiarism («Intimidate»); a double click on a thing that cannot be worn - red «не вдягнуто».
+
 # uaRO Graphics 3.0.18-beta.223 — what's new · 2026-11-12
 
 - A game that will not start (R-H42AS4, R-3PETVR: «the process is there, the game never starts»): such reports had no log at all - the game stopped before the graphics driver begins writing. The driver now watches the start from the very beginning: if the game has not come to its window in 25 seconds, it opens the log and writes where the game stands (a few times, by module), its command line, every module in the process (other programs that hook into the game show), the game's windows and a minidump for the report. An error box of the game's hidden behind other windows or off every screen is brought to the front, onto the main screen.
