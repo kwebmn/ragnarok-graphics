@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.221 — what's new · 2026-11-12
+
+- The character block (R-BN9TJA: «shrunk, its words get cut like a picture and lose readability»): its size in «Розміщення інтерфейсу» no longer scales a finished picture - the block is laid out anew at that size and its letters drawn at their own size, sharp small or big. The lengths inside it are in its own units now, the proportions as they were.
+- To check: «Розміщення інтерфейсу» (Ctrl+Shift+L) - make the character block smaller and bigger: the words sharp, nothing out of place; Alt+V (full / compact / folded) - all in place; the tips under the cursor - in their places.
+
 # uaRO Graphics 3.0.18-beta.220 — what's new · 2026-11-12
 
 - The sets in «Спорядження» (Alt+Q) made plain (the owner, R-76RF6H: «still did not understand how it works, make it plain»): in place of the numbers «1 2 3», a «Комплекти» block with a row for each set: its number, its things' icons and names (or «порожній») and buttons with words - «Надягти» (or «✓ Надіто» when it is on already), «Зберегти надіте» (keep in this row what is worn now) and «Очистити». The line over them says what came of it: kept (things: N), putting on…, worn, not in the bag - ….
