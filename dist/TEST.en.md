@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.198 — what's new · 2026-11-12
+
+- «Check the graphics card» in the «How the game looks» card no longer starts the game: the app asks Windows about the card itself (its name, its memory and, when the game already ran on it, how it drew it), puts in the picture and the textures for it at once and says what it found: «Checked: … - by its memory». For 5 s «Changed · Undo» takes it back. The «Graphics test» with the game stays in «Service».
+
 # uaRO Graphics 3.0.18-beta.197 — what's new · 2026-11-12
 
 - The first start of a freshly unpacked game: the card picked (or «Skip») is now remembered at once - before, until the game's first start, the cards could come back at every opening of the app.
