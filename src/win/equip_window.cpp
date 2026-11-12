@@ -149,6 +149,8 @@ struct State {
     bool moving = false;
     float grabX = 0, grabY = 0;
     int told = 0, pressesTold = 0;
+    std::string wornSaid;  // 3.0.18-beta.216 (R-RASZHM): the slots' things last told
+    int wornTold = 0;
 };
 
 State& state() {
@@ -348,6 +350,24 @@ void readData(State& s) {
     }
 }
 
+// 3.0.18-beta.216 (R-RASZHM «одел шмотку 15001 и она кудато пропала»: the log told «3 thing(s) worn», not which and
+// where): each slot's thing told when the window opens and whenever what is worn changes
+void tellWorn(State& s) {
+    static constexpr const char* kSlotNames[ew::kSlots] = {
+        "the middle head", "the low head", "the armour", "the garment", "the left accessory", "the top head",
+        "the weapon",      "the shield",   "the shoes",  "the right accessory", "the ammo"};
+    std::string said;
+    for (int i = 0; i < ew::kSlots; ++i) {
+        const ew::Worn& w = s.data.slots[i];
+        if (w.index <= 0 || w.spill) continue;
+        said += (said.empty() ? "" : ", ") + std::string(kSlotNames[i]) + " #" + std::to_string(w.id) + ' ' + w.name;
+    }
+    if (said.empty()) said = "nothing";
+    const bool changed = said != s.wornSaid;
+    s.wornSaid = said;
+    if (changed && s.wornTold++ < 40) LOG_INFO("equip: worn - %s", said.c_str());
+}
+
 void readPicks(State& s, int slot) {  // what of the bag fits the slot: identified, not worn
     s.data.picks.clear();
     s.pickBag.clear();
@@ -415,6 +435,7 @@ void hide(State& s) {
     s.press = windrag::Press{};
     s.shown = false;
     s.moving = false;
+    s.wornSaid.clear();  // 3.0.18-beta.216: told again at the next opening
     s.show.picking = false;
 }
 
@@ -643,6 +664,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         s.readAt = now;
         readData(s);
         if (s.show.picking) readPicks(s, s.show.pickSlot);
+        tellWorn(s);
     }
     const uapad::runtime::Look pad = uapad::runtime::navLook();  // .210: keys too
     s.show.pad = pad.shown;

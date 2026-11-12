@@ -111,6 +111,7 @@ struct State {
     bool sheetShown = false;
     bool on = false, shown = false, moved = false, forced = false, oldTold = false, folded = false;
     bool inputTold = false, swallowTab = false;
+    bool widthTold = false;  // 3.0.18-beta.216 (R-JPMWSD): the input's two widths told once
     unsigned swallowChar = 0;
     int pasteTold = 0;  // 3.0.18-beta.84: Ctrl+V/C/X's control character, not into the game's field
     bool searching = false;  // 3.0.11-beta.284 (the owner's feature 17): Ctrl+F in the field - its words the search's
@@ -239,8 +240,12 @@ cp::Texts texts() {
     return t;
 }
 
+// 3.0.18-beta.216 (R-JPMWSD «при переміщенні курсора він стає на букву, а не між буквами»): the words measured as
+// uaUI draws them - its faces letter by letter at RmlUi's whole-pixel size; GDI's whole line came out other than the
+// letters drawn and the caret stood in a letter. GDI's only while uaUI does not draw
 float measure(const std::string& utf8Text, float px, bool bold) {
-    return float(wordsWidth(utf8Wide(utf8Text), px, bold));
+    const float drawn = uaui::textWidth(utf8Text, px, bold);
+    return drawn >= 0 ? drawn : float(wordsWidth(utf8Wide(utf8Text), px, bold));
 }
 
 const char* sourceName(cp::Source s) {
@@ -483,6 +488,13 @@ void readInput(State& s) {
             s.inputTold = true;
             LOG_INFO("chat: the game's input read - %zu bytes, its caret at %u (+0x48 %u)", raw.size(), caret,
                      read32(words + 0x48));
+        }
+        const float px = 12 * s.layout.s, drawn = raw.size() >= 6 ? uaui::textWidth(in.text, px, false) : -1;
+        if (drawn >= 0 && !s.widthTold) {  // 3.0.18-beta.216 (R-JPMWSD): what the caret stood off by (no words told)
+            s.widthTold = true;
+            LOG_INFO("chat: the input's %zu bytes %.0f px wide as uaUI draws them, %d px as GDI's whole line - the "
+                     "caret by uaUI's",
+                     raw.size(), double(drawn), wordsWidth(utf8Wide(in.text), px, false));
         }
     }
     if (const uint32_t name = nameEdit()) {
