@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.227 — what's new · 2026-11-12
+
+- «Спорядження» (Alt+Q): the character's head is over the body again - the body's neck no longer covers the mouth (R-UC9NT7). Every job had it since beta .126: the job's .imf layer order was read the other way round. Now the order is the game world's; in the frames where the game puts the body over the head, the low headgear goes under the body too, as in the game.
+- To check: Alt+Q - the face shows whole (novice, rogue, priestess); turn the character to all 8 sides - the head and the headgear in place, as in the game world.
+
 # uaRO Graphics 3.0.18-beta.226 — what's new · 2026-11-12
 
 - The menu (Esc): a new row «Змінити акаунт» on its very top. The game opens the character select and the driver presses its «Назад» at once - you are on the login screen, where another account can be picked. «Вибір персонажа» stays where it was.
