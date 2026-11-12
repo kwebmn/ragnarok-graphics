@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.222 — what's new · 2026-11-12
+
+- Sharp words at any size - now everywhere (the owner: «делай»; as R-BN9TJA's character block in 3.0.18-beta.221): the target card and the party panel (their size in «Розміщення інтерфейсу») and the windows sized by their corner (NPC talk, messages and questions, character making, whispers, the shop windows, chat rooms, cards - ~20 windows) no longer shrink a finished picture. Each is laid out anew at its size and its letters drawn at their own size - sharp small or big. For it the interface library (RmlUi) got a document's own scale.
+- The target card stays in the middle when resized (it slid a little), and its showing/hiding slides smoothly again.
+- To check: «Розміщення інтерфейсу» - make the target card and the party panel smaller: the words sharp; pull an NPC talk or a message window by its corner - smaller and bigger, the words sharp, the buttons pressed, the focus ring (keys/pad) in its place; character making made smaller by its corner - the face shrinks with the window.
+
 # uaRO Graphics 3.0.18-beta.221 — what's new · 2026-11-12
 
 - The character block (R-BN9TJA: «shrunk, its words get cut like a picture and lose readability»): its size in «Розміщення інтерфейсу» no longer scales a finished picture - the block is laid out anew at that size and its letters drawn at their own size, sharp small or big. The lengths inside it are in its own units now, the proportions as they were.
