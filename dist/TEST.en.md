@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.212 — what's new · 2026-11-12
+
+- Keyboard, fixes after the review: the arrows do not walk the character while the caret is in another of the game's fields (a count, a name) - they move the caret there; a key's action pressed while an NPC dialog or a menu is open no longer fires later, when the window closes.
+
 # uaRO Graphics 3.0.18-beta.211 — what's new · 2026-11-12
 
 - Character select from the keyboard: after an arrow, ←/→ go through the characters, Enter plays, Space makes one, Esc goes back, PgUp / PgDn the pages (as in the windows).
