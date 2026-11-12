@@ -282,6 +282,16 @@ int imfPriority(const Imf& imf, size_t layer, size_t action, size_t frame) {
     return imf.priority[layer][action][frame];
 }
 
+bool bodyOverHead(const Imf& imf, size_t action, size_t frame) {  // 3.0.18-beta.227
+    return imfPriority(imf, 0, action, frame) == 0 && imfPriority(imf, 1, action, frame) == 1;
+}
+
+std::vector<HeroLayer> heroLayers(bool bodyOver) {
+    using L = HeroLayer;
+    if (bodyOver) return {L::Cart, L::Head, L::Low, L::Body, L::Middle, L::Top, L::Weapon, L::Shield, L::Falcon};
+    return {L::Cart, L::Body, L::Head, L::Low, L::Middle, L::Top, L::Weapon, L::Shield, L::Falcon};
+}
+
 bool frameImage(const Sprite& s, const Act& a, size_t action, size_t frame, Image& out) {
     return frameImageScaled(s, a, action, frame, 1, nullptr, out);
 }

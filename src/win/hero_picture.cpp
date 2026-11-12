@@ -158,13 +158,15 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
         head.ok = headpicture::headFiles(sex, l.head, l.colour, head.spr, act) &&
                   spritefile::readSpr(head.spr, head.sprite) && spritefile::readAct(act, head.act);
     }
-    std::vector<Loaded> gear;  // the low, the middle, the top headgear (the game's order over the head)
-    for (const int view : {l.low, l.middle, l.top}) {
+    Loaded gear[3];  // the low, the middle, the top headgear (the game's order over the head)
+    int gears = 0;
+    for (int i = 0; i < 3; ++i) {
+        const int view = i == 0 ? l.low : i == 1 ? l.middle : l.top;
         if (view <= 0 || view > kMostView) continue;
         const std::string acc = nameAt(kAccessories, view);
         if (acc.empty()) continue;
-        Loaded g = load("data\\sprite\\" + kAccessory + folder + "\\" + folder + acc);
-        if (g.ok) gear.push_back(std::move(g));
+        gear[i] = load("data\\sprite\\" + kAccessory + folder + "\\" + folder + acc);
+        if (gear[i].ok) ++gears;
     }
     // the cart behind (0x08 the first, 0x80 0x100 0x200 0x400 the others), the falcon over (0x10)
     Loaded cart, falcon;
@@ -184,6 +186,7 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
         if (p->big.factor) factor = p->big.factor, ++bigParts;
     }
     for (Loaded& g : gear) {
+        if (!g.ok) continue;
         g.big = packframes::of(g.spr, g.sprite, packframes::usedBy(g.sprite, g.act, size_t(dir), 0), factor);
         if (g.big.factor) factor = g.big.factor, ++bigParts;
     }
@@ -216,34 +219,48 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
         p->big = packframes::of(p->spr, p->sprite, packframes::usedBy(p->sprite, p->act, size_t(dir), 0), factor);
         if (p->big.factor) factor = p->big.factor, ++bigParts;
     }
-    std::vector<spritefile::Part> parts;  // under to over: the cart, the body, the head, its headgear, the falcon
-    if (cart.ok) parts.push_back({&cart.sprite, &cart.act, size_t(dir), 0, false, 0, 0, false, from4(cart)});
-    bool bodyOver = false;  // 3.0.18-beta.126: the job's .imf - the body over the head in this frame
+    // 3.0.18-beta.126: the job's .imf - the body over the head in this frame; .227 (R-UC9NT7): as the world reads it
+    // (the body's priority 0, the head's 1 - .126 had it the other way: the body's neck over the mouth)
+    bool bodyOver = false;
     {
         const std::string imfName = nameAt(kImfs, shownJob(l.job, l.options));
         std::string bytes;
         spritefile::Imf imf;
         if (!imfName.empty() && headpicture::readFile("data\\imf\\" + imfName + ending + ".imf", bytes) &&
             spritefile::readImf(bytes, imf))
-            bodyOver = spritefile::imfPriority(imf, 0, size_t(dir), 0) >
-                       spritefile::imfPriority(imf, 1, size_t(dir), 0);
+            bodyOver = spritefile::bodyOverHead(imf, size_t(dir), 0);
     }
-    const spritefile::Part bodyPart{&body.sprite, &body.act, size_t(dir), 0, false, 0, 0, true, from4(body)};
-    if (!bodyOver) parts.push_back(bodyPart);
-    if (head.ok) parts.push_back({&head.sprite, &head.act, size_t(dir), 0, true, 0, 0, false, from4(head)});
-    if (bodyOver) parts.push_back(bodyPart);
-    for (const Loaded& g : gear) parts.push_back({&g.sprite, &g.act, size_t(dir), 0, true, 0, 0, false, from4(g)});
-    // 3.0.18-beta.129: the weapon and the shield where the body stands (their frames share its origin), over it
-    if (weapon.ok) parts.push_back({&weapon.sprite, &weapon.act, size_t(dir), 0, false, 0, 0, false, from4(weapon)});
-    if (shield.ok) parts.push_back({&shield.sprite, &shield.act, size_t(dir), 0, false, 0, 0, false, from4(shield)});
-    if (falcon.ok) {  // perched: its feet (its frame's foot, 22 under its origin) on the shoulder beside the neck
-        int nx = 0, ny = -70;
-        const auto& frames = body.act.actions;
-        if (size_t(dir) < frames.size() && !frames[size_t(dir)].empty() && !frames[size_t(dir)][0].anchors.empty())
-            nx = frames[size_t(dir)][0].anchors[0].first, ny = frames[size_t(dir)][0].anchors[0].second;
-        const int side = dir == 2 || dir == 6 ? 0 : dir >= 3 && dir <= 5 ? -12 : 12;  // the right shoulder
-        parts.push_back(
-            {&falcon.sprite, &falcon.act, size_t(dir), 0, false, nx + side, ny + 6 - 22, false, from4(falcon)});
+    std::vector<spritefile::Part> parts;  // under to over: spritefile::heroLayers
+    const auto put = [&](const Loaded& p, bool head) {
+        if (p.ok) parts.push_back({&p.sprite, &p.act, size_t(dir), 0, head, 0, 0, false, from4(p)});
+    };
+    for (const spritefile::HeroLayer layer : spritefile::heroLayers(bodyOver)) {
+        using L = spritefile::HeroLayer;
+        switch (layer) {
+            case L::Cart: put(cart, false); break;
+            case L::Body:
+                parts.push_back({&body.sprite, &body.act, size_t(dir), 0, false, 0, 0, true, from4(body)});
+                break;
+            case L::Head: put(head, true); break;
+            case L::Low: put(gear[0], true); break;
+            case L::Middle: put(gear[1], true); break;
+            case L::Top: put(gear[2], true); break;
+            // 3.0.18-beta.129: the weapon and the shield where the body stands (their frames share its origin)
+            case L::Weapon: put(weapon, false); break;
+            case L::Shield: put(shield, false); break;
+            case L::Falcon:
+                if (falcon.ok) {  // perched: its feet (its frame's foot, 22 under its origin) on the shoulder
+                    int nx = 0, ny = -70;
+                    const auto& frames = body.act.actions;
+                    if (size_t(dir) < frames.size() && !frames[size_t(dir)].empty() &&
+                        !frames[size_t(dir)][0].anchors.empty())
+                        nx = frames[size_t(dir)][0].anchors[0].first, ny = frames[size_t(dir)][0].anchors[0].second;
+                    const int side = dir == 2 || dir == 6 ? 0 : dir >= 3 && dir <= 5 ? -12 : 12;  // the right one
+                    parts.push_back({&falcon.sprite, &falcon.act, size_t(dir), 0, false, nx + side, ny + 6 - 22,
+                                     false, from4(falcon)});
+                }
+                break;
+        }
     }
     spritefile::Image im;
     int footX = 0, footY = 0;
@@ -275,7 +292,7 @@ bool make(const Looks& l, int direction, int w, int h, panel::Picture& out, std:
     if (from)
         *from = bodyBase + (l.cloth > 0 ? " dyed " + std::to_string(l.cloth) : "") +
                 (bodyOver ? " (over the head)" : "") +
-                (head.ok ? " + head" : "") + " + " + std::to_string(gear.size()) + " headgear(s)" +
+                (head.ok ? " + head" : "") + " + " + std::to_string(gears) + " headgear(s)" +
                 (cart.ok ? " + cart" : "") + (falcon.ok ? " + falcon" : "") +
                 (weapon.ok  ? " + weapon " + std::to_string(l.weapon)
                  : l.weapon ? " (weapon " + std::to_string(l.weapon) + " not found)"

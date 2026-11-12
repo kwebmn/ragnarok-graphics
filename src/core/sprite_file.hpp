@@ -62,12 +62,19 @@ bool compose(const std::vector<Part>& parts, Image& out, int& footX, int& footY,
 bool frameImageScaled(const Sprite& s, const Act& a, size_t action, size_t frame, int factor,
                       const std::function<const Image*(int index)>& bigger, Image& out);
 // 3.0.18-beta.126: a job's .imf (data\imf\<job><ending>.imf, FUN_0062e920) - each layer's (0 the body, 1 the head)
-// actions' frames' priority (the higher drawn over the other)
+// actions' frames' priority: the world (FUN_005ae540) draws the layer of priority 1 first, the one of 0 over it
 struct Imf {
     std::vector<std::vector<std::vector<int>>> priority;  // [layer][action][frame]
 };
 bool readImf(const std::string& bytes, Imf& out);
 int imfPriority(const Imf& imf, size_t layer, size_t action, size_t frame);  // -1 none
+// 3.0.18-beta.227 (R-UC9NT7): the body over the head in this frame - its priority 0, the head's 1 (the usual: the body
+// 1, the head 0 - the head over it); no .imf or no such frame: the usual
+bool bodyOverHead(const Imf& imf, size_t action, size_t frame);
+// .227: the character's parts under to over (win/hero_picture) - with the body over the head the low headgear between
+// them, as the world draws it (FUN_005ae540: the body's turn given to layer 2, the body drawn in its place)
+enum class HeroLayer : uint8_t { Cart, Body, Head, Low, Middle, Top, Weapon, Shield, Falcon };
+std::vector<HeroLayer> heroLayers(bool bodyOver);
 // A picture fitted into a w x h box (premultiplied ARGB, see-through around it): small ones grown by whole steps (the
 // pixels kept sharp, at most `most` times), big ones shrunk smoothly
 Image fitted(const Image& in, int w, int h, int most = 3);

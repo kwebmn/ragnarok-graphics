@@ -246,9 +246,8 @@ TEST(sprite_file_cut_to_what_shows) {
     CHECK_EQ(spritefile::cutToShown(spritefile::Image{}, 8).w, 0);
 }
 
-// 3.0.18-beta.126 (item 3: «Спорядження»'s character as uaRO.exe FUN_0046fd40 draws it): a job's .imf
-// (data\imf\, FUN_0062e920 "%s%s.imf") - version 1.01, a checksum, the last layer's number, each layer's actions'
-// frames' priority and a point; the body over the head where its priority is the higher (the priestess's veil)
+// 3.0.18-beta.126 (item 3: «Спорядження»'s character): a job's .imf (data\imf\, FUN_0062e920 "%s%s.imf") - version
+// 1.01, a checksum, the last layer's number, each layer's actions' frames' priority and a point
 TEST(sprite_file_imf_priorities) {
     std::string b;
     const auto u32 = [&](uint32_t v) { for (int i = 0; i < 4; ++i) b.push_back(char(v >> (8 * i))); };
@@ -274,4 +273,30 @@ TEST(sprite_file_imf_priorities) {
     CHECK_EQ(spritefile::imfPriority(imf, 0, 0, 0), 0);
     CHECK_EQ(spritefile::imfPriority(imf, 0, 5, 0), -1);  // past its actions: none
     CHECK(!spritefile::readImf("xx", imf));
+}
+
+// 3.0.18-beta.227 (R-UC9NT7 «тіло "пустою шиєю" перекриває "рот" персонажа», the novice, the rogue): the world
+// (uaRO.exe FUN_005ae540) draws the layer of priority 1 first and the one of 0 over it (FUN_0042e430 finds the layer by
+// its priority) - the usual standing frame (the body 1, the head 0) has the head over the body; .126 had it the other
+// way round
+TEST(sprite_file_imf_body_over_head) {
+    spritefile::Imf imf;
+    imf.priority = {{{1}, {0}}, {{0}, {1}}};  // [layer][action][frame]: action 0 the usual, action 1 the body over
+    CHECK(!spritefile::bodyOverHead(imf, 0, 0));
+    CHECK(spritefile::bodyOverHead(imf, 1, 0));
+    CHECK(!spritefile::bodyOverHead(imf, 2, 0));  // no such action: the usual order
+    CHECK(!spritefile::bodyOverHead(spritefile::Imf{}, 0, 0));  // no .imf
+    spritefile::Imf same;
+    same.priority = {{{0}}, {{0}}};
+    CHECK(!spritefile::bodyOverHead(same, 0, 0));
+}
+
+// .227: the order of the character's parts under to over - with the body over the head the low headgear goes between
+// them, as the world does it (the body's turn given to layer 2, the body drawn in its place)
+TEST(sprite_file_hero_layers) {
+    using L = spritefile::HeroLayer;
+    CHECK(spritefile::heroLayers(false) ==
+          (std::vector<L>{L::Cart, L::Body, L::Head, L::Low, L::Middle, L::Top, L::Weapon, L::Shield, L::Falcon}));
+    CHECK(spritefile::heroLayers(true) ==
+          (std::vector<L>{L::Cart, L::Head, L::Low, L::Body, L::Middle, L::Top, L::Weapon, L::Shield, L::Falcon}));
 }
