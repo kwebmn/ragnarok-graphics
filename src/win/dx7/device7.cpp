@@ -25,7 +25,6 @@
 #include "win/net_predict.hpp"
 #include "win/net_smooth.hpp"
 #include "win/paths.hpp"
-#include "core/sharp_specks.hpp"
 #include "win/sharp_frames.hpp"
 #include "win/sharp_specks.hpp"
 #include "win/skill_delay_watch.hpp"
@@ -299,19 +298,17 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     DrawCmd cmd;
     // 0.28: the renderer learns what effect a draw is of (the fireflies are drawn anew). 3.0.18-beta.181: found first
     const effect_exe::Tag tag = win::drawnEffect(vertices);
-    // 3.0.18-beta.181: [effects] crisp_storm_gust - Storm Gust's texture looked at before it goes up (its texels then
-    // as the game last wrote them): a sheet of its snow gets a copy at real resolution (win/sharp_specks).
-    // 3.0.18-beta.182: in the mages' new look too (core/sharp_specks stormSnowSharp)
+    // 3.0.18-beta.181 (Storm Gust), .184 (every skill: EffectSettings::sharpSpecks, any skills' look but the
+    // original): a skill's texture looked at before it goes up (its texels then as the game last wrote them) - a sheet
+    // of specks (the snow, the sparkles) gets a copy at real resolution (win/sharp_specks)
     const EffectSettings& look0 = c.effects();
-    const bool crispStorm = tag.kind == effect_exe::Kind::Skill && tag.id == win::sharpspecks::kStormGust &&
-                            textures_[0] && c.enhanced() &&
-                            ::uagfx::sharpspecks::stormSnowSharp(look0.crispStormGust, look0.mageEffects,
-                                                                 look0.mageWater);
-    if (crispStorm) {
+    const bool sharpSpecks = tag.kind == effect_exe::Kind::Skill && textures_[0] && c.enhanced() &&
+                             look0.sharpSpecks && !textures_[0]->spriteCache();  // the sprites' cells: as they are
+    if (sharpSpecks) {
         Surface7* t = textures_[0];
         if (win::sharpspecks::wanted(t->gpuTexture(), t->topDirty()) && t->topArgb(specks_) &&
             specks_.size() == size_t(t->width()) * size_t(t->height()))
-            win::sharpspecks::note(t->gpuTexture(), specks_.data(), t->width(), t->height());
+            win::sharpspecks::note(t->gpuTexture(), specks_.data(), t->width(), t->height(), unsigned(tag.id));
     }
     bool hasTexture[2] = {false, false};
     for (int i = 0; i < 2; ++i) {
@@ -363,8 +360,11 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         if (const sprite_cells::Cell* n = textures_[0]->spriteNumberAt((u0 + u1) / 2, (v0 + v1) / 2, texW, texH))
             win::sharpframes::swap(*n, texW, texH, cmd, setup, vertices, vertexCount, fvf, sharp_);
     }
-    if (crispStorm && !setup.ui)  // 3.0.18-beta.181: its snow from its copy (.182: in either look)
-        win::sharpspecks::swap(cmd, setup, look0.crispStormGust ? "the game's look" : "the mages' look");
+    if (sharpSpecks && !setup.ui)  // 3.0.18-beta.181: its specks from their copy (.184: every skill, every look)
+        win::sharpspecks::swap(cmd, setup,
+                               look0.skillLooks == kSkillImproved ? "improved original"
+                               : look0.skillLooks == kSkillSoft   ? "redrawn, soft"
+                                                                  : "redrawn");
     cmd.state = c.record.addState(setup);
     cmd.primitive = uint32_t(type);
     cmd.fvf = fvf;
@@ -410,8 +410,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     const magelook::Element element = look.tone;
     const bool branchOn = [&] {
         switch (look.branch) {
-            case magelook::Branch::Mage:  // 3.0.18-beta.181: Storm Gust as the game's with crisp_storm_gust
-                if (fx.crispStormGust && tag.id == win::sharpspecks::kStormGust) return false;
+            case magelook::Branch::Mage:
                 return fx.mageEffects && (element == magelook::Element::Fire    ? fx.mageFire
                                           : element == magelook::Element::Water ? fx.mageWater
                                           : element == magelook::Element::Wind  ? fx.mageWind

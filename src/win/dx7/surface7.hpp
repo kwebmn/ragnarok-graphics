@@ -70,6 +70,8 @@ public:
     // the cache's size in texels with it; nullptr otherwise. anySpriteNumber: whether any cell does (a draw's check)
     const sprite_cells::Cell* spriteNumberAt(float u, float v, int& width, int& height) const;
     bool anySpriteNumber() const { return top()->cells_.anyNumber(); }
+    // 3.0.18-beta.184: a sprite cache (cells written in it) - never a skill's sheet of specks (win/sharp_specks)
+    bool spriteCache() const { return top()->cells_.size() > 0; }
     // 2.5.18: what CTexture::Update just wrote into this texture (win/texture_hook.hpp) as its picture had it - w x h
     // texels at (x, y), pitch in texels - kept to go up in full colour; false: not kept.
     bool fullColour(int x, int y, int w, int h, const uint32_t* picture, int pitch);

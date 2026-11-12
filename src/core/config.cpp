@@ -315,7 +315,7 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
         if (s.number && this->*s.number != o.*s.number) return false;
     }
     return nightNow == o.nightNow && dayNow == o.dayNow && hallucinatingNow == o.hallucinatingNow &&
-           clock == o.clock && season == o.season && skillLooks == o.skillLooks &&
+           clock == o.clock && season == o.season && skillLooks == o.skillLooks && sharpSpecks == o.sharpSpecks &&
            weatherKind == o.weatherKind && tier == o.tier && preset == o.preset && grassThin == o.grassThin &&
            std::equal(groups, groups + kEffectGroups, o.groups) &&
            std::equal(groupStrength, groupStrength + kEffectGroups, o.groupStrength) &&

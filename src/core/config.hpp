@@ -231,6 +231,10 @@ struct EffectSettings {
     // the groups leave on (effect_groups::looksStyled): the game's own, the game's made sharp (Storm Gust's snow so
     // far), redrawn (the classes' new looks), redrawn soft (mage_soft). The player's own, as the clock is.
     int skillLooks = 2;  // SkillLooks
+    // 3.0.18-beta.184 (the owner: «сделай все без остановки»): every skill's sheets of specks (the snow, the sparkles)
+    // drawn anew at real resolution (core/sharp_specks) - made by looksStyled: any look but the original, while the
+    // set and the groups leave the skills' looks on. The driver's own, no file's.
+    bool sharpSpecks = false;
     // 3.0.15-beta.12 (the owner: «делай еффекты по всем остальным персонажам»): every other class's skills likewise
     // (core/mage_looks.hpp lookOf), a switch a branch, off as new looks are
     bool swordEffects = false, acolyteEffects = false, archerEffects = false, thiefEffects = false;

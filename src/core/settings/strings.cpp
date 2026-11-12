@@ -1082,15 +1082,15 @@ constexpr Entry kTexts[] = {
     // 3.0.18-beta.183: every class's skills, one choice
     {Text::FxSkillLooks, "Skills' look", "Вигляд умінь", "Вид умений"},
     {Text::FxSkillLooksHint,
-     "Every class's skills: as the game draws them; the game's own made sharp (Storm Gust's snowflakes at the "
-     "screen's resolution so far, more skills to come); redrawn in the classes' new looks; or redrawn and soft - the "
-     "game's own light, tinted.",
-     "Уміння всіх професій: як їх малює гра; власний вигляд гри, тільки чіткий (поки що сніжинки Storm Gust у "
-     "роздільності екрана, далі інші вміння); перемальовані в новому вигляді професій; або перемальовані й м'які — "
-     "власне світло гри, підфарбоване.",
-     "Умения всех профессий: как их рисует игра; собственный вид игры, только чёткий (пока снежинки Storm Gust в "
-     "разрешении экрана, дальше другие умения); перерисованные в новом виде профессий; или перерисованные и мягкие "
-     "— собственный свет игры, подкрашенный."},
+     "Every class's skills: as the game draws them; the game's own made sharp (the skills' snowflakes and sparkles "
+     "drawn anew at the screen's resolution); redrawn in the classes' new looks; or redrawn and soft - the game's own "
+     "light, tinted. The sparkles are sharp in the redrawn looks too.",
+     "Уміння всіх професій: як їх малює гра; власний вигляд гри, тільки чіткий (сніжинки й іскри вмінь намальовано "
+     "заново в роздільності екрана); перемальовані в новому вигляді професій; або перемальовані й м'які — власне "
+     "світло гри, підфарбоване. Іскри чіткі й у перемальованих.",
+     "Умения всех профессий: как их рисует игра; собственный вид игры, только чёткий (снежинки и искры умений "
+     "нарисованы заново в разрешении экрана); перерисованные в новом виде профессий; или перерисованные и мягкие — "
+     "собственный свет игры, подкрашенный. Искры чёткие и в перерисованных."},
     {Text::FxSkillLooksOriginal, "Original", "Оригінал", "Оригинал"},
     {Text::FxSkillLooksImproved, "Improved original", "Покращений оригінал", "Улучшенный оригинал"},
     {Text::FxSkillLooksRedrawn, "Redrawn", "Перемальовані", "Перерисованные"},

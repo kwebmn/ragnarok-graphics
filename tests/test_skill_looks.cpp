@@ -48,7 +48,20 @@ TEST(skill_looks_over_the_classes_looks) {
     CHECK(o.mageEffects && o.monsterEffects && o.mageSoft && !o.crispStormGust);
     EffectSettings none;  // the set or the group «Уміння» off: nothing to make sharp either
     none.skillLooks = kSkillImproved;
-    CHECK(!effect_groups::looksStyled(none).crispStormGust);
+    CHECK(!effect_groups::looksStyled(none).crispStormGust && !effect_groups::looksStyled(none).sharpSpecks);
+}
+
+// 3.0.18-beta.184 (the owner: «давай без этого всего, сделай все без остановки»): every skill's sheets of specks drawn
+// anew at real resolution (the snow, the sparkles) in every look but the original, while the skills show anew at all
+TEST(skill_looks_every_skills_specks_sharp) {
+    EffectSettings e;
+    e.swordEffects = true;  // a set leaves a class's look on
+    for (int look : {kSkillImproved, kSkillRedrawn, kSkillSoft}) {
+        e.skillLooks = look;
+        CHECK(effect_groups::looksStyled(e).sharpSpecks);
+    }
+    e.skillLooks = kSkillOriginal;
+    CHECK(!effect_groups::looksStyled(e).sharpSpecks);
 }
 
 TEST(skill_looks_one_row_the_classes_boxes_out_of_sight) {

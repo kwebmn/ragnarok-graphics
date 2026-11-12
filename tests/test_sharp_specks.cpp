@@ -101,16 +101,6 @@ TEST(sharp_specks_redrawn_with_as_much_light_and_a_sharp_edge) {
     CHECK(middle > 200 && first > 20 && half >= first && half - first <= 2);
 }
 
-// 3.0.18-beta.182 (the owner: «нравится и тот и тот»): the sharp snow in both of Storm Gust's looks - the game's
-// (crisp_storm_gust) and the mages' new one (mage_effects with its water); neither on: the game's own snow
-TEST(sharp_specks_storm_gust_snow_sharp_in_both_looks) {
-    CHECK(sharpspecks::stormSnowSharp(true, false, false));
-    CHECK(sharpspecks::stormSnowSharp(false, true, true));
-    CHECK(sharpspecks::stormSnowSharp(true, true, true));
-    CHECK(!sharpspecks::stormSnowSharp(false, true, false));  // the mages' look without its water skills
-    CHECK(!sharpspecks::stormSnowSharp(false, false, true));
-}
-
 TEST(sharp_specks_copy_and_its_levels) {
     const std::vector<uint32_t> snow = sheet(64, 64, grid(64, 64, 14), 1.6f, 0.95f);
     const sharpspecks::Copy c = sharpspecks::makeCopy(snow.data(), 64, 64);

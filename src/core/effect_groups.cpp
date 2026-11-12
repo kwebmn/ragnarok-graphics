@@ -283,6 +283,9 @@ EffectSettings looksStyled(EffectSettings e) {
     bool* const looks[] = {&e.mageEffects,  &e.swordEffects, &e.acolyteEffects, &e.archerEffects, &e.thiefEffects,
                            &e.merchantEffects, &e.otherEffects, &e.hitEffects,     &e.itemEffects,   &e.statusEffects,
                            &e.travelEffects,  &e.monsterEffects};
+    bool any = false;
+    for (bool* b : looks) any = any || *b;
+    e.sharpSpecks = any && e.skillLooks != kSkillOriginal;  // 3.0.18-beta.184: every skill's specks
     e.crispStormGust = false;
     e.mageSoft = false;
     switch (e.skillLooks) {
