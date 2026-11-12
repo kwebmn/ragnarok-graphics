@@ -80,6 +80,9 @@ constexpr const char* kEffectCapture = "uaro-graphics\\logs\\uaro-effects.txt";
 // reports the site did not take yet (queued-*.json, sent at the app's next start)
 constexpr const char* kReports = "uaro-graphics\\reports";
 constexpr const char* kComputerKey = "uaro-graphics\\reports\\computer.txt";
+// 3.0.18-beta.189: a report's check shots (core/report_checks) - the driver writes them after the report's picture,
+// the app sends them with it; the last report's go when the next one starts
+constexpr const char* kReportChecks = "uaro-graphics\\reports\\checks";
 // 3.0.9-beta.4: the developer's answers not seen yet, as the game's watcher last heard them (core/report_answers) -
 // the driver shows them in the game
 constexpr const char* kAnswers = "uaro-graphics\\reports\\answers.json";

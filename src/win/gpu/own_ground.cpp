@@ -306,6 +306,16 @@ bool Renderer::Impl::drawOwnGround() {
     bool meanMoved = false;
     o.shading.takeChanged(o.changed, meanMoved);
     o.cornersChanged += o.changed.size();  // 3.0.4-beta.15: for the log
+    // 3.0.18-beta.189 (R-VHMGXR «словил глюк с берсрком»: the ground and the walls washed pink-white, the models not):
+    // the game's corners' mean when it jumps - the light the game gives its ground taken from it - at most 20 a map
+    if (const uint32_t mean = o.shading.meanColour(); o.meanTold == 0) {
+        o.meanTold = mean;
+    } else if (own_ground::channelsApart(mean, o.meanTold) > 24 && o.meanJumpsTold < 20) {
+        ++o.meanJumpsTold;
+        LOG_INFO("own ground: %s - the game's corners' mean #%08X, #%08X before (%zu corners given another colour now)",
+                 g->map.c_str(), mean, o.meanTold, o.changed.size());
+        o.meanTold = mean;
+    }
     if (meanMoved) {
         for (std::vector<uint8_t>& f : o.fresh) std::fill(f.begin(), f.end(), uint8_t(0));
     } else {
@@ -645,11 +655,14 @@ bool Renderer::Impl::drawOwnGround() {
     }
     // 3.0.4-beta.27: a minute's worth - how much was drawn again as it was, and why it was made anew
     if (o.minuteFrames >= 3600) {
+        // 3.0.18-beta.189: and the corners' mean, the fog's alpha 100 and 1000 units away and the state's ops now
         LOG_INFO("own ground: %s - the last %u pictures: %.0f %% drawn again as they were; made anew for the camera "
                  "%u, the ground's colours %u, their mean %u, the hills' light %u, the fog %u, the state %u, the "
-                 "models' colours %u, the rest %u", g->map.c_str(), o.minuteFrames,
-                 100.0 * double(o.minuteReused) / double(o.minuteFrames), o.anew[0], o.anew[1], o.anew[2], o.anew[3],
-                 o.anew[4], o.anew[5], o.anew[6], o.anew[7]);
+                 "models' colours %u, the rest %u; now the corners' mean #%08X, the fog %u-%u, stage ops %u/%u",
+                 g->map.c_str(), o.minuteFrames, 100.0 * double(o.minuteReused) / double(o.minuteFrames), o.anew[0],
+                 o.anew[1], o.anew[2], o.anew[3], o.anew[4], o.anew[5], o.anew[6], o.anew[7], o.shading.meanColour(),
+                 o.shading.specularAt(100.0f) >> 24, o.shading.specularAt(1000.0f) >> 24, o.like.stage[0].colorOp,
+                 o.like.stage[1].colorOp);
         o.minuteFrames = o.minuteReused = 0;
         std::fill(o.anew, o.anew + 8, 0u);
     }

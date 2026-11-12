@@ -18,6 +18,7 @@
 #include "core/frame.hpp"
 #include "core/image.hpp"
 #include "core/pixel.hpp"
+#include "core/report_checks.hpp"
 #include "core/scale.hpp"
 #include "core/throttle.hpp"
 #include "core/toggle_key.hpp"
@@ -285,6 +286,11 @@ private:
     Console console_;               // 1.9.3: ~ - the effects' switches over the game
     std::string consoleOff_;        // the effect the console holds off, and the settings without it
     EffectSettings compareFx_;
+    // 3.0.18-beta.189 (R-VHMGXR): a report's check shots after its picture (core/report_checks) - each variant's
+    // effects made at its start from the ini as it is
+    reportchecks::Run reportChecks_;
+    std::vector<EffectSettings> checkFx_;
+    void startReportChecks(const std::string& shot);
     daylight::ServerClock serverClock_;  // 2.6.19: the Clock's «От сервера»
     Throttle scaleLog_{500};  // the scale line while the window is being resized (stage 3 review M7)
     SIZE lastOut_{};

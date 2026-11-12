@@ -22,6 +22,7 @@
 #include "core/scale.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/schema.hpp"
+#include "core/shot_spec.hpp"
 #include "core/texture_levels.hpp"
 #include "core/ui_motion.hpp"
 #include "core/ui_style.hpp"
@@ -833,6 +834,31 @@ void Context::behind() {
     answercard::behind(window);                            // 3.0.9-beta.4: a new answer told from behind
 }
 
+// 3.0.18-beta.189 (R-VHMGXR «словил глюк с берсрком»: the ground washed, the models not): a report's check shots -
+// each variant's effects from the ini as it is (as the console's Tab compares them), the last report's shots gone
+void Context::startReportChecks(const std::string& shot) {
+    std::string text;
+    readTextFile(ourFile(layout::File::Ini), text);
+    const EffectSettings file = parseConfig(text).effects;
+    checkFx_.clear();
+    for (const reportchecks::Variant& v : reportchecks::variants())
+        checkFx_.push_back(reportchecks::effectsOf(v, file, cardLevel()));
+    CreateDirectoryA(layout::join(gameDir(), layout::kReports).c_str(), nullptr);
+    const std::string folder = layout::join(gameDir(), layout::kReportChecks);
+    CreateDirectoryA(folder.c_str(), nullptr);
+    WIN32_FIND_DATAA f{};
+    const HANDLE h = FindFirstFileA((folder + "\\*.png").c_str(), &f);
+    if (h != INVALID_HANDLE_VALUE) {
+        do {
+            DeleteFileA((folder + "\\" + f.cFileName).c_str());
+        } while (FindNextFileA(h, &f));
+        FindClose(h);
+    }
+    reportChecks_.start(folder, shot);
+    LOG_INFO("report checks: %zu pictures of the same place to come, each with a part of ours off, into %s",
+             reportchecks::variants().size(), folder.c_str());
+}
+
 void Context::present(const Rect& source, bool waitForVblank) {
     const double presentFrom = nowMs();  // 3.0.18-beta.161: the driver's own work at a present (logStats)
     g_parts.begin(presentFrom);           // 3.0.18-beta.169: and by its parts
@@ -1080,7 +1106,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
             LOG_INFO("camera: the game's view with the shot %s - %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.4f "
                      "%.4f %.4f; the game %dx%d", name + 1, view[0], view[1], view[2], view[3], view[4], view[5],
                      view[6], view[7], view[8], view[9], view[10], view[11], screenWidth, screenHeight);
-        if (reportNow) startReport(screenshot, readGameMap());
+        if (reportNow) {
+            const std::string map = readGameMap();
+            startReport(screenshot, map);
+            if (!map.empty() && enhanced_) startReportChecks(screenshot);  // 3.0.18-beta.189
+        }
     }
     if (screenshot.empty() && config.portraits) {  // 3.0.11-beta.273: the character's picture now and then
         const std::string own = readOwnName();
@@ -1531,7 +1561,21 @@ void Context::present(const Rect& source, bool waitForVblank) {
         fx.dayNow = day;
         fx.hallucinatingNow = hallucinating;
     }
-    renderer->setEffects(enhanced_ ? fx : effectsOff());  // Pause: the game's own picture
+    // 3.0.18-beta.189 (R-VHMGXR): a report's check shots - each variant's effects a few frames, its shot the last
+    std::string checkShot;
+    bool checkPause = false;
+    if (const int check = reportChecks_.frame(checkShot); check >= 0 && size_t(check) < checkFx_.size()) {
+        const reportchecks::Variant& v = reportchecks::variants()[size_t(check)];
+        checkPause = v.pause;
+        const int night = fx.nightNow, day = fx.dayNow;
+        const bool hallucinating = fx.hallucinatingNow;
+        fx = checkFx_[size_t(check)];
+        fx.nightNow = night;
+        fx.dayNow = day;
+        fx.hallucinatingNow = hallucinating;
+        if (!checkShot.empty()) LOG_INFO("report checks: %s - %s", v.what, checkShot.c_str());
+    }
+    renderer->setEffects(enhanced_ && !checkPause ? fx : effectsOff());  // Pause: the game's own picture
     serverNightFrame(enhanced_ && fx.noServerNight);      // 2.6.13: the server's night by the clock and «Ночь»
     mapEntryFrame(config.connection, window);             // 2.6.17: the way onto a map ([connection])
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
@@ -1567,6 +1611,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.foreground = foreground;
     o.vsyncSetting = config.vsync;
     o.screenshot = screenshot;
+    if (screenshot.empty() && !checkShot.empty())  // 3.0.18-beta.189: small, for the report
+        o.screenshot = shotspec::withShrink(checkShot, reportchecks::kShrink);
     o.screenshotWhole = bigShot_ == 1 && !screenshot.empty();  // 3.0.13-beta.16: the target at its own size
     if (bigShot_ > 0) --bigShot_;
     o.hdr = config.hdr && enhanced_;  // 0.65: Pause shows the SDR picture

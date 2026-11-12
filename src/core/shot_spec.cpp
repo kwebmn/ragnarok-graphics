@@ -14,6 +14,11 @@ Spec parse(const std::string& target) {
     const size_t bar = target.find('|');
     s.path = target.substr(0, bar);
     if (bar == std::string::npos) return s;
+    int n = 0;
+    if (target.size() > bar + 1 && target[bar + 1] == '/') {  // 3.0.18-beta.189: «|/N»
+        if (std::sscanf(target.c_str() + bar + 2, "%d", &n) == 1 && n >= 2) s.shrink = std::min(n, 8);
+        return s;
+    }
     float v[4] = {};
     if (std::sscanf(target.c_str() + bar + 1, "%f %f %f %f", &v[0], &v[1], &v[2], &v[3]) == 4 && v[2] > 0 &&
         v[3] > 0) {
@@ -32,6 +37,29 @@ std::string withCrop(const std::string& path, float x, float y, float w, float h
     return path + buf;
 }
 
+std::string withShrink(const std::string& path, int n) { return path + "|/" + std::to_string(n); }
+
+std::vector<uint8_t> shrunk(const uint8_t* bgra, int width, int height, size_t pitch, int n, int& w, int& h) {
+    n = std::max(1, n);
+    w = std::max(1, width / n);
+    h = std::max(1, height / n);
+    std::vector<uint8_t> out(size_t(w) * size_t(h) * 4);
+    const int across = std::min(n, width), down = std::min(n, height);
+    const uint32_t count = uint32_t(across) * uint32_t(down);
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            uint32_t sum[4] = {0, 0, 0, 0};
+            for (int j = 0; j < down; ++j) {
+                const uint8_t* row = bgra + size_t(y * n + j) * pitch + size_t(x * n) * 4;
+                for (int i = 0; i < across; ++i)
+                    for (int c = 0; c < 4; ++c) sum[c] += row[size_t(i) * 4 + size_t(c)];
+            }
+            uint8_t* p = out.data() + (size_t(y) * size_t(w) + size_t(x)) * 4;
+            for (int c = 0; c < 4; ++c) p[c] = uint8_t((sum[c] + count / 2) / count);
+        }
+    return out;
+}
+
 void pixels(const Spec& s, int width, int height, int& x, int& y, int& w, int& h) {
     if (!s.crop) {
         x = y = 0;
@@ -48,6 +76,10 @@ void pixels(const Spec& s, int width, int height, int& x, int& y, int& w, int& h
 bool write(const std::string& target, const uint8_t* bgra, int width, int height, size_t pitch) {
     const Spec s = parse(target);
     int x = 0, y = 0, w = 0, h = 0;
+    if (s.shrink > 1) {  // 3.0.18-beta.189: a report's check shot, small
+        const std::vector<uint8_t> small = shrunk(bgra, width, height, pitch, s.shrink, w, h);
+        return writePng(s.path, small.data(), w, h, size_t(w) * 4);
+    }
     pixels(s, width, height, x, y, w, h);
     const uint8_t* from = bgra + size_t(y) * pitch + size_t(x) * 4;
     const bool raw = s.path.size() > 5 && s.path.compare(s.path.size() - 5, 5, ".bgra") == 0;

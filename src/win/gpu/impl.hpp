@@ -1360,6 +1360,10 @@ struct Renderer::Impl {
         // colours, the mean, the light, the fog, the state, the models' colours, the rest; and the minute's own counts
         uint32_t anew[8] = {0, 0, 0, 0, 0, 0, 0, 0};
         uint32_t minuteFrames = 0, minuteReused = 0;
+        // 3.0.18-beta.189 (R-VHMGXR: the ground washed, the models not): the corners' mean last told and how many
+        // times its jumps were told on this map
+        uint32_t meanTold = 0;
+        int meanJumpsTold = 0;
         int sinceMade = 0;  // 3.0.4-beta.32: pictures drawn again since the record was made (modelsColoursDue)
         double slowest = 0.0;       // ms, of the frames so far
         size_t most = 0;            // vertices, the most a frame

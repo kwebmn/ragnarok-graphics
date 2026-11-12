@@ -180,6 +180,13 @@ uint32_t Shading::diffuseAt(float x, float z) const {
     return out;
 }
 
+int channelsApart(uint32_t a, uint32_t b) {
+    int most = 0;
+    for (int shift = 0; shift <= 16; shift += 8)
+        most = std::max(most, std::abs(int((a >> shift) & 255u) - int((b >> shift) & 255u)));
+    return most;
+}
+
 void Shading::beginFrame() {
     n_ = sz_ = sa_ = szz_ = sza_ = 0.0;
     fogged_ = false;

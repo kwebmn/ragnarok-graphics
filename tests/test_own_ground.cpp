@@ -358,3 +358,11 @@ TEST(own_ground_wall_check_tells_the_corners_of_the_first_wall_apart) {
     CHECK_EQ(w.firstApart(), std::string("2,0 far side: the game's ff162626, ours ff334c4c; its corners ff162626 "
                                          "ff162626 ff334c4c ff000000"));
 }
+
+// 3.0.18-beta.189 (R-VHMGXR: the ground washed, the models not): the game's corners' mean told when it jumps
+TEST(own_ground_channels_apart) {
+    CHECK_EQ(own_ground::channelsApart(0xFF364031u, 0xFF364031u), 0);
+    CHECK_EQ(own_ground::channelsApart(0xFF364031u, 0x00364031u), 0);  // alpha not counted
+    CHECK_EQ(own_ground::channelsApart(0xFF364031u, 0xFFCE9EA4u), 0xCE - 0x36);
+    CHECK_EQ(own_ground::channelsApart(0xFF000010u, 0xFF000000u), 16);
+}

@@ -110,6 +110,9 @@ enum class Room : uint8_t { Whole, NoModels, Coarse, None };
 constexpr uint64_t kKeepFree = uint64_t(384) << 20;
 Room roomFor(uint64_t free, uint64_t models, uint64_t fine);
 
+// 3.0.18-beta.189: two ARGB colours' largest difference in one of red, green and blue (0-255)
+int channelsApart(uint32_t a, uint32_t b);
+
 // The game's own colours of its ground, learnt from its draws: each cell corner's vertex colour (the colour the game
 // lights its ground with) and the fog of this frame (the specular's alpha by the view depth)
 class Shading {
