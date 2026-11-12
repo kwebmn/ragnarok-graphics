@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.213 — what's new · 2026-11-12
+
+- The character select's carousel (the owner: «hold left/right and it spins endlessly and cannot be stopped»): each left/right is now a step from the place shown, not from the one already asked for - a held key turns the carousel at the game's pace and stops as soon as it is let go; a place the game does not move to is left after 4 s (and the log says so).
+
 # uaRO Graphics 3.0.18-beta.212 — what's new · 2026-11-12
 
 - Keyboard, fixes after the review: the arrows do not walk the character while the caret is in another of the game's fields (a count, a name) - they move the caret there; a key's action pressed while an NPC dialog or a menu is open no longer fires later, when the window closes.
