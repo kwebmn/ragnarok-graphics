@@ -125,6 +125,10 @@ void Element::Update(float dp_ratio, Vector2f vp_dimensions)
 	RMLUI_ZoneText(name.c_str(), name.size());
 #endif
 
+	// uaRO Graphics 3.0.18-beta.222: a document's own dp scale, for itself and every element under it
+	if (owner_document && static_cast<const Element*>(owner_document) == this)
+		dp_ratio *= owner_document->GetDpScale();
+
 	OnUpdate();
 
 	HandleTransitionProperty();

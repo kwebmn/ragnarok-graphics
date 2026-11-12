@@ -96,6 +96,11 @@ public:
 	/// @return True if the document is hogging focus.
 	bool IsModal() const;
 
+	/// uaRO Graphics 3.0.18-beta.222: the document's own dp scale (a window sized by its corner) - its dp lengths and
+	/// fonts computed at the context's density-independent pixel ratio times it (its letters made at that size).
+	void SetDpScale(float scale);
+	float GetDpScale() const { return dp_scale; }
+
 	/// Finds the next tabbable element in the document tree, starting at the given element, possibly wrapping around the document.
 	/// @param[in] current_element The element to start from.
 	/// @param[in] forward True to search forward, false to search backward.
@@ -171,6 +176,8 @@ private:
 
 	bool layout_dirty;
 	bool position_dirty;
+
+	float dp_scale = 1.0f;  // uaRO Graphics 3.0.18-beta.222
 
 	friend class Rml::Context;
 	friend class Rml::Factory;

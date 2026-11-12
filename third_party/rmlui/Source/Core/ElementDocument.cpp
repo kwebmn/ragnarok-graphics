@@ -236,7 +236,7 @@ void ElementDocument::ProcessHeader(const DocumentHeader* document_header)
 	const Vector2f vp_dimensions = (context ? Vector2f(context->GetDimensions()) : Vector2f(1.0f));
 
 	// Update properties so that e.g. visibility status can be queried properly immediately.
-	UpdateProperties(dp_ratio, vp_dimensions);
+	UpdateProperties(dp_ratio * dp_scale, vp_dimensions);  // uaRO Graphics 3.0.18-beta.222: its own scale
 }
 
 Context* ElementDocument::GetContext()
@@ -463,6 +463,15 @@ bool ElementDocument::IsModal() const
 void ElementDocument::LoadInlineScript(const String& /*content*/, const String& /*source_path*/, int /*line*/) {}
 
 void ElementDocument::LoadExternalScript(const String& /*source_path*/) {}
+
+void ElementDocument::SetDpScale(float scale)
+{
+	// uaRO Graphics 3.0.18-beta.222: its dp lengths and fonts made again at the new scale (as for the context's own ratio)
+	if (scale <= 0.f || scale == dp_scale)
+		return;
+	dp_scale = scale;
+	GetStyle()->DirtyPropertiesWithUnitsRecursive(Unit::DP_SCALABLE_LENGTH);
+}
 
 void ElementDocument::UpdateDocument()
 {

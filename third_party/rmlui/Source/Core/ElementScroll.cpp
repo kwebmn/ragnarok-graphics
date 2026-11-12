@@ -1,3 +1,4 @@
+#include "../../Include/RmlUi/Core/ElementDocument.h"
 #include "../../Include/RmlUi/Core/ElementScroll.h"
 #include "../../Include/RmlUi/Core/ComputedValues.h"
 #include "../../Include/RmlUi/Core/Context.h"
@@ -229,7 +230,10 @@ void ElementScroll::UpdateScrollElementProperties(Element* scroll_element)
 
 	Context* context = element->GetContext();
 
-	const float dp_ratio = (context ? context->GetDensityIndependentPixelRatio() : 1.0f);
+	float dp_ratio = (context ? context->GetDensityIndependentPixelRatio() : 1.0f);
+	// uaRO Graphics 3.0.18-beta.222: its document's own scale
+	if (ElementDocument* document = element->GetOwnerDocument())
+		dp_ratio *= document->GetDpScale();
 	const Vector2f vp_dimensions = (context ? Vector2f(context->GetDimensions()) : Vector2f(1.0f));
 	scroll_element->Update(dp_ratio, vp_dimensions);
 }

@@ -1,2 +1,5 @@
 RmlUi 6.3 (tag 6.3, ba95ffe8bfb6370efb2cdcca927eaad4710c5413), https://github.com/mikke89/RmlUi - MIT (LICENSE.txt).
 Only the core: Include/RmlUi/{Core,Config,Core.h}, Source/Core without FontEngineDefault (FreeType); the font engine is the driver's own (GDI).
+Local changes (search «uaRO Graphics»): 3.0.18-beta.176 a hidden document skips its elements' update and layout;
+3.0.18-beta.222 ElementDocument::SetDpScale - a document's own dp scale (Element::Update, ElementStyle ComputeLength,
+ElementScroll, ElementUtilities::GetDensityIndependentPixelRatio).

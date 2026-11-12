@@ -266,8 +266,7 @@ Ui& ui() {
 void uiSize(int& w, int& h) {
     int x = 0, y = 0, dw = 0, dh = 0;
     if (!uaui::ready() || !ui().doc.box(x, y, dw, dh)) return;
-    const float size = hudedit::sizeOf(hudlayout::Part::Target);
-    w = int(std::lround(float(dw) * size)), h = int(std::lround(float(dh) * size));
+    w = dw, h = dh;  // 3.0.18-beta.222: laid out at its size
 }
 
 // The place and size uaUI draws it at last frame (grown from its top middle), in the target's pixels; untouched while
@@ -275,8 +274,7 @@ void uiSize(int& w, int& h) {
 void uiRect(float& x, float& y, float& w, float& h) {
     int dx = 0, dy = 0, dw = 0, dh = 0;
     if (!uaui::ready() || !ui().doc.box(dx, dy, dw, dh)) return;
-    const float size = hudedit::sizeOf(hudlayout::Part::Target);
-    x = float(dx) + float(dw) * (1 - size) / 2, y = float(dy), w = float(dw) * size, h = float(dh) * size;
+    x = float(dx), y = float(dy), w = float(dw), h = float(dh);  // 3.0.18-beta.222: laid out at its size
 }
 
 std::string colourOf(uint32_t rgb, int alpha = -1) {
@@ -399,8 +397,9 @@ bool uiFrame(State& s) {
         u.doc.dirtyAll();
     }
     if (u.doc.doc()) {
-        const float size = hudedit::sizeOf(hudlayout::Part::Target);
-        u.doc.prop("transform", size != 1.0f ? "scale(" + std::to_string(size) + ")" : "none");  // .70: on change
+        // its size in «Розміщення інтерфейсу» - 3.0.18-beta.222: its document's own dp scale (laid out and its letters
+        // made at that size), not transform: scale (the words shrunk as a picture, R-BN9TJA's kind)
+        u.doc.zoom(hudedit::sizeOf(hudlayout::Part::Target));
     }
     u.doc.place(s.layout.x, s.layout.y);
     u.doc.show(true);

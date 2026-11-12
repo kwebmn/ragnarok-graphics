@@ -1,3 +1,4 @@
+#include "../../Include/RmlUi/Core/ElementDocument.h"
 #include "../../Include/RmlUi/Core/ElementUtilities.h"
 #include "../../Include/RmlUi/Core/ComputedValues.h"
 #include "../../Include/RmlUi/Core/Context.h"
@@ -100,7 +101,8 @@ float ElementUtilities::GetDensityIndependentPixelRatio(Element* element)
 	if (context == nullptr)
 		return 1.0f;
 
-	return context->GetDensityIndependentPixelRatio();
+	const ElementDocument* document = element->GetOwnerDocument();  // uaRO Graphics 3.0.18-beta.222: its own scale
+	return context->GetDensityIndependentPixelRatio() * (document ? document->GetDpScale() : 1.0f);
 }
 
 int ElementUtilities::GetStringWidth(Element* element, StringView string, Character prior_character)

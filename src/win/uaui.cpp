@@ -1801,7 +1801,7 @@ std::vector<panel::Box> Doc::boxesOf(const char* selector) const {
         if (!e->IsVisible()) continue;
         const Rml::Vector2f at = e->GetAbsoluteOffset(Rml::BoxArea::Border) - origin;
         const Rml::Vector2f size = e->GetBox().GetSize(Rml::BoxArea::Border);
-        out.push_back(panel::Box{at.x * zoom_, at.y * zoom_, size.x * zoom_, size.y * zoom_});  // .152: as drawn
+        out.push_back(panel::Box{at.x, at.y, size.x, size.y});  // .222: laid out at its size (no transform)
     }
     return out;
 }
@@ -1810,22 +1810,17 @@ bool Doc::box(int& x, int& y, int& w, int& h) const {
     if (!doc_ || !shown_) return false;
     const Rml::Vector2f at = doc_->GetAbsoluteOffset(Rml::BoxArea::Border);
     const Rml::Vector2f size = doc_->GetBox().GetSize(Rml::BoxArea::Border);
-    x = int(at.x), y = int(at.y), w = int(size.x * zoom_), h = int(size.y * zoom_);  // .152: as drawn
+    x = int(at.x), y = int(at.y), w = int(size.x), h = int(size.y);  // .222: laid out at its size (no transform)
     return w > 0 && h > 0;
 }
 
+// 3.0.18-beta.152: a window's own size (pulled by its corner); 3.0.18-beta.222 (the owner: «делай» - R-BN9TJA's kind,
+// the words shrunk as a picture): the document's own dp scale (RmlUi patched: ElementDocument::SetDpScale) - laid out
+// and its letters made at that size, not a finished picture scaled by a transform
 void Doc::zoom(float z) {
     if (!doc_ || std::fabs(z - zoom_) < 0.001f) return;
     zoom_ = z;
-    if (std::fabs(z - 1) < 0.001f) {
-        doc_->RemoveProperty("transform");
-        doc_->RemoveProperty("transform-origin");
-        return;
-    }
-    char t[48];
-    std::snprintf(t, sizeof t, "scale(%.3f)", double(z));
-    doc_->SetProperty("transform-origin", "left top");
-    doc_->SetProperty("transform", t);
+    doc_->SetDpScale(z);
 }
 
 namespace {

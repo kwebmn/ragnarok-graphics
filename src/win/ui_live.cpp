@@ -19,11 +19,12 @@ bool Window::make(const char* name, const char* rml, const std::function<void(Rm
         if (!r) return;
         r->SetProperty("display", b ? "block" : "none");
         if (!b) return;
-        const float d = 3 * uaui::dp(), z = doc.zoomed() > 0 ? doc.zoomed() : 1;  // .152: its own pixels
-        r->SetProperty("left", std::to_string(b->x / z - d) + "px");
-        r->SetProperty("top", std::to_string(b->y / z - d) + "px");
-        r->SetProperty("width", std::to_string(b->w / z + 2 * d) + "px");
-        r->SetProperty("height", std::to_string(b->h / z + 2 * d) + "px");
+        // .152; .222: laid out at its size (its dp scale, no transform) - the boxes are its own pixels
+        const float d = 3 * uaui::dp() * (doc.zoomed() > 0 ? doc.zoomed() : 1);
+        r->SetProperty("left", std::to_string(b->x - d) + "px");
+        r->SetProperty("top", std::to_string(b->y - d) + "px");
+        r->SetProperty("width", std::to_string(b->w + 2 * d) + "px");
+        r->SetProperty("height", std::to_string(b->h + 2 * d) + "px");
     };
     return true;
 }

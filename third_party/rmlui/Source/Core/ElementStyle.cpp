@@ -718,6 +718,8 @@ static float ComputeLength(NumericValue value, Element* element)
 	{
 		if (Context* context = element->GetContext())
 			dp_ratio = context->GetDensityIndependentPixelRatio();
+		if (ElementDocument* document = element->GetOwnerDocument())  // uaRO Graphics 3.0.18-beta.222
+			dp_ratio *= document->GetDpScale();
 	}
 
 	switch (value.unit)

@@ -27,6 +27,7 @@
 #include "win/uaui.hpp"
 #include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/window_stack.hpp"
 #include "win/words.hpp"
 
 namespace uagfx::win::charmakewin {
@@ -171,7 +172,9 @@ cm::Fields fieldsOf(State& s, uint32_t window) {
         for (int i = 0; i < 6; ++i) f.stats[i] = stats[i];
     f.hair = int16_t(read16(window + kHair));
     f.colour = int16_t(read16(window + kColour));
-    const int sex = read32(kSex) != 0 ? 1 : 0, side = cm::faceSide(s.scale);
+    // 3.0.18-beta.222: at the window's own size too (its corner pulled) - the window laid out at it, no transform
+    const int sex = read32(kSex) != 0 ? 1 : 0,
+              side = cm::faceSide(s.scale * windowstack::sizeOf(winstack::Win::CharMake));
     const auto key = std::make_tuple(sex, f.hair, f.colour, side);
     auto it = s.faces.find(key);
     if (it == s.faces.end()) {
