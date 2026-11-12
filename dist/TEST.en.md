@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.18-beta.220 — what's new · 2026-11-12
+
+- The sets in «Спорядження» (Alt+Q) made plain (the owner, R-76RF6H: «still did not understand how it works, make it plain»): in place of the numbers «1 2 3», a «Комплекти» block with a row for each set: its number, its things' icons and names (or «порожній») and buttons with words - «Надягти» (or «✓ Надіто» when it is on already), «Зберегти надіте» (keep in this row what is worn now) and «Очистити». The line over them says what came of it: kept (things: N), putting on…, worn, not in the bag - ….
+- A set takes off what it has not (the owner: «снимать»): putting it on first takes off what is worn in slots empty in the set (a manteau, arrows…), so the character is dressed just as kept; a two-hander's other half is left alone.
+- «Довідник» (R-5773KD, R-FSNPYE): the pink round a location's map picture is gone - the game's magenta is see-through now, as on the minimap, on every map.
+- The hotbar (R-BJZH75) no longer jumps aside when the cursor points at something whose name shows over it: the name under the cursor is no window, the bar stays.
+- To check: Alt+Q - «Зберегти надіте» in row 1, take something off, press «Надягти»; put on a manteau, press «Надягти» on a set without one - the manteau comes off; «Довідник» → Локації → Prontera - no pink bars; point at an NPC at the screen's bottom - the bar stays.
+
 # uaRO Graphics 3.0.18-beta.219 — what's new · 2026-11-12
 
 - The «1 2 3» sets in «Спорядження» (Alt+Q) redone (the owner: «still did not understand how to use the 1 2 3 buttons, and it feels not functional»): a click on an empty number did nothing, and keeping a set was the right button's alone, with nothing telling it. Now:
