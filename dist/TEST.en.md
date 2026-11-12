@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.210 — what's new · 2026-11-12
+
+- Windows from the keyboard: the window opened or clicked last («Items», «Storage», «Cart», «Skills», «Equipment», «Stats», «Trade», the menu and the others) listens to the keys after the first arrow (with the chat line empty), as it does to a gamepad: the arrows move the gold frame, Enter presses (use, wear, move), Esc closes, Space is the X action, PgUp / PgDn the tabs, Shift+F10 or the menu key the card. The window's hints show the keys' names in place of the gamepad's buttons. A click on the ground gives the keys back to the world (the arrows walk again); text in the chat line takes them back too.
+
 # uaRO Graphics 3.0.18-beta.209 — what's new · 2026-11-12
 
 - Quick keys: Space with the chat line empty does what the gamepad's A does - attacks the target, else picks up loot beside, else attacks the nearest monster, else talks to the NPC near. Ctrl+←/→ turns the camera 45°, Ctrl+↑/↓ zooms it in and out. The switch: «Interface» → «Space acts». In the game's battle mode (/bm) Space still opens the chat.
