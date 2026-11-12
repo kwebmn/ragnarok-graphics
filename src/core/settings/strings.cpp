@@ -8645,6 +8645,15 @@ constexpr Entry kTexts[] = {
     {Text::MenuKeysBack, "Back", "Назад", "Назад"},
     {Text::MenuAccount, "Change account", "Змінити акаунт", "Сменить аккаунт"},  // 3.0.18-beta.226
     {Text::MakeKeysHint, "↑ ↓ row · ← → change", "↑ ↓ рядок · ← → змінити", "↑ ↓ строка · ← → изменить"},  // .228
+    {Text::FxFixNegative, "No negative after skill effects", "Без негативу після ефектів умінь",
+     "Без негатива после эффектов умений"},  // 3.0.18-beta.229 (R-H2CQCJ)
+    {Text::FxFixNegativeHint,
+     "Some skill effects are drawn by the game in inverted colours, and it forgets to set them back: the whole world "
+     "turns into a negative or the ground washes white. The inverted colours stay on the effect itself.",
+     "Деякі ефекти вмінь гра малює вивернутими кольорами й забуває повернути звичайні — тоді весь світ стає "
+     "негативом або земля біліє. Вивернуті кольори лишаються тільки на самому ефекті.",
+     "Некоторые эффекты умений игра рисует вывернутыми цветами и забывает вернуть обычные — тогда весь мир "
+     "становится негативом или земля белеет. Вывернутые цвета остаются только на самом эффекте."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

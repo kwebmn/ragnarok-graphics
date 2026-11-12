@@ -225,7 +225,7 @@ EffectSettings effectsOff() {
     e.ripples = false;
     e.softParticles = e.rimLight = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
     e.bloom = e.regionLooks = e.footprints = e.storms = e.grass = e.skillSparks = false;
-    e.mapFade = e.noGameFog = e.noServerNight = e.roundLight = false;
+    e.mapFade = e.noGameFog = e.noServerNight = e.roundLight = e.fixNegative = false;
     // 2.4: the parts of the effects
     e.waterFoam = e.waterGlints = e.caustics = e.waterfalls = e.stepDust = e.seasonSnow = false;
     e.seasonGrass = e.pollen = e.indoorDust = e.rainSplashes = e.desertHeat = false;

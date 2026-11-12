@@ -959,6 +959,7 @@ enum class Text : uint16_t {
     MenuKeys, MenuKeysBack,  // .225: the menu's «Клавіші» (the keys list in its card)
     MenuAccount,             // .226: the menu's «Змінити акаунт» (on its top)
     MakeKeysHint,            // .228: the character make's keys line
+    FxFixNegative, FxFixNegativeHint,  // .229 (R-H2CQCJ): [effects] fix_negative
     Count
 };
 

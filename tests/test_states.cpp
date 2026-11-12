@@ -197,3 +197,23 @@ TEST(states_values_past_d3d7_draw_as_the_defaults) {
     CHECK_EQ(d.srcBlend, uint8_t(BLEND_ONE));
     CHECK_EQ(d.dstBlend, uint8_t(BLEND_ZERO));
 }
+
+// 3.0.18-beta.229 (R-H2CQCJ «зміг зловити "негатив"», the washed ground on moc_pryd05 and aldebaran): the game's
+// texture op preset 6 (uaRO.exe FUN_00410320) sets both stages' COLORARG1 to TEXTURE | COMPLEMENT and nothing sets them
+// back - its frame's lists set their ops alone (FUN_0040e4d0) - so every later draw came out a negative (stage 0) or
+// the ground's lightmap inverted (stage 1, washed white); after the draw that asked for it they are put back
+TEST(states_complement_kept_to_its_draw) {
+    DeviceStates s;
+    s.setStage(0, TSS_COLORARG1, TA_TEXTURE | TA_COMPLEMENT);
+    s.setStage(1, TSS_COLORARG1, TA_TEXTURE | TA_COMPLEMENT);
+    CHECK_EQ(int(s.dropComplement()), 3);  // both stages put back
+    CHECK_EQ(s.stage(0, TSS_COLORARG1), uint32_t(TA_TEXTURE));
+    CHECK_EQ(s.stage(1, TSS_COLORARG1), uint32_t(TA_TEXTURE));
+    CHECK_EQ(int(s.dropComplement()), 0);  // nothing more
+    s.setStage(0, TSS_COLORARG2, TA_DIFFUSE);
+    CHECK_EQ(int(s.dropComplement()), 0);  // the usual arguments untouched
+    CHECK_EQ(s.stage(0, TSS_COLORARG2), uint32_t(TA_DIFFUSE));
+    s.setStage(1, TSS_ALPHAARG1, TA_TEXTURE | TA_COMPLEMENT | TA_ALPHAREPLICATE);
+    CHECK_EQ(int(s.dropComplement()), 2);
+    CHECK_EQ(s.stage(1, TSS_ALPHAARG1), uint32_t(TA_TEXTURE | TA_ALPHAREPLICATE));
+}

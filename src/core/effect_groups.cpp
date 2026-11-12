@@ -120,6 +120,7 @@ const Member kMembers[] = {
     {"soft_particles", GameFixes, 1, &E::softParticles},
     {"map_fade", GameFixes, 1, &E::mapFade},
     {"no_game_fog", GameFixes, 1, &E::noGameFog},  // 2.6.10
+    {"fix_negative", GameFixes, 1, &E::fixNegative},  // 3.0.18-beta.229
 };
 
 // A group's strength works on these of its effects (each up to its own most).
@@ -161,7 +162,7 @@ struct OldMember {
 };
 const OldMember kOldMembers[] = {
     {OldFixes, &E::smoothLight},    {OldFixes, &E::softParticles},  {OldFixes, &E::mapFade},
-    {OldFixes, &E::noGameFog},      {OldFixes, &E::noServerNight},
+    {OldFixes, &E::noGameFog},      {OldFixes, &E::noServerNight},  {OldFixes, &E::fixNegative},
     {OldLight, &E::torch},          {OldLight, &E::smoke},          {OldLight, &E::lamps},
     {OldLight, &E::torchShadows},  // 3.0.16-beta.16
     {OldLight, &E::fireLight},      {OldLight, &E::fireflies},      {OldLight, &E::mapGlows},

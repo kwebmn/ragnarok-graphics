@@ -93,6 +93,17 @@ void DeviceStates::setStage(uint32_t stage, uint32_t type, uint32_t value) {
     }
 }
 
+uint8_t DeviceStates::dropComplement() {  // 3.0.18-beta.229
+    uint8_t back = 0;
+    for (uint32_t s = 0; s < kStages; ++s)
+        for (const uint32_t t : {TSS_COLORARG1, TSS_COLORARG2, TSS_ALPHAARG1, TSS_ALPHAARG2})
+            if (ts_[s][t] & TA_COMPLEMENT) {
+                ts_[s][t] &= ~uint32_t(TA_COMPLEMENT);
+                back = uint8_t(back | (1u << s));
+            }
+    return back;
+}
+
 uint32_t DeviceStates::stage(uint32_t stage, uint32_t type) const {
     return stage < kStages && type < kStageStateCount ? ts_[stage][type] : 0;
 }

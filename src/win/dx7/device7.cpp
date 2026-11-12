@@ -323,6 +323,15 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     }
     win::crisp::tileDraw(textures_[0], cmd);  // stage 6: a window tile carries its twin
     DrawSetup setup = resolveDrawSetup(states_, false, hasTexture);  // the target has no alpha
+    // 3.0.18-beta.229 (R-H2CQCJ «негатив»): an effect's inverted texture (the game's preset 6) kept to this draw - the
+    // game never sets it back ([effects] fix_negative, core DeviceStates::dropComplement)
+    if (c.enhanced() && c.effects().fixNegative)
+        if (const uint8_t back = states_.dropComplement(); back && negativeTold_ < 5) {
+            ++negativeTold_;
+            LOG_INFO("effects: an inverted texture (the game's preset 6) put back after its draw - effect kind %d, "
+                     "id %d, stages %u; the world after it not a negative ([effects] fix_negative)",
+                     int(tag.kind), int(tag.id), unsigned(back));
+        }
     setup.ui = scene_.ui();
     // 0.27: the level 99 aura softer - its vertices' colour and alpha, in a copy (the game's stay as they are)
     // 3.0.15-beta.2: [effects] new_casting - the casting's magic circle on the ground, drawn before its walls and

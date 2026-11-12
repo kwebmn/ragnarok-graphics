@@ -14,6 +14,12 @@ public:
     uint32_t render(uint32_t state) const;
     void setStage(uint32_t stage, uint32_t type, uint32_t value);
     uint32_t stage(uint32_t stage, uint32_t type) const;
+    // 3.0.18-beta.229 (R-H2CQCJ «негатив»): the game's preset 6 (uaRO.exe FUN_00410320) takes the texture inverted
+    // (COLORARG1 = TEXTURE | COMPLEMENT, both stages) and nothing sets it back - its frame's lists set their ops alone
+    // (FUN_0040e4d0): every later draw a negative, or the ground's lightmap inverted (washed white). Called after the
+    // draw that asked for it ([effects] fix_negative): the stages' arguments without COMPLEMENT; the stages put back
+    // (bits, 0 none)
+    uint8_t dropComplement();
 
 private:
     std::array<uint32_t, d3d7::kRenderStateCount> rs_{};

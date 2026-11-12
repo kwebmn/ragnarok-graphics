@@ -217,6 +217,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"hallucination_wave", Screen},
         {"smooth_light", GameFixes}, {"soft_particles", GameFixes}, {"map_fade", GameFixes},
         {"no_game_fog", GameFixes},
+        {"fix_negative", GameFixes},  // 3.0.18-beta.229 (R-H2CQCJ)
     };
     CHECK_EQ(int(sizeof kWhere / sizeof kWhere[0]), memberCount());
     for (const auto& w : kWhere) {

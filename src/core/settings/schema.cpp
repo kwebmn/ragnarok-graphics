@@ -815,6 +815,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxNoGameFogHint, "", &E::noGameFog},  // 2.6.10
         {"effects", "no_server_night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNoServerNight,
          Text::FxNoServerNightHint, "", &E::noServerNight},  // 2.6.13
+        {"effects", "fix_negative", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFixNegative,
+         Text::FxFixNegativeHint, "", &E::fixNegative},  // 3.0.18-beta.229
         {"effects", "moon_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMoonLight,
          Text::FxMoonLightHint, "", &E::moonLight},  // 2.7.18
         {"effects", "moon_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxMoonStrength,

@@ -66,6 +66,7 @@ private:
                    DWORD indexCount);
 
     LONG refs_ = 1;
+    int negativeTold_ = 0;  // 3.0.18-beta.229: [effects] fix_negative's lines
     Surface7* target_;
     Surface7* textures_[d3d7::kStages] = {};
     DeviceStates states_;

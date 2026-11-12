@@ -403,6 +403,10 @@ struct EffectSettings {
     // 2.6.13: the server's night (its status SI_NIGHT) does not darken the picture: the game's half-dark blue light
     // left out, the time of day the clock's and the night's (win/server_night.hpp). A fix, in every set.
     bool noServerNight = true;
+    // 3.0.18-beta.229 (R-H2CQCJ «негатив», the washed ground on moc_pryd05 and aldebaran): an effect's inverted texture
+    // (the game's preset 6) kept to its own draw - the game never set it back, so the world after it came out a
+    // negative or its ground washed white (core/states DeviceStates::dropComplement). A fix, in every set.
+    bool fixNegative = true;
     // 0.84: round characters - the torches' light across a character as if it were round (0.79 with the rim light;
     // now its own switch). Off by default.
     bool roundLight = false;

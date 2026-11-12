@@ -23,6 +23,7 @@ const EffectLayout kEffects[] = {
     {"effects.map_fade", {}, {}, {}, 0},                                // 0.83
     {"effects.no_game_fog", {}, {}, {}, 0},                             // 2.6.10
     {"effects.no_server_night", {}, {}, {}, 0},                         // 2.6.13
+    {"effects.fix_negative", {}, {}, {}, 0},                            // 3.0.18-beta.229
     {"effects.moon_light", {"effects.moon_beams"}, {"effects.moon_strength"}, {}, 0},  // 2.7.18; 2.7.20 its beams
     {"effects.round_light", {}, {}, {}, 0},  // 0.84
     {"effects.ripples", {}, {}, {}, 0},  // 0.94
