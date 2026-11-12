@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.230 — what's new · 2026-11-13
+
+- Wings on characters (first beta): big wings on the back, drawn by the driver for whoever wears one of nine rare items (the GM hands them out). Wings Of Victory - angel, Flying Evil Wing - fallen angel, Wings of Diablo (and Refined) - demon, Red Wing Hat - fire, Filir's Pinions - ice, Sigrun's Wings - valkyrie, Bijofnil Wings - gold, Fairy Flower - sakura, Majestic Evil Horns - crimson demon. The pictures are the official wings of the uaRO HD client and their recolours. Every player with uaRO Graphics sees them; none in «Пауза».
+- To check (GM): put each item on a test character in the classic client and in HD - the game takes it calmly; the wings show from every side, walking, sitting, on a Peco; none while in Hiding. If no wings show, send a report (its log has «wings: ...» lines).
+
 # uaRO Graphics 3.0.18-beta.229 — what's new · 2026-11-12
 
 - Fixed the «negative» and the washed-white ground after some skill effects (R-H2CQCJ, the old Berserk reports on moc_pryd05 and moc_fild11): the game draws some effects in inverted colours and never sets the usual ones back - after such an effect the whole world turned into a negative or the ground washed white. Now the inverted colours stay on the effect itself. The switch «Без негативу після ефектів умінь» in the group «Виправлення гри» (on; in «Пауза» the game as it is).
