@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.223 — what's new · 2026-11-12
+
+- A game that will not start (R-H42AS4, R-3PETVR: «the process is there, the game never starts»): such reports had no log at all - the game stopped before the graphics driver begins writing. The driver now watches the start from the very beginning: if the game has not come to its window in 25 seconds, it opens the log and writes where the game stands (a few times, by module), its command line, every module in the process (other programs that hook into the game show), the game's windows and a minidump for the report. An error box of the game's hidden behind other windows or off every screen is brought to the front, onto the main screen.
+- To check: a normal start - no «start watch» lines in the log (they come only when a start drags on). If the game will not start - wait half a minute and send a report from the app: it carries the log and the minidump.
+
 # uaRO Graphics 3.0.18-beta.222 — what's new · 2026-11-12
 
 - Sharp words at any size - now everywhere (the owner: «делай»; as R-BN9TJA's character block in 3.0.18-beta.221): the target card and the party panel (their size in «Розміщення інтерфейсу») and the windows sized by their corner (NPC talk, messages and questions, character making, whispers, the shop windows, chat rooms, cards - ~20 windows) no longer shrink a finished picture. Each is laid out anew at its size and its letters drawn at their own size - sharp small or big. For it the interface library (RmlUi) got a document's own scale.
