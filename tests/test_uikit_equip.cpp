@@ -199,3 +199,33 @@ TEST(uikit_equip_mount_asks_yes_or_no) {
     }
     rmlhost::close(doc);
 }
+
+// 3.0.18-beta.217 (R-RASZHM's second picture: the sets «1 2 3» drawn over their hint, the row at the window's very left
+// edge): the hint after the last set, the row in from the edge as the ammo's
+TEST(uikit_equip_sets_row_beside_its_hint) {
+    ew::Data d;
+    ew::Show sh;
+    static el::Model m;
+    el::fill(m, d, sh, texts(), 1, none, glyph);
+    using Set = el::Model::SetV;
+    m.sets = {Set{"1", false, false}, Set{"2", true, false}, Set{"3", false, false}};
+    m.setsHint = "Комплекти: клік — вдягти, права кнопка — запам'ятати вдягнене";
+    std::string error;
+    Rml::ElementDocument* doc =
+        rmlhost::load(el::rml(), [&](Rml::DataModelConstructor& c) { el::bind(c, m); }, 100, 80, &error);
+    CHECK_EQ(error, std::string());
+    rmlhost::update();
+    const std::vector<uikit::Placed> sets = uikit::placesOf(doc, "set");
+    float ammoX = -1;
+    for (const uikit::Placed& p : uikit::placesOf(doc, "slot"))
+        if (p.index == ew::Ammo) ammoX = p.box.x;
+    Rml::Element* hint = doc->QuerySelector(".setsnote");
+    CHECK_EQ(sets.size(), size_t(3));
+    CHECK(hint != nullptr && ammoX >= 0);
+    if (sets.size() == 3 && hint && ammoX >= 0) {
+        const float lastRight = sets[2].box.x + sets[2].box.w, hintX = hint->GetAbsoluteLeft() - doc->GetAbsoluteLeft();
+        CHECK(hintX >= lastRight);            // after the sets, not over them
+        CHECK(sets[0].box.x >= ammoX - 0.5f);  // in from the edge as the ammo's
+    }
+    rmlhost::close(doc);
+}

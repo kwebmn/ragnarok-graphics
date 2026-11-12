@@ -958,13 +958,15 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
     white-space: nowrap; }
 .eql .nm.worn { font-weight: bold; color: #eef2f8; }
 /* 3.0.18-beta.154: the sets «1 2 3» (the later clients' Equip Switch) */
-.eql .sets { display: flex; align-items: center; margin-top: 0.5rem; }
+/* 3.0.18-beta.217 (R-RASZHM's picture: the hint drawn over «1 2 3», the row at the window's edge): in from the edge
+   as the ammo's row; the hint's class «setsnote» (it was «sh» - the sheets' own, position: absolute) */
+.eql .sets { display: flex; align-items: center; margin: 0.5rem 1.3333rem 0 1.3333rem; }
 .eql .sets .set { display: block; width: 2rem; height: 1.8333rem; line-height: 1.8333rem; margin-right: 0.4167rem;
     text-align: center; border-radius: 0.5rem; border-width: 1px; border-color: #ffffff1f; color: #7e889a;
     background-color: #ffffff0a; font-weight: bold; }
 .eql .sets .set.saved { color: #e6cb8a; border-color: #c9a55b80; }
 .eql .sets .set.hot { background-color: #ffffff24; }
-.eql .sets .sh { margin-left: 0.4167rem; font-size: 0.9167rem; color: #7e889a; }
+.eql .sets .setsnote { display: block; margin-left: 0.4167rem; font-size: 0.9167rem; color: #7e889a; }
 .eql .nm.spill { font-weight: normal; color: #7e889a; }
 .eql .dots { display: flex; height: 0.5833rem; margin-top: 0.0833rem; }
 .eql .left .dots { justify-content: flex-end; }

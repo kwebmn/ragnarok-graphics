@@ -63,7 +63,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   class="txt"><div class="lbl">{{ammo.label}}</div><div class="nm" data-class-worn="ammo.worn">{{ammo.name}}</div>
 </div></div></div>
 <div class="sets"><span class="set" data-for="x, i : sets" data-hit="set" data-attr-data-index="i"
-  data-class-saved="x.saved" data-class-hot="x.hot">{{x.label}}</span><span class="sh">{{setsHint}}</span></div>
+  data-class-saved="x.saved" data-class-hot="x.hot">{{x.label}}</span><span class="setsnote">{{setsHint}}</span></div>
 <div class="foot" data-hit="footer"><span class="cards">{{cards}}</span><span class="drag"
   data-if="!pad">{{drag}}</span><div class="pads" data-if="pad"><div class="pad" data-for="p : padItems"><img
   data-attr-src="p.glyph" data-style-width="p.w + 'px'" data-style-height="p.h + 'px'"/><span>{{p.words}}</span></div>
