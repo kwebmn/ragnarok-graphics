@@ -278,6 +278,30 @@ EffectSettings effective(const EffectSettings& in, int card) {
     return e;
 }
 
+EffectSettings looksStyled(EffectSettings e) {
+    const bool mage = e.mageEffects;  // as the set and the groups leave it: the skills shown anew at all
+    bool* const looks[] = {&e.mageEffects,  &e.swordEffects, &e.acolyteEffects, &e.archerEffects, &e.thiefEffects,
+                           &e.merchantEffects, &e.otherEffects, &e.hitEffects,     &e.itemEffects,   &e.statusEffects,
+                           &e.travelEffects,  &e.monsterEffects};
+    e.crispStormGust = false;
+    e.mageSoft = false;
+    switch (e.skillLooks) {
+        case kSkillOriginal:
+            for (bool* b : looks) *b = false;
+            break;
+        case kSkillImproved:
+            for (bool* b : looks) *b = false;
+            e.crispStormGust = mage;
+            break;
+        case kSkillSoft:
+            e.mageSoft = true;
+            break;
+        default:  // redrawn
+            break;
+    }
+    return e;
+}
+
 bool hasLegacy(const EffectSettings& e) {
     for (int g = 0; g < kOldEffectGroups; ++g)
         if (!e.legacyGroups[g] || e.legacyStrength[g] != 100) return true;

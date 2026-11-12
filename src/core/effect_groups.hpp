@@ -64,6 +64,10 @@ int cardLevel(bool d3d12, unsigned long long vramMb);
 // What the driver draws by: the set's switches (all as written for custom), each group's off, its strength on its
 // effects' own; with a set, its mode (tier) - the remaster's for strong, classic+ for the others.
 EffectSettings effective(const EffectSettings& e, int cardLevel);
+// 3.0.18-beta.183: [effects] skill_looks over what the set and the groups leave on - the classes' new looks (their
+// switches) kept (redrawn), soft (redrawn soft), or off: the game's own (original), or the game's made sharp where it
+// can be (improved: Storm Gust's snow, with the mages' look on). For the driver's frames, not the page's sets.
+EffectSettings looksStyled(EffectSettings e);
 
 // What the Effects page and the console show: each switch and the mode as the set has them (custom: as written);
 // the groups and the strengths as written - they stay over the switches.

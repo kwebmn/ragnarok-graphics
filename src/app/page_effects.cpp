@@ -27,6 +27,7 @@ constexpr int kPreset = 20000, kTier = 20001, kClock = 20002;  // 2.6.11: the cl
 constexpr int kNightStrength = 20003;  // 2.6.19: the clock's night, by it
 constexpr int kSeason = 20004;  // 2.6.22: the season, by the clock
 constexpr int kWeatherKind = 20005;  // 2.6.22: the weather, by the clock
+constexpr int kSkillLooks = 20006;   // 3.0.18-beta.183: every class's skills, one choice
 int groupBox(int g) { return 20100 + 20 * g; }
 int groupSlider(int g) { return 20102 + 20 * g; }  // its number: + 1
 int groupOpen(int g) { return 20105 + 20 * g; }
@@ -100,6 +101,7 @@ public:
             slider(p, kNightStrength, "effects.night_strength", word != "off");
             choiceRow(p, kSeason, "effects.season");  // 2.6.22: the year by the day
             choiceRow(p, kWeatherKind, "effects.weather_kind");  // 2.6.22: and the weather
+            choiceRow(p, kSkillLooks, "effects.skill_looks");  // 3.0.18-beta.183: the skills' look, one row
         }
         if (!simple) p.note(t(Text::FxDetailsNote), Tone::Muted);
         const bool any = word != "off";
@@ -115,9 +117,11 @@ public:
             for (int i = 0; i < effect_groups::memberCount(); ++i) {
                 const effect_groups::Member& x = effect_groups::members()[i];
                 if (x.group != g) continue;
-                ++count;
-                lit += shown_.*x.on ? 1 : 0;
                 const std::string pass = effect_costs::passOf(x.key);
+                if (layoutOf(x) >= 0) {  // 3.0.18-beta.183: the rows shown (the skills' look a row of its own)
+                    ++count;
+                    lit += shown_.*x.on ? 1 : 0;
+                }
                 if (pass.empty() || !passes.insert(pass).second) continue;
                 const double c = effect_costs::costOf(costs, x.key);
                 if (c > 0.0) ms += c;
@@ -160,6 +164,7 @@ public:
         size_t i = 0;
         while (i < all.size() && sectionKey(all[i]) != key) ++i;
         if (i == all.size() || std::string(all[i].section) != "effects") return false;
+        if (hiddenEffect(key.c_str())) return false;  // 3.0.18-beta.183: [effects] skill_looks in their place
         Model& m = host_.model();
         shown_ = effect_groups::shown(m.pendingConfig().effects, cardLevel());
         const IniSetting& s = all[i];
@@ -196,10 +201,12 @@ public:
             chooseTier(SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0));
             return;
         }
-        if ((id == kClock || id == kSeason || id == kWeatherKind) && code == CBN_SELCHANGE) {  // 2.6.11; 2.6.22
-            const IniSetting& s = setting(id == kClock    ? "effects.clock"
-                                          : id == kSeason ? "effects.season"
-                                                          : "effects.weather_kind");
+        if ((id == kClock || id == kSeason || id == kWeatherKind || id == kSkillLooks) &&
+            code == CBN_SELCHANGE) {  // 2.6.11; 2.6.22; 3.0.18-beta.183
+            const IniSetting& s = setting(id == kClock         ? "effects.clock"
+                                          : id == kSeason      ? "effects.season"
+                                          : id == kSkillLooks  ? "effects.skill_looks"
+                                                               : "effects.weather_kind");
             const LRESULT sel = SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0);
             if (sel >= 0 && size_t(sel) < s.tokens.size()) set(s, s.tokens[size_t(sel)], true);
             return;

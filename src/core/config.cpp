@@ -315,7 +315,7 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
         if (s.number && this->*s.number != o.*s.number) return false;
     }
     return nightNow == o.nightNow && dayNow == o.dayNow && hallucinatingNow == o.hallucinatingNow &&
-           clock == o.clock && season == o.season &&
+           clock == o.clock && season == o.season && skillLooks == o.skillLooks &&
            weatherKind == o.weatherKind && tier == o.tier && preset == o.preset && grassThin == o.grassThin &&
            std::equal(groups, groups + kEffectGroups, o.groups) &&
            std::equal(groupStrength, groupStrength + kEffectGroups, o.groupStrength) &&
@@ -425,6 +425,7 @@ Config parseConfig(const std::string& text) {
     bool macroSet = false;                        // 3.0.11-beta.169
     bool tipSet = false;                          // 3.0.11-beta.204
     bool loadingBarSet = false;                   // 3.0.18-beta.180
+    bool skillLooksSet = false;                   // 3.0.18-beta.183
     bool emoteSet = false;                        // 3.0.11-beta.205
     bool commandSet = false;                      // 3.0.11-beta.206
     bool chatRoomSet = false;                     // 3.0.11-beta.207
@@ -1037,6 +1038,10 @@ Config parseConfig(const std::string& text) {
                 "auto", "server", "dawn", "morning", "day", "sunset", "night", "deep_night"};  // 2.6.19, 2.7.16
             for (int k = 0; k < daylight::kClocks; ++k)
                 if (val == kWords[k]) c.effects.clock = k;
+        } else if (key == "effects.skill_looks") {  // 3.0.18-beta.183
+            static const char* const kWords[] = {"original", "improved", "redrawn", "soft"};
+            for (int k = 0; k < 4; ++k)
+                if (val == kWords[k]) c.effects.skillLooks = k, skillLooksSet = true;
         } else if (key == "effects.season") {  // 2.6.22
             static const char* const kWords[seasons::kSeasons] = {"auto", "spring", "summer", "autumn", "winter"};
             for (int k = 0; k < seasons::kSeasons; ++k)
@@ -1194,6 +1199,11 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !macroSet) c.macroWindow = true;            // 3.0.11-beta.169
     if (c.newMinimap && !tipSet) c.tipWindow = true;                // 3.0.11-beta.204
     if (c.newMinimap && !loadingBarSet) c.loadingBar = true;        // 3.0.18-beta.180
+    // 3.0.18-beta.183: a file of before - its own boxes say which look (Storm Gust's «як у грі», the soft look)
+    if (!skillLooksSet)
+        c.effects.skillLooks = c.effects.crispStormGust ? kSkillImproved
+                               : c.effects.mageSoft     ? kSkillSoft
+                                                        : kSkillRedrawn;
     if (c.newMinimap && !emoteSet) c.emoteWindow = true;            // 3.0.11-beta.205
     if (c.newMinimap && !commandSet) c.commandWindow = true;        // 3.0.11-beta.206
     if (c.newMinimap && !chatRoomSet) c.chatRoomWindows = true;     // 3.0.11-beta.207

@@ -1,5 +1,7 @@
 #include "core/settings/effects_layout.hpp"
 
+#include <cstring>
+
 namespace uagfx::settings {
 namespace {
 
@@ -36,24 +38,7 @@ const EffectLayout kEffects[] = {
     {"effects.silhouette", {}, {}, {}, 0},    // 3.0.13-beta.30
     {"effects.skills_soft", {}, {"effects.skill_brightness"}, {}, 0},
     {"effects.crowd_effects", {}, {}, {}, 0},  // 3.0.13-beta.20
-    {"effects.mage_effects",  // 3.0.15-beta.11
-     {"effects.mage_casting", "effects.mage_fire", "effects.mage_water", "effects.mage_wind", "effects.mage_earth",
-      "effects.mage_spirit", "effects.mage_soft"},
-     {},
-     {},
-     0},
-    {"effects.crisp_storm_gust", {}, {}, {}, 0},  // 3.0.18-beta.181
-    {"effects.sword_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
-    {"effects.acolyte_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
-    {"effects.archer_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
-    {"effects.thief_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
-    {"effects.merchant_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
-    {"effects.other_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
-    {"effects.hit_effects", {}, {}, {}, 0},  // 3.0.16-beta.1
-    {"effects.item_effects", {}, {}, {}, 0},  // 3.0.16-beta.1
-    {"effects.status_effects", {}, {}, {}, 0},  // 3.0.16-beta.1
-    {"effects.travel_effects", {}, {}, {}, 0},  // 3.0.16-beta.1
-    {"effects.monster_effects", {}, {}, {}, 0},  // 3.0.16-beta.1
+    // 3.0.15-beta.11-3.0.18-beta.181: the classes' looks' own boxes - [effects] skill_looks in their place (.183)
     {"effects.water",
      {"effects.water_foam", "effects.water_glints", "effects.caustics", "effects.waterfalls"},
      {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"},
@@ -121,5 +106,18 @@ const EffectLayout kEffects[] = {
 
 const EffectLayout* effectLayout() { return kEffects; }
 int effectLayoutCount() { return int(sizeof kEffects / sizeof kEffects[0]); }
+
+bool hiddenEffect(const char* sectionKey) {
+    static const char* const kHidden[] = {
+        "effects.mage_effects",    "effects.mage_casting",    "effects.mage_fire",       "effects.mage_water",
+        "effects.mage_wind",       "effects.mage_earth",      "effects.mage_spirit",     "effects.mage_soft",
+        "effects.crisp_storm_gust", "effects.sword_effects",  "effects.acolyte_effects", "effects.archer_effects",
+        "effects.thief_effects",   "effects.merchant_effects", "effects.other_effects",  "effects.hit_effects",
+        "effects.item_effects",    "effects.status_effects",  "effects.travel_effects",  "effects.monster_effects"};
+    if (!sectionKey) return false;
+    for (const char* k : kHidden)
+        if (std::strcmp(k, sectionKey) == 0) return true;
+    return false;
+}
 
 }  // namespace uagfx::settings

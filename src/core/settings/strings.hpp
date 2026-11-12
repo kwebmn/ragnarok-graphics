@@ -101,6 +101,8 @@ enum class Text : uint16_t {
     FxMageWaterHint, FxMageWind, FxMageWindHint, FxMageEarth, FxMageEarthHint, FxMageSpirit, FxMageSpiritHint,
     FxMageSoft, FxMageSoftHint,  // 3.0.16-beta.27
     FxCrispStormGust, FxCrispStormGustHint,  // 3.0.18-beta.181
+    FxSkillLooks, FxSkillLooksHint, FxSkillLooksOriginal, FxSkillLooksImproved, FxSkillLooksRedrawn,
+    FxSkillLooksSoft,  // 3.0.18-beta.183
     FxSword, FxSwordHint, FxAcolyte, FxAcolyteHint, FxArcher, FxArcherHint, FxThief, FxThiefHint, FxMerchant,
     FxMerchantHint, FxOther, FxOtherHint,  // 3.0.15-beta.12
     FxHit, FxHitHint, FxItem, FxItemHint, FxStatus, FxStatusHint, FxTravel, FxTravelHint, FxMonster,

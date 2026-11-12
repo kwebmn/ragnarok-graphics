@@ -16,5 +16,9 @@ struct EffectLayout {
 };
 const EffectLayout* effectLayout();
 int effectLayoutCount();
+// 3.0.18-beta.183 (the owner: «лучше одним пунктом чтобы не усложнять интерфейс»): the classes' and the mages'
+// elements' own boxes, the soft look's and Storm Gust's «як у грі» - [effects] skill_looks in their place; still read
+// from the file (a set's or a player's own), no row of the page's, the console's or the search's
+bool hiddenEffect(const char* sectionKey);
 
 }  // namespace uagfx::settings

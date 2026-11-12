@@ -264,6 +264,7 @@ void Console::build(Lang lang, const Config& config) {
             rows_.push_back(Row{Kind::Slider, "effects.night_strength", 1});
             if (settingOf("effects.season")) rows_.push_back(Row{Kind::Choice, "effects.season", 0});  // 2.6.22
             if (settingOf("effects.weather_kind")) rows_.push_back(Row{Kind::Choice, "effects.weather_kind", 0});
+            if (settingOf("effects.skill_looks")) rows_.push_back(Row{Kind::Choice, "effects.skill_looks", 0});  // .183
         }
         if (picture) rows_.push_back(Row{Kind::Here, "", 0});  // 2.6.22
         for (int g = 0; g < kEffectGroups && picture; ++g) {

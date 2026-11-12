@@ -316,6 +316,7 @@ void Context::writeUsage(const std::string& lines) {
 EffectSettings Context::madeEffects(const EffectSettings& file) const {
     // 2.5.20: as the light modes leave them - super-light none, the battery's at most the weak set's
     EffectSettings e = light::effectsOf(effect_groups::effective(file, cardLevel()), light_);
+    e = effect_groups::looksStyled(e);  // 3.0.18-beta.183: [effects] skill_looks
     // 3.0.4-beta.35: a card weak by its memory - the grass thinned (its roots on every second row), even raised by its
     // speed; keep_fps thins it too (keepOff_'s grass_thin)
     e.grassThin = startup().memoryLevel == 1;
@@ -1514,7 +1515,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
             EffectSettings file = parseConfig(text).effects;
             for (int g = 0; g < kEffectGroups; ++g)  // a group held: all of it off
                 if (comparing == std::string("effects.group_") + effect_groups::groupWord(g)) file.groups[g] = false;
-            compareFx_ = effect_groups::effective(file, cardLevel());
+            compareFx_ = effect_groups::looksStyled(effect_groups::effective(file, cardLevel()));
             if (const effect_groups::Member* fxm = effect_groups::memberOf(comparing)) compareFx_.*fxm->on = false;
         }
     }

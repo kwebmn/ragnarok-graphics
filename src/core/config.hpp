@@ -140,6 +140,9 @@ enum class EffectPreset { Auto, Off, Weak, Medium, Strong, Custom };
 constexpr int kEffectGroups = 14;
 constexpr int kOldEffectGroups = 10;
 
+// 3.0.18-beta.183: [effects] skill_looks (EffectSettings::skillLooks)
+enum SkillLooks : int { kSkillOriginal = 0, kSkillImproved = 1, kSkillRedrawn = 2, kSkillSoft = 3 };
+
 struct EffectSettings {
     EffectPreset preset = EffectPreset::Custom;  // an ini without it keeps its switches
     bool groups[kEffectGroups] = {true, true, true, true, true, true, true, true, true, true, true, true, true, true};
@@ -223,6 +226,11 @@ struct EffectSettings {
     // draws it (its colours, its added light; the mages' look aside for it), its snow drawn again at real resolution
     // (core/sharp_specks, win/sharp_specks); off as new looks are
     bool crispStormGust = false;
+    // 3.0.18-beta.183 (the owner: «оригинал, улушеный орининал и перерисованый ... для всех скилов магов», «и других
+    // професий», «лучше одним пунктом»): [effects] skill_looks - every class's skills, one choice over what the set and
+    // the groups leave on (effect_groups::looksStyled): the game's own, the game's made sharp (Storm Gust's snow so
+    // far), redrawn (the classes' new looks), redrawn soft (mage_soft). The player's own, as the clock is.
+    int skillLooks = 2;  // SkillLooks
     // 3.0.15-beta.12 (the owner: «делай еффекты по всем остальным персонажам»): every other class's skills likewise
     // (core/mage_looks.hpp lookOf), a switch a branch, off as new looks are
     bool swordEffects = false, acolyteEffects = false, archerEffects = false, thiefEffects = false;

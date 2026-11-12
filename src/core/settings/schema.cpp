@@ -933,6 +933,10 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::FxClockAuto, Text::FxClockServer, Text::FxClockDawn, Text::FxClockMorning, Text::FxClockDay,
           Text::FxClockSunset, Text::FxClockNight, Text::FxClockDeepNight},
          Text::FxClock, Text::FxClockHint, ""},
+        // 3.0.18-beta.183: every class's skills - the game's own, the game's sharp, redrawn, redrawn soft
+        {"effects", "skill_looks", Page::Effects, Control::Choice, 0, 0, 0, {"original", "improved", "redrawn", "soft"},
+         {Text::FxSkillLooksOriginal, Text::FxSkillLooksImproved, Text::FxSkillLooksRedrawn, Text::FxSkillLooksSoft},
+         Text::FxSkillLooks, Text::FxSkillLooksHint, ""},
         // 2.6.22: the season for all that goes by the year (core/seasons.hpp Choice)
         {"effects", "season", Page::Effects, Control::Choice, 0, 0, 0, {"auto", "spring", "summer", "autumn", "winter"},
          {Text::FxSeasonAuto, Text::FxSeasonSpring, Text::FxSeasonSummer, Text::FxSeasonAutumn, Text::FxSeasonWinter},
@@ -1547,6 +1551,10 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.tier") return c.effects.tier == 1 ? "classic" : c.effects.tier == 2 ? "remaster" : "auto";
     if (k == "effects.clock")  // 2.6.11
         return s.tokens[c.effects.clock > 0 && c.effects.clock < int(s.tokens.size()) ? size_t(c.effects.clock) : 0];
+    if (k == "effects.skill_looks")  // 3.0.18-beta.183
+        return s.tokens[c.effects.skillLooks >= 0 && c.effects.skillLooks < int(s.tokens.size())
+                            ? size_t(c.effects.skillLooks)
+                            : size_t(kSkillRedrawn)];
     if (k == "effects.season")  // 2.6.22
         return s.tokens[c.effects.season > 0 && c.effects.season < int(s.tokens.size()) ? size_t(c.effects.season) : 0];
     if (k == "effects.weather_kind")  // 2.6.22

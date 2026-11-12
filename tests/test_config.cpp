@@ -910,7 +910,7 @@ TEST(config_interface_minimap) {
 }
 
 // 3.0.18-beta.181 (the owner: Storm Gust «как в игре, только чётко»): [effects] crisp_storm_gust - off as new looks
-// are, a box of the Effects page (with the mages' looks), by hand only (no effects' set turns it on)
+// are, by hand only (no effects' set turns it on); 3.0.18-beta.183: no row of its own - skill_looks «improved»
 TEST(config_crisp_storm_gust) {
     CHECK(!parseConfig("").effects.crispStormGust);
     CHECK(parseConfig("[effects]\ncrisp_storm_gust = 1\n").effects.crispStormGust);
@@ -918,11 +918,7 @@ TEST(config_crisp_storm_gust) {
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Effects && s->control == settings::Control::Check && s->flag != nullptr);
-    bool shown = false;
-    const settings::EffectLayout* fx = settings::effectLayout();
-    for (int e = 0; e < settings::effectLayoutCount(); ++e)
-        shown = shown || std::strcmp(fx[e].box, "effects.crisp_storm_gust") == 0;
-    CHECK(shown);
+    CHECK(settings::hiddenEffect("effects.crisp_storm_gust"));  // 3.0.18-beta.183: skill_looks «improved» its row
     CHECK(parseConfig("[effects]\npreset = strong\n").effects.crispStormGust == false);
 }
 

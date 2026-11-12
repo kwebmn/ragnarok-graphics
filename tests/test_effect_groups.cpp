@@ -11,13 +11,14 @@ using namespace uagfx;
 using namespace uagfx::effect_groups;
 
 TEST(effect_groups_hold_every_switch_of_the_page) {
-    // 2.2: each box of the Effects page's list is in one group, each member is a box of it
+    // 2.2: each box of the Effects page's list is in one group, each member is a box of it - 3.0.18-beta.183: or one
+    // of the classes' looks, [effects] skill_looks their row
     const settings::EffectLayout* layout = settings::effectLayout();
     for (int i = 0; i < settings::effectLayoutCount(); ++i) CHECK(memberOf(layout[i].box) != nullptr);
     for (int m = 0; m < memberCount(); ++m) {
-        bool found = false;
-        for (int i = 0; i < settings::effectLayoutCount(); ++i)
-            found = found || std::string(layout[i].box) == std::string("effects.") + members()[m].key;
+        const std::string key = std::string("effects.") + members()[m].key;
+        bool found = settings::hiddenEffect(key.c_str());
+        for (int i = 0; i < settings::effectLayoutCount(); ++i) found = found || std::string(layout[i].box) == key;
         CHECK(found);
         CHECK(members()[m].group >= 0 && members()[m].group < kEffectGroups);
     }

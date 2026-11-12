@@ -1079,6 +1079,22 @@ constexpr Entry kTexts[] = {
      "Storm Gust в собственных цветах и свете игры, его снежинки нарисованы заново в разрешении экрана: каждая "
      "чёткая, на своём месте, своего размера и яркости, вместо растянутого пятна. Облако, вихрь, молнии и лёд — как "
      "в игре. Выключено: новый вид магов для него (если включён), снежинки там тоже чёткие."},
+    // 3.0.18-beta.183: every class's skills, one choice
+    {Text::FxSkillLooks, "Skills' look", "Вигляд умінь", "Вид умений"},
+    {Text::FxSkillLooksHint,
+     "Every class's skills: as the game draws them; the game's own made sharp (Storm Gust's snowflakes at the "
+     "screen's resolution so far, more skills to come); redrawn in the classes' new looks; or redrawn and soft - the "
+     "game's own light, tinted.",
+     "Уміння всіх професій: як їх малює гра; власний вигляд гри, тільки чіткий (поки що сніжинки Storm Gust у "
+     "роздільності екрана, далі інші вміння); перемальовані в новому вигляді професій; або перемальовані й м'які — "
+     "власне світло гри, підфарбоване.",
+     "Умения всех профессий: как их рисует игра; собственный вид игры, только чёткий (пока снежинки Storm Gust в "
+     "разрешении экрана, дальше другие умения); перерисованные в новом виде профессий; или перерисованные и мягкие "
+     "— собственный свет игры, подкрашенный."},
+    {Text::FxSkillLooksOriginal, "Original", "Оригінал", "Оригинал"},
+    {Text::FxSkillLooksImproved, "Improved original", "Покращений оригінал", "Улучшенный оригинал"},
+    {Text::FxSkillLooksRedrawn, "Redrawn", "Перемальовані", "Перерисованные"},
+    {Text::FxSkillLooksSoft, "Redrawn, soft", "Перемальовані, м'які", "Перерисованные, мягкие"},
     {Text::FxSword, "Swordsmen's new effects", "Нові ефекти мечників", "Новые эффекты мечников"},
     {Text::FxSwordHint,
      "Swordsman, Knight, Crusader: Bash, Magnum Break, Bowling Bash, Brandish Spear, Grand Cross, Shield Boomerang.",
