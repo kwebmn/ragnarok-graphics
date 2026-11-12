@@ -84,6 +84,7 @@ struct State {
     bool makeWanted = false;  // 3.0.11-beta.181: a character made on the first empty place
     bool carousel = false;    // 3.0.11-beta.275: [interface] char_carousel
     int goTo = -1;            // .275: the place (of all pages) the carousel steps the game's choice to
+    ULONGLONG goToSince = 0;  // 3.0.18-beta.213: when that chase began (given up after 4 s)
     std::vector<int> shownPlaces;  // .275: the place each position shows (-1 none)
 };
 
@@ -299,17 +300,32 @@ void goToFrame(State& s, uint32_t window) {
     const ULONGLONG now = GetTickCount64();
     if (s.goTo < 0 || now - s.stepAt < 150) return;
     const int page = s.goTo / 3, place = s.goTo % 3, pageNow = int(read32(window + kPage));
+    // 3.0.18-beta.213 (the owner: «если зажать ... влево вправо то оно бесконечно крутится и это не остановить»): a
+    // place the game does not take (its page or its place never comes) - the chase ends, its facts to the log
+    if (s.goToSince != 0 && now - s.goToSince > 4000) {
+        LOG_INFO("characters: the carousel's place %d not reached in 4 s (its page %d, the game's %d; its place %d, "
+                 "the game's %d) - left", s.goTo, page, pageNow, place, int(read32(window + kChosen)));
+        s.goTo = -1;
+        s.goToSince = 0;
+        return;
+    }
     s.stepAt = now;
     if (page != pageNow) send(s, 0, cs::pageButton(page > pageNow), "a page (the carousel)");
     else if (place != int(read32(window + kChosen))) choose(s, place);
-    else s.goTo = -1;
+    else {
+        s.goTo = -1;
+        s.goToSince = 0;
+    }
 }
 
 void step(State& s, int by) {  // .275: the carousel one place on (round)
     const int total = s.show.pages * 3;
     if (total <= 0) return;
-    const int now = s.goTo >= 0 ? s.goTo : s.show.page;  // carousel: show.page holds the chosen place
-    s.goTo = ((now + by) % total + total) % total;
+    // 3.0.18-beta.213: one place on from the place shown (show.page holds it), not from the one asked before - a held
+    // key's repeats no longer run the target round and round ahead of the game, which takes a step each 150 ms
+    const int to = ((s.show.page + by) % total + total) % total;
+    if (to != s.goTo) s.goToSince = GetTickCount64();
+    s.goTo = to;
 }
 
 void press(State& s, cs::Button b) {
@@ -481,7 +497,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         const cs::Hit h = cs::hitTest(s.layout, lx, ly);
         if (h.part == cs::Part::Slot && s.carousel && h.index != cs::kMiddle) {  // .275: a neighbour to the middle
             const int place = h.index < int(s.shownPlaces.size()) ? s.shownPlaces[size_t(h.index)] : -1;
-            if (place >= 0) s.goTo = place;
+            if (place >= 0) {
+                s.goTo = place;
+                s.goToSince = GetTickCount64();  // 3.0.18-beta.213
+            }
         } else if ((h.part == cs::Part::PageLeft || h.part == cs::Part::PageRight) && s.carousel) {
             step(s, h.part == cs::Part::PageRight ? 1 : -1);
         } else if (h.part == cs::Part::Slot) {
