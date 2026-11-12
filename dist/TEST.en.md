@@ -1,3 +1,6 @@
+- The maps' torches: «New flame» now hides behind the walls standing in front of it - the flame, its glow and its light stand at their torch's true place from the map file. The game draws the flame nearer to the camera than its torch stands, so the fire and its red light came over the top of the wall in front of it (moc_pryd05). Torches their makers set a little into a wall are brought out of it so they do not vanish.
+- «New report»'s check shots are all five now: the report's window opens once they are taken (in a second) - the game behind the window draws no more.
+
 - The count window («Into the storage», «Into the cart», «Drop on the ground»…): Enter with its field empty now takes the most, as the «Done» button does - Enter moved nothing before. Typed digits Enter takes as they are.
 
 - «New report» now adds up to five check shots of the same place to its picture: right after it the driver draws the frame for a moment without «Own ground», without the «Ground and walls» group, without «Light» and «Fire and smoke», without the «Whole screen» group and as in Pause. In one report they show which part makes a wrong look (such as the ground washed pink-white after Berserk). The game blinks for half a second meanwhile.
