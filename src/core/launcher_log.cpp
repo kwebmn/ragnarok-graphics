@@ -78,19 +78,21 @@ Screen layoutFor(const launcherview::Layout& L, const std::vector<settings::chan
     const float k = L.s > 0 ? L.s : 1.0f;
     s.s = k;
     const float W = float(std::max(L.w, 1)), H = float(std::max(L.h, 1));
-    s.back = Box{kLeft * k, kTop * k, kBackW * k, kHeadH * k};
+    // 3.0.18-beta.203: under the logo (taller than the bar), the list as far below the header as before
+    const float top = std::max(kTop * k, L.logo.y + L.logo.h + 10 * k), listTop = kListTop * k + (top - kTop * k);
+    s.back = Box{kLeft * k, top, kBackW * k, kHeadH * k};
     // the filters at the right of the header, the title between
     const float widths[kFilters] = {kChipAll * k, kChipReleases * k, kChipNew * k};
     float x = W - kRight * k;
     for (int i = kFilters - 1; i >= 0; --i) {
         x -= widths[i];
-        s.filters[i] = Box{x, kTop * k, widths[i], kHeadH * k};
+        s.filters[i] = Box{x, top, widths[i], kHeadH * k};
         x -= kChipGap * k;
     }
     const float titleX = s.back.x + s.back.w + 16 * k;
-    s.title = Box{titleX, kTop * k, std::max(0.0f, x - titleX), kHeadH * k};
+    s.title = Box{titleX, top, std::max(0.0f, x - titleX), kHeadH * k};
     const float listW = std::min(kListW * k, W * 0.4f);
-    s.list = Box{kLeft * k, kListTop * k, listW, std::max(0.0f, H - kBottom * k - kListTop * k)};
+    s.list = Box{kLeft * k, listTop, listW, std::max(0.0f, H - kBottom * k - listTop)};
     const float pageX = s.list.x + s.list.w + kGap * k;
     s.page = Box{pageX, s.list.y, std::max(0.0f, W - kRight * k - pageX), s.list.h};
     // the rows: a day's words over its first version

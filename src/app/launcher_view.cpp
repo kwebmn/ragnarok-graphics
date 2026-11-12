@@ -282,6 +282,8 @@ bool LauncherView::create(HWND parent, LauncherHost& host, const std::wstring& a
         if (readFile(artDir_ + L"\\" + kArtFiles[i], bytes)) art_[0] = launcherart::decode(bytes);
         if (art_[0].w > 0) artIndex_ = i;
     }
+    bytes.clear();  // 3.0.18-beta.203: the logo cut out of the client's own login picture
+    if (readFile(artDir_ + L"\\logo.webp", bytes)) logo_ = launcherart::decodeLogo(bytes);
     relayout();
     return true;
 }
@@ -606,6 +608,16 @@ void LauncherView::compose() {
     const float s = L.s, edge = std::max(1.0f, s);
     // 3.0.18-beta.195: «Журнал змін» over the art darker (the launcher's own picture; the top bar stays over it)
     if (logging_ && !data_.firstRun) panel::roundRect(pic_, pb(Box{0, 0, float(w), float(h)}), 0, kShadeRgb, 0.74f);
+    // 3.0.18-beta.203 (the owner: «лого на картинке с заставки самого клиента взять»): the logo, its box's size
+    if (logo_.w > 0) {
+        const int lw = int(std::lround(L.logo.w)), lh = int(std::lround(L.logo.h));
+        if (lw != logoW_ || lh != logoH_) {
+            launcherart::fitted(logo_, lw, lh, logoPx_);
+            logoW_ = lw;
+            logoH_ = lh;
+        }
+        launcherart::over(pic_.px, w, h, logoPx_, lw, lh, int(std::lround(L.logo.x)), int(std::lround(L.logo.y)));
+    }
     HDC dc = memDc_;
     // the server's pill: its dot and words, at the right of its place
     {
@@ -665,9 +677,10 @@ void LauncherView::compose() {
         const bool on = hovered(Part::Look);
         panel::roundRect(pic_, pb(L.look), 8 * s, kCard, 0.86f, on ? kGold : kLine, on ? 0.6f : 1.0f, edge);
     }
-    // the button: gold to play (its glow under it), blue to update, dark while it comes or the game runs
+    // the button: gold to play (its glow under it), blue to update, dark while it comes or the game runs;
+    // 3.0.18-beta.203 (the owner: «кнопку обновить как-то в кнопку "играть" совместить»): ⟳ | ГРАТИ | ▾ one button
     {
-        const Box btn{L.play.x, L.play.y, L.play.w + L.playMore.w, L.play.h};
+        const Box btn{L.check.x, L.play.y, L.check.w + L.play.w + L.playMore.w, L.play.h};
         const float r = 10 * s;
         const PlayState state = playState();
         if (state == PlayState::Play) {
@@ -687,7 +700,7 @@ void LauncherView::compose() {
         } else {
             panel::roundRect(pic_, pb(btn), r, kRaise, 0.96f, kLine, 1.0f, edge);
             if (state == PlayState::Updating && share_ > 0) {
-                pic_.clipX1 = int(std::lround(L.play.x + L.play.w * share_));
+                pic_.clipX1 = int(std::lround(btn.x + btn.w * share_));
                 gradient(pic_, btn, r, 0x4A5F96, 0x5C76B8, 0x7A9CF0, 0.75f, true);
                 pic_.clipX1 = 1 << 30;
             }
@@ -698,9 +711,10 @@ void LauncherView::compose() {
             panel::roundRect(pic_, pb(btn), r, kWhite, 0.5f);
             pic_.clipY1 = 1 << 30;
         }
-        // the hovered half lighter, the pressed one darker
-        for (const auto& [part, box] : {std::pair{Part::Play, L.play}, std::pair{Part::PlayMore, L.playMore}}) {
-            if (!hovered(part)) continue;
+        // the hovered part lighter, the pressed one darker (⟳ not while the update comes)
+        for (const auto& [part, box] : {std::pair{Part::Check, L.check}, std::pair{Part::Play, L.play},
+                                        std::pair{Part::PlayMore, L.playMore}}) {
+            if (!hovered(part) || (part == Part::Check && state == PlayState::Updating)) continue;
             pic_.clipX0 = int(std::lround(box.x));
             pic_.clipX1 = int(std::lround(box.x + box.w));
             panel::roundRect(pic_, pb(btn), r, pressedOn(part) ? 0x000000 : kWhite, pressedOn(part) ? 0.14f : 0.1f);
@@ -708,8 +722,8 @@ void LauncherView::compose() {
             pic_.clipX1 = 1 << 30;
         }
         const uint32_t split = bright ? 0x3C280A : kLine;
-        panel::roundRect(pic_, pb(Box{L.playMore.x, btn.y + 14 * s, edge, btn.h - 28 * s}), 0, split,
-                         bright ? 0.35f : 1.0f);
+        for (const float x : {L.play.x, L.playMore.x})
+            panel::roundRect(pic_, pb(Box{x, btn.y + 14 * s, edge, btn.h - 28 * s}), 0, split, bright ? 0.35f : 1.0f);
         const uint32_t arrow = state == PlayState::Play ? kOnGoldArrow : state == PlayState::Update ? kOnBlue : kMuted;
         triangleDown(pic_, L.playMore.x + L.playMore.w / 2, btn.y + btn.h / 2, 7 * s, arrow, 1.0f);
     }
@@ -718,10 +732,8 @@ void LauncherView::compose() {
         const bool on = hovered(Part::NoUpdate);
         panel::roundRect(pic_, pb(L.noUpdate), 8 * s, on ? kRaise : kCard, 0.88f, kGold, on ? 0.9f : 0.5f, edge);
     }
-    // 3.0.18-beta.202: «Перевірити» a square at the big button's left; «Реліз | Бета» at the version's left
+    // 3.0.18-beta.202: «Реліз | Бета» at the version's left
     {
-        const bool on = hovered(Part::Check);
-        panel::roundRect(pic_, pb(L.check), 10 * s, on ? kRaise : kCard, 0.9f, kGold, on ? 0.9f : 0.55f, edge);
         for (int i = 0; i < 2; ++i) {
             const Box& b = L.channel[i];
             if ((i == 1) == data_.beta) {
@@ -753,10 +765,12 @@ void LauncherView::compose() {
 void LauncherView::words(HDC dc) {
     const launcherview::Layout& L = layout_;
     const float s = L.s;
-    // the wordmark and its line
-    line(dc, Style{Face::Logo, 30, kGoldHi, 1}, L"uaRO", L.logo.x, L.logo.y + 26 * s, -1);
-    line(dc, Style{Face::SemiBold, 9.5f, kMuted, 2.2f}, upper(t(Text::LauncherTagline)), L.logo.x + 1 * s,
-         L.logo.y + 40 * s, -1);
+    // the wordmark and its line - 3.0.18-beta.203: only when the logo's picture is not there
+    if (logo_.w <= 0) {
+        line(dc, Style{Face::Logo, 30, kGoldHi, 1}, L"uaRO", L.logo.x, L.logo.y + 38 * s, -1);
+        line(dc, Style{Face::SemiBold, 9.5f, kMuted, 2.2f}, upper(t(Text::LauncherTagline)), L.logo.x + 1 * s,
+             L.logo.y + 52 * s, -1);
+    }
     // the server's pill
     {
         const Style st{Face::SemiBold, 13, kText};
@@ -916,20 +930,28 @@ void LauncherView::words(HDC dc) {
         line(dc, st, fit(dc, st, t(Text::LauncherNoUpdate), int(L.noUpdate.w - 20 * s)),
              L.noUpdate.x + L.noUpdate.w / 2, L.noUpdate.y + L.noUpdate.h / 2 + ascentOf(dc, st) * 0.36f, 0);
     }
-    // 3.0.18-beta.202: «Перевірити» (its glyph, «Перевіряю…» while the check asks) and «Реліз | Бета»
+    // 3.0.18-beta.202/.203: «Перевірити» - the big button's left part (its glyph, «Перевіряю…» while the check
+    // asks), in the button's ink; «Реліз | Бета»
     {
-        const bool on = hovered(Part::Check), asking = data_.update.kind == UpdateState::Checking;
+        const PlayState state = playState();
+        const bool asking = data_.update.kind == UpdateState::Checking, idle = state == PlayState::Updating;
+        const uint32_t ink = state == PlayState::Play     ? kOnGold
+                             : state == PlayState::Update ? kOnBlue
+                             : hovered(Part::Check)       ? kWhite
+                                                          : kText;
+        const uint32_t ground = state == PlayState::Play ? 0xD7AC58 : state == PlayState::Update ? 0x6C90E4 : kRaise;
+        const uint32_t shown = asking || idle ? mix(ink, ground, 0.55f) : ink;
         const float cx = L.check.x + L.check.w / 2;
         if (hasIcons()) {
-            const Style glyph{Face::Icons, 19, asking ? kMuted : on ? kWhite : kGoldHi};
+            const Style glyph{Face::Icons, 19, shown};
             line(dc, glyph, L"\xE895", cx, L.check.y + 25 * s + ascentOf(dc, glyph) * 0.5f, 0);
         } else {
-            const Style glyph{Face::Other, 20, asking ? kMuted : on ? kWhite : kGoldHi};
+            const Style glyph{Face::Other, 20, shown};
             line(dc, glyph, L"\x21BB", cx, L.check.y + 27 * s + ascentOf(dc, glyph) * 0.36f, 0);
         }
         const std::wstring said = t(asking ? Text::LauncherCheckingNow : Text::LauncherCheck);
-        const Style label = shrunk(dc, Style{Face::SemiBold, 10, on ? kText : kMuted}, said, int(L.check.w - 4 * s));
-        line(dc, label, fit(dc, label, said, int(L.check.w - 4 * s)), cx, L.check.y + L.check.h - 9 * s, 0);
+        const Style label = shrunk(dc, Style{Face::SemiBold, 10, shown}, said, int(L.check.w - 6 * s));
+        line(dc, label, fit(dc, label, said, int(L.check.w - 6 * s)), cx, L.check.y + L.check.h - 9 * s, 0);
         for (int i = 0; i < 2; ++i) {
             const Box& b = L.channel[i];
             const bool lit = (i == 1) == data_.beta;
@@ -1749,6 +1771,7 @@ Box LauncherView::boxOf(Hit hit) const {
 void LauncherView::press(Hit hit) {
     if (hit.part == Part::None || !host_) return;
     if (hit.part == Part::Plate && layout_.plate.w <= 0) return;
+    if (hit.part == Part::Check && downloading_) return;  // 3.0.18-beta.203: no check while the update comes
     if (hit.part == Part::Look) {  // 3.0.18-beta.194: the look picker over the launcher
         openPicker();
         return;

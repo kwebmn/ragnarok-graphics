@@ -94,6 +94,7 @@ ALLOWED = {
         # 0.43: the texture pack's reader (core/texture_pack.cpp), the builder's process name, libwebp
         "_chsize", "_wcsicmp", "islower", "isspace",
         "wcsstr", "wcstoul", "time", "_wcstoui64",  # 0.51: --watch, the reports sent
+        "bsearch", "log10", "qsort",  # 3.0.18-beta.203: libwebp's decoder in the app (the launcher's logo)
     },
     "ole32.dll": {
         "CoInitializeEx", "CoUninitialize",

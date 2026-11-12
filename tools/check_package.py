@@ -30,7 +30,7 @@ EXPECTED = {"install.bat",  # 2.10: the only .bat - for an older update.bat, whi
             "uaro-graphics/launcher/art-dawn.jpg", "uaro-graphics/launcher/art-day.jpg",
             "uaro-graphics/launcher/art-sunset.jpg", "uaro-graphics/launcher/art-winter.jpg",
             "uaro-graphics/launcher/look-classic.jpg", "uaro-graphics/launcher/look-remaster.jpg",
-            "uaro-graphics/launcher/look-better.jpg",
+            "uaro-graphics/launcher/look-better.jpg", "uaro-graphics/launcher/logo.webp",
             "uaro-graphics/licenses/exo2-ofl.txt", "uaro-graphics/licenses/cinzel-ofl.txt"}
 # 2.15: the AI models are in release/uaro-graphics-models.zip, not here
 VERSION_CPP = Path(__file__).resolve().parent.parent / "src" / "core" / "version.cpp"

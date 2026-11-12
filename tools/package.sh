@@ -32,7 +32,7 @@ cp build-win/ddraw.dll build-win/uaro-graphics.exe build-win64/uaro-render64.exe
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
 cp dist/walkable.bin "$stage/uaro-graphics/"  # 3.0.11-beta.8: the maps' walkable parts (tools/walk_grids.py)
 # 3.0.18-beta.193: the launcher's art (uaRO HD's fountain at four times) and the look picker's pictures
-mkdir -p "$stage/uaro-graphics/launcher" && cp dist/launcher/*.jpg "$stage/uaro-graphics/launcher/"
+mkdir -p "$stage/uaro-graphics/launcher" && cp dist/launcher/*.jpg dist/launcher/*.webp "$stage/uaro-graphics/launcher/"
 # 3.0.11-beta.66: IBM Plex Sans is in ddraw.dll (the new interface's words) - its SIL OFL 1.1 beside it
 cp third_party/plex/LICENSE.txt "$stage/uaro-graphics/licenses/ibm-plex-sans-ofl.txt"
 # 3.0.18-beta.193: Exo 2 and Cinzel are in uaro-graphics.exe (the launcher's words, its wordmark) - their OFL beside them

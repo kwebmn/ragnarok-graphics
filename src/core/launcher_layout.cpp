@@ -6,7 +6,9 @@ namespace uagfx::launcherview {
 namespace {
 
 // At scale 1 (the design 1280 x 720)
-constexpr float kBar = 64, kLeft = 22, kRight = 26, kBottom = 26, kFeedTop = 80, kFeedW = 380, kLabel = 28;
+constexpr float kBar = 64, kLeft = 22, kRight = 26, kBottom = 26, kFeedTop = 92, kFeedW = 380, kLabel = 28;
+// 3.0.18-beta.203: the logo (logo.webp, 491 x 206, cut out of the client's login picture) - taller than the bar
+constexpr float kLogoX = 20, kLogoY = 6, kLogoH = 76, kLogoW = kLogoH * 491 / 206;
 constexpr float kUpdateH = 150, kNewsH = 84, kGap = 10, kIcon = 64, kIconGap = 12, kDockBottom = 22;
 constexpr float kPlayW = 336, kLookH = 52, kButtonH = 64, kMoreW = 56, kPlateH = 44, kPlateW = 560;
 constexpr float kNoUpdateH = 32, kRowH = 22, kChanW = 60, kCheckW = 64;
@@ -21,7 +23,7 @@ Layout layoutFor(int width, int height, float scale, int newsCount, bool plate, 
     L.w = width;
     L.h = height;
     L.bar = Box{0, 0, W, kBar * s};
-    L.logo = Box{kLeft * s, 12 * s, 260 * s, 40 * s};
+    L.logo = Box{kLogoX * s, kLogoY * s, kLogoW * s, kLogoH * s};
     L.language = Box{W - kRight * s - 56 * s, 18 * s, 56 * s, 28 * s};
     L.server = Box{L.language.x - 12 * s - 280 * s, 16 * s, 280 * s, 32 * s};
     // the play column: the version at the bottom, the button over it, the look line over that
@@ -39,8 +41,8 @@ Layout layoutFor(int width, int height, float scale, int newsCount, bool plate, 
         above = L.noUpdate.y;
     }
     const float by = above - 8 * s - kButtonH * s;
-    L.check = Box{px, by, kCheckW * s, kButtonH * s};  // «Перевірити» at the big button's left
-    const float bx = px + (kCheckW + 8) * s;
+    L.check = Box{px, by, kCheckW * s, kButtonH * s};  // «Перевірити»: the big button's left part
+    const float bx = px + kCheckW * s;  // 3.0.18-beta.203: one button - ⟳ | ГРАТИ | ▾
     L.play = Box{bx, by, std::max(0.0f, px + playW - kMoreW * s - bx), kButtonH * s};
     L.playMore = Box{px + playW - kMoreW * s, by, kMoreW * s, kButtonH * s};
     L.look = Box{px, by - kGap * s - kLookH * s, playW, kLookH * s};
@@ -108,7 +110,7 @@ FirstRun firstRunFor(const Layout& L) {
     const float titleH = 36 * s, noteH = 22 * s, foundH = 22 * s, skipH = 34 * s;
     const float block = titleH + 8 * s + noteH + 6 * s + foundH + 18 * s + h + 22 * s + skipH;
     float top = (H - block) / 2 + 12 * s;
-    top = std::max(top, L.bar.h + 8 * s);
+    top = std::max(top, std::max(L.bar.h, L.logo.y + L.logo.h) + 8 * s);  // .203: under the logo
     f.title = Box{x0, top, row, titleH};
     f.note = Box{x0, top + titleH + 8 * s, row, noteH};
     f.found = Box{x0, f.note.y + noteH + 6 * s, row, foundH};

@@ -193,6 +193,9 @@ private:
     int frameW_ = 0, frameH_ = 0;
     // the art: the one shown and the one fading in, as read and at the client's size; base_: the frame's art shaded
     launcherart::Image art_[2];
+    launcherart::Image logo_;          // 3.0.18-beta.203: logo.webp (straight alpha), empty: the words instead
+    std::vector<uint32_t> logoPx_;     // made the logo box's size, premultiplied
+    int logoW_ = 0, logoH_ = 0;
     std::vector<uint32_t> artPx_, nextPx_, base_;
     int artIndex_ = 0, nextIndex_ = 0;
     bool baseValid_ = false, fading_ = false;

@@ -1,9 +1,11 @@
 // 3.0.18-beta.193 (the owner: «первый экран... новый пользователь может испугаться»; docs/superpowers/plans/
 // 2026-11-12-launcher.md Task 3): the launcher's places at any window size and Windows' scale, what is under the mouse,
 // what the big button says
+#include <cmath>
 #include <initializer_list>
 
 #include "core/launcher_layout.hpp"
+#include "core/launcher_log.hpp"
 #include "core/settings/choice_presets.hpp"
 #include "test.hpp"
 
@@ -166,6 +168,30 @@ TEST(launcher_layout_update_offered_shows_play_without_it) {
 }
 
 // 3.0.18-beta.202: «Перевірити» a square beside «ГРАТИ», the same height; «Реліз | Бета» left of the version in its row
+// 3.0.18-beta.203 (the owner: «лого на картинке с заставки самого клиента взять»): the logo cut out of the client's
+// login picture at the top left, taller than the bar, the feed under it; two news still fit the smallest window
+TEST(launcher_layout_logo_above_the_feed) {
+    struct Size {
+        int w, h;
+        float s;
+    };
+    const Size sizes[] = {Size{960, 560, 1.0f}, Size{1280, 720, 1.0f}, Size{3360, 1890, 1.75f}};
+    for (const Size z : sizes) {
+        const launcherview::Layout L = launcherview::layoutFor(z.w, z.h, z.s, 3, false);
+        CHECK(L.logo.h >= 72 * z.s && L.logo.h > L.bar.h);
+        const float aspect = L.logo.w / L.logo.h;  // the picture's own: 491 x 206
+        CHECK(aspect > 2.33f && aspect < 2.43f);
+        CHECK(L.logo.x >= 0 && L.logo.y >= 0);
+        CHECK(L.logo.y + L.logo.h <= L.feed.y);
+        CHECK(L.logo.x + L.logo.w <= L.server.x);
+        const launcherlog::Screen log =
+            launcherlog::layoutFor(L, {}, launcherlog::Filter::All, "", "2026-11-12", 0, settings::Lang::Uk);
+        CHECK(log.back.y >= L.logo.y + L.logo.h);  // «Журнал змін»'s «← До гри» under it
+        CHECK(launcherview::firstRunFor(L).title.y >= L.logo.y + L.logo.h);
+    }
+    CHECK_EQ(launcherview::layoutFor(960, 560, 1.0f, 3, false).newsShown, 2);
+}
+
 TEST(launcher_layout_check_and_channel_by_the_button) {
     struct Size {
         int w, h;
@@ -176,7 +202,12 @@ TEST(launcher_layout_check_and_channel_by_the_button) {
         for (const bool offered : {false, true}) {
             const launcherview::Layout L = launcherview::layoutFor(z.w, z.h, z.s, 3, false, offered);
             CHECK(L.check.w > 0 && L.check.h == L.play.h && L.check.y == L.play.y);
-            CHECK(L.check.x + L.check.w <= L.play.x);  // beside it, at its left
+            // 3.0.18-beta.203 (the owner: «кнопку обновить как-то в кнопку "играть" совместить»): the big button's
+            // left part, ▾ its right one - one button across the play column
+            CHECK(std::fabs(L.check.x + L.check.w - L.play.x) < 0.01f);
+            CHECK(std::fabs(L.play.x + L.play.w - L.playMore.x) < 0.01f);
+            CHECK(std::fabs(L.check.x - L.look.x) < 0.01f);
+            CHECK(std::fabs(L.playMore.x + L.playMore.w - (L.look.x + L.look.w)) < 0.01f);
             CHECK(L.channel[0].x + L.channel[0].w <= L.channel[1].x);
             CHECK(L.channel[1].x + L.channel[1].w <= L.version.x);
             CHECK(L.channel[0].y == L.version.y && L.channel[0].h > 0);
