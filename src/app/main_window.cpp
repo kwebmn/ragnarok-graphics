@@ -8,8 +8,10 @@
 #include <algorithm>
 #include <memory>
 
+#include "app/app_disk.hpp"
 #include "app/check_notify.hpp"
 #include "app/client_patch.hpp"
+#include "app/files.hpp"
 #include "app/installer.hpp"
 #include "app/mnemonic.hpp"
 #include "app/notes_window.hpp"
@@ -19,12 +21,16 @@
 #include "app/launcher.hpp"
 #include "app/modes.hpp"
 #include "app/update.hpp"
+#include "app/update_run.hpp"
 #include "app/update_window.hpp"
 #include "core/graphics_test.hpp"
+#include "core/layout.hpp"
 #include "core/notify.hpp"
 #include "core/report_answers.hpp"
 #include "core/report_texts.hpp"
+#include "core/settings/choice_presets.hpp"
 #include "core/settings/search.hpp"
+#include "core/start_failures.hpp"
 #include "core/update_check.hpp"
 #include "core/version.hpp"
 
@@ -56,6 +62,8 @@ constexpr int kHeader = 52;        // 2.6: the header's height at 96 DPI
 constexpr int kList = 200;         // the list's width
 constexpr int kAnswerOpen = 46;    // 3.0.9-beta.4: the answer strip's «Відкрити»
 constexpr int kAnswerStrip = 40;   // its height at 96 DPI
+constexpr int kBackButton = 47;    // 3.0.18-beta.193: «← До гри» - the launcher again
+constexpr int kBackWidth = 120;    // its width at 96 DPI
 constexpr UINT kRebuild = WM_APP + 1;
 constexpr UINT kShowPage = WM_APP + 7;  // 1.6: wParam the page; 2.6: the view, lParam its tab
 constexpr UINT kAskStats = WM_APP + 8;  // 2.2.1: once, the window shown: may the statistics (and the reports) go
@@ -81,6 +89,23 @@ constexpr UINT_PTR kMoreGames = 4;    // 3.0.4-beta.4: the set's next game windo
 constexpr UINT_PTR kAnswersTimer = 5;  // 3.0.10-beta.3: the developer's answers asked again (recheckReports)
 constexpr UINT kAnswersEveryMs = 5 * 60 * 1000;
 
+// 3.0.18-beta.193 (the launcher: «это игра, а не приложение»): Windows' own frame dark - DWM's dark title bar
+// (DWMWA_USE_IMMERSIVE_DARK_MODE: 20, 19 before Windows 10 2004) and on Windows 11 the caption in the launcher's ground
+// (DWMWA_CAPTION_COLOR 35); dwmapi by LoadLibrary (the app's imports as they were). Snap, sizing, the buttons stay
+// Windows'.
+void darkFrame(HWND hwnd) {
+    static const HMODULE dwm = LoadLibraryW(L"dwmapi.dll");
+    if (!dwm) return;
+    using SetFn = HRESULT(WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
+    static const SetFn set =
+        reinterpret_cast<SetFn>(reinterpret_cast<void*>(GetProcAddress(dwm, "DwmSetWindowAttribute")));
+    if (!set) return;
+    const BOOL on = TRUE;
+    if (FAILED(set(hwnd, 20, &on, sizeof on))) set(hwnd, 19, &on, sizeof on);
+    const COLORREF caption = RGB(0x0B, 0x0E, 0x14);
+    set(hwnd, 35, &caption, sizeof caption);
+}
+
 }  // namespace
 
 int MainWindow::run(HINSTANCE inst, int show) {
@@ -104,7 +129,6 @@ int MainWindow::run(HINSTANCE inst, int show) {
     lang_ = settings::windowLang(saved, PRIMARYLANGID(GetUserDefaultUILanguage()));
     mode_ = model_->startMode();  // 2.6
     shown_ = viewsOf(mode_).front();
-    newInstall_ = !model_->usedBefore();  // before the statistics' question writes its answer
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof wc;
     wc.lpfnWndProc = proc;
@@ -141,7 +165,8 @@ int MainWindow::run(HINSTANCE inst, int show) {
     MSG msg;
     while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
         if (msg.message == WM_MOUSEWHEEL && wheelToPage(msg)) continue;
-        if (msg.message == WM_KEYDOWN && msg.wParam == 'F' && GetKeyState(VK_CONTROL) < 0 && search_) {  // 2.6
+        if (msg.message == WM_KEYDOWN && msg.wParam == 'F' && GetKeyState(VK_CONTROL) < 0 && search_ &&
+            !launcherOn_) {  // 2.6; 3.0.18-beta.193: the settings' search, not the launcher's
             SetFocus(search_);
             SendMessageW(search_, EM_SETSEL, 0, -1);
             continue;
@@ -313,6 +338,7 @@ void MainWindow::create() {
     ShowWindow(stripUpdate_, SW_HIDE);
     stripBrush_ = CreateSolidBrush(RGB(243, 243, 243));
     report_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP | WS_GROUP, kReportButton);
+    back_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP | WS_GROUP, kBackButton);  // 3.0.18-beta.193: «← До гри»
     answerText_ = child(L"STATIC", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX | SS_ENDELLIPSIS, 0);  // 3.0.9-beta.4
     answerOpen_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP, kAnswerOpen);
     markPrimary(answerOpen_);
@@ -358,6 +384,13 @@ void MainWindow::create() {
     }
     AdjustWindowRectEx(&r, DWORD(GetWindowLongPtrW(hwnd_, GWL_STYLE)), FALSE, 0);
     SetWindowPos(hwnd_, nullptr, 0, 0, r.right - r.left, r.bottom - r.top, SWP_NOMOVE | SWP_NOZORDER);
+    // 3.0.18-beta.193: the launcher over the whole client, in front from the start; the frame dark
+    darkFrame(hwnd_);
+    std::string seen;
+    readFile(model_->paths().dir + L"\\" + wide(layout::kSeenVersion), seen);
+    while (!seen.empty() && (seen.back() == '\n' || seen.back() == '\r' || seen.back() == ' ')) seen.pop_back();
+    seen_ = seen;
+    launcher_.create(hwnd_, *this, model_->paths().dir + L"\\" + wide(layout::kLauncherArt));
     layout();
     retext();
     // 2.4.2: the game's key this app's from its start, setup.exe out of it - written when there is none (the game would
@@ -375,6 +408,7 @@ void MainWindow::create() {
     // 2.13: the waiting reports sent, the answers counted
     startReportsCheck(model_->paths().dir, computerKey(model_->paths().dir));
     buildPage();
+    showSettingsControls();  // 3.0.18-beta.193: the launcher in front, the settings' controls hidden under it
     SetTimer(hwnd_, kTimer, 2000, nullptr);  // whether the game was started or closed meanwhile
     SetTimer(hwnd_, kAnswersTimer, kAnswersEveryMs, nullptr);  // 3.0.10-beta.3
     // 2.12: a fresh install set up for this computer at once («Гра» says so), a changed card or screen asked about
@@ -408,13 +442,16 @@ void MainWindow::layout() {
     const int w = c.right;
     auto at = [&](int v) { return px(v, dpi_); };
     for (HWND ctl : {sidebar_, langBox_, banner_, status_, apply_, play_, undo_, close_, report_, search_, modes_[0],
-                     modes_[1], modes_[2], stripLeft_, stripRight_, answerText_, answerOpen_})
+                     modes_[1], modes_[2], stripLeft_, stripRight_, answerText_, answerOpen_, back_})
         SendMessageW(ctl, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
+    // 3.0.18-beta.193: the launcher over the whole client; «← До гри» first in the settings' header
+    if (launcher_.hwnd()) MoveWindow(launcher_.hwnd(), 0, 0, w, c.bottom, TRUE);
+    MoveWindow(back_, at(16), at(11), at(kBackWidth), at(30), TRUE);
     // 2.6: the modes, the search (what the rest leaves of 300), "Report a problem" and the language on the right
-    int x = at(16);
+    int x = at(16 + kBackWidth + 12);
     for (int i = 0; i < kModeCount; ++i) {  // 2.15: the Developer mode's button while it is the mode, or Ctrl+Shift+D
-        const bool shown = Mode(i) != Mode::Developer || mode_ == Mode::Developer || developerShown_;
-        ShowWindow(modes_[i], shown ? SW_SHOW : SW_HIDE);
+        const bool shown = modeShown(i);
+        ShowWindow(modes_[i], shown && !launcherOn_ ? SW_SHOW : SW_HIDE);
         if (!shown) continue;
         MoveWindow(modes_[i], x, at(11), at(100), at(30), TRUE);
         x += at(100) + at(2);
@@ -497,7 +534,8 @@ void MainWindow::updateStrip() {
         GetWindowTextW(stripUpdate_, shown, 64);
         if (word != shown) SetWindowTextW(stripUpdate_, word.c_str());
     }
-    if (offered != (IsWindowVisible(stripUpdate_) != 0)) ShowWindow(stripUpdate_, offered ? SW_SHOW : SW_HIDE);
+    const bool strip = offered && !launcherOn_;  // 3.0.18-beta.193: hidden under the launcher
+    if (strip != (IsWindowVisible(stripUpdate_) != 0)) ShowWindow(stripUpdate_, strip ? SW_SHOW : SW_HIDE);
     const PackSummary pack = packSummary(model_->paths().dir);
     left += L"     ";
     if (!pack.exists)
@@ -623,8 +661,8 @@ void MainWindow::setMode(Mode m) {
 std::unique_ptr<Page> MainWindow::makeView() {
     using P = settings::Page;
     switch (shown_) {
+        case settings::View::Play:  // 3.0.18-beta.193: «Гра» is the launcher now (app/launcher_view), out of the list
         case settings::View::Main: return makeMainPage(*this);
-        case settings::View::Play: return makePlayPage(*this);  // 2.11: the launcher «Гра»
         case settings::View::Help: return makeHelpPage(*this);  // 3.0.2-beta.6: «Довідка»
         case settings::View::Graphics:
             return makeSettingsPage(*this, {P::Render, P::Quality}, {P::Smoothing, P::Frames});
@@ -662,6 +700,8 @@ void MainWindow::retext() {
     SetWindowTextW(play_, wtr(lang_, Text::ApplyAndPlay).c_str());
     SetWindowTextW(undo_, wtr(lang_, Text::Revert).c_str());
     SetWindowTextW(close_, wtr(lang_, Text::Close).c_str());
+    SetWindowTextW(back_, wtr(lang_, Text::LauncherBack).c_str());  // 3.0.18-beta.193
+    refreshLauncher();
 }
 
 void MainWindow::buildPage() {
@@ -852,8 +892,8 @@ void MainWindow::updateAnswers(const std::vector<reports::Answer>& list) {
         SetWindowTextW(answerText_, wide(reporttexts::strip(lang_, answers_.front())).c_str());
         SetWindowTextW(answerOpen_, wtr(lang_, Text::AnswerOpen).c_str());
     }
-    ShowWindow(answerText_, now ? SW_SHOW : SW_HIDE);
-    ShowWindow(answerOpen_, now ? SW_SHOW : SW_HIDE);
+    ShowWindow(answerText_, now && !launcherOn_ ? SW_SHOW : SW_HIDE);  // 3.0.18-beta.193: not over the launcher
+    ShowWindow(answerOpen_, now && !launcherOn_ ? SW_SHOW : SW_HIDE);
     if (was != now) layout();  // the list and the page start under it
 }
 
@@ -861,6 +901,7 @@ void MainWindow::retextReports() {
     SetWindowTextW(report_, unread_ > 0 ? wtrf(lang_, Text::ReportsButtonUnread, {std::to_string(unread_)}).c_str()
                                         : wtr(lang_, Text::ReportsButton).c_str());
     SendMessageW(report_, WM_SETFONT, reinterpret_cast<WPARAM>(unread_ > 0 && bold_ ? bold_ : font_), TRUE);
+    refreshLauncher();  // 3.0.18-beta.193: «Звернення»'s red count there too
 }
 
 void MainWindow::showNotes(const std::wstring& text) {
@@ -953,7 +994,7 @@ void MainWindow::syncLibraries() {
     if (!r.log.empty()) model_->load();  // 3.0.1-beta.8: ROExt's dinput8.dll moved: its window now the driver's
 }
 
-void MainWindow::doApply(bool play, bool test) {
+void MainWindow::doApply(bool play, bool test, bool noUpdate) {
     std::wstring err = model_->apply(lang_);
     if (err.empty()) syncLibraries();  // a library's switch changed: put in now (the game closed)
     bool closing = false;
@@ -985,11 +1026,12 @@ void MainWindow::doApply(bool play, bool test) {
         const UpdateState u = updateState();
         // 3.0.5-beta.7: «Тест графіки» - the game (or the update that starts it) takes the mark; none after it
         if (test) SetEnvironmentVariableA(graphics_test::kStartMark, "1");
-        err = playNow(*model_, u.kind == UpdateState::Done ? u.offer : "", lang_, closing);
+        const bool viaUpdate = u.kind == UpdateState::Done && !noUpdate;  // 3.0.18-beta.193: «Грати без оновлення»
+        err = playNow(*model_, viaUpdate ? u.offer : "", lang_, closing);
         if (test) SetEnvironmentVariableA(graphics_test::kStartMark, nullptr);
         // 3.0.4-beta.4: a set of game windows - the rest one every 1.5 s (each its own log, place and panel card);
         // 3.0.5-beta.7: one window for the test - the others would draw beside it on the same card
-        const bool started = err.empty() && !closing && u.kind != UpdateState::Done;  // the game itself started
+        const bool started = err.empty() && !closing && !viaUpdate;  // the game itself started
         moreGames_ = started && !test ? model_->pendingConfig().windowStartCount - 1 : 0;
         if (moreGames_ > 0) SetTimer(hwnd_, kMoreGames, 1500, nullptr);
     }
@@ -1047,6 +1089,8 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                     message(wtrf(lang_, Text::UpdateError, {err}), true);
             } else if (id == kReportButton && code == BN_CLICKED) {
                 openReports(false);
+            } else if (id == kBackButton && code == BN_CLICKED) {  // 3.0.18-beta.193: «← До гри»
+                showLauncher(true);
             } else if (id == kAnswerOpen && code == BN_CLICKED && answerShown()) {  // 3.0.9-beta.4: that answer
                 reportStart_ = ReportStart{};
                 reportStart_.code = answers_.front().code;
@@ -1061,12 +1105,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             } else if (id == kLang && (code == CBN_CLOSEUP ||
                                        (code == CBN_SELCHANGE && !SendMessageW(langBox_, CB_GETDROPPEDSTATE, 0, 0)))) {
                 const LRESULT sel = SendMessageW(langBox_, CB_GETCURSEL, 0, 0);  // taken when its list is closed
-                if (sel >= 0 && sel < kLangCount && Lang(sel) != lang_) {
-                    lang_ = Lang(sel);
-                    model_->saveLanguage(lang_);
-                    startLauncherCheck(lang_);  // 2.11: «Гра»'s news in that language
-                    reload();
-                }
+                if (sel >= 0 && sel < kLangCount) setLanguage(Lang(sel));
             } else if (id == kApply && code == BN_CLICKED) {
                 doApply(false);
             } else if (id == kPlay && code == BN_CLICKED) {
@@ -1217,6 +1256,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             updateStrip();
             if (current_) current_->tick();
             takeChecked();  // 3.0.10-beta.3: the number, the strip, a new answer's notification
+            refreshLauncher();  // 3.0.18-beta.193: the server, the news, the update
             return 0;
         case kAskMachine: {  // 2.12: the settings picked again for the new card or screen, if the player wants
             const settings::Machine x = model_->machine();
@@ -1249,11 +1289,9 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 if (!err.empty()) message(err, true);
                 rebuild();
             }
-            if (model_->seenVersion() != kVersion) {  // 2.6: a new version's notes, once (not on a new install)
-                const std::wstring notes = newInstall_ ? std::wstring() : notesText(model_->paths().dir, lang_);
-                if (!notes.empty()) showNotes(notes);
-                model_->saveSeenVersion(kVersion);
-            }
+            // 2.6: a new version's notes, once (not on a new install); 3.0.18-beta.193: the launcher's card
+            // «Оновлено до» tells it - no window over the launcher at the start
+            if (model_->seenVersion() != kVersion) model_->saveSeenVersion(kVersion);
             if (model_->now().config.statsSend && !model_->now().gameRunning && !statsThread_) {
                 auto* dir = new std::wstring(model_->paths().dir);
                 statsThread_ = CreateThread(nullptr, 0, &sendStats, dir, 0, nullptr);
@@ -1275,6 +1313,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             if (wp == kTimer) {
                 if (model_->refreshRunning()) rebuild();  // the game started or closed
                 updateStrip();  // the update's check, the pack's builder
+                refreshLauncher();  // 3.0.18-beta.193: the game, the site's answer, the update's
                 takeChecked();  // 2.13: the start's check came back; 3.0.10-beta.3: or one of every 5 minutes
                 if (startReport_ && !reportsOpen_ && IsWindowEnabled(hwnd_))  // 2.13: --report; 3.0.9-beta.4: --answer
                     openReports(reportStart_.code.empty());
@@ -1308,6 +1347,12 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             }
             return 0;
         }
+        case WM_SETFOCUS:  // 3.0.18-beta.193: the window's focus the launcher's while it is in front (Enter plays)
+            if (launcherOn_ && launcher_.hwnd()) {
+                SetFocus(launcher_.hwnd());
+                return 0;
+            }
+            break;
         case WM_GETMINMAXINFO: {  // 2.6: 880 x 600 at the least
             auto* mm = reinterpret_cast<MINMAXINFO*>(lp);
             RECT r{0, 0, px(kWidth, dpi_), px(kHeight, dpi_)};
@@ -1357,6 +1402,283 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             break;
     }
     return DefWindowProcW(hwnd_, msg, wp, lp);
+}
+
+// --- 3.0.18-beta.193: the launcher (app/launcher_view, docs/superpowers/specs/2026-11-12-launcher-design.md) ---
+
+bool MainWindow::modeShown(int i) const {
+    return Mode(i) != Mode::Developer || mode_ == Mode::Developer || developerShown_;
+}
+
+// The settings' own controls shown or hidden as a whole: the launcher covers the client while it is in front
+void MainWindow::showSettingsControls() {
+    const bool on = !launcherOn_;
+    for (HWND w : {sidebar_, langBox_, status_, apply_, play_, undo_, close_, report_, search_, stripLeft_,
+                   stripRight_, view_, back_})
+        if (w) ShowWindow(w, on ? SW_SHOW : SW_HIDE);
+    for (int i = 0; i < kModeCount; ++i) ShowWindow(modes_[i], on && modeShown(i) ? SW_SHOW : SW_HIDE);
+    ShowWindow(banner_, on && model_->system().elevated ? SW_SHOW : SW_HIDE);
+    ShowWindow(answerText_, on && answerShown() ? SW_SHOW : SW_HIDE);
+    ShowWindow(answerOpen_, on && answerShown() ? SW_SHOW : SW_HIDE);
+    const UpdateState u = updateState();
+    ShowWindow(stripUpdate_, on && u.kind == UpdateState::Done && !u.offer.empty() ? SW_SHOW : SW_HIDE);
+    launcher_.show(launcherOn_);
+}
+
+void MainWindow::showLauncher(bool on) {
+    if (on == launcherOn_) return;
+    launcherOn_ = on;
+    showSettingsControls();
+    if (on) {
+        refreshLauncher();
+    } else {
+        SetFocus(sidebar_);
+        updateStatus();
+    }
+    InvalidateRect(hwnd_, nullptr, TRUE);
+}
+
+void MainWindow::setLanguage(Lang l) {
+    if (l == lang_) return;
+    lang_ = l;
+    model_->saveLanguage(lang_);
+    SendMessageW(langBox_, CB_SETCURSEL, WPARAM(lang_), 0);
+    startLauncherCheck(lang_);  // 2.11: the site's news in that language
+    reload();
+}
+
+// The changelog of the player's language (English where it is missing) for the channel: the betas on «Бета», the
+// releases with their betas' points on «Реліз»; read again when the language or the channel changes
+void MainWindow::readChangelog() {
+    const bool beta = model_->channel() == update::Channel::Beta;
+    if (changelogRead_ && changelogLang_ == lang_ && changelogBeta_ == beta) return;
+    const std::wstring dir = model_->paths().dir;
+    std::string md;
+    if (!readFile(ourPlace(dir, layout::notes(settings::langToken(lang_))), md))
+        readFile(ourPlace(dir, layout::notes("en")), md);
+    changelog_ = settings::changelog::forChannel(settings::changelog::parse(md), beta);
+    changelogLang_ = lang_;
+    changelogBeta_ = beta;
+    changelogRead_ = true;
+}
+
+void MainWindow::markSeen() {
+    writeFileAtomic(model_->paths().dir + L"\\" + wide(layout::kSeenVersion), std::string(kVersion));
+    seen_ = kVersion;
+    refreshLauncher();
+}
+
+// What the launcher shows, gathered: the site's answer, the update's, the game, the look, the version, a plate, what
+// changed since the player's last look; nothing painted again when it is all as shown
+void MainWindow::refreshLauncher() {
+    if (!launcher_.hwnd() || !model_) return;
+    Model& m = *model_;
+    readChangelog();
+    LauncherData d;
+    d.lang = lang_;
+    const LauncherState site = launcherState();
+    d.info = site.info;
+    d.siteAsking = site.kind == LauncherState::Idle || site.kind == LauncherState::Asking;
+    d.siteFailed = site.kind == LauncherState::Failed;
+    d.update = channelUpdate(m);
+    d.gameRunning = m.now().gameRunning;
+    // the look: the three choices' names, «авто для <card>» while the picture and the textures are the card's
+    const Config c = m.pendingConfig();
+    namespace presets = settings::presets;
+    for (int k = 0; k < presets::kChoices; ++k) {
+        const auto choice = presets::Choice(k);
+        if (!d.look.empty()) d.look += L" \x00B7 ";
+        d.look += wtr(lang_, presets::nameOf(choice, presets::match(choice, c).variant));
+    }
+    const settings::Machine machine = m.machine();
+    const presets::Suggestion card = presets::suggest(m.cardLevel(), machine.vramMb, machine.integrated);
+    const bool fits = presets::match(presets::Choice::Picture, c).variant == card.picture &&
+                      presets::match(presets::Choice::Textures, c).variant == card.textures;
+    if (fits && !machine.adapter.empty()) d.lookNote = wtrf(lang_, Text::LauncherAuto, {machine.adapter});
+    // the version: the channel, the update's word
+    const bool beta = m.channel() == update::Channel::Beta;
+    std::string state = utf8(wtr(lang_, beta ? Text::LauncherBeta : Text::LauncherRelease));
+    if (d.update.kind == UpdateState::Done)
+        state += " \xC2\xB7 " + utf8(d.update.offer.empty()
+                                         ? wtr(lang_, Text::MainUpdateNone)
+                                         : wtrf(lang_, d.update.back ? Text::MainUpdateBack : Text::MainUpdateNew,
+                                                {d.update.offer}));
+    d.version = wtrf(lang_, Text::LauncherVersionLine, {kVersion, state});
+    // a plate: two failed starts of this version (the way back), the safe mode, uaRO Graphics off
+    plate_ = Plate::None;
+    rollBack_.clear();
+    const std::wstring dir = m.paths().dir;
+    if (installer::canRollBack(dir)) {
+        rollBack_ = installer::previousVersion(dir);
+    } else if (d.update.kind == UpdateState::Done) {
+        const auto older = update::rollbackChoices(d.update.branch, m.channel(), kVersion);
+        if (!older.empty()) rollBack_ = older.front().version;
+    }
+    std::string failures;
+    readFile(dir + L"\\" + wide(layout::kStartFailures), failures);
+    const std::string installed = installedVersion(dir);
+    if (!rollBack_.empty() && startfail::offerRollback(failures, installed)) {
+        plate_ = Plate::Rollback;
+        d.plateText = wtrf(lang_, Text::RollbackFailedStarts, {installed, rollBack_});
+        d.plateButton = wtrf(lang_, Text::RollbackShort, {rollBack_});
+    } else if (m.safeModeNoted() || m.now().config.safeMode) {
+        plate_ = Plate::Safe;
+        d.plateText = wtr(lang_, m.safeModeNoted() ? Text::LauncherPlateSafeAuto : Text::LauncherPlateSafe);
+        d.plateButton = wtr(lang_, Text::SafeModeOff);
+    } else if (m.now().config.api == Api::System) {
+        plate_ = Plate::Off;
+        d.plateText = wtr(lang_, Text::SwitchedOff);
+        d.plateButton = wtr(lang_, Text::LauncherPlateOn);
+    }
+    // what changed: the newest versions, how many since the player's last look
+    d.newFor = int(settings::changelog::newerThan(changelog_, seen_));
+    d.news.assign(changelog_.begin(), changelog_.begin() + std::ptrdiff_t(std::min<size_t>(changelog_.size(), 3)));
+    d.unread = std::max(0, unread_);
+    std::wstring sig = std::to_wstring(int(lang_)) + L"|" + std::to_wstring(int(site.kind)) + L"|" +
+                       std::to_wstring(d.info.online) + L"|" + std::to_wstring(d.info.news.size()) + L"|" +
+                       std::to_wstring(int(d.update.kind)) + L"|" + wide(d.update.offer) + L"|" +
+                       std::to_wstring(int(d.gameRunning)) + L"|" + d.look + L"|" + d.lookNote + L"|" + d.version +
+                       L"|" + d.plateText + L"|" + std::to_wstring(d.newFor) + L"|" + std::to_wstring(d.unread) +
+                       L"|" + std::to_wstring(changelog_.size());
+    for (const launcher::News& n : d.info.news) sig += L"|" + wide(n.title);
+    if (sig == launcherShownSig_) return;
+    launcherShownSig_ = sig;
+    launcher_.setData(d);
+}
+
+int MainWindow::menuAt(const std::vector<MenuItem>& items, const RECT& at, bool up) {
+    HMENU menu = CreatePopupMenu();
+    if (!menu) return 0;
+    for (const MenuItem& it : items) {
+        if (it.id == 0) {
+            AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+            continue;
+        }
+        AppendMenuW(menu, MF_STRING | (it.checked ? MF_CHECKED : 0u) | (it.enabled ? 0u : MF_GRAYED), UINT_PTR(it.id),
+                    it.text.c_str());
+    }
+    const UINT flags = TPM_RETURNCMD | TPM_NONOTIFY | TPM_RIGHTBUTTON | TPM_RIGHTALIGN |
+                       (up ? TPM_BOTTOMALIGN : TPM_TOPALIGN);
+    rebuilds_.boxOpened();  // its own message loop runs like a message box's
+    const int id = int(TrackPopupMenu(menu, flags, at.right, up ? at.top : at.bottom, 0, hwnd_, nullptr));
+    if (rebuilds_.boxClosed()) PostMessageW(hwnd_, kRebuild, 0, 0);
+    DestroyMenu(menu);
+    return id;
+}
+
+void MainWindow::launcherAction(launcherview::Part part, int index) {
+    using launcherview::Part;
+    Model& m = *model_;
+    const bool running = m.now().gameRunning;
+    switch (part) {
+        case Part::Play:  // the game running: another window of it (never an update over it)
+            if (running) {
+                const std::wstring err = m.launchGame(lang_);
+                if (!err.empty()) message(err, true);
+                refreshLauncher();
+            } else {
+                play();
+            }
+            return;
+        case Part::PlayMore: {  // ▾: another window, the safe start, the game without the offered update
+            enum { kAnother = 1, kSafe, kNoUpdate };
+            const UpdateState u = channelUpdate(m);
+            std::vector<MenuItem> items{{kAnother, wtr(lang_, Text::LauncherAnother)},
+                                        {kSafe, wtr(lang_, Text::LauncherSafe), false, !running}};
+            if (u.kind == UpdateState::Done && !u.offer.empty() && !running)
+                items.push_back({kNoUpdate, wtr(lang_, Text::LauncherNoUpdate)});
+            const int pick = menuAt(items, launcher_.screenRect(Part::PlayMore), true);
+            if (pick == kAnother) {
+                const std::wstring err = m.launchGame(lang_);
+                if (!err.empty()) message(err, true);
+            } else if (pick == kSafe) {  // the safe mode on (its plate turns it off), then the game
+                const std::wstring err = m.setSafeMode(true, lang_);
+                if (!err.empty())
+                    message(err, true);
+                else
+                    doApply(true);
+            } else if (pick == kNoUpdate) {
+                doApply(true, false, true);
+            }
+            refreshLauncher();
+            return;
+        }
+        case Part::Settings:
+            showLauncher(false);
+            return;
+        case Part::Reports:
+            openReports(false);
+            return;
+        case Part::Site:
+            openInShell(L"https://uaro.kiev.ua/" + wide(launcher::langToken(lang_)) + L"/");
+            return;
+        case Part::Forum:
+            openInShell(L"https://uaro.kiev.ua/forum/");
+            return;
+        case Part::Language: {
+            std::vector<MenuItem> items;
+            for (int i = 0; i < kLangCount; ++i) items.push_back({i + 1, wide(langName(Lang(i))), Lang(i) == lang_});
+            const int pick = menuAt(items, launcher_.screenRect(Part::Language), false);
+            if (pick > 0) setLanguage(Lang(pick - 1));
+            return;
+        }
+        case Part::Version: {  // the channel, a check, another version (the settings' «Сервіс»)
+            enum { kRelease = 1, kBeta, kCheck, kOther };
+            const bool beta = m.channel() == update::Channel::Beta;
+            const bool checking = updateState().kind == UpdateState::Checking;
+            const std::vector<MenuItem> items{{kRelease, wtr(lang_, Text::UpdateChannelRelease), !beta},
+                                              {kBeta, wtr(lang_, Text::UpdateChannelBeta), beta},
+                                              {},
+                                              {kCheck, wtr(lang_, Text::UpdateCheck), false, !checking},
+                                              {kOther, wtr(lang_, Text::RollbackOtherHead) + L"\x2026"}};
+            const int pick = menuAt(items, launcher_.screenRect(Part::Version), true);
+            if ((pick == kRelease && beta) || (pick == kBeta && !beta)) {
+                const std::wstring err = m.setChannel(beta ? update::Channel::Release : update::Channel::Beta, lang_);
+                if (!err.empty()) message(err, true);
+                startUpdateCheck();
+            } else if (pick == kCheck) {
+                startUpdateCheck();
+            } else if (pick == kOther) {
+                showLauncher(false);
+                showView(settings::View::Service, 0);
+            }
+            refreshLauncher();
+            return;
+        }
+        case Part::Plate: {
+            std::wstring err;
+            if (plate_ == Plate::Rollback && !rollBack_.empty()) {
+                rollBackTo(*this, rollBack_);
+                return;
+            }
+            if (plate_ == Plate::Safe) err = m.setSafeMode(false, lang_);
+            if (plate_ == Plate::Off) err = m.setSwitchedOff(false, lang_);
+            if (!err.empty()) message(err, true);
+            reload();
+            return;
+        }
+        case Part::News:
+            if (index >= 0 && size_t(index) < launcherState().info.news.size()) {
+                const std::string url = launcherState().info.news[size_t(index)].url;
+                if (!url.empty()) openInShell(wide(url));  // the site's pages only (core/launcher)
+            }
+            return;
+        case Part::Changelog: {  // stage 2: the version's notes as before; the changelog's screen comes in stage 4
+            markSeen();
+            const std::wstring notes = notesText(m.paths().dir, lang_);
+            if (notes.empty())
+                message(wtrf(lang_, Text::NotesNone, {kVersion}), false);
+            else
+                showNotes(notes);
+            return;
+        }
+        case Part::Look:  // stage 2: «Головна», where the three choices are; the picker comes in stage 3
+            showLauncher(false);
+            showView(settings::View::Main, 0);
+            return;
+        case Part::None:
+            break;
+    }
 }
 
 }  // namespace uagfx::app

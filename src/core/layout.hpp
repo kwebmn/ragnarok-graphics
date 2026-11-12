@@ -83,6 +83,8 @@ constexpr const char* kComputerKey = "uaro-graphics\\reports\\computer.txt";
 // 3.0.18-beta.189: a report's check shots (core/report_checks) - the driver writes them after the report's picture,
 // the app sends them with it; the last report's go when the next one starts
 constexpr const char* kReportChecks = "uaro-graphics\\reports\\checks";
+// 3.0.18-beta.193: the launcher's art and the look picker's pictures (core/launcher_art), the package's
+constexpr const char* kLauncherArt = "uaro-graphics\\launcher";
 // 3.0.9-beta.4: the developer's answers not seen yet, as the game's watcher last heard them (core/report_answers) -
 // the driver shows them in the game
 constexpr const char* kAnswers = "uaro-graphics\\reports\\answers.json";

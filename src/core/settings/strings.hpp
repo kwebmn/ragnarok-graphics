@@ -934,6 +934,12 @@ enum class Text : uint16_t {
     EquipSetsHint,   // 3.0.18-beta.154: the equipment sets
     StorageTakePicked, PickedPut, PickedHint,  // 3.0.18-beta.155: things picked with Ctrl / Shift
     CountFits,  // 3.0.18-beta.156: «how many» - what the weight lets in
+    LauncherPlay, LauncherUpdate, LauncherUpdating, LauncherRunning, LauncherServer, LauncherServerDown,
+    LauncherServerAsking, LauncherWhatsNew, LauncherUpdated, LauncherNewSince, LauncherLog, LauncherSettings,
+    LauncherReports, LauncherSite, LauncherForum, LauncherAnother, LauncherSafe, LauncherNoUpdate,
+    LauncherVersionLine, LauncherAuto, LauncherChange, LauncherBack, LauncherTagline, LauncherBeta,
+    LauncherRelease,  // 3.0.18-beta.193: the launcher
+    LauncherPlateSafeAuto, LauncherPlateSafe, LauncherPlateOn,  // and its plates
     Count
 };
 

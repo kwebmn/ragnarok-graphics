@@ -35,6 +35,10 @@ ALLOWED = {
         "BitBlt", "CreateSolidBrush",  # 1.6.2: the preview's window
         # 3.0.9-beta.5: «Звернення» as a messenger - the cards, the bubbles, the rules (all since Windows NT)
         "CreatePen", "Ellipse", "GetStockObject", "LineTo", "MoveToEx", "RoundRect", "SetBkColor",
+        # 3.0.18-beta.193: the launcher - its fonts from the app's resources (Windows 2000), its words drawn with the
+        # glyphs Exo 2 lacks in Segoe UI (GetGlyphIndicesW: Windows 2000; the rest since Windows NT)
+        "AddFontMemResourceEx", "CreateFontW", "ExtTextOutW", "GdiFlush", "GetGlyphIndicesW", "GetTextFaceW",
+        "SetTextAlign", "SetTextCharacterExtra",
     },
     "kernel32.dll": {
         "SystemTimeToTzSpecificLocalTime",  # 2.13: the site's times in the player's clock
@@ -107,6 +111,8 @@ ALLOWED = {
         "Shell_NotifyIconW",  # 3.0.10-beta.3: a new answer's notification while the app is behind (Windows NT 4)
     },
     "user32.dll": {
+        # 3.0.18-beta.193: the launcher - its hover (TrackMouseEvent: Windows 2000), its press, its menus (Windows NT)
+        "AppendMenuW", "CreatePopupMenu", "DestroyMenu", "GetCapture", "TrackMouseEvent", "TrackPopupMenu",
         "GetClipboardData", "IsClipboardFormatAvailable", "UpdateWindow",  # 2.13: Ctrl+V of a screenshot
         # 3.0.9-beta.5: «Звернення»'s chat - its class, a thumbnail under the mouse (all since Windows NT)
         "GetClassInfoExW", "GetCursorPos", "GetParent", "OffsetRect", "PtInRect",

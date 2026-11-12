@@ -75,9 +75,10 @@ Text viewName(View v) {
 
 std::vector<View> viewsOf(Mode m) {
     // 3.0.17-beta.5 (the concept «простой старт»): every page in the simple mode too - its detailed rows folded
-    // behind «Ще N налаштувань ›» (page_settings), not hidden with their pages
-    std::vector<View> list{View::Play,    View::Main,     View::Graphics,  View::Screen,  View::Effects, View::Ai,
-                           View::Sound,   View::Pad,      View::GameChat,  View::Interface, View::Service, View::Help};
+    // behind «Ще N налаштувань ›» (page_settings), not hidden with their pages. 3.0.18-beta.193: «Гра» out - the
+    // launcher is the app's first screen, the settings behind its gear
+    std::vector<View> list{View::Main,  View::Graphics, View::Screen,    View::Effects, View::Ai,     View::Sound,
+                           View::Pad,   View::GameChat, View::Interface, View::Service, View::Help};
     if (m == Mode::Developer) list.push_back(View::Debug);
     return list;
 }
@@ -108,8 +109,8 @@ std::vector<Page> partsOf(View v, int tab) {
         case View::Pad: return {Page::Pad};
         case View::GameChat: return {Page::Game, Page::Chat};
         case View::Interface: return {Page::Interface};
-        case View::Service: return {Page::Service, Page::Diagnostics};
-        case View::Play: return {Page::Launcher};
+        case View::Service: return {Page::Service, Page::Diagnostics, Page::Launcher};  // .193: the launcher's row
+        case View::Play: return {};
         case View::Help: return {};
         case View::Debug: break;
     }
@@ -133,7 +134,7 @@ Place placeOf(Page p) {
         case Page::Chat: return {View::GameChat, 0};
         case Page::Interface: return {View::Interface, 0};
         case Page::Debug: return {View::Debug, 0};
-        case Page::Launcher: return {View::Play, 0};
+        case Page::Launcher:  // 3.0.18-beta.193: «Запускати гру одразу» in «Сервіс»
         case Page::Diagnostics:
         case Page::Service: break;
     }

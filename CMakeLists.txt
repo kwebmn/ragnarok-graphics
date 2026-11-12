@@ -231,10 +231,11 @@ elseif(WIN32)
                    src/app/page_effects.cpp src/app/page_pack.cpp src/app/page_pad.cpp src/app/preview_window.cpp
                    src/app/page_parts.cpp src/app/page_debug.cpp src/app/page_main.cpp src/app/status_info.cpp
                    src/app/page_search.cpp src/app/notes_window.cpp src/app/update_window.cpp src/app/modes.cpp
-                   src/app/page_play.cpp src/app/page_help.cpp src/app/reports_window.cpp src/app/reports_thread.cpp
-                   src/app/client_patch_thread.cpp src/app/chat_view.cpp
+                   src/app/page_help.cpp src/app/reports_window.cpp src/app/reports_thread.cpp
+                   src/app/client_patch_thread.cpp src/app/chat_view.cpp src/app/launcher_view.cpp
                    src/app/app.rc)
-    target_include_directories(uaro-graphics PRIVATE src/app dist ${CMAKE_BINARY_DIR}/app)
+    # 3.0.18-beta.193: the launcher's fonts (third_party/launcher_fonts) - the .rc's files
+    target_include_directories(uaro-graphics PRIVATE src/app dist ${CMAKE_BINARY_DIR}/app third_party/launcher_fonts)
     target_compile_options(uaro-graphics PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>)
     target_link_libraries(uaro-graphics PRIVATE uagfx_app comdlg32)
     target_link_options(uaro-graphics PRIVATE -static -static-libgcc -static-libstdc++ -s -municode)

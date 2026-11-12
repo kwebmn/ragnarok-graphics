@@ -111,7 +111,6 @@ std::unique_ptr<Page> makePackPage(PageHost& host);     // 0.43: the texture pac
 std::unique_ptr<Page> makePadPage(PageHost& host);      // 1.4: uaRO Pad, the gamepad
 std::unique_ptr<Page> makeDebugPage(PageHost& host);    // 2.6: the Developer mode's switches and tools
 std::unique_ptr<Page> makeMainPage(PageHost& host);     // 2.6: the Simple mode's Main page
-std::unique_ptr<Page> makePlayPage(PageHost& host);     // 2.11: the launcher «Гра»
 std::unique_ptr<Page> makeHelpPage(PageHost& host);     // 3.0.2-beta.6: «Довідка», every function described
 // 2.12: what the auto setup picked, in words (page_settings.cpp) - the Main page's question, «Гра»'s card
 std::wstring autoSetupText(const settings::Machine& x, const settings::AutoSetup& a, bool uiChanged,

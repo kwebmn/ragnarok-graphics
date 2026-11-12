@@ -25,6 +25,8 @@ constexpr int kUpdateNow = 2006;
 constexpr int kMakePack = 2007;
 constexpr int kAiMore = 2008;
 constexpr int kGetDlss = 2009;  // 2.10: DLSS from the site, in a progress window
+constexpr int kNewFeatures = 2010;  // 3.0.18-beta.193: «★ Нові можливості (N)», «Лише змінені» - «Гра»'s before
+constexpr int kChangedOnly = 2011;
 
 const Text kQualities[kMainQualityCount] = {Text::MainQualityLow, Text::MainQualityMedium, Text::MainQualityHigh,
                                             Text::MainQualitySuperLight};
@@ -65,6 +67,10 @@ public:
         rows_->buildRow(p, "frames.battery_saver");
         p.buttons({{kRecommended, t(Text::MainRecommended), true, true},  // blue (the user)
                    {kWhatsNew, tf(Text::MainWhatsNew, {kVersion})}});
+        int fresh = 0;  // 3.0.17-beta.6: the rows new to the player; .193 here, «Гра» is the launcher now
+        for (const settings::IniSetting& s : settings::iniSettings()) fresh += m.isNew(settings::sectionKey(s)) ? 1 : 0;
+        p.buttons({{kNewFeatures, tf(Text::PlayNewFeatures, {std::to_string(fresh)}), true, fresh > 0},
+                   {kChangedOnly, t(Text::PlayChangedOnly), true}});
         if (two)
             p.nextColumn();
         else
@@ -125,6 +131,8 @@ public:
                 host_.rebuild();
                 return;
             }
+            case kNewFeatures: host_.search(kNewQuery); return;
+            case kChangedOnly: host_.search(kChangedQuery); return;
             case kMakePack: host_.showView(View::Ai, 2); return;
             case kAiMore: host_.showView(View::Ai, 0); return;
             default: return;

@@ -9,6 +9,7 @@
 #include "app/setting_ids.hpp"
 #include "app/update.hpp"
 #include "app/update_run.hpp"
+#include "core/graphics_test.hpp"
 #include "core/settings/presets.hpp"
 #include "core/updates.hpp"
 #include "core/update_check.hpp"
@@ -42,6 +43,8 @@ constexpr int kProfileSave = 1452;
 constexpr int kProfileLoad = 1453;
 constexpr int kProfileDelete = 1454;
 constexpr int kRollTo = 1470;  // 3.0.17-beta.1: + n, «Встановити 3.0.15» (update::kMostRollback)
+constexpr int kTestNow = 1490;   // 3.0.18-beta.193: «Запустити тест графіки» - «Гра»'s before (the launcher took it)
+constexpr int kTestList = 1491;  // and the last test's table
 constexpr int kPalettesFile = 1460;  // 2.5.19
 constexpr int kPalettesFolder = 1461;
 
@@ -53,6 +56,26 @@ Text presetName(Preset p) {
         case Preset::Plain: break;
     }
     return Text::PresetPlain;
+}
+
+// 3.0.5-beta.7: when a file was written ("" none) - its stamp, and its local time for the page
+std::wstring stampOf(const std::wstring& file) {
+    WIN32_FILE_ATTRIBUTE_DATA a{};
+    if (!GetFileAttributesExW(file.c_str(), GetFileExInfoStandard, &a)) return L"";
+    return std::to_wstring(a.ftLastWriteTime.dwHighDateTime) + L"." + std::to_wstring(a.ftLastWriteTime.dwLowDateTime) +
+           L"." + std::to_wstring(a.nFileSizeLow);
+}
+
+std::string localTimeOf(const std::wstring& file) {
+    WIN32_FILE_ATTRIBUTE_DATA a{};
+    FILETIME local{};
+    SYSTEMTIME t{};
+    if (!GetFileAttributesExW(file.c_str(), GetFileExInfoStandard, &a) ||
+        !FileTimeToLocalFileTime(&a.ftLastWriteTime, &local) || !FileTimeToSystemTime(&local, &t))
+        return "";
+    char text[32];
+    std::snprintf(text, sizeof text, "%02u.%02u.%04u %02u:%02u", t.wDay, t.wMonth, t.wYear, t.wHour, t.wMinute);
+    return text;
 }
 
 // "2026-10-13-192033" -> "2026-10-13 19:20:33"
@@ -150,8 +173,9 @@ public:
         // previous version back, the files repaired, uaRO Graphics removed.
         p.gap();
         p.heading(t(Text::ServiceUpdate));
-        // 3.0.0-beta.2: the channel - the testers' builds or the releases (not in the Simple mode: «Гра» has it)
-        if (host_.mode() != settings::Mode::Simple) buildChannel(p, host_, kChannel);
+        // 3.0.0-beta.2: the channel - the testers' builds or the releases; 3.0.18-beta.193 in every mode («Гра», where
+        // the Simple mode had it, is the launcher now: its version's menu has the channel too)
+        buildChannel(p, host_, kChannel);
         const UpdateState u = channelUpdate(m);
         checking_ = u.kind == UpdateState::Checking;
         const bool offered = u.kind == UpdateState::Done && !u.offer.empty();
@@ -196,6 +220,12 @@ public:
                 versions.push_back({kRollTo + int(i), tf(Text::RollbackToButton, {rollTo_[i]})});
             p.buttons(versions);
         }
+        // 3.0.18-beta.193: «Гра»'s rows - the game's direct start and the graphics test (the launcher took «Гра»)
+        p.gap();
+        p.heading(t(Text::ViewPlay));
+        rows_->buildRow(p, "launcher.direct_start");
+        p.gap();
+        buildTest(p);
         // 3.0.1-beta.5: our own libraries in place of the game's old ones, each switchable (core/client_libs.hpp)
         if (host_.mode() != settings::Mode::Simple) {
             p.gap();
@@ -232,15 +262,66 @@ public:
         p.note(t(Text::SwitchOffNote));
     }
 
-    bool ticks() const override {
-        return updateState().kind == UpdateState::Checking || palettesState().kind == PalettesState::Working;
-    }
+    bool ticks() const override { return true; }  // 3.0.18-beta.193: a test's result may come too (was «Гра»'s)
     void tick() override {
         const bool checking = updateState().kind == UpdateState::Checking;
         const bool making = palettesState().kind == PalettesState::Working;
-        if ((checking_ && !checking) || (making_ && !making)) host_.rebuild();  // the answer came, or the file
+        const std::wstring file = testFile();
+        const bool tested = stampOf(file) + L"|" + stampOf(file + L".sent") != testStamp_;
+        // the answer came, or the file, or a test's result
+        if ((checking_ && !checking) || (making_ && !making) || tested) host_.rebuild();
         checking_ = checking;
         making_ = making;
+    }
+
+    // 3.0.5-beta.7 (the user: «сделай»): «Тест графіки» - the game started for it alone (its first map runs the test,
+    // win/context_test.cpp), and the last test's table under it (uaro-graphics\graphics-test.txt; its .sent: the
+    // report's code, or why it did not go). 3.0.18-beta.193: here from «Гра»
+    std::wstring testFile() const { return host_.model().paths().dir + L"\\uaro-graphics\\graphics-test.txt"; }
+    void buildTest(Panel& p) {
+        Model& m = host_.model();
+        p.heading(t(Text::TestTitle));
+        p.note(t(Text::PlayTestNote));
+        const bool running = m.now().gameRunning;
+        p.buttons({{kTestNow, t(Text::PlayTestButton), !running}});
+        if (running) p.note(t(Text::PlayTestRunning), Tone::Warn);
+        const std::wstring file = testFile();
+        testStamp_ = stampOf(file) + L"|" + stampOf(file + L".sent");
+        std::string text;
+        graphics_test::Table table;
+        if (!readFile(file, text) || !graphics_test::parseSummary(text, table)) {
+            p.note(t(Text::PlayTestNone));
+            return;
+        }
+        p.gap(4);
+        p.note(tf(Text::PlayTestLast, {localTimeOf(file)}), Tone::Normal);
+        p.note(wide(table.head));
+        static const int kWidths[] = {130, 45, 150, 95, 330};
+        std::vector<std::pair<std::wstring, int>> columns;
+        for (size_t c = 0; c < table.columns.size() && c < 5; ++c)
+            columns.emplace_back(wide(table.columns[c]), kWidths[c]);
+        HWND list = p.listView(kTestList, columns, int(table.rows.size()));
+        for (size_t r = 0; r < table.rows.size(); ++r) {
+            std::vector<std::string> cells = table.rows[r];
+            if (cells.size() == 2) cells = {cells[0], "—", "—", "—", cells[1]};  // not measured: the words, wide
+            for (size_t c = 0; c < cells.size(); ++c) {
+                const std::wstring cell = wide(cells[c]);
+                LVITEMW item{};
+                item.mask = LVIF_TEXT;
+                item.iItem = int(r);
+                item.iSubItem = int(c);
+                item.pszText = const_cast<wchar_t*>(cell.c_str());
+                SendMessageW(list, c == 0 ? LVM_INSERTITEMW : LVM_SETITEMTEXTW, c == 0 ? 0 : WPARAM(r),
+                             reinterpret_cast<LPARAM>(&item));
+            }
+        }
+        std::string said;
+        if (!readFile(file + L".sent", said)) return;
+        while (!said.empty() && (said.back() == '\n' || said.back() == '\r' || said.back() == ' ')) said.pop_back();
+        if (said.rfind("R-", 0) == 0)
+            p.note(tf(Text::PlayTestSent, {said}), Tone::Good);
+        else if (!said.empty())
+            p.note(tf(Text::PlayTestNotSent, {said.rfind("error: ", 0) == 0 ? said.substr(7) : said}), Tone::Warn);
     }
 
     void command(int id, int code) override {
@@ -250,6 +331,10 @@ public:
         }
         if (channelCommand(host_, id, code, kChannel)) return;  // 3.0.0-beta.2
         if (code != BN_CLICKED) return;
+        if (id == kTestNow) {  // 3.0.18-beta.193: «Гра»'s before
+            host_.playTest();
+            return;
+        }
         Model& m = host_.model();
         const Lang l = host_.lang();
         if (id >= kPreset && id < kPreset + kPresetCount) {
@@ -373,6 +458,7 @@ private:
     HWND list_ = nullptr;
     HWND profiles_ = nullptr;
     bool checking_ = false, making_ = false;  // at the last look: what ended since is shown anew
+    std::wstring testStamp_;  // 3.0.18-beta.193: the test's result and its answer, when the page was built
 };
 
 }  // namespace

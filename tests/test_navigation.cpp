@@ -13,9 +13,9 @@ bool listed(const std::vector<Page>& pages, Page p) { return std::find(pages.beg
 
 TEST(nav_simple_lists_every_page) {
     // 3.0.17-beta.5 (the concept «простой старт»): one list in every mode, «Головна» second (the three choices);
-    // the simple mode folds the detailed rows instead of hiding pages
+    // the simple mode folds the detailed rows instead of hiding pages. 3.0.18-beta.193: «Головна» first («Гра» out)
     CHECK(viewsOf(Mode::Simple) == viewsOf(Mode::Detailed));
-    CHECK(viewsOf(Mode::Simple).at(1) == View::Main);
+    CHECK(viewsOf(Mode::Simple).at(0) == View::Main);
 }
 
 TEST(nav_the_new_interface_has_its_own_item) {
@@ -38,16 +38,24 @@ TEST(nav_help_in_every_mode) {
 }
 
 TEST(nav_detailed_lists_eight_pages) {
-    CHECK(viewsOf(Mode::Detailed) == std::vector<View>({View::Play, View::Main, View::Graphics, View::Screen,
-                                                        View::Effects, View::Ai, View::Sound, View::Pad,
-                                                        View::GameChat, View::Interface, View::Service, View::Help}));
+    CHECK(viewsOf(Mode::Detailed) == std::vector<View>({View::Main, View::Graphics, View::Screen, View::Effects,
+                                                        View::Ai, View::Sound, View::Pad, View::GameChat,
+                                                        View::Interface, View::Service, View::Help}));
 }
 
-// 2.11: the launcher «Гра» first in every mode - the app opens on it
-TEST(views_open_on_play) {
-    for (Mode m : {Mode::Simple, Mode::Detailed, Mode::Developer}) CHECK(viewsOf(m).front() == View::Play);
-    CHECK(partsOf(View::Play, 0) == std::vector<Page>({Page::Launcher}));
-    CHECK(placeOf(Page::Launcher).view == View::Play);
+// 3.0.18-beta.193 (the launcher, docs/superpowers/specs/2026-11-12-launcher-design.md): the app opens on the launcher;
+// «Гра» leaves the settings' list (the launcher is it), the settings behind the gear open on «Головна»; its row
+// («Запускати гру одразу») is «Сервіс»'s
+TEST(views_open_on_main_the_launcher_out_of_the_list) {
+    for (Mode m : {Mode::Simple, Mode::Detailed, Mode::Developer}) {
+        const std::vector<View> list = viewsOf(m);
+        CHECK(list.front() == View::Main);
+        CHECK(std::find(list.begin(), list.end(), View::Play) == list.end());
+    }
+    CHECK(placeOf(Page::Launcher).view == View::Service);
+    const std::vector<Page> service = partsOf(View::Service, 0);
+    CHECK(std::find(service.begin(), service.end(), Page::Launcher) != service.end());
+    CHECK(partsOf(View::Play, 0).empty());
 }
 
 TEST(nav_developer_adds_debug_last) {

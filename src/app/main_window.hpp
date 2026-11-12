@@ -5,17 +5,20 @@
 #include <string>
 #include <vector>
 
+#include "app/launcher_view.hpp"
 #include "app/model.hpp"
 #include "app/page.hpp"
 #include "app/rebuilds.hpp"
 #include "app/reports_window.hpp"
 #include "app/ui.hpp"
+#include "core/settings/changelog.hpp"
 
 namespace uagfx::app {
 
 // The settings app's window (stage 2 spec §6): the list of pages on the left, the page, the language at the top
-// right, the status line and the buttons at the bottom.
-class MainWindow : public PageHost {
+// right, the status line and the buttons at the bottom. 3.0.18-beta.193: the launcher over it first (LauncherView,
+// docs/superpowers/specs/2026-11-12-launcher-design.md) - the settings behind its gear, «← До гри» back.
+class MainWindow : public PageHost, public LauncherHost {
 public:
     int run(HINSTANCE inst, int show);
 
@@ -40,6 +43,7 @@ public:
     void play() override { doApply(true); }
     void playTest() override { doApply(true, true); }  // 3.0.5-beta.7
     void openReports(bool fresh) override;
+    void launcherAction(launcherview::Part part, int index) override;  // 3.0.18-beta.193
     // 2.13: uaro-graphics.exe --report (the game's Ctrl+Shift+F10): «Нове звернення» with its shot, the window up
     void reportAtStart(const ReportStart& s) {
         reportStart_ = s;
@@ -81,8 +85,32 @@ private:
     std::wstring searchText() const;
     std::wstring windowLetters() const;  // Alt+letter of the window's own buttons
     void syncLibraries();  // 3.0.1-beta.5
-    void doApply(bool play, bool test = false);
+    void doApply(bool play, bool test = false, bool noUpdate = false);  // noUpdate: the game as it is (.193)
     RECT pageArea() const;
+    // 3.0.18-beta.193: the launcher - in front at the start; the settings' own controls hidden while it is
+    struct MenuItem {
+        int id = 0;  // 0: a line between
+        std::wstring text;
+        bool checked = false, enabled = true;
+    };
+    void showLauncher(bool on);
+    void showSettingsControls();
+    bool modeShown(int i) const;  // the Developer mode's button only while it is the mode, or after Ctrl+Shift+D
+    void refreshLauncher();
+    void readChangelog();
+    void markSeen();
+    void setLanguage(settings::Lang l);
+    int menuAt(const std::vector<MenuItem>& items, const RECT& at, bool up);  // the item's id, 0 none
+    LauncherView launcher_;
+    bool launcherOn_ = true;
+    HWND back_ = nullptr;  // «← До гри» in the settings' header
+    std::vector<settings::changelog::Version> changelog_;  // uaro-graphics\notes\TEST.<lang>.md for the channel
+    settings::Lang changelogLang_ = settings::Lang::En;
+    bool changelogBeta_ = false, changelogRead_ = false;
+    std::string seen_;  // cache\seen-version.txt: the version the player last saw the news of
+    enum class Plate : uint8_t { None, Rollback, Safe, Off } plate_ = Plate::None;
+    std::string rollBack_;           // the plate's version back to
+    std::wstring launcherShownSig_;  // what the launcher shows: nothing painted again when it is the same
 
     std::unique_ptr<Model> model_;
     HWND hwnd_ = nullptr;
@@ -146,7 +174,6 @@ private:
     HWND stripRight_ = nullptr;
     HWND stripUpdate_ = nullptr;  // 2.10: "Update" in the status bar while a newer version is offered
     HBRUSH stripBrush_ = nullptr;
-    bool newInstall_ = false;  // no notes of "What's new" on the first start
     std::unique_ptr<Panel> panel_;
     std::unique_ptr<Page> current_;
     Rebuilds rebuilds_;

@@ -1,0 +1,53 @@
+#pragma once
+#include <cstdint>
+
+namespace uagfx::launcherview {
+
+// 3.0.18-beta.193 (the owner: «первый экран... очень сложный, новый пользователь может испугаться... учти, что это
+// игра, а не приложение»; docs/superpowers/specs/2026-11-12-launcher-design.md): the places of the launcher - the
+// first screen of uaro-graphics.exe - at a window's client size in pixels and Windows' scale (1 at 96 DPI). Designed
+// at 1280 x 720: a top bar, «Що нового» on the left (the update card, the site's news), four icons at the bottom left,
+// the look line, the big button and the version at the bottom right; a plate over the icons when one is asked.
+
+enum class Part : uint8_t {
+    None, Play, PlayMore, Look, Changelog, News, Settings, Reports, Site, Forum, Version, Language, Plate
+};
+
+struct Box {
+    float x = 0, y = 0, w = 0, h = 0;
+    bool contains(float px, float py) const { return px >= x && py >= y && px < x + w && py < y + h; }
+};
+
+constexpr int kMostNews = 3;
+constexpr int kDockIcons = 4;  // «Налаштування», «Звернення», «Сайт», «Форум»
+
+struct Layout {
+    float s = 1;
+    int w = 0, h = 0;
+    Box bar, logo, server, language;
+    Box feed, update;  // feed: its label's line and the cards; update: the first card
+    Box news[kMostNews];
+    int newsShown = 0;
+    Box dock[kDockIcons];
+    Box look, play, playMore, version;
+    Box plate;  // w 0: none
+};
+
+// newsCount: the site's news at hand; plate: a plate is shown (the safe mode, uaRO Graphics off, a roll back)
+Layout layoutFor(int width, int height, float scale, int newsCount, bool plate);
+
+struct Hit {
+    Part part = Part::None;
+    int index = -1;  // a news card's
+};
+Hit hitAt(const Layout& L, float x, float y);
+
+// What the big button does now: the game running - another window (never an update over it); an update coming in;
+// one offered; else play
+enum class PlayState : uint8_t { Update, Updating, Play, Running };
+struct PlayInputs {
+    bool offered = false, downloading = false, gameRunning = false;
+};
+PlayState playState(const PlayInputs& in);
+
+}  // namespace uagfx::launcherview

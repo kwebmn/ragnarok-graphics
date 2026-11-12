@@ -75,9 +75,9 @@ TEST(help_holds_the_pages_own_rows) {
                    Text::PadNpcHint, Text::PadWho, Text::PadButtons, Text::PadMark})  // 3.0.11-beta.89: the page's own
         CHECK(at(pad, t) > 1);
     CHECK(hintOf(View::Pad, Mode::Simple, Text::PadNpcHint) == Text::PadNpcHintHint);
-    const std::vector<Text> play = labels(View::Play, Mode::Simple);
-    CHECK_EQ(at(play, Text::UpdateChannel), 0);
-    CHECK_EQ(at(play, labelOf("launcher.direct_start")), 1);
+    // 3.0.18-beta.193: «Гра»'s two rows in «Сервіс» (the launcher took «Гра»'s place) - the start a detailed row
+    CHECK_EQ(at(labels(View::Service, Mode::Simple), Text::UpdateChannel), 0);
+    CHECK(at(labels(View::Service, Mode::Detailed), labelOf("launcher.direct_start")) > 0);
     CHECK_EQ(at(labels(View::Main, Mode::Simple), Text::PageQuality), 0);
     // «Головне» builds its rows by name in every mode: the gamepad's switch among them
     const std::vector<Text> main = labels(View::Main, Mode::Simple);

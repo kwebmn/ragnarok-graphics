@@ -18,7 +18,7 @@ struct OwnRow {
 };
 
 const OwnRow kOwnRows[] = {
-    {View::Play, Mode::Simple, "", {Text::UpdateChannel, Text::UpdateChannelHint}},
+    {View::Service, Mode::Simple, "", {Text::UpdateChannel, Text::UpdateChannelHint}},  // .193: «Гра»'s before
     {View::Main, Mode::Simple, "", {Text::PageQuality, Text::MainQualityHint}},
     {View::Screen, Mode::Simple, "", {Text::ScreenShow, Text::ScreenShowHint}},
     {View::Screen, Mode::Simple, "", {Text::ScreenMonitor, Text::ScreenMonitorHint}},
@@ -84,12 +84,10 @@ std::vector<const IniSetting*> byName(const char* const (&keys)[N], const Machin
     return out;
 }
 
-// The schema's rows a view shows: «Гра», «Головне» and «Геймпад» theirs by name, the Effects page its head and its
+// The schema's rows a view shows: «Головне» and «Геймпад» theirs by name, the Effects page its head and its
 // groups (each group's effects are on the page itself), every other page the rows of its level and machine
 std::vector<const IniSetting*> schemaRows(View v, Mode mode, const Machine& machine) {
-    static const char* const kPlay[] = {"launcher.direct_start"};
     static const char* const kPad[] = {"pad.enabled"};
-    if (v == View::Play) return byName(kPlay, machine);
     if (v == View::Main) return byName(kMainPageKeys, machine);
     if (v == View::Pad) return byName(kPad, machine);
     std::vector<const IniSetting*> out;

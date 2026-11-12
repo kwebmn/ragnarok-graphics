@@ -199,8 +199,9 @@ const std::vector<Action>& actions() {
         {Text::PadLightbar, {View::Pad, 0}, Mode::Simple, "підсвітка подсветка lightbar"},
         {Text::PadButtons, {View::Pad, 0}, Mode::Simple, "кнопки геймпада buttons"},
         {Text::PadChatWheel, {View::Pad, 0}, Mode::Simple, ""},
-        {Text::PlayTestButton, {View::Play, 0}, Mode::Simple, "тест графіки тест графики test"},
-        {Text::UpdateNow, {View::Play, 0}, Mode::Simple, "оновлення обновление update"},
+        // 3.0.18-beta.193: «Гра»'s test and update in «Сервіс» (the launcher took «Гра»'s place)
+        {Text::PlayTestButton, {View::Service, 0}, Mode::Simple, "тест графіки тест графики test"},
+        {Text::UpdateNow, {View::Service, 0}, Mode::Simple, "оновлення обновление update"},
     };
     return list;
 }

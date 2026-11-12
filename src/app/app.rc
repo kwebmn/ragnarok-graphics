@@ -7,6 +7,13 @@
 1 ICON "app.ico"
 1 24 "app.manifest"
 DEFAULT_INI RCDATA "uaro-graphics.ini"
+// 3.0.18-beta.193: the launcher's fonts (third_party/launcher_fonts, SIL OFL 1.1), loaded privately by
+// app/launcher_view - Exo 2 for its words, Cinzel for the wordmark
+LAUNCHER_EXO2_MEDIUM RCDATA "Exo2-Medium.ttf"
+LAUNCHER_EXO2_SEMIBOLD RCDATA "Exo2-SemiBold.ttf"
+LAUNCHER_EXO2_BOLD RCDATA "Exo2-Bold.ttf"
+LAUNCHER_EXO2_EXTRABOLD RCDATA "Exo2-ExtraBold.ttf"
+LAUNCHER_CINZEL_BOLD RCDATA "Cinzel-Bold.ttf"
 
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION UAGFX_VERSION_NUMBERS
