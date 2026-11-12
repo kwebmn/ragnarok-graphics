@@ -8498,9 +8498,9 @@ constexpr Entry kTexts[] = {
     {Text::TrackerEmptyTag, "how", "як", "как"},
     {Text::ServersPlayers, "{1} playing", "{1} у грі", "{1} в игре"},  // 3.0.18-beta.153
     // 3.0.18-beta.154; .219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться»): what the row is for
-    {Text::EquipSetsHint, "Sets of gear: point at a number - what it holds and what a click does",
-     "Комплекти речей: наведіть на цифру — що в ній і що зробить клік",
-     "Комплекты вещей: наведите на цифру — что в ней и что сделает клик"},
+    {Text::EquipSetsHint, "keep what is worn in a row - and change into it with one click",  // .220: «сделай явно»
+     "збережіть надіте в рядок — і перевдягайтеся одним кліком",
+     "сохраните надетое в строку — и переодевайтесь одним кликом"},
     {Text::StorageTakePicked, "Take the picked ({1})",
      "Забрати вибране ({1})",
      "Забрать выбранное ({1})"},
@@ -8618,16 +8618,10 @@ constexpr Entry kTexts[] = {
      "б'є найближчого монстра, інакше говорить з NPC поруч. Ctrl+стрілки повертають і наближають камеру.",
      "Пробел, когда строка чата пуста, делает то же, что A геймпада: бьёт цель, иначе подбирает лут рядом, иначе "
      "бьёт ближайшего монстра, иначе говорит с NPC рядом. Ctrl+стрелки поворачивают и приближают камеру."},
-    {Text::EquipSetTitle, "Set {1}", "Комплект {1}", "Комплект {1}"},  // 3.0.18-beta.219
-    {Text::EquipSetEmpty, "Empty", "Порожній", "Пустой"},
-    {Text::EquipSetClickKeep, "Click: keep what is worn now", "Клік — зберегти те, що надіто зараз",
-     "Клик — сохранить то, что надето сейчас"},
-    {Text::EquipSetClickPut, "Click: put it on \xC2\xB7 right button: keep or clear",
-     "Клік — надягти \xC2\xB7 права кнопка — зберегти чи очистити",
-     "Клик — надеть \xC2\xB7 правая кнопка — сохранить или очистить"},
-    {Text::EquipSetClickOn, "Worn now \xC2\xB7 right button: keep or clear",
-     "Уже надіто \xC2\xB7 права кнопка — зберегти чи очистити",
-     "Уже надето \xC2\xB7 правая кнопка — сохранить или очистить"},
+    {Text::EquipSetsTitle, "Sets", "Комплекти", "Комплекты"},  // 3.0.18-beta.219, .220
+    {Text::EquipSetEmpty, "empty", "порожній", "пустой"},
+    {Text::EquipSetPutOn, "Put on", "Надягти", "Надеть"},
+    {Text::EquipSetWornNow, "\xE2\x9C\x93 Worn", "\xE2\x9C\x93 Надіто", "\xE2\x9C\x93 Надето"},
     {Text::EquipSetMenuKeep, "Keep what is worn", "Зберегти надіте", "Сохранить надетое"},
     {Text::EquipSetMenuClear, "Clear", "Очистити", "Очистить"},
     {Text::EquipSetKept, "Set {1} kept - things: {2}", "Комплект {1} збережено — речей: {2}",
@@ -8636,7 +8630,6 @@ constexpr Entry kTexts[] = {
      "Ничего не надето — нечего сохранять"},
     {Text::EquipSetPutting, "Putting on set {1}…", "Надягаю комплект {1}…", "Надеваю комплект {1}…"},
     {Text::EquipSetDone, "Set {1} worn", "Комплект {1} надіто", "Комплект {1} надет"},
-    {Text::EquipSetAlready, "Set {1} is worn already", "Комплект {1} уже надіто", "Комплект {1} уже надет"},
     {Text::EquipSetMissing, "Set {1}: not in the bag - {2}", "Комплект {1}: немає в сумці — {2}",
      "Комплект {1}: нет в сумке — {2}"},
     {Text::EquipSetPartly, "Set {1}: not all of it could be worn", "Комплект {1}: не все вдалося надягти",

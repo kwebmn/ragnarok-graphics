@@ -31,6 +31,7 @@ struct Step {
     int index = 0;  // the bag's place
     uint32_t at = 0;  // where (the slot's bit)
     int slot = 0;
+    bool off = false;  // 3.0.18-beta.220: taken off (the slot's thing), not worn
 };
 std::vector<Step> plan(const Set& set, const std::vector<Owned>& bag, const equipwin::Worn now[equipwin::kSlots]);
 constexpr int kSets = 3;

@@ -103,7 +103,6 @@ struct State {
     std::string setsOf;
     std::vector<equipsets::Step> setQueue;
     ULONGLONG setStepAt = 0;
-    int setHot = -1;
     int sheetGen = 0;
     bool sheetShown = false;
     WindowShadow shadow;
@@ -141,10 +140,10 @@ struct State {
     int turnHot = -1;       // 3.0.18-beta.115: over ◀ (0) or ▶ (1)
     bool mountAsk = false;  // 3.0.18-beta.117: the sign pressed - Yes / No asked
     int askHot = -1;        // over Yes (0) or No (1)
-    // 3.0.18-beta.219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться, и оно как-то не функциональное»):
-    // the right button's menu of a set and the cursor over its item; the last set action's words a while; the set
-    // being put on, its result told when its last thing had time to be worn
-    int setMenu = -1, setMenuHot = -1;
+    // 3.0.18-beta.219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться, и оно как-то не функциональное»),
+    // .220 («сделай явно»): the sets' rows under the cursor; the last set action's words a while; the set being put
+    // on, its result told when its last thing had time to be worn
+    int setRowHot = -1, setButtonHot = -1;  // 3.0.18-beta.220: the row and its button under the cursor
     std::string setNote;
     ULONGLONG setNoteUntil = 0, setCheckAt = 0;
     int setWearing = -1;
@@ -663,46 +662,32 @@ void putSet(State& s, int i) {
     setNote(s, setSaid(settings::Text::EquipSetPutting, i));
 }
 
-// 3.0.18-beta.219: a set's click says itself (core equipsets::clickOf) - an empty one keeps what is worn, a kept one
-// puts itself on, one all worn already says so
-void clickSet(State& s, int i) {
-    switch (equipsets::clickOf(s.sets[i], s.data.slots)) {
-        case equipsets::Click::Keep: keepSet(s, i); break;
-        case equipsets::Click::PutOn: putSet(s, i); break;
-        case equipsets::Click::AlreadyOn:
-            LOG_INFO("equip: the set %d is worn already", i + 1);
-            setNote(s, setSaid(settings::Text::EquipSetAlready, i));
-            break;
-    }
-}
-
-// 3.0.18-beta.219: the set under the cursor told over the row (its things, what a click does), or its right
-// button's menu (keep what is worn; clear a kept one) - at that set's place in the row
-void fillSetTip(State& s, uikit::equip::Model& m) {
-    const int i = s.setMenu >= 0 ? s.setMenu : s.setHot;
-    m.setTip = s.setMenu < 0 && s.setHot >= 0;
-    m.setMenuOn = s.setMenu >= 0;
-    m.setMenuHot = s.setMenuHot;
-    m.setMenuClear = s.setMenu >= 0 && !s.sets[s.setMenu].things.empty();
-    m.setKeepWord = say(settings::Text::EquipSetMenuKeep);
-    m.setClearWord = say(settings::Text::EquipSetMenuClear);
-    m.setTipLines.clear();
-    if (i < 0 || i >= equipsets::kSets) return;
-    const std::vector<uikit::Placed> at = uikit::placesOf(s.live.doc.doc(), "set");
-    float first = -1, mine = -1;
-    for (const uikit::Placed& p : at) {
-        if (p.index == 0) first = p.box.x;
-        if (p.index == i) mine = p.box.x;
-    }
-    m.setTipX = first >= 0 && mine >= 0 ? mine - first : 0;
-    m.setTipTitle = setSaid(settings::Text::EquipSetTitle, i);
-    const equipsets::Set& set = s.sets[i];
-    for (const equipsets::Thing& t : set.things) m.setTipLines.push_back(thingWords(s, t));
-    if (set.things.empty()) m.setTipLines.push_back(say(settings::Text::EquipSetEmpty));
-    switch (equipsets::clickOf(set, s.data.slots)) {
-        case equipsets::Click::Keep: m.setTipAction = say(settings::Text::EquipSetClickKeep); break;
-        case equipsets::Click::PutOn: m.setTipAction = say(settings::Text::EquipSetClickPut); break;
-        case equipsets::Click::AlreadyOn: m.setTipAction = say(settings::Text::EquipSetClickOn); break;
+// 3.0.18-beta.220 (the owner: «так и не понял как это работает, сделай явно чтобы было понятно»): the sets as rows -
+// each its number, its things' icons and names (or «порожній»), «Надягти» or «✓ Надіто», «Зберегти надіте» and, kept,
+// «Очистити»; the line over them says what came of the last press (else what the rows are for)
+void fillSetRows(State& s, uikit::equip::Model& m) {
+    m.setsTitle = say(settings::Text::EquipSetsTitle);
+    m.setsNote = s.setNote.empty() ? say(settings::Text::EquipSetsHint) : s.setNote;
+    m.putWord = say(settings::Text::EquipSetPutOn);
+    m.wornWord = say(settings::Text::EquipSetWornNow);
+    m.keepWord = say(settings::Text::EquipSetMenuKeep);
+    m.clearWord = say(settings::Text::EquipSetMenuClear);
+    const float side = std::round(22 * s.scale);
+    m.setRows.clear();
+    for (int i = 0; i < equipsets::kSets; ++i) {
+        uikit::equip::Model::SetRowV r;
+        const equipsets::Set& set = s.sets[i];
+        r.number = std::to_string(i + 1);
+        r.saved = !set.things.empty();
+        r.on = equipsets::wornNow(set, s.data.slots);
+        r.hot = i == s.setRowHot ? s.setButtonHot : -1;
+        for (const equipsets::Thing& t : set.things) {
+            r.things += (r.things.empty() ? "" : ", ") + thingWords(s, t);
+            if (const panel::Picture* icon = iconOf(s, t.id); icon && r.icons.size() < 6)
+                r.icons.push_back(uikit::equip::Model::SetIconV{s.live.icon(icon), side, side});
+        }
+        if (!r.saved) r.things = say(settings::Text::EquipSetEmpty);
+        m.setRows.push_back(std::move(r));
     }
 }
 
@@ -715,6 +700,12 @@ void setSteps(State& s) {  // one thing a step, as the game's own window wears t
     if (s.setQueue.empty() || GetTickCount64() < s.setStepAt) return;
     const equipsets::Step st = s.setQueue.front();
     s.setQueue.erase(s.setQueue.begin());
+    if (st.off) {  // 3.0.18-beta.220 (the owner: «снимать»): what the set has not taken off, as the game's take-off
+        modeMsg(kTakeOffMsg, ew::bitIndex(st.at), 0, 0);
+        s.setStepAt = GetTickCount64() + 150;
+        s.readAt = 0;
+        return;
+    }
     bool ammo = false;
     for (const Thing& t : s.bag)
         if (t.index == st.index) ammo = isAmmo(t.type);
@@ -827,23 +818,22 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         for (int i = 0; i < 2; ++i)  // 3.0.18-beta.115 (R-RJBU55 «не активні при наведении»)
             for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), i ? "turnright" : "turnleft"))
                 if (p.box.contains(px, py)) s.turnHot = i;
-        s.setHot = -1;  // 3.0.18-beta.219: it was never set - the sets lit under the cursor, their tip
-        for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "set"))
-            if (p.box.contains(px, py) && p.index >= 0 && p.index < equipsets::kSets) s.setHot = p.index;
-        s.setMenuHot = -1;
-        for (int i = 0; s.setMenu >= 0 && i < 2; ++i)
-            for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), i ? "setclear" : "setkeep"))
-                if (p.box.contains(px, py)) s.setMenuHot = i;
+        s.setRowHot = s.setButtonHot = -1;  // 3.0.18-beta.220: the sets' buttons lit under the cursor
+        const char* buttons[3] = {"setput", "setkeep", "setclear"};
+        for (int b = 0; b < 3; ++b)
+            for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), buttons[b]))
+                if (p.box.contains(px, py) && p.index >= 0 && p.index < equipsets::kSets)
+                    s.setRowHot = p.index, s.setButtonHot = b;
     } else {
-        s.setHot = s.setMenuHot = -1;
+        s.setRowHot = s.setButtonHot = -1;
     }
     if (s.setNoteUntil && GetTickCount64() >= s.setNoteUntil) {  // 3.0.18-beta.219: the row's own hint again
         s.setNoteUntil = 0;
         s.setNote.clear();
     }
     if (s.mountAsk && (mountNow() == Mount::None || !s.shown)) s.mountAsk = false;  // nothing left to ask about
-    std::string key = "S" + std::to_string(s.setHot) + ',' + std::to_string(s.setMenu) + ',' +
-                      std::to_string(s.setMenuHot) + ',' + s.setNote + ';' +  // 3.0.18-beta.219
+    std::string key = "S" + std::to_string(s.setRowHot) + ',' + std::to_string(s.setButtonHot) + ',' + s.setNote +
+                      ';' +  // 3.0.18-beta.219, .220
                       std::string(s.mountHot ? "m" : "") + (s.mountAsk ? "a" + std::to_string(s.askHot) : "") + "t" +
                       std::to_string(s.turnHot) +
                       std::to_string(s.layout.x) + ',' +
@@ -903,13 +893,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                     m.mountAsk = s.mountAsk && !m.mountOff.empty();  // 3.0.18-beta.117
                                     m.askHot = s.askHot;
                                     m.askYes = say(settings::Text::MsgYes);
-                                    m.sets.clear();  // 3.0.18-beta.154: the sets «1 2 3»
-                                    for (int i = 0; i < equipsets::kSets; ++i)
-                                        m.sets.push_back(el::Model::SetV{std::to_string(i + 1),
-                                                                         !s.sets[i].things.empty(), i == s.setHot,
-                                                                         equipsets::wornNow(s.sets[i], s.data.slots)});
-                                    m.setsHint = s.setNote.empty() ? say(settings::Text::EquipSetsHint) : s.setNote;
-                                    fillSetTip(s, m);  // 3.0.18-beta.219
+                                    fillSetRows(s, m);  // 3.0.18-beta.154, .220: the sets as rows
                                     m.askNo = say(settings::Text::MsgNo);
                                     m.hero = m.turns ? s.live.icon(&s.hero) : "";
                                     {  // .113: fitted into the middle's box, its proportions kept
@@ -1070,10 +1054,6 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         s.mountAsk = false;  // 3.0.18-beta.117: a press past the window forgets the question
         s.key.clear();
     }
-    if (h.part == ew::Part::None && s.setMenu >= 0 && (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN)) {
-        s.setMenu = -1;  // 3.0.18-beta.219: and a set's menu
-        s.key.clear();
-    }
     if (h.part == ew::Part::None || m == WM_MOUSEMOVE) return false;
     result = 0;
     if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && s.live.shown()) {  // 3.0.18-beta.111: ◀ ▶ turn it
@@ -1103,24 +1083,19 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             }
             if (on("mountoff")) return true;  // the sign again: the question closed
         }
-        if (s.setMenu >= 0) {  // 3.0.18-beta.219: a set's menu - its item done, a press anywhere else closes it
-            const int set = s.setMenu;
-            s.setMenu = -1;
-            s.key.clear();
-            for (int i = 0; i < 2; ++i)
-                for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), i ? "setclear" : "setkeep"))
-                    if (p.box.contains(lx, ly)) {
-                        if (i) clearSet(s, set);
-                        else keepSet(s, set);
-                        return true;
+        // 3.0.18-beta.154, .220 (the owner: «сделай явно»): a set's row's buttons - «Надягти», «Зберегти надіте»,
+        // «Очистити» (a double click's second press: no second action)
+        const char* buttons[3] = {"setput", "setkeep", "setclear"};
+        for (int b = 0; b < 3; ++b)
+            for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), buttons[b]))
+                if (p.box.contains(lx, ly) && p.index >= 0 && p.index < equipsets::kSets && !s.setsOf.empty()) {
+                    if (m == WM_LBUTTONDOWN) {
+                        if (b == 0) putSet(s, p.index);
+                        else if (b == 1) keepSet(s, p.index);
+                        else clearSet(s, p.index);
                     }
-        }
-        // 3.0.18-beta.154: a set put on; 3.0.18-beta.219: an empty one keeps what is worn, a worn one says so
-        for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "set"))
-            if (p.box.contains(lx, ly) && p.index >= 0 && p.index < equipsets::kSets && !s.setsOf.empty()) {
-                if (m == WM_LBUTTONDOWN) clickSet(s, p.index);  // a double click's second press: no second action
-                return true;
-            }
+                    return true;
+                }
         for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "mountoff"))  // 3.0.18-beta.114
             if (p.box.contains(lx, ly)) {
                 s.mountAsk = mountNow() != Mount::None;
@@ -1136,20 +1111,6 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                     if (s.told++ < 40) LOG_INFO("equip: the character turned to %d", s.heroDir);
                     return true;
                 }
-    }
-    if (m == WM_RBUTTONDOWN && s.live.shown()) {  // 3.0.18-beta.154: a set's right click - what is worn kept in it
-        const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
-        // 3.0.18-beta.219: its menu instead (keep what is worn / clear) - a right click on it again closes it
-        const int was = s.setMenu;
-        s.setMenu = -1;
-        s.key.clear();
-        for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "set"))
-            if (p.box.contains(lx, ly) && p.index >= 0 && p.index < equipsets::kSets && !s.setsOf.empty()) {
-                s.setMenu = p.index == was ? -1 : p.index;
-                if (s.told++ < 40)
-                    LOG_INFO("equip: the set %d's menu %s", p.index + 1, s.setMenu >= 0 ? "open" : "closed");
-                return true;
-            }
     }
     if (m == WM_RBUTTONDOWN && h.part == ew::Part::Slot) {  // its card, as a right click in the game's window
         if (s.data.slots[h.index].index > 0) card(s, h.index);

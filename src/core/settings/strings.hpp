@@ -952,10 +952,9 @@ enum class Text : uint16_t {
     InterfaceArrowsWalk, InterfaceArrowsWalkHint,  // .207: the keyboard concept, stage 1
     InterfaceWalkMode, InterfaceWalkModeHint, ChatHintWalk,  // .208: stage 2, the walk mode
     InterfaceSpaceAction, InterfaceSpaceActionHint,          // .209: stage 3, the quick keys
-    // .219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться»): «Спорядження»'s sets said
-    EquipSetTitle, EquipSetEmpty, EquipSetClickKeep, EquipSetClickPut, EquipSetClickOn, EquipSetMenuKeep,
-    EquipSetMenuClear, EquipSetKept, EquipSetNothingWorn, EquipSetPutting, EquipSetDone, EquipSetAlready,
-    EquipSetMissing, EquipSetPartly, EquipSetCleared,
+    // .219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться»), .220 («сделай явно»): «Спорядження»'s sets
+    EquipSetsTitle, EquipSetEmpty, EquipSetPutOn, EquipSetWornNow, EquipSetMenuKeep, EquipSetMenuClear, EquipSetKept,
+    EquipSetNothingWorn, EquipSetPutting, EquipSetDone, EquipSetMissing, EquipSetPartly, EquipSetCleared,
     Count
 };
 

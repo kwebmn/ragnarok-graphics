@@ -534,4 +534,10 @@ void paintLifted(panel::Picture& out, const panel::Picture* icon, bool far, floa
     uiicons::draw(out, uiicons::Icon::Minus, badge.x + 2 * s, badge.y + 2 * s, badge.w - 4 * s, kWhite, 1.0f, 3.0f);
 }
 
+bool asideFor(uint32_t windowClass, float w, float h, float targetW, float targetH) {
+    constexpr uint32_t kNameBalloon = 0x696100;  // uaRO.exe FUN_00441bf0's: the words under the cursor
+    if (windowClass == kNameBalloon || h <= 0.032f * targetH) return false;
+    return w <= 0.9f * targetW && h <= 0.6f * targetH;
+}
+
 }  // namespace uagfx::hotbar

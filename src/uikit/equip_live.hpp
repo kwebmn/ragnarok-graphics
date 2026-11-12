@@ -66,21 +66,21 @@ struct Model {
     std::vector<StatV> stats;
     std::vector<PickV> picks;
     std::vector<PadV> padItems;
-    // 3.0.18-beta.154 (the later clients' Equip Switch): the sets «1 2 3» in the footer - kept ones bright
-    struct SetV {
-        Rml::String label;
-        bool saved = false, hot = false;
-        bool on = false;  // 3.0.18-beta.219: all of it worn now
+    // 3.0.18-beta.154 (the later clients' Equip Switch); .220 (the owner: «так и не понял как это работает, сделай
+    // явно чтобы было понятно»): the sets as rows - a number, the things' icons and names, «Надягти» (or «✓ Надіто»),
+    // «Зберегти надіте», «Очистити»; a line over them that says what came of the last press
+    struct SetIconV {
+        Rml::String src;
+        float w = 0, h = 0;
     };
-    std::vector<SetV> sets;
-    Rml::String setsHint;
-    // 3.0.18-beta.219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться»): the set under the cursor told
-    // over the row - its name, its things, what a click does; the right button's menu there (keep / clear)
-    bool setTip = false, setMenuOn = false, setMenuClear = false;  // the tip / the menu shown; clear offered
-    int setMenuHot = -1;  // the cursor over keep (0) or clear (1)
-    float setTipX = 0;
-    Rml::String setTipTitle, setTipAction, setKeepWord, setClearWord;
-    std::vector<Rml::String> setTipLines;
+    struct SetRowV {
+        Rml::String number, things;
+        std::vector<SetIconV> icons;
+        bool saved = false, on = false;
+        int hot = -1;  // the cursor over «Надягти» (0), «Зберегти надіте» (1), «Очистити» (2)
+    };
+    std::vector<SetRowV> setRows;
+    Rml::String setsTitle, setsNote, putWord, wornWord, keepWord, clearWord;
 };
 
 const char* rml();

@@ -957,29 +957,28 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .nm { display: block; height: 1.6667rem; line-height: 1.6667rem; font-size: 1.0833rem; color: #7e889a;
     white-space: nowrap; }
 .eql .nm.worn { font-weight: bold; color: #eef2f8; }
-/* 3.0.18-beta.154: the sets «1 2 3» (the later clients' Equip Switch) */
-/* 3.0.18-beta.217 (R-RASZHM's picture: the hint drawn over «1 2 3», the row at the window's edge): in from the edge
-   as the ammo's row; the hint's class «setsnote» (it was «sh» - the sheets' own, position: absolute) */
-.eql .sets { display: flex; align-items: center; margin: 0.5rem 1.3333rem 0 1.3333rem; position: relative; }
-.eql .sets .set { display: block; width: 2rem; height: 1.8333rem; line-height: 1.8333rem; margin-right: 0.4167rem;
-    text-align: center; border-radius: 0.5rem; border-width: 1px; border-color: #ffffff1f; color: #7e889a;
-    background-color: #ffffff0a; font-weight: bold; }
-.eql .sets .set.saved { color: #e6cb8a; border-color: #c9a55b80; }
-.eql .sets .set.hot { background-color: #ffffff24; }
-.eql .sets .setsnote { display: block; margin-left: 0.4167rem; font-size: 0.9167rem; color: #7e889a; }
-/* 3.0.18-beta.219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться»): the set worn now filled; the tip and
-   the right button's menu over the row at the set's place */
-.eql .sets .set.on { background-color: #c9a55b40; border-color: #e6cb8a; color: #f3d98f; }
-.eql .settip, .eql .setmenu { position: absolute; bottom: 2.3333rem; padding: 0.5rem 0.6667rem;
-    border-radius: 0.5833rem; border: 0.0833rem #e6cb8a66; background-color: #141a24f2; z-index: 5; }
-.eql .settip { display: block; width: 21rem; }
-.eql .stt { display: block; font-size: 0.9583rem; font-weight: bold; color: #e6cb8a; margin-bottom: 0.25rem; }
-.eql .stl { display: block; font-size: 0.9167rem; color: #e9e4ea; white-space: nowrap; overflow: hidden; }
-.eql .sta { display: block; margin-top: 0.3333rem; font-size: 0.875rem; color: #9aa3b5; }
-.eql .setmenu { display: flex; }
-.eql .smi { display: block; height: 1.8333rem; line-height: 1.8333rem; padding: 0 0.6667rem; margin: 0 0.25rem;
-    border-radius: 0.5rem; border: 0.0833rem #ffffff26; color: #e9e4ea; font-size: 0.9167rem; white-space: nowrap; }
-.eql .smi.hot { background-color: #ffffff24; }
+/* 3.0.18-beta.154: the sets (the later clients' Equip Switch); .220 (the owner: «сделай явно чтобы было понятно»):
+   rows - the number, the things' icons and names, «Надягти» / «✓ Надіто», «Зберегти надіте», «Очистити» */
+.eql .sets { display: block; margin: 0.6667rem 1.3333rem 0 1.3333rem; }
+.eql .setshead { display: flex; align-items: center; height: 1.6667rem; }
+.eql .sht { display: block; font-size: 0.9583rem; font-weight: bold; color: #e6cb8a; }
+.eql .setsnote { display: block; flex: 1; margin-left: 0.8333rem; font-size: 0.875rem; color: #9aa3b5;
+    white-space: nowrap; overflow: hidden; }
+.eql .setrow { display: flex; align-items: center; height: 2.5rem; margin-top: 0.3333rem; padding: 0 0.5rem;
+    border-radius: 0.5rem; border: 0.0833rem #ffffff12; background-color: #ffffff08; }
+.eql .setrow.on { border-color: #e6cb8a88; background-color: #c9a55b1a; }
+.eql .sn { display: block; width: 1.5rem; font-weight: bold; color: #e6cb8a; }
+.eql .sicons { display: flex; align-items: center; }
+.eql .si { display: block; margin-right: 0.1667rem; }
+.eql .si img { display: block; }
+.eql .stx { display: block; flex: 1; margin: 0 0.5rem; font-size: 0.9167rem; color: #e9e4ea; white-space: nowrap;
+    overflow: hidden; }
+.eql .stx.empty { color: #7e889a; }
+.eql .sbtn { display: block; height: 1.8333rem; line-height: 1.8333rem; padding: 0 0.6667rem; margin-left: 0.4167rem;
+    border-radius: 0.5rem; border: 0.0833rem #ffffff26; font-size: 0.9167rem; color: #e9e4ea; white-space: nowrap; }
+.eql .sbtn.put { color: #f3d98f; border-color: #e6cb8a99; }
+.eql .sbtn.worn { color: #9fdcae; border-color: #9fdcae55; }
+.eql .sbtn.hot { background-color: #ffffff24; }
 .eql .nm.spill { font-weight: normal; color: #7e889a; }
 .eql .dots { display: flex; height: 0.5833rem; margin-top: 0.0833rem; }
 .eql .left .dots { justify-content: flex-end; }

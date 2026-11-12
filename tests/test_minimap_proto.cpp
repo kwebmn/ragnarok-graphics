@@ -538,3 +538,14 @@ TEST(minimap_proto_buttons_and_marks_grow) {
     CHECK(std::fabs(big.zoomIn.w - plain.zoomIn.w * 1.5f) <= 1.0f && big.layers[0].w > plain.layers[0].w);
     CHECK(big.expand.y + big.expand.h <= big.map.h && big.style.x + big.style.w <= big.map.w);  // still on the map
 }
+
+// 3.0.18-beta.220 (R-5773KD «потрібно прибрати рожевий фон біля карти», R-FSNPYE «на всіх картах»): «Довідник»'s
+// location picture keyed as the minimap's - the game's magenta and its smudges see-through, the rest as it was
+TEST(minimap_pink_keyed_in_a_picture) {
+    std::vector<uint32_t> argb = {0xFFFF00FF, 0xFFFA14F0, 0xFF20A040, 0xFFC878C8};
+    minimap::keyPink(argb);
+    CHECK_EQ(argb[0], 0u);
+    CHECK_EQ(argb[1], 0u);
+    CHECK_EQ(argb[2], 0xFF20A040u);
+    CHECK_EQ(argb[3], 0xFFC878C8u);  // a pinkish colour of the map itself stays
+}

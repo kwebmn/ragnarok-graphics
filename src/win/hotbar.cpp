@@ -780,7 +780,8 @@ bool windowsOver(const State& s, float x0, float y0, float x1, float y1, float& 
         const float wx0 = float(r[0]) * s.k, wy0 = float(r[1]) * s.k;
         const float wx1 = float(r[0] + r[2]) * s.k, wy1 = float(r[1] + r[3]) * s.k;
         if (r[2] <= 0 || r[3] <= 0 || wx0 >= x1 || wx1 <= x0 || wy0 >= y1 || wy1 <= y0) continue;
-        if (wx1 - wx0 > 0.9f * float(s.targetW) || wy1 - wy0 > 0.6f * float(s.targetH)) continue;  // a screen's own
+        // a screen's own; 3.0.18-beta.220 (R-BJZH75): the name under the cursor neither
+        if (!hb::asideFor(read32(window), wx1 - wx0, wy1 - wy0, float(s.targetW), float(s.targetH))) continue;
         right = any ? std::max(right, wx1) : wx1;
         top = any ? std::min(top, wy0) : wy0;
         any = true;

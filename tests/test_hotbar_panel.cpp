@@ -278,3 +278,13 @@ TEST(hotbar_table_filled_from_the_language_folder) {
     CHECK_EQ(int(table.size()), 4);
     CHECK_EQ(int(hotbar::fillMissing(table, english)), 0);  // again: nothing new
 }
+
+// 3.0.18-beta.220 (R-BJZH75 «якщо навестись на що небудь ... то її змістить»): the bar moves aside for a window of
+// the game's over its place, not for the name balloon under the cursor (class 0x696100, a line of words high)
+TEST(hotbar_aside_for_windows_not_for_names) {
+    CHECK(!hotbar::asideFor(0x696100, 40, 20, 1600, 900));   // the balloon «Stylist» under the cursor
+    CHECK(!hotbar::asideFor(0x699000, 180, 22, 1600, 900));  // any one line high
+    CHECK(hotbar::asideFor(0x699000, 280, 200, 1600, 900));  // a window
+    CHECK(!hotbar::asideFor(0x699000, 1500, 200, 1600, 900));  // a screen's own (wider than 0.9 of it)
+    CHECK(!hotbar::asideFor(0x699000, 300, 600, 1600, 900));   // or taller than 0.6
+}

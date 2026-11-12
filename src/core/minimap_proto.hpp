@@ -109,6 +109,12 @@ inline bool keyedPink(uint32_t argb) {
     const int r = int((argb >> 16) & 0xFF), g = int((argb >> 8) & 0xFF), b = int(argb & 0xFF);
     return !(argb >> 24) || (r < b ? r : b) - g > 110;
 }
+// 3.0.18-beta.220 (R-5773KD, R-FSNPYE: «Довідник»'s location picture pink round the map): a whole picture keyed -
+// its keyedPink pixels see-through (0), the rest left as they are
+inline void keyPink(std::vector<uint32_t>& argb) {
+    for (uint32_t& c : argb)
+        if (keyedPink(c)) c = 0;
+}
 MapPicture prepare(const std::vector<uint32_t>& argb, int width, int height);
 // 3.0.11-beta.201 (the tester: «є 2 типи порталів ... треба прибрати "зайві" (червоні портали)»): the game's map
 // pictures mark the warps with pure red dots - the minimap marks them itself; each dot (its pure red middle and its

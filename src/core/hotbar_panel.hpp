@@ -262,4 +262,10 @@ Release letGo(const Layout& L, int lifted, float x, float y);
 int liftedSide(Mode mode, float scale);
 void paintLifted(panel::Picture& out, const panel::Picture* icon, bool away, float scale);
 
+// 3.0.18-beta.220 (R-BJZH75: the bar jumped aside under a name the cursor pointed at): whether a window of the game's
+// over the bar's place (its class, its size in the target's pixels) moves it aside - not the name balloon under the
+// cursor (class 0x696100) nor anything a line of words high, nor a screen's own (over 0.9 of its width, 0.6 of its
+// height)
+bool asideFor(uint32_t windowClass, float w, float h, float targetW, float targetH);
+
 }  // namespace uagfx::hotbar

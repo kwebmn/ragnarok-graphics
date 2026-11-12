@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "core/layout.hpp"
+#include "core/minimap_proto.hpp"
 #include "core/pack_source.hpp"
 #include "core/reference_pages.hpp"
 #include "core/reference_route.hpp"
@@ -201,6 +202,7 @@ void loadPicture(State& s, const std::string& key, int side) {
         if (!readFile(s, "data\\texture\\" + kUi + "\\map\\" + key.substr(4) + ".bmp", bmp) ||
             !pack::decodeBmp(reinterpret_cast<const uint8_t*>(bmp.data()), bmp.size(), argb, w, h))
             return;
+        minimap::keyPink(argb);  // 3.0.18-beta.220 (R-5773KD, R-FSNPYE): the game's magenta round it see-through
         spritefile::Image im;
         im.w = w;
         im.h = h;

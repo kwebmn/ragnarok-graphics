@@ -52,8 +52,24 @@ Set capture(const ew::Worn now[ew::kSlots]) {
     return s;
 }
 
+namespace {
+bool setHasSlot(const Set& set, int slot) {
+    for (const Thing& t : set.things)
+        if (t.slot == slot) return true;
+    return false;
+}
+// 3.0.18-beta.220 (the owner: «снимать»): a thing worn now at `slot` (shown there first - not a two-hander's other
+// half) where the set has nothing
+bool extraAt(const Set& set, const ew::Worn now[ew::kSlots], int slot) {
+    const ew::Worn& w = now[slot];
+    return w.index > 0 && !w.spill && !setHasSlot(set, slot);
+}
+}  // namespace
+
 std::vector<Step> plan(const Set& set, const std::vector<Owned>& bag, const ew::Worn now[ew::kSlots]) {
     std::vector<Step> out;
+    for (int slot = 0; slot < ew::kSlots; ++slot)  // 3.0.18-beta.220: what the set has not taken off first
+        if (extraAt(set, now, slot)) out.push_back(Step{now[slot].index, ew::kBits[slot], slot, true});
     std::vector<bool> used(bag.size(), false);
     for (const Thing& t : set.things) {
         const ew::Worn& w = now[t.slot];
@@ -85,6 +101,8 @@ bool wornNow(const Set& set, const ew::Worn now[ew::kSlots]) {
     if (set.things.empty()) return false;
     for (const Thing& t : set.things)
         if (!wornAt(t, now)) return false;
+    for (int slot = 0; slot < ew::kSlots; ++slot)  // 3.0.18-beta.220: and nothing else - just that set
+        if (extraAt(set, now, slot)) return false;
     return true;
 }
 
