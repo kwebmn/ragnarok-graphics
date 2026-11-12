@@ -415,6 +415,21 @@ void MainWindow::create() {
     SetTimer(hwnd_, kAnswersTimer, kAnswersEveryMs, nullptr);  // 3.0.10-beta.3
     // 2.12: a fresh install set up for this computer at once («Гра» says so), a changed card or screen asked about
     if (model_->startSetup(lang_) == settings::FirstStart::Ask) PostMessageW(hwnd_, kAskMachine, 0, 0);
+    // 3.0.18-beta.199 (the owner: «автоопределение видеокарты надо делать сразу при первом запуске»): the first start's
+    // card looked at and its picture and textures put in at once - the cards over the launcher only change them
+    if (seen_.empty() && !model_->playedHere()) {
+        bool changes = false;
+        for (const auto& [key, token] : cardSet(false))
+            if (const settings::IniSetting* s = settings::findSetting(key))
+                if (model_->token(*s) != token) {
+                    model_->setToken(*s, token);
+                    changes = true;
+                }
+        if (changes) {
+            model_->apply(lang_);
+            reload();
+        }
+    }
     PostMessageW(hwnd_, kAskStats, 0, 0);
     if (startReport_) PostMessageW(hwnd_, kOpenReports, 0, 0);
 }
@@ -1523,6 +1538,14 @@ void MainWindow::refreshLauncher() {
                              wtr(lang_, presets::nameOf(presets::Choice::Interface, per.ui)) + L" \x00B7 " +
                              wtr(lang_, presets::nameOf(presets::Choice::Textures, per.textures));
         }
+        // 3.0.18-beta.199: what was put in for the card at the start, «Пропустити» keeps it
+        if (!machine.adapter.empty())
+            d.firstFound = wtrf(lang_, Text::LauncherFirstFound,
+                                {machine.adapter,
+                                 utf8(wtr(lang_, presets::nameOf(presets::Choice::Picture,
+                                                                 d.looks[int(presets::Choice::Picture)].variant))),
+                                 utf8(wtr(lang_, presets::nameOf(presets::Choice::Textures,
+                                                                 d.looks[int(presets::Choice::Textures)].variant)))});
     }
     // the version: the channel, the update's word
     const bool beta = m.channel() == update::Channel::Beta;
@@ -1571,7 +1594,7 @@ void MainWindow::refreshLauncher() {
                        L"|" + std::to_wstring(changelog_.size()) + L"|" + d.cardName + L"|" +
                        std::to_wstring(int(d.fitsCard)) + L"|" + std::to_wstring(int(d.undoable)) + L"|" +
                        wide(d.seen) + L"|" + std::to_wstring(int(d.firstRun)) + L"." +
-                       std::to_wstring(d.suggestedKind) + L"|" + d.cardCheck;
+                       std::to_wstring(d.suggestedKind) + L"|" + d.cardCheck + L"|" + d.firstFound;
     for (const LauncherData::Look& l : d.looks)
         sig += L"|" + std::to_wstring(l.variant) + L"." + std::to_wstring(l.changed);
     for (const launcher::News& n : d.info.news) sig += L"|" + wide(n.title);
@@ -1614,13 +1637,10 @@ void MainWindow::launcherAction(launcherview::Part part, int index) {
                 play();
             }
             return;
-        case Part::PlayMore: {  // ▾: another window, the safe start, the game without the offered update
-            enum { kAnother = 1, kSafe, kNoUpdate };
-            const UpdateState u = channelUpdate(m);
+        case Part::PlayMore: {  // ▾: another window, the safe start (.199: «Грати без оновлення» in sight, not here)
+            enum { kAnother = 1, kSafe };
             std::vector<MenuItem> items{{kAnother, wtr(lang_, Text::LauncherAnother)},
                                         {kSafe, wtr(lang_, Text::LauncherSafe), false, !running}};
-            if (u.kind == UpdateState::Done && !u.offer.empty() && !running)
-                items.push_back({kNoUpdate, wtr(lang_, Text::LauncherNoUpdate)});
             const int pick = menuAt(items, launcher_.screenRect(Part::PlayMore), true);
             if (pick == kAnother) {
                 const std::wstring err = m.launchGame(lang_);
@@ -1631,12 +1651,14 @@ void MainWindow::launcherAction(launcherview::Part part, int index) {
                     message(err, true);
                 else
                     doApply(true);
-            } else if (pick == kNoUpdate) {
-                doApply(true, false, true);
             }
             refreshLauncher();
             return;
         }
+        case Part::NoUpdate:  // 3.0.18-beta.199: the game as it is, the update left for later
+            doApply(true, false, true);
+            refreshLauncher();
+            return;
         case Part::Settings:
             showLauncher(false);
             return;
@@ -1737,28 +1759,13 @@ void MainWindow::lookAction(launcherpick::PickPart part, settings::presets::Choi
             doApply(false);
             return;
         }
-        case PickPart::Test: {  // 3.0.18-beta.198 (the owner: «проверку карты надо делать без запуска игры»): Windows
-            // asked about the card again - its name, its memory, the game's verdict on it when a game drew on it - and
-            // the picture and the textures for it put in, as «Авто для вашої відеокарти»; the game is not started
-            const HCURSOR was = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
-            m.probeAgain();
-            SetCursor(was);
-            const settings::Machine machine = m.machine();
-            if (machine.adapter.empty()) {
-                cardCheck_ = wtr(lang_, Text::LauncherPickNoCard);
+        case PickPart::Test:  // 3.0.18-beta.198 (the owner: «проверку карты надо делать без запуска игры»)
+            keys = cardSet(true);
+            if (keys.empty()) {
                 refreshLauncher();
                 return;
             }
-            const std::string gb = std::to_string((machine.vramMb + 512) / 1024);
-            const std::string memory = machine.integrated ? utf8(wtr(lang_, Text::CardIntegrated))
-                                                          : utf8(wtrf(lang_, Text::CardMemory, {gb}));
-            const Text by = m.cardJudgedByGame() ? Text::LauncherByGame : Text::LauncherByMemory;
-            cardCheck_ = wtrf(lang_, Text::LauncherPickChecked, {machine.adapter, memory, utf8(wtr(lang_, by))});
-            const presets::Suggestion card = presets::suggest(m.cardLevel(), machine.vramMb, machine.integrated);
-            keys = presets::keysOf(presets::Choice::Picture, card.picture);
-            for (const auto& k : presets::keysOf(presets::Choice::Textures, card.textures)) keys.push_back(k);
             break;
-        }
         case PickPart::All:
             showLauncher(false);
             showView(settings::View::Main, 0);
@@ -1824,6 +1831,30 @@ void MainWindow::firstRunAction(int kind) {
         for (const auto& [key, token] : presets::keysOf(choice, variant))
             if (const settings::IniSetting* s = settings::findSetting(key)) m.setToken(*s, token);
     doApply(false);
+}
+
+std::vector<std::pair<std::string, std::string>> MainWindow::cardSet(bool probe) {
+    namespace presets = settings::presets;
+    Model& m = *model_;
+    if (probe) {
+        const HCURSOR was = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
+        m.probeAgain();
+        SetCursor(was);
+    }
+    const settings::Machine machine = m.machine();
+    if (machine.adapter.empty()) {
+        cardCheck_ = wtr(lang_, Text::LauncherPickNoCard);
+        return {};
+    }
+    const std::string gb = std::to_string((machine.vramMb + 512) / 1024);
+    const std::string memory =
+        machine.integrated ? utf8(wtr(lang_, Text::CardIntegrated)) : utf8(wtrf(lang_, Text::CardMemory, {gb}));
+    const Text by = m.cardJudgedByGame() ? Text::LauncherByGame : Text::LauncherByMemory;
+    cardCheck_ = wtrf(lang_, Text::LauncherPickChecked, {machine.adapter, memory, utf8(wtr(lang_, by))});
+    const presets::Suggestion card = presets::suggest(m.cardLevel(), machine.vramMb, machine.integrated);
+    std::vector<std::pair<std::string, std::string>> keys = presets::keysOf(presets::Choice::Picture, card.picture);
+    for (const auto& k : presets::keysOf(presets::Choice::Textures, card.textures)) keys.push_back(k);
+    return keys;
 }
 
 }  // namespace uagfx::app

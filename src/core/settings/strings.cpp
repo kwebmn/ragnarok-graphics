@@ -8499,7 +8499,7 @@ constexpr Entry kTexts[] = {
      "За вагою влізе {1} з {2} — порожнє поле: {1}",
      "По весу влезет {1} из {2} — пустое поле: {1}"},
     {Text::LauncherPlay, "PLAY", "ГРАТИ", "ИГРАТЬ"},
-    {Text::LauncherUpdate, "UPDATE · {1} MB", "ОНОВИТИ · {1} МБ", "ОБНОВИТЬ · {1} МБ"},
+    {Text::LauncherUpdate, "UPDATE AND PLAY", "ОНОВИТИ Й ГРАТИ", "ОБНОВИТЬ И ИГРАТЬ"},
     {Text::LauncherUpdating, "Updating {1} % · {2} MB/s", "Оновлення {1} % · {2} МБ/с", "Обновление {1} % · {2} МБ/с"},
     {Text::LauncherRunning, "GAME RUNNING · + WINDOW", "ГРА ЗАПУЩЕНА · + ВІКНО", "ИГРА ЗАПУЩЕНА · + ОКНО"},
     {Text::LauncherServer, "Server up · {1} online", "Сервер працює · {1} онлайн", "Сервер работает · {1} онлайн"},
@@ -8522,7 +8522,7 @@ constexpr Entry kTexts[] = {
     {Text::LauncherAuto, "auto for {1}", "авто для {1}", "авто для {1}"},
     {Text::LauncherChange, "change ›", "змінити ›", "изменить ›"},
     {Text::LauncherBack, "← To the game", "← До гри", "← К игре"},
-    {Text::LauncherTagline, "Ragnarok Online · Ukraine", "Ragnarok Online · Україна", "Ragnarok Online · Украина"},
+    {Text::LauncherTagline, "Ragnarok Online", "Ragnarok Online", "Ragnarok Online"},
     {Text::LauncherBeta, "beta", "бета", "бета"},
     {Text::LauncherRelease, "release", "реліз", "релиз"},
     {Text::LauncherPlateSafeAuto, "Safe mode: the last starts failed, so effects, Direct3D 12 and DLSS are off",
@@ -8560,6 +8560,9 @@ constexpr Entry kTexts[] = {
      "Проверено: {1} ({2}) — {3}"},
     {Text::LauncherByMemory, "by its memory", "за пам'яттю відеокарти", "по памяти видеокарты"},
     {Text::LauncherByGame, "by how it drew the game", "за тим, як вона малювала гру", "по тому, как она рисовала игру"},
+    {Text::LauncherUpdateWhat, "{1} · {2} MB", "{1} · {2} МБ", "{1} · {2} МБ"},
+    {Text::LauncherFirstFound, "Already chosen for {1}: {2} · {3}", "Уже підібрано для {1}: {2} · {3}",
+     "Уже подобрано для {1}: {2} · {3}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

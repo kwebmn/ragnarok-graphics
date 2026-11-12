@@ -945,6 +945,7 @@ enum class Text : uint16_t {
     LauncherToday, LauncherYesterday, LauncherMonths, LauncherLogEmpty,  // .195: «Журнал змін»
     LauncherFirstSkip, LauncherFirstFits,  // .196: the first start's cards
     LauncherPickChecked, LauncherByMemory, LauncherByGame,  // .198: the card checked without the game
+    LauncherUpdateWhat, LauncherFirstFound,  // .199: the update's line, the first start's card set
     Count
 };
 

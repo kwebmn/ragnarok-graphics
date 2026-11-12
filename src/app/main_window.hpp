@@ -49,6 +49,9 @@ public:
     std::string tryName(const std::string& point) override;
     void tryPoint(const std::string& name) override;
     void firstRunAction(int kind) override;  // 3.0.18-beta.196: the first start's card
+    // 3.0.18-beta.198/.199: the card looked at (Windows asked again when `probe`) without the game - its finding kept
+    // for the picker, the keys of its picture and textures returned (none when no card is known)
+    std::vector<std::pair<std::string, std::string>> cardSet(bool probe);
     // 2.13: uaro-graphics.exe --report (the game's Ctrl+Shift+F10): «Нове звернення» with its shot, the window up
     void reportAtStart(const ReportStart& s) {
         reportStart_ = s;

@@ -9,10 +9,11 @@ namespace {
 constexpr float kBar = 64, kLeft = 22, kRight = 26, kBottom = 26, kFeedTop = 80, kFeedW = 380, kLabel = 28;
 constexpr float kUpdateH = 150, kNewsH = 84, kGap = 10, kIcon = 64, kIconGap = 12, kDockBottom = 22;
 constexpr float kPlayW = 336, kLookH = 52, kButtonH = 64, kMoreW = 56, kVersionH = 18, kPlateH = 44, kPlateW = 560;
+constexpr float kNoUpdateH = 32;
 
 }  // namespace
 
-Layout layoutFor(int width, int height, float scale, int newsCount, bool plate) {
+Layout layoutFor(int width, int height, float scale, int newsCount, bool plate, bool offered) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     const float W = float(std::max(width, 1)), H = float(std::max(height, 1));
@@ -27,7 +28,12 @@ Layout layoutFor(int width, int height, float scale, int newsCount, bool plate) 
     const float playW = std::min(kPlayW * s, W * 0.4f);
     const float px = W - kRight * s - playW;
     L.version = Box{px, H - kBottom * s - kVersionH * s, playW, kVersionH * s};
-    const float by = L.version.y - 8 * s - kButtonH * s;
+    float above = L.version.y;  // what the button stands on: the version, or «Грати без оновлення» over it
+    if (offered) {
+        L.noUpdate = Box{px, L.version.y - 8 * s - kNoUpdateH * s, playW, kNoUpdateH * s};
+        above = L.noUpdate.y;
+    }
+    const float by = above - 8 * s - kButtonH * s;
     L.play = Box{px, by, playW - kMoreW * s, kButtonH * s};
     L.playMore = Box{px + playW - kMoreW * s, by, kMoreW * s, kButtonH * s};
     L.look = Box{px, by - kGap * s - kLookH * s, playW, kLookH * s};
@@ -59,6 +65,7 @@ Hit hitAt(const Layout& L, float x, float y) {
     if (L.playMore.contains(x, y)) return Hit{Part::PlayMore};
     if (L.play.contains(x, y)) return Hit{Part::Play};
     if (L.look.contains(x, y)) return Hit{Part::Look};
+    if (L.noUpdate.w > 0 && L.noUpdate.contains(x, y)) return Hit{Part::NoUpdate};
     if (L.version.contains(x, y)) return Hit{Part::Version};
     if (L.update.contains(x, y)) return Hit{Part::Changelog};
     for (int i = 0; i < L.newsShown; ++i)
@@ -88,13 +95,14 @@ FirstRun firstRunFor(const Layout& L) {
     const float h = w * 9.0f / 16.0f + 86 * s;
     const float row = 4 * w + 3 * gap;
     const float x0 = (W - row) / 2;
-    const float titleH = 36 * s, noteH = 22 * s, skipH = 34 * s;
-    const float block = titleH + 8 * s + noteH + 24 * s + h + 22 * s + skipH;
+    const float titleH = 36 * s, noteH = 22 * s, foundH = 22 * s, skipH = 34 * s;
+    const float block = titleH + 8 * s + noteH + 6 * s + foundH + 18 * s + h + 22 * s + skipH;
     float top = (H - block) / 2 + 12 * s;
     top = std::max(top, L.bar.h + 8 * s);
     f.title = Box{x0, top, row, titleH};
     f.note = Box{x0, top + titleH + 8 * s, row, noteH};
-    const float cardsY = f.note.y + noteH + 24 * s;
+    f.found = Box{x0, f.note.y + noteH + 6 * s, row, foundH};
+    const float cardsY = f.found.y + foundH + 18 * s;
     for (int i = 0; i < kKindCards; ++i) f.cards[i] = Box{x0 + float(i) * (w + gap), cardsY, w, h};
     const float skipW = std::min(row, 380 * s);
     f.skip = Box{(W - skipW) / 2, cardsY + h + 22 * s, skipW, skipH};

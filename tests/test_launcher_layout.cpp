@@ -115,7 +115,10 @@ TEST(launcher_first_run_cards) {
             }
             CHECK_EQ(launcherview::firstRunAt(f, c.x + c.w / 2, c.y + c.h / 2), i);
         }
-        CHECK(f.title.y + f.title.h <= f.cards[0].y);
+        CHECK(f.title.y + f.title.h <= f.note.y);
+        // 3.0.18-beta.199 (the owner: «автоопределение видеокарты надо делать сразу при первом запуске»): what was
+        // chosen for the card at once, between the note and the cards
+        CHECK(f.found.w > 0 && f.found.y >= f.note.y + f.note.h && f.found.y + f.found.h <= f.cards[0].y);
         CHECK(f.skip.y >= f.cards[0].y + f.cards[0].h && f.skip.y + f.skip.h <= client.h);
         CHECK_EQ(launcherview::firstRunAt(f, f.skip.x + f.skip.w / 2, f.skip.y + f.skip.h / 2),
                  launcherview::kKindCards);
@@ -129,4 +132,29 @@ TEST(launcher_first_run_cards) {
     CHECK(presets::suggestedKind(1, 4096, false) == presets::Kind::WeakPc);
     CHECK(presets::suggestedKind(3, 8192, true) == presets::Kind::WeakPc);
     CHECK(presets::suggestedKind(3, 1024, false) == presets::Kind::WeakPc);
+}
+
+// 3.0.18-beta.199 (the owner: «можно было запустить и без обновления и это не было спрятано»): an update offered - the
+// big button updates and plays, «Грати без оновлення» in sight under it, over the version
+TEST(launcher_layout_update_offered_shows_play_without_it) {
+    struct Size {
+        int w, h;
+        float s;
+    };
+    const Size sizes[] = {Size{960, 560, 1.0f}, Size{1280, 720, 1.0f}, Size{3360, 1890, 1.75f}};
+    for (const Size z : sizes) {
+        const launcherview::Layout L = launcherview::layoutFor(z.w, z.h, z.s, 3, false, true);
+        CHECK(L.noUpdate.w > 0 && L.noUpdate.h > 0);
+        CHECK(L.noUpdate.y >= L.play.y + L.play.h);           // under the big button
+        CHECK(L.noUpdate.y + L.noUpdate.h <= L.version.y);    // over the version
+        CHECK(L.look.y + L.look.h <= L.play.y);
+        CHECK(L.look.y >= L.bar.y + L.bar.h);
+        CHECK(L.noUpdate.x >= L.play.x && L.noUpdate.x + L.noUpdate.w <= L.playMore.x + L.playMore.w + 0.01f);
+        const launcherview::Hit h =
+            launcherview::hitAt(L, L.noUpdate.x + L.noUpdate.w / 2, L.noUpdate.y + L.noUpdate.h / 2);
+        CHECK(h.part == Part::NoUpdate);
+    }
+    const launcherview::Layout plain = launcherview::layoutFor(1280, 720, 1.0f, 3, false);  // nothing offered
+    CHECK_EQ(plain.noUpdate.w, 0.0f);
+    CHECK(launcherview::hitAt(plain, 1100, plain.version.y - 20).part != Part::NoUpdate);
 }

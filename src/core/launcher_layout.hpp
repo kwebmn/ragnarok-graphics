@@ -10,7 +10,8 @@ namespace uagfx::launcherview {
 // the look line, the big button and the version at the bottom right; a plate over the icons when one is asked.
 
 enum class Part : uint8_t {
-    None, Play, PlayMore, Look, Changelog, News, Settings, Reports, Site, Forum, Version, Language, Plate
+    None, Play, PlayMore, Look, Changelog, News, Settings, Reports, Site, Forum, Version, Language, Plate,
+    NoUpdate  // 3.0.18-beta.199: «Грати без оновлення» under the big button while an update is offered
 };
 
 struct Box {
@@ -30,11 +31,13 @@ struct Layout {
     int newsShown = 0;
     Box dock[kDockIcons];
     Box look, play, playMore, version;
-    Box plate;  // w 0: none
+    Box plate;     // w 0: none
+    Box noUpdate;  // w 0: none (no update offered)
 };
 
-// newsCount: the site's news at hand; plate: a plate is shown (the safe mode, uaRO Graphics off, a roll back)
-Layout layoutFor(int width, int height, float scale, int newsCount, bool plate);
+// newsCount: the site's news at hand; plate: a plate is shown (the safe mode, uaRO Graphics off, a roll back);
+// offered: an update offered - «Грати без оновлення» in sight under the big button (3.0.18-beta.199)
+Layout layoutFor(int width, int height, float scale, int newsCount, bool plate, bool offered = false);
 
 struct Hit {
     Part part = Part::None;
@@ -46,7 +49,7 @@ Hit hitAt(const Layout& L, float x, float y);
 // cards side by side (presets::Kind's order), «Пропустити — вибере сама програма» under them
 constexpr int kKindCards = 4;
 struct FirstRun {
-    Box title, note, cards[kKindCards], skip;
+    Box title, note, found, cards[kKindCards], skip;  // found: what was chosen for the card at once (.199)
 };
 FirstRun firstRunFor(const Layout& L);
 int firstRunAt(const FirstRun& f, float x, float y);  // a card 0..3, kKindCards «Пропустити», -1 none

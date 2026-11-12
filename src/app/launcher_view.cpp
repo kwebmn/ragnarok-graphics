@@ -336,7 +336,10 @@ void LauncherView::relayout() {
     RECT r{};
     GetClientRect(hwnd_, &r);
     const int news = int(std::min<size_t>(data_.info.news.size(), size_t(launcherview::kMostNews)));
-    layout_ = launcherview::layoutFor(r.right, r.bottom, float(dpi_) / 96.0f, news, !data_.plateText.empty());
+    // 3.0.18-beta.199: an update offered (not over a running game) - «Грати без оновлення» in sight under the button
+    const bool offered = playState() == PlayState::Update;
+    layout_ =
+        launcherview::layoutFor(r.right, r.bottom, float(dpi_) / 96.0f, news, !data_.plateText.empty(), offered);
     picker_ = launcherpick::layoutFor(layout_);  // 3.0.18-beta.194
     first_ = launcherview::firstRunFor(layout_);  // 3.0.18-beta.196
     if (logging_) relayoutLog();                  // 3.0.18-beta.195
@@ -699,6 +702,11 @@ void LauncherView::compose() {
         const uint32_t arrow = state == PlayState::Play ? kOnGoldArrow : state == PlayState::Update ? kOnBlue : kMuted;
         triangleDown(pic_, L.playMore.x + L.playMore.w / 2, btn.y + btn.h / 2, 7 * s, arrow, 1.0f);
     }
+    // 3.0.18-beta.199: «Грати без оновлення» under the button while an update is offered - in sight, not in a menu
+    if (L.noUpdate.w > 0) {
+        const bool on = hovered(Part::NoUpdate);
+        panel::roundRect(pic_, pb(L.noUpdate), 8 * s, on ? kRaise : kCard, 0.88f, kGold, on ? 0.9f : 0.5f, edge);
+    }
     // the plate over the icons, its button at its right
     plateButton_ = Box{};
     if (L.plate.w > 0) {
@@ -854,9 +862,14 @@ void LauncherView::words(HDC dc) {
         if (state == PlayState::Play) {
             st = Style{Face::ExtraBold, 28, kOnGold, 5};
             said = t(Text::LauncherPlay);
-        } else if (state == PlayState::Update) {
-            st = Style{Face::ExtraBold, 19, kOnBlue, 2};
-            said = tf(Text::LauncherUpdate, {megabytes(data_.update.branch.package.size)});
+        } else if (state == PlayState::Update) {  // 3.0.18-beta.199: «ОНОВИТИ Й ГРАТИ», the version and its size under
+            const Style big{Face::ExtraBold, 18, kOnBlue, 1.5f}, small{Face::SemiBold, 11.5f, kOnBlue};
+            const float cx = L.play.x + L.play.w / 2;
+            line(dc, big, fit(dc, big, t(Text::LauncherUpdate), int(L.play.w - 24 * s)), cx + 0.75f * s,
+                 L.play.y + 30 * s, 0);
+            const std::wstring what =
+                tf(Text::LauncherUpdateWhat, {data_.update.offer, megabytes(data_.update.branch.package.size)});
+            line(dc, small, fit(dc, small, what, int(L.play.w - 24 * s)), cx, L.play.y + 48 * s, 0);
         } else if (state == PlayState::Updating) {
             st = Style{Face::SemiBold, 16, kText, 0.5f};
             said = tf(Text::LauncherUpdating, {std::to_string(int(share_ * 100)), oneDecimal(speed_ / 1048576.0)});
@@ -864,9 +877,16 @@ void LauncherView::words(HDC dc) {
             st = Style{Face::SemiBold, 15, kMuted, 1};
             said = t(Text::LauncherRunning);
         }
-        const std::wstring shown = fit(dc, st, said, int(L.play.w - 24 * s));
-        const float base = L.play.y + L.play.h / 2 + ascentOf(dc, st) * 0.36f;
-        line(dc, st, shown, L.play.x + L.play.w / 2 + st.spacing * s / 2, base, 0);
+        if (state != PlayState::Update) {
+            const std::wstring shown = fit(dc, st, said, int(L.play.w - 24 * s));
+            const float base = L.play.y + L.play.h / 2 + ascentOf(dc, st) * 0.36f;
+            line(dc, st, shown, L.play.x + L.play.w / 2 + st.spacing * s / 2, base, 0);
+        }
+    }
+    if (L.noUpdate.w > 0) {  // 3.0.18-beta.199
+        const Style st{Face::SemiBold, 13, hovered(Part::NoUpdate) ? kWhite : kGoldHi};
+        line(dc, st, fit(dc, st, t(Text::LauncherNoUpdate), int(L.noUpdate.w - 20 * s)),
+             L.noUpdate.x + L.noUpdate.w / 2, L.noUpdate.y + L.noUpdate.h / 2 + ascentOf(dc, st) * 0.36f, 0);
     }
     // the version, at the right under the button
     {
@@ -1593,6 +1613,11 @@ void LauncherView::wordsFirst(HDC dc) {
     const Style note{Face::Medium, 13.5f, kMuted};
     line(dc, note, fit(dc, note, t(Text::KindNote), int(F.note.w)), F.note.x + F.note.w / 2,
          F.note.y + F.note.h / 2 + ascentOf(dc, note) * 0.36f, 0);
+    if (!data_.firstFound.empty()) {  // 3.0.18-beta.199: the card's set, chosen at once («Пропустити» keeps it)
+        const Style found{Face::SemiBold, 13.5f, kGoldHi};
+        line(dc, found, fit(dc, found, data_.firstFound, int(F.found.w)), F.found.x + F.found.w / 2,
+             F.found.y + F.found.h / 2 + ascentOf(dc, found) * 0.36f, 0);
+    }
     for (int i = 0; i < launcherview::kKindCards; ++i) {
         const Box& c = F.cards[i];
         const bool fits = data_.suggestedKind == i;
@@ -1630,7 +1655,9 @@ Hit LauncherView::hitAt(int x, int y) const {
 }
 
 std::vector<Hit> LauncherView::focusOrder() const {
-    std::vector<Hit> order{Hit{Part::Play}, Hit{Part::PlayMore}, Hit{Part::Look}};
+    std::vector<Hit> order{Hit{Part::Play}, Hit{Part::PlayMore}};
+    if (layout_.noUpdate.w > 0) order.push_back(Hit{Part::NoUpdate});  // 3.0.18-beta.199
+    order.push_back(Hit{Part::Look});
     if (layout_.update.w > 0) order.push_back(Hit{Part::Changelog});
     for (int i = 0; i < layout_.newsShown; ++i) order.push_back(Hit{Part::News, i});
     for (Part p : kDockParts) order.push_back(Hit{p});
@@ -1649,6 +1676,7 @@ Box LauncherView::boxOf(Hit hit) const {
     case Part::Changelog: return L.update;
     case Part::News: return hit.index >= 0 && hit.index < L.newsShown ? L.news[hit.index] : Box{};
     case Part::Version: return L.version;
+    case Part::NoUpdate: return L.noUpdate;
     case Part::Language: return L.language;
     case Part::Plate: return plateButton_;
     default: break;
