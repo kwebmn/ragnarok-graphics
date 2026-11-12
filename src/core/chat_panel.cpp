@@ -663,7 +663,10 @@ std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const In
         }
     }
     if (in.text.empty()) {
-        const std::string& hint = in.searching ? t.searchHint : in.battle && !in.typing ? t.type : t.send;
+        const std::string& hint = in.searching             ? t.searchHint
+                                  : in.walk && !in.typing    ? t.walk  // 3.0.18-beta.208
+                                  : in.battle && !in.typing ? t.type
+                                                            : t.send;
         out.push_back(Words{panel::Box{L.field.x, L.field.y, L.field.w, L.field.h}, hint, kFaint, 11.5f * s, false,
                             Align::Left});
     } else {

@@ -1,3 +1,4 @@
+#include "win/walk_mode.hpp"
 #include "win/ui_field.hpp"
 #include "win/chat_window.hpp"
 
@@ -209,6 +210,7 @@ cp::Texts texts() {
     t.from = say(settings::Text::ChatFrom);
     t.to = say(settings::Text::ChatTo);
     t.send = say(settings::Text::ChatHintSend);
+    t.walk = say(settings::Text::ChatHintWalk);  // 3.0.18-beta.208
     t.type = say(settings::Text::ChatHintType);
     t.newer = "\xE2\x86\x93";  // ↓
     t.commands[0] = say(settings::Text::ChatCmdParty);  // 3.0.11-beta.240
@@ -433,6 +435,18 @@ bool inputEmpty() {
     return !words || editText(words).empty();
 }
 
+bool focusInChat() {
+    const uint32_t focus = read32(kFocus);
+    return focus == 0 || focus == wordsEdit() || focus == nameEdit();
+}
+
+void clearLine() {
+    const uint32_t words = wordsEdit();
+    if (const uint32_t set = words ? setTextOf(words) : 0) reinterpret_cast<SetTextFn>(uintptr_t(set))(words, "");
+}
+
+bool gameBattle() { return read32(kBattle) != 0; }
+
 namespace {
 
 // 3.0.11-beta.241: the size by the corner - «width 640», «rows 10» (rows 0: F10's)
@@ -479,6 +493,10 @@ void readInput(State& s) {
     in.mode = mode <= 2 ? int(mode) : 0;
     in.battle = read32(kBattle) != 0;
     in.typing = !in.battle || read32(kTyping) != 0;
+    if (walkmodewin::on()) {  // 3.0.18-beta.208: the walk mode - typing after Enter, its own hint
+        in.walk = true;
+        in.typing = walkmodewin::typing();
+    }
     in.caretOn = (GetTickCount64() / kBlinkMs) % 2 == 0;
     in.replyTo = s.replyTo;  // 3.0.11-beta.240
     s.input = in;
@@ -859,7 +877,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     for (size_t i = 0; i < s.show.people.size(); ++i)
         key += s.show.people[i] + ':' + std::to_string(s.show.peopleUnread[i]) + ',';
     key += ';' + in.text + '|' + std::to_string(in.caret) + '|' + in.whisper + '|' + std::to_string(in.mode) +
-           (in.whisperFocus ? "f" : "") + (in.battle ? "b" : "") + (in.typing ? "t" : "") + (caret ? "|" : "");
+           (in.whisperFocus ? "f" : "") + (in.battle ? "b" : "") + (in.walk ? "w" : "") + (in.typing ? "t" : "") +
+           (caret ? "|" : "");
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
         drawn != s.key) {  // its grounds (3.0.18-beta.32: uaUI's or the picture)
         s.key = drawn;

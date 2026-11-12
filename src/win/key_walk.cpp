@@ -15,6 +15,7 @@ constexpr ULONGLONG kStopTickMs = 600;  // after the last let go: the controller
 struct State {
     bool enabled = true;
     uint8_t held = 0;
+    uint8_t mode = 0;  // 3.0.18-beta.208: the walk mode's keys
     ULONGLONG letGoAt = 0;
     std::string toldMap;  // the map the first walk was told on
 };
@@ -65,14 +66,21 @@ void lost() {
 
 bool vector(float& x, float& y) {
     const State& s = state();
-    const uagfx::keywalk::Vec v = uagfx::keywalk::vectorOf(s.held);
+    const uagfx::keywalk::Vec v = uagfx::keywalk::vectorOf(uint8_t(s.held | s.mode));
     x = v.x;
     y = v.y;
-    if (s.held) return true;
+    if (s.held || s.mode) return true;
     return s.letGoAt != 0 && GetTickCount64() - s.letGoAt < kStopTickMs;
 }
 
-bool walking() { return state().held != 0; }
+bool walking() { return state().held != 0 || state().mode != 0; }
+
+void setModeDirs(uint8_t dirs) {
+    State& s = state();
+    if (dirs == s.mode) return;
+    s.mode = dirs;
+    if (!s.held && !s.mode) s.letGoAt = GetTickCount64();
+}
 
 void setEnabled(bool on) {
     State& s = state();

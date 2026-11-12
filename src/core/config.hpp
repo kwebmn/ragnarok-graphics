@@ -775,6 +775,8 @@ struct Config {
     // 3.0.18-beta.207 (the keyboard concept, stage 1): [interface] arrows_walk - the arrows walk while the chat line is
     // empty (win/key_walk)
     bool arrowsWalk = true;
+    // 3.0.18-beta.208 (stage 2): [interface] walk_mode - the walk mode on (` switches it in the game, written here)
+    bool walkMode = false;
     // 3.0.11-beta.90 (stage 6): [interface] pad_tiles - Start opens the windows' tile (win/pad_tiles); off: the pad's
     // own menu, as before
     bool padTiles = true;

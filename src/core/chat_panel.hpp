@@ -46,6 +46,7 @@ struct Texts {
     std::string tabs[6];       // «Усі», «Група», «Гільдія», «Шепіт», «Торг», «Бій»
     std::string from, to;      // «від {1}», «до {1}»
     std::string send, type;    // the empty field's hint: «Enter — надіслати · Tab — канал», «Enter — писати …»
+    std::string walk;          // 3.0.18-beta.208: the walk mode's «Ходьба · Enter — писати · ` — вимкнути»
     std::string newer;         // the scrolled history's way back down
     // 3.0.11-beta.240 (the chat concept, stage 1): the commands' hints over the input while «/» is typed - «/p — у
     // групу», «/g — у гільдію», «/w Ім'я — шепіт», «/r — відповісти {1}»
@@ -113,6 +114,7 @@ struct Input {
     size_t caret = std::string::npos;  // bytes into `text`; npos its end
     bool typing = true;          // the keys go to the chat (the battle mode: after Enter)
     bool battle = false;         // the game's battle mode
+    bool walk = false;           // 3.0.18-beta.208: the walk mode (win/walk_mode) - typing after Enter
     int mode = 0;                // 0 near, 1 the party, 2 the guild
     std::string whisper;         // the name the words go to (UTF-8); "" none
     bool whisperFocus = false;   // the name being typed

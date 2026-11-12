@@ -36,6 +36,10 @@ bool searchKey(UINT m, WPARAM wp, LPARAM lp);
 bool key(UINT m, WPARAM wp, LPARAM lp);
 // 3.0.11-beta.98: the game's chat line holds no words (the NPC talk's keys 1-9, Enter, Esc are its own then)
 bool inputEmpty();
+// 3.0.18-beta.208 (the walk mode): the game's focus is the chat's words or name field, or no field at all
+bool focusInChat();
+void clearLine();  // the words' field emptied (the walk mode's Esc)
+bool gameBattle();  // the game's battle mode (/bm) on
 // 3.0.18-beta.134 (the pad analysis: chat on the controller): the channel round (near, party, guild - as Tab), the
 // history scrolled `by` lines (up +)
 void padChannel();

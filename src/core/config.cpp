@@ -646,6 +646,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.walkMark);
         } else if (key == "interface.arrows_walk") {  // 3.0.18-beta.207: the arrows walk
             setBool(val, c.arrowsWalk);
+        } else if (key == "interface.walk_mode") {  // 3.0.18-beta.208: the walk mode
+            setBool(val, c.walkMode);
         } else if (key == "interface.cursor") {  // 3.0.11-beta.198: the cursor's look
             for (const CursorLook l : {CursorLook::Game, CursorLook::Dark, CursorLook::Light})
                 if (val == cursorLookToken(l)) c.cursorLook = l;

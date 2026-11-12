@@ -1,6 +1,8 @@
 #pragma once
 #include <windows.h>
 
+#include <cstdint>
+
 namespace uagfx::win::keywalk {
 
 // 3.0.18-beta.207 (the keyboard concept https://claude.ai/artifact/SxvWxL5BM2tHtSWAvYPh9J, stage 1): the game window's
@@ -14,6 +16,7 @@ void lost();                             // the window lost the keys: every arro
 // tick that sends the stop step
 bool vector(float& x, float& y);
 bool walking();             // arrows held now
+void setModeDirs(uint8_t dirs);  // 3.0.18-beta.208: the walk mode's keys held (win/walk_mode) - walked as the arrows
 void setEnabled(bool on);   // [interface] arrows_walk
 bool enabled();
 

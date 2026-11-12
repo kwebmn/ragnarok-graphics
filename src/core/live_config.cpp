@@ -313,6 +313,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("cursor", cursorLookToken(running.cursorLook), cursorLookToken(file.cursorLook)));
         n.cursorLook = file.cursorLook;
     }
+    if (file.walkMode != running.walkMode) {  // 3.0.18-beta.208: the walk mode
+        u.applied.push_back(change("walk_mode", flag(running.walkMode), flag(file.walkMode)));
+        n.walkMode = file.walkMode;
+    }
     if (file.arrowsWalk != running.arrowsWalk) {  // 3.0.18-beta.207: the arrows walk
         u.applied.push_back(change("arrows_walk", flag(running.arrowsWalk), flag(file.arrowsWalk)));
         n.arrowsWalk = file.arrowsWalk;

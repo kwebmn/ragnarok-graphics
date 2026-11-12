@@ -1,4 +1,5 @@
 #include "win/key_walk.hpp"
+#include "win/walk_mode.hpp"
 #include "win/window_switch.hpp"
 #include "win/window_stack.hpp"
 
@@ -202,8 +203,10 @@ uint64_t g_lastEnter = 0;  // 3.0.18-beta.186: lastEnterMs()
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     watchInput(m, wp, lp);  // 3.0.16-beta.4
     // 3.0.18-beta.207: the window lost the keys - an arrow held stops walking
-    if (m == WM_KILLFOCUS || (m == WM_ACTIVATE && LOWORD(wp) == WA_INACTIVE) || (m == WM_ACTIVATEAPP && !wp))
+    if (m == WM_KILLFOCUS || (m == WM_ACTIVATE && LOWORD(wp) == WA_INACTIVE) || (m == WM_ACTIVATEAPP && !wp)) {
         keywalk::lost();
+        walkmodewin::lost();  // 3.0.18-beta.208
+    }
     if (m == WM_KEYDOWN && wp == VK_RETURN) g_lastEnter = GetTickCount64();
     if (g_switch) {
         if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN || m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN)
@@ -218,6 +221,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if (chatwin::searchKey(m, wp, lp)) return 0;  // 3.0.11-beta.284: Ctrl+F in the chat's field, its search
         npcwin::cutinEsc(m, wp);  // 3.0.13-beta.10: Esc closes the NPC's picture too (the key goes on)
         if (windowstack::key(m, wp, lp)) return 0;
+        if (walkmodewin::key(m, wp, lp)) return 0;  // 3.0.18-beta.208: the walk mode's keys and letters
         if (keywalk::key(m, wp, lp)) return 0;  // 3.0.18-beta.207: the arrows walk while the chat line is empty
         if (chatwin::key(m, wp, lp)) return 0;       // 3.0.11-beta.41: the new chat's F10, Alt+F10 and Tab
         if (charpanel::key(m, wp, lp)) return 0;     // 3.0.11-beta.141: Alt+V, the character block full or small

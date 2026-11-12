@@ -8579,6 +8579,19 @@ constexpr Entry kTexts[] = {
      "зупиняється. Вимкнено: стрілки, як раніше, у гри.",
      "Стрелки ведут персонажа, пока строка чата пуста: вверх — от камеры, две стрелки — по диагонали, отпустили — "
      "останавливается. Выключено: стрелки, как раньше, у игры."},
+    {Text::InterfaceWalkMode, "Walk mode (` key)", "Режим ходьби (клавіша `)", "Режим ходьбы (клавиша `)"},
+    {Text::InterfaceWalkModeHint,
+     "` (the key left of 1) switches it in the game while the chat line is empty: the letters stop typing, W A S D, "
+     "the arrows and the numpad walk, Enter opens the chat line and sends it, Esc clears it. The chat line says it: "
+     "«Walking · Enter: type».",
+     "` (клавіша ліворуч від 1) вмикає його в грі, поки рядок чату порожній: літери не пишуться в чат, W A S D, "
+     "стрілки й цифровий блок ведуть персонажа, Enter відкриває рядок чату й надсилає, Esc стирає. Рядок чату "
+     "показує: «Ходьба · Enter — писати».",
+     "` (клавиша слева от 1) включает его в игре, пока строка чата пуста: буквы не пишутся в чат, W A S D, "
+     "стрелки и цифровой блок ведут персонажа, Enter открывает строку чата и отправляет, Esc стирает. Строка чата "
+     "показывает: «Ходьба · Enter — писать»."},
+    {Text::ChatHintWalk, "Walking \xC2\xB7 Enter: type \xC2\xB7 `: off",
+     "Ходьба \xC2\xB7 Enter — писати \xC2\xB7 ` — вимкнути", "Ходьба \xC2\xB7 Enter — писать \xC2\xB7 ` — выключить"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -1,0 +1,91 @@
+#include "core/walk_mode.hpp"
+
+#include "core/key_walk.hpp"
+
+namespace uagfx::walkmode {
+
+using keywalk::kDown;
+using keywalk::kLeft;
+using keywalk::kRight;
+using keywalk::kUp;
+
+uint8_t dirOfScan(unsigned scan, bool extended) {
+    switch (scan) {
+    case 0x11: return kUp;  // W
+    case 0x1E: return kLeft;  // A
+    case 0x1F: return kDown;  // S
+    case 0x20: return kRight;  // D
+    case 0x48: return kUp;  // the arrows, the numpad's 8 2 4 6
+    case 0x50: return kDown;
+    case 0x4B: return kLeft;
+    case 0x4D: return kRight;
+    default: break;
+    }
+    if (extended) return 0;  // Home, End, Page Up, Page Down: the game's
+    switch (scan) {
+    case 0x47: return uint8_t(kUp | kLeft);  // the numpad's 7
+    case 0x49: return uint8_t(kUp | kRight);
+    case 0x4F: return uint8_t(kDown | kLeft);
+    case 0x51: return uint8_t(kDown | kRight);
+    case 0x4C: return kStop;  // its 5
+    default: return 0;
+    }
+}
+
+bool printable(unsigned vk) {
+    return vk == 0x20 || (vk >= 0x30 && vk <= 0x39) || (vk >= 0x41 && vk <= 0x5A) || (vk >= 0x60 && vk <= 0x6F) ||
+           (vk >= 0xBA && vk <= 0xC0) || (vk >= 0xDB && vk <= 0xDF) || vk == 0xE2;
+}
+
+void Mode::set(bool on) {
+    on_ = on;
+    typing_ = false;
+    dirs_ = 0;
+}
+
+Act Mode::key(const Key& k) {
+    const bool walkingNow = on_ && !typing_;
+    if (!k.down) {
+        const uint8_t d = walkingNow ? dirOfScan(k.scan, k.extended) : 0;
+        if (d == 0 || d == kStop) return Act::Pass;
+        dirs_ = uint8_t(dirs_ & ~d);
+        return Act::Swallow;
+    }
+    const bool modifier = k.ctrl || k.alt;
+    if (k.scan == kToggleScan && !modifier && (walkingNow || (!on_ && k.chatEmpty))) {
+        on_ = !on_;
+        typing_ = false;
+        dirs_ = 0;
+        return Act::Toggle;
+    }
+    if (!on_) return Act::Pass;
+    if (typing_) {
+        if (k.vk == 0x0D) {
+            typing_ = false;
+            return Act::Send;
+        }
+        if (k.vk == 0x1B) {
+            typing_ = false;
+            return Act::CancelChat;
+        }
+        return Act::Pass;
+    }
+    if (modifier) return Act::Pass;
+    if (k.vk == 0x0D) {
+        typing_ = true;
+        dirs_ = 0;
+        return Act::OpenChat;
+    }
+    const uint8_t d = dirOfScan(k.scan, k.extended);
+    if (d == kStop) {
+        dirs_ = 0;
+        return Act::Swallow;
+    }
+    if (d) {
+        dirs_ = uint8_t(dirs_ | d);
+        return Act::Swallow;
+    }
+    return printable(k.vk) ? Act::Swallow : Act::Pass;
+}
+
+}  // namespace uagfx::walkmode
