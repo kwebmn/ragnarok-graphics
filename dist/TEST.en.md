@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.194 — what's new · 2026-11-12
+
+- «How the game looks» right on the first screen: a click on the line over «PLAY» opens a card with pictures - «Picture» (Auto, As in the game, Improved, Remaster), «Interface» (New, New screen, the game's windows, Classic), «Textures» (HD, HD light, Original); the current choice outlined in gold, «changed N» when something was changed by hand.
+- A pick is written at once; for 5 s «Changed · Undo» takes it back.
+- On top of the card: «Auto for your graphics card» - the picture and the textures for your card in one press (a tick when they already are). «Check the graphics card» starts the «Graphics test», «All settings ›» opens «Main». Esc, ✕ or a click outside closes it.
+
 # uaRO Graphics 3.0.18-beta.193 — what's new · 2026-11-12
 
 - A new first screen: the game's launcher. uaRO HD's art over the whole window (Prontera's fountain at dawn, by day, at sunset and in winter; the pictures change slowly while the window is in front and the game is not running), the big «PLAY» button, how the game looks over it, the version under it. On the left «What's new»: the update's card with its first points and the site's news. At the top: the server and the players online, the language.
