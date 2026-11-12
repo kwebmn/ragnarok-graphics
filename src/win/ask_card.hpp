@@ -25,6 +25,9 @@ void packet(const packets::Event& e);
 void frame(HWND game, bool on, bool counts, unsigned codePage, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
+// 3.0.18-beta.190 (the tester: Enter put nothing into «Склад», «Готово» all of it): Enter on a count whose field is
+// empty - the most put in as «Готово» puts it, the key left to the game (its own Enter, its OK); false always
+bool key(UINT m, WPARAM wp, LPARAM lp);
 bool shown();
 bool asking();
 // 3.0.18-beta.155: the game's «how many» just made (a stack moved in a batch) - its whole count set and its OK

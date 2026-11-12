@@ -97,6 +97,11 @@ int quickAt(const Layout& L, float x, float y) {
     return -1;
 }
 
+std::string onEnter(const std::string& field, int most) {
+    if (most <= 0 || field.find_first_not_of(" \t") != std::string::npos) return "";
+    return std::to_string(most);
+}
+
 int quickValue(Quick q, int most) {
     const int m = std::max(1, most);
     switch (q) {

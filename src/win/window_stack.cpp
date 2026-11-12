@@ -357,6 +357,7 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
         case Win::Guild: return guildcardwin::key(m, wp, lp);  // 3.0.11-beta.271: the notice's fields
         case Win::SlotCard: return infocardwin::key(infocardwin::Kind::Card, m, wp, lp);
         case Win::VendSetup: return vendsetupwin::key(m, wp, lp);  // 3.0.18-beta.105: Tab / Enter between fields
+        case Win::Ask: return askcardwin::key(m, wp, lp);  // 3.0.18-beta.190: Enter on an empty count - the most
         default: return false;
     }
 }

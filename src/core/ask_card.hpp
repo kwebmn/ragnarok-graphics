@@ -61,6 +61,10 @@ std::string boxWords(const std::string& now, const std::string& words, bool boxU
 enum class Quick : uint8_t { One, Half, All };
 int quickAt(const Layout& L, float x, float y);  // the picture's pixels; -1 none
 int quickValue(Quick q, int most);
+// 3.0.18-beta.190 (the tester: «жму ентер не кидає на склад, а мишкою на Готово - все перекине»): what a count's
+// field takes when Enter is pressed - the most when it is empty (as «Готово» does: the field is emptied as the card
+// shows, 3.0.15-beta.7), "" to leave it as it is (the player's digits)
+std::string onEnter(const std::string& field, int most);
 
 
 enum class Align : uint8_t { Left, Right, Center };

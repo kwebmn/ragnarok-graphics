@@ -556,6 +556,25 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     return false;  // the old edition gone: the live window alone
 }
 
+bool key(UINT m, WPARAM wp, LPARAM) {
+    State& s = state();
+    if (!s.shown || s.kind != ac::Kind::Count || m != WM_KEYDOWN || wp != VK_RETURN) return false;
+    const uint32_t window = gameCount(), edit = window ? read32(window + kEdit) : 0;
+    if (!edit) return false;
+    // the game's field as it is now (the card's copy is the last frame's: digits typed since would be lost)
+    std::string field;
+    if (const char* t = reinterpret_cast<GetTextFn>(uintptr_t(kGetText))(edit)) {
+        char buf[96] = {};
+        if (readGame(uint32_t(reinterpret_cast<uintptr_t>(t)), buf, sizeof buf - 1)) field = buf;
+    }
+    const std::string most = ac::onEnter(field, s.card.most);
+    if (most.empty()) return false;
+    setCountField(window, most);
+    if (s.told++ < 30)
+        LOG_INFO("asks: the game's «how many» - Enter on its empty field, the most %s put in", most.c_str());
+    return false;  // its own Enter: its OK takes the field
+}
+
 bool countAll() {
     const uint32_t window = gameCount(), mode = read32(kModeNow);
     int most = mode ? int(read32(mode + kDragCount)) : 0;

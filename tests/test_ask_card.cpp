@@ -78,3 +78,14 @@ TEST(ask_card_the_box_words_after_another_call) {
     CHECK(askcard::boxWords("A line.", "Another.", true, true) == "A line.\nAnother.");
     CHECK(askcard::boxWords("A line.", "", true, true) == "A line.");
 }
+
+// 3.0.18-beta.190 (the tester: «жму ентер не кидає на склад, а мишкою на Готово - все перекине»): Enter on a count
+// takes the most when its field is empty, as «Готово» does; the player's digits stay as they are
+TEST(ask_card_enter_on_an_empty_count_takes_the_most) {
+    CHECK_EQ(askcard::onEnter("", 57), std::string("57"));
+    CHECK_EQ(askcard::onEnter("  ", 57), std::string("57"));
+    CHECK_EQ(askcard::onEnter("10", 57), std::string());   // typed: the game's own Enter takes it
+    CHECK_EQ(askcard::onEnter("0", 57), std::string());
+    CHECK_EQ(askcard::onEnter("", 0), std::string());      // nothing known to take
+    CHECK_EQ(askcard::onEnter("", -1), std::string());
+}
