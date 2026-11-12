@@ -193,4 +193,22 @@ std::string tipSecond(const Item& it, const Texts& t);
 std::string nameOf(const Item& it);  // «+7 Sword», its count after a stack's: «Red Potion ×38»
 std::string grouped(long long n);
 
+// 3.0.18-beta.224 (R-5K5NRW «пише що успіх, але не вдягається»: «вдягнуто» rose over the cell at the double click,
+// before the server answered - a level too low refused it after): a wear asked, its answer read from the bag - the
+// thing gone from it (arrows: marked worn) is worn; still there kWaitMs on, refused
+class WearWatch {
+public:
+    enum class Answer : uint8_t { None, Worn, Refused };
+    static constexpr uint64_t kWaitMs = 1500;
+    void asked(int index, bool ammo, uint64_t now);
+    // `inBag(index)`: the bag holds it not worn; `wornAmmo(index)`: arrows marked worn. Worn or Refused once each ask
+    Answer check(const std::function<bool(int)>& inBag, const std::function<bool(int)>& wornAmmo, uint64_t now);
+    bool waiting() const { return index_ > 0; }
+
+private:
+    int index_ = 0;
+    bool ammo_ = false;
+    uint64_t at_ = 0;
+};
+
 }  // namespace uagfx::itemwin

@@ -8635,6 +8635,7 @@ constexpr Entry kTexts[] = {
     {Text::EquipSetPartly, "Set {1}: not all of it could be worn", "Комплект {1}: не все вдалося надягти",
      "Комплект {1}: не всё удалось надеть"},
     {Text::EquipSetCleared, "Set {1} cleared", "Комплект {1} очищено", "Комплект {1} очищен"},
+    {Text::ItemsNotWorn, "not worn", "не вдягнуто", "не надето"},  // 3.0.18-beta.224 (R-5K5NRW)
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

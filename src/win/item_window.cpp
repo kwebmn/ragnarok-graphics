@@ -152,6 +152,8 @@ struct State {
     bool dragging = false;
     int pressesTold = 0;
     std::vector<std::pair<iw::Flash, ULONGLONG>> flashes;  // 3.0.11-beta.44: the uses answered, when
+    iw::WearWatch wear;  // 3.0.18-beta.224 (R-5K5NRW): a wear's flash waits for the server's answer
+    iw::Flash wearFlash;
     int padFocus = 0;      // 3.0.11-beta.91: the controller's frame (of the shown cells)
     bool padNow = false;   // played with the controller: its frame, its buttons in the tip
     panel::Picture dragIcon;  // the dragged item's icon under the cursor
@@ -478,11 +480,14 @@ void useCell(State& s, int shownIndex, ULONGLONG now, const char* how) {
         const int cell = shownIndex - s.show.scroll * s.layout.columns;
         if (cell >= 0 && cell < int(s.layout.cells.size())) f.cell = s.layout.cells[size_t(cell)];
         f.icon = it.icon;
-        f.label = kind == iw::Use::Wear || kind == iw::Use::Ammo ? say(settings::Text::ItemsWorn)
-                  : kind == iw::Use::Card                        ? ""
-                                                                 : "\xE2\x88\x92" "1";  // −1
-        f.rgb = kind == iw::Use::Wear || kind == iw::Use::Ammo ? 0x5FD08A : 0xF3C653;
-        if (f.cell.w > 0) s.flashes.emplace_back(f, now);
+        f.label = kind == iw::Use::Card ? "" : "\xE2\x88\x92" "1";  // −1
+        f.rgb = 0xF3C653;
+        if (kind == iw::Use::Wear || kind == iw::Use::Ammo) {  // 3.0.18-beta.224 (R-5K5NRW): when the server answers
+            s.wearFlash = f;
+            s.wear.asked(it.index, kind == iw::Use::Ammo, now);
+        } else if (f.cell.w > 0) {
+            s.flashes.emplace_back(f, now);
+        }
     }
     if (s.told++ < 20) LOG_INFO("items: %s on #%d (kind %d) - %s", how, it.id, it.type, did);
     s.readAt = 0;
@@ -701,6 +706,29 @@ void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth
         putSteps(s);
     }
     place(s);
+    if (s.wear.waiting()) {  // 3.0.18-beta.224 (R-5K5NRW): the wear's answer - gone from the bag, or refused
+        const auto inBag = [&](int index) {
+            for (const iw::Item& it : s.items)
+                if (it.index == index && !it.worn) return true;
+            return false;
+        };
+        const auto wornAmmo = [&](int index) {
+            for (const iw::Item& it : s.items)
+                if (it.index == index && it.worn) return true;
+            return false;
+        };
+        const iw::WearWatch::Answer a = s.wear.check(inBag, wornAmmo, now);
+        if (a != iw::WearWatch::Answer::None) {
+            const bool worn = a == iw::WearWatch::Answer::Worn;
+            iw::Flash f = s.wearFlash;
+            f.label = say(worn ? settings::Text::ItemsWorn : settings::Text::ItemsNotWorn);
+            f.rgb = worn ? 0x5FD08A : 0xFF6B5E;
+            if (f.cell.w > 0) s.flashes.emplace_back(f, now);
+            if (!worn && s.told++ < 20)
+                LOG_INFO("items: the wear refused - still in the bag %llu ms on (the game's own words say why)",
+                         static_cast<unsigned long long>(iw::WearWatch::kWaitMs));
+        }
+    }
     s.show.flashes.clear();  // 3.0.11-beta.44: the uses still answering in their cells
     for (auto f = s.flashes.begin(); f != s.flashes.end();) {
         const float t = float(now - f->second) / iw::kFlashMs;

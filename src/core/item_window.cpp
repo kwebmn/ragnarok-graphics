@@ -280,4 +280,22 @@ std::string grouped(long long n) {
     return n < 0 ? "-" + out : out;
 }
 
+void WearWatch::asked(int index, bool ammo, uint64_t now) {
+    index_ = index;
+    ammo_ = ammo;
+    at_ = now;
+}
+
+WearWatch::Answer WearWatch::check(const std::function<bool(int)>& inBag, const std::function<bool(int)>& wornAmmo,
+                                   uint64_t now) {
+    if (index_ <= 0) return Answer::None;
+    if (ammo_ ? wornAmmo(index_) : !inBag(index_)) {
+        index_ = 0;
+        return Answer::Worn;
+    }
+    if (now - at_ < kWaitMs) return Answer::None;
+    index_ = 0;
+    return Answer::Refused;
+}
+
 }  // namespace uagfx::itemwin

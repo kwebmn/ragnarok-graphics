@@ -977,10 +977,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     result = 0;
     if (m == WM_MOUSEWHEEL && s.show.tree) {  // 3.0.11-beta.224: «Дерево» - up and down, with Shift sideways
         const float by = (GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -60.0f : 60.0f) * s.scale;
-        if (GetKeyState(VK_SHIFT) < 0)
-            kw::scrollTree(s.show, s.layout, by, 0);
-        else
-            kw::scrollTree(s.show, s.layout, 0, by);
+        kw::wheelTree(s.show, s.layout, by, GetKeyState(VK_SHIFT) < 0);  // .224: sideways when it cannot go down
         s.key.clear();
         return true;
     }

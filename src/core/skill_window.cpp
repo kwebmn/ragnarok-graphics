@@ -502,6 +502,13 @@ void scrollTree(Show& sh, const Layout& L, float dx, float dy) {
     sh.treeY = std::clamp(L.scrollY + dy, 0.0f, L.maxY) / L.s;
 }
 
+void wheelTree(Show& sh, const Layout& L, float by, bool shift) {
+    if (shift || (L.maxY <= 0 && L.maxX > 0))
+        scrollTree(sh, L, by, 0);
+    else
+        scrollTree(sh, L, 0, by);
+}
+
 bool treeInSight(Show& sh, const Layout& L, int index) {
     if (!L.tree || index < 0 || index >= int(L.rows.size())) return false;
     const panel::Box& b = L.rows[size_t(index)];

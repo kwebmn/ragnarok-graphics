@@ -132,3 +132,44 @@ TEST(uikit_skills_tree_nodes_move_with_the_view) {
     CHECK(std::abs(m.nodes[0].x - (coreRow.x - coreView.x)) < 0.01f);  // against the view
     rmlhost::close(doc);
 }
+
+// 3.0.18-beta.224 (R-3ZE2X9: the Rogue's tree drawn on past its view, under the side panel): a node past the view's
+// right edge is clipped at it - RmlUi clips by overflow only when it counts content overflowing, and the nodes are
+// absolute, so the view says «clip: always»
+TEST(uikit_skills_tree_clipped_at_its_view) {
+    kw::Data d = data();
+    d.tabs[0].skills.resize(1);
+    for (int i = 1; i < 9; ++i) {  // a chain of nine: wider than the view
+        kw::Skill k = d.tabs[0].skills[0];
+        k.id = 1 + i;
+        k.name = "Next " + std::to_string(i);
+        k.req = {{i, 1}};
+        d.tabs[0].skills.push_back(k);
+    }
+    kw::Show sh;
+    sh.tree = true;
+    kw::Layout L = kw::layout(0, 0, 1, d, sh, texts(), measure);
+    CHECK(L.maxX > 0);
+    static sl::Model m;
+    sl::fill(m, L, d, sh, texts(), measure, none, glyph);
+    std::string error;
+    Rml::ElementDocument* doc =
+        rmlhost::load(sl::rml(), [&](Rml::DataModelConstructor& c) { sl::bind(c, m); }, 50, 40, &error);
+    CHECK_EQ(error, std::string());
+    Rml::Element* view = doc ? doc->QuerySelector(".view") : nullptr;
+    CHECK(view != nullptr);
+    if (!view) return;
+    const float viewRight = view->GetAbsoluteLeft() + view->GetClientWidth();
+    Rml::ElementList nodes;
+    doc->QuerySelectorAll(nodes, ".nd");
+    Rml::Element* past = nullptr;
+    for (Rml::Element* n : nodes)
+        if (n->IsVisible() && n->GetAbsoluteLeft() + n->GetOffsetWidth() > viewRight + 1) past = n;
+    CHECK(past != nullptr);  // the chain goes on past the view
+    if (past) {
+        Rml::Rectanglei clip;
+        CHECK(Rml::ElementUtilities::GetClippingRegion(past, clip));
+        CHECK(float(clip.Right()) <= viewRight + 1);  // cut at the view's edge
+    }
+    rmlhost::close(doc);
+}

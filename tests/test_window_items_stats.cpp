@@ -557,3 +557,19 @@ TEST(item_window_scroll_bar_taken_by_the_mouse) {
     drag.release();
     CHECK(!drag.press(L, 40, scroll, L.grid.y + 10));  // nothing to scroll: not taken
 }
+
+// 3.0.18-beta.224 (R-5K5NRW «при спробі вдягнути ітем, до якого не вистачає лвла - пише що успіх, але не вдягається»:
+// «вдягнуто» rose over the cell at the double click, before the server answered): the word waits for the answer - the
+// thing gone from the bag (or its arrows marked worn) is worn, still there after a while is refused
+TEST(items_wear_answered_not_assumed) {
+    itemwin::WearWatch w;
+    w.asked(5, false, 1000);
+    CHECK(w.check([](int) { return true; }, [](int) { return false; }, 1100) == itemwin::WearWatch::Answer::None);
+    CHECK(w.check([](int) { return true; }, [](int) { return false; }, 2600) == itemwin::WearWatch::Answer::Refused);
+    CHECK(w.check([](int) { return true; }, [](int) { return false; }, 2700) == itemwin::WearWatch::Answer::None);
+    w.asked(7, false, 3000);  // a sash put on: gone from the bag
+    CHECK(w.check([](int i) { return i != 7; }, [](int) { return false; }, 3200) == itemwin::WearWatch::Answer::Worn);
+    w.asked(9, true, 4000);  // arrows: they stay in the bag, marked worn
+    CHECK(w.check([](int) { return true; }, [](int) { return false; }, 4100) == itemwin::WearWatch::Answer::None);
+    CHECK(w.check([](int) { return true; }, [](int i) { return i == 9; }, 4200) == itemwin::WearWatch::Answer::Worn);
+}

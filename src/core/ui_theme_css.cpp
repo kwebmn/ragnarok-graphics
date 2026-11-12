@@ -1119,7 +1119,9 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .skl .thumb .th { position: absolute; left: 0; width: 0.4167rem; border-radius: 0.2083rem;
     background-color: #ffffff47; }
 .skl .treebox { display: block; position: relative; }
-.skl .view { display: block; position: relative; overflow: hidden; }
+/* 3.0.18-beta.224 (R-3ZE2X9: the Rogue's tree drawn under the side panel): RmlUi clips by overflow only when it counts
+   content overflowing, and the tree's nodes are absolute - «clip: always» */
+.skl .view { display: block; position: relative; overflow: hidden; clip: always; }
 .skl .ln, .skl .nd, .skl .bar { position: absolute; }
 .skl .nd { box-sizing: border-box; }
 .skl .ni img { position: absolute; }

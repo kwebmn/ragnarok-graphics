@@ -955,6 +955,7 @@ enum class Text : uint16_t {
     // .219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться»), .220 («сделай явно»): «Спорядження»'s sets
     EquipSetsTitle, EquipSetEmpty, EquipSetPutOn, EquipSetWornNow, EquipSetMenuKeep, EquipSetMenuClear, EquipSetKept,
     EquipSetNothingWorn, EquipSetPutting, EquipSetDone, EquipSetMissing, EquipSetPartly, EquipSetCleared,
+    ItemsNotWorn,  // .224 (R-5K5NRW): the server refused a thing put on
     Count
 };
 

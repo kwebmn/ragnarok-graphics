@@ -149,6 +149,9 @@ Hit hitTest(const Layout& L, float x, float y);
 
 // 3.0.11-beta.224: «Дерево» scrolled by window pixels; scrolled to show a skill (the controller's)
 void scrollTree(Show& sh, const Layout& L, float dx, float dy);
+// 3.0.18-beta.224 (R-3ZE2X9: the Rogue's tree wider than its view, the wheel moving nothing): the wheel's notch `by` -
+// up and down, sideways with Shift or when the tree has no room up and down
+void wheelTree(Show& sh, const Layout& L, float by, bool shift);
 bool treeInSight(Show& sh, const Layout& L, int index);  // true: it moved
 // 3.0.11-beta.245: a scroll bar pressed or dragged at (x, y) - the list (its rows) or the tree (either way) scrolled so
 // that its thumb's middle stands there

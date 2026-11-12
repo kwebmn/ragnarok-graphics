@@ -127,6 +127,29 @@ TEST(skill_tree_view_scrolls_and_keeps_a_skill_in_sight) {
     CHECK(sh.treeX == 0);
 }
 
+// 3.0.18-beta.224 (R-3ZE2X9 «у рога плагіазм не відображається, скіли виходять за рамку»: the Rogue's tree wider than
+// its view, Plagiarism («Intimidate» by the client's names) in its sixth column, the wheel moving nothing): a tree with
+// no room to scroll up and down scrolls sideways by the plain wheel; Shift still sideways, a tall one up and down
+TEST(skill_tree_view_the_wheel_scrolls_sideways_when_it_cannot_go_down) {
+    skillwin::Data d;
+    skillwin::Tab tab{"Rogue", {}};
+    tab.skills.push_back(skill(1000, "First", 1, 10));
+    for (int i = 1; i < 9; ++i)  // a chain of nine: wider than the view, one row high
+        tab.skills.push_back(skill(1000 + i, "Next", 0, 5, {{1000 + i - 1, 1}}));
+    d.tabs.push_back(tab);
+    skillwin::Show sh;
+    sh.tree = true;
+    const skillwin::Texts t = texts();
+    skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
+    CHECK(L.maxX > 0 && L.maxY == 0);
+    skillwin::wheelTree(sh, L, 60, false);
+    CHECK(sh.treeX > 0 && sh.treeY == 0);  // sideways: the hidden columns come in
+    const float x = sh.treeX;
+    L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
+    skillwin::wheelTree(sh, L, -60, true);  // Shift: sideways back
+    CHECK(sh.treeX < x);
+}
+
 // 3.0.11-beta.225 (the skills concept, stage 3: «План»): levels planned without asking the server - a requirement
 // counts by its planned level, taking a level off takes off what needed it, the points the plan leaves; «Застосувати»
 // asks the raises the server lets now, one by one; the plan's buttons in the window
