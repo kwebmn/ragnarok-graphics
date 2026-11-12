@@ -22,6 +22,7 @@ Vec vectorOf(uint8_t held);
 // empty (words in it: the arrows move its caret), no Ctrl, Alt or Shift held
 struct Gate {
     bool enabled = false, inGame = false, chatEmpty = false, modifier = false;
+    bool otherField = false;  // another of the game's fields has the focus (a count, a name): its caret's arrows
 };
 bool arrowWalks(const Gate& g);
 

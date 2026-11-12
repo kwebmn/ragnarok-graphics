@@ -383,6 +383,22 @@ TEST(ctl_key_actions_with_the_pad_off) {
     CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x0190);
 }
 
+// the final review: a key's action pressed while an NPC window is open is dropped - not fired when the window closes
+TEST(ctl_key_action_dropped_in_an_npc_window) {
+    Controller c(Config{});
+    WorldState w = world();
+    addMob(w, 110000001, Cell{102, 101});
+    c.keyAction(Action{Action::Kind::Attack});
+    PadState p = pad();
+    p.keyActs = true;
+    ViewInfo talking = view();
+    talking.dialog = NpcDialog::Next;
+    TickOutput o = c.tick(p, w, talking, 1000);
+    CHECK(o.packets.empty());
+    o = c.tick(pad(), w, view(), 1100);  // the window closed: nothing fired late
+    CHECK(o.packets.empty());
+}
+
 TEST(ctl_key_cycle_target_nearest_first) {
     Controller c(Config{});
     WorldState w = world();

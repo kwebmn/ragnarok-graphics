@@ -101,6 +101,7 @@ bool key(UINT m, WPARAM wp, LPARAM) {
     g.inGame = !map.empty();
     g.chatEmpty = chatwin::inputEmpty();
     g.modifier = modifier();
+    g.otherField = !chatwin::focusInChat();  // the final review: a count's or a name's field keeps its arrows
     if (!uagfx::keywalk::arrowWalks(g)) return false;
     s.held = uint8_t(s.held | dir);
     if (map != s.toldMap) {

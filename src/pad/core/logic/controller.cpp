@@ -270,6 +270,10 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
         out.notes.push_back(hotkeyName(choosing_->slot) + ": the choice cancelled");  // 3.0.11-beta.85: a window came
         choosing_.reset();
     }
+    if (view.paused || view.dialog != NpcDialog::None) {  // the final review: the keys' actions not fired later
+        keyActions_.clear();
+        keyCycle_ = 0;
+    }
     if (view.paused) {  // the settings menu has the pad: the character stands, buttons only get remembered
         if (!paused_) {
             paused_ = true;

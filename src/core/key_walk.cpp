@@ -19,6 +19,6 @@ Vec vectorOf(uint8_t held) {
     return Vec{float(x) * k, float(y) * k};
 }
 
-bool arrowWalks(const Gate& g) { return g.enabled && g.inGame && g.chatEmpty && !g.modifier; }
+bool arrowWalks(const Gate& g) { return g.enabled && g.inGame && g.chatEmpty && !g.modifier && !g.otherField; }
 
 }  // namespace uagfx::keywalk

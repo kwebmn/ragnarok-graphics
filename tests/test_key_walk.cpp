@@ -60,4 +60,7 @@ TEST(key_walk_gate) {
     Gate ctrl = g;
     ctrl.modifier = true;  // Ctrl, Alt or Shift held: not a walk
     CHECK(!arrowWalks(ctrl));
+    Gate field = g;
+    field.otherField = true;  // the final review: another of the game's fields typed in (a count, a name) - its caret
+    CHECK(!arrowWalks(field));
 }
