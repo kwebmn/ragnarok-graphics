@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.216 — what's new · 2026-11-12
+
+- Report R-JPMWSD («moving the cursor, it lands on a letter, not between letters»): the chat line's caret was put by the text's width as GDI measured the whole line at once, while the new interface draws the letters one by one, and in Latin text the two widths came half a letter apart. The chat now measures its words the way the new interface draws them, so the caret stands between the letters (in the message line and in a whisper's name). Once a session the log gives both widths of the line, not its words.
+- «Спорядження» logs what each slot holds when the window opens and whenever what is worn changes («equip: worn - …»): reports like R-RASZHM («put a thing on and it went missing») can now be read from the log.
+- To check: type a few English words into the chat and move the caret with ← → - it stands between the letters; open «Спорядження», put a thing on and take it off - «equip: worn» lines in the log.
+
 # uaRO Graphics 3.0.18-beta.215 — what's new · 2026-11-12
 
 - Report R-8KPDY9 («the keyboard pulled right all the time»): an arrow was pressed with the walk mode off, then ` turned the mode on while the arrow was still held. The walk mode took the arrow's let go, and the arrows' hook never learned it was let go, so the character walked right on its own for half a minute. Now each frame the held arrows, the walk mode's keys (W A S D, the numpad) and the windows' keys are checked against what Windows holds: a key let go stops the walk whichever part of the driver took its message (the log says so in a line «let go taken by another hook»).
