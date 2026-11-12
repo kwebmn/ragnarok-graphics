@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.203 — what's new · 2026-11-12
+
+- The first screen shows the logo from the game's own login picture (the wings, the crystal, «UARO», «RAGNAROK ONLINE») in place of the «uaRO» words.
+- «Check» is now a part of the big button: ⟳ | «PLAY» | ▾ - one button; while an update comes ⟳ does not click.
+
 # uaRO Graphics 3.0.18-beta.202 — what's new · 2026-11-12
 
 - After an update the program opens the first screen again, and the game starts only by «PLAY» - after «UPDATE» and after an update at the game's start alike.
