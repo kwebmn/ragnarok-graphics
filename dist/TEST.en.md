@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.207 — what's new · 2026-11-12
+
+- Walking with the arrows (testers: «control with the keyboard's up, down, left, right»): while the chat line is empty the arrow keys walk the character - up is away from the camera, two arrows go diagonally; let go and it stops at the nearest cell. The same arrow as the gamepad's shows on the ground, and by a wall the character slides along it. With text in the chat line the arrows move its caret as before; in an NPC menu, a shop and «Reference» they belong to the window. The switch: «Interface» → «Walking with the arrows».
+
 # uaRO Graphics 3.0.18-beta.206 — what's new · 2026-11-12
 
 - While the game runs, the big button stays gold and says what it does: «+ ONE MORE WINDOW», with «The game is running · windows: N» under it (how many game windows are open). It was a dark «GAME RUNNING · + WINDOW» before, more like a label than a button.
