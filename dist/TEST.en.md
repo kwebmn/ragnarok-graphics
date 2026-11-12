@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.18-beta.219 — what's new · 2026-11-12
+
+- The «1 2 3» sets in «Спорядження» (Alt+Q) redone (the owner: «still did not understand how to use the 1 2 3 buttons, and it feels not functional»): a click on an empty number did nothing, and keeping a set was the right button's alone, with nothing telling it. Now:
+  - point at a number - a tip over the row: what the set holds (things with their refine) and what a click does;
+  - a click on an empty number keeps what is worn now; a click on a kept set puts it on; one worn already says so;
+  - the right button - a menu «Зберегти надіте» / «Очистити»;
+  - the line under the numbers says what came of it: kept (things: N), putting on…, worn, not in the bag - …, not all of it could be worn;
+  - the number of the set worn now is lit in gold; the light under the cursor works now (it never did).
+- To check: put something on, click «1» - «збережено»; take a thing off, click «1» - it is on again; right button on «1» - «Очистити».
+
 # uaRO Graphics 3.0.18-beta.218 — what's new · 2026-11-12
 
 - «Спорядження» (R-RASZHM's picture): the hint «Комплекти: клік — вдягти, права кнопка — запам'ятати вдягнене» was drawn over the «1 2 3» buttons and the row stuck to the window's left edge. The hint had a class name the new interface already uses for its sheets (absolutely positioned); it has its own now and stands after the buttons, the row in from the edge as the ammo's.
