@@ -309,114 +309,164 @@ float share(int value, int next, int level) {
 // the clicks through RmlUi's events into press() and changeView(); its picture not painted then ----
 
 const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="cb" data-model="charblock" data-style-width="w + extra_w + 'dp'" data-style-height="h + 'dp'">
-<div class="card" data-style-width="w + 'dp'" data-style-height="h + 'dp'" data-if="view != 2 && !(view == 1 && look == 1)"></div>
-<div class="zone" style="left: 0; top: 0;" data-style-width="w + 'dp'" data-style-height="h + 'dp'"
+<body class="cb" data-model="charblock" data-style-width="(w + extra_w) / 14 + 'rem'"
+  data-style-height="(h) / 14 + 'rem'">
+<div class="card" data-style-width="(w) / 14 + 'rem'" data-style-height="(h) / 14 + 'rem'"
+  data-if="view != 2 && !(view == 1 && look == 1)"></div>
+<div class="zone" style="left: 0; top: 0;" data-style-width="(w) / 14 + 'rem'" data-style-height="(h) / 14 + 'rem'"
      data-event-mouseover="hover(3, 0)" data-event-mouseout="unhover()"></div>
 <div data-if="view == 0">
- <div class="portrait" style="left: 12dp; top: 12dp; width: 54dp; height: 54dp;" data-event-click="portrait()"
+ <div class="portrait" style="left: 0.857143rem; top: 0.857143rem; width: 3.857143rem; height: 3.857143rem;"
+   data-event-click="portrait()"
       data-event-mouseover="hover(4, 0)" data-event-mouseout="unhover()">
   <img data-if="portrait != ''" data-attr-src="portrait"/>
-  <span class="letter" style="font-size: 22dp; line-height: 54dp;" data-if="portrait == ''">{{letter}}</span></div>
- <div class="line" style="left: 78dp; top: 14dp; height: 20dp;"><span class="name">{{name}}</span>
+  <span class="letter" style="font-size: 1.571429rem; line-height: 3.857143rem;"
+    data-if="portrait == ''">{{letter}}</span></div>
+ <div class="line" style="left: 5.571429rem; top: 1rem; height: 1.428571rem;"><span class="name">{{name}}</span>
   <span class="job">{{job_name}}</span></div>
  <span class="levels">{{levels}}</span>
  <div data-if="weight_shown">
-  <span class="line muted" style="left: 78dp; top: 36dp;">{{weight_label}}</span>
-  <div class="track" style="left: 118dp; top: 42dp; width: 60dp; height: 5dp;"><div class="fill weightfill" data-style-width="weight_w + '%'"></div></div>
-  <span class="line" style="left: 184dp; top: 36dp; font-weight: bold;" data-attr-class="'line ' + weight_tone">{{weight_pct}}</span>
+  <span class="line muted" style="left: 5.571429rem; top: 2.571429rem;">{{weight_label}}</span>
+  <div class="track" style="left: 8.428571rem; top: 3rem; width: 4.285714rem; height: 0.357143rem;"><div
+    class="fill weightfill" data-style-width="weight_w + '%'"></div></div>
+  <span class="line" style="left: 13.142857rem; top: 2.571429rem; font-weight: bold;"
+    data-attr-class="'line ' + weight_tone">{{weight_pct}}</span>
  </div>
- <span class="line" style="left: 234dp; top: 36dp; font-weight: bold;" data-if="zeny_shown">{{zeny}} <span class="muted" style="font-weight: normal;">z</span></span>
- <div class="line" style="left: 78dp; top: 54dp;"><span class="chip" data-for="c : social" data-attr-class="'chip ' + c.tone">{{c.text}}</span></div>
- <div class="line" style="left: 78dp; top: 71dp;"><span class="chip" data-for="c : points" data-attr-class="'chip ' + c.tone">{{c.text}}</span></div>
- <span class="label" style="left: 12dp; top: 94dp;">HP</span>
- <div class="track" style="left: 48dp; top: 97dp; width: 180dp; height: 10dp;"><div class="fill hp" data-class-low="low" data-style-width="hp_w + '%'"></div></div>
- <span class="num" style="left: 236dp; top: 94dp; width: 124dp;" data-class-low="low" data-if="hp_shown">{{hp}}</span>
- <span class="small" style="left: 48dp; top: 109dp;" data-attr-class="'small ' + hp_regen.tone">{{hp_regen.text}}</span>
- <span class="small" style="right: 12dp; top: 109dp;" data-attr-class="'small ' + hp_regen_right.tone">{{hp_regen_right.text}}</span>
- <span class="label" style="left: 12dp; top: 126dp;">SP</span>
- <div class="track" style="left: 48dp; top: 129dp; width: 180dp; height: 10dp;"><div class="fill sp" data-style-width="sp_w + '%'"></div></div>
- <span class="num" style="left: 236dp; top: 126dp; width: 124dp;" data-if="sp_shown">{{sp}}</span>
- <span class="small" style="left: 48dp; top: 141dp;" data-attr-class="'small ' + sp_regen.tone">{{sp_regen.text}}</span>
- <span class="small" style="right: 12dp; top: 141dp;" data-attr-class="'small ' + sp_regen_right.tone">{{sp_regen_right.text}}</span>
- <div class="cell" style="top: 160dp; width: 82dp; height: 32dp;" data-for="c, i : battle" data-style-left="12 + i * 88.5 + 'dp'"
+ <span class="line" style="left: 16.714286rem; top: 2.571429rem; font-weight: bold;"
+   data-if="zeny_shown">{{zeny}} <span class="muted" style="font-weight: normal;">z</span></span>
+ <div class="line" style="left: 5.571429rem; top: 3.857143rem;"><span class="chip" data-for="c : social"
+   data-attr-class="'chip ' + c.tone">{{c.text}}</span></div>
+ <div class="line" style="left: 5.571429rem; top: 5.071429rem;"><span class="chip" data-for="c : points"
+   data-attr-class="'chip ' + c.tone">{{c.text}}</span></div>
+ <span class="label" style="left: 0.857143rem; top: 6.714286rem;">HP</span>
+ <div class="track" style="left: 3.428571rem; top: 6.928571rem; width: 12.857143rem; height: 0.714286rem;"><div
+   class="fill hp" data-class-low="low" data-style-width="hp_w + '%'"></div></div>
+ <span class="num" style="left: 16.857143rem; top: 6.714286rem; width: 8.857143rem;" data-class-low="low"
+   data-if="hp_shown">{{hp}}</span>
+ <span class="small" style="left: 3.428571rem; top: 7.785714rem;"
+   data-attr-class="'small ' + hp_regen.tone">{{hp_regen.text}}</span>
+ <span class="small" style="right: 0.857143rem; top: 7.785714rem;"
+   data-attr-class="'small ' + hp_regen_right.tone">{{hp_regen_right.text}}</span>
+ <span class="label" style="left: 0.857143rem; top: 9rem;">SP</span>
+ <div class="track" style="left: 3.428571rem; top: 9.214286rem; width: 12.857143rem; height: 0.714286rem;"><div
+   class="fill sp" data-style-width="sp_w + '%'"></div></div>
+ <span class="num" style="left: 16.857143rem; top: 9rem; width: 8.857143rem;" data-if="sp_shown">{{sp}}</span>
+ <span class="small" style="left: 3.428571rem; top: 10.071429rem;"
+   data-attr-class="'small ' + sp_regen.tone">{{sp_regen.text}}</span>
+ <span class="small" style="right: 0.857143rem; top: 10.071429rem;"
+   data-attr-class="'small ' + sp_regen_right.tone">{{sp_regen_right.text}}</span>
+ <div class="cell" style="top: 11.428571rem; width: 5.857143rem; height: 2.285714rem;" data-for="c, i : battle"
+   data-style-left="(12 + i * 88.5) / 14 + 'rem'"
       data-event-mouseover="hover(0, 6 + i)" data-event-mouseout="unhover()" data-event-click="zone(6 + i)">
   <span class="k">{{c.key}}</span><span class="v" data-attr-class="'v ' + c.tone">{{c.value}}</span></div>
  <div data-if="!session_shown">
   <div data-if="base.shown" data-event-mouseover="hover(1, 0)" data-event-mouseout="unhover()">
-   <span class="label" style="left: 12dp; top: 200dp;">{{base.label}}</span>
-   <div class="track" style="left: 48dp; top: 205dp; width: 180dp; height: 6dp;"><div class="fill base" data-style-width="base.w + '%'"></div></div>
-   <span class="num muted" style="left: 236dp; top: 200dp; width: 124dp; font-size: 12dp;">{{base.pct}}</span>
-   <span class="small muted" style="left: 48dp; top: 216dp;">{{base.numbers}}</span>
-   <span class="small" style="right: 12dp; top: 216dp;" data-attr-class="'small ' + base.right_tone">{{base.right}}</span>
+   <span class="label" style="left: 0.857143rem; top: 14.285714rem;">{{base.label}}</span>
+   <div class="track" style="left: 3.428571rem; top: 14.642857rem; width: 12.857143rem; height: 0.428571rem;"><div
+     class="fill base" data-style-width="base.w + '%'"></div></div>
+   <span class="num muted"
+     style="left: 16.857143rem; top: 14.285714rem; width: 8.857143rem; font-size: 0.857143rem;">{{base.pct}}</span>
+   <span class="small muted" style="left: 3.428571rem; top: 15.428571rem;">{{base.numbers}}</span>
+   <span class="small" style="right: 0.857143rem; top: 15.428571rem;"
+     data-attr-class="'small ' + base.right_tone">{{base.right}}</span>
   </div>
   <div data-if="job.shown" data-event-mouseover="hover(1, 1)" data-event-mouseout="unhover()">
-   <span class="label" style="left: 12dp; top: 234dp;">{{job.label}}</span>
-   <div class="track" style="left: 48dp; top: 239dp; width: 180dp; height: 6dp;"><div class="fill jobx" data-style-width="job.w + '%'"></div></div>
-   <span class="num muted" style="left: 236dp; top: 234dp; width: 124dp; font-size: 12dp;">{{job.pct}}</span>
-   <span class="small muted" style="left: 48dp; top: 250dp;">{{job.numbers}}</span>
-   <span class="small" style="right: 12dp; top: 250dp;" data-attr-class="'small ' + job.right_tone">{{job.right}}</span>
+   <span class="label" style="left: 0.857143rem; top: 16.714286rem;">{{job.label}}</span>
+   <div class="track" style="left: 3.428571rem; top: 17.071429rem; width: 12.857143rem; height: 0.428571rem;"><div
+     class="fill jobx" data-style-width="job.w + '%'"></div></div>
+   <span class="num muted"
+     style="left: 16.857143rem; top: 16.714286rem; width: 8.857143rem; font-size: 0.857143rem;">{{job.pct}}</span>
+   <span class="small muted" style="left: 3.428571rem; top: 17.857143rem;">{{job.numbers}}</span>
+   <span class="small" style="right: 0.857143rem; top: 17.857143rem;"
+     data-attr-class="'small ' + job.right_tone">{{job.right}}</span>
   </div>
  </div>
  <div data-if="session_shown">
-  <span class="small muted" style="left: 12dp; top: 200dp; font-weight: bold; font-size: 10.5dp;"
+  <span class="small muted" style="left: 0.857143rem; top: 14.285714rem; font-weight: bold; font-size: 0.75rem;"
         data-event-mouseover="hover(0, 10)" data-event-mouseout="unhover()">{{session_head}}</span>
-  <div class="cell" style="top: 218dp; width: 112dp; height: 32dp;" data-for="c, i : session"
-       data-style-left="12 + i * 118 + 'dp'" data-event-mouseover="hover(0, 11 + i)" data-event-mouseout="unhover()">
+  <div class="cell" style="top: 15.571429rem; width: 8rem; height: 2.285714rem;" data-for="c, i : session"
+       data-style-left="(12 + i * 118) / 14 + 'rem'" data-event-mouseover="hover(0, 11 + i)"
+         data-event-mouseout="unhover()">
    <span class="k">{{c.key}}</span><span class="v" data-attr-class="'v ' + c.tone">{{c.value}}</span></div>
  </div>
- <div class="zone" style="left: 78dp; top: 36dp; width: 150dp; height: 17dp;" data-event-mouseover="hover(0, 0)" data-event-mouseout="unhover()"></div>
- <div class="zone" style="left: 234dp; top: 36dp; width: 126dp; height: 17dp;" data-event-mouseover="hover(0, 1)" data-event-mouseout="unhover()"></div>
- <div class="zone" style="left: 78dp; top: 54dp; width: 282dp; height: 16dp;" data-event-mouseover="hover(0, 2)" data-event-mouseout="unhover()"></div>
- <div class="zone" style="left: 78dp; top: 71dp; width: 282dp; height: 16dp;" data-event-mouseover="hover(0, 3)" data-event-mouseout="unhover()" data-event-click="zone(3)"></div>
- <div class="zone" style="left: 48dp; top: 109dp; width: 312dp; height: 13dp;" data-event-mouseover="hover(0, 4)" data-event-mouseout="unhover()"></div>
- <div class="zone" style="left: 48dp; top: 141dp; width: 312dp; height: 13dp;" data-event-mouseover="hover(0, 5)" data-event-mouseout="unhover()"></div>
- <div class="button" style="width: 32dp; height: 26dp;" data-for="b, i : buttons" data-style-left="12 + i * 38 + 'dp'"
-      data-style-top="h - game_row + 'dp'" data-event-click="press(i)" data-event-mouseover="hover(2, i)"
+ <div class="zone" style="left: 5.571429rem; top: 2.571429rem; width: 10.714286rem; height: 1.214286rem;"
+   data-event-mouseover="hover(0, 0)" data-event-mouseout="unhover()"></div>
+ <div class="zone" style="left: 16.714286rem; top: 2.571429rem; width: 9rem; height: 1.214286rem;"
+   data-event-mouseover="hover(0, 1)" data-event-mouseout="unhover()"></div>
+ <div class="zone" style="left: 5.571429rem; top: 3.857143rem; width: 20.142857rem; height: 1.142857rem;"
+   data-event-mouseover="hover(0, 2)" data-event-mouseout="unhover()"></div>
+ <div class="zone" style="left: 5.571429rem; top: 5.071429rem; width: 20.142857rem; height: 1.142857rem;"
+   data-event-mouseover="hover(0, 3)" data-event-mouseout="unhover()" data-event-click="zone(3)"></div>
+ <div class="zone" style="left: 3.428571rem; top: 7.785714rem; width: 22.285714rem; height: 0.928571rem;"
+   data-event-mouseover="hover(0, 4)" data-event-mouseout="unhover()"></div>
+ <div class="zone" style="left: 3.428571rem; top: 10.071429rem; width: 22.285714rem; height: 0.928571rem;"
+   data-event-mouseover="hover(0, 5)" data-event-mouseout="unhover()"></div>
+ <div class="button" style="width: 2.285714rem; height: 1.857143rem;" data-for="b, i : buttons"
+   data-style-left="(12 + i * 38) / 14 + 'rem'"
+      data-style-top="(h - game_row) / 14 + 'rem'" data-event-click="press(i)" data-event-mouseover="hover(2, i)"
       data-event-mouseout="unhover()">
   <img data-attr-src="b"/></div>
- <div class="button own" style="width: 32dp; height: 26dp;" data-for="b, i : own" data-style-left="12 + i * 38 + 'dp'"
-      data-style-top="h - 38 + 'dp'" data-class-lit="b.lit" data-event-click="own(i)" data-event-mouseover="hover(5, i)"
+ <div class="button own" style="width: 2.285714rem; height: 1.857143rem;" data-for="b, i : own"
+   data-style-left="(12 + i * 38) / 14 + 'rem'"
+      data-style-top="(h - 38) / 14 + 'rem'" data-class-lit="b.lit" data-event-click="own(i)"
+        data-event-mouseover="hover(5, i)"
       data-event-mouseout="unhover()"><img data-attr-src="b.icon"/></div>
 </div>
 <div data-if="view == 1 && look == 0">
- <div class="portrait" style="left: 10dp; top: 10dp; width: 46dp; height: 46dp;" data-event-click="portrait()"
+ <div class="portrait" style="left: 0.714286rem; top: 0.714286rem; width: 3.285714rem; height: 3.285714rem;"
+   data-event-click="portrait()"
       data-event-mouseover="hover(4, 0)" data-event-mouseout="unhover()">
   <img data-if="portrait != ''" data-attr-src="portrait"/>
-  <span class="letter" style="font-size: 19dp; line-height: 46dp;" data-if="portrait == ''">{{letter}}</span></div>
- <div class="track" style="left: 66dp; top: 14dp; width: 222dp; height: 10dp;"><div class="fill hp" data-class-low="low" data-style-width="hp_w + '%'"></div></div>
- <div class="track" style="left: 66dp; top: 29dp; width: 222dp; height: 8dp;"><div class="fill sp" data-style-width="sp_w + '%'"></div></div>
- <span class="num" style="left: 66dp; top: 42dp; text-align: left;" data-class-low="low">{{hp_compact}}</span>
- <span class="num" style="left: 158dp; top: 42dp; width: 130dp;">{{sp_compact}}</span>
- <div class="track" style="left: 10dp; top: 62dp; width: 280dp; height: 3dp;"><div class="fill base" data-style-width="base.w + '%'"></div></div>
- <div class="track" style="left: 10dp; top: 67dp; width: 280dp; height: 3dp;"><div class="fill jobx" data-style-width="job.w + '%'"></div></div>
+  <span class="letter" style="font-size: 1.357143rem; line-height: 3.285714rem;"
+    data-if="portrait == ''">{{letter}}</span></div>
+ <div class="track" style="left: 4.714286rem; top: 1rem; width: 15.857143rem; height: 0.714286rem;"><div
+   class="fill hp" data-class-low="low" data-style-width="hp_w + '%'"></div></div>
+ <div class="track" style="left: 4.714286rem; top: 2.071429rem; width: 15.857143rem; height: 0.571429rem;"><div
+   class="fill sp" data-style-width="sp_w + '%'"></div></div>
+ <span class="num" style="left: 4.714286rem; top: 3rem; text-align: left;" data-class-low="low">{{hp_compact}}</span>
+ <span class="num" style="left: 11.285714rem; top: 3rem; width: 9.285714rem;">{{sp_compact}}</span>
+ <div class="track" style="left: 0.714286rem; top: 4.428571rem; width: 20rem; height: 0.214286rem;"><div
+   class="fill base" data-style-width="base.w + '%'"></div></div>
+ <div class="track" style="left: 0.714286rem; top: 4.785714rem; width: 20rem; height: 0.214286rem;"><div
+   class="fill jobx" data-style-width="job.w + '%'"></div></div>
 </div>
 <div data-if="view == 2 || (view == 1 && look == 1)">
  <div class="abs" style="left: 0; top: 0; border-radius: 999px; background-color: #00000080;"
-      data-style-width="ring_d + 'dp'" data-style-height="ring_d + 'dp'"></div>
- <ua-ring class="abs" style="left: 0; top: 0;" data-style-width="ring_d + 'dp'" data-style-height="ring_d + 'dp'"
-          data-attr-width="ring_hp_w" data-attr-value="hp_w / 100" data-attr-fill="low ? '#ff5a4e' : '#5bd36c'" track="#ffffff1f"></ua-ring>
- <ua-ring class="abs" data-style-left="ring_gap + 'dp'" data-style-top="ring_gap + 'dp'"
-          data-style-width="ring_d - 2 * ring_gap + 'dp'" data-style-height="ring_d - 2 * ring_gap + 'dp'"
+      data-style-width="(ring_d) / 14 + 'rem'" data-style-height="(ring_d) / 14 + 'rem'"></div>
+ <ua-ring class="abs" style="left: 0; top: 0;" data-style-width="(ring_d) / 14 + 'rem'"
+   data-style-height="(ring_d) / 14 + 'rem'"
+          data-attr-width="ring_hp_w" data-attr-value="hp_w / 100"
+            data-attr-fill="low ? '#ff5a4e' : '#5bd36c'" track="#ffffff1f"></ua-ring>
+ <ua-ring class="abs" data-style-left="(ring_gap) / 14 + 'rem'" data-style-top="(ring_gap) / 14 + 'rem'"
+          data-style-width="(ring_d - 2 * ring_gap) / 14 + 'rem'"
+            data-style-height="(ring_d - 2 * ring_gap) / 14 + 'rem'"
           data-attr-width="ring_sp_w" data-attr-value="sp_w / 100" fill="#4f8bff" track="#ffffff14"></ua-ring>
- <div class="portrait" data-style-left="ring_d / 2 - ring_pic + 'dp'" data-style-top="ring_d / 2 - ring_pic + 'dp'"
-      data-style-width="2 * ring_pic + 'dp'" data-style-height="2 * ring_pic + 'dp'" data-event-click="portrait()"
+ <div class="portrait" data-style-left="(ring_d / 2 - ring_pic) / 14 + 'rem'"
+   data-style-top="(ring_d / 2 - ring_pic) / 14 + 'rem'"
+      data-style-width="(2 * ring_pic) / 14 + 'rem'" data-style-height="(2 * ring_pic) / 14 + 'rem'"
+        data-event-click="portrait()"
       data-event-mouseover="hover(3, 0)" data-event-mouseout="unhover()">
   <img data-if="portrait != ''" data-attr-src="portrait"/>
-  <span class="letter" data-if="portrait == ''" data-style-line-height="2 * ring_pic + 'dp'">{{letter}}</span></div>
- <span class="badge" data-style-left="ring_d / 2 - ring_badge_w / 2 + 'dp'" data-style-top="ring_d - ring_badge_h * 0.6 - ring_gap + 'dp'"
-       data-style-width="ring_badge_w + 'dp'" data-style-height="ring_badge_h + 'dp'" data-style-line-height="ring_badge_h + 'dp'">{{badge}}</span>
+  <span class="letter" data-if="portrait == ''"
+    data-style-line-height="(2 * ring_pic) / 14 + 'rem'">{{letter}}</span></div>
+ <span class="badge" data-style-left="(ring_d / 2 - ring_badge_w / 2) / 14 + 'rem'"
+   data-style-top="(ring_d - ring_badge_h * 0.6 - ring_gap) / 14 + 'rem'"
+       data-style-width="(ring_badge_w) / 14 + 'rem'" data-style-height="(ring_badge_h) / 14 + 'rem'"
+         data-style-line-height="(ring_badge_h) / 14 + 'rem'">{{badge}}</span>
 </div>
 <div data-if="view != 0 && own.size > 0">
- <div class="button own more" style="width: 30dp; height: 26dp; top: 0;" data-style-left="w + 6 + 'dp'"
+ <div class="button own more" style="width: 2.142857rem; height: 1.857143rem; top: 0;"
+   data-style-left="(w + 6) / 14 + 'rem'"
       data-class-lit="own_open" data-event-click="own_more()" data-event-mouseover="hover(7, 0)"
       data-event-mouseout="unhover()"><span class="dots">&#x2026;</span></div>
- <div class="button own" style="width: 32dp; height: 26dp; top: 0;" data-if="own_open" data-for="b, i : own"
-      data-style-left="w + 42 + i * 38 + 'dp'" data-class-lit="b.lit" data-event-click="own(i)"
+ <div class="button own" style="width: 2.285714rem; height: 1.857143rem; top: 0;" data-if="own_open"
+   data-for="b, i : own"
+      data-style-left="(w + 42 + i * 38) / 14 + 'rem'" data-class-lit="b.lit" data-event-click="own(i)"
       data-event-mouseover="hover(6, i)" data-event-mouseout="unhover()"><img data-attr-src="b.icon"/></div>
 </div>
-<span class="warning away" id="warning" data-style-top="h + 8 + 'dp'" style="left: 0;">{{low_text}}</span>
-<div class="tip" data-if="tip.size > 0" data-style-left="tip_left + 'dp'" data-style-top="tip_top + 'dp'">
+<span class="warning away" id="warning" data-style-top="(h + 8) / 14 + 'rem'" style="left: 0;">{{low_text}}</span>
+<div class="tip" data-if="tip.size > 0" data-style-left="(tip_left) / 14 + 'rem'"
+  data-style-top="(tip_top) / 14 + 'rem'">
  <p data-for="l, i : tip" data-class-first="i == 0">{{l}}</p></div>
 </body></rml>)RML";
 
@@ -468,21 +518,19 @@ Ui& ui() {
     return u;
 }
 
-// 3.0.18-beta.49: the size uaUI draws it at last frame (its document times its size in «Розміщення інтерфейсу») - the
-// editor's frame round what is seen; untouched while uaUI does not draw it
+// 3.0.18-beta.49: the size uaUI draws it at last frame - the editor's frame round what is seen; untouched while uaUI
+// does not draw it (3.0.18-beta.221: its size in «Розміщення інтерфейсу» in its own layout, not a picture scaled)
 void uiSize(int& w, int& h) {
     int x = 0, y = 0, dw = 0, dh = 0;
     if (!uaui::ready() || !ui().doc.box(x, y, dw, dh)) return;
-    const float size = hudedit::sizeOf(hudlayout::Part::Character);
-    w = int(std::lround(float(dw) * size)), h = int(std::lround(float(dh) * size));
+    w = dw, h = dh;
 }
 
 // The place and size uaUI draws it at last frame, in the target's pixels; untouched while uaUI does not draw it
 void uiRect(float& x, float& y, float& w, float& h) {
     int dx = 0, dy = 0, dw = 0, dh = 0;
     if (!uaui::ready() || !ui().doc.box(dx, dy, dw, dh)) return;
-    const float size = hudedit::sizeOf(hudlayout::Part::Character);
-    x = float(dx), y = float(dy), w = float(dw) * size, h = float(dh) * size;
+    x = float(dx), y = float(dy), w = float(dw), h = float(dh);  // 3.0.18-beta.221: its size in its layout
 }
 
 // 3.0.18-beta.120: the second row's icons and tips
@@ -775,7 +823,10 @@ bool uiFrame(State& s, const cb::View view, const cb::Look look, const std::stri
                 groundOn = card, groundWas = ground;
                 card->SetProperty("background-color", ground);
             }
-        u.doc.prop("transform", size != 1.0f ? "scale(" + std::to_string(size) + ")" : "none");  // .70: on change
+        // 3.0.18-beta.221 (R-BN9TJA «при зменшенні вікна персонажа шрифт кадрується як картинка»): its size in
+        // «Розміщення інтерфейсу» by its font - 1rem a 14th of it, every length in rem - the letters drawn at their
+        // size, not a picture scaled (it was transform: scale)
+        u.doc.prop("font-size", std::to_string(14 * dp * size) + "px");  // .70: on change
     }
     u.doc.place(s.layout.x, s.layout.y);
     u.doc.show(true);

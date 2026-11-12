@@ -81,8 +81,10 @@ select selectbox option:hover { background-color: #ffffff14; }
 select selectbox option:checked { color: #e6cb8a; }
 .ua-row2 { display: block; margin-bottom: 10dp; }
 /* 3.0.18-beta.17: the character block (win/char_block) - the concept's v17_char, in concept pixels (dp) */
+/* 3.0.18-beta.221 (R-BN9TJA): every length in rem - 1rem a 14th of the block's font (14dp x its size in
+   «Розміщення інтерфейсу»): the letters drawn at their size, not a picture scaled */
 .cb { position: absolute; font-family: Plex; color: #eceff5; transform-origin: 0 0; }
-.cb .card { position: absolute; left: 0; top: 0; border-radius: 10dp; border: 1dp #ffffff17;
+.cb .card { position: absolute; left: 0; top: 0; border-radius: 0.714286rem; border: 0.071429rem #ffffff17;
             background-color: #10141ccc; transition: border-color 0.3s quadratic-out; }
 .cb.flare .card { border-color: #e6cb8a; }
 .cb .abs { position: absolute; }
@@ -90,52 +92,57 @@ select selectbox option:checked { color: #e6cb8a; }
                 cursor: pointer; }
 .cb .portrait img { position: absolute; left: 7%; top: 7%; width: 86%; height: 86%; }
 .cb .letter { display: block; width: 100%; text-align: center; font-weight: bold; color: #eceff5; }
-.cb .name { font-size: 16dp; font-weight: bold; }
-.cb .job { font-size: 13dp; color: #9aa3b5; margin-left: 8dp; }
-.cb .levels { position: absolute; right: 12dp; top: 14dp; font-size: 13dp; font-weight: bold; color: #e6cb8a; }
-.cb .line { position: absolute; height: 17dp; font-size: 12.5dp; white-space: nowrap; }
+.cb .name { font-size: 1.142857rem; font-weight: bold; }
+.cb .job { font-size: 0.928571rem; color: #9aa3b5; margin-left: 0.571429rem; }
+.cb .levels { position: absolute; right: 0.857143rem; top: 1rem; font-size: 0.928571rem; font-weight: bold;
+              color: #e6cb8a; }
+.cb .line { position: absolute; height: 1.214286rem; font-size: 0.892857rem; white-space: nowrap; }
 .cb .muted { color: #9aa3b5; }
 .cb .gold { color: #e6cb8a; }
 .cb .warn { color: #f0a050; }
 .cb .bad { color: #ff5a4e; }
 .cb .fight { color: #f3d27a; font-weight: bold; }
-.cb .chip { margin-right: 12dp; }
-.cb .label { position: absolute; font-size: 11dp; font-weight: bold; color: #9aa3b5; }
-.cb .track { position: absolute; border-radius: 5dp; background-color: #00000073; }
-.cb .fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 5dp; }
+.cb .chip { margin-right: 0.857143rem; }
+.cb .label { position: absolute; font-size: 0.785714rem; font-weight: bold; color: #9aa3b5; }
+.cb .track { position: absolute; border-radius: 0.357143rem; background-color: #00000073; }
+.cb .fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 0.357143rem; }
 .cb .hp { background-color: #5bd36c; }
 .cb .hp.low { background-color: #ff5a4e; }
 .cb .sp { background-color: #4f8bff; }
 .cb .base { background-color: #b7a6ff; }
 .cb .jobx { background-color: #7fd3c3; }
 .cb .weightfill { background-color: #c9a55b; }
-.cb .num { position: absolute; font-size: 13dp; font-weight: bold; text-align: right; }
+.cb .num { position: absolute; font-size: 0.928571rem; font-weight: bold; text-align: right; }
 .cb .num.low { color: #ff9a8f; }
-.cb .small { position: absolute; font-size: 11dp; white-space: nowrap; }
-.cb .cell { position: absolute; border-radius: 6dp; background-color: #1b1d24b3; }
-.cb .cell .k { position: absolute; left: 7dp; top: 2dp; font-size: 9.5dp; font-weight: bold; color: #9aa3b5; }
-.cb .cell .v { position: absolute; left: 7dp; top: 14dp; font-size: 12.5dp; font-weight: bold; }
-.cb .button { position: absolute; border-radius: 7dp; background-color: #1b1d24b3; cursor: pointer;
+.cb .small { position: absolute; font-size: 0.785714rem; white-space: nowrap; }
+.cb .cell { position: absolute; border-radius: 0.428571rem; background-color: #1b1d24b3; }
+.cb .cell .k { position: absolute; left: 0.5rem; top: 0.142857rem; font-size: 0.678571rem; font-weight: bold;
+               color: #9aa3b5; }
+.cb .cell .v { position: absolute; left: 0.5rem; top: 1rem; font-size: 0.892857rem; font-weight: bold; }
+.cb .button { position: absolute; border-radius: 0.5rem; background-color: #1b1d24b3; cursor: pointer;
               transition: background-color 0.1s; }
 .cb .button:hover { background-color: #2a2f3a; }
 .cb .button:active { background-color: #3a3f4c; }
-.cb .button img { position: absolute; left: 7dp; top: 4dp; width: 18dp; height: 18dp; }
+.cb .button img { position: absolute; left: 0.5rem; top: 0.285714rem; width: 1.285714rem; height: 1.285714rem; }
 /* 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): the second row - our windows, gold-edged while open */
-.cb .button.own { border-width: 1dp; border-color: #ffffff14; }
+.cb .button.own { border-width: 0.071429rem; border-color: #ffffff14; }
 .cb .button.own.lit { border-color: #e6cb8a; background-color: #e6cb8a22; }
-.cb .button.more .dots { display: block; text-align: center; line-height: 24dp; font-size: 16dp; color: #eceff5; }
-.cb .badge { position: absolute; border-radius: 9dp; background-color: #10141c; border: 1dp #c9a55b;
-             text-align: center; font-weight: bold; font-size: 12dp; }
+.cb .button.more .dots { display: block; text-align: center; line-height: 1.714286rem; font-size: 1.142857rem;
+                         color: #eceff5; }
+.cb .badge { position: absolute; border-radius: 0.642857rem; background-color: #10141c; border: 0.071429rem #c9a55b;
+             text-align: center; font-weight: bold; font-size: 0.857143rem; }
 .cb .zone { position: absolute; }
-.cb .tip { position: absolute; padding: 4dp 10dp 4dp 10dp; border-radius: 8dp; background-color: #10141cee;
-           border: 1dp #ffffff17; white-space: nowrap; font-size: 13dp;
-           margin-right: -2000dp; }  /* 3.0.18-beta.55 (R-PWJXJ3): as wide as its longest line, past the block */
-.cb .tip p { display: block; color: #9aa3b5; line-height: 17dp; }
+.cb .tip { position: absolute; padding: 0.285714rem 0.714286rem 0.285714rem 0.714286rem; border-radius: 0.571429rem;
+           background-color: #10141cee;
+           border: 0.071429rem #ffffff17; white-space: nowrap; font-size: 0.928571rem;
+           margin-right: -142.857143rem; }  /* 3.0.18-beta.55 (R-PWJXJ3): as wide as its longest line, past the block */
+.cb .tip p { display: block; color: #9aa3b5; line-height: 1.214286rem; }
 .cb .tip p.first { color: #eceff5; font-weight: bold; }
-.cb .warning { position: absolute; padding: 0 12dp; height: 30dp; line-height: 30dp; border-radius: 8dp;
-               background-color: #3a1414; font-size: 13dp; font-weight: bold; white-space: nowrap;
+.cb .warning { position: absolute; padding: 0 0.857143rem; height: 2.142857rem; line-height: 2.142857rem;
+               border-radius: 0.571429rem;
+               background-color: #3a1414; font-size: 0.928571rem; font-weight: bold; white-space: nowrap;
                transition: opacity transform 0.18s quadratic-out; }
-.cb .warning.away { opacity: 0; transform: translateY(-8dp); }
+.cb .warning.away { opacity: 0; transform: translateY(-0.571429rem); }
 /* 3.0.18-beta.18: the target's card (win/target_card) - the concept's target16 */
 .tc { position: absolute; font-family: Plex; color: #eceff5; text-align: center; transform-origin: 50% 0;
       transition: opacity transform 0.12s quadratic-out; }
