@@ -1,5 +1,7 @@
 #include "core/launcher_layout.hpp"
 
+#include <cmath>
+
 #include <algorithm>
 
 namespace uagfx::launcherview {
@@ -92,6 +94,28 @@ Hit hitAt(const Layout& L, float x, float y) {
     if (L.language.contains(x, y)) return Hit{Part::Language};
     if (L.account.w > 0 && L.account.contains(x, y)) return Hit{Part::Account};  // 3.0.18-beta.205
     return Hit{};
+}
+
+int nearestToward(const std::vector<Box>& boxes, int from, int dx, int dy) {
+    if (from < 0 || from >= int(boxes.size()) || (dx == 0 && dy == 0)) return -1;
+    const Box& f = boxes[size_t(from)];
+    const float fx = f.x + f.w / 2, fy = f.y + f.h / 2;
+    int best = -1;
+    float bestScore = 0;
+    for (int i = 0; i < int(boxes.size()); ++i) {
+        const Box& b = boxes[size_t(i)];
+        if (i == from || b.w <= 0 || b.h <= 0) continue;
+        const float vx = b.x + b.w / 2 - fx, vy = b.y + b.h / 2 - fy;
+        const float along = vx * float(dx) + vy * float(dy);
+        const float across = std::fabs(vx * float(dy) - vy * float(dx));
+        if (along <= 0 || across > along) continue;  // behind, or more than 45° off
+        const float score = along + 2 * across;
+        if (best < 0 || score < bestScore) {
+            best = i;
+            bestScore = score;
+        }
+    }
+    return best;
 }
 
 PlayState playState(const PlayInputs& in) {

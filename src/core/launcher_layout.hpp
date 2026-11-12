@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <vector>
 
 namespace uagfx::launcherview {
 
@@ -52,6 +53,9 @@ struct Hit {
     int index = -1;  // a news card's
 };
 Hit hitAt(const Layout& L, float x, float y);
+// 3.0.18-beta.211 (the keyboard concept, stage 7): the part an arrow goes to from boxes[from] - the nearest whose
+// centre lies that way (dx, dy: one of the four ways) within 45°, the distance across the way weighed double; -1 none
+int nearestToward(const std::vector<Box>& boxes, int from, int dx, int dy);
 
 // 3.0.18-beta.196: the first start (no version seen, no game played here) - «Як ви хочете грати?», the four players'
 // cards side by side (presets::Kind's order), «Пропустити — вибере сама програма» under them

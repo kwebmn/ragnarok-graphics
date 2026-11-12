@@ -2075,12 +2075,33 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
         const std::vector<Hit> order = focusOrder();
         const int n = int(order.size());
         const bool back = GetKeyState(VK_SHIFT) < 0;
-        if (wp == VK_TAB || wp == VK_LEFT || wp == VK_RIGHT || wp == VK_UP || wp == VK_DOWN) {
-            const bool previous = wp == VK_TAB ? back : (wp == VK_LEFT || wp == VK_UP);
+        if (wp == VK_F5) {  // 3.0.18-beta.211 (the keyboard concept, stage 7): «Перевірити», as a page's reload
+            press(Hit{Part::Check});
+            return 0;
+        }
+        if (wp == VK_TAB) {
             if (focus_ < 0)
-                focus_ = previous ? n - 1 : 0;
+                focus_ = back ? n - 1 : 0;
             else
-                focus_ = (focus_ + (previous ? n - 1 : 1)) % n;
+                focus_ = (focus_ + (back ? n - 1 : 1)) % n;
+            InvalidateRect(hwnd_, nullptr, FALSE);
+            return 0;
+        }
+        if (wp == VK_LEFT || wp == VK_RIGHT || wp == VK_UP || wp == VK_DOWN) {
+            // 3.0.18-beta.211: the arrows by place - the nearest part that way; the first from the big button
+            int at = -1;
+            for (int i = 0; i < n; ++i)
+                if (order[size_t(i)].part == Part::Play) at = i;
+            if (focus_ < 0) {
+                focus_ = at >= 0 ? at : 0;
+            } else {
+                std::vector<Box> boxes;
+                for (const Hit& h : order) boxes.push_back(boxOf(h));
+                const int dx = wp == VK_LEFT ? -1 : wp == VK_RIGHT ? 1 : 0;
+                const int dy = wp == VK_UP ? -1 : wp == VK_DOWN ? 1 : 0;
+                const int to = launcherview::nearestToward(boxes, focus_, dx, dy);
+                if (to >= 0) focus_ = to;
+            }
             InvalidateRect(hwnd_, nullptr, FALSE);
             return 0;
         }

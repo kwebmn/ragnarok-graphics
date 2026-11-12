@@ -237,3 +237,19 @@ TEST(launcher_layout_check_and_channel_by_the_button) {
             CHECK(L.look.y + L.look.h <= L.play.y);
         }
 }
+
+// 3.0.18-beta.211 (the keyboard concept, stage 7): the arrows by place on the first screen - the nearest part that way
+// (its centre within 45° of it, the distance across the way weighed double); none past the edge
+TEST(launcher_layout_arrows_by_place) {
+    using launcherview::Box;
+    // three in a row, one under the middle
+    const std::vector<Box> b{Box{0, 0, 40, 20}, Box{60, 0, 40, 20}, Box{120, 0, 40, 20}, Box{60, 80, 40, 20}};
+    CHECK_EQ(launcherview::nearestToward(b, 0, 1, 0), 1);   // right of the first: the middle
+    CHECK_EQ(launcherview::nearestToward(b, 1, 1, 0), 2);
+    CHECK_EQ(launcherview::nearestToward(b, 2, 1, 0), -1);  // the edge
+    CHECK_EQ(launcherview::nearestToward(b, 1, 0, 1), 3);   // down from the middle
+    CHECK_EQ(launcherview::nearestToward(b, 3, 0, -1), 1);  // and back up
+    CHECK_EQ(launcherview::nearestToward(b, 0, 0, 1), 3);   // down from the first: the one under, though not straight
+    CHECK_EQ(launcherview::nearestToward(b, 3, -1, 0), -1); // nothing left of the lone one within 45°
+    CHECK_EQ(launcherview::nearestToward(b, -1, 1, 0), -1); // no part to start from
+}

@@ -173,6 +173,17 @@ int MainWindow::run(HINSTANCE inst, int show) {
             SendMessageW(search_, EM_SETSEL, 0, -1);
             continue;
         }
+        // 3.0.18-beta.211 (the keyboard concept, stage 7): Ctrl+PgUp / PgDn - the page before / after in the list
+        if (msg.message == WM_KEYDOWN && (msg.wParam == VK_PRIOR || msg.wParam == VK_NEXT) &&
+            GetKeyState(VK_CONTROL) < 0 && !launcherOn_) {
+            const std::vector<settings::View> views = settings::viewsOf(mode_);
+            if (!views.empty()) {
+                const auto at = std::find(views.begin(), views.end(), shown_);
+                const int n = int(views.size()), i = at == views.end() ? 0 : int(at - views.begin());
+                showView(views[size_t((i + (msg.wParam == VK_NEXT ? 1 : n - 1)) % n)], 0);
+            }
+            continue;
+        }
         if (msg.message == WM_KEYDOWN && msg.wParam == 'D' && GetKeyState(VK_CONTROL) < 0 &&
             GetKeyState(VK_SHIFT) < 0) {  // 2.15: the Developer mode, whose button players do not see
             developerShown_ = true;
