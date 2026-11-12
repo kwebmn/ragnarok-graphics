@@ -681,6 +681,7 @@ void fillSetRows(State& s, uikit::equip::Model& m) {
         r.saved = !set.things.empty();
         r.on = equipsets::wornNow(set, s.data.slots);
         r.hot = i == s.setRowHot ? s.setButtonHot : -1;
+        r.focus = s.show.pad && s.show.focus == ew::kSlots + i;  // 3.0.18-beta.225
         for (const equipsets::Thing& t : set.things) {
             r.things += (r.things.empty() ? "" : ", ") + thingWords(s, t);
             if (const panel::Picture* icon = iconOf(s, t.id); icon && r.icons.size() < 6)
@@ -688,6 +689,30 @@ void fillSetRows(State& s, uikit::equip::Model& m) {
         }
         if (!r.saved) r.things = say(settings::Text::EquipSetEmpty);
         m.setRows.push_back(std::move(r));
+    }
+}
+
+// 3.0.18-beta.225 (the sets by the controller and the keys): a set's row in focus - its buttons' hints: A puts it on
+// (an empty one keeps what is worn), X keeps what is worn, Y clears a kept one, B closes
+void setPadItems(State& s, uikit::equip::Model& m, const std::function<std::string(int, float, float&)>& glyph) {
+    const int set = s.show.focus - ew::kSlots;
+    if (!s.show.pad || s.show.picking || set < 0 || set >= equipsets::kSets) return;
+    using B = padglyph::Button;
+    const bool kept = !s.sets[set].things.empty(), on = equipsets::wornNow(s.sets[set], s.data.slots);
+    std::vector<std::pair<B, std::string>> items;
+    if (kept && !on) items.push_back({B::A, say(settings::Text::EquipSetPutOn)});
+    if (!kept) items.push_back({B::A, say(settings::Text::EquipSetMenuKeep)});
+    if (kept) items.push_back({B::X, say(settings::Text::EquipSetMenuKeep)});
+    if (kept) items.push_back({B::Y, say(settings::Text::EquipSetMenuClear)});
+    items.push_back({B::B, texts().close});
+    m.padItems.clear();
+    const float h = std::round(17 * s.layout.s);
+    for (const auto& [b, words] : items) {
+        uikit::equip::PadV v;
+        v.h = h;
+        v.glyph = glyph(int(b), h, v.w);
+        v.words = words;
+        m.padItems.push_back(v);
     }
 }
 
@@ -905,18 +930,19 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                         m.heroW = std::round(float(s.hero.width) * k);
                                         m.heroH = std::round(float(s.hero.height) * k);
                                     }
+                                    const auto padGlyph = [&](int button, float h, float& w) {
+                                        w = std::ceil(padglyph::widthOf(padglyph::Button(button), h));
+                                        const int iw = std::max(1, int(w)), ih = std::max(1, int(h));
+                                        const std::string key = "pad" + std::to_string(button) +
+                                                                (s.show.sony ? "s" : "x") + std::to_string(iw) + 'x' +
+                                                                std::to_string(ih);
+                                        return s.live.made(key, iw, ih, [&](panel::Picture& p) {
+                                            paintPadBadge(p, button, s.show.sony, h);  // .136
+                                        });
+                                    };
                                     el::fill(m, s.data, s.show, texts(), s.layout.s,
-                                             [&](const panel::Picture* p) { return s.live.icon(p); },
-                                             [&](int button, float h, float& w) {
-                                                 w = std::ceil(padglyph::widthOf(padglyph::Button(button), h));
-                                                 const int iw = std::max(1, int(w)), ih = std::max(1, int(h));
-                                                 const std::string key = "pad" + std::to_string(button) +
-                                                                         (s.show.sony ? "s" : "x") +
-                                                                         std::to_string(iw) + 'x' + std::to_string(ih);
-                                                 return s.live.made(key, iw, ih, [&](panel::Picture& p) {
-                                                     paintPadBadge(p, button, s.show.sony, h);  // .136
-                                                 });
-                                             });
+                                             [&](const panel::Picture* p) { return s.live.icon(p); }, padGlyph);
+                                    setPadItems(s, m, padGlyph);  // 3.0.18-beta.225: a set's row's buttons
                                 });
 }
 
@@ -952,9 +978,33 @@ bool shown() { return state().shown; }
 void padCommand(PadCommand c) {
     State& s = state();
     if (!s.shown) return;
-    if (s.show.focus < 0 || s.show.focus >= ew::kSlots) s.show.focus = ew::Weapon;
+    if (s.show.focus < 0 || s.show.focus >= ew::kSlots + ew::kSetRows) s.show.focus = ew::Weapon;
     const int slot = s.show.focus;
-    const bool worn = s.data.slots[slot].index > 0;
+    if (slot >= ew::kSlots && !s.show.picking) {  // 3.0.18-beta.225: a set's row - A puts on (empty: keeps), X keeps,
+        const int set = slot - ew::kSlots;       // Y clears
+        const bool kept = !s.sets[set].things.empty();
+        switch (c) {
+            case PadCommand::Up:
+            case PadCommand::Down:
+            case PadCommand::Left:
+            case PadCommand::Right: s.show.focus = stepFrom(slot, c); break;
+            case PadCommand::Put:
+                if (!kept)
+                    keepSet(s, set);
+                else if (!equipsets::wornNow(s.sets[set], s.data.slots))
+                    putSet(s, set);
+                break;
+            case PadCommand::Change: keepSet(s, set); break;
+            case PadCommand::Card:
+                if (kept) clearSet(s, set);
+                break;
+            case PadCommand::Back:
+            case PadCommand::Close: closeGameWindow(); break;
+        }
+        s.key.clear();
+        return;
+    }
+    const bool worn = slot < ew::kSlots && s.data.slots[slot].index > 0;
     if (s.show.picking) {
         const int count = int(s.data.picks.size());
         switch (c) {

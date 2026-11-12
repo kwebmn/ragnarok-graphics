@@ -4621,30 +4621,35 @@ constexpr Entry kTexts[] = {
      "Ctrl+Shift+F12 - a screenshot at full size (the ScreenShot folder)\n"
      "Pause or Scroll Lock - every improvement off, and on again: to compare with the original look\n"
      "Arrows (the chat line empty) - walk; two at once - diagonally; Ctrl+arrows - the camera\n"
+     "Ctrl+Home - the camera as at the game's start\n"
      "Space (the chat line empty) - attack, else pick up, else talk to the NPC near\n"
      "` - the walk mode: W A S D walk, Tab the target, Space attack, F pick up, R talk, C sit, Q / E the camera, "
      "1-9 the bar, Enter the chat\n"
-     "In a window, after an arrow: the arrows move the frame, Enter presses, Esc closes, PgUp / PgDn the tabs",
+     "Arrows in a window - move its frame (after the first arrow); Enter presses, Esc closes, PgUp / PgDn the tabs",
      "Ctrl+~ (клавіша ліворуч від 1) — консоль ефектів: вмикати й вимикати ефекти просто в грі\n"
      "Ctrl+Shift+F10 — «Нове звернення» до розробників зі знімком екрана\n"
      "Ctrl+Shift+F11 — лічильник кадрів\n"
      "Ctrl+Shift+F12 — знімок екрана в повному розмірі (тека ScreenShot)\n"
      "Pause або Scroll Lock — усі покращення вимкнути й увімкнути знову: порівняти з оригінальним виглядом\n"
      "Стрілки (рядок чату порожній) — ходьба; дві разом — навскіс; Ctrl+стрілки — камера\n"
+     "Ctrl+Home — камера як на початку гри\n"
      "Пробіл (рядок чату порожній) — атака, інакше підібрати, інакше заговорити з NPC поруч\n"
      "` — режим ходьби: W A S D — ходьба, Tab — ціль, пробіл — атака, F — підібрати, R — NPC, C — сісти, "
      "Q / E — камера, 1–9 — панель, Enter — чат\n"
-     "У вікні після стрілки: стрілки ведуть рамку, Enter — натиснути, Esc — закрити, PgUp / PgDn — вкладки",
+     "Стрілки у вікні — ведуть його рамку (після першої стрілки); Enter натискає, Esc закриває, PgUp / PgDn — "
+     "вкладки",
      "Ctrl+~ (клавиша слева от 1) — консоль эффектов: включать и выключать эффекты прямо в игре\n"
      "Ctrl+Shift+F10 — «Новое обращение» к разработчикам со снимком экрана\n"
      "Ctrl+Shift+F11 — счётчик кадров\n"
      "Ctrl+Shift+F12 — снимок экрана в полном размере (папка ScreenShot)\n"
      "Pause или Scroll Lock — все улучшения выключить и включить снова: сравнить с оригинальным видом\n"
      "Стрелки (строка чата пуста) — ходьба; две вместе — по диагонали; Ctrl+стрелки — камера\n"
+     "Ctrl+Home — камера как в начале игры\n"
      "Пробел (строка чата пуста) — атака, иначе подобрать, иначе заговорить с NPC рядом\n"
      "` — режим ходьбы: W A S D — ходьба, Tab — цель, пробел — атака, F — подобрать, R — NPC, C — сесть, "
      "Q / E — камера, 1–9 — панель, Enter — чат\n"
-     "В окне после стрелки: стрелки ведут рамку, Enter — нажать, Esc — закрыть, PgUp / PgDn — вкладки"},
+     "Стрелки в окне — ведут его рамку (после первой стрелки); Enter нажимает, Esc закрывает, PgUp / PgDn — "
+     "вкладки"},
     {Text::PlayKeysLine,
      "In the game: Ctrl+~ the effects console, Ctrl+Shift+F10 a report, Pause the original look. Every key is on "
      "«Main».",
@@ -8636,6 +8641,8 @@ constexpr Entry kTexts[] = {
      "Комплект {1}: не всё удалось надеть"},
     {Text::EquipSetCleared, "Set {1} cleared", "Комплект {1} очищено", "Комплект {1} очищен"},
     {Text::ItemsNotWorn, "not worn", "не вдягнуто", "не надето"},  // 3.0.18-beta.224 (R-5K5NRW)
+    {Text::MenuKeys, "Keys", "Клавіші", "Клавиши"},  // 3.0.18-beta.225
+    {Text::MenuKeysBack, "Back", "Назад", "Назад"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

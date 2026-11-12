@@ -956,6 +956,7 @@ enum class Text : uint16_t {
     EquipSetsTitle, EquipSetEmpty, EquipSetPutOn, EquipSetWornNow, EquipSetMenuKeep, EquipSetMenuClear, EquipSetKept,
     EquipSetNothingWorn, EquipSetPutting, EquipSetDone, EquipSetMissing, EquipSetPartly, EquipSetCleared,
     ItemsNotWorn,  // .224 (R-5K5NRW): the server refused a thing put on
+    MenuKeys, MenuKeysBack,  // .225: the menu's «Клавіші» (the keys list in its card)
     Count
 };
 

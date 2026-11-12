@@ -77,6 +77,7 @@ struct Model {
         Rml::String number, things;
         std::vector<SetIconV> icons;
         bool saved = false, on = false;
+        bool focus = false;  // 3.0.18-beta.225: the controller's (and the keys') row
         int hot = -1;  // the cursor over «Надягти» (0), «Зберегти надіте» (1), «Очистити» (2)
     };
     std::vector<SetRowV> setRows;

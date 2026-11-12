@@ -19,6 +19,8 @@ struct State {
     bool spaceDown = false;  // Space pressed as the action (its let go and its letter swallowed too)
     bool skipSpace = false;
     uint8_t camHeld = 0;     // Ctrl+arrows pressed as the camera's (one step a press)
+    bool homeHeld = false;   // 3.0.18-beta.225: Ctrl+Home pressed as the camera's
+    int homeTold = 0;
     std::string spaceMap;    // the map Space's first action was told on
     uint8_t held = 0;
     uint8_t mode = 0;  // 3.0.18-beta.208: the walk mode's keys
@@ -85,6 +87,23 @@ bool key(UINT m, WPARAM wp, LPARAM) {
     if (m != WM_KEYDOWN && m != WM_KEYUP) return false;
     if (m == WM_KEYDOWN && wp != VK_SPACE) s.skipSpace = false;
     if (wp == VK_SPACE) return spaceKey(s, m);
+    if (wp == VK_HOME) {  // 3.0.18-beta.225: Ctrl+Home - the camera as at the game's start (the chat line empty)
+        const bool ctrlOnly = GetKeyState(VK_CONTROL) < 0 && GetKeyState(VK_MENU) >= 0 && GetKeyState(VK_SHIFT) >= 0;
+        if (m == WM_KEYUP) {
+            const bool mine = s.homeHeld;
+            s.homeHeld = false;
+            return mine;
+        }
+        if (s.homeHeld) return true;  // its auto repeat
+        if (!ctrlOnly || !s.enabled || !inGameWorld() || !chatwin::focusInChat() || !chatwin::inputEmpty())
+            return false;
+        s.homeHeld = true;
+        const bool done = resetCameraPose();
+        if (s.homeTold++ < 5)
+            LOG_INFO("keys: Ctrl+Home - the camera back as at the game's start (turned 0, tilted -45, 300 away)%s",
+                     done ? "" : " - not now (no view)");
+        return true;
+    }
     const uint8_t dir = uagfx::keywalk::dirOfVk(unsigned(wp));
     if (!dir) return false;
     const bool ctrlOnly = GetKeyState(VK_CONTROL) < 0 && GetKeyState(VK_MENU) >= 0 && GetKeyState(VK_SHIFT) >= 0;

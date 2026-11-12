@@ -63,7 +63,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   class="txt"><div class="lbl">{{ammo.label}}</div><div class="nm" data-class-worn="ammo.worn">{{ammo.name}}</div>
 </div></div></div>
 <div class="sets"><div class="setshead"><span class="sht">{{setsTitle}}</span><span
-  class="setsnote">{{setsNote}}</span></div><div class="setrow" data-for="r, i : setRows" data-class-on="r.on"><span
+  class="setsnote">{{setsNote}}</span></div><div class="setrow" data-for="r, i : setRows" data-class-on="r.on"
+  data-class-focus="r.focus"><span
   class="sn">{{r.number}}</span><div class="sicons"><span class="si" data-for="ic : r.icons"><img
   data-attr-src="ic.src" data-style-width="ic.w + 'px'" data-style-height="ic.h + 'px'"/></span></div><span
   class="stx" data-class-empty="!r.saved">{{r.things}}</span><span class="sbtn put" data-if="r.saved && !r.on"
@@ -128,6 +129,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         v.RegisterMember("saved", &Model::SetRowV::saved);
         v.RegisterMember("on", &Model::SetRowV::on);
         v.RegisterMember("hot", &Model::SetRowV::hot);
+        v.RegisterMember("focus", &Model::SetRowV::focus);  // 3.0.18-beta.225
     }
     c.RegisterArray<std::vector<Model::SetRowV>>();
     c.Bind("setRows", &m.setRows);

@@ -94,3 +94,16 @@ TEST(equip_window_pad_steps_in_the_originals_columns) {
     CHECK_EQ(padStep(HeadMid, 1, 0), int(HeadMid));
 }
 
+// 3.0.18-beta.225 (the sets by the controller and the keys): down from the ammo into the sets' rows (kSlots + 0..2),
+// up out of them back to it; the last row's down and the rows' sides stay
+TEST(equip_window_pad_steps_into_the_sets) {
+    using namespace equipwin;
+    CHECK_EQ(padStep(Ammo, 0, 1), kSlots);
+    CHECK_EQ(padStep(kSlots, 0, -1), int(Ammo));
+    CHECK_EQ(padStep(kSlots, 0, 1), kSlots + 1);
+    CHECK_EQ(padStep(kSlots + 1, 0, -1), kSlots);
+    CHECK_EQ(padStep(kSlots + kSetRows - 1, 0, 1), kSlots + kSetRows - 1);
+    CHECK_EQ(padStep(kSlots + 1, 1, 0), kSlots + 1);
+    CHECK_EQ(padStep(kSlots + 1, -1, 0), kSlots + 1);
+}
+

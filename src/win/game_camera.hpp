@@ -115,6 +115,9 @@ uint32_t readGameMode();
 bool readCameraPose(float& yaw, float& distance);
 // written as the targets, and with `exact` as the shown ones too (no easing: the same path on every computer)
 bool writeCameraPose(float yaw, float distance, bool exact);
+// 3.0.18-beta.225 (the keyboard concept's Ctrl+Home): the camera eased back to the game's own at its start - turned 0,
+// tilted -45, 300 away (uaRO.exe's every launch)
+bool resetCameraPose();
 // the map's camera: outdoors or a building (as the game holds it now), its own limits (core::graphics_test zoomRange)
 bool readCameraLimits(bool& outdoor, bool& ownLimits, int& limitFrom, int& limitSpan);
 // The game's memory read without a fault where nothing is mapped

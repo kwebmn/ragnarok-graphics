@@ -25,6 +25,7 @@ const std::string& wordsOf(const Texts& t, Action a) {
         case Action::Layout: return t.layout;
         case Action::Test: return t.test;
         case Action::Report: return t.report;
+        case Action::Keys: return t.keys;
         case Action::Back: break;
     }
     return t.back;
@@ -35,8 +36,8 @@ const std::string& wordsOf(const Texts& t, Action a) {
 std::vector<Action> actions(Kind k) {
     switch (k) {
         case Kind::Alive:  // 3.0.18-beta.121: ours over the game's
-            return {Action::Settings, Action::Layout, Action::Test,  Action::Report,
-                    Action::CharSelect, Action::Exit,   Action::Back};
+            return {Action::Settings, Action::Keys, Action::Layout, Action::Test, Action::Report,
+                    Action::CharSelect, Action::Exit, Action::Back};
         case Kind::Dead: return {Action::SavePoint, Action::CharSelect, Action::Exit, Action::Back};
         case Kind::DeadToken: break;
     }
@@ -46,6 +47,8 @@ std::vector<Action> actions(Kind k) {
 bool ours(Action a) {
     return a == Action::Settings || a == Action::Layout || a == Action::Test || a == Action::Report;
 }
+
+bool local(Action a) { return a == Action::Keys; }
 
 int buttonId(Kind k, Action a) {
     if (ours(a)) return 0;
@@ -129,6 +132,103 @@ std::vector<Words> words(const Layout& L, Kind k, const Show& sh, const Texts& t
                                 itemwin::Align::Right});
     }
     return out;
+}
+
+std::vector<KeyLine> keyLines(const std::string& text) {
+    std::vector<KeyLine> out;
+    size_t from = 0;
+    while (from < text.size()) {
+        size_t end = text.find('\n', from);
+        if (end == std::string::npos) end = text.size();
+        const std::string line = text.substr(from, end - from);
+        from = end + 1;
+        if (line.find_first_not_of(' ') == std::string::npos) continue;
+        static const char* const kDashes[] = {" \xE2\x80\x94 ", " - "};  // « — », « - »
+        size_t at = std::string::npos, len = 0;
+        for (const char* d : kDashes) {
+            const size_t p = line.find(d);
+            if (p != std::string::npos && p < at) at = p, len = std::char_traits<char>::length(d);
+        }
+        if (at == std::string::npos)
+            out.push_back(KeyLine{"", line});
+        else
+            out.push_back(KeyLine{line.substr(0, at), line.substr(at + len)});
+    }
+    return out;
+}
+
+namespace {
+// `text` cut into lines of `width` at most, at its spaces (a word wider than it on a line of its own)
+std::vector<std::string> wrapped(const std::string& text, float width, float px, bool bold, const Measure& m) {
+    std::vector<std::string> out;
+    std::string line;
+    size_t from = 0;
+    while (from <= text.size()) {
+        size_t end = text.find(' ', from);
+        if (end == std::string::npos) end = text.size();
+        const std::string word = text.substr(from, end - from);
+        from = end + 1;
+        if (word.empty()) continue;
+        const std::string longer = line.empty() ? word : line + " " + word;
+        if (!line.empty() && m(longer, px, bold) > width) {
+            out.push_back(line);
+            line = word;
+        } else {
+            line = longer;
+        }
+    }
+    if (!line.empty()) out.push_back(line);
+    return out;
+}
+}  // namespace
+
+KeysView keysView(int targetW, int targetH, float scale, const std::vector<KeyLine>& lines, const Texts& t,
+                  const Show& sh, const Measure& m) {
+    KeysView v;
+    Layout& L = v.layout;
+    const float s = scale > 0 ? scale : 1.0f;
+    L.s = s;
+    const float w = std::round(560 * s), pad = std::round(kPad * s), inner = w - 2 * pad;
+    const float keyPx = 13 * s, whatPx = 12.5f * s, rowH = std::round(19 * s), gap = std::round(6 * s);
+    float keyW = 0;  // as wide as the widest keys, a third of the card at most (longer ones wrapped)
+    for (const KeyLine& k : lines) keyW = std::max(keyW, m(k.keys, keyPx, true));
+    keyW = std::min(std::ceil(keyW) + std::round(4 * s), std::round(inner * 0.34f));
+    const float whatX = pad + keyW + std::round(14 * s), whatW = w - pad - whatX;
+    float y = pad;
+    L.title = panel::Box{pad, y, inner, std::round(kTitleH * s)};
+    v.words.push_back(Words{L.title, t.keys, kText, 17 * s, true, itemwin::Align::Left});
+    y += L.title.h + std::round(kTitleGap * s);
+    for (const KeyLine& k : lines) {
+        const bool whole = k.keys.empty();
+        const std::vector<std::string> parts = wrapped(k.what, whole ? inner : whatW, whatPx, false, m);
+        const std::vector<std::string> keys =
+            whole ? std::vector<std::string>{} : wrapped(k.keys, keyW, keyPx, true, m);
+        for (size_t i = 0; i < keys.size(); ++i)
+            v.words.push_back(Words{panel::Box{pad, y + float(i) * rowH, keyW, rowH}, keys[i], kGold2, keyPx, true,
+                                    itemwin::Align::Left});
+        for (size_t i = 0; i < parts.size(); ++i)
+            v.words.push_back(Words{panel::Box{whole ? pad : whatX, y + float(i) * rowH, whole ? inner : whatW, rowH},
+                                    parts[i], kText, whatPx, false, itemwin::Align::Left});
+        y += float(std::max<size_t>(1, std::max(parts.size(), keys.size()))) * rowH + gap;
+    }
+    y += std::round(kTitleGap * s) - gap;
+    L.buttons.push_back(panel::Box{pad, y, inner, std::round(kButtonH * s)});
+    const panel::Box& b = L.buttons[0];
+    const std::string hint = t.esc;
+    const float hintW = hint.empty() ? 0 : m(hint, 12 * s, false) + 4 * s;
+    v.words.push_back(Words{panel::Box{b.x + 14 * s, b.y, b.w - 28 * s - hintW, b.h}, t.keysBack,
+                            sh.focus == 0 ? kGold2 : kText, 14 * s, false, itemwin::Align::Left});
+    if (hintW > 0)
+        v.words.push_back(Words{panel::Box{b.x + b.w - 14 * s - hintW, b.y, hintW, b.h}, hint, kMuted, 12 * s, false,
+                                itemwin::Align::Right});
+    y += b.h + pad;
+    L.glass = panel::Box{0, 0, w, y};
+    L.w = int(std::ceil(w));
+    L.h = int(std::ceil(y));
+    L.x = std::max(0, (targetW - L.w) / 2);
+    const int below = targetH / 2 + int(std::lround(30 * s));
+    L.y = std::max(0, std::min(below, targetH - L.h - int(std::lround(8 * s))));
+    return v;
 }
 
 }  // namespace uagfx::menuwin

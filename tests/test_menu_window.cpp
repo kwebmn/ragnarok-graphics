@@ -40,7 +40,8 @@ float measure(const std::string& s, float px, bool) {
 TEST(menu_window_buttons_of_each_window) {
     using A = menuwin::Action;
     CHECK((menuwin::actions(menuwin::Kind::Alive) ==  // 3.0.18-beta.121: ours over the game's
-           std::vector<A>{A::Settings, A::Layout, A::Test, A::Report, A::CharSelect, A::Exit, A::Back}));
+           std::vector<A>{A::Settings, A::Keys, A::Layout, A::Test, A::Report, A::CharSelect, A::Exit,
+                          A::Back}));  // 3.0.18-beta.225: «Клавіші» after «Налаштування»
     CHECK(menuwin::ours(A::Settings) && menuwin::ours(A::Report) && !menuwin::ours(A::Exit));
     CHECK(menuwin::buttonId(menuwin::Kind::Alive, A::Settings) == 0);
     CHECK((menuwin::actions(menuwin::Kind::Dead) == std::vector<A>{A::SavePoint, A::CharSelect, A::Exit, A::Back}));
@@ -67,9 +68,9 @@ TEST(menu_window_places_and_the_mouse) {
     const panel::Box& b = L.buttons[2];
     CHECK(menuwin::buttonAt(L, b.x + b.w / 2, b.y + b.h / 2) == 2);
     CHECK(menuwin::buttonAt(L, -5, -5) == -1);
-    CHECK(menuwin::firstFocus(menuwin::Kind::Dead) == 3 && menuwin::firstFocus(menuwin::Kind::Alive) == 6);
+    CHECK(menuwin::firstFocus(menuwin::Kind::Dead) == 3 && menuwin::firstFocus(menuwin::Kind::Alive) == 7);  // .225
     const menuwin::Layout alive = menuwin::layout(menuwin::Kind::Alive, 1920, 1080, 1.0f);
-    CHECK(alive.buttons.size() == 7);
+    CHECK(alive.buttons.size() == 8);  // 3.0.18-beta.225: «Клавіші»
     CHECK(alive.y + alive.h <= 1080);  // 3.0.18-beta.121: the taller card still on the screen
     CHECK(menuwin::layout(menuwin::Kind::DeadToken, 1920, 1080, 1.0f).h > L.h);
 }
@@ -112,4 +113,44 @@ TEST(menu_window_long_words_drop_the_key) {
     sh.focus = 1;  // «До точки збереження» fits beside it
     const std::vector<menuwin::Words> w2 = menuwin::words(L, menuwin::Kind::DeadToken, sh, t, measure);
     CHECK(std::any_of(w2.begin(), w2.end(), [](const menuwin::Words& x) { return x.text == "Enter"; }));
+}
+
+// 3.0.18-beta.225 (the keyboard concept's cheat sheet; the owner: «продолжай»): «Клавіші» in the menu - shown in the
+// card itself (the game's menu stays): the settings app's keys list, the keys in a gold column, what they do beside,
+// wrapped to the card, «Назад» under them
+TEST(menu_keys_view) {
+    const std::vector<menuwin::Action> as = menuwin::actions(menuwin::Kind::Alive);
+    CHECK(std::find(as.begin(), as.end(), menuwin::Action::Keys) != as.end());
+    CHECK(menuwin::local(menuwin::Action::Keys) && !menuwin::ours(menuwin::Action::Keys));
+    CHECK_EQ(menuwin::buttonId(menuwin::Kind::Alive, menuwin::Action::Keys), 0);
+    const std::vector<menuwin::KeyLine> lines =
+        menuwin::keyLines("Ctrl+~ — консоль ефектів\nCtrl+Home - камера як на початку\nбез тире\n");
+    CHECK_EQ(lines.size(), size_t(3));
+    CHECK(lines.size() == 3 && lines[0].keys == "Ctrl+~" && lines[0].what == "консоль ефектів");
+    CHECK(lines.size() == 3 && lines[1].keys == "Ctrl+Home" && lines[1].what == "камера як на початку");
+    CHECK(lines.size() == 3 && lines[2].keys.empty() && lines[2].what == "без тире");  // a line as it is
+    menuwin::Texts t = texts();
+    t.keys = "Клавіші";
+    t.keysBack = "Назад";
+    const std::vector<menuwin::KeyLine> many = {
+        {"Ctrl+~", "консоль ефектів"},
+        {"Стрілки (рядок чату порожній, нічого не набрано)", "ходьба; дві разом — навскіс"},  // a key too long: wrapped
+        {"`", "режим ходьби: W A S D — ходьба, Tab — ціль, пробіл — атака, F — підібрати, R — NPC, C — сісти, "
+              "Q / E — камера, 1–9 — панель, Enter — чат"}};
+    menuwin::Show sh;
+    const menuwin::KeysView v = menuwin::keysView(1920, 1080, 1.0f, many, t, sh, measure);
+    CHECK_EQ(v.layout.buttons.size(), size_t(1));  // «Назад»
+    const panel::Box& back = v.layout.buttons[0];
+    CHECK_EQ(menuwin::buttonAt(v.layout, back.x + back.w / 2, back.y + back.h / 2), 0);
+    int gold = 0, long1 = 0;
+    for (const itemwin::Words& w : v.words) {
+        if (w.text == "Ctrl+~" || w.text == "`") gold += w.bold ? 1 : 0;
+        if (w.text.find("Стрілки") == 0) CHECK(w.bold && w.rgb == 0xE6CB8A);  // the long key's first line, gold
+        CHECK(w.box.x + w.box.w <= v.layout.glass.w + 0.5f);       // in the card
+        CHECK(measure(w.text, w.px, w.bold) <= w.box.w + 0.5f);    // each line fits its box
+        if (w.text.find("ходьба") != std::string::npos || w.text.find("панель") != std::string::npos) ++long1;
+    }
+    CHECK_EQ(gold, 2);
+    CHECK(long1 >= 2);  // the long one wrapped onto lines of its own
+    CHECK(v.layout.y + v.layout.h <= 1080);
 }

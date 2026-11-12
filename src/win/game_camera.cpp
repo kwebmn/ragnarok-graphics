@@ -238,6 +238,16 @@ bool writeCameraPose(float yaw, float distance, bool exact) {
     return ok;
 }
 
+bool resetCameraPose() {
+    const Asked asked(__builtin_return_address(0));
+    uint32_t cview = 0;
+    const uint32_t mode = gameMode();
+    if (!mode || !read(mode + camera::kModeView, &cview, 4) || !cview) return false;
+    const float yaw = 0.0f, tilt = -45.0f, distance = 300.0f;  // the eased targets: the game moves the view to them
+    return write(cview + camera::kViewYawTo, &yaw, 4) && write(cview + camera::kViewTiltTo, &tilt, 4) &&
+           write(cview + camera::kViewDistanceTo, &distance, 4);
+}
+
 bool readCameraLimits(bool& outdoor, bool& ownLimits, int& limitFrom, int& limitSpan) {
     const Asked asked(__builtin_return_address(0));
     const uint32_t mode = gameMode();

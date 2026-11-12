@@ -974,6 +974,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .setrow { display: flex; align-items: center; height: 2.5rem; margin-top: 0.3333rem; padding: 0 0.5rem;
     border-radius: 0.5rem; border: 0.0833rem #ffffff12; background-color: #ffffff08; }
 .eql .setrow.on { border-color: #e6cb8a88; background-color: #c9a55b1a; }
+.eql .setrow.focus { border-color: #f3c653e6; background-color: #c9a55b26; }  /* .225: the controller's, the keys' */
 .eql .sn { display: block; width: 1.5rem; font-weight: bold; color: #e6cb8a; }
 .eql .sicons { display: flex; align-items: center; }
 .eql .si { display: block; margin-right: 0.1667rem; }

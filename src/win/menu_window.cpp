@@ -55,6 +55,7 @@ struct State {
     bool recapOn = true;  // 3.0.11-beta.277: [interface] death_recap
     std::string recapTitle;
     std::vector<std::string> recap;
+    std::vector<mw::Words> keysWords;  // 3.0.18-beta.225: «Клавіші»'s words (core menuwin keysView)
     unsigned codePage = 0;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -117,6 +118,8 @@ mw::Texts texts(bool pad) {
     t.layout = say(settings::Text::MenuLayout);
     t.test = say(settings::Text::MenuTest);
     t.report = say(settings::Text::MenuReport);
+    t.keys = say(settings::Text::MenuKeys);  // 3.0.18-beta.225
+    t.keysBack = say(settings::Text::MenuKeysBack);
     t.enter = pad ? uapad::buttonLabel(0) : "Enter";
     t.esc = pad ? uapad::buttonLabel(1) : "Esc";
     t.recapTitle = state().recapTitle;  // 3.0.11-beta.277
@@ -161,6 +164,7 @@ const char* nameOf(mw::Action a) {
         case mw::Action::Layout: return "arrange the interface";
         case mw::Action::Test: return "the graphics test";
         case mw::Action::Report: return "send a report";
+        case mw::Action::Keys: return "the keys";  // 3.0.18-beta.225
         case mw::Action::Back: break;
     }
     return "back to the game";
@@ -168,11 +172,26 @@ const char* nameOf(mw::Action a) {
 
 // Its row pressed: the game's window's own button (message 6, its id) - the game does the rest and deletes its window
 void press(State& s, int row) {
+    if (s.show.keys) {  // 3.0.18-beta.225: «Клавіші»'s one button, «Назад» - the menu's buttons again
+        s.show.keys = false;
+        const std::vector<mw::Action> as = mw::actions(s.kind);
+        const auto at = std::find(as.begin(), as.end(), mw::Action::Keys);
+        s.show.focus = at == as.end() ? mw::firstFocus(s.kind) : int(at - as.begin());
+        s.key.clear();
+        return;
+    }
     mw::Kind kind = mw::Kind::Alive;
     const uint32_t window = gameWindow(kind);
     const std::vector<mw::Action> as = mw::actions(kind);
     if (!window || row < 0 || row >= int(as.size())) return;
     const mw::Action a = as[size_t(row)];
+    if (mw::local(a)) {  // 3.0.18-beta.225: «Клавіші» - the card shows the keys, the game's menu stays
+        s.show.keys = true;
+        s.show.focus = 0;
+        if (s.told++ < 30) LOG_INFO("menu: «Клавіші» - the keys list in the card");
+        s.key.clear();
+        return;
+    }
     // 3.0.18-beta.121 (the concept «Ігровий інтерфейс», stage 4): ours - the game's menu closed as by «Повернутися до
     // гри» (its 0x77), then the driver does it (the context takes it: takeAsk)
     const int id = mw::ours(a) ? mw::buttonId(kind, mw::Action::Back) : mw::buttonId(kind, a);
@@ -212,6 +231,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     }
     if (!s.shown || window != s.window || kind != s.kind) {  // opened: the safe row in focus
         s.show.focus = mw::firstFocus(kind);
+        s.show.keys = false;  // 3.0.18-beta.225: the buttons first
         s.recap.clear();  // 3.0.11-beta.277: the death's last hits, taken once as it shows
         if (kind != mw::Kind::Alive && s.recapOn) s.recap = deathrecapwin::lines(s.recapTitle);
         if (s.told++ < 30)
@@ -226,6 +246,13 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     s.layout = mw::layout(kind, targetWidth, targetHeight, s.scale, s.recap.size());
+    if (s.show.keys) {  // 3.0.18-beta.225: «Клавіші» - the settings app's keys list in the card
+        const mw::KeysView kv = mw::keysView(targetWidth, targetHeight, s.scale,
+                                             mw::keyLines(say(settings::Text::MainKeysList)), texts(s.padNow), s.show,
+                                             measure);
+        s.layout = kv.layout;
+        s.keysWords = kv.words;
+    }
     s.show.hover = -1;
     int cx = 0, cy = 0;
     if (readHoverCursor(cx, cy)) {
@@ -237,7 +264,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     const std::string key = std::to_string(int(kind)) + ';' + std::to_string(s.layout.x) + ',' +
                             std::to_string(s.layout.y) + ';' + std::to_string(s.scale) + ';' +
                             std::to_string(s.show.hover) + ',' + std::to_string(s.show.focus) +
-                            (s.padNow ? "P" : "") + '#' + std::to_string(uistyle::generation());
+                            (s.padNow ? "P" : "") + (s.show.keys ? "K" : "") + '#' +
+                            std::to_string(uistyle::generation());
     if (const std::string drawn = key + (uaui::ready() ? "u" : ""); drawn != s.key) {  // 3.0.18-beta.34
         s.key = drawn;
         render(s);
@@ -295,14 +323,17 @@ static void fillSheet(State& s, uisheet::Content& ui) {
     for (size_t i = 0; i < L.buttons.size(); ++i) {
         const panel::Box& b = L.buttons[i];
         const bool lit = int(i) == sh.hover || int(i) == sh.focus;
-        if (k != Kind::Alive && i == 0)  // core menuwin's primary(): the death's first
+        if (k != Kind::Alive && i == 0 && !sh.keys)  // core menuwin's primary(): the death's first
             ui.rect(ui.under, b, 8 * sc, kGold, lit ? 0.26f : 0.16f, kGold2, lit ? 0.9f : 0.55f,
                     (lit ? 2.0f : 1.0f) * sc);
         else
             ui.rect(ui.under, b, 8 * sc, kWhite, lit ? 0.12f : 0.05f, lit ? kGold2 : kWhite, lit ? 0.8f : 0.10f,
                     (lit ? 2.0f : 1.0f) * sc);
     }
-    ui.say(mw::words(s.layout, s.kind, s.show, t, measure));
+    if (sh.keys)  // 3.0.18-beta.225
+        ui.say(s.keysWords);
+    else
+        ui.say(mw::words(s.layout, s.kind, s.show, t, measure));
 }
 
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
@@ -350,6 +381,10 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     State& s = state();
     (void)lp;
     if (!s.shown || (m != WM_KEYDOWN && m != WM_KEYUP && m != WM_CHAR)) return false;
+    if (s.show.keys && (wp == VK_ESCAPE || (m == WM_CHAR && wp == 0x1B))) {  // 3.0.18-beta.225: back to the buttons
+        if (m == WM_KEYDOWN) press(s, 0);
+        return true;
+    }
     if (wp != VK_UP && wp != VK_DOWN && wp != VK_RETURN) return false;  // Esc and the rest: the game's
     if (m == WM_KEYDOWN)
         padCommand(wp == VK_UP ? PadCommand::Up : wp == VK_DOWN ? PadCommand::Down : PadCommand::Press);
@@ -368,7 +403,7 @@ void beforeGameDraw() {
 void padCommand(PadCommand c) {
     State& s = state();
     if (!s.shown) return;
-    const int rows = int(mw::actions(s.kind).size());
+    const int rows = s.show.keys ? 1 : int(mw::actions(s.kind).size());  // 3.0.18-beta.225: «Назад» alone
     switch (c) {
         case PadCommand::Up: s.show.focus = std::max(0, s.show.focus - 1); break;
         case PadCommand::Down: s.show.focus = std::min(rows - 1, s.show.focus + 1); break;

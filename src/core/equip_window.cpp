@@ -42,7 +42,12 @@ std::vector<PadItem> padItems(const Data& d, const Show& sh, const Texts& t) {
 const uint32_t kBits[kSlots] = {0x200, 0x001, 0x010, 0x004, 0x008, 0x100, 0x002, 0x020, 0x040, 0x080, 0x8000};
 
 int padStep(int slot, int dx, int dy) {
-    if (slot == Ammo) return dy < 0 ? AccR : slot;
+    if (slot >= kSlots) {  // 3.0.18-beta.225: a set's row
+        if (dy < 0) return slot == kSlots ? int(Ammo) : slot - 1;
+        if (dy > 0) return slot + 1 < kSlots + kSetRows ? slot + 1 : slot;
+        return slot;
+    }
+    if (slot == Ammo) return dy < 0 ? int(AccR) : dy > 0 ? kSlots : slot;
     const bool l = left(slot);
     const int row = rowOf(slot);
     if (dy > 0) return row < 4 ? (l ? kLeftColumn : kRightColumn)[row + 1] : Ammo;
