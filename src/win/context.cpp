@@ -165,6 +165,7 @@
 #include "win/weight_rules.hpp"
 #include "win/window_guard.hpp"
 #include "win/windows_draw.hpp"
+#include "win/wings.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -503,6 +504,7 @@ bool Context::open(std::string& error) {
                            config.crispNumbers;  // 3.0.18-beta.178: the numbers' frames as the game writes them
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
+    wings::install();     // 3.0.18-beta.230: the nine headgears' wings (win/wings)
     setFullColour(config.fullColour);  // 2.5.18: the textures in their pictures' own colours
     setFastTextures(config.fastTextures);  // 2.5.20
     setSpriteDyes(config.aiNow.dyes);      // 2.5.23

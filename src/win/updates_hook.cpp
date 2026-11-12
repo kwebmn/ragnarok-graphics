@@ -15,6 +15,7 @@
 #include "core/layout.hpp"
 #include "core/updates.hpp"
 #include "core/updates_exe.hpp"
+#include "win/entry_hook.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 
@@ -103,40 +104,6 @@ bool __cdecl fileIsThere(const char* name) {
     return inUpdates(name) || reinterpret_cast<ExistsFn>(g_exists)(name);
 }
 
-// A function's entry, its first n bytes `expect` (whole instructions), to `hook`; those bytes run in a trampoline
-// of their own before the rest of it
-bool hookEntry(uint32_t entry, const uint8_t* expect, size_t n, const void* hook, uintptr_t& trampoline) {
-    auto* at = reinterpret_cast<uint8_t*>(uintptr_t(entry));
-    uint8_t now[16] = {};
-    SIZE_T got = 0;
-    if (n < 5 || n > 11 || !ReadProcessMemory(GetCurrentProcess(), at, now, n, &got) || got != n ||
-        std::memcmp(now, expect, n) != 0)
-        return false;
-    auto* t = static_cast<uint8_t*>(VirtualAlloc(nullptr, 32, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
-    if (!t) return false;
-    std::memcpy(t, now, n);
-    t[n] = 0xE9;  // jmp entry + n
-    const int32_t back = int32_t(uintptr_t(entry) + n - (reinterpret_cast<uintptr_t>(t) + n + 5));
-    std::memcpy(t + n + 1, &back, sizeof back);
-    FlushInstructionCache(GetCurrentProcess(), t, 32);
-    DWORD old = 0;
-    if (!VirtualProtect(at, n, PAGE_EXECUTE_READWRITE, &old)) {
-        VirtualFree(t, 0, MEM_RELEASE);
-        return false;
-    }
-    uint8_t jump[16];
-    std::memset(jump, 0x90, sizeof jump);  // jmp hook, nops after it
-    jump[0] = 0xE9;
-    const int32_t to = int32_t(reinterpret_cast<uintptr_t>(hook) - (uintptr_t(entry) + 5));
-    std::memcpy(jump + 1, &to, sizeof to);
-    std::memcpy(at, jump, n);
-    DWORD unused = 0;
-    VirtualProtect(at, n, old, &unused);
-    FlushInstructionCache(GetCurrentProcess(), at, n);
-    trampoline = reinterpret_cast<uintptr_t>(t);
-    return true;
-}
-
 bool known(uint32_t entry, const uint8_t* expect) {
     uint8_t now[updates_exe::kPrologue] = {};
     SIZE_T got = 0;
@@ -175,12 +142,12 @@ void installUpdates() {
         return;
     }
     InitializeCriticalSection(&g_lock);
-    const bool ok = hookEntry(updates_exe::kGetData, updates_exe::kGetDataBytes, updates_exe::kPrologue,
-                              reinterpret_cast<const void*>(&getData), g_getData) &&
-                    hookEntry(updates_exe::kHasFile, updates_exe::kHasFileBytes, updates_exe::kPrologue,
-                              reinterpret_cast<const void*>(&hasFile), g_hasFile) &&
-                    hookEntry(updates_exe::kFileExists, updates_exe::kFileExistsBytes, updates_exe::kPrologue,
-                              reinterpret_cast<const void*>(&fileIsThere), g_exists);
+    const bool ok = hookEntryBytes(updates_exe::kGetData, updates_exe::kGetDataBytes, updates_exe::kPrologue,
+                                   reinterpret_cast<const void*>(&getData), g_getData) &&
+                    hookEntryBytes(updates_exe::kHasFile, updates_exe::kHasFileBytes, updates_exe::kPrologue,
+                                   reinterpret_cast<const void*>(&hasFile), g_hasFile) &&
+                    hookEntryBytes(updates_exe::kFileExists, updates_exe::kFileExistsBytes, updates_exe::kPrologue,
+                                   reinterpret_cast<const void*>(&fileIsThere), g_exists);
     char line[160];
     std::snprintf(line, sizeof line, "updates: %u archive(s) in updates\\ %s", unsigned(g_files.size()),
                   ok ? "- mounted at the first lookup" : "- the hooks failed, not mounted");

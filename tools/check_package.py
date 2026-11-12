@@ -24,6 +24,7 @@ EXPECTED = {"install.bat",  # 2.10: the only .bat - for an older update.bat, whi
             "uaro-graphics/clientlibs/ijl15.dll",  # 3.0.1-beta.6
             "uaro-graphics/clientlibs/mss32.dll",  # 3.0.1-beta.7
             "uaro-graphics/walkable.bin",  # 3.0.11-beta.8: the maps' walkable parts for the reference's routes
+            "uaro-graphics/wings.grf",  # 3.0.18-beta.230: the wings' garment sets (tools/wings_pack.py)
             "uaro-graphics/licenses/ibm-plex-sans-ofl.txt",  # 3.0.11-beta.66: the font in ddraw.dll, its license
             # 3.0.18-beta.193: the launcher's art and the look picker's pictures; the launcher's fonts' licenses (the
             # fonts in uaro-graphics.exe)

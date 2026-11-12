@@ -8,6 +8,7 @@
 #include "win/context.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/wings.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -78,6 +79,10 @@ void __attribute__((thiscall)) sortFace(uint32_t renderer, uint32_t face, uint32
         Guard guard;
         g_faces.note(vertices, tag);
     }
+    // 3.0.18-beta.230: a wearer's own sprite faces (a blended list's, not an effect's) while its render runs - where
+    // its wings go
+    if (tag.kind == Kind::None && (flags & 1) && face)
+        wings::noteFace(*reinterpret_cast<const uint32_t*>(uintptr_t(face)));
     reinterpret_cast<SortFn>(g_sort)(renderer, face, flags);
 }
 
@@ -187,6 +192,7 @@ Tag drawnEffect(const void* vertices) {
 void effectFrame() {
     g_faces.clear();
     g_owner.clear();
+    wings::frameStart();  // 3.0.18-beta.230
 }
 
 }  // namespace uagfx::win

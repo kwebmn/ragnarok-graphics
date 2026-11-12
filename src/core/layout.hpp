@@ -37,6 +37,8 @@ constexpr const char* kRedirected = "uaro-graphics\\cache\\launcher-redirect.txt
 // 2.12: the safe mode's (core/safe_mode): the failed starts in a row; why the game starts safe (the app shows it and
 // removes it - «Звичайний режим»)
 constexpr const char* kCardLevel = "uaro-graphics\\card-level.txt";  // 3.0.4-beta.35: the card judge's verdict
+// 3.0.18-beta.230: the wings' garment sets from the uaRO HD client (tools/wings_pack.py, core/wings)
+constexpr const char* kWings = "uaro-graphics\\wings.grf";
 // 3.0.11-beta.61 (the autopilot): the first game's outcome (core/first_game) and the mark that the site took it
 constexpr const char* kFirstGame = "uaro-graphics\\cache\\first-game.txt";
 // 3.0.11-beta.303: the settings app's rows the player has had - those not in it are marked «нове» (core/settings

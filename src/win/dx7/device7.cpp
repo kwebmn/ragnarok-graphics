@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <vector>
 
 #include "core/device_caps.hpp"
 #include "core/frame.hpp"
@@ -12,6 +13,7 @@
 #include "core/version.hpp"
 #include "core/layout.hpp"
 #include "core/sprite_exe.hpp"
+#include "core/wings.hpp"
 #include "win/context.hpp"
 #include "win/crisp/crisp.hpp"
 #include "win/dx7/caps.hpp"
@@ -32,8 +34,61 @@
 #include "win/buff_overlay.hpp"
 #include "win/combo_watch.hpp"
 #include "win/windows_draw.hpp"
+#include "win/wings.hpp"
 
 namespace uagfx::dx7 {
+namespace {
+
+uint32_t multiplied(uint32_t a, uint32_t b) {  // two ARGB colours channel by channel
+    uint32_t out = 0;
+    for (int s = 0; s < 32; s += 8) out |= ((((a >> s) & 255) * ((b >> s) & 255) + 127) / 255) << s;
+    return out;
+}
+
+// 3.0.18-beta.230 (win/wings): a wearer's wings as quads of the driver's textures - with the face's depth along its
+// height (a wall in front hides them as it hides the body), its colours (a cloaked one's alpha, a tint, the fog's
+// specular) and its draw's setup with the wing's picture in place of the game's
+void drawWings(win::Context& c, const std::vector<win::wings::Quad>& quads, const uint8_t* face, uint32_t count,
+               const DrawSetup& setup) {
+    if (quads.empty() || count < 3) return;
+    float yTop = 1e30f, yBottom = -1e30f, zTop = 0, zBottom = 0, wTop = 1, wBottom = 1;
+    for (uint32_t i = 0; i < count; ++i) {
+        float f[4];
+        std::memcpy(f, face + size_t(i) * 32, sizeof f);
+        if (f[1] < yTop) yTop = f[1], zTop = f[2], wTop = f[3];
+        if (f[1] > yBottom) yBottom = f[1], zBottom = f[2], wBottom = f[3];
+    }
+    uint32_t diffuse = 0, specular = 0;
+    std::memcpy(&diffuse, face + 16, 4);
+    std::memcpy(&specular, face + 20, 4);
+    DrawSetup s = setup;
+    s.colorKey = false;  // the wings' pictures carry their own alpha
+    const uint32_t state = c.record.addState(s);
+    for (const win::wings::Quad& q : quads) {
+        uint8_t v[4][32] = {};
+        const float xs[4] = {q.x0, q.x1, q.x0, q.x1}, ys[4] = {q.y0, q.y0, q.y1, q.y1};
+        const float left = q.mirror ? 1.0f : 0.0f, right = q.mirror ? 0.0f : 1.0f;
+        const float us[4] = {left, right, left, right}, ts[4] = {0, 0, 1, 1};
+        const uint32_t colour = multiplied(diffuse, q.tint);
+        for (int i = 0; i < 4; ++i) {
+            const float z = std::clamp(wings::lerpAt(ys[i], yTop, zTop, yBottom, zBottom), 0.0f, 1.0f);
+            const float rhw = std::max(wings::lerpAt(ys[i], yTop, wTop, yBottom, wBottom), 1e-6f);
+            const float f[4] = {xs[i], ys[i], z, rhw}, uv[2] = {us[i], ts[i]};
+            std::memcpy(v[i], f, sizeof f);
+            std::memcpy(v[i] + 16, &colour, 4);
+            std::memcpy(v[i] + 20, &specular, 4);
+            std::memcpy(v[i] + 24, uv, sizeof uv);
+        }
+        DrawCmd cmd;
+        cmd.state = state;
+        cmd.texture[0] = q.texture;
+        cmd.primitive = d3d7::PT_TRIANGLESTRIP;
+        cmd.fvf = d3d7::FVF_TL1;
+        c.record.draw(cmd, v, 4, nullptr, 0);
+    }
+}
+
+}  // namespace
 
 Device7::Device7(Surface7* target) : target_(target) {
     target_->AddRef();
@@ -297,6 +352,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     if (!vertices || vertexCount == 0) return DDERR_INVALIDPARAMS;
     win::Context& c = win::Context::get();
     DrawCmd cmd;
+    const uint32_t faceAt = uint32_t(uintptr_t(vertices));  // 3.0.18-beta.230: as the game gave it (win/wings)
     // 0.28: the renderer learns what effect a draw is of (the fireflies are drawn anew). 3.0.18-beta.181: found first
     const effect_exe::Tag tag = win::drawnEffect(vertices);
     if (tag.kind == effect_exe::Kind::Skill) win::lightskillswin::drawn();  // 3.0.18-beta.186: the crowd of skills
@@ -682,7 +738,14 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         win::groundway::draw(c.record, c.screenWidth, c.screenHeight);    // 3.0.11-beta.31: the way followed
         win::groundmarks::draw(c.record, c.screenWidth, c.screenHeight);  // 3.0.11-beta.87: the target's ring
     }
+    // 3.0.18-beta.230: a wearer's wings right before its first face (facing us) or right after its last (win/wings)
+    const win::wings::Emit wingsAt = win::wings::drawn(faceAt);
+    const bool wingsHere = fvf == d3d7::FVF_TL1 && !setup.ui;
+    if (wingsAt.before && wingsHere)
+        drawWings(c, *wingsAt.before, static_cast<const uint8_t*>(vertices), vertexCount, setup);
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);
+    if (wingsAt.after && wingsHere)
+        drawWings(c, *wingsAt.after, static_cast<const uint8_t*>(vertices), vertexCount, setup);
     if (tint.strength > 0 && flash <= 0.01f) {  // 3.0.16-beta.13: the body's tint - its colour added where it is
         flash = tint.strength;
     }

@@ -31,6 +31,7 @@ cp build-win/ddraw.dll build-win/uaro-graphics.exe build-win64/uaro-render64.exe
    build-win64/uaro-studio.exe dist/dlss-version.txt dist/models-version.txt "$stage/uaro-graphics/"
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
 cp dist/walkable.bin "$stage/uaro-graphics/"  # 3.0.11-beta.8: the maps' walkable parts (tools/walk_grids.py)
+cp dist/wings.grf "$stage/uaro-graphics/"  # 3.0.18-beta.230: the wings' garment sets (tools/wings_pack.py)
 # 3.0.18-beta.193: the launcher's art (uaRO HD's fountain at four times) and the look picker's pictures
 mkdir -p "$stage/uaro-graphics/launcher" && cp dist/launcher/*.jpg dist/launcher/*.webp "$stage/uaro-graphics/launcher/"
 # 3.0.11-beta.66: IBM Plex Sans is in ddraw.dll (the new interface's words) - its SIL OFL 1.1 beside it
