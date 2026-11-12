@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.201 — what's new · 2026-11-12
+
+- Fixed: after Teleport level 1 (while the character walked) the game left it on its old place - «hanging in the air» over its shadow, not moving, the minimap showing the old position. The server stops the character and moves it at the same moment; the smooth easing to the stop's cell no longer undoes the move.
+- On the first screen the «Updates» icon beside «Settings», «Reports», «Site», «Forum» checks for updates in one click («Checking…» while it asks), and the version line under the button says what is out.
+
 # uaRO Graphics 3.0.18-beta.200 — what's new · 2026-11-12
 
 - «Close» (and Esc) in the settings now closes only the settings and goes back to the first screen, not the whole app. The window's cross closes the app.
