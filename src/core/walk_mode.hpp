@@ -1,5 +1,8 @@
 #pragma once
 #include <cstdint>
+#include <vector>
+
+#include "core/key_walk.hpp"
 
 namespace uagfx::walkmode {
 
@@ -16,6 +19,7 @@ struct Key {
     bool down = true;       // false: let go
     bool ctrl = false, alt = false, shift = false;
     bool chatEmpty = true;  // the chat line holds no words
+    bool repeat = false;    // 3.0.18-beta.215: lParam bit 30 - the key's auto repeat (the toggle: once a press)
 };
 
 enum class Act : uint8_t {
@@ -53,16 +57,24 @@ class Mode {
 public:
     bool on() const { return on_; }
     bool typing() const { return typing_; }
-    uint8_t dirs() const { return dirs_; }  // keywalk::Dir bits the mode's keys hold
+    uint8_t dirs() const;                   // keywalk::Dir bits the mode's keys hold
     void set(bool on);                      // from the settings: typing and the held keys end
-    void lost() { dirs_ = 0; }              // the window lost the keys
+    void lost() { held_.clear(); }          // the window lost the keys
+    // 3.0.18-beta.215 (R-8KPDY9): the walking keys Windows no longer holds let go (their let go taken elsewhere);
+    // true when one did
+    bool verify(keywalk::KeyDown down);
     Act key(const Key& k);
     Do action() const { return action_; }  // the last Act::Action's
     int slot() const { return slot_; }     // Do::Slot's: 0-8 in the shown row
 
 private:
+    struct Held {
+        unsigned vk = 0, scan = 0;  // the key as pressed (its VK for Windows' state, its place for its let go)
+        bool extended = false;
+        uint8_t dir = 0;
+    };
     bool on_ = false, typing_ = false;
-    uint8_t dirs_ = 0;
+    std::vector<Held> held_;  // 3.0.18-beta.215: the walking keys held (two keys one way: either keeps it)
     Do action_ = Do::None;
     int slot_ = 0;
 };

@@ -2,6 +2,7 @@
 // «кнопками с клавиатуры верх вниз влево вправо управлять»): the arrows walk while the chat line is empty - the held
 // arrows as the pad's stick, the rule for when an arrow walks
 #include <cmath>
+#include <initializer_list>
 
 #include "core/key_walk.hpp"
 #include "pad/core/logic/pad.hpp"
@@ -81,4 +82,44 @@ TEST(key_walk_window_buttons) {
     CHECK_EQ(int(windowButtonOf(0x79, false)), 0);                   // F10 alone: the game's
     CHECK_EQ(int(windowButtonOf(0x20, false)), 0);                   // Space: no window button
     CHECK_EQ(int(windowButtonOf(0x41, false)), 0);
+}
+
+// 3.0.18-beta.215 (R-8KPDY9 «клавиатура тянула все время в право»): an arrow's let go taken by a hook earlier in the
+// chain (the walk mode switched on with the arrow held) left the walk on for 30 s - the keys held are checked against
+// Windows' own state of the keys each frame
+namespace {
+unsigned g_down[4];
+int g_downs = 0;
+bool fakeDown(unsigned vk) {
+    for (int i = 0; i < g_downs; ++i)
+        if (g_down[i] == vk) return true;
+    return false;
+}
+void downOnly(std::initializer_list<unsigned> vks) {
+    g_downs = 0;
+    for (unsigned vk : vks) g_down[g_downs++] = vk;
+}
+}  // namespace
+
+TEST(key_walk_held_checked_against_windows) {
+    using namespace keywalk;
+    downOnly({0x26});  // only the arrow up is down
+    CHECK_EQ(int(heldNow(uint8_t(kUp | kRight), fakeDown)), int(kUp));  // the right's let go was not seen
+    downOnly({});
+    CHECK_EQ(int(heldNow(uint8_t(kUp | kRight), fakeDown)), 0);
+    downOnly({0x25, 0x28});
+    CHECK_EQ(int(heldNow(uint8_t(kLeft | kDown), fakeDown)), int(kLeft | kDown));
+    CHECK_EQ(int(heldNow(0, fakeDown)), 0);
+}
+
+TEST(key_walk_window_buttons_checked_against_windows) {
+    using namespace keywalk;
+    downOnly({0x0D});  // Enter down, the right arrow up
+    CHECK_EQ(int(windowButtonsNow(uint16_t(uapad::kPadRight | uapad::kPadA), fakeDown)), int(uapad::kPadA));
+    downOnly({0x79});  // F10 (Shift+F10 pressed it): Y held
+    CHECK_EQ(int(windowButtonsNow(uapad::kPadY, fakeDown)), int(uapad::kPadY));
+    downOnly({0x5D});  // the menu key
+    CHECK_EQ(int(windowButtonsNow(uapad::kPadY, fakeDown)), int(uapad::kPadY));
+    downOnly({});
+    CHECK_EQ(int(windowButtonsNow(uint16_t(uapad::kPadY | uapad::kPadLB | uapad::kPadB), fakeDown)), 0);
 }

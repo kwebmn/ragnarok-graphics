@@ -154,3 +154,63 @@ TEST(walk_mode_follows_the_settings_not_its_own_write) {
     CHECK(!f.follow(true, 20900));
     CHECK(f.follow(false, 30000));   // long after: the settings' again
 }
+
+// 3.0.18-beta.215 (R-8KPDY9): the mode's walking keys checked against Windows' state of the keys - a let go taken by
+// another hook (a field of the game's took the focus) does not leave the walk on
+namespace {
+unsigned g_modeDown[4];
+int g_modeDowns = 0;
+bool modeDown(unsigned vk) {
+    for (int i = 0; i < g_modeDowns; ++i)
+        if (g_modeDown[i] == vk) return true;
+    return false;
+}
+}  // namespace
+
+TEST(walk_mode_keys_checked_against_windows) {
+    using namespace keywalk;
+    walkmode::Mode m;
+    m.set(true);
+    m.key(down('W', 0x11));
+    m.key(down('D', 0x20));
+    CHECK_EQ(int(m.dirs()), int(kUp | kRight));
+    g_modeDown[0] = 'W';
+    g_modeDowns = 1;  // D's let go never came
+    CHECK(m.verify(modeDown));
+    CHECK_EQ(int(m.dirs()), int(kUp));
+    CHECK(!m.verify(modeDown));  // nothing more to drop
+    g_modeDowns = 0;
+    CHECK(m.verify(modeDown));
+    CHECK_EQ(int(m.dirs()), 0);
+}
+
+TEST(walk_mode_two_keys_one_way) {
+    using namespace keywalk;
+    walkmode::Mode m;
+    m.set(true);
+    m.key(down('W', 0x11));
+    Key arrowUp = down(0x26, 0x48);
+    arrowUp.extended = true;
+    m.key(arrowUp);
+    CHECK(m.key(up('W', 0x11)) == Act::Swallow);  // W let go, the arrow still held: still up
+    CHECK_EQ(int(m.dirs()), int(kUp));
+    Key arrowLetGo = up(0x26, 0x48);
+    arrowLetGo.extended = true;
+    m.key(arrowLetGo);
+    CHECK_EQ(int(m.dirs()), 0);
+}
+
+TEST(walk_mode_toggle_once_a_press) {
+    walkmode::Mode m;
+    CHECK(m.key(down(kTilde, kTildeScan)) == Act::Toggle);
+    CHECK(m.on());
+    Key held = down(kTilde, kTildeScan);
+    held.repeat = true;  // its auto repeat
+    CHECK(m.key(held) == Act::Swallow);
+    CHECK(m.on());
+    m.key(up(kTilde, kTildeScan));
+    CHECK(m.key(down(kTilde, kTildeScan)) == Act::Toggle);
+    CHECK(!m.on());
+    CHECK(m.key(held) == Act::Swallow);  // held on while off: neither on again nor typed
+    CHECK(!m.on());
+}

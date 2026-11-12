@@ -31,4 +31,12 @@ bool arrowWalks(const Gate& g);
 // Space none since .214 (R-CX44S5): as X it took a thing in «Речі» up to the bar, a carry for the pad alone
 uint16_t windowButtonOf(unsigned vk, bool shift);
 
+// 3.0.18-beta.215 (R-8KPDY9 «клавиатура тянула все время в право»): a key's let go can be taken by a hook earlier in
+// the game window's chain - the walk mode switched on with an arrow held took the arrow's let go, and the arrows' walk
+// went on for 30 s. Each frame the keys held are checked against Windows' own state of the keys (`down`: GetKeyState
+// on the game's thread): a key no longer down lets go, whoever took its message
+using KeyDown = bool (*)(unsigned vk);
+uint8_t heldNow(uint8_t dirs, KeyDown down);              // the arrows (Dir bits) whose keys are still down
+uint16_t windowButtonsNow(uint16_t buttons, KeyDown down);  // windowButtonOf's buttons whose keys are still down
+
 }  // namespace uagfx::keywalk

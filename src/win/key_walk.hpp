@@ -19,6 +19,9 @@ void lost();                             // the window lost the keys: every arro
 // tick that sends the stop step
 bool vector(float& x, float& y);
 bool walking();             // arrows held now
+// 3.0.18-beta.215 (R-8KPDY9): Windows' own state of a key on the game's thread (GetKeyState) - the keys' hooks check
+// what they hold against it each frame, a let go taken by another hook let go all the same
+bool keyDown(unsigned vk);
 void setModeDirs(uint8_t dirs);  // 3.0.18-beta.208: the walk mode's keys held (win/walk_mode) - walked as the arrows
 void setEnabled(bool on);   // [interface] arrows_walk
 void setSpace(bool on);     // 3.0.18-beta.209: [interface] space_action

@@ -53,7 +53,20 @@ bool FileFollow::follow(bool value, uint64_t now) {
 void Mode::set(bool on) {
     on_ = on;
     typing_ = false;
-    dirs_ = 0;
+    held_.clear();
+}
+
+uint8_t Mode::dirs() const {
+    uint8_t d = 0;
+    for (const Held& h : held_) d = uint8_t(d | h.dir);
+    return d;
+}
+
+bool Mode::verify(keywalk::KeyDown down) {
+    const size_t before = held_.size();
+    for (size_t i = held_.size(); i-- > 0;)
+        if (!down(held_[i].vk)) held_.erase(held_.begin() + long(i));
+    return held_.size() != before;
 }
 
 Act Mode::key(const Key& k) {
@@ -61,7 +74,8 @@ Act Mode::key(const Key& k) {
     if (!k.down) {
         const uint8_t d = walkingNow ? dirOfScan(k.scan, k.extended) : 0;
         if (d != 0 && d != kStop) {
-            dirs_ = uint8_t(dirs_ & ~d);
+            for (size_t i = held_.size(); i-- > 0;)
+                if (held_[i].scan == k.scan && held_[i].extended == k.extended) held_.erase(held_.begin() + long(i));
             return Act::Swallow;
         }
         // the let go of a key whose press was the mode's (a letter, Tab): the game never saw it pressed
@@ -69,9 +83,10 @@ Act Mode::key(const Key& k) {
     }
     const bool modifier = k.ctrl || k.alt;
     if (k.scan == kToggleScan && !modifier && (walkingNow || (!on_ && k.chatEmpty))) {
+        if (k.repeat) return Act::Swallow;  // 3.0.18-beta.215: held - once a press, its letters not typed
         on_ = !on_;
         typing_ = false;
-        dirs_ = 0;
+        held_.clear();
         return Act::Toggle;
     }
     if (!on_) return Act::Pass;
@@ -89,16 +104,18 @@ Act Mode::key(const Key& k) {
     if (modifier) return Act::Pass;
     if (k.vk == 0x0D) {
         typing_ = true;
-        dirs_ = 0;
+        held_.clear();
         return Act::OpenChat;
     }
     const uint8_t d = dirOfScan(k.scan, k.extended);
     if (d == kStop) {
-        dirs_ = 0;
+        held_.clear();
         return Act::Swallow;
     }
     if (d) {
-        dirs_ = uint8_t(dirs_ | d);
+        bool known = false;
+        for (const Held& h : held_) known = known || (h.scan == k.scan && h.extended == k.extended);
+        if (!known && held_.size() < 8) held_.push_back(Held{k.vk, k.scan, k.extended, d});
         return Act::Swallow;
     }
     // 3.0.18-beta.209: the quick actions, by the keys' places (any layout)

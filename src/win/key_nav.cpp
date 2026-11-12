@@ -3,6 +3,7 @@
 #include "core/key_walk.hpp"
 #include "pad/core/logic/pad.hpp"
 #include "win/chat_window.hpp"
+#include "win/key_walk.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win::keynav {
@@ -25,7 +26,7 @@ State& state() {
 }
 
 // The pad bit a key stands for in a window; 0 none (core/key_walk: Space none since 3.0.18-beta.214)
-uint16_t bitOf(WPARAM vk) { return keywalk::windowButtonOf(unsigned(vk), GetKeyState(VK_SHIFT) < 0); }
+uint16_t bitOf(WPARAM vk) { return uagfx::keywalk::windowButtonOf(unsigned(vk), GetKeyState(VK_SHIFT) < 0); }
 
 bool arrow(WPARAM vk) { return vk == VK_UP || vk == VK_DOWN || vk == VK_LEFT || vk == VK_RIGHT; }
 
@@ -108,6 +109,12 @@ bool engaged() {
 uint16_t buttons() {
     State& s = state();
     if (!engaged()) return 0;
+    // 3.0.18-beta.215 (R-8KPDY9): a key's let go another hook took - Windows holds it no more, the window's button up
+    const uint16_t still = uagfx::keywalk::windowButtonsNow(s.held, uagfx::win::keywalk::keyDown);
+    if (still != s.held) {
+        s.taken = uint16_t(s.taken & ~(s.held & ~still));
+        s.held = still;
+    }
     const uint16_t now = uint16_t(s.held & ~s.gap);
     s.gap = 0;
     return now;

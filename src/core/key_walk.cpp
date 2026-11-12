@@ -39,4 +39,28 @@ uint16_t windowButtonOf(unsigned vk, bool shift) {
     }
 }
 
+uint8_t heldNow(uint8_t dirs, KeyDown down) {
+    static constexpr struct {
+        uint8_t dir;
+        unsigned vk;
+    } kKeys[] = {{kUp, 0x26}, {kDown, 0x28}, {kLeft, 0x25}, {kRight, 0x27}};
+    uint8_t now = 0;
+    for (const auto& k : kKeys)
+        if ((dirs & k.dir) && down(k.vk)) now = uint8_t(now | k.dir);
+    return now;
+}
+
+uint16_t windowButtonsNow(uint16_t buttons, KeyDown down) {
+    static constexpr struct {
+        uint16_t button;
+        unsigned vk;
+    } kKeys[] = {{uapad::kPadUp, 0x26},    {uapad::kPadDown, 0x28}, {uapad::kPadLeft, 0x25}, {uapad::kPadRight, 0x27},
+                 {uapad::kPadA, 0x0D},     {uapad::kPadB, 0x1B},    {uapad::kPadLB, 0x21},   {uapad::kPadRB, 0x22},
+                 {uapad::kPadY, 0x5D},     {uapad::kPadY, 0x79}};  // Y: the menu key or (Shift+) F10
+    uint16_t now = 0;
+    for (const auto& k : kKeys)
+        if ((buttons & k.button) && down(k.vk)) now = uint16_t(now | k.button);
+    return now;
+}
+
 }  // namespace uagfx::keywalk

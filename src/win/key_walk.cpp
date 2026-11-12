@@ -24,6 +24,7 @@ struct State {
     uint8_t mode = 0;  // 3.0.18-beta.208: the walk mode's keys
     ULONGLONG letGoAt = 0;
     std::string toldMap;  // the map the first walk was told on
+    int unseen = 0;       // 3.0.18-beta.215: let goes another hook took (told 20 times)
 };
 
 State& state() {
@@ -119,8 +120,20 @@ void lost() {
     LOG_INFO("keys: the window lost the keys - the arrows let go, the walk stops");
 }
 
+bool keyDown(unsigned vk) { return GetKeyState(int(vk)) < 0; }
+
 bool vector(float& x, float& y) {
-    const State& s = state();
+    State& s = state();
+    if (s.held) {  // 3.0.18-beta.215 (R-8KPDY9: the walk mode switched on took an arrow's let go, the walk went on)
+        const uint8_t still = uagfx::keywalk::heldNow(s.held, keyDown);
+        if (still != s.held) {
+            if (s.unseen++ < 20)
+                LOG_INFO("keys: an arrow's let go taken by another hook (%u) - Windows holds it no more",
+                         unsigned(s.held & ~still));
+            s.held = still;
+            if (!s.held) s.letGoAt = GetTickCount64();
+        }
+    }
     const uagfx::keywalk::Vec v = uagfx::keywalk::vectorOf(uint8_t(s.held | s.mode));
     x = v.x;
     y = v.y;

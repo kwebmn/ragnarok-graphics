@@ -17,6 +17,7 @@ struct State {
     walkmode::Mode mode;
     walkmode::FileFollow file;  // [interface] walk_mode: the settings' changes, not the toggle's own writes (.214)
     bool skipChar = false;   // the toggle's letter (` ё ') not typed
+    int unseen = 0;          // 3.0.18-beta.215: let goes another hook took (told 20 times)
     const Config* config = nullptr;
     std::string iniPath;
 };
@@ -71,6 +72,7 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     k.scan = unsigned((lp >> 16) & 0xFF);
     k.extended = ((lp >> 24) & 1) != 0;
     k.down = m == WM_KEYDOWN;
+    k.repeat = k.down && ((lp >> 30) & 1) != 0;  // 3.0.18-beta.215: the toggle once a press
     k.ctrl = GetKeyState(VK_CONTROL) < 0;
     k.alt = GetKeyState(VK_MENU) < 0;
     k.chatEmpty = chatwin::inputEmpty();
@@ -78,7 +80,9 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     tellDirs(s);
     switch (act) {
     case walkmode::Act::Pass: return false;
-    case walkmode::Act::Swallow: return true;
+    case walkmode::Act::Swallow:
+        if (k.down && k.scan == walkmode::kToggleScan) s.skipChar = true;  // the toggle held: its letters not typed
+        return true;
     case walkmode::Act::Toggle: {
         s.skipChar = true;
         LOG_INFO("keys: the walk mode %s (`)", s.mode.on() ? "on - W A S D walk, Enter opens the chat" : "off");
@@ -108,6 +112,11 @@ void frame(const Config& config, const std::string& iniPath) {
     State& s = state();
     s.config = &config;
     s.iniPath = iniPath;
+    // 3.0.18-beta.215 (R-8KPDY9): a walking key's let go another hook took (a field of the game's took the focus)
+    if (s.mode.verify(keywalk::keyDown)) {
+        tellDirs(s);
+        if (s.unseen++ < 20) LOG_INFO("keys: a walk mode key's let go taken by another hook - its walk stops");
+    }
     // the start, or «Налаштування» switched it (3.0.18-beta.214: not the toggle's own write read back - R-CX44S5)
     if (s.file.follow(config.walkMode, GetTickCount64())) {
         if (s.mode.on() != config.walkMode) {
