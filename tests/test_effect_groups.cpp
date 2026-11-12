@@ -191,6 +191,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"aura", Characters}, {"aura_portals", Characters},
         {"silhouette", Characters},
         {"skills_soft", SkillEffects}, {"crowd_effects", SkillEffects}, {"mage_effects", SkillEffects},
+        {"crisp_storm_gust", SkillEffects},  // 3.0.18-beta.181
         {"sword_effects", SkillEffects}, {"acolyte_effects", SkillEffects}, {"archer_effects", SkillEffects},
         {"thief_effects", SkillEffects}, {"merchant_effects", SkillEffects}, {"other_effects", SkillEffects},
         {"hit_effects", SkillEffects}, {"item_effects", SkillEffects}, {"status_effects", SkillEffects},

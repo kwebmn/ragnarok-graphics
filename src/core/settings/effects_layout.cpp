@@ -42,6 +42,7 @@ const EffectLayout kEffects[] = {
      {},
      {},
      0},
+    {"effects.crisp_storm_gust", {}, {}, {}, 0},  // 3.0.18-beta.181
     {"effects.sword_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
     {"effects.acolyte_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
     {"effects.archer_effects", {}, {}, {}, 0},  // 3.0.15-beta.12

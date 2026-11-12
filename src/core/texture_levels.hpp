@@ -24,6 +24,8 @@ public:
     const ColorKey& key() const { return key_; }
     void setKey(const ColorKey& key);  // the alpha of keyed texels changes: every level is sent again
     void changed(int level, Rect r);   // r is clipped to the level
+    // 3.0.18-beta.181: a level written since its last upload (a new texture: everywhere)
+    bool dirty(int level) const { return level >= 0 && level < levels() && !dirty_[size_t(level)].empty(); }
     // AI textures (0.13): a cell of the game's sprite cache got a new frame (of `source`, sprite_exe::Source); the
     // next upload of level 0 names it. 2.5.23: own - the frame in its sprite's own colours when the game wrote it in
     // a dye (the cell's size; else none).

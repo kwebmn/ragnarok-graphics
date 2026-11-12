@@ -40,6 +40,7 @@
 #include "win/map_entry_hook.hpp"
 #include "win/pick_hook.hpp"
 #include "win/sharp_frames.hpp"
+#include "win/sharp_specks.hpp"
 #include "win/sort_guard.hpp"
 #include "win/world_mouse.hpp"
 #include "win/server_night.hpp"
@@ -2013,9 +2014,9 @@ void Context::logStats(bool final) {
         std::snprintf(full, sizeof full, "; %u textures written in full colour so far (%u MB waiting)",
                       fullColourTextures(), unsigned(TextureLevels::fullBytes() >> 20));
     if (stats_.frames || stats_.readBacks)
-        LOG_INFO("%u frames in %.1f s (%.1f fps), %u reads of the frame from the GPU%s%s%s%s", stats_.frames,
+        LOG_INFO("%u frames in %.1f s (%.1f fps), %u reads of the frame from the GPU%s%s%s%s%s", stats_.frames,
                  ms / 1000.0, ms ? stats_.frames * 1000.0 / ms : 0.0, stats_.readBacks, crisp::stats().c_str(),
-                 sharpframes::stats().c_str(), busy, full);
+                 sharpframes::stats().c_str(), sharpspecks::stats().c_str(), busy, full);
     // 3.0.18-beta.161 (the owner: «делай 1 и 2» - the costs measured before the game's access is redone): the
     // driver's own work at a present, the game's memory it read (each read a call into Windows) and the controller's
     // checks of that memory (a VirtualQuery each)

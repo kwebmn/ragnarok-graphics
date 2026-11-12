@@ -73,6 +73,7 @@ private:
     D3DVIEWPORT7 viewport_{};
     std::vector<uint8_t> soft_;  // 0.27: a draw of the level 99 aura's vertices, softer
     std::vector<uint8_t> sharp_;  // 3.0.18-beta.178: a number's draw moved into its sharp copy (win/sharp_frames)
+    std::vector<uint32_t> specks_;  // 3.0.18-beta.181: a Storm Gust texture's texels (win/sharp_specks)
     auraportal::Portals portals_;
     // 3.0.13-beta.17: [effects] fade_models - the character's body on the screen this frame, the camera, each model's
     // see-through

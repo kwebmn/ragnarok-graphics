@@ -26,6 +26,7 @@
 #include "win/net_smooth.hpp"
 #include "win/paths.hpp"
 #include "win/sharp_frames.hpp"
+#include "win/sharp_specks.hpp"
 #include "win/skill_delay_watch.hpp"
 #include "win/buff_overlay.hpp"
 #include "win/combo_watch.hpp"
@@ -295,6 +296,18 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     if (!vertices || vertexCount == 0) return DDERR_INVALIDPARAMS;
     win::Context& c = win::Context::get();
     DrawCmd cmd;
+    // 0.28: the renderer learns what effect a draw is of (the fireflies are drawn anew). 3.0.18-beta.181: found first
+    const effect_exe::Tag tag = win::drawnEffect(vertices);
+    // 3.0.18-beta.181: [effects] crisp_storm_gust - Storm Gust's texture looked at before it goes up (its texels then
+    // as the game last wrote them): a sheet of its snow gets a copy at real resolution (win/sharp_specks)
+    const bool crispStorm = tag.kind == effect_exe::Kind::Skill && tag.id == win::sharpspecks::kStormGust &&
+                            textures_[0] && c.effects().crispStormGust && c.enhanced();
+    if (crispStorm) {
+        Surface7* t = textures_[0];
+        if (win::sharpspecks::wanted(t->gpuTexture(), t->topDirty()) && t->topArgb(specks_) &&
+            specks_.size() == size_t(t->width()) * size_t(t->height()))
+            win::sharpspecks::note(t->gpuTexture(), specks_.data(), t->width(), t->height());
+    }
     bool hasTexture[2] = {false, false};
     for (int i = 0; i < 2; ++i) {
         Surface7* t = textures_[i];
@@ -307,9 +320,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     win::crisp::tileDraw(textures_[0], cmd);  // stage 6: a window tile carries its twin
     DrawSetup setup = resolveDrawSetup(states_, false, hasTexture);  // the target has no alpha
     setup.ui = scene_.ui();
-    // 0.27: the level 99 aura softer - its vertices' colour and alpha, in a copy (the game's stay as they are).
-    // 0.28: the renderer learns what effect a draw is of (the fireflies are drawn anew).
-    const effect_exe::Tag tag = win::drawnEffect(vertices);
+    // 0.27: the level 99 aura softer - its vertices' colour and alpha, in a copy (the game's stay as they are)
     // 3.0.15-beta.2: [effects] new_casting - the casting's magic circle on the ground, drawn before its walls and
     // before anything here uses the scratch copies (it goes through record too)
     if (!castCircleNext_ && fvf == d3d7::FVF_TL1 && !setup.ui && tag.kind == effect_exe::Kind::Skill &&
@@ -347,6 +358,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         if (const sprite_cells::Cell* n = textures_[0]->spriteNumberAt((u0 + u1) / 2, (v0 + v1) / 2, texW, texH))
             win::sharpframes::swap(*n, texW, texH, cmd, setup, vertices, vertexCount, fvf, sharp_);
     }
+    if (crispStorm && !setup.ui) win::sharpspecks::swap(cmd, setup);  // 3.0.18-beta.181: its snow from its copy
     cmd.state = c.record.addState(setup);
     cmd.primitive = uint32_t(type);
     cmd.fvf = fvf;
@@ -392,7 +404,8 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     const magelook::Element element = look.tone;
     const bool branchOn = [&] {
         switch (look.branch) {
-            case magelook::Branch::Mage:
+            case magelook::Branch::Mage:  // 3.0.18-beta.181: Storm Gust as the game's with crisp_storm_gust
+                if (fx.crispStormGust && tag.id == win::sharpspecks::kStormGust) return false;
                 return fx.mageEffects && (element == magelook::Element::Fire    ? fx.mageFire
                                           : element == magelook::Element::Water ? fx.mageWater
                                           : element == magelook::Element::Wind  ? fx.mageWind

@@ -219,6 +219,10 @@ struct EffectSettings {
     // сделали с фаерволом» - «2», one choice for all): mage_soft - every class's new skills' effects soft: the game's
     // own added light, tinted a little in the element's colours and brighter (Part::Soft), not the crisp layer
     bool mageSoft = false;
+    // 3.0.18-beta.181 (the owner: Storm Gust «как в игре, только чётко»): crisp_storm_gust - Storm Gust as the game
+    // draws it (its colours, its added light; the mages' look aside for it), its snow drawn again at real resolution
+    // (core/sharp_specks, win/sharp_specks); off as new looks are
+    bool crispStormGust = false;
     // 3.0.15-beta.12 (the owner: «делай еффекты по всем остальным персонажам»): every other class's skills likewise
     // (core/mage_looks.hpp lookOf), a switch a branch, off as new looks are
     bool swordEffects = false, acolyteEffects = false, archerEffects = false, thiefEffects = false;

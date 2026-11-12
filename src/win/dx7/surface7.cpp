@@ -196,6 +196,11 @@ bool Surface7::topArgb(std::vector<uint32_t>& out) const {
     return true;
 }
 
+bool Surface7::topDirty() const {
+    const Surface7* s = top();
+    return role_ == SurfaceRole::Texture && s->levels_ && s->levels_->dirty(0);
+}
+
 Image& Surface7::pixels() { return role_ == SurfaceRole::Texture ? top()->levels_->level(level_) : image_; }
 
 ColorKey Surface7::colorKey() const { return role_ == SurfaceRole::Texture ? top()->levels_->key() : key_; }

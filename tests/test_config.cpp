@@ -6,6 +6,7 @@
 #include "core/config.hpp"
 #include "core/game_camera.hpp"
 #include "core/live_config.hpp"
+#include "core/settings/effects_layout.hpp"
 #include "core/settings/navigation.hpp"
 #include "core/settings/schema.hpp"
 #include "test.hpp"
@@ -906,6 +907,23 @@ TEST(config_interface_minimap) {
     CHECK(u.applied[44] == "tracker 0 -> 1" && u.applied[45] == "party 0 -> 1" && u.applied[46] == "target 0 -> 1");
     CHECK(u.applied[47] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
+}
+
+// 3.0.18-beta.181 (the owner: Storm Gust «как в игре, только чётко»): [effects] crisp_storm_gust - off as new looks
+// are, a box of the Effects page (with the mages' looks), by hand only (no effects' set turns it on)
+TEST(config_crisp_storm_gust) {
+    CHECK(!parseConfig("").effects.crispStormGust);
+    CHECK(parseConfig("[effects]\ncrisp_storm_gust = 1\n").effects.crispStormGust);
+    const settings::IniSetting* s = settings::findSetting("effects.crisp_storm_gust");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Effects && s->control == settings::Control::Check && s->flag != nullptr);
+    bool shown = false;
+    const settings::EffectLayout* fx = settings::effectLayout();
+    for (int e = 0; e < settings::effectLayoutCount(); ++e)
+        shown = shown || std::strcmp(fx[e].box, "effects.crisp_storm_gust") == 0;
+    CHECK(shown);
+    CHECK(parseConfig("[effects]\npreset = strong\n").effects.crispStormGust == false);
 }
 
 // 3.0.18-beta.180: [interface] loading_bar - the game's map loading bar in the new look; on with the new interface,

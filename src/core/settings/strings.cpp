@@ -1062,6 +1062,19 @@ constexpr Entry kTexts[] = {
      "яскравіше, замість чітких щільних шарів — Safety Wall, Sanctuary, Pneuma та інші виглядають легше.",
      "Все новые эффекты навыков мягкими: собственное свечение игры и прозрачный свет, немного подкрашенный в цвета "
      "стихии и ярче, вместо чётких плотных слоёв — Safety Wall, Sanctuary, Pneuma и остальные выглядят легче."},
+    // 3.0.18-beta.181: Storm Gust as the game's, its snow at real resolution
+    {Text::FxCrispStormGust, "Storm Gust sharp, as the game's", "Storm Gust чітко, як у грі",
+     "Storm Gust чётко, как в игре"},
+    {Text::FxCrispStormGustHint,
+     "Storm Gust in the game's own colours and light, its snowflakes drawn anew at the screen's resolution: each one "
+     "sharp, in its place, size and brightness, instead of a stretched blot. Its cloud, whirl, lightning and ice stay "
+     "the game's. Over the mages' new look for it.",
+     "Storm Gust у власних кольорах і світлі гри, його сніжинки намальовано заново в роздільності екрана: кожна "
+     "чітка, на своєму місці, свого розміру й яскравості, замість розтягнутої плями. Хмара, вихор, блискавки й лід — "
+     "як у грі. Замість нового вигляду магів для нього.",
+     "Storm Gust в собственных цветах и свете игры, его снежинки нарисованы заново в разрешении экрана: каждая "
+     "чёткая, на своём месте, своего размера и яркости, вместо растянутого пятна. Облако, вихрь, молнии и лёд — как "
+     "в игре. Вместо нового вида магов для него."},
     {Text::FxSword, "Swordsmen's new effects", "Нові ефекти мечників", "Новые эффекты мечников"},
     {Text::FxSwordHint,
      "Swordsman, Knight, Crusader: Bash, Magnum Break, Bowling Bash, Brandish Spear, Grand Cross, Shield Boomerang.",

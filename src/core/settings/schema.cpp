@@ -665,6 +665,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxMageSpiritHint, "", &E::mageSpirit},
         {"effects", "mage_soft", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMageSoft,
          Text::FxMageSoftHint, "", &E::mageSoft},  // 3.0.16-beta.27
+        {"effects", "crisp_storm_gust", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::FxCrispStormGust, Text::FxCrispStormGustHint, "", &E::crispStormGust},  // 3.0.18-beta.181
         {"effects", "sword_effects", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxSword,
          Text::FxSwordHint, "", &E::swordEffects},  // 3.0.15-beta.12
         {"effects", "acolyte_effects", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxAcolyte,

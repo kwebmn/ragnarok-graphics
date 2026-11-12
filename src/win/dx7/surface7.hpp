@@ -76,6 +76,8 @@ public:
     // 3.0.15-beta.1 (2.7.53's, back): a texture's top level in ARGB (rows from the top) - false for a surface that is
     // not a texture (core/effect_capture's textures)
     bool topArgb(std::vector<uint32_t>& out) const;
+    // 3.0.18-beta.181: its top level written since it last went up (a new texture too) - core/texture_levels' dirty
+    bool topDirty() const;
     int width() const { return width_; }
     int height() const { return height_; }
 
