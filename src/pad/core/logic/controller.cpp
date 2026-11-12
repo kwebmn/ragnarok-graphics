@@ -259,7 +259,8 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
         if (!enabled_) stopAttacking();
     }
     followStep(world, now, out);  // 3.0.13-beta.11: with the window behind and no pad too
-    if (!enabled_ || !pad.connected || !view.focused || !world.inGame() || world.dead()) {
+    // 3.0.18-beta.207: the arrows walk with the pad switched off too (pad.keyWalk)
+    if ((!enabled_ && !pad.keyWalk) || !pad.connected || !view.focused || !world.inGame() || world.dead()) {
         walking_ = false;
         ringSteadyFromMs_.reset();
         aiming_ = false;
@@ -295,6 +296,10 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
     }
     if (dialog_ != NpcDialog::None) out.notes.push_back("NPC window closed");
     dialog_ = NpcDialog::None;
+    if (!enabled_) {  // 3.0.18-beta.207: the pad off, the arrows walking - nothing else of the pad
+        walk(pad, world, view, now, out);
+        return out;
+    }
     bHeldSinceMs_.reset();
     if (view.mouseClicked && (wantAttack_ || approach_)) {  // the player took over with the mouse
         stopAttacking();
@@ -367,7 +372,7 @@ void Controller::onClientWalk(Cell dest, const WorldState& world, uint32_t now) 
 void Controller::walk(const PadState& pad, const WorldState& world, const ViewInfo& view, uint32_t now,
                       TickOutput& out) {
     const float mag = std::sqrt(pad.lx * pad.lx + pad.ly * pad.ly);
-    if (directWalk_) {  // 3.0.11-beta.88: no mouse
+    if (directWalk_ || pad.keyWalk) {  // 3.0.11-beta.88: no mouse; 3.0.18-beta.207: the arrows never hold it
         walkDirect(pad, mag, world, now, out);
         return;
     }

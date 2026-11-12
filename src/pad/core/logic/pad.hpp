@@ -28,6 +28,9 @@ struct PadState {
     float lx = 0, ly = 0;  // -1..1, +y = stick pushed up
     float rx = 0, ry = 0;
     float lt = 0, rt = 0;  // 0..1
+    // 3.0.18-beta.207 (the keyboard concept, stage 1): lx / ly are the arrows' (win/key_walk) - a walk without the
+    // mouse whatever [interface] pad_walk says, with the pad switched off too
+    bool keyWalk = false;
 };
 
 enum class Rumble { None, TargetSwitch, TargetCleared, PadOn, PadOff, Denied, CameraOn, CameraOff };

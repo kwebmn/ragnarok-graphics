@@ -1,3 +1,4 @@
+#include "win/key_walk.hpp"
 #include "win/ground_marks.hpp"
 
 #include <algorithm>
@@ -315,7 +316,8 @@ void draw(FrameRecord& record, int width, int height) {
     uint32_t target = 0, next = 0, mate = 0;
     int toX = 0, toY = 0;
     const bool padNow = uapad::runtime::look().shown;
-    const bool walking = padNow && uapad::runtime::walkTarget(toX, toY);  // 3.0.11-beta.88: the stick without the mouse
+    // 3.0.11-beta.88: the stick without the mouse; 3.0.18-beta.207: or the arrows
+    const bool walking = (padNow || keywalk::walking()) && uapad::runtime::walkTarget(toX, toY);
     Walk& w = s.walk;  // 3.0.11-beta.103: faded in while it walks, out after
     float wayEast = 0, wayNorth = 0;
     bool cut = false;

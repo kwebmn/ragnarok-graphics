@@ -8571,6 +8571,14 @@ constexpr Entry kTexts[] = {
     {Text::LauncherChannelBeta, "Beta", "Бета", "Бета"},
     {Text::LauncherRunningCount, "The game is running · windows: {1}", "Гра вже запущена · вікон: {1}",
      "Игра уже запущена · окон: {1}"},
+    {Text::InterfaceArrowsWalk, "Walking with the arrows", "Ходьба стрілками", "Ходьба стрелками"},
+    {Text::InterfaceArrowsWalkHint,
+     "The arrow keys walk the character while the chat line is empty: up is away from the camera, two arrows a "
+     "diagonal, let go - it stops. Off: the arrows are the game's, as before.",
+     "Стрілки ведуть персонажа, поки рядок чату порожній: вгору — від камери, дві стрілки — навскіс, відпустили — "
+     "зупиняється. Вимкнено: стрілки, як раніше, у гри.",
+     "Стрелки ведут персонажа, пока строка чата пуста: вверх — от камеры, две стрелки — по диагонали, отпустили — "
+     "останавливается. Выключено: стрелки, как раньше, у игры."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

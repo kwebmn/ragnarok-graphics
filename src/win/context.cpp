@@ -1,3 +1,4 @@
+#include "win/key_walk.hpp"
 #include "win/upkeep_watch.hpp"
 #include "win/context.hpp"
 
@@ -1252,6 +1253,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     g_parts.mark("targetpanel", nowMs());
     groundmarks::look(config.targetRing);  // 3.0.11-beta.87: the target's ring on the ground
     groundmarks::walkLook(config.walkArrow, config.walkMark);  // 3.0.11-beta.103: the stick's arrow's look
+    keywalk::setEnabled(config.arrowsWalk);                    // 3.0.18-beta.207: the arrows walk
     groundmarks::groundTimers(config.groundTimers);  // 3.0.16-beta.21
     hotbarwin::setTimers(config.groundTimers);       // 3.0.16-beta.22: on the slots too
     groundmarks::skillCells(config.skillCells);                // 3.0.11-beta.142: a ground skill's cells

@@ -949,6 +949,7 @@ enum class Text : uint16_t {
     LauncherCheckingNow, LauncherChecking, LauncherCheckFailed,  // .201: the update check
     LauncherCheck, LauncherChannelBeta,  // .202: «Перевірити» beside «ГРАТИ», «Реліз | Бета»
     LauncherRunningCount,                // .206: «Гра вже запущена · вікон: N» under «+ ЩЕ ОДНЕ ВІКНО»
+    InterfaceArrowsWalk, InterfaceArrowsWalkHint,  // .207: the keyboard concept, stage 1
     Count
 };
 

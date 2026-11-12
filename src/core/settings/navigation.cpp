@@ -218,8 +218,8 @@ const std::vector<InterfaceSection>& interfaceSections() {
         {Text::InterfaceSecNet, {"interface.smooth_fixes", "interface.predict_walk", "interface.net_badge"}},
         // 3.0.18-beta.125 (the concept «Ігровий інтерфейс»): our windows' keys
         {Text::InterfaceSecKeys,
-         {"interface.key_hunt", "interface.key_mvp", "interface.key_tracker", "interface.key_party",
-          "interface.key_recap"}},
+         {"interface.arrows_walk", "interface.key_hunt", "interface.key_mvp", "interface.key_tracker",
+          "interface.key_party", "interface.key_recap"}},
         {Text::InterfaceSecWindows,
          {"interface.items",     "interface.status",       "interface.skills",       "interface.equip",
           "interface.npc_talk",  "interface.npc_remember", "interface.shop",         "interface.storage",

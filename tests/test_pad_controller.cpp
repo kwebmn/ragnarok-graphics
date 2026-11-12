@@ -64,6 +64,48 @@ TEST(ctl_direct_walk_along_the_stick) {
     CHECK(!c.walkTarget());
 }
 
+// 3.0.18-beta.207 (the keyboard concept, stage 1): the arrows walk as the stick does without the mouse - whatever
+// [interface] pad_walk says and with the pad switched off; let go, the character stands at the next cell
+TEST(ctl_keys_walk_without_the_mouse_mode) {
+    Controller c(Config{});  // the pad's own walk holds the mouse (pad_walk mouse): the keys still walk without it
+    c.setLook(0, 1);
+    WorldState w = world();
+    PadState p = pad();
+    p.lx = 1.0f;
+    p.keyWalk = true;
+    TickOutput o = c.tick(p, w, view(), 100);
+    CHECK(!o.mouse.active);
+    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x00a7 && decodePos3(pkt(o, 0).data(), 5) == (Cell{105, 100}));
+}
+
+TEST(ctl_keys_walk_with_the_pad_off) {
+    Controller c(Config{});
+    c.setLook(0, 1);
+    WorldState w = world();
+    c.tick(pad(kPadBack), w, view(), 50);  // Back: the pad off
+    CHECK(!c.enabled());
+    PadState p = pad();
+    p.ly = 1.0f;
+    p.keyWalk = true;
+    TickOutput o = c.tick(p, w, view(), 100);
+    CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{100, 105}));
+}
+
+TEST(ctl_keys_let_go_stops) {
+    Controller c(Config{});
+    c.setLook(0, 1);
+    WorldState w = world();
+    PadState p = pad();
+    p.lx = 1.0f;
+    p.keyWalk = true;
+    c.tick(p, w, view(), 100);
+    PadState let = pad();  // the arrows let go: the keys still the input for this tick
+    let.keyWalk = true;
+    TickOutput o = c.tick(let, w, view(), 300);
+    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x00a7 && decodePos3(pkt(o, 0).data(), 5) == (Cell{101, 100}));
+    CHECK(!c.walkTarget());
+}
+
 TEST(ctl_direct_walk_turns_with_the_camera) {
     Controller c(Config{});
     c.setDirectWalk(true);

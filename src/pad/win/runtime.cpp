@@ -42,6 +42,7 @@
 #include "pad/win/log.hpp"
 #include "pad/win/overlay.hpp"
 #include "pad/win/pads.hpp"
+#include "win/key_walk.hpp"
 #include "win/ui_sheet.hpp"
 #include "win/disk.hpp"
 #include "win/paths.hpp"
@@ -1251,7 +1252,7 @@ void lookAndGround(DWORD now) {
         control.setLook(double(view[2] / len), double(view[8] / len));
     else
         control.clearLook();
-    if (!s.directWalk) return;
+    if (!s.directWalk && !uagfx::win::keywalk::enabled()) return;  // 3.0.18-beta.207: the arrows walk without it too
     int cx = 0, cy = 0, cw = 0, ch = 0;  // 3.0.11-beta.102: the character's cell as the game shows it now
     if (uagfx::win::readPlayerCell(cx, cy, cw, ch))
         control.setSelfCell(Cell{cx, cy});
@@ -1536,6 +1537,15 @@ void tick() {
     if (talk && s.talkDown && s.talkOwned) padIn.buttons = uint16_t(padIn.buttons & ~talk);  // .214: not yet a tap
     if (talkTap) padIn.buttons = uint16_t(padIn.buttons | talk);  // .214: the tap - a press this tick, let go the next
     backCloses(padIn, view);  // 3.0.11-beta.93: each tick, so the press closing the tile closes nothing more
+    {  // 3.0.18-beta.207 (the keyboard concept, stage 1): the arrows' walk - the stick's while the real stick rests
+        float kx = 0, ky = 0;
+        if (uagfx::win::keywalk::vector(kx, ky) && std::hypot(padIn.lx, padIn.ly) <= s.cfg.deadzone) {
+            padIn.lx = kx;
+            padIn.ly = ky;
+            padIn.keyWalk = true;
+            padIn.connected = true;
+        }
+    }
     const TickOutput out = s.session->tick(padIn, view, now);
     if (s.session->controller().aimView())  // 3.0.11-beta.146 (R-VYV3AG): the pad aims - the game's own wait ended
         uagfx::win::groundmarks::cancelGameAim("the pad aims its own");
