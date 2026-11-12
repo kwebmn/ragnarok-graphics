@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.228 — what's new · 2026-11-12
+
+- The character make by the keys: ↑ ↓ go through the rows - the name, the hair, its colour, the three stat pairs (a frame on the row); ← → change the row chosen (in a pair: the point left or right), and on the name's row they move its caret as before. Enter - «Створити», Esc - «Скасувати» (the game's). Under the pairs: the hint «↑ ↓ рядок · ← → змінити».
+- To check: on the make screen ↓ - the frame on the hair, ← → change it; on down to the pairs and back up to the name (← → move the name's caret again); type a name, Enter - the character is made.
+
 # uaRO Graphics 3.0.18-beta.227 — what's new · 2026-11-12
 
 - «Спорядження» (Alt+Q): the character's head is over the body again - the body's neck no longer covers the mouth (R-UC9NT7). Every job had it since beta .126: the job's .imf layer order was read the other way round. Now the order is the game world's; in the frames where the game puts the body over the head, the low headgear goes under the body too, as in the game.
