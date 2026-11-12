@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.206 — what's new · 2026-11-12
+
+- While the game runs, the big button stays gold and says what it does: «+ ONE MORE WINDOW», with «The game is running · windows: N» under it (how many game windows are open). It was a dark «GAME RUNNING · + WINDOW» before, more like a label than a button.
+
 # uaRO Graphics 3.0.18-beta.205 — what's new · 2026-11-12
 
 - The first screen has a «Create an account» button at the top: it starts the game with the registration open (in the game, as «Create an account» on the login screen; the site's registration page when the site does not answer). With an update offered, the game starts for the registration without it.
