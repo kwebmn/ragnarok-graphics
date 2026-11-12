@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.229 — what's new · 2026-11-12
+
+- Fixed the «negative» and the washed-white ground after some skill effects (R-H2CQCJ, the old Berserk reports on moc_pryd05 and moc_fild11): the game draws some effects in inverted colours and never sets the usual ones back - after such an effect the whole world turned into a negative or the ground washed white. Now the inverted colours stay on the effect itself. The switch «Без негативу після ефектів умінь» in the group «Виправлення гри» (on; in «Пауза» the game as it is).
+- To check: the same skills (Assumptio, Berserk and others) - the world and the ground in their usual colours; if a negative or a wash still shows, send a report - its log will have a line about the inverted texture.
+
 # uaRO Graphics 3.0.18-beta.228 — what's new · 2026-11-12
 
 - The character make by the keys: ↑ ↓ go through the rows - the name, the hair, its colour, the three stat pairs (a frame on the row); ← → change the row chosen (in a pair: the point left or right), and on the name's row they move its caret as before. Enter - «Створити», Esc - «Скасувати» (the game's). Under the pairs: the hint «↑ ↓ рядок · ← → змінити».
