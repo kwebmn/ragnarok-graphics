@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.195 — what's new · 2026-11-12
+
+- «Changelog»: a click on the «What's new» card opens a screen with every version. On the left the versions by day («Today», «Yesterday», dates), marked «beta» / «release» and «new» for those out since you last looked; on the right what changed in the chosen one. At the top the filters «All», «Releases only», «New for me · N».
+- A point that names a setting has «Try it» beside it: it opens the settings searched for that name.
+- On the «Release» channel the changelog lists the releases only, each with its betas' points. The wheel scrolls the list and the page, ↑ / ↓ walk the versions, Esc or «← To the game» go back.
+
 # uaRO Graphics 3.0.18-beta.194 — what's new · 2026-11-12
 
 - «How the game looks» right on the first screen: a click on the line over «PLAY» opens a card with pictures - «Picture» (Auto, As in the game, Improved, Remaster), «Interface» (New, New screen, the game's windows, Classic), «Textures» (HD, HD light, Original); the current choice outlined in gold, «changed N» when something was changed by hand.
