@@ -17,11 +17,15 @@ namespace uagfx::menuwin {
 enum class Kind : uint8_t { Alive, Dead, DeadToken };
 // 3.0.18-beta.121 (the concept «Ігровий інтерфейс», stage 4): ours over the game's in the menu - «Налаштування»,
 // «Розмістити інтерфейс», «Тест графіки», «Надіслати звіт» (not the game's buttons: the driver does them)
-enum class Action : uint8_t { Revive, SavePoint, CharSelect, Exit, Back, Settings, Layout, Test, Report, Keys };
+enum class Action : uint8_t {
+    Revive, SavePoint, CharSelect, Exit, Back, Settings, Layout, Test, Report, Keys, Account
+};
 bool ours(Action a);
 // 3.0.18-beta.225 (the keyboard concept's cheat sheet): «Клавіші» - the card itself shows the keys (keysView), the
 // game's menu stays open
 bool local(Action a);
+// 3.0.18-beta.226 (the owner: «смену аккаунта в меню ескейпа вынести в самый верх»): «Змінити акаунт» first - the
+// game's character select button (0x9A), the driver presses its «Назад» on to the login (win/char_select)
 std::vector<Action> actions(Kind k);  // as shown, top down
 int buttonId(Kind k, Action a);       // the game's window's own button; 0 not in it
 int firstFocus(Kind k);               // «Повернутися до гри» - Enter by chance changes nothing
@@ -31,6 +35,7 @@ struct Texts {
     std::string revive, savePoint, charSelect, exit, back;
     std::string settings, layout, test, report;  // 3.0.18-beta.121
     std::string keys, keysBack;                  // 3.0.18-beta.225: «Клавіші», «Назад»
+    std::string account;                         // 3.0.18-beta.226: «Змінити акаунт»
     std::string enter, esc;  // the keys' hints (the controller's buttons while played with it)
     // 3.0.11-beta.277 (the owner's feature 8): the death's last hits - «Останні удари · {1} шкоди», their lines
     std::string recapTitle;

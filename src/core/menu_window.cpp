@@ -26,6 +26,7 @@ const std::string& wordsOf(const Texts& t, Action a) {
         case Action::Test: return t.test;
         case Action::Report: return t.report;
         case Action::Keys: return t.keys;
+        case Action::Account: return t.account;
         case Action::Back: break;
     }
     return t.back;
@@ -35,8 +36,8 @@ const std::string& wordsOf(const Texts& t, Action a) {
 
 std::vector<Action> actions(Kind k) {
     switch (k) {
-        case Kind::Alive:  // 3.0.18-beta.121: ours over the game's
-            return {Action::Settings, Action::Keys, Action::Layout, Action::Test, Action::Report,
+        case Kind::Alive:  // 3.0.18-beta.121: ours over the game's; .226: «Змінити акаунт» on the top
+            return {Action::Account, Action::Settings, Action::Keys, Action::Layout, Action::Test, Action::Report,
                     Action::CharSelect, Action::Exit, Action::Back};
         case Kind::Dead: return {Action::SavePoint, Action::CharSelect, Action::Exit, Action::Back};
         case Kind::DeadToken: break;
@@ -53,7 +54,8 @@ bool local(Action a) { return a == Action::Keys; }
 int buttonId(Kind k, Action a) {
     if (ours(a)) return 0;
     if (a == Action::Back) return 0x77;
-    if (k == Kind::Alive) return a == Action::CharSelect ? 0x9A : a == Action::Exit ? 0x9B : 0;
+    if (k == Kind::Alive)
+        return a == Action::CharSelect || a == Action::Account ? 0x9A : a == Action::Exit ? 0x9B : 0;
     switch (a) {
         case Action::SavePoint: return 0x9A;
         case Action::CharSelect: return 0xBA;

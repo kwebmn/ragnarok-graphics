@@ -86,6 +86,8 @@ struct State {
     int goTo = -1;            // .275: the place (of all pages) the carousel steps the game's choice to
     ULONGLONG goToSince = 0;  // 3.0.18-beta.213: when that chase began (given up after 4 s)
     std::vector<int> shownPlaces;  // .275: the place each position shows (-1 none)
+    ULONGLONG toLoginAt = 0;       // 3.0.18-beta.226: «Змінити акаунт» pressed (0: not)
+    ULONGLONG toLoginSeen = 0;     // .226: the game's select first seen for it
 };
 
 State& state() {
@@ -328,6 +330,26 @@ void step(State& s, int by) {  // .275: the carousel one place on (round)
     s.goTo = to;
 }
 
+// 3.0.18-beta.226 («Змінити акаунт»): the game's select left by its «Назад» once it has stood 0.3 s (its own time to
+// take a press); true while that is on (the new one not shown). Not come within 20 s (the server kept the character
+// in the world): forgotten
+bool toLoginFrame(State& s, uint32_t window) {
+    const ULONGLONG now = GetTickCount64();
+    if (now - s.toLoginAt > 20000) {
+        LOG_INFO("characters: «Змінити акаунт» - no character select within 20 s, forgotten");
+        s.toLoginAt = s.toLoginSeen = 0;
+        return false;
+    }
+    if (!window || read32(camera::kModeMgr + camera::kModeType) != 0) return false;
+    if (!s.toLoginSeen) s.toLoginSeen = now;
+    if (now - s.toLoginSeen < 300) return true;
+    send(s, 0, cs::gameButton(cs::Button::Back), "«Змінити акаунт» - «Назад» to the login");
+    s.toLoginAt = s.toLoginSeen = 0;
+    s.wanted.clear();
+    s.makeWanted = false;
+    return true;
+}
+
 void press(State& s, cs::Button b) {
     const int chosen = s.show.selected;
     const cs::Slot none;
@@ -360,6 +382,11 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     const uint32_t window = gameSelect();
     hold(s, window, on);
     if (window) s.chosen = chosenOf(s, window);  // 3.0.11-beta.175: the shelf's last character
+    if (s.toLoginAt && toLoginFrame(s, window)) {  // 3.0.18-beta.226: «Змінити акаунт» - not shown, left
+        hide(s);
+        s.window = 0;
+        return;
+    }
     if (window && (!s.wanted.empty() || s.makeWanted)) wantFrame(s, window);  // 3.0.11-beta.176: «Одразу в гру»
     if (!window) {
         s.wanted.clear();
@@ -547,6 +574,12 @@ bool enterByName(const std::string& name) {
 }
 
 accounts::LastChar entered() { return state().chosen; }
+
+void toLogin(bool on) {  // 3.0.18-beta.226
+    State& s = state();
+    s.toLoginAt = on ? GetTickCount64() : 0;
+    s.toLoginSeen = 0;
+}
 
 void beforeGameDraw() {
     State& s = state();

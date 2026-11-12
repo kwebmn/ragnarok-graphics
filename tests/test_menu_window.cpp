@@ -40,8 +40,12 @@ float measure(const std::string& s, float px, bool) {
 TEST(menu_window_buttons_of_each_window) {
     using A = menuwin::Action;
     CHECK((menuwin::actions(menuwin::Kind::Alive) ==  // 3.0.18-beta.121: ours over the game's
-           std::vector<A>{A::Settings, A::Keys, A::Layout, A::Test, A::Report, A::CharSelect, A::Exit,
-                          A::Back}));  // 3.0.18-beta.225: «Клавіші» after «Налаштування»
+           std::vector<A>{A::Account, A::Settings, A::Keys, A::Layout, A::Test, A::Report, A::CharSelect, A::Exit,
+                          A::Back}));  // .225: «Клавіші» after «Налаштування»; .226: «Змінити акаунт» first
+    // 3.0.18-beta.226 (the owner: «смену аккаунта в меню ескейпа вынести в самый верх»): the game's character select
+    // button - the driver goes on through its «Назад» to the login
+    CHECK(menuwin::buttonId(menuwin::Kind::Alive, A::Account) == 0x9A && !menuwin::ours(A::Account) &&
+          !menuwin::local(A::Account));
     CHECK(menuwin::ours(A::Settings) && menuwin::ours(A::Report) && !menuwin::ours(A::Exit));
     CHECK(menuwin::buttonId(menuwin::Kind::Alive, A::Settings) == 0);
     CHECK((menuwin::actions(menuwin::Kind::Dead) == std::vector<A>{A::SavePoint, A::CharSelect, A::Exit, A::Back}));
@@ -68,9 +72,9 @@ TEST(menu_window_places_and_the_mouse) {
     const panel::Box& b = L.buttons[2];
     CHECK(menuwin::buttonAt(L, b.x + b.w / 2, b.y + b.h / 2) == 2);
     CHECK(menuwin::buttonAt(L, -5, -5) == -1);
-    CHECK(menuwin::firstFocus(menuwin::Kind::Dead) == 3 && menuwin::firstFocus(menuwin::Kind::Alive) == 7);  // .225
+    CHECK(menuwin::firstFocus(menuwin::Kind::Dead) == 3 && menuwin::firstFocus(menuwin::Kind::Alive) == 8);  // .226
     const menuwin::Layout alive = menuwin::layout(menuwin::Kind::Alive, 1920, 1080, 1.0f);
-    CHECK(alive.buttons.size() == 8);  // 3.0.18-beta.225: «Клавіші»
+    CHECK(alive.buttons.size() == 9);  // 3.0.18-beta.225: «Клавіші»; .226: «Змінити акаунт»
     CHECK(alive.y + alive.h <= 1080);  // 3.0.18-beta.121: the taller card still on the screen
     CHECK(menuwin::layout(menuwin::Kind::DeadToken, 1920, 1080, 1.0f).h > L.h);
 }

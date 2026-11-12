@@ -14,6 +14,7 @@
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/code_page.hpp"
+#include "win/char_select.hpp"
 #include "win/death_recap_watch.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_memory.hpp"
@@ -120,6 +121,7 @@ mw::Texts texts(bool pad) {
     t.report = say(settings::Text::MenuReport);
     t.keys = say(settings::Text::MenuKeys);  // 3.0.18-beta.225
     t.keysBack = say(settings::Text::MenuKeysBack);
+    t.account = say(settings::Text::MenuAccount);  // 3.0.18-beta.226
     t.enter = pad ? uapad::buttonLabel(0) : "Enter";
     t.esc = pad ? uapad::buttonLabel(1) : "Esc";
     t.recapTitle = state().recapTitle;  // 3.0.11-beta.277
@@ -165,6 +167,7 @@ const char* nameOf(mw::Action a) {
         case mw::Action::Test: return "the graphics test";
         case mw::Action::Report: return "send a report";
         case mw::Action::Keys: return "the keys";  // 3.0.18-beta.225
+        case mw::Action::Account: return "change account (character select, then its «Назад»)";  // .226
         case mw::Action::Back: break;
     }
     return "back to the game";
@@ -197,6 +200,8 @@ void press(State& s, int row) {
     const int id = mw::ours(a) ? mw::buttonId(kind, mw::Action::Back) : mw::buttonId(kind, a);
     if (!id) return;
     if (mw::ours(a)) asked() = a;
+    // 3.0.18-beta.226: «Змінити акаунт» - the character select the game opens left by its «Назад» (the login)
+    if (a == mw::Action::Account || a == mw::Action::CharSelect) charselectwin::toLogin(a == mw::Action::Account);
     const uint32_t send = read32(read32(window) + kSendMsgSlot);
     if (s.told++ < 30) LOG_INFO("menu: «%s» pressed - the game's button 0x%X", nameOf(a), unsigned(id));
     reinterpret_cast<SendMsgFn>(uintptr_t(send))(window, 0, kButtonMsg, id, 0, 0);

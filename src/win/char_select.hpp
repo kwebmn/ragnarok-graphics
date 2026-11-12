@@ -40,5 +40,8 @@ bool enterByName(const std::string& name);
 // 3.0.11-beta.181 (the registration in the client: «2 Персонаж»): the first empty place chosen and «Створити» pressed
 // (the character make opens), a step a frame as enterByName. False: the game's select is not there.
 bool makeFirst();
+// 3.0.18-beta.226 (the menu's «Змінити акаунт»): the game's character select that comes next (within 20 s) left at
+// once by its own «Назад» (0x77) - the login; false: not (the menu's «Вибір персонажа»)
+void toLogin(bool on);
 
 }  // namespace uagfx::win::charselectwin
