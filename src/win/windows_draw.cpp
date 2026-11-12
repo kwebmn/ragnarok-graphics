@@ -57,6 +57,7 @@
 #include "win/detail_window.hpp"
 #include "win/popup_window.hpp"
 #include "win/whisper_window.hpp"
+#include "win/loading_bar.hpp"
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
 #include "win/trade_window.hpp"
@@ -68,7 +69,9 @@ namespace {
 // with its shown flag +0x38 set) and its call in the game mode's frame
 using DrawFn = void(__attribute__((thiscall)) *)(uint32_t manager);
 constexpr uint32_t kDraw = 0x4CD720, kDrawCall = 0x559972;
-constexpr uint32_t kOtherCalls[] = {0x4EAD24, 0x5A030E};  // 3.0.11-beta.203: the login's modes' (FUN_004ea9a0, ..a0180)
+// 3.0.11-beta.203: the login's modes' (FUN_004ea9a0, ..a0180); 3.0.18-beta.180: the map loading's first frame
+// (FUN_00559030 makes its loading bar, window 7, at 0x559241 and draws the windows at once)
+constexpr uint32_t kOtherCalls[] = {0x4EAD24, 0x5A030E, 0x559264};
 struct Known {
     uint32_t at;
     const char* bytes;
@@ -203,6 +206,7 @@ void hideReplaced() {
     detailwin::beforeGameDraw();        // 3.0.11-beta.209: Alt+D - the driver's console
     popupwin::beforeGameDraw();         // 3.0.11-beta.211: the popup menus
     whisperwin::beforeGameDraw();       // 3.0.11-beta.212: the whisper windows
+    loadingbarwin::beforeGameDraw();    // 3.0.18-beta.180: the map loading bar
     mobhpwin::beforeGameDraw();   // 3.0.11-beta.100: the monsters' per cent asked
     npctagwin::beforeGameDraw();  // 3.0.11-beta.256: the tagged NPC's name asked
     charpanel::beforeGameDraw();  // the Basic Info window
@@ -292,7 +296,8 @@ bool installWindowsDraw() {
         FlushInstructionCache(GetCurrentProcess(), at, 4);
         ++others;
     }
-    LOG_INFO("windows draw: %d of the login's modes' draws of the game's windows hide the replaced ones first too",
+    LOG_INFO("windows draw: %d of the login's modes' and the map loading's draws of the game's windows hide the "
+             "replaced ones first too",
              others);
     return true;
 }

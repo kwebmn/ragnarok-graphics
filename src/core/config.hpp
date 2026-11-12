@@ -897,6 +897,8 @@ struct Config {
     bool macroWindow = false;
     // 3.0.11-beta.204: [interface] tips - the game's «Tip of the Day» (win/tip_window) as a card
     bool tipWindow = false;
+    // 3.0.18-beta.180: [interface] loading_bar - the game's map loading bar (win/loading_bar) in the new look
+    bool loadingBar = false;
     // 3.0.11-beta.205: [interface] emotes - the game's emotion list (Alt+L, win/emote_window) as a card
     bool emoteWindow = false;
     // 3.0.11-beta.206: [interface] commands - the game's command list (Alt+Y, win/command_window) as a card

@@ -585,6 +585,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("tips", flag(running.tipWindow), flag(file.tipWindow)));
         n.tipWindow = file.tipWindow;
     }
+    if (file.loadingBar != running.loadingBar) {  // 3.0.18-beta.180: the map loading bar, at the next loading
+        u.applied.push_back(change("loading_bar", flag(running.loadingBar), flag(file.loadingBar)));
+        n.loadingBar = file.loadingBar;
+    }
     if (file.emoteWindow != running.emoteWindow) {  // 3.0.11-beta.205: the emotion list as a card, at once
         u.applied.push_back(change("emotes", flag(running.emoteWindow), flag(file.emoteWindow)));
         n.emoteWindow = file.emoteWindow;

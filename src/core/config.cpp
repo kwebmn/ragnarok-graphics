@@ -424,6 +424,7 @@ Config parseConfig(const std::string& text) {
     bool whisperSetupSet = false;                 // 3.0.11-beta.168
     bool macroSet = false;                        // 3.0.11-beta.169
     bool tipSet = false;                          // 3.0.11-beta.204
+    bool loadingBarSet = false;                   // 3.0.18-beta.180
     bool emoteSet = false;                        // 3.0.11-beta.205
     bool commandSet = false;                      // 3.0.11-beta.206
     bool chatRoomSet = false;                     // 3.0.11-beta.207
@@ -815,6 +816,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.tips") {  // 3.0.11-beta.204: the game's «Tip of the Day»
             tipSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.tipWindow);
+        } else if (key == "interface.loading_bar") {  // 3.0.18-beta.180: the game's map loading bar
+            loadingBarSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.loadingBar);
         } else if (key == "interface.emotes") {  // 3.0.11-beta.205: the game's emotion list
             emoteSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.emoteWindow);
@@ -1189,6 +1193,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !whisperSetupSet) c.whisperSetupWindow = true;  // 3.0.11-beta.168
     if (c.newMinimap && !macroSet) c.macroWindow = true;            // 3.0.11-beta.169
     if (c.newMinimap && !tipSet) c.tipWindow = true;                // 3.0.11-beta.204
+    if (c.newMinimap && !loadingBarSet) c.loadingBar = true;        // 3.0.18-beta.180
     if (c.newMinimap && !emoteSet) c.emoteWindow = true;            // 3.0.11-beta.205
     if (c.newMinimap && !commandSet) c.commandWindow = true;        // 3.0.11-beta.206
     if (c.newMinimap && !chatRoomSet) c.chatRoomWindows = true;     // 3.0.11-beta.207

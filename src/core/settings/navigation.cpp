@@ -228,7 +228,8 @@ const std::vector<InterfaceSection>& interfaceSections() {
           "interface.messages",  "interface.counts",       "interface.picks",        "interface.party_setup",
           "interface.pet",       "interface.homun",        "interface.merc",         "interface.social",
           "interface.guild",     "interface.servers",      "interface.whispers",     "interface.whisper_setup",
-          "interface.macros",    "interface.tips",         "interface.emotes",       "interface.commands",
+          "interface.macros",    "interface.tips",         "interface.loading_bar",  "interface.emotes",
+          "interface.commands",
           "interface.chat_rooms", "interface.detail_console", "interface.popups"},
          true},
     };

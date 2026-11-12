@@ -6,6 +6,7 @@
 #include "core/config.hpp"
 #include "core/game_camera.hpp"
 #include "core/live_config.hpp"
+#include "core/settings/navigation.hpp"
 #include "core/settings/schema.hpp"
 #include "test.hpp"
 
@@ -882,8 +883,8 @@ TEST(config_interface_minimap) {
     // .100: the shops; .115: the storage; .116: the trade; .140: the menu; .149: the item and skill cards; .150: the
     // requests and the NPC's inputs; .151: the game's message boxes and its login; .204: the tip of the day; .205:
     // the emotion list; .206: the command list; .207: the chat rooms; .209: Alt+D's console; .211: the popups;
-    // .212: the whisper windows; 3.0.18-beta.103: opening one's shop (as my_shop)
-    CHECK(u.waiting.empty() && u.applied.size() == 47 && u.applied[0] == "minimap 0 -> 1");
+    // .212: the whisper windows; 3.0.18-beta.103: opening one's shop (as my_shop); 3.0.18-beta.180: the map loading bar
+    CHECK(u.waiting.empty() && u.applied.size() == 48 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
     CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "equip 0 -> 1" && u.applied[6] == "npc_talk 0 -> 1");
     CHECK(u.applied[7] == "shop 0 -> 1" && u.applied[8] == "storage 0 -> 1" && u.applied[9] == "trade 0 -> 1");
@@ -896,14 +897,35 @@ TEST(config_interface_minimap) {
     CHECK(u.applied[26] == "social 0 -> 1" && u.applied[27] == "servers 0 -> 1" && u.applied[28] == "guild 0 -> 1");
     CHECK(u.applied[29] == "my_shop 0 -> 1" && u.applied[30] == "vend_setup 0 -> 1" &&
           u.applied[31] == "whisper_setup 0 -> 1" &&
-          u.applied[32] == "macros 0 -> 1" && u.applied[33] == "tips 0 -> 1" && u.applied[34] == "emotes 0 -> 1");
-    CHECK(u.applied[35] == "commands 0 -> 1" && u.applied[36] == "chat_rooms 0 -> 1" &&
-          u.applied[37] == "detail_console 0 -> 1" && u.applied[38] == "popups 0 -> 1" &&
-          u.applied[39] == "whispers 0 -> 1");
-    CHECK(u.applied[40] == "cast 0 -> 1" && u.applied[41] == "chat 0 -> 1" && u.applied[42] == "hotbar 0 -> 1");
-    CHECK(u.applied[43] == "tracker 0 -> 1" && u.applied[44] == "party 0 -> 1" && u.applied[45] == "target 0 -> 1");
-    CHECK(u.applied[46] == "character off -> bars");
+          u.applied[32] == "macros 0 -> 1" && u.applied[33] == "tips 0 -> 1" &&
+          u.applied[34] == "loading_bar 0 -> 1" && u.applied[35] == "emotes 0 -> 1");
+    CHECK(u.applied[36] == "commands 0 -> 1" && u.applied[37] == "chat_rooms 0 -> 1" &&
+          u.applied[38] == "detail_console 0 -> 1" && u.applied[39] == "popups 0 -> 1" &&
+          u.applied[40] == "whispers 0 -> 1");
+    CHECK(u.applied[41] == "cast 0 -> 1" && u.applied[42] == "chat 0 -> 1" && u.applied[43] == "hotbar 0 -> 1");
+    CHECK(u.applied[44] == "tracker 0 -> 1" && u.applied[45] == "party 0 -> 1" && u.applied[46] == "target 0 -> 1");
+    CHECK(u.applied[47] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
+}
+
+// 3.0.18-beta.180: [interface] loading_bar - the game's map loading bar in the new look; on with the new interface,
+// a box of «Інтерфейс» → «Вікна в новому вигляді», applied at once
+TEST(config_interface_loading_bar) {
+    CHECK(parseConfig("").loadingBar);
+    CHECK(!noUi("").loadingBar);
+    CHECK(noUi("loading_bar = 1\n").loadingBar);
+    CHECK(!parseConfig("[interface]\nloading_bar = 0\n").loadingBar);
+    const settings::IniSetting* s = settings::findSetting("interface.loading_bar");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("1"));
+    CHECK(appliesNow("interface.loading_bar"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nloading_bar = 0\n")).next.loadingBar);
+    bool listed = false;
+    for (const settings::InterfaceSection& sec : settings::interfaceSections())
+        for (const char* k : sec.keys) listed = listed || std::strcmp(k, "interface.loading_bar") == 0;
+    CHECK(listed);
 }
 
 // 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment, off): [interface] minimap_reach - the

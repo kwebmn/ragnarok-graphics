@@ -695,7 +695,8 @@ enum class Text : uint16_t {
     // 3.0.11-beta.169: the chat's macros
     InterfaceMacros, InterfaceMacrosHint, MacroTitle, MacroHint, MacroSave,
     // 3.0.11-beta.204: the game's «Tip of the Day»
-    InterfaceTips, InterfaceTipsHint, TipTitle, TipBack, TipNext, TipClose, TipStartup,
+    InterfaceTips, InterfaceTipsHint, InterfaceLoadingBar, InterfaceLoadingBarHint, TipTitle, TipBack, TipNext,
+    TipClose, TipStartup,
     // 3.0.11-beta.205: the game's emotion list
     InterfaceEmotes, InterfaceEmotesHint, EmoteTitle, EmoteHint,
     // 3.0.11-beta.206: the game's command list - its tabs, a switch's state, the windows by their Alt keys

@@ -16,7 +16,7 @@ const char* const kWindows[] = {
     "items", "status", "skills", "equip", "npc_talk", "shop", "storage", "trade", "menu", "cards", "asks",
     "messages", "login", "char_select", "char_make", "cart", "counts", "vending", "picks", "party_setup", "pet",
     "homun", "merc", "options", "social", "servers", "guild", "my_shop", "vend_setup", "whisper_setup", "macros",
-    "tips",
+    "tips", "loading_bar",
     "emotes", "commands", "chat_rooms", "detail_console", "popups", "whispers"};
 
 Keys interfaceKeys(Ui u) {

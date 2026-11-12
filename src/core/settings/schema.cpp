@@ -373,6 +373,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceMacrosHint, ""},  // 3.0.11-beta.169
         {"interface", "tips", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceTips,
          Text::InterfaceTipsHint, ""},  // 3.0.11-beta.204
+        {"interface", "loading_bar", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceLoadingBar, Text::InterfaceLoadingBarHint, ""},  // 3.0.18-beta.180
         {"interface", "emotes", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceEmotes,
          Text::InterfaceEmotesHint, ""},  // 3.0.11-beta.205
         {"interface", "commands", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceCommands,
@@ -1428,6 +1430,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.whisper_setup") return c.whisperSetupWindow ? "1" : "0";  // 3.0.11-beta.168
     if (k == "interface.macros") return c.macroWindow ? "1" : "0";            // 3.0.11-beta.169
     if (k == "interface.tips") return c.tipWindow ? "1" : "0";                // 3.0.11-beta.204
+    if (k == "interface.loading_bar") return c.loadingBar ? "1" : "0";        // 3.0.18-beta.180
     if (k == "interface.emotes") return c.emoteWindow ? "1" : "0";            // 3.0.11-beta.205
     if (k == "interface.commands") return c.commandWindow ? "1" : "0";        // 3.0.11-beta.206
     if (k == "interface.chat_rooms") return c.chatRoomWindows ? "1" : "0";    // 3.0.11-beta.207

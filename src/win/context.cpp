@@ -144,6 +144,7 @@
 #include "win/sprite_hook.hpp"
 #include "win/start_screen.hpp"
 #include "win/texture_hook.hpp"
+#include "win/loading_bar.hpp"
 #include "win/log.hpp"
 #include "win/low_hp_edge.hpp"
 #include "win/uaui.hpp"
@@ -1317,6 +1318,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     g_parts.mark("pickcardwin", nowMs());
     oldwindows::frame();  // 3.0.18-beta.1: the game's windows not redrawn, told as they first show
     g_parts.mark("oldwindows", nowMs());
+    loadingbarwin::frame(config.loadingBar, pk, pw, ph);  // 3.0.18-beta.180: the map loading bar
+    g_parts.mark("loadingbarwin", nowMs());
     partysetupwin::frame(window, config.partySetupWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.158
     g_parts.mark("partysetupwin", nowMs());
     petcardwin::frame(window, config.petWindow, gameCodePage(config), pk, pw, ph);            // 3.0.11-beta.159
