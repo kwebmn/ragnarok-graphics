@@ -474,6 +474,7 @@ void probe() {
 }
 
 bool siteReady() { return state().ready == 1; }
+bool siteDown() { return state().ready == -1; }  // 3.0.18-beta.205
 
 static void frameInner(double k, int targetWidth, int targetHeight) {
     State& s = state();

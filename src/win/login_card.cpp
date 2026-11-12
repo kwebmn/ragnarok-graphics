@@ -3,6 +3,7 @@
 #include <windowsx.h>
 
 #include <algorithm>
+#include <cstring>
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
@@ -850,6 +851,36 @@ void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight
 
 }  // namespace
 
+// 3.0.18-beta.205 (the owner: «в лаунчере сделать кнопку создать аккаунт»): the launcher's «Створити акаунт» starts
+// the game with UAGFX_START=register - at the login screen the registration opens once: in the client when the site's
+// API answers (5 s at most), else the site's page
+void startRegister() {
+    static int stage = 0;  // 0 not looked at yet, 1 waiting for the site, 2 done
+    static ULONGLONG since = 0;
+    if (stage == 2) return;
+    if (stage == 0) {
+        char v[16] = {};
+        const DWORD n = GetEnvironmentVariableA("UAGFX_START", v, sizeof v);
+        if (n == 0 || n >= sizeof v || std::strcmp(v, "register") != 0) {
+            stage = 2;
+            return;
+        }
+        SetEnvironmentVariableA("UAGFX_START", nullptr);  // once: not again after a logout
+        stage = 1;
+        since = GetTickCount64();
+    }
+    if (sitesigninwin::siteReady()) {
+        sitesigninwin::openRegister();
+        LOG_INFO("login: the launcher's «Створити акаунт» - the registration in the client");
+        stage = 2;
+    } else if (sitesigninwin::siteDown() || GetTickCount64() - since > 5000) {
+        const bool opened = openUrl(kRegister);
+        LOG_INFO("login: the launcher's «Створити акаунт» - the site's API not answering, its registration page %s",
+                 opened ? "opened" : "not opened");
+        stage = 2;
+    }
+}
+
 static void frameInner(HWND game, bool on, bool status, bool news, loginview::View view, unsigned codePage, double k,
            int targetWidth, int targetHeight) {
     State& s = state();
@@ -958,6 +989,7 @@ static void frameInner(HWND game, bool on, bool status, bool news, loginview::Vi
     const accounts::Shelf& shelf = accountsstore::shelf();
     const bool any = !shelf.list.empty(), forOne = loginshelfwin::classicChosen();
     sitesigninwin::probe();  // 3.0.11-beta.180: the site's client API there? (asked once; again while not)
+    startRegister();         // 3.0.18-beta.205: the launcher's «Створити акаунт»
     if (sitesigninwin::takeSignedIn()) siteaccounts::refresh(true);  // 3.0.11-beta.181: the shelf from the site
     {
         std::string login, password;

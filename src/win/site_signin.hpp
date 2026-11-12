@@ -29,6 +29,7 @@ bool isOpen();
 void close();
 void probe();      // the login screen shown: is the site's client API there?
 bool siteReady();  // it answered as the API (422 on an empty login)
+bool siteDown();   // 3.0.18-beta.205: it did not answer at all
 void frame(double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(UINT m, float tx, float ty);  // a button's message at the target's (tx, ty); true: the card's

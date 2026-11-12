@@ -1678,6 +1678,19 @@ void MainWindow::launcherAction(launcherview::Part part, int index) {
             if (updateState().kind != UpdateState::Checking) startUpdateCheck();
             refreshLauncher();
             return;
+        case Part::Account: {  // 3.0.18-beta.205 (the owner: «в лаунчере сделать кнопку создать аккаунт»): the game
+            // with its registration open - the driver opens it at the login screen (UAGFX_START, inherited by the game)
+            SetEnvironmentVariableW(L"UAGFX_START", L"register");
+            if (running) {  // another window of it
+                const std::wstring err = m.launchGame(lang_);
+                if (!err.empty()) message(err, true);
+            } else {
+                doApply(true, false, true);  // the game as it is: an update waits for later
+            }
+            SetEnvironmentVariableW(L"UAGFX_START", nullptr);
+            refreshLauncher();
+            return;
+        }
         case Part::Channel: {  // 3.0.18-beta.202 (the owner: «кнопку выбора канала обновлений»): «Реліз» or «Бета»
             const update::Channel want = index == 1 ? update::Channel::Beta : update::Channel::Release;
             if (want != m.channel()) {

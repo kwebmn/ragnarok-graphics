@@ -26,6 +26,9 @@ Layout layoutFor(int width, int height, float scale, int newsCount, bool plate, 
     L.logo = Box{kLogoX * s, kLogoY * s, kLogoW * s, kLogoH * s};
     L.language = Box{W - kRight * s - 56 * s, 18 * s, 56 * s, 28 * s};
     L.server = Box{L.language.x - 12 * s - 280 * s, 16 * s, 280 * s, 32 * s};
+    // 3.0.18-beta.205: «Створити акаунт» left of the server's pill, as tall; narrower when the bar has less room
+    const float accountW = std::max(0.0f, std::min(180 * s, L.server.x - 12 * s - (kLogoX + kLogoW + 16) * s));
+    L.account = Box{L.server.x - 12 * s - accountW, 16 * s, accountW, 32 * s};
     // the play column: the version at the bottom, the button over it, the look line over that
     const float playW = std::min(kPlayW * s, W * 0.4f);
     const float px = W - kRight * s - playW;
@@ -87,6 +90,7 @@ Hit hitAt(const Layout& L, float x, float y) {
         if (L.dock[i].contains(x, y)) return Hit{kDock[i]};
     if (L.plate.w > 0 && L.plate.contains(x, y)) return Hit{Part::Plate};
     if (L.language.contains(x, y)) return Hit{Part::Language};
+    if (L.account.w > 0 && L.account.contains(x, y)) return Hit{Part::Account};  // 3.0.18-beta.205
     return Hit{};
 }
 

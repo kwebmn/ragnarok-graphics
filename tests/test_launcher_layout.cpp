@@ -192,6 +192,26 @@ TEST(launcher_layout_logo_above_the_feed) {
     CHECK_EQ(launcherview::layoutFor(960, 560, 1.0f, 3, false).newsShown, 2);
 }
 
+// 3.0.18-beta.205 (the owner: «надо еще в лаунчере сделать кнопку создать аккаунт»): «Створити акаунт» in the top
+// bar, left of the server's pill - the game started with its registration open
+TEST(launcher_layout_account_in_the_bar) {
+    struct Size {
+        int w, h;
+        float s;
+    };
+    const Size sizes[] = {Size{960, 560, 1.0f}, Size{1280, 720, 1.0f}, Size{3360, 1890, 1.75f}};
+    for (const Size z : sizes) {
+        const launcherview::Layout L = launcherview::layoutFor(z.w, z.h, z.s, 3, false);
+        CHECK(L.account.w > 0 && L.account.h > 0);
+        CHECK(L.account.y >= L.bar.y && L.account.y + L.account.h <= L.bar.y + L.bar.h);
+        CHECK(L.account.x + L.account.w <= L.server.x);
+        CHECK(L.account.x >= L.logo.x + L.logo.w);
+        const launcherview::Hit h =
+            launcherview::hitAt(L, L.account.x + L.account.w / 2, L.account.y + L.account.h / 2);
+        CHECK(h.part == launcherview::Part::Account);
+    }
+}
+
 TEST(launcher_layout_check_and_channel_by_the_button) {
     struct Size {
         int w, h;

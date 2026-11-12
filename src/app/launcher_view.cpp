@@ -642,9 +642,20 @@ void LauncherView::compose() {
         const float x = L.language.x + (L.language.w - tw - 14 * s) / 2 + tw + 8 * s;
         triangleDown(pic_, x, L.language.y + L.language.h / 2, 4 * s, hovered(Part::Language) ? kText : kMuted, 1.0f);
     }
+    accountPill_ = Box{};
     if (data_.firstRun) {
         composeFirst();
         return;
+    }
+    // 3.0.18-beta.205 (the owner: «в лаунчере сделать кнопку создать аккаунт»): «Створити акаунт» left of the server's
+    // pill - its words' width, at the right of its place
+    if (L.account.w > 0) {
+        const Style st{Face::SemiBold, 13, kText};
+        const float pw = std::min(L.account.w, float(widthOf(dc, st, t(Text::LoginCreateAccount))) + 50 * s);
+        const float ph = 30 * s;
+        accountPill_ = Box{L.account.x + L.account.w - pw, L.account.y + (L.account.h - ph) / 2, pw, ph};
+        const bool on = hovered(Part::Account);
+        panel::roundRect(pic_, pb(accountPill_), ph / 2, on ? kRaise : kCard, 0.85f, kGold, on ? 0.95f : 0.6f, edge);
     }
     if (logging_) {
         composeLog();
@@ -793,6 +804,17 @@ void LauncherView::words(HDC dc) {
     if (data_.firstRun) {
         wordsFirst(dc);
         return;
+    }
+    if (accountPill_.w > 0) {  // 3.0.18-beta.205: «Створити акаунт», a person with + before it
+        const bool on = hovered(Part::Account);
+        const float base = accountPill_.y + accountPill_.h / 2;
+        if (hasIcons()) {
+            const Style glyph{Face::Icons, 14, on ? kWhite : kGoldHi};
+            line(dc, glyph, L"\xE8FA", accountPill_.x + 22 * s, base + ascentOf(dc, glyph) * 0.5f, 0);
+        }
+        const Style st{Face::SemiBold, 13, on ? kWhite : kText};
+        line(dc, st, fit(dc, st, t(Text::LoginCreateAccount), int(accountPill_.w - 46 * s)),
+             accountPill_.x + 36 * s, base + ascentOf(dc, st) * 0.36f, -1);
     }
     if (logging_) {
         wordsLog(dc);
@@ -1726,6 +1748,7 @@ void LauncherView::wordsFirst(HDC dc) {
 Hit LauncherView::hitAt(int x, int y) const {
     Hit h = launcherview::hitAt(layout_, float(x), float(y));
     if (h.part == Part::Plate && !plateButton_.contains(float(x), float(y))) h = Hit{};  // the plate's button alone
+    if (h.part == Part::Account && !accountPill_.contains(float(x), float(y))) h = Hit{};  // .205: the pill alone
     return h;
 }
 
@@ -1740,6 +1763,7 @@ std::vector<Hit> LauncherView::focusOrder() const {
     order.push_back(Hit{Part::Channel, 1});
     order.push_back(Hit{Part::Version});
     if (layout_.plate.w > 0) order.push_back(Hit{Part::Plate});
+    if (accountPill_.w > 0) order.push_back(Hit{Part::Account});  // 3.0.18-beta.205
     order.push_back(Hit{Part::Language});
     return order;
 }
@@ -1755,6 +1779,7 @@ Box LauncherView::boxOf(Hit hit) const {
     case Part::Version: return L.version;
     case Part::NoUpdate: return L.noUpdate;
     case Part::Check: return L.check;  // 3.0.18-beta.202
+    case Part::Account: return accountPill_;  // 3.0.18-beta.205
     case Part::Channel: return hit.index >= 0 && hit.index < 2 ? L.channel[hit.index] : Box{};
     case Part::Language: return L.language;
     case Part::Plate: return plateButton_;

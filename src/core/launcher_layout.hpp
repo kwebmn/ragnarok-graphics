@@ -13,7 +13,8 @@ enum class Part : uint8_t {
     None, Play, PlayMore, Look, Changelog, News, Settings, Reports, Site, Forum, Version, Language, Plate,
     NoUpdate,  // 3.0.18-beta.199: «Грати без оновлення» under the big button while an update is offered
     Check,     // 3.0.18-beta.202: «Перевірити» beside the big button - the update check
-    Channel    // 3.0.18-beta.202: «Реліз» (index 0) or «Бета» (1) beside the version
+    Channel,   // 3.0.18-beta.202: «Реліз» (index 0) or «Бета» (1) beside the version
+    Account    // 3.0.18-beta.205: «Створити акаунт» in the top bar - the game with its registration open
 };
 
 struct Box {
@@ -39,6 +40,7 @@ struct Layout {
     // check a square at the big button's left, the channel's two halves at the version's left in its row
     Box check;
     Box channel[2];
+    Box account;  // 3.0.18-beta.205 (the owner: «кнопку создать аккаунт»): in the top bar, left of the server's pill
 };
 
 // newsCount: the site's news at hand; plate: a plate is shown (the safe mode, uaRO Graphics off, a roll back);

@@ -179,6 +179,7 @@ private:
     int dpi_ = 96;
     launcherview::Layout layout_;
     launcherview::Box pill_, plateButton_;  // the server's pill, the plate's button (composed, then written on)
+    launcherview::Box accountPill_;         // 3.0.18-beta.205: «Створити акаунт» as drawn (w 0: not shown)
     launcherview::Hit hover_, pressed_;
     int focus_ = -1;  // in focusOrder(); -1: no ring (until Tab)
     bool tracking_ = false;
