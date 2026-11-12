@@ -20,18 +20,24 @@ everyone who has it. The server and the game's data stay as they are; the wings 
 
 | Look | Garment set (uaRO HD data.grf) | Recolour | Item (view the server sends) |
 |---|---|---|---|
-| angel | 로브\천사날개 (Angel Wings) | - | Wings Of Victory 5357 (view 365) |
-| fallen | 로브\타락천사의날개 (Wings of Fallen Angel) | - | Flying Evil Wing 5376 (view 382) |
+| angel | 로브\천사날개 (Angel Wings) | - | Angel Blessing 5207 (view 260) |
+| fallen | 로브\타락천사의날개 (Wings of Fallen Angel) | - | Helm of Darkness 5181 (view 233) |
 | demon | robe\darkwing (Dark Wing, one .act for every job) | - | Wings of Diablo 5044, Refined 5328 (view 129) |
-| fire | Angel Wings | fire gradient | Red Wing Hat 5690 (view 613) |
-| ice | Angel Wings | ice gradient | Filir's Pinions 5664 (view 595) |
-| valkyrie | Angel Wings | white-gold | Sigrun's Wings 5592 (view 568) |
-| gold | Angel Wings | gold | Bijofnil Wings 5480 (view 477) |
-| sakura | Angel Wings | pink | Fairy Flower 5437 (view 438) - my call |
-| crimson | Dark Wing | crimson | Majestic Evil Horns 5584 (view 562) - my call |
+| fire | Angel Wings | fire gradient | Phoenix Crown 5152, 5271 (view 221) |
+| ice | Angel Wings | ice gradient | Soul Wing 5297, Soul Ring 5257 (view 301) |
+| valkyrie | Angel Wings | white-gold | Valkyrie Feather Band 5256 (view 300) |
+| gold | Angel Wings | gold | Emperor's Laurel Crown 5205, Sacred Palma 5320, Emperor Wreath 5533 (view 261) |
+| sakura | Angel Wings | pink | Flower Crown 5303 (view 325) |
+| crimson | Dark Wing | crimson | Red Deviruchi Hat 5227 (view 271) |
 
 A recolour maps the used palette colours by brightness onto a gradient (the concept page's stops); every frame,
 side and movement of the set is kept.
+
+3.0.18-beta.232 (the owner's «давай»): the items changed. .230's (views 365, 382, 613, 595, 568, 477, 438, 562) were
+past the 2007 client's headgear names (about 327, «_화관» = 325 the last known): the game read another table's word for
+them and showed «Cannot find File» to every plain client near the wearer (3.0.18-beta.231 stops that for uaRO
+Graphics players alone). The views now are ones it names; every item is the GM's only and shares its view with no
+item a player can get.
 
 ## Facts it rests on (uaRO.exe, decomp /root/BornRok/winEXE/decomp/uaRO_decomp.c)
 

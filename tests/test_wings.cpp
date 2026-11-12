@@ -18,20 +18,23 @@ bool near(float a, float b) { return std::fabs(a - b) < 0.001f; }
 
 }  // namespace
 
+// 3.0.18-beta.232 (the owner's «давай»: the items' list changed - .230's views past the 2007 client's names showed
+// «Cannot find File» to every plain client near the wearer): views the game knows, items only the GM has
 TEST(wings_looks_by_view) {
-    CHECK(wings::lookOfView(365) == Look::Angel);   // Wings Of Victory
-    CHECK(wings::lookOfView(382) == Look::Fallen);  // Flying Evil Wing
-    CHECK(wings::lookOfView(129) == Look::Demon);   // Wings of Diablo and its refined one
-    CHECK(wings::lookOfView(613) == Look::Fire);    // Red Wing Hat
-    CHECK(wings::lookOfView(595) == Look::Ice);     // Filir's Pinions
-    CHECK(wings::lookOfView(568) == Look::Valkyrie);  // Sigrun's Wings
-    CHECK(wings::lookOfView(477) == Look::Gold);      // Bijofnil Wings
-    CHECK(wings::lookOfView(438) == Look::Sakura);    // Fairy Flower
-    CHECK(wings::lookOfView(562) == Look::Crimson);   // Majestic Evil Horns
+    CHECK(wings::lookOfView(260) == Look::Angel);     // Angel Blessing
+    CHECK(wings::lookOfView(233) == Look::Fallen);    // Helm of Darkness
+    CHECK(wings::lookOfView(129) == Look::Demon);     // Wings of Diablo and its refined one
+    CHECK(wings::lookOfView(221) == Look::Fire);      // Phoenix Crown (both)
+    CHECK(wings::lookOfView(301) == Look::Ice);       // Soul Wing, Soul Ring
+    CHECK(wings::lookOfView(300) == Look::Valkyrie);  // Valkyrie Feather Band
+    CHECK(wings::lookOfView(261) == Look::Gold);      // Emperor's Laurel Crown, Sacred Palma, Emperor Wreath
+    CHECK(wings::lookOfView(325) == Look::Sakura);    // Flower Crown
+    CHECK(wings::lookOfView(271) == Look::Crimson);   // Red Deviruchi Hat
+    for (int old : {365, 382, 613, 595, 568, 477, 438, 562}) CHECK(wings::lookOfView(old) == Look::None);  // .230's
     CHECK(wings::lookOfView(0) == Look::None);
     CHECK(wings::lookOfView(38) == Look::None);  // Angel Wing: anyone may have it, no big wings
     CHECK(wings::lookOfView(130) == Look::None);
-    const int views[3] = {0, 613, 365};
+    const int views[3] = {0, 221, 260};
     CHECK(wings::lookOfViews(views) == Look::Fire);  // the first of the three with a look
     const int none[3] = {0, 38, 39};
     CHECK(wings::lookOfViews(none) == Look::None);

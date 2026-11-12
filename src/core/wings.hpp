@@ -13,8 +13,8 @@ namespace uagfx::wings {
 // The server tells every client the headgears' views; nine of them carry a look, drawn by the driver from the uaRO HD
 // client's garment sets (Angel Wings, Wings of Fallen Angel, Dark Wing) or their recolours.
 enum class Look : uint8_t { None, Angel, Fallen, Demon, Fire, Ice, Valkyrie, Gold, Sakura, Crimson };
-Look lookOfView(int view);           // 365 angel, 382 fallen, 129 demon, 613 fire, 595 ice, 568 valkyrie, 477 gold,
-                                     // 438 sakura, 562 crimson; else none
+Look lookOfView(int view);           // .232: 260 angel, 233 fallen, 129 demon, 221 fire, 301 ice, 300 valkyrie,
+                                     // 261 gold, 325 sakura, 271 crimson; else none
 Look lookOfViews(const int views[3]);  // the first of a character's three headgears with a look
 const char* lookName(Look look);       // "angel" ... (the log's)
 

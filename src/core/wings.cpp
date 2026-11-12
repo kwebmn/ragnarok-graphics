@@ -55,17 +55,19 @@ const std::string kBodies = "data\\sprite\\\xC0\xCE\xB0\xA3\xC1\xB7\\\xB8\xF6\xC
 
 }  // namespace
 
+// 3.0.18-beta.232 (the owner's «давай»): views the 2007 client has names for (it has up to about 326), of items only
+// the GM has - .230's (365, 382, 613, 595, 568, 477, 438, 562) were past them: «Cannot find File» in every plain client
 Look lookOfView(int view) {
     switch (view) {
-        case 365: return Look::Angel;     // Wings Of Victory
-        case 382: return Look::Fallen;    // Flying Evil Wing
-        case 129: return Look::Demon;     // Wings of Diablo, Refined Wing of Diablo
-        case 613: return Look::Fire;      // Red Wing Hat
-        case 595: return Look::Ice;       // Filir's Pinions
-        case 568: return Look::Valkyrie;  // Sigrun's Wings
-        case 477: return Look::Gold;      // Bijofnil Wings
-        case 438: return Look::Sakura;    // Fairy Flower
-        case 562: return Look::Crimson;   // Majestic Evil Horns
+        case 260: return Look::Angel;     // Angel Blessing 5207
+        case 233: return Look::Fallen;    // Helm of Darkness 5181
+        case 129: return Look::Demon;     // Wings of Diablo 5044, Refined Wing of Diablo 5328
+        case 221: return Look::Fire;      // Phoenix Crown 5152, 5271
+        case 301: return Look::Ice;       // Soul Wing 5297, Soul Ring 5257
+        case 300: return Look::Valkyrie;  // Valkyrie Feather Band 5256
+        case 261: return Look::Gold;      // Emperor's Laurel Crown 5205, Sacred Palma 5320, Emperor Wreath 5533
+        case 325: return Look::Sakura;    // Flower Crown 5303
+        case 271: return Look::Crimson;   // Red Deviruchi Hat 5227
         default: return Look::None;
     }
 }
