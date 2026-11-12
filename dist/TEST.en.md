@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.232 — what's new · 2026-11-13
+
+- Wings: a new list of items - only ones the 2007 game knows, so players without the driver get no error boxes and nothing odd (they see the usual headgear). Angel Blessing - angel, Helm of Darkness - fallen angel, Wings of Diablo (and Refined) - demon, Phoenix Crown - fire, Soul Wing and Soul Ring - ice, Valkyrie Feather Band - valkyrie, Emperor's Laurel Crown, Sacred Palma and Emperor Wreath - gold, Flower Crown - sakura, Red Deviruchi Hat - crimson demon. Only the GM hands them out. The .230 items (Wings Of Victory and the others) give no wings any more - do not hand them out.
+- To check (GM): @item with the item's number on a test character (5207, 5181, 5044, 5152, 5297, 5256, 5205, 5303, 5227) - no error boxes; the small headgear on the head and big wings on the back, from every side, walking, sitting.
+
 # uaRO Graphics 3.0.18-beta.231 — what's new · 2026-11-13
 
 - The «Cannot find File : sprite\악세사리\…» boxes no longer show when you or someone near wears a headgear the 2007 game does not know (as Wings Of Victory and other items of newer clients): the game read another word in place of its name and looked for a file that is not there. Now it looks for nothing for such a headgear (the log's «wings: … past its … names»).
