@@ -46,6 +46,9 @@ struct Persona {
     int picture = 0, ui = 0, textures = 0;
 };
 Persona persona(Kind k, const Suggestion& card);  // the new look takes the card's picture and textures
+// 3.0.18-beta.196 (the launcher's first start): the card «для вашої відеокарти» - everything new where the card draws
+// it (level 2-3, its own 2 GB and more), else the weak computer's
+Kind suggestedKind(int cardLevel, unsigned long long vramMb, bool integrated);
 Text kindName(Kind k);  // «Хочу все нове», ...
 
 Text headOf(Choice c);             // «Картинка», «Інтерфейс», «Текстури»

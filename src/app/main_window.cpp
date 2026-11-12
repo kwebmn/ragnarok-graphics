@@ -1510,6 +1510,17 @@ void MainWindow::refreshLauncher() {
     d.fitsCard = fits && !machine.adapter.empty();
     d.undoable = !lookUndo_.empty();
     d.seen = seen_;  // 3.0.18-beta.195: «Журнал змін»'s «нове»
+    // 3.0.18-beta.196: the first start - no version seen, no game played here: the players' cards, each with its looks
+    d.firstRun = seen_.empty() && !m.playedHere();
+    if (d.firstRun) {
+        d.suggestedKind = int(presets::suggestedKind(m.cardLevel(), machine.vramMb, machine.integrated));
+        for (int k = 0; k < presets::kKinds && k < launcherview::kKindCards; ++k) {
+            const presets::Persona per = presets::persona(presets::Kind(k), card);
+            d.kindLooks[k] = wtr(lang_, presets::nameOf(presets::Choice::Picture, per.picture)) + L" \x00B7 " +
+                             wtr(lang_, presets::nameOf(presets::Choice::Interface, per.ui)) + L" \x00B7 " +
+                             wtr(lang_, presets::nameOf(presets::Choice::Textures, per.textures));
+        }
+    }
     // the version: the channel, the update's word
     const bool beta = m.channel() == update::Channel::Beta;
     std::string state = utf8(wtr(lang_, beta ? Text::LauncherBeta : Text::LauncherRelease));
@@ -1556,7 +1567,7 @@ void MainWindow::refreshLauncher() {
                        L"|" + d.plateText + L"|" + std::to_wstring(d.newFor) + L"|" + std::to_wstring(d.unread) +
                        L"|" + std::to_wstring(changelog_.size()) + L"|" + d.cardName + L"|" +
                        std::to_wstring(int(d.fitsCard)) + L"|" + std::to_wstring(int(d.undoable)) + L"|" +
-                       wide(d.seen);
+                       wide(d.seen) + L"|" + std::to_wstring(int(d.firstRun)) + L"." + std::to_wstring(d.suggestedKind);
     for (const LauncherData::Look& l : d.looks)
         sig += L"|" + std::to_wstring(l.variant) + L"." + std::to_wstring(l.changed);
     for (const launcher::News& n : d.info.news) sig += L"|" + wide(n.title);
@@ -1768,6 +1779,25 @@ std::string MainWindow::tryName(const std::string& point) {
 void MainWindow::tryPoint(const std::string& name) {
     showLauncher(false);
     search(wide(name));
+}
+
+// 3.0.18-beta.196 (the concept «простой старт», 3.0.17-beta.10's cards as pictures): a card sets the three choices at
+// once (presets::persona with the card's suggestion) and writes them; either way the version is seen - the cards go
+void MainWindow::firstRunAction(int kind) {
+    namespace presets = settings::presets;
+    Model& m = *model_;
+    markSeen();
+    if (kind < 0 || kind >= presets::kKinds) return;
+    const settings::Machine machine = m.machine();
+    const presets::Suggestion card = presets::suggest(m.cardLevel(), machine.vramMb, machine.integrated);
+    const presets::Persona per = presets::persona(presets::Kind(kind), card);
+    const std::pair<presets::Choice, int> picks[] = {{presets::Choice::Picture, per.picture},
+                                                     {presets::Choice::Interface, per.ui},
+                                                     {presets::Choice::Textures, per.textures}};
+    for (const auto& [choice, variant] : picks)
+        for (const auto& [key, token] : presets::keysOf(choice, variant))
+            if (const settings::IniSetting* s = settings::findSetting(key)) m.setToken(*s, token);
+    doApply(false);
 }
 
 }  // namespace uagfx::app

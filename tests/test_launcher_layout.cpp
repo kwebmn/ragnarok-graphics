@@ -4,6 +4,7 @@
 #include <initializer_list>
 
 #include "core/launcher_layout.hpp"
+#include "core/settings/choice_presets.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -90,4 +91,42 @@ TEST(launcher_play_state_running_wins) {
     CHECK(launcherview::playState(in) == PlayState::Updating);
     in.gameRunning = true;  // never an update over a running game: another window
     CHECK(launcherview::playState(in) == PlayState::Running);
+}
+
+// 3.0.18-beta.196 (Task 9): the first start - the four players' cards side by side over the launcher, «Пропустити»
+// under them; the card for the computer's graphics card marked
+TEST(launcher_first_run_cards) {
+    struct Size {
+        int w, h;
+        float s;
+    };
+    const Size sizes[] = {Size{960, 560, 1.0f}, Size{1280, 720, 1.0f}, Size{3360, 1890, 1.75f}};
+    for (const Size z : sizes) {
+        const launcherview::Layout L = launcherview::layoutFor(z.w, z.h, z.s, 3, false);
+        const launcherview::FirstRun f = launcherview::firstRunFor(L);
+        const Box client{0, 0, float(z.w), float(z.h)};
+        for (int i = 0; i < launcherview::kKindCards; ++i) {
+            const Box& c = f.cards[i];
+            CHECK(c.w > 0 && c.h > c.w * 9.0f / 16.0f);  // a picture and words under it
+            CHECK(c.x >= client.x && c.y >= L.bar.h && c.x + c.w <= client.w && c.y + c.h <= client.h);
+            if (i) {
+                CHECK(c.x >= f.cards[i - 1].x + f.cards[i - 1].w);  // side by side, the same row
+                CHECK(c.y == f.cards[0].y && c.w == f.cards[0].w);
+            }
+            CHECK_EQ(launcherview::firstRunAt(f, c.x + c.w / 2, c.y + c.h / 2), i);
+        }
+        CHECK(f.title.y + f.title.h <= f.cards[0].y);
+        CHECK(f.skip.y >= f.cards[0].y + f.cards[0].h && f.skip.y + f.skip.h <= client.h);
+        CHECK_EQ(launcherview::firstRunAt(f, f.skip.x + f.skip.w / 2, f.skip.y + f.skip.h / 2),
+                 launcherview::kKindCards);
+        CHECK_EQ(launcherview::firstRunAt(f, 1, 1), -1);
+    }
+    // the card marked «для вашої відеокарти»: everything new on a card that draws it, the weak computer's on a weak
+    // one, an integrated one or one of little memory
+    namespace presets = settings::presets;
+    CHECK(presets::suggestedKind(3, 8192, false) == presets::Kind::AllNew);
+    CHECK(presets::suggestedKind(2, 4096, false) == presets::Kind::AllNew);
+    CHECK(presets::suggestedKind(1, 4096, false) == presets::Kind::WeakPc);
+    CHECK(presets::suggestedKind(3, 8192, true) == presets::Kind::WeakPc);
+    CHECK(presets::suggestedKind(3, 1024, false) == presets::Kind::WeakPc);
 }

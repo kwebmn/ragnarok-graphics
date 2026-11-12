@@ -46,6 +46,11 @@ struct LauncherData {
     bool fitsCard = false;  // «Картинка» and «Текстури» are the card's
     bool undoable = false;  // a pick of the last 5 s: «Змінено · Скасувати»
     std::string seen;       // 3.0.18-beta.195: the version the player last saw the news of ("" none)
+    // 3.0.18-beta.196: the first start (no version seen, no game here) - the players' cards over the launcher: the
+    // one for the card, each card's three looks in words
+    bool firstRun = false;
+    int suggestedKind = 0;
+    std::wstring kindLooks[launcherview::kKindCards];
 };
 
 class LauncherHost {
@@ -60,6 +65,8 @@ public:
     virtual const std::vector<settings::changelog::Version>& launcherLog() = 0;
     virtual std::string tryName(const std::string& point) = 0;
     virtual void tryPoint(const std::string& name) = 0;
+    // 3.0.18-beta.196: the first start's card picked (presets::Kind), -1 «Пропустити»
+    virtual void firstRunAction(int kind) = 0;
 };
 
 class LauncherView {
@@ -137,6 +144,11 @@ private:
     void chooseRow(int row);  // its place in logScreen_.rows, scrolled into sight
     float pageTop() const;    // where the page's content starts, scrolled
     int logFresh() const;     // how many lead the log newer than the one seen
+    // 3.0.18-beta.196: the first start's cards over the launcher, the art darker at its edges
+    void veil(std::vector<uint32_t>& px) const;
+    void composeFirst();
+    void wordsFirst(HDC dc);
+    void firstPress(int card);  // 0..3 a card, kKindCards «Пропустити»
     bool hovered(launcherview::Part p, int index = -1) const;
     bool pressedOn(launcherview::Part p) const;
     std::wstring t(settings::Text x) const;
@@ -205,6 +217,14 @@ private:
     std::vector<PagePoint> page_;
     int pageFor_ = -2;
     float pageWidth_ = 0;
+    // the first start: its places, the mouse's and the keys' card, the cards' pictures as read and at their size
+    launcherview::FirstRun first_;
+    int firstHover_ = -1, firstPressed_ = -1, firstFocus_ = -1;
+    bool kindArtRead_ = false;
+    launcherart::Image kindArt_[launcherview::kKindCards];
+    std::vector<uint32_t> kindPx_[launcherview::kKindCards];
+    int kindW_ = 0, kindH_ = 0;
+    bool firstShown_ = false;  // firstRun as the base was made (the veil in it)
 };
 
 }  // namespace uagfx::app

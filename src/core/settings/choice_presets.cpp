@@ -48,6 +48,10 @@ Persona persona(Kind k, const Suggestion& card) {
     return {};
 }
 
+Kind suggestedKind(int cardLevel, unsigned long long vramMb, bool integrated) {
+    return cardLevel >= 2 && !integrated && vramMb >= 2048 ? Kind::AllNew : Kind::WeakPc;
+}
+
 Text kindName(Kind k) {
     static const Text names[kKinds] = {Text::KindAllNew, Text::KindNewLookOldUi, Text::KindWeakPc, Text::KindClassic};
     return names[int(k)];

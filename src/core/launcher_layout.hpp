@@ -42,6 +42,15 @@ struct Hit {
 };
 Hit hitAt(const Layout& L, float x, float y);
 
+// 3.0.18-beta.196: the first start (no version seen, no game played here) - «Як ви хочете грати?», the four players'
+// cards side by side (presets::Kind's order), «Пропустити — вибере сама програма» under them
+constexpr int kKindCards = 4;
+struct FirstRun {
+    Box title, note, cards[kKindCards], skip;
+};
+FirstRun firstRunFor(const Layout& L);
+int firstRunAt(const FirstRun& f, float x, float y);  // a card 0..3, kKindCards «Пропустити», -1 none
+
 // What the big button does now: the game running - another window (never an update over it); an update coming in;
 // one offered; else play
 enum class PlayState : uint8_t { Update, Updating, Play, Running };

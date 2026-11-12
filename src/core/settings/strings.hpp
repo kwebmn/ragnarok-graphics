@@ -943,6 +943,7 @@ enum class Text : uint16_t {
     LauncherPickAuto, LauncherPickTest, LauncherPickAll, LauncherPickUndo, LauncherPickNoCard,  // .194: picker
     LauncherLogTitle, LauncherFilterAll, LauncherFilterReleases, LauncherFilterNew, LauncherTagNew, LauncherTry,
     LauncherToday, LauncherYesterday, LauncherMonths, LauncherLogEmpty,  // .195: «Журнал змін»
+    LauncherFirstSkip, LauncherFirstFits,  // .196: the first start's cards
     Count
 };
 

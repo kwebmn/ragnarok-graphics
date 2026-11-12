@@ -77,4 +77,34 @@ PlayState playState(const PlayInputs& in) {
     return in.offered ? PlayState::Update : PlayState::Play;
 }
 
+// The cards 240 wide at most, 16 apart, in the window's middle a little under its centre; the title and its note over
+// them, «Пропустити» under them
+FirstRun firstRunFor(const Layout& L) {
+    FirstRun f;
+    const float s = L.s > 0 ? L.s : 1.0f;
+    const float W = float(std::max(L.w, 1)), H = float(std::max(L.h, 1));
+    const float gap = 16 * s, margin = 40 * s;
+    const float w = std::min(240 * s, (W - 2 * margin - 3 * gap) / 4);
+    const float h = w * 9.0f / 16.0f + 86 * s;
+    const float row = 4 * w + 3 * gap;
+    const float x0 = (W - row) / 2;
+    const float titleH = 36 * s, noteH = 22 * s, skipH = 34 * s;
+    const float block = titleH + 8 * s + noteH + 24 * s + h + 22 * s + skipH;
+    float top = (H - block) / 2 + 12 * s;
+    top = std::max(top, L.bar.h + 8 * s);
+    f.title = Box{x0, top, row, titleH};
+    f.note = Box{x0, top + titleH + 8 * s, row, noteH};
+    const float cardsY = f.note.y + noteH + 24 * s;
+    for (int i = 0; i < kKindCards; ++i) f.cards[i] = Box{x0 + float(i) * (w + gap), cardsY, w, h};
+    const float skipW = std::min(row, 380 * s);
+    f.skip = Box{(W - skipW) / 2, cardsY + h + 22 * s, skipW, skipH};
+    return f;
+}
+
+int firstRunAt(const FirstRun& f, float x, float y) {
+    for (int i = 0; i < kKindCards; ++i)
+        if (f.cards[i].contains(x, y)) return i;
+    return f.skip.contains(x, y) ? kKindCards : -1;
+}
+
 }  // namespace uagfx::launcherview

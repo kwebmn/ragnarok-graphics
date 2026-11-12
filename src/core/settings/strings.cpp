@@ -8551,6 +8551,10 @@ constexpr Entry kTexts[] = {
      "січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня",
      "января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря"},
     {Text::LauncherLogEmpty, "Nothing here yet", "Тут поки порожньо", "Здесь пока пусто"},
+    {Text::LauncherFirstSkip, "Skip - the app chooses itself",
+     "Пропустити — вибере сама програма",
+     "Пропустить — выберет сама программа"},
+    {Text::LauncherFirstFits, "for your graphics card", "для вашої відеокарти", "для вашей видеокарты"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

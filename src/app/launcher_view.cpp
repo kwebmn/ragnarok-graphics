@@ -338,6 +338,7 @@ void LauncherView::relayout() {
     const int news = int(std::min<size_t>(data_.info.news.size(), size_t(launcherview::kMostNews)));
     layout_ = launcherview::layoutFor(r.right, r.bottom, float(dpi_) / 96.0f, news, !data_.plateText.empty());
     picker_ = launcherpick::layoutFor(layout_);  // 3.0.18-beta.194
+    first_ = launcherview::firstRunFor(layout_);  // 3.0.18-beta.196
     if (logging_) relayoutLog();                  // 3.0.18-beta.195
 }
 
@@ -570,7 +571,7 @@ bool LauncherView::pressedOn(Part p) const { return pressed_.part == p && hover_
 
 void LauncherView::compose() {
     const int w = frameW_, h = frameH_;
-    if (!baseValid_) {
+    if (!baseValid_ || firstShown_ != data_.firstRun) {
         if (artPx_.size() != size_t(w) * size_t(h)) coverArt();
         base_ = artPx_;
         if (fading_ && nextPx_.size() == base_.size()) {
@@ -578,6 +579,8 @@ void LauncherView::compose() {
             launcherart::blend(base_, nextPx_, t * t * (3 - 2 * t));  // eased in and out
         }
         shade(base_);
+        if (data_.firstRun) veil(base_);  // 3.0.18-beta.196: the first start's cards over it
+        firstShown_ = data_.firstRun;
         baseValid_ = true;
     }
     pic_.width = w;
@@ -588,7 +591,7 @@ void LauncherView::compose() {
     const launcherview::Layout& L = layout_;
     const float s = L.s, edge = std::max(1.0f, s);
     // 3.0.18-beta.195: «Журнал змін» over the art darker (the launcher's own picture; the top bar stays over it)
-    if (logging_) panel::roundRect(pic_, pb(Box{0, 0, float(w), float(h)}), 0, kShadeRgb, 0.74f);
+    if (logging_ && !data_.firstRun) panel::roundRect(pic_, pb(Box{0, 0, float(w), float(h)}), 0, kShadeRgb, 0.74f);
     HDC dc = memDc_;
     // the server's pill: its dot and words, at the right of its place
     {
@@ -612,6 +615,10 @@ void LauncherView::compose() {
         const float tw = float(widthOf(dc, st, L"UA"));
         const float x = L.language.x + (L.language.w - tw - 14 * s) / 2 + tw + 8 * s;
         triangleDown(pic_, x, L.language.y + L.language.h / 2, 4 * s, hovered(Part::Language) ? kText : kMuted, 1.0f);
+    }
+    if (data_.firstRun) {
+        composeFirst();
+        return;
     }
     if (logging_) {
         composeLog();
@@ -735,6 +742,10 @@ void LauncherView::words(HDC dc) {
         const float tw = float(widthOf(dc, st, code));
         const float x = L.language.x + (L.language.w - tw - 14 * s) / 2;
         line(dc, st, code, x, L.language.y + L.language.h / 2 + ascentOf(dc, st) * 0.36f, -1);
+    }
+    if (data_.firstRun) {
+        wordsFirst(dc);
+        return;
     }
     if (logging_) {
         wordsLog(dc);
@@ -889,8 +900,8 @@ void LauncherView::paint(HDC target) {
     GdiFlush();
     std::memcpy(bits_, pic_.px.data(), size_t(frameW_) * size_t(frameH_) * sizeof(uint32_t));
     words(memDc_);
-    if (picking_ && !logging_) {  // 3.0.18-beta.194: the picker over the frame with its words - back into pic_, then
-                                  // its card and its words
+    // 3.0.18-beta.194: the picker over the frame with its words - back into pic_, then its card and its words
+    if (picking_ && !logging_ && !data_.firstRun) {
         GdiFlush();
         std::memcpy(pic_.px.data(), bits_, size_t(frameW_) * size_t(frameH_) * sizeof(uint32_t));
         composePicker();
@@ -1489,6 +1500,124 @@ void LauncherView::wordsLog(HDC dc) {
     SelectClipRgn(dc, nullptr);
 }
 
+// --- 3.0.18-beta.196: the first start ---
+
+// The concept's veil: the art darker toward the edges (an ellipse round the middle a little over the centre, from .55
+// to .92 of the ground's colour), the cards bright in it
+void LauncherView::veil(std::vector<uint32_t>& px) const {
+    const int w = frameW_, h = frameH_;
+    if (w <= 0 || h <= 0 || px.size() < size_t(w) * size_t(h)) return;
+    const float cx = float(w) * 0.5f, cy = float(h) * 0.4f, rx = float(w) * 0.5f, ry = float(h) * 0.6f;
+    const int cr = int((kShadeRgb >> 16) & 255), cg = int((kShadeRgb >> 8) & 255), cb = int(kShadeRgb & 255);
+    for (int y = 0; y < h; ++y) {
+        const float ny = (float(y) + 0.5f - cy) / ry;
+        uint32_t* row = px.data() + size_t(y) * size_t(w);
+        for (int x = 0; x < w; ++x) {
+            const float nx = (float(x) + 0.5f - cx) / rx;
+            const float d = std::sqrt(nx * nx + ny * ny) / 1.4142f;
+            const float a = 0.55f + 0.37f * std::clamp(d / 0.7f, 0.0f, 1.0f);
+            const int k = int((1 - a) * 256);
+            const uint32_t p = row[x];
+            const int r = cr + (((int((p >> 16) & 255) - cr) * k) >> 8);
+            const int g = cg + (((int((p >> 8) & 255) - cg) * k) >> 8);
+            const int b = cb + (((int(p & 255) - cb) * k) >> 8);
+            row[x] = 0xFF000000u | uint32_t(r) << 16 | uint32_t(g) << 8 | uint32_t(b);
+        }
+    }
+}
+
+void LauncherView::firstPress(int card) {
+    if (!host_) return;
+    host_->firstRunAction(card >= 0 && card < launcherview::kKindCards ? card : -1);
+}
+
+void LauncherView::composeFirst() {
+    const launcherview::FirstRun& F = first_;
+    const float s = layout_.s, edge = std::max(1.0f, s);
+    if (!kindArtRead_) {  // «Хочу все нове» the remaster, «Нова картинка...» uaRO HD's day, the weak PC's the improved,
+                          // «Як у 2004-му» the game's
+        kindArtRead_ = true;
+        static const wchar_t* const kFiles[launcherview::kKindCards] = {L"look-remaster.jpg", L"art-day.jpg",
+                                                                        L"look-better.jpg", L"look-classic.jpg"};
+        std::string bytes;
+        for (int i = 0; i < launcherview::kKindCards; ++i) {
+            bytes.clear();
+            kindArt_[i] =
+                readFile(artDir_ + L"\\" + kFiles[i], bytes) ? launcherart::decode(bytes) : launcherart::Image{};
+        }
+        kindW_ = kindH_ = 0;
+    }
+    for (int i = 0; i < launcherview::kKindCards; ++i) {
+        const Box& c = F.cards[i];
+        const bool fits = data_.suggestedKind == i, on = firstHover_ == i;
+        for (int k = 4; k >= 1 && fits; --k) {  // the card's own glows a little
+            const float g = float(k) * 3 * s;
+            panel::roundRect(pic_, pb(grown(c, g)), 12 * s + g, kGold, 0.03f);
+        }
+        panel::roundRect(pic_, pb(c), 12 * s, on ? kRaise : kCard, 0.96f, fits || on ? kGold : kLine,
+                         fits ? 1.0f : on ? 0.6f : 1.0f, fits ? 2 * s : edge);
+        const int w = int(c.w - 12 * s), h = int(float(w) * 9.0f / 16.0f);
+        if (w > 0 && h > 0) {
+            if (w != kindW_ || h != kindH_) {
+                for (int k = 0; k < launcherview::kKindCards; ++k) shrink(kindArt_[k], w, h, kindPx_[k]);
+                kindW_ = w;
+                kindH_ = h;
+            }
+            blitRounded(pic_, c.x + 6 * s, c.y + 6 * s, 8 * s, kindPx_[i], w, h, 1.0f);
+        }
+        if (fits) {  // «для вашої відеокарти» on its picture
+            const Style st{Face::SemiBold, 11, kOnGold};
+            const float pw = float(widthOf(memDc_, st, t(Text::LauncherFirstFits))) + 18 * s;
+            panel::roundRect(pic_, pb(Box{c.x + 12 * s, c.y + 12 * s, std::min(pw, c.w - 24 * s), 22 * s}), 11 * s,
+                             kGold, 1.0f);
+        }
+    }
+    const bool skipOn = firstHover_ == launcherview::kKindCards;
+    panel::roundRect(pic_, pb(F.skip), F.skip.h / 2, kCard, 0.8f, skipOn ? kGold : kLine, skipOn ? 0.7f : 1.0f, edge);
+    if (firstFocus_ >= 0 && GetFocus() == hwnd_) {
+        const Box b = firstFocus_ < launcherview::kKindCards ? F.cards[firstFocus_] : F.skip;
+        panel::roundRect(pic_, pb(grown(b, 4 * s)), 15 * s, 0, 0, kGoldHi, 0.95f, 2 * s);
+    }
+}
+
+void LauncherView::wordsFirst(HDC dc) {
+    namespace presets = settings::presets;
+    const launcherview::FirstRun& F = first_;
+    const float s = layout_.s;
+    const Style title{Face::Bold, 28, kText};
+    line(dc, title, fit(dc, title, t(Text::KindHead), int(F.title.w)), F.title.x + F.title.w / 2,
+         F.title.y + F.title.h / 2 + ascentOf(dc, title) * 0.36f, 0);
+    const Style note{Face::Medium, 13.5f, kMuted};
+    line(dc, note, fit(dc, note, t(Text::KindNote), int(F.note.w)), F.note.x + F.note.w / 2,
+         F.note.y + F.note.h / 2 + ascentOf(dc, note) * 0.36f, 0);
+    for (int i = 0; i < launcherview::kKindCards; ++i) {
+        const Box& c = F.cards[i];
+        const bool fits = data_.suggestedKind == i;
+        const float x = c.x + 12 * s, width = c.w - 24 * s;
+        float y = c.y + 6 * s + (c.w - 12 * s) * 9.0f / 16.0f + 22 * s;
+        const Style name{Face::SemiBold, 14.5f, fits ? kGoldHi : firstHover_ == i ? kWhite : kText};
+        for (const std::wstring& l : wrap(dc, name, t(presets::kindName(presets::Kind(i))), int(width), 2)) {
+            line(dc, name, l, x, y, -1);
+            y += 18 * s;
+        }
+        const Style looks{Face::Medium, 11.5f, kMuted};
+        y += 2 * s;
+        for (const std::wstring& l : wrap(dc, looks, data_.kindLooks[i], int(width), 2)) {
+            line(dc, looks, l, x, y, -1);
+            y += 15 * s;
+        }
+        if (fits) {
+            const Style st{Face::SemiBold, 11, kOnGold};
+            const Box pill{c.x + 12 * s, c.y + 12 * s, c.w - 24 * s, 22 * s};
+            const std::wstring said = fit(dc, st, t(Text::LauncherFirstFits), int(pill.w - 18 * s));
+            line(dc, st, said, pill.x + 9 * s, pill.y + pill.h / 2 + ascentOf(dc, st) * 0.36f, -1);
+        }
+    }
+    const Style skip{Face::SemiBold, 13, firstHover_ == launcherview::kKindCards ? kWhite : kGoldHi};
+    line(dc, skip, fit(dc, skip, t(Text::LauncherFirstSkip), int(F.skip.w - 20 * s)), F.skip.x + F.skip.w / 2,
+         F.skip.y + F.skip.h / 2 + ascentOf(dc, skip) * 0.36f, 0);
+}
+
 // --- the mouse and the keys ---
 
 Hit LauncherView::hitAt(int x, int y) const {
@@ -1597,6 +1726,18 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
             tme.hwndTrack = hwnd_;
             tracking_ = TrackMouseEvent(&tme) != FALSE;
         }
+        if (data_.firstRun) {  // 3.0.18-beta.196: the cards, «Пропустити»; the language above them too
+            const float x = float(GET_X_LPARAM(lp)), y = float(GET_Y_LPARAM(lp));
+            const int card = launcherview::firstRunAt(first_, x, y);
+            const Hit main = launcherview::hitAt(layout_, x, y);
+            const Hit lang = main.part == Part::Language ? main : Hit{};
+            if (card != firstHover_ || lang.part != hover_.part) {
+                firstHover_ = card;
+                hover_ = lang;
+                InvalidateRect(hwnd_, nullptr, FALSE);
+            }
+            return 0;
+        }
         if (logging_) {  // 3.0.18-beta.195
             const LogHit h = logHitAt(float(GET_X_LPARAM(lp)), float(GET_Y_LPARAM(lp)));
             if (h.kind != logHover_.kind || h.index != logHover_.index) {
@@ -1625,6 +1766,7 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
         tracking_ = false;
         pickHover_ = launcherpick::PickHit{};
         logHover_ = LogHit{};
+        firstHover_ = -1;
         if (hover_.part != Part::None || picking_) {
             hover_ = Hit{};
             InvalidateRect(hwnd_, nullptr, FALSE);
@@ -1633,6 +1775,15 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK:
         SetFocus(hwnd_);
+        if (data_.firstRun) {
+            const float x = float(GET_X_LPARAM(lp)), y = float(GET_Y_LPARAM(lp));
+            firstPressed_ = launcherview::firstRunAt(first_, x, y);
+            const Hit main = launcherview::hitAt(layout_, x, y);
+            pressed_ = main.part == Part::Language ? main : Hit{};
+            SetCapture(hwnd_);
+            InvalidateRect(hwnd_, nullptr, FALSE);
+            return 0;
+        }
         if (logging_) {
             logPressed_ = logHitAt(float(GET_X_LPARAM(lp)), float(GET_Y_LPARAM(lp)));
             SetCapture(hwnd_);
@@ -1650,6 +1801,20 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
         InvalidateRect(hwnd_, nullptr, FALSE);
         return 0;
     case WM_LBUTTONUP: {
+        if (data_.firstRun) {
+            const int was = firstPressed_;
+            const Hit wasMain = pressed_;
+            firstPressed_ = -1;
+            pressed_ = Hit{};
+            if (GetCapture() == hwnd_) ReleaseCapture();
+            const float x = float(GET_X_LPARAM(lp)), y = float(GET_Y_LPARAM(lp));
+            InvalidateRect(hwnd_, nullptr, FALSE);
+            if (was >= 0 && launcherview::firstRunAt(first_, x, y) == was)
+                firstPress(was);
+            else if (wasMain.part == Part::Language && launcherview::hitAt(layout_, x, y).part == Part::Language)
+                press(wasMain);
+            return 0;
+        }
         if (logging_) {
             const LogHit was = logPressed_;
             logPressed_ = LogHit{};
@@ -1686,7 +1851,8 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_SETCURSOR:
         if (LOWORD(lp) == HTCLIENT) {
             const launcherpick::PickPart pp = pickHover_.part;
-            const bool hand = logging_   ? logHover_.kind != LogHit::None
+            const bool hand = data_.firstRun ? firstHover_ >= 0 || hover_.part == Part::Language
+                              : logging_     ? logHover_.kind != LogHit::None
                               : picking_ ? pp != launcherpick::PickPart::None && pp != launcherpick::PickPart::Card &&
                                                (pp != launcherpick::PickPart::Undo || data_.undoable)
                                          : hover_.part != Part::None;
@@ -1716,6 +1882,20 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
         }
         break;
     case WM_KEYDOWN: {
+        if (data_.firstRun) {  // the arrows and Tab walk the cards and «Пропустити», Enter picks (the card's own
+                               // when none ringed), Esc skips
+            const int n = launcherview::kKindCards + 1;
+            if (wp == VK_ESCAPE) {
+                firstPress(launcherview::kKindCards);
+            } else if (wp == VK_TAB || wp == VK_LEFT || wp == VK_RIGHT || wp == VK_UP || wp == VK_DOWN) {
+                const bool previous = wp == VK_TAB ? GetKeyState(VK_SHIFT) < 0 : (wp == VK_LEFT || wp == VK_UP);
+                firstFocus_ = firstFocus_ < 0 ? (previous ? n - 1 : 0) : (firstFocus_ + (previous ? n - 1 : 1)) % n;
+                InvalidateRect(hwnd_, nullptr, FALSE);
+            } else if (wp == VK_RETURN || wp == VK_SPACE) {
+                firstPress(firstFocus_ >= 0 ? firstFocus_ : data_.suggestedKind);
+            }
+            return 0;
+        }
         if (logging_) {  // Esc closes, Up and Down walk the versions, Page Up and Page Down the page
             const auto& rows = logScreen_.rows;
             int at = -1;

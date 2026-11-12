@@ -48,6 +48,7 @@ public:
     const std::vector<settings::changelog::Version>& launcherLog() override;  // 3.0.18-beta.195: «Журнал змін»
     std::string tryName(const std::string& point) override;
     void tryPoint(const std::string& name) override;
+    void firstRunAction(int kind) override;  // 3.0.18-beta.196: the first start's card
     // 2.13: uaro-graphics.exe --report (the game's Ctrl+Shift+F10): «Нове звернення» with its shot, the window up
     void reportAtStart(const ReportStart& s) {
         reportStart_ = s;
