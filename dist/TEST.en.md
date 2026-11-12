@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.234 — what's new · 2026-11-13
+
+- Wings: the wings' items draw their own headgear on the head again, as always (the owner's call); the big wings on the back come from the driver as before.
+- To check: put on an item of the list - its headgear on the head, the big wings on the back.
+
 # uaRO Graphics 3.0.18-beta.233 — what's new · 2026-11-13
 
 - Wings: for players with uaRO Graphics the wings' items (Angel Blessing, Helm of Darkness, Wings of Diablo, Phoenix Crown, Soul Wing, Soul Ring, Valkyrie Feather Band, Emperor's Laurel Crown, Sacred Palma, Emperor Wreath, Flower Crown, Red Deviruchi Hat) no longer draw their own headgear - the big wings on the back alone. The character in «Спорядження» (Alt+Q) wears none of it either. Players without the driver see the usual headgear.
