@@ -8532,6 +8532,13 @@ constexpr Entry kTexts[] = {
      "Безпечний режим увімкнено: ефекти, Direct3D 12 і DLSS вимкнено",
      "Безопасный режим включён: эффекты, Direct3D 12 и DLSS выключены"},
     {Text::LauncherPlateOn, "Switch on again", "Увімкнути знову", "Включить снова"},
+    {Text::LauncherPickAuto, "Auto for your graphics card", "Авто для вашої відеокарти", "Авто для вашей видеокарты"},
+    {Text::LauncherPickTest, "Check the graphics card", "Перевірити відеокарту", "Проверить видеокарту"},
+    {Text::LauncherPickAll, "All settings ›", "Усі налаштування ›", "Все настройки ›"},
+    {Text::LauncherPickUndo, "Changed · Undo", "Змінено · Скасувати", "Изменено · Отменить"},
+    {Text::LauncherPickNoCard, "the graphics card is not known yet",
+     "відеокарту ще не визначено",
+     "видеокарта ещё не определена"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -940,6 +940,7 @@ enum class Text : uint16_t {
     LauncherVersionLine, LauncherAuto, LauncherChange, LauncherBack, LauncherTagline, LauncherBeta,
     LauncherRelease,  // 3.0.18-beta.193: the launcher
     LauncherPlateSafeAuto, LauncherPlateSafe, LauncherPlateOn,  // and its plates
+    LauncherPickAuto, LauncherPickTest, LauncherPickAll, LauncherPickUndo, LauncherPickNoCard,  // .194: picker
     Count
 };
 

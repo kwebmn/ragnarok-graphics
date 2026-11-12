@@ -44,6 +44,7 @@ public:
     void playTest() override { doApply(true, true); }  // 3.0.5-beta.7
     void openReports(bool fresh) override;
     void launcherAction(launcherview::Part part, int index) override;  // 3.0.18-beta.193
+    void lookAction(launcherpick::PickPart part, settings::presets::Choice choice, int variant) override;  // .194
     // 2.13: uaro-graphics.exe --report (the game's Ctrl+Shift+F10): «Нове звернення» with its shot, the window up
     void reportAtStart(const ReportStart& s) {
         reportStart_ = s;
@@ -111,6 +112,8 @@ private:
     enum class Plate : uint8_t { None, Rollback, Safe, Off } plate_ = Plate::None;
     std::string rollBack_;           // the plate's version back to
     std::wstring launcherShownSig_;  // what the launcher shows: nothing painted again when it is the same
+    // 3.0.18-beta.194: the look picker's last pick - its keys' tokens before it, kept 5 s for «Скасувати»
+    std::vector<std::pair<std::string, std::string>> lookUndo_;
 
     std::unique_ptr<Model> model_;
     HWND hwnd_ = nullptr;

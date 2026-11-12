@@ -139,6 +139,69 @@ void triangleDown(panel::Picture& p, float cx, float cy, float half, uint32_t rg
         }
 }
 
+// A line from (ax, ay) to (bx, by), r thick each side, its ends round - the picker's ✕ and ✓
+void stroke(panel::Picture& p, float ax, float ay, float bx, float by, float r, uint32_t rgb, float a) {
+    const int x0 = std::max(0, int(std::floor(std::min(ax, bx) - r - 1)));
+    const int x1 = std::min(p.width, int(std::ceil(std::max(ax, bx) + r + 1)));
+    const int y0 = std::max(0, int(std::floor(std::min(ay, by) - r - 1)));
+    const int y1 = std::min(p.height, int(std::ceil(std::max(ay, by) + r + 1)));
+    const float dx = bx - ax, dy = by - ay, len2 = std::max(dx * dx + dy * dy, 1e-6f);
+    for (int y = y0; y < y1; ++y)
+        for (int x = x0; x < x1; ++x) {
+            const float px = float(x) + 0.5f, py = float(y) + 0.5f;
+            const float t = std::clamp(((px - ax) * dx + (py - ay) * dy) / len2, 0.0f, 1.0f);
+            const float ex = px - (ax + t * dx), ey = py - (ay + t * dy);
+            const float inside = std::clamp(0.5f - (std::sqrt(ex * ex + ey * ey) - r), 0.0f, 1.0f);
+            if (inside > 0) panel::over(p.px[size_t(y) * size_t(p.width) + size_t(x)], rgb, a * inside);
+        }
+}
+
+// A picture made w x h by the mean of the pixels each target pixel covers (a small one from a big one stays smooth),
+// cut to w:h at its middle first
+void shrink(const launcherart::Image& src, int w, int h, std::vector<uint32_t>& out) {
+    out.assign(size_t(std::max(w, 0)) * size_t(std::max(h, 0)), launcherart::kGround);
+    if (src.w <= 0 || src.h <= 0 || w <= 0 || h <= 0 || src.argb.size() < size_t(src.w) * size_t(src.h)) return;
+    const double k = std::min(double(src.w) / w, double(src.h) / h);  // source pixels a target pixel
+    const double ox = (src.w - k * w) / 2, oy = (src.h - k * h) / 2;
+    for (int y = 0; y < h; ++y) {
+        const int sy0 = std::clamp(int(oy + y * k), 0, src.h - 1);
+        const int sy1 = std::clamp(int(oy + (y + 1) * k), sy0 + 1, src.h);
+        for (int x = 0; x < w; ++x) {
+            const int sx0 = std::clamp(int(ox + x * k), 0, src.w - 1);
+            const int sx1 = std::clamp(int(ox + (x + 1) * k), sx0 + 1, src.w);
+            uint32_t r = 0, g = 0, b = 0, n = 0;
+            for (int sy = sy0; sy < sy1; ++sy)
+                for (int sx = sx0; sx < sx1; ++sx) {
+                    const uint32_t c = src.argb[size_t(sy) * size_t(src.w) + size_t(sx)];
+                    r += (c >> 16) & 255u, g += (c >> 8) & 255u, b += c & 255u, ++n;
+                }
+            out[size_t(y) * size_t(w) + size_t(x)] = 0xFF000000u | (r / n) << 16 | (g / n) << 8 | (b / n);
+        }
+    }
+}
+
+// pixels (w x h) into the picture at (x, y), their corners rounded r; `light` < 1 darkens them
+void blitRounded(panel::Picture& p, float x, float y, float r, const std::vector<uint32_t>& px, int w, int h,
+                 float light) {
+    if (px.size() < size_t(w) * size_t(h)) return;
+    const int ix = int(std::lround(x)), iy = int(std::lround(y));
+    const Box b{float(ix), float(iy), float(w), float(h)};
+    for (int j = 0; j < h; ++j) {
+        const int ty = iy + j;
+        if (ty < 0 || ty >= p.height) continue;
+        for (int i = 0; i < w; ++i) {
+            const int tx = ix + i;
+            if (tx < 0 || tx >= p.width) continue;
+            const float inside =
+                std::clamp(0.5f - roundDistance(float(tx) + 0.5f, float(ty) + 0.5f, b, r), 0.0f, 1.0f);
+            if (inside <= 0) continue;
+            uint32_t c = px[size_t(j) * size_t(w) + size_t(i)] & 0xFFFFFFu;
+            if (light < 1) c = mix(c, 0x000000, 1 - light);
+            panel::over(p.px[size_t(ty) * size_t(p.width) + size_t(tx)], c, inside);
+        }
+    }
+}
+
 // The picture of the time of day (the season first: winter in December to February), the next ones after it
 int firstArt() {
     SYSTEMTIME t{};
@@ -274,6 +337,7 @@ void LauncherView::relayout() {
     GetClientRect(hwnd_, &r);
     const int news = int(std::min<size_t>(data_.info.news.size(), size_t(launcherview::kMostNews)));
     layout_ = launcherview::layoutFor(r.right, r.bottom, float(dpi_) / 96.0f, news, !data_.plateText.empty());
+    picker_ = launcherpick::layoutFor(layout_);  // 3.0.18-beta.194
 }
 
 // --- the words ---
@@ -633,7 +697,7 @@ void LauncherView::compose() {
     }
     // the keyboard's ring
     const std::vector<Hit> order = focusOrder();
-    if (focus_ >= 0 && focus_ < int(order.size()) && GetFocus() == hwnd_) {
+    if (!picking_ && focus_ >= 0 && focus_ < int(order.size()) && GetFocus() == hwnd_) {
         const Box b = boxOf(order[size_t(focus_)]);
         if (b.w > 0) panel::roundRect(pic_, pb(grown(b, 3 * s)), 12 * s, 0, 0, kGoldHi, 0.95f, 2 * s);
     }
@@ -814,6 +878,13 @@ void LauncherView::paint(HDC target) {
     GdiFlush();
     std::memcpy(bits_, pic_.px.data(), size_t(frameW_) * size_t(frameH_) * sizeof(uint32_t));
     words(memDc_);
+    if (picking_) {  // 3.0.18-beta.194: the picker over the frame with its words - back into pic_, its card, its words
+        GdiFlush();
+        std::memcpy(pic_.px.data(), bits_, size_t(frameW_) * size_t(frameH_) * sizeof(uint32_t));
+        composePicker();
+        std::memcpy(bits_, pic_.px.data(), size_t(frameW_) * size_t(frameH_) * sizeof(uint32_t));
+        wordsPicker(memDc_);
+    }
     GdiFlush();
     BitBlt(target, 0, 0, frameW_, frameH_, memDc_, 0, 0, SRCCOPY);
 }
@@ -887,6 +958,241 @@ void LauncherView::tick() {
     InvalidateRect(hwnd_, nullptr, FALSE);
 }
 
+// --- 3.0.18-beta.194: the look picker ---
+
+void LauncherView::openPicker() {
+    if (!looksRead_) {  // «Як у грі», «Покращена», «Ремастер»'s pictures; «Авто» shows the improved one darker
+        looksRead_ = true;
+        static const wchar_t* const kFiles[3] = {L"look-classic.jpg", L"look-better.jpg", L"look-remaster.jpg"};
+        std::string bytes;
+        for (int i = 0; i < 3; ++i) {
+            bytes.clear();
+            looks_[i] =
+                readFile(artDir_ + L"\\" + kFiles[i], bytes) ? launcherart::decode(bytes) : launcherart::Image{};
+        }
+        lookW_ = lookH_ = 0;
+    }
+    picking_ = true;
+    hover_ = pressed_ = Hit{};
+    pickHover_ = pickPressed_ = launcherpick::PickHit{};
+    pickFocus_ = -1;
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void LauncherView::closePicker() {
+    if (!picking_) return;
+    picking_ = false;
+    pickHover_ = pickPressed_ = launcherpick::PickHit{};
+    pickFocus_ = -1;
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+std::vector<launcherpick::PickHit> LauncherView::pickerOrder() const {
+    using launcherpick::PickHit;
+    using launcherpick::PickPart;
+    std::vector<PickHit> order;
+    for (size_t i = 0; i < picker_.options.size(); ++i) order.push_back(PickHit{PickPart::Option, int(i)});
+    order.push_back(PickHit{PickPart::Auto});
+    order.push_back(PickHit{PickPart::Test});
+    if (data_.undoable) order.push_back(PickHit{PickPart::Undo});
+    order.push_back(PickHit{PickPart::All});
+    order.push_back(PickHit{PickPart::Close});
+    return order;
+}
+
+Box LauncherView::pickerBox(launcherpick::PickHit hit) const {
+    using launcherpick::PickPart;
+    switch (hit.part) {
+    case PickPart::Option:
+        return hit.option >= 0 && size_t(hit.option) < picker_.options.size() ? picker_.options[size_t(hit.option)].box
+                                                                               : Box{};
+    case PickPart::Auto: return picker_.autoRow;
+    case PickPart::Test: return picker_.test;
+    case PickPart::Undo: return picker_.undo;
+    case PickPart::All: return picker_.all;
+    case PickPart::Close: return picker_.close;
+    default: break;
+    }
+    return Box{};
+}
+
+void LauncherView::pickerPress(launcherpick::PickHit hit) {
+    using launcherpick::PickPart;
+    namespace presets = settings::presets;
+    switch (hit.part) {
+    case PickPart::None:
+    case PickPart::Close: closePicker(); return;
+    case PickPart::Card: return;
+    case PickPart::Option:
+        if (host_ && hit.option >= 0 && size_t(hit.option) < picker_.options.size()) {
+            const launcherpick::Option& o = picker_.options[size_t(hit.option)];
+            host_->lookAction(PickPart::Option, o.choice, o.variant);
+        }
+        return;
+    case PickPart::Undo:
+        if (!data_.undoable) return;
+        if (host_) host_->lookAction(hit.part, presets::Choice::Picture, 0);
+        return;
+    case PickPart::Auto:
+        if (host_) host_->lookAction(hit.part, presets::Choice::Picture, 0);
+        return;
+    case PickPart::Test:
+    case PickPart::All:
+        closePicker();
+        if (host_) host_->lookAction(hit.part, presets::Choice::Picture, 0);
+        return;
+    }
+}
+
+void LauncherView::composePicker() {
+    namespace presets = settings::presets;
+    using launcherpick::PickPart;
+    const launcherpick::Picker& P = picker_;
+    const float s = P.s, edge = std::max(1.0f, s);
+    pic_.clipX0 = pic_.clipY0 = 0;
+    pic_.clipX1 = pic_.clipY1 = 1 << 30;
+    // its shadow, the card
+    for (int i = 6; i >= 1; --i) {
+        const float g = float(i) * 3 * s;
+        panel::roundRect(pic_, pb(Box{P.card.x - g, P.card.y + 6 * s - g / 2, P.card.w + 2 * g, P.card.h + g}),
+                         14 * s + g, 0x000000, 0.06f);
+    }
+    panel::roundRect(pic_, pb(P.card), 14 * s, kCard, 0.98f, kLine, 1.0f, edge);
+    const auto on = [&](PickPart part, int option = -1) {
+        return pickHover_.part == part && (option < 0 || pickHover_.option == option);
+    };
+    // «Авто для вашої відеокарти»: gold while the look is the card's, a tick at its right
+    const bool autoOn = on(PickPart::Auto);
+    panel::roundRect(pic_, pb(P.autoRow), 9 * s, kRaise, 0.9f, data_.fitsCard || autoOn ? kGold : kLine,
+                     data_.fitsCard ? 0.95f : autoOn ? 0.6f : 1.0f, data_.fitsCard ? 2 * s : edge);
+    if (data_.fitsCard) {
+        const float cx = P.autoRow.x + P.autoRow.w - 22 * s, cy = P.autoRow.y + P.autoRow.h / 2;
+        stroke(pic_, cx - 7 * s, cy, cx - 2 * s, cy + 5 * s, 1.3f * s, kGoldHi, 1.0f);
+        stroke(pic_, cx - 2 * s, cy + 5 * s, cx + 8 * s, cy - 6 * s, 1.3f * s, kGoldHi, 1.0f);
+    }
+    // the options: the current one gold; «Картинка»'s with their pictures
+    for (size_t i = 0; i < P.options.size(); ++i) {
+        const launcherpick::Option& o = P.options[i];
+        const bool current = data_.looks[int(o.choice)].variant == o.variant;
+        const bool hot = on(PickPart::Option, int(i));
+        panel::roundRect(pic_, pb(o.box), 8 * s, kRaise, hot ? 1.0f : 0.86f, current || hot ? kGold : kLine,
+                         current ? 1.0f : hot ? 0.6f : 1.0f, current ? 2 * s : edge);
+        if (o.choice != presets::Choice::Picture) continue;
+        const int w = int(o.box.w - 10 * s), h = int(float(w) * 9.0f / 16.0f);
+        if (w <= 0 || h <= 0) continue;
+        if (w != lookW_ || h != lookH_) {
+            for (int k = 0; k < 3; ++k) shrink(looks_[k], w, h, lookPx_[k]);
+            lookW_ = w;
+            lookH_ = h;
+        }
+        // «Авто» (0) the improved picture darker, «Як у грі» (1), «Покращена» (2), «Ремастер» (3)
+        const int k = o.variant == 0 ? 1 : std::clamp(o.variant - 1, 0, 2);
+        blitRounded(pic_, o.box.x + 5 * s, o.box.y + 5 * s, 6 * s, lookPx_[k], w, h, o.variant == 0 ? 0.45f : 1.0f);
+    }
+    // its bottom row: the test, undo (while a pick may be undone), all the settings
+    panel::roundRect(pic_, pb(P.test), 8 * s, kRaise, 0.9f, kGold, on(PickPart::Test) ? 0.9f : 0.45f, edge);
+    if (data_.undoable)
+        panel::roundRect(pic_, pb(P.undo), 8 * s, kGold, on(PickPart::Undo) ? 0.34f : 0.18f, kGold, 0.9f, edge);
+    // ✕
+    {
+        const uint32_t c = on(PickPart::Close) ? kText : kMuted;
+        const float cx = P.close.x + P.close.w / 2, cy = P.close.y + P.close.h / 2, r = 6 * s;
+        stroke(pic_, cx - r, cy - r, cx + r, cy + r, 1.1f * s, c, 1.0f);
+        stroke(pic_, cx - r, cy + r, cx + r, cy - r, 1.1f * s, c, 1.0f);
+    }
+    // the keyboard's ring
+    const std::vector<launcherpick::PickHit> order = pickerOrder();
+    if (pickFocus_ >= 0 && pickFocus_ < int(order.size()) && GetFocus() == hwnd_) {
+        const Box b = pickerBox(order[size_t(pickFocus_)]);
+        if (b.w > 0) panel::roundRect(pic_, pb(grown(b, 3 * s)), 11 * s, 0, 0, kGoldHi, 0.95f, 2 * s);
+    }
+}
+
+void LauncherView::wordsPicker(HDC dc) {
+    namespace presets = settings::presets;
+    using launcherpick::PickPart;
+    const launcherpick::Picker& P = picker_;
+    const float s = P.s;
+    const auto on = [&](PickPart part, int option = -1) {
+        return pickHover_.part == part && (option < 0 || pickHover_.option == option);
+    };
+    const Style title{Face::Bold, 16, kText};
+    line(dc, title, fit(dc, title, t(Text::LookHead), int(P.title.w)), P.title.x, P.title.y + 17 * s, -1);
+    // the card's set
+    {
+        const float x = P.autoRow.x + 14 * s, width = P.autoRow.w - 28 * s - (data_.fitsCard ? 24 * s : 0);
+        const Style head{Face::SemiBold, 14, data_.fitsCard ? kGoldHi : kText};
+        line(dc, head, fit(dc, head, t(Text::LauncherPickAuto), int(width)), x, P.autoRow.y + 22 * s, -1);
+        const std::wstring note =
+            data_.cardName.empty()
+                ? t(Text::LauncherPickNoCard)
+                : data_.cardName + L": " + t(presets::nameOf(presets::Choice::Picture, data_.card.picture)) +
+                      L" \x00B7 " + t(presets::nameOf(presets::Choice::Textures, data_.card.textures));
+        const Style small{Face::Medium, 12, kMuted};
+        line(dc, small, fit(dc, small, note, int(width)), x, P.autoRow.y + 40 * s, -1);
+    }
+    // the rows' heads, «змінено N» at their right
+    for (int c = 0; c < presets::kChoices; ++c) {
+        const Box& h = P.heads[c];
+        const float base = h.y + 15 * s;
+        line(dc, Style{Face::Bold, 11, kGold, 2}, upper(t(presets::headOf(presets::Choice(c)))), h.x, base, -1);
+        const int changed = data_.looks[c].changed;
+        if (changed <= 0) continue;
+        std::wstring said = tf(Text::LookChanged, {"", std::to_string(changed)});  // «{1} · змінено {2}»
+        const size_t at = said.find_first_not_of(L" \x00B7");
+        said = at == std::wstring::npos ? said : said.substr(at);
+        line(dc, Style{Face::Medium, 11.5f, kMuted}, said, h.x + h.w, base, 1);
+    }
+    // the options' names: under the pictures (the words before «(»; «Авто»'s «(…)» on its darker picture), in the
+    // middle of the others in two lines at most
+    for (size_t i = 0; i < P.options.size(); ++i) {
+        const launcherpick::Option& o = P.options[i];
+        const bool current = data_.looks[int(o.choice)].variant == o.variant;
+        const Style st{Face::SemiBold, 12.5f, current ? kGoldHi : on(PickPart::Option, int(i)) ? kWhite : kText};
+        const std::wstring full = t(presets::nameOf(o.choice, o.variant));
+        const float cx = o.box.x + o.box.w / 2, width = o.box.w - 10 * s;
+        if (o.choice == presets::Choice::Picture) {
+            const size_t open = full.find(L" (");
+            const std::wstring name = open == std::wstring::npos ? full : full.substr(0, open);
+            line(dc, st, fit(dc, st, name, int(width)), cx, o.box.y + o.box.h - 9 * s, 0);
+            if (open != std::wstring::npos) {  // what it means, on the picture
+                std::wstring said = full.substr(open + 2);
+                if (!said.empty() && said.back() == L')') said.pop_back();
+                const Style small{Face::SemiBold, 11, kWhite};
+                const std::vector<std::wstring> lines = wrap(dc, small, said, int(width - 8 * s), 2);
+                const float imageH = width * 9.0f / 16.0f, lineH = 14 * s;
+                float y = o.box.y + 5 * s + imageH / 2 - lineH * float(lines.empty() ? 0 : lines.size() - 1) / 2 +
+                          ascentOf(dc, small) * 0.36f;
+                for (const std::wstring& l : lines) {
+                    line(dc, small, l, cx, y, 0);
+                    y += lineH;
+                }
+            }
+        } else {
+            const std::vector<std::wstring> lines = wrap(dc, st, full, int(width), 2);
+            const float lineH = 15 * s;
+            float y = o.box.y + o.box.h / 2 - lineH * float(lines.empty() ? 0 : lines.size() - 1) / 2 +
+                      ascentOf(dc, st) * 0.36f;
+            for (const std::wstring& l : lines) {
+                line(dc, st, l, cx, y, 0);
+                y += lineH;
+            }
+        }
+    }
+    // the bottom row
+    const Style link{Face::SemiBold, 12.5f, kGoldHi};
+    const float base = P.test.y + P.test.h / 2 + ascentOf(dc, link) * 0.36f;
+    const Style test{Face::SemiBold, 12.5f, on(PickPart::Test) ? kWhite : kGoldHi};
+    line(dc, test, fit(dc, test, t(Text::LauncherPickTest), int(P.test.w - 12 * s)), P.test.x + P.test.w / 2, base, 0);
+    if (data_.undoable) {
+        const Style undo{Face::SemiBold, 12.5f, on(PickPart::Undo) ? kWhite : kGoldHi};
+        line(dc, undo, fit(dc, undo, t(Text::LauncherPickUndo), int(P.undo.w - 12 * s)), P.undo.x + P.undo.w / 2,
+             base, 0);
+    }
+    const Style all{Face::SemiBold, 12.5f, on(PickPart::All) ? kWhite : kGoldHi};
+    line(dc, all, fit(dc, all, t(Text::LauncherPickAll), int(P.all.w)), P.all.x + P.all.w, base, 1);
+}
+
 // --- the mouse and the keys ---
 
 Hit LauncherView::hitAt(int x, int y) const {
@@ -930,6 +1236,10 @@ Box LauncherView::boxOf(Hit hit) const {
 void LauncherView::press(Hit hit) {
     if (hit.part == Part::None || !host_) return;
     if (hit.part == Part::Plate && layout_.plate.w <= 0) return;
+    if (hit.part == Part::Look) {  // 3.0.18-beta.194: the look picker over the launcher
+        openPicker();
+        return;
+    }
     host_->launcherAction(hit.part, hit.index);
 }
 
@@ -986,6 +1296,15 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
             tme.hwndTrack = hwnd_;
             tracking_ = TrackMouseEvent(&tme) != FALSE;
         }
+        if (picking_) {
+            const launcherpick::PickHit h =
+                launcherpick::pickAt(picker_, float(GET_X_LPARAM(lp)), float(GET_Y_LPARAM(lp)));
+            if (h.part != pickHover_.part || h.option != pickHover_.option) {
+                pickHover_ = h;
+                InvalidateRect(hwnd_, nullptr, FALSE);
+            }
+            return 0;
+        }
         const Hit h = hitAt(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
         if (h.part != hover_.part || h.index != hover_.index) {
             hover_ = h;
@@ -995,7 +1314,8 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
     }
     case WM_MOUSELEAVE:
         tracking_ = false;
-        if (hover_.part != Part::None) {
+        pickHover_ = launcherpick::PickHit{};
+        if (hover_.part != Part::None || picking_) {
             hover_ = Hit{};
             InvalidateRect(hwnd_, nullptr, FALSE);
         }
@@ -1003,11 +1323,27 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK:
         SetFocus(hwnd_);
+        if (picking_) {
+            pickPressed_ = launcherpick::pickAt(picker_, float(GET_X_LPARAM(lp)), float(GET_Y_LPARAM(lp)));
+            SetCapture(hwnd_);
+            InvalidateRect(hwnd_, nullptr, FALSE);
+            return 0;
+        }
         pressed_ = hitAt(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
         if (pressed_.part != Part::None) SetCapture(hwnd_);
         InvalidateRect(hwnd_, nullptr, FALSE);
         return 0;
     case WM_LBUTTONUP: {
+        if (picking_) {
+            const launcherpick::PickHit was = pickPressed_;
+            pickPressed_ = launcherpick::PickHit{};
+            if (GetCapture() == hwnd_) ReleaseCapture();
+            const launcherpick::PickHit h =
+                launcherpick::pickAt(picker_, float(GET_X_LPARAM(lp)), float(GET_Y_LPARAM(lp)));
+            InvalidateRect(hwnd_, nullptr, FALSE);
+            if (h.part == was.part && h.option == was.option) pickerPress(h);
+            return 0;
+        }
         const Hit was = pressed_;
         pressed_ = Hit{};
         if (GetCapture() == hwnd_) ReleaseCapture();
@@ -1024,7 +1360,11 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     case WM_SETCURSOR:
         if (LOWORD(lp) == HTCLIENT) {
-            SetCursor(LoadCursorW(nullptr, hover_.part != Part::None ? IDC_HAND : IDC_ARROW));
+            const launcherpick::PickPart pp = pickHover_.part;
+            const bool hand = picking_ ? pp != launcherpick::PickPart::None && pp != launcherpick::PickPart::Card &&
+                                             (pp != launcherpick::PickPart::Undo || data_.undoable)
+                                       : hover_.part != Part::None;
+            SetCursor(LoadCursorW(nullptr, hand ? IDC_HAND : IDC_ARROW));
             return TRUE;
         }
         break;
@@ -1035,6 +1375,20 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
         InvalidateRect(hwnd_, nullptr, FALSE);
         return 0;
     case WM_KEYDOWN: {
+        if (picking_) {  // the picker's keys: Esc closes it, Tab and the arrows walk it, Enter presses
+            const std::vector<launcherpick::PickHit> order = pickerOrder();
+            const int n = int(order.size());
+            if (wp == VK_ESCAPE) {
+                closePicker();
+            } else if (wp == VK_TAB || wp == VK_LEFT || wp == VK_RIGHT || wp == VK_UP || wp == VK_DOWN) {
+                const bool previous = wp == VK_TAB ? GetKeyState(VK_SHIFT) < 0 : (wp == VK_LEFT || wp == VK_UP);
+                pickFocus_ = pickFocus_ < 0 ? (previous ? n - 1 : 0) : (pickFocus_ + (previous ? n - 1 : 1)) % n;
+                InvalidateRect(hwnd_, nullptr, FALSE);
+            } else if ((wp == VK_RETURN || wp == VK_SPACE) && pickFocus_ >= 0 && pickFocus_ < n) {
+                pickerPress(order[size_t(pickFocus_)]);
+            }
+            return 0;
+        }
         const std::vector<Hit> order = focusOrder();
         const int n = int(order.size());
         const bool back = GetKeyState(VK_SHIFT) < 0;

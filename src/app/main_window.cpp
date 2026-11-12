@@ -87,6 +87,8 @@ constexpr UINT_PTR kTickTimer = 2;  // 0.43: a page's tick()
 constexpr UINT_PTR kSearchTimer = 3;  // 2.6: the search runs once the typing stops for a moment
 constexpr UINT_PTR kMoreGames = 4;    // 3.0.4-beta.4: the set's next game window ([windows] start_count)
 constexpr UINT_PTR kAnswersTimer = 5;  // 3.0.10-beta.3: the developer's answers asked again (recheckReports)
+constexpr UINT_PTR kUndoTimer = 6;     // 3.0.18-beta.194: the look picker's «Скасувати» gone after 5 s
+constexpr UINT kUndoMs = 5000;
 constexpr UINT kAnswersEveryMs = 5 * 60 * 1000;
 
 // 3.0.18-beta.193 (the launcher: «это игра, а не приложение»): Windows' own frame dark - DWM's dark title bar
@@ -1320,6 +1322,11 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             }
             if (wp == kTickTimer && current_) current_->tick();
             if (wp == kAnswersTimer && !reportsOpen_) recheckReports();  // 3.0.10-beta.3
+            if (wp == kUndoTimer) {  // 3.0.18-beta.194: the pick stays
+                KillTimer(hwnd_, kUndoTimer);
+                lookUndo_.clear();
+                refreshLauncher();
+            }
             if (wp == kMoreGames) {  // 3.0.4-beta.4
                 const std::wstring e = moreGames_ > 0 ? model_->launchGame(lang_) : L"";
                 if (--moreGames_ <= 0 || !e.empty()) KillTimer(hwnd_, kMoreGames);
@@ -1485,16 +1492,23 @@ void MainWindow::refreshLauncher() {
     // the look: the three choices' names, «авто для <card>» while the picture and the textures are the card's
     const Config c = m.pendingConfig();
     namespace presets = settings::presets;
-    for (int k = 0; k < presets::kChoices; ++k) {
+    for (int k = 0; k < presets::kChoices; ++k) {  // .194: each choice's variant and its hand changes, for the picker
         const auto choice = presets::Choice(k);
+        const presets::Match now = presets::match(choice, c);
+        d.looks[k].variant = now.variant;
+        d.looks[k].changed = now.changed;
         if (!d.look.empty()) d.look += L" \x00B7 ";
-        d.look += wtr(lang_, presets::nameOf(choice, presets::match(choice, c).variant));
+        d.look += wtr(lang_, presets::nameOf(choice, now.variant));
     }
     const settings::Machine machine = m.machine();
     const presets::Suggestion card = presets::suggest(m.cardLevel(), machine.vramMb, machine.integrated);
-    const bool fits = presets::match(presets::Choice::Picture, c).variant == card.picture &&
-                      presets::match(presets::Choice::Textures, c).variant == card.textures;
+    const bool fits = d.looks[int(presets::Choice::Picture)].variant == card.picture &&
+                      d.looks[int(presets::Choice::Textures)].variant == card.textures;
     if (fits && !machine.adapter.empty()) d.lookNote = wtrf(lang_, Text::LauncherAuto, {machine.adapter});
+    d.card = card;
+    d.cardName = wide(machine.adapter);
+    d.fitsCard = fits && !machine.adapter.empty();
+    d.undoable = !lookUndo_.empty();
     // the version: the channel, the update's word
     const bool beta = m.channel() == update::Channel::Beta;
     std::string state = utf8(wtr(lang_, beta ? Text::LauncherBeta : Text::LauncherRelease));
@@ -1539,7 +1553,10 @@ void MainWindow::refreshLauncher() {
                        std::to_wstring(int(d.update.kind)) + L"|" + wide(d.update.offer) + L"|" +
                        std::to_wstring(int(d.gameRunning)) + L"|" + d.look + L"|" + d.lookNote + L"|" + d.version +
                        L"|" + d.plateText + L"|" + std::to_wstring(d.newFor) + L"|" + std::to_wstring(d.unread) +
-                       L"|" + std::to_wstring(changelog_.size());
+                       L"|" + std::to_wstring(changelog_.size()) + L"|" + d.cardName + L"|" +
+                       std::to_wstring(int(d.fitsCard)) + L"|" + std::to_wstring(int(d.undoable));
+    for (const LauncherData::Look& l : d.looks)
+        sig += L"|" + std::to_wstring(l.variant) + L"." + std::to_wstring(l.changed);
     for (const launcher::News& n : d.info.news) sig += L"|" + wide(n.title);
     if (sig == launcherShownSig_) return;
     launcherShownSig_ = sig;
@@ -1672,13 +1689,68 @@ void MainWindow::launcherAction(launcherview::Part part, int index) {
                 showNotes(notes);
             return;
         }
-        case Part::Look:  // stage 2: «Головна», where the three choices are; the picker comes in stage 3
+        case Part::Look:  // 3.0.18-beta.194: the view opens its picker itself (lookAction); «Головне» if it asks
             showLauncher(false);
             showView(settings::View::Main, 0);
             return;
         case Part::None:
             break;
     }
+}
+
+// 3.0.18-beta.194: the look picker's - a pick written at once (its keys' tokens before it kept 5 s for «Скасувати»),
+// the card's set («Картинка» and «Текстури» as suggest gives them), undo, the graphics test, all the settings
+void MainWindow::lookAction(launcherpick::PickPart part, settings::presets::Choice choice, int variant) {
+    using launcherpick::PickPart;
+    namespace presets = settings::presets;
+    Model& m = *model_;
+    std::vector<std::pair<std::string, std::string>> keys;
+    switch (part) {
+        case PickPart::Option:
+            keys = presets::keysOf(choice, variant);
+            break;
+        case PickPart::Auto: {
+            const settings::Machine machine = m.machine();
+            const presets::Suggestion card = presets::suggest(m.cardLevel(), machine.vramMb, machine.integrated);
+            keys = presets::keysOf(presets::Choice::Picture, card.picture);
+            for (const auto& k : presets::keysOf(presets::Choice::Textures, card.textures)) keys.push_back(k);
+            break;
+        }
+        case PickPart::Undo: {
+            if (lookUndo_.empty()) return;
+            const auto back = lookUndo_;
+            lookUndo_.clear();
+            KillTimer(hwnd_, kUndoTimer);
+            for (const auto& [key, token] : back)
+                if (const settings::IniSetting* s = settings::findSetting(key)) m.setToken(*s, token);
+            doApply(false);
+            return;
+        }
+        case PickPart::Test:
+            playTest();
+            return;
+        case PickPart::All:
+            showLauncher(false);
+            showView(settings::View::Main, 0);
+            return;
+        default:
+            return;
+    }
+    std::vector<std::pair<std::string, std::string>> before;
+    bool changes = false;
+    for (const auto& [key, token] : keys)
+        if (const settings::IniSetting* s = settings::findSetting(key)) {
+            const std::string now = m.token(*s);
+            before.emplace_back(key, now);
+            if (now != token) {
+                m.setToken(*s, token);
+                changes = true;
+            }
+        }
+    if (!changes) return;
+    lookUndo_ = before;
+    SetTimer(hwnd_, kUndoTimer, kUndoMs, nullptr);
+    doApply(false);  // written now; the game running takes it live
 }
 
 }  // namespace uagfx::app

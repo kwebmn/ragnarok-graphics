@@ -10,7 +10,9 @@
 #include "app/update.hpp"
 #include "core/launcher_art.hpp"
 #include "core/launcher_layout.hpp"
+#include "core/launcher_picker.hpp"
 #include "core/settings/changelog.hpp"
+#include "core/settings/choice_presets.hpp"
 #include "core/settings/strings.hpp"
 #include "core/window_panel.hpp"
 
@@ -33,6 +35,15 @@ struct LauncherData {
     std::vector<settings::changelog::Version> news;  // the changelog's versions, the newest first
     int newFor = 0;  // how many of them the player has not seen (newer than cache\seen-version.txt)
     int unread = 0;  // answers to the player's reports not read
+    // 3.0.18-beta.194: the look picker - each choice's variant now and its keys changed by hand, what fits the card
+    struct Look {
+        int variant = 0, changed = 0;
+    };
+    Look looks[settings::presets::kChoices];
+    settings::presets::Suggestion card;
+    std::wstring cardName;  // the adapter, "" not known
+    bool fitsCard = false;  // «Картинка» and «Текстури» are the card's
+    bool undoable = false;  // a pick of the last 5 s: «Змінено · Скасувати»
 };
 
 class LauncherHost {
@@ -40,6 +51,8 @@ public:
     virtual ~LauncherHost() = default;
     // A part clicked (or Enter on it): index - a news card's
     virtual void launcherAction(launcherview::Part part, int index) = 0;
+    // 3.0.18-beta.194: the look picker's - an option (its choice and variant), the card's set, the test, undo, all
+    virtual void lookAction(launcherpick::PickPart part, settings::presets::Choice choice, int variant) = 0;
 };
 
 class LauncherView {
@@ -86,6 +99,14 @@ private:
     std::vector<launcherview::Hit> focusOrder() const;
     launcherview::Box boxOf(launcherview::Hit hit) const;
     launcherview::PlayState playState() const;
+    // 3.0.18-beta.194: the look picker over the launcher (the look line opens it; Esc, ✕ or a click outside close it)
+    void openPicker();
+    void closePicker();
+    void composePicker();
+    void wordsPicker(HDC dc);
+    void pickerPress(launcherpick::PickHit hit);
+    std::vector<launcherpick::PickHit> pickerOrder() const;
+    launcherview::Box pickerBox(launcherpick::PickHit hit) const;
     bool hovered(launcherview::Part p, int index = -1) const;
     bool pressedOn(launcherview::Part p) const;
     std::wstring t(settings::Text x) const;
@@ -131,6 +152,16 @@ private:
     bool baseValid_ = false, fading_ = false;
     int heldMs_ = 0, fadeMs_ = 0, timerMs_ = 0;
     unsigned long long lastTick_ = 0;
+    // the look picker: shown, its places, the mouse's and the keys' part; the three pictures of «Картинка» as read and
+    // at their boxes' size
+    bool picking_ = false;
+    launcherpick::Picker picker_;
+    launcherpick::PickHit pickHover_, pickPressed_;
+    int pickFocus_ = -1;
+    bool looksRead_ = false;
+    launcherart::Image looks_[3];
+    std::vector<uint32_t> lookPx_[3];
+    int lookW_ = 0, lookH_ = 0;
 };
 
 }  // namespace uagfx::app
