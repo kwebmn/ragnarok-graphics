@@ -1,5 +1,6 @@
 #include "win/key_nav.hpp"
 
+#include "core/key_walk.hpp"
 #include "pad/core/logic/pad.hpp"
 #include "win/chat_window.hpp"
 #include "win/log.hpp"
@@ -9,6 +10,7 @@ namespace {
 
 struct State {
     int top = -1;           // the stack's top window last seen
+    bool carry = false;     // 3.0.18-beta.214: the pad's carry on - the keys drive it
     bool focus = false;     // the top window has the keys' focus (opened or clicked last)
     bool engaged = false;   // an arrow pressed: the keys drive it
     uint16_t held = 0;      // the pad bits the keys hold
@@ -22,24 +24,8 @@ State& state() {
     return s;
 }
 
-// The pad bit a key stands for in a window; 0 none
-uint16_t bitOf(WPARAM vk) {
-    const bool shift = GetKeyState(VK_SHIFT) < 0;
-    switch (vk) {
-    case VK_UP: return uapad::kPadUp;
-    case VK_DOWN: return uapad::kPadDown;
-    case VK_LEFT: return uapad::kPadLeft;
-    case VK_RIGHT: return uapad::kPadRight;
-    case VK_RETURN: return uapad::kPadA;
-    case VK_ESCAPE: return uapad::kPadB;
-    case VK_SPACE: return uapad::kPadX;
-    case VK_PRIOR: return uapad::kPadLB;
-    case VK_NEXT: return uapad::kPadRB;
-    case VK_APPS: return uapad::kPadY;
-    case VK_F10: return shift ? uapad::kPadY : 0;
-    default: return 0;
-    }
-}
+// The pad bit a key stands for in a window; 0 none (core/key_walk: Space none since 3.0.18-beta.214)
+uint16_t bitOf(WPARAM vk) { return keywalk::windowButtonOf(unsigned(vk), GetKeyState(VK_SHIFT) < 0); }
 
 bool arrow(WPARAM vk) { return vk == VK_UP || vk == VK_DOWN || vk == VK_LEFT || vk == VK_RIGHT; }
 
@@ -55,7 +41,7 @@ void release(State& s, const char* why) {
 bool key(UINT m, WPARAM wp, LPARAM) {
     State& s = state();
     if (m == WM_CHAR) {
-        if (s.skipChars <= 0 || (wp != '\r' && wp != ' ' && wp != 0x1B)) return false;
+        if (s.skipChars <= 0 || (wp != '\r' && wp != 0x1B)) return false;
         --s.skipChars;
         return true;
     }
@@ -68,21 +54,22 @@ bool key(UINT m, WPARAM wp, LPARAM) {
         s.taken = uint16_t(s.taken & ~bit);
         return true;
     }
-    if (!s.focus || s.top < 0) return false;
+    if (!s.focus || (s.top < 0 && !s.carry)) return false;
     if (!chatwin::inputEmpty() || !chatwin::focusInChat()) {  // words in the chat line: theirs
         release(s, "words in the chat line");
         return false;
     }
     if (GetKeyState(VK_CONTROL) < 0 || GetKeyState(VK_MENU) < 0) return false;
     if (!s.engaged) {
-        if (!arrow(wp)) return false;  // only an arrow starts it: Enter, Space, Esc stay the game's till then
+        // only an arrow starts it: Enter and Esc stay the game's till then - but for a carry to the bar (.214)
+        if (!arrow(wp) && !(s.carry && (wp == VK_RETURN || wp == VK_ESCAPE))) return false;
         s.engaged = true;
-        LOG_INFO("keys: the top window (%d) takes the arrows, Enter, Esc, Space, PgUp / PgDn", s.top);
+        LOG_INFO("keys: the top window (%d) takes the arrows, Enter, Esc, PgUp / PgDn", s.top);
     }
     if ((s.held & bit) && arrow(wp)) s.gap = uint16_t(s.gap | bit);  // held: a step each repeat
     s.held = uint16_t(s.held | bit);
     s.taken = uint16_t(s.taken | bit);
-    if (wp == VK_RETURN || wp == VK_SPACE || wp == VK_ESCAPE) ++s.skipChars;
+    if (wp == VK_RETURN || wp == VK_ESCAPE) ++s.skipChars;
     return true;
 }
 
@@ -96,11 +83,16 @@ void click(bool onWindow) {
     release(s, "a click on the ground");
 }
 
-void frame(int top) {
+void frame(int top, bool carry) {
     State& s = state();
+    if (carry != s.carry) {
+        s.carry = carry;
+        if (carry) s.focus = true;  // a thing carried to the bar: an arrow, Enter (put) or Esc (cancel) takes it
+    }
     if (top == s.top) return;
     s.top = top;
     if (top < 0) {
+        if (s.carry) return;  // the carry hides the window it came from: the keys stay with the carry
         s.focus = false;
         release(s, "no window open");
         return;
@@ -110,7 +102,7 @@ void frame(int top) {
 
 bool engaged() {
     const State& s = state();
-    return s.engaged && s.focus && s.top >= 0;
+    return s.engaged && s.focus && (s.top >= 0 || s.carry);
 }
 
 uint16_t buttons() {

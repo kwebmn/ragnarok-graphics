@@ -35,6 +35,20 @@ enum class Do : uint8_t { None, Attack, Pickup, Talk, Sit, NextTarget, PrevTarge
 
 constexpr unsigned kToggleScan = 0x29;
 
+// 3.0.18-beta.214 (R-CX44S5's log: «off (`)», «on by the settings», «off by the settings» within 0.3 s): the settings'
+// [interface] walk_mode followed when its value changes - not the toggle's own writes read back (within kEchoMs of
+// the last one), which once turned the mode back on and off again
+class FileFollow {
+public:
+    static constexpr uint64_t kEchoMs = 3000;
+    void wrote(uint64_t now);               // the toggle wrote the file
+    bool follow(bool value, uint64_t now);  // the file's value this frame: true - the mode is to be set to it
+
+private:
+    bool known_ = false, value_ = false, wrote_ = false;
+    uint64_t wroteAt_ = 0;
+};
+
 class Mode {
 public:
     bool on() const { return on_; }

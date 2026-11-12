@@ -1464,8 +1464,9 @@ void tick() {
     const std::optional<Win> top = menuOpen ? std::nullopt : uagfx::win::windowstack::top();
     // 3.0.18-beta.210 (the keyboard concept, stage 4): the keys drive the top window too (win/key_nav) - its pad
     // handler takes them as the D-pad, A, B, X, LB / RB and Y; its hints name the keys
-    uagfx::win::keynav::frame(top ? int(*top) : -1);
-    const bool keyNav = top && *top != Win::Npc && uagfx::win::keynav::engaged();
+    const bool carrying = uagfx::win::padcarrywin::active() && !menuOpen;  // 3.0.18-beta.214 (R-CX44S5)
+    uagfx::win::keynav::frame(top ? int(*top) : -1, carrying);
+    const bool keyNav = ((top && *top != Win::Npc) || carrying) && uagfx::win::keynav::engaged();
     uagfx::padglyph::setKeyCaps(keyNav);
     PadState winPad = pad;
     if (keyNav) {
@@ -1499,7 +1500,7 @@ void tick() {
     }
     view.paused = uagfx::win::oskwin::isOpen() && !menuOpen                ? keyboardPad(pad, now)    // .214
                   : uagfx::win::chatwheelwin::isOpen() && !menuOpen        ? wheelPad(pad, talkHeld)  // .214
-                  : uagfx::win::padcarrywin::active() && !menuOpen   ? carryPad(pad, now)   // 3.0.11-beta.121
+                  : uagfx::win::padcarrywin::active() && !menuOpen   ? carryPad(winPad, now)   // .121; .214 keys
                   : uagfx::win::padassignwin::isOpen() && !menuOpen ? assignPad(pad, now)  // 3.0.11-beta.91
                   : uagfx::win::padtileswin::isOpen() && !menuOpen ? tilePad(pad, now)    // 3.0.11-beta.90
                   : drive && *top == Win::Reference                ? referencePad(winPad)    // 3.0.11-beta.21

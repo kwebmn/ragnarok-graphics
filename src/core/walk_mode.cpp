@@ -37,6 +37,19 @@ bool printable(unsigned vk) {
            (vk >= 0xBA && vk <= 0xC0) || (vk >= 0xDB && vk <= 0xDF) || vk == 0xE2;
 }
 
+void FileFollow::wrote(uint64_t now) {
+    wrote_ = true;
+    wroteAt_ = now;
+}
+
+bool FileFollow::follow(bool value, uint64_t now) {
+    if (known_ && value == value_) return false;
+    const bool first = !known_;
+    known_ = true;
+    value_ = value;
+    return first || !wrote_ || now - wroteAt_ >= kEchoMs;
+}
+
 void Mode::set(bool on) {
     on_ = on;
     typing_ = false;

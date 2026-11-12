@@ -26,4 +26,9 @@ struct Gate {
 };
 bool arrowWalks(const Gate& g);
 
+// 3.0.18-beta.210 (stage 4), moved here 3.0.18-beta.214: the pad button a key stands for in the driver's windows
+// (win/key_nav): the arrows the D-pad, Enter A, Esc B, PgUp / PgDn LB / RB, the menu key or Shift+F10 Y; 0 none.
+// Space none since .214 (R-CX44S5): as X it took a thing in «Речі» up to the bar, a carry for the pad alone
+uint16_t windowButtonOf(unsigned vk, bool shift);
+
 }  // namespace uagfx::keywalk

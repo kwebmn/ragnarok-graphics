@@ -15,8 +15,7 @@ constexpr uint32_t kBarRow = 0x771458;  // the hotkey bar's row shown (0-2), as 
 
 struct State {
     walkmode::Mode mode;
-    bool known = false;      // the settings' state taken once
-    bool fileOn = false;     // [interface] walk_mode as last read
+    walkmode::FileFollow file;  // [interface] walk_mode: the settings' changes, not the toggle's own writes (.214)
     bool skipChar = false;   // the toggle's letter (` ё ') not typed
     const Config* config = nullptr;
     std::string iniPath;
@@ -83,9 +82,10 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     case walkmode::Act::Toggle: {
         s.skipChar = true;
         LOG_INFO("keys: the walk mode %s (`)", s.mode.on() ? "on - W A S D walk, Enter opens the chat" : "off");
-        if (s.config && !s.iniPath.empty())
+        if (s.config && !s.iniPath.empty()) {
             settingedit::set(s.iniPath, *s.config, "interface.walk_mode", s.mode.on() ? "1" : "0");
-        s.fileOn = s.mode.on();
+            s.file.wrote(GetTickCount64());
+        }
         return true;
     }
     // the game's Enter would send the empty line; in the game's battle mode it is its own typing switch (without it the
@@ -108,9 +108,8 @@ void frame(const Config& config, const std::string& iniPath) {
     State& s = state();
     s.config = &config;
     s.iniPath = iniPath;
-    if (!s.known || config.walkMode != s.fileOn) {  // the start, or «Налаштування» switched it
-        s.known = true;
-        s.fileOn = config.walkMode;
+    // the start, or «Налаштування» switched it (3.0.18-beta.214: not the toggle's own write read back - R-CX44S5)
+    if (s.file.follow(config.walkMode, GetTickCount64())) {
         if (s.mode.on() != config.walkMode) {
             s.mode.set(config.walkMode);
             tellDirs(s);

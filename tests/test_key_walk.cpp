@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "core/key_walk.hpp"
+#include "pad/core/logic/pad.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -63,4 +64,21 @@ TEST(key_walk_gate) {
     Gate field = g;
     field.otherField = true;  // the final review: another of the game's fields typed in (a count, a name) - its caret
     CHECK(!arrowWalks(field));
+}
+
+// 3.0.18-beta.214 (R-CX44S5 «кнопка з awakening potion зависла»): a key's pad button in the driver's windows - Space
+// none (it was X: «Речі» took the potion up to the bar, and the keys could not put it)
+TEST(key_walk_window_buttons) {
+    using namespace keywalk;
+    CHECK_EQ(int(windowButtonOf(0x26, false)), int(uapad::kPadUp));
+    CHECK_EQ(int(windowButtonOf(0x27, false)), int(uapad::kPadRight));
+    CHECK_EQ(int(windowButtonOf(0x0D, false)), int(uapad::kPadA));   // Enter
+    CHECK_EQ(int(windowButtonOf(0x1B, false)), int(uapad::kPadB));   // Esc
+    CHECK_EQ(int(windowButtonOf(0x21, false)), int(uapad::kPadLB));  // PgUp
+    CHECK_EQ(int(windowButtonOf(0x22, false)), int(uapad::kPadRB));  // PgDn
+    CHECK_EQ(int(windowButtonOf(0x5D, false)), int(uapad::kPadY));   // the menu key
+    CHECK_EQ(int(windowButtonOf(0x79, true)), int(uapad::kPadY));    // Shift+F10
+    CHECK_EQ(int(windowButtonOf(0x79, false)), 0);                   // F10 alone: the game's
+    CHECK_EQ(int(windowButtonOf(0x20, false)), 0);                   // Space: no window button
+    CHECK_EQ(int(windowButtonOf(0x41, false)), 0);
 }

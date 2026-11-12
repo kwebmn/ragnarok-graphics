@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "core/pad_glyphs.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "core/window_drag.hpp"
@@ -114,13 +115,17 @@ bool put(State& s, const pc::Place& p) {
     return false;
 }
 
+// 3.0.18-beta.214 (R-CX44S5): the keys' names while the keys drive the carry (Enter, Esc), else the pad's (A, B)
+std::string buttonWord(int i) {
+    if (padglyph::keyCaps()) return padglyph::keyName(i == 0 ? padglyph::Button::A : padglyph::Button::B);
+    return uapad::buttonLabel(size_t(i));
+}
+
 void paintHint(State& s, bool nowhere) {
-    const std::string text = nowhere ? say(settings::Text::PadCarryNowhere) + "  \xC2\xB7  " +
-                                           std::string(uapad::buttonLabel(1)) + ": " +
+    const std::string text = nowhere ? say(settings::Text::PadCarryNowhere) + "  \xC2\xB7  " + buttonWord(1) + ": " +
                                            say(settings::Text::PadCarryCancel)
-                                     : std::string(uapad::buttonLabel(0)) + ": " + say(settings::Text::PadCarryPut) +
-                                           "  \xC2\xB7  " + std::string(uapad::buttonLabel(1)) + ": " +
-                                           say(settings::Text::PadCarryCancel);
+                                     : buttonWord(0) + ": " + say(settings::Text::PadCarryPut) + "  \xC2\xB7  " +
+                                           buttonWord(1) + ": " + say(settings::Text::PadCarryCancel);
     const std::string all = s.name.empty() ? text : s.name + "  \xC2\xB7  " + text;
     const float px = 12.5f * s.scale;
     const int w = int(std::ceil(float(wordsWidth(utf8Wide(all), px, true)) + 28 * s.scale));

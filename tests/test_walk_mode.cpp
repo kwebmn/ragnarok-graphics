@@ -137,3 +137,20 @@ TEST(walk_mode_actions) {
     CHECK(act('F', 0x21) == Act::Pass);
     CHECK(act(0x09, 0x0F) == Act::Pass);  // Tab: the chat's channel while typing
 }
+
+// 3.0.18-beta.214 (R-CX44S5's log: «off (`)», then «on by the settings», «off by the settings» within 0.3 s): the
+// settings' [interface] walk_mode followed when it changes - the toggle's own writes coming back are not
+TEST(walk_mode_follows_the_settings_not_its_own_write) {
+    walkmode::FileFollow f;
+    CHECK(f.follow(true, 0));        // the start: the file's value taken
+    CHECK(!f.follow(true, 16));      // no change: nothing
+    f.wrote(1000);                   // ` turned it off, "0" written
+    CHECK(!f.follow(true, 1016));    // the old value still read: not «on by the settings»
+    CHECK(!f.follow(false, 1300));   // the own write read back: not «off by the settings» either
+    CHECK(f.follow(true, 10000));    // «Налаштування» switched it later: followed
+    f.wrote(20000);                  // two toggles at once: off, then on
+    f.wrote(20200);
+    CHECK(!f.follow(false, 20300));  // the first write's value read back between them: the mode stays
+    CHECK(!f.follow(true, 20900));
+    CHECK(f.follow(false, 30000));   // long after: the settings' again
+}
