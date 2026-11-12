@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.226 — what's new · 2026-11-12
+
+- The menu (Esc): a new row «Змінити акаунт» on its very top. The game opens the character select and the driver presses its «Назад» at once - you are on the login screen, where another account can be picked. «Вибір персонажа» stays where it was.
+- To check: Esc → «Змінити акаунт» - the character select is not shown (or flashes for a moment), the login screen opens; then Esc → «Вибір персонажа» - it stops at the character select as before.
+
 # uaRO Graphics 3.0.18-beta.225 — what's new · 2026-11-12
 
 - The keys' cheat sheet in the game: the menu (Esc) has «Клавіші». The menu card shows every key of uaRO Graphics (the same list as the app's «Головне»): the keys in gold on the left, what they do on the right; «Назад» or Esc bring the menu's buttons back.
