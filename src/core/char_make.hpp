@@ -35,6 +35,7 @@ constexpr int kMakeButton = 0x76, kCancelButton = 0x77;
 
 struct Texts {
     std::string title, name, nameHint, hair, colour, pairsHint, make, cancel;
+    std::string keysHint;  // 3.0.18-beta.228: «↑ ↓ рядок · ← → змінити»
     std::string stats[6];
 };
 enum class Part : uint8_t { None, Name, HairBefore, HairAfter, ColourBefore, ColourAfter, PairLeft, PairRight, Make,
@@ -44,6 +45,11 @@ struct Show {
     int hoverIndex = -1;
     int focusRow = -1;  // the controller's row: 0 the hair, 1 its colour, 2-4 the pairs
 };
+constexpr int kRows = 5;  // the controller's: the hair, its colour, the three pairs
+// 3.0.18-beta.228 (the keyboard concept, stage 5): the rows by the arrows - ↑ ↓ round the name (-1: its field's caret
+// takes ← →) and the kRows; ← → change a row (not the name's)
+int keyRow(int row, bool down);
+bool keySides(int row);
 struct Layout {
     float s = 1;
     int x = 0, y = 0, w = 0, h = 0;

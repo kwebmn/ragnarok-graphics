@@ -25,6 +25,9 @@ bool shown();
 void beforeGameDraw();
 enum class PadCommand : uint8_t { Up, Down, Left, Right, Make, Cancel };
 void padCommand(PadCommand c);
+// 3.0.18-beta.228 (the keyboard concept, stage 5): ↑ ↓ the rows (the name among them: core charmake::keyRow), ← → the
+// row's change (on the name: its caret, the game's); Enter and Esc stay the game's («Створити», «Скасувати»)
+bool key(UINT m, WPARAM wp, LPARAM lp);
 bool box(int& x, int& y, int& w, int& h);
 
 }  // namespace uagfx::win::charmakewin

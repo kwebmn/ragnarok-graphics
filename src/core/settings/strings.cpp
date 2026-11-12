@@ -8644,6 +8644,7 @@ constexpr Entry kTexts[] = {
     {Text::MenuKeys, "Keys", "Клавіші", "Клавиши"},  // 3.0.18-beta.225
     {Text::MenuKeysBack, "Back", "Назад", "Назад"},
     {Text::MenuAccount, "Change account", "Змінити акаунт", "Сменить аккаунт"},  // 3.0.18-beta.226
+    {Text::MakeKeysHint, "↑ ↓ row · ← → change", "↑ ↓ рядок · ← → змінити", "↑ ↓ строка · ← → изменить"},  // .228
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

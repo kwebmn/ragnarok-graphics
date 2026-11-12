@@ -36,6 +36,14 @@ int hairButton(bool after) { return after ? 0xa0 : 0xa1; }
 
 int colourPresses(bool after) { return after ? 1 : 8; }
 
+int keyRow(int row, bool down) {  // 3.0.18-beta.228
+    if (row < -1 || row >= kRows) row = -1;
+    if (down) return row >= kRows - 1 ? -1 : row + 1;
+    return row <= -1 ? kRows - 1 : row - 1;
+}
+
+bool keySides(int row) { return row >= 0 && row < kRows; }
+
 Layout layout(int targetW, int targetH, float scale) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;

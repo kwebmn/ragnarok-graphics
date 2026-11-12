@@ -46,7 +46,6 @@ constexpr uint32_t kGetText = 0x443300, kFocus = kWindowMgr + 0x6C, kSetFocus = 
 constexpr int kButtonMsg = 6, kAway = -4000;
 constexpr size_t kMostWindows = 128;
 constexpr ULONGLONG kBlinkMs = 530;
-constexpr int kRows = 5;  // the controller's: the hair, its colour, the three pairs
 using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
 
@@ -71,7 +70,7 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
   data-class-off="!p.canLeft" data-event-click="cm_act(6, i)">+</span><span class="sl">{{p.left}}</span><div
   class="bar"><div class="fill" data-style-width="p.share + '%'"></div></div><span class="sr">{{p.right}}</span><span
   class="pt ctl" data-class-off="!p.canRight" data-event-click="cm_act(7, i)">+</span></div>
-<div class="hint">{{pairsHint}}</div></div></div>
+<div class="hint">{{pairsHint}}</div><div class="hint">{{keysHint}}</div></div></div>
 <div class="btns"><div class="btn ctl" data-event-click="cm_act(9, -1)">{{cancel}}</div>
 <div class="btn main ctl" data-event-click="cm_act(8, -1)">{{make}}</div></div>
 <div id="ring" class="ring"></div>
@@ -86,6 +85,7 @@ struct State {
     uilive::Window live;  // 3.0.18-beta.81
     std::vector<MakePairView> pairViews;  // 3.0.18-beta.106: the live window's
     Rml::String title, hairWord, colourWord, nameWord, nameHint, pairsHint, make, cancel, name, face, hair, colour;
+    Rml::String keysHint;  // 3.0.18-beta.228
     Rml::String ground = "#00000000", facePrev;
     float faceW = 0, faceH = 0;
     bool nameFocus = false, caretOn = false;
@@ -194,6 +194,7 @@ cm::Texts texts() {
     t.hair = say(settings::Text::MakeHair);
     t.colour = say(settings::Text::MakeColour);
     t.pairsHint = say(settings::Text::MakePairsHint);
+    t.keysHint = say(settings::Text::MakeKeysHint);  // 3.0.18-beta.228
     t.make = say(settings::Text::CharsMake);
     t.cancel = say(settings::Text::MsgCancel);
     const char* const stats[6] = {"STR", "AGI", "VIT", "INT", "DEX", "LUK"};
@@ -330,7 +331,7 @@ static void liveFrame(State& s) {
                  {"title", &s.title}, {"hairWord", &s.hairWord}, {"colourWord", &s.colourWord},
                  {"nameWord", &s.nameWord}, {"nameHint", &s.nameHint}, {"pairsHint", &s.pairsHint},
                  {"make", &s.make}, {"cancel", &s.cancel}, {"name", &s.name}, {"face", &s.face},
-                 {"hair", &s.hair}, {"colour", &s.colour}, {"ground", &s.ground}})
+                 {"hair", &s.hair}, {"colour", &s.colour}, {"ground", &s.ground}, {"keysHint", &s.keysHint}})
             m.Bind(n, v);
         m.Bind("faceW", &s.faceW);
         m.Bind("faceH", &s.faceH);
@@ -356,6 +357,7 @@ static void liveFrame(State& s) {
         s.liveKey = key;
         s.title = t.title, s.hairWord = t.hair, s.colourWord = t.colour, s.nameWord = t.name;
         s.nameHint = t.nameHint, s.pairsHint = t.pairsHint, s.make = t.make, s.cancel = t.cancel;
+        s.keysHint = t.keysHint;
         s.name = f.name, s.nameFocus = f.focus, s.caretOn = f.focus && f.caret;
         s.hair = std::to_string(f.hair), s.colour = std::to_string(f.colour), s.focusNo = s.show.focusRow;
         s.face = f.face && f.face->width > 0 ? uaui::picture(f.face, uaui::stamp(f.face), s.facePrev) : "";
@@ -413,8 +415,8 @@ void padCommand(PadCommand c) {
     int& row = s.show.focusRow;
     const bool side = c == PadCommand::Left || c == PadCommand::Right;
     switch (c) {
-        case PadCommand::Up: row = row <= 0 ? kRows - 1 : row - 1; break;
-        case PadCommand::Down: row = row < 0 || row >= kRows - 1 ? 0 : row + 1; break;
+        case PadCommand::Up: row = row <= 0 ? cm::kRows - 1 : row - 1; break;
+        case PadCommand::Down: row = row < 0 || row >= cm::kRows - 1 ? 0 : row + 1; break;
         case PadCommand::Make: act(s, cm::Part::Make, -1); break;
         case PadCommand::Cancel: act(s, cm::Part::Cancel, -1); break;
         default: break;
@@ -427,6 +429,24 @@ void padCommand(PadCommand c) {
         else act(s, after ? cm::Part::PairRight : cm::Part::PairLeft, row - 2);
     }
     s.key.clear();
+}
+
+bool key(UINT m, WPARAM wp, LPARAM) {  // 3.0.18-beta.228
+    State& s = state();
+    if (!s.shown || (m != WM_KEYDOWN && m != WM_KEYUP)) return false;
+    if (wp != VK_UP && wp != VK_DOWN && wp != VK_LEFT && wp != VK_RIGHT) return false;
+    if (GetKeyState(VK_CONTROL) < 0 || GetKeyState(VK_MENU) < 0) return false;
+    const bool sides = wp == VK_LEFT || wp == VK_RIGHT;
+    if (sides && !cm::keySides(s.show.focusRow)) return false;  // the name's: its caret, the game's
+    if (m == WM_KEYUP) return true;
+    if (sides) {
+        padCommand(wp == VK_RIGHT ? PadCommand::Right : PadCommand::Left);
+    } else {
+        s.show.focusRow = cm::keyRow(s.show.focusRow, wp == VK_DOWN);
+        s.key.clear();
+    }
+    if (s.told++ < 40) LOG_INFO("character make: a key - the row %d (-1 the name)", s.show.focusRow);
+    return true;
 }
 
 bool box(int& x, int& y, int& w, int& h) {

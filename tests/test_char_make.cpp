@@ -79,3 +79,19 @@ TEST(char_make_places_and_the_mouse) {
     CHECK(charmake::hitTest(L, -5, -5).part == P::None);
 }
 
+
+// 3.0.18-beta.228 (the keyboard concept, stage 5: the character make by the keys): ↑ ↓ go round the rows - the name
+// (-1: its field's caret takes ← →), the hair, its colour, the three pairs; ← → change the row chosen
+TEST(char_make_rows_by_keys) {
+    using charmake::keyRow;
+    CHECK_EQ(keyRow(-1, true), 0);  // from the name down: the hair
+    CHECK_EQ(keyRow(0, true), 1);
+    CHECK_EQ(keyRow(charmake::kRows - 1, true), -1);  // past the last pair: the name again
+    CHECK_EQ(keyRow(-1, false), charmake::kRows - 1);  // up from the name: the last pair
+    CHECK_EQ(keyRow(0, false), -1);                    // up from the hair: the name
+    CHECK_EQ(keyRow(3, false), 2);
+    CHECK_EQ(keyRow(9, true), 0);  // out of the rows: as from the name
+    CHECK(!charmake::keySides(-1));  // the name: ← → move its caret
+    CHECK(charmake::keySides(0) && charmake::keySides(charmake::kRows - 1));
+    CHECK(!charmake::keySides(charmake::kRows));
+}
