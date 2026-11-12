@@ -30,9 +30,6 @@ std::string garmentEntry(Set set, const std::string& bodySprite, const char* ext
 // last at uaRO.exe's session +0x880/+0x884) - the game would read another table's word for it and ask for a sprite
 // that is not there; none (0) is the game's own
 bool pastTable(int view, uint32_t first, uint32_t last);
-// 3.0.18-beta.233 (the owner: the big wings from the back, not a hat): no sprite asked for a headgear view - one of the
-// nine items' (their wings alone in its place) or past the game's names
-bool noSprite(int view, uint32_t first, uint32_t last);
 
 // Where a character's garment frame is drawn: its screen point (the game's, of its feet) and its scale (its size times
 // the depth's, as uaRO.exe FUN_005ae540 has them)

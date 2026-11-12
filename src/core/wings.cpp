@@ -128,10 +128,6 @@ bool pastTable(int view, uint32_t first, uint32_t last) {
     return uint32_t(view) >= (last - first) / 4;
 }
 
-bool noSprite(int view, uint32_t first, uint32_t last) {
-    return lookOfView(view) != Look::None || pastTable(view, first, last);
-}
-
 std::vector<Quad> quads(const spritefile::Act& garment, const spritefile::Act& body, const spritefile::Sprite& s,
                         size_t action, size_t frame, const Transform& t) {
     std::vector<Quad> out;

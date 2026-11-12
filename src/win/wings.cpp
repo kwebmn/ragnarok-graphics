@@ -196,17 +196,12 @@ void __attribute__((thiscall)) playerRender(uint32_t actor, uint32_t matrix, int
 // another table's word for it and showed «Cannot find File» for each of its files
 char* namedOrNone(uintptr_t original, uint32_t session, uint32_t a, uint32_t b, int sex, int view, char* out) {
     const uint32_t first = read32(session + kNamesFirst), last = read32(session + kNamesLast);
-    if (!cw::noSprite(view, first, last)) return reinterpret_cast<NameFn>(original)(session, a, b, sex, view, out);
+    if (!cw::pastTable(view, first, last)) return reinterpret_cast<NameFn>(original)(session, a, b, sex, view, out);
     if (out) *out = 0;
     State& s = state();
-    const unsigned names = first && last >= first ? unsigned((last - first) / 4) : 0u;
-    if (!s.told.insert("no sprite " + std::to_string(view)).second) return out;
-    if (cw::lookOfView(view) != cw::Look::None)  // 3.0.18-beta.233: the wings alone, not the item's own headgear
-        LOG_INFO("wings: the headgear view %d is a wings' item - its own picture not drawn, the wings alone (the "
-                 "game's names: %u)", view, names);
-    else
+    if (s.told.insert("past " + std::to_string(view)).second)
         LOG_INFO("wings: the game's headgear view %d is past its %u names - no sprite asked for it (no «Cannot find "
-                 "File»)", view, names);
+                 "File»)", view, first && last >= first ? unsigned((last - first) / 4) : 0u);
     return out;
 }
 
