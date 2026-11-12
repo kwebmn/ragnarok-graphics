@@ -50,7 +50,10 @@ Full-window art of uaRO (the site's uaRO HD shots), darkened to the left and the
 
 A card like the game's windows over the launcher: «Авто для вашої відеокарти» (presets::suggest) on top, then the
 three knobs of core/settings/choice_presets — «Картинка» (with pictures), «Інтерфейс», «Текстури» — the current one
-outlined, «змінено N» when hand changes differ. «Перевірити відеокарту» (today's graphics test), «Усі налаштування ›».
+outlined, «змінено N» when hand changes differ. «Перевірити відеокарту» — without the game (the owner 12.11:
+«проверку карты надо делать без запуска игры»): Windows asked about the card again, its level by the game's verdict
+when a game drew on it (card-level.txt), else by its memory; the picture and the textures for it put in (5 s undo)
+and the finding shown. The graphics test with the game stays in «Сервіс». «Усі налаштування ›».
 A pick writes the ini at once and shows «Змінено · Скасувати» for 5 s **(предложено)**.
 
 ## «Журнал змін»

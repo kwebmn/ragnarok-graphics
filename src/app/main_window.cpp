@@ -1512,6 +1512,7 @@ void MainWindow::refreshLauncher() {
     d.fitsCard = fits && !machine.adapter.empty();
     d.undoable = !lookUndo_.empty();
     d.seen = seen_;  // 3.0.18-beta.195: «Журнал змін»'s «нове»
+    d.cardCheck = cardCheck_;  // 3.0.18-beta.198
     // 3.0.18-beta.196: the first start - no version seen, no game played here: the players' cards, each with its looks
     d.firstRun = seen_.empty() && !m.playedHere();
     if (d.firstRun) {
@@ -1569,7 +1570,8 @@ void MainWindow::refreshLauncher() {
                        L"|" + d.plateText + L"|" + std::to_wstring(d.newFor) + L"|" + std::to_wstring(d.unread) +
                        L"|" + std::to_wstring(changelog_.size()) + L"|" + d.cardName + L"|" +
                        std::to_wstring(int(d.fitsCard)) + L"|" + std::to_wstring(int(d.undoable)) + L"|" +
-                       wide(d.seen) + L"|" + std::to_wstring(int(d.firstRun)) + L"." + std::to_wstring(d.suggestedKind);
+                       wide(d.seen) + L"|" + std::to_wstring(int(d.firstRun)) + L"." +
+                       std::to_wstring(d.suggestedKind) + L"|" + d.cardCheck;
     for (const LauncherData::Look& l : d.looks)
         sig += L"|" + std::to_wstring(l.variant) + L"." + std::to_wstring(l.changed);
     for (const launcher::News& n : d.info.news) sig += L"|" + wide(n.title);
@@ -1735,9 +1737,28 @@ void MainWindow::lookAction(launcherpick::PickPart part, settings::presets::Choi
             doApply(false);
             return;
         }
-        case PickPart::Test:
-            playTest();
-            return;
+        case PickPart::Test: {  // 3.0.18-beta.198 (the owner: «проверку карты надо делать без запуска игры»): Windows
+            // asked about the card again - its name, its memory, the game's verdict on it when a game drew on it - and
+            // the picture and the textures for it put in, as «Авто для вашої відеокарти»; the game is not started
+            const HCURSOR was = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
+            m.probeAgain();
+            SetCursor(was);
+            const settings::Machine machine = m.machine();
+            if (machine.adapter.empty()) {
+                cardCheck_ = wtr(lang_, Text::LauncherPickNoCard);
+                refreshLauncher();
+                return;
+            }
+            const std::string gb = std::to_string((machine.vramMb + 512) / 1024);
+            const std::string memory = machine.integrated ? utf8(wtr(lang_, Text::CardIntegrated))
+                                                          : utf8(wtrf(lang_, Text::CardMemory, {gb}));
+            const Text by = m.cardJudgedByGame() ? Text::LauncherByGame : Text::LauncherByMemory;
+            cardCheck_ = wtrf(lang_, Text::LauncherPickChecked, {machine.adapter, memory, utf8(wtr(lang_, by))});
+            const presets::Suggestion card = presets::suggest(m.cardLevel(), machine.vramMb, machine.integrated);
+            keys = presets::keysOf(presets::Choice::Picture, card.picture);
+            for (const auto& k : presets::keysOf(presets::Choice::Textures, card.textures)) keys.push_back(k);
+            break;
+        }
         case PickPart::All:
             showLauncher(false);
             showView(settings::View::Main, 0);
@@ -1756,7 +1777,10 @@ void MainWindow::lookAction(launcherpick::PickPart part, settings::presets::Choi
                 changes = true;
             }
         }
-    if (!changes) return;
+    if (!changes) {
+        refreshLauncher();  // 3.0.18-beta.198: the check's finding shows even when the set was the card's already
+        return;
+    }
     lookUndo_ = before;
     SetTimer(hwnd_, kUndoTimer, kUndoMs, nullptr);
     doApply(false);  // written now; the game running takes it live

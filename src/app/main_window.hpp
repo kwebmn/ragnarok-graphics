@@ -118,6 +118,7 @@ private:
     std::wstring launcherShownSig_;  // what the launcher shows: nothing painted again when it is the same
     // 3.0.18-beta.194: the look picker's last pick - its keys' tokens before it, kept 5 s for «Скасувати»
     std::vector<std::pair<std::string, std::string>> lookUndo_;
+    std::wstring cardCheck_;  // 3.0.18-beta.198: «Перевірити відеокарту»'s finding for the picker
 
     std::unique_ptr<Model> model_;
     HWND hwnd_ = nullptr;

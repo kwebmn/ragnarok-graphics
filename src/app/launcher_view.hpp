@@ -46,6 +46,7 @@ struct LauncherData {
     bool fitsCard = false;  // «Картинка» and «Текстури» are the card's
     bool undoable = false;  // a pick of the last 5 s: «Змінено · Скасувати»
     std::string seen;       // 3.0.18-beta.195: the version the player last saw the news of ("" none)
+    std::wstring cardCheck;  // 3.0.18-beta.198: «Перевірити відеокарту»'s finding, "" not checked yet
     // 3.0.18-beta.196: the first start (no version seen, no game here) - the players' cards over the launcher: the
     // one for the card, each card's three looks in words
     bool firstRun = false;

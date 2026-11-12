@@ -1059,7 +1059,9 @@ void LauncherView::pickerPress(launcherpick::PickHit hit) {
     case PickPart::Auto:
         if (host_) host_->lookAction(hit.part, presets::Choice::Picture, 0);
         return;
-    case PickPart::Test:
+    case PickPart::Test:  // 3.0.18-beta.198: the card checked here, without the game; the picker stays with the finding
+        if (host_) host_->lookAction(hit.part, presets::Choice::Picture, 0);
+        return;
     case PickPart::All:
         closePicker();
         if (host_) host_->lookAction(hit.part, presets::Choice::Picture, 0);
@@ -1147,11 +1149,12 @@ void LauncherView::wordsPicker(HDC dc) {
         const Style head{Face::SemiBold, 14, data_.fitsCard ? kGoldHi : kText};
         line(dc, head, fit(dc, head, t(Text::LauncherPickAuto), int(width)), x, P.autoRow.y + 22 * s, -1);
         const std::wstring note =
-            data_.cardName.empty()
+            !data_.cardCheck.empty() ? data_.cardCheck  // 3.0.18-beta.198: what «Перевірити відеокарту» found
+            : data_.cardName.empty()
                 ? t(Text::LauncherPickNoCard)
                 : data_.cardName + L": " + t(presets::nameOf(presets::Choice::Picture, data_.card.picture)) +
                       L" \x00B7 " + t(presets::nameOf(presets::Choice::Textures, data_.card.textures));
-        const Style small{Face::Medium, 12, kMuted};
+        const Style small{Face::Medium, 12, data_.cardCheck.empty() ? kMuted : kOk};
         line(dc, small, fit(dc, small, note, int(width)), x, P.autoRow.y + 40 * s, -1);
     }
     // the rows' heads, «змінено N» at their right

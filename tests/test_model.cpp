@@ -867,6 +867,27 @@ void aCard(fake::Windows& w, const char* name, unsigned vendor, unsigned long lo
 
 }  // namespace
 
+// 3.0.18-beta.198 (the owner: «проверку карты надо делать без запуска игры»): the launcher's «Перевірити відеокарту»
+// asks Windows about the card again and judges it by how it drew the game when it did (card-level.txt), else by its
+// memory - the game is not started
+TEST(model_checks_the_card_again_without_the_game) {
+    fake::Windows& w = fake::reset();
+    aCard(w, "Intel(R) UHD Graphics", 0x8086, 128);
+    app::Model m;
+    CHECK_EQ(m.machine().adapter, std::string("Intel(R) UHD Graphics"));
+    aCard(w, "NVIDIA GeForce RTX 4070", 0x10de, 12282);  // the card Windows tells now
+    m.probeAgain();
+    CHECK_EQ(m.machine().adapter, std::string("NVIDIA GeForce RTX 4070"));
+    CHECK_EQ(m.machine().vramMb, 12282ull);
+    CHECK(!m.cardJudgedByGame());  // no game drew on it yet: by its memory
+    w.files[fake::path(L"uaro-graphics\\card-level.txt")] = "v2 3 1 NVIDIA GeForce RTX 4070\n";
+    CHECK(m.cardJudgedByGame());
+    CHECK_EQ(m.cardLevel(), 3);
+    w.files[fake::path(L"uaro-graphics\\card-level.txt")] = "v2 3 1 AMD Radeon RX 7800 XT\n";  // another card's
+    CHECK(!m.cardJudgedByGame());
+    CHECK(w.launched.empty());  // nothing was started
+}
+
 // 2.12: the first start sets a fresh install up for its card, and records the card and the screen.
 TEST(model_sets_a_fresh_install_up) {
     fake::Windows& w = fake::reset();

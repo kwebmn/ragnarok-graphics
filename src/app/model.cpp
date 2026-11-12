@@ -251,6 +251,15 @@ int Model::cardLevel() const {
     return card_speed::startOf(memoryLevel(), adapter, judged).level;
 }
 
+void Model::probeAgain() { system_ = probeSystem(); }
+
+bool Model::cardJudgedByGame() const {
+    std::string judged;
+    readFile(ourPlace(paths_.dir, layout::kCardLevel), judged);
+    const std::string& adapter = !system_.d3d12.adapter.empty() ? system_.d3d12.adapter : system_.d3d11.adapter;
+    return card_speed::startOf(memoryLevel(), adapter, judged).settled;
+}
+
 void Model::settleOldGroups() {
     const auto ini = readIni(now_.iniText);
     bool old = false;

@@ -80,6 +80,11 @@ public:
     const SystemInfo& system() const { return system_; }
     // 2.2: the card's level for the automatic set, as the driver finds it (effect_groups::cardLevel)
     int cardLevel() const;
+    // 3.0.18-beta.198 (the owner: «проверку карты надо делать без запуска игры»): Windows asked about the card again
+    // (the launcher's «Перевірити відеокарту»), and whether its level is the game's verdict on how it drew
+    // (card-level.txt naming this card), not its memory's
+    void probeAgain();
+    bool cardJudgedByGame() const;
     int memoryLevel() const;  // 3.0.11-beta.58: the card's level by its memory alone (effect_groups::cardLevel)
     bool playedHere() const;  // 3.0.11-beta.60: the driver's log is in this folder - a game was played here
     const Paths& paths() const { return paths_; }

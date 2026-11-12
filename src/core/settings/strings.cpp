@@ -8555,6 +8555,11 @@ constexpr Entry kTexts[] = {
      "Пропустити — вибере сама програма",
      "Пропустить — выберет сама программа"},
     {Text::LauncherFirstFits, "for your graphics card", "для вашої відеокарти", "для вашей видеокарты"},
+    {Text::LauncherPickChecked, "Checked: {1} ({2}) - {3}",
+     "Перевірено: {1} ({2}) — {3}",
+     "Проверено: {1} ({2}) — {3}"},
+    {Text::LauncherByMemory, "by its memory", "за пам'яттю відеокарти", "по памяти видеокарты"},
+    {Text::LauncherByGame, "by how it drew the game", "за тим, як вона малювала гру", "по тому, как она рисовала игру"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
