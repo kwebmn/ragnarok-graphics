@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.200 — what's new · 2026-11-12
+
+- «Close» (and Esc) in the settings now closes only the settings and goes back to the first screen, not the whole app. The window's cross closes the app.
+- The big button when an update is out is «UPDATE»: the app updates and opens the first screen again, the game does not start by itself. Play with «PLAY» after the update, or «Play without the update» at once.
+
 # uaRO Graphics 3.0.18-beta.199 — what's new · 2026-11-12
 
 - When an update is out, the big button says «UPDATE AND PLAY» (the version and its size under it), and right under it, in sight, «Play without the update»: the game starts as it is, the update waits.
