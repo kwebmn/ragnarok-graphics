@@ -131,6 +131,28 @@ bool heightAt(const Ground& g, float x, float z, float& y) {
     return true;
 }
 
+map::Point outOfWall(const Ground& g, const map::Point& place) {
+    float top = 0.0f;
+    if (!heightAt(g, place.x, place.z, top) || !(top < place.y - kSetIn)) return place;  // up along -y
+    const float fx = place.x / g.zoom + float(g.width) * 0.5f, fz = place.z / g.zoom + float(g.height) * 0.5f;
+    const float cx = std::floor(fx), cz = std::floor(fz);
+    const float u = (fx - cx) * g.zoom, v = (fz - cz) * g.zoom;  // within its cell, in units
+    struct Side {
+        float dx, dz, distance;
+    };
+    const Side sides[4] = {{-1, 0, u}, {1, 0, g.zoom - u}, {0, -1, v}, {0, 1, g.zoom - v}};
+    const Side* best = nullptr;
+    for (const Side& s : sides) {
+        float next = 0.0f;  // the neighbour's top, a little into it
+        const float nx = place.x + s.dx * (s.distance + 0.5f), nz = place.z + s.dz * (s.distance + 0.5f);
+        if (s.distance > kMostSetIn || !heightAt(g, nx, nz, next) || next < place.y - kSetIn) continue;
+        if (!best || s.distance < best->distance) best = &s;
+    }
+    if (!best) return place;
+    const float step = best->distance + 0.5f;
+    return map::Point{place.x + best->dx * step, place.y, place.z + best->dz * step};
+}
+
 bool clear(const Ground& g, const map::Point& from, const map::Point& to, float skipFrom, float skipTo, float slack) {
     const float dx = to.x - from.x, dz = to.z - from.z, d = std::hypot(dx, dz);
     if (g.corners.empty() || !(d > 0.0f)) return true;

@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <unordered_map>
@@ -13,6 +14,8 @@ namespace uagfx::torch {
 // flame frames (1-7) at twice their size, the flame some 26 x 60 texels of it. Magnified that much on a large screen
 // they are a red blotch with edges and a blurred drop; the driver draws them anew (win/gpu/torches.cpp), known by
 // their textures (core/map_objects.hpp).
+
+constexpr int32_t kTorchEffect = 47;  // the map file's effect of a torch the game draws
 
 // Where the flame is in its frames (torch_01's frames 1-7: the base at row 103, the tip at rows 43-54, columns 52-78),
 // in texels of the 128x128 frame.
@@ -34,6 +37,10 @@ struct Flame {
     float z = 0, rhw = 0;  // the quad's
     float alpha = 1;       // the game's fade (the quad's vertex alpha, 1 when it shows the layer as the .act has it)
     float tint[3] = {1, 1, 1};  // 0.25: a torch the game does not show - red, green, purple; white: the fire's own
+    // 3.0.18-beta.191 (R-F7U2Q6 «огонь за стенами не прячится с факлов»): where its base and tip truly are in the view
+    // (uprightPoints) - the game's sprite depth (z, rhw) is pulled towards the camera; false: not known (1 / rhw)
+    bool upright = false;
+    float base3[3] = {0, 0, 0}, tip3[3] = {0, 0, 0};
 };
 
 // The flame of a quad drawn with a flame frame - its texture coordinates span the frame (the game's sprite setting
@@ -79,6 +86,20 @@ private:
     std::unordered_map<uint32_t, Kept> kept_;
     double last_ = -1.0;
 };
+
+// 3.0.18-beta.191 (R-F7U2Q6 «огонь за стенами не прячится с факлов»): the game draws a map torch's flame as a sprite,
+// its depth pulled towards the camera (moc_pryd05: the quad's 1 / rhw some 12 units nearer than the torch, so the
+// flame and its light passed over the top of the wall in front of it). Its true place: on the world's upright line
+// through the map file's torch (its effect's place) - `anchor` in the view, `up` the world's up in the view (a unit
+// vector); the points of that line the flame's base and tip are seen at (f.baseX/Y and + f.upX/Y, game pixels) into
+// `base` and `tip`. False when the line does not reach them in front of the camera or the base lies below the torch.
+bool uprightPoints(const Flame& f, const float anchor[3], const float up[3], const camera::Projection& p, float base[3],
+                   float tip[3]);
+constexpr float kAnchorBelow = 11.0f;  // the flame's base above its torch's place (world units, torch_01's frames)
+// The map's torch a flame the game drew stands on: of `anchors` (view places), the one whose upright line meets the
+// flame's base within its width across and about kAnchorBelow under it; -1 none
+int anchorOf(const Flame& f, const std::vector<std::array<float, 3>>& anchors, const float up[3],
+             const camera::Projection& p);
 
 // How bright a flame burns at time t (seconds): about 1, within 1 +- amount, smooth; each seed its own way.
 float flicker(double t, uint32_t seed, float amount);

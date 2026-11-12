@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <vector>
@@ -253,4 +254,56 @@ TEST(torch_take_has_room_for_a_torchs_other_effect_when_full) {
     CHECK(!torch::take(flames, flameAt(500.0f, 1.0f), 3));
     CHECK(torch::take(flames, flameAt(200.0f, 0.5f), 3));
     CHECK_EQ(flames.size(), size_t(3));
+}
+
+// 3.0.18-beta.191 (R-F7U2Q6 «огонь за стенами не прячится с факлов», moc_pryd05): a flame the game drew stands on its
+// map torch's upright line - its true depth, not the sprite's pulled nearer. The report's own camera and torch.
+namespace {
+const float kView[12] = {0.981627f, 0.134924f, -0.134924f, -0.0f, 0.707107f, 0.707107f,
+                         0.190812f, -0.694115f, 0.694115f, -365.1895f, -181.6577f, 727.5577f};  // world -> view
+std::array<float, 3> inView(float x, float y, float z) {
+    return {x * kView[0] + y * kView[3] + z * kView[6] + kView[9],
+            x * kView[1] + y * kView[4] + z * kView[7] + kView[10],
+            x * kView[2] + y * kView[5] + z * kView[8] + kView[11]};
+}
+void seen(const camera::Projection& p, const std::array<float, 3>& v, float& x, float& y) {
+    x = p.cx + p.f0 * v[0] / v[2];
+    y = p.cy + p.f1 * v[1] / v[2];
+}
+}  // namespace
+
+TEST(torch_flame_stands_on_its_map_torch) {
+    const camera::Projection p = camera::projectionFor(2194, 1234);
+    const float up[3] = {-kView[3], -kView[4], -kView[5]};  // the world's up (-y) in the view
+    const std::array<float, 3> torch = inView(383.594f, -15.0f, -208.558f);  // moc_pryd05's, behind a wall 30 high
+    // the flame as the game shows it: its base 11 units over the torch, 13 more to its tip
+    const std::array<float, 3> base = inView(383.594f, -26.0f, -208.558f), tip = inView(383.594f, -39.0f, -208.558f);
+    torch::Flame f;
+    seen(p, base, f.baseX, f.baseY);
+    float tx = 0, ty = 0;
+    seen(p, tip, tx, ty);
+    f.upX = tx - f.baseX;
+    f.upY = ty - f.baseY;
+    f.halfWidth = 12.0f;
+    f.rhw = 1.0f / (base[2] - 12.0f);  // the sprite's depth 12 units nearer, as the game pulls it
+    const std::vector<std::array<float, 3>> anchors = {
+        inView(383.594f, -15.0f, -178.558f),  // the next torch on, further off: seen higher up
+        inView(423.594f, -15.0f, -208.558f),  // one aside
+        torch,
+        inView(383.594f, -15.0f, -248.558f),  // one nearer the camera, its line passing far under the base
+    };
+    CHECK_EQ(torch::anchorOf(f, anchors, up, p), 2);
+    float b[3], t[3];
+    CHECK(torch::uprightPoints(f, torch.data(), up, p, b, t));
+    CHECK(std::fabs(b[2] - base[2]) < 0.05f);  // the base's true depth
+    CHECK(std::fabs(t[2] - tip[2]) < 0.05f);
+    CHECK(t[2] < b[2]);  // the camera looks down: the tip nearer
+    // the report's wall top where the flame's base is seen: 506.5 by a ray through the map's ground - more than the
+    // flame's two units of slack in front of the base's true depth (hidden), not in front of the sprite's (shown)
+    CHECK(b[2] - 506.5f > 2.0f);
+    CHECK(1.0f / f.rhw - 506.5f < 2.0f);
+    CHECK_EQ(torch::anchorOf(f, {}, up, p), -1);
+    torch::Flame aside = f;
+    aside.baseX += 200.0f;  // no torch under it
+    CHECK_EQ(torch::anchorOf(aside, anchors, up, p), -1);
 }

@@ -2015,6 +2015,10 @@ float3 torchFlame(float2 q, float t, float seed, float flick, float hw, float h)
 // uiPixels.xy the world's size, .z its flicker, .w the time (seconds); twinX the glow's strength, twinY the
 // game's fade, twinW the flame's brightness (0: the game draws its own), fogColor its colour. Hidden behind what stands
 // in front of it - a character, the bowl's rim - by the picture's depth (t3).
+// 3.0.18-beta.191 (R-F7U2Q6 «огонь за стенами не прячится с факлов»): its depth along it - .y at its base, twinH at
+// its tip (its true place on its map torch's upright line: the camera looks down, the tip is nearer); the glow by its
+// middle's, not over what stands more than a few units in front of it (15 before: the tops of the walls in front of the
+// torches behind them glowed red)
 float4 torch_fire_ps(PresentOut i) : SV_Target {
     float2 pos = i.pos.xy;
     float h = max(length(sourceRect.zw), 1.0);
@@ -2022,18 +2026,19 @@ float4 torch_fire_ps(PresentOut i) : SV_Target {
     float2 rel = pos - sourceRect.xy;
     float2 q = float2(dot(rel, float2(-up.y, up.x)) / max(sourceClamp.x, 1.0), dot(rel, up) / h);
     float flick = uiPixels.z;
-    float flameZ = sourceClamp.y;
+    float flameZ = lerp(sourceClamp.y, twinH, saturate(q.y));
+    float midZ = lerp(sourceClamp.y, twinH, 0.38);
     float z = viewDepth(sceneDepth.Load(int3(int2(pos), 0)));
     float seen = saturate((z - flameZ + 2.0) / 2.0);
     float2 mid = sourceRect.xy + sourceRect.zw * 0.38;
     // The glow: as much as the fire is seen, and not on what stands well in front of it.
     int2 m = int2(clamp(mid, float2(0.0, 0.0), uiPixels.xy - 1.0));
-    float midSeen = saturate((viewDepth(sceneDepth.Load(int3(m, 0))) - flameZ + 3.0) / 3.0);
+    float midSeen = saturate((viewDepth(sceneDepth.Load(int3(m, 0))) - midZ + 3.0) / 3.0);
     float r2 = dot(pos - mid, pos - mid) / (h * h);
     float fade = saturate(1.0 - r2 / 4.84);  // none at 2.2 heights, the edge of its pass
     // 0.25.2: half of 0.23.3's - as the game's torch looks while it comes up from its fade, which the player liked.
     float glow = (0.105 * exp(-r2 / 0.16) + 0.045 / (1.0 + r2 / 0.5)) * fade * fade;  // 0.25.4: three quarters
-    glow *= (1.0 + (flick - 1.0) * 0.5) * twinX * twinY * midSeen * saturate((z - flameZ + 15.0) / 15.0);
+    glow *= (1.0 + (flick - 1.0) * 0.5) * twinX * twinY * midSeen * saturate((z - midZ + 6.0) / 6.0);
     // 0.23.3: on bright ground the glow only washes it out - less of it there.
     float under = dot(sceneColor.Load(int3(int2(pos), 0)).rgb, float3(0.2126, 0.7152, 0.0722));
     glow *= 1.0 - 0.6 * smoothstep(0.3, 0.9, under);

@@ -529,6 +529,7 @@ struct Renderer::Impl {
     bool torchDone = false;                 // this frame's are drawn, or could not be
     bool torchesLogged = false;
     bool torchesMergedLogged = false;  // 2.6.18: a torch's second effect taken as the same torch
+    std::string uprightToldMap;  // 3.0.18-beta.191: the map the flames' true places were told for
     ID3D12Resource* torchData = nullptr;  // R32G32B32A32 float, a texel a torch: its light's place and strength
     D3D12_RESOURCE_STATES torchDataState = D3D12_RESOURCE_STATE_COPY_DEST;
     UINT torchDataSrv = 0;

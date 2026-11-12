@@ -542,10 +542,48 @@ bool Renderer::Impl::applyTorches() {
             f.upY = vt.y / vt.z * proj.f1 + proj.cy - f.baseY;
             f.halfWidth = std::hypot(f.upX, f.upY) * (torch::kHalfWidth / torch::kHeight);
             f.rhw = 1.0f / vb.z;
+            f.upright = true;  // 3.0.18-beta.191: its true base and tip
+            f.base3[0] = vb.x, f.base3[1] = vb.y, f.base3[2] = vb.z;
+            f.tip3[0] = vt.x, f.tip3[1] = vt.y, f.tip3[2] = vt.z;
             if (!onScreen(f.baseX, f.baseY, margin)) continue;
             flames.push_back(f);
             torchSeeds.push_back(torch::seedAt(base.x, base.z));  // its exact place: a steady seed
         }
+    // 3.0.18-beta.191 (R-F7U2Q6 «огонь за стенами не прячится с факлов»): the game's flames on their map torches'
+    // upright lines - the sprite's depth is pulled towards the camera (moc_pryd05: 12 units, the flame and its light
+    // over the top of the wall in front of it); hidden behind what stands in front of its true place, lit from there
+    if (layout && gameFlames > 0) {
+        float up[3];
+        camera::upInView(viewToWorld, up);
+        // where the game draws each (its sprite's place) and its upright line - out of the wall it is set into
+        std::vector<std::array<float, 3>> anchors, lines;
+        const ground_heights::Ground* ground = mapWorld.ground();
+        for (const rsw::Effect& e : layout->effects) {
+            if (e.id != torch::kTorchEffect) continue;
+            const map::Point at{e.pos[0], e.pos[1], e.pos[2]};
+            const map::Point v = toView(viewToWorld, map::toWorld(axes, at));
+            if (v.z <= proj.nearZ || !onScreen(v.x / v.z * proj.f0 + proj.cx, v.y / v.z * proj.f1 + proj.cy, margin))
+                continue;
+            const map::Point l = toView(viewToWorld, map::toWorld(axes, ground ? ground_heights::outOfWall(*ground, at)
+                                                                              : at));
+            anchors.push_back({v.x, v.y, v.z});
+            lines.push_back({l.x, l.y, l.z});
+        }
+        size_t placed = 0;
+        float nearer = 0.0f;
+        for (size_t i = 0; i < gameFlames && i < flames.size(); ++i) {
+            torch::Flame& f = flames[i];
+            const int a = torch::anchorOf(f, anchors, up, proj);
+            f.upright = a >= 0 && torch::uprightPoints(f, lines[size_t(a)].data(), up, proj, f.base3, f.tip3);
+            if (f.upright && f.rhw > 0.0f) ++placed, nearer += f.base3[2] - 1.0f / f.rhw;
+        }
+        if (uprightToldMap != mapName && !flames.empty()) {
+            uprightToldMap = mapName;
+            LOG_INFO("torches: %zu of the game's %zu flames on %s stand on their map torches - the sprite's depth %.1f "
+                     "units nearer than the base's on average, hidden and lit from their true places", placed,
+                     gameFlames, mapName.c_str(), placed ? double(nearer) / double(placed) : 0.0);
+        }
+    }
     if (torchWanted()) critterFlames = flames;  // 2.5.4: the embers rise from them; off: noteCritterFlame's
     // 0.28: the fireflies - the game's (their flash by their primitive's seed) and, the map file read, those the
     // maps' makers placed that the game does not show (713, 714, 946), drifting about their places.
@@ -684,8 +722,13 @@ bool Renderer::Impl::applyTorches() {
     for (size_t i = 0; i < flames.size(); ++i) {
         const torch::Flame& f = flames[i];
         const float mx = f.baseX + f.upX * kMiddle, my = f.baseY + f.upY * kMiddle;  // game pixels
-        const float vz = 1.0f / f.rhw;
-        const float vx = (mx - proj.cx) * vz / proj.f0, vy = (my - proj.cy) * vz / proj.f1;
+        float vz = 1.0f / f.rhw;
+        float vx = (mx - proj.cx) * vz / proj.f0, vy = (my - proj.cy) * vz / proj.f1;
+        if (f.upright) {  // 3.0.18-beta.191: its true middle, not the sprite's pulled nearer
+            vx = f.base3[0] + (f.tip3[0] - f.base3[0]) * kMiddle;
+            vy = f.base3[1] + (f.tip3[1] - f.base3[1]) * kMiddle;
+            vz = f.base3[2] + (f.tip3[2] - f.base3[2]) * kMiddle;
+        }
         // its torch's: its own flicker and flame whichever way the camera looks (2.6.17: kept as it is followed)
         const uint32_t s =
             i < torchSeeds.size() ? torchSeeds[i] : torch::placeSeed(f, proj, viewToWorld, viewToWorldValid);
@@ -1117,7 +1160,8 @@ bool Renderer::Impl::applyTorches() {
         c.sourceRect[2] = ux;
         c.sourceRect[3] = uy;
         c.sourceClamp[0] = f.halfWidth * k;
-        c.sourceClamp[1] = 1.0f / f.rhw;
+        c.sourceClamp[1] = f.upright ? f.base3[2] : 1.0f / f.rhw;
+        c.twin[3] = f.upright ? f.tip3[2] : c.sourceClamp[1];  // 3.0.18-beta.191: the depth along it, base to tip
         c.sourceClamp[2] = i < gameFlames ? torch::kGameEffects : 1.0f;  // 2.6.18: drawn as the game's two were
         c.sourceClamp[3] = seeds[i];
         c.uiPixels[2] = flickers[i];
@@ -1133,6 +1177,7 @@ bool Renderer::Impl::applyTorches() {
                         kNoSrv, &around))
             return false;
     }
+    c.twin[3] = 0.0f;  // 3.0.18-beta.191: the flames' tip depth, theirs alone
     for (const Fly& f : flies) {  // 0.28: each firefly's dot and halo (a pass each, cut to it)
         if (f.bright < 0.01f) continue;
         const float fx = f.gx * k + 0.5f + jx, fy = f.gy * k + 0.5f + jy, r = std::max(f.r * k, 0.6f);

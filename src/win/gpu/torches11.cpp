@@ -318,10 +318,44 @@ void Renderer11::applyTorchLight() {
             f.upY = vt[1] / vt[2] * proj.f1 + proj.cy - f.baseY;
             f.halfWidth = std::hypot(f.upX, f.upY) * (torch::kHalfWidth / torch::kHeight);
             f.rhw = 1.0f / vb[2];
+            f.upright = true;  // 3.0.18-beta.191: its true base and tip
+            std::copy(vb, vb + 3, f.base3);
+            std::copy(vt, vt + 3, f.tip3);
             if (!onScreen(f.baseX, f.baseY, margin)) continue;
             flames.push_back(f);
             torchSeeds.push_back(torch::seedAt(base.x, base.z));  // its exact place: a steady seed
         }
+    // 3.0.18-beta.191 (torches.cpp, R-F7U2Q6): the game's flames on their map torches' upright lines - hidden behind
+    // what stands in front of their true places, lit from there
+    if (layout && gameFlames > 0) {
+        float up[3];
+        camera::upInView(m, up);
+        std::vector<std::array<float, 3>> anchors, lines;  // the sprite's place; the upright line out of its wall
+        const ground_heights::Ground* ground = mapWorld_.ground();
+        for (const rsw::Effect& e : layout->effects) {
+            if (e.id != torch::kTorchEffect) continue;
+            const map::Point at{e.pos[0], e.pos[1], e.pos[2]};
+            float v[3], l[3];
+            toView(map::toWorld(axes, at), v);
+            if (v[2] <= proj.nearZ) continue;
+            if (!onScreen(v[0] / v[2] * proj.f0 + proj.cx, v[1] / v[2] * proj.f1 + proj.cy, margin)) continue;
+            toView(map::toWorld(axes, ground ? ground_heights::outOfWall(*ground, at) : at), l);
+            anchors.push_back({v[0], v[1], v[2]});
+            lines.push_back({l[0], l[1], l[2]});
+        }
+        size_t placedFlames = 0;
+        for (size_t i = 0; i < gameFlames && i < flames.size(); ++i) {
+            torch::Flame& f = flames[i];
+            const int a = torch::anchorOf(f, anchors, up, proj);
+            f.upright = a >= 0 && torch::uprightPoints(f, lines[size_t(a)].data(), up, proj, f.base3, f.tip3);
+            placedFlames += f.upright ? 1 : 0;
+        }
+        if (uprightToldMap_ != map_) {
+            uprightToldMap_ = map_;
+            LOG_INFO("torches: %zu of the game's %zu flames on %s stand on their map torches (Direct3D 11)",
+                     placedFlames, gameFlames, map_.c_str());
+        }
+    }
     // The flames' own flicker: each by its place in the world - whichever way the camera looks
     std::vector<float> flickers(flames.size(), 1.0f), seeds(flames.size(), 0.0f), calms(flames.size(), 1.0f);
     for (size_t i = 0; i < flames.size(); ++i) {
@@ -428,7 +462,9 @@ void Renderer11::applyTorchLight() {
             const torch::Flame& f = flames[i];
             const float mx = f.baseX + f.upX * kMiddle, my = f.baseY + f.upY * kMiddle;
             const float vz = 1.0f / f.rhw;
-            const float view[3] = {(mx - proj.cx) * vz / proj.f0, (my - proj.cy) * vz / proj.f1, vz};
+            float view[3] = {(mx - proj.cx) * vz / proj.f0, (my - proj.cy) * vz / proj.f1, vz};
+            if (f.upright)  // 3.0.18-beta.191: its true middle, not the sprite's pulled nearer
+                for (int a = 0; a < 3; ++a) view[a] = f.base3[a] + (f.tip3[a] - f.base3[a]) * kMiddle;
             const bool own = f.tint[0] < 0.99f || f.tint[1] < 0.99f || f.tint[2] < 0.99f;  // a hidden one's colour
             const float layers = i < gameFlames ? torch::kGameEffects : 1.0f;  // 2.6.18
             if (count < kMaxLights) casterLights.push_back(count);  // 3.0.16-beta.35
@@ -794,7 +830,8 @@ void Renderer11::applyTorchLight() {
             fc.sourceRect[2] = ux;
             fc.sourceRect[3] = uy;
             fc.sourceClamp[0] = f.halfWidth * k;
-            fc.sourceClamp[1] = 1.0f / f.rhw;
+            fc.sourceClamp[1] = f.upright ? f.base3[2] : 1.0f / f.rhw;
+            fc.twin[3] = f.upright ? f.tip3[2] : fc.sourceClamp[1];  // 3.0.18-beta.191: base to tip
             fc.sourceClamp[2] = i < gameFlames ? torch::kGameEffects : 1.0f;  // 2.6.18: drawn as the game's two were
             fc.sourceClamp[3] = seeds[i];
             fc.uiPixels[2] = flickers[i];

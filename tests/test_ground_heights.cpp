@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -192,4 +193,36 @@ TEST(ground_heights_laid_patches_read_with_the_map) {
     placeOf(7, 3, x, z);
     CHECK(ground_heights::laidAt(g, x, z));
     CHECK(!ground_heights::laidAt(g, 1000.0f, 0.0f));  // off the map
+}
+
+// 3.0.18-beta.191 (R-F7U2Q6 «огонь за стенами не прячится с факлов»): a map torch's place out of the wall its makers
+// set it into - to the side of its cell that is open at its height, half a unit past it; as it was when it hangs free
+TEST(ground_heights_a_torch_out_of_its_wall) {
+    // 4 x 3 cells: the middle row's two left cells a wall 30 high (x -20..0, z -5..5), the rest floor at 0
+    const std::vector<uint8_t> d = gndOf(4, 3, {0, 0, 0, 0, -30, -30, 0, 0, 0, 0, 0, 0});
+    ground_heights::Ground g;
+    std::string error;
+    CHECK(ground_heights::parse(d.data(), d.size(), g, error));
+    // 1.4 units off the wall's far side (z 5): free - as it is (moc_pryd05's)
+    const map::Point free{-15.0f, -15.0f, 6.4f};
+    const map::Point same = ground_heights::outOfWall(g, free);
+    CHECK(same.x == free.x && same.y == free.y && same.z == free.z);
+    // set 4 units into the wall's near side (z -5): out past it
+    const map::Point in = ground_heights::outOfWall(g, map::Point{-15.0f, -15.0f, -1.0f});
+    CHECK(std::fabs(in.z - (-5.5f)) < 1e-4f);
+    CHECK(in.x == -15.0f && in.y == -15.0f);
+    // 1 unit in from its end (x 0): out across that end, the nearest open side
+    const map::Point end = ground_heights::outOfWall(g, map::Point{-1.0f, -15.0f, 3.0f});
+    CHECK(std::fabs(end.x - 0.5f) < 1e-4f);
+    CHECK(end.z == 3.0f);
+    // over the wall's top (above it): as it is
+    const map::Point over = ground_heights::outOfWall(g, map::Point{-15.0f, -35.0f, 0.0f});
+    CHECK(over.z == 0.0f && over.x == -15.0f);
+    // deep in: no side within kMostSetIn - as it is
+    const std::vector<uint8_t> thick = gndOf(5, 5, {0, 0, 0, 0, 0, 0, -30, -30, -30, 0, 0, -30, -30, -30, 0,
+                                                    0, -30, -30, -30, 0, 0, 0, 0, 0, 0});
+    ground_heights::Ground t;
+    CHECK(ground_heights::parse(thick.data(), thick.size(), t, error));
+    const map::Point deep = ground_heights::outOfWall(t, map::Point{5.0f, -15.0f, 5.0f});  // the middle cell's middle
+    CHECK(deep.x == 5.0f && deep.z == 5.0f);
 }

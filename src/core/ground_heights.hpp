@@ -32,6 +32,13 @@ bool laidAt(const Ground& g, float x, float z);
 bool parse(const uint8_t* data, size_t size, Ground& out, std::string& error);
 // The ground's height at the map file's (x, z) - its cell's top across its corners; false off the map.
 bool heightAt(const Ground& g, float x, float z, float& y);
+// 3.0.18-beta.191 (R-F7U2Q6 «огонь за стенами не прячится с факлов»): a map torch's place (the file's) out of the wall
+// its makers set it into - a place whose cell's top stands more than kSetIn above it moved across to the nearest side
+// of that cell whose neighbour's top is not (the face it hangs on), half a unit past it; as it was when that side is
+// further than kMostSetIn or there is none. 14 % of the maps' torches stand so, most 4 to 5 units in: the game's flame
+// drawn nearer than its torch showed them, their true place would hide them behind their own walls.
+constexpr float kSetIn = 3.0f, kMostSetIn = 6.0f;
+map::Point outOfWall(const Ground& g, const map::Point& place);
 // Whether light from `from` reaches `to` (the file's places): nowhere between them does the ground stand more than
 // `slack` above the straight line - but within `skipFrom` of `from` along the ground (a torch hangs on its wall) and
 // `skipTo` of `to`; off the map, and with no ground known, nothing stands in the way.

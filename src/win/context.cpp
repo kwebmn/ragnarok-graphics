@@ -1108,8 +1108,14 @@ void Context::present(const Rect& source, bool waitForVblank) {
                      view[6], view[7], view[8], view[9], view[10], view[11], screenWidth, screenHeight);
         if (reportNow) {
             const std::string map = readGameMap();
-            startReport(screenshot, map);
-            if (!map.empty() && enhanced_) startReportChecks(screenshot);  // 3.0.18-beta.189
+            if (!map.empty() && enhanced_) {  // 3.0.18-beta.189: its checks first; .191: then its window
+                startReportChecks(screenshot);
+                pendingReportShot_ = screenshot;
+                pendingReportMap_ = map;
+                pendingReportSince_ = GetTickCount64();
+            } else {
+                startReport(screenshot, map);
+            }
         }
     }
     if (screenshot.empty() && config.portraits) {  // 3.0.11-beta.273: the character's picture now and then
@@ -1574,6 +1580,19 @@ void Context::present(const Rect& source, bool waitForVblank) {
         fx.dayNow = day;
         fx.hallucinatingNow = hallucinating;
         if (!checkShot.empty()) LOG_INFO("report checks: %s - %s", v.what, checkShot.c_str());
+    }
+    // 3.0.18-beta.191: the report's window once its checks are taken - in front it would leave the game behind, which
+    // draws no more frames there; at most kChecksWaitMs after the picture all the same
+    constexpr uint64_t kChecksWaitMs = 5000;
+    if (!pendingReportShot_.empty() &&
+        (!reportChecks_.active() || GetTickCount64() - pendingReportSince_ > kChecksWaitMs)) {
+        if (reportChecks_.active()) {
+            LOG_INFO("report checks: not all taken in %llu ms - the report's window now",
+                     static_cast<unsigned long long>(kChecksWaitMs));
+            reportChecks_.stop();
+        }
+        startReport(pendingReportShot_, pendingReportMap_);
+        pendingReportShot_.clear();
     }
     renderer->setEffects(enhanced_ && !checkPause ? fx : effectsOff());  // Pause: the game's own picture
     serverNightFrame(enhanced_ && fx.noServerNight);      // 2.6.13: the server's night by the clock and «Ночь»

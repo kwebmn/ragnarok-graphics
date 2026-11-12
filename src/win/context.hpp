@@ -291,6 +291,10 @@ private:
     reportchecks::Run reportChecks_;
     std::vector<EffectSettings> checkFx_;
     void startReportChecks(const std::string& shot);
+    // 3.0.18-beta.191 (R-F7U2Q6: 2 of the 5 taken - the report's window in front, the game behind drew no more): the
+    // report's window opened once the checks are taken (at most kChecksWaitMs after its picture)
+    std::string pendingReportShot_, pendingReportMap_;
+    uint64_t pendingReportSince_ = 0;
     daylight::ServerClock serverClock_;  // 2.6.19: the Clock's «От сервера»
     Throttle scaleLog_{500};  // the scale line while the window is being resized (stage 3 review M7)
     SIZE lastOut_{};

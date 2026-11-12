@@ -162,6 +162,55 @@ void Keeper::update(std::vector<Flame>& flames, std::vector<uint32_t>& seeds, do
     }
 }
 
+namespace {
+
+// How high along `up` from `a` the upright line is seen at the screen's row y (game pixels) - false: never there
+bool heightAtRow(const float a[3], const float up[3], const camera::Projection& p, float y, float& s) {
+    const double k = double(y) - double(p.cy);
+    const double den = k * double(up[2]) - double(p.f1) * double(up[1]);
+    if (std::fabs(den) < 1e-9) return false;
+    s = float((double(p.f1) * double(a[1]) - k * double(a[2])) / den);
+    return std::isfinite(s);
+}
+
+}  // namespace
+
+bool uprightPoints(const Flame& f, const float anchor[3], const float up[3], const camera::Projection& p, float base[3],
+                   float tip[3]) {
+    float sb = 0.0f, st = 0.0f;
+    if (!heightAtRow(anchor, up, p, f.baseY, sb) || !heightAtRow(anchor, up, p, f.baseY + f.upY, st)) return false;
+    if (sb < -2.0f || st <= sb) return false;
+    for (int k = 0; k < 3; ++k) {
+        base[k] = anchor[k] + up[k] * sb;
+        tip[k] = anchor[k] + up[k] * st;
+    }
+    return base[2] > p.nearZ && tip[2] > p.nearZ;
+}
+
+int anchorOf(const Flame& f, const std::vector<std::array<float, 3>>& anchors, const float up[3],
+             const camera::Projection& p) {
+    if (p.f0 <= 0.0f || p.f1 <= 0.0f) return -1;
+    const float across = std::max(12.0f, 3.0f * f.halfWidth);
+    int best = -1;
+    float bestScore = 1e30f;
+    for (size_t i = 0; i < anchors.size(); ++i) {
+        const float* a = anchors[i].data();
+        if (a[2] <= p.nearZ || std::fabs(p.cx + p.f0 * a[0] / a[2] - f.baseX) > across) continue;
+        float s = 0.0f;
+        if (!heightAtRow(a, up, p, f.baseY, s) || s < 0.0f || s > 3.0f * kAnchorBelow) continue;
+        const float bx = a[0] + up[0] * s, bz = a[2] + up[2] * s;  // the line's point at the base's row
+        if (bz <= p.nearZ) continue;
+        // in world units: how far across the base the line passes, and the base's height above the torch against
+        // torch_01's own
+        const float score = std::fabs(p.cx + p.f0 * bx / bz - f.baseX) * bz / p.f0 + std::fabs(s - kAnchorBelow);
+        if (score < bestScore) {
+            best = int(i);
+            bestScore = score;
+        }
+    }
+    return best;
+}
+
 uint32_t placeSeed(const Flame& f, const camera::Projection& p, const float viewToWorld[12], bool cameraKnown) {
     const float mx = f.baseX + f.upX * 0.38f, my = f.baseY + f.upY * 0.38f;
     if (!cameraKnown || f.rhw <= 0.0f || p.f0 <= 0.0f || p.f1 <= 0.0f) return seedAt(mx, my);

@@ -716,6 +716,7 @@ private:
     objects::Textures objectTextures_;
     std::vector<torch::Flame> flames_;  // this frame's
     torch::Keeper torchKeeper_;         // 2.6.17: the game's flames kept steady (core/torch.hpp)
+    std::string uprightToldMap_;  // 3.0.18-beta.191: the map the flames' true places were told for
     bool lightDone_ = false, lightLogged_ = false;
     // 2.5: the mists and the weather (applyMist, applyWeather)
     ID3D11PixelShader* mistPs_ = nullptr;
