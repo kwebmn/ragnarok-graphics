@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.211 — what's new · 2026-11-12
+
+- Character select from the keyboard: after an arrow, ←/→ go through the characters, Enter plays, Space makes one, Esc goes back, PgUp / PgDn the pages (as in the windows).
+- «Main» lists every key for playing from the keyboard: the arrows, Space, the walk mode, the windows; the hint of «Walk mode (` key)» lists its quick keys.
+- The first screen: the arrows move between the buttons by place (←/→ in a row, ↑/↓ between rows), Tab one by one; F5 is «Check» for updates. «Settings»: Ctrl+PgUp and Ctrl+PgDn the page before and after (Ctrl+F the search, as before).
+
 # uaRO Graphics 3.0.18-beta.210 — what's new · 2026-11-12
 
 - Windows from the keyboard: the window opened or clicked last («Items», «Storage», «Cart», «Skills», «Equipment», «Stats», «Trade», the menu and the others) listens to the keys after the first arrow (with the chat line empty), as it does to a gamepad: the arrows move the gold frame, Enter presses (use, wear, move), Esc closes, Space is the X action, PgUp / PgDn the tabs, Shift+F10 or the menu key the card. The window's hints show the keys' names in place of the gamepad's buttons. A click on the ground gives the keys back to the world (the arrows walk again); text in the chat line takes them back too.
