@@ -1470,6 +1470,8 @@ void MainWindow::readChangelog() {
 }
 
 void MainWindow::markSeen() {
+    // its folder first: a fresh unpacking has none until the game or the install makes it
+    CreateDirectoryW((model_->paths().dir + L"\\" + wide(layout::kCache)).c_str(), nullptr);
     writeFileAtomic(model_->paths().dir + L"\\" + wide(layout::kSeenVersion), std::string(kVersion));
     seen_ = kVersion;
     refreshLauncher();
