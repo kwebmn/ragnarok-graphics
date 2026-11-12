@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.205 — what's new · 2026-11-12
+
+- The first screen has a «Create an account» button at the top: it starts the game with the registration open (in the game, as «Create an account» on the login screen; the site's registration page when the site does not answer). With an update offered, the game starts for the registration without it.
+
 # uaRO Graphics 3.0.18-beta.204 — what's new · 2026-11-12
 
 - «Items», «Storage» and «Cart»: the scroll bar right of the cells can now be dragged with the mouse, and a click on the bar moves there (it only showed where you are in the list before).
