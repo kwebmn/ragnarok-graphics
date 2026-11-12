@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.231 — what's new · 2026-11-13
+
+- The «Cannot find File : sprite\악세사리\…» boxes no longer show when you or someone near wears a headgear the 2007 game does not know (as Wings Of Victory and other items of newer clients): the game read another word in place of its name and looked for a file that is not there. Now it looks for nothing for such a headgear (the log's «wings: … past its … names»).
+- For the GM: players without uaRO Graphics still get those boxes - do not hand out the wings' items until their list changes (to items the game knows).
+
 # uaRO Graphics 3.0.18-beta.230 — what's new · 2026-11-13
 
 - Wings on characters (first beta): big wings on the back, drawn by the driver for whoever wears one of nine rare items (the GM hands them out). Wings Of Victory - angel, Flying Evil Wing - fallen angel, Wings of Diablo (and Refined) - demon, Red Wing Hat - fire, Filir's Pinions - ice, Sigrun's Wings - valkyrie, Bijofnil Wings - gold, Fairy Flower - sakura, Majestic Evil Horns - crimson demon. The pictures are the official wings of the uaRO HD client and their recolours. Every player with uaRO Graphics sees them; none in «Пауза».
