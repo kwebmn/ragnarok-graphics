@@ -70,9 +70,17 @@ struct Model {
     struct SetV {
         Rml::String label;
         bool saved = false, hot = false;
+        bool on = false;  // 3.0.18-beta.219: all of it worn now
     };
     std::vector<SetV> sets;
     Rml::String setsHint;
+    // 3.0.18-beta.219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться»): the set under the cursor told
+    // over the row - its name, its things, what a click does; the right button's menu there (keep / clear)
+    bool setTip = false, setMenuOn = false, setMenuClear = false;  // the tip / the menu shown; clear offered
+    int setMenuHot = -1;  // the cursor over keep (0) or clear (1)
+    float setTipX = 0;
+    Rml::String setTipTitle, setTipAction, setKeepWord, setClearWord;
+    std::vector<Rml::String> setTipLines;
 };
 
 const char* rml();

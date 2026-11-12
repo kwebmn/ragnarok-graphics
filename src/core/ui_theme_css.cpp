@@ -960,13 +960,26 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 /* 3.0.18-beta.154: the sets «1 2 3» (the later clients' Equip Switch) */
 /* 3.0.18-beta.217 (R-RASZHM's picture: the hint drawn over «1 2 3», the row at the window's edge): in from the edge
    as the ammo's row; the hint's class «setsnote» (it was «sh» - the sheets' own, position: absolute) */
-.eql .sets { display: flex; align-items: center; margin: 0.5rem 1.3333rem 0 1.3333rem; }
+.eql .sets { display: flex; align-items: center; margin: 0.5rem 1.3333rem 0 1.3333rem; position: relative; }
 .eql .sets .set { display: block; width: 2rem; height: 1.8333rem; line-height: 1.8333rem; margin-right: 0.4167rem;
     text-align: center; border-radius: 0.5rem; border-width: 1px; border-color: #ffffff1f; color: #7e889a;
     background-color: #ffffff0a; font-weight: bold; }
 .eql .sets .set.saved { color: #e6cb8a; border-color: #c9a55b80; }
 .eql .sets .set.hot { background-color: #ffffff24; }
 .eql .sets .setsnote { display: block; margin-left: 0.4167rem; font-size: 0.9167rem; color: #7e889a; }
+/* 3.0.18-beta.219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться»): the set worn now filled; the tip and
+   the right button's menu over the row at the set's place */
+.eql .sets .set.on { background-color: #c9a55b40; border-color: #e6cb8a; color: #f3d98f; }
+.eql .settip, .eql .setmenu { position: absolute; bottom: 2.3333rem; padding: 0.5rem 0.6667rem;
+    border-radius: 0.5833rem; border: 0.0833rem #e6cb8a66; background-color: #141a24f2; z-index: 5; }
+.eql .settip { display: block; width: 21rem; }
+.eql .stt { display: block; font-size: 0.9583rem; font-weight: bold; color: #e6cb8a; margin-bottom: 0.25rem; }
+.eql .stl { display: block; font-size: 0.9167rem; color: #e9e4ea; white-space: nowrap; overflow: hidden; }
+.eql .sta { display: block; margin-top: 0.3333rem; font-size: 0.875rem; color: #9aa3b5; }
+.eql .setmenu { display: flex; }
+.eql .smi { display: block; height: 1.8333rem; line-height: 1.8333rem; padding: 0 0.6667rem; margin: 0 0.25rem;
+    border-radius: 0.5rem; border: 0.0833rem #ffffff26; color: #e9e4ea; font-size: 0.9167rem; white-space: nowrap; }
+.eql .smi.hot { background-color: #ffffff24; }
 .eql .nm.spill { font-weight: normal; color: #7e889a; }
 .eql .dots { display: flex; height: 0.5833rem; margin-top: 0.0833rem; }
 .eql .left .dots { justify-content: flex-end; }

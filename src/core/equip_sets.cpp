@@ -74,4 +74,36 @@ std::vector<Step> plan(const Set& set, const std::vector<Owned>& bag, const ew::
     return out;
 }
 
+namespace {
+bool wornAt(const Thing& t, const ew::Worn now[ew::kSlots]) {
+    const ew::Worn& w = now[t.slot];
+    return w.index > 0 && w.id == t.id && w.refine == t.refine && sameCards(w.cards, t.cards);
+}
+}  // namespace
+
+bool wornNow(const Set& set, const ew::Worn now[ew::kSlots]) {
+    if (set.things.empty()) return false;
+    for (const Thing& t : set.things)
+        if (!wornAt(t, now)) return false;
+    return true;
+}
+
+Click clickOf(const Set& set, const ew::Worn now[ew::kSlots]) {
+    if (set.things.empty()) return Click::Keep;
+    return wornNow(set, now) ? Click::AlreadyOn : Click::PutOn;
+}
+
+std::vector<Thing> missing(const Set& set, const std::vector<Owned>& bag, const ew::Worn now[ew::kSlots]) {
+    std::vector<Thing> out;
+    std::vector<bool> used(bag.size(), false);
+    for (const Thing& t : set.things) {
+        if (wornAt(t, now)) continue;
+        bool found = false;
+        for (size_t i = 0; i < bag.size() && !found; ++i)  // as plan: the same number and refine serve
+            if (!used[i] && !bag[i].worn && bag[i].id == t.id && bag[i].refine == t.refine) found = used[i] = true;
+        if (!found) out.push_back(t);
+    }
+    return out;
+}
+
 }  // namespace uagfx::equipsets

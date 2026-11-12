@@ -35,4 +35,13 @@ struct Step {
 std::vector<Step> plan(const Set& set, const std::vector<Owned>& bag, const equipwin::Worn now[equipwin::kSlots]);
 constexpr int kSets = 3;
 
+// 3.0.18-beta.219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться, и оно как-то не функциональное» - a
+// click on an empty set did nothing, keeping one was the right button's alone): a set's click says itself - an empty
+// one keeps what is worn, a kept one puts itself on, one all worn already says so
+enum class Click : uint8_t { Keep, PutOn, AlreadyOn };
+bool wornNow(const Set& set, const equipwin::Worn now[equipwin::kSlots]);  // all of it worn now (an empty one: no)
+Click clickOf(const Set& set, const equipwin::Worn now[equipwin::kSlots]);
+// The set's things neither worn nor in the bag (sold, stored, dropped) - told after it is put on
+std::vector<Thing> missing(const Set& set, const std::vector<Owned>& bag, const equipwin::Worn now[equipwin::kSlots]);
+
 }  // namespace uagfx::equipsets

@@ -229,3 +229,58 @@ TEST(uikit_equip_sets_row_beside_its_hint) {
     }
     rmlhost::close(doc);
 }
+
+// 3.0.18-beta.219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться»): the set under the cursor told over
+// the row at its place (its name, things, what a click does); the right button's menu there - keep, clear
+TEST(uikit_equip_set_tip_and_menu_over_the_row) {
+    ew::Data d;
+    ew::Show sh;
+    static el::Model m;
+    el::fill(m, d, sh, texts(), 1, none, glyph);
+    using Set = el::Model::SetV;
+    m.sets = {Set{"1", false, false}, Set{"2", true, true}, Set{"3", false, false}};
+    m.setsHint = "Комплекти речей: наведіть на цифру — що в ній і що зробить клік";
+    m.setTip = true;
+    m.setTipX = 31;  // the second set's place in the row
+    m.setTipTitle = "Комплект 2";
+    m.setTipLines = {"+7 Gakkung Bow", "Arrow of Wind"};
+    m.setTipAction = "Клік — надягти · права кнопка — зберегти чи очистити";
+    m.setKeepWord = "Зберегти надіте";
+    m.setClearWord = "Очистити";
+    std::string error;
+    Rml::ElementDocument* doc =
+        rmlhost::load(el::rml(), [&](Rml::DataModelConstructor& c) { el::bind(c, m); }, 100, 80, &error);
+    CHECK_EQ(error, std::string());
+    rmlhost::update();
+    const std::vector<uikit::Placed> sets = uikit::placesOf(doc, "set");
+    Rml::Element* tip = doc->QuerySelector(".settip");
+    CHECK_EQ(sets.size(), size_t(3));
+    CHECK(tip != nullptr);
+    if (sets.size() == 3 && tip) {
+        const float x = tip->GetAbsoluteLeft() - doc->GetAbsoluteLeft();
+        const float y = tip->GetAbsoluteTop() - doc->GetAbsoluteTop();
+        CHECK(std::abs(x - (sets[0].box.x + 31)) < 1.0f);           // at the second set
+        CHECK(y + tip->GetOffsetHeight() <= sets[1].box.y + 0.5f);  // over the row
+        Rml::ElementList lines;
+        tip->QuerySelectorAll(lines, ".stl");  // data-for's template stays, hidden
+        size_t shown = 0;
+        for (Rml::Element* l : lines) shown += l->IsVisible() ? 1 : 0;
+        CHECK_EQ(shown, size_t(2));
+    }
+    CHECK(uikit::placesOf(doc, "setkeep").empty());  // no menu till the right button
+    m.setTip = false;
+    m.setMenuOn = true;
+    m.setMenuClear = true;
+    rmlhost::update();
+    CHECK(tip == nullptr || !tip->IsVisible());  // data-if hides it
+    const std::vector<uikit::Placed> keep = uikit::placesOf(doc, "setkeep"), clear = uikit::placesOf(doc, "setclear");
+    CHECK(keep.size() == 1 && clear.size() == 1);
+    if (keep.size() == 1 && clear.size() == 1 && sets.size() == 3) {
+        CHECK(keep[0].box.y + keep[0].box.h <= sets[1].box.y + 0.5f);  // over the row
+        CHECK(clear[0].box.x >= keep[0].box.x + keep[0].box.w);       // side by side
+    }
+    m.setMenuClear = false;  // an empty set: keep alone
+    rmlhost::update();
+    CHECK(uikit::placesOf(doc, "setclear").empty());
+    rmlhost::close(doc);
+}

@@ -141,6 +141,13 @@ struct State {
     int turnHot = -1;       // 3.0.18-beta.115: over ◀ (0) or ▶ (1)
     bool mountAsk = false;  // 3.0.18-beta.117: the sign pressed - Yes / No asked
     int askHot = -1;        // over Yes (0) or No (1)
+    // 3.0.18-beta.219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться, и оно как-то не функциональное»):
+    // the right button's menu of a set and the cursor over its item; the last set action's words a while; the set
+    // being put on, its result told when its last thing had time to be worn
+    int setMenu = -1, setMenuHot = -1;
+    std::string setNote;
+    ULONGLONG setNoteUntil = 0, setCheckAt = 0;
+    int setWearing = -1;
     panel::Picture hero;
     panel::Picture picture, portrait;
     uint32_t texture = 0;
@@ -561,18 +568,26 @@ void readSets(State& s) {
     for (int i = 0; i < equipsets::kSets; ++i) s.sets[i] = equipsets::Set::parse(part[i]);
 }
 
-void keepSet(State& s, int i) {
-    s.sets[i] = equipsets::capture(s.data.slots);
-    std::string text;
-    for (int n = 0; n < equipsets::kSets; ++n) text += "#" + std::to_string(n + 1) + "\n" + s.sets[n].text();
-    CreateDirectoryA((gameDir() + "\\uaro-graphics\\equip-sets").c_str(), nullptr);
-    writeFileAtomic(setsFile(s.setsOf), text);
-    LOG_INFO("equip: the set %d kept - %zu thing(s)", i + 1, s.sets[i].things.size());
+// 3.0.18-beta.219: the sets' words - «{1}» the set's number, «{2}» what follows
+std::string setSaid(settings::Text text, int set, const std::string& more = "") {
+    std::string words = say(text);
+    if (const size_t at = words.find("{1}"); at != std::string::npos) words.replace(at, 3, std::to_string(set + 1));
+    if (const size_t at = words.find("{2}"); at != std::string::npos) words.replace(at, 3, more);
+    return words;
+}
+
+void setNote(State& s, std::string words) {  // under the row a while, then the row's own hint again
+    s.setNote = std::move(words);
+    s.setNoteUntil = GetTickCount64() + 6000;
     s.key.clear();
 }
 
-void putSet(State& s, int i) {
-    if (s.sets[i].things.empty()) return;
+std::string thingWords(const State& s, const equipsets::Thing& t) {
+    const std::string name = nameOf(s, t.id, true);
+    return t.refine > 0 ? "+" + std::to_string(t.refine) + " " + name : name;
+}
+
+std::vector<equipsets::Owned> ownedOf(const State& s) {
     std::vector<equipsets::Owned> bag;
     for (const Thing& t : s.bag) {
         equipsets::Owned o;
@@ -580,12 +595,123 @@ void putSet(State& s, int i) {
         for (int c = 0; c < 4; ++c) o.cards[c] = t.cards[c];
         bag.push_back(o);
     }
-    s.setQueue = equipsets::plan(s.sets[i], bag, s.data.slots);
+    return bag;
+}
+
+void writeSets(const State& s) {
+    std::string text;
+    for (int n = 0; n < equipsets::kSets; ++n) text += "#" + std::to_string(n + 1) + "\n" + s.sets[n].text();
+    CreateDirectoryA((gameDir() + "\\uaro-graphics\\equip-sets").c_str(), nullptr);
+    writeFileAtomic(setsFile(s.setsOf), text);
+}
+
+void keepSet(State& s, int i) {
+    const equipsets::Set now = equipsets::capture(s.data.slots);
+    if (now.things.empty()) {  // 3.0.18-beta.219: nothing worn - an empty set is not kept over the one there
+        setNote(s, say(settings::Text::EquipSetNothingWorn));
+        return;
+    }
+    s.sets[i] = now;
+    writeSets(s);
+    LOG_INFO("equip: the set %d kept - %zu thing(s)", i + 1, s.sets[i].things.size());
+    setNote(s, setSaid(settings::Text::EquipSetKept, i, std::to_string(s.sets[i].things.size())));
+}
+
+void clearSet(State& s, int i) {  // 3.0.18-beta.219: the right button's menu
+    s.sets[i] = equipsets::Set{};
+    writeSets(s);
+    LOG_INFO("equip: the set %d cleared", i + 1);
+    setNote(s, setSaid(settings::Text::EquipSetCleared, i));
+}
+
+// 3.0.18-beta.219: what came of a set put on - all of it worn, things in it not in the bag (named), or the game
+// refused some (a level, a job)
+void tellSetResult(State& s) {
+    const int i = s.setWearing;
+    s.setWearing = -1;
+    s.setCheckAt = 0;
+    if (i < 0 || i >= equipsets::kSets) return;
+    if (equipsets::wornNow(s.sets[i], s.data.slots)) {
+        LOG_INFO("equip: the set %d worn", i + 1);
+        setNote(s, setSaid(settings::Text::EquipSetDone, i));
+        return;
+    }
+    const std::vector<equipsets::Thing> gone = equipsets::missing(s.sets[i], ownedOf(s), s.data.slots);
+    if (!gone.empty()) {
+        std::string names;
+        for (size_t n = 0; n < gone.size() && n < 3; ++n) names += (n ? ", " : "") + thingWords(s, gone[n]);
+        if (gone.size() > 3) names += ", \xE2\x80\xA6";
+        LOG_INFO("equip: the set %d - %zu thing(s) neither worn nor in the bag", i + 1, gone.size());
+        setNote(s, setSaid(settings::Text::EquipSetMissing, i, names));
+        return;
+    }
+    LOG_INFO("equip: the set %d - not all of it worn (the game refused some)", i + 1);
+    setNote(s, setSaid(settings::Text::EquipSetPartly, i));
+}
+
+void putSet(State& s, int i) {
+    if (s.sets[i].things.empty()) return;
+    s.setQueue = equipsets::plan(s.sets[i], ownedOf(s), s.data.slots);
     s.setStepAt = 0;
     LOG_INFO("equip: the set %d put on - %zu thing(s) to wear", i + 1, s.setQueue.size());
+    s.setWearing = i;  // 3.0.18-beta.219: its result told
+    if (s.setQueue.empty()) {
+        tellSetResult(s);
+        return;
+    }
+    s.setCheckAt = 0;
+    setNote(s, setSaid(settings::Text::EquipSetPutting, i));
+}
+
+// 3.0.18-beta.219: a set's click says itself (core equipsets::clickOf) - an empty one keeps what is worn, a kept one
+// puts itself on, one all worn already says so
+void clickSet(State& s, int i) {
+    switch (equipsets::clickOf(s.sets[i], s.data.slots)) {
+        case equipsets::Click::Keep: keepSet(s, i); break;
+        case equipsets::Click::PutOn: putSet(s, i); break;
+        case equipsets::Click::AlreadyOn:
+            LOG_INFO("equip: the set %d is worn already", i + 1);
+            setNote(s, setSaid(settings::Text::EquipSetAlready, i));
+            break;
+    }
+}
+
+// 3.0.18-beta.219: the set under the cursor told over the row (its things, what a click does), or its right
+// button's menu (keep what is worn; clear a kept one) - at that set's place in the row
+void fillSetTip(State& s, uikit::equip::Model& m) {
+    const int i = s.setMenu >= 0 ? s.setMenu : s.setHot;
+    m.setTip = s.setMenu < 0 && s.setHot >= 0;
+    m.setMenuOn = s.setMenu >= 0;
+    m.setMenuHot = s.setMenuHot;
+    m.setMenuClear = s.setMenu >= 0 && !s.sets[s.setMenu].things.empty();
+    m.setKeepWord = say(settings::Text::EquipSetMenuKeep);
+    m.setClearWord = say(settings::Text::EquipSetMenuClear);
+    m.setTipLines.clear();
+    if (i < 0 || i >= equipsets::kSets) return;
+    const std::vector<uikit::Placed> at = uikit::placesOf(s.live.doc.doc(), "set");
+    float first = -1, mine = -1;
+    for (const uikit::Placed& p : at) {
+        if (p.index == 0) first = p.box.x;
+        if (p.index == i) mine = p.box.x;
+    }
+    m.setTipX = first >= 0 && mine >= 0 ? mine - first : 0;
+    m.setTipTitle = setSaid(settings::Text::EquipSetTitle, i);
+    const equipsets::Set& set = s.sets[i];
+    for (const equipsets::Thing& t : set.things) m.setTipLines.push_back(thingWords(s, t));
+    if (set.things.empty()) m.setTipLines.push_back(say(settings::Text::EquipSetEmpty));
+    switch (equipsets::clickOf(set, s.data.slots)) {
+        case equipsets::Click::Keep: m.setTipAction = say(settings::Text::EquipSetClickKeep); break;
+        case equipsets::Click::PutOn: m.setTipAction = say(settings::Text::EquipSetClickPut); break;
+        case equipsets::Click::AlreadyOn: m.setTipAction = say(settings::Text::EquipSetClickOn); break;
+    }
 }
 
 void setSteps(State& s) {  // one thing a step, as the game's own window wears them
+    if (s.setQueue.empty() && s.setWearing >= 0) {  // 3.0.18-beta.219: the last one's answer had time to come
+        if (!s.setCheckAt) s.setCheckAt = GetTickCount64() + 700;
+        else if (GetTickCount64() >= s.setCheckAt) tellSetResult(s);
+        return;
+    }
     if (s.setQueue.empty() || GetTickCount64() < s.setStepAt) return;
     const equipsets::Step st = s.setQueue.front();
     s.setQueue.erase(s.setQueue.begin());
@@ -701,9 +827,24 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         for (int i = 0; i < 2; ++i)  // 3.0.18-beta.115 (R-RJBU55 «не активні при наведении»)
             for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), i ? "turnright" : "turnleft"))
                 if (p.box.contains(px, py)) s.turnHot = i;
+        s.setHot = -1;  // 3.0.18-beta.219: it was never set - the sets lit under the cursor, their tip
+        for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "set"))
+            if (p.box.contains(px, py) && p.index >= 0 && p.index < equipsets::kSets) s.setHot = p.index;
+        s.setMenuHot = -1;
+        for (int i = 0; s.setMenu >= 0 && i < 2; ++i)
+            for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), i ? "setclear" : "setkeep"))
+                if (p.box.contains(px, py)) s.setMenuHot = i;
+    } else {
+        s.setHot = s.setMenuHot = -1;
+    }
+    if (s.setNoteUntil && GetTickCount64() >= s.setNoteUntil) {  // 3.0.18-beta.219: the row's own hint again
+        s.setNoteUntil = 0;
+        s.setNote.clear();
     }
     if (s.mountAsk && (mountNow() == Mount::None || !s.shown)) s.mountAsk = false;  // nothing left to ask about
-    std::string key = std::string(s.mountHot ? "m" : "") + (s.mountAsk ? "a" + std::to_string(s.askHot) : "") + "t" +
+    std::string key = "S" + std::to_string(s.setHot) + ',' + std::to_string(s.setMenu) + ',' +
+                      std::to_string(s.setMenuHot) + ',' + s.setNote + ';' +  // 3.0.18-beta.219
+                      std::string(s.mountHot ? "m" : "") + (s.mountAsk ? "a" + std::to_string(s.askHot) : "") + "t" +
                       std::to_string(s.turnHot) +
                       std::to_string(s.layout.x) + ',' +
                       std::to_string(s.layout.y) + ';' + std::to_string(scale) +
@@ -765,8 +906,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                     m.sets.clear();  // 3.0.18-beta.154: the sets «1 2 3»
                                     for (int i = 0; i < equipsets::kSets; ++i)
                                         m.sets.push_back(el::Model::SetV{std::to_string(i + 1),
-                                                                         !s.sets[i].things.empty(), i == s.setHot});
-                                    m.setsHint = say(settings::Text::EquipSetsHint);
+                                                                         !s.sets[i].things.empty(), i == s.setHot,
+                                                                         equipsets::wornNow(s.sets[i], s.data.slots)});
+                                    m.setsHint = s.setNote.empty() ? say(settings::Text::EquipSetsHint) : s.setNote;
+                                    fillSetTip(s, m);  // 3.0.18-beta.219
                                     m.askNo = say(settings::Text::MsgNo);
                                     m.hero = m.turns ? s.live.icon(&s.hero) : "";
                                     {  // .113: fitted into the middle's box, its proportions kept
@@ -927,6 +1070,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         s.mountAsk = false;  // 3.0.18-beta.117: a press past the window forgets the question
         s.key.clear();
     }
+    if (h.part == ew::Part::None && s.setMenu >= 0 && (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN)) {
+        s.setMenu = -1;  // 3.0.18-beta.219: and a set's menu
+        s.key.clear();
+    }
     if (h.part == ew::Part::None || m == WM_MOUSEMOVE) return false;
     result = 0;
     if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && s.live.shown()) {  // 3.0.18-beta.111: ◀ ▶ turn it
@@ -956,9 +1103,22 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             }
             if (on("mountoff")) return true;  // the sign again: the question closed
         }
-        for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "set"))  // 3.0.18-beta.154: a set put on
-            if (p.box.contains(lx, ly) && p.index >= 0 && p.index < equipsets::kSets) {
-                putSet(s, p.index);
+        if (s.setMenu >= 0) {  // 3.0.18-beta.219: a set's menu - its item done, a press anywhere else closes it
+            const int set = s.setMenu;
+            s.setMenu = -1;
+            s.key.clear();
+            for (int i = 0; i < 2; ++i)
+                for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), i ? "setclear" : "setkeep"))
+                    if (p.box.contains(lx, ly)) {
+                        if (i) clearSet(s, set);
+                        else keepSet(s, set);
+                        return true;
+                    }
+        }
+        // 3.0.18-beta.154: a set put on; 3.0.18-beta.219: an empty one keeps what is worn, a worn one says so
+        for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "set"))
+            if (p.box.contains(lx, ly) && p.index >= 0 && p.index < equipsets::kSets && !s.setsOf.empty()) {
+                if (m == WM_LBUTTONDOWN) clickSet(s, p.index);  // a double click's second press: no second action
                 return true;
             }
         for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "mountoff"))  // 3.0.18-beta.114
@@ -979,9 +1139,15 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     }
     if (m == WM_RBUTTONDOWN && s.live.shown()) {  // 3.0.18-beta.154: a set's right click - what is worn kept in it
         const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
+        // 3.0.18-beta.219: its menu instead (keep what is worn / clear) - a right click on it again closes it
+        const int was = s.setMenu;
+        s.setMenu = -1;
+        s.key.clear();
         for (const uikit::Placed& p : uikit::placesOf(s.live.doc.doc(), "set"))
             if (p.box.contains(lx, ly) && p.index >= 0 && p.index < equipsets::kSets && !s.setsOf.empty()) {
-                keepSet(s, p.index);
+                s.setMenu = p.index == was ? -1 : p.index;
+                if (s.told++ < 40)
+                    LOG_INFO("equip: the set %d's menu %s", p.index + 1, s.setMenu >= 0 ? "open" : "closed");
                 return true;
             }
     }

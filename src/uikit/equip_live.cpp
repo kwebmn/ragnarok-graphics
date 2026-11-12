@@ -63,7 +63,13 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   class="txt"><div class="lbl">{{ammo.label}}</div><div class="nm" data-class-worn="ammo.worn">{{ammo.name}}</div>
 </div></div></div>
 <div class="sets"><span class="set" data-for="x, i : sets" data-hit="set" data-attr-data-index="i"
-  data-class-saved="x.saved" data-class-hot="x.hot">{{x.label}}</span><span class="setsnote">{{setsHint}}</span></div>
+  data-class-saved="x.saved" data-class-hot="x.hot" data-class-on="x.on">{{x.label}}</span><span
+  class="setsnote">{{setsHint}}</span><div class="settip" data-if="setTip"
+  data-style-left="setTipX + 'px'"><div class="stt">{{setTipTitle}}</div><div class="stl"
+  data-for="l : setTipLines">{{l}}</div><div class="sta">{{setTipAction}}</div></div><div class="setmenu"
+  data-if="setMenuOn" data-style-left="setTipX + 'px'"><span class="smi" data-hit="setkeep"
+  data-class-hot="setMenuHot == 0">{{setKeepWord}}</span><span class="smi" data-if="setMenuClear"
+  data-hit="setclear" data-class-hot="setMenuHot == 1">{{setClearWord}}</span></div></div>
 <div class="foot" data-hit="footer"><span class="cards">{{cards}}</span><span class="drag"
   data-if="!pad">{{drag}}</span><div class="pads" data-if="pad"><div class="pad" data-for="p : padItems"><img
   data-attr-src="p.glyph" data-style-width="p.w + 'px'" data-style-height="p.h + 'px'"/><span>{{p.words}}</span></div>
@@ -111,10 +117,22 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         v.RegisterMember("label", &Model::SetV::label);
         v.RegisterMember("saved", &Model::SetV::saved);
         v.RegisterMember("hot", &Model::SetV::hot);
+        v.RegisterMember("on", &Model::SetV::on);  // 3.0.18-beta.219
     }
     c.RegisterArray<std::vector<Model::SetV>>();
     c.Bind("sets", &m.sets);
     c.Bind("setsHint", &m.setsHint);
+    c.RegisterArray<std::vector<Rml::String>>();  // 3.0.18-beta.219: the set's tip
+    c.Bind("setTip", &m.setTip);
+    c.Bind("setMenuClear", &m.setMenuClear);
+    c.Bind("setMenuOn", &m.setMenuOn);
+    c.Bind("setMenuHot", &m.setMenuHot);
+    c.Bind("setTipX", &m.setTipX);
+    c.Bind("setTipTitle", &m.setTipTitle);
+    c.Bind("setTipAction", &m.setTipAction);
+    c.Bind("setKeepWord", &m.setKeepWord);
+    c.Bind("setClearWord", &m.setClearWord);
+    c.Bind("setTipLines", &m.setTipLines);
     registerSlot(c);
     if (auto e = c.RegisterStruct<StatV>()) {
         e.RegisterMember("name", &StatV::name);

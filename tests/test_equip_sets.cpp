@@ -46,3 +46,44 @@ TEST(equip_sets_kept_and_put_on) {
     CHECK(es::plan(back, bag, later).size() == 1);
     CHECK(es::Set::parse("").things.empty());
 }
+
+// 3.0.18-beta.219 (the owner: «так и не понял как кнопкой 1 2 3 пользоваться, и оно как-то не функциональное» - a
+// click on an empty set did nothing, keeping one was the right button's alone): a set's click says itself
+TEST(equip_sets_click_keeps_puts_on_or_says_worn) {
+    ew::Worn now[ew::kSlots];
+    now[ew::Weapon] = worn(5, 1201, 7, 4001);
+    now[ew::Armor] = worn(6, 2301, 4);
+    const es::Set empty;
+    CHECK(es::clickOf(empty, now) == es::Click::Keep);  // empty: a click keeps what is worn
+    CHECK(!es::wornNow(empty, now));
+    const es::Set kept = es::capture(now);
+    CHECK(es::wornNow(kept, now));
+    CHECK(es::clickOf(kept, now) == es::Click::AlreadyOn);  // all of it worn: nothing to do, said so
+    ew::Worn later[ew::kSlots];
+    later[ew::Armor] = worn(6, 2301, 4);
+    later[ew::Weapon] = worn(9, 1101, 0);
+    CHECK(!es::wornNow(kept, later));
+    CHECK(es::clickOf(kept, later) == es::Click::PutOn);
+    ew::Worn refined[ew::kSlots];  // the same knife at another refine: not this set's
+    refined[ew::Armor] = worn(6, 2301, 4);
+    refined[ew::Weapon] = worn(5, 1201, 6, 4001);
+    CHECK(es::clickOf(kept, refined) == es::Click::PutOn);
+}
+
+// What a set holds but neither is worn nor in the bag (sold, stored) - told after it is put on
+TEST(equip_sets_missing_things_told) {
+    ew::Worn now[ew::kSlots];
+    now[ew::Weapon] = worn(5, 1201, 7, 4001);
+    now[ew::Armor] = worn(6, 2301, 4);
+    now[ew::Shoes] = worn(7, 2401, 0);
+    const es::Set kept = es::capture(now);
+    ew::Worn later[ew::kSlots];
+    later[ew::Armor] = worn(6, 2301, 4);  // worn: not missing
+    std::vector<es::Owned> bag;
+    bag.push_back(es::Owned{12, 1201, 7, {0, 0, 0, 0}, false});  // the knife (its card gone): in the bag, not missing
+    const std::vector<es::Thing> gone = es::missing(kept, bag, later);
+    CHECK_EQ(gone.size(), size_t(1));
+    CHECK(gone.size() == 1 && gone[0].id == 2401 && gone[0].slot == ew::Shoes);  // the shoes: nowhere
+    bag.push_back(es::Owned{14, 2401, 0, {0, 0, 0, 0}, false});
+    CHECK(es::missing(kept, bag, later).empty());
+}
