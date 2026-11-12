@@ -131,6 +131,12 @@ std::string dataPath(const std::string& resource) {
     return "data\\sprite\\" + resource;
 }
 
+std::string actOf(const std::string& sprite) {
+    const size_t dot = sprite.rfind('.'), slash = sprite.rfind('\\');
+    if (dot == std::string::npos || (slash != std::string::npos && dot < slash)) return {};
+    return sprite.substr(0, dot) + ".act";
+}
+
 bool pastTable(int view, uint32_t first, uint32_t last) {
     if (view <= 0) return false;
     if (!first || last < first) return true;

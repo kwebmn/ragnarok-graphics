@@ -33,8 +33,9 @@ namespace cw = uagfx::wings;
 constexpr uint32_t kRender = 0x5AECC0;
 constexpr uint8_t kRenderBytes[9] = {0x55, 0x8B, 0xEC, 0x81, 0xEC, 0xF4, 0x06, 0x00, 0x00};
 constexpr uint32_t kViews[3] = {0x36C, 0x370, 0x374};  // its headgears' views
-// its layers' sprite and act resources (8 each, the body first), a resource's name, its action and frame, its size
-constexpr uint32_t kSprites = 0x3C4, kActs = 0x3B4, kResName = 0x14, kAction = 0x24, kFrame = 0x28, kSize = 0x3C;
+// its layers' resources (8, the body first; .236: the act named by the sprite), a resource's name, its action
+// and frame, its size
+constexpr uint32_t kSprites = 0x3C4, kResName = 0x14, kAction = 0x24, kFrame = 0x28, kSize = 0x3C;
 // the view: a point's screen place and depth (FUN_00412C30), a depth's scale (FUN_00412D60), as the render asks them
 constexpr uint32_t kViewObject = 0x6EE3D8, kProject = 0x412C30, kDepthScale = 0x412D60;
 using RenderFn = void(__attribute__((thiscall)) *)(uint32_t actor, uint32_t matrix, int flag);
@@ -168,7 +169,8 @@ void startJob(State& s, uint32_t actor, uint32_t matrix) {
     if (look == cw::Look::None) return;
     const std::string body = resName(actor, kSprites);
     Garment* g = garmentFor(s, look, body);
-    const spritefile::Act* bact = g ? bodyAct(s, resName(actor, kActs)) : nullptr;
+    // .236 (R-4U3RD7): the body's act by its sprite's name - the list taken for the acts held the sprites
+    const spritefile::Act* bact = g ? bodyAct(s, cw::actOf(body)) : nullptr;
     const uint32_t view = read32(kViewObject);
     float size = 0;
     if (!bact) return;

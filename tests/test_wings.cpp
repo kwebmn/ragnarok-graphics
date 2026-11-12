@@ -222,3 +222,13 @@ TEST(wings_views_past_the_table) {
     CHECK(wings::pastTable(5, 0, 0));           // no table: nothing to name it by
     CHECK(wings::pastTable(5, first, first - 4));  // a broken one
 }
+
+// 3.0.18-beta.236 (R-4U3RD7: «the body's sprite\인간족\몸통\여\궁수_여.spr not read» - the list taken for the acts held
+// the sprites): the body's act named after its sprite
+TEST(wings_body_act_of_its_sprite) {
+    CHECK(wings::actOf("sprite\\a\\b.spr") == "sprite\\a\\b.act");
+    CHECK(wings::actOf("sprite\\a\\b.SPR") == "sprite\\a\\b.act");
+    CHECK(wings::actOf("x.act") == "x.act");
+    CHECK(wings::actOf("sprite\\a.b\\c").empty());  // no extension of its own
+    CHECK(wings::actOf("").empty());
+}

@@ -30,6 +30,8 @@ std::string garmentEntry(Set set, const std::string& bodySprite, const char* ext
 // .235: a sprite resource's name as the game's files know it: "data\sprite\..." ("sprite\..." gets data\, a name
 // relative to the sprites' folder both)
 std::string dataPath(const std::string& resource);
+// .236 (R-4U3RD7): a body's act by its sprite's name (the extension changed); "" when the name has none
+std::string actOf(const std::string& sprite);
 // 3.0.18-beta.231: a headgear view past the game's own table of their names (a vector of name pointers, its first and
 // last at uaRO.exe's session +0x880/+0x884) - the game would read another table's word for it and ask for a sprite
 // that is not there; none (0) is the game's own
