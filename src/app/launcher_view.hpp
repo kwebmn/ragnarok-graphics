@@ -10,6 +10,7 @@
 #include "app/update.hpp"
 #include "core/launcher_art.hpp"
 #include "core/launcher_layout.hpp"
+#include "core/launcher_log.hpp"
 #include "core/launcher_picker.hpp"
 #include "core/settings/changelog.hpp"
 #include "core/settings/choice_presets.hpp"
@@ -44,6 +45,7 @@ struct LauncherData {
     std::wstring cardName;  // the adapter, "" not known
     bool fitsCard = false;  // «Картинка» and «Текстури» are the card's
     bool undoable = false;  // a pick of the last 5 s: «Змінено · Скасувати»
+    std::string seen;       // 3.0.18-beta.195: the version the player last saw the news of ("" none)
 };
 
 class LauncherHost {
@@ -53,6 +55,11 @@ public:
     virtual void launcherAction(launcherview::Part part, int index) = 0;
     // 3.0.18-beta.194: the look picker's - an option (its choice and variant), the card's set, the test, undo, all
     virtual void lookAction(launcherpick::PickPart part, settings::presets::Choice choice, int variant) = 0;
+    // 3.0.18-beta.195: «Журнал змін» - the changelog for the channel, a point's setting to try (its «…» name that is
+    // a settings row's title, "" none), the try itself (the settings searched for it)
+    virtual const std::vector<settings::changelog::Version>& launcherLog() = 0;
+    virtual std::string tryName(const std::string& point) = 0;
+    virtual void tryPoint(const std::string& name) = 0;
 };
 
 class LauncherView {
@@ -107,6 +114,29 @@ private:
     void pickerPress(launcherpick::PickHit hit);
     std::vector<launcherpick::PickHit> pickerOrder() const;
     launcherview::Box pickerBox(launcherpick::PickHit hit) const;
+    // 3.0.18-beta.195: «Журнал змін» over the darkened art (the update's card opens it; Esc and «← До гри» close it)
+    struct LogHit {
+        enum Kind : uint8_t { None, Back, Filter, Row, Try } kind = None;
+        int index = -1;
+    };
+    struct PagePoint {
+        std::vector<std::wstring> lines;
+        bool section = false;
+        float y = 0;  // its first line's baseline from the page's top, unscrolled
+        launcherview::Box tryBox;  // «Спробувати», w 0 none (from the page's top, unscrolled)
+        std::string name;          // the setting it tries
+    };
+    void openLog();
+    void closeLog();
+    void relayoutLog();
+    void layoutPage(HDC dc);
+    void composeLog();
+    void wordsLog(HDC dc);
+    LogHit logHitAt(float x, float y) const;
+    void logPress(LogHit hit);
+    void chooseRow(int row);  // its place in logScreen_.rows, scrolled into sight
+    float pageTop() const;    // where the page's content starts, scrolled
+    int logFresh() const;     // how many lead the log newer than the one seen
     bool hovered(launcherview::Part p, int index = -1) const;
     bool pressedOn(launcherview::Part p) const;
     std::wstring t(settings::Text x) const;
@@ -162,6 +192,19 @@ private:
     launcherart::Image looks_[3];
     std::vector<uint32_t> lookPx_[3];
     int lookW_ = 0, lookH_ = 0;
+    // «Журнал змін»: shown, its versions (the host's, as opened), the filter, the scrolls, the chosen version, its
+    // points laid out at the page's width
+    bool logging_ = false;
+    std::vector<settings::changelog::Version> log_;
+    std::string logSeen_, today_;
+    launcherlog::Filter logFilter_ = launcherlog::Filter::All;
+    launcherlog::Screen logScreen_;
+    float logScroll_ = 0, pageScroll_ = 0, pageContentH_ = 0;
+    int logChosen_ = -1;  // a version's index in log_
+    LogHit logHover_, logPressed_;
+    std::vector<PagePoint> page_;
+    int pageFor_ = -2;
+    float pageWidth_ = 0;
 };
 
 }  // namespace uagfx::app

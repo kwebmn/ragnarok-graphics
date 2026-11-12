@@ -1509,6 +1509,7 @@ void MainWindow::refreshLauncher() {
     d.cardName = wide(machine.adapter);
     d.fitsCard = fits && !machine.adapter.empty();
     d.undoable = !lookUndo_.empty();
+    d.seen = seen_;  // 3.0.18-beta.195: «Журнал змін»'s «нове»
     // the version: the channel, the update's word
     const bool beta = m.channel() == update::Channel::Beta;
     std::string state = utf8(wtr(lang_, beta ? Text::LauncherBeta : Text::LauncherRelease));
@@ -1554,7 +1555,8 @@ void MainWindow::refreshLauncher() {
                        std::to_wstring(int(d.gameRunning)) + L"|" + d.look + L"|" + d.lookNote + L"|" + d.version +
                        L"|" + d.plateText + L"|" + std::to_wstring(d.newFor) + L"|" + std::to_wstring(d.unread) +
                        L"|" + std::to_wstring(changelog_.size()) + L"|" + d.cardName + L"|" +
-                       std::to_wstring(int(d.fitsCard)) + L"|" + std::to_wstring(int(d.undoable));
+                       std::to_wstring(int(d.fitsCard)) + L"|" + std::to_wstring(int(d.undoable)) + L"|" +
+                       wide(d.seen);
     for (const LauncherData::Look& l : d.looks)
         sig += L"|" + std::to_wstring(l.variant) + L"." + std::to_wstring(l.changed);
     for (const launcher::News& n : d.info.news) sig += L"|" + wide(n.title);
@@ -1680,15 +1682,9 @@ void MainWindow::launcherAction(launcherview::Part part, int index) {
                 if (!url.empty()) openInShell(wide(url));  // the site's pages only (core/launcher)
             }
             return;
-        case Part::Changelog: {  // stage 2: the version's notes as before; the changelog's screen comes in stage 4
+        case Part::Changelog:  // 3.0.18-beta.195: the view opened «Журнал змін» - the news seen now
             markSeen();
-            const std::wstring notes = notesText(m.paths().dir, lang_);
-            if (notes.empty())
-                message(wtrf(lang_, Text::NotesNone, {kVersion}), false);
-            else
-                showNotes(notes);
             return;
-        }
         case Part::Look:  // 3.0.18-beta.194: the view opens its picker itself (lookAction); «Головне» if it asks
             showLauncher(false);
             showView(settings::View::Main, 0);
@@ -1751,6 +1747,27 @@ void MainWindow::lookAction(launcherpick::PickPart part, settings::presets::Choi
     lookUndo_ = before;
     SetTimer(hwnd_, kUndoTimer, kUndoMs, nullptr);
     doApply(false);  // written now; the game running takes it live
+}
+
+// 3.0.18-beta.195: «Журнал змін» - the channel's changelog; a point's setting to try: a «…» name in it that is a
+// settings row's title in the player's language (core/settings/changelog quotedNames); trying it: the settings searched
+const std::vector<settings::changelog::Version>& MainWindow::launcherLog() {
+    readChangelog();
+    return changelog_;
+}
+
+std::string MainWindow::tryName(const std::string& point) {
+    for (const std::string& name : settings::changelog::quotedNames(point)) {
+        const std::wstring words = wide(name);
+        for (const settings::IniSetting& s : settings::iniSettings())
+            if (wtr(lang_, s.label) == words) return name;
+    }
+    return "";
+}
+
+void MainWindow::tryPoint(const std::string& name) {
+    showLauncher(false);
+    search(wide(name));
 }
 
 }  // namespace uagfx::app

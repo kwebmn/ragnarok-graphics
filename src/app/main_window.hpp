@@ -45,6 +45,9 @@ public:
     void openReports(bool fresh) override;
     void launcherAction(launcherview::Part part, int index) override;  // 3.0.18-beta.193
     void lookAction(launcherpick::PickPart part, settings::presets::Choice choice, int variant) override;  // .194
+    const std::vector<settings::changelog::Version>& launcherLog() override;  // 3.0.18-beta.195: «Журнал змін»
+    std::string tryName(const std::string& point) override;
+    void tryPoint(const std::string& name) override;
     // 2.13: uaro-graphics.exe --report (the game's Ctrl+Shift+F10): «Нове звернення» with its shot, the window up
     void reportAtStart(const ReportStart& s) {
         reportStart_ = s;

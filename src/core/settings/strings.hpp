@@ -941,6 +941,8 @@ enum class Text : uint16_t {
     LauncherRelease,  // 3.0.18-beta.193: the launcher
     LauncherPlateSafeAuto, LauncherPlateSafe, LauncherPlateOn,  // and its plates
     LauncherPickAuto, LauncherPickTest, LauncherPickAll, LauncherPickUndo, LauncherPickNoCard,  // .194: picker
+    LauncherLogTitle, LauncherFilterAll, LauncherFilterReleases, LauncherFilterNew, LauncherTagNew, LauncherTry,
+    LauncherToday, LauncherYesterday, LauncherMonths, LauncherLogEmpty,  // .195: «Журнал змін»
     Count
 };
 

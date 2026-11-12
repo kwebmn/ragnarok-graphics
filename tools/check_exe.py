@@ -39,6 +39,7 @@ ALLOWED = {
         # glyphs Exo 2 lacks in Segoe UI (GetGlyphIndicesW: Windows 2000; the rest since Windows NT)
         "AddFontMemResourceEx", "CreateFontW", "ExtTextOutW", "GdiFlush", "GetGlyphIndicesW", "GetTextFaceW",
         "SetTextAlign", "SetTextCharacterExtra",
+        "IntersectClipRect", "SelectClipRgn",  # 3.0.18-beta.195: «Журнал змін»'s list and page (Windows NT)
     },
     "kernel32.dll": {
         "SystemTimeToTzSpecificLocalTime",  # 2.13: the site's times in the player's clock

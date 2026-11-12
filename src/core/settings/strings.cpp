@@ -8539,6 +8539,18 @@ constexpr Entry kTexts[] = {
     {Text::LauncherPickNoCard, "the graphics card is not known yet",
      "відеокарту ще не визначено",
      "видеокарта ещё не определена"},
+    {Text::LauncherLogTitle, "Changelog", "Журнал змін", "Журнал изменений"},
+    {Text::LauncherFilterAll, "All", "Усе", "Всё"},
+    {Text::LauncherFilterReleases, "Releases only", "Лише релізи", "Только релизы"},
+    {Text::LauncherFilterNew, "New for me · {1}", "Нове для мене · {1}", "Новое для меня · {1}"},
+    {Text::LauncherTagNew, "new", "нове", "новое"},
+    {Text::LauncherTry, "Try it", "Спробувати", "Попробовать"},
+    {Text::LauncherToday, "Today", "Сьогодні", "Сегодня"},
+    {Text::LauncherYesterday, "Yesterday", "Вчора", "Вчера"},
+    {Text::LauncherMonths, "January|February|March|April|May|June|July|August|September|October|November|December",
+     "січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня",
+     "января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря"},
+    {Text::LauncherLogEmpty, "Nothing here yet", "Тут поки порожньо", "Здесь пока пусто"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

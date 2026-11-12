@@ -338,6 +338,7 @@ void LauncherView::relayout() {
     const int news = int(std::min<size_t>(data_.info.news.size(), size_t(launcherview::kMostNews)));
     layout_ = launcherview::layoutFor(r.right, r.bottom, float(dpi_) / 96.0f, news, !data_.plateText.empty());
     picker_ = launcherpick::layoutFor(layout_);  // 3.0.18-beta.194
+    if (logging_) relayoutLog();                  // 3.0.18-beta.195
 }
 
 // --- the words ---
@@ -586,6 +587,8 @@ void LauncherView::compose() {
     pic_.clipX1 = pic_.clipY1 = 1 << 30;
     const launcherview::Layout& L = layout_;
     const float s = L.s, edge = std::max(1.0f, s);
+    // 3.0.18-beta.195: «Журнал змін» over the art darker (the launcher's own picture; the top bar stays over it)
+    if (logging_) panel::roundRect(pic_, pb(Box{0, 0, float(w), float(h)}), 0, kShadeRgb, 0.74f);
     HDC dc = memDc_;
     // the server's pill: its dot and words, at the right of its place
     {
@@ -609,6 +612,10 @@ void LauncherView::compose() {
         const float tw = float(widthOf(dc, st, L"UA"));
         const float x = L.language.x + (L.language.w - tw - 14 * s) / 2 + tw + 8 * s;
         triangleDown(pic_, x, L.language.y + L.language.h / 2, 4 * s, hovered(Part::Language) ? kText : kMuted, 1.0f);
+    }
+    if (logging_) {
+        composeLog();
+        return;
     }
     // the update's card: a gold edge and a gold strip at its left; the news' cards
     if (L.update.w > 0) {
@@ -728,6 +735,10 @@ void LauncherView::words(HDC dc) {
         const float tw = float(widthOf(dc, st, code));
         const float x = L.language.x + (L.language.w - tw - 14 * s) / 2;
         line(dc, st, code, x, L.language.y + L.language.h / 2 + ascentOf(dc, st) * 0.36f, -1);
+    }
+    if (logging_) {
+        wordsLog(dc);
+        return;
     }
     // «Що нового»
     if (L.update.w > 0) {
@@ -878,7 +889,8 @@ void LauncherView::paint(HDC target) {
     GdiFlush();
     std::memcpy(bits_, pic_.px.data(), size_t(frameW_) * size_t(frameH_) * sizeof(uint32_t));
     words(memDc_);
-    if (picking_) {  // 3.0.18-beta.194: the picker over the frame with its words - back into pic_, its card, its words
+    if (picking_ && !logging_) {  // 3.0.18-beta.194: the picker over the frame with its words - back into pic_, then
+                                  // its card and its words
         GdiFlush();
         std::memcpy(pic_.px.data(), bits_, size_t(frameW_) * size_t(frameH_) * sizeof(uint32_t));
         composePicker();
@@ -1193,6 +1205,290 @@ void LauncherView::wordsPicker(HDC dc) {
     line(dc, all, fit(dc, all, t(Text::LauncherPickAll), int(P.all.w)), P.all.x + P.all.w, base, 1);
 }
 
+// --- 3.0.18-beta.195: «Журнал змін» ---
+
+int LauncherView::logFresh() const { return int(settings::changelog::newerThan(log_, logSeen_)); }
+
+void LauncherView::openLog() {
+    closePicker();
+    if (host_) log_ = host_->launcherLog();
+    logSeen_ = data_.seen;  // the «нове» marks as they were at its opening (the host marks the news seen now)
+    SYSTEMTIME t{};
+    GetLocalTime(&t);
+    char today[16];
+    std::snprintf(today, sizeof today, "%04u-%02u-%02u", t.wYear, t.wMonth, t.wDay);
+    today_ = today;
+    logFilter_ = logFresh() > 0 ? launcherlog::Filter::New : launcherlog::Filter::All;
+    logScroll_ = pageScroll_ = 0;
+    logChosen_ = -1;
+    pageFor_ = -2;
+    logging_ = true;
+    hover_ = pressed_ = Hit{};
+    logHover_ = logPressed_ = LogHit{};
+    relayoutLog();
+    if (!logScreen_.rows.empty()) logChosen_ = logScreen_.rows.front().version;
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void LauncherView::closeLog() {
+    if (!logging_) return;
+    logging_ = false;
+    std::vector<settings::changelog::Version>().swap(log_);
+    page_.clear();
+    pageFor_ = -2;
+    logHover_ = logPressed_ = LogHit{};
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void LauncherView::relayoutLog() {
+    logScreen_ = launcherlog::layoutFor(layout_, log_, logFilter_, logSeen_, today_, logScroll_, data_.lang);
+    const float most = std::max(0.0f, logScreen_.contentH - logScreen_.list.h);
+    if (logScroll_ > most) {
+        logScroll_ = most;
+        logScreen_ = launcherlog::layoutFor(layout_, log_, logFilter_, logSeen_, today_, logScroll_, data_.lang);
+    }
+    if (logScreen_.page.w != pageWidth_) pageFor_ = -2;
+}
+
+float LauncherView::pageTop() const { return logScreen_.page.y - pageScroll_; }
+
+// The chosen version's points at the page's width: a bullet's lines, a release's «## X» as its own line, «Спробувати»
+// at the right of a point naming a setting (measured with the frame's words)
+void LauncherView::layoutPage(HDC dc) {
+    const Box& P = logScreen_.page;
+    if (pageFor_ == logChosen_ && pageWidth_ == P.w) return;
+    pageFor_ = logChosen_;
+    pageWidth_ = P.w;
+    page_.clear();
+    const float s = logScreen_.s;
+    const float x0 = P.x + 26 * s, width = P.w - 52 * s;
+    float y = 100 * s;  // under the version's title and day
+    if (logChosen_ < 0 || size_t(logChosen_) >= log_.size()) {
+        pageContentH_ = 0;
+        return;
+    }
+    const Style point{Face::Medium, 14, kPointRgb}, section{Face::SemiBold, 14, kGoldHi};
+    const Style tryStyle{Face::SemiBold, 12.5f, kGoldHi};
+    for (const settings::changelog::Point& p : log_[size_t(logChosen_)].points) {
+        if (p.text.empty()) continue;
+        PagePoint pp;
+        pp.section = p.section;
+        const std::wstring text = wide(p.text);
+        if (p.section) {
+            y += 8 * s;
+            pp.lines = wrap(dc, section, text, int(width), 2);
+            pp.y = y;
+            y += float(pp.lines.size()) * 21 * s + 8 * s;
+        } else {
+            pp.name = host_ ? host_->tryName(p.text) : "";
+            float textW = width - 18 * s;
+            if (!pp.name.empty()) {
+                const float bw = float(widthOf(dc, tryStyle, t(Text::LauncherTry))) + 26 * s;
+                pp.tryBox = Box{x0 + width - bw, y - 19 * s, bw, 28 * s};
+                textW -= bw + 14 * s;
+            }
+            pp.lines = wrap(dc, point, text, int(std::max(40.0f, textW)), 60);
+            pp.y = y;
+            y += std::max(float(pp.lines.size()) * 21 * s, pp.tryBox.w > 0 ? 30 * s : 0.0f) + 11 * s;
+        }
+        page_.push_back(pp);
+    }
+    pageContentH_ = y + 12 * s;
+}
+
+LauncherView::LogHit LauncherView::logHitAt(float x, float y) const {
+    const launcherlog::Screen& S = logScreen_;
+    if (S.back.contains(x, y)) return LogHit{LogHit::Back};
+    for (int i = 0; i < launcherlog::kFilters; ++i)
+        if (S.filters[i].contains(x, y)) return LogHit{LogHit::Filter, i};
+    const int row = launcherlog::rowAt(S, x, y);
+    if (row >= 0) return LogHit{LogHit::Row, row};
+    if (S.page.contains(x, y))
+        for (size_t i = 0; i < page_.size(); ++i) {
+            const Box& b = page_[i].tryBox;
+            if (b.w > 0 && Box{b.x, pageTop() + b.y, b.w, b.h}.contains(x, y))
+                return LogHit{LogHit::Try, int(i)};
+        }
+    return LogHit{};
+}
+
+void LauncherView::chooseRow(int row) {
+    if (row < 0 || size_t(row) >= logScreen_.rows.size()) return;
+    logChosen_ = logScreen_.rows[size_t(row)].version;
+    pageScroll_ = 0;
+    pageFor_ = -2;
+    const Box& b = logScreen_.rows[size_t(row)].box;
+    const Box& list = logScreen_.list;
+    const float dayRoom = logScreen_.rows[size_t(row)].day.empty() ? 0.0f : 30 * logScreen_.s;
+    if (b.y - dayRoom < list.y)
+        logScroll_ = std::max(0.0f, logScroll_ - (list.y - (b.y - dayRoom)));
+    else if (b.y + b.h > list.y + list.h)
+        logScroll_ += b.y + b.h - (list.y + list.h);
+    relayoutLog();
+    InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void LauncherView::logPress(LogHit hit) {
+    switch (hit.kind) {
+    case LogHit::Back: closeLog(); return;
+    case LogHit::Filter:
+        logFilter_ = launcherlog::Filter(std::clamp(hit.index, 0, launcherlog::kFilters - 1));
+        logScroll_ = 0;
+        relayoutLog();
+        if (!logScreen_.rows.empty()) chooseRow(0);
+        else logChosen_ = -1, pageFor_ = -2;
+        InvalidateRect(hwnd_, nullptr, FALSE);
+        return;
+    case LogHit::Row: chooseRow(hit.index); return;
+    case LogHit::Try:
+        if (hit.index >= 0 && size_t(hit.index) < page_.size() && host_) {
+            const std::string name = page_[size_t(hit.index)].name;
+            closeLog();
+            host_->tryPoint(name);
+        }
+        return;
+    case LogHit::None: return;
+    }
+}
+
+void LauncherView::composeLog() {
+    const launcherlog::Screen& S = logScreen_;
+    const float s = S.s, edge = std::max(1.0f, s);
+    const auto hot = [&](LogHit::Kind k, int index = -1) {
+        return logHover_.kind == k && (index < 0 || logHover_.index == index);
+    };
+    panel::roundRect(pic_, pb(S.back), 9 * s, kCard, 0.86f, hot(LogHit::Back) ? kGold : kLine,
+                     hot(LogHit::Back) ? 0.7f : 1.0f, edge);
+    for (int i = 0; i < launcherlog::kFilters; ++i) {
+        const Box& f = S.filters[i];
+        if (int(logFilter_) == i)
+            panel::roundRect(pic_, pb(f), f.h / 2, kGold, 1.0f);
+        else
+            panel::roundRect(pic_, pb(f), f.h / 2, kCard, 0.82f, hot(LogHit::Filter, i) ? kGold : kLine,
+                             hot(LogHit::Filter, i) ? 0.7f : 1.0f, edge);
+    }
+    // the versions, inside the list
+    const int fresh = logFresh();
+    pic_.clipX0 = int(S.list.x);
+    pic_.clipY0 = int(S.list.y);
+    pic_.clipX1 = int(std::ceil(S.list.x + S.list.w)) + 1;
+    pic_.clipY1 = int(std::ceil(S.list.y + S.list.h));
+    for (size_t i = 0; i < S.rows.size(); ++i) {
+        const launcherlog::Row& r = S.rows[i];
+        if (r.box.y + r.box.h < S.list.y || r.box.y > S.list.y + S.list.h) continue;
+        const bool chosen = r.version == logChosen_, on = hot(LogHit::Row, int(i));
+        panel::roundRect(pic_, pb(r.box), 9 * s, chosen ? kRaise : kCard, chosen ? 0.96f : 0.8f,
+                         chosen || on ? kGold : kLine, chosen ? 1.0f : on ? 0.55f : 1.0f, chosen ? 2 * s : edge);
+        if (r.version < fresh) {  // «нове»
+            const Style st{Face::SemiBold, 11, kOk};
+            const float pw = float(widthOf(memDc_, st, t(Text::LauncherTagNew))) + 18 * s;
+            panel::roundRect(pic_, pb(Box{r.box.x + r.box.w - 12 * s - pw, r.box.y + 10 * s, pw, 20 * s}), 10 * s,
+                             kOk, 0.16f, kOk, 0.7f, edge);
+        }
+    }
+    pic_.clipX0 = pic_.clipY0 = 0;
+    pic_.clipX1 = pic_.clipY1 = 1 << 30;
+    // the page; its «Спробувати» buttons
+    panel::roundRect(pic_, pb(S.page), 12 * s, kCard, 0.92f, kLine, 1.0f, edge);
+    layoutPage(memDc_);
+    pic_.clipY0 = int(S.page.y + 2 * s);
+    pic_.clipY1 = int(S.page.y + S.page.h - 2 * s);
+    for (size_t i = 0; i < page_.size(); ++i) {
+        const Box& b = page_[i].tryBox;
+        if (b.w <= 0) continue;
+        const bool on = hot(LogHit::Try, int(i));
+        panel::roundRect(pic_, pb(Box{b.x, pageTop() + b.y, b.w, b.h}), 7 * s, kGold, on ? 0.32f : 0.16f, kGold, 0.85f,
+                         edge);
+    }
+    pic_.clipY0 = 0;
+    pic_.clipY1 = 1 << 30;
+}
+
+void LauncherView::wordsLog(HDC dc) {
+    const launcherlog::Screen& S = logScreen_;
+    const float s = S.s;
+    const auto hot = [&](LogHit::Kind k, int index = -1) {
+        return logHover_.kind == k && (index < 0 || logHover_.index == index);
+    };
+    const auto middle = [&](const Box& b, const Style& st) { return b.y + b.h / 2 + ascentOf(dc, st) * 0.36f; };
+    const Style back{Face::SemiBold, 14, hot(LogHit::Back) ? kWhite : kGoldHi};
+    line(dc, back, fit(dc, back, t(Text::LauncherBack), int(S.back.w - 12 * s)), S.back.x + S.back.w / 2,
+         middle(S.back, back), 0);
+    const Style title{Face::Bold, 24, kText};
+    line(dc, title, fit(dc, title, t(Text::LauncherLogTitle), int(S.title.w)), S.title.x, middle(S.title, title), -1);
+    const int fresh = logFresh();
+    const std::wstring filters[launcherlog::kFilters] = {t(Text::LauncherFilterAll), t(Text::LauncherFilterReleases),
+                                                         tf(Text::LauncherFilterNew, {std::to_string(fresh)})};
+    for (int i = 0; i < launcherlog::kFilters; ++i) {
+        const bool on = int(logFilter_) == i;
+        const Style st{Face::SemiBold, 13, on ? kOnGold : hot(LogHit::Filter, i) ? kText : kMuted};
+        line(dc, st, fit(dc, st, filters[i], int(S.filters[i].w - 16 * s)), S.filters[i].x + S.filters[i].w / 2,
+             middle(S.filters[i], st), 0);
+    }
+    // the versions: their day over the first of it, the version, its date and kind, «нове»
+    IntersectClipRect(dc, int(S.list.x), int(S.list.y), int(std::ceil(S.list.x + S.list.w)) + 1,
+                      int(std::ceil(S.list.y + S.list.h)));
+    for (size_t i = 0; i < S.rows.size(); ++i) {
+        const launcherlog::Row& r = S.rows[i];
+        if (r.box.y + r.box.h < S.list.y - 40 * s || r.box.y > S.list.y + S.list.h) continue;
+        const settings::changelog::Version& v = log_[size_t(r.version)];
+        if (!r.day.empty())
+            line(dc, Style{Face::Bold, 11, kMuted, 1.5f}, upper(wide(r.day)), r.box.x + 4 * s, r.box.y - 10 * s, -1);
+        const bool chosen = r.version == logChosen_;
+        const Style name{Face::SemiBold, 15, chosen ? kGoldHi : kText};
+        float right = r.box.x + r.box.w - 14 * s;
+        if (r.version < fresh) {
+            const Style tag{Face::SemiBold, 11, kOk};
+            const float pw = float(widthOf(dc, tag, t(Text::LauncherTagNew))) + 18 * s;
+            line(dc, tag, t(Text::LauncherTagNew), r.box.x + r.box.w - 12 * s - pw / 2,
+                 r.box.y + 20 * s + ascentOf(dc, tag) * 0.36f, 0);
+            right -= pw + 6 * s;
+        }
+        line(dc, name, fit(dc, name, wide(v.version), int(right - r.box.x - 14 * s)), r.box.x + 14 * s,
+             r.box.y + 23 * s, -1);
+        std::wstring sub = wide(dateText(v.date));
+        const std::wstring kind = t(v.beta ? Text::LauncherBeta : Text::LauncherRelease);
+        sub = sub.empty() ? kind : sub + L" \x00B7 " + kind;
+        const Style small{Face::Medium, 12, kMuted};
+        line(dc, small, fit(dc, small, sub, int(r.box.w - 28 * s)), r.box.x + 14 * s, r.box.y + 42 * s, -1);
+    }
+    SelectClipRgn(dc, nullptr);
+    if (S.rows.empty())
+        line(dc, Style{Face::Medium, 14, kMuted}, t(Text::LauncherLogEmpty), S.list.x + 4 * s, S.list.y + 24 * s, -1);
+    // the chosen version: its name, its day and kind, its points
+    if (logChosen_ < 0 || size_t(logChosen_) >= log_.size()) return;
+    const settings::changelog::Version& v = log_[size_t(logChosen_)];
+    const Box& P = S.page;
+    IntersectClipRect(dc, int(P.x), int(P.y + 2 * s), int(P.x + P.w), int(P.y + P.h - 2 * s));
+    const float top = pageTop(), x0 = P.x + 26 * s;
+    const Style head{Face::Bold, 22, kText};
+    line(dc, head, fit(dc, head, wide(v.version), int(P.w - 52 * s)), x0, top + 44 * s, -1);
+    std::wstring sub = wide(launcherlog::dayWords(v.date, today_, data_.lang));
+    const std::wstring kind = t(v.beta ? Text::LauncherBeta : Text::LauncherRelease);
+    sub = sub.empty() ? kind : sub + L" \x00B7 " + kind;
+    if (size_t(logChosen_) < size_t(fresh)) sub += L" \x00B7 " + t(Text::LauncherTagNew);
+    line(dc, Style{Face::Medium, 13, kMuted}, sub, x0, top + 68 * s, -1);
+    const Style point{Face::Medium, 14, kPointRgb}, section{Face::SemiBold, 14, kGoldHi};
+    const Style bullet{Face::Bold, 14, kGold};
+    for (size_t i = 0; i < page_.size(); ++i) {
+        const PagePoint& pp = page_[i];
+        float y = top + pp.y;
+        if (y > P.y + P.h + 30 * s) break;
+        if (!pp.section) line(dc, bullet, L"\x2022", x0, y, -1);
+        for (const std::wstring& l : pp.lines) {
+            if (y > P.y - 30 * s && y < P.y + P.h + 30 * s)
+                line(dc, pp.section ? section : point, l, pp.section ? x0 : x0 + 18 * s, y, -1);
+            y += 21 * s;
+        }
+        if (pp.tryBox.w > 0) {
+            const Style st{Face::SemiBold, 12.5f, hot(LogHit::Try, int(i)) ? kWhite : kGoldHi};
+            const Box b{pp.tryBox.x, top + pp.tryBox.y, pp.tryBox.w, pp.tryBox.h};
+            line(dc, st, t(Text::LauncherTry), b.x + b.w / 2, middle(b, st), 0);
+        }
+    }
+    SelectClipRgn(dc, nullptr);
+}
+
 // --- the mouse and the keys ---
 
 Hit LauncherView::hitAt(int x, int y) const {
@@ -1238,6 +1534,11 @@ void LauncherView::press(Hit hit) {
     if (hit.part == Part::Plate && layout_.plate.w <= 0) return;
     if (hit.part == Part::Look) {  // 3.0.18-beta.194: the look picker over the launcher
         openPicker();
+        return;
+    }
+    if (hit.part == Part::Changelog) {  // 3.0.18-beta.195: «Журнал змін»; the host marks the news seen
+        openLog();
+        host_->launcherAction(hit.part, hit.index);
         return;
     }
     host_->launcherAction(hit.part, hit.index);
@@ -1296,6 +1597,14 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
             tme.hwndTrack = hwnd_;
             tracking_ = TrackMouseEvent(&tme) != FALSE;
         }
+        if (logging_) {  // 3.0.18-beta.195
+            const LogHit h = logHitAt(float(GET_X_LPARAM(lp)), float(GET_Y_LPARAM(lp)));
+            if (h.kind != logHover_.kind || h.index != logHover_.index) {
+                logHover_ = h;
+                InvalidateRect(hwnd_, nullptr, FALSE);
+            }
+            return 0;
+        }
         if (picking_) {
             const launcherpick::PickHit h =
                 launcherpick::pickAt(picker_, float(GET_X_LPARAM(lp)), float(GET_Y_LPARAM(lp)));
@@ -1315,6 +1624,7 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_MOUSELEAVE:
         tracking_ = false;
         pickHover_ = launcherpick::PickHit{};
+        logHover_ = LogHit{};
         if (hover_.part != Part::None || picking_) {
             hover_ = Hit{};
             InvalidateRect(hwnd_, nullptr, FALSE);
@@ -1323,6 +1633,12 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK:
         SetFocus(hwnd_);
+        if (logging_) {
+            logPressed_ = logHitAt(float(GET_X_LPARAM(lp)), float(GET_Y_LPARAM(lp)));
+            SetCapture(hwnd_);
+            InvalidateRect(hwnd_, nullptr, FALSE);
+            return 0;
+        }
         if (picking_) {
             pickPressed_ = launcherpick::pickAt(picker_, float(GET_X_LPARAM(lp)), float(GET_Y_LPARAM(lp)));
             SetCapture(hwnd_);
@@ -1334,6 +1650,15 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
         InvalidateRect(hwnd_, nullptr, FALSE);
         return 0;
     case WM_LBUTTONUP: {
+        if (logging_) {
+            const LogHit was = logPressed_;
+            logPressed_ = LogHit{};
+            if (GetCapture() == hwnd_) ReleaseCapture();
+            const LogHit h = logHitAt(float(GET_X_LPARAM(lp)), float(GET_Y_LPARAM(lp)));
+            InvalidateRect(hwnd_, nullptr, FALSE);
+            if (was.kind != LogHit::None && h.kind == was.kind && h.index == was.index) logPress(h);
+            return 0;
+        }
         if (picking_) {
             const launcherpick::PickHit was = pickPressed_;
             pickPressed_ = launcherpick::PickHit{};
@@ -1361,9 +1686,10 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_SETCURSOR:
         if (LOWORD(lp) == HTCLIENT) {
             const launcherpick::PickPart pp = pickHover_.part;
-            const bool hand = picking_ ? pp != launcherpick::PickPart::None && pp != launcherpick::PickPart::Card &&
-                                             (pp != launcherpick::PickPart::Undo || data_.undoable)
-                                       : hover_.part != Part::None;
+            const bool hand = logging_   ? logHover_.kind != LogHit::None
+                              : picking_ ? pp != launcherpick::PickPart::None && pp != launcherpick::PickPart::Card &&
+                                               (pp != launcherpick::PickPart::Undo || data_.undoable)
+                                         : hover_.part != Part::None;
             SetCursor(LoadCursorW(nullptr, hand ? IDC_HAND : IDC_ARROW));
             return TRUE;
         }
@@ -1374,7 +1700,42 @@ LRESULT LauncherView::handle(UINT msg, WPARAM wp, LPARAM lp) {
     case WM_KILLFOCUS:
         InvalidateRect(hwnd_, nullptr, FALSE);
         return 0;
+    case WM_MOUSEWHEEL:  // 3.0.18-beta.195: «Журнал змін»'s list or page scrolls under the mouse (60 px a notch)
+        if (logging_) {
+            POINT at{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
+            ScreenToClient(hwnd_, &at);
+            const float by = -float(GET_WHEEL_DELTA_WPARAM(wp)) / float(WHEEL_DELTA) * 60 * logScreen_.s;
+            if (logScreen_.list.contains(float(at.x), float(at.y))) {
+                logScroll_ = std::max(0.0f, logScroll_ + by);
+                relayoutLog();
+            } else if (logScreen_.page.contains(float(at.x), float(at.y))) {
+                pageScroll_ = std::clamp(pageScroll_ + by, 0.0f, std::max(0.0f, pageContentH_ - logScreen_.page.h));
+            }
+            InvalidateRect(hwnd_, nullptr, FALSE);
+            return 0;
+        }
+        break;
     case WM_KEYDOWN: {
+        if (logging_) {  // Esc closes, Up and Down walk the versions, Page Up and Page Down the page
+            const auto& rows = logScreen_.rows;
+            int at = -1;
+            for (size_t i = 0; i < rows.size(); ++i)
+                if (rows[i].version == logChosen_) at = int(i);
+            if (wp == VK_ESCAPE) {
+                closeLog();
+            } else if ((wp == VK_DOWN || wp == VK_UP) && !rows.empty()) {
+                chooseRow(std::clamp(at + (wp == VK_DOWN ? 1 : -1), 0, int(rows.size()) - 1));
+            } else if (wp == VK_HOME && !rows.empty()) {
+                chooseRow(0);
+            } else if (wp == VK_END && !rows.empty()) {
+                chooseRow(int(rows.size()) - 1);
+            } else if (wp == VK_NEXT || wp == VK_PRIOR) {
+                const float by = logScreen_.page.h * 0.8f * (wp == VK_NEXT ? 1 : -1);
+                pageScroll_ = std::clamp(pageScroll_ + by, 0.0f, std::max(0.0f, pageContentH_ - logScreen_.page.h));
+                InvalidateRect(hwnd_, nullptr, FALSE);
+            }
+            return 0;
+        }
         if (picking_) {  // the picker's keys: Esc closes it, Tab and the arrows walk it, Enter presses
             const std::vector<launcherpick::PickHit> order = pickerOrder();
             const int n = int(order.size());
