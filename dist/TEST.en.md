@@ -1,3 +1,5 @@
+- The count window («Into the storage», «Into the cart», «Drop on the ground»…): Enter with its field empty now takes the most, as the «Done» button does - Enter moved nothing before. Typed digits Enter takes as they are.
+
 - «New report» now adds up to five check shots of the same place to its picture: right after it the driver draws the frame for a moment without «Own ground», without the «Ground and walls» group, without «Light» and «Fire and smoke», without the «Whole screen» group and as in Pause. In one report they show which part makes a wrong look (such as the ground washed pink-white after Berserk). The game blinks for half a second meanwhile.
 - The own ground's log tells every minute the game's ground corners' mean colour, the fog and the stages, and a jump of the mean colour at once.
 
