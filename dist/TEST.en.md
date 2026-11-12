@@ -1,37 +1,73 @@
+# uaRO Graphics 3.0.18-beta.192 — what's new · 2026-11-12
+
+- «What's new» shows your version's changes again: since 3.0.18-beta.56 the betas' notes had no version headings and the button opened an empty window. Each beta now has its heading and date - the ground for the «Changelog» of the new first screen.
+
+# uaRO Graphics 3.0.18-beta.191 — what's new · 2026-11-12
+
 - The maps' torches: «New flame» now hides behind the walls standing in front of it - the flame, its glow and its light stand at their torch's true place from the map file. The game draws the flame nearer to the camera than its torch stands, so the fire and its red light came over the top of the wall in front of it (moc_pryd05). Torches their makers set a little into a wall are brought out of it so they do not vanish.
 - «New report»'s check shots are all five now: the report's window opens once they are taken (in a second) - the game behind the window draws no more.
 
+# uaRO Graphics 3.0.18-beta.190 — what's new · 2026-11-12
+
 - The count window («Into the storage», «Into the cart», «Drop on the ground»…): Enter with its field empty now takes the most, as the «Done» button does - Enter moved nothing before. Typed digits Enter takes as they are.
+
+# uaRO Graphics 3.0.18-beta.189 — what's new · 2026-11-12
 
 - «New report» now adds up to five check shots of the same place to its picture: right after it the driver draws the frame for a moment without «Own ground», without the «Ground and walls» group, without «Light» and «Fire and smoke», without the «Whole screen» group and as in Pause. In one report they show which part makes a wrong look (such as the ground washed pink-white after Berserk). The game blinks for half a second meanwhile.
 - The own ground's log tells every minute the game's ground corners' mean colour, the fog and the stages, and a jump of the mean colour at once.
 
+# uaRO Graphics 3.0.18-beta.188 — what's new · 2026-11-12
+
 - As with Wind Walk's icon: the items' and skills' icons, the skills' and items' name tables and the cards' words not read (the game's files busy while a map loaded) are read again a few seconds later instead of staying empty for the rest of the game. With the names found whatever their case (.187) the driver finds the files the game finds - for its own ground and the map's models too.
 
+# uaRO Graphics 3.0.18-beta.187 — what's new · 2026-11-12
+
 - Wind Walk's icon (and the like) shows in the buffs' column again (the tester: «yesterday orange, now grey»). The cause: a buff come while a map loaded found the game's files busy, and the driver read its icon by its own reader of the archives, which compared names with their letters' case - the game asks for "effect\ICON06.tga", the archive holds "icon06.tga". Names are found as the game finds them now, whatever their case (cp949's Korean names as they were), and an icon not read is read again a few seconds later instead of a dark tile for the rest of the game.
+
+# uaRO Graphics 3.0.18-beta.186 — what's new · 2026-11-12
 
 - Lighter skill effects when frames run short: below "Keep the frame rate" with many skills on the screen (a fight, a guild war), the driver turns on the game's own lighter effects - as its /mineffect - for the new effects, and the full ones again when the frames are back or the skills gone for 20 s. Your own /mineffect is left alone. The switch: Frames → "Lighter skill effects when frames run short" (on; works when "Keep the frame rate" is set). When it turns on - a short note on the screen and a "light skills: …" line in the log.
 - "Skills' look" is now "Redrawn, soft" by default.
 - The chat after an NPC teleport in the battle mode: for the first 5 seconds on a new map, with the chat's field empty and no Enter of yours there, the chat's typing is turned off - the letters are the skills' again (the tester: the chat active after a teleport through an NPC). The log says "chat: the battle mode's typing off N ms into the new map".
 
+# uaRO Graphics 3.0.18-beta.185 — what's new · 2026-11-12
+
 - Damage numbers sharper still on large screens: on 4K the game stretches a digit 12 times, so its copy is now 16 times larger (xBR twice) instead of 4 - sharper edges, smoother curves, the same look. Miss, Guard, Critical!!, Lucky and the stars, which the game stretches less, stay four times larger. The same switch - Graphics → Quality → "Crisp damage numbers".
+
+# uaRO Graphics 3.0.18-beta.184 — what's new · 2026-11-12
 
 - Sharp snowflakes and sparkles for every class's skills now, not only Storm Gust's: the driver finds the skills' textures that are sheets of small dots on black (snow, sparks, glitter) and draws each dot anew at the screen's resolution - in its place, of its size, colour and brightness. Besides Storm Gust's snow, effects 192, 204, 205 and 219's sparkles come out so already. In "Skills' look" → "Improved original", "Redrawn" and "Redrawn, soft"; "Original" stays the game's. At most one new texture is looked at a frame, the sprite cache is left alone. The log says "skills' specks: effect N's sheet …".
 
+# uaRO Graphics 3.0.18-beta.183 — what's new · 2026-11-12
+
 - One item for every class's skills - "Skills' look" at the top of the Effects page (by the time of day, season and weather; in the game Alt+D): "Original" - as the game draws them; "Improved original" - the game's, only sharp (Storm Gust's snowflakes so far, more skills next); "Redrawn" - the classes' new looks; "Redrawn, soft" - the former "Soft look". The separate boxes of the classes, the mages' elements, "Soft look" and "Storm Gust sharp, as the game's" are gone from the page and the console; an older settings file is read: with "Storm Gust sharp, as the game's" on it starts as "Improved original", with "Soft look" as "Redrawn, soft".
+
+# uaRO Graphics 3.0.18-beta.182 — what's new · 2026-11-12
 
 - Storm Gust's sharp snow is now in the mages' new look too, not only in the game's. Its snowflakes there are the same clean ellipses in their places instead of white pixel blots, the new look's colours and manner kept. The box Effects → Skills → "Storm Gust sharp, as the game's" picks between the two looks: on - the game's, sharp; off - the mages' new look (when it is on). The log tells in which look the snow was first drawn.
 
+# uaRO Graphics 3.0.18-beta.181 — what's new · 2026-11-12
+
 - Storm Gust as the game's, only sharp. The game draws its snowflakes from two small 64×64 sheets stretched 6–12 times on a 4K screen, so they were blurred blots. Each snowflake is now drawn anew at the screen's resolution: a sharp ellipse in the same place, of the same size, tilt, colour and brightness. Its cloud, whirl, lightning, ghost and ice stay the game's (or the AI pack's), the colours and light the game's; the mages' new look for Storm Gust steps aside. The switch: Effects → Skills → "Storm Gust sharp, as the game's" (off). The log says "storm gust: the first snow drawn from its copy".
 
+# uaRO Graphics 3.0.18-beta.180 — what's new · 2026-11-12
+
 - The map loading bar is in the new look. It was the last old window of the game seen at every map change (in 57 of 70 reports): a yellow frame, a grey track and the per cent in the game's small font. Now a sharp bar in the interface's style stands at the same place under the loading picture, with the same per cent the game counts. The switch: Interface → "Windows in the new look" → "Map loading bar" (on with the new interface).
+
+# uaRO Graphics 3.0.18-beta.179 — what's new · 2026-11-12
 
 - The NPC menu colours its options with the server's colours as the game's window does, instead of showing codes like "^FF3355" in the text (R-P7RFV2, Reset Girl: "^FF3355Reset Skills", "Reset Both^000000"). A colour begun in one option goes on in the next ones until another, as the game's list draws it.
 - A monster the game left standing 2 cells off its place on the server is put back on it (R-WKEDPY: a Minorous stood elsewhere for 8 s). With its target next to it, the server sends a "walk" from a cell to the same cell; the game makes no such walk, so it is now given as a stop on that cell. The log says "its walk of no length, a stop on".
 
+# uaRO Graphics 3.0.18-beta.178 — what's new · 2026-11-11
+
 - Damage numbers, Miss, Guard, Critical!!, Lucky and the crits' stars are sharp now. They are the game's own pictures (`숫자.spr`, `msg.spr`, `bluemsg.spr`), made four times larger by xBR (as the windows' buttons and labels) instead of stretched and blurred. The game places, colours, scales and moves them as before. The switch: Graphics → Quality → "Crisp damage numbers" (on); Pause shows the old look. The log tells when a number is first drawn from its copy, and every 30 s how many times.
 
+# uaRO Graphics 3.0.18-beta.177 — what's new · 2026-11-11
+
 - A text's width is measured through Windows only once for each label at its size: then it comes from memory (R-B8SDEK: measuring text took 13.7 % of the game's thread, the chat's layout 0.65 ms a frame). The stock of fonts for measuring is larger (64), and the one unused longest goes first. The log tells every 30 s how many measures and how many fonts were made.
+
+# uaRO Graphics 3.0.18-beta.176 — what's new · 2026-11-11
 
 - By the profiler's measurement (R-XZGR7R) needless work every frame removed:
   - the interface library no longer visits every element of the hidden windows each frame (about 70 of them) - a hidden document is updated and laid out when it shows;
@@ -40,84 +76,154 @@
   - the magic effects' looks are found by their number at once, not by walking the table at each draw;
   - small frame fields go into the bridge to the renderer without an extra call.
 
+# uaRO Graphics 3.0.18-beta.175 — what's new · 2026-11-11
+
 - «Речі», storage and the cart, while open, no longer give the interface library all their data every frame (about 60 times a second during a used thing's flash, R-6PYQQG): only what changed. The minimap likewise - its changed parts alone, not everything up to 15 times a second.
+
+# uaRO Graphics 3.0.18-beta.174 — what's new · 2026-11-11
 
 - The game no longer crashes when the server says an item is worn at more than three of the ten equipment places, or only at places this client does not know (R-ZGN2US: a crash entering moc_fild02): the game itself wrote such places past its own array and spoiled its memory. The driver now leaves such an item out and tells it in the log.
 
+# uaRO Graphics 3.0.18-beta.173 — what's new · 2026-11-11
+
 - The interface library does less work for nothing (R-AKUGNX): the friends and party window told it of changes every frame even closed - now a closed one only hides; the picked-up thing's toast and the experience numbers gave all their data every frame (up to 85 times a second) - now only what changed.
+
+# uaRO Graphics 3.0.18-beta.172 — what's new · 2026-11-11
 
 - «Налаштування» and the Alt+D console no longer look for the settings file on the disk every frame (it was 0.11 ms a frame even with the window closed, R-2CKVU6): its place is found once a second.
 - A measurement: the log shows the interface's parts that change their data the most - each change gives work to the interface library, the dearest part of a frame (0.7-1.2 ms).
 
+# uaRO Graphics 3.0.18-beta.171 — what's new · 2026-11-11
+
 - A measurement: the chat's time a frame split into its steps (the game's lines, the input field, the mouse over it, the layout, the history's rows, the redraw, the mouse's bounds) - in R-UT4N5V the chat no longer grows but stays at 0.7 ms a frame; now the step that takes it shows.
+
+# uaRO Graphics 3.0.18-beta.170 — what's new · 2026-11-11
 
 - The chat no longer gets dearer while hunting: each kill, picked-up thing or experience line made it wrap and measure its whole history again (up to 200 lines) - in three minutes the chat grew from 0.13 to 1.33 ms a frame (R-CD8KCP). Now the lines' rows are kept and only a new or changed line is measured.
 - The closed «Налаштування» window no longer builds its rows every frame (it was 0.14 ms a frame).
 
+# uaRO Graphics 3.0.18-beta.169 — what's new · 2026-11-11
+
 - A measurement: every 30 s the log tells what each part of the driver takes a frame (chat, skill bar, HP bars, windows, the interface), the dearest first. In R-45Z47V the driver's own work grew from 2.1 to 4.7 ms a frame in five minutes of hunting - now the part that grows shows. The game memory reads are told by module again.
+
+# uaRO Graphics 3.0.18-beta.168 — what's new · 2026-11-11
 
 - The characters' and monsters' index (.166) moves on at the start of every frame, even with the game minimised: otherwise a monster that came while the window was minimised was not found until it was restored.
 
+# uaRO Graphics 3.0.18-beta.167 — what's new · 2026-11-11
+
 - The driver's work with the game's memory is in one place: shared functions instead of 60 copies of the read and 43 of the write (each write a call into Windows), the writes into the game's data without a call into Windows too. Likewise one shared function instead of 55 copies of the interface's texts, 49 copies of a window's place over the game and 37 copies of the mouse buttons' check. About 540 lines of code fewer; the same look and behaviour.
+
+# uaRO Graphics 3.0.18-beta.166 — what's new · 2026-11-11
 
 - Characters and monsters are found by their numbers through an index read in one pass a frame (before, each look-up walked the game's whole list: the monsters' move smoothing made up to ~390 reads a frame, R-C8GVNT). The move smoothing also writes a monster's place without a call into Windows.
 
+# uaRO Graphics 3.0.18-beta.165 — what's new · 2026-11-11
+
 - Reading the game's memory without a call into Windows: the processor copies by itself, and an address that is gone is caught by the driver's handler (before, each of ~1000 reads a frame was its own call into Windows - 0.8-1.3 ms a frame by R-MBCDBU). The controller's, the crisp text's and the textures' memory checks are faster the same way. At start the driver checks the new way itself and goes back to the old one if needed (the «game memory: …» line in the log).
 
+# uaRO Graphics 3.0.18-beta.164 — what's new · 2026-11-11
+
 - Entering the game after a disconnect (R-CFNPF6): while the server still holds the last entry and the character's selection waits, the «Вхід у гру…» card no longer goes away after 30 s and shows the time left itself: «The server still holds the last entry · 2:27». Before, only a small line at the top of the screen told it, and the wait looked like endless loading.
+
+# uaRO Graphics 3.0.18-beta.163 — what's new · 2026-11-11
 
 - The panels that run every frame (the skill bar, chat, party, HP bars, buffs, signs in the world, the controller) are built at full speed again: in .162 the interface was slower (R-MBCDBU: 1.9–2.4 ms a frame against 1.3). Only what opens now and then is built compact: storage, shops, trade, equipment, settings, login, reports, «Довідник». ddraw.dll 17.6 MB (was 20.5), the settings app 4.0 MB.
 - In the log the game memory reads are grouped by the driver's functions: it shows who reads the most.
 
+# uaRO Graphics 3.0.18-beta.162 — what's new · 2026-11-11
+
 - A smaller update: ddraw.dll 20.5 → 16.0 MB, the settings app 5.6 → 4.0 MB (about 2.3 MB less to download). The code of the windows, settings and reports is now built for size; drawing, textures, the game's hooks, sound and map loading stay at full speed as before. To check: «Тест графіки» or a usual report - the speed is compared with the previous beta.
+
+# uaRO Graphics 3.0.18-beta.161 — what's new · 2026-11-11
 
 - Measurements in the log: the driver's own work per frame, our interface parts apart from the interface library itself, how many times per frame the game's memory is read and what it costs (the controller's too). Needed before speeding up the work with the game; the same look and behaviour.
 
+# uaRO Graphics 3.0.18-beta.160 — what's new · 2026-11-11
+
 - Unused code removed across all programs (game, settings, studio, renderer): about 3,200 lines - over 200 functions no call reached, with their tests. Found by tracing the links of every program; each one built and checked by the tests. ddraw.dll is 72 KB smaller again; the same look and behaviour.
+
+# uaRO Graphics 3.0.18-beta.159 — what's new · 2026-11-11
 
 - Cleanup finished: the rest of the old picture drawing removed - exp bars, the reference's row repaints, the character block's layers and level flare, the login screens (strip, login list, veil, shelf toast), the on-screen keyboard, shop signs over heads, the controller's carry ring, monster and mercenary cards, Start tiles, the low-HP edge, exp over monsters, the layout editor, pickup toasts. Less work every frame; the same look.
 
+# uaRO Graphics 3.0.18-beta.158 — what's new · 2026-11-11
+
 - Cleanup continued: the old picture output (GDI) of 17 panels and windows removed - the character block, buffs, party, target, hotbar, chat, minimap, tracker, exp bars, reference, trade, whispers and others. Nothing changes on screen.
 
+# uaRO Graphics 3.0.18-beta.157 — what's new · 2026-11-11
+
 - The old edition of the new interface removed from the driver: the fallback sheets of 20 windows, the core's old drawing of windows and panels (GDI pictures) - about 7,000 lines fewer. Nothing changes on screen.
+
+# uaRO Graphics 3.0.18-beta.156 — what's new · 2026-11-11
 
 - The "how many" window moving into the bag (from the storage or the cart) counts what the weight lets in: "The weight lets in 142 of 300", an empty field and "All" take that many. Batch moves take no more than fits too.
 - Several things picked now also in the cart (taken into the bag) and in the bag: with the storage or the cart open - Ctrl+click / Shift+click / Ctrl+A, "Put the picked (N)" or drag the picked onto the storage or the cart.
 
+# uaRO Graphics 3.0.18-beta.155 — what's new · 2026-11-11
+
 - Storage: several things at once - Ctrl+click picks a thing (a gold edge), Shift+click a run, Ctrl+A all on the tab, Esc lets go. Take the picked into the bag by the footer's "Take the picked (N)", a double click on a picked one, or dragging the picked out of the storage. Stacks go whole (the "how many" window confirms itself).
+
+# uaRO Graphics 3.0.18-beta.154 — what's new · 2026-11-11
 
 - Equipment: sets "1 2 3", as the later clients' Equip Switch - a right click on a number keeps what is worn, a click puts the set on (things found in the bag by number, refine and cards). Each character has its own sets.
 
+# uaRO Graphics 3.0.18-beta.153 — what's new · 2026-11-11
+
 - Server select: beside the name - how many are playing now ("uaRO · 512 playing"), as the login server tells.
+
+# uaRO Graphics 3.0.18-beta.152 — what's new · 2026-11-11
 
 - Almost every window can now be pulled by its bottom right corner: NPC talk, vending, shop opening, my shop, item choice, friends/party, chat rooms, pet, homunculus, mercenary, settings, macros, whisper settings, the command list - 70-150 %, each keeps its own size.
 
+# uaRO Graphics 3.0.18-beta.151 — what's new · 2026-11-11
+
 - Window size by the mouse: Items, Equipment, Stats, Skills, storage, cart, trade, the NPC shop and the guild - take the bottom right corner (a gold corner shows under the pointer) and pull: 70-150 %. Each window keeps its own size (uaro-graphics\window-sizes.txt).
+
+# uaRO Graphics 3.0.18-beta.150 — what's new · 2026-11-11
 
 - Buffs the server keeps on by itself no longer show a timer or warn that they are ending: Maximize Power and Cloaking (while SP lasts), Chase Walk, Relax, Frenzy, Play Dead, Running, Lex Aeterna, Mystical Amplification, Counter Instinct, Signum Crucis, taekwon stances. Their skill database numbers were not durations (Maximize Power's 1-5 s instead of "until switched off").
 
+# uaRO Graphics 3.0.18-beta.149 — what's new · 2026-11-11
+
 - Wind is now lightning yellow; holy near white so they are not mixed up.
 
+# uaRO Graphics 3.0.18-beta.148 — what's new · 2026-11-11
+
 - Equipment: a worn thing's element now as in the later clients - its name itself in the element's colour (no separate "Wind" mark).
+
+# uaRO Graphics 3.0.18-beta.147 — what's new · 2026-11-11
 
 - Fixed the game freezing on entering a map in .145-.146 (R-STGQE9): our interface waited for the game to finish loading the map's models while the game waited for it. Now it never waits - with the game's files busy it reads the archives with its own reader. The .145 crash fix stays.
 - Chat room: actions right under the chosen person; right click chooses; twice on a person or "Whisper" - a whisper in the chat.
 
+# uaRO Graphics 3.0.18-beta.146 — what's new · 2026-11-11
+
 - Equipment: a worn thing with an element shows it in colour beside its name - "Wind", "Fire", "Holy"… (element weapons, forged ones, armour with an element card).
 - Item card: an element thing's first line is "Property: Wind", as in the later clients.
+
+# uaRO Graphics 3.0.18-beta.145 — what's new · 2026-11-11
 
 - Fixed the game crashing right after entering a map (an error in cps.dll, then a hang): our interface read the game's files at the same time as its map model loader thread. Now it reads under the same lock as the game.
 - Slots in names, as in the old client: "Jur [3]" in the bag, storage, cart and trade (shops since .142).
 - Tracking: with nothing pinned, its icon shows for 8 s what to pin and how.
 - A crash report now keeps the crash's own dump and logs the faulting address.
 
+# uaRO Graphics 3.0.18-beta.144 — what's new · 2026-11-11
+
 - Element things in their colour: weapons with an element (Fire Brand, Ice Falchion…), forged ones with an element, armour with an element card (Pasana, Swordfish…) - a coloured line in the bag/storage/cart cell, the name in the tip and in the shop and item choice lists in the element's colour. Switch: Interface → "Element things in their colour".
 
+# uaRO Graphics 3.0.18-beta.143 — what's new · 2026-11-11
+
 - My shop: each thing shows "sold N", its slots and what is inside, right click - its card; "Earned" and the Sales list (time · how many × what · +zeny, newest first). The list starts anew each time the shop opens. The server does not name the buyer, so neither do we.
+
+# uaRO Graphics 3.0.18-beta.142 — what's new · 2026-11-11
 
 - Forged things: named as the game does - "Very Strong Fire Main Gauche" (star crumbs and element) in the bag, storage, cart, trade, vending; under the name and in the card - "Forged by Name" (the game asks the server for the smith's name).
 - Opening a shop: things show their slots "[3]" and what is inside (cards, free slots); right click on a thing - its card; under the list "If all sells: N z".
 - Choosing a thing (a card to insert, the magnifier): slots and what is inside under the name, right click (Y on the controller) - the thing's card.
+
+# uaRO Graphics 3.0.18-beta.141 — what's new · 2026-11-11
 
 - Friends / Party renewed: each person with a face, class and level, an HP bar, "near · N cells" or the map's name, "dead".
 - Right click on a person - a menu under the row: whisper, expel (the leader), leave the party (one's own row), add to friends, remove from friends, a route to them, copy the name. On hover - quick whisper / expel buttons.
@@ -125,193 +231,363 @@
 - Friends: a player's name field + Add - a friend request by name. Empty tabs say what to do.
 - Controller: the D-pad walks people, A opens the menu (left/right its items, A does one), B closes the menu, LB/RB the tabs.
 
+# uaRO Graphics 3.0.18-beta.140 — what's new · 2026-11-11
+
 - NPC talk: the answers are two a row again, as meant (each stood on its own line over half the window).
 - Friends / Party and the pet's card: the buttons two a row, not a column on the right; the party's list no longer keeps empty room when the party is small. The same for the list in the item choice window.
 
+# uaRO Graphics 3.0.18-beta.139 — what's new · 2026-11-11
+
 - Item card: a card in a slot (left or right mouse button) opens in its own window beside it, the item's card stays. The card's window moves by its title and closes by its ✕, Esc or B on the controller.
+
+# uaRO Graphics 3.0.18-beta.138 — what's new · 2026-11-11
 
 - Another player's shop: press a thing's name to open its item card (description, slots, the cards in it with their art). On the controller - Y; buying is now Start.
 - A thing's line shows its slots "[3]" and what is inside: the cards' names and how many slots are free.
 
+# uaRO Graphics 3.0.18-beta.137 — what's new · 2026-11-11
+
 - Cart (Alt+W): the cards in a thing show in its name, as in the bag, storage, trade and vending (Lucky …, Double …, … of Counter). The same in the item pick window.
+
+# uaRO Graphics 3.0.18-beta.136 — what's new · 2026-11-11
 
 - Hotbar profiles from the controller: the Start menu's "Bar profile N" tile switches 1 → 2 → 3 (as Ctrl+Shift+1..3, with the character's own bar on).
 - The controller's button badges in windows (shop, skills, equipment, hints) have their letters again: A, B, LB, RT, Start and so on.
 - Shop: when Start bought nothing, the log says why.
 
+# uaRO Graphics 3.0.18-beta.135 — what's new · 2026-11-11
+
 - Our panels from the controller: in the Start menu an open panel's tile (Hunt, Boss timers, Tracking, What killed me) gives its buttons - the D-pad or the left stick walks them (a gold ring), A presses, B leaves. The ✕ is among them.
+
+# uaRO Graphics 3.0.18-beta.134 — what's new · 2026-11-11
 
 - Controller in the chat (on-screen keyboard): RT the channel (all, party, guild), R3 reply to the last whisper, the right stick scrolls the history.
 
+# uaRO Graphics 3.0.18-beta.133 — what's new · 2026-11-11
+
 - Controller on the big map: the left stick moves a cross, X the next NPC / warp / Kafra (named beside it), A plots the way there, Y clears it, B closes.
+
+# uaRO Graphics 3.0.18-beta.132 — what's new · 2026-11-11
 
 - Controller: "Skill wheel 1" and "2" - bind them in the controller menu to any button: hold it, pick one of eight cells of the skill bar's second (third) row with the right stick, let go - the skill. "Settings": choosing "Interface" -> "New screen, game windows" no longer turns the settings window itself off.
 
+# uaRO Graphics 3.0.18-beta.131 — what's new · 2026-11-11
+
 - Controller: the attack button with no target picks up loot beside you (within 2 cells), and with no monsters around talks to the NPC near.
+
+# uaRO Graphics 3.0.18-beta.130 — what's new · 2026-11-11
 
 - Controller: the highlight and tips in windows (Stats, Skills, Items, shops and others) now follow the controller's choice, not the hidden mouse cursor. On the skill bar the LB, RB, LT, RT badges are no longer cut.
 
+# uaRO Graphics 3.0.18-beta.129 — what's new · 2026-11-11
+
 - "Equipment": the character now holds its weapon and shield (as in the game's world).
+
+# uaRO Graphics 3.0.18-beta.128 — what's new · 2026-11-11
 
 - The character block folded: a "…" button on its right opens the row of uaRO's windows (hunt, bosses, tracking and so on).
 
+# uaRO Graphics 3.0.18-beta.127 — what's new · 2026-11-11
+
 - The target card: a log warning on a target change removed.
+
+# uaRO Graphics 3.0.18-beta.126 — what's new · 2026-11-11
 
 - "Equipment": the character in its clothes' dye and with the head and body layers in the game's order (a priestess's veil over her hair), as the game draws it.
 
+# uaRO Graphics 3.0.18-beta.125 — what's new · 2026-11-11
+
 - "Settings" -> "Keys": the keys of "Hunt", "Boss timers", "Tracking", "Party", "What killed me" can be changed (Ctrl and a free letter) or removed.
+
+# uaRO Graphics 3.0.18-beta.124 — what's new · 2026-11-11
 
 - Controller: the Start tile now has "Hunt", "Boss timers", "Tracking", "What killed me"; the "Settings" tile opens the new window, walked by its controls.
 - "Settings": - and + buttons by every slider.
 
+# uaRO Graphics 3.0.18-beta.123 — what's new · 2026-11-11
+
 - "Party": ✕ is now at the right of its header (it stood over the title).
+
+# uaRO Graphics 3.0.18-beta.122 — what's new · 2026-11-11
 
 - A new "Settings" window (Alt+O, the character block's icon, the menu) in place of the game's options: sections on the left - "Game" (music, sounds, volumes, snapping, opaque windows - all it had), "How the game looks" and every interface section; a search on top. Everything changes at once.
 
+# uaRO Graphics 3.0.18-beta.121 — what's new · 2026-11-11
+
 - The menu (Esc) has new items at the top: "Settings", "Arrange the interface", "Graphics test", "Send a report"; the game's buttons below, as before.
+
+# uaRO Graphics 3.0.18-beta.120 — what's new · 2026-11-11
 
 - The character block (Alt+V) has a second row of icons: "Reference", "Hunt", "Boss timers", "Tracking", "Party", "What killed me", "Settings"; an open window's icon glows gold. Keys: Ctrl+H, Ctrl+B, Ctrl+J, Ctrl+G, Ctrl+K.
 - ✕ on "Hunt", "Boss timers", "Party" and the target card: hides the window without switching it off; bring it back with its icon or key. The game remembers hidden windows.
 - "What killed me" is a window of its own with the last death's hits (Ctrl+K).
 
+# uaRO Graphics 3.0.18-beta.119 — what's new · 2026-11-11
+
 - "Lock the parts' places" removed: the interface's parts can always be dragged now (hold 0.3 s and move). Anyone who had the lock on has it off now.
+
+# uaRO Graphics 3.0.18-beta.118 — what's new · 2026-11-11
 
 - Cards now show in item names in another's shop and your own, the shop setup, trade, storage and the bag (e.g. "Double Lucky Katana of Counter"), as in "Equipment".
 
+# uaRO Graphics 3.0.18-beta.117 — what's new · 2026-11-11
+
 - "Equipment": the cart / falcon / Peco sign asks first ("Get off the Peco?" - "Yes" / "No"); a stray click takes nothing off.
+
+# uaRO Graphics 3.0.18-beta.116 — what's new · 2026-11-11
 
 - "Equipment": the button for the cart, the falcon and the Peco is now a round sign between the ◀ ▶ arrows; what it does shows in a tip under the cursor.
 
+# uaRO Graphics 3.0.18-beta.115 — what's new · 2026-11-11
+
 - "Equipment": the character fills the middle again (it stayed small at the top); the ◀ ▶ arrows light up under the cursor.
+
+# uaRO Graphics 3.0.18-beta.114 — what's new · 2026-11-11
 
 - "Equipment": the character is now made of the texture pack's improved frames (4x), no more "squares"; a button over the character, as in the game: "Remove the cart", "Release the falcon" or "Get off the Peco" (with your own shop open the game asks to close it first).
 
+# uaRO Graphics 3.0.18-beta.113 — what's new · 2026-11-11
+
 - Equipment: the character is big and centred again (after the window shrank it stayed small at the top); long item names are not cut - they go onto a second line and the slot grows; "Clip of of Counter" is now "Clip of Counter".
+
+# uaRO Graphics 3.0.18-beta.112 — what's new · 2026-11-11
 
 - Things with cards are named as in the game: the card's word before the name ("Saharic Jur", "Double Bloody Katana"), some cards after it ("Clip of Counter") - in the equipment window and the item card.
 - Equipment: the ◀ ▶ arrows now turn the character; the window is smaller (640 instead of 880).
 
+# uaRO Graphics 3.0.18-beta.111 — what's new · 2026-11-10
+
 - "Спорядження" (equipment): the middle now shows the real character from the game's sprites - the class body (on the Peco when riding), the head in its hair colour, three headgears; the hunter's falcon on the shoulder and the merchant's cart behind. The ◀ ▶ buttons turn it all eight ways. The weapon and shield in hand are not drawn yet.
+
+# uaRO Graphics 3.0.18-beta.110 — what's new · 2026-11-10
 
 - "Спорядження" (equipment) like the game's original window: left the top and low head, right hand, robe, right accessory; right the middle head, body, left hand, shoes, left accessory; the ammo in the strip below. The place over each item name, the slot dots after it (gold with a card). The character numbers left the window (they are in "Характеристики"); the middle shows the portrait for now - the character from sprites is the next step.
 - A card opened from a slot in the item card shows its big illustration over its description, like the original card window.
 
+# uaRO Graphics 3.0.18-beta.109 — what's new · 2026-11-10
+
 - The item card closer to the original: the big item picture on the left, the description on the right, the slots below - a card's picture and name, two a row. A click on a card opens its description in the same card; a click on the title ("‹ item name") goes back. The card texts inside the item text (from beta.108) are gone.
+
+# uaRO Graphics 3.0.18-beta.108 — what's new · 2026-11-10
 
 - The item card: under the item's description, each inserted card's name in gold and its own description from the game's table (as it is, for any card). The card shows up to 20 rows; a longer one scrolls with the wheel.
 
+# uaRO Graphics 3.0.18-beta.107 — what's new · 2026-11-10
+
 - The login card (login, password, ▾ of saved logins, the eye, ticks, "Увійти" / "Вийти", links, the site line) is now laid out by the new interface library. The login and password fields are matched by name; the presses are the same.
 
+# uaRO Graphics 3.0.18-beta.106 — what's new · 2026-11-10
+
 - The login screens in the new interface library: the server select, the character make (face, hair and colour, name, stat pairs) and the character select (buttons below; the cards and carousel keep their places).
+
+# uaRO Graphics 3.0.18-beta.105 — what's new · 2026-11-10
 
 - Opening a shop: Tab moves to the next field (name, then the prices, round; Shift+Tab back), Enter to the next thing's price.
 - Chat: a magnifier in the tabs row - a click opens the search through the lines (type the words; Esc or another click closes it).
 
+# uaRO Graphics 3.0.18-beta.104 — what's new · 2026-11-10
+
 - Fixed: the stats and guild windows stretched over the whole screen.
 - Opening a shop: the price field is wide and easy to see, "For sale" shows the places used of all, and each thing shows the price for the whole stack and the site market price.
 
+# uaRO Graphics 3.0.18-beta.103 — what's new · 2026-11-10
+
 - Opening your own shop (choosing things and prices) now uses the new look: the "vend_setup" switch was not part of the "Новий інтерфейс" choice, so the game's old window opened. It now follows "Своя лавка" (my shop).
+
+# uaRO Graphics 3.0.18-beta.102 — what's new · 2026-11-10
 
 - The guild card is now laid out by the new interface library: its top and six tabs (two rows of three); the tabs' content keeps its places, and the "+", "Змінити", "Скасувати" buttons and the notice fields became library elements.
 - Fixed (since 3.0.18-beta.92): the guild card could not be dragged - it now moves by its empty part.
 
+# uaRO Graphics 3.0.18-beta.101 — what's new · 2026-11-10
+
 - "Характеристики" (stats, Alt+A): the top of the window (title, tabs, free points, ✕) is now laid out by the new interface library; the tables, formulas and planning keep their places, and their buttons became library elements.
 
+# uaRO Graphics 3.0.18-beta.100 — what's new · 2026-11-10
+
 - Fixed (since 3.0.18-beta.94): the items, storage, cart, trade, equipment, skills, homunculus, mercenary and NPC shop windows follow the text size and item window size settings again.
+
+# uaRO Graphics 3.0.18-beta.99 — what's new · 2026-11-10
 
 - The NPC shop is now laid out by the new interface library: the wares, the cart with − amount + and ×, the totals, the buttons and the keys below. Presses land where they are seen.
 - Fixed (since 3.0.18-beta.94): the search hint in the items, storage and cart windows sat below its field.
 
+# uaRO Graphics 3.0.18-beta.98 — what's new · 2026-11-10
+
 - The homunculus and mercenary cards are now laid out by the new interface library: bars, stats, "Нагодувати" (feed), skills with the level arrows and "+", "Видалити" / "Звільнити". Presses land where the button is seen.
+
+# uaRO Graphics 3.0.18-beta.97 — what's new · 2026-11-10
 
 - "Навички" (skills) is now laid out by the new interface library: the top buttons, tabs, list rows, the side panel and the footer; the tree stays a diagram in its places. Presses on "+", the arrows and dragging skills land where you see them.
 - Fixed (since 3.0.18-beta.94): the footer of the items, storage and cart windows was spread across the whole width and the gold ring of a used thing did not show; the equipment slot names had extra margins.
 
+# uaRO Graphics 3.0.18-beta.96 — what's new · 2026-11-10
+
 - "Спорядження" (equipment) is now laid out by the new interface library: five slots each side, the portrait and numbers (or the controller's list) in the middle, the ammo below. Clicks and dragging things land in the slot you see.
+
+# uaRO Graphics 3.0.18-beta.95 — what's new · 2026-11-10
 
 - "Обмін" (trade) is now laid out by the new interface library: two sides of five cells a row, the zeny row, the warning and the buttons. Clicks and dragging things land where the cell is seen.
 
+# uaRO Graphics 3.0.18-beta.94 — what's new · 2026-11-10
+
 - "Речі" (items), "Склад" (storage) and "Візок" (cart) are now laid out by the new interface library: the tabs, the search, the cells eight a row and the footer. Clicks, dragging things into other windows, the tip and the controller take the cells' places from that layout, so they land where the cell is seen.
+
+# uaRO Graphics 3.0.18-beta.93 — what's new · 2026-11-10
 
 - The item description card and the skill card can now be dragged: press on the title or the text and drag. A new card opens beside the cursor again.
 
+# uaRO Graphics 3.0.18-beta.92 — what's new · 2026-11-10
+
 - Every window of the new interface can now be dragged: press its empty part and pull. Added for all live windows (messages, requests, "Опції", the pet, macros, chat rooms, shops, the NPC talk and others), the guild, the homunculus, the mercenary and each whisper card.
+
+# uaRO Graphics 3.0.18-beta.91 — what's new · 2026-11-10
 
 - Fixed: when dragging an item, a skill or a skill bar cell inside a window ("Речі", "Склад", "Візок", "Спорядження", "Навички"), its icon now follows the cursor there too - the window itself hid it before, it showed only outside it.
 
+# uaRO Graphics 3.0.18-beta.90 — what's new · 2026-11-10
+
 - New interface (uaUI): one's own open shop and its setup are live windows of the new library: the cart and the wares for sale side by side, the sign and prices the game's fields, a click on a cart item puts it up for sale, ✕ takes it down.
+
+# uaRO Graphics 3.0.18-beta.89 — what's new · 2026-11-10
 
 - New interface (uaUI): another player's shop is a live window of the new library: wares with − / +, the sum and your zeny, "Купити" lit only when you can afford it.
 
+# uaRO Graphics 3.0.18-beta.88 — what's new · 2026-11-10
+
 - New interface (uaUI): the NPC talk is a live window of the new library: the NPC's coloured words, the answers in two columns, the "Далі" / "Закрити" button; the text wraps by itself, the window drags by its ground.
+
+# uaRO Graphics 3.0.18-beta.87 — what's new · 2026-11-10
 
 - New interface (uaUI): the whisper setup, macros, making a chat room, the chat room, friends / party and the pick list are now live windows of the new library - laid out by flexbox, their text wraps by itself, the library's own hover and clicks; the gamepad walks them as before.
 
+# uaRO Graphics 3.0.18-beta.86 — what's new · 2026-11-10
+
 - New interface (uaUI): the last style warning in the log removed (an empty ground colour as the shelf appeared).
+
+# uaRO Graphics 3.0.18-beta.85 — what's new · 2026-11-10
 
 - Internal: the old code painting windows as pictures removed (40 painters and their helpers) - nothing looks different, the driver is smaller.
 
+# uaRO Graphics 3.0.18-beta.84 — what's new · 2026-11-10
+
 - Chat: the chat line takes Ctrl+V (paste one line at the end, as much as the field holds), Ctrl+C (copy the line) and Ctrl+X (cut it). The field itself stays the game's - sending, typing in other languages and the battle mode as they were.
+
+# uaRO Graphics 3.0.18-beta.83 — what's new · 2026-11-10
 
 - "Довідник": the world map is no longer repainted on every mouse move over its rows - only when something on it changed (less processor work with "Довідник" open).
 
+# uaRO Graphics 3.0.18-beta.82 — what's new · 2026-11-10
+
 - New interface (uaUI): the game's "Опції" is a live window of the new library: the music and sound volumes are its sliders, the switches ticks.
+
+# uaRO Graphics 3.0.18-beta.81 — what's new · 2026-11-10
 
 - New interface (uaUI): the "Порада дня" tip, the requests (trade, party, guild, friend, a number or text to type, a count) and the pet window are now live windows of the new library - laid out by flexbox, their text wraps by itself, the library's own hover and clicks.
 
+# uaRO Graphics 3.0.18-beta.80 — what's new · 2026-11-10
+
 - Gamepad: with the character dead and the death window closed, the hint line at the bottom says "B: back to the save point".
 - New interface (uaUI): the log no longer fills with "Could not get value from data variable words[…]" warnings.
+
+# uaRO Graphics 3.0.18-beta.79 — what's new · 2026-11-10
 
 - Gamepad: B now closes an NPC talk just as Esc does - on a "Далі" page, in a window with no buttons (it needed holding for a second) and in a number field. The hint line shows it.
 - Gamepad: with the character dead and the death window closed, B opens it again - to go back to the save point.
 - New interface (uaUI): the party panel re-evaluates only the bars while the HP bars glide, not every row.
 
+# uaRO Graphics 3.0.18-beta.78 — what's new · 2026-11-10
+
 - Fixed (since 3.0.18-beta.75): on the login screens the game's "Please wait…", "Failed to Connect to Server." and other login errors were not shown - only the background stayed. The developer's answer and the gamepad hint show before entering the game again too.
+
+# uaRO Graphics 3.0.18-beta.77 — what's new · 2026-11-10
 
 - New interface (uaUI): the red edges at low HP are lighter still - the clear middle of the screen is no longer cut into small triangles. The FPS drop when they appeared (R-6XYRXP) is gone together with 3.0.18-beta.76.
 
+# uaRO Graphics 3.0.18-beta.76 — what's new · 2026-11-10
+
 - New interface (uaUI): the red edges at low HP no longer slow things down at 4K (over 100 thousand vertices a frame, now a few thousand). Style errors in the log at start removed.
+
+# uaRO Graphics 3.0.18-beta.75 — what's new · 2026-11-10
 
 - The new interface is now drawn by the new library (uaUI) alone: the "new interface library" switch under "Інтерфейс" is gone, the old way of painting windows and panels as pictures has been removed.
 
+# uaRO Graphics 3.0.18-beta.74 — what's new · 2026-11-10
+
 - New interface (uaUI): the game's message box (OK, Yes/No, "Please wait…") is now a live window of the new library - its text wraps by itself, the buttons stand in a row under it, the window centres by its own size.
+
+# uaRO Graphics 3.0.18-beta.73 — what's new · 2026-11-10
 
 - New interface (uaUI): the "Емоції" and "Список команд" windows and the player menu (right click) are now live windows of the new library - it lays them out itself (flexbox), its own hover and clicks. Emotes: a click puts it into the chat, a double click sends it, drag by the window's ground. The gamepad walks them as before.
 
+# uaRO Graphics 3.0.18-beta.72 — what's new · 2026-11-10
+
 - The searches in "Речі", "Склад", "Візок", the shop and "Довідник" now take any language (only Latin letters before), Backspace removes a whole letter, Ctrl+A, Ctrl+C, Ctrl+X and Ctrl+V work. While a field types, no key reaches the game.
+
+# uaRO Graphics 3.0.18-beta.71 — what's new · 2026-11-10
 
 - New interface (uaUI): the theme, the palette and parts' markup can now reach every player through the updates: data\uaro-graphics\ui\theme.rcss, palette.txt and <part>.rml in a GRF in the client's updates folder. The player's own files in uaro-graphics\ui stay on top.
 
+# uaRO Graphics 3.0.18-beta.70 — what's new · 2026-11-10
+
 - New interface (uaUI): faster - a window re-evaluates only the parts of it that changed, and still elements are not rebuilt every frame. The log line "uaui: in N s …" now also tells how many elements were rebuilt a frame.
+
+# uaRO Graphics 3.0.18-beta.69 — what's new · 2026-11-10
 
 - New interface (uaUI): the last parts still drawn as pictures are now drawn by the new library - monsters' HP bars, gold dots over NPCs, the red edges at low HP, the "Вхід у гру…" veil, the shelf's "… додано" note, the interface cursor. The gamepad's window tile, "Призначити", the chat wheel, the on-screen keyboard and the "Розміщення інтерфейсу" frames are over the game's own windows again.
 
+# uaRO Graphics 3.0.18-beta.68 — what's new · 2026-11-10
+
 - The new interface library (uaUI) is now on by default: it draws every part of the new interface. It can be turned off under "Інтерфейс".
+
+# uaRO Graphics 3.0.18-beta.67 — what's new · 2026-11-10
 
 - The world no longer dims under windows: the switch "Приглушувати світ під вікнами" is gone, the world behind "Речі", "Характеристики" and "Довідник" stays as it is.
 
+# uaRO Graphics 3.0.18-beta.66 — what's new · 2026-11-10
+
 - Settings: "Приглушувати світ під вікнами" is now off by default in the app too (the game has had it off since 3.0.11-beta.55); "Типово" no longer turns it on.
+
+# uaRO Graphics 3.0.18-beta.65 — what's new · 2026-11-10
 
 - New interface (uaUI): "Скляні вікна" with DLSS - windows were a flat grey instead of the blurred world; the glass now works with DLSS too. Small style errors in the log at start removed.
 
+# uaRO Graphics 3.0.18-beta.64 — what's new · 2026-11-10
+
 - New interface (uaUI): the switch "Скляні вікна (нова бібліотека)" under "Інтерфейс" (off by default). With it windows of the new library show the world behind them softly blurred, like frosted glass, with the window's colour laid over. Direct3D 12 only (with DLSS too); on Direct3D 11 the switch changes nothing.
+
+# uaRO Graphics 3.0.18-beta.63 — what's new · 2026-11-10
 
 - New interface (uaUI): with "Плавний рух (нова бібліотека)" the HP bars in the party panel glide to their new value too.
 - New interface (uaUI): the gamepad in the whisper window - the D-pad moves the frame over the input field, "Надіслати" and ×, A presses, B closes (the top whisper window).
 - New interface (uaUI): with "Ефекти (нова бібліотека)" radial gradients are drawn too (for your own themes and markup).
 
+# uaRO Graphics 3.0.18-beta.62 — what's new · 2026-11-10
+
 - New interface (uaUI): the target card no longer logs a style error (an empty element frame colour) the moment it appears.
+
+# uaRO Graphics 3.0.18-beta.61 — what's new · 2026-11-10
 
 - New interface (uaUI): the switch "Ефекти (нова бібліотека)" under "Інтерфейс" (off by default). With it windows and panels cast soft shadows, the button chosen by the gamepad and the ready or lit skill bar cells glow, the HP, SP and experience bars and the buttons get a light sheen on top, and round corners inside windows are cut cleanly.
 
+# uaRO Graphics 3.0.18-beta.60 — what's new · 2026-11-10
+
 - New interface (uaUI): the gamepad in windows that did not hear it before - emotes, commands, making a chat room, the chat room, the popup list, macros. The D-pad (or the left stick) moves a gold frame over the buttons and cells, A presses the chosen one just as the mouse does, B closes the window.
+
+# uaRO Graphics 3.0.18-beta.59 — what's new · 2026-11-10
 
 - New interface (uaUI): your own look for any part. The game puts every part's built-in markup into uaro-graphics\ui\builtin\ (with a README.txt). Copy a part's file to uaro-graphics\ui\ and edit the copy - changes show within a second, no restart; delete the copy to get the built-in one back.
 - New interface (uaUI): ready text fields, sliders, lists and switches in the game's look; in a field of the new library the keyboard types into the field. See "Вітрина компонентів (для розробників)", tab "Форма".
 
+# uaRO Graphics 3.0.18-beta.58 — what's new · 2026-11-10
+
 - New interface (uaUI): the switch "Плавний рух (нова бібліотека)" under "Інтерфейс" (off by default). With it windows slide in softly, cells and buttons light up smoothly, skill bar cells grow a little under the mouse and press in, the HP and SP bars glide to their new value (in the character block and on the target card), the low HP bar pulses, a new item and experience float in.
 
+# uaRO Graphics 3.0.18-beta.57 — what's new · 2026-11-10
+
 - New interface (uaUI): labels are now measured by the same engine that draws them - plates, buttons and tags fit the letters exactly. A line that still does not fit its field shrinks a little (by a quarter at most) instead of spilling out.
+
+# uaRO Graphics 3.0.18-beta.56 — what's new · 2026-11-10
 
 - New interface (uaUI): on the skill bar and the effects column the letters now grow with the part's size in "Розміщення інтерфейсу" - the arrow count and other labels no longer spill out of their plates.
 
