@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.218 — what's new · 2026-11-12
+
+- «Спорядження» (R-RASZHM's picture): the hint «Комплекти: клік — вдягти, права кнопка — запам'ятати вдягнене» was drawn over the «1 2 3» buttons and the row stuck to the window's left edge. The hint had a class name the new interface already uses for its sheets (absolutely positioned); it has its own now and stands after the buttons, the row in from the edge as the ammo's.
+- To check: open «Спорядження» (Alt+Q) - the «1 2 3» buttons and the hint side by side, nothing over another.
+
 # uaRO Graphics 3.0.18-beta.217 — what's new · 2026-11-12
 
 - uaRO HD's own things - Familiar Power (#15001), Lycan Fury (#15002), Holy Order Relic (#15003) - have pictures in the client, but their files are named only in the English table (data\english\idnum2itemresnametable.txt), and our windows read data\'s alone. Now the tables of the language folder the game reads its own from (data\english\ for Ukrainian and Russian Windows) fill data\'s: these things show their pictures in «Речі», «Спорядження», the hotbar, the shop, the trade and «Довідник». Entries data\ already has are never changed; the log says how many were added.
