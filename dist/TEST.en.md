@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.196 — what's new · 2026-11-12
+
+- The first start shows the game instead of the settings: four cards with pictures, «How do you want to play?» - «I want everything new», «New picture, the old interface», «A weak computer, but sharp», «As in 2004». Under each: the picture, the interface and the textures it sets; the one for your card is marked «for your graphics card». One click and it is set; «Skip - the app chooses itself» keeps the automatic choice. Change it any time by the look line over «PLAY».
+
 # uaRO Graphics 3.0.18-beta.195 — what's new · 2026-11-12
 
 - «Changelog»: a click on the «What's new» card opens a screen with every version. On the left the versions by day («Today», «Yesterday», dates), marked «beta» / «release» and «new» for those out since you last looked; on the right what changed in the chosen one. At the top the filters «All», «Releases only», «New for me · N».
