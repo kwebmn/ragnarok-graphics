@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.18-beta.215 — what's new · 2026-11-12
+
+- Report R-8KPDY9 («the keyboard pulled right all the time»): an arrow was pressed with the walk mode off, then ` turned the mode on while the arrow was still held. The walk mode took the arrow's let go, and the arrows' hook never learned it was let go, so the character walked right on its own for half a minute. Now each frame the held arrows, the walk mode's keys (W A S D, the numpad) and the windows' keys are checked against what Windows holds: a key let go stops the walk whichever part of the driver took its message (the log says so in a line «let go taken by another hook»).
+- ` held switches the walk mode once, not back and forth with the auto repeat, and types nothing into the chat.
+- Walk mode: two keys one way (W and ↑) - one let go, the character walks on while the other is held.
+- To check: hold →, press `, let go of → - the character stops; in the walk mode hold D and click a field of the game's (a count, a search) - the character stops; hold ` for a second - the mode switched once.
+
 # uaRO Graphics 3.0.18-beta.214 — what's new · 2026-11-12
 
 - Report R-CX44S5 («the awakening potion button got stuck»): Space in «Речі» acted as the pad's X and took the item up to put it on the bar, and the keyboard could not finish that. Space is now no window button. When the pad carries a thing to the bar, the keys work too: the arrows pick the place, Enter puts it, Esc cancels, and the hint names the keys.
