@@ -951,6 +951,7 @@ enum class Text : uint16_t {
     LauncherRunningCount,                // .206: «Гра вже запущена · вікон: N» under «+ ЩЕ ОДНЕ ВІКНО»
     InterfaceArrowsWalk, InterfaceArrowsWalkHint,  // .207: the keyboard concept, stage 1
     InterfaceWalkMode, InterfaceWalkModeHint, ChatHintWalk,  // .208: stage 2, the walk mode
+    InterfaceSpaceAction, InterfaceSpaceActionHint,          // .209: stage 3, the quick keys
     Count
 };
 

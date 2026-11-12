@@ -8592,6 +8592,14 @@ constexpr Entry kTexts[] = {
      "показывает: «Ходьба · Enter — писать»."},
     {Text::ChatHintWalk, "Walking \xC2\xB7 Enter: type \xC2\xB7 `: off",
      "Ходьба \xC2\xB7 Enter — писати \xC2\xB7 ` — вимкнути", "Ходьба \xC2\xB7 Enter — писать \xC2\xB7 ` — выключить"},
+    {Text::InterfaceSpaceAction, "Space acts", "Пробіл — дія", "Пробел — действие"},
+    {Text::InterfaceSpaceActionHint,
+     "Space with the chat line empty does what the gamepad's A does: attacks the target, else picks up loot beside, "
+     "else attacks the nearest monster, else talks to the NPC near. Ctrl+arrows turn the camera and zoom it.",
+     "Пробіл, коли рядок чату порожній, робить те саме, що A геймпада: б'є ціль, інакше підбирає лут поруч, інакше "
+     "б'є найближчого монстра, інакше говорить з NPC поруч. Ctrl+стрілки повертають і наближають камеру.",
+     "Пробел, когда строка чата пуста, делает то же, что A геймпада: бьёт цель, иначе подбирает лут рядом, иначе "
+     "бьёт ближайшего монстра, иначе говорит с NPC рядом. Ctrl+стрелки поворачивают и приближают камеру."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

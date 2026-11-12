@@ -14,7 +14,7 @@ struct Key {
     unsigned scan = 0;      // WM_KEYDOWN's lParam bits 16-23: the same key in any layout
     bool extended = false;  // its bit 24: the arrows' and Home's own keys (the numpad's are not)
     bool down = true;       // false: let go
-    bool ctrl = false, alt = false;
+    bool ctrl = false, alt = false, shift = false;
     bool chatEmpty = true;  // the chat line holds no words
 };
 
@@ -25,7 +25,13 @@ enum class Act : uint8_t {
     OpenChat,    // Enter: the chat line opened for typing (the Enter itself not the game's)
     Send,        // Enter while typing: the game sends the line, the mode walks again
     CancelChat,  // Esc while typing: the line cleared, the mode walks again
+    Action,      // 3.0.18-beta.209: a quick action's key (Mode::action) - not typed
 };
+
+// 3.0.18-beta.209 (stage 3): the walk mode's quick actions - Space attack (the pad's one button: the target, else
+// loot beside, else the nearest monster, else the NPC near), F pick up, R talk, C sit, Tab / Shift+Tab the next /
+// the previous target, Q / E the camera turned, 1-9 the shown bar row's slots
+enum class Do : uint8_t { None, Attack, Pickup, Talk, Sit, NextTarget, PrevTarget, CameraLeft, CameraRight, Slot };
 
 constexpr unsigned kToggleScan = 0x29;
 
@@ -37,10 +43,14 @@ public:
     void set(bool on);                      // from the settings: typing and the held keys end
     void lost() { dirs_ = 0; }              // the window lost the keys
     Act key(const Key& k);
+    Do action() const { return action_; }  // the last Act::Action's
+    int slot() const { return slot_; }     // Do::Slot's: 0-8 in the shown row
 
 private:
     bool on_ = false, typing_ = false;
     uint8_t dirs_ = 0;
+    Do action_ = Do::None;
+    int slot_ = 0;
 };
 
 // The walk of a key in the mode: W A S D, the arrows (any), the numpad's 7 9 1 3 (not Home's own keys); kStop its 5;

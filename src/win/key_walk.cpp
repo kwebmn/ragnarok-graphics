@@ -3,6 +3,7 @@
 #include <string>
 
 #include "core/key_walk.hpp"
+#include "pad/win/runtime.hpp"
 #include "win/log.hpp"
 #include "win/chat_window.hpp"
 #include "win/game_camera.hpp"
@@ -14,6 +15,11 @@ constexpr ULONGLONG kStopTickMs = 600;  // after the last let go: the controller
 
 struct State {
     bool enabled = true;
+    bool space = true;       // 3.0.18-beta.209: [interface] space_action
+    bool spaceDown = false;  // Space pressed as the action (its let go and its letter swallowed too)
+    bool skipSpace = false;
+    uint8_t camHeld = 0;     // Ctrl+arrows pressed as the camera's (one step a press)
+    std::string spaceMap;    // the map Space's first action was told on
     uint8_t held = 0;
     uint8_t mode = 0;  // 3.0.18-beta.208: the walk mode's keys
     ULONGLONG letGoAt = 0;
@@ -29,11 +35,59 @@ bool modifier() { return GetKeyState(VK_CONTROL) < 0 || GetKeyState(VK_MENU) < 0
 
 }  // namespace
 
+// 3.0.18-beta.209: Space - the action; true: swallowed
+bool spaceKey(State& s, UINT m) {
+    if (m == WM_KEYUP) {
+        const bool mine = s.spaceDown;
+        s.spaceDown = false;
+        return mine;
+    }
+    if (s.spaceDown) return true;  // its auto repeat: one action a press
+    if (!s.space || !inGameWorld() || modifier() || !chatwin::focusInChat() || !chatwin::inputEmpty() ||
+        chatwin::gameBattle())  // the game's battle mode: its Space opens the chat
+        return false;
+    s.spaceDown = true;
+    s.skipSpace = true;
+    uapad::runtime::keyAction(uapad::Action{uapad::Action::Kind::Attack, 0});
+    const std::string map = readGameMap();
+    if (map != s.spaceMap) {
+        s.spaceMap = map;
+        LOG_INFO("keys: Space acts on %s - the target, else loot beside, else the nearest monster, else the NPC near",
+                 map.c_str());
+    }
+    return true;
+}
+
+// 3.0.18-beta.209: Ctrl+arrows - the camera, a step a press
+bool cameraKey(State& s, UINT m, uint8_t dir) {
+    if (m == WM_KEYUP) {
+        const bool mine = (s.camHeld & dir) != 0;
+        s.camHeld = uint8_t(s.camHeld & ~dir);
+        return mine;
+    }
+    if (s.camHeld & dir) return true;
+    if (!s.enabled || !inGameWorld() || !chatwin::focusInChat() || !chatwin::inputEmpty()) return false;
+    s.camHeld = uint8_t(s.camHeld | dir);
+    using uagfx::keywalk::Dir;
+    uapad::runtime::keyCamera(dir == Dir::kLeft ? -45.0f : dir == Dir::kRight ? 45.0f : 0.0f,
+                              dir == Dir::kUp ? 1 : dir == Dir::kDown ? -1 : 0);
+    return true;
+}
+
 bool key(UINT m, WPARAM wp, LPARAM) {
     State& s = state();
+    if (m == WM_CHAR) {
+        const bool skip = s.skipSpace && wp == ' ';
+        s.skipSpace = false;
+        return skip;
+    }
     if (m != WM_KEYDOWN && m != WM_KEYUP) return false;
+    if (m == WM_KEYDOWN && wp != VK_SPACE) s.skipSpace = false;
+    if (wp == VK_SPACE) return spaceKey(s, m);
     const uint8_t dir = uagfx::keywalk::dirOfVk(unsigned(wp));
     if (!dir) return false;
+    const bool ctrlOnly = GetKeyState(VK_CONTROL) < 0 && GetKeyState(VK_MENU) >= 0 && GetKeyState(VK_SHIFT) >= 0;
+    if ((s.camHeld & dir) || (m == WM_KEYDOWN && ctrlOnly && !(s.held & dir))) return cameraKey(s, m, dir);
     if (m == WM_KEYUP) {
         if (!(s.held & dir)) return false;  // pressed when it was not the walk's: the game's
         s.held = uint8_t(s.held & ~dir);
@@ -94,5 +148,12 @@ void setEnabled(bool on) {
 }
 
 bool enabled() { return state().enabled; }
+
+void setSpace(bool on) {
+    State& s = state();
+    if (on == s.space) return;
+    s.space = on;
+    LOG_INFO("keys: Space as the action %s", on ? "on" : "off");
+}
 
 }  // namespace uagfx::win::keywalk

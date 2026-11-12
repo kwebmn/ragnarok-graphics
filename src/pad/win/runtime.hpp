@@ -63,6 +63,12 @@ uint16_t talkButtonBit();
 // 3.0.11-beta.88 (stage 4): [interface] pad_walk = arrow - the left stick walks without the mouse (win/context, each
 // frame); where it walks now (the arrow's end, the map's cells); false none
 void setDirectWalk(bool on);
+// 3.0.18-beta.209 (the keyboard concept, stage 3): the keys' quick actions for the next tick (win/key_walk,
+// win/walk_mode) - fired by the pad's controller as its buttons' (with the pad off too); Tab's target; the camera
+// turned (degrees, + right as the right stick) and zoomed (notches, + closer)
+void keyAction(const Action& a);
+void keyCycleTarget(int dir);
+void keyCamera(float turnDeg, int zoomSteps);
 bool walkTarget(int& x, int& y);
 // 3.0.11-beta.145 (the concept «маг, прист и хант на геймпаде»): a ground skill aimed with the pad now - the skill, its
 // level and the cell it would go on (its cells on the ground: win/ground_marks); false while not aiming

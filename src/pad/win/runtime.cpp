@@ -146,6 +146,10 @@ struct State {
     bool cameraSupported = false;  // the client's camera can be read and turned in its memory
     bool loggedCameraFail = false;
     int pendingZoom = 0;           // wheel notches the right stick asked for, one per mouse poll (> 0: closer)
+    std::vector<Action> keyActs;   // 3.0.18-beta.209: the keys' actions for the next tick
+    int keyCycle = 0;              // Tab (+), Shift+Tab (-)
+    float keyTurn = 0;             // the camera's turn the keys asked (degrees)
+    int keyZoom = 0;
     bool barSupported = false;  // the client's hotkey bar can be read from its memory
     bool loggedBarFail = false;
     DWORD lastBarMs = 0;
@@ -1537,6 +1541,21 @@ void tick() {
     if (talk && s.talkDown && s.talkOwned) padIn.buttons = uint16_t(padIn.buttons & ~talk);  // .214: not yet a tap
     if (talkTap) padIn.buttons = uint16_t(padIn.buttons | talk);  // .214: the tap - a press this tick, let go the next
     backCloses(padIn, view);  // 3.0.11-beta.93: each tick, so the press closing the tile closes nothing more
+    {  // 3.0.18-beta.209 (stage 3): the keys' actions and Tab's target - fired this tick as the pad's buttons
+        Controller& control = s.session->control();
+        for (const Action& a : s.keyActs) control.keyAction(a);
+        if (s.keyCycle != 0) control.keyCycle(s.keyCycle);
+        if (!s.keyActs.empty() || s.keyCycle != 0) {
+            padIn.keyActs = true;
+            padIn.connected = true;
+        }
+        s.keyActs.clear();
+        s.keyCycle = 0;
+        if (s.keyTurn != 0 && s.cameraSupported) clientcamera::turn(s.keyTurn);
+        s.keyTurn = 0;
+        s.pendingZoom = std::clamp(s.pendingZoom + s.keyZoom, -8, 8);
+        s.keyZoom = 0;
+    }
     {  // 3.0.18-beta.207 (the keyboard concept, stage 1): the arrows' walk - the stick's while the real stick rests
         float kx = 0, ky = 0;
         if (uagfx::win::keywalk::vector(kx, ky) && std::hypot(padIn.lx, padIn.ly) <= s.cfg.deadzone) {
@@ -1655,6 +1674,20 @@ void setTiles(bool on) {
 void openPadMenu() {
     S().openMenuNow = true;
     LOG_INFO("the controller's own menu asked for from the tile");
+}
+
+void keyAction(const Action& a) {
+    if (healthy()) S().keyActs.push_back(a);
+}
+
+void keyCycleTarget(int dir) {
+    if (healthy()) S().keyCycle += dir;
+}
+
+void keyCamera(float turnDeg, int zoomSteps) {
+    if (!healthy()) return;
+    S().keyTurn += turnDeg;
+    S().keyZoom += zoomSteps;
 }
 
 void setDirectWalk(bool on) {

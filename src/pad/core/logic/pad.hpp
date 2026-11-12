@@ -31,6 +31,7 @@ struct PadState {
     // 3.0.18-beta.207 (the keyboard concept, stage 1): lx / ly are the arrows' (win/key_walk) - a walk without the
     // mouse whatever [interface] pad_walk says, with the pad switched off too
     bool keyWalk = false;
+    bool keyActs = false;  // 3.0.18-beta.209: the keys' actions wait (Controller::keyAction / keyCycle)
 };
 
 enum class Rumble { None, TargetSwitch, TargetCleared, PadOn, PadOff, Denied, CameraOn, CameraOff };

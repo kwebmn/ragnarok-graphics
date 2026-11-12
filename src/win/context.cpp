@@ -1255,6 +1255,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     groundmarks::look(config.targetRing);  // 3.0.11-beta.87: the target's ring on the ground
     groundmarks::walkLook(config.walkArrow, config.walkMark);  // 3.0.11-beta.103: the stick's arrow's look
     keywalk::setEnabled(config.arrowsWalk);                    // 3.0.18-beta.207: the arrows walk
+    keywalk::setSpace(config.spaceAction);                     // 3.0.18-beta.209: Space acts
     walkmodewin::frame(config, iniPath());                     // 3.0.18-beta.208: the walk mode
     groundmarks::groundTimers(config.groundTimers);  // 3.0.16-beta.21
     hotbarwin::setTimers(config.groundTimers);       // 3.0.16-beta.22: on the slots too

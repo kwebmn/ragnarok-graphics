@@ -47,9 +47,12 @@ Act Mode::key(const Key& k) {
     const bool walkingNow = on_ && !typing_;
     if (!k.down) {
         const uint8_t d = walkingNow ? dirOfScan(k.scan, k.extended) : 0;
-        if (d == 0 || d == kStop) return Act::Pass;
-        dirs_ = uint8_t(dirs_ & ~d);
-        return Act::Swallow;
+        if (d != 0 && d != kStop) {
+            dirs_ = uint8_t(dirs_ & ~d);
+            return Act::Swallow;
+        }
+        // the let go of a key whose press was the mode's (a letter, Tab): the game never saw it pressed
+        return walkingNow && !k.ctrl && !k.alt && (printable(k.vk) || k.scan == 0x0F) ? Act::Swallow : Act::Pass;
     }
     const bool modifier = k.ctrl || k.alt;
     if (k.scan == kToggleScan && !modifier && (walkingNow || (!on_ && k.chatEmpty))) {
@@ -84,6 +87,27 @@ Act Mode::key(const Key& k) {
     if (d) {
         dirs_ = uint8_t(dirs_ | d);
         return Act::Swallow;
+    }
+    // 3.0.18-beta.209: the quick actions, by the keys' places (any layout)
+    Do act = Do::None;
+    switch (k.scan) {
+    case 0x39: act = Do::Attack; break;  // Space
+    case 0x21: act = Do::Pickup; break;  // F
+    case 0x13: act = Do::Talk; break;    // R
+    case 0x2E: act = Do::Sit; break;     // C
+    case 0x0F: act = k.shift ? Do::PrevTarget : Do::NextTarget; break;  // Tab
+    case 0x10: act = Do::CameraLeft; break;   // Q
+    case 0x12: act = Do::CameraRight; break;  // E
+    default:
+        if (k.scan >= 0x02 && k.scan <= 0x0A) {  // 1-9
+            act = Do::Slot;
+            slot_ = int(k.scan) - 0x02;
+        }
+        break;
+    }
+    if (act != Do::None) {
+        action_ = act;
+        return Act::Action;
     }
     return printable(k.vk) ? Act::Swallow : Act::Pass;
 }

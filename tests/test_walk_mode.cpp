@@ -47,9 +47,9 @@ TEST(walk_mode_toggle) {
 TEST(walk_mode_keys_while_on) {
     walkmode::Mode m;
     m.set(true);
-    CHECK(m.key(down('Q', 0x10)) == Act::Swallow);  // a letter: not into the chat
-    CHECK(m.key(down('7', 0x08)) == Act::Swallow);
-    CHECK(m.key(down(' ', 0x39)) == Act::Swallow);
+    CHECK(m.key(down('P', 0x19)) == Act::Swallow);  // a letter: not into the chat
+    CHECK(m.key(down('0', 0x0B)) == Act::Swallow);
+    CHECK(m.key(down(0xBA, 0x27)) == Act::Swallow);  // a sign (; ж)
     Key altE = down('E', 0x12);
     altE.alt = true;  // Alt+E: the game's window
     CHECK(m.key(altE) == Act::Pass);
@@ -109,4 +109,31 @@ TEST(walk_mode_set_and_lost) {
     m.set(false);
     CHECK(!m.on() && !m.typing());
     CHECK(m.key(down('A', 0x1E)) == Act::Pass);  // off: letters type
+}
+
+// 3.0.18-beta.209 (stage 3): the walk mode's letters for the quick actions - one key, one action
+TEST(walk_mode_actions) {
+    using walkmode::Do;
+    walkmode::Mode m;
+    m.set(true);
+    const auto act = [&](unsigned vk, unsigned scan, bool shift = false) {
+        Key k = down(vk, scan);
+        k.shift = shift;
+        return m.key(k);
+    };
+    CHECK(act(' ', 0x39) == Act::Action && m.action() == Do::Attack);
+    CHECK(act('F', 0x21) == Act::Action && m.action() == Do::Pickup);
+    CHECK(act('R', 0x13) == Act::Action && m.action() == Do::Talk);
+    CHECK(act('C', 0x2E) == Act::Action && m.action() == Do::Sit);
+    CHECK(act(0x09, 0x0F) == Act::Action && m.action() == Do::NextTarget);
+    CHECK(act(0x09, 0x0F, true) == Act::Action && m.action() == Do::PrevTarget);
+    CHECK(act('Q', 0x10) == Act::Action && m.action() == Do::CameraLeft);
+    CHECK(act('E', 0x12) == Act::Action && m.action() == Do::CameraRight);
+    CHECK(act('1', 0x02) == Act::Action && m.action() == Do::Slot && m.slot() == 0);
+    CHECK(act('9', 0x0A) == Act::Action && m.action() == Do::Slot && m.slot() == 8);
+    CHECK(act('0', 0x0B) == Act::Swallow);  // no action: just not typed
+    CHECK(m.key(up(' ', 0x39)) == Act::Swallow);  // let go: nothing more
+    m.key(down(0x0D, 0x1C));  // typing: the same keys type
+    CHECK(act('F', 0x21) == Act::Pass);
+    CHECK(act(0x09, 0x0F) == Act::Pass);  // Tab: the chat's channel while typing
 }

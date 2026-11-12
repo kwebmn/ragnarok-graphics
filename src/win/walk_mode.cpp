@@ -1,6 +1,7 @@
 #include "win/walk_mode.hpp"
 
 #include "core/walk_mode.hpp"
+#include "pad/win/runtime.hpp"
 #include "win/chat_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/key_walk.hpp"
@@ -9,6 +10,8 @@
 
 namespace uagfx::win::walkmodewin {
 namespace {
+
+constexpr uint32_t kBarRow = 0x771458;  // the hotkey bar's row shown (0-2), as win/hotbar reads it
 
 struct State {
     walkmode::Mode mode;
@@ -25,6 +28,29 @@ State& state() {
 }
 
 void tellDirs(const State& s) { keywalk::setModeDirs(s.mode.on() ? s.mode.dirs() : 0); }
+
+// 3.0.18-beta.209 (stage 3): a quick action's key - the pad controller fires it at its next tick
+void doAction(const walkmode::Mode& m) {
+    using walkmode::Do;
+    using uapad::Action;
+    switch (m.action()) {
+    case Do::Attack: uapad::runtime::keyAction(Action{Action::Kind::Attack, 0}); break;
+    case Do::Pickup: uapad::runtime::keyAction(Action{Action::Kind::Pickup, 0}); break;
+    case Do::Talk: uapad::runtime::keyAction(Action{Action::Kind::Talk, 0}); break;
+    case Do::Sit: uapad::runtime::keyAction(Action{Action::Kind::SitStand, 0}); break;
+    case Do::NextTarget: uapad::runtime::keyCycleTarget(1); break;
+    case Do::PrevTarget: uapad::runtime::keyCycleTarget(-1); break;
+    case Do::CameraLeft: uapad::runtime::keyCamera(-45, 0); break;
+    case Do::CameraRight: uapad::runtime::keyCamera(45, 0); break;
+    case Do::Slot: {  // 1-9: the row the game shows (F12 turns it)
+        uint8_t row = 0;
+        readGame(kBarRow, &row, 1);
+        uapad::runtime::keyAction(Action{Action::Kind::Slot, uint8_t((row < 3 ? row : 0) * 9 + m.slot())});
+        break;
+    }
+    case Do::None: break;
+    }
+}
 
 }  // namespace
 
@@ -67,6 +93,7 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     case walkmode::Act::OpenChat: return !chatwin::gameBattle();
     case walkmode::Act::Send: return false;     // the game's Enter sends it
     case walkmode::Act::CancelChat: chatwin::clearLine(); return true;
+    case walkmode::Act::Action: doAction(s.mode); return true;  // 3.0.18-beta.209
     }
     return false;
 }

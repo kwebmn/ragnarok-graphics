@@ -354,6 +354,58 @@ TEST(ctl_attack_takes_nearest_and_marks_it) {
     CHECK_EQ(o.mark, 0u);
 }
 
+// 3.0.18-beta.209 (the keyboard concept, stage 3): the keys' actions - fired as the pad's buttons' once, with the pad
+// off too; Tab's next target nearest first, round again
+TEST(ctl_key_attack_fires_as_a_button) {
+    Controller c(Config{});
+    WorldState w = world();
+    addMob(w, 110000001, Cell{102, 101});
+    c.keyAction(Action{Action::Kind::Attack});
+    PadState p = pad();
+    p.keyActs = true;
+    TickOutput o = c.tick(p, w, view(), 1000);
+    CHECK_EQ(c.target(), 110000001u);
+    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x0190);
+    o = c.tick(pad(), w, view(), 1100);  // once: nothing asked again
+    CHECK(o.packets.empty());
+}
+
+TEST(ctl_key_actions_with_the_pad_off) {
+    Controller c(Config{});
+    WorldState w = world();
+    c.tick(pad(kPadBack), w, view(), 50);
+    CHECK(!c.enabled());
+    addMob(w, 110000001, Cell{102, 101});
+    c.keyAction(Action{Action::Kind::Attack});
+    PadState p = pad();
+    p.keyActs = true;
+    TickOutput o = c.tick(p, w, view(), 1000);
+    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x0190);
+}
+
+TEST(ctl_key_cycle_target_nearest_first) {
+    Controller c(Config{});
+    WorldState w = world();
+    addMob(w, 110000003, Cell{106, 100});  // distance 6
+    addMob(w, 110000001, Cell{102, 101});  // distance 2
+    PadState p = pad();
+    p.keyActs = true;
+    c.keyCycle(1);
+    TickOutput o = c.tick(p, w, view(), 1000);
+    CHECK_EQ(c.target(), 110000001u);
+    CHECK_EQ(o.mark, 110000001u);
+    CHECK(o.packets.empty());  // chosen, not attacked
+    c.keyCycle(1);
+    c.tick(p, w, view(), 1100);
+    CHECK_EQ(c.target(), 110000003u);
+    c.keyCycle(1);
+    c.tick(p, w, view(), 1200);
+    CHECK_EQ(c.target(), 110000001u);  // round again
+    c.keyCycle(-1);
+    c.tick(p, w, view(), 1300);
+    CHECK_EQ(c.target(), 110000003u);
+}
+
 TEST(ctl_attack_tap_stops_when_target_dies) {
     Controller c(Config{});
     WorldState w = world();

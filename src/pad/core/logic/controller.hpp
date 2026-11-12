@@ -81,6 +81,12 @@ public:
     // A map was loaded. The client may have set its camera back, and one walk teaches the turn again.
     void onMapLoaded() { camera_.reset(); }
 
+    // 3.0.18-beta.209 (the keyboard concept, stage 3): a key's action, fired at the next tick once as a pressed
+    // button's (Attack: the target, else loot beside, else the nearest monster, else the NPC near); keyCycle: the next
+    // monster (dir > 0) or the one before, nearest first, round again
+    void keyAction(const Action& a) { keyActions_.push_back(a); }
+    void keyCycle(int dir) { keyCycle_ += dir; }
+
     void setBindings(const Bindings& bindings);
     const Bindings& bindings() const { return bindings_; }
     // 3.0.11-beta.85 (the concept's «Выбор цели навыка»): the party's members on this map, in the party panel's order
@@ -219,6 +225,9 @@ private:
     bool keepsTarget(const WorldState& world) const;
     // Takes the nearest monster as the target, telling the log what the pad saw; 0 when there is none.
     uint32_t takeNearest(const WorldState& world, uint32_t now, const char* why, TickOutput& out);
+    // 3.0.18-beta.209: the keys' actions and Tab's target this tick
+    void keyStep(const WorldState& world, uint32_t now, TickOutput& out);
+    void cycleTarget(int dir, const WorldState& world, uint32_t now, TickOutput& out);
     void dropFarTarget(const WorldState& world, uint32_t now, TickOutput& out);
     void toggleCamera(TickOutput& out);
     void talk(const WorldState& world, uint32_t now, TickOutput& out);
@@ -270,6 +279,9 @@ private:
     std::optional<uint32_t> lastPickupMs_;
     std::unordered_map<uint32_t, uint32_t> pickupTriedMs_;  // floor item id -> our first takeitem for it
     std::unordered_map<uint32_t, uint32_t> blacklist_;  // actor id -> blacklisted until (ms)
+    std::vector<Action> keyActions_;  // 3.0.18-beta.209: the keys' actions waiting for the tick
+    int keyCycle_ = 0;                // Tab (+) and Shift+Tab (-) pressed since the last tick
+    bool keyFiring_ = false;          // a key's slot: no «whom?» choice (the D-pad's, not the keys')
     std::unordered_map<uint32_t, uint32_t> markedMs_;   // actor id -> when we last showed its "!"
     std::optional<Approach> approach_;
     std::vector<uint32_t> friends_;     // 3.0.11-beta.85

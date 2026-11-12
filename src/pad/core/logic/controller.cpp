@@ -131,6 +131,44 @@ uint32_t Controller::takeNearest(const WorldState& world, uint32_t now, const ch
     return c.front();
 }
 
+void Controller::keyStep(const WorldState& world, uint32_t now, TickOutput& out) {
+    if (keyCycle_ != 0) {
+        cycleTarget(keyCycle_ > 0 ? 1 : -1, world, now, out);
+        keyCycle_ = 0;
+    }
+    if (keyActions_.empty()) return;
+    const std::vector<Action> actions = std::move(keyActions_);
+    keyActions_.clear();
+    keyFiring_ = true;
+    for (const Action& a : actions) {
+        approach_.reset();  // a new press overrides walking up to something
+        out.notes.push_back("key: " + actionToken(a));
+        fire(a, false, world, now, out);
+    }
+    keyFiring_ = false;
+}
+
+// Tab: the monsters within reach nearest first - the one after the target (the nearest when none), round again
+void Controller::cycleTarget(int dir, const WorldState& world, uint32_t now, TickOutput& out) {
+    const std::vector<uint32_t> c = targetCandidates(world, now, blacklist_);
+    if (c.empty()) {
+        deny(out, "no monsters around");
+        return;
+    }
+    const auto at = std::find(c.begin(), c.end(), target_);
+    size_t next = 0;
+    if (at != c.end()) {
+        const size_t i = size_t(at - c.begin());
+        next = dir > 0 ? (i + 1) % c.size() : (i + c.size() - 1) % c.size();
+    } else if (dir < 0) {
+        next = c.size() - 1;
+    }
+    setTarget(c[next], now, out);
+    picked_ = true;  // chosen: presses keep it, as the right stick's
+    out.notes.push_back("key Tab: target " + std::to_string(c[next]) + " (" + std::to_string(next + 1) + " of " +
+                        std::to_string(c.size()) + ")");
+}
+
 uint32_t Controller::nearestTarget(const WorldState& world, uint32_t now) const {
     auto c = targetCandidates(world, now, blacklist_);
     return c.empty() ? 0 : c.front();
@@ -260,7 +298,10 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
     }
     followStep(world, now, out);  // 3.0.13-beta.11: with the window behind and no pad too
     // 3.0.18-beta.207: the arrows walk with the pad switched off too (pad.keyWalk)
-    if ((!enabled_ && !pad.keyWalk) || !pad.connected || !view.focused || !world.inGame() || world.dead()) {
+    if ((!enabled_ && !pad.keyWalk && !pad.keyActs) || !pad.connected || !view.focused || !world.inGame() ||
+        world.dead()) {
+        keyActions_.clear();  // 3.0.18-beta.209: not kept for later
+        keyCycle_ = 0;
         walking_ = false;
         ringSteadyFromMs_.reset();
         aiming_ = false;
@@ -296,8 +337,11 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
     }
     if (dialog_ != NpcDialog::None) out.notes.push_back("NPC window closed");
     dialog_ = NpcDialog::None;
-    if (!enabled_) {  // 3.0.18-beta.207: the pad off, the arrows walking - nothing else of the pad
+    if (!enabled_) {  // 3.0.18-beta.207: the pad off - the arrows' walk; 3.0.18-beta.209: the keys' actions
         walk(pad, world, view, now, out);
+        keyStep(world, now, out);
+        stepApproach(world, now, out);
+        maintainTarget(false, world, now, out);
         return out;
     }
     bHeldSinceMs_.reset();
@@ -350,6 +394,7 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
         const std::optional<Cell> at = world.actorPos(npcChoice_, now);
         if (!at || cellDistance(world.selfPos(now), *at) > kNpcReach) npcChoice_ = 0;
     }
+    keyStep(world, now, out);  // 3.0.18-beta.209: the keys' actions, as pressed buttons
     if (choosing_) {  // 3.0.11-beta.85: the buttons choose whom the support skill goes on; the sticks go on
         choose(down, world, now, out);
         armed_ = 0;  // nothing held then repeats or attacks
@@ -915,7 +960,8 @@ void Controller::useSlot(int slot, bool repeat, const WorldState& world, uint32_
     if (!due(last, now, kSlotIntervalMs)) return;
     last = now;
     if (!repeat) out.slotUsed = slot;  // 3.0.11-beta.254: its cell shown pressed
-    if (!repeat && key.type != 0) {  // 3.0.11-beta.85: a support skill with party members in sight asks whom
+    // 3.0.11-beta.85: a support skill with party members in sight asks whom (3.0.18-beta.209: not from a key)
+    if (!repeat && key.type != 0 && !keyFiring_) {
         auto sk = world.skill(uint16_t(key.id));
         if (sk && sk->lv > 0 && choosesWhom(*sk)) {
             std::vector<uint32_t> who;
