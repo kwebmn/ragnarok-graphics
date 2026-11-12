@@ -212,6 +212,8 @@ int mostScroll(const Layout& L, size_t count) {
 Hit hitTest(const Layout& L, size_t shownCount, int scroll, float x, float y) {
     if (!L.glass.contains(x, y)) return Hit{};
     if (L.close.contains(x, y)) return Hit{Part::Close, -1};
+    if (const ScrollBar bar = scrollBar(L, shownCount, scroll); bar.track.w > 0 && bar.track.contains(x, y))
+        return Hit{Part::Scroll, -1};  // 3.0.18-beta.204
     for (size_t i = 0; i < L.tabs.size(); ++i)
         if (L.tabs[i].contains(x, y)) return Hit{Part::Tab, int(i)};
     if (L.search.contains(x, y)) return Hit{Part::Search, -1};
@@ -225,6 +227,41 @@ Hit hitTest(const Layout& L, size_t shownCount, int scroll, float x, float y) {
     if (L.grid.contains(x, y)) return Hit{Part::Grid, -1};
     if (y < L.title.y + L.title.h) return Hit{Part::Title, -1};
     return Hit{Part::Body, -1};
+}
+
+ScrollBar scrollBar(const Layout& L, size_t shownCount, int scroll) {
+    const int most = mostScroll(L, shownCount);
+    if (most <= 0 || L.grid.h <= 0) return ScrollBar{};
+    const float s = L.s > 0 ? L.s : 1;
+    const int rows = most + L.rows;
+    ScrollBar b;
+    b.track = panel::Box{L.grid.x + L.grid.w + 1 * s, L.grid.y, 15 * s, L.grid.h};
+    const float h = L.grid.h * float(L.rows) / float(rows);
+    b.thumb = panel::Box{b.track.x, L.grid.y + (L.grid.h - h) * float(std::clamp(scroll, 0, most)) / float(most),
+                         b.track.w, h};
+    return b;
+}
+
+int scrollFor(const Layout& L, size_t shownCount, float y, float grab) {
+    const int most = mostScroll(L, shownCount);
+    if (most <= 0) return 0;
+    const ScrollBar b = scrollBar(L, shownCount, 0);
+    const float room = L.grid.h - b.thumb.h;
+    if (room <= 0) return 0;
+    const float t = (y - grab - L.grid.y) / room;
+    return std::clamp(int(std::lround(t * float(most))), 0, most);
+}
+
+bool BarDrag::press(const Layout& L, size_t shownCount, int& scroll, float y) {
+    const ScrollBar b = scrollBar(L, shownCount, scroll);
+    if (b.track.w <= 0) return on = false;
+    grab = y >= b.thumb.y && y <= b.thumb.y + b.thumb.h ? y - b.thumb.y : b.thumb.h / 2;
+    scroll = scrollFor(L, shownCount, y, grab);
+    return on = true;
+}
+
+void BarDrag::move(const Layout& L, size_t shownCount, int& scroll, float y) const {
+    if (on) scroll = scrollFor(L, shownCount, y, grab);
 }
 
 std::string tipFirst(const Item& it) { return tipFirstOf(it); }

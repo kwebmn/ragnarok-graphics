@@ -75,6 +75,7 @@ using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
 
 struct State {
+    iw::BarDrag bar;  // 3.0.18-beta.204: the scroll bar held
     // 3.0.18-beta.155 (the owner: several things picked with Ctrl and taken together): the things picked
     // (Ctrl / Shift / Ctrl+A), those being taken into the bag (one each 250 ms, a stack's count all)
     itempick::Picked picked;
@@ -592,6 +593,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     float tx = 0, ty = 0;
     bool fromGame = false;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, &fromGame)) return false;
+    // 3.0.18-beta.204 (a tester: «а скрол еще не працює»): the scroll bar held - the rows follow the pointer
+    if (s.bar.on && m == WM_MOUSEMOVE && !(wp & MK_LBUTTON)) s.bar.release();  // let go outside the window
+    if (s.bar.on && (m == WM_MOUSEMOVE || m == WM_LBUTTONUP)) {
+        s.bar.move(s.layout, s.shownItems.size(), s.show.scroll, ty - float(s.layout.y));
+        if (m == WM_LBUTTONUP) s.bar.release();
+        result = 0;
+        return true;
+    }
     if (s.moving) {  // its title dragged: it follows the cursor, inside the screen
         if (m == WM_MOUSEMOVE || m == WM_LBUTTONUP) {
             const int roomX = std::max(1, s.targetW - s.layout.w), roomY = std::max(1, s.targetH - s.layout.h);
@@ -666,6 +675,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     if (h.part != iw::Part::Search) s.show.typing = false;
     switch (h.part) {
+        case iw::Part::Scroll:  // 3.0.18-beta.204: the thumb taken, or the strip pressed - it jumps there
+            s.bar.press(s.layout, s.shownItems.size(), s.show.scroll, ty - float(s.layout.y));
+            break;
         case iw::Part::Close: {
             const bool asked = closeGameWindow();
             if (s.told++ < 30)

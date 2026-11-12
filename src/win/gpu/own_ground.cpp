@@ -88,6 +88,7 @@ void Renderer::Impl::dropOwnGround() {
     ownState.texture = ownState.level = 0;
     ownState.atlasRow = 0;
     ownState.up = ownState.groundUp = false;
+    ownState.refused = false;  // 3.0.18-beta.204
     ownState.frame = false;
     for (int m = 0; m < 2; ++m) {  // 3.0.4-beta.12
         std::vector<uint32_t>().swap(ownState.colours[m]);
@@ -139,6 +140,15 @@ bool Renderer::Impl::prepareOwnGround() {
         for (const OwnGround::Picture& p : g->textures)
             o.ids.push_back(p.levels.empty() ? 0 : ownTexture(p.width, p.height, int(p.levels.size())));
         o.atlas = g->atlas.argb.empty() ? 0 : ownTexture(g->atlas.width, g->atlas.height, 1);
+        // 3.0.18-beta.204 (R-7XY449: the ground white): a texture of it or its lightmaps not made on the card (its
+        // memory, its views) would be drawn white (a texture not there is) - the game's own ground on this map
+        unsigned unmade = 0;
+        for (size_t k = 0; k < g->textures.size(); ++k) unmade += !g->textures[k].levels.empty() && !o.ids[k];
+        unmade += !g->atlas.argb.empty() && !o.atlas;
+        o.refused = unmade > 0;
+        if (o.refused)
+            LOG_INFO("own ground: %s - %u of its pictures not made on the card (its memory?) - the game's own ground "
+                     "on this map, not a white one", g->map.c_str(), unmade);
         for (const OwnGround::Picture& p : g->modelTextures)  // 3.0.4-beta.14
             o.modelIds.push_back(p.levels.empty() ? 0 : ownTexture(p.width, p.height, int(p.levels.size())));
         for (const OwnGround::Picture& p : g->waterPictures)  // 3.0.4-beta.20
@@ -146,6 +156,7 @@ bool Renderer::Impl::prepareOwnGround() {
         o.learning.reset(g->models, g->toLight);
         o.modelsTurn = own_models::NotingTurn{};  // 3.0.4-beta.34: the map's own, from its first
     }
+    if (o.refused) return false;  // 3.0.18-beta.204
     if (o.up) return true;
     o.uploads.reset();
     size_t texels = 0;

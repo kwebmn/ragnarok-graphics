@@ -376,6 +376,35 @@ void MapWorld::loop() {
                         own->textures.push_back(picture(t, true));
                         found += own->textures.back().levels.empty() ? 0 : 1;
                     }
+                    // 3.0.18-beta.204 (R-7XY449, a tester's «зайшов і відразу побіліло»: the ground white - the game's
+                    // corners' colour on a white picture, as a texture not there is drawn): one not read is read again
+                    // (the game's archives may be busy while it loads the map); one still not there that a surface
+                    // shows - the game's own ground on this map, not a white one
+                    for (int again = 0; again < 3 && found < full.textures.size(); ++again) {
+                        Sleep(250);
+                        for (size_t i = 0; i < full.textures.size(); ++i)
+                            if (own->textures[i].levels.empty()) {
+                                own->textures[i] = picture(full.textures[i], true);
+                                found += own->textures[i].levels.empty() ? 0 : 1;
+                            }
+                    }
+                    bool whiteRisk = false;
+                    if (found < full.textures.size()) {
+                        std::vector<bool> used(full.textures.size(), false);
+                        for (const gnd::Surface& sf : full.surfaces)
+                            if (sf.texture >= 0 && size_t(sf.texture) < used.size()) used[size_t(sf.texture)] = true;
+                        std::string missing;
+                        for (size_t i = 0; i < full.textures.size(); ++i)
+                            if (own->textures[i].levels.empty()) {
+                                missing += (missing.empty() ? "" : ", ") + full.textures[i];
+                                if (!used[i]) missing += " (unused)";
+                                whiteRisk = whiteRisk || used[i];
+                            }
+                        LOG_INFO("own ground: %s - %u of %u textures not read after 3 tries: %s%s", name.c_str(),
+                                 unsigned(full.textures.size()) - found, unsigned(full.textures.size()),
+                                 missing.c_str(),
+                                 whiteRisk ? " - the game's own ground on this map, not a white one" : "");
+                    }
                     // 3.0.4-beta.14: its models, each file read once, placed as the map places them
                     std::vector<std::string> modelNames;
                     std::vector<rsm::Model> files;
@@ -492,6 +521,7 @@ void MapWorld::loop() {
                                  : room == own_ground::Room::None   ? ": none of it - the game's own ground"
                                                                     : "");
                     if (room == own_ground::Room::None) own.reset();
+                    if (whiteRisk) own.reset();  // 3.0.18-beta.204
                 }
             } catch (const std::bad_alloc&) {
                 own.reset();

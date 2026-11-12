@@ -744,6 +744,9 @@ struct Renderer::Impl {
     UINT64 readbackSize = 0;
 
     std::unordered_map<uint32_t, Texture> textures;
+    // 3.0.18-beta.204 (R-7XY449: the ground white): a texture drawn that is not there is drawn white - told once each
+    std::vector<uint32_t> whiteTold;
+    void noteDrawnWhite(uint32_t id, int stage);
     uint32_t nextTexture = 1;
     uint32_t white = 0;
 
@@ -1295,6 +1298,7 @@ struct Renderer::Impl {
         int atlasRow = 0;
         bool up = false;            // all of them up
         bool groundUp = false;      // 3.0.4-beta.27: the ground's own (its textures, its lightmaps): drawn from then
+        bool refused = false;       // 3.0.18-beta.204: a picture of it not made on the card - the game's ground
         bool decided = false, frame = false, drawn = false;  // this picture's: drawn in place of the game's
         bool likeKnown = false;     // 3.0.4-beta.16: kept over the pictures (the camera far out: none of the game's)
         bool likeTaken = false;     // this picture's taken

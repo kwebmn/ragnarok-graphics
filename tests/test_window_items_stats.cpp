@@ -1,6 +1,7 @@
 // 3.0.11-beta.42: the windows «Речі» (core/item_window) and «Характеристики» (core/stat_window) - their tabs and
 // uses as the game's, the search, their places and the mouse, the stats' prices and what a point gives
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <set>
 #include <string>
@@ -510,4 +511,49 @@ TEST(items_a_pets_accessory_is_worn) {
     other.identified = true;
     other.id = 2301;
     CHECK(itemwin::useOf(other) == itemwin::Use::None);
+}
+
+// 3.0.18-beta.204 (a tester: «а скрол еще не працює» - «Склад»'s bar was only drawn): the scroll bar beside the grid
+// - its strip from the grid's right edge, the thumb in it as the bar draws it - taken by the mouse
+TEST(item_window_scroll_bar_taken_by_the_mouse) {
+    const itemwin::Texts t = itemTexts();
+    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
+    CHECK_EQ(itemwin::scrollBar(L, 40, 0).track.w, 0.0f);  // all in sight: no bar
+    CHECK(itemwin::hitTest(L, 40, 0, L.grid.x + L.grid.w + 6, L.grid.y + 10).part != itemwin::Part::Scroll);
+    // 100 things, 13 rows, 5 in sight: the thumb 5/13 of the grid's height, at the top, then at the bottom
+    const itemwin::ScrollBar top = itemwin::scrollBar(L, 100, 0);
+    CHECK(top.track.x >= L.grid.x + L.grid.w && top.track.x + top.track.w <= L.glass.x + L.glass.w);
+    CHECK(top.track.y == L.grid.y && top.track.h == L.grid.h);
+    CHECK(std::fabs(top.thumb.h - L.grid.h * 5 / 13) < 0.5f);
+    CHECK(std::fabs(top.thumb.y - L.grid.y) < 0.5f);
+    const itemwin::ScrollBar bottom = itemwin::scrollBar(L, 100, 8);
+    CHECK(std::fabs(bottom.thumb.y + bottom.thumb.h - (L.grid.y + L.grid.h)) < 0.5f);
+    // its strip a part of its own, no cell under it
+    const itemwin::Hit h = itemwin::hitTest(L, 100, 0, top.track.x + top.track.w / 2, L.grid.y + L.grid.h / 2);
+    CHECK(h.part == itemwin::Part::Scroll);
+    for (const panel::Box& c : L.cells) CHECK(c.x + c.w <= top.track.x);
+    // the scroll for a place along it: the thumb's top where the pointer is less where it was taken; past the ends
+    const float room = L.grid.h - top.thumb.h;  // the thumb's way: 8 rows along it
+    CHECK_EQ(itemwin::scrollFor(L, 100, L.grid.y - 50, 0), 0);
+    CHECK_EQ(itemwin::scrollFor(L, 100, L.grid.y + L.grid.h + 50, 0), 8);
+    CHECK_EQ(itemwin::scrollFor(L, 100, L.grid.y + room / 2 + 3, 3), 4);
+    CHECK_EQ(itemwin::scrollFor(L, 40, L.grid.y + 100, 0), 0);  // nothing to scroll
+    // pressed on the thumb: kept, then dragged along; let go
+    itemwin::BarDrag drag;
+    int scroll = 0;
+    CHECK(drag.press(L, 100, scroll, top.thumb.y + 4));
+    CHECK(drag.on);
+    CHECK_EQ(scroll, 0);
+    drag.move(L, 100, scroll, top.thumb.y + 4 + room / 2);
+    CHECK_EQ(scroll, 4);
+    drag.release();
+    CHECK(!drag.on);
+    drag.move(L, 100, scroll, L.grid.y);  // not held: nothing
+    CHECK_EQ(scroll, 4);
+    // pressed on the strip under the thumb: it jumps there, its middle under the pointer
+    scroll = 0;
+    CHECK(drag.press(L, 100, scroll, L.grid.y + L.grid.h - 1));
+    CHECK_EQ(scroll, 8);
+    drag.release();
+    CHECK(!drag.press(L, 40, scroll, L.grid.y + 10));  // nothing to scroll: not taken
 }

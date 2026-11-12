@@ -427,7 +427,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     for (int i = 0; i < 2; ++i) {
         const uint32_t id = i == 0 && twin ? d.twin : d.texture[i];
         auto it = textures.find(id ? id : white);
-        if (it == textures.end()) it = textures.find(white);
+        if (it == textures.end()) {
+            if (id && id != white) noteDrawnWhite(id, i);  // 3.0.18-beta.204
+            it = textures.find(white);
+        }
         if (it == textures.end()) return;
         t[i] = &it->second;
         // A world texture the network has done is drawn in its place; one it has not, waits its turn. In the
@@ -798,6 +801,16 @@ void Renderer::Impl::noteWaterLevel(const FrameRecord& rec, const DrawCmd& d) {
     waterTop = waterLevelKnown ? std::min(waterTop, top) : top;
     waterLevelNoted = true;
     waterLevelKnown = true;
+}
+
+// 3.0.18-beta.204 (R-7XY449, a tester's «зайшов і відразу побіліло»): a draw's texture that is not there (let go, or
+// never made) is drawn with the white one - a ground white on the game's corner colours; told once each, 12 at most
+void Renderer::Impl::noteDrawnWhite(uint32_t id, int stage) {
+    if (whiteTold.size() >= 12 || std::find(whiteTold.begin(), whiteTold.end(), id) != whiteTold.end()) return;
+    whiteTold.push_back(id);
+    const bool own = id >= 0xF0000000u;
+    LOG_INFO("draw: texture %u (%s) is not there - drawn white (stage %d)%s", own ? id - 0xF0000000u : id,
+             own ? "the own ground's" : "the game's", stage, whiteTold.size() == 12 ? "; no more of these told" : "");
 }
 
 }  // namespace uagfx::gpu

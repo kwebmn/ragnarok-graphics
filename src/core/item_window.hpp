@@ -124,13 +124,33 @@ struct Layout {
 Layout layout(int x, int y, float scale, const Texts& t, const Measure& m);
 int mostScroll(const Layout& L, size_t count);
 
-// 3.0.11-beta.113: Star; 3.0.18-beta.155: Picked - the footer's button for the things picked
-enum class Part : uint8_t { None, Close, Tab, Search, Cell, Grid, Title, Body, Star, Picked };
+// 3.0.11-beta.113: Star; 3.0.18-beta.155: Picked - the footer's button for the things picked; 3.0.18-beta.204: Scroll -
+// the scroll bar's strip beside the grid
+enum class Part : uint8_t { None, Close, Tab, Search, Cell, Grid, Title, Body, Star, Picked, Scroll };
 struct Hit {
     Part part = Part::None;
     int index = -1;  // a tab's; a cell's (of the shown, the scroll counted)
 };
 Hit hitTest(const Layout& L, size_t shownCount, int scroll, float x, float y);
+
+// 3.0.18-beta.204 (a tester: «а скрол еще не працює» - «Склад»'s bar was only drawn): the scroll bar beside the grid
+// taken by the mouse - its strip (from the grid's right edge, 16 wide at scale 1, as tall as the grid) and the thumb in
+// it where the bar draws it (its height the rows in sight of all); both 0 wide when everything shows
+struct ScrollBar {
+    panel::Box track, thumb;
+};
+ScrollBar scrollBar(const Layout& L, size_t shownCount, int scroll);
+// the scroll that puts the thumb's top `grab` pixels above `y` (where it is held), within its ends
+int scrollFor(const Layout& L, size_t shownCount, float y, float grab);
+// The thumb held: pressed on it - kept and dragged from where it was taken; on the strip - it jumps there (its middle
+// under the pointer) and is held on
+struct BarDrag {
+    bool on = false;
+    float grab = 0;
+    bool press(const Layout& L, size_t shownCount, int& scroll, float y);  // false: nothing to scroll
+    void move(const Layout& L, size_t shownCount, int& scroll, float y) const;
+    void release() { on = false; }
+};
 // 3.0.11-beta.196: the cell a hit points at - on its star too (its ☆ stays to be pressed); -1 none
 inline int pointedCell(const Hit& h) { return h.part == Part::Cell || h.part == Part::Star ? h.index : -1; }
 
