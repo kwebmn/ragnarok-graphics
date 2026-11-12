@@ -26,4 +26,11 @@ struct Letter {
 };
 Letter letter(Button b, Family f, float x, float y, float side);
 
+// 3.0.18-beta.210 (the keyboard concept, stage 4): the keys driving a window (win/key_nav) - while on, every button is
+// drawn as its key's cap with the key's name (A Enter, B Esc, X Space, Y Shift+F10, LB PgUp, RB PgDn, the D-pad the
+// arrows, Start Esc), whatever family the caller asks
+void setKeyCaps(bool on);
+bool keyCaps();
+const char* keyName(Button b);  // "" for a button no key stands for
+
 }  // namespace uagfx::padglyph

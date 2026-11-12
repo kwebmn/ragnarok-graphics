@@ -721,7 +721,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         readData(s);
         applyStep(s, now);
     }
-    const uapad::runtime::Look pad = uapad::runtime::look();
+    const uapad::runtime::Look pad = uapad::runtime::navLook();  // .210: keys too
     s.show.pad = pad.shown;
     s.show.sony = pad.sony;
     const int count = s.data.tabs.empty() ? 0 : int(s.data.tabs[size_t(s.show.tab)].skills.size());

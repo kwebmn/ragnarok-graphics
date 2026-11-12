@@ -187,7 +187,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.scale = uistyle::readingScale(k);
     s.targetW = targetWidth;
     s.targetH = targetHeight;
-    s.padNow = uapad::runtime::look().shown;
+    s.padNow = uapad::runtime::navLook().shown;
     const int number = int(read32(window + kNumber));
     if (window != s.window || number != s.number) {
         int count = 0;

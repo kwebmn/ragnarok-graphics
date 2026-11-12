@@ -463,11 +463,11 @@ static void frameInner(HWND game, bool on, double k, int targetWidth, int target
         }
         s.show.hoverClose = h.part == sw::Part::Close;
     }
-    if (uapad::runtime::look().shown && s.tab == 0) {  // 3.0.11-beta.92: the controller's stat - its «+» lit
+    if (uapad::runtime::navLook().shown && s.tab == 0) {  // 3.0.11-beta.92: the controller's stat - its «+» lit
         if (s.show.selected < 0 || s.show.selected > 5) s.show.selected = 0;
         s.show.hoverPlus = s.show.selected;
     }
-    if (uapad::runtime::look().shown && s.tab == sw::kPlanTab) {  // .296: the controller's row - its › or + lit
+    if (uapad::runtime::navLook().shown && s.tab == sw::kPlanTab) {  // .296: the controller's row - its › or + lit
         s.padRow = std::clamp(s.padRow, 0, kPadRows - 1);
         s.show.hoverPlan = int(s.padRow == 0                ? sw::Part::PlanLevel
                                : s.padRow <= sw::kStats     ? sw::Part::PlanPlus

@@ -739,7 +739,7 @@ void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth
             s.fresh.erase(it.index);
         }
     }
-    s.padNow = uapad::runtime::look().shown;  // 3.0.11-beta.91: the controller's frame and its tip at once
+    s.padNow = uapad::runtime::navLook().shown;  // 3.0.11-beta.91: the controller's frame and its tip at once
     s.show.dropping = windrag::now().kind == windrag::Kind::Worn;  // 3.0.11-beta.110: a drop here takes it off
     if (s.padNow && !s.shownItems.empty()) {
         s.padFocus = std::clamp(s.padFocus, 0, int(s.shownItems.size()) - 1);

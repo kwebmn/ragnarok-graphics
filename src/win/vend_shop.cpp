@@ -392,7 +392,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.scale = uistyle::readingScale(k);
     s.targetW = targetWidth;
     s.targetH = targetHeight;
-    s.padNow = uapad::runtime::look().shown;
+    s.padNow = uapad::runtime::navLook().shown;  // .210: the keys too
     readShop(s);
     s.show.zeny = int32_t(read32(kZeny));
     s.layout = vs::layout(targetWidth, targetHeight, s.scale, s.rows.size());

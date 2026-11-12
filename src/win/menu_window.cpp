@@ -233,7 +233,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
                                      float(cy) * float(k) - float(s.layout.y));
         if (row >= 0) s.show.hover = row;
     }
-    s.padNow = uapad::runtime::look().shown;
+    s.padNow = uapad::runtime::navLook().shown;
     const std::string key = std::to_string(int(kind)) + ';' + std::to_string(s.layout.x) + ',' +
                             std::to_string(s.layout.y) + ';' + std::to_string(s.scale) + ';' +
                             std::to_string(s.show.hover) + ',' + std::to_string(s.show.focus) +

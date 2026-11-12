@@ -446,7 +446,7 @@ static void frameInner(HWND game, bool on, bool counts, unsigned codePage, doubl
     s.scale = uistyle::readingScale(k);
     s.targetW = targetWidth;
     s.targetH = targetHeight;
-    s.padNow = uapad::runtime::look().shown;
+    s.padNow = uapad::runtime::navLook().shown;
     s.card = cardOf(s, kind, window);
     const ac::Texts t = texts(s);
     s.layout = ac::layout(s.card, targetWidth, targetHeight, s.scale, t);

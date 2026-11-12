@@ -644,7 +644,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         readData(s);
         if (s.show.picking) readPicks(s, s.show.pickSlot);
     }
-    const uapad::runtime::Look pad = uapad::runtime::look();
+    const uapad::runtime::Look pad = uapad::runtime::navLook();  // .210: keys too
     s.show.pad = pad.shown;
     s.show.sony = pad.sony;
     s.show.dropFits = dropFits();  // 3.0.11-beta.110

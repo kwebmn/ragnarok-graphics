@@ -49,6 +49,9 @@ struct Look {
     Bindings bindings{};  // the layout in use
 };
 Look look();
+// 3.0.18-beta.210 (the keyboard concept, stage 4): look() with `shown` while the keys drive a window too (win/key_nav)
+// - the windows' gold ring and hints (their buttons' names the keys' then, padglyph key caps)
+Look navLook();
 // A key or a click in the game's window (window_switch): the keys' names back on the interface
 void noteKeysOrMouse(bool click);
 // 3.0.11-beta.87 (the concept's stage 3): the pad's target, and the monster a light tilt of the right stick points at

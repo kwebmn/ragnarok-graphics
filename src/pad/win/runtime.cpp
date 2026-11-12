@@ -42,6 +42,8 @@
 #include "pad/win/log.hpp"
 #include "pad/win/overlay.hpp"
 #include "pad/win/pads.hpp"
+#include "core/pad_glyphs.hpp"
+#include "win/key_nav.hpp"
 #include "win/key_walk.hpp"
 #include "win/ui_sheet.hpp"
 #include "win/disk.hpp"
@@ -1460,7 +1462,17 @@ void tick() {
     // last opened or clicked in («Довідник» with no controller too, as before)
     using uagfx::winstack::Win;
     const std::optional<Win> top = menuOpen ? std::nullopt : uagfx::win::windowstack::top();
-    const bool drive = top && (*top == Win::Reference || (pad.connected && *top != Win::Npc));
+    // 3.0.18-beta.210 (the keyboard concept, stage 4): the keys drive the top window too (win/key_nav) - its pad
+    // handler takes them as the D-pad, A, B, X, LB / RB and Y; its hints name the keys
+    uagfx::win::keynav::frame(top ? int(*top) : -1);
+    const bool keyNav = top && *top != Win::Npc && uagfx::win::keynav::engaged();
+    uagfx::padglyph::setKeyCaps(keyNav);
+    PadState winPad = pad;
+    if (keyNav) {
+        winPad.connected = true;
+        winPad.buttons = uint16_t(winPad.buttons | uagfx::win::keynav::buttons());
+    }
+    const bool drive = top && (*top == Win::Reference || ((pad.connected || keyNav) && *top != Win::Npc));
     if (drive && top != s.padTop) LOG_INFO("pad: %s takes the controller (the top window)", kTopNames[int(*top)]);
     s.padTop = drive ? top : std::nullopt;
     // 3.0.11-beta.214 (the owner: «как сделать удобно начинать общение с геймпада» - «придумай»): the Talk button held
@@ -1490,40 +1502,40 @@ void tick() {
                   : uagfx::win::padcarrywin::active() && !menuOpen   ? carryPad(pad, now)   // 3.0.11-beta.121
                   : uagfx::win::padassignwin::isOpen() && !menuOpen ? assignPad(pad, now)  // 3.0.11-beta.91
                   : uagfx::win::padtileswin::isOpen() && !menuOpen ? tilePad(pad, now)    // 3.0.11-beta.90
-                  : drive && *top == Win::Reference                ? referencePad(pad)    // 3.0.11-beta.21
-                  : drive && *top == Win::Items                    ? itemsPad(pad, now)   // .91
-                  : drive && *top == Win::Stats                    ? statsPad(pad, now)   // .92
-                  : drive && *top == Win::Skills                   ? skillsPad(pad, now)  // .96
-                  : drive && *top == Win::Equip                    ? equipPad(pad, now)   // .97
-                  : drive && *top == Win::Shop                     ? shopPad(pad, now)    // .100
-                  : drive && *top == Win::Storage                  ? storagePad(pad, now)  // .115
-                  : drive && *top == Win::Trade                    ? tradePad(pad, now)    // .116
-                  : drive && *top == Win::Menu                     ? menuPad(pad, now)     // .140
+                  : drive && *top == Win::Reference                ? referencePad(winPad)    // 3.0.11-beta.21
+                  : drive && *top == Win::Items                    ? itemsPad(winPad, now)   // .91
+                  : drive && *top == Win::Stats                    ? statsPad(winPad, now)   // .92
+                  : drive && *top == Win::Skills                   ? skillsPad(winPad, now)  // .96
+                  : drive && *top == Win::Equip                    ? equipPad(winPad, now)   // .97
+                  : drive && *top == Win::Shop                     ? shopPad(winPad, now)    // .100
+                  : drive && *top == Win::Storage                  ? storagePad(winPad, now)  // .115
+                  : drive && *top == Win::Trade                    ? tradePad(winPad, now)    // .116
+                  : drive && *top == Win::Menu                     ? menuPad(winPad, now)     // .140
                   : drive && *top == Win::ItemCard                 ? cardPad(true, pad, now)   // .149
                   : drive && *top == Win::SkillCard                ? cardPad(false, pad, now)
-                  : drive && *top == Win::SlotCard                 ? slotCardPad(pad, now)  // 3.0.18-beta.139
-                  : drive && *top == Win::Ask                      ? askPad(pad)  // .150: an input's - the game's
-                  : drive && *top == Win::Message                  ? messagePad(pad)  // .151
-                  : drive && *top == Win::Login                    ? loginPad(pad, now)       // .179
-                  : drive && *top == Win::CharSelect               ? charSelectPad(pad, now)  // .152
-                  : drive && *top == Win::CharMake                 ? charMakePad(pad, now)    // .153
-                  : drive && *top == Win::Cart                     ? cartPad(pad, now)        // .154
-                  : drive && *top == Win::Vending                  ? vendPad(pad, now)        // .156
-                  : drive && *top == Win::Pick                     ? pickPad(pad, now)        // .157
-                  : drive && *top == Win::PartySetup               ? partySetupPad(pad, now)  // .158
-                  : drive && *top == Win::Pet                      ? petPad(pad, now)         // .159
-                  : drive && *top == Win::Homun                    ? homunPad(pad, now)       // .160
-                  : drive && *top == Win::Merc                     ? mercPad(pad, now)        // .161
+                  : drive && *top == Win::SlotCard                 ? slotCardPad(winPad, now)  // 3.0.18-beta.139
+                  : drive && *top == Win::Ask                      ? askPad(winPad)  // .150: an input's - the game's
+                  : drive && *top == Win::Message                  ? messagePad(winPad)  // .151
+                  : drive && *top == Win::Login                    ? loginPad(winPad, now)       // .179
+                  : drive && *top == Win::CharSelect               ? charSelectPad(winPad, now)  // .152
+                  : drive && *top == Win::CharMake                 ? charMakePad(winPad, now)    // .153
+                  : drive && *top == Win::Cart                     ? cartPad(winPad, now)        // .154
+                  : drive && *top == Win::Vending                  ? vendPad(winPad, now)        // .156
+                  : drive && *top == Win::Pick                     ? pickPad(winPad, now)        // .157
+                  : drive && *top == Win::PartySetup               ? partySetupPad(winPad, now)  // .158
+                  : drive && *top == Win::Pet                      ? petPad(winPad, now)         // .159
+                  : drive && *top == Win::Homun                    ? homunPad(winPad, now)       // .160
+                  : drive && *top == Win::Merc                     ? mercPad(winPad, now)        // .161
                   // .162; 3.0.18-beta.124: «Налаштування» (live) walked by its own controls
-                  : drive && *top == Win::Options && !uagfx::win::uisheet::hasNav(int(*top)) ? optionsPad(pad, now)
-                  : drive && *top == Win::Social                   ? socialPad(pad, now)      // .163
-                  : drive && *top == Win::Servers                  ? serversPad(pad, now)     // .164
-                  : drive && *top == Win::Guild                    ? guildPad(pad, now)       // .165
-                  : drive && *top == Win::MyShop                   ? myShopPad(pad, now)      // .166
-                  : drive && *top == Win::WhisperSetup             ? whisperSetupPad(pad, now)  // .168
-                  : drive && *top == Win::Tip                      ? tipPad(pad, now)           // .204
-                  : drive && *top == Win::VendSetup                ? vendSetupPad(pad, now)     // 3.0.16-beta.39
-                  : drive && uagfx::win::uisheet::hasNav(int(*top)) ? walkPad(int(*top), pad, now)  // .18-beta.60
+                  : drive && *top == Win::Options && !uagfx::win::uisheet::hasNav(int(*top)) ? optionsPad(winPad, now)
+                  : drive && *top == Win::Social                   ? socialPad(winPad, now)      // .163
+                  : drive && *top == Win::Servers                  ? serversPad(winPad, now)     // .164
+                  : drive && *top == Win::Guild                    ? guildPad(winPad, now)       // .165
+                  : drive && *top == Win::MyShop                   ? myShopPad(winPad, now)      // .166
+                  : drive && *top == Win::WhisperSetup             ? whisperSetupPad(winPad, now)  // .168
+                  : drive && *top == Win::Tip                      ? tipPad(winPad, now)           // .204
+                  : drive && *top == Win::VendSetup                ? vendSetupPad(winPad, now)     // 3.0.16-beta.39
+                  : drive && uagfx::win::uisheet::hasNav(int(*top)) ? walkPad(int(*top), winPad, now)  // .18-beta.60
                   : !drive && !menuOpen && pad.connected && uagfx::win::padpanels::active()
                       ? panelsPad(pad, now)  // 3.0.18-beta.135
                   : !drive && !menuOpen && pad.connected && uagfx::win::minimapproto::bigShown()
@@ -1601,6 +1613,12 @@ Look look() {
     l.shown = s.padConnected && s.session->controller().enabled() && s.mode.padShown(GetTickCount64());
     l.sony = s.pad.sony();
     l.bindings = s.session->controller().bindings();
+    return l;
+}
+
+Look navLook() {
+    Look l = look();
+    if (uagfx::win::keynav::engaged()) l.shown = true;
     return l;
 }
 

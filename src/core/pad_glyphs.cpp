@@ -1,5 +1,7 @@
 #include "core/pad_glyphs.hpp"
 
+#include <algorithm>
+
 #include "core/ui_icons.hpp"
 
 namespace uagfx::padglyph {
@@ -10,6 +12,15 @@ constexpr uint32_t kXbox[4] = {0x4CC35A, 0xF25A4E, 0x4A90F0, 0xF3C33A};  // A B 
 constexpr uint32_t kSony[4] = {0x7FA7F5, 0xF5707A, 0xE68BD0, 0x3FD3A8};  // cross circle square triangle
 constexpr uiicons::Icon kSonyShape[4] = {uiicons::Icon::PadCross, uiicons::Icon::PadCircle,
                                          uiicons::Icon::PadSquare, uiicons::Icon::PadTriangle};
+
+bool g_keyCaps = false;  // 3.0.18-beta.210
+
+// the name's letters (an arrow one)
+int chars(const char* s) {
+    int n = 0;
+    for (; *s; ++s) n += (uint8_t(*s) & 0xC0) != 0x80;
+    return n;
+}
 
 bool face(Button b) { return b <= Button::Y; }
 bool pill(Button b) { return (b >= Button::LB && b <= Button::RT) || b == Button::Start || b == Button::Back; }
@@ -41,7 +52,29 @@ Button buttonOf(uint16_t padBit) {
     return Button::kCount;
 }
 
+void setKeyCaps(bool on) { g_keyCaps = on; }
+
+bool keyCaps() { return g_keyCaps; }
+
+const char* keyName(Button b) {
+    switch (b) {
+        case Button::A: return "Enter";
+        case Button::B: return "Esc";
+        case Button::X: return "Space";
+        case Button::Y: return "Shift+F10";
+        case Button::LB: return "PgUp";
+        case Button::RB: return "PgDn";
+        case Button::Up: return "\xE2\x86\x91";
+        case Button::Right: return "\xE2\x86\x92";
+        case Button::Down: return "\xE2\x86\x93";
+        case Button::Left: return "\xE2\x86\x90";
+        case Button::Start: return "Esc";
+        default: return "";
+    }
+}
+
 float widthOf(Button b, float side) {
+    if (g_keyCaps) return side * std::max(1.0f, 0.62f + 0.42f * float(std::max(1, chars(keyName(b)))));
     if (b == Button::Start || b == Button::Back) return side * 2.3f;
     return pill(b) ? side * 1.55f : side;
 }
@@ -49,7 +82,7 @@ float widthOf(Button b, float side) {
 void paint(panel::Picture& out, Button b, Family f, float x, float y, float side) {
     if (b >= Button::kCount || side <= 0) return;
     const float k = side / 24.0f, w = widthOf(b, side);
-    if (pill(b)) {
+    if (pill(b) || g_keyCaps) {  // 3.0.18-beta.210: a key's cap as a pill
         panel::roundRect(out, panel::Box{x, y, w, side}, side * 0.3f, kGround, 0.94f, kEdge, 0.95f, 1.4f * k);
         return;
     }
@@ -69,7 +102,11 @@ void paint(panel::Picture& out, Button b, Family f, float x, float y, float side
 Letter letter(Button b, Family f, float x, float y, float side) {
     Letter l;
     l.box = panel::Box{x, y, widthOf(b, side), side};
-    if (face(b) && f == Family::Xbox) {
+    if (g_keyCaps) {  // 3.0.18-beta.210: the key's name
+        l.text = keyName(b);
+        l.rgb = kText;
+        l.px = side * 0.46f;
+    } else if (face(b) && f == Family::Xbox) {
         static const char* const kLetters[4] = {"A", "B", "X", "Y"};
         l.text = kLetters[size_t(b)];
         l.rgb = kXbox[size_t(b)];

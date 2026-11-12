@@ -348,7 +348,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.scale = uistyle::readingScale(k);
     s.targetW = targetWidth;
     s.targetH = targetHeight;
-    s.padNow = uapad::runtime::look().shown;
+    s.padNow = uapad::runtime::navLook().shown;
     s.card = ac::Card{};
     s.card.kind = wait ? ac::Kind::Wait : s.kind;
     s.card.title = say(wait ? settings::Text::MsgWaitTitle : settings::Text::MsgTitle);

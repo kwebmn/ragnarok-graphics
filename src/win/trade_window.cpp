@@ -384,7 +384,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         s.tipSince = now;
     }
     s.show.tip = s.show.hover >= 0 && now - s.tipSince >= kTipMs;
-    s.padNow = uapad::runtime::look().shown;
+    s.padNow = uapad::runtime::navLook().shown;
     s.show.dropping = windrag::now().kind == windrag::Kind::Item;
     if (s.padNow) {
         s.padFocus = std::clamp(s.padFocus, 0, 2 * tw::kSlots - 1);

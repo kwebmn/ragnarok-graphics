@@ -490,7 +490,7 @@ static void liveFrame(State& s) {
     const Rml::String settingsWord = party && !s.partyName.empty() ? say(Text::SocialSettings) : "";
     const Rml::String empty = party ? say(Text::SocialNoPartyHint) : say(Text::SocialNoFriendsHint);
     Rml::String hint = say(Text::SocialMouseHint);
-    if (uapad::runtime::look().shown) {
+    if (uapad::runtime::navLook().shown) {
         hint = say(Text::SocialPadHint);
         const char* const labels[4] = {uapad::buttonLabel(0), uapad::buttonLabel(4), uapad::buttonLabel(5),
                                        uapad::buttonLabel(1)};
@@ -498,7 +498,7 @@ static void liveFrame(State& s) {
         for (int i = 0; i < 4; ++i)
             if (const size_t at = hint.find(marks[i]); at != Rml::String::npos) hint.replace(at, 3, labels[i]);
     }
-    const int padRow = uapad::runtime::look().shown ? s.show.focusRow : -1;
+    const int padRow = uapad::runtime::navLook().shown ? s.show.focusRow : -1;
     ul::Model& v = s.mv;
     if (rows != v.rows) v.rows = std::move(rows), s.live.doc.dirty("rows");
     if (menu != v.menu) v.menu = std::move(menu), s.live.doc.dirty("menu");

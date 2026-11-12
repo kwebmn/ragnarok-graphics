@@ -446,7 +446,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.scale = uistyle::readingScale(k);
     s.targetW = targetWidth;
     s.targetH = targetHeight;
-    s.padNow = uapad::runtime::look().shown;
+    s.padNow = uapad::runtime::navLook().shown;
     s.entries = readList(s, window);
     s.show.selected = chosenOf(window, kind);
     if (s.show.selected >= int(s.entries.size())) s.show.selected = -1;

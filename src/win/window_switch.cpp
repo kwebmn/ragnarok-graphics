@@ -1,3 +1,4 @@
+#include "win/key_nav.hpp"
 #include "win/key_walk.hpp"
 #include "win/walk_mode.hpp"
 #include "win/window_switch.hpp"
@@ -87,6 +88,7 @@ bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
     if (gamepress::pressOver(m)) return false;
     if (minimapproto::mouseBig(w, m, wp, lp, answer)) return true;  // 3.0.11-beta.260: the big map over the windows
     if (windowstack::mouse(w, m, wp, lp, answer)) {  // 3.0.11-beta.108: the windows, the stack's top first
+        if (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN || m == WM_LBUTTONDBLCLK) keynav::click(true);  // .210
         if (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN || m == WM_LBUTTONDBLCLK) minimapproto::lowerBig();  // .260
         return true;
     }
@@ -206,6 +208,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if (m == WM_KILLFOCUS || (m == WM_ACTIVATE && LOWORD(wp) == WA_INACTIVE) || (m == WM_ACTIVATEAPP && !wp)) {
         keywalk::lost();
         walkmodewin::lost();  // 3.0.18-beta.208
+        keynav::lost();       // 3.0.18-beta.210
     }
     if (m == WM_KEYDOWN && wp == VK_RETURN) g_lastEnter = GetTickCount64();
     if (g_switch) {
@@ -221,6 +224,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if (chatwin::searchKey(m, wp, lp)) return 0;  // 3.0.11-beta.284: Ctrl+F in the chat's field, its search
         npcwin::cutinEsc(m, wp);  // 3.0.13-beta.10: Esc closes the NPC's picture too (the key goes on)
         if (windowstack::key(m, wp, lp)) return 0;
+        if (keynav::key(m, wp, lp)) return 0;  // 3.0.18-beta.210: the keys drive the top window once an arrow did
         if (walkmodewin::key(m, wp, lp)) return 0;  // 3.0.18-beta.208: the walk mode's keys and letters
         if (keywalk::key(m, wp, lp)) return 0;  // 3.0.18-beta.207: the arrows walk while the chat line is empty
         if (chatwin::key(m, wp, lp)) return 0;       // 3.0.11-beta.41: the new chat's F10, Alt+F10 and Tab
@@ -284,7 +288,10 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     // 3.0.13-beta.11 (pick 42 of «50 идей»): a press the game gets - Shift on a player: followed for good; a plain one
     // on the world: the following ends (the game's own windows' presses aside); Esc too
     if (m == WM_LBUTTONDOWN && (wp & MK_SHIFT) && pointedActor()) uapad::runtime::followActor(pointedActor());
-    else if (m == WM_LBUTTONDOWN && !(wp & MK_SHIFT) && cursorOverWorld()) uapad::runtime::stopFollow("a click");
+    else if (m == WM_LBUTTONDOWN && !(wp & MK_SHIFT) && cursorOverWorld()) {
+        uapad::runtime::stopFollow("a click");
+        keynav::click(false);  // 3.0.18-beta.210: the keys back to the world
+    }
     else if (m == WM_KEYDOWN && wp == VK_ESCAPE) uapad::runtime::stopFollow("Esc");
     const BattleTyping typing = holdBattleTyping(m);
     const BattleEnter enter = holdBattleEnter(m, wp);
