@@ -26,6 +26,10 @@ void recolour(spritefile::Sprite& s, Look look);
 // The pack's name of a set's file for a body: "angel\<sex>\<body>.<ext>", "fallen\...", "dark.<ext>" (one for every
 // body); "" when `bodySprite` is not a human body's sprite ("data\sprite\인간족\몸통\<sex>\<body>.spr", CP949, any case)
 std::string garmentEntry(Set set, const std::string& bodySprite, const char* ext);
+// 3.0.18-beta.231: a headgear view past the game's own table of their names (a vector of name pointers, its first and
+// last at uaRO.exe's session +0x880/+0x884) - the game would read another table's word for it and ask for a sprite
+// that is not there; none (0) is the game's own
+bool pastTable(int view, uint32_t first, uint32_t last);
 
 // Where a character's garment frame is drawn: its screen point (the game's, of its feet) and its scale (its size times
 // the depth's, as uaRO.exe FUN_005ae540 has them)

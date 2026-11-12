@@ -120,6 +120,12 @@ std::string garmentEntry(Set set, const std::string& bodySprite, const char* ext
     return std::string(set == Set::Fallen ? "fallen\\" : "angel\\") + rest + "." + ext;
 }
 
+bool pastTable(int view, uint32_t first, uint32_t last) {
+    if (view <= 0) return false;
+    if (!first || last < first) return true;
+    return uint32_t(view) >= (last - first) / 4;
+}
+
 std::vector<Quad> quads(const spritefile::Act& garment, const spritefile::Act& body, const spritefile::Sprite& s,
                         size_t action, size_t frame, const Transform& t) {
     std::vector<Quad> out;

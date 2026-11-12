@@ -190,3 +190,17 @@ TEST(wings_lerp) {
     CHECK(near(wings::lerpAt(30, 10, 0.5f, 20, 1.0f), 1.5f));  // past the face: on along the same line
     CHECK(near(wings::lerpAt(15, 10, 0.5f, 10, 1.0f), 0.5f));  // a flat face: its own
 }
+
+// 3.0.18-beta.231 (the owner's «Cannot find File : sprite\악세사리\여\여검사.act»): the 2007 client's headgear names
+// end near view 330; a view past them read another table's word ("검사", a job's) - its sprite asked for, an error box
+// for each file. Such a view gets no picture (FUN_0062E970 / FUN_0062EA20 asked for none)
+TEST(wings_views_past_the_table) {
+    const uint32_t first = 0x1000, last = first + 4 * 327;  // 327 names: views 0..326
+    CHECK(!wings::pastTable(1, first, last));
+    CHECK(!wings::pastTable(326, first, last));
+    CHECK(wings::pastTable(327, first, last));
+    CHECK(wings::pastTable(365, first, last));  // Wings Of Victory's
+    CHECK(!wings::pastTable(0, first, last));   // none worn: the game's own way
+    CHECK(wings::pastTable(5, 0, 0));           // no table: nothing to name it by
+    CHECK(wings::pastTable(5, first, first - 4));  // a broken one
+}

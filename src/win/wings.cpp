@@ -42,6 +42,13 @@ using RenderFn = void(__attribute__((thiscall)) *)(uint32_t actor, uint32_t matr
 using ProjectFn = void(__attribute__((thiscall)) *)(uint32_t view, uint32_t pos, uint32_t matrix, float* x, float* y,
                                                      float* depth);
 using DepthScaleFn = float(__attribute__((thiscall)) *)(uint32_t view, float depth);
+// 3.0.18-beta.231: a headgear's sprite and act names from its view (thiscall on the session: two words, the sex, the
+// view, the name's buffer; ret 0x14), their first 7 bytes (push ebp; mov ebp, esp; push ebx; mov ebx, [ebp+0x14]);
+// the session's table of the names (a vector of pointers: first +0x880, last +0x884)
+constexpr uint32_t kSprName = 0x62E970, kActName = 0x62EA20, kNamesFirst = 0x880, kNamesLast = 0x884;
+constexpr uint8_t kNameBytes[7] = {0x55, 0x8B, 0xEC, 0x53, 0x8B, 0x5D, 0x14};
+using NameFn = char*(__attribute__((thiscall)) *)(uint32_t session, uint32_t a, uint32_t b, int sex, int view,
+                                                  char* out);
 
 struct Garment {
     bool ok = false;
@@ -56,6 +63,7 @@ struct Job {
 };
 struct State {
     uintptr_t render = 0;
+    uintptr_t sprName = 0, actName = 0;  // 3.0.18-beta.231
     bool packTried = false, packOk = false;
     grf::Archive pack;
     std::unique_ptr<gamefiles::Reader> files;
@@ -184,6 +192,27 @@ void __attribute__((thiscall)) playerRender(uint32_t actor, uint32_t matrix, int
     s.current = -1;  // its faces end with its render
 }
 
+// 3.0.18-beta.231: a view past the game's names asks for no sprite (the game's way for none) - the 2007 client read
+// another table's word for it and showed «Cannot find File» for each of its files
+char* namedOrNone(uintptr_t original, uint32_t session, uint32_t a, uint32_t b, int sex, int view, char* out) {
+    const uint32_t first = read32(session + kNamesFirst), last = read32(session + kNamesLast);
+    if (!cw::pastTable(view, first, last)) return reinterpret_cast<NameFn>(original)(session, a, b, sex, view, out);
+    if (out) *out = 0;
+    State& s = state();
+    if (s.told.insert("past " + std::to_string(view)).second)
+        LOG_INFO("wings: the game's headgear view %d is past its %u names - no sprite asked for it (no «Cannot find "
+                 "File»)", view, first && last >= first ? unsigned((last - first) / 4) : 0u);
+    return out;
+}
+
+char* __attribute__((thiscall)) sprName(uint32_t session, uint32_t a, uint32_t b, int sex, int view, char* out) {
+    return namedOrNone(state().sprName, session, a, b, sex, view, out);
+}
+
+char* __attribute__((thiscall)) actName(uint32_t session, uint32_t a, uint32_t b, int sex, int view, char* out) {
+    return namedOrNone(state().actName, session, a, b, sex, view, out);
+}
+
 uint32_t textureOf(Garment& g, const cw::Quad& q) {
     const size_t at = q.type == 1 ? g.sprite.palette.size() + size_t(q.image) : size_t(q.image);
     if (q.image < 0 || at >= g.textures.size()) return 0;
@@ -214,6 +243,14 @@ const std::vector<Quad>& ready(Job& j) {
 bool install() {
     State& s = state();
     if (s.render) return true;
+    // 3.0.18-beta.231: the headgears' views past the game's names - no sprite asked for
+    if (hookEntryBytes(kSprName, kNameBytes, sizeof kNameBytes, reinterpret_cast<const void*>(&sprName), s.sprName) &&
+        hookEntryBytes(kActName, kNameBytes, sizeof kNameBytes, reinterpret_cast<const void*>(&actName), s.actName))
+        LOG_INFO("wings: the headgears' names hooked (uaRO.exe 0x%X, 0x%X) - a view past the game's names asks for no "
+                 "sprite", kSprName, kActName);
+    else
+        LOG_INFO("wings: the headgears' names are not where this build of uaRO.exe has them - left as the game has "
+                 "them");
     if (!hookEntryBytes(kRender, kRenderBytes, sizeof kRenderBytes, reinterpret_cast<const void*>(&playerRender),
                         s.render)) {
         LOG_INFO("wings: the players' render is not where this build of uaRO.exe has it - no wings");
