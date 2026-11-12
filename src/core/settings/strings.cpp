@@ -8501,7 +8501,8 @@ constexpr Entry kTexts[] = {
     {Text::LauncherPlay, "PLAY", "ГРАТИ", "ИГРАТЬ"},
     {Text::LauncherUpdate, "UPDATE", "ОНОВИТИ", "ОБНОВИТЬ"},
     {Text::LauncherUpdating, "Updating {1} % · {2} MB/s", "Оновлення {1} % · {2} МБ/с", "Обновление {1} % · {2} МБ/с"},
-    {Text::LauncherRunning, "GAME RUNNING · + WINDOW", "ГРА ЗАПУЩЕНА · + ВІКНО", "ИГРА ЗАПУЩЕНА · + ОКНО"},
+    // 3.0.18-beta.206 (the owner: «не явно сказано что можно запустить еще одно окно»): the button's word while it runs
+    {Text::LauncherRunning, "+ ONE MORE WINDOW", "+ ЩЕ ОДНЕ ВІКНО", "+ ЕЩЁ ОДНО ОКНО"},
     {Text::LauncherServer, "Server up · {1} online", "Сервер працює · {1} онлайн", "Сервер работает · {1} онлайн"},
     {Text::LauncherServerDown, "Server unreachable", "Сервер недоступний", "Сервер недоступен"},
     {Text::LauncherServerAsking, "Asking the server…", "Питаю сервер…", "Спрашиваю сервер…"},
@@ -8568,6 +8569,8 @@ constexpr Entry kTexts[] = {
     {Text::LauncherCheckFailed, "not checked", "не вдалося перевірити", "не удалось проверить"},
     {Text::LauncherCheck, "Check", "Перевірити", "Проверить"},
     {Text::LauncherChannelBeta, "Beta", "Бета", "Бета"},
+    {Text::LauncherRunningCount, "The game is running · windows: {1}", "Гра вже запущена · вікон: {1}",
+     "Игра уже запущена · окон: {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

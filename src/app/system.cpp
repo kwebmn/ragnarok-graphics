@@ -241,6 +241,10 @@ std::vector<DWORD> processesOf(const std::wstring& exe, bool hungOnly) {
 
 }  // namespace
 
+// 3.0.18-beta.206 (the owner: «не явно сказано что можно запустить еще одно окно»): the game's windows running -
+// the processes of its exe (one run as administrator, whose path cannot be read, not counted)
+int gameWindows(const std::wstring& gameExe) { return int(processesOf(gameExe, false).size()); }
+
 bool gameHung(const std::wstring& gameExe) { return !processesOf(gameExe, true).empty(); }
 
 bool closeHungGame(const std::wstring& gameExe) {

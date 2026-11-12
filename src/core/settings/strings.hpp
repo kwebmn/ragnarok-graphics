@@ -948,6 +948,7 @@ enum class Text : uint16_t {
     LauncherUpdateWhat, LauncherFirstFound,  // .199: the update's line, the first start's card set
     LauncherCheckingNow, LauncherChecking, LauncherCheckFailed,  // .201: the update check
     LauncherCheck, LauncherChannelBeta,  // .202: «Перевірити» beside «ГРАТИ», «Реліз | Бета»
+    LauncherRunningCount,                // .206: «Гра вже запущена · вікон: N» under «+ ЩЕ ОДНЕ ВІКНО»
     Count
 };
 

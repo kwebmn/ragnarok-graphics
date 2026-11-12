@@ -64,6 +64,7 @@ struct Snapshot {
     Ddraw ddraw = Ddraw::None;
     std::string installedVersion;  // uaro-graphics\version.txt
     bool gameRunning = false;
+    int windows = 0;  // 3.0.18-beta.206: the game's windows while it runs (1 at least then)
     std::vector<std::wstring> backups;  // folder names, newest first
     settings::LogDigest log;
     bool folderWritable = true;

@@ -1509,6 +1509,7 @@ void MainWindow::refreshLauncher() {
     d.siteFailed = site.kind == LauncherState::Failed;
     d.update = channelUpdate(m);
     d.gameRunning = m.now().gameRunning;
+    d.windows = m.now().windows;  // 3.0.18-beta.206
     // the look: the three choices' names, «авто для <card>» while the picture and the textures are the card's
     const Config c = m.pendingConfig();
     namespace presets = settings::presets;
@@ -1601,7 +1602,7 @@ void MainWindow::refreshLauncher() {
                        std::to_wstring(int(d.fitsCard)) + L"|" + std::to_wstring(int(d.undoable)) + L"|" +
                        wide(d.seen) + L"|" + std::to_wstring(int(d.firstRun)) + L"." +
                        std::to_wstring(d.suggestedKind) + L"|" + d.cardCheck + L"|" + d.firstFound + L"|" +
-                       std::to_wstring(int(d.beta));
+                       std::to_wstring(int(d.beta)) + L"|" + std::to_wstring(d.windows);
     for (const LauncherData::Look& l : d.looks)
         sig += L"|" + std::to_wstring(l.variant) + L"." + std::to_wstring(l.changed);
     for (const launcher::News& n : d.info.news) sig += L"|" + wide(n.title);

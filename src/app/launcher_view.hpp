@@ -32,6 +32,7 @@ struct LauncherData {
     bool siteAsking = false, siteFailed = false;  // the site's answer still coming / not got
     UpdateState update;
     bool gameRunning = false;
+    int windows = 0;  // 3.0.18-beta.206: the game's windows running («Гра вже запущена · вікон: N»)
     std::wstring look, lookNote, version, plateText, plateButton;  // plateText "": no plate
     std::vector<settings::changelog::Version> news;  // the changelog's versions, the newest first
     int newFor = 0;  // how many of them the player has not seen (newer than cache\seen-version.txt)

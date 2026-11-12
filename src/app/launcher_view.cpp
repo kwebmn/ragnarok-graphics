@@ -694,7 +694,7 @@ void LauncherView::compose() {
         const Box btn{L.check.x, L.play.y, L.check.w + L.play.w + L.playMore.w, L.play.h};
         const float r = 10 * s;
         const PlayState state = playState();
-        if (state == PlayState::Play) {
+        if (state == PlayState::Play || state == PlayState::Running) {  // .206: another window gold too
             for (int i = 6; i >= 1; --i) {
                 const float g = float(i) * 3 * s;
                 panel::roundRect(pic_, pb(Box{btn.x - g, btn.y + 7 * s - g / 2, btn.w + 2 * g, btn.h + g}), r + g,
@@ -716,7 +716,7 @@ void LauncherView::compose() {
                 pic_.clipX1 = 1 << 30;
             }
         }
-        const bool bright = state == PlayState::Play || state == PlayState::Update;
+        const bool bright = state == PlayState::Play || state == PlayState::Update || state == PlayState::Running;
         if (bright) {  // the light along its top edge
             pic_.clipY1 = int(std::lround(btn.y + 2 * s));
             panel::roundRect(pic_, pb(btn), r, kWhite, 0.5f);
@@ -735,7 +735,8 @@ void LauncherView::compose() {
         const uint32_t split = bright ? 0x3C280A : kLine;
         for (const float x : {L.play.x, L.playMore.x})
             panel::roundRect(pic_, pb(Box{x, btn.y + 14 * s, edge, btn.h - 28 * s}), 0, split, bright ? 0.35f : 1.0f);
-        const uint32_t arrow = state == PlayState::Play ? kOnGoldArrow : state == PlayState::Update ? kOnBlue : kMuted;
+        const bool gold = state == PlayState::Play || state == PlayState::Running;
+        const uint32_t arrow = gold ? kOnGoldArrow : state == PlayState::Update ? kOnBlue : kMuted;
         triangleDown(pic_, L.playMore.x + L.playMore.w / 2, btn.y + btn.h / 2, 7 * s, arrow, 1.0f);
     }
     // 3.0.18-beta.199: «Грати без оновлення» under the button while an update is offered - in sight, not in a menu
@@ -923,24 +924,27 @@ void LauncherView::words(HDC dc) {
         if (state == PlayState::Play) {
             st = Style{Face::ExtraBold, 28, kOnGold, 5};
             said = t(Text::LauncherPlay);
-        } else if (state == PlayState::Update) {  // 3.0.18-beta.199/.200: «ОНОВИТИ», the version and its size under
+        } else if (state == PlayState::Update || state == PlayState::Running) {
+            // 3.0.18-beta.199/.200: «ОНОВИТИ», the version and its size under; 3.0.18-beta.206 (the owner: «не явно
+            // сказано что можно запустить еще одно окно»): «+ ЩЕ ОДНЕ ВІКНО», «Гра вже запущена · вікон: N» under
+            const bool update = state == PlayState::Update;
+            const uint32_t ink = update ? kOnBlue : kOnGold;
             const int room = int(L.play.w - 24 * s);
-            const std::wstring word = t(Text::LauncherUpdate),
-                               what = tf(Text::LauncherUpdateWhat,
-                                         {data_.update.offer, megabytes(data_.update.branch.package.size)});
-            const Style big = shrunk(dc, Style{Face::ExtraBold, 18, kOnBlue, 1.5f}, word, room),
-                        small = shrunk(dc, Style{Face::SemiBold, 11.5f, kOnBlue}, what, room);
+            const std::string windows = std::to_string(std::max(1, data_.windows));
+            const std::wstring word = t(update ? Text::LauncherUpdate : Text::LauncherRunning),
+                               what = update ? tf(Text::LauncherUpdateWhat,
+                                                  {data_.update.offer, megabytes(data_.update.branch.package.size)})
+                                             : tf(Text::LauncherRunningCount, {windows});
+            const Style big = shrunk(dc, Style{Face::ExtraBold, 18, ink, 1.5f}, word, room),
+                        small = shrunk(dc, Style{Face::SemiBold, 11.5f, ink}, what, room);
             const float cx = L.play.x + L.play.w / 2;
             line(dc, big, fit(dc, big, word, room), cx + 0.75f * s, L.play.y + 30 * s, 0);
             line(dc, small, fit(dc, small, what, room), cx, L.play.y + 48 * s, 0);
         } else if (state == PlayState::Updating) {
             st = Style{Face::SemiBold, 16, kText, 0.5f};
             said = tf(Text::LauncherUpdating, {std::to_string(int(share_ * 100)), oneDecimal(speed_ / 1048576.0)});
-        } else {
-            st = Style{Face::SemiBold, 15, kMuted, 1};
-            said = t(Text::LauncherRunning);
         }
-        if (state != PlayState::Update) {
+        if (state == PlayState::Play || state == PlayState::Updating) {
             st = shrunk(dc, st, said, int(L.play.w - 24 * s));
             const std::wstring shown = fit(dc, st, said, int(L.play.w - 24 * s));
             const float base = L.play.y + L.play.h / 2 + ascentOf(dc, st) * 0.36f;
@@ -957,11 +961,13 @@ void LauncherView::words(HDC dc) {
     {
         const PlayState state = playState();
         const bool asking = data_.update.kind == UpdateState::Checking, idle = state == PlayState::Updating;
-        const uint32_t ink = state == PlayState::Play     ? kOnGold
+        const uint32_t ink = state == PlayState::Play || state == PlayState::Running ? kOnGold
                              : state == PlayState::Update ? kOnBlue
                              : hovered(Part::Check)       ? kWhite
                                                           : kText;
-        const uint32_t ground = state == PlayState::Play ? 0xD7AC58 : state == PlayState::Update ? 0x6C90E4 : kRaise;
+        const uint32_t ground = state == PlayState::Play || state == PlayState::Running ? 0xD7AC58
+                                : state == PlayState::Update                              ? 0x6C90E4
+                                                                                          : kRaise;
         const uint32_t shown = asking || idle ? mix(ink, ground, 0.55f) : ink;
         const float cx = L.check.x + L.check.w / 2;
         if (hasIcons()) {

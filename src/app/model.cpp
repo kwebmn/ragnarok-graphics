@@ -279,6 +279,7 @@ void Model::settleOldGroups() {
 
 bool Model::refreshRunning() {
     const bool running = gameRunning(paths_.game);
+    now_.windows = running ? std::max(1, gameWindows(paths_.game)) : 0;  // 3.0.18-beta.206
     if (running == now_.gameRunning) return false;
     if (running)
         now_.gameRunning = true;
