@@ -1191,6 +1191,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FramesBatteryFpsHint, ""},
         {"frames", "keep_fps", Page::Frames, Control::Number, 0, 240, 1, {}, {}, Text::FramesKeepFps,
          Text::FramesKeepFpsHint, ""},
+        {"frames", "light_skills", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesLightSkills,
+         Text::FramesLightSkillsHint, ""},  // 3.0.18-beta.186
         {"frames", "allow_tearing", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesTearing,
          Text::FramesTearingHint, ""},
         // 0.91: the game's sound through the driver
@@ -1554,7 +1556,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.skill_looks")  // 3.0.18-beta.183
         return s.tokens[c.effects.skillLooks >= 0 && c.effects.skillLooks < int(s.tokens.size())
                             ? size_t(c.effects.skillLooks)
-                            : size_t(kSkillRedrawn)];
+                            : size_t(kSkillSoft)];
     if (k == "effects.season")  // 2.6.22
         return s.tokens[c.effects.season > 0 && c.effects.season < int(s.tokens.size()) ? size_t(c.effects.season) : 0];
     if (k == "effects.weather_kind")  // 2.6.22
@@ -1564,6 +1566,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
     if (k == "frames.keep_fps") return std::to_string(c.keepFps);
+    if (k == "frames.light_skills") return c.lightSkills ? "1" : "0";  // 3.0.18-beta.186
     if (k == "debug.profile") return c.profile ? "1" : "0";
     if (k == "debug.xray") return c.xray ? "1" : "0";  // 2.3
     if (k == "debug.seams_view") return std::to_string(c.seamsView >= 0 && c.seamsView <= 2 ? c.seamsView : 0);

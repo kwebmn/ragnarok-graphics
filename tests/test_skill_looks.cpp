@@ -14,7 +14,7 @@
 using namespace uagfx;
 
 TEST(skill_looks_read_and_its_old_switches) {
-    CHECK(parseConfig("").effects.skillLooks == kSkillRedrawn);  // as the sets showed them
+    CHECK(parseConfig("").effects.skillLooks == kSkillSoft);  // 3.0.18-beta.186: the owner's «redraw soft по умолчанию»
     CHECK(parseConfig("[effects]\nskill_looks = original\n").effects.skillLooks == kSkillOriginal);
     CHECK(parseConfig("[effects]\nskill_looks = improved\n").effects.skillLooks == kSkillImproved);
     CHECK(parseConfig("[effects]\nskill_looks = redrawn\n").effects.skillLooks == kSkillRedrawn);
@@ -28,7 +28,7 @@ TEST(skill_looks_read_and_its_old_switches) {
     if (!s) return;
     CHECK(s->control == settings::Control::Choice && s->tokens.size() == 4 && s->choices.size() == 4);
     CHECK_EQ(settings::tokenOf(*s, parseConfig("[effects]\nskill_looks = improved\n")), std::string("improved"));
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("redrawn"));
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("soft"));
 }
 
 TEST(skill_looks_over_the_classes_looks) {

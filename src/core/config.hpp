@@ -230,7 +230,7 @@ struct EffectSettings {
     // професий», «лучше одним пунктом»): [effects] skill_looks - every class's skills, one choice over what the set and
     // the groups leave on (effect_groups::looksStyled): the game's own, the game's made sharp (Storm Gust's snow so
     // far), redrawn (the classes' new looks), redrawn soft (mage_soft). The player's own, as the clock is.
-    int skillLooks = 2;  // SkillLooks
+    int skillLooks = 3;  // SkillLooks - 3.0.18-beta.186: the owner's «redraw soft поставь по умолчанию»
     // 3.0.18-beta.184 (the owner: «сделай все без остановки»): every skill's sheets of specks (the snow, the sparkles)
     // drawn anew at real resolution (core/sharp_specks) - made by looksStyled: any look but the original, while the
     // set and the groups leave the skills' looks on. The driver's own, no file's.
@@ -1058,6 +1058,9 @@ struct Config {
     // 0.76: [frames] keep_fps - below this for ten seconds, the costliest effect goes off for the rest of the game
     // (core/effect_costs.hpp); 0 = never
     int keepFps = 0;
+    // 3.0.18-beta.186 (the owner: «делай 2 без остановки»): [frames] light_skills - the game's own light skill effects
+    // (its /mineffect's) while the frames run short of keep_fps in a crowd of skills (core/light_skills)
+    bool lightSkills = true;
     bool fpsCounter = false;
     // 2.5.16: [quality] world_scale - Direct3D 11: the world drawn at this share (50-100 %) of the picture's size and
     // made larger with sharpening before the interface, which stays sharp (an HD 6570: the world was the frame)

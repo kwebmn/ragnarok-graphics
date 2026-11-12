@@ -922,6 +922,20 @@ TEST(config_crisp_storm_gust) {
     CHECK(parseConfig("[effects]\npreset = strong\n").effects.crispStormGust == false);
 }
 
+// 3.0.18-beta.186 (the owner: «делай 2 без остановки»): [frames] light_skills - the game's own light skill effects
+// (/mineffect's) while the frames run short of keep_fps in a crowd of skills; on, a row of the frames' page by keep_fps
+TEST(config_light_skills) {
+    CHECK(parseConfig("").lightSkills);
+    CHECK(!parseConfig("[frames]\nlight_skills = 0\n").lightSkills);
+    const settings::IniSetting* s = settings::findSetting("frames.light_skills");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Frames && s->control == settings::Control::Check);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("1"));
+    CHECK(appliesNow("frames.light_skills"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[frames]\nlight_skills = 0\n")).next.lightSkills);
+}
+
 // 3.0.18-beta.180: [interface] loading_bar - the game's map loading bar in the new look; on with the new interface,
 // a box of «Інтерфейс» → «Вікна в новому вигляді», applied at once
 TEST(config_interface_loading_bar) {

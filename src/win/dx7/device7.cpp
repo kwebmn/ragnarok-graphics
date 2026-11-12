@@ -25,6 +25,7 @@
 #include "win/net_predict.hpp"
 #include "win/net_smooth.hpp"
 #include "win/paths.hpp"
+#include "win/light_skills.hpp"
 #include "win/sharp_frames.hpp"
 #include "win/sharp_specks.hpp"
 #include "win/skill_delay_watch.hpp"
@@ -298,6 +299,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     DrawCmd cmd;
     // 0.28: the renderer learns what effect a draw is of (the fireflies are drawn anew). 3.0.18-beta.181: found first
     const effect_exe::Tag tag = win::drawnEffect(vertices);
+    if (tag.kind == effect_exe::Kind::Skill) win::lightskillswin::drawn();  // 3.0.18-beta.186: the crowd of skills
     // 3.0.18-beta.181 (Storm Gust), .184 (every skill: EffectSettings::sharpSpecks, any skills' look but the
     // original): a skill's texture looked at before it goes up (its texels then as the game last wrote them) - a sheet
     // of specks (the snow, the sparkles) gets a copy at real resolution (win/sharp_specks)

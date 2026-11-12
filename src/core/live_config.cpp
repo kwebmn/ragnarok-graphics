@@ -810,6 +810,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("profile", flag(running.profile), flag(file.profile)));
         n.profile = file.profile;
     }
+    if (file.lightSkills != running.lightSkills) {  // 3.0.18-beta.186
+        u.applied.push_back(change("light_skills", flag(running.lightSkills), flag(file.lightSkills)));
+        n.lightSkills = file.lightSkills;
+    }
     if (file.keepFps != running.keepFps) {  // 0.76
         u.applied.push_back(change("keep_fps", std::to_string(running.keepFps), std::to_string(file.keepFps)));
         n.keepFps = file.keepFps;
@@ -866,6 +870,7 @@ bool appliesNow(const std::string& k) {
            k == "quality.msaa" || k == "quality.taa" ||
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
+           k == "frames.light_skills" ||  // 3.0.18-beta.186
            k == "debug.profile" || k == "debug.xray" || k == "debug.seams_view" || k == "frames.fps_counter" ||
            k == "debug.quick_acks" ||  // 3.0.11-beta.128
            k == "utility.language" ||  // 3.0.11-beta.174

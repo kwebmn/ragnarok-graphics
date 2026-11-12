@@ -145,6 +145,7 @@
 #include "win/sprite_hook.hpp"
 #include "win/start_screen.hpp"
 #include "win/texture_hook.hpp"
+#include "win/light_skills.hpp"
 #include "win/loading_bar.hpp"
 #include "win/log.hpp"
 #include "win/low_hp_edge.hpp"
@@ -1438,14 +1439,13 @@ void Context::present(const Rect& source, bool waitForVblank) {
             mapLightAt_ = map.empty() ? 0 : GetTickCount64() + 3000;  // 3.0.18-beta.5: the light the game holds
             // 3.0.17-beta.20 (a player: «поки я сам не хочу щось написати щоб він був сплячим»): a new map with the
             // chat's field empty - the battle mode's letters are the skills' again
-            uint32_t battle = 0, typing = 0;
-            if (!map.empty() && readGame(0x772D54, &battle, 4) && battle && readGame(0x772D58, &typing, 4) && typing &&
-                chatwin::inputEmpty()) {
-                *reinterpret_cast<volatile uint32_t*>(uintptr_t(0x772D58)) = 0;
-                LOG_INFO("chat: the battle mode's typing off on the new map (its field empty)");
-            }
+            // 3.0.18-beta.186 (the tester again: the chat active after an NPC teleport): watched for the map's first
+            // seconds too (watchNewMapTyping)
+            mapCameMs_ = map.empty() ? 0 : GetTickCount64();
+            typingTold_ = 0;
         }
     }
+    watchNewMapTyping();  // 3.0.17-beta.20, 3.0.18-beta.186
     // 3.0.18-beta.5 (the owner: «засветление стен» - the game's walls on in_sphinx1, moc_pryd05 half of the map's
     // light): the light uaRO.exe holds for the map (its way 0x74A858, diffuse 0x74A868, all round 0x74A828, as
     // FUN_004e4190 lights the ground by them), its environment at 0x7710B8 (the dark byte, the factors after it) and
@@ -1478,6 +1478,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     testFrame(foreground);  // 3.0.5-beta.6: «Тест графіки» - its set is effects() below
     keepFrameRate(config, window);
     g_parts.mark("keepFrameRate", nowMs());
+    // 3.0.18-beta.186: [frames] light_skills - the game's light skill effects when the frames run short in a crowd
+    if (const int fps = lightskillswin::frame(config.lightSkills, config.keepFps, foreground, map_); fps >= 0)
+        sayOnScreen(wideOf(settings::fmt(settings::tr(language(), settings::Text::LightSkillsOnNote),
+                                         {std::to_string(fps), std::to_string(config.keepFps)})));
     // 0.87: [debug] profile; 3.0.5-beta.10: and while «Тест графіки» runs - where the game's thread goes on each set
     // (R-5A9BTU: Direct3D 11's «Високі» 63 ms of the processor a frame, nothing sampled with the profile off)
     Profiler::get().run(GetCurrentThreadId(), config.profile || test_.running());
@@ -1735,6 +1739,40 @@ void Context::watchMapLoad(const std::string& map, bool world, bool picture) {
 // 0.76: every half minute the effects' costs into uaro-graphics\effect-costs.txt (the settings app shows them);
 // [frames] keep_fps - the frames counted in five-second windows while the game is in front with every improvement on;
 // two slow windows in a row (under 90 % of it) turn the costliest effect off for the rest of the game.
+// 3.0.17-beta.20 (a player: «поки я сам не хочу щось написати щоб він був сплячим»), 3.0.18-beta.186 (the tester again:
+// «обратно с портуешь через НПЦ чат стае активним і скіли не працюють бо пічатаються в строку»): a new map's first
+// seconds - the battle mode's typing on with the chat's field empty and no Enter of the player's since the map came (an
+// NPC's «Next» or a warp's menu before it, the game's own way in after): off, the letters the skills' again
+void Context::watchNewMapTyping() {
+    if (!mapCameMs_) return;
+    const uint64_t now = GetTickCount64();
+    if (now - mapCameMs_ > kTypingWatchMs) {
+        mapCameMs_ = 0;
+        return;
+    }
+    uint32_t battle = 0, typing = 0;
+    if (!readGame(0x772D54, &battle, 4) || !battle || !readGame(0x772D58, &typing, 4) || !typing) return;
+    if (lastEnterMs() > mapCameMs_) {  // the player's own Enter on this map: the typing is theirs
+        mapCameMs_ = 0;
+        return;
+    }
+    const unsigned long long into = static_cast<unsigned long long>(now - mapCameMs_);
+    if (!chatwin::inputEmpty()) {
+        if (typingTold_ < 1) {
+            ++typingTold_;
+            LOG_INFO("chat: the battle mode's typing on %llu ms into the new map, its field not empty - left as it is",
+                     into);
+        }
+        return;
+    }
+    *reinterpret_cast<volatile uint32_t*>(uintptr_t(0x772D58)) = 0;
+    if (typingTold_ < 3) {
+        ++typingTold_;
+        LOG_INFO("chat: the battle mode's typing off %llu ms into the new map (its field empty, no Enter of the "
+                 "player's here)", into);
+    }
+}
+
 void Context::keepFrameRate(const Config& config, HWND window) {
     const uint64_t now = GetTickCount64();
     if (keepNoteUntil_ && now >= keepNoteUntil_) {  // 3.0.4-beta.11: its line said long enough

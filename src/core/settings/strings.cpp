@@ -1834,6 +1834,21 @@ constexpr Entry kTexts[] = {
      "Если игра десять секунд идёт медленнее стольких кадров в секунду из-за видеокарты, самый дорогой эффект "
      "выключается до конца игры (лог говорит, какой), при необходимости следующий. Когда тормозит процессор (толпа, "
      "город), эффекты остаются: выключать их бесполезно. Файл настроек не меняется. 0 — никогда."},
+    // 3.0.18-beta.186: the game's own light skill effects when the frames run short
+    {Text::FramesLightSkills, "Lighter skill effects when frames run short", "Легші ефекти вмінь, коли бракує кадрів",
+     "Облегчённые эффекты умений, когда не хватает кадров"},
+    {Text::FramesLightSkillsHint,
+     "Below the frame rate kept above with many skills on the screen (a fight, a guild war), the game's own lighter "
+     "skill effects - as its /mineffect - for the new effects; its full ones again when the frames are back or the "
+     "skills gone for 20 s. Your own /mineffect stays as you set it.",
+     "Коли кадрів менше, ніж утримувати вище, а на екрані багато вмінь (бій, війна гільдій), — власні легші ефекти "
+     "вмінь гри, як від її /mineffect, для нових ефектів; повні — знову, коли кадри повернулися або вмінь немає 20 с. "
+     "Ваш власний /mineffect лишається, як ви його поставили.",
+     "Когда кадров меньше, чем держать выше, а на экране много умений (бой, война гильдий), — собственные облегчённые "
+     "эффекты умений игры, как от её /mineffect, для новых эффектов; полные — снова, когда кадры вернулись или умений "
+     "нет 20 с. Ваш собственный /mineffect остаётся, как вы его поставили."},
+    {Text::LightSkillsOnNote, "Skill effects lighter: {1} fps of {2}", "Ефекти вмінь легші: {1} к/с із {2}",
+     "Эффекты умений облегчены: {1} к/с из {2}"},
     {Text::FxCostMs, " · ~{1} ms",
      " · ~{1} мс",
      " · ~{1} мс"},

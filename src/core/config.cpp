@@ -1087,6 +1087,8 @@ Config parseConfig(const std::string& text) {
             toInt(val, 15, 60, c.batteryFps);
         } else if (key == "frames.keep_fps") {
             toInt(val, 0, 240, c.keepFps);
+        } else if (key == "frames.light_skills") {  // 3.0.18-beta.186
+            setBool(val, c.lightSkills);
         } else if (key == "frames.allow_tearing") {
             setBool(val, c.allowTearing);
         } else if (key == "frames.reflex") {  // 2.5.26
@@ -1201,9 +1203,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !loadingBarSet) c.loadingBar = true;        // 3.0.18-beta.180
     // 3.0.18-beta.183: a file of before - its own boxes say which look (Storm Gust's «як у грі», the soft look)
     if (!skillLooksSet)
-        c.effects.skillLooks = c.effects.crispStormGust ? kSkillImproved
-                               : c.effects.mageSoft     ? kSkillSoft
-                                                        : kSkillRedrawn;
+        c.effects.skillLooks = c.effects.crispStormGust ? kSkillImproved : kSkillSoft;  // .186: soft unless improved
     if (c.newMinimap && !emoteSet) c.emoteWindow = true;            // 3.0.11-beta.205
     if (c.newMinimap && !commandSet) c.commandWindow = true;        // 3.0.11-beta.206
     if (c.newMinimap && !chatRoomSet) c.chatRoomWindows = true;     // 3.0.11-beta.207

@@ -20,6 +20,10 @@ void hit();
 void whispered();
 }  // namespace windowmarks
 
+// 3.0.18-beta.186: when the player last pressed Enter in the game's window (GetTickCount64; 0: never) - a new map's
+// battle-mode typing left on by an NPC's or a warp's Enter tells from the player's own
+uint64_t lastEnterMs();
+
 // 3.0.3-beta.6 (the user: «я хочу в игре мышкой переключатся и быстрой кнопкой»): this game's window among the
 // player's others - its entry in the block they share (its number, the character, when it was last in front), and the
 // keys that switch the windows ([windows] switch_keys), taken in the game window's procedure before the game sees

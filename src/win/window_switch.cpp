@@ -196,8 +196,11 @@ BattleEnter holdBattleEnter(UINT m, WPARAM wp) {
     return b;
 }
 
+uint64_t g_lastEnter = 0;  // 3.0.18-beta.186: lastEnterMs()
+
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     watchInput(m, wp, lp);  // 3.0.16-beta.4
+    if (m == WM_KEYDOWN && wp == VK_RETURN) g_lastEnter = GetTickCount64();
     if (g_switch) {
         if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN || m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN)
             uapad::runtime::noteKeysOrMouse(m != WM_KEYDOWN && m != WM_SYSKEYDOWN);  // 3.0.11-beta.86: keys' names back
@@ -300,6 +303,8 @@ bool above(HWND a, HWND b) {
 }
 
 }  // namespace
+
+uint64_t lastEnterMs() { return g_lastEnter; }
 
 namespace windowmarks {
 void died() { g_diedAt = gamewindows::stamp(GetTickCount64()); }

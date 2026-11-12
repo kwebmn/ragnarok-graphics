@@ -254,6 +254,10 @@ private:
     // 0.76: [frames] keep_fps - the frames counted since keepSince_, slow windows in a row, the effects turned off for
     // this game; the effects' costs written for the settings app every half minute
     void keepFrameRate(const Config& config, HWND window);
+    void watchNewMapTyping();  // 3.0.18-beta.186
+    static constexpr uint64_t kTypingWatchMs = 5000;
+    uint64_t mapCameMs_ = 0;  // when this map came (0: none watched)
+    int typingTold_ = 0;
     void watchMapLoad(const std::string& map, bool world, bool picture);  // 3.0.2-beta.12
     uint64_t keepSince_ = 0;
     unsigned keepFrames_ = 0;
