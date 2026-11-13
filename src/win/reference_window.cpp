@@ -147,6 +147,7 @@ struct State {
     std::string locSrc, locKey, locWordsRml;
     int locW = 0, locH = 0;            // its box
     bool layerMobs = true;             // the owner: all the layers on at first
+    bool layerHere = true;             // «Ви тут»: the player and the party's faces (the window's own, as the zones)
     bool locDrag = false, locDragged = false;
     float locDragX = 0, locDragY = 0;
     int locDragMark = -1;
@@ -527,7 +528,7 @@ void buildLocationScene(State& s) {
     const bool npcs = minimapproto::layerShown(int(minimap::Layer::Npcs)) ||
                       minimapproto::layerShown(int(minimap::Layer::Kafra));
     const bool warps = minimapproto::layerShown(int(minimap::Layer::Warps));
-    const bool here = minimapproto::layerShown(int(minimap::Layer::Party));
+    const bool here = s.layerHere;
     const refindex::MapHints* hints = nullptr;
     if (s.index)
         if (const auto it = s.index->maps.find(s.locCode); it != s.index->maps.end()) hints = &it->second;
@@ -712,7 +713,7 @@ void renderBody(State& s) {
         look.layers = {{say(Text::RefLayerNpc), npcs},
                        {say(Text::RefLayerWarps), minimapproto::layerShown(int(minimap::Layer::Warps))},
                        {say(Text::RefLayerMobs), s.layerMobs},
-                       {say(Text::RefLayerHere), minimapproto::layerShown(int(minimap::Layer::Party))}};
+                       {say(Text::RefLayerHere), s.layerHere}};
     }
     std::string rml = ur::body(s.page, look);
     if (worldPage(s) && !s.worldWordsRml.empty()) {  // the world map's words inside its box
@@ -1054,8 +1055,8 @@ void close(State& s) {
     s.shown = false;
 }
 
-// 3.0.18-beta.240: a layer's chip on the location's map - the NPCs (theirs and Kafra's), the warps, the player and
-// the party: the minimap's own (one setting); the monster zones the window's
+// 3.0.18-beta.240: a layer's chip on the location's map - the NPCs (theirs and Kafra's) and the warps the minimap's
+// own (one setting); the monster zones and «Ви тут» (the player, the party's faces) the window's
 void switchLayer(State& s, int i) {
     if (i == 0) {
         const bool on = !(minimapproto::layerShown(int(minimap::Layer::Npcs)) ||
@@ -1067,7 +1068,7 @@ void switchLayer(State& s, int i) {
     } else if (i == 2) {
         s.layerMobs = !s.layerMobs;
     } else if (i == 3) {
-        minimapproto::switchLayerFromReference(int(minimap::Layer::Party));
+        s.layerHere = !s.layerHere;
     }
     buildLocationScene(s);
     s.locKey.clear();
@@ -1343,7 +1344,7 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
                 locationPaint(s);
             }
         }
-        if (s.locCode == s.here && minimapproto::layerShown(int(minimap::Layer::Party))) {
+        if (s.locCode == s.here && s.layerHere) {
             std::string members;  // the party's members moved, came or went: the marks made again
             for (const partywin::OnMap& p : partywin::onMap(memberSide(s))) members += membersKeyOf(p);
             if (members != s.locMembers) {
