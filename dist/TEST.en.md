@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.245 — what's new · 2026-11-13
+
+- «Reference», search: a name typed in a Cyrillic layout («зщкштп») is searched by the same keys in Latin («poring»), and a line over the results says «Typed in the Ukrainian layout - searching poring». Beside it «search as typed ›» searches the typed letters themselves.
+- Chat: «[Name]» of a thing or a monster in players' lines (near, party, guild, whisper) is now a link - a click opens its card in the reference. Shift+click on a name in the reference puts such a «[Name]» into the chat line, so players with uaRO Graphics can share cards.
+- What to check: Ctrl+F, type «зщкштп» in the Ukrainian layout - the line over the results and Poring; «search as typed ›»; write «selling [Poring Card]» in the chat - the link opens the card.
+
 # uaRO Graphics 3.0.18-beta.244 — what's new · 2026-11-13
 
 - «Reference»: a new section «Skills» (between «Crafting» and «World map»). Jobs are grouped: «Novice», «First jobs», «Second jobs», «Transcendent», «Other jobs», each with how many skills of its own it has.
