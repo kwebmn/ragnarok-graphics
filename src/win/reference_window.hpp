@@ -17,9 +17,14 @@ namespace uagfx::win::referencewin {
 // types the English names too; Backspace, Delete (all of it), Enter (the first found), Alt+← and the mouse's back
 // button (back), the wheel, PgUp/PgDn. A click outside it is the game's. Pages: core/reference_pages; shapes:
 // core/reference_window; data: win/reference_load.
+// 3.0.18-beta.239: a live window of the new interface (uikit/reference_live) - moved, sized by its corner, a real
+// search field; the caret outside the field, the hotbar's F-keys and the Alt windows stay the game's.
 void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool key(UINT m, WPARAM wp, LPARAM lp);  // true: the message is the window's, not the game's
+// 3.0.18-beta.239: before uaUI's field takes the keys - its own while its search field has the caret (↑ ↓ the rows,
+// Enter opens, Esc clears then closes, PgUp/PgDn, Alt+← and Backspace on an empty field back)
+bool fieldKey(UINT m, WPARAM wp, LPARAM lp);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // The minimap's line with the map's name: that map's card (when the window is on); 3.0.11-beta.9: a monster's line
 // under it - the monster's card

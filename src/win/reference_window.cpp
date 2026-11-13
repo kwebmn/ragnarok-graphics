@@ -1,4 +1,3 @@
-#include "win/ui_field.hpp"
 #include "win/code_page.hpp"
 #include "win/reference_window.hpp"
 
@@ -21,8 +20,10 @@
 #include "core/reference_window.hpp"
 #include "core/settings/strings.hpp"
 #include "core/sprite_file.hpp"
+#include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "uikit/reference_live.hpp"
 #include "win/client_tables.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
@@ -36,93 +37,96 @@
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
 #include "win/tracker.hpp"
-#include "win/ui_cost.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_live.hpp"
+#include "win/ui_sheet.hpp"
 #include "win/updates_hook.hpp"
 #include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
 #include "win/window_stack.hpp"
-#include "win/uaui.hpp"
-#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::referencewin {
 namespace {
 
+// 3.0.18-beta.239 (docs/superpowers/plans/2026-11-13-reference-rewrite.md, the owner: «начинай делать в инлайн
+// режиме, без остановки»): «Довідник» a live window of the new interface - uikit/reference_live's markup, laid out by
+// RmlUi: moved by its ground, sized by its corner (its box, not a zoom: a narrow one stacks its blocks), a real
+// scroll and a real search field. Pages: core/reference_pages; the world map's picture and words: core
+// reference_window's painter; data: win/reference_load.
 using settings::Text;
+namespace ur = uikit::reference;
 
-constexpr size_t kMostTyped = 120;  // bytes (3.0.18-beta.72: UTF-8 - 40 letters of any language)
 constexpr size_t kMostRecent = 8, kMostKept = 40;  // 3.0.11-beta.18: «Нещодавні», «Обране» at most
 constexpr size_t kMostPictures = 2000;             // 3.0.11-beta.22: the cards' pictures and icons kept at most
+constexpr float kWideW = 1270, kWideH = 850;       // the concept's window at 1080p, in dp
+constexpr float kNarrowBelow = 900;                // dp: narrower - the rail its icons, the blocks one column
+constexpr float kPanelW = 314;                     // dp: the world map's panel and its gap
 
 struct Entry {  // a page left for another: what «Назад» brings back
     refpages::Link at;
     std::string query, name;
-    int scroll = 0;
+    float scroll = 0;
     unsigned opened = 0;  // its long sections opened
     int sel = -1;         // 3.0.11-beta.28: the row that led away (picked again on the way back)
 };
 
 struct State {
-    // 3.0.18-beta.36: «Довідник» drawn by uaUI - core refwin's markup data, the world map's own picture, the words
-    uisheet::Sheet sheet;
-    int sheetGen = 0;
-    std::string worldKey;  // 3.0.18-beta.83: what the world map's picture last showed
-    int worldPainted = 0;
-    std::string worldSrc;  // 3.0.18-beta.83: its texture by the times painted (every change, not a sample of it)
-    bool sheetShown = false;
-    sheet::Model model;
-    panel::Picture worldSheet;
-    std::vector<Words> sheetWords;
-    WindowShadow shadow;  // 3.0.11-beta.49
-    WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
-    bool enabled = false, open = false, shown = false, dirty = true, wantPage = true;
-    int style = -1;  // 3.0.11-beta.47: core/ui_style's generation painted
-    int iconsMade = -2;  // 3.0.11-beta.74: win/pack_pictures' iconsStamp() the pictures were made for
+    uilive::Window win;  // 3.0.18-beta.239
+    ur::Model model;
+    WindowShadow shadow;
+    bool enabled = false, open = false, shown = false, wantPage = true;
+    bool bodyDirty = false, bodyNow = false;  // the body's markup to make again (now: a new page)
+    ULONGLONG bodyAt = 0;
+    int applyIn = -1;     // frames until the new body is laid out: then its scroll and its picked row
+    float scrollTo = 0;   // the scroll to set then
+    bool listened = false;
+    int markedSel = -1;   // the row whose element has «sel»
+    int style = -1;       // 3.0.11-beta.47: core/ui_style's generation the ground was made for
+    int iconsMade = -2;   // 3.0.11-beta.74: win/pack_pictures' iconsStamp() the pictures were made for
     WPARAM skipChar = 0;  // the character of the key that opened or closed it: neither typed nor the game's
-    std::string query;    // typed (ASCII: the names are English)
+    std::string query;    // typed
     refpages::Link at;    // the page: Go::None - the search's (the first screen when nothing is typed)
     unsigned opened = 0;  // the card's long sections opened (refpages::Part bits)
     std::vector<Entry> back;
     refpages::Page page;
-    std::vector<refwin::Placed> rows;
-    int total = 0, scroll = 0;
-    refwin::Layout layout;
-    refwin::Under hover;
     std::shared_ptr<const refindex::Index> index;
     std::shared_ptr<const reflive::Online> online;  // 3.0.11-beta.10: the players now (null: none fresh)
     std::shared_ptr<const reflive::Live> live;      // 3.0.11-beta.12: MVP timers, the market (null: none fresh)
     ULONGLONG madeAt = 0;                           // the page's minutes: made again each minute with timers
     std::shared_ptr<const reference::World> world;  // 3.0.11-beta.11: the world map (null: not made yet)
-    panel::Picture worldPicture;                    // its picture at its row's size (3.0.11-beta.29: at the view)
-    std::string worldHover;                         // the map under the pointer there
-    // 3.0.11-beta.29 (the concept's v19_route): the world map's view - its zoom and centre (worldmap::view), set on
-    // the way or the maps marked when a page of it opens; the drag that moves it (a press not moved: a click)
+    panel::Picture worldPicture;                    // its picture at the map's box (its shapes)
+    int worldPainted = 0;
+    std::string worldSrc, worldKey, worldWordsRml;
+    std::string worldHover;  // the map under the pointer there
+    // 3.0.11-beta.29: the world map's view - its zoom and centre, the drag that moves it (a press not moved: a click)
     float zoom = 1, cx = -1, cy = -1;
-    std::string viewOf;            // the page the view was set for
-    worldmap::Fit pictureFit;      // the fit the picture was made at
-    ULONGLONG worldMadeAt = 0;     // made again at most every 33 ms while dragged
+    std::string viewOf;
+    ULONGLONG worldMadeAt = 0;
     bool dragging = false, dragged = false;
-    float dragX = 0, dragY = 0, dragCx = 0, dragCy = 0;  // where it began (the window's pixels), the centre then
-    int dragTile = -1;             // the tile pressed: its card on a click
-    refpages::WorldWay way;        // what the map shows of the page's way (made with the page)
-    // 3.0.11-beta.64: the dungeon box's pictures - the maps' own minimaps at its side, found once each (none: empty)
-    std::map<std::string, panel::Picture> chainPictures;
+    float dragX = 0, dragY = 0, dragCx = 0, dragCy = 0;
+    int dragTile = -1, dragChain = -1;
+    refpages::WorldWay way;
+    std::map<std::string, panel::Picture> chainPictures;  // 3.0.11-beta.64: the dungeon box's minimaps
     int chainSide = 0, chainLogged = 0;
     std::vector<std::pair<std::string, std::string>> labels;  // the towns' names (made with the index)
     const refindex::Index* labelsOf = nullptr;
-    // 3.0.11-beta.14: the cards' pictures - the client's sprites and item icons, found once each (none: an empty one)
     std::unique_ptr<gamefiles::Reader> files;
-    std::map<std::string, panel::Picture> pictures;
+    std::map<std::string, panel::Picture> pictures;  // 3.0.11-beta.14: the cards' pictures, icons; ui icons
+    // the ones let go, kept a few frames: RmlUi reads a «pic:» source's pixels when it draws it the first time - the
+    // markup that names them must be gone before they are
+    std::vector<std::pair<int, std::map<std::string, panel::Picture>>> retired;
+    std::map<std::string, std::string> sources;      // their sources given to RmlUi (the previous of each)
+    std::vector<std::string> wanted;                 // icons the body asked for, not made yet
     unsigned folded = 0;  // 3.0.11-beta.17: the sections the player folded (refpages::Part bits), kept in a file
     bool foldedRead = false;
-    // 3.0.11-beta.18: the cards opened lately (the latest first) and the starred ones, kept in files
-    std::vector<refpages::Link> recent, favourites;
+    std::vector<refpages::Link> recent, favourites;  // 3.0.11-beta.18
     int sel = -1;  // 3.0.11-beta.21: the row picked by the arrows (or the pad's D-pad), -1 none
-    // 3.0.11-beta.25 (R-77TCM7): the highlights' areas - uaUI's words said again (.158: no picture repainted)
-    std::vector<Rect> hot;
-    refwin::Chrome chrome;  // 3.0.11-beta.26: the header's and the bottom's places, as the picture has them
     std::string here;
     int targetW = 0, targetH = 0;
-    float k = 0, scale = 0;  // 3.0.11-beta.67: the layout's (uistyle::readingScale)
+    float k = 0, dp = 1;
+    int w = 0, h = 0;  // the window's box, the target's pixels
+    bool narrow = false;
+    int mapW = 0, mapH = 0;  // the world map's box on its page
     std::vector<barhint::Skill> bar;  // 3.0.11-beta.68: the hotbar's skills, read with each page
 };
 
@@ -133,8 +137,7 @@ State& state() {
 
 std::string say(Text t) { return settings::tr(language(), t); }
 
-// 3.0.11-beta.14: a card's picture - a monster's standing frame from its sprite (data\sprite\몬스터 or npc), an
-// item's icon (data\texture\유저인터페이스\item) - fitted into the Portrait's square
+// 3.0.11-beta.14: a card's picture - a monster's standing frame from its sprite, an item's icon, a location's minimap
 const std::string kUi = "\xC0\xAF\xC0\xFA\xC0\xCE\xC5\xCD\xC6\xE4\xC0\xCC\xBD\xBA";  // 유저인터페이스
 
 bool readFile(State& s, const std::string& entry, std::string& out) {
@@ -146,8 +149,7 @@ bool readFile(State& s, const std::string& entry, std::string& out) {
     return true;
 }
 
-// 3.0.11-beta.64 (the concept's v19_route): a map's minimap for the world map's dungeon box - the client's own picture
-// (data\texture\유저인터페이스\map\<code>.bmp, as the world map's tiles), `side` square; null: none in its files
+// 3.0.11-beta.64: a map's minimap for the world map's dungeon box (the client's own picture), `side` square
 const panel::Picture* chainPicture(State& s, const std::string& map, int side) {
     if (side != s.chainSide) {
         s.chainPictures.clear();
@@ -177,17 +179,57 @@ panel::Picture asPicture(const spritefile::Image& im) {
     return p;
 }
 
-void loadPicture(State& s, const std::string& key, int side) {
+int px(float dp, const State& s) { return std::max(1, int(std::lround(dp * s.dp))); }
+
+// The pictures let go (a new size, the pack's icons, too many): kept until a body without them is laid out
+void retirePictures(State& s) {
+    if (s.pictures.empty()) return;
+    s.retired.emplace_back(8, std::move(s.pictures));
+    s.pictures.clear();
+    s.wanted.clear();
+    s.bodyNow = true;
+}
+
+// 3.0.11-beta.26: a row's «ui:<name>» icon (the tiles', the rail's, the chips' of a location and a quest)
+bool iconNamed(const std::string& key, uiicons::Icon& icon) {
+    static const std::pair<const char*, uiicons::Icon> kNames[] = {
+        {"ui:monster", uiicons::Icon::Monster}, {"ui:item", uiicons::Icon::Item},
+        {"ui:location", uiicons::Icon::Location}, {"ui:quest", uiicons::Icon::Quest},
+        {"ui:npc", uiicons::Icon::Npc}, {"ui:mvp", uiicons::Icon::Mvp},
+        {"ui:pet", uiicons::Icon::Pet}, {"ui:craft", uiicons::Icon::Craft},
+        {"ui:world", uiicons::Icon::World}, {"ui:tables", uiicons::Icon::Tables},
+        {"ui:search", uiicons::Icon::Search}, {"ui:dungeon", uiicons::Icon::Dungeon},
+        {"ui:minus", uiicons::Icon::Minus}, {"ui:plus", uiicons::Icon::Plus},
+        {"ui:expand", uiicons::Icon::Expand}, {"ui:home", uiicons::Icon::Home},
+        {"ui:back", uiicons::Icon::Back}, {"ui:route", uiicons::Icon::Route},
+    };
+    for (const auto& [name, i] : kNames)
+        if (key == name) {
+            icon = i;
+            return true;
+        }
+    return false;
+}
+
+void loadPicture(State& s, const std::string& key) {
     if (s.pictures.count(key) || !s.index) return;
-    if (s.pictures.size() >= kMostPictures) s.pictures.clear();  // 3.0.11-beta.22: a long browse never piles up
+    if (s.pictures.size() >= kMostPictures) retirePictures(s);  // 3.0.11-beta.22: a long browse never piles up
     panel::Picture& out = s.pictures[key];  // empty until found: not looked for again
+    if (key.rfind("ui:", 0) == 0) {          // the core's line icon, painted at its size
+        uiicons::Icon icon;
+        if (!iconNamed(key, icon)) return;
+        const int side = px(24, s);
+        panel::blank(out, side, side);
+        uiicons::draw(out, icon, 0, 0, float(side), 0xC9D1DE, 1.0f, 2.0f);
+        return;
+    }
     const bool mobIcon = key.rfind("icon:mob:", 0) == 0;  // 3.0.11-beta.26: a chip's monster, the icon's size
-    const int box = mobIcon ? side : std::max(16, side - int(8 * s.layout.s));  // the square less its edge
+    const int side = mobIcon || key.rfind("icon:", 0) == 0 ? px(24, s) : px(104, s);
     if (key.rfind("mob:", 0) == 0 || mobIcon) {
         const auto m = s.index->mobs.find(std::atoi(key.c_str() + (mobIcon ? 9 : 4)));
         if (m == s.index->mobs.end()) return;
         std::string from;
-        if (monsterPicture(m->second, box, out, &from)) {  // 3.0.11-beta.38: win/monster_picture
+        if (monsterPicture(m->second, side, out, &from)) {  // 3.0.11-beta.38: win/monster_picture
             LOG_INFO("reference: %s's picture - %s", m->second.name.c_str(), from.c_str());
             return;
         }
@@ -202,31 +244,48 @@ void loadPicture(State& s, const std::string& key, int side) {
         if (!readFile(s, "data\\texture\\" + kUi + "\\map\\" + key.substr(4) + ".bmp", bmp) ||
             !pack::decodeBmp(reinterpret_cast<const uint8_t*>(bmp.data()), bmp.size(), argb, w, h))
             return;
-        minimap::keyPink(argb);  // 3.0.18-beta.220 (R-5773KD, R-FSNPYE): the game's magenta round it see-through
+        minimap::keyPink(argb);  // 3.0.18-beta.220: the game's magenta round it see-through
         spritefile::Image im;
         im.w = w;
         im.h = h;
         im.argb = std::move(argb);
-        out = asPicture(spritefile::fitted(im, box, box));
+        out = asPicture(spritefile::fitted(im, side, side));
         return;
     }
     const bool icon = key.rfind("icon:item:", 0) == 0;  // 3.0.11-beta.15: a row's icon, its own size
     if (key.rfind("item:", 0) == 0 || icon) {
-        // 3.0.18-beta.217: the client tables' item -> icon (data\idnum2itemresnametable.txt filled from the language
-        // folder's: uaRO HD's own 15001-15003), no copy of its own
-        const auto& files = clienttables::itemFiles();
+        const auto& files = clienttables::itemFiles();  // 3.0.18-beta.217: the client tables' item -> icon
         const auto f = files.find(std::to_string(std::atoi(key.c_str() + (icon ? 10 : 5))));
         if (f == files.end()) return;
-        // 3.0.11-beta.74: the AI texture pack's icon when it has one (win/client_tables), else the game's
-        spritefile::Image im;
+        spritefile::Image im;  // 3.0.11-beta.74: the AI texture pack's icon when it has one, else the game's
         if (!clienttables::iconPixels(f->second, im.argb, im.w, im.h)) return;
         out = icon ? asPicture(spritefile::fitted(im, side, side, 1))
-                   : asPicture(spritefile::fitted(im, std::min(box, 72), std::min(box, 72)));
+                   : asPicture(spritefile::fitted(im, std::min(side, px(72, s)), std::min(side, px(72, s))));
     }
 }
 
-// What a page is made with: the player's place, the minimap's way, the live data, the world map (3.0.11-beta.29:
-// the world map's look too)
+// A picture's source for the markup ("" while it is not made, or there is none): the body asks; the icons not made
+// yet are made a few a frame and the body said again
+std::string pictureSrc(State& s, const std::string& key) {
+    if (key == "world") {
+        if (s.worldPicture.width <= 0) return {};
+        return uaui::picture(&s.worldPicture, s.worldPainted, s.worldSrc);
+    }
+    auto it = s.pictures.find(key);
+    if (it == s.pictures.end()) {
+        if (key.rfind("icon:", 0) == 0) {  // a row's icon: later, a few a frame
+            if (std::find(s.wanted.begin(), s.wanted.end(), key) == s.wanted.end()) s.wanted.push_back(key);
+            return {};
+        }
+        loadPicture(s, key);  // a portrait, a line icon: at once
+        it = s.pictures.find(key);
+        if (it == s.pictures.end()) return {};
+    }
+    if (it->second.width <= 0) return {};
+    return uaui::picture(&it->second, uaui::stamp(&it->second), s.sources[key]);
+}
+
+// What a page is made with: the player's place, the minimap's way, the live data, the world map
 refpages::Context contextOf(const State& s) {
     refpages::Context c;
     c.here = s.here;
@@ -242,51 +301,204 @@ refpages::Context contextOf(const State& s) {
     c.folded = s.folded;  // 3.0.11-beta.17
     c.recent = &s.recent;  // 3.0.11-beta.18
     c.favourites = &s.favourites;
-    c.bar = &s.bar;        // 3.0.11-beta.68: the hotbar's skills (read with each page)
-    c.liveAt = reference::onlineSeen();  // 3.0.11-beta.69: the data's page - the live data's age
-    c.trackedQuests = &trackerwin::quests();  // 3.0.11-beta.70: the cards' pins
+    c.bar = &s.bar;        // 3.0.11-beta.68
+    c.liveAt = reference::onlineSeen();  // 3.0.11-beta.69
+    c.trackedQuests = &trackerwin::quests();  // 3.0.11-beta.70
     c.trackedItems = &trackerwin::items();
     return c;
 }
 
-int worldRow(const State& s) {
-    for (size_t i = 0; i < s.rows.size() && i < s.page.rows.size(); ++i)
-        if (s.page.rows[i].style == refpages::Style::World) return int(i);
-    return -1;
+bool worldPage(const State& s) {
+    for (const refpages::Row& r : s.page.rows)
+        if (r.style == refpages::Style::World) return true;
+    return false;
 }
 
-// 3.0.11-beta.29: the world map's picture at the view (the sheet's pictures at their detail) - made again when the
-// view or the row's size changed; false when it is as it was
-bool worldPictureMade(State& s) {
-    const int row = worldRow(s);
-    if (row < 0 || !s.world) return false;
-    const refwin::Placed& r = s.rows[size_t(row)];
-    const worldmap::Sheet& sh = s.world->sheet;
-    const worldmap::Fit v = worldmap::view(sh.w, sh.h, r.w, r.h, s.zoom, s.cx, s.cy);
-    if (s.worldPicture.width == r.w && s.worldPicture.height == r.h && v.s == s.pictureFit.s &&
-        v.x == s.pictureFit.x && v.y == s.pictureFit.y)
-        return false;
-    const int d = reference::World::detail;
-    worldmap::scaled(s.worldPicture, s.world->argb, sh.w * d, sh.h * d, r.w, r.h, worldmap::Fit{v.s / d, v.x, v.y});
-    s.pictureFit = v;
-    s.worldMadeAt = GetTickCount64();
-    return true;
+// 3.0.11-beta.26: the chips' and the way's words measured as drawWords draws them
+float measured(const std::string& utf8, float px, bool bold) { return float(wordsWidth(utf8Wide(utf8), px, bold)); }
+
+refwin::Layout worldLayout(const State& s) {  // the world map's painter's scale: the document's dp
+    refwin::Layout L;
+    L.s = s.dp;
+    L.measure = measured;
+    return L;
 }
 
-// The view moved or zoomed: its centre kept where the view puts it (no drifting past the sheet's edges), the
-// picture made again, the map's row painted again
-void worldChanged(State& s) {
-    const int row = worldRow(s);
-    if (row < 0 || !s.world) return;
-    const refwin::Placed& r = s.rows[size_t(row)];
-    const worldmap::Sheet& sh = s.world->sheet;
-    const worldmap::Fit v = worldmap::view(sh.w, sh.h, r.w, r.h, s.zoom, s.cx, s.cy);
-    if (s.zoom > 1 && v.s > 0) {
-        s.cx = (float(r.w) / 2 - v.x) / v.s;
-        s.cy = (float(r.h) / 2 - v.y) / v.s;
+refwin::WorldLook worldLook(State& s, bool forPaint) {
+    refwin::WorldLook w;
+    if (!s.world || !s.index) return w;
+    w.sheet = &s.world->sheet;
+    w.zoom = s.zoom;
+    w.cx = s.cx;
+    w.cy = s.cy;
+    const int side = refwin::chainSide(worldLayout(s));
+    for (const auto& [map, name] : s.way.chain)  // 3.0.11-beta.64: a dungeon's way - its maps in a box
+        w.chain.push_back(refwin::ChainMap{map, name, forPaint ? chainPicture(s, map, side) : nullptr});
+    w.chainTitle = s.way.chainTitle;
+    if (!forPaint) return w;
+    w.picture = &s.worldPicture;
+    w.here = s.here;
+    w.hover = s.worldHover;
+    if (s.at.go == refpages::Go::World) w.marks = refpages::worldMarks(*s.index, s.at.map);  // 3.0.11-beta.19
+    if (s.online) w.players = &s.online->maps;
+    int x = -1, y = -1, mw = 0, mh = 0;
+    const bool cell = readPlayerCell(x, y, mw, mh);
+    if (const worldmap::Tile* t = worldmap::tileOf(s.world->sheet, s.here); t && cell)
+        worldmap::cellOnSheet(*t, mw, mh, x, y, w.hereX, w.hereY);
+    w.hops = s.way.hops;
+    w.target = s.way.target;
+    w.targetLabel = s.way.targetLabel;
+    w.hereLabel = s.way.hereLabel;
+    if (s.labelsOf != s.index.get()) {
+        s.labels = refpages::worldLabels(*s.index);
+        s.labelsOf = s.index.get();
     }
-    if (!worldPictureMade(s) || s.dirty) return;
-    if (const Rect a = refwin::rowArea(s.layout, s.page, s.rows, s.scroll, row); !a.empty()) s.hot.push_back(a);
+    w.labels = s.labels;
+    if (!s.worldHover.empty()) w.tip = refpages::worldTip(*s.index, language(), s.worldHover, contextOf(s));
+    return w;
+}
+
+// The world map's words over its picture as markup (spans placed in its box)
+std::string worldWordsRml(const State& s, const refwin::WorldLook& w) {
+    std::string o;
+    const panel::Box b{0, 0, float(s.mapW), float(s.mapH)};
+    char style[256];
+    for (const refwin::Words& x : refwin::worldWordsIn(worldLayout(s), w, b)) {
+        const char* align = x.align == refwin::Align::Right ? "right" : x.align == refwin::Align::Center ? "center"
+                                                                                                         : "left";
+        std::snprintf(style, sizeof style,
+                      "left: %.1fpx; top: %.1fpx; width: %.1fpx; height: %.1fpx; font-size: %.1fpx; "
+                      "line-height: %.1fpx; color: #%06x; text-align: %s;",
+                      double(x.box.x), double(x.box.y), double(x.box.w), double(x.box.h), double(x.px),
+                      double(x.wrap ? std::round(x.px * 1.3f) : x.box.h), unsigned(x.rgb & 0xFFFFFF), align);
+        o += std::string("<span class=\"ww") + (x.bold ? " b" : "") + (x.wrap ? " wrap" : "") + "\" style=\"" + style +
+             "\">" + ur::escape(x.text) + "</span>";
+    }
+    return o;
+}
+
+// 3.0.11-beta.29: the world map's picture at the view - painted again when what it shows changed; its element's
+// picture and words then put in place (not the whole body)
+void worldPaint(State& s) {
+    if (!worldPage(s) || !s.world || s.mapW <= 0 || s.mapH <= 0) return;
+    const refwin::WorldLook w = worldLook(s, true);
+    char head[200];
+    std::snprintf(head, sizeof head, "%d %d %.1f %.1f %.4f %.3f %.3f %.3f|", s.mapW, s.mapH, double(w.hereX),
+                  double(w.hereY), double(w.zoom), double(w.cx), double(w.cy), double(s.dp));
+    std::string key = head + w.here + '|' + w.target + '|' + w.hover + '|';
+    for (const auto& hop : w.hops) key += hop.from + '>' + hop.to + (hop.jump ? "j" : "") + hop.label + ';';
+    if (w.players)
+        for (const auto& [m, n] : *w.players) key += m + '=' + std::to_string(n) + ',';
+    for (const auto& [m, n] : w.marks) key += m + '#' + std::to_string(n) + ',';
+    for (const std::string& l : w.tip) key += l + '\n';
+    for (const auto& c : w.chain) key += c.map + (c.picture ? "+" : "-");
+    key += std::to_string(uistyle::generation());
+    if (key == s.worldKey) return;
+    s.worldKey = std::move(key);
+    refwin::paintWorldPicture(s.worldPicture, worldLayout(s), panel::Box{0, 0, float(s.mapW), float(s.mapH)}, w);
+    ++s.worldPainted;
+    s.worldMadeAt = GetTickCount64();
+    s.worldWordsRml = worldWordsRml(s, w);
+    if (Rml::Element* map = s.win.doc.byId("wmap"); map && !s.bodyDirty) {
+        const std::string src = pictureSrc(s, "world");
+        char size[64];
+        std::snprintf(size, sizeof size, "width: %dpx; height: %dpx;", s.mapW, s.mapH);
+        map->SetInnerRML("<img id=\"wimg\" src=\"" + ur::escape(src) + "\" style=\"" + size + "\"/>" +
+                         s.worldWordsRml);
+    }
+}
+
+// The view moved or zoomed: its centre kept where the view puts it, the picture made again
+void worldChanged(State& s) {
+    if (!s.world || s.mapW <= 0) return;
+    const worldmap::Sheet& sh = s.world->sheet;
+    const worldmap::Fit v = worldmap::view(sh.w, sh.h, s.mapW, s.mapH, s.zoom, s.cx, s.cy);
+    if (s.zoom > 1 && v.s > 0) {
+        s.cx = (float(s.mapW) / 2 - v.x) / v.s;
+        s.cy = (float(s.mapH) / 2 - v.y) / v.s;
+    }
+    worldPaint(s);
+}
+
+// 3.0.11-beta.26: the words around the page - the title, «Назад до …», the way here, the data's chips, the keys
+void fillChrome(State& s) {
+    const settings::Lang l = language();
+    ur::Model& m = s.model;
+    m.title = say(Text::RefTitle);
+    m.back = s.back.empty() ? "" : settings::fmt(settings::tr(l, Text::RefBack), {s.back.back().name});
+    m.crumbs.clear();
+    for (const Entry& e : s.back)
+        if (!e.name.empty() && e.name != m.title) m.crumbs.push_back(e.name);
+    if (!s.back.empty() && !s.page.name.empty()) m.crumbs.push_back(s.page.name);
+    m.find = say(Text::RefFind);
+    m.home = s.at.go != refpages::Go::None || !s.query.empty();  // 3.0.11-beta.30: «Головна» but on it
+    m.home_icon = pictureSrc(s, "ui:home");
+    m.star = s.page.star < 0 ? "" : s.page.star > 0 ? "\xE2\x98\x85" : "\xE2\x98\x86";  // ★ ☆
+    m.starred = s.page.star > 0;
+    m.rail.clear();
+    for (size_t i = 0; i < s.page.rail.size(); ++i) {
+        const refpages::Row& r = s.page.rail[i];
+        m.rail.push_back(ur::RailV{r.left, r.icon.empty() ? "" : pictureSrc(s, r.icon), r.right,
+                                   int(i) == s.page.railOn});
+    }
+    const long long now = static_cast<long long>(std::time(nullptr));
+    m.pack.clear();
+    if (s.index && refpages::packStale(*s.index, now))  // 3.0.11-beta.69: past 14 days - it may be out of date
+        m.pack = settings::fmt(settings::tr(l, Text::RefFooterStale), {s.index->date.substr(0, 10)});
+    else if (s.index)
+        m.pack = settings::fmt(settings::tr(l, Text::RefFooter),
+                               {s.index->date.substr(0, 10), s.index->commit.substr(0, 8)});
+    if (s.online) {  // 3.0.11-beta.20: how fresh the players now (and the timers, the market) are
+        const long long age = std::max<long long>(0, now - s.online->at);
+        m.live = settings::fmt(settings::tr(l, Text::RefLiveNow),
+                               {refpages::number(s.online->online, l),
+                                refpages::respawn(int(std::max<long long>(age, 60) * 1000), l)});
+        m.live_state = int(refwin::Live::Fresh);
+    } else if (const long long seen = reference::onlineSeen(); seen > 0) {  // 3.0.11-beta.69: came, now stale
+        const long long age = std::min<long long>(std::max<long long>(now - seen, 60), 2000000);
+        m.live = settings::fmt(settings::tr(l, Text::RefLiveStale), {refpages::respawn(int(age * 1000), l)});
+        m.live_state = int(refwin::Live::Stale);
+    } else {
+        m.live = say(Text::RefLiveOff);
+        m.live_state = int(refwin::Live::Off);
+    }
+    const bool card = s.at.go == refpages::Go::Mob || s.at.go == refpages::Go::Item || s.at.go == refpages::Go::Map ||
+                      s.at.go == refpages::Go::Quest;
+    m.keys = say(card                                                 ? Text::RefKeysCard
+                 : s.at.go == refpages::Go::World && s.at.id == 0 ? Text::RefKeysWorld  // 3.0.11-beta.29
+                                                                  : Text::RefKeysList);
+    m.ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    m.narrow = s.narrow;
+    // not the field's words: said again while one types, they would move its caret
+    for (const char* v : {"title", "back", "crumbs", "find", "home", "home_icon", "star", "starred", "rail", "pack",
+                          "live", "live_state", "keys", "ground", "narrow"})
+        s.win.doc.dirty(v);
+}
+
+// The body's markup again (a new page, the pictures that came, the narrow look)
+void renderBody(State& s) {
+    const ULONGLONG t0 = GetTickCount64();
+    ur::Look look;
+    look.narrow = s.narrow;
+    look.selected = s.sel;
+    look.worldW = s.mapW;
+    look.worldH = s.mapH;
+    look.picture = [&s](const std::string& key) { return pictureSrc(s, key); };
+    std::string rml = ur::body(s.page, look);
+    if (worldPage(s) && !s.worldWordsRml.empty()) {  // the world map's words inside its box
+        const size_t at = rml.find("<div id=\"wmap\"");
+        const size_t end = at == std::string::npos ? at : rml.find("</div>", at);
+        if (end != std::string::npos) rml.insert(end, s.worldWordsRml);
+    }
+    s.model.body = rml;
+    s.win.doc.dirty("body");
+    s.bodyDirty = s.bodyNow = false;
+    s.bodyAt = GetTickCount64();
+    s.markedSel = s.sel;
+    static int told = 0;
+    if (told++ < 40)
+        LOG_INFO("reference: «%s» - %zu rows, %zu bytes of markup in %llu ms", s.page.name.c_str(),
+                 s.page.rows.size(), rml.size(), (unsigned long long)(GetTickCount64() - t0));
 }
 
 void makePage(State& s) {
@@ -307,39 +519,35 @@ void makePage(State& s) {
     }
     const bool first = s.at.go == refpages::Go::None && s.query.empty();  // 3.0.11-beta.26: the concept's rail
     if (s.index && !first && s.at.go != refpages::Go::World) s.page = refpages::withRail(s.page, *s.index, l, s.at);
-    s.rows = refwin::place(s.layout, s.page, s.total);
-    s.scroll = refwin::clampScroll(s.scroll, s.total, s.layout.bodyH);
     s.madeAt = GetTickCount64();
     if (s.sel >= int(s.page.rows.size()) || (s.sel >= 0 && s.page.rows[size_t(s.sel)].link.go == refpages::Go::None))
         s.sel = -1;
-    if (s.sel < 0 && s.at.go == refpages::Go::None && !s.query.empty())  // 3.0.11-beta.28: the first result picked:
-        for (size_t i = 0; i < s.page.rows.size(); ++i)                    // Enter's (the concept's v21_search)
+    if (s.sel < 0 && s.at.go == refpages::Go::None && !s.query.empty())  // 3.0.11-beta.28: the first result picked
+        for (size_t i = 0; i < s.page.rows.size(); ++i)
             if (s.page.rows[i].style == refpages::Style::Result) {
                 s.sel = int(i);
                 break;
             }
-    for (const refpages::Row& r : s.page.rows)  // 3.0.11-beta.14
-        if (r.style == refpages::Style::Portrait && !r.picture.empty())
-            loadPicture(s, r.picture, refwin::portraitSide(s.layout));
-    if (const int row = worldRow(s); row >= 0 && s.world && s.index) {  // 3.0.11-beta.11: the world's picture
+    if (worldPage(s) && s.world && s.index) {  // 3.0.11-beta.11: the world's picture, its way and its view
         const refpages::Context c = contextOf(s);
-        s.way = refpages::worldWayOf(*s.index, l, c, s.at.map);  // 3.0.11-beta.29: its way, its view
-        const std::string key = refpages::linkText(s.at) + "|" + std::to_string(s.at.id) + "|" + s.at.map;
+        s.way = refpages::worldWayOf(*s.index, l, c, s.at.map);
+        const std::string key = refpages::linkText(s.at) + "|" + std::to_string(s.at.id) + "|" + s.at.map + "|" +
+                                std::to_string(s.mapW) + "x" + std::to_string(s.mapH);
         if (key != s.viewOf) {  // a page of it opened: the view on its way or its marks, else the whole world
             s.viewOf = key;
             s.zoom = 1;
             s.cx = s.cy = -1;
             float vl = 0, vt = 0, vr = 0, vb = 0;
-            const refwin::Placed& r = s.rows[size_t(row)];
             const worldmap::Sheet& sh = s.world->sheet;
             if (refpages::worldFocus(sh, s.way, refpages::worldMarks(*s.index, s.at.map), vl, vt, vr, vb))
-                worldmap::viewOn(sh.w, sh.h, r.w, r.h, vl, vt, vr, vb, s.zoom, s.cx, s.cy);
+                worldmap::viewOn(sh.w, sh.h, s.mapW, s.mapH, vl, vt, vr, vb, s.zoom, s.cx, s.cy);
         }
-        worldPictureMade(s);
+        s.worldKey.clear();
+        worldPaint(s);
     }
-    s.hover = refwin::Under{};
     s.wantPage = false;
-    s.dirty = true;
+    s.bodyDirty = s.bodyNow = true;
+    fillChrome(s);
 }
 
 void close(State& s);
@@ -382,17 +590,46 @@ void noteRecent(State& s) {  // the card opened now: first of «Нещодавн
     keepList(s.recent, layout::kReferenceRecent);
 }
 
+Rml::Element* scroller(State& s) { return s.win.doc.byId("scroll"); }
+float scrollNow(State& s) {
+    Rml::Element* e = scroller(s);
+    return e ? e->GetScrollTop() : 0;
+}
+
+Rml::Element* field(State& s) { return s.win.doc.byId("rq"); }
+bool fieldFocused(State& s) {
+    Rml::Element* f = field(s);
+    Rml::ElementDocument* d = s.win.doc.doc();
+    if (!f || !d || !d->GetContext()) return false;
+    return d->GetContext()->GetFocusElement() == f;
+}
+void blurField(State& s) {
+    if (fieldFocused(s))
+        if (Rml::Element* f = field(s)) f->Blur();
+}
+
+// The field's words said by the window (a page left, Esc) - the model and the window agree, nothing typed anew
+void setQuery(State& s, const std::string& q) {
+    s.query = q;
+    s.model.query = q;
+    s.win.doc.dirty("query");
+}
+
+// A new page: its top shown (or `scroll`, «Назад»'s) once its markup is laid out
+void newPage(State& s, float scroll) {
+    s.scrollTo = scroll;
+    s.applyIn = 2;
+}
+
 void go(State& s, const refpages::Link& to) {
     if (to.go == refpages::Go::Zoom) {  // 3.0.11-beta.29: the world map's «-», «+» round its middle, the whole
-        const int row = worldRow(s);
-        if (row < 0 || !s.world) return;
-        const refwin::Placed& r = s.rows[size_t(row)];
+        if (!s.world || s.mapW <= 0) return;
         const worldmap::Sheet& sh = s.world->sheet;
         if (to.id == 0) {
             s.zoom = 1;
             s.cx = s.cy = -1;
         } else {
-            worldmap::zoomAt(sh.w, sh.h, r.w, r.h, s.zoom, s.cx, s.cy, float(r.w) / 2, float(r.h) / 2,
+            worldmap::zoomAt(sh.w, sh.h, s.mapW, s.mapH, s.zoom, s.cx, s.cy, float(s.mapW) / 2, float(s.mapH) / 2,
                              to.id > 0 ? 1.5f : 1 / 1.5f);
         }
         worldChanged(s);
@@ -400,7 +637,9 @@ void go(State& s, const refpages::Link& to) {
     }
     if (to.go == refpages::Go::Expand) {  // «усі N ›»: the section in full, in place
         s.opened |= 1u << unsigned(to.id);
+        const float keep = scrollNow(s);
         makePage(s);
+        newPage(s, keep);
         return;
     }
     if (to.go == refpages::Go::Star) {  // 3.0.11-beta.18: the card shown into «Обране» or out of it
@@ -409,7 +648,9 @@ void go(State& s, const refpages::Link& to) {
         if (it != s.favourites.end()) s.favourites.erase(it);
         else if (isCard(s.at) && s.favourites.size() < kMostKept) s.favourites.insert(s.favourites.begin(), s.at);
         keepList(s.favourites, layout::kReferenceFavourites);
+        const float keep = scrollNow(s);
         makePage(s);
+        newPage(s, keep);
         return;
     }
     if (to.go == refpages::Go::Fold) {  // 3.0.11-beta.17: a section folded or back, in every card, kept for later
@@ -418,13 +659,17 @@ void go(State& s, const refpages::Link& to) {
         const std::string text = std::to_string(s.folded) + "\n";
         if (!writeFileAtomic(path, text.data(), text.size()))
             LOG_INFO("reference: %s cannot be written", path.c_str());
+        const float keep = scrollNow(s);
         makePage(s);
+        newPage(s, keep);
         return;
     }
     if (to.go == refpages::Go::Track) {  // 3.0.11-beta.70: a quest's or an item's pin in the tracker - the card stays
         if (to.id == 0) trackerwin::toggleQuest(to.map);
         else trackerwin::toggleItem(std::atoi(to.map.c_str()));
+        const float keep = scrollNow(s);
         makePage(s);
+        newPage(s, keep);
         return;
     }
     if (to.go == refpages::Go::Follow) {  // 3.0.11-beta.9: the way on the minimap
@@ -434,56 +679,54 @@ void go(State& s, const refpages::Link& to) {
             minimapproto::unfollow();
         else
             minimapproto::follow(to.map, to.id == 0);
-        // 3.0.11-beta.31 (the owner: «когда выбрать маршрут то справочник закрывается»): the window stays, its page
-        // says it is followed («веду · зупинити ›», «Не вести»)
+        const float keep = scrollNow(s);  // 3.0.11-beta.31: the window stays, its page says it is followed
         makePage(s);
+        newPage(s, keep);
         return;
     }
+    if (to.go == refpages::Go::None) return;
     int from = s.sel;  // 3.0.11-beta.28: a result opened by a click - picked when back at the results
     for (size_t i = 0; i < s.page.rows.size(); ++i)
         if (refpages::sameCard(s.page.rows[i].link, to)) {
             from = int(i);
             break;
         }
-    s.back.push_back(Entry{s.at, s.query, s.page.name, s.scroll, s.opened, from});
+    s.back.push_back(Entry{s.at, s.query, s.page.name, scrollNow(s), s.opened, from});
     s.at = to;
-    s.scroll = 0;
     s.opened = 0;
     s.sel = -1;
+    blurField(s);  // a card: the hotbar's keys the game's again
     noteRecent(s);  // 3.0.11-beta.18
     makePage(s);
+    newPage(s, 0);
 }
 
-// 3.0.11-beta.26: the rail's «Усе» - the first screen (the search emptied), the page left kept for «Назад»
+// 3.0.11-beta.26: «Головна» - the first screen (the search emptied), the page left kept for «Назад»
 void goFirst(State& s) {
     if (s.at.go == refpages::Go::None && s.query.empty()) return;
-    s.back.push_back(Entry{s.at, s.query, s.page.name, s.scroll, s.opened});
+    s.back.push_back(Entry{s.at, s.query, s.page.name, scrollNow(s), s.opened});
     s.at = refpages::Link{};
-    s.query.clear();
-    s.scroll = 0;
+    setQuery(s, "");
     s.opened = 0;
     s.sel = -1;
     makePage(s);
+    newPage(s, 0);
+}
+
+// The picked row's element marked (its class «sel»), the old one's let go; `show`: scrolled into view
+void markSelected(State& s, bool show) {
+    if (s.markedSel >= 0)
+        if (Rml::Element* e = s.win.doc.byId(("r" + std::to_string(s.markedSel)).c_str())) e->SetClass("sel", false);
+    s.markedSel = -1;
+    if (s.sel < 0) return;
+    if (Rml::Element* e = s.win.doc.byId(("r" + std::to_string(s.sel)).c_str())) {
+        e->SetClass("sel", true);
+        if (show) e->ScrollIntoView(false);
+        s.markedSel = s.sel;
+    }
 }
 
 // 3.0.11-beta.21: the arrows' (and the pad's D-pad's) row - the next one that leads somewhere, kept in view
-// 3.0.11-beta.25 (R-77TCM7: «когда по меню вожу, лагат курсор и фпс падает»): the
-// highlights moved - another row under the pointer, another one picked - so their old areas and their new ones are
-// painted again, not the whole window (290 ms at 4K for each row the pointer went to)
-void highlight(State& s, const refwin::Under& hover, int sel) {
-    for (int pass = 0; pass < 2 && !s.dirty; ++pass) {
-        refwin::Look look;
-        look.hover = s.hover;
-        look.chrome = s.chrome;
-        look.selected = s.sel;
-        for (const Rect& a : refwin::hotAreas(s.layout, s.page, s.rows, s.scroll, look)) s.hot.push_back(a);
-        s.hover = hover;
-        s.sel = sel;
-    }
-    s.hover = hover;
-    s.sel = sel;
-}
-
 void step(State& s, int by) {
     const int n = int(s.page.rows.size());
     int i = s.sel;
@@ -493,18 +736,8 @@ void step(State& s, int by) {
         if (s.page.rows[size_t(i)].link.go != refpages::Go::None) break;
     }
     if (i < 0 || i >= n || s.page.rows[size_t(i)].link.go == refpages::Go::None) return;
-    const refwin::Placed& r = s.rows[size_t(i)];
-    int scroll = s.scroll;
-    if (r.y < scroll) scroll = refwin::clampScroll(r.y - r.h, s.total, s.layout.bodyH);
-    if (r.y + r.h > scroll + s.layout.bodyH)
-        scroll = refwin::clampScroll(r.y + 2 * r.h - s.layout.bodyH, s.total, s.layout.bodyH);
-    if (scroll == s.scroll) {
-        highlight(s, s.hover, i);
-        return;
-    }
     s.sel = i;
-    s.scroll = scroll;
-    s.dirty = true;
+    markSelected(s, true);
 }
 
 // Enter (the pad's A): the picked row, else the first that leads to a card
@@ -526,28 +759,24 @@ void goBack(State& s) {
     const Entry e = s.back.back();
     s.back.pop_back();
     s.at = e.at;
-    s.query = e.query;
-    s.scroll = e.scroll;
+    setQuery(s, e.query);
     s.opened = e.opened;
     s.sel = e.sel;
     makePage(s);
+    newPage(s, e.scroll);
 }
 
 void typed(State& s) {  // the query changed: its results (a card left for them comes back by «Назад»)
-    if (s.at.go != refpages::Go::None) s.back.push_back(Entry{s.at, "", s.page.name, s.scroll, s.opened});
+    if (s.at.go != refpages::Go::None) s.back.push_back(Entry{s.at, "", s.page.name, scrollNow(s), s.opened});
     s.at = refpages::Link{};
     s.opened = 0;  // 3.0.11-beta.28: the groups closed, the first result picked again
     s.sel = -1;
-    s.scroll = 0;
     makePage(s);
+    newPage(s, 0);
 }
 
-void scrollBy(State& s, int pixels) {
-    const int next = refwin::clampScroll(s.scroll + pixels, s.total, s.layout.bodyH);
-    if (next == s.scroll) return;
-    s.scroll = next;
-    s.hover = refwin::Under{};
-    s.dirty = true;
+void scrollBy(State& s, float pages) {
+    if (Rml::Element* e = scroller(s)) e->SetScrollTop(e->GetScrollTop() + pages * e->GetClientHeight() * 0.9f);
 }
 
 void openWindow(State& s, const refpages::Link& at) {
@@ -560,224 +789,158 @@ void openWindow(State& s, const refpages::Link& at) {
         readList(s.favourites, layout::kReferenceFavourites);
     }
     s.open = true;
-    s.query.clear();
+    setQuery(s, "");
     s.back.clear();
     s.at = at;
-    s.scroll = 0;
     s.opened = 0;
+    s.sel = -1;
     s.wantPage = true;
-    s.dirty = true;
+    newPage(s, 0);
     noteRecent(s);  // 3.0.11-beta.18: a card from the minimap's lines too
 }
 
-// 3.0.11-beta.26: the chips' and the way's words measured as drawWords draws them
-float measured(const std::string& utf8, float px, bool bold) { return float(wordsWidth(utf8Wide(utf8), px, bold)); }
-
 void close(State& s) {
     s.open = false;
+    s.dragging = false;
+    blurField(s);
     if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Reference, nullptr, nullptr, false);
     s.shown = false;
 }
 
-// 3.0.11-beta.11: what goes over the world map - you, the way followed, the players now, the map under the pointer
-// 3.0.11-beta.29: what finds the map under the pointer - the sheet at the view (none off the world map's page)
-refwin::WorldLook worldHit(const State& s) {
-    refwin::WorldLook w;
-    if (!s.world || worldRow(s) < 0) return w;
-    w.sheet = &s.world->sheet;
-    w.zoom = s.zoom;
-    w.cx = s.cx;
-    w.cy = s.cy;
-    for (const auto& [map, name] : s.way.chain) w.chain.push_back(refwin::ChainMap{map, name, nullptr});  // .64
-    w.chainTitle = s.way.chainTitle;
-    return w;
-}
-
-refwin::WorldLook worldLook(State& s) {
-    refwin::WorldLook w;
-    if (!s.world || !s.index) return w;
-    w.picture = &s.worldPicture;
-    w.sheet = &s.world->sheet;
-    w.here = s.here;
-    w.hover = s.worldHover;
-    if (s.at.go == refpages::Go::World) w.marks = refpages::worldMarks(*s.index, s.at.map);  // 3.0.11-beta.19
-    if (s.online) w.players = &s.online->maps;
-    int x = -1, y = -1, mw = 0, mh = 0;
-    const bool cell = readPlayerCell(x, y, mw, mh);
-    if (const worldmap::Tile* t = worldmap::tileOf(s.world->sheet, s.here); t && cell)
-        worldmap::cellOnSheet(*t, mw, mh, x, y, w.hereX, w.hereY);
-    // 3.0.11-beta.29: the concept's v19_route - the view, the way made with the page, the towns' names, the card of
-    // the map under the pointer
-    w.zoom = s.zoom;
-    w.cx = s.cx;
-    w.cy = s.cy;
-    w.hops = s.way.hops;
-    w.target = s.way.target;
-    w.targetLabel = s.way.targetLabel;
-    w.hereLabel = s.way.hereLabel;
-    // 3.0.11-beta.64: a dungeon's way - its maps in a box at the map's bottom left, with their own minimaps
-    const int side = refwin::chainSide(s.layout);
-    for (const auto& [map, name] : s.way.chain)
-        w.chain.push_back(refwin::ChainMap{map, name, chainPicture(s, map, side)});
-    w.chainTitle = s.way.chainTitle;
-    if (s.labelsOf != s.index.get()) {
-        s.labels = refpages::worldLabels(*s.index);
-        s.labelsOf = s.index.get();
-    }
-    w.labels = s.labels;
-    if (!s.worldHover.empty()) w.tip = refpages::worldTip(*s.index, language(), s.worldHover, contextOf(s));
-    return w;
-}
-
-// What the window is painted with - 3.0.11-beta.25: the world map's only on its page (its way found anew each time)
-refwin::Look lookOf(State& s) {
-    refwin::Look look{s.hover, s.chrome, {}, &s.pictures};
-    for (const refpages::Row& r : s.page.rows)
-        if (r.style == refpages::Style::World) {
-            look.world = worldLook(s);
-            break;
-        }
-    look.selected = s.sel;  // 3.0.11-beta.21
-    return look;
-}
-
-// 3.0.11-beta.26: the words around the page - the title, «Назад до …», the way here (the pages left but the
-// first screen, then this one), the searches', the data's chips (the pack; the players now and how fresh, or no
-// link), the keys (a card's or a list's)
-refwin::Texts textsOf(const State& s) {
-    const settings::Lang l = language();
-    refwin::Texts t;
-    t.title = say(Text::RefTitle);
-    if (!s.back.empty()) t.back = settings::fmt(settings::tr(l, Text::RefBack), {s.back.back().name});
-    for (const Entry& e : s.back)
-        if (!e.name.empty() && e.name != t.title) t.crumbs.push_back(e.name);
-    if (!s.back.empty() && !s.page.name.empty()) t.crumbs.push_back(s.page.name);
-    t.query = s.query;
-    t.hint = say(Text::RefSearchHint);
-    t.find = say(Text::RefFind);
-    const long long now = static_cast<long long>(std::time(nullptr));
-    if (s.index && refpages::packStale(*s.index, now))  // 3.0.11-beta.69: past 14 days - it may be out of date
-        t.pack = settings::fmt(settings::tr(l, Text::RefFooterStale), {s.index->date.substr(0, 10)});
-    else if (s.index)
-        t.pack = settings::fmt(settings::tr(l, Text::RefFooter),
-                               {s.index->date.substr(0, 10), s.index->commit.substr(0, 8)});
-    if (s.online) {  // 3.0.11-beta.20: how fresh the players now (and the timers, the market) are
-        const long long age = std::max<long long>(0, static_cast<long long>(std::time(nullptr)) - s.online->at);
-        t.live = settings::fmt(settings::tr(l, Text::RefLiveNow),
-                               {refpages::number(s.online->online, l),
-                                refpages::respawn(int(std::max<long long>(age, 60) * 1000), l)});
-        t.liveState = refwin::Live::Fresh;
-    } else if (const long long seen = reference::onlineSeen(); seen > 0) {  // 3.0.11-beta.69: came, now stale
-        const long long age = std::min<long long>(std::max<long long>(now - seen, 60), 2000000);
-        t.live = settings::fmt(settings::tr(l, Text::RefLiveStale), {refpages::respawn(int(age * 1000), l)});
-        t.liveState = refwin::Live::Stale;
-    } else {
-        t.live = say(Text::RefLiveOff);
-        t.liveState = refwin::Live::Off;
-    }
-    t.home = s.at.go != refpages::Go::None || !s.query.empty();  // 3.0.11-beta.30: «Головна» but on it
-    t.keys = say(isCard(s.at)                                       ? Text::RefKeysCard
-                 : s.at.go == refpages::Go::World && s.at.id == 0 ? Text::RefKeysWorld  // 3.0.11-beta.29
-                                                                  : Text::RefKeysList);
-    return t;
-}
-
-std::vector<Words> wordsOf(const State& s, const refwin::Look& look) {
-    const refwin::Texts t = textsOf(s);
-    std::vector<Words> gdi;
-    for (const refwin::Words& w : refwin::words(s.layout, s.page, s.rows, s.scroll, t, look)) {
-        const UINT align = w.align == refwin::Align::Right ? DT_RIGHT : w.align == refwin::Align::Center ? DT_CENTER
-                                                                                                          : DT_LEFT;
-        gdi.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold, align, w.wrap});
-    }
-    return gdi;
-}
-
-void render(State& s) {
-    const uicost::Paint cost("«Довідник»", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    s.chrome = refwin::chrome(s.layout, s.page, textsOf(s));  // 3.0.11-beta.26
-    const refwin::Look look = lookOf(s);
-    refwin::sheetOf(s.model, s.layout, s.page, s.rows, s.scroll, s.total, look);
-    if (s.model.world.w > 0) {  // 3.0.18-beta.83: painted again only when what it shows changed (not each hover)
-        const refwin::WorldLook& w = look.world;
-        char head[160];
-        std::snprintf(head, sizeof head, "%p %p %.1f %.1f %.3f %.3f %.3f %.1f %.1f %.2f|", (const void*)w.picture,
-                      (const void*)w.sheet, double(w.hereX), double(w.hereY), double(w.zoom), double(w.cx),
-                      double(w.cy), double(s.model.world.w), double(s.model.world.h), double(s.layout.s));
-        std::string key = head + w.here + '|' + w.target + '|' + w.hover + '|';
-        for (const auto& h : w.hops) key += h.from + '>' + h.to + (h.jump ? "j" : "") + h.label + ';';
-        if (w.players)
-            for (const auto& [m, n] : *w.players) key += m + '=' + std::to_string(n) + ',';
-        for (const auto& [m, n] : w.marks) key += m + '#' + std::to_string(n) + ',';
-        for (const auto& [a, b] : w.labels) key += a + ':' + b + ',';
-        for (const std::string& l : w.tip) key += l + '\n';
-        key += std::to_string(uistyle::generation());
-        if (key != s.worldKey) {
-            s.worldKey = std::move(key);
-            refwin::paintWorldPicture(s.worldSheet, s.layout, s.model.world, w);
-            ++s.worldPainted;
+// The rows' clicks: a data-ln's row's link, a jump chip's group scrolled to the top
+class Clicks final : public Rml::EventListener {
+public:
+    void ProcessEvent(Rml::Event& e) override {
+        State& s = state();
+        for (Rml::Element* el = e.GetTargetElement(); el; el = el->GetParentNode()) {
+            if (el->GetId() == "body") return;
+            const Rml::String ln = el->GetAttribute<Rml::String>("data-ln", "");
+            if (!ln.empty()) {
+                const int i = std::atoi(ln.c_str());
+                if (i >= 0 && size_t(i) < s.page.rows.size()) {
+                    s.sel = i;
+                    go(s, s.page.rows[size_t(i)].link);
+                }
+                return;
+            }
+            const Rml::String jump = el->GetAttribute<Rml::String>("data-jump", "");
+            if (!jump.empty()) {
+                if (Rml::Element* to = s.win.doc.byId(jump.c_str())) to->ScrollIntoView(true);
+                return;
+            }
         }
     }
-    s.sheetWords = wordsOf(s, look);
-    ++s.sheetGen;
-    s.dirty = false;
-    s.hot.clear();
+};
+Clicks g_clicks;
+
+bool make(State& s) {
+    if (s.win.made()) return true;
+    const bool made = s.win.make("reference", ur::rml(), [&s](Rml::DataModelConstructor& c) {
+        ur::bind(c, s.model);
+        c.BindEventCallback("ref_back", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            goBack(state());
+        });
+        c.BindEventCallback("ref_home", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            goFirst(state());
+        });
+        c.BindEventCallback("ref_star", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            go(state(), refpages::Link{refpages::Go::Star, 0, ""});
+        });
+        c.BindEventCallback("ref_close", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            close(state());
+        });
+        c.BindEventCallback("ref_rail", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
+            const int i = a.empty() ? -1 : a[0].Get<int>(-1);
+            if (i == 0) goFirst(st);  // «Головна»
+            else if (i > 0 && size_t(i) < st.page.rail.size()) go(st, st.page.rail[size_t(i)].link);
+        });
+        c.BindEventCallback("ref_chip", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            go(state(), refpages::Link{refpages::Go::Section, refpages::kDataSection, ""});  // 3.0.11-beta.69
+        });
+    });
+    if (made) LOG_INFO("reference: the window made on the new interface (uikit/reference_live)");
+    return made;
 }
 
-bool toWindow(const State& s, HWND game, POINT client, float& wx, float& wy) {
-    RECT r{};
-    if (!GetClientRect(game, &r) || r.right <= 0 || r.bottom <= 0 || s.targetW <= 0) return false;
-    wx = float(client.x) * float(s.targetW) / float(r.right) - float(s.layout.x);  // uaRO.exe is not DPI-aware
-    wy = float(client.y) * float(s.targetH) / float(r.bottom) - float(s.layout.y);
-    return true;
+// The world map's box on the target (false: not its page, not laid out)
+bool mapBox(State& s, float& x, float& y, float& w, float& h) {
+    Rml::Element* e = s.win.doc.byId("wmap");
+    if (!e || !worldPage(s)) return false;
+    const Rml::Vector2f at = e->GetAbsoluteOffset(Rml::BoxArea::Content);
+    const Rml::Vector2f size = e->GetBox().GetSize(Rml::BoxArea::Content);
+    x = at.x, y = at.y, w = size.x, h = size.y;
+    return w > 0 && h > 0;
 }
 
-bool inside(const State& s, float wx, float wy) {
-    return wx >= 0 && wy >= 0 && wx < float(s.layout.w) && wy < float(s.layout.h);
-}
-
-void block(const State& s, HWND game) {
+void block(State& s, HWND game) {
     RECT client{};
-    if (!GetClientRect(game, &client) || s.targetW <= 0 || s.targetH <= 0) return;
-    const refwin::Layout& L = s.layout;
-    const RECT r = clientBox(client, s.targetW, s.targetH, L.x, L.y, L.w, L.h);
+    int bx = 0, by = 0, bw = 0, bh = 0;
+    if (!GetClientRect(game, &client) || s.targetW <= 0 || s.targetH <= 0 || !s.win.box(bx, by, bw, bh)) return;
+    const RECT r = clientBox(client, s.targetW, s.targetH, float(bx), float(by), float(bw), float(bh));
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Reference, game, &r, false);
 }
 
-// A key's own character for the search (the names are English): letters, digits, the space and a few signs by the
-// key's place, whatever the layout types
+// The window's box from the screen and its corner (win/window_stack's size for «reference»); narrow below 900 dp
+void sizeBox(State& s) {
+    const float f = windowstack::sizeOf(winstack::Win::Reference);
+    const float most = 0.96f;
+    int w = int(std::lround(std::min(kWideW * s.dp, 0.92f * float(s.targetW)) * f));
+    int h = int(std::lround(std::min(kWideH * s.dp, 0.90f * float(s.targetH)) * f));
+    w = std::clamp(w, std::min(px(560, s), s.targetW), int(most * float(s.targetW)));
+    h = std::clamp(h, std::min(px(420, s), s.targetH), int(most * float(s.targetH)));
+    const bool narrow = float(w) < kNarrowBelow * s.dp;
+    // the world map's box: the body less its padding, the panel at its right, the bar over it
+    const int mapW = std::max(px(200, s), w - px(2 * 18 + kPanelW, s) - 2);
+    const int mapH = std::max(px(160, s), h - px(56 + 36 + 30 + 42, s) - 2);
+    const bool changed = w != s.w || h != s.h;
+    if (narrow != s.narrow || (worldPage(s) && (mapW != s.mapW || mapH != s.mapH))) s.wantPage = true;
+    s.w = w, s.h = h, s.narrow = narrow, s.mapW = mapW, s.mapH = mapH;
+    if (changed) {
+        char b[32];
+        std::snprintf(b, sizeof b, "%dpx", w);
+        s.model.w = b;
+        std::snprintf(b, sizeof b, "%dpx", h);
+        s.model.h = b;
+        s.win.doc.dirty("w");
+        s.win.doc.dirty("h");
+    }
+}
 
 }  // namespace
 
-static void frameInner(HWND game, bool enabled, double k, int targetWidth, int targetHeight) {
+void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.enabled = enabled;
     if (s.open && !enabled) {
         close(s);
         LOG_INFO("reference: off ([interface] reference = 0) - the window closed");
     }
-    if (!s.open || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
+    if (!s.open || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !make(s)) {
         if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Reference, nullptr, nullptr, false);
         s.shown = false;
+        s.win.frame(false, 0, 0, -1, nullptr);
         return;
     }
+    if (!s.listened)
+        if (Rml::Element* b = s.win.doc.byId("body")) {
+            b->AddEventListener(Rml::EventId::Click, &g_clicks);
+            s.listened = true;
+        }
     const std::string here = readGameMap();
     if (here != s.here) {  // 3.0.11-beta.8: «ви тут» and the routes are from the player's map
         s.here = here;
         s.wantPage = true;
     }
-    // 3.0.11-beta.67: [interface] text_size's too - and laid out again when it or [interface] size changes (a new
-    // size reached the open window only at its next game resolution)
-    const float scale = uistyle::readingScale(k);
-    if (float(k) != s.k || targetWidth != s.targetW || targetHeight != s.targetH || scale != s.scale) {
+    if (float(k) != s.k || targetWidth != s.targetW || targetHeight != s.targetH || uaui::dp() != s.dp) {
         s.k = float(k);
-        s.scale = scale;
+        s.dp = uaui::dp();
         s.targetW = targetWidth;
         s.targetH = targetHeight;
-        s.layout = refwin::layout(targetWidth, targetHeight, scale, measured);
-        s.pictures.clear();  // 3.0.11-beta.14: their size is the layout's
+        retirePictures(s);  // their sizes are the dp's
         s.wantPage = true;
     }
+    sizeBox(s);
     const auto index = reference::index();
     if (index != s.index) {
         s.index = index;
@@ -801,21 +964,30 @@ static void frameInner(HWND game, bool enabled, double k, int targetWidth, int t
             s.wantPage = true;
         }
     }
-    if (s.wantPage) makePage(s);
-    int cx = 0, cy = 0;  // the row under the game's cursor (it is drawn over the window)
-    refwin::Under hover;
+    if (s.model.query != s.query) {  // typed in the field (RmlUi's input writes the model)
+        s.query = s.model.query;
+        typed(s);
+    }
+    if (s.wantPage) {
+        const float keep = scrollNow(s);
+        makePage(s);
+        if (s.applyIn < 0) newPage(s, keep);  // made again in place (live data, the map): the scroll kept
+    }
+    // the world map: dragged, and the map under the pointer (its frame and its card)
+    float mx = 0, my = 0, mw = 0, mh = 0;
+    const bool onMap = mapBox(s, mx, my, mw, mh);
+    int cx = 0, cy = 0;
     const bool pointer = readGameCursor(cx, cy);
-    const float px = float(cx) * float(k) - float(s.layout.x), py = float(cy) * float(k) - float(s.layout.y);
-    if (s.dragging) {  // 3.0.11-beta.29: the world map dragged - the view moves with the pointer
-        const int row = worldRow(s);
+    const float px0 = float(cx) * float(k) - mx, py0 = float(cy) * float(k) - my;
+    if (s.dragging) {
         const int left = GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON;  // the physical one pressed
-        if (GetAsyncKeyState(left) >= 0 || row < 0 || !s.world) {
+        if (GetAsyncKeyState(left) >= 0 || !onMap || !s.world) {
             s.dragging = false;  // let go outside the window
         } else if (pointer) {
-            const float dx = px - s.dragX, dy = py - s.dragY;
-            if (!s.dragged && std::abs(dx) + std::abs(dy) >= 5 * s.layout.s) s.dragged = true;
-            const refwin::Placed& r = s.rows[size_t(row)];
-            const worldmap::Fit v = worldmap::view(s.world->sheet.w, s.world->sheet.h, r.w, r.h, s.zoom, s.cx, s.cy);
+            const float dx = px0 + mx - s.dragX, dy = py0 + my - s.dragY;
+            if (!s.dragged && std::abs(dx) + std::abs(dy) >= 5 * s.dp) s.dragged = true;
+            const worldmap::Fit v = worldmap::view(s.world->sheet.w, s.world->sheet.h, s.mapW, s.mapH, s.zoom, s.cx,
+                                                   s.cy);
             if (s.dragged && v.s > 0 && GetTickCount64() - s.worldMadeAt >= 33) {
                 s.cx = s.dragCx - dx / v.s;
                 s.cy = s.dragCy - dy / v.s;
@@ -823,85 +995,87 @@ static void frameInner(HWND game, bool enabled, double k, int targetWidth, int t
             }
         }
     }
-    const refwin::WorldLook view = worldHit(s);
-    if (pointer) hover = refwin::under(s.layout, s.page, s.rows, s.scroll, s.chrome, px, py, &view);
-    const std::string map = hover.part == refwin::Part::Tile && s.world && !(s.dragging && s.dragged)
-                                ? s.world->sheet.world[size_t(hover.tile)].map
-                                : std::string();
-    if (map != s.worldHover) {  // the world map's tile under the pointer: its frame and its card over the map
-        // 3.0.11-beta.25 (R-77TCM7), 3.0.11-beta.29: only the two maps' frames and cards are painted again (the
-        // page stays as it is)
-        const int row = worldRow(s);
-        const bool clean = !s.dirty && s.world && row >= 0;
-        if (clean)
-            if (const Rect a = refwin::worldArea(s.layout, s.rows, s.scroll, row, worldLook(s)); !a.empty())
-                s.hot.push_back(a);
-        s.worldHover = map;
-        if (clean)
-            if (const Rect a = refwin::worldArea(s.layout, s.rows, s.scroll, row, worldLook(s)); !a.empty())
-                s.hot.push_back(a);
+    if (onMap && s.world) {
+        std::string map;
+        if (pointer && !(s.dragging && s.dragged) && px0 >= 0 && py0 >= 0 && px0 < mw && py0 < mh) {
+            const refwin::Under u = refwin::worldUnder(worldLayout(s), panel::Box{0, 0, mw, mh}, worldLook(s, false),
+                                                       px0, py0);
+            if (u.part == refwin::Part::Tile && size_t(u.tile) < s.world->sheet.world.size())
+                map = s.world->sheet.world[size_t(u.tile)].map;
+        }
+        if (map != s.worldHover) {
+            s.worldHover = map;
+            worldPaint(s);
+        }
     }
-    if (hover.part != s.hover.part || hover.row != s.hover.row || hover.tile != s.hover.tile)
-        highlight(s, hover, s.sel);
-    int budget = 8;  // 3.0.11-beta.15: the icons of the rows in view, a few a frame (a long list never stalls)
-    for (size_t i = 0; i < s.rows.size() && i < s.page.rows.size() && budget > 0; ++i) {
-        const refpages::Row& r = s.page.rows[i];
-        if (r.icon.empty() || r.icon.rfind("ui:", 0) == 0 || !refwin::shown(s.layout, s.rows[i], s.scroll) ||
-            s.pictures.count("icon:" + r.icon))  // 3.0.11-beta.26: «ui:» - the core's own drawings
-            continue;
-        loadPicture(s, "icon:" + r.icon, refwin::iconSide(s.layout));
-        --budget;
-        // 3.0.11-beta.25 (R-77TCM7): the rows with this icon painted again, not the whole window - a long list's
-        // icons come a few a frame
-        for (size_t j = i; j < s.rows.size() && j < s.page.rows.size() && !s.dirty; ++j)
-            if (s.page.rows[j].icon == r.icon)
-                if (const Rect a = refwin::rowArea(s.layout, s.page, s.rows, s.scroll, int(j)); !a.empty())
-                    s.hot.push_back(a);
+    int budget = 8;  // 3.0.11-beta.15: the icons the body asked for, a few a frame (a long list never stalls)
+    while (budget-- > 0 && !s.wanted.empty()) {
+        loadPicture(s, s.wanted.back());
+        s.wanted.pop_back();
+        s.bodyDirty = true;
     }
     if (s.style != uistyle::generation()) {  // 3.0.11-beta.47: its ground another opacity
         s.style = uistyle::generation();
-        s.dirty = true;
+        fillChrome(s);
     }
     if (const int icons = packpictures::iconsStamp(); icons != s.iconsMade) {  // 3.0.11-beta.74: the pack's icons
         s.iconsMade = icons;
-        s.pictures.clear();
-        s.dirty = true;
+        retirePictures(s);
     }
-    if (uaui::ready() != (s.sheetGen > 0 && s.sheetShown)) s.dirty = true;  // 3.0.18-beta.36: drawn the other way
-    if (s.dirty || !s.hot.empty()) render(s);  // uaUI's: said again whole (.158: the picture's repaint gone)
-    s.shown = true;
-    block(s, game);
-}
-
-// 3.0.18-beta.36 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): «Довідник» in RmlUi's
-// markup - core refwin's data of it (sheetOf: its glass, header, rail, the body's rows cut at the body, the scroll's
-// thumb, the rail's tip), the world map's picture in its place, the words as the window lays them out
-static void fillSheet(State& s, uisheet::Content& c) {
-    uisheet::fromModel(c, s.model, s.sheet);
-    if (s.model.world.w > 0 && s.worldSheet.width > 0)
-        c.clippedIcons.insert(c.clippedIcons.begin(),
-                              uisheet::Icon{s.model.world.x, s.model.world.y, float(s.worldSheet.width),
-                                            float(s.worldSheet.height), 1,
-                                            uaui::picture(&s.worldSheet, s.worldPainted, s.worldSrc)});
-    uisheet::sayGdi(c, s.sheetWords);
-}
-
-void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight) {
-    frameInner(game, enabled, k, targetWidth, targetHeight);
-    State& s = state();
-    s.sheetShown = s.sheet.frame("reference", s.shown && s.open, true, s.layout.x, s.layout.y, s.sheetGen,
-                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+    if (s.bodyNow || (s.bodyDirty && GetTickCount64() - s.bodyAt >= 150)) renderBody(s);  // the scroll stays
+    for (auto it = s.retired.begin(); it != s.retired.end();)  // the pictures let go: away once unseen
+        it = --it->first <= 0 ? s.retired.erase(it) : it + 1;
+    if (s.applyIn > 0 && --s.applyIn == 0) {  // the new body laid out: its scroll, its picked row
+        s.applyIn = -1;
+        if (Rml::Element* e = scroller(s)) e->SetScrollTop(s.scrollTo);
+        markSelected(s, false);
+    }
+    const int x = (targetWidth - s.w) / 2, y = (targetHeight - s.h) / 2;
+    s.win.frame(true, x, y, -1, nullptr);
+    s.shown = s.win.shown;
+    if (s.shown) block(s, game);
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
-    if (!s.shown || !s.sheetShown || s.k <= 0) return;  // the old edition (its picture) gone: uaUI draws it
-    const float sc = s.layout.s;  // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
-    s.shadow.draw(record, renderer, s.layout.x, s.layout.y, s.layout.w, s.layout.h, 10 * sc, sc, s.k);
+    if (!s.shown || s.k <= 0) return;
+    s.win.draw(s.shadow, record, renderer, s.dp, s.k);  // its place in the windows' stack, its shadow
 }
 
-bool key(UINT m, WPARAM wp, LPARAM) {
+bool fieldKey(UINT m, WPARAM wp, LPARAM) {
+    State& s = state();
+    if (!s.open || !s.shown || !fieldFocused(s)) return false;
+    const bool alt = GetKeyState(VK_MENU) < 0;
+    if (m == WM_SYSKEYDOWN && wp == VK_LEFT && alt) {  // Alt+← back, the field's words as they are
+        goBack(s);
+        return true;
+    }
+    if (m != WM_KEYDOWN) return false;
+    switch (wp) {
+        case VK_UP: step(s, -1); return true;
+        case VK_DOWN: step(s, +1); return true;
+        case VK_PRIOR: scrollBy(s, -1); return true;
+        case VK_NEXT: scrollBy(s, +1); return true;
+        case VK_RETURN: enter(s); return true;
+        case VK_ESCAPE:  // the owner's: Esc first clears the field, then closes the window
+            if (!s.query.empty()) {
+                setQuery(s, "");
+                typed(s);
+            } else {
+                close(s);
+            }
+            return true;
+        case VK_BACK:
+            if (s.query.empty() && !s.back.empty()) {
+                goBack(s);
+                return true;
+            }
+            return false;
+        default: return false;
+    }
+}
+
+bool key(UINT m, WPARAM wp, LPARAM lp) {
     State& s = state();
     if (!s.enabled) return false;
     const bool ctrl = GetKeyState(VK_CONTROL) < 0, alt = GetKeyState(VK_MENU) < 0;
@@ -919,45 +1093,41 @@ bool key(UINT m, WPARAM wp, LPARAM) {
         s.skipChar = 6;  // Ctrl+F's WM_CHAR
         return true;
     }
-    // 3.0.11-beta.64 (the concept's v19_route: «Карта світу Ctrl+M»): the world map at once, and away again; the game
-    // takes M with Alt alone (FUN_004d96e0) - Ctrl+M is free
+    // 3.0.11-beta.64: Ctrl+M - the world map at once, and away again (the game takes M with Alt alone)
     if (m == WM_KEYDOWN && wp == 'M' && ctrl && !alt) {
         const bool onIt = s.open && s.at.go == refpages::Go::World && s.at.id == 0;
-        if (onIt) {
-            close(s);
-        } else if (s.open) {
-            go(s, refpages::Link{refpages::Go::World, 0, ""});
-        } else {
-            openWindow(s, refpages::Link{refpages::Go::World, 0, ""});
-        }
+        if (onIt) close(s);
+        else if (s.open) go(s, refpages::Link{refpages::Go::World, 0, ""});
+        else openWindow(s, refpages::Link{refpages::Go::World, 0, ""});
         LOG_INFO("reference: Ctrl+M - the world map %s", onIt ? "closed" : "opened");
         s.skipChar = 13;  // Ctrl+M's WM_CHAR is a carriage return - the chat's Enter
         return true;
     }
     if (!s.open) return false;
-    if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN) {
+    // 3.0.18-beta.239 (the owner 13.11): the caret not in the field - the hotbar's F-keys and the Alt windows are
+    // the game's; the window's own keys and the letters (into the field) its
+    if (m == WM_SYSKEYDOWN && wp == VK_LEFT && alt) {
+        goBack(s);
+        return true;
+    }
+    if (m == WM_KEYDOWN) {
         switch (wp) {
             case VK_ESCAPE:
-                close(s);
+                if (!s.query.empty()) {
+                    setQuery(s, "");
+                    typed(s);
+                } else {
+                    close(s);
+                }
                 s.skipChar = 27;
                 return true;
-            case VK_LEFT:
-                if (alt) goBack(s);
-                return true;
             case VK_BACK:
-                if (!s.query.empty()) {
-                    textfield::Field f{s.query, false};  // 3.0.18-beta.72: a whole letter
-                    textfield::backspace(f);
-                    s.query = f.text;
-                    typed(s);
-                } else if (s.at.go != refpages::Go::None || !s.back.empty()) {
-                    goBack(s);
-                }
+                if (s.at.go != refpages::Go::None || !s.back.empty()) goBack(s);
                 s.skipChar = 8;
                 return true;
             case VK_DELETE:
                 if (!s.query.empty()) {
-                    s.query.clear();
+                    setQuery(s, "");
                     typed(s);
                 }
                 return true;
@@ -965,115 +1135,89 @@ bool key(UINT m, WPARAM wp, LPARAM) {
                 enter(s);
                 s.skipChar = 13;
                 return true;
-            case VK_PRIOR: scrollBy(s, -s.layout.bodyH * 9 / 10); return true;
-            case VK_NEXT: scrollBy(s, s.layout.bodyH * 9 / 10); return true;
-            case VK_UP: step(s, -1); return true;  // 3.0.11-beta.21: a row up, a row down
+            case VK_PRIOR: scrollBy(s, -1); return true;
+            case VK_NEXT: scrollBy(s, +1); return true;
+            case VK_UP: step(s, -1); return true;
             case VK_DOWN: step(s, +1); return true;
-            case VK_HOME: scrollBy(s, -s.total); return true;
-            case VK_END: scrollBy(s, s.total); return true;
+            case VK_HOME:
+                if (Rml::Element* e = scroller(s)) e->SetScrollTop(0);
+                return true;
+            case VK_END:
+                if (Rml::Element* e = scroller(s)) e->SetScrollTop(e->GetScrollHeight());
+                return true;
             default: break;
         }
-        if (ctrl && !alt && (wp == 'V' || wp == 'C' || wp == 'X')) {  // 3.0.18-beta.72: the clipboard
-            textfield::Field f{s.query, false};
-            uifield::Result r = uifield::Result::None;
-            uifield::key(f, m, wp, kMostTyped, r);
-            if (r == uifield::Result::Changed) s.query = f.text, typed(s);
+        if (ctrl && !alt && wp == 'V') {  // 3.0.18-beta.72: the clipboard - into the field
+            if (Rml::Element* f = field(s)) f->Focus();
+            return uaui::key(m, wp, lp);
         }
-        return true;  // every key: the window's while it is open
+        if (wp >= VK_F1 && wp <= VK_F24) return false;  // the hotbar's
+        return !ctrl;  // a letter's key: its character comes as WM_CHAR into the field
     }
-    if (m == WM_CHAR && !ctrl && !alt && wp >= 32 && wp != 127) {  // 3.0.18-beta.72: any language's letters
-        const std::string add = typedUtf8(unsigned(wp));
-        textfield::Field f{s.query, false};
-        if (!(add == " " && (s.query.empty() || s.query.back() == ' ')) && textfield::type(f, add, kMostTyped))
-            s.query = f.text, typed(s);
-        return true;
+    if (m == WM_CHAR && !ctrl && !alt && wp >= 32 && wp != 127) {  // type anywhere: into the field
+        if (wp == ' ' && (s.query.empty() || s.query.back() == ' ')) return true;
+        if (Rml::Element* f = field(s)) f->Focus();
+        return uaui::key(m, wp, lp) || true;
     }
-    return m == WM_KEYUP || m == WM_SYSKEYUP || m == WM_CHAR || m == WM_SYSCHAR || m == WM_DEADCHAR ||
-           m == WM_SYSDEADCHAR;
+    if (m == WM_KEYUP) return !ctrl && !(wp >= VK_F1 && wp <= VK_F24);  // the hotbar's let go: the game's
+    return m == WM_CHAR || m == WM_DEADCHAR;
 }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.open || !s.shown) return false;
-    POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
-    if (m == WM_MOUSEWHEEL && !ScreenToClient(game, &p)) return false;  // the wheel's point is the screen's
-    float wx = 0, wy = 0;
-    if (!toWindow(s, game, p, wx, wy) || !inside(s, wx, wy)) return false;  // outside: the game's
-    switch (m) {
-        case WM_MOUSEWHEEL: {
-            const int row = worldRow(s);  // 3.0.11-beta.29: over the world map - its zoom round the pointer
-            if (row >= 0 && s.world) {
-                const refwin::Placed& r = s.rows[size_t(row)];
-                const float rx = wx - float(r.x), ry = wy - float(s.layout.bodyY + r.y - s.scroll);
-                if (rx >= 0 && ry >= 0 && rx < float(r.w) && ry < float(r.h)) {
-                    worldmap::zoomAt(s.world->sheet.w, s.world->sheet.h, r.w, r.h, s.zoom, s.cx, s.cy, rx, ry,
-                                     std::pow(1.25f, float(GET_WHEEL_DELTA_WPARAM(wp)) / WHEEL_DELTA));
-                    worldChanged(s);
-                    break;
-                }
-            }
-            scrollBy(s, -GET_WHEEL_DELTA_WPARAM(wp) * std::max(1, s.layout.bodyH / 8) / WHEEL_DELTA);
-            break;
-        }
-        case WM_LBUTTONDOWN:
-        case WM_LBUTTONDBLCLK: {
-            const refwin::WorldLook view = worldHit(s);
-            const refwin::Under u = refwin::under(s.layout, s.page, s.rows, s.scroll, s.chrome, wx, wy, &view);
-            if (u.part == refwin::Part::Close) close(s);
-            if (u.part == refwin::Part::Back) goBack(s);
-            if (u.part == refwin::Part::Home) goFirst(s);  // 3.0.11-beta.30: the first screen
-            if (u.part == refwin::Part::Star) go(s, refpages::Link{refpages::Go::Star, 0, ""});  // 3.0.11-beta.26
-            if (u.part == refwin::Part::Rail && u.row == 0) goFirst(s);
-            if (u.part == refwin::Part::Rail && u.row > 0 && size_t(u.row) < s.page.rail.size())
-                go(s, s.page.rail[size_t(u.row)].link);
-            if (u.part == refwin::Part::Row) go(s, s.page.rows[size_t(u.row)].link);
-            if (u.part == refwin::Part::Chip)  // 3.0.11-beta.69: the data's page - its states, «Подробиці»
-                go(s, refpages::Link{refpages::Go::Section, refpages::kDataSection, ""});
-            if (u.part == refwin::Part::Chain && u.tile >= 0 && size_t(u.tile) < s.way.chain.size())  // .64: its card
-                go(s, refpages::Link{refpages::Go::Map, 0, s.way.chain[size_t(u.tile)].first});
-            const int row = worldRow(s);  // 3.0.11-beta.29: a press on the world map - a drag, or a click on letting go
-            if (row >= 0 && s.world && (u.part == refwin::Part::Tile || u.part == refwin::Part::Body)) {
-                const refwin::Placed& r = s.rows[size_t(row)];
-                const float ry = wy - float(s.layout.bodyY + r.y - s.scroll);
-                if (wx >= float(r.x) && wx < float(r.x + r.w) && ry >= 0 && ry < float(r.h)) {
-                    const worldmap::Fit v = worldmap::view(s.world->sheet.w, s.world->sheet.h, r.w, r.h, s.zoom,
-                                                           s.cx, s.cy);
-                    s.dragging = true;
-                    s.dragged = false;
-                    s.dragX = wx;
-                    s.dragY = wy;
-                    s.dragCx = v.s > 0 ? (float(r.w) / 2 - v.x) / v.s : s.cx;
-                    s.dragCy = v.s > 0 ? (float(r.h) / 2 - v.y) / v.s : s.cy;
-                    s.dragTile = u.part == refwin::Part::Tile ? u.tile : -1;
-                }
-            }
-            break;
-        }
-        case WM_XBUTTONDOWN:
-            if (GET_XBUTTON_WPARAM(wp) == XBUTTON1) goBack(s);
-            result = TRUE;
-            return true;
-        case WM_XBUTTONUP:
-            result = TRUE;
-            return true;
-        case WM_LBUTTONUP:  // 3.0.11-beta.29: a press on a map not dragged - its card
-            if (s.dragging && !s.dragged && s.dragTile >= 0 && s.world &&
-                size_t(s.dragTile) < s.world->sheet.world.size()) {
-                s.dragging = false;
-                go(s, refpages::Link{refpages::Go::Map, 0, s.world->sheet.world[size_t(s.dragTile)].map});
-                break;
-            }
-            s.dragging = false;
-            break;
-        case WM_RBUTTONDOWN:
-        case WM_RBUTTONUP:
-        case WM_RBUTTONDBLCLK:
-        case WM_MBUTTONDOWN:
-        case WM_MBUTTONUP:
-            break;
-        default:
+    if (m == WM_XBUTTONDOWN || m == WM_XBUTTONUP) {  // the mouse's back button over the window
+        int bx = 0, by = 0, bw = 0, bh = 0;
+        float tx = 0, ty = 0;
+        if (!s.win.box(bx, by, bw, bh) || !pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr) ||
+            tx < float(bx) || ty < float(by) || tx >= float(bx + bw) || ty >= float(by + bh))
             return false;
+        if (m == WM_XBUTTONDOWN && GET_XBUTTON_WPARAM(wp) == XBUTTON1) goBack(s);
+        result = TRUE;
+        return true;
     }
+    // 3.0.11-beta.29: the world map - its wheel zooms round the pointer, a press drags it, a click opens a map's card
+    float mx = 0, my = 0, mw = 0, mh = 0, tx = 0, ty = 0;
+    if (s.world && mapBox(s, mx, my, mw, mh) &&
+        pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) {
+        const float lx = tx - mx, ly = ty - my;
+        const bool in = lx >= 0 && ly >= 0 && lx < mw && ly < mh;
+        if (in && m == WM_MOUSEWHEEL) {
+            worldmap::zoomAt(s.world->sheet.w, s.world->sheet.h, s.mapW, s.mapH, s.zoom, s.cx, s.cy, lx, ly,
+                             std::pow(1.25f, float(GET_WHEEL_DELTA_WPARAM(wp)) / WHEEL_DELTA));
+            worldChanged(s);
+            result = 0;
+            return true;
+        }
+        if (in && (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK)) {
+            const refwin::Under u = refwin::worldUnder(worldLayout(s), panel::Box{0, 0, mw, mh}, worldLook(s, false),
+                                                       lx, ly);
+            const worldmap::Fit v = worldmap::view(s.world->sheet.w, s.world->sheet.h, s.mapW, s.mapH, s.zoom, s.cx,
+                                                   s.cy);
+            s.dragging = true;
+            s.dragged = false;
+            s.dragX = tx;
+            s.dragY = ty;
+            s.dragCx = v.s > 0 ? (float(s.mapW) / 2 - v.x) / v.s : s.cx;
+            s.dragCy = v.s > 0 ? (float(s.mapH) / 2 - v.y) / v.s : s.cy;
+            s.dragTile = u.part == refwin::Part::Tile ? u.tile : -1;
+            s.dragChain = u.part == refwin::Part::Chain ? u.tile : -1;
+            result = 0;
+            return true;
+        }
+        if (m == WM_LBUTTONUP && s.dragging) {
+            const bool click = !s.dragged;
+            s.dragging = false;
+            if (click && s.dragChain >= 0 && size_t(s.dragChain) < s.way.chain.size())  // .64: its card
+                go(s, refpages::Link{refpages::Go::Map, 0, s.way.chain[size_t(s.dragChain)].first});
+            else if (click && s.dragTile >= 0 && size_t(s.dragTile) < s.world->sheet.world.size())
+                go(s, refpages::Link{refpages::Go::Map, 0, s.world->sheet.world[size_t(s.dragTile)].map});
+            result = 0;
+            return true;
+        }
+    }
+    const int taken = s.win.mouse(game, m, wp, lp);  // RmlUi's: the rows' clicks, the scroll, the drag by the ground
+    if (!taken) return false;
     result = 0;
     return true;
 }
@@ -1099,8 +1243,8 @@ void padCommand(PadCommand c) {
             else goBack(s);
             break;
         case PadCommand::Close: close(s); break;
-        case PadCommand::PageUp: scrollBy(s, -s.layout.bodyH * 9 / 10); break;
-        case PadCommand::PageDown: scrollBy(s, s.layout.bodyH * 9 / 10); break;
+        case PadCommand::PageUp: scrollBy(s, -1); break;
+        case PadCommand::PageDown: scrollBy(s, +1); break;
     }
 }
 
@@ -1140,15 +1284,10 @@ void openItem(int id) {
     LOG_INFO("reference: item %d's card from the tracker", id);
 }
 
-
 bool box(int& x, int& y, int& w, int& h) {  // 3.0.11-beta.109
-    const State& s = state();
+    State& s = state();
     if (!s.shown) return false;
-    x = s.layout.x;
-    y = s.layout.y;
-    w = s.layout.w;
-    h = s.layout.h;
-    return true;
+    return s.win.box(x, y, w, h);
 }
 
 }  // namespace uagfx::win::referencewin

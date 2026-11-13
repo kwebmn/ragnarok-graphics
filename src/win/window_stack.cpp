@@ -108,6 +108,7 @@ const char* sizeKey(Win w) {
         case Win::Vending: return "vending";
         case Win::VendSetup: return "shop_setup";
         case Win::MyShop: return "my_shop";
+        case Win::Reference: return "reference";  // 3.0.18-beta.239: its box, not a zoom (win/reference_window)
         case Win::Pick: return "pick";
         case Win::Pet: return "pet";
         case Win::Options: return "options";

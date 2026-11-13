@@ -137,9 +137,9 @@ void readMobs(const json::Value& v, Index& ix) {
         mob.boss = at(a, 9) != 0;
         for (uint8_t kind = 0; kind < 2; ++kind)
             for (const json::Value& d : a[size_t(10 + kind)].items())
-                if (at(d, 0) > 0) mob.drops.push_back(Drop{at(d, 0), at(d, 1), kind});
+                if (at(d, 0) > 0) mob.drops.push_back(Drop{at(d, 0), at(d, 1), kind, {}});
         if (a[size_t(12)].type() == json::Value::Array && at(a[size_t(12)], 0) > 0)
-            mob.drops.push_back(Drop{at(a[size_t(12)], 0), at(a[size_t(12)], 1), 2});
+            mob.drops.push_back(Drop{at(a[size_t(12)], 0), at(a[size_t(12)], 1), 2, {}});
         mob.drops = mergedDrops(std::move(mob.drops));  // 3.0.18-beta.239
         if (a.items().size() > 13) mob.sprite = lower(a[size_t(13)].asString());
         if (a.items().size() > 14) {  // 3.0.11-beta.28: kRO's name - the site's newer packs, "" when the same

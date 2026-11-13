@@ -1149,6 +1149,30 @@ Rect pixelsOf(const Layout& L, const panel::Box& b) {
 
 }  // namespace
 
+// 3.0.18-beta.239: the world map's box alone for the live window - its dungeon box first, then the tiles
+Under worldUnder(const Layout& L, const panel::Box& b, const WorldLook& w, float x, float y) {
+    if (!w.sheet) return Under{};
+    const ChainBox chain = chainBox(L, w, panel::Box{0, 0, b.w, b.h});
+    if (chain.box.w > 0 && chain.box.contains(x, y)) {
+        for (size_t k = 0; k < chain.maps.size(); ++k) {
+            const panel::Box& pb = chain.pictures[k];
+            const panel::Box& nb = chain.names[k];
+            if (x >= nb.x && x < nb.x + nb.w && y >= pb.y && y < nb.y + nb.h)
+                return Under{Part::Chain, 0, int(chain.maps[k])};
+        }
+        return Under{Part::Body, -1};
+    }
+    const worldmap::Fit f = worldmap::view(w.sheet->w, w.sheet->h, int(b.w), int(b.h), w.zoom, w.cx, w.cy);
+    const int t = worldmap::tileAt(*w.sheet, f, x, y);
+    return t >= 0 ? Under{Part::Tile, 0, t} : Under{Part::Body, -1};
+}
+
+std::vector<Words> worldWordsIn(const Layout& L, const WorldLook& w, const panel::Box& b) {
+    std::vector<Words> out;
+    worldWords(out, L, w, b);
+    return out;
+}
+
 Rect worldArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int row, const WorldLook& w) {
     const worldmap::Tile* t = w.hover.empty() || !w.sheet ? nullptr : worldmap::tileOf(*w.sheet, w.hover);
     if (!t || row < 0 || size_t(row) >= rows.size() || !shown(L, rows[size_t(row)], scroll)) return Rect{};

@@ -166,5 +166,10 @@ void sheetOf(sheet::Model& m, const Layout& L, const refpages::Page& p, const st
              int total, const Look& look);
 // the world map's picture alone, b's size (paint()'s world map moved to the picture's corner)
 void paintWorldPicture(panel::Picture& out, const Layout& L, const panel::Box& b, const WorldLook& w);
+// 3.0.18-beta.239 (the live «Довідник», win/reference_window): the world map's box alone (b's size, its own pixels) -
+// what is under a point of it (Part::Tile with its tile, Part::Chain with its map, Part::Body), the words over its
+// picture (the towns, the card of the map under the pointer, the dungeon box's)
+Under worldUnder(const Layout& L, const panel::Box& b, const WorldLook& w, float x, float y);
+std::vector<Words> worldWordsIn(const Layout& L, const WorldLook& w, const panel::Box& b);
 
 }  // namespace uagfx::refwin
