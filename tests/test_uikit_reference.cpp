@@ -1,9 +1,12 @@
 // 3.0.18-beta.239 (docs/superpowers/plans/2026-11-13-reference-rewrite.md): «Довідник» a live window - its chrome and
 // the page's markup (uikit/reference_live) loaded by RmlUi on the host: no warnings, the rows' links, two columns
 // with the next block into the shorter one, a long list across in columns, one column narrow, the world map's page.
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <string>
+
+#include <RmlUi/Core/ElementUtilities.h>
 
 #include "rml_host.hpp"
 #include "test.hpp"
@@ -572,4 +575,61 @@ TEST(uikit_reference_entries_and_facts_have_their_widths) {
     CHECK(width("#r0 .rfact") > 60.0f);
     CHECK(width("#r0 .rfact.wide") > 3.0f * width("#r0 .rfact"));
     rmlhost::close(l.doc);
+}
+
+// 3.0.18-beta.256 (R-7F6XJS, the owner 13.11: «поехали надписи, одна на другой»): the elements' tables - each column's
+// name inside its column at every width (the four tables two to a row gave a column 20dp for «Shadow»'s 41dp): whole
+// names when there is room (the tables a row each, or two to a row when wide), three letters in a narrow window
+TEST(uikit_reference_element_tables_names_fit_their_columns) {
+    const char* names[] = {"Neutral", "Water", "Earth",  "Fire",  "Wind",
+                           "Poison",  "Holy",  "Shadow", "Ghost", "Undead"};
+    refpages::Page p;
+    for (int lv = 1; lv <= 4; ++lv) {
+        p.rows.push_back(row(Style::Heading, "Стихії атаки проти захисту рівня " + std::to_string(lv)));
+        Row head = row(Style::Grid, "");
+        head.gold = true;
+        for (const char* n : names) head.tags.push_back(n);
+        p.rows.push_back(head);
+        for (const char* a : names) {
+            Row line = row(Style::Grid, a);
+            for (int d = 0; d < 10; ++d) line.tags.push_back(d == 7 ? "-100" : "100");
+            p.rows.push_back(line);
+        }
+        p.rows.push_back(row(Style::Note, "Стихія атаки — рядок, стихія цілі — стовпчик"));
+    }
+    struct Case {
+        int w;
+        bool narrow, wide;
+        const char* first;  // the first column's name
+    };
+    // the window's width; its body as the window makes it (win/reference_window: less the rail and the padding)
+    for (const Case c : {Case{900, false, false, "Neutral"}, Case{1270, false, false, "Neutral"},
+                         Case{1600, false, true, "Neutral"}, Case{560, true, false, "Neu"}}) {
+        ur::Look look;
+        look.narrow = c.narrow;
+        look.wide = c.wide;
+        look.bodyDp = ur::bodyDpFor(c.w, c.narrow);
+        ur::Model m;
+        m.w = std::to_string(c.w) + "px";
+        m.narrow = c.narrow;
+        m.rail = {ur::RailV{"Головна", "", "", false}, ur::RailV{"Стихії", "", "", true}};  // as the window's
+        m.body = ur::body(p, look);
+        const Loaded l = load(m);
+        CHECK_EQ(l.warnings, std::string());
+        Rml::ElementList cells;
+        if (l.doc) l.doc->QuerySelectorAll(cells, ".rgrid.hd .rgc");
+        CHECK_EQ(cells.size(), size_t(40));
+        Rml::Element* body = l.doc ? l.doc->GetElementById("body") : nullptr;  // the window's sum is the layout's
+        CHECK(body && std::fabs(body->GetBox().GetSize().x - float(look.bodyDp)) < 1.5f);
+        float worst = -1000.0f;
+        for (Rml::Element* e : cells) {
+            const float text = float(Rml::ElementUtilities::GetStringWidth(e, e->GetInnerRML()));
+            worst = std::max(worst, text - e->GetBox().GetSize(Rml::BoxArea::Content).x);
+        }
+        if (worst > 0.5f) std::printf("  %dpx: a name %.1fdp wider than its column\n", c.w, double(worst));
+        CHECK(worst <= 0.5f);
+        CHECK(!cells.empty() && cells[0]->GetInnerRML() == c.first);
+        CHECK_EQ(count(l.doc, ".rcols") > 0, c.wide);  // two to a row only when wide (their names whole there)
+        rmlhost::close(l.doc);
+    }
 }

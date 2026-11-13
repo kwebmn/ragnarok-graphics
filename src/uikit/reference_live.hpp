@@ -49,7 +49,13 @@ struct Look {
     int mapW = 0, mapH = 0;
     std::vector<std::pair<std::string, bool>> layers;
     std::string mapWords;
+    // 3.0.18-beta.256 (R-7F6XJS): the body's width in dp (the window less its rail and padding; 0 not known) - the
+    // elements' tables two to a row only when their columns have room for the names
+    int bodyDp = 0;
 };
+// 3.0.18-beta.256 (R-7F6XJS): the body's width in a window so wide (dp): less the rail 196dp and its padding 16dp
+// (narrow 52 and 12), the window's padding and borders 39dp and the scroll bar 12dp
+int bodyDpFor(int windowDp, bool narrow);
 // The page's rows but its rail, as RML (UTF-8, every text escaped)
 std::string body(const refpages::Page& p, const Look& look);
 std::string escape(const std::string& utf8);

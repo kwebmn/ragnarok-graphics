@@ -1747,6 +1747,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .rgrid.hd { font-size: 11.5dp; color: #9aa3b5; }
 .rfw .rgl { display: block; flex: none; width: 90dp; white-space: nowrap; }
 .rfw .rgc { display: block; flex: 1 1 0; text-align: center; font-size: 12.5dp; }
+.rfw .rgrid.hd .rgc { font-size: 11.5dp; white-space: nowrap; overflow: hidden; }
 .rfw .rgc.up { color: #9be7a9; }
 .rfw .rgc.dn { color: #8a93a3; }
 .rfw .rgc.heal { color: #ff9b9b; }

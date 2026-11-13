@@ -73,10 +73,19 @@ std::string marked(const std::string& s, const refpages::Marks& marks) {
     return out + escape(s.substr(std::min(at, s.size())));
 }
 
+// The first n letters of a UTF-8 text (whole letters)
+std::string firstLetters(const std::string& utf8, size_t n) {
+    size_t at = 0;
+    for (size_t k = 0; k < n && at < utf8.size(); ++k)
+        for (++at; at < utf8.size() && (static_cast<unsigned char>(utf8[at]) & 0xC0) == 0x80;) ++at;
+    return utf8.substr(0, at);
+}
+
 struct Maker {
     const refpages::Page& p;
     const Look& look;
     std::string o;
+    bool shortGrid = false;  // 3.0.18-beta.256 (R-7F6XJS): a table's column names by their first three letters
 
     // The row's element's own attributes: its id, its classes (and «ctl» when it leads somewhere), data-ln
     std::string open(const char* tag, int i, const std::string& cls) const {
@@ -254,7 +263,8 @@ struct Maker {
                 o += open("div", i, r.gold ? "rgrid hd" : "rgrid") + "<span class=\"rgl\">" + escape(r.left) +
                      "</span>";
                 for (const std::string& t : r.tags)
-                    o += r.gold ? "<span class=\"rgc\">" + escape(t) + "</span>" : cell(t);
+                    o += r.gold ? "<span class=\"rgc\">" + escape(shortGrid ? firstLetters(t, 3) : t) + "</span>"
+                                : cell(t);
                 o += "</div>";
                 break;
             }
@@ -340,6 +350,17 @@ size_t lineRows(const refpages::Page& p, const Section& s) {
     return n;
 }
 
+// 3.0.18-beta.256 (R-7F6XJS): a table's columns (its first line's cells; 0 not a table) and the width each gets
+// in a section so wide: less its padding and border 26dp, the line's padding 12dp and the names' 90dp
+size_t gridColumns(const refpages::Page& p, const Section& s) {
+    for (const int i : s.rows)
+        if (p.rows[size_t(i)].style == Style::Grid) return p.rows[size_t(i)].tags.size();
+    return 0;
+}
+float columnDp(float sectionDp, size_t columns) { return columns ? (sectionDp - 128) / float(columns) : 0; }
+// The longest whole name («Shadow» 41dp at 11.5dp) with room around it (else three letters, 21dp)
+constexpr float kWholeNameDp = 48;
+
 }  // namespace
 
 const char* rml() { return kRml; }
@@ -374,6 +395,8 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("rail", &m.rail);
     c.Bind("crumbs", &m.crumbs);
 }
+
+int bodyDpFor(int windowDp, bool narrow) { return windowDp - (narrow ? 64 : 212) - 51; }
 
 std::string escape(const std::string& s) {
     std::string out;
@@ -502,8 +525,20 @@ std::string body(const refpages::Page& p, const Look& look) {
         }
         m.o += "</div>";
     };
+    // 3.0.18-beta.256 (R-7F6XJS «поехали надписи, одна на другой»): a table its own row unless two fit side by side
+    // with their names whole; its names by three letters when even its own row is too narrow for them
+    const float bodyDp = float(look.bodyDp);
+    auto tableAlone = [&](const Section& s) {
+        const size_t cols = gridColumns(p, s);
+        if (!cols) return false;
+        m.shortGrid = bodyDp > 0 && columnDp(bodyDp, cols) < kWholeNameDp;
+        section(s, 1);
+        m.shortGrid = false;
+        return true;
+    };
     if (look.narrow) {
-        for (const Section& s : sections) section(s, 1);
+        for (const Section& s : sections)
+            if (!tableAlone(s)) section(s, 1);
         return m.o;
     }
     // Two columns, the next block into the shorter one; a long list across (its own columns) between them
@@ -522,6 +557,12 @@ std::string body(const refpages::Page& p, const Look& look) {
         height[0] = height[1] = 0;
     };
     for (const Section& s : sections) {
+        const size_t table = gridColumns(p, s);
+        if (table && !(bodyDp > 0 && columnDp((bodyDp - 16) / 2, table) >= kWholeNameDp)) {
+            flush();
+            tableAlone(s);
+            continue;
+        }
         const size_t lines = lineRows(p, s);
         if (lines > kLong) {
             flush();

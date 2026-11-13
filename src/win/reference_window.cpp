@@ -798,6 +798,7 @@ void renderBody(State& s) {
     ur::Look look;
     look.narrow = s.narrow;
     look.wide = !s.narrow && s.dp > 0 && float(s.w) / s.dp >= 1560;  // 3.0.18-beta.248: three columns only so wide
+    look.bodyDp = s.dp > 0 ? ur::bodyDpFor(int(std::lround(float(s.w) / s.dp)), s.narrow) : 0;  // 3.0.18-beta.256
     look.selected = s.sel;
     look.worldW = s.mapW;
     look.worldH = s.mapH;
