@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.254 — what's new · 2026-11-13
+
+- The reference's world map no longer shrinks to a strip (R-TMUEN4). A long way (31 moves to the Monastery) had a steps panel taller than the window; the window took that for the map's overflow and trimmed the map again and again. Now the panel is no taller than the map and its steps scroll inside it; the map is trimmed only when it does not fit itself.
+- What to check: «Довідник» → MVP → Fallen Bishop Hibram → Monastery (abbey02) → the way: the whole map, the steps at the right scrolled by the wheel.
+
 # uaRO Graphics 3.0.18-beta.253 — what's new · 2026-11-13
 
 - «Довідник» reworked after the owner's review (R-N7GPT5, R-JSWF77, R-U5HAJ6, R-9CD8YA, R-WP985Q). A list's line now: a picture, a name, a line under it and figures at the right (a value over its label), each list's in straight columns.
