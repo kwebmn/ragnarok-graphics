@@ -124,6 +124,22 @@ std::vector<std::pair<ULONGLONG, std::vector<uint8_t>>> g_letGo;  // sounds a vo
 std::string g_wanted;        // 3.0.4-beta.1: [sound] output from the driver ("" Windows' default); the driver's lock
 volatile LONG g_reopen = 0;  // a device lost (XAudio2's thread) or the chosen one back (the feed's): a new engine
 
+// 3.0.18-beta.252 (R-S9B6T3: a crash in AIL_set_stream_volume, its voice destroyed): the game calls Miles from two
+// threads - its music fading (uaRO.exe FUN_004f5640, a thread of its own at each map change and teleport:
+// AIL_set_stream_volume, AIL_pause_stream) beside its own thread opening, starting and closing the music - and RAD's
+// Miles takes a lock of its own in each call. Ours too: one call at a time, the whole of it (a critical section:
+// AIL_shutdown closes the driver in the same call). The feed's thread takes the driver's lock alone, after it.
+CRITICAL_SECTION g_api;
+struct ApiInit {
+    ApiInit() { InitializeCriticalSection(&g_api); }
+} g_apiInit;
+struct Api {
+    Api() { EnterCriticalSection(&g_api); }
+    ~Api() { LeaveCriticalSection(&g_api); }
+    Api(const Api&) = delete;
+    Api& operator=(const Api&) = delete;
+};
+
 // XAudio2's word that its device is gone (XAUDIO2_E_DEVICE_INVALIDATED): the engine stopped for good
 struct EngineWatch : IXAudio2EngineCallback {
     void STDMETHODCALLTYPE OnProcessingPassStart() override {}
@@ -488,9 +504,13 @@ void service() {
 
 extern "C" {
 
-int __stdcall AIL_startup() { return 1; }
+int __stdcall AIL_startup() {
+    const Api api;
+    return 1;
+}
 
 char* __stdcall AIL_set_redist_directory(const char* dir) {
+    const Api api;
     static char before[MAX_PATH];
     lstrcpynA(before, g_redist, MAX_PATH);
     if (dir) lstrcpynA(g_redist, dir, MAX_PATH);
@@ -498,6 +518,7 @@ char* __stdcall AIL_set_redist_directory(const char* dir) {
 }
 
 int __stdcall AIL_set_preference(unsigned number, int value) {
+    const Api api;
     if (number >= sizeof g_prefs / sizeof g_prefs[0]) return 0;
     const int was = g_prefs[number];
     g_prefs[number] = value;
@@ -505,12 +526,14 @@ int __stdcall AIL_set_preference(unsigned number, int value) {
 }
 
 void* __stdcall AIL_open_digital_driver(unsigned, int, int, unsigned) {
+    const Api api;
     if (!g_driver) g_driver = openDriver();
     return g_driver;
 }
 
 // Everything of it stopped and gone; a handle the game still holds plays nothing more
 void __stdcall AIL_close_digital_driver(void* h) {
+    const Api api;
     Driver* d = static_cast<Driver*>(h);
     if (!d || d != g_driver) return;
     SetEvent(d->quit);
@@ -538,10 +561,12 @@ void __stdcall AIL_close_digital_driver(void* h) {
 }
 
 void __stdcall AIL_shutdown() {
+    const Api api;
     if (g_driver) AIL_close_digital_driver(g_driver);
 }
 
 void* __stdcall AIL_allocate_sample_handle(void* h) {
+    const Api api;
     Driver* d = static_cast<Driver*>(h);
     if (!d || d != g_driver) return nullptr;
     try {
@@ -555,10 +580,14 @@ void* __stdcall AIL_allocate_sample_handle(void* h) {
     }
 }
 
-void __stdcall AIL_release_sample_handle(void* h) { release(sampleOf(h, Kind::Sample)); }
+void __stdcall AIL_release_sample_handle(void* h) {
+    const Api api;
+    release(sampleOf(h, Kind::Sample));
+}
 
 // Miles' defaults again: full volume, the middle, stopped
 void __stdcall AIL_init_sample(void* h) {
+    const Api api;
     Sample* s = sampleOf(h, Kind::Sample);
     if (!s) return;
     stop(*s);
@@ -567,9 +596,13 @@ void __stdcall AIL_init_sample(void* h) {
     s->pan = 64;
 }
 
-int __stdcall AIL_set_sample_file(void* h, const void* image, int) { return setFile(sampleOf(h, Kind::Sample), image); }
+int __stdcall AIL_set_sample_file(void* h, const void* image, int) {
+    const Api api;
+    return setFile(sampleOf(h, Kind::Sample), image);
+}
 
 void __stdcall AIL_set_sample_volume(void* h, int volume) {
+    const Api api;
     if (Sample* s = sampleOf(h, Kind::Sample)) {
         s->volume = std::clamp(volume, 0, 127);
         if (s->started) mix(*s);
@@ -578,6 +611,7 @@ void __stdcall AIL_set_sample_volume(void* h, int volume) {
 
 // Not taken by the game: the driver sets a 2D sound's side with it (0 left, 64 the middle, 127 right)
 void __stdcall AIL_set_sample_pan(void* h, int pan) {
+    const Api api;
     if (Sample* s = sampleOf(h, Kind::Sample)) {
         s->pan = std::clamp(pan, 0, 127);
         if (s->started) mix(*s);
@@ -585,21 +619,25 @@ void __stdcall AIL_set_sample_pan(void* h, int pan) {
 }
 
 void __stdcall AIL_start_sample(void* h) {
+    const Api api;
     service();
     if (Sample* s = sampleOf(h, Kind::Sample)) start(*s);
 }
 
 void __stdcall AIL_end_sample(void* h) {
+    const Api api;
     if (Sample* s = sampleOf(h, Kind::Sample)) stop(*s);
 }
 
 unsigned __stdcall AIL_sample_status(void* h) {
+    const Api api;
     service();
     return statusOf(sampleOf(h, Kind::Sample));
 }
 
 // One provider, the one the game looks for
 int __stdcall AIL_enumerate_3D_providers(uint32_t* next, uint32_t* dest, char** name) {
+    const Api api;
     if (!next || *next != 0) return 0;
     *next = 1;
     if (dest) *dest = kProvider;
@@ -607,14 +645,27 @@ int __stdcall AIL_enumerate_3D_providers(uint32_t* next, uint32_t* dest, char** 
     return 1;
 }
 
-int __stdcall AIL_open_3D_provider(uint32_t provider) { return provider == kProvider ? 0 : 1; }  // M3D_NOERR
+int __stdcall AIL_open_3D_provider(uint32_t provider) {  // M3D_NOERR
+    const Api api;
+    return provider == kProvider ? 0 : 1;
+}
 void __stdcall AIL_close_3D_provider(uint32_t) {}
-int __stdcall AIL_3D_speaker_type(uint32_t) { return g_speakers; }
-void __stdcall AIL_set_3D_speaker_type(uint32_t, int type) { g_speakers = type; }
-int __stdcall AIL_3D_room_type(uint32_t) { return -1; }  // no rooms: the game sets none (0x421DA5)
+int __stdcall AIL_3D_speaker_type(uint32_t) {
+    const Api api;
+    return g_speakers;
+}
+void __stdcall AIL_set_3D_speaker_type(uint32_t, int type) {
+    const Api api;
+    g_speakers = type;
+}
+int __stdcall AIL_3D_room_type(uint32_t) {  // no rooms: the game sets none (0x421DA5)
+    const Api api;
+    return -1;
+}
 void __stdcall AIL_set_3D_room_type(uint32_t, int) {}
 
 void* __stdcall AIL_open_3D_listener(uint32_t provider) {
+    const Api api;
     if (provider != kProvider) return nullptr;
     g_listener = Listener{};
     return &g_listener;
@@ -623,6 +674,7 @@ void* __stdcall AIL_open_3D_listener(uint32_t provider) {
 void __stdcall AIL_close_3D_listener(void*) {}
 
 void* __stdcall AIL_allocate_3D_sample_handle(uint32_t provider) {
+    const Api api;
     if (provider != kProvider || !g_driver) return nullptr;
     try {
         g_driver->samples.push_back(nullptr);
@@ -635,11 +687,18 @@ void* __stdcall AIL_allocate_3D_sample_handle(uint32_t provider) {
     }
 }
 
-void __stdcall AIL_release_3D_sample_handle(void* h) { release(sampleOf(h, Kind::Sample3D)); }
+void __stdcall AIL_release_3D_sample_handle(void* h) {
+    const Api api;
+    release(sampleOf(h, Kind::Sample3D));
+}
 
-int __stdcall AIL_set_3D_sample_file(void* h, const void* image) { return setFile(sampleOf(h, Kind::Sample3D), image); }
+int __stdcall AIL_set_3D_sample_file(void* h, const void* image) {
+    const Api api;
+    return setFile(sampleOf(h, Kind::Sample3D), image);
+}
 
 void __stdcall AIL_set_3D_sample_volume(void* h, int volume) {
+    const Api api;
     if (Sample* s = sampleOf(h, Kind::Sample3D)) {
         s->volume = std::clamp(volume, 0, 127);
         if (s->started) mix(*s);
@@ -647,6 +706,7 @@ void __stdcall AIL_set_3D_sample_volume(void* h, int volume) {
 }
 
 void __stdcall AIL_set_3D_sample_distances(void* h, float farthest, float nearest) {
+    const Api api;
     if (Sample* s = sampleOf(h, Kind::Sample3D)) {
         s->farthest = farthest;
         s->nearest = nearest;
@@ -657,6 +717,7 @@ void __stdcall AIL_set_3D_sample_distances(void* h, float farthest, float neares
 void __stdcall AIL_set_3D_sample_effects_level(void*, float) {}  // no rooms, nothing to send to them
 
 void __stdcall AIL_set_3D_position(void* h, float x, float y, float z) {
+    const Api api;
     service();
     if (kindOf(h) == Kind::Listener) {
         g_listener.pos[0] = x, g_listener.pos[1] = y, g_listener.pos[2] = z;
@@ -669,6 +730,7 @@ void __stdcall AIL_set_3D_position(void* h, float x, float y, float z) {
 
 // The listener's facing (the camera's turn, 0x421DD0); a sample's own is of no matter (no cones)
 void __stdcall AIL_set_3D_orientation(void* h, float fx, float fy, float fz, float ux, float uy, float uz) {
+    const Api api;
     service();
     if (kindOf(h) != Kind::Listener) return;
     g_listener.front[0] = fx, g_listener.front[1] = fy, g_listener.front[2] = fz;
@@ -677,20 +739,24 @@ void __stdcall AIL_set_3D_orientation(void* h, float fx, float fy, float fz, flo
 }
 
 void __stdcall AIL_start_3D_sample(void* h) {
+    const Api api;
     service();
     if (Sample* s = sampleOf(h, Kind::Sample3D)) start(*s);
 }
 
 void __stdcall AIL_end_3D_sample(void* h) {
+    const Api api;
     if (Sample* s = sampleOf(h, Kind::Sample3D)) stop(*s);
 }
 
 unsigned __stdcall AIL_3D_sample_status(void* h) {
+    const Api api;
     service();
     return statusOf(sampleOf(h, Kind::Sample3D));
 }
 
 void* __stdcall AIL_open_stream(void* h, const char* name, int) {
+    const Api api;
     service();
     Driver* d = static_cast<Driver*>(h);
     if (!d || d != g_driver || !name) return nullptr;
@@ -721,12 +787,15 @@ void* __stdcall AIL_open_stream(void* h, const char* name, int) {
 }
 
 void __stdcall AIL_close_stream(void* h) {
+    const Api api;
     Stream* s = streamOf(h);
     if (!s) return;
     if (Driver* d = s->driver) {
         EnterCriticalSection(&d->lock);
         d->streams.erase(std::remove(d->streams.begin(), d->streams.end(), s), d->streams.end());
         if (s->voice) s->voice->DestroyVoice();
+        s->voice = nullptr;  // 3.0.18-beta.252: never a destroyed one's pointer left (R-S9B6T3)
+        s->kind = Kind::None;
         LeaveCriticalSection(&d->lock);
     }
     s->kind = Kind::None;
@@ -735,6 +804,7 @@ void __stdcall AIL_close_stream(void* h) {
 
 // From its start, on a voice of its own (the one before destroyed: XAudio2 is done with its buffers then)
 void __stdcall AIL_start_stream(void* h) {
+    const Api api;
     service();
     Stream* s = streamOf(h);
     if (!s || !s->driver) return;
@@ -750,6 +820,7 @@ void __stdcall AIL_start_stream(void* h) {
 }
 
 void __stdcall AIL_pause_stream(void* h, int on) {
+    const Api api;
     Stream* s = streamOf(h);
     if (!s || !s->driver) return;
     EnterCriticalSection(&s->driver->lock);
@@ -764,6 +835,7 @@ void __stdcall AIL_pause_stream(void* h, int on) {
 }
 
 void __stdcall AIL_set_stream_volume(void* h, int volume) {
+    const Api api;
     Stream* s = streamOf(h);
     if (!s) return;
     s->volume = std::clamp(volume, 0, 127);
@@ -774,11 +846,13 @@ void __stdcall AIL_set_stream_volume(void* h, int volume) {
 }
 
 int __stdcall AIL_stream_volume(void* h) {
+    const Api api;
     const Stream* s = streamOf(h);
     return s ? s->volume : 0;
 }
 
 void __stdcall AIL_set_stream_loop_count(void* h, int count) {
+    const Api api;
     Stream* s = streamOf(h);
     if (!s) return;
     if (s->driver) EnterCriticalSection(&s->driver->lock);
@@ -787,10 +861,12 @@ void __stdcall AIL_set_stream_loop_count(void* h, int count) {
 }
 
 int __stdcall AIL_file_type(const void* data, unsigned size) {
+    const Api api;
     return miles::fileType(static_cast<const uint8_t*>(data), size);
 }
 
 int __stdcall AIL_WAV_info(const void* data, SoundInfo* info) {
+    const Api api;
     miles::SoundInfo s;
     const auto* image = static_cast<const uint8_t*>(data);
     if (!image || !info || !miles::wavInfo(image, miles::imageSize(image), s)) return 0;
@@ -808,6 +884,7 @@ int __stdcall AIL_WAV_info(const void* data, SoundInfo* info) {
 
 // A 16-bit PCM WAVE image of an ADPCM one (IMA, and Microsoft's too); its size out where the game asks (it does not)
 int __stdcall AIL_decompress_ADPCM(const SoundInfo* info, void** out, unsigned* size) {
+    const Api api;
     if (!info || !out) return 0;
     try {
         miles::SoundInfo s;
@@ -832,6 +909,7 @@ int __stdcall AIL_decompress_ADPCM(const SoundInfo* info, void** out, unsigned* 
 
 // The game's mp3 sounds (data\wav\effect\*.mp3) as 16-bit PCM WAVE images; mp3dec.asi is not needed
 int __stdcall AIL_decompress_ASI(const void* in, unsigned insize, const char*, void** out, unsigned* size, void*) {
+    const Api api;
     if (!in || !insize || !out) return 0;
     try {
         std::vector<int16_t> pcm;
@@ -844,11 +922,15 @@ int __stdcall AIL_decompress_ASI(const void* in, unsigned insize, const char*, v
     }
 }
 
-void __stdcall AIL_mem_free_lock(void* p) { std::free(p); }
+void __stdcall AIL_mem_free_lock(void* p) {
+    const Api api;
+    std::free(p);
+}
 
 // 3.0.4-beta.1, the driver's ([sound] output, win/sound_hook.cpp): the output device to play on - Windows' endpoint
 // id, "" or NULL its default. Before the game opens its driver, or at once on a new engine.
 void __stdcall UAGFX_set_output(const char* id) {
+    const Api api;
     const std::string wanted = id ? id : "";
     if (!g_driver) {
         g_wanted = wanted;
@@ -865,6 +947,7 @@ void __stdcall UAGFX_set_output(const char* id) {
 // (0 none) with bit 31 set while the chosen one is not connected, bit 30 while no device would open. A new engine
 // asked for is made first.
 unsigned __stdcall UAGFX_output(char* id, unsigned size) {
+    const Api api;
     service();
     if (id && size) id[0] = '\0';
     if (!g_driver) return 0;

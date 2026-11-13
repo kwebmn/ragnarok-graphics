@@ -92,6 +92,22 @@ Tracked g_tracked[160];
 int g_count = 0;
 ULONGLONG g_lastTick = 0;
 
+// 3.0.18-beta.252 (R-S9B6T3, a crash in our mss32.dll's AIL_set_stream_volume on a destroyed voice): the game calls
+// Miles from two threads - its music's fades (uaRO.exe FUN_004f5640, a thread of its own at each map change and
+// teleport: AIL_set_stream_volume, AIL_pause_stream) beside its own thread - and each volume set here goes over all
+// the handles tracked (apply) while that thread starts, closes and forgets them. One call at a time through these
+// hooks, as RAD's Miles takes its calls (a critical section: they call one another).
+CRITICAL_SECTION g_hooks;
+struct HooksInit {
+    HooksInit() { InitializeCriticalSection(&g_hooks); }
+} g_hooksInit;
+struct Held {
+    Held() { EnterCriticalSection(&g_hooks); }
+    ~Held() { LeaveCriticalSection(&g_hooks); }
+    Held(const Held&) = delete;
+    Held& operator=(const Held&) = delete;
+};
+
 void readSettings() {
     if (g_read) return;
     g_read = true;
@@ -156,6 +172,7 @@ void apply(const Tracked* starting) {
 }
 
 void* WINAPI openDriver(unsigned rate, int bits, int channels, unsigned flags) {
+    const Held held;
     readSettings();
     if (g_setOutput) g_setOutput(g_set.output.c_str());  // 3.0.4-beta.1: opened on it
     g_askedRate = rate;
@@ -177,6 +194,7 @@ void* WINAPI openDriver(unsigned rate, int bits, int channels, unsigned flags) {
 }
 
 void WINAPI sampleVolume(void* s, int volume) {
+    const Held held;
     if (Tracked* t = track(s, 0)) {
         t->wanted = volume;
         t->applied = -1;
@@ -186,6 +204,7 @@ void WINAPI sampleVolume(void* s, int volume) {
     }
 }
 void WINAPI volume3D(void* s, int volume) {
+    const Held held;
     if (Tracked* t = track(s, 1)) {
         t->wanted = volume;
         t->applied = -1;
@@ -195,6 +214,7 @@ void WINAPI volume3D(void* s, int volume) {
     }
 }
 void WINAPI streamVolume(void* s, int volume) {
+    const Held held;
     if (Tracked* t = track(s, 2)) {
         t->wanted = volume;
         t->applied = -1;
@@ -204,6 +224,7 @@ void WINAPI streamVolume(void* s, int volume) {
     }
 }
 void WINAPI startSample(void* s) {
+    const Held held;
     apply(track(s, 0));
     if (g_pendingPan >= 0 && g_pan) g_pan(s, g_pendingPan);  // 0.92: the sound being played at its place
     g_start(s);
@@ -271,6 +292,7 @@ char __cdecl play3D(void* file, float* x, float* y, float* z, int farthest, int 
 
 // 0.92: a piece of music fades in; closed by the game, it fades out first (the next one fading in meanwhile).
 void WINAPI startStream(void* s) {
+    const Held held;
     readSettings();
     if (g_set.crossfade)
         if (Tracked* t = track(s, 2)) {
@@ -304,11 +326,13 @@ bool fading() {
     return false;
 }
 void WINAPI start3D(void* s) {
+    const Held held;
     apply(track(s, 1));
     g_start3D(s);
 }
 
 int WINAPI enum3D(void* next, void* provider, char** name) {
+    const Held held;
     const int more = g_enum3D(next, provider, name);
     if (more && name && *name && g_providers.size() < 400)
         g_providers += (g_providers.empty() ? "" : ", ") + std::string(*name);
@@ -333,6 +357,7 @@ std::string fixMissing3D() {
 }
 
 void WINAPI closeStream(void* s) {
+    const Held held;
     readSettings();
     if (g_set.crossfade)
         for (int i = 0; i < g_count; ++i)
@@ -346,25 +371,30 @@ void WINAPI closeStream(void* s) {
     g_closeStream(s);
 }
 void WINAPI releaseSample(void* s) {
+    const Held held;
     forget(s, 0);
     g_release(s);
 }
 void WINAPI release3D(void* s) {
+    const Held held;
     forget(s, 1);
     g_release3D(s);
 }
 // The driver or the 3D provider closed, Miles shut down: every handle of them gone.
 void WINAPI closeDriver(void* d) {
+    const Held held;
     closeFaded(true);
     g_count = 0;
     g_closeDriver(d);
 }
 void WINAPI close3D(void* p) {
+    const Held held;
     closeFaded(true);
     g_count = 0;
     g_close3D(p);
 }
 void WINAPI shutdownMiles() {
+    const Held held;
     closeFaded(true);
     g_count = 0;
     g_shutdown();
@@ -508,6 +538,7 @@ bool playOwn(const void* image) {
 }
 
 void soundOutput(const std::string& id) {
+    const Held held;
     readSettings();
     g_set.output = id;
     audio::setOutput(id);
@@ -515,6 +546,7 @@ void soundOutput(const std::string& id) {
 }
 
 void soundFrame(bool foreground, bool music, bool sounds) {
+    const Held held;
     if (!g_open) return;
     {  // 1.1: the engine's frame - its voices, the background, the place (the map looked at twice a second)
         static std::string map;
