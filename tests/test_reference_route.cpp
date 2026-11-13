@@ -9,7 +9,7 @@
 #include "core/reference_live.hpp"
 #include "core/reference_pages.hpp"
 #include "core/reference_route.hpp"
-#include "core/reference_window.hpp"
+#include "core/reference_world_paint.hpp"
 #include "core/route_follow.hpp"
 #include "core/walk_grid.hpp"
 #include "core/world_map.hpp"
@@ -322,28 +322,23 @@ TEST(reference_world_way) {
         return row.link.go == refpages::Go::World && row.link.map == "to:isle";
     }));
     // the window: the gold way, a teleport's words, the pin's words - inside the map, none under the pointer's card
-    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
-    int total = 0;
-    const auto rows = refwin::place(L, k, total);
-    size_t map = 0;
-    while (k.rows[map].style != refpages::Style::World) ++map;
+    const refwin::Layout L;
+    const panel::Box box{0, 0, 900, 520};
     panel::Picture sheet;
-    sheet.width = rows[map].w;
-    sheet.height = rows[map].h;
+    sheet.width = int(box.w);
+    sheet.height = int(box.h);
     sheet.px.assign(size_t(sheet.width) * size_t(sheet.height), 0xFF181B57u);
-    refwin::Look look;
-    look.world.picture = &sheet;
-    look.world.sheet = &sh;
-    look.world.here = "town";
-    look.world.hops = kafra.hops;
-    look.world.target = kafra.target;
-    look.world.targetLabel = "isle";
-    look.world.hereLabel = kafra.hereLabel;
-    look.world.hover = "field";
-    look.world.tip = {"field", "field · видів монстрів: 2"};
-    refwin::Texts texts;
-    const std::vector<refwin::Words> words = refwin::words(L, k, rows, 0, texts, look);
-    const panel::Box box{float(rows[map].x), float(L.bodyY + rows[map].y), float(rows[map].w), float(rows[map].h)};
+    refwin::WorldLook world;
+    world.picture = &sheet;
+    world.sheet = &sh;
+    world.here = "town";
+    world.hops = kafra.hops;
+    world.target = kafra.target;
+    world.targetLabel = "isle";
+    world.hereLabel = kafra.hereLabel;
+    world.hover = "field";
+    world.tip = {"field", "field · видів монстрів: 2"};
+    const std::vector<refwin::Words> words = refwin::worldWordsIn(L, world, box);
     bool price = false, here = false, tip = false;
     for (const refwin::Words& w : words) {
         price = price || w.text == "Kafra · 1 200 z";
@@ -381,35 +376,28 @@ TEST(reference_world_dungeon_chain) {
     CHECK(std::any_of(home.rows.begin(), home.rows.end(),
                       [](const refpages::Row& r) { return r.left == "3 локації · 2 підземелля"; }));
     // the window: the box at the map's bottom left - its title, each map's picture and name; a click: its card
-    const refpages::Page p = refpages::world(*ix, Lang::Uk, c, "to:cave:w");
-    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
-    int total = 0;
-    const auto rows = refwin::place(L, p, total);
-    size_t map = 0;
-    while (map < p.rows.size() && p.rows[map].style != refpages::Style::World) ++map;
-    CHECK(map < p.rows.size());
-    if (map >= p.rows.size()) return;
+    const refwin::Layout L;
+    const panel::Box box{0, 0, 900, 520};
     panel::Picture sheet;
-    sheet.width = rows[map].w;
-    sheet.height = rows[map].h;
+    sheet.width = int(box.w);
+    sheet.height = int(box.h);
     sheet.px.assign(size_t(sheet.width) * size_t(sheet.height), 0xFF181B57u);
     const int side = refwin::chainSide(L);
     CHECK_EQ(side, 64);
     panel::Picture red;
     red.width = red.height = side;
     red.px.assign(size_t(side) * size_t(side), 0xFFC03030u);
-    refwin::Look look;
-    look.world.picture = &sheet;
-    look.world.sheet = &sh;
-    look.world.here = "town";
-    look.world.hops = w.hops;
-    look.world.target = w.target;
-    look.world.targetLabel = w.targetLabel;
-    look.world.chainTitle = w.chainTitle;
+    refwin::WorldLook world;
+    world.picture = &sheet;
+    world.sheet = &sh;
+    world.here = "town";
+    world.hops = w.hops;
+    world.target = w.target;
+    world.targetLabel = w.targetLabel;
+    world.chainTitle = w.chainTitle;
     for (const auto& [code, name] : w.chain)
-        look.world.chain.push_back(refwin::ChainMap{code, name, code == "tower" ? &red : nullptr});
-    const std::vector<refwin::Words> words = refwin::words(L, p, rows, 0, refwin::Texts{}, look);
-    const panel::Box box{float(rows[map].x), float(L.bodyY + rows[map].y), float(rows[map].w), float(rows[map].h)};
+        world.chain.push_back(refwin::ChainMap{code, name, code == "tower" ? &red : nullptr});
+    const std::vector<refwin::Words> words = refwin::worldWordsIn(L, world, box);
     const auto find = [&](const std::string& t) {
         return std::find_if(words.begin(), words.end(), [&](const refwin::Words& x) { return x.text == t; });
     };
@@ -424,8 +412,7 @@ TEST(reference_world_dungeon_chain) {
     const auto hall = find("Hall");  // its picture over its name: pointed at, the chain's tile
     if (hall == words.end()) return;
     const float cx = hall->box.x + hall->box.w / 2, cy = hall->box.y - float(side) / 2 - 6;
-    const refwin::Chrome ch = refwin::chrome(L, p, refwin::Texts{});
-    const refwin::Under u = refwin::under(L, p, rows, 0, ch, cx, cy, &look.world);
+    const refwin::Under u = refwin::worldUnder(L, box, world, cx, cy);
     CHECK(u.part == refwin::Part::Chain && u.tile == 1);
 }
 

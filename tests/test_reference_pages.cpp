@@ -8,8 +8,6 @@
 #include "core/bar_hint.hpp"
 #include "core/reference_pages.hpp"
 #include "core/reference_route.hpp"
-#include "core/reference_window.hpp"
-#include "core/ui_sheet_model.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -230,86 +228,6 @@ TEST(reference_pages_long_sections_open_by_their_row) {
     CHECK(rowWith(open, "усі 130 ›") == nullptr);
 }
 
-TEST(reference_window_lays_itself_out) {
-    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
-    CHECK(L.w == 1270 && L.h == 850 && L.x == 325 && L.y == 115);  // the concept's size, centred
-    const refwin::Layout small = refwin::layout(1366, 768, 1.0f);
-    CHECK(small.w == 1270 && small.h == 728);  // 20 px of the game left round it
-    const refwin::Layout big = refwin::layout(3840, 2160, 2.0f);
-    CHECK(big.w == 2540 && big.h == 1700);
-    const refindex::Index ix = index();
-    const refpages::Page home = refpages::home(ix, Lang::Uk);
-    int total = 0;
-    const std::vector<refwin::Placed> rows = refwin::place(L, home, total);
-    // 3.0.11-beta.26: the concept's - the search, its line, five tiles to a line, «Обране» under them
-    CHECK(rows[0].y < rows[1].y && rows[1].y < rows[2].y && rows[0].h == 54);
-    CHECK(rows[2].y == rows[6].y && rows[7].y > rows[2].y && rows[3].x > rows[2].x && rows[7].x == rows[2].x);
-    CHECK(rows[12].y > rows[7].y + rows[7].h && rows[12].w == rows[0].w && rows[13].y > rows[12].y);
-    CHECK(total > rows[12].y + rows[12].h);
-    refwin::Texts t;
-    t.title = "Довідник";
-    const refwin::Chrome first = refwin::chrome(L, home, t);
-    CHECK(first.back.w == 0 && first.search.w == 0 && first.star.w == 0 && first.close.w > 0);  // its own field
-    // clicks: ×, the field, a tile; nothing outside
-    CHECK(refwin::under(L, home, rows, 0, first, float(L.w - 20), 30).part == refwin::Part::Close);
-    CHECK(refwin::under(L, home, rows, 0, first, 200, float(L.bodyY + rows[0].y + 20)).part == refwin::Part::Search);
-    const refwin::Under tile = refwin::under(L, home, rows, 0, first, float(rows[4].x + 20),
-                                             float(L.bodyY + rows[4].y + 20));
-    CHECK(tile.part == refwin::Part::Row && tile.row == 4);
-    CHECK(refwin::under(L, home, rows, 0, first, -5, 10).part == refwin::Part::None);
-    CHECK(refwin::under(L, home, rows, 0, first, 130, 30).part != refwin::Part::Back);  // none on the first
-    t.back = "Назад до Довідник";
-    t.crumbs = {"Монстри", "Poring"};
-    const refpages::Page poring = refpages::mob(ix, Lang::Uk, 1002, ctx("prontera"));
-    const refwin::Chrome card = refwin::chrome(L, poring, t);
-    CHECK(card.back.w > 0 && card.search.w > 0 && card.crumbs.size() == 3);  // two parts and a «›»
-    CHECK(card.back.x > first.title.x + first.title.w && card.search.x > card.crumbs.back().x);
-    CHECK(refwin::under(L, poring, rows, 0, card, card.back.x + 10, 30).part == refwin::Part::Back);
-    CHECK(refwin::under(L, poring, rows, 0, card, card.search.x + 30, 30).part == refwin::Part::Search);
-    CHECK_EQ(refwin::clampScroll(-40, total, L.bodyH), 0);
-    CHECK_EQ(refwin::clampScroll(100000, 2000, 500), 1500);
-}
-
-// 3.0.18-beta.36 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5): uaUI's «Довідник» - what paint()
-// draws as the markup's data: the glass first, the body's rows cut at the body, every box inside the window
-TEST(reference_window_sheet_holds_what_it_paints) {
-    const refindex::Index ix = index();
-    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
-    const refpages::Page p = refpages::mob(ix, Lang::Uk, 1002, ctx("prt_fild08"));
-    int total = 0;
-    const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
-    sheet::Model m;
-    refwin::sheetOf(m, L, p, rows, 0, total, refwin::Look{});
-    CHECK(m.w == float(L.w) && m.h == float(L.h) && !m.under.boxes.empty() && !m.clipped.boxes.empty());
-    CHECK(m.under.boxes[0].box.w == float(L.w) && m.under.boxes[0].fillA > 0.5f);  // the glass
-    CHECK(m.clip.y == float(L.bodyY) && m.clip.h == float(L.bodyH));
-    for (const sheet::Box& b : m.clipped.boxes) CHECK(b.box.x >= -1 && b.box.x + b.box.w <= float(L.w) + 1);
-    CHECK(m.world.w == 0);  // no world map on a monster's card
-}
-
-TEST(reference_window_hot_areas) {
-    const refindex::Index ix = index();
-    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
-    const refpages::Page p = refpages::home(ix, Lang::Uk);
-    int total = 0;
-    const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
-    refwin::Look look;
-    CHECK(refwin::hotAreas(L, p, rows, 0, look).empty());
-    look.hover = refwin::Under{refwin::Part::Row, 0};
-    const std::vector<Rect> one = refwin::hotAreas(L, p, rows, 0, look);
-    CHECK_EQ(one.size(), size_t(1));
-    CHECK(!one.empty() && one[0].left <= rows[0].x && one[0].right >= rows[0].x + rows[0].w);
-    CHECK(!one.empty() && one[0].top <= L.bodyY + rows[0].y && one[0].bottom >= L.bodyY + rows[0].y + rows[0].h);
-    CHECK(!one.empty() && one[0].right <= L.w && one[0].bottom <= L.h && one[0].left >= 0);
-    look.hover = refwin::Under{refwin::Part::Back, -1};
-    CHECK(refwin::hotAreas(L, p, rows, 0, look).empty());  // no «back» on the first page
-    refwin::Texts back;
-    back.back = "Назад до Довідник";
-    look.chrome = refwin::chrome(L, p, back);
-    look.selected = 1;
-    CHECK_EQ(refwin::hotAreas(L, p, rows, 0, look).size(), size_t(2));
-}
-
 // 3.0.11-beta.12: the site's live data (core/reference_live) - the players' public MVP timers, the market - in the
 // cards
 TEST(reference_live_timers_and_market) {
@@ -460,13 +378,6 @@ TEST(reference_pages_recent_and_starred) {
     CHECK_EQ(lately + 3, fav);  // the one the index has not: left out
     CHECK(home.rows[fav + 1].left == "Fly Wing" && home.rows[fav + 1].icon == "item:601");
     CHECK(home.rows[fav + 1].sub == "предмет" && home.rows[fav + 1].link.id == 601);
-    int total = 0;
-    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
-    const std::vector<refwin::Placed> rows = refwin::place(L, home, total);
-    CHECK(rows[lately].y == rows[fav].y && rows[fav].x > rows[lately].x + rows[lately].w);  // side by side
-    CHECK(rows[lately].h == rows[fav].h && rows[lately].w > rows[fav].w);
-    CHECK(rows[lately + 2].x > rows[lately + 1].x && rows[lately + 2].y == rows[lately + 1].y);  // chips in a line
-    CHECK(rows[lately + 1].x >= rows[lately].x && rows[fav + 1].x >= rows[fav].x);
     // a card's star: in the header (the page's), not a row
     const refpages::Page wing = refpages::open(ix, Lang::Uk, refpages::Link{refpages::Go::Item, 601, ""}, c);
     CHECK_EQ(wing.star, 1);  // starred
@@ -504,59 +415,12 @@ TEST(reference_concept_sections_and_words) {
     CHECK(fire && fire->tags[2] == "150" && fire->tags[1] == "50" && fire->tags[0] == "100");
     CHECK(tables.rows[1].style == refpages::Style::Grid && tables.rows[1].gold && tables.rows[1].tags[3] == "Fire");
     CHECK(tables.rows[1].tags[0] == "Neutral");  // the columns' whole names: the window cuts them only when narrow
-    const auto columnHead = [&](const refwin::Layout& L) {
-        int total = 0;
-        const std::vector<refwin::Placed> placed = refwin::place(L, tables, total);
-        refwin::Texts none;
-        refwin::Look plain;
-        plain.chrome = refwin::chrome(L, tables, none);
-        for (const refwin::Words& w : refwin::words(L, tables, placed, 0, none, plain))
-            if (w.bold && w.text.rfind("Neu", 0) == 0) return w;
-        return refwin::Words{};
-    };
-    CHECK_EQ(columnHead(refwin::layout(1920, 1080, 1.0f)).text, std::string("Neutral"));
-    const refwin::Layout slim = refwin::layout(800, 600, 1.0f);
-    const refwin::Words cut = columnHead(slim);
-    CHECK(cut.text.size() >= 3 && cut.text.size() < 7 && slim.measure(cut.text, cut.px, true) <= cut.box.w);
-    // the blocks' names in capitals, the first screen's words
-    const std::vector<refpages::Link> recent{{refpages::Go::Mob, 1002, ""}};
-    refpages::Context c = ctx("");
-    c.recent = &recent;
-    const refpages::Page home = refpages::home(ix, Lang::Uk, c);
-    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
-    int total = 0;
-    const std::vector<refwin::Placed> rows = refwin::place(L, home, total);
-    refwin::Texts t;
-    t.title = "Довідник";
-    t.hint = "Пошук: монстр, предмет, карта, квест, NPC";
-    refwin::Look look;
-    look.chrome = refwin::chrome(L, home, t);
-    bool lately = false, starred = false, hint = false, key = false;
-    for (const refwin::Words& w : refwin::words(L, home, rows, 0, t, look)) {
-        lately = lately || w.text == "НЕЩОДАВНІ";
-        starred = starred || w.text == "ОБРАНЕ";
-        hint = hint || (w.text == t.hint && w.px == 17.0f);
-        key = key || w.text == "Ctrl+F";
-    }
-    CHECK(lately && starred && hint && key);
-    // a narrow window keeps the way's last parts
-    const refwin::Layout narrow = refwin::layout(1024, 768, 1.0f);
-    const refpages::Page poring = refpages::mob(ix, Lang::Uk, 1002, ctx("prontera"));
-    t.back = "Назад до Monster Section With A Long Name";
-    t.crumbs = {"Монстри з дуже довгою назвою", "Ще одна довга сторінка",
-                "Prontera Field", "Poring"};
-    const refwin::Chrome c1 = refwin::chrome(narrow, poring, t);
-    CHECK(c1.crumbFirst > 0 && !c1.crumbs.empty());
-    CHECK(c1.crumbs.back().x + c1.crumbs.back().w <= c1.search.x);
-    const refwin::Chrome c2 = refwin::chrome(L, poring, t);
-    CHECK(c2.crumbFirst <= c1.crumbFirst);
 }
 
 // 3.0.11-beta.26, stage 2: the concept's cards (v23_ref_monster) - the rail of sections at the left, the card's head,
 // its two main blocks side by side, the rest in sections that fold
 TEST(reference_concept_cards) {
     const refindex::Index ix = index();
-    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
     const refpages::Link poringAt{refpages::Go::Mob, 1002, ""};
     refpages::Page p = refpages::withRail(refpages::mob(ix, Lang::Uk, 1002, ctx("prontera")), ix, Lang::Uk, poringAt);
     CHECK_EQ(p.rail.size(), size_t(11));  // 3.0.11-beta.30: «Головна» and all the first screen's sections
@@ -573,72 +437,13 @@ TEST(reference_concept_cards) {
     CHECK_EQ(litFor(refpages::Link{refpages::Go::Section, refpages::Bosses, ""}), 6);
     CHECK_EQ(litFor(refpages::Link{refpages::Go::Section, 106, ""}), 2);  // the cards: an items' type
     CHECK_EQ(litFor(refpages::Link{}), 0);  // the search's results
-    int total = 0;
-    const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
-    refwin::Texts t;
-    t.title = "Довідник";
-    const refwin::Chrome c = refwin::chrome(L, p, t);
-    CHECK(c.rail.size() == 11 && c.railW == 204.0f && !c.narrow);
-    for (const refwin::Placed& r : rows) CHECK(r.x >= int(c.railW));  // the body right of the rail
-    CHECK(refwin::under(L, p, rows, 0, c, c.rail[3].x + 20, c.rail[3].y + 10).part == refwin::Part::Rail);
-    CHECK_EQ(refwin::under(L, p, rows, 0, c, c.rail[3].x + 20, c.rail[3].y + 10).row, 3);
-    // the head: the picture at its left, the name beside it
-    CHECK(rows[1].h == 112 && rows[0].x == rows[1].x + 112 + 18);
-    // the main blocks side by side, the same height; the elements' section under them, its chips inside it
-    const size_t where = indexOf(p, "Де знайти"), drops = indexOf(p, "Що випадає");
-    const size_t ele = indexOf(p, "Шкода стихіями");
-    CHECK(rows[where].y == rows[drops].y && rows[drops].x > rows[where].x + rows[where].w);
-    CHECK(rows[where].boxH == rows[drops].boxH && rows[where].boxH > rows[where].h);
-    CHECK(rows[ele].y >= rows[where].y + rows[where].boxH && rows[ele].h == 46 && rows[ele].boxH > rows[ele].h);
-    CHECK(rows[ele + 1].in && rows[ele + 1].y > rows[ele].y && rows[ele + 2].x > rows[ele + 1].x);  // chips in a line
-    CHECK(rows[where + 1].in && rows[where + 1].x > rows[where].x);
-    // a folded section: its line alone
+    // a folded section: its heading alone, folded
     refpages::Context folded = ctx("prontera");
     folded.folded = 1u << refpages::Elements;
     const refpages::Page shut =
         refpages::withRail(refpages::open(ix, Lang::Uk, poringAt, folded), ix, Lang::Uk, poringAt);
-    const std::vector<refwin::Placed> shutRows = refwin::place(L, shut, total);
     const size_t at = indexOf(shut, "Шкода стихіями");
-    CHECK(shut.rows[at].closed && shutRows[at].boxH == shutRows[at].h);
-    // the words: ▸ for the folded, the block's capitals, the head's tags, the rail's names
-    refwin::Look look;
-    look.chrome = refwin::chrome(L, shut, t);
-    bool arrow = false, capital = false, tag = false, rail = false;
-    for (const refwin::Words& w : refwin::words(L, shut, shutRows, 0, t, look)) {
-        arrow = arrow || w.text == "▸";
-        capital = capital || w.text == "ДЕ ЗНАЙТИ";
-        tag = tag || w.text == "Water 1";
-        rail = rail || w.text == "Предмети";
-    }
-    CHECK(arrow && capital && tag && rail);
-    // a narrow window: the rail's icons alone
-    const refwin::Layout narrow = refwin::layout(1100, 700, 1.0f);
-    const refwin::Chrome thin = refwin::chrome(narrow, shut, t);
-    CHECK(thin.narrow && thin.railW == 58.0f && thin.rail.size() == 11);
-    bool named = false;
-    refwin::Look slim;
-    slim.chrome = thin;
-    for (const refwin::Words& w : refwin::words(narrow, shut, refwin::place(narrow, shut, total), 0, t, slim))
-        named = named || w.text == "Предмети";
-    CHECK(!named);
-    // 3.0.11-beta.67 (the concept's small screens: the rail folded to its icons, «с подсказками»): the section under
-    // the pointer names itself in a tip right of its icon, nothing else's words under it
-    slim.hover = refwin::Under{refwin::Part::Rail, 2};
-    int tips = 0;
-    panel::Box tip;
-    const std::vector<refwin::Words> slimWords =
-        refwin::words(narrow, shut, refwin::place(narrow, shut, total), 0, t, slim);
-    for (const refwin::Words& w : slimWords)
-        if (w.text == "Предмети") {
-            ++tips;
-            tip = w.box;
-        }
-    CHECK_EQ(tips, 1);
-    CHECK(tip.x >= thin.railW && std::fabs((tip.y + tip.h / 2) - (thin.rail[2].y + thin.rail[2].h / 2)) < 2);
-    for (const refwin::Words& w : slimWords)
-        if (w.text != "Предмети")
-            CHECK(w.box.x >= tip.x + tip.w || w.box.x + w.box.w <= tip.x || w.box.y >= tip.y + tip.h ||
-                  w.box.y + w.box.h <= tip.y);
+    CHECK(at != size_t(-1) && shut.rows[at].closed);
 }
 
 // 3.0.11-beta.28: the concept's search results (v21_search) - groups of results with their lines and kinds, the query
@@ -735,35 +540,6 @@ TEST(reference_search_concept_more_and_forms) {
     for (int i = 125; i < 130; ++i) ix.items.erase(i);  // 25: all of them, no «ще 5 ›»
     const refpages::Page most = refpages::found(ix, Lang::Uk, "stone");
     CHECK(most.rows[26].style == refpages::Style::Result && most.rows[27].style == refpages::Style::Hint);
-}
-
-// 3.0.11-beta.30 (the owner: «нету кнопки перейти на главный экран справочника где все иконками и чтобы можно было
-// выйти оттуда например сразу на карту мира»): «Головна» in the header (and its title) on every page but the first
-// screen - the world map's too; its hover painted again alone
-TEST(reference_home_button) {
-    const refindex::Index ix = index();
-    const refpages::Page card = refpages::mob(ix, Lang::Uk, 1002, ctx(""));
-    for (const float k : {1.0f, 2.0f}) {
-        const refwin::Layout L = refwin::layout(int(1920 * k), int(1080 * k), k);
-        refwin::Texts t;
-        t.title = "Довідник";
-        t.back = "Назад до Довідник";
-        const refwin::Chrome none = refwin::chrome(L, card, t);
-        CHECK(none.home.w == 0);
-        CHECK(refwin::under(L, card, {}, 0, none, none.title.x + 4, none.title.y + 10).part != refwin::Part::Home);
-        t.home = true;
-        const refwin::Chrome c = refwin::chrome(L, card, t);
-        CHECK(c.home.w > 0 && c.home.x > c.title.x + c.title.w && c.back.x > c.home.x + c.home.w);
-        int total = 0;
-        const std::vector<refwin::Placed> rows = refwin::place(L, card, total);
-        CHECK(refwin::under(L, card, rows, 0, c, c.home.x + 5, c.home.y + 5).part == refwin::Part::Home);
-        CHECK(refwin::under(L, card, rows, 0, c, c.title.x + 4, c.title.y + 10).part == refwin::Part::Home);
-        refwin::Look was;
-        was.chrome = c;
-        refwin::Look now = was;
-        now.hover = refwin::Under{refwin::Part::Home, -1};
-        CHECK(!refwin::hotAreas(L, card, rows, 0, now).empty());
-    }
 }
 
 // 3.0.11-beta.32: the monsters' list - those met on maps first, by their levels, each its picture and its line (the
@@ -871,21 +647,6 @@ TEST(reference_data_states) {
     c.now = 1794312000;  // 2026-11-10: the pack 18 days old
     CHECK(has(refpages::open(ix, Lang::Uk, at, c), "може бути застарілим"));
     CHECK(refpages::packStale(ix, c.now) && !refpages::packStale(ix, 1793361600));
-    // the chips: the live one says its state; a click on a chip opens this page
-    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
-    refwin::Texts t;
-    t.title = "Довідник";
-    t.pack = "Пакет даних \xC2\xB7 2026-10-23";
-    t.live = "Живі дані \xC2\xB7 3 год тому \xC2\xB7 можуть бути застарілими";
-    t.liveState = refwin::Live::Stale;
-    const refpages::Page home = refpages::home(ix, Lang::Uk, c);
-    const refwin::Chrome ch = refwin::chrome(L, home, t);
-    CHECK(ch.chips.size() == 2 && ch.chips[1].w > 0 && ch.live == refwin::Live::Stale);
-    int total = 0;
-    const std::vector<refwin::Placed> rows = refwin::place(L, home, total);
-    const refwin::Under u =
-        refwin::under(L, home, rows, 0, ch, ch.chips[1].x + ch.chips[1].w / 2, ch.chips[1].y + ch.chips[1].h / 2);
-    CHECK(u.part == refwin::Part::Chip && u.row == 1);
 }
 
 // 3.0.11-beta.70 (the concept: «что закрепить (квест, путь, вещь для сбора)»): an item monsters drop - its card's pin

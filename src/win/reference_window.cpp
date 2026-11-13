@@ -19,7 +19,7 @@
 #include "core/pack_source.hpp"
 #include "core/reference_pages.hpp"
 #include "core/reference_route.hpp"
-#include "core/reference_window.hpp"
+#include "core/reference_world_paint.hpp"
 #include "core/settings/strings.hpp"
 #include "core/sprite_file.hpp"
 #include "core/ui_icons.hpp"
@@ -690,14 +690,14 @@ void fillChrome(State& s) {
         m.live = settings::fmt(settings::tr(l, Text::RefLiveNow),
                                {refpages::number(s.online->online, l),
                                 refpages::respawn(int(std::max<long long>(age, 60) * 1000), l)});
-        m.live_state = int(refwin::Live::Fresh);
+        m.live_state = int(ur::Live::Fresh);
     } else if (const long long seen = reference::onlineSeen(); seen > 0) {  // 3.0.11-beta.69: came, now stale
         const long long age = std::min<long long>(std::max<long long>(now - seen, 60), 2000000);
         m.live = settings::fmt(settings::tr(l, Text::RefLiveStale), {refpages::respawn(int(age * 1000), l)});
-        m.live_state = int(refwin::Live::Stale);
+        m.live_state = int(ur::Live::Stale);
     } else {
         m.live = say(Text::RefLiveOff);
-        m.live_state = int(refwin::Live::Off);
+        m.live_state = int(ur::Live::Off);
     }
     const bool card = s.at.go == refpages::Go::Mob || s.at.go == refpages::Go::Item || s.at.go == refpages::Go::Map ||
                       s.at.go == refpages::Go::Quest;

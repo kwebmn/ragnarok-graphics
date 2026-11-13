@@ -21,10 +21,12 @@ struct RailV {
     bool on = false;
     bool operator==(const RailV& o) const;
 };
+// The site's live data in the bottom's chip: not asked for, fresh, no link; stale - came, but past its minutes
+enum class Live : int { None, Fresh, Off, Stale };
 struct Model {
     Rml::String title, back, query, find, keys, pack, live, star, home_icon, body, note, ground = "#10141cf0";
     Rml::String w = "1270px", h = "850px";  // the window's box (the window sets them from the screen and its corner)
-    int live_state = 0;                     // refwin::Live: 0 none, 1 fresh, 2 off, 3 stale
+    int live_state = 0;                     // Live: 0 none, 1 fresh, 2 off, 3 stale
     bool home = false, narrow = false, starred = false;  // star: "" none, «☆» or «★» (starred)
     std::vector<RailV> rail;
     std::vector<Rml::String> crumbs;

@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "core/reference_pages.hpp"
-#include "core/reference_window.hpp"
+#include "core/reference_world_paint.hpp"
 #include "core/world_map.hpp"
 #include "test.hpp"
 
@@ -160,27 +160,20 @@ TEST(reference_world_pages) {
     CHECK(d.rows[4].link.go == refpages::Go::Map && d.rows[4].link.map == "prt_sewb1");
     const refpages::Page home = refpages::home(ix, Lang::Uk);
     CHECK(home.rows[10].link.go == refpages::Go::World && home.rows[10].icon == "ui:world");  // the ninth tile
-    // the window: the bar's line, the map at the left to the body's bottom, the panel at its right, the zoom's
-    // buttons at the map's right; the tile under the pointer at a zoom
+    // the window's world map: the tile under the pointer at a zoom (its own pixels)
     for (const float k : {1.0f, 2.0f}) {
-        const refwin::Layout L = refwin::layout(int(1920 * k), int(1080 * k), k);
-        int total = 0;
-        const auto rows = refwin::place(L, w, total);
-        const refwin::Placed& map = rows[5];
-        CHECK(map.h > int(500 * k) && map.y + map.h <= L.bodyH && total <= L.bodyH);
-        CHECK(rows[0].y == rows[2].y && rows[0].x == map.x && rows[1].x > rows[0].x + rows[0].w);
-        CHECK_EQ(rows[4].x + rows[4].w, map.x + map.w);  // «+» at the map's right
-        CHECK(rows[6].x >= map.x + map.w + int(16 * k) && rows[6].w == int(std::lround(380 * k)));
+        refwin::Layout L;
+        L.s = k;
+        const panel::Box box{0, 0, 900 * k, 560 * k};
         refwin::WorldLook look;
         look.sheet = &sh;
         for (const float zoom : {1.0f, 2.0f}) {
             look.zoom = zoom;
             look.cx = 20;
             look.cy = 20;
-            const worldmap::Fit f = refwin::worldView(look, map);
-            const float x = float(map.x) + f.x + 15 * f.s, y = float(L.bodyY + map.y) + f.y + 15 * f.s;
-            const refwin::Under u = refwin::under(L, w, rows, 0, refwin::Chrome{}, x, y, &look);
-            CHECK(u.part == refwin::Part::Tile && u.row == 5 && u.tile == 0);
+            const worldmap::Fit f = worldmap::view(sh.w, sh.h, int(box.w), int(box.h), zoom, 20, 20);
+            const refwin::Under u = refwin::worldUnder(L, box, look, f.x + 15 * f.s, f.y + 15 * f.s);
+            CHECK(u.part == refwin::Part::Tile && u.tile == 0);
         }
     }
 }
