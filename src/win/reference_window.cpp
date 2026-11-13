@@ -1806,8 +1806,18 @@ void keepInRoom(State& s) {
     }
     if (!worldPage(s) || s.applyIn > 0 || s.bodyDirty) return;
     Rml::Element* sc = scroller(s);
-    if (!sc) return;
-    const int over = int(std::ceil(sc->GetScrollHeight() - sc->GetClientHeight()));
+    Rml::Element* map = s.win.doc.byId("wmap");
+    if (!sc || !map) return;
+    // 3.0.18-beta.254 (R-TMUEN4 «не всю карту показало»: a long way's panel beside the map overflowed the window - the
+    // map was trimmed 201 px four times over, the page no shorter, the map a strip): the map's own bottom past the
+    // body's (the panel scrolls in itself, no taller than the map), measured once its box is the size it was made at
+    if (std::fabs(map->GetBox().GetSize(Rml::BoxArea::Content).y - float(s.mapH)) > 1.5f)
+        return;  // not laid out at its new size yet (its style's height is its content's; its border round it)
+    const float height = map->GetBox().GetSize(Rml::BoxArea::Border).y;
+    const float top = map->GetAbsoluteOffset(Rml::BoxArea::Border).y - sc->GetAbsoluteOffset(Rml::BoxArea::Padding).y +
+                      sc->GetScrollTop();
+    const float pad = sc->GetBox().GetEdge(Rml::BoxArea::Padding, Rml::BoxEdge::Bottom);
+    const int over = int(std::ceil(top + height + pad - sc->GetClientHeight()));
     if (over > 1 && over < s.mapH / 2) {
         s.mapTrim += over;
         s.wantPage = true;  // the map's box again, its picture at the new size

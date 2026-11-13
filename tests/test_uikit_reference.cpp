@@ -247,6 +247,15 @@ TEST(uikit_reference_world_page_bar_map_panel) {
     CHECK_EQ(count(l.doc, ".rwpanel .rstep.paid"), size_t(1));
     CHECK_EQ(count(l.doc, ".rwpanel .lg-here"), size_t(1));
     CHECK_EQ(count(l.doc, ".rwtab.on"), size_t(1));
+    // 3.0.18-beta.254 (R-TMUEN4 «не всю карту показало»: a long way's panel made the page taller than the window and
+    // the map was trimmed to a strip): the panel no taller than the map, its steps scrolled in it
+    Rml::Element* panel = nullptr;
+    if (l.doc) {
+        Rml::ElementList found;
+        l.doc->QuerySelectorAll(found, ".rwpanel");
+        if (found.size() == 1) panel = found[0];
+    }
+    CHECK(panel && panel->GetProperty<float>("max-height") == 400.0f);
     rmlhost::close(l.doc);
 }
 

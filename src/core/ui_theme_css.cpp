@@ -1764,7 +1764,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .ww { position: absolute; white-space: nowrap; font-effect: outline(2px #000000b3); }
 .rfw .ww.b { font-weight: bold; }
 .rfw .ww.wrap { white-space: normal; }
-.rfw .rwpanel { display: block; flex: 1; margin-left: 14dp; }
+.rfw .rwpanel { display: block; flex: 1; margin-left: 14dp; overflow-y: auto; }
 .rfw .rleg { display: flex; flex-direction: row; align-items: center; height: 24dp; font-size: 12.5dp; color: #c9d1de; }
 .rfw .lg { display: block; flex: none; width: 14dp; height: 14dp; margin-right: 8dp; border-radius: 7dp; }
 .rfw .lg-here { background-color: #f3c653; }

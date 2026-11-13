@@ -421,7 +421,11 @@ std::string body(const refpages::Page& p, const Look& look) {
         m.run(bar);
         m.o += "<div class=\"rwrow\"><div class=\"rwleft\">";
         m.line(world);
-        m.o += "</div><div class=\"rwpanel\">";
+        // 3.0.18-beta.254 (R-TMUEN4 «не всю карту показало»): the panel no taller than the map - a long way's steps
+        // scrolled in it (it made the page taller than the window and the map was trimmed to a strip)
+        char most[48];
+        std::snprintf(most, sizeof most, "max-height: %dpx;", std::max(1, look.worldH));
+        m.o += std::string("</div><div class=\"rwpanel\" style=\"") + most + "\">";
         m.run(panel);
         m.o += "</div></div>";
         return m.o;
