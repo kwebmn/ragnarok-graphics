@@ -23,7 +23,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
  <span class="rbk ctl" data-if="back != ''" data-event-click="ref_back()">&#x2039; {{back}}</span>
  <span class="rhm ctl" data-if="home" data-event-click="ref_home()"><img data-attr-src="home_icon"/></span>
  <span class="rtt">{{title}}</span>
- <span class="rcr"><span class="rcb" data-for="c, i : crumbs"><span class="sep"
+ <span id="rcr" class="rcr"><span class="rcb" data-for="c, i : crumbs"><span class="sep"
    data-if="i > 0">&#x203A;</span>{{c}}</span></span>
  <div class="rsrch"><input id="rq" class="ctl" type="text" data-value="query"/><span class="ph"
    data-if="query == ''">{{find}}</span><span class="kbd" data-if="query == ''">Ctrl+F</span></div>
@@ -484,7 +484,7 @@ std::string body(const refpages::Page& p, const Look& look) {
         const size_t lines = lineRows(p, s);
         if (lines > kLong) {
             flush();
-            section(s, lines > kLonger ? 3 : 2);
+            section(s, lines > kLonger && look.wide ? 3 : 2);  // 3.0.18-beta.248: three only when wide
             continue;
         }
         const int c = height[1] < height[0] ? 1 : 0;

@@ -510,4 +510,14 @@ void paintWorldPicture(panel::Picture& out, const Layout& L, const panel::Box& b
     paintWorld(out, L, panel::Box{0, 0, b.w, b.h}, w);
 }
 
+bool backgroundAt(panel::Picture& back, worldmap::Fit& made, const std::vector<uint32_t>& argb, int sheetW, int sheetH,
+                  int detail, int w, int h, float zoom, float cx, float cy) {
+    if (w <= 0 || h <= 0 || sheetW <= 0 || sheetH <= 0 || detail <= 0) return false;
+    const worldmap::Fit v = worldmap::view(sheetW, sheetH, w, h, zoom, cx, cy);
+    if (back.width == w && back.height == h && v.s == made.s && v.x == made.x && v.y == made.y) return false;
+    worldmap::scaled(back, argb, sheetW * detail, sheetH * detail, w, h, worldmap::Fit{v.s / float(detail), v.x, v.y});
+    made = v;
+    return true;
+}
+
 }  // namespace uagfx::refwin

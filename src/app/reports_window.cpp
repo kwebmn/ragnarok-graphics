@@ -17,7 +17,6 @@
 #include "app/text.hpp"
 #include "app/ui.hpp"
 #include "core/layout.hpp"
-#include "core/report_checks.hpp"
 #include "core/report_talk.hpp"
 #include "core/report_texts.hpp"
 #include "core/version.hpp"
@@ -1278,18 +1277,6 @@ void ReportsWindow::sendNewReport() {
         shots.emplace_back(shot + ".jpg", std::move(jpeg));
         std::string png = p.path.empty() ? p.png : shotPng(p.path);
         if (!png.empty()) originals.emplace_back(shot + ".png", std::move(png));
-    }
-    // 3.0.18-beta.189 (R-VHMGXR): the driver's check shots of the report's picture (core/report_checks) - the same
-    // place with a part of ours off each, small, after the player's pictures (the site takes six in all)
-    if (!start_.shot.empty()) {
-        const std::string folder = utf8(model_.paths().dir) + "\\" + layout::kReportChecks;
-        for (const reportchecks::Variant& v : reportchecks::variants()) {
-            if (shots.size() >= size_t(reportchecks::kMostShots)) break;
-            const std::wstring path = wide(reportchecks::shotPath(folder, utf8(start_.shot), v.name));
-            if (!fileExists(path)) continue;
-            std::string jpeg = shotJpeg(path);
-            if (!jpeg.empty()) shots.emplace_back(std::string("check-") + v.name + ".jpg", std::move(jpeg));
-        }
     }
     std::string comment = utf8(what);
     if (!start_.map.empty()) comment += (comment.empty() ? "" : "\n\n") + utf8(tf(Text::ReportMapLine, {start_.map}));

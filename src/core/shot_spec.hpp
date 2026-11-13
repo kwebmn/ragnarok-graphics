@@ -9,7 +9,7 @@ namespace uagfx::shotspec {
 // target - a PNG path as before, or a path with «|x y w h» after it (shares of the picture, 0-1) for a part of it;
 // a path ending «.bgra» a raw picture (kMagic, width, height, then the B8G8R8A8 rows) the driver reads back itself
 // (it has no PNG reader)
-// 3.0.18-beta.189 (core/report_checks): «|/N» after it - the whole picture N times smaller a side (2-8), each pixel the
+// 3.0.18-beta.189 (the report check shots', gone in .248): «|/N» after it - the whole picture N times smaller a side (2-8), each pixel the
 // mean of its N x N
 struct Spec {
     std::string path;

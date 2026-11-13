@@ -82,8 +82,8 @@ constexpr const char* kEffectCapture = "uaro-graphics\\logs\\uaro-effects.txt";
 // reports the site did not take yet (queued-*.json, sent at the app's next start)
 constexpr const char* kReports = "uaro-graphics\\reports";
 constexpr const char* kComputerKey = "uaro-graphics\\reports\\computer.txt";
-// 3.0.18-beta.189: a report's check shots (core/report_checks) - the driver writes them after the report's picture,
-// the app sends them with it; the last report's go when the next one starts
+// 3.0.18-beta.189: a report's check shots (gone in 3.0.18-beta.248) - their folder, emptied and removed when a report
+// starts
 constexpr const char* kReportChecks = "uaro-graphics\\reports\\checks";
 // 3.0.18-beta.193: the launcher's art and the look picker's pictures (core/launcher_art), the package's
 constexpr const char* kLauncherArt = "uaro-graphics\\launcher";

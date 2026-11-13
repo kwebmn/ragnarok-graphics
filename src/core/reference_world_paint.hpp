@@ -75,6 +75,11 @@ struct Words {
     bool wrap = false;
 };
 
+// 3.0.18-beta.248 (R-QP7PQB): the world map's background at the view - the sheet's own pixels (argb, `detail` times
+// its size) scaled to w x h at the zoom and centre; made again only when the view or the size changed (`made` the
+// view it was made at; false: as it was). WorldLook::picture is this one, never the picture painted over it
+bool backgroundAt(panel::Picture& back, worldmap::Fit& made, const std::vector<uint32_t>& argb, int sheetW, int sheetH,
+                  int detail, int w, int h, float zoom, float cx, float cy);
 // The world map's picture alone at b's size; what is under a point of it (its own pixels); the words over it (the
 // towns, the card of the map under the pointer, the dungeon box's)
 void paintWorldPicture(panel::Picture& out, const Layout& L, const panel::Box& b, const WorldLook& w);

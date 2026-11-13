@@ -37,6 +37,7 @@ void bind(Rml::DataModelConstructor& c, Model& m);
 
 struct Look {
     bool narrow = false;
+    bool wide = false;  // 3.0.18-beta.248: a body wide enough for a long list in three columns (else two)
     // A picture's source by its key ("" while it is not made yet): a Portrait's row.picture ("mob:1002",
     // "item:512", "map:prontera"), a row's icon ("icon:item:512", "icon:mob:1002"; "ui:<name>" the core's line icons),
     // "world" the world map's sheet at worldW x worldH

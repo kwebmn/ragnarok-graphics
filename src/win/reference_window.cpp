@@ -108,6 +108,10 @@ struct State {
     ULONGLONG madeAt = 0;                           // the page's minutes: made again each minute with timers
     std::shared_ptr<const reference::World> world;  // 3.0.11-beta.11: the world map (null: not made yet)
     panel::Picture worldPicture;                    // its picture at the map's box (its shapes)
+    // 3.0.18-beta.248 (R-QP7PQB «карта не грузиться»): its background at the view (the sheet's tiles) - its own
+    // picture, the one painted over it (worldPicture) never its own background
+    panel::Picture worldBack;
+    worldmap::Fit worldBackFit;
     int worldPainted = 0;
     std::string worldSrc, worldKey, worldWordsRml;
     std::string worldHover;  // the map under the pointer there
@@ -139,6 +143,7 @@ struct State {
     int w = 0, h = 0;  // the window's box, the target's pixels
     bool narrow = false;
     int mapW = 0, mapH = 0;  // the world map's box on its page
+    int mapTrim = 0;         // 3.0.18-beta.248: px off its height - the page overflowed the window by them
     std::vector<barhint::Skill> bar;  // 3.0.11-beta.68: the hotbar's skills, read with each page
     // 3.0.18-beta.240 (the reference's «одна карта», the owner 13.11): a location's map - the big map's look at any
     // zoom; its layers the minimap's (one setting), the monster zones the window's own
@@ -442,7 +447,12 @@ refwin::WorldLook worldLook(State& s, bool forPaint) {
         w.chain.push_back(refwin::ChainMap{map, name, forPaint ? chainPicture(s, map, side) : nullptr});
     w.chainTitle = s.way.chainTitle;
     if (!forPaint) return w;
-    w.picture = &s.worldPicture;
+    if (refwin::backgroundAt(s.worldBack, s.worldBackFit, s.world->argb, s.world->sheet.w, s.world->sheet.h,
+                             reference::World::detail, s.mapW, s.mapH, s.zoom, s.cx, s.cy)) {
+        static int told = 0;
+        if (told++ < 20) LOG_INFO("reference: the world map's background at the view - %dx%d", s.mapW, s.mapH);
+    }
+    w.picture = &s.worldBack;
     w.here = s.here;
     w.hover = s.worldHover;
     if (s.at.go == refpages::Go::World) w.marks = refpages::worldMarks(*s.index, s.at.map);  // 3.0.11-beta.19
@@ -785,6 +795,7 @@ void renderBody(State& s) {
     const ULONGLONG t0 = GetTickCount64();
     ur::Look look;
     look.narrow = s.narrow;
+    look.wide = !s.narrow && s.dp > 0 && float(s.w) / s.dp >= 1560;  // 3.0.18-beta.248: three columns only so wide
     look.selected = s.sel;
     look.worldW = s.mapW;
     look.worldH = s.mapH;
@@ -1329,9 +1340,10 @@ void sizeBox(State& s) {
     w = std::clamp(w, std::min(px(560, s), s.targetW), int(most * float(s.targetW)));
     h = std::clamp(h, std::min(px(420, s), s.targetH), int(most * float(s.targetH)));
     const bool narrow = float(w) < kNarrowBelow * s.dp;
+    if (w != s.w || h != s.h) s.mapTrim = 0;  // 3.0.18-beta.248: another size - measured anew
     // the world map's box: the body less its padding, the panel at its right, the bar over it
     const int mapW = std::max(px(200, s), w - px(2 * 18 + kPanelW, s) - 2);
-    const int mapH = std::max(px(160, s), h - px(56 + 36 + 30 + 42, s) - 2);
+    const int mapH = std::max(px(160, s), h - px(56 + 36 + 30 + 42, s) - 2 - s.mapTrim);  // .248: what overflowed
     // 3.0.18-beta.240: a location's map - three fifths of the body beside its NPCs (narrow: the body's width), its
     // height the body's less its title and bar
     const int content = w - px(float(narrow ? 52 : 196) + 36, s) - 2;
@@ -1762,6 +1774,28 @@ void loadWaiting(State& s) {
     if (budget > 0) s.waitingScroll = scrollNow(s);  // all in view made: none looked for till the body scrolls
 }
 
+// 3.0.18-beta.248 (the owner: «всюду немного покороченый интерфейс»): the header's way keeps its end - while it is
+// wider than its room its earliest parts give way to «…» (the page's own name stays); the world map's page no taller
+// than the body (its map trimmed by what it overflows, else a scroll bar and its bottom cut)
+void keepInRoom(State& s) {
+    if (Rml::Element* way = s.win.doc.byId("rcr");
+        way && s.model.crumbs.size() > 1 && way->GetScrollWidth() > way->GetClientWidth() + 1) {
+        const Rml::String more = "\xE2\x80\xA6";
+        if (s.model.crumbs.front() != more) s.model.crumbs.front() = more;
+        else s.model.crumbs.erase(s.model.crumbs.begin() + 1);
+        s.win.doc.dirty("crumbs");
+    }
+    if (!worldPage(s) || s.applyIn > 0 || s.bodyDirty) return;
+    Rml::Element* sc = scroller(s);
+    if (!sc) return;
+    const int over = int(std::ceil(sc->GetScrollHeight() - sc->GetClientHeight()));
+    if (over > 1 && over < s.mapH / 2) {
+        s.mapTrim += over;
+        s.wantPage = true;  // the map's box again, its picture at the new size
+        LOG_INFO("reference: the world map %d px lower - its page fits the window", over);
+    }
+}
+
 void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.enabled = enabled;
@@ -1814,6 +1848,8 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
         if (world != s.world) {
             s.world = world;
             s.worldPicture = panel::Picture{};
+            s.worldBack = panel::Picture{};  // 3.0.18-beta.248
+            s.worldBackFit = worldmap::Fit{};
             s.wantPage = true;
         }
     }
@@ -1932,6 +1968,7 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
     s.shown = s.win.shown;
     if (s.shown) block(s, game);
     if (s.shown && (s.padActive || s.padCross)) padShow(s);  // 3.0.18-beta.241
+    if (s.shown) keepInRoom(s);  // 3.0.18-beta.248
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {

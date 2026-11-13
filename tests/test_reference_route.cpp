@@ -427,3 +427,26 @@ TEST(reference_pages_lead_of_a_card) {
     CHECK(lead && lead->go == refpages::Go::Follow && lead->id == 0 && lead->map == "cave");
     CHECK(refpages::leadOf(refpages::map(*ix, Lang::Uk, "cave", ctx("town"))) == nullptr);
 }
+
+// 3.0.18-beta.248 (R-QP7PQB «карта не грузиться»: the world map's tiles gone since 3.0.18-beta.239 - the window gave
+// its own picture as the background, blanked before it was copied): the background at the view is its own picture,
+// made from the sheet's pixels and again only when the view or the size changes; under the marks in the painted one
+TEST(reference_world_background_under_the_marks) {
+    worldmap::Sheet sh;
+    CHECK(worldmap::parse(R"({"W":100,"H":60,"world":[{"id":"town","l":10,"t":10,"w":20,"h":20}]})", sh));
+    const int d = 2;  // the sheet's pixels at twice its size
+    const std::vector<uint32_t> argb(size_t(100 * d) * size_t(60 * d), 0xFF2050A0u);
+    panel::Picture back;
+    worldmap::Fit made;
+    CHECK(refwin::backgroundAt(back, made, argb, sh.w, sh.h, d, 200, 120, 1, -1, -1));
+    CHECK(back.width == 200 && back.height == 120 && back.px[size_t(60) * 200 + 100] == 0xFF2050A0u);
+    CHECK(!refwin::backgroundAt(back, made, argb, sh.w, sh.h, d, 200, 120, 1, -1, -1));  // as it was
+    CHECK(refwin::backgroundAt(back, made, argb, sh.w, sh.h, d, 200, 120, 2, 50, 30));    // zoomed: again
+    const refwin::Layout L;
+    refwin::WorldLook w;
+    w.sheet = &sh;
+    w.picture = &back;
+    panel::Picture out;
+    refwin::paintWorldPicture(out, L, panel::Box{0, 0, 200, 120}, w);
+    CHECK(out.width == 200 && out.px[size_t(5) * 200 + 190] == 0xFF2050A0u);
+}

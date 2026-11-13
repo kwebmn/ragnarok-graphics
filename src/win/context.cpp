@@ -838,29 +838,18 @@ void Context::behind() {
     answercard::behind(window);                            // 3.0.9-beta.4: a new answer told from behind
 }
 
-// 3.0.18-beta.189 (R-VHMGXR «словил глюк с берсрком»: the ground washed, the models not): a report's check shots -
-// each variant's effects from the ini as it is (as the console's Tab compares them), the last report's shots gone
-void Context::startReportChecks(const std::string& shot) {
-    std::string text;
-    readTextFile(ourFile(layout::File::Ini), text);
-    const EffectSettings file = parseConfig(text).effects;
-    checkFx_.clear();
-    for (const reportchecks::Variant& v : reportchecks::variants())
-        checkFx_.push_back(reportchecks::effectsOf(v, file, cardLevel()));
-    CreateDirectoryA(layout::join(gameDir(), layout::kReports).c_str(), nullptr);
+// 3.0.18-beta.248 (the owner: «теперь он не нужен такой сложный»): a report's check shots gone (3.0.18-beta.189, for
+// Berserk's wash - solved in .229); their files of an earlier report deleted when a report starts
+void removeReportChecks() {
     const std::string folder = layout::join(gameDir(), layout::kReportChecks);
-    CreateDirectoryA(folder.c_str(), nullptr);
     WIN32_FIND_DATAA f{};
     const HANDLE h = FindFirstFileA((folder + "\\*.png").c_str(), &f);
-    if (h != INVALID_HANDLE_VALUE) {
-        do {
-            DeleteFileA((folder + "\\" + f.cFileName).c_str());
-        } while (FindNextFileA(h, &f));
-        FindClose(h);
-    }
-    reportChecks_.start(folder, shot);
-    LOG_INFO("report checks: %zu pictures of the same place to come, each with a part of ours off, into %s",
-             reportchecks::variants().size(), folder.c_str());
+    if (h == INVALID_HANDLE_VALUE) return;
+    do {
+        DeleteFileA((folder + "\\" + f.cFileName).c_str());
+    } while (FindNextFileA(h, &f));
+    FindClose(h);
+    RemoveDirectoryA(folder.c_str());
 }
 
 void Context::present(const Rect& source, bool waitForVblank) {
@@ -1111,15 +1100,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
                      "%.4f %.4f; the game %dx%d", name + 1, view[0], view[1], view[2], view[3], view[4], view[5],
                      view[6], view[7], view[8], view[9], view[10], view[11], screenWidth, screenHeight);
         if (reportNow) {
-            const std::string map = readGameMap();
-            if (!map.empty() && enhanced_) {  // 3.0.18-beta.189: its checks first; .191: then its window
-                startReportChecks(screenshot);
-                pendingReportShot_ = screenshot;
-                pendingReportMap_ = map;
-                pendingReportSince_ = GetTickCount64();
-            } else {
-                startReport(screenshot, map);
-            }
+            removeReportChecks();  // 3.0.18-beta.248: no check shots any more
+            startReport(screenshot, readGameMap());
         }
     }
     if (screenshot.empty() && config.portraits) {  // 3.0.11-beta.273: the character's picture now and then
@@ -1574,34 +1556,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         fx.dayNow = day;
         fx.hallucinatingNow = hallucinating;
     }
-    // 3.0.18-beta.189 (R-VHMGXR): a report's check shots - each variant's effects a few frames, its shot the last
-    std::string checkShot;
-    bool checkPause = false;
-    if (const int check = reportChecks_.frame(checkShot); check >= 0 && size_t(check) < checkFx_.size()) {
-        const reportchecks::Variant& v = reportchecks::variants()[size_t(check)];
-        checkPause = v.pause;
-        const int night = fx.nightNow, day = fx.dayNow;
-        const bool hallucinating = fx.hallucinatingNow;
-        fx = checkFx_[size_t(check)];
-        fx.nightNow = night;
-        fx.dayNow = day;
-        fx.hallucinatingNow = hallucinating;
-        if (!checkShot.empty()) LOG_INFO("report checks: %s - %s", v.what, checkShot.c_str());
-    }
-    // 3.0.18-beta.191: the report's window once its checks are taken - in front it would leave the game behind, which
-    // draws no more frames there; at most kChecksWaitMs after the picture all the same
-    constexpr uint64_t kChecksWaitMs = 5000;
-    if (!pendingReportShot_.empty() &&
-        (!reportChecks_.active() || GetTickCount64() - pendingReportSince_ > kChecksWaitMs)) {
-        if (reportChecks_.active()) {
-            LOG_INFO("report checks: not all taken in %llu ms - the report's window now",
-                     static_cast<unsigned long long>(kChecksWaitMs));
-            reportChecks_.stop();
-        }
-        startReport(pendingReportShot_, pendingReportMap_);
-        pendingReportShot_.clear();
-    }
-    renderer->setEffects(enhanced_ && !checkPause ? fx : effectsOff());  // Pause: the game's own picture
+    renderer->setEffects(enhanced_ ? fx : effectsOff());  // Pause: the game's own picture
     serverNightFrame(enhanced_ && fx.noServerNight);      // 2.6.13: the server's night by the clock and «Ночь»
     mapEntryFrame(config.connection, window);             // 2.6.17: the way onto a map ([connection])
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
@@ -1637,8 +1592,6 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.foreground = foreground;
     o.vsyncSetting = config.vsync;
     o.screenshot = screenshot;
-    if (screenshot.empty() && !checkShot.empty())  // 3.0.18-beta.189: small, for the report
-        o.screenshot = shotspec::withShrink(checkShot, reportchecks::kShrink);
     o.screenshotWhole = bigShot_ == 1 && !screenshot.empty();  // 3.0.13-beta.16: the target at its own size
     if (bigShot_ > 0) --bigShot_;
     o.hdr = config.hdr && enhanced_;  // 0.65: Pause shows the SDR picture

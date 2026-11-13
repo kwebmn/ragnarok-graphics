@@ -168,18 +168,22 @@ TEST(uikit_reference_narrow_is_one_column) {
 }
 
 TEST(uikit_reference_long_list_goes_across_in_columns) {
-    for (const int rows : {30, 70}) {
+    // 3.0.18-beta.248 (the owner: «всюду немного покороченый интерфейс» - names cut in three columns): three only in a
+    // wide window
+    for (const auto& [rows, wide] : {std::pair<int, bool>{30, false}, {70, false}, {70, true}}) {
         refpages::Page p;
         p.rows.push_back(row(Style::Heading, "З кого випадає"));
         for (int i = 0; i < rows; ++i) p.rows.push_back(row(Style::Row, "Mob", refpages::Go::Mob, 1000 + i));
         p.rows.push_back(row(Style::Heading, "Де купити"));
         p.rows.push_back(row(Style::Row, "Tool Dealer", refpages::Go::Shop, 1));
         ur::Model m;
-        m.body = ur::body(p, ur::Look{});
+        ur::Look look;
+        look.wide = wide;
+        m.body = ur::body(p, look);
         const Loaded l = load(m);
         CHECK_EQ(l.warnings, std::string());
         CHECK_EQ(count(l.doc, ".rsplit"), size_t(1));
-        CHECK_EQ(count(l.doc, ".rspc"), size_t(rows > 60 ? 3 : 2));
+        CHECK_EQ(count(l.doc, ".rspc"), size_t(rows > 60 && wide ? 3 : 2));
         CHECK_EQ(count(l.doc, "[data-ln]"), size_t(rows + 1));
         Rml::Element* shop = l.doc ? l.doc->GetElementById("r" + std::to_string(rows + 2)) : nullptr;
         CHECK(shop && !within(shop, "rsplit"));  // the short one after it on its own
