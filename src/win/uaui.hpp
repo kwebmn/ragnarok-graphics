@@ -95,12 +95,17 @@ public:
     bool made() const { return doc_ != nullptr; }
     void show(bool on);  // shown with the theme's fade in (its body's class «away» taken off the next frame)
     bool shown() const { return shown_; }
-    // 3.0.18-beta.172: each one counted - the log's uaUI line tells the parts that change their data the most
+    // 3.0.18-beta.172: each one counted - the log's uaUI line tells the parts that change their data the most.
+    // 3.0.18-beta.242 (R-F8FGR4): nothing before make() - a part that sets its model's words before its document is
+    // made (the reference's first open: its search's words emptied) wrote through RmlUi's empty handle (a read at 0x28);
+    // the document reads the bound model as it is when made
     void dirty(const char* variable) {
+        if (!model_) return;
         ++dirties;
         model_.DirtyVariable(variable);
     }
     void dirtyAll() {
+        if (!model_) return;
         ++dirtyAlls;
         model_.DirtyAllVariables();
     }
