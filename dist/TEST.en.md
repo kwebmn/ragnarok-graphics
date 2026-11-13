@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.18-beta.243 — what's new · 2026-11-13
+
+- «Reference», cards: under a thing's name is its description from the game, the same as in the bag's item card. Beside it is what you have: «in the bag 3 · in the cart 1 · in storage 12» (the storage as you last saw it in this game).
+- «What it is made of» shows how many of each material your bag holds, and «Goes into» says «have all» or «missing N». A quest's needed things show «2 of 5».
+- Monsters' levels in the lists are coloured by your character's level: green fits (within 10 levels), red is stronger, grey is weaker.
+- A boss's card: «Your timers» from the «Bosses» panel first, the site's players' timers below. The bosses' list puts your timer first too.
+- Shift+click on a name (a monster's, a thing's, an NPC's, a quest's, a map's) or on the card's title puts «[Name]» into the chat line.
+- A thing's card (right click on a thing) has «In the reference ›» at the bottom - it opens its card in the reference.
+- What to check: Apple's or Jellopy's card - the game's description under the name, the «in the bag …» line; a thing that can be crafted; a quest with things; the monsters' list - the levels' colours; Shift+click on Poring - «[Poring]» in the chat; right click on a thing in «Items» → «In the reference ›».
+
 # uaRO Graphics 3.0.18-beta.242 — what's new · 2026-11-13
 
 - Fixed: in betas 239–241 the game closed with an error the first time in a game «Reference» opened - by Ctrl+F, its button, the target's card or the controller. The window wrote its search words before it was made. Now such a write waits for the window, in every window of the new interface (R-F8FGR4).
