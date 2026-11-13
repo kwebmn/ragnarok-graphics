@@ -960,6 +960,10 @@ enum class Text : uint16_t {
     MenuAccount,             // .226: the menu's «Змінити акаунт» (on its top)
     MakeKeysHint,            // .228: the character make's keys line
     FxFixNegative, FxFixNegativeHint,  // .229 (R-H2CQCJ): [effects] fix_negative
+    // .240 (the reference's maps): the NPCs' groups, the NPC card's lines, the map's layers
+    RefNpcGroupKafra, RefNpcGroupMerchant, RefNpcGroupQuest, RefNpcGroupCustom, RefNpcGroupGuide, RefNpcGroupCity,
+    RefNpcGroupGuild, RefNpcGroupJob, RefNpcGroupEvent, RefNpcGroupFerry, RefNpcGroupOther, RefNpcLead, RefNpcOnMap,
+    RefNpcFerry, RefNpcByKind, RefLayerNpc, RefLayerWarps, RefLayerMobs, RefLayerHere,
     Count
 };
 

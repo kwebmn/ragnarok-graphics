@@ -27,8 +27,10 @@ namespace uagfx::refpages {
 // Star (3.0.11-beta.18): the card in «Обране» or out of it; Zoom (3.0.11-beta.29): the world map's zoom (the window's)
 // - id -1 out, 0 the whole map, 1 in
 // Track (3.0.11-beta.70): a pin of the tracker panel - id 0 a quest (map: its slug), 1 an item to collect (map: its id)
+// Npc (3.0.18-beta.240): an NPC's card - id its place in the map's NPCs, map its map; Follow id 2 - the way to a cell
+// (map «code:x:y»: an NPC's); Map id > 0 - the map with its NPC id - 1 in the view's middle
 enum class Go : uint8_t {
-    None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest, Fold, Star, Zoom, Track
+    None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest, Fold, Star, Zoom, Track, Npc
 };
 struct Link {
     Go go = Go::None;
@@ -52,9 +54,11 @@ struct Link {
 // main one)
 // 3.0.11-beta.32: Grid - a table's line (the elements' «Таблиці»): `left` its name, `tags` its cells (per cents: their
 // colours by them), `gold` the columns' names
+// 3.0.18-beta.240 (the reference's «одна карта»): MapView - a location's map (`left` its code; the window paints it as
+// the big map «⤢» does), the rows marked `side` beside it (its NPCs by kinds)
 enum class Style : uint8_t {
     Title, Sub, Heading, Row, Note, Tile, World, Portrait, Text, Search, Hint, Block, Chip, Result, Group, More, Empty,
-    Tab, Tool, Caption, Warn, Step, Legend, Button, Grid
+    Tab, Tool, Caption, Warn, Step, Legend, Button, Grid, MapView
 };
 using Marks = std::vector<std::pair<uint16_t, uint16_t>>;  // byte ranges [from, to) of the words
 struct Row {
@@ -74,6 +78,7 @@ struct Row {
     int tone = 0;                   // 3.0.11-beta.26: a chip's number - 1 good (green), -1 heals (red)
     std::vector<std::string> tags;  // 3.0.11-beta.26: a card's picture row's tags («elN:» an element's, «gold:»)
     Marks marks, subMarks;          // 3.0.11-beta.28: a result's query in `left`, in `sub`
+    bool side = false;              // 3.0.18-beta.240: beside the location's map (its NPCs' list)
 };
 struct Page {
     std::string name;  // what «Назад до …» calls it
@@ -170,6 +175,10 @@ Page mob(const refindex::Index& ix, settings::Lang l, int id, const Context& c, 
 Page item(const refindex::Index& ix, settings::Lang l, int id, const Context& c, unsigned opened = 0);
 Page map(const refindex::Index& ix, settings::Lang l, const std::string& code, const Context& c, unsigned opened = 0);
 Page shop(const refindex::Index& ix, settings::Lang l, int index);
+// 3.0.18-beta.240 (the owner 13.11): an NPC's card - its kind and place, «Вести сюди» to its cell, its map with it in
+// the middle, a merchant's goods, Kafra's teleports, a ferryman's ways (where and the price)
+Page npc(const refindex::Index& ix, settings::Lang l, const std::string& map, int index, const Context& c = {});
+std::string groupName(refindex::NpcGroup g, settings::Lang l);
 // 3.0.11-beta.16: the site's quests by kinds, a quest's card (who gives it, what it takes, its steps, its reward)
 Page quests(const refindex::Index& ix, settings::Lang l);
 Page quest(const refindex::Index& ix, settings::Lang l, int index, const Context& c = {});

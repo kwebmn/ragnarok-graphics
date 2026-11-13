@@ -172,7 +172,7 @@ TEST(reference_pages_a_maps_card) {
     const refpages::Page p = refpages::map(ix, Lang::Uk, "prontera", ctx("prontera"));
     CHECK(p.rows[0].left == "Prontera City" && p.rows[0].gold);
     // 3.0.11-beta.26: the concept's head - its minimap, its code and its marks as tags, its full name
-    CHECK(p.rows[1].style == refpages::Style::Portrait && p.rows[1].picture == "map:prontera");
+    CHECK(p.rows[1].style == refpages::Style::Portrait && p.rows[1].picture.empty());
     CHECK_EQ(p.rows[1].left, std::string("Prontera City, Capitol of Rune-Midgard"));
     CHECK(p.rows[1].tags.size() == 4 && p.rows[1].tags[0] == "prontera" && p.rows[1].tags[1] == "місто");
     CHECK(p.rows[1].tags[3] == "gold:ви тут");
@@ -184,8 +184,12 @@ TEST(reference_pages_a_maps_card) {
     const size_t near = indexOf(p, "Kafra поруч");  // 3.0.11-beta.15: on this very map
     CHECK(near != size_t(-1) && p.rows[near + 1].left == "Kafra Employee");
     CHECK_EQ(p.rows[near + 1].right, std::string("тут · 150, 180"));
-    const refpages::Row& kafra = p.rows[p.rows.size() - 1];  // the NPCs' list, the last
-    CHECK(kafra.left == "Kafra Employee" && kafra.dot == 0xE0447C && kafra.right == "150, 180");
+    // 3.0.18-beta.240: the NPCs beside the map by their kinds, each one's card
+    const refpages::Row* kafra = nullptr;
+    for (const refpages::Row& r : p.rows)
+        if (r.side && r.left == "Kafra Employee") kafra = &r;
+    CHECK(kafra && kafra->dot == 0xE0447C && kafra->right == "150, 180");
+    CHECK(kafra && kafra->link.go == refpages::Go::Npc && kafra->link.map == "prontera" && kafra->link.id == 0);
     const refpages::Page izlude = refpages::map(ix, Lang::Uk, "izlude", ctx(""));  // none there: by the teleport
     const size_t far = indexOf(izlude, "Kafra поруч");
     CHECK(far == size_t(-1));  // the way back is not known to the pack: no Kafra found
@@ -396,7 +400,7 @@ TEST(reference_pages_npcs_kafra_and_icons) {
     CHECK_EQ(found.rows[npcs + 1].left, std::string("Kafra Employee"));
     CHECK_EQ(found.rows[npcs + 1].sub, std::string("Prontera City (prontera) · 150, 180 · переходів: 1"));
     CHECK(found.rows[npcs + 1].right == "NPC" && found.rows[npcs + 1].icon == "ui:npc");
-    CHECK(found.rows[npcs + 1].link.go == refpages::Go::Map && found.rows[npcs + 1].link.map == "prontera");
+    CHECK(found.rows[npcs + 1].link.go == refpages::Go::Npc && found.rows[npcs + 1].link.map == "prontera");
     const refpages::Page field = refpages::map(ix, Lang::Uk, "prt_fild08", ctx(""));
     const size_t near = indexOf(field, "Kafra поруч");
     CHECK(near != size_t(-1));
@@ -939,4 +943,62 @@ TEST(reference_pages_a_merged_drop_says_its_parts) {
     const refpages::Page mob = refpages::mob(ix, Lang::Uk, 1284, ctx(""));
     const refpages::Row* row = rowWith(mob, "Apple");
     CHECK(row != nullptr && row->right == "7,73 %" && row->sub == "8 × 1 %");
+}
+
+// 3.0.18-beta.240 (the owner 13.11, «Карты: что на них»): a location's card - the map (one with «⤢»), beside it the
+// NPCs by kinds (Kafra, merchants, quests ... - the site's folders), each row its NPC's card; the old flat list gone
+TEST(reference_pages_a_maps_card_map_and_npcs_by_kind) {
+    refindex::Index ix;
+    CHECK(refindex::build(R"({"v":1,"data":1,"mobs":{},"spawns":{},"routes":[],"shops":[],"npcs":[)"
+                          R"(["prontera",150,180,"Kafra Employee",113,"kafra"],["prontera",100,120,"Old Man",86,"quest"],)"
+                          R"(["prontera",104,49,"Fruit Gardener",83,"merchant"],["prontera",20,20,"Lady",90,"city"]]})",
+                          ix));
+    const refpages::Page p = refpages::map(ix, Lang::Uk, "prontera", ctx(""));
+    const size_t view = [&] {
+        for (size_t i = 0; i < p.rows.size(); ++i)
+            if (p.rows[i].style == refpages::Style::MapView) return i;
+        return size_t(-1);
+    }();
+    CHECK(view != size_t(-1) && p.rows[view].left == "prontera");
+    std::vector<std::string> groups;
+    for (const refpages::Row& r : p.rows)
+        if (r.side && r.style == refpages::Style::Group) groups.push_back(r.left);
+    CHECK((groups == std::vector<std::string>{"Кафра · 1", "Торговці й послуги · 1", "Квести · 1",
+                                              "Міські жителі · 1"}));
+    const refpages::Row* oldMan = rowWith(p, "Old Man");
+    CHECK(oldMan && oldMan->side && oldMan->link.go == refpages::Go::Npc && oldMan->dot == 0xF08C00);
+    CHECK(indexOf(p, "NPC") == size_t(-1));  // the old flat list
+}
+
+// 3.0.18-beta.240: an NPC's card - its kind and place, «Вести сюди» to its very cell, its map with it in the middle,
+// a merchant's goods with their prices, Kafra's teleports
+TEST(reference_pages_an_npcs_card) {
+    const refindex::Index ix = index();  // a Tool Dealer's shop at prontera 134, 203; Kafra at 150, 180
+    refindex::Index shopIx = ix;
+    shopIx.maps["prontera"].npcs.push_back(refindex::Npc{134, 203, "Tool Dealer", 83, refindex::NpcKind::Tool});
+    const int dealer = int(shopIx.maps["prontera"].npcs.size()) - 1;
+    const refpages::Page p = refpages::open(shopIx, Lang::Uk, refpages::Link{refpages::Go::Npc, dealer, "prontera"},
+                                            ctx(""));
+    CHECK(!p.rows.empty() && p.rows[0].style == refpages::Style::Title && p.rows[0].left == "Tool Dealer");
+    const refpages::Row* lead = rowWith(p, "Вести сюди ›");
+    CHECK(lead && lead->link.go == refpages::Go::Follow && lead->link.id == 2 && lead->link.map == "prontera:134:203");
+    const refpages::Row* onMap = rowWith(p, "Показати на карті ›");
+    CHECK(onMap && onMap->link.go == refpages::Go::Map && onMap->link.map == "prontera" && onMap->link.id == dealer + 1);
+    const refpages::Row* wing = rowWith(p, "Fly Wing");
+    CHECK(wing && wing->right == "60 z" && wing->link.go == refpages::Go::Item);
+    const refpages::Page k = refpages::open(ix, Lang::Uk, refpages::Link{refpages::Go::Npc, 0, "prontera"}, ctx(""));
+    CHECK(!k.rows.empty() && k.rows[0].left == "Kafra Employee");
+    CHECK(rowWith(k, "Telemarketing") == nullptr);
+    CHECK_EQ(refpages::titleOf(ix, Lang::Uk, refpages::Link{refpages::Go::Npc, 0, "prontera"}),
+             std::string("Kafra Employee"));
+}
+
+// 3.0.18-beta.240: an NPC found by the search opens its own card
+TEST(reference_search_an_npc_opens_its_card) {
+    const refindex::Index ix = index();
+    const refpages::Page f = refpages::found(ix, Lang::Uk, "kafra employee");
+    const refpages::Row* r = nullptr;
+    for (const refpages::Row& x : f.rows)
+        if (x.style == refpages::Style::Result && x.left == "Kafra Employee") r = &x;
+    CHECK(r && r->link.go == refpages::Go::Npc && r->link.map == "prontera" && r->link.id == 0);
 }

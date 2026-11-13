@@ -850,7 +850,8 @@ Page found(const refindex::Index& ix, Lang l, const std::string& query, const Co
                   const auto m = moves.find(h.map);
                   if (h.map == c.here) sub = say(l, Text::RefYouHere) + " · " + sub;
                   else if (m != moves.end()) sub += " · " + farNote(m->second, l);
-                  Row r = result(n.name, sub, Text::RefKindNpc, toMap(h.map), "ui:npc", query, l);
+                  // 3.0.18-beta.240: its own card
+                  Row r = result(n.name, sub, Text::RefKindNpc, Link{Go::Npc, h.id, h.map}, "ui:npc", query, l);
                   r.dot = refindex::colorOf(n.kind);
                   return r;
               });
@@ -1405,9 +1406,8 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
     title.gold = code == here;
     p.rows.push_back(title);
     const auto it = ix.maps.find(code);
-    Row hero;  // 3.0.11-beta.26: the concept's - its minimap's picture (the client's), its tags, its line
+    Row hero;  // 3.0.11-beta.26: the concept's - its tags, its line (3.0.18-beta.240: its picture the map view below)
     hero.style = Style::Portrait;
-    hero.picture = "map:" + code;
     hero.tags = {code};
     if (named != ix.mapNames.end() && refindex::shortName(named->second) != named->second) hero.left = named->second;
     if (it != ix.maps.end()) {
@@ -1429,6 +1429,39 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
                 (hero.left.empty() ? "" : " · ") + sayf(l, Text::RefPlayersNow, {std::to_string(now->second)});
     }
     p.rows.push_back(hero);
+    // 3.0.18-beta.240 (the owner 13.11: «одна карта»): the map itself - the big map «⤢»'s look, at any zoom; beside it
+    // its NPCs by kinds (the site's folders), each row its NPC's card
+    Row view;
+    view.style = Style::MapView;
+    view.left = code;
+    p.rows.push_back(view);
+    if (it != ix.maps.end() && !it->second.npcs.empty()) {
+        const refindex::NpcGroup order[] = {refindex::NpcGroup::Kafra, refindex::NpcGroup::Merchant,
+                                            refindex::NpcGroup::Quest, refindex::NpcGroup::Custom,
+                                            refindex::NpcGroup::Guide, refindex::NpcGroup::City,
+                                            refindex::NpcGroup::Guild, refindex::NpcGroup::Job,
+                                            refindex::NpcGroup::Event, refindex::NpcGroup::Ferry,
+                                            refindex::NpcGroup::Other};
+        const std::vector<refindex::Npc>& npcs = it->second.npcs;
+        for (const refindex::NpcGroup g : order) {
+            std::vector<int> in;
+            for (size_t i = 0; i < npcs.size(); ++i)
+                if (refindex::groupOf(npcs[i].kind) == g) in.push_back(int(i));
+            if (in.empty()) continue;
+            Row head;
+            head.style = Style::Group;
+            head.left = groupName(g, l) + " · " + std::to_string(in.size());
+            head.side = true;
+            p.rows.push_back(head);
+            for (const int i : in) {
+                const refindex::Npc& n = npcs[size_t(i)];
+                Row r = linked(n.name, std::to_string(n.x) + ", " + std::to_string(n.y), Link{Go::Npc, i, code});
+                r.dot = refindex::colorOf(n.kind);
+                r.side = true;
+                p.rows.push_back(std::move(r));
+            }
+        }
+    }
     // the concept's main blocks: who is here, how to get here (side by side when both); the rest folds
     const bool way = !here.empty() && here != code && ix.graph;
     const bool who = it != ix.maps.end() && !it->second.mobs.empty();
@@ -1499,17 +1532,69 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
                                   Link{Go::Shop, s, ""}));
         capped(p, std::move(rows), ShopsHere, opened, l);
     }
-    if (!h.npcs.empty()) {
-        p.rows.push_back(heading(say(l, Text::RefNpcs), std::to_string(h.npcs.size()), Npcs));
-        std::vector<Row> rows;
-        for (const refindex::Npc& n : h.npcs) {
-            Row r;
-            r.left = n.name;
-            r.right = std::to_string(n.x) + ", " + std::to_string(n.y);
-            r.dot = refindex::colorOf(n.kind);
-            rows.push_back(std::move(r));
-        }
-        capped(p, std::move(rows), Npcs, opened, l);
+    return p;  // 3.0.18-beta.240: the NPCs beside the map (no flat list at the end)
+}
+
+std::string groupName(refindex::NpcGroup g, Lang l) {
+    switch (g) {
+        case refindex::NpcGroup::Kafra: return say(l, Text::RefNpcGroupKafra);
+        case refindex::NpcGroup::Merchant: return say(l, Text::RefNpcGroupMerchant);
+        case refindex::NpcGroup::Quest: return say(l, Text::RefNpcGroupQuest);
+        case refindex::NpcGroup::Custom: return say(l, Text::RefNpcGroupCustom);
+        case refindex::NpcGroup::Guide: return say(l, Text::RefNpcGroupGuide);
+        case refindex::NpcGroup::City: return say(l, Text::RefNpcGroupCity);
+        case refindex::NpcGroup::Guild: return say(l, Text::RefNpcGroupGuild);
+        case refindex::NpcGroup::Job: return say(l, Text::RefNpcGroupJob);
+        case refindex::NpcGroup::Event: return say(l, Text::RefNpcGroupEvent);
+        case refindex::NpcGroup::Ferry: return say(l, Text::RefNpcGroupFerry);
+        case refindex::NpcGroup::Other: break;
+    }
+    return say(l, Text::RefNpcGroupOther);
+}
+
+Page npc(const refindex::Index& ix, Lang l, const std::string& map, int index, const Context& c) {
+    Page p;
+    const auto it = ix.maps.find(map);
+    if (it == ix.maps.end() || index < 0 || size_t(index) >= it->second.npcs.size()) return p;
+    const refindex::MapHints& h = it->second;
+    const refindex::Npc& n = h.npcs[size_t(index)];
+    const std::string cell = std::to_string(n.x) + ", " + std::to_string(n.y);
+    p.name = n.name;
+    Row title;
+    title.style = Style::Title;
+    title.left = n.name;
+    title.gold = map == c.here;
+    p.rows.push_back(title);
+    Row hero;  // its sprite's first frame when the window finds it, its kind and place
+    hero.style = Style::Portrait;
+    if (n.sprite > 0) hero.picture = "npc:" + std::to_string(n.sprite);
+    hero.left = groupName(refindex::groupOf(n.kind), l) + " Â· " + refindex::mapTitle(ix, map) + " Â· " + cell;
+    hero.tags = {map};
+    if (map == c.here) hero.tags.push_back("gold:" + say(l, Text::RefYouHere));
+    p.rows.push_back(hero);
+    p.rows.push_back(linked(say(l, Text::RefNpcLead), "", Link{Go::Follow, 2, map + ":" + std::to_string(n.x) + ":" +
+                                                                                   std::to_string(n.y)}));
+    p.rows.push_back(linked(say(l, Text::RefNpcOnMap), "", Link{Go::Map, index + 1, map}));
+    for (size_t s = 0; s < ix.shops.size(); ++s) {  // a merchant's goods: the shop at its cell
+        const refindex::Shop& shop = ix.shops[s];
+        if (shop.map != map || shop.x != n.x || shop.y != n.y) continue;
+        p.rows.push_back(heading(say(l, Text::RefShopItems), std::to_string(shop.items.size())));
+        for (const auto& [item, price] : shop.items)
+            p.rows.push_back(linked(itemName(ix, item), sayf(l, Text::RefZeny, {number(price, l)}), toItem(item)));
+        break;
+    }
+    std::vector<std::pair<std::string, int>> ways;  // Kafra's teleports, a ferryman's ways: the moves taken at it
+    for (const refindex::Move& mv : h.moves) {
+        if (mv.how == refindex::How::Warp || std::abs(mv.x - n.x) > 2 || std::abs(mv.y - n.y) > 2) continue;
+        if (std::find(ways.begin(), ways.end(), std::make_pair(mv.to, mv.price)) == ways.end())
+            ways.emplace_back(mv.to, mv.price);
+    }
+    if (!ways.empty()) {
+        p.rows.push_back(heading(say(l, n.kind == refindex::NpcKind::Kafra ? Text::RefTeleports : Text::RefNpcFerry),
+                                 std::to_string(ways.size())));
+        for (const auto& [to, price] : ways)
+            p.rows.push_back(linked(refindex::mapTitle(ix, to),
+                                    price >= 0 ? sayf(l, Text::RefZeny, {number(price, l)}) : "", toMap(to)));
     }
     return p;
 }
@@ -2018,7 +2103,8 @@ Page withRail(Page p, const refindex::Index& ix, Lang l, const Link& at) {
         case Go::Mob: section = Mobs; break;
         case Go::Item: section = Items; break;
         case Go::Map: section = Maps; break;
-        case Go::Shop: section = Services; break;
+        case Go::Shop:
+        case Go::Npc: section = Services; break;  // 3.0.18-beta.240: an NPC's card the NPCs' section's
         case Go::Quest: go = Go::Quests; break;
         case Go::Section:
             section = at.id >= 100 || at.id == Cards ? Items
@@ -2045,6 +2131,12 @@ std::string titleOf(const refindex::Index& ix, Lang l, const Link& link) {
             return link.id >= 0 && size_t(link.id) < ix.quests.size()
                        ? refquests::textOf(ix.quests[size_t(link.id)].title, questLang(l))
                        : "";
+        case Go::Npc: {  // 3.0.18-beta.240
+            const auto m = ix.maps.find(link.map);
+            return m != ix.maps.end() && link.id >= 0 && size_t(link.id) < m->second.npcs.size()
+                       ? m->second.npcs[size_t(link.id)].name
+                       : "";
+        }
         default: return "";
     }
 }
@@ -2090,6 +2182,7 @@ Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
         case Go::World: return link.id == 1 ? dungeons(ix, l, c) : world(ix, l, c, link.map);
         case Go::Quests: return quests(ix, l);
         case Go::Quest: return quest(ix, l, link.id, c);
+        case Go::Npc: return npc(ix, l, link.map, link.id, c);  // 3.0.18-beta.240
         case Go::Fold:
         case Go::Star:
         case Go::None:

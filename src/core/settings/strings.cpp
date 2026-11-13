@@ -8655,6 +8655,26 @@ constexpr Entry kTexts[] = {
      "негативом або земля біліє. Вивернуті кольори лишаються тільки на самому ефекті.",
      "Некоторые эффекты умений игра рисует вывернутыми цветами и забывает вернуть обычные — тогда весь мир "
      "становится негативом или земля белеет. Вывернутые цвета остаются только на самом эффекте."},
+    // 3.0.18-beta.240 (the reference's maps, the owner 13.11): the NPCs' groups on a map, the NPC card, the layers
+    {Text::RefNpcGroupKafra, "Kafra", "Кафра", "Кафра"},
+    {Text::RefNpcGroupMerchant, "Merchants and services", "Торговці й послуги", "Торговцы и услуги"},
+    {Text::RefNpcGroupQuest, "Quests", "Квести", "Квесты"},
+    {Text::RefNpcGroupCustom, "Our server's NPCs", "Наші NPC сервера", "Наши NPC сервера"},
+    {Text::RefNpcGroupGuide, "Guides", "Провідники", "Проводники"},
+    {Text::RefNpcGroupCity, "Townsfolk", "Міські жителі", "Горожане"},
+    {Text::RefNpcGroupGuild, "Guilds", "Гільдії", "Гильдии"},
+    {Text::RefNpcGroupJob, "Jobs", "Професії", "Профессии"},
+    {Text::RefNpcGroupEvent, "Events", "Події", "События"},
+    {Text::RefNpcGroupFerry, "Ferrymen", "Перевізники", "Перевозчики"},
+    {Text::RefNpcGroupOther, "Others", "Інші", "Другие"},
+    {Text::RefNpcLead, "Lead me here ›", "Вести сюди ›", "Вести сюда ›"},
+    {Text::RefNpcOnMap, "Show on the map ›", "Показати на карті ›", "Показать на карте ›"},
+    {Text::RefNpcFerry, "Takes you to", "Куди везе", "Куда везёт"},
+    {Text::RefNpcByKind, "By kind", "За видами", "По видам"},
+    {Text::RefLayerNpc, "NPC", "NPC", "NPC"},
+    {Text::RefLayerWarps, "Warps", "Переходи", "Переходы"},
+    {Text::RefLayerMobs, "Monsters", "Монстри", "Монстры"},
+    {Text::RefLayerHere, "You are here", "Ви тут", "Вы здесь"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

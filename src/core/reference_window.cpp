@@ -61,6 +61,7 @@ int heightOf(refpages::Style st, float s) {
         case refpages::Style::Legend: return px(24, s);
         case refpages::Style::Button: return px(kButtonH, s);
         case refpages::Style::Grid: return px(28, s);  // 3.0.11-beta.32
+        case refpages::Style::MapView: return px(kWorldLeast, s);  // 3.0.18-beta.240: the live window's only
         case refpages::Style::Warn:  // place() gives it its lines
         case refpages::Style::Block:  // place() gives it its rows
         case refpages::Style::Row: break;
@@ -1507,6 +1508,8 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
                                     Align::Left});
                 break;
             }
+            case refpages::Style::MapView:  // 3.0.18-beta.240: the live window's only
+                break;
             case refpages::Style::World:  // 3.0.11-beta.29: the words over the map (overItems)
                 worldWords(out, L, look.world, panel::Box{x, y, w, h});
                 break;
