@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.242 — what's new · 2026-11-13
+
+- Fixed: in betas 239–241 the game closed with an error the first time in a game «Reference» opened - by Ctrl+F, its button, the target's card or the controller. The window wrote its search words before it was made. Now such a write waits for the window, in every window of the new interface (R-F8FGR4).
+- What to check: right after entering the game press Ctrl+F - the reference's «Home» opens and the game does not fall; close it and open it again; open the reference from the target's card (click a monster).
+
 # uaRO Graphics 3.0.18-beta.241 — what's new · 2026-11-13
 
 - «Reference» on the controller works like the other windows. A gold frame walks the card's rows, chips and buttons with the D-pad or the left stick, sideways between the two columns too. A opens, B goes back (on the first page it closes the window). X is «Lead me here» on an NPC's or a location's card, Y is the search with the on-screen keyboard (Start on it opens the first result). LB and RB switch the sections on the left, the right stick scrolls, Start closes the window. The bottom line shows your controller's buttons.
