@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.247 — what's new · 2026-11-13
+
+- «Reference» no longer stutters on long lists (R-ZW43KT). «Monsters» had 1006 rows, and each time a few monster pictures came the whole page was made again - the game fell to 26 frames. Now a long list shows its first 100 rows and «all N ›» (as the reference's other lists do). Pictures load first for the rows in view and take their place without the page being made again.
+- The same limit for «Items» by type, «Cards», «Locations», «Crafting», shops and teleports.
+- What to check: «Monsters» opens at once and scrolls smoothly; pictures appear where you look; «all N ›» opens the whole list and it scrolls smoothly too.
+
 # uaRO Graphics 3.0.18-beta.246 — what's new · 2026-11-13
 
 - Getting ready for a site update for «Reference»: the app can take a fresh file of the maps' walkable cells (routes and maps) from the site as soon as the site serves it, and then it wins over the package's own file. Until the site serves it nothing changes.
