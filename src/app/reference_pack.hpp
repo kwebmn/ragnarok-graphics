@@ -29,5 +29,8 @@ bool noteNow(const std::wstring& dir, std::string& error);
 // 3.0.18-beta.244 («Довідник» › «Навички»): the site's skills' words in the three languages (core/reference_skills),
 // asked once a day into uaro-graphics\reference\skilldesc.json
 bool noteSkills(const std::wstring& dir, std::string& error);
+// 3.0.18-beta.246 (the reference's stage 8): the site's walkable cells (core/reference_walk) when the site has others
+// than the reference folder's - at the game's start; a site without them yet: false, the package's file stays
+bool noteWalkable(const std::wstring& dir, std::string& error);
 
 }  // namespace uagfx::app

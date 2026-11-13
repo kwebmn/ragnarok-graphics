@@ -12,6 +12,7 @@
 #include "core/reference_now.hpp"
 #include "core/reference_quests.hpp"
 #include "core/reference_skills.hpp"
+#include "core/reference_walk.hpp"
 #include "core/world_map.hpp"
 
 namespace uagfx::app {
@@ -26,6 +27,7 @@ constexpr const char* kQuestsPath = "/api/public/game/quests.json";  // 3.0.11-b
 constexpr const char* kNowPath = "/api/public/now.json";  // 3.0.11-beta.174: the site's event or news now
 constexpr long long kNowAgain = 600;  // seconds: the item asked again at most every 10 minutes
 constexpr const char* kSkillsPath = "/api/public/skilldesc.json";  // 3.0.18-beta.244: the skills' words
+constexpr const char* kWalkablePath = "/api/public/game/walkable.json";  // 3.0.18-beta.246: the maps' cells
 constexpr long long kOnlineAgain = 90;  // seconds: younger counts are kept (several game windows, several watchers)
 
 std::wstring folderOf(const std::wstring& dir) { return dir + L"\\" + wide(layout::kReference); }
@@ -229,6 +231,40 @@ bool noteSkills(const std::wstring& dir, std::string& error) {
         error = "the skills' words could not be written";
         return false;
     }
+    return true;
+}
+
+bool noteWalkable(const std::wstring& dir, std::string& error) {
+    std::string text;
+    if (!fetchPath(kWalkablePath, text, error, 4u << 10)) return false;
+    refwalk::Manifest site;
+    if (!refquests::parse(text, site)) {
+        error = "uaro.kiev.ua: not the walkable cells' manifest";
+        return false;
+    }
+    const std::wstring folder = folderOf(dir), manifest = dir + L"\\" + wide(layout::kReferenceWalkable);
+    std::optional<refwalk::Manifest> there;
+    std::string old;
+    refwalk::Manifest m;
+    if (readFile(manifest, old) && refquests::parse(old, m)) there = m;
+    const long long have = there ? fileSize(folder + L"\\" + wide(refwalk::fileName(*there))) : -1;
+    if (!refquests::needs(site, there, have)) return true;
+    makeFolder(dir + L"\\" + wide(layout::kOurs));
+    makeFolder(folder);
+    const std::wstring name = wide(refwalk::fileName(site)), file = folder + L"\\" + name;
+    if (!downloadPath(refwalk::sitePath(site), file, [](uint64_t, uint64_t) { return true; }, error)) return false;
+    std::string bytes;
+    if (!readFile(file, bytes) || !refquests::verify(bytes, site)) {
+        deleteFile(file);
+        error = "uaro.kiev.ua: the walkable cells differ from their manifest (size or SHA-256)";
+        return false;
+    }
+    if (!writeFileAtomic(manifest, refquests::write(site))) {
+        error = "the walkable cells' manifest could not be written";
+        return false;
+    }
+    for (const std::wstring& n : listFolder(folder, false))  // older ones and pieces of cut downloads go
+        if (n != name && n.rfind(L"walkable-", 0) == 0) deleteFile(folder + L"\\" + n);
     return true;
 }
 

@@ -300,6 +300,7 @@ int watchGame(unsigned long pid, int logSlot) {
         noteWorld(exeFolder(), error);   // 3.0.11-beta.11
         noteQuests(exeFolder(), error);  // 3.0.11-beta.16
         noteSkills(exeFolder(), error);  // 3.0.18-beta.244: once a day
+        noteWalkable(exeFolder(), error);  // 3.0.18-beta.246: when the site has others
         noteOnline(exeFolder(), error);
         noteLive(exeFolder(), error);  // 3.0.11-beta.12
     }

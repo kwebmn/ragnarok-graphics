@@ -11,6 +11,7 @@
 #include "core/reference_pack.hpp"
 #include "core/reference_quests.hpp"
 #include "core/reference_route.hpp"
+#include "core/reference_walk.hpp"
 #include "core/walk_grid.hpp"
 #include "win/game_files.hpp"
 #include "win/log.hpp"
@@ -48,9 +49,20 @@ std::shared_ptr<const walkgrid::Grids> walkable() {
     static bool tried = false;
     if (tried) return grids;
     tried = true;
-    const std::string path = layout::join(gameDir(), layout::kWalkable);
-    std::string file;
+    std::string path = layout::join(gameDir(), layout::kWalkable);
+    std::string file, manifest;
     auto read = std::make_shared<walkgrid::Grids>();
+    refwalk::Manifest m;  // 3.0.18-beta.246: the site's newer file (the watcher's) before the package's own
+    if (readTextFile(layout::join(gameDir(), layout::kReferenceWalkable), manifest) && refquests::parse(manifest, m)) {
+        const std::string site = layout::join(gameDir(), std::string(layout::kReference) + "\\" + refwalk::fileName(m));
+        std::string bytes;
+        if (readTextFile(site, bytes) && refquests::verify(bytes, m) && walkgrid::read(bytes, *read)) {
+            grids = std::move(read);
+            LOG_INFO("reference: the walkable parts of %zu maps (the site's %s)", grids->size(), site.c_str());
+            return grids;
+        }
+        read = std::make_shared<walkgrid::Grids>();
+    }
     if (readTextFile(path, file) && walkgrid::read(file, *read)) {
         grids = std::move(read);
         LOG_INFO("reference: the walkable parts of %zu maps (%s)", grids->size(), layout::kWalkable);
