@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.237 — what's new · 2026-11-13
+
+- Wings (R-FAFJWS «the character's body blinks»): the wings took the depth of the character's first drawn layer. The game sorts the body and the head by the depth of their tops, and the head now and then comes first - then the wings stood nearer than the body and covered it, switching from frame to frame, so the body blinked. Now the wings always stand a little behind all of the character's layers (facing us) or a little in front of them (facing away).
+- To check: restart the game (it updates to .237), put on Angel Blessing (5207), stand, walk, turn every way - the body does not blink, the arms and shoulders are over the wings; if something is wrong, a new report with the «wings: …» lines in its log.
+
 # uaRO Graphics 3.0.18-beta.236 — what's new · 2026-11-13
 
 - Wings (R-4U3RD7): the .235 log showed where they stopped - the driver read the body's animation from the wrong file (.spr, not .act). Now the body's animation is found by its sprite's name, and the wings should show on the back.
