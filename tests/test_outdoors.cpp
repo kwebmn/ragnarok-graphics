@@ -45,3 +45,25 @@ TEST(outdoors_the_green_open_maps) {
     for (const char* m : {"new_1-1", "new_1-4", "payg_cas01", "izlu_dun01", "mosk_in", "gl_cas01", "gefenia01"})
         CHECK(!uagfx::outdoors(m));
 }
+
+// 3.0.18-beta.252 (R-9UNG8S, the owner on prtg_cas01: «в замке трава плоская с отражением»): a guild castle's map is
+// mostly its courtyards' grass under the sky, its halls (the Emperium's) inside the same map - our grass grows there
+// (off the halls' floors: ground_heights::interiorTexture), the rest stays as under a roof: no weather, no sky's
+// light, the halls' polished floors reflecting
+TEST(outdoors_grass_grows_in_the_guild_castles_courtyards) {
+    for (const char* m : {"prtg_cas01", "payg_cas03", "gefg_cas05", "aldeg_cas02", "schg_cas01", "arug_cas02",
+                          "nguild_prt", "nguild_pay"}) {
+        CHECK(castleGrounds(m));
+        CHECK(grassGrows(m));
+        CHECK(!outdoors(m));
+        CHECK(floorShine(m) == 1.0f);
+    }
+    for (const char* m : {"prt_fild08", "prontera", "mjolnir_01", "pay_gld"}) {
+        CHECK(grassGrows(m));
+        CHECK(!castleGrounds(m));
+    }
+    for (const char* m : {"prt_castle", "gl_cas01", "prt_church", "pay_dun00", "prt_in", "gefenia01", ""}) {
+        CHECK(!grassGrows(m));
+        CHECK(!castleGrounds(m));
+    }
+}

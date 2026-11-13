@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -225,4 +226,90 @@ TEST(ground_heights_a_torch_out_of_its_wall) {
     CHECK(ground_heights::parse(thick.data(), thick.size(), t, error));
     const map::Point deep = ground_heights::outOfWall(t, map::Point{5.0f, -15.0f, 5.0f});  // the middle cell's middle
     CHECK(deep.x == 5.0f && deep.z == 5.0f);
+}
+
+namespace {
+
+// 3.0.18-beta.252: as gndWithTextures, its textures named `names` (the game's cp949 bytes)
+std::vector<uint8_t> gndNamed(int width, int height, const std::vector<std::string>& names,
+                              const std::vector<int>& texture) {
+    std::vector<uint8_t> d;
+    const auto put = [&](const void* p, size_t n) {
+        const auto* b = static_cast<const uint8_t*>(p);
+        d.insert(d.end(), b, b + n);
+    };
+    const auto i32 = [&](int32_t v) { put(&v, 4); };
+    const auto f32 = [&](float v) { put(&v, 4); };
+    put("GRGN", 4);
+    d.push_back(1);
+    d.push_back(7);
+    i32(width);
+    i32(height);
+    f32(10.0f);
+    i32(int32_t(names.size()));
+    i32(80);
+    for (const std::string& n : names) {
+        char name[80] = {};
+        std::memcpy(name, n.data(), std::min<size_t>(n.size(), 79));
+        put(name, sizeof name);
+    }
+    i32(0);  // lightmaps
+    i32(8);
+    i32(8);
+    i32(1);
+    i32(int32_t(names.size()));  // surfaces: surface k of texture k
+    for (size_t k = 0; k < names.size(); ++k) {
+        for (int j = 0; j < 8; ++j) f32(0.0f);
+        const int16_t t = int16_t(k);
+        const uint16_t lightmap = 0;
+        put(&t, 2);
+        put(&lightmap, 2);
+        i32(-1);
+    }
+    for (int c = 0; c < width * height; ++c) {
+        for (int k = 0; k < 4; ++k) f32(0.0f);
+        i32(texture[size_t(c)]);
+        i32(-1);
+        i32(-1);
+    }
+    return d;
+}
+
+const std::string kInside = "\xB3\xBB\xBA\xCE";                                // «내부», inside
+const std::string kOtherTownsInside = std::string("\xB1\xE2\xC5\xB8\xB8\xB6\xC0\xBB") + kInside;  // «기타마을내부»
+const std::string kPayonInside = std::string("\xC6\xE4\xC0\xCC\xBF\xE6") + kInside;            // «페이욘내부»
+const std::string kFieldFloor = "\xC7\xCA\xB5\xE5\xB9\xD9\xB4\xDA";                             // «필드바닥»
+
+}  // namespace
+
+// 3.0.18-beta.252 (R-9UNG8S «в замке трава плоская с отражением»): a hall's floor is a texture of a folder «...내부»
+// («inside»: 프론테라내부, 기타마을내부, 페이욘내부 ...) - Aldebaran's castles lay a green carpet (alde-in-carpet), Payon's
+// green stone tiles (archer_vil_tile00), green as grass; the fields' and the towns' grounds are of other folders
+TEST(ground_heights_halls_floors_by_their_textures_folder) {
+    CHECK(ground_heights::interiorTexture(kOtherTownsInside + "\\alde-in-carpet.bmp"));
+    CHECK(ground_heights::interiorTexture(kPayonInside + "\\archer_vil_tile00.bmp"));
+    CHECK(ground_heights::interiorTexture("data\\texture\\" + kPayonInside + "\\pe_tile_00.bmp"));
+    CHECK(ground_heights::interiorTexture(kPayonInside + "/pe_tile_00.bmp"));
+    CHECK(!ground_heights::interiorTexture(kFieldFloor + "\\prt_" + "\xC3\xCA\xBF\xF8" + "01.bmp"));
+    CHECK(!ground_heights::interiorTexture("BLACK.BMP"));
+    CHECK(!ground_heights::interiorTexture(kInside + ".bmp"));  // a file so named, in no such folder
+    CHECK(!ground_heights::interiorTexture(""));
+}
+
+TEST(ground_heights_halls_floors_read_with_the_map) {
+    // 3 x 2 cells: the field's grass, a hall's carpet, no top; the carpet again, the grass, the grass
+    const std::vector<uint8_t> d = gndNamed(3, 2, {kFieldFloor + "\\grass.bmp", kOtherTownsInside + "\\carpet.bmp"},
+                                            {0, 1, -1, 1, 0, 0});
+    ground_heights::Ground g;
+    std::string error;
+    CHECK(ground_heights::parse(d.data(), d.size(), g, error));
+    CHECK_EQ(g.inside.size(), size_t(6));
+    CHECK(!g.inside[0] && g.inside[1] && !g.inside[2] && g.inside[3] && !g.inside[4] && !g.inside[5]);
+    // the map's middle at 0: cell (1, 0) is x -5..5, z -10..0
+    CHECK(ground_heights::insideAt(g, 0.0f, -5.0f));
+    CHECK(!ground_heights::insideAt(g, 10.0f, -5.0f));
+    CHECK(ground_heights::insideAt(g, -10.0f, 5.0f));
+    CHECK(!ground_heights::insideAt(g, 40.0f, 0.0f));  // off the map
+    ground_heights::Ground none;
+    CHECK(!ground_heights::insideAt(none, 0.0f, 0.0f));
 }

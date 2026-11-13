@@ -123,6 +123,9 @@ public:
     void setMap(const std::string& map) {  // 0.79: the region's look; 1.7: the trees' season
         map_ = map;
         outdoors_ = outdoors(map);
+        grass_ = grassGrows(map);  // 3.0.18-beta.252: and a castle's courtyards
+        castle_ = castleGrounds(map);
+        hallsLogged_ = false;
         torchKeeper_.clear();  // 2.6.17: a new map's torches
         shine_ = floorShine(map);  // 2.5.17
         desert_ = desert(map);  // 2.5.2: the prints in the sand
@@ -515,7 +518,7 @@ private:
                                  seasonsShown() || rainWetShown());
     }
     bool grassWanted() const {
-        return effects_.grass && effects_.grassAmount > 0 && grassPs_ && outdoors_ && cameraValid_;
+        return effects_.grass && effects_.grassAmount > 0 && grassPs_ && grassHere() && cameraValid_;
     }
     bool wetWanted() const {
         return effects_.wetGround && effects_.weather && weather_ == weather::Kind::Rain && floorReflectPs_ &&
@@ -727,6 +730,10 @@ private:
     bool mistDone_ = false, weatherDone_ = false;
     bool mistLogged_ = false, weatherLogged_ = false;
     bool outdoors_ = false;
+    // 3.0.18-beta.252 (R-9UNG8S «в замке трава плоская с отражением»): as Direct3D 12's mapGrass, mapCastle
+    bool grass_ = false, castle_ = false, hallsLogged_ = false;
+    bool grassHere() const { return grass_ && (!castle_ || mapWorld_.hallsKnown()); }
+    void dropHalls();
     float shine_ = 0.0f;  // 2.5.17: how much the map's floor reflects under a roof (floorShine)
     weather::Kind weather_ = weather::Kind::None;
     float cameraTargetZ_ = 0.0f;  // the view depth of what the camera looks at (setCamera), 0 unknown

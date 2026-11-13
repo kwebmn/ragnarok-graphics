@@ -2113,6 +2113,9 @@ void Renderer::setMap(const std::string& map) {
     impl_->mapName = map;  // 0.31: lava's maps
     impl_->takeSeason();  // 1.7 the trees', 1.20 the year's; 2.6.22: the chosen season's month
     impl_->mapOutdoors = outdoors(map);  // 0.33: the open sky's effects
+    impl_->mapGrass = grassGrows(map);   // 3.0.18-beta.252: and a castle's courtyards
+    impl_->mapCastle = castleGrounds(map);
+    impl_->hallsLogged = false;
     impl_->torchKeeper.clear();  // 2.6.17: a new map's torches
     impl_->mapShine = floorShine(map);   // 2.5.17: the floor reflections on smooth floors alone
     impl_->mapDesert = desert(map);      // 0.35: its heat haze far off

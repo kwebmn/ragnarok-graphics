@@ -181,6 +181,12 @@ bool MapWorld::laidAt(float x, float z) const {
     return ground_heights::laidAt(*g, at.x, at.z);
 }
 
+bool MapWorld::insideAt(float x, float z) const {
+    if (!hallsKnown()) return false;
+    const map::Point at = map::toWorld(axes_, map::Point{x, 0.0f, z});
+    return ground_heights::insideAt(ground_, at.x, at.z);
+}
+
 void MapWorld::noteTorch(const map::Point& world) {
     if (axes_.known() || seen_.size() >= 64) return;
     for (const map::Point& s : seen_)  // the same torch again

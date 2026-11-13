@@ -2453,6 +2453,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     updateWind();
     if (grassWanted() && !groundTris_.empty()) {  // the next frame's; 3.0.1-beta.3: the flower beds' tops too
         groundCells_ = ground_cells::build(groundTris_);
+        dropHalls();  // 3.0.18-beta.252: no grass on the halls' floors
         grass_beds::addTo(groundCells_, mapWorld_.beds());
     }
     if (hillsWanted()) hillsGrid_ = hills::build(groundTris_);  // 2.5.9: the next frame's smooth hills
@@ -3233,6 +3234,18 @@ void Renderer11::applyGrass() {
     grassLogged_ = true;
     // copy 2: the picture's copy the mask was made from (made above), not made again
     worldPass(grassPs_, c, 2, 1, depthSrv_, grassMask_.srv, held ? trampleSrv_ : nullptr, nullptr, cells);
+}
+
+// 3.0.18-beta.252 (R-9UNG8S): the halls' floors (MapWorld::insideAt) out of the grass's ground, once known
+void Renderer11::dropHalls() {
+    if (!mapWorld_.hallsKnown()) return;
+    const size_t n =
+        ground_cells::dropWhere(groundCells_, [this](float x, float z) { return mapWorld_.insideAt(x, z); });
+    if (n == 0 || hallsLogged_) return;
+    hallsLogged_ = true;
+    LOG_INFO("grass: none on %s's halls' floors (their textures of the game's «inside» folders, a carpet, tiles) - %u "
+             "of the %dx%d cells about the camera (Direct3D 11)", map_.c_str(), unsigned(n), groundCells_.width,
+             groundCells_.height);
 }
 
 // 2.5.4 (critters.cpp noteCrown): a tree's leaves drawn - its crown in the world, for the leaves falling from it

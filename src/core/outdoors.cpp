@@ -54,6 +54,16 @@ float floorShine(const std::string& map) {
     return 0.0f;
 }
 
+bool castleGrounds(const std::string& map) {
+    static const char* const kCastles[] = {"prtg_cas", "payg_cas", "gefg_cas", "aldeg_cas", "schg_cas", "arug_cas",
+                                           "nguild_"};
+    for (const char* c : kCastles)
+        if (map.compare(0, std::char_traits<char>::length(c), c) == 0) return true;
+    return false;
+}
+
+bool grassGrows(const std::string& map) { return outdoors(map) || castleGrounds(map); }
+
 bool desert(const std::string& map) {
     return map == "morocc" || map == "moc_ruins" || map.compare(0, 8, "moc_fild") == 0;
 }

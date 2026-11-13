@@ -1,4 +1,6 @@
 #pragma once
+#include <cstddef>
+#include <functional>
 #include <vector>
 
 #include "core/seams.hpp"
@@ -21,5 +23,9 @@ constexpr int kMostSide = 256;  // cells a side at most: the texture's
 
 // The grid about the triangles' middle, at most kMostSide a side.
 Grid build(const std::vector<seams::Triangle>& ground);
+// 3.0.18-beta.252 (R-9UNG8S «в замке трава плоская с отражением»): the cells with ground whose middle (the world's x,
+// z) `off` names - a hall's floor, its texture of a folder «...내부» (ground_heights::interiorTexture) - left with no
+// ground: no grass there (a castle's green carpet, Payon's green tiles). The number of cells so taken out.
+size_t dropWhere(Grid& g, const std::function<bool(float x, float z)>& off);
 
 }  // namespace uagfx::ground_cells

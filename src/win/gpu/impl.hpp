@@ -583,6 +583,10 @@ struct Renderer::Impl {
     bool actorShadowsLogged = false;
     bool sceneDepthFresh = false;  // 0.39.2: sceneDepth holds the depth as it is now (copySceneDepth)
     bool mapOutdoors = false;  // the map is a field or a town (core/outdoors.hpp)
+    // 3.0.18-beta.252 (R-9UNG8S «в замке трава плоская с отражением»): our grass grows here (core grassGrows) - on a
+    // castle's grounds only once its halls' floors are known (MapWorld::hallsKnown), and never on them (dropHalls)
+    bool mapGrass = false, mapCastle = false, hallsLogged = false;
+    bool grassHere() const { return mapGrass && (!mapCastle || mapWorld.hallsKnown()); }
     float mapShine = 0.0f;     // 2.5.17: how much its floor reflects under a roof (core/outdoors.hpp floorShine)
     // 0.34, haze and fog (haze.cpp); 2.6.8: the far haze and the dungeons' dark and fog gone at the player's word -
     // the low mists left: the morning's over the fields and the towns, a swamp's.
@@ -1150,6 +1154,7 @@ struct Renderer::Impl {
         if (hillsWanted() && !groundTris.empty()) hillsGrid = hills::build(groundTris);
         if (grassCellsWanted() && !groundTris.empty()) {
             groundCells = ground_cells::build(groundTris);
+            dropHalls();  // 3.0.18-beta.252: no grass on the halls' floors
             grass_beds::addTo(groundCells, mapWorld.beds());  // 3.0.1-beta.3: the flower beds' tops too
         }
         hillsUp = hillsTried = false;
@@ -1277,8 +1282,9 @@ struct Renderer::Impl {
     D3D12_RESOURCE_STATES groundCellsState = D3D12_RESOURCE_STATE_COPY_DEST;
     UINT groundCellsSrv = kNoSrv;
     bool groundCellsUp = false, groundCellsTried = false, groundCellsFailed = false, groundCellsLogged = false;
+    void dropHalls();  // 3.0.18-beta.252: the halls' floors (MapWorld::insideAt) out of the grass's ground, once known
     bool grassCellsWanted() const {
-        return effects.grass && effects.grassAmount > 0 && grassPs && mapOutdoors && viewToWorldValid;
+        return effects.grass && effects.grassAmount > 0 && grassPs && grassHere() && viewToWorldValid;
     }
     bool ensureGroundCells();  // the texture holds this frame's cells; false: none this frame
     void hillsConstants(Constants& c) const;
@@ -1496,7 +1502,7 @@ struct Renderer::Impl {
     // the mask (w x maskRows, the tiles' reach under it) and the tiles; false: none - no grass
     bool ensureGrassMask(int w, int maskRows, int tilesWide, int tilesHigh);
     bool grassDue() const {
-        return effects.grass && effects.grassAmount > 0 && grassPs && mapOutdoors && groundDrawn && !grassDone &&
+        return effects.grass && effects.grassAmount > 0 && grassPs && grassHere() && groundDrawn && !grassDone &&
                viewToWorldValid;
     }
     bool applyGrass();  // once a frame, before the characters; false: lost

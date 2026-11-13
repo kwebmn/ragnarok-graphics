@@ -69,4 +69,20 @@ Grid build(const std::vector<seams::Triangle>& ground) {
     return g;
 }
 
+size_t dropWhere(Grid& g, const std::function<bool(float x, float z)>& off) {
+    if (g.side <= 0.0f || g.width <= 0 || g.height <= 0 || g.span.size() < size_t(g.width) * size_t(g.height) * 2)
+        return 0;
+    size_t dropped = 0;
+    for (int z = 0; z < g.height; ++z)
+        for (int x = 0; x < g.width; ++x) {
+            float* s = &g.span[(size_t(z) * size_t(g.width) + size_t(x)) * 2];
+            if (s[0] > s[1]) continue;  // no ground there already
+            if (!off(g.originX + (float(x) + 0.5f) * g.side, g.originZ + (float(z) + 0.5f) * g.side)) continue;
+            s[0] = 1e30f;
+            s[1] = -1e30f;
+            ++dropped;
+        }
+    return dropped;
+}
+
 }  // namespace uagfx::ground_cells

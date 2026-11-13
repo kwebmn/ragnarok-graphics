@@ -40,6 +40,11 @@ public:
     // 2.7.57: whether the ground at the world's x and z lies in a patch its makers laid by hand (ground_heights::
     // laidPatches) - false not known; laidKey() changes as what it says does (another read, the axes found), 0 never
     bool laidAt(float x, float z) const;
+    // 3.0.18-beta.252 (R-9UNG8S «в замке трава плоская с отражением»): whether the ground at the world's x and z is a
+    // hall's floor (ground_heights::interiorTexture: a castle's carpet, its green tiles) - false not known; known
+    // once the .gnd is read and the axes found
+    bool insideAt(float x, float z) const;
+    bool hallsKnown() const { return ground() && axes_.known() && !ground_.inside.empty(); }
     uint64_t laidKey() const {
         return ground() && axes_.known() ? uint64_t(reads_) << 8 | uint64_t(axes_.x + 1) << 4 | uint64_t(axes_.z + 1)
                                          : 0;

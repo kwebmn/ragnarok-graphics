@@ -51,3 +51,14 @@ TEST(effect_where_the_places) {
     for (int i = 0; i < effect_groups::memberCount(); ++i)
         CHECK(worksOn(std::string("effects.") + effect_groups::members()[i].key, "", e));
 }
+
+// 3.0.18-beta.252 (R-9UNG8S «в замке трава плоская с отражением»): the console's «Тільки на цій карті» shows the
+// grass and its dew in a guild castle; the halls' floors reflect there as before, its sky's effects stay off
+TEST(effect_where_grass_in_the_guild_castles) {
+    const EffectSettings e;
+    for (const char* k : {"effects.grass", "effects.dew", "effects.floor_reflections"})
+        CHECK(worksOn(k, "prtg_cas01", e));
+    for (const char* k : {"effects.morning_fog", "effects.ground_seams", "effects.butterflies"})
+        CHECK(!worksOn(k, "prtg_cas01", e));
+    CHECK(!worksOn("effects.grass", "prt_castle", e));
+}

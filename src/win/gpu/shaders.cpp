@@ -2946,6 +2946,20 @@ float4 floor_reflect_ps(PresentOut i) : SV_Target {
     float3 nr = rain ? up : n;
     float flat = rain ? smoothstep(0.6, 0.85, -nw.y) : smoothstep(0.88, 0.97, -nw.y);  // up is -y
     float shine = flat * (1.0 - rim) * smoothstep(0.15, 0.3, dot(-v, nr));  // what reflects
+    // 3.0.18-beta.252 (R-9UNG8S, the owner on prtg_cas01: «в замке трава плоская с отражением»): a castle's halls
+    // reflect, its courtyards' grass does not - green ground about the pixel (the grass's own test of a root,
+    // greenGround, softly over five pixels: a field's yellow and dark specks are no polished floor)
+    if (!rain && shine > 0.0) {
+        float3 m = sceneColor.Load(int3(wp, 0)).rgb;
+        m += sceneColor.Load(int3(clamp(wp + int2(3, 0), int2(0, 0), last), 0)).rgb;
+        m += sceneColor.Load(int3(clamp(wp - int2(3, 0), int2(0, 0), last), 0)).rgb;
+        m += sceneColor.Load(int3(clamp(wp + int2(0, 3), int2(0, 0), last), 0)).rgb;
+        m += sceneColor.Load(int3(clamp(wp - int2(0, 3), int2(0, 0), last), 0)).rgb;
+        m *= 0.2;
+        float grassy = smoothstep(1.0, 1.06, m.g / max(m.r, 1e-3)) * smoothstep(1.05, 1.2, m.g / max(m.b, 1e-3)) *
+                       smoothstep(0.08, 0.14, m.g);
+        shine *= 1.0 - grassy;
+    }
     // the rain's wet darkens a rim as the floor about it (taken for floor): no light specks along the edges
     float wet = rain ? lerp(flat, 1.0, rim) : 0.0;
     if (shine <= 0.0 && wet <= 0.0) return float4(0.0, 0.0, 0.0, 0.0);

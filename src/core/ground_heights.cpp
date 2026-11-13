@@ -64,6 +64,15 @@ bool parse(const uint8_t* data, size_t size, Ground& out, std::string& error) {
         texture[c] = t;
     }
     out.laid = laidPatches(width, height, texture);
+    // 3.0.18-beta.252: the halls' floors - each texture's name once, then each cell's top
+    std::vector<uint8_t> hall(size_t(textures), 0);
+    for (int32_t k = 0; k < textures; ++k) {
+        const char* n = reinterpret_cast<const char*>(data + 26 + uint64_t(k) * uint64_t(length));
+        hall[size_t(k)] = interiorTexture(std::string(n, std::find(n, n + length, '\0'))) ? 1 : 0;
+    }
+    out.inside.assign(size_t(cells), 0);
+    for (size_t c = 0; c < size_t(cells); ++c)
+        if (texture[c] >= 0 && texture[c] < textures) out.inside[c] = hall[size_t(texture[c])];
     return true;
 }
 
@@ -118,6 +127,30 @@ bool laidAt(const Ground& g, float x, float z) {
     const float fz = std::floor(z / g.zoom + float(g.height) * 0.5f);
     if (!(fx >= 0.0f && fz >= 0.0f && fx < float(g.width) && fz < float(g.height))) return false;
     return g.laid[size_t(fz) * size_t(g.width) + size_t(fx)] != 0;
+}
+
+bool interiorTexture(const std::string& name) {
+    // the folders' names before the file's: cp949's second bytes (0x41-0x5A, 0x61-0x7A, 0x81-0xFE) are never '\\'
+    // or '/', and a name valid to its end that ends in these four bytes ends in «내부» itself
+    static const char kInside[] = "\xB3\xBB\xBA\xCE";
+    const size_t file = name.find_last_of("\\/");
+    if (file == std::string::npos) return false;
+    size_t start = 0;
+    while (start < file) {
+        const size_t end = name.find_first_of("\\/", start);
+        const size_t stop = end == std::string::npos || end > file ? file : end;
+        if (stop - start >= 4 && name.compare(stop - 4, 4, kInside, 4) == 0) return true;
+        start = stop + 1;
+    }
+    return false;
+}
+
+bool insideAt(const Ground& g, float x, float z) {
+    if (g.inside.size() < size_t(g.width) * size_t(g.height)) return false;
+    const float fx = std::floor(x / g.zoom + float(g.width) * 0.5f);
+    const float fz = std::floor(z / g.zoom + float(g.height) * 0.5f);
+    if (!(fx >= 0.0f && fz >= 0.0f && fx < float(g.width) && fz < float(g.height))) return false;
+    return g.inside[size_t(fz) * size_t(g.width) + size_t(fx)] != 0;
 }
 
 bool heightAt(const Ground& g, float x, float z, float& y) {
