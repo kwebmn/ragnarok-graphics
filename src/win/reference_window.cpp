@@ -179,6 +179,7 @@ struct State {
     // 3.0.18-beta.244 («Навички»): the site's skills' words (the watcher's file), read once a window's opening
     refskills::File skillWords;
     bool skillWordsRead = false;
+    bool asTyped = false;  // 3.0.18-beta.245: the search's Cyrillic as typed («шукати як набрано»)
 };
 
 State& state() {
@@ -407,6 +408,7 @@ refpages::Context contextOf(const State& s) {
         if (lines.empty()) lines = infocardwin::skillDescription(skillinfo::aegis(id), skillinfo::name(id));
         return lines;
     };
+    c.asTyped = s.asTyped;  // 3.0.18-beta.245
     return c;
 }
 
@@ -936,6 +938,13 @@ void newPage(State& s, float scroll) {
 }
 
 void go(State& s, const refpages::Link& to) {
+    if (to.go == refpages::Go::AsTyped) {  // 3.0.18-beta.245: «шукати як набрано» - the Cyrillic itself
+        s.asTyped = true;
+        s.sel = -1;
+        makePage(s);
+        newPage(s, 0);
+        return;
+    }
     if (to.go == refpages::Go::Zoom) {  // 3.0.11-beta.29: the world map's «-», «+» round its middle, the whole
         if (!s.world || s.mapW <= 0) return;
         const worldmap::Sheet& sh = s.world->sheet;
@@ -1097,6 +1106,7 @@ void goBack(State& s) {
 }
 
 void typed(State& s) {  // the query changed: its results (a card left for them comes back by «Назад»)
+    s.asTyped = false;  // 3.0.18-beta.245: by the keys' Latin again
     if (s.at.go != refpages::Go::None) s.back.push_back(Entry{s.at, "", s.page.name, scrollNow(s), s.opened});
     s.at = refpages::Link{};
     s.opened = 0;  // 3.0.11-beta.28: the groups closed, the first result picked again

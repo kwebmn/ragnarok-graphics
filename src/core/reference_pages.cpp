@@ -12,6 +12,7 @@
 #include <unordered_map>
 
 #include "core/char_block.hpp"
+#include "core/login_hints.hpp"
 #include "core/reference_route.hpp"
 #include "core/settings/search.hpp"
 #include "core/skill_costs.hpp"
@@ -961,7 +962,43 @@ Page skill(Lang l, int id, const Context& c) {
 
 }  // namespace
 
+namespace {
+
+// 3.0.18-beta.245: the keyboard's layout Cyrillic was typed in - the Russian by its own letters (ы э ъ ё), the
+// Ukrainian by its (і ї є ґ), else the interface's; false: no Cyrillic
+bool cyrillicLayout(const std::string& utf8, Lang l, bool& russian) {
+    bool any = false, uk = false, ru = false;
+    for (size_t i = 0; i + 1 < utf8.size(); ++i) {
+        const unsigned char a = static_cast<unsigned char>(utf8[i]), b = static_cast<unsigned char>(utf8[i + 1]);
+        if (a != 0xD0 && a != 0xD1 && a != 0xD2) continue;
+        const unsigned cp = ((a & 0x1Fu) << 6) | (b & 0x3Fu);
+        if (cp < 0x400 || cp > 0x4FF) continue;
+        any = true;
+        const unsigned low = cp >= 0x410 && cp <= 0x42F ? cp + 0x20 : cp >= 0x400 && cp <= 0x40F ? cp + 0x50 : cp;
+        uk = uk || low == 0x456 || low == 0x457 || low == 0x454 || cp == 0x490 || cp == 0x491;
+        ru = ru || low == 0x44B || low == 0x44D || low == 0x44A || low == 0x451;
+        ++i;
+    }
+    russian = ru || (!uk && l == Lang::Ru);
+    return any;
+}
+
+}  // namespace
+
 Page found(const refindex::Index& ix, Lang l, const std::string& query, const Context& c, unsigned opened) {
+    bool russian = false;
+    if (!c.asTyped && cyrillicLayout(query, l, russian)) {  // 3.0.18-beta.245: the same keys in Latin, when they find
+        const std::string latin = loginhint::latinGuess(query);
+        Context k = c;
+        k.asTyped = true;
+        Page by = found(ix, l, latin, k, opened);
+        if (latin != query && !by.rows.empty() && by.rows.back().style == Style::Hint) {
+            by.name = "«" + query + "»";
+            by.rows.insert(by.rows.begin() + 1, linked(sayf(l, russian ? Text::RefTypedRu : Text::RefTypedUk, {latin}),
+                                                       say(l, Text::RefSearchAsTyped), Link{Go::AsTyped, 0, ""}));
+            return by;
+        }
+    }
     Page p;
     p.name = "«" + query + "»";
     Row field;  // 3.0.11-beta.26: the concept's results under the search's own field (v21_search), Esc its key
@@ -2576,6 +2613,7 @@ Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
         case Go::Expand:
         case Go::Follow:
         case Go::Zoom:
+        case Go::AsTyped:  // 3.0.18-beta.245: the window's
         case Go::Track: break;
     }
     return home(ix, l);

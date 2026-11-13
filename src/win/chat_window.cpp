@@ -11,7 +11,9 @@
 #include <cstring>
 #include <deque>
 #include <map>
+#include <memory>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -283,8 +285,49 @@ void logged(State& s, const cp::Line& line) {
     std::fclose(f);
 }
 
+// 3.0.18-beta.245 («Довідник» › chat links): the reference's things and monsters by their names (small letters) for
+// «[Name]» in the players' lines - made again when another pack is read; a name of several: the smallest thing's
+// number, the monster met on a map before the others
+struct Names {
+    std::shared_ptr<const refindex::Index> of;
+    std::unordered_map<std::string, int> items, mobs;
+};
+
+std::string smallLetters(std::string s) {
+    for (char& ch : s)
+        if (ch >= 'A' && ch <= 'Z') ch = char(ch - 'A' + 'a');
+    return s;
+}
+
+std::pair<int, int> namedInReference(const std::string& name) {
+    static Names n;
+    const std::shared_ptr<const refindex::Index> ix = reference::index();
+    if (!ix) return {0, 0};
+    if (ix != n.of) {
+        n.of = ix;
+        n.items.clear();
+        n.mobs.clear();
+        for (const auto& [id, it] : ix->items) {
+            const auto [at, fresh] = n.items.emplace(smallLetters(it.name), id);
+            if (!fresh && id < at->second) at->second = id;
+        }
+        for (const auto& [id, m] : ix->mobs) {
+            const bool met = ix->spawnsOf.count(id) > 0;
+            const auto [at, fresh] = n.mobs.emplace(smallLetters(m.name), id);
+            if (!fresh && met && !ix->spawnsOf.count(at->second)) at->second = id;
+        }
+    }
+    const std::string key = smallLetters(name);
+    if (const auto i = n.items.find(key); i != n.items.end()) return {i->second, 0};
+    if (const auto m = n.mobs.find(key); m != n.mobs.end()) return {0, m->second};
+    return {0, 0};
+}
+
 void add(State& s, cp::Line line) {
     logged(s, line);  // 3.0.13-beta.3
+    if (line.kind == cp::Kind::Public || line.kind == cp::Kind::Party || line.kind == cp::Kind::Guild ||
+        line.kind == cp::Kind::Whisper)  // 3.0.18-beta.245: «[Name]» - its card in «Довідник» by a click
+        line.spans = cp::bracketLinks(line.spans, namedInReference);
     const ULONGLONG now = GetTickCount64();
     // 3.0.11-beta.243 (the chat concept, stage 4): the same line again within a minute - «×N» on the one before
     if (line.kind != cp::Kind::Battle && !s.lines.empty()) {

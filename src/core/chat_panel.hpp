@@ -32,6 +32,10 @@ struct Span {
     bool name = false;  // the one who said it: a click whispers to them
     int item = 0, mob = 0;  // 3.0.11-beta.244: a thing's or a monster's name - a click opens it in «Довідник»
 };
+// 3.0.18-beta.245 («Довідник» › chat links): «[Name]» in the words - a thing's or a monster's name `resolve` knows
+// ({item, mob}; {0, 0} none) becomes its link span (the brackets kept); the speaker's and the links' spans untouched
+std::vector<Span> bracketLinks(const std::vector<Span>& in,
+                               const std::function<std::pair<int, int>(const std::string& name)>& resolve);
 struct Line {
     Kind kind = Kind::System;
     std::vector<Span> spans;

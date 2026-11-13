@@ -972,3 +972,21 @@ TEST(reference_pages_a_skills_card) {
     const refpages::Row* r = rowWith(found, "Magnum Break");
     CHECK(r && r->link.go == refpages::Go::Skill && r->link.id == 7);
 }
+
+// 3.0.18-beta.245 (the concept: Cyrillic typed by the layout): «зщкштп» is «poring» by the keys - found so, a line on
+// top says it and offers the search as typed; as typed (the link's) the words themselves
+TEST(reference_pages_search_typed_in_the_cyrillic_layout) {
+    const refindex::Index ix = index();
+    const refpages::Page p = refpages::found(ix, Lang::Uk, "зщкштп");
+    CHECK(p.rows.size() > 2 && p.rows[1].left == "Набрано в українській розкладці — шукаю poring");
+    CHECK(p.rows.size() > 2 && p.rows[1].right == "шукати як набрано ›" && p.rows[1].link.go == refpages::Go::AsTyped);
+    CHECK(rowWith(p, "Poring") != nullptr);
+    refpages::Context c;
+    c.asTyped = true;
+    const refpages::Page typed = refpages::found(ix, Lang::Uk, "зщкштп", c);
+    CHECK(rowWith(typed, "Poring") == nullptr && typed.rows.back().style == refpages::Style::Empty);
+    const refpages::Page ru = refpages::found(ix, Lang::Uk, "ыцщкв");  // ы: the Russian layout's «s» - «sword»
+    CHECK(ru.rows.size() > 1 && ru.rows[1].left == "Набрано в російській розкладці — шукаю sword");
+    const refpages::Page plain = refpages::found(ix, Lang::Uk, "poring");  // Latin: no line
+    CHECK(plain.rows.size() > 1 && plain.rows[1].style == refpages::Style::Group);
+}

@@ -846,4 +846,49 @@ View view(const Layout& L, const std::vector<Row>& rows, const Input& in, const 
     return v;
 }
 
+std::vector<Span> bracketLinks(const std::vector<Span>& in,
+                               const std::function<std::pair<int, int>(const std::string& name)>& resolve) {
+    std::vector<Span> out;
+    for (const Span& sp : in) {
+        if (sp.name || sp.item || sp.mob || sp.text.find('[') == std::string::npos || !resolve) {
+            out.push_back(sp);
+            continue;
+        }
+        const std::string& s = sp.text;
+        std::string plain;
+        size_t i = 0;
+        const auto flush = [&] {
+            if (plain.empty()) return;
+            Span p = sp;
+            p.text = plain;
+            out.push_back(std::move(p));
+            plain.clear();
+        };
+        while (i < s.size()) {
+            const size_t open = s.find('[', i);
+            if (open == std::string::npos) break;
+            const size_t close = s.find(']', open + 1);
+            if (close == std::string::npos) break;
+            const std::string name = s.substr(open + 1, close - open - 1);
+            const std::pair<int, int> to =
+                name.empty() || name.size() > 64 ? std::pair<int, int>{0, 0} : resolve(name);
+            if (to.first > 0 || to.second > 0) {
+                plain += s.substr(i, open - i);
+                flush();
+                Span link = sp;
+                link.text = s.substr(open, close - open + 1);
+                link.item = to.first;
+                link.mob = to.second;
+                out.push_back(std::move(link));
+            } else {
+                plain += s.substr(i, close + 1 - i);
+            }
+            i = close + 1;
+        }
+        plain += s.substr(i);
+        flush();
+    }
+    return out;
+}
+
 }  // namespace uagfx::chatpanel

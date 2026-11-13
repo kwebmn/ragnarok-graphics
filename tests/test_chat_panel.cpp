@@ -218,3 +218,26 @@ TEST(chat_panel_wrap_cache_keeps_each_piece_on_its_line_of_the_list) {
     const std::vector<Row> withD = cache.wrap({&d}, 200, 10, m, 1);
     CHECK(withD.size() == 1 && withD[0][0].text == "four" && withD[0][0].line == 0);
 }
+
+// 3.0.18-beta.245 («Довідник» › chat links): «[Name]» in a line - a thing's or a monster's name the reference knows
+// becomes its link (the brackets kept), the rest of the words as they were
+TEST(chat_panel_bracketed_names_link_to_the_reference) {
+    const auto resolve = [](const std::string& name) -> std::pair<int, int> {
+        if (name == "Poring Card") return {4001, 0};
+        if (name == "Poring") return {0, 1002};
+        return {0, 0};
+    };
+    std::vector<chatpanel::Span> in{chatpanel::Span{"Ann: ", chatpanel::kText, true, true},
+                                    chatpanel::Span{"WTS [Poring Card] 1kk, kill [Poring] [Nobody] [oops", 0xFFFFFF}};
+    const std::vector<chatpanel::Span> out = chatpanel::bracketLinks(in, resolve);
+    CHECK_EQ(out.size(), size_t(6));
+    if (out.size() != 6) return;
+    CHECK(out[0].name && out[0].text == "Ann: ");  // the speaker's span untouched
+    CHECK(out[1].text == "WTS " && out[1].item == 0 && out[1].rgb == 0xFFFFFF);
+    CHECK(out[2].text == "[Poring Card]" && out[2].item == 4001 && out[2].mob == 0);
+    CHECK(out[3].text == " 1kk, kill ");
+    CHECK(out[4].text == "[Poring]" && out[4].mob == 1002);
+    CHECK(out[5].text == " [Nobody] [oops" && out[5].item == 0 && out[5].mob == 0);
+    const std::vector<chatpanel::Span> none = chatpanel::bracketLinks({chatpanel::Span{"no names here", 1}}, resolve);
+    CHECK(none.size() == 1 && none[0].text == "no names here");
+}

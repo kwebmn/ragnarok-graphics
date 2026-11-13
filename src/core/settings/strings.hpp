@@ -973,6 +973,7 @@ enum class Text : uint16_t {
     RefSkillsEarlier, RefSkillKindWeapon, RefSkillKindMagic, RefSkillKindMisc, RefSkillKindNone, RefSkillWeaponElement,
     RefSkillOnEnemy, RefSkillOnGround, RefSkillOnSelf, RefSkillOnFriend, RefSkillTrap, RefSkillSpByLevel,
     RefSkillAllLevels, RefSkillLevelN, RefSkillNeeds, RefSkillJobs, RefFoundSkills, RefKindSkill,
+    RefTypedUk, RefTypedRu, RefSearchAsTyped,  // .245: the search typed in a Cyrillic layout
     Count
 };
 

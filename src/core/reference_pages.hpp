@@ -32,7 +32,8 @@ namespace uagfx::refpages {
 // (map «code:x:y»: an NPC's); Map id > 0 - the map with its NPC id - 1 in the view's middle
 enum class Go : uint8_t {
     None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest, Fold, Star, Zoom, Track, Npc,
-    Skill  // 3.0.18-beta.244: a skill's card (id the skill's number)
+    Skill,   // 3.0.18-beta.244: a skill's card (id the skill's number)
+    AsTyped  // 3.0.18-beta.245: the search's words as typed (not by the keyboard's layout)
 };
 struct Link {
     Go go = Go::None;
@@ -178,6 +179,7 @@ struct Context {
     const std::vector<OwnTimer>* own = nullptr;
     // 3.0.18-beta.244 («Навички»): a skill's words (the site's in the language, else the game's table; empty none)
     std::function<std::vector<std::string>(int skill)> skillText;
+    bool asTyped = false;  // 3.0.18-beta.245: Cyrillic searched as typed, not by its keys in Latin
 };
 // 3.0.18-beta.242: a monster of `mobLv` for a character of `level` - 1 fitting (within 10 levels), 2 too strong, 3 too
 // weak; 0 either not known

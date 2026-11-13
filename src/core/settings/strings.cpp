@@ -8723,6 +8723,11 @@ constexpr Entry kTexts[] = {
     {Text::RefSkillJobs, "Who learns it", "Хто вчить", "Кто учит"},
     {Text::RefFoundSkills, "Skills · {1}", "Навички · {1}", "Навыки · {1}"},
     {Text::RefKindSkill, "skill", "навичка", "навык"},
+    {Text::RefTypedUk, "Typed in the Ukrainian layout - searching {1}", "Набрано в українській розкладці — шукаю {1}",
+     "Набрано в украинской раскладке — ищу {1}"},
+    {Text::RefTypedRu, "Typed in the Russian layout - searching {1}", "Набрано в російській розкладці — шукаю {1}",
+     "Набрано в русской раскладке — ищу {1}"},
+    {Text::RefSearchAsTyped, "search as typed ›", "шукати як набрано ›", "искать как набрано ›"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
