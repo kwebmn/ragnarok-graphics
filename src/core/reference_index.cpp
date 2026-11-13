@@ -206,8 +206,18 @@ void readItems(const json::Value& v, Index& ix) {  // {id: [name, aegis, type, b
 
 // What refers to what: each list in the order a card shows it
 void link(Index& ix) {
+    for (const auto& m : ix.maps)  // the monsters met on maps first: the droppers are theirs
+        for (const MobOnMap& o : m.second.mobs) ix.spawnsOf[o.id].push_back(Where{m.first, o.count, o.respawnMs});
+    for (auto& w : ix.spawnsOf)
+        std::sort(w.second.begin(), w.second.end(), [](const Where& a, const Where& b) {
+            return a.count != b.count ? a.count > b.count : a.map < b.map;
+        });
+    // 3.0.18-beta.250 (the owner: «убери мобов которых нету на картах, они отвлекают»): an item's droppers are the
+    // monsters met on maps - an event's copy or a summon dropping it too left out (their cards stay)
     for (const auto& m : ix.mobs)
-        for (const Drop& d : m.second.drops) ix.droppedBy[d.item].push_back(Source{m.first, d.rate, d.kind, d.parts});
+        if (ix.spawnsOf.count(m.first))
+            for (const Drop& d : m.second.drops)
+                ix.droppedBy[d.item].push_back(Source{m.first, d.rate, d.kind, d.parts});
     for (auto& d : ix.droppedBy)
         std::sort(d.second.begin(), d.second.end(), [&](const Source& a, const Source& b) {
             if (a.rate != b.rate) return a.rate > b.rate;
@@ -218,12 +228,6 @@ void link(Index& ix) {
     for (auto& s : ix.soldAt)
         std::stable_sort(s.second.begin(), s.second.end(),
                          [](const auto& a, const auto& b) { return a.second < b.second; });
-    for (const auto& m : ix.maps)
-        for (const MobOnMap& o : m.second.mobs) ix.spawnsOf[o.id].push_back(Where{m.first, o.count, o.respawnMs});
-    for (auto& w : ix.spawnsOf)
-        std::sort(w.second.begin(), w.second.end(), [](const Where& a, const Where& b) {
-            return a.count != b.count ? a.count > b.count : a.map < b.map;
-        });
     for (size_t c = 0; c < ix.craft.size(); ++c) {
         ix.craftOf[ix.craft[c].item].push_back(int(c));
         for (const auto& mat : ix.craft[c].mats) ix.usedIn[mat.first].push_back(int(c));
@@ -461,8 +465,8 @@ Found search(const Index& ix, const std::string& query, size_t most) {
         const bool byName = hasAll(name, words);
         const std::string& other = byName ? scratch2 : foldedOf(m.second.otherFolded, m.second.other, scratch2);
         if (!byName && (other.empty() || !hasAll(other, words))) continue;
-        const auto where = ix.spawnsOf.find(m.first);
-        const int rank = (where == ix.spawnsOf.end() ? 1000 : 0) + m.second.lv;  // met somewhere, the lower first
+        if (!ix.spawnsOf.count(m.first)) continue;  // 3.0.18-beta.250: none off the maps
+        const int rank = m.second.lv;               // the lower first
         mobs.push_back(Scored{closeness(byName ? name : other, q), rank, &m.second.name, nullptr,
                               Hit{Kind::Mob, m.first, "", uint8_t(byName ? 0 : 1)}});
     }
@@ -472,6 +476,7 @@ Found search(const Index& ix, const std::string& query, size_t most) {
         scratch2.clear();
         const std::string& service = byName ? scratch2 : foldedOf(i.second.aegisFolded, i.second.aegis, scratch2);
         if (!byName && (service.empty() || !hasAll(service, words))) continue;
+        if (!obtainable(ix, i.first)) continue;  // 3.0.18-beta.250: none no one can get
         const auto by = ix.droppedBy.find(i.first);
         const auto at = ix.soldAt.find(i.first);
         const int places = int((by == ix.droppedBy.end() ? 0 : by->second.size()) +
@@ -510,6 +515,14 @@ std::string mapTitle(const Index& ix, const std::string& code) {
     if (named == ix.mapNames.end()) return code;
     const std::string name = shortName(named->second);
     return name.empty() ? code : name + " (" + code + ")";
+}
+
+bool obtainable(const Index& ix, int item) {
+    if (ix.droppedBy.count(item) || ix.soldAt.count(item) || ix.craftOf.count(item) || ix.questsOf.count(item))
+        return true;
+    for (const Pet& p : ix.pets)
+        if (p.lure == item || p.egg == item || p.equip == item || p.food == item) return true;
+    return false;
 }
 
 }  // namespace uagfx::refindex

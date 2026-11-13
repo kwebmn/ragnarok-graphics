@@ -97,6 +97,20 @@ std::string mobNote(const refindex::Index& ix, Lang l, int id) {
     return s;
 }
 
+// 3.0.18-beta.250 (the owner: «убери мобов которых нету на картах»): the monsters met on maps - the ones counted
+size_t mobsOnMaps(const refindex::Index& ix) {
+    size_t n = 0;
+    for (const auto& m : ix.mobs) n += ix.spawnsOf.count(m.first);
+    return n;
+}
+
+// 3.0.18-beta.250 (the owner: «и итемы»): the things one can get - the ones counted
+size_t thingsToGet(const refindex::Index& ix) {
+    size_t n = 0;
+    for (const auto& i : ix.items) n += refindex::obtainable(ix, i.first);
+    return n;
+}
+
 // A long section's rows: all of them when opened, else the first kFew and «усі N ›» that opens it
 void capped(Page& p, std::vector<Row> rows, Part part, unsigned opened, Lang l) {
     const bool all = ((opened >> unsigned(part)) & 1u) || rows.size() <= kFew + kFewMore;
@@ -574,8 +588,8 @@ Page home(const refindex::Index& ix, Lang l, const Context& c) {
         std::string sub, count;
         Link link;
     } tiles[] = {
-        {"monster", Text::RefSecMobs, say(l, Text::RefSecMobsHint), count(ix.mobs.size()), Link{Go::Section, Mobs, ""}},
-        {"item", Text::RefSecItems, say(l, Text::RefSecItemsHint), count(ix.items.size()),
+        {"monster", Text::RefSecMobs, say(l, Text::RefSecMobsHint), count(mobsOnMaps(ix)), Link{Go::Section, Mobs, ""}},
+        {"item", Text::RefSecItems, say(l, Text::RefSecItemsHint), count(thingsToGet(ix)),
          Link{Go::Section, Items, ""}},
         {"location", Text::RefSecMaps, say(l, Text::RefSecMapsHint), count(maps), Link{Go::Section, Maps, ""}},
         {"quest", Text::RefSecQuests, say(l, Text::RefSecQuestsHint), ix.quests.empty() ? "" : count(ix.quests.size()),
@@ -1313,8 +1327,9 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c, unsign
         p.name = typeName(id - 100, l);
         p.rows.push_back(heading(p.name));
         std::vector<std::pair<std::string, int>> list;
-        for (const auto& i : ix.items)
-            if (i.second.type == id - 100) list.emplace_back(i.second.name, i.first);
+        for (const auto& i : ix.items)  // 3.0.18-beta.250: the things one can get
+            if (i.second.type == id - 100 && refindex::obtainable(ix, i.first))
+                list.emplace_back(i.second.name, i.first);
         std::sort(list.begin(), list.end(), byNatural);
         std::vector<Row> rows;
         for (const auto& [name, item] : list) {
@@ -1332,13 +1347,12 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c, unsign
         case Mobs: {  // 3.0.11-beta.32: those met on maps by their levels first, the rest (events' and summons'
                       // copies - «Baphomet Lv 1») apart; each its picture, its line
             p.name = say(l, Text::RefSecMobs);
-            std::vector<std::tuple<int, std::string, int>> on, nowhere;  // level, name, id
-            for (const auto& m : ix.mobs)
-                (ix.spawnsOf.count(m.first) ? on : nowhere).emplace_back(m.second.lv, m.second.name, m.first);
+            std::vector<std::tuple<int, std::string, int>> on;  // level, name, id
+            for (const auto& m : ix.mobs)  // 3.0.18-beta.250 (the owner): those off the maps not listed
+                if (ix.spawnsOf.count(m.first)) on.emplace_back(m.second.lv, m.second.name, m.first);
             std::sort(on.begin(), on.end());
-            std::sort(nowhere.begin(), nowhere.end());
             const std::pair<Text, const std::vector<std::tuple<int, std::string, int>>*> groups[] = {
-                {Text::RefMobsOnMaps, &on}, {Text::RefMobsNowhere, &nowhere}};
+                {Text::RefMobsOnMaps, &on}};
             int group = 0;
             for (const auto& [title, list] : groups) {
                 const int bit = group++;  // 3.0.18-beta.247: each group past 100 «усі N ›»
@@ -1394,7 +1408,8 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c, unsign
             p.name = say(l, Text::RefSecItems);
             p.rows.push_back(heading(p.name));
             std::map<int, size_t> types;
-            for (const auto& i : ix.items) ++types[i.second.type];
+            for (const auto& i : ix.items)  // 3.0.18-beta.250: the things one can get
+                if (refindex::obtainable(ix, i.first)) ++types[i.second.type];
             for (const auto& [type, count] : types)
                 p.rows.push_back(linked(typeName(type, l), number(static_cast<long long>(count), l),
                                         Link{Go::Section, 100 + type, ""}));
@@ -1405,7 +1420,7 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c, unsign
             p.name = say(l, Text::RefSecCards);
             std::vector<std::pair<std::string, int>> dropped, other, enchants;
             for (const auto& i : ix.items)
-                if (i.second.type == 6)
+                if (i.second.type == 6 && refindex::obtainable(ix, i.first))  // 3.0.18-beta.250
                     (ix.droppedBy.count(i.first)                       ? dropped
                      : i.second.name.find("Card") != std::string::npos ? other
                                                                        : enchants)

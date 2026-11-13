@@ -521,6 +521,8 @@ TEST(reference_search_concept_more_and_forms) {
         const int shops[] = {1, 3, 5, 21};
         if (i < 4)
             for (int s = 0; s < shops[i]; ++s) ix.soldAt[100 + i].emplace_back(s, 10);
+        else
+            ix.craftOf[100 + i].push_back(0);  // 3.0.18-beta.250: the rest crafted - things one can get, unsaid
     }
     const refpages::Page p = refpages::found(ix, Lang::Uk, "stone");
     CHECK(p.rows[1].style == refpages::Style::Group && p.rows[1].left == "Предмети · 30");
@@ -533,8 +535,10 @@ TEST(reference_search_concept_more_and_forms) {
     CHECK(p.rows[31].style == refpages::Style::Result && p.rows[32].style == refpages::Style::Group);
     CHECK(p.rows[32].left.rfind("Навички · ", 0) == 0 && p.rows.back().style == refpages::Style::Hint);  // .244
     refindex::Index many;  // 130 stones: the search's own cut - the first 100 and «type more of the name»
-    for (int i = 0; i < 130; ++i) many.items[1000 + i] = refindex::Item{"Stone " + std::to_string(1000 + i), "S", 3,
-                                                                         10, 1, 0};
+    for (int i = 0; i < 130; ++i) {
+        many.items[1000 + i] = refindex::Item{"Stone " + std::to_string(1000 + i), "S", 3, 10, 1, 0};
+        many.craftOf[1000 + i].push_back(0);  // 3.0.18-beta.250: things one can get
+    }
     const refpages::Page cut = refpages::found(many, Lang::Uk, "stone");
     CHECK(cut.rows[101].style == refpages::Style::Result && cut.rows[101].left == "Stone 1099");
     CHECK(cut.rows[102].style == refpages::Style::Note && cut.rows[102].left == "перші 100 з 130 - уточніть назву");
@@ -554,11 +558,18 @@ TEST(reference_mobs_list_groups) {
     CHECK(poring && poring->icon == "mob:1002" && poring->right == "Lv 1 · 2 карти");
     const refpages::Row* morroc = rowWith(p, "Satan Morroc");
     CHECK(morroc && morroc->gold && morroc->right == "MVP · Lv 99 · 1 карта");
+    // 3.0.18-beta.250 (the owner: «убери мобов которых нету на картах, они отвлекают»): none off the maps - not in the
+    // list, not in the search, not counted on the first screen; its card still opens by a link
     refindex::Index more = index();
     more.mobs[1999] = refindex::Mob{};
     more.mobs[1999].name = "Event Copy";
     const refpages::Page split = refpages::section(more, Lang::Uk, refpages::Mobs);
-    CHECK(indexOf(split, "Не трапляються на картах (події, виклики) · 1") != size_t(-1));
+    CHECK(rowWith(split, "Event Copy") == nullptr);
+    for (const refpages::Row& r : split.rows) CHECK(r.left.find("Не трапляються") == std::string::npos);
+    CHECK(rowWith(refpages::found(more, Lang::Uk, "event copy"), "Event Copy") == nullptr);
+    const refpages::Row* tile = rowWith(refpages::home(more, Lang::Uk), "Монстри");
+    CHECK(tile && tile->right == "2");
+    CHECK(!refpages::mob(more, Lang::Uk, 1999, ctx("")).rows.empty());
 }
 
 // 3.0.11-beta.32 (the owner: «есть еще куча подобных мелочей, посмотри по ним еще»): the lists' small things - the
@@ -608,6 +619,7 @@ TEST(reference_lists_polish) {
     ix.items[4002] = refindex::Item{"Fabre Card", "Fabre_Card", 6};
     ix.items[4700] = refindex::Item{"AGI+10", "Agility10", 6};
     ix.items[4701] = refindex::Item{"AGI+2", "Agility2", 6};
+    for (const int sold : {4002, 4700, 4701}) ix.soldAt[sold].emplace_back(0, 1000);  // .250: things one can get
     const refpages::Page cards = refpages::section(ix, Lang::Uk, refpages::Cards);
     CHECK(indexOf(cards, "Випадають з монстрів · 1") != size_t(-1));
     CHECK(indexOf(cards, "Не випадають з монстрів (події, квести) · 1") != size_t(-1));
@@ -692,7 +704,7 @@ TEST(reference_pages_a_merged_drop_says_its_parts) {
     CHECK(refindex::build(R"({"v":1,"data":1,"items":{"512":["Apple","Apple",0,15,2,0,0]},)"
                           R"("mobs":{"1284":["Hugeling",1,1,0,0,0,0,0,1,0,)"
                           R"([[512,100],[512,100],[512,100],[512,100],[512,100],[512,100],[512,100],[512,100]],)"
-                          R"([],null]},"spawns":{},"routes":[],"npcs":[]})",
+                          R"([],null]},"spawns":{"prt_fild08":[[1284,1,0,0,0,0,0]]},"routes":[],"npcs":[]})",
                           ix));
     const refpages::Page apple = refpages::item(ix, Lang::Uk, 512, ctx(""));
     int hugelings = 0;
@@ -1013,6 +1025,7 @@ TEST(reference_pages_long_sections_show_100_then_all) {
         ix.mobs[2000 + i].lv = 1 + i;
         ix.spawnsOf[2000 + i].push_back(refindex::Where{"prt_fild08", 1, 0});
         ix.items[5000 + i] = refindex::Item{"Thing " + std::to_string(1000 + i), "T", 3, 10, 1, 0};
+        ix.soldAt[5000 + i].emplace_back(0, 10);  // 3.0.18-beta.250: things one can get
     }
     const refpages::Page mobs = refpages::section(ix, Lang::Uk, refpages::Mobs);
     int shown = 0;
@@ -1029,4 +1042,20 @@ TEST(reference_pages_long_sections_show_100_then_all) {
     shown = 0;
     for (const refpages::Row& r : etc.rows) shown += r.link.go == refpages::Go::Item;
     CHECK(shown == 100 && rowWith(etc, "усі 150 ›") != nullptr);
+}
+
+// 3.0.18-beta.250 (the owner: «и итемы»): a thing no one can get - no monster on a map drops it, no shop sells it, no
+// craft makes it, no quest or pet takes it - not in the lists, not found, not counted; its card still opens by a link
+TEST(reference_pages_things_no_one_can_get_are_not_listed) {
+    refindex::Index ix = index();
+    ix.items[7777] = refindex::Item{"Ghost Thing", "Ghost_Thing", 3, 10, 1, 0};
+    CHECK(!refindex::obtainable(ix, 7777));
+    CHECK(refindex::obtainable(ix, 512) && refindex::obtainable(ix, 1101) && refindex::obtainable(ix, 531));
+    CHECK(rowWith(refpages::section(ix, Lang::Uk, 100 + 3), "Ghost Thing") == nullptr);
+    CHECK(rowWith(refpages::found(ix, Lang::Uk, "ghost"), "Ghost Thing") == nullptr);
+    CHECK(rowWith(refpages::found(ix, Lang::Uk, "ghost_thing"), "Ghost Thing") == nullptr);
+    const refpages::Row* before = rowWith(refpages::home(index(), Lang::Uk), "Предмети");
+    const refpages::Row* after = rowWith(refpages::home(ix, Lang::Uk), "Предмети");
+    CHECK(before && after && before->right == after->right);
+    CHECK(!refpages::item(ix, Lang::Uk, 7777, ctx("")).rows.empty());
 }

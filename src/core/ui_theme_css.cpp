@@ -1638,9 +1638,9 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .rempty .rel { display: block; font-size: 15dp; }
 .rfw .rempty .rsb { display: block; margin: 4dp 0 0 0; color: #9aa3b5; }
 .rfw .rport { display: flex; flex-direction: row; align-items: center; margin: 0 0 14dp 0; }
-.rfw .rpic { display: block; flex: none; width: 112dp; height: 112dp; margin-right: 16dp; border-radius: 12dp;
-    border: 1dp #ffffff17; background-color: #ffffff08; }
-.rfw .rpimg { display: block; margin: 4dp; }
+.rfw .rpic { display: flex; flex: none; align-items: center; justify-content: center; width: 158dp; height: 158dp;
+    margin-right: 16dp; border-radius: 12dp; border: 1dp #ffffff17; background-color: #ffffff08; }
+.rfw .rpimg { display: block; flex: none; }
 .rfw .rpinfo { display: block; flex: 1; }
 .rfw .rpl { display: block; font-size: 14dp; }
 .rfw .rpr { display: block; margin-top: 3dp; color: #9aa3b5; }
@@ -1691,6 +1691,9 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .rr.hl { background-color: #ffffff0a; }
 .rfw .sel, .rfw .sel:hover { background-color: #e6cb8a26; }
 .rfw .ri { display: block; flex: none; width: 24dp; height: 24dp; margin-right: 8dp; }
+/* 3.0.18-beta.250 (the owner: «картинки сделай побольше в базе»): the lists' monsters and things bigger */
+.rfw .rr .ri.rim, .rfw .rres .ri.rim { width: 44dp; height: 44dp; margin-right: 10dp; }
+.rfw .rr .ri.rit, .rfw .rres .ri.rit { width: 32dp; height: 32dp; margin-right: 10dp; }
 .rfw .rl { display: block; flex: 1; white-space: nowrap; overflow: hidden; }
 .rfw .rsb { display: block; flex: none; margin-left: 10dp; font-size: 12dp; color: #9aa3b5; white-space: nowrap; }
 .rfw .rrt { display: block; flex: none; margin-left: 10dp; font-size: 12.5dp; color: #eceff5; white-space: nowrap; }

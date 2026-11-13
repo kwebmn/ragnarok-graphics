@@ -160,6 +160,9 @@ struct Index {
 bool gunzip(const std::string& gz, std::string& out);
 // The pack's JSON (format 1) into the index; false when it is not such a pack
 bool build(const std::string& json, Index& out);
+// 3.0.18-beta.250 (the owner: «убери ... итемы»): a thing one can get on the server - a monster on a map drops it, a
+// shop sells it, a craft makes it, a quest or a pet takes it; the reference lists and finds only those
+bool obtainable(const Index& ix, int item);
 // The site's NPC kinds by the name (GameReference / Shapes::npcKind) and their colours (0xRRGGBB, the site's map)
 NpcKind kindOf(const std::string& name);
 // 3.0.18-beta.240: by the site's folder word (kafra, merchant, quest, city, custom, guild, job, guide, event, ferry,

@@ -427,3 +427,33 @@ TEST(uikit_reference_icon_placeholders_name_their_pictures) {
     }
     rmlhost::close(l.doc);
 }
+
+// 3.0.18-beta.250 (the owner: «картинки сделай побольше в базе»): the lists' pictures bigger - a monster's 44, a
+// thing's and a skill's 32 (a chip's stays 22)
+TEST(uikit_reference_list_pictures_bigger) {
+    refpages::Page p;
+    p.rows.push_back(row(Style::Heading, "Список"));
+    Row poring = row(Style::Row, "Poring", refpages::Go::Mob, 1002);
+    poring.icon = "mob:1002";
+    p.rows.push_back(poring);
+    Row wing = row(Style::Row, "Fly Wing", refpages::Go::Item, 601);
+    wing.icon = "item:601";
+    p.rows.push_back(wing);
+    Row chip = row(Style::Chip, "Apple", refpages::Go::Item, 512);
+    chip.icon = "item:512";
+    p.rows.push_back(chip);
+    ur::Look look;
+    ur::Model m;
+    m.body = ur::body(p, look);
+    const Loaded l = load(m);
+    CHECK_EQ(l.warnings, std::string());
+    const auto side = [&](const char* id) {
+        Rml::Element* r = l.doc ? l.doc->GetElementById(id) : nullptr;
+        Rml::Element* i = r ? r->QuerySelector(".ri") : nullptr;
+        return i ? i->GetBox().GetSize().x : 0.0f;
+    };
+    CHECK(std::fabs(side("r1") - 44) < 0.5f);
+    CHECK(std::fabs(side("r2") - 32) < 0.5f);
+    CHECK(std::fabs(side("r3") - 22) < 0.5f);
+    rmlhost::close(l.doc);
+}

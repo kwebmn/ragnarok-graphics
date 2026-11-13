@@ -126,7 +126,9 @@ struct Maker {
     std::string icon(const Row& r) const {
         if (r.icon.empty()) return {};
         if (r.icon.rfind("mark:", 0) == 0) return "<span class=\"lg lg-" + escape(r.icon.substr(5)) + "\"></span>";
-        return pic(r.icon.rfind("ui:", 0) == 0 ? r.icon : "icon:" + r.icon, "ri");
+        if (r.icon.rfind("ui:", 0) == 0) return pic(r.icon, "ri");
+        // 3.0.18-beta.250 (the owner: «картинки сделай побольше»): a monster's (rim) and a thing's or a skill's (rit)
+        return pic("icon:" + r.icon, r.icon.rfind("mob:", 0) == 0 ? "ri rim" : "ri rit");
     }
     std::string dot(const Row& r) const {
         return r.dot ? "<span class=\"rdot\" style=\"background-color: " + hex(r.dot) + ";\"></span>" : std::string();

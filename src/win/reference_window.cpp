@@ -287,7 +287,8 @@ void loadPicture(State& s, const std::string& key) {
         return;
     }
     const bool mobIcon = key.rfind("icon:mob:", 0) == 0;  // 3.0.11-beta.26: a chip's monster, the icon's size
-    const int side = mobIcon || key.rfind("icon:", 0) == 0 ? px(24, s) : px(104, s);
+    // 3.0.18-beta.250 (the owner: «картинки сделай побольше в базе»): a list's monster 44, a thing's 32, a card's 150
+    const int side = mobIcon ? px(44, s) : key.rfind("icon:", 0) == 0 ? px(32, s) : px(150, s);
     if (key.rfind("mob:", 0) == 0 || mobIcon) {
         const auto m = s.index->mobs.find(std::atoi(key.c_str() + (mobIcon ? 9 : 4)));
         if (m == s.index->mobs.end()) return;
@@ -323,7 +324,7 @@ void loadPicture(State& s, const std::string& key) {
         spritefile::Image im;
         if (aegis.empty() || !clienttables::iconPixels(hotbar::lowered(aegis), im.argb, im.w, im.h)) return;
         out = skillIcon ? asPicture(spritefile::fitted(im, side, side, 1))
-                        : asPicture(spritefile::fitted(im, std::min(side, px(72, s)), std::min(side, px(72, s))));
+                        : asPicture(spritefile::fitted(im, std::min(side, px(100, s)), std::min(side, px(100, s))));
         return;
     }
     const bool icon = key.rfind("icon:item:", 0) == 0;  // 3.0.11-beta.15: a row's icon, its own size
@@ -334,7 +335,7 @@ void loadPicture(State& s, const std::string& key) {
         spritefile::Image im;  // 3.0.11-beta.74: the AI texture pack's icon when it has one, else the game's
         if (!clienttables::iconPixels(f->second, im.argb, im.w, im.h)) return;
         out = icon ? asPicture(spritefile::fitted(im, side, side, 1))
-                   : asPicture(spritefile::fitted(im, std::min(side, px(72, s)), std::min(side, px(72, s))));
+                   : asPicture(spritefile::fitted(im, std::min(side, px(100, s)), std::min(side, px(100, s))));
     }
 }
 

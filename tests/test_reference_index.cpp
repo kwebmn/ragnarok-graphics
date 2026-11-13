@@ -120,7 +120,8 @@ TEST(reference_index_merges_a_monsters_entries_of_one_thing) {
     refindex::Index ix;
     CHECK(refindex::build(R"({"v":1,"data":1,"mobs":{"1284":["Hugeling",1,1,0,0,0,0,0,1,0,)"
                           R"([[512,100],[512,100],[512,100],[512,100],[512,100],[512,100],[512,100],[512,100],)"
-                          R"([909,8000],[909,8000],[601,150]],[[909,5000]],null]},"spawns":{},"routes":[],"npcs":[]})",
+                          R"([909,8000],[909,8000],[601,150]],[[909,5000]],null]},)"
+                          R"("spawns":{"prt_fild08":[[1284,1,0,0,0,0,0]]},"routes":[],"npcs":[]})",
                           ix));
     const refindex::Mob& m = ix.mobs.at(1284);
     CHECK_EQ(m.drops.size(), size_t(4));
@@ -192,4 +193,18 @@ TEST(reference_index_spawn_zones) {
     if (!h.zones.empty())
         CHECK(h.zones[0].mob == 1002 && h.zones[0].count == 10 && h.zones[0].x == 100 && h.zones[0].y == 120 &&
               h.zones[0].rx == 20 && h.zones[0].ry == 15);
+}
+
+// 3.0.18-beta.250 (the owner: «убери мобов которых нету на картах»): an item's droppers are the monsters met on maps -
+// an event's copy or a summon dropping it too is not among them (its card stays)
+TEST(reference_index_droppers_are_on_maps) {
+    refindex::Index ix;
+    CHECK(refindex::build(R"({"v":1,"data":1,"items":{"512":["Apple","Apple",0,15,2,0,0]},)"
+                          R"("mobs":{"1002":["Poring",1,50,2,1,1,3,1,1,0,[[512,1000]],[],null],)"
+                          R"("1999":["Event Poring",1,50,2,1,1,3,1,1,0,[[512,5000]],[],null]},)"
+                          R"("spawns":{"prt_fild08":[[1002,100,0,0,0,0,0]]},"routes":[],"npcs":[]})",
+                          ix));
+    const auto by = ix.droppedBy.find(512);
+    CHECK(by != ix.droppedBy.end() && by->second.size() == 1 && by->second[0].mob == 1002);
+    CHECK(ix.mobs.count(1999) == 1);
 }
