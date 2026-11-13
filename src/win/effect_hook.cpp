@@ -80,9 +80,9 @@ void __attribute__((thiscall)) sortFace(uint32_t renderer, uint32_t face, uint32
         g_faces.note(vertices, tag);
     }
     // 3.0.18-beta.230: a wearer's own sprite faces (a blended list's, not an effect's) while its render runs - where
-    // its wings go
-    if (tag.kind == Kind::None && (flags & 1) && face)
-        wings::noteFace(*reinterpret_cast<const uint32_t*>(uintptr_t(face)));
+    // its wings go. .237 (R-FAFJWS): the opaque list's too (flags without bit 0: a layer by the frames' count, a
+    // headgear of view 185 - FUN_005AECC0) - for the depth alone
+    if (tag.kind == Kind::None && face) wings::noteFace(face, (flags & 1) != 0);
     reinterpret_cast<SortFn>(g_sort)(renderer, face, flags);
 }
 

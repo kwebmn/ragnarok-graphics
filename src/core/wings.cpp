@@ -2,12 +2,19 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <map>
 
+#include "core/game_camera.hpp"
 #include "core/updates.hpp"
 
 namespace uagfx::wings {
 namespace {
+
+// 3.0.18-beta.237 (R-FAFJWS): how far behind the farthest of a wearer's faces (facing us) or nearer than its nearest
+// (facing away) its wings go, in view units - about half the game's step between a character's layers (0.81 at the
+// usual zoom): no tie with a layer, far less than the 4.7 the game lifts its sprites off the ground by
+constexpr float kBehind = 0.5f, kOver = 0.5f;
 
 struct Stop {
     float t;
@@ -188,14 +195,48 @@ float lerpAt(float y, float y0, float v0, float y1, float v1) {
     return v0 + (v1 - v0) * (y - y0) / (y1 - y0);
 }
 
-int Frame::begin(uint32_t actor, bool away) {
-    jobs_.push_back(Job{actor, away, 0, 0});
+Depth faceDepth(const uint8_t* vertices, uint32_t count) {
+    Depth d;
+    float top = 1e30f, bottom = -1e30f;
+    for (uint32_t i = 0; vertices && i < count; ++i) {
+        float f[4];
+        std::memcpy(f, vertices + size_t(i) * 32, sizeof f);
+        if (!std::isfinite(f[1]) || !std::isfinite(f[3])) continue;
+        if (f[1] < top) top = f[1], d.yTop = f[1], d.rhwTop = f[3];
+        if (f[1] > bottom) bottom = f[1], d.yBottom = f[1], d.rhwBottom = f[3];
+    }
+    return d;
+}
+
+float zOf(float rhw) { return camera::kFar / (camera::kFar - camera::kNear) * (1.0f - camera::kNear * rhw); }
+
+Depth moved(const Depth& d, float units) {
+    Depth out = d;
+    if (!d.known()) return out;
+    const auto shift = [units](float rhw) { return 1.0f / std::max(1.0f / rhw + units, camera::kNear); };
+    out.rhwTop = shift(d.rhwTop);
+    out.rhwBottom = shift(d.rhwBottom);
+    return out;
+}
+
+int Frame::begin(uint32_t actor, bool away, float feetY) {
+    Job j;
+    j.actor = actor;
+    j.away = away;
+    j.feetY = feetY;
+    jobs_.push_back(j);
     return int(jobs_.size()) - 1;
 }
 
-void Frame::face(int job, uint32_t vertices) {
+void Frame::face(int job, uint32_t vertices, const Depth& depth, bool anchor) {
     if (job < 0 || size_t(job) >= jobs_.size() || !vertices) return;
-    if (byVertices_.emplace(vertices, job).second) ++jobs_[size_t(job)].faces;
+    Job& j = jobs_[size_t(job)];
+    if (depth.known()) {  // .237: compared at its feet (a character's faces lean alike)
+        const float at = depth.at(j.feetY);
+        if (!j.farthest.known() || at < j.farthest.at(j.feetY)) j.farthest = depth;
+        if (!j.nearest.known() || at > j.nearest.at(j.feetY)) j.nearest = depth;
+    }
+    if (anchor && byVertices_.emplace(vertices, job).second) ++j.faces;
 }
 
 Frame::Emit Frame::drawn(uint32_t vertices) {
@@ -204,8 +245,14 @@ Frame::Emit Frame::drawn(uint32_t vertices) {
     if (it == byVertices_.end()) return e;
     Job& j = jobs_[size_t(it->second)];
     ++j.drawn;
-    if (!j.away && j.drawn == 1) e.before = it->second;
-    if (j.away && j.drawn == j.faces) e.after = it->second;
+    if (!j.away && j.drawn == 1) {
+        e.before = it->second;
+        if (j.farthest.known()) e.depth = moved(j.farthest, kBehind);
+    }
+    if (j.away && j.drawn == j.faces) {
+        e.after = it->second;
+        if (j.nearest.known()) e.depth = moved(j.nearest, -kOver);
+    }
     return e;
 }
 

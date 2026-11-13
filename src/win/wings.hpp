@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "core/wings.hpp"
+
 namespace uagfx::win::wings {
 
 // 3.0.18-beta.230 (the owner's wings - concept https://claude.ai/artifact/S1rYPnLYM9yByk6wz5FTok, spec
@@ -11,8 +13,10 @@ namespace uagfx::win::wings {
 // its faces noted while it sorts them (noteFace, from the face sort hook); at the draws (Device7::record) the wings go
 // right before its first face (facing us) or right after its last (facing away). None in «Пауза». The game's thread.
 bool install();
-void noteFace(uint32_t vertices);  // a face sorted (its vertices' address) - a wearer's while its render runs
-void frameStart();                 // a frame shown: the next one's wearers anew
+// a face sorted (the game's RPFace: its vertices' address, their count at +4) - a wearer's while its render runs;
+// .237: blended (its flags' bit 0) - the wings may go to its draw; else (the opaque list's) its depth counts alone
+void noteFace(uint32_t face, bool blended);
+void frameStart();  // a frame shown: the next one's wearers anew
 
 struct Quad {
     float x0 = 0, y0 = 0, x1 = 0, y1 = 0;  // screen pixels
@@ -23,6 +27,7 @@ struct Quad {
 struct Emit {
     const std::vector<Quad>* before = nullptr;  // wings to draw right before this draw of the game's
     const std::vector<Quad>* after = nullptr;   // and right after it
+    uagfx::wings::Depth depth;  // .237: their depth (behind / over all the wearer's faces); none known: this draw's
 };
 // Device7::record, once for each draw of the game's (its vertices as the game gave them)
 Emit drawn(uint32_t vertices);

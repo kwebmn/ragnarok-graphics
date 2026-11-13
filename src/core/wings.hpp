@@ -57,14 +57,32 @@ bool facesAway(size_t action);  // its side (of 8) 3, 4 or 5: the wings over the
 // A face's depth (z, rhw) at another height of the screen: on the line through its top's and bottom's
 float lerpAt(float y, float y0, float v0, float y1, float v1);
 
+// 3.0.18-beta.237 (R-FAFJWS «мигает тело персонажа»): a face's depth along the screen's height - its rhw at its top
+// and at its bottom (the rasterizer's rhw is linear in screen space)
+struct Depth {
+    float yTop = 0, rhwTop = 0, yBottom = 0, rhwBottom = 0;
+    bool known() const { return rhwTop > 0.0f && rhwBottom > 0.0f; }
+    float at(float y) const { return lerpAt(y, yTop, rhwTop, yBottom, rhwBottom); }
+};
+// Of TL1 vertices (32 bytes each: x, y, z, rhw, ...): their top's and bottom's; none known for no vertices
+Depth faceDepth(const uint8_t* vertices, uint32_t count);
+float zOf(float rhw);                       // uaRO.exe's depth of an rhw (FUN_00412E30): far/(far-near)*(1-near*rhw)
+Depth moved(const Depth& d, float units);  // `units` farther in view space (less than 0: nearer)
+
 // A frame's bookkeeping (the driver's draws, win/wings): each wearer's faces as the game sorts them; its wings right
-// before its first face drawn (facing us) or right after its last (facing away)
+// before its first face drawn (facing us) or right after its last (facing away). .237: their depth a little behind
+// the farthest of its faces (facing us) or nearer than the nearest (facing away) - uaRO.exe sorts a body and its head
+// by their tops' rhw, the head now and then first: the first face's depth (the head's) hid the body under the wings
 class Frame {
 public:
-    int begin(uint32_t actor, bool away);  // a wearer's job (its index)
-    void face(int job, uint32_t vertices);  // one of its faces (job -1: nobody's)
+    // a wearer's job (its index); .237: feetY, the screen row its faces' depths are compared at
+    int begin(uint32_t actor, bool away, float feetY = 0.0f);
+    // one of its faces (job -1: nobody's), its depth (none known: the draw's own face's then); .237: anchor false - a
+    // face of the game's opaque list (drawn before the ground) counts for the depth alone, no wings go to its draw
+    void face(int job, uint32_t vertices, const Depth& depth = {}, bool anchor = true);
     struct Emit {
         int before = -1, after = -1;  // the job whose wings go before / after this draw
+        Depth depth;                  // .237: their depth (none known: the draw's own face's)
     };
     Emit drawn(uint32_t vertices);
     void clear();
@@ -75,6 +93,8 @@ private:
         uint32_t actor = 0;
         bool away = false;
         int faces = 0, drawn = 0;
+        float feetY = 0;
+        Depth farthest, nearest;  // .237: of all its faces at feetY
     };
     std::vector<Job> jobs_;
     std::unordered_map<uint32_t, int> byVertices_;

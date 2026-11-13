@@ -61,8 +61,18 @@ item a player can get.
   size; ask the game for the screen point and depth scale with the shadow's matrix; note a wing job for the actor.
 - The faces sorted after it (until the next shadow) are counted for the job.
 - At the draw of the job's first face (facing us: sides 0, 1, 2, 6, 7) the wing quads go right before it; facing away
-  (3, 4, 5) right after its last face. Their depth and colour (alpha, tint, fog's specular) are that face's - a wall in
-  front hides them as it hides the body; a cloaked character's alpha passes on; a hidden one has no faces, no wings.
+  (3, 4, 5) right after its last face. Their colour (alpha, tint, fog's specular) and draw setup are that face's - a
+  wall in front hides them as it hides the body; a cloaked character's alpha passes on; a hidden one has no faces, no
+  wings.
+- 3.0.18-beta.237 (R-FAFJWS «мигает тело персонажа»): their depth is not the first face's. FUN_005AECC0 gives each
+  layer its flags: the body and the head 0x101 - the list +0xCC, drawn writing the depth (ZWRITE 1, ALPHAREF 1),
+  sorted by the top vertex's rhw, so the head now and then comes first; layers 2-4 flags 1 (list +0xDC, ZWRITE 0);
+  a layer whose frames are a multiple of the head's, or layer 4 under top headgear view 185, flags 0 (the opaque
+  list, drawn before the ground); +0xD4 bits give 5 (the per-face list). With the head's depth the wings stood nearer
+  than the body and hid it, flipping frame by frame. Now every face sorted during the render counts (the opaque
+  list's for the depth alone): facing us the wings go 0.5 view units behind the farthest face, facing away 0.5
+  nearer than the nearest (the game's own step between layers is 0.81 at the usual zoom; its sprites stand 4.7 off
+  the ground). z of an rhw as the game's (FUN_00412E30: far/(far-near)*(1-near*rhw), near 10, far 1500).
 - The wing frames are the driver's own textures (Renderer::createTexture + FrameRecord::uploadOwn), one per frame
   image and look, made once.
 - Off in «Пауза» (the effects off), as the driver's other drawings. No switch: they always show.

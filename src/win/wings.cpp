@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <map>
@@ -199,7 +200,7 @@ void startJob(State& s, uint32_t actor, uint32_t matrix) {
                      cw::lookName(look), body.c_str(), action, frame);
         return;
     }
-    s.current = s.frame.begin(actor, cw::facesAway(action));
+    s.current = s.frame.begin(actor, cw::facesAway(action), y);  // .237: its faces' depths compared at its feet
     s.jobs.push_back(std::move(job));
     if (s.told.insert(std::string("on ") + cw::lookName(look) + "|" + body).second)
         LOG_INFO("wings: %s on %s (views %d, %d, %d) at %.0f, %.0f scale %.2f, %u pictures - waiting for its faces",
@@ -289,9 +290,14 @@ bool install() {
     return true;
 }
 
-void noteFace(uint32_t vertices) {
+void noteFace(uint32_t face, bool blended) {
     State& s = state();
-    if (s.current >= 0) s.frame.face(s.current, vertices);
+    if (s.current < 0 || !face) return;
+    // .237 (R-FAFJWS «мигает тело персонажа»): its depth from its vertices, as the game made them before the sort
+    const uint32_t vertices = read32(face), count = std::min<uint32_t>(read32(face + 4), 4);
+    uint8_t bytes[4 * 32] = {};
+    const bool read = vertices && count && readGame(vertices, bytes, size_t(count) * 32);
+    s.frame.face(s.current, vertices, read ? cw::faceDepth(bytes, count) : cw::Depth{}, blended);
 }
 
 void frameStart() {
@@ -311,6 +317,18 @@ Emit drawn(uint32_t vertices) {
     const cw::Frame::Emit at = s.frame.drawn(vertices);
     if (at.before >= 0 && size_t(at.before) < s.jobs.size()) e.before = &ready(s.jobs[size_t(at.before)]);
     if (at.after >= 0 && size_t(at.after) < s.jobs.size()) e.after = &ready(s.jobs[size_t(at.after)]);
+    e.depth = at.depth;  // .237
+    if ((e.before || e.after) && s.told.insert(e.before ? "depth behind" : "depth over").second) {
+        // .237 (R-FAFJWS): the proof - the wings' depth against the face they go to (view units, top - bottom)
+        uint8_t bytes[4 * 32] = {};
+        const bool read = readGame(vertices, bytes, sizeof bytes);
+        const cw::Depth face = read ? cw::faceDepth(bytes, 4) : cw::Depth{};
+        const auto w = [](float rhw) { return rhw > 0.0f ? 1.0f / rhw : 0.0f; };
+        LOG_INFO("wings: %s - their depth %.1f - %.1f, the face they go %s %.1f - %.1f%s",
+                 e.before ? "behind every face of the wearer" : "over every face of the wearer",
+                 double(w(e.depth.rhwTop)), double(w(e.depth.rhwBottom)), e.before ? "before" : "after",
+                 double(w(face.rhwTop)), double(w(face.rhwBottom)), e.depth.known() ? "" : " (none known: its own)");
+    }
     return e;
 }
 

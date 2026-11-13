@@ -2,6 +2,7 @@
 // spec docs/superpowers/specs/2026-11-13-wings-design.md): big wings on whoever wears one of nine GM-only headgears,
 // drawn from the uaRO HD client's garment sets and their recolours
 #include <cmath>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -201,6 +202,98 @@ TEST(wings_frame_front_and_back) {
     CHECK_EQ(f.drawn(0xF).after, -1);
     f.clear();
     CHECK_EQ(f.drawn(0xA).before, -1);  // a new frame: nothing known
+}
+
+// 3.0.18-beta.237 (R-FAFJWS «мигает тело персонажа»): uaRO.exe sorts a player's body and head into one list that
+// writes the depth (flags 0x101, FUN_00412020), by their top's rhw - the head now and then first. The wings took the
+// first drawn face's depth: the head's, nearer than the body, hid the body under them, and as the order flipped from
+// frame to frame the body blinked. Their depth now: a little behind the farthest of the wearer's faces (facing us),
+// a little nearer than its nearest (facing away) - whichever is drawn first
+namespace {
+
+bool close(float a, float b, float eps) { return std::fabs(a - b) < eps; }
+
+// a sprite's face as the game makes it (FUN_00547E20): TL1 vertices, the top two at one rhw, the bottom two at another,
+// z from the rhw
+std::vector<uint8_t> faceQuad(float x0, float y0, float x1, float y1, float rhwTop, float rhwBottom) {
+    std::vector<uint8_t> v(4 * 32, 0);
+    const float xs[4] = {x0, x1, x0, x1}, ys[4] = {y0, y0, y1, y1};
+    const float ws[4] = {rhwTop, rhwTop, rhwBottom, rhwBottom};
+    for (int i = 0; i < 4; ++i) {
+        const float f[4] = {xs[i], ys[i], wings::zOf(ws[i]), ws[i]};
+        std::memcpy(v.data() + size_t(i) * 32, f, sizeof f);
+    }
+    return v;
+}
+
+}  // namespace
+
+TEST(wings_depth_of_a_face) {
+    const std::vector<uint8_t> v = faceQuad(10, 100, 50, 200, 0.0040f, 0.0050f);
+    const wings::Depth d = wings::faceDepth(v.data(), 4);
+    CHECK(d.known());
+    CHECK(near(d.yTop, 100) && near(d.yBottom, 200));
+    CHECK(close(d.rhwTop, 0.0040f, 1e-7f) && close(d.rhwBottom, 0.0050f, 1e-7f));
+    CHECK(close(d.at(150), 0.0045f, 1e-7f));
+    CHECK(!wings::faceDepth(v.data(), 0).known());  // no vertices
+    CHECK(!wings::Depth{}.known());
+    CHECK(close(wings::zOf(1.0f / 10.0f), 0.0f, 1e-6f));    // uaRO.exe FUN_00412E30: the near plane's 0
+    CHECK(close(wings::zOf(1.0f / 1500.0f), 1.0f, 1e-6f));  // the far one's 1
+    const wings::Depth farther = wings::moved(d, 0.5f);  // half a unit farther in view space
+    CHECK(close(1.0f / farther.rhwTop, 1.0f / 0.0040f + 0.5f, 1e-3f));
+    CHECK(close(1.0f / farther.rhwBottom, 1.0f / 0.0050f + 0.5f, 1e-3f));
+    CHECK(near(farther.yTop, 100) && near(farther.yBottom, 200));
+}
+
+TEST(wings_depth_behind_every_face) {
+    wings::Frame f;
+    const int job = f.begin(0x1000, false, 300.0f);  // facing us, its feet at row 300
+    // the head (rows 160-220) nearer than the body (rows 200-300) - and drawn first
+    const std::vector<uint8_t> head = faceQuad(0, 160, 40, 220, 0.00340f, 0.00341f);
+    const std::vector<uint8_t> body = faceQuad(0, 200, 40, 300, 0.00335f, 0.00336f);
+    f.face(job, 0xA, wings::faceDepth(head.data(), 4));
+    f.face(job, 0xB, wings::faceDepth(body.data(), 4));
+    const wings::Frame::Emit e = f.drawn(0xA);
+    CHECK_EQ(e.before, job);  // right before the first drawn, as before
+    CHECK(e.depth.known());
+    const wings::Depth b = wings::faceDepth(body.data(), 4);
+    for (const float y : {160.0f, 220.0f, 260.0f, 300.0f}) CHECK(e.depth.at(y) < b.at(y));  // behind the body
+    const float behind = 1.0f / e.depth.at(250) - 1.0f / b.at(250);
+    CHECK(behind > 0.1f && behind < 1.0f);  // a little: not into the ground behind its feet
+    CHECK(!f.drawn(0xB).depth.known());     // its other faces: nothing to draw
+}
+
+TEST(wings_depth_over_every_face) {
+    wings::Frame f;
+    const int job = f.begin(0x1000, true, 300.0f);  // facing away: over everything of it
+    const std::vector<uint8_t> body = faceQuad(0, 200, 40, 300, 0.00335f, 0.00336f);
+    const std::vector<uint8_t> head = faceQuad(0, 160, 40, 220, 0.00340f, 0.00341f);
+    f.face(job, 0xB, wings::faceDepth(body.data(), 4));
+    f.face(job, 0xA, wings::faceDepth(head.data(), 4));
+    CHECK_EQ(f.drawn(0xA).after, -1);
+    const wings::Frame::Emit e = f.drawn(0xB);  // the body drawn last
+    CHECK_EQ(e.after, job);
+    const wings::Depth h = wings::faceDepth(head.data(), 4);
+    for (const float y : {160.0f, 220.0f, 300.0f}) CHECK(e.depth.at(y) > h.at(y));  // nearer than the head
+}
+
+TEST(wings_depth_of_faces_drawn_elsewhere) {
+    // a layer the game sorts into its opaque list (flags without bit 0, drawn before the ground): its depth counts,
+    // the wings never go to its draw
+    wings::Frame f;
+    const int job = f.begin(0x1000, false, 300.0f);
+    const std::vector<uint8_t> layer = faceQuad(0, 200, 40, 300, 0.00330f, 0.00331f);  // the farthest
+    const std::vector<uint8_t> body = faceQuad(0, 200, 40, 300, 0.00335f, 0.00336f);
+    f.face(job, 0xC, wings::faceDepth(layer.data(), 4), false);
+    f.face(job, 0xB, wings::faceDepth(body.data(), 4));
+    CHECK_EQ(f.drawn(0xC).before, -1);
+    const wings::Frame::Emit e = f.drawn(0xB);
+    CHECK_EQ(e.before, job);
+    CHECK(e.depth.at(250) < wings::faceDepth(layer.data(), 4).at(250));  // behind that one too
+    wings::Frame g;  // faces with no depth known: none told (the draw's own face then)
+    const int other = g.begin(0x2000, false);
+    g.face(other, 0xD);
+    CHECK(!g.drawn(0xD).depth.known());
 }
 
 TEST(wings_lerp) {

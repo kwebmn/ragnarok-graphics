@@ -47,17 +47,14 @@ uint32_t multiplied(uint32_t a, uint32_t b) {  // two ARGB colours channel by ch
 
 // 3.0.18-beta.230 (win/wings): a wearer's wings as quads of the driver's textures - with the face's depth along its
 // height (a wall in front hides them as it hides the body), its colours (a cloaked one's alpha, a tint, the fog's
-// specular) and its draw's setup with the wing's picture in place of the game's
+// specular) and its draw's setup with the wing's picture in place of the game's. .237 (R-FAFJWS «мигает тело
+// персонажа»): the depth win/wings tells - behind all the wearer's faces (facing us), over them (facing away); this
+// face's own only when none is known. z of each rhw as the game's sprites have it (FUN_00412E30)
 void drawWings(win::Context& c, const std::vector<win::wings::Quad>& quads, const uint8_t* face, uint32_t count,
-               const DrawSetup& setup) {
+               const DrawSetup& setup, const wings::Depth& told) {
     if (quads.empty() || count < 3) return;
-    float yTop = 1e30f, yBottom = -1e30f, zTop = 0, zBottom = 0, wTop = 1, wBottom = 1;
-    for (uint32_t i = 0; i < count; ++i) {
-        float f[4];
-        std::memcpy(f, face + size_t(i) * 32, sizeof f);
-        if (f[1] < yTop) yTop = f[1], zTop = f[2], wTop = f[3];
-        if (f[1] > yBottom) yBottom = f[1], zBottom = f[2], wBottom = f[3];
-    }
+    const wings::Depth depth = told.known() ? told : wings::faceDepth(face, count);
+    if (!depth.known()) return;
     uint32_t diffuse = 0, specular = 0;
     std::memcpy(&diffuse, face + 16, 4);
     std::memcpy(&specular, face + 20, 4);
@@ -71,8 +68,8 @@ void drawWings(win::Context& c, const std::vector<win::wings::Quad>& quads, cons
         const float us[4] = {left, right, left, right}, ts[4] = {0, 0, 1, 1};
         const uint32_t colour = multiplied(diffuse, q.tint);
         for (int i = 0; i < 4; ++i) {
-            const float z = std::clamp(wings::lerpAt(ys[i], yTop, zTop, yBottom, zBottom), 0.0f, 1.0f);
-            const float rhw = std::max(wings::lerpAt(ys[i], yTop, wTop, yBottom, wBottom), 1e-6f);
+            const float rhw = std::max(depth.at(ys[i]), 1e-6f);
+            const float z = std::clamp(wings::zOf(rhw), 0.0f, 1.0f);
             const float f[4] = {xs[i], ys[i], z, rhw}, uv[2] = {us[i], ts[i]};
             std::memcpy(v[i], f, sizeof f);
             std::memcpy(v[i] + 16, &colour, 4);
@@ -742,10 +739,10 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     const win::wings::Emit wingsAt = win::wings::drawn(faceAt);
     const bool wingsHere = fvf == d3d7::FVF_TL1 && !setup.ui;
     if (wingsAt.before && wingsHere)
-        drawWings(c, *wingsAt.before, static_cast<const uint8_t*>(vertices), vertexCount, setup);
+        drawWings(c, *wingsAt.before, static_cast<const uint8_t*>(vertices), vertexCount, setup, wingsAt.depth);
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);
     if (wingsAt.after && wingsHere)
-        drawWings(c, *wingsAt.after, static_cast<const uint8_t*>(vertices), vertexCount, setup);
+        drawWings(c, *wingsAt.after, static_cast<const uint8_t*>(vertices), vertexCount, setup, wingsAt.depth);
     if (tint.strength > 0 && flash <= 0.01f) {  // 3.0.16-beta.13: the body's tint - its colour added where it is
         flash = tint.strength;
     }
