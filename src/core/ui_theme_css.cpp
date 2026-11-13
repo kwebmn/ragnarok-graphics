@@ -1697,8 +1697,9 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .rr .ri.rit, .rfw .rres .ri.rit { width: 32dp; height: 32dp; margin-right: 10dp; }
 .rfw .rl { display: block; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rfw .rsb { display: block; flex: none; margin-left: 10dp; font-size: 12dp; color: #9aa3b5; white-space: nowrap; }
-.rfw .rrt { display: block; flex: none; max-width: 60%; margin-left: 10dp; font-size: 12.5dp; color: #eceff5;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 3.0.18-beta.255 (the owner: «что падает не показывает шанс»): .253's max-width 60% with overflow hidden left it no
+   width in RmlUi's flex layout - the note whole again (the long ones are entries now, cut there) */
+.rfw .rrt { display: block; flex: none; margin-left: 10dp; font-size: 12.5dp; color: #eceff5; white-space: nowrap; }
 /* 3.0.18-beta.253 (the owner's review of the reference: R-N7GPT5 «список сделан совсем ни о чём», R-U5HAJ6, R-9CD8YA
    - a craft's things over the next column): a list's entry - its picture, its name and a line under it (cut with «…»),
    its figures at the right in columns, a value over its label */

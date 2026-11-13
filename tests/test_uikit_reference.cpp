@@ -503,3 +503,73 @@ TEST(uikit_reference_entries_and_facts) {
     CHECK_EQ(count(body, "[data-ln]"), size_t(3));
     rmlhost::close(l.doc);
 }
+
+// 3.0.18-beta.255 (the owner: «что падает не показывает шанс»): a row's note at its right (a drop's chance, a place's
+// count) laid out whole beside its name, in a card's block of two columns
+TEST(uikit_reference_a_rows_note_shown_beside_its_name) {
+    refpages::Page p;
+    p.rows.push_back(row(Style::Title, "Fabre"));
+    Row head = row(Style::Heading, "Що випадає");
+    head.share = 50;
+    p.rows.push_back(head);
+    Row drop = row(Style::Row, "Fluff", refpages::Go::Item, 914);
+    drop.right = "20 %";
+    drop.icon = "item:914";
+    p.rows.push_back(drop);  // 2
+    Row other = row(Style::Heading, "Де знайти");
+    other.share = 50;
+    p.rows.push_back(other);
+    Row place = row(Style::Row, "Mushroom Farm (job_thief1)", refpages::Go::Map, 0);
+    place.right = "×50";
+    p.rows.push_back(place);  // 4
+    ur::Look look;
+    ur::Model m;
+    m.body = ur::body(p, look);
+    const Loaded l = load(m);
+    CHECK_EQ(l.warnings, std::string());
+    const auto width = [&](const char* selector) {
+        Rml::Element* e = l.doc ? l.doc->QuerySelector(selector) : nullptr;
+        return e ? e->GetBox().GetSize(Rml::BoxArea::Border).x : -1.0f;
+    };
+    CHECK(width("#r2 .rrt") > 20.0f);  // «20 %» at 12.5dp: about 34
+    CHECK(width("#r4 .rrt") > 15.0f);
+    CHECK(width("#r2 .rl") > 20.0f);
+    rmlhost::close(l.doc);
+}
+
+// 3.0.18-beta.255: an entry's name, its line and its figures, a card's facts - each with its width in RmlUi's layout
+// (none collapsed as .253's row note was)
+TEST(uikit_reference_entries_and_facts_have_their_widths) {
+    refpages::Page p;
+    Row hero = row(Style::Portrait, "Insect · Small");
+    hero.picture = "mob:1007";
+    hero.cells = {refpages::Cell{"63", "HP", 0, false}, refpages::Cell{"3", "Base EXP", 0, false},
+                  refpages::Cell{"Novice, Swordman, Acolyte, and Merchant Classes", "Jobs", 0, true}};
+    p.rows.push_back(hero);  // 0
+    Row head = row(Style::Group, "Lv 1–10");
+    head.right = "40";
+    p.rows.push_back(head);  // 1
+    Row e = row(Style::Entry, "Fabre", refpages::Go::Mob, 1007);
+    e.sub = "Insect · Earth 1 · Small";
+    e.icon = "mob:1007";
+    e.cells = {refpages::Cell{"2", "Lv", 1, false}, refpages::Cell{"63", "HP", 0, false},
+               refpages::Cell{"1 500 z", "у магазині", 0, true}};
+    p.rows.push_back(e);  // 2
+    ur::Look look;
+    look.picture = [](const std::string& key) { return key == "mob:1007" ? std::string("pic:1:1") : std::string(); };
+    ur::Model m;
+    m.body = ur::body(p, look);
+    const Loaded l = load(m);
+    CHECK_EQ(l.warnings, std::string());
+    const auto width = [&](const char* selector) {
+        Rml::Element* e = l.doc ? l.doc->QuerySelector(selector) : nullptr;
+        return e ? e->GetBox().GetSize(Rml::BoxArea::Border).x : -1.0f;
+    };
+    CHECK(width("#r2 .renn") > 30.0f);
+    CHECK(width("#r2 .rens") > 60.0f);
+    CHECK(width("#r2 .rec .recv") > 20.0f);
+    CHECK(width("#r2 .rec.w .recv") > 50.0f);
+    CHECK(width("#r0 .rfact") > 60.0f);
+    CHECK(width("#r0 .rfact.wide") > 3.0f * width("#r0 .rfact"));
+    rmlhost::close(l.doc);
+}
