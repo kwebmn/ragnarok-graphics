@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.18-beta.253 — what's new · 2026-11-13
+
+- «Довідник» reworked after the owner's review (R-N7GPT5, R-JSWF77, R-U5HAJ6, R-9CD8YA, R-WP985Q). A list's line now: a picture, a name, a line under it and figures at the right (a value over its label), each list's in straight columns.
+- Monsters: in groups of 10 levels with jumps on top; race · element · size under the name, Lv (coloured by your level), HP and the maps' count at the right. Cut at 100, the list starts a little below your level; the rest by «all N ›».
+- Items: where to get it under the name (who drops it and the chance, craft, shops), the shop's price a labelled column of its own. Cards show their effect. Craft by groups: cooking (the book's level a column), potions, weapons (the weapon's level), metals and stones, converters; the ingredients no longer run over the next column. MVP, pets, locations (players now), shops, Kafra, «dropped by» look the same.
+- A monster's card: the picture stays in its frame; a grid of facts beside it - HP, Base EXP, Job EXP, and once the site's pack is updated ATK, DEF, MDEF, HIT, FLEE, STR-LUK, attack range, step, attack pace and its ways (aggressive, picks up items, ...). Zero-chance drops hidden, slots in the things' names: Club [3] and Club [4].
+- An item's card: weight, price, sell price, slots and the facts of the game's description (class, attack, defence, weapon level, required level, jobs) as a grid; the description as paragraphs the whole width, the weight not twice. «Made of» shows «needed» and «in the bag» columns (red when short) instead of «є 0».
+- The lists' pictures load a little at a time, at most 3 ms a frame - no stutter.
+- What to check: «Monsters», «Items» (any type), «Craft», «MVP», the cards of Fabre and Autumn Red Tea. The monsters' full stats appear once the site's pack is deployed.
+
 # uaRO Graphics 3.0.18-beta.252 — what's new · 2026-11-13
 
 - The guild castles' courtyards grow grass, and the lawn no longer shines like a polished floor (R-9UNG8S). Castles counted as indoors by their names: no «Grass» there, and «Reflections on smooth floors» covered the whole courtyard, mirroring the banners in the grass. Now the grass grows in every castle's courtyards (prtg, payg, gefg, aldeg, schg, arug, nguild) but not on the halls' floors: Aldebaran's carpet and Payon's green tiles stay clear. The halls' floors still reflect, grass never does.
