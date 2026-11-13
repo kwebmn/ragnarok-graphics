@@ -142,6 +142,15 @@ struct Mark {
     std::string label;  // its words: under the pointer; on the big map a warp's and a Kafra's always
     const panel::Picture* picture = nullptr;  // 3.0.11-beta.83: a member's face (premultiplied); null: none
     bool dead = false;                        // a member's
+    // 3.0.18-beta.240 (the owner 13.11: «буквы в точках, подписи только у выходов»): its letter in its dot («$», «!»;
+    // the dot bigger) on the big views; a warp out of the map - its words always there (the rest under the pointer)
+    std::string letter;
+    bool exit = false;
+};
+// 3.0.18-beta.240: a monster's spawn area (its centre cell, half sizes in cells) - the reference's map shows them
+struct ZoneMark {
+    Cell cell;
+    int rx = 0, ry = 0;
 };
 struct Layers {
     bool on[kLayers] = {true, true, true, true};
@@ -192,6 +201,8 @@ struct Scene {
     // 3.0.11-beta.127: the plate's graph - the round trips of the last minute (ms), the oldest first; -1 a stall
     const std::vector<int>* netGraph = nullptr;
     Layers layers;        // 3.0.11-beta.119: the buttons' and the chips' looks (the marks given already shown ones)
+    bool showPlayer = true;          // 3.0.18-beta.240: false - another map than his (the reference's)
+    std::vector<ZoneMark> zones;     // 3.0.18-beta.240: the monster zones (the reference's map view)
     int hoverLayer = -1;  // the layer's button or chip under the pointer
     bool scheme = false;  // 3.0.11-beta.120: «Схема» shown (its switch lit)
 };
@@ -264,6 +275,25 @@ std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& ti
                             const std::string* layerNames = nullptr,  // 3.0.11-beta.119: the chips' words
                             const std::string& styleName = "");       // 3.0.11-beta.120
 int bigMarkAt(const Big& b, const Scene& sc, float x, float y);
+
+// 3.0.18-beta.240 (the reference's «одна карта», the owner 13.11): the map at any box, zoom and centre - the big map's
+// look (its picture, the zones, the marks one and a half times, the exits' words, the letters) for «Довідник»'s
+// location card; zoom 1 the whole map fitted in the box, its limit mapViewMost (2 the game's picture, 4 the x4 one
+// and «Схема»)
+struct MapView {
+    int w = 0, h = 0;
+    float cx = -1, cy = -1;  // the cell in the middle (-1: the map's middle)
+    float zoom = 1;
+    float s = 1;
+};
+View viewOf(const MapView& m, const MapSize& map);
+float mapViewMost(bool sharpPicture);
+void zoomMapView(MapView& m, const MapSize& map, float px, float py, float by, float most);  // round (px, py)
+void panMapView(MapView& m, const MapSize& map, float dx, float dy);                        // by pixels
+void paintMapView(panel::Picture& out, const MapView& m, const Scene& sc);
+std::vector<Words> mapViewWords(const MapView& m, const Scene& sc);
+int mapViewMarkAt(const MapView& m, const Scene& sc, float x, float y);  // within 12 px of its middle, -1 none
+bool mapViewCellAt(const MapView& m, const Scene& sc, float x, float y, Cell& out);
 
 // 3.0.11-beta.71 (the owner: «иконка игрока не поворачивается в сторону куда идешь», «туда куда чар смотрит»): the
 // character's facing as uaRO.exe keeps it - its object + 0x38, degrees from the south toward the east: FUN_00544da0

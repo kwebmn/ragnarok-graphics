@@ -630,7 +630,8 @@ void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const 
     for (const size_t i : drawOrder(sc.marks)) {
         const Mark& m = sc.marks[i];
         place(m.cell, x, y);
-        const float r = radiusOf(m, s) * big * marks;  // 3.0.11-beta.201: the minimap's by its zoom
+        float r = radiusOf(m, s) * big * marks;  // 3.0.11-beta.201: the minimap's by its zoom
+        if (!m.letter.empty() && m.glyph == Glyph::Dot && big > 1) r *= 1.7f;  // 3.0.18-beta.240: room for «$»
         if (!inBox(x, y, r)) continue;
         if (int(i) == sc.hoverMark) ring(out, x, y, r + 3 * s, 1.6f * s, kWhite, 0.95f);
         switch (m.glyph) {
@@ -703,7 +704,7 @@ void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const 
         if (inBox(x, y, 0)) pin(out, x, y, 5 * s * big);
     }
     place(sc.player, x, y);
-    if (inBox(x, y, 0))
+    if (sc.showPlayer && inBox(x, y, 0))
         player(out, box, x, y, sc.viewFan ? sc.lookX : 0.0f, sc.viewFan ? sc.lookY : 0.0f,
                sc.viewFan || std::hypot(sc.headX, sc.headY) > 1e-4f ? sc.headX : sc.lookX,
                sc.viewFan || std::hypot(sc.headX, sc.headY) > 1e-4f ? sc.headY : sc.lookY, 9.5f * s * big);
@@ -1257,6 +1258,155 @@ void paintBigSquare(panel::Picture& out, const panel::Picture& map, const Big& b
     for (const Label& l : bigLabels(b, sc))
         panel::roundRect(out, panel::Box{l.box.x - b.map.x, l.box.y - b.map.y, l.box.w, l.box.h}, 6 * b.s, kDark,
                          0.84f);
+}
+
+
+// 3.0.18-beta.240 (the reference's «одна карта»): the map at any box, zoom and centre
+View viewOf(const MapView& m, const MapSize& map) {
+    View v;
+    if (map.w <= 0 || map.h <= 0 || m.w <= 0 || m.h <= 0) return v;
+    const float fit = std::min(float(m.w) / float(map.w), float(m.h) / float(map.h));
+    v.cellPx = fit * std::max(1.0f, m.zoom);
+    const float halfW = float(m.w) / 2 / v.cellPx, halfH = float(m.h) / 2 / v.cellPx;
+    float cx = m.cx < 0 ? float(map.w) / 2 : m.cx, cy = m.cy < 0 ? float(map.h) / 2 : m.cy;
+    // kept on the map: a side longer than the view's - its edges inside the view's; a shorter one in its middle
+    cx = float(map.w) <= 2 * halfW ? float(map.w) / 2 : std::clamp(cx, halfW, float(map.w) - halfW);
+    cy = float(map.h) <= 2 * halfH ? float(map.h) / 2 : std::clamp(cy, halfH, float(map.h) - halfH);
+    v.left = cx - halfW;
+    v.top = cy + halfH;
+    return v;
+}
+
+float mapViewMost(bool sharpPicture) { return sharpPicture ? 4.0f : 2.0f; }
+
+namespace {
+
+void keepCentre(MapView& m, const MapSize& map) {  // the centre as the view keeps it (no drifting past the edges)
+    if (m.zoom <= 1.0f) {
+        m.cx = m.cy = -1;
+        return;
+    }
+    const View v = viewOf(m, map);
+    if (v.cellPx <= 0) return;
+    m.cx = v.left + float(m.w) / 2 / v.cellPx;
+    m.cy = v.top - float(m.h) / 2 / v.cellPx;
+}
+
+// The words beside the marks that always have them (the exits) and the one under the pointer, as the big map's
+std::vector<Label> viewLabels(const MapView& m, const Scene& sc) {
+    std::vector<Label> out;
+    const float s = m.s;
+    const View v = viewOf(m, sc.map);
+    if (v.cellPx <= 0) return out;
+    const auto guess = [&](const std::string& t) {
+        float w = 0;
+        for (size_t i = 0; i < t.size(); ++i)
+            if ((static_cast<unsigned char>(t[i]) & 0xC0) != 0x80) w += 7.6f * s;
+        return w;
+    };
+    const auto add = [&](size_t i, bool force) {
+        const Mark& mk = sc.marks[i];
+        if (mk.label.empty()) return;
+        float x = 0, y = 0;
+        cellToPanel(v, sc.map, mk.cell, x, y);
+        if (x < 0 || y < 0 || x > float(m.w) || y > float(m.h)) return;
+        const float r = radiusOf(mk, s) * 1.5f, w = guess(mk.label) + 14 * s, h = 22 * s;
+        panel::Box box{x + r + 4 * s, y - h / 2, w, h};
+        if (box.x + box.w > float(m.w)) box.x = x - r - 4 * s - w;  // past the right edge: on the left
+        box.x = std::clamp(box.x, 0.0f, std::max(0.0f, float(m.w) - box.w));
+        box.y = std::clamp(box.y, 0.0f, std::max(0.0f, float(m.h) - box.h));
+        for (const Label& o : out)
+            if (!force && box.x < o.box.x + o.box.w && o.box.x < box.x + box.w && box.y < o.box.y + o.box.h &&
+                o.box.y < box.y + box.h)
+                return;
+        out.push_back(Label{box, mk.label, mk.glyph == Glyph::Warp ? 0xC7CEFF : kText});
+    };
+    for (size_t i = 0; i < sc.marks.size(); ++i)
+        if (sc.marks[i].glyph == Glyph::Warp && sc.marks[i].exit) add(i, false);
+    if (sc.hoverMark >= 0 && size_t(sc.hoverMark) < sc.marks.size()) add(size_t(sc.hoverMark), true);
+    return out;
+}
+
+}  // namespace
+
+void zoomMapView(MapView& m, const MapSize& map, float px, float py, float by, float most) {
+    const View before = viewOf(m, map);
+    if (before.cellPx <= 0) return;
+    const float cellX = before.left + px / before.cellPx, cellY = before.top - py / before.cellPx;
+    m.zoom = std::clamp(std::max(1.0f, m.zoom) * by, 1.0f, std::max(1.0f, most));
+    MapView fitted = m;
+    fitted.cx = fitted.cy = -1;
+    const View after = viewOf(fitted, map);
+    m.cx = cellX - (px - float(m.w) / 2) / after.cellPx;
+    m.cy = cellY + (py - float(m.h) / 2) / after.cellPx;
+    keepCentre(m, map);
+}
+
+void panMapView(MapView& m, const MapSize& map, float dx, float dy) {
+    const View v = viewOf(m, map);
+    if (v.cellPx <= 0 || m.zoom <= 1.0f) return;
+    m.cx = v.left + float(m.w) / 2 / v.cellPx - dx / v.cellPx;
+    m.cy = v.top - float(m.h) / 2 / v.cellPx + dy / v.cellPx;
+    keepCentre(m, map);
+}
+
+void paintMapView(panel::Picture& out, const MapView& m, const Scene& sc) {
+    panel::blank(out, std::max(1, m.w), std::max(1, m.h));
+    const panel::Box box{0, 0, float(m.w), float(m.h)};
+    const View v = viewOf(m, sc.map);
+    if (v.cellPx <= 0) return;
+    mapPixels(out, box, sc, v);
+    for (const ZoneMark& z : sc.zones) {  // a monster zone: a soft red area with its edge
+        float x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+        cellToPanel(v, sc.map, Cell{z.cell.x - z.rx, z.cell.y + z.ry}, x0, y0);
+        cellToPanel(v, sc.map, Cell{z.cell.x + z.rx, z.cell.y - z.ry}, x1, y1);
+        const panel::Box zb{x0, y0, std::max(4.0f, x1 - x0), std::max(4.0f, y1 - y0)};
+        panel::roundRect(out, zb, std::min(zb.w, zb.h) / 2, 0xE05A4E, 0.16f, 0xE05A4E, 0.55f,
+                         std::max(1.0f, 1.2f * m.s));
+    }
+    overMap(out, box, sc, v, m.s, 1.5f);
+    for (const Label& l : viewLabels(m, sc)) panel::roundRect(out, l.box, 6 * m.s, kDark, 0.84f);
+}
+
+std::vector<Words> mapViewWords(const MapView& m, const Scene& sc) {
+    std::vector<Words> out;
+    const View v = viewOf(m, sc.map);
+    if (v.cellPx <= 0) return out;
+    for (const Mark& mk : sc.marks) {  // the letters: a Kafra's «K» (not over a face), «$», «!» in their dots
+        const std::string letter = mk.glyph == Glyph::Kafra && !mk.picture ? std::string("K") : mk.letter;
+        if (letter.empty() || (mk.glyph == Glyph::Kafra && mk.picture)) continue;
+        float x = 0, y = 0;
+        cellToPanel(v, sc.map, mk.cell, x, y);
+        if (x < 0 || y < 0 || x > float(m.w) || y > float(m.h)) continue;
+        const float r = radiusOf(mk, m.s) * 1.5f * (mk.glyph == Glyph::Dot ? 1.7f : 1.0f);
+        out.push_back(Words{panel::Box{x - r, y - r, 2 * r, 2 * r}, letter, kWhite, 11 * m.s, true, Align::Center});
+    }
+    for (const Label& l : viewLabels(m, sc))
+        out.push_back(Words{l.box, l.text, l.rgb, 12.5f * m.s, true, Align::Center});
+    return out;
+}
+
+int mapViewMarkAt(const MapView& m, const Scene& sc, float x, float y) {
+    const View v = viewOf(m, sc.map);
+    if (v.cellPx <= 0) return -1;
+    int best = -1;
+    float bestD = 0;
+    for (size_t i = 0; i < sc.marks.size(); ++i) {
+        float px = 0, py = 0;
+        cellToPanel(v, sc.map, sc.marks[i].cell, px, py);
+        const float reach = std::max(radiusOf(sc.marks[i], m.s) * 1.5f + 5 * m.s, 12 * m.s);  // the owner's 24 px
+        const float d = (px - x) * (px - x) + (py - y) * (py - y);
+        if (d <= reach * reach && (best < 0 || d < bestD)) {
+            best = int(i);
+            bestD = d;
+        }
+    }
+    return best;
+}
+
+bool mapViewCellAt(const MapView& m, const Scene& sc, float x, float y, Cell& out) {
+    if (x < 0 || y < 0 || x >= float(m.w) || y >= float(m.h)) return false;
+    return cellUnder(viewOf(m, sc.map), sc.map, x, y, out);
 }
 
 }  // namespace uagfx::minimap

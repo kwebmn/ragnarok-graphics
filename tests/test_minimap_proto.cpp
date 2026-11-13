@@ -549,3 +549,82 @@ TEST(minimap_pink_keyed_in_a_picture) {
     CHECK_EQ(argb[2], 0xFF20A040u);
     CHECK_EQ(argb[3], 0xFFC878C8u);  // a pinkish colour of the map itself stays
 }
+
+// 3.0.18-beta.240 (the reference's «одна карта», the owner 13.11): the map at any box, zoom and centre - fitted at
+// zoom 1, zoomed round a point up to its limit, the letters in the dots, the exits' words always (the rest under the
+// pointer), the monster zones, no player on another map, the mark under a point within 12 px
+TEST(minimap_map_view_fits_and_zooms) {
+    const minimap::MapSize map{200, 100};
+    minimap::MapView m;
+    m.w = 400, m.h = 400;
+    minimap::View v = minimap::viewOf(m, map);
+    CHECK(std::fabs(v.cellPx - 2) < 1e-4f);
+    float x = 0, y = 0;
+    minimap::cellToPanel(v, map, minimap::Cell{0, 99}, x, y);  // the map's top left cell, the map in the middle
+    CHECK(std::fabs(x - 1) < 1e-3f && std::fabs(y - 101) < 1e-3f);
+    minimap::zoomMapView(m, map, 200, 200, 2, 2);
+    CHECK(std::fabs(m.zoom - 2) < 1e-4f);
+    minimap::zoomMapView(m, map, 200, 200, 2, 2);
+    CHECK(std::fabs(m.zoom - 2) < 1e-4f);  // its limit
+    v = minimap::viewOf(m, map);
+    CHECK(std::fabs(v.cellPx - 4) < 1e-4f);
+    minimap::zoomMapView(m, map, 0, 0, 0.1f, 2);
+    CHECK(std::fabs(m.zoom - 1) < 1e-4f);  // never smaller than the map fitted
+    CHECK(std::fabs(minimap::mapViewMost(false) - 2) < 1e-4f && std::fabs(minimap::mapViewMost(true) - 4) < 1e-4f);
+}
+
+TEST(minimap_map_view_letters_and_exit_words) {
+    minimap::Scene sc;
+    sc.map = minimap::MapSize{100, 100};
+    minimap::Mark shop{minimap::Cell{20, 20}, 0x3B8AE0, minimap::Glyph::Dot, "Tool Dealer"};
+    shop.letter = "$";
+    minimap::Mark kafra{minimap::Cell{40, 40}, 0xE0447C, minimap::Glyph::Kafra, "Kafra Employee"};
+    minimap::Mark out{minimap::Cell{90, 50}, 0, minimap::Glyph::Warp, "\xE2\x86\x92 Prontera Field"};
+    out.exit = true;
+    minimap::Mark inn{minimap::Cell{60, 60}, 0, minimap::Glyph::Warp, "\xE2\x86\x92 Inn"};
+    sc.marks = {shop, kafra, out, inn};
+    minimap::MapView m;
+    m.w = m.h = 500;
+    const auto has = [](const std::vector<minimap::Words>& w, const std::string& t) {
+        for (const minimap::Words& x : w)
+            if (x.text == t) return true;
+        return false;
+    };
+    std::vector<minimap::Words> w = minimap::mapViewWords(m, sc);
+    CHECK(has(w, "$") && has(w, "K") && has(w, "\xE2\x86\x92 Prontera Field"));
+    CHECK(!has(w, "\xE2\x86\x92 Inn") && !has(w, "Tool Dealer") && !has(w, "Kafra Employee"));
+    sc.hoverMark = 3;  // under the pointer: its words too
+    w = minimap::mapViewWords(m, sc);
+    CHECK(has(w, "\xE2\x86\x92 Inn"));
+}
+
+TEST(minimap_map_view_zones_and_no_player) {
+    minimap::Scene sc;
+    sc.map = minimap::MapSize{100, 100};
+    sc.player = minimap::Cell{10, 10};
+    sc.zones = {minimap::ZoneMark{minimap::Cell{70, 70}, 10, 10}};
+    minimap::MapView m;
+    m.w = m.h = 200;  // 2 px a cell
+    panel::Picture with, without;
+    minimap::paintMapView(with, m, sc);
+    sc.showPlayer = false;
+    minimap::paintMapView(without, m, sc);
+    float x = 0, y = 0;
+    minimap::cellToPanel(minimap::viewOf(m, sc.map), sc.map, sc.player, x, y);
+    const auto at = [](const panel::Picture& p, float px, float py) { return p.px[size_t(int(py)) * p.width + int(px)]; };
+    CHECK(at(with, x, y) != at(without, x, y));  // the player drawn on his own map only
+    minimap::cellToPanel(minimap::viewOf(m, sc.map), sc.map, minimap::Cell{70, 70}, x, y);
+    CHECK(at(without, x, y) != at(without, 100, 20));  // the zone tinted over the ground
+}
+
+TEST(minimap_map_view_mark_at) {
+    minimap::Scene sc;
+    sc.map = minimap::MapSize{100, 100};
+    sc.marks = {minimap::Mark{minimap::Cell{30, 30}, 0x3B8AE0, minimap::Glyph::Dot, "A"}};
+    minimap::MapView m;
+    m.w = m.h = 400;
+    float x = 0, y = 0;
+    minimap::cellToPanel(minimap::viewOf(m, sc.map), sc.map, sc.marks[0].cell, x, y);
+    CHECK_EQ(minimap::mapViewMarkAt(m, sc, x + 10, y), 0);  // within 12 px
+    CHECK_EQ(minimap::mapViewMarkAt(m, sc, x + 30, y), -1);
+}
