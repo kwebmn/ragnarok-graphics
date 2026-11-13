@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.252 — what's new · 2026-11-13
+
+- The guild castles' courtyards grow grass, and the lawn no longer shines like a polished floor (R-9UNG8S). Castles counted as indoors by their names: no «Grass» there, and «Reflections on smooth floors» covered the whole courtyard, mirroring the banners in the grass. Now the grass grows in every castle's courtyards (prtg, payg, gefg, aldeg, schg, arug, nguild) but not on the halls' floors: Aldebaran's carpet and Payon's green tiles stay clear. The halls' floors still reflect, grass never does.
+- No more sound crashes at a map change or a teleport (R-S9B6T3). The game fades its music in a thread of its own while its main thread opens and closes the music. RAD's Miles takes such calls one at a time; our mss32.dll and the driver's sound hooks did not, and the fade thread hit an XAudio2 voice already destroyed. Now the calls go one at a time.
+- What to check: enter a castle by day - grass in the courtyard, none on the halls' carpets and tiles, the halls' floors reflecting. Change maps and teleport a few times, also right after coming back to the game window from another one.
+
 # uaRO Graphics 3.0.18-beta.251 — what's new · 2026-11-13
 
 - Entering a castle no longer throws you out of the game (R-NGSWJM, "can't get into the castle"). The game reads its data.grf archive through 256 MB "windows". In a castle its main thread was reading the guild war 3D models (Emperium, guardians) while the map loading thread switched the archive to another window at the same moment, so the model was unpacked from memory that was already gone. The game's archive reads now go one at a time, with or without the updates folder. The 3.0.15 fix did not close this cause.
