@@ -1,3 +1,58 @@
+# uaRO Graphics 3.0.18 — what's new · 2026-11-13
+
+The game's whole interface on the new library: windows move and resize, the text sharp at any size. A new «Reference», a game launcher, playing from the keyboard, more of the controller, sharp damage numbers and crashes fixed.
+
+## The new interface
+
+- **Every window and panel** is drawn by the new interface library: drag them, resize most by the bottom-right corner, the text stays sharp at any size. The login, server and character screens too; the server list shows how many players are online.
+- **«Settings» in the game** (Alt+O, the icon in the character block, the Esc menu) in place of the game's options, with sections and search. ✕ on our panels; the character block (Alt+V) has a second row of our windows' icons.
+- **«Equipment»** as the game's original window, with the real character in its clothes and dye. Sets «1 2 3» - put a set of things on with one click.
+- **Items:** names show their slots «[3]» and the cards inside (bag, storage, cart, trade, shops); element things in their element's colour. Several things at once in the storage and cart (Ctrl+click, Shift+click); the count window works out how many fit by weight.
+- **«Friends / Party»:** each person's face, class and level; a menu under the row; add a friend by name.
+- **Chat:** a magnifier to search the lines, Ctrl+V to paste, «[Name]» of an item or monster in a player's line opens it in the «Reference».
+- No more dimming of the world under windows.
+
+## «Reference» (Ctrl+F)
+
+- **A window of the new interface:** sections at the left, search (in the Cyrillic layout too), back, the controller.
+- **Monsters** by bands of 10 levels, **items** by types - with figures in columns; **cards** with facts: HP, experience, element, what drops and its chance, where to find, where to buy, what it is made of.
+- **Locations** with their own map and NPCs by kinds; **«Skills»** - jobs and skill cards; **«Elements»** - the damage tables; the **world map** with a route.
+- Shift+click on a name in the game, or «In the reference ›» in an item card, opens its card.
+
+## The first screen - a launcher
+
+- **The game's art over the window and one big button:** «PLAY», «UPDATE», «+ ONE MORE WINDOW» while the game runs. «Check» beside it and the «Release | Beta» switch.
+- **«How the game looks»** right on the first screen, with «Auto for your graphics card»; the card checked without starting the game.
+- **«Changelog»** with every version; a «Create an account» button.
+
+## Keyboard
+
+- **Walk mode** (the ` key left of 1): W A S D and the arrows lead the character, Tab the next target.
+- **Windows by keys:** arrows, Enter, Esc in the window opened last; choosing and making a character by the arrows.
+- **Menu (Esc):** «Keys» - every key on one card, «Change account»; Ctrl+Home brings the camera back.
+
+## Controller
+
+- Skill wheels, chat from the controller (channel, reply to a whisper, history), hotbar profiles, our windows on the Start tiles.
+- The «Reference», the map and NPC talk from the controller; the attack button with no target picks up the loot nearby.
+
+## Picture
+
+- **Sharp damage numbers,** Miss, Guard, Critical and the crit stars; sharp snowflakes and sparkles of skills (Storm Gust and others). «Skills' look» is now «Redrawn, soft» by default.
+- When frames run short, skill effects get lighter by themselves.
+- **Wings** on the backs of those wearing Angel Blessing, Helm of Darkness, Wings of Diablo and other winged things (seen by players with uaRO Graphics).
+- The map loading bar in the new look; grass in the guild castles' yards; torch fire hides behind walls.
+
+## Faster and smaller
+
+- Less work every frame (chat, windows, finding characters and monsters); a smaller update: ddraw.dll 20.5 → 16.0 MB, the app 5.6 → 4.0 MB.
+
+## Fixed
+
+- **Crashes:** right after entering a map (cps.dll - two threads read the game's archives), entering a guild castle, in the sound on a map change or teleport, when the server says a thing is worn at 4+ places.
+- **«Negative»** and washed-out ground after some skills (Berserk), **white ground**, monsters left standing off their place, logging in after a lost connection.
+- **Hangs:** when the game stands 15 seconds or more the log writes where it stands, and «The game froze» is a report of its own.
+
 # uaRO Graphics 3.0.18-beta.256 — what's new · 2026-11-13
 
 - «Reference» → «Elements»: the columns' names no longer run into each other. The four tables stood two to a row and a column had no room for its name. Each table now takes its own row; two to a row only in a wide window, where the names fit whole. In a narrow window the column names are cut to three letters (Neu, Wat, Ear…).
