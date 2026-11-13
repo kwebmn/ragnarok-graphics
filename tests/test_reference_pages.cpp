@@ -94,7 +94,7 @@ TEST(reference_pages_home_and_search) {
     CHECK(home.rows[2].link.go == refpages::Go::Section && home.rows[2].link.id == refpages::Mobs);
     const char* names[] = {"Монстри", "Предмети", "Локації",     "Квести",
                            "NPC і послуги", "MVP", "Пети", "Крафт",
-                           "Карта світу", "Таблиці"};  // the concept's order
+                           "Карта світу", "Стихії"};  // the concept's order
     for (size_t i = 0; i < 10; ++i) CHECK_EQ(home.rows[2 + i].left, std::string(names[i]));
     CHECK(home.rows[10].link.go == refpages::Go::World && home.rows[10].right.empty());
     CHECK(home.rows[12].style == refpages::Style::Block && home.rows[12].left == "Обране");
@@ -196,8 +196,8 @@ TEST(reference_pages_a_maps_card) {
 }
 
 TEST(reference_pages_long_sections_open_by_their_row) {
-    // 3.0.11-beta.30 (the owner: «пускай будет весь список, разворачивать имеет смысл если там больше 20 позиций»):
-    // a monster on 30 maps - the first 20 and «усі 30 ›», which opens the section in place; on 25 - all of them
+    // 3.0.18-beta.239 (the owner 13.11: «всегда выводить полный список, только когда там больше 100 значений»): a
+    // monster on 130 maps - the first 100 and «усі 130 ›», which opens the section in place; on 100 - all of them
     const auto onMaps = [](int maps) {
         std::string spawns;
         for (int i = 0; i < maps; ++i)
@@ -206,23 +206,24 @@ TEST(reference_pages_long_sections_open_by_their_row) {
     };
     refindex::Index all;
     CHECK(refindex::build(R"({"v":1,"data":1,"mobs":{"1":["A",1,1,0,0,0,0,0,1,0,[],[],null]},"spawns":{)" +
-                              onMaps(25) + R"(},"routes":[],"npcs":[]})",
+                              onMaps(100) + R"(},"routes":[],"npcs":[]})",
                           all));
-    CHECK(rowWith(refpages::mob(all, Lang::Uk, 1, ctx("m6")), "усі 25 ›") == nullptr);
-    const std::string spawns = onMaps(30);
+    CHECK(rowWith(refpages::mob(all, Lang::Uk, 1, ctx("m6")), "усі 100 ›") == nullptr);
+    const std::string spawns = onMaps(130);
     refindex::Index ix;
     CHECK(refindex::build(R"({"v":1,"data":1,"mobs":{"1":["A",1,1,0,0,0,0,0,1,0,[],[],null]},"spawns":{)" + spawns +
                               R"(},"routes":[],"npcs":[]})",
                           ix));
     const refpages::Page closed = refpages::mob(ix, Lang::Uk, 1, ctx("m6"));
     const size_t where = indexOf(closed, "Де знайти");
-    CHECK_EQ(closed.rows[where].right, std::string("30"));
+    CHECK_EQ(closed.rows[where].right, std::string("130"));
     CHECK(closed.rows[where + 1].link.map == "m6");  // the player's map first, before the cut
+    CHECK_EQ(refpages::kFew, size_t(100));
     const refpages::Row& more = closed.rows[where + 1 + refpages::kFew];
-    CHECK(more.left == "усі 30 ›" && more.link.go == refpages::Go::Expand && more.link.id == refpages::Where);
+    CHECK(more.left == "усі 130 ›" && more.link.go == refpages::Go::Expand && more.link.id == refpages::Where);
     const refpages::Page open = refpages::mob(ix, Lang::Uk, 1, ctx("m6"), 1u << refpages::Where);
-    CHECK_EQ(open.rows.size(), closed.rows.size() + 30 - refpages::kFew - 1);
-    CHECK(rowWith(open, "усі 30 ›") == nullptr);
+    CHECK_EQ(open.rows.size(), closed.rows.size() + 130 - refpages::kFew - 1);
+    CHECK(rowWith(open, "усі 130 ›") == nullptr);
 }
 
 TEST(reference_window_lays_itself_out) {
@@ -491,7 +492,7 @@ TEST(reference_concept_sections_and_words) {
     CHECK(indexOf(services, "Телепорти Kafra") != size_t(-1));
     CHECK(indexOf(services, "Крамниці") != size_t(-1));
     const refpages::Page tables = refpages::section(ix, Lang::Uk, refpages::Tables);
-    CHECK_EQ(tables.name, std::string("Таблиці"));
+    CHECK_EQ(tables.name, std::string("Стихії"));
     CHECK(indexOf(tables, "Стихії атаки проти захисту рівня 1") != size_t(-1));
     CHECK(indexOf(tables, "Стихії атаки проти захисту рівня 4") != size_t(-1));
     const refpages::Row* fire = rowWith(tables, "Fire");  // 3.0.11-beta.32: a grid - fire against earth 150, water 50
@@ -718,11 +719,14 @@ TEST(reference_search_concept_more_and_forms) {
     CHECK_EQ(p.rows[4].sub, std::string("10 z · 3 крамниці"));
     CHECK_EQ(p.rows[5].sub, std::string("10 z · 1 крамниця"));
     CHECK(p.rows[6].sub.empty());  // «Інше» unsaid, nothing else to say
-    // 3.0.11-beta.30 (the owner: «разворачивать имеет смысл если там больше 20 позиций»): 20, «ще 10 ›»
-    CHECK(p.rows[22].style == refpages::Style::More && p.rows[22].left == "ще 10 ›");
-    CHECK(p.rows[22].link.go == refpages::Go::Expand);
-    const refpages::Page open = refpages::found(ix, Lang::Uk, "stone", {}, 1u << unsigned(p.rows[22].link.id));
-    CHECK(open.rows[31].style == refpages::Style::Result && open.rows[32].style == refpages::Style::Hint);
+    // 3.0.18-beta.239 (the owner 13.11): a group whole up to 100 - all thirty stones, no «ще …»
+    CHECK(p.rows[31].style == refpages::Style::Result && p.rows[32].style == refpages::Style::Hint);
+    refindex::Index many;  // 130 stones: the search's own cut - the first 100 and «type more of the name»
+    for (int i = 0; i < 130; ++i) many.items[1000 + i] = refindex::Item{"Stone " + std::to_string(1000 + i), "S", 3,
+                                                                         10, 1, 0};
+    const refpages::Page cut = refpages::found(many, Lang::Uk, "stone");
+    CHECK(cut.rows[101].style == refpages::Style::Result && cut.rows[101].left == "Stone 1099");
+    CHECK(cut.rows[102].style == refpages::Style::Note && cut.rows[102].left == "перші 100 з 130 - уточніть назву");
     CHECK_EQ(refpages::found(ix, Lang::En, "stone aa").rows[2].sub, std::string("10 z · 1 shop"));
     for (int i = 125; i < 130; ++i) ix.items.erase(i);  // 25: all of them, no «ще 5 ›»
     const refpages::Page most = refpages::found(ix, Lang::Uk, "stone");
@@ -905,4 +909,34 @@ TEST(reference_pages_tracked_item_entry) {
     if (e.empty()) return;
     CHECK(e[0].kind == tracker::Kind::Item && e[0].title == "Jellopy" && e[0].tag == "збір");
     CHECK(!e[0].lines.empty() && e[0].lines[0].text == "Poring" && e[0].lines[0].right == "70 %");
+}
+
+// 3.0.18-beta.239: a merged chance's note - how it was made («8 × 1 %», «11 % + 8 %», the biggest first)
+TEST(reference_pages_chance_parts) {
+    CHECK_EQ(refpages::chanceParts(std::vector<int>(8, 100), Lang::Uk), std::string("8 × 1 %"));
+    CHECK_EQ(refpages::chanceParts({800, 1100}, Lang::Uk), std::string("11 % + 8 %"));
+    CHECK_EQ(refpages::chanceParts({150, 1000}, Lang::En), std::string("10 % + 1.5 %"));
+    CHECK_EQ(refpages::chanceParts({500}, Lang::Uk), std::string());
+}
+
+// 3.0.18-beta.239: one row a monster in an item's droppers and one a thing in a monster's drops, with the note
+TEST(reference_pages_a_merged_drop_says_its_parts) {
+    refindex::Index ix;
+    CHECK(refindex::build(R"({"v":1,"data":1,"items":{"512":["Apple","Apple",0,15,2,0,0]},)"
+                          R"("mobs":{"1284":["Hugeling",1,1,0,0,0,0,0,1,0,)"
+                          R"([[512,100],[512,100],[512,100],[512,100],[512,100],[512,100],[512,100],[512,100]],)"
+                          R"([],null]},"spawns":{},"routes":[],"npcs":[]})",
+                          ix));
+    const refpages::Page apple = refpages::item(ix, Lang::Uk, 512, ctx(""));
+    int hugelings = 0;
+    for (const refpages::Row& r : apple.rows)
+        if (r.left == "Hugeling") {
+            ++hugelings;
+            CHECK(r.right.rfind("7,73 %", 0) == 0);
+            CHECK_EQ(r.sub, std::string("8 × 1 %"));
+        }
+    CHECK_EQ(hugelings, 1);
+    const refpages::Page mob = refpages::mob(ix, Lang::Uk, 1284, ctx(""));
+    const refpages::Row* row = rowWith(mob, "Apple");
+    CHECK(row != nullptr && row->right == "7,73 %" && row->sub == "8 × 1 %");
 }

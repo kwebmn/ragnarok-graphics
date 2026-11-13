@@ -63,6 +63,9 @@ struct Drop {
     int item = 0;
     int rate = 0;  // in 0.01 % as mob_db keeps it (7000 = 70 %)
     uint8_t kind = 0;  // 0 a drop, 1 the MVP's reward, 2 its card
+    // 3.0.18-beta.239 (the owner's review of 13.11): a monster's several entries of one thing (and kind) are one drop -
+    // `rate` their chance together, 1 - (1 - a)(1 - b)...; these the entries' rates (empty: one entry)
+    std::vector<int> parts;
 };
 struct Mob {
     std::string name;
@@ -107,6 +110,7 @@ struct Where {  // a monster's map
 struct Source {  // who drops an item
     int mob = 0, rate = 0;
     uint8_t kind = 0;
+    std::vector<int> parts;  // 3.0.18-beta.239: the drop's merged entries (Drop::parts)
 };
 }  // namespace uagfx::refindex
 namespace uagfx::refroute {

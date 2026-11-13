@@ -425,6 +425,15 @@ std::string chance(int rate, Lang l) {
     return s + " %";
 }
 
+std::string chanceParts(std::vector<int> parts, Lang l) {
+    if (parts.size() < 2) return {};
+    std::sort(parts.begin(), parts.end(), std::greater<int>());
+    if (parts.front() == parts.back()) return std::to_string(parts.size()) + " × " + chance(parts.front(), l);
+    std::string s;
+    for (const int p : parts) s += (s.empty() ? "" : " + ") + chance(p, l);
+    return s;
+}
+
 std::string respawn(int ms, Lang l) {
     const int all = (ms + 30000) / 60000;
     if (all < 60) return sayf(l, Text::MinimapRespawn, {std::to_string(all)});  // 3.0.11-beta.32: «1 год 57 хв»
@@ -1245,6 +1254,7 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
         std::string right = chance(d.rate, l);
         if (d.kind == 1) right = say(l, Text::RefMvpReward) + " · " + right;
         dropRows.push_back(linked(itemName(ix, d.item), right, toItem(d.item)));
+        dropRows.back().sub = chanceParts(d.parts, l);  // 3.0.18-beta.239
     }
     capped(p, std::move(dropRows), Drops, opened, l);
     elements(l, p, m, c.bar);   // 3.0.11-beta.13; 3.0.11-beta.68 the hotbar's skills on it
@@ -1298,6 +1308,7 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
             const std::string note = mobNote(ix, l, s.mob);
             Row r = linked(mobName(ix, s.mob), right + (note.empty() ? "" : " · " + note), toMob(s.mob));
             r.gold = ix.mobs.count(s.mob) && ix.mobs.at(s.mob).boss;
+            r.sub = chanceParts(s.parts, l);  // 3.0.18-beta.239: one row a monster, how its chance was made
             rows.push_back(std::move(r));
         }
         capped(p, std::move(rows), DroppedBy, opened, l);

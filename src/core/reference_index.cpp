@@ -1,6 +1,7 @@
 #include "core/reference_index.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>
@@ -96,6 +97,26 @@ namespace {
 
 int at(const json::Value& a, size_t i, int fallback = 0) { return int(a[i].asInt(fallback)); }
 
+// 3.0.18-beta.239 (the owner's review of 13.11: Apple's droppers showed Hugeling eight times): a monster's entries of
+// one thing and kind as one drop - each entry rolls apart (the server's mob_dead), so together 1 - (1 - a)(1 - b)...
+std::vector<Drop> mergedDrops(std::vector<Drop> in) {
+    std::vector<Drop> out;
+    for (Drop& d : in) {
+        const auto same = std::find_if(out.begin(), out.end(),
+                                       [&](const Drop& o) { return o.item == d.item && o.kind == d.kind; });
+        if (same == out.end()) {
+            out.push_back(std::move(d));
+            continue;
+        }
+        if (same->parts.empty()) same->parts.push_back(same->rate);
+        same->parts.push_back(d.rate);
+        double keep = 1;
+        for (const int p : same->parts) keep *= 1 - std::clamp(p, 0, 10000) / 10000.0;
+        same->rate = int(std::lround((1 - keep) * 10000));
+    }
+    return out;
+}
+
 void readMobs(const json::Value& v, Index& ix) {
     // {id: [name, lv, hp, exp, jexp, size, race, ele, ele lv, boss, drops, mvp drops, card | null, sprite]} - the
     // sprite's name the site's newer packs have (3.0.11-beta.14)
@@ -119,6 +140,7 @@ void readMobs(const json::Value& v, Index& ix) {
                 if (at(d, 0) > 0) mob.drops.push_back(Drop{at(d, 0), at(d, 1), kind});
         if (a[size_t(12)].type() == json::Value::Array && at(a[size_t(12)], 0) > 0)
             mob.drops.push_back(Drop{at(a[size_t(12)], 0), at(a[size_t(12)], 1), 2});
+        mob.drops = mergedDrops(std::move(mob.drops));  // 3.0.18-beta.239
         if (a.items().size() > 13) mob.sprite = lower(a[size_t(13)].asString());
         if (a.items().size() > 14) {  // 3.0.11-beta.28: kRO's name - the site's newer packs, "" when the same
             mob.other = a[size_t(14)].asString();
@@ -142,7 +164,7 @@ void readItems(const json::Value& v, Index& ix) {  // {id: [name, aegis, type, b
 // What refers to what: each list in the order a card shows it
 void link(Index& ix) {
     for (const auto& m : ix.mobs)
-        for (const Drop& d : m.second.drops) ix.droppedBy[d.item].push_back(Source{m.first, d.rate, d.kind});
+        for (const Drop& d : m.second.drops) ix.droppedBy[d.item].push_back(Source{m.first, d.rate, d.kind, d.parts});
     for (auto& d : ix.droppedBy)
         std::sort(d.second.begin(), d.second.end(), [&](const Source& a, const Source& b) {
             if (a.rate != b.rate) return a.rate > b.rate;

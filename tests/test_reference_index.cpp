@@ -112,3 +112,35 @@ TEST(reference_index_map_words) {
     CHECK(refindex::mapWords(names, "yuno_fild08") == "Kiel Hyre's Academy");  // the only one of its name
     CHECK(refindex::mapWords(names, "new_map") == "new_map");
 }
+
+// 3.0.18-beta.239 (the reference's rewrite, the owner's review of 13.11): a monster's entries of one thing - mob_db
+// lists Apple eight times for Hugeling - one drop: its chance 1 - (1 - a)(1 - b)..., the entries kept for the note;
+// the MVP's reward of the same thing apart; one source a monster for the thing's droppers
+TEST(reference_index_merges_a_monsters_entries_of_one_thing) {
+    refindex::Index ix;
+    CHECK(refindex::build(R"({"v":1,"data":1,"mobs":{"1284":["Hugeling",1,1,0,0,0,0,0,1,0,)"
+                          R"([[512,100],[512,100],[512,100],[512,100],[512,100],[512,100],[512,100],[512,100],)"
+                          R"([909,8000],[909,8000],[601,150]],[[909,5000]],null]},"spawns":{},"routes":[],"npcs":[]})",
+                          ix));
+    const refindex::Mob& m = ix.mobs.at(1284);
+    CHECK_EQ(m.drops.size(), size_t(4));
+    int apples = 0, jellopies = 0;
+    for (const refindex::Drop& d : m.drops) {
+        if (d.item == 512) {
+            ++apples;
+            CHECK_EQ(d.rate, 773);  // 1 - 0.99^8 = 7.73 %
+            CHECK_EQ(d.parts.size(), size_t(8));
+        }
+        if (d.item == 909 && d.kind == 0) {
+            ++jellopies;
+            CHECK_EQ(d.rate, 9600);
+            CHECK(d.parts == std::vector<int>({8000, 8000}));
+        }
+        if (d.item == 909 && d.kind == 1) CHECK(d.rate == 5000 && d.parts.empty());
+        if (d.item == 601) CHECK(d.rate == 150 && d.parts.empty());
+    }
+    CHECK(apples == 1 && jellopies == 1);
+    const auto by = ix.droppedBy.find(512);
+    CHECK(by != ix.droppedBy.end() && by->second.size() == 1);
+    if (by != ix.droppedBy.end() && !by->second.empty()) CHECK(by->second[0].rate == 773 && by->second[0].parts.size() == 8);
+}

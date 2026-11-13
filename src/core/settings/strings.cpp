@@ -7894,8 +7894,9 @@ constexpr Entry kTexts[] = {
      "shops, Kafra, prices",
      "крамниці, Kafra, ціни",
      "магазины, Kafra, цены"},
-    {Text::RefSecTables, "Tables", "Таблиці", "Таблицы"},
-    {Text::RefSecTablesHint, "elements", "стихії", "стихии"},
+    // 3.0.18-beta.239 (the owner 13.11): «Таблиці» held the elements' table alone - named for it
+    {Text::RefSecTables, "Elements", "Стихії", "Стихии"},
+    {Text::RefSecTablesHint, "damage by element", "шкода за стихіями", "урон по стихиям"},
     {Text::RefWorldHintN,
      "a mosaic of {1} maps, as on the site; {2} dungeons apart",
      "мозаїка з {1} карт, як на сайті; {2} підземель окремо",

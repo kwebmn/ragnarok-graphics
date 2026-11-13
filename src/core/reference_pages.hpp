@@ -108,8 +108,10 @@ enum Part : int {
     Way, Timers, Market, QuestFor, Kafra, PetOf, CraftOf, QuestNpc, QuestItems, QuestSteps, QuestReward
 };
 // 3.0.11-beta.30 (the owner: «пускай будет весь список, разворачивать имеет смысл если там больше 20 позиций»): 20,
-// and a list kFewMore longer whole (no «усі 23 ›» for three more)
-constexpr size_t kFew = 20, kFewMore = 5;
+// and a list kFewMore longer whole (no «усі 23 ›» for three more). 3.0.18-beta.239 (the owner 13.11: «всегда
+// выводить полный список, только когда там больше 100 значений»): 100 - no card has a longer list (Elunium's 88
+// droppers the most), only the sections and the search
+constexpr size_t kFew = 100, kFewMore = 0;
 
 // 3.0.11-beta.9: whether a way can be followed on the minimap (the new one on) and the one followed now
 struct Follow {
@@ -218,6 +220,8 @@ Page open(const refindex::Index& ix, settings::Lang l, const Link& link, const C
 // Words for numbers: 1 200 (en 1,200); a chance kept in 0.01 % - «70 %», «1,5 %», «0,01 %» (en «1.5 %»)
 std::string number(long long v, settings::Lang l);
 std::string chance(int rate, settings::Lang l);
+// 3.0.18-beta.239: how a merged drop's chance was made - «8 × 1 %», «11 % + 8 %» (the biggest first); "" for one
+std::string chanceParts(std::vector<int> parts, settings::Lang l);
 std::string elementName(int element, settings::Lang l);
 std::string raceName(int race, settings::Lang l);
 std::string sizeName(int size, settings::Lang l);
