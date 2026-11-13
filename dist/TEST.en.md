@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.18-beta.250 — what's new · 2026-11-13
+
+- «Reference» without the clutter: monsters not on any map (event copies, summons) and things no one can get (no monster on a map drops them, no shop sells them, no craft makes them, no quest or pet takes them) no longer show in the lists, the search and the counts. 483 of 1004 monsters stay, about 1 870 of 7 643 things. Their cards still open by a link.
+- «Dropped by» on a thing's card lists monsters on maps only.
+- Bigger pictures: a monster in the lists 44 instead of 24, a thing and a skill 32, a card's picture up to 150.
+- What to check: «Monsters» - only those on maps; searching a thing not in the game finds nothing; the pictures in the lists and cards visibly bigger and sharp.
+
 # uaRO Graphics 3.0.18-beta.249 — what's new · 2026-11-13
 
 - Reports are simpler still: they no longer carry the pictures the texture pack had no better version of (up to 64 small files). The game no longer saves them either, and the old copies (the uaro-graphics\missing folder) are deleted at start.
