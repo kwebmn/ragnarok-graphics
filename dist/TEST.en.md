@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.18-beta.239 — what's new · 2026-11-13
+
+- «Довідник» (the reference) is now an ordinary window of the new interface. Drag it by its header or background and size it by its bottom right corner. A narrow window shows the left sections as icons and stacks the card's blocks. The window lays out its own text, so nothing is clipped or overlaps. A real scroll bar and a real search field: caret, selection, paste.
+- Esc clears the search field first and closes the window the second time. While the caret is not in the search field, F1–F9 and the Alt windows work in the game. Ctrl+F always opens «Головна».
+- Cards: blocks in two columns, the next block into the shorter one. Lists show in full; «ще N» appears only past 100 rows. A long list (over 20 rows) spans the width in two or three columns. Search results have a row on top that jumps to each group.
+- One row per monster: several database entries of the same thing show as one total chance and how it was made. For example, Hugeling on the Apple card: «7,73 % · 8 × 1 %» instead of eight rows of 1 %.
+- «Таблиці» is now called «Стихії». Gold marks only what can be pressed and what is chosen; numbers are white.
+- The world map lives in the same window: drag, wheel zoom, a click on a location opens its card.
+- What to check: Ctrl+F, type a name, ↑ ↓ and Enter; drag the window by its header; pull the corner to make it narrow; Esc twice; open a card and press F1 — the game's bar must act; the Apple card — Hugeling once with «8 × 1 %»; Ctrl+M — the world map: drag, wheel, click a town.
+
 # uaRO Graphics 3.0.18-beta.238 — what's new · 2026-11-13
 
 - The scrollbar in the new windows («Settings», the shop, the storage and others): a press on it was taken for a press on the window's ground, and the window followed the cursor together with its bar, so only the mouse wheel scrolled. Now the bar can be dragged and clicked in every window.
