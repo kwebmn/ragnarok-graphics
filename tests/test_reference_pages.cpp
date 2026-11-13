@@ -990,3 +990,15 @@ TEST(reference_pages_search_typed_in_the_cyrillic_layout) {
     const refpages::Page plain = refpages::found(ix, Lang::Uk, "poring");  // Latin: no line
     CHECK(plain.rows.size() > 1 && plain.rows[1].style == refpages::Style::Group);
 }
+
+// 3.0.18-beta.246 (the final review): a transcendent job's own skills are its own (not the second job's), and its
+// earlier job is the second one
+TEST(reference_pages_skills_of_a_transcendent_job) {
+    const refindex::Index ix = index();
+    const refpages::Page lk = refpages::section(ix, Lang::Uk, refpages::kJobSkills + 4008);  // Lord Knight
+    CHECK_EQ(lk.name, std::string("Lord Knight"));
+    CHECK(rowWith(lk, "Aura Blade") != nullptr);
+    CHECK(rowWith(lk, "Bash") == nullptr && rowWith(lk, "Pierce") == nullptr);  // the Swordsman's, the Knight's
+    const refpages::Row* earlier = rowWith(lk, "Навички Knight ›");
+    CHECK(earlier && earlier->link.id == refpages::kJobSkills + 7);
+}
