@@ -974,6 +974,16 @@ enum class Text : uint16_t {
     RefSkillOnEnemy, RefSkillOnGround, RefSkillOnSelf, RefSkillOnFriend, RefSkillTrap, RefSkillSpByLevel,
     RefSkillAllLevels, RefSkillLevelN, RefSkillNeeds, RefSkillJobs, RefFoundSkills, RefKindSkill,
     RefTypedUk, RefTypedRu, RefSearchAsTyped,  // .245: the search typed in a Cyrillic layout
+    // .253 (the owner's review of the reference: lists and cards): the entries' figures' labels, an item's sources,
+    // the craft's groups, the cards' facts, a monster's ways
+    RefCellMaps, RefCellWeight, RefCellShop, RefCellChance, RefCellNeed, RefCellHave, RefCellHere, RefCellGoods,
+    RefCellPlayers, RefCellKinds, RefCellRespawn, RefCellWeaponLv, RefCellBookLv, RefDroppedFrom, RefFromCraft,
+    RefForQuest, RefForPet, RefCraftCooking, RefCraftPotions, RefCraftWeapons, RefCraftMetals, RefCraftConverters,
+    RefCraftOther, RefFactWeight, RefFactPrice, RefFactSells, RefFactSlots, RefFactClass, RefFactAttack,
+    RefFactDefense, RefFactWeaponLevel, RefFactRequiredLevel, RefFactJobs, RefFactLocation, RefFactElement,
+    RefFactCompoundOn, RefFactHave, RefFactRange, RefFactStep, RefFactAttackEvery, RefMs, RefSeconds,
+    RefModeAggressive, RefModePassive, RefModeLooter, RefModeAssist, RefModeCastSensor, RefModeDetector,
+    RefModeStill, RefModePlant,
     Count
 };
 

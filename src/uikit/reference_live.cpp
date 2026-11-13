@@ -149,6 +149,25 @@ struct Maker {
         }
         return s + "</div>";
     }
+    // 3.0.18-beta.253 (the owner's review of the reference): a card's facts - a grid of small boxes, a label over its
+    // value (a wide one the whole line)
+    static std::string facts(const std::vector<refpages::Cell>& cells) {
+        if (cells.empty()) return {};
+        std::string s = "<div class=\"rfacts\">";
+        for (const refpages::Cell& c : cells)
+            s += std::string("<div class=\"rfact") + (c.wide ? " wide" : "") + "\"><div class=\"rfl\">" +
+                 escape(c.label) + "</div><div class=\"rfv" + tone(c.tone) + "\">" + escape(c.value) + "</div></div>";
+        return s + "</div>";
+    }
+    static const char* tone(int t) {
+        switch (t) {
+            case 1: return " t1";
+            case 2: return " t2";
+            case 3: return " t3";
+            case 4: return " t4";
+            default: return "";
+        }
+    }
     // A cell of the elements' table by its per cent: more than 100 good, below 100 weak, below 0 heals
     static std::string cell(const std::string& t) {
         const int v = std::atoi(t.c_str());
@@ -187,12 +206,28 @@ struct Maker {
             case Style::Portrait: {  // 3.0.18-beta.240: no picture (a location's: its map below), or one that
                 // cannot be made (an NPC's sprite, a monster without one: portraits are made at once) - no box
                 const std::string src = look.picture && !r.picture.empty() ? look.picture(r.picture) : std::string();
-                const std::string box = "<div class=\"rpic\"><img class=\"rpimg\" src=\"" + escape(src) + "\"/></div>";
-                o += open("div", i, "rport") + (src.empty() ? "" : box) +
-                     "<div class=\"rpinfo\"><div class=\"rpl\">" + escape(r.left) + "</div>" +
+                // 3.0.18-beta.253 (R-JSWF77: Fabre's sprite over its words «nsect · Small»): the picture in its box,
+                // made smaller to fit it, never larger (a decorator's scale-down)
+                const std::string box = "<div class=\"rpic\"><div class=\"rpimg\" style=\"decorator: image(&quot;" +
+                                        escape(src) + "&quot; scale-down);\"></div></div>";
+                o += open("div", i, r.cells.empty() ? "rport" : "rport hasfacts") + (src.empty() ? "" : box) +
+                     "<div class=\"rpinfo\">" +
+                     (r.left.empty() ? "" : "<div class=\"rpl\">" + escape(r.left) + "</div>") +
                      (r.sub.empty() ? "" : "<div class=\"rpd\">" + lines(r.sub) + "</div>") +
                      (r.right.empty() ? "" : "<div class=\"rpr\">" + escape(r.right) + "</div>") + tags(r) +
-                     "</div></div>";
+                     facts(r.cells) + "</div></div>";
+                break;
+            }
+            case Style::Facts: o += open("div", i, "rfrow") + facts(r.cells) + "</div>"; break;
+            case Style::Entry: {  // 3.0.18-beta.253: a list's entry - its name and line, its figures in columns
+                o += open("div", i, r.gold ? "rent hl" : "rent") + icon(r) + dot(r) + "<div class=\"ren\"><div " +
+                     "class=\"renn\">" + escape(r.left) + "</div>" +
+                     (r.sub.empty() ? "" : "<div class=\"rens\">" + escape(r.sub) + "</div>") + "</div>";
+                for (const refpages::Cell& c : r.cells)
+                    o += std::string("<div class=\"rec") + (c.wide ? " w" : "") + "\"><div class=\"recv" +
+                         tone(c.tone) + "\">" + escape(c.value) + "</div><div class=\"recl\">" + escape(c.label) +
+                         "</div></div>";
+                o += "</div>";
                 break;
             }
             case Style::Tile:
@@ -293,7 +328,7 @@ int weight(const refpages::Page& p, const Section& s) {
         const Style st = p.rows[size_t(i)].style;
         if (st == Style::Chip) ++chips;
         else if (st == Style::Text) lines += 1 + int(p.rows[size_t(i)].left.size() / 90);
-        else ++lines;
+        else lines += st == Style::Entry ? 2 : 1;  // 3.0.18-beta.253: an entry two lines high
     }
     return lines + (chips + 3) / 4;
 }
@@ -486,7 +521,10 @@ std::string body(const refpages::Page& p, const Look& look) {
         const size_t lines = lineRows(p, s);
         if (lines > kLong) {
             flush();
-            section(s, lines > kLonger && look.wide ? 3 : 2);  // 3.0.18-beta.248: three only when wide
+            const bool entries = std::any_of(s.rows.begin(), s.rows.end(),
+                                             [&](int k) { return p.rows[size_t(k)].style == Style::Entry; });
+            // 3.0.18-beta.248: three only when wide; 3.0.18-beta.253: entries two (their figures need the room)
+            section(s, lines > kLonger && look.wide && !entries ? 3 : 2);
             continue;
         }
         const int c = height[1] < height[0] ? 1 : 0;

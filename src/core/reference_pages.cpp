@@ -12,6 +12,7 @@
 #include <unordered_map>
 
 #include "core/char_block.hpp"
+#include "core/item_desc.hpp"
 #include "core/login_hints.hpp"
 #include "core/reference_route.hpp"
 #include "core/settings/search.hpp"
@@ -86,16 +87,6 @@ std::string mapShort(const refindex::Index& ix, const std::string& code) {
 }
 
 std::string minutes(Lang l, int ms) { return respawn(ms, l); }
-
-// A monster's line on a list: «Lv 12 · prt_fild08» (its first map) - two Porings of other ids told apart
-std::string mobNote(const refindex::Index& ix, Lang l, int id) {
-    const auto m = ix.mobs.find(id);
-    std::string s = m == ix.mobs.end() ? "" : sayf(l, Text::RefLevel, {std::to_string(m->second.lv)});
-    const auto where = ix.spawnsOf.find(id);
-    if (where != ix.spawnsOf.end() && !where->second.empty()) s += " · " + where->second.front().map;
-    if (m != ix.mobs.end() && m->second.boss) s = say(l, Text::RefBoss) + " · " + s;
-    return s;
-}
 
 // 3.0.18-beta.250 (the owner: «убери мобов которых нету на картах»): the monsters met on maps - the ones counted
 size_t mobsOnMaps(const refindex::Index& ix) {
@@ -1148,9 +1139,15 @@ std::vector<Row> shopRows(const refindex::Index& ix, Lang l) {
     for (size_t s = 0; s < ix.shops.size(); ++s)
         list.emplace_back(refindex::mapTitle(ix, ix.shops[s].map), ix.shops[s].name, int(s));
     std::sort(list.begin(), list.end());
-    for (const auto& [title, name, s] : list) {
-        const std::string goods = counted(l, ix.shops[size_t(s)].items.size(), Text::RefItemsCount);  // «2 товари»
-        out.push_back(linked(name + " · " + title, goods, Link{Go::Shop, s, ""}));
+    for (const auto& [title, name, s] : list) {  // 3.0.18-beta.253: its map under its name, its goods' count
+        Row r;
+        r.style = Style::Entry;
+        r.left = name;
+        r.sub = title;
+        r.link = Link{Go::Shop, s, ""};
+        r.cells.push_back(Cell{number(static_cast<long long>(ix.shops[size_t(s)].items.size()), l),
+                               say(l, Text::RefCellGoods), 0, false});
+        out.push_back(std::move(r));
     }
     return out;
 }
@@ -1168,7 +1165,12 @@ std::vector<Row> kafraRows(const refindex::Index& ix) {
             const std::string name = named == ix.mapNames.end() ? d : refindex::shortName(named->second);
             right += (right.empty() ? "" : ", ") + name;
         }
-        out.push_back(linked(refindex::mapTitle(ix, m.first), right, toMap(m.first)));
+        Row r;  // 3.0.18-beta.253: where to under the town's name (a long list cut with «…», not over the next column)
+        r.style = Style::Entry;
+        r.left = refindex::mapTitle(ix, m.first);
+        r.sub = right;
+        r.link = toMap(m.first);
+        out.push_back(std::move(r));
     }
     std::sort(out.begin(), out.end(), [](const Row& a, const Row& b) { return a.left < b.left; });
     return out;
@@ -1314,6 +1316,204 @@ Page npcKind(const refindex::Index& ix, Lang l, refindex::NpcGroup g) {
 
 namespace {
 void toneLevels(const refindex::Index& ix, Page& p, int level);  // 3.0.18-beta.242 (with the item card's helpers)
+
+// 3.0.18-beta.253 (the owner's review of 13.11, R-N7GPT5 «список сделан совсем ни о чём», R-U5HAJ6 «красиво списки
+// сделай», R-9CD8YA «всё неркасиво и разбросано»): the lists' entries - each its picture, its name, a line under it
+// and its figures at the right in columns, a value over its label
+
+// A thing's name with its slots as the game writes it (R-JSWF77: Fabre's two «Club» - Club [3] and Club [4])
+std::string itemTitle(const refindex::Index& ix, int id) {
+    const auto it = ix.items.find(id);
+    if (it == ix.items.end()) return "#" + std::to_string(id);
+    return it->second.slots > 0 ? it->second.name + " [" + std::to_string(it->second.slots) + "]" : it->second.name;
+}
+
+Cell cell(std::string value, std::string label, int tone = 0, bool wide = false) {
+    return Cell{std::move(value), std::move(label), tone, wide};
+}
+
+Row entry(std::string name, std::string sub, Link to, std::string icon = "") {
+    Row r;
+    r.style = Style::Entry;
+    r.left = std::move(name);
+    r.sub = std::move(sub);
+    r.link = std::move(to);
+    r.icon = std::move(icon);
+    return r;
+}
+
+// «Insect · Earth 1 · Small» - the game's words
+std::string mobKind(const refindex::Mob& m, Lang l) {
+    return raceName(m.race, l) + " · " + elementName(m.element, l) + " " + std::to_string(m.elementLv) + " · " +
+           sizeName(m.size, l);
+}
+
+// A figure for a list's column: past a million «5,7M» (the card says it whole) - MVPs' HP fit their column
+std::string compact(long long v, Lang l) {
+    if (v < 1000000) return number(v, l);
+    const long long tenths = (v + 50000) / 100000;
+    const std::string part = tenths % 10 ? (l == Lang::En ? "." : ",") + std::to_string(tenths % 10) : "";
+    return std::to_string(tenths / 10) + part + "M";
+}
+
+// A monster's entry: its kind under its name (MVP or a boss first), its level by the character's, HP, its maps
+Row mobEntry(const refindex::Index& ix, Lang l, int id, int level) {
+    const refindex::Mob& m = ix.mobs.at(id);
+    std::string sub = mobKind(m, l);
+    if (isMvp(m)) sub = "MVP · " + sub;
+    else if (m.boss) sub = say(l, Text::RefBoss) + " · " + sub;
+    Row r = entry(m.name, sub, toMob(id), "mob:" + std::to_string(id));
+    r.gold = m.boss;
+    r.cells.push_back(cell(std::to_string(m.lv), "Lv", levelTone(m.lv, level)));
+    r.cells.push_back(cell(compact(m.hp, l), "HP"));
+    const auto where = ix.spawnsOf.find(id);
+    r.cells.push_back(cell(where == ix.spawnsOf.end() ? "-" : number(static_cast<long long>(where->second.size()), l),
+                           say(l, Text::RefCellMaps)));
+    return r;
+}
+
+bool forPet(const refindex::Index& ix, int item) {
+    return std::any_of(ix.pets.begin(), ix.pets.end(), [&](const refindex::Pet& p) {
+        return p.lure == item || p.egg == item || p.food == item || p.equip == item;
+    });
+}
+
+// A thing's entry: where one gets it under its name (its best dropper and the chance, the craft; else what needs
+// it), its shop's price apart - one column says one thing (R-U5HAJ6: the price or a monster in the same place)
+Row itemEntry(const refindex::Index& ix, Lang l, int id) {
+    std::vector<std::string> from;
+    const auto by = ix.droppedBy.find(id);
+    if (by != ix.droppedBy.end() && !by->second.empty())
+        from.push_back(sayf(l, Text::RefDroppedFrom, {mobName(ix, by->second.front().mob),
+                                                        chance(by->second.front().rate, l)}));
+    if (ix.craftOf.count(id)) from.push_back(say(l, Text::RefFromCraft));
+    const auto at = ix.soldAt.find(id);
+    if (from.empty() && at != ix.soldAt.end()) from.push_back(counted(l, at->second.size(), Text::RefShopsN));
+    if (from.empty() && ix.questsOf.count(id)) from.push_back(say(l, Text::RefForQuest));
+    if (from.empty() && forPet(ix, id)) from.push_back(say(l, Text::RefForPet));
+    Row r = entry(itemTitle(ix, id), joined(from), toItem(id), "item:" + std::to_string(id));
+    if (at != ix.soldAt.end())
+        r.cells.push_back(cell(sayf(l, Text::RefZeny, {number(at->second.front().second, l)}),
+                               say(l, Text::RefCellShop), 0, true));
+    return r;
+}
+
+// A card's effect for its line: the game's words of it, one line (none: "")
+std::string effectOf(int item, const Context& c) {
+    if (!c.describe) return {};
+    const itemdesc::Read d = itemdesc::read(c.describe(item));
+    std::vector<std::string> parts;
+    for (const std::string& p : d.paragraphs) parts.push_back(p);
+    return joined(parts);
+}
+
+// 3.0.18-beta.253: «1,87 с» (en «1.87 s») - a time in ms, at most two decimals
+std::string secondsText(int ms, Lang l) {
+    const int whole = ms / 1000, part = (ms % 1000 + 5) / 10;  // hundredths
+    std::string s = std::to_string(whole + part / 100);
+    const int h = part % 100;
+    if (h) {
+        std::string d = (h < 10 ? "0" : "") + std::to_string(h);
+        while (!d.empty() && d.back() == '0') d.pop_back();
+        s += (l == Lang::En ? "." : ",") + d;
+    }
+    return sayf(l, Text::RefSeconds, {s});
+}
+
+// 3.0.18-beta.253 (R-JSWF77 «дай полную инфу, статы»): a monster's facts beside its picture - HP and its exp; the
+// site's newer pack's ATK, DEF, MDEF, HIT and FLEE (the server's: its level + DEX, + AGI), its six stats, its range,
+// its step and its attacks' pace
+std::vector<Cell> mobFacts(const refindex::Mob& m, Lang l) {
+    std::vector<Cell> f{cell(number(m.hp, l), "HP"), cell(number(m.baseExp, l), "Base EXP"),
+                        cell(number(m.jobExp, l), "Job EXP")};
+    const refindex::Mob::Stats& s = m.stats;
+    if (!s.has) return f;
+    f.push_back(cell(s.atkMax > s.atkMin ? number(s.atkMin, l) + "\xE2\x80\x93" + number(s.atkMax, l)
+                                         : number(s.atkMin, l),
+                     "ATK"));
+    f.push_back(cell(number(s.def, l), "DEF"));
+    f.push_back(cell(number(s.mdef, l), "MDEF"));
+    f.push_back(cell(number(m.lv + s.dex, l), "HIT"));
+    f.push_back(cell(number(m.lv + s.agi, l), "FLEE"));
+    const std::pair<int, const char*> six[] = {{s.str, "STR"}, {s.agi, "AGI"}, {s.vit, "VIT"},
+                                               {s.intel, "INT"}, {s.dex, "DEX"}, {s.luk, "LUK"}};
+    for (const auto& [v, name] : six) f.push_back(cell(number(v, l), name));
+    f.push_back(cell(number(s.range, l), say(l, Text::RefFactRange)));
+    if (s.speed > 0) f.push_back(cell(sayf(l, Text::RefMs, {number(s.speed, l)}), say(l, Text::RefFactStep)));
+    if (s.attackDelay > 0) f.push_back(cell(secondsText(s.attackDelay, l), say(l, Text::RefFactAttackEvery)));
+    return f;
+}
+
+// Its ways by mob_db's mode: aggressive or passive, a looter, helps its kind, hears casting, sees the hidden, does
+// not move, a plant
+std::vector<std::string> mobWays(const refindex::Mob& m, Lang l) {
+    std::vector<std::string> w;
+    if (!m.stats.has) return w;
+    const int mode = m.stats.mode;
+    w.push_back(say(l, mode & 0x04 ? Text::RefModeAggressive : Text::RefModePassive));
+    if (mode & 0x02) w.push_back(say(l, Text::RefModeLooter));
+    if (mode & 0x08) w.push_back(say(l, Text::RefModeAssist));
+    if (mode & (0x10 | 0x200)) w.push_back(say(l, Text::RefModeCastSensor));
+    if (mode & 0x100) w.push_back(say(l, Text::RefModeDetector));
+    if (!(mode & 0x01)) w.push_back(say(l, Text::RefModeStill));
+    if (mode & 0x40) w.push_back(say(l, Text::RefModePlant));
+    return w;
+}
+
+// 3.0.18-beta.253 (R-WP985Q «описание можно было сделать лучше»): an item's facts - the pack's weight, prices and
+// slots, then the game's description's (its own words for the known ones; its weight and slots not twice; a long
+// one the whole line), the pack's attack, defence and levels where the description has none
+std::vector<Cell> itemFacts(const refindex::Item& i, const itemdesc::Read& d, Lang l) {
+    std::vector<Cell> f;
+    f.push_back(cell(number(i.weight / 10, l) + (i.weight % 10 ? (l == Lang::En ? "." : ",") +
+                                                                     std::to_string(i.weight % 10)
+                                                               : ""),
+                     say(l, Text::RefFactWeight)));
+    if (i.buy > 0) f.push_back(cell(sayf(l, Text::RefZeny, {number(i.buy, l)}), say(l, Text::RefFactPrice)));
+    if (i.buy > 1) f.push_back(cell(sayf(l, Text::RefZeny, {number(i.buy / 2, l)}), say(l, Text::RefFactSells)));
+    if (i.slots > 0) f.push_back(cell(std::to_string(i.slots), say(l, Text::RefFactSlots)));
+    using itemdesc::Key;
+    bool attack = false, defence = false, weaponLv = false, needLv = false;
+    for (const itemdesc::Fact& fact : d.facts) {
+        const Key k = itemdesc::keyOf(fact.key);
+        Text label = Text::Count;
+        switch (k) {
+            case Key::Weight:
+            case Key::Slots: continue;
+            case Key::Class: label = Text::RefFactClass; break;
+            case Key::Attack: label = Text::RefFactAttack, attack = true; break;
+            case Key::Defense: label = Text::RefFactDefense, defence = true; break;
+            case Key::WeaponLevel: label = Text::RefFactWeaponLevel, weaponLv = true; break;
+            case Key::RequiredLevel: label = Text::RefFactRequiredLevel, needLv = true; break;
+            case Key::Jobs: label = Text::RefFactJobs; break;
+            case Key::Location: label = Text::RefFactLocation; break;
+            case Key::Element: label = Text::RefFactElement; break;
+            case Key::CompoundOn: label = Text::RefFactCompoundOn; break;
+            case Key::Unknown: break;
+        }
+        if (fact.value.empty()) continue;
+        f.push_back(cell(fact.value, label == Text::Count ? fact.key : say(l, label), 0,
+                         k == Key::Jobs || fact.value.size() > 22));
+    }
+    if (i.hasStats) {
+        if (!attack && i.atk > 0) f.push_back(cell(number(i.atk, l), say(l, Text::RefFactAttack)));
+        if (!defence && i.def > 0) f.push_back(cell(number(i.def, l), say(l, Text::RefFactDefense)));
+        if (!weaponLv && i.weaponLv > 0) f.push_back(cell(number(i.weaponLv, l), say(l, Text::RefFactWeaponLevel)));
+        if (!needLv && i.equipLv > 0) f.push_back(cell(number(i.equipLv, l), say(l, Text::RefFactRequiredLevel)));
+    }
+    return f;
+}
+
+// 3.0.18-beta.253 (R-9CD8YA): the craft by what one makes - the cooking (its books' levels 1-10), the potions (the
+// Prepare Potion, Create Deadly Poison, Aqua Benedicta), the smiths' weapons, metals and stones, the converters
+int craftGroup(const refindex::Craft& c) {
+    if (c.skill == 0) return 0;
+    if (c.skill == 228 || c.skill == 407 || c.skill == 31) return 1;
+    if (c.skill >= 98 && c.skill <= 104) return 2;
+    if (c.skill >= 94 && c.skill <= 97) return 3;
+    if (c.skill == 1007) return 4;
+    return 5;
+}
 }  // namespace
 
 Page section(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned opened) {
@@ -1332,41 +1532,47 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c, unsign
                 list.emplace_back(i.second.name, i.first);
         std::sort(list.begin(), list.end(), byNatural);
         std::vector<Row> rows;
-        for (const auto& [name, item] : list) {
-            const auto by = ix.droppedBy.find(item);
-            const auto at = ix.soldAt.find(item);
-            std::string right;
-            if (at != ix.soldAt.end()) right = sayf(l, Text::RefZeny, {number(at->second.front().second, l)});
-            else if (by != ix.droppedBy.end()) right = mobName(ix, by->second.front().mob);
-            rows.push_back(linked(name, right, toItem(item)));
-        }
+        for (const auto& [name, item] : list) rows.push_back(itemEntry(ix, l, item));  // 3.0.18-beta.253
         capped(p, std::move(rows), Part(0), opened, l);  // 3.0.18-beta.247: past 100 «усі N ›»
         return p;
     }
     switch (id) {
-        case Mobs: {  // 3.0.11-beta.32: those met on maps by their levels first, the rest (events' and summons'
-                      // copies - «Baphomet Lv 1») apart; each its picture, its line
+        case Mobs: {  // 3.0.11-beta.32: those met on maps by their levels; 3.0.18-beta.253 (R-N7GPT5) each ten levels
+                      // a group of its own (the jump to each on top), each monster's kind, level, HP and maps
             p.name = say(l, Text::RefSecMobs);
             std::vector<std::tuple<int, std::string, int>> on;  // level, name, id
             for (const auto& m : ix.mobs)  // 3.0.18-beta.250 (the owner): those off the maps not listed
                 if (ix.spawnsOf.count(m.first)) on.emplace_back(m.second.lv, m.second.name, m.first);
             std::sort(on.begin(), on.end());
-            const std::pair<Text, const std::vector<std::tuple<int, std::string, int>>*> groups[] = {
-                {Text::RefMobsOnMaps, &on}};
-            int group = 0;
-            for (const auto& [title, list] : groups) {
-                const int bit = group++;  // 3.0.18-beta.247: each group past 100 «усі N ›»
-                if (list->empty()) continue;
-                p.rows.push_back(heading(sayf(l, title, {std::to_string(list->size())})));
-                std::vector<Row> rows;
-                for (const auto& [lv, name, mob] : *list) {
-                    Row r = linked(name, mobLine(ix, l, mob), toMob(mob));
-                    r.icon = "mob:" + std::to_string(mob);
-                    r.gold = ix.mobs.at(mob).boss;
-                    rows.push_back(std::move(r));
+            // past 100 the first 100 and «усі N ›» (the owner's rule) - counted by the monsters, not their headings
+            const bool all = (opened & 1u) || on.size() <= kFew + kFewMore;
+            // cut: from ten levels below the character's (its fitting monsters first in view; not known - the first)
+            const int from = all || c.level <= 0 ? 0 : std::max(0, (c.level - 11) / 10) * 10 + 1;
+            size_t shown = 0;
+            int band = -1;
+            for (const auto& [lv, name, mob] : on) {
+                if (lv < from && on.size() - size_t(std::count_if(on.begin(), on.end(), [&](const auto& o) {
+                                                    return std::get<0>(o) < from;
+                                                })) >= kFew)
+                    continue;
+                if (!all && shown == kFew) break;
+                const int b = std::max(0, (lv - 1) / 10);
+                if (b != band) {
+                    band = b;
+                    const size_t n = size_t(std::count_if(on.begin(), on.end(), [&](const auto& o) {
+                        return std::max(0, (std::get<0>(o) - 1) / 10) == b;
+                    }));
+                    Row g = heading("Lv " + std::to_string(b * 10 + 1) + "\xE2\x80\x93" + std::to_string(b * 10 + 10),
+                                    std::to_string(n));
+                    g.style = Style::Group;
+                    p.rows.push_back(std::move(g));
                 }
-                capped(p, std::move(rows), Part(bit), opened, l);
+                p.rows.push_back(mobEntry(ix, l, mob, c.level));
+                ++shown;
             }
+            if (!all)
+                p.rows.push_back(
+                    linked(sayf(l, Text::RefAll, {std::to_string(on.size())}), "", Link{Go::Expand, 0, ""}));
             break;
         }
         case Bosses: {
@@ -1383,23 +1589,21 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c, unsign
             std::sort(list.begin(), list.end());
             for (const auto& [neg, name, mob] : list) {
                 const refindex::Where& w = ix.spawnsOf.at(mob).front();
-                std::string right = refindex::mapTitle(ix, w.map);
-                if (-neg >= 600000) right += " · " + minutes(l, -neg);
+                std::string right;  // 3.0.18-beta.253: the timer's words alone (its map and respawn the line's)
                 // 3.0.11-beta.20: the board of MVP hunters - a player's public timer of it (the latest)
                 const reflive::Timer* t = c.live ? reflive::timerOf(*c.live, mob) : nullptr;
                 const long long respawn = t ? respawnOn(ix, mob, t->map) / 1000 : 0;
                 if (const OwnTimer* o = ownTimerOf(c, mob); o && c.now > 0) {  // 3.0.18-beta.242: the own first
                     const long long left = o->back - c.now;
-                    right += " · " + (left > 0 ? sayf(l, Text::RefTimerSoon, {respawnText(left, l)})
-                                               : say(l, Text::RefTimerDue));
+                    right = left > 0 ? sayf(l, Text::RefTimerSoon, {respawnText(left, l)}) : say(l, Text::RefTimerDue);
                 } else if (t && respawn > 0 && c.now > 0) {
                     const long long left = t->killed + respawn - c.now;
-                    right += " · " + (left > 0 ? sayf(l, Text::RefTimerSoon, {respawnText(left, l)})
-                                               : say(l, Text::RefTimerDue));
+                    right = left > 0 ? sayf(l, Text::RefTimerSoon, {respawnText(left, l)}) : say(l, Text::RefTimerDue);
                 }
-                Row r = linked(name, right, toMob(mob));
-                r.gold = true;
-                r.icon = "mob:" + std::to_string(mob);  // 3.0.11-beta.32: its picture
+                Row r = mobEntry(ix, l, mob, c.level);  // 3.0.18-beta.253: its map and respawn under its name
+                r.sub = refindex::mapTitle(ix, w.map) + (-neg >= 600000 ? " · " + minutes(l, -neg) : "");
+                r.cells.pop_back();  // its maps: the line says the first
+                if (!right.empty()) r.cells.push_back(cell(right, say(l, Text::RefCellRespawn), 4, true));
                 p.rows.push_back(std::move(r));
             }
             break;
@@ -1434,13 +1638,13 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c, unsign
                 std::sort(list->begin(), list->end(), byNatural);
                 p.rows.push_back(heading(sayf(l, title, {std::to_string(list->size())})));
                 std::vector<Row> rows;
-                for (const auto& [name, card] : *list) {
+                for (const auto& [name, card] : *list) {  // 3.0.18-beta.253: its effect, its best dropper
                     const auto by = ix.droppedBy.find(card);
-                    const std::string right = by == ix.droppedBy.end()
-                                                  ? ""
-                                                  : mobName(ix, by->second.front().mob) + " · " +
-                                                        chance(by->second.front().rate, l);
-                    rows.push_back(linked(name, right, toItem(card)));
+                    Row r = entry(name, effectOf(card, c), toItem(card), "item:" + std::to_string(card));
+                    if (by != ix.droppedBy.end())
+                        r.cells.push_back(cell(chance(by->second.front().rate, l), mobName(ix, by->second.front().mob),
+                                               0, true));
+                    rows.push_back(std::move(r));
                 }
                 capped(p, std::move(rows), Part(bit), opened, l);
             }
@@ -1460,6 +1664,13 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c, unsign
             };
             std::sort(towns.begin(), towns.end(), byTitle);
             std::sort(fields.begin(), fields.end(), byTitle);
+            // 3.0.18-beta.253: the players there now in a column (the site's live data)
+            const auto players = [&](Row& r, const std::string& code) {
+                if (!c.players) return;
+                const auto n = c.players->find(code);
+                r.cells.push_back(cell(n == c.players->end() ? "-" : number(n->second, l), say(l, Text::RefCellPlayers),
+                                       n != c.players->end() && n->second > 0 ? 1 : 3));
+            };
             if (!towns.empty()) p.rows.push_back(heading(sayf(l, Text::RefTowns, {std::to_string(towns.size())})));
             for (const auto& [title, code] : towns) {
                 const refindex::MapHints& m = ix.maps.at(code);
@@ -1468,15 +1679,26 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c, unsign
                 });
                 const size_t shops = size_t(std::count_if(ix.shops.begin(), ix.shops.end(),
                                                           [&](const refindex::Shop& s) { return s.map == code; }));
-                std::string right = kafra ? "Kafra" : "";
-                if (shops) right += (right.empty() ? "" : " · ") + counted(l, shops, Text::RefShopsN);
-                if (right.empty()) right = mapNote(ix, l, code);
-                p.rows.push_back(linked(title, right, toMap(code)));
+                std::string sub = kafra ? "Kafra" : "";
+                if (shops) sub += (sub.empty() ? "" : " · ") + counted(l, shops, Text::RefShopsN);
+                if (sub.empty()) sub = mapNote(ix, l, code);
+                Row r = entry(title, sub, toMap(code));
+                players(r, code);
+                p.rows.push_back(std::move(r));
             }
             if (!fields.empty())
                 p.rows.push_back(heading(sayf(l, Text::RefMapsWithMobs, {std::to_string(fields.size())})));
             std::vector<Row> rows;  // 3.0.18-beta.247: past 100 «усі N ›»
-            for (const auto& [title, code] : fields) rows.push_back(linked(title, mapNote(ix, l, code), toMap(code)));
+            for (const auto& [title, code] : fields) {  // 3.0.18-beta.253: its monsters by name, their kinds' count
+                const refindex::MapHints& m = ix.maps.at(code);
+                std::vector<std::string> names;
+                for (const refindex::MobOnMap& o : m.mobs)
+                    if (names.size() < 4) names.push_back(mobName(ix, o.id));
+                Row r = entry(title, joined(names), toMap(code));
+                r.cells.push_back(cell(std::to_string(m.mobs.size()), say(l, Text::RefCellKinds)));
+                players(r, code);
+                rows.push_back(std::move(r));
+            }
             capped(p, std::move(rows), Part(1), opened, l);
             break;
         }
@@ -1530,27 +1752,50 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c, unsign
             std::sort(list.begin(), list.end());
             for (const auto& [name, lv, k] : list) {  // 3.0.11-beta.32: three «Goblin» told apart by their levels
                 const refindex::Pet& pet = ix.pets[k];
-                std::string right = lv > 0 ? sayf(l, Text::RefLevel, {std::to_string(lv)}) : "";
-                if (pet.lure > 0)  // none: no «#0»
-                    right += (right.empty() ? "" : " · ") + say(l, Text::RefPetLure) + ": " + itemName(ix, pet.lure);
-                Row r = linked(name, right, toMob(pet.mob));
-                r.icon = "mob:" + std::to_string(pet.mob);
+                std::vector<std::string> parts;  // 3.0.18-beta.253: what tames it and its food under its name
+                if (pet.lure > 0) parts.push_back(say(l, Text::RefPetLure) + ": " + itemName(ix, pet.lure));
+                if (pet.food > 0) parts.push_back(say(l, Text::RefPetFood) + ": " + itemName(ix, pet.food));
+                Row r = entry(name, joined(parts), toMob(pet.mob), "mob:" + std::to_string(pet.mob));
+                if (lv > 0) r.cells.push_back(cell(std::to_string(lv), "Lv", levelTone(lv, c.level)));
                 p.rows.push_back(std::move(r));
             }
             break;
         }
-        case Crafting: {
+        case Crafting: {  // 3.0.18-beta.253 (R-9CD8YA «всё неркасиво и разбросано»): by what one makes, each its
+                          // things under its name (cut with «…»), its weapon's or its book's level
             p.name = say(l, Text::RefSecCraft);
-            p.rows.push_back(heading(p.name));
-            std::vector<Row> rows;
-            for (const refindex::Craft& c : ix.craft) {
-                std::string mats;
-                for (const auto& [mat, n] : c.mats)
-                    mats += (mats.empty() ? "" : ", ") + itemName(ix, mat) + " ×" + std::to_string(n);
-                rows.push_back(linked(itemName(ix, c.item), mats, toItem(c.item)));
+            static const Text kGroups[] = {Text::RefCraftCooking, Text::RefCraftPotions, Text::RefCraftWeapons,
+                                           Text::RefCraftMetals, Text::RefCraftConverters, Text::RefCraftOther};
+            for (int g = 0; g < int(std::size(kGroups)); ++g) {
+                std::vector<std::pair<std::string, size_t>> list;  // the name, the craft's row
+                for (size_t k = 0; k < ix.craft.size(); ++k)
+                    if (craftGroup(ix.craft[k]) == g) list.emplace_back(itemTitle(ix, ix.craft[k].item), k);
+                if (list.empty()) continue;
+                std::sort(list.begin(), list.end(), [](const auto& a, const auto& b) {
+                    return naturalLess(a.first, b.first) || (!naturalLess(b.first, a.first) && a.second < b.second);
+                });
+                Row head = heading(say(l, kGroups[g]), std::to_string(list.size()));
+                head.style = Style::Group;
+                p.rows.push_back(std::move(head));
+                std::vector<Row> rows;
+                for (const auto& [name, k] : list) {
+                    const refindex::Craft& cr = ix.craft[k];
+                    std::vector<std::string> mats;
+                    for (const auto& [mat, n] : cr.mats) {
+                        const std::string what = itemName(ix, mat);
+                        // the cookbook its column says («книга 9»): the line for what goes into the pot
+                        if (g == 0 && what.size() > 9 && what.compare(what.size() - 9, 9, " Cookbook") == 0) continue;
+                        mats.push_back(what + " ×" + std::to_string(n));
+                    }
+                    Row r = entry(name, joined(mats), toItem(cr.item), "item:" + std::to_string(cr.item));
+                    if (g == 0 && cr.itemLv > 10)  // a cookbook's level (the server's 11-20)
+                        r.cells.push_back(cell(std::to_string(cr.itemLv - 10), say(l, Text::RefCellBookLv)));
+                    else if (g == 2 && cr.itemLv > 0)
+                        r.cells.push_back(cell(std::to_string(cr.itemLv), say(l, Text::RefCellWeaponLv)));
+                    rows.push_back(std::move(r));
+                }
+                capped(p, std::move(rows), Part(g), opened, l);  // 3.0.18-beta.247: past 100 «усі N ›»
             }
-            std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.left < b.left; });
-            capped(p, std::move(rows), Part(0), opened, l);  // 3.0.18-beta.247: past 100 «усі N ›»
             break;
         }
         default:
@@ -1580,8 +1825,9 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
                                                                      std::to_string(m.elementLv)};
     if (isMvp(m)) hero.tags.push_back("gold:MVP");
     else if (m.boss) hero.tags.push_back("gold:" + say(l, Text::RefBoss));
-    hero.left = raceName(m.race, l) + " · " + sizeName(m.size, l) + " · " + sayf(l, Text::RefHp, {number(m.hp, l)}) +
-                " · " + sayf(l, Text::RefExp, {number(m.baseExp, l), number(m.jobExp, l)});
+    hero.left = raceName(m.race, l) + " · " + sizeName(m.size, l);  // 3.0.18-beta.253: HP and exp among its facts
+    for (std::string& w : mobWays(m, l)) hero.tags.push_back(std::move(w));
+    hero.cells = mobFacts(m, l);
     p.rows.push_back(hero);
 
     // the concept's two main blocks side by side: where it lives, what it drops; the rest folds
@@ -1611,18 +1857,21 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
         capped(p, std::move(rows), Where, opened, l);
         p.rows.push_back(linked(say(l, Text::RefOnWorld), "", Link{Go::World, 0, "mob:" + std::to_string(id)}));
     }
-    p.rows.push_back(heading(say(l, Text::RefDrops), m.drops.empty() ? "" : std::to_string(m.drops.size()), Drops));
+    const size_t dropping = size_t(std::count_if(m.drops.begin(), m.drops.end(),  // 3.0.18-beta.253: none at 0
+                                                 [](const refindex::Drop& d) { return d.rate > 0; }));
+    p.rows.push_back(heading(say(l, Text::RefDrops), dropping == 0 ? "" : std::to_string(dropping), Drops));
     asMain(p.rows.back(), 50);
-    if (m.drops.empty()) p.rows.push_back(note(say(l, Text::RefNoDrops)));
+    if (dropping == 0) p.rows.push_back(note(say(l, Text::RefNoDrops)));
     std::vector<refindex::Drop> drops = m.drops;
     std::stable_sort(drops.begin(), drops.end(), [](const refindex::Drop& a, const refindex::Drop& b) {
         return a.kind != b.kind ? a.kind < b.kind : a.rate > b.rate;
     });
     std::vector<Row> dropRows;
     for (const refindex::Drop& d : drops) {
+        if (d.rate <= 0) continue;  // 3.0.18-beta.253 (R-JSWF77: the novices' Fabre's card «0 %»): none drops it
         std::string right = chance(d.rate, l);
         if (d.kind == 1) right = say(l, Text::RefMvpReward) + " · " + right;
-        dropRows.push_back(linked(itemName(ix, d.item), right, toItem(d.item)));
+        dropRows.push_back(linked(itemTitle(ix, d.item), right, toItem(d.item)));  // 3.0.18-beta.253: «Club [3]»
         dropRows.back().sub = chanceParts(d.parts, l);  // 3.0.18-beta.239
     }
     capped(p, std::move(dropRows), Drops, opened, l);
@@ -1695,21 +1944,15 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
     hero.picture = "item:" + std::to_string(id);
     hero.tags = {typeName(i.type, l)};
     if (!i.aegis.empty()) hero.tags.push_back(i.aegis);
-    hero.left = sayf(l, Text::RefWeight, {number(i.weight / 10, l) + (i.weight % 10 ? (l == Lang::En ? "." : ",") +
-                                                                                        std::to_string(i.weight % 10)
-                                                                                  : "")});
-    if (i.buy > 0) hero.left += " · " + sayf(l, Text::RefPrice, {number(i.buy, l)});
-    if (i.buy > 1) hero.left += " · " + sayf(l, Text::RefSells, {number(i.buy / 2, l)});  // 3.0.11-beta.22: an NPC's
-    if (i.slots > 0) hero.left += " · " + sayf(l, Text::RefSlots, {std::to_string(i.slots)});
-    if (c.describe) {  // 3.0.18-beta.242: the game's own words under the name, its empty first and last lines left out
-        std::vector<std::string> words = c.describe(id);
-        while (!words.empty() && words.back().empty()) words.pop_back();
-        size_t from = 0;
-        while (from < words.size() && words[from].empty()) ++from;
-        for (size_t k = from; k < words.size(); ++k) hero.sub += (k > from ? "\n" : "") + words[k];
-    }
-    hero.right = haveLine(l, id, c);
+    // 3.0.18-beta.253 (R-WP985Q): its facts beside its picture (the pack's, the game's description's), what you have
+    // the last; the game's words as paragraphs under it, the whole width (the table's lines cut at 25 letters were a
+    // narrow column)
+    const itemdesc::Read words = c.describe ? itemdesc::read(c.describe(id)) : itemdesc::Read{};
+    hero.cells = itemFacts(i, words, l);
+    if (const std::string have = haveLine(l, id, c); !have.empty())
+        hero.cells.push_back(cell(have, say(l, Text::RefFactHave), 0, true));
     p.rows.push_back(hero);
+    for (const std::string& w : words.paragraphs) p.rows.push_back(text(w));
 
     // the concept's main blocks: who drops it, where to buy it (side by side when both); the rest folds
     const auto by = ix.droppedBy.find(id);
@@ -1720,12 +1963,20 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
         asMain(p.rows.back(), share);
         std::vector<Row> rows;
         for (const refindex::Source& s : by->second) {
-            std::string right = chance(s.rate, l);
-            if (s.kind == 1) right = say(l, Text::RefMvpReward) + " · " + right;
-            const std::string note = mobNote(ix, l, s.mob);
-            Row r = linked(mobName(ix, s.mob), right + (note.empty() ? "" : " · " + note), toMob(s.mob));
-            r.gold = ix.mobs.count(s.mob) && ix.mobs.at(s.mob).boss;
-            r.sub = chanceParts(s.parts, l);  // 3.0.18-beta.239: one row a monster, how its chance was made
+            // 3.0.18-beta.253: an entry - its picture, its first map (two Fabres told apart), its level by yours and
+            // the chance in columns; an MVP's reward said; how a merged chance was made (3.0.18-beta.239)
+            const auto m = ix.mobs.find(s.mob);
+            const auto where = ix.spawnsOf.find(s.mob);
+            std::vector<std::string> line;
+            if (s.kind == 1) line.push_back(say(l, Text::RefMvpReward));
+            if (where != ix.spawnsOf.end() && !where->second.empty())
+                line.push_back(refindex::mapTitle(ix, where->second.front().map));
+            if (const std::string parts = chanceParts(s.parts, l); !parts.empty()) line.push_back(parts);
+            Row r = entry(mobName(ix, s.mob), joined(line), toMob(s.mob), "mob:" + std::to_string(s.mob));
+            r.gold = m != ix.mobs.end() && m->second.boss;
+            if (m != ix.mobs.end() && m->second.lv > 0)
+                r.cells.push_back(cell(std::to_string(m->second.lv), "Lv", levelTone(m->second.lv, c.level)));
+            r.cells.push_back(cell(chance(s.rate, l), say(l, Text::RefCellChance)));
             rows.push_back(std::move(r));
         }
         capped(p, std::move(rows), DroppedBy, opened, l);
@@ -1777,9 +2028,14 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
         p.rows.push_back(heading(say(l, Text::RefCraftOf), "", CraftOf));
         for (int k : made->second)
             for (const auto& [mat, n] : ix.craft[size_t(k)].mats) {
-                std::string right = "×" + std::to_string(n);  // 3.0.18-beta.242: what the bag has of it
-                if (c.bag) right += " · " + sayf(l, Text::RefCraftHave, {number(countIn(c.bag, mat), l)});
-                p.rows.push_back(linked(itemName(ix, mat), right, toItem(mat)));
+                // 3.0.18-beta.253 (R-WP985Q: «×1 · є 0» read as symbols): how many it takes, how many the bag has
+                Row r = entry(itemTitle(ix, mat), "", toItem(mat), "item:" + std::to_string(mat));
+                r.cells.push_back(cell(number(n, l), say(l, Text::RefCellNeed)));
+                if (c.bag) {
+                    const int have = countIn(c.bag, mat);
+                    r.cells.push_back(cell(number(have, l), say(l, Text::RefCellHave), have >= n ? 1 : 2));
+                }
+                p.rows.push_back(std::move(r));
             }
     }
     const auto used = ix.usedIn.find(id);
@@ -1788,14 +2044,15 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
         std::vector<Row> rows;
         for (int k : used->second) {
             const int made = ix.craft[size_t(k)].item;
-            std::string right;  // 3.0.18-beta.242: all of it in the bag, or how many pieces are missing
-            if (c.bag) {
+            Row r = entry(itemTitle(ix, made), "", toItem(made), "item:" + std::to_string(made));  // 3.0.18-beta.253
+            if (c.bag) {  // 3.0.18-beta.242: all of it in the bag, or how many pieces are missing
                 int missing = 0;
                 for (const auto& [mat, n] : ix.craft[size_t(k)].mats) missing += std::max(0, n - countIn(c.bag, mat));
-                right = missing == 0 ? say(l, Text::RefCraftAll)
-                                     : sayf(l, Text::RefCraftMissing, {number(missing, l)});
+                r.cells.push_back(cell(missing == 0 ? say(l, Text::RefCraftAll)
+                                                    : sayf(l, Text::RefCraftMissing, {number(missing, l)}),
+                                       say(l, Text::RefCellHave), missing == 0 ? 1 : 2, true));
             }
-            rows.push_back(linked(itemName(ix, made), right, toItem(made)));
+            rows.push_back(std::move(r));
         }
         capped(p, std::move(rows), UsedIn, opened, l);
     }

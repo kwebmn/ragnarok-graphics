@@ -128,7 +128,7 @@ TEST(uikit_reference_card_in_two_columns) {
     CHECK_EQ(count(body, "[data-ln]"), size_t(7));  // six rows that lead somewhere and the folded heading
     CHECK_EQ(count(body, ".rcols"), size_t(1));
     CHECK_EQ(count(body, ".rcol"), size_t(2));
-    CHECK_EQ(count(body, "img.rpimg"), size_t(1));
+    CHECK_EQ(count(body, "div.rpimg"), size_t(1));  // 3.0.18-beta.253: fitted into its box (a decorator's scale-down)
     CHECK_EQ(count(body, ".rtag"), size_t(3));
     // «Що випадає» (6 high) in the first column, «Де знайти» (4) in the second, the folded one under it (shorter)
     Rml::Element* cols[2] = {nullptr, nullptr};
@@ -455,5 +455,42 @@ TEST(uikit_reference_list_pictures_bigger) {
     CHECK(std::fabs(side("r1") - 44) < 0.5f);
     CHECK(std::fabs(side("r2") - 32) < 0.5f);
     CHECK(std::fabs(side("r3") - 22) < 0.5f);
+    rmlhost::close(l.doc);
+}
+
+// 3.0.18-beta.253 (the owner's review of the reference: R-N7GPT5, R-U5HAJ6, R-9CD8YA): a list's entries - their
+// names, the lines under them, their figures in columns (a value over its label); a card's facts beside its picture
+TEST(uikit_reference_entries_and_facts) {
+    refpages::Page p;
+    p.rows.push_back(refpages::Row{});
+    p.rows.back().style = refpages::Style::Portrait;
+    p.rows.back().picture = "mob:1002";
+    p.rows.back().cells = {refpages::Cell{"50", "HP", 0, false}, refpages::Cell{"Novice, Swordman", "Jobs", 0, true}};
+    for (int i = 0; i < 3; ++i) {
+        refpages::Row r;
+        r.style = refpages::Style::Entry;
+        r.left = "Poring " + std::to_string(i);
+        r.sub = "Plant · Water 1 · Medium";
+        r.icon = "mob:1002";
+        r.link = refpages::Link{refpages::Go::Mob, 1002, ""};
+        r.cells = {refpages::Cell{"1", "Lv", 1, false}, refpages::Cell{"50", "HP", 0, false},
+                   refpages::Cell{"1 500 z", "у магазині", 0, true}};
+        p.rows.push_back(std::move(r));
+    }
+    ur::Look look;
+    look.picture = [](const std::string& key) { return key == "mob:1002" ? std::string("pic:1:1") : std::string(); };
+    ur::Model m;
+    m.body = ur::body(p, look);
+    const Loaded l = load(m);
+    CHECK_EQ(l.warnings, std::string());
+    Rml::Element* body = l.doc ? l.doc->GetElementById("body") : nullptr;
+    CHECK(body != nullptr);
+    CHECK_EQ(count(body, ".rent"), size_t(3));
+    CHECK_EQ(count(body, ".rent .rec"), size_t(9));
+    CHECK_EQ(count(body, ".rec.w"), size_t(3));
+    CHECK_EQ(count(body, ".recv.t1"), size_t(3));
+    CHECK_EQ(count(body, ".rport.hasfacts .rfact"), size_t(2));
+    CHECK_EQ(count(body, ".rfact.wide"), size_t(1));
+    CHECK_EQ(count(body, "[data-ln]"), size_t(3));
     rmlhost::close(l.doc);
 }

@@ -59,9 +59,20 @@ struct Link {
 // colours by them), `gold` the columns' names
 // 3.0.18-beta.240 (the reference's «одна карта»): MapView - a location's map (`left` its code; the window paints it as
 // the big map «⤢» does), the rows marked `side` beside it (its NPCs by kinds)
+// 3.0.18-beta.253 (the owner's review of 13.11: R-N7GPT5 «список сделан совсем ни о чём», R-U5HAJ6 «красиво списки
+// сделай», R-9CD8YA «всё неркасиво и разбросано»): Entry - a list's entry: `icon`, `left` its name, `sub` one line
+// under it (cut with «…»), `cells` its figures at the right, a value over its label, each list's in columns; Facts -
+// a card's facts, a grid of `cells` (a label over its value; `wide` the whole line); a Portrait's `cells` - its facts
+// beside its picture
 enum class Style : uint8_t {
     Title, Sub, Heading, Row, Note, Tile, World, Portrait, Text, Search, Hint, Block, Chip, Result, Group, More, Empty,
-    Tab, Tool, Caption, Warn, Step, Legend, Button, Grid, MapView
+    Tab, Tool, Caption, Warn, Step, Legend, Button, Grid, MapView, Entry, Facts
+};
+// 3.0.18-beta.253: an entry's figure or a card's fact; tone 1 good (green), 2 bad (red), 3 faint, 4 gold
+struct Cell {
+    std::string value, label;
+    int tone = 0;
+    bool wide = false;  // an entry's wider column (a name under its figure); a fact over the whole line
 };
 using Marks = std::vector<std::pair<uint16_t, uint16_t>>;  // byte ranges [from, to) of the words
 struct Row {
@@ -85,6 +96,7 @@ struct Row {
     // 3.0.18-beta.242 (the concept: monsters' levels coloured by the character's): a monster's row - its «Lv N» 1
     // fitting, 2 too strong, 3 too weak (levelTone); 0 none
     int lvTone = 0;
+    std::vector<Cell> cells;  // 3.0.18-beta.253: an Entry's figures, a Facts' or a Portrait's facts
 };
 struct Page {
     std::string name;  // what «Назад до …» calls it

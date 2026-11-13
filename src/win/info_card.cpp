@@ -764,6 +764,16 @@ std::vector<std::string> itemDescription(int id) {
     return out;
 }
 
+std::vector<std::string> itemDescriptionMarked(int id) {
+    State& s = state();
+    readTables(s);
+    std::vector<std::string> out;
+    const auto d = s.tables.items.find(std::to_string(id));
+    if (d == s.tables.items.end()) return out;
+    for (const std::string& l : d->second) out.push_back(utf8(s, l));
+    return out;
+}
+
 int slotsOf(int id) {
     State& s = state();
     readTables(s);

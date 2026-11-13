@@ -117,7 +117,7 @@ TEST(reference_pages_a_monsters_card) {
     CHECK(p.rows[0].style == refpages::Style::Title && p.rows[0].left == "Poring" && p.rows[0].right.empty());
     // 3.0.11-beta.26: the concept's head - its tags (the level, the element), its line
     CHECK(p.rows[1].tags.size() == 2 && p.rows[1].tags[0] == "Lv 1" && p.rows[1].tags[1] == "el1:Water 1");
-    CHECK_EQ(p.rows[1].left, std::string("Plant · Medium · HP 50 · досвід 2 / 1"));  // 3.0.11-beta.30: the game's
+    CHECK_EQ(p.rows[1].left, std::string("Plant · Medium"));  // 3.0.18-beta.253: HP and exp among its facts
     CHECK(p.rows[1].style == refpages::Style::Portrait && p.rows[1].picture == "mob:1002");  // 3.0.11-beta.14
     // «Де знайти»: the player's map first (marked), then by count
     const size_t where = indexOf(p, "Де знайти");
@@ -145,7 +145,8 @@ TEST(reference_pages_an_items_card) {
     const refindex::Index ix = index();
     const refpages::Page p = refpages::item(ix, Lang::Uk, 601, ctx(""));
     CHECK(p.rows[0].left == "Fly Wing" && p.rows[0].right.empty());
-    CHECK(p.rows[1].left == "вага 0,5 · ціна 60 z · продаж 30 z");  // 3.0.11-beta.22: an NPC pays half
+    // 3.0.11-beta.22: an NPC pays half; 3.0.18-beta.253: the weight and the prices among its facts
+    CHECK(p.rows[1].cells.size() == 3 && p.rows[1].cells[2].value == "30 z" && p.rows[1].left.empty());
     CHECK(p.rows[1].picture == "item:601" && p.rows[1].tags.size() == 2);  // 3.0.11-beta.26: the concept's tags
     CHECK(p.rows[1].tags[0] == "Вживане" && p.rows[1].tags[1] == "Wing_Of_Fly");
     const size_t by = indexOf(p, "З кого випадає");
@@ -158,9 +159,10 @@ TEST(reference_pages_an_items_card) {
     const refpages::Page sword = refpages::item(ix, Lang::Uk, 1101, ctx(""));
     CHECK(sword.rows[0].left == "Sword [3]");
     const size_t made = indexOf(sword, "З чого зробити");
-    CHECK(sword.rows[made + 1].left == "Iron" && sword.rows[made + 1].right == "×1");
+    CHECK(sword.rows[made + 1].left == "Iron" && sword.rows[made + 1].cells.size() == 1 &&
+          sword.rows[made + 1].cells[0].value == "1");  // 3.0.18-beta.253: «треба 1»
     const refpages::Page iron = refpages::item(ix, Lang::Uk, 998, ctx(""));
-    CHECK(rowWith(iron, "Sword") != nullptr);  // «Входить у крафт»
+    CHECK(rowWith(iron, "Sword [3]") != nullptr);  // «Входить у крафт», 3.0.18-beta.253 its slots
     const refpages::Page juice = refpages::item(ix, Lang::Uk, 531, ctx(""));
     const refpages::Row* pet = rowWith(juice, "Poring");
     CHECK(pet && pet->right == "корм" && pet->link.go == refpages::Go::Mob);
@@ -553,11 +555,18 @@ TEST(reference_search_concept_more_and_forms) {
 TEST(reference_mobs_list_groups) {
     const refindex::Index ix = index();
     const refpages::Page p = refpages::section(ix, Lang::Uk, refpages::Mobs);
-    CHECK(p.rows[0].style == refpages::Style::Heading && p.rows[0].left == "На картах · 2");
+    // 3.0.18-beta.253 (R-N7GPT5 «список сделан совсем ни о чём»): each ten levels a group; an entry's kind under its
+    // name, its level, HP and maps in columns
+    CHECK(p.rows[0].style == refpages::Style::Group && p.rows[0].left == "Lv 1\xE2\x80\x93" "10" &&
+          p.rows[0].right == "1");
     const refpages::Row* poring = rowWith(p, "Poring");
-    CHECK(poring && poring->icon == "mob:1002" && poring->right == "Lv 1 · 2 карти");
+    CHECK(poring && poring->style == refpages::Style::Entry && poring->icon == "mob:1002");
+    CHECK(poring && poring->cells.size() == 3 && poring->cells[0].value == "1" && poring->cells[0].label == "Lv");
+    CHECK(poring && poring->cells[2].value == "2" && poring->cells[2].label == "карт");
+    CHECK(poring && poring->sub.find(" · ") != std::string::npos);  // «race · element N · size»
     const refpages::Row* morroc = rowWith(p, "Satan Morroc");
-    CHECK(morroc && morroc->gold && morroc->right == "MVP · Lv 99 · 1 карта");
+    CHECK(morroc && morroc->gold && morroc->sub.rfind("MVP · ", 0) == 0 && morroc->cells[0].value == "99");
+    CHECK(indexOf(p, "Lv 91\xE2\x80\x93" "100") != size_t(-1));
     // 3.0.18-beta.250 (the owner: «убери мобов которых нету на картах, они отвлекают»): none off the maps - not in the
     // list, not in the search, not counted on the first screen; its card still opens by a link
     refindex::Index more = index();
@@ -587,14 +596,17 @@ TEST(reference_lists_polish) {
         return nullptr;
     };
     const refpages::Page services = refpages::section(ix, Lang::Uk, refpages::Services);
-    const refpages::Row* tools = starting(services, "Tool Dealer · Prontera");
-    CHECK(tools && tools->right == "2 товари");
+    const refpages::Row* tools = nullptr;  // 3.0.18-beta.253: the shop's entry - its map under its name
+    for (const refpages::Row& r : services.rows)
+        if (r.link.go == refpages::Go::Shop && r.left == "Tool Dealer") tools = &r;
+    CHECK(tools && tools->style == refpages::Style::Entry && tools->sub.rfind("Prontera", 0) == 0);
+    CHECK(tools && tools->cells.size() == 1 && tools->cells[0].value == "2" && tools->cells[0].label == "товарів");
     const refpages::Page maps = refpages::section(ix, Lang::Uk, refpages::Maps);
     CHECK(maps.rows.size() > 2 && maps.rows[0].left == "Міста · 1" && maps.rows[0].style == refpages::Style::Heading);
     const refpages::Row* prontera = starting(maps, "Prontera City");
-    CHECK(prontera && prontera->right == "Kafra · 1 крамниця");
-    const refpages::Row* field = starting(maps, "Prontera Field");
-    CHECK(field && field->right == "1 вид монстрів");
+    CHECK(prontera && prontera->sub == "Kafra · 1 крамниця");
+    const refpages::Row* field = starting(maps, "Prontera Field");  // its monsters by name, their kinds' count
+    CHECK(field && !field->sub.empty() && field->cells.size() == 1 && field->cells[0].value == "1");
     CHECK(indexOf(maps, "З монстрами · 3") != size_t(-1));
     const refpages::Page home = refpages::home(ix, Lang::Uk, refpages::Context{});
     const refpages::Row* places = rowWith(home, "Локації");
@@ -630,9 +642,10 @@ TEST(reference_lists_polish) {
     ix.pets.push_back(refindex::Pet{1917, 0, 0, 0, 0});
     const refpages::Page pets = refpages::section(ix, Lang::Uk, refpages::Pets);
     const refpages::Row* poring = rowWith(pets, "Poring");
-    CHECK(poring && poring->right == "Lv 1 · приманка: Apple" && poring->icon == "mob:1002");
+    CHECK(poring && poring->sub.rfind("приманка: Apple · корм: ", 0) == 0 && poring->icon == "mob:1002");
+    CHECK(poring && poring->cells.size() == 1 && poring->cells[0].value == "1");
     const refpages::Row* morroc = rowWith(pets, "Satan Morroc");
-    CHECK(morroc && morroc->right == "Lv 99");
+    CHECK(morroc && morroc->sub.empty() && morroc->cells.size() == 1 && morroc->cells[0].value == "99");
 }
 
 // 3.0.11-beta.69 (the concept's question 21: the data's states and «Подробиці» by a click): the page the bottom's
@@ -711,8 +724,9 @@ TEST(reference_pages_a_merged_drop_says_its_parts) {
     for (const refpages::Row& r : apple.rows)
         if (r.left == "Hugeling") {
             ++hugelings;
-            CHECK(r.right.rfind("7,73 %", 0) == 0);
-            CHECK_EQ(r.sub, std::string("8 × 1 %"));
+            // 3.0.18-beta.253: an entry - the chance its last column, how it was made in its line
+            CHECK(!r.cells.empty() && r.cells.back().value == "7,73 %" && r.cells.back().label == "шанс");
+            CHECK(r.sub.find("8 × 1 %") != std::string::npos);
         }
     CHECK_EQ(hugelings, 1);
     const refpages::Page mob = refpages::mob(ix, Lang::Uk, 1284, ctx(""));
@@ -832,6 +846,17 @@ const refpages::Row* portraitOf(const refpages::Page& p) {
         if (r.style == refpages::Style::Portrait) return &r;
     return nullptr;
 }
+// 3.0.18-beta.253: a card's fact by its label ("" none), how many of that label
+std::string factOf(const refpages::Row& r, const std::string& label) {
+    for (const refpages::Cell& c : r.cells)
+        if (c.label == label) return c.value;
+    return "";
+}
+int factsNamed(const refpages::Row& r, const std::string& label) {
+    int n = 0;
+    for (const refpages::Cell& c : r.cells) n += c.label == label;
+    return n;
+}
 }  // namespace
 
 // 3.0.18-beta.242 (the concept's cards): a boss's own timers (the HUD «Боси» panel's) first, the players' below; the
@@ -855,8 +880,9 @@ TEST(reference_pages_own_boss_timers_first) {
     const refpages::Page due = refpages::mob(ix, Lang::Uk, 1917, c);
     const size_t at = indexOf(due, "Ваші таймери");
     CHECK(at != size_t(-1) && due.rows[at + 1].right == "вже має бути" && due.rows[at + 1].gold);
-    const refpages::Row* boss = rowWith(refpages::section(ix, Lang::Uk, refpages::Bosses, c), "Satan Morroc");
-    CHECK(boss && boss->right.find("вже має бути") != std::string::npos);
+    const refpages::Page bosses = refpages::section(ix, Lang::Uk, refpages::Bosses, c);  // kept: its rows pointed to
+    const refpages::Row* boss = rowWith(bosses, "Satan Morroc");
+    CHECK(boss && !boss->cells.empty() && boss->cells.back().value.find("вже має бути") != std::string::npos);
 }
 
 // 3.0.18-beta.242: an item's words from the game's table under its name; what the player has, where
@@ -864,7 +890,9 @@ TEST(reference_pages_item_description_and_what_you_have) {
     const refindex::Index ix = index();
     refpages::Context c = ctx("");
     c.describe = [](int id) {
-        return id == 601 ? std::vector<std::string>{"A wing.", "Teleports you."} : std::vector<std::string>{};
+        return id == 601 ? std::vector<std::string>{"A wing that", "takes you somewhere.",
+                                                    "Item Class: ^777777Usable^000000", "Weight: ^7777775^000000"}
+                         : std::vector<std::string>{};
     };
     const std::map<int, int> bag{{601, 3}}, cart{{601, 1}}, storage{{601, 12}, {512, 4}};
     c.bag = &bag;
@@ -872,35 +900,80 @@ TEST(reference_pages_item_description_and_what_you_have) {
     c.storage = &storage;
     const refpages::Page wing = refpages::item(ix, Lang::Uk, 601, c);
     const refpages::Row* hero = portraitOf(wing);
-    CHECK(hero && hero->sub == "A wing.\nTeleports you.");
-    CHECK(hero && hero->right == "у сумці 3 · у візку 1 · на складі 12");
+    // 3.0.18-beta.253 (R-WP985Q «описание можно было сделать лучше»): its facts beside its picture - the pack's weight
+    // and prices, the game's «Item Class» as «Клас» (its «Weight» not twice), what you have; the game's words one
+    // paragraph under them, the whole width
+    CHECK(hero && factOf(*hero, "Вага") == "0,5" && factOf(*hero, "Ціна") == "60 z");
+    CHECK(hero && factOf(*hero, "Продаж") == "30 z" && factOf(*hero, "Клас") == "Usable");
+    CHECK(hero && factsNamed(*hero, "Вага") == 1 && hero->sub.empty());
+    CHECK(hero && factOf(*hero, "У вас") == "у сумці 3 · у візку 1 · на складі 12");
+    const size_t words = indexOf(wing, "A wing that takes you somewhere.");
+    CHECK(words != size_t(-1) && wing.rows[words].style == refpages::Style::Text);
     const refpages::Page apple = refpages::item(ix, Lang::Uk, 512, c);
-    CHECK(portraitOf(apple) && portraitOf(apple)->sub.empty() && portraitOf(apple)->right == "на складі 4");
+    CHECK(portraitOf(apple) && factOf(*portraitOf(apple), "У вас") == "на складі 4");
     const refpages::Page jellopy = refpages::item(ix, Lang::Uk, 909, c);
-    CHECK(portraitOf(jellopy) && portraitOf(jellopy)->right.empty());  // none anywhere
+    CHECK(portraitOf(jellopy) && factOf(*portraitOf(jellopy), "У вас").empty());  // none anywhere
 }
 
-// 3.0.18-beta.242: «З чого зробити» says what the bag has of each, «Входить у крафт» what is missing
+// 3.0.18-beta.242: «З чого зробити» says what the bag has of each, «Входить у крафт» what is missing; 3.0.18-beta.253
+// (R-WP985Q: «×1 · є 0» read as symbols) in columns with their words - how many it takes, how many the bag has (red
+// short, green enough)
 TEST(reference_pages_craft_have_and_missing) {
     const refindex::Index ix = index();
     refpages::Context c = ctx("");
     const std::map<int, int> none, two{{998, 2}};
     c.bag = &none;
-    const refpages::Row* iron = rowWith(refpages::item(ix, Lang::Uk, 1101, c), "Iron");
-    CHECK(iron && iron->right == "×1 · є 0");
+    const refpages::Page sword = refpages::item(ix, Lang::Uk, 1101, c);
+    const refpages::Row* iron = rowWith(sword, "Iron");
+    CHECK(iron && iron->style == refpages::Style::Entry && iron->icon == "item:998");
+    CHECK(iron && iron->cells.size() == 2 && iron->cells[0].value == "1" && iron->cells[0].label == "треба");
+    CHECK(iron && iron->cells[1].value == "0" && iron->cells[1].label == "у сумці" && iron->cells[1].tone == 2);
     const refpages::Page ironCard = refpages::item(ix, Lang::Uk, 998, c);
-    const refpages::Row* sword = rowWith(ironCard, "Sword");
-    CHECK(sword && sword->right == "бракує 1");
+    const refpages::Row* used = rowWith(ironCard, "Sword [3]");
+    CHECK(used && used->cells.size() == 1 && used->cells[0].value == "бракує 1" && used->cells[0].tone == 2);
     c.bag = &two;
-    const refpages::Page swordCard = refpages::item(ix, Lang::Uk, 1101, c);
-    CHECK(rowWith(swordCard, "Iron") && rowWith(swordCard, "Iron")->right == "×1 · є 2");
-    const refpages::Page ironHave = refpages::item(ix, Lang::Uk, 998, c);
-    CHECK(rowWith(ironHave, "Sword") && rowWith(ironHave, "Sword")->right == "є все");
-    c.bag = nullptr;  // not known: as before
+    const refpages::Page swordHave = refpages::item(ix, Lang::Uk, 1101, c);
+    const refpages::Row* ironHave = rowWith(swordHave, "Iron");
+    CHECK(ironHave && ironHave->cells.size() == 2 && ironHave->cells[1].value == "2" && ironHave->cells[1].tone == 1);
+    const refpages::Page ironCardHave = refpages::item(ix, Lang::Uk, 998, c);
+    const refpages::Row* all = rowWith(ironCardHave, "Sword [3]");
+    CHECK(all && all->cells.size() == 1 && all->cells[0].value == "є все" && all->cells[0].tone == 1);
+    c.bag = nullptr;  // not known: how many it takes alone
     const refpages::Page plain = refpages::item(ix, Lang::Uk, 1101, c);
-    CHECK(rowWith(plain, "Iron") && rowWith(plain, "Iron")->right == "×1");
+    CHECK(rowWith(plain, "Iron") && rowWith(plain, "Iron")->cells.size() == 1);
     const refpages::Page plainIron = refpages::item(ix, Lang::Uk, 998, c);
-    CHECK(rowWith(plainIron, "Sword") && rowWith(plainIron, "Sword")->right.empty());
+    CHECK(rowWith(plainIron, "Sword [3]") && rowWith(plainIron, "Sword [3]")->cells.empty());
+}
+
+// 3.0.18-beta.253 (R-JSWF77, the owner on Fabre's card: «мало информации про моба, дай полную инфу, статы итд и есть
+// огрехи в выводе карточки монстра»): its facts beside its picture - HP, its exp; with the site's newer pack its ATK,
+// DEF, MDEF, HIT, FLEE, its six stats, its range, step and attacks, its ways as tags; the drops none drops left out,
+// the things' slots in their names
+TEST(reference_pages_monster_card_facts) {
+    refindex::Index ix = index();
+    const refpages::Context c = ctx("");
+    const refpages::Page plain = refpages::mob(ix, Lang::Uk, 1002, c);
+    const refpages::Row* hero = portraitOf(plain);
+    CHECK(hero && factOf(*hero, "HP") == "50" && factOf(*hero, "Base EXP") == "2" && factOf(*hero, "Job EXP") == "1");
+    CHECK(hero && factOf(*hero, "ATK").empty());  // an older pack: no stats
+    refindex::Mob::Stats& st = ix.mobs[1002].stats;
+    st.has = true;
+    st.atkMin = 7, st.atkMax = 10, st.def = 0, st.mdef = 5, st.str = 1, st.agi = 1, st.vit = 1, st.intel = 0;
+    st.dex = 6, st.luk = 30, st.range = 1, st.speed = 400, st.attackDelay = 1872, st.mode = 0x83;
+    ix.mobs[1002].drops.push_back(refindex::Drop{998, 0, 2, {}});    // a card none drops
+    ix.mobs[1002].drops.push_back(refindex::Drop{1101, 300, 0, {}});  // a thing of 3 slots
+    const refpages::Page full = refpages::mob(ix, Lang::Uk, 1002, c);
+    hero = portraitOf(full);
+    CHECK(hero && factOf(*hero, "ATK") == "7\xE2\x80\x93" "10" && factOf(*hero, "DEF") == "0");
+    CHECK(hero && factOf(*hero, "MDEF") == "5" && factOf(*hero, "LUK") == "30");
+    CHECK(hero && factOf(*hero, "HIT") == "7" && factOf(*hero, "FLEE") == "2");  // its level + DEX, + AGI
+    CHECK(hero && factOf(*hero, "Дальність атаки") == "1" && factOf(*hero, "Крок") == "400 мс");
+    CHECK(hero && factOf(*hero, "Атака раз на") == "1,87 с");
+    const auto tagged = [&](const std::string& tag) {
+        return hero && std::find(hero->tags.begin(), hero->tags.end(), tag) != hero->tags.end();
+    };
+    CHECK(tagged("Пасивний") && tagged("Підбирає речі") && !tagged("Агресивний"));
+    CHECK(rowWith(full, "Iron") == nullptr && rowWith(full, "Sword [3]") != nullptr);
 }
 
 // 3.0.18-beta.242 (the concept: monsters' levels coloured by the character's) - fitting within 10 levels, too strong
@@ -909,19 +982,25 @@ TEST(reference_pages_monster_levels_by_yours) {
     const refindex::Index ix = index();
     refpages::Context c = ctx("");
     c.level = 50;
+    // 3.0.18-beta.253: the droppers' entries - their level's column toned
+    const auto lvTone = [](const refpages::Page& p, const std::string& who) {
+        const refpages::Row* r = rowWith(p, who);
+        return r && !r->cells.empty() && r->cells[0].label == "Lv" ? r->cells[0].tone : -1;
+    };
     const refpages::Page apple = refpages::item(ix, Lang::Uk, 512, c);  // Poring, Lv 1
-    CHECK(rowWith(apple, "Poring") && rowWith(apple, "Poring")->lvTone == 3);
+    CHECK_EQ(lvTone(apple, "Poring"), 3);
     const refpages::Page wing = refpages::item(ix, Lang::Uk, 601, c);  // Satan Morroc, Lv 99
-    CHECK(rowWith(wing, "Satan Morroc") && rowWith(wing, "Satan Morroc")->lvTone == 2);
+    CHECK_EQ(lvTone(wing, "Satan Morroc"), 2);
     c.level = 5;
     const refpages::Page near = refpages::item(ix, Lang::Uk, 512, c);
-    CHECK(rowWith(near, "Poring") && rowWith(near, "Poring")->lvTone == 1);
+    CHECK_EQ(lvTone(near, "Poring"), 1);
     c.level = 0;
     const refpages::Page unknown = refpages::item(ix, Lang::Uk, 512, c);
-    CHECK(rowWith(unknown, "Poring") && rowWith(unknown, "Poring")->lvTone == 0);
+    CHECK_EQ(lvTone(unknown, "Poring"), 0);
     c.level = 50;
-    const refpages::Row* listed = rowWith(refpages::section(ix, Lang::Uk, refpages::Mobs, c), "Poring");
-    CHECK(listed && listed->lvTone == 3);
+    const refpages::Page mobs = refpages::section(ix, Lang::Uk, refpages::Mobs, c);
+    const refpages::Row* listed = rowWith(mobs, "Poring");
+    CHECK(listed && !listed->cells.empty() && listed->cells[0].tone == 3);  // 3.0.18-beta.253: its level's column
     CHECK_EQ(refpages::levelTone(60, 50), 1);  // the edges: 10 above fits, 11 too strong
     CHECK_EQ(refpages::levelTone(61, 50), 2);
     CHECK_EQ(refpages::levelTone(40, 50), 1);
@@ -1058,4 +1137,26 @@ TEST(reference_pages_things_no_one_can_get_are_not_listed) {
     const refpages::Row* after = rowWith(refpages::home(ix, Lang::Uk), "Предмети");
     CHECK(before && after && before->right == after->right);
     CHECK(!refpages::item(ix, Lang::Uk, 7777, ctx("")).rows.empty());
+}
+
+// 3.0.18-beta.253 (R-N7GPT5): the monsters' list cut at 100 starts ten levels below the character's (the fitting ones
+// in view; the first ones by «усі N ›»); a character's level not known - from the first
+TEST(reference_pages_monsters_from_your_levels) {
+    refindex::Index ix;
+    for (int i = 0; i < 300; ++i) {
+        ix.mobs[3000 + i] = refindex::Mob{};
+        ix.mobs[3000 + i].name = "Mob " + std::to_string(1000 + i);
+        ix.mobs[3000 + i].lv = 1 + i;
+        ix.spawnsOf[3000 + i].push_back(refindex::Where{"prt_fild08", 1, 0});
+    }
+    refpages::Context c;
+    c.level = 79;
+    const refpages::Page p = refpages::section(ix, Lang::Uk, refpages::Mobs, c);
+    CHECK(!p.rows.empty() && p.rows[0].style == refpages::Style::Group && p.rows[0].left == "Lv 61\xE2\x80\x93" "70");
+    CHECK(rowWith(p, "Mob 1060") != nullptr && rowWith(p, "Mob 1059") == nullptr);  // Lv 61 in, Lv 60 not
+    CHECK(rowWith(p, "усі 300 ›") != nullptr);
+    c.level = 0;
+    const refpages::Page first = refpages::section(ix, Lang::Uk, refpages::Mobs, c);
+    CHECK(!first.rows.empty() && first.rows[0].left == "Lv 1\xE2\x80\x93" "10");
+    CHECK(rowWith(first, "Mob 1000") != nullptr);
 }

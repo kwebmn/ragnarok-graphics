@@ -85,10 +85,20 @@ struct Mob {
     // 3.0.11-beta.28: its other name - kRO's where the game says iRO's («Wander Man» of Wanderer); "" none or the same
     std::string other;
     std::string folded{}, otherFolded{};  // 3.0.11-beta.28: both case folded once by build() ("" not yet)
+    // 3.0.18-beta.253 (R-JSWF77 «мало информации про моба, дай полную инфу, статы»): the site's newer packs' stats
+    // (its 16th field) - `has` false in the older ones
+    struct Stats {
+        bool has = false;
+        int atkMin = 0, atkMax = 0, def = 0, mdef = 0, str = 0, agi = 0, vit = 0, intel = 0, dex = 0, luk = 0;
+        int range = 0, speed = 0, attackDelay = 0, mode = 0;  // cells; ms a cell; ms between attacks; mob_db's mode
+    } stats;
 };
 struct Item {  // 3.0.11-beta.7
     std::string name, aegis;
     int type = 0, buy = 0, weight = 0, slots = 0;
+    // 3.0.18-beta.253: the site's newer packs' (its 8th field) - attack, defence, weapon level, equip level
+    bool hasStats = false;
+    int atk = 0, def = 0, weaponLv = 0, equipLv = 0;
     std::string folded{}, aegisFolded{};  // 3.0.11-beta.28: both case folded once by build() ("" not yet)
 };
 struct Shop {

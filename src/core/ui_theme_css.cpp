@@ -1640,7 +1640,8 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .rport { display: flex; flex-direction: row; align-items: center; margin: 0 0 14dp 0; }
 .rfw .rpic { display: flex; flex: none; align-items: center; justify-content: center; width: 158dp; height: 158dp;
     margin-right: 16dp; border-radius: 12dp; border: 1dp #ffffff17; background-color: #ffffff08; }
-.rfw .rpimg { display: block; flex: none; }
+.rfw .rpimg { display: block; flex: none; width: 150dp; height: 150dp; }
+.rfw .rport.hasfacts { align-items: flex-start; }
 .rfw .rpinfo { display: block; flex: 1; }
 .rfw .rpl { display: block; font-size: 14dp; }
 .rfw .rpr { display: block; margin-top: 3dp; color: #9aa3b5; }
@@ -1665,7 +1666,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .rts { display: block; margin-top: 3dp; font-size: 11.5dp; color: #7d8597; }
 .rfw.narrow .rtile { width: 32%; }
 .rfw .rcols { display: flex; flex-direction: row; align-items: flex-start; }
-.rfw .rcol { display: block; flex: 1 1 0; }
+.rfw .rcol { display: block; flex: 1 1 0; min-width: 0; }
 .rfw .rcol:first-child { margin-right: 8dp; }
 .rfw .rcol:last-child { margin-left: 8dp; }
 .rfw .rsec { display: block; margin-bottom: 14dp; padding: 10dp 12dp; border-radius: 12dp; border: 1dp #ffffff14;
@@ -1677,7 +1678,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .rshr { display: block; flex: none; margin-left: 8dp; font-weight: normal; }
 .rfw .rgroup { color: #c9d1de; }
 .rfw .rsplit { display: flex; flex-direction: row; align-items: flex-start; }
-.rfw .rspc { display: block; flex: 1 1 0; margin-right: 14dp; }
+.rfw .rspc { display: block; flex: 1 1 0; min-width: 0; margin-right: 14dp; }
 .rfw .rspc:last-child { margin-right: 0; }
 .rfw .rjump { display: flex; flex-direction: row; flex-wrap: wrap; margin-bottom: 12dp; }
 .rfw .rjc { display: block; height: 24dp; line-height: 24dp; padding: 0 10dp; margin: 0 6dp 6dp 0; border-radius: 12dp;
@@ -1694,9 +1695,43 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 /* 3.0.18-beta.250 (the owner: «картинки сделай побольше в базе»): the lists' monsters and things bigger */
 .rfw .rr .ri.rim, .rfw .rres .ri.rim { width: 44dp; height: 44dp; margin-right: 10dp; }
 .rfw .rr .ri.rit, .rfw .rres .ri.rit { width: 32dp; height: 32dp; margin-right: 10dp; }
-.rfw .rl { display: block; flex: 1; white-space: nowrap; overflow: hidden; }
+.rfw .rl { display: block; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rfw .rsb { display: block; flex: none; margin-left: 10dp; font-size: 12dp; color: #9aa3b5; white-space: nowrap; }
-.rfw .rrt { display: block; flex: none; margin-left: 10dp; font-size: 12.5dp; color: #eceff5; white-space: nowrap; }
+.rfw .rrt { display: block; flex: none; max-width: 60%; margin-left: 10dp; font-size: 12.5dp; color: #eceff5;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 3.0.18-beta.253 (the owner's review of the reference: R-N7GPT5 «список сделан совсем ни о чём», R-U5HAJ6, R-9CD8YA
+   - a craft's things over the next column): a list's entry - its picture, its name and a line under it (cut with «…»),
+   its figures at the right in columns, a value over its label */
+.rfw .rent { display: flex; flex-direction: row; align-items: center; min-height: 48dp; padding: 3dp 8dp;
+    border-radius: 8dp; }
+.rfw .rent.ctl:hover { background-color: #ffffff12; }
+.rfw .rent .ri { margin-right: 10dp; }
+.rfw .rent .ri.rim { width: 44dp; height: 44dp; }
+.rfw .rent .ri.rit { width: 32dp; height: 32dp; margin-left: 6dp; margin-right: 16dp; }
+.rfw .ren { display: block; flex: 1 1 0; min-width: 0; overflow: hidden; }
+.rfw .renn { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14dp; }
+.rfw .rent.hl .renn { color: #e6cb8a; }
+.rfw .rens { display: block; margin-top: 2dp; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 12dp; color: #9aa3b5; }
+.rfw .rec { display: block; flex: none; width: 58dp; margin-left: 6dp; text-align: right; }
+.rfw .rec.w { width: 104dp; }
+.rfw .recv { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13.5dp; }
+.rfw .recl { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10.5dp;
+    color: #7d8597; }
+.rfw .recv.t1, .rfw .rfv.t1 { color: #7fd49a; }
+.rfw .recv.t2, .rfw .rfv.t2 { color: #ff8a7a; }
+.rfw .recv.t3, .rfw .rfv.t3 { color: #7d8597; }
+.rfw .recv.t4, .rfw .rfv.t4 { color: #e6cb8a; }
+/* 3.0.18-beta.253 (R-JSWF77 «дай полную инфу, статы», R-WP985Q): a card's facts - a grid of small boxes, a label over
+   its value, four to a line (a wide one the whole line) */
+.rfw .rfacts { display: flex; flex-direction: row; flex-wrap: wrap; margin-top: 10dp; }
+.rfw .rfact { display: block; width: 23.8%; margin: 0 1% 6dp 0; padding: 5dp 9dp; border-radius: 8dp;
+    background-color: #ffffff0b; box-sizing: border-box; }
+.rfw .rfact.wide { width: 98.2%; }
+.rfw .rfl { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10.5dp;
+    color: #8a93a3; }
+.rfw .rfv { display: block; margin-top: 1dp; font-size: 13.5dp; }
+.rfw .rfrow { display: block; }
 .rfw .rres .rrs { display: block; flex: 1; overflow: hidden; }
 .rfw .rres .rl, .rfw .rres .rsb { display: block; margin-left: 0; }
 .rfw .rres .rrt { color: #9aa3b5; }

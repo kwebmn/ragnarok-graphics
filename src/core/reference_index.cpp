@@ -191,6 +191,17 @@ void readMobs(const json::Value& v, Index& ix) {
             std::replace(same.begin(), same.end(), '_', ' ');
             if (same == lower(mob.name)) mob.other.clear();
         }
+        // 3.0.18-beta.253: [atk1, atk2, def, mdef, str, agi, vit, int, dex, luk, range, speed, adelay, mode]
+        if (a.items().size() > 15 && a[size_t(15)].type() == json::Value::Array &&
+            a[size_t(15)].items().size() >= 14) {
+            const json::Value& s = a[size_t(15)];
+            Mob::Stats& st = mob.stats;
+            st.has = true;
+            st.atkMin = at(s, 0), st.atkMax = at(s, 1), st.def = at(s, 2), st.mdef = at(s, 3);
+            st.str = at(s, 4), st.agi = at(s, 5), st.vit = at(s, 6), st.intel = at(s, 7), st.dex = at(s, 8);
+            st.luk = at(s, 9), st.range = at(s, 10), st.speed = at(s, 11), st.attackDelay = at(s, 12);
+            st.mode = at(s, 13);
+        }
         ix.mobs[id] = std::move(mob);
     }
 }
@@ -200,7 +211,14 @@ void readItems(const json::Value& v, Index& ix) {  // {id: [name, aegis, type, b
         const int id = std::atoi(m.first.c_str());
         const json::Value& a = m.second;
         if (id <= 0 || a.items().size() < 6) continue;
-        ix.items[id] = Item{a[size_t(0)].asString(), a[size_t(1)].asString(), at(a, 2), at(a, 3), at(a, 4), at(a, 5)};
+        Item item{a[size_t(0)].asString(), a[size_t(1)].asString(), at(a, 2), at(a, 3), at(a, 4), at(a, 5)};
+        // 3.0.18-beta.253: [atk, def, weapon level, equip level] - the site's newer packs
+        if (a.items().size() > 7 && a[size_t(7)].type() == json::Value::Array && a[size_t(7)].items().size() >= 4) {
+            const json::Value& s = a[size_t(7)];
+            item.hasStats = true;
+            item.atk = at(s, 0), item.def = at(s, 1), item.weaponLv = at(s, 2), item.equipLv = at(s, 3);
+        }
+        ix.items[id] = std::move(item);
     }
 }
 

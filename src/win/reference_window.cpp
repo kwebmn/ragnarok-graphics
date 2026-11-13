@@ -404,7 +404,8 @@ refpages::Context contextOf(const State& s) {
     c.liveAt = reference::onlineSeen();  // 3.0.11-beta.69
     c.trackedQuests = &trackerwin::quests();  // 3.0.11-beta.70
     c.trackedItems = &trackerwin::items();
-    c.describe = [](int id) { return infocardwin::itemDescription(id); };  // 3.0.18-beta.242
+    // 3.0.18-beta.242; 3.0.18-beta.253 with its colour marks (its facts' values told apart: core/item_desc)
+    c.describe = [](int id) { return infocardwin::itemDescriptionMarked(id); };
     c.bag = s.bagKnown ? &s.bag : nullptr;
     c.cart = s.cartKnown ? &s.cart : nullptr;
     c.storage = s.storageSeen.empty() ? nullptr : &s.storageSeen;
@@ -1748,8 +1749,25 @@ void loadWaiting(State& s) {
         top = v.y - v.h;
         bottom = v.y + 2 * v.h;
     }
-    int budget = 8;
-    for (size_t i = 0; i < s.waiting.size() && budget > 0;) {
+    // 3.0.18-beta.253 (R-N7GPT5 «грузится с подлагиванием»): by the time they take, not by their count - a monster's
+    // picture (its sprite read and drawn) costs a few ms, eight a frame made frames of 20-40 ms; now about 3 ms of them
+    // a frame (one at least)
+    constexpr double kMsAFrame = 3.0;
+    LARGE_INTEGER hz{}, start{};
+    QueryPerformanceFrequency(&hz);
+    QueryPerformanceCounter(&start);
+    const auto spent = [&]() {
+        LARGE_INTEGER now{};
+        QueryPerformanceCounter(&now);
+        return hz.QuadPart > 0 ? double(now.QuadPart - start.QuadPart) * 1000.0 / double(hz.QuadPart) : 0.0;
+    };
+    int made = 0;
+    bool late = false;
+    for (size_t i = 0; i < s.waiting.size();) {
+        if (made > 0 && spent() >= kMsAFrame) {
+            late = true;
+            break;
+        }
         const panel::Box b = boxIn(s, s.waiting[i].second);
         if (b.y + b.h < top || b.y > bottom) {
             ++i;
@@ -1757,7 +1775,7 @@ void loadWaiting(State& s) {
         }
         const std::string key = s.waiting[i].first;
         loadPicture(s, key);
-        --budget;
+        ++made;
         const auto it = s.pictures.find(key);
         const std::string src = it == s.pictures.end() || it->second.width <= 0
                                     ? std::string()
@@ -1772,7 +1790,7 @@ void loadWaiting(State& s) {
         }
         if (i > s.waiting.size()) i = s.waiting.size();
     }
-    if (budget > 0) s.waitingScroll = scrollNow(s);  // all in view made: none looked for till the body scrolls
+    if (!late) s.waitingScroll = scrollNow(s);  // all in view made: none looked for till the body scrolls
 }
 
 // 3.0.18-beta.248 (the owner: «всюду немного покороченый интерфейс»): the header's way keeps its end - while it is
