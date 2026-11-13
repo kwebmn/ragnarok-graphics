@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.18-beta.241 — what's new · 2026-11-13
+
+- «Reference» on the controller works like the other windows. A gold frame walks the card's rows, chips and buttons with the D-pad or the left stick, sideways between the two columns too. A opens, B goes back (on the first page it closes the window). X is «Lead me here» on an NPC's or a location's card, Y is the search with the on-screen keyboard (Start on it opens the first result). LB and RB switch the sections on the left, the right stick scrolls, Start closes the window. The bottom line shows your controller's buttons.
+- Maps on the controller: A on a location's map or on the world map puts a cross on it. The left stick moves the cross (at the edge the map follows), the right stick moves the map, LB and RB zoom. A opens what is under the cross: an NPC's card, the next map, a location on the world map. X on a location's map moves the cross to the next NPC or exit, B removes the cross. The name under the cross shows just as under the mouse.
+- The mouse or the keyboard take the window back: the frame and the cross go away.
+- The reference's old hand layout is gone; only the world map's painter is left.
+- What to check: open the reference with a controller button - the frame on the first row; the D-pad every way over a monster's card; A on a row, B back, LB and RB through the sections; Y - type «poring», Start; X on a Kafra's card; on Prontera's card A on the map - the cross, the stick, LB and RB, X, A on a Kafra; the world map - the cross and A on a town; a mouse click - the frame goes away.
+
 # uaRO Graphics 3.0.18-beta.240 — what's new · 2026-11-13
 
 - «Reference», a location's card: it now holds the map itself, like the minimap's big map «⤢». The wheel and the «−», «⤢», «+» buttons zoom, and the map can be dragged. Over the map are the layers «NPC», «Warps», «Monsters», «You are here». «NPC» and «Warps» are the same switches as the minimap's. «Monsters» (where monsters spawn, as red patches) and «You are here» (you and your party members' faces) are the reference's own.
