@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.18-beta.248 — what's new · 2026-11-13
+
+- «Reference», «World map»: the map itself is back (R-QP7PQB). Since beta 239 it showed only the players' marks and «You are here» without the locations: the window gave the picture it drew as its own background too, so it was wiped before the drawing.
+- Less cut off: the header's way keeps its end (the page's name shows, the early steps become «…»); long lists go in two columns, three only in a very wide window, so names are not cut; the world map's page no longer overflows the window (no stray scroll bar).
+- Reports are simpler: no more five extra pictures of the same place with parts of the graphics off (added to hunt Berserk's wash; its cause was found back in beta 229). The report is smaller and the game does not flicker while making it. The old files of those pictures are deleted.
+- What to check: «World map» with its locations, zoom and drag; the header on a deep page; «Monsters» - names in two full columns; send a report - only your own picture.
+
 # uaRO Graphics 3.0.18-beta.247 — what's new · 2026-11-13
 
 - «Reference» no longer stutters on long lists (R-ZW43KT). «Monsters» had 1006 rows, and each time a few monster pictures came the whole page was made again - the game fell to 26 frames. Now a long list shows its first 100 rows and «all N ›» (as the reference's other lists do). Pictures load first for the rows in view and take their place without the page being made again.
