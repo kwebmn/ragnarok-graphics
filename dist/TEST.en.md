@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.246 — what's new · 2026-11-13
+
+- Getting ready for a site update for «Reference»: the app can take a fresh file of the maps' walkable cells (routes and maps) from the site as soon as the site serves it, and then it wins over the package's own file. Until the site serves it nothing changes.
+- What to check: nothing new in the game; «Lead me here» routes work as before.
+
 # uaRO Graphics 3.0.18-beta.245 — what's new · 2026-11-13
 
 - «Reference», search: a name typed in a Cyrillic layout («зщкштп») is searched by the same keys in Latin («poring»), and a line over the results says «Typed in the Ukrainian layout - searching poring». Beside it «search as typed ›» searches the typed letters themselves.
