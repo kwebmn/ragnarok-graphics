@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <map>
@@ -22,6 +23,7 @@
 #include "core/sprite_file.hpp"
 #include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
+#include "core/walk_grid.hpp"
 #include "pad/win/game_window.hpp"
 #include "uikit/reference_live.hpp"
 #include "win/client_tables.hpp"
@@ -32,6 +34,7 @@
 #include "win/minimap_proto.hpp"
 #include "win/monster_picture.hpp"
 #include "win/pack_pictures.hpp"
+#include "win/party_panel.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -128,6 +131,28 @@ struct State {
     bool narrow = false;
     int mapW = 0, mapH = 0;  // the world map's box on its page
     std::vector<barhint::Skill> bar;  // 3.0.11-beta.68: the hotbar's skills, read with each page
+    // 3.0.18-beta.240 (the reference's «одна карта», the owner 13.11): a location's map - the big map's look at any
+    // zoom; its layers the minimap's (one setting), the monster zones the window's own
+    std::string locCode;               // the map shown ("" none)
+    minimap::MapView mv;               // its zoom and centre
+    minimap::MapPicture locPicture;    // its picture: the game's, or «Схема»
+    std::string locPictureOf;
+    bool locSharp = false;             // «Схема»: zoom up to 4
+    minimap::Scene locScene;
+    std::vector<int> locNpc;           // each mark's NPC (its place in the map's list), -1 a warp
+    std::vector<std::string> locDest;  // each mark's warp's map ("" an NPC)
+    std::string locMembers;            // the party's members on it (their names, cells, faces) as last drawn
+    panel::Picture locImage;
+    int locPainted = 0, locHover = -1;
+    std::string locSrc, locKey, locWordsRml;
+    int locW = 0, locH = 0;            // its box
+    bool layerMobs = true;             // the owner: all the layers on at first
+    bool locDrag = false, locDragged = false;
+    float locDragX = 0, locDragY = 0;
+    int locDragMark = -1;
+    // «Вести сюди» to an NPC's cell: the way to its map now, the cell once the player is on it
+    std::string plotMap;
+    int plotX = 0, plotY = 0;
 };
 
 State& state() {
@@ -271,6 +296,10 @@ std::string pictureSrc(State& s, const std::string& key) {
         if (s.worldPicture.width <= 0) return {};
         return uaui::picture(&s.worldPicture, s.worldPainted, s.worldSrc);
     }
+    if (key == "mapview") {  // 3.0.18-beta.240: the location's map
+        if (s.locImage.width <= 0) return {};
+        return uaui::picture(&s.locImage, s.locPainted, s.locSrc);
+    }
     auto it = s.pictures.find(key);
     if (it == s.pictures.end()) {
         if (key.rfind("icon:", 0) == 0) {  // a row's icon: later, a few a frame
@@ -359,23 +388,7 @@ refwin::WorldLook worldLook(State& s, bool forPaint) {
 }
 
 // The world map's words over its picture as markup (spans placed in its box)
-std::string worldWordsRml(const State& s, const refwin::WorldLook& w) {
-    std::string o;
-    const panel::Box b{0, 0, float(s.mapW), float(s.mapH)};
-    char style[256];
-    for (const refwin::Words& x : refwin::worldWordsIn(worldLayout(s), w, b)) {
-        const char* align = x.align == refwin::Align::Right ? "right" : x.align == refwin::Align::Center ? "center"
-                                                                                                         : "left";
-        std::snprintf(style, sizeof style,
-                      "left: %.1fpx; top: %.1fpx; width: %.1fpx; height: %.1fpx; font-size: %.1fpx; "
-                      "line-height: %.1fpx; color: #%06x; text-align: %s;",
-                      double(x.box.x), double(x.box.y), double(x.box.w), double(x.box.h), double(x.px),
-                      double(x.wrap ? std::round(x.px * 1.3f) : x.box.h), unsigned(x.rgb & 0xFFFFFF), align);
-        o += std::string("<span class=\"ww") + (x.bold ? " b" : "") + (x.wrap ? " wrap" : "") + "\" style=\"" + style +
-             "\">" + ur::escape(x.text) + "</span>";
-    }
-    return o;
-}
+std::string worldWordsRml(const State& s, const refwin::WorldLook& w);
 
 // 3.0.11-beta.29: the world map's picture at the view - painted again when what it shows changed; its element's
 // picture and words then put in place (not the whole body)
@@ -418,6 +431,212 @@ void worldChanged(State& s) {
         s.cy = (float(s.mapH) / 2 - v.y) / v.s;
     }
     worldPaint(s);
+}
+
+// --- 3.0.18-beta.240 (the reference's «одна карта»): a location's map
+
+bool wrapOf(const refwin::Words& w) { return w.wrap; }
+bool wrapOf(const minimap::Words&) { return false; }
+
+// Words of a painter (the world map's, the minimap's) as spans placed over its picture
+template <typename W>
+std::string spansOf(const std::vector<W>& words) {
+    std::string o;
+    char style[256];
+    for (const W& x : words) {
+        const char* align = x.align == decltype(x.align)::Right ? "right" : x.align == decltype(x.align)::Center
+                                                                                  ? "center"
+                                                                                  : "left";
+        const bool wrap = wrapOf(x);
+        std::snprintf(style, sizeof style,
+                      "left: %.1fpx; top: %.1fpx; width: %.1fpx; height: %.1fpx; font-size: %.1fpx; "
+                      "line-height: %.1fpx; color: #%06x; text-align: %s;",
+                      double(x.box.x), double(x.box.y), double(x.box.w), double(x.box.h), double(x.px),
+                      double(wrap ? std::round(x.px * 1.3f) : x.box.h), unsigned(x.rgb & 0xFFFFFF), align);
+        o += std::string("<span class=\"ww") + (x.bold ? " b" : "") + (wrap ? " wrap" : "") + "\" style=\"" + style +
+             "\">" + ur::escape(x.text) + "</span>";
+    }
+    return o;
+}
+
+std::string worldWordsRml(const State& s, const refwin::WorldLook& w) {
+    return spansOf(refwin::worldWordsIn(worldLayout(s), w, panel::Box{0, 0, float(s.mapW), float(s.mapH)}));
+}
+
+bool locationPage(const State& s) {
+    for (const refpages::Row& r : s.page.rows)
+        if (r.style == refpages::Style::MapView) return true;
+    return false;
+}
+
+std::string locationOf(const State& s) {
+    for (const refpages::Row& r : s.page.rows)
+        if (r.style == refpages::Style::MapView) return r.left;
+    return {};
+}
+
+const walkgrid::Grid* gridOf(const State& s, const std::string& code) {
+    if (!s.index || !s.index->walk) return nullptr;
+    const auto it = s.index->walk->find(code);
+    return it == s.index->walk->end() ? nullptr : &it->second;
+}
+
+// Its picture: «Схема» when the minimap shows it (the walkable cells), else the game's own (its warps' red dots out)
+void loadLocationPicture(State& s, const std::string& code) {
+    const walkgrid::Grid* g = gridOf(s, code);
+    const bool scheme = minimapproto::schemeShown() && g;
+    const std::string key = code + (scheme ? "|scheme" : "|picture");
+    if (key == s.locPictureOf) return;
+    s.locPictureOf = key;
+    s.locPicture = minimap::MapPicture{};
+    s.locSharp = scheme;
+    if (scheme) {
+        int w = 0, h = 0;
+        const std::vector<uint32_t> px = minimap::schemePixels(*g, nullptr, 4, w, h);
+        s.locPicture = minimap::prepare(px, w, h);
+        return;
+    }
+    std::string bmp;
+    std::vector<uint32_t> argb;
+    int w = 0, h = 0;
+    if (readFile(s, "data\\texture\\" + kUi + "\\map\\" + code + ".bmp", bmp) &&
+        pack::decodeBmp(reinterpret_cast<const uint8_t*>(bmp.data()), bmp.size(), argb, w, h)) {
+        minimap::dropWarpDots(argb, w, h);
+        s.locPicture = minimap::prepare(argb, w, h);
+    }
+    LOG_INFO("reference: %s's map - %s", code.c_str(), s.locPicture.levels.empty() ? "no picture (the ground)"
+                                                                                       : "the game's picture");
+}
+
+int memberSide(const State& s) { return std::max(8, int(std::lround(12 * s.dp))); }
+
+std::string membersKeyOf(const partywin::OnMap& p) {
+    char face[24];
+    std::snprintf(face, sizeof face, "%p", static_cast<const void*>(p.face));
+    return p.name + ':' + std::to_string(p.x) + ',' + std::to_string(p.y) + (p.dead ? "d" : "") + face + ';';
+}
+
+// Its marks by the layers: the NPCs (their colours, «K» «$» «!»), the warps (the exits' words always), the monster
+// zones, the player and the party's members on his own map
+void buildLocationScene(State& s) {
+    minimap::Scene sc;
+    s.locNpc.clear();
+    s.locDest.clear();
+    if (const walkgrid::Grid* g = gridOf(s, s.locCode)) sc.map = minimap::MapSize{g->w, g->h};
+    sc.picture = s.locPicture.levels.empty() ? nullptr : &s.locPicture;
+    const bool npcs = minimapproto::layerShown(int(minimap::Layer::Npcs)) ||
+                      minimapproto::layerShown(int(minimap::Layer::Kafra));
+    const bool warps = minimapproto::layerShown(int(minimap::Layer::Warps));
+    const bool here = minimapproto::layerShown(int(minimap::Layer::Party));
+    const refindex::MapHints* hints = nullptr;
+    if (s.index)
+        if (const auto it = s.index->maps.find(s.locCode); it != s.index->maps.end()) hints = &it->second;
+    if (hints) {
+        const refindex::MapHints& h = *hints;
+        if (npcs)
+            for (size_t i = 0; i < h.npcs.size(); ++i) {
+                const refindex::Npc& n = h.npcs[i];
+                const bool kafra = n.kind == refindex::NpcKind::Kafra;
+                minimap::Mark m{minimap::Cell{n.x, n.y}, refindex::colorOf(n.kind),
+                                kafra ? minimap::Glyph::Kafra : minimap::Glyph::Dot, n.name};
+                if (!kafra) m.letter = refindex::letterOf(n.kind);
+                sc.marks.push_back(std::move(m));
+                s.locNpc.push_back(int(i));
+                s.locDest.emplace_back();
+            }
+        if (warps)
+            for (const refindex::Warp& w : h.warps) {
+                bool twin = false;  // the same warp's second cell beside it
+                for (size_t k = 0; k < sc.marks.size(); ++k)
+                    twin = twin || (sc.marks[k].glyph == minimap::Glyph::Warp &&
+                                    std::abs(sc.marks[k].cell.x - w.x) <= 2 && std::abs(sc.marks[k].cell.y - w.y) <= 2);
+                if (twin) continue;
+                minimap::Mark m{minimap::Cell{w.x, w.y}, 0, minimap::Glyph::Warp,
+                                "\xE2\x86\x92 " + refindex::mapTitle(*s.index, w.dest)};
+                m.exit = w.dest.find("_in") == std::string::npos;  // indoors: its words under the pointer only
+                sc.marks.push_back(std::move(m));
+                s.locNpc.push_back(-1);
+                s.locDest.push_back(w.dest);
+            }
+        if (s.layerMobs)
+            for (const refindex::Zone& z : h.zones)
+                sc.zones.push_back(minimap::ZoneMark{minimap::Cell{z.x, z.y}, z.rx, z.ry});
+    }
+    int x = -1, y = -1, w = 0, hh = 0;
+    sc.showPlayer = here && s.locCode == s.here && readPlayerCell(x, y, w, hh);
+    if (sc.showPlayer) sc.player = minimap::Cell{x, y};
+    s.locMembers.clear();
+    if (here && s.locCode == s.here)  // the party's members on it, their faces (as the minimap's), after the rest
+        for (const partywin::OnMap& p : partywin::onMap(memberSide(s))) {
+            minimap::Mark m{minimap::Cell{p.x, p.y}, 0, minimap::Glyph::Member, p.name};
+            m.picture = p.face;
+            m.dead = p.dead;
+            sc.marks.push_back(std::move(m));
+            s.locNpc.push_back(-1);
+            s.locDest.emplace_back();
+            s.locMembers += membersKeyOf(p);
+        }
+    sc.hoverMark = s.locHover;
+    s.locScene = std::move(sc);
+}
+
+// Painted again when what it shows changed; its element's picture and words then put in place (not the whole body)
+void locationPaint(State& s) {
+    if (s.locCode.empty() || s.locW <= 0 || s.locH <= 0) return;
+    s.mv.w = s.locW;
+    s.mv.h = s.locH;
+    s.mv.s = s.dp;
+    s.locScene.hoverMark = s.locHover;
+    char head[200];
+    std::snprintf(head, sizeof head, "%d %d %.4f %.3f %.3f %.3f %d %d %d %zu %zu %d|", s.locW, s.locH,
+                  double(s.mv.zoom), double(s.mv.cx), double(s.mv.cy), double(s.dp), s.locHover,
+                  s.locScene.showPlayer ? s.locScene.player.x : -1, s.locScene.showPlayer ? s.locScene.player.y : -1,
+                  s.locScene.marks.size(), s.locScene.zones.size(), uistyle::generation());
+    const std::string key = head + s.locCode + "|" + s.locPictureOf;
+    if (key == s.locKey) return;
+    s.locKey = key;
+    minimap::paintMapView(s.locImage, s.mv, s.locScene);
+    ++s.locPainted;
+    s.locWordsRml = spansOf(minimap::mapViewWords(s.mv, s.locScene));
+    if (Rml::Element* view = s.win.doc.byId("mview"); view && !s.bodyDirty) {
+        const std::string src = uaui::picture(&s.locImage, s.locPainted, s.locSrc);
+        char size[64];
+        std::snprintf(size, sizeof size, "width: %dpx; height: %dpx;", s.locW, s.locH);
+        view->SetInnerRML("<img id=\"mimg\" src=\"" + ur::escape(src) + "\" style=\"" + size + "\"/>" +
+                          s.locWordsRml);
+    }
+}
+
+// The map shown on this page: its picture and marks; a new one at its whole, an NPC's card's «Показати на карті» on
+// that NPC at twice the zoom
+void locationSetUp(State& s) {
+    const std::string code = locationOf(s);
+    if (code.empty()) {
+        s.locCode.clear();
+        return;
+    }
+    const bool fresh = code != s.locCode;
+    s.locCode = code;
+    loadLocationPicture(s, code);
+    if (fresh) {
+        s.mv = minimap::MapView{};
+        s.locHover = -1;
+    }
+    buildLocationScene(s);
+    if (s.at.go == refpages::Go::Map && s.at.id > 0) {  // its NPC in the middle, marked
+        for (size_t i = 0; i < s.locNpc.size(); ++i)
+            if (s.locNpc[i] == s.at.id - 1) {
+                const minimap::Cell c = s.locScene.marks[i].cell;
+                s.mv.w = s.locW, s.mv.h = s.locH, s.mv.s = s.dp;
+                s.mv.zoom = std::min(2.0f, minimap::mapViewMost(s.locSharp));
+                s.mv.cx = float(c.x) + 0.5f;
+                s.mv.cy = float(c.y) + 0.5f;
+                s.locHover = int(i);
+                break;
+            }
+    }
+    s.locKey.clear();
+    locationPaint(s);
 }
 
 // 3.0.11-beta.26: the words around the page - the title, «Назад до …», the way here, the data's chips, the keys
@@ -484,6 +703,17 @@ void renderBody(State& s) {
     look.worldW = s.mapW;
     look.worldH = s.mapH;
     look.picture = [&s](const std::string& key) { return pictureSrc(s, key); };
+    if (locationPage(s)) {  // 3.0.18-beta.240: the location's map, its layers' chips
+        look.mapW = s.locW;
+        look.mapH = s.locH;
+        look.mapWords = s.locWordsRml;
+        const bool npcs = minimapproto::layerShown(int(minimap::Layer::Npcs)) ||
+                          minimapproto::layerShown(int(minimap::Layer::Kafra));
+        look.layers = {{say(Text::RefLayerNpc), npcs},
+                       {say(Text::RefLayerWarps), minimapproto::layerShown(int(minimap::Layer::Warps))},
+                       {say(Text::RefLayerMobs), s.layerMobs},
+                       {say(Text::RefLayerHere), minimapproto::layerShown(int(minimap::Layer::Party))}};
+    }
     std::string rml = ur::body(s.page, look);
     if (worldPage(s) && !s.worldWordsRml.empty()) {  // the world map's words inside its box
         const size_t at = rml.find("<div id=\"wmap\"");
@@ -545,6 +775,7 @@ void makePage(State& s) {
         s.worldKey.clear();
         worldPaint(s);
     }
+    locationSetUp(s);  // 3.0.18-beta.240
     s.wantPage = false;
     s.bodyDirty = s.bodyNow = true;
     fillChrome(s);
@@ -670,6 +901,22 @@ void go(State& s, const refpages::Link& to) {
         const float keep = scrollNow(s);
         makePage(s);
         newPage(s, keep);
+        return;
+    }
+    if (to.go == refpages::Go::Follow && to.id == 2) {  // 3.0.18-beta.240: an NPC's cell - its map's way, then it
+        const size_t a = to.map.find(':'), b = a == std::string::npos ? a : to.map.find(':', a + 1);
+        if (b == std::string::npos) return;
+        const std::string code = to.map.substr(0, a);
+        s.plotX = std::atoi(to.map.c_str() + a + 1);
+        s.plotY = std::atoi(to.map.c_str() + b + 1);
+        if (code == s.here) {
+            minimapproto::plotTo(s.plotX, s.plotY);
+            s.plotMap.clear();
+        } else {
+            minimapproto::follow(code, true);
+            s.plotMap = code;
+        }
+        LOG_INFO("reference: led to %s %d, %d", code.c_str(), s.plotX, s.plotY);
         return;
     }
     if (to.go == refpages::Go::Follow) {  // 3.0.11-beta.9: the way on the minimap
@@ -807,6 +1054,40 @@ void close(State& s) {
     s.shown = false;
 }
 
+// 3.0.18-beta.240: a layer's chip on the location's map - the NPCs (theirs and Kafra's), the warps, the player and
+// the party: the minimap's own (one setting); the monster zones the window's
+void switchLayer(State& s, int i) {
+    if (i == 0) {
+        const bool on = !(minimapproto::layerShown(int(minimap::Layer::Npcs)) ||
+                          minimapproto::layerShown(int(minimap::Layer::Kafra)));
+        for (const minimap::Layer l : {minimap::Layer::Npcs, minimap::Layer::Kafra})
+            if (minimapproto::layerShown(int(l)) != on) minimapproto::switchLayerFromReference(int(l));
+    } else if (i == 1) {
+        minimapproto::switchLayerFromReference(int(minimap::Layer::Warps));
+    } else if (i == 2) {
+        s.layerMobs = !s.layerMobs;
+    } else if (i == 3) {
+        minimapproto::switchLayerFromReference(int(minimap::Layer::Party));
+    }
+    buildLocationScene(s);
+    s.locKey.clear();
+    locationPaint(s);
+    s.bodyNow = true;  // the chips' looks (the scroll stays)
+}
+
+// Its «−», «⤢» (the whole map), «+» round the middle
+void zoomLocation(State& s, int by) {
+    if (s.locCode.empty() || s.locScene.map.w <= 0) return;
+    if (by == 0) {
+        s.mv.zoom = 1;
+        s.mv.cx = s.mv.cy = -1;
+    } else {
+        minimap::zoomMapView(s.mv, s.locScene.map, float(s.locW) / 2, float(s.locH) / 2, by > 0 ? 1.5f : 1 / 1.5f,
+                             minimap::mapViewMost(s.locSharp));
+    }
+    locationPaint(s);
+}
+
 // The rows' clicks: a data-ln's row's link, a jump chip's group scrolled to the top
 class Clicks final : public Rml::EventListener {
 public:
@@ -826,6 +1107,16 @@ public:
             const Rml::String jump = el->GetAttribute<Rml::String>("data-jump", "");
             if (!jump.empty()) {
                 if (Rml::Element* to = s.win.doc.byId(jump.c_str())) to->ScrollIntoView(true);
+                return;
+            }
+            const Rml::String lay = el->GetAttribute<Rml::String>("data-lay", "");  // 3.0.18-beta.240
+            if (!lay.empty()) {
+                switchLayer(s, std::atoi(lay.c_str()));
+                return;
+            }
+            const Rml::String mz = el->GetAttribute<Rml::String>("data-mz", "");
+            if (!mz.empty()) {
+                zoomLocation(s, std::atoi(mz.c_str()));
                 return;
             }
         }
@@ -863,6 +1154,16 @@ bool make(State& s) {
     return made;
 }
 
+// 3.0.18-beta.240: the location's map's box on the target (false: not its page, not laid out)
+bool locationBox(State& s, float& x, float& y, float& w, float& h) {
+    Rml::Element* e = s.win.doc.byId("mview");
+    if (!e || s.locCode.empty()) return false;
+    const Rml::Vector2f at = e->GetAbsoluteOffset(Rml::BoxArea::Content);
+    const Rml::Vector2f size = e->GetBox().GetSize(Rml::BoxArea::Content);
+    x = at.x, y = at.y, w = size.x, h = size.y;
+    return w > 0 && h > 0;
+}
+
 // The world map's box on the target (false: not its page, not laid out)
 bool mapBox(State& s, float& x, float& y, float& w, float& h) {
     Rml::Element* e = s.win.doc.byId("wmap");
@@ -893,9 +1194,16 @@ void sizeBox(State& s) {
     // the world map's box: the body less its padding, the panel at its right, the bar over it
     const int mapW = std::max(px(200, s), w - px(2 * 18 + kPanelW, s) - 2);
     const int mapH = std::max(px(160, s), h - px(56 + 36 + 30 + 42, s) - 2);
+    // 3.0.18-beta.240: a location's map - three fifths of the body beside its NPCs (narrow: the body's width), its
+    // height the body's less its title and bar
+    const int content = w - px(float(narrow ? 52 : 196) + 36, s) - 2;
+    const int locW = std::max(px(240, s), narrow ? content : std::min(int(float(content) * 0.6f), px(640, s)));
+    const int locH = std::clamp(h - px(56 + 36 + 30 + 34 + 110, s), px(220, s), px(600, s));
     const bool changed = w != s.w || h != s.h;
-    if (narrow != s.narrow || (worldPage(s) && (mapW != s.mapW || mapH != s.mapH))) s.wantPage = true;
-    s.w = w, s.h = h, s.narrow = narrow, s.mapW = mapW, s.mapH = mapH;
+    if (narrow != s.narrow || (worldPage(s) && (mapW != s.mapW || mapH != s.mapH)) ||
+        (locationPage(s) && (locW != s.locW || locH != s.locH)))
+        s.wantPage = true;
+    s.w = w, s.h = h, s.narrow = narrow, s.mapW = mapW, s.mapH = mapH, s.locW = locW, s.locH = locH;
     if (changed) {
         char b[32];
         std::snprintf(b, sizeof b, "%dpx", w);
@@ -1007,6 +1315,54 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
             s.worldHover = map;
             worldPaint(s);
         }
+    }
+    // 3.0.18-beta.240: the location's map - dragged, the mark under the pointer (its ring, its words), the player
+    // walking on his own map; «Вести сюди»'s cell once the player is on its map
+    float lx0 = 0, ly0 = 0, lw = 0, lh = 0;
+    if (locationBox(s, lx0, ly0, lw, lh)) {
+        if (s.locDrag) {
+            const int left = GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON;
+            if (GetAsyncKeyState(left) >= 0) {
+                s.locDrag = false;
+            } else if (pointer) {
+                const float dx = float(cx) * float(k) - s.locDragX, dy = float(cy) * float(k) - s.locDragY;
+                if (!s.locDragged && std::abs(dx) + std::abs(dy) >= 5 * s.dp) s.locDragged = true;
+                if (s.locDragged && (dx != 0 || dy != 0)) {
+                    minimap::panMapView(s.mv, s.locScene.map, dx, dy);
+                    s.locDragX += dx;
+                    s.locDragY += dy;
+                    locationPaint(s);
+                }
+            }
+        }
+        const float lx = float(cx) * float(k) - lx0, ly = float(cy) * float(k) - ly0;
+        if (pointer && !s.locDragged && lx >= 0 && ly >= 0 && lx < lw && ly < lh) {
+            const int hover = minimap::mapViewMarkAt(s.mv, s.locScene, lx, ly);
+            if (hover != s.locHover) {
+                s.locHover = hover;
+                locationPaint(s);
+            }
+        }
+        if (s.locCode == s.here && minimapproto::layerShown(int(minimap::Layer::Party))) {
+            std::string members;  // the party's members moved, came or went: the marks made again
+            for (const partywin::OnMap& p : partywin::onMap(memberSide(s))) members += membersKeyOf(p);
+            if (members != s.locMembers) {
+                buildLocationScene(s);
+                locationPaint(s);
+            }
+        }
+        if (s.locCode == s.here && s.locScene.showPlayer) {
+            int x = -1, y = -1, mw = 0, mh = 0;
+            if (readPlayerCell(x, y, mw, mh) && (x != s.locScene.player.x || y != s.locScene.player.y)) {
+                s.locScene.player = minimap::Cell{x, y};
+                locationPaint(s);
+            }
+        }
+    }
+    if (!s.plotMap.empty() && s.here == s.plotMap) {
+        minimapproto::plotTo(s.plotX, s.plotY);
+        LOG_INFO("reference: on %s - the way to %d, %d", s.plotMap.c_str(), s.plotX, s.plotY);
+        s.plotMap.clear();
     }
     int budget = 8;  // 3.0.11-beta.15: the icons the body asked for, a few a frame (a long list never stalls)
     while (budget-- > 0 && !s.wanted.empty()) {
@@ -1175,6 +1531,44 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         if (m == WM_XBUTTONDOWN && GET_XBUTTON_WPARAM(wp) == XBUTTON1) goBack(s);
         result = TRUE;
         return true;
+    }
+    // 3.0.18-beta.240: the location's map - its wheel zooms round the pointer, a press drags it, a click on an NPC
+    // opens its card (on a warp: its map's)
+    float vx = 0, vy = 0, vw = 0, vh = 0, ux = 0, uy = 0;
+    if (locationBox(s, vx, vy, vw, vh) &&
+        pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, ux, uy, nullptr)) {
+        const float lx = ux - vx, ly = uy - vy;
+        const bool in = lx >= 0 && ly >= 0 && lx < vw && ly < vh;
+        if (in && m == WM_MOUSEWHEEL) {
+            minimap::zoomMapView(s.mv, s.locScene.map, lx, ly,
+                                 std::pow(1.25f, float(GET_WHEEL_DELTA_WPARAM(wp)) / WHEEL_DELTA),
+                                 minimap::mapViewMost(s.locSharp));
+            locationPaint(s);
+            result = 0;
+            return true;
+        }
+        if (in && (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK)) {
+            s.locDrag = true;
+            s.locDragged = false;
+            s.locDragX = ux;
+            s.locDragY = uy;
+            s.locDragMark = minimap::mapViewMarkAt(s.mv, s.locScene, lx, ly);
+            result = 0;
+            return true;
+        }
+        if (m == WM_LBUTTONUP && s.locDrag) {
+            const bool click = !s.locDragged;
+            const int mark = s.locDragMark;
+            s.locDrag = s.locDragged = false;
+            if (click && mark >= 0 && size_t(mark) < s.locNpc.size()) {
+                if (s.locNpc[size_t(mark)] >= 0)
+                    go(s, refpages::Link{refpages::Go::Npc, s.locNpc[size_t(mark)], s.locCode});
+                else if (!s.locDest[size_t(mark)].empty())
+                    go(s, refpages::Link{refpages::Go::Map, 0, s.locDest[size_t(mark)]});
+            }
+            result = 0;
+            return true;
+        }
     }
     // 3.0.11-beta.29: the world map - its wheel zooms round the pointer, a press drags it, a click opens a map's card
     float mx = 0, my = 0, mw = 0, mh = 0, tx = 0, ty = 0;

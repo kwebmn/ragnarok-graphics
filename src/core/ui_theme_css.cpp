@@ -1742,6 +1742,8 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .rmview { display: block; position: relative; overflow: hidden; border-radius: 10dp; border: 1dp #ffffff17; }
 .rfw .rmview img { display: block; }
 .rfw .rmside { display: block; flex: 1; margin-left: 14dp; }
+.rfw.narrow .rmrow { flex-direction: column; }
+.rfw.narrow .rmside { margin: 12dp 0 0 0; }
 )";
 
 }  // namespace

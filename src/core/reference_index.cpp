@@ -87,8 +87,8 @@ NpcKind kindOfFolder(const std::string& folder, const std::string& name) {
         if (folder == word) return kind;
     if (folder == "merchant") {  // a shop by its name's words, else a tool dealer's
         const NpcKind k = kindOf(name);
-        return k == NpcKind::Healer || k == NpcKind::Weapon || k == NpcKind::Armor || k == NpcKind::Inn ? k
-                                                                                                         : NpcKind::Tool;
+        const bool shop = k == NpcKind::Healer || k == NpcKind::Weapon || k == NpcKind::Armor || k == NpcKind::Inn;
+        return shop ? k : NpcKind::Tool;
     }
     if (folder == "other") return NpcKind::Other;
     return kindOf(name);

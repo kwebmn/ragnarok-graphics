@@ -61,6 +61,12 @@ bool key(unsigned vk);
 // two lines under the map (where to, how many moves left, where to take the move); made again wherever the player
 // goes; «Ви на місці» on the map, then it stops. canFollow: the new minimap on
 bool canFollow();
+// 3.0.18-beta.240 (the reference's «одна карта», the owner 13.11): the map's layers (minimap::Layer) and «Схема» as the
+// minimap shows them - «Довідник»'s location map shows by them and switches them the same way (uaro-graphics.ini told,
+// the minimap's buttons and the big map's chips too)
+bool layerShown(int layer);
+void switchLayerFromReference(int layer);
+bool schemeShown();
 // 3.0.11-beta.201: the server's marks (0x0144) and the guild's mates (0x01eb) from the packets (win/packet_tap)
 void packet(const packets::Event& e);
 // 3.0.11-beta.213 (the owner: «вывод команды @mobsearch показывался на миникарте ... чтобы это можно было потом

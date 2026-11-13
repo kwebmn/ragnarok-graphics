@@ -1057,11 +1057,11 @@ std::vector<Label> bigLabels(const Big& b, const Scene& sc) {
         out.push_back(Label{box, m.label, m.glyph == Glyph::Warp ? 0xC7CEFF : m.glyph == Glyph::Kafra ? 0xFFC2E0
                                                                                                        : kText});
     };
+    // 3.0.18-beta.240 (the owner 13.11: «подписи только у выходов»): the exits' words always (a Kafra its «K»), the
+    // rest's under the pointer
     for (size_t i = 0; i < sc.marks.size(); ++i)
-        if (sc.marks[i].glyph != Glyph::Dot) add(i, false);
-    if (sc.hoverMark >= 0 && size_t(sc.hoverMark) < sc.marks.size() && sc.marks[size_t(sc.hoverMark)].glyph ==
-                                                                           Glyph::Dot)
-        add(size_t(sc.hoverMark), true);
+        if (sc.marks[i].glyph == Glyph::Warp && sc.marks[i].exit) add(i, false);
+    if (sc.hoverMark >= 0 && size_t(sc.hoverMark) < sc.marks.size()) add(size_t(sc.hoverMark), true);
     return out;
 }
 
@@ -1144,13 +1144,14 @@ std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& ti
                         Align::Right});
     out.push_back(Words{b.close, "✕", sc.bigHover == BigPart::Close ? kText : kMuted, 16 * s, false, Align::Center});
     const View v = bigView(b, sc);
-    for (const Mark& m : sc.marks) {  // the Kafras' «K» (3.0.11-beta.196: not over a face)
-        if (m.glyph != Glyph::Kafra || m.picture) continue;
+    for (const Mark& m : sc.marks) {  // the Kafras' «K» (3.0.11-beta.196: not over a face); .240: «$», «!»
+        const bool kafra = m.glyph == Glyph::Kafra && !m.picture;
+        if (!kafra && (m.letter.empty() || m.glyph != Glyph::Dot)) continue;
         float x = 0, y = 0;
         cellToPanel(v, sc.map, m.cell, x, y);
-        const float r = markRadius(m.glyph, s) * 1.5f;
-        out.push_back(Words{panel::Box{b.map.x + x - r, b.map.y + y - r, 2 * r, 2 * r}, "K", kWhite, 12 * s, true,
-                            Align::Center});
+        const float r = markRadius(m.glyph, s) * 1.5f * (kafra ? 1.0f : 1.7f);
+        out.push_back(Words{panel::Box{b.map.x + x - r, b.map.y + y - r, 2 * r, 2 * r}, kafra ? "K" : m.letter, kWhite,
+                            (kafra ? 12 : 11) * s, true, Align::Center});
     }
     for (const Label& l : bigLabels(b, sc))
         out.push_back(Words{l.box, l.text, l.rgb, 12.5f * s, true, Align::Center});

@@ -311,6 +311,7 @@ void buildHints(State& s) {
             s.marks.push_back(minimap::Mark{minimap::Cell{n.x, n.y}, refindex::colorOf(n.kind),
                                             kafra ? minimap::Glyph::Kafra : minimap::Glyph::Dot, n.name});
             if (kafra) s.marks.back().picture = face;
+            else s.marks.back().letter = refindex::letterOf(n.kind);  // 3.0.18-beta.240: «$», «!» on the big map
         }
     }
     if (h && s.show.warps) {
@@ -323,6 +324,7 @@ void buildHints(State& s) {
             if (twin) continue;
             s.marks.push_back(minimap::Mark{minimap::Cell{w.x, w.y}, 0, minimap::Glyph::Warp,
                                             "\xE2\x86\x92 " + shortTitle(s, w.dest)});  // «→ Prontera Field»
+            s.marks.back().exit = w.dest.find("_in") == std::string::npos;  // 3.0.18-beta.240: its words always
         }
     }
     if (!s.show.mobs) return;
@@ -1801,6 +1803,19 @@ bool showBig(bool open) {
 bool bigShown() { return state().on && state().big; }
 
 bool canFollow() { return state().on; }
+
+bool layerShown(int layer) {
+    State& s = state();
+    if (layer < 0 || layer >= minimap::kLayers) return false;
+    return layersOf(withWanted(s, s.show, GetTickCount64())).on[layer];
+}
+
+void switchLayerFromReference(int layer) { switchLayer(state(), layer); }
+
+bool schemeShown() {
+    State& s = state();
+    return withWanted(s, s.show, GetTickCount64()).scheme;
+}
 
 bool plotTo(int x, int y) {
     State& s = state();

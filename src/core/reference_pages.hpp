@@ -96,6 +96,8 @@ enum Section : int { Mobs, Bosses, Items, Cards, Maps, Shops, Teleports, Pets, C
 // 3.0.11-beta.69 (the concept's question 21: the data's states, «Подробиці» by a click): the page the window's bottom
 // chips open (Go::Section) - the pack's date, server and age, the live data's state
 constexpr int kDataSection = 90;
+// 3.0.18-beta.240 (the owner 13.11): «NPC і послуги» by the maps' kinds - a kind's page is kNpcKinds + its NpcGroup
+constexpr int kNpcKinds = 300;
 constexpr long long kPackStaleDays = 14;  // the concept's «Порог «могут быть застаревшими» — 14 дней»
 bool packStale(const refindex::Index& ix, long long now);  // the pack's date older than kPackStaleDays at `now`
 // 3.0.11-beta.70 (the concept's tracker): the entries of what the player pinned - each quest (its title, the items to

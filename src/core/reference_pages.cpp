@@ -973,7 +973,73 @@ std::vector<tracker::Entry> trackedEntries(const refindex::Index& ix, Lang l, co
     return out;
 }
 
+namespace {
+
+// 3.0.18-beta.240: the NPCs' kinds with their counts on all the maps, each its page
+using refindex::NpcGroup;
+const NpcGroup kGroups[] = {NpcGroup::Kafra, NpcGroup::Merchant, NpcGroup::Quest, NpcGroup::Custom,
+                            NpcGroup::Guide, NpcGroup::City,     NpcGroup::Guild, NpcGroup::Job,
+                            NpcGroup::Event, NpcGroup::Ferry,    NpcGroup::Other};
+
+uint32_t groupColour(refindex::NpcGroup g) {
+    switch (g) {
+        case refindex::NpcGroup::Kafra: return refindex::colorOf(refindex::NpcKind::Kafra);
+        case refindex::NpcGroup::Merchant: return refindex::colorOf(refindex::NpcKind::Tool);
+        case refindex::NpcGroup::Quest: return refindex::colorOf(refindex::NpcKind::Quest);
+        case refindex::NpcGroup::Custom: return refindex::colorOf(refindex::NpcKind::Custom);
+        case refindex::NpcGroup::Guide: return refindex::colorOf(refindex::NpcKind::Guide);
+        default: return refindex::colorOf(refindex::NpcKind::Other);
+    }
+}
+
+void npcKinds(const refindex::Index& ix, Lang l, Page& p) {
+    std::map<refindex::NpcGroup, size_t> count;
+    for (const auto& [code, h] : ix.maps)
+        for (const refindex::Npc& n : h.npcs) ++count[refindex::groupOf(n.kind)];
+    if (count.empty()) return;
+    p.rows.push_back(heading(say(l, Text::RefNpcByKind)));
+    for (const refindex::NpcGroup g : kGroups) {
+        const auto it = count.find(g);
+        if (it == count.end()) continue;
+        Row r = linked(groupName(g, l), std::to_string(it->second), Link{Go::Section, kNpcKinds + int(g), ""});
+        r.dot = groupColour(g);
+        p.rows.push_back(std::move(r));
+    }
+}
+
+// A kind's NPCs on every map (by the map's name, then theirs), each its card; the first 100
+Page npcKind(const refindex::Index& ix, Lang l, refindex::NpcGroup g) {
+    Page p;
+    p.name = groupName(g, l);
+    std::vector<std::tuple<std::string, std::string, int>> all;  // the map's title, its code, the NPC's place
+    for (const auto& [code, h] : ix.maps)
+        for (size_t i = 0; i < h.npcs.size(); ++i)
+            if (refindex::groupOf(h.npcs[i].kind) == g) all.emplace_back(refindex::mapTitle(ix, code), code, int(i));
+    std::sort(all.begin(), all.end(), [&](const auto& a, const auto& b) {
+        if (std::get<0>(a) != std::get<0>(b)) return std::get<0>(a) < std::get<0>(b);
+        return ix.maps.at(std::get<1>(a)).npcs[size_t(std::get<2>(a))].name <
+               ix.maps.at(std::get<1>(b)).npcs[size_t(std::get<2>(b))].name;
+    });
+    p.rows.push_back(heading(p.name, std::to_string(all.size())));
+    const size_t shown = std::min(all.size(), kFew);
+    for (size_t k = 0; k < shown; ++k) {
+        const auto& [title, code, i] = all[k];
+        const refindex::Npc& n = ix.maps.at(code).npcs[size_t(i)];
+        Row r = linked(n.name + " \xC2\xB7 " + title, std::to_string(n.x) + ", " + std::to_string(n.y),
+                       Link{Go::Npc, i, code});
+        r.dot = refindex::colorOf(n.kind);
+        p.rows.push_back(std::move(r));
+    }
+    if (all.size() > shown)
+        p.rows.push_back(note(sayf(l, Text::RefShownOf, {std::to_string(shown), std::to_string(all.size())})));
+    return p;
+}
+
+}  // namespace
+
 Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
+    if (id >= kNpcKinds && id < kNpcKinds + int(std::size(kGroups)))  // 3.0.18-beta.240
+        return npcKind(ix, l, refindex::NpcGroup(id - kNpcKinds));
     if (id == kDataSection) return dataPage(ix, l, c);  // 3.0.11-beta.69
     Page p;
     if (id == 100 + 6) id = Cards;  // 3.0.11-beta.32: «Предмети» › «Картка» - the cards' own list (in three)
@@ -1129,6 +1195,7 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
             break;
         case Services:  // 3.0.11-beta.26: the concept's «NPC і послуги» - the shops and Kafra
             p.name = say(l, Text::RefSecServices);
+            npcKinds(ix, l, p);  // 3.0.18-beta.240: by the maps' kinds first
             p.rows.push_back(heading(say(l, Text::RefSecTeleports)));
             for (Row& r : kafraRows(ix)) p.rows.push_back(std::move(r));
             p.rows.push_back(heading(say(l, Text::RefSecShops)));
@@ -1568,7 +1635,8 @@ Page npc(const refindex::Index& ix, Lang l, const std::string& map, int index, c
     Row hero;  // its sprite's first frame when the window finds it, its kind and place
     hero.style = Style::Portrait;
     if (n.sprite > 0) hero.picture = "npc:" + std::to_string(n.sprite);
-    hero.left = groupName(refindex::groupOf(n.kind), l) + " Â· " + refindex::mapTitle(ix, map) + " Â· " + cell;
+    const std::string dot = " \xC2\xB7 ";
+    hero.left = groupName(refindex::groupOf(n.kind), l) + dot + refindex::mapTitle(ix, map) + dot + cell;
     hero.tags = {map};
     if (map == c.here) hero.tags.push_back("gold:" + say(l, Text::RefYouHere));
     p.rows.push_back(hero);
@@ -2107,9 +2175,10 @@ Page withRail(Page p, const refindex::Index& ix, Lang l, const Link& at) {
         case Go::Npc: section = Services; break;  // 3.0.18-beta.240: an NPC's card the NPCs' section's
         case Go::Quest: go = Go::Quests; break;
         case Go::Section:
-            section = at.id >= 100 || at.id == Cards ? Items
-                      : at.id == Shops || at.id == Teleports ? Services
-                                                             : at.id;
+            section = at.id >= kNpcKinds && at.id < kNpcKinds + 20 ? Services  // 3.0.18-beta.240: the NPCs' kinds
+                      : at.id >= 100 || at.id == Cards           ? Items
+                      : at.id == Shops || at.id == Teleports     ? Services
+                                                                 : at.id;
             break;
         default: break;
     }

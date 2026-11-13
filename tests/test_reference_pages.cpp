@@ -986,6 +986,11 @@ TEST(reference_pages_an_npcs_card) {
     CHECK(onMap && onMap->link.go == refpages::Go::Map && onMap->link.map == "prontera" && onMap->link.id == dealer + 1);
     const refpages::Row* wing = rowWith(p, "Fly Wing");
     CHECK(wing && wing->right == "60 z" && wing->link.go == refpages::Go::Item);
+    const refpages::Row* hero = nullptr;  // kind, map and cell joined by a middle dot (UTF-8), not a double-encoded one
+    for (const refpages::Row& r : p.rows)
+        if (r.style == refpages::Style::Portrait) hero = &r;
+    CHECK(hero && hero->left.find(" \xC2\xB7 ") != std::string::npos &&
+          hero->left.find("\xC3\x82") == std::string::npos);
     const refpages::Page k = refpages::open(ix, Lang::Uk, refpages::Link{refpages::Go::Npc, 0, "prontera"}, ctx(""));
     CHECK(!k.rows.empty() && k.rows[0].left == "Kafra Employee");
     CHECK(rowWith(k, "Telemarketing") == nullptr);
@@ -1001,4 +1006,27 @@ TEST(reference_search_an_npc_opens_its_card) {
     for (const refpages::Row& x : f.rows)
         if (x.style == refpages::Style::Result && x.left == "Kafra Employee") r = &x;
     CHECK(r && r->link.go == refpages::Go::Npc && r->link.map == "prontera" && r->link.id == 0);
+}
+
+// 3.0.18-beta.240 (the owner 13.11, question 8): «NPC і послуги» by the maps' kinds - each kind's count on all maps,
+// its page the NPCs of that kind on every map, each its card
+TEST(reference_pages_services_by_kind) {
+    refindex::Index ix;
+    CHECK(refindex::build(R"({"v":1,"data":1,"mobs":{},"spawns":{},"routes":[],"shops":[],"npcs":[)"
+                          R"(["prontera",150,180,"Kafra Employee",113,"kafra"],["izlude",120,110,"Kafra Employee",113,)"
+                          R"("kafra"],["prontera",100,120,"Old Man",86,"quest"]]})",
+                          ix));
+    const refpages::Page s = refpages::section(ix, Lang::Uk, refpages::Services);
+    const size_t at = indexOf(s, "За видами");
+    CHECK(at != size_t(-1));
+    const refpages::Row* kafra = rowWith(s, "Кафра");
+    CHECK(kafra && kafra->right == "2" && kafra->link.go == refpages::Go::Section &&
+          kafra->link.id == refpages::kNpcKinds + int(refindex::NpcGroup::Kafra));
+    const refpages::Page list = refpages::section(ix, Lang::Uk, kafra ? kafra->link.id : 0);
+    int rows = 0;
+    for (const refpages::Row& r : list.rows)
+        if (r.link.go == refpages::Go::Npc) ++rows;
+    CHECK_EQ(rows, 2);
+    const refpages::Page railed = refpages::withRail(list, ix, Lang::Uk, kafra ? kafra->link : refpages::Link{});
+    CHECK(railed.railOn >= 0 && railed.rail[size_t(railed.railOn)].left == "NPC і послуги");
 }

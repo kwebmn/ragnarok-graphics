@@ -164,6 +164,7 @@ TEST(minimap_proto_way_zoom_and_big_map) {
     CHECK(minimap::bigPartAt(b, b.map.x + 5, b.map.y + 5) == minimap::BigPart::Map);
     CHECK(minimap::bigPartAt(b, -1, 5) == minimap::BigPart::None);
     sc.marks = {{minimap::Cell{20, 80}, 0, minimap::Glyph::Warp, "→ Izlude"}};
+    sc.marks[0].exit = true;  // 3.0.18-beta.240: an exit's words always (the rest's under the pointer)
     bool label = false, title = false;
     for (const minimap::Words& w : minimap::bigWords(b, sc, "Prontera Field · prt_fild08", "50, 50")) {
         label = label || (w.text == "→ Izlude" && w.box.x >= b.map.x);

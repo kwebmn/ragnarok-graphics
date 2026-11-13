@@ -144,7 +144,7 @@ struct Mark {
     bool dead = false;                        // a member's
     // 3.0.18-beta.240 (the owner 13.11: «буквы в точках, подписи только у выходов»): its letter in its dot («$», «!»;
     // the dot bigger) on the big views; a warp out of the map - its words always there (the rest under the pointer)
-    std::string letter;
+    std::string letter{};
     bool exit = false;
 };
 // 3.0.18-beta.240: a monster's spawn area (its centre cell, half sizes in cells) - the reference's map shows them
