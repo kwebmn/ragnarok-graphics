@@ -16,7 +16,6 @@
 #include "core/config.hpp"
 #include "core/frame.hpp"
 #include "core/texture_pack.hpp"
-#include "win/gpu/missing_dump.hpp"
 #include "win/gpu/renderer.hpp"
 
 struct ID3D11Device;
@@ -176,7 +175,6 @@ private:
     uint32_t putAway_ = 0, broughtBack_ = 0;
 
     pack::Reader pack_;  // read by the thread; has() on either
-    MissingDump dump_;   // 0.49.1
     HANDLE thread_ = nullptr;
     HANDLE wake_ = nullptr;
     CRITICAL_SECTION lock_{};

@@ -153,15 +153,6 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
         const std::string text = fileFor(other, 256u << 10);
         if (!text.empty()) u.files.emplace_back("uaro-graphics-" + std::to_string(slot) + ".log", text);
     }
-    // 0.52: the pictures the pack had none of (the driver saves the first 64 of a game, uaro-graphics\missing)
-    const std::wstring missing = dir + L"\\uaro-graphics\\missing";
-    for (const std::wstring& name : listFolder(missing, false)) {
-        if (u.images.size() == report::kMostImages) break;
-        std::string bytes;
-        const bool bmp = name.size() > 4 && name.compare(name.size() - 4, 4, L".bmp") == 0;
-        if (bmp && readFile(missing + L"\\" + name, bytes))
-            u.images.emplace_back(utf8(name), bytes);
-    }
     // 0.52: a crash's minidump (win/crash.cpp) of the last week
     const std::wstring dump = dir + L"\\uaro-graphics\\crash.dmp";
     WIN32_FILE_ATTRIBUTE_DATA a{};

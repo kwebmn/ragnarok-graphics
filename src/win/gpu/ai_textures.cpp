@@ -25,6 +25,20 @@
 
 namespace uagfx::gpu {
 
+// 3.0.18-beta.249 (the owner: «давай» - reports without the missing pictures): their copies of earlier runs
+// (uaro-graphics\missing, 0.49.1's) deleted
+static void removeOldDumps(const std::string& gameDir) {
+    const std::string dir = gameDir + "\\uaro-graphics\\missing";
+    WIN32_FIND_DATAA f{};
+    const HANDLE h = FindFirstFileA((dir + "\\*.bmp").c_str(), &f);
+    if (h == INVALID_HANDLE_VALUE) return;
+    do {
+        DeleteFileA((dir + "\\" + f.cFileName).c_str());
+    } while (FindNextFileA(h, &f));
+    FindClose(h);
+    RemoveDirectoryA(dir.c_str());
+}
+
 // 2.2.1: aiKindsShown's bits (core/config.hpp) are the kinds' numbers
 static_assert(int(ai::Kind::Ground) == 0 && int(ai::Kind::Objects) == 1 && int(ai::Kind::Sprites) == 2 &&
                   int(ai::Kind::Effects) == 3 && int(ai::Kind::Icons) == 4,
@@ -262,7 +276,7 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     if (!nets_.empty()) step("the self-test");
     // 0.42: the texture pack - read by the I/O thread, looked up here; 0.48: the only place of the pictures.
     packPath_ = win::ourFile(gameDir, layout::File::Pack);  // 2.8: uaro-graphics\textures
-    dump_.setGameDir(gameDir);
+    removeOldDumps(gameDir);  // 3.0.18-beta.249: the missing pictures' copies no more (the reports had them)
     const bool packThere = GetFileAttributesA(packPath_.c_str()) != INVALID_FILE_ATTRIBUTES;
     // 3.0.2-beta.9 (the client build session: the game waited for this before its first picture): the pack's pictures
     // alone - the pack opens on the I/O thread alongside the game, what comes meanwhile waits for it (packOpened); a
@@ -456,7 +470,7 @@ void AiTextures::packOpened(IoResult& r) {
     cells.swap(waitingCells_);
     for (WaitingCell& c : cells) {  // the frames the game has not written over since
         if (!pictures_->anyCells() || !cellCurrent(c.job)) continue;
-        lookUpCell(std::move(c.job), std::move(c.pixels), std::move(c.own), c.source, c.seen);
+        lookUpCell(std::move(c.job), std::move(c.pixels), std::move(c.own), c.seen);
         ++frames;
     }
     std::vector<Job> waiting;
@@ -1290,11 +1304,10 @@ void AiTextures::cellWritten(uint32_t id, Texture& t, Atlas& a, int net, const R
         waitingCells_.push_back({std::move(j), std::move(pixels), std::move(ownPixels), source, seen});
         return;
     }
-    lookUpCell(std::move(j), std::move(pixels), std::move(ownPixels), source, seen);
+    lookUpCell(std::move(j), std::move(pixels), std::move(ownPixels), seen);
 }
 
-void AiTextures::lookUpCell(Job j, std::vector<uint32_t> pixels, std::vector<uint32_t> own, uint8_t source,
-                            bool seen) {
+void AiTextures::lookUpCell(Job j, std::vector<uint32_t> pixels, std::vector<uint32_t> own, bool seen) {
     const int w = j.width, h = j.height;
     const std::string key = ai::keyName(ai::textureKey(pixels.data(), w, h));
     // 0.42: from the texture pack first; 0.48: from the pack alone - generating, the network makes the rest.
@@ -1324,10 +1337,6 @@ void AiTextures::lookUpCell(Job j, std::vector<uint32_t> pixels, std::vector<uin
     if (!seen) return;  // perhaps no frame at all: the network makes none of it
     if (j.net < 0) {  // not generating (1.6: its group's network): the frame stays as the game has it
         ++cellsMissing_;
-        if (!ownKey.empty())  // 2.5.23: the pack has the frame in no colour - it lacks its own colours' picture
-            dump_.save(sprite_exe::sourceName(source), ownKey, own.data(), w, h);
-        else
-            dump_.save(sprite_exe::sourceName(source), key, pixels.data(), w, h);
         return;
     }
     j.name = name;
@@ -1637,7 +1646,6 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
     const bool pixels = item.argb.size() >= size_t(item.width) * size_t(item.height) && !item.argb.empty();
     if (item.net < 0 || !pixels) {  // not generating: it stays the game's
         ++missing_[k];
-        if (pixels) dump_.save(ai::kindName(kind), item.key, item.argb.data(), item.width, item.height);
         drop(item);
     } else if (later) {
         item.later = true;

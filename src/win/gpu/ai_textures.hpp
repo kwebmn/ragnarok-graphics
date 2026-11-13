@@ -25,7 +25,6 @@
 #include "core/frame.hpp"
 #include "core/studio_link.hpp"
 #include "core/texture_pack.hpp"
-#include "win/gpu/missing_dump.hpp"
 #include "win/gpu/renderer.hpp"
 
 namespace uagfx::gpu {
@@ -289,7 +288,7 @@ private:
                      const uint32_t* own = nullptr);
     // 3.0.2-beta.9: a frame's picture looked up in the pack (by its own colours' in a dye), else made or missing;
     // an icon's the same - apart from the notes, so that what came while the pack opened is looked up once it is
-    void lookUpCell(Job j, std::vector<uint32_t> pixels, std::vector<uint32_t> own, uint8_t source, bool seen);
+    void lookUpCell(Job j, std::vector<uint32_t> pixels, std::vector<uint32_t> own, bool seen);
     void lookUpIcon(Job j);
     bool makeAtlas(uint32_t id, Texture& t);
     void standIn(Texture& t, const Atlas& a, const Rect& r, const uint32_t* argb, int pitch);
@@ -372,7 +371,6 @@ private:
     void logPack(const std::string& how) const;
     void turnOff();  // no pack after all: off, as the start would have left them
     std::unique_ptr<ai::ReadyPictures> pictures_;  // 0.48: the pack's pictures and kinds, looked up here
-    MissingDump dump_;                             // 0.49.1
     int scale_ = 4;                             // the result: 4 or 2 times the game's texture
     int minSide_ = 64, maxSide_ = 512;          // the textures taken
     bool ahead_ = true;

@@ -84,7 +84,6 @@ bool Ai11::start(const std::string& gameDir, const AiSettings& s, std::string& e
         error = "no kind of texture is chosen (the AI textures page)";
         return false;
     }
-    dump_.setGameDir(gameDir);
     const std::string packPath = win::ourFile(gameDir, layout::File::Pack);  // 2.8: uaro-graphics\textures
     std::string why;
     if (!pack_.open(packPath, why) && GetFileAttributesA(packPath.c_str()) != INVALID_FILE_ATTRIBUTES)
@@ -431,14 +430,12 @@ void Ai11::cellWritten(uint32_t id, Atlas& a, const Rect& c, const uint32_t* arg
             ++dyed_;
         } else if (seen) {  // the pack has the frame in no colour: it lacks its own colours' picture
             ++cellsMissing_;
-            dump_.save(sprite_exe::sourceName(source), ownKey, ownPixels.data(), w, h);
             return;
         }
     }
     if (!found) {
         if (!seen) return;  // perhaps no frame at all
         ++cellsMissing_;
-        dump_.save(sprite_exe::sourceName(source), key, pixels.data(), w, h);
         return;
     }
     if (!seen) ++unseenFound_;
