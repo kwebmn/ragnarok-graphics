@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.18-beta.244 — what's new · 2026-11-13
+
+- «Reference»: a new section «Skills» (between «Crafting» and «World map»). Jobs are grouped: «Novice», «First jobs», «Second jobs», «Transcendent», «Other jobs», each with how many skills of its own it has.
+- A job's page shows only its own skills (not its earlier job's) with a «Lv 10 · SP 8 · Physical» line, and at the bottom a way to the earlier job's skills.
+- A skill's card: the most level and SP, kind, element, what it is used on; its description; «SP by level»; «Needs» - which skills at which level come first; «Who learns it» - every job with the skill. Levels, SP and trees come from the server's tables.
+- Skill descriptions come from the site in your interface's language; the app fetches them once a day. Until then the game's own description is shown.
+- The search finds skills too: a «Skills» group by the name or the English service name (MG_FIREBOLT).
+- What to check: «Skills» → Swordsman → Bash → «Who learns it»; Magnum Break - «Needs: Bash Lv 5»; Fire Bolt - SP by level 12…30; search «fire bolt»; the description in your language (after the app ran once with the internet).
+
 # uaRO Graphics 3.0.18-beta.243 — what's new · 2026-11-13
 
 - «Reference», cards: under a thing's name is its description from the game, the same as in the bag's item card. Beside it is what you have: «in the bag 3 · in the cart 1 · in storage 12» (the storage as you last saw it in this game).
