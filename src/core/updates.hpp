@@ -20,6 +20,21 @@ std::vector<std::string> lookupOrder(std::vector<std::string> files);
 // folder before them), then DATA.INI's in their order
 std::vector<std::string> archiveOrder(const std::vector<std::string>& files, const std::vector<std::string>& dataIni);
 
+// 3.0.18-beta.251 (R-NGSWJM; the castles' crash «не можу попасти в замок», R-FPT4KM): uaRO.exe reads each archive
+// through one window of it (FUN_00510c20: 512 MB, halved while that fails - 256 MB here) and maps another for a file
+// past it. Its map loader thread (FUN_004ea130, under its resource lock) and the game's thread (a castle's 3D models,
+// CFile::Open without that lock) read at once, and one's window went under the other's inflate (data.grf 1.7 GB, the
+// WoE models in three windows). The driver's hook on CFileMgr::GetData takes its reads one at a time - always, with
+// updates or without. What to hook: the game's GetData known (its first bytes), [client] updates on, the folder's
+// GRFs, the game's lookups known
+struct HookPlan {
+    bool inTurn = false;   // GetData hooked, its reads one at a time
+    bool updates = false;  // the folder's GRFs over the game's archives (GetData, IsExist, CFile::IsExist)
+};
+HookPlan hookPlan(bool getDataKnown, bool updatesOn, size_t files, bool lookupsKnown);
+// The n-th read (from 1) that waited for another thread's: told in the log (the first five, then every hundredth)
+bool tellWait(unsigned n);
+
 struct Hit {
     int archive;       // in the order they were added
     std::string name;  // as the archive stores it

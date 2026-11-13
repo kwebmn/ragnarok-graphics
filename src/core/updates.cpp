@@ -51,4 +51,16 @@ const Hit* Index::find(const std::string& name) const {
     return it == hits_.end() ? nullptr : &it->second;
 }
 
+HookPlan hookPlan(bool getDataKnown, bool updatesOn, size_t files, bool lookupsKnown) {
+    HookPlan p;
+    p.inTurn = getDataKnown;
+    p.updates = getDataKnown && updatesOn && files > 0 && lookupsKnown;
+    return p;
+}
+
+bool tellWait(unsigned n) {
+    constexpr unsigned kFirst = 5, kEvery = 100;
+    return n > 0 && (n <= kFirst || n % kEvery == 0);
+}
+
 }  // namespace uagfx::updates

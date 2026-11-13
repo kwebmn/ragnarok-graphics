@@ -53,3 +53,30 @@ TEST(updates_go_before_the_games_archives) {
                                            "Palettes.grf", "data.grf"};
     CHECK(all == want);
 }
+
+// 3.0.18-beta.251 (R-NGSWJM, the castles' crash «не можу попасти в замок», R-FPT4KM): the game's archives read one at
+// a time whatever the updates are - the owner had no updates\ GRF, nothing was hooked, and a castle's 3D model read on
+// the game's thread lost its archive window to the map's loader thread
+TEST(updates_read_the_games_archives_in_turn_without_updates) {
+    const updates::HookPlan off = updates::hookPlan(true, false, 0, true);  // [client] updates = 0
+    CHECK(off.inTurn && !off.updates);
+    const updates::HookPlan none = updates::hookPlan(true, true, 0, true);  // no GRF in updates\ (the owner's)
+    CHECK(none.inTurn && !none.updates);
+    const updates::HookPlan both = updates::hookPlan(true, true, 2, true);
+    CHECK(both.inTurn && both.updates);
+    const updates::HookPlan lookups = updates::hookPlan(true, true, 2, false);  // its lookups another build's
+    CHECK(lookups.inTurn && !lookups.updates);
+    const updates::HookPlan other = updates::hookPlan(false, true, 2, true);  // another uaRO.exe: left alone
+    CHECK(!other.inTurn && !other.updates);
+}
+
+// A read that waited for another thread's: the first five told in the log, then every hundredth
+TEST(updates_tell_the_first_waits_then_every_hundredth) {
+    for (unsigned n = 1; n <= 5; ++n) CHECK(updates::tellWait(n));
+    CHECK(!updates::tellWait(6));
+    CHECK(!updates::tellWait(99));
+    CHECK(updates::tellWait(100));
+    CHECK(!updates::tellWait(101));
+    CHECK(updates::tellWait(300));
+    CHECK(!updates::tellWait(0));
+}

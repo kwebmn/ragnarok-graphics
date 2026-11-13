@@ -28,6 +28,12 @@ using ExistsFn = bool(__cdecl*)(const char* name);
 
 uintptr_t g_getData = 0, g_hasFile = 0, g_exists = 0;  // the game's own, through their trampolines
 CRITICAL_SECTION g_lock;
+// 3.0.18-beta.251 (R-NGSWJM, core/updates.hpp HookPlan): the game's archive reads one at a time - its map loader
+// thread and the game's thread (a castle's 3D models) each moved the archive's one window under the other's inflate
+CRITICAL_SECTION g_turn;
+bool g_inTurn = false;     // g_turn made (the game's GetData known)
+bool g_updates = false;    // the folder's GRFs mounted over the game's
+volatile LONG g_waits = 0;  // the reads that waited for another thread's
 std::string g_dir;
 std::vector<std::string> g_files;  // updates\'s GRFs, the later first
 std::vector<std::unique_ptr<grf::Archive>> g_archives;
@@ -64,28 +70,56 @@ const updates::Hit* hitOf(const char* name) {  // under g_lock
     return name ? g_index.find(name) : nullptr;
 }
 
-// The game's file from an update: a copy as the game's own makes it (VirtualAlloc, 8 bytes more; it frees it)
+// 3.0.18-beta.251: the game's own GetData (`fn`: its trampoline when hooked) with no other thread reading its
+// archives meanwhile - its whole read (the window mapped, the entry deciphered and inflated into its copy) one at a
+// time. Nothing else is taken inside (no resource lock, no driver's wait): its map loader thread may hold the game's
+// resource lock while it waits here, never the other way round. A wait told in the log (core/updates tellWait).
+void* readInTurn(GetDataFn fn, void* self, const char* name, uint32_t* size) {
+    if (!g_inTurn) return fn(self, name, size);
+    if (!TryEnterCriticalSection(&g_turn)) {
+        LARGE_INTEGER a{}, b{}, hz{};
+        QueryPerformanceCounter(&a);
+        EnterCriticalSection(&g_turn);
+        QueryPerformanceCounter(&b);
+        QueryPerformanceFrequency(&hz);
+        const unsigned n = unsigned(InterlockedIncrement(&g_waits));
+        const double ms = hz.QuadPart > 0 ? double(b.QuadPart - a.QuadPart) * 1000.0 / double(hz.QuadPart) : 0.0;
+        if (updates::tellWait(n))
+            LOG_INFO("files: %s waited %.2f ms for another thread's read of the game's archives (thread %lu; %u "
+                     "reads waited so far) - read in turn, as a castle's 3D models beside the map's loader",
+                     name ? name : "?", ms, GetCurrentThreadId(), n);
+    }
+    void* const data = fn(self, name, size);
+    LeaveCriticalSection(&g_turn);
+    return data;
+}
+
+// The game's file from an update: a copy as the game's own makes it (VirtualAlloc, 8 bytes more; it frees it); else
+// the game's own, its reads one at a time (3.0.18-beta.251)
 void* __attribute__((thiscall)) getData(void* self, const char* name, uint32_t* size) {
     void* copy = nullptr;
-    EnterCriticalSection(&g_lock);
-    try {
-        if (const updates::Hit* hit = hitOf(name)) {
-            std::vector<uint8_t> bytes;
-            std::string why;
-            if (g_archives[size_t(hit->archive)]->read(hit->name, bytes, why) &&
-                (copy = VirtualAlloc(nullptr, bytes.size() + 8, MEM_COMMIT, PAGE_READWRITE)) != nullptr) {
-                if (!bytes.empty()) std::memcpy(copy, bytes.data(), bytes.size());
-                if (size) *size = uint32_t(bytes.size());
+    if (g_updates) {
+        EnterCriticalSection(&g_lock);
+        try {
+            if (const updates::Hit* hit = hitOf(name)) {
+                std::vector<uint8_t> bytes;
+                std::string why;
+                if (g_archives[size_t(hit->archive)]->read(hit->name, bytes, why) &&
+                    (copy = VirtualAlloc(nullptr, bytes.size() + 8, MEM_COMMIT, PAGE_READWRITE)) != nullptr) {
+                    if (!bytes.empty()) std::memcpy(copy, bytes.data(), bytes.size());
+                    if (size) *size = uint32_t(bytes.size());
+                }
             }
+        } catch (const std::bad_alloc&) {
+            copy = nullptr;
         }
-    } catch (const std::bad_alloc&) {
-        copy = nullptr;
+        LeaveCriticalSection(&g_lock);
     }
-    LeaveCriticalSection(&g_lock);
-    return copy ? copy : reinterpret_cast<GetDataFn>(g_getData)(self, name, size);
+    return copy ? copy : readInTurn(reinterpret_cast<GetDataFn>(g_getData), self, name, size);
 }
 
 bool inUpdates(const char* name) {
+    if (!g_updates) return false;
     EnterCriticalSection(&g_lock);
     bool found = false;
     try {
@@ -116,38 +150,55 @@ bool known(uint32_t entry, const uint8_t* expect) {
 
 void installUpdates() {
     if (!GetModuleHandleA("dinput.dll")) return;  // the game alone (it imports DINPUT.dll), not setup.exe
+    InitializeCriticalSection(&g_lock);
+    InitializeCriticalSection(&g_turn);
     std::string text;
     readTextFile(ourFile(layout::File::Ini), text);
-    if (!parseConfig(text).clientUpdates) {
-        g_lines.push_back("updates: off ([client] updates = 0) - the game's own archives alone");
+    const bool on = parseConfig(text).clientUpdates;
+    if (!on) g_lines.push_back("updates: off ([client] updates = 0) - the game's own archives alone");
+    g_dir = gameDir();
+    if (on) {
+        std::vector<std::string> names;
+        WIN32_FIND_DATAA f{};
+        const std::string pattern = layout::join(layout::join(g_dir, updates::kFolder), "*.grf");
+        HANDLE h = FindFirstFileA(pattern.c_str(), &f);
+        if (h != INVALID_HANDLE_VALUE) {
+            do {
+                if (!(f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) names.push_back(f.cFileName);
+            } while (FindNextFileA(h, &f));
+            FindClose(h);
+        }
+        g_files = updates::lookupOrder(names);
+    }
+    // 3.0.18-beta.251 (R-NGSWJM): GetData hooked whatever the updates - its reads one at a time
+    const bool lookupsKnown = known(updates_exe::kHasFile, updates_exe::kHasFileBytes) &&
+                              known(updates_exe::kFileExists, updates_exe::kFileExistsBytes);
+    const updates::HookPlan plan = updates::hookPlan(known(updates_exe::kGetData, updates_exe::kGetDataBytes), on,
+                                                     g_files.size(), lookupsKnown);
+    if (!plan.inTurn) {
+        g_lines.push_back("files: this build of uaRO.exe keeps its archives elsewhere - its reads not taken in turn"
+                          ", no updates mounted");
         return;
     }
-    g_dir = gameDir();
-    std::vector<std::string> names;
-    WIN32_FIND_DATAA f{};
-    const std::string pattern = layout::join(layout::join(g_dir, updates::kFolder), "*.grf");
-    HANDLE h = FindFirstFileA(pattern.c_str(), &f);
-    if (h != INVALID_HANDLE_VALUE) {
-        do {
-            if (!(f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) names.push_back(f.cFileName);
-        } while (FindNextFileA(h, &f));
-        FindClose(h);
+    if (!hookEntryBytes(updates_exe::kGetData, updates_exe::kGetDataBytes, updates_exe::kPrologue,
+                        reinterpret_cast<const void*>(&getData), g_getData)) {
+        g_lines.push_back("files: the game's GetData not hooked - its archives read as it reads them, no updates");
+        return;
     }
-    g_files = updates::lookupOrder(names);
-    if (g_files.empty()) return;  // nothing to put over the game's: nothing hooked
-    if (!known(updates_exe::kGetData, updates_exe::kGetDataBytes) ||
-        !known(updates_exe::kHasFile, updates_exe::kHasFileBytes) ||
-        !known(updates_exe::kFileExists, updates_exe::kFileExistsBytes)) {
+    g_inTurn = true;
+    g_lines.push_back("files: the game's archive reads one at a time (its CFileMgr::GetData hooked) - a castle's 3D "
+                      "models on the game's thread and the map's loader thread no longer move each other's window "
+                      "of the archive");
+    if (!g_files.empty() && !plan.updates) {
         g_lines.push_back("updates: not mounted - this build of uaRO.exe keeps its archives elsewhere");
         return;
     }
-    InitializeCriticalSection(&g_lock);
-    const bool ok = hookEntryBytes(updates_exe::kGetData, updates_exe::kGetDataBytes, updates_exe::kPrologue,
-                                   reinterpret_cast<const void*>(&getData), g_getData) &&
-                    hookEntryBytes(updates_exe::kHasFile, updates_exe::kHasFileBytes, updates_exe::kPrologue,
+    if (!plan.updates) return;  // nothing to put over the game's
+    const bool ok = hookEntryBytes(updates_exe::kHasFile, updates_exe::kHasFileBytes, updates_exe::kPrologue,
                                    reinterpret_cast<const void*>(&hasFile), g_hasFile) &&
                     hookEntryBytes(updates_exe::kFileExists, updates_exe::kFileExistsBytes, updates_exe::kPrologue,
                                    reinterpret_cast<const void*>(&fileIsThere), g_exists);
+    g_updates = ok;
     char line[160];
     std::snprintf(line, sizeof line, "updates: %u archive(s) in updates\\ %s", unsigned(g_files.size()),
                   ok ? "- mounted at the first lookup" : "- the hooks failed, not mounted");
@@ -182,8 +233,8 @@ bool readGameFile(const std::string& name, std::string& out) {
             LOG_INFO("files: %s read by our own reader - the game's files busy (a map loading)", name.c_str());
         return false;
     }
-    if (g_getData) data = getData(self, name.c_str(), &size);  // hooked: the updates, then the game's own
-    else data = reinterpret_cast<GetDataFn>(uintptr_t(updates_exe::kGetData))(self, name.c_str(), &size);
+    if (g_getData) data = getData(self, name.c_str(), &size);  // hooked: the updates, then the game's own in turn
+    else data = readInTurn(reinterpret_cast<GetDataFn>(uintptr_t(updates_exe::kGetData)), self, name.c_str(), &size);
     if (lock) LeaveCriticalSection(lock);
     if (!data) return false;
     out.assign(static_cast<const char*>(data), size);
