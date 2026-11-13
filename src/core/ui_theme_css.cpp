@@ -1732,6 +1732,16 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .rbtn:hover { background-color: #ffffff21; }
 .rfw .rbtn.main { background-color: #f3c653; color: #1a1406; font-weight: bold; }
 .rfw .rbtn.main:hover { background-color: #f6d27a; }
+.rfw .rmrow { display: flex; flex-direction: row; align-items: flex-start; margin-bottom: 14dp; }
+.rfw .rmleft { display: block; flex: none; }
+.rfw .rmbar { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 8dp; }
+.rfw .rlay { display: block; height: 26dp; line-height: 26dp; padding: 0 10dp; margin-right: 6dp; border-radius: 13dp;
+    background-color: #ffffff0f; font-size: 12dp; color: #9aa3b5; }
+.rfw .rlay.on { background-color: #e6cb8a26; color: #e6cb8a; }
+.rfw .rlay:hover { background-color: #ffffff21; }
+.rfw .rmview { display: block; position: relative; overflow: hidden; border-radius: 10dp; border: 1dp #ffffff17; }
+.rfw .rmview img { display: block; }
+.rfw .rmside { display: block; flex: 1; margin-left: 14dp; }
 )";
 
 }  // namespace

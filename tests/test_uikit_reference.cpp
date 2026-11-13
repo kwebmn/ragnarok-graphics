@@ -242,3 +242,58 @@ TEST(uikit_reference_world_page_bar_map_panel) {
     CHECK_EQ(count(l.doc, ".rwtab.on"), size_t(1));
     rmlhost::close(l.doc);
 }
+
+// 3.0.18-beta.240 (the reference's «одна карта»): a location's card - the map's bar (its layers, its zoom), the map
+// box at its size with its picture and words, its NPCs beside it with the kinds' jump row; no picture box in the hero
+TEST(uikit_reference_location_map_and_its_npcs) {
+    refpages::Page p;
+    p.rows.push_back(row(Style::Title, "Prontera"));
+    p.rows.push_back(row(Style::Portrait, "Prontera City"));  // no picture: the map below is it
+    Row view = row(Style::MapView, "prontera");
+    p.rows.push_back(view);  // 2
+    Row g1 = row(Style::Group, "Кафра · 2");
+    g1.side = true;
+    p.rows.push_back(g1);  // 3
+    for (int i = 0; i < 2; ++i) {
+        Row r = row(Style::Row, "Kafra", refpages::Go::Npc, i);
+        r.side = true;
+        r.dot = 0xE0447C;
+        p.rows.push_back(r);  // 4, 5
+    }
+    Row g2 = row(Style::Group, "Квести · 1");
+    g2.side = true;
+    p.rows.push_back(g2);  // 6
+    Row q = row(Style::Row, "Old Man", refpages::Go::Npc, 2);
+    q.side = true;
+    p.rows.push_back(q);  // 7
+    p.rows.push_back(row(Style::Heading, "Хто тут"));  // 8
+    p.rows.push_back(row(Style::Row, "Poring", refpages::Go::Mob, 1002));
+    ur::Look look;
+    look.mapW = 520;
+    look.mapH = 480;
+    look.layers = {{"NPC", true}, {"Переходи", true}, {"Монстри", false}, {"Ви тут", true}};
+    look.mapWords = "<span class=\"ww\" style=\"left: 1px; top: 1px;\">K</span>";
+    look.picture = [](const std::string& key) {
+        return key == "mapview" ? std::string("pic:5:1") : key.rfind("ui:", 0) == 0 ? std::string("pic:6:1")
+                                                                                     : std::string();
+    };
+    ur::Model m;
+    m.body = ur::body(p, look);
+    const Loaded l = load(m);
+    CHECK_EQ(l.warnings, std::string());
+    Rml::Element* map = l.doc ? l.doc->GetElementById("mview") : nullptr;
+    CHECK(map && within(map, "rmleft") && map->IsClassSet("ctl"));
+    CHECK(l.doc && l.doc->GetElementById("mimg"));
+    CHECK(map && std::fabs(map->GetBox().GetSize(Rml::BoxArea::Content).x - 520) < 1);
+    CHECK_EQ(count(l.doc, ".rmbar .rlay"), size_t(4));
+    CHECK_EQ(count(l.doc, ".rmbar .rlay.on"), size_t(3));
+    CHECK_EQ(count(l.doc, ".rmbar [data-mz]"), size_t(3));
+    CHECK_EQ(count(l.doc, ".rmview .ww"), size_t(1));
+    CHECK_EQ(count(l.doc, ".rmside .rjc"), size_t(2));
+    Rml::Element* oldMan = l.doc ? l.doc->GetElementById("r7") : nullptr;
+    CHECK(oldMan && within(oldMan, "rmside"));
+    Rml::Element* poring = l.doc ? l.doc->GetElementById("r9") : nullptr;
+    CHECK(poring && !within(poring, "rmside") && !within(poring, "rmleft"));
+    CHECK_EQ(count(l.doc, ".rpic"), size_t(0));
+    rmlhost::close(l.doc);
+}

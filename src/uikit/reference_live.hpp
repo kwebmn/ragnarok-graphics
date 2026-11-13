@@ -41,6 +41,11 @@ struct Look {
     std::function<std::string(const std::string& key)> picture;
     int worldW = 0, worldH = 0;  // the world map's box on its page, in the target's pixels
     int selected = -1;           // the row the arrows picked (class «sel»)
+    // 3.0.18-beta.240 (the reference's «одна карта»): a location's map - its box, its layers' chips (name, on), the
+    // words over it (made by the window); its picture is picture("mapview")
+    int mapW = 0, mapH = 0;
+    std::vector<std::pair<std::string, bool>> layers;
+    std::string mapWords;
 };
 // The page's rows but its rail, as RML (UTF-8, every text escaped)
 std::string body(const refpages::Page& p, const Look& look);

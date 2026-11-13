@@ -150,9 +150,10 @@ struct Maker {
                      arrow + escape(r.left) + "</span><span class=\"rshr\">" + escape(r.right) + "</span></div>";
                 break;
             }
-            case Style::Portrait:
-                o += open("div", i, "rport") + "<div class=\"rpic\">" + pic(r.picture, "rpimg") +
-                     "</div><div class=\"rpinfo\"><div class=\"rpl\">" + escape(r.left) + "</div>" +
+            case Style::Portrait:  // 3.0.18-beta.240: no picture (a location's: its map below) - no box for one
+                o += open("div", i, "rport") +
+                     (r.picture.empty() ? "" : "<div class=\"rpic\">" + pic(r.picture, "rpimg") + "</div>") +
+                     "<div class=\"rpinfo\"><div class=\"rpl\">" + escape(r.left) + "</div>" +
                      (r.right.empty() ? "" : "<div class=\"rpr\">" + escape(r.right) + "</div>") + tags(r) +
                      "</div></div>";
                 break;
@@ -316,6 +317,23 @@ std::string escape(const std::string& s) {
     return out;
 }
 
+// 3.0.18-beta.240: a location's map - its bar (the layers' chips, the zoom), its box (the window's picture and words)
+static void mapView(Maker& m, const Look& look) {
+    m.o += "<div class=\"rmbar\">";
+    for (size_t i = 0; i < look.layers.size(); ++i)
+        m.o += std::string("<span class=\"rlay ctl") + (look.layers[i].second ? " on" : "") + "\" data-lay=\"" +
+               std::to_string(i) + "\">" + escape(look.layers[i].first) + "</span>";
+    const std::pair<int, const char*> tools[] = {{-1, "ui:minus"}, {0, "ui:expand"}, {1, "ui:plus"}};
+    for (const auto& [by, icon] : tools)
+        m.o += "<span class=\"rwtool ctl\" data-mz=\"" + std::to_string(by) + "\">" + m.pic(icon, "ri") + "</span>";
+    const std::string src = look.picture ? look.picture("mapview") : std::string();
+    char size[64];
+    std::snprintf(size, sizeof size, "width: %dpx; height: %dpx;", std::max(1, look.mapW), std::max(1, look.mapH));
+    m.o += std::string("</div><div id=\"mview\" class=\"rmview ctl\" style=\"") + size + "\">" +
+           (src.empty() ? "" : "<img id=\"mimg\" src=\"" + escape(src) + "\" style=\"" + size + "\"/>") +
+           look.mapWords + "</div>";
+}
+
 std::string body(const refpages::Page& p, const Look& look) {
     Maker m{p, look, {}};
     const int n = int(p.rows.size());
@@ -335,10 +353,40 @@ std::string body(const refpages::Page& p, const Look& look) {
         m.o += "</div></div>";
         return m.o;
     }
+    // 3.0.18-beta.240: a location's card - its map at the left, its NPCs beside it (the rows marked side), the rest
+    // below as any card's
+    int view = -1;
+    for (int i = 0; i < n; ++i)
+        if (p.rows[size_t(i)].style == Style::MapView) view = i;
+    std::vector<int> side;
+    if (view >= 0) {
+        std::vector<int> before;
+        for (int i = 0; i < view; ++i) before.push_back(i);
+        m.run(before);
+        std::vector<int> heads;
+        for (int i = view + 1; i < n; ++i)
+            if (p.rows[size_t(i)].side) {
+                side.push_back(i);
+                if (p.rows[size_t(i)].style == Style::Group) heads.push_back(i);
+            }
+        m.o += "<div class=\"rmrow\"><div class=\"rmleft\">";
+        mapView(m, look);
+        m.o += "</div><div class=\"rmside\">";
+        if (heads.size() >= 2) {
+            m.o += "<div class=\"rjump\">";
+            for (const int g : heads)
+                m.o += "<span class=\"rjc ctl\" data-jump=\"r" + std::to_string(g) + "\">" +
+                       escape(p.rows[size_t(g)].left) + "</span>";
+            m.o += "</div>";
+        }
+        m.run(side);
+        m.o += "</div></div>";
+    }
     // The hero (the rows before the first heading), then the sections
     std::vector<int> hero;
     std::vector<Section> sections;
-    for (int i = 0; i < n; ++i) {
+    for (int i = view >= 0 ? view + 1 : 0; i < n; ++i) {
+        if (p.rows[size_t(i)].side) continue;
         if (head(p.rows[size_t(i)].style)) {
             sections.push_back(Section{i, {}});
             continue;
