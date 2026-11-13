@@ -26,5 +26,8 @@ bool noteLive(const std::wstring& dir, std::string& error);
 // 3.0.11-beta.174: the site's event or news now (core/reference_now) in its three languages into now.json - for the
 // login screen's news line, at the game's start and with the counts, at most every 10 minutes
 bool noteNow(const std::wstring& dir, std::string& error);
+// 3.0.18-beta.244 («Довідник» › «Навички»): the site's skills' words in the three languages (core/reference_skills),
+// asked once a day into uaro-graphics\reference\skilldesc.json
+bool noteSkills(const std::wstring& dir, std::string& error);
 
 }  // namespace uagfx::app

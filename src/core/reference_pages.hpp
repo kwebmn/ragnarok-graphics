@@ -31,7 +31,8 @@ namespace uagfx::refpages {
 // Npc (3.0.18-beta.240): an NPC's card - id its place in the map's NPCs, map its map; Follow id 2 - the way to a cell
 // (map «code:x:y»: an NPC's); Map id > 0 - the map with its NPC id - 1 in the view's middle
 enum class Go : uint8_t {
-    None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest, Fold, Star, Zoom, Track, Npc
+    None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest, Fold, Star, Zoom, Track, Npc,
+    Skill  // 3.0.18-beta.244: a skill's card (id the skill's number)
 };
 struct Link {
     Go go = Go::None;
@@ -96,7 +97,12 @@ struct Page {
 
 // Sections of the first screen (Go::Section's ids); items by their type are 100 + the type; 3.0.11-beta.26 the
 // concept's «NPC і послуги» (the shops and Kafra) and «Таблиці» (the elements)
-enum Section : int { Mobs, Bosses, Items, Cards, Maps, Shops, Teleports, Pets, Crafting, Services, Tables, kSections };
+enum Section : int {
+    Mobs, Bosses, Items, Cards, Maps, Shops, Teleports, Pets, Crafting, Services, Tables,
+    Skills,  // 3.0.18-beta.244: «Навички» - the jobs; a job's page is kJobSkills + its number
+    kSections
+};
+constexpr int kJobSkills = 1000;
 // 3.0.11-beta.69 (the concept's question 21: the data's states, «Подробиці» by a click): the page the window's bottom
 // chips open (Go::Section) - the pack's date, server and age, the live data's state
 constexpr int kDataSection = 90;
@@ -170,6 +176,8 @@ struct Context {
     const std::map<int, int>* storage = nullptr;
     int level = 0;
     const std::vector<OwnTimer>* own = nullptr;
+    // 3.0.18-beta.244 («Навички»): a skill's words (the site's in the language, else the game's table; empty none)
+    std::function<std::vector<std::string>(int skill)> skillText;
 };
 // 3.0.18-beta.242: a monster of `mobLv` for a character of `level` - 1 fitting (within 10 levels), 2 too strong, 3 too
 // weak; 0 either not known

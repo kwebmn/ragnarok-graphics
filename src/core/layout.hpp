@@ -102,6 +102,7 @@ constexpr const char* kReferenceOnline = "uaro-graphics\\reference\\online.json"
 // 3.0.11-beta.174: the site's event or news now in its three languages (core/reference_now) - the watcher asks it at
 // the game's start, at most every 10 minutes
 constexpr const char* kReferenceNow = "uaro-graphics\\reference\\now.json";
+constexpr const char* kReferenceSkills = "uaro-graphics\\reference\\skilldesc.json";  // 3.0.18-beta.244
 // 3.0.11-beta.11: the site's world map sheet (core/world_map) - the watcher fetches it at the game's start
 constexpr const char* kReferenceWorld = "uaro-graphics\\reference\\worldmap.json";
 // 3.0.11-beta.12: the players' public MVP timers and the site's market (core/reference_live) - with online.json

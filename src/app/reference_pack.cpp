@@ -11,6 +11,7 @@
 #include "core/reference_live.hpp"
 #include "core/reference_now.hpp"
 #include "core/reference_quests.hpp"
+#include "core/reference_skills.hpp"
 #include "core/world_map.hpp"
 
 namespace uagfx::app {
@@ -24,6 +25,7 @@ constexpr const char* kLivePath = "/api/public/game/live.json";  // 3.0.11-beta.
 constexpr const char* kQuestsPath = "/api/public/game/quests.json";  // 3.0.11-beta.16: the quests' manifest
 constexpr const char* kNowPath = "/api/public/now.json";  // 3.0.11-beta.174: the site's event or news now
 constexpr long long kNowAgain = 600;  // seconds: the item asked again at most every 10 minutes
+constexpr const char* kSkillsPath = "/api/public/skilldesc.json";  // 3.0.18-beta.244: the skills' words
 constexpr long long kOnlineAgain = 90;  // seconds: younger counts are kept (several game windows, several watchers)
 
 std::wstring folderOf(const std::wstring& dir) { return dir + L"\\" + wide(layout::kReference); }
@@ -199,6 +201,32 @@ bool noteNow(const std::wstring& dir, std::string& error) {
     makeFolder(folderOf(dir));
     if (!writeFileAtomic(file, refnow::write(f))) {
         error = "the site's item now could not be written";
+        return false;
+    }
+    return true;
+}
+
+bool noteSkills(const std::wstring& dir, std::string& error) {
+    std::string text;
+    refskills::File there;
+    const long long now = static_cast<long long>(std::time(nullptr));
+    const std::wstring file = dir + L"\\" + wide(layout::kReferenceSkills);
+    if (readFile(file, text) && refskills::read(text, there) && refskills::fresh(there, now)) return true;
+    static constexpr std::pair<settings::Lang, const char*> kLangs[] = {
+        {settings::Lang::Uk, "ua"}, {settings::Lang::Ru, "ru"}, {settings::Lang::En, "en"}};
+    refskills::File f;
+    f.at = now;
+    for (const auto& [lang, site] : kLangs) {
+        if (!fetchPath(std::string(kSkillsPath) + "?lang=" + site, text, error, 2u << 20)) return false;
+        if (!refskills::fromSite(text, f.words[int(lang)])) {
+            error = "uaro.kiev.ua: not the skills' words";
+            return false;
+        }
+    }
+    makeFolder(dir + L"\\" + wide(layout::kOurs));
+    makeFolder(folderOf(dir));
+    if (!writeFileAtomic(file, refskills::write(f))) {
+        error = "the skills' words could not be written";
         return false;
     }
     return true;

@@ -299,6 +299,7 @@ int watchGame(unsigned long pid, int logSlot) {
         noteReference(exeFolder(), error);
         noteWorld(exeFolder(), error);   // 3.0.11-beta.11
         noteQuests(exeFolder(), error);  // 3.0.11-beta.16
+        noteSkills(exeFolder(), error);  // 3.0.18-beta.244: once a day
         noteOnline(exeFolder(), error);
         noteLive(exeFolder(), error);  // 3.0.11-beta.12
     }

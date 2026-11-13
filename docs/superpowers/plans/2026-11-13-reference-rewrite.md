@@ -124,6 +124,22 @@ cart, storage last seen), craft have/missing, quest «2 з 5»; monsters' levels
 Skills by jobs from the site's data (the watcher fetches it like quests) - jobs list, a job's skills with levels,
 SP, element, description. Tests: the section and a job page from a sample file.
 
+Detailed 2026-11-13 (ruling: the jobs, trees, levels, SP, element and type are the server's own tables the driver
+embeds - core/skill_tree, skill_costs, skill_info (the same db the site builds from); the site gives the words: its
+/api/public/skilldesc.json?lang=uk|ru|en, fetched by the watcher; the game's skilldesctable when none):
+- tools/skill_info.py also writes each skill's AEGIS name (col 15), max level (7), element (4, its first value; -1
+  the weapon's), type (13: weapon/magic/misc/none) into core/skill_info.inc; `skillinfo::Info` gets aegis, most,
+  element, kind; `skilltree::jobs()` - the jobs the tree has, sorted.
+- refpages: Section `Skills` (rail between «Крафт» and «Карта світу», a home tile): jobs in groups (Новачок, Перші,
+  Другі, Перероджені, Інші) with their own skills' counts -> Go::Section kJobSkills + job: the job's own skills (not its
+  earlier jobs'), each «Lv N · SP a–b · type» -> Go::Skill id: title, tags (type, element, used on, Lv most), the words
+  (Context::skillText), «SP за рівнями» grid, «Потрібно» (needs, links), «Хто вчить» (jobs, links). Search: a group
+  «Навички» by name and AEGIS.
+- win: Context::skillText from uaro-graphics\reference\skilldesc-<lang>.json (the watcher's), else
+  infocardwin::skillDescription; skill icons «skill:<aegis>» by clienttables::icon.
+- app: the watcher fetches skilldesc.json?lang= for the UI language once a day (atomic write; mtime kept).
+Tests: generator fields read; section groups and counts; a job page's own skills; a skill card's rows; search group.
+
 ### Stage 7 - search and chat (beta)
 Cyrillic typed -> the same keys in Latin (login_hints' table) searched too, the line over the results, «шукати як
 набрано»; «[Name]» in the chat (the new chat) a link to the card for players with uaRO Graphics.

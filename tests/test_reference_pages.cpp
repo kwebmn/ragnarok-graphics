@@ -83,7 +83,7 @@ TEST(reference_pages_home_and_search) {
     const refindex::Index ix = index();
     // 3.0.11-beta.26: the concept's first screen - its search and its line, ten tiles, «Обране» (empty: a word)
     const refpages::Page home = refpages::home(ix, Lang::Uk);
-    CHECK_EQ(home.rows.size(), size_t(14));
+    CHECK_EQ(home.rows.size(), size_t(15));
     CHECK(home.rows[0].style == refpages::Style::Search && home.rows[0].right == "Ctrl+F");
     CHECK(home.rows[1].style == refpages::Style::Hint);
     CHECK(home.rows[2].style == refpages::Style::Tile && home.rows[2].left == "Монстри");
@@ -92,12 +92,13 @@ TEST(reference_pages_home_and_search) {
     CHECK(home.rows[2].link.go == refpages::Go::Section && home.rows[2].link.id == refpages::Mobs);
     const char* names[] = {"Монстри", "Предмети", "Локації",     "Квести",
                            "NPC і послуги", "MVP", "Пети", "Крафт",
-                           "Карта світу", "Стихії"};  // the concept's order
-    for (size_t i = 0; i < 10; ++i) CHECK_EQ(home.rows[2 + i].left, std::string(names[i]));
-    CHECK(home.rows[10].link.go == refpages::Go::World && home.rows[10].right.empty());
-    CHECK(home.rows[12].style == refpages::Style::Block && home.rows[12].left == "Обране");
-    CHECK_EQ(home.rows[12].share, 0);
-    CHECK(home.rows[13].style == refpages::Style::Note);
+                           "Навички", "Карта світу", "Стихії"};  // the concept's order (3.0.18-beta.244: «Навички»)
+    for (size_t i = 0; i < 11; ++i) CHECK_EQ(home.rows[2 + i].left, std::string(names[i]));
+    CHECK(home.rows[10].link.go == refpages::Go::Section && home.rows[10].link.id == refpages::Skills);
+    CHECK(home.rows[11].link.go == refpages::Go::World && home.rows[11].right.empty());
+    CHECK(home.rows[13].style == refpages::Style::Block && home.rows[13].left == "Обране");
+    CHECK_EQ(home.rows[13].share, 0);
+    CHECK(home.rows[14].style == refpages::Style::Note);
     const refpages::Page found = refpages::found(ix, Lang::Uk, "por");
     CHECK(found.rows[0].style == refpages::Style::Search && found.rows[0].right == "Esc");
     CHECK(found.rows[1].style == refpages::Style::Group);  // 3.0.11-beta.28: the concept's groups of results
@@ -423,9 +424,9 @@ TEST(reference_concept_cards) {
     const refindex::Index ix = index();
     const refpages::Link poringAt{refpages::Go::Mob, 1002, ""};
     refpages::Page p = refpages::withRail(refpages::mob(ix, Lang::Uk, 1002, ctx("prontera")), ix, Lang::Uk, poringAt);
-    CHECK_EQ(p.rail.size(), size_t(11));  // 3.0.11-beta.30: «Головна» and all the first screen's sections
+    CHECK_EQ(p.rail.size(), size_t(12));  // 3.0.11-beta.30: «Головна» and all the first screen's sections
     CHECK(p.rail[0].left == "Головна" && p.rail[0].icon == "ui:home" && p.rail[0].link.go == refpages::Go::None);
-    CHECK(p.rail[9].left == "Карта світу" && p.rail[9].link.go == refpages::Go::World);
+    CHECK(p.rail[10].left == "Карта світу" && p.rail[10].link.go == refpages::Go::World);
     CHECK(p.railOn == 1 && p.rail[1].left == "Монстри");
     const auto litFor = [&](const refpages::Link& k) {
         return refpages::withRail(refpages::Page{}, ix, Lang::Uk, k).railOn;
@@ -529,7 +530,8 @@ TEST(reference_search_concept_more_and_forms) {
     CHECK_EQ(p.rows[5].sub, std::string("10 z · 1 крамниця"));
     CHECK(p.rows[6].sub.empty());  // «Інше» unsaid, nothing else to say
     // 3.0.18-beta.239 (the owner 13.11): a group whole up to 100 - all thirty stones, no «ще …»
-    CHECK(p.rows[31].style == refpages::Style::Result && p.rows[32].style == refpages::Style::Hint);
+    CHECK(p.rows[31].style == refpages::Style::Result && p.rows[32].style == refpages::Style::Group);
+    CHECK(p.rows[32].left.rfind("Навички · ", 0) == 0 && p.rows.back().style == refpages::Style::Hint);  // .244
     refindex::Index many;  // 130 stones: the search's own cut - the first 100 and «type more of the name»
     for (int i = 0; i < 130; ++i) many.items[1000 + i] = refindex::Item{"Stone " + std::to_string(1000 + i), "S", 3,
                                                                          10, 1, 0};
@@ -539,7 +541,7 @@ TEST(reference_search_concept_more_and_forms) {
     CHECK_EQ(refpages::found(ix, Lang::En, "stone aa").rows[2].sub, std::string("10 z · 1 shop"));
     for (int i = 125; i < 130; ++i) ix.items.erase(i);  // 25: all of them, no «ще 5 ›»
     const refpages::Page most = refpages::found(ix, Lang::Uk, "stone");
-    CHECK(most.rows[26].style == refpages::Style::Result && most.rows[27].style == refpages::Style::Hint);
+    CHECK(most.rows[26].style == refpages::Style::Result && most.rows[27].style == refpages::Style::Group);
 }
 
 // 3.0.11-beta.32: the monsters' list - those met on maps first, by their levels, each its picture and its line (the
@@ -913,4 +915,60 @@ TEST(reference_pages_monster_levels_by_yours) {
     CHECK_EQ(refpages::levelTone(40, 50), 1);
     CHECK_EQ(refpages::levelTone(39, 50), 3);
     CHECK_EQ(refpages::levelTone(10, 0), 0);
+}
+
+// 3.0.18-beta.244 («Довідник» › «Навички», the server's own tables): the jobs in groups, each with its own skills'
+// count; a job's page - its own skills (not its earlier jobs'), each «Lv N · SP …», and the way to the earlier job's
+TEST(reference_pages_skills_by_jobs) {
+    const refindex::Index ix = index();
+    const refpages::Page s = refpages::section(ix, Lang::Uk, refpages::Skills);
+    CHECK_EQ(s.name, std::string("Навички"));
+    CHECK(indexOf(s, "Перші професії") != size_t(-1) && indexOf(s, "Другі професії") != size_t(-1));
+    CHECK(indexOf(s, "Перероджені") != size_t(-1));
+    const refpages::Row* knight = rowWith(s, "Knight");
+    CHECK(knight && knight->link.go == refpages::Go::Section && knight->link.id == refpages::kJobSkills + 7);
+    CHECK(knight && !knight->right.empty());
+    CHECK(rowWith(s, "Baby Knight") == nullptr);  // the babies', the mounted and the wedding's trees left out
+    const refpages::Page sw = refpages::section(ix, Lang::Uk, refpages::kJobSkills + 1);  // Swordsman
+    CHECK_EQ(sw.name, std::string("Swordsman"));
+    const refpages::Row* bash = rowWith(sw, "Bash");
+    CHECK(bash && bash->link.go == refpages::Go::Skill && bash->link.id == 5);
+    CHECK(bash && bash->right.find("Lv 10") != std::string::npos && bash->right.find("SP 8") != std::string::npos);
+    CHECK(rowWith(sw, "Basic Skill") == nullptr);  // the Novice's
+    const refpages::Row* earlier = rowWith(sw, "Навички Novice ›");
+    CHECK(earlier && earlier->link.id == refpages::kJobSkills + 0);
+    const refpages::Page railed =
+        refpages::withRail(sw, ix, Lang::Uk, refpages::Link{refpages::Go::Section, refpages::kJobSkills + 1, ""});
+    CHECK(railed.railOn >= 0 && railed.rail[size_t(railed.railOn)].left == "Навички");
+}
+
+// 3.0.18-beta.244: a skill's card - its facts, the words (the site's or the game's), SP by level, what it needs, who
+// learns it; its name in the search's group «Навички»
+TEST(reference_pages_a_skills_card) {
+    const refindex::Index ix = index();
+    refpages::Context c;
+    c.skillText = [](int id) {
+        return id == 7 ? std::vector<std::string>{"Hits everything around."} : std::vector<std::string>{};
+    };
+    const refpages::Page p = refpages::open(ix, Lang::Uk, refpages::Link{refpages::Go::Skill, 7, ""}, c);
+    CHECK(!p.rows.empty() && p.rows[0].left == "Magnum Break");
+    const refpages::Row* hero = portraitOf(p);
+    CHECK(hero && hero->picture == "skill:SM_MAGNUM" && hero->left.find("Lv 10") != std::string::npos);
+    CHECK(hero && std::find(hero->tags.begin(), hero->tags.end(), "Фізична") != hero->tags.end());
+    CHECK(hero && std::find(hero->tags.begin(), hero->tags.end(), "el3:Fire") != hero->tags.end());
+    CHECK(rowWith(p, "Hits everything around.") != nullptr);
+    const refpages::Row* bash = rowWith(p, "Bash");  // what it needs
+    CHECK(bash && bash->right == "Lv 5" && bash->link.go == refpages::Go::Skill && bash->link.id == 5);
+    const refpages::Row* who = rowWith(p, "Swordsman");
+    CHECK(who && who->link.go == refpages::Go::Section && who->link.id == refpages::kJobSkills + 1);
+    const refpages::Row* sp = rowWith(p, "Усі рівні");  // the same SP at every level
+    CHECK(sp && sp->right == "SP 30");
+    const refpages::Page bolt = refpages::open(ix, Lang::Uk, refpages::Link{refpages::Go::Skill, 19, ""}, c);
+    const refpages::Row* first = rowWith(bolt, "Рівень 1");
+    CHECK(first && first->right == "SP 12");
+    CHECK_EQ(refpages::titleOf(ix, Lang::Uk, refpages::Link{refpages::Go::Skill, 7, ""}), std::string("Magnum Break"));
+    const refpages::Page found = refpages::found(ix, Lang::Uk, "magnum");
+    CHECK(indexOf(found, "Навички · 1") != size_t(-1));
+    const refpages::Row* r = rowWith(found, "Magnum Break");
+    CHECK(r && r->link.go == refpages::Go::Skill && r->link.id == 7);
 }

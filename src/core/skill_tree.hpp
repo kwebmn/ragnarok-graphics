@@ -28,5 +28,7 @@ std::vector<int> skills(int job);
 // 3.0.11-beta.226 (stage 4: «Наступна»): the jobs a character of `job` may change to next, as the game's NPCs give
 // them (a first job's two, a second job's transcendent one; an Archer's Bard or Dancer by `male`); none past them
 std::vector<int> nextJobs(int job, bool male);
+// 3.0.18-beta.244 («Довідник» › «Навички»): the jobs the tree has, by their numbers
+std::vector<int> jobs();
 
 }  // namespace uagfx::skilltree

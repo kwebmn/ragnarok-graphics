@@ -11,8 +11,12 @@
 #include <tuple>
 #include <unordered_map>
 
+#include "core/char_block.hpp"
 #include "core/reference_route.hpp"
 #include "core/settings/search.hpp"
+#include "core/skill_costs.hpp"
+#include "core/skill_info.hpp"
+#include "core/skill_tree.hpp"
 
 namespace uagfx::refpages {
 
@@ -20,6 +24,12 @@ using settings::Lang;
 using settings::Text;
 
 namespace {
+
+// 3.0.18-beta.244 («Навички», the server's own tables): the jobs shown - the site's 38 and the Taekwon (no babies, no
+// mounted copies, no wedding)
+const int kShownJobs[] = {0,    1,    2,    3,    4,    5,    6,    7,    8,    9,    10,   11,   12,
+                          14,   15,   16,   17,   18,   19,   20,   4008, 4009, 4010, 4011, 4012, 4013,
+                          4015, 4016, 4017, 4018, 4019, 4020, 4021, 23,   24,   25,   4046, 4047, 4049};
 #include "core/attr_fix.inc"  // 3.0.11-beta.13: kAttrFix, tools/attr_fix.py from the server's db/attr_fix.txt
 }  // namespace
 
@@ -575,6 +585,8 @@ Page home(const refindex::Index& ix, Lang l, const Context& c) {
         {"pet", Text::RefSecPets, say(l, Text::RefSecPetsHint), count(ix.pets.size()), Link{Go::Section, Pets, ""}},
         {"craft", Text::RefSecCraft, say(l, Text::RefSecCraftHint), count(ix.craft.size()),
          Link{Go::Section, Crafting, ""}},
+        {"skill", Text::RefSecSkills, say(l, Text::RefSecSkillsHint), count(std::size(kShownJobs)),  // .244
+         Link{Go::Section, Skills, ""}},
         {"world", Text::RefWorld, world, "", Link{Go::World, 0, ""}},
         {"tables", Text::RefSecTables, say(l, Text::RefSecTablesHint), "", Link{Go::Section, Tables, ""}},
     };
@@ -644,7 +656,7 @@ Page home(const refindex::Index& ix, Lang l, const Context& c) {
 namespace {
 
 // 3.0.11-beta.28: the groups of the search's results that open (their Go::Expand bits)
-enum FoundGroup : int { ByNumber, FoundMobs, FoundItems, FoundAegis, FoundMaps, FoundQuests, FoundNpcs };
+enum FoundGroup : int { ByNumber, FoundMobs, FoundItems, FoundAegis, FoundMaps, FoundQuests, FoundNpcs, FoundSkills };
 // a group's results until «ще N ›» opens it (the concept's v21_search had 8; 3.0.11-beta.30 the owner's 20 - kFew)
 constexpr size_t kFewFound = kFew;
 
@@ -785,6 +797,170 @@ Row mapFound(const refindex::Index& ix, Lang l, const std::string& code, const C
 
 }  // namespace
 
+namespace {
+
+int jobGroup(int job) { return job == 0 ? 0 : job <= 6 ? 1 : job <= 20 ? 2 : job >= 4008 && job <= 4021 ? 3 : 4; }
+
+std::string jobWords(int job) {
+    const char* n = charblock::jobName(job);
+    return n && *n ? n : "#" + std::to_string(job);
+}
+
+// A job's own skills - its tree's but its earlier job's
+std::vector<int> ownSkills(int job) {
+    const std::vector<int> chain = skilltree::chain(job);
+    std::vector<int> earlier;
+    if (chain.size() >= 2) earlier = skilltree::skills(chain[chain.size() - 2]);
+    std::vector<int> out;
+    for (const int id : skilltree::skills(job))
+        if (std::find(earlier.begin(), earlier.end(), id) == earlier.end()) out.push_back(id);
+    return out;
+}
+
+// «SP 8», «SP 12–30» over its levels ("" none in the table)
+std::string spRange(int id, int most) {
+    int lo = INT_MAX, hi = -1;
+    for (int lv = 1; lv <= std::max(1, most); ++lv)
+        if (const int v = skillcost::sp(id, lv); v >= 0) lo = std::min(lo, v), hi = std::max(hi, v);
+    if (hi < 0) return "";
+    return lo == hi ? "SP " + std::to_string(lo) : "SP " + std::to_string(lo) + "\xE2\x80\x93" + std::to_string(hi);
+}
+
+std::string kindWords(int id, Lang l) {
+    const std::string k = skillinfo::kind(id);
+    return say(l, k == "weapon"  ? Text::RefSkillKindWeapon
+                  : k == "magic" ? Text::RefSkillKindMagic
+                  : k == "misc"  ? Text::RefSkillKindMisc
+                                 : Text::RefSkillKindNone);
+}
+
+std::string skillLine(int id, int most, Lang l) {
+    std::vector<std::string> parts{sayf(l, Text::RefLevel, {std::to_string(most)})};
+    if (const std::string sp = spRange(id, most); !sp.empty()) parts.push_back(sp);
+    parts.push_back(kindWords(id, l));
+    return joined(parts);
+}
+
+// «Навички»: the jobs by their groups, each its own skills' count
+void skillsPage(Lang l, Page& p) {
+    p.name = say(l, Text::RefSecSkills);
+    const Text groups[] = {Text::RefJobsNovice, Text::RefJobsFirst, Text::RefJobsSecond, Text::RefJobsTrans,
+                           Text::RefJobsOther};
+    for (int g = 0; g < 5; ++g) {
+        std::vector<Row> rows;
+        for (const int job : kShownJobs)
+            if (jobGroup(job) == g)
+                rows.push_back(linked(jobWords(job),
+                                      sayf(l, Text::RefSkillsN, {std::to_string(ownSkills(job).size())}),
+                                      Link{Go::Section, kJobSkills + job, ""}));
+        if (rows.empty()) continue;
+        p.rows.push_back(heading(say(l, groups[g]), std::to_string(rows.size())));
+        for (Row& r : rows) p.rows.push_back(std::move(r));
+    }
+}
+
+// A job's page: its own skills (the tree's order), the way to its earlier job's
+Page jobSkills(Lang l, int job) {
+    Page p;
+    p.name = jobWords(job);
+    Row title;
+    title.style = Style::Title;
+    title.left = p.name;
+    p.rows.push_back(title);
+    const std::vector<int> own = ownSkills(job);
+    p.rows.push_back(heading(say(l, Text::RefSecSkills), std::to_string(own.size())));
+    for (const int id : own) {
+        Row r = linked(skillinfo::name(id), skillLine(id, skilltree::maxLevel(job, id), l), Link{Go::Skill, id, ""});
+        r.icon = std::string("skill:") + skillinfo::aegis(id);
+        p.rows.push_back(std::move(r));
+    }
+    const std::vector<int> chain = skilltree::chain(job);
+    if (chain.size() >= 2) {
+        const int earlier = chain[chain.size() - 2];
+        p.rows.push_back(linked(sayf(l, Text::RefSkillsEarlier, {jobWords(earlier)}), "",
+                                Link{Go::Section, kJobSkills + earlier, ""}));
+    }
+    return p;
+}
+
+Text usedOn(int id) {
+    switch (skillinfo::type(id)) {
+        case 1: return Text::RefSkillOnEnemy;
+        case 2: return Text::RefSkillOnGround;
+        case 4: return Text::RefSkillOnSelf;
+        case 16: return Text::RefSkillOnFriend;
+        case 32: return Text::RefSkillTrap;
+        default: return Text::Count;
+    }
+}
+
+// SP by level: one row when every level costs the same, else a row a level
+void spRows(Lang l, Page& p, int id, int most) {
+    std::vector<int> sp;
+    for (int lv = 1; lv <= most; ++lv) sp.push_back(skillcost::sp(id, lv));
+    p.rows.push_back(heading(say(l, Text::RefSkillSpByLevel)));
+    if (std::all_of(sp.begin(), sp.end(), [&](int v) { return v == sp.front(); })) {
+        if (sp.front() >= 0)
+            p.rows.push_back(linked(say(l, Text::RefSkillAllLevels), "SP " + std::to_string(sp.front()), Link{}));
+        return;
+    }
+    for (int lv = 1; lv <= most; ++lv)
+        if (sp[size_t(lv - 1)] >= 0)
+            p.rows.push_back(linked(sayf(l, Text::RefSkillLevelN, {std::to_string(lv)}),
+                                    "SP " + std::to_string(sp[size_t(lv - 1)]), Link{}));
+}
+
+// A skill's card: its facts, its words, SP by level, what it needs, who learns it
+Page skill(Lang l, int id, const Context& c) {
+    Page p;
+    const std::string name = skillinfo::name(id);
+    if (name.empty()) return p;
+    p.name = name;
+    Row title;
+    title.style = Style::Title;
+    title.left = name;
+    p.rows.push_back(title);
+    const int most = std::max(1, skillinfo::most(id));
+    Row hero;
+    hero.style = Style::Portrait;
+    hero.picture = std::string("skill:") + skillinfo::aegis(id);
+    hero.left = sayf(l, Text::RefLevel, {std::to_string(most)});
+    if (const std::string sp = spRange(id, most); !sp.empty()) hero.left += " · " + sp;
+    hero.tags = {kindWords(id, l)};
+    const int element = skillinfo::element(id);
+    if (element >= 0 && element <= 9)
+        hero.tags.push_back("el" + std::to_string(element) + ":" + elementName(element, l));
+    else if (element == -1)
+        hero.tags.push_back(say(l, Text::RefSkillWeaponElement));
+    if (const Text where = usedOn(id); where != Text::Count) hero.tags.push_back(say(l, where));
+    p.rows.push_back(hero);
+    if (c.skillText)
+        for (const std::string& line : c.skillText(id))
+            if (!line.empty()) p.rows.push_back(text(line));
+    spRows(l, p, id, most);
+    const int home = skilltree::homeJob(skilltree::jobs(), id);
+    const std::vector<std::pair<int, int>> needs =
+        home >= 0 ? skilltree::needs(home, id) : std::vector<std::pair<int, int>>{};
+    if (!needs.empty()) {
+        p.rows.push_back(heading(say(l, Text::RefSkillNeeds), std::to_string(needs.size())));
+        for (const auto& [need, lv] : needs)
+            p.rows.push_back(linked(skillinfo::name(need), sayf(l, Text::RefLevel, {std::to_string(lv)}),
+                                    Link{Go::Skill, need, ""}));
+    }
+    std::vector<Row> who;
+    for (const int job : kShownJobs)
+        if (const int lv = skilltree::maxLevel(job, id); lv > 0)
+            who.push_back(linked(jobWords(job), sayf(l, Text::RefLevel, {std::to_string(lv)}),
+                                 Link{Go::Section, kJobSkills + job, ""}));
+    if (!who.empty()) {
+        p.rows.push_back(heading(say(l, Text::RefSkillJobs), std::to_string(who.size())));
+        for (Row& r : who) p.rows.push_back(std::move(r));
+    }
+    return p;
+}
+
+}  // namespace
+
 Page found(const refindex::Index& ix, Lang l, const std::string& query, const Context& c, unsigned opened) {
     Page p;
     p.name = "«" + query + "»";
@@ -886,6 +1062,24 @@ Page found(const refindex::Index& ix, Lang l, const std::string& query, const Co
                   return r;
               });
     }
+    std::vector<int> skills;  // 3.0.18-beta.244: the skills by their names and AEGIS names
+    size_t skillsAll = 0;
+    const std::vector<int> jobs = skilltree::jobs();
+    for (const int id : skillinfo::all()) {
+        const std::string name = skillinfo::name(id);
+        if (name.empty() || skilltree::homeJob(jobs, id) < 0) continue;
+        if (!settings::textMatches(settings::foldCase(name), folded) &&
+            !settings::textMatches(settings::foldCase(skillinfo::aegis(id)), folded))
+            continue;
+        if (++skillsAll <= kMostFound) skills.push_back(id);
+    }
+    group(FoundSkills, sayf(l, Text::RefFoundSkills, {std::to_string(skillsAll)}), "", skills.size(), skillsAll,
+          [&](size_t k) {
+              const int id = skills[k];
+              return result(skillinfo::name(id), skillLine(id, std::max(1, skillinfo::most(id)), l),
+                            Text::RefKindSkill, Link{Go::Skill, id, ""}, std::string("skill:") + skillinfo::aegis(id),
+                            query, l);
+          });
     Row end;  // 3.0.11-beta.28: how the search finds (a line above it), or nothing found and what to try
     end.style = p.rows.size() == 1 ? Style::Empty : Style::Hint;
     end.left = p.rows.size() == 1 ? sayf(l, Text::RefNothingFor, {query}) : say(l, Text::RefSearchExplain);
@@ -1072,6 +1266,7 @@ void toneLevels(const refindex::Index& ix, Page& p, int level);  // 3.0.18-beta.
 }  // namespace
 
 Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
+    if (id >= kJobSkills && id < kJobSkills + 5000) return jobSkills(l, id - kJobSkills);  // 3.0.18-beta.244
     if (id >= kNpcKinds && id < kNpcKinds + int(std::size(kGroups)))  // 3.0.18-beta.240
         return npcKind(ix, l, refindex::NpcGroup(id - kNpcKinds));
     if (id == kDataSection) return dataPage(ix, l, c);  // 3.0.11-beta.69
@@ -1231,6 +1426,7 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
             p.rows.push_back(heading(p.name));
             for (Row& r : kafraRows(ix)) p.rows.push_back(std::move(r));
             break;
+        case Skills: skillsPage(l, p); break;  // 3.0.18-beta.244
         case Services:  // 3.0.11-beta.26: the concept's «NPC і послуги» - the shops and Kafra
             p.name = say(l, Text::RefSecServices);
             npcKinds(ix, l, p);  // 3.0.18-beta.240: by the maps' kinds first
@@ -2289,9 +2485,11 @@ Page withRail(Page p, const refindex::Index& ix, Lang l, const Link& at) {
         case Go::Map: section = Maps; break;
         case Go::Shop:
         case Go::Npc: section = Services; break;  // 3.0.18-beta.240: an NPC's card the NPCs' section's
+        case Go::Skill: section = Skills; break;  // 3.0.18-beta.244
         case Go::Quest: go = Go::Quests; break;
         case Go::Section:
-            section = at.id >= kNpcKinds && at.id < kNpcKinds + 20 ? Services  // 3.0.18-beta.240: the NPCs' kinds
+            section = at.id >= kJobSkills                             ? Skills    // 3.0.18-beta.244: a job's skills
+                      : at.id >= kNpcKinds && at.id < kNpcKinds + 20 ? Services  // 3.0.18-beta.240: the NPCs' kinds
                       : at.id >= 100 || at.id == Cards           ? Items
                       : at.id == Shops || at.id == Teleports     ? Services
                                                                  : at.id;
@@ -2311,6 +2509,7 @@ std::string titleOf(const refindex::Index& ix, Lang l, const Link& link) {
     switch (link.go) {
         case Go::Mob: return ix.mobs.count(link.id) ? ix.mobs.at(link.id).name : "";
         case Go::Item: return ix.items.count(link.id) ? ix.items.at(link.id).name : "";
+        case Go::Skill: return skillinfo::name(link.id);  // 3.0.18-beta.244
         case Go::Map: return link.map.empty() ? "" : refindex::mapTitle(ix, link.map);
         case Go::Quest:
             return link.id >= 0 && size_t(link.id) < ix.quests.size()
@@ -2334,6 +2533,7 @@ std::string linkText(const Link& link) {
         case Go::Item: return "i " + std::to_string(link.id);
         case Go::Map: return "p " + link.map;
         case Go::Quest: return "q " + std::to_string(link.id);
+        case Go::Skill: return "s " + std::to_string(link.id);  // 3.0.18-beta.244
         default: return "";
     }
 }
@@ -2345,6 +2545,7 @@ bool linkOf(const std::string& line, Link& out) {
         case 'm': out = Link{Go::Mob, std::atoi(rest.c_str()), ""}; return out.id > 0;
         case 'i': out = Link{Go::Item, std::atoi(rest.c_str()), ""}; return out.id > 0;
         case 'q': out = Link{Go::Quest, std::atoi(rest.c_str()), ""}; return out.id >= 0;
+        case 's': out = Link{Go::Skill, std::atoi(rest.c_str()), ""}; return out.id > 0;  // 3.0.18-beta.244
         case 'p': {
             for (char ch : rest)
                 if (!std::isalnum(static_cast<unsigned char>(ch)) && ch != '_' && ch != '-') return false;
@@ -2368,6 +2569,7 @@ Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
         case Go::Quests: return quests(ix, l);
         case Go::Quest: return quest(ix, l, link.id, c);
         case Go::Npc: return npc(ix, l, link.map, link.id, c);  // 3.0.18-beta.240
+        case Go::Skill: return skill(l, link.id, c);              // 3.0.18-beta.244
         case Go::Fold:
         case Go::Star:
         case Go::None:

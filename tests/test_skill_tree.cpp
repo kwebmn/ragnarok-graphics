@@ -54,3 +54,23 @@ TEST(skill_tree_a_jobs_skills_and_how_they_are_learned) {
     CHECK(std::string(skillinfo::name(681)) == "Increase Weight Limit R");
     CHECK(std::string(skillinfo::name(13000)).empty());
 }
+
+// 3.0.18-beta.244 («Довідник» › «Навички»): the server's skill_db facts for a skill's card - its AEGIS name, most
+// level, element (-1 the weapon's) and kind; the jobs the tree has, in order
+TEST(skill_info_card_facts_and_the_jobs) {
+    CHECK_EQ(std::string(skillinfo::aegis(5)), std::string("SM_BASH"));
+    CHECK_EQ(skillinfo::most(5), 10);
+    CHECK_EQ(skillinfo::element(5), -1);  // the weapon's
+    CHECK_EQ(std::string(skillinfo::kind(5)), std::string("weapon"));
+    CHECK_EQ(std::string(skillinfo::aegis(19)), std::string("MG_FIREBOLT"));
+    CHECK_EQ(skillinfo::element(19), 3);  // fire
+    CHECK_EQ(std::string(skillinfo::kind(19)), std::string("magic"));
+    CHECK_EQ(skillinfo::idOf("MG_FIREBOLT"), 19);
+    CHECK_EQ(skillinfo::idOf("NO_SUCH_SKILL"), 0);
+    CHECK_EQ(std::string(skillinfo::aegis(99999)), std::string());
+    const std::vector<int> jobs = skilltree::jobs();
+    CHECK(!jobs.empty() && jobs.front() == 0);  // Novice first
+    CHECK(std::find(jobs.begin(), jobs.end(), 7) != jobs.end());
+    CHECK(std::find(jobs.begin(), jobs.end(), 4008) != jobs.end());
+    CHECK(std::is_sorted(jobs.begin(), jobs.end()));
+}

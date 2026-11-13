@@ -52,7 +52,8 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "i686" AND CMAKE_BUILD_TYPE STREQUAL "Release
         src/core/my_shop.cpp src/core/npc_talk.cpp src/core/options_card.cpp src/core/party_setup.cpp
         src/core/pet_card.cpp src/core/pick_card.cpp src/core/popup_card.cpp src/core/reference_live.cpp
         src/core/reference_now.cpp src/core/reference_pack.cpp src/core/reference_pages.cpp
-        src/core/reference_quests.cpp src/core/reference_world_paint.cpp src/core/register_form.cpp
+        src/core/reference_quests.cpp src/core/reference_skills.cpp
+        src/core/reference_world_paint.cpp src/core/register_form.cpp
         src/core/renderer_choice.cpp src/core/report*.cpp src/core/room_card.cpp src/core/safe_mode.cpp
         src/core/server_status.cpp src/core/settings_window.cpp src/core/shelf_merge.cpp src/core/shelf_toast.cpp
         src/core/shop_window.cpp src/core/shot_spec.cpp src/core/site_api.cpp src/core/site_signin.cpp

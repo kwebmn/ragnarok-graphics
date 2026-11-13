@@ -968,6 +968,11 @@ enum class Text : uint16_t {
     // .242 (the reference's cards): the own timers, what the player has, the craft's have and missing, «2 з 5»
     RefTimersOwn, RefHaveBag, RefHaveCart, RefHaveStorage, RefCraftHave, RefCraftAll, RefCraftMissing, RefOfN,
     RefInReference,  // .242: the item card's link to its card in «Довідник»
+    // .244 («Довідник» › «Навички»): the section, the jobs' groups, a skill's facts and parts, the search's group
+    RefSecSkills, RefSecSkillsHint, RefJobsNovice, RefJobsFirst, RefJobsSecond, RefJobsTrans, RefJobsOther, RefSkillsN,
+    RefSkillsEarlier, RefSkillKindWeapon, RefSkillKindMagic, RefSkillKindMisc, RefSkillKindNone, RefSkillWeaponElement,
+    RefSkillOnEnemy, RefSkillOnGround, RefSkillOnSelf, RefSkillOnFriend, RefSkillTrap, RefSkillSpByLevel,
+    RefSkillAllLevels, RefSkillLevelN, RefSkillNeeds, RefSkillJobs, RefFoundSkills, RefKindSkill,
     Count
 };
 

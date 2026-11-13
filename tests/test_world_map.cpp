@@ -159,7 +159,7 @@ TEST(reference_world_pages) {
     CHECK(d.rows[3].style == refpages::Style::Heading && d.rows[3].left == "Prontera Culvert");
     CHECK(d.rows[4].link.go == refpages::Go::Map && d.rows[4].link.map == "prt_sewb1");
     const refpages::Page home = refpages::home(ix, Lang::Uk);
-    CHECK(home.rows[10].link.go == refpages::Go::World && home.rows[10].icon == "ui:world");  // the ninth tile
+    CHECK(home.rows[11].link.go == refpages::Go::World && home.rows[11].icon == "ui:world");  // the tenth tile
     // the window's world map: the tile under the pointer at a zoom (its own pixels)
     for (const float k : {1.0f, 2.0f}) {
         refwin::Layout L;

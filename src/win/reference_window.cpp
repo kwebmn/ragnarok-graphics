@@ -15,12 +15,14 @@
 
 #include "core/layout.hpp"
 #include "core/minimap_proto.hpp"
-#include "core/pad_nav.hpp"
 #include "core/pack_source.hpp"
+#include "core/pad_nav.hpp"
 #include "core/reference_pages.hpp"
 #include "core/reference_route.hpp"
+#include "core/reference_skills.hpp"
 #include "core/reference_world_paint.hpp"
 #include "core/settings/strings.hpp"
+#include "core/skill_info.hpp"
 #include "core/sprite_file.hpp"
 #include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
@@ -174,6 +176,9 @@ struct State {
     bool bagKnown = false, cartKnown = false;
     int level = 0;
     std::vector<refpages::OwnTimer> own;
+    // 3.0.18-beta.244 («Навички»): the site's skills' words (the watcher's file), read once a window's opening
+    refskills::File skillWords;
+    bool skillWordsRead = false;
 };
 
 State& state() {
@@ -244,6 +249,7 @@ bool iconNamed(const std::string& key, uiicons::Icon& icon) {
         {"ui:npc", uiicons::Icon::Npc}, {"ui:mvp", uiicons::Icon::Mvp},
         {"ui:pet", uiicons::Icon::Pet}, {"ui:craft", uiicons::Icon::Craft},
         {"ui:world", uiicons::Icon::World}, {"ui:tables", uiicons::Icon::Tables},
+        {"ui:skill", uiicons::Icon::Skill},  // 3.0.18-beta.244: «Навички»
         {"ui:search", uiicons::Icon::Search}, {"ui:dungeon", uiicons::Icon::Dungeon},
         {"ui:minus", uiicons::Icon::Minus}, {"ui:plus", uiicons::Icon::Plus},
         {"ui:expand", uiicons::Icon::Expand}, {"ui:home", uiicons::Icon::Home},
@@ -298,6 +304,17 @@ void loadPicture(State& s, const std::string& key) {
         out = asPicture(spritefile::fitted(im, side, side));
         return;
     }
+    // 3.0.18-beta.244 («Навички»): a skill's icon by its AEGIS name (the game's, as the hotbar's), a row's or the
+    // card's
+    const bool skillIcon = key.rfind("icon:skill:", 0) == 0;
+    if (key.rfind("skill:", 0) == 0 || skillIcon) {
+        const std::string aegis = key.substr(skillIcon ? 11 : 6);
+        spritefile::Image im;
+        if (aegis.empty() || !clienttables::iconPixels(hotbar::lowered(aegis), im.argb, im.w, im.h)) return;
+        out = skillIcon ? asPicture(spritefile::fitted(im, side, side, 1))
+                        : asPicture(spritefile::fitted(im, std::min(side, px(72, s)), std::min(side, px(72, s))));
+        return;
+    }
     const bool icon = key.rfind("icon:item:", 0) == 0;  // 3.0.11-beta.15: a row's icon, its own size
     if (key.rfind("item:", 0) == 0 || icon) {
         const auto& files = clienttables::itemFiles();  // 3.0.18-beta.217: the client tables' item -> icon
@@ -347,6 +364,16 @@ void readGameThings(State& s) {
     s.level = readGame(kBaseLevel, &level, 4) && level > 0 && level < 1000 ? int(level) : 0;
     s.own.clear();
     for (const mvptimers::Timer& t : mvpwin::timers()) s.own.push_back(refpages::OwnTimer{t.mob, t.map, t.back()});
+    if (!s.skillWordsRead) {  // 3.0.18-beta.244
+        s.skillWordsRead = true;
+        std::string text;
+        refskills::File f;
+        if (readTextFile(layout::join(gameDir(), layout::kReferenceSkills), text) && refskills::read(text, f))
+            s.skillWords = std::move(f);
+        LOG_INFO("reference: the site's skills' words - %zu (uk), %zu (ru), %zu (en)",
+                 s.skillWords.words[int(settings::Lang::Uk)].size(), s.skillWords.words[int(settings::Lang::Ru)].size(),
+                 s.skillWords.words[int(settings::Lang::En)].size());
+    }
 }
 
 refpages::Context contextOf(const State& s) {
@@ -374,6 +401,12 @@ refpages::Context contextOf(const State& s) {
     c.storage = s.storageSeen.empty() ? nullptr : &s.storageSeen;
     c.level = s.level;
     c.own = &s.own;
+    // 3.0.18-beta.244: a skill's words - the site's in the player's language, else the game's own table's
+    c.skillText = [&words = s.skillWords](int id) {
+        std::vector<std::string> lines = refskills::lines(words, language(), id);
+        if (lines.empty()) lines = infocardwin::skillDescription(skillinfo::aegis(id), skillinfo::name(id));
+        return lines;
+    };
     return c;
 }
 
@@ -1086,6 +1119,7 @@ void openWindow(State& s, const refpages::Link& at) {
         readList(s.favourites, layout::kReferenceFavourites);
     }
     s.open = true;
+    s.skillWordsRead = false;  // 3.0.18-beta.244: the watcher may have brought them since
     setQuery(s, "");
     s.back.clear();
     s.at = at;

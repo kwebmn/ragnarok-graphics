@@ -133,4 +133,12 @@ std::vector<int> nextJobs(int job, bool male) {
     }
 }
 
+std::vector<int> jobs() {
+    std::vector<int> out;
+    for (const Entry& e : kTree)
+        if (std::find(out.begin(), out.end(), int(e.job)) == out.end()) out.push_back(int(e.job));
+    std::sort(out.begin(), out.end());
+    return out;
+}
+
 }  // namespace uagfx::skilltree
