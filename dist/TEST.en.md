@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.256 — what's new · 2026-11-13
+
+- «Reference» → «Elements»: the columns' names no longer run into each other. The four tables stood two to a row and a column had no room for its name. Each table now takes its own row; two to a row only in a wide window, where the names fit whole. In a narrow window the column names are cut to three letters (Neu, Wat, Ear…).
+- What to check: «Reference» → «Elements» at different window sizes - the names over the columns do not touch.
+
 # uaRO Graphics 3.0.18-beta.255 — what's new · 2026-11-13
 
 - «What drops» shows the chance again, «Where to find» the monsters' count on a map, «Where to buy» the price. 3.0.18-beta.253 limited a row's right-hand words by a per cent of its width and the game's layout gave them no width at all. The words are whole again; a layout test checks it.
