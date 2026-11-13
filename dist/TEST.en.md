@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.18-beta.238 — what's new · 2026-11-13
+
+- The scrollbar in the new windows («Settings», the shop, the storage and others): a press on it was taken for a press on the window's ground, and the window followed the cursor together with its bar, so only the mouse wheel scrolled. Now the bar can be dragged and clicked in every window.
+- The shop: the list's head «Item · Price · Weight» lay over the first row, and the first item's icon stuck out of the frame. The cause was the style of the screen's red edge at low HP, which reached any element of the same class name in other windows. Three more such clashes were found and removed: the character block, the target card, the login's password field. A new test checks all the markup so such clashes do not come back.
+- NPC talk: in the frame where the game makes its window (a Kafra's first words) the old white window showed for a moment. Now the game's window is hidden before the game draws it.
+- To check: scroll «Settings» (Alt+O) by dragging the bar on the right; open a shop - the head is above the list, nothing overlaps; talk to a Kafra for the first time after a start - no old white window.
+
 # uaRO Graphics 3.0.18-beta.237 — what's new · 2026-11-13
 
 - Wings (R-FAFJWS «the character's body blinks»): the wings took the depth of the character's first drawn layer. The game sorts the body and the head by the depth of their tops, and the head now and then comes first - then the wings stood nearer than the body and covered it, switching from frame to frame, so the body blinked. Now the wings always stand a little behind all of the character's layers (facing us) or a little in front of them (facing away).
