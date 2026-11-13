@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.251 — what's new · 2026-11-13
+
+- Entering a castle no longer throws you out of the game (R-NGSWJM, "can't get into the castle"). The game reads its data.grf archive through 256 MB "windows". In a castle its main thread was reading the guild war 3D models (Emperium, guardians) while the map loading thread switched the archive to another window at the same moment, so the model was unpacked from memory that was already gone. The game's archive reads now go one at a time, with or without the updates folder. The 3.0.15 fix did not close this cause.
+- What to check: enter a few castles (prtg_cas01–05, payg_cas01–05, gefg_cas01–05, aldeg_cas01–05) — the game must not close. The log has the line "files: the game's archive reads one at a time" at the start, and in castles lines "files: … waited … ms" may appear — that is the caught case.
+
 # uaRO Graphics 3.0.18-beta.250 — what's new · 2026-11-13
 
 - «Reference» without the clutter: monsters not on any map (event copies, summons) and things no one can get (no monster on a map drops them, no shop sells them, no craft makes them, no quest or pet takes them) no longer show in the lists, the search and the counts. 483 of 1004 monsters stay, about 1 870 of 7 643 things. Their cards still open by a link.
