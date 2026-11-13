@@ -1433,4 +1433,18 @@ bool whisperTo(const std::string& utf8Name) {
     return true;
 }
 
+bool putIntoLine(const std::string& utf8) {
+    State& s = state();
+    const uint32_t words = wordsEdit();
+    if (!words || utf8.empty() || !setTextOf(words)) return false;
+    std::string line = editText(words);
+    if (!line.empty() && line.back() != ' ') line += ' ';
+    line += narrowed(utf8Wide(utf8), s.codePage);
+    if (line.size() > std::max<size_t>(1, read32(words + kEditMost))) return false;
+    reinterpret_cast<SetTextFn>(uintptr_t(setTextOf(words)))(words, line.c_str());
+    giveKeys(words);
+    LOG_INFO("chat: a name put into the line from «Довідник» (%zu bytes)", line.size());
+    return true;
+}
+
 }  // namespace uagfx::win::chatwin

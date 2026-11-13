@@ -45,6 +45,9 @@ bool gameBattle();  // the game's battle mode (/bm) on
 void padChannel();
 // 3.0.18-beta.147: a whisper to this one (UTF-8) - its name in the game's field, the words' field takes the keys
 bool whisperTo(const std::string& utf8Name);
+// 3.0.18-beta.242 (the reference's Shift+click on a name): `utf8` («[Poring]») after the chat line's words (a space
+// between), the line given the keys; false: no chat line, or the line would be longer than it takes
+bool putIntoLine(const std::string& utf8);
 void padScroll(int by);
 // Its box in the target while it shows (the hotbar keeps clear of it); false: not shown
 bool panelBox(int& x, int& y, int& w, int& h);

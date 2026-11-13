@@ -8687,6 +8687,15 @@ constexpr Entry kTexts[] = {
      "Stick — move · {1} a map's card · {5} {6} zoom · {2} leave the map",
      "Стік — рух · {1} картка карти · {5} {6} масштаб · {2} вийти з карти",
      "Стик — движение · {1} карточка карты · {5} {6} масштаб · {2} выйти из карты"},
+    {Text::RefTimersOwn, "Your timers", "Ваші таймери", "Ваши таймеры"},
+    {Text::RefHaveBag, "in the bag {1}", "у сумці {1}", "в сумке {1}"},
+    {Text::RefHaveCart, "in the cart {1}", "у візку {1}", "в тележке {1}"},
+    {Text::RefHaveStorage, "in storage {1}", "на складі {1}", "на складе {1}"},
+    {Text::RefCraftHave, "have {1}", "є {1}", "есть {1}"},
+    {Text::RefCraftAll, "have all", "є все", "есть всё"},
+    {Text::RefCraftMissing, "missing {1}", "бракує {1}", "не хватает {1}"},
+    {Text::RefOfN, "{1} of {2}", "{1} з {2}", "{1} из {2}"},
+    {Text::RefInReference, "In the reference ›", "У довіднику ›", "В справочнике ›"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

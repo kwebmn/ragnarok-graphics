@@ -36,6 +36,7 @@ void openItem(int id);
 // 3.0.11-beta.21: uaRO Pad (src/pad) while the window is open - its D-pad picks a row, A opens it, B goes back (the
 // first page: closes), Start closes, the bumpers scroll; the character does nothing meanwhile
 bool isOpen();
+bool on();  // 3.0.18-beta.242: [interface] reference on - its links elsewhere shown (the item card's «У довіднику ›»)
 // 3.0.18-beta.241 (the concept's pad, «as in other windows»): Up Down Left Right walk the gold frame over the body's
 // controls (on a map the pad took: its cross), Enter (A) clicks the framed one (a map: the cross takes it), Back (B)
 // back (the cross: off the map), Lead (X) «Вести сюди» (the cross: the next mark), Search (Y) the on-screen keyboard

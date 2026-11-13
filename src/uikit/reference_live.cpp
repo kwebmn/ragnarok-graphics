@@ -89,6 +89,31 @@ struct Maker {
         if (leads) s += " data-ln=\"" + std::to_string(i) + "\"";
         return s + ">";
     }
+    // 3.0.18-beta.242: a monster's «Lv N» in its words coloured by the character's level (refpages::Row::lvTone)
+    static std::string toned(const Row& r, const std::string& words) {
+        std::string s = escape(words);
+        if (r.lvTone < 1 || r.lvTone > 3) return s;
+        const size_t at = s.find("Lv ");
+        if (at == std::string::npos) return s;
+        size_t end = at + 3;
+        while (end < s.size() && s[end] >= '0' && s[end] <= '9') ++end;
+        if (end == at + 3) return s;
+        return s.substr(0, at) + "<span class=\"rlv t" + std::to_string(r.lvTone) + "\">" + s.substr(at, end - at) +
+               "</span>" + s.substr(end);
+    }
+    // A portrait's words from the game, line by line
+    static std::string lines(const std::string& words) {
+        std::string out;
+        size_t from = 0;
+        while (from <= words.size()) {
+            const size_t nl = words.find('\n', from);
+            const std::string one = words.substr(from, nl == std::string::npos ? std::string::npos : nl - from);
+            out += (out.empty() && from == 0 ? "" : "<br/>") + escape(one);
+            if (nl == std::string::npos) break;
+            from = nl + 1;
+        }
+        return out;
+    }
     std::string pic(const std::string& key, const char* cls) const {
         const std::string src = look.picture && !key.empty() ? look.picture(key) : std::string();
         if (src.empty()) return std::string("<span class=\"") + cls + " none\"></span>";
@@ -159,6 +184,7 @@ struct Maker {
                 const std::string box = "<div class=\"rpic\"><img class=\"rpimg\" src=\"" + escape(src) + "\"/></div>";
                 o += open("div", i, "rport") + (src.empty() ? "" : box) +
                      "<div class=\"rpinfo\"><div class=\"rpl\">" + escape(r.left) + "</div>" +
+                     (r.sub.empty() ? "" : "<div class=\"rpd\">" + lines(r.sub) + "</div>") +
                      (r.right.empty() ? "" : "<div class=\"rpr\">" + escape(r.right) + "</div>") + tags(r) +
                      "</div></div>";
                 break;
@@ -173,15 +199,15 @@ struct Maker {
                 if (!r.picture.empty()) picture = pic(r.picture, "ri");
                 else picture = icon(r);
                 o += open("div", i, "rchp") + picture + dot(r) + "<span class=\"rcn\">" + escape(r.left) + "</span>" +
-                     (r.sub.empty() ? "" : "<span class=\"rcs\">" + escape(r.sub) + "</span>") +
-                     (r.right.empty() ? "" : "<span class=\"rcs\">" + escape(r.right) + "</span>") + "</div>";
+                     (r.sub.empty() ? "" : "<span class=\"rcs\">" + toned(r, r.sub) + "</span>") +
+                     (r.right.empty() ? "" : "<span class=\"rcs\">" + toned(r, r.right) + "</span>") + "</div>";
                 break;
             }
             case Style::Result:
                 o += open("div", i, "rres") + icon(r) + dot(r) + "<div class=\"rrs\"><span class=\"rl\">" +
                      marked(r.left, r.marks) + "</span>" +
                      (r.sub.empty() ? "" : "<span class=\"rsb\">" + marked(r.sub, r.subMarks) + "</span>") +
-                     "</div><span class=\"rrt\">" + escape(r.right) + "</span></div>";
+                     "</div><span class=\"rrt\">" + toned(r, r.right) + "</span></div>";
                 break;
             case Style::Grid: {
                 o += open("div", i, r.gold ? "rgrid hd" : "rgrid") + "<span class=\"rgl\">" + escape(r.left) +
@@ -219,8 +245,8 @@ struct Maker {
             default:
                 o += open("div", i, r.gold ? "rr hl" : "rr") + icon(r) + dot(r) + "<span class=\"rl\">" +
                      escape(r.left) + "</span>" +
-                     (r.sub.empty() ? "" : "<span class=\"rsb\">" + escape(r.sub) + "</span>") +
-                     (r.right.empty() ? "" : "<span class=\"rrt\">" + escape(r.right) + "</span>") + "</div>";
+                     (r.sub.empty() ? "" : "<span class=\"rsb\">" + toned(r, r.sub) + "</span>") +
+                     (r.right.empty() ? "" : "<span class=\"rrt\">" + toned(r, r.right) + "</span>") + "</div>";
                 break;
         }
     }

@@ -356,3 +356,34 @@ TEST(uikit_reference_pad_targets_are_the_bodys_controls) {
     CHECK(chips == 2 && tools == 3 && maps == 1 && npcs == 1);
     rmlhost::close(ll.doc);
 }
+
+// 3.0.18-beta.242 (the concept's cards): an item's words from the game under its name beside the picture, line by line;
+// a monster's «Lv N» coloured by the character's level (1 fitting, 2 too strong, 3 too weak)
+TEST(uikit_reference_description_and_level_tone) {
+    refpages::Page p;
+    p.rows.push_back(row(Style::Title, "Apple"));
+    Row hero = row(Style::Portrait, "Вага 2");
+    hero.sub = "A red <fruit>.\nHeals 16 HP.";
+    p.rows.push_back(hero);
+    p.rows.push_back(row(Style::Heading, "Хто дропає"));
+    Row poring = row(Style::Row, "Poring", refpages::Go::Mob, 1002);
+    poring.right = "10 % · Lv 1 · prt_fild08";
+    poring.lvTone = 3;
+    p.rows.push_back(poring);
+    Row plain = row(Style::Row, "Lunatic", refpages::Go::Mob, 1063);
+    plain.right = "5 % · Lv 3";
+    p.rows.push_back(plain);
+    ur::Look look;
+    ur::Model m;
+    m.body = ur::body(p, look);
+    const Loaded l = load(m);
+    CHECK_EQ(l.warnings, std::string());
+    Rml::Element* d = l.doc ? l.doc->QuerySelector(".rpd") : nullptr;
+    const std::string words = d ? d->GetInnerRML() : std::string();
+    CHECK(words.find("A red &lt;fruit&gt;.") != std::string::npos && words.find("<br") != std::string::npos &&
+          words.find("Heals 16 HP.") != std::string::npos);
+    Rml::Element* lv = l.doc ? l.doc->QuerySelector(".rlv.t3") : nullptr;
+    CHECK(lv && lv->GetInnerRML() == "Lv 1");
+    CHECK(l.doc && count(l.doc, ".rlv") == 1);  // a row without a tone: its words as they were
+    rmlhost::close(l.doc);
+}

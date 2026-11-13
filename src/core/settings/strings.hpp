@@ -965,6 +965,9 @@ enum class Text : uint16_t {
     RefNpcGroupGuild, RefNpcGroupJob, RefNpcGroupEvent, RefNpcGroupFerry, RefNpcGroupOther, RefNpcLead, RefNpcOnMap,
     RefNpcFerry, RefNpcByKind, RefLayerNpc, RefLayerWarps, RefLayerMobs, RefLayerHere,
     RefPadKeys, RefPadCrossKeys, RefPadWorldKeys,  // .241 (the reference's pad): the bottom line - {1} A .. {6} RB
+    // .242 (the reference's cards): the own timers, what the player has, the craft's have and missing, «2 з 5»
+    RefTimersOwn, RefHaveBag, RefHaveCart, RefHaveStorage, RefCraftHave, RefCraftAll, RefCraftMissing, RefOfN,
+    RefInReference,  // .242: the item card's link to its card in «Довідник»
     Count
 };
 

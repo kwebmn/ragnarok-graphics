@@ -9,6 +9,8 @@
 #include "core/ui_style.hpp"
 
 namespace uagfx::infocard {
+constexpr uint32_t kGoldLink = 0xE6CB8A;  // 3.0.18-beta.242: the theme's gold (what is pressed)
+
 namespace {
 
 // At scale 1: the card 330 wide, 14 in; its title 48 high (the icon 32); the words 12.5 px a row of 17, at most 16 rows
@@ -260,6 +262,12 @@ Layout layout(const Card& c, int x, int y, int targetW, int targetH, float scale
         }
         bottom += float((c.cards.size() + across - 1) / across) * (kSlotH + kSlotGap) * s - kSlotGap * s;
     }
+    if (!t.reference.empty()) {  // 3.0.18-beta.242: the link to its card in «Довідник», at the bottom left
+        bottom += 10 * s;
+        L.reference = panel::Box{side, bottom, std::min(w - 2 * side, std::ceil(m(t.reference, 12 * s, true)) + 4 * s),
+                                 18 * s};
+        bottom += 18 * s;
+    }
     L.glass = panel::Box{0, 0, w, bottom + side};
     L.w = int(std::ceil(L.glass.w));
     L.h = int(std::ceil(L.glass.h));
@@ -270,6 +278,7 @@ Layout layout(const Card& c, int x, int y, int targetW, int targetH, float scale
 
 Part hitTest(const Layout& L, float x, float y) {
     if (L.close.contains(x, y)) return Part::Close;
+    if (L.reference.w > 0 && L.reference.contains(x, y)) return Part::Reference;  // 3.0.18-beta.242
     // 3.0.18-beta.110: the head's band (a card's illustration under it is the body's)
     const float head = std::max(L.title.y + L.title.h, L.note.y + L.note.h) + 6 * L.s;
     if (y < head && L.glass.contains(x, y)) return Part::Title;
@@ -309,6 +318,8 @@ std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const T
         out.push_back(Words{b, filled ? c.cards[i] : t.empty, filled ? kText : kMuted, 10.5f * s, filled,
                             pic ? Align::Left : Align::Center});
     }
+    if (L.reference.w > 0)  // 3.0.18-beta.242: gold - it is pressed
+        out.push_back(Words{L.reference, t.reference, kGoldLink, 12 * s, true, Align::Left});
     return out;
 }
 

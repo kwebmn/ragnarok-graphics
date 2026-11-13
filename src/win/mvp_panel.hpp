@@ -5,6 +5,7 @@
 
 #include "core/frame.hpp"
 #include "core/game_packets.hpp"
+#include "core/mvp_timers.hpp"
 #include "win/pad_panels.hpp"
 
 namespace uagfx::gpu {
@@ -23,6 +24,8 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 
+// 3.0.18-beta.242 (the reference's boss cards: «Ваші таймери» first): the timers the panel shows now, the soonest first
+std::vector<mvptimers::Timer> timers();
 // 3.0.18-beta.135 (win/pad_panels): each timer's row (forgotten by a press) and ✕ for the controller
 std::vector<padpanels::Button> padButtons();
 

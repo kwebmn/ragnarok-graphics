@@ -64,6 +64,7 @@ panel::Picture fitted(const std::vector<uint32_t>& argb, int width, int height, 
 struct Texts {
     std::string slots;  // «Слоти»
     std::string empty;  // «порожньо»
+    std::string reference;  // 3.0.18-beta.242: «У довіднику ›» under it all - its item's card there; "" none
 };
 struct Show {
     int scroll = 0;  // the first row shown
@@ -73,6 +74,7 @@ struct Layout {
     float s = 1;
     int x = 0, y = 0, w = 0, h = 0;  // the picture in the target
     panel::Box glass, title, note, close, icon, picture, body, slotsLabel;
+    panel::Box reference;  // 3.0.18-beta.242: the «У довіднику ›» link (w 0 none)
     std::vector<npctalk::Placed> lines;  // every row's runs, their y as if not scrolled
     int rows = 0, shownRows = 0;
     float lineH = 0;
@@ -81,7 +83,7 @@ struct Layout {
 // Its top left at (x, y) of the target, kept on its targetW x targetH
 Layout layout(const Card& c, int x, int y, int targetW, int targetH, float scale, const Show& sh, const Texts& t,
               const npctalk::Measure& m);
-enum class Part : uint8_t { None, Close, Body, Title };
+enum class Part : uint8_t { None, Close, Body, Title, Reference };
 Part hitTest(const Layout& L, float x, float y);  // the picture's pixels
 // 3.0.18-beta.109 (the owner: «как было в оригинале»): the slot under (x, y), -1 none - a card there opens its own
 // description (the game's item window opens a card's window from its slot)

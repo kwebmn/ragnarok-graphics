@@ -132,3 +132,17 @@ TEST(reference_quests_tracked_entries) {
     CHECK(e[0].lines[1].text == "Old Ring" && e[0].lines[1].right == "\xC3\x97" "2");
     CHECK(e[0].lines[2].strong && e[0].lines[2].text.rfind("Здати: Kafra", 0) == 0);
 }
+
+// 3.0.18-beta.242 (the concept: a quest's needed things «2 з 5»): what the bag has of each, up to the number needed
+TEST(reference_quests_needed_things_counted) {
+    const refindex::Index ix = index();
+    refpages::Context c;
+    const std::map<int, int> none{{7288, 0}}, more{{7288, 3}};
+    c.bag = &none;
+    const refpages::Page q = refpages::quest(ix, Lang::Uk, 0, c);
+    const size_t items = indexOf(q, "Що потрібно");
+    CHECK(items != size_t(-1) && q.rows[items + 1].right == "0 з 1");
+    c.bag = &more;
+    const refpages::Page has = refpages::quest(ix, Lang::Uk, 0, c);
+    CHECK(items != size_t(-1) && has.rows[items + 1].right == "1 з 1");
+}

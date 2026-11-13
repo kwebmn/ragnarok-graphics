@@ -215,3 +215,25 @@ TEST(info_card_a_cards_art_over_its_words) {
     CHECK(!L.lines.empty() && L.lines.front().box.y >= L.picture.y + L.picture.h);  // the words under it
     CHECK(L.lines.front().box.x < L.picture.x);
 }
+
+// 3.0.18-beta.242 (the reference concept: a card opens from the item's own card «У довіднику»): a link under its words
+// and slots - pressed it is Part::Reference, its words gold in its box; none when its words are not given
+TEST(info_card_reference_link) {
+    infocard::Card c;
+    c.title = "Fly Wing";
+    c.lines = {"A wing.", "Teleports you."};
+    c.cards = {"", ""};
+    infocard::Show sh;
+    infocard::Texts t = texts();
+    const infocard::Layout none = infocard::layout(c, 100, 100, 1920, 1080, 1.0f, sh, t, measure);
+    CHECK_EQ(none.reference.w, 0.0f);
+    t.reference = "У довіднику ›";
+    const infocard::Layout L = infocard::layout(c, 100, 100, 1920, 1080, 1.0f, sh, t, measure);
+    CHECK(L.reference.w > 0 && L.reference.y >= L.slots.back().y + L.slots.back().h);
+    CHECK(L.reference.y + L.reference.h <= L.glass.y + L.glass.h && L.h > none.h);
+    CHECK(infocard::hitTest(L, L.reference.x + 4, L.reference.y + L.reference.h / 2) == infocard::Part::Reference);
+    bool said = false;
+    for (const infocard::Words& w : infocard::words(L, c, sh, t))
+        said = said || (w.text == "У довіднику ›" && w.box.x == L.reference.x && w.box.y == L.reference.y);
+    CHECK(said);
+}

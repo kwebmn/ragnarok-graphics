@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <ctime>
 #include <string>
 #include <variant>
 #include <vector>
@@ -323,6 +324,12 @@ std::vector<padpanels::Button> padButtons() {
     out.push_back({panel::Box{float(s.x) + s.close.x, float(s.y) + s.close.y, s.close.w, s.close.h},
                    [] { ownwin::setClosed(closedwin::Window::Mvp, true, "the pad"); }});
     return out;
+}
+
+std::vector<mvptimers::Timer> timers() {
+    State& s = state();
+    load(s);
+    return s.timers.shown(static_cast<long long>(std::time(nullptr)));
 }
 
 }  // namespace uagfx::win::mvpwin

@@ -28,14 +28,18 @@
 #include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
 #include "uikit/reference_live.hpp"
+#include "win/chat_window.hpp"
 #include "win/client_tables.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
 #include "win/hotbar.hpp"
+#include "win/info_card.hpp"
+#include "win/item_lists.hpp"
 #include "win/log.hpp"
 #include "win/minimap_proto.hpp"
-#include "win/osk_window.hpp"
 #include "win/monster_picture.hpp"
+#include "win/mvp_panel.hpp"
+#include "win/osk_window.hpp"
 #include "win/pack_pictures.hpp"
 #include "win/party_panel.hpp"
 #include "win/paths.hpp"
@@ -67,6 +71,7 @@ constexpr size_t kMostPictures = 2000;             // 3.0.11-beta.22: the cards'
 constexpr float kWideW = 1270, kWideH = 850;       // the concept's window at 1080p, in dp
 constexpr float kNarrowBelow = 900;                // dp: narrower - the rail its icons, the blocks one column
 constexpr float kPanelW = 314;                     // dp: the world map's panel and its gap
+constexpr uint32_t kBaseLevel = 0x771F94;          // 3.0.18-beta.242: the character's base level (CSession)
 
 struct Entry {  // a page left for another: what «Назад» brings back
     refpages::Link at;
@@ -163,6 +168,12 @@ struct State {
     bool padActive = false, padCross = false, crossWorld = false, oskOurs = false;
     std::string padKey, padPageOf, ringWas, crossWas;
     float crossX = 0, crossY = 0;
+    // 3.0.18-beta.242 (the concept's cards): what the game says, read with each page - the bag's and the cart's counts
+    // (known: the game has the list), the storage's as last seen, the character's level, the bosses' own timers
+    std::map<int, int> bag, cart, storageSeen;
+    bool bagKnown = false, cartKnown = false;
+    int level = 0;
+    std::vector<refpages::OwnTimer> own;
 };
 
 State& state() {
@@ -325,6 +336,19 @@ std::string pictureSrc(State& s, const std::string& key) {
 }
 
 // What a page is made with: the player's place, the minimap's way, the live data, the world map
+// 3.0.18-beta.242: the game's things for the cards - the bag, the cart, the storage (kept as last seen), the level,
+// the HUD «Боси» panel's timers
+void readGameThings(State& s) {
+    s.bag = itemlists::counts(itemlists::List::Bag, &s.bagKnown);
+    s.cart = itemlists::counts(itemlists::List::Cart, &s.cartKnown);
+    if (std::map<int, int> seen = itemlists::counts(itemlists::List::Storage); !seen.empty())
+        s.storageSeen = std::move(seen);
+    uint32_t level = 0;
+    s.level = readGame(kBaseLevel, &level, 4) && level > 0 && level < 1000 ? int(level) : 0;
+    s.own.clear();
+    for (const mvptimers::Timer& t : mvpwin::timers()) s.own.push_back(refpages::OwnTimer{t.mob, t.map, t.back()});
+}
+
 refpages::Context contextOf(const State& s) {
     refpages::Context c;
     c.here = s.here;
@@ -344,6 +368,12 @@ refpages::Context contextOf(const State& s) {
     c.liveAt = reference::onlineSeen();  // 3.0.11-beta.69
     c.trackedQuests = &trackerwin::quests();  // 3.0.11-beta.70
     c.trackedItems = &trackerwin::items();
+    c.describe = [](int id) { return infocardwin::itemDescription(id); };  // 3.0.18-beta.242
+    c.bag = s.bagKnown ? &s.bag : nullptr;
+    c.cart = s.cartKnown ? &s.cart : nullptr;
+    c.storage = s.storageSeen.empty() ? nullptr : &s.storageSeen;
+    c.level = s.level;
+    c.own = &s.own;
     return c;
 }
 
@@ -761,6 +791,7 @@ void makePage(State& s) {
         s.page.rows.push_back(r);
     } else {
         s.bar = hotbarwin::barSkills();  // 3.0.11-beta.68: a monster's card says the bar's skills on it
+        readGameThings(s);                // 3.0.18-beta.242
         const refpages::Context c = contextOf(s);
         s.page = s.at.go != refpages::Go::None ? refpages::open(*s.index, l, s.at, c, s.opened)
                  : !s.query.empty()            ? refpages::found(*s.index, l, s.query, c, s.opened)
@@ -1147,9 +1178,38 @@ void clickOn(State& s, Rml::Element* target) {
     }
 }
 
+// 3.0.18-beta.242 (the concept's cards): Shift+click on a name - «[Name]» into the chat line (a monster's, a thing's,
+// an NPC's, a quest's name; a map's code), the card's own title too; false: not a name (the click goes on)
+bool shiftClick(State& s, Rml::Element* target) {
+    if (!s.index) return false;
+    refpages::Link at;
+    for (Rml::Element* el = target; el && el->GetId() != "body"; el = el->GetParentNode()) {
+        const Rml::String ln = el->GetAttribute<Rml::String>("data-ln", "");
+        if (!ln.empty()) {
+            const int i = std::atoi(ln.c_str());
+            if (i >= 0 && size_t(i) < s.page.rows.size()) at = s.page.rows[size_t(i)].link;
+            break;
+        }
+        if (el->IsClassSet("rtitle")) {
+            at = s.at;
+            break;
+        }
+    }
+    using refpages::Go;
+    if (at.go != Go::Mob && at.go != Go::Item && at.go != Go::Map && at.go != Go::Npc && at.go != Go::Quest)
+        return false;
+    const std::string name = at.go == Go::Map ? at.map : refpages::titleOf(*s.index, language(), at);
+    if (name.empty() || !chatwin::putIntoLine("[" + name + "]")) return false;
+    LOG_INFO("reference: Shift+click - «[%s]» into the chat line", name.c_str());
+    return true;
+}
+
 class Clicks final : public Rml::EventListener {
 public:
-    void ProcessEvent(Rml::Event& e) override { clickOn(state(), e.GetTargetElement()); }
+    void ProcessEvent(Rml::Event& e) override {
+        if (GetKeyState(VK_SHIFT) < 0 && shiftClick(state(), e.GetTargetElement())) return;  // 3.0.18-beta.242
+        clickOn(state(), e.GetTargetElement());
+    }
 };
 Clicks g_clicks;
 
@@ -2010,6 +2070,8 @@ void openMap(const std::string& code) {
 }
 
 bool isOpen() { return state().open && state().shown; }
+
+bool on() { return state().enabled; }
 
 void padCommand(PadCommand c) {
     State& s = state();

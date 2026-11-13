@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <string>
 #include <utility>
@@ -79,6 +80,9 @@ struct Row {
     std::vector<std::string> tags;  // 3.0.11-beta.26: a card's picture row's tags («elN:» an element's, «gold:»)
     Marks marks, subMarks;          // 3.0.11-beta.28: a result's query in `left`, in `sub`
     bool side = false;              // 3.0.18-beta.240: beside the location's map (its NPCs' list)
+    // 3.0.18-beta.242 (the concept: monsters' levels coloured by the character's): a monster's row - its «Lv N» 1
+    // fitting, 2 too strong, 3 too weak (levelTone); 0 none
+    int lvTone = 0;
 };
 struct Page {
     std::string name;  // what «Назад до …» calls it
@@ -126,6 +130,13 @@ struct Follow {
     std::string map;   // where the followed way leads ("" none)
     bool walk = true;  // on foot (else by Kafra)
 };
+// 3.0.18-beta.242 (the concept's cards): a boss's own timer (the HUD «Боси» panel's, core/mvp_timers) - its map, when
+// it comes back (unix)
+struct OwnTimer {
+    int mob = 0;
+    std::string map;
+    long long back = 0;
+};
 // Where the player is and what the window knows now - a map's card says more with it
 struct Context {
     std::string here;    // the player's map
@@ -150,7 +161,19 @@ struct Context {
     // quest's and an item's card say it with their pin
     const std::vector<std::string>* trackedQuests = nullptr;
     const std::vector<int>* trackedItems = nullptr;
+    // 3.0.18-beta.242 (the concept's cards): what the game says - an item's description (its table's lines, UTF-8
+    // without colour marks; none: empty), what the player has (an item's count in the bag, the cart, the storage as
+    // last seen; null: not known), the character's base level (0 not known), the bosses' own timers
+    std::function<std::vector<std::string>(int item)> describe;
+    const std::map<int, int>* bag = nullptr;
+    const std::map<int, int>* cart = nullptr;
+    const std::map<int, int>* storage = nullptr;
+    int level = 0;
+    const std::vector<OwnTimer>* own = nullptr;
 };
+// 3.0.18-beta.242: a monster of `mobLv` for a character of `level` - 1 fitting (within 10 levels), 2 too strong, 3 too
+// weak; 0 either not known
+int levelTone(int mobLv, int level);
 // 3.0.11-beta.18: a card's name for the first screen's lists («Poring», «Fly Wing», «Prontera Field (prt_fild08)»);
 // "" when the index has no such
 std::string titleOf(const refindex::Index& ix, settings::Lang l, const Link& link);

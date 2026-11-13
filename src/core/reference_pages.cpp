@@ -130,9 +130,39 @@ long long respawnOn(const refindex::Index& ix, int mob, const std::string& map) 
     return map.empty() ? where->second.front().respawnMs : 0;
 }
 
+// 3.0.18-beta.242: a boss's soonest own timer (null none)
+const OwnTimer* ownTimerOf(const Context& c, int mob) {
+    const OwnTimer* best = nullptr;
+    if (c.own)
+        for (const OwnTimer& t : *c.own)
+            if (t.mob == mob && (!best || t.back < best->back)) best = &t;
+    return best;
+}
+
+// 3.0.18-beta.242 (the concept's cards): «Ваші таймери» - the HUD «Боси» panel's of this boss, the soonest first
+void ownTimers(const refindex::Index& ix, Lang l, Page& p, int mob, const Context& c) {
+    if (!c.own || c.now <= 0) return;
+    std::vector<const OwnTimer*> mine;
+    for (const OwnTimer& t : *c.own)
+        if (t.mob == mob) mine.push_back(&t);
+    if (mine.empty()) return;
+    std::sort(mine.begin(), mine.end(), [](const OwnTimer* a, const OwnTimer* b) { return a->back < b->back; });
+    p.rows.push_back(heading(say(l, Text::RefTimersOwn), std::to_string(mine.size()), Timers));
+    for (const OwnTimer* t : mine) {
+        const long long left = t->back - c.now;
+        const std::string right =
+            left > 0 ? sayf(l, Text::RefTimerSoon, {respawnText(left, l)}) : say(l, Text::RefTimerDue);
+        Row r = t->map.empty() ? linked(say(l, Text::RefTimerNoMap), right, Link{})
+                               : linked(refindex::mapTitle(ix, t->map), right, toMap(t->map));
+        r.gold = left <= 0;
+        p.rows.push_back(std::move(r));
+    }
+}
+
 // «Таймери гравців»: the public timers of the site's MVP page (the latest a map) - when it comes back by the server's
-// respawn, how long ago it was killed
+// respawn, how long ago it was killed; 3.0.18-beta.242: the own ones first
 void timers(const refindex::Index& ix, Lang l, Page& p, int mob, const Context& c) {
+    ownTimers(ix, l, p, mob, c);
     if (!c.live || c.now <= 0) return;
     std::vector<const reflive::Timer*> latest;
     for (const reflive::Timer& t : c.live->timers)
@@ -1037,6 +1067,10 @@ Page npcKind(const refindex::Index& ix, Lang l, refindex::NpcGroup g) {
 
 }  // namespace
 
+namespace {
+void toneLevels(const refindex::Index& ix, Page& p, int level);  // 3.0.18-beta.242 (with the item card's helpers)
+}  // namespace
+
 Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
     if (id >= kNpcKinds && id < kNpcKinds + int(std::size(kGroups)))  // 3.0.18-beta.240
         return npcKind(ix, l, refindex::NpcGroup(id - kNpcKinds));
@@ -1102,7 +1136,11 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
                 // 3.0.11-beta.20: the board of MVP hunters - a player's public timer of it (the latest)
                 const reflive::Timer* t = c.live ? reflive::timerOf(*c.live, mob) : nullptr;
                 const long long respawn = t ? respawnOn(ix, mob, t->map) / 1000 : 0;
-                if (t && respawn > 0 && c.now > 0) {
+                if (const OwnTimer* o = ownTimerOf(c, mob); o && c.now > 0) {  // 3.0.18-beta.242: the own first
+                    const long long left = o->back - c.now;
+                    right += " · " + (left > 0 ? sayf(l, Text::RefTimerSoon, {respawnText(left, l)})
+                                               : say(l, Text::RefTimerDue));
+                } else if (t && respawn > 0 && c.now > 0) {
                     const long long left = t->killed + respawn - c.now;
                     right += " · " + (left > 0 ? sayf(l, Text::RefTimerSoon, {respawnText(left, l)})
                                                : say(l, Text::RefTimerDue));
@@ -1256,6 +1294,7 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
         default:
             break;
     }
+    toneLevels(ix, p, c.level);  // 3.0.18-beta.242
     return p;
 }
 
@@ -1338,6 +1377,46 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
     return p;
 }
 
+namespace {
+
+// 3.0.18-beta.242 (the concept's cards): how many of an item one of the player's places has (0 none or not known)
+int countIn(const std::map<int, int>* place, int item) {
+    if (!place) return 0;
+    const auto it = place->find(item);
+    return it == place->end() ? 0 : it->second;
+}
+
+// «у сумці 3 · у візку 1 · на складі 12» - the places that have it ("" none)
+std::string haveLine(Lang l, int item, const Context& c) {
+    std::vector<std::string> parts;
+    const std::pair<const std::map<int, int>*, Text> places[] = {
+        {c.bag, Text::RefHaveBag}, {c.cart, Text::RefHaveCart}, {c.storage, Text::RefHaveStorage}};
+    for (const auto& [place, words] : places)
+        if (const int n = countIn(place, item); n > 0) parts.push_back(sayf(l, words, {number(n, l)}));
+    return joined(parts);
+}
+
+// 3.0.18-beta.242: the monsters' rows with their «Lv N» - toned by the character's level
+void toneLevels(const refindex::Index& ix, Page& p, int level) {
+    if (level <= 0) return;
+    for (Row& r : p.rows) {
+        if (r.link.go != Go::Mob) continue;
+        const auto m = ix.mobs.find(r.link.id);
+        if (m == ix.mobs.end() || m->second.lv <= 0) continue;
+        const std::string lv = "Lv " + std::to_string(m->second.lv);
+        if (r.right.find(lv) != std::string::npos || r.sub.find(lv) != std::string::npos)
+            r.lvTone = levelTone(m->second.lv, level);
+    }
+}
+
+}  // namespace
+
+int levelTone(int mobLv, int level) {
+    if (mobLv <= 0 || level <= 0) return 0;
+    const int d = mobLv - level;
+    return d > 10 ? 2 : d < -10 ? 3 : 1;
+}
+
 Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned opened) {
     const std::string& here = c.here;
     Page p;
@@ -1360,6 +1439,14 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
     if (i.buy > 0) hero.left += " · " + sayf(l, Text::RefPrice, {number(i.buy, l)});
     if (i.buy > 1) hero.left += " · " + sayf(l, Text::RefSells, {number(i.buy / 2, l)});  // 3.0.11-beta.22: an NPC's
     if (i.slots > 0) hero.left += " · " + sayf(l, Text::RefSlots, {std::to_string(i.slots)});
+    if (c.describe) {  // 3.0.18-beta.242: the game's own words under the name, its empty first and last lines left out
+        std::vector<std::string> words = c.describe(id);
+        while (!words.empty() && words.back().empty()) words.pop_back();
+        size_t from = 0;
+        while (from < words.size() && words[from].empty()) ++from;
+        for (size_t k = from; k < words.size(); ++k) hero.sub += (k > from ? "\n" : "") + words[k];
+    }
+    hero.right = haveLine(l, id, c);
     p.rows.push_back(hero);
 
     // the concept's main blocks: who drops it, where to buy it (side by side when both); the rest folds
@@ -1426,17 +1513,27 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
     const auto made = ix.craftOf.find(id);
     if (made != ix.craftOf.end()) {
         p.rows.push_back(heading(say(l, Text::RefCraftOf), "", CraftOf));
-        for (int c : made->second)
-            for (const auto& [mat, n] : ix.craft[size_t(c)].mats)
-                p.rows.push_back(linked(itemName(ix, mat), "×" + std::to_string(n), toItem(mat)));
+        for (int k : made->second)
+            for (const auto& [mat, n] : ix.craft[size_t(k)].mats) {
+                std::string right = "×" + std::to_string(n);  // 3.0.18-beta.242: what the bag has of it
+                if (c.bag) right += " · " + sayf(l, Text::RefCraftHave, {number(countIn(c.bag, mat), l)});
+                p.rows.push_back(linked(itemName(ix, mat), right, toItem(mat)));
+            }
     }
     const auto used = ix.usedIn.find(id);
     if (used != ix.usedIn.end()) {
         p.rows.push_back(heading(say(l, Text::RefUsedIn), std::to_string(used->second.size()), UsedIn));
         std::vector<Row> rows;
-        for (int c : used->second) {
-            const int made = ix.craft[size_t(c)].item;
-            rows.push_back(linked(itemName(ix, made), "", toItem(made)));
+        for (int k : used->second) {
+            const int made = ix.craft[size_t(k)].item;
+            std::string right;  // 3.0.18-beta.242: all of it in the bag, or how many pieces are missing
+            if (c.bag) {
+                int missing = 0;
+                for (const auto& [mat, n] : ix.craft[size_t(k)].mats) missing += std::max(0, n - countIn(c.bag, mat));
+                right = missing == 0 ? say(l, Text::RefCraftAll)
+                                     : sayf(l, Text::RefCraftMissing, {number(missing, l)});
+            }
+            rows.push_back(linked(itemName(ix, made), right, toItem(made)));
         }
         capped(p, std::move(rows), UsedIn, opened, l);
     }
@@ -1459,6 +1556,7 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
         pin.gold = on;
         p.rows.push_back(std::move(pin));
     }
+    toneLevels(ix, p, c.level);  // 3.0.18-beta.242
     return p;
 }
 
@@ -1599,6 +1697,7 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
                                   Link{Go::Shop, s, ""}));
         capped(p, std::move(rows), ShopsHere, opened, l);
     }
+    toneLevels(ix, p, c.level);  // 3.0.18-beta.242
     return p;  // 3.0.18-beta.240: the NPCs beside the map (no flat list at the end)
 }
 
@@ -1748,8 +1847,12 @@ Page quest(const refindex::Index& ix, Lang l, int index, const Context& c) {
     if (!q.items.empty()) {
         p.rows.push_back(heading(say(l, Text::RefQuestItems), std::to_string(q.items.size()), QuestItems));
         asMain(p.rows.back(), 100);
-        for (const auto& [item, n] : q.items)
-            p.rows.push_back(linked(itemName(ix, item), "×" + number(n, l), toItem(item)));
+        for (const auto& [item, n] : q.items)  // 3.0.18-beta.242: «2 з 5» by the bag
+            p.rows.push_back(linked(itemName(ix, item),
+                                    c.bag ? sayf(l, Text::RefOfN, {number(std::min(countIn(c.bag, item), n), l),
+                                                                    number(n, l)})
+                                          : "×" + number(n, l),
+                                    toItem(item)));
     }
     const std::vector<std::string>& steps = refquests::listOf(q.steps, ql);
     if (!steps.empty()) {

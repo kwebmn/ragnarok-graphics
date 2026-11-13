@@ -26,7 +26,7 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "i686" AND CMAKE_BUILD_TYPE STREQUAL "Release
         src/win/char_diary.cpp src/win/char_make.cpp src/win/char_select.cpp src/win/chatroom_window.cpp
         src/win/command_window.cpp src/win/console.cpp src/win/detail_window.cpp src/win/emote_window.cpp
         src/win/equip_window.cpp src/win/game_logins.cpp src/win/guild_card.cpp src/win/homun_ai_files.cpp
-        src/win/homun_card.cpp src/win/hud_edit.cpp src/win/info_card.cpp src/win/item_window.cpp
+        src/win/homun_card.cpp src/win/hud_edit.cpp src/win/info_card.cpp src/win/item_lists.cpp src/win/item_window.cpp
         src/win/login_*.cpp src/win/macro_card.cpp src/win/menu_window.cpp src/win/merc_card.cpp
         src/win/mob_card.cpp src/win/msg_box.cpp src/win/my_shop.cpp src/win/npc_talk.cpp src/win/old_windows.cpp
         src/win/open_page.cpp src/win/options_card.cpp src/win/own_windows.cpp src/win/party_setup.cpp

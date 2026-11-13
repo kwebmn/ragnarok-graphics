@@ -811,3 +811,106 @@ TEST(reference_pages_rail_steps_round) {
     p.railOn = -1;
     CHECK_EQ(refpages::railStep(p, +1), -1);
 }
+
+namespace {
+const refpages::Row* portraitOf(const refpages::Page& p) {
+    for (const refpages::Row& r : p.rows)
+        if (r.style == refpages::Style::Portrait) return &r;
+    return nullptr;
+}
+}  // namespace
+
+// 3.0.18-beta.242 (the concept's cards): a boss's own timers (the HUD «Боси» panel's) first, the players' below; the
+// bosses' list says the own one
+TEST(reference_pages_own_boss_timers_first) {
+    const refindex::Index ix = index();
+    refpages::Context c = ctx("");
+    c.now = 1800000000;
+    reflive::Live live;
+    live.timers.push_back(reflive::Timer{1917, "moc_fild20", c.now - 600});
+    c.live = &live;
+    std::vector<refpages::OwnTimer> own{{1917, "moc_fild20", c.now + 600}, {1002, "prt_fild08", c.now + 60}};
+    c.own = &own;
+    const refpages::Page p = refpages::mob(ix, Lang::Uk, 1917, c);
+    const size_t mine = indexOf(p, "Ваші таймери"), theirs = indexOf(p, "Таймери гравців");
+    CHECK(mine != size_t(-1) && theirs != size_t(-1) && mine < theirs);
+    CHECK(mine != size_t(-1) && p.rows[mine].right == "1");
+    CHECK(mine != size_t(-1) && p.rows[mine + 1].right == "через " + refpages::respawn(600000, Lang::Uk) &&
+          !p.rows[mine + 1].gold && p.rows[mine + 1].link.go == refpages::Go::Map);
+    own[0].back = c.now - 5;  // back by now
+    const refpages::Page due = refpages::mob(ix, Lang::Uk, 1917, c);
+    const size_t at = indexOf(due, "Ваші таймери");
+    CHECK(at != size_t(-1) && due.rows[at + 1].right == "вже має бути" && due.rows[at + 1].gold);
+    const refpages::Row* boss = rowWith(refpages::section(ix, Lang::Uk, refpages::Bosses, c), "Satan Morroc");
+    CHECK(boss && boss->right.find("вже має бути") != std::string::npos);
+}
+
+// 3.0.18-beta.242: an item's words from the game's table under its name; what the player has, where
+TEST(reference_pages_item_description_and_what_you_have) {
+    const refindex::Index ix = index();
+    refpages::Context c = ctx("");
+    c.describe = [](int id) {
+        return id == 601 ? std::vector<std::string>{"A wing.", "Teleports you."} : std::vector<std::string>{};
+    };
+    const std::map<int, int> bag{{601, 3}}, cart{{601, 1}}, storage{{601, 12}, {512, 4}};
+    c.bag = &bag;
+    c.cart = &cart;
+    c.storage = &storage;
+    const refpages::Page wing = refpages::item(ix, Lang::Uk, 601, c);
+    const refpages::Row* hero = portraitOf(wing);
+    CHECK(hero && hero->sub == "A wing.\nTeleports you.");
+    CHECK(hero && hero->right == "у сумці 3 · у візку 1 · на складі 12");
+    const refpages::Page apple = refpages::item(ix, Lang::Uk, 512, c);
+    CHECK(portraitOf(apple) && portraitOf(apple)->sub.empty() && portraitOf(apple)->right == "на складі 4");
+    const refpages::Page jellopy = refpages::item(ix, Lang::Uk, 909, c);
+    CHECK(portraitOf(jellopy) && portraitOf(jellopy)->right.empty());  // none anywhere
+}
+
+// 3.0.18-beta.242: «З чого зробити» says what the bag has of each, «Входить у крафт» what is missing
+TEST(reference_pages_craft_have_and_missing) {
+    const refindex::Index ix = index();
+    refpages::Context c = ctx("");
+    const std::map<int, int> none, two{{998, 2}};
+    c.bag = &none;
+    const refpages::Row* iron = rowWith(refpages::item(ix, Lang::Uk, 1101, c), "Iron");
+    CHECK(iron && iron->right == "×1 · є 0");
+    const refpages::Page ironCard = refpages::item(ix, Lang::Uk, 998, c);
+    const refpages::Row* sword = rowWith(ironCard, "Sword");
+    CHECK(sword && sword->right == "бракує 1");
+    c.bag = &two;
+    const refpages::Page swordCard = refpages::item(ix, Lang::Uk, 1101, c);
+    CHECK(rowWith(swordCard, "Iron") && rowWith(swordCard, "Iron")->right == "×1 · є 2");
+    const refpages::Page ironHave = refpages::item(ix, Lang::Uk, 998, c);
+    CHECK(rowWith(ironHave, "Sword") && rowWith(ironHave, "Sword")->right == "є все");
+    c.bag = nullptr;  // not known: as before
+    const refpages::Page plain = refpages::item(ix, Lang::Uk, 1101, c);
+    CHECK(rowWith(plain, "Iron") && rowWith(plain, "Iron")->right == "×1");
+    const refpages::Page plainIron = refpages::item(ix, Lang::Uk, 998, c);
+    CHECK(rowWith(plainIron, "Sword") && rowWith(plainIron, "Sword")->right.empty());
+}
+
+// 3.0.18-beta.242 (the concept: monsters' levels coloured by the character's) - fitting within 10 levels, too strong
+// above, too weak below; not known: none
+TEST(reference_pages_monster_levels_by_yours) {
+    const refindex::Index ix = index();
+    refpages::Context c = ctx("");
+    c.level = 50;
+    const refpages::Page apple = refpages::item(ix, Lang::Uk, 512, c);  // Poring, Lv 1
+    CHECK(rowWith(apple, "Poring") && rowWith(apple, "Poring")->lvTone == 3);
+    const refpages::Page wing = refpages::item(ix, Lang::Uk, 601, c);  // Satan Morroc, Lv 99
+    CHECK(rowWith(wing, "Satan Morroc") && rowWith(wing, "Satan Morroc")->lvTone == 2);
+    c.level = 5;
+    const refpages::Page near = refpages::item(ix, Lang::Uk, 512, c);
+    CHECK(rowWith(near, "Poring") && rowWith(near, "Poring")->lvTone == 1);
+    c.level = 0;
+    const refpages::Page unknown = refpages::item(ix, Lang::Uk, 512, c);
+    CHECK(rowWith(unknown, "Poring") && rowWith(unknown, "Poring")->lvTone == 0);
+    c.level = 50;
+    const refpages::Row* listed = rowWith(refpages::section(ix, Lang::Uk, refpages::Mobs, c), "Poring");
+    CHECK(listed && listed->lvTone == 3);
+    CHECK_EQ(refpages::levelTone(60, 50), 1);  // the edges: 10 above fits, 11 too strong
+    CHECK_EQ(refpages::levelTone(61, 50), 2);
+    CHECK_EQ(refpages::levelTone(40, 50), 1);
+    CHECK_EQ(refpages::levelTone(39, 50), 3);
+    CHECK_EQ(refpages::levelTone(10, 0), 0);
+}

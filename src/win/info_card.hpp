@@ -35,6 +35,9 @@ bool box(Kind kind, int& x, int& y, int& w, int& h);
 // 3.0.11-beta.230 («Навички»' side panel): a skill's description as the game's table has it, UTF-8 without its colour
 // marks and without its first line when that is the name again; empty when the table has none
 std::vector<std::string> skillDescription(const std::string& aegis, const std::string& name);
+// 3.0.18-beta.242 (the reference's cards): an item's description as the game's table has it (the bag's card's), UTF-8
+// without its colour marks; empty when the table has none
+std::vector<std::string> itemDescription(int id);
 // 3.0.18-beta.138: an item's slots as the game's itemslotcounttable.txt has them (0 none)
 int slotsOf(int id);
 // 3.0.18-beta.142 (the owner: «все» - the windows' audit): a thing's item card by its ITEM_INFO in the game (a list

@@ -1644,6 +1644,12 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .rpinfo { display: block; flex: 1; }
 .rfw .rpl { display: block; font-size: 14dp; }
 .rfw .rpr { display: block; margin-top: 3dp; color: #9aa3b5; }
+/* 3.0.18-beta.242 (the concept's cards): an item's words from the game under its name; a monster's level by yours -
+   fitting green, too strong red, too weak faint */
+.rfw .rpd { display: block; margin-top: 6dp; font-size: 12.5dp; line-height: 17dp; color: #c9cfdb; }
+.rfw .rlv.t1 { color: #7fd49a; }
+.rfw .rlv.t2 { color: #ff8a7a; }
+.rfw .rlv.t3 { color: #7d8597; }
 .rfw .rtags { display: flex; flex-direction: row; flex-wrap: wrap; margin-top: 8dp; }
 .rfw .rtag { display: flex; flex-direction: row; align-items: center; height: 24dp; padding: 0 10dp;
     margin: 0 6dp 6dp 0; border-radius: 12dp; background-color: #ffffff0f; font-size: 12.5dp; color: #c9d1de; }

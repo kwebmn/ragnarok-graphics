@@ -33,6 +33,7 @@
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/reference_window.hpp"
 #include "win/ui_cost.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
@@ -82,6 +83,7 @@ struct One {
     bool shown = false, hid = false;
     uint32_t window = 0;
     std::string what;  // the thing shown (its number, identified, refined, cards, count; a skill's AEGIS name)
+    int itemId = 0;    // 3.0.18-beta.242: the item shown (a slot's card's too), 0 a skill - «У довіднику ›»
     ic::Card card;
     ic::Show show;
     ic::Layout layout;
@@ -266,6 +268,7 @@ std::string forgedLine(const int cards[4], unsigned codePage) {
 // The item card's thing: its title (+refined, [slots]), its count or «Не опізнано», its description, its slots' cards
 void itemCard(State& s, One& o, uint32_t window) {
     const std::string number = text(read32(window + kNameText), read32(window + kNameLen));
+    o.itemId = std::atoi(number.c_str());  // 3.0.18-beta.242
     uint8_t known = 0;
     readGame(window + kKnown, &known, 1);
     const int refine = int(read32(window + kRefine)), count = int(read32(window + kCount));
@@ -331,6 +334,7 @@ void itemCard(State& s, One& o, uint32_t window) {
 // 3.0.18-beta.109/.139: a card's own card - its name, words, its illustration big over them (3.0.18-beta.110, the
 // owner: «окно карты как в оригинале»), else its item picture
 void cardCard(State& s, One& o, int id) {
+    o.itemId = id;  // 3.0.18-beta.242
     const std::string card = std::to_string(id);
     const std::string what = "card " + card + '@' + std::to_string(s.scale);
     if (what == o.what) return;
@@ -413,6 +417,7 @@ std::vector<std::string> skillFacts(State& s, const std::string& aegis) {
 }
 
 void skillCard(State& s, One& o, uint32_t window) {
+    o.itemId = 0;  // 3.0.18-beta.242: a skill - no item card in «Довідник»
     // 3.0.11-beta.200: the game's card keeps the skill's name as shown (FUN_00505d60's) - its AEGIS name and level
     // the character's skill of that name (core/info_card skillOfCard)
     const std::string shown = text(read32(window + kAegisText), read32(window + kAegisLen));
@@ -447,10 +452,11 @@ float measure(const std::string& utf8Text, float px, bool bold) {
     return float(wordsWidth(utf8Wide(utf8Text), px, bold));
 }
 
-ic::Texts texts() {
+ic::Texts texts(const One& o) {
     ic::Texts t;
     t.slots = say(settings::Text::CardSlots);
     t.empty = say(settings::Text::CardEmpty);
+    if (o.itemId > 0 && referencewin::on()) t.reference = say(settings::Text::RefInReference);  // 3.0.18-beta.242
     return t;
 }
 
@@ -522,7 +528,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         o.window = window;
         if (kind == Kind::Item) itemCard(s, o, window);
         else skillCard(s, o, window);
-        o.layout = ic::layout(o.card, o.atX, o.atY, targetWidth, targetHeight, s.scale, o.show, texts(), measure);
+        o.layout = ic::layout(o.card, o.atX, o.atY, targetWidth, targetHeight, s.scale, o.show, texts(o), measure);
         o.move.apply(o.layout.x, o.layout.y, o.layout.w, o.layout.h, targetWidth, targetHeight, k, 48 * s.scale);
         o.show.scroll = std::clamp(o.show.scroll, 0, std::max(0, o.layout.rows - o.layout.shownRows));
         o.show.hoverClose = false;
@@ -548,7 +554,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     }
     readTables(s);
     cardCard(s, c, s.slotCard);
-    c.layout = ic::layout(c.card, c.atX, c.atY, targetWidth, targetHeight, s.scale, c.show, texts(), measure);
+    c.layout = ic::layout(c.card, c.atX, c.atY, targetWidth, targetHeight, s.scale, c.show, texts(c), measure);
     c.move.apply(c.layout.x, c.layout.y, c.layout.w, c.layout.h, targetWidth, targetHeight, k, 48 * s.scale);
     c.show.scroll = std::clamp(c.show.scroll, 0, std::max(0, c.layout.rows - c.layout.shownRows));
     c.show.hoverClose = false;
@@ -606,7 +612,7 @@ static void fillSheet(One& o, uisheet::Content& c) {
         c.rect(u, L.slots[i], 6 * sc, filled ? kGold : kWhite, filled ? 0.10f : 0.04f, filled ? kGold : kWhite,
                filled ? 0.55f : 0.12f, 1.0f * sc);
     }
-    c.say(ic::words(L, d, o.show, texts()));
+    c.say(ic::words(L, d, o.show, texts(o)));
 }
 
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
@@ -656,6 +662,9 @@ bool mouse(Kind kind, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) 
         o.key.clear();
     } else if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && part == ic::Part::Close) {
         close(kind);
+    } else if (m == WM_LBUTTONDOWN && part == ic::Part::Reference && o.itemId > 0) {  // 3.0.18-beta.242
+        referencewin::openItem(o.itemId);
+        if (s.told++ < 40) LOG_INFO("cards: «У довіднику» - the item #%d's card opened there", o.itemId);
     } else if (const int slot = ic::slotAt(o.layout, tx - float(o.layout.x), ty - float(o.layout.y));
                (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN) && kind == Kind::Item && slot >= 0 && slot < 4 &&
                o.cardIds[slot] > 0) {  // 3.0.18-beta.139: a slot's card in its own window (was in this one)
@@ -742,6 +751,16 @@ std::vector<std::string> skillDescription(const std::string& aegis, const std::s
     for (const std::string& l : ic::forJob(d->second, ownJob(), jobWords))  // .270: the character's job's
         out.push_back(utf8(s, gamewords::withoutColours(l)));
     if (!out.empty() && (out.front() == name || out.front().empty())) out.erase(out.begin());
+    return out;
+}
+
+std::vector<std::string> itemDescription(int id) {
+    State& s = state();
+    readTables(s);
+    std::vector<std::string> out;
+    const auto d = s.tables.items.find(std::to_string(id));
+    if (d == s.tables.items.end()) return out;
+    for (const std::string& l : d->second) out.push_back(utf8(s, gamewords::withoutColours(l)));
     return out;
 }
 
