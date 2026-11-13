@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.249 — what's new · 2026-11-13
+
+- Reports are simpler still: they no longer carry the pictures the texture pack had no better version of (up to 64 small files). The game no longer saves them either, and the old copies (the uaro-graphics\missing folder) are deleted at start.
+- What to check: send a report - only your own picture and the logs go.
+
 # uaRO Graphics 3.0.18-beta.248 — what's new · 2026-11-13
 
 - «Reference», «World map»: the map itself is back (R-QP7PQB). Since beta 239 it showed only the players' marks and «You are here» without the locations: the window gave the picture it drew as its own background too, so it was wiped before the drawing.
