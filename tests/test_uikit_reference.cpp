@@ -297,3 +297,18 @@ TEST(uikit_reference_location_map_and_its_npcs) {
     CHECK_EQ(count(l.doc, ".rpic"), size_t(0));
     rmlhost::close(l.doc);
 }
+
+// 3.0.18-beta.240: a portrait whose picture cannot be made (an NPC's sprite not read, a monster without a sprite) has
+// no empty box - its words take the width
+TEST(uikit_reference_portrait_without_its_picture_has_no_box) {
+    refpages::Page p = card();
+    p.rows[1].picture = "npc:83";
+    ur::Look look;
+    look.picture = [](const std::string&) { return std::string(); };
+    ur::Model m;
+    m.body = ur::body(p, look);
+    const Loaded l = load(m);
+    CHECK_EQ(l.warnings, std::string());
+    CHECK(l.doc && count(l.doc, ".rport") == 1 && count(l.doc, ".rpic") == 0);
+    rmlhost::close(l.doc);
+}

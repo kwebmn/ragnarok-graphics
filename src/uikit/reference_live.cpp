@@ -150,13 +150,16 @@ struct Maker {
                      arrow + escape(r.left) + "</span><span class=\"rshr\">" + escape(r.right) + "</span></div>";
                 break;
             }
-            case Style::Portrait:  // 3.0.18-beta.240: no picture (a location's: its map below) - no box for one
-                o += open("div", i, "rport") +
-                     (r.picture.empty() ? "" : "<div class=\"rpic\">" + pic(r.picture, "rpimg") + "</div>") +
+            case Style::Portrait: {  // 3.0.18-beta.240: no picture (a location's: its map below), or one that
+                // cannot be made (an NPC's sprite, a monster without one: portraits are made at once) - no box
+                const std::string src = look.picture && !r.picture.empty() ? look.picture(r.picture) : std::string();
+                const std::string box = "<div class=\"rpic\"><img class=\"rpimg\" src=\"" + escape(src) + "\"/></div>";
+                o += open("div", i, "rport") + (src.empty() ? "" : box) +
                      "<div class=\"rpinfo\"><div class=\"rpl\">" + escape(r.left) + "</div>" +
                      (r.right.empty() ? "" : "<div class=\"rpr\">" + escape(r.right) + "</div>") + tags(r) +
                      "</div></div>";
                 break;
+            }
             case Style::Tile:
                 o += open("div", i, "rtile") + icon(r) + "<div class=\"rtn\">" + escape(r.left) + "</div>" +
                      (r.right.empty() ? "" : "<div class=\"rtc\">" + escape(r.right) + "</div>") +
