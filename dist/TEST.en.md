@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.18-beta.240 — what's new · 2026-11-13
+
+- «Reference», a location's card: it now holds the map itself, like the minimap's big map «⤢». The wheel and the «−», «⤢», «+» buttons zoom, and the map can be dragged. Over the map are the layers «NPC», «Warps», «Monsters», «You are here». «NPC» and «Warps» are the same switches as the minimap's. «Monsters» (where monsters spawn, as red patches) and «You are here» (you and your party members' faces) are the reference's own.
+- NPCs on the maps are coloured dots by kind with letters: K for Kafra, $ for merchants and services, ! for quests. Our server's NPCs are purple, guides yellow, the rest grey. Words stay on only by the map's exits; the rest show under the pointer. On your own map you see yourself and your party members' faces. The minimap's big map «⤢» shows the same letters and the same words.
+- Beside the map are the location's NPCs by kind, with a row that jumps to each kind. A click on an NPC in the list or on the map opens its card: kind, map and cell, «Lead me here ›» (leads to it, from other maps too), «Show on the map ›», its goods with prices, and «Takes you to» for ferrymen. A click on an exit on the map opens the next map's card. An NPC found by the search opens its card too.
+- «NPCs and services»: a «By kind» block on top - how many NPCs of each kind there are on all the maps. A click on a kind lists them all with their map and cell.
+- What to check: Ctrl+F, «Locations», Prontera - the wheel over the map, dragging, «−» «⤢» «+»; switch each layer off and on (for «NPC» and «Warps» the minimap should change too); point at a dot - its name; click a Kafra - her card, «Lead me here ›» from another map; click an exit; «NPCs and services» → «By kind» → «Kafra»; the minimap's big map «⤢» - letters in the dots, words only by the exits; in a party - your friends' faces on your own location's map.
+
 # uaRO Graphics 3.0.18-beta.239 — what's new · 2026-11-13
 
 - «Довідник» (the reference) is now an ordinary window of the new interface. Drag it by its header or background and size it by its bottom right corner. A narrow window shows the left sections as icons and stacks the card's blocks. The window lays out its own text, so nothing is clipped or overlaps. A real scroll bar and a real search field: caret, selection, paste.
