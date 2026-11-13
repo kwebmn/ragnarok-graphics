@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.255 — what's new · 2026-11-13
+
+- «What drops» shows the chance again, «Where to find» the monsters' count on a map, «Where to buy» the price. 3.0.18-beta.253 limited a row's right-hand words by a per cent of its width and the game's layout gave them no width at all. The words are whole again; a layout test checks it.
+- What to check: any monster's card - the chance at the right of each thing; an item's card - the prices in «Where to buy».
+
 # uaRO Graphics 3.0.18-beta.254 — what's new · 2026-11-13
 
 - The reference's world map no longer shrinks to a strip (R-TMUEN4). A long way (31 moves to the Monastery) had a steps panel taller than the window; the window took that for the map's overflow and trimmed the map again and again. Now the panel is no taller than the map and its steps scroll inside it; the map is trimmed only when it does not fit itself.
