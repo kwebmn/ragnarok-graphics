@@ -1617,6 +1617,12 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .rchip.stale { color: #f0b46a; }
 .rfw .rkeys { display: block; flex: 1; text-align: right; white-space: nowrap; overflow: hidden; }
 .rfw .ring { position: absolute; display: none; border: 2dp #e6cb8a; border-radius: 8dp; background-color: #e6cb8a14; }
+/* 3.0.18-beta.241 (the concept's pad): the cross on a map the pad took - two gold bars edged dark */
+.rfw .rcross { position: absolute; display: none; width: 26dp; height: 26dp; }
+.rfw .rch { position: absolute; left: 0; top: 11dp; width: 24dp; height: 2dp; background-color: #e6cb8a;
+  border: 1dp #000000b3; }
+.rfw .rcv { position: absolute; left: 11dp; top: 0; width: 2dp; height: 24dp; background-color: #e6cb8a;
+  border: 1dp #000000b3; }
 .rfw .rtitle { display: block; font-size: 24dp; font-weight: bold; margin: 2dp 0 6dp 0; }
 .rfw .rtitle .rrt { margin-left: 10dp; font-size: 14dp; font-weight: normal; color: #9aa3b5; }
 .rfw .rsubl { display: block; margin-bottom: 8dp; color: #9aa3b5; }

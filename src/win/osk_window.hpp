@@ -2,6 +2,8 @@
 #include <windows.h>
 
 #include <cstdint>
+#include <functional>
+#include <string>
 
 #include "core/frame.hpp"
 
@@ -17,6 +19,16 @@ namespace uagfx::win::oskwin {
 // vtable + 0x98) as long as the line takes it; Start sends it as Enter does (its window's SendMsg 6 / 0x76); B closes
 // it with the line kept. On the game's thread.
 void open();
+// 3.0.18-beta.241 (the reference's pad: Y the search with the keyboard): a window of the driver's own field instead -
+// its words read and set by the window (UTF-8, at most `longest` letters), Start its Enter; B closes the keyboard with
+// the words kept
+struct Field {
+    std::function<std::string()> read;
+    std::function<void(const std::string&)> write;
+    std::function<void()> enter;
+    size_t longest = 64;
+};
+void openFor(const Field& f);
 bool isOpen();
 void close();
 // Reply (3.0.18-beta.134, the pad analysis: chat): «/r » put before the line's words - the chat whispers back to the

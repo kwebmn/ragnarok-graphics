@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include <RmlUi/Core/Element.h>
+
 namespace uagfx::uikit::reference {
 
 bool RailV::operator==(const RailV& o) const {
@@ -43,6 +45,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-class-stale="live_state == 3" data-event-click="ref_chip(1)">{{live}}</span><span
   class="rkeys">{{keys}}</span></div>
 <div id="ring" class="ring"></div>
+<div id="rcross" class="rcross"><div class="rch"></div><div class="rcv"></div></div>
 </body></rml>)RML";
 
 using refpages::Row;
@@ -460,6 +463,16 @@ std::string body(const refpages::Page& p, const Look& look) {
     }
     flush();
     return m.o;
+}
+
+std::vector<Rml::Element*> padTargets(Rml::Element* body) {
+    std::vector<Rml::Element*> out;
+    if (!body) return out;
+    Rml::ElementList found;
+    body->QuerySelectorAll(found, ".ctl");
+    for (Rml::Element* e : found)
+        if (!e->HasAttribute("data-for") && e->IsVisible(true)) out.push_back(e);
+    return out;
 }
 
 }  // namespace uagfx::uikit::reference

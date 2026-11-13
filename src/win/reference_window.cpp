@@ -15,6 +15,7 @@
 
 #include "core/layout.hpp"
 #include "core/minimap_proto.hpp"
+#include "core/pad_nav.hpp"
 #include "core/pack_source.hpp"
 #include "core/reference_pages.hpp"
 #include "core/reference_route.hpp"
@@ -24,6 +25,7 @@
 #include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
 #include "core/walk_grid.hpp"
+#include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
 #include "uikit/reference_live.hpp"
 #include "win/client_tables.hpp"
@@ -32,6 +34,7 @@
 #include "win/hotbar.hpp"
 #include "win/log.hpp"
 #include "win/minimap_proto.hpp"
+#include "win/osk_window.hpp"
 #include "win/monster_picture.hpp"
 #include "win/pack_pictures.hpp"
 #include "win/party_panel.hpp"
@@ -154,6 +157,12 @@ struct State {
     // «Вести сюди» to an NPC's cell: the way to its map now, the cell once the player is on it
     std::string plotMap;
     int plotX = 0, plotY = 0;
+    // 3.0.18-beta.241 (the concept's pad): the control its gold frame is on (its key - the element's id or data
+    // attribute - on the page padPageOf; none: the first shown one), the cross on a map it took (pixels from the map's
+    // corner), the keyboard typing into the search field
+    bool padActive = false, padCross = false, crossWorld = false, oskOurs = false;
+    std::string padKey, padPageOf, ringWas, crossWas;
+    float crossX = 0, crossY = 0;
 };
 
 State& state() {
@@ -641,6 +650,14 @@ void locationSetUp(State& s) {
 }
 
 // 3.0.11-beta.26: the words around the page - the title, «Назад до …», the way here, the data's chips, the keys
+// 3.0.18-beta.241: the bottom line while the pad has the window - its buttons by the controller's names
+std::string padKeysLine(const State& s) {
+    std::vector<std::string> names;
+    for (size_t i = 0; i < 6; ++i) names.push_back(uapad::buttonLabel(i));  // A B X Y LB RB
+    const Text t = !s.padCross ? Text::RefPadKeys : s.crossWorld ? Text::RefPadWorldKeys : Text::RefPadCrossKeys;
+    return settings::fmt(say(t), names);
+}
+
 void fillChrome(State& s) {
     const settings::Lang l = language();
     ur::Model& m = s.model;
@@ -687,6 +704,7 @@ void fillChrome(State& s) {
     m.keys = say(card                                                 ? Text::RefKeysCard
                  : s.at.go == refpages::Go::World && s.at.id == 0 ? Text::RefKeysWorld  // 3.0.11-beta.29
                                                                   : Text::RefKeysList);
+    if (s.padActive || s.padCross) m.keys = padKeysLine(s);  // 3.0.18-beta.241
     m.ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
     m.narrow = s.narrow;
     // not the field's words: said again while one types, they would move its caret
@@ -1051,6 +1069,13 @@ void close(State& s) {
     s.open = false;
     s.dragging = false;
     blurField(s);
+    s.padActive = s.padCross = false;  // 3.0.18-beta.241
+    s.padKey.clear();
+    s.ringWas = s.crossWas = "";
+    if (s.win.nav.ring) s.win.nav.ring(nullptr);
+    if (Rml::Element* c = s.win.doc.byId("rcross")) c->SetProperty("display", "none");
+    if (s.oskOurs && oskwin::isOpen()) oskwin::close();
+    s.oskOurs = false;
     if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Reference, nullptr, nullptr, false);
     s.shown = false;
 }
@@ -1090,38 +1115,41 @@ void zoomLocation(State& s, int by) {
 }
 
 // The rows' clicks: a data-ln's row's link, a jump chip's group scrolled to the top
-class Clicks final : public Rml::EventListener {
-public:
-    void ProcessEvent(Rml::Event& e) override {
-        State& s = state();
-        for (Rml::Element* el = e.GetTargetElement(); el; el = el->GetParentNode()) {
-            if (el->GetId() == "body") return;
-            const Rml::String ln = el->GetAttribute<Rml::String>("data-ln", "");
-            if (!ln.empty()) {
-                const int i = std::atoi(ln.c_str());
-                if (i >= 0 && size_t(i) < s.page.rows.size()) {
-                    s.sel = i;
-                    go(s, s.page.rows[size_t(i)].link);
-                }
-                return;
+// A click on the body's element (the mouse's through the listener; 3.0.18-beta.241 the pad's A): a row's link, a
+// jump chip's section, a layer's chip, a zoom tool
+void clickOn(State& s, Rml::Element* target) {
+    for (Rml::Element* el = target; el; el = el->GetParentNode()) {
+        if (el->GetId() == "body") return;
+        const Rml::String ln = el->GetAttribute<Rml::String>("data-ln", "");
+        if (!ln.empty()) {
+            const int i = std::atoi(ln.c_str());
+            if (i >= 0 && size_t(i) < s.page.rows.size()) {
+                s.sel = i;
+                go(s, s.page.rows[size_t(i)].link);
             }
-            const Rml::String jump = el->GetAttribute<Rml::String>("data-jump", "");
-            if (!jump.empty()) {
-                if (Rml::Element* to = s.win.doc.byId(jump.c_str())) to->ScrollIntoView(true);
-                return;
-            }
-            const Rml::String lay = el->GetAttribute<Rml::String>("data-lay", "");  // 3.0.18-beta.240
-            if (!lay.empty()) {
-                switchLayer(s, std::atoi(lay.c_str()));
-                return;
-            }
-            const Rml::String mz = el->GetAttribute<Rml::String>("data-mz", "");
-            if (!mz.empty()) {
-                zoomLocation(s, std::atoi(mz.c_str()));
-                return;
-            }
+            return;
+        }
+        const Rml::String jump = el->GetAttribute<Rml::String>("data-jump", "");
+        if (!jump.empty()) {
+            if (Rml::Element* to = s.win.doc.byId(jump.c_str())) to->ScrollIntoView(true);
+            return;
+        }
+        const Rml::String lay = el->GetAttribute<Rml::String>("data-lay", "");  // 3.0.18-beta.240
+        if (!lay.empty()) {
+            switchLayer(s, std::atoi(lay.c_str()));
+            return;
+        }
+        const Rml::String mz = el->GetAttribute<Rml::String>("data-mz", "");
+        if (!mz.empty()) {
+            zoomLocation(s, std::atoi(mz.c_str()));
+            return;
         }
     }
+}
+
+class Clicks final : public Rml::EventListener {
+public:
+    void ProcessEvent(Rml::Event& e) override { clickOn(state(), e.GetTargetElement()); }
 };
 Clicks g_clicks;
 
@@ -1218,6 +1246,364 @@ void sizeBox(State& s) {
 
 }  // namespace
 
+// 3.0.18-beta.241 (docs/superpowers/plans/2026-11-13-reference-rewrite.md, stage 4; the concept's pad, «as in other
+// windows»): the gold frame walks the body's controls (ur::padTargets) by the D-pad and the left stick, A clicks the
+// one framed (a map: the cross takes it), B back, X «Вести сюди», Y the search with the on-screen keyboard, LB / RB
+// the sections, the right stick scrolls; a press of the mouse or a key gives the window back to them
+panel::Box boxIn(State& s, Rml::Element* e) {  // in the window's own pixels (the ring's)
+    Rml::ElementDocument* d = s.win.doc.doc();
+    const Rml::Vector2f origin = d ? d->GetAbsoluteOffset(Rml::BoxArea::Border) : Rml::Vector2f(0, 0);
+    const Rml::Vector2f at = e->GetAbsoluteOffset(Rml::BoxArea::Border) - origin;
+    const Rml::Vector2f size = e->GetBox().GetSize(Rml::BoxArea::Border);
+    return panel::Box{at.x, at.y, size.x, size.y};
+}
+
+bool inView(State& s, const panel::Box& b) {  // its middle inside the scrolled body
+    Rml::Element* sc = scroller(s);
+    if (!sc) return true;
+    const panel::Box v = boxIn(s, sc);
+    const float mid = b.y + b.h / 2;
+    return mid >= v.y && mid <= v.y + v.h;
+}
+
+std::vector<Rml::Element*> padTargets(State& s) { return ur::padTargets(s.win.doc.byId("body")); }
+
+std::string padKeyOf(Rml::Element* e) {  // the control's own name: its id, else its data attribute
+    const Rml::String id = e->GetId();
+    if (!id.empty()) return "#" + id;
+    for (const char* a : {"data-jump", "data-lay", "data-mz"}) {
+        const Rml::String v = e->GetAttribute<Rml::String>(a, "");
+        if (!v.empty()) return std::string(a) + '=' + v;
+    }
+    return {};
+}
+
+// The framed control's place among the targets: its name's on this page, else the row that led away from it («Назад»
+// brought it back), else the first one shown (-1 none)
+int padIndex(State& s, const std::vector<Rml::Element*>& t) {
+    const std::string page = std::to_string(int(s.at.go)) + ':' + std::to_string(s.at.id) + ':' + s.at.map + '|' +
+                             s.query;
+    if (page != s.padPageOf) {  // another page: from its first control
+        s.padPageOf = page;
+        s.padKey.clear();
+    }
+    const std::string want = !s.padKey.empty() ? s.padKey : s.sel >= 0 ? "#r" + std::to_string(s.sel) : "";
+    if (!want.empty())
+        for (size_t i = 0; i < t.size(); ++i)
+            if (padKeyOf(t[i]) == want && (!s.padKey.empty() || inView(s, boxIn(s, t[i])))) return int(i);
+    for (size_t i = 0; i < t.size(); ++i)
+        if (inView(s, boxIn(s, t[i]))) return int(i);
+    return t.empty() ? -1 : 0;
+}
+
+void ringAt(State& s, const panel::Box* b) {  // the gold frame (said again only when it moves)
+    char key[96] = "none";
+    if (b)
+        std::snprintf(key, sizeof key, "%.1f %.1f %.1f %.1f", double(b->x), double(b->y), double(b->w), double(b->h));
+    if (s.ringWas == key || !s.win.nav.ring) return;
+    s.ringWas = key;
+    s.win.nav.ring(b);
+}
+
+void crossAt(State& s, bool show, float left, float top) {
+    char key[64] = "none";
+    if (show) std::snprintf(key, sizeof key, "%.1f %.1f", double(left), double(top));
+    if (s.crossWas == key) return;
+    s.crossWas = key;
+    Rml::Element* c = s.win.doc.byId("rcross");
+    if (!c) return;
+    c->SetProperty("display", show ? "block" : "none");
+    if (!show) return;
+    c->SetProperty("left", std::to_string(left) + "px");
+    c->SetProperty("top", std::to_string(top) + "px");
+}
+
+void padOn(State& s) {
+    if (s.padActive) return;
+    s.padActive = true;
+    fillChrome(s);  // the bottom line: the pad's buttons
+}
+
+void padOff(State& s) {  // the mouse or a key took the window back
+    if (!s.padActive && !s.padCross) return;
+    s.padActive = s.padCross = false;
+    s.padKey.clear();
+    ringAt(s, nullptr);
+    crossAt(s, false, 0, 0);
+    fillChrome(s);
+}
+
+bool crossBox(State& s, float& x, float& y, float& w, float& h) {
+    return s.crossWorld ? mapBox(s, x, y, w, h) : locationBox(s, x, y, w, h);
+}
+
+void crossOn(State& s, bool world) {
+    s.crossWorld = world;
+    float x = 0, y = 0, w = 0, h = 0;
+    if (!crossBox(s, x, y, w, h)) return;
+    s.padCross = true;
+    s.crossX = w / 2;
+    s.crossY = h / 2;
+    if (Rml::Element* m = s.win.doc.byId(world ? "wmap" : "mview"))
+        m->ScrollIntoView(Rml::ScrollIntoViewOptions(Rml::ScrollAlignment::Nearest, Rml::ScrollAlignment::Nearest));
+    ringAt(s, nullptr);
+    fillChrome(s);
+    LOG_INFO("reference: the pad took the %s map", world ? "world" : "location's");
+}
+
+void crossOff(State& s) {
+    if (!s.padCross) return;
+    s.padCross = false;
+    crossAt(s, false, 0, 0);
+    fillChrome(s);
+}
+
+// A location map's mark opened (the mouse's click, the pad's A at the cross): an NPC's card, a warp's map's
+void openMark(State& s, int mark) {
+    if (mark < 0 || size_t(mark) >= s.locNpc.size()) return;
+    if (s.locNpc[size_t(mark)] >= 0) go(s, refpages::Link{refpages::Go::Npc, s.locNpc[size_t(mark)], s.locCode});
+    else if (!s.locDest[size_t(mark)].empty()) go(s, refpages::Link{refpages::Go::Map, 0, s.locDest[size_t(mark)]});
+}
+
+// The view moved by (dx, dy) of the map's pixels under the cross (the right stick; the cross pushed past an edge)
+void panUnder(State& s, float dx, float dy) {
+    if (s.crossWorld) {
+        if (!s.world) return;
+        const worldmap::Fit v = worldmap::view(s.world->sheet.w, s.world->sheet.h, s.mapW, s.mapH, s.zoom, s.cx, s.cy);
+        if (v.s <= 0) return;
+        s.cx = (float(s.mapW) / 2 - v.x + dx) / v.s;
+        s.cy = (float(s.mapH) / 2 - v.y + dy) / v.s;
+        worldChanged(s);
+        return;
+    }
+    minimap::panMapView(s.mv, s.locScene.map, -dx, -dy);
+    locationPaint(s);
+}
+
+void moveCross(State& s, float dx, float dy) {
+    float x = 0, y = 0, w = 0, h = 0;
+    if (!crossBox(s, x, y, w, h)) return;
+    const float edge = 4 * s.dp;
+    float nx = s.crossX + dx, ny = s.crossY + dy, px = 0, py = 0;
+    if (nx < edge) px = nx - edge, nx = edge;
+    else if (nx > w - edge) px = nx - (w - edge), nx = w - edge;
+    if (ny < edge) py = ny - edge, ny = edge;
+    else if (ny > h - edge) py = ny - (h - edge), ny = h - edge;
+    s.crossX = nx;
+    s.crossY = ny;
+    if (px != 0 || py != 0) panUnder(s, px, py);
+}
+
+// The cross's hover: the mark or the location under it, named as under the pointer
+void crossHover(State& s, float w, float h) {
+    if (s.crossWorld) {
+        if (!s.world) return;
+        std::string map;
+        const refwin::Under u =
+            refwin::worldUnder(worldLayout(s), panel::Box{0, 0, w, h}, worldLook(s, false), s.crossX, s.crossY);
+        if (u.part == refwin::Part::Tile && size_t(u.tile) < s.world->sheet.world.size())
+            map = s.world->sheet.world[size_t(u.tile)].map;
+        if (map != s.worldHover) {
+            s.worldHover = map;
+            worldPaint(s);
+        }
+        return;
+    }
+    const int hover = minimap::mapViewMarkAt(s.mv, s.locScene, s.crossX, s.crossY);
+    if (hover != s.locHover) {
+        s.locHover = hover;
+        locationPaint(s);
+    }
+}
+
+// Each frame while the pad has the window: the frame on its control, or the cross on its map
+void padShow(State& s) {
+    if (s.oskOurs && !oskwin::isOpen()) s.oskOurs = false;
+    if (s.padCross) {
+        float x = 0, y = 0, w = 0, h = 0;
+        if (crossBox(s, x, y, w, h)) {
+            s.crossX = std::clamp(s.crossX, 0.0f, w);
+            s.crossY = std::clamp(s.crossY, 0.0f, h);
+            crossHover(s, w, h);
+            Rml::ElementDocument* d = s.win.doc.doc();
+            const Rml::Vector2f origin = d ? d->GetAbsoluteOffset(Rml::BoxArea::Border) : Rml::Vector2f(0, 0);
+            const float half = 13 * s.dp;
+            crossAt(s, true, x - origin.x + s.crossX - half, y - origin.y + s.crossY - half);
+            return;
+        }
+        crossOff(s);  // its map gone (another page)
+    }
+    if (!s.padActive) return;
+    if (s.applyIn > 0) {  // a new body not laid out yet
+        ringAt(s, nullptr);
+        return;
+    }
+    const std::vector<Rml::Element*> t = padTargets(s);
+    const int i = padIndex(s, t);
+    if (i < 0) {
+        ringAt(s, nullptr);
+        return;
+    }
+    const panel::Box b = boxIn(s, t[size_t(i)]);
+    ringAt(s, b.w > 0 && b.h > 0 && inView(s, b) ? &b : nullptr);
+}
+
+void padMove(State& s, padnav::Dir d) {
+    if (s.padCross) {  // the D-pad: the cross by small steps
+        const float step = 16 * s.dp;
+        moveCross(s, d == padnav::Dir::Left ? -step : d == padnav::Dir::Right ? step : 0,
+                  d == padnav::Dir::Up ? -step : d == padnav::Dir::Down ? step : 0);
+        return;
+    }
+    const std::vector<Rml::Element*> t = padTargets(s);
+    int i = padIndex(s, t);
+    if (i < 0) return;
+    std::vector<panel::Box> boxes;
+    boxes.reserve(t.size());
+    for (Rml::Element* e : t) boxes.push_back(boxIn(s, e));
+    i = padnav::next(boxes, i, d);
+    if (i < 0 || size_t(i) >= t.size()) return;
+    Rml::Element* e = t[size_t(i)];
+    s.padKey = padKeyOf(e);
+    e->ScrollIntoView(Rml::ScrollIntoViewOptions(Rml::ScrollAlignment::Nearest, Rml::ScrollAlignment::Nearest));
+    const Rml::String ln = e->GetAttribute<Rml::String>("data-ln", "");  // the keys' pick follows (Enter the same)
+    s.sel = ln.empty() ? -1 : std::atoi(ln.c_str());
+    markSelected(s, false);
+}
+
+void crossPress(State& s) {
+    float x = 0, y = 0, w = 0, h = 0;
+    if (!crossBox(s, x, y, w, h)) return;
+    if (!s.crossWorld) {
+        openMark(s, minimap::mapViewMarkAt(s.mv, s.locScene, s.crossX, s.crossY));
+        return;
+    }
+    if (!s.world) return;
+    const refwin::Under u =
+        refwin::worldUnder(worldLayout(s), panel::Box{0, 0, w, h}, worldLook(s, false), s.crossX, s.crossY);
+    if (u.part == refwin::Part::Chain && size_t(u.tile) < s.way.chain.size())
+        go(s, refpages::Link{refpages::Go::Map, 0, s.way.chain[size_t(u.tile)].first});
+    else if (u.part == refwin::Part::Tile && size_t(u.tile) < s.world->sheet.world.size())
+        go(s, refpages::Link{refpages::Go::Map, 0, s.world->sheet.world[size_t(u.tile)].map});
+}
+
+void padPress(State& s) {
+    if (s.padCross) {
+        crossPress(s);
+        return;
+    }
+    const std::vector<Rml::Element*> t = padTargets(s);
+    const int i = padIndex(s, t);
+    if (i < 0) return;
+    Rml::Element* e = t[size_t(i)];
+    const Rml::String id = e->GetId();
+    if (id == "mview" || id == "wmap") {
+        crossOn(s, id == "wmap");
+        return;
+    }
+    s.padKey = padKeyOf(e);
+    clickOn(s, e);
+}
+
+void crossNext(State& s) {  // X on a location's map: the next NPC or warp round it (as on «⤢»)
+    const std::vector<minimap::Mark>& marks = s.locScene.marks;
+    std::vector<size_t> order;
+    for (size_t i = 0; i < marks.size(); ++i)
+        if (marks[i].glyph != minimap::Glyph::Member) order.push_back(i);
+    float x = 0, y = 0, w = 0, h = 0;
+    if (order.empty() || !crossBox(s, x, y, w, h)) return;
+    const int under = minimap::mapViewMarkAt(s.mv, s.locScene, s.crossX, s.crossY);
+    size_t at = 0;
+    for (size_t k = 0; k < order.size(); ++k)
+        if (int(order[k]) == under) at = (k + 1) % order.size();
+    const minimap::Cell c = marks[order[at]].cell;
+    float px = 0, py = 0;
+    minimap::cellToPanel(minimap::viewOf(s.mv, s.locScene.map), s.locScene.map, c, px, py);
+    if (px < 0 || py < 0 || px >= w || py >= h) {  // out of the view: the view on it
+        s.mv.cx = float(c.x) + 0.5f;
+        s.mv.cy = float(c.y) + 0.5f;
+        locationPaint(s);
+        minimap::cellToPanel(minimap::viewOf(s.mv, s.locScene.map), s.locScene.map, c, px, py);
+    }
+    s.crossX = px;
+    s.crossY = py;
+}
+
+void padLead(State& s) {
+    if (s.padCross) {
+        if (!s.crossWorld) crossNext(s);
+        return;
+    }
+    const refpages::Link* l = refpages::leadOf(s.page);
+    if (!l) return;
+    const refpages::Link to = *l;  // go() makes the page again
+    LOG_INFO("reference: the pad's X - the way (%d, %s)", to.id, to.map.c_str());
+    go(s, to);
+}
+
+void padSection(State& s, int by) {
+    if (s.padCross) {  // LB / RB on a map: its zoom round the cross
+        const float f = by > 0 ? 1.25f : 0.8f;
+        if (!s.crossWorld) {
+            minimap::zoomMapView(s.mv, s.locScene.map, s.crossX, s.crossY, f, minimap::mapViewMost(s.locSharp));
+            locationPaint(s);
+        } else if (s.world) {
+            worldmap::zoomAt(s.world->sheet.w, s.world->sheet.h, s.mapW, s.mapH, s.zoom, s.cx, s.cy, s.crossX,
+                             s.crossY, f);
+            worldChanged(s);
+        }
+        return;
+    }
+    const int i = refpages::railStep(s.page, by);
+    if (i == 0) {
+        goFirst(s);
+    } else if (i > 0) {
+        const refpages::Link to = s.page.rail[size_t(i)].link;
+        go(s, to);
+    }
+}
+
+void padSearch(State& s) {  // Y: the field's words by the on-screen keyboard, Start its Enter
+    crossOff(s);
+    oskwin::Field f;
+    f.read = [] { return std::string(state().model.query); };
+    f.write = [](const std::string& q) {
+        State& st = state();
+        st.model.query = q;
+        st.win.doc.dirty("query");
+    };
+    f.enter = [] {
+        State& st = state();
+        if (st.model.query != st.query) {  // the results first, then the first of them
+            st.query = st.model.query;
+            typed(st);
+        }
+        enter(st);
+    };
+    f.longest = 40;
+    oskwin::openFor(f);
+    s.oskOurs = true;
+}
+
+void padSticksIn(State& s, float lx, float ly, float rx, float ry, float seconds) {
+    if (seconds <= 0) return;
+    const auto speed = [&](float mag) {  // 80 to 480 dp a second by how far the stick is pushed
+        return (80.0f + 400.0f * std::min(1.0f, (mag - 0.2f) / 0.8f)) * s.dp * seconds;
+    };
+    if (s.padCross) {
+        const float lm = std::hypot(lx, ly), rm = std::hypot(rx, ry);
+        if (lm > 0.2f) moveCross(s, lx / lm * speed(lm), -ly / lm * speed(lm));  // the stick's up: the cross up
+        if (rm > 0.2f) panUnder(s, rx / rm * speed(rm), -ry / rm * speed(rm));  // the right stick: the map under it
+        return;
+    }
+    if (std::fabs(ry) <= 0.2f) return;
+    if (Rml::Element* sc = scroller(s)) {  // the right stick scrolls the body; the frame on the first one shown
+        const float v = std::min(1.0f, (std::fabs(ry) - 0.2f) / 0.8f);
+        sc->SetScrollTop(sc->GetScrollTop() - (ry > 0 ? 1.0f : -1.0f) * (200.0f + 1400.0f * v) * s.dp * seconds);
+        s.padKey.clear();
+    }
+}
+
 void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.enabled = enabled;
@@ -1304,9 +1690,9 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
             }
         }
     }
-    if (onMap && s.world) {
+    if (onMap && s.world && !(s.padCross && s.crossWorld)) {  // 3.0.18-beta.241: the cross's own hover
         std::string map;
-        if (pointer && !(s.dragging && s.dragged) && px0 >= 0 && py0 >= 0 && px0 < mw && py0 < mh) {
+        if (pointer && !s.padCross && !(s.dragging && s.dragged) && px0 >= 0 && py0 >= 0 && px0 < mw && py0 < mh) {
             const refwin::Under u = refwin::worldUnder(worldLayout(s), panel::Box{0, 0, mw, mh}, worldLook(s, false),
                                                        px0, py0);
             if (u.part == refwin::Part::Tile && size_t(u.tile) < s.world->sheet.world.size())
@@ -1337,7 +1723,7 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
             }
         }
         const float lx = float(cx) * float(k) - lx0, ly = float(cy) * float(k) - ly0;
-        if (pointer && !s.locDragged && lx >= 0 && ly >= 0 && lx < lw && ly < lh) {
+        if (pointer && !s.padCross && !s.locDragged && lx >= 0 && ly >= 0 && lx < lw && ly < lh) {
             const int hover = minimap::mapViewMarkAt(s.mv, s.locScene, lx, ly);
             if (hover != s.locHover) {
                 s.locHover = hover;
@@ -1391,6 +1777,7 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
     s.win.frame(true, x, y, -1, nullptr);
     s.shown = s.win.shown;
     if (s.shown) block(s, game);
+    if (s.shown && (s.padActive || s.padCross)) padShow(s);  // 3.0.18-beta.241
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
@@ -1402,6 +1789,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 bool fieldKey(UINT m, WPARAM wp, LPARAM) {
     State& s = state();
     if (!s.open || !s.shown || !fieldFocused(s)) return false;
+    if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN) padOff(s);  // 3.0.18-beta.241: the keys took it back
     const bool alt = GetKeyState(VK_MENU) < 0;
     if (m == WM_SYSKEYDOWN && wp == VK_LEFT && alt) {  // Alt+← back, the field's words as they are
         goBack(s);
@@ -1435,6 +1823,7 @@ bool fieldKey(UINT m, WPARAM wp, LPARAM) {
 bool key(UINT m, WPARAM wp, LPARAM lp) {
     State& s = state();
     if (!s.enabled) return false;
+    if (s.open && (m == WM_KEYDOWN || m == WM_SYSKEYDOWN)) padOff(s);  // 3.0.18-beta.241: the keys took it back
     const bool ctrl = GetKeyState(VK_CONTROL) < 0, alt = GetKeyState(VK_MENU) < 0;
     if ((m == WM_CHAR || m == WM_SYSCHAR) && s.skipChar && wp == s.skipChar) {  // Ctrl+F's or Esc's own character
         s.skipChar = 0;
@@ -1523,6 +1912,7 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.open || !s.shown) return false;
+    if (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN || m == WM_MBUTTONDOWN || m == WM_MOUSEWHEEL) padOff(s);  // .241
     if (m == WM_XBUTTONDOWN || m == WM_XBUTTONUP) {  // the mouse's back button over the window
         int bx = 0, by = 0, bw = 0, bh = 0;
         float tx = 0, ty = 0;
@@ -1561,12 +1951,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             const bool click = !s.locDragged;
             const int mark = s.locDragMark;
             s.locDrag = s.locDragged = false;
-            if (click && mark >= 0 && size_t(mark) < s.locNpc.size()) {
-                if (s.locNpc[size_t(mark)] >= 0)
-                    go(s, refpages::Link{refpages::Go::Npc, s.locNpc[size_t(mark)], s.locCode});
-                else if (!s.locDest[size_t(mark)].empty())
-                    go(s, refpages::Link{refpages::Go::Map, 0, s.locDest[size_t(mark)]});
-            }
+            if (click) openMark(s, mark);
             result = 0;
             return true;
         }
@@ -1629,18 +2014,38 @@ bool isOpen() { return state().open && state().shown; }
 void padCommand(PadCommand c) {
     State& s = state();
     if (!s.open) return;
+    if (c != PadCommand::Close) padOn(s);
     switch (c) {
-        case PadCommand::Up: step(s, -1); break;
-        case PadCommand::Down: step(s, +1); break;
-        case PadCommand::Enter: enter(s); break;
+        case PadCommand::Up: padMove(s, padnav::Dir::Up); break;
+        case PadCommand::Down: padMove(s, padnav::Dir::Down); break;
+        case PadCommand::Left: padMove(s, padnav::Dir::Left); break;
+        case PadCommand::Right: padMove(s, padnav::Dir::Right); break;
+        case PadCommand::Enter: padPress(s); break;
         case PadCommand::Back:
-            if (s.back.empty()) close(s);
+            if (s.padCross) crossOff(s);
+            else if (s.back.empty()) close(s);
             else goBack(s);
             break;
         case PadCommand::Close: close(s); break;
         case PadCommand::PageUp: scrollBy(s, -1); break;
         case PadCommand::PageDown: scrollBy(s, +1); break;
+        case PadCommand::Lead: padLead(s); break;
+        case PadCommand::Search: padSearch(s); break;
+        case PadCommand::PrevSection: padSection(s, -1); break;
+        case PadCommand::NextSection: padSection(s, +1); break;
     }
+}
+
+void padSticks(float lx, float ly, float rx, float ry, float seconds) {
+    State& s = state();
+    if (!s.open || !s.shown) return;
+    if (std::hypot(rx, ry) > 0.5f || (s.padCross && std::hypot(lx, ly) > 0.5f)) padOn(s);
+    padSticksIn(s, lx, ly, rx, ry, seconds);
+}
+
+bool padCrossOn() {
+    const State& s = state();
+    return s.open && s.padCross;
 }
 
 void toggleFromPad() {
@@ -1649,8 +2054,12 @@ void toggleFromPad() {
         LOG_INFO("reference: a pad button asked for it - off ([interface] reference = 0)");
         return;
     }
-    if (s.open) close(s);
-    else openWindow(s, refpages::Link{});
+    if (s.open) {
+        close(s);
+    } else {
+        openWindow(s, refpages::Link{});
+        if (s.open) padOn(s);  // 3.0.18-beta.241: the frame on its first control at once
+    }
 }
 
 void openMob(int id) {

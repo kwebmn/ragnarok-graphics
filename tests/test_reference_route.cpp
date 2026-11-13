@@ -428,3 +428,15 @@ TEST(reference_world_dungeon_chain) {
     const refwin::Under u = refwin::under(L, p, rows, 0, ch, cx, cy, &look.world);
     CHECK(u.part == refwin::Part::Chain && u.tile == 1);
 }
+
+// 3.0.18-beta.241 (the concept's pad: X «Вести сюди» on a card): a map's card leads by its first way; none when the
+// minimap cannot lead
+TEST(reference_pages_lead_of_a_card) {
+    const auto ix = index();
+    refpages::Follow f;
+    f.can = true;
+    const refpages::Page p = refpages::map(*ix, Lang::Uk, "cave", ctx("town", f));
+    const refpages::Link* lead = refpages::leadOf(p);
+    CHECK(lead && lead->go == refpages::Go::Follow && lead->id == 0 && lead->map == "cave");
+    CHECK(refpages::leadOf(refpages::map(*ix, Lang::Uk, "cave", ctx("town"))) == nullptr);
+}

@@ -109,6 +109,9 @@ TEST(uikit_reference_chrome_loads_bound) {
     CHECK_EQ(count(l.doc, ".rri"), size_t(2));
     CHECK_EQ(count(l.doc, ".rcb"), size_t(2));
     CHECK(l.doc && l.doc->GetElementById("ring"));
+    // 3.0.18-beta.241: the pad's cross on a map, hidden until the pad takes the map
+    Rml::Element* cross = l.doc ? l.doc->GetElementById("rcross") : nullptr;
+    CHECK(cross && !cross->IsVisible() && cross->GetNumChildren() == 2);
     rmlhost::close(l.doc);
 }
 
@@ -311,4 +314,45 @@ TEST(uikit_reference_portrait_without_its_picture_has_no_box) {
     CHECK_EQ(l.warnings, std::string());
     CHECK(l.doc && count(l.doc, ".rport") == 1 && count(l.doc, ".rpic") == 0);
     rmlhost::close(l.doc);
+}
+
+// 3.0.18-beta.241 (the concept's pad: the gold frame on rows): the pad walks the body's controls - every row that leads
+// somewhere, the folded heading, the map's chips and the map - in the markup's order, none of the chrome's
+TEST(uikit_reference_pad_targets_are_the_bodys_controls) {
+    const refpages::Page p = card();
+    ur::Look look;
+    ur::Model m;
+    m.body = ur::body(p, look);
+    const Loaded l = load(m);
+    Rml::Element* body = l.doc ? l.doc->GetElementById("body") : nullptr;
+    const std::vector<Rml::Element*> t = ur::padTargets(body);
+    CHECK_EQ(t.size(), size_t(7));
+    bool rows = true;
+    for (Rml::Element* e : t) rows = rows && within(e, "rcols") && e->HasAttribute("data-ln");
+    CHECK(rows);
+    CHECK(t.size() == 7 && t[0]->GetId() == "r3" && t[6]->GetId() == "r10");
+    rmlhost::close(l.doc);
+    // a location's page: its layers' chips, its zoom tools, its map, then its NPCs beside it
+    refpages::Page loc;
+    loc.rows.push_back(row(Style::Title, "Prontera"));
+    loc.rows.push_back(row(Style::MapView, ""));
+    loc.rows.push_back(row(Style::Row, "Kafra Employee", refpages::Go::Npc, 0));
+    loc.rows.back().side = true;
+    ur::Look ml;
+    ml.mapW = 600;
+    ml.mapH = 400;
+    ml.layers = {{"NPC", true}, {"Переходи", true}};
+    ur::Model mm;
+    mm.body = ur::body(loc, ml);
+    const Loaded ll = load(mm);
+    const std::vector<Rml::Element*> lt = ur::padTargets(ll.doc ? ll.doc->GetElementById("body") : nullptr);
+    int chips = 0, tools = 0, maps = 0, npcs = 0;
+    for (Rml::Element* e : lt) {
+        chips += e->HasAttribute("data-lay");
+        tools += e->HasAttribute("data-mz");
+        maps += e->GetId() == "mview";
+        npcs += e->HasAttribute("data-ln");
+    }
+    CHECK(chips == 2 && tools == 3 && maps == 1 && npcs == 1);
+    rmlhost::close(ll.doc);
 }

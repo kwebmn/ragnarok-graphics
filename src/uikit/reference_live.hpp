@@ -50,6 +50,9 @@ struct Look {
 // The page's rows but its rail, as RML (UTF-8, every text escaped)
 std::string body(const refpages::Page& p, const Look& look);
 std::string escape(const std::string& utf8);
+// 3.0.18-beta.241 (the concept's pad: the gold frame on rows): the controls the pad walks - the body's «ctl» elements
+// shown (rows, folded headings, jump chips, the maps, their chips and tools), in the markup's order
+std::vector<Rml::Element*> padTargets(Rml::Element* body);
 // 3.0.18-beta.239: a section of more than kLong rows goes across the body in columns (two; three past kLonger)
 constexpr size_t kLong = 20, kLonger = 60;
 

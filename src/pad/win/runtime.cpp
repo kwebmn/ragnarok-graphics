@@ -106,6 +106,7 @@ constexpr DWORD kTalkHoldMs = 350;  // 3.0.11-beta.214: the Talk button held thi
 
 struct State {
     DWORD bigPadAt = 0;  // 3.0.18-beta.133: the big map's cross moved last
+    DWORD refPadAt = 0;  // 3.0.18-beta.241: the reference's sticks read last
     DWORD chatScrollAt = 0;  // 3.0.18-beta.134: the chat's history scrolled last by the right stick
     bool controllerAllowed = true;  // 3.0.12-beta.1: [pad] enabled = 0 - false: the mouse's part only
     bool initDone = false;
@@ -465,26 +466,34 @@ bool saveLayouts() {
 
 // The settings menu behind Start. True while the menu had the pad this tick (the tick it closes included,
 // so the button that closed it does not reach the game as a new press).
-// 3.0.11-beta.21: «Довідник» (uaRO Graphics' reference window) open - the pad's buttons are its: the D-pad picks a
-// row, A opens it, B goes back, Start closes it, the bumpers scroll; the character waits meanwhile
-bool referencePad(const PadState& pad) {
+// 3.0.11-beta.21: «Довідник» (uaRO Graphics' reference window) open - the pad's buttons are its; the character waits
+// meanwhile. 3.0.18-beta.241 (the concept's pad, «as in other windows»): the D-pad or the left stick walks the gold
+// frame, A opens, B back, X «Вести сюди», Y the search with the on-screen keyboard, LB / RB the sections, Start closes,
+// the right stick scrolls; on a map the pad took the left stick moves its cross
+uint16_t stickSteps(const PadState& pad, DWORD now);
+
+bool referencePad(const PadState& pad, DWORD now) {
     State& s = S();
     const uint16_t buttons = pad.connected ? pad.buttons : 0;
-    const uint16_t down = uint16_t(buttons & ~s.prevPadButtons);
+    const bool cross = uagfx::win::referencewin::padCrossOn();
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | (cross ? 0 : stickSteps(pad, now)));
     s.prevPadButtons = buttons;
+    const float seconds = s.refPadAt && now > s.refPadAt ? std::min(0.1f, float(now - s.refPadAt) / 1000.0f) : 0.0f;
+    s.refPadAt = now;
     using uagfx::win::referencewin::PadCommand;
     const std::pair<uint16_t, PadCommand> keys[] = {
-        {kPadUp, PadCommand::Up},       {kPadDown, PadCommand::Down},     {kPadA, PadCommand::Enter},
-        {kPadB, PadCommand::Back},      {kPadStart, PadCommand::Close},   {kPadLB, PadCommand::PageUp},
-        {kPadRB, PadCommand::PageDown}};
+        {kPadUp, PadCommand::Up},           {kPadDown, PadCommand::Down},        {kPadLeft, PadCommand::Left},
+        {kPadRight, PadCommand::Right},     {kPadA, PadCommand::Enter},          {kPadB, PadCommand::Back},
+        {kPadStart, PadCommand::Close},     {kPadLB, PadCommand::PrevSection},   {kPadRB, PadCommand::NextSection},
+        {kPadX, PadCommand::Lead},          {kPadY, PadCommand::Search}};
     for (const auto& [button, command] : keys)
         if (down & button) uagfx::win::referencewin::padCommand(command);
+    if (pad.connected) uagfx::win::referencewin::padSticks(pad.lx, pad.ly, pad.rx, pad.ry, seconds);
     return true;
 }
 
 // 3.0.11-beta.90 (the concept's stage 6): the windows' tile open - the pad's buttons are its: the D-pad (or the left
 // stick) moves its frame, A opens, B or Start closes; the character waits meanwhile
-uint16_t stickSteps(const PadState& pad, DWORD now);
 
 // 3.0.18-beta.133 (the pad analysis: the big map on the controller): the big map open, no window over it - the left
 // stick moves its cross, X the next NPC / warp, A plots the way there, Y clears it, B closes; the character waits
@@ -1503,7 +1512,7 @@ void tick() {
                   : uagfx::win::padcarrywin::active() && !menuOpen   ? carryPad(winPad, now)   // .121; .214 keys
                   : uagfx::win::padassignwin::isOpen() && !menuOpen ? assignPad(pad, now)  // 3.0.11-beta.91
                   : uagfx::win::padtileswin::isOpen() && !menuOpen ? tilePad(pad, now)    // 3.0.11-beta.90
-                  : drive && *top == Win::Reference                ? referencePad(winPad)    // 3.0.11-beta.21
+                  : drive && *top == Win::Reference                ? referencePad(winPad, now)  // 3.0.11-beta.21
                   : drive && *top == Win::Items                    ? itemsPad(winPad, now)   // .91
                   : drive && *top == Win::Stats                    ? statsPad(winPad, now)   // .92
                   : drive && *top == Win::Skills                   ? skillsPad(winPad, now)  // .96

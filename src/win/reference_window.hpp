@@ -36,8 +36,18 @@ void openItem(int id);
 // 3.0.11-beta.21: uaRO Pad (src/pad) while the window is open - its D-pad picks a row, A opens it, B goes back (the
 // first page: closes), Start closes, the bumpers scroll; the character does nothing meanwhile
 bool isOpen();
-enum class PadCommand { Up, Down, Enter, Back, Close, PageUp, PageDown };
+// 3.0.18-beta.241 (the concept's pad, «as in other windows»): Up Down Left Right walk the gold frame over the body's
+// controls (on a map the pad took: its cross), Enter (A) clicks the framed one (a map: the cross takes it), Back (B)
+// back (the cross: off the map), Lead (X) «Вести сюди» (the cross: the next mark), Search (Y) the on-screen keyboard
+// into the search field, Prev / NextSection (LB / RB) the rail's sections (the cross: the map's zoom)
+enum class PadCommand {
+    Up, Down, Enter, Back, Close, PageUp, PageDown, Left, Right, Lead, Search, PrevSection, NextSection
+};
 void padCommand(PadCommand c);
+// Each tick: the sticks (-1..1, +y up) for `seconds` - the left one moves the cross on a map, the right one scrolls
+// the body (on a map: moves the map under the cross)
+void padSticks(float lx, float ly, float rx, float ry, float seconds);
+bool padCrossOn();  // the cross on a map: the left stick is its, not the frame's steps
 // 3.0.11-beta.22: a pad button bound to «Довідник» (uaRO Pad's action «reference») - open it, or close it
 void toggleFromPad();
 

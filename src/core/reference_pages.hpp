@@ -170,6 +170,12 @@ Page section(const refindex::Index& ix, settings::Lang l, int id, const Context&
 // 3.0.11-beta.26: a page with the concept's sections at its left, the one `at` belongs to lit (a monster's card the
 // monsters', an item's the items', ...; the search's «Усе»)
 Page withRail(Page p, const refindex::Index& ix, settings::Lang l, const Link& at);
+// 3.0.18-beta.241 (the concept's pad: X «Вести сюди» on a card): the card's first way to follow (an NPC's «Вести
+// сюди ›», a map's «вести ›»); null none
+const Link* leadOf(const Page& p);
+// 3.0.18-beta.241 (the pad's LB / RB): the rail's entry `by` steps from the one on, round (none on: the first for a
+// step on, the last for one back); -1 no rail
+int railStep(const Page& p, int by);
 // `here`: the player's map (it comes first in «Де знайти», marked; a map's card shows the way from it - 3.0.11-beta.8)
 // `opened`: bits of Part shown in full
 Page mob(const refindex::Index& ix, settings::Lang l, int id, const Context& c, unsigned opened = 0);

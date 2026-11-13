@@ -984,6 +984,8 @@ TEST(reference_pages_an_npcs_card) {
     CHECK(lead && lead->link.go == refpages::Go::Follow && lead->link.id == 2 && lead->link.map == "prontera:134:203");
     const refpages::Row* onMap = rowWith(p, "Показати на карті ›");
     CHECK(onMap && onMap->link.go == refpages::Go::Map && onMap->link.map == "prontera" && onMap->link.id == dealer + 1);
+    const refpages::Link* x = refpages::leadOf(p);  // 3.0.18-beta.241: the pad's X
+    CHECK(x && x->go == refpages::Go::Follow && x->id == 2 && x->map == "prontera:134:203");
     const refpages::Row* wing = rowWith(p, "Fly Wing");
     CHECK(wing && wing->right == "60 z" && wing->link.go == refpages::Go::Item);
     const refpages::Row* hero = nullptr;  // kind, map and cell joined by a middle dot (UTF-8), not a double-encoded one
@@ -1029,4 +1031,22 @@ TEST(reference_pages_services_by_kind) {
     CHECK_EQ(rows, 2);
     const refpages::Page railed = refpages::withRail(list, ix, Lang::Uk, kafra ? kafra->link : refpages::Link{});
     CHECK(railed.railOn >= 0 && railed.rail[size_t(railed.railOn)].left == "NPC і послуги");
+}
+
+// 3.0.18-beta.241 (the pad's LB / RB): the rail's next and previous entries, round; none on - the first or the last
+TEST(reference_pages_rail_steps_round) {
+    refpages::Page p;
+    p.rail.resize(4);
+    CHECK_EQ(refpages::railStep(p, +1), 0);
+    CHECK_EQ(refpages::railStep(p, -1), 3);
+    p.railOn = 2;
+    CHECK_EQ(refpages::railStep(p, +1), 3);
+    CHECK_EQ(refpages::railStep(p, -1), 1);
+    p.railOn = 3;
+    CHECK_EQ(refpages::railStep(p, +1), 0);
+    p.railOn = 0;
+    CHECK_EQ(refpages::railStep(p, -1), 3);
+    p.rail.clear();
+    p.railOn = -1;
+    CHECK_EQ(refpages::railStep(p, +1), -1);
 }

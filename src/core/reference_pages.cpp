@@ -2155,6 +2155,19 @@ Page open(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
     return p;
 }
 
+const Link* leadOf(const Page& p) {
+    for (const Row& r : p.rows)
+        if (r.link.go == Go::Follow) return &r.link;
+    return nullptr;
+}
+
+int railStep(const Page& p, int by) {
+    const int n = int(p.rail.size());
+    if (n == 0) return -1;
+    if (p.railOn < 0 || p.railOn >= n) return by > 0 ? 0 : n - 1;
+    return ((p.railOn + by) % n + n) % n;
+}
+
 Page withRail(Page p, const refindex::Index& ix, Lang l, const Link& at) {
     Row first;  // the first screen's (3.0.11-beta.30, the owner: «нету кнопки перейти на главный экран справочника»)
     first.style = Style::Tile;

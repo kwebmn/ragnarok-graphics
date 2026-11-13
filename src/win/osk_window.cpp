@@ -48,6 +48,8 @@ struct State {
     osk::Lang lang = osk::Lang::Uk;
     osk::Focus focus{1, 0};
     uint32_t edit = 0, owner = 0;  // the line typed into, the window its Enter goes to
+    Field field;                   // 3.0.18-beta.241: a driver window's own field (own: typed into it, not the game's)
+    bool own = false;
     unsigned codePage = 0;
     float k = 0, scale = 1;
     std::string line;  // UTF-8, as the game's line has it
@@ -110,8 +112,21 @@ void setText(uint32_t edit, const std::string& text) {
     if (edit) reinterpret_cast<SetTextFn>(uintptr_t(read32(read32(edit) + kSetTextSlot)))(edit, text.c_str());
 }
 
-// The game's line with `utf8` after it, when it still takes it (its longest in the code page's bytes)
+size_t letters(const std::string& utf8) {
+    size_t n = 0;
+    for (const char c : utf8) n += (static_cast<unsigned char>(c) & 0xC0) != 0x80;
+    return n;
+}
+
+// The game's line with `utf8` after it, when it still takes it (its longest in the code page's bytes); a window's own
+// field (3.0.18-beta.241) by its letters
 void type(State& s, const std::string& utf8) {
+    if (s.own) {
+        const std::string now = s.field.read ? s.field.read() : std::string();
+        if (s.field.write && letters(now) + letters(utf8) <= s.field.longest) s.field.write(now + utf8);
+        s.key.clear();
+        return;
+    }
     if (!s.edit) return;
     const std::string now = gameText(s.edit), more = narrowed(utf8Wide(utf8), s.codePage);
     const uint32_t longest = read32(s.edit + kLongest);
@@ -121,6 +136,14 @@ void type(State& s, const std::string& utf8) {
 }
 
 void erase(State& s) {
+    if (s.own) {  // 3.0.18-beta.241: its last letter (a UTF-8 sequence)
+        std::string now = s.field.read ? s.field.read() : std::string();
+        while (!now.empty() && (static_cast<unsigned char>(now.back()) & 0xC0) == 0x80) now.pop_back();
+        if (!now.empty()) now.pop_back();
+        if (s.field.write) s.field.write(now);
+        s.key.clear();
+        return;
+    }
     if (!s.edit) return;
     std::wstring w = widened(gameText(s.edit), s.codePage);
     if (w.empty()) return;
@@ -130,6 +153,11 @@ void erase(State& s) {
 }
 
 void send(State& s) {
+    if (s.own) {  // 3.0.18-beta.241: the window's Enter
+        if (s.field.enter) s.field.enter();
+        close();
+        return;
+    }
     if (!s.owner) return;
     if (s.told++ < 30) LOG_INFO("keyboard: the line sent (its window's Enter)");
     reinterpret_cast<SendMsgFn>(uintptr_t(read32(read32(s.owner) + kSendMsgSlot)))(s.owner, 0, kButtonMsg, kEnter, 0,
@@ -192,10 +220,25 @@ void open() {
     s.lang = ui == settings::Lang::Ru ? osk::Lang::Ru : ui == settings::Lang::En ? osk::Lang::En : osk::Lang::Uk;
     s.shift = false;
     s.focus = osk::Focus{1, 0};
+    s.own = false;
     pickLine(s);
     s.key.clear();
     LOG_INFO("keyboard: open - typing into %s", !s.owner ? "nothing (no chat line)" :
                                                 s.owner == chatWindow() ? "the chat's line" : "a card's line");
+}
+
+void openFor(const Field& f) {
+    State& s = state();
+    const settings::Lang ui = language();
+    s.lang = ui == settings::Lang::Ru ? osk::Lang::Ru : ui == settings::Lang::En ? osk::Lang::En : osk::Lang::Uk;
+    s.shift = false;
+    s.focus = osk::Focus{1, 0};
+    s.field = f;
+    s.own = true;
+    s.edit = s.owner = 0;
+    s.key.clear();
+    s.open = true;
+    LOG_INFO("keyboard: open - typing into a window's own field");
 }
 
 bool isOpen() { return state().open; }
@@ -203,6 +246,8 @@ bool isOpen() { return state().open; }
 void close() {
     State& s = state();
     s.open = false;
+    s.own = false;  // 3.0.18-beta.241: a window's own field let go
+    s.field = Field{};
 }
 
 void command(Command c) {
@@ -222,8 +267,8 @@ void command(Command c) {
         case Command::Shift: s.shift = !s.shift; break;
         case Command::Send: send(s); return;
         case Command::Close: close(); return;
-        case Command::Reply:  // 3.0.18-beta.134
-            if (s.edit && gameText(s.edit).rfind("/r ", 0) != 0) setText(s.edit, "/r " + gameText(s.edit));
+        case Command::Reply:  // 3.0.18-beta.134 (not a window's own field)
+            if (!s.own && s.edit && gameText(s.edit).rfind("/r ", 0) != 0) setText(s.edit, "/r " + gameText(s.edit));
             break;
     }
     s.key.clear();
@@ -239,7 +284,7 @@ static void frameInner(HWND game, unsigned codePage, double k, int targetWidth, 
     }
     s.k = float(k);
     s.scale = uistyle::readingScale(k);
-    s.line = utf8Of(widened(gameText(s.edit), codePage));
+    s.line = s.own ? (s.field.read ? s.field.read() : std::string()) : utf8Of(widened(gameText(s.edit), codePage));
     const osk::Grid g = osk::rows(s.lang, s.shift);
     s.layout = osk::layout(g, targetWidth, targetHeight, s.scale);
     const bool caret = (GetTickCount64() / kBlinkMs) % 2 == 0;

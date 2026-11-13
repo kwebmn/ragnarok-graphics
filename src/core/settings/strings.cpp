@@ -8675,6 +8675,18 @@ constexpr Entry kTexts[] = {
     {Text::RefLayerWarps, "Warps", "Переходи", "Переходы"},
     {Text::RefLayerMobs, "Monsters", "Монстри", "Монстры"},
     {Text::RefLayerHere, "You are here", "Ви тут", "Вы здесь"},
+    {Text::RefPadKeys,
+     "{1} open · {2} back · {3} lead me here · {4} search · {5} {6} sections",
+     "{1} відкрити · {2} назад · {3} вести сюди · {4} пошук · {5} {6} розділи",
+     "{1} открыть · {2} назад · {3} вести сюда · {4} поиск · {5} {6} разделы"},
+    {Text::RefPadCrossKeys,
+     "Stick — move · {1} open · {3} next mark · {5} {6} zoom · {2} leave the map",
+     "Стік — рух · {1} відкрити · {3} наступна позначка · {5} {6} масштаб · {2} вийти з карти",
+     "Стик — движение · {1} открыть · {3} следующая отметка · {5} {6} масштаб · {2} выйти из карты"},
+    {Text::RefPadWorldKeys,
+     "Stick — move · {1} a map's card · {5} {6} zoom · {2} leave the map",
+     "Стік — рух · {1} картка карти · {5} {6} масштаб · {2} вийти з карти",
+     "Стик — движение · {1} карточка карты · {5} {6} масштаб · {2} выйти из карты"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

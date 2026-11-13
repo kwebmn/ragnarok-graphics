@@ -964,6 +964,7 @@ enum class Text : uint16_t {
     RefNpcGroupKafra, RefNpcGroupMerchant, RefNpcGroupQuest, RefNpcGroupCustom, RefNpcGroupGuide, RefNpcGroupCity,
     RefNpcGroupGuild, RefNpcGroupJob, RefNpcGroupEvent, RefNpcGroupFerry, RefNpcGroupOther, RefNpcLead, RefNpcOnMap,
     RefNpcFerry, RefNpcByKind, RefLayerNpc, RefLayerWarps, RefLayerMobs, RefLayerHere,
+    RefPadKeys, RefPadCrossKeys, RefPadWorldKeys,  // .241 (the reference's pad): the bottom line - {1} A .. {6} RB
     Count
 };
 
