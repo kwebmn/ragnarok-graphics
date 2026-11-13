@@ -1302,7 +1302,7 @@ namespace {
 void toneLevels(const refindex::Index& ix, Page& p, int level);  // 3.0.18-beta.242 (with the item card's helpers)
 }  // namespace
 
-Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
+Page section(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned opened) {
     if (id >= kJobSkills && id < kJobSkills + 5000) return jobSkills(l, id - kJobSkills);  // 3.0.18-beta.244
     if (id >= kNpcKinds && id < kNpcKinds + int(std::size(kGroups)))  // 3.0.18-beta.240
         return npcKind(ix, l, refindex::NpcGroup(id - kNpcKinds));
@@ -1316,14 +1316,16 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
         for (const auto& i : ix.items)
             if (i.second.type == id - 100) list.emplace_back(i.second.name, i.first);
         std::sort(list.begin(), list.end(), byNatural);
+        std::vector<Row> rows;
         for (const auto& [name, item] : list) {
             const auto by = ix.droppedBy.find(item);
             const auto at = ix.soldAt.find(item);
             std::string right;
             if (at != ix.soldAt.end()) right = sayf(l, Text::RefZeny, {number(at->second.front().second, l)});
             else if (by != ix.droppedBy.end()) right = mobName(ix, by->second.front().mob);
-            p.rows.push_back(linked(name, right, toItem(item)));
+            rows.push_back(linked(name, right, toItem(item)));
         }
+        capped(p, std::move(rows), Part(0), opened, l);  // 3.0.18-beta.247: past 100 «усі N ›»
         return p;
     }
     switch (id) {
@@ -1337,15 +1339,19 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
             std::sort(nowhere.begin(), nowhere.end());
             const std::pair<Text, const std::vector<std::tuple<int, std::string, int>>*> groups[] = {
                 {Text::RefMobsOnMaps, &on}, {Text::RefMobsNowhere, &nowhere}};
+            int group = 0;
             for (const auto& [title, list] : groups) {
+                const int bit = group++;  // 3.0.18-beta.247: each group past 100 «усі N ›»
                 if (list->empty()) continue;
                 p.rows.push_back(heading(sayf(l, title, {std::to_string(list->size())})));
+                std::vector<Row> rows;
                 for (const auto& [lv, name, mob] : *list) {
                     Row r = linked(name, mobLine(ix, l, mob), toMob(mob));
                     r.icon = "mob:" + std::to_string(mob);
                     r.gold = ix.mobs.at(mob).boss;
-                    p.rows.push_back(std::move(r));
+                    rows.push_back(std::move(r));
                 }
+                capped(p, std::move(rows), Part(bit), opened, l);
             }
             break;
         }
@@ -1406,18 +1412,22 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
                         .emplace_back(i.second.name, i.first);
             const std::pair<Text, std::vector<std::pair<std::string, int>>*> groups[] = {
                 {Text::RefCardsDropped, &dropped}, {Text::RefCardsOther, &other}, {Text::RefCardsEnchants, &enchants}};
+            int group = 0;
             for (const auto& [title, list] : groups) {
+                const int bit = group++;  // 3.0.18-beta.247: each group past 100 «усі N ›»
                 if (list->empty()) continue;
                 std::sort(list->begin(), list->end(), byNatural);
                 p.rows.push_back(heading(sayf(l, title, {std::to_string(list->size())})));
+                std::vector<Row> rows;
                 for (const auto& [name, card] : *list) {
                     const auto by = ix.droppedBy.find(card);
                     const std::string right = by == ix.droppedBy.end()
                                                   ? ""
                                                   : mobName(ix, by->second.front().mob) + " · " +
                                                         chance(by->second.front().rate, l);
-                    p.rows.push_back(linked(name, right, toItem(card)));
+                    rows.push_back(linked(name, right, toItem(card)));
                 }
+                capped(p, std::move(rows), Part(bit), opened, l);
             }
             break;
         }
@@ -1450,27 +1460,29 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
             }
             if (!fields.empty())
                 p.rows.push_back(heading(sayf(l, Text::RefMapsWithMobs, {std::to_string(fields.size())})));
-            for (const auto& [title, code] : fields) p.rows.push_back(linked(title, mapNote(ix, l, code), toMap(code)));
+            std::vector<Row> rows;  // 3.0.18-beta.247: past 100 «усі N ›»
+            for (const auto& [title, code] : fields) rows.push_back(linked(title, mapNote(ix, l, code), toMap(code)));
+            capped(p, std::move(rows), Part(1), opened, l);
             break;
         }
         case Shops:
             p.name = say(l, Text::RefSecShops);
             p.rows.push_back(heading(p.name));
-            for (Row& r : shopRows(ix, l)) p.rows.push_back(std::move(r));
+            capped(p, shopRows(ix, l), Part(0), opened, l);  // 3.0.18-beta.247: past 100 «усі N ›»
             break;
         case Teleports:
             p.name = say(l, Text::RefSecTeleports);
             p.rows.push_back(heading(p.name));
-            for (Row& r : kafraRows(ix)) p.rows.push_back(std::move(r));
+            capped(p, kafraRows(ix), Part(0), opened, l);
             break;
         case Skills: skillsPage(l, p); break;  // 3.0.18-beta.244
         case Services:  // 3.0.11-beta.26: the concept's «NPC і послуги» - the shops and Kafra
             p.name = say(l, Text::RefSecServices);
             npcKinds(ix, l, p);  // 3.0.18-beta.240: by the maps' kinds first
             p.rows.push_back(heading(say(l, Text::RefSecTeleports)));
-            for (Row& r : kafraRows(ix)) p.rows.push_back(std::move(r));
+            capped(p, kafraRows(ix), Part(0), opened, l);  // 3.0.18-beta.247: past 100 «усі N ›»
             p.rows.push_back(heading(say(l, Text::RefSecShops)));
-            for (Row& r : shopRows(ix, l)) p.rows.push_back(std::move(r));
+            capped(p, shopRows(ix, l), Part(1), opened, l);
             break;
         case Tables:  // 3.0.11-beta.26: the concept's «Таблиці» - the server's element table, each level
             p.name = say(l, Text::RefSecTables);
@@ -1515,13 +1527,15 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
         case Crafting: {
             p.name = say(l, Text::RefSecCraft);
             p.rows.push_back(heading(p.name));
+            std::vector<Row> rows;
             for (const refindex::Craft& c : ix.craft) {
                 std::string mats;
                 for (const auto& [mat, n] : c.mats)
                     mats += (mats.empty() ? "" : ", ") + itemName(ix, mat) + " ×" + std::to_string(n);
-                p.rows.push_back(linked(itemName(ix, c.item), mats, toItem(c.item)));
+                rows.push_back(linked(itemName(ix, c.item), mats, toItem(c.item)));
             }
-            std::sort(p.rows.begin() + 1, p.rows.end(), [](const Row& a, const Row& b) { return a.left < b.left; });
+            std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.left < b.left; });
+            capped(p, std::move(rows), Part(0), opened, l);  // 3.0.18-beta.247: past 100 «усі N ›»
             break;
         }
         default:
@@ -2601,7 +2615,7 @@ Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
         case Go::Item: return item(ix, l, link.id, c, opened);
         case Go::Map: return map(ix, l, link.map, c, opened);
         case Go::Shop: return shop(ix, l, link.id);
-        case Go::Section: return section(ix, l, link.id, c);
+        case Go::Section: return section(ix, l, link.id, c, opened);
         case Go::World: return link.id == 1 ? dungeons(ix, l, c) : world(ix, l, c, link.map);
         case Go::Quests: return quests(ix, l);
         case Go::Quest: return quest(ix, l, link.id, c);

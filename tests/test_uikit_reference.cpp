@@ -387,3 +387,39 @@ TEST(uikit_reference_description_and_level_tone) {
     CHECK(l.doc && count(l.doc, ".rlv") == 1);  // a row without a tone: its words as they were
     rmlhost::close(l.doc);
 }
+
+// 3.0.18-beta.247 (R-ZW43KT): an icon not made yet is a placeholder that names its picture (data-pic) - the window
+// puts the picture on it in place when it comes (the page's markup is not made again for it)
+TEST(uikit_reference_icon_placeholders_name_their_pictures) {
+    refpages::Page p;
+    p.rows.push_back(row(Style::Heading, "Монстри"));
+    Row poring = row(Style::Row, "Poring", refpages::Go::Mob, 1002);
+    poring.icon = "mob:1002";
+    p.rows.push_back(poring);
+    Row wing = row(Style::Row, "Fly Wing", refpages::Go::Item, 601);
+    wing.icon = "item:601";
+    p.rows.push_back(wing);
+    ur::Look look;
+    look.picture = [](const std::string& key) {
+        return key == "icon:item:601" ? std::string("pic:7:1") : std::string();
+    };
+    ur::Model m;
+    m.body = ur::body(p, look);
+    const Loaded l = load(m);
+    CHECK_EQ(l.warnings, std::string());
+    Rml::Element* body = l.doc ? l.doc->GetElementById("body") : nullptr;
+    Rml::ElementList waiting;
+    if (body) body->QuerySelectorAll(waiting, "[data-pic]");
+    CHECK(waiting.size() == 1 && waiting[0]->GetAttribute<Rml::String>("data-pic", "") == "icon:mob:1002");
+    CHECK(waiting.size() == 1 && waiting[0]->IsClassSet("none"));
+    CHECK(body && count(body, "img.ri") == 1);  // the one made: its picture at once
+    if (waiting.size() == 1) {  // the window's way: the picture as the placeholder's decorator, RmlUi takes it
+        const size_t before = rmlhost::log().size();
+        waiting[0]->SetProperty("decorator", "image(\"pic:9:1\" contain)");
+        waiting[0]->SetClass("none", false);
+        rmlhost::update();
+        CHECK(waiting[0]->GetProperty("decorator") != nullptr);
+        CHECK_EQ(rmlhost::log().substr(before), std::string());
+    }
+    rmlhost::close(l.doc);
+}

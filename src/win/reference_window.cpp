@@ -129,7 +129,6 @@ struct State {
     // markup that names them must be gone before they are
     std::vector<std::pair<int, std::map<std::string, panel::Picture>>> retired;
     std::map<std::string, std::string> sources;      // their sources given to RmlUi (the previous of each)
-    std::vector<std::string> wanted;                 // icons the body asked for, not made yet
     unsigned folded = 0;  // 3.0.11-beta.17: the sections the player folded (refpages::Part bits), kept in a file
     bool foldedRead = false;
     std::vector<refpages::Link> recent, favourites;  // 3.0.11-beta.18
@@ -180,6 +179,12 @@ struct State {
     refskills::File skillWords;
     bool skillWordsRead = false;
     bool asTyped = false;  // 3.0.18-beta.245: the search's Cyrillic as typed («шукати як набрано»)
+    // 3.0.18-beta.247 (R-ZW43KT «лагає довідник»: every few icons made the whole page's markup again - 29 ms a frame on
+    // «Монстри»): the body's placeholders of icons not made yet (by their pictures' keys), looked for once a new body
+    // is laid out; a few made a frame, those in view first, each put on its placeholders in place (a decorator)
+    std::vector<std::pair<std::string, Rml::Element*>> waiting;
+    int waitingIn = -1;  // frames until a new body's placeholders are looked for
+    float waitingScroll = -1;  // the scroll the last look found none in view at: none looked for till it moves
 };
 
 State& state() {
@@ -238,7 +243,7 @@ void retirePictures(State& s) {
     if (s.pictures.empty()) return;
     s.retired.emplace_back(8, std::move(s.pictures));
     s.pictures.clear();
-    s.wanted.clear();
+    s.waiting.clear();  // 3.0.18-beta.247: the body is made again - its placeholders anew
     s.bodyNow = true;
 }
 
@@ -341,10 +346,7 @@ std::string pictureSrc(State& s, const std::string& key) {
     }
     auto it = s.pictures.find(key);
     if (it == s.pictures.end()) {
-        if (key.rfind("icon:", 0) == 0) {  // a row's icon: later, a few a frame
-            if (std::find(s.wanted.begin(), s.wanted.end(), key) == s.wanted.end()) s.wanted.push_back(key);
-            return {};
-        }
+        if (key.rfind("icon:", 0) == 0) return {};  // a row's icon: its placeholder, made later (in view first)
         loadPicture(s, key);  // a portrait, a line icon: at once
         it = s.pictures.find(key);
         if (it == s.pictures.end()) return {};
@@ -806,6 +808,9 @@ void renderBody(State& s) {
     }
     s.model.body = rml;
     s.win.doc.dirty("body");
+    s.waiting.clear();  // 3.0.18-beta.247: the old body's elements go
+    s.waitingIn = 2;
+    s.waitingScroll = -1;
     s.bodyDirty = s.bodyNow = false;
     s.bodyAt = GetTickCount64();
     s.markedSel = s.sel;
@@ -1708,6 +1713,55 @@ void padSticksIn(State& s, float lx, float ly, float rx, float ry, float seconds
     }
 }
 
+// 3.0.18-beta.247 (R-ZW43KT): the new body's icon placeholders (data-pic: the picture's key)
+void collectWaiting(State& s) {
+    s.waiting.clear();
+    Rml::Element* body = s.win.doc.byId("body");
+    if (!body) return;
+    Rml::ElementList found;
+    body->QuerySelectorAll(found, "[data-pic]");
+    s.waiting.reserve(found.size());
+    for (Rml::Element* e : found) s.waiting.emplace_back(e->GetAttribute<Rml::String>("data-pic", ""), e);
+}
+
+// A few icons a frame - those in view and a view round it first (the rest when scrolled to) - each put on every
+// placeholder of its key as a decorator: no layout, no markup made again
+void loadWaiting(State& s) {
+    if (s.waiting.empty() || scrollNow(s) == s.waitingScroll) return;
+    Rml::Element* sc = scroller(s);
+    float top = -1e9f, bottom = 1e9f;
+    if (sc) {
+        const panel::Box v = boxIn(s, sc);
+        top = v.y - v.h;
+        bottom = v.y + 2 * v.h;
+    }
+    int budget = 8;
+    for (size_t i = 0; i < s.waiting.size() && budget > 0;) {
+        const panel::Box b = boxIn(s, s.waiting[i].second);
+        if (b.y + b.h < top || b.y > bottom) {
+            ++i;
+            continue;
+        }
+        const std::string key = s.waiting[i].first;
+        loadPicture(s, key);
+        --budget;
+        const auto it = s.pictures.find(key);
+        const std::string src = it == s.pictures.end() || it->second.width <= 0
+                                    ? std::string()
+                                    : uaui::picture(&it->second, uaui::stamp(&it->second), s.sources[key]);
+        for (size_t j = s.waiting.size(); j-- > 0;) {
+            if (s.waiting[j].first != key) continue;
+            if (!src.empty()) {
+                s.waiting[j].second->SetProperty("decorator", "image(\"" + src + "\" contain)");
+                s.waiting[j].second->SetClass("none", false);
+            }
+            s.waiting.erase(s.waiting.begin() + std::ptrdiff_t(j));
+        }
+        if (i > s.waiting.size()) i = s.waiting.size();
+    }
+    if (budget > 0) s.waitingScroll = scrollNow(s);  // all in view made: none looked for till the body scrolls
+}
+
 void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.enabled = enabled;
@@ -1855,12 +1909,8 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
         LOG_INFO("reference: on %s - the way to %d, %d", s.plotMap.c_str(), s.plotX, s.plotY);
         s.plotMap.clear();
     }
-    int budget = 8;  // 3.0.11-beta.15: the icons the body asked for, a few a frame (a long list never stalls)
-    while (budget-- > 0 && !s.wanted.empty()) {
-        loadPicture(s, s.wanted.back());
-        s.wanted.pop_back();
-        s.bodyDirty = true;
-    }
+    if (s.waitingIn > 0 && --s.waitingIn == 0) collectWaiting(s);  // 3.0.18-beta.247
+    loadWaiting(s);
     if (s.style != uistyle::generation()) {  // 3.0.11-beta.47: its ground another opacity
         s.style = uistyle::generation();
         fillChrome(s);

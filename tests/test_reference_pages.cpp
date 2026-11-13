@@ -1002,3 +1002,31 @@ TEST(reference_pages_skills_of_a_transcendent_job) {
     const refpages::Row* earlier = rowWith(lk, "Навички Knight ›");
     CHECK(earlier && earlier->link.id == refpages::kJobSkills + 7);
 }
+
+// 3.0.18-beta.247 (R-ZW43KT «лагает справочник»: «Монстри» showed 1006 rows): a section's list past 100 rows shows its
+// first 100 and «усі N ›» (the owner's 13.11 rule), opened it shows them all
+TEST(reference_pages_long_sections_show_100_then_all) {
+    refindex::Index ix;
+    for (int i = 0; i < 150; ++i) {
+        ix.mobs[2000 + i] = refindex::Mob{};
+        ix.mobs[2000 + i].name = "Mob " + std::to_string(1000 + i);
+        ix.mobs[2000 + i].lv = 1 + i;
+        ix.spawnsOf[2000 + i].push_back(refindex::Where{"prt_fild08", 1, 0});
+        ix.items[5000 + i] = refindex::Item{"Thing " + std::to_string(1000 + i), "T", 3, 10, 1, 0};
+    }
+    const refpages::Page mobs = refpages::section(ix, Lang::Uk, refpages::Mobs);
+    int shown = 0;
+    for (const refpages::Row& r : mobs.rows) shown += r.link.go == refpages::Go::Mob;
+    CHECK_EQ(shown, 100);
+    const refpages::Row* all = rowWith(mobs, "усі 150 ›");
+    CHECK(all && all->link.go == refpages::Go::Expand);
+    const refpages::Page opened = refpages::section(ix, Lang::Uk, refpages::Mobs, {}, all ? 1u << all->link.id : 0u);
+    shown = 0;
+    for (const refpages::Row& r : opened.rows) shown += r.link.go == refpages::Go::Mob;
+    CHECK_EQ(shown, 150);
+    CHECK(rowWith(opened, "усі 150 ›") == nullptr);
+    const refpages::Page etc = refpages::section(ix, Lang::Uk, 100 + 3);  // the items of one type
+    shown = 0;
+    for (const refpages::Row& r : etc.rows) shown += r.link.go == refpages::Go::Item;
+    CHECK(shown == 100 && rowWith(etc, "усі 150 ›") != nullptr);
+}

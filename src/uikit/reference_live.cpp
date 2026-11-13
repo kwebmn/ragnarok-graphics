@@ -116,7 +116,11 @@ struct Maker {
     }
     std::string pic(const std::string& key, const char* cls) const {
         const std::string src = look.picture && !key.empty() ? look.picture(key) : std::string();
-        if (src.empty()) return std::string("<span class=\"") + cls + " none\"></span>";
+        // 3.0.18-beta.247 (R-ZW43KT): not made yet - a placeholder naming its picture; the window puts the picture
+        // on it in place (a decorator: no layout, no new markup)
+        if (src.empty())
+            return std::string("<span class=\"") + cls + " none\"" +
+                   (key.empty() ? "" : " data-pic=\"" + escape(key) + "\"") + "></span>";
         return std::string("<img class=\"") + cls + "\" src=\"" + escape(src) + "\"/>";
     }
     std::string icon(const Row& r) const {

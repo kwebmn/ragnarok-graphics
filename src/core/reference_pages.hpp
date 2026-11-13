@@ -199,7 +199,9 @@ Page home(const refindex::Index& ix, settings::Lang l, const Context& c = {});
 // bits), the query marked in the names; the items found by their service names apart; nothing - what to try
 Page found(const refindex::Index& ix, settings::Lang l, const std::string& query, const Context& c = {},
            unsigned opened = 0);
-Page section(const refindex::Index& ix, settings::Lang l, int id, const Context& c = {});
+// 3.0.18-beta.247 (R-ZW43KT): a list of a section past kFew rows - its first kFew and «усі N ›» (Go::Expand, its
+// group's bit in `opened`)
+Page section(const refindex::Index& ix, settings::Lang l, int id, const Context& c = {}, unsigned opened = 0);
 // 3.0.11-beta.26: a page with the concept's sections at its left, the one `at` belongs to lit (a monster's card the
 // monsters', an item's the items', ...; the search's «Усе»)
 Page withRail(Page p, const refindex::Index& ix, settings::Lang l, const Link& at);
