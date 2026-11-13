@@ -17,7 +17,15 @@ namespace uagfx::refindex {
 // the items, the monsters' cards, the shops, Kafra's teleports, the pets, the crafting, what refers to what, and the
 // search over it all. The parts that need no Windows.
 
-enum class NpcKind : uint8_t { Kafra, Healer, Tool, Weapon, Armor, Inn, Guide, Job, Warp, Other };
+// 3.0.18-beta.240 (the reference's maps, the owner 13.11): Quest, City, Custom (the server's own), Guild, Event - the
+// kinds the site's pack tells by the NPC's script folder; the rest guessed by the name as before
+enum class NpcKind : uint8_t { Kafra, Healer, Tool, Weapon, Armor, Inn, Guide, Job, Warp, Other, Quest, City, Custom,
+                               Guild, Event };
+// The groups the maps and the reference show: Kafra «K», the merchants «$» (the shops, the healers, the inns), the
+// quests «!», ours and the guides by their colour, the rest grey
+enum class NpcGroup : uint8_t { Kafra, Merchant, Quest, Custom, Guide, City, Guild, Job, Event, Ferry, Other };
+NpcGroup groupOf(NpcKind k);
+const char* letterOf(NpcKind k);  // "K", "$", "!" or ""
 
 struct Npc {
     int x = 0, y = 0;
@@ -95,8 +103,13 @@ struct Craft {
     int item = 0, itemLv = 0, skill = 0, skillLv = 0;
     std::vector<std::pair<int, int>> mats;  // item, how many
 };
+// 3.0.18-beta.240: a monster's spawn area on its map (the pack's x, y and half sizes; a whole map's line has none)
+struct Zone {
+    int mob = 0, count = 0, x = 0, y = 0, rx = 0, ry = 0;
+};
 struct MapHints {
     std::vector<Npc> npcs;
+    std::vector<Zone> zones;  // 3.0.18-beta.240
     std::vector<Warp> warps;
     std::vector<MobOnMap> mobs;  // the bosses first, then by count, then by name
     std::vector<Teleport> teleports;  // 3.0.11-beta.7: Kafra's and the NPCs' from here
@@ -149,6 +162,9 @@ bool gunzip(const std::string& gz, std::string& out);
 bool build(const std::string& json, Index& out);
 // The site's NPC kinds by the name (GameReference / Shapes::npcKind) and their colours (0xRRGGBB, the site's map)
 NpcKind kindOf(const std::string& name);
+// 3.0.18-beta.240: by the site's folder word (kafra, merchant, quest, city, custom, guild, job, guide, event, ferry,
+// other); another word: the name's guess
+NpcKind kindOfFolder(const std::string& folder, const std::string& name);
 uint32_t colorOf(NpcKind k);
 // The client's data\mapnametable.txt («prt_fild07.rsw#Prontera Field #»): the map's code (lower case) -> its name
 // (trimmed)

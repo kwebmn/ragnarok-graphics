@@ -185,7 +185,7 @@ TEST(reference_pages_a_maps_card) {
     CHECK(near != size_t(-1) && p.rows[near + 1].left == "Kafra Employee");
     CHECK_EQ(p.rows[near + 1].right, std::string("тут · 150, 180"));
     const refpages::Row& kafra = p.rows[p.rows.size() - 1];  // the NPCs' list, the last
-    CHECK(kafra.left == "Kafra Employee" && kafra.dot == 0xD6336C && kafra.right == "150, 180");
+    CHECK(kafra.left == "Kafra Employee" && kafra.dot == 0xE0447C && kafra.right == "150, 180");
     const refpages::Page izlude = refpages::map(ix, Lang::Uk, "izlude", ctx(""));  // none there: by the teleport
     const size_t far = indexOf(izlude, "Kafra поруч");
     CHECK(far == size_t(-1));  // the way back is not known to the pack: no Kafra found

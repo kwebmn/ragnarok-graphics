@@ -83,8 +83,8 @@ TEST(reference_index_npc_kinds_as_the_site) {
     CHECK(refindex::kindOf("Swordman Guildsman Master") == refindex::NpcKind::Job);
     CHECK(refindex::kindOf("Sailor") == refindex::NpcKind::Warp);
     CHECK(refindex::kindOf("Bard") == refindex::NpcKind::Other);
-    CHECK_EQ(refindex::colorOf(refindex::NpcKind::Kafra), 0xD6336Cu);
-    CHECK_EQ(refindex::colorOf(refindex::NpcKind::Other), 0x868E96u);
+    CHECK_EQ(refindex::colorOf(refindex::NpcKind::Kafra), 0xE0447Cu);
+    CHECK_EQ(refindex::colorOf(refindex::NpcKind::Other), 0x7D8694u);
 }
 
 TEST(reference_index_reads_the_clients_map_names) {
@@ -143,4 +143,53 @@ TEST(reference_index_merges_a_monsters_entries_of_one_thing) {
     const auto by = ix.droppedBy.find(512);
     CHECK(by != ix.droppedBy.end() && by->second.size() == 1);
     if (by != ix.droppedBy.end() && !by->second.empty()) CHECK(by->second[0].rate == 773 && by->second[0].parts.size() == 8);
+}
+
+// 3.0.18-beta.240 (the reference's maps, the owner 13.11): an NPC's kind by its script's folder when the site's pack
+// says it (its sixth field), else by its name as before; the groups the map shows - Kafra K, merchants $, quests !
+// with their colours, ours and the guides by colour, the rest grey
+TEST(reference_index_npc_kinds_from_the_packs_folder) {
+    refindex::Index ix;
+    CHECK(refindex::build(R"({"v":1,"data":1,"mobs":{},"spawns":{},"routes":[],"npcs":[)"
+                          R"(["prontera",1,1,"Old Man",86,"quest"],["prontera",2,2,"Banker",86,"custom"],)"
+                          R"(["prontera",3,3,"Tool Dealer",83,"merchant"],["prontera",4,4,"Kafra Employee",113,"kafra"],)"
+                          R"(["prontera",5,5,"Guard",105,"city"],["prontera",6,6,"Tool Dealer",83,"strange"],)"
+                          R"(["prontera",7,7,"Tool Dealer",83]]})",
+                          ix));
+    const auto& n = ix.maps["prontera"].npcs;
+    CHECK_EQ(n.size(), size_t(7));
+    if (n.size() < 7) return;
+    CHECK(n[0].kind == refindex::NpcKind::Quest && n[1].kind == refindex::NpcKind::Custom);
+    CHECK(n[2].kind == refindex::NpcKind::Tool && n[3].kind == refindex::NpcKind::Kafra);
+    CHECK(n[4].kind == refindex::NpcKind::City);
+    CHECK(n[5].kind == refindex::NpcKind::Tool && n[6].kind == refindex::NpcKind::Tool);  // by the name
+    CHECK(refindex::groupOf(refindex::NpcKind::Weapon) == refindex::NpcGroup::Merchant);
+    CHECK(refindex::groupOf(refindex::NpcKind::Warp) == refindex::NpcGroup::Ferry);
+    CHECK_EQ(std::string(refindex::letterOf(refindex::NpcKind::Kafra)), std::string("K"));
+    CHECK_EQ(std::string(refindex::letterOf(refindex::NpcKind::Armor)), std::string("$"));
+    CHECK_EQ(std::string(refindex::letterOf(refindex::NpcKind::Quest)), std::string("!"));
+    CHECK_EQ(std::string(refindex::letterOf(refindex::NpcKind::Custom)), std::string());
+    CHECK_EQ(refindex::colorOf(refindex::NpcKind::Kafra), 0xE0447Cu);
+    CHECK_EQ(refindex::colorOf(refindex::NpcKind::Inn), 0x3B8AE0u);  // a merchant's
+    CHECK_EQ(refindex::colorOf(refindex::NpcKind::Quest), 0xF08C00u);
+    CHECK_EQ(refindex::colorOf(refindex::NpcKind::Custom), 0xB44FD6u);
+    CHECK_EQ(refindex::colorOf(refindex::NpcKind::Guide), 0xF2C94Cu);
+    CHECK_EQ(refindex::colorOf(refindex::NpcKind::City), 0x7D8694u);
+    CHECK_EQ(refindex::colorOf(refindex::NpcKind::Other), 0x7D8694u);
+}
+
+// 3.0.18-beta.240: a monster's spawn areas on a map (the pack's x, y, xs, ys) - the map's monster zones; a line over
+// the whole map (0, 0) none
+TEST(reference_index_spawn_zones) {
+    refindex::Index ix;
+    CHECK(refindex::build(R"({"v":1,"data":1,"mobs":{"1002":["Poring",1,50,2,1,1,3,1,1,0,[],[],null]},)"
+                          R"("spawns":{"prt_fild08":[[1002,10,100,120,20,15,0],[1002,5,0,0,0,0,0]]},)"
+                          R"("routes":[],"npcs":[]})",
+                          ix));
+    const refindex::MapHints& h = ix.maps["prt_fild08"];
+    CHECK(h.mobs.size() == 1 && h.mobs[0].count == 15);
+    CHECK_EQ(h.zones.size(), size_t(1));
+    if (!h.zones.empty())
+        CHECK(h.zones[0].mob == 1002 && h.zones[0].count == 10 && h.zones[0].x == 100 && h.zones[0].y == 120 &&
+              h.zones[0].rx == 20 && h.zones[0].ry == 15);
 }

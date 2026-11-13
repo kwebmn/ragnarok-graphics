@@ -77,20 +77,63 @@ NpcKind kindOf(const std::string& name) {
     return NpcKind::Other;
 }
 
-uint32_t colorOf(NpcKind k) {
+NpcKind kindOfFolder(const std::string& folder, const std::string& name) {
+    static const std::pair<const char*, NpcKind> kWords[] = {
+        {"kafra", NpcKind::Kafra}, {"quest", NpcKind::Quest}, {"city", NpcKind::City}, {"custom", NpcKind::Custom},
+        {"guild", NpcKind::Guild}, {"job", NpcKind::Job}, {"guide", NpcKind::Guide}, {"event", NpcKind::Event},
+        {"ferry", NpcKind::Warp},
+    };
+    for (const auto& [word, kind] : kWords)
+        if (folder == word) return kind;
+    if (folder == "merchant") {  // a shop by its name's words, else a tool dealer's
+        const NpcKind k = kindOf(name);
+        return k == NpcKind::Healer || k == NpcKind::Weapon || k == NpcKind::Armor || k == NpcKind::Inn ? k
+                                                                                                         : NpcKind::Tool;
+    }
+    if (folder == "other") return NpcKind::Other;
+    return kindOf(name);
+}
+
+NpcGroup groupOf(NpcKind k) {
     switch (k) {
-        case NpcKind::Kafra: return 0xD6336C;
-        case NpcKind::Healer: return 0x37B24D;
-        case NpcKind::Tool: return 0x1971C2;
-        case NpcKind::Weapon: return 0xE8590C;
-        case NpcKind::Armor: return 0x7048E8;
-        case NpcKind::Inn: return 0x0CA678;
-        case NpcKind::Guide: return 0xF08C00;
-        case NpcKind::Job: return 0x1098AD;
-        case NpcKind::Warp: return 0x4263EB;
+        case NpcKind::Kafra: return NpcGroup::Kafra;
+        case NpcKind::Healer:
+        case NpcKind::Tool:
+        case NpcKind::Weapon:
+        case NpcKind::Armor:
+        case NpcKind::Inn: return NpcGroup::Merchant;
+        case NpcKind::Guide: return NpcGroup::Guide;
+        case NpcKind::Job: return NpcGroup::Job;
+        case NpcKind::Warp: return NpcGroup::Ferry;
+        case NpcKind::Quest: return NpcGroup::Quest;
+        case NpcKind::City: return NpcGroup::City;
+        case NpcKind::Custom: return NpcGroup::Custom;
+        case NpcKind::Guild: return NpcGroup::Guild;
+        case NpcKind::Event: return NpcGroup::Event;
         case NpcKind::Other: break;
     }
-    return 0x868E96;
+    return NpcGroup::Other;
+}
+
+const char* letterOf(NpcKind k) {
+    switch (groupOf(k)) {
+        case NpcGroup::Kafra: return "K";
+        case NpcGroup::Merchant: return "$";
+        case NpcGroup::Quest: return "!";
+        default: return "";
+    }
+}
+
+// 3.0.18-beta.240 (the owner 13.11: «меньше цветов, буквы в точках»): five groups by colour, the rest grey
+uint32_t colorOf(NpcKind k) {
+    switch (groupOf(k)) {
+        case NpcGroup::Kafra: return 0xE0447C;
+        case NpcGroup::Merchant: return 0x3B8AE0;
+        case NpcGroup::Quest: return 0xF08C00;
+        case NpcGroup::Custom: return 0xB44FD6;
+        case NpcGroup::Guide: return 0xF2C94C;
+        default: return 0x7D8694;
+    }
 }
 
 namespace {
@@ -208,6 +251,10 @@ bool build(const std::string& text, Index& out) {
             if (it == h.mobs.end()) it = h.mobs.insert(h.mobs.end(), MobOnMap{id, 0, 0});
             it->count += int(s[size_t(1)].asInt(0));
             it->respawnMs = std::max(it->respawnMs, int(s[size_t(6)].asInt(0)));
+            // 3.0.18-beta.240: an area of the map (its centre and half sizes) - the map's monster zone
+            const int zx = at(s, 2), zy = at(s, 3), rx = at(s, 4), ry = at(s, 5);
+            if ((zx > 0 || zy > 0) && (rx > 0 || ry > 0))
+                h.zones.push_back(Zone{id, int(s[size_t(1)].asInt(0)), zx, zy, rx, ry});
         }
     }
     for (const json::Value& r : v["routes"].items()) {  // [map, x, y, dest, dx, dy, kind w|k|s, name, price, flags]
@@ -251,7 +298,10 @@ bool build(const std::string& text, Index& out) {
         if (map.empty()) continue;
         Npc npc{int(n[size_t(1)].asInt(0)), int(n[size_t(2)].asInt(0)), n[size_t(3)].asString(),
                 int(n[size_t(4)].asInt(0))};
-        npc.kind = kindOf(npc.name);
+        // 3.0.18-beta.240: the site's newer packs say its kind by its script's folder (a sixth field)
+        npc.kind = n.items().size() > 5 && n[size_t(5)].type() == json::Value::String
+                       ? kindOfFolder(n[size_t(5)].asString(), npc.name)
+                       : kindOf(npc.name);
         ix.maps[map].npcs.push_back(std::move(npc));
     }
     for (auto& m : ix.maps) {  // a free NPC leading to several maps: where depends on something (Eden's way back)
