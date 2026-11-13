@@ -293,12 +293,12 @@ select selectbox option:checked { color: #e6cb8a; }
 .xb { position: absolute; font-family: Plex; color: #eceff5; }
 .xg { position: absolute; font-family: Plex; }
 .it { position: absolute; font-family: Plex; }
-.hp { position: absolute; font-family: Plex; border-color: #ffffff17; }
+.hpn { position: absolute; font-family: Plex; border-color: #ffffff17; }
 .mp { position: absolute; font-family: Plex; border-color: #ffffff17; }
-.tr { position: absolute; font-family: Plex; }
+.trk { position: absolute; font-family: Plex; }
 .mm { position: absolute; font-family: Plex; }
 /* 3.0.18-beta.52 (R-W9WZ4G: the signs off the round buttons' middles): an edge inside the box, as roundRect's */
-.mm div, .sh div, .ig div, .tr div, .hb div, .hp, .mp { box-sizing: border-box; }
+.mm div, .sh div, .ig div, .trk div, .hb div, .hpn, .mp { box-sizing: border-box; }
 .ig { position: absolute; font-family: Plex; }
 .sh { position: absolute; font-family: Plex; }
 .sh div, .sh span, .sh .a { position: absolute; }
@@ -388,17 +388,17 @@ select selectbox option:checked { color: #e6cb8a; }
 .mm .word.bold { font-weight: bold; }
 .mm .word.right { text-align: right; }
 .mm .word.centre { text-align: center; }
-.tr div, .tr span { position: absolute; }
-.tr .glass { border-color: #ffffff17; }
-.tr .rule { background-color: #ffffff14; }
-.tr .hot { background-color: #ffffff1f; }
-.tr .entry { background-color: #ffffff0a; }
-.tr .entry.over { background-color: #ffffff13; }
-.tr .more { background-color: #ffffff0f; }
-.tr .word { white-space: nowrap; overflow: hidden; }
-.tr .word.bold { font-weight: bold; }
-.tr .word.right { text-align: right; }
-.tr .word.centre { text-align: center; }
+.trk div, .trk span { position: absolute; }
+.trk .glass { border-color: #ffffff17; }
+.trk .rule { background-color: #ffffff14; }
+.trk .hot { background-color: #ffffff1f; }
+.trk .entry { background-color: #ffffff0a; }
+.trk .entry.over { background-color: #ffffff13; }
+.trk .more { background-color: #ffffff0f; }
+.trk .word { white-space: nowrap; overflow: hidden; }
+.trk .word.bold { font-weight: bold; }
+.trk .word.right { text-align: right; }
+.trk .word.centre { text-align: center; }
 .mp .title, .mp .name, .mp .left, .mp .lit { position: absolute; white-space: nowrap; }
 .mp .title { font-weight: bold; color: #e6cb8a; }
 .mp .lit { background-color: #ffffff14; }
@@ -406,12 +406,12 @@ select selectbox option:checked { color: #e6cb8a; }
 .mp .name.hot { color: #eef2f8; }
 .mp .left { text-align: right; font-weight: bold; color: #eef2f8; }
 .mp .left.back { color: #8fd19e; }
-.hp .title, .hp .line, .hp .reset { position: absolute; white-space: nowrap; }
-.hp .title { font-weight: bold; color: #e6cb8a; }
-.hp .line { color: #9aa3b5; }
-.hp .line.first { font-weight: bold; color: #eef2f8; }
-.hp .reset { text-align: center; font-weight: bold; color: #eef2f8; background-color: #ffffff0f; }
-.hp .reset.hot { background-color: #ffffff29; }
+.hpn .title, .hpn .line, .hpn .reset { position: absolute; white-space: nowrap; }
+.hpn .title { font-weight: bold; color: #e6cb8a; }
+.hpn .line { color: #9aa3b5; }
+.hpn .line.first { font-weight: bold; color: #eef2f8; }
+.hpn .reset { text-align: center; font-weight: bold; color: #eef2f8; background-color: #ffffff0f; }
+.hpn .reset.hot { background-color: #ffffff29; }
 /* 3.0.18-beta.120 (the concept «Ігровий інтерфейс»: «✕ на каждом окне»): our panels' close, one look for them all */
 .ownx { position: absolute; text-align: center; font-weight: bold; color: #eef2f8; background-color: #ffffff0f;
     white-space: nowrap; }
@@ -736,14 +736,14 @@ select selectbox option:checked { color: #e6cb8a; }
                  border: 1dp #ffffff40; vertical-align: middle; }
 .lw .tick.on .box { background-color: #c9a55b; border-color: #e6cb8a; }
 .lw .foot .btns { display: flex; }
-.pw { padding: 6dp; border-radius: 10dp; min-width: 150dp; }
-.pw .row { font-size: 12.5dp; white-space: nowrap; }
-.pw .sep { display: block; height: 1dp; margin: 4dp 6dp; background-color: #ffffff1f; }
+.popw { padding: 6dp; border-radius: 10dp; min-width: 150dp; }
+.popw .row { font-size: 12.5dp; white-space: nowrap; }
+.popw .sep { display: block; height: 1dp; margin: 4dp 6dp; background-color: #ffffff1f; }
 .motion .lw .cell, .motion .lw .row, .motion .lw .x { transition: background-color border-color color 0.12s cubic-out; }
 .glassy.lw { decorator: ua-glass(1); }
 /* 3.0.18-beta.69: the screen's edges red at low HP (win/low_hp_edge) - the concept's .vign */
-.lh { position: absolute; }
-.lh .vign { position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+.lowhp { position: absolute; }
+.lowhp .vign { position: absolute; left: 0; top: 0; width: 100%; height: 100%;
             decorator: radial-gradient(#ff2d2300 62%, #ff2d2366 100%); }
 /* 3.0.18-beta.64: [interface] uaui_glass - the windows' frosted glass (the body's class «glassy», Direct3D 12) */
 .glassy.win.sh .glass, .glassy.win.ig .glass, .glassy .ua-window { decorator: ua-glass(1); }

@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 #include "core/window_panel.hpp"
 
@@ -46,4 +47,8 @@ float itemScale(double k);
 // 3.0.11-beta.198: dropped `down` pixels - as dark as `alpha` under the box it is dropped from (right under the
 // window's bottom edge too), the picture `down` taller
 panel::Picture shadow(int w, int h, float radius, float spread, float alpha, int down = 0);
+
+// 3.0.18-beta.238 (the beta tester: «нема в налаштуваннях скролінга вниз кроме колесика»): RmlUi's scrollbar parts
+// by their tag - a press on one works the scrollbar, it is not a press on the window's ground (its drag)
+bool scrollbarPart(const std::string& tag);
 }  // namespace uagfx::uistyle

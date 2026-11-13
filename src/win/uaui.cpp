@@ -1778,8 +1778,10 @@ bool Doc::pointer(HWND game, UINT m, WPARAM wp, LPARAM lp, bool& onControl) {
     // 3.0.18-beta.82: a press taken here is let go here wherever the button comes up (a slider dragged off it)
     const bool release = up && pressedIn_;
     if ((!hover || hover->GetOwnerDocument() != doc_) && !release) return false;
+    // 3.0.18-beta.238 (the tester: «нема в налаштуваннях скролінга вниз кроме колесика»): RmlUi's scrollbar too - a
+    // press on it was taken for the ground's and the whole window followed the cursor with its bar
     for (Rml::Element* e = hover; e && e != doc_; e = e->GetParentNode())
-        if (e->IsClassSet("ctl")) onControl = true;
+        if (e->IsClassSet("ctl") || uistyle::scrollbarPart(e->GetTagName())) onControl = true;
     if (down) pressedIn_ = true;
     if (up) pressedIn_ = false;
     if (wheel) s.context->ProcessMouseWheel(-float(GET_WHEEL_DELTA_WPARAM(wp)) / float(WHEEL_DELTA), 0);

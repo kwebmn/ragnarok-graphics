@@ -172,7 +172,7 @@ void placeOf(const State& s, int& right, int& top) {
 // markup - its glass, the header's line, the entries' plates (the one pointed at lighter), ▾/✕ lit when pointed at,
 // «ще N», the words where core tracker places them; drawn only (passive): its clicks and blocker stay this part's
 const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="tr" data-model="tracker" data-style-width="w + 'px'" data-style-height="h + 'px'">
+<body class="trk" data-model="tracker" data-style-width="w + 'px'" data-style-height="h + 'px'">
 <div class="glass" data-style-left="g.x + 'px'" data-style-top="g.y + 'px'" data-style-width="g.w + 'px'"
   data-style-height="g.h + 'px'" data-style-border-radius="g.r + 'px'" data-style-border-width="g.e + 'px'"
   data-style-background-color="ground"></div>

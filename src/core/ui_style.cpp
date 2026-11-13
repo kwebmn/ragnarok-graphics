@@ -104,4 +104,13 @@ panel::Picture shadow(int w, int h, float radius, float spread, float alpha, int
     return p;
 }
 
+bool scrollbarPart(const std::string& tag) {
+    // RmlUi's own elements of a scrollbar (ElementScroll): the bars, their tracks, thumbs and arrows, the corner
+    static const char* const kParts[] = {"scrollbarvertical", "scrollbarhorizontal", "scrollbarcorner", "slidertrack",
+                                         "sliderbar", "sliderarrowdec", "sliderarrowinc"};
+    for (const char* part : kParts)
+        if (tag == part) return true;
+    return false;
+}
+
 }  // namespace uagfx::uistyle

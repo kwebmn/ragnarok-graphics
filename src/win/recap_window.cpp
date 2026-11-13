@@ -40,7 +40,7 @@ State& state() {
 }
 
 const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="hp" data-model="recap" data-style-width="w + 'px'" data-style-height="h + 'px'"
+<body class="hpn" data-model="recap" data-style-width="w + 'px'" data-style-height="h + 'px'"
   data-style-border-radius="10 * s + 'px'" data-style-border-width="s + 'px'" data-style-background-color="ground">
 <span class="title" data-style-left="10 * s + 'px'" data-style-top="10 * s + 'px'" data-style-width="w - 46 * s + 'px'"
   data-style-height="20 * s + 'px'" data-style-line-height="20 * s + 'px'" data-style-font-size="13 * s + 'px'"

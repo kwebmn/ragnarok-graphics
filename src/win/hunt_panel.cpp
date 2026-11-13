@@ -83,7 +83,7 @@ std::string monsterName(uint32_t id) {
 // RmlUi's markup - its card, the title, the lines (the first bright), «↺»; drawn only (passive): «↺» and the
 // blocker stay this part's; sizes by its own scale (the interface editor's size too), not dp
 const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="hp" data-model="hunt" data-style-width="w + 'px'" data-style-height="h + 'px'"
+<body class="hpn" data-model="hunt" data-style-width="w + 'px'" data-style-height="h + 'px'"
   data-style-border-radius="10 * s + 'px'" data-style-border-width="s + 'px'" data-style-background-color="ground">
 <span class="title" data-style-left="10 * s + 'px'" data-style-top="10 * s + 'px'" data-style-width="w - 72 * s + 'px'"
   data-style-height="20 * s + 'px'" data-style-line-height="20 * s + 'px'" data-style-font-size="13 * s + 'px'"

@@ -95,6 +95,9 @@ struct State {
     WindowShadow shadow;
     WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
     bool on = false, shown = false;
+    // 3.0.18-beta.238 (the tester: «пробивається старе біле окошко, бо дальше змінюється на нове»): ours can show
+    // (on, a game window, its scale and size known) - the game's text and menu windows held from their first draw
+    bool canShow = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
     unsigned codePage = 0;
@@ -469,6 +472,7 @@ static void liveFrame(State& s) {
 void frame(HWND game, bool on, bool remember, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, remember, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    s.canShow = on && game && k > 0 && targetWidth > 0 && targetHeight > 0;  // 3.0.18-beta.238
     liveFrame(s);  // the old edition (the sheet) gone: the live window alone
 }
 
@@ -600,7 +604,9 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
 
 void beforeGameDraw() {
     State& s = state();
-    if (s.on && s.shown && inGameWorld()) holdGame(true);
+    // 3.0.18-beta.238: not only once ours is shown - the window the game made this frame (a Kafra's first words) was
+    // drawn by it once before ours took its place at the present
+    if (s.on && s.canShow && inGameWorld()) holdGame(true);
 }
 
 

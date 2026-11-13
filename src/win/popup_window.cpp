@@ -45,7 +45,7 @@ using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a
 
 // 3.0.18-beta.73 (the big six, F): the menu a live document - its rows one under another, RmlUi's clicks
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="lw pw" data-style-background-color="ground">
+<body class="lw popw" data-style-background-color="ground">
 <div data-for="e, i : items"><div class="sep" data-if="e.sep"></div><div class="row ctl" data-if="!e.sep"
   data-event-click="pick_row(i)">{{e.text}}</div></div>
 <div id="ring" class="ring"></div>

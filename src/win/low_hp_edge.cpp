@@ -75,7 +75,7 @@ void frame(int strength, double k, int targetWidth, int targetHeight) {
             s.doc.passive = true;
             s.doc.world = true;
             s.doc.make("low hp edge", R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="lh" data-style-width="w + 'px'" data-style-height="h + 'px'" data-style-opacity="op">
+<body class="lowhp" data-style-width="w + 'px'" data-style-height="h + 'px'" data-style-opacity="op">
 <div class="vign"></div></body></rml>)RML",
                        [&](Rml::DataModelConstructor& m) {
                            m.Bind("w", &s.w);
