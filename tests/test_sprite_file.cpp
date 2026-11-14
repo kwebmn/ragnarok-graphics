@@ -177,6 +177,26 @@ TEST(reference_sprite_names_the_clients_own_files) {
     CHECK(!has(m, "crystal_1"));  // another crystal's colour: never a guess by its name
 }
 
+// 3.0.19-beta.2 (the owner: «да есть в игре такие монстры, посмотри в чем проблема»): the game's own name of a
+// monster's sprite (uaRO.exe's job name table - kRO's names: CHOCHO for the server's CHONCHON, Vorit for VERIT,
+// ATROS for ATROCE) as a file's name; a 3D model's (the Emperium's Empelium90_0.gr2) or no name - none
+TEST(reference_sprite_name_from_the_games_table) {
+    CHECK_EQ(refindex::gameSpriteName("CHOCHO"), std::string("chocho"));
+    CHECK_EQ(refindex::gameSpriteName("Steel_chocho"), std::string("steel_chocho"));
+    CHECK_EQ(refindex::gameSpriteName("Vorit"), std::string("vorit"));
+    CHECK_EQ(refindex::gameSpriteName("Empelium90_0.gr2"), std::string());
+    CHECK_EQ(refindex::gameSpriteName("TREASUREBOX_2.gr2"), std::string());
+    CHECK_EQ(refindex::gameSpriteName(""), std::string());
+    CHECK_EQ(refindex::gameSpriteName("bad\\name"), std::string());
+    CHECK_EQ(refindex::gameSpriteName("\x01\x02"), std::string());
+    refindex::Mob m;
+    m.name = "Chonchon";
+    m.sprite = "chonchon";
+    const std::vector<std::string> n = refindex::spriteNames(m, "CHOCHO");  // the game's first
+    CHECK(!n.empty() && n.front() == "chocho");
+    CHECK(std::find(n.begin(), n.end(), "chonchon") != n.end());
+}
+
 // 3.0.11-beta.76 (the owner: «иконки ... и всего остального ... грузить в текстур которые обработаны»): a frame put
 // together 4 times bigger - a palette picture from the AI pack's frame when there is one, else stretched
 TEST(sprite_file_frame_bigger) {

@@ -189,7 +189,12 @@ std::string shortName(const std::string& name);
 std::string mapWords(const std::map<std::string, std::string>& names, const std::string& code);
 // 3.0.11-beta.14: the client's sprite files a monster may have, the likeliest first: the server's sprite name, it
 // without an event's «_» or a variant's prefix (m_desert_wolf - desert_wolf: the client draws them alike), its name
-std::vector<std::string> spriteNames(const Mob& m);
+// 3.0.19-beta.2 (the owner: «да есть в игре такие монстры, посмотри в чем проблема»): `game` - the game's own name of
+// it (uaRO.exe's job name table, win/monster_picture) tried first: kRO's file names where the server's differ
+std::vector<std::string> spriteNames(const Mob& m, const std::string& game = {});
+// The game's job name table's word as a sprite file's name (lower case); "" - a 3D model's (the Emperium's
+// Empelium90_0.gr2, the treasure chests'), none, or not a name
+std::string gameSpriteName(const std::string& raw);
 
 // 3.0.11-beta.7: the search of «Довідник» - every word of the query a part of the name (case folded, any order: the
 // console's rule), monsters, items and maps (by the code and the client's name); the closest first in each kind:

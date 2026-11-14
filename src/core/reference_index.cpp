@@ -397,11 +397,23 @@ std::string mapWords(const std::map<std::string, std::string>& names, const std:
     return name + " " + std::to_string(std::atoi(code.c_str() + digits));
 }
 
-std::vector<std::string> spriteNames(const Mob& m) {
+std::string gameSpriteName(const std::string& raw) {
+    if (raw.empty() || raw.size() > 48) return "";
+    std::string out;
+    for (const char c : raw) {
+        const unsigned char u = static_cast<unsigned char>(c);
+        if (c == '.' || c == '\\' || c == '/' || u < 0x20) return "";  // a model's file, a path, not a name
+        out += char(u < 0x80 ? std::tolower(u) : u);
+    }
+    return out;
+}
+
+std::vector<std::string> spriteNames(const Mob& m, const std::string& game) {
     std::vector<std::string> out;
     auto add = [&](const std::string& n) {
         if (!n.empty() && std::find(out.begin(), out.end(), n) == out.end()) out.push_back(n);
     };
+    add(gameSpriteName(game));  // 3.0.19-beta.2: as the game itself draws it
     // 3.0.19-beta.1 (players' logs «no sprite for Egnigem Cenia» and 132 more): the server's variants' prefixes - an
     // MVP's «b_», an instance's «i_», «a_», «r_», «p_» too - taken off the name as it is first (r_baphomet_ -
     // baphomet_, Baphomet Jr.), then off it without its «_»

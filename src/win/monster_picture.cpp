@@ -8,6 +8,7 @@
 #include "core/mob_pictures.hpp"
 #include "core/sprite_file.hpp"
 #include "win/game_files.hpp"
+#include "win/game_memory.hpp"
 #include "win/pack_frames.hpp"
 #include "win/paths.hpp"
 #include "win/updates_hook.hpp"
@@ -39,10 +40,25 @@ bool biggerFrame(const std::string& spr, const spritefile::Sprite& sp, const spr
     return spritefile::frameImageScaled(sp, ac, 0, 0, factor, [&](int index) { return fr.at(index); }, out);
 }
 
+// 3.0.19-beta.2 (the owner: «да есть в игре такие монстры, посмотри в чем проблема»): the game's own name of a
+// monster's sprite - uaRO.exe's job name table (*(char**)0x771A18, filled at its start; FUN_005A9020 makes
+// 몬스터\<name>.spr of it): kRO's names where the server's differ - CHONCHON's CHOCHO, VERIT's Vorit, ATROCE's ATROS;
+// the Emperium's and the chests' 3D models (.gr2). "" - none (a number past the table, another build's memory)
+std::string gameName(int id) {
+    constexpr uint32_t kJobNames = 0x771A18;
+    constexpr int kJobNamesSize = 0xFD2;  // FUN_0063b080's bound
+    if (id < 1000 || id >= kJobNamesSize) return "";
+    const uint32_t table = read32(kJobNames);
+    const uint32_t at = table ? read32(table + 4 * uint32_t(id)) : 0;
+    char buf[64] = {};
+    if (!at || !readGame(at, buf, sizeof buf - 1)) return "";
+    return buf;
+}
+
 }  // namespace
 
 bool monsterPicture(int id, const refindex::Mob& mob, int box, panel::Picture& out, std::string* from) {
-    for (const std::string& name : refindex::spriteNames(mob))
+    for (const std::string& name : refindex::spriteNames(mob, gameName(id)))
         for (const std::string& folder : {kMonsters, std::string("npc")}) {
             const std::string base = "data\\sprite\\" + folder + "\\" + name;
             std::string spr, act;
