@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.19-beta.1 — what's new · 2026-11-14
+
+- **«Reference»: pictures of every monster.** The client has no sprites of Chonchon, Steel Chonchon, Verit, Atroce, Beelzebub, Satan Morroc, Sword Master, Bow Master, the treasure chests and the castle guardians — their pictures from the site are now built into uaRO Graphics. 38 more monsters (the Bio Lab MVPs, Egnigem Cenia, skeletons, kobolds) now find the game's own sprites. The same in the target card and the «Pets» section.
+- **«Guild» no longer falls apart** when pulled bigger by its corner: it grows with its size, three tabs a row. «Information» opens with the guild's emblem and name. The same fix in «Status» (Alt+A) and on the character select screen.
+- **Warp Portal and Teleport:** the list names the maps as the game's old window did (for example «Robot Factory level 2»), the map's code small under the name.
+- **The old client no longer crashes** on a clothes dye its archives lack («CPaletteRes :: Cannot find File : palette\…»): such clothes are drawn in their own colours, as the game itself does in the world.
+
 # uaRO Graphics 3.0.18 — what's new · 2026-11-13
 
 The game's whole interface on the new library: windows move and resize, the text sharp at any size. A new «Reference», a game launcher, playing from the keyboard, more of the controller, sharp damage numbers and crashes fixed.
