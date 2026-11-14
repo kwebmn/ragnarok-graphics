@@ -27,6 +27,11 @@ struct GpuTiming {
     // 3.0.6-beta.3: the renderer still makes the effects' one-time things - the own world read and its pictures going
     // up, the AI textures' pictures of what is drawn read from the pack («Тест графіки» measures a set once done)
     bool loading = false;
+    // 3.0.19-beta.8 (R-T8FGMM: a laptop drawing on its AMD card while its screen hung off its Intel - the swap chain's
+    // present 201 ms every frame): the processor's time a frame in the present and in the driver's own drawing, the
+    // last half second's average (core/present_watch); 0: not measured
+    double presentMs = 0.0;
+    double cpuMs = 0.0;
 };
 
 inline void writeTiming(bridge::WireWriter& w, const GpuTiming& t) {
@@ -45,6 +50,8 @@ inline void writeTiming(bridge::WireWriter& w, const GpuTiming& t) {
     w.f32(float(t.shown));  // 2.5.24
     w.u8(t.reflex ? 1 : 0);  // 2.5.26
     w.u8(t.loading ? 1 : 0);  // 3.0.6-beta.3
+    w.f32(float(t.presentMs));  // 3.0.19-beta.8
+    w.f32(float(t.cpuMs));
 }
 
 inline bool readTiming(bridge::WireReader& rd, GpuTiming& t) {
@@ -63,6 +70,8 @@ inline bool readTiming(bridge::WireReader& rd, GpuTiming& t) {
     r.shown = rd.f32();  // 2.5.24
     r.reflex = rd.u8() != 0;  // 2.5.26
     r.loading = rd.u8() != 0;  // 3.0.6-beta.3
+    r.presentMs = rd.left() >= 8 ? rd.f32() : 0.0;  // 3.0.19-beta.8
+    r.cpuMs = rd.left() >= 4 ? rd.f32() : 0.0;
     if (!rd.ok()) return false;
     t = r;
     return true;

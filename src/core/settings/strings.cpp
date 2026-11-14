@@ -8787,6 +8787,18 @@ constexpr Entry kTexts[] = {
     {Text::RefModeDetector, "Sees the hidden", "Бачить схованих", "Видит скрытых"},
     {Text::RefModeStill, "Does not move", "Не рухається", "Не двигается"},
     {Text::RefModePlant, "Plant", "Рослина", "Растение"},
+    {Text::PresentSlowD3d11,
+     "uaRO Graphics: each frame took {1} ms to get from one graphics card to the other - Direct3D 11 from the next "
+     "start, restart the game",
+     "uaRO Graphics: кожен кадр ішов з однієї відеокарти на іншу {1} мс — з наступного запуску Direct3D 11, "
+     "перезапустіть гру",
+     "uaRO Graphics: каждый кадр шёл с одной видеокарты на другую {1} мс — со следующего запуска Direct3D 11, "
+     "перезапустите игру"},
+    {Text::PresentSlowCard,
+     "uaRO Graphics: each frame took {1} ms to reach the screen - from the next start the game is drawn on {2}, "
+     "restart the game",
+     "uaRO Graphics: кожен кадр ішов на екран {1} мс — з наступного запуску гру малює {2}, перезапустіть гру",
+     "uaRO Graphics: каждый кадр шёл на экран {1} мс — со следующего запуска игру рисует {2}, перезапустите игру"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

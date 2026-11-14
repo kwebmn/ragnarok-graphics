@@ -987,6 +987,8 @@ enum class Text : uint16_t {
     RefFactCompoundOn, RefFactHave, RefFactRange, RefFactStep, RefFactAttackEvery, RefMs, RefSeconds,
     RefModeAggressive, RefModePassive, RefModeLooter, RefModeAssist, RefModeCastSensor, RefModeDetector,
     RefModeStill, RefModePlant,
+    // 3.0.19-beta.8 (R-T8FGMM, core/present_watch): the chat's line when slow presents turned the drawing over
+    PresentSlowD3d11, PresentSlowCard,
     Count
 };
 

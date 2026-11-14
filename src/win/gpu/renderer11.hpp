@@ -1009,6 +1009,7 @@ private:
     double effectMs_[kEffectTimes11] = {};
     double recentMs_ = 0.0, recentEffectMs_[kEffectTimes11] = {};  // 2.2.1: the half second's, for timing()
     uint32_t recentFrames_ = 0;
+    double recentPresentMs_ = 0.0;  // 3.0.19-beta.8: the presents' time, the half second (core/present_watch)
     ULONGLONG recentSince_ = 0;
     GpuTiming recent_;
     // 0.89: what the frames ask of the processor and the driver, the log every half minute - draws, the driver's

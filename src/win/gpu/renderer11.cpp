@@ -2520,7 +2520,16 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     HRESULT hr = S_OK;
     {
         PartTime t(closed != nullptr, closed ? closed->presented : unmeasured, qpcPerMs_);
+        LARGE_INTEGER a, b;
+        QueryPerformanceCounter(&a);
         hr = swap_->Present(sync, flags);
+        QueryPerformanceCounter(&b);
+        static const double ticksPerMs = [] {  // 3.0.19-beta.8 (qpcPerMs_ is the profile's, set with it alone)
+            LARGE_INTEGER f;
+            QueryPerformanceFrequency(&f);
+            return double(f.QuadPart) / 1000.0;
+        }();
+        if (ticksPerMs > 0.0) recentPresentMs_ += double(b.QuadPart - a.QuadPart) / ticksPerMs;
     }
     if (FAILED(hr))
         failed("Present", hr);
@@ -4028,6 +4037,8 @@ void Renderer11::timeFrame() {
                                                              "glow", "water", "floor", "grass", "world",
                                                              "interface"};
         recent_.gpuMs = recentMs_ / recentFrames_;
+        recent_.presentMs = recentPresentMs_ / recentFrames_;  // 3.0.19-beta.8 (core/present_watch)
+        recentPresentMs_ = 0.0;
         recent_.loading = ai_ && ai_->pending() > 0;  // 3.0.6-beta.3: the AI textures' pictures of what is drawn
         recent_.effects.clear();
         for (int e = 0; e < kEffectTimes11; ++e) {

@@ -322,6 +322,19 @@ void Renderer::Impl::noteGpuFrame() {
             if (recentEffect[e]) recent.effects[passName(e).key] = double(recentEffect[e]) * ms;
             recentEffect[e] = 0;
         }
+        // 3.0.19-beta.8 (core/present_watch): the processor's time a frame in the present and in the drawing, this half
+        // second - the 30 s log empties the counts (their marks with them)
+        static const double qpcMs = [] {
+            LARGE_INTEGER f;
+            QueryPerformanceFrequency(&f);
+            return f.QuadPart > 0 ? 1000.0 / double(f.QuadPart) : 0.0;
+        }();
+        const LONGLONG swapNow = swapTicks, cpuNow = cpuTicks;
+        recent.presentMs = double(swapNow >= recentSwapMark ? swapNow - recentSwapMark : swapNow) * qpcMs /
+                           double(recentFrames);
+        recent.cpuMs = double(cpuNow >= recentCpuMark ? cpuNow - recentCpuMark : cpuNow) * qpcMs / double(recentFrames);
+        recentSwapMark = swapNow;
+        recentCpuMark = cpuNow;
         ++recent.serial;
         recentGpu = recentUpscale = 0;
         recentFrames = 0;
@@ -362,6 +375,7 @@ void Renderer::Impl::noteGpuFrame() {
              "limit's wait, %.2f ms the swap chain's present%s", double(cpuTicks) * perFrame,
              double(fenceTicks) * perFrame, double(pacerTicks) * perFrame, double(swapTicks) * perFrame, reflexPart);
     cpuTicks = fenceTicks = pacerTicks = swapTicks = reflexTicks = 0;
+    recentSwapMark = recentCpuMark = 0;  // 3.0.19-beta.8
     if (drawsGathered)  // 2.5: how many of the game's draws went as one call
         LOG_INFO("draws: %u a frame in %u calls to the GPU", drawsGathered / std::max<uint32_t>(gpuFrames, 1),
                  drawCalls / std::max<uint32_t>(gpuFrames, 1));

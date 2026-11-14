@@ -1,4 +1,5 @@
 #include "win/key_walk.hpp"
+#include "win/present_watch.hpp"
 #include "win/view3d.hpp"
 #include "win/walk_mode.hpp"
 #include "win/upkeep_watch.hpp"
@@ -1245,6 +1246,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     keywalk::setSpace(config.spaceAction);                     // 3.0.18-beta.209: Space acts
     walkmodewin::frame(config, iniPath());                     // 3.0.18-beta.208: the walk mode
     view3dwin::frame();                                        // 3.0.19-beta.6: the 3D view
+    presentwatchwin::frame(*renderer, config, iniPath(), window, gameCodePage(config));  // 3.0.19-beta.8
     groundmarks::groundTimers(config.groundTimers);  // 3.0.16-beta.21
     hotbarwin::setTimers(config.groundTimers);       // 3.0.16-beta.22: on the slots too
     groundmarks::skillCells(config.skillCells);                // 3.0.11-beta.142: a ground skill's cells

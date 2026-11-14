@@ -697,6 +697,7 @@ struct Renderer::Impl {
     UINT64 recentGpu = 0, recentUpscale = 0, recentEffect[kEffectTimes] = {};
     uint32_t recentFrames = 0;
     ULONGLONG recentSince = 0;
+    LONGLONG recentSwapMark = 0, recentCpuMark = 0;  // 3.0.19-beta.8: the present's and the drawing's, the half second
     GpuTiming recent;
     void effectBegin(EffectTimer e);
     void effectEnd(EffectTimer e);
