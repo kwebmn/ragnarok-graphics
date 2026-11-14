@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.19-beta.42 — what's new · 2026-11-15
+
+- **The 3D view: faster.** In the 3D view the game now works out the far cells of its ground (past the reflections' reach) once in 8 frames — our own ground is drawn in their place anyway, the game only gives it their colours. The game's thread does noticeably less work a frame, on the fields most. The switch «Faster far ground» is in Settings → Game → the 3D view.
+- **Less load in a crowd.** The footprints and the wings load the processor less with many characters about.
+
 # uaRO Graphics 3.0.19-beta.41 — what's new · 2026-11-15
 
 - **The 3D view: the free camera no longer flies through houses.** The camera (Ctrl+Shift+C) stops a few steps before a house, a castle's wall or a tree now and slides along it — up the wall and over the roof; out of one and away from it, it flies freely.
