@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.25 — what's new · 2026-11-14
+
+- **«Keep the frame rate» aims no higher than the game can go.** With «Keep the frame rate» above the «FPS limit», or with «Vertical sync (VSync)» above the screen's refresh (say 100 on a 60 Hz monitor), the game never shows that rate — and the autopilot turned the effects off one by one while the game ran at a steady 60. The aim is now the least of the three; likewise for the light skill effects and the card's judgement.
+
 # uaRO Graphics 3.0.19-beta.24 — what's new · 2026-11-14
 
 - **3D view: «View distance».** A new setting under «3D view» on the «Game» page: how far the 3D view sees (800–1500, 1200 by default). The game culls its ground and models at that distance, and the haze thickens fully by then — so no edge shows, and there are more frames: from the eyes the game drew everything 1500 ahead, and that drawing took most of a frame's time. 1500 — as it was.
