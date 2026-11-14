@@ -17,6 +17,7 @@
 #include "win/log.hpp"
 #include "win/uaui.hpp"
 #include "win/walk_mode.hpp"
+#include "win/world_mouse.hpp"
 
 namespace uagfx::win::view3dwin {
 namespace {
@@ -83,6 +84,7 @@ struct State {
     std::vector<uint32_t> waySeen;
     int modelPullsTold = 0;
     bool walkBefore = false;  // the walk mode as it was before the 3D view
+    int castsTold = 0;        // 3.0.19-beta.31: castWaiting's lines
     bool centred = false;
     bool looking = false;
     bool clipped = false;
@@ -654,5 +656,49 @@ bool looking() { return g_state.mode != view3d::Mode::Off && g_state.looking; }
 bool fromTheEyes() { return g_state.mode == view3d::Mode::First; }
 
 bool ownHidden() { return ownHiddenNow(); }
+
+// 3.0.19-beta.31: the game mode waiting for a skill's target (its class's vtable 0x69F388; FUN_00562580 - a click on
+// a monster): its state +0x3C4 (2 an enemy, 4 a friend), the skill +0x3C8, its range +0x3CC, its level +0x3D0; the
+// world +0xC4, its player +0x3C, whose SendMsg (vtable + 8) takes 0x29 (the target, the skill, the range) then 0x5A
+// (the level); the mode's SendMsg (vtable + 0x14) 0x4E ends the wait (FUN_00566c80 after every left press). The weight
+// past 89 % of the most: no skill (the game says it, message 0x133), 10000 aside
+bool castWaiting(bool shift) {
+    State& s = g_state;
+    if (s.mode == view3d::Mode::Off || !s.looking || !cursorOverWorld()) return false;  // a game's window: its press
+    constexpr uint32_t kModeClass = 0x69F388, kWait = 0x3C4, kSkill = 0x3C8, kRange = 0x3CC, kLevel = 0x3D0;
+    constexpr uint32_t kPlayer = 0x3C, kOwnAccount = 0x771F7C, kWeight = 0x772048, kWeightMost = 0x772050;
+    constexpr int kUseOn = 0x29, kUseLevel = 0x5A, kWaitEnds = 0x4E;
+    using ActorMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
+    using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, int msg, int a, int b, int c);
+    const uint32_t mode = readGameMode();
+    uint32_t vtable = 0, wait = 0, own = 0, world = 0, player = 0, playerTable = 0, fn = 0, modeFn = 0;
+    int skill = 0, range = 0, level = 0, weight = 0, most = 0;
+    if (!mode || !readGame(mode, &vtable, 4) || vtable != kModeClass || !readGame(mode + kWait, &wait, 4) ||
+        (wait != 2 && wait != 4) || !readGame(mode + kSkill, &skill, 4) || view3d::companionSkill(skill))
+        return false;
+    if (skill != 10000 && readGame(kWeight, &weight, 4) && readGame(kWeightMost, &most, 4) &&
+        weight * 100 / std::max(most, 1) > 89)
+        return false;  // the game's own press: it says why
+    if (!readGame(kOwnAccount, &own, 4) || !own) return false;
+    const uint32_t target = view3d::skillTargetOf(int(wait), pointedActor(), pointedClass(), s.aimed, own, shift);
+    if (!target || !readGame(mode + kRange, &range, 4) || !readGame(mode + kLevel, &level, 4) ||
+        !readGame(mode + kModeWorld, &world, 4) || !world || !readGame(world + kPlayer, &player, 4) || !player ||
+        !readGame(player, &playerTable, 4) || !readGame(playerTable + 8, &fn, 4) ||
+        !readGame(vtable + 0x14, &modeFn, 4))
+        return false;
+    const auto inExe = [](uint32_t f) { return f >= 0x401000 && f < 0x6A0000; };
+    if (!inExe(fn) || !inExe(modeFn)) return false;
+    const auto use = reinterpret_cast<ActorMsgFn>(uintptr_t(fn));
+    use(player, 0, kUseOn, int(target), skill, range);
+    use(player, 0, kUseLevel, level, 0, 0);
+    reinterpret_cast<ModeMsgFn>(uintptr_t(modeFn))(mode, kWaitEnds, 0, 0, 0);
+    if (s.castsTold < 10) {
+        ++s.castsTold;
+        LOG_INFO("3D view: the skill %d Lv %d the game waited a target for (%s) on %s %u at the press%s", skill, level,
+                 wait == 2 ? "an enemy" : "a friend", target == own ? "the character itself" : "the crosshair's",
+                 target, shift ? " (Shift)" : "");
+    }
+    return true;
+}
 
 }  // namespace uagfx::win::view3dwin

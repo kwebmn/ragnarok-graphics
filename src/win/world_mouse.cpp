@@ -96,8 +96,9 @@ int g_drops = 0;        // 3.0.11-beta.40: the drops over the parts logged
 // cursor points at in the world (the pick's record, its id at +0x18)
 int g_answer = 0;
 uint32_t g_pointed = 0;
+int g_pointedClass = -1;  // 3.0.19-beta.31: its class (the record's +0x1C)
 DWORD g_pointedAt = 0;
-constexpr uint32_t kRecordId = 0x18;
+constexpr uint32_t kRecordId = 0x18, kRecordClass = 0x1C;
 constexpr DWORD kPointedMs = 500;  // the game mode's frame not run since: none
 
 int windowsAnswer(uint32_t manager) {
@@ -193,7 +194,11 @@ void* __attribute__((thiscall)) pickedActor(uint32_t world, float x, float y) {
     void* const actor = pickedUnder(world, x, y);
     tellRightPress(world, x, y, actor);  // 3.0.11-beta.211: the facts about the pick boxes
     g_pointed = 0;  // 3.0.11-beta.99: over a window the world's actor is not pointed at
-    if (actor && g_answer != 1) std::memcpy(&g_pointed, static_cast<const uint8_t*>(actor) + kRecordId, 4);
+    g_pointedClass = -1;
+    if (actor && g_answer != 1) {
+        std::memcpy(&g_pointed, static_cast<const uint8_t*>(actor) + kRecordId, 4);
+        std::memcpy(&g_pointedClass, static_cast<const uint8_t*>(actor) + kRecordClass, 4);
+    }
     g_pointedAt = GetTickCount();
     return actor;
 }
@@ -273,6 +278,8 @@ bool installWorldMouse() {
 uint32_t pointedActor() {
     return g_pointed && GetTickCount() - g_pointedAt <= kPointedMs ? g_pointed : 0;
 }
+
+int pointedClass() { return pointedActor() ? g_pointedClass : -1; }  // 3.0.19-beta.31
 
 bool cursorOverWorld() { return g_answer != 1; }  // 3.0.13-beta.11
 

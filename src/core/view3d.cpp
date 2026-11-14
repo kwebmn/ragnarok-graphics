@@ -131,6 +131,18 @@ uint32_t nextLock(const std::vector<AimBox>& boxes, float cx, float cy, uint32_t
 
 bool monsterClass(int cls) { return cls >= 1001 && cls <= 3999; }
 
+uint32_t skillTargetOf(int wait, uint32_t pointed, int pointedClass, uint32_t aimed, uint32_t own, bool shift) {
+    const bool monster = pointed && monsterClass(pointedClass);
+    const bool fixed = pointed && pointedClass >= 45 && pointedClass < 1000;  // the warps (45) and the NPCs
+    const bool person = pointed && !monster && !fixed && pointedClass >= 0;  // a player, a homunculus, a mercenary
+    if (wait == 2) return monster || (person && pointed != own) ? pointed : aimed;
+    if (wait != 4) return 0;
+    if (monster && shift) return pointed;
+    return person ? pointed : own;
+}
+
+bool companionSkill(int skill) { return (skill >= 8000 && skill <= 8016) || (skill >= 8200 && skill <= 8237); }
+
 namespace {
 // The way's span in the box: [t0, t1] of its share; false: it misses the box
 bool spanIn(const Box& b, const float from[3], const float to[3], float& t0, float& t1) {

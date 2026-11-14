@@ -90,6 +90,18 @@ Aim aimAt(const std::vector<AimBox>& boxes, float cx, float cy, float reach, uin
 uint32_t nextLock(const std::vector<AimBox>& boxes, float cx, float cy, uint32_t current);
 // The game's classes it names monsters (as mob_hp's): 1001-3999
 bool monsterClass(int cls);
+// 3.0.19-beta.31 (the testers: in the 3D view «на себе неможливо накласти бафи, аля хіл ітд, і неможливо скастувати на
+// моба скіл який вимагає кліка по мобу» - the own picture is left out, and the crosshair pulled onto a monster moves
+// the game's cursor each frame, which forgets the monster it hovered, uaRO.exe FUN_00562580): whom a skill the game
+// waits a target for goes to at a left press. `wait` the game mode's state (+0x3C4: 2 an enemy, 4 a friend),
+// `pointed`/`pointedClass` the actor the game's pick finds under the crosshair (0 none), `aimed` the monster the
+// crosshair is pulled onto, `own` the character, `shift` held. An enemy's skill: a monster or a player under it, else
+// the pulled one; a friend's: a player, a homunculus or a mercenary under it, a monster with Shift (as the game wants
+// it), else the character itself. 0: the press is the game's as it came (no wait, a place's or a trap's, none)
+uint32_t skillTargetOf(int wait, uint32_t pointed, int pointedClass, uint32_t aimed, uint32_t own, bool shift);
+// The homunculus' (8000-8016) and the mercenary's (8200-8237) own skills - the game hands them to those
+// (FUN_00562580), never the character's
+bool companionSkill(int skill);
 
 // 3.0.19-beta.18 (R-57KBSF «некоторые нпс утоплены в пол»): the game keeps a sprite a few units nearer than its feet
 // by its rhw (uaRO.exe FUN_00546c50: n * 0x6D5EF4 + 0x6D5EF8 * scale - ~4.7 units at its own distance 300); from the

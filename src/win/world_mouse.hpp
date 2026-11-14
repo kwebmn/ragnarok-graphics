@@ -16,6 +16,9 @@ bool installWorldMouse();
 // 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): the world's actor the game's
 // cursor points at this frame (the pick's, not under a window of the game's or a part); 0 none or not hooked
 uint32_t pointedActor();
+// 3.0.19-beta.31: that actor's class (45 a warp, 46-999 an NPC, 1001-3999 a monster, else a player, a homunculus, a
+// mercenary); -1 none
+int pointedClass();
 // 3.0.13-beta.11: the game's cursor over the world (or a window it shows through), not over a window of the game's -
 // the manager's last answer
 bool cursorOverWorld();

@@ -376,3 +376,39 @@ TEST(view3d_haze_whole_at_the_sight) {
     CHECK(view3d::hazeReach(vault, 1200.0f) == vault);  // a dungeon's nearer already
     CHECK(view3d::hazeReach(outdoors, 0.0f) > 0.0f);     // nonsense: never none
 }
+
+// 3.0.19-beta.31 (the testers: in the 3D view «на себе неможливо накласти бафи, аля хіл ітд, і неможливо скастувати на
+// моба скіл який вимагає кліка по мобу»): whom a skill the game waits a target for goes to at a left press
+TEST(view3d_skill_target_at_a_press) {
+    constexpr uint32_t own = 2000001, monster = 110000123, player = 2000777, homun = 110000999, npc = 110000555;
+    using view3d::skillTargetOf;
+    // an enemy's skill: the monster under the crosshair, else the one it is pulled onto, else none (the game's)
+    CHECK_EQ(skillTargetOf(2, monster, 1002, 0, own, false), monster);
+    CHECK_EQ(skillTargetOf(2, 0, -1, monster, own, false), monster);
+    CHECK_EQ(skillTargetOf(2, 0, -1, 0, own, false), 0u);
+    CHECK_EQ(skillTargetOf(2, npc, 101, monster, own, false), monster);  // an NPC under it: the pulled one
+    CHECK_EQ(skillTargetOf(2, npc, 45, 0, own, false), 0u);              // a warp
+    CHECK_EQ(skillTargetOf(2, player, 4010, 0, own, false), player);     // another player (the castles' wars)
+    // a friend's: a player, a homunculus under it; a monster with Shift (as the game wants); else the character
+    CHECK_EQ(skillTargetOf(4, player, 4010, 0, own, false), player);
+    CHECK_EQ(skillTargetOf(4, player, 7, 0, own, false), player);
+    CHECK_EQ(skillTargetOf(4, homun, 6001, 0, own, false), homun);
+    CHECK_EQ(skillTargetOf(4, monster, 1002, monster, own, false), own);  // a Heal while fighting: on itself
+    CHECK_EQ(skillTargetOf(4, monster, 1002, monster, own, true), monster);
+    CHECK_EQ(skillTargetOf(4, 0, -1, 0, own, false), own);
+    CHECK_EQ(skillTargetOf(4, npc, 101, 0, own, false), own);
+    CHECK_EQ(skillTargetOf(4, own, 4010, 0, own, false), own);
+    // no wait, a place's (1), a trap's (5): the game's
+    CHECK_EQ(skillTargetOf(0, monster, 1002, monster, own, false), 0u);
+    CHECK_EQ(skillTargetOf(1, monster, 1002, monster, own, false), 0u);
+    CHECK_EQ(skillTargetOf(5, monster, 1002, monster, own, false), 0u);
+}
+
+// The homunculus' and the mercenary's own skills go through those (uaRO.exe FUN_00562580): left to the game
+TEST(view3d_companion_skills_left_to_the_game) {
+    using view3d::companionSkill;
+    CHECK(companionSkill(8000) && companionSkill(8013) && companionSkill(8016));  // a homunculus'
+    CHECK(companionSkill(8200) && companionSkill(8237));                          // a mercenary's
+    CHECK(!companionSkill(7999) && !companionSkill(8017) && !companionSkill(8199) && !companionSkill(8238));
+    CHECK(!companionSkill(28) && !companionSkill(271));  // Heal, Asura
+}

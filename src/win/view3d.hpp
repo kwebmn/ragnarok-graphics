@@ -22,5 +22,10 @@ bool active();                           // the 3D view on
 bool looking();                          // and the mouse turns it (not Alt): the crosshair in the cursor's place
 bool fromTheEyes();                      // 3.0.19-beta.13: the view from the character's eyes
 bool ownHidden();                        // 3.0.19-beta.15: the character's own picture left out (eyes, or right behind)
+// 3.0.19-beta.31 (the testers: «на себе неможливо накласти бафи, аля хіл ітд, і неможливо скастувати на моба скіл
+// який вимагає кліка по мобу»): a left press while looking and the game waiting for a skill's target - the skill cast
+// on the crosshair's target or the character itself (core view3d::skillTargetOf), the wait ended; true: the press
+// is not the game's any more
+bool castWaiting(bool shift);
 
 }  // namespace uagfx::win::view3dwin
