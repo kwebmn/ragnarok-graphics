@@ -72,6 +72,11 @@ bool heightAt(const Vault& v, float x, float z, float& up) {
     return true;
 }
 
+void rockOf(bool lightKnown, const float ambient[3], const float diffuse[3], float out[3]) {
+    for (int k = 0; k < 3; ++k)
+        out[k] = lightKnown ? std::clamp((ambient[k] + diffuse[k] * 0.35f) * kRock[k], 0.06f, 0.6f) : kRockUnlit[k];
+}
+
 bool forMap(const std::string& map) {
     std::string m;
     for (char c : map) m += char(std::tolower(static_cast<unsigned char>(c)));

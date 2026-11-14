@@ -487,3 +487,17 @@ TEST(view3d_free_camera_flies_within_its_reach) {
     view3d::flyStep(still, f, right, 0, 0, 0, 1.0f, true, feet);  // no key: where it was
     CHECK(still[0] == 5 && still[1] == -13 && still[2] == 5);
 }
+
+// 3.0.19-beta.38 (R-S3NQBF: in the 3D view the monsters' HP bars stood in the air over the hills hiding them): whether
+// the ground lets the eye see a place - the way between them sampled, a ground point over it hides it
+TEST(view3d_ground_hides_what_is_behind_a_hill) {
+    const float eye[3] = {0, -14, 0}, monster[3] = {0, -8, 100};  // y down: the eye 14 up, the monster's head 8 up
+    const auto flat = [](float, float) { return 0.0f; };
+    CHECK(view3d::groundLetsSee(eye, monster, flat));
+    const auto hill = [](float, float z) { return z > 40 && z < 60 ? -20.0f : 0.0f; };  // 20 up halfway
+    CHECK(!view3d::groundLetsSee(eye, monster, hill));
+    const auto low = [](float, float z) { return z > 40 && z < 60 ? -9.0f : 0.0f; };  // under the way there (11)
+    CHECK(view3d::groundLetsSee(eye, monster, low));
+    const auto atItsFeet = [](float, float z) { return z > 97 ? -10.0f : 0.0f; };  // right at it: its own ground
+    CHECK(view3d::groundLetsSee(eye, monster, atItsFeet));
+}

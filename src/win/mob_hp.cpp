@@ -24,6 +24,7 @@
 #include "win/world_mouse.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/view3d.hpp"
 
 namespace uagfx::win::mobhpwin {
 namespace {
@@ -247,6 +248,12 @@ static void frameInner(HWND game, MobHp mode, double k, int targetWidth, int tar
         const auto it = s.boxes.find(m.id);
         if (it == s.boxes.end()) continue;  // not on the screen now
         const auto place = camera ? s.places.find(m.id) : s.places.end();
+        // 3.0.19-beta.38 (R-S3NQBF: in the 3D view the bars stood in the air over the hills hiding their monsters):
+        // its head out of the eye's sight behind the ground - no bar
+        if (place != s.places.end() && view3dwin::active()) {
+            const float head[3] = {place->second[0], place->second[1] - 12.0f, place->second[2]};  // y down
+            if (!view3dwin::seen(head)) continue;
+        }
         own_ground::Tl2 feet{};
         mobhp::Bar b;
         if (place != s.places.end()) {

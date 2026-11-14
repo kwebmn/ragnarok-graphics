@@ -742,6 +742,14 @@ bool fromTheEyes() { return g_state.mode == view3d::Mode::First; }
 
 bool ownHidden() { return ownHiddenNow(); }
 
+bool seen(const float to[3]) {
+    const State& s = g_state;
+    if (s.mode == view3d::Mode::Off || !s.eyeKnown) return true;
+    const uint32_t ground = groundNow();
+    if (!ground) return true;
+    return view3d::groundLetsSee(s.eyeNow, to, [ground](float x, float z) { return groundY(ground, x, z); });
+}
+
 bool viewAxes(float right[2], float forward[2]) {
     const State& s = g_state;
     if (s.mode == view3d::Mode::Off || !s.viewKnown) return false;

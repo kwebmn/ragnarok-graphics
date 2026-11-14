@@ -3198,7 +3198,7 @@ void Renderer11::applyGrass3d() {
     }
     c.twin[0] = float(grid.side);
     c.twin[1] = grid.step;
-    c.twin[2] = 0.65f * float(std::clamp(effects_.grassAmount, 0, 100)) / 100.0f;
+    c.twin[2] = float(std::clamp(effects_.grassAmount, 0, 100)) / 100.0f;  // 3.0.19-beta.38
     c.sharpen = waterTime();
     if (windShared()) {
         c.sourceRect[2] = windNow_.x * windNow_.strength;
@@ -3234,8 +3234,8 @@ void Renderer11::applyGrass3d() {
     }
     if (grass3dLogged_ != map_) {
         grass3dLogged_ = map_;
-        LOG_INFO("3D grass: on %s - %u blades round the eye, %.1f apart (Direct3D 11)%s", map_.c_str(), grid.blades(),
-                 double(grid.step), cells ? ", on the map's own ground" : "");
+        LOG_INFO("3D grass: on %s - %u tufts of %u blades round the eye, %.1f apart (Direct3D 11)%s", map_.c_str(),
+                 grid.blades(), grass3d::kTuft, double(grid.step), cells ? ", on the map's own ground" : "");
     }
     targetBound_ = false;  // the next draw binds the target, the viewport and the game's shaders again
     ID3D11ShaderResourceView* none[6] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
@@ -3942,6 +3942,11 @@ void Renderer11::applySky3d() {
         c.fogColor[3] = float(axes.y);
         c.twin[2] = float(axes.x);
         c.twin[3] = float(axes.z);
+        // 3.0.19-beta.38 (R-S3NQBF): its rock by the map's own light (sourceClamp - no sun under a vault)
+        const rsw::World* rw = mapWorld_.world();
+        const float none[3] = {0, 0, 0};
+        cave_vault::rockOf(rw && rw->lightKnown, rw ? rw->lightAmbient : none, rw ? rw->lightDiffuse : none,
+                           c.sourceClamp);
     }
     if (sky3dLogged_ != map_) {
         sky3dLogged_ = map_;

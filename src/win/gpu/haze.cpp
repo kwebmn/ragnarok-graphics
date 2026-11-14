@@ -111,6 +111,11 @@ bool Renderer::Impl::applySky3d() {
         c.fogColor[3] = float(axes.y);
         c.twin[2] = float(axes.x);
         c.twin[3] = float(axes.z);
+        // 3.0.19-beta.38 (R-S3NQBF): its rock by the map's own light (sourceClamp - no sun under a vault)
+        const rsw::World* rw = mapWorld.world();
+        const float none[3] = {0, 0, 0};
+        cave_vault::rockOf(rw && rw->lightKnown, rw ? rw->lightAmbient : none, rw ? rw->lightDiffuse : none,
+                           c.sourceClamp);
     }
     if (sky3dLogged != mapName) {
         sky3dLogged = mapName;

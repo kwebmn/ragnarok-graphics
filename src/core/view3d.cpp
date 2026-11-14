@@ -225,6 +225,18 @@ float spriteDepth(float z, float rhw) {
     return std::max(0.0f, camera::kFar / (camera::kFar - camera::kNear) * (1.0f - camera::kNear / v));
 }
 
+bool groundLetsSee(const float eye[3], const float to[3], const std::function<float(float x, float z)>& groundY) {
+    const float d[3] = {to[0] - eye[0], to[1] - eye[1], to[2] - eye[2]};
+    const float len = std::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+    if (!(len > 2.0f * kSightEnds)) return true;
+    for (float t = kSightEnds; t <= len - kSightEnds; t += kSightStep) {
+        const float k = t / len, x = eye[0] + d[0] * k, y = eye[1] + d[1] * k, z = eye[2] + d[2] * k;
+        const float g = groundY(x, z);
+        if (std::isfinite(g) && g < y - kSightMargin) return false;  // the ground over the way (y down)
+    }
+    return true;
+}
+
 void axesOf(const float flat[3], const float up[3], float pitch, float f[3], float right[3]) {
     const float p = pitch * kRad;
     f[0] = flat[0] * std::cos(p) + kWorldUp[0] * std::sin(p);

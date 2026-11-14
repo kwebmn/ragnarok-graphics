@@ -75,3 +75,17 @@ TEST(cave_vault_for_the_dungeons_by_name) {
     CHECK(cave_vault::forMap("orcsdun01") && cave_vault::forMap("iz_dun02") && cave_vault::forMap("PAY_DUN01"));
     CHECK(!cave_vault::forMap("prt_in") && !cave_vault::forMap("prontera") && !cave_vault::forMap("in_sphinx1"));
 }
+
+// 3.0.19-beta.38 (R-S3NQBF: the vault near black under walls three times lighter): its rock by the map's own light
+TEST(cave_vault_rock_by_the_maps_light) {
+    const float ambient[3] = {0.4f, 0.35f, 0.3f}, diffuse[3] = {0.6f, 0.5f, 0.4f};
+    float rock[3] = {};
+    cave_vault::rockOf(true, ambient, diffuse, rock);
+    CHECK(std::fabs(rock[0] - (0.4f + 0.6f * 0.35f) * cave_vault::kRock[0]) < 1e-4f);
+    CHECK(rock[0] > rock[2]);  // warm
+    cave_vault::rockOf(false, ambient, diffuse, rock);
+    CHECK(rock[0] == cave_vault::kRockUnlit[0] && rock[2] == cave_vault::kRockUnlit[2]);
+    const float dark[3] = {0, 0, 0};
+    cave_vault::rockOf(true, dark, dark, rock);
+    CHECK(rock[1] >= 0.06f);  // never black
+}

@@ -128,6 +128,13 @@ void axesOf(const float flat[3], const float up[3], float pitch, float f[3], flo
 void flyStep(float eye[3], const float f[3], const float right[3], int ahead, int aside, int rise, float seconds,
              bool fast, const float feet[3]);
 
+// 3.0.19-beta.38 (R-S3NQBF: in the 3D view the monsters' HP bars stood in the air over the hills hiding them):
+// whether the ground (groundY(x, z) its y there, y down) lets the eye see `to` - the way between sampled every
+// kSightStep, kSightEnds off each end (its own ground under it, the eye's); a ground point over the way by more than
+// kSightMargin hides it
+constexpr float kSightStep = 3.0f, kSightEnds = 4.0f, kSightMargin = 0.5f;
+bool groundLetsSee(const float eye[3], const float to[3], const std::function<float(float x, float z)>& groundY);
+
 // The game's LookAt (0x409540: right = up x forward, then forward x right; 4 x 3 for row vectors, the last row the
 // move) and its inverse (0x409860)
 void lookAt(const float eye[3], const float at[3], const float up[3], float out[12]);
