@@ -159,7 +159,10 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
         const bool tintOn = c.effects().bodyTints;  // 3.0.16-beta.13
         hero_ = modelfade::Focus{};
         tint_ = afterimage::Tint{};
-        if ((flags || tintOn) && c.enhanced() && c.screenWidth > 0 && win::readCameraAndTarget(view, at)) {
+        // 3.0.19-beta.16 (R-M2CRPG: from the eyes a golden ghost over the view): the character's place on the screen
+        // is the game's own camera's - not in the 3D view (behind, the character stands before the camera anyway)
+        if ((flags || tintOn) && c.enhanced() && c.screenWidth > 0 && !win::view3dwin::active() &&
+            win::readCameraAndTarget(view, at)) {
             const camera::Projection p = camera::projectionFor(c.screenWidth, c.screenHeight);
             hero_ = modelfade::focusOf(p, view, at);
             if (flags) modelfade::holeOf(hero_, hole);

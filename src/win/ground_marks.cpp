@@ -21,6 +21,7 @@
 #include "win/mob_hp.hpp"
 #include "win/pick_hook.hpp"
 #include "win/target_card.hpp"
+#include "win/view3d.hpp"
 
 namespace uagfx::win::groundmarks {
 namespace {
@@ -332,7 +333,9 @@ void draw(FrameRecord& record, int width, int height) {
         w.glide = groundway::WalkGlide{};
         tellWalk(w);
     }
-    const bool arrowShown = w.look != WalkLook::Off && (walking || w.has);
+    // 3.0.19-beta.16 (R-M2CRPG: from the eyes the arrow lay right under them, a big white one over the view): not in
+    // the 3D view
+    const bool arrowShown = w.look != WalkLook::Off && (walking || w.has) && !view3dwin::active();
     if (padNow && s.ring != TargetRing::Off) {
         target = uapad::runtime::target();
         next = uapad::runtime::preview();
