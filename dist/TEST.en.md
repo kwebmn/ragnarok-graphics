@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.19-beta.41 — what's new · 2026-11-15
+
+- **The 3D view: the free camera no longer flies through houses.** The camera (Ctrl+Shift+C) stops a few steps before a house, a castle's wall or a tree now and slides along it — up the wall and over the roof; out of one and away from it, it flies freely.
+- **The 3D view: the water reflects the sky.** From the eyes, water seen at a low angle reflects the 3D sky's own horizon now — by day, at night and under a cave's vault — not a blue of its own.
+
 # uaRO Graphics 3.0.19-beta.40 — what's new · 2026-11-15
 
 - **The 3D view: the weather in depth.** In the 3D view the snow, the rain, the falling leaves and the motes in the air are particles in the world round you now, not layers over the picture: flakes pass by your eyes, the rain falls in slanting streaks with the wind, the leaves tumble, and all of it hides behind walls and houses. The desert's sand is as it was. The switch «Weather in the 3D view» is in Settings → Game → the 3D view.
