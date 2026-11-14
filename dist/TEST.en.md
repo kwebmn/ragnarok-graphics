@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.3 — what's new · 2026-11-14
+
+- **«Reference» shows the same as the site:** the site now works out which monsters are in the game (on maps and the ones scripts call — the Emperium, the castle guardians, quest MVPs) and which things one can get (from boxes, albums and NPCs too). Once the site updates its data pack, «Reference» follows its word; with an older pack — as before.
+
 # uaRO Graphics 3.0.19-beta.2 — what's new · 2026-11-14
 
 - **«Reference»: Chonchon, Steel Chonchon, Verit, Atroce and others in the game's own sprites.** The game names their files the Korean way (chocho, vorit, atros), not as the server does, so «Reference» did not find them. Now it asks the game for the name first. The Emperium and the treasure chests are 3D models in the game — they keep the site's pictures.
