@@ -835,6 +835,11 @@ struct Renderer::Impl {
     // wait, the swap chain's present - for the log next to cpuTicks (the game's own wait is the bridge's, remote.cpp)
     LONGLONG fenceTicks = 0, pacerTicks = 0, swapTicks = 0;
     LONGLONG reflexTicks = 0;  // 2.5.26: Reflex's sleep after the present (Upscaler::afterPresent)
+    // 3.0.19-beta.22 (R-8HBYXU «всеравно тормозит»: the drawing 11.8 ms a frame in the 3D view, no parts known): the
+    // processor's time of the passes that read the game's draws or make the own world's, for the log next to cpuTicks
+    enum CpuPart { kCpuGroundNotes, kCpuCasters, kCpuOwnGroundNotes, kCpuOwnGround, kCpuOwnWater, kCpuOwnModelNotes,
+                   kCpuActorShadows, kCpuParts };
+    LONGLONG cpuPartTicks[kCpuParts] = {};
     struct CpuTime {
         LONGLONG& total;
         LARGE_INTEGER start{};

@@ -106,12 +106,19 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // characters' list comes first of those - or at the interface, the shadows go onto what is drawn so far: the
     // map and its models, before the characters and the effects.
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn = true;
+    // 3.0.19-beta.22 (R-8HBYXU): not in the 3D view over the own ground - its seams, hills and grass's cells are for
+    // the game's ground, left out then, and the grass is off there; from the eyes the game draws its ground to 1500
     if (!seamPass && !ownPass && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite &&
-        (seamsWanted() || hillsWanted() || grassCellsWanted()))
+        (seamsWanted() || hillsWanted() || grassCellsWanted()) &&
+        !(ownState.decided && ownState.frame && camera::wideView())) {
+        CpuTime t(cpuPartTicks[kCpuGroundNotes]);
         noteGround(rec, d);  // 1.9; 1.15 the smooth hills of the next frame; 2.2.1 the grass's ground
+    }
     // 1.16: an opaque draw of the world into the next frame's mirror (2.2: the sun's map is gone)
-    if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite && (mirrorCollecting() || shadowCollecting()))
+    if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite && (mirrorCollecting() || shadowCollecting())) {
+        CpuTime t(cpuPartTicks[kCpuCasters]);
         noteCaster(rec, d, s);  // 3.0.16-beta.16: the torches' shadows too
+    }
     // 3.0.16-beta.18: a character's sprite - the torches' shadows of it
     if (!inner && !s.ui && s.blend && d.vertexCount == 4 && d.texture[0] && shadowCollecting()) noteStanding(rec, d);
     // 3.0.4-beta.10: the own ground in place of the game's (own_ground.cpp) - the game's ground draws noted, not drawn,
@@ -122,6 +129,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
             ownState.frame = prepareOwnGround();
         }
         if (ownState.frame) {
+            CpuTime t(cpuPartTicks[kCpuOwnGroundNotes]);
             noteOwnGround(rec, d);
             return;
         }
@@ -132,31 +140,41 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         ownState.decided = true;
         ownState.frame = prepareOwnGround();
     }
-    if (!inner && ownState.frame && !ownState.drawn && (s.ui || s.blend) && !drawOwnGround()) return;
+    if (!inner && ownState.frame && !ownState.drawn && (s.ui || s.blend)) {
+        CpuTime t(cpuPartTicks[kCpuOwnGround]);
+        if (!drawOwnGround()) return;
+    }
     // 3.0.4-beta.20: the own water past the far plane, after the characters (the modern water's copy of the world taken
     // there, as before). 3.0.4-beta.24 (R-PTAMG4 «на корабле видна полоса»): at the start of the game's sorted list -
     // its water and its models' keyed faces back to front, depth not written (uaRO.exe 0x40e4d0) -, not at its first
     // water quad: the faces before that one lay under the far water (a band of water over the ship's deck). The list's
     // first water quad read ahead in the record for its picture, state, colour and waves; or at the interface
     if (!inner && ownState.frame && !ownState.waterDrawn && !s.ui && s.blend && !s.zWrite) {
+        CpuTime t(cpuPartTicks[kCpuOwnWater]);
         noteOwnWaterAhead(rec, size_t(&d - rec.draws().data()));
         if (!drawOwnWater()) return;
     }
-    if (!inner && ownState.frame && !ownState.waterDrawn && s.ui && !drawOwnWater()) return;
+    if (!inner && ownState.frame && !ownState.waterDrawn && s.ui) {
+        CpuTime t(cpuPartTicks[kCpuOwnWater]);
+        if (!drawOwnWater()) return;
+    }
     // 3.0.4-beta.14: a draw of the game's own models near - the far models' colours and state learnt from it. Not by
     // this picture's choice (ownState.frame): the game draws its models before its ground
     if (!inner && ownState.serial && ownGroundWanted() && effects.ownFarModels && !s.ui && d.fvf == d3d7::FVF_TL1 &&
-        s.zWrite && !s.blend && d.effect == 0)
+        s.zWrite && !s.blend && d.effect == 0) {
+        CpuTime t(cpuPartTicks[kCpuOwnModelNotes]);
         noteOwnModels(rec, d);
+    }
     if (!inner && !s.ui && s.blend && seamsDue() && !applySeams()) return;  // 1.9: before the soft shadows
     if (!inner && !s.ui && s.blend && aoDue() && !applyAo()) return;
     if (!inner && !s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
     if (!inner && !s.ui && s.blend && grassDue() && !applyGrass()) return;  // 0.81: the grass under the characters
     // 0.32: the characters' shadows likewise - from this draw on the frame's characters stand on the ground - and
     // the game's round ones are in them.
-    if (!inner && !s.ui && s.blend && actorShadowsDue() &&
-        !applyActorShadows(rec, size_t(&d - rec.draws().data())))
-        return;
+    if (!inner && !s.ui && s.blend && actorShadowsDue()) {
+        CpuTime t(cpuPartTicks[kCpuActorShadows]);
+        if (!applyActorShadows(rec, size_t(&d - rec.draws().data()))) return;
+    }
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Shadow) && feetWanted()) noteFoot(rec, d);  // 0.94
     if (!s.ui && actorShadowsDrawn && d.effect == uint8_t(effect_exe::Kind::Shadow)) return;
     // 2.7.40: the game's own snow where ours falls - one snow, not two (weather::hidesGameEffect)

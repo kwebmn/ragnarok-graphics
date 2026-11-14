@@ -374,6 +374,26 @@ void Renderer::Impl::noteGpuFrame() {
     LOG_INFO("CPU: %.2f ms a frame in the driver's drawing (%.2f of it waiting for the card); %.2f ms the frame "
              "limit's wait, %.2f ms the swap chain's present%s", double(cpuTicks) * perFrame,
              double(fenceTicks) * perFrame, double(pacerTicks) * perFrame, double(swapTicks) * perFrame, reflexPart);
+    {  // 3.0.19-beta.22 (R-8HBYXU): the passes' share of the drawing
+        static const char* const kPartNames[kCpuParts] = {
+            "the game's ground noted (hills, seams, grass)", "the reflections' and torch shadows' casters",
+            "the game's ground for the own ground's colours", "the own ground", "the own water",
+            "the game's models for the far models' colours", "the characters' shadows"};
+        std::string parts;
+        LONGLONG known = 0;
+        for (int k = 0; k < kCpuParts; ++k) {
+            known += cpuPartTicks[k];
+            if (double(cpuPartTicks[k]) * perFrame < 0.01) continue;
+            char part[96];
+            std::snprintf(part, sizeof part, "%s%s %.2f", parts.empty() ? "" : ", ", kPartNames[k],
+                          double(cpuPartTicks[k]) * perFrame);
+            parts += part;
+        }
+        for (LONGLONG& t : cpuPartTicks) t = 0;
+        if (!parts.empty())
+            LOG_INFO("CPU: of the drawing a frame - %s; the rest (the game's draws, the effects) %.2f ms",
+                     parts.c_str(), double(std::max<LONGLONG>(cpuTicks - known, 0)) * perFrame);
+    }
     cpuTicks = fenceTicks = pacerTicks = swapTicks = reflexTicks = 0;
     recentSwapMark = recentCpuMark = 0;  // 3.0.19-beta.8
     if (drawsGathered)  // 2.5: how many of the game's draws went as one call
