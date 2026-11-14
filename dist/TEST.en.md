@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.40 — what's new · 2026-11-15
+
+- **The 3D view: the weather in depth.** In the 3D view the snow, the rain, the falling leaves and the motes in the air are particles in the world round you now, not layers over the picture: flakes pass by your eyes, the rain falls in slanting streaks with the wind, the leaves tumble, and all of it hides behind walls and houses. The desert's sand is as it was. The switch «Weather in the 3D view» is in Settings → Game → the 3D view.
+
 # uaRO Graphics 3.0.19-beta.39 — what's new · 2026-11-15
 
 - **The 3D view: HP bars no longer show through houses.** A monster's bar and name are no longer seen through a house, a castle's wall or a tree that hides it from the eyes.
