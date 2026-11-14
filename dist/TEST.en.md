@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.29 — what's new · 2026-11-14
+
+- **The game is a little faster again in the 3D view.** The frame for the renderer is now written straight into the memory shared with it, not into a buffer of its own first and copied once more from there. In the 3D view that is megabytes a frame. A smaller thing too: the driver now finds where the world ends and the interface begins in a frame at once, instead of looking through thousands of draws several times a frame.
+
 # uaRO Graphics 3.0.19-beta.28 — what's new · 2026-11-14
 
 - **The game is faster, the 3D view above all.** Every frame the driver hands all the game's vertices to the renderer, and the memory for them was filled with zeros each time before the copy. In the 3D view that is megabytes a frame — the profile showed 6–7 % of the game's thread. The vertices are now copied straight away, with no zeros first.
