@@ -262,6 +262,9 @@ private:
     uint64_t keepSince_ = 0;
     unsigned keepFrames_ = 0;
     int keepSlow_ = 0;
+    int keepAimTold_ = 0;  // 3.0.19-beta.25: keep_fps held to the screen's refresh / the frame limit - told
+    int screenHz_ = 0;     // 3.0.19-beta.25: the game window's screen's refresh (keepFrameRate's windows), 0 unknown
+    int keepAim(const Config& config) const;  // core effect_costs::keepTarget with it
     std::set<std::string> keepOff_;
     // 3.0.4-beta.11 (R-EQDYNE «нету травы»): the switches the player turned on in this game, which keep_fps leaves,
     // and its choice said on the screen for 10 s (the frame counter's line)

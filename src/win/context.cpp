@@ -1512,9 +1512,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     keepFrameRate(config, window);
     g_parts.mark("keepFrameRate", nowMs());
     // 3.0.18-beta.186: [frames] light_skills - the game's light skill effects when the frames run short in a crowd
-    if (const int fps = lightskillswin::frame(config.lightSkills, config.keepFps, foreground, map_); fps >= 0)
+    if (const int fps = lightskillswin::frame(config.lightSkills, keepAim(config), foreground, map_); fps >= 0)
         sayOnScreen(wideOf(settings::fmt(settings::tr(language(), settings::Text::LightSkillsOnNote),
-                                         {std::to_string(fps), std::to_string(config.keepFps)})));
+                                         {std::to_string(fps), std::to_string(keepAim(config))})));
     // 0.87: [debug] profile; 3.0.5-beta.10: and while «Тест графіки» runs - where the game's thread goes on each set
     // (R-5A9BTU: Direct3D 11's «Високі» 63 ms of the processor a frame, nothing sampled with the profile off)
     Profiler::get().run(GetCurrentThreadId(), config.profile || test_.running());
@@ -1807,6 +1807,10 @@ void Context::watchNewMapTyping() {
     }
 }
 
+int Context::keepAim(const Config& config) const {
+    return effect_costs::keepTarget(config.keepFps, config.fpsLimit, config.vsync, screenHz_);
+}
+
 void Context::keepFrameRate(const Config& config, HWND window) {
     const uint64_t now = GetTickCount64();
     if (keepNoteUntil_ && now >= keepNoteUntil_) {  // 3.0.4-beta.11: its line said long enough
@@ -1844,6 +1848,16 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     keepSince_ = now;
     keepFrames_ = 0;
     keepOnMap_ = onMap;
+    // 3.0.19-beta.25: the window's screen's refresh, for keepAim
+    if (const HMONITOR mon = MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST)) {
+        MONITORINFOEXW mi{};
+        mi.cbSize = sizeof mi;
+        DEVMODEW dm{};
+        dm.dmSize = sizeof dm;
+        if (GetMonitorInfoW(mon, &mi) && EnumDisplaySettingsW(mi.szDevice, ENUM_CURRENT_SETTINGS, &dm) &&
+            dm.dmDisplayFrequency > 1)
+            screenHz_ = int(dm.dmDisplayFrequency);
+    }
     GpuTiming gpu;  // 2.2.2: the card's own work - a game slow for the processor's part keeps its effects
     const double gpuMs = renderer && renderer->gpuTiming(gpu) ? gpu.gpuMs : -1.0;
     if (windowOnMap) {
@@ -1851,7 +1865,16 @@ void Context::keepFrameRate(const Config& config, HWND window) {
         noteFirstGame(config, fps);  // 3.0.11-beta.61
     }
     if (config.keepFps <= 0) return;
-    keepSlow_ = effect_costs::slowForCard(fps, config.keepFps, gpuMs) ? keepSlow_ + 1 : 0;
+    // 3.0.19-beta.25 (R-GD8UMS: keep_fps 100 with vsync on a 60 Hz screen - the effects turned off one by one while
+    // the game ran at the screen's 60): no higher than the game can go - the frame limit, with vsync the screen's
+    const int aim = keepAim(config);
+    if (aim != config.keepFps && keepAimTold_ < 3) {
+        ++keepAimTold_;
+        LOG_INFO("keep_fps: %d asked, %d held - %s", config.keepFps, aim,
+                 config.vsync && screenHz_ > 0 && aim == screenHz_ ? "the screen's refresh with vsync"
+                                                                   : "the frame limit");
+    }
+    keepSlow_ = effect_costs::slowForCard(fps, aim, gpuMs) ? keepSlow_ + 1 : 0;
     if (keepSlow_ < 2) return;
     keepSlow_ = 0;
     EffectSettings fx = effects();
@@ -1860,7 +1883,7 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     passed.insert(keepByHand_.begin(), keepByHand_.end());
     // 3.0.5-beta.3: how far the card is over the frame keep_fps wants - the thinned grass goes first when the others
     // cannot make that up (R-UQKHFX)
-    const double overMs = gpuMs >= 0.0 ? gpuMs - 0.85 * 1000.0 / double(config.keepFps) : -1.0;
+    const double overMs = gpuMs >= 0.0 ? gpuMs - 0.85 * 1000.0 / double(aim) : -1.0;
     const std::string key = effect_costs::pickToDrop(fx, measured ? costs : effect_costs::Costs{}, passed, overMs);
     if (key.empty()) return;
     const double othersMs = key == "grass" && measured ? effect_costs::othersCost(fx, costs, passed) : 0.0;
@@ -1873,18 +1896,18 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     if (gpuMs >= 0) std::snprintf(card, sizeof card, ", the card %.1f ms a frame", gpuMs);
     if (thin)
         LOG_INFO("keep_fps: %.0f fps, under %d%s - the grass thinned for this game (its roots on every second row)%s",
-                 fps, config.keepFps, card, cost);
+                 fps, aim, card, cost);
     else if (othersMs > 0.0)  // 3.0.5-beta.3: the grass before the others - why
         LOG_INFO("keep_fps: %.0f fps, under %d%s - effects.grass off for this game%s, before the others: they cost "
-                 "%.2f ms together, the card %.2f ms over", fps, config.keepFps, card, cost, othersMs, overMs);
+                 "%.2f ms together, the card %.2f ms over", fps, aim, card, cost, othersMs, overMs);
     else
-        LOG_INFO("keep_fps: %.0f fps, under %d%s - effects.%s off for this game%s", fps, config.keepFps, card,
-                 key.c_str(), cost);
+        LOG_INFO("keep_fps: %.0f fps, under %d%s - effects.%s off for this game%s", fps, aim, card, key.c_str(),
+                 cost);
     // 3.0.4-beta.11: said on the screen too - the grass gone with nothing said looked like a fault (R-EQDYNE)
     const settings::IniSetting* s = settings::findSetting("effects." + key);
     const settings::Lang lang = language();
     const std::string name = s ? settings::tr(lang, s->label) : key;
-    const std::string fpsNow = std::to_string(int(fps + 0.5)), target = std::to_string(config.keepFps);
+    const std::string fpsNow = std::to_string(int(fps + 0.5)), target = std::to_string(aim);
     const settings::Text note = thin ? settings::Text::KeepFpsThinNote : settings::Text::KeepFpsOffNote;
     sayOnScreen(wideOf(thin ? settings::fmt(settings::tr(lang, note), {fpsNow, target})
                             : settings::fmt(settings::tr(lang, note), {name, fpsNow, target})));
@@ -1910,9 +1933,10 @@ card_speed::Judge& Context::judge() const {
 // and the settings app (uaro-graphics\card-level.txt). 3.0.11-beta.58 (the autopilot): every card, the whole ladder
 void Context::judgeCard(const Config& config, double fps, double gpuMs) {
     if (config.effects.preset != EffectPreset::Auto) return;
-    const int target = config.fpsLimit > 0 ? config.fpsLimit : 60;
+    // 3.0.19-beta.25 (R-GD8UMS): with vsync no higher than the screen's refresh (a 60 Hz screen at the limit's 100)
+    const int target = effect_costs::keepTarget(config.fpsLimit > 0 ? config.fpsLimit : 60, 0, config.vsync, screenHz_);
     const int before = judge().level();
-    const card_speed::Step step = judge().window(fps, target, gpuMs, config.keepFps);
+    const card_speed::Step step = judge().window(fps, target, gpuMs, keepAim(config));  // .25: the held target
     if (step == card_speed::Step::None) return;
     effectsMade_ = false;
     keepSlow_ = 0;  // 3.0.11-beta.58: the set moved this window - keep_fps counts again from the next one

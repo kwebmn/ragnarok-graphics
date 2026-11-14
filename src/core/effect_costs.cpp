@@ -1,5 +1,6 @@
 #include "core/effect_costs.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <sstream>
 
@@ -81,6 +82,14 @@ Costs parse(const std::string& text) {
 bool slowForCard(double fps, int target, double gpuMs) {
     if (target <= 0 || fps >= 0.9 * double(target)) return false;
     return gpuMs < 0.0 || gpuMs > 0.85 * 1000.0 / double(target);
+}
+
+int keepTarget(int keepFps, int fpsLimit, bool vsync, int refreshHz) {
+    if (keepFps <= 0) return 0;
+    int t = keepFps;
+    if (fpsLimit > 0) t = std::min(t, fpsLimit);
+    if (vsync && refreshHz > 0) t = std::min(t, refreshHz);
+    return t;
 }
 
 std::string passOf(const std::string& key) {

@@ -136,3 +136,16 @@ TEST(effect_costs_keep_fps_turns_the_grass_off_first_when_the_others_cannot_make
     whole.grassThin = false;
     CHECK(effect_costs::pickToDrop(whole, c, {}, 26.0) == "grass_thin");
 }
+
+// 3.0.19-beta.25 (R-GD8UMS: keep_fps 100 with vsync on a 60 Hz screen - never reached, the effects turned off one by
+// one, the game at the screen's 60 all along): the frame rate keep_fps holds the game to - the least of it, the frame
+// limit (0: none) and, with vsync, the screen's refresh (0: not known); 0: keep_fps off
+TEST(effect_costs_keep_fps_aims_no_higher_than_the_game_can_go) {
+    CHECK(effect_costs::keepTarget(100, 100, true, 60) == 60);   // the screen's 60 with vsync
+    CHECK(effect_costs::keepTarget(100, 100, false, 60) == 100);  // no vsync: past the screen
+    CHECK(effect_costs::keepTarget(60, 60, true, 144) == 60);
+    CHECK(effect_costs::keepTarget(100, 50, false, 60) == 50);    // the frame limit
+    CHECK(effect_costs::keepTarget(100, 0, true, 0) == 100);      // no limit, the screen not known
+    CHECK(effect_costs::keepTarget(0, 60, true, 60) == 0);        // off
+    CHECK(effect_costs::keepTarget(-5, 60, true, 60) == 0);
+}
