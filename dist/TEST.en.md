@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.5 — what's new · 2026-11-14
+
+- **Assumptio without the square.** Under Assumptio the game draws the character's body and head once more — slightly larger, pulsing, as light. That pass now takes the game's own picture instead of the frame's HD copy, so there should be no light square around the character any more. If the square stays, send a report while Assumptio is on you: the log now has a line about this pass.
+
 # uaRO Graphics 3.0.19-beta.4 — what's new · 2026-11-14
 
 - **«Reference»: your quest step — from the server.** A quest's card has a «Your progress» block: the step you are on, what to do now and whom to go to (the «Next: …» line opens the NPC with «Lead me here»). The site reads your character's quest variable on the server, so «the server didn't give the variable» shows too. The first quest is Kiel Hyre; the program must be signed in to the site with the account your character is on. Refreshed once a minute while «Reference» is open.
