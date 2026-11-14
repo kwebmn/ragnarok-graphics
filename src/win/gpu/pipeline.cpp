@@ -235,7 +235,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"critters_vs", "vs_5_0", &crittersVs},        {"material_ps", "ps_5_0", &materialPs},
                    {"mirror_vs", "vs_5_0", &mirrorVs},            {"mirror_ps", "ps_5_0", &mirrorPs},
                    {"torch_shadow_vs", "vs_5_0", &torchShadowVs}, {"torch_shadow_ps", "ps_5_0", &torchShadowPs},
-                   {"grass3d_vs", "vs_5_0", &grass3dVs},          {"grass3d_ps", "ps_5_0", &grass3dPs}};
+                   {"grass3d_vs", "vs_5_0", &grass3dVs},          {"grass3d_ps", "ps_5_0", &grass3dPs},
+                   {"weather3d_vs", "vs_5_0", &weather3dVs},      {"weather3d_ps", "ps_5_0", &weather3dPs}};
     store.sink = startSink;  // 0.40
     store.context = startContext;
     store.total = 6 + int(sizeof effects / sizeof effects[0]);  // the six below and the effects'

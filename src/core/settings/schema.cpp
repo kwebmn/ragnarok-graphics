@@ -508,6 +508,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.19-beta.33 (the owner: «я так траву в 3д и не увидел»): the grass as blades in the world
         {"view3d", "grass", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dGrass,
          Text::View3dGrassHint, "", &E::grass3d},
+        // 3.0.19-beta.40 (the owner's «делаем все по порядку»): the weather as particles in the world
+        {"view3d", "weather", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dWeather,
+         Text::View3dWeatherHint, "", &E::weather3d},
         // 3.0.19-beta.36 (the concept's threat's arc): a red arc on the side one out of sight hits from
         {"view3d", "threat", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dThreat,
          Text::View3dThreatHint, ""},

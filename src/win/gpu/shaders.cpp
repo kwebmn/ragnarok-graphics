@@ -2702,6 +2702,127 @@ float4 grass3d_ps(BladeOut i) : SV_Target {
     return float4(i.colour * lerp(0.42, 1.38, i.tip) + float3(0.045, 0.04, 0.0) * i.tip, 1.0);
 }
 
+// 3.0.19-beta.40 (the owner's «делаем все по порядку»: in the 3D view the weather fell as flat layers over the
+// picture; core/weather3d, weather.cpp applyWeather3d): the 3D view's weather - particles in the world round the eye.
+// A box the world's own (twinY a side, twinW high: from 15 under the eye up) they repeat in - each its place by its
+// number, falling sourceRect.z units a second (y down), blown sourceRect.xy so far, wrapped into the box round the
+// eye; a quad each turned to the camera (rain: a streak along its fall - fogColor.xy the wind's way, units a second -
+// sourceRect.w long), twinH its half size, footprint its alpha. twinX the kind (weather_ps's: 1 snow, 2 rain, 3
+// leaves, 5 pollen, 6 dust - lit by the picture's copy t2 under it), sharpen the time; the depth's copy t3 hides one
+// behind what is nearer. Nearer than the game's near plane too: the flakes pass the eyes.
+struct FlakeOut {
+    float4 pos : SV_Position;
+    float2 uv : TEXCOORD0;
+    float viewZ : TEXCOORD1;
+    float3 colour : TEXCOORD2;
+    float alpha : TEXCOORD3;
+    float spin : TEXCOORD4;
+};
+
+float2 flakePixel(float3 v) {  // a view point -> the target's pixel (grass3d_vs's)
+    return float2(v.x / v.z * f0 + cx, v.y / v.z * f1 + cy) * scale + 0.5 + float2(jitterX, jitterY);
+}
+
+float4 flakeClip(float2 px) {
+    return float4(px.x * 2.0 / targetSize.x - 1.0, 1.0 - px.y * 2.0 / targetSize.y, 0.5, 1.0);
+}
+
+FlakeOut weather3d_vs(uint id : SV_VertexID) {
+    FlakeOut o;
+    o.pos = float4(2.0, 2.0, 2.0, 1.0);  // off the picture: none
+    o.uv = float2(0.0, 0.0);
+    o.viewZ = 0.0;
+    o.colour = float3(1.0, 1.0, 1.0);
+    o.alpha = 0.0;
+    o.spin = 0.0;
+    uint n = id / 6u, k = id % 6u;
+    uint corner = k == 0u ? 0u : (k == 1u || k == 4u) ? 1u : (k == 2u || k == 3u) ? 2u : 3u;  // 0 1 2, 2 1 3
+    float2 c2 = float2(corner == 1u || corner == 3u ? 1.0 : -1.0, corner >= 2u ? 1.0 : -1.0);
+    int kind = int(twinX + 0.5);
+    float side = max(twinY, 1.0), high = max(twinW, 1.0);
+    float3 box = float3(side, high, side);
+    float fn = float(n);
+    float3 h = float3(hash12(float2(fn, 1.37)), hash12(float2(fn, 7.91)), hash12(float2(fn, 3.17)));
+    float t = sharpen;
+    float3 eye = float3(r9, r10, r11);
+    float3 p = h * box + float3(sourceRect.x, sourceRect.z * t, sourceRect.y);  // falling (y down) and blown
+    float ph = hash12(float2(fn, 5.53)) * 6.2832;
+    if (kind == 1) p.xz += float2(sin(t * 0.9 + ph), cos(t * 0.7 + ph * 1.3)) * 0.6;  // a flake sways
+    if (kind == 3) p.xz += float2(sin(t * 1.1 + ph), cos(t * 0.8 + ph * 0.7)) * 1.5;  // a leaf drifts
+    if (kind >= 5) p += float3(sin(t * 0.37 + ph), 0.5 * sin(t * 0.23 + ph * 1.7), cos(t * 0.29 + ph * 0.3)) * 1.2;
+    float3 low = eye - float3(side * 0.5, high - 15.0, side * 0.5);
+    float3 rel = p - low;
+    rel -= box * floor(rel / box);
+    float3 w = low + rel;
+    float fade = 1.0 - smoothstep(0.3 * side, 0.5 * side, length(w.xz - eye.xz));
+    if (fade <= 0.0) return o;
+    float3 v = bladeView(w);
+    if (v.z <= 1.0) return o;
+    float alpha = kind == 1 ? 0.85 : kind == 2 ? 0.4 : kind == 3 ? 0.92 : kind == 5 ? 0.55 : 0.35;
+    float3 colour = kind == 2   ? float3(0.78, 0.83, 0.92)
+                    : kind == 5 ? float3(1.0, 0.95, 0.75)
+                    : kind == 6 ? float3(0.85, 0.80, 0.70)
+                                : float3(1.0, 1.0, 1.0);
+    if (kind == 3)
+        colour = h.x < 0.4 ? float3(0.86, 0.45, 0.13) : h.x < 0.75 ? float3(0.58, 0.36, 0.16) : float3(0.62, 0.66, 0.2);
+    if (kind == 5) alpha *= 0.55 + 0.45 * sin(t * (0.8 + h.y) + h.x * 20.0);  // catching the light, now and then
+    float2 px = flakePixel(v);
+    if (kind == 6) {  // the dust shows in the light under it (weather_ps's weatherLight)
+        int2 at = clamp(int2(px), int2(0, 0), int2(targetSize) - int2(1, 1));
+        float3 under = sceneColor.Load(int3(at, 0)).rgb;
+        float l = dot(under, float3(0.299, 0.587, 0.114));
+        alpha = min(alpha * (0.3 + 2.1 * smoothstep(0.12, 0.55, l)), 0.8);
+        colour = lerp(colour, saturate(under * 1.6 + 0.35), 0.6);
+    }
+    float nearFade = saturate((v.z - 1.0) / 2.0);  // none sharp at the eye
+    float want = twinH / v.z * f0 * scale;          // its half size in pixels
+    if (kind == 2) {  // a streak along its fall
+        float3 way = normalize(float3(fogColor.x, max(sourceRect.z, 1.0), fogColor.y));
+        float3 a = bladeView(w - way * sourceRect.w * 0.5), b = bladeView(w + way * sourceRect.w * 0.5);
+        if (a.z <= 1.0 || b.z <= 1.0) return o;
+        float2 pa = flakePixel(a), pb = flakePixel(b);
+        float2 dir = pb - pa;
+        float len = length(dir);
+        dir = len > 1e-3 ? dir / len : float2(0.0, 1.0);
+        float wide = max(want, 0.6 * scale);
+        float2 across = float2(-dir.y, dir.x) * wide;
+        o.pos = flakeClip((c2.y < 0.0 ? pa : pb) + across * c2.x);
+        o.uv = float2(c2.y, c2.x);  // along, across
+        o.alpha = alpha * fade * nearFade * min(1.0, want / wide) * footprint;
+    } else {
+        float size = want * (kind == 3 ? 1.6 : 1.0);
+        float r = max(size, 0.8 * scale);
+        o.pos = flakeClip(px + c2 * r);
+        o.uv = c2;
+        float share = size / r;  // under a pixel: fainter, not smaller
+        o.alpha = alpha * fade * nearFade * share * share * footprint;
+        o.spin = t * 2.1 + ph;
+    }
+    o.viewZ = v.z;
+    o.colour = colour;
+    return o;
+}
+
+float4 weather3d_ps(FlakeOut i) : SV_Target {
+    float raw = sceneDepth.Load(int3(int2(i.pos.xy), 0));
+    float sceneZ = raw >= 0.99999 ? 1e6 : viewDepth(raw);
+    if (sceneZ < i.viewZ - 0.05) discard;  // something nearer in front of it
+    int kind = int(twinX + 0.5);
+    float2 uv = i.uv;
+    float shape;
+    if (kind == 2) {
+        shape = exp(-uv.y * uv.y * 2.5) * saturate(1.2 - abs(uv.x));  // a streak, fading at its ends
+    } else if (kind == 3) {
+        float2 e = uv / float2(max(abs(sin(i.spin)), 0.2), 0.62);  // a leaf tumbling, its width turning
+        shape = saturate(1.0 - dot(e, e)) * 1.5;
+    } else {
+        shape = exp(-dot(uv, uv) * 2.6);  // a soft round flake, a mote
+    }
+    float a = saturate(shape) * i.alpha;
+    if (a < 0.004) discard;
+    return float4(i.colour, a);
+}
+
 // 1.7, the ground of the living world (ao.cpp applyGroundLife), before the characters, blended over by its alpha:
 // twinX sand drifting over desert ground in the wind (sand_drift), twinW the walls of a damp cave with water running
 // down them where light falls (wet_walls); 2.7.45: the snow's glints (twinY) gone. sharpen the time;

@@ -227,6 +227,8 @@ Renderer11::~Renderer11() {
     drop(crittersVs_);  // 2.5.4
     drop(grass3dVs_);  // 3.0.19-beta.37
     drop(grass3dPs_);
+    drop(weather3dVs_);  // 3.0.19-beta.40
+    drop(weather3dPs_);
     drop(crittersPs_);
     drop(crittersDataSrv_);
     drop(crittersData_);
@@ -463,7 +465,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[68] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[70] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -522,7 +524,9 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"torch_shadow_ps", ps, shaderSource(), {}, true},
                    {"sky3d_ps", ps, shaderSource(), {}, true},  // 3.0.19-beta.6: the 3D view's sky and haze
                    {"grass3d_vs", vs, shaderSource(), {}, true},  // 3.0.19-beta.37: the 3D view's grass
-                   {"grass3d_ps", ps, shaderSource(), {}, true}};
+                   {"grass3d_ps", ps, shaderSource(), {}, true},
+                   {"weather3d_vs", vs, shaderSource(), {}, true},  // 3.0.19-beta.40: the 3D view's weather
+                   {"weather3d_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -675,6 +679,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[65].code.empty() || !psOf(wants[65], sky3dPs_)) sky3dPs_ = nullptr;  // 3.0.19-beta.6
     if (wants[66].code.empty() || !vsOf(wants[66], grass3dVs_)) grass3dVs_ = nullptr;  // 3.0.19-beta.37
     if (wants[67].code.empty() || !psOf(wants[67], grass3dPs_)) grass3dPs_ = nullptr;
+    if (wants[68].code.empty() || !vsOf(wants[68], weather3dVs_)) weather3dVs_ = nullptr;  // 3.0.19-beta.40
+    if (wants[69].code.empty() || !psOf(wants[69], weather3dPs_)) weather3dPs_ = nullptr;
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -3723,6 +3729,11 @@ void Renderer11::updateWind() {
     windScreenX_ = cameraValid_ && axis > 1e-4f ? (windNow_.x * m[0] + windNow_.z * m[2]) / axis : 0.0f;
     const float s = windNow_.strength;
     weatherDrift_.advance(windScreenX_ * s * 60.0f, 0.0f, dt);
+    if (windShared()) {  // 3.0.19-beta.40: the 3D view's weather blown in the world
+        const float k = s * weather3d::kWindUnits * dt;
+        weather3dDrift_[0] = std::fmod(weather3dDrift_[0] + windNow_.x * k, weather3d::kDriftRound);
+        weather3dDrift_[1] = std::fmod(weather3dDrift_[1] + windNow_.z * k, weather3d::kDriftRound);
+    }
 }
 
 // 2.5.5: as Direct3D 12's applyShafts (haze.cpp) - the light in the air about this frame's lights (the torches'
@@ -4033,6 +4044,10 @@ void Renderer11::applyWeather() {
     // whole picture as before (its air)
     const int kind = int(c.twin[0] + 0.5f);
     const bool quads = kind != int(weather::Kind::Sand) && weatherVs_ && weatherQuadPs_;
+    // 3.0.19-beta.40: in the 3D view the particles in the world round the eye (core/weather3d) - sand's air as it is
+    const weather3d::Field field = weather3d::fieldOf(kind, c.footprint);
+    const bool inWorld = camera::wideView() && effects_.weather3d && cameraValid_ && field.count > 0 &&
+                         weather3dVs_ && weather3dPs_ && depthViews() && copyScene();
     const weather::QuadCells cells =
         weather::quadCells(kind, float(target_.width) / c.scale, float(target_.height) / c.scale);
     const uint32_t particles = cells.count[0] + cells.count[1] + cells.count[2];
@@ -4049,7 +4064,9 @@ void Renderer11::applyWeather() {
         c.sourceRect[2] = weatherDrift_.x;
         c.sourceRect[3] = windScreenX_ * windNow_.strength * 60.0f;
     }
-    if (quads) {
+    if (inWorld) {
+        applyWeather3d(kind, field);
+    } else if (quads) {
         c.reproject[0] = float(cells.count[0]);
         c.reproject[1] = float(cells.count[0] + cells.count[1]);
         for (int layer = 0; layer < 3; ++layer) c.reproject[2 + layer] = float(cells.across[layer]);
@@ -4088,6 +4105,69 @@ void Renderer11::applyWeather() {
     std::copy(pv, pv + 6, c.projection);
     std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
     worldPass(splashPs_, c, 0, 1, depthSrv_);
+}
+
+// 3.0.19-beta.40: as Direct3D 12's applyWeather3d (weather.cpp) - the 3D view's weather, particles in the world round
+// the eye (weather3d_vs reads the picture's copy t2 for the dust's light, weather3d_ps the depth t3), blended over
+void Renderer11::applyWeather3d(int kind, const weather3d::Field& f) {
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    Constants c{};
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+    const int w = target_.width, ht = target_.height;
+    c.targetSize[0] = float(w);
+    c.targetSize[1] = float(ht);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(ht);
+    c.twin[0] = float(kind);
+    c.twin[1] = f.side;
+    c.twin[2] = f.high;
+    c.twin[3] = f.half;
+    c.sourceRect[0] = weather3dDrift_[0] * f.blown;
+    c.sourceRect[1] = weather3dDrift_[1] * f.blown;
+    c.sourceRect[2] = f.fall;
+    c.sourceRect[3] = f.streak;
+    if (windShared()) {  // the rain's slant: the wind's way, units a second
+        c.fogColor[0] = windNow_.x * windNow_.strength * weather3d::kWindUnits * f.blown;
+        c.fogColor[1] = windNow_.z * windNow_.strength * weather3d::kWindUnits * f.blown;
+    }
+    c.footprint = 1.0f;
+    c.sharpen = waterTime();
+    if (weather3dLogged_ != map_) {
+        weather3dLogged_ = map_;
+        LOG_INFO("3D weather: kind %d over %s - %u particles in the world round the eye (a box %.0f wide, %.0f high, "
+                 "Direct3D 11)", kind, map_.c_str(), f.count, double(f.side), double(f.high));
+    }
+    targetBound_ = false;  // the next draw binds the target, the viewport and the game's shaders again
+    ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
+    ctx_->PSSetShaderResources(0, 4, none);
+    ctx_->OMSetRenderTargets(1, &target_.rtv, nullptr);
+    const D3D11_VIEWPORT vp{0.0f, 0.0f, float(w), float(ht), 0.0f, 1.0f};
+    ctx_->RSSetViewports(1, &vp);
+    const D3D11_RECT whole{0, 0, w, ht};
+    ctx_->RSSetScissorRects(1, &whole);
+    setConstants(c);
+    ctx_->OMSetBlendState(blendState(true, d3d7::BLEND_SRCALPHA, d3d7::BLEND_INVSRCALPHA,
+                                     D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
+                                         D3D11_COLOR_WRITE_ENABLE_BLUE),
+                          nullptr, 0xFFFFFFFF);
+    ctx_->OMSetDepthStencilState(depthState(false, false, d3d7::CMP_ALWAYS), 0);
+    ctx_->RSSetState(rasterState(d3d7::CULL_NONE));
+    ctx_->IASetInputLayout(nullptr);
+    ctx_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    ctx_->VSSetShader(weather3dVs_, nullptr, 0);
+    ctx_->PSSetShader(weather3dPs_, nullptr, 0);
+    ctx_->VSSetConstantBuffers(0, 1, &constants_);
+    ctx_->PSSetConstantBuffers(0, 1, &constants_);
+    passSamplers();
+    ID3D11ShaderResourceView* views[4] = {nullptr, nullptr, scene_.srv, depthSrv_};
+    ctx_->VSSetShaderResources(0, 4, views);  // the dust's light under it
+    ctx_->PSSetShaderResources(0, 4, views);  // the depth hides it
+    ctx_->Draw(f.vertices(), 0);
+    ctx_->PSSetShaderResources(0, 4, none);
+    ctx_->VSSetShaderResources(0, 4, none);
 }
 
 void Renderer11::saveScreenshot(const std::string& path) {

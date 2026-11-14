@@ -106,6 +106,10 @@ bool Renderer::Impl::applyWeather() {
                                      ? nullptr
                                      : blendPipeline(weatherQuadPs, weatherQuadPipelines, upscale ? 1 : samples,
                                                      "weather's particles", 0, weatherVs);
+    // 3.0.19-beta.40: in the 3D view the particles in the world round the eye (core/weather3d) - sand's air as it is
+    const weather3d::Field field = weather3d::fieldOf(kind, c.footprint);
+    const bool inWorld = camera::wideView() && effects.weather3d && viewToWorldValid && field.count > 0 &&
+                         weather3dVs && weather3dPs;
     const weather::QuadCells cells = weather::quadCells(kind, float(w) / c.scale, float(h) / c.scale);
     const uint32_t particles = cells.count[0] + cells.count[1] + cells.count[2];
     if (!weatherLogged)
@@ -113,7 +117,9 @@ bool Renderer::Impl::applyWeather() {
                  mapName.c_str(),
                  quads ? (", " + std::to_string(particles) + " cells' particles as quads").c_str() : "");
     weatherLogged = true;
-    if (quads) {
+    if (inWorld) {
+        if (!applyWeather3d(kind, field)) return false;
+    } else if (quads) {
         c.reproject[0] = float(cells.count[0]);
         c.reproject[1] = float(cells.count[0] + cells.count[1]);
         for (int layer = 0; layer < 3; ++layer) c.reproject[2 + layer] = float(cells.across[layer]);
@@ -135,6 +141,50 @@ bool Renderer::Impl::applyWeather() {
         c.jitter[1] = jitter[1];
     }
     return worldPass(splash, w, h, c, sceneColorSrv, true);
+}
+
+// 3.0.19-beta.40 (the owner's «делаем все по порядку»: in the 3D view the weather fell as flat layers over the
+// picture): the 3D view's weather - particles in the world round the eye (weather3d_vs: a box the world's own they
+// repeat in, falling, blown by the shared wind; a quad each, the rain's a streak), hidden behind what is nearer (the
+// depth's copy), blended over by their alpha; the dust lit by the picture's copy under it
+bool Renderer::Impl::applyWeather3d(int kind, const weather3d::Field& f) {
+    ID3D12PipelineState* pso =
+        blendPipeline(weather3dPs, weather3dPipelines, upscale ? 1 : samples, "3D weather", 0, weather3dVs);
+    if (!pso) return true;
+    if (!copySceneDepth() || !copySceneColor()) return false;
+    const int w = sceneWidth, h = sceneHeight;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld, viewToWorld + 12, c.reproject);
+    c.scale = float(upscale ? worldScale : scale);
+    if (upscale) {
+        c.jitter[0] = jitter[0];
+        c.jitter[1] = jitter[1];
+    }
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.twin[0] = float(kind);
+    c.twin[1] = f.side;
+    c.twin[2] = f.high;
+    c.twin[3] = f.half;
+    c.sourceRect[0] = weather3dDrift[0] * f.blown;
+    c.sourceRect[1] = weather3dDrift[1] * f.blown;
+    c.sourceRect[2] = f.fall;
+    c.sourceRect[3] = f.streak;
+    if (windShared()) {  // the rain's slant: the wind's way, units a second
+        c.fogColor[0] = windNow.x * windNow.strength * weather3d::kWindUnits * f.blown;
+        c.fogColor[1] = windNow.z * windNow.strength * weather3d::kWindUnits * f.blown;
+    }
+    c.footprint = 1.0f;
+    c.sharpen = waterTime();
+    if (weather3dLogged != mapName) {
+        weather3dLogged = mapName;
+        LOG_INFO("3D weather: kind %d over %s - %u particles in the world round the eye (a box %.0f wide, %.0f high)",
+                 kind, mapName.c_str(), f.count, double(f.side), double(f.high));
+    }
+    return worldPass(pso, w, h, c, sceneColorSrv, true, kNoSrv, nullptr, f.vertices());
 }
 
 const char* weatherName(weather::Kind k) {
@@ -160,6 +210,11 @@ void Renderer::Impl::updateWind() {
     windScreenX = axis > 1e-4f ? (windNow.x * m[0] + windNow.z * m[2]) / axis : 0.0f;
     const float s = windNow.strength;
     weatherDrift.advance(windScreenX * s * 60.0f, 0.0f, dt);
+    if (windShared()) {  // 3.0.19-beta.40: the 3D view's weather blown in the world
+        const float k = s * weather3d::kWindUnits * dt;
+        weather3dDrift[0] = std::fmod(weather3dDrift[0] + windNow.x * k, weather3d::kDriftRound);
+        weather3dDrift[1] = std::fmod(weather3dDrift[1] + windNow.z * k, weather3d::kDriftRound);
+    }
 }
 
 }  // namespace uagfx::gpu

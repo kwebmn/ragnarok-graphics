@@ -33,6 +33,7 @@
 #include "core/own_models.hpp"
 #include "core/seams.hpp"
 #include "core/seasons.hpp"
+#include "core/weather3d.hpp"
 #include "core/wind.hpp"
 #include "core/living.hpp"
 #include "core/log_once.hpp"
@@ -644,6 +645,14 @@ struct Renderer::Impl {
     ID3DBlob* weatherVs = nullptr;
     ID3DBlob* weatherQuadPs = nullptr;
     ID3D12PipelineState* weatherQuadPipelines[4] = {};
+    // 3.0.19-beta.40: in the 3D view the particles in the world round the eye (weather3d_vs, weather3d_ps; core/
+    // weather3d) - blown by the shared wind as far as weather3dDrift (world units, x and z) so far
+    ID3DBlob* weather3dVs = nullptr;
+    ID3DBlob* weather3dPs = nullptr;
+    ID3D12PipelineState* weather3dPipelines[4] = {};
+    std::string weather3dLogged;
+    float weather3dDrift[2] = {0.0f, 0.0f};
+    bool applyWeather3d(int kind, const weather3d::Field& field);  // false: lost
     ID3DBlob* splashPs = nullptr;  // 0.64: the rain's splashes
     ID3DBlob* waterfallPs = nullptr;  // 0.65: the maps' waterfalls (waterfalls.cpp)
     // 0.65: [display] hdr - the back buffer HDR10 (R10G10B10A2, PQ) where the window's monitor shows HDR

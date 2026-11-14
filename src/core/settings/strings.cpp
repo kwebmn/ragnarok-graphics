@@ -8900,6 +8900,14 @@ constexpr Entry kTexts[] = {
      "і інші гравці. Вимкнено — дивиться туди, куди дивився, коли зупинився.",
      "В 3D-режиме, когда персонаж стоит, он поворачивается туда, куда смотрит камера (8 направлений игры), — это "
      "видят и другие игроки. Выключено — смотрит туда, куда смотрел, когда остановился."},
+    {Text::View3dWeather, "Weather in the 3D view", "Погода у 3D-режимі", "Погода в 3D-режиме"},  // 3.0.19-beta.40
+    {Text::View3dWeatherHint,
+     "In the 3D view the snow, the rain, the falling leaves and the motes in the air are particles in the world round "
+     "you - they fall in depth and hide behind walls. Off: the layers over the picture, as in the game's own view.",
+     "У 3D-режимі сніг, дощ, листопад і порошинки в повітрі — частинки у світі навколо вас: падають у глибину й "
+     "ховаються за стінами. Вимкнено — шари поверх картинки, як у звичайному огляді.",
+     "В 3D-режиме снег, дождь, листопад и пылинки в воздухе — частицы в мире вокруг вас: падают в глубину и прячутся "
+     "за стенами. Выключено — слои поверх картинки, как в обычном обзоре."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

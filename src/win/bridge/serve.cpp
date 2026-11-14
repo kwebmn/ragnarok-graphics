@@ -204,6 +204,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.torchLeafLight = rd.u8() != 0;  // 3.0.16-beta.30
             e.caveVault = rd.u8() != 0;       // 3.0.19-beta.32
             e.grass3d = rd.u8() != 0;         // 3.0.19-beta.33
+            e.weather3d = rd.u8() != 0;       // 3.0.19-beta.40
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

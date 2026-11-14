@@ -28,6 +28,7 @@
 #include "core/outdoors.hpp"
 #include "core/point_shadows.hpp"
 #include "core/weather.hpp"
+#include "core/weather3d.hpp"
 #include "core/wind.hpp"
 #include "win/gpu/map_world.hpp"
 #include "core/frame.hpp"
@@ -738,6 +739,12 @@ private:
     // 3.0.5-beta.19: the particles as small quads (weather_vs, weather_quad_ps) - not sand's
     ID3D11VertexShader* weatherVs_ = nullptr;
     ID3D11PixelShader* weatherQuadPs_ = nullptr;
+    // 3.0.19-beta.40: in the 3D view the particles in the world round the eye (as Direct3D 12's applyWeather3d)
+    ID3D11VertexShader* weather3dVs_ = nullptr;
+    ID3D11PixelShader* weather3dPs_ = nullptr;
+    std::string weather3dLogged_;
+    float weather3dDrift_[2] = {0.0f, 0.0f};
+    void applyWeather3d(int kind, const weather3d::Field& field);
     bool mistDone_ = false, weatherDone_ = false;
     bool sky3dDone_ = false;  // 3.0.19-beta.6: the 3D view's sky
     std::string sky3dLogged_;
