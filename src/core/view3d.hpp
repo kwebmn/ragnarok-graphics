@@ -127,6 +127,12 @@ constexpr float kFreeSpeed = 40.0f, kFreeFast = 3.0f, kFreeReach = 250.0f;
 void axesOf(const float flat[3], const float up[3], float pitch, float f[3], float right[3]);
 void flyStep(float eye[3], const float f[3], const float right[3], int ahead, int aside, int rise, float seconds,
              bool fast, const float feet[3]);
+// 3.0.19-beta.41 (item 7 of the owner's «делаем все по порядку»: the free camera flew through the houses): its step
+// from `from` to `to` kept kFreeGap off the models' boxes (nearer, the game's near plane - 10 - cuts the wall open),
+// axis by axis (the world's x, y, z: along a wall it slides, up a wall and over the roof); out of a box it is in, and
+// away from one, it goes
+constexpr float kFreeGap = 10.0f;
+void keepOffBoxes(const float from[3], float to[3], const std::vector<Box>& boxes);
 
 // 3.0.19-beta.38 (R-S3NQBF: in the 3D view the monsters' HP bars stood in the air over the hills hiding them):
 // whether the ground (groundY(x, z) its y there, y down) lets the eye see `to` - the way between sampled every

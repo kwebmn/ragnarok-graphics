@@ -18,6 +18,7 @@
 #include "win/gpu/ai_textures.hpp"
 #include "core/cast_look.hpp"
 #include "core/mage_looks.hpp"
+#include "core/view3d.hpp"
 #include "win/gpu/draw_constants.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
@@ -699,6 +700,11 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[1] = float(effects.waterClarity) / 100.0f;
         c.twin[3] = waterLife();  // 1.7
         if (mirrorMade) c.stage0[1] |= 1u << 27;  // 1.16: the world mirrored (t5)
+        if (camera::wideView() && c.fogEnable == 0) {  // 3.0.19-beta.41: the 3D view's horizon its sky (water_ps)
+            const view3d::Sky sky = view3d::skyOf(float(std::clamp(effects.nightNow, 0, 100)) / 100.0f, !mapOutdoors);
+            std::copy(sky.horizon, sky.horizon + 3, c.fogColor);
+            c.fogColor[3] = 2.0f;
+        }
         if (!ownWater) noteWaterLevel(rec, d);  // 3.0.4-beta.20: the game's own water's, not the far water's
         if (ripplesWanted()) {  // 0.94: the three newest steps (x, z, age), one in each free vector
             float* slot[3] = {c.uiPixels, c.sourceRect, c.sourceClamp};

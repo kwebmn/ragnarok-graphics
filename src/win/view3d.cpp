@@ -96,6 +96,7 @@ struct State {
     float eyeNow[3] = {0, 0, 0};  // the eye of the last frame (the free camera starts there)
     bool eyeKnown = false;
     DWORD flewAt = 0;
+    int freeStopsTold = 0;  // 3.0.19-beta.41: kept off a model
     // 3.0.19-beta.39: the world (its models' tree) of the last frame, and each actor's models' answer of late
     uint32_t worldNow = 0;
     struct Sight {
@@ -628,9 +629,25 @@ void __attribute__((thiscall)) build(uint32_t view) {
         s.flewAt = tick;
         const auto held = [](int vk) { return GetAsyncKeyState(vk) < 0 ? 1 : 0; };
         const bool keys = !walkmodewin::typing() && GetKeyState(VK_CONTROL) >= 0 && GetKeyState(VK_MENU) >= 0;
+        const float before[3] = {s.freeEye[0], s.freeEye[1], s.freeEye[2]};
         if (keys)
             view3d::flyStep(s.freeEye, f, right, held('W') - held('S'), held('D') - held('A'),
                             held(VK_SPACE) - held('C'), seconds, held(VK_SHIFT) != 0, feet);
+        // 3.0.19-beta.41 (item 7): kept off the map's models (a house, a castle's wall, a tree) - along them it slides
+        if (s.worldNow && (before[0] != s.freeEye[0] || before[1] != s.freeEye[1] || before[2] != s.freeEye[2])) {
+            std::vector<view3d::Box> boxes;
+            std::vector<uint32_t> looked;
+            int budget = 1200;
+            boxesOnTheWay(s.worldNow + kWorldTree, 0, before, s.freeEye, boxes, looked, budget);
+            const float wanted[3] = {s.freeEye[0], s.freeEye[1], s.freeEye[2]};
+            view3d::keepOffBoxes(before, s.freeEye, boxes);
+            if (s.freeStopsTold < 5 && (wanted[0] != s.freeEye[0] || wanted[1] != s.freeEye[1] ||
+                                        wanted[2] != s.freeEye[2])) {
+                ++s.freeStopsTold;
+                LOG_INFO("3D view: the free camera kept off a model (%zu model(s) near its way, %zu looked at)",
+                         boxes.size(), looked.size());
+            }
+        }
         std::copy(s.freeEye, s.freeEye + 3, eye);
         for (int i = 0; i < 3; ++i) target[i] = eye[i] + f[i] * 10.0f;
         const float head[3] = {feet[0], feet[1] - view3d::kHeadHeight, feet[2]};  // y down

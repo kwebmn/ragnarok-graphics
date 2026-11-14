@@ -570,3 +570,34 @@ TEST(config_view3d_face_on_by_default) {
     CHECK(appliesNow("view3d.face"));
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[view3d]\nface = 0\n")).next.view3dFace);
 }
+
+// 3.0.19-beta.41 (item 7 of the owner's «делаем все по порядку»: the free camera flew through the houses): its step
+// kept kFreeGap off the models' boxes (nearer, the game's near plane cuts the wall open), axis by axis - along a wall
+// it slides; out of a box it is in, and away from one, it goes
+TEST(view3d_free_camera_kept_off_the_models) {
+    view3d::Box house;
+    house.centre[0] = 30.0f;
+    house.half[0] = house.half[1] = house.half[2] = 5.0f;  // its face at x 25
+    const std::vector<view3d::Box> boxes = {house};
+    const float from[3] = {0, 0, 0};
+    float to[3] = {20.0f, 0, 0};
+    view3d::keepOffBoxes(from, to, boxes);
+    CHECK(std::fabs(to[0] - (25.0f - view3d::kFreeGap)) < 0.01f && to[1] == 0.0f && to[2] == 0.0f);
+    const float at[3] = {15.0f, 0, 0};
+    float on[3] = {16.0f, 0, 3.0f};  // into it and aside: aside alone
+    view3d::keepOffBoxes(at, on, boxes);
+    CHECK(std::fabs(on[0] - 15.0f) < 0.01f && on[2] == 3.0f);
+    float back[3] = {10.0f, 0, 0};  // away from it
+    view3d::keepOffBoxes(at, back, boxes);
+    CHECK(back[0] == 10.0f);
+    const float inside[3] = {30.0f, 0, 0};
+    float out[3] = {40.0f, 0, 0};  // out of the box it is in
+    view3d::keepOffBoxes(inside, out, boxes);
+    CHECK(out[0] == 40.0f);
+    float free[3] = {20.0f, 0, 0};
+    view3d::keepOffBoxes(from, free, {});
+    CHECK(free[0] == 20.0f);
+    float over[3] = {20.0f, -30.0f, 0};  // over its roof: up first, then on
+    view3d::keepOffBoxes(from, over, boxes);
+    CHECK(over[1] == -30.0f && std::fabs(over[0] - 15.0f) < 0.01f);  // x before y: stopped first, then up
+}

@@ -1632,6 +1632,11 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         // bed (Direct3D 12's since 2.4, never set here until now)
         c.twin[3] = waterLife();
         if (mirrorMade_) c.stage0[1] |= 1u << 27;  // 2.5.9 (draw.cpp 1.16): the world mirrored (t5)
+        if (camera::wideView() && c.fogEnable == 0) {  // 3.0.19-beta.41: the 3D view's horizon its sky (water_ps)
+            const view3d::Sky sky = view3d::skyOf(float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f, !outdoors_);
+            std::copy(sky.horizon, sky.horizon + 3, c.fogColor);
+            c.fogColor[3] = 2.0f;
+        }
         if (ripplesWanted()) {  // 2.5.2 (draw.cpp 0.94): the three newest steps (x, z, age), one in each free vector
             float* slot[3] = {c.uiPixels, c.sourceRect, c.sourceClamp};
             int n = 0;

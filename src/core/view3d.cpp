@@ -248,6 +248,24 @@ bool effectAtTheEyes(const void* vertices, uint32_t count, size_t stride, bool o
     return float(sum / known) < (own ? kOwnEffectNear : kAnyEffectNear);
 }
 
+void keepOffBoxes(const float from[3], float to[3], const std::vector<Box>& boxes) {
+    float at[3] = {from[0], from[1], from[2]};
+    for (int axis = 0; axis < 3; ++axis) {
+        const float d = to[axis] - at[axis];
+        if (!(std::fabs(d) > 1e-6f)) continue;
+        const float way = std::fabs(d), sign = d > 0.0f ? 1.0f : -1.0f;
+        float probe[3] = {at[0], at[1], at[2]};
+        probe[axis] += sign * (way + kFreeGap);
+        float allowed = way;
+        for (const Box& b : boxes) {
+            const float share = entersAt(b, at, probe);
+            if (share > 0.0f) allowed = std::min(allowed, std::max(0.0f, share * (way + kFreeGap) - kFreeGap));
+        }
+        at[axis] += sign * allowed;
+    }
+    std::copy(at, at + 3, to);
+}
+
 int serverDir(float angle) { return ((int(angle) + 180) / 45) & 7; }
 
 bool faceToward(float east, float north, float current, Facing& out) {

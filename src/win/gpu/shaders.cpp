@@ -1277,6 +1277,10 @@ float4 water(WaterIn i) {
     // The place's light, from the bed's brightness: night, dungeons.
     float light = clamp(dot(bed, float3(0.299, 0.587, 0.114)) * 2.2, 0.25, 1.0);
     float3 sky = (fogEnable != 0 ? fogColor.rgb : float3(0.62, 0.74, 0.88)) * light;
+    // 3.0.19-beta.41 (item 6 of the owner's «делаем все по порядку»): in the 3D view, no fog, the sky the 3D sky's
+    // horizon (fogColor's alpha 2: sky3d_ps's, day, night, a vault) - from the eyes the water at a grazing angle
+    // reflects the horizon over it, not a blue of its own under the haze
+    if (fogEnable == 0 && fogColor.a > 1.5) sky = fogColor.rgb * 0.92;
     float hit;
     float3 seen = waterReflection(i.view, reflect(normalize(i.view), nv), hit);
 #ifndef UAGFX_SAFE
