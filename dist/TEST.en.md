@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.16 — what's new · 2026-11-14
+
+- **3D view: no golden ghost, no big arrow.** The character's silhouette behind houses and the body tint found its place on the screen as for the game's own camera, and from the eyes drew a translucent golden silhouette in the middle of the view. In the 3D view they are now off: from behind, the character stands before the camera anyway. The walk arrow on the ground is not drawn in the 3D view either, as from the eyes it lay right under them.
+
 # uaRO Graphics 3.0.19-beta.15 — what's new · 2026-11-14
 
 - **3D view: a steady mouse.** The view now turns by the usual Windows cursor's move, at your pointer speed. Before, it took the mouse's raw data: that goes with the DPI, and when the game window came back to the front it jumped and threw the view down. Sudden jumps are now dropped.
