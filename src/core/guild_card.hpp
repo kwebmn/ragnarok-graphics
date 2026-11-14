@@ -82,6 +82,12 @@ struct Layout {
     std::vector<panel::Box> plus;  // 3.0.11-beta.220: the skills' «+», one a row
     panel::Box notice, edit;       // 3.0.11-beta.220: the notice's text; «Змінити» (w 0: none)
     panel::Box fields[2], cancel;  // 3.0.11-beta.271: editing - the subject's and the body's fields; «Скасувати»
+    // 3.0.19-beta.1 (the testers: «не видно значок ГІ»): «Інформація»'s head - the guild's emblem (w 0: another tab),
+    // its level and members under the name (the name in `head`)
+    panel::Box emblem, sub;
+    // 3.0.19-beta.1: its own width at its size - the live card's width (uikit guild's refit leaves it: w from the
+    // document as it is handed the old width back when the corner pulled it bigger)
+    int wide = 0;
 };
 // .271: `editing` - the notice's fields, «Зберегти» in «Змінити»'s place and «Скасувати» beside it
 Layout layout(int targetW, int targetH, float scale, Tab tab, size_t members, bool editing = false);
@@ -106,5 +112,11 @@ std::vector<Words> words(const Layout& L, const Info& g, const std::vector<Membe
                          const Texts& t);
 std::vector<Words> words(const Layout& L, const Info& g, const std::vector<Member>& members, const More& more,
                          const Show& sh, const Texts& t);
+
+// 3.0.19-beta.1 (the testers: «не видно значок ГІ твоеї»): the guild's emblem from the game's own file
+// (<client>\_tmpEmblem\<server>_<guild id>_<emblem id>.ebm, written by uaRO.exe's FUN_0063aab0 from the packet
+// 0x0152: the BMP zlib-packed as the server keeps it; a plain BMP taken too) - side x side ARGB, its magenta
+// (255, 0, 255, the game's key) see-through, made bigger pixel for pixel; empty when it is not one
+std::vector<uint32_t> emblemPixels(const std::string& file, int side);
 
 }  // namespace uagfx::guildcard

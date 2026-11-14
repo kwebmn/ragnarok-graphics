@@ -14,6 +14,7 @@
 #include "core/hotbar_panel.hpp"
 #include "core/item_window.hpp"
 #include "core/pick_card.hpp"
+#include "core/reference_index.hpp"
 #include "core/skill_info.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
@@ -26,6 +27,9 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/updates_hook.hpp"
+#include "win/paths.hpp"
+#include "win/game_files.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -210,6 +214,26 @@ void hold(State& s, uint32_t window, bool on) {
     }
 }
 
+// 3.0.19-beta.1 (the testers: «тут код карти прописує, а встарому назви»): the client's names of maps
+// (data\mapnametable.txt) as the game finds the file, else our reader of its archives; looked for again in 10 s while
+// none read (the game's files busy while a map loads)
+const std::map<std::string, std::string>& clientMapNames() {
+    static std::map<std::string, std::string> names;
+    static ULONGLONG at = 0;
+    if (!names.empty() || (at && GetTickCount64() - at < 10000)) return names;
+    at = GetTickCount64();
+    std::string text;
+    if (!readGameFile("data\\mapnametable.txt", text)) {
+        gamefiles::Reader files(gameDir());
+        std::vector<uint8_t> bytes;
+        if (files.read("data\\mapnametable.txt", bytes, nullptr)) text.assign(bytes.begin(), bytes.end());
+    }
+    names = refindex::mapNames(text);
+    LOG_INFO("picks: %zu names of maps from the client's mapnametable.txt (Warp Portal's and Teleport's rows)",
+             names.size());
+    return names;
+}
+
 std::vector<pc::Entry> readMenu(uint32_t window, unsigned codePage, bool box) {
     std::vector<pc::Entry> out;
     const uint32_t list = box ? read32(window + kMenuBox) : window;  // .263: the list box's own words
@@ -227,6 +251,10 @@ std::vector<pc::Entry> readMenu(uint32_t window, unsigned codePage, bool box) {
             if (name.size() > 4 && name.compare(name.size() - 4, 4, end) == 0) name.resize(name.size() - 4);
         pc::Entry e;
         e.name = name.empty() ? "-" : utf8Of(widened(name, codePage));
+        if (!box) {  // 3.0.19-beta.1: Teleport's and Warp Portal's maps by the client's names, the code under each
+            const pc::Place p = pc::placeOf(clientMapNames(), name);
+            if (!p.code.empty()) e.name = p.name, e.inside = p.code;
+        }
         out.push_back(std::move(e));
     }
     return out;

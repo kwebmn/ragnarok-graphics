@@ -1,0 +1,101 @@
+# 3.0.19-beta.1: monsters the clients have no sprite for (players' logs «reference: no sprite for» on
+# 3.0.18, checked against the uaRO HD client's archives with refindex::spriteNames' rules) - their pictures
+# from the site (web/assets/mobs/<id>.gif, first frame) go into the driver: tools/mob_pictures.py
+1011 Chonchon
+1032 Verit
+1042 Steel Chonchon
+1182 Thief Mushroom
+1183 Chonchon
+1235 Smoking Orc
+1285 Archer Guardian
+1286 Knight Guardian
+1287 Soldier Guardian
+1288 Emperium
+1324 Treasure Chest
+1325 Treasure Chest
+1326 Treasure Chest
+1327 Treasure Chest
+1328 Treasure Chest
+1329 Treasure Chest
+1330 Treasure Chest
+1331 Treasure Chest
+1332 Treasure Chest
+1333 Treasure Chest
+1334 Treasure Chest
+1335 Treasure Chest
+1336 Treasure Chest
+1337 Treasure Chest
+1338 Treasure Chest
+1339 Treasure Chest
+1340 Treasure Chest
+1341 Treasure Chest
+1342 Treasure Chest
+1343 Treasure Chest
+1344 Treasure Chest
+1345 Treasure Chest
+1346 Treasure Chest
+1347 Treasure Chest
+1348 Treasure Chest
+1349 Treasure Chest
+1350 Treasure Chest
+1351 Treasure Chest
+1352 Treasure Chest
+1353 Treasure Chest
+1354 Treasure Chest
+1355 Treasure Chest
+1356 Treasure Chest
+1357 Treasure Chest
+1358 Treasure Chest
+1359 Treasure Chest
+1360 Treasure Chest
+1361 Treasure Chest
+1362 Treasure Chest
+1363 Treasure Chest
+1502 Bring it on!
+1732 Treasure Chest
+1785 Atroce
+1798 Treasure Chest
+1814 Moonlight Flower
+1829 Sword Master
+1830 Bow Master
+1845 Treasure Box
+1846 Emperium
+1872 Hell Fly
+1873 Beelzebub
+1877 Crystal
+1899 Knight Guardian
+1900 Archer Guardian
+1902 Treasure Box
+1903 Treasure Box
+1916 Satan Morroc
+1917 Satan Morroc
+1918 Morroc's Shadow
+1919 Morroc's Shadow
+1920 Morroc's Shadow
+1921 Morroc's Shadow
+1922 Morroc's Shadow
+1923 Morroc's Shadow
+1924 Morroc's Shadow
+1925 Morroc's Shadow
+1938 Treasure Chest
+1939 Treasure Chest
+1940 Treasure Chest
+1941 Treasure Chest
+1942 Treasure Chest
+1943 Treasure Chest
+1944 Treasure Chest
+1945 Treasure Chest
+1946 Treasure Chest
+1949 Camp Guardian
+1950 Camp Guardian
+1951 Crystal
+1952 Crystal
+1953 Crystal
+1954 Crystal
+1955 Treasure Chest
+1958 Thorny Skeleton
+1959 Thorn of Recovery
+1960 Thorn of Magic
+1961 Thorn of Purification
+2008 Woomawang
+2009 Woomawang

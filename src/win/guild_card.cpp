@@ -5,6 +5,7 @@
 #include <windowsx.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <string>
@@ -19,6 +20,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -49,6 +51,8 @@ constexpr uint32_t kName = 0x74B654, kMaster = 0x74B664, kTerritory = 0x74B6A8, 
 constexpr uint32_t kMost = 0x74B69C, kAverage = 0x74B6A0, kExp = 0x74B6B4, kNextExp = 0x74B6B8, kTax = 0x74B6C0;
 constexpr uint32_t kMembers = 0x74B70C, kMember = 8;
 constexpr uint32_t kRights = 0x74B6D0;  // 3.0.11-beta.210: the tabs' rights (FUN_0049c4d0 checks them)
+// 3.0.19-beta.1: the guild's id and its emblem's (the packet 0x01B6's +2 and +0x2A, kept by FUN_00590c60)
+constexpr uint32_t kGuildId = 0x74B6D4, kEmblemId = 0x74B6D8;
 constexpr int kButtonMsg = 6;
 constexpr size_t kMostMembers = 100;
 // 3.0.11-beta.220: the game mode's SendMsg (FUN_005707d0, its vtable + 0x14) - 0x4A raises a skill (the packet 0x0112,
@@ -83,6 +87,10 @@ struct State {
     guildtabs::Data tabs;     // 3.0.11-beta.220: tabs 2-5 as the server sent them
     gc::More more;
     uint32_t editing = 0;     // 3.0.11-beta.220: the game's own tab window «Змінити» showed (0 none)
+    // 3.0.19-beta.1: the guild's emblem from the game's file (empty: none found), what it was read for, when
+    panel::Picture emblem;
+    std::string emblemFor;
+    ULONGLONG emblemAt = 0;
 };
 
 State& state() {
@@ -163,6 +171,61 @@ void readGuild(State& s) {
         }
     }
     g.members = int(s.members.size());
+}
+
+// 3.0.19-beta.1 (the testers: «не видно значок ГІ твоеї»): the guild's emblem as the game keeps it -
+// <client>\_tmpEmblem\<server>_<guild>_<emblem>.ebm (uaRO.exe FUN_0063aab0 writes it from the packet 0x0152; the
+// server's name is the session's, so any) at the card's emblem size; looked for again every 3 s while not there
+void readEmblem(State& s) {
+    const uint32_t guild = read32(kGuildId), emblem = read32(kEmblemId);
+    const int side = int(std::lround(s.layout.emblem.w));
+    if (!guild || side <= 0) return;
+    const std::string want = std::to_string(guild) + '_' + std::to_string(emblem) + '_' + std::to_string(side);
+    const ULONGLONG now = GetTickCount64();
+    if (want == s.emblemFor && (s.emblem.width > 0 || now - s.emblemAt < 3000)) return;
+    const bool again = want == s.emblemFor;
+    s.emblemFor = want;
+    s.emblemAt = now;
+    const std::string dir = gameDir() + "\\_tmpEmblem\\";
+    WIN32_FIND_DATAA fd{};
+    const std::string pattern = dir + "*_" + std::to_string(guild) + '_' + std::to_string(emblem) + ".ebm";
+    HANDLE h = FindFirstFileA(pattern.c_str(), &fd);
+    std::string file, bytes;
+    FILETIME newest{};
+    if (h != INVALID_HANDLE_VALUE) {
+        do {
+            if (!file.empty() && CompareFileTime(&fd.ftLastWriteTime, &newest) <= 0) continue;
+            file = fd.cFileName;
+            newest = fd.ftLastWriteTime;
+        } while (FindNextFileA(h, &fd));
+        FindClose(h);
+    }
+    if (!file.empty()) {
+        HANDLE f = CreateFileA((dir + file).c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                               OPEN_EXISTING, 0, nullptr);
+        if (f != INVALID_HANDLE_VALUE) {
+            LARGE_INTEGER size{};
+            if (GetFileSizeEx(f, &size) && size.QuadPart > 0 && size.QuadPart < (1 << 20)) {
+                bytes.resize(size_t(size.QuadPart));
+                DWORD got = 0;
+                if (!ReadFile(f, bytes.data(), DWORD(bytes.size()), &got, nullptr)) got = 0;
+                bytes.resize(got);
+            }
+            CloseHandle(f);
+        }
+    }
+    std::vector<uint32_t> px = gc::emblemPixels(bytes, side);
+    s.emblem = panel::Picture{};
+    if (!px.empty()) {
+        s.emblem.width = s.emblem.height = side;
+        s.emblem.px = std::move(px);
+    }
+    if (!again || s.emblem.width > 0)
+        LOG_INFO("guild: emblem %u of the guild %u - %s", emblem, guild,
+                 s.emblem.width > 0 ? ("_tmpEmblem\\" + file + ", " + std::to_string(side) + " px").c_str()
+                 : file.empty()     ? "no file in _tmpEmblem yet (looked for again every 3 s)"
+                                    : ("_tmpEmblem\\" + file + " not an emblem (" + std::to_string(bytes.size()) +
+                                       " bytes)").c_str());
 }
 
 gc::Texts texts() {
@@ -263,8 +326,8 @@ void raiseSkill(State& s, int row) {
 }
 
 // 3.0.11-beta.271: the notice edited on the card - started from the notice there is; saved through the game mode's
-// message 0x83 (the guild, the subject, the body: the packet 0x016e, as the game's own notice window sends it)
-constexpr uint32_t kGuildId = 0x74B6D4;
+// message 0x83 (the guild, the subject, the body: the packet 0x016e, as the game's own notice window sends it; the
+// guild's id kGuildId)
 constexpr int kNoticeMsg = 0x83;
 
 std::string gameBytes(const std::string& utf8, unsigned codePage, size_t most) {
@@ -358,6 +421,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     const size_t rows = s.show.tab == gc::Tab::Members ? s.members.size() : s.more.lines.size();
     if (s.show.editing && s.show.tab != gc::Tab::Notice) s.show.editing = false;  // .271: another tab - let go
     s.layout = gc::layout(targetWidth, targetHeight, s.scale, s.show.tab, rows, s.show.editing);
+    readEmblem(s);  // 3.0.19-beta.1
     if (s.live.shown()) uikit::guild::refit(s.live.doc.doc(), s.layout);  // 3.0.18-beta.102: its drawn boxes
     // 3.0.18-beta.92 (the owner: «не все окна перетаскиваются»): moved by a press on its empty part
     s.move.apply(s.layout.x, s.layout.y, s.layout.w, s.layout.h, targetWidth, targetHeight, k, 48 * s.scale);
@@ -388,7 +452,9 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
                       ',' + std::to_string(s.show.scroll) + ',' + std::to_string(s.show.hoverTab) + ',' +
                       std::to_string(s.show.rights) +
                       (s.show.hoverClose ? "x" : "") + ';' + std::to_string(s.layout.x) + ',' +
-                      std::to_string(s.layout.y) + '#' + std::to_string(uistyle::generation());
+                      std::to_string(s.layout.y) + ',' + std::to_string(s.layout.wide) + '#' +
+                      std::to_string(uistyle::generation()) + '#' + s.emblemFor +
+                      (s.emblem.width > 0 ? "e" : "");  // 3.0.19-beta.1: its size and its emblem too
     for (const gc::Member& m : s.members)
         key += ';' + m.name + ',' + m.title + ',' + std::to_string(m.level) + (m.online ? "o" : "");
     key += '|' + s.more.head + '|' + s.more.subject + '|' + s.more.body + '|' + std::to_string(s.show.hoverPlus) +
@@ -412,7 +478,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.sheetShown = s.live.frame("guild", s.shown, s.layout.x, s.layout.y, s.sheetGen, gl::rml(), gl::bind,
                                 [&](gl::Model& m) {
                                     m.ground = s.live.ground();
-                                    gl::fill(m, s.layout, s.info, s.members, s.more, s.show, texts());
+                                    gl::fill(m, s.layout, s.info, s.members, s.more, s.show, texts(),
+                                             s.emblem.width > 0 ? s.live.icon(&s.emblem) : std::string());
                                 });
 }
 

@@ -32,8 +32,10 @@ struct Model {
 
 const char* rml();
 void bind(Rml::DataModelConstructor& c, Model& m);
+// 3.0.19-beta.1: `emblem` - the guild's emblem picture's source (LivePart::icon), empty: a quiet frame in its place
 void fill(Model& m, const guildcard::Layout& L, const guildcard::Info& g, const std::vector<guildcard::Member>& members,
-          const guildcard::More& more, const guildcard::Show& sh, const guildcard::Texts& t);
+          const guildcard::More& more, const guildcard::Show& sh, const guildcard::Texts& t,
+          const std::string& emblem = {});
 bool refit(Rml::ElementDocument* doc, guildcard::Layout& L);
 
 }  // namespace uagfx::uikit::guild

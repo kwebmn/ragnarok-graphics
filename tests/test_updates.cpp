@@ -80,3 +80,34 @@ TEST(updates_tell_the_first_waits_then_every_hundredth) {
     CHECK(updates::tellWait(300));
     CHECK(!updates::tellWait(0));
 }
+
+// 3.0.19-beta.1 (the testers' doc 14.11: the old client «4 акаунта пробую. всі вилітають» - «CPaletteRes :: Cannot
+// find File : palette\몸\프리스트_남_4.pal», then uaRO_New.exe at 0x417B94: the character select's sprite drawn
+// through no palette): a dye's palette the client has not - the sprite it recolours, whose own palette stands in
+// (the sprite's own colours, as the game draws a dye it finds no palette of in the world)
+TEST(updates_a_missing_palette_stands_in_by_its_sprite) {
+    const std::string priest = "\xC7\xC1\xB8\xAE\xBD\xBA\xC6\xAE";  // 프리스트
+    const std::string male = "\xB3\xB2", female = "\xBF\xA9";     // 남, 여
+    CHECK_EQ(updates::paletteSprite("data\\palette\\\xB8\xF6\\" + priest + "_" + male + "_4.pal"),
+             "data\\sprite\\\xC0\xCE\xB0\xA3\xC1\xB7\\\xB8\xF6\xC5\xEB\\" + male + "\\" + priest + "_" + male + ".spr");
+    CHECK_EQ(updates::paletteSprite("data\\palette\\\xB8\xD3\xB8\xAE\\\xB8\xD3\xB8\xAE" "12_" + female + "_7.pal"),
+             "data\\sprite\\\xC0\xCE\xB0\xA3\xC1\xB7\\\xB8\xD3\xB8\xAE\xC5\xEB\\" + female + "\\12_" + female + ".spr");
+    CHECK_EQ(updates::paletteSprite("DATA\\PALETTE\\\xB8\xF6\\" + priest + "_" + male + "_4.PAL"),
+             "data\\sprite\\\xC0\xCE\xB0\xA3\xC1\xB7\\\xB8\xF6\xC5\xEB\\" + male + "\\" + priest + "_" + male + ".spr");
+    CHECK_EQ(updates::paletteSprite("data\\sprite\\poring.spr"), std::string());
+    CHECK_EQ(updates::paletteSprite("data\\palette\\\xB8\xF6\\noSex_4.pal"), std::string());
+    CHECK_EQ(updates::paletteSprite("data\\palette\\\xB8\xF6\\" + priest + "_" + male + ".pal"), std::string());
+    // the sprite's own palette: its last 1024 bytes (an SPR 2.x)
+    std::vector<uint8_t> spr = {'S', 'P', 0x01, 0x02, 1, 0, 0, 0};
+    for (int i = 0; i < 300; ++i) spr.push_back(uint8_t(i));
+    for (int i = 0; i < 1024; ++i) spr.push_back(uint8_t(255 - i % 256));
+    std::vector<uint8_t> pal;
+    CHECK(updates::spritePalette(spr, pal));
+    CHECK_EQ(pal.size(), size_t(1024));
+    CHECK_EQ(int(pal[0]), 255);
+    CHECK_EQ(int(pal[1023]), 0);
+    std::vector<uint8_t> old = {'S', 'P', 0x00, 0x01, 1, 0};  // SPR 1.0 keeps no palette
+    old.resize(2000);
+    CHECK(!updates::spritePalette(old, pal));
+    CHECK(!updates::spritePalette({'X', 'X', 1, 2}, pal));
+}

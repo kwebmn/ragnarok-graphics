@@ -60,3 +60,32 @@ TEST(uikit_charselect_buttons_live_cards_in_place) {
     CHECK(cs::hitTest(L, mid(L.pageRight).x, mid(L.pageRight).y).part == cs::Part::PageRight);
     rmlhost::close(d);
 }
+
+// 3.0.19-beta.1 (the testers' guild card, the same trap): the interface made bigger while the character select shows
+// - core charselect at the new size, refit on the document as it is, the model filled from that layout: it grows
+TEST(uikit_charselect_grows_with_the_interface) {
+    std::vector<cs::Slot> slots(3);
+    slots[0].used = true;
+    slots[0].name = "Hero";
+    cs::Show sh;
+    cs::Layout L = cs::layout(1920, 1080, 1);
+    static cl::Model m;
+    cl::fill(m, L, slots, sh, texts(), none);
+    std::string error;
+    Rml::ElementDocument* d =
+        rmlhost::load(cl::rml(), [&](Rml::DataModelConstructor& c) { cl::bind(c, m); }, 300, 100, &error);
+    CHECK_EQ(error, std::string());
+    CHECK(cl::refit(d, L));
+    for (int frame = 0; frame < 3; ++frame) {
+        L = cs::layout(1920, 1080, 1.4f);
+        cl::refit(d, L);
+        cl::fill(m, L, slots, sh, texts(), none);
+        rmlhost::update();
+    }
+    L = cs::layout(1920, 1080, 1.4f);
+    const int own = L.w;
+    CHECK(cl::refit(d, L));
+    std::printf("  character select at 1.4: %d wide (its own %d)\n", L.w, own);
+    CHECK(std::abs(float(L.w) - float(own)) < 3.0f);
+    rmlhost::close(d);
+}

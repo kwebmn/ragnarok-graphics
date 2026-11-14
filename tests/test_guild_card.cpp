@@ -3,10 +3,12 @@
 // their average level, the experience to the next level, the tax points, the territory) and its members (a row each:
 // online or not, the name, the title, the job and the level), read as the game keeps them
 #include <algorithm>
+#include <cmath>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "core/client_libs.hpp"
 #include "core/guild_card.hpp"
 #include "test.hpp"
 
@@ -108,4 +110,85 @@ TEST(guild_card_notice_edited_on_the_card) {
         save = save || w.text == "Зберегти";
     }
     CHECK(caret && save);
+}
+
+// 3.0.19-beta.1 (the testers' doc 14.11: «сирувате окне і не видно значок ГІ твоеї»): «Інформація» opens with the
+// guild's own head - its emblem (the game's 24 x 24 twice) at the left, the guild's name beside it in gold, its level
+// and members under the name; the facts below it
+TEST(guild_card_info_opens_with_the_emblem_and_the_name) {
+    for (float s : {1.0f, 1.5f}) {
+        const guildcard::Layout L = guildcard::layout(1920, 1080, s, guildcard::Tab::Info, 0);
+        CHECK(std::abs(L.emblem.w - 48 * s) < 0.01f && std::abs(L.emblem.h - 48 * s) < 0.01f);
+        CHECK(L.emblem.y >= L.tabs[3].y + L.tabs[3].h);  // under the tabs
+        CHECK(L.facts[0].y >= L.emblem.y + L.emblem.h);  // the facts under it
+        CHECK(L.head.x >= L.emblem.x + L.emblem.w);      // the name beside it
+        CHECK(L.sub.y >= L.head.y + L.head.h - 0.01f && L.sub.x == L.head.x);
+    }
+    guildcard::Info g;
+    g.name = "Plague.Corp";
+    g.level = 32;
+    g.members = 51;
+    g.most = 76;
+    guildcard::Show sh;
+    sh.tab = guildcard::Tab::Info;
+    const guildcard::Layout L = guildcard::layout(1920, 1080, 1, sh.tab, 0);
+    bool name = false, sub = false;
+    for (const guildcard::Words& w : guildcard::words(L, g, {}, sh, texts())) {
+        if (w.text == "Plague.Corp" && w.bold && std::abs(w.box.y - L.head.y) < 0.01f) name = true;
+        if (w.text == "Рівень 32 · Учасники 51 / 76" && std::abs(w.box.y - L.sub.y) < 0.01f) sub = true;
+    }
+    CHECK(name);
+    CHECK(sub);
+    // other tabs keep no emblem
+    CHECK(guildcard::layout(1920, 1080, 1, guildcard::Tab::Members, 3).emblem.w == 0);
+}
+
+namespace {
+// A 24 x 24 24-bit BMP as the game's emblems are: magenta all round, a red square in the middle (8..15), bottom up
+std::string emblemBmp() {
+    const int w = 24, h = 24, row = w * 3;
+    std::string b(54 + row * h, '\0');
+    auto put32 = [&](size_t at, uint32_t v) {
+        for (int i = 0; i < 4; ++i) b[at + size_t(i)] = char((v >> (8 * i)) & 0xFF);
+    };
+    b[0] = 'B', b[1] = 'M';
+    put32(2, uint32_t(b.size()));
+    put32(10, 54);
+    put32(14, 40);
+    put32(18, uint32_t(w));
+    put32(22, uint32_t(h));
+    b[26] = 1;
+    b[28] = 24;
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            const bool red = x >= 8 && x < 16 && y >= 8 && y < 16;
+            const size_t at = 54 + size_t(y) * size_t(row) + size_t(x) * 3;  // B G R
+            b[at] = char(red ? 0 : 255), b[at + 1] = 0, b[at + 2] = char(255);
+        }
+    return b;
+}
+}  // namespace
+
+// 3.0.19-beta.1: the guild's emblem from the game's own file (<client>\_tmpEmblem\<server>_<guild>_<emblem>.ebm - the
+// packet 0x0152's data as the server sent it: the BMP zlib-packed) - unpacked, its magenta see-through, made twice as
+// big pixel for pixel; a plain BMP read as it is; anything else nothing
+TEST(guild_card_emblem_from_the_games_file) {
+    const std::string bmp = emblemBmp();
+    std::vector<unsigned char> packed(bmp.size() + 64);
+    unsigned long len = static_cast<unsigned long>(packed.size());
+    CHECK_EQ(client_libs::zlibCompress(packed.data(), &len, reinterpret_cast<const unsigned char*>(bmp.data()),
+                                      static_cast<unsigned long>(bmp.size())),
+             0);
+    const std::string ebm(reinterpret_cast<const char*>(packed.data()), len);
+    for (const std::string* file : {&ebm, &bmp}) {
+        const std::vector<uint32_t> px = guildcard::emblemPixels(*file, 48);
+        CHECK_EQ(px.size(), size_t(48 * 48));
+        if (px.size() != size_t(48 * 48)) continue;
+        CHECK_EQ(px[0] >> 24, 0u);                          // magenta - see-through
+        CHECK_EQ(px[size_t(24 * 48 + 24)], 0xFFFF0000u);    // the red middle, opaque
+        CHECK_EQ(px[size_t(16 * 48 + 16)], 0xFFFF0000u);    // its corner: 8 * 2
+        CHECK_EQ(px[size_t(15 * 48 + 15)] >> 24, 0u);       // just outside it
+    }
+    CHECK(guildcard::emblemPixels("not an emblem", 48).empty());
+    CHECK(guildcard::emblemPixels(ebm, 0).empty());
 }

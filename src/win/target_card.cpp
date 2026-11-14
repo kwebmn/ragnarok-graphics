@@ -123,7 +123,7 @@ const panel::Picture* pictureOf(State& s, const refindex::Mob& mob, int id, int 
         if (s.pictures.size() > 64) s.pictures.clear();
         panel::Picture p;
         std::string from;
-        if (monsterPicture(mob, side, p, &from) && s.told < 20) {
+        if (monsterPicture(id, mob, side, p, &from) && s.told < 20) {
             ++s.told;
             LOG_INFO("target: %s's picture - %s", mob.name.c_str(), from.c_str());
         }

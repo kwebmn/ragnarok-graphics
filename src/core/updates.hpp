@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <cstddef>
 #include <string>
 #include <unordered_map>
@@ -34,6 +35,14 @@ struct HookPlan {
 HookPlan hookPlan(bool getDataKnown, bool updatesOn, size_t files, bool lookupsKnown);
 // The n-th read (from 1) that waited for another thread's: told in the log (the first five, then every hundredth)
 bool tellWait(unsigned n);
+// 3.0.19-beta.1 (the testers: the old client - «CPaletteRes :: Cannot find File : palette\몸\프리스트_남_4.pal», then
+// uaRO_New.exe at 0x417B94, every account's character select; the game loads a dye's palette there unchecked): the
+// sprite a dye's palette recolours - data\palette\몸\<job>_<sex>_<n>.pal: data\sprite\인간족\몸통\<sex>\<job>_<sex>.spr,
+// data\palette\머리\머리<style>_<sex>_<n>.pal: data\sprite\인간족\머리통\<sex>\<style>_<sex>.spr (CP949 bytes, the
+// ASCII parts in any case); "" another name
+std::string paletteSprite(const std::string& name);
+// A sprite's own palette - an SPR 1.1 or later keeps it in its last 1024 bytes; false: none
+bool spritePalette(const std::vector<uint8_t>& spr, std::vector<uint8_t>& palette);
 
 struct Hit {
     int archive;       // in the order they were added

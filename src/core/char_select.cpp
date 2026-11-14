@@ -66,6 +66,7 @@ Layout layout(int targetW, int targetH, float scale) {
     const float h = by + kButtonH * s + pad;
     L.glass = panel::Box{0, 0, w, h};
     L.w = int(std::ceil(w));
+    L.wide = L.w;
     L.h = int(std::ceil(h));
     L.x = std::max(0, targetW / 2 - L.w / 2);
     L.y = std::max(0, targetH / 2 - L.h / 2);
@@ -96,6 +97,7 @@ Layout carouselLayout(int targetW, int targetH, float scale) {
     const float h = by + kButtonH * s + pad;
     L.glass = panel::Box{0, 0, w, h};
     L.w = int(std::ceil(w));
+    L.wide = L.w;
     L.h = int(std::ceil(h));
     L.x = std::max(0, targetW / 2 - L.w / 2);
     L.y = std::max(0, targetH / 2 - L.h / 2);

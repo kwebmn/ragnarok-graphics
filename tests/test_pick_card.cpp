@@ -3,6 +3,7 @@
 // (core/pick_card): a row a thing, the chosen one outlined, OK and cancel the game's own (0x76 / 0x77)
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -51,3 +52,27 @@ TEST(pick_card_single_entry_goes_on_by_itself) {
     CHECK(pickcard::autoChoice(0, -1) == -1);
 }
 
+
+// 3.0.19-beta.1 (the testers' doc 14.11: «тут код карти прописує, а встарому назви і це удобніше»): a Warp Portal /
+// Teleport row naming a map - the client's name of it (data\mapnametable.txt, whole, a space after its commas), its
+// code under it; a row not a map's (Random) as it is
+TEST(pick_card_a_warp_row_names_its_map) {
+    const std::map<std::string, std::string> names = {{"comodo", "Beach town,Comodo"},
+                                                      {"kh_dun02", "Robot Factory level 2"},
+                                                      {"jupe_ele_r", "Juperos Elevator"},
+                                                      {"ra_san04", "Holy Ground"}};
+    pickcard::Place p = pickcard::placeOf(names, "kh_dun02");
+    CHECK_EQ(p.name, std::string("Robot Factory level 2"));
+    CHECK_EQ(p.code, std::string("kh_dun02"));
+    p = pickcard::placeOf(names, "comodo.gat");
+    CHECK_EQ(p.name, std::string("Beach town, Comodo"));
+    CHECK_EQ(p.code, std::string("comodo"));
+    p = pickcard::placeOf(names, "Comodo");
+    CHECK_EQ(p.name, std::string("Beach town, Comodo"));
+    p = pickcard::placeOf(names, "Random");
+    CHECK_EQ(p.name, std::string("Random"));
+    CHECK_EQ(p.code, std::string());
+    p = pickcard::placeOf({}, "jupe_ele_r");  // no table read: the code as it is
+    CHECK_EQ(p.name, std::string("jupe_ele_r"));
+    CHECK_EQ(p.code, std::string());
+}

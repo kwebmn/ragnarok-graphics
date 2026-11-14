@@ -183,6 +183,7 @@ struct Layout {
     panel::Box mobs;                       // .296: «Монстри карти»
     panel::Box buffsRow, buffChips[kPlanBuffs];  // .297: the buffs the plan counts
     std::vector<panel::Box> planRowsBoxes, planMinus, planPlus;
+    int wide = 0;  // 3.0.19-beta.1: its own width at its size - the live window's (uikit stats' refit leaves it)
 };
 // The weapons the class can use: its delay, the ASPD at AGI 1, 50, 80, 99 and at the AGI given, with the DEX given
 struct AspdRow {

@@ -689,6 +689,7 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
         L.battleRows.clear();
     }
     L.w = int(std::ceil(w));
+    L.wide = L.w;
     L.h = int(std::ceil(L.glass.h));
     L.x = x;
     L.y = y;

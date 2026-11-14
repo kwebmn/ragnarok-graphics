@@ -69,7 +69,7 @@ void fill(Model& m, const cs::Layout& L, const std::vector<cs::Slot>& slots, con
     const float sc = L.s > 0 ? L.s : 1;
     constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kHp = 0x4CC777, kSp = 0x3D7EEB;
     m.base = 12 * sc;
-    m.width = float(L.w);
+    m.width = float(L.wide > 0 ? L.wide : L.w);  // 3.0.19-beta.1: its size's, never refit's old one
     m.title = t.title;
     m.page = std::to_string(sh.page + 1) + " / " + std::to_string(std::max(1, sh.pages));
     m.pages = !L.carousel;

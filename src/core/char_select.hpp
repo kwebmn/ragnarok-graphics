@@ -46,6 +46,7 @@ struct Layout {
     // middle (2), two neighbours each side smaller and fainter; each position's size against the middle's
     bool carousel = false;
     std::vector<float> scales;
+    int wide = 0;  // 3.0.19-beta.1: its own width at its size - the live window's (uikit charpick's refit leaves it)
 };
 Layout layout(int targetW, int targetH, float scale);
 constexpr int kPositions = 5, kMiddle = 2;

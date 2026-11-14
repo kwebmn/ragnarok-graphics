@@ -94,6 +94,33 @@ void* readInTurn(GetDataFn fn, void* self, const char* name, uint32_t* size) {
     return data;
 }
 
+// 3.0.19-beta.1 (the testers: the old client - «CPaletteRes :: Cannot find File : palette\몸\프리스트_남_4.pal», then
+// uaRO_New.exe at 0x417B94 on every account's character select: the game draws the sprite through the palette it did
+// not find): a dye's palette none of the game's archives has - the sprite's own palette in its place (the sprite's own
+// colours, as the game draws such a dye in the world), a copy as the game's own makes it; null: no such sprite either
+void* paletteStandIn(void* self, const char* name, uint32_t* size) {
+    const std::string sprite = updates::paletteSprite(name);
+    if (sprite.empty()) return nullptr;
+    uint32_t got = 0;
+    void* const spr = readInTurn(reinterpret_cast<GetDataFn>(g_getData), self, sprite.c_str(), &got);
+    if (!spr) return nullptr;
+    std::vector<uint8_t> palette;
+    const bool has =
+        updates::spritePalette(std::vector<uint8_t>(static_cast<uint8_t*>(spr), static_cast<uint8_t*>(spr) + got),
+                               palette);
+    VirtualFree(spr, 0, MEM_RELEASE);  // as the game's own FUN_0050d080
+    void* const copy = has ? VirtualAlloc(nullptr, palette.size() + 8, MEM_COMMIT, PAGE_READWRITE) : nullptr;
+    if (!copy) return nullptr;
+    std::memcpy(copy, palette.data(), palette.size());
+    if (size) *size = uint32_t(palette.size());
+    static volatile LONG told = 0;
+    if (InterlockedIncrement(&told) <= 20)
+        LOG_INFO("files: %s is in none of the client's archives - its sprite's own palette (%s) in its place (the "
+                 "game would crash drawing it: its Palettes.grf misses that dye)",
+                 name, sprite.c_str());
+    return copy;
+}
+
 // The game's file from an update: a copy as the game's own makes it (VirtualAlloc, 8 bytes more; it frees it); else
 // the game's own, its reads one at a time (3.0.18-beta.251)
 void* __attribute__((thiscall)) getData(void* self, const char* name, uint32_t* size) {
@@ -115,7 +142,9 @@ void* __attribute__((thiscall)) getData(void* self, const char* name, uint32_t* 
         }
         LeaveCriticalSection(&g_lock);
     }
-    return copy ? copy : readInTurn(reinterpret_cast<GetDataFn>(g_getData), self, name, size);
+    if (copy) return copy;
+    void* const data = readInTurn(reinterpret_cast<GetDataFn>(g_getData), self, name, size);
+    return data || !name ? data : paletteStandIn(self, name, size);  // 3.0.19-beta.1
 }
 
 bool inUpdates(const char* name) {

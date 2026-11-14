@@ -96,3 +96,32 @@ TEST(uikit_stats_height_stays_frame_after_frame) {
     CHECK(L.h < 700);
     rmlhost::close(doc);
 }
+
+// 3.0.19-beta.1 (the testers' guild card, the same trap here): the game's order when the corner pulls «Характеристики»
+// bigger - core statwin at the new size, refit on the document as it is, the model filled from that layout: it grows
+TEST(uikit_stats_grows_when_its_corner_pulls_it_bigger) {
+    sw::Data d;
+    d.free = 5;
+    for (int i = 0; i < sw::kStats; ++i) d.base[i] = 10 + i, d.need[i] = 2;
+    sw::Show sh;
+    sw::Layout L = sw::layout(0, 0, 1, d, texts(), measure, 0);
+    static sl::Model m;
+    sl::fill(m, L, d, sh, texts(), measure);
+    std::string error;
+    Rml::ElementDocument* doc =
+        rmlhost::load(sl::rml(), [&](Rml::DataModelConstructor& c) { sl::bind(c, m); }, 100, 50, &error);
+    CHECK_EQ(error, std::string());
+    CHECK(sl::refit(doc, L));
+    for (int frame = 0; frame < 3; ++frame) {
+        L = sw::layout(0, 0, 1.5f, d, texts(), measure, 0);
+        sl::refit(doc, L);
+        sl::fill(m, L, d, sh, texts(), measure);
+        rmlhost::update();
+    }
+    L = sw::layout(0, 0, 1.5f, d, texts(), measure, 0);
+    const int own = L.w;
+    CHECK(sl::refit(doc, L));
+    std::printf("  stats pulled to 1.5: %d wide (its own %d)\n", L.w, own);
+    CHECK(std::abs(float(L.w) - float(own)) < 3.0f);
+    rmlhost::close(doc);
+}

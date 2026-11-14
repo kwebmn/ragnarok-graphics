@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/client_libs.hpp"
+#include "core/pack_source.hpp"
 #include "core/ui_style.hpp"
 
 namespace uagfx::guildcard {
@@ -41,8 +43,15 @@ Layout layout(int targetW, int targetH, float scale, Tab tab, size_t members, bo
         L.tabs[i] = panel::Box{pad + float(i % 3) * (tw + kGap * s), y + float(i / 3) * (kTabH + kGap) * s, tw,
                                kTabH * s};
     y += 2 * kTabH * s + kGap * s + 8 * s;
-    L.head = panel::Box{pad, y, inner, 20 * s};
-    y += 24 * s;
+    if (tab == Tab::Info) {  // 3.0.19-beta.1: its own head - the emblem, the name beside it, level and members under
+        L.emblem = panel::Box{pad, y, 48 * s, 48 * s};
+        L.head = panel::Box{pad + 60 * s, y + 4 * s, inner - 60 * s, 22 * s};
+        L.sub = panel::Box{pad + 60 * s, y + 26 * s, inner - 60 * s, 18 * s};
+        y += 56 * s;
+    } else {
+        L.head = panel::Box{pad, y, inner, 20 * s};
+        y += 24 * s;
+    }
     if (tab == Tab::Info) {
         for (int i = 0; i < 7; ++i) {
             L.facts[i] = panel::Box{pad, y, inner, kFactH * s};
@@ -78,6 +87,7 @@ Layout layout(int targetW, int targetH, float scale, Tab tab, size_t members, bo
     y += pad;
     L.glass = panel::Box{0, 0, w, y};
     L.w = int(std::ceil(w));
+    L.wide = L.w;
     L.h = int(std::ceil(y));
     L.x = std::clamp(int(float(targetW) * 0.64f), 0, std::max(0, targetW - L.w));
     L.y = std::clamp(int(float(targetH) * 0.16f), 0, std::max(0, targetH - L.h));
@@ -114,8 +124,12 @@ std::vector<Words> words(const Layout& L, const Info& g, const std::vector<Membe
     for (int i = 0; i < kTabs; ++i)
         out.push_back(Words{L.tabs[i], t.tabs[i], allowed(i, sh.rights) ? kText : kDim, 12.5f * s, int(sh.tab) == i,
                             Align::Center});
-    if (sh.tab == Tab::Info) {
-        out.push_back(Words{L.head, t.title, kMuted, 12 * s, false, Align::Left});
+    if (sh.tab == Tab::Info) {  // 3.0.19-beta.1: the guild's name in gold, its level and members under it
+        out.push_back(Words{L.head, g.name.empty() ? t.title : g.name, kGold2, 15 * s, true, Align::Left});
+        out.push_back(Words{L.sub,
+                            t.facts[1] + ' ' + std::to_string(g.level) + " \xC2\xB7 " + t.facts[2] + ' ' +
+                                ofMost(g.members, g.most),
+                            kMuted, 12 * s, false, Align::Left});
         const std::string values[7] = {g.master,
                                        std::to_string(g.level),
                                        ofMost(g.members, g.most),
@@ -198,6 +212,34 @@ std::vector<Words> words(const Layout& L, const Info& g, const std::vector<Membe
                             m.job + " " + std::to_string(m.level), kMuted, 11.5f * s, false, Align::Right});
     }
     return out;
+}
+
+std::vector<uint32_t> emblemPixels(const std::string& file, int side) {
+    if (side <= 0 || file.size() < 2) return {};
+    std::string bmp;
+    if (file[0] == 'B' && file[1] == 'M') {
+        bmp = file;
+    } else {  // packed: an emblem's BMP is a few KB (24 x 24 at 24 bits 1782 bytes), at most 64 x 64 at 32
+        std::vector<unsigned char> out(64 * 1024);
+        unsigned long len = static_cast<unsigned long>(out.size());
+        if (client_libs::zlibUncompress(out.data(), &len, reinterpret_cast<const unsigned char*>(file.data()),
+                                        static_cast<unsigned long>(file.size())) != 0)
+            return {};
+        bmp.assign(reinterpret_cast<const char*>(out.data()), len);
+    }
+    std::vector<uint32_t> argb;
+    int w = 0, h = 0;
+    if (!pack::decodeBmp(reinterpret_cast<const uint8_t*>(bmp.data()), bmp.size(), argb, w, h) || w <= 0 || h <= 0 ||
+        w > 256 || h > 256)
+        return {};
+    std::vector<uint32_t> px(size_t(side) * size_t(side), 0u);
+    for (int y = 0; y < side; ++y)
+        for (int x = 0; x < side; ++x) {
+            const uint32_t c = argb[size_t(y * h / side) * size_t(w) + size_t(x * w / side)];
+            const uint32_t r = (c >> 16) & 0xFF, g = (c >> 8) & 0xFF, b = c & 0xFF;
+            px[size_t(y) * size_t(side) + size_t(x)] = r >= 0xF8 && g <= 0x08 && b >= 0xF8 ? 0u : (c | 0xFF000000u);
+        }
+    return px;
 }
 
 }  // namespace uagfx::guildcard

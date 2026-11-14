@@ -293,7 +293,7 @@ void loadPicture(State& s, const std::string& key) {
         const auto m = s.index->mobs.find(std::atoi(key.c_str() + (mobIcon ? 9 : 4)));
         if (m == s.index->mobs.end()) return;
         std::string from;
-        if (monsterPicture(m->second, side, out, &from)) {  // 3.0.11-beta.38: win/monster_picture
+        if (monsterPicture(m->first, m->second, side, out, &from)) {  // 3.0.11-beta.38: win/monster_picture
             LOG_INFO("reference: %s's picture - %s", m->second.name.c_str(), from.c_str());
             return;
         }

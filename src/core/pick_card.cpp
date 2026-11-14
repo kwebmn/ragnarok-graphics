@@ -1,6 +1,7 @@
 #include "core/pick_card.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 
 #include "core/ui_style.hpp"
@@ -62,6 +63,21 @@ Hit hitTest(const Layout& L, int scroll, size_t count, float x, float y) {
     if (L.ok.contains(x, y)) return Hit{Part::Ok, -1};
     if (L.cancel.contains(x, y)) return Hit{Part::Cancel, -1};
     return Hit{};
+}
+
+Place placeOf(const std::map<std::string, std::string>& names, const std::string& row) {
+    std::string code;
+    for (const char c : row) code += char(std::tolower(static_cast<unsigned char>(c)));
+    for (const char* end : {".gat", ".rsw"})
+        if (code.size() > 4 && code.compare(code.size() - 4, 4, end) == 0) code.resize(code.size() - 4);
+    const auto named = names.find(code);
+    if (named == names.end() || named->second.empty()) return Place{row, ""};
+    std::string name;
+    for (size_t i = 0; i < named->second.size(); ++i) {
+        name += named->second[i];
+        if (named->second[i] == ',' && i + 1 < named->second.size() && named->second[i + 1] != ' ') name += ' ';
+    }
+    return Place{name, code};
 }
 
 }  // namespace uagfx::pickcard

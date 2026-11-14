@@ -56,11 +56,11 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
 }
 
 void fill(Model& m, const gc::Layout& L, const gc::Info& g, const std::vector<gc::Member>& members,
-          const gc::More& more, const gc::Show& sh, const gc::Texts& t) {
+          const gc::More& more, const gc::Show& sh, const gc::Texts& t, const std::string& emblem) {
     const float sc = L.s > 0 ? L.s : 1;
     constexpr uint32_t kWhite = 0xFFFFFF, kGold = 0xC9A55B, kOnline = 0x4CC777, kOffline = 0x5C6370;
     m.base = 12 * sc;
-    m.width = float(L.w);
+    m.width = float(L.wide > 0 ? L.wide : L.w);  // 3.0.19-beta.1: its size's, never refit's old one
     m.title = t.title;
     m.closeHot = sh.hoverClose;
     m.tabs.resize(gc::kTabs);
@@ -72,6 +72,10 @@ void fill(Model& m, const gc::Layout& L, const gc::Info& g, const std::vector<gc
     {
         ly::Builder b(m.layer, panel::Box{0, top, 0, 0});
         b.box(L.list, 8 * sc, 0x000000, 0.16f);
+        if (L.emblem.w > 0) {  // 3.0.19-beta.1: the guild's emblem, a quiet frame till the game's file is read
+            if (!emblem.empty()) b.icon(L.emblem, emblem);
+            else b.box(L.emblem, 8 * sc, kWhite, 0.05f, kGold, 0.35f, 1.0f * sc);
+        }
         if (L.edit.w > 0 && sh.canEdit) {
             b.box(L.edit, 8 * sc, kGold, sh.hoverEdit ? 0.34f : 0.22f, kGold, 0.8f, 1.0f * sc);
             b.hit("edit", -1, L.edit);

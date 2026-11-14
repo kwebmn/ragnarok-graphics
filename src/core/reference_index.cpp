@@ -402,13 +402,21 @@ std::vector<std::string> spriteNames(const Mob& m) {
     auto add = [&](const std::string& n) {
         if (!n.empty() && std::find(out.begin(), out.end(), n) == out.end()) out.push_back(n);
     };
+    // 3.0.19-beta.1 (players' logs «no sprite for Egnigem Cenia» and 132 more): the server's variants' prefixes - an
+    // MVP's «b_», an instance's «i_», «a_», «r_», «p_» too - taken off the name as it is first (r_baphomet_ -
+    // baphomet_, Baphomet Jr.), then off it without its «_»
+    static const char* const kPrefixes[] = {"meta_", "provoke_", "conceive_", "mutant_", "event_", "l_", "m_",
+                                            "g_",    "e_",       "c_",        "b_",      "a_",     "r_", "i_", "p_"};
     if (!m.sprite.empty()) {
         add(m.sprite);
         std::string t = m.sprite;
         while (!t.empty() && t.back() == '_') t.pop_back();  // FABRE_ - an event's Fabre: the Fabre's look
         add(t);
-        for (const char* p : {"meta_", "provoke_", "conceive_", "mutant_", "event_", "l_", "m_", "g_", "e_", "c_"})
-            if (t.rfind(p, 0) == 0) add(t.substr(std::strlen(p)));
+        const std::string* const forms[2] = {&m.sprite, &t};
+        for (const std::string* from : forms)
+            for (const char* p : kPrefixes)
+                if (from->rfind(p, 0) == 0) add(from->substr(std::strlen(p)));
+        if (t.rfind("l_", 0) == 0) add(t.substr(2) + "_1");  // l_kobold, l_goblin: the client's kobold_1..5
     }
     std::string fromName;  // «Archer Skeleton» - archer_skeleton: the packs before 3.0.11-beta.14 have no sprite
     for (char c : lower(m.name)) {
@@ -416,6 +424,10 @@ std::vector<std::string> spriteNames(const Mob& m) {
         else if (c == ' ' || c == '-' || c == '_') fromName += '_';
     }
     add(fromName);
+    for (size_t i = 0, n = out.size(); i < n; ++i) {  // 3.0.19-beta.1: archer_skeleton - the client's skel_archer
+        const std::string c = out[i];
+        if (c.size() > 9 && c.compare(c.size() - 9, 9, "_skeleton") == 0) add("skel_" + c.substr(0, c.size() - 9));
+    }
     return out;
 }
 

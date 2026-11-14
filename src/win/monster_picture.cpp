@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 
+#include "core/mob_pictures.hpp"
 #include "core/sprite_file.hpp"
 #include "win/game_files.hpp"
 #include "win/pack_frames.hpp"
@@ -40,7 +41,7 @@ bool biggerFrame(const std::string& spr, const spritefile::Sprite& sp, const spr
 
 }  // namespace
 
-bool monsterPicture(const refindex::Mob& mob, int box, panel::Picture& out, std::string* from) {
+bool monsterPicture(int id, const refindex::Mob& mob, int box, panel::Picture& out, std::string* from) {
     for (const std::string& name : refindex::spriteNames(mob))
         for (const std::string& folder : {kMonsters, std::string("npc")}) {
             const std::string base = "data\\sprite\\" + folder + "\\" + name;
@@ -65,7 +66,18 @@ bool monsterPicture(const refindex::Mob& mob, int box, panel::Picture& out, std:
                             : "");
             return true;
         }
-    return false;
+    // 3.0.19-beta.1 (the testers: «чон чон мухи не отображаються так як і 2 МВП»): the client has none of its sprites -
+    // the site's picture of it, kept in the driver
+    spritefile::Image kept;
+    if (!mobpictures::pixels(id, kept.argb, kept.w, kept.h)) return false;
+    const spritefile::Image fit = spritefile::fitted(kept, box, box);
+    out.width = fit.w;
+    out.height = fit.h;
+    out.px = fit.argb;
+    if (from)
+        *from = "no sprite in the client - uaRO Graphics' own picture of it (the site's, " + std::to_string(kept.w) +
+                "x" + std::to_string(kept.h) + ")";
+    return true;
 }
 
 }  // namespace uagfx::win

@@ -61,7 +61,7 @@ void fill(Model& m, const sw::Layout& L, const sw::Data& d, const sw::Show& sh, 
     constexpr uint32_t kWhite = 0xFFFFFF, kGold = 0xF3C653, kGold2 = 0xC9A55B, kGreen = 0x5FD08A;
     constexpr float kSide = 18, kHeaderH = 30;  // core statwin's
     m.base = 12 * sc;
-    m.width = float(L.w);
+    m.width = float(L.wide > 0 ? L.wide : L.w);  // 3.0.19-beta.1: its size's, never refit's old one
     m.title = t.title;
     m.hotkey = t.hotkey;
     std::string chip = t.free;

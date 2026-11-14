@@ -1,5 +1,6 @@
 // 3.0.11-beta.14: the client's sprite files (core/sprite_file) - .spr pictures (palette with RLE, true colour), .act
 // frames of layers - and the monsters' sprite names (refindex::spriteNames) for «Довідник»'s pictures.
+#include <algorithm>
 #include <cstring>
 #include <string>
 
@@ -127,9 +128,53 @@ TEST(reference_sprite_names_of_a_monster) {
     CHECK(refindex::spriteNames(m) == std::vector<std::string>({"m_desert_wolf", "desert_wolf"}));
     m.name = "Archer Skeleton";
     m.sprite = "";  // a pack before 3.0.11-beta.14
-    CHECK(refindex::spriteNames(m) == std::vector<std::string>({"archer_skeleton"}));
+    CHECK(refindex::spriteNames(m) == std::vector<std::string>({"archer_skeleton", "skel_archer"}));
     m.name = "Goblin (Dagger)";
     CHECK(refindex::spriteNames(m) == std::vector<std::string>({"goblin_dagger"}));
+}
+
+// 3.0.19-beta.1 (the testers' doc 14.11: pictures missing in «Довідник» - players' logs «no sprite for Egnigem Cenia»
+// and 132 more): the client's own files of the server's variants - an MVP's «b_», an instance's «i_», «a_», «r_», «p_»
+// (kept with its «_»: r_baphomet_ is Baphomet Jr., baphomet_), the client's «skel_archer» of «archer_skeleton», the
+// first of kobold_1..5 for «l_kobold»
+TEST(reference_sprite_names_the_clients_own_files) {
+    auto has = [](const refindex::Mob& m, const std::string& name) {
+        const std::vector<std::string> n = refindex::spriteNames(m);
+        return std::find(n.begin(), n.end(), name) != n.end();
+    };
+    auto before = [](const refindex::Mob& m, const std::string& a, const std::string& b) {
+        const std::vector<std::string> n = refindex::spriteNames(m);
+        const auto ia = std::find(n.begin(), n.end(), a), ib = std::find(n.begin(), n.end(), b);
+        return ia != n.end() && ib != n.end() && ia < ib;
+    };
+    refindex::Mob m;
+    m.name = "Egnigem Cenia";
+    m.sprite = "b_ygnizem";
+    CHECK(has(m, "ygnizem"));
+    m.name = "Lord Knight Seyren";
+    m.sprite = "b_seyren_";
+    CHECK(has(m, "seyren"));
+    m.name = "Baphomet Jr.";
+    m.sprite = "r_baphomet_";
+    CHECK(before(m, "baphomet_", "baphomet"));
+    m.name = "Archer Skeleton";
+    m.sprite = "g_archer_skeleton";
+    CHECK(has(m, "skel_archer"));
+    m.name = "Kobold";
+    m.sprite = "l_kobold";
+    CHECK(has(m, "kobold_1"));
+    m.name = "Safeguard Chief";
+    m.sprite = "i_high_orc";
+    CHECK(has(m, "high_orc"));
+    m.name = "New Year Doll";
+    m.sprite = "p_chung_e";
+    CHECK(has(m, "chung_e"));
+    m.name = "Gangster";
+    m.sprite = "a_mobster";
+    CHECK(has(m, "mobster"));
+    m.name = "Crystal";
+    m.sprite = "crystal_6";
+    CHECK(!has(m, "crystal_1"));  // another crystal's colour: never a guess by its name
 }
 
 // 3.0.11-beta.76 (the owner: «иконки ... и всего остального ... грузить в текстур которые обработаны»): a frame put

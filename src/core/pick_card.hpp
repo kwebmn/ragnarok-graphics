@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -55,4 +56,12 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
+// 3.0.19-beta.1 (the testers: «тут код карти прописує, а встарому назви»): a Teleport / Warp Portal row naming a map
+// (its code, «.gat» or not, any case) - the client's name for it (data\mapnametable.txt via refindex::mapNames: whole,
+// a space after each comma) and the code (shown under it); a row naming no map known - as it is, no code
+struct Place {
+    std::string name, code;
+};
+Place placeOf(const std::map<std::string, std::string>& names, const std::string& row);
+
 }  // namespace uagfx::pickcard
