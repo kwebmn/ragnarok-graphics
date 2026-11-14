@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.28 — what's new · 2026-11-14
+
+- **The game is faster, the 3D view above all.** Every frame the driver hands all the game's vertices to the renderer, and the memory for them was filled with zeros each time before the copy. In the 3D view that is megabytes a frame — the profile showed 6–7 % of the game's thread. The vertices are now copied straight away, with no zeros first.
+
 # uaRO Graphics 3.0.19-beta.27 — what's new · 2026-11-14
 
 - **The log: what keeps the game busy in the 3D view.** The first time in a game the 3D view is on, the driver records for 21 seconds where the game's thread spends its time — the game itself or our hooks — and writes two tallies into the log. Nothing to turn on; nothing shows in the game.
