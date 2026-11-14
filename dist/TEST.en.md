@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.19-beta.26 — what's new · 2026-11-14
+
+- **3D view: reflections in the water from nearby only.** In the 3D view the water's reflections are gathered only from what is nearer than 600 units: far palms and houses in the water near the horizon are hidden by the haze anyway, and gathering them cost up to 2.4 ms a frame.
+- **The log: more on where the time goes.** The «CPU: of the drawing a frame» line now splits the rest into the game's draws themselves, the vertices' upload, the textures' uploads, the list's submit to the card, and the present's passes.
+
 # uaRO Graphics 3.0.19-beta.25 — what's new · 2026-11-14
 
 - **«Keep the frame rate» aims no higher than the game can go.** With «Keep the frame rate» above the «FPS limit», or with «Vertical sync (VSync)» above the screen's refresh (say 100 on a 60 Hz monitor), the game never shows that rate — and the autopilot turned the effects off one by one while the game ran at a steady 60. The aim is now the least of the three; likewise for the light skill effects and the card's judgement.
