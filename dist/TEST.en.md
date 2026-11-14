@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.19-beta.37 — what's new · 2026-11-15
+
+- **The 3D view: the distance by the threat's arc.** By the red arc it now says how far the monster hitting you from out of sight is: a cell a metre.
+- **The 3D view: grass on Direct3D 11 too.** The blades round you in the 3D view now grow on the weaker cards too (Direct3D 11), as on Direct3D 12.
+- **The 3D view: a free camera for shots.** Ctrl+Shift+C in the 3D view takes the camera off the character: W A S D fly it, Space up, C down, Shift faster, the mouse looks; the character stays where it is. The camera goes no further than 250 units (50 cells) and not under the ground. Ctrl+Shift+C again — back with the character; a clean shot without the interface — Ctrl+Alt+F12, as before.
+
 # uaRO Graphics 3.0.19-beta.36 — what's new · 2026-11-15
 
 - **The 3D view: the mouse no longer drifts sideways.** On a scaled monitor (175 %) the cursor put back at the window's middle stood a pixel aside, and that pixel was read as a mouse move every frame — the view turned slowly by itself. It is now measured from where the cursor really stands.
