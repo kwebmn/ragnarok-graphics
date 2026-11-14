@@ -53,6 +53,9 @@ struct State {
     int fovFirst = int(view3d::kFirstFov), fovBehind = int(view3d::kBehindFov);  // 3.0.19-beta.10: [view3d]
     float mouseSpeed = 1.0f;
     float behindNow = 0.0f;  // 3.0.19-beta.10: the distance behind used (in at once before a wall, out slowly)
+    std::vector<view3d::Box> wayBoxes;  // 3.0.19-beta.12: the models on the way back this frame
+    std::vector<uint32_t> waySeen;
+    int modelPullsTold = 0;
     bool walkBefore = false;  // the walk mode as it was before the 3D view
     bool centred = false;
     bool looking = false;
@@ -266,6 +269,69 @@ void adoptTilt(uint32_t view, State& s) {
         s.look.pitch = std::clamp(s.look.pitch + (to - s.wroteTilt), -view3d::kPitchMost, view3d::kPitchMost);
 }
 
+// 3.0.19-beta.12 (R-ZQWGVD: behind, the eye in Morocc's buildings): the map's models on the way back from the head -
+// the world's tree of the map (CView +0x1b4 the world, its tree's root at +0x68, FUN_004f9e60 / FUN_004fa1c0): a node's
+// four children at +4..+0x10, its box (+0x2c the centre, +0x38 the half sizes), the leaves at the depth 5 with their
+// models (+0x4c..+0x50); a model's own box at +0x130 (FUN_004fa0f0)
+constexpr uint32_t kViewWorld = 0x1B4, kWorldTree = 0x68, kNodeCentre = 0x2C, kNodeHalf = 0x38, kNodeModels = 0x4C;
+constexpr uint32_t kModelBox = 0x130;
+constexpr int kTreeDepth = 5;
+
+bool finiteAll(const float* f, int n, float most) {
+    for (int i = 0; i < n; ++i)
+        if (!std::isfinite(f[i]) || std::fabs(f[i]) > most) return false;
+    return true;
+}
+
+bool modelBox(uint32_t model, view3d::Box& b) {
+    float f[15];
+    if (!readGame(model + kModelBox, f, sizeof f) || !finiteAll(f, 15, 1e5f)) return false;
+    for (int i = 0; i < 3; ++i) {
+        b.half[i] = f[i];
+        b.centre[i] = f[3 + i];
+        for (int k = 0; k < 3; ++k) b.axis[i][k] = f[6 + 3 * i + k];
+    }
+    float most = 0.0f;  // its largest half size in the world's units: the small things (a barrel, a sign) left out
+    for (int i = 0; i < 3; ++i) {
+        const float* a = b.axis[i];
+        most = std::max(most, std::fabs(b.half[i]) * std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]));
+    }
+    return most >= 3.0f && most < 5000.0f;
+}
+
+void boxesOnTheWay(uint32_t node, int depth, const float head[3], const float eye[3], std::vector<view3d::Box>& out,
+                   std::vector<uint32_t>& seen, int& budget) {
+    if (!node || --budget < 0) return;
+    view3d::Box nb;
+    float c[3], h[3];
+    if (!readGame(node + kNodeCentre, c, sizeof c) || !readGame(node + kNodeHalf, h, sizeof h) ||
+        !finiteAll(c, 3, 1e6f) || !finiteAll(h, 3, 1e6f))
+        return;
+    for (int i = 0; i < 3; ++i) {
+        nb.centre[i] = c[i];
+        nb.half[i] = std::fabs(h[i]) + (i == 1 ? 200.0f : 20.0f);  // the tall models out of the ground's own box
+    }
+    if (!view3d::crosses(nb, head, eye)) return;
+    if (depth >= kTreeDepth) {
+        uint32_t first = 0, last = 0;
+        if (!readGame(node + kNodeModels, &first, 4) || !readGame(node + kNodeModels + 4, &last, 4) || last < first ||
+            last - first > 4 * 4096)
+            return;
+        for (uint32_t p = first; p < last; p += 4) {
+            uint32_t model = 0;
+            if (!readGame(p, &model, 4) || !model || std::find(seen.begin(), seen.end(), model) != seen.end()) continue;
+            seen.push_back(model);
+            view3d::Box mb;
+            if (modelBox(model, mb)) out.push_back(mb);
+        }
+        return;
+    }
+    for (uint32_t k = 0; k < 4; ++k) {
+        uint32_t kid = 0;
+        if (readGame(node + 4 + 4 * k, &kid, 4)) boxesOnTheWay(kid, depth + 1, head, eye, out, seen, budget);
+    }
+}
+
 // The game's ground now (the build's own: the mode's world's), 0: none
 uint32_t groundNow() {
     const uint32_t mode = readGameMode();
@@ -355,8 +421,28 @@ void __attribute__((thiscall)) build(uint32_t view) {
     view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target, want);
     const uint32_t ground = groundNow();
     if (s.mode == view3d::Mode::Behind && ground) {  // 3.0.19-beta.10: a wall, a cliff behind - the eye before it
-        const float free = view3d::freeDistance(eye, target, want,
-                                                [ground](float x, float z) { return groundY(ground, x, z); });
+        const float onGround = view3d::freeDistance(eye, target, want,
+                                                    [ground](float x, float z) { return groundY(ground, x, z); });
+        // 3.0.19-beta.12: the map's models too (a house, a roof, a wall of a castle)
+        float free = onGround;
+        uint32_t world = 0;
+        float way[3] = {target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]};
+        const float len = std::sqrt(way[0] * way[0] + way[1] * way[1] + way[2] * way[2]);
+        if (readGame(view + kViewWorld, &world, 4) && world && len > 0.0f) {
+            const float head[3] = {eye[0] + way[0] / len * want, eye[1] + way[1] / len * want,
+                                   eye[2] + way[2] / len * want};
+            s.wayBoxes.clear();
+            s.waySeen.clear();
+            int budget = 2000;
+            boxesOnTheWay(world + kWorldTree, 0, head, eye, s.wayBoxes, s.waySeen, budget);
+            const float byModels = view3d::freeOfBoxes(eye, target, want, s.wayBoxes);
+            if (byModels < onGround - 0.5f && s.modelPullsTold < 10 && byModels < s.behindNow - 0.5f) {
+                ++s.modelPullsTold;
+                LOG_INFO("3D view: behind - brought in to %.0f of %.0f before a model (%zu model(s) on the way, %zu "
+                         "looked at)", byModels, want, s.wayBoxes.size(), s.waySeen.size());
+            }
+            free = std::min(free, byModels);
+        }
         s.behindNow = s.behindNow <= 0.0f || free < s.behindNow ? free : s.behindNow + (free - s.behindNow) * 0.12f;
         if (s.behindNow < want - 0.01f)
             view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target, s.behindNow);

@@ -258,3 +258,48 @@ TEST(view3d_monster_classes) {
     CHECK(view3d::monsterClass(1001) && view3d::monsterClass(1002) && view3d::monsterClass(3999));
     CHECK(!view3d::monsterClass(4000));
 }
+
+// 3.0.19-beta.12 (R-ZQWGVD: behind, the eye went into Morocc's buildings - a roof edge-on, a striped slab): the game's
+// boxes of things (a model's OBB, a ground node's) - where the way back from the head goes into one
+TEST(view3d_box_entered_on_the_way) {
+    view3d::Box b;  // 10 x 10 x 10 round (-30, 0, 0), the world's axes
+    b.centre[0] = -30.0f;
+    b.half[0] = b.half[1] = b.half[2] = 5.0f;
+    const float head[3] = {0.0f, 0.0f, 0.0f}, eye[3] = {-50.0f, 0.0f, 0.0f};
+    CHECK(near(view3d::entersAt(b, head, eye), 0.5f));  // at x = -25 of the 50
+    const float aside[3] = {-50.0f, 0.0f, 20.0f};
+    CHECK(view3d::entersAt(b, head, aside) < 0.0f);  // past its side
+    const float shortEye[3] = {-20.0f, 0.0f, 0.0f};
+    CHECK(view3d::entersAt(b, head, shortEye) < 0.0f);  // ends before it
+    const float inside[3] = {-30.0f, 0.0f, 0.0f};
+    CHECK(view3d::entersAt(b, inside, eye) < 0.0f);  // the head in it: not this one's
+    CHECK(view3d::crosses(b, inside, eye) && view3d::crosses(b, head, eye) && !view3d::crosses(b, head, shortEye));
+}
+
+TEST(view3d_box_turned_and_scaled_axes) {
+    view3d::Box b;  // turned 45 degrees round y, its axes twice as long (the half sizes in their units)
+    const float k = 2.0f * 0.70710678f;
+    b.centre[0] = -30.0f;
+    b.axis[0][0] = k, b.axis[0][2] = k;
+    b.axis[1][1] = 2.0f;
+    b.axis[2][0] = -k, b.axis[2][2] = k;
+    b.half[0] = b.half[1] = b.half[2] = 2.5f;  // 5 world units
+    const float head[3] = {0.0f, 0.0f, 0.0f}, eye[3] = {-50.0f, 0.0f, 0.0f};
+    const float t = view3d::entersAt(b, head, eye);
+    CHECK(t > 0.0f && near(t * 50.0f, 30.0f - 5.0f * 1.41421356f, 0.05f));  // its corner towards the head
+}
+
+TEST(view3d_behind_brought_in_before_a_building) {
+    const float feet[3] = {0.0f, 0.0f, 0.0f}, ahead[3] = {1.0f, 0.0f, 0.0f}, up[3] = {0.0f, -1.0f, 0.0f};
+    float eye[3], target[3];
+    view3d::place(view3d::Mode::Behind, feet, ahead, up, 0.0f, eye, target, 60.0f);
+    view3d::Box house;  // 40 wide, 30 high, from x = -30 back
+    house.centre[0] = -50.0f, house.centre[1] = -15.0f, house.centre[2] = 0.0f;
+    house.half[0] = 20.0f, house.half[1] = 15.0f, house.half[2] = 30.0f;
+    const float free = view3d::freeOfBoxes(eye, target, 60.0f, {house});
+    CHECK(free < 30.0f && free >= view3d::kPullNearest);
+    CHECK(view3d::freeOfBoxes(eye, target, 60.0f, {}) == 60.0f);
+    view3d::Box around = house;  // the head in it (a hall): no pull
+    around.centre[0] = 0.0f, around.half[0] = 100.0f;
+    CHECK(view3d::freeOfBoxes(eye, target, 60.0f, {around}) == 60.0f);
+}

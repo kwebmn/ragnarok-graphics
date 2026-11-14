@@ -129,6 +129,57 @@ uint32_t nextLock(const std::vector<AimBox>& boxes, float cx, float cy, uint32_t
 
 bool monsterClass(int cls) { return cls >= 1001 && cls <= 3999; }
 
+namespace {
+// The way's span in the box: [t0, t1] of its share; false: it misses the box
+bool spanIn(const Box& b, const float from[3], const float to[3], float& t0, float& t1) {
+    const float d[3] = {to[0] - from[0], to[1] - from[1], to[2] - from[2]};
+    const float o[3] = {from[0] - b.centre[0], from[1] - b.centre[1], from[2] - b.centre[2]};
+    t0 = -1e30f, t1 = 1e30f;
+    for (int i = 0; i < 3; ++i) {
+        const float* a = b.axis[i];
+        const float len = std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+        if (!(len > 1e-6f) || !std::isfinite(b.half[i])) return false;
+        const float half = std::fabs(b.half[i]) * len;  // the world's units
+        const float at = (o[0] * a[0] + o[1] * a[1] + o[2] * a[2]) / len;
+        const float v = (d[0] * a[0] + d[1] * a[1] + d[2] * a[2]) / len;
+        if (std::fabs(v) < 1e-9f) {
+            if (std::fabs(at) > half) return false;
+            continue;
+        }
+        float e0 = (-half - at) / v, e1 = (half - at) / v;
+        if (e0 > e1) std::swap(e0, e1);
+        t0 = std::max(t0, e0);
+        t1 = std::min(t1, e1);
+        if (t0 > t1) return false;
+    }
+    return t1 >= 0.0f && t0 <= 1.0f;
+}
+}  // namespace
+
+float entersAt(const Box& b, const float from[3], const float to[3]) {
+    float t0 = 0, t1 = 0;
+    if (!spanIn(b, from, to, t0, t1) || t0 <= 0.0f) return -1.0f;
+    return t0;
+}
+
+bool crosses(const Box& b, const float from[3], const float to[3]) {
+    float t0 = 0, t1 = 0;
+    return spanIn(b, from, to, t0, t1);
+}
+
+float freeOfBoxes(const float eye[3], const float target[3], float distance, const std::vector<Box>& boxes) {
+    if (!(distance > kPullNearest) || boxes.empty()) return distance;
+    float dir[3] = {target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]};
+    if (!normalize(dir)) return distance;
+    const float head[3] = {eye[0] + dir[0] * distance, eye[1] + dir[1] * distance, eye[2] + dir[2] * distance};
+    float free = distance;
+    for (const Box& b : boxes) {
+        const float t = entersAt(b, head, eye);
+        if (t > 0.0f) free = std::min(free, t * distance);
+    }
+    return free < distance ? std::max(kPullNearest, free - kPullStep) : distance;
+}
+
 float behindDistanceOf(float gameDistance) {
     if (!std::isfinite(gameDistance) || gameDistance <= 0.0f) return kBehindDistance;
     return std::clamp(gameDistance * (kBehindDistance / 300.0f), 22.0f, 160.0f);

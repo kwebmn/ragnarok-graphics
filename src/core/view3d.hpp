@@ -42,6 +42,22 @@ float turnSign(const float view[12], float yawDegrees);
 // (CView +0x88), pitch in degrees (up positive); behind: `distance` back from the head (beta.7: the game's wheel)
 void place(Mode m, const float feet[3], const float flat[3], const float up[3], float pitch, float eye[3],
            float target[3], float distance = kBehindDistance);
+// 3.0.19-beta.12 (R-ZQWGVD: behind, the eye went into Morocc's buildings): the game's boxes of things - a model's
+// (its +0x130: the half sizes, the centre, three axes - uaRO.exe FUN_004fa0f0; the axes may carry a scale, the half
+// sizes in their units), a ground node's (+0x2c the centre, +0x38 the half sizes, the world's axes)
+struct Box {
+    float centre[3] = {0, 0, 0};
+    float axis[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+    float half[3] = {0, 0, 0};
+};
+// Where the way from `from` to `to` goes into the box: its share of the way (0-1]; -1: it does not, or `from` is in it
+float entersAt(const Box& b, const float from[3], const float to[3]);
+// Whether any of the way is in the box (`from` in it too)
+bool crosses(const Box& b, const float from[3], const float to[3]);
+// Behind: the free distance back from the head before the first box the way back enters (a step before it,
+// kPullNearest at least); a box the head stands in left out
+float freeOfBoxes(const float eye[3], const float target[3], float distance, const std::vector<Box>& boxes);
+
 // 3.0.19-beta.7: the game's wheel zoom (CView +0x3c, 230-2040, its start 300) as the distance behind the head
 float behindDistanceOf(float gameDistance);
 
