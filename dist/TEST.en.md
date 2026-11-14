@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.32 — what's new · 2026-11-14
+
+- **The 3D view: a vault in the caves.** In the dungeons (the Payon cave, the Geffen and Orc dungeons, the Ant Hell…) a stone vault now stands over the passages instead of the dark sky: the cave's own relief mirrored up, down to the walls over them, a dome over the ways, sinking into the haze far off. The switch «Vault in the caves» on «Game», the section «3D view».
+
 # uaRO Graphics 3.0.19-beta.31 — what's new · 2026-11-14
 
 - **The 3D view: skills by a click work.** While the game waits for a skill's target (the aiming cursor after a skill's key), a click in the 3D view gives it to whoever is under the crosshair. An enemy skill goes to the monster under the crosshair or the one it is pulled onto. A friend's skill (Heal, buffs) goes to the player, homunculus or mercenary under it; with nobody or a monster there, on yourself. On a monster with Shift, as usual. Before, in the 3D view you could neither buff yourself nor cast on a monster.
