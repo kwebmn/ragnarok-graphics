@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.33 — what's new · 2026-11-14
+
+- **The 3D view: grass.** In the 3D view real blades of grass now grow on the green ground round you — in the world, not painted over the picture: they stay put as you walk, sway in the wind and bend under steps, thinning out far off. It grows where the effects' grass grows, as much of it; not on water, bridges or decks. The switch «Grass in the 3D view» on «Game», the section «3D view» (Direct3D 12).
+
 # uaRO Graphics 3.0.19-beta.32 — what's new · 2026-11-14
 
 - **The 3D view: a vault in the caves.** In the dungeons (the Payon cave, the Geffen and Orc dungeons, the Ant Hell…) a stone vault now stands over the passages instead of the dark sky: the cave's own relief mirrored up, down to the walls over them, a dome over the ways, sinking into the haze far off. The switch «Vault in the caves» on «Game», the section «3D view».
