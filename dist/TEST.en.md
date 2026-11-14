@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.14 — what's new · 2026-11-14
+
+- **3D view: after leaving the world the game's camera is its own again.** If the world closed while in the 3D view (a disconnect, back to the character list), the next map was drawn with the 3D view's wide field of view. Our own models and ground then stood off their places: a house askew in the middle of a road, for one. Now, while the 3D view is off, the game always draws with its own angle.
+
 # uaRO Graphics 3.0.19-beta.13 — what's new · 2026-11-14
 
 - **3D view: no slabs, no white blaze.** When part of a house was behind the camera, it stretched across the whole screen as a dark or striped slab. The card now cuts such triangles properly. From the eyes, looking down, your own level 99 aura no longer floods everything white; other players' auras stay.
