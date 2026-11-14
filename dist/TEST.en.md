@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.27 — what's new · 2026-11-14
+
+- **The log: what keeps the game busy in the 3D view.** The first time in a game the 3D view is on, the driver records for 21 seconds where the game's thread spends its time — the game itself or our hooks — and writes two tallies into the log. Nothing to turn on; nothing shows in the game.
+
 # uaRO Graphics 3.0.19-beta.26 — what's new · 2026-11-14
 
 - **3D view: reflections in the water from nearby only.** In the 3D view the water's reflections are gathered only from what is nearer than 600 units: far palms and houses in the water near the horizon are hidden by the haze anyway, and gathering them cost up to 2.4 ms a frame.
