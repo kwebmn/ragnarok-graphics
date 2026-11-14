@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.20 — what's new · 2026-11-14
+
+- **A faster 3D view.** From the eyes and from behind, the smooth ground is now drawn only nearby, to about 220 units, where a cell is still large on the screen; past it, the game's own ground. Before, the 3D view drew the smooth ground 600 units ahead: in Morocc 218 thousand vertices the processor worked out every frame (9 ms, peaks of 25) — hence the FPS drops. The game's normal view is unchanged.
+
 # uaRO Graphics 3.0.19-beta.19 — what's new · 2026-11-14
 
 - **The homunculus and the mercenary keep close.** Our AI attacks by itself only monsters within 5 cells of you, and only while you stand. Past 7 cells from you it gives up the fight and comes back, and when you walk it follows you (monsters hitting you it still drives off). Filir and Vanilmirth hit with blows, and with their skill when their HP is under half. The game takes the new AI after a map change or a new login.
