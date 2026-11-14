@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.19-beta.11 — what's new · 2026-11-14
+
+- **3D view: the mouse obeys.** The camera no longer spins by itself. While you look around in the 3D view, the game's cursor is held at the crosshair and the mouse's own moves turn the view. Before, «mouse freedom» put the cursor back every frame and the camera spun. Alt gives the usual cursor, where the crosshair was.
+- **The crosshair and Tab.** Near a monster the crosshair is pulled onto it a little, so moving targets are easier to hit; the camera never turns by itself. Tab locks the monster nearest the crosshair, again the next one. The crosshair is pulled onto the locked one from farther off. If it is not seen for 5 seconds, the lock is let go. While you type in the chat, Tab works as before.
+- **From the eyes your own character is no longer seen:** its head and hair no longer cover the view.
+
 # uaRO Graphics 3.0.19-beta.10 — what's new · 2026-11-14
 
 - **3D view: settings, a red crosshair, the camera before a wall.** A new section «3D view» on the «Game» page: the field of view from the eyes (70° by default), from behind (60°) and the mouse speed. They apply at once. Over a monster the crosshair turns red; over an NPC, an item or a warp it shows the game's sign (talk, pick up, go through). The camera behind no longer goes into walls and cliffs: before a wall it comes nearer at once, then moves back smoothly. The grass is not drawn in the 3D view for now: its blades are made for the game's own camera.
