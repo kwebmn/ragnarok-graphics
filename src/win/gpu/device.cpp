@@ -2000,6 +2000,10 @@ void Renderer::setUiSharp(bool sharp) {
 
 bool Renderer::upscales() const { return remote_ && remote_->upscales(); }
 
+bool Renderer::ownGroundLately() const { return remote_ && remote_->ownGroundLately(); }  // 3.0.19-beta.42
+
+bool Renderer::ownGroundShown() const { return !remix_ && !d3d11_ && !remote_ && impl_ && impl_->ownShownLast; }
+
 void Renderer::bridgeTimes(double& sendMs, double& waitMs) const {
     sendMs = waitMs = 0.0;
     if (remote_) remote_->bridgeTimes(sendMs, waitMs);

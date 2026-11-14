@@ -98,6 +98,11 @@ private:
     };
     std::vector<Job> jobs_;
     std::unordered_map<uint32_t, int> byVertices_;
+    // 3.0.19-beta.42 (the speed: drawn() 1.1 % of the game's thread with a wearer about - a lookup each of its some
+    // 3000 draws): the anchors' vertices' bits (by their address), a draw whose bit is clear none of them
+    static constexpr uint32_t kMaskBits = 1024;
+    uint64_t mask_[kMaskBits / 64] = {};
+    static uint32_t bitOf(uint32_t vertices) { return ((vertices >> 4) * 2654435761u) >> 22; }  // 0 - 1023
 };
 
 }  // namespace uagfx::wings

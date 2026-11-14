@@ -820,6 +820,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
                                    flag(file.view3dFace)));
         n.view3dFace = file.view3dFace;
     }
+    if (file.view3dFastGround != running.view3dFastGround) {  // 3.0.19-beta.42
+        u.applied.push_back(change("3D view far ground less often", flag(running.view3dFastGround),
+                                   flag(file.view3dFastGround)));
+        n.view3dFastGround = file.view3dFastGround;
+    }
     if (file.cameraRemember != running.cameraRemember) {  // 3.0.11-beta.184
         u.applied.push_back(change("camera remember", flag(running.cameraRemember), flag(file.cameraRemember)));
         n.cameraRemember = file.cameraRemember;

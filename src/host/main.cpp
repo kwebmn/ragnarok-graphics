@@ -392,6 +392,7 @@ void Host::present(const uint8_t* data, uint32_t size) {
     } else {
         Sleep(1);  // no way to show it yet: the surface is on its way
     }
+    channel_.noteOwnGround(renderer_.ownGroundShown());  // 3.0.19-beta.42: the driver thins the game's far ground
     channel_.notifyPresented();
 }
 

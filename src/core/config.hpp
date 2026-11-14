@@ -1029,6 +1029,9 @@ struct Config {
     bool view3dAimPull = false;
     // 3.0.19-beta.39: [view3d] face - standing, the character turned where the camera looks (core view3d::faceToward)
     bool view3dFace = true;
+    // 3.0.19-beta.42: [view3d] fast_ground - the game's far ground cells worked out one frame in 8 while the renderer's
+    // own ground is drawn in their place (core/ground_thin)
+    bool view3dFastGround = true;
     bool buffTimers = true;  // 3.0.4-beta.6, [buffs] timers: the time left on the buff icons (win/buff_overlay)
     bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player

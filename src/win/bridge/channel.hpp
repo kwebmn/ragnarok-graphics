@@ -58,6 +58,11 @@ public:
     // The renderer after each picture it shows; the driver waits until at least `count` have been shown.
     void notifyPresented();
     uint32_t presented() const;
+    // 3.0.19-beta.42: the renderer, before it tells a picture shown - whether its own ground was drawn in place of the
+    // game's in it; the driver - whether it was in one of the last kOwnGroundLately pictures
+    static constexpr uint32_t kOwnGroundLately = 3;
+    void noteOwnGround(bool drawn);
+    bool ownGroundLately() const;
     bool waitPresented(uint32_t count, DWORD ms);
 
 private:

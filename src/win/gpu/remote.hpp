@@ -30,6 +30,8 @@ public:
     // 3.0.2-beta.12: the game's thread here so far, ms - its frames' draws written and sent, its waits for the
     // renderer's presents
     void bridgeTimes(double& sendMs, double& waitMs) const;
+    // 3.0.19-beta.42: the renderer drew its own ground in place of the game's lately (bridge::Channel)
+    bool ownGroundLately() const { return channel_.ownGroundLately(); }
     // 2.2.1: the renderer's work a frame, as it last sent it (Msg::Timing, twice a second)
     bool timing(GpuTiming& out) const {
         out = timing_;

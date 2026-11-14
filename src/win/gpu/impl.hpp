@@ -1174,7 +1174,9 @@ struct Renderer::Impl {
         mapYear = seasons::of(mapName, month, outdoors(mapName), mapPlace);
         mapPlace = seasons::withYear(mapPlace, mapYear);  // 2.7.5: no insects in winter
     }
+    bool ownShownLast = false;  // 3.0.19-beta.42: the last picture's ground the own one in place of the game's
     void newPicture() {
+        ownShownLast = ownState.frame;
         ownState.decided = ownState.frame = ownState.drawn = ownState.likeTaken = false;  // 3.0.4-beta.10
         ownState.waterDrawn = ownState.waterGame = false;  // 3.0.4-beta.20
         ownState.shading.beginFrame();

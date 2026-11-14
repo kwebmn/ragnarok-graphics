@@ -325,3 +325,22 @@ TEST(wings_body_act_of_its_sprite) {
     CHECK(wings::actOf("sprite\\a.b\\c").empty());  // no extension of its own
     CHECK(wings::actOf("").empty());
 }
+
+// 3.0.19-beta.42 (the speed: a bit a face's vertices before the lookup): a crowd's draws between a wearer's faces leave
+// its wings where they go - before its first face (facing us), after its last (facing away)
+TEST(wings_frame_finds_its_faces_among_many_draws) {
+    wings::Frame f;
+    const int us = f.begin(1, false), away = f.begin(2, true);
+    for (uint32_t k = 0; k < 30; ++k) f.face(us, 0x01000000u + k * 0x1A0u);
+    for (uint32_t k = 0; k < 30; ++k) f.face(away, 0x05000000u + k * 0x2C0u);
+    for (uint32_t k = 0; k < 3000; ++k) {  // the others' draws
+        const wings::Frame::Emit e = f.drawn(0x09000000u + k * 0x80u);
+        CHECK(e.before < 0 && e.after < 0);
+    }
+    CHECK(f.drawn(0x01000000u).before == us);
+    for (uint32_t k = 1; k < 30; ++k) CHECK(f.drawn(0x01000000u + k * 0x1A0u).before < 0);
+    for (uint32_t k = 0; k + 1 < 30; ++k) CHECK(f.drawn(0x05000000u + k * 0x2C0u).after < 0);
+    CHECK(f.drawn(0x05000000u + 29 * 0x2C0u).after == away);
+    f.clear();
+    CHECK(f.drawn(0x01000000u).before < 0);  // cleared: nobody's
+}

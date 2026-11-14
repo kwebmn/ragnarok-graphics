@@ -34,5 +34,9 @@ bool viewAxes(float right[2], float forward[2]);
 // eye see an actor's place (core view3d::groundLetsSee by the game's own heights); 3.0.19-beta.39 and the map's models
 // (a house, a castle's wall, a tree: view3d::boxHides), their answer kept a moment for each actor; true off the view
 bool seenActor(uint32_t id, const float to[3]);
+// 3.0.19-beta.42 (core/ground_thin): a world point's depth in the view the 3D view wrote last (false off it), and the
+// camera's builds so far (the frames' turns)
+bool viewDepthOf(const float at[3], float& depth);
+uint32_t builds();
 
 }  // namespace uagfx::win::view3dwin

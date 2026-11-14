@@ -8,13 +8,14 @@ void Tracker::update(const std::vector<map::Point>& feet, float time, float life
     std::vector<bool> taken(walkers_.size(), false);
     for (const map::Point& f : feet) {
         // The walker it is: the nearest seen last within 8 units (a character runs about 3 a frame at worst).
+        // 3.0.19-beta.42: by the squares (a crowd's feet against its walkers each frame: no hypot for each pair)
         int best = -1;
-        float bestD = 8.0f;
+        float bestD2 = 8.0f * 8.0f;
         for (size_t i = 0; i < walkers_.size(); ++i) {
             if (taken[i]) continue;
-            const float d = std::hypot(walkers_[i].x - f.x, walkers_[i].z - f.z);
-            if (d < bestD) {
-                bestD = d;
+            const float wx = walkers_[i].x - f.x, wz = walkers_[i].z - f.z, d2 = wx * wx + wz * wz;
+            if (d2 < bestD2) {
+                bestD2 = d2;
                 best = int(i);
             }
         }

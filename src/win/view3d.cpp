@@ -97,6 +97,7 @@ struct State {
     bool eyeKnown = false;
     DWORD flewAt = 0;
     int freeStopsTold = 0;  // 3.0.19-beta.41: kept off a model
+    uint64_t builds = 0;    // 3.0.19-beta.42: the camera's builds in the 3D view
     // 3.0.19-beta.39: the world (its models' tree) of the last frame, and each actor's models' answer of late
     uint32_t worldNow = 0;
     struct Sight {
@@ -667,6 +668,7 @@ void __attribute__((thiscall)) build(uint32_t view) {
     std::memcpy(at(view, kInverse), inv, sizeof inv);
     std::memcpy(s.viewNow, nm, sizeof nm);  // 3.0.19-beta.36: its axes for the threat's arc
     s.viewKnown = true;
+    ++s.builds;  // 3.0.19-beta.42: the ground's turns (win/ground_thin)
     applyFov(s, view3d::fovFor(s.mode, s.fovFirst, s.fovBehind));
     ++s.frames;
     tell(s, view, eye, feet, up);
@@ -818,6 +820,15 @@ bool looking() { return g_state.mode != view3d::Mode::Off && g_state.looking; }
 bool fromTheEyes() { return g_state.mode == view3d::Mode::First; }
 
 bool ownHidden() { return ownHiddenNow(); }
+
+bool viewDepthOf(const float at[3], float& depth) {
+    const State& s = g_state;
+    if (s.mode == view3d::Mode::Off || !s.viewKnown) return false;
+    depth = camera::viewZ(s.viewNow, at);
+    return std::isfinite(depth);
+}
+
+uint32_t builds() { return uint32_t(g_state.builds); }
 
 bool seenActor(uint32_t id, const float to[3]) {
     State& s = g_state;

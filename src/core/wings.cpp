@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <iterator>
 #include <map>
 
 #include "core/game_camera.hpp"
@@ -236,11 +237,17 @@ void Frame::face(int job, uint32_t vertices, const Depth& depth, bool anchor) {
         if (!j.farthest.known() || at < j.farthest.at(j.feetY)) j.farthest = depth;
         if (!j.nearest.known() || at > j.nearest.at(j.feetY)) j.nearest = depth;
     }
-    if (anchor && byVertices_.emplace(vertices, job).second) ++j.faces;
+    if (anchor && byVertices_.emplace(vertices, job).second) {
+        ++j.faces;
+        const uint32_t bit = bitOf(vertices);
+        mask_[bit / 64] |= uint64_t(1) << (bit % 64);
+    }
 }
 
 Frame::Emit Frame::drawn(uint32_t vertices) {
     Emit e;
+    const uint32_t bit = bitOf(vertices);
+    if (!(mask_[bit / 64] >> (bit % 64) & 1)) return e;  // none of the anchors'
     const auto it = byVertices_.find(vertices);
     if (it == byVertices_.end()) return e;
     Job& j = jobs_[size_t(it->second)];
@@ -259,6 +266,7 @@ Frame::Emit Frame::drawn(uint32_t vertices) {
 void Frame::clear() {
     jobs_.clear();
     byVertices_.clear();
+    std::fill(std::begin(mask_), std::end(mask_), uint64_t(0));
 }
 
 uint32_t Frame::actor(int job) const {
