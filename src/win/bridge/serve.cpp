@@ -317,6 +317,7 @@ bool Server::readPresent(const uint8_t* data, uint32_t size, Present& out) {
     out.options.hdr = rd.u8() != 0;     // 0.65
     out.options.pacerSleeps = rd.u8() != 0;  // 2.5.20
     out.options.screenshotWhole = rd.u8() != 0;  // 3.0.13-beta.16
+    out.options.crossPresent = rd.left() >= 1 && rd.u8() != 0;  // 3.0.19-beta.9
     return rd.ok();
 }
 

@@ -543,6 +543,9 @@ const std::vector<IniSetting>& iniSettings() {
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         // 2.12: Direct3D 11 without the risky parts, also by itself after two failed starts (core/safe_mode)
+        // 3.0.19-beta.9 (R-T8FGMM): a laptop's two cards - the frames through the one the screen hangs off
+        {"renderer", "cross_present", Page::Render, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::RenderCrossPresent,
+         Text::RenderCrossPresentHint, ""},
         {"renderer", "safe_mode", Page::Render, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::RenderSafeMode,
          Text::RenderSafeModeHint, ""},
         {"renderer", "render_thread", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderThread,
@@ -1502,6 +1505,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "renderer.safe_mode") return c.safeMode ? "1" : "0";  // 2.12
     if (k == "stats.send") return c.statsSend ? "1" : "0";
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";
+    if (k == "renderer.cross_present") return c.crossPresent ? "1" : "0";  // 3.0.19-beta.9
     if (k == "renderer.render_thread") return c.renderThread ? "1" : "0";
     if (k == "renderer.remix") return c.remix ? "1" : "0";
     if (k == "display.high_resolution") return c.highResolution ? "1" : "0";

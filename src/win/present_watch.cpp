@@ -103,10 +103,16 @@ void frame(gpu::Renderer& renderer, const Config& config, const std::string& ini
     sample.cpuMs = t.cpuMs;
     const bool d3d12 = !renderer.d3d11();
     const bool before = s.watch.taken();
-    const presentwatch::Step step = s.watch.feed(sample, d3d12, s.screen);
-    if (before || !s.watch.taken()) return;  // the half second that took it, once
+    const presentwatch::Step step = s.watch.feed(sample, d3d12, config.crossPresent, s.screen);
     const std::string ms = std::to_string(int(t.presentMs + 0.5));
-    if (step == presentwatch::Step::ToD3d11) {
+    if (step == presentwatch::Step::ToCrossPresent) {  // 3.0.19-beta.9: at once - the renderer takes it at a present
+        settingedit::set(iniPath, config, "renderer.cross_present", "1");
+        LOG_INFO("present watch: 10 s of slow presents (%.0f ms each, the card's work %.1f ms) - the frames through %s "
+                 "from now ([renderer] cross_present = 1)", t.presentMs, t.gpuMs, s.screen.c_str());
+        tellInChat(settings::fmt(settings::tr(language(), settings::Text::PresentSlowCross),
+                                 {ms, renderer.adapterName()}),
+                   codePage);
+    } else if (step == presentwatch::Step::ToD3d11) {
         settingedit::set(iniPath, config, "renderer.api", "d3d11");
         LOG_INFO("present watch: 10 s of slow presents (%.0f ms each, the card's work %.1f ms) - Direct3D 11 from the "
                  "next start ([renderer] api = d3d11)", t.presentMs, t.gpuMs);
@@ -117,7 +123,7 @@ void frame(gpu::Renderer& renderer, const Config& config, const std::string& ini
                  "next start ([renderer] gpu)", t.presentMs, s.screen.c_str());
         tellInChat(settings::fmt(settings::tr(language(), settings::Text::PresentSlowCard), {ms, s.screen}),
                    codePage);
-    } else {
+    } else if (!before && s.watch.taken()) {
         LOG_INFO("present watch: 10 s of slow presents (%.0f ms each, the card's work %.1f ms) - nothing to turn to "
                  "(Direct3D 11, the screen on the card drawing)", t.presentMs, t.gpuMs);
     }

@@ -482,6 +482,11 @@ private:
             }
             p.choice(kGpu, t(Text::RenderGpu), items, selected, t(Text::RenderGpuHint), gpuShown.choosable);
         }
+        // 3.0.19-beta.9 (R-T8FGMM): a laptop's two cards - the frames through the one its screen hangs off
+        if (cards.size() > 1)
+            for (size_t i = 0; i < all.size(); ++i)
+                if (sectionKey(all[i]) == "renderer.cross_present")
+                    p.check(rowId(i), t(all[i].label), m.token(all[i]) == "1", t(all[i].hint));
         p.gap();
         // part 3: the renderer in a 64-bit process (2.6: its thread and Remix on the Debug page)
         for (size_t i = 0; i < all.size(); ++i)

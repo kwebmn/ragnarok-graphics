@@ -1603,6 +1603,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.screenshotWhole = bigShot_ == 1 && !screenshot.empty();  // 3.0.13-beta.16: the target at its own size
     if (bigShot_ > 0) --bigShot_;
     o.hdr = config.hdr && enhanced_;  // 0.65: Pause shows the SDR picture
+    o.crossPresent = config.crossPresent;  // 3.0.19-beta.9: through the screen's card (gpu/cross_present.cpp)
     // 0.91: quieter in the background; the crowd's limiter thinned out. 3.0.3-beta.3: the music of the main game
     // window alone, unless [windows] others_music
     soundFrame(foreground, mainWindow_ || config.windowOthersMusic, mainWindow_ || config.windowOthersSounds);

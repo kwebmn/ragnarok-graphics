@@ -608,6 +608,9 @@ struct Config {
     // 0.50.2: [renderer] gpu - the name of the graphics card to draw on (Windows' own, as the Renderer page lists
     // them); "" (auto): the fast one of several (core/gpu_order.hpp).
     std::string gpu;
+    // 3.0.19-beta.9 (R-T8FGMM): [renderer] cross_present = 1 - Direct3D 12's frames shown through the card the game's
+    // monitor hangs off when it is another one (gpu/cross_present.cpp); the present watch turns it on by itself
+    bool crossPresent = false;
     // 0.51: [report] auto - a report to the developers (uaro.kiev.ua) when a game ended badly: the settings app's
     // watcher, started by the driver, sends it after the game (core/report_upload.hpp).
     bool reportAuto = false;

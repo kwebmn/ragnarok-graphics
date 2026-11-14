@@ -963,6 +963,8 @@ Config parseConfig(const std::string& text) {
             if (val == "auto" || val == "window" || val == "composition") c.bridgePresent = val;
         } else if (key == "renderer.remix") {
             setBool(val, c.remix);
+        } else if (key == "renderer.cross_present") {  // 3.0.19-beta.9
+            setBool(val, c.crossPresent);
         } else if (key == "renderer.bridge_wine") {  // 3.0.4-beta.8
             setBool(val, c.bridgeWine);
         } else if (key == "renderer.bridge_dpi_scale") {

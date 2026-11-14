@@ -989,6 +989,8 @@ enum class Text : uint16_t {
     RefModeStill, RefModePlant,
     // 3.0.19-beta.8 (R-T8FGMM, core/present_watch): the chat's line when slow presents turned the drawing over
     PresentSlowD3d11, PresentSlowCard,
+    // 3.0.19-beta.9: [renderer] cross_present, and the chat's line when the present watch turned it on
+    RenderCrossPresent, RenderCrossPresentHint, PresentSlowCross,
     Count
 };
 

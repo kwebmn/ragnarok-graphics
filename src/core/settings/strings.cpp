@@ -8799,6 +8799,24 @@ constexpr Entry kTexts[] = {
      "restart the game",
      "uaRO Graphics: кожен кадр ішов на екран {1} мс — з наступного запуску гру малює {2}, перезапустіть гру",
      "uaRO Graphics: каждый кадр шёл на экран {1} мс — со следующего запуска игру рисует {2}, перезапустите игру"},
+    {Text::RenderCrossPresent, "Frames through the screen's graphics card", "Кадр через відеокарту екрана",
+     "Кадр через видеокарту экрана"},
+    {Text::RenderCrossPresentHint,
+     "For a laptop with two graphics cards whose screen hangs off the integrated one: the game is drawn on the fast "
+     "card and each frame is handed to the screen's card, which shows it. Turn it on when the frame counter shows "
+     "few frames while the card's own work is light. The program turns it on by itself when it sees that. Direct3D "
+     "12 only.",
+     "Для ноутбука з двома відеокартами, у якого екран підключено до вбудованої: гру малює швидка відеокарта, а "
+     "кожен кадр передається відеокарті екрана, і вона його показує. Увімкніть, якщо кадрів мало, а робота самої "
+     "відеокарти легка. Програма вмикає це сама, коли таке помічає. Лише Direct3D 12.",
+     "Для ноутбука с двумя видеокартами, у которого экран подключён к встроенной: игру рисует быстрая видеокарта, а "
+     "каждый кадр передаётся видеокарте экрана, и она его показывает. Включите, если кадров мало, а работа самой "
+     "видеокарты лёгкая. Программа включает это сама, когда такое замечает. Только Direct3D 12."},
+    {Text::PresentSlowCross,
+     "uaRO Graphics: each frame took {1} ms to get from {2} to the screen - the frames now go through the screen's "
+     "card",
+     "uaRO Graphics: кожен кадр ішов з {2} на екран {1} мс — тепер кадри йдуть через відеокарту екрана",
+     "uaRO Graphics: каждый кадр шёл с {2} на экран {1} мс — теперь кадры идут через видеокарту экрана"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

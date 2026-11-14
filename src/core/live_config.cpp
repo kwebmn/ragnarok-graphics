@@ -133,6 +133,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("anisotropy", std::to_string(running.anisotropy), std::to_string(file.anisotropy)));
         n.anisotropy = file.anisotropy;
     }
+    if (file.crossPresent != running.crossPresent) {  // 3.0.19-beta.9: the renderer takes it at a present
+        u.applied.push_back(change("cross_present", flag(running.crossPresent), flag(file.crossPresent)));
+        n.crossPresent = file.crossPresent;
+    }
     if (file.vsync != running.vsync) {
         u.applied.push_back(change("vsync", flag(running.vsync), flag(file.vsync)));
         n.vsync = file.vsync;
@@ -883,6 +887,7 @@ bool appliesNow(const std::string& k) {
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
            k == "frames.light_skills" ||  // 3.0.18-beta.186
+           k == "renderer.cross_present" ||  // 3.0.19-beta.9
            k == "debug.profile" || k == "debug.xray" || k == "debug.seams_view" || k == "frames.fps_counter" ||
            k == "debug.quick_acks" ||  // 3.0.11-beta.128
            k == "utility.language" ||  // 3.0.11-beta.174

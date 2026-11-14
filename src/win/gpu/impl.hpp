@@ -784,6 +784,41 @@ struct Renderer::Impl {
     HANDLE presentSurface = nullptr;  // part 3: a composition surface instead of the game's window
     bool surfaceNoted = false;        // the log has said frame generation stays off on it
     bool refused = false;             // the game's window took no swap chain from this process
+    // 3.0.19-beta.9 (R-T8FGMM, [renderer] cross_present; gpu/cross_present.cpp): the frames shown through the card
+    // the game's monitor hangs off when it is another than the one drawing (a laptop's AMD drawing, its screen on the
+    // Intel: 201 ms in every present). backBuffers are then this card's own pictures; each frame is copied into a
+    // buffer both cards see (a cross-adapter heap) and handed over by a shared fence; the screen's card copies it
+    // into its swap chain's buffer and presents it.
+    struct Cross {
+        bool wanted = false;  // the option, as the present brought it
+        bool on = false;      // the swap chain is the screen's card's now
+        bool failed = false;  // its making failed once: the usual way until the option changes
+        std::string card;     // the screen's card's name
+        ID3D12Device* device = nullptr;
+        ID3D12CommandQueue* queue = nullptr;
+        ID3D12CommandAllocator* allocators[2] = {nullptr, nullptr};
+        ID3D12GraphicsCommandList* list = nullptr;
+        ID3D12Fence* fence = nullptr;  // that card's own work done
+        HANDLE event = nullptr;
+        UINT64 value = 0, done[2] = {0, 0};
+        ID3D12Heap* heapHere = nullptr;  // the buffers both cards see: this card's view and that one's
+        ID3D12Heap* heapThere = nullptr;
+        ID3D12Resource* bufHere[2] = {nullptr, nullptr};
+        ID3D12Resource* bufThere[2] = {nullptr, nullptr};
+        ID3D12Fence* handHere = nullptr;  // the frame copied over: signalled here, waited for there
+        ID3D12Fence* handThere = nullptr;
+        UINT64 handed = 0;
+        ID3D12Resource* back[2] = {nullptr, nullptr};  // the screen's card's swap chain buffers
+        UINT pitch = 0, width = 0, height = 0;
+        UINT index = 0;  // which of backBuffers this frame draws into
+        int told = 0;
+    } cross;
+    bool crossDevice(HWND hwnd);              // the screen's card's device when it is another one; false: none
+    bool crossBuffers(UINT w, UINT h);        // this size's pictures, shared buffers and the swap chain's buffers
+    void crossReleaseBuffers();
+    void crossRelease();                      // everything, the screen's card's device too
+    void crossCopy(UINT index);               // in the frame's list: its picture into the shared buffer
+    HRESULT crossPresent(UINT index, UINT sync, UINT flags);  // that card copies it into its buffer and presents
     FramePacer pacer;  // 0.85: [frames] fps_limit
     // 2.5.25: frame generation kept under the refresh of the window's monitor (core/frame_fit.hpp), asked again every
     // few seconds - the window may go to another monitor; and how Windows shows the swap chain, logged on a change

@@ -1516,6 +1516,8 @@ bool Renderer::Impl::ensureGenerationTargets(UINT w, UINT h) {
 // ---- Impl: swap chain --------------------------------------------------------------------------------------
 
 void Renderer::Impl::releaseSwapChain() {
+    if (cross.on) crossReleaseBuffers();  // 3.0.19-beta.9: the screen's card's own and the shared ones
+    cross.on = false;
     for (ID3D12Resource*& b : backBuffers) releaseCom(b);
     releaseCom(swapChain);
     window = nullptr;
@@ -1530,6 +1532,10 @@ void Renderer::Impl::releaseSwapChain() {
 void Renderer::Impl::decideHdr() {
     hdrDecided = true;
     if (!swapChain) return;
+    if (cross.on) {  // 3.0.19-beta.9: the frames handed across the cards are 8-bit sRGB
+        if (hdrWanted) LOG_INFO("HDR: off while the frames go through the screen's card ([renderer] cross_present)");
+        return;
+    }
     bool can = false;
     if (hdrWanted && !presentSurface && !(upscaler && upscaler->generates())) {
         IDXGIOutput* out = nullptr;
@@ -1575,6 +1581,12 @@ void Renderer::Impl::decideHdr() {
 }
 
 bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing) {
+    // 3.0.19-beta.9 ([renderer] cross_present): the option changed - the swap chain made again on the other card
+    const bool crossWant = cross.wanted && !cross.failed;
+    if (swapChain && crossWant != cross.on) {
+        waitIdle();
+        releaseSwapChain();
+    }
     if (swapChain && hwnd == window && w == swapWidth && h == swapHeight) {
         if (!hdrDecided) decideHdr();  // 0.65
         return swapChain != nullptr;
@@ -1583,6 +1595,7 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing
     waitIdle();
     const UINT flags = tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
     if (swapChain && hwnd == window) {  // the window changed size
+        if (cross.on) crossReleaseBuffers();  // 3.0.19-beta.9: made again for the new size below
         for (ID3D12Resource*& b : backBuffers) releaseCom(b);
         const HRESULT hr = swapChain->ResizeBuffers(2, w, h, swapFormat, flags);  // 0.65: HDR keeps its format
         if (FAILED(hr)) {
@@ -1614,6 +1627,10 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing
         d.Flags = tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
         IDXGISwapChain1* sc1 = nullptr;
         HRESULT hr = E_FAIL;
+        // 3.0.19-beta.9: the swap chain of the card the game's monitor hangs off, when another than this one
+        const bool viaScreen = crossWant && crossDevice(hwnd);
+        if (crossWant && !viaScreen) cross.failed = true;  // not tried again until the option changes
+        ID3D12CommandQueue* const showing = viaScreen ? cross.queue : queue;
         if (presentSurface) {  // part 3: the surface the game's window shows (uaro-render64.exe)
             d.Scaling = DXGI_SCALING_STRETCH;
             d.Flags = 0;
@@ -1621,10 +1638,10 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing
             IDXGIFactoryMedia* media = nullptr;
             hr = factory->QueryInterface(__uuidof(IDXGIFactoryMedia), reinterpret_cast<void**>(&media));
             if (SUCCEEDED(hr))
-                hr = media->CreateSwapChainForCompositionSurfaceHandle(queue, presentSurface, &d, nullptr, &sc1);
+                hr = media->CreateSwapChainForCompositionSurfaceHandle(showing, presentSurface, &d, nullptr, &sc1);
             releaseCom(media);
         } else {
-            hr = factory->CreateSwapChainForHwnd(queue, hwnd, &d, nullptr, nullptr, &sc1);
+            hr = factory->CreateSwapChainForHwnd(showing, hwnd, &d, nullptr, nullptr, &sc1);
             refused = FAILED(hr);
         }
         if (SUCCEEDED(hr)) hr = sc1->QueryInterface(__uuidof(IDXGISwapChain3), reinterpret_cast<void**>(&swapChain));
@@ -1639,16 +1656,26 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing
         sc1->Release();
         if (!presentSurface) factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
         window = hwnd;
-        LOG_INFO("swap chain %ux%u%s%s", w, h, tearingSupported ? ", tearing allowed" : "",
-                 presentSurface ? " on a composition surface" : "");
+        cross.on = viaScreen;
+        LOG_INFO("swap chain %ux%u%s%s%s", w, h, tearingSupported ? ", tearing allowed" : "",
+                 presentSurface ? " on a composition surface" : "", viaScreen ? ", the screen's card's" : "");
     }
-    for (UINT i = 0; i < 2; ++i) {
-        if (FAILED(swapChain->GetBuffer(i, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&backBuffers[i])))) {
+    if (cross.on) {  // 3.0.19-beta.9: this card's own pictures, the shared buffers, the screen's card's buffers
+        if (!crossBuffers(w, h)) {
+            LOG_ERROR("cross present: off - the frames go the usual way");
+            cross.failed = true;
             releaseSwapChain();
             return false;
         }
-        device->CreateRenderTargetView(backBuffers[i], nullptr, rtvHandle(1 + i));
-        backStates[i] = D3D12_RESOURCE_STATE_PRESENT;
+    } else {
+        for (UINT i = 0; i < 2; ++i) {
+            if (FAILED(swapChain->GetBuffer(i, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&backBuffers[i])))) {
+                releaseSwapChain();
+                return false;
+            }
+            device->CreateRenderTargetView(backBuffers[i], nullptr, rtvHandle(1 + i));
+            backStates[i] = D3D12_RESOURCE_STATE_PRESENT;
+        }
     }
     swapWidth = w;
     swapHeight = h;
@@ -1664,6 +1691,7 @@ void Renderer::Impl::destroy() {
     delete ai;  // its last results go into the texture pack
     ai = nullptr;
     releaseSwapChain();
+    crossRelease();  // 3.0.19-beta.9
     for (auto& t : textures) {
         releaseCom(t.second.resource);
         releaseCom(t.second.ai);
@@ -2893,7 +2921,11 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     // generation was on, so the swap chain never changes under it (0.10 review 3).
     UINT wantW = UINT(std::max(1, outputWidth)), wantH = UINT(std::max(1, outputHeight));
     const bool resize = m.swapChain && (wantW != m.swapWidth || wantH != m.swapHeight);
-    const bool held = !m.upscale || !options.foreground || resize || m.presentSurface;
+    if (options.crossPresent != m.cross.wanted) {  // 3.0.19-beta.9: [renderer] cross_present switched
+        m.cross.wanted = options.crossPresent;
+        m.cross.failed = false;
+    }
+    const bool held = !m.upscale || !options.foreground || resize || m.presentSurface || m.cross.wanted;
     if (m.upscaler && m.upscaler->generates() && held) {
         if (m.presentSurface && !m.surfaceNoted) {
             m.surfaceNoted = true;
@@ -2919,7 +2951,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     m.profileMark("the picture's samples put together (MSAA)");  // 3.0.5-beta.2
     const Impl::Readable shown = m.readableTarget();  // resolved first when it has several samples (stage 4)
     m.profileMark("the picture into the window (the display letting go of it)");
-    const UINT index = m.swapChain->GetCurrentBackBufferIndex();
+    const UINT index = m.cross.on ? m.cross.index : m.swapChain->GetCurrentBackBufferIndex();  // 3.0.19-beta.9
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_RENDER_TARGET);
     const D3D12_CPU_DESCRIPTOR_HANDLE rtv = m.rtvHandle(kRtvSwap + index);
     const float black[4] = {0.0f, 0.0f, 0.0f, 1.0f};
@@ -3030,6 +3062,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
             m.shotHeight = int(shotH);
         }
     }
+    if (m.cross.on) m.crossCopy(index);  // 3.0.19-beta.9: into the buffer both cards see
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_PRESENT);
     m.submit();
 
@@ -3047,7 +3080,8 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
     Impl::CpuTime swapped(m.swapTicks);  // 2.1.1
-    const HRESULT hr = m.swapChain->Present(sync, flags);
+    // 3.0.19-beta.9: across the cards - the screen's card copies the frame into its buffer and presents it
+    const HRESULT hr = m.cross.on ? m.crossPresent(index, sync, flags) : m.swapChain->Present(sync, flags);
     swapped.stop();
     if (!m.shotPath.empty()) {  // 0.54: the copy done, the PNG written
         m.waitIdle();

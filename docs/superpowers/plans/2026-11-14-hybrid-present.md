@@ -15,3 +15,7 @@ it into its swap chain's back buffer and presents (Microsoft's heterogeneous mul
 
 ## Ledger
 Step 1: code complete, host 2774/2774, win32 + win64 build clean.
+Step 1: shipped as 3.0.19-beta.8 (a6be07f).
+Step 2: code complete - [renderer] cross_present (Render page, shown with several cards), D3D12 frames copied into a
+cross-adapter buffer and presented by the screen's card (src/win/gpu/cross_present.cpp); the watch turns it on at once
+on D3D12, then D3D11 from the next start; host 2775/2775, win32 + win64 build clean; shipped as 3.0.19-beta.9.
