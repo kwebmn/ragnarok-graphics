@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.19-beta.38 — what's new · 2026-11-15
+
+- **The 3D view: the grass is seen now.** The blades in the 3D view were thin, low and the ground's own colour — lost on it. They are tufts of three now, taller, turned to the camera, dark at the roots and lighter, a little yellow, at the tips, and grow thicker.
+- **The 3D view: HP bars no longer hang over the hills.** A monster's bar no longer stands in the air when a hill or a cave's wall hides the monster from the eyes.
+- **The 3D view: the cave's vault lighter.** Its stone is lit by the map's own light now, as the walls are, not near black.
+
 # uaRO Graphics 3.0.19-beta.37 — what's new · 2026-11-15
 
 - **The 3D view: the distance by the threat's arc.** By the red arc it now says how far the monster hitting you from out of sight is: a cell a metre.
