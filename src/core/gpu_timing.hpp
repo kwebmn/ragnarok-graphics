@@ -34,6 +34,12 @@ struct GpuTiming {
     double cpuMs = 0.0;
 };
 
+// 3.0.19-beta.23 (R-8HBYXU: the 3D view at 40 fps with Reflex - the game's frame, 9 ms there, and the renderer's, 12,
+// one after the other): whether the game waits for each frame of its to be shown before it makes the next - with
+// frame generation always (its queued frames waited out Reflex's sleep: the cursor behind the mouse, R-Q7RBYV), with
+// Reflex alone not in the 3D view (`wide`): one frame ahead there, as without Reflex
+inline bool waitsForEachShown(const GpuTiming& t, bool wide) { return t.shown > 1.05 || (t.reflex && !wide); }
+
 inline void writeTiming(bridge::WireWriter& w, const GpuTiming& t) {
     w.f32(float(t.gpuMs));
     w.f32(float(t.upscaleMs));

@@ -685,7 +685,9 @@ void Remote::present(HWND window, int outputWidth, int outputHeight, const Rect&
     // its input as late as Reflex wants it. Two frames ahead (above), the frames drawn waited out Reflex's sleep in
     // the queue instead - the cursor some 100 ms behind the mouse at 4x (R-Q7RBYV: "it feels slow"). 2.5.26: Reflex
     // without frame generation too ([frames] reflex).
-    if (!o.loading && (timing_.reflex || timing_.shown > 1.05)) {  // 3.0.2-beta.13: a loading picture not waited for
+    // 3.0.19-beta.23 (R-8HBYXU): with Reflex alone not in the 3D view (core waitsForEachShown) - there the game's frame
+    // and the renderer's one after the other made 40 fps; one frame ahead as without Reflex
+    if (!o.loading && waitsForEachShown(timing_, camera::wideView())) {  // 3.0.2-beta.13: a loading picture not waited
         QueryPerformanceCounter(&a);
         const bool shown = channel_.waitPresented(presentsSent_, 1000);
         QueryPerformanceCounter(&b);

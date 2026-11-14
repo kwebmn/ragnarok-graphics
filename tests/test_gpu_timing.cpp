@@ -132,3 +132,18 @@ TEST(effect_costs_passes_are_the_renderers_timed_ones) {
     }
     for (const effect_costs::TimedPass& p : effect_costs::kTimedPasses) CHECK(std::string(p.key) != "sun");
 }
+
+// 3.0.19-beta.23 (R-8HBYXU: the 3D view at 40 fps with Reflex - the game's frame (9 ms there) and the renderer's (12)
+// one after the other): the game waits for each frame of its to be shown before the next - with frame generation
+// always (its queued frames waited out Reflex's sleep, R-Q7RBYV), with Reflex alone not in the 3D view
+TEST(gpu_timing_the_game_waits_for_each_frame_shown) {
+    GpuTiming t;
+    CHECK(!waitsForEachShown(t, false) && !waitsForEachShown(t, true));  // neither: frames ahead as ever
+    t.reflex = true;
+    CHECK(waitsForEachShown(t, false));   // Reflex in the game's own view: each frame shown first
+    CHECK(!waitsForEachShown(t, true));   // the 3D view: one frame ahead
+    t.shown = 2.0;                         // frame generation
+    CHECK(waitsForEachShown(t, true) && waitsForEachShown(t, false));
+    t.reflex = false;
+    CHECK(waitsForEachShown(t, true));
+}
