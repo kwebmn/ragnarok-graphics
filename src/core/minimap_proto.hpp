@@ -180,6 +180,9 @@ struct Scene {
     // arrow's way; the camera's (look) the fan's. 0, 0 not known: the arrow the camera's way as before
     float headX = 0, headY = 0;
     bool viewFan = true;  // 3.0.11-beta.187: [interface] minimap_view - the camera's fan; off: the arrow alone
+    // 3.0.19-beta.35 (the 3D view's concept: «миникарта с конусом взгляда»): the fan's half (radians) - the game's own
+    // look 38 degrees each way; the 3D view its field of view's across
+    float fanHalf = 0.66f;
     bool classicMarks = false;  // 3.0.11-beta.222: [interface] minimap_classic - guild mates and members as dots
     int cells = 100;             // the zoom
     std::vector<Mark> marks;

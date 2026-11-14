@@ -2353,3 +2353,15 @@ TEST(ctl_key_action_goes_to_the_3d_views_target) {
     d.tick(p, w, view(), 1000);
     CHECK_EQ(d.target(), 110000001u);
 }
+
+// 3.0.19-beta.35: the pad's own buttons as the keys - its attack (A) on the 3D view's target too
+TEST(ctl_pad_attack_goes_to_the_3d_views_target) {
+    Controller c(Config{});
+    WorldState w = world();
+    addMob(w, 110000001, Cell{102, 101});  // the nearest
+    addMob(w, 110000003, Cell{106, 100});  // under the crosshair
+    c.preferTarget(110000003);
+    c.tick(pad(), w, view(), 900);
+    c.tick(pad(kPadA), w, view(), 1000);
+    CHECK_EQ(c.target(), 110000003u);
+}

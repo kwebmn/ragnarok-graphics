@@ -27,6 +27,7 @@
 #include "core/walk_grid.hpp"
 #include "core/walk_path.hpp"
 #include "pad/win/game_window.hpp"
+#include "core/game_camera.hpp"
 #include "win/game_camera.hpp"
 #include "win/guild_card.hpp"
 #include "win/game_files.hpp"
@@ -823,6 +824,13 @@ minimap::Scene sceneOf(const State& s) {
     }
     sc.headX = s.headX;  // 3.0.11-beta.71: the character's facing
     sc.headY = s.headY;
+    // 3.0.19-beta.35 (the 3D view's concept: «миникарта с конусом взгляда»): the fan as wide as the 3D view sees
+    // across - its field of view by the picture's sides; the game's own view its own 38 degrees each way
+    if (camera::wideView()) {
+        int gw = 0, gh = 0;
+        if (readGame(0x6EBE1C, &gw, 4) && readGame(0x6EBE20, &gh, 4) && gw > 0 && gh > 0)
+            sc.fanHalf = std::atan(std::tan(camera::fovNow() * 0.5f * 3.14159265f / 180.0f) * float(gw) / float(gh));
+    }
     sc.hoverMark = s.hover;
     sc.hover = s.part;
     sc.bigHover = s.bigPart;

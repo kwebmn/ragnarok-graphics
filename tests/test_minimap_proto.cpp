@@ -629,3 +629,28 @@ TEST(minimap_map_view_mark_at) {
     CHECK_EQ(minimap::mapViewMarkAt(m, sc, x + 10, y), 0);  // within 12 px
     CHECK_EQ(minimap::mapViewMarkAt(m, sc, x + 30, y), -1);
 }
+
+// 3.0.19-beta.35 (the 3D view's concept: «Миникарта с конусом взгляда»): the camera's fan as wide as the view - the
+// game's own 38 degrees each way, the 3D view's own field of view (Scene::fanHalf) when wider
+TEST(minimap_fan_as_wide_as_the_view) {
+    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
+    const std::vector<uint32_t> argb(4, 0xFF404040);
+    minimap::Scene sc;
+    sc.argb = &argb;
+    sc.imgW = sc.imgH = 2;
+    sc.map = minimap::MapSize{100, 100};
+    sc.player = minimap::Cell{50, 50};
+    sc.lookY = 1;  // the camera north
+    float px = 0, py = 0;
+    minimap::cellToPanel(minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)), sc.map, sc.player, px, py);
+    const int qx = int(px + 12.0f * 0.7071f), qy = int(py - 12.0f * 0.7071f);  // 45 degrees east of north
+    const int ax = int(px), ay = int(py - 14.0f);                                // straight ahead
+    panel::Picture game, wide;
+    minimap::paintMapSquare(game, L, sc);
+    sc.fanHalf = 0.9f;  // 52 degrees each way
+    minimap::paintMapSquare(wide, L, sc);
+    const auto at = [](const panel::Picture& p, int x, int y) { return p.px[size_t(y) * size_t(p.width) + size_t(x)]; };
+    CHECK(at(game, qx, qy) != at(wide, qx, qy));  // the wider fan reaches it
+    CHECK(at(game, ax, ay) != 0xFF404040u);       // ahead: in both
+    CHECK(std::fabs(minimap::Scene{}.fanHalf - 0.66f) < 1e-6f);
+}

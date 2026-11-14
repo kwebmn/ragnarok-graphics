@@ -98,7 +98,7 @@ void triangles(panel::Picture& p, const std::vector<std::array<float, 6>>& tris,
 // The player: where the camera looks, a soft fan of its view; 3.0.11-beta.71 the arrow the way the character faces
 // (the camera's when not known); neither known - a white dot
 void player(panel::Picture& p, const panel::Box& clip, float x, float y, float lookX, float lookY, float headX,
-            float headY, float size) {
+            float headY, float size, float half) {
     const float len = std::hypot(lookX, lookY), head = std::hypot(headX, headY);
     if (len < 1e-4f && head < 1e-4f) {
         panel::circle(p, x, y, size * 0.32f + 1.5f, kBlack, 0.85f);
@@ -106,7 +106,7 @@ void player(panel::Picture& p, const panel::Box& clip, float x, float y, float l
         return;
     }
     const float fx = len < 1e-4f ? 0.0f : lookX / len, fy = len < 1e-4f ? 0.0f : -lookY / len;  // north up
-    const float reach = len < 1e-4f ? 0.0f : size * 3.6f, half = 0.66f;  // the view: 38 degrees each way
+    const float reach = len < 1e-4f ? 0.0f : size * 3.6f;  // the view: `half` each way (Scene::fanHalf)
     // 3.0.11-beta.57: well outside the fan by its cosine - no arc cosine for four pixels of five
     const float outside = std::cos(half) - 1e-3f;
     for (int py = std::max(int(clip.y), int(y - reach)); py <= std::min(int(clip.y + clip.h) - 1, int(y + reach));
@@ -707,7 +707,8 @@ void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const 
     if (sc.showPlayer && inBox(x, y, 0))
         player(out, box, x, y, sc.viewFan ? sc.lookX : 0.0f, sc.viewFan ? sc.lookY : 0.0f,
                sc.viewFan || std::hypot(sc.headX, sc.headY) > 1e-4f ? sc.headX : sc.lookX,
-               sc.viewFan || std::hypot(sc.headX, sc.headY) > 1e-4f ? sc.headY : sc.lookY, 9.5f * s * big);
+               sc.viewFan || std::hypot(sc.headX, sc.headY) > 1e-4f ? sc.headY : sc.lookY, 9.5f * s * big,
+               std::clamp(sc.fanHalf, 0.2f, 1.4f));
 }
 
 uint32_t orText(uint32_t rgb) { return rgb ? rgb : kText; }
