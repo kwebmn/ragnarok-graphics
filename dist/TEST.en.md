@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.30 — what's new · 2026-11-14
+
+- **The game is a little faster again in the 3D view.** For each of a frame's thousands of draws the driver no longer does needless work: the drawing's settings are put together again only when the game changed something in them; a texture is checked for changes by one flag, not by all its levels; the «negative» is looked for only where the game really turned it on.
+
 # uaRO Graphics 3.0.19-beta.29 — what's new · 2026-11-14
 
 - **The game is a little faster again in the 3D view.** The frame for the renderer is now written straight into the memory shared with it, not into a buffer of its own first and copied once more from there. In the 3D view that is megabytes a frame. A smaller thing too: the driver now finds where the world ends and the interface begins in a frame at once, instead of looking through thousands of draws several times a frame.
