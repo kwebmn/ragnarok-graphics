@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "core/game_camera.hpp"
+#include "core/view3d.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -89,11 +90,9 @@ bool Renderer::Impl::applySky3d() {
     c.uiPixels[1] = float(h);
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     const bool vault = !mapOutdoors;
-    // the horizon's colour: a light haze by day, a deep blue at night; under a dungeon's vault a dark warm grey
-    static const float kDay[3] = {0.76f, 0.83f, 0.90f}, kNight[3] = {0.09f, 0.11f, 0.17f};
-    static const float kVault[3] = {0.075f, 0.068f, 0.062f};
-    for (int k = 0; k < 3; ++k) c.sourceRect[k] = vault ? kVault[k] : kDay[k] + (kNight[k] - kDay[k]) * night;
-    c.sourceRect[3] = vault ? 650.0f : 1450.0f;  // the haze's reach: the far plane outdoors (1500), nearer inside
+    const view3d::Sky sky = view3d::skyOf(night, vault);  // the horizon's colour, the haze's reach
+    std::copy(sky.horizon, sky.horizon + 3, c.sourceRect);
+    c.sourceRect[3] = sky.reach;
     float toSun[3] = {0.0f, 0.0f, 0.0f};
     if (!vault && mapSun(toSun)) std::copy(toSun, toSun + 3, c.sourceClamp);
     c.twin[0] = night;

@@ -94,3 +94,24 @@ TEST(view3d_forward_and_turn_sign_from_the_games_own_matrix) {
     const float right[3] = {m[0], m[3], m[6]};
     CHECK(sign == (right[0] > 0.0f ? 1.0f : -1.0f));
 }
+
+TEST(view3d_sky_by_the_night_and_under_a_vault) {
+    const view3d::Sky day = view3d::skyOf(0.0f, false), night = view3d::skyOf(1.0f, false);
+    const view3d::Sky vault = view3d::skyOf(0.0f, true);
+    CHECK(day.horizon[2] > night.horizon[2] && day.horizon[0] > 0.5f);  // light by day, dark at night
+    CHECK(vault.horizon[0] < 0.1f && vault.reach < day.reach);         // a dungeon: dark, the haze nearer
+    CHECK(day.reach > 1000.0f);
+}
+
+// 3.0.19-beta.7: the game's wheel zoom moves the camera behind nearer or further back
+TEST(view3d_the_wheel_sets_the_distance_behind) {
+    CHECK(std::fabs(view3d::behindDistanceOf(300.0f) - view3d::kBehindDistance) < 1e-3f);  // the game's start
+    CHECK(view3d::behindDistanceOf(230.0f) < view3d::kBehindDistance);
+    CHECK(view3d::behindDistanceOf(2040.0f) <= 160.0f && view3d::behindDistanceOf(2040.0f) > 100.0f);
+    CHECK(view3d::behindDistanceOf(-1.0f) == view3d::kBehindDistance);
+    const float feet[3] = {0.0f, 0.0f, 0.0f}, ahead[3] = {1.0f, 0.0f, 0.0f}, up[3] = {0.0f, -1.0f, 0.0f};
+    float nearEye[3], farEye[3], target[3];
+    view3d::place(view3d::Mode::Behind, feet, ahead, up, 0.0f, nearEye, target, 25.0f);
+    view3d::place(view3d::Mode::Behind, feet, ahead, up, 0.0f, farEye, target, 120.0f);
+    CHECK(farEye[0] < nearEye[0] - 90.0f);
+}

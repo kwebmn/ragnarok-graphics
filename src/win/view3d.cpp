@@ -29,6 +29,8 @@ constexpr uint32_t kGameW = 0x6EBE1C, kGameH = 0x6EBE20;    // the game's size (
 constexpr uint32_t kMouseRmb = 0x6EE6F0 + 0x24;             // CMouse: the right button down
 // CView: the yaw and its target (degrees), the eye, the up, the player's place; the view matrix and its inverse
 constexpr uint32_t kYaw = 0x20, kYawTo = 0x38, kEye = 0x7C, kUp = 0x88, kFeet = 0x40;
+constexpr uint32_t kTilt = 0x1C, kTiltTo = 0x34, kDistanceTo = 0x3C;  // beta.7: the pad's tilt, the wheel's zoom
+constexpr float kHeldTilt = -45.0f;  // the game's tilt held here while in the 3D view: a change of it is the pad's
 constexpr uint32_t kView = 0x94, kInverse = 0xC4;
 constexpr float kDegreesPerCount = 0.07f;  // the mouse: 1000 counts (about an inch) turn 70 degrees
 
@@ -37,6 +39,7 @@ struct State {
     view3d::Look look;
     float sign = 1.0f;       // which way the game's yaw grows on the screen (from its own matrix)
     float wroteYaw = -1.0f;  // the yaw put into the game last frame
+    float wroteTilt = 0.0f;  // beta.7: the tilt held there (kHeldTilt once written)
     float fov = view3d::kGameFov;
     bool walkBefore = false;  // the walk mode as it was before the 3D view
     bool centred = false;
@@ -110,6 +113,16 @@ void adoptYaw(uint32_t view, State& s) {
     }
 }
 
+// 3.0.19-beta.7: the pad's right stick tilted the game's camera (its tilt's target): the view looks up or down with
+// it - the tilt toward the horizon (less negative) looking up; the right button's Shift tilt is the mouse's, ours
+void adoptTilt(uint32_t view, State& s) {
+    const float to = *at(view, kTiltTo);
+    int rmb = 0;
+    readGame(kMouseRmb, &rmb, 4);
+    if (s.wroteTilt < 0.0f && std::isfinite(to) && std::fabs(to - s.wroteTilt) > 0.01f && !rmb)
+        s.look.pitch = std::clamp(s.look.pitch + (to - s.wroteTilt), -view3d::kPitchMost, view3d::kPitchMost);
+}
+
 // The eye 2 over the ground under it at least (the game's build keeps its own eye over it the same way)
 void overGround(float eye[3]) {
     const uint32_t mode = readGameMode();
@@ -130,6 +143,7 @@ void switchTo(State& s, uint32_t view) {
         s.look.yaw = *at(view, kYawTo);  // from the game's own turn
         s.look.pitch = to == view3d::Mode::First ? 0.0f : -12.0f;
         s.wroteYaw = -1.0f;
+        s.wroteTilt = 0.0f;
         s.walkBefore = walkmodewin::on();
         walkmodewin::setOn(true);
     } else if (to == view3d::Mode::Off) {
@@ -162,9 +176,13 @@ void __attribute__((thiscall)) build(uint32_t view) {
     }
     mouse(s);
     adoptYaw(view, s);
+    adoptTilt(view, s);
     *at(view, kYaw) = s.look.yaw;
     *at(view, kYawTo) = s.look.yaw;
     s.wroteYaw = s.look.yaw;
+    *at(view, kTilt) = kHeldTilt;
+    *at(view, kTiltTo) = kHeldTilt;
+    s.wroteTilt = kHeldTilt;
     original(view);
     float m[12];
     std::memcpy(m, at(view, kView), sizeof m);
@@ -174,7 +192,8 @@ void __attribute__((thiscall)) build(uint32_t view) {
     float feet[3], up[3], eye[3], target[3];
     std::memcpy(feet, at(view, kFeet), sizeof feet);
     std::memcpy(up, at(view, kUp), sizeof up);
-    view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target);
+    view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target,
+                  view3d::behindDistanceOf(*at(view, kDistanceTo)));  // beta.7: the wheel
     overGround(eye);
     float nm[12], inv[12];
     view3d::lookAt(eye, target, up, nm);

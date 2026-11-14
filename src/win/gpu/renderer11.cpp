@@ -29,6 +29,7 @@
 #include "core/full_colour.hpp"
 #include "core/light_mode.hpp"
 #include "core/game_camera.hpp"
+#include "core/view3d.hpp"
 #include "core/pipeline_key.hpp"
 #include "core/png_write.hpp"
 #include "core/shot_spec.hpp"
@@ -172,6 +173,7 @@ Renderer11::~Renderer11() {
     drop(drawLeanPs_);  // 2.5
     drop(drawGlowLeanPs_);
     drop(mistPs_);
+    drop(sky3dPs_);  // 3.0.19-beta.6
     drop(weatherPs_);
     drop(aoPs_);  // 2.5.1
     drop(aoBlurPs_);
@@ -456,7 +458,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[65] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[66] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -512,7 +514,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"grass_near_ps", ps, shaderSource(), {}, true},
                    {"ao_depth_ps", ps, shaderSource(), {}, true},  // 3.0.5-beta.21: the shadows' depths
                    {"torch_shadow_vs", vs, shaderSource(), {}, true},  // 3.0.16-beta.35: the torches' shadows
-                   {"torch_shadow_ps", ps, shaderSource(), {}, true}};
+                   {"torch_shadow_ps", ps, shaderSource(), {}, true},
+                   {"sky3d_ps", ps, shaderSource(), {}, true}};  // 3.0.19-beta.6: the 3D view's sky and haze
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -662,6 +665,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[62].code.empty() || !psOf(wants[62], aoDepthPs_)) aoDepthPs_ = nullptr;  // 3.0.5-beta.21
     if (wants[63].code.empty() || !vsOf(wants[63], torchShadowVs_)) torchShadowVs_ = nullptr;  // 3.0.16-beta.35
     if (wants[64].code.empty() || !psOf(wants[64], torchShadowPs_)) torchShadowPs_ = nullptr;
+    if (wants[65].code.empty() || !psOf(wants[65], sky3dPs_)) sky3dPs_ = nullptr;  // 3.0.19-beta.6
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -1302,7 +1306,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // torches' light before them
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
     if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !mistDone_ ||
-                                !shaftsDone_ || !heatDone_ || !bloomDone_ ||
+                                !sky3dDone_ || !shaftsDone_ || !heatDone_ || !bloomDone_ ||
                                 !gradeDone_ || !weatherDone_ || !darknessLaid_ || !silhouetteLaid_))
         flushBatch();
     if (s.ui && worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2: on the ground, under the night
@@ -1314,6 +1318,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     if (s.ui && worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3: lit, before the mists
     if (s.ui && worldDrawn_ && !mistDone_) applyMist();  // 2.5: over the ground, before the colours
+    if (s.ui && worldDrawn_ && !sky3dDone_) applySky3d();  // 3.0.19-beta.6: the 3D view's sky and haze
     if (s.ui && worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5: the light in the air
     if (s.ui && worldDrawn_ && !heatDone_) applyHeat();  // 2.5.3: the hot air over all of that
     if (s.ui && worldDrawn_ && !bloomDone_) applyBloom();  // 2.5.2: before the colours (ao.cpp finishWorld)
@@ -2384,6 +2389,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         pmark(effectName11(kTimeMist11));
         applyMist();  // 2.5
     }
+    if (worldDrawn_ && !sky3dDone_) applySky3d();  // 3.0.19-beta.6
     if (worldDrawn_ && !shaftsDone_) {
         pmark(effectName11(kTimeShafts11));
         applyShafts();  // 2.5.5
@@ -2453,6 +2459,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     fireSparks_.clear();
     lightDone_ = nightDone_ = dayKept_ = dayWanted_ = false;  // 0.61, 0.63, 2.7.47, 3.0.5-beta.20
     mistDone_ = weatherDone_ = false;  // 2.5
+    sky3dDone_ = false;  // 3.0.19-beta.6
     bloomDone_ = stepsDone_ = false;  // 2.5.2
     heatDone_ = floorDone_ = false;  // 2.5.3
     heatSpots_.clear();
@@ -3775,6 +3782,38 @@ void Renderer11::applyMist() {
         LOG_INFO("mists: %s over %s (Direct3D 11)", swampy ? "a swamp's" : "the morning's", map_.c_str());
     mistLogged_ = true;
     worldPass(mistPs_, c, false, 1, depthSrv_);
+}
+
+// 3.0.19-beta.6 (the 3D view; Direct3D 12's haze.cpp applySky3d): the sky where nothing is drawn, a haze to it over
+// what is, by its distance - the game's camera from behind or the eyes sees past all the game ever drew
+void Renderer11::applySky3d() {
+    sky3dDone_ = true;
+    if (!sky3dPs_ || camera::fovNow() <= camera::kFov + 0.5f || !cameraValid_ || !target_.texture || !depthViews())
+        return;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(target_.width);
+    c.uiPixels[1] = float(target_.height);
+    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+    const bool vault = !outdoors_;
+    const view3d::Sky sky = view3d::skyOf(night, vault);
+    std::copy(sky.horizon, sky.horizon + 3, c.sourceRect);
+    c.sourceRect[3] = sky.reach;
+    float toSun[3] = {0.0f, 0.0f, 0.0f};
+    if (!vault && mapSun(toSun)) std::copy(toSun, toSun + 3, c.sourceClamp);
+    c.twin[0] = night;
+    c.twin[1] = vault ? 1.0f : 0.0f;
+    c.sharpen = waterTime();
+    if (sky3dLogged_ != map_) {
+        sky3dLogged_ = map_;
+        LOG_INFO("3D sky: on %s - %s, the night %.2f (Direct3D 11, field of view %.0f)", map_.c_str(),
+                 vault ? "a dark vault" : "the open sky", night, camera::fovNow());
+    }
+    worldPass(sky3dPs_, c, false, 1, depthSrv_);
 }
 
 // 2.5: the weather (weather_ps) as Direct3D 12's weather.cpp - the map's snow, rain, leaves or sand in three layers,

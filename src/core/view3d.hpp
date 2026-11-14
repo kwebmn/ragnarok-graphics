@@ -35,13 +35,23 @@ bool ahead(const float view[12], float out[3]);
 float turnSign(const float view[12], float yawDegrees);
 
 // The eye and the point it looks at: `feet` the character's place, `flat` the way ahead laid flat, `up` the game's up
-// (CView +0x88), pitch in degrees (up positive)
+// (CView +0x88), pitch in degrees (up positive); behind: `distance` back from the head (beta.7: the game's wheel)
 void place(Mode m, const float feet[3], const float flat[3], const float up[3], float pitch, float eye[3],
-           float target[3]);
+           float target[3], float distance = kBehindDistance);
+// 3.0.19-beta.7: the game's wheel zoom (CView +0x3c, 230-2040, its start 300) as the distance behind the head
+float behindDistanceOf(float gameDistance);
 
 // The game's LookAt (0x409540: right = up x forward, then forward x right; 4 x 3 for row vectors, the last row the
 // move) and its inverse (0x409860)
 void lookAt(const float eye[3], const float at[3], const float up[3], float out[12]);
 void inverse(const float m[12], float out[12]);
+
+// The renderers' sky (sky3d_ps): the horizon's colour - a light haze by day, a deep blue at night, a dungeon's dark
+// warm grey - and the haze's reach in world units (the far plane outdoors, nearer under a vault)
+struct Sky {
+    float horizon[3] = {0, 0, 0};
+    float reach = 0;
+};
+Sky skyOf(float night, bool vault);
 
 }  // namespace uagfx::view3d

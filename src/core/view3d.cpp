@@ -70,8 +70,13 @@ float turnSign(const float view[12], float yawDegrees) {
     return right >= 0.0f ? 1.0f : -1.0f;
 }
 
+float behindDistanceOf(float gameDistance) {
+    if (!std::isfinite(gameDistance) || gameDistance <= 0.0f) return kBehindDistance;
+    return std::clamp(gameDistance * (kBehindDistance / 300.0f), 22.0f, 160.0f);
+}
+
 void place(Mode m, const float feet[3], const float flat[3], const float up[3], float pitch, float eye[3],
-           float target[3]) {
+           float target[3], float distance) {
     const float p = pitch * kRad;
     float f[3] = {flat[0] * std::cos(p) + kWorldUp[0] * std::sin(p), kWorldUp[1] * std::sin(p),
                   flat[2] * std::cos(p) + kWorldUp[2] * std::sin(p)};
@@ -83,9 +88,19 @@ void place(Mode m, const float feet[3], const float flat[3], const float up[3], 
         cross(up, f, right);  // the screen's right as the game's LookAt makes it
         if (!normalize(right)) right[0] = right[1] = right[2] = 0.0f;
         for (int i = 0; i < 3; ++i)
-            eye[i] = feet[i] + kWorldUp[i] * kHeadHeight - f[i] * kBehindDistance + right[i] * kShoulder;
+            eye[i] = feet[i] + kWorldUp[i] * kHeadHeight - f[i] * distance + right[i] * kShoulder;
     }
     for (int i = 0; i < 3; ++i) target[i] = eye[i] + f[i] * 10.0f;
+}
+
+Sky skyOf(float night, bool vault) {
+    static const float kDay[3] = {0.76f, 0.83f, 0.90f}, kNight[3] = {0.09f, 0.11f, 0.17f};
+    static const float kVault[3] = {0.075f, 0.068f, 0.062f};
+    const float n = std::clamp(night, 0.0f, 1.0f);
+    Sky s;
+    for (int k = 0; k < 3; ++k) s.horizon[k] = vault ? kVault[k] : kDay[k] + (kNight[k] - kDay[k]) * n;
+    s.reach = vault ? 650.0f : 1450.0f;
+    return s;
 }
 
 void lookAt(const float eye[3], const float at[3], const float up[3], float out[12]) {

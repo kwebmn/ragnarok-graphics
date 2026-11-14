@@ -247,6 +247,7 @@ private:
     // 2.5: the low mists, the map's weather (or the motes) - Direct3D 12's haze.cpp and weather.cpp passes by the
     // same shaders, with the game's camera (setCamera) and the depth (t3) (2.7.17: the sky past the map's edge gone)
     void applyMist();
+    void applySky3d();  // 3.0.19-beta.6: the 3D view's sky and haze (sky3d_ps)
     void applyWeather();
     // 2.5.1: the soft shadows where surfaces meet (ao.cpp: a mask at a half or a quarter of the size, blurred twice,
     // multiplied in) - before the characters
@@ -723,11 +724,14 @@ private:
     bool lightDone_ = false, lightLogged_ = false;
     // 2.5: the mists and the weather (applyMist, applyWeather)
     ID3D11PixelShader* mistPs_ = nullptr;
+    ID3D11PixelShader* sky3dPs_ = nullptr;  // 3.0.19-beta.6
     ID3D11PixelShader* weatherPs_ = nullptr;
     // 3.0.5-beta.19: the particles as small quads (weather_vs, weather_quad_ps) - not sand's
     ID3D11VertexShader* weatherVs_ = nullptr;
     ID3D11PixelShader* weatherQuadPs_ = nullptr;
     bool mistDone_ = false, weatherDone_ = false;
+    bool sky3dDone_ = false;  // 3.0.19-beta.6: the 3D view's sky
+    std::string sky3dLogged_;
     bool mistLogged_ = false, weatherLogged_ = false;
     bool outdoors_ = false;
     // 3.0.18-beta.252 (R-9UNG8S «в замке трава плоская с отражением»): as Direct3D 12's mapGrass, mapCastle
