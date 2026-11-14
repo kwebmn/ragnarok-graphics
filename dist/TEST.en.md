@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.10 — what's new · 2026-11-14
+
+- **3D view: settings, a red crosshair, the camera before a wall.** A new section «3D view» on the «Game» page: the field of view from the eyes (70° by default), from behind (60°) and the mouse speed. They apply at once. Over a monster the crosshair turns red; over an NPC, an item or a warp it shows the game's sign (talk, pick up, go through). The camera behind no longer goes into walls and cliffs: before a wall it comes nearer at once, then moves back smoothly. The grass is not drawn in the 3D view for now: its blades are made for the game's own camera.
+
 # uaRO Graphics 3.0.19-beta.9 — what's new · 2026-11-14
 
 - **Laptops with two graphics cards: frames through the screen's card.** A new switch «Frames through the screen's graphics card» on the «Renderer» page (shown when the computer has more than one card). The fast card still draws the game on Direct3D 12, and the program itself hands each finished frame to the card the screen hangs off, which shows it. The frame no longer waits ~200 ms to get there. When the program sees frames getting to the screen slowly, it turns the switch on by itself, at once, without a restart, and says so in the chat. If that is still slow, it moves to Direct3D 11 from the next start, as in beta.8. HDR is off while the switch is on.
