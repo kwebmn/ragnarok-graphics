@@ -412,3 +412,21 @@ TEST(view3d_companion_skills_left_to_the_game) {
     CHECK(!companionSkill(7999) && !companionSkill(8017) && !companionSkill(8199) && !companionSkill(8238));
     CHECK(!companionSkill(28) && !companionSkill(271));  // Heal, Asura
 }
+
+// 3.0.19-beta.32: [view3d] vault - a dungeon's vault in the 3D view (core/cave_vault), on unless the file says 0; in
+// «Гра» under «3D-режим»; an effect's field the renderers get (EffectSettings), at once
+TEST(config_view3d_vault_on_by_default_and_live) {
+    CHECK(parseConfig("").effects.caveVault);
+    CHECK(!parseConfig("[view3d]\nvault = 0\n").effects.caveVault);
+    CHECK(parseConfig("[view3d]\nvault = 1\n").effects.caveVault);
+    const settings::IniSetting* row = settings::findSetting("view3d.vault");
+    CHECK(row != nullptr);
+    if (row) {
+        CHECK(row->page == settings::Page::Game && row->control == settings::Control::Check);
+        CHECK(settings::tokenOf(*row, parseConfig("")) == "1");
+    }
+    CHECK(appliesNow("view3d.vault"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[view3d]\nvault = 0\n"));
+    CHECK(!u.next.effects.caveVault);
+    CHECK(!(parseConfig("").effects == parseConfig("[view3d]\nvault = 0\n").effects));  // the renderer told
+}

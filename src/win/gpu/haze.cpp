@@ -3,6 +3,7 @@
 #include <d3d12.h>
 
 #include <algorithm>
+#include <cstring>
 
 #include "core/game_camera.hpp"
 #include "core/view3d.hpp"
@@ -98,6 +99,19 @@ bool Renderer::Impl::applySky3d() {
     c.twin[0] = night;
     c.twin[1] = vault ? 1.0f : 0.0f;
     c.sharpen = waterTime();
+    // 3.0.19-beta.32: a dungeon's vault (t1: its heights a cell; fogColor its cell's units, its cells, the up axis's
+    // sign; twinW/twinH the ground's x and z signs)
+    const UINT vaultT = vault ? vaultTexture() : kNoSrv;
+    if (vaultT != kNoSrv) {
+        const map::Axes axes = mapWorld.axes();
+        c.footprint = 1.0f;
+        c.fogColor[0] = vaultMap.zoom;
+        c.fogColor[1] = float(vaultMap.width);
+        c.fogColor[2] = float(vaultMap.height);
+        c.fogColor[3] = float(axes.y);
+        c.twin[2] = float(axes.x);
+        c.twin[3] = float(axes.z);
+    }
     if (sky3dLogged != mapName) {
         sky3dLogged = mapName;
         LOG_INFO("3D sky: on %s - %s, the night %.2f, the sun %s (field of view %.0f)", mapName.c_str(),
@@ -106,7 +120,62 @@ bool Renderer::Impl::applySky3d() {
                                                                                                     : "none",
                  camera::fovNow());
     }
-    return worldPass(pso, w, h, c, sceneDepthSrv, true);
+    return worldPass(pso, w, h, c, sceneDepthSrv, true, vaultT);
+}
+
+UINT Renderer::Impl::vaultTexture() {
+    if (!effects.caveVault || vaultFailed || !cave_vault::forMap(mapName)) return kNoSrv;
+    const uint64_t key = mapWorld.laidKey();  // the ground read and its axes known
+    if (!key || !mapWorld.ground()) return kNoSrv;
+    if (key != vaultKey) {
+        vaultKey = key;
+        vaultUploaded = false;
+        vaultMade = cave_vault::build(*mapWorld.ground(), vaultMap);
+        if (vaultMade)
+            LOG_INFO("3D sky: %s - a vault over its passages, its relief mirrored about its walls' top %.0f (its "
+                     "floors %.0f), %dx%d cells", mapName.c_str(), vaultMap.wallTop, vaultMap.floorLevel,
+                     vaultMap.width, vaultMap.height);
+    }
+    if (!vaultMade) return kNoSrv;
+    if (!vaultUploaded) {
+        if (!vaultData || vaultTexW != vaultMap.width || vaultTexH != vaultMap.height) {
+            if (vaultData) discard(vaultData);
+            vaultData = createTexture2D(device, vaultMap.width, vaultMap.height, 1, DXGI_FORMAT_R32_FLOAT,
+                                        D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+            if (vaultData && vaultSrv == kNoSrv) vaultSrv = allocSrv();
+            if (!vaultData || vaultSrv == kNoSrv) {
+                LOG_ERROR("3D sky: no memory for the vault's heights - the dark sky in the dungeons");
+                releaseCom(vaultData);
+                vaultFailed = true;  // not tried again
+                return kNoSrv;
+            }
+            vaultState = D3D12_RESOURCE_STATE_COPY_DEST;
+            device->CreateShaderResourceView(vaultData, nullptr, cpuSrvHandle(vaultSrv));
+            vaultTexW = vaultMap.width;
+            vaultTexH = vaultMap.height;
+        }
+        const UINT row = UINT(vaultMap.width) * 4, pitch = (row + 255u) & ~255u;  // rows 256 bytes apart
+        const Upload u = allocUpload(UINT64(pitch) * UINT(vaultMap.height), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+        if (!u.cpu) return kNoSrv;  // the next frame again
+        for (int y = 0; y < vaultMap.height; ++y)
+            std::memcpy(u.cpu + size_t(y) * pitch, vaultMap.up.data() + size_t(y) * size_t(vaultMap.width), row);
+        D3D12_TEXTURE_COPY_LOCATION src{}, to{};
+        src.pResource = slots[slot].upload;
+        src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+        src.PlacedFootprint.Offset = u.offset;
+        src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R32_FLOAT;
+        src.PlacedFootprint.Footprint.Width = UINT(vaultMap.width);
+        src.PlacedFootprint.Footprint.Height = UINT(vaultMap.height);
+        src.PlacedFootprint.Footprint.Depth = 1;
+        src.PlacedFootprint.Footprint.RowPitch = pitch;
+        to.pResource = vaultData;
+        to.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        transition(vaultData, vaultState, D3D12_RESOURCE_STATE_COPY_DEST);
+        list->CopyTextureRegion(&to, 0, 0, 0, &src, nullptr);
+        transition(vaultData, vaultState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        vaultUploaded = true;
+    }
+    return vaultSrv;
 }
 
 // 0.73: the light in the air - about the torches' pass's lights (their list left in torchData) and, under the open

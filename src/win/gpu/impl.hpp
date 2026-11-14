@@ -12,6 +12,7 @@
 #include <array>
 #include <vector>
 
+#include "core/cave_vault.hpp"
 #include "core/point_shadows.hpp"
 #include "core/pick.hpp"
 #include "core/effect_costs.hpp"
@@ -1043,6 +1044,16 @@ struct Renderer::Impl {
         return sky3dPs && camera::wideView() && groundDrawn && !sky3dDone && viewToWorldValid;
     }
     bool applySky3d();  // once a frame, after the mists; false: lost
+    // 3.0.19-beta.32 (the concept's decision 4, core/cave_vault): a dungeon's vault for the 3D sky - its heights a
+    // texture (a texel a cell, R32_FLOAT, sky3d_ps's t1) made of the map's ground once its axes are known; kNoSrv none
+    UINT vaultTexture();
+    cave_vault::Vault vaultMap;
+    uint64_t vaultKey = 0;  // mapWorld.laidKey() it was made for
+    bool vaultMade = false, vaultUploaded = false, vaultFailed = false;
+    ID3D12Resource* vaultData = nullptr;
+    D3D12_RESOURCE_STATES vaultState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT vaultSrv = kNoSrv;
+    int vaultTexW = 0, vaultTexH = 0;
     // 0.72: indoors (a polished or wet floor) and in the rain; a field under a dry sky does not shine
     float floorReflectAmount() const {
         if (!effects.floorReflections || !floorReflectPs || !halfOverPs) return 0.0f;

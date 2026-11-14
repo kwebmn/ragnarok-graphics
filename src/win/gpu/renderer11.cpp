@@ -194,6 +194,8 @@ Renderer11::~Renderer11() {
     drop(stepsData_);
     drop(trampleSrv_);  // 2.6.8
     drop(trampleData_);
+    drop(vaultSrv_);  // 3.0.19-beta.32
+    drop(vaultData_);
     drop(smokePs_);
     drop(smokeGlowPs_);
     drop(lavaPs_);
@@ -3817,12 +3819,66 @@ void Renderer11::applySky3d() {
     c.twin[0] = night;
     c.twin[1] = vault ? 1.0f : 0.0f;
     c.sharpen = waterTime();
+    ID3D11ShaderResourceView* vaultT = vault ? vaultTexture() : nullptr;  // 3.0.19-beta.32: as Direct3D 12's
+    if (vaultT) {
+        const map::Axes axes = mapWorld_.axes();
+        c.footprint = 1.0f;
+        c.fogColor[0] = vaultMap_.zoom;
+        c.fogColor[1] = float(vaultMap_.width);
+        c.fogColor[2] = float(vaultMap_.height);
+        c.fogColor[3] = float(axes.y);
+        c.twin[2] = float(axes.x);
+        c.twin[3] = float(axes.z);
+    }
     if (sky3dLogged_ != map_) {
         sky3dLogged_ = map_;
         LOG_INFO("3D sky: on %s - %s, the night %.2f (Direct3D 11, field of view %.0f)", map_.c_str(),
                  vault ? "a dark vault" : "the open sky", night, camera::fovNow());
     }
-    worldPass(sky3dPs_, c, false, 1, depthSrv_);
+    worldPass(sky3dPs_, c, false, 1, depthSrv_, nullptr, vaultT);
+}
+
+ID3D11ShaderResourceView* Renderer11::vaultTexture() {
+    if (!effects_.caveVault || vaultFailed_ || !cave_vault::forMap(map_)) return nullptr;
+    const uint64_t key = mapWorld_.laidKey();
+    if (!key || !mapWorld_.ground()) return nullptr;
+    if (key != vaultKey_) {
+        vaultKey_ = key;
+        vaultUploaded_ = false;
+        vaultMade_ = cave_vault::build(*mapWorld_.ground(), vaultMap_);
+        if (vaultMade_)
+            LOG_INFO("3D sky: %s - a vault over its passages, its relief mirrored about its walls' top %.0f (its "
+                     "floors %.0f), %dx%d cells (Direct3D 11)", map_.c_str(), vaultMap_.wallTop,
+                     vaultMap_.floorLevel, vaultMap_.width, vaultMap_.height);
+    }
+    if (!vaultMade_) return nullptr;
+    if (!vaultUploaded_) {
+        D3D11_TEXTURE2D_DESC was{};
+        if (vaultData_) vaultData_->GetDesc(&was);
+        if (!vaultData_ || int(was.Width) != vaultMap_.width || int(was.Height) != vaultMap_.height) {
+            drop(vaultSrv_);
+            drop(vaultData_);
+            D3D11_TEXTURE2D_DESC d{};
+            d.Width = UINT(vaultMap_.width);
+            d.Height = UINT(vaultMap_.height);
+            d.MipLevels = d.ArraySize = 1;
+            d.Format = DXGI_FORMAT_R32_FLOAT;
+            d.SampleDesc.Count = 1;
+            d.Usage = D3D11_USAGE_DEFAULT;
+            d.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+            if (FAILED(device_->CreateTexture2D(&d, nullptr, &vaultData_)) ||
+                FAILED(device_->CreateShaderResourceView(vaultData_, nullptr, &vaultSrv_))) {
+                drop(vaultSrv_);
+                drop(vaultData_);
+                vaultFailed_ = true;  // not tried again
+                LOG_ERROR("3D sky: no memory for the vault's heights (Direct3D 11) - the dark sky in the dungeons");
+                return nullptr;
+            }
+        }
+        ctx_->UpdateSubresource(vaultData_, 0, nullptr, vaultMap_.up.data(), UINT(vaultMap_.width) * 4, 0);
+        vaultUploaded_ = true;
+    }
+    return vaultSrv_;
 }
 
 // 2.5: the weather (weather_ps) as Direct3D 12's weather.cpp - the map's snow, rain, leaves or sand in three layers,

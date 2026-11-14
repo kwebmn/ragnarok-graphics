@@ -8856,6 +8856,14 @@ constexpr Entry kTexts[] = {
      "ховає серпанок.",
      "Как далеко видно в 3D-режиме (1500 — сколько рисует игра). Ближе — больше кадров: игра рисует меньше, а дальше "
      "всё скрывает дымка."},
+    {Text::View3dVault, "Vault in the caves", "Склепіння в печерах", "Свод в пещерах"},  // 3.0.19-beta.32
+    {Text::View3dVaultHint,
+     "In the 3D view a dungeon gets a stone vault over its passages: its own relief mirrored up, down to the walls "
+     "over them, a dome over the ways, sinking into the haze far off. Off: the dark sky as before.",
+     "У 3D-режимі над проходами підземелля кам'яне склепіння: його власний рельєф, відбитий угору, — над стінами "
+     "опускається до них, над проходами піднімається куполом, удалині тоне в серпанку. Вимкнено — темне небо, як було.",
+     "В 3D-режиме над проходами подземелья каменный свод: его собственный рельеф, отражённый вверх, — над стенами "
+     "опускается к ним, над проходами поднимается куполом, вдали тонет в дымке. Выключено — тёмное небо, как было."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

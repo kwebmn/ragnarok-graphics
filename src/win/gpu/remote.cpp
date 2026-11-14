@@ -529,6 +529,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.hallucinationWave ? 1 : 0);  // 3.0.16-beta.37
     w.u8(e.hallucinatingNow ? 1 : 0);
     w.u8(e.torchLeafLight ? 1 : 0);  // 3.0.16-beta.30
+    w.u8(e.caveVault ? 1 : 0);       // 3.0.19-beta.32
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

@@ -454,7 +454,7 @@ Config parseConfig(const std::string& text) {
         const std::string val = lower(raw);
         // 2.2.2: a switch or a number of [effects] the settings' schema binds to its field - read by its entry there
         // (a number from its min to its max, else the default stays), not by a branch of its own below
-        if (section == "effects") {
+        if (section == "effects" || section == "view3d") {  // 3.0.19-beta.32: [view3d] vault too
             if (const settings::IniSetting* s = settings::findSetting(key)) {
                 if (s->flag) {
                     setBool(val, c.effects.*s->flag);

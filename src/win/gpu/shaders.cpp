@@ -2223,6 +2223,60 @@ float4 mist_ps(PresentOut i) : SV_Target {
 // world's y down) with its glow, soft clouds drifting (sharpen the time); a dungeon (twinY 1) a dark vault, no sun.
 // Over what is drawn: a haze to the horizon's colour by its distance (sourceRect.w the reach). twinX the night (0-1).
 // Blended over the picture by its alpha.
+// 3.0.19-beta.32 (the concept's decision 4, core/cave_vault): a dungeon's vault - tex1 its height over each cell (up
+// positive), fogColor.x a cell's units, .yz the cells, .w the up axis's sign, twinW/twinH the ground's x and z signs;
+// the world's y of it over xz, between the cells' middles
+float vaultY(float2 xz) {
+    float2 cells = fogColor.yz;
+    float2 g = float2(xz.x * twinW, xz.y * twinH) / max(fogColor.x, 1e-3) + cells * 0.5 - 0.5;
+    float2 lo = clamp(floor(g), float2(0.0, 0.0), cells - 1.0);
+    float2 f = saturate(g - lo);
+    int2 a = int2(lo);
+    int2 b = int2(min(lo + 1.0, cells - 1.0));
+    float h00 = tex1.Load(int3(a.x, a.y, 0)).r, h10 = tex1.Load(int3(b.x, a.y, 0)).r;
+    float h01 = tex1.Load(int3(a.x, b.y, 0)).r, h11 = tex1.Load(int3(b.x, b.y, 0)).r;
+    return -fogColor.w * lerp(lerp(h00, h10, f.x), lerp(h01, h11, f.x), f.y);
+}
+
+// The vault a ray from the eye meets, in its rock's light and the haze (footprint 1: there is one); its alpha 0 where
+// the ray meets none within the haze's reach and a little past
+float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
+    float reachEnd = max(sourceRect.w, 1.0) + 100.0;
+    float stride = reachEnd / 48.0;
+    if (eye.y - vaultY(eye.xz) <= 0.0) return float4(dark, 0.0);  // the eye over it (y points down)
+    float before = 0.0, t = 0.0;
+    bool met = false;
+    [loop] for (int k = 1; k <= 48; ++k) {
+        t = stride * float(k);
+        float3 q = eye + dir * t;
+        if (q.y - vaultY(q.xz) <= 0.0) {
+            met = true;
+            break;
+        }
+        before = t;
+    }
+    if (!met) return float4(dark, 0.0);
+    float near0 = before, far0 = t;
+    [unroll] for (int j = 0; j < 5; ++j) {
+        float half0 = 0.5 * (near0 + far0);
+        float3 q = eye + dir * half0;
+        if (q.y - vaultY(q.xz) <= 0.0) far0 = half0;
+        else near0 = half0;
+    }
+    float3 at = eye + dir * far0;
+    float e = max(fogColor.x, 1.0);
+    float gx = (vaultY(at.xz + float2(e, 0.0)) - vaultY(at.xz - float2(e, 0.0))) / (2.0 * e);
+    float gz = (vaultY(at.xz + float2(0.0, e)) - vaultY(at.xz - float2(0.0, e))) / (2.0 * e);
+    float3 n = normalize(float3(-gx, 1.0, -gz));  // towards the floor (+y)
+    float lit = 0.5 + 0.5 * saturate(dot(n, normalize(float3(0.25, 1.0, 0.15))));
+    float rock = 0.78 + 0.32 * fbm4(at.xz * 0.045) + 0.12 * fbm4(at.xz * 0.21 + 3.7);
+    float3 stone = sourceRect.rgb * 1.15 * lit * rock;
+    float reach = max(sourceRect.w, 1.0);
+    float haze = smoothstep(reach * 0.1, reach, far0);
+    haze = max(haze * haze * 0.92, smoothstep(reach, reach + 100.0, far0));
+    return float4(lerp(stone, dark, haze), 1.0);
+}
+
 float4 sky3d_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     float night = saturate(twinX);
@@ -2246,6 +2300,10 @@ float4 sky3d_ps(PresentOut i) : SV_Target {
     float rise = -dir.y;  // the world's y points down
     if (vault) {
         float3 dark = horizon * lerp(0.55, 0.25, smoothstep(0.0, 0.6, rise));
+        if (footprint > 0.5 && rise > -0.3) {  // 3.0.19-beta.32: the vault over the passages
+            float4 v = vaultSeen(float3(r9, r10, r11), dir, dark);
+            if (v.a > 0.5) return float4(v.rgb, 1.0);
+        }
         return float4(dark, 1.0);
     }
     float3 zenith = lerp(float3(0.30, 0.52, 0.86), float3(0.015, 0.025, 0.07), night);

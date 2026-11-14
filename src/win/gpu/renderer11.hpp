@@ -16,6 +16,7 @@
 #include "core/frame_profile.hpp"
 #include "core/game_camera.hpp"
 #include "core/portal.hpp"
+#include "core/cave_vault.hpp"
 #include "core/trample.hpp"
 #include "core/ground_cells.hpp"
 #include "core/hills.hpp"
@@ -769,6 +770,13 @@ private:
     ID3D11ShaderResourceView* stepsDataSrv_ = nullptr;
     footsteps::Tracker footTracker_;
     trample::Grid trample_;                     // 2.6.8: the steps' hold on the grass, made once a frame
+    // 3.0.19-beta.32: a dungeon's vault for the 3D sky (Direct3D 12's haze.cpp vaultTexture) - sky3d_ps's t1
+    ID3D11ShaderResourceView* vaultTexture();
+    cave_vault::Vault vaultMap_;
+    uint64_t vaultKey_ = 0;
+    bool vaultMade_ = false, vaultUploaded_ = false, vaultFailed_ = false;
+    ID3D11Texture2D* vaultData_ = nullptr;
+    ID3D11ShaderResourceView* vaultSrv_ = nullptr;
     ID3D11Texture2D* trampleData_ = nullptr;    // its texels (grass_ps's t1)
     ID3D11ShaderResourceView* trampleSrv_ = nullptr;
     bool trampleFailed_ = false;

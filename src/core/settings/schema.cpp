@@ -502,6 +502,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.19-beta.24: how far the 3D view sees (the game culls its world there; the haze whole)
         {"view3d", "distance", Page::Game, Control::Slider, 800, 1500, 100, {}, {}, Text::View3dDistance,
          Text::View3dDistanceHint, ""},
+        // 3.0.19-beta.32 (the concept's decision 4): a dungeon's vault from its relief mirrored up
+        {"view3d", "vault", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dVault,
+         Text::View3dVaultHint, "", &E::caveVault},
         // 3.0.4-beta.6: the time left on the buff icons
         {"buffs", "timers", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::BuffTimers,
          Text::BuffTimersHint, ""},

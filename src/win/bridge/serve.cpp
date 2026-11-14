@@ -202,6 +202,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.hallucinationWave = rd.u8() != 0;  // 3.0.16-beta.37
             e.hallucinatingNow = rd.u8() != 0;
             e.torchLeafLight = rd.u8() != 0;  // 3.0.16-beta.30
+            e.caveVault = rd.u8() != 0;       // 3.0.19-beta.32
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }
