@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.8 — what's new · 2026-11-14
+
+- **Laptops with two graphics cards.** When a frame takes long to get from the card that draws to the one the screen hangs off (a laptop with AMD and Intel had 5 frames a second whatever the effects), the program notices within 10 seconds. From the next start it switches to Direct3D 11, or, already on it, to the screen's card, and says so in the chat. The log now names the card the game's monitor hangs off.
+
 # uaRO Graphics 3.0.19-beta.7 — what's new · 2026-11-14
 
 - **3D view.** The sky and the haze on Direct3D 11 too. The mouse wheel moves the camera behind nearer or further back. The gamepad's right stick now turns the view up and down as well, not only left and right.
