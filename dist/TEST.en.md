@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.35 — what's new · 2026-11-15
+
+- **The 3D view: the minimap's view fan and the gamepad.** In the 3D view the fan on the minimap is as wide as what the screen shows (from the eyes and from behind — the field of view from the settings), not the narrow one of the game's camera. The gamepad's buttons — attack (A) and the bar's skills — strike the target under the crosshair or the locked one in the 3D view, as the keys do.
+
 # uaRO Graphics 3.0.19-beta.34 — what's new · 2026-11-15
 
 - **The 3D view: the keys' targets and the wheel.** Space (attack) and 1–9 (the bar's skills and items) in the 3D view strike whoever is under the crosshair or the one Tab locked, not the nearest monster. From the eyes the mouse wheel steps the locked target among the monsters in view: down the next, up the one before.
