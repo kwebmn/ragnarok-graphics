@@ -68,6 +68,19 @@ inline bool modelsColoursDue(size_t made, size_t now, int picturesSince) {
     return made != now && picturesSince >= kModelsColoursEvery;
 }
 
+// 3.0.19-beta.20 (R-K2JPUU «чтото фпс тупит»: from the eyes 104 of Morocc's 400 chunks in view, 218 012 vertices of
+// the smooth ground made on the processor a frame - 9 ms, up to 25): the smooth ground drawn to where a cell is
+// kFinePixels wide on the screen (zoom * f1 / kFinePixels), the plain one past it - in the game's own view from
+// kFineNearest on, as before; in the 3D view (`wide`: a level look foreshortens the ground further) from
+// kFineNearestWide
+constexpr float kFinePixels = 40.0f, kFineNearest = 600.0f, kFineFarthest = 1500.0f, kFineNearestWide = 150.0f;
+inline float fineDepthOf(float zoom, float f1, bool wide) {
+    const float depth = zoom * f1 / kFinePixels;
+    return depth < (wide ? kFineNearestWide : kFineNearest) ? (wide ? kFineNearestWide : kFineNearest)
+           : depth > kFineFarthest                         ? kFineFarthest
+                                                           : depth;
+}
+
 // A vertex of the own ground at its place in the map's file (the axes make it the world's) as the game would put it on
 // the screen - its colours and texture coordinates left; false behind the near plane
 bool place(const View& v, const camera::Projection& p, const map::Axes& axes, const float file[3], Tl2& out);

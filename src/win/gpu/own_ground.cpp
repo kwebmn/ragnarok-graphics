@@ -22,8 +22,7 @@ constexpr int kAtlasStrip = 256;                    // the lightmaps' rows a pie
 constexpr float kMostDepth = 4000.0f;               // how far off the own ground goes (the game's ends at 1500)
 // smooth (and the strips between the textures) where a cell is 40 pixels or more on the screen (about 1000 at the
 // game's 1080), the game's own cells past it - 3.0.4-beta.15: to 1500 before, much of the pass's 7.7 ms a frame on an
-// i7-8700 (R-N6FC5V)
-constexpr float kFinePixels = 40.0f;
+// i7-8700 (R-N6FC5V); 3.0.19-beta.20: core own_ground::fineDepthOf (the 3D view from 150, R-K2JPUU)
 constexpr int kRelitAPicture = 8;  // 3.0.4-beta.28: chunks made again a picture when the hills' light moved
 constexpr unsigned kWallsChecked = 32;  // 3.0.7-beta.3: the game's walls seen before the log tells how many are alike
 constexpr float kMorphFrom = 0.75f;  // 3.0.4-beta.29: of fineDepth - the smooth ground eased onto the plain past it
@@ -458,7 +457,7 @@ bool Renderer::Impl::drawOwnGround() {
             pd.idx.clear();
         };
         const float sign[3] = {float(axes.x), float(axes.y), float(axes.z)};
-        const float fineDepth = std::clamp(g->zoom * p.f1 / kFinePixels, 600.0f, 1500.0f);
+        const float fineDepth = own_ground::fineDepthOf(g->zoom, p.f1, camera::wideView());
         int relit = 0;  // 3.0.4-beta.28: chunks made again in the moved light this picture
         o.lightPending = false;
         const float from = own_ground::ownFrom(p);  // 3.0.4-beta.23: the triangles across it cut there

@@ -366,3 +366,18 @@ TEST(own_ground_channels_apart) {
     CHECK_EQ(own_ground::channelsApart(0xFF364031u, 0xFFCE9EA4u), 0xCE - 0x36);
     CHECK_EQ(own_ground::channelsApart(0xFF000010u, 0xFF000000u), 16);
 }
+
+// 3.0.19-beta.20 (R-K2JPUU «чтото фпс тупит, скорость не очень»: from the eyes 104 of Morocc's 400 chunks in view,
+// 218 012 vertices of the smooth ground made on the processor a frame - 9 ms, up to 25): the smooth ground to where a
+// cell is kFinePixels wide (zoom * f1 / 40) - in the game's own view 600 at least, as before; in the 3D view (a level
+// look foreshortens the ground further) from kFineNearestWide
+TEST(own_ground_smooth_as_far_as_its_cells_are_wide) {
+    const auto near = [](float a, float b, float eps) { return std::fabs(a - b) <= eps; };
+    CHECK(near(own_ground::fineDepthOf(10.0f, 4686.6f, false), 1171.65f, 0.1f));  // the game's 15 degrees
+    CHECK(own_ground::fineDepthOf(10.0f, 2000.0f, false) == 600.0f);               // its nearest, as before
+    CHECK(own_ground::fineDepthOf(10.0f, 9000.0f, false) == 1500.0f);
+    CHECK(near(own_ground::fineDepthOf(10.0f, 881.2f, true), 220.3f, 0.1f));    // from the eyes, 70 degrees
+    CHECK(near(own_ground::fineDepthOf(10.0f, 1068.7f, true), 267.2f, 0.1f));   // behind, 60 degrees
+    CHECK(own_ground::fineDepthOf(10.0f, 300.0f, true) == own_ground::kFineNearestWide);
+    CHECK(own_ground::fineDepthOf(10.0f, 4686.6f, true) < 1500.0f);
+}
