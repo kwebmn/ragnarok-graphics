@@ -116,6 +116,9 @@ struct Sky {
     float horizon[3] = {0, 0, 0};
     float reach = 0;
 };
+// 3.0.19-beta.21 (R-4JGBJS): the haze has the world whole (the horizon's colour) this far past the reach (sky3d_ps) -
+// past it the own ground ends (own_ground::mostDepthOf), and the game's own far plane (1500) is not seen as an edge
+constexpr float kHazeWholePast = 100.0f;
 Sky skyOf(float night, bool vault);
 
 }  // namespace uagfx::view3d

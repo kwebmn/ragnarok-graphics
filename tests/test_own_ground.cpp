@@ -6,6 +6,7 @@
 #include "core/gnd.hpp"
 #include "core/map_axes.hpp"
 #include "core/own_ground.hpp"
+#include "core/view3d.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -380,4 +381,14 @@ TEST(own_ground_smooth_as_far_as_its_cells_are_wide) {
     CHECK(near(own_ground::fineDepthOf(10.0f, 1068.7f, true), 267.2f, 0.1f));   // behind, 60 degrees
     CHECK(own_ground::fineDepthOf(10.0f, 300.0f, true) == own_ground::kFineNearestWide);
     CHECK(own_ground::fineDepthOf(10.0f, 4686.6f, true) < 1500.0f);
+}
+
+// 3.0.19-beta.21 (R-4JGBJS «всеравно тормозит» on .20: from behind 339 of moc_fild10's 500 chunks in view - the own
+// ground went 4000 ahead, up to 16 ms a frame on the processor): in the 3D view it ends where its haze has the world
+// whole (view3d::kHazeWholePast past the sky's reach) - nothing there to see; the game's own view as far as before
+TEST(own_ground_as_far_as_the_3d_haze_lets_one_see) {
+    CHECK(own_ground::mostDepthOf(false) == 4000.0f);
+    const float wide = own_ground::mostDepthOf(true);
+    CHECK(wide >= view3d::skyOf(0.0f, false).reach + view3d::kHazeWholePast);
+    CHECK(wide <= 1600.0f);
 }

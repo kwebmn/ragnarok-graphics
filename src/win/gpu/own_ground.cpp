@@ -19,7 +19,6 @@ namespace {
 
 constexpr size_t kTexelsAFrame = size_t(1) << 19;  // pictures put up a frame (2 MB): the upload buffers stay small
 constexpr int kAtlasStrip = 256;                    // the lightmaps' rows a piece
-constexpr float kMostDepth = 4000.0f;               // how far off the own ground goes (the game's ends at 1500)
 // smooth (and the strips between the textures) where a cell is 40 pixels or more on the screen (about 1000 at the
 // game's 1080), the game's own cells past it - 3.0.4-beta.15: to 1500 before, much of the pass's 7.7 ms a frame on an
 // i7-8700 (R-N6FC5V); 3.0.19-beta.20: core own_ground::fineDepthOf (the 3D view from 150, R-K2JPUU)
@@ -462,6 +461,7 @@ bool Renderer::Impl::drawOwnGround() {
         o.lightPending = false;
         const float from = own_ground::ownFrom(p);  // 3.0.4-beta.23: the triangles across it cut there
         const float morphFrom = fineDepth * kMorphFrom;  // 3.0.4-beta.29: the smooth ground eased from here on
+        const float mostDepth = own_ground::mostDepthOf(camera::wideView());  // 3.0.19-beta.21
         for (size_t k = 0; k < g->mesh.chunks.size(); ++k) {
             const terrain::Chunk& box = g->mesh.chunks[k];
             float lo[3], hi[3];
@@ -470,7 +470,7 @@ bool Renderer::Impl::drawOwnGround() {
                 hi[a] = std::max(box.lo[a] * sign[a], box.hi[a] * sign[a]);
             }
             float nearest = 0.0f;
-            if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, kMostDepth, nearest)) continue;
+            if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, mostDepth, nearest)) continue;
             const int which = nearest > fineDepth && k < g->distant.chunks.size() ? 1 : 0;
             const terrain::Mesh& mesh = which ? g->distant : g->mesh;
             const terrain::Chunk& ch = mesh.chunks[k];
@@ -789,6 +789,7 @@ void Renderer::Impl::drawOwnModels(const own_ground::View& view, const camera::P
     const terrain::Mesh& mesh = g->models;
     std::vector<float> seen;      // a batch's vertices in the view, each worked out once
     std::vector<int32_t> putAt;   // a batch's vertex in its texture's draw, -1 not yet
+    const float mostDepth = own_ground::mostDepthOf(camera::wideView());  // 3.0.19-beta.21
     for (const terrain::Chunk& box : mesh.chunks) {
         float lo[3], hi[3];
         for (int a = 0; a < 3; ++a) {
@@ -796,7 +797,7 @@ void Renderer::Impl::drawOwnModels(const own_ground::View& view, const camera::P
             hi[a] = std::max(box.lo[a] * sign[a], box.hi[a] * sign[a]);
         }
         float nearest = 0.0f, farthest = 0.0f;
-        if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, kMostDepth, nearest, &farthest) ||
+        if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, mostDepth, nearest, &farthest) ||
             farthest < from)
             continue;  // none of it past the far plane: the game's own
         for (uint32_t b = box.firstBatch; b < box.firstBatch + box.batchCount; ++b) {
@@ -1040,6 +1041,7 @@ bool Renderer::Impl::drawOwnWater() {
     if (o.wavePhaseKnown && !o.waterGame)
         phase = water::phaseAfter(o.wavePhase, g->waveSpeed, int((GetTickCount64() - o.wavePhaseAt) / 16));
     const terrain::Mesh& mesh = g->water;
+    const float mostDepth = own_ground::mostDepthOf(camera::wideView());  // 3.0.19-beta.21
     for (const terrain::Chunk& box : mesh.chunks) {
         float lo[3], hi[3];
         for (int a = 0; a < 3; ++a) {
@@ -1047,7 +1049,7 @@ bool Renderer::Impl::drawOwnWater() {
             hi[a] = std::max(box.lo[a] * sign[a], box.hi[a] * sign[a]);
         }
         float nearest = 0.0f, farthest = 0.0f;
-        if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, kMostDepth, nearest, &farthest) ||
+        if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, mostDepth, nearest, &farthest) ||
             farthest < from)
             continue;  // none of it past the far plane: the game's own
         const terrain::Batch& bt = mesh.batches[box.firstBatch];

@@ -2234,6 +2234,9 @@ float4 sky3d_ps(PresentOut i) : SV_Target {
         float reach = max(sourceRect.w, 1.0);
         float haze = smoothstep(reach * 0.1, reach, dist);
         haze = haze * haze * (vault ? 0.92 : 0.78);
+        // 3.0.19-beta.21 (R-4JGBJS): whole 100 past the reach (core view3d::kHazeWholePast) - the own ground ends
+        // there in the 3D view, the game's far plane (1500) no edge
+        haze = max(haze, smoothstep(reach, reach + 100.0, dist));
         if (haze < 0.003) discard;
         return float4(horizon, haze);
     }

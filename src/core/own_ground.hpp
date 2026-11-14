@@ -81,6 +81,13 @@ inline float fineDepthOf(float zoom, float f1, bool wide) {
                                                            : depth;
 }
 
+// How far off the own ground, its far models and water go: past the game's far plane (1500) to kMostDepth;
+// 3.0.19-beta.21 (R-4JGBJS «всеравно тормозит»: from behind 339 of moc_fild10's 500 chunks in view, up to 16 ms a
+// frame) in the 3D view only to kMostDepthWide, where its haze has the world whole (view3d::kHazeWholePast past the
+// sky's reach 1450)
+constexpr float kMostDepth = 4000.0f, kMostDepthWide = 1550.0f;
+inline float mostDepthOf(bool wide) { return wide ? kMostDepthWide : kMostDepth; }
+
 // A vertex of the own ground at its place in the map's file (the axes make it the world's) as the game would put it on
 // the screen - its colours and texture coordinates left; false behind the near plane
 bool place(const View& v, const camera::Projection& p, const map::Axes& axes, const float file[3], Tl2& out);
