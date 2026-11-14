@@ -138,9 +138,12 @@ void applyFov(State& s, float fov) {
     if (w <= 0 || h <= 0) return;
     const camera::SetSizeFields want = camera::setSizeFields(fov, w, h);
     if (f[0] != want.f0 || f[1] != want.f1 || f[2] != want.slopeH || f[3] != want.slopeV) {
-        if (fov != s.fov)
+        static int told = 0;  // 3.0.19-beta.14: each time the fields are put right (a few dozen at most)
+        if (fov != s.fov || told < 20) {
+            ++told;
             LOG_INFO("3D view: the field of view %.0f degrees - the projection's f1 %.1f -> %.1f (%dx%d)", fov, f[1],
                      want.f1, w, h);
+        }
         f[0] = want.f0;
         f[1] = want.f1;
         f[2] = want.slopeH;
@@ -395,7 +398,9 @@ void __attribute__((thiscall)) build(uint32_t view) {
     if (s.wanted != s.mode) switchTo(s, view);
     if (s.mode == view3d::Mode::Off) {
         original(view);
-        if (s.fov != view3d::kGameFov) applyFov(s, view3d::kGameFov);
+        // 3.0.19-beta.14 (R-W5K25A: the world left in the 3D view - a disconnect - and the next map drawn with its 60
+        // degrees, our own models off their places): the game's own projection kept each frame (only written when off)
+        applyFov(s, view3d::kGameFov);
         return;
     }
     if (s.mode == view3d::Mode::First) hidePlayerRender();  // 3.0.19-beta.11
@@ -511,6 +516,7 @@ void frame(const Config& config) {
         walkmodewin::setOn(s.walkBefore);
         release(s);  // 3.0.19-beta.11
         s.locked = s.aimed = 0;
+        applyFov(s, view3d::kGameFov);  // 3.0.19-beta.14: the game's renderer's fields too, not only ours
         s.fov = view3d::kGameFov;
         camera::setFov(view3d::kGameFov);
         s.looking = false;
