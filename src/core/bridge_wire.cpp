@@ -151,6 +151,11 @@ bool count(WireReader& rd, size_t least, uint32_t& n) {
 
 // 3.0.6-beta.3 (R-ZSDWYU: WireWriter::bytes the driver's busiest place in a FirePro laptop's game thread): each kind's
 // items into their room at once - the same bytes as written field by field before
+void WireWriter::block(const void* p, size_t n) {
+    const auto* b = static_cast<const uint8_t*>(p);
+    out_.insert(out_.end(), b, b + n);
+}
+
 void writeRecord(WireWriter& w, const FrameRecord& r) {
     w.u32(uint32_t(r.commands().size()));
     uint8_t* p = w.grow(r.commands().size() * kCommandBytes);

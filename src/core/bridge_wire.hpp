@@ -31,10 +31,17 @@ public:
             for (size_t i = 0; i < n; ++i) out_.push_back(b[i]);
             return;
         }
+        // 3.0.19-beta.28 (R-G6GF3A: in the 3D view a frame's vertex bytes - megabytes - zeroed by resize before the
+        // copy, the game's thread's «wcstok_s» (msvcrt's memset) 6-7 %): a block appended with no zeros first
+        if (n > 64) {
+            block(p, n);
+            return;
+        }
         const size_t at = out_.size();
         out_.resize(at + n);
         if (n) std::memcpy(out_.data() + at, p, n);
     }
+    void block(const void* p, size_t n);  // out of line: GCC 12 warns falsely of insert's memcpy inlined for a field
     // 3.0.6-beta.3 (R-ZSDWYU: bytes() the driver's busiest place in a FirePro laptop's game thread - eighteen calls a
     // draw): the next n bytes, for the caller to fill - a kind's items at once (writeRecord)
     uint8_t* grow(size_t n) {

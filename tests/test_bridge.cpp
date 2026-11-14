@@ -222,3 +222,17 @@ TEST(bridge_carries_set_studio) {
     WireReader cut(buf.data(), 4);
     CHECK(!readStudioKeys(cut, k));
 }
+
+// 3.0.19-beta.28 (R-G6GF3A): a block of a frame's size appended whole - by insert, no zeros first - between fields
+TEST(bridge_a_big_block_appended_whole) {
+    std::vector<uint8_t> out = {1, 2};
+    WireWriter w(out);
+    std::vector<uint8_t> big(100000);
+    for (size_t i = 0; i < big.size(); ++i) big[i] = uint8_t(i * 13 + 5);
+    w.bytes(big.data(), big.size());
+    w.u32(7);
+    CHECK_EQ(out.size(), size_t(2 + 100000 + 4));
+    CHECK(out[0] == 1 && out[1] == 2);
+    CHECK(std::equal(big.begin(), big.end(), out.begin() + 2));
+    CHECK(out[100002] == 7 && out[100003] == 0);
+}
