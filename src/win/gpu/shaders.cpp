@@ -2594,6 +2594,100 @@ float4 grass_ps(PresentOut i) : SV_Target {
     discard;
     return float4(0.0, 0.0, 0.0, 0.0);
 }
+// 3.0.19-beta.33 (the owner: «кстати, я так траву в 3д и не увидел»; core/grass3d; ao.cpp applyGrass3d): the 3D
+// view's grass as blades in the world - grass_ps's are lengths in the picture's pixels for the game's own distance. A
+// grid round the eye, the world's own (twinX blades a side, twinY apart; twinW how many, 0-1): each blade a triangle
+// whose root stands on what the picture shows there - its place seen at the ground cell's height (t5's span, as
+// grass_ps keeps to the map's own ground) or the feet's, its depth read and the point there taken, twice; a blade
+// only on green ground (grass_ps's test), on the map's own, not under the water (uiPixels.w), the point found near
+// its place. Its colour the ground's there, lighter to its tip; it sways (sourceRect.zw the wind, sharpen the time)
+// and the steps tread it (footprint 1: t1 the steps' grid, fogColor its corner, one over a texel, texels a side).
+struct BladeOut {
+    float4 pos : SV_Position;
+    float3 colour : TEXCOORD0;
+    float viewZ : TEXCOORD1;
+    float tip : TEXCOORD2;
+};
+
+float3 bladeView(float3 w) {  // the world -> the view (viewToWorld's rows the view's axes in the world)
+    float3 d = w - float3(r9, r10, r11);
+    return float3(dot(d, float3(r0, r1, r2)), dot(d, float3(r3, r4, r5)), dot(d, float3(r6, r7, r8)));
+}
+
+BladeOut grass3d_vs(uint id : SV_VertexID) {
+    BladeOut o;
+    o.pos = float4(2.0, 2.0, 2.0, 1.0);  // off the picture: no blade
+    o.colour = float3(0.0, 0.0, 0.0);
+    o.viewZ = 0.0;
+    o.tip = 0.0;
+    uint blade = id / 3u, corner = id % 3u;
+    uint side = uint(twinX + 0.5);
+    float gap = max(twinY, 0.05);
+    float3 eye = float3(r9, r10, r11);
+    float2 cid = floor(eye.xz / gap) - float(side / 2u) + float2(float(blade % side), float(blade / side));
+    if (hash12(cid + 0.7) > twinW) return o;
+    float2 xz = (cid + 0.15 + 0.7 * float2(hash12(cid + 1.7), hash12(cid + 9.1))) * gap;
+    float reach = float(side / 2u) * gap;
+    float dist = length(xz - eye.xz);
+    if (dist > reach || (dist > reach * 0.6 && hash12(cid + 4.4) < (dist - reach * 0.6) / (reach * 0.4))) return o;
+    float y = eye.y + 13.0;  // the feet's, about (y down: the eyes 13 over them)
+    bool cellKnown = false;
+    float2 span = float2(0.0, 0.0);
+    if (sourceClamp.z > 0.0) {
+        int across = int(fmod(sourceClamp.w, 1024.0) + 0.5), down = int(sourceClamp.w / 1024.0);
+        int2 cellAt = int2(floor((xz - sourceClamp.xy) * sourceClamp.z));
+        if (all(cellAt >= int2(0, 0)) && cellAt.x < across && cellAt.y < down) {
+            span = mirrorTex.Load(int3(cellAt, 0)).rg;
+            if (span.x > span.y) return o;  // none of the map's own ground in that cell
+            cellKnown = true;
+            y = 0.5 * (span.x + span.y);
+        }
+    }
+    float2 tp = float2(0.0, 0.0);
+    bool found = false;
+    [unroll] for (int k = 0; k < 2; ++k) {
+        if (!viewToPixel(bladeView(float3(xz.x, y, xz.y)), tp)) return o;
+        float raw = sceneDepth.Load(int3(int2(tp), 0));
+        if (raw >= 0.99999) return o;
+        float3 w = grassWorld(viewFrom(int2(tp), raw));
+        y = w.y;
+        found = length(w.xz - xz) < 0.75 * gap + 0.35;
+    }
+    if (!found || y > uiPixels.w) return o;  // something else seen there; under the water (up is -y)
+    if (cellKnown && (y < span.x - 0.75 || y > span.y + 0.75)) return o;  // a deck, a bridge over the ground
+    float3 rc = sceneColor.Load(int3(int2(tp), 0)).rgb;
+    if (rc.g < rc.r * 1.04 || rc.g < rc.b * 1.15 || rc.g < 0.12) return o;  // not green ground
+    float h = (0.7 + 0.7 * hash12(cid + 2.1)) * 1.3;  // units: some 1-2, a character some 16
+    float turn = hash12(cid + 3.3) * 6.2832;
+    float2 across2 = float2(cos(turn), sin(turn)) * (0.06 + 0.04 * hash12(cid + 5.5));
+    float phase = hash12(cid + 6.6) * 6.2832;
+    float2 lean = sourceRect.zw * (0.35 + 0.25 * sin(sharpen * 2.1 + phase)) * h;
+    lean += float2(sin(sharpen * 1.3 + phase), cos(sharpen * 1.1 + phase * 0.7)) * 0.07 * h;
+    if (footprint > 0.5) {  // the steps' hold: pushed away from the step, lower
+        float4 hold = trampleAt(xz);
+        lean += hold.xy * 2.0 * h * 0.8;
+        h *= 1.0 - 0.6 * saturate(hold.z);
+    }
+    float3 base = bladeView(float3(xz.x, y, xz.y));
+    if (base.z <= nearZ + 1.0) return o;  // the whole blade in front of the eye
+    float3 at = corner == 2u ? float3(xz.x + lean.x, y - h, xz.y + lean.y)
+                             : float3(xz.x + (corner == 0u ? -across2.x : across2.x), y,
+                                      xz.y + (corner == 0u ? -across2.y : across2.y));
+    float3 v = bladeView(at);
+    float2 px = float2(v.x / v.z * f0 + cx, v.y / v.z * f1 + cy) * scale + 0.5 + float2(jitterX, jitterY);
+    o.pos = float4(px.x * 2.0 / targetSize.x - 1.0, 1.0 - px.y * 2.0 / targetSize.y, 0.5, 1.0);
+    o.colour = rc;
+    o.viewZ = v.z;
+    o.tip = corner == 2u ? 1.0 : 0.0;
+    return o;
+}
+
+float4 grass3d_ps(BladeOut i) : SV_Target {
+    float raw = sceneDepth.Load(int3(int2(i.pos.xy), 0));
+    float sceneZ = raw >= 0.99999 ? 1e6 : viewDepth(raw);
+    if (sceneZ < i.viewZ - 0.08) discard;  // something nearer in front of it
+    return float4(i.colour * lerp(0.72, 1.22, i.tip), 1.0);
+}
 
 // 1.7, the ground of the living world (ao.cpp applyGroundLife), before the characters, blended over by its alpha:
 // twinX sand drifting over desert ground in the wind (sand_drift), twinW the walls of a damp cave with water running

@@ -1210,6 +1210,7 @@ struct Renderer::Impl {
             frameFeet.clear();
         }
         grassDone = false;  // 0.81
+        grass3dDone = false;  // 3.0.19-beta.33
         groundLifeDone = false;  // 1.7
         crittersDone = false;
         materialsMade = 0;  // 1.8
@@ -1573,6 +1574,18 @@ struct Renderer::Impl {
                viewToWorldValid && !camera::wideView();
     }
     bool applyGrass();  // once a frame, before the characters; false: lost
+    // 3.0.19-beta.33 (the owner: «я так траву в 3д и не увидел»; core/grass3d): in the 3D view the grass as blades
+    // in the world (grass3d_vs), where grass_ps would grow it, before the characters too
+    ID3DBlob* grass3dVs = nullptr;
+    ID3DBlob* grass3dPs = nullptr;
+    ID3D12PipelineState* grass3dPipelines[4] = {};
+    bool grass3dDone = false;
+    std::string grass3dLogged;
+    bool grass3dDue() const {
+        return effects.grass && effects.grassAmount > 0 && effects.grass3d && grass3dPs && grass3dVs && grassHere() &&
+               groundDrawn && !grass3dDone && viewToWorldValid && camera::wideView();
+    }
+    bool applyGrass3d();
     // 2.6.8: the steps' hold on the blades (core/trample.hpp), made once a frame into its texture (grass_ps's t1)
     trample::Grid trample;
     ID3D12Resource* trampleData = nullptr;

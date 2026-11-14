@@ -177,6 +177,9 @@ struct EffectSettings {
     // 3.0.19-beta.32: [view3d] vault - in the 3D view a dungeon's vault (core/cave_vault) over its passages; not of the
     // effects' presets (effectsOff leaves it): the 3D view's own sky
     bool caveVault = true;
+    // 3.0.19-beta.33: [view3d] grass - in the 3D view the grass as blades in the world (core/grass3d) where the
+    // grass grows ([effects] grass, its amount); not of the presets either
+    bool grass3d = true;
     // 3.0.16-beta.25 (the owner: «давай» - the body's stamp, from nostalRE): body_stamp - after the game's characters'
     // sprites (drawn writing no depth) each one's shape put into the depth a little behind its feet: an effect drawn
     // after them falls behind the body where it lies behind it (a ring's far half), in front where it lies in front

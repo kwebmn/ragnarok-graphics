@@ -994,6 +994,7 @@ enum class Text : uint16_t {
     // 3.0.19-beta.10: [view3d] in «Гра» - the 3D view's own section
     View3dHeading, View3dFovFirst, View3dFovFirstHint, View3dFovBehind, View3dFovBehindHint, View3dMouse,
     View3dMouseHint, View3dKeysNote, View3dDistance, View3dDistanceHint, View3dVault, View3dVaultHint,
+    View3dGrass, View3dGrassHint,
     Count
 };
 

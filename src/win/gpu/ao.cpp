@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstring>
 
+#include "core/grass3d.hpp"
 #include "core/d3d7.hpp"
 #include "core/daylight.hpp"
 #include "core/game_camera.hpp"
@@ -374,6 +375,66 @@ bool Renderer::Impl::uploadTrample() {
     list->CopyTextureRegion(&to, 0, 0, 0, &src, nullptr);
     transition(trampleData, trampleState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     return true;
+}
+
+// 3.0.19-beta.33 (the owner: «кстати, я так траву в 3д и не увидел»; core/grass3d): the 3D view's grass - blades in
+// the world round the eye, a triangle each (grass3d_vs), over the world by their alpha before the characters
+bool Renderer::Impl::applyGrass3d() {
+    grass3dDone = true;
+    EffectTime timing(*this, kTimeGrass);
+    if (!ensureScene("3D grass")) return true;
+    ID3D12PipelineState* pso = blendPipeline(grass3dPs, grass3dPipelines, upscale ? 1 : samples, "3D grass", 0,
+                                             grass3dVs);
+    if (!pso) return true;
+    if (!copySceneColor() || !copySceneDepth()) return false;
+    const bool held = uploadTrample();
+    const int w = sceneWidth, h = sceneHeight;
+    const grass3d::Grid grid = grass3d::gridFor(effects.grassThin);
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld, viewToWorld + 12, c.reproject);
+    c.scale = float(upscale ? worldScale : scale);
+    if (upscale) {
+        c.jitter[0] = jitter[0];
+        c.jitter[1] = jitter[1];
+    }
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.uiPixels[3] = waterLevelKnown ? waterTop + 0.05f : 1e9f;  // no blades under the water
+    if (held) {
+        c.footprint = 1.0f;
+        c.fogColor[0] = trample.originX;
+        c.fogColor[1] = trample.originZ;
+        c.fogColor[2] = 1.0f / trample.cell;
+        c.fogColor[3] = float(trample::Grid::kSide);
+    }
+    c.twin[0] = float(grid.side);
+    c.twin[1] = grid.step;
+    c.twin[2] = 0.65f * float(std::clamp(effects.grassAmount, 0, 100)) / 100.0f;  // as grass_ps's twinY
+    c.sharpen = waterTime();
+    if (windShared()) {
+        c.sourceRect[2] = windNow.x * windNow.strength;
+        c.sourceRect[3] = windNow.z * windNow.strength;
+    }
+    UINT cells = kNoSrv;
+    if (ensureGroundCells()) {
+        const ground_cells::Grid& g = groundCells;
+        c.sourceClamp[0] = g.originX;
+        c.sourceClamp[1] = g.originZ;
+        c.sourceClamp[2] = 1.0f / g.side;
+        c.sourceClamp[3] = float(g.width) + 1024.0f * float(g.height);
+        cells = groundCellsSrv;
+    }
+    if (grass3dLogged != mapName) {
+        grass3dLogged = mapName;
+        LOG_INFO("3D grass: on %s - %u blades round the eye, %.1f apart (%.0f each way)%s", mapName.c_str(),
+                 grid.blades(), double(grid.step), double(grid.reach()),
+                 cells != kNoSrv ? ", on the map's own ground" : "");
+    }
+    return worldPass(pso, w, h, c, sceneColorSrv, true, held ? trampleSrv : sceneColorSrv, nullptr, grid.vertices(),
+                     cells);
 }
 
 // 0.81: grass blades from the green ground (grass_ps), trodden down where the last frame's steps are.
@@ -796,6 +857,7 @@ bool Renderer::Impl::finishWorld() {
     if (seamsDue() && !applySeams()) return false;            // 1.9
     if (groundLifeDue() && !applyGroundLife()) return false;  // 1.7
     if (grassDue() && !applyGrass()) return false;            // 0.81
+    if (grass3dDue() && !applyGrass3d()) return false;        // 3.0.19-beta.33
     if (stepsDue() && !applySteps()) return false;            // 0.80: on the ground, under the night
     if (nightDue() && !applyNight()) return false;    // 0.63: the night first - the lights shine out of it
     if (torchDue() && !applyTorches()) return false;  // 0.23: lit and burning before the colours

@@ -234,7 +234,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"ground_life_ps", "ps_5_0", &groundLifePs},   {"critters_ps", "ps_5_0", &crittersPs},
                    {"critters_vs", "vs_5_0", &crittersVs},        {"material_ps", "ps_5_0", &materialPs},
                    {"mirror_vs", "vs_5_0", &mirrorVs},            {"mirror_ps", "ps_5_0", &mirrorPs},
-                   {"torch_shadow_vs", "vs_5_0", &torchShadowVs}, {"torch_shadow_ps", "ps_5_0", &torchShadowPs}};
+                   {"torch_shadow_vs", "vs_5_0", &torchShadowVs}, {"torch_shadow_ps", "ps_5_0", &torchShadowPs},
+                   {"grass3d_vs", "vs_5_0", &grass3dVs},          {"grass3d_ps", "ps_5_0", &grass3dPs}};
     store.sink = startSink;  // 0.40
     store.context = startContext;
     store.total = 6 + int(sizeof effects / sizeof effects[0]);  // the six below and the effects'
@@ -290,7 +291,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
     params[kRootScene].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     params[kRootScene].DescriptorTable.NumDescriptorRanges = 1;
     params[kRootScene].DescriptorTable.pDescriptorRanges = &sceneRange;
-    params[kRootScene].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    // 3.0.19-beta.33: the vertex shaders too - grass3d_vs stands its blades on the picture and its depth (t2, t3, t5)
+    params[kRootScene].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     D3D12_ROOT_SIGNATURE_DESC desc{};
     desc.NumParameters = 4;
     desc.pParameters = params;

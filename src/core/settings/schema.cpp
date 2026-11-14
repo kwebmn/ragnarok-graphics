@@ -505,6 +505,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.19-beta.32 (the concept's decision 4): a dungeon's vault from its relief mirrored up
         {"view3d", "vault", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dVault,
          Text::View3dVaultHint, "", &E::caveVault},
+        // 3.0.19-beta.33 (the owner: «я так траву в 3д и не увидел»): the grass as blades in the world
+        {"view3d", "grass", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dGrass,
+         Text::View3dGrassHint, "", &E::grass3d},
         // 3.0.4-beta.6: the time left on the buff icons
         {"buffs", "timers", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::BuffTimers,
          Text::BuffTimersHint, ""},
