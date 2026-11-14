@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.17 — what's new · 2026-11-14
+
+- **3D view: no HP/SP bar in the air.** When the character is not drawn (from the eyes, or with the camera pressed right against it), the game's own HP/SP bar of it no longer hangs in the air. Other players' and monsters' bars stay. A quick flick of the mouse now turns the view too, instead of being dropped as a jump.
+
 # uaRO Graphics 3.0.19-beta.16 — what's new · 2026-11-14
 
 - **3D view: no golden ghost, no big arrow.** The character's silhouette behind houses and the body tint found its place on the screen as for the game's own camera, and from the eyes drew a translucent golden silhouette in the middle of the view. In the 3D view they are now off: from behind, the character stands before the camera anyway. The walk arrow on the ground is not drawn in the 3D view either, as from the eyes it lay right under them.
