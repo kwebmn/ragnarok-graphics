@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <functional>
+#include <vector>
 
 namespace uagfx::view3d {
 
@@ -50,6 +51,26 @@ float behindDistanceOf(float gameDistance);
 constexpr float kPullStep = 2.0f, kPullMargin = 2.0f, kPullNearest = 5.0f;
 float freeDistance(const float eye[3], const float target[3], float distance,
                    const std::function<float(float x, float z)>& groundY);
+
+// 3.0.19-beta.11 (the concept's decision: Tab locks, the mouse stays free - the camera never turns by itself, only a
+// light pull of the crosshair near the target): the monsters' boxes on the game's screen (its pick list, the game's
+// pixels) and the point its cursor is put at - on the monster under the crosshair as it is; one within `reach` pixels
+// pulled into (its nearest point, a fifth of its size inside); the locked one from `lockedReach`. Under the crosshair
+// first (the locked one of those), then the locked one, then the nearest.
+struct AimBox {
+    uint32_t id = 0;
+    float x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+};
+struct Aim {
+    float x = 0, y = 0;
+    uint32_t id = 0;  // the monster aimed at, 0 none
+};
+Aim aimAt(const std::vector<AimBox>& boxes, float cx, float cy, float reach, uint32_t locked, float lockedReach);
+// Tab: the next to lock after `current` - the monsters by how near the crosshair, round; `current` gone: the nearest;
+// none on the screen: 0
+uint32_t nextLock(const std::vector<AimBox>& boxes, float cx, float cy, uint32_t current);
+// The game's classes it names monsters (as mob_hp's): 1001-3999
+bool monsterClass(int cls);
 
 // The game's LookAt (0x409540: right = up x forward, then forward x right; 4 x 3 for row vectors, the last row the
 // move) and its inverse (0x409860)

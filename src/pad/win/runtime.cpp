@@ -123,6 +123,14 @@ struct State {
     VirtualButton button;      // virtual LMB as the client has been told about it
     bool loggedNullRead = false;
     CursorBridge bridge;     // drives the client's own cursor (it only reads DirectInput deltas)
+    // 3.0.19-beta.11 (R-ZQWGVD «мышкой ... крутит и не слушается»: the 3D view's centring undone by the bridge every
+    // poll): the game's cursor held at a point for the 3D view (win/view3d) - the mouse's own moves kept for it
+    struct Hold {
+        bool on = false;
+        int x = 0, y = 0;      // the game's pixels
+        long dx = 0, dy = 0;   // DirectInput's counts since the last take
+        unsigned polls = 0;    // polls handled while on: 0 - the view takes the cursor's own move instead
+    } hold;
     bool lastFocused = false;
     int loggedSteps = 0;
     int pointersHooked = 0;
@@ -1927,6 +1935,22 @@ void onMouseState(DWORD cb, LPVOID data) {
         else if (realLmb && !s.realLmb)
             s.realClicked = true;
         s.realLmb = realLmb;
+        // 3.0.19-beta.11 (the 3D view): the mouse turns the view - its own moves kept for it, the game's cursor put at
+        // the held point (the crosshair) at every poll, whatever the Windows cursor does; the clicks as above
+        if (s.hold.on && !s.mouse.active) {
+            s.hold.dx += st->lX;
+            s.hold.dy += st->lY;
+            ++s.hold.polls;
+            int hx = 0, hy = 0, hw = 0, hh = 0;
+            if (s.mouseSupported && clientmouse::read(hx, hy, hw, hh)) {
+                st->lX = s.hold.x - hx;
+                st->lY = s.hold.y - hy;
+            } else {
+                st->lX = st->lY = 0;
+            }
+            s.bridge.reset();  // resynced when the hold ends
+            return;
+        }
         if (!s.cfg.mouseFreedom && !s.mouse.active) {
             s.bridge.reset();  // the real mouse moves the client's cursor now; resync before driving it again
             return;
@@ -2104,6 +2128,27 @@ void onClose(SOCKET sock) {
         s.session->onClosed(uintptr_t(sock));
         g_mapSocket.store(s.session->mapSocket());
     });
+}
+
+void holdCursor(bool on, int x, int y) {
+    State& s = S();
+    if (on != s.hold.on) {
+        LOG_INFO("mouse: %s", on ? "held for the 3D view - its moves turn the view, the game's cursor at the crosshair"
+                                 : "free again (the 3D view's hold off)");
+        s.hold.dx = s.hold.dy = 0;
+        s.hold.polls = 0;
+    }
+    s.hold.on = on;
+    s.hold.x = x;
+    s.hold.y = y;
+}
+
+bool takeLook(long& dx, long& dy) {
+    State& s = S();
+    dx = s.hold.dx;
+    dy = s.hold.dy;
+    s.hold.dx = s.hold.dy = 0;
+    return s.hold.on && s.hold.polls > 0;
 }
 
 DWORD mouseCooperativeLevel(DWORD flags) {

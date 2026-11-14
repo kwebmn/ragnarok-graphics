@@ -87,6 +87,48 @@ float freeDistance(const float eye[3], const float target[3], float distance,
     }
 }
 
+namespace {
+float gapTo(const AimBox& b, float x, float y) {
+    const float dx = std::max({b.x0 - x, 0.0f, x - b.x1}), dy = std::max({b.y0 - y, 0.0f, y - b.y1});
+    return std::hypot(dx, dy);
+}
+float centreGap(const AimBox& b, float x, float y) { return std::hypot((b.x0 + b.x1) / 2 - x, (b.y0 + b.y1) / 2 - y); }
+}  // namespace
+
+Aim aimAt(const std::vector<AimBox>& boxes, float cx, float cy, float reach, uint32_t locked, float lockedReach) {
+    Aim a{cx, cy, 0};
+    const AimBox* best = nullptr;
+    float bestRank = 0, bestGap = 0;
+    for (const AimBox& b : boxes) {
+        if (!b.id || !(b.x1 > b.x0) || !(b.y1 > b.y0)) continue;
+        const bool lock = locked && b.id == locked;
+        const float gap = gapTo(b, cx, cy);
+        if (gap > (lock ? std::max(reach, lockedReach) : reach)) continue;
+        const float rank = gap <= 0.0f ? (lock ? -3.0f : -2.0f) : lock ? -1.0f : gap;
+        if (!best || rank < bestRank) best = &b, bestRank = rank, bestGap = gap;
+    }
+    if (!best) return a;
+    a.id = best->id;
+    if (bestGap <= 0.0f) return a;
+    const float ix = (best->x1 - best->x0) * 0.2f, iy = (best->y1 - best->y0) * 0.2f;
+    a.x = std::clamp(cx, best->x0 + ix, best->x1 - ix);
+    a.y = std::clamp(cy, best->y0 + iy, best->y1 - iy);
+    return a;
+}
+
+uint32_t nextLock(const std::vector<AimBox>& boxes, float cx, float cy, uint32_t current) {
+    std::vector<std::pair<std::pair<float, float>, uint32_t>> order;
+    for (const AimBox& b : boxes)
+        if (b.id && b.x1 > b.x0 && b.y1 > b.y0) order.push_back({{gapTo(b, cx, cy), centreGap(b, cx, cy)}, b.id});
+    if (order.empty()) return 0;
+    std::sort(order.begin(), order.end());
+    for (size_t i = 0; i < order.size(); ++i)
+        if (order[i].second == current) return order[(i + 1) % order.size()].second;
+    return order[0].second;
+}
+
+bool monsterClass(int cls) { return cls >= 1001 && cls <= 3999; }
+
 float behindDistanceOf(float gameDistance) {
     if (!std::isfinite(gameDistance) || gameDistance <= 0.0f) return kBehindDistance;
     return std::clamp(gameDistance * (kBehindDistance / 300.0f), 22.0f, 160.0f);

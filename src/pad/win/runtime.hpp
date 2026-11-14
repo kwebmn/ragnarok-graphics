@@ -28,6 +28,13 @@ void setGameWindow(HWND hwnd);
 // Mouse freedom: the cooperative level the mouse device should really get for the requested one.
 DWORD mouseCooperativeLevel(DWORD flags);
 void onMouseState(DWORD cb, LPVOID data);
+// 3.0.19-beta.11 (R-ZQWGVD, the 3D view - win/view3d): while on, the game's cursor is held at (x, y) of the game's
+// screen at every poll of the mouse - its own moves (DirectInput's counts) kept for takeLook instead of moving the
+// cursor; off: the cursor follows the Windows one again (mouse freedom). On the game's thread.
+void holdCursor(bool on, int x, int y);
+// The mouse's moves since the last take; false: no poll held yet (the runtime not on the mouse - the cursor's own move
+// is the view's then)
+bool takeLook(long& dx, long& dy);
 void onMouseData(DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD inOut, DWORD capacity, DWORD flags);
 void onGetCursorPos(LPPOINT p);
 void onMessagePump();

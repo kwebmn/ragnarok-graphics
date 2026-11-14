@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include <string>
+#include <vector>
 
 #include "core/config.hpp"
 #include "core/live_config.hpp"
@@ -203,4 +204,57 @@ TEST(view3d_behind_against_a_wall_keeps_the_nearest) {
     const auto wall = [](float x, float) { return x < -1.0f ? -100.0f : 0.0f; };  // right behind the head
     const float free = view3d::freeDistance(eye, target, 45.0f, wall);
     CHECK(free == view3d::kPullNearest);
+}
+
+// 3.0.19-beta.11 (the concept's decision: «Tab lock YES but the mouse stays free - only a light pull of the crosshair
+// near the target»): the point the game's cursor is put at - on a monster under the crosshair, pulled into one near it
+TEST(view3d_aim_on_a_monster_stays) {
+    const std::vector<view3d::AimBox> boxes = {{7, 90, 80, 110, 120}};
+    const view3d::Aim a = view3d::aimAt(boxes, 100, 100, 30, 0, 100);
+    CHECK(a.id == 7 && a.x == 100 && a.y == 100);
+}
+
+TEST(view3d_aim_near_a_monster_pulled_into_it) {
+    const std::vector<view3d::AimBox> boxes = {{7, 120, 80, 140, 120}};
+    const view3d::Aim a = view3d::aimAt(boxes, 100, 100, 30, 0, 100);
+    CHECK(a.id == 7);
+    CHECK(a.x > 120 && a.x < 140 && a.y == 100);
+}
+
+TEST(view3d_aim_far_from_any_stays_at_the_crosshair) {
+    const std::vector<view3d::AimBox> boxes = {{7, 200, 80, 220, 120}};
+    const view3d::Aim a = view3d::aimAt(boxes, 100, 100, 30, 0, 100);
+    CHECK(a.id == 0 && a.x == 100 && a.y == 100);
+}
+
+TEST(view3d_aim_the_nearer_of_two_and_the_one_under_it_first) {
+    const std::vector<view3d::AimBox> two = {{7, 125, 80, 140, 120}, {8, 60, 80, 90, 120}};
+    CHECK(view3d::aimAt(two, 100, 100, 30, 0, 100).id == 8);  // 10 off against 25
+    const std::vector<view3d::AimBox> under = {{7, 95, 80, 140, 120}, {8, 60, 80, 99, 120}};
+    CHECK(view3d::aimAt(under, 97, 100, 30, 8, 100).id == 8);  // both under it: the locked one
+    const std::vector<view3d::AimBox> other = {{7, 90, 80, 110, 120}, {8, 150, 80, 170, 120}};
+    CHECK(view3d::aimAt(other, 100, 100, 30, 8, 100).id == 7);  // the one under the crosshair before the locked one
+}
+
+TEST(view3d_aim_the_locked_one_pulls_from_farther) {
+    const std::vector<view3d::AimBox> boxes = {{7, 160, 80, 180, 120}};  // 60 off
+    CHECK(view3d::aimAt(boxes, 100, 100, 30, 0, 100).id == 0);
+    const view3d::Aim a = view3d::aimAt(boxes, 100, 100, 30, 7, 100);
+    CHECK(a.id == 7 && a.x > 160 && a.x < 180);
+}
+
+TEST(view3d_tab_locks_the_nearest_then_the_next) {
+    const std::vector<view3d::AimBox> boxes = {{1, 190, 90, 200, 110}, {2, 105, 90, 115, 110}, {3, 140, 90, 150, 110}};
+    CHECK(view3d::nextLock(boxes, 100, 100, 0) == 2);
+    CHECK(view3d::nextLock(boxes, 100, 100, 2) == 3);
+    CHECK(view3d::nextLock(boxes, 100, 100, 3) == 1);
+    CHECK(view3d::nextLock(boxes, 100, 100, 1) == 2);   // round again
+    CHECK(view3d::nextLock(boxes, 100, 100, 99) == 2);  // the locked one gone: the nearest
+    CHECK(view3d::nextLock({}, 100, 100, 2) == 0);      // none on the screen: unlocked
+}
+
+TEST(view3d_monster_classes) {
+    CHECK(!view3d::monsterClass(0) && !view3d::monsterClass(45) && !view3d::monsterClass(1000));
+    CHECK(view3d::monsterClass(1001) && view3d::monsterClass(1002) && view3d::monsterClass(3999));
+    CHECK(!view3d::monsterClass(4000));
 }

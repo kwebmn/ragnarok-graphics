@@ -1,12 +1,17 @@
 #include "win/view3d.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <unordered_map>
+#include <vector>
 
 #include "core/game_camera.hpp"
 #include "core/view3d.hpp"
+#include "pad/win/runtime.hpp"
+#include "win/chat_window.hpp"
 #include "win/code_detour.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -33,6 +38,10 @@ constexpr uint32_t kTilt = 0x1C, kTiltTo = 0x34, kDistanceTo = 0x3C;  // beta.7:
 constexpr float kHeldTilt = -45.0f;  // the game's tilt held here while in the 3D view: a change of it is the pad's
 constexpr uint32_t kView = 0x94, kInverse = 0xC4;
 constexpr float kDegreesPerCount = 0.07f;  // the mouse: 1000 counts (about an inch) turn 70 degrees
+// 3.0.19-beta.11: the crosshair pulled onto a monster this near (of the game's height), onto the Tab-locked one from
+// this far; the lock let go when it is not on the screen for kLockLostMs
+constexpr float kPullReach = 0.045f, kLockReach = 0.14f;
+constexpr DWORD kLockLostMs = 5000;
 
 struct State {
     view3d::Mode mode = view3d::Mode::Off, wanted = view3d::Mode::Off;
@@ -51,10 +60,67 @@ struct State {
     bool skipChar = false;
     int frames = 0;
     DWORD toldAt = 0;
+    // 3.0.19-beta.11 (R-ZQWGVD «мышкой ... крутит и не слушается»): the game's cursor put at (putX, putY) each frame -
+    // held there by the pad runtime (uapad::runtime::holdCursor), the mouse's own moves turning the view
+    int putX = 0, putY = 0;
+    bool skipTab = false, wantLock = false;
+    uint32_t locked = 0, aimed = 0;  // Tab's monster, the one the crosshair is on
+    DWORD lockSeen = 0;
+    int pullsTold = 0;
+    std::unordered_map<uint32_t, std::array<float, 4>> boxes;
+    std::unordered_map<uint32_t, int> classes;
+    std::vector<view3d::AimBox> aims;
 };
 
 State g_state;  // the game's thread: its window's keys, its frame, its camera build
 uintptr_t g_build = 0;
+
+// 3.0.19-beta.11 (R-H2UJ9X: from the eyes the character's own head and hair right in front of them): the character's
+// render (its class's virtual slot 3: Render(matrix) - as uaRO.exe's actors 0x5aa130 and 0x5aac50, its shadow and body)
+// left out while the view is from the eyes; the slot of its vtable ours, the others of the class drawn as before
+using RenderFn = void(__attribute__((thiscall)) *)(uint32_t actor, uint32_t matrix);
+constexpr uint32_t kModeWorldOf = 0xC4, kWorldPlayer = 0x3C, kRenderSlot = 3 * 4;
+uintptr_t g_playerRender = 0;
+
+uint32_t playerNow() {
+    const uint32_t mode = readGameMode();
+    uint32_t world = 0, player = 0;
+    if (!mode || !readGame(mode + kModeWorldOf, &world, 4) || !world || !readGame(world + kWorldPlayer, &player, 4))
+        return 0;
+    return player;
+}
+
+void __attribute__((thiscall)) playerRender(uint32_t actor, uint32_t matrix) {
+    if (g_state.mode == view3d::Mode::First && actor == playerNow()) return;
+    reinterpret_cast<RenderFn>(g_playerRender)(actor, matrix);
+}
+
+void hidePlayerRender() {
+    static bool tried = false;
+    if (tried) return;
+    const uint32_t player = playerNow();
+    if (!player) return;
+    tried = true;
+    uint32_t table = 0, fn = 0;
+    uint8_t code[3] = {};
+    if (!readGame(player, &table, 4) || !table || !readGame(table + kRenderSlot, &fn, 4) || !fn ||
+        !readGame(fn, code, sizeof code) || code[0] != 0x55 || code[1] != 0x8B || code[2] != 0xEC) {
+        LOG_INFO("3D view: the character's own render not found (its table 0x%08X, slot 3 0x%08X) - drawn from the "
+                 "eyes", table, fn);
+        return;
+    }
+    auto* slot = reinterpret_cast<uint32_t*>(uintptr_t(table + kRenderSlot));
+    DWORD old = 0;
+    if (!VirtualProtect(slot, 4, PAGE_READWRITE, &old)) {
+        LOG_INFO("3D view: the character's render slot not writable (%lu) - drawn from the eyes", GetLastError());
+        return;
+    }
+    g_playerRender = fn;
+    *slot = uint32_t(reinterpret_cast<uintptr_t>(&playerRender));
+    VirtualProtect(slot, 4, old, &old);
+    LOG_INFO("3D view: the character's own picture left out from the eyes - its render (table 0x%08X slot 3, 0x%08X) "
+             "ours", table, fn);
+}
 
 float* at(uint32_t view, uint32_t offset) { return reinterpret_cast<float*>(uintptr_t(view + offset)); }
 
@@ -81,13 +147,72 @@ void applyFov(State& s, float fov) {
     camera::setFov(fov);
 }
 
-// The mouse's move from the screen's middle turns the view; the game's cursor held there (its clicks and its hover at
-// the crosshair). Alt held, or the window not in front: the cursor free.
+// The game's pixels as the window's client ones (the game may be drawn scaled into it)
+POINT clientOf(HWND game, int gx, int gy, int w, int h) {
+    RECT r{};
+    if (!GetClientRect(game, &r) || r.right <= 0 || r.bottom <= 0) return POINT{gx, gy};
+    return POINT{LONG(std::lround(double(gx) * double(r.right) / double(w))),
+                 LONG(std::lround(double(gy) * double(r.bottom) / double(h)))};
+}
+
+// The Windows cursor kept at the game's point (x, y): out of the way while the view turns, and where the crosshair is
+// when Alt frees it
+void park(HWND game, int x, int y, int w, int h) {
+    POINT at = clientOf(game, x, y, w, h), now{};
+    if (!ClientToScreen(game, &at) || !GetCursorPos(&now)) return;
+    if (std::abs(now.x - at.x) > 1 || std::abs(now.y - at.y) > 1) SetCursorPos(at.x, at.y);
+}
+
+// The hold let go (Alt, the window behind, the view off): the Windows cursor where the crosshair was
+void release(State& s) {
+    if (!s.centred) return;
+    s.centred = false;
+    uapad::runtime::holdCursor(false, 0, 0);
+    int w = 0, h = 0;
+    const HWND game = uaui::gameWindow();
+    if (game && readGame(kGameW, &w, 4) && readGame(kGameH, &h, 4) && w > 0 && h > 0) park(game, s.putX, s.putY, w, h);
+}
+
+// 3.0.19-beta.11: the monsters' boxes on the screen (the game's pick list of the last picture)
+void readAims(State& s) {
+    readActorBoxes(s.boxes, &s.classes);
+    s.aims.clear();
+    for (const auto& [id, b] : s.boxes) {
+        const auto c = s.classes.find(id);
+        if (c != s.classes.end() && view3d::monsterClass(c->second)) s.aims.push_back({id, b[0], b[1], b[2], b[3]});
+    }
+}
+
+// Tab pressed: the next monster locked; the locked one not on the screen for a while: let go
+void lockStep(State& s, float cx, float cy) {
+    const DWORD now = GetTickCount();
+    if (s.wantLock) {
+        s.wantLock = false;
+        s.locked = view3d::nextLock(s.aims, cx, cy, s.locked);
+        s.lockSeen = now;
+        if (s.locked)
+            LOG_INFO("3D view: Tab - locked on %u (%zu monster(s) on the screen)", s.locked, s.aims.size());
+        else
+            LOG_INFO("3D view: Tab - no monster on the screen, nothing locked");
+        return;
+    }
+    if (!s.locked) return;
+    for (const view3d::AimBox& b : s.aims)
+        if (b.id == s.locked) s.lockSeen = now;
+    if (now - s.lockSeen > kLockLostMs) {
+        LOG_INFO("3D view: the locked %u not on the screen for %lu s - let go", s.locked, kLockLostMs / 1000);
+        s.locked = 0;
+    }
+}
+
+// The mouse's own moves turn the view (the pad runtime holds the game's cursor and keeps them; without it the cursor's
+// own move since the last frame); the game's cursor at the crosshair - pulled onto a monster near it (its clicks and
+// its hover there). Alt held, or the window not in front: the cursor free.
 void mouse(State& s) {
     const HWND game = uaui::gameWindow();
     s.looking = game && GetForegroundWindow() == game && GetKeyState(VK_MENU) >= 0;
     if (!s.looking) {
-        s.centred = false;
+        release(s);
         return;
     }
     int w = 0, h = 0;
@@ -95,12 +220,27 @@ void mouse(State& s) {
     int* x = reinterpret_cast<int*>(uintptr_t(camera::kMouse + camera::kMouseX));
     int* y = reinterpret_cast<int*>(uintptr_t(camera::kMouse + camera::kMouseY));
     const int cx = w / 2, cy = h / 2;
-    if (s.centred) {
-        const int dx = *x - cx, dy = *y - cy;
-        if (dx || dy) view3d::turn(s.look, float(dx), float(dy), kDegreesPerCount * s.mouseSpeed, s.sign);
+    long dx = 0, dy = 0;
+    const bool held = uapad::runtime::takeLook(dx, dy);
+    if (!held) dx = *x - s.putX, dy = *y - s.putY;  // the game moved its own cursor by the mouse
+    if (s.centred && (dx || dy)) view3d::turn(s.look, float(dx), float(dy), kDegreesPerCount * s.mouseSpeed, s.sign);
+    readAims(s);
+    lockStep(s, float(cx), float(cy));
+    const view3d::Aim a = view3d::aimAt(s.aims, float(cx), float(cy), kPullReach * float(h), s.locked,
+                                        kLockReach * float(h));
+    const int ax = int(std::lround(a.x)), ay = int(std::lround(a.y));
+    if (a.id != s.aimed && a.id && (ax != cx || ay != cy) && s.pullsTold < 10) {
+        ++s.pullsTold;
+        LOG_INFO("3D view: the crosshair pulled onto %u%s (%d, %d px off the middle)", a.id,
+                 a.id == s.locked ? " (the locked one)" : "", ax - cx, ay - cy);
     }
-    *x = cx;
-    *y = cy;
+    s.aimed = a.id;
+    *x = ax;
+    *y = ay;
+    s.putX = ax;
+    s.putY = ay;
+    uapad::runtime::holdCursor(true, ax, ay);
+    park(game, cx, cy, w, h);
     s.centred = true;
 }
 
@@ -162,6 +302,8 @@ void switchTo(State& s, uint32_t view) {
         walkmodewin::setOn(true);
     } else if (to == view3d::Mode::Off) {
         walkmodewin::setOn(s.walkBefore);
+        release(s);  // 3.0.19-beta.11: the cursor the Windows one again, at the crosshair
+        s.locked = s.aimed = 0;
     } else if (to == view3d::Mode::First) {
         s.look.pitch = std::clamp(s.look.pitch + 12.0f, -view3d::kPitchMost, view3d::kPitchMost);
     }
@@ -190,6 +332,7 @@ void __attribute__((thiscall)) build(uint32_t view) {
         if (s.fov != view3d::kGameFov) applyFov(s, view3d::kGameFov);
         return;
     }
+    if (s.mode == view3d::Mode::First) hidePlayerRender();  // 3.0.19-beta.11
     mouse(s);
     adoptYaw(view, s);
     adoptTilt(view, s);
@@ -250,6 +393,19 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
         s.skipChar = false;
         return wp == 0x16;
     }
+    if (m == WM_CHAR && s.skipTab) {  // 3.0.19-beta.11: Tab's own
+        s.skipTab = false;
+        return wp == '\t';
+    }
+    // 3.0.19-beta.11 (the concept's decision: «Tab lock YES»): Tab in the 3D view locks the monster nearest the
+    // crosshair, again - the next; only with the chat's line empty (typing, its Tab is the chat's channel)
+    if (m == WM_KEYDOWN && wp == VK_TAB && s.mode != view3d::Mode::Off && s.looking && GetKeyState(VK_CONTROL) >= 0 &&
+        GetKeyState(VK_MENU) >= 0 && GetKeyState(VK_SHIFT) >= 0 && chatwin::focusInChat() && chatwin::inputEmpty() &&
+        !walkmodewin::typing()) {
+        s.skipTab = true;
+        if (((lp >> 30) & 1) == 0) s.wantLock = true;  // held: once a press
+        return true;
+    }
     if (m != WM_KEYDOWN || wp != 'V' || GetKeyState(VK_CONTROL) >= 0 || GetKeyState(VK_SHIFT) >= 0) return false;
     if (!g_build || !inGameWorld()) return false;
     s.skipChar = true;
@@ -267,6 +423,8 @@ void frame(const Config& config) {
     if (s.mode != view3d::Mode::Off && !inGameWorld()) {  // the login, the character list: the game's own
         s.mode = s.wanted = view3d::Mode::Off;
         walkmodewin::setOn(s.walkBefore);
+        release(s);  // 3.0.19-beta.11
+        s.locked = s.aimed = 0;
         s.fov = view3d::kGameFov;
         camera::setFov(view3d::kGameFov);
         s.looking = false;
