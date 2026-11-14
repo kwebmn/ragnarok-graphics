@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.19-beta.22 — what's new · 2026-11-14
+
+- **3D view: less work wasted.** From the eyes and from behind the game draws its ground 1500 ahead, and every frame we read it for the seams, the hills and the grass, though with our own ground and no grass in the 3D view nothing uses that. The 3D view no longer does it.
+- **The log: where the time goes.** Every 30 seconds the log shows how much processor time a frame each part of our drawing takes (reading the game's ground and models, our ground, the water, the reflections, the characters' shadows, the rest) — to find exactly what slows the 3D view.
+
 # uaRO Graphics 3.0.19-beta.21 — what's new · 2026-11-14
 
 - **An even faster 3D view.** From the eyes and from behind, our ground, water and far models are now drawn only to 1550 units, where the haze already hides the world whole; before, to 4000, and in moc_fild10 339 of the map's 500 ground pieces were in the frame. The haze now thickens all the way, so the line where the game ends its own world (1500) no longer shows as an edge.
