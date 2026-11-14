@@ -8817,6 +8817,30 @@ constexpr Entry kTexts[] = {
      "card",
      "uaRO Graphics: кожен кадр ішов з {2} на екран {1} мс — тепер кадри йдуть через відеокарту екрана",
      "uaRO Graphics: каждый кадр шёл с {2} на экран {1} мс — теперь кадры идут через видеокарту экрана"},
+    {Text::View3dHeading, "3D view", "3D-режим", "3D-режим"},
+    {Text::View3dFovFirst, "Field of view from the eyes", "Кут огляду від першої особи", "Угол обзора от первого лица"},
+    {Text::View3dFovFirstHint,
+     "How wide the view from the character's eyes is (Ctrl+Shift+V twice): wider shows more around, narrower brings "
+     "things nearer.",
+     "Наскільки широко видно з очей персонажа (Ctrl+Shift+V двічі): ширше — більше видно довкола, вужче — усе ближче.",
+     "Насколько широко видно из глаз персонажа (Ctrl+Shift+V дважды): шире — больше видно вокруг, уже — всё ближе."},
+    {Text::View3dFovBehind, "Field of view from behind", "Кут огляду з-за спини", "Угол обзора из-за спины"},
+    {Text::View3dFovBehindHint,
+     "How wide the view over the character's shoulder is (Ctrl+Shift+V once). The mouse wheel brings the camera "
+     "nearer or takes it farther.",
+     "Наскільки широко видно з-за плеча персонажа (Ctrl+Shift+V один раз). Колесо миші наближає й віддаляє камеру.",
+     "Насколько широко видно из-за плеча персонажа (Ctrl+Shift+V один раз). Колесо мыши приближает и отдаляет "
+     "камеру."},
+    {Text::View3dMouse, "Mouse speed", "Швидкість миші", "Скорость мыши"},
+    {Text::View3dMouseHint, "How fast the mouse turns the view in the 3D view.",
+     "Як швидко миша повертає погляд у 3D-режимі.", "Как быстро мышь поворачивает взгляд в 3D-режиме."},
+    {Text::View3dKeysNote,
+     "In the game Ctrl+Shift+V switches the game's camera → from behind → from the eyes → back. The mouse turns the "
+     "view, the crosshair goes red over a monster; hold Alt for the cursor (the windows, the interface).",
+     "У грі Ctrl+Shift+V перемикає: камера гри → з-за спини → від першої особи → назад. Миша повертає погляд, над "
+     "монстром приціл червоніє; затисніть Alt, щоб з'явився курсор (вікна, інтерфейс).",
+     "В игре Ctrl+Shift+V переключает: камера игры → из-за спины → от первого лица → назад. Мышь поворачивает взгляд, "
+     "над монстром прицел краснеет; зажмите Alt, чтобы появился курсор (окна, интерфейс)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

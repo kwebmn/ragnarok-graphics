@@ -3797,7 +3797,7 @@ void Renderer11::applyMist() {
 // what is, by its distance - the game's camera from behind or the eyes sees past all the game ever drew
 void Renderer11::applySky3d() {
     sky3dDone_ = true;
-    if (!sky3dPs_ || camera::fovNow() <= camera::kFov + 0.5f || !cameraValid_ || !target_.texture || !depthViews())
+    if (!sky3dPs_ || !camera::wideView() || !cameraValid_ || !target_.texture || !depthViews())
         return;
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);

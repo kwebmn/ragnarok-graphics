@@ -40,10 +40,12 @@ const char* nameOf(Mode m) {
     }
 }
 
-float fovFor(Mode m) {
+float fovFor(Mode m) { return fovFor(m, int(kFirstFov), int(kBehindFov)); }
+
+float fovFor(Mode m, int first, int behind) {
     switch (m) {
-        case Mode::Behind: return kBehindFov;
-        case Mode::First: return kFirstFov;
+        case Mode::Behind: return float(behind);
+        case Mode::First: return float(first);
         default: return kGameFov;
     }
 }
@@ -68,6 +70,21 @@ float turnSign(const float view[12], float yawDegrees) {
     const float grows[3] = {std::cos(y), 0.0f, -std::sin(y)};  // d/dyaw of (sin, 0, cos)
     const float right = grows[0] * view[0] + grows[1] * view[3] + grows[2] * view[6];
     return right >= 0.0f ? 1.0f : -1.0f;
+}
+
+float freeDistance(const float eye[3], const float target[3], float distance,
+                   const std::function<float(float x, float z)>& groundY) {
+    if (!(distance > kPullNearest) || !groundY) return distance;
+    float dir[3] = {target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]};
+    if (!normalize(dir)) return distance;
+    const float head[3] = {eye[0] + dir[0] * distance, eye[1] + dir[1] * distance, eye[2] + dir[2] * distance};
+    for (float s = kPullStep;; s += kPullStep) {
+        const float at = std::min(s, distance);
+        const float p[3] = {head[0] - dir[0] * at, head[1] - dir[1] * at, head[2] - dir[2] * at};
+        const float h = groundY(p[0], p[2]);
+        if (std::isfinite(h) && p[1] > h - kPullMargin) return std::max(kPullNearest, at - kPullStep);
+        if (at >= distance) return distance;
+    }
 }
 
 float behindDistanceOf(float gameDistance) {

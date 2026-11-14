@@ -248,3 +248,15 @@ TEST(camera_set_size_fields_and_the_fov_now) {
     CHECK(fovNow() == 15.0f);
     setFov(15.0f);
 }
+
+// 3.0.19-beta.10: the 3D view's camera - a field of view wider than the game's own; the renderers' sky, not the grass
+TEST(camera_wide_view_is_the_3d_views) {
+    setFov(15.0f);
+    CHECK(!wideView());
+    setFov(15.4f);
+    CHECK(!wideView());
+    setFov(60.0f);
+    CHECK(wideView());
+    setFov(15.0f);
+    CHECK(!wideView());
+}

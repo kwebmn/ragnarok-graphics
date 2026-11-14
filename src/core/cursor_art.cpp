@@ -73,6 +73,7 @@ struct Design {
     std::vector<Piece> body, marks;
     P hot{12, 12};
     bool red = false;  // «not there»: its body red
+    uint32_t fillRgb = 0, edgeRgb = 0;  // 3.0.19-beta.10: its own colours in every look (0: the look's)
 };
 
 Design designOf(Shape s) {
@@ -129,6 +130,13 @@ Design designOf(Shape s) {
                       capsule({12, 18.4f}, {12, 22.4f}, 1.0f), capsule({1.6f, 12}, {5.6f, 12}, 1.0f),
                       capsule({18.4f, 12}, {22.4f, 12}, 1.0f), circle({12, 12}, 1.5f)};
             break;
+        case Shape::TargetHot:  // 3.0.19-beta.10: over a monster - the target bolder, red in a dark red rim, any look
+            d.body = {ring({12, 12}, 6.8f, 3.4f), capsule({12, 1.6f}, {12, 5.4f}, 1.4f),
+                      capsule({12, 18.6f}, {12, 22.4f}, 1.4f), capsule({1.6f, 12}, {5.4f, 12}, 1.4f),
+                      capsule({18.6f, 12}, {22.4f, 12}, 1.4f), circle({12, 12}, 2.2f)};
+            d.fillRgb = 0xFF4A3Du;
+            d.edgeRgb = 0x9C1C14u;
+            break;
         case Shape::kCount: break;
     }
     return d;
@@ -176,14 +184,29 @@ Shape shapeOf(int action) {
     }
 }
 
+Shape lookShapeOf(int action) {
+    switch (action) {
+        case 1: return Shape::Talk;
+        case 2: return Shape::Hand;
+        case 5:
+        case 6: return Shape::TargetHot;
+        case 7:
+        case 12: return Shape::Door;
+        case 8: return Shape::Invalid;
+        case 9: return Shape::Grab;
+        default: return Shape::Target;
+    }
+}
+
 Art make(Shape shape, CursorLook look, float size) {
     Art art;
     if (look == CursorLook::Game || size <= 0 || shape >= Shape::kCount) return art;
     const Design d = designOf(shape);
     const bool dark = look == CursorLook::Dark;
-    const uint32_t fill = d.red ? (dark ? 0xD9534Au : 0xE5484Du) : dark ? 0x151A24u : 0xF7F8FAu;
-    const uint32_t edge = dark ? 0xE6CB8Au : 0x10141Cu;
-    const uint32_t marks = d.red ? edge : dark ? 0xE6CB8Au : 0x10141Cu;
+    const uint32_t fill =
+        d.fillRgb ? d.fillRgb : d.red ? (dark ? 0xD9534Au : 0xE5484Du) : dark ? 0x151A24u : 0xF7F8FAu;
+    const uint32_t edge = d.edgeRgb ? d.edgeRgb : dark ? 0xE6CB8Au : 0x10141Cu;
+    const uint32_t marks = d.red || d.edgeRgb ? edge : dark ? 0xE6CB8Au : 0x10141Cu;
     const float k = size / 24.0f, edgePx = std::max(1.0f, 1.4f * k);
     const float shadowX = 1.2f * k, shadowY = 1.6f * k, soft = std::max(1.5f, 2.0f * k);
     const int pad = int(std::ceil(soft + std::max(shadowX, shadowY) + 1));

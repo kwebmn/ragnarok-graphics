@@ -3,6 +3,11 @@
 // (concept https://claude.ai/artifact/RadnVxG35hjE9d8HgdqzAy)
 #include <cmath>
 
+#include <string>
+
+#include "core/config.hpp"
+#include "core/live_config.hpp"
+#include "core/settings/schema.hpp"
 #include "core/view3d.hpp"
 #include "test.hpp"
 
@@ -114,4 +119,88 @@ TEST(view3d_the_wheel_sets_the_distance_behind) {
     view3d::place(view3d::Mode::Behind, feet, ahead, up, 0.0f, nearEye, target, 25.0f);
     view3d::place(view3d::Mode::Behind, feet, ahead, up, 0.0f, farEye, target, 120.0f);
     CHECK(farEye[0] < nearEye[0] - 90.0f);
+}
+
+// 3.0.19-beta.10: [view3d] - the field of view from the eyes and from behind, the mouse's speed; in «Гра» under its
+// own heading «3D-режим», applied at once
+TEST(config_view3d_defaults_and_limits) {
+    const Config d = parseConfig("");
+    CHECK(d.view3dFovFirst == 70 && d.view3dFovBehind == 60 && d.view3dMouse == 100);
+    const Config c = parseConfig("[view3d]\nfov_first = 85\nfov_behind = 50\nmouse = 150\n");
+    CHECK(c.view3dFovFirst == 85 && c.view3dFovBehind == 50 && c.view3dMouse == 150);
+    const Config low = parseConfig("[view3d]\nfov_first = 10\nfov_behind = 10\nmouse = 1\n");
+    CHECK(low.view3dFovFirst == 50 && low.view3dFovBehind == 40 && low.view3dMouse == 25);
+    const Config high = parseConfig("[view3d]\nfov_first = 200\nfov_behind = 200\nmouse = 999\n");
+    CHECK(high.view3dFovFirst == 100 && high.view3dFovBehind == 90 && high.view3dMouse == 300);
+    CHECK(parseConfig("[view3d]\nfov_first = wide\n").view3dFovFirst == 70);
+}
+
+TEST(view3d_fov_from_the_settings) {
+    CHECK(view3d::fovFor(view3d::Mode::First, 85, 50) == 85.0f);
+    CHECK(view3d::fovFor(view3d::Mode::Behind, 85, 50) == 50.0f);
+    CHECK(view3d::fovFor(view3d::Mode::Off, 85, 50) == 15.0f);
+    CHECK(view3d::fovFor(view3d::Mode::First, 70, 60) == view3d::fovFor(view3d::Mode::First));
+    CHECK(view3d::fovFor(view3d::Mode::Behind, 70, 60) == view3d::fovFor(view3d::Mode::Behind));
+}
+
+TEST(schema_view3d_rows_on_the_game_page) {
+    const Config d = parseConfig("");
+    const char* keys[] = {"view3d.fov_first", "view3d.fov_behind", "view3d.mouse"};
+    const char* tokens[] = {"70", "60", "100"};
+    for (int i = 0; i < 3; ++i) {
+        const settings::IniSetting* s = settings::findSetting(keys[i]);
+        CHECK(s != nullptr);
+        if (!s) continue;
+        CHECK(s->page == settings::Page::Game && s->control == settings::Control::Slider);
+        CHECK(settings::tokenOf(*s, d) == tokens[i]);
+        CHECK(appliesNow(keys[i]));
+    }
+}
+
+TEST(live_config_takes_the_view3d_rows_at_once) {
+    const Config running = parseConfig("");
+    const Config file = parseConfig("[view3d]\nfov_first = 90\nfov_behind = 45\nmouse = 200\n");
+    const LiveUpdate u = liveUpdate(running, file);
+    CHECK(u.next.view3dFovFirst == 90 && u.next.view3dFovBehind == 45 && u.next.view3dMouse == 200);
+    CHECK(u.applied.size() == 3);
+}
+
+// 3.0.19-beta.10: behind - the ground between the head and the eye (a wall, a cliff, the ground itself when looking
+// up) brings the eye in front of it: the free distance back from the head along the view
+TEST(view3d_behind_free_ground_keeps_the_distance) {
+    const float feet[3] = {0.0f, 0.0f, 0.0f}, ahead[3] = {1.0f, 0.0f, 0.0f}, up[3] = {0.0f, -1.0f, 0.0f};
+    float eye[3], target[3];
+    view3d::place(view3d::Mode::Behind, feet, ahead, up, -15.0f, eye, target, 45.0f);
+    CHECK(view3d::freeDistance(eye, target, 45.0f, [](float, float) { return 0.0f; }) == 45.0f);
+}
+
+TEST(view3d_behind_a_wall_brings_the_eye_in_front_of_it) {
+    const float feet[3] = {0.0f, 0.0f, 0.0f}, ahead[3] = {1.0f, 0.0f, 0.0f}, up[3] = {0.0f, -1.0f, 0.0f};
+    const auto wall = [](float x, float) { return x < -20.0f ? -100.0f : 0.0f; };  // 100 high behind x = -20
+    float eye[3], target[3];
+    view3d::place(view3d::Mode::Behind, feet, ahead, up, 0.0f, eye, target, 45.0f);
+    const float free = view3d::freeDistance(eye, target, 45.0f, wall);
+    CHECK(free >= 18.0f && free <= 20.0f);
+    view3d::place(view3d::Mode::Behind, feet, ahead, up, 0.0f, eye, target, free);
+    CHECK(eye[0] >= -20.0f && eye[0] < -10.0f);
+}
+
+TEST(view3d_behind_looking_up_comes_in_over_the_ground) {
+    const float feet[3] = {0.0f, 0.0f, 0.0f}, ahead[3] = {1.0f, 0.0f, 0.0f}, up[3] = {0.0f, -1.0f, 0.0f};
+    float eye[3], target[3];
+    view3d::place(view3d::Mode::Behind, feet, ahead, up, 40.0f, eye, target, 45.0f);
+    CHECK(eye[1] > 0.0f);  // under the ground at the whole distance
+    const float free = view3d::freeDistance(eye, target, 45.0f, [](float, float) { return 0.0f; });
+    CHECK(free < 45.0f && free > view3d::kPullNearest);
+    view3d::place(view3d::Mode::Behind, feet, ahead, up, 40.0f, eye, target, free);
+    CHECK(eye[1] < -view3d::kPullMargin);  // over it
+}
+
+TEST(view3d_behind_against_a_wall_keeps_the_nearest) {
+    const float feet[3] = {0.0f, 0.0f, 0.0f}, ahead[3] = {1.0f, 0.0f, 0.0f}, up[3] = {0.0f, -1.0f, 0.0f};
+    float eye[3], target[3];
+    view3d::place(view3d::Mode::Behind, feet, ahead, up, 0.0f, eye, target, 45.0f);
+    const auto wall = [](float x, float) { return x < -1.0f ? -100.0f : 0.0f; };  // right behind the head
+    const float free = view3d::freeDistance(eye, target, 45.0f, wall);
+    CHECK(free == view3d::kPullNearest);
 }

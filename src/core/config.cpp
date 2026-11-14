@@ -933,6 +933,13 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.cameraRemember);
         } else if (key == "camera.tilt") {  // 3.0.13-beta.5
             c.cameraTilt = val == "lower" || val == "ground" ? val : "game";
+        } else if (key == "view3d.fov_first" || key == "view3d.fov_behind" || key == "view3d.mouse") {  // 3.0.19-b.10
+            int n = 0;
+            if (toInt(val, -100000, 100000, n)) {
+                if (key == "view3d.fov_first") c.view3dFovFirst = std::clamp(n, 50, 100);
+                else if (key == "view3d.fov_behind") c.view3dFovBehind = std::clamp(n, 40, 90);
+                else c.view3dMouse = std::clamp(n, 25, 300);
+            }
         } else if (key == "buffs.timers") {  // 3.0.4-beta.6
             setBool(val, c.buffTimers);
         } else if (key.compare(0, 7, "notify.") == 0) {  // 3.0.4-beta.3

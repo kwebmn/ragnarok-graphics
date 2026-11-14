@@ -1010,6 +1010,9 @@ struct Config {
     // 3.0.13-beta.5 (the owner's pick 15 of «50 идей»): [camera] tilt - game, lower or ground (core/game_camera
     // tiltRoom)
     std::string cameraTilt = "game";
+    // 3.0.19-beta.10: [view3d] the 3D view (Ctrl+Shift+V, core/view3d): the field of view from the eyes and from
+    // behind (degrees), the mouse's speed (percent of 0.07 degrees a count)
+    int view3dFovFirst = 70, view3dFovBehind = 60, view3dMouse = 100;
     bool buffTimers = true;  // 3.0.4-beta.6, [buffs] timers: the time left on the buff icons (win/buff_overlay)
     bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player

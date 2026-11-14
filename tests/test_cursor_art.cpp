@@ -32,6 +32,35 @@ TEST(cursor_art_shapes_of_the_games_actions) {
     CHECK(cursorart::shapeOf(-1) == S::Arrow && cursorart::shapeOf(99) == S::Arrow);
 }
 
+// 3.0.19-beta.10 (the 3D view's crosshair, win/view3d): the game's own action at the middle of the screen - over a
+// monster a red target, an NPC's talk, a thing to pick up, a warp and «not there» as the game's; the rest the target
+TEST(cursor_art_the_3d_crosshair_by_the_games_action) {
+    using S = cursorart::Shape;
+    const S want[14] = {S::Target, S::Talk,  S::Hand,    S::Target, S::Target, S::TargetHot, S::TargetHot,
+                        S::Door,   S::Invalid, S::Grab, S::Target, S::Target, S::Door,      S::Target};
+    for (int a = 0; a < 14; ++a) CHECK(cursorart::lookShapeOf(a) == want[a]);
+    CHECK(cursorart::lookShapeOf(-1) == S::Target && cursorart::lookShapeOf(99) == S::Target);
+}
+
+// The red target: the target's rings in red (in both looks), its point in the middle
+TEST(cursor_art_the_hot_target_is_red) {
+    const auto redPixels = [](const cursorart::Art& a) {
+        int n = 0;
+        for (const uint32_t c : a.picture.px) {
+            const int al = alphaOf(c), r = int((c >> 16) & 255), g = int((c >> 8) & 255);
+            n += al > 200 && r > 150 && g < 110;
+        }
+        return n;
+    };
+    for (const CursorLook look : {CursorLook::Dark, CursorLook::Light}) {
+        const cursorart::Art hot = cursorart::make(cursorart::Shape::TargetHot, look, 24);
+        const cursorart::Art plain = cursorart::make(cursorart::Shape::Target, look, 24);
+        CHECK(redPixels(hot) > 20);
+        CHECK(redPixels(plain) == 0);
+        CHECK(hot.picture.width == plain.picture.width && hot.hotX == plain.hotX && hot.hotY == plain.hotY);
+    }
+}
+
 // The arrow: its point at the picture's top left (where the game's is), dark glass inside a gold edge («Темний»),
 // white inside a dark one («Світлий»), see-through away from it; twice the size twice as big
 TEST(cursor_art_arrow_looks) {
@@ -67,8 +96,8 @@ TEST(cursor_art_every_shape_drawn) {
         int seen = 0;
         for (const uint32_t c : a.picture.px) seen += alphaOf(c) > 200;
         CHECK(seen > 20);
-        if (shape == cursorart::Shape::Target || shape == cursorart::Shape::Invalid ||
-            shape == cursorart::Shape::Rotate)
+        if (shape == cursorart::Shape::Target || shape == cursorart::Shape::TargetHot ||
+            shape == cursorart::Shape::Invalid || shape == cursorart::Shape::Rotate)
             CHECK(std::fabs(a.hotX - float(a.picture.width) / 2) < 3 &&
                   std::fabs(a.hotY - float(a.picture.height) / 2) < 3);
     }

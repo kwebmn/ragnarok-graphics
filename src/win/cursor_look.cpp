@@ -90,7 +90,10 @@ static CursorLook lookNow(CursorLook look) {
     return view3dwin::looking() && look == CursorLook::Game ? CursorLook::Light : look;
 }
 
-static ca::Shape shapeNow(int action) { return view3dwin::looking() ? ca::Shape::Target : ca::shapeOf(action); }
+// 3.0.19-beta.10: the crosshair by the game's own action at it - red over a monster, an NPC's talk, a warp...
+static ca::Shape shapeNow(int action) {
+    return view3dwin::looking() ? ca::lookShapeOf(action) : ca::shapeOf(action);
+}
 
 void frame(CursorLook look, double k) {
     State& s = state();

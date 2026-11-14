@@ -78,6 +78,9 @@ Projection projectionFor(int width, int height);
 // projectionFor follows it (in the renderer's process the bridge's Camera message carries it each frame)
 void setFov(float degrees);
 float fovNow();
+// 3.0.19-beta.10: the 3D view's camera now - a field of view wider than the game's own (the renderers' sky over it;
+// the grass, a screen pass for the game's distance, not)
+bool wideView();
 // The renderer's fields SetSize (0x40d760) makes for a field of view: f0, f1 and the culling's slopes (+0 .. +0xc)
 struct SetSizeFields {
     float f0 = 0, f1 = 0, slopeH = 0, slopeV = 0;

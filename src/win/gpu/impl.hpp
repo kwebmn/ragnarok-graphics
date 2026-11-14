@@ -1032,7 +1032,7 @@ struct Renderer::Impl {
     bool applyMist();  // once a frame, the world drawn and lit; false: lost
     ID3D12PipelineState* mistPipeline(UINT samples);
     bool sky3dDue() const {  // 3.0.19-beta.6: the 3D view - the game's field of view wider than its own
-        return sky3dPs && camera::fovNow() > camera::kFov + 0.5f && groundDrawn && !sky3dDone && viewToWorldValid;
+        return sky3dPs && camera::wideView() && groundDrawn && !sky3dDone && viewToWorldValid;
     }
     bool applySky3d();  // once a frame, after the mists; false: lost
     // 0.72: indoors (a polished or wet floor) and in the rain; a field under a dry sky does not shine
@@ -1549,8 +1549,9 @@ struct Renderer::Impl {
     // the mask (w x maskRows, the tiles' reach under it) and the tiles; false: none - no grass
     bool ensureGrassMask(int w, int maskRows, int tilesWide, int tilesHigh);
     bool grassDue() const {
+        // 3.0.19-beta.10: not in the 3D view (a blade's length is in pixels, for the game's own distance)
         return effects.grass && effects.grassAmount > 0 && grassPs && grassHere() && groundDrawn && !grassDone &&
-               viewToWorldValid;
+               viewToWorldValid && !camera::wideView();
     }
     bool applyGrass();  // once a frame, before the characters; false: lost
     // 2.6.8: the steps' hold on the blades (core/trample.hpp), made once a frame into its texture (grass_ps's t1)

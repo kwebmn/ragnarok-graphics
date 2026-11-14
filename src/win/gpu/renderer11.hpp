@@ -14,6 +14,7 @@
 #include "core/draw_batch.hpp"
 #include "core/footsteps.hpp"
 #include "core/frame_profile.hpp"
+#include "core/game_camera.hpp"
 #include "core/portal.hpp"
 #include "core/trample.hpp"
 #include "core/ground_cells.hpp"
@@ -519,7 +520,9 @@ private:
                                  seasonsShown() || rainWetShown());
     }
     bool grassWanted() const {
-        return effects_.grass && effects_.grassAmount > 0 && grassPs_ && grassHere() && cameraValid_;
+        // 3.0.19-beta.10: not in the 3D view (a blade's length is in pixels, for the game's own distance)
+        return effects_.grass && effects_.grassAmount > 0 && grassPs_ && grassHere() && cameraValid_ &&
+               !camera::wideView();
     }
     bool wetWanted() const {
         return effects_.wetGround && effects_.weather && weather_ == weather::Kind::Rain && floorReflectPs_ &&

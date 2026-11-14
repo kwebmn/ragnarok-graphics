@@ -29,6 +29,8 @@ void setFov(float degrees) {
 
 float fovNow() { return g_fov.load(std::memory_order_relaxed); }
 
+bool wideView() { return fovNow() > kFov + 0.5f; }
+
 SetSizeFields setSizeFields(float fovDegrees, int width, int height) {
     SetSizeFields s;
     if (width <= 0 || height <= 0) return s;

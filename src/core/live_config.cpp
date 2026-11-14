@@ -787,6 +787,21 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("camera tilt", running.cameraTilt, file.cameraTilt));
         n.cameraTilt = file.cameraTilt;
     }
+    if (file.view3dFovFirst != running.view3dFovFirst) {  // 3.0.19-beta.10: the 3D view's, at its next frame
+        u.applied.push_back(change("3D view fov first", std::to_string(running.view3dFovFirst),
+                                   std::to_string(file.view3dFovFirst)));
+        n.view3dFovFirst = file.view3dFovFirst;
+    }
+    if (file.view3dFovBehind != running.view3dFovBehind) {
+        u.applied.push_back(change("3D view fov behind", std::to_string(running.view3dFovBehind),
+                                   std::to_string(file.view3dFovBehind)));
+        n.view3dFovBehind = file.view3dFovBehind;
+    }
+    if (file.view3dMouse != running.view3dMouse) {
+        u.applied.push_back(
+            change("3D view mouse", std::to_string(running.view3dMouse), std::to_string(file.view3dMouse)));
+        n.view3dMouse = file.view3dMouse;
+    }
     if (file.cameraRemember != running.cameraRemember) {  // 3.0.11-beta.184
         u.applied.push_back(change("camera remember", flag(running.cameraRemember), flag(file.cameraRemember)));
         n.cameraRemember = file.cameraRemember;
@@ -901,6 +916,7 @@ bool appliesNow(const std::string& k) {
            k == "camera.zoom_limit" ||        // 3.0.4-beta.17
            k == "camera.remember" ||          // 3.0.11-beta.184
            k == "camera.tilt" ||              // 3.0.13-beta.5
+           k.compare(0, 7, "view3d.") == 0 ||  // 3.0.19-beta.10
            k == "buffs.timers" ||              // 3.0.4-beta.6
            k.compare(0, 11, "connection.") == 0;  // 3.0.11-beta.148: the way onto a map
 }

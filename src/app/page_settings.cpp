@@ -125,6 +125,13 @@ public:
                     buildRows(p, "camera", false);
                     p.note(t(Text::CameraPhotoNote));
                 }
+                // 3.0.19-beta.10: the 3D view ([view3d]) - its own heading, its keys
+                if (anyListed("view3d")) {
+                    p.gap();
+                    p.heading(t(Text::View3dHeading));
+                    buildRows(p, "view3d", false);
+                    p.note(t(Text::View3dKeysNote));
+                }
                 if (anyListed("buffs")) {  // 3.0.4-beta.6: the buff icons' times
                     p.gap();
                     p.heading(t(Text::BuffsHeading));

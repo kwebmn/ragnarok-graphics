@@ -991,6 +991,9 @@ enum class Text : uint16_t {
     PresentSlowD3d11, PresentSlowCard,
     // 3.0.19-beta.9: [renderer] cross_present, and the chat's line when the present watch turned it on
     RenderCrossPresent, RenderCrossPresentHint, PresentSlowCross,
+    // 3.0.19-beta.10: [view3d] in «Гра» - the 3D view's own section
+    View3dHeading, View3dFovFirst, View3dFovFirstHint, View3dFovBehind, View3dFovBehindHint, View3dMouse,
+    View3dMouseHint, View3dKeysNote,
     Count
 };
 

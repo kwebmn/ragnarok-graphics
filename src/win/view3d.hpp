@@ -1,6 +1,8 @@
 #pragma once
 #include <windows.h>
 
+#include "core/config.hpp"
+
 namespace uagfx::win::view3dwin {
 
 // 3.0.19-beta.6 (the owner: «давай попробуем, сделай побольше всего ... чтобы сразу получить качественную картинку»;
@@ -13,7 +15,9 @@ namespace uagfx::win::view3dwin {
 
 void install();                          // the camera's hook, once (the game's world not needed yet)
 bool key(UINT m, WPARAM wp, LPARAM lp);  // Ctrl+Shift+V; true: ours (the game sees neither the key nor its letter)
-void frame();                            // each frame: the cursor held in the window while looking, the log
+// each frame: the cursor held in the window while looking, the log; 3.0.19-beta.10: [view3d]'s fields of view and
+// mouse speed taken (for the camera's next build)
+void frame(const Config& config);
 bool active();                           // the 3D view on
 bool looking();                          // and the mouse turns it (not Alt): the crosshair in the cursor's place
 

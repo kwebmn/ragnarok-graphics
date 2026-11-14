@@ -41,6 +41,9 @@ struct State {
     float wroteYaw = -1.0f;  // the yaw put into the game last frame
     float wroteTilt = 0.0f;  // beta.7: the tilt held there (kHeldTilt once written)
     float fov = view3d::kGameFov;
+    int fovFirst = int(view3d::kFirstFov), fovBehind = int(view3d::kBehindFov);  // 3.0.19-beta.10: [view3d]
+    float mouseSpeed = 1.0f;
+    float behindNow = 0.0f;  // 3.0.19-beta.10: the distance behind used (in at once before a wall, out slowly)
     bool walkBefore = false;  // the walk mode as it was before the 3D view
     bool centred = false;
     bool looking = false;
@@ -94,7 +97,7 @@ void mouse(State& s) {
     const int cx = w / 2, cy = h / 2;
     if (s.centred) {
         const int dx = *x - cx, dy = *y - cy;
-        if (dx || dy) view3d::turn(s.look, float(dx), float(dy), kDegreesPerCount, s.sign);
+        if (dx || dy) view3d::turn(s.look, float(dx), float(dy), kDegreesPerCount * s.mouseSpeed, s.sign);
     }
     *x = cx;
     *y = cy;
@@ -123,14 +126,24 @@ void adoptTilt(uint32_t view, State& s) {
         s.look.pitch = std::clamp(s.look.pitch + (to - s.wroteTilt), -view3d::kPitchMost, view3d::kPitchMost);
 }
 
-// The eye 2 over the ground under it at least (the game's build keeps its own eye over it the same way)
-void overGround(float eye[3]) {
+// The game's ground now (the build's own: the mode's world's), 0: none
+uint32_t groundNow() {
     const uint32_t mode = readGameMode();
     uint32_t world = 0, ground = 0;
-    if (!mode || !readGame(mode + kModeWorld, &world, 4) || !world || !readGame(world + kWorldGround, &ground, 4) ||
-        !ground)
-        return;
-    const float h = reinterpret_cast<HeightFn>(uintptr_t(kGroundHeight))(ground, eye[0], eye[2]);
+    if (!mode || !readGame(mode + kModeWorld, &world, 4) || !world || !readGame(world + kWorldGround, &ground, 4))
+        return 0;
+    return ground;
+}
+
+// Its y at (x, z), y down (out of the map: 0, the game's own answer)
+float groundY(uint32_t ground, float x, float z) {
+    return reinterpret_cast<HeightFn>(uintptr_t(kGroundHeight))(ground, x, z);
+}
+
+// The eye 2 over the ground under it at least (the game's build keeps its own eye over it the same way)
+void overGround(uint32_t ground, float eye[3]) {
+    if (!ground) return;
+    const float h = groundY(ground, eye[0], eye[2]);
     if (std::isfinite(h) && eye[1] > h - 2.0f) eye[1] = h - 2.0f;  // y down
 }
 
@@ -144,6 +157,7 @@ void switchTo(State& s, uint32_t view) {
         s.look.pitch = to == view3d::Mode::First ? 0.0f : -12.0f;
         s.wroteYaw = -1.0f;
         s.wroteTilt = 0.0f;
+        s.behindNow = 0.0f;
         s.walkBefore = walkmodewin::on();
         walkmodewin::setOn(true);
     } else if (to == view3d::Mode::Off) {
@@ -151,8 +165,10 @@ void switchTo(State& s, uint32_t view) {
     } else if (to == view3d::Mode::First) {
         s.look.pitch = std::clamp(s.look.pitch + 12.0f, -view3d::kPitchMost, view3d::kPitchMost);
     }
-    LOG_INFO("3D view: %s - the field of view %.0f, the walk mode %s", view3d::nameOf(to), view3d::fovFor(to),
-             to != view3d::Mode::Off || s.walkBefore ? "on" : "off");
+    LOG_INFO("3D view: %s - the field of view %.0f, the mouse %.0f %%, the walk mode %s%s", view3d::nameOf(to),
+             view3d::fovFor(to, s.fovFirst, s.fovBehind), s.mouseSpeed * 100.0f,
+             to != view3d::Mode::Off || s.walkBefore ? "on" : "off",
+             to != view3d::Mode::Off ? "; the grass not drawn in it" : "");
 }
 
 void tell(State& s, uint32_t view, const float eye[3], const float feet[3], const float up[3]) {
@@ -160,9 +176,9 @@ void tell(State& s, uint32_t view, const float eye[3], const float feet[3], cons
     if (s.frames != 1 && now - s.toldAt < 10000) return;
     s.toldAt = now;
     LOG_INFO("3D view: %s - yaw %.1f, pitch %.1f, the turn %+.0f; the eye %.1f %.1f %.1f over the feet %.1f %.1f %.1f, "
-             "up %.2f %.2f %.2f; the game's tilt %.1f, distance %.1f; %d frames",
+             "up %.2f %.2f %.2f; the game's tilt %.1f, distance %.1f (behind %.1f); %d frames",
              view3d::nameOf(s.mode), s.look.yaw, s.look.pitch, s.sign, eye[0], eye[1], eye[2], feet[0], feet[1],
-             feet[2], up[0], up[1], up[2], *at(view, 0x1C), *at(view, 0x24), s.frames);
+             feet[2], up[0], up[1], up[2], *at(view, 0x1C), *at(view, 0x24), s.behindNow, s.frames);
 }
 
 void __attribute__((thiscall)) build(uint32_t view) {
@@ -192,9 +208,17 @@ void __attribute__((thiscall)) build(uint32_t view) {
     float feet[3], up[3], eye[3], target[3];
     std::memcpy(feet, at(view, kFeet), sizeof feet);
     std::memcpy(up, at(view, kUp), sizeof up);
-    view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target,
-                  view3d::behindDistanceOf(*at(view, kDistanceTo)));  // beta.7: the wheel
-    overGround(eye);
+    const float want = view3d::behindDistanceOf(*at(view, kDistanceTo));  // beta.7: the wheel
+    view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target, want);
+    const uint32_t ground = groundNow();
+    if (s.mode == view3d::Mode::Behind && ground) {  // 3.0.19-beta.10: a wall, a cliff behind - the eye before it
+        const float free = view3d::freeDistance(eye, target, want,
+                                                [ground](float x, float z) { return groundY(ground, x, z); });
+        s.behindNow = s.behindNow <= 0.0f || free < s.behindNow ? free : s.behindNow + (free - s.behindNow) * 0.12f;
+        if (s.behindNow < want - 0.01f)
+            view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target, s.behindNow);
+    }
+    overGround(ground, eye);
     float nm[12], inv[12];
     view3d::lookAt(eye, target, up, nm);
     if (!camera::plausibleView(nm)) return;
@@ -202,7 +226,7 @@ void __attribute__((thiscall)) build(uint32_t view) {
     std::memcpy(at(view, kEye), eye, sizeof eye);
     std::memcpy(at(view, kView), nm, sizeof nm);
     std::memcpy(at(view, kInverse), inv, sizeof inv);
-    applyFov(s, view3d::fovFor(s.mode));
+    applyFov(s, view3d::fovFor(s.mode, s.fovFirst, s.fovBehind));
     ++s.frames;
     tell(s, view, eye, feet, up);
 }
@@ -235,8 +259,11 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     return true;
 }
 
-void frame() {
+void frame(const Config& config) {
     State& s = g_state;
+    s.fovFirst = config.view3dFovFirst;
+    s.fovBehind = config.view3dFovBehind;
+    s.mouseSpeed = float(config.view3dMouse) / 100.0f;
     if (s.mode != view3d::Mode::Off && !inGameWorld()) {  // the login, the character list: the game's own
         s.mode = s.wanted = view3d::Mode::Off;
         walkmodewin::setOn(s.walkBefore);

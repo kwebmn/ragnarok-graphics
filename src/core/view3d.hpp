@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 
 namespace uagfx::view3d {
 
@@ -15,6 +16,8 @@ constexpr float kGameFov = 15.0f;    // the game's own vertical field of view (d
 constexpr float kFirstFov = 70.0f;   // from the eyes
 constexpr float kBehindFov = 60.0f;  // over the shoulder
 float fovFor(Mode m);
+// 3.0.19-beta.10: by the settings ([view3d] fov_first, fov_behind)
+float fovFor(Mode m, int first, int behind);
 
 constexpr float kEyeHeight = 13.0f;      // the eyes over the feet (a character is about 16 high)
 constexpr float kHeadHeight = 14.0f;     // behind: the point the camera keeps in front of it
@@ -40,6 +43,13 @@ void place(Mode m, const float feet[3], const float flat[3], const float up[3], 
            float target[3], float distance = kBehindDistance);
 // 3.0.19-beta.7: the game's wheel zoom (CView +0x3c, 230-2040, its start 300) as the distance behind the head
 float behindDistanceOf(float gameDistance);
+
+// 3.0.19-beta.10: behind - how far back from the head the eye can be along the view (`eye` and `target` as place
+// made them for `distance`): the first point of the way back closer than kPullMargin over the ground (`groundY(x, z)`
+// its y there, y down: a wall, a cliff, the ground when looking up) stops it a step before, kPullNearest at least
+constexpr float kPullStep = 2.0f, kPullMargin = 2.0f, kPullNearest = 5.0f;
+float freeDistance(const float eye[3], const float target[3], float distance,
+                   const std::function<float(float x, float z)>& groundY);
 
 // The game's LookAt (0x409540: right = up x forward, then forward x right; 4 x 3 for row vectors, the last row the
 // move) and its inverse (0x409860)

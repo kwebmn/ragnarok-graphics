@@ -1245,7 +1245,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     keywalk::setEnabled(config.arrowsWalk);                    // 3.0.18-beta.207: the arrows walk
     keywalk::setSpace(config.spaceAction);                     // 3.0.18-beta.209: Space acts
     walkmodewin::frame(config, iniPath());                     // 3.0.18-beta.208: the walk mode
-    view3dwin::frame();                                        // 3.0.19-beta.6: the 3D view
+    view3dwin::frame(config);                                  // 3.0.19-beta.6: the 3D view
     presentwatchwin::frame(*renderer, config, iniPath(), window, gameCodePage(config));  // 3.0.19-beta.8
     groundmarks::groundTimers(config.groundTimers);  // 3.0.16-beta.21
     hotbarwin::setTimers(config.groundTimers);       // 3.0.16-beta.22: on the slots too

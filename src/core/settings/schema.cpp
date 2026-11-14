@@ -492,6 +492,13 @@ const std::vector<IniSetting>& iniSettings() {
         {"camera", "tilt", Page::Game, Control::Choice, 0, 0, 0, {"game", "lower", "ground"},
          {Text::CameraTiltGame, Text::CameraTiltLower, Text::CameraTiltGround}, Text::CameraTilt,
          Text::CameraTiltHint, ""},
+        // 3.0.19-beta.10: the 3D view (Ctrl+Shift+V) - a section of its own, «3D-режим»
+        {"view3d", "fov_first", Page::Game, Control::Slider, 50, 100, 5, {}, {}, Text::View3dFovFirst,
+         Text::View3dFovFirstHint, "°"},
+        {"view3d", "fov_behind", Page::Game, Control::Slider, 40, 90, 5, {}, {}, Text::View3dFovBehind,
+         Text::View3dFovBehindHint, "°"},
+        {"view3d", "mouse", Page::Game, Control::Slider, 25, 300, 25, {}, {}, Text::View3dMouse, Text::View3dMouseHint,
+         " %"},
         // 3.0.4-beta.6: the time left on the buff icons
         {"buffs", "timers", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::BuffTimers,
          Text::BuffTimersHint, ""},
@@ -1488,6 +1495,9 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "camera.zoom_limit") return c.cameraZoomLimit ? "1" : "0";         // 3.0.4-beta.17
     if (k == "camera.remember") return c.cameraRemember ? "1" : "0";            // 3.0.11-beta.184
     if (k == "camera.tilt") return c.cameraTilt;                                // 3.0.13-beta.5
+    if (k == "view3d.fov_first") return std::to_string(c.view3dFovFirst);       // 3.0.19-beta.10
+    if (k == "view3d.fov_behind") return std::to_string(c.view3dFovBehind);
+    if (k == "view3d.mouse") return std::to_string(c.view3dMouse);
     if (k == "buffs.timers") return c.buffTimers ? "1" : "0";                   // 3.0.4-beta.6
     if (k.compare(0, 7, "notify.") == 0) {                   // 3.0.4-beta.3
         const NotifySettings& n = c.notify;
