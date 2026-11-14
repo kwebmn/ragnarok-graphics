@@ -508,6 +508,12 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.19-beta.33 (the owner: «я так траву в 3д и не увидел»): the grass as blades in the world
         {"view3d", "grass", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dGrass,
          Text::View3dGrassHint, "", &E::grass3d},
+        // 3.0.19-beta.36 (the concept's threat's arc): a red arc on the side one out of sight hits from
+        {"view3d", "threat", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dThreat,
+         Text::View3dThreatHint, ""},
+        // 3.0.19-beta.36 (the owner: «автонаводка на мобов раздражает»): the crosshair's pull, off
+        {"view3d", "aim_pull", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dAimPull,
+         Text::View3dAimPullHint, ""},
         // 3.0.4-beta.6: the time left on the buff icons
         {"buffs", "timers", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::BuffTimers,
          Text::BuffTimersHint, ""},
@@ -1508,6 +1514,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "view3d.fov_behind") return std::to_string(c.view3dFovBehind);
     if (k == "view3d.mouse") return std::to_string(c.view3dMouse);
     if (k == "view3d.distance") return std::to_string(c.view3dDistance);
+    if (k == "view3d.threat") return c.view3dThreat ? "1" : "0";  // 3.0.19-beta.36
+    if (k == "view3d.aim_pull") return c.view3dAimPull ? "1" : "0";
     if (k == "buffs.timers") return c.buffTimers ? "1" : "0";                   // 3.0.4-beta.6
     if (k.compare(0, 7, "notify.") == 0) {                   // 3.0.4-beta.3
         const NotifySettings& n = c.notify;

@@ -27,5 +27,8 @@ bool ownHidden();                        // 3.0.19-beta.15: the character's own 
 // on the crosshair's target or the character itself (core view3d::skillTargetOf), the wait ended; true: the press
 // is not the game's any more
 bool castWaiting(bool shift);
+// 3.0.19-beta.36: the 3D view's right and forward laid flat along the ground (the world's x, z), from the view it
+// wrote last; false off the 3D view
+bool viewAxes(float right[2], float forward[2]);
 
 }  // namespace uagfx::win::view3dwin

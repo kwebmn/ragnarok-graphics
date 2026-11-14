@@ -440,3 +440,29 @@ TEST(view3d_lock_steps_back_too) {
     CHECK(view3d::nextLock(boxes, 100, 100, 0, -1) == 2);  // none locked: the nearest either way
     CHECK(view3d::nextLock(boxes, 100, 100, 2, 1) == 3);   // as before
 }
+
+// 3.0.19-beta.36 (the owner: «автонаводка на мобов раздражает, можно без нее?»): [view3d] aim_pull - the crosshair
+// pulled onto a monster near it and the locked one, off unless the file says 1; off: the monster right under it alone
+TEST(config_view3d_aim_pull_off_by_default) {
+    CHECK(!parseConfig("").view3dAimPull);
+    CHECK(parseConfig("[view3d]\naim_pull = 1\n").view3dAimPull);
+    const settings::IniSetting* row = settings::findSetting("view3d.aim_pull");
+    CHECK(row != nullptr);
+    if (row) CHECK(row->page == settings::Page::Game && settings::tokenOf(*row, parseConfig("")) == "0");
+    CHECK(appliesNow("view3d.aim_pull"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[view3d]\naim_pull = 1\n")).next.view3dAimPull);
+    // no pull: the one under the crosshair as it is, none near it, not the locked one from afar
+    const std::vector<view3d::AimBox> boxes = {{5, 90, 90, 110, 110}, {6, 130, 90, 150, 110}};
+    const view3d::Aim under = view3d::aimAt(boxes, 100, 100, 0, 6, 0);
+    CHECK(under.id == 5 && under.x == 100 && under.y == 100);
+    const view3d::Aim none = view3d::aimAt(boxes, 120, 100, 0, 6, 0);
+    CHECK(none.id == 0 && none.x == 120 && none.y == 100);
+}
+
+// 3.0.19-beta.36 (the concept's threat's arc): [view3d] threat - on unless the file says 0
+TEST(config_view3d_threat_on_by_default) {
+    CHECK(parseConfig("").view3dThreat);
+    CHECK(!parseConfig("[view3d]\nthreat = 0\n").view3dThreat);
+    CHECK(settings::findSetting("view3d.threat") != nullptr);
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[view3d]\nthreat = 0\n")).next.view3dThreat);
+}

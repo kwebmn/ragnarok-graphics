@@ -807,6 +807,14 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("3D view distance", std::to_string(running.view3dDistance), std::to_string(file.view3dDistance)));
         n.view3dDistance = file.view3dDistance;
     }
+    if (file.view3dThreat != running.view3dThreat) {  // 3.0.19-beta.36
+        u.applied.push_back(change("3D view threat's arc", flag(running.view3dThreat), flag(file.view3dThreat)));
+        n.view3dThreat = file.view3dThreat;
+    }
+    if (file.view3dAimPull != running.view3dAimPull) {  // 3.0.19-beta.36
+        u.applied.push_back(change("3D view crosshair pull", flag(running.view3dAimPull), flag(file.view3dAimPull)));
+        n.view3dAimPull = file.view3dAimPull;
+    }
     if (file.cameraRemember != running.cameraRemember) {  // 3.0.11-beta.184
         u.applied.push_back(change("camera remember", flag(running.cameraRemember), flag(file.cameraRemember)));
         n.cameraRemember = file.cameraRemember;

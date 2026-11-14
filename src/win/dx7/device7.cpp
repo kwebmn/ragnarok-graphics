@@ -22,6 +22,7 @@
 #include "win/dx7/surface7.hpp"
 #include "win/effect_hook.hpp"
 #include "win/game_camera.hpp"
+#include "win/threat_arc.hpp"
 #include "win/view3d.hpp"
 #include "win/ground_marks.hpp"
 #include "win/ground_way.hpp"
@@ -184,6 +185,7 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
     win::Context::get().markInterfaceEnd(win::interfaceFaces());  // 3.0.11-beta.190: the game's interface list
     win::groundway::newFrame();    // 3.0.11-beta.31: the way on the ground drawn once in this frame
     win::groundmarks::newFrame();  // 3.0.11-beta.87: the target's ring too
+    win::threatarcwin::newFrame();  // 3.0.19-beta.36: the threat's arc
     win::netsmoothwin::beginScene();  // 3.0.11-beta.123: the server's position fixes drawn gliding
     win::netpredictwin::beginScene();  // 3.0.11-beta.130: the own walk guessed at the click
     return D3D_OK;
@@ -756,6 +758,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     if (setup.ui) {
         win::groundway::draw(c.record, c.screenWidth, c.screenHeight);    // 3.0.11-beta.31: the way followed
         win::groundmarks::draw(c.record, c.screenWidth, c.screenHeight);  // 3.0.11-beta.87: the target's ring
+        win::threatarcwin::draw(c.record, c.screenWidth, c.screenHeight);  // 3.0.19-beta.36: the threat's arc
     }
     // 3.0.19-beta.18 (R-57KBSF «некоторые нпс утоплены в пол»): in the 3D view a character's, a monster's, an NPC's
     // sprite a few units nearer than its feet (core view3d::spriteDepth) - the game's own nearness, made for its far

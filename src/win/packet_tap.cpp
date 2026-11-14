@@ -36,6 +36,7 @@
 #include "win/target_card.hpp"
 #include "win/ground_units.hpp"
 #include "win/notifier.hpp"
+#include "win/threat_arc.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -103,6 +104,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
         chatwin::packet(e);      // 3.0.11-beta.41: the chat's battle log
         castwin::packet(e);      // 3.0.11-beta.48: the cast's label - which skill
         mobhpwin::packet(e);     // 3.0.11-beta.95: the monsters' HP bars
+        threatarcwin::packet(e);  // 3.0.19-beta.36: the 3D view's threat's arc
         if (const auto* h = std::get_if<packets::Hit>(&e))  // 3.0.13-beta.20: a friend's target - its effects theirs
             Context::get().noteHit(h->source, h->target);
         npcwin::packet(e);       // 3.0.11-beta.98: the NPC talk's words

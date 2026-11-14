@@ -86,6 +86,9 @@ struct State {
     bool walkBefore = false;  // the walk mode as it was before the 3D view
     int castsTold = 0;        // 3.0.19-beta.31: castWaiting's lines
     int wheelsTold = 0;       // 3.0.19-beta.34: the wheel's locks told
+    float viewNow[12] = {};   // 3.0.19-beta.36: the view matrix written last (viewAxes)
+    bool aimPull = false;     // 3.0.19-beta.36: [view3d] aim_pull
+    bool viewKnown = false;
     bool centred = false;
     bool looking = false;
     bool clipped = false;
@@ -219,8 +222,14 @@ POINT clientOf(HWND game, int gx, int gy, int w, int h) {
 bool park(HWND game, int x, int y, int w, int h, POINT* where = nullptr) {
     POINT at = clientOf(game, x, y, w, h), now{};
     if (!ClientToScreen(game, &at) || !GetCursorPos(&now)) return false;
-    if (std::abs(now.x - at.x) > 1 || std::abs(now.y - at.y) > 1) SetCursorPos(at.x, at.y);
-    if (where) *where = at;
+    if (std::abs(now.x - at.x) > 1 || std::abs(now.y - at.y) > 1) {
+        SetCursorPos(at.x, at.y);
+        // 3.0.19-beta.36 (the owner: «в режиме от третего лица в 3д чтото мышка какбудто в бок идет»): where it
+        // truly stands now - a screen scaled (175 %) puts it a pixel off the point asked, and that pixel, measured
+        // from the point asked, was a move every frame: the view turned by itself
+        if (!GetCursorPos(&now)) now = at;
+    }
+    if (where) *where = now;
     return true;
 }
 
@@ -326,8 +335,9 @@ void mouse(State& s) {
             }
         }
     }
-    const view3d::Aim a = view3d::aimAt(s.aims, float(cx), float(cy), kPullReach * float(h), s.locked,
-                                        kLockReach * float(h));
+    // 3.0.19-beta.36 (the owner: «автонаводка на мобов раздражает»): pulled only with [view3d] aim_pull
+    const view3d::Aim a = view3d::aimAt(s.aims, float(cx), float(cy), s.aimPull ? kPullReach * float(h) : 0.0f,
+                                        s.locked, s.aimPull ? kLockReach * float(h) : 0.0f);
     const int ax = int(std::lround(a.x)), ay = int(std::lround(a.y));
     if (a.id != s.aimed && a.id && (ax != cx || ay != cy) && s.pullsTold < 10) {
         ++s.pullsTold;
@@ -586,6 +596,8 @@ void __attribute__((thiscall)) build(uint32_t view) {
     std::memcpy(at(view, kEye), eye, sizeof eye);
     std::memcpy(at(view, kView), nm, sizeof nm);
     std::memcpy(at(view, kInverse), inv, sizeof inv);
+    std::memcpy(s.viewNow, nm, sizeof nm);  // 3.0.19-beta.36: its axes for the threat's arc
+    s.viewKnown = true;
     applyFov(s, view3d::fovFor(s.mode, s.fovFirst, s.fovBehind));
     ++s.frames;
     tell(s, view, eye, feet, up);
@@ -638,6 +650,7 @@ void frame(const Config& config) {
     s.fovBehind = config.view3dFovBehind;
     s.mouseSpeed = float(config.view3dMouse) / 100.0f;
     s.sight = config.view3dDistance;  // 3.0.19-beta.24
+    s.aimPull = config.view3dAimPull;  // 3.0.19-beta.36
     if (s.mode != view3d::Mode::Off && !inGameWorld()) {  // the login, the character list: the game's own
         s.mode = s.wanted = view3d::Mode::Off;
         walkmodewin::setOn(s.walkBefore);
@@ -672,6 +685,19 @@ bool looking() { return g_state.mode != view3d::Mode::Off && g_state.looking; }
 bool fromTheEyes() { return g_state.mode == view3d::Mode::First; }
 
 bool ownHidden() { return ownHiddenNow(); }
+
+bool viewAxes(float right[2], float forward[2]) {
+    const State& s = g_state;
+    if (s.mode == view3d::Mode::Off || !s.viewKnown) return false;
+    const float* m = s.viewNow;  // 4 x 3 for row vectors: its columns the view's axes in the world
+    const float rl = std::hypot(m[0], m[6]), fl = std::hypot(m[2], m[8]);
+    if (rl < 1e-4f || fl < 1e-4f) return false;
+    right[0] = m[0] / rl;
+    right[1] = m[6] / rl;
+    forward[0] = m[2] / fl;
+    forward[1] = m[8] / fl;
+    return true;
+}
 
 // 3.0.19-beta.31: the game mode waiting for a skill's target (its class's vtable 0x69F388; FUN_00562580 - a click on
 // a monster): its state +0x3C4 (2 an enemy, 4 a friend), the skill +0x3C8, its range +0x3CC, its level +0x3D0; the

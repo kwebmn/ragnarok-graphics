@@ -1020,6 +1020,10 @@ struct Config {
     // behind (degrees), the mouse's speed (percent of 0.07 degrees a count)
     int view3dFovFirst = 70, view3dFovBehind = 60, view3dMouse = 100;
     int view3dDistance = 1200;  // 3.0.19-beta.24: the 3D view's sight (core view3d::kSightDefault), 800-1500
+    bool view3dThreat = true;   // 3.0.19-beta.36: [view3d] threat - the threat's arc (core/threat_arc)
+    // 3.0.19-beta.36 (the owner: «автонаводка на мобов раздражает, можно без нее?»): [view3d] aim_pull - the
+    // crosshair pulled onto a monster near it and the one Tab locked; off: the monster right under it alone
+    bool view3dAimPull = false;
     bool buffTimers = true;  // 3.0.4-beta.6, [buffs] timers: the time left on the buff icons (win/buff_overlay)
     bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player

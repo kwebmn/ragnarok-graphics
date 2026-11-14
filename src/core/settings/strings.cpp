@@ -8872,6 +8872,22 @@ constexpr Entry kTexts[] = {
      "там, де росте трава з ефектів, і стільки ж. Вимкнено — у 3D-режимі трави немає.",
      "В 3D-режиме трава растёт травинками на зелёной земле вокруг, качается на ветру и пригибается от шагов — там, "
      "где растёт трава из эффектов, и столько же. Выключено — в 3D-режиме травы нет."},
+    {Text::View3dThreat, "Threat's arc", "Дуга загрози", "Дуга угрозы"},  // 3.0.19-beta.36
+    {Text::View3dThreatHint,
+     "In the 3D view a red arc at the screen's edge on the side a monster out of sight hits you from - fading in a "
+     "second and a half.",
+     "У 3D-режимі червона дуга біля краю екрана з того боку, звідки б'є монстр поза полем зору, — гасне за півтори "
+     "секунди.",
+     "В 3D-режиме красная дуга у края экрана с той стороны, откуда бьёт монстр вне поля зрения, — гаснет за полторы "
+     "секунды."},
+    {Text::View3dAimPull, "Crosshair pull", "Притягування прицілу", "Притягивание прицела"},  // 3.0.19-beta.36
+    {Text::View3dAimPullHint,
+     "In the 3D view the crosshair is pulled onto a monster near it and onto the one Tab locked. Off: it stays where "
+     "the mouse puts it - the monster right under it is the one aimed at.",
+     "У 3D-режимі приціл притягується до монстра поруч і до захопленого Tab. Вимкнено — приціл стоїть там, куди "
+     "його ставить миша: ціль — монстр саме під ним.",
+     "В 3D-режиме прицел притягивается к монстру рядом и к захваченному Tab. Выключено — прицел стоит там, куда его "
+     "ставит мышь: цель — монстр прямо под ним."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
