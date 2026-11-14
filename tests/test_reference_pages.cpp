@@ -1139,6 +1139,22 @@ TEST(reference_pages_things_no_one_can_get_are_not_listed) {
     CHECK(!refpages::item(ix, Lang::Uk, 7777, ctx("")).rows.empty());
 }
 
+// 3.0.19-beta.3: the site's word on what is in the game rules the lists, the search and «who drops» - the Emperium
+// (a script's, on no map) listed and found; a thing from a box listed
+TEST(reference_pages_lists_follow_the_sites_word) {
+    refindex::Index ix = index();
+    ix.mobs[1288] = refindex::Mob{};
+    ix.mobs[1288].name = "Emperium";
+    ix.mobs[1288].lv = 90;
+    ix.mobs[1288].inGame = 1;
+    ix.items[7777] = refindex::Item{"Box Prize", "Box_Prize", 3, 10, 1, 0};
+    ix.items[7777].inGame = 1;
+    CHECK(rowWith(refpages::section(ix, Lang::Uk, refpages::Mobs), "Emperium") != nullptr);
+    CHECK(rowWith(refpages::found(ix, Lang::Uk, "emperium"), "Emperium") != nullptr);
+    CHECK(rowWith(refpages::section(ix, Lang::Uk, 100 + 3), "Box Prize") != nullptr);
+    CHECK(rowWith(refpages::found(ix, Lang::Uk, "box prize"), "Box Prize") != nullptr);
+}
+
 // 3.0.18-beta.253 (R-N7GPT5): the monsters' list cut at 100 starts ten levels below the character's (the fitting ones
 // in view; the first ones by «усі N ›»); a character's level not known - from the first
 TEST(reference_pages_monsters_from_your_levels) {

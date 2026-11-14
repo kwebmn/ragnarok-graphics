@@ -91,7 +91,7 @@ std::string minutes(Lang l, int ms) { return respawn(ms, l); }
 // 3.0.18-beta.250 (the owner: «убери мобов которых нету на картах»): the monsters met on maps - the ones counted
 size_t mobsOnMaps(const refindex::Index& ix) {
     size_t n = 0;
-    for (const auto& m : ix.mobs) n += ix.spawnsOf.count(m.first);
+    for (const auto& m : ix.mobs) n += refindex::inGame(ix, m.first);  // 3.0.19-beta.3: the site's word
     return n;
 }
 
@@ -552,7 +552,7 @@ Page home(const refindex::Index& ix, Lang l, const Context& c) {
     // starred cards as chips
     size_t mvps = 0, maps = 0, kafra = 0;
     for (const auto& m : ix.mobs)
-        if (ix.spawnsOf.count(m.first) && isMvp(m.second)) ++mvps;
+        if (refindex::inGame(ix, m.first) && isMvp(m.second)) ++mvps;
     for (const auto& m : ix.maps) {
         if (!m.second.mobs.empty() || isTown(ix, m.first)) ++maps;  // 3.0.11-beta.32: the towns too
         for (const refindex::Teleport& t : m.second.teleports)
@@ -1542,7 +1542,7 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c, unsign
             p.name = say(l, Text::RefSecMobs);
             std::vector<std::tuple<int, std::string, int>> on;  // level, name, id
             for (const auto& m : ix.mobs)  // 3.0.18-beta.250 (the owner): those off the maps not listed
-                if (ix.spawnsOf.count(m.first)) on.emplace_back(m.second.lv, m.second.name, m.first);
+                if (refindex::inGame(ix, m.first)) on.emplace_back(m.second.lv, m.second.name, m.first);
             std::sort(on.begin(), on.end());
             // past 100 the first 100 and «усі N ›» (the owner's rule) - counted by the monsters, not their headings
             const bool all = (opened & 1u) || on.size() <= kFew + kFewMore;

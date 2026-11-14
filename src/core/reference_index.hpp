@@ -92,6 +92,9 @@ struct Mob {
         int atkMin = 0, atkMax = 0, def = 0, mdef = 0, str = 0, agi = 0, vit = 0, intel = 0, dex = 0, luk = 0;
         int range = 0, speed = 0, attackDelay = 0, mode = 0;  // cells; ms a cell; ms between attacks; mob_db's mode
     } stats;
+    // 3.0.19-beta.3: the site's word (its newer packs' 17th field) - in the game (on a map or called by a script: the
+    // Emperium, the guardians) 1, not 0; -1 none said
+    int8_t inGame = -1;
 };
 struct Item {  // 3.0.11-beta.7
     std::string name, aegis;
@@ -100,6 +103,8 @@ struct Item {  // 3.0.11-beta.7
     bool hasStats = false;
     int atk = 0, def = 0, weaponLv = 0, equipLv = 0;
     std::string folded{}, aegisFolded{};  // 3.0.11-beta.28: both case folded once by build() ("" not yet)
+    // 3.0.19-beta.3: the site's word (its newer packs' 9th field) - one can get it (1) or not (0); -1 none said
+    int8_t inGame = -1;
 };
 struct Shop {
     std::string map, name;
@@ -173,6 +178,9 @@ bool build(const std::string& json, Index& out);
 // 3.0.18-beta.250 (the owner: «убери ... итемы»): a thing one can get on the server - a monster on a map drops it, a
 // shop sells it, a craft makes it, a quest or a pet takes it; the reference lists and finds only those
 bool obtainable(const Index& ix, int item);
+// 3.0.19-beta.3 (the owner: the site and the game alike): a monster in the game - the site's word when its pack has
+// one (on a map or a script's), else met on a map
+bool inGame(const Index& ix, int mob);
 // The site's NPC kinds by the name (GameReference / Shapes::npcKind) and their colours (0xRRGGBB, the site's map)
 NpcKind kindOf(const std::string& name);
 // 3.0.18-beta.240: by the site's folder word (kafra, merchant, quest, city, custom, guild, job, guide, event, ferry,

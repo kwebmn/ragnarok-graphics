@@ -202,6 +202,7 @@ void readMobs(const json::Value& v, Index& ix) {
             st.luk = at(s, 9), st.range = at(s, 10), st.speed = at(s, 11), st.attackDelay = at(s, 12);
             st.mode = at(s, 13);
         }
+        if (a.items().size() > 16) mob.inGame = at(a, 16) != 0 ? 1 : 0;  // 3.0.19-beta.3: the site's word
         ix.mobs[id] = std::move(mob);
     }
 }
@@ -218,6 +219,7 @@ void readItems(const json::Value& v, Index& ix) {  // {id: [name, aegis, type, b
             item.hasStats = true;
             item.atk = at(s, 0), item.def = at(s, 1), item.weaponLv = at(s, 2), item.equipLv = at(s, 3);
         }
+        if (a.items().size() > 8) item.inGame = at(a, 8) != 0 ? 1 : 0;  // 3.0.19-beta.3: the site's word
         ix.items[id] = std::move(item);
     }
 }
@@ -233,7 +235,7 @@ void link(Index& ix) {
     // 3.0.18-beta.250 (the owner: «убери мобов которых нету на картах, они отвлекают»): an item's droppers are the
     // monsters met on maps - an event's copy or a summon dropping it too left out (their cards stay)
     for (const auto& m : ix.mobs)
-        if (ix.spawnsOf.count(m.first))
+        if (inGame(ix, m.first))  // 3.0.19-beta.3: the site's word when it has one
             for (const Drop& d : m.second.drops)
                 ix.droppedBy[d.item].push_back(Source{m.first, d.rate, d.kind, d.parts});
     for (auto& d : ix.droppedBy)
@@ -507,7 +509,7 @@ Found search(const Index& ix, const std::string& query, size_t most) {
         const bool byName = hasAll(name, words);
         const std::string& other = byName ? scratch2 : foldedOf(m.second.otherFolded, m.second.other, scratch2);
         if (!byName && (other.empty() || !hasAll(other, words))) continue;
-        if (!ix.spawnsOf.count(m.first)) continue;  // 3.0.18-beta.250: none off the maps
+        if (!inGame(ix, m.first)) continue;  // 3.0.18-beta.250: none off the maps; 3.0.19-beta.3: the site's word
         const int rank = m.second.lv;               // the lower first
         mobs.push_back(Scored{closeness(byName ? name : other, q), rank, &m.second.name, nullptr,
                               Hit{Kind::Mob, m.first, "", uint8_t(byName ? 0 : 1)}});
@@ -559,7 +561,17 @@ std::string mapTitle(const Index& ix, const std::string& code) {
     return name.empty() ? code : name + " (" + code + ")";
 }
 
+bool inGame(const Index& ix, int mob) {
+    const auto it = ix.mobs.find(mob);
+    if (it == ix.mobs.end()) return false;
+    if (it->second.inGame >= 0) return it->second.inGame == 1;
+    return ix.spawnsOf.count(mob) > 0;
+}
+
 bool obtainable(const Index& ix, int item) {
+    // 3.0.19-beta.3: the site's word when its pack has one (boxes' and NPCs' things too)
+    if (const auto it = ix.items.find(item); it != ix.items.end() && it->second.inGame >= 0)
+        return it->second.inGame == 1;
     if (ix.droppedBy.count(item) || ix.soldAt.count(item) || ix.craftOf.count(item) || ix.questsOf.count(item))
         return true;
     for (const Pet& p : ix.pets)

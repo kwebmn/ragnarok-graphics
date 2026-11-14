@@ -6,11 +6,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 version=$(sed -n 's/.*kVersion = "\(.*\)".*/\1/p' src/core/version.cpp)
 cmake -S . -B build-win --no-warn-unused-cli -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake -DCMAKE_BUILD_TYPE=Release >/dev/null
-cmake --build build-win -j >/dev/null
+# 2026-11-14 (the owner: «не так чтобы все ядра трещали»): 4 jobs at most (UAGFX_JOBS), not all the cores
+cmake --build build-win -j"${UAGFX_JOBS:-4}" >/dev/null
 # Part 3: the renderer's 64-bit process.
 cmake -S . -B build-win64 --no-warn-unused-cli -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-x86_64.cmake \
       -DCMAKE_BUILD_TYPE=Release >/dev/null
-cmake --build build-win64 -j >/dev/null
+cmake --build build-win64 -j"${UAGFX_JOBS:-4}" >/dev/null
 python3 tools/check_dll.py build-win/ddraw.dll
 python3 -I tools/check_client_libs.py build-win  # 3.0.1-beta.5: our own libraries in place of the client's old ones
 python3 tools/check_exe.py build-win/uaro-graphics.exe

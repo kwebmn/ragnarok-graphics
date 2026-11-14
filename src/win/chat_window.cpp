@@ -312,9 +312,9 @@ std::pair<int, int> namedInReference(const std::string& name) {
             if (!fresh && id < at->second) at->second = id;
         }
         for (const auto& [id, m] : ix->mobs) {
-            const bool met = ix->spawnsOf.count(id) > 0;
+            const bool met = refindex::inGame(*ix, id);  // 3.0.19-beta.3: the site's word
             const auto [at, fresh] = n.mobs.emplace(smallLetters(m.name), id);
-            if (!fresh && met && !ix->spawnsOf.count(at->second)) at->second = id;
+            if (!fresh && met && !refindex::inGame(*ix, at->second)) at->second = id;
         }
     }
     const std::string key = smallLetters(name);

@@ -208,3 +208,28 @@ TEST(reference_index_droppers_are_on_maps) {
     CHECK(by != ix.droppedBy.end() && by->second.size() == 1 && by->second[0].mob == 1002);
     CHECK(ix.mobs.count(1999) == 1);
 }
+
+// 3.0.19-beta.3 (the owner: the site and the game alike - «убрать» what is not in the game): the site's newer packs
+// say for each monster whether it is in the game (on a map or called by a script - the Emperium, the guardians) and
+// for each thing whether one can get it (from boxes and NPCs too): that word rules; a row without it - the old rule
+TEST(reference_index_the_sites_word_on_what_is_in_the_game) {
+    const char* pack = R"({"v":1,"mobs":{
+        "1288":["Emperium",90,68,0,0,1,0,8,1,1,[],[],null,"emperium","",[0,0,0,0,0,0,0,0,0,0,0,0,0,0],1],
+        "1002":["Poring",1,50,2,1,1,3,1,1,0,[[909,7000]],[],null,"poring","",[0,0,0,0,0,0,0,0,0,0,0,0,0,0],0],
+        "1004":["Hornet",8,169,19,15,0,4,4,1,0,[[938,9000]],[],null,"hornet"]},
+      "items":{"7777":["Box Prize","Box_Prize",3,10,1,0,0,[0,0,0,0],1],
+               "909":["Jellopy","Jellopy",3,6,1,0,0,[0,0,0,0],0],
+               "938":["Sticky Mucus","Sticky_Mucus",3,6,1,0,0],
+               "512":["Apple","Apple",0,15,2,0,0]},
+      "spawns":{"prt_fild08":[[1002,100,0,0,0,0,5000],[1004,10,0,0,0,0,5000]]}})";
+    refindex::Index ix;
+    CHECK(refindex::build(pack, ix));
+    CHECK(refindex::inGame(ix, 1288));   // the site's word: a script's monster, on no map
+    CHECK(!refindex::inGame(ix, 1002));  // the site's word over its spawn
+    CHECK(refindex::inGame(ix, 1004));   // no word: on a map
+    CHECK(!refindex::inGame(ix, 9999));
+    CHECK(refindex::obtainable(ix, 7777));  // the site's word: from a box no one drops here
+    CHECK(!refindex::obtainable(ix, 909));  // the site's word over Poring's drop
+    CHECK(refindex::obtainable(ix, 938));   // no word: Hornet on a map drops it
+    CHECK(!refindex::obtainable(ix, 512));  // no word, no source
+}
