@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.31 — what's new · 2026-11-14
+
+- **The 3D view: skills by a click work.** While the game waits for a skill's target (the aiming cursor after a skill's key), a click in the 3D view gives it to whoever is under the crosshair. An enemy skill goes to the monster under the crosshair or the one it is pulled onto. A friend's skill (Heal, buffs) goes to the player, homunculus or mercenary under it; with nobody or a monster there, on yourself. On a monster with Shift, as usual. Before, in the 3D view you could neither buff yourself nor cast on a monster.
+
 # uaRO Graphics 3.0.19-beta.30 — what's new · 2026-11-14
 
 - **The game is a little faster again in the 3D view.** For each of a frame's thousands of draws the driver no longer does needless work: the drawing's settings are put together again only when the game changed something in them; a texture is checked for changes by one flag, not by all its levels; the «negative» is looked for only where the game really turned it on.
