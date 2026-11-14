@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.19-beta.4 — what's new · 2026-11-14
+
+- **«Reference»: your quest step — from the server.** A quest's card has a «Your progress» block: the step you are on, what to do now and whom to go to (the «Next: …» line opens the NPC with «Lead me here»). The site reads your character's quest variable on the server, so «the server didn't give the variable» shows too. The first quest is Kiel Hyre; the program must be signed in to the site with the account your character is on. Refreshed once a minute while «Reference» is open.
+- **The site's new quest kinds** have their own names in «Reference»: «Quest skills» and «Story quests».
+
 # uaRO Graphics 3.0.19-beta.3 — what's new · 2026-11-14
 
 - **«Reference» shows the same as the site:** the site now works out which monsters are in the game (on maps and the ones scripts call — the Emperium, the castle guardians, quest MVPs) and which things one can get (from boxes, albums and NPCs too). Once the site updates its data pack, «Reference» follows its word; with an older pack — as before.
