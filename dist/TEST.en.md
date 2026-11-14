@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.21 — what's new · 2026-11-14
+
+- **An even faster 3D view.** From the eyes and from behind, our ground, water and far models are now drawn only to 1550 units, where the haze already hides the world whole; before, to 4000, and in moc_fild10 339 of the map's 500 ground pieces were in the frame. The haze now thickens all the way, so the line where the game ends its own world (1500) no longer shows as an edge.
+
 # uaRO Graphics 3.0.19-beta.20 — what's new · 2026-11-14
 
 - **A faster 3D view.** From the eyes and from behind, the smooth ground is now drawn only nearby, to about 220 units, where a cell is still large on the screen; past it, the game's own ground. Before, the 3D view drew the smooth ground 600 units ahead: in Morocc 218 thousand vertices the processor worked out every frame (9 ms, peaks of 25) — hence the FPS drops. The game's normal view is unchanged.
