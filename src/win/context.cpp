@@ -1517,7 +1517,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
                                          {std::to_string(fps), std::to_string(keepAim(config))})));
     // 0.87: [debug] profile; 3.0.5-beta.10: and while «Тест графіки» runs - where the game's thread goes on each set
     // (R-5A9BTU: Direct3D 11's «Високі» 63 ms of the processor a frame, nothing sampled with the profile off)
-    Profiler::get().run(GetCurrentThreadId(), config.profile || test_.running());
+    Profiler::get().run(GetCurrentThreadId(), config.profile || test_.running() || view3dProfiling());
     Profiler::get().watch(GetCurrentThreadId(), window);  // 3.0.11-beta.94: the stall watch (R-3S33MK)
     // 2.2: the set and the groups made into the switches; 0.63: how much night now, by the clock; 0.74: the minute
     EffectSettings fx = effects();
@@ -1805,6 +1805,27 @@ void Context::watchNewMapTyping() {
         LOG_INFO("chat: the battle mode's typing off %llu ms into the new map (its field empty, no Enter of the "
                  "player's here)", into);
     }
+}
+
+// 3.0.19-beta.27 (R-VHXXKS: in the 3D view the game's thread 15.4-16.7 ms a frame, the renderer waiting on it - the
+// game's own transforming or the driver's handling of its 3000 draws?): once a game the profile samples its thread
+// for 21 s from the 3D view's 5th second - two tallies in the log, the driver's own places by its functions (the
+// build's link map names them)
+bool Context::view3dProfiling() {
+    if (view3dProfiled_) return false;
+    if (!view3dwin::active()) {
+        view3dSince_ = 0;  // left before it was done: from the start the next time
+        return false;
+    }
+    const uint64_t now = GetTickCount64();
+    if (!view3dSince_) view3dSince_ = now;
+    const uint64_t in = now - view3dSince_;
+    if (in >= 26000) {
+        view3dProfiled_ = true;
+        LOG_INFO("3D view: the game's thread sampled for 21 s - the profile's tallies above");
+        return false;
+    }
+    return in >= 5000;
 }
 
 int Context::keepAim(const Config& config) const {

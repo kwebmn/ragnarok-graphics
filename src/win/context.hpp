@@ -263,6 +263,10 @@ private:
     unsigned keepFrames_ = 0;
     int keepSlow_ = 0;
     int keepAimTold_ = 0;  // 3.0.19-beta.25: keep_fps held to the screen's refresh / the frame limit - told
+    // 3.0.19-beta.27: the game's thread sampled once a game in the 3D view (view3dProfiling)
+    uint64_t view3dSince_ = 0;
+    bool view3dProfiled_ = false;
+    bool view3dProfiling();
     int screenHz_ = 0;     // 3.0.19-beta.25: the game window's screen's refresh (keepFrameRate's windows), 0 unknown
     int keepAim(const Config& config) const;  // core effect_costs::keepTarget with it
     std::set<std::string> keepOff_;
