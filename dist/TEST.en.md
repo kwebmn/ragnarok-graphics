@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.2 — what's new · 2026-11-14
+
+- **«Reference»: Chonchon, Steel Chonchon, Verit, Atroce and others in the game's own sprites.** The game names their files the Korean way (chocho, vorit, atros), not as the server does, so «Reference» did not find them. Now it asks the game for the name first. The Emperium and the treasure chests are 3D models in the game — they keep the site's pictures.
+
 # uaRO Graphics 3.0.19-beta.1 — what's new · 2026-11-14
 
 - **«Reference»: pictures of every monster.** The client has no sprites of Chonchon, Steel Chonchon, Verit, Atroce, Beelzebub, Satan Morroc, Sword Master, Bow Master, the treasure chests and the castle guardians — their pictures from the site are now built into uaRO Graphics. 38 more monsters (the Bio Lab MVPs, Egnigem Cenia, skeletons, kobolds) now find the game's own sprites. The same in the target card and the «Pets» section.
