@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.19-beta.19 — what's new · 2026-11-14
+
+- **The homunculus and the mercenary keep close.** Our AI attacks by itself only monsters within 5 cells of you, and only while you stand. Past 7 cells from you it gives up the fight and comes back, and when you walk it follows you (monsters hitting you it still drives off). Filir and Vanilmirth hit with blows, and with their skill when their HP is under half. The game takes the new AI after a map change or a new login.
+- **The log: skills on a target and the speed.** The uaRO Pad log now records the skills the game asks for on a target (how many cells away by the server's steps, and what the server answered) and the walking speed the server gives. This helps to see why Asura from afar does not strike.
+
 # uaRO Graphics 3.0.19-beta.18 — what's new · 2026-11-14
 
 - **3D view: the mouse after leaving it.** After leaving the 3D view (Ctrl+Shift+V) the game's cursor no longer stays pinned to the middle of the screen; the mouse works at once.
