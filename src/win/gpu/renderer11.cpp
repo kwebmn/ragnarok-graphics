@@ -1428,6 +1428,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     ID3D11ShaderResourceView* srvs[2] = {t[0]->srv, t[1]->srv};
     StageSetup sampled[2] = {s.stage[0], s.stage[1]};
     bool aiDrawn[2] = {false, false};
+    bool addedSprite = false;  // 3.0.19-beta.5: an actor's frame added as light - the game's own picture
     const bool aiHere = !s.ui || aiInterfaceAt(scale_);  // 0.89: not the interface at the game's own size
     if (ai_ && aiHere) {
         for (int i = 0; i < 2 && !(d.twin && s.ui); ++i) {
@@ -1438,6 +1439,12 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
                                                                         d.vertexCount);
             ID3D11ShaderResourceView* copy = t[i] != &white_ ? ai_->copyOf(d.texture[i], s.ui, source) : nullptr;
             if (!copy) continue;
+            // 3.0.19-beta.5 (R-P75FMG, core/ai_copy_blend.hpp): an actor's frame added as light - Assumptio's glow
+            // of the body and the head - keeps the game's own picture
+            if (!t[i]->cells.empty() && aicopy::gameOwnWhenAdded(source, s.ui, s.blend, s.dstBlend)) {
+                addedSprite = true;
+                continue;
+            }
             srvs[i] = copy;
             aiDrawn[i] = true;
             if (sampled[i].mipFilter != d3d7::TFP_POINT && sampled[i].mipFilter != d3d7::TFP_LINEAR)
@@ -1692,6 +1699,17 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
             ++told;
             LOG_INFO("AI textures: an HD copy added with the source's factor one (its alpha unused) - its colour times "
                      "its alpha (Direct3D 11, destination factor %u)", unsigned(s.dstBlend));
+        }
+    }
+    if (addedSprite) {  // 3.0.19-beta.5 (R-P75FMG, gpu/draw.cpp): what else the frame added as light takes
+        static int told = 0;
+        if (told < 3) {
+            ++told;
+            LOG_INFO("AI textures: a sprite frame added as light (Assumptio's glow of the body and the head) drawn "
+                     "from the game's own picture, not its HD copy - Direct3D 11, blend %u/%u, effect %u, the shaders' "
+                     "bits 0x%08x, into the glow %d",
+                     unsigned(s.srcBlend), unsigned(s.dstBlend), unsigned(d.effectId), unsigned(c.alphaTest),
+                     toGlow ? 1 : 0);
         }
     }
     if (toGlow) glowDrawn_ = true;

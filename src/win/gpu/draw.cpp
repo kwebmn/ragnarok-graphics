@@ -370,6 +370,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // off in its options): four times the texels, shrunk on the screen, would shimmer.
     StageSetup sampled[2] = {s.stage[0], s.stage[1]};
     bool aiDrawn[2] = {false, false};  // the stage's texture is the AI's
+    bool addedSprite = false;          // 3.0.19-beta.5: a sprite frame added as light - the game's own picture
     if (ai && ai->shown && !(d.twin && s.ui))
         for (int i = 0; i < 2; ++i) {
             const auto it = d.texture[i] ? textures.find(d.texture[i]) : textures.end();
@@ -378,12 +379,20 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                          (!s.ui || aiInterfaceAt(scale));  // 0.89: not the interface at the game's own size
             // 2.2.1: its kind on in the file now; 2.2.2: a sprite cache's by the kind of the cell drawn (monsters
             // off alone are the game's own at once)
-            if (aiDrawn[i] && it->second.aiKind == uint8_t(ai::Kind::Sprites))
-                aiDrawn[i] = ai->cellShown(spriteSourceOf(it->second.spriteCells, it->second.width, it->second.height,
-                                                          rec.vertexBytes(), d.vertexOffset,
-                                                          FrameRecord::stride(d.fvf), d.vertexCount));
-            else if (aiDrawn[i])
+            if (aiDrawn[i] && it->second.aiKind == uint8_t(ai::Kind::Sprites)) {
+                const uint8_t source = spriteSourceOf(it->second.spriteCells, it->second.width, it->second.height,
+                                                      rec.vertexBytes(), d.vertexOffset, FrameRecord::stride(d.fvf),
+                                                      d.vertexCount);
+                aiDrawn[i] = ai->cellShown(source);
+                // 3.0.19-beta.5 (R-P75FMG, core/ai_copy_blend.hpp): an actor's frame added as light - Assumptio's
+                // glow of the body and the head - takes the game's own picture
+                if (aiDrawn[i] && aicopy::gameOwnWhenAdded(source, s.ui, s.blend, s.dstBlend)) {
+                    aiDrawn[i] = false;
+                    addedSprite = true;
+                }
+            } else if (aiDrawn[i]) {
                 aiDrawn[i] = ai->kindShown(it->second.aiKind);
+            }
             const bool mips = sampled[i].mipFilter == d3d7::TFP_POINT || sampled[i].mipFilter == d3d7::TFP_LINEAR;
             if (aiDrawn[i] && !mips) sampled[i].mipFilter = d3d7::TFP_LINEAR;
         }
@@ -560,6 +569,19 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                      "its alpha (%ux%u, kind %d, destination factor %u)",
                      it != textures.end() ? it->second.width : 0u, it != textures.end() ? it->second.height : 0u,
                      it != textures.end() ? int(it->second.aiKind) : -1, unsigned(s.dstBlend));
+        }
+    }
+    if (addedSprite) {  // 3.0.19-beta.5 (R-P75FMG): what else the frame added as light takes - for the next report
+        static int told = 0;
+        if (told < 3) {
+            ++told;
+            const auto it = textures.find(d.texture[0]);
+            LOG_INFO("AI textures: a sprite frame added as light (Assumptio's glow of the body and the head) drawn "
+                     "from the game's own picture, not its HD copy - %ux%u, blend %u/%u, effect %u, the shaders' "
+                     "bits 0x%08x, into the glow %d",
+                     it != textures.end() ? it->second.width : 0u, it != textures.end() ? it->second.height : 0u,
+                     unsigned(s.srcBlend), unsigned(s.dstBlend), unsigned(d.effectId), unsigned(c.alphaTest),
+                     toGlow ? 1 : 0);
         }
     }
     if (soft) {  // 0.67: its fade (shaders.cpp shade())
