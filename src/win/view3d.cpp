@@ -44,9 +44,16 @@ constexpr float kDegreesPerCount = 0.07f;  // the mouse: 1000 counts (about an i
 constexpr float kDegreesPerPixel = 0.1f;
 constexpr long kMostPixels = 1000, kMostCounts = 400;  // .17: 200 dropped a quick flick (R-9KRT3M: 143 a frame)
 // 3.0.19-beta.15 (R-W5K25A: in 15, 17, 5, 12, 5 of 78 within two seconds by Morocc's houses): the eye goes out again
-// only this long after it was last brought in; nearer than kOwnNear behind, the character's own picture left out
+// only this long after it was last brought in; nearer than view3d::kOwnNear behind, the character's own picture left
+// out (.18: shown again past view3d::kOwnShownAgain - core view3d::ownOut)
 constexpr DWORD kOutAfterMs = 500;
-constexpr float kOwnNear = 12.0f;
+// 3.0.19-beta.18 (R-57KBSF «вижу свою или голову пеко ... мигает», «нпс утоплены в пол»): the sprites' depth tilt -
+// uaRO.exe's camera update (0x4FACA0) makes each row of a sprite 0.16 tan(tilt) / (height / 480) nearer than its feet
+// (0x6B789C; 0.062 a row at 1234 high): an upright figure as its 45-degree camera sees it. From the eyes a sprite near
+// by is hundreds of rows tall - its top went tens of units nearer, past the eye (a head cut off, flickering as one
+// walks; its upper half over the walls in front of it). 0 in the 3D view, written after the game's update each frame
+// (its own back the first frame the view is the game's): upright cards at their feet
+constexpr uint32_t kSpriteTilt = 0x6B789C;
 // 3.0.19-beta.11: the crosshair pulled onto a monster this near (of the game's height), onto the Tab-locked one from
 // this far; the lock let go when it is not on the screen for kLockLostMs
 constexpr float kPullReach = 0.045f, kLockReach = 0.14f;
@@ -62,6 +69,8 @@ struct State {
     int fovFirst = int(view3d::kFirstFov), fovBehind = int(view3d::kBehindFov);  // 3.0.19-beta.10: [view3d]
     float mouseSpeed = 1.0f;
     float behindNow = 0.0f;  // 3.0.19-beta.10: the distance behind used (in at once before a wall, out slowly)
+    bool ownOut = false;     // 3.0.19-beta.18: the character's own picture left out now (view3d::ownOut)
+    bool uprightTold = false;
     float zoomAtEntry = 0.0f;  // 3.0.19-beta.15: the game's zoom as the 3D view began (the wheel moves from there)
     DWORD pulledAt = 0;        // 3.0.19-beta.15: brought in last - out again only kOutAfterMs later
     std::vector<view3d::Box> wayBoxes;  // 3.0.19-beta.12: the models on the way back this frame
@@ -107,9 +116,8 @@ uint32_t playerNow() {
     return player;
 }
 
-bool ownHiddenNow() {  // 3.0.19-beta.15: from the eyes, or the eye pulled in right behind the head
-    return g_state.mode == view3d::Mode::First ||
-           (g_state.mode == view3d::Mode::Behind && g_state.behindNow > 0.0f && g_state.behindNow < kOwnNear);
+bool ownHiddenNow() {  // 3.0.19-beta.15: from the eyes, or the eye pulled in right behind the head (.18: a margin)
+    return g_state.mode != view3d::Mode::Off && g_state.ownOut;
 }
 
 void __attribute__((thiscall)) playerRender(uint32_t actor, uint32_t matrix) {
@@ -402,8 +410,24 @@ void overGround(uint32_t ground, float eye[3]) {
     if (std::isfinite(h) && eye[1] > h - 2.0f) eye[1] = h - 2.0f;  // y down
 }
 
+// 3.0.19-beta.18: the sprites stand upright in the 3D view (kSpriteTilt 0 after the game's camera update)
+void uprightSprites(State& s) {
+    float tilt = 0.0f;
+    if (!readGame(kSpriteTilt, &tilt, 4) || !std::isfinite(tilt) || tilt < 0.0f || tilt > 1.0f) return;
+    if (!s.uprightTold) {
+        s.uprightTold = true;
+        LOG_INFO("3D view: the sprites upright - the game's depth tilt %.4f a row (0x%X) 0 in the 3D view", tilt,
+                 kSpriteTilt);
+    }
+    *reinterpret_cast<float*>(uintptr_t(kSpriteTilt)) = 0.0f;
+}
+
 void switchTo(State& s, uint32_t view) {
     const view3d::Mode from = s.mode, to = s.wanted;
+    // 3.0.19-beta.18 (R-57KBSF «после выхода с режима 3д мышка перестает работать»): the hold let go while it is still
+    // known - release() asks `centred`, cleared below; Ctrl+Shift+V back to the game's own left the pad runtime holding
+    // the game's cursor at the crosshair
+    if (to == view3d::Mode::Off) release(s);
     s.mode = to;
     s.frames = 0;
     s.centred = false;
@@ -417,8 +441,7 @@ void switchTo(State& s, uint32_t view) {
         s.walkBefore = walkmodewin::on();
         walkmodewin::setOn(true);
     } else if (to == view3d::Mode::Off) {
-        walkmodewin::setOn(s.walkBefore);
-        release(s);  // 3.0.19-beta.11: the cursor the Windows one again, at the crosshair
+        walkmodewin::setOn(s.walkBefore);  // the cursor the Windows one again, at the crosshair: above (.11, .18)
         s.locked = s.aimed = 0;
     } else if (to == view3d::Mode::First) {  // 3.0.19-beta.15: from behind looking down - level, not at the feet
         s.look.pitch = std::clamp(s.look.pitch + 12.0f, -25.0f, 25.0f);
@@ -448,6 +471,7 @@ void __attribute__((thiscall)) build(uint32_t view) {
     State& s = g_state;
     const auto original = reinterpret_cast<BuildFn>(g_build);
     if (s.wanted != s.mode) switchTo(s, view);
+    s.ownOut = view3d::ownOut(s.mode, s.behindNow, s.ownOut);  // 3.0.19-beta.18: the last frame's distance
     if (s.mode == view3d::Mode::Off) {
         original(view);
         // 3.0.19-beta.14 (R-W5K25A: the world left in the 3D view - a disconnect - and the next map drawn with its 60
@@ -456,6 +480,7 @@ void __attribute__((thiscall)) build(uint32_t view) {
         return;
     }
     if (s.mode != view3d::Mode::Off) hidePlayerRender();  // 3.0.19-beta.11; .15 behind too (pulled in near)
+    uprightSprites(s);  // 3.0.19-beta.18
     mouse(s);
     adoptYaw(view, s);
     adoptTilt(view, s);

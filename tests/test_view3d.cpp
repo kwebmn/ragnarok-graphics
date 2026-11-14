@@ -308,3 +308,42 @@ TEST(view3d_behind_brought_in_before_a_building) {
     around.centre[0] = 0.0f, around.half[0] = 100.0f;
     CHECK(view3d::freeOfBoxes(eye, target, 60.0f, {around}) == 60.0f);
 }
+
+// 3.0.19-beta.18 (R-57KBSF «некоторые нпс утоплены в пол»): the game keeps a sprite a few units nearer than its feet
+// by its rhw (~4.7 at its own distance 300); seen from the eyes that is a hundredth of a unit, the ground in front of
+// the feet over them. In the 3D view a character's, a monster's, an NPC's sprite comes kSpriteNearer of its distance
+// nearer (kSpriteNearerMost at most), never past the near plane; behind it (z below 0) or behind the eye kept as it is
+namespace {
+float gameZ(float viewZ) { return 1500.0f / 1490.0f * (1.0f - 10.0f / viewZ); }
+}  // namespace
+
+TEST(view3d_sprites_nearer_by_their_distance) {
+    CHECK(near(view3d::spriteDepth(gameZ(100.0f), 0.01f), gameZ(96.0f), 1e-6f));    // 4 of 100
+    CHECK(near(view3d::spriteDepth(gameZ(50.0f), 0.02f), gameZ(48.0f), 1e-6f));     // 2 of 50
+    CHECK(near(view3d::spriteDepth(gameZ(400.0f), 0.0025f), gameZ(392.0f), 1e-6f));  // 8 at most
+    CHECK(view3d::spriteDepth(gameZ(10.2f), 1.0f / 10.2f) == 0.0f);  // to the near plane, not past it
+    const float tooNear = gameZ(5.0f);                               // nearer than the near plane: cut as before
+    CHECK(view3d::spriteDepth(tooNear, 0.2f) == tooNear);
+    CHECK(view3d::spriteDepth(0.5f, -0.1f) == 0.5f && view3d::spriteDepth(0.5f, 0.0f) == 0.5f);  // behind the eye
+    float last = -1.0f;  // the farther stays the farther
+    for (float d = 11.0f; d < 1500.0f; d *= 1.3f) {
+        const float z = view3d::spriteDepth(gameZ(d), 1.0f / d);
+        CHECK(z > last && z < gameZ(d));
+        last = z;
+    }
+}
+
+// 3.0.19-beta.18 (R-57KBSF «вижу свою или голову пеко ... когда иду и она мигает»): behind, the character's own
+// picture left out under kOwnNear and shown again only past kOwnShownAgain - the eye pulled in and let out by a step
+// at the walls no longer turns it on and off; from the eyes always out, the game's own view never
+TEST(view3d_own_picture_out_near_with_a_margin) {
+    using view3d::Mode;
+    CHECK(view3d::ownOut(Mode::First, 0.0f, false) && view3d::ownOut(Mode::First, 80.0f, false));
+    CHECK(!view3d::ownOut(Mode::Off, 5.0f, true));
+    CHECK(!view3d::ownOut(Mode::Behind, 30.0f, false) && !view3d::ownOut(Mode::Behind, 30.0f, true));
+    CHECK(view3d::ownOut(Mode::Behind, 11.0f, false));
+    CHECK(view3d::ownOut(Mode::Behind, 14.0f, true) && !view3d::ownOut(Mode::Behind, 14.0f, false));
+    CHECK(!view3d::ownOut(Mode::Behind, view3d::kOwnShownAgain + 0.5f, true));
+    CHECK(!view3d::ownOut(Mode::Behind, 0.0f, false) && !view3d::ownOut(Mode::Behind, 0.0f, true));  // not yet known
+    CHECK(view3d::kOwnNear < view3d::kOwnShownAgain);
+}

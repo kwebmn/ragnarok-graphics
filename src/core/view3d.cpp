@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/game_camera.hpp"
+
 namespace uagfx::view3d {
 namespace {
 
@@ -202,6 +204,19 @@ void place(Mode m, const float feet[3], const float flat[3], const float up[3], 
             eye[i] = feet[i] + kWorldUp[i] * kHeadHeight - f[i] * distance + right[i] * kShoulder;
     }
     for (int i = 0; i < 3; ++i) target[i] = eye[i] + f[i] * 10.0f;
+}
+
+float spriteDepth(float z, float rhw) {
+    if (!(rhw > 0.0f) || z < 0.0f) return z;
+    const float viewZ = 1.0f / rhw;
+    const float v = std::max(viewZ - std::min(kSpriteNearer * viewZ, kSpriteNearerMost), camera::kNear);
+    return std::max(0.0f, camera::kFar / (camera::kFar - camera::kNear) * (1.0f - camera::kNear / v));
+}
+
+bool ownOut(Mode m, float behind, bool outBefore) {
+    if (m == Mode::First) return true;
+    if (m != Mode::Behind || !(behind > 0.0f)) return false;
+    return behind < (outBefore ? kOwnShownAgain : kOwnNear);
 }
 
 Sky skyOf(float night, bool vault) {

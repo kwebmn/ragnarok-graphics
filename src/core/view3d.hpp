@@ -91,6 +91,20 @@ uint32_t nextLock(const std::vector<AimBox>& boxes, float cx, float cy, uint32_t
 // The game's classes it names monsters (as mob_hp's): 1001-3999
 bool monsterClass(int cls);
 
+// 3.0.19-beta.18 (R-57KBSF «некоторые нпс утоплены в пол»): the game keeps a sprite a few units nearer than its feet
+// by its rhw (uaRO.exe FUN_00546c50: n * 0x6D5EF4 + 0x6D5EF8 * scale - ~4.7 units at its own distance 300); from the
+// eyes that is a hundredth of a unit and the ground in front of the feet covers them. In the 3D view a character's, a
+// monster's, an NPC's sprite vertex: its depth (the game's z of rhw, FUN_00412E30) kSpriteNearer of its distance
+// nearer, kSpriteNearerMost at most, never past the near plane; one nearer than that plane or behind the eye as it is
+constexpr float kSpriteNearer = 0.04f, kSpriteNearerMost = 8.0f;
+float spriteDepth(float z, float rhw);
+
+// 3.0.19-beta.18 (R-57KBSF «вижу свою или голову пеко ... мигает»): the character's own picture left out - from the
+// eyes always; behind, under kOwnNear from the head, and once out shown again only past kOwnShownAgain (the eye pulled
+// in at a wall and let out by steps no longer turns it on and off); `behind` 0 - not known yet
+constexpr float kOwnNear = 12.0f, kOwnShownAgain = 16.0f;
+bool ownOut(Mode m, float behind, bool outBefore);
+
 // The game's LookAt (0x409540: right = up x forward, then forward x right; 4 x 3 for row vectors, the last row the
 // move) and its inverse (0x409860)
 void lookAt(const float eye[3], const float at[3], const float up[3], float out[12]);

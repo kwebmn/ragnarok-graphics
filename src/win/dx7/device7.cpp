@@ -13,6 +13,7 @@
 #include "core/version.hpp"
 #include "core/layout.hpp"
 #include "core/sprite_exe.hpp"
+#include "core/view3d.hpp"
 #include "core/wings.hpp"
 #include "win/context.hpp"
 #include "win/crisp/crisp.hpp"
@@ -73,7 +74,8 @@ void drawWings(win::Context& c, const std::vector<win::wings::Quad>& quads, cons
         const uint32_t colour = multiplied(diffuse, q.tint);
         for (int i = 0; i < 4; ++i) {
             const float rhw = std::max(depth.at(ys[i]), 1e-6f);
-            const float z = std::clamp(wings::zOf(rhw), 0.0f, 1.0f);
+            float z = std::clamp(wings::zOf(rhw), 0.0f, 1.0f);
+            if (win::view3dwin::active()) z = view3d::spriteDepth(z, rhw);  // 3.0.19-beta.18: as the body's
             const float f[4] = {xs[i], ys[i], z, rhw}, uv[2] = {us[i], ts[i]};
             std::memcpy(v[i], f, sizeof f);
             std::memcpy(v[i] + 16, &colour, 4);
@@ -753,6 +755,39 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     if (setup.ui) {
         win::groundway::draw(c.record, c.screenWidth, c.screenHeight);    // 3.0.11-beta.31: the way followed
         win::groundmarks::draw(c.record, c.screenWidth, c.screenHeight);  // 3.0.11-beta.87: the target's ring
+    }
+    // 3.0.19-beta.18 (R-57KBSF «некоторые нпс утоплены в пол»): in the 3D view a character's, a monster's, an NPC's
+    // sprite a few units nearer than its feet (core view3d::spriteDepth) - the game's own nearness, made for its far
+    // camera, is a hundredth of a unit at the eye's distances and the ground in front of the feet covered them
+    if (win::view3dwin::active() && fvf == d3d7::FVF_TL1 && vertexCount == 4 && !indices && !setup.ui &&
+        tag.kind == effect_exe::Kind::None && textures_[0]) {
+        const auto* v = static_cast<const uint8_t*>(vertices);
+        float u = 0.0f, w = 0.0f;
+        for (DWORD i = 0; i < 4; ++i) {
+            float t[2];
+            std::memcpy(t, v + i * 32 + 24, sizeof t);
+            u += t[0] / 4;
+            w += t[1] / 4;
+        }
+        const Surface7* tex = textures_[0];
+        const uint8_t kind = tex->spriteAt(u * float(tex->width()), w * float(tex->height()));
+        if (kind == uint8_t(sprite_exe::Source::Player) || kind == uint8_t(sprite_exe::Source::Monster) ||
+            kind == uint8_t(sprite_exe::Source::Npc)) {
+            upright_.assign(v, v + 4 * 32);
+            for (int i = 0; i < 4; ++i) {
+                float zr[2];
+                std::memcpy(zr, &upright_[size_t(i) * 32 + 8], sizeof zr);
+                zr[0] = view3d::spriteDepth(zr[0], zr[1]);
+                std::memcpy(&upright_[size_t(i) * 32 + 8], &zr[0], sizeof zr[0]);
+            }
+            vertices = upright_.data();
+            if (!uprightTold_) {
+                uprightTold_ = true;
+                LOG_INFO("3D view: the characters', monsters' and NPCs' sprites %.0f %% of their distance nearer (%.0f "
+                         "at most) - their feet over the ground in front", view3d::kSpriteNearer * 100.0f,
+                         view3d::kSpriteNearerMost);
+            }
+        }
     }
     // 3.0.18-beta.230: a wearer's wings right before its first face (facing us) or right after its last (win/wings)
     const win::wings::Emit wingsAt = win::wings::drawn(faceAt);

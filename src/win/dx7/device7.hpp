@@ -97,6 +97,9 @@ private:
                        DWORD vertexCount, const WORD* indices, DWORD indexCount);
     bool overPortalTold_ = false;  // 3.0.13-beta.15: [effects] aura_portals - where the portals were drawn
     bool ownAuraTold_ = false;     // 3.0.19-beta.13: the character's own aura left out from the eyes (the 3D view)
+    // 3.0.19-beta.18 (R-57KBSF): the 3D view's actors' sprites with their depth nearer (core view3d::spriteDepth)
+    std::vector<uint8_t> upright_;
+    bool uprightTold_ = false;
     // 2.7.37, diagnostics (the tester: «все умения, и даже когда кастуется что-то, какие-то очень яркие»): the skills'
     // draws made softer and the draws that add light of no effect known, told every 10 s
     uint32_t skillDraws_ = 0, plainAdds_ = 0;
