@@ -839,6 +839,9 @@ struct Renderer::Impl {
     // processor's time of the passes that read the game's draws or make the own world's, for the log next to cpuTicks
     enum CpuPart { kCpuGroundNotes, kCpuCasters, kCpuOwnGroundNotes, kCpuOwnGround, kCpuOwnWater, kCpuOwnModelNotes,
                    kCpuActorShadows, kCpuParts };
+    // 3.0.19-beta.26 (R-24ZKYP: «the rest» 9.7-11.7 ms): the record's parts around them - the vertices' upload, the
+    // textures' uploads, the draws (with the parts above in them), the list's submit; the rest: the present's passes
+    LONGLONG geometryTicks = 0, texturesTicks = 0, drawsTicks = 0, submitTicks = 0;
     LONGLONG cpuPartTicks[kCpuParts] = {};
     struct CpuTime {
         LONGLONG& total;

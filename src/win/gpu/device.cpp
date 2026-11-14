@@ -390,9 +390,17 @@ void Renderer::Impl::noteGpuFrame() {
             parts += part;
         }
         for (LONGLONG& t : cpuPartTicks) t = 0;
+        // 3.0.19-beta.26: the draws' own handling (the parts above are inside the draws), the uploads, the submit;
+        // what is left: the present's passes (the effects over the world, DLSS, the haze, the interface's)
+        const LONGLONG drawsOwn = std::max<LONGLONG>(drawsTicks - known, 0);
+        const LONGLONG around = drawsTicks + geometryTicks + texturesTicks + submitTicks;
         if (!parts.empty())
-            LOG_INFO("CPU: of the drawing a frame - %s; the rest (the game's draws, the effects) %.2f ms",
-                     parts.c_str(), double(std::max<LONGLONG>(cpuTicks - known, 0)) * perFrame);
+            LOG_INFO("CPU: of the drawing a frame - %s; the game's draws themselves %.2f, their vertices' upload %.2f, "
+                     "textures' uploads %.2f, the list's submit %.2f; the rest (the present's passes) %.2f ms",
+                     parts.c_str(), double(drawsOwn) * perFrame, double(geometryTicks) * perFrame,
+                     double(texturesTicks) * perFrame, double(submitTicks) * perFrame,
+                     double(std::max<LONGLONG>(cpuTicks - around, 0)) * perFrame);
+        geometryTicks = texturesTicks = drawsTicks = submitTicks = 0;
     }
     cpuTicks = fenceTicks = pacerTicks = swapTicks = reflexTicks = 0;
     recentSwapMark = recentCpuMark = 0;  // 3.0.19-beta.8
@@ -2819,7 +2827,10 @@ void Renderer::execute(const FrameRecord& record) {
         m.renderStarted = true;
         m.upscaler->renderStart();
     }
-    m.prepareGeometry(record);
+    {
+        Impl::CpuTime t(m.geometryTicks);  // 3.0.19-beta.26
+        m.prepareGeometry(record);
+    }
     if (m.pick.looking() && m.ai) {  // 2.3: the AI textures under the cursor, the one on top first (2.3.1: all of them)
         std::vector<uint32_t> opaque, blended;
         for (int k : pick::drawsAt(record, m.pick.x(), m.pick.y(), [&m](const DrawCmd& d) {
@@ -2836,13 +2847,23 @@ void Renderer::execute(const FrameRecord& record) {
         switch (c.type) {
             case Cmd::Clear: m.clear(record.clears()[c.index]); break;
             case Cmd::Viewport: m.setViewport(record.viewports()[c.index]); break;
-            case Cmd::Upload: m.upload(record, record.uploads()[c.index]); break;
+            case Cmd::Upload: {
+                Impl::CpuTime t(m.texturesTicks);  // 3.0.19-beta.26
+                m.upload(record, record.uploads()[c.index]);
+                break;
+            }
             case Cmd::WriteTarget: m.writeTarget(record, record.writes()[c.index]); break;
-            case Cmd::Draw: m.draw(record, record.draws()[c.index]); break;
+            case Cmd::Draw: {
+                Impl::CpuTime t(m.drawsTicks);  // 3.0.19-beta.26
+                m.draw(record, record.draws()[c.index]);
+                break;
+            }
         }
     }
     const UINT64 before = m.fenceValue;
+    Impl::CpuTime submitTime(m.submitTicks);  // 3.0.19-beta.26
     m.submit();
+    submitTime.stop();
     if (m.fenceValue != before) m.retireDying();  // only once the record really went to the GPU
 }
 

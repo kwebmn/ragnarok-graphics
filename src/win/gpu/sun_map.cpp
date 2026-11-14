@@ -16,6 +16,10 @@ namespace uagfx::gpu {
 namespace {
 
 constexpr size_t kMostSunVerts = 600000;
+// 3.0.19-beta.26 (R-24ZKYP: from behind at moc_fild10's oasis the casters 1.85-2.42 ms a frame - every palm to the
+// sight's 1200 into the world): in the 3D view a draw's first corner past this is no caster - a palm that far shows in
+// the water near the horizon, hazed
+constexpr float kCasterReachWide = 600.0f;
 
 }  // namespace
 
@@ -28,6 +32,11 @@ void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const 
     const std::vector<uint8_t>& vb = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
     if (d.vertexOffset + size_t(d.vertexCount) * stride > vb.size()) return;
+    if (camera::wideView() && d.vertexCount) {  // 3.0.19-beta.26: far off in the 3D view - none
+        float rhw = 0.0f;
+        std::memcpy(&rhw, vb.data() + d.vertexOffset + 12, sizeof rhw);
+        if (rhw > 0.0f && 1.0f / rhw > kCasterReachWide) return;
+    }
     const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
     const float* m = viewToWorld;
     const std::vector<uint16_t>& ix = rec.indices();
