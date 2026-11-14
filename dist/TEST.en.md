@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.19-beta.18 — what's new · 2026-11-14
+
+- **3D view: the mouse after leaving it.** After leaving the 3D view (Ctrl+Shift+V) the game's cursor no longer stays pinned to the middle of the screen; the mouse works at once.
+- **3D view: characters stand upright.** Characters', monsters' and NPCs' sprites in the 3D view stand upright at their feet: a character close by is no longer cut off or flickering as you walk, and its upper half no longer shows through the walls in front of it. NPCs no longer sink into the floor: their feet show above the ground in front of them.
+- **3D view: your own figure without flicker.** When the camera behind presses against a wall, your character hides nearer than 12 and shows again only past 16 — no flicker at the edge.
+
 # uaRO Graphics 3.0.19-beta.17 — what's new · 2026-11-14
 
 - **3D view: no HP/SP bar in the air.** When the character is not drawn (from the eyes, or with the camera pressed right against it), the game's own HP/SP bar of it no longer hangs in the air. Other players' and monsters' bars stay. A quick flick of the mouse now turns the view too, instead of being dropped as a jump.
