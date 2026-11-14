@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.12 — what's new · 2026-11-14
+
+- **3D view: the camera behind no longer goes into houses.** Before a house, a castle wall or a roof it comes nearer to the character at once, then moves back smoothly. Before, the camera ran into houses and a roof seen up close looked like a striped slab. Awnings over the street you stand under do not stop it.
+
 # uaRO Graphics 3.0.19-beta.11 — what's new · 2026-11-14
 
 - **3D view: the mouse obeys.** The camera no longer spins by itself. While you look around in the 3D view, the game's cursor is held at the crosshair and the mouse's own moves turn the view. Before, «mouse freedom» put the cursor back every frame and the camera spun. Alt gives the usual cursor, where the crosshair was.
