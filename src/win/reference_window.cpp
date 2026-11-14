@@ -48,6 +48,7 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
+#include "win/quest_progress_win.hpp"
 #include "win/tracker.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_live.hpp"
@@ -190,6 +191,7 @@ struct State {
     std::vector<std::pair<std::string, Rml::Element*>> waiting;
     int waitingIn = -1;  // frames until a new body's placeholders are looked for
     float waitingScroll = -1;  // the scroll the last look found none in view at: none looked for till it moves
+    int progressGen = 0;  // 3.0.19-beta.4: the quests' steps read last (win/quest_progress_win)
 };
 
 State& state() {
@@ -404,6 +406,7 @@ refpages::Context contextOf(const State& s) {
     c.liveAt = reference::onlineSeen();  // 3.0.11-beta.69
     c.trackedQuests = &trackerwin::quests();  // 3.0.11-beta.70
     c.trackedItems = &trackerwin::items();
+    c.progress = questprogresswin::states();  // 3.0.19-beta.4: the character's steps as the server keeps them
     // 3.0.18-beta.242; 3.0.18-beta.253 with its colour marks (its facts' values told apart: core/item_desc)
     c.describe = [](int id) { return infocardwin::itemDescriptionMarked(id); };
     c.bag = s.bagKnown ? &s.bag : nullptr;
@@ -1867,6 +1870,12 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
     if (online != s.online) {
         s.online = online;
         s.wantPage = true;
+    }
+    // 3.0.19-beta.4: the character's quests' steps from the site (asked by win/context while open) - a quest's card
+    // made again when they come
+    if (const int g = questprogresswin::generation(); g != s.progressGen) {
+        s.progressGen = g;
+        if (s.at.go == refpages::Go::Quest) s.wantPage = true;
     }
     const auto live = reference::live();  // 3.0.11-beta.12: and the timers' minutes go on
     if (live != s.live || (s.live && GetTickCount64() - s.madeAt >= 60000)) {

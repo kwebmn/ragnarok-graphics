@@ -19,6 +19,9 @@ Request authPassword(const std::string& email, const std::string& password, cons
 Request deviceStart(const std::string& device);
 Request devicePoll(const std::string& deviceCode);
 Request accounts();
+// 3.0.19-beta.4: the character's quests' steps as the server keeps them (GET /api/client/quests/progress?char=<the name
+// as UTF-8, percent-encoded>; only the site account's own characters - core/quest_progress reads the answer)
+Request questProgress(const std::string& charName);
 Request createLogin(const std::string& login, const std::string& password, char sex);
 Request linkLogin(const std::string& login, const std::string& password);
 Request changePassword(int accountId, const std::string& current, const std::string& next);

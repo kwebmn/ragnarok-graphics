@@ -50,6 +50,7 @@
 #include "win/answer_card.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/pack_pictures.hpp"
+#include "win/quest_progress_win.hpp"
 #include "win/reference_window.hpp"
 #include "win/buff_column.hpp"
 #include "win/buff_overlay.hpp"
@@ -1411,6 +1412,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     g_parts.mark("whisperwin", nowMs());
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
+    // 3.0.19-beta.4: the character's quests' steps from the site while «Довідник» is open (its quest cards say them)
+    questprogresswin::frame(referencewin::isOpen(), gameCodePage(config));
     g_parts.mark("referencewin", nowMs());
     padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now
     g_parts.mark("padcarrywin", nowMs());

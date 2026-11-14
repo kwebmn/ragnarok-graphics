@@ -832,6 +832,9 @@ enum class Text : uint16_t {
     RefSecQuests, RefSecQuestsHint, RefFoundQuests, RefQuestNpc, RefQuestItems, RefQuestSteps, RefQuestRewards,
     RefQuestFor, RefQuestLevel, RefQuestJobs, RefQuestHeadgear, RefQuestAccess, RefQuestEvents, RefQuestOther,
     RefQuestsNone,
+    RefQuestSkills, RefQuestStory,  // 3.0.19-beta.4: the site's new kinds - quest skills, story quests
+    // 3.0.19-beta.4: the character's step as the server keeps it
+    RefQuestYou, RefQuestStepOf, RefQuestDone, RefQuestNotStarted, RefQuestNext,
     RefRecent, RefFavourites,               // 3.0.11-beta.18: the first screen's recent and starred cards
     RefOnWorld, RefWorldOf, RefAlsoInside,  // 3.0.11-beta.19: a monster's maps on the world map
     RefDroppersHere,                        // 3.0.11-beta.20: an item's droppers there

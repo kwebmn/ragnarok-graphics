@@ -7864,6 +7864,15 @@ constexpr Entry kTexts[] = {
      "The quests come from uaro.kiev.ua when the game starts - not here yet.",
      "Квести приходять з uaro.kiev.ua під час запуску гри - їх ще немає.",
      "Квесты приходят с uaro.kiev.ua при запуске игры - их ещё нет."},
+    // 3.0.19-beta.4: the site's new quest kinds (its auto cards of every server quest)
+    {Text::RefQuestSkills, "Quest skills", "Квестові навички", "Квестовые навыки"},
+    {Text::RefQuestStory, "Story quests", "Сюжетні квести", "Сюжетные квесты"},
+    // 3.0.19-beta.4: the character's step as the server keeps it (the site reads its quest variable)
+    {Text::RefQuestYou, "Your progress", "Ваш прогрес", "Ваш прогресс"},
+    {Text::RefQuestStepOf, "Step {1} of {2}", "Крок {1} з {2}", "Шаг {1} из {2}"},
+    {Text::RefQuestDone, "Finished", "Завершено", "Завершён"},
+    {Text::RefQuestNotStarted, "Not started yet", "Ще не розпочато", "Ещё не начат"},
+    {Text::RefQuestNext, "Next: {1}", "Далі: {1}", "Дальше: {1}"},
     // 3.0.11-beta.18: the first screen's recent and starred cards
     {Text::RefRecent, "Opened lately", "Нещодавні", "Недавние"},
     {Text::RefFavourites, "Starred", "Обране", "Избранное"},

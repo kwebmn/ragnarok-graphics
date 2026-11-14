@@ -119,6 +119,8 @@ std::string categoryName(const std::string& c, Lang l) {
     if (c == "headgear") return say(l, Text::RefQuestHeadgear);
     if (c == "access") return say(l, Text::RefQuestAccess);
     if (c == "event") return say(l, Text::RefQuestEvents);
+    if (c == "skill") return say(l, Text::RefQuestSkills);  // 3.0.19-beta.4
+    if (c == "story") return say(l, Text::RefQuestStory);
     return say(l, Text::RefQuestOther);
 }
 
@@ -2354,6 +2356,36 @@ Page quest(const refindex::Index& ix, Lang l, int index, const Context& c) {
     hero.left = q.npc + (q.npcMap.empty() ? "" : (q.npc.empty() ? "" : " · ") + refindex::mapTitle(ix, q.npcMap));
     p.rows.push_back(hero);
     if (!refquests::textOf(q.summary, ql).empty()) p.rows.push_back(text(refquests::textOf(q.summary, ql)));
+    // 3.0.19-beta.4 (the owner: «давай»; the testers: «на якому ти кроці в квесті»): the character's step as the
+    // server keeps it (the site's word) - the step, its words, whom to go to (his card, else his map)
+    if (const questprogress::State* st = c.progress ? questprogress::find(*c.progress, q.slug) : nullptr) {
+        p.rows.push_back(heading(say(l, Text::RefQuestYou), "", QuestYou));
+        asMain(p.rows.back(), 100);
+        const std::vector<std::string>& all = refquests::listOf(q.steps, ql);
+        if (st->done) {
+            p.rows.push_back(text(say(l, Text::RefQuestDone)));
+        } else {
+            p.rows.push_back(text(st->started ? sayf(l, Text::RefQuestStepOf, {std::to_string(st->step),
+                                                                                std::to_string(st->steps)})
+                                              : say(l, Text::RefQuestNotStarted)));
+            if (st->step >= 1 && size_t(st->step) <= all.size()) p.rows.push_back(text(all[size_t(st->step - 1)]));
+            if (!st->npc.empty() && !st->map.empty()) {
+                Link to = toMap(st->map);
+                if (const auto m = ix.maps.find(st->map); m != ix.maps.end())
+                    for (size_t i = 0; i < m->second.npcs.size(); ++i)
+                        if (m->second.npcs[i].name == st->npc) {
+                            to = Link{Go::Npc, int(i), st->map};
+                            break;
+                        }
+                Row r = linked(sayf(l, Text::RefQuestNext, {st->npc}),
+                               refindex::mapTitle(ix, st->map) + " \xC2\xB7 " + std::to_string(st->x) + ", " +
+                                   std::to_string(st->y),
+                               to);
+                r.dot = refindex::colorOf(refindex::NpcKind::Guide);
+                p.rows.push_back(std::move(r));
+            }
+        }
+    }
     // the concept's: each part a block the whole width (none folds)
     if (!q.npc.empty()) {
         p.rows.push_back(heading(say(l, Text::RefQuestNpc), "", QuestNpc));

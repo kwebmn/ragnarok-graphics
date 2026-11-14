@@ -54,6 +54,20 @@ Request devicePoll(const std::string& deviceCode) {
 
 Request accounts() { return Request{"GET", "/api/client/accounts", "", true}; }
 
+Request questProgress(const std::string& charName) {
+    static const char* const kHex = "0123456789ABCDEF";
+    std::string q;
+    for (const char c : charName) {  // RFC 3986's unreserved as they are, every other byte %XX
+        const unsigned char u = static_cast<unsigned char>(c);
+        if ((u >= 'A' && u <= 'Z') || (u >= 'a' && u <= 'z') || (u >= '0' && u <= '9') || u == '-' || u == '_' ||
+            u == '.' || u == '~')
+            q += c;
+        else
+            q += {'%', kHex[u >> 4], kHex[u & 15]};
+    }
+    return Request{"GET", "/api/client/quests/progress?char=" + q, "", true};
+}
+
 Request createLogin(const std::string& login, const std::string& password, char sex) {
     return post("/api/client/accounts",
                 object({{"game_userid", login}, {"game_password", password}, {"sex", std::string(1, sex)}}), true);

@@ -66,6 +66,24 @@ TEST(reference_quests_manifest_and_file) {
     CHECK_EQ(refquests::listOf(q[1].steps, refquests::Uk).front(), std::string("Bring feathers."));
 }
 
+// 3.0.19-beta.4 (the owner's «ок» to the site's auto cards for all the server's quests): the new kinds «skill» and
+// «story» by their own names, not «Інше»
+TEST(reference_quests_new_kinds_named) {
+    refindex::Index ix;
+    refquests::Quest a;
+    a.slug = "skill-knight";
+    a.category = "skill";
+    a.title[refquests::En] = "Knight Skill Quests";
+    refquests::Quest b;
+    b.slug = "story-kiel-hyre";
+    b.category = "story";
+    b.title[refquests::En] = "Kiel Hyre Quest";
+    ix.quests = {a, b};
+    const refpages::Page list = refpages::quests(ix, Lang::Uk);
+    CHECK(indexOf(list, "Квестові навички") != size_t(-1));
+    CHECK(indexOf(list, "Сюжетні квести") != size_t(-1));
+}
+
 TEST(reference_quests_pages) {
     const refindex::Index ix = index();
     const refpages::Page home = refpages::home(ix, Lang::Uk);

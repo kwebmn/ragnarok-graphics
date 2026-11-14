@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/quest_progress.hpp"
 #include "core/bar_hint.hpp"
 #include "core/reference_index.hpp"
 #include "core/reference_live.hpp"
@@ -135,7 +136,8 @@ enum Part : int {
     Route1, Route2,  // 3.0.11-beta.8: «Як дістатися» on foot, by Kafra
     Elements,        // 3.0.11-beta.13: «Шкода стихіями»
     // 3.0.11-beta.17: the other sections a player may fold
-    Way, Timers, Market, QuestFor, Kafra, PetOf, CraftOf, QuestNpc, QuestItems, QuestSteps, QuestReward
+    Way, Timers, Market, QuestFor, Kafra, PetOf, CraftOf, QuestNpc, QuestItems, QuestSteps, QuestReward,
+    QuestYou  // 3.0.19-beta.4: the character's step as the server keeps it
 };
 // 3.0.11-beta.30 (the owner: «пускай будет весь список, разворачивать имеет смысл если там больше 20 позиций»): 20,
 // and a list kFewMore longer whole (no «усі 23 ›» for three more). 3.0.18-beta.239 (the owner 13.11: «всегда
@@ -192,6 +194,9 @@ struct Context {
     // 3.0.18-beta.244 («Навички»): a skill's words (the site's in the language, else the game's table; empty none)
     std::function<std::vector<std::string>(int skill)> skillText;
     bool asTyped = false;  // 3.0.18-beta.245: Cyrillic searched as typed, not by its keys in Latin
+    // 3.0.19-beta.4: the character's quests' steps as the server keeps them (the site's word; null: not known - not
+    // signed in to the site, another character, not asked yet)
+    const std::vector<questprogress::State>* progress = nullptr;
 };
 // 3.0.18-beta.242: a monster of `mobLv` for a character of `level` - 1 fitting (within 10 levels), 2 too strong, 3 too
 // weak; 0 either not known
