@@ -70,6 +70,7 @@ private:
     Surface7* target_;
     Surface7* textures_[d3d7::kStages] = {};
     DeviceStates states_;
+    SetupCache setupCache_;  // 3.0.19-beta.30: its resolved setup while states_ stay the same
     SceneTracker scene_;  // which draws are interface (stage 3)
     D3DVIEWPORT7 viewport_{};
     std::vector<uint8_t> soft_;  // 0.27: a draw of the level 99 aura's vertices, softer

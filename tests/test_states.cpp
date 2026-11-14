@@ -217,3 +217,64 @@ TEST(states_complement_kept_to_its_draw) {
     CHECK_EQ(int(s.dropComplement()), 2);
     CHECK_EQ(s.stage(1, TSS_ALPHAARG1), uint32_t(TA_TEXTURE | TA_ALPHAREPLICATE));
 }
+
+// 3.0.19-beta.30 (R-DGXEPX: resolveDrawSetup 1.1 % of the game's thread in the 3D view - the same states resolved for
+// each of 2600 draws a frame): the states' version moves when a value changes, not when one is set again as it is
+TEST(states_version_moves_on_a_change_alone) {
+    DeviceStates s;
+    const uint32_t v0 = s.version();
+    s.setRender(RS_ZENABLE, s.render(RS_ZENABLE));  // as it is
+    s.setStage(0, TSS_COLOROP, s.stage(0, TSS_COLOROP));
+    CHECK_EQ(s.version(), v0);
+    s.setRender(RS_ZENABLE, 1);
+    const uint32_t v1 = s.version();
+    CHECK(v1 != v0);
+    s.setStage(1, TSS_ADDRESS, TADDRESS_CLAMP);  // both axes with it
+    CHECK(s.version() != v1);
+    const uint32_t v2 = s.version();
+    s.setStage(1, TSS_ADDRESS, TADDRESS_CLAMP);
+    CHECK_EQ(s.version(), v2);
+    s.setStage(0, TSS_COLORARG1, TA_TEXTURE | TA_COMPLEMENT);
+    const uint32_t v3 = s.version();
+    CHECK_EQ(int(s.dropComplement()), 1);
+    CHECK(s.version() != v3);  // COMPLEMENT put back is a change too
+    const uint32_t v4 = s.version();
+    CHECK_EQ(int(s.dropComplement()), 0);
+    CHECK_EQ(s.version(), v4);
+}
+
+// A COMPLEMENT set and then set back by the game itself is no longer there to drop
+TEST(states_complement_set_back_by_the_game_is_not_dropped) {
+    DeviceStates s;
+    s.setStage(2, TSS_ALPHAARG2, TA_CURRENT | TA_COMPLEMENT);
+    s.setStage(2, TSS_ALPHAARG2, TA_CURRENT);
+    CHECK_EQ(int(s.dropComplement()), 0);
+    s.setStage(7, TSS_COLORARG2, TA_DIFFUSE | TA_COMPLEMENT);  // the last stage
+    s.setStage(3, TSS_COLORARG1, TA_TEXTURE | TA_COMPLEMENT);
+    s.setStage(3, TSS_ALPHAARG1, TA_TEXTURE | TA_COMPLEMENT);
+    s.setStage(3, TSS_COLORARG1, TA_TEXTURE);  // one of stage 3's two set back: the other still there
+    CHECK_EQ(int(s.dropComplement()), (1 << 7) | (1 << 3));
+    CHECK_EQ(s.stage(3, TSS_ALPHAARG1), uint32_t(TA_TEXTURE));
+    CHECK_EQ(s.stage(7, TSS_COLORARG2), uint32_t(TA_DIFFUSE));
+}
+
+// The setup resolved once is given again while nothing it is made of changed; anything that did makes it anew
+TEST(states_setup_cache_resolves_again_on_a_change) {
+    DeviceStates s = clientInit();
+    SetupCache cache;
+    const DrawSetup a = cache.resolve(s, false, kBoth);
+    CHECK(a == resolveDrawSetup(s, false, kBoth));
+    CHECK(cache.resolve(s, false, kBoth) == a);
+    s.setRender(RS_ALPHABLENDENABLE, 1);
+    CHECK(cache.resolve(s, false, kBoth) == resolveDrawSetup(s, false, kBoth));
+    CHECK(!(cache.resolve(s, false, kBoth) == a));
+    CHECK(cache.resolve(s, false, kNone) == resolveDrawSetup(s, false, kNone));  // the stages' textures
+    CHECK(cache.resolve(s, true, kNone) == resolveDrawSetup(s, true, kNone));    // the target's alpha
+    s.setStage(0, TSS_COLORARG1, TA_TEXTURE | TA_COMPLEMENT);
+    const DrawSetup inverted = cache.resolve(s, true, kNone);
+    CHECK_EQ(int(inverted.stage[0].colorArg1), int(TA_TEXTURE | TA_COMPLEMENT));
+    s.dropComplement();
+    CHECK_EQ(int(cache.resolve(s, true, kNone).stage[0].colorArg1), int(TA_TEXTURE));
+    DeviceStates other = clientInit();  // another device's states, at the same version
+    CHECK(cache.resolve(other, false, kBoth) == resolveDrawSetup(other, false, kBoth));
+}

@@ -20,10 +20,17 @@ public:
     // draw that asked for it ([effects] fix_negative): the stages' arguments without COMPLEMENT; the stages put back
     // (bits, 0 none)
     uint8_t dropComplement();
+    // 3.0.19-beta.30 (R-DGXEPX: resolveDrawSetup 1.1 % of the game's thread in the 3D view, the same states resolved
+    // for each of 2600 draws a frame): moves when a value is set to another one, or a COMPLEMENT is dropped - not
+    // when one is set again as it is (SetupCache)
+    uint32_t version() const { return version_; }
 
 private:
+    void noteComplement(uint32_t stage);
     std::array<uint32_t, d3d7::kRenderStateCount> rs_{};
     std::array<std::array<uint32_t, d3d7::kStageStateCount>, d3d7::kStages> ts_{};
+    uint32_t version_ = 0;
+    uint8_t complement_ = 0;  // 3.0.19-beta.30: the stages with an argument's COMPLEMENT, dropComplement's to look at
 };
 
 // One texture stage, resolved for the pixel shader and the sampler.
@@ -69,5 +76,19 @@ struct DrawSetup {
 // targetHasAlpha: the client's screen formats have no alpha, so DESTALPHA reads 1 there.
 // stageHasTexture: which of stages 0 and 1 have a texture bound.
 DrawSetup resolveDrawSetup(const DeviceStates& s, bool targetHasAlpha, const bool stageHasTexture[2]);
+
+// 3.0.19-beta.30: the last setup resolved, given again while the states (the same ones, at the same version), the
+// target's alpha and the stages' textures are what they were - else resolved anew
+class SetupCache {
+public:
+    const DrawSetup& resolve(const DeviceStates& s, bool targetHasAlpha, const bool stageHasTexture[2]);
+
+private:
+    DrawSetup setup_;
+    const DeviceStates* states_ = nullptr;
+    uint32_t version_ = 0;
+    bool alpha_ = false;
+    bool texture_[2] = {false, false};
+};
 
 }  // namespace uagfx

@@ -72,11 +72,13 @@ bool TextureLevels::mergeFull(const Rect& r, std::vector<uint32_t>& argb) const 
 void TextureLevels::setKey(const ColorKey& key) {
     key_ = key;
     for (size_t i = 0; i < images_.size(); ++i) dirty_[i] = images_[i].bounds();
+    anyDirty_ = true;
 }
 
 void TextureLevels::changed(int level, Rect r) {
     if (level < 0 || level >= levels() || !clipRect(images_[size_t(level)].bounds(), r)) return;
     dirty_[size_t(level)] = unite(dirty_[size_t(level)], r);
+    anyDirty_ = true;
 }
 
 void TextureLevels::slotWritten(Rect r, uint8_t source, const std::vector<uint32_t>* own) {
@@ -94,6 +96,7 @@ void TextureLevels::slotWritten(Rect r, uint8_t source, const std::vector<uint32
 }
 
 void TextureLevels::sync(FrameRecord& record, uint32_t texture) {
+    if (!anyDirty_) return;
     std::vector<uint32_t> argb;
     const PixelFormat f = images_.empty() ? PixelFormat::Unknown : images_[0].format();
     // 2.5.18: the levels made of the full colours, from level 0 down as far as the changed mip levels need
@@ -143,6 +146,7 @@ void TextureLevels::sync(FrameRecord& record, uint32_t texture) {
         }
         sent = true;
     }
+    anyDirty_ = false;  // every level sent (an exception before here leaves it set)
     if (sent) dropFull();
 }
 

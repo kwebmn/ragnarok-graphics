@@ -45,6 +45,9 @@ private:
 
     std::vector<Image> images_;
     std::vector<Rect> dirty_;
+    // 3.0.19-beta.30 (R-DGXEPX: sync 1.0-1.5 % of the game's thread in the 3D view, every level looked at for each
+    // texture of each draw): some level's dirty_ not empty - sync goes no further without it
+    bool anyDirty_ = true;
     std::vector<SpriteCell> slots_;  // since the last upload of level 0
     std::vector<std::vector<uint32_t>> slotOwn_;  // 2.5.23: each one's own colours (empty: none)
     ColorKey key_;

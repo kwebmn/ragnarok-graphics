@@ -92,3 +92,30 @@ TEST(texlevels_full_colour_only_for_16_bit_textures_inside_them) {
     }
     CHECK_EQ(TextureLevels::fullBytes(), size_t(0));  // gone with its texture
 }
+
+// 3.0.19-beta.30 (R-DGXEPX: TextureLevels::sync 1.0-1.5 % of the game's thread in the 3D view - every level looked
+// at for each texture of each draw): a texture with nothing changed sends nothing, and whatever changes after a sync
+// - a level, the key, a new texture's every level - is sent at the next
+TEST(texlevels_after_a_sync_only_what_changed_goes_again) {
+    TextureLevels t(8, 8, PixelFormat::A1R5G5B5, 3);
+    FrameRecord r;
+    t.sync(r, 1);
+    CHECK_EQ(r.uploads().size(), size_t(3));  // new: every level
+    r.reset();
+    t.sync(r, 1);
+    CHECK(r.uploads().empty());
+    t.changed(2, Rect{0, 0, 1, 1});
+    t.sync(r, 1);
+    CHECK(r.uploads().size() == 1 && r.uploads()[0].level == 2u);
+    r.reset();
+    t.sync(r, 1);
+    CHECK(r.uploads().empty());
+    t.changed(1, Rect{9, 9, 12, 12});  // outside level 1 (4x4): nothing
+    t.sync(r, 1);
+    CHECK(r.uploads().empty());
+    ColorKey k;
+    k.enabled = true;
+    t.setKey(k);
+    t.sync(r, 1);
+    CHECK_EQ(r.uploads().size(), size_t(3));
+}

@@ -79,28 +79,46 @@ DeviceStates::DeviceStates() {
 }
 
 void DeviceStates::setRender(uint32_t state, uint32_t value) {
-    if (state < kRenderStateCount) rs_[state] = value;
+    if (state >= kRenderStateCount || rs_[state] == value) return;
+    rs_[state] = value;
+    ++version_;
 }
 
 uint32_t DeviceStates::render(uint32_t state) const { return state < kRenderStateCount ? rs_[state] : 0; }
 
 void DeviceStates::setStage(uint32_t stage, uint32_t type, uint32_t value) {
     if (stage >= kStages || type >= kStageStateCount) return;
-    ts_[stage][type] = value;
+    auto& t = ts_[stage];
+    if (t[type] == value && (type != TSS_ADDRESS || (t[TSS_ADDRESSU] == value && t[TSS_ADDRESSV] == value))) return;
+    t[type] = value;
     if (type == TSS_ADDRESS) {
-        ts_[stage][TSS_ADDRESSU] = value;
-        ts_[stage][TSS_ADDRESSV] = value;
+        t[TSS_ADDRESSU] = value;
+        t[TSS_ADDRESSV] = value;
     }
+    ++version_;
+    if (type == TSS_COLORARG1 || type == TSS_COLORARG2 || type == TSS_ALPHAARG1 || type == TSS_ALPHAARG2)
+        noteComplement(stage);
+}
+
+void DeviceStates::noteComplement(uint32_t stage) {
+    const auto& t = ts_[stage];
+    const bool any = ((t[TSS_COLORARG1] | t[TSS_COLORARG2] | t[TSS_ALPHAARG1] | t[TSS_ALPHAARG2]) & TA_COMPLEMENT) != 0;
+    complement_ = uint8_t(any ? complement_ | (1u << stage) : complement_ & ~(1u << stage));
 }
 
 uint8_t DeviceStates::dropComplement() {  // 3.0.18-beta.229
+    if (!complement_) return 0;  // 3.0.19-beta.30: each draw, the stages looked at only when one has it
     uint8_t back = 0;
-    for (uint32_t s = 0; s < kStages; ++s)
+    for (uint32_t s = 0; s < kStages; ++s) {
+        if (!(complement_ & (1u << s))) continue;
         for (const uint32_t t : {TSS_COLORARG1, TSS_COLORARG2, TSS_ALPHAARG1, TSS_ALPHAARG2})
             if (ts_[s][t] & TA_COMPLEMENT) {
                 ts_[s][t] &= ~uint32_t(TA_COMPLEMENT);
                 back = uint8_t(back | (1u << s));
             }
+    }
+    complement_ = 0;
+    if (back) ++version_;
     return back;
 }
 
@@ -181,6 +199,19 @@ DrawSetup resolveDrawSetup(const DeviceStates& s, bool targetHasAlpha, const boo
         d.stage[i] = off ? StageSetup{} : st;
     }
     return d;
+}
+
+const DrawSetup& SetupCache::resolve(const DeviceStates& s, bool targetHasAlpha, const bool stageHasTexture[2]) {
+    if (states_ != &s || version_ != s.version() || alpha_ != targetHasAlpha || texture_[0] != stageHasTexture[0] ||
+        texture_[1] != stageHasTexture[1]) {
+        setup_ = resolveDrawSetup(s, targetHasAlpha, stageHasTexture);
+        states_ = &s;
+        version_ = s.version();
+        alpha_ = targetHasAlpha;
+        texture_[0] = stageHasTexture[0];
+        texture_[1] = stageHasTexture[1];
+    }
+    return setup_;
 }
 
 }  // namespace uagfx
