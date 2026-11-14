@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.9 — what's new · 2026-11-14
+
+- **Laptops with two graphics cards: frames through the screen's card.** A new switch «Frames through the screen's graphics card» on the «Renderer» page (shown when the computer has more than one card). The fast card still draws the game on Direct3D 12, and the program itself hands each finished frame to the card the screen hangs off, which shows it. The frame no longer waits ~200 ms to get there. When the program sees frames getting to the screen slowly, it turns the switch on by itself, at once, without a restart, and says so in the chat. If that is still slow, it moves to Direct3D 11 from the next start, as in beta.8. HDR is off while the switch is on.
+
 # uaRO Graphics 3.0.19-beta.8 — what's new · 2026-11-14
 
 - **Laptops with two graphics cards.** When a frame takes long to get from the card that draws to the one the screen hangs off (a laptop with AMD and Intel had 5 frames a second whatever the effects), the program notices within 10 seconds. From the next start it switches to Direct3D 11, or, already on it, to the screen's card, and says so in the chat. The log now names the card the game's monitor hangs off.
