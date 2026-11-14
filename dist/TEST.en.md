@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.19-beta.15 — what's new · 2026-11-14
+
+- **3D view: a steady mouse.** The view now turns by the usual Windows cursor's move, at your pointer speed. Before, it took the mouse's raw data: that goes with the DPI, and when the game window came back to the front it jumped and threw the view down. Sudden jumps are now dropped.
+- **A calmer camera behind.** It always starts at the same distance whatever the game's zoom; the wheel brings it nearer or farther from there. By houses it no longer "breathes" in and out: once brought in, it moves back only half a second later. Pressed against the character, its sprite and aura no longer cover the screen.
+- **Switching to the eyes** keeps the view level, not at the feet.
+
 # uaRO Graphics 3.0.19-beta.14 — what's new · 2026-11-14
 
 - **3D view: after leaving the world the game's camera is its own again.** If the world closed while in the 3D view (a disconnect, back to the character list), the next map was drawn with the 3D view's wide field of view. Our own models and ground then stood off their places: a house askew in the middle of a road, for one. Now, while the 3D view is off, the game always draws with its own angle.
