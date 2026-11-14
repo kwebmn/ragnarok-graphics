@@ -110,11 +110,16 @@ TEST(view3d_sky_by_the_night_and_under_a_vault) {
 }
 
 // 3.0.19-beta.7: the game's wheel zoom moves the camera behind nearer or further back
+// 3.0.19-beta.15 (R-YCGGJR: the game zoomed out to 521 put the camera 78 behind, into the houses): the 3D view starts
+// kBehindDistance behind whatever the game's zoom; the wheel moves it from there by its share
 TEST(view3d_the_wheel_sets_the_distance_behind) {
-    CHECK(std::fabs(view3d::behindDistanceOf(300.0f) - view3d::kBehindDistance) < 1e-3f);  // the game's start
-    CHECK(view3d::behindDistanceOf(230.0f) < view3d::kBehindDistance);
-    CHECK(view3d::behindDistanceOf(2040.0f) <= 160.0f && view3d::behindDistanceOf(2040.0f) > 100.0f);
-    CHECK(view3d::behindDistanceOf(-1.0f) == view3d::kBehindDistance);
+    CHECK(std::fabs(view3d::behindDistanceOf(300.0f, 300.0f) - view3d::kBehindDistance) < 1e-3f);
+    CHECK(std::fabs(view3d::behindDistanceOf(521.6f, 521.6f) - view3d::kBehindDistance) < 1e-3f);  // any start
+    CHECK(std::fabs(view3d::behindDistanceOf(600.0f, 300.0f) - 2.0f * view3d::kBehindDistance) < 1e-3f);
+    CHECK(view3d::behindDistanceOf(150.0f, 600.0f) == view3d::kBehindNearest);  // in: no nearer than that
+    CHECK(view3d::behindDistanceOf(2040.0f, 230.0f) == view3d::kBehindFarthest);
+    CHECK(view3d::behindDistanceOf(-1.0f, 300.0f) == view3d::kBehindDistance);
+    CHECK(view3d::behindDistanceOf(300.0f, 0.0f) == view3d::kBehindDistance);
     const float feet[3] = {0.0f, 0.0f, 0.0f}, ahead[3] = {1.0f, 0.0f, 0.0f}, up[3] = {0.0f, -1.0f, 0.0f};
     float nearEye[3], farEye[3], target[3];
     view3d::place(view3d::Mode::Behind, feet, ahead, up, 0.0f, nearEye, target, 25.0f);

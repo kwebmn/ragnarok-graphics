@@ -180,9 +180,10 @@ float freeOfBoxes(const float eye[3], const float target[3], float distance, con
     return free < distance ? std::max(kPullNearest, free - kPullStep) : distance;
 }
 
-float behindDistanceOf(float gameDistance) {
-    if (!std::isfinite(gameDistance) || gameDistance <= 0.0f) return kBehindDistance;
-    return std::clamp(gameDistance * (kBehindDistance / 300.0f), 22.0f, 160.0f);
+float behindDistanceOf(float gameDistance, float atEntry) {
+    if (!std::isfinite(gameDistance) || gameDistance <= 0.0f || !std::isfinite(atEntry) || atEntry <= 0.0f)
+        return kBehindDistance;
+    return std::clamp(kBehindDistance * gameDistance / atEntry, kBehindNearest, kBehindFarthest);
 }
 
 void place(Mode m, const float feet[3], const float flat[3], const float up[3], float pitch, float eye[3],

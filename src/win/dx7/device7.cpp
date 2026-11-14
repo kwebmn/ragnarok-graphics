@@ -441,7 +441,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     if (tag.auraExtra && c.enhanced() && win::auraOff()) return D3D_OK;
     // 3.0.19-beta.13 (R-T3R3PX: from the eyes looking down, the character's own level 99 aura a white blaze over the
     // view): the character's own aura left out from the eyes, the others' kept
-    if (tag.kind == effect_exe::Kind::Aura && tag.owner && win::view3dwin::fromTheEyes()) {
+    if (tag.kind == effect_exe::Kind::Aura && tag.owner && win::view3dwin::ownHidden()) {
         uint32_t own = 0;
         if (win::readGame(kOwnAccount, &own, 4) && own == tag.owner) {
             if (!ownAuraTold_) {

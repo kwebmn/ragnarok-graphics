@@ -58,8 +58,11 @@ bool crosses(const Box& b, const float from[3], const float to[3]);
 // kPullNearest at least); a box the head stands in left out
 float freeOfBoxes(const float eye[3], const float target[3], float distance, const std::vector<Box>& boxes);
 
-// 3.0.19-beta.7: the game's wheel zoom (CView +0x3c, 230-2040, its start 300) as the distance behind the head
-float behindDistanceOf(float gameDistance);
+// 3.0.19-beta.7: the game's wheel zoom (CView +0x3c, 230-2040, its start 300) as the distance behind the head;
+// 3.0.19-beta.15 (R-YCGGJR): kBehindDistance whatever the zoom the 3D view began at (`atEntry`), the wheel moving it
+// by its share from there, kBehindNearest-kBehindFarthest
+constexpr float kBehindNearest = 22.0f, kBehindFarthest = 100.0f;
+float behindDistanceOf(float gameDistance, float atEntry);
 
 // 3.0.19-beta.10: behind - how far back from the head the eye can be along the view (`eye` and `target` as place
 // made them for `distance`): the first point of the way back closer than kPullMargin over the ground (`groundY(x, z)`

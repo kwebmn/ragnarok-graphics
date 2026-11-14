@@ -38,6 +38,15 @@ constexpr uint32_t kTilt = 0x1C, kTiltTo = 0x34, kDistanceTo = 0x3C;  // beta.7:
 constexpr float kHeldTilt = -45.0f;  // the game's tilt held here while in the 3D view: a change of it is the pad's
 constexpr uint32_t kView = 0x94, kInverse = 0xC4;
 constexpr float kDegreesPerCount = 0.07f;  // the mouse: 1000 counts (about an inch) turn 70 degrees
+// 3.0.19-beta.15 (R-YCGGJR «глючит мышка»: the counts jumped - 1971 in a poll for 2 px of the cursor - as the window
+// came back in front, and they go with the mouse's DPI): the Windows cursor's own move turns the view (the player's
+// pointer speed), parked at the window's middle each frame; a frame's move past these taken for a jump and dropped
+constexpr float kDegreesPerPixel = 0.1f;
+constexpr long kMostPixels = 200, kMostCounts = 400;
+// 3.0.19-beta.15 (R-W5K25A: in 15, 17, 5, 12, 5 of 78 within two seconds by Morocc's houses): the eye goes out again
+// only this long after it was last brought in; nearer than kOwnNear behind, the character's own picture left out
+constexpr DWORD kOutAfterMs = 500;
+constexpr float kOwnNear = 12.0f;
 // 3.0.19-beta.11: the crosshair pulled onto a monster this near (of the game's height), onto the Tab-locked one from
 // this far; the lock let go when it is not on the screen for kLockLostMs
 constexpr float kPullReach = 0.045f, kLockReach = 0.14f;
@@ -53,6 +62,8 @@ struct State {
     int fovFirst = int(view3d::kFirstFov), fovBehind = int(view3d::kBehindFov);  // 3.0.19-beta.10: [view3d]
     float mouseSpeed = 1.0f;
     float behindNow = 0.0f;  // 3.0.19-beta.10: the distance behind used (in at once before a wall, out slowly)
+    float zoomAtEntry = 0.0f;  // 3.0.19-beta.15: the game's zoom as the 3D view began (the wheel moves from there)
+    DWORD pulledAt = 0;        // 3.0.19-beta.15: brought in last - out again only kOutAfterMs later
     std::vector<view3d::Box> wayBoxes;  // 3.0.19-beta.12: the models on the way back this frame
     std::vector<uint32_t> waySeen;
     int modelPullsTold = 0;
@@ -66,6 +77,9 @@ struct State {
     // 3.0.19-beta.11 (R-ZQWGVD «мышкой ... крутит и не слушается»): the game's cursor put at (putX, putY) each frame -
     // held there by the pad runtime (uapad::runtime::holdCursor), the mouse's own moves turning the view
     int putX = 0, putY = 0;
+    POINT parked{};              // 3.0.19-beta.15: the Windows cursor put there last frame (the screen's pixels)
+    bool parkedValid = false, cursorMoved = false;
+    long pixels = 0, counts = 0, mostPixels = 0, jumps = 0;  // for the log
     bool skipTab = false, wantLock = false;
     uint32_t locked = 0, aimed = 0;  // Tab's monster, the one the crosshair is on
     DWORD lockSeen = 0;
@@ -93,8 +107,13 @@ uint32_t playerNow() {
     return player;
 }
 
+bool ownHiddenNow() {  // 3.0.19-beta.15: from the eyes, or the eye pulled in right behind the head
+    return g_state.mode == view3d::Mode::First ||
+           (g_state.mode == view3d::Mode::Behind && g_state.behindNow > 0.0f && g_state.behindNow < kOwnNear);
+}
+
 void __attribute__((thiscall)) playerRender(uint32_t actor, uint32_t matrix) {
-    if (g_state.mode == view3d::Mode::First && actor == playerNow()) return;
+    if (ownHiddenNow() && actor == playerNow()) return;
     reinterpret_cast<RenderFn>(g_playerRender)(actor, matrix);
 }
 
@@ -163,16 +182,19 @@ POINT clientOf(HWND game, int gx, int gy, int w, int h) {
 
 // The Windows cursor kept at the game's point (x, y): out of the way while the view turns, and where the crosshair is
 // when Alt frees it
-void park(HWND game, int x, int y, int w, int h) {
+bool park(HWND game, int x, int y, int w, int h, POINT* where = nullptr) {
     POINT at = clientOf(game, x, y, w, h), now{};
-    if (!ClientToScreen(game, &at) || !GetCursorPos(&now)) return;
+    if (!ClientToScreen(game, &at) || !GetCursorPos(&now)) return false;
     if (std::abs(now.x - at.x) > 1 || std::abs(now.y - at.y) > 1) SetCursorPos(at.x, at.y);
+    if (where) *where = at;
+    return true;
 }
 
 // The hold let go (Alt, the window behind, the view off): the Windows cursor where the crosshair was
 void release(State& s) {
     if (!s.centred) return;
     s.centred = false;
+    s.parkedValid = false;
     uapad::runtime::holdCursor(false, 0, 0);
     int w = 0, h = 0;
     const HWND game = uaui::gameWindow();
@@ -226,10 +248,34 @@ void mouse(State& s) {
     int* x = reinterpret_cast<int*>(uintptr_t(camera::kMouse + camera::kMouseX));
     int* y = reinterpret_cast<int*>(uintptr_t(camera::kMouse + camera::kMouseY));
     const int cx = w / 2, cy = h / 2;
+    long cdx = 0, cdy = 0;
+    const bool held = uapad::runtime::takeLook(cdx, cdy);
+    // 3.0.19-beta.15: the Windows cursor's own move since it was parked; the counts only where it never moves (the
+    // mouse taken whole by the game, no mouse freedom); without the hold the game's own cursor's move, as before
+    POINT now{};
     long dx = 0, dy = 0;
-    const bool held = uapad::runtime::takeLook(dx, dy);
-    if (!held) dx = *x - s.putX, dy = *y - s.putY;  // the game moved its own cursor by the mouse
-    if (s.centred && (dx || dy)) view3d::turn(s.look, float(dx), float(dy), kDegreesPerCount * s.mouseSpeed, s.sign);
+    float perUnit = kDegreesPerPixel;
+    if (s.centred && s.parkedValid && GetCursorPos(&now)) {
+        dx = now.x - s.parked.x;
+        dy = now.y - s.parked.y;
+        if (dx || dy) s.cursorMoved = true;
+    }
+    if (held && !s.cursorMoved && (cdx || cdy)) {
+        dx = cdx, dy = cdy;
+        perUnit = kDegreesPerCount;
+    } else if (!held && !s.cursorMoved && s.centred) {
+        dx = *x - s.putX, dy = *y - s.putY;
+        perUnit = kDegreesPerCount;
+    }
+    const long most = perUnit == kDegreesPerPixel ? kMostPixels : kMostCounts;
+    if (std::labs(dx) > most || std::labs(dy) > most) {  // a jump (the window back in front): not the player's
+        ++s.jumps;
+        dx = dy = 0;
+    }
+    s.pixels += std::labs(dx) + std::labs(dy);
+    s.counts += std::labs(cdx) + std::labs(cdy);
+    s.mostPixels = std::max(s.mostPixels, std::max(std::labs(dx), std::labs(dy)));
+    if (s.centred && (dx || dy)) view3d::turn(s.look, float(dx), float(dy), perUnit * s.mouseSpeed, s.sign);
     readAims(s);
     lockStep(s, float(cx), float(cy));
     const view3d::Aim a = view3d::aimAt(s.aims, float(cx), float(cy), kPullReach * float(h), s.locked,
@@ -246,7 +292,7 @@ void mouse(State& s) {
     s.putX = ax;
     s.putY = ay;
     uapad::runtime::holdCursor(true, ax, ay);
-    park(game, cx, cy, w, h);
+    s.parkedValid = park(game, cx, cy, w, h, &s.parked);
     s.centred = true;
 }
 
@@ -367,14 +413,15 @@ void switchTo(State& s, uint32_t view) {
         s.wroteYaw = -1.0f;
         s.wroteTilt = 0.0f;
         s.behindNow = 0.0f;
+        s.zoomAtEntry = *at(view, kDistanceTo);  // 3.0.19-beta.15
         s.walkBefore = walkmodewin::on();
         walkmodewin::setOn(true);
     } else if (to == view3d::Mode::Off) {
         walkmodewin::setOn(s.walkBefore);
         release(s);  // 3.0.19-beta.11: the cursor the Windows one again, at the crosshair
         s.locked = s.aimed = 0;
-    } else if (to == view3d::Mode::First) {
-        s.look.pitch = std::clamp(s.look.pitch + 12.0f, -view3d::kPitchMost, view3d::kPitchMost);
+    } else if (to == view3d::Mode::First) {  // 3.0.19-beta.15: from behind looking down - level, not at the feet
+        s.look.pitch = std::clamp(s.look.pitch + 12.0f, -25.0f, 25.0f);
     }
     LOG_INFO("3D view: %s - the field of view %.0f, the mouse %.0f %%, the walk mode %s%s", view3d::nameOf(to),
              view3d::fovFor(to, s.fovFirst, s.fovBehind), s.mouseSpeed * 100.0f,
@@ -390,6 +437,11 @@ void tell(State& s, uint32_t view, const float eye[3], const float feet[3], cons
              "up %.2f %.2f %.2f; the game's tilt %.1f, distance %.1f (behind %.1f); %d frames",
              view3d::nameOf(s.mode), s.look.yaw, s.look.pitch, s.sign, eye[0], eye[1], eye[2], feet[0], feet[1],
              feet[2], up[0], up[1], up[2], *at(view, 0x1C), *at(view, 0x24), s.behindNow, s.frames);
+    // 3.0.19-beta.15: the mouse in these seconds - the cursor's pixels (or counts) that turned it, its most a frame,
+    // the jumps dropped, DirectInput's counts beside
+    LOG_INFO("3D view: the mouse - %ld moved (%s), %ld at most a frame, %ld jump(s) dropped; DirectInput's counts %ld",
+             s.pixels, s.cursorMoved ? "the cursor's pixels" : "counts", s.mostPixels, s.jumps, s.counts);
+    s.pixels = s.counts = s.mostPixels = s.jumps = 0;
 }
 
 void __attribute__((thiscall)) build(uint32_t view) {
@@ -403,7 +455,7 @@ void __attribute__((thiscall)) build(uint32_t view) {
         applyFov(s, view3d::kGameFov);
         return;
     }
-    if (s.mode == view3d::Mode::First) hidePlayerRender();  // 3.0.19-beta.11
+    if (s.mode != view3d::Mode::Off) hidePlayerRender();  // 3.0.19-beta.11; .15 behind too (pulled in near)
     mouse(s);
     adoptYaw(view, s);
     adoptTilt(view, s);
@@ -422,7 +474,7 @@ void __attribute__((thiscall)) build(uint32_t view) {
     float feet[3], up[3], eye[3], target[3];
     std::memcpy(feet, at(view, kFeet), sizeof feet);
     std::memcpy(up, at(view, kUp), sizeof up);
-    const float want = view3d::behindDistanceOf(*at(view, kDistanceTo));  // beta.7: the wheel
+    const float want = view3d::behindDistanceOf(*at(view, kDistanceTo), s.zoomAtEntry);  // beta.7/.15: the wheel
     view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target, want);
     const uint32_t ground = groundNow();
     if (s.mode == view3d::Mode::Behind && ground) {  // 3.0.19-beta.10: a wall, a cliff behind - the eye before it
@@ -448,7 +500,13 @@ void __attribute__((thiscall)) build(uint32_t view) {
             }
             free = std::min(free, byModels);
         }
-        s.behindNow = s.behindNow <= 0.0f || free < s.behindNow ? free : s.behindNow + (free - s.behindNow) * 0.12f;
+        const DWORD tick = GetTickCount();
+        if (s.behindNow <= 0.0f || free < s.behindNow) {
+            if (s.behindNow > 0.0f && free < s.behindNow - 0.5f) s.pulledAt = tick;
+            s.behindNow = free;
+        } else if (tick - s.pulledAt >= kOutAfterMs) {  // 3.0.19-beta.15: out again once it stayed clear a while
+            s.behindNow += (free - s.behindNow) * 0.12f;
+        }
         if (s.behindNow < want - 0.01f)
             view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target, s.behindNow);
     }
@@ -543,5 +601,7 @@ bool active() { return g_state.mode != view3d::Mode::Off; }
 bool looking() { return g_state.mode != view3d::Mode::Off && g_state.looking; }
 
 bool fromTheEyes() { return g_state.mode == view3d::Mode::First; }
+
+bool ownHidden() { return ownHiddenNow(); }
 
 }  // namespace uagfx::win::view3dwin
