@@ -19,6 +19,7 @@
 #include "core/frame_profile.hpp"
 #include "core/trample.hpp"
 #include "core/frame.hpp"
+#include "core/game_camera.hpp"
 #include "core/portal.hpp"
 #include "core/critters.hpp"
 #include "core/draw_batch.hpp"
@@ -594,6 +595,11 @@ struct Renderer::Impl {
     ID3D12PipelineState* mistPipelines[4] = {};
     bool mistDone = false;
     bool mistLogged = false;
+    // 3.0.19-beta.6 (the 3D view, core/view3d; haze.cpp applySky3d): a sky where nothing is drawn, a haze to it
+    ID3DBlob* sky3dPs = nullptr;
+    ID3D12PipelineState* sky3dPipelines[4] = {};
+    bool sky3dDone = false;
+    std::string sky3dLogged;  // the map it was told on
     // 0.73, light in the air (haze.cpp, shafts_ps): the torches' pass leaves its lights' count.
     ID3DBlob* shaftsPs = nullptr;
     // 2.5.7: drawn into a half-size target (no blending), then added over the world from it (half_over_ps)
@@ -989,6 +995,10 @@ struct Renderer::Impl {
     bool mistDue() const { return mistWanted() && groundDrawn && !mistDone && viewToWorldValid; }
     bool applyMist();  // once a frame, the world drawn and lit; false: lost
     ID3D12PipelineState* mistPipeline(UINT samples);
+    bool sky3dDue() const {  // 3.0.19-beta.6: the 3D view - the game's field of view wider than its own
+        return sky3dPs && camera::fovNow() > camera::kFov + 0.5f && groundDrawn && !sky3dDone && viewToWorldValid;
+    }
+    bool applySky3d();  // once a frame, after the mists; false: lost
     // 0.72: indoors (a polished or wet floor) and in the rain; a field under a dry sky does not shine
     float floorReflectAmount() const {
         if (!effects.floorReflections || !floorReflectPs || !halfOverPs) return 0.0f;
@@ -1136,6 +1146,7 @@ struct Renderer::Impl {
         actorShadowsDone = actorShadowsDrawn = false;
         sceneDepthFresh = false;
         mistDone = false;
+        sky3dDone = false;  // 3.0.19-beta.6
         floorReflectDone = false;  // 0.72
         bloomDone = false;  // 0.78
         stepsDone = false;  // 0.80

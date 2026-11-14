@@ -129,6 +129,14 @@ void frame(const Config& config, const std::string& iniPath) {
 
 bool on() { return state().mode.on(); }
 
+void setOn(bool on) {
+    State& s = state();
+    if (s.mode.on() == on) return;
+    s.mode.set(on);
+    tellDirs(s);
+    LOG_INFO("keys: the walk mode %s by the 3D view", on ? "on" : "off");
+}
+
 bool typing() { return state().mode.typing(); }
 
 }  // namespace uagfx::win::walkmodewin

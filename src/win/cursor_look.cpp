@@ -13,6 +13,7 @@
 #include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
+#include "win/view3d.hpp"
 
 namespace uagfx::win::cursorlook {
 namespace {
@@ -83,8 +84,17 @@ std::vector<size_t> cursorFaces(const FrameRecord& r, float x, float y) {
 
 }  // namespace
 
+// 3.0.19-beta.6 (win/view3d): the 3D view's mouse turning it - a crosshair at the game's cursor (held at the middle),
+// the interface's light one when the game's own is chosen
+static CursorLook lookNow(CursorLook look) {
+    return view3dwin::looking() && look == CursorLook::Game ? CursorLook::Light : look;
+}
+
+static ca::Shape shapeNow(int action) { return view3dwin::looking() ? ca::Shape::Target : ca::shapeOf(action); }
+
 void frame(CursorLook look, double k) {
     State& s = state();
+    look = lookNow(look);
     const float size = float(std::lround(kSize * uistyle::partScale(k)));
     if (look != s.look || size != s.size) {
         if (look != s.look) LOG_INFO("cursor: [interface] cursor = %s", cursorLookToken(look));
@@ -104,7 +114,7 @@ void frame(CursorLook look, double k) {
         return;
     }
     const uint32_t mode = read32(kModeNow);
-    const ca::Shape shape = ca::shapeOf(mode ? int(read32(mode + kCursorAction)) : 0);
+    const ca::Shape shape = shapeNow(mode ? int(read32(mode + kCursorAction)) : 0);
     Slot& slot = s.slots[int(shape)];
     if (!slot.made) {
         slot.art = ca::make(shape, s.look, s.size);
@@ -148,7 +158,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     }
     const uint32_t mode = read32(kModeNow);
     const int action = mode ? int(read32(mode + kCursorAction)) : 0;
-    const ca::Shape shape = ca::shapeOf(action);
+    const ca::Shape shape = shapeNow(action);
     Slot& slot = s.slots[int(shape)];
     if (!slot.made) {
         slot.art = ca::make(shape, s.look, s.size);

@@ -2215,6 +2215,53 @@ float4 mist_ps(PresentOut i) : SV_Target {
     return float4(sourceRect.rgb, f);
 }
 
+// 3.0.19-beta.6 (the 3D view, core/view3d; haze.cpp applySky3d): the game's camera from behind or from the eyes sees
+// past what it ever drew. Where nothing is drawn (t3 the picture's depth at its far end): the sky - the horizon's
+// colour (sourceRect.rgb) up to the zenith's, the sun the map's light comes from (sourceClamp.xyz, towards it, the
+// world's y down) with its glow, soft clouds drifting (sharpen the time); a dungeon (twinY 1) a dark vault, no sun.
+// Over what is drawn: a haze to the horizon's colour by its distance (sourceRect.w the reach). twinX the night (0-1).
+// Blended over the picture by its alpha.
+float4 sky3d_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    float night = saturate(twinX);
+    bool vault = twinY > 0.5;
+    float3 horizon = sourceRect.rgb;
+    float depthHere = sceneDepth.Load(int3(wp, 0));
+    if (depthHere < 0.99999) {
+        float dist = length(viewAt(wp));
+        float reach = max(sourceRect.w, 1.0);
+        float haze = smoothstep(reach * 0.1, reach, dist);
+        haze = haze * haze * (vault ? 0.92 : 0.78);
+        if (haze < 0.003) discard;
+        return float4(horizon, haze);
+    }
+    float2 g = (float2(wp) - float2(jitterX, jitterY)) / max(scale, 1e-3);
+    float3 ray = float3((g.x - cx) / max(f0, 1e-3), (g.y - cy) / max(f1, 1e-3), 1.0);
+    float3 dir = normalize(ray.x * float3(r0, r1, r2) + ray.y * float3(r3, r4, r5) + ray.z * float3(r6, r7, r8));
+    float rise = -dir.y;  // the world's y points down
+    if (vault) {
+        float3 dark = horizon * lerp(0.55, 0.25, smoothstep(0.0, 0.6, rise));
+        return float4(dark, 1.0);
+    }
+    float3 zenith = lerp(float3(0.30, 0.52, 0.86), float3(0.015, 0.025, 0.07), night);
+    float3 sky = lerp(horizon, zenith, smoothstep(-0.03, 0.55, rise));
+    float3 toSun = sourceClamp.xyz;
+    if (dot(toSun, toSun) > 0.25) {
+        float sunUp = saturate(dot(dir, normalize(toSun)));
+        float3 sunLight = float3(1.0, 0.92, 0.76) * (1.0 - night);
+        sky += sunLight * (pow(sunUp, 900.0) * 5.0 + pow(sunUp, 24.0) * 0.35 + pow(sunUp, 4.0) * 0.08);
+    }
+    float lift = max(rise, 0.0) + 0.1;
+    float2 flow = float2(sharpen * 0.006, sharpen * 0.003);
+    float2 across = dir.xz / lift * 0.8 + flow;
+    float puff = fbm4(across) * 0.65 + fbm4(across * 2.7 + 5.1) * 0.35;
+    float cover = smoothstep(0.5, 0.74, puff) * smoothstep(0.0, 0.2, rise);
+    float3 cloud = lerp(float3(0.97, 0.97, 0.98), float3(0.62, 0.65, 0.72), saturate((puff - 0.6) * 3.0));
+    cloud = lerp(cloud, horizon * 0.45, night * 0.85);
+    sky = lerp(sky, cloud, cover * 0.85);
+    return float4(sky, 1.0);
+}
+
 // 0.82, the skills' sparks (torches.cpp applyEmbers), added on: about each place a skill burns or shines (t1, two
 // texels: its middle (target pixels) .xy, its size .z, strength .w; then its colour .rgb and kind .w - 1 fire, 0
 // another) - footprint how many - a dozen sparks: a fire's embers rise, swaying, and die out; another skill's

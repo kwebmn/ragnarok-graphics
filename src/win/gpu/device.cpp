@@ -1396,7 +1396,7 @@ bool Renderer::Impl::composite() {
         camera::inverse4(f.clipToPrevClip, f.prevClipToClip);
         f.nearZ = p.nearZ;
         f.farZ = p.farZ;
-        f.fovY = camera::kFov * camera::kPi / 180.0f;
+        f.fovY = camera::fovNow() * camera::kPi / 180.0f;  // 3.0.19-beta.6: the 3D view's
         f.aspect = float(gameWidth) / float(gameHeight);
         float view[16], eye[16];
         camera::affine4(cameraValid ? camera : c.reproject, view);
@@ -1738,6 +1738,8 @@ void Renderer::Impl::destroy() {
     releaseCom(shadowApplyPs);
     for (ID3D12PipelineState*& p : mistPipelines) releaseCom(p);  // 0.34
     releaseCom(mistPs);
+    for (ID3D12PipelineState*& p : sky3dPipelines) releaseCom(p);  // 3.0.19-beta.6
+    releaseCom(sky3dPs);
     releaseCom(floorReflectPipeline);  // 0.72, 0.86
     for (ID3D12PipelineState*& p : halfOverPipelines) releaseCom(p);
     releaseCom(halfOverPs);

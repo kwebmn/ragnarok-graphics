@@ -74,6 +74,15 @@ struct Projection {
 };
 // As SetSize makes it for the game's size.
 Projection projectionFor(int width, int height);
+// 3.0.19-beta.6 (the 3D view, core/view3d): the game's vertical field of view now - its own 15, the 3D view's wider;
+// projectionFor follows it (in the renderer's process the bridge's Camera message carries it each frame)
+void setFov(float degrees);
+float fovNow();
+// The renderer's fields SetSize (0x40d760) makes for a field of view: f0, f1 and the culling's slopes (+0 .. +0xc)
+struct SetSizeFields {
+    float f0 = 0, f1 = 0, slopeH = 0, slopeV = 0;
+};
+SetSizeFields setSizeFields(float fovDegrees, int width, int height);
 
 // 1.4.2: how far in front of the camera the point `at` is (view-space z), by the view matrix.
 inline float viewZ(const float view[12], const float at[3]) {

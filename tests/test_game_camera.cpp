@@ -231,3 +231,20 @@ TEST(camera_tilt_room_by_its_choice) {
     CHECK(42.0f - uagfx::camera::tiltRoom("ground") == -3.0f);
     CHECK(uagfx::camera::kTiltRoomSites[0] == 0x565D48 && uagfx::camera::kTiltRoomSites[1] == 0x5662F2);
 }
+
+// 3.0.19-beta.6 (the 3D view): the renderer's fields as SetSize makes them for another field of view, and the
+// projection of the driver's own parts following the one the game draws with
+TEST(camera_set_size_fields_and_the_fov_now) {
+    const SetSizeFields g = setSizeFields(15.0f, 1280, 960);
+    const Projection p = projectionFor(1280, 960);
+    CHECK(g.f0 == p.f0 && g.f1 == p.f1);  // the game's own: as before
+    CHECK(std::fabs(g.slopeV - 7.5958f) < 1e-3f && std::fabs(g.slopeH - 0.75f * 7.5958f) < 1e-3f);
+    const SetSizeFields w = setSizeFields(70.0f, 1280, 960);
+    CHECK(w.f1 < g.f1 * 0.2f && w.slopeV < g.slopeV);  // wider: everything smaller, the sides further out
+    setFov(70.0f);
+    CHECK(fovNow() == 70.0f);
+    CHECK(projectionFor(1280, 960).f1 == w.f1);
+    setFov(1000.0f);  // nonsense: the game's own
+    CHECK(fovNow() == 15.0f);
+    setFov(15.0f);
+}

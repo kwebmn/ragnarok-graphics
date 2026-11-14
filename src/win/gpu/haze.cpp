@@ -65,6 +65,51 @@ bool Renderer::Impl::applyMist() {
     return worldPass(pso, w, h, c, sceneDepthSrv, true);
 }
 
+// 3.0.19-beta.6 (the 3D view, core/view3d): the game's camera from behind or from the eyes sees past all the game ever
+// drew - a sky where nothing is drawn (the horizon's colour up to the zenith's, the sun the map's light comes from,
+// soft clouds; a dark vault in a dungeon) and a haze to it over what is, by its distance (sky3d_ps). After the mists.
+bool Renderer::Impl::applySky3d() {
+    sky3dDone = true;
+    if (!ensureScene("3D sky")) return true;
+    ID3D12PipelineState* pso = alphaPipeline(sky3dPs, sky3dPipelines, upscale ? 1 : samples, "3D sky");
+    if (!pso) return true;
+    if (!copySceneDepth()) return false;
+    const int w = sceneWidth, h = sceneHeight;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld, viewToWorld + 12, c.reproject);
+    c.scale = float(upscale ? worldScale : scale);
+    if (upscale) {
+        c.jitter[0] = jitter[0];
+        c.jitter[1] = jitter[1];
+    }
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    const bool vault = !mapOutdoors;
+    // the horizon's colour: a light haze by day, a deep blue at night; under a dungeon's vault a dark warm grey
+    static const float kDay[3] = {0.76f, 0.83f, 0.90f}, kNight[3] = {0.09f, 0.11f, 0.17f};
+    static const float kVault[3] = {0.075f, 0.068f, 0.062f};
+    for (int k = 0; k < 3; ++k) c.sourceRect[k] = vault ? kVault[k] : kDay[k] + (kNight[k] - kDay[k]) * night;
+    c.sourceRect[3] = vault ? 650.0f : 1450.0f;  // the haze's reach: the far plane outdoors (1500), nearer inside
+    float toSun[3] = {0.0f, 0.0f, 0.0f};
+    if (!vault && mapSun(toSun)) std::copy(toSun, toSun + 3, c.sourceClamp);
+    c.twin[0] = night;
+    c.twin[1] = vault ? 1.0f : 0.0f;
+    c.sharpen = waterTime();
+    if (sky3dLogged != mapName) {
+        sky3dLogged = mapName;
+        LOG_INFO("3D sky: on %s - %s, the night %.2f, the sun %s (field of view %.0f)", mapName.c_str(),
+                 vault ? "a dark vault" : "the open sky", night,
+                 c.sourceClamp[0] != 0.0f || c.sourceClamp[1] != 0.0f || c.sourceClamp[2] != 0.0f ? "the map's"
+                                                                                                    : "none",
+                 camera::fovNow());
+    }
+    return worldPass(pso, w, h, c, sceneDepthSrv, true);
+}
+
 // 0.73: the light in the air - about the torches' pass's lights (their list left in torchData) and, under the open
 // sky, rays from where the sky shows past the map's edge (shafts_ps), added on.
 bool Renderer::Impl::applyShafts() {

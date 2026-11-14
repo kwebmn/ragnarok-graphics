@@ -1,5 +1,6 @@
 #include "win/key_nav.hpp"
 #include "win/key_walk.hpp"
+#include "win/view3d.hpp"
 #include "win/walk_mode.hpp"
 #include "win/window_switch.hpp"
 #include "win/window_stack.hpp"
@@ -226,6 +227,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         npcwin::cutinEsc(m, wp);  // 3.0.13-beta.10: Esc closes the NPC's picture too (the key goes on)
         if (windowstack::key(m, wp, lp)) return 0;
         if (keynav::key(m, wp, lp)) return 0;  // 3.0.18-beta.210: the keys drive the top window once an arrow did
+        if (view3dwin::key(m, wp, lp)) return 0;    // 3.0.19-beta.6: Ctrl+Shift+V, the 3D view
         if (walkmodewin::key(m, wp, lp)) return 0;  // 3.0.18-beta.208: the walk mode's keys and letters
         if (keywalk::key(m, wp, lp)) return 0;  // 3.0.18-beta.207: the arrows walk while the chat line is empty
         if (chatwin::key(m, wp, lp)) return 0;       // 3.0.11-beta.41: the new chat's F10, Alt+F10 and Tab

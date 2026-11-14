@@ -1,5 +1,6 @@
 #include "core/game_camera.hpp"
 
+#include <atomic>
 #include <cmath>
 #include <cstring>
 
@@ -17,18 +18,41 @@ bool raiseToWater(float centre, float half, float waterTop, float& outCentre, fl
     return true;
 }
 
+namespace {
+std::atomic<float> g_fov{kFov};  // 3.0.19-beta.6: the 3D view's
+}  // namespace
+
+void setFov(float degrees) {
+    g_fov.store(std::isfinite(degrees) && degrees > 1.0f && degrees < 170.0f ? degrees : kFov,
+                std::memory_order_relaxed);
+}
+
+float fovNow() { return g_fov.load(std::memory_order_relaxed); }
+
+SetSizeFields setSizeFields(float fovDegrees, int width, int height) {
+    SetSizeFields s;
+    if (width <= 0 || height <= 0) return s;
+    const int halfW = width / 2;
+    const int halfH = height / 2;
+    // SetSize: tan(pi * fov / 360) in the FPU, then a float per step; the slopes tan((90 - fov / 2) * pi / 180)
+    const double t = std::tan(double(kPi) * double(fovDegrees) * double(1.0f / 360.0f));
+    const float aspect = float(height) / float(width);
+    s.f0 = aspect * float(double(halfW) / t);
+    s.f1 = float(double(halfH) / t);
+    const double slope = std::tan((90.0 - double(fovDegrees) * 0.5) * double(kPi) * double(1.0f / 180.0f));
+    s.slopeH = aspect * float(slope);
+    s.slopeV = float(slope);
+    return s;
+}
+
 Projection projectionFor(int width, int height) {
     Projection p;
     if (width <= 0 || height <= 0) return p;
-    const int halfW = width / 2;
-    const int halfH = height / 2;
-    // SetSize: tan(pi * fov / 360) in the FPU, then a float per step.
-    const double t = std::tan(double(kPi) * double(kFov) * double(1.0f / 360.0f));
-    const float aspect = float(height) / float(width);
-    p.f0 = aspect * float(double(halfW) / t);
-    p.f1 = float(double(halfH) / t);
-    p.cx = float(halfW);
-    p.cy = float(halfH);
+    const SetSizeFields s = setSizeFields(fovNow(), width, height);
+    p.f0 = s.f0;
+    p.f1 = s.f1;
+    p.cx = float(width / 2);
+    p.cy = float(height / 2);
     return p;
 }
 

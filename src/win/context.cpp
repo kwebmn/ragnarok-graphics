@@ -1,4 +1,5 @@
 #include "win/key_walk.hpp"
+#include "win/view3d.hpp"
 #include "win/walk_mode.hpp"
 #include "win/upkeep_watch.hpp"
 #include "win/context.hpp"
@@ -505,6 +506,7 @@ bool Context::open(std::string& error) {
                            config.crispNumbers;  // 3.0.18-beta.178: the numbers' frames as the game writes them
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
+    view3dwin::install();  // 3.0.19-beta.6: Ctrl+Shift+V, the 3D view
     wings::install();     // 3.0.18-beta.230: the nine headgears' wings (win/wings)
     setFullColour(config.fullColour);  // 2.5.18: the textures in their pictures' own colours
     setFastTextures(config.fastTextures);  // 2.5.20
@@ -1242,6 +1244,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     keywalk::setEnabled(config.arrowsWalk);                    // 3.0.18-beta.207: the arrows walk
     keywalk::setSpace(config.spaceAction);                     // 3.0.18-beta.209: Space acts
     walkmodewin::frame(config, iniPath());                     // 3.0.18-beta.208: the walk mode
+    view3dwin::frame();                                        // 3.0.19-beta.6: the 3D view
     groundmarks::groundTimers(config.groundTimers);  // 3.0.16-beta.21
     hotbarwin::setTimers(config.groundTimers);       // 3.0.16-beta.22: on the slots too
     groundmarks::skillCells(config.skillCells);                // 3.0.11-beta.142: a ground skill's cells

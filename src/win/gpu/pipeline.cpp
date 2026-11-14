@@ -219,6 +219,7 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"shadow_vs", "vs_5_0", &shadowVs},            {"shadow_ps", "ps_5_0", &shadowPs},
                    {"shadow_blur_ps", "ps_5_0", &shadowBlurPs},   {"shadow_apply_ps", "ps_5_0", &shadowApplyPs},
                    {"mist_ps", "ps_5_0", &mistPs},                {"heat_ps", "ps_5_0", &heatPs},
+                   {"sky3d_ps", "ps_5_0", &sky3dPs},  // 3.0.19-beta.6: the 3D view's sky and haze
                    {"weather_ps", "ps_5_0", &weatherPs},          {"night_ps", "ps_5_0", &nightPs},
                    {"weather_vs", "vs_5_0", &weatherVs},          {"weather_quad_ps", "ps_5_0", &weatherQuadPs},
                    {"splash_ps", "ps_5_0", &splashPs},            {"waterfall_ps", "ps_5_0", &waterfallPs},

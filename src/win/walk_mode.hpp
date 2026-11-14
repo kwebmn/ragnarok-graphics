@@ -18,6 +18,8 @@ void lost();                             // the window lost the keys
 // Each frame: the settings' state (a change from «Налаштування» switches it) and where the toggle is written
 void frame(const Config& config, const std::string& iniPath);
 bool on();
+// 3.0.19-beta.6 (win/view3d): on while the 3D view is - W A S D walk; its file left as it is
+void setOn(bool on);
 bool typing();  // the chat line opened by Enter
 
 }  // namespace uagfx::win::walkmodewin

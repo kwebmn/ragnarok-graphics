@@ -4,6 +4,7 @@
 #include <string>
 
 #include "core/bridge_wire.hpp"
+#include "core/game_camera.hpp"
 #include "core/gpu_timing.hpp"
 #include "win/log.hpp"
 
@@ -244,7 +245,12 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             float view[12];
             for (float& v : view) v = rd.f32();
             const float targetZ = rd.left() >= 4 ? rd.f32() : 0.0f;  // 1.4.2: the character's depth
-            if (rd.ok()) renderer_.setCamera(valid, view, targetZ);
+            // 3.0.19-beta.6: the field of view the game draws with (the 3D view widens it) - every projection here
+            const float fov = rd.left() >= 4 ? rd.f32() : camera::kFov;
+            if (rd.ok()) {
+                camera::setFov(fov);
+                renderer_.setCamera(valid, view, targetZ);
+            }
             break;
         }
         case Msg::SeeThrough: {  // 3.0.13-beta.26
