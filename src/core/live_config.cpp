@@ -802,6 +802,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("3D view mouse", std::to_string(running.view3dMouse), std::to_string(file.view3dMouse)));
         n.view3dMouse = file.view3dMouse;
     }
+    if (file.view3dDistance != running.view3dDistance) {  // 3.0.19-beta.24
+        u.applied.push_back(
+            change("3D view distance", std::to_string(running.view3dDistance), std::to_string(file.view3dDistance)));
+        n.view3dDistance = file.view3dDistance;
+    }
     if (file.cameraRemember != running.cameraRemember) {  // 3.0.11-beta.184
         u.applied.push_back(change("camera remember", flag(running.cameraRemember), flag(file.cameraRemember)));
         n.cameraRemember = file.cameraRemember;

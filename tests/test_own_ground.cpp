@@ -387,8 +387,9 @@ TEST(own_ground_smooth_as_far_as_its_cells_are_wide) {
 // ground went 4000 ahead, up to 16 ms a frame on the processor): in the 3D view it ends where its haze has the world
 // whole (view3d::kHazeWholePast past the sky's reach) - nothing there to see; the game's own view as far as before
 TEST(own_ground_as_far_as_the_3d_haze_lets_one_see) {
-    CHECK(own_ground::mostDepthOf(false) == 4000.0f);
-    const float wide = own_ground::mostDepthOf(true);
-    CHECK(wide >= view3d::skyOf(0.0f, false).reach + view3d::kHazeWholePast);
-    CHECK(wide <= 1600.0f);
+    CHECK(own_ground::mostDepthOf(false, 1200.0f) == 4000.0f);
+    // 3.0.19-beta.24: just past the 3D view's sight ([view3d] distance), where the haze is whole
+    CHECK(own_ground::mostDepthOf(true, 1500.0f) >= view3d::hazeReach(1450.0f, 1500.0f) + view3d::kHazeWholePast);
+    CHECK(own_ground::mostDepthOf(true, 1500.0f) <= 1600.0f);
+    CHECK(own_ground::mostDepthOf(true, 1000.0f) >= 1000.0f && own_ground::mostDepthOf(true, 1000.0f) <= 1100.0f);
 }

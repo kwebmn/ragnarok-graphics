@@ -54,6 +54,10 @@ constexpr DWORD kOutAfterMs = 500;
 // walks; its upper half over the walls in front of it). 0 in the 3D view, written after the game's update each frame
 // (its own back the first frame the view is the game's): upright cards at their feet
 constexpr uint32_t kSpriteTilt = 0x6B789C;
+// 3.0.19-beta.24 (R-T9FPZZ «лучше но еще не то»): the game's frustum's far (uaRO.exe 0x69C5DC, 1500, read by its
+// culling FUN_004f9e60 alone) - in the 3D view [view3d] distance: the game culls its ground and models there, the
+// haze whole there (core view3d::hazeReach), the own ground just past it
+constexpr uint32_t kCullFar = 0x69C5DC;
 // 3.0.19-beta.11: the crosshair pulled onto a monster this near (of the game's height), onto the Tab-locked one from
 // this far; the lock let go when it is not on the screen for kLockLostMs
 constexpr float kPullReach = 0.045f, kLockReach = 0.14f;
@@ -70,6 +74,8 @@ struct State {
     float mouseSpeed = 1.0f;
     float behindNow = 0.0f;  // 3.0.19-beta.10: the distance behind used (in at once before a wall, out slowly)
     bool ownOut = false;     // 3.0.19-beta.18: the character's own picture left out now (view3d::ownOut)
+    int sight = view3d::kSightDefault;  // 3.0.19-beta.24: [view3d] distance
+    int sightTold = 0;
     bool uprightTold = false;
     float zoomAtEntry = 0.0f;  // 3.0.19-beta.15: the game's zoom as the 3D view began (the wheel moves from there)
     DWORD pulledAt = 0;        // 3.0.19-beta.15: brought in last - out again only kOutAfterMs later
@@ -178,6 +184,23 @@ void applyFov(State& s, float fov) {
     }
     s.fov = fov;
     camera::setFov(fov);
+}
+
+// 3.0.19-beta.24: the 3D view's sight - the game's culling far there (its own 1500 back when the view is the game's),
+// the renderer told it with the field of view (camera::setSight, the bridge's Camera message)
+void applySight(State& s, float units) {
+    camera::setSight(units);
+    float now = 0.0f;
+    if (!readGame(kCullFar, &now, 4) || !(now >= 100.0f && now <= camera::kFar) || now == units) return;
+    auto* at = reinterpret_cast<float*>(uintptr_t(kCullFar));
+    DWORD old = 0;
+    if (!VirtualProtect(at, 4, PAGE_READWRITE, &old)) return;
+    *at = units;
+    VirtualProtect(at, 4, old, &old);
+    if (s.sightTold < 20) {
+        ++s.sightTold;
+        LOG_INFO("3D view: the game culls its world at %.0f (was %.0f; uaRO.exe 0x%X)", units, now, kCullFar);
+    }
 }
 
 // The game's pixels as the window's client ones (the game may be drawn scaled into it)
@@ -477,8 +500,10 @@ void __attribute__((thiscall)) build(uint32_t view) {
         // 3.0.19-beta.14 (R-W5K25A: the world left in the 3D view - a disconnect - and the next map drawn with its 60
         // degrees, our own models off their places): the game's own projection kept each frame (only written when off)
         applyFov(s, view3d::kGameFov);
+        applySight(s, camera::kFar);  // 3.0.19-beta.24: the game's own culling
         return;
     }
+    applySight(s, float(s.sight));  // 3.0.19-beta.24
     if (s.mode != view3d::Mode::Off) hidePlayerRender();  // 3.0.19-beta.11; .15 behind too (pulled in near)
     uprightSprites(s);  // 3.0.19-beta.18
     mouse(s);
@@ -594,6 +619,7 @@ void frame(const Config& config) {
     s.fovFirst = config.view3dFovFirst;
     s.fovBehind = config.view3dFovBehind;
     s.mouseSpeed = float(config.view3dMouse) / 100.0f;
+    s.sight = config.view3dDistance;  // 3.0.19-beta.24
     if (s.mode != view3d::Mode::Off && !inGameWorld()) {  // the login, the character list: the game's own
         s.mode = s.wanted = view3d::Mode::Off;
         walkmodewin::setOn(s.walkBefore);

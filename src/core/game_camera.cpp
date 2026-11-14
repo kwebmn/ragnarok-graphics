@@ -31,6 +31,16 @@ float fovNow() { return g_fov.load(std::memory_order_relaxed); }
 
 bool wideView() { return fovNow() > kFov + 0.5f; }
 
+namespace {
+std::atomic<float> g_sight{kFar};  // 3.0.19-beta.24
+}  // namespace
+
+void setSight(float units) {
+    g_sight.store(std::isfinite(units) && units > kNear && units <= kFar ? units : kFar, std::memory_order_relaxed);
+}
+
+float sightNow() { return g_sight.load(std::memory_order_relaxed); }
+
 SetSizeFields setSizeFields(float fovDegrees, int width, int height) {
     SetSizeFields s;
     if (width <= 0 || height <= 0) return s;

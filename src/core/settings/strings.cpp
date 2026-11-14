@@ -8848,6 +8848,14 @@ constexpr Entry kTexts[] = {
      "монстром приціл червоніє; затисніть Alt, щоб з'явився курсор (вікна, інтерфейс).",
      "В игре Ctrl+Shift+V переключает: камера игры → из-за спины → от первого лица → назад. Мышь поворачивает взгляд, "
      "над монстром прицел краснеет; зажмите Alt, чтобы появился курсор (окна, интерфейс)."},
+    {Text::View3dDistance, "View distance", "Дальність огляду", "Дальность обзора"},  // 3.0.19-beta.24
+    {Text::View3dDistanceHint,
+     "How far the 3D view sees (1500 - as far as the game draws). Nearer - more frames: the game draws less, and the "
+     "haze hides what lies past it.",
+     "Як далеко видно у 3D-режимі (1500 — скільки малює гра). Ближче — більше кадрів: гра малює менше, а далі все "
+     "ховає серпанок.",
+     "Как далеко видно в 3D-режиме (1500 — сколько рисует игра). Ближе — больше кадров: игра рисует меньше, а дальше "
+     "всё скрывает дымка."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

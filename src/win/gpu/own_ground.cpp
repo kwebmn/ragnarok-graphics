@@ -461,7 +461,7 @@ bool Renderer::Impl::drawOwnGround() {
         o.lightPending = false;
         const float from = own_ground::ownFrom(p);  // 3.0.4-beta.23: the triangles across it cut there
         const float morphFrom = fineDepth * kMorphFrom;  // 3.0.4-beta.29: the smooth ground eased from here on
-        const float mostDepth = own_ground::mostDepthOf(camera::wideView());  // 3.0.19-beta.21
+        const float mostDepth = own_ground::mostDepthOf(camera::wideView(), camera::sightNow());  // .21, .24
         for (size_t k = 0; k < g->mesh.chunks.size(); ++k) {
             const terrain::Chunk& box = g->mesh.chunks[k];
             float lo[3], hi[3];
@@ -789,7 +789,7 @@ void Renderer::Impl::drawOwnModels(const own_ground::View& view, const camera::P
     const terrain::Mesh& mesh = g->models;
     std::vector<float> seen;      // a batch's vertices in the view, each worked out once
     std::vector<int32_t> putAt;   // a batch's vertex in its texture's draw, -1 not yet
-    const float mostDepth = own_ground::mostDepthOf(camera::wideView());  // 3.0.19-beta.21
+    const float mostDepth = own_ground::mostDepthOf(camera::wideView(), camera::sightNow());  // .21, .24
     for (const terrain::Chunk& box : mesh.chunks) {
         float lo[3], hi[3];
         for (int a = 0; a < 3; ++a) {
@@ -1041,7 +1041,7 @@ bool Renderer::Impl::drawOwnWater() {
     if (o.wavePhaseKnown && !o.waterGame)
         phase = water::phaseAfter(o.wavePhase, g->waveSpeed, int((GetTickCount64() - o.wavePhaseAt) / 16));
     const terrain::Mesh& mesh = g->water;
-    const float mostDepth = own_ground::mostDepthOf(camera::wideView());  // 3.0.19-beta.21
+    const float mostDepth = own_ground::mostDepthOf(camera::wideView(), camera::sightNow());  // .21, .24
     for (const terrain::Chunk& box : mesh.chunks) {
         float lo[3], hi[3];
         for (int a = 0; a < 3; ++a) {

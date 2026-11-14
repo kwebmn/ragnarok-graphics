@@ -219,6 +219,10 @@ bool ownOut(Mode m, float behind, bool outBefore) {
     return behind < (outBefore ? kOwnShownAgain : kOwnNear);
 }
 
+float hazeReach(float skyReach, float sight) {
+    return std::max(std::min(skyReach, sight - kHazeWholePast), kHazeWholePast);
+}
+
 Sky skyOf(float night, bool vault) {
     static const float kDay[3] = {0.76f, 0.83f, 0.90f}, kNight[3] = {0.09f, 0.11f, 0.17f};
     static const float kVault[3] = {0.075f, 0.068f, 0.062f};

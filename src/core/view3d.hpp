@@ -119,6 +119,12 @@ struct Sky {
 // 3.0.19-beta.21 (R-4JGBJS): the haze has the world whole (the horizon's colour) this far past the reach (sky3d_ps) -
 // past it the own ground ends (own_ground::mostDepthOf), and the game's own far plane (1500) is not seen as an edge
 constexpr float kHazeWholePast = 100.0f;
+// 3.0.19-beta.24 (R-T9FPZZ «лучше но еще не то»: from the eyes the game drew all to 1500 ahead - the renderer's
+// drawing 14.4 ms a frame, 8.9 of it the game's draws, the game's thread 11.3): [view3d] distance, the 3D view's sight
+// - the game culls its world there (its frustum's far, uaRO.exe 0x69C5DC, 1500 its own), the haze is whole there
+constexpr int kSightDefault = 1200, kSightLeast = 800, kSightMost = 1500;
+// The haze's reach in the 3D view for a sight: whole kHazeWholePast past it at the sight, a nearer sky's kept
+float hazeReach(float skyReach, float sight);
 Sky skyOf(float night, bool vault);
 
 }  // namespace uagfx::view3d

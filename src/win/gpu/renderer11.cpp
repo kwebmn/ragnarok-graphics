@@ -3811,7 +3811,7 @@ void Renderer11::applySky3d() {
     const bool vault = !outdoors_;
     const view3d::Sky sky = view3d::skyOf(night, vault);
     std::copy(sky.horizon, sky.horizon + 3, c.sourceRect);
-    c.sourceRect[3] = sky.reach;
+    c.sourceRect[3] = view3d::hazeReach(sky.reach, camera::sightNow());  // 3.0.19-beta.24: whole at the sight
     float toSun[3] = {0.0f, 0.0f, 0.0f};
     if (!vault && mapSun(toSun)) std::copy(toSun, toSun + 3, c.sourceClamp);
     c.twin[0] = night;

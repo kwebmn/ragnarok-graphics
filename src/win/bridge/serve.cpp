@@ -247,8 +247,10 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             const float targetZ = rd.left() >= 4 ? rd.f32() : 0.0f;  // 1.4.2: the character's depth
             // 3.0.19-beta.6: the field of view the game draws with (the 3D view widens it) - every projection here
             const float fov = rd.left() >= 4 ? rd.f32() : camera::kFov;
+            const float sight = rd.left() >= 4 ? rd.f32() : camera::kFar;  // 3.0.19-beta.24
             if (rd.ok()) {
                 camera::setFov(fov);
+                camera::setSight(sight);
                 renderer_.setCamera(valid, view, targetZ);
             }
             break;

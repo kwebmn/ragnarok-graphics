@@ -347,3 +347,32 @@ TEST(view3d_own_picture_out_near_with_a_margin) {
     CHECK(!view3d::ownOut(Mode::Behind, 0.0f, false) && !view3d::ownOut(Mode::Behind, 0.0f, true));  // not yet known
     CHECK(view3d::kOwnNear < view3d::kOwnShownAgain);
 }
+
+// 3.0.19-beta.24 (R-T9FPZZ «лучше но еще не то», 49.7 fps: the renderer's drawing 14.4 ms a frame, 8.9 of it the
+// game's own draws - from the eyes it draws all to 1500 ahead -, the game's thread 11.3): [view3d] distance - how far
+// the game culls its world in the 3D view (its frustum's far 0x69C5DC), the haze whole there, the own ground just past
+TEST(config_view3d_distance_defaults_and_limits) {
+    CHECK(parseConfig("").view3dDistance == view3d::kSightDefault);
+    CHECK(parseConfig("[view3d]\ndistance = 1000\n").view3dDistance == 1000);
+    CHECK(parseConfig("[view3d]\ndistance = 100\n").view3dDistance == view3d::kSightLeast);
+    CHECK(parseConfig("[view3d]\ndistance = 9000\n").view3dDistance == view3d::kSightMost);
+    CHECK(parseConfig("[view3d]\ndistance = far\n").view3dDistance == view3d::kSightDefault);
+    CHECK(view3d::kSightLeast == 800 && view3d::kSightMost == 1500 && view3d::kSightDefault == 1200);
+    const settings::IniSetting* row = settings::findSetting("view3d.distance");
+    CHECK(row != nullptr);
+    if (row) {
+        CHECK(row->page == settings::Page::Game && row->control == settings::Control::Slider);
+        CHECK(settings::tokenOf(*row, parseConfig("")) == "1200");
+    }
+    CHECK(appliesNow("view3d.distance"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[view3d]\ndistance = 900\n"));
+    CHECK(u.next.view3dDistance == 900 && u.applied.size() == 1);
+}
+
+TEST(view3d_haze_whole_at_the_sight) {
+    const float outdoors = view3d::skyOf(0.0f, false).reach, vault = view3d::skyOf(0.0f, true).reach;
+    CHECK(view3d::hazeReach(outdoors, 1500.0f) == 1500.0f - view3d::kHazeWholePast);
+    CHECK(view3d::hazeReach(outdoors, 1000.0f) == 1000.0f - view3d::kHazeWholePast);
+    CHECK(view3d::hazeReach(vault, 1200.0f) == vault);  // a dungeon's nearer already
+    CHECK(view3d::hazeReach(outdoors, 0.0f) > 0.0f);     // nonsense: never none
+}

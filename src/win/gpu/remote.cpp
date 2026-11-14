@@ -330,6 +330,7 @@ void Remote::setCamera(bool valid, const float view[12], float targetZ) {
     for (int i = 0; i < 12; ++i) w.f32(valid ? view[i] : 0.0f);
     w.f32(valid ? targetZ : 0.0f);  // 1.4.2
     w.f32(camera::fovNow());       // 3.0.19-beta.6: the 3D view's field of view
+    w.f32(camera::sightNow());     // 3.0.19-beta.24: its sight
     send(Msg::Camera, buffer_);
 }
 

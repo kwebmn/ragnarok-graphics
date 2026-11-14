@@ -85,8 +85,9 @@ inline float fineDepthOf(float zoom, float f1, bool wide) {
 // 3.0.19-beta.21 (R-4JGBJS «всеравно тормозит»: from behind 339 of moc_fild10's 500 chunks in view, up to 16 ms a
 // frame) in the 3D view only to kMostDepthWide, where its haze has the world whole (view3d::kHazeWholePast past the
 // sky's reach 1450)
-constexpr float kMostDepth = 4000.0f, kMostDepthWide = 1550.0f;
-inline float mostDepthOf(bool wide) { return wide ? kMostDepthWide : kMostDepth; }
+// 3.0.19-beta.24: the 3D view's sight (camera::sightNow, [view3d] distance) + kPastSight
+constexpr float kMostDepth = 4000.0f, kPastSight = 50.0f;
+inline float mostDepthOf(bool wide, float sight) { return wide ? sight + kPastSight : kMostDepth; }
 
 // A vertex of the own ground at its place in the map's file (the axes make it the world's) as the game would put it on
 // the screen - its colours and texture coordinates left; false behind the near plane

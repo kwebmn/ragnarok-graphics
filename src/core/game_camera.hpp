@@ -81,6 +81,10 @@ float fovNow();
 // 3.0.19-beta.10: the 3D view's camera now - a field of view wider than the game's own (the renderers' sky over it;
 // the grass, a screen pass for the game's distance, not)
 bool wideView();
+// 3.0.19-beta.24: the 3D view's sight ([view3d] distance; the game's own far plane kFar otherwise) - in the renderer's
+// process from the bridge's Camera message as the field of view; out of (kNear, kFar]: kFar
+void setSight(float units);
+float sightNow();
 // The renderer's fields SetSize (0x40d760) makes for a field of view: f0, f1 and the culling's slopes (+0 .. +0xc)
 struct SetSizeFields {
     float f0 = 0, f1 = 0, slopeH = 0, slopeV = 0;

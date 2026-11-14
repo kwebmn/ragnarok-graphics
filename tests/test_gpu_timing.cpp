@@ -2,6 +2,7 @@
 
 #include "core/effect_costs.hpp"
 #include "core/effect_groups.hpp"
+#include "core/game_camera.hpp"
 #include "core/gpu_timing.hpp"
 #include "core/live_config.hpp"
 #include "test.hpp"
@@ -146,4 +147,15 @@ TEST(gpu_timing_the_game_waits_for_each_frame_shown) {
     CHECK(waitsForEachShown(t, true) && waitsForEachShown(t, false));
     t.reflex = false;
     CHECK(waitsForEachShown(t, true));
+}
+
+// 3.0.19-beta.24: the 3D view's sight goes to the renderer with its field of view (the bridge's Camera message)
+TEST(camera_sight_kept_and_checked) {
+    CHECK(camera::sightNow() == camera::kFar);  // the game's own far plane until told
+    camera::setSight(1100.0f);
+    CHECK(camera::sightNow() == 1100.0f);
+    camera::setSight(-5.0f);
+    CHECK(camera::sightNow() == camera::kFar);
+    camera::setSight(99999.0f);
+    CHECK(camera::sightNow() == camera::kFar);
 }

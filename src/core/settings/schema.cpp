@@ -499,6 +499,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::View3dFovBehindHint, "°"},
         {"view3d", "mouse", Page::Game, Control::Slider, 25, 300, 25, {}, {}, Text::View3dMouse, Text::View3dMouseHint,
          " %"},
+        // 3.0.19-beta.24: how far the 3D view sees (the game culls its world there; the haze whole)
+        {"view3d", "distance", Page::Game, Control::Slider, 800, 1500, 100, {}, {}, Text::View3dDistance,
+         Text::View3dDistanceHint, ""},
         // 3.0.4-beta.6: the time left on the buff icons
         {"buffs", "timers", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::BuffTimers,
          Text::BuffTimersHint, ""},
@@ -1498,6 +1501,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "view3d.fov_first") return std::to_string(c.view3dFovFirst);       // 3.0.19-beta.10
     if (k == "view3d.fov_behind") return std::to_string(c.view3dFovBehind);
     if (k == "view3d.mouse") return std::to_string(c.view3dMouse);
+    if (k == "view3d.distance") return std::to_string(c.view3dDistance);
     if (k == "buffs.timers") return c.buffTimers ? "1" : "0";                   // 3.0.4-beta.6
     if (k.compare(0, 7, "notify.") == 0) {                   // 3.0.4-beta.3
         const NotifySettings& n = c.notify;
