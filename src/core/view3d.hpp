@@ -87,7 +87,8 @@ struct Aim {
 Aim aimAt(const std::vector<AimBox>& boxes, float cx, float cy, float reach, uint32_t locked, float lockedReach);
 // Tab: the next to lock after `current` - the monsters by how near the crosshair, round; `current` gone: the nearest;
 // none on the screen: 0
-uint32_t nextLock(const std::vector<AimBox>& boxes, float cx, float cy, uint32_t current);
+// 3.0.19-beta.34: `dir` below 0 the one before (the wheel from the eyes turned back)
+uint32_t nextLock(const std::vector<AimBox>& boxes, float cx, float cy, uint32_t current, int dir = 1);
 // The game's classes it names monsters (as mob_hp's): 1001-3999
 bool monsterClass(int cls);
 // 3.0.19-beta.31 (the testers: in the 3D view «на себе неможливо накласти бафи, аля хіл ітд, і неможливо скастувати на

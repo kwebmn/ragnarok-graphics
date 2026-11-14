@@ -130,6 +130,8 @@ struct State {
         int x = 0, y = 0;      // the game's pixels
         long dx = 0, dy = 0;   // DirectInput's counts since the last take
         unsigned polls = 0;    // polls handled while on: 0 - the view takes the cursor's own move instead
+        bool wheel = false;    // 3.0.19-beta.34: the wheel kept from the game too
+        long notches = 0;      // its counts since the last take
     } hold;
     bool lastFocused = false;
     int loggedSteps = 0;
@@ -1941,6 +1943,10 @@ void onMouseState(DWORD cb, LPVOID data) {
             s.hold.dx += st->lX;
             s.hold.dy += st->lY;
             ++s.hold.polls;
+            if (s.hold.wheel) {  // 3.0.19-beta.34: the 3D view's from the eyes, not the game's zoom
+                s.hold.notches += st->lZ;
+                st->lZ = 0;
+            }
             int hx = 0, hy = 0, hw = 0, hh = 0;
             if (s.mouseSupported && clientmouse::read(hx, hy, hw, hh)) {
                 st->lX = s.hold.x - hx;
@@ -2130,7 +2136,7 @@ void onClose(SOCKET sock) {
     });
 }
 
-void holdCursor(bool on, int x, int y) {
+void holdCursor(bool on, int x, int y, bool wheel) {
     State& s = S();
     if (on != s.hold.on) {
         LOG_INFO("mouse: %s", on ? "held for the 3D view - its moves turn the view, the game's cursor at the crosshair"
@@ -2141,6 +2147,20 @@ void holdCursor(bool on, int x, int y) {
     s.hold.on = on;
     s.hold.x = x;
     s.hold.y = y;
+    s.hold.wheel = on && wheel;
+    if (!s.hold.wheel) s.hold.notches = 0;
+}
+
+long takeWheel() {
+    State& s = S();
+    const long n = s.hold.notches;
+    s.hold.notches = 0;
+    return n;
+}
+
+void preferTarget(uint32_t id) {
+    State& s = S();
+    if (healthy() && s.session) s.session->control().preferTarget(id);
 }
 
 bool takeLook(long& dx, long& dy) {

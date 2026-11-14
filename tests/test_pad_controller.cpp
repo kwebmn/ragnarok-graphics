@@ -2331,3 +2331,25 @@ TEST(ctl_skill_wheel_picks_with_the_right_stick_and_uses_at_the_release) {
     CHECK(o.packets.empty());
     CHECK_EQ(Controller::wheelSlot(1, 7), 25);  // wheel 2: the third row's F8
 }
+
+// 3.0.19-beta.34 (the 3D view's concept: «1–9 — умения и предметы панели: по цели под прицелом или по захваченной»):
+// a key's attack or slot goes to the 3D view's target (its crosshair's, the one Tab locked) - not the nearest; one no
+// longer in the world, or none, as before
+TEST(ctl_key_action_goes_to_the_3d_views_target) {
+    Controller c(Config{});
+    WorldState w = world();
+    addMob(w, 110000001, Cell{102, 101});  // the nearest
+    addMob(w, 110000003, Cell{106, 100});  // under the crosshair
+    c.preferTarget(110000003);
+    c.keyAction(Action{Action::Kind::Attack});
+    PadState p = pad();
+    p.keyActs = true;
+    TickOutput o = c.tick(p, w, view(), 1000);
+    CHECK_EQ(c.target(), 110000003u);
+    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x0190);
+    Controller d(Config{});
+    d.preferTarget(110000099);  // gone: the nearest, as before
+    d.keyAction(Action{Action::Kind::Attack});
+    d.tick(p, w, view(), 1000);
+    CHECK_EQ(d.target(), 110000001u);
+}

@@ -118,14 +118,14 @@ Aim aimAt(const std::vector<AimBox>& boxes, float cx, float cy, float reach, uin
     return a;
 }
 
-uint32_t nextLock(const std::vector<AimBox>& boxes, float cx, float cy, uint32_t current) {
+uint32_t nextLock(const std::vector<AimBox>& boxes, float cx, float cy, uint32_t current, int dir) {
     std::vector<std::pair<std::pair<float, float>, uint32_t>> order;
     for (const AimBox& b : boxes)
         if (b.id && b.x1 > b.x0 && b.y1 > b.y0) order.push_back({{gapTo(b, cx, cy), centreGap(b, cx, cy)}, b.id});
     if (order.empty()) return 0;
     std::sort(order.begin(), order.end());
     for (size_t i = 0; i < order.size(); ++i)
-        if (order[i].second == current) return order[(i + 1) % order.size()].second;
+        if (order[i].second == current) return order[(i + (dir < 0 ? order.size() - 1 : 1)) % order.size()].second;
     return order[0].second;
 }
 

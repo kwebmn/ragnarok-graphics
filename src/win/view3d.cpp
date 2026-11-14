@@ -85,6 +85,7 @@ struct State {
     int modelPullsTold = 0;
     bool walkBefore = false;  // the walk mode as it was before the 3D view
     int castsTold = 0;        // 3.0.19-beta.31: castWaiting's lines
+    int wheelsTold = 0;       // 3.0.19-beta.34: the wheel's locks told
     bool centred = false;
     bool looking = false;
     bool clipped = false;
@@ -229,6 +230,7 @@ void release(State& s) {
     s.centred = false;
     s.parkedValid = false;
     uapad::runtime::holdCursor(false, 0, 0);
+    uapad::runtime::preferTarget(0);  // 3.0.19-beta.34
     int w = 0, h = 0;
     const HWND game = uaui::gameWindow();
     if (game && readGame(kGameW, &w, 4) && readGame(kGameH, &h, 4) && w > 0 && h > 0) park(game, s.putX, s.putY, w, h);
@@ -311,6 +313,19 @@ void mouse(State& s) {
     if (s.centred && (dx || dy)) view3d::turn(s.look, float(dx), float(dy), perUnit * s.mouseSpeed, s.sign);
     readAims(s);
     lockStep(s, float(cx), float(cy));
+    // 3.0.19-beta.34 (the concept: «Колесо: ... от первого лица: смена цели среди тех, что в прицеле»): from the eyes
+    // the wheel steps the lock - down the next one, up the one before
+    if (const long wheel = uapad::runtime::takeWheel(); wheel != 0 && s.mode == view3d::Mode::First) {
+        const uint32_t next = view3d::nextLock(s.aims, float(cx), float(cy), s.locked, wheel < 0 ? 1 : -1);
+        if (next != s.locked) {
+            s.locked = next;
+            s.lockSeen = GetTickCount();
+            if (s.wheelsTold < 10) {
+                ++s.wheelsTold;
+                LOG_INFO("3D view: the wheel - locked on %u (%zu monster(s) on the screen)", next, s.aims.size());
+            }
+        }
+    }
     const view3d::Aim a = view3d::aimAt(s.aims, float(cx), float(cy), kPullReach * float(h), s.locked,
                                         kLockReach * float(h));
     const int ax = int(std::lround(a.x)), ay = int(std::lround(a.y));
@@ -320,11 +335,12 @@ void mouse(State& s) {
                  a.id == s.locked ? " (the locked one)" : "", ax - cx, ay - cy);
     }
     s.aimed = a.id;
+    uapad::runtime::preferTarget(s.locked ? s.locked : s.aimed);  // 3.0.19-beta.34: the keys' attack and slots
     *x = ax;
     *y = ay;
     s.putX = ax;
     s.putY = ay;
-    uapad::runtime::holdCursor(true, ax, ay);
+    uapad::runtime::holdCursor(true, ax, ay, s.mode == view3d::Mode::First);
     s.parkedValid = park(game, cx, cy, w, h, &s.parked);
     s.centred = true;
 }

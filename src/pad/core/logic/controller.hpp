@@ -86,6 +86,10 @@ public:
     // monster (dir > 0) or the one before, nearest first, round again
     void keyAction(const Action& a) { keyActions_.push_back(a); }
     void keyCycle(int dir) { keyCycle_ += dir; }
+    // 3.0.19-beta.34 (the 3D view's concept: «1–9 ... по цели под прицелом или по захваченной»): the 3D view's target
+    // (its crosshair's, the one its Tab locked; 0 none) - a key's attack or slot takes it for the target first, while
+    // it is in the world
+    void preferTarget(uint32_t id) { preferred_ = id; }
 
     void setBindings(const Bindings& bindings);
     const Bindings& bindings() const { return bindings_; }
@@ -281,6 +285,7 @@ private:
     std::unordered_map<uint32_t, uint32_t> blacklist_;  // actor id -> blacklisted until (ms)
     std::vector<Action> keyActions_;  // 3.0.18-beta.209: the keys' actions waiting for the tick
     int keyCycle_ = 0;                // Tab (+) and Shift+Tab (-) pressed since the last tick
+    uint32_t preferred_ = 0;  // 3.0.19-beta.34: preferTarget
     bool keyFiring_ = false;          // a key's slot: no «whom?» choice (the D-pad's, not the keys')
     std::unordered_map<uint32_t, uint32_t> markedMs_;   // actor id -> when we last showed its "!"
     std::optional<Approach> approach_;

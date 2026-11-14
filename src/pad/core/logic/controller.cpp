@@ -143,6 +143,13 @@ void Controller::keyStep(const WorldState& world, uint32_t now, TickOutput& out)
     for (const Action& a : actions) {
         approach_.reset();  // a new press overrides walking up to something
         out.notes.push_back("key: " + actionToken(a));
+        // 3.0.19-beta.34: the 3D view's target first - its crosshair's or its lock, a monster still in the world
+        const auto preferred = world.actors().find(preferred_);
+        if ((a.kind == Action::Kind::Attack || a.kind == Action::Kind::Slot) && preferred_ != 0 &&
+            preferred != world.actors().end() && world.isMonster(preferred->second)) {
+            setTarget(preferred_, now, out);
+            picked_ = true;  // chosen: kept, as Tab's
+        }
         fire(a, false, world, now, out);
     }
     keyFiring_ = false;

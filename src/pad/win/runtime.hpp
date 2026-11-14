@@ -31,7 +31,13 @@ void onMouseState(DWORD cb, LPVOID data);
 // 3.0.19-beta.11 (R-ZQWGVD, the 3D view - win/view3d): while on, the game's cursor is held at (x, y) of the game's
 // screen at every poll of the mouse - its own moves (DirectInput's counts) kept for takeLook instead of moving the
 // cursor; off: the cursor follows the Windows one again (mouse freedom). On the game's thread.
-void holdCursor(bool on, int x, int y);
+// 3.0.19-beta.34: `wheel` - its wheel kept from the game too (the 3D view from the eyes steps its lock by it), for
+// takeWheel
+void holdCursor(bool on, int x, int y, bool wheel = false);
+long takeWheel();  // DirectInput's wheel counts kept since the last take
+// 3.0.19-beta.34 (the 3D view's concept: «1–9 ... по цели под прицелом или по захваченной»): the 3D view's target for
+// the keys' attack and slots (Controller::preferTarget); 0 none
+void preferTarget(uint32_t id);
 // The mouse's moves since the last take; false: no poll held yet (the runtime not on the mouse - the cursor's own move
 // is the view's then)
 bool takeLook(long& dx, long& dy);

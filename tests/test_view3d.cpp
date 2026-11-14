@@ -430,3 +430,13 @@ TEST(config_view3d_vault_on_by_default_and_live) {
     CHECK(!u.next.effects.caveVault);
     CHECK(!(parseConfig("").effects == parseConfig("[view3d]\nvault = 0\n").effects));  // the renderer told
 }
+
+// 3.0.19-beta.34 (the 3D view's concept: «Колесо: ... от первого лица: смена цели среди тех, что в прицеле»): the
+// wheel from the eyes steps the lock either way - the one before as the next one's way back, round
+TEST(view3d_lock_steps_back_too) {
+    const std::vector<view3d::AimBox> boxes = {{1, 300, 80, 340, 120}, {2, 90, 90, 110, 110}, {3, 140, 90, 160, 110}};
+    CHECK(view3d::nextLock(boxes, 100, 100, 2, -1) == 1);  // 2 the nearest, 3 next, 1 last: before 2 comes 1
+    CHECK(view3d::nextLock(boxes, 100, 100, 1, -1) == 3);
+    CHECK(view3d::nextLock(boxes, 100, 100, 0, -1) == 2);  // none locked: the nearest either way
+    CHECK(view3d::nextLock(boxes, 100, 100, 2, 1) == 3);   // as before
+}
