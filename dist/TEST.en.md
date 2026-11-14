@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.19-beta.36 — what's new · 2026-11-15
+
+- **The 3D view: the mouse no longer drifts sideways.** On a scaled monitor (175 %) the cursor put back at the window's middle stood a pixel aside, and that pixel was read as a mouse move every frame — the view turned slowly by itself. It is now measured from where the cursor really stands.
+- **The 3D view: no auto-aim.** The crosshair is no longer pulled onto monsters near it or onto the one Tab locked — it stays where the mouse puts it, and the target is the monster right under it. For the old way — the switch «Crosshair pull» on «Game», the section «3D view».
+- **The 3D view: the threat's arc.** When a monster out of sight (beside or behind) hits you, a red arc flashes at the screen's edge on that side and fades in a second and a half. The switch «Threat's arc» there too.
+
 # uaRO Graphics 3.0.19-beta.35 — what's new · 2026-11-15
 
 - **The 3D view: the minimap's view fan and the gamepad.** In the 3D view the fan on the minimap is as wide as what the screen shows (from the eyes and from behind — the field of view from the settings), not the narrow one of the game's camera. The gamepad's buttons — attack (A) and the bar's skills — strike the target under the crosshair or the locked one in the 3D view, as the keys do.
