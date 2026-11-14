@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.19-beta.39 — what's new · 2026-11-15
+
+- **The 3D view: HP bars no longer show through houses.** A monster's bar and name are no longer seen through a house, a castle's wall or a tree that hides it from the eyes.
+- **The 3D view: your own effects no longer stand in your eyes.** From the eyes the effects on the character itself — Kyrie Eleison's barrier, Assumptio, a monk's spheres, the shields — no longer cover the view; those farther from it (a ground skill's far side) stay.
+- **The 3D view: the character faces the camera's way.** Standing, the character turns where the camera looks (the game's 8 directions) — the other players see it too. The switch «Character faces the camera's way» is in Settings → Game → the 3D view.
+
 # uaRO Graphics 3.0.19-beta.38 — what's new · 2026-11-15
 
 - **The 3D view: the grass is seen now.** The blades in the 3D view were thin, low and the ground's own colour — lost on it. They are tufts of three now, taller, turned to the camera, dark at the roots and lighter, a little yellow, at the tips, and grow thicker.
