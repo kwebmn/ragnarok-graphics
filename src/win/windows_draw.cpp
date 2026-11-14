@@ -61,6 +61,7 @@
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
 #include "win/trade_window.hpp"
+#include "win/view3d.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -117,6 +118,26 @@ namespace {
 constexpr uint32_t kWindowsList = 0x38, kWindowShown = 0x38;
 constexpr size_t kMostWindows = 512;
 int g_gaugesTold = 0;
+
+// 3.0.19-beta.17 (R-9KRT3M, R-TNAYJF: the character left out by the 3D view, its HP/SP bar hanging in the air): the
+// character's own bar - the game mode's + 0x2E8 (FUN_005707d0 makes it; the others' are their actors' own) - held
+// at 0 through the draw while the 3D view leaves the character out
+constexpr uint32_t kModeNowAt = 0x74B57C, kModeOwnGauge = 0x2E8;
+int g_ownGaugeTold = 0;
+
+void holdOwnGauge(std::vector<std::pair<uint32_t, int32_t>>& held) {
+    const uint32_t mode = *reinterpret_cast<const uint32_t*>(uintptr_t(kModeNowAt));
+    uint32_t gauge = 0;
+    if (!mode || !readGame(mode + kModeOwnGauge, &gauge, 4) || !gauge) return;
+    int32_t shown = 0;
+    if (!readGame(gauge + 0x38, &shown, 4) || !shown) return;
+    held.emplace_back(gauge, shown);
+    *reinterpret_cast<int32_t*>(uintptr_t(gauge + 0x38)) = 0;
+    if (g_ownGaugeTold < 3) {
+        ++g_ownGaugeTold;
+        LOG_INFO("windows draw: the character's own HP/SP bar left out - the 3D view leaves the character out");
+    }
+}
 
 bool worldGauge(uint32_t window) {
     return worldwindows::worldWindow(*reinterpret_cast<const uint32_t*>(uintptr_t(window)));
@@ -217,6 +238,8 @@ void hideReplaced() {
 void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     mendWindowFields(manager, "before its windows' draw");  // 3.0.11-beta.194 (R-ZS5B2D): a freed one's name
     hideReplaced();
+    std::vector<std::pair<uint32_t, int32_t>> ownHeld;  // 3.0.19-beta.17
+    if (view3dwin::ownHidden()) holdOwnGauge(ownHeld);
     std::vector<std::pair<uint32_t, int32_t>> held, signs;
     holdSigns(manager, signs);  // 3.0.16-beta.7
     const size_t gauges = holdShown(manager, false, held);  // 3.0.11-beta.191: the bars under the characters first
@@ -237,6 +260,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     reinterpret_cast<DrawFn>(uintptr_t(kDraw))(manager);
     putBack(held);
     putBack(signs);
+    putBack(ownHeld);
 }
 
 // 3.0.11-beta.203 (the tester: «при логіні ... там залишились в старому стилі please wait вікна»): the login's modes

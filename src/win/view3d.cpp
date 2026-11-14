@@ -42,7 +42,7 @@ constexpr float kDegreesPerCount = 0.07f;  // the mouse: 1000 counts (about an i
 // came back in front, and they go with the mouse's DPI): the Windows cursor's own move turns the view (the player's
 // pointer speed), parked at the window's middle each frame; a frame's move past these taken for a jump and dropped
 constexpr float kDegreesPerPixel = 0.1f;
-constexpr long kMostPixels = 200, kMostCounts = 400;
+constexpr long kMostPixels = 1000, kMostCounts = 400;  // .17: 200 dropped a quick flick (R-9KRT3M: 143 a frame)
 // 3.0.19-beta.15 (R-W5K25A: in 15, 17, 5, 12, 5 of 78 within two seconds by Morocc's houses): the eye goes out again
 // only this long after it was last brought in; nearer than kOwnNear behind, the character's own picture left out
 constexpr DWORD kOutAfterMs = 500;
