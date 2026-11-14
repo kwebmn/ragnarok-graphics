@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.13 — what's new · 2026-11-14
+
+- **3D view: no slabs, no white blaze.** When part of a house was behind the camera, it stretched across the whole screen as a dark or striped slab. The card now cuts such triangles properly. From the eyes, looking down, your own level 99 aura no longer floods everything white; other players' auras stay.
+
 # uaRO Graphics 3.0.19-beta.12 — what's new · 2026-11-14
 
 - **3D view: the camera behind no longer goes into houses.** Before a house, a castle wall or a roof it comes nearer to the character at once, then moves back smoothly. Before, the camera ran into houses and a roof seen up close looked like a striped slab. Awnings over the street you stand under do not stop it.
