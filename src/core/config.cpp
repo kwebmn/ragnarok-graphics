@@ -937,6 +937,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.view3dThreat);
         } else if (key == "view3d.aim_pull") {  // 3.0.19-beta.36
             setBool(val, c.view3dAimPull);
+        } else if (key == "view3d.face") {  // 3.0.19-beta.39
+            setBool(val, c.view3dFace);
         } else if (key == "view3d.distance") {  // 3.0.19-beta.24
             int n = 0;
             if (toInt(val, -100000, 100000, n)) c.view3dDistance = std::clamp(n, 800, 1500);

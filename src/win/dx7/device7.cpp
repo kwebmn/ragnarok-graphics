@@ -459,6 +459,23 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
             return D3D_OK;
         }
     }
+    // 3.0.19-beta.39 (the owner's «делаем все по порядку»): from the eyes the effects on the character - Kyrie's
+    // barrier, Assumptio, a monk's spheres - left out where they stand at the eyes (core view3d::effectAtTheEyes),
+    // anyone's in the 3D view right at them; those farther off (a ground skill's far side) kept
+    if ((tag.kind == effect_exe::Kind::Skill || tag.kind == effect_exe::Kind::Aura) && win::view3dwin::active() &&
+        (fvf & D3DFVF_POSITION_MASK) == D3DFVF_XYZRHW) {
+        uint32_t own = 0;
+        const bool onOwn = tag.owner && win::view3dwin::ownHidden() && win::readGame(kOwnAccount, &own, 4) &&
+                           own == tag.owner;
+        if (view3d::effectAtTheEyes(vertices, vertexCount, FrameRecord::stride(fvf), onOwn)) {
+            if (!eyeEffectTold_[onOwn]) {
+                eyeEffectTold_[onOwn] = true;
+                LOG_INFO("3D view: %s effect %u left out at the eyes", onOwn ? "the character's own" : "an",
+                         unsigned(tag.id));
+            }
+            return D3D_OK;
+        }
+    }
     cmd.effect = uint8_t(tag.kind);
     cmd.effectSeed = tag.seed;
     cmd.effectId = tag.id;  // 2.7.21: Ruwach's orbs light by it

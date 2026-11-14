@@ -501,3 +501,72 @@ TEST(view3d_ground_hides_what_is_behind_a_hill) {
     const auto atItsFeet = [](float, float z) { return z > 97 ? -10.0f : 0.0f; };  // right at it: its own ground
     CHECK(view3d::groundLetsSee(eye, monster, atItsFeet));
 }
+
+// 3.0.19-beta.39 (the owner's «делаем все по порядку»: the HP bars hidden behind the map's models too - a house, a
+// castle's wall): whether a model's box stands between the eye and a place - the way going into its core (kHideShare of
+// its half sizes) from outside, the place itself out of it (under a tree's crown, inside a house's box: not hidden)
+TEST(view3d_model_box_hides_what_is_behind_it) {
+    view3d::Box house;
+    house.centre[0] = 0, house.centre[1] = -10, house.centre[2] = 50;
+    house.half[0] = 10, house.half[1] = 10, house.half[2] = 10;
+    const float eye[3] = {0, -14, 0};
+    const float behind[3] = {0, -8, 100}, before[3] = {0, -8, 30}, inside[3] = {0, -8, 50};
+    CHECK(view3d::boxHides(house, eye, behind));
+    CHECK(!view3d::boxHides(house, eye, before));
+    CHECK(!view3d::boxHides(house, eye, inside));
+    const float beside[3] = {25, -8, 100};  // the way passes its side
+    CHECK(!view3d::boxHides(house, eye, beside));
+    const float eyeInside[3] = {0, -12, 50};  // the eye in it (a camera under a tree): nothing hidden by it
+    CHECK(!view3d::boxHides(house, eyeInside, behind));
+}
+
+// 3.0.19-beta.39 (the owner's «делаем все по порядку»: from the eyes the character's own effects - Kyrie's barrier,
+// Assumptio, the spheres round it - stood in the camera): an effect's draw at the eyes (its vertices' mean depth from
+// them, 1 / rhw) left out - one of the character's nearer than kOwnEffectNear, anyone's nearer than kAnyEffectNear
+TEST(view3d_effects_at_the_eyes_left_out) {
+    struct V { float x, y, z, rhw; };
+    const V barrier[4] = {
+        {0, 0, 0.1f, 1 / 6.0f}, {1, 0, 0.1f, 1 / 8.0f}, {0, 1, 0.1f, 1 / 7.0f}, {1, 1, 0.1f, 1 / 9.0f}};
+    const V bolt[4] = {
+        {0, 0, 0.5f, 1 / 60.0f}, {1, 0, 0.5f, 1 / 61.0f}, {0, 1, 0.5f, 1 / 62.0f}, {1, 1, 0.5f, 1 / 63.0f}};
+    CHECK(view3d::effectAtTheEyes(barrier, 4, sizeof(V), true));    // the character's, 7.5 away: out
+    CHECK(!view3d::effectAtTheEyes(barrier, 4, sizeof(V), false));  // another's at 7.5: kept
+    CHECK(!view3d::effectAtTheEyes(bolt, 4, sizeof(V), true));      // flying off, 61 away: kept
+    const V face[3] = {{0, 0, 0.0f, 1 / 2.0f}, {1, 0, 0.0f, 1 / 3.0f}, {0, 1, 0.0f, 1 / 4.0f}};
+    CHECK(view3d::effectAtTheEyes(face, 3, sizeof(V), false));  // anyone's at the very eyes: out
+    const V behind[3] = {{0, 0, 0, -1.0f}, {1, 0, 0, -1.0f}, {0, 1, 0, -1.0f}};
+    CHECK(!view3d::effectAtTheEyes(behind, 3, sizeof(V), true));  // no depth known: kept
+}
+
+// 3.0.19-beta.39 (the owner's «делаем все по порядку»: the character standing turned where the camera looks): the
+// game's facing (actor + 0x38, degrees: 0 south, 90 east, 180 north - uaRO.exe's /bangbang, FUN_00567900) for the
+// view's flat way, the nearest of the server's 8 directions (((int)angle + 180) / 45 & 7: 0 north, 2 west, 6 east);
+// kept while the way is within kFaceKeep of the facing
+TEST(view3d_character_faces_the_view) {
+    view3d::Facing f;
+    CHECK(view3d::faceToward(0.0f, 1.0f, 0.0f, f) && f.angle == 180.0f && f.dir == 0);    // north
+    CHECK(view3d::faceToward(1.0f, 0.0f, 180.0f, f) && f.angle == 90.0f && f.dir == 6);   // east
+    CHECK(view3d::faceToward(-1.0f, 0.0f, 180.0f, f) && f.angle == 270.0f && f.dir == 2); // west
+    CHECK(view3d::faceToward(0.0f, -1.0f, 180.0f, f) && f.angle == 0.0f && f.dir == 4);   // south
+    CHECK(view3d::faceToward(-0.7071f, 0.7071f, 0.0f, f) && f.angle == 225.0f && f.dir == 1);  // north-west
+    const float k = 205.0f * 3.14159265f / 180.0f;  // 25 off north: within kFaceKeep, kept
+    CHECK(!view3d::faceToward(std::sin(k), -std::cos(k), 180.0f, f));
+    const float a = 215.0f * 3.14159265f / 180.0f;  // 35 off north: the next step (225)
+    CHECK(view3d::faceToward(std::sin(a), -std::cos(a), 180.0f, f) && f.angle == 225.0f && f.dir == 1);
+    CHECK(!view3d::faceToward(std::sin(a), -std::cos(a), 225.0f, f));  // already that way
+    const float w = 10.0f * 3.14159265f / 180.0f;  // over the round: 10 degrees against 350
+    CHECK(!view3d::faceToward(std::sin(w), -std::cos(w), 350.0f, f));
+    CHECK(!view3d::faceToward(0.0f, 0.0f, 0.0f, f));  // no way
+    CHECK(view3d::serverDir(180.0f) == 0 && view3d::serverDir(90.0f) == 6 && view3d::serverDir(315.0f) == 3);
+}
+
+// 3.0.19-beta.39: [view3d] face - standing, the character turned where the camera looks; on unless the file says 0
+TEST(config_view3d_face_on_by_default) {
+    CHECK(parseConfig("").view3dFace);
+    CHECK(!parseConfig("[view3d]\nface = 0\n").view3dFace);
+    const settings::IniSetting* row = settings::findSetting("view3d.face");
+    CHECK(row != nullptr);
+    if (row) CHECK(row->page == settings::Page::Game && settings::tokenOf(*row, parseConfig("")) == "1");
+    CHECK(appliesNow("view3d.face"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[view3d]\nface = 0\n")).next.view3dFace);
+}

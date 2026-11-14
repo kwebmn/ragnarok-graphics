@@ -98,6 +98,7 @@ private:
                        DWORD vertexCount, const WORD* indices, DWORD indexCount);
     bool overPortalTold_ = false;  // 3.0.13-beta.15: [effects] aura_portals - where the portals were drawn
     bool ownAuraTold_ = false;     // 3.0.19-beta.13: the character's own aura left out from the eyes (the 3D view)
+    bool eyeEffectTold_[2] = {};   // 3.0.19-beta.39: an effect left out at the eyes (anyone's, the character's own)
     // 3.0.19-beta.18 (R-57KBSF): the 3D view's actors' sprites with their depth nearer (core view3d::spriteDepth)
     std::vector<uint8_t> upright_;
     bool uprightTold_ = false;

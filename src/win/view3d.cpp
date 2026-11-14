@@ -14,6 +14,7 @@
 #include "win/chat_window.hpp"
 #include "win/code_detour.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/uaui.hpp"
 #include "win/walk_mode.hpp"
@@ -95,6 +96,19 @@ struct State {
     float eyeNow[3] = {0, 0, 0};  // the eye of the last frame (the free camera starts there)
     bool eyeKnown = false;
     DWORD flewAt = 0;
+    // 3.0.19-beta.39: the world (its models' tree) of the last frame, and each actor's models' answer of late
+    uint32_t worldNow = 0;
+    struct Sight {
+        DWORD at = 0;
+        bool seen = true;
+    };
+    std::unordered_map<uint32_t, Sight> sights;
+    DWORD sightsSwept = 0;
+    // 3.0.19-beta.39: standing, the character turned where the camera looks (faceTheView) - its place of the last
+    // frame, when it last fought (attacked, cast, was hit) and when it was turned
+    float stoodAt[3] = {0, 0, 0};
+    DWORD foughtAt = 0, facedAt = 0;
+    int facesTold = 0;
     bool viewKnown = false;
     bool centred = false;
     bool looking = false;
@@ -553,6 +567,7 @@ void __attribute__((thiscall)) build(uint32_t view) {
     *at(view, kTiltTo) = kHeldTilt;
     s.wroteTilt = kHeldTilt;
     original(view);
+    if (!readGame(view + kViewWorld, &s.worldNow, 4)) s.worldNow = 0;  // 3.0.19-beta.39: its models for seenActor
     float m[12];
     std::memcpy(m, at(view, kView), sizeof m);
     float flat[3];
@@ -700,6 +715,50 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     return true;
 }
 
+// 3.0.19-beta.39 (the owner's «делаем все по порядку»): standing, the character turned where the camera looks (core
+// view3d::faceToward) - its facing (actor + 0x38) put as the game's /bangbang puts it, the server told by the game
+// mode's message 0x98 (the direction, the head straight: FUN_00567900). Only while it stands where it stood a frame
+// before in its standing or ready pose (its action - actor + 0x24 - of kind 0 or 4, the act's 8 sides a kind) and
+// kFaceAfterMs past its last attack, cast or hit (a fight turns it to its target), at most each kFaceEveryMs; never
+// with the free camera, nor off the game's thread
+void faceTheView(State& s, bool on) {
+    constexpr uint32_t kModeClass = 0x69F388, kAction = 0x24, kFacing = 0x38, kPlace = 4;
+    constexpr DWORD kFaceEveryMs = 250, kFaceAfterMs = 2000;
+    constexpr int kTurnMsg = 0x98;
+    using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, int msg, int a, int b, int c);
+    if (!on || s.mode == view3d::Mode::Off || s.free || !s.viewKnown) return;
+    const HWND game = uaui::gameWindow();
+    if (!game || GetWindowThreadProcessId(game, nullptr) != GetCurrentThreadId()) return;
+    const uint32_t player = playerNow();
+    uint32_t action = 0;
+    float facing = 0, place[3] = {0, 0, 0};
+    if (!player || !readGame(player + kAction, &action, 4) || !readGame(player + kFacing, &facing, 4) ||
+        !readGame(player + kPlace, place, sizeof place))
+        return;
+    const DWORD now = GetTickCount();
+    const uint32_t kind = action / 8;
+    if (kind == 5 || kind == 6 || (kind >= 10 && kind <= 12)) s.foughtAt = now;  // attacks, a hit, a cast
+    const bool still = place[0] == s.stoodAt[0] && place[1] == s.stoodAt[1] && place[2] == s.stoodAt[2];
+    std::memcpy(s.stoodAt, place, sizeof place);
+    if (!still || (kind != 0 && kind != 4) || now - s.foughtAt < kFaceAfterMs || now - s.facedAt < kFaceEveryMs)
+        return;
+    float right[2], forward[2];
+    view3d::Facing f;
+    if (!viewAxes(right, forward) || !view3d::faceToward(forward[0], forward[1], facing, f)) return;
+    const uint32_t mode = readGameMode();
+    uint32_t vtable = 0, fn = 0;
+    if (!mode || !readGame(mode, &vtable, 4) || vtable != kModeClass || !readGame(vtable + 0x14, &fn, 4) ||
+        fn < 0x401000 || fn >= 0x6A0000 || !writeGame(player + kFacing, &f.angle, 4))
+        return;
+    s.facedAt = now;
+    reinterpret_cast<ModeMsgFn>(uintptr_t(fn))(mode, kTurnMsg, f.dir, 0, 0);
+    if (s.facesTold < 6) {
+        ++s.facesTold;
+        LOG_INFO("3D view: the character turned where the camera looks - %.0f degrees (it faced %.0f), the server's "
+                 "direction %d", double(f.angle), double(facing), f.dir);
+    }
+}
+
 void frame(const Config& config) {
     State& s = g_state;
     s.fovFirst = config.view3dFovFirst;
@@ -732,6 +791,7 @@ void frame(const Config& config) {
         ClipCursor(nullptr);
         s.clipped = false;
     }
+    faceTheView(s, config.view3dFace);  // 3.0.19-beta.39
 }
 
 bool active() { return g_state.mode != view3d::Mode::Off; }
@@ -742,12 +802,32 @@ bool fromTheEyes() { return g_state.mode == view3d::Mode::First; }
 
 bool ownHidden() { return ownHiddenNow(); }
 
-bool seen(const float to[3]) {
-    const State& s = g_state;
+bool seenActor(uint32_t id, const float to[3]) {
+    State& s = g_state;
     if (s.mode == view3d::Mode::Off || !s.eyeKnown) return true;
     const uint32_t ground = groundNow();
-    if (!ground) return true;
-    return view3d::groundLetsSee(s.eyeNow, to, [ground](float x, float z) { return groundY(ground, x, z); });
+    if (ground && !view3d::groundLetsSee(s.eyeNow, to, [ground](float x, float z) { return groundY(ground, x, z); }))
+        return false;
+    if (!s.worldNow) return true;
+    // 3.0.19-beta.39: the models on the way (the behind camera's tree walk), each actor's answer kept kSightEveryMs
+    constexpr DWORD kSightEveryMs = 200, kSightForgetMs = 5000;
+    const DWORD now = GetTickCount();
+    if (now - s.sightsSwept > kSightForgetMs) {
+        s.sightsSwept = now;
+        for (auto it = s.sights.begin(); it != s.sights.end();)
+            it = now - it->second.at > kSightForgetMs ? s.sights.erase(it) : std::next(it);
+    }
+    State::Sight& sight = s.sights[id];
+    if (sight.at == 0 || now - sight.at >= kSightEveryMs) {
+        sight.at = now;
+        std::vector<view3d::Box> boxes;
+        std::vector<uint32_t> looked;
+        int budget = 800;
+        boxesOnTheWay(s.worldNow + kWorldTree, 0, to, s.eyeNow, boxes, looked, budget);
+        sight.seen = std::none_of(boxes.begin(), boxes.end(),
+                                  [&](const view3d::Box& b) { return view3d::boxHides(b, s.eyeNow, to); });
+    }
+    return sight.seen;
 }
 
 bool viewAxes(float right[2], float forward[2]) {

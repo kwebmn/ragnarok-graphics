@@ -135,6 +135,34 @@ void flyStep(float eye[3], const float f[3], const float right[3], int ahead, in
 constexpr float kSightStep = 3.0f, kSightEnds = 4.0f, kSightMargin = 0.5f;
 bool groundLetsSee(const float eye[3], const float to[3], const std::function<float(float x, float z)>& groundY);
 
+// 3.0.19-beta.39 (the owner's «делаем все по порядку»: the HP bars hidden behind the map's models too - a house, a
+// castle's wall, a tree): whether a model's box stands between the eye and `to` - the way going into its core
+// (kHideShare of its half sizes: a tree's crown's rim lets the eye through) from outside it, and neither the eye nor
+// `to` inside the box (under a tree's crown, in a house's box: not hidden by it)
+constexpr float kHideShare = 0.8f;
+bool boxHides(const Box& b, const float eye[3], const float to[3]);
+
+// 3.0.19-beta.39 (the owner's «делаем все по порядку»: from the eyes the character's own effects - Kyrie's barrier,
+// Assumptio, a monk's spheres, the shields - stood in the camera, a picture over the view): whether an effect's draw
+// (TL vertices, `stride` bytes each, x y z rhw first) is at the eyes - its vertices' mean depth (1 / rhw, world
+// units) nearer than kOwnEffectNear for one on the character itself (`own`), than kAnyEffectNear for anyone's; a draw
+// with no depth known (no rhw over 0) is not
+constexpr float kOwnEffectNear = 14.0f, kAnyEffectNear = 4.0f;
+bool effectAtTheEyes(const void* vertices, uint32_t count, size_t stride, bool own);
+
+// 3.0.19-beta.39 (the owner's «делаем все по порядку»: standing, the character turned where the camera looks - the
+// others see it too): the game's facing of an actor (+0x38, degrees: 0 south, 90 east, 180 north) and the server's
+// direction of it (uaRO.exe's /bangbang, FUN_00567900: ((int)angle + 180) / 45 & 7 - 0 north, 2 west, 6 east, sent
+// by the game mode's message 0x98); for the view's flat way (east, north) its nearest of the 8, none while the way is
+// within kFaceKeep of `current` (past the half step a margin: the camera turning does not flap it)
+constexpr float kFaceKeep = 30.0f;
+struct Facing {
+    float angle = 0.0f;
+    int dir = 0;
+};
+int serverDir(float angle);
+bool faceToward(float east, float north, float current, Facing& out);
+
 // The game's LookAt (0x409540: right = up x forward, then forward x right; 4 x 3 for row vectors, the last row the
 // move) and its inverse (0x409860)
 void lookAt(const float eye[3], const float at[3], const float up[3], float out[12]);

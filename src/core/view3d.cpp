@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 #include "core/game_camera.hpp"
 
@@ -170,6 +171,14 @@ bool spanIn(const Box& b, const float from[3], const float to[3], float& t0, flo
 }
 }  // namespace
 
+bool boxHides(const Box& b, const float eye[3], const float to[3]) {
+    float t0 = 0, t1 = 0;
+    if (!spanIn(b, eye, to, t0, t1) || t0 <= 0.0f || t1 >= 1.0f) return false;  // missed, or an end in it
+    Box core = b;
+    for (float& h : core.half) h *= kHideShare;
+    return spanIn(core, eye, to, t0, t1) && t0 > 0.0f && t1 < 1.0f;
+}
+
 float entersAt(const Box& b, const float from[3], const float to[3]) {
     float t0 = 0, t1 = 0;
     if (!spanIn(b, from, to, t0, t1) || t0 <= 0.0f) return -1.0f;
@@ -223,6 +232,40 @@ float spriteDepth(float z, float rhw) {
     const float viewZ = 1.0f / rhw;
     const float v = std::max(viewZ - std::min(kSpriteNearer * viewZ, kSpriteNearerMost), camera::kNear);
     return std::max(0.0f, camera::kFar / (camera::kFar - camera::kNear) * (1.0f - camera::kNear / v));
+}
+
+bool effectAtTheEyes(const void* vertices, uint32_t count, size_t stride, bool own) {
+    if (!vertices || stride < 4 * sizeof(float)) return false;
+    const auto* p = static_cast<const uint8_t*>(vertices);
+    double sum = 0;
+    uint32_t known = 0;
+    for (uint32_t i = 0; i < count; ++i) {
+        float rhw = 0;
+        std::memcpy(&rhw, p + i * stride + 3 * sizeof(float), sizeof rhw);
+        if (rhw > 0.0f && std::isfinite(rhw)) sum += 1.0 / rhw, ++known;
+    }
+    if (!known) return false;
+    return float(sum / known) < (own ? kOwnEffectNear : kAnyEffectNear);
+}
+
+int serverDir(float angle) { return ((int(angle) + 180) / 45) & 7; }
+
+bool faceToward(float east, float north, float current, Facing& out) {
+    if (!(std::hypot(east, north) > 1e-3f) || !std::isfinite(current)) return false;
+    float a = std::atan2(east, -north) / kRad;
+    if (a < 0.0f) a += 360.0f;
+    float off = std::fmod(a - current, 360.0f);
+    if (off > 180.0f) off -= 360.0f;
+    if (off < -180.0f) off += 360.0f;
+    if (std::fabs(off) <= kFaceKeep) return false;
+    float step = std::round(a / 45.0f) * 45.0f;
+    if (step >= 360.0f) step -= 360.0f;
+    float from = std::fmod(step - current, 360.0f);
+    if (from < 0.0f) from += 360.0f;
+    if (from < 0.5f || from > 359.5f) return false;  // that way already
+    out.angle = step;
+    out.dir = serverDir(step);
+    return true;
 }
 
 bool groundLetsSee(const float eye[3], const float to[3], const std::function<float(float x, float z)>& groundY) {

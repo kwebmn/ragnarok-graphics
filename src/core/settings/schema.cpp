@@ -514,6 +514,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.19-beta.36 (the owner: «автонаводка на мобов раздражает»): the crosshair's pull, off
         {"view3d", "aim_pull", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dAimPull,
          Text::View3dAimPullHint, ""},
+        // 3.0.19-beta.39 (the owner's «делаем все по порядку»): standing, the character turned where the camera looks
+        {"view3d", "face", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dFace, Text::View3dFaceHint,
+         ""},
         // 3.0.4-beta.6: the time left on the buff icons
         {"buffs", "timers", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::BuffTimers,
          Text::BuffTimersHint, ""},
@@ -1516,6 +1519,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "view3d.distance") return std::to_string(c.view3dDistance);
     if (k == "view3d.threat") return c.view3dThreat ? "1" : "0";  // 3.0.19-beta.36
     if (k == "view3d.aim_pull") return c.view3dAimPull ? "1" : "0";
+    if (k == "view3d.face") return c.view3dFace ? "1" : "0";  // 3.0.19-beta.39
     if (k == "buffs.timers") return c.buffTimers ? "1" : "0";                   // 3.0.4-beta.6
     if (k.compare(0, 7, "notify.") == 0) {                   // 3.0.4-beta.3
         const NotifySettings& n = c.notify;

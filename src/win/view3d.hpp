@@ -31,7 +31,8 @@ bool castWaiting(bool shift);
 // wrote last; false off the 3D view
 bool viewAxes(float right[2], float forward[2]);
 // 3.0.19-beta.38 (R-S3NQBF: the monsters' HP bars over the hills hiding them): whether the ground lets the 3D view's
-// eye see a place of the world (core view3d::groundLetsSee by the game's own heights); true off the 3D view
-bool seen(const float to[3]);
+// eye see an actor's place (core view3d::groundLetsSee by the game's own heights); 3.0.19-beta.39 and the map's models
+// (a house, a castle's wall, a tree: view3d::boxHides), their answer kept a moment for each actor; true off the view
+bool seenActor(uint32_t id, const float to[3]);
 
 }  // namespace uagfx::win::view3dwin

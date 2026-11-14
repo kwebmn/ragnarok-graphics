@@ -8891,6 +8891,15 @@ constexpr Entry kTexts[] = {
      "його ставить миша: ціль — монстр саме під ним.",
      "В 3D-режиме прицел притягивается к монстру рядом и к захваченному Tab. Выключено — прицел стоит там, куда его "
      "ставит мышь: цель — монстр прямо под ним."},
+    {Text::View3dFace, "Character faces the camera's way", "Персонаж дивиться за камерою",
+     "Персонаж смотрит за камерой"},  // 3.0.19-beta.39
+    {Text::View3dFaceHint,
+     "In the 3D view, while standing, the character turns where the camera looks (the game's 8 directions) - the "
+     "other players see it too. Off: it keeps the way it stopped facing.",
+     "У 3D-режимі, коли персонаж стоїть, він повертається туди, куди дивиться камера (8 напрямків гри), — це бачать "
+     "і інші гравці. Вимкнено — дивиться туди, куди дивився, коли зупинився.",
+     "В 3D-режиме, когда персонаж стоит, он поворачивается туда, куда смотрит камера (8 направлений игры), — это "
+     "видят и другие игроки. Выключено — смотрит туда, куда смотрел, когда остановился."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

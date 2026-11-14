@@ -815,6 +815,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("3D view crosshair pull", flag(running.view3dAimPull), flag(file.view3dAimPull)));
         n.view3dAimPull = file.view3dAimPull;
     }
+    if (file.view3dFace != running.view3dFace) {  // 3.0.19-beta.39
+        u.applied.push_back(change("3D view character facing the camera", flag(running.view3dFace),
+                                   flag(file.view3dFace)));
+        n.view3dFace = file.view3dFace;
+    }
     if (file.cameraRemember != running.cameraRemember) {  // 3.0.11-beta.184
         u.applied.push_back(change("camera remember", flag(running.cameraRemember), flag(file.cameraRemember)));
         n.cameraRemember = file.cameraRemember;

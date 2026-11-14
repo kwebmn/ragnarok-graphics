@@ -252,7 +252,7 @@ static void frameInner(HWND game, MobHp mode, double k, int targetWidth, int tar
         // its head out of the eye's sight behind the ground - no bar
         if (place != s.places.end() && view3dwin::active()) {
             const float head[3] = {place->second[0], place->second[1] - 12.0f, place->second[2]};  // y down
-            if (!view3dwin::seen(head)) continue;
+            if (!view3dwin::seenActor(m.id, head)) continue;
         }
         own_ground::Tl2 feet{};
         mobhp::Bar b;
