@@ -536,4 +536,6 @@ bool active() { return g_state.mode != view3d::Mode::Off; }
 
 bool looking() { return g_state.mode != view3d::Mode::Off && g_state.looking; }
 
+bool fromTheEyes() { return g_state.mode == view3d::Mode::First; }
+
 }  // namespace uagfx::win::view3dwin

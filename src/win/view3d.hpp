@@ -20,5 +20,6 @@ bool key(UINT m, WPARAM wp, LPARAM lp);  // Ctrl+Shift+V; true: ours (the game s
 void frame(const Config& config);
 bool active();                           // the 3D view on
 bool looking();                          // and the mouse turns it (not Alt): the crosshair in the cursor's place
+bool fromTheEyes();                      // 3.0.19-beta.13: the view from the character's eyes
 
 }  // namespace uagfx::win::view3dwin

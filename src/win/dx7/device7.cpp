@@ -21,6 +21,7 @@
 #include "win/dx7/surface7.hpp"
 #include "win/effect_hook.hpp"
 #include "win/game_camera.hpp"
+#include "win/view3d.hpp"
 #include "win/ground_marks.hpp"
 #include "win/ground_way.hpp"
 #include "win/log.hpp"
@@ -37,6 +38,9 @@
 #include "win/wings.hpp"
 
 namespace uagfx::dx7 {
+
+// 3.0.19-beta.13: the character's own id (uaRO.exe's session, as death_recap_watch reads it)
+constexpr uint32_t kOwnAccount = 0x771F7C;
 namespace {
 
 uint32_t multiplied(uint32_t a, uint32_t b) {  // two ARGB colours channel by channel
@@ -435,6 +439,18 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // 0.63: /aura at once - the game reads it only as an aura is made (a map entered): its ring and bubbles go the
     // moment it is off; the circles stay, as the game shows them.
     if (tag.auraExtra && c.enhanced() && win::auraOff()) return D3D_OK;
+    // 3.0.19-beta.13 (R-T3R3PX: from the eyes looking down, the character's own level 99 aura a white blaze over the
+    // view): the character's own aura left out from the eyes, the others' kept
+    if (tag.kind == effect_exe::Kind::Aura && tag.owner && win::view3dwin::fromTheEyes()) {
+        uint32_t own = 0;
+        if (win::readGame(kOwnAccount, &own, 4) && own == tag.owner) {
+            if (!ownAuraTold_) {
+                ownAuraTold_ = true;
+                LOG_INFO("3D view: the character's own level 99 aura left out from the eyes");
+            }
+            return D3D_OK;
+        }
+    }
     cmd.effect = uint8_t(tag.kind);
     cmd.effectSeed = tag.seed;
     cmd.effectId = tag.id;  // 2.7.21: Ruwach's orbs light by it

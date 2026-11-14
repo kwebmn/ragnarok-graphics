@@ -54,7 +54,9 @@ void __attribute__((thiscall)) primRender(uint32_t prim, void* matrix) {
         tag.seed = uint8_t((prim >> 4) * 2654435761u >> 24);  // the primitive's own
         tag.id = id > 0 && id < 65536 ? uint16_t(id) : 0;      // 2.7.21
         tag.raised = *reinterpret_cast<const float*>(uintptr_t(prim) + effect_exe::kPrimLift) < -1.0f;  // 2.7.27
-        if (tag.kind == Kind::Skill) tag.owner = ownerOf(master);  // 3.0.13-beta.20
+        // 3.0.13-beta.20; 3.0.19-beta.13: the level 99 aura's too (the 3D view leaves the character's own out from
+        // the eyes)
+        if (tag.kind == Kind::Skill || tag.kind == Kind::Aura) tag.owner = ownerOf(master);
     }
     g_current = tag;
     reinterpret_cast<RenderFn>(g_render)(prim, matrix);
@@ -67,7 +69,8 @@ void __attribute__((thiscall)) effectRender(uint32_t effect, void* matrix) {
     const int id = *reinterpret_cast<const int*>(uintptr_t(effect) + effect_exe::kEffectId);
     g_current = Tag{effect_exe::kindOf(id), uint8_t((effect >> 4) * 2654435761u >> 24), effect_exe::auraExtra(id),
                     id > 0 && id < 65536 ? uint16_t(id) : uint16_t(0)};  // 2.7.21: its number too
-    if (g_current.kind == Kind::Skill) g_current.owner = ownerOf(effect);  // 3.0.13-beta.20
+    if (g_current.kind == Kind::Skill || g_current.kind == Kind::Aura)
+        g_current.owner = ownerOf(effect);  // 3.0.13-beta.20; 3.0.19-beta.13: the aura's
     reinterpret_cast<RenderFn>(g_effect)(effect, matrix);
     g_current = before;
 }

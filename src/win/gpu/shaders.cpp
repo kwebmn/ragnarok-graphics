@@ -90,7 +90,9 @@ struct PsIn {
 // game's size: a game x lands at x * scale + 0.5 (stage 3 spec §4; at scale 1 that is calibration.md §3).
 PsIn draw_vs(VsIn i) {
     PsIn o;
-    float w = i.pos.w > 0.0 ? 1.0 / i.pos.w : 1.0;
+    // 3.0.19-beta.13 (R-R3DHTC, the 3D view: a model's corner behind the camera drew a slab across the screen): a
+    // vertex behind the camera (its RHW below 0) taken as it is too - the card then cuts the triangle at the near plane
+    float w = abs(i.pos.w) > 1e-7 ? 1.0 / i.pos.w : 1.0;
     float gx = i.pos.x;
     // 0.64: the leaves the wind sways (core/foliage.cpp's sway) - a world draw of leaves: twinX the swing (game
     // pixels), twinY the draw's bottom, twinW its height, twinH the time; the top swings, the trunk stays.
@@ -1085,7 +1087,7 @@ WaterIn water_vs(VsIn i) {
     o.pos = d.pos;
     o.diffuse = i.diffuse;
     o.uv = i.uv0;
-    float z = i.pos.w > 0.0 ? 1.0 / i.pos.w : nearZ;
+    float z = abs(i.pos.w) > 1e-7 ? 1.0 / i.pos.w : nearZ;  // 3.0.19-beta.13: behind the camera too (draw_vs)
     o.view = float3((i.pos.x - cx) * z / f0, (i.pos.y - cy) * z / f1, z);
     o.world = o.view.x * float3(r0, r1, r2) + o.view.y * float3(r3, r4, r5) + o.view.z * float3(r6, r7, r8) +
               float3(r9, r10, r11);
