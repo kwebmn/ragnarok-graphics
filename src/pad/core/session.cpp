@@ -1,6 +1,7 @@
 #include "pad/core/session.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <cstdio>
 
 #include "pad/core/proto/c2s.hpp"
@@ -79,6 +80,7 @@ void Session::feedUp(Conn& c, const uint8_t* data, size_t n, uint32_t nowMs) {
     for (const Bytes& p : packets) {
         if (auto account = parseWantToConnection(p)) {
             world_.reset(*account);
+            skills_.setSelf(*account);  // 3.0.19-beta.19
             charId_ = parseWantToConnectionCharId(p).value_or(0);
             auto known = profiles_.characters.find(charId_);
             charName_ = known == profiles_.characters.end() ? std::string() : known->second.name;
@@ -101,9 +103,38 @@ void Session::feedUp(Conn& c, const uint8_t* data, size_t n, uint32_t nowMs) {
             controller_.onClientWalk(*dest, world_, nowMs);
         } else if (p.size() >= 2 && (rd16(p.data(), 0) == 0x0072 || rd16(p.data(), 0) == 0x0113)) {
             controller_.onClientSkill(nowMs);  // useskilltoid / useskilltopos
+            if (rd16(p.data(), 0) == 0x0072 && p.size() >= 25) noteSkillAsked(p, nowMs);  // 3.0.19-beta.19
             if (auto g = parseGroundSkill(p); g && groundAsked_.size() < 8) groundAsked_.push_back(*g);
         }
     }
+}
+
+// 3.0.19-beta.19 (the testers: Asura from afar walked up but was never used): the client's 0x0072 - <lv>.W at 6,
+// <skill>.W at 10, <target>.L at 21 - how far apart we are by the server's walks, the skill's range from its list
+void Session::noteSkillAsked(const Bytes& p, uint32_t nowMs) {
+    const uint16_t lv = rd16(p.data(), 6), skill = rd16(p.data(), 10);
+    const uint32_t target = rd32(p.data(), 21);
+    int cells = -1;
+    if (const auto at = world_.actorPos(target, nowMs)) {
+        const Cell me = world_.selfPos(nowMs);
+        cells = std::max(std::abs(at->x - me.x), std::abs(at->y - me.y));
+    }
+    const auto info = world_.skill(skill);
+    const auto line = skills_.asked(skill, info ? info->name : std::string(), lv, target, cells, info ? info->range : 0,
+                                    nowMs);
+    if (line) log_.push_back(*line);
+}
+
+// The server's other answers to it: a cast begun (0x013e <src>.L at 2, <skill>.W at 14), a skill without damage
+// (0x011a <skill>.W at 2, <src>.L at 10), a refusal (0x0110 <skill>.W at 2, <cause>.B at 9)
+void Session::noteSkillAnswer(const Bytes& p, uint32_t nowMs) {
+    if (p.size() < 10) return;
+    std::optional<std::string> line;
+    const uint16_t id = rd16(p.data(), 0);
+    if (id == 0x013e && p.size() >= 24) line = skills_.castBegun(rd16(p.data(), 14), rd32(p.data(), 2), nowMs);
+    if (id == 0x011a && p.size() >= 15) line = skills_.used(rd16(p.data(), 2), rd32(p.data(), 10), nowMs);
+    if (id == 0x0110) line = skills_.refused(rd16(p.data(), 2), p[9], nowMs);
+    if (line) log_.push_back(*line);
 }
 
 void Session::onServerData(SocketId s, const uint8_t* data, size_t n, uint32_t nowMs) {
@@ -116,6 +147,7 @@ void Session::onServerData(SocketId s, const uint8_t* data, size_t n, uint32_t n
         log_.push_back("server stream out of sync at " + hex16(it->second.down->badId()) + "; pad requests are off");
     }
     for (const Bytes& p : packets) {
+        noteSkillAnswer(p, nowMs);  // 3.0.19-beta.19
         auto ev = parseS2C(p);
         if (!ev) continue;
         if (const auto* walk = std::get_if<EvSelfWalk>(&*ev); walk && justStoppedWalking(nowMs))
@@ -132,7 +164,16 @@ void Session::onServerData(SocketId s, const uint8_t* data, size_t n, uint32_t n
             auto it = profiles_.characters.find(charId_);
             if (it != profiles_.characters.end()) it->second.name = charName_;
         }
+        if (const auto* sp = std::get_if<EvSelfSpeed>(&*ev); sp && sp->speed != speedSeen_ && speedTold_ < 40) {
+            ++speedTold_;  // 3.0.19-beta.19 (Bloody Axe «не усоряеться»): the server's walking speed for us
+            log_.push_back("walking speed " + std::to_string(sp->speed) + " ms a cell" +
+                           (speedSeen_ ? " (was " + std::to_string(speedSeen_) + ")" : std::string()) +
+                           ", the server's");
+            speedSeen_ = sp->speed;
+        }
         world_.apply(*ev, nowMs);
+        if (const auto* hit = std::get_if<EvSkillHit>(&*ev))  // 3.0.19-beta.19: the asked skill used
+            if (auto l = skills_.used(hit->skill, hit->src, nowMs)) log_.push_back(*l);
         if (std::holds_alternative<EvAuthOk>(*ev) || std::holds_alternative<EvMapChange>(*ev)) {
             controller_.onMapLoaded();
             marked_ = 0;  // a new map: the client knows nobody yet
@@ -181,6 +222,7 @@ bool Session::justStoppedWalking(uint32_t nowMs) const {
 }
 
 TickOutput Session::tick(const PadState& pad, const ViewInfo& view, uint32_t nowMs) {
+    if (auto l = skills_.tick(nowMs)) log_.push_back(*l);  // 3.0.19-beta.19: no answer to a skill asked
     TickOutput out = controller_.tick(pad, world_, view, nowMs);
     if (padWalking_ && !controller_.walking()) walkStopMs_ = nowMs;
     padWalking_ = controller_.walking();

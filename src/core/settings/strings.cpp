@@ -6025,17 +6025,24 @@ constexpr Entry kTexts[] = {
      "Собственный ИИ, кладётся в папку игры AI\\USER_AI (никогда поверх другого ИИ): ходит за вами, защищает, "
      "лечит. Включите «Свой ИИ гомункула (/hoai)» и «Свой ИИ наёмника (/merai)», чтобы игра его брала."},
     {Text::InterfaceHomunAggressive, "AI: attacks by itself", "ШІ: нападає сам", "ИИ: нападает сам"},
-    {Text::InterfaceHomunAggressiveHint, "It attacks monsters near you without waiting for them to attack.",
-     "Нападає на монстрів поруч із вами, не чекаючи, поки вони нападуть.",
-     "Нападает на монстров рядом с вами, не дожидаясь, пока они нападут."},
+    {Text::InterfaceHomunAggressiveHint,  // 3.0.19-beta.19: within 5 cells, while you stand
+     "It attacks monsters within 5 cells of you without waiting for them to attack - not while you walk; past 7 "
+     "cells from you it comes back.",
+     "Нападає на монстрів за 5 клітинок від вас, не чекаючи, поки вони нападуть, — не тоді, коли ви йдете; далі "
+     "7 клітинок від вас повертається.",
+     "Нападает на монстров в 5 клетках от вас, не дожидаясь, пока они нападут, — не когда вы идёте; дальше 7 "
+     "клеток от вас возвращается."},
     {Text::InterfaceHomunDefend, "AI: defends you", "ШІ: захищає вас", "ИИ: защищает вас"},
     {Text::InterfaceHomunDefendHint, "It attacks monsters that attack you or it.",
      "Нападає на монстрів, що нападають на вас чи на нього.", "Нападает на монстров, атакующих вас или его."},
     {Text::InterfaceHomunSkills, "AI: uses skills", "ШІ: використовує навички", "ИИ: использует навыки"},
-    {Text::InterfaceHomunSkillsHint,
-     "Lif heals you under half HP; Filir and Vanilmirth open a fight with their skill (level 1).",
-     "Lif лікує вас, коли HP менше половини; Filir і Vanilmirth починають бій своєю навичкою (рівень 1).",
-     "Lif лечит вас, когда HP меньше половины; Filir и Vanilmirth начинают бой своим навыком (уровень 1)."},
+    {Text::InterfaceHomunSkillsHint,  // 3.0.19-beta.19: Filir and Vanilmirth under half their own HP
+     "Lif heals you under half HP; Filir and Vanilmirth hit with blows and strike with their skill under half "
+     "their own HP (level 1).",
+     "Lif лікує вас, коли HP менше половини; Filir і Vanilmirth б'ють звичайно, а навичкою — коли їхнє HP "
+     "менше половини (рівень 1).",
+     "Lif лечит вас, когда HP меньше половины; Filir и Vanilmirth бьют обычно, а навыком — когда их HP "
+     "меньше половины (уровень 1)."},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

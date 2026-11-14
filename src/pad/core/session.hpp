@@ -13,6 +13,7 @@
 #include "pad/core/config/bindings.hpp"
 #include "pad/core/config/config.hpp"
 #include "pad/core/logic/controller.hpp"
+#include "pad/core/logic/skill_watch.hpp"
 #include "pad/core/proto/framer.hpp"
 #include "pad/core/world/world.hpp"
 
@@ -96,6 +97,8 @@ private:
     // Sight / Ruwach / Poison: the client draws the effect on the target; the one before gets its state back.
     void updatePersistentMark(uint32_t nowMs);
     bool justStoppedWalking(uint32_t nowMs) const;
+    void noteSkillAsked(const Bytes& p, uint32_t nowMs);   // 3.0.19-beta.19 (SkillWatch)
+    void noteSkillAnswer(const Bytes& p, uint32_t nowMs);
 
     WorldState world_;
     Controller controller_;
@@ -104,6 +107,9 @@ private:
     uint32_t marked_ = 0;   // the monster the client draws our persistent mark on
     bool remark_ = false;   // the server redrew it (or the style changed): send the mark again
     int hpTold_ = 0;        // 3.0.11-beta.86: monsters' HP lines told the log (the live check)
+    SkillWatch skills_;     // 3.0.19-beta.19: a skill asked on a target and the server's answer, in the log
+    int speedTold_ = 0;     // 3.0.19-beta.19: the server's walking speed changes told the log
+    uint16_t speedSeen_ = 0;
     bool padWalking_ = false;
     std::optional<uint32_t> walkStopMs_;  // the stick walk ended: what follows is logged for a moment
     std::optional<std::array<ClientBarSlot, kClientBarSlots>> loggedBar_;

@@ -5,6 +5,7 @@
 #include "pad/core/proto/packet_tables.hpp"
 #include "pad/core/config/bindings.hpp"
 #include "pad/core/session.hpp"
+#include "pad/core/logic/skill_watch.hpp"
 #include "test.hpp"
 
 using namespace uapad;
@@ -697,4 +698,57 @@ TEST(session_hands_the_clients_walk_request_once) {
     CHECK(w.has_value());
     if (w) CHECK(w->x == 104 && w->y == 98);
     CHECK(!s.takeWalkAsked().has_value());  // once
+}
+
+// 3.0.19-beta.19 (the testers: «с далека то він просто підходить і касту нема»): a skill the client asks for on a
+// target goes to the log with how far apart by the server's walks, then the server's answer or its silence
+TEST(session_logs_a_skill_asked_on_a_target_and_the_answer) {
+    Session s{Config{}};
+    connect(s);
+    s.takeLog();
+    const Bytes ask = buildSkillToId(271, 5, 110000001);  // Asura on the Poring two cells off
+    s.onClientSent(kMap, ask.data(), ask.size(), 100);
+    const auto logged = [&s](const char* part) {
+        bool found = false;
+        for (const std::string& line : s.takeLog()) found = found || line.find(part) != std::string::npos;
+        return found;
+    };
+    CHECK(logged("skill 271 lv 5 on 110000001 - 2 cells apart"));
+    s.tick(PadState{}, kView, 100 + SkillWatch::kWaitMs + 10);
+    CHECK(logged("no answer from the server"));
+    s.onClientSent(kMap, ask.data(), ask.size(), 5000);
+    s.takeLog();
+    Bytes hit(33, 0);  // 0x01de: <skill>.W <src>.L <dst>.L ...
+    wr16(hit, 0, 0x01de);
+    wr16(hit, 2, 271);
+    wr32(hit, 4, kSelf);
+    wr32(hit, 8, 110000001);
+    s.onServerData(kMap, hit.data(), hit.size(), 5100);
+    CHECK(logged("the server used it in 100 ms"));
+}
+
+// 3.0.19-beta.19 (the testers: «на ходу зміню сетап а він не усоряеться» - Bloody Axe): the server's walking speed
+// for us (0x00b0 SP_SPEED) in the log as it changes - the next report shows whether the server sped us up
+TEST(session_logs_our_walking_speed_as_the_server_changes_it) {
+    Session s{Config{}};
+    connect(s);
+    s.takeLog();
+    const auto speed = [&s](uint32_t ms, uint32_t now) {
+        Bytes b(8, 0);
+        wr16(b, 0, 0x00b0);
+        wr16(b, 2, 0);  // SP_SPEED
+        wr32(b, 4, ms);
+        s.onServerData(kMap, b.data(), b.size(), now);
+    };
+    const auto logged = [&s](const char* part) {
+        bool found = false;
+        for (const std::string& line : s.takeLog()) found = found || line.find(part) != std::string::npos;
+        return found;
+    };
+    speed(150, 10);
+    CHECK(logged("walking speed 150 ms a cell"));
+    speed(150, 20);
+    CHECK(!logged("walking speed"));  // the same: not again
+    speed(112, 30);
+    CHECK(logged("walking speed 112 ms a cell (was 150)"));
 }
