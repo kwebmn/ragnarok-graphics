@@ -155,6 +155,33 @@ bool Channel::send(Msg type, const void* data, size_t size, DWORD ms) {
     return ok;
 }
 
+bool Channel::sendIn(Msg type, uint32_t size, void (*fill)(uint8_t*, void*), void* context, DWORD ms) {
+    if (!view_ || size > out_.maxChunk()) return false;
+    const ULONGLONG start = GetTickCount64();
+    bool ok = true;
+    EnterCriticalSection(&sendLock_);
+    uint8_t* room = nullptr;
+    while (!(room = out_.reserve(uint32_t(type), size, 0, size))) {  // as send() waits
+        if (peerGone() || (ms != INFINITE && GetTickCount64() - start >= ms)) {
+            ok = false;
+            break;
+        }
+        if (whileWaiting_ && !inWhileWaiting_) {
+            inWhileWaiting_ = true;
+            whileWaiting_(waitingContext_);
+            inWhileWaiting_ = false;
+        }
+        wait(spaceOut_, whileWaiting_ ? 5 : 50);
+    }
+    if (ok) {
+        fill(room, context);
+        out_.commit();
+        SetEvent(dataOut_);
+    }
+    LeaveCriticalSection(&sendLock_);
+    return ok;
+}
+
 bool Channel::trySend(Msg type, const std::vector<uint8_t>& payload) {
     if (!view_ || payload.size() > out_.maxChunk()) return false;
     // Never waits, not even for the lock: the main thread may be inside a long send (0.10 review 10).

@@ -565,17 +565,43 @@ void Remote::execute(const FrameRecord& record) {
     if (lost_ || record.empty()) return;
     LARGE_INTEGER a, b;
     QueryPerformanceCounter(&a);
-    buffer_.clear();
-    WireWriter w(buffer_);
-    bridge::writeRecord(w, record);
-    if (recordFile_ != INVALID_HANDLE_VALUE) {  // 3.0.17-beta.8: what the recorded frame carries
-        uint64_t uploads = 0, writes = 0;
-        for (const UploadCmd& u : record.uploads()) uploads += uint64_t(u.rect.width()) * uint64_t(u.rect.height()) * 4;
-        for (const WriteTargetCmd& t : record.writes())
-            writes += uint64_t(t.rect.width()) * uint64_t(t.rect.height()) * 4;
-        record_.noteFrame(uploads, writes, record.vertexBytes().size());
+    // 3.0.19-beta.29 (R-63EH75: in the 3D view the game's thread copied a frame's megabytes into buffer_, then into
+    // the ring - its copies 14 %): written straight into the ring when it fits one chunk (core/bridge_wire putRecord,
+    // the same bytes); a larger one, or a scene being recorded, by buffer_ as before
+    const size_t bytes = bridge::recordBytes(record);
+    if (recordFile_ == INVALID_HANDLE_VALUE && bytes <= channel_.maxChunk()) {
+        struct Fill {
+            const FrameRecord* record;
+            size_t bytes;
+            bool exact;
+        } f{&record, bytes, false};
+        const auto put = [](uint8_t* room, void* context) {
+            auto* f = static_cast<Fill*>(context);
+            f->exact = bridge::putRecord(room, *f->record) == room + f->bytes;
+        };
+        if (!channel_.sendIn(Msg::Execute, uint32_t(bytes), put, &f))
+            setLost(who_ + " is gone");
+        else if (!f.exact)
+            setLost("the bridge: a frame's record not of the size it was measured at");  // never: tests/test_bridge
+        if (!directTold_) {
+            directTold_ = true;
+            LOG_INFO("bridge: the frames' records written straight into the shared memory (%.2f MB the first)",
+                     double(bytes) / (1024.0 * 1024.0));
+        }
+    } else {
+        buffer_.clear();
+        WireWriter w(buffer_);
+        bridge::writeRecord(w, record);
+        if (recordFile_ != INVALID_HANDLE_VALUE) {  // 3.0.17-beta.8: what the recorded frame carries
+            uint64_t uploads = 0, writes = 0;
+            for (const UploadCmd& u : record.uploads())
+                uploads += uint64_t(u.rect.width()) * uint64_t(u.rect.height()) * 4;
+            for (const WriteTargetCmd& t : record.writes())
+                writes += uint64_t(t.rect.width()) * uint64_t(t.rect.height()) * 4;
+            record_.noteFrame(uploads, writes, record.vertexBytes().size());
+        }
+        send(Msg::Execute, buffer_);
     }
-    send(Msg::Execute, buffer_);
     QueryPerformanceCounter(&b);
     sendTicks_ += b.QuadPart - a.QuadPart;  // 2.1.1
     sendTotal_ += b.QuadPart - a.QuadPart;

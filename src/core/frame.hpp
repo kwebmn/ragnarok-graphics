@@ -94,6 +94,10 @@ struct WriteTargetCmd {  // CPU pixels written into the render target (Unlock af
 
 struct Command {
     Cmd type;
+    // 3.0.19-beta.29 (R-63EH75: firstInterface and interfaceDraw 1.6 % of the game's thread in the 3D view, thousands
+    // of draws looked up to their states several times a frame): a draw of the interface's (its DrawSetup::ui), as it
+    // was recorded - in the padding, the command's 8 bytes as before
+    bool ui = false;
     uint32_t index;  // into the vector of that type
 };
 

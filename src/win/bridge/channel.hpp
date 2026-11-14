@@ -36,6 +36,13 @@ public:
     bool send(Msg type, const void* data, size_t size, DWORD ms = INFINITE);
     bool send(Msg type, const std::vector<uint8_t>& payload) { return send(type, payload.data(), payload.size()); }
     bool send(Msg type) { return send(type, nullptr, 0); }
+    // 3.0.19-beta.29 (R-63EH75: in the 3D view the game's thread copied a frame's megabytes into a message, then the
+    // message into the ring): a message of `size` bytes written by fill(room, context) straight into the ring - one
+    // chunk, so up to maxChunk() bytes; waits for room as send() does. False when it is larger (send() it then), the
+    // peer is gone or `ms` passed - fill not called then.
+    bool sendIn(Msg type, uint32_t size, void (*fill)(uint8_t* room, void* context), void* context,
+                DWORD ms = INFINITE);
+    uint32_t maxChunk() const { return out_.maxChunk(); }
     // A small message only if it fits now: false, and nothing sent, when the ring is full (log lines never wait).
     bool trySend(Msg type, const std::vector<uint8_t>& payload);
     // Called while send() waits for room: the driver reads what the renderer sends meanwhile, so that neither waits

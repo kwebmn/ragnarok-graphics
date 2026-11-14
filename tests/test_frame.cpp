@@ -406,3 +406,26 @@ TEST(frame_finds_the_interface) {
     f.moveLastBefore(1, f.firstInterface());
     CHECK(!f.states()[f.draws()[f.commands()[2].index].state].ui && f.firstInterface() == 3);
 }
+
+// 3.0.19-beta.29 (R-63EH75: firstInterface and interfaceDraw 1.6 % of the game's thread in the 3D view - thousands of
+// draws looked through, each to its state, several times a frame): a draw's command knows it is the interface's
+TEST(frame_a_draw_command_knows_it_is_the_interfaces) {
+    FrameRecord f;
+    uint8_t v[4 * 32] = {};
+    DrawSetup world, ui;
+    ui.ui = true;
+    DrawCmd d;
+    d.primitive = d3d7::PT_TRIANGLESTRIP;
+    d.fvf = d3d7::FVF_TL1;
+    d.state = f.addState(world);
+    f.draw(d, v, 4, nullptr, 0);
+    d.state = f.addState(ui);
+    f.draw(d, v, 4, nullptr, 0);
+    f.clear(ClearCmd{d3d7::CLEAR_TARGET, 0xFF000000, 1.0f, Rect{0, 0, 4, 4}});
+    CHECK(!f.commands()[0].ui && f.commands()[1].ui && !f.commands()[2].ui);
+    CHECK_EQ(f.firstInterface(), size_t(1));
+    std::vector<Command> tail = f.takeRange(1, 3);  // carried along as they go
+    CHECK(tail.size() == 2 && tail[0].ui && !tail[1].ui);
+    f.putBack(tail);
+    CHECK_EQ(f.firstInterface(), size_t(1));
+}

@@ -109,3 +109,23 @@ TEST(profile_tallies_our_own_functions_with_what_they_call) {
                                 "+0x3000c0 14.3%") != std::string::npos;
     CHECK(found);
 }
+
+// 3.0.19-beta.29 (R-63EH75: our quarter of the game's thread in the 3D view spread thin over its 64-byte places): our
+// module's samples by the function they are in, alone - none of the Windows code it called
+TEST(profile_tallies_our_own_functions_by_their_own_time) {
+    profile::Tally t;
+    t.setModules({{"uaRO.exe", 0x400000, 0x300000},
+                  {"DDRAW.dll", 0x6a000000, 0x400000},
+                  {"msvcrt.dll", 0x75000000, 0x100000}},
+                 0, 1);
+    t.setOwnFunctions({{0x12000, 0x400}, {0x13000, 0x2000}});
+    for (int k = 0; k < 3; ++k) t.add({0x6a012345, 0x4170a5, "", -1, 0x6a012345});  // in the first one
+    t.add({0x6a013010, 0x4170a5, "", -1, 0x6a013010});                              // in the second
+    for (int k = 0; k < 2; ++k) t.add({0x75001234, 0x4170a5, "memcpy from DDRAW.dll", -1, 0x6a014000});
+    t.add({0x6a3000f0, 0, "", -1, 0x6a3000f0});  // in none of them: its 64-byte place
+    bool found = false;
+    for (const std::string& l : t.report(10.0))
+        found = found || l.find("DDRAW.dll's functions by their own time - +0x012000 42.9%, +0x013000 14.3%, "
+                                "+0x3000c0 14.3%") != std::string::npos;
+    CHECK(found);
+}

@@ -98,6 +98,7 @@ private:
     bool upscales_ = false;
     GpuTiming timing_;
     bool lost_ = false;
+    bool directTold_ = false;  // 3.0.19-beta.29: the records written straight into the ring, told once
     bool needSurface_ = false;  // the renderer could not make a swap chain for the game's window
     EffectSettings effects_;  // as last sent
     bool effectsSent_ = false;

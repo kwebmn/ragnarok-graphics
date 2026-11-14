@@ -236,3 +236,95 @@ TEST(bridge_a_big_block_appended_whole) {
     CHECK(std::equal(big.begin(), big.end(), out.begin() + 2));
     CHECK(out[100002] == 7 && out[100003] == 0);
 }
+
+// 3.0.19-beta.29 (R-63EH75: in the 3D view the game's thread copied a frame's megabytes into a message, then the
+// message into the shared ring - its copies 14 %): the record put straight into room of its size, the same bytes
+TEST(bridge_a_record_put_in_place_is_the_same_bytes) {
+    const FrameRecord busy = busyRecord();
+    CHECK_EQ(recordBytes(busy), size_t(12698));
+    std::vector<uint8_t> room(recordBytes(busy));
+    CHECK(putRecord(room.data(), busy) == room.data() + room.size());
+    CHECK_EQ(fnv(room), uint64_t(0x432f44fc9b030f0eull));  // as written field by field (above)
+    const FrameRecord kinds[2] = {FrameRecord{}, sampleRecord()};
+    for (const FrameRecord& r : kinds) {
+        std::vector<uint8_t> in(recordBytes(r));
+        CHECK(putRecord(in.data(), r) == in.data() + in.size());
+        CHECK(in == bytesOf(r));
+    }
+}
+
+// The interface's draws known again in a record read from its bytes (Command::ui, as the driver's record has them)
+TEST(bridge_a_record_read_back_knows_its_interface) {
+    const FrameRecord busy = busyRecord();
+    const std::vector<uint8_t> bytes = bytesOf(busy);
+    FrameRecord back;
+    WireReader rd(bytes.data(), bytes.size());
+    CHECK(readRecord(rd, back));
+    CHECK_EQ(back.firstInterface(), busy.firstInterface());
+    CHECK_EQ(back.firstInterface(), size_t(2));  // sampleRecord's draw after its clear and viewport
+    CHECK(back.commands()[2].ui && !back.commands()[3].ui);
+}
+
+namespace {
+
+// A ring over plain memory as the shared block lays it out: 256 bytes of chunks, at most 112 bytes a chunk
+struct TestRing {
+    alignas(16) uint8_t area[sizeof(RingHeader) + 256] = {};
+    Ring ring{area, sizeof area};
+    TestRing() { ring.init(); }
+};
+
+}  // namespace
+
+// 3.0.19-beta.29 (R-63EH75): room for a chunk filled in place - seen by the reader once committed, as tryWrite's
+TEST(bridge_ring_reserved_room_is_seen_once_committed) {
+    TestRing t;
+    CHECK_EQ(t.ring.maxChunk(), 112u);
+    uint8_t* room = t.ring.reserve(7, 20, 0, 20);
+    CHECK(room != nullptr);
+    if (!room) return;
+    for (int i = 0; i < 20; ++i) room[i] = uint8_t(i + 1);
+    ChunkHeader h{};
+    const uint8_t* data = nullptr;
+    CHECK(!t.ring.peek(h, data));  // not before the commit
+    t.ring.commit();
+    CHECK(t.ring.peek(h, data));
+    CHECK(h.type == 7 && h.size == 20 && h.total == 20 && h.offset == 0);
+    CHECK(data == room && data[0] == 1 && data[19] == 20);
+    t.ring.consume();
+    CHECK(!t.ring.peek(h, data));
+    CHECK(t.ring.reserve(7, 113, 0, 113) == nullptr);  // past maxChunk
+}
+
+TEST(bridge_ring_reserved_room_goes_to_the_start_past_the_end) {
+    TestRing t;
+    const uint8_t a[100] = {};
+    CHECK(t.ring.tryWrite(1, 100, 0, a, 100));  // 16 + 100 -> 128 bytes: 0-127
+    CHECK(t.ring.tryWrite(2, 80, 0, a, 80));    // 96 bytes: 128-223, 32 left at the end
+    ChunkHeader h{};
+    const uint8_t* data = nullptr;
+    CHECK(t.ring.peek(h, data) && h.type == 1);
+    t.ring.consume();  // 0-127 free again
+    uint8_t* room = t.ring.reserve(3, 60, 0, 60);  // 80 bytes: not in the 32 at the end - at the start, past padding
+    CHECK(room == t.area + sizeof(RingHeader) + sizeof(ChunkHeader));
+    if (!room) return;
+    std::memset(room, 0xAB, 60);
+    t.ring.commit();
+    CHECK(t.ring.peek(h, data) && h.type == 2);
+    t.ring.consume();
+    CHECK(t.ring.peek(h, data) && h.type == 3 && h.size == 60);  // the padding passed over
+    CHECK(data == room && data[0] == 0xAB && data[59] == 0xAB);
+}
+
+TEST(bridge_ring_reserve_refuses_without_room) {
+    TestRing t;
+    const uint8_t a[112] = {};
+    CHECK(t.ring.tryWrite(1, 112, 0, a, 112));
+    CHECK(t.ring.tryWrite(2, 112, 0, a, 112));  // full: 2 x 128
+    CHECK(t.ring.reserve(3, 1, 0, 1) == nullptr);
+    ChunkHeader h{};
+    const uint8_t* data = nullptr;
+    CHECK(t.ring.peek(h, data) && h.type == 1 && h.size == 112);  // what was there untouched
+    t.ring.consume();
+    CHECK(t.ring.reserve(3, 1, 0, 1) != nullptr);  // room again
+}

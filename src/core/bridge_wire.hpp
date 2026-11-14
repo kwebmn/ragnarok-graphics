@@ -83,6 +83,11 @@ private:
 };
 
 void writeRecord(WireWriter& w, const FrameRecord& r);
+// 3.0.19-beta.29 (R-63EH75: in the 3D view the game's thread copied a frame's megabytes into a message, then the
+// message into the shared ring - its copies 14 %): the bytes writeRecord writes, and the record put straight into
+// room of that size (the ring's, Channel::sendIn) - the same bytes; the place after them
+size_t recordBytes(const FrameRecord& r);
+uint8_t* putRecord(uint8_t* p, const FrameRecord& r);
 // False for bytes that are not a whole, consistent record (an index or offset out of its range); r is empty then.
 bool readRecord(WireReader& rd, FrameRecord& r);
 

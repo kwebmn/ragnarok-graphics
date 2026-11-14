@@ -35,6 +35,11 @@ public:
 
     // Writes one chunk; false when there is no room now (the reader has not caught up) or size > maxChunk().
     bool tryWrite(uint32_t type, uint32_t total, uint32_t offset, const void* data, uint32_t size);
+    // 3.0.19-beta.29 (R-63EH75): room for one chunk's `size` bytes in place, filled by the caller before commit() -
+    // tryWrite without its copy; null when there is no room now or size > maxChunk(). The reader sees it only once
+    // committed; a reserve not committed is left for the next one.
+    uint8_t* reserve(uint32_t type, uint32_t total, uint32_t offset, uint32_t size);
+    void commit();
     // The next chunk in place, or false when there is none; consume() frees it.
     bool peek(ChunkHeader& h, const uint8_t*& data);
     void consume();
@@ -43,6 +48,8 @@ private:
     RingHeader* h_ = nullptr;
     uint8_t* data_ = nullptr;
     uint32_t cap_ = 0;
+    uint32_t reservedEnd_ = 0;  // the write position commit() makes known
+    bool reserved_ = false;
 };
 
 // Puts chunks together: feed() each one in order; complete() when the last chunk of a message has come.

@@ -90,6 +90,7 @@ private:
     std::map<uint32_t, size_t> inSelf_;        // 2.5.5: 64-byte spans of the driver's own module, from its base
     std::vector<pe::Function> ownFunctions_;   // 3.0.6-beta.3
     std::map<uint32_t, size_t> ownTotals_;     // by the function's start (else its 64-byte span), from its base
+    std::map<uint32_t, size_t> ownSelf_;       // 3.0.19-beta.29: the samples in it alone, keyed as ownTotals_
     std::map<int, size_t> bySteps_;            // 3.0.2-beta.12: -1 under none
     size_t stepped_ = 0;                       // the samples under a step
 };

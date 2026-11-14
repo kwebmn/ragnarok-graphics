@@ -21,12 +21,12 @@ uint32_t FrameRecord::addState(const DrawSetup& s) {
 void FrameRecord::clear(const ClearCmd& c) {
     ++work_;
     clears_.push_back(c);
-    commands_.push_back({Cmd::Clear, uint32_t(clears_.size() - 1)});
+    commands_.push_back({Cmd::Clear, false, uint32_t(clears_.size() - 1)});
 }
 
 void FrameRecord::viewport(const ViewportCmd& v) {
     viewports_.push_back(v);
-    commands_.push_back({Cmd::Viewport, uint32_t(viewports_.size() - 1)});
+    commands_.push_back({Cmd::Viewport, false, uint32_t(viewports_.size() - 1)});
 }
 
 void FrameRecord::draw(DrawCmd cmd, const void* vertices, uint32_t vertexCount, const uint16_t* indices,
@@ -41,7 +41,7 @@ void FrameRecord::draw(DrawCmd cmd, const void* vertices, uint32_t vertexCount, 
     cmd.indexCount = indices ? indexCount : 0;
     if (indices) indices_.insert(indices_.end(), indices, indices + indexCount);
     draws_.push_back(cmd);
-    commands_.push_back({Cmd::Draw, uint32_t(draws_.size() - 1)});
+    commands_.push_back({Cmd::Draw, cmd.state < states_.size() && states_[cmd.state].ui, uint32_t(draws_.size() - 1)});
 }
 
 uint32_t FrameRecord::addPixels(const uint32_t* argb, size_t count) {
@@ -68,7 +68,7 @@ void FrameRecord::upload(uint32_t texture, uint32_t level, const Rect& rect, con
         s.own = i < own.size() && !own[i].empty() && own[i].size() == area ? addPixels(own[i].data(), area) + 1 : 0;
     }
     uploads_.push_back(u);
-    commands_.push_back({Cmd::Upload, uint32_t(uploads_.size() - 1)});
+    commands_.push_back({Cmd::Upload, false, uint32_t(uploads_.size() - 1)});
 }
 
 void FrameRecord::uploadOwn(uint32_t texture, uint32_t level, const Rect& rect, const uint32_t* argb,
@@ -83,7 +83,7 @@ void FrameRecord::writeTarget(const Rect& rect, const uint32_t* argb) {
     w.rect = rect;
     w.pixels = addPixels(argb, size_t(rect.width()) * size_t(rect.height()));
     writes_.push_back(w);
-    commands_.push_back({Cmd::WriteTarget, uint32_t(writes_.size() - 1)});
+    commands_.push_back({Cmd::WriteTarget, false, uint32_t(writes_.size() - 1)});
 }
 
 void FrameRecord::moveLastBefore(size_t count, size_t position) {
@@ -108,13 +108,13 @@ size_t FrameRecord::dropInterface() {
 
 size_t FrameRecord::firstInterface() const {
     for (size_t i = 0; i < commands_.size(); ++i)
-        if (commands_[i].type == Cmd::Draw && states_[draws_[commands_[i].index].state].ui) return i;
+        if (commands_[i].ui) return i;
     return commands_.size();
 }
 
 size_t FrameRecord::interfaceDraw(size_t skip) const {
     for (size_t i = 0; i < commands_.size(); ++i)
-        if (commands_[i].type == Cmd::Draw && states_[draws_[commands_[i].index].state].ui && skip-- == 0) return i;
+        if (commands_[i].ui && skip-- == 0) return i;
     return commands_.size();
 }
 

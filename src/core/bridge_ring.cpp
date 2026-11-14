@@ -31,7 +31,15 @@ void Ring::init() {
 }
 
 bool Ring::tryWrite(uint32_t type, uint32_t total, uint32_t offset, const void* data, uint32_t size) {
-    if (!h_ || size > maxChunk()) return false;
+    uint8_t* room = reserve(type, total, offset, size);
+    if (!room) return false;
+    if (size) std::memcpy(room, data, size);
+    commit();
+    return true;
+}
+
+uint8_t* Ring::reserve(uint32_t type, uint32_t total, uint32_t offset, uint32_t size) {
+    if (!h_ || size > maxChunk()) return nullptr;
     const uint32_t need = align16(uint32_t(sizeof(ChunkHeader)) + size);
     uint32_t w = h_->write.load(std::memory_order_relaxed);  // only this side moves it
     const uint32_t r = h_->read.load(std::memory_order_acquire);
@@ -39,7 +47,7 @@ bool Ring::tryWrite(uint32_t type, uint32_t total, uint32_t offset, const void* 
     const uint32_t tail = cap_ - at;
     uint32_t skip = 0;
     if (tail < need) skip = tail;  // the chunk goes to the start; the end is padding
-    if ((w - r) + skip + need > cap_) return false;
+    if ((w - r) + skip + need > cap_) return nullptr;
     if (skip) {
         const ChunkHeader pad{0, skip - uint32_t(sizeof(ChunkHeader)), 0, 0};
         std::memcpy(data_ + at, &pad, sizeof pad);
@@ -48,9 +56,15 @@ bool Ring::tryWrite(uint32_t type, uint32_t total, uint32_t offset, const void* 
     }
     const ChunkHeader c{type, size, total, offset};
     std::memcpy(data_ + at, &c, sizeof c);
-    if (size) std::memcpy(data_ + at + sizeof c, data, size);
-    h_->write.store(w + need, std::memory_order_release);
-    return true;
+    reservedEnd_ = w + need;
+    reserved_ = true;
+    return data_ + at + sizeof c;
+}
+
+void Ring::commit() {
+    if (!h_ || !reserved_) return;
+    reserved_ = false;
+    h_->write.store(reservedEnd_, std::memory_order_release);
 }
 
 bool Ring::peek(ChunkHeader& c, const uint8_t*& data) {

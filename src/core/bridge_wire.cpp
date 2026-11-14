@@ -156,30 +156,26 @@ void WireWriter::block(const void* p, size_t n) {
     out_.insert(out_.end(), b, b + n);
 }
 
-void writeRecord(WireWriter& w, const FrameRecord& r) {
-    w.u32(uint32_t(r.commands().size()));
-    uint8_t* p = w.grow(r.commands().size() * kCommandBytes);
+uint8_t* putRecord(uint8_t* p, const FrameRecord& r) {
+    p = put(p, uint32_t(r.commands().size()));
     for (const Command& c : r.commands()) {
         *p++ = uint8_t(c.type);
         p = put(p, c.index);
     }
-    w.u32(uint32_t(r.clears().size()));
-    p = w.grow(r.clears().size() * kClearBytes);
+    p = put(p, uint32_t(r.clears().size()));
     for (const ClearCmd& c : r.clears()) {
         p = put(p, c.flags);
         p = put(p, c.argb);
         p = put(p, c.z);
         p = putRect(p, c.rect);
     }
-    w.u32(uint32_t(r.viewports().size()));
-    p = w.grow(r.viewports().size() * kViewportBytes);
+    p = put(p, uint32_t(r.viewports().size()));
     for (const ViewportCmd& v : r.viewports()) {
         p = putRect(p, v.rect);
         p = put(p, v.minZ);
         p = put(p, v.maxZ);
     }
-    w.u32(uint32_t(r.draws().size()));
-    p = w.grow(r.draws().size() * kDrawBytes);
+    p = put(p, uint32_t(r.draws().size()));
     for (const DrawCmd& d : r.draws()) {
         p = put(p, d.state);
         p = put(p, d.texture[0]);
@@ -201,8 +197,7 @@ void writeRecord(WireWriter& w, const FrameRecord& r) {
         p = put(p, d.twinScale);
         *p++ = d.sharpCopy ? 1 : 0;  // 3.0.18-beta.178
     }
-    w.u32(uint32_t(r.uploads().size()));
-    p = w.grow(r.uploads().size() * kUploadBytes);
+    p = put(p, uint32_t(r.uploads().size()));
     for (const UploadCmd& u : r.uploads()) {
         p = put(p, u.texture);
         p = put(p, u.level);
@@ -213,21 +208,18 @@ void writeRecord(WireWriter& w, const FrameRecord& r) {
         *p++ = u.fullFrom;
         *p++ = u.own;  // 3.0.18-beta.178
     }
-    w.u32(uint32_t(r.slots().size()));
-    p = w.grow(r.slots().size() * kSlotBytes);
+    p = put(p, uint32_t(r.slots().size()));
     for (const SpriteCell& s : r.slots()) {
         p = putRect(p, s.rect);
         *p++ = s.source;
         p = put(p, s.own);  // 2.5.23
     }
-    w.u32(uint32_t(r.writes().size()));
-    p = w.grow(r.writes().size() * kWriteBytes);
+    p = put(p, uint32_t(r.writes().size()));
     for (const WriteTargetCmd& t : r.writes()) {
         p = putRect(p, t.rect);
         p = put(p, t.pixels);
     }
-    w.u32(uint32_t(r.states().size()));
-    p = w.grow(r.states().size() * kSetupBytes);
+    p = put(p, uint32_t(r.states().size()));
     for (const DrawSetup& s : r.states()) {  // as writeSetup
         const uint8_t b[13] = {uint8_t(s.zEnable), uint8_t(s.zWrite), s.zFunc,      s.cull,         uint8_t(s.blend),
                                s.srcBlend,         s.dstBlend,        uint8_t(s.alphaTest), s.alphaFunc, s.alphaRef,
@@ -237,13 +229,26 @@ void writeRecord(WireWriter& w, const FrameRecord& r) {
         p = putStage(p, s.stage[0]);
         p = putStage(p, s.stage[1]);
     }
-    w.u32(uint32_t(r.vertexBytes().size()));
-    w.bytes(r.vertexBytes().data(), r.vertexBytes().size());
-    w.u32(uint32_t(r.indices().size()));
-    w.bytes(r.indices().data(), r.indices().size() * sizeof(uint16_t));
-    w.u32(uint32_t(r.pixels().size()));
-    w.bytes(r.pixels().data(), r.pixels().size() * sizeof(uint32_t));
+    const auto block = [&p](const void* from, size_t count, size_t bytes) {
+        p = put(p, uint32_t(count));
+        if (bytes) std::memcpy(p, from, bytes);
+        p += bytes;
+    };
+    block(r.vertexBytes().data(), r.vertexBytes().size(), r.vertexBytes().size());
+    block(r.indices().data(), r.indices().size(), r.indices().size() * sizeof(uint16_t));
+    block(r.pixels().data(), r.pixels().size(), r.pixels().size() * sizeof(uint32_t));
+    return p;
 }
+
+size_t recordBytes(const FrameRecord& r) {
+    return 11 * sizeof(uint32_t) + r.commands().size() * kCommandBytes + r.clears().size() * kClearBytes +
+           r.viewports().size() * kViewportBytes + r.draws().size() * kDrawBytes + r.uploads().size() * kUploadBytes +
+           r.slots().size() * kSlotBytes + r.writes().size() * kWriteBytes + r.states().size() * kSetupBytes +
+           r.vertexBytes().size() + r.indices().size() * sizeof(uint16_t) + r.pixels().size() * sizeof(uint32_t);
+}
+
+void writeRecord(WireWriter& w, const FrameRecord& r) { putRecord(w.grow(recordBytes(r)), r); }
+
 
 bool readRecord(WireReader& rd, FrameRecord& r) {
     r.reset();
@@ -357,6 +362,8 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
             uint64_t(d.firstIndex) + d.indexCount > r.indices_.size())
             return fail();
     }
+    for (Command& c : r.commands_)  // 3.0.19-beta.29: the interface's draws, as the driver's record has them
+        c.ui = c.type == Cmd::Draw && r.states_[r.draws_[c.index].state].ui;
     const auto pixelsFit = [&r](const Rect& rect, uint32_t at) {
         if (rect.empty()) return true;
         return uint64_t(at) + uint64_t(rect.width()) * uint64_t(rect.height()) <= r.pixels_.size();
