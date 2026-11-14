@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.6 — what's new · 2026-11-14
+
+- **3D view, a first try.** **Ctrl+Shift+V** switches the camera: the game's own camera → behind the character → first person → the game's own again. The mouse turns the view, a crosshair in the middle of the screen: the left button attacks a monster, talks to an NPC, picks up an item or walks where you look. **W A S D** walk (the walk mode turns on by itself), hold **Alt** for a free cursor for the windows. A sky over the world: the sun where the map's light comes from, clouds, the distance fading into haze; a dark vault in dungeons. This is the first try: tell us what looks wrong — the world cut off in the distance, sprites up close, effects. No sky on Direct3D 11 yet.
+
 # uaRO Graphics 3.0.19-beta.5 — what's new · 2026-11-14
 
 - **Assumptio without the square.** Under Assumptio the game draws the character's body and head once more — slightly larger, pulsing, as light. That pass now takes the game's own picture instead of the frame's HD copy, so there should be no light square around the character any more. If the square stays, send a report while Assumptio is on you: the log now has a line about this pass.
