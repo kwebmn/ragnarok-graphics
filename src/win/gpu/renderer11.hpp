@@ -520,6 +520,11 @@ private:
         return groundLifePs_ && ((effects_.sandDrift && place_.sand) || (effects_.wetWalls && place_.cave) ||
                                  seasonsShown() || rainWetShown());
     }
+    bool grass3dWanted() const {  // 3.0.19-beta.37
+        return effects_.grass && effects_.grassAmount > 0 && effects_.grass3d && grass3dVs_ && grass3dPs_ &&
+               grassHere() && cameraValid_ && camera::wideView();
+    }
+    void applyGrass3d();
     bool grassWanted() const {
         // 3.0.19-beta.10: not in the 3D view (a blade's length is in pixels, for the game's own distance)
         return effects_.grass && effects_.grassAmount > 0 && grassPs_ && grassHere() && cameraValid_ &&
@@ -829,6 +834,11 @@ private:
     bool groundLifeDone_ = false, grassDone_ = false, groundLifeLogged_ = false, grassLogged_ = false;
     // 2.5.4: the living world
     ID3D11VertexShader* crittersVs_ = nullptr;
+    // 3.0.19-beta.37 (the owner: «сделай» - the 3D view's grass on Direct3D 11 too): as Direct3D 12's (core/grass3d)
+    ID3D11VertexShader* grass3dVs_ = nullptr;
+    ID3D11PixelShader* grass3dPs_ = nullptr;
+    bool grass3dDone_ = false;
+    std::string grass3dLogged_;
     ID3D11PixelShader* crittersPs_ = nullptr;
     ID3D11Texture2D* crittersData_ = nullptr;  // four texels a sprite (critters_vs's and critters_ps's t1)
     ID3D11ShaderResourceView* crittersDataSrv_ = nullptr;

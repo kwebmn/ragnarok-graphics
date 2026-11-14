@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -31,5 +32,13 @@ float bearingOf(float fromX, float fromZ, float toX, float toZ, float fx, float 
 // The arc's triangles (a list) on a picture w x h round its middle at `bearing` (0 the top, clockwise), in its
 // colour at `alpha` (0-1) of kAlphaMost, on the screen (z 0, rhw 1)
 void arc(float w, float h, float bearing, float alpha, std::vector<own_ground::Tl1>& out);
+// 3.0.19-beta.37 (the owner: «нет, но наверное надо писать растояние пускай клетка будет метр»): the attacker's
+// distance by its arc - a walk cell (the .gat's, kCellUnits of the world's) a metre, at least one once apart; its
+// words (latin: "m", else the Cyrillic "м"); its place inside the arc at the arc's middle (kLabelIn of the shorter
+// side nearer the middle than its inner edge)
+constexpr float kCellUnits = 5.0f, kLabelIn = 0.045f;
+int cellsOf(float units);
+std::string metres(int cells, bool latin);
+void labelAt(float w, float h, float bearing, float& x, float& y);
 
 }  // namespace uagfx::threatarc

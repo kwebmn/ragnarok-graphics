@@ -44,4 +44,17 @@ void arc(float w, float h, float bearing, float alpha, std::vector<own_ground::T
     }
 }
 
+int cellsOf(float units) {
+    const float cells = std::max(units, 0.0f) / kCellUnits;
+    return cells > 0.0f ? std::max(1, int(std::lround(cells))) : 0;
+}
+
+std::string metres(int cells, bool latin) { return std::to_string(cells) + (latin ? " m" : " \xD0\xBC"); }
+
+void labelAt(float w, float h, float bearing, float& x, float& y) {
+    const float side = std::min(w, h), r = (kRadius - kThick - kLabelIn) * side;
+    x = w * 0.5f + r * std::sin(bearing);
+    y = h * 0.5f - r * std::cos(bearing);
+}
+
 }  // namespace uagfx::threatarc

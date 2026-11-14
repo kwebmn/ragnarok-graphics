@@ -420,6 +420,8 @@ select selectbox option:checked { color: #e6cb8a; }
              white-space: nowrap; background-color: #10141ceb; border-color: #f3c653b3; }
 .xg .gain { position: absolute; width: 600dp; height: 22dp; line-height: 22dp; text-align: center; font-size: 15dp;
             font-weight: bold; color: #f3d27a; white-space: nowrap; font-effect: outline(2px #000000d9); }
+.ta .far { position: absolute; width: 120dp; height: 22dp; line-height: 22dp; text-align: center; font-size: 15dp;
+           font-weight: bold; color: #ff8a7a; white-space: nowrap; font-effect: outline(2px #000000d9); }
 .xb .band { position: absolute; left: 0; width: 100%; background-color: #0000008c; }
 .xb .row { position: absolute; left: 0; width: 100%; }
 .xb .fill { position: absolute; left: 0; top: 0; height: 100%; }

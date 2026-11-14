@@ -225,6 +225,28 @@ float spriteDepth(float z, float rhw) {
     return std::max(0.0f, camera::kFar / (camera::kFar - camera::kNear) * (1.0f - camera::kNear / v));
 }
 
+void axesOf(const float flat[3], const float up[3], float pitch, float f[3], float right[3]) {
+    const float p = pitch * kRad;
+    f[0] = flat[0] * std::cos(p) + kWorldUp[0] * std::sin(p);
+    f[1] = kWorldUp[1] * std::sin(p);
+    f[2] = flat[2] * std::cos(p) + kWorldUp[2] * std::sin(p);
+    normalize(f);
+    cross(up, f, right);  // the screen's right as the game's LookAt makes it
+    if (!normalize(right)) right[0] = right[1] = right[2] = 0.0f;
+}
+
+void flyStep(float eye[3], const float f[3], const float right[3], int ahead, int aside, int rise, float seconds,
+             bool fast, const float feet[3]) {
+    if (!ahead && !aside && !rise) return;
+    const float v = kFreeSpeed * (fast ? kFreeFast : 1.0f) * std::max(seconds, 0.0f);
+    for (int i = 0; i < 3; ++i)
+        eye[i] += (f[i] * float(ahead) + right[i] * float(aside) + kWorldUp[i] * float(rise)) * v;
+    float d[3] = {eye[0] - feet[0], eye[1] - feet[1], eye[2] - feet[2]};
+    const float len = std::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+    if (len > kFreeReach)
+        for (int i = 0; i < 3; ++i) eye[i] = feet[i] + d[i] / len * kFreeReach;
+}
+
 bool ownOut(Mode m, float behind, bool outBefore) {
     if (m == Mode::First) return true;
     if (m != Mode::Behind || !(behind > 0.0f)) return false;

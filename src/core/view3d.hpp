@@ -118,6 +118,16 @@ float spriteDepth(float z, float rhw);
 constexpr float kOwnNear = 12.0f, kOwnShownAgain = 16.0f;
 bool ownOut(Mode m, float behind, bool outBefore);
 
+// 3.0.19-beta.37 (the owner: «можнол попробовать» - the concept's photo mode with a free camera, Ctrl+Shift+C): the
+// free camera's step - its eye moved along the view (f), its right and the world's up by the keys held (ahead, aside,
+// rise: -1, 0, 1) at kFreeSpeed units a second (Shift kFreeFast times) over `seconds`, kept within kFreeReach of the
+// character's feet (the server shows what is near it alone)
+constexpr float kFreeSpeed = 40.0f, kFreeFast = 3.0f, kFreeReach = 250.0f;
+// The view's forward (the flat way tilted by pitch, degrees) and its right on the screen, as place makes them
+void axesOf(const float flat[3], const float up[3], float pitch, float f[3], float right[3]);
+void flyStep(float eye[3], const float f[3], const float right[3], int ahead, int aside, int rise, float seconds,
+             bool fast, const float feet[3]);
+
 // The game's LookAt (0x409540: right = up x forward, then forward x right; 4 x 3 for row vectors, the last row the
 // move) and its inverse (0x409860)
 void lookAt(const float eye[3], const float at[3], const float up[3], float out[12]);

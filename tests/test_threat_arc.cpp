@@ -63,3 +63,16 @@ TEST(threat_arc_fades_after_its_hit) {
     h.gone(9);
     CHECK(h.last.empty());
 }
+
+// 3.0.19-beta.37 (the owner: «нет, но наверное надо писать растояние пускай клетка будет метр»): the attacker's
+// distance by the arc, a walk cell (5 of the world's units) a metre, inside the arc at its middle
+TEST(threat_arc_distance_by_it) {
+    CHECK(threatarc::cellsOf(0.0f) == 0 && threatarc::cellsOf(24.0f) == 5 && threatarc::cellsOf(26.0f) == 5);
+    CHECK(threatarc::cellsOf(28.0f) == 6 && threatarc::cellsOf(3.0f) == 1);  // at least a metre once apart
+    CHECK(threatarc::metres(7, false) == "7 м" && threatarc::metres(12, true) == "12 m");
+    float x = 0, y = 0;
+    threatarc::labelAt(1000, 600, kPi / 2, x, y);  // to the right: inside the arc, at its height
+    CHECK(x > 500.0f && x < 500.0f + (threatarc::kRadius - threatarc::kThick) * 600.0f && std::fabs(y - 300.0f) < 1.0f);
+    threatarc::labelAt(1000, 600, kPi, x, y);  // behind: under the middle
+    CHECK(std::fabs(x - 500.0f) < 1.0f && y > 300.0f);
+}

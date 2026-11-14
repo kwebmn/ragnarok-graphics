@@ -466,3 +466,24 @@ TEST(config_view3d_threat_on_by_default) {
     CHECK(settings::findSetting("view3d.threat") != nullptr);
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[view3d]\nthreat = 0\n")).next.view3dThreat);
 }
+
+// 3.0.19-beta.37 (the owner: «можнол попробовать» - the concept's photo mode with a free camera): the free camera's
+// step - along the view, aside, up - at its speed (Shift faster), kept within its reach of the character's feet
+TEST(view3d_free_camera_flies_within_its_reach) {
+    const float f[3] = {0, 0, 1}, right[3] = {1, 0, 0}, feet[3] = {0, 0, 0};
+    float eye[3] = {0, -13, 0};
+    view3d::flyStep(eye, f, right, 1, 0, 0, 1.0f, false, feet);  // ahead a second
+    CHECK(std::fabs(eye[2] - view3d::kFreeSpeed) < 1e-3f && std::fabs(eye[0]) < 1e-3f);
+    view3d::flyStep(eye, f, right, 0, -1, 0, 0.5f, true, feet);  // to the left, fast, half a second
+    CHECK(std::fabs(eye[0] + view3d::kFreeSpeed * view3d::kFreeFast * 0.5f) < 1e-3f);
+    const float y0 = eye[1];
+    view3d::flyStep(eye, f, right, 0, 0, 1, 0.25f, false, feet);  // up: the world's y down
+    CHECK(eye[1] < y0 - 9.0f);
+    float far[3] = {0, -13, 240};
+    view3d::flyStep(far, f, right, 1, 0, 0, 2.0f, false, feet);  // past the reach: kept at it
+    const float d = std::sqrt(far[0] * far[0] + far[1] * far[1] + far[2] * far[2]);
+    CHECK(d <= view3d::kFreeReach + 1e-2f && d > view3d::kFreeReach - 1.0f);
+    float still[3] = {5, -13, 5};
+    view3d::flyStep(still, f, right, 0, 0, 0, 1.0f, true, feet);  // no key: where it was
+    CHECK(still[0] == 5 && still[1] == -13 && still[2] == 5);
+}

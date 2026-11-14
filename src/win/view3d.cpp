@@ -88,6 +88,13 @@ struct State {
     int wheelsTold = 0;       // 3.0.19-beta.34: the wheel's locks told
     float viewNow[12] = {};   // 3.0.19-beta.36: the view matrix written last (viewAxes)
     bool aimPull = false;     // 3.0.19-beta.36: [view3d] aim_pull
+    // 3.0.19-beta.37 (the owner: «можнол попробовать» - the photo mode with a free camera): Ctrl+Shift+C in the 3D
+    // view - the camera off the character, flown by W A S D, Space up, C down (Shift faster)
+    bool free = false, wantFree = false, skipFreeChar = false;
+    float freeEye[3] = {0, 0, 0};
+    float eyeNow[3] = {0, 0, 0};  // the eye of the last frame (the free camera starts there)
+    bool eyeKnown = false;
+    DWORD flewAt = 0;
     bool viewKnown = false;
     bool centred = false;
     bool looking = false;
@@ -479,6 +486,7 @@ void switchTo(State& s, uint32_t view) {
     // known - release() asks `centred`, cleared below; Ctrl+Shift+V back to the game's own left the pad runtime holding
     // the game's cursor at the crosshair
     if (to == view3d::Mode::Off) release(s);
+    s.free = false;  // 3.0.19-beta.37: another view - the camera with the character again
     s.mode = to;
     s.frames = 0;
     s.centred = false;
@@ -522,7 +530,8 @@ void __attribute__((thiscall)) build(uint32_t view) {
     State& s = g_state;
     const auto original = reinterpret_cast<BuildFn>(g_build);
     if (s.wanted != s.mode) switchTo(s, view);
-    s.ownOut = view3d::ownOut(s.mode, s.behindNow, s.ownOut);  // 3.0.19-beta.18: the last frame's distance
+    // 3.0.19-beta.18: the last frame's distance; 3.0.19-beta.37: the free camera's as from behind (seen, unless near)
+    s.ownOut = view3d::ownOut(s.free ? view3d::Mode::Behind : s.mode, s.behindNow, s.ownOut);
     if (s.mode == view3d::Mode::Off) {
         original(view);
         // 3.0.19-beta.14 (R-W5K25A: the world left in the 3D view - a disconnect - and the next map drawn with its 60
@@ -588,7 +597,35 @@ void __attribute__((thiscall)) build(uint32_t view) {
         if (s.behindNow < want - 0.01f)
             view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target, s.behindNow);
     }
+    if (s.wantFree) {  // 3.0.19-beta.37: Ctrl+Shift+C
+        s.wantFree = false;
+        s.free = !s.free && s.eyeKnown;
+        if (s.free) std::copy(s.eyeNow, s.eyeNow + 3, s.freeEye);
+        s.flewAt = 0;
+        LOG_INFO("3D view: the free camera %s", s.free ? "on - W A S D fly it, Space up, C down, Shift faster; the "
+                                                         "character stays" : "off - back with the character");
+    }
+    if (s.free) {
+        float f[3], right[3];
+        view3d::axesOf(flat, up, s.look.pitch, f, right);
+        const DWORD tick = GetTickCount();
+        const float seconds = s.flewAt ? std::min(float(tick - s.flewAt) / 1000.0f, 0.1f) : 0.0f;
+        s.flewAt = tick;
+        const auto held = [](int vk) { return GetAsyncKeyState(vk) < 0 ? 1 : 0; };
+        const bool keys = !walkmodewin::typing() && GetKeyState(VK_CONTROL) >= 0 && GetKeyState(VK_MENU) >= 0;
+        if (keys)
+            view3d::flyStep(s.freeEye, f, right, held('W') - held('S'), held('D') - held('A'),
+                            held(VK_SPACE) - held('C'), seconds, held(VK_SHIFT) != 0, feet);
+        std::copy(s.freeEye, s.freeEye + 3, eye);
+        for (int i = 0; i < 3; ++i) target[i] = eye[i] + f[i] * 10.0f;
+        const float head[3] = {feet[0], feet[1] - view3d::kHeadHeight, feet[2]};  // y down
+        s.behindNow = std::sqrt((eye[0] - head[0]) * (eye[0] - head[0]) + (eye[1] - head[1]) * (eye[1] - head[1]) +
+                                (eye[2] - head[2]) * (eye[2] - head[2]));  // the own picture hidden only near it
+    }
     overGround(ground, eye);
+    if (s.free) std::copy(eye, eye + 3, s.freeEye);  // kept over the ground
+    std::copy(eye, eye + 3, s.eyeNow);
+    s.eyeKnown = true;
     float nm[12], inv[12];
     view3d::lookAt(eye, target, up, nm);
     if (!camera::plausibleView(nm)) return;
@@ -625,6 +662,25 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     if (m == WM_CHAR && s.skipTab) {  // 3.0.19-beta.11: Tab's own
         s.skipTab = false;
         return wp == '\t';
+    }
+    if (m == WM_CHAR && s.skipFreeChar) {  // 3.0.19-beta.37: Ctrl+Shift+C's letter (0x03)
+        s.skipFreeChar = false;
+        return wp == 0x03;
+    }
+    // 3.0.19-beta.37: Ctrl+Shift+C - the free camera on and off in the 3D view
+    if (m == WM_KEYDOWN && wp == 'C' && GetKeyState(VK_CONTROL) < 0 && GetKeyState(VK_SHIFT) < 0 &&
+        GetKeyState(VK_MENU) >= 0 && s.mode != view3d::Mode::Off) {
+        s.skipFreeChar = true;
+        if (((lp >> 30) & 1) == 0) s.wantFree = true;  // held: once a press
+        return true;
+    }
+    // while free its flight's keys are not the walk mode's (the character stays)
+    if (s.free && GetKeyState(VK_CONTROL) >= 0 && GetKeyState(VK_MENU) >= 0 && !walkmodewin::typing()) {
+        const bool flight = wp == 'W' || wp == 'A' || wp == 'S' || wp == 'D' || wp == 'C' || wp == VK_SPACE;
+        if ((m == WM_KEYDOWN || m == WM_KEYUP) && flight) return true;
+        if (m == WM_CHAR && (wp == 'w' || wp == 'a' || wp == 's' || wp == 'd' || wp == 'c' || wp == ' ' ||
+                             wp == 'W' || wp == 'A' || wp == 'S' || wp == 'D' || wp == 'C'))
+            return true;
     }
     // 3.0.19-beta.11 (the concept's decision: «Tab lock YES»): Tab in the 3D view locks the monster nearest the
     // crosshair, again - the next; only with the chat's line empty (typing, its Tab is the chat's channel)

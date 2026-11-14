@@ -1235,6 +1235,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     chardiarywin::frame(gameCodePage(config));  // 3.0.11-beta.273: the characters' diary
     g_parts.mark("chardiarywin", nowMs());
     expgainwin::frame(config.expGain, pk, pw, ph);  // 3.0.11-beta.237: [interface] exp_gain (the bars' label)
+    threatarcwin::labels(pk, pw, ph);  // 3.0.19-beta.37: the threat's arcs' distances
     g_parts.mark("expgainwin", nowMs());
     expbars::frame(config.expBars, pk, pw, ph);  // 3.0.11-beta.236: [interface] exp_bars, the bottom's strip
     g_parts.mark("expbars", nowMs());

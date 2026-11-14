@@ -11,6 +11,8 @@
 #include "core/threat_arc.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/real_ddraw.hpp"
+#include "win/uaui.hpp"
 #include "win/view3d.hpp"
 
 namespace uagfx::win::threatarcwin {
@@ -25,13 +27,42 @@ constexpr uint32_t kPlaceX = 4, kPlaceZ = 0xC, kGameW = 0x6EBE1C, kGameH = 0x6EB
 constexpr size_t kMostNodes = 4096;
 constexpr float kPi = 3.14159265f;
 
+struct Label {  // 3.0.19-beta.37: an arc's distance, in the game's pixels
+    float x = 0, y = 0, alpha = 0;
+    int cells = 0;
+};
+
 struct State {
     bool on = true;
     bool drawn = false;
     ta::Hits hits;
     int told = 0;
     std::vector<own_ground::Tl1> verts;
+    std::vector<Label> labels;
 };
+
+// 3.0.19-beta.37: the distances by the arcs in RmlUi's markup - each a red word with its outline, its middle there
+const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="ta" data-model="threat" data-style-width="w + 'px'" data-style-height="h + 'px'">
+<span class="far" data-for="f : dist" data-style-left="f.x - 60 * s + 'px'" data-style-top="f.y - 11 * s + 'px'"
+  data-style-opacity="f.op">{{f.text}}</span>
+</body></rml>)RML";
+
+struct FarV {
+    float x = 0, y = 0, op = 0;
+    Rml::String text;
+};
+
+struct Ui {
+    uaui::Doc doc;
+    float w = 0, h = 0, s = 1;
+    std::vector<FarV> dist;  // not "far": windef.h makes it nothing
+};
+
+Ui& ui() {
+    static Ui u;
+    return u;
+}
 
 State& state() {
     static State s;
@@ -92,7 +123,11 @@ void packet(const packets::Event& e) {
     }
 }
 
-void newFrame() { state().drawn = false; }
+void newFrame() {
+    State& s = state();
+    s.drawn = false;
+    s.labels.clear();
+}
 
 void draw(FrameRecord& record, int width, int height) {
     State& s = state();
@@ -117,7 +152,13 @@ void draw(FrameRecord& record, int width, int height) {
         if (!actor || !placeOf(actor, ax, az)) continue;
         const float bearing = ta::bearingOf(px, pz, ax, az, forward[0], forward[1], right[0], right[1]);
         if (std::fabs(bearing) < half * 0.95f) continue;  // in sight: its sprite and its bar say it
-        ta::arc(float(width), float(height), bearing, s.hits.alphaOf(id, now), s.verts);
+        const float alpha = s.hits.alphaOf(id, now);
+        ta::arc(float(width), float(height), bearing, alpha, s.verts);
+        Label l;  // 3.0.19-beta.37: its distance by it
+        ta::labelAt(float(width), float(height), bearing, l.x, l.y);
+        l.alpha = alpha;
+        l.cells = ta::cellsOf(std::hypot(ax - px, az - pz));
+        s.labels.push_back(l);
         if (s.told < 10) {
             ++s.told;
             LOG_INFO("3D view: %u hits the character from %.0f degrees off the view's way - the threat's arc", id,
@@ -131,6 +172,44 @@ void draw(FrameRecord& record, int width, int height) {
     cmd.fvf = d3d7::FVF_TL1;
     cmd.effect = uint8_t(effect_exe::Kind::None);
     record.draw(cmd, s.verts.data(), uint32_t(s.verts.size()), nullptr, 0);
+}
+
+void labels(double k, int targetWidth, int targetHeight) {
+    State& s = state();
+    Ui& u = ui();
+    std::vector<FarV> now;
+    const bool latin = language() == settings::Lang::En;
+    for (const Label& l : s.labels)
+        if (l.alpha > 0.0f && l.cells > 0)
+            now.push_back(FarV{l.x * float(k), l.y * float(k), l.alpha, ta::metres(l.cells, latin)});
+    if (!uaui::ready() || !s.on || k <= 0.0 || now.empty()) {
+        u.doc.show(false);
+        return;
+    }
+    if (!u.doc.made()) {
+        u.doc.passive = true;
+        if (!u.doc.make("threat", kDoc, [&](Rml::DataModelConstructor& m) {
+                if (auto f = m.RegisterStruct<FarV>()) {
+                    f.RegisterMember("x", &FarV::x);
+                    f.RegisterMember("y", &FarV::y);
+                    f.RegisterMember("op", &FarV::op);
+                    f.RegisterMember("text", &FarV::text);
+                }
+                m.RegisterArray<std::vector<FarV>>();
+                m.Bind("w", &u.w);
+                m.Bind("h", &u.h);
+                m.Bind("s", &u.s);
+                m.Bind("dist", &u.dist);
+            }))
+            return;
+    }
+    if (u.w != float(targetWidth)) u.w = float(targetWidth), u.doc.dirty("w");
+    if (u.h != float(targetHeight)) u.h = float(targetHeight), u.doc.dirty("h");
+    if (u.s != float(k)) u.s = float(k), u.doc.dirty("s");
+    u.dist = std::move(now);
+    u.doc.dirty("dist");  // they fade each frame
+    u.doc.place(0, 0);
+    u.doc.show(true);
 }
 
 }  // namespace uagfx::win::threatarcwin

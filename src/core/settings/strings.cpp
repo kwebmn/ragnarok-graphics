@@ -8843,11 +8843,14 @@ constexpr Entry kTexts[] = {
      "Як швидко миша повертає погляд у 3D-режимі.", "Как быстро мышь поворачивает взгляд в 3D-режиме."},
     {Text::View3dKeysNote,
      "In the game Ctrl+Shift+V switches the game's camera → from behind → from the eyes → back. The mouse turns the "
-     "view, the crosshair goes red over a monster; hold Alt for the cursor (the windows, the interface).",
+     "view, the crosshair goes red over a monster; hold Alt for the cursor (the windows, the interface). "
+     "Ctrl+Shift+C - the free camera for shots: W A S D fly it, Space up, C down, Shift faster.",
      "У грі Ctrl+Shift+V перемикає: камера гри → з-за спини → від першої особи → назад. Миша повертає погляд, над "
-     "монстром приціл червоніє; затисніть Alt, щоб з'явився курсор (вікна, інтерфейс).",
+     "монстром приціл червоніє; затисніть Alt, щоб з'явився курсор (вікна, інтерфейс). Ctrl+Shift+C — вільна камера "
+     "для знімків: W A S D — політ, пробіл — угору, C — униз, Shift — швидше.",
      "В игре Ctrl+Shift+V переключает: камера игры → из-за спины → от первого лица → назад. Мышь поворачивает взгляд, "
-     "над монстром прицел краснеет; зажмите Alt, чтобы появился курсор (окна, интерфейс)."},
+     "над монстром прицел краснеет; зажмите Alt, чтобы появился курсор (окна, интерфейс). Ctrl+Shift+C — свободная "
+     "камера для снимков: W A S D — полёт, пробел — вверх, C — вниз, Shift — быстрее."},
     {Text::View3dDistance, "View distance", "Дальність огляду", "Дальность обзора"},  // 3.0.19-beta.24
     {Text::View3dDistanceHint,
      "How far the 3D view sees (1500 - as far as the game draws). Nearer - more frames: the game draws less, and the "

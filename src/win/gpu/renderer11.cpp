@@ -13,6 +13,7 @@
 #include <iterator>
 #include <string>
 
+#include "core/grass3d.hpp"
 #include "core/cast_look.hpp"
 #include "core/mage_looks.hpp"
 #include "core/ai_copy_blend.hpp"
@@ -224,6 +225,8 @@ Renderer11::~Renderer11() {
     drop(groundCellsSrv_);
     drop(groundCellsData_);
     drop(crittersVs_);  // 2.5.4
+    drop(grass3dVs_);  // 3.0.19-beta.37
+    drop(grass3dPs_);
     drop(crittersPs_);
     drop(crittersDataSrv_);
     drop(crittersData_);
@@ -460,7 +463,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[66] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[68] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -517,7 +520,9 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"ao_depth_ps", ps, shaderSource(), {}, true},  // 3.0.5-beta.21: the shadows' depths
                    {"torch_shadow_vs", vs, shaderSource(), {}, true},  // 3.0.16-beta.35: the torches' shadows
                    {"torch_shadow_ps", ps, shaderSource(), {}, true},
-                   {"sky3d_ps", ps, shaderSource(), {}, true}};  // 3.0.19-beta.6: the 3D view's sky and haze
+                   {"sky3d_ps", ps, shaderSource(), {}, true},  // 3.0.19-beta.6: the 3D view's sky and haze
+                   {"grass3d_vs", vs, shaderSource(), {}, true},  // 3.0.19-beta.37: the 3D view's grass
+                   {"grass3d_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -668,6 +673,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[63].code.empty() || !vsOf(wants[63], torchShadowVs_)) torchShadowVs_ = nullptr;  // 3.0.16-beta.35
     if (wants[64].code.empty() || !psOf(wants[64], torchShadowPs_)) torchShadowPs_ = nullptr;
     if (wants[65].code.empty() || !psOf(wants[65], sky3dPs_)) sky3dPs_ = nullptr;  // 3.0.19-beta.6
+    if (wants[66].code.empty() || !vsOf(wants[66], grass3dVs_)) grass3dVs_ = nullptr;  // 3.0.19-beta.37
+    if (wants[67].code.empty() || !psOf(wants[67], grass3dPs_)) grass3dPs_ = nullptr;
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -1387,7 +1394,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.60.1: the characters' shadows, before the first blended draw after the ground (as draw.cpp does)
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn_ = true;
     // 2.5.4: the grass's next cells; 2.5.9 the next frame's smooth hills, this frame's seams
-    if (!seamPass_ && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && (grassWanted() || hillsWanted() || seamsWanted()))
+    if (!seamPass_ && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite &&
+        (grassWanted() || grass3dWanted() || hillsWanted() || seamsWanted()))  // 3.0.19-beta.37: the 3D grass's too
         noteGround(rec, d);
     // 2.5.9 (draw.cpp 1.16): an opaque draw of the world into the next frame's mirror
     // 3.0.16-beta.35: also the torches' shadows' casters (this frame's)
@@ -1416,6 +1424,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (passes && !grassDone_ && grassWanted()) {  // 2.5.4: under the characters
         flushBatch();
         applyGrass();
+    }
+    if (passes && !grass3dDone_ && grass3dWanted()) {  // 3.0.19-beta.37: the 3D view's, under the characters too
+        flushBatch();
+        applyGrass3d();
     }
     if (passes && !shadowsDone_ && shadowsWanted()) {
         flushBatch();  // 0.90
@@ -2467,6 +2479,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     heatSpots_.clear();
     embers_.clear();
     groundLifeDone_ = grassDone_ = waterLevelNoted_ = false;  // 2.5.4
+    grass3dDone_ = false;  // 3.0.19-beta.37
     frameCrowns_.clear();
     critterFires_.clear();
     critterFlames_.clear();  // 2.6.12
@@ -2478,7 +2491,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     shaftsDone_ = false;  // 2.5.5
     shaftLights_ = 0;
     updateWind();
-    if (grassWanted() && !groundTris_.empty()) {  // the next frame's; 3.0.1-beta.3: the flower beds' tops too
+    if ((grassWanted() || grass3dWanted()) && !groundTris_.empty()) {  // the next frame's; 3.0.1-beta.3: the beds too
         groundCells_ = ground_cells::build(groundTris_);
         dropHalls();  // 3.0.18-beta.252: no grass on the halls' floors
         grass_beds::addTo(groundCells_, mapWorld_.beds());
@@ -3155,6 +3168,106 @@ bool Renderer11::uploadTrample() {
 // 2.5.4: as Direct3D 12's applyGrass (ao.cpp) - grass_ps from the picture's copy and its depth, blended over; the
 // steps bend it (t1: 2.6.8 their hold's grid, uploadTrample), the map's ground only (t5, its cells' heights from the
 // last frame).
+// 3.0.19-beta.37 (the owner: «сделай»): as Direct3D 12's applyGrass3d (ao.cpp) - the 3D view's grass, blades in the
+// world round the eye, a triangle each (grass3d_vs reads the picture's copy t2, its depth t3, the steps t1, the
+// ground's cells t5), over the world by their alpha
+void Renderer11::applyGrass3d() {
+    EffectSpan span(*this, kTimeGrass11);
+    grass3dDone_ = true;
+    if (!grass3dWanted() || !target_.texture || !depthViews() || !copyScene()) return;
+    const grass3d::Grid grid = grass3d::gridFor(effects_.grassThin);
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    Constants c{};
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+    const int w = target_.width, ht = target_.height;
+    c.targetSize[0] = float(w);
+    c.targetSize[1] = float(ht);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(ht);
+    c.uiPixels[3] = waterLevelKnown_ ? waterTop_ + 0.05f : 1e9f;  // no blades under the water
+    const bool held = uploadTrample();
+    if (held) {
+        c.footprint = 1.0f;
+        c.fogColor[0] = trample_.originX;
+        c.fogColor[1] = trample_.originZ;
+        c.fogColor[2] = 1.0f / trample_.cell;
+        c.fogColor[3] = float(trample::Grid::kSide);
+    }
+    c.twin[0] = float(grid.side);
+    c.twin[1] = grid.step;
+    c.twin[2] = 0.65f * float(std::clamp(effects_.grassAmount, 0, 100)) / 100.0f;
+    c.sharpen = waterTime();
+    if (windShared()) {
+        c.sourceRect[2] = windNow_.x * windNow_.strength;
+        c.sourceRect[3] = windNow_.z * windNow_.strength;
+    }
+    const ground_cells::Grid& g = groundCells_;  // the map's own ground (as applyGrass's)
+    const bool spans = g.side > 0.0f && g.width > 0 && g.height > 0 &&
+                       g.span.size() >= size_t(g.width) * size_t(g.height) * 2;
+    if (spans && !groundCellsData_) {  // applyGrass makes it - not drawn in the 3D view
+        D3D11_TEXTURE2D_DESC d{};
+        d.Width = d.Height = UINT(ground_cells::kMostSide);
+        d.MipLevels = d.ArraySize = 1;
+        d.Format = DXGI_FORMAT_R32G32_FLOAT;
+        d.SampleDesc.Count = 1;
+        d.Usage = D3D11_USAGE_DEFAULT;
+        d.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        if (FAILED(device_->CreateTexture2D(&d, nullptr, &groundCellsData_)) ||
+            FAILED(device_->CreateShaderResourceView(groundCellsData_, nullptr, &groundCellsSrv_)))
+            drop(groundCellsData_);
+    }
+    const bool cellsKnown = spans && groundCellsSrv_;
+    if (cellsKnown && !groundCellsUp_) {
+        const D3D11_BOX box{0, 0, 0, UINT(g.width), UINT(g.height), 1};
+        ctx_->UpdateSubresource(groundCellsData_, 0, &box, g.span.data(), UINT(g.width) * 2 * sizeof(float), 0);
+        groundCellsUp_ = true;
+    }
+    ID3D11ShaderResourceView* cells = cellsKnown && groundCellsUp_ ? groundCellsSrv_ : nullptr;
+    if (cells) {
+        c.sourceClamp[0] = g.originX;
+        c.sourceClamp[1] = g.originZ;
+        c.sourceClamp[2] = 1.0f / g.side;
+        c.sourceClamp[3] = float(g.width) + 1024.0f * float(g.height);
+    }
+    if (grass3dLogged_ != map_) {
+        grass3dLogged_ = map_;
+        LOG_INFO("3D grass: on %s - %u blades round the eye, %.1f apart (Direct3D 11)%s", map_.c_str(), grid.blades(),
+                 double(grid.step), cells ? ", on the map's own ground" : "");
+    }
+    targetBound_ = false;  // the next draw binds the target, the viewport and the game's shaders again
+    ID3D11ShaderResourceView* none[6] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+    ctx_->PSSetShaderResources(0, 6, none);
+    ctx_->OMSetRenderTargets(1, &target_.rtv, nullptr);
+    const D3D11_VIEWPORT vp{0.0f, 0.0f, float(w), float(ht), 0.0f, 1.0f};
+    ctx_->RSSetViewports(1, &vp);
+    const D3D11_RECT whole{0, 0, w, ht};
+    ctx_->RSSetScissorRects(1, &whole);
+    setConstants(c);
+    ctx_->OMSetBlendState(blendState(true, d3d7::BLEND_SRCALPHA, d3d7::BLEND_INVSRCALPHA,
+                                     D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
+                                         D3D11_COLOR_WRITE_ENABLE_BLUE),
+                          nullptr, 0xFFFFFFFF);
+    ctx_->OMSetDepthStencilState(depthState(false, false, d3d7::CMP_ALWAYS), 0);
+    ctx_->RSSetState(rasterState(d3d7::CULL_NONE));
+    ctx_->IASetInputLayout(nullptr);
+    ctx_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    ctx_->VSSetShader(grass3dVs_, nullptr, 0);
+    ctx_->PSSetShader(grass3dPs_, nullptr, 0);
+    ctx_->VSSetConstantBuffers(0, 1, &constants_);
+    ctx_->PSSetConstantBuffers(0, 1, &constants_);
+    passSamplers();
+    ID3D11ShaderResourceView* views[6] = {nullptr, held ? trampleSrv_ : nullptr, scene_.srv, depthSrv_, nullptr,
+                                          cells};
+    ctx_->VSSetShaderResources(0, 6, views);  // the blades stand on the picture and its depth
+    ctx_->PSSetShaderResources(0, 6, views);
+    ctx_->Draw(grid.vertices(), 0);
+    ctx_->PSSetShaderResources(0, 6, none);
+    ctx_->VSSetShaderResources(0, 6, none);
+}
+
 void Renderer11::applyGrass() {
     EffectSpan span(*this, kTimeGrass11);  // 2.5.9
     grassDone_ = true;

@@ -12,5 +12,8 @@ void setOn(bool on);
 void packet(const packets::Event& e);
 void newFrame();
 void draw(FrameRecord& record, int width, int height);
+// 3.0.19-beta.37 (the owner: «надо писать растояние пускай клетка будет метр»): each arc's attacker's distance by it
+// (uaUI; k the interface's scale, the target's size) - its frame after draw's
+void labels(double k, int targetWidth, int targetHeight);
 
 }  // namespace uagfx::win::threatarcwin
