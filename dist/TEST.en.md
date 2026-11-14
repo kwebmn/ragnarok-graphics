@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.34 — what's new · 2026-11-15
+
+- **The 3D view: the keys' targets and the wheel.** Space (attack) and 1–9 (the bar's skills and items) in the 3D view strike whoever is under the crosshair or the one Tab locked, not the nearest monster. From the eyes the mouse wheel steps the locked target among the monsters in view: down the next, up the one before.
+
 # uaRO Graphics 3.0.19-beta.33 — what's new · 2026-11-14
 
 - **The 3D view: grass.** In the 3D view real blades of grass now grow on the green ground round you — in the world, not painted over the picture: they stay put as you walk, sway in the wind and bend under steps, thinning out far off. It grows where the effects' grass grows, as much of it; not on water, bridges or decks. The switch «Grass in the 3D view» on «Game», the section «3D view» (Direct3D 12).
