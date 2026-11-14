@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.24 — what's new · 2026-11-14
+
+- **3D view: «View distance».** A new setting under «3D view» on the «Game» page: how far the 3D view sees (800–1500, 1200 by default). The game culls its ground and models at that distance, and the haze thickens fully by then — so no edge shows, and there are more frames: from the eyes the game drew everything 1500 ahead, and that drawing took most of a frame's time. 1500 — as it was.
+
 # uaRO Graphics 3.0.19-beta.23 — what's new · 2026-11-14
 
 - **3D view: the game and the drawing side by side.** With NVIDIA Reflex the game waited for each of its frames to be shown before it began the next. In the normal view that goes unnoticed, but in the 3D view the game takes 9 ms for its frame and the drawing another 12 — about 40 frames together. In the 3D view the game now makes its next frame while this one is drawn (one frame ahead, as without Reflex). With DLSS frame generation, and in the normal view, all is as before.
