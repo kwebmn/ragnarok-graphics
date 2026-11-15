@@ -2327,11 +2327,13 @@ void Renderer::addGameModel(const gamemodels::Node& n) {
 void Renderer::gameModelsFrame(const gamemodels::Frame& f) {
     if (remix_ || d3d11_) return;
     if (remote_) return remote_->sendGameModelsFrame(f);
-    impl_->gameFrame = f;
+    impl_->gameModelsNow.told(f);
 }
 
 bool Renderer::gameModelsLately() const { return remote_ && remote_->gameModelsLately(); }  // 3.0.20-beta.4
-bool Renderer::gameModelsShown() const { return !remix_ && !d3d11_ && !remote_ && impl_ && impl_->gameShownLast; }
+bool Renderer::gameModelsShown() const {
+    return !remix_ && !d3d11_ && !remote_ && impl_ && impl_->gameModelsNow.shown();
+}
 
 void Renderer::setSeeThrough(const float hole[8], uint8_t flags) {
     if (remix_) return;
@@ -3263,6 +3265,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     }
     m.renderStarted = false;
     m.upscaledNow = false;
+    m.gameModelsNow.presented();  // 3.0.20-beta.7: the frame's game models let go at its present alone (R-Y2JJKH)
     m.newPicture();  // 0.19-0.23: the next frame's water, shadows, torches, colours, depth of field
     if (m.upscale) {  // part 3: the next frame - a new jitter, this camera the previous one, a clean layer
         ++m.upscaleFrame;

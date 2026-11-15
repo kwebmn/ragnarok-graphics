@@ -1196,14 +1196,11 @@ struct Renderer::Impl {
     bool ownShownLast = false;  // 3.0.19-beta.42: the last picture's ground the own one in place of the game's
     // 3.0.20-beta.4 (stage 2b): the frame's game models to draw (Msg::GameModelsFrame); whether the renderer could
     // draw them the last picture (its own ground drawn, the game's model state known) - the driver's word to leave them
-    // out of the game's draw
-    gamemodels::Frame gameFrame;
-    bool gameShownLast = false, gameReadyNow = false;
+    // out of the game's draw. 3.0.20-beta.7 (R-Y2JJKH): the frame's own until its present (gameModelsNow.presented) - a
+    // new picture is started by a clear of the whole picture too, the frame's first draw after the list: not here
+    gamemodels::FrameState gameModelsNow;
     void newPicture() {
         ownShownLast = ownState.frame;
-        gameShownLast = gameReadyNow;  // 3.0.20-beta.4
-        gameReadyNow = false;
-        gameFrame.ids.clear();
         ownState.decided = ownState.frame = ownState.drawn = ownState.likeTaken = false;  // 3.0.4-beta.10
         ownState.waterDrawn = ownState.waterGame = false;  // 3.0.4-beta.20
         ownState.shading.beginFrame();
@@ -1488,6 +1485,7 @@ struct Renderer::Impl {
             bool valid = false;
         } made;
         size_t gameTriangles = 0;  // 3.0.20-beta.4: the game's still models' in the record (drawGameModels)
+        size_t gameNodes = 0, gameUnknown = 0;  // 3.0.20-beta.7: the list's nodes drawn, the ones it has not
         size_t madeChunks = 0, madeVertices = 0, madeTriangles = 0, reused = 0;
         // 3.0.4-beta.26: the smooth hills' light baked into the colours made - its sun (file places), its light all
         // round and its strength as they were made
@@ -1544,6 +1542,9 @@ struct Renderer::Impl {
     std::unordered_map<uint32_t, gamemodels::Node> gameModels;
     uint32_t gameModelsMap = 0;
     size_t gameModelFaces = 0, gameModelCorners = 0, gameModelCornersOurs = 0, gameModelsTold = 0;
+    // 3.0.20-beta.7 (R-Y2JJKH: the models left out and none drawn, nothing in the log to tell): the pictures that drew
+    // the game's still models in the last 30 s, their triangles, nodes and nodes unknown to the renderer
+    uint64_t gameDrawnFrames = 0, gameDrawnTriangles = 0, gameDrawnNodes = 0, gameDrawnUnknown = 0;
     gamemodels::Corners ownCorners;
     bool ownCornersMade = false;
     std::vector<uint32_t> gameModelsUnchecked;  // came before our own corners were made

@@ -49,6 +49,28 @@ struct Frame {
 void write(bridge::WireWriter& w, const Frame& f);
 bool read(bridge::WireReader& r, Frame& f);
 
+// 3.0.20-beta.7 (R-Y2JJKH: the still models gone in the 3D view with «Моделі нашим рендером» on - the renderer let the
+// frame's list go at its new picture, which a clear of the whole picture starts too: the frame's first draw, after the
+// list): the renderer's frame of the game's models - the list told before the frame's draws, its own until the
+// frame's present (the clears leave it); whether the renderer could draw them (its own ground drawn with the game's
+// model state known) told the driver from the present on
+class FrameState {
+public:
+    void told(const Frame& f) { frame_ = f; }
+    void drawn(bool ready) { ready_ = ready; }
+    void presented() {
+        shown_ = ready_;
+        ready_ = false;
+        frame_.ids.clear();
+    }
+    const Frame& frame() const { return frame_; }
+    bool shown() const { return shown_; }
+
+private:
+    Frame frame_;
+    bool ready_ = false, shown_ = false;
+};
+
 // 3.0.20-beta.4: whether the game's draw shows a face (0x4DED2E) - its corners' x y on the screen `a`, `b`, `c`: a
 // one-sided face by its turn, the other way round on a flipped node; a two-sided one always
 bool shown(const float a[2], const float b[2], const float c[2], bool twoSided, bool flipped);

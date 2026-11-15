@@ -50,35 +50,36 @@ void Renderer::Impl::checkGameModel(const gamemodels::Node& n) {
 
 // 3.0.20-beta.4: the frame's game models, hashed (FNV-1a) - the own ground's record is made again when they change
 uint64_t Renderer::Impl::gameFrameKey() const {
-    if (gameFrame.ids.empty()) return 0;
+    if (gameModelsNow.frame().ids.empty()) return 0;
     uint64_t h = 1469598103934665603ull;
     const auto mix = [&h](const void* p, size_t n) {
         const auto* b = static_cast<const uint8_t*>(p);
         for (size_t i = 0; i < n; ++i) h = (h ^ b[i]) * 1099511628211ull;
     };
-    mix(gameFrame.ids.data(), gameFrame.ids.size() * sizeof(uint32_t));
-    mix(gameFrame.factors, sizeof gameFrame.factors);
-    const uint8_t lit = gameFrame.lit ? 1 : 0;
+    mix(gameModelsNow.frame().ids.data(), gameModelsNow.frame().ids.size() * sizeof(uint32_t));
+    mix(gameModelsNow.frame().factors, sizeof gameModelsNow.frame().factors);
+    const uint8_t lit = gameModelsNow.frame().lit ? 1 : 0;
     mix(&lit, 1);
     return h | 1;
 }
 
 // 3.0.20-beta.4 (stage 2b of «Модели нашим рендером»): the game's still models the driver left out of its draw this
-// frame (gameFrame.ids), from their captured nodes - each corner placed as the own ground's, coloured as the game
-// colours it (core/model_census expected: its lit ints or colour bytes x the factors), its texture the game's own; with
-// the game's model state (both sides drawn, as the models past the far plane), into the own ground's record (layer 3)
+// frame (gameModelsNow's list), from their captured nodes - each corner placed as the own ground's, coloured as the
+// game colours it (core/model_census expected: its lit ints or colour bytes x the factors), its texture the game's
+// own; with the game's model state (both sides drawn, as the models past the far plane), into the own ground's record
+// (layer 3)
 void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::Projection& p) {
     OwnState& o = ownState;
-    o.gameTriangles = 0;
-    if (gameFrame.ids.empty() || !o.modelLikeKnown) return;
+    o.gameTriangles = o.gameNodes = o.gameUnknown = 0;
+    if (gameModelsNow.frame().ids.empty() || !o.modelLikeKnown) return;
     DrawSetup ms = o.modelLike;
     ms.cull = d3d7::CULL_NONE;
     const uint32_t state = o.rec.addState(ms);
     const bool fogged = o.shading.fogged();
     const uint32_t plain = o.shading.specularAt(0.0f);
     modelcensus::Colouring how;
-    how.way = gameFrame.lit ? modelcensus::Way::Lit : modelcensus::Way::Plain;
-    std::copy(gameFrame.factors, gameFrame.factors + 3, how.factors);
+    how.way = gameModelsNow.frame().lit ? modelcensus::Way::Lit : modelcensus::Way::Plain;
+    std::copy(gameModelsNow.frame().factors, gameModelsNow.frame().factors + 3, how.factors);
     how.alpha = 0xFF;
     for (auto& [id, pd] : gamePending) pd.verts.clear(), pd.idx.clear();
     const auto emit = [&](uint32_t texture) {
@@ -95,9 +96,13 @@ void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::
         pd.verts.clear();
         pd.idx.clear();
     };
-    for (const uint32_t id : gameFrame.ids) {
+    for (const uint32_t id : gameModelsNow.frame().ids) {
         const auto it = gameModels.find(id);
-        if (it == gameModels.end()) continue;
+        if (it == gameModels.end()) {
+            ++o.gameUnknown;  // 3.0.20-beta.7
+            continue;
+        }
+        ++o.gameNodes;
         const gamemodels::Node& n = it->second;
         for (const gamemodels::Face& f : n.faces) {
             const uint32_t texture = f.texture < n.textures.size() ? n.textures[f.texture] : 0;
@@ -132,6 +137,13 @@ void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::
 }
 
 void Renderer::Impl::tellGameModels() {
+    if (gameDrawnFrames) {  // 3.0.20-beta.7
+        LOG_INFO("game models: drawn by us in %llu pictures - %.0f triangles a picture, %.0f nodes, %.1f of the "
+                 "frame's nodes unknown to the renderer",
+                 static_cast<unsigned long long>(gameDrawnFrames), double(gameDrawnTriangles) / double(gameDrawnFrames),
+                 double(gameDrawnNodes) / double(gameDrawnFrames), double(gameDrawnUnknown) / double(gameDrawnFrames));
+        gameDrawnFrames = gameDrawnTriangles = gameDrawnNodes = gameDrawnUnknown = 0;
+    }
     if (gameModels.size() == gameModelsTold) return;
     gameModelsTold = gameModels.size();
     makeOwnCorners();

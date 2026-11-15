@@ -738,7 +738,14 @@ bool Renderer::Impl::drawOwnGround() {
             }
             seamPass = seamOwnBand = false;
             ownPass = false;
-            gameReadyNow = o.modelLikeKnown;  // 3.0.20-beta.4: the game's still models drawn here when it leaves them
+            // 3.0.20-beta.4: the game's still models drawn here when it leaves them
+            gameModelsNow.drawn(o.modelLikeKnown);
+            if (!gameModelsNow.frame().ids.empty()) {  // 3.0.20-beta.7: for the log (tellGameModels)
+                ++gameDrawnFrames;
+                gameDrawnTriangles += o.gameTriangles;
+                gameDrawnNodes += o.gameNodes;
+                gameDrawnUnknown += o.gameUnknown;
+            }
         }
         geometryList = 0;  // the game's record's vertices go up again with its next draw
     }

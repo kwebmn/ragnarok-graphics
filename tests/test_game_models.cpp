@@ -137,3 +137,20 @@ TEST(game_models_places_alike_within_the_float_noise_only) {
     b[4] = 0.995f;  // turned
     CHECK(!gamemodels::samePlace(a, b));
 }
+
+// 3.0.20-beta.7 (R-Y2JJKH: in the 3D view with «Моделі нашим рендером» on the still models were gone - the renderer let
+// the frame's list go at the frame's first clear of the picture, which comes after the list): the list is the
+// frame's until its present (the renderer's clears leave it), drawn; the driver told «drawn» from the present on
+TEST(game_models_frame_list_kept_until_the_frames_present) {
+    gamemodels::FrameState s;
+    gamemodels::Frame f;
+    f.ids = {11, 12, 13};
+    s.told(f);
+    CHECK(s.frame().ids.size() == 3);
+    s.drawn(true);
+    CHECK(!s.shown());  // told from the present on
+    s.presented();
+    CHECK(s.shown() && s.frame().ids.empty());
+    s.presented();  // a picture with no own ground drawn
+    CHECK(!s.shown());
+}

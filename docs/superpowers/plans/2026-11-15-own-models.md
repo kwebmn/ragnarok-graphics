@@ -134,3 +134,19 @@ RELEASED 15.11, main 8394155).
    «Усе» gets «3D-режим» (every [view3d] row as its control asks), its search finds [view3d] rows under «3D-режим».
    Tests: console_tiles_quick_holds_the_models_switch_and_known_rows_only, console_tiles_section_rows_of_the_3d_view,
    search_finds_the_models_by_our_renderer_switch (the app's search, Detailed and from Simple, View::GameChat).
+3.0.20-beta.6 SHIPPED (a2df062, update.ini 230db89).
+7. 3.0.20-beta.7 - R-Y2JJKH (the owner on beta.6, prontera 156,172, the switch on from 12:14:14, the 3D view from
+   12:14:17; the report at 12:14:47 - before the next 30-s tally: only «140 nodes drawn by our renderer ... in 5
+   frames»): the shot - the plaza empty: the fountain (분수대, the .rsw's x 0, z 40), the weapon and tool shops, the
+   flowerbeds, benches, trees, the notice board and the signpost (all in view by the .rsw) gone; the banner lamps
+   (휘장가로등, animated: the game's) there; a telescope over the empty place - an animated part of a skipped node,
+   drawn by the game through drawChildren at its right place. Cause (root): Renderer::Impl::newPicture() let the
+   frame's list go (beta.4), and a clear of the whole picture calls it (Impl::clear, 0.19) - the frame's first draw,
+   after Msg::GameModelsFrame - so drawGameModels always saw an empty list, while gameReadyNow (set after the own
+   ground's draws whatever the list) told the driver «drawn». Fix: core gamemodels::FrameState (told / drawn /
+   presented: shown = ready, the list let go) - newPicture no longer touches it, Renderer::present calls presented();
+   test game_models_frame_list_kept_until_the_frames_present. Log (render64, 30 s): «game models: drawn by us in N
+   pictures - T triangles a picture, K nodes, U of the frame's nodes unknown to the renderer». Also seen: the census's
+   colours 93.4 % (2 apart at most) at Prontera's centre in the top view (beta.4-5: 99.9 %) - the checked nodes now
+   mostly the animated ones (banners, cherry trees), which the game lights anew every picture (3.0.4-beta.32's note)
+   - its memory read after the draw; ours are still nodes, guarded by their first face's lights. Not chased.
