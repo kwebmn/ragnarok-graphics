@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.19-beta.50 — what's new · 2026-11-15
+
+- **The ground in batches.** The game hands its ground over a cell at a time — thousands of separate draws a frame, each going the whole way through the driver. Now cells in a row with the same pictures and settings are gathered into one draw: less work for the processor, the same picture. The switch «Ground in batches» is in Settings → Quality.
+- **A correction to 3.0.19-beta.48:** the game's fast number conversion had already been working since 2.5.20 (the debug switch «fast_ftol»), so beta.48 sped nothing up — its repeat is removed, all works as before.
+
 # uaRO Graphics 3.0.19-beta.49 — what's new · 2026-11-15
 
 - **Two more parts of the game itself rewritten.** The projection of vertices onto the screen (the game computes it for every vertex of the ground, the models and the sprites) took three divisions a vertex — now one, with the same result. And the sort of the faces before drawing went through two pointers in memory for each comparison — now the keys are read once, in a row, and sorted. Together some 3–4 % of the game's thread.
