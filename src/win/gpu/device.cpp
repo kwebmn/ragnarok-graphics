@@ -409,6 +409,7 @@ void Renderer::Impl::noteGpuFrame() {
         geometryTicks = texturesTicks = drawsTicks = submitTicks = 0;
     }
     cpuTicks = fenceTicks = pacerTicks = swapTicks = reflexTicks = 0;
+    runCycles = runTsc = 0;              // 3.0.19-beta.52
     recentSwapMark = recentCpuMark = 0;  // 3.0.19-beta.8
     // 3.0.19-beta.51: the long frames beside them; the frames' marks zeroed with the counters
     if (const std::string pace = paceTally.line(); !pace.empty()) LOG_INFO("%s", pace.c_str());
@@ -447,6 +448,10 @@ void Renderer::Impl::notePace(bool counts) {
     n.draws = drawsTicks;
     n.submit = submitTicks;
     std::copy(cpuPartTicks, cpuPartTicks + kCpuParts, n.parts);
+    n.card = fenceTicks;  // 3.0.19-beta.52
+    n.runCycles = runCycles;
+    n.runTsc = runTsc;
+    n.drawn = drawsGathered;
     if (counts && !paceSkipped && paceMarks.at && perMs > 0.0) {
         const PaceMarks& b = paceMarks;
         const auto ms = [](LONGLONG later, LONGLONG before) {
@@ -457,6 +462,10 @@ void Renderer::Impl::notePace(bool counts) {
         f.drawing = ms(n.cpu, b.cpu);
         f.pace = ms(n.pacer, b.pacer);
         f.present = ms(n.swap, b.swap) + ms(n.reflex, b.reflex);
+        f.card = ms(n.card, b.card);  // 3.0.19-beta.52
+        if (n.runCycles >= b.runCycles && n.runTsc >= b.runTsc)
+            f.ran = framepace::ranOf(f.drawing, n.runCycles - b.runCycles, n.runTsc - b.runTsc);
+        f.draws = n.drawn >= b.drawn ? n.drawn - b.drawn : n.drawn;
         double known = 0.0;
         for (int k = 0; k < kCpuParts; ++k) {
             const double part = ms(n.parts[k], b.parts[k]);
@@ -2902,7 +2911,8 @@ void Renderer::execute(const FrameRecord& record) {
     if (d3d11_) return d3d11_->execute(record);
     if (remote_) return remote_->execute(record);
     Impl& m = *impl_;
-    Impl::CpuTime cpu(m.cpuTicks);  // 0.86
+    Impl::CpuTime cpu(m.cpuTicks);              // 0.86
+    RunTime cpuRun(m.runCycles, m.runTsc);  // 3.0.19-beta.52: how much of it the thread ran
     if (m.lost || !m.target || record.empty() || !m.begin()) return;
     if (m.upscale && m.upscaler && !m.renderStarted) {  // part 3: latency markers
         m.renderStarted = true;
@@ -3024,7 +3034,8 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     if (d3d11_) return d3d11_->present(window, outputWidth, outputHeight, source, options);
     if (remote_) return remote_->present(window, outputWidth, outputHeight, source, options);
     Impl& m = *impl_;
-    Impl::CpuTime presentCpu(m.cpuTicks);  // 0.86
+    Impl::CpuTime presentCpu(m.cpuTicks);       // 0.86
+    RunTime presentRun(m.runCycles, m.runTsc);  // 3.0.19-beta.52
     uint32_t picked = 0;  // 2.3, uaRO Studio: the frame after the key is whole - what it drew under the cursor
     if (m.pick.due(picked) && m.ai) m.ai->writePick(picked, int(m.pick.x()), int(m.pick.y()));
     if (m.abWanted) {
@@ -3189,6 +3200,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     m.submit();
 
     presentCpu.stop();  // 0.86: not the waits
+    presentRun.stop();
     // 2.5.26: with Reflex the game draws its next frame only after this present (Remote::present), so without frame
     // generation the frame limit waits after the present: the game takes the mouse after the wait instead of the
     // frame being shown a wait late. Frame generation's waits stay before it - its frames paced by the presents.

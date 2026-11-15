@@ -82,3 +82,70 @@ TEST(frame_pace_renderer_side_tells_waiting_from_drawing) {
                     "limit's wait 0, the present 0"));
     CHECK(has(line, "the dearest of the drawing in them - the own ground 1 (20.0 ms at most)"));
 }
+
+// 3.0.19-beta.52 (R-GHP9SJ: on .51 the renderer's long frames had every part of their drawing slower at once - the
+// thread kept from the processor, or a view with many more draws?): how much of a span the thread ran, the draws, the
+// card's slot
+TEST(frame_pace_ran_is_the_threads_share_of_the_span) {
+    CHECK(framepace::ranOf(10.0, 5, 10) > 4.99 && framepace::ranOf(10.0, 5, 10) < 5.01);
+    CHECK(framepace::ranOf(10.0, 20, 10) > 9.99 && framepace::ranOf(10.0, 20, 10) < 10.01);  // never past the span
+    CHECK(framepace::ranOf(10.0, 5, 0) < 0.0);                                                // unknown
+}
+
+TEST(frame_pace_game_side_tells_how_much_its_thread_ran_and_the_draws) {
+    framepace::GameTally t;
+    for (int i = 0; i < 10; ++i) {
+        framepace::GameFrame f = gameFrame(10.0, 1.0, 5.0);
+        f.draws = 2000;
+        f.ran = 9.8;
+        t.add(f);
+    }
+    framepace::GameFrame kept = gameFrame(40.0, 1.0, 5.0);  // kept from the processor
+    kept.draws = 2000;
+    kept.ran = 10.0;
+    t.add(kept);
+    framepace::GameFrame busy = gameFrame(30.0, 1.0, 5.0);  // busy with a view of many draws
+    busy.draws = 6000;
+    busy.ran = 29.0;
+    t.add(busy);
+    framepace::GameFrame unknown = gameFrame(15.0, 1.0, 5.0);  // not long, its share unknown: left out of the shares
+    unknown.draws = 2000;
+    t.add(unknown);
+    const std::string line = t.line();
+    CHECK(has(line, "the longest 46.0 ms - the game's own frame 40.0 (ran 10.0), our present 1.0, the renderer's "
+                    "5.0; 2000 draws"));
+    CHECK(has(line, "draws a frame 2308 on average, 4000 in the long ones"));
+    CHECK(has(line, "the game's thread ran 56 % of their own frames' time (98 % in the others)"));
+}
+
+TEST(frame_pace_renderer_side_tells_how_much_its_drawing_ran_and_the_card) {
+    framepace::DrawnTally t;
+    for (int i = 0; i < 10; ++i) {
+        framepace::DrawnFrame f;
+        f.ms = 16.7;
+        f.drawing = 8.0;
+        f.card = 0.1;
+        f.ran = 7.8;
+        f.pace = 7.0;
+        f.present = 0.4;
+        f.draws = 2000;
+        t.add(f);
+    }
+    framepace::DrawnFrame kept;
+    kept.ms = 47.4;
+    kept.drawing = 37.7;
+    kept.card = 0.1;
+    kept.ran = 9.1;
+    kept.pace = 3.4;
+    kept.present = 0.7;
+    kept.draws = 2100;
+    kept.part = "the game's draws themselves";
+    kept.partMs = 12.6;
+    t.add(kept);
+    const std::string line = t.line();
+    CHECK(has(line, "its drawing 37.7 (ran 9.1, the card's slot 0.1)"));
+    CHECK(has(line, "(its drawing's dearest: the game's draws themselves 12.6); 2100 draws"));
+    CHECK(has(line, "draws a frame 2009 on average, 2100 in the long ones"));
+    CHECK(has(line, "its drawing ran 24 % of its time in them (99 % in the others), the card's slot 0.1 ms a frame "
+                    "in them"));
+}

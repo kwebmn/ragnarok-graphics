@@ -27,6 +27,7 @@
 #include "win/console.hpp"
 #include "win/fps_overlay.hpp"
 #include "win/gpu/renderer.hpp"
+#include "win/gpu/thread_run.hpp"
 #include "win/front_game.hpp"
 #include "win/several_windows.hpp"
 #include "win/window_switch.hpp"
@@ -144,6 +145,10 @@ private:
     uint32_t paceBegun_ = 0, paceEnded_ = 0;
     double paceEnd_ = 0.0;
     bool paceSkipped_ = true;
+    // 3.0.19-beta.52 (R-GHP9SJ): the game's draws since the last present (taken at its EndScene and the present); the
+    // thread's marks at this present's start and the last one's end - how much of the game's own frame it ran
+    uint32_t paceWork_ = 0;
+    gpu::RunMark paceRunFrom_, paceRunEnd_;
     void notePace(double from, double rendererMs, bool counts);
     int scaledWidth_ = 0;  // the target size the last scale plan asked for (stage 3)
     int scaledHeight_ = 0;

@@ -47,6 +47,7 @@
 #include "core/weather.hpp"
 #include "core/torch.hpp"
 #include "core/effect_clock.hpp"
+#include "win/gpu/thread_run.hpp"
 #include "win/gpu/draw_constants.hpp"
 #include "win/gpu/frame_pacer.hpp"
 #include "win/gpu/renderer.hpp"
@@ -860,7 +861,13 @@ struct Renderer::Impl {
     struct PaceMarks {
         LONGLONG at = 0, cpu = 0, pacer = 0, swap = 0, reflex = 0, geometry = 0, textures = 0, draws = 0, submit = 0;
         LONGLONG parts[kCpuParts] = {};
+        LONGLONG card = 0;                          // 3.0.19-beta.52: fenceTicks
+        uint64_t runCycles = 0, runTsc = 0;         // runCycles, runTsc
+        uint32_t drawn = 0;                         // drawsGathered
     };
+    // 3.0.19-beta.52 (R-GHP9SJ: the long frames' drawing slower in every part at once): the thread's cycles and the
+    // time stamp counter's ticks over the same spans as cpuTicks (gpu/thread_run) - how much of its drawing it ran
+    uint64_t runCycles = 0, runTsc = 0;
     PaceMarks paceMarks;
     framepace::DrawnTally paceTally;
     bool paceSkipped = true;

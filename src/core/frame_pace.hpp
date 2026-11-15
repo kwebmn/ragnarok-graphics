@@ -11,6 +11,12 @@ namespace uagfx::framepace {
 constexpr double kLongMs = 25.0;      // seen as a jerk at 60 fps: one and a half of its 16.7 ms
 constexpr double kVeryLongMs = 50.0;  // three of them
 
+// 3.0.19-beta.52 (R-GHP9SJ: on .51 the renderer's long frames had every part of their drawing slower at once - the
+// thread kept from the processor, or a view of many more draws?): how much of a span of `spanMs` the thread ran - its
+// cycles (QueryThreadCycleTime) against the time stamp counter's ticks over the span, both the counter's; never past
+// the span; below 0: unknown
+double ranOf(double spanMs, uint64_t threadCycles, uint64_t tscTicks);
+
 // The game's side, a present to the next
 struct GameFrame {
     double made = 0.0;      // the game's own frame: from the last present's end to this one's start (our hooks in it)
@@ -20,6 +26,8 @@ struct GameFrame {
     double readMs = 0.0;
     std::string slowest;  // the slowest of them
     double slowestMs = 0.0;
+    uint32_t draws = 0;  // 3.0.19-beta.52: the game's draws, clears and writes in the frame
+    double ran = -1.0;   // how much of `made` its thread ran (ranOf); below 0 unknown
     double ms() const { return made + own + renderer; }
 };
 
@@ -42,12 +50,18 @@ private:
     std::string slowest_;
     double slowestMs_ = 0.0;
     GameFrame longest_;
+    // 3.0.19-beta.52: the draws in all and in the long ones; the made time with its share known and what ran of it
+    uint64_t draws_ = 0, longDraws_ = 0;
+    double ran_[2] = {}, made_[2] = {};  // the others, the long ones
 };
 
 // The renderer's side, a present to the next
 struct DrawnFrame {
     double ms = 0.0;
     double drawing = 0.0;  // its own work: the game's draws, the passes, the present's before its waits
+    double card = 0.0;     // 3.0.19-beta.52: of it waiting for the card (a list's slot)
+    double ran = -1.0;     // how much of the drawing its thread ran (ranOf); below 0 unknown
+    uint32_t draws = 0;    // the game's draws in it
     double pace = 0.0;     // the frame limit's wait
     double present = 0.0;  // the swap chain's present and Reflex's wait
     const char* part = nullptr;  // the dearest part of its drawing in the frame
@@ -80,6 +94,11 @@ private:
     uint32_t by_[4] = {};  // waiting, drawing, pace, present
     std::map<std::string, Dearest> dearest_;
     DrawnFrame longest_;
+    // 3.0.19-beta.52: the draws in all and in the long ones; the drawing with its share known (the card's waits
+    // apart) and what ran of it - the others, the long ones; the card's waits in the long ones
+    uint64_t draws_ = 0, longDraws_ = 0;
+    double ran_[2] = {}, worked_[2] = {};
+    double longCard_ = 0.0;
 };
 
 }  // namespace uagfx::framepace

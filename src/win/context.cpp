@@ -738,7 +738,9 @@ void Context::markInterfaceEnd(size_t faces) {
 void Context::endScene() {
     // 3.0.3-beta.12 (the user's R-KVTEMT: «всеравно курсор не видно»): the scene goes to the GPU here, before the
     // present - beta.9's and beta.11's panel, put in at the present, found no cursor in an empty record and covered it
-    const bool drawn = record.takeWork() > 0;
+    const uint32_t sceneWork = record.takeWork();
+    paceWork_ += sceneWork;  // 3.0.19-beta.52: the game's draws, for the frame's pace
+    const bool drawn = sceneWork > 0;
     // 3.0.11-beta.215: the next frames' cell under the mouse - none while the cursor is hidden (hidePadCursor's rule)
     // 3.0.16-beta.7: [interface] mouse_cell - the game's cell hidden, ours drawn (win/ground_marks)
     hideGridCell(gridcell::hides(config.padWalk == PadWalk::Arrow, uapad::runtime::look().shown) || config.mouseCell);
@@ -870,12 +872,15 @@ void Context::present(const Rect& source, bool waitForVblank) {
     dx7::setGroundBatch(config.batchGround);  // [quality] batch_ground, for the next frame
     const double presentFrom = nowMs();  // 3.0.18-beta.161: the driver's own work at a present (logStats)
     ++paceBegun_;                          // 3.0.19-beta.51
+    paceRunFrom_ = gpu::RunMark::now();    // 3.0.19-beta.52
     g_parts.begin(presentFrom);           // 3.0.18-beta.169: and by its parts
     actorIndexFrame();                     // 3.0.18-beta.168: the actors' index read again at its next ask
     // 3.0.3-beta.8: whether the game drew this picture anew - the windows' panel goes over such a one alone: the
     // target keeps its pixels across a present, and over the same picture again the panel would darken itself.
     // 3.0.3-beta.12: put into the game's scene at its EndScene; here only into a picture drawn without one
-    const bool drawnAnew = record.takeWork() > 0;
+    const uint32_t presentWork = record.takeWork();
+    paceWork_ += presentWork;  // 3.0.19-beta.52
+    const bool drawnAnew = presentWork > 0;
     drawSparkles();  // 2.7.14: a frame with no interface draw
     if (panelSlot_.present(drawnAnew) && renderer && !photoNow()) {
         hidePadCursor(record, config.padWalk);  // 3.0.11-beta.102
@@ -2143,14 +2148,21 @@ void Context::notePace(double from, double rendererMs, bool counts) {
     takeFrameReads(f);
     const bool whole = paceBegun_ == paceEnded_ + 1;
     paceEnded_ = paceBegun_;
+    f.draws = paceWork_;  // 3.0.19-beta.52
+    paceWork_ = 0;
     if (counts && whole && !paceSkipped_ && paceEnd_ > 0.0) {
         f.made = std::max(0.0, from - paceEnd_);
         f.renderer = rendererMs;
         f.own = std::max(0.0, end - from - rendererMs);
+        const gpu::RunMark& a = paceRunEnd_;
+        const gpu::RunMark& b = paceRunFrom_;
+        if (a.tsc && b.tsc > a.tsc && b.cycles >= a.cycles)
+            f.ran = framepace::ranOf(f.made, b.cycles - a.cycles, b.tsc - a.tsc);
         pace_.add(f);
     }
     paceSkipped_ = !counts;
     paceEnd_ = end;
+    paceRunEnd_ = gpu::RunMark::now();
 }
 
 void Context::logStats(bool final) {
