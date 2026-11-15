@@ -1,3 +1,6 @@
+#include <algorithm>
+
+#include "core/game_models_place.hpp"
 #include "core/model_census.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
@@ -71,16 +74,38 @@ uint64_t Renderer::Impl::gameFrameKey() const {
 void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::Projection& p) {
     OwnState& o = ownState;
     o.gameTriangles = o.gameNodes = o.gameUnknown = 0;
-    if (gameModelsNow.frame().ids.empty() || !o.modelLikeKnown) return;
+    const std::vector<uint32_t>& ids = gameModelsNow.frame().ids;
+    if (ids.empty() || !o.modelLikeKnown) return;
     DrawSetup ms = o.modelLike;
     ms.cull = d3d7::CULL_NONE;
     const uint32_t state = o.rec.addState(ms);
-    const bool fogged = o.shading.fogged();
-    const uint32_t plain = o.shading.specularAt(0.0f);
-    modelcensus::Colouring how;
-    how.way = gameModelsNow.frame().lit ? modelcensus::Way::Lit : modelcensus::Way::Plain;
-    std::copy(gameModelsNow.frame().factors, gameModelsNow.frame().factors + 3, how.factors);
-    how.alpha = 0xFF;
+    gamemodels::Picture pic;
+    pic.view = view;
+    pic.p = p;
+    pic.how.way = gameModelsNow.frame().lit ? modelcensus::Way::Lit : modelcensus::Way::Plain;
+    std::copy(gameModelsNow.frame().factors, gameModelsNow.frame().factors + 3, pic.how.factors);
+    pic.how.alpha = 0xFF;
+    pic.fog = o.shading.fogged() ? &o.shading : nullptr;
+    pic.plain = o.shading.specularAt(0.0f);
+    // 3.0.20-beta.8 (the owner's «давай по очереди», step 1 - R-XTEFYA: «the own ground» +2 ms a frame): the list's
+    // nodes in turns of kGameNodesAJob, each turn placed on a thread of its own (parallelChunks, as the own ground's
+    // chunks; core/game_models_place - each vertex once a node), then put into the draws in the list's order: the same
+    // draws as one thread made
+    const size_t jobs = (ids.size() + kGameNodesAJob - 1) / kGameNodesAJob;
+    if (gameOuts.size() < jobs) gameOuts.resize(jobs);
+    if (gameScratch.size() < jobs) gameScratch.resize(jobs);
+    parallelChunks(jobs, [&](size_t job) {
+        gamemodels::Placed& out = gameOuts[job];
+        out.clear();
+        const size_t end = std::min(ids.size(), (job + 1) * kGameNodesAJob);
+        for (size_t i = job * kGameNodesAJob; i < end; ++i) {
+            const auto it = gameModels.find(ids[i]);
+            if (it == gameModels.end())
+                ++out.unknown;  // 3.0.20-beta.7
+            else
+                gamemodels::place(it->second, pic, gameScratch[job], out);
+        }
+    });
     for (auto& [id, pd] : gamePending) pd.verts.clear(), pd.idx.clear();
     const auto emit = [&](uint32_t texture) {
         OwnState::ModelPending& pd = gamePending[texture];
@@ -96,41 +121,27 @@ void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::
         pd.verts.clear();
         pd.idx.clear();
     };
-    for (const uint32_t id : gameModelsNow.frame().ids) {
-        const auto it = gameModels.find(id);
-        if (it == gameModels.end()) {
-            ++o.gameUnknown;  // 3.0.20-beta.7
-            continue;
-        }
-        ++o.gameNodes;
-        const gamemodels::Node& n = it->second;
-        for (const gamemodels::Face& f : n.faces) {
-            const uint32_t texture = f.texture < n.textures.size() ? n.textures[f.texture] : 0;
-            if (!texture) continue;
-            own_ground::Tl1 t[3];
-            bool ok = true;
-            for (int k = 0; k < 3 && ok; ++k) {
-                float seen[3];
-                own_ground::toView(view, &n.vertices[size_t(f.v[k]) * 3], seen);
-                own_ground::Tl2 placed;
-                ok = own_ground::placeView(p, seen, placed);
-                t[k].x = placed.x, t[k].y = placed.y, t[k].z = placed.z, t[k].rhw = placed.rhw;
-                t[k].diffuse = modelcensus::expected(how, f.colour[k], &f.lit[3 * k]);
-                t[k].specular = fogged ? o.shading.specularAt(seen[2]) : plain;
-                t[k].u = f.uv[2 * k], t[k].v = f.uv[2 * k + 1];
+    for (size_t job = 0; job < jobs; ++job) {
+        const gamemodels::Placed& out = gameOuts[job];
+        o.gameTriangles += out.triangles;
+        o.gameNodes += out.nodes;
+        o.gameUnknown += out.unknown;
+        for (size_t t = 0; t < out.textures(); ++t) {
+            const uint32_t texture = out.texture(t);
+            const std::vector<own_ground::Tl1>& v = out.vertices(t);
+            for (size_t at = 0; at < v.size();) {
+                OwnState::ModelPending& pd = gamePending[texture];
+                const size_t room = (65535 - pd.verts.size()) / 3 * 3;  // a draw's most: 21845 faces
+                if (!room) {
+                    emit(texture);
+                    continue;
+                }
+                const size_t n = std::min(room, v.size() - at);
+                const uint16_t base = uint16_t(pd.verts.size());
+                pd.verts.insert(pd.verts.end(), v.begin() + ptrdiff_t(at), v.begin() + ptrdiff_t(at + n));
+                for (size_t k = 0; k < n; ++k) pd.idx.push_back(uint16_t(base + k));
+                at += n;
             }
-            if (!ok) continue;  // a corner behind the eye: as the game, not drawn
-            // 3.0.20-beta.4: culled as the game's draw culls - by its turn on the screen, two-sided ones never
-            const float s0[2] = {t[0].x, t[0].y}, s1[2] = {t[1].x, t[1].y}, s2[2] = {t[2].x, t[2].y};
-            if (!gamemodels::shown(s0, s1, s2, (f.flags & gamemodels::kTwoSided) != 0, n.flipped)) continue;
-            OwnState::ModelPending& pd = gamePending[texture];
-            if (pd.verts.size() + 3 > 65535) emit(texture);
-            const uint16_t base = uint16_t(pd.verts.size());
-            for (int k = 0; k < 3; ++k) {
-                pd.verts.push_back(t[k]);
-                pd.idx.push_back(uint16_t(base + k));
-            }
-            ++o.gameTriangles;
         }
     }
     for (auto& [texture, pd] : gamePending) emit(texture);

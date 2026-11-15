@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -30,6 +31,7 @@
 #include "core/gpu_timing.hpp"
 #include "core/ground_cells.hpp"
 #include "core/hills.hpp"
+#include "core/game_models_place.hpp"
 #include "core/own_ground.hpp"
 #include "core/own_models.hpp"
 #include "core/seams.hpp"
@@ -56,6 +58,10 @@
 #include "win/gpu/upscaler.hpp"
 
 namespace uagfx::gpu {
+
+// 3.0.20-beta.8: the own ground's threads (own_ground.cpp) - `count` jobs, the renderer's thread among them, the call
+// back when all are done; the game's still models placed on them too (game_models.cpp)
+void parallelChunks(size_t count, const std::function<void(size_t)>& body);
 
 class AiTextures;  // ai_textures.hpp
 
@@ -1551,6 +1557,11 @@ struct Renderer::Impl {
     void addGameModel(const gamemodels::Node& n);
     void drawGameModels(const own_ground::View& view, const camera::Projection& p);  // 3.0.20-beta.4
     std::unordered_map<uint32_t, OwnState::ModelPending> gamePending;               // by the texture's id
+    // 3.0.20-beta.8: the list's nodes placed in turns of kGameNodesAJob on the own ground's threads - each turn's
+    // placed faces and its scratch
+    static constexpr size_t kGameNodesAJob = 8;
+    std::vector<gamemodels::Placed> gameOuts;
+    std::vector<std::vector<gamemodels::Corner>> gameScratch;
     uint64_t gameFrameKey() const;
     bool makeOwnCorners();
     void checkGameModel(const gamemodels::Node& n);

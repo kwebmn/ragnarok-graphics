@@ -150,3 +150,18 @@ RELEASED 15.11, main 8394155).
    colours 93.4 % (2 apart at most) at Prontera's centre in the top view (beta.4-5: 99.9 %) - the checked nodes now
    mostly the animated ones (banners, cherry trees), which the game lights anew every picture (3.0.4-beta.32's note)
    - its memory read after the draw; ours are still nodes, guarded by their first face's lights. Not chased.
+3.0.20-beta.7 SHIPPED (a454083, update.ini e53bbb5). R-XTEFYA (the owner, beta.7, prontera 162,224 3D, on): CONFIRMED -
+346-477 nodes / 11-15k triangles a picture drawn by us, 0 unknown, the shot as the game's (R-UQPC3E, the same place,
+off); off -> on: game models 1.73 -> 0.33-0.44 ms, GPU calls 509 -> 374-412, render64 «the game's draws themselves»
+3.2-3.3 -> 1.9-2.3 ms, «the own ground» 1.6-2.3 -> 3.9-4.3 ms (drawGameModels on one thread, each corner placed
+again in every face, all of it again whenever the view moved): the renderer's CPU net +0.8 ms. The owner: «давай по
+очереди» - step 1 threads, step 2 the models' geometry on the GPU.
+8. 3.0.20-beta.8 - step 1: core/game_models_place (Placed - the placed faces by the renderer's texture id, first met;
+   Picture - view, projection, colouring, fog; place(node, picture, scratch, out) - each vertex into the view and onto
+   the screen once a node, a face with a corner behind the eye left out, shown(), expected(), the fog by the depth, an
+   unknown texture left out); the renderer: the list's nodes in turns of 8 (kGameNodesAJob) on parallelChunks (the own
+   ground's threads: a quarter of the processor's, at most 4 with the renderer's), each turn its own Placed and
+   scratch (gameOuts, gameScratch), then merged in the list's order into gamePending - a draw's most 65535 vertices
+   as before (room = (65535 - size) / 3 * 3): the same draws as one thread made. Thread safety: gameModels read only,
+   Shading::specularAt pure. Tests: game_models_place_a_node_as_the_game_draws_it, game_models_place_a_flipped_node_
+   culls_the_other_way. Untested in the game.
