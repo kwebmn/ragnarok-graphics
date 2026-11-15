@@ -114,3 +114,42 @@ TEST(game_models_card_runs_and_their_corners_as_casters) {
     CHECK(colour == (0xFF000000u | 0x00102030u));
     CHECK(corners[6] == 4.0f && corners[18 + 3] == 2.0f);  // corner 1's x; face 2's first u
 }
+
+// 3.0.20-beta.14 (stage 4): a moving node's faces kept in its own space - left out of the frame's batches (a draw a
+// run of its, with its matrix), its runs found by its id, its corners into the world by a matrix for the casters
+TEST(game_models_card_moving_nodes_drawn_apart) {
+    gamemodels::CardStore store;
+    gamemodels::Node n = nodeOf(5);
+    n.moving = true;
+    store.add(n);
+    store.add(nodeOf(6));
+    gamemodels::CardFrame frame;
+    store.frameOf({5, 6}, frame);  // the moving one's faces not in the batches
+    CHECK(frame.nodes == 1 && frame.textures.size() == 2 && frame.faces[0].size() == 1 && frame.faces[1].size() == 2);
+    const std::vector<gamemodels::CardRun>* runs = store.runsOfNode(5);
+    CHECK(runs && runs->size() == 2 && store.moving(5) && !store.moving(6) && !store.runsOfNode(77));
+    std::vector<float> corners;
+    const float moved[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 100, 0, 0};
+    store.cornersOf((*runs)[0], corners, moved);
+    CHECK(corners.size() == 18 && corners[0] == 101.0f && corners[1] == 2.0f && corners[6] == 104.0f);
+}
+
+// 3.0.20-beta.14: the frame's moving nodes' faces join the batches by texture - each face's number with its node's
+// place in the frame's moving list (from 1) in the high bits, model_vs puts those faces by that node's matrix; an
+// unknown one keeps its place (the frame's matrices go to the card in the list's order)
+TEST(game_models_card_moving_faces_join_the_batches_with_their_place) {
+    gamemodels::CardStore store;
+    gamemodels::Node n = nodeOf(5);
+    n.moving = true;
+    store.add(n);          // the card's faces 0 (texture 7), 1 and 2 (texture 9)
+    store.add(nodeOf(6));  // 3 (texture 7), 4 and 5 (texture 9)
+    gamemodels::CardFrame frame;
+    store.frameOf({6}, {77, 5}, frame);  // 77 unknown: place 1 left unused
+    CHECK(frame.nodes == 2 && frame.moving == 1 && frame.unknown == 1);
+    CHECK(frame.textures.size() == 2 && frame.textures[0] == 7 && frame.textures[1] == 9);
+    const uint32_t second = 2u << gamemodels::kCardSlotShift;
+    CHECK(frame.faces[0] == (std::vector<uint32_t>{3, 0 | second}));
+    CHECK(frame.faces[1] == (std::vector<uint32_t>{4, 5, 1 | second, 2 | second}));
+    CHECK(gamemodels::kCardMostMoving == (1u << (32 - gamemodels::kCardSlotShift)) - 1);
+    CHECK(gamemodels::kCardMostFaces == 1u << gamemodels::kCardSlotShift);
+}

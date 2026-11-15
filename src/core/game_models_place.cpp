@@ -22,12 +22,15 @@ std::vector<own_ground::Tl1>& Placed::of(uint32_t texture) {
 }
 
 void place(const Node& n, const Picture& pic, std::vector<Corner>& scratch, Placed& out,
-           const std::vector<bool>* only) {
+           const std::vector<bool>* only, const float* toView) {
     const size_t vertices = n.vertices.size() / 3;
     scratch.resize(vertices);
     for (size_t v = 0; v < vertices; ++v) {
         float seen[3];
-        own_ground::toView(pic.view, &n.vertices[3 * v], seen);
+        if (toView)
+            transform(toView, &n.vertices[3 * v], seen);  // 3.0.20-beta.14: a moving node's
+        else
+            own_ground::toView(pic.view, &n.vertices[3 * v], seen);
         own_ground::Tl2 placed;
         Corner& c = scratch[v];
         c.ok = own_ground::placeView(pic.p, seen, placed);

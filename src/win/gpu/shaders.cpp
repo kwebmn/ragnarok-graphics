@@ -178,6 +178,11 @@ float3 modelView(float3 w) {
     float3 d = w - float3(r9, r10, r11);
     return float3(dot(d, cross(rb, rc)), dot(d, cross(rc, ra)), dot(d, cross(ra, rb))) / dot(ra, cross(rb, rc));
 }
+// 3.0.20-beta.14 (stage 4): a moving node's corner (its own space) into the view by its matrix this frame - the game's
+// own (FUN_00409720 of its keys' and its parent's), 4 x 3 as three uint4 in t6 from asuint(holeG) on
+float3 modelMoved(float3 p, float4 a, float4 b, float4 c) {
+    return p.x * a.xyz + p.y * float3(a.w, b.x, b.y) + p.z * float3(b.z, b.w, c.x) + float3(c.y, c.z, c.w);
+}
 float2 modelScreen(float3 v) { return float2(v.x / v.z * f0 + cx, v.y / v.z * f1 + cy); }
 float modelDepth(float zd) {  // own_ground depthFromInverse: the game's, past farZ - 10 squeezed below 1
     float a = farZ / (farZ - nearZ), b = farZ * nearZ / (farZ - nearZ), split = farZ - 10.0;
@@ -188,13 +193,27 @@ float modelDepth(float zd) {  // own_ground depthFromInverse: the game's, past f
 PsIn model_vs(ModelIn i) {
     PsIn o = (PsIn)0;
     o.pos = float4(2.0, 2.0, 0.5, 1.0);  // past the target's right: the face left out
-    uint at = i.face * 5;
+    uint at = (i.face & 0xFFFFFu) * 5;  // 3.0.20-beta.14: its moving node's place in the frame's list above (from 1)
+    uint slot = i.face >> 20;
     uint4 c0 = seamVertices.Load(int(at));
     uint4 c1 = seamVertices.Load(int(at + 1));
     uint4 c2 = seamVertices.Load(int(at + 2));
     uint4 t0 = seamVertices.Load(int(at + 3));
     uint4 t1 = seamVertices.Load(int(at + 4));
-    float3 v0 = modelView(asfloat(c0.xyz)), v1 = modelView(asfloat(c1.xyz)), v2 = modelView(asfloat(c2.xyz));
+    float3 v0, v1, v2;
+    if (slot == 0u) {
+        v0 = modelView(asfloat(c0.xyz));
+        v1 = modelView(asfloat(c1.xyz));
+        v2 = modelView(asfloat(c2.xyz));
+    } else {
+        uint m = asuint(holeG) + (slot - 1u) * 3u;
+        float4 ma = asfloat(seamVertices.Load(int(m)));
+        float4 mb = asfloat(seamVertices.Load(int(m + 1u)));
+        float4 mc = asfloat(seamVertices.Load(int(m + 2u)));
+        v0 = modelMoved(asfloat(c0.xyz), ma, mb, mc);
+        v1 = modelMoved(asfloat(c1.xyz), ma, mb, mc);
+        v2 = modelMoved(asfloat(c2.xyz), ma, mb, mc);
+    }
     if (v0.z <= nearZ || v1.z <= nearZ || v2.z <= nearZ) return o;
     float2 s0 = modelScreen(v0), s1 = modelScreen(v1), s2 = modelScreen(v2);
     bool turned = (s2.x - s0.x) * (s1.y - s0.y) > (s1.x - s0.x) * (s2.y - s0.y);

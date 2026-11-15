@@ -488,6 +488,11 @@ private:
     uint32_t modelFogVertices_ = 0;
     gamemodels::FrameState modelsNow_;
     uint64_t modelsDrawnFrames_ = 0, modelsDrawnFaces_ = 0, modelsDrawnNodes_ = 0, modelsUnknown_ = 0;
+    // 3.0.20-beta.14 (stage 4): the frame's moving nodes' matrices' first uint4 in modelFaces_ (after the faces; holeG
+    // of the draws), 0 none; of the nodes drawn, the moving ones
+    uint32_t modelMatrices_ = 0;
+    uint64_t modelsDrawnMoving_ = 0;
+    const gamemodels::Node* modelNodeOf(const gamemodels::Frame& frame, size_t i, const float*& toView) const;
     void drawGameModels11();
     bool ensureModelFaces(uint32_t faces);
     void noteModelFog(const FrameRecord& rec, const DrawCmd& d);

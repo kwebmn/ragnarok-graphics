@@ -31,34 +31,54 @@ constexpr float kCasterReachWide = 600.0f;
 void Renderer::Impl::noteGameCasters() {
     if (!mirrorCollecting() && !shadowCollecting()) return;
     const gamemodels::Frame& frame = gameModelsNow.frame();
-    if (frame.ids.empty() || !ownState.modelLikeKnown) return;
+    if (frame.empty() || !ownState.modelLikeKnown) return;
     gameCards.runsOf(frame.ids, gameRuns);
     const DrawSetup& s = ownState.modelLike;
     const bool wide = camera::wideView();
     const float eye[3] = {viewToWorld[9], viewToWorld[10], viewToWorld[11]};
     const bool leavesApart = leavesOwnWay();  // 3.0.20-beta.13: their casters noted as the game's (noteCaster)
-    for (const gamemodels::CardRun& r : gameRuns) {
-        if (leavesApart && leafyTexture(r.texture)) continue;
-        if (sunVerts.size() / 6 + size_t(r.count) * 3 > kMostSunVerts) break;
+    // a run into the casters - `toWorld` a moving node's (its own space; 3.0.20-beta.14); false: no room left
+    const auto note = [&](const gamemodels::CardRun& r, const float* toWorld) {
+        if (leavesApart && leafyTexture(r.texture)) return true;
+        if (sunVerts.size() / 6 + size_t(r.count) * 3 > kMostSunVerts) return false;
+        float lo[3], hi[3];
+        if (toWorld) {
+            gamemodels::boxBy(toWorld, r.lo, r.hi, lo, hi);
+        } else {
+            std::copy(r.lo, r.lo + 3, lo);
+            std::copy(r.hi, r.hi + 3, hi);
+        }
         if (wide) {  // far off in the 3D view - none, as the game's draws there
             float apart = 0.0f;
             for (int a = 0; a < 3; ++a) {
-                const float d = std::max({r.lo[a] - eye[a], 0.0f, eye[a] - r.hi[a]});
+                const float d = std::max({lo[a] - eye[a], 0.0f, eye[a] - hi[a]});
                 apart += d * d;
             }
-            if (apart > kCasterReachWide * kCasterReachWide) continue;
+            if (apart > kCasterReachWide * kCasterReachWide) return true;
         }
         SunCaster c;
         c.first = uint32_t(sunVerts.size() / 6);
-        gameCards.cornersOf(r, sunVerts);
+        gameCards.cornersOf(r, sunVerts, toWorld);
         c.count = uint32_t(sunVerts.size() / 6) - c.first;
-        if (!c.count) continue;
+        if (!c.count) return true;
         c.texture = r.texture;
         c.alphaTest = s.alphaTest || s.colorKey;
         c.ref = s.alphaTest ? float(s.alphaRef) / 255.0f : 0.5f;
-        std::copy(r.lo, r.lo + 3, c.lo);
-        std::copy(r.hi, r.hi + 3, c.hi);
+        std::copy(lo, lo + 3, c.lo);
+        std::copy(hi, hi + 3, c.hi);
         sunCasters.push_back(c);
+        return true;
+    };
+    for (const gamemodels::CardRun& r : gameRuns)
+        if (!note(r, nullptr)) return;
+    // 3.0.20-beta.14 (stage 4): the moving ones - into the world by their matrices this frame, then the camera's
+    for (size_t k = 0; k < frame.moving.size() && frame.matrices.size() >= 12 * (k + 1); ++k) {
+        const std::vector<gamemodels::CardRun>* runs = gameCards.runsOfNode(frame.moving[k]);
+        if (!runs || !gameCards.moving(frame.moving[k])) continue;
+        float toWorld[12];
+        gamemodels::compose(&frame.matrices[12 * k], viewToWorld, toWorld);
+        for (const gamemodels::CardRun& r : *runs)
+            if (!note(r, toWorld)) return;
     }
 }
 

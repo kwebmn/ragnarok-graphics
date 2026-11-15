@@ -33,23 +33,40 @@ constexpr size_t kMostCasterVerts = 600000;
 void Renderer11::noteModelCasters() {
     if (!mirrorCollecting() && !shadowCollecting()) return;
     const gamemodels::Frame& frame = modelsNow_.frame();
-    if (frame.ids.empty() || !modelLikeKnown_) return;
+    if (frame.empty() || !modelLikeKnown_) return;
     modelCards_.runsOf(frame.ids, modelRuns_);
     const bool leavesApart = leavesOwnWay();  // 3.0.20-beta.13: their casters noted as the game's (noteCaster)
-    for (const gamemodels::CardRun& r : modelRuns_) {
-        if (leavesApart && leafyTexture(r.texture)) continue;
-        if (casterVerts_.size() / 6 + size_t(r.count) * 3 > kMostCasterVerts) break;
+    // a run into the casters - `toWorld` a moving node's (its own space; 3.0.20-beta.14); false: no room left
+    const auto note = [&](const gamemodels::CardRun& r, const float* toWorld) {
+        if (leavesApart && leafyTexture(r.texture)) return true;
+        if (casterVerts_.size() / 6 + size_t(r.count) * 3 > kMostCasterVerts) return false;
         Caster11 c;
         c.first = uint32_t(casterVerts_.size() / 6);
-        modelCards_.cornersOf(r, casterVerts_);
+        modelCards_.cornersOf(r, casterVerts_, toWorld);
         c.count = uint32_t(casterVerts_.size() / 6) - c.first;
-        if (!c.count) continue;
+        if (!c.count) return true;
         c.texture = r.texture;
         c.alphaTest = modelLike_.alphaTest || modelLike_.colorKey;
         c.ref = modelLike_.alphaTest ? float(modelLike_.alphaRef) / 255.0f : 0.5f;
-        std::copy(r.lo, r.lo + 3, c.lo);
-        std::copy(r.hi, r.hi + 3, c.hi);
+        if (toWorld) {
+            gamemodels::boxBy(toWorld, r.lo, r.hi, c.lo, c.hi);
+        } else {
+            std::copy(r.lo, r.lo + 3, c.lo);
+            std::copy(r.hi, r.hi + 3, c.hi);
+        }
         casters_.push_back(c);
+        return true;
+    };
+    for (const gamemodels::CardRun& r : modelRuns_)
+        if (!note(r, nullptr)) return;
+    // 3.0.20-beta.14 (stage 4): the moving ones - into the world by their matrices this frame, then the camera's
+    for (size_t k = 0; k < frame.moving.size() && frame.matrices.size() >= 12 * (k + 1); ++k) {
+        const std::vector<gamemodels::CardRun>* runs = modelCards_.runsOfNode(frame.moving[k]);
+        if (!runs || !modelCards_.moving(frame.moving[k])) continue;
+        float toWorld[12];
+        gamemodels::compose(&frame.matrices[12 * k], viewToWorld_, toWorld);
+        for (const gamemodels::CardRun& r : *runs)
+            if (!note(r, toWorld)) return;
     }
 }
 

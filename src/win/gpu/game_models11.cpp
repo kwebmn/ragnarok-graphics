@@ -45,13 +45,14 @@ bool Renderer11::ensureModelFaces(uint32_t faces) {
     release(modelFaces_);
     modelFacesRoom_ = 0;
     D3D11_BUFFER_DESC d{};
-    d.ByteWidth = room * kFaceWords * 4;
+    // 3.0.20-beta.14 (stage 4): after the faces, the frame's moving nodes' matrices - three uint4 each
+    d.ByteWidth = room * kFaceWords * 4 + gamemodels::kCardMostMoving * 48;
     d.Usage = D3D11_USAGE_DEFAULT;
     d.BindFlags = D3D11_BIND_SHADER_RESOURCE;
     D3D11_SHADER_RESOURCE_VIEW_DESC v{};
     v.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
     v.Format = DXGI_FORMAT_R32G32B32A32_UINT;
-    v.Buffer.NumElements = room * (kFaceWords / 4);
+    v.Buffer.NumElements = room * (kFaceWords / 4) + gamemodels::kCardMostMoving * 3;
     HRESULT hr = device_->CreateBuffer(&d, nullptr, &modelFaces_);
     if (SUCCEEDED(hr)) hr = device_->CreateShaderResourceView(modelFaces_, &v, &modelFacesSrv_);
     if (FAILED(hr)) {
@@ -86,13 +87,27 @@ void Renderer11::noteModelFog(const FrameRecord& rec, const DrawCmd& d) {
     }
 }
 
+// 3.0.20-beta.14 (stage 4): the frame's node `i` - its still ones, then its moving ones (`toView` its matrix this
+// frame); none when unknown, or a still one listed as moving or the other way round
+const gamemodels::Node* Renderer11::modelNodeOf(const gamemodels::Frame& frame, size_t i, const float*& toView) const {
+    const bool still = i < frame.ids.size();
+    const size_t k = still ? 0 : i - frame.ids.size();
+    toView = nullptr;
+    if (!still && (k >= frame.moving.size() || frame.matrices.size() < 12 * (k + 1))) return nullptr;
+    const gamemodels::Node* n = modelCards_.node(still ? frame.ids[i] : frame.moving[k]);
+    if (!n || n->moving == still) return nullptr;
+    if (!still) toView = &frame.matrices[12 * k];
+    return n;
+}
+
 void Renderer11::drawGameModels11() {
     modelsDone_ = true;
     own_ground::View view;
+    // 3.0.20-beta.14: a map's faces past kCardMostFaces leave no room for a face's place in the batches - the game's
     const bool ready = modelLikeKnown_ && cameraValid_ && modelVs_ && modelLayout_ &&
-                       own_ground::viewOf(viewToWorld_, view);
+                       modelCards_.faces() < gamemodels::kCardMostFaces && own_ground::viewOf(viewToWorld_, view);
     const gamemodels::Frame& frame = modelsNow_.frame();
-    if (ready && !frame.ids.empty()) {
+    if (ready && !frame.empty()) {
         // the colours as the game makes them with this frame's factors (again for every node when they changed)
         const uint64_t key = gamemodels::colouringKey(frame);
         if (key != modelCards_.colouredWith()) {
@@ -107,7 +122,18 @@ void Renderer11::drawGameModels11() {
                 ctx_->UpdateSubresource(modelFaces_, 0, &box, fresh, 0, 0);
                 modelFacesUp_ = faces;
             }
-            modelCards_.frameOf(frame.ids, modelFrame_);  // the frame's faces by texture, the textures first met
+            // 3.0.20-beta.14 (stage 4): the frame's moving nodes' matrices after the faces (holeG: their first uint4),
+            // their faces into the batches with their places in the list - model_vs puts them by those
+            const size_t moving = std::min<size_t>(frame.moving.size(), gamemodels::kCardMostMoving);
+            modelMatrices_ = 0;
+            if (moving && frame.matrices.size() >= moving * 12) {
+                modelMatrices_ = modelFacesRoom_ * (kFaceWords / 4);
+                const D3D11_BOX box{modelMatrices_ * 16, 0, 0, modelMatrices_ * 16 + uint32_t(moving) * 48, 1, 1};
+                ctx_->UpdateSubresource(modelFaces_, 0, &box, frame.matrices.data(), 0, 0);
+            }
+            static const std::vector<uint32_t> kNoMoving;
+            // the frame's faces by texture, the textures first met
+            modelCards_.frameOf(frame.ids, modelMatrices_ ? frame.moving : kNoMoving, modelFrame_);
             const uint64_t nodes = modelFrame_.nodes, unknown = modelFrame_.unknown;
             modelInstanceData_.clear();
             modelDraws_.clear();
@@ -147,7 +173,9 @@ void Renderer11::drawGameModels11() {
                 modelsDrawnFaces_ += modelInstanceData_.size();
                 modelsDrawnNodes_ += nodes;
                 modelsUnknown_ += unknown;
+                modelsDrawnMoving_ += modelFrame_.moving;  // 3.0.20-beta.14
             }
+            modelMatrices_ = 0;
         }
     }
     if (ready) drawGameLeaves11();  // 3.0.20-beta.13
@@ -159,7 +187,7 @@ void Renderer11::drawGameModels11() {
 // path (not the model pass): the wind's sway, the crowns' volume, the light through, the tints, the casters
 void Renderer11::drawGameLeaves11() {
     const gamemodels::Frame& frame = modelsNow_.frame();
-    if (!leavesOwnWay() || frame.ids.empty() || !modelLikeKnown_ || !cameraValid_) return;
+    if (!leavesOwnWay() || frame.empty() || !modelLikeKnown_ || !cameraValid_) return;
     gamemodels::Picture pic;
     if (!own_ground::viewOf(viewToWorld_, pic.view)) return;
     pic.p = camera::projectionFor(gameWidth_, gameHeight_);
@@ -171,8 +199,9 @@ void Renderer11::drawGameLeaves11() {
     DrawSetup st = modelLike_;
     st.cull = d3d7::CULL_NONE;  // culled by place() as the game culls
     const uint32_t state = leafRec_.addState(st);
-    for (const uint32_t id : frame.ids) {
-        const gamemodels::Node* n = modelCards_.node(id);
+    for (size_t i = 0; i < frame.ids.size() + frame.moving.size(); ++i) {  // 3.0.20-beta.14: the moving ones too
+        const float* toView = nullptr;
+        const gamemodels::Node* n = modelNodeOf(frame, i, toView);
         if (!n) continue;
         leafWanted_.assign(n->textures.size(), false);
         bool any = false;
@@ -180,7 +209,7 @@ void Renderer11::drawGameLeaves11() {
             if (n->textures[t] && leafyTexture(n->textures[t])) leafWanted_[t] = any = true;
         if (!any) continue;
         leafOut_.clear();
-        gamemodels::place(*n, pic, leafScratch_, leafOut_, &leafWanted_);
+        gamemodels::place(*n, pic, leafScratch_, leafOut_, &leafWanted_, toView);
         for (size_t t = 0; t < leafOut_.textures(); ++t) {
             const std::vector<own_ground::Tl1>& v = leafOut_.vertices(t);
             if (v.empty() || v.size() > 65535) continue;

@@ -260,3 +260,24 @@ again in every face, all of it again whenever the view moved): the renderer's CP
    (its own vertex buffer swapped in as the darkness pass does). core: place(..., only), CardStore::node(id). Test
    game_models_place_only_the_textures_wanted. Untested in the game.
    The owner on beta.13: «двигаются деревья» - CONFIRMED.
+14. 3.0.20-beta.14 - stage 4 (the owner: «делай все» - the animated models ours, then «Моделі нашим рендером» on by
+   default, each its own beta). Game facts (decomp): the node's own matrix +0xB4 is rebuilt from its keys each frame
+   BEFORE the actor's draw (FUN_004FA8B0 -> FUN_004E0940 -> FUN_004DE950, for every actor in view, drawn or not) - a
+   skipped draw does not stop the animation; the lights (+0x144) are worked out once at the map's setup (FUN_004DF930
+   via the vtable's slot 2) - a moving node's colours as captured stay right. R-36ND9B/R-XTEFYA: 1045 moving nodes of
+   2562 in Prontera (393-652 at a time). Driver: a moving node (own keys or hung on one) captured with its own
+   vertices (Node.moving, bridge v38); skipped as a still one is (the switch, the way, alpha 0xFF, no rect, the same
+   mesh/colour/light lists) with its node-to-view matrix by FUN_00409720 (drawChildren's) into the frame
+   (Frame.moving/matrices); the skipped moving node on the call stack while its children are drawn (Ruling: else a
+   child captured after its parent was skipped would be taken as still and given back to the game - cost if wrong:
+   none, the stack entry only names the parent); kCardMostMoving (4095) a frame at most, the rest the game's.
+   Renderer: Ruling - the moving faces join the card's batches by texture, their moving node's place in the frame's
+   list (from 1) in the face number's bits 20-31 (kCardSlotShift), the frame's matrices in the faces' buffer after
+   the faces (D3D12: a region a slot - kSlots 2 lists in flight; D3D11: one, UpdateSubresource), model_vs puts a
+   moving face by its matrix (holeG = the matrices' first uint4) - no draws more than before (a draw a node's run
+   would be ~1200 draws more in Prontera); a map past 1 << 20 faces: D3D12 the processor's way, D3D11 the game's (its
+   word false) - cost if wrong: none seen (Prontera ~80k still faces). The processor's way (place with toView), the
+   leaves (drawGameLeaves*/place toView) and the casters (compose(M, viewToWorld), boxBy for the box) take them too.
+   Fix found on the way: FrameState::presented() let go of the still list only - the moving one and its matrices too
+   now (test game_models_frame_moving_kept_to_the_present). Tests: game_models_card_moving_faces_join_the_batches_
+   with_their_place, game_models_box_by_a_matrix (+ beta.14's earlier wire/place/card ones). Untested in the game.

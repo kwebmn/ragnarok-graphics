@@ -1,5 +1,6 @@
 #include "core/game_models.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -19,6 +20,7 @@ void write(bridge::WireWriter& w, const Node& n) {
     w.u32(uint32_t(n.faces.size()));
     w.bytes(n.faces.data(), n.faces.size() * sizeof(Face));
     w.u8(n.flipped ? 1 : 0);  // 3.0.20-beta.4
+    w.u8(n.moving ? 1 : 0);   // 3.0.20-beta.14
 }
 
 bool read(bridge::WireReader& r, Node& n) {
@@ -45,6 +47,7 @@ bool read(bridge::WireReader& r, Node& n) {
             (face.texture >= n.textures.size() && !n.textures.empty()))
             return false;
     n.flipped = r.u8() != 0;
+    n.moving = r.u8() != 0;
     return r.ok();
 }
 
@@ -53,6 +56,10 @@ void write(bridge::WireWriter& w, const Frame& f) {
     w.bytes(f.ids.data(), f.ids.size() * sizeof(uint32_t));
     for (const float k : f.factors) w.f32(k);
     w.u8(f.lit ? 1 : 0);
+    w.u32(uint32_t(f.moving.size()));  // 3.0.20-beta.14
+    w.bytes(f.moving.data(), f.moving.size() * sizeof(uint32_t));
+    w.u32(uint32_t(f.matrices.size()));
+    w.bytes(f.matrices.data(), f.matrices.size() * sizeof(float));
 }
 
 bool read(bridge::WireReader& r, Frame& f) {
@@ -64,6 +71,18 @@ bool read(bridge::WireReader& r, Frame& f) {
     std::memcpy(f.ids.data(), ids, f.ids.size() * sizeof(uint32_t));
     for (float& k : f.factors) k = r.f32();
     f.lit = r.u8() != 0;
+    const uint32_t moving = r.u32();  // 3.0.20-beta.14
+    if (!r.ok() || moving > kMostVertices) return false;
+    const uint8_t* movingIds = r.take(size_t(moving) * sizeof(uint32_t));
+    if (!movingIds) return false;
+    f.moving.resize(moving);
+    std::memcpy(f.moving.data(), movingIds, f.moving.size() * sizeof(uint32_t));
+    const uint32_t floats = r.u32();
+    if (!r.ok() || floats != moving * 12) return false;  // a matrix each
+    const uint8_t* m = r.take(size_t(floats) * sizeof(float));
+    if (!m) return false;
+    f.matrices.resize(floats);
+    std::memcpy(f.matrices.data(), m, f.matrices.size() * sizeof(float));
     return r.ok();
 }
 
@@ -101,6 +120,16 @@ void worldOf(const float combined[12], const float viewInverse[12], float world[
 
 void transform(const float m[12], const float p[3], float out[3]) {
     for (int col = 0; col < 3; ++col) out[col] = p[0] * m[col] + p[1] * m[3 + col] + p[2] * m[6 + col] + m[9 + col];
+}
+
+void boxBy(const float m[12], const float lo[3], const float hi[3], float outLo[3], float outHi[3]) {
+    for (int a = 0; a < 3; ++a) outLo[a] = 1e30f, outHi[a] = -1e30f;
+    for (int k = 0; k < 8; ++k) {
+        const float p[3] = {(k & 1) ? hi[0] : lo[0], (k & 2) ? hi[1] : lo[1], (k & 4) ? hi[2] : lo[2]};
+        float w[3];
+        transform(m, p, w);
+        for (int a = 0; a < 3; ++a) outLo[a] = std::min(outLo[a], w[a]), outHi[a] = std::max(outHi[a], w[a]);
+    }
 }
 
 uint64_t Corners::key(int x, int y, int z) const {

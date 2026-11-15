@@ -1559,6 +1559,9 @@ struct Renderer::Impl {
     // the game's still models in the last 30 s, their triangles, nodes and nodes unknown to the renderer
     uint64_t gameDrawnFrames = 0, gameDrawnTriangles = 0, gameDrawnNodes = 0, gameDrawnUnknown = 0;
     uint64_t gameDrawnByCard = 0;  // 3.0.20-beta.11: of those pictures, from the card
+    uint64_t gameDrawnMoving = 0;  // 3.0.20-beta.14: of those nodes, the moving ones (by their matrices)
+    size_t gameMovingPlaced = 0;   // the processor's way's this picture
+    const gamemodels::Node* gameNodeOf(const gamemodels::Frame& frame, size_t i, const float*& toView) const;
     gamemodels::Corners ownCorners;
     bool ownCornersMade = false;
     std::vector<uint32_t> gameModelsUnchecked;  // came before our own corners were made
@@ -1599,7 +1602,12 @@ struct Renderer::Impl {
     UINT cardCount = 0;
     const own_ground::Shading* cardFog = nullptr;  // the fog they take (the own ground's or gameFog)
     std::vector<uint32_t> cardPacked;
-    bool cardModelsReady() const { return modelVs && !gameFacesFailed; }
+    // 3.0.20-beta.14 (stage 4): the frame's moving nodes' matrices' first uint4 in t6 for these draws (holeG), 0 none;
+    // a map's faces past kCardMostFaces leave no room for a face's place in the batches: the processor's way
+    uint32_t cardMatrices = 0;
+    bool cardModelsReady() const {
+        return modelVs && !gameFacesFailed && gameCards.faces() < gamemodels::kCardMostFaces;
+    }
     // 3.0.20-beta.12 (the owner's «да, делай» - stage 3): the game's still models we drew this picture into the
     // casters (sunVerts, sunCasters) - the water's reflections and the torches' shadows take them as the game's own
     void noteGameCasters();

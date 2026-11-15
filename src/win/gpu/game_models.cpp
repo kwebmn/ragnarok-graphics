@@ -57,15 +57,18 @@ void Renderer::Impl::checkGameModel(const gamemodels::Node& n) {
 
 // 3.0.20-beta.4: the frame's game models, hashed (FNV-1a) - the own ground's record is made again when they change
 uint64_t Renderer::Impl::gameFrameKey() const {
-    if (gameModelsNow.frame().ids.empty()) return 0;
+    const gamemodels::Frame& f = gameModelsNow.frame();
+    if (f.empty()) return 0;
     uint64_t h = 1469598103934665603ull;
     const auto mix = [&h](const void* p, size_t n) {
         const auto* b = static_cast<const uint8_t*>(p);
         for (size_t i = 0; i < n; ++i) h = (h ^ b[i]) * 1099511628211ull;
     };
-    mix(gameModelsNow.frame().ids.data(), gameModelsNow.frame().ids.size() * sizeof(uint32_t));
-    mix(gameModelsNow.frame().factors, sizeof gameModelsNow.frame().factors);
-    const uint8_t lit = gameModelsNow.frame().lit ? 1 : 0;
+    mix(f.ids.data(), f.ids.size() * sizeof(uint32_t));
+    mix(f.moving.data(), f.moving.size() * sizeof(uint32_t));  // 3.0.20-beta.14: the moving ones by their matrices
+    mix(f.matrices.data(), f.matrices.size() * sizeof(float));
+    mix(f.factors, sizeof f.factors);
+    const uint8_t lit = f.lit ? 1 : 0;
     mix(&lit, 1);
     return h | 1;
 }
@@ -79,8 +82,10 @@ void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::
                                     std::vector<uint8_t>* layers, const own_ground::Shading& fog) {
     OwnState& o = ownState;
     o.gameTriangles = o.gameNodes = o.gameUnknown = 0;
-    const std::vector<uint32_t>& ids = gameModelsNow.frame().ids;
-    if (ids.empty() || !o.modelLikeKnown) return;
+    gameMovingPlaced = 0;
+    const gamemodels::Frame& frame = gameModelsNow.frame();
+    const std::vector<uint32_t>& ids = frame.ids;
+    if (frame.empty() || !o.modelLikeKnown) return;
     DrawSetup ms = o.modelLike;
     ms.cull = d3d7::CULL_NONE;
     const uint32_t state = rec.addState(ms);
@@ -96,21 +101,28 @@ void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::
     // nodes in turns of kGameNodesAJob, each turn placed on a thread of its own (parallelChunks, as the own ground's
     // chunks; core/game_models_place - each vertex once a node), then put into the draws in the list's order: the same
     // draws as one thread made
-    const size_t jobs = (ids.size() + kGameNodesAJob - 1) / kGameNodesAJob;
+    // 3.0.20-beta.14 (stage 4): the frame's moving nodes after its still ones, each put into the view by its matrix
+    const size_t all = ids.size() + frame.moving.size();
+    const size_t jobs = (all + kGameNodesAJob - 1) / kGameNodesAJob;
     if (gameOuts.size() < jobs) gameOuts.resize(jobs);
     if (gameScratch.size() < jobs) gameScratch.resize(jobs);
     parallelChunks(jobs, [&](size_t job) {
         gamemodels::Placed& out = gameOuts[job];
         out.clear();
-        const size_t end = std::min(ids.size(), (job + 1) * kGameNodesAJob);
+        const size_t end = std::min(all, (job + 1) * kGameNodesAJob);
         for (size_t i = job * kGameNodesAJob; i < end; ++i) {
-            const auto it = gameModels.find(ids[i]);
-            if (it == gameModels.end())
+            const float* toView = nullptr;
+            const gamemodels::Node* n = gameNodeOf(frame, i, toView);
+            if (!n)
                 ++out.unknown;  // 3.0.20-beta.7
             else
-                gamemodels::place(it->second, pic, gameScratch[job], out);
+                gamemodels::place(*n, pic, gameScratch[job], out, nullptr, toView);
         }
     });
+    for (size_t k = 0; k < frame.moving.size(); ++k) {
+        const float* toView = nullptr;
+        if (gameNodeOf(frame, ids.size() + k, toView)) ++gameMovingPlaced;
+    }
     for (auto& [id, pd] : gamePending) pd.verts.clear(), pd.idx.clear();
     const auto emit = [&](uint32_t texture) {
         OwnState::ModelPending& pd = gamePending[texture];
@@ -153,6 +165,20 @@ void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::
     for (auto& [texture, pd] : gamePending) emit(texture);
 }
 
+// 3.0.20-beta.14 (stage 4): the frame's node `i` - its still ones, then its moving ones (`toView` its matrix this
+// frame); none when unknown, or a still one listed as moving or the other way round
+const gamemodels::Node* Renderer::Impl::gameNodeOf(const gamemodels::Frame& frame, size_t i,
+                                                   const float*& toView) const {
+    const bool still = i < frame.ids.size();
+    const size_t k = still ? 0 : i - frame.ids.size();
+    toView = nullptr;
+    if (!still && (k >= frame.moving.size() || frame.matrices.size() < 12 * (k + 1))) return nullptr;
+    const auto it = gameModels.find(still ? frame.ids[i] : frame.moving[k]);
+    if (it == gameModels.end() || it->second.moving == still) return nullptr;
+    if (!still) toView = &frame.matrices[12 * k];
+    return &it->second;
+}
+
 // 3.0.20-beta.9: as the own ground's draws (drawOwnGround) - after the game's draws gathered so far, the own pass
 // (no sway of leaves - a draw holds many trees -, not a caster)
 bool Renderer::Impl::drawGameModelsAlone() {
@@ -160,10 +186,10 @@ bool Renderer::Impl::drawGameModelsAlone() {
     OwnState& o = ownState;
     own_ground::View view;
     const bool ready = o.modelLikeKnown && viewToWorldValid && own_ground::viewOf(viewToWorld, view);
-    if (ready && !gameModelsNow.frame().ids.empty() && cardModelsReady()) {  // 3.0.20-beta.11: from the card
+    if (ready && !gameModelsNow.frame().empty() && cardModelsReady()) {  // 3.0.20-beta.11: from the card
         gameFog.fit();
         drawGameModelsCard(gameFog);
-    } else if (ready && !gameModelsNow.frame().ids.empty()) {
+    } else if (ready && !gameModelsNow.frame().empty()) {
         const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
         gameFog.fit();
         gameRec.reset();
@@ -182,6 +208,7 @@ bool Renderer::Impl::drawGameModelsAlone() {
         gameDrawnTriangles += o.gameTriangles;
         gameDrawnNodes += o.gameNodes;
         gameDrawnUnknown += o.gameUnknown;
+        gameDrawnMoving += gameMovingPlaced;  // 3.0.20-beta.14
     }
     if (ready) drawGameLeaves(gameFog);  // 3.0.20-beta.13
     gameModelsNow.drawn(ready);  // the driver's word: from the present on
@@ -218,7 +245,9 @@ bool Renderer::Impl::ensureGameFaces(uint32_t faces) {
     heap.Type = D3D12_HEAP_TYPE_UPLOAD;
     D3D12_RESOURCE_DESC desc{};
     desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    desc.Width = UINT64(room) * gamemodels::kCardFaceWords * 4;
+    // 3.0.20-beta.14 (stage 4): after the faces, the frame's moving nodes' matrices - a region a slot (the list in
+    // flight before this one may still read its own), kCardMostMoving of three uint4 each
+    desc.Width = UINT64(room) * gamemodels::kCardFaceWords * 4 + UINT64(kSlots) * gamemodels::kCardMostMoving * 48;
     desc.Height = 1;
     desc.DepthOrArraySize = 1;
     desc.MipLevels = 1;
@@ -253,7 +282,7 @@ bool Renderer::Impl::ensureGameFaces(uint32_t faces) {
     v.Format = DXGI_FORMAT_R32G32B32A32_UINT;
     v.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
     v.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    v.Buffer.NumElements = room * (gamemodels::kCardFaceWords / 4);
+    v.Buffer.NumElements = room * (gamemodels::kCardFaceWords / 4) + kSlots * gamemodels::kCardMostMoving * 3;
     device->CreateShaderResourceView(gameFaces, &v, cpuSrvHandle(gameFacesSrv));
     static bool told = false;
     if (!told) {
@@ -271,7 +300,7 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
     OwnState& o = ownState;
     const gamemodels::Frame& frame = gameModelsNow.frame();
     o.gameTriangles = o.gameNodes = o.gameUnknown = 0;
-    if (frame.ids.empty() || !o.modelLikeKnown || !viewToWorldValid) return;
+    if (frame.empty() || !o.modelLikeKnown || !viewToWorldValid) return;
     const uint64_t key = gamemodels::colouringKey(frame);
     if (key != gameCards.colouredWith()) {
         gameCards.colour(gamemodels::colouringOf(frame), key);
@@ -285,7 +314,16 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
                     (size_t(faces) * gamemodels::kCardFaceWords - from) * 4);
         gameFacesUp = faces;
     }
-    gameCards.frameOf(frame.ids, gameCardFrame);
+    // 3.0.20-beta.14 (stage 4): the frame's moving nodes' matrices into this list's region after the faces (holeG: its
+    // first uint4), their faces into the batches with their places in the list - model_vs puts them by those
+    cardMatrices = 0;
+    const size_t moving = open ? std::min<size_t>(frame.moving.size(), gamemodels::kCardMostMoving) : 0;
+    if (moving && frame.matrices.size() >= moving * 12) {
+        cardMatrices = gameFacesRoom * (gamemodels::kCardFaceWords / 4) + slot * gamemodels::kCardMostMoving * 3;
+        std::memcpy(gameFacesMapped + size_t(cardMatrices) * 16, frame.matrices.data(), moving * 48);
+    }
+    static const std::vector<uint32_t> kNoMoving;
+    gameCards.frameOf(frame.ids, cardMatrices ? frame.moving : kNoMoving, gameCardFrame);
     cardRec.reset();
     cardCounts.clear();
     DrawSetup st = o.modelLike;
@@ -308,7 +346,10 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
     }
     o.gameNodes = gameCardFrame.nodes;
     o.gameUnknown = gameCardFrame.unknown;
-    if (cardCounts.empty()) return;
+    if (cardCounts.empty()) {
+        cardMatrices = 0;
+        return;
+    }
     flushDraws();  // the draws gathered so far are of the record's vertices before these
     prepareGeometry(cardRec);
     if (vertexBase) {
@@ -323,6 +364,7 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
         cardCount = 0;
         cardFog = nullptr;
     }
+    cardMatrices = 0;
     geometryList = 0;  // the game's record's vertices go up again with its next draw
     noteGameCasters();  // 3.0.20-beta.12: the reflections and the torches' shadows take them
     ++gameDrawnFrames;
@@ -330,6 +372,7 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
     gameDrawnTriangles += o.gameTriangles;
     gameDrawnNodes += o.gameNodes;
     gameDrawnUnknown += o.gameUnknown;
+    gameDrawnMoving += gameCardFrame.moving;  // 3.0.20-beta.14
 }
 
 // 3.0.20-beta.13 (the owner: «не качаются деревья»): the frame's game models' leaves drawn as the game's own trees - a
@@ -338,7 +381,7 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
 // its casters noted as the game's
 void Renderer::Impl::drawGameLeaves(const own_ground::Shading& fog) {
     const gamemodels::Frame& frame = gameModelsNow.frame();
-    if (!leavesOwnWay() || frame.ids.empty() || !ownState.modelLikeKnown || !viewToWorldValid) return;
+    if (!leavesOwnWay() || frame.empty() || !ownState.modelLikeKnown || !viewToWorldValid) return;
     gamemodels::Picture pic;
     if (!own_ground::viewOf(viewToWorld, pic.view)) return;
     pic.p = camera::projectionFor(gameWidth, gameHeight);
@@ -349,17 +392,18 @@ void Renderer::Impl::drawGameLeaves(const own_ground::Shading& fog) {
     DrawSetup st = ownState.modelLike;
     st.cull = d3d7::CULL_NONE;  // culled by place() as the game culls
     const uint32_t state = leafRec.addState(st);
-    for (const uint32_t id : frame.ids) {
-        const auto it = gameModels.find(id);
-        if (it == gameModels.end()) continue;
-        const gamemodels::Node& n = it->second;
+    for (size_t i = 0; i < frame.ids.size() + frame.moving.size(); ++i) {  // 3.0.20-beta.14: the moving ones too
+        const float* toView = nullptr;
+        const gamemodels::Node* found = gameNodeOf(frame, i, toView);
+        if (!found) continue;
+        const gamemodels::Node& n = *found;
         leafWanted.assign(n.textures.size(), false);
         bool any = false;
         for (size_t t = 0; t < n.textures.size(); ++t)
             if (n.textures[t] && leafyTexture(n.textures[t])) leafWanted[t] = any = true;
         if (!any) continue;
         leafOut.clear();
-        gamemodels::place(n, pic, leafScratch, leafOut, &leafWanted);
+        gamemodels::place(n, pic, leafScratch, leafOut, &leafWanted, toView);
         for (size_t t = 0; t < leafOut.textures(); ++t) {
             const std::vector<own_ground::Tl1>& v = leafOut.vertices(t);
             if (v.empty() || v.size() > 65535) continue;
@@ -383,11 +427,13 @@ void Renderer::Impl::drawGameLeaves(const own_ground::Shading& fog) {
 void Renderer::Impl::tellGameModels() {
     if (gameDrawnFrames) {  // 3.0.20-beta.7
         LOG_INFO("game models: drawn by us in %llu pictures (%llu of them from the card) - %.0f triangles a picture, "
-                 "%.0f nodes, %.1f of the frame's nodes unknown to the renderer",
+                 "%.0f nodes (%.0f of them moving, by their matrices), %.1f of the frame's nodes unknown to the "
+                 "renderer",
                  static_cast<unsigned long long>(gameDrawnFrames), static_cast<unsigned long long>(gameDrawnByCard),
                  double(gameDrawnTriangles) / double(gameDrawnFrames), double(gameDrawnNodes) / double(gameDrawnFrames),
-                 double(gameDrawnUnknown) / double(gameDrawnFrames));
+                 double(gameDrawnMoving) / double(gameDrawnFrames), double(gameDrawnUnknown) / double(gameDrawnFrames));
         gameDrawnFrames = gameDrawnTriangles = gameDrawnNodes = gameDrawnUnknown = gameDrawnByCard = 0;
+        gameDrawnMoving = 0;
     }
     if (gameModels.size() == gameModelsTold) return;
     gameModelsTold = gameModels.size();

@@ -72,6 +72,16 @@ bool CardStore::add(const Node& n) {
     return true;
 }
 
+const std::vector<CardRun>* CardStore::runsOfNode(uint32_t id) const {
+    const auto it = nodes_.find(id);
+    return it == nodes_.end() ? nullptr : &it->second.runs;
+}
+
+bool CardStore::moving(uint32_t id) const {
+    const auto it = nodes_.find(id);
+    return it != nodes_.end() && it->second.node.moving;
+}
+
 const Node* CardStore::node(uint32_t id) const {
     const auto it = nodes_.find(id);
     return it == nodes_.end() ? nullptr : &it->second.node;
@@ -98,9 +108,14 @@ void CardStore::colourOf(Kept& k) {
 }
 
 void CardStore::frameOf(const std::vector<uint32_t>& ids, CardFrame& out) const {
+    static const std::vector<uint32_t> kNone;
+    frameOf(ids, kNone, out);
+}
+
+void CardStore::frameOf(const std::vector<uint32_t>& ids, const std::vector<uint32_t>& moving, CardFrame& out) const {
     out.textures.clear();
     for (std::vector<uint32_t>& list : out.faces) list.clear();
-    out.nodes = out.unknown = 0;
+    out.nodes = out.unknown = out.moving = 0;
     at_.clear();
     for (const uint32_t id : ids) {
         const auto it = nodes_.find(id);
@@ -108,18 +123,33 @@ void CardStore::frameOf(const std::vector<uint32_t>& ids, CardFrame& out) const 
             ++out.unknown;
             continue;
         }
-        ++out.nodes;
-        for (const CardRun& r : it->second.runs) {
-            const auto [at, fresh] = at_.try_emplace(r.texture, uint32_t(out.textures.size()));
-            if (fresh) {
-                out.textures.push_back(r.texture);
-                if (out.faces.size() < out.textures.size()) out.faces.emplace_back();
-            }
-            std::vector<uint32_t>& list = out.faces[at->second];
-            for (uint32_t i = 0; i < r.count; ++i) list.push_back(r.first + i);
+        if (it->second.node.moving) continue;  // 3.0.20-beta.14: its own space - only with its matrix
+        into(it->second, 0, out);
+    }
+    for (size_t m = 0; m < moving.size() && m < kCardMostMoving; ++m) {  // 3.0.20-beta.14
+        const auto it = nodes_.find(moving[m]);
+        if (it == nodes_.end() || !it->second.node.moving) {
+            ++out.unknown;
+            continue;
         }
+        into(it->second, uint32_t(m + 1), out);
+        ++out.moving;
     }
     out.faces.resize(std::max(out.faces.size(), out.textures.size()));
+}
+
+void CardStore::into(const Kept& k, uint32_t slot, CardFrame& out) const {
+    ++out.nodes;
+    const uint32_t high = slot << kCardSlotShift;
+    for (const CardRun& r : k.runs) {
+        const auto [at, fresh] = at_.try_emplace(r.texture, uint32_t(out.textures.size()));
+        if (fresh) {
+            out.textures.push_back(r.texture);
+            if (out.faces.size() < out.textures.size()) out.faces.emplace_back();
+        }
+        std::vector<uint32_t>& list = out.faces[at->second];
+        for (uint32_t i = 0; i < r.count; ++i) list.push_back((r.first + i) | high);
+    }
 }
 
 void CardStore::runsOf(const std::vector<uint32_t>& ids, std::vector<CardRun>& out) const {
@@ -130,13 +160,17 @@ void CardStore::runsOf(const std::vector<uint32_t>& ids, std::vector<CardRun>& o
     }
 }
 
-void CardStore::cornersOf(const CardRun& r, std::vector<float>& out) const {
+void CardStore::cornersOf(const CardRun& r, std::vector<float>& out, const float* toWorld) const {
     if (size_t(r.first + r.count) * kCardFaceWords > words_.size()) return;
     for (uint32_t f = r.first; f < r.first + r.count; ++f) {
         const uint32_t* w = words_.data() + size_t(f) * kCardFaceWords;
         for (int c = 0; c < 3; ++c) {
             float v[6];
             std::memcpy(v, w + 4 * c, 3 * sizeof(float));      // x y z
+            if (toWorld) {  // 3.0.20-beta.14: a moving node's own space
+                const float p[3] = {v[0], v[1], v[2]};
+                transform(toWorld, p, v);
+            }
             std::memcpy(v + 3, w + 12 + 2 * c, 2 * sizeof(float));  // u v
             std::memcpy(v + 5, w + 4 * c + 3, sizeof(float));  // the colour's bits
             out.insert(out.end(), v, v + 6);

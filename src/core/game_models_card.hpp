@@ -14,6 +14,11 @@
 namespace uagfx::gamemodels {
 
 constexpr uint32_t kCardFaceWords = 20;
+// 3.0.20-beta.14 (stage 4): a face's number in the frame's batches - the card's face below 1 << 20, its moving node's
+// place in the frame's moving list (from 1; 0 a still face, in the world) above: so many faces a map, moving nodes a
+// frame at most (the card's way past them: the processor's)
+constexpr uint32_t kCardSlotShift = 20, kCardMostFaces = 1u << kCardSlotShift,
+                   kCardMostMoving = (1u << (32 - kCardSlotShift)) - 1;
 
 // the frame's colouring: the game's way (lit or plain), its factors, alpha 0xFF; as a key (never 0)
 modelcensus::Colouring colouringOf(const Frame& f);
@@ -25,11 +30,12 @@ struct CardRun {
     float lo[3] = {0.0f, 0.0f, 0.0f}, hi[3] = {0.0f, 0.0f, 0.0f};
 };
 
-// the frame's faces by texture: the textures in the order first met, each one's face numbers; nodes found, ids not
+// the frame's faces by texture: the textures in the order first met, each one's face numbers; nodes found
+// (3.0.20-beta.14: the moving ones of them), ids not
 struct CardFrame {
     std::vector<uint32_t> textures;
     std::vector<std::vector<uint32_t>> faces;
-    uint32_t nodes = 0, unknown = 0;
+    uint32_t nodes = 0, unknown = 0, moving = 0;
 };
 
 class CardStore {
@@ -44,10 +50,16 @@ public:
     size_t nodes() const { return nodes_.size(); }
     const Node* node(uint32_t id) const;  // 3.0.20-beta.13: a node kept (its leaves placed by the processor)
     void frameOf(const std::vector<uint32_t>& ids, CardFrame& out) const;
+    // 3.0.20-beta.14: the frame's moving nodes too - their faces with their places (kCardSlotShift), after the still
+    void frameOf(const std::vector<uint32_t>& ids, const std::vector<uint32_t>& moving, CardFrame& out) const;
     // 3.0.20-beta.12 (stage 3: our models in the torches' shadows and the water's reflections): the frame's nodes'
     // runs, and a run's corners appended as the casters' vertices - x y z, u v, the colour's bits as a float
     void runsOf(const std::vector<uint32_t>& ids, std::vector<CardRun>& out) const;
-    void cornersOf(const CardRun& r, std::vector<float>& out) const;
+    // 3.0.20-beta.14: `toWorld` - a moving node's (its corners are its own space): into the world by it
+    void cornersOf(const CardRun& r, std::vector<float>& out, const float* toWorld = nullptr) const;
+    // 3.0.20-beta.14 (stage 4): a moving node's runs (frameOf leaves them out of the batches), whether a node moves
+    const std::vector<CardRun>* runsOfNode(uint32_t id) const;
+    bool moving(uint32_t id) const;
 
 private:
     struct Kept {
@@ -57,6 +69,7 @@ private:
         std::vector<CardRun> runs;
     };
     void colourOf(Kept& k);
+    void into(const Kept& k, uint32_t slot, CardFrame& out) const;
     std::unordered_map<uint32_t, Kept> nodes_;
     std::vector<uint32_t> words_;
     modelcensus::Colouring how_;

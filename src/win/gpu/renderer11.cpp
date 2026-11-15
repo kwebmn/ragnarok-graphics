@@ -1850,9 +1850,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         std::memcpy(c.projection, proj, sizeof proj);
         std::memcpy(c.reproject, viewToWorld_, sizeof c.reproject);
         const uint32_t tint = modelFog_.specularRgb();
-        float bits;
+        float bits, matrices;
         std::memcpy(&bits, &tint, sizeof bits);
-        const float fog[8] = {modelFog_.fogA(), modelFog_.fogB(), bits, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};  // holeZ 0
+        std::memcpy(&matrices, &modelMatrices_, sizeof matrices);  // 3.0.20-beta.14: holeG, the moving ones' matrices
+        const float fog[8] = {modelFog_.fogA(), modelFog_.fogB(), bits, 0.0f, matrices, 0.0f, 0.0f, 0.0f};  // holeZ 0
         std::memcpy(c.hole, fog, sizeof fog);
     }
     if (seamPass_) {  // 2.5.9 (draw.cpp 1.9): a strip across a seam - its alpha from the noise over the world
@@ -4511,14 +4512,16 @@ void Renderer11::logGpu(ULONGLONG now) {
                  static_cast<unsigned>(pooledBytes_ >> 20),
                  seconds > 0 ? double(stats_.uploaded) / 1048576.0 / seconds : 0.0);
         if (modelsDrawnFrames_)  // 3.0.20-beta.10
-            LOG_INFO("Direct3D 11: the game's still models drawn by us on the card in %llu pictures - %.0f faces a "
-                     "picture, %.0f nodes, %.1f of the frame's nodes unknown; %zu nodes, %zu faces on the card",
+            LOG_INFO("Direct3D 11: the game's models drawn by us on the card in %llu pictures - %.0f faces a picture, "
+                     "%.0f nodes (%.0f of them moving, by their matrices), %.1f of the frame's nodes unknown; %zu "
+                     "nodes, %zu faces on the card",
                      static_cast<unsigned long long>(modelsDrawnFrames_),
                      double(modelsDrawnFaces_) / double(modelsDrawnFrames_),
                      double(modelsDrawnNodes_) / double(modelsDrawnFrames_),
+                     double(modelsDrawnMoving_) / double(modelsDrawnFrames_),
                      double(modelsUnknown_) / double(modelsDrawnFrames_), modelCards_.nodes(),
                      size_t(modelCards_.faces()));
-        modelsDrawnFrames_ = modelsDrawnFaces_ = modelsDrawnNodes_ = modelsUnknown_ = 0;
+        modelsDrawnFrames_ = modelsDrawnFaces_ = modelsDrawnNodes_ = modelsUnknown_ = modelsDrawnMoving_ = 0;
         // 3.0.19-beta.43 (R-XHRKGN): the ground's draws by their first texture - told while any went white
         if (stats_.groundNone || stats_.groundGone)
             LOG_INFO("Direct3D 11: the ground's draws a frame - %.0f from the game's textures, %.0f from their HD "

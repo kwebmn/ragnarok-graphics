@@ -802,10 +802,11 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         std::memcpy(c.projection, proj, sizeof proj);
         std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
         const uint32_t tint = cardFog ? cardFog->specularRgb() : 0u;
-        float bits;
+        float bits, matrices;
         std::memcpy(&bits, &tint, sizeof bits);
+        std::memcpy(&matrices, &cardMatrices, sizeof matrices);  // 3.0.20-beta.14: holeG, the moving nodes' matrices
         const float fog[8] = {cardFog ? cardFog->fogA() : 255.0f, cardFog ? cardFog->fogB() : 0.0f, bits, 0.0f,
-                              0.0f, 0.0f, 0.0f, 0.0f};
+                              matrices, 0.0f, 0.0f, 0.0f};
         std::memcpy(c.hole, fog, sizeof fog);
         next.card = cardCount;
     }

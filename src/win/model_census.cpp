@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "core/game_models.hpp"
+#include "core/game_models_card.hpp"
 #include "core/model_census.hpp"
 #include "core/view3d.hpp"
 #include "win/context.hpp"
@@ -70,6 +71,16 @@ struct Still {
     bool placed = false;
 };
 std::unordered_map<uint32_t, Still> g_still;
+// 3.0.20-beta.14 (stage 4): the moving nodes captured (their own vertices) with their mesh and colour lists then - the
+// frame's moving nodes left out of the game's draw with the node-to-view matrices its draw makes, how many told
+struct Moving {
+    uint32_t mesh = 0, colours = 0, lits = 0;
+};
+std::unordered_map<uint32_t, Moving> g_moving;
+std::vector<uint32_t> g_frameMoving;
+std::vector<float> g_frameMatrices;
+size_t g_toldMoving = 0;
+uint32_t g_oursMoving = 0;
 bool g_on = false;
 std::vector<uint32_t> g_frameIds;
 size_t g_told = 0;
@@ -152,8 +163,9 @@ void check(const uint8_t* node, const Call& call, const mc::Colouring& how) {
 // 3.0.20-beta.4: a node left out of the game's draw - its matrix by the game's own (FUN_00409720: thiscall on the
 // out 4 x 3, its local +0xB4 and the parent's) and its children drawn as the game's draw does (its list +0xAC, each
 // child's vtable slot 0 with the matrix and the two passed on); its half see-through flag cleared as the draw does
-void drawChildren(uint8_t* node, uint32_t parent, uint32_t b, uint32_t c) {
-    float m[12];
+void drawChildren(uint8_t* node, uint32_t parent, uint32_t b, uint32_t c, float* toView = nullptr) {
+    float own[12];
+    float* m = toView ? toView : own;  // 3.0.20-beta.14: a moving node's - the frame's matrix for it
     const void* from = reinterpret_cast<const void*>(uintptr_t(parent));
     reinterpret_cast<MatrixFn>(uintptr_t(kNodeMatrix))(m, node + kNodeLocal, from);
     const uintptr_t head = at<uint32_t>(uintptr_t(node) + kNodeChildren);
@@ -221,6 +233,29 @@ bool ours(const uint8_t* node, const mc::Colouring& how, const float* parent) {
     return r && r->gameModelsLately();
 }
 
+// 3.0.20-beta.14 (stage 4): a moving node is the renderer's this frame as a still one (the switch, the way, its actor
+// not fading, the renderer's word) while its mesh and colour lists are those of its capture - the game lights a node
+// once, at the map's setup (FUN_004DF930 through the vtable's slot 2), and rebuilds its own matrix (+0xB4) from its
+// keys each frame before the actor's draw (FUN_004FA8B0 -> FUN_004E0940 -> FUN_004DE950): placed by the frame's matrix
+bool oursMoving(const uint8_t* node, const mc::Colouring& how) {
+    // so many a frame as the batches' places hold (core/game_models_card kCardSlotShift): the rest the game's
+    if (!g_on || how.alpha != 0xFF || (how.way != mc::Way::Plain && how.way != mc::Way::Lit) ||
+        at<int32_t>(kInsideRect) || g_frameMoving.size() >= gamemodels::kCardMostMoving)
+        return false;
+    const auto it = g_moving.find(uint32_t(uintptr_t(node)));
+    if (it == g_moving.end()) return false;
+    const uintptr_t n = uintptr_t(node);
+    const Moving& was = it->second;
+    if (was.mesh != at<uint32_t>(n + mc::kNodeMesh) || was.colours != at<uint32_t>(n + mc::kNodeColours) ||
+        was.lits != at<uint32_t>(n + mc::kNodeLit)) {
+        g_moving.erase(it);
+        ++g_moved;
+        return false;
+    }
+    auto* r = Context::get().renderer;
+    return r && r->gameModelsLately();
+}
+
 void __attribute__((thiscall)) drawHook(uint8_t* node, uint32_t a, uint32_t b, uint32_t c) {
     if (g_depth >= kDeepest || !node) {
         reinterpret_cast<NodeDrawFn>(g_draw)(node, a, b, c);
@@ -232,6 +267,20 @@ void __attribute__((thiscall)) drawHook(uint8_t* node, uint32_t a, uint32_t b, u
         g_frameIds.push_back(uint32_t(uintptr_t(node)));
         ++g_ours;
         drawChildren(node, a, b, c);
+        return;
+    }
+    if (oursMoving(node, how)) {  // 3.0.20-beta.14: its matrix as the game's draw makes it, into the frame's list
+        float m[12];
+        // on the stack while its children are drawn: one not captured yet is captured as moving (hung on it)
+        const int depth = g_depth++;
+        g_calls[depth] = Call{node};
+        g_calls[depth].flipped = (b & 0xFF) != 0;
+        g_calls[depth].parent = reinterpret_cast<const float*>(uintptr_t(a));
+        drawChildren(node, a, b, c, m);
+        g_depth = depth;
+        g_frameMoving.push_back(uint32_t(uintptr_t(node)));
+        g_frameMatrices.insert(g_frameMatrices.end(), m, m + 12);
+        ++g_oursMoving;
         return;
     }
     const int depth = g_depth++;
@@ -273,7 +322,8 @@ bool animated(uintptr_t node, bool* alike = nullptr) {
     return moves;
 }
 
-void capture(uintptr_t node, bool flipped, const float* parent, const float* points, const float* matrix, int count) {
+void capture(uintptr_t node, bool flipped, const float* parent, const float* points, const float* matrix, int count,
+             bool moving = false) {
     const uintptr_t view = view3dwin::lastView(), mesh = at<uint32_t>(node + mc::kNodeMesh);
     if (!view || !mesh || !points || !matrix) return;
     const uint32_t vertices = at<uint32_t>(mesh + kMeshVertexCount), faces = at<uint32_t>(mesh + mc::kMeshFaces);
@@ -304,7 +354,11 @@ void capture(uintptr_t node, bool flipped, const float* parent, const float* poi
         if (!n.textures.back() || at<int32_t>(texture + kTextureFormat) == int32_t(kFormatAlpha)) drawable = false;
     }
     n.vertices.resize(size_t(vertices) * 3);
-    for (uint32_t v = 0; v < vertices; ++v) gamemodels::transform(world, points + 3 * v, &n.vertices[3 * v]);
+    n.moving = moving;  // 3.0.20-beta.14: its own vertices, placed by the frame's matrix for it
+    if (moving)
+        std::memcpy(n.vertices.data(), points, n.vertices.size() * sizeof(float));
+    else
+        for (uint32_t v = 0; v < vertices; ++v) gamemodels::transform(world, points + 3 * v, &n.vertices[3 * v]);
     n.faces.resize(faces);
     for (uint32_t f = 0; f < faces; ++f) {
         gamemodels::Face& out = n.faces[f];
@@ -322,7 +376,10 @@ void capture(uintptr_t node, bool flipped, const float* parent, const float* poi
     if (!r) return;
     r->addGameModel(n);
     g_sent.insert(uint32_t(node));
-    if (drawable)
+    if (drawable && moving)  // 3.0.20-beta.14
+        g_moving[uint32_t(node)] = Moving{at<uint32_t>(node + mc::kNodeMesh), at<uint32_t>(node + mc::kNodeColours),
+                                          at<uint32_t>(node + mc::kNodeLit)};
+    else if (drawable)
         g_still[uint32_t(node)] = stillOf(node, parent);  // 3.0.20-beta.4
     else
         ++g_keptBlended;
@@ -342,9 +399,11 @@ void noteProjection(const float* points, const float* matrix, int count) {
     bool under = false;
     for (int d = 0; d + 1 < g_depth && !moves; ++d) moves = under = animated(uintptr_t(g_calls[d].node));
     if (moves) {
-        g_sent.insert(uint32_t(node));  // looked at once: left to the game
+        g_sent.insert(uint32_t(node));  // looked at once
         ++g_animated;
         if (under) ++g_under;
+        // 3.0.20-beta.14 (stage 4): captured too - its own vertices, placed by the frame's matrix for it
+        capture(node, g_calls[g_depth - 1].flipped, g_calls[g_depth - 1].parent, points, matrix, count, true);
         return;
     }
     if (alike) ++g_alike;
@@ -354,21 +413,27 @@ void noteProjection(const float* points, const float* matrix, int count) {
 void mapChanged() {
     g_sent.clear();
     g_still.clear();
+    g_moving.clear();  // 3.0.20-beta.14
     g_frameIds.clear();
-    g_told = 0;
+    g_frameMoving.clear();
+    g_frameMatrices.clear();
+    g_told = g_toldMoving = 0;
     ++g_map;
 }
 
 void setOn(bool on) { g_on = on; }
 
 void beforeRecord() {
-    if (g_frameIds.size() == g_told) return;
+    if (g_frameIds.size() == g_told && g_frameMoving.size() == g_toldMoving) return;
     gamemodels::Frame f;
     f.ids = g_frameIds;
+    f.moving = g_frameMoving;  // 3.0.20-beta.14
+    f.matrices = g_frameMatrices;
     for (int k = 0; k < 3; ++k) f.factors[k] = at<float>(mc::kFactors + uintptr_t(4 * k));
     f.lit = at<uint8_t>(mc::kLitWay) != 0;
     if (auto* r = Context::get().renderer) r->gameModelsFrame(f);
     g_told = g_frameIds.size();
+    g_toldMoving = g_frameMoving.size();
 }
 
 void install() {
@@ -405,9 +470,11 @@ void frame() {
     if (g_nodes && frameMs > 0 && frameMs < 1000)
         g_tally.frame(mc::Frame{g_nodes, g_faces, g_perMs > 0 ? double(g_ticks) / g_perMs : 0.0}, frameMs);
     g_nodes = g_faces = g_checks = g_captures = 0;
-    if (!g_frameIds.empty()) ++g_oursFrames;  // 3.0.20-beta.4
+    if (!g_frameIds.empty() || !g_frameMoving.empty()) ++g_oursFrames;  // 3.0.20-beta.4
     g_frameIds.clear();
-    g_told = 0;
+    g_frameMoving.clear();  // 3.0.20-beta.14
+    g_frameMatrices.clear();
+    g_told = g_toldMoving = 0;
     g_ticks = 0;
     const DWORD tick = GetTickCount();
     if (!g_toldAt) g_toldAt = tick;
@@ -416,16 +483,19 @@ void frame() {
     if (const std::string line = g_tally.line(); !line.empty()) LOG_INFO("%s", line.c_str());
     g_tally.clear();
     if (g_sentNodes || g_animated)  // 3.0.20-beta.3; 3.0.20-beta.5: those under a moving one, the alike keys
-        LOG_INFO("models: %u static nodes captured as the game draws them (%u faces) and sent to the renderer (%u of "
-                 "them with several keys all alike), %u moving ones left to the game (%u of them hung on a moving "
-                 "one)", g_sentNodes, g_sentFaces, g_alike, g_animated, g_under);
+        LOG_INFO("models: %u nodes captured as the game draws them (%u faces) and sent to the renderer (%u of them "
+                 "with several keys all alike), %u of them moving - their own vertices, placed by the frame's "
+                 "matrices (%u of them hung on a moving one)", g_sentNodes, g_sentFaces, g_alike, g_animated, g_under);
     g_sentNodes = g_sentFaces = g_animated = g_under = g_alike = 0;
-    if (g_ours || g_keptBlended || g_moved)  // 3.0.20-beta.4
-        LOG_INFO("models: %u nodes drawn by our renderer in place of the game's in %u frames (%.0f a frame) - "
-                 "[view3d] own_models; %u captured ones left to the game (a texture with its own alpha, or one the "
-                 "renderer does not know), %u given back to it (moved or coloured anew since)",
-                 g_ours, g_oursFrames, g_oursFrames ? double(g_ours) / g_oursFrames : 0.0, g_keptBlended, g_moved);
-    g_ours = g_oursFrames = g_keptBlended = g_moved = 0;
+    if (g_ours || g_oursMoving || g_keptBlended || g_moved)  // 3.0.20-beta.4; 3.0.20-beta.14: the moving ones
+        LOG_INFO("models: %u nodes drawn by our renderer in place of the game's in %u frames (%.0f a frame; %.0f of "
+                 "them moving, by their matrices) - [view3d] own_models; %u captured ones left to the game (a texture "
+                 "with its own alpha, or one the renderer does not know), %u given back to it (moved or coloured anew "
+                 "since)",
+                 g_ours + g_oursMoving, g_oursFrames,
+                 g_oursFrames ? double(g_ours + g_oursMoving) / g_oursFrames : 0.0,
+                 g_oursFrames ? double(g_oursMoving) / g_oursFrames : 0.0, g_keptBlended, g_moved);
+    g_ours = g_oursFrames = g_keptBlended = g_moved = g_oursMoving = 0;
 }
 
 }  // namespace uagfx::win::modelcensus

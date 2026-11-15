@@ -91,3 +91,21 @@ TEST(game_models_place_only_the_textures_wanted) {
     gamemodels::place(nodeOf(), pic, scratch, out, &leaves);
     CHECK(out.textures() == 1 && out.texture(0) == 9 && out.vertices(0).size() == 3 && out.triangles == 1);
 }
+
+// 3.0.20-beta.14 (stage 4): a moving node's own vertices put into the view by its node-to-view matrix this frame (as
+// the game's draw puts them), the view's camera aside
+TEST(game_models_place_a_moving_node_by_its_matrix) {
+    gamemodels::Picture pic = straightOn();
+    pic.view.eye[2] = 500.0f;  // a camera that would put the node elsewhere: not taken for a moving node
+    gamemodels::Node n;
+    n.textures = {7};
+    n.vertices = {0, 0, 0, 1, 0, 0, 0, 1, 0};
+    n.faces = {faceOf(0, 2, 1, 0)};
+    n.moving = true;
+    const float toView[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10};  // moved 10 ahead
+    gamemodels::Placed out;
+    std::vector<gamemodels::Corner> scratch;
+    gamemodels::place(n, pic, scratch, out, nullptr, toView);
+    CHECK(out.triangles == 1 && out.vertices(0).size() == 3);
+    CHECK(out.vertices(0)[0].x == 50.0f && out.vertices(0)[0].y == 50.0f && out.vertices(0)[1].y == 60.0f);
+}

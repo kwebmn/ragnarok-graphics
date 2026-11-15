@@ -154,3 +154,65 @@ TEST(game_models_frame_list_kept_until_the_frames_present) {
     s.presented();  // a picture with no own ground drawn
     CHECK(!s.shown());
 }
+
+// 3.0.20-beta.14 (the owner's «делай все» - stage 4: the moving models ours too): a moving node kept with its own
+// (node-space) vertices, and the frame's moving nodes with their node-to-view matrices as the game's draw makes them
+TEST(game_models_moving_nodes_go_over_the_wire) {
+    gamemodels::Node n;
+    n.id = 7;
+    n.textures = {3};
+    n.vertices = {0, 0, 0, 1, 0, 0, 0, 1, 0};
+    gamemodels::Face f;
+    f.v[0] = 0, f.v[1] = 1, f.v[2] = 2;
+    n.faces = {f};
+    n.moving = true;
+    std::vector<uint8_t> bytes;
+    bridge::WireWriter w(bytes);
+    gamemodels::write(w, n);
+    bridge::WireReader r(bytes.data(), bytes.size());
+    gamemodels::Node back;
+    CHECK(gamemodels::read(r, back) && r.left() == 0 && back.moving);
+    gamemodels::Frame fr;
+    fr.ids = {1};
+    fr.moving = {7, 8};
+    for (int i = 0; i < 24; ++i) fr.matrices.push_back(float(i));
+    std::vector<uint8_t> fb;
+    bridge::WireWriter fw(fb);
+    gamemodels::write(fw, fr);
+    bridge::WireReader fr2(fb.data(), fb.size());
+    gamemodels::Frame fback;
+    CHECK(gamemodels::read(fr2, fback) && fr2.left() == 0);
+    CHECK(fback.moving == fr.moving && fback.matrices.size() == 24 && fback.matrices[23] == 23.0f);
+    fr.matrices.pop_back();  // a matrix short of its nodes: refused
+    std::vector<uint8_t> bad;
+    bridge::WireWriter bw(bad);
+    gamemodels::write(bw, fr);
+    bridge::WireReader br(bad.data(), bad.size());
+    CHECK(!gamemodels::read(br, fback));
+}
+
+// 3.0.20-beta.14 (stage 4): a moving node's run's box (in its own space) into the world by its matrix this frame - the
+// box of its eight corners, for the casters' reach and boxes
+TEST(game_models_box_by_a_matrix) {
+    const float turned[12] = {0, 1, 0, -1, 0, 0, 0, 0, 1, 10, 20, 30};  // a quarter turn about z, then moved
+    const float lo[3] = {0, 0, 0}, hi[3] = {2, 1, 1};
+    float a[3], b[3];
+    gamemodels::boxBy(turned, lo, hi, a, b);
+    // x' = 10 - y (9..10), y' = x + 20 (20..22), z' = z + 30
+    CHECK(a[0] == 9.0f && b[0] == 10.0f && a[1] == 20.0f && b[1] == 22.0f && a[2] == 30.0f && b[2] == 31.0f);
+}
+
+// 3.0.20-beta.14: a frame's moving nodes kept to its present as its still ones, then let go with their matrices (a
+// frame the driver tells nothing of draws none of them by old matrices)
+TEST(game_models_frame_moving_kept_to_the_present) {
+    gamemodels::FrameState s;
+    gamemodels::Frame f;
+    CHECK(f.empty());
+    f.moving = {7};
+    f.matrices.assign(12, 1.0f);
+    CHECK(!f.empty());
+    s.told(f);
+    CHECK(!s.frame().empty());
+    s.presented();
+    CHECK(s.frame().empty() && s.frame().matrices.empty());
+}

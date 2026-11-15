@@ -34,6 +34,9 @@ struct Node {
     // 3.0.20-beta.4: its actor's scale below 0 on an odd number of axes (the game's draw's second argument, its actor's
     // render FUN_004E0B20): its faces' turn on the screen the other way round
     bool flipped = false;
+    // 3.0.20-beta.14 (stage 4): a node the game moves - its vertices its own (node space), put into the view by the
+    // frame's matrix for it (Frame::matrices); a still one's are in the world
+    bool moving = false;
 };
 
 void write(bridge::WireWriter& w, const Node& n);
@@ -45,6 +48,11 @@ struct Frame {
     std::vector<uint32_t> ids;
     float factors[3] = {1.0f, 1.0f, 1.0f};
     bool lit = false;
+    // 3.0.20-beta.14 (stage 4): the moving nodes left out, each with its node-to-view matrix (12 floats) as the game's
+    // draw made it this frame
+    std::vector<uint32_t> moving;
+    std::vector<float> matrices;
+    bool empty() const { return ids.empty() && moving.empty(); }
 };
 void write(bridge::WireWriter& w, const Frame& f);
 bool read(bridge::WireReader& r, Frame& f);
@@ -62,6 +70,8 @@ public:
         shown_ = ready_;
         ready_ = false;
         frame_.ids.clear();
+        frame_.moving.clear();  // 3.0.20-beta.14
+        frame_.matrices.clear();
     }
     const Frame& frame() const { return frame_; }
     bool shown() const { return shown_; }
@@ -87,6 +97,8 @@ void compose(const float a[12], const float b[12], float out[12]);
 // a node's world matrix from the game's node-to-view one and the view's inverse
 void worldOf(const float combined[12], const float viewInverse[12], float world[12]);
 void transform(const float m[12], const float p[3], float out[3]);
+// 3.0.20-beta.14 (stage 4): the box lo..hi (a moving node's own space) by `m` - its eight corners' box
+void boxBy(const float m[12], const float lo[3], const float hi[3], float outLo[3], float outHi[3]);
 
 // Corners by a grid of cells `cell` units wide: whether a point lies within `reach` (at most a cell) of one - the
 // renderer's check of the captured nodes against our own models placed from the map's files

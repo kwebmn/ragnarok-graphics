@@ -743,12 +743,13 @@ bool Renderer::Impl::drawOwnGround() {
             ownPass = false;
             // 3.0.20-beta.4: the game's still models drawn here when it leaves them
             gameModelsNow.drawn(o.modelLikeKnown);
-            if (!gameModelsNow.frame().ids.empty() && !cardModelsReady()) {  // 3.0.20-beta.7: for the log
+            if (!gameModelsNow.frame().empty() && !cardModelsReady()) {  // 3.0.20-beta.7: for the log
                 noteGameCasters();  // 3.0.20-beta.12: the reflections and the torches' shadows take them
                 ++gameDrawnFrames;
                 gameDrawnTriangles += o.gameTriangles;
                 gameDrawnNodes += o.gameNodes;
                 gameDrawnUnknown += o.gameUnknown;
+                gameDrawnMoving += gameMovingPlaced;  // 3.0.20-beta.14
             }
         }
         geometryList = 0;  // the game's record's vertices go up again with its next draw
