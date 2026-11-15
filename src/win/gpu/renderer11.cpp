@@ -249,6 +249,11 @@ Renderer11::~Renderer11() {
         drop(s.indices);
     }
     drop(seamInstances_);
+    drop(modelVs_);  // 3.0.20-beta.10
+    drop(modelLayout_);
+    drop(modelFacesSrv_);
+    drop(modelFaces_);
+    drop(modelInstances_);
     drop(mirrorVs_);
     drop(mirrorPs_);
     drop(mirrorLayout_);
@@ -465,7 +470,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[70] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[71] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -526,7 +531,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"grass3d_vs", vs, shaderSource(), {}, true},  // 3.0.19-beta.37: the 3D view's grass
                    {"grass3d_ps", ps, shaderSource(), {}, true},
                    {"weather3d_vs", vs, shaderSource(), {}, true},  // 3.0.19-beta.40: the 3D view's weather
-                   {"weather3d_ps", ps, shaderSource(), {}, true}};
+                   {"weather3d_ps", ps, shaderSource(), {}, true},
+                   {"model_vs", vs, shaderSource(), {}, true}};  // 3.0.20-beta.10: the game's still models
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -681,6 +687,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[67].code.empty() || !psOf(wants[67], grass3dPs_)) grass3dPs_ = nullptr;
     if (wants[68].code.empty() || !vsOf(wants[68], weather3dVs_)) weather3dVs_ = nullptr;  // 3.0.19-beta.40
     if (wants[69].code.empty() || !psOf(wants[69], weather3dPs_)) weather3dPs_ = nullptr;
+    if (wants[70].code.empty() || !vsOf(wants[70], modelVs_)) modelVs_ = nullptr;  // 3.0.20-beta.10
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -717,6 +724,12 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
             {"TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, 0, D3D11_INPUT_PER_INSTANCE_DATA, 1}};
         if (FAILED(device_->CreateInputLayout(layout, 1, wants[57].code.data(), wants[57].code.size(), &seamLayout_)))
             seamLayout_ = nullptr;
+    }
+    if (modelVs_) {  // 3.0.20-beta.10: the game's still models' faces on the card - an instance each (its number)
+        const D3D11_INPUT_ELEMENT_DESC layout[1] = {
+            {"TEXCOORD", 0, DXGI_FORMAT_R32_UINT, 0, 0, D3D11_INPUT_PER_INSTANCE_DATA, 1}};
+        if (FAILED(device_->CreateInputLayout(layout, 1, wants[70].code.data(), wants[70].code.size(), &modelLayout_)))
+            modelLayout_ = nullptr;
     }
     if (torchShadowVs_) {  // 3.0.16-beta.35: the casters' corners as the mirror's (torch_shadows11.cpp)
         const D3D11_INPUT_ELEMENT_DESC layout[3] = {
@@ -1304,7 +1317,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     const DrawSetup& s = rec.states()[d.state];
     // 3.0.16-beta.35: [effects] body_stamp (body_stamp11.cpp) - a character's sprite gathered for the depth; the
     // gathered ones put down at the next draw of something else
-    const bool innerPass = seamPass_ || darknessPass_ || silhouettePass_ || stampPass_;
+    const bool innerPass = seamPass_ || darknessPass_ || silhouettePass_ || stampPass_ || modelPass_;
     if (!innerPass && effects_.bodyStamp && !s.ui && remaster()) {
         if (characterSource(rec, d, s)) noteStamp(rec, d, s);
         else if (!stampRec_.draws().empty()) applyStamps();
@@ -1405,11 +1418,26 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         noteGround(rec, d);
     // 2.5.9 (draw.cpp 1.16): an opaque draw of the world into the next frame's mirror
     // 3.0.16-beta.35: also the torches' shadows' casters (this frame's)
-    if (!seamPass_ && !s.ui && !s.blend && s.zEnable && s.zWrite && (mirrorCollecting() || shadowCollecting()))
+    if (!seamPass_ && !modelPass_ && !s.ui && !s.blend && s.zEnable && s.zWrite &&
+        (mirrorCollecting() || shadowCollecting()))
         noteCaster(rec, d, s);
     // 3.0.16-beta.35: a character standing, for the torches' shadows (torch_shadows11.cpp)
     if (!innerPass && !s.ui && s.blend && d.vertexCount == 4 && d.texture[0] && shadowCollecting())
         noteStanding(rec, d);
+    // 3.0.20-beta.10 (the owner's «делай все сразу»): the game's model state of the picture from its first model draw
+    // and the fog of its world draws; the game's still models by us (game_models11.cpp) at the world's first blended
+    // draw or the interface - before the seams' strips over the ground
+    if (!innerPass && !s.ui && s.zWrite && !s.blend && d.effect == 0) {
+        if (d.fvf == d3d7::FVF_TL1 && !modelLikeTaken_) {
+            modelLike_ = s;
+            modelLikeKnown_ = modelLikeTaken_ = true;
+        }
+        if (d.fvf == d3d7::FVF_TL1 || d.fvf == d3d7::FVF_TL2) noteModelFog(rec, d);
+    }
+    if (!innerPass && !modelsDone_ && (s.ui || s.blend)) {
+        flushBatch();
+        drawGameModels11();
+    }
     // 2.5.9 (draw.cpp 1.9): the seams' strips at the first blended draw of the world, before the soft shadows - drawn
     // by this function (seamPass_), which makes no notes and no passes for them
     if (!seamPass_ && !s.ui && s.blend && !seamsDone_ && seamsWanted() && !groundTris_.empty()) {
@@ -1814,6 +1842,17 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool hilly = hillsWanted() && !s.ui && d.fvf == d3d7::FVF_TL2 && !water && !d.twin &&
                        (s.zWrite || seamPass_) && ensureHills();
     if (hilly) hillsConstants(c);
+    if (modelPass_) {  // 3.0.20-beta.10: the game's still models on the card - the camera, the projection, the fog
+        const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        std::memcpy(c.reproject, viewToWorld_, sizeof c.reproject);
+        const uint32_t tint = modelFog_.specularRgb();
+        float bits;
+        std::memcpy(&bits, &tint, sizeof bits);
+        const float fog[8] = {modelFog_.fogA(), modelFog_.fogB(), bits, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};  // holeZ 0
+        std::memcpy(c.hole, fog, sizeof fog);
+    }
     if (seamPass_) {  // 2.5.9 (draw.cpp 1.9): a strip across a seam - its alpha from the noise over the world
         c.stage1[1] |= 1u << 31;
         const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
@@ -1855,6 +1894,11 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         is.layout = seamLayout_;
         is.seam = seamDraw_;
     }
+    if (modelPass_ && modelDraw_.count) {  // 3.0.20-beta.10: the game's still models' faces, an instance each
+        is.vs = modelVs_;
+        is.layout = modelLayout_;
+        is.model = modelDraw_;
+    }
     // 2.5: a draw whose constants carry none of the world's extras takes the lean shader (as draw.cpp)
     const bool lean = !water && !smoke && !lava && !ray && !warpDrawn &&
                       (c.stage1[1] & (1u << 26 | 1u << 27 | 1u << 28 | 1u << 30 | 1u << 31)) == 0 &&
@@ -1878,7 +1922,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     batch::Draw shape{batch::kindOf(d.primitive, d.vertexCount, d.indexCount != 0), d.vertexOffset, d.vertexCount,
                       uint32_t(stride)};
     // By itself as before: merging off, a soft particle (its depth bound for it alone), quads without the pattern.
-    if (!mergeDraws_ || soft || (shape.kind == batch::Kind::Quads && !quadIndices_) || is.seam.count)
+    if (!mergeDraws_ || soft || (shape.kind == batch::Kind::Quads && !quadIndices_) || is.seam.count ||
+        is.model.count)
         shape.kind = batch::Kind::Single;
     ++stats_.draws;
     if (batch_.joins(shape) && is.sameState(issue_)) {
@@ -1975,6 +2020,12 @@ void Renderer11::flushGathered() {
         ID3D11ShaderResourceView* slots[2] = {seamSlots_[is.seam.size].vertexSrv, seamSlots_[is.seam.size].indexSrv};
         ctx_->VSSetShaderResources(6, 2, slots);
     }
+    if (is.model.count) {  // 3.0.20-beta.10: the game's still models' faces - their numbers, the faces for model_vs
+        vertices = modelInstances_;
+        strideBytes = 4;
+        phase = 0;
+        ctx_->VSSetShaderResources(6, 1, &modelFacesSrv_);
+    }
     if (need(all || vertices != bound_.vertexBuffer || strideBytes != bound_.stride || phase != bound_.phase))
         ctx_->IASetVertexBuffers(0, 1, &vertices, &strideBytes, &phase);
     ID3D11Buffer* indices = kind == batch::Kind::Quads ? quadIndices_
@@ -1982,6 +2033,8 @@ void Renderer11::flushGathered() {
                                                                            : nullptr;
     if (is.seam.count) {
         ctx_->DrawInstanced(is.seam.corners, is.seam.count, 0, is.seam.first);
+    } else if (is.model.count) {
+        ctx_->DrawInstanced(3, is.model.count, 0, is.model.first);
     } else if (indices) {
         if (need(all || indices != bound_.indexBuffer)) ctx_->IASetIndexBuffer(indices, DXGI_FORMAT_R16_UINT, 0);
         bound_.indexBuffer = indices;
@@ -2526,6 +2579,10 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     groundTextures_.clear();
     groundCellsUp_ = false;
     hillsUp_ = hillsTried_ = seamsDone_ = false;
+    modelsDone_ = modelLikeTaken_ = false;  // 3.0.20-beta.10: the next picture's
+    modelFog_.beginFrame();
+    modelFogVertices_ = 0;
+    modelsNow_.presented();
     if (mirrorCollecting()) {  // 2.5.9: this frame's opaque world for the next one's mirror
         mirrorVerts_.swap(casterVerts_);
         mirrorCasters_.swap(casters_);
@@ -4451,6 +4508,14 @@ void Renderer11::logGpu(ULONGLONG now) {
                  static_cast<unsigned long long>(stats_.freed), static_cast<unsigned>(textures_.size()),
                  static_cast<unsigned>(pooledBytes_ >> 20),
                  seconds > 0 ? double(stats_.uploaded) / 1048576.0 / seconds : 0.0);
+        if (modelsDrawnFrames_)  // 3.0.20-beta.10
+            LOG_INFO("Direct3D 11: the game's still models drawn by us on the card in %llu pictures - %.0f faces a "
+                     "picture, %.0f nodes, %.1f of the frame's nodes unknown; %zu nodes, %zu faces on the card",
+                     static_cast<unsigned long long>(modelsDrawnFrames_),
+                     double(modelsDrawnFaces_) / double(modelsDrawnFrames_),
+                     double(modelsDrawnNodes_) / double(modelsDrawnFrames_),
+                     double(modelsUnknown_) / double(modelsDrawnFrames_), models_.size(), modelFaceData_.size() / 20);
+        modelsDrawnFrames_ = modelsDrawnFaces_ = modelsDrawnNodes_ = modelsUnknown_ = 0;
         // 3.0.19-beta.43 (R-XHRKGN): the ground's draws by their first texture - told while any went white
         if (stats_.groundNone || stats_.groundGone)
             LOG_INFO("Direct3D 11: the ground's draws a frame - %.0f from the game's textures, %.0f from their HD "

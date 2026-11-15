@@ -15,6 +15,9 @@
 #include "core/footsteps.hpp"
 #include "core/frame_profile.hpp"
 #include "core/game_camera.hpp"
+#include "core/game_models.hpp"
+#include "core/model_census.hpp"
+#include "core/own_ground.hpp"
 #include "core/portal.hpp"
 #include "core/cave_vault.hpp"
 #include "core/trample.hpp"
@@ -156,6 +159,12 @@ public:
         std::copy(hole, hole + 8, hole_);
         holeFlags_ = flags;
     }
+    // 3.0.20-beta.10 (the owner's «делай все сразу»): «Моделі нашим рендером» - the game's still models the driver
+    // captured, kept on the card (game_models11.cpp); the frame's list of those it left out of the game's draw; whether
+    // the last picture could draw them (the driver's word)
+    void addGameModel(const gamemodels::Node& n);
+    void gameModelsFrame(const gamemodels::Frame& f) { modelsNow_.told(f); }
+    bool gameModelsShown() const { return modelsNow_.shown(); }
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
     // 0.47: the AI textures from the texture pack (none made); false: off, the reason in the log.
     bool startAi(const std::string& gameDir, const AiSettings& settings);
@@ -449,6 +458,52 @@ private:
         uint32_t size = 0, first = 0, count = 0, corners = 0;
     };
     SeamDraw11 seamDraw_;   // the one draw() issues now; count 0: the game's vertices
+    // 3.0.20-beta.10: the game's still models on the card (game_models11.cpp, model_vs) - each face five uint4 in
+    // modelFaces_ (its corners in the world with their colours, the texture coordinates, its flags), a node's faces in
+    // runs of one texture; the frame's faces an instance each (modelInstances_), a draw a texture, at the world's first
+    // blended draw or the interface (modelPass_: no notes, no passes); the game's model state and the fog learnt from
+    // its draws of the picture
+    struct ModelRun11 {
+        uint32_t texture = 0, first = 0, count = 0;
+    };
+    struct ModelNode11 {
+        gamemodels::Node node;
+        uint32_t first = 0;           // its first face on the card
+        std::vector<uint16_t> order;  // the node's faces in the card's order (by texture; unknown ones left out)
+        std::vector<ModelRun11> runs;
+    };
+    struct ModelDraw11 {  // a draw of faces: the first instance and how many
+        uint32_t first = 0, count = 0;
+    };
+    std::unordered_map<uint32_t, ModelNode11> models_;
+    uint32_t modelsMap_ = 0;
+    std::vector<uint32_t> modelFaceData_;  // 20 words a face
+    uint32_t modelFacesUp_ = 0, modelFacesRoom_ = 0;
+    ID3D11Buffer* modelFaces_ = nullptr;
+    ID3D11ShaderResourceView* modelFacesSrv_ = nullptr;
+    ID3D11Buffer* modelInstances_ = nullptr;
+    UINT modelInstanceBytes_ = 0;
+    std::vector<uint32_t> modelInstanceData_;
+    ID3D11VertexShader* modelVs_ = nullptr;
+    ID3D11InputLayout* modelLayout_ = nullptr;
+    FrameRecord modelRec_;
+    std::vector<ModelDraw11> modelDraws_;
+    ModelDraw11 modelDraw_;  // the one draw() issues now; count 0: the game's vertices
+    std::vector<uint32_t> modelTextures_;
+    std::vector<std::vector<uint32_t>> modelTextureFaces_;
+    std::unordered_map<uint32_t, uint32_t> modelTextureAt_;
+    bool modelPass_ = false, modelsDone_ = false, modelLikeTaken_ = false, modelLikeKnown_ = false;
+    DrawSetup modelLike_;
+    own_ground::Shading modelFog_;
+    uint32_t modelFogVertices_ = 0;
+    gamemodels::FrameState modelsNow_;
+    uint64_t modelColoursKey_ = 0;  // the frame's factors and way the colours on the card were made with (0 none)
+    modelcensus::Colouring modelHow_;
+    uint64_t modelsDrawnFrames_ = 0, modelsDrawnFaces_ = 0, modelsDrawnNodes_ = 0, modelsUnknown_ = 0;
+    void drawGameModels11();
+    bool ensureModelFaces(uint32_t faces);
+    void noteModelFog(const FrameRecord& rec, const DrawCmd& d);
+    void bakeModelColours(ModelNode11& m);
     struct SeamBatch11 {    // applySeams' batch: the groups giving its state and textures, its pieces of each size
         uint32_t in = 0, shows = 0;
         std::vector<uint32_t> pieces[2];  // seamStore_.shown()'s
@@ -974,6 +1029,7 @@ private:
         ID3D11PixelShader* ps = nullptr;
         uint32_t primitive = 0, firstIndex = 0, indexCount = 0;  // a draw by itself: its own
         SeamDraw11 seam;  // 3.0.5-beta.13: the seams' pieces on the card (count 0: none)
+        ModelDraw11 model;  // 3.0.20-beta.10: the game's still models' faces on the card (count 0: none)
         bool sameState(const Issue& o) const;
     };
     void flushBatch();     // the gathered draw call to the driver (3.0.5-beta.2: timed under [debug] profile)

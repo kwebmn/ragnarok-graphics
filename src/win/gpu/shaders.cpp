@@ -161,6 +161,58 @@ PsIn seam_vs(SeamIn i) {
     return o;
 }
 
+// 3.0.20-beta.10 (the owner's «делай все сразу»: «Моделі нашим рендером» in Direct3D 11, the card's way): the game's
+// still models kept on the card in the world's places (game_models11.cpp) - an instance a face: its number in the
+// faces' buffer (t6, five uint4 a face: each corner's x y z with its colour, the corners' texture coordinates, the
+// face's flags - 1 two-sided, 2 its node mirrored). Put into the view and onto the screen as the processor's way
+// (core/game_models_place: own_ground's toView over the camera's inverse, placeView, the game's depth); a corner
+// behind the eye drops the face, the game's culling by its turn on the screen; then as draw_vs. The camera and the
+// projection in r0-r11 and f0-farZ as seam_vs's; the fog's line in holeX, holeY (the specular's alpha by the view
+// depth), its colour's bits in holeH (holeZ 0: no silhouette)
+struct ModelIn {
+    uint corner : SV_VertexID;
+    uint face : TEXCOORD0;
+};
+float3 modelView(float3 w) {
+    float3 ra = float3(r0, r1, r2), rb = float3(r3, r4, r5), rc = float3(r6, r7, r8);
+    float3 d = w - float3(r9, r10, r11);
+    return float3(dot(d, cross(rb, rc)), dot(d, cross(rc, ra)), dot(d, cross(ra, rb))) / dot(ra, cross(rb, rc));
+}
+float2 modelScreen(float3 v) { return float2(v.x / v.z * f0 + cx, v.y / v.z * f1 + cy); }
+float modelDepth(float zd) {  // own_ground depthFromInverse: the game's, past farZ - 10 squeezed below 1
+    float a = farZ / (farZ - nearZ), b = farZ * nearZ / (farZ - nearZ), split = farZ - 10.0;
+    if (zd <= split) return a - b / zd;
+    float at = a - b / split;
+    return min(at + (1.0 - at) * (1.0 - split / zd), 0.99999994);
+}
+PsIn model_vs(ModelIn i) {
+    PsIn o = (PsIn)0;
+    o.pos = float4(2.0, 2.0, 0.5, 1.0);  // past the target's right: the face left out
+    uint at = i.face * 5;
+    uint4 c0 = seamVertices.Load(int(at));
+    uint4 c1 = seamVertices.Load(int(at + 1));
+    uint4 c2 = seamVertices.Load(int(at + 2));
+    uint4 t0 = seamVertices.Load(int(at + 3));
+    uint4 t1 = seamVertices.Load(int(at + 4));
+    float3 v0 = modelView(asfloat(c0.xyz)), v1 = modelView(asfloat(c1.xyz)), v2 = modelView(asfloat(c2.xyz));
+    if (v0.z <= nearZ || v1.z <= nearZ || v2.z <= nearZ) return o;
+    float2 s0 = modelScreen(v0), s1 = modelScreen(v1), s2 = modelScreen(v2);
+    bool turned = (s2.x - s0.x) * (s1.y - s0.y) > (s1.x - s0.x) * (s2.y - s0.y);
+    if ((t1.z & 1u) == 0u && turned == ((t1.z & 2u) != 0u)) return o;
+    float3 v = i.corner == 0 ? v0 : (i.corner == 1 ? v1 : v2);
+    float2 s = i.corner == 0 ? s0 : (i.corner == 1 ? s1 : s2);
+    uint tint = i.corner == 0 ? c0.w : (i.corner == 1 ? c1.w : c2.w);
+    float x = (s.x * scale + 0.5 + jitterX) * 2.0 / targetSize.x - 1.0;
+    float y = 1.0 - (s.y * scale + 0.5 + jitterY) * 2.0 / targetSize.y;
+    o.pos = float4(x * v.z, y * v.z, modelDepth(v.z) * v.z, v.z);
+    o.diffuse = colourOf(tint);
+    float haze = clamp(floor(holeX + holeY * v.z + 0.5), 0.0, 255.0);
+    o.specular = colourOf((uint(haze) << 24) | (asuint(holeH) & 0xFFFFFFu));
+    o.uv0 = i.corner == 0 ? asfloat(t0.xy) : (i.corner == 1 ? asfloat(t0.zw) : asfloat(t1.xy));
+    o.uv1 = float2(0.0, 0.0);
+    return o;
+}
+
 float4 arg(uint a, float4 diffuse, float4 current, float4 tex, float4 specular) {
     uint sel = a & 15;
     float4 v = float4(1, 1, 1, 1);  // TFACTOR: the client never sets it, D3D7's default is white

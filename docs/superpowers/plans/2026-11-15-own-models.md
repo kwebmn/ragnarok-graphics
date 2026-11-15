@@ -193,3 +193,19 @@ again in every face, all of it again whenever the view moved): the renderer's CP
    the app's «3D-режим») until it is on by default - cost: a 3D-section switch acting from above too (its hint says
    so). (b) the leaves of our trees do not sway ([effects] foliage, a draw a tree in the game's) - cost: still trees
    where the game's swayed (animated trees stay the game's). Untested in the game.
+3.0.20-beta.9 SHIPPED (7baf995, update.ini d8463a7).
+10. 3.0.20-beta.10 - Direct3D 11 with the card's way (the seams' pattern, ground11.cpp): model_vs (shaders.cpp) - an
+   instance a face, its number into t6 (seamVertices' Buffer<uint4>: five uint4 a face - each corner's x y z with its
+   colour, the uv, the flags 1 two-sided / 2 mirrored), the corners into the view as seam_vs (the camera r0-r11 =
+   viewToWorld, the inverse by crosses = own_ground viewOf's), onto the screen (f0..cy), a corner at or behind nearZ
+   dropping the face, the game's turn rule, own_ground depthFromInverse's depth (squeezed past farZ - 10), draw_vs's
+   pixels; the fog's line in hole[0..1], its colour's bits in hole[2], hole[3] (holeZ) 0. game_models11.cpp:
+   addGameModel (a node's faces by texture - stable, unknown textures out - its runs, 20 words a face),
+   bakeModelColours (modelcensus::expected with the frame's factors; again for all when the key changes),
+   ensureModelFaces (x2, all written again), noteModelFog (4 a draw, 512 a picture), drawGameModels11 (the frame's
+   faces by texture, the instances' buffer, modelRec_'s empty draws of three vertices - the state: the picture's first
+   game model draw's, cull none -, modelPass_ through draw(): innerPass, not a caster). renderer11.cpp: wants[71]
+   (model_vs at 70), an R32_UINT per-instance layout, flushGathered's DrawInstanced(3, count, 0, first) with t6 the
+   faces, the trigger before the seams at the world's first blended draw or the interface, the present's resets and
+   modelsNow_.presented(), logGpu's line. Renderer: addGameModel/gameModelsFrame/gameModelsLately to d3d11_ (in this
+   process). Own_ground::Shading fogA/fogB/specularRgb read. DXC: 91 shaders ok. Untested in the game.

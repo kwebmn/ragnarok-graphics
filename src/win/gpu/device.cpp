@@ -2320,18 +2320,23 @@ void Renderer::setCamera(bool valid, const float view[12], float targetZ) {
 }
 
 void Renderer::addGameModel(const gamemodels::Node& n) {
-    if (remix_ || d3d11_) return;
+    if (remix_) return;
+    if (d3d11_) return d3d11_->addGameModel(n);  // 3.0.20-beta.10: its own, on the card
     if (remote_) return remote_->sendGameModel(n);
     impl_->addGameModel(n);
 }
 
 void Renderer::gameModelsFrame(const gamemodels::Frame& f) {
-    if (remix_ || d3d11_) return;
+    if (remix_) return;
+    if (d3d11_) return d3d11_->gameModelsFrame(f);  // 3.0.20-beta.10
     if (remote_) return remote_->sendGameModelsFrame(f);
     impl_->gameModelsNow.told(f);
 }
 
-bool Renderer::gameModelsLately() const { return remote_ && remote_->gameModelsLately(); }  // 3.0.20-beta.4
+bool Renderer::gameModelsLately() const {  // 3.0.20-beta.4; 3.0.20-beta.10: Direct3D 11's, in this process
+    if (d3d11_) return d3d11_->gameModelsShown();
+    return remote_ && remote_->gameModelsLately();
+}
 bool Renderer::gameModelsShown() const {
     return !remix_ && !d3d11_ && !remote_ && impl_ && impl_->gameModelsNow.shown();
 }
