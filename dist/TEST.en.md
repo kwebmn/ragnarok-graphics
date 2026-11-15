@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.27 — what's new · 2026-11-15
+
+- **The 3D view's grass is the top view's grass and no longer «slides» while walking (R-TBD86F).** In the 3D view the blades now stand where the usual top view draws them: the same spot in each cell, the same share of grass, the same height and the same colour up a blade. Flowers grow in the same patches too, in the map's and the season's colours. Walking no longer changes the grass: the blades no longer turn after the camera (each has its own way in the world, three in a tuft), a far blade is the same one as near with denser ones growing in round it, and width and height change smoothly with the distance rather than jumping at the rings' edges.
+
 # uaRO Graphics 3.0.20-beta.26 — what's new · 2026-11-15
 
 - **The 3D view's grass no longer blinks (R-PKPE9D).** Three causes, all gone. An olive meadow lies right on the edge of the «green ground» test, so a blade went and came as the point of its root crossed into the next pixel. Now the root's colour is taken smoothly between the pixels, and the blades by that edge (and by each ring's edge) shrink and grow instead of vanishing. Far blades narrower than two pixels trembled from frame to frame — now they are at least 2.5 pixels wide and as much fainter. With DLSS the blades are now marked in its mask like the characters and effects: DLSS takes them from the current frame rather than from its history by the motion of the ground under them (the swaying blades flickered for that).
