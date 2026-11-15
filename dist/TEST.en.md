@@ -1,3 +1,38 @@
+# uaRO Graphics 3.0.19 — what's new · 2026-11-15
+
+A new 3D view (Ctrl+Shift+V): the camera behind the character or through its eyes, grass, weather and sky in depth. The game is faster — parts of the game itself rewritten, the ground drawn in batches. The «Reference» shows every monster and your step in quests.
+
+## 3D view (a trial)
+
+- **Ctrl+Shift+V** switches the camera: the game's own → behind the character → through its eyes → the game's own again. The mouse turns the view (Alt frees the cursor), the wheel brings the camera behind closer.
+- **Fighting:** the crosshair in the middle turns red over a monster; Space and 1–9 hit whoever is under it; skills waiting for a target take it with a click. A red arc at the screen's edge, with the distance, shows where a monster out of sight hits you from.
+- **The character in the middle,** the camera a little over its head; Shift turns the camera round the character. Standing, the character looks where the camera looks.
+- **The world in depth:** blades of grass on green ground, snow, rain and leaves as particles round you, a 3D sky, a stone vault in caves, water reflecting the sky.
+- The camera behind never enters houses, walls or rock; HP bars no longer show through houses, hills and cave walls.
+- **A free camera for screenshots** — Ctrl+Shift+C: W A S D, Space up, C down.
+- **Settings** — the «3D view» section of the «Game» page: the field of view, the mouse's speed, «View distance», grass, weather, the vault, «Camera over the shoulder» and more.
+
+## Speed
+
+- **Parts of the game itself rewritten:** the vertex projection, the faces' sort and the models' vertex room. **Ground in batches:** thousands of ground draws a frame became tens (the switch «Ground in batches» on the «Quality» page).
+- The own ground is built on several processor cores; the frame for the renderer is written straight into the shared memory.
+- **No stalls** on the first reads of the game's archives (wings, the «Reference»). The party window, «Items», «Storage», the cart, footprints and wings in a crowd no longer load the processor every frame.
+- **Laptops with two graphics cards:** the switch «Frames through the screen's graphics card» on the «Renderer» page — the program turns it on itself when frames reach the screen slowly.
+- «Keep the frame rate» no longer aims above the «FPS limit» and the screen's refresh rate.
+
+## «Reference»
+
+- **Pictures of every monster:** Chonchon, Verit, Atroce, Satan Morroc, castle guardians and more — the game's real sprites or built-in pictures.
+- Shows the same as the site: the monsters there are in the game and the items you can get.
+- **«Your progress»** on a quest's card — your step from the server and whom to see next.
+
+## Other
+
+- Assumptio no longer draws a light square round the character.
+- «Guild», «Status» and the character select no longer «float» when the window is dragged by its corner; Warp Portal and Teleport show the maps' names.
+- The homunculus and the mercenary stay close and no longer chase monsters across the map.
+- The old client no longer crashes on a clothes dye its archives lack.
+
 # uaRO Graphics 3.0.19-beta.54 — what's new · 2026-11-15
 
 - **The character in the middle in 3D.** From behind, the character now stands in the middle of the screen and the camera a little over its head — the crosshair over the head. The old way, over the shoulder: the switch «Camera over the shoulder» in the «3D view» section of the «Game» page.
