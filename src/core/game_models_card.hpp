@@ -19,6 +19,12 @@ constexpr uint32_t kCardFaceWords = 20;
 modelcensus::Colouring colouringOf(const Frame& f);
 uint64_t colouringKey(const Frame& f);
 
+// 3.0.20-beta.12: a node's faces of one texture - the card's faces first.. first + count, their box in the world
+struct CardRun {
+    uint32_t texture = 0, first = 0, count = 0;
+    float lo[3] = {0.0f, 0.0f, 0.0f}, hi[3] = {0.0f, 0.0f, 0.0f};
+};
+
 // the frame's faces by texture: the textures in the order first met, each one's face numbers; nodes found, ids not
 struct CardFrame {
     std::vector<uint32_t> textures;
@@ -37,16 +43,17 @@ public:
     uint32_t faces() const { return uint32_t(words_.size() / kCardFaceWords); }
     size_t nodes() const { return nodes_.size(); }
     void frameOf(const std::vector<uint32_t>& ids, CardFrame& out) const;
+    // 3.0.20-beta.12 (stage 3: our models in the torches' shadows and the water's reflections): the frame's nodes'
+    // runs, and a run's corners appended as the casters' vertices - x y z, u v, the colour's bits as a float
+    void runsOf(const std::vector<uint32_t>& ids, std::vector<CardRun>& out) const;
+    void cornersOf(const CardRun& r, std::vector<float>& out) const;
 
 private:
-    struct Run {
-        uint32_t texture = 0, first = 0, count = 0;
-    };
     struct Kept {
         Node node;
         uint32_t first = 0;           // its first face
         std::vector<uint16_t> order;  // the node's faces in the card's order
-        std::vector<Run> runs;
+        std::vector<CardRun> runs;
     };
     void colourOf(Kept& k);
     std::unordered_map<uint32_t, Kept> nodes_;

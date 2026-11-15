@@ -25,6 +25,41 @@ constexpr float kCasterReachWide = 600.0f;
 
 // 1.12: an opaque draw of the world (not the interface, not blended: the map, its models, the crowns): its
 // triangles in the world with their texture coordinates - since 2.2 for the mirror under the water (mirror.cpp).
+// 3.0.20-beta.12 (stage 3 of «Модели нашим рендером»): the game's still models we drew this picture, a caster a node's
+// faces of one texture (its box from the capture) - their corners in the world as noteCaster unprojects the game's;
+// the casters' room and, in the 3D view, their reach as the game's draws'
+void Renderer::Impl::noteGameCasters() {
+    if (!mirrorCollecting() && !shadowCollecting()) return;
+    const gamemodels::Frame& frame = gameModelsNow.frame();
+    if (frame.ids.empty() || !ownState.modelLikeKnown) return;
+    gameCards.runsOf(frame.ids, gameRuns);
+    const DrawSetup& s = ownState.modelLike;
+    const bool wide = camera::wideView();
+    const float eye[3] = {viewToWorld[9], viewToWorld[10], viewToWorld[11]};
+    for (const gamemodels::CardRun& r : gameRuns) {
+        if (sunVerts.size() / 6 + size_t(r.count) * 3 > kMostSunVerts) break;
+        if (wide) {  // far off in the 3D view - none, as the game's draws there
+            float apart = 0.0f;
+            for (int a = 0; a < 3; ++a) {
+                const float d = std::max({r.lo[a] - eye[a], 0.0f, eye[a] - r.hi[a]});
+                apart += d * d;
+            }
+            if (apart > kCasterReachWide * kCasterReachWide) continue;
+        }
+        SunCaster c;
+        c.first = uint32_t(sunVerts.size() / 6);
+        gameCards.cornersOf(r, sunVerts);
+        c.count = uint32_t(sunVerts.size() / 6) - c.first;
+        if (!c.count) continue;
+        c.texture = r.texture;
+        c.alphaTest = s.alphaTest || s.colorKey;
+        c.ref = s.alphaTest ? float(s.alphaRef) / 255.0f : 0.5f;
+        std::copy(r.lo, r.lo + 3, c.lo);
+        std::copy(r.hi, r.hi + 3, c.hi);
+        sunCasters.push_back(c);
+    }
+}
+
 void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
     if (sunVerts.size() / 6 >= kMostSunVerts || (d.primitive != d3d7::PT_TRIANGLELIST &&
                                                  d.primitive != d3d7::PT_TRIANGLESTRIP))

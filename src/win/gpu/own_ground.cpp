@@ -744,6 +744,7 @@ bool Renderer::Impl::drawOwnGround() {
             // 3.0.20-beta.4: the game's still models drawn here when it leaves them
             gameModelsNow.drawn(o.modelLikeKnown);
             if (!gameModelsNow.frame().ids.empty() && !cardModelsReady()) {  // 3.0.20-beta.7: for the log
+                noteGameCasters();  // 3.0.20-beta.12: the reflections and the torches' shadows take them
                 ++gameDrawnFrames;
                 gameDrawnTriangles += o.gameTriangles;
                 gameDrawnNodes += o.gameNodes;

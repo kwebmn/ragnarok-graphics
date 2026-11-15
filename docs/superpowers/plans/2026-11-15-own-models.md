@@ -231,3 +231,17 @@ again in every face, all of it again whenever the view moved): the renderer's CP
    R-BA9PE2 and R-36ND9B (the owner, beta.11, 3D): CONFIRMED - all pictures from the card, renderer CPU 5.0-7.6 ms (off
    9.3-9.8), the game's draws 1.2-2.2 (off 3.2-3.3), long frames renderer 3-23 of 1800 (off ~127). The owner skipped
    the checks of the view from above (beta.9) and Direct3D 11 (beta.10): «давай это пропустим».
+12. 3.0.20-beta.12 - stage 3 (the owner: «да, делай»): our models in the water's reflections and the torches'
+   shadows. The renderers took both from the game's opaque draws (noteCaster: TL corners back into the world, six
+   floats a corner - x y z, u v, the colour's bits - and a caster a draw with its box); ours are inner (no notes).
+   core CardStore: a run (CardRun: a node's faces of one texture) with its box from the capture; runsOf(ids),
+   cornersOf(run) (test game_models_card_runs_and_their_corners_as_casters). Direct3D 12 noteGameCasters (sun_map.cpp:
+   the casters' room kMostSunVerts, the 3D view's reach kCasterReachWide by the box's nearest point to the eye; the
+   state's alpha test or colour key and ref) after every path that drew them (the card, the own ground's record, the
+   standalone); the torches' shadows come in finishWorld (the interface's first draw or the world's end) - after our
+   pass; the mirror takes the last picture's. Direct3D 11 noteModelCasters (mirror11.cpp, kMostCasterVerts) after
+   the model pass; the pass and its learning moved before timeDraws/the interface's passes (Ruling: a frame whose first
+   draw past the opaque world is the interface's drew ours after the torches' light, the night and the grade - cost
+   if wrong: none, the pass only moves up). Noted, not done: our far models' colours learnt from the game's model
+   draws (noteOwnModels) see fewer of them while ours are on (R-36ND9B: 37 % matched, 74 % before) - the far models'
+   colours slower to learn; the leaves of our trees do not sway (beta.9's ruling). Untested in the game.

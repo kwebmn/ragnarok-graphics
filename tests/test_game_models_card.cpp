@@ -89,3 +89,28 @@ TEST(game_models_card_colouring_of_a_frame_and_its_key) {
     f.lit = false;
     CHECK(gamemodels::colouringKey(f) != key);
 }
+
+// 3.0.20-beta.12 (the owner's «да, делай» - stage 3: our models in the torches' shadows and the water's reflections):
+// the frame's nodes' runs - a node's faces of one texture - with their boxes in the world, and a run's corners as the
+// casters' vertices (x y z, u v, the colour's bits as a float), as the renderers collect the game's own opaque draws
+TEST(game_models_card_runs_and_their_corners_as_casters) {
+    gamemodels::CardStore store;
+    store.add(nodeOf(5));
+    modelcensus::Colouring plain{modelcensus::Way::Plain, {1.0f, 1.0f, 1.0f}, 0xFF};
+    store.colour(plain, 11);
+    std::vector<gamemodels::CardRun> runs;
+    store.runsOf({5, 77}, runs);  // 77 unknown
+    CHECK(runs.size() == 2 && runs[0].texture == 7 && runs[0].count == 1 && runs[1].texture == 9 &&
+          runs[1].count == 2);
+    CHECK(runs[0].lo[0] == 1.0f && runs[0].lo[1] == 2.0f && runs[0].lo[2] == 3.0f);
+    CHECK(runs[0].hi[0] == 7.0f && runs[0].hi[1] == 8.0f && runs[0].hi[2] == 9.0f);
+    std::vector<float> corners;
+    store.cornersOf(runs[1], corners);  // texture 9: faces 0 and 2
+    CHECK(corners.size() == 2 * 3 * 6);
+    CHECK(corners[0] == 1.0f && corners[1] == 2.0f && corners[2] == 3.0f);  // face 0, corner 0
+    CHECK(corners[3] == 0.0f && corners[4] == 0.1f);                        // its uv
+    uint32_t colour;
+    std::memcpy(&colour, &corners[5], sizeof colour);
+    CHECK(colour == (0xFF000000u | 0x00102030u));
+    CHECK(corners[6] == 4.0f && corners[18 + 3] == 2.0f);  // corner 1's x; face 2's first u
+}

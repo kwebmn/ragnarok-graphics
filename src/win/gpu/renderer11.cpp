@@ -1329,6 +1329,21 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         noteDarkness(rec, d, s);
         return;
     }
+    // 3.0.20-beta.10 (the owner's «делай все сразу»): the game's model state of the picture from its first model draw
+    // and the fog of its world draws; the game's still models by us (game_models11.cpp) at the world's first blended
+    // draw or the interface - before the seams' strips over the ground; 3.0.20-beta.12: and before the interface's
+    // passes over the world (the torches' light and shadows, the night, the colours) when no blended draw came first
+    if (!innerPass && !s.ui && s.zWrite && !s.blend && d.effect == 0) {
+        if (d.fvf == d3d7::FVF_TL1 && !modelLikeTaken_) {
+            modelLike_ = s;
+            modelLikeKnown_ = modelLikeTaken_ = true;
+        }
+        if (d.fvf == d3d7::FVF_TL1 || d.fvf == d3d7::FVF_TL2) noteModelFog(rec, d);
+    }
+    if (!innerPass && !modelsDone_ && (s.ui || s.blend)) {
+        flushBatch();
+        drawGameModels11();
+    }
     timeDraws(s.ui, true);  // 2.5.15: the world's and the interface's spans on the card
     // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade); 0.61: the
     // torches' light before them
@@ -1424,20 +1439,6 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 3.0.16-beta.35: a character standing, for the torches' shadows (torch_shadows11.cpp)
     if (!innerPass && !s.ui && s.blend && d.vertexCount == 4 && d.texture[0] && shadowCollecting())
         noteStanding(rec, d);
-    // 3.0.20-beta.10 (the owner's «делай все сразу»): the game's model state of the picture from its first model draw
-    // and the fog of its world draws; the game's still models by us (game_models11.cpp) at the world's first blended
-    // draw or the interface - before the seams' strips over the ground
-    if (!innerPass && !s.ui && s.zWrite && !s.blend && d.effect == 0) {
-        if (d.fvf == d3d7::FVF_TL1 && !modelLikeTaken_) {
-            modelLike_ = s;
-            modelLikeKnown_ = modelLikeTaken_ = true;
-        }
-        if (d.fvf == d3d7::FVF_TL1 || d.fvf == d3d7::FVF_TL2) noteModelFog(rec, d);
-    }
-    if (!innerPass && !modelsDone_ && (s.ui || s.blend)) {
-        flushBatch();
-        drawGameModels11();
-    }
     // 2.5.9 (draw.cpp 1.9): the seams' strips at the first blended draw of the world, before the soft shadows - drawn
     // by this function (seamPass_), which makes no notes and no passes for them
     if (!seamPass_ && !s.ui && s.blend && !seamsDone_ && seamsWanted() && !groundTris_.empty()) {

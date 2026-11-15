@@ -490,6 +490,9 @@ private:
     void drawGameModels11();
     bool ensureModelFaces(uint32_t faces);
     void noteModelFog(const FrameRecord& rec, const DrawCmd& d);
+    // 3.0.20-beta.12 (stage 3): the game's still models we drew this picture into the casters (casterVerts_, casters_)
+    void noteModelCasters();
+    std::vector<gamemodels::CardRun> modelRuns_;
     struct SeamBatch11 {    // applySeams' batch: the groups giving its state and textures, its pieces of each size
         uint32_t in = 0, shows = 0;
         std::vector<uint32_t> pieces[2];  // seamStore_.shown()'s

@@ -1600,6 +1600,10 @@ struct Renderer::Impl {
     const own_ground::Shading* cardFog = nullptr;  // the fog they take (the own ground's or gameFog)
     std::vector<uint32_t> cardPacked;
     bool cardModelsReady() const { return modelVs && !gameFacesFailed; }
+    // 3.0.20-beta.12 (the owner's «да, делай» - stage 3): the game's still models we drew this picture into the
+    // casters (sunVerts, sunCasters) - the water's reflections and the torches' shadows take them as the game's own
+    void noteGameCasters();
+    std::vector<gamemodels::CardRun> gameRuns;
     bool ensureGameFaces(uint32_t faces);
     void drawGameModelsCard(const own_ground::Shading& fog);
     uint64_t gameFrameKey() const;

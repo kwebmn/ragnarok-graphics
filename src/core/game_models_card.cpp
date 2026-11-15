@@ -46,9 +46,21 @@ bool CardStore::add(const Node& n) {
     for (size_t i = 0; i < k.order.size(); ++i) {
         const Face& f = n.faces[k.order[i]];
         const uint32_t texture = n.textures[f.texture];
-        if (k.runs.empty() || k.runs.back().texture != texture)
-            k.runs.push_back(Run{texture, k.first + uint32_t(i), 0});
-        ++k.runs.back().count;
+        if (k.runs.empty() || k.runs.back().texture != texture) {
+            CardRun r;
+            r.texture = texture;
+            r.first = k.first + uint32_t(i);
+            for (int a = 0; a < 3; ++a) r.lo[a] = 1e30f, r.hi[a] = -1e30f;
+            k.runs.push_back(r);
+        }
+        CardRun& run = k.runs.back();
+        ++run.count;
+        for (int c = 0; c < 3; ++c)  // 3.0.20-beta.12: its box
+            for (int a = 0; a < 3; ++a) {
+                const float v = n.vertices[size_t(f.v[c]) * 3 + size_t(a)];
+                run.lo[a] = std::min(run.lo[a], v);
+                run.hi[a] = std::max(run.hi[a], v);
+            }
         uint32_t w[kCardFaceWords] = {};
         for (int c = 0; c < 3; ++c)
             for (int a = 0; a < 3; ++a) w[4 * c + a] = bitsOf(n.vertices[size_t(f.v[c]) * 3 + size_t(a)]);
@@ -92,7 +104,7 @@ void CardStore::frameOf(const std::vector<uint32_t>& ids, CardFrame& out) const 
             continue;
         }
         ++out.nodes;
-        for (const Run& r : it->second.runs) {
+        for (const CardRun& r : it->second.runs) {
             const auto [at, fresh] = at_.try_emplace(r.texture, uint32_t(out.textures.size()));
             if (fresh) {
                 out.textures.push_back(r.texture);
@@ -103,6 +115,28 @@ void CardStore::frameOf(const std::vector<uint32_t>& ids, CardFrame& out) const 
         }
     }
     out.faces.resize(std::max(out.faces.size(), out.textures.size()));
+}
+
+void CardStore::runsOf(const std::vector<uint32_t>& ids, std::vector<CardRun>& out) const {
+    out.clear();
+    for (const uint32_t id : ids) {
+        const auto it = nodes_.find(id);
+        if (it != nodes_.end()) out.insert(out.end(), it->second.runs.begin(), it->second.runs.end());
+    }
+}
+
+void CardStore::cornersOf(const CardRun& r, std::vector<float>& out) const {
+    if (size_t(r.first + r.count) * kCardFaceWords > words_.size()) return;
+    for (uint32_t f = r.first; f < r.first + r.count; ++f) {
+        const uint32_t* w = words_.data() + size_t(f) * kCardFaceWords;
+        for (int c = 0; c < 3; ++c) {
+            float v[6];
+            std::memcpy(v, w + 4 * c, 3 * sizeof(float));      // x y z
+            std::memcpy(v + 3, w + 12 + 2 * c, 2 * sizeof(float));  // u v
+            std::memcpy(v + 5, w + 4 * c + 3, sizeof(float));  // the colour's bits
+            out.insert(out.end(), v, v + 6);
+        }
+    }
 }
 
 }  // namespace uagfx::gamemodels

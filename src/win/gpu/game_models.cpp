@@ -176,6 +176,7 @@ bool Renderer::Impl::drawGameModelsAlone() {
             ownPass = false;
             geometryList = 0;  // the game's record's vertices go up again with its next draw
         }
+        noteGameCasters();  // 3.0.20-beta.12
         ++gameDrawnFrames;  // 3.0.20-beta.11: for the log
         gameDrawnTriangles += o.gameTriangles;
         gameDrawnNodes += o.gameNodes;
@@ -320,6 +321,7 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
         cardFog = nullptr;
     }
     geometryList = 0;  // the game's record's vertices go up again with its next draw
+    noteGameCasters();  // 3.0.20-beta.12: the reflections and the torches' shadows take them
     ++gameDrawnFrames;
     ++gameDrawnByCard;
     gameDrawnTriangles += o.gameTriangles;

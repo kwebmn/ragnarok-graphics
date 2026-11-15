@@ -141,6 +141,7 @@ void Renderer11::drawGameModels11() {
                 flushBatch();
                 modelDraw_ = ModelDraw11{};
                 modelPass_ = false;
+                noteModelCasters();  // 3.0.20-beta.12: the reflections and the torches' shadows take them
                 ++modelsDrawnFrames_;
                 modelsDrawnFaces_ += modelInstanceData_.size();
                 modelsDrawnNodes_ += nodes;

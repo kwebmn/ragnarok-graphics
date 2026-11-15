@@ -28,6 +28,29 @@ constexpr size_t kMostCasterVerts = 600000;
 
 // An opaque draw of the world (not the interface, not blended: the map, its models, the crowns): its triangles in the
 // world with their texture coordinates and the game's colour (six floats a corner), for the next frame's mirror.
+// 3.0.20-beta.12 (stage 3 of «Модели нашим рендером»): the game's still models we drew this picture, a caster a node's
+// faces of one texture (its box from the capture) - their corners in the world as noteCaster unprojects the game's
+void Renderer11::noteModelCasters() {
+    if (!mirrorCollecting() && !shadowCollecting()) return;
+    const gamemodels::Frame& frame = modelsNow_.frame();
+    if (frame.ids.empty() || !modelLikeKnown_) return;
+    modelCards_.runsOf(frame.ids, modelRuns_);
+    for (const gamemodels::CardRun& r : modelRuns_) {
+        if (casterVerts_.size() / 6 + size_t(r.count) * 3 > kMostCasterVerts) break;
+        Caster11 c;
+        c.first = uint32_t(casterVerts_.size() / 6);
+        modelCards_.cornersOf(r, casterVerts_);
+        c.count = uint32_t(casterVerts_.size() / 6) - c.first;
+        if (!c.count) continue;
+        c.texture = r.texture;
+        c.alphaTest = modelLike_.alphaTest || modelLike_.colorKey;
+        c.ref = modelLike_.alphaTest ? float(modelLike_.alphaRef) / 255.0f : 0.5f;
+        std::copy(r.lo, r.lo + 3, c.lo);
+        std::copy(r.hi, r.hi + 3, c.hi);
+        casters_.push_back(c);
+    }
+}
+
 void Renderer11::noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
     if (casterVerts_.size() / 6 >= kMostCasterVerts ||
         (d.primitive != d3d7::PT_TRIANGLELIST && d.primitive != d3d7::PT_TRIANGLESTRIP))
