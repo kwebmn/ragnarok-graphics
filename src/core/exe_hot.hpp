@@ -34,6 +34,35 @@ struct FaceKey {
 constexpr uint64_t faceKey(uint32_t first, uint32_t second) { return uint64_t(first) << 32 | second; }
 void sortFaces(std::vector<FaceKey>& keys);
 
+// 3.0.19-beta.53 (the owner's «берись»; R-GHP9SJ's profile of the 3D view: the game's own busiest place, 3.9 % of
+// its thread). Its vertex pool grown for a model's faces (FUN_00412980 -> MSVC 6's vector<32-byte vertex>::insert,
+// FUN_00414790, thiscall: the place, a count, a blank vertex; ret 0xC - its one caller): a blank copied into every
+// place each frame (rep movs of 8 a vertex), then the model's kept faces write theirs whole and the culled ones'
+// places are never read (FUN_004DE9F0). Ours: the end moved past them, nothing written; another place or no room -
+// the game's own (win/exe_hot: its trampoline)
+constexpr uint32_t kGrow = 0x414790;
+constexpr size_t kGrowSize = 7;
+extern const uint8_t kGrowBytes[kGrowSize];
+struct GameVector {  // MSVC 6's, its addresses: the allocator's word, +4 begin, +8 end, +0xC its room's end
+    uint32_t allocator = 0, begin = 0, end = 0, room = 0;
+};
+bool growAtEnd(GameVector& v, uint32_t at, uint32_t n);  // false: the game's own insert
+
+// The model's projection loop (FUN_004DE9F0, 0x4DEAAF-0x4DEADD: FUN_00412CB0 called a vertex - the count at
+// [ebp-0x34], the points in edi, 12 bytes each, the 4 x 3 matrix at [ebp-0x88], out kModelOut, 32 bytes each, the
+// renderer [kRenderer]) - its bytes checked before it is sent to ours, which projects them in a row: each vertex's
+// x y z rhw as project() makes it, the rest of it untouched
+constexpr uint32_t kModelLoop = 0x4DEAAF, kModelLoopEnd = 0x4DEADD, kModelOut = 0x731150, kRenderer = 0x6EE3D8;
+constexpr size_t kModelLoopSize = kModelLoopEnd - kModelLoop;
+extern const uint8_t kModelLoopBytes[kModelLoopSize];
+void projectMany(float f0, float f1, int cx, int cy, float nearZ, float k, const float* points, const float m[12],
+                 float* out, int count);
+// The way from the loop to ours, made for the place `at` it runs from: the count and the matrix from the game's frame
+// to `call` (cdecl: the renderer, the points, the matrix, out, the count), then the loop's state on its way out - esi
+// past the last out vertex, edi past the last point, its counter [ebp-0x14] and eax 0 - and on at kModelLoopEnd
+constexpr size_t kModelStubSize = 61;
+void modelStub(uint32_t at, uint32_t call, uint8_t out[kModelStubSize]);
+
 bool sameBytes(const uint8_t* have, const uint8_t* want, size_t n);
 
 }  // namespace uagfx::exehot
