@@ -549,6 +549,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.grass3d ? 1 : 0);         // 3.0.19-beta.33
     w.u8(e.weather3d ? 1 : 0);       // 3.0.19-beta.40
     w.u8(e.ownGroundCard ? 1 : 0);   // 3.0.20-beta.23
+    w.u8(e.leavesCard ? 1 : 0);      // 3.0.20-beta.34
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

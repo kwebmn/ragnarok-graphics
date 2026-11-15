@@ -1682,7 +1682,7 @@ struct Renderer::Impl {
     std::vector<UINT> leafCardCounts;
     std::vector<Constants> leafCardLooks;
     std::vector<uint32_t> leafCardPacked;
-    bool leavesFromCard() const { return cardModelsReady() && leafVs && leavesOwnWay(); }
+    bool leavesFromCard() const { return effects.leavesCard && cardModelsReady() && leafVs && leavesOwnWay(); }
     void drawGameLeavesCard(const own_ground::Shading& fog);
     // 3.0.20-beta.23 (the owner's «берем», item 1 - «Своя земля» on the card): the own ground's vertices on the card in
     // their file's places (core/own_ground_card Layout: the smooth mesh's, the plain one's, the colours, the strips'

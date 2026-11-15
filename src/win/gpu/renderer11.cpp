@@ -251,6 +251,7 @@ Renderer11::~Renderer11() {
     }
     drop(seamInstances_);
     drop(modelVs_);  // 3.0.20-beta.10
+    drop(leafVs_);   // 3.0.20-beta.34
     drop(modelLayout_);
     drop(modelFacesSrv_);
     drop(modelFaces_);
@@ -472,7 +473,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[71] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[72] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -534,7 +535,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"grass3d_ps", ps, shaderSource(), {}, true},
                    {"weather3d_vs", vs, shaderSource(), {}, true},  // 3.0.19-beta.40: the 3D view's weather
                    {"weather3d_ps", ps, shaderSource(), {}, true},
-                   {"model_vs", vs, shaderSource(), {}, true}};  // 3.0.20-beta.10: the game's still models
+                   {"model_vs", vs, shaderSource(), {}, true},  // 3.0.20-beta.10: the game's still models
+                   {"leaf_vs", vs, shaderSource(), {}, true}};  // 3.0.20-beta.34: their leaves
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -690,6 +692,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[68].code.empty() || !vsOf(wants[68], weather3dVs_)) weather3dVs_ = nullptr;  // 3.0.19-beta.40
     if (wants[69].code.empty() || !psOf(wants[69], weather3dPs_)) weather3dPs_ = nullptr;
     if (wants[70].code.empty() || !vsOf(wants[70], modelVs_)) modelVs_ = nullptr;  // 3.0.20-beta.10
+    if (wants[71].code.empty() || !vsOf(wants[71], leafVs_)) leafVs_ = nullptr;  // 3.0.20-beta.34
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -1674,7 +1677,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         std::memcpy(c.projection, proj, sizeof proj);
     }
     // 2.6.19 (draw.cpp): leaves as the game draws a tree's - alpha-tested, not blended: never a sprite or an effect
-    const bool leaves = !s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2 && !s.blend;
+    const bool leaves = !s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2 && !s.blend &&
+                        !leafPass_;  // 3.0.20-beta.34: the card's leaves' look worked out from their box
     float swayTop = 0.0f, swayBottom = 0.0f;  // 0.64: leaves in the wind (as draw.cpp)
     if (leaves && effects_.foliage && effects_.foliageStrength > 0 && yExtent(rec, d, swayTop, swayBottom)) {
         const unsigned long long now = GetTickCount64();
@@ -1685,17 +1689,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[3] = float(double(now - clockStart_) / 1000.0);
     }
     if (leaves) {  // 1.7: the trees
-        LeafLook l;
-        l.volume = effects_.treeVolume;
-        l.through = effects_.leafLight;
-        l.tints = effects_.treeTints;
-        const daylight::Light sun = daylight::at(effects_.dayCycle ? effects_.dayNow : -1);
-        l.sun[0] = sun.shadow[0];
-        l.sun[1] = sun.shadow[1];
-        l.throughLight = trees::throughLight(sun.length, float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f);
-        l.season = season_;
-        l.viewToWorld = cameraValid_ ? viewToWorld_ : nullptr;
-        l.projection = camera::projectionFor(gameWidth_, gameHeight_);
+        const LeafLook l = leafLookNow();
         leafShading(rec, d, l, c);
         if (effects_.leafFall) noteCrown(rec, d);  // 2.5.4: the leaves falling from it (the living world)
     }
@@ -1905,12 +1899,25 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
         const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
         std::memcpy(c.projection, proj, sizeof proj);
-        std::memcpy(c.reproject, viewToWorld_, sizeof c.reproject);
+        if (!leafPass_) {
+            std::memcpy(c.reproject, viewToWorld_, sizeof c.reproject);
+        } else {  // 3.0.20-beta.34: the card's leaves - their camera from modelFaces_ (holeF), r0-r5 their look
+            const Constants& l = leafLook_;
+            std::copy(l.twin, l.twin + 4, c.twin);
+            std::copy(l.sourceRect, l.sourceRect + 4, c.sourceRect);
+            std::copy(l.uiPixels, l.uiPixels + 3, c.uiPixels);
+            std::copy(l.sourceClamp, l.sourceClamp + 3, c.sourceClamp);
+            std::copy(l.reproject, l.reproject + 6, c.reproject);
+            c.stage1[1] |= l.stage1[1] & (1u << 27);
+        }
         const uint32_t tint = modelFog_.specularRgb();
-        float bits, matrices;
+        const uint32_t matricesAt = leafPass_ ? modelMatricesKept_ : modelMatrices_;
+        float bits, matrices, camera;
         std::memcpy(&bits, &tint, sizeof bits);
-        std::memcpy(&matrices, &modelMatrices_, sizeof matrices);  // 3.0.20-beta.14: holeG, the moving ones' matrices
-        const float fog[8] = {modelFog_.fogA(), modelFog_.fogB(), bits, 0.0f, matrices, 0.0f, 0.0f, 0.0f};  // holeZ 0
+        std::memcpy(&matrices, &matricesAt, sizeof matrices);  // 3.0.20-beta.14: holeG, the moving ones' matrices
+        std::memcpy(&camera, &modelCameraAt_, sizeof camera);
+        const float fog[8] = {modelFog_.fogA(), modelFog_.fogB(), bits, 0.0f, matrices, 0.0f, 0.0f,
+                              leafPass_ ? camera : 0.0f};  // holeZ 0
         std::memcpy(c.hole, fog, sizeof fog);
     }
     if (seamPass_) {  // 2.5.9 (draw.cpp 1.9): a strip across a seam - its alpha from the noise over the world
@@ -1955,7 +1962,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         is.seam = seamDraw_;
     }
     if (modelPass_ && modelDraw_.count) {  // 3.0.20-beta.10: the game's still models' faces, an instance each
-        is.vs = modelVs_;
+        is.vs = leafPass_ && leafVs_ ? leafVs_ : modelVs_;  // 3.0.20-beta.34: their leaves' own
         is.layout = modelLayout_;
         is.model = modelDraw_;
     }

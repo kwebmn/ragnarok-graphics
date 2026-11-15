@@ -1013,6 +1013,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxOwnFarModelsHint, "", &E::ownFarModels},  // 3.0.4-beta.14: a part of own_ground
         {"effects", "own_ground_card", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxOwnGroundCard,
          Text::FxOwnGroundCardHint, "", &E::ownGroundCard},  // 3.0.20-beta.23: a part of own_ground
+        {"effects", "leaves_card", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxLeavesCard,
+         Text::FxLeavesCardHint, "", &E::leavesCard},  // 3.0.20-beta.34: the leaves of «Моделі нашим рендером»
         {"effects", "world_reflections", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::FxWorldReflections, Text::FxWorldReflectionsHint, "", &E::worldReflections},
         {"effects", "sprite_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSpriteLight,

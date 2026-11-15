@@ -352,6 +352,7 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
     OwnState& o = ownState;
     const gamemodels::Frame& frame = gameModelsNow.frame();
     o.gameTriangles = o.gameNodes = o.gameUnknown = 0;
+    gameMatricesAt = gameCameraAt = 0;  // 3.0.20-beta.34: none this frame till put up below
     if (frame.empty() || !o.modelLikeKnown || !viewToWorldValid) return;
     const uint64_t key = gamemodels::colouringKey(frame);
     if (key != gameCards.colouredWith()) {
@@ -545,63 +546,19 @@ void Renderer::Impl::drawGameLeavesCard(const own_ground::Shading& fog) {
     DrawSetup st = ownState.modelLike;
     st.cull = d3d7::CULL_NONE;  // culled in leaf_vs as the game culls
     const uint32_t state = leafCardRec.addState(st);
+    const float swing = sway ? foliage::kSwing * float(effects.foliageStrength) / 100.0f : 0.0f;
+    const auto leafy = [this](uint32_t texture) { return leafyTexture(texture); };
     // a node's leaves: `bits` its faces' moving place, toView its matrix this frame (node -> view; none: still)
     const auto tree = [&](uint32_t id, uint32_t bits, const float* toView) {
         const std::vector<gamemodels::CardRun>* runs = gameCards.runsOfNode(id);
         if (!runs) return;
-        float lo[3] = {1e30f, 1e30f, 1e30f}, hi[3] = {-1e30f, -1e30f, -1e30f};
-        bool any = false;
-        for (const gamemodels::CardRun& r : *runs) {
-            if (!r.count || !leafyTexture(r.texture)) continue;
-            any = true;
-            for (int a = 0; a < 3; ++a) lo[a] = std::min(lo[a], r.lo[a]), hi[a] = std::max(hi[a], r.hi[a]);
-        }
-        if (!any) return;
-        // the crown's box: its corners into the view, onto the game's screen; its middle in the world
-        float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f, mid[3] = {0.0f, 0.0f, 0.0f};
-        bool front = true;
-        for (int k = 0; k < 8; ++k) {
-            const float w[3] = {k & 1 ? hi[0] : lo[0], k & 2 ? hi[1] : lo[1], k & 4 ? hi[2] : lo[2]};
-            float v[3];
-            if (toView) {
-                for (int a = 0; a < 3; ++a)
-                    v[a] = w[0] * toView[a] + w[1] * toView[3 + a] + w[2] * toView[6 + a] + toView[9 + a];
-            } else {
-                own_ground::toView(view, w, v);
-            }
-            for (int a = 0; a < 3; ++a) mid[a] += v[a] * 0.125f;
-            if (v[2] <= p.nearZ + 1.0f) {
-                front = false;
-                continue;
-            }
-            const float gx = v[0] / v[2] * p.f0 + p.cx, gy = v[1] / v[2] * p.f1 + p.cy;
-            x0 = std::min(x0, gx), y0 = std::min(y0, gy), x1 = std::max(x1, gx), y1 = std::max(y1, gy);
-        }
         Constants leaf{};
-        if (front) {
-            if (sway) {  // as draw.cpp's for the game's leaves: the swing, the crown's bottom and height, the time
-                leaf.twin[0] = foliage::kSwing * float(effects.foliageStrength) / 100.0f;
-                leaf.twin[1] = y1;
-                leaf.twin[2] = y1 - y0;
-                leaf.twin[3] = waterTime();
-            }
-            // its middle back into the world: the view's axes in it (viewToWorld's rows) and its place
-            const float crown[2] = {viewToWorld[9] + mid[0] * viewToWorld[0] + mid[1] * viewToWorld[3] +
-                                        mid[2] * viewToWorld[6],
-                                    viewToWorld[11] + mid[0] * viewToWorld[2] + mid[1] * viewToWorld[5] +
-                                        mid[2] * viewToWorld[8]};
-            leafShadingOf(x0, y0, x1, y1, crown, look, leaf);
-            // as draw.cpp's noteCrown for the game's leaves: the crown the falling leaves start from
-            if (effects.leafFall && frameCrowns.size() < 32 && x1 - x0 >= 8.0f && mid[2] > 0.0f) {
-                critters::Crown cr;
-                cr.centre = critters::Point{crown[0],
-                                            viewToWorld[10] + mid[0] * viewToWorld[1] + mid[1] * viewToWorld[4] +
-                                                mid[2] * viewToWorld[7],
-                                            crown[1]};
-                cr.radius = std::clamp((x1 - x0) * 0.5f * mid[2] / p.f0, 1.0f, 12.0f);
-                frameCrowns.push_back(cr);
-            }
-        }
+        critters::Crown crown;
+        bool crownSeen = false;
+        if (!cardTreeLook(*runs, leafy, toView, view, p, viewToWorld, look, swing, waterTime(), leaf,
+                          effects.leafFall && frameCrowns.size() < 32 ? &crown : nullptr, &crownSeen))
+            return;
+        if (crownSeen) frameCrowns.push_back(crown);
         for (const gamemodels::CardRun& r : *runs) {
             if (!r.count || !leafyTexture(r.texture)) continue;
             leafCardPacked.clear();

@@ -486,6 +486,7 @@ enum class Text : uint16_t {
     AutopilotNote, AutopilotChange,  // 3.0.11-beta.58: «Гра»'s line of the automatic set and its button
     FxOwnFarModels, FxOwnFarModelsHint,  // 3.0.4-beta.14: a part of the own ground
     FxOwnGroundCard, FxOwnGroundCardHint,  // 3.0.20-beta.23: a part of the own ground
+    FxLeavesCard, FxLeavesCardHint,  // 3.0.20-beta.34: the leaves of the models by our renderer
     CameraZoomLimit, CameraZoomLimitHint,  // 3.0.4-beta.17: the camera no further out than the character is drawn
     // 3.0.5-beta.1: «Реліз» chosen over a beta - the release offered back (update::backToRelease)
     UpdateBackNote, UpdateBackButton, PlayBackButton, MainUpdateBack, UpdateBackDo, UpdateBackOut, UpdateBackStay,

@@ -36,6 +36,7 @@
 #include "core/weather.hpp"
 #include "core/weather3d.hpp"
 #include "core/wind.hpp"
+#include "win/gpu/draw_constants.hpp"
 #include "win/gpu/map_world.hpp"
 #include "core/frame.hpp"
 #include "core/image.hpp"
@@ -479,6 +480,7 @@ private:
     UINT modelInstanceBytes_ = 0;
     std::vector<uint32_t> modelInstanceData_;
     ID3D11VertexShader* modelVs_ = nullptr;
+    ID3D11VertexShader* leafVs_ = nullptr;  // 3.0.20-beta.34: their leaves from the card (leaf_vs)
     ID3D11InputLayout* modelLayout_ = nullptr;
     FrameRecord modelRec_;
     std::vector<ModelDraw11> modelDraws_;
@@ -516,6 +518,22 @@ private:
         return it != textures_.end() && it->second.leafy;
     }
     void drawGameLeaves11();
+    // 3.0.20-beta.34 (the owner's «6,7,8,9», 8 - as Direct3D 12's 3.0.20-beta.33): the leaves from the card while
+    // their look is on - leaf_vs, a tree's leafy run a draw, its sway and crown's look from its box (cardTreeLook);
+    // the camera in modelFaces_ after the moving nodes' matrices, the frame's matrices kept for them
+    bool leafPass_ = false;
+    Constants leafLook_{};  // the draw's own
+    uint32_t modelCameraAt_ = 0, modelMatricesKept_ = 0;  // uint4 in modelFaces_; 0 none
+    FrameRecord leafCardRec_;
+    std::vector<ModelDraw11> leafCardDraws_;
+    std::vector<uint32_t> leafCardData_;
+    std::vector<Constants> leafCardLooks_;
+    bool leavesFromCard11() const {
+        return effects_.leavesCard && modelVs_ && leafVs_ && modelLayout_ && leavesOwnWay() &&
+               modelCards_.faces() < gamemodels::kCardMostFaces;
+    }
+    LeafLook leafLookNow() const;  // the trees' look now (draw's leafShading, the card's leaves)
+    void drawGameLeavesCard11();
     FrameRecord leafRec_;
     gamemodels::Leaves leaves11_;  // 3.0.20-beta.16: placed a node each on the own ground's threads
     ID3D11Buffer* leafVertices_ = nullptr;

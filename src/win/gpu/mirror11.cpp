@@ -38,7 +38,7 @@ void Renderer11::noteModelCasters() {
     const bool leavesApart = leavesOwnWay();  // 3.0.20-beta.13: their casters noted as the game's (noteCaster)
     // a run into the casters - `toWorld` a moving node's (its own space; 3.0.20-beta.14); false: no room left
     const auto note = [&](const gamemodels::CardRun& r, const float* toWorld) {
-        if (leavesApart && leafyTexture(r.texture)) return true;
+        if (leavesApart && !leavesFromCard11() && leafyTexture(r.texture)) return true;  // .34: the card's - here
         if (casterVerts_.size() / 6 + size_t(r.count) * 3 > kMostCasterVerts) return false;
         Caster11 c;
         c.first = uint32_t(casterVerts_.size() / 6);

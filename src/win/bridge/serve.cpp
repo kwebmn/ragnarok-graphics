@@ -206,6 +206,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.grass3d = rd.u8() != 0;         // 3.0.19-beta.33
             e.weather3d = rd.u8() != 0;       // 3.0.19-beta.40
             e.ownGroundCard = rd.u8() != 0;   // 3.0.20-beta.23
+            e.leavesCard = rd.u8() != 0;      // 3.0.20-beta.34
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

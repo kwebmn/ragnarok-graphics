@@ -497,6 +497,10 @@ struct EffectSettings {
     // 3.0.20-beta.23 (the owner's «берем», item 1), a part of own_ground: its vertices kept on the card and put there
     // by ground_vs (core/own_ground_card.hpp) - the processor only picks the chunks in view; off: put by the processor
     bool ownGroundCard = true;
+    // 3.0.20-beta.34 (the owner's «6,7,8,9», 8): the leaves of the models drawn by the renderer (view3d own_models)
+    // from the card - their faces where the models' are, a tree's sway and look worked out once from its box (leaf_vs);
+    // off: laid out by the processor face by face, as before 3.0.20-beta.33
+    bool leavesCard = true;
     // 1.16: the remaster's world reflections (mirror.cpp): the last frame's opaque world turned over the water's
     // level, read by water_ps where the picture has nothing to reflect. Remaster mode. Off by default.
     bool worldReflections = false;

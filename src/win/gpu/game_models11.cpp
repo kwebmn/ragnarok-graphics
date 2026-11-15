@@ -9,7 +9,10 @@
 #include <algorithm>
 #include <cstring>
 
+#include "core/daylight.hpp"
+#include "core/foliage.hpp"
 #include "core/frame.hpp"
+#include "win/gpu/draw_constants.hpp"
 #include "win/gpu/renderer11.hpp"
 #include "win/gpu/threads.hpp"
 #include "win/log.hpp"
@@ -46,14 +49,15 @@ bool Renderer11::ensureModelFaces(uint32_t faces) {
     release(modelFaces_);
     modelFacesRoom_ = 0;
     D3D11_BUFFER_DESC d{};
-    // 3.0.20-beta.14 (stage 4): after the faces, the frame's moving nodes' matrices - three uint4 each
-    d.ByteWidth = room * kFaceWords * 4 + gamemodels::kCardMostMoving * 48;
+    // 3.0.20-beta.14 (stage 4): after the faces, the frame's moving nodes' matrices - three uint4 each; 3.0.20-beta.34
+    // and the leaves' camera (leaf_vs)
+    d.ByteWidth = room * kFaceWords * 4 + gamemodels::kCardMostMoving * 48 + 48;
     d.Usage = D3D11_USAGE_DEFAULT;
     d.BindFlags = D3D11_BIND_SHADER_RESOURCE;
     D3D11_SHADER_RESOURCE_VIEW_DESC v{};
     v.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
     v.Format = DXGI_FORMAT_R32G32B32A32_UINT;
-    v.Buffer.NumElements = room * (kFaceWords / 4) + gamemodels::kCardMostMoving * 3;
+    v.Buffer.NumElements = room * (kFaceWords / 4) + gamemodels::kCardMostMoving * 3 + 3;
     HRESULT hr = device_->CreateBuffer(&d, nullptr, &modelFaces_);
     if (SUCCEEDED(hr)) hr = device_->CreateShaderResourceView(modelFaces_, &v, &modelFacesSrv_);
     if (FAILED(hr)) {
@@ -103,6 +107,7 @@ const gamemodels::Node* Renderer11::modelNodeOf(const gamemodels::Frame& frame, 
 
 void Renderer11::drawGameModels11() {
     modelsDone_ = true;
+    modelCameraAt_ = modelMatricesKept_ = 0;  // 3.0.20-beta.34: none this frame till put up below
     own_ground::View view;
     // 3.0.20-beta.14: a map's faces past kCardMostFaces leave no room for a face's place in the batches - the game's
     const bool ready = modelLikeKnown_ && cameraValid_ && modelVs_ && modelLayout_ &&
@@ -131,6 +136,14 @@ void Renderer11::drawGameModels11() {
                 modelMatrices_ = modelFacesRoom_ * (kFaceWords / 4);
                 const D3D11_BOX box{modelMatrices_ * 16, 0, 0, modelMatrices_ * 16 + uint32_t(moving) * 48, 1, 1};
                 ctx_->UpdateSubresource(modelFaces_, 0, &box, frame.matrices.data(), 0, 0);
+            }
+            // 3.0.20-beta.34: the matrices kept for the leaves after, and their camera (leaf_vs)
+            modelMatricesKept_ = modelMatrices_;
+            modelCameraAt_ = 0;
+            if (leavesFromCard11()) {
+                modelCameraAt_ = modelFacesRoom_ * (kFaceWords / 4) + gamemodels::kCardMostMoving * 3;
+                const D3D11_BOX box{modelCameraAt_ * 16, 0, 0, modelCameraAt_ * 16 + 48, 1, 1};
+                ctx_->UpdateSubresource(modelFaces_, 0, &box, viewToWorld_, 0, 0);
             }
             static const std::vector<uint32_t> kNoMoving;
             // the frame's faces by texture, the textures first met
@@ -189,6 +202,10 @@ void Renderer11::drawGameModels11() {
 void Renderer11::drawGameLeaves11() {
     const gamemodels::Frame& frame = modelsNow_.frame();
     if (!leavesOwnWay() || frame.empty() || !modelLikeKnown_ || !cameraValid_) return;
+    if (leavesFromCard11() && modelCameraAt_) {  // 3.0.20-beta.34: from the card, the camera put up with the models'
+        drawGameLeavesCard11();
+        return;
+    }
     gamemodels::Picture pic;
     if (!own_ground::viewOf(viewToWorld_, pic.view)) return;
     pic.p = camera::projectionFor(gameWidth_, gameHeight_);
@@ -233,6 +250,96 @@ void Renderer11::drawGameLeaves11() {
     for (const DrawCmd& cmd : leafRec_.draws()) draw(leafRec_, cmd);  // the world's path, as the game's trees
     flushBatch();
     std::swap(vertices_, leafVertices_);
+}
+
+// 3.0.20-beta.34 (the owner's «6,7,8,9», 8 - as Direct3D 12's drawGameLeavesCard): a tree's leafy runs from the
+// card a draw each (leaf_vs, their faces' numbers as instances), their sway and crown's look from the tree's box
+// (cardTreeLook); their casters the card's (noteModelCasters)
+void Renderer11::drawGameLeavesCard11() {
+    const gamemodels::Frame& frame = modelsNow_.frame();
+    own_ground::View view;
+    if (!own_ground::viewOf(viewToWorld_, view)) return;
+    const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+    const LeafLook look = leafLookNow();
+    const unsigned long long now = GetTickCount64();
+    if (!clockStart_) clockStart_ = now;
+    const float time = float(double(now - clockStart_) / 1000.0);
+    const float swing = effects_.foliage && effects_.foliageStrength > 0
+                            ? foliage::kSwing * float(effects_.foliageStrength) / 100.0f
+                            : 0.0f;
+    leafCardRec_.reset();
+    leafCardDraws_.clear();
+    leafCardData_.clear();
+    leafCardLooks_.clear();
+    DrawSetup st = modelLike_;
+    st.cull = d3d7::CULL_NONE;  // culled in leaf_vs as the game culls
+    const uint32_t state = leafCardRec_.addState(st);
+    static const uint8_t kNone[3 * 32] = {};  // the record's draw: three vertices of nothing (leaf_vs reads)
+    const auto leafy = [this](uint32_t texture) { return leafyTexture(texture); };
+    const auto tree = [&](uint32_t id, uint32_t bits, const float* toView) {
+        const std::vector<gamemodels::CardRun>* runs = modelCards_.runsOfNode(id);
+        if (!runs) return;
+        Constants leaf{};
+        critters::Crown crown;
+        bool crownSeen = false;
+        if (!cardTreeLook(*runs, leafy, toView, view, p, viewToWorld_, look, swing, time, leaf,
+                          effects_.leafFall && frameCrowns_.size() < 32 ? &crown : nullptr, &crownSeen))
+            return;
+        if (crownSeen) frameCrowns_.push_back(crown);
+        for (const gamemodels::CardRun& r : *runs) {
+            if (!r.count || !leafyTexture(r.texture)) continue;
+            leafCardDraws_.push_back(ModelDraw11{uint32_t(leafCardData_.size()), r.count});
+            for (uint32_t f = 0; f < r.count; ++f) leafCardData_.push_back((r.first + f) | bits);
+            DrawCmd cmd;
+            cmd.state = state;
+            cmd.texture[0] = r.texture;
+            cmd.primitive = d3d7::PT_TRIANGLELIST;
+            cmd.fvf = d3d7::FVF_TL1;
+            leafCardRec_.draw(cmd, kNone, 3, nullptr, 0);
+            leafCardLooks_.push_back(leaf);
+        }
+    };
+    for (const uint32_t id : frame.ids) tree(id, 0u, nullptr);
+    if (modelMatricesKept_ && frame.matrices.size() >= frame.moving.size() * 12)
+        for (size_t m = 0; m < frame.moving.size() && m < gamemodels::kCardMostMoving; ++m)
+            tree(frame.moving[m], uint32_t(m + 1) << gamemodels::kCardSlotShift, frame.matrices.data() + m * 12);
+    if (leafCardDraws_.empty()) return;
+    modelFog_.fit();  // as the models' pass (none of theirs drawn when all their faces are leaves)
+    static bool told = false;
+    if (!told) {
+        told = true;
+        LOG_INFO("game models: their leaves drawn from the card (leaf_vs, Direct3D 11) - %zu draws in the first "
+                 "picture, their sway and crowns' look from their boxes",
+                 leafCardDraws_.size());
+    }
+    flushBatch();  // the game's draws gathered so far
+    if (!fillBuffer(modelInstances_, modelInstanceBytes_, D3D11_BIND_VERTEX_BUFFER, leafCardData_.data(),
+                    leafCardData_.size() * sizeof(uint32_t), nullptr))
+        return;
+    modelPass_ = leafPass_ = true;
+    for (size_t n = 0; n < leafCardDraws_.size(); ++n) {
+        modelDraw_ = leafCardDraws_[n];
+        leafLook_ = leafCardLooks_[n];
+        draw(leafCardRec_, leafCardRec_.draws()[n]);
+    }
+    flushBatch();
+    modelDraw_ = ModelDraw11{};
+    modelPass_ = leafPass_ = false;
+}
+
+LeafLook Renderer11::leafLookNow() const {
+    LeafLook l;
+    l.volume = effects_.treeVolume;
+    l.through = effects_.leafLight;
+    l.tints = effects_.treeTints;
+    const daylight::Light sun = daylight::at(effects_.dayCycle ? effects_.dayNow : -1);
+    l.sun[0] = sun.shadow[0];
+    l.sun[1] = sun.shadow[1];
+    l.throughLight = trees::throughLight(sun.length, float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f);
+    l.season = season_;
+    l.viewToWorld = cameraValid_ ? viewToWorld_ : nullptr;
+    l.projection = camera::projectionFor(gameWidth_, gameHeight_);
+    return l;
 }
 
 }  // namespace uagfx::gpu

@@ -6,8 +6,11 @@
 #include <cstring>
 #include <vector>
 
+#include "core/critters.hpp"
 #include "core/frame.hpp"
 #include "core/game_camera.hpp"
+#include "core/game_models_card.hpp"
+#include "core/own_ground.hpp"
 #include "core/model_fade.hpp"
 #include "core/trees.hpp"
 #include "win/gpu/shaders.hpp"
@@ -217,6 +220,65 @@ inline void leafShadingOf(float x0, float y0, float x1, float y1, const float* c
     }
     c.reproject[3] = sh.autumnAmount;
     c.reproject[5] = sh.rime;
+}
+
+// 3.0.20-beta.34: a tree of the card's leaves (Direct3D 12's drawGameLeavesCard, Direct3D 11's drawGameLeaves11) - its
+// leafy runs' box (toView: a moving node's matrix, node -> view; none: still, its runs in the world), its eight corners
+// onto the game's screen: its sway (swing 0: none; the time) and its crown's look (leafShadingOf) into `out`; the crown
+// the falling leaves start from into `crown` when given (false then: none). False: no leafy run
+template <typename Leafy>
+inline bool cardTreeLook(const std::vector<gamemodels::CardRun>& runs, const Leafy& leafy, const float* toView,
+                         const own_ground::View& view, const camera::Projection& p, const float* viewToWorld,
+                         const LeafLook& look, float swing, float time, Constants& out, critters::Crown* crown,
+                         bool* crownSeen) {
+    if (crownSeen) *crownSeen = false;
+    float lo[3] = {1e30f, 1e30f, 1e30f}, hi[3] = {-1e30f, -1e30f, -1e30f};
+    bool any = false;
+    for (const gamemodels::CardRun& r : runs) {
+        if (!r.count || !leafy(r.texture)) continue;
+        any = true;
+        for (int a = 0; a < 3; ++a) lo[a] = std::min(lo[a], r.lo[a]), hi[a] = std::max(hi[a], r.hi[a]);
+    }
+    if (!any) return false;
+    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f, mid[3] = {0.0f, 0.0f, 0.0f};
+    bool front = true;
+    for (int k = 0; k < 8; ++k) {
+        const float w[3] = {k & 1 ? hi[0] : lo[0], k & 2 ? hi[1] : lo[1], k & 4 ? hi[2] : lo[2]};
+        float v[3];
+        if (toView) {
+            for (int a = 0; a < 3; ++a)
+                v[a] = w[0] * toView[a] + w[1] * toView[3 + a] + w[2] * toView[6 + a] + toView[9 + a];
+        } else {
+            own_ground::toView(view, w, v);
+        }
+        for (int a = 0; a < 3; ++a) mid[a] += v[a] * 0.125f;
+        if (v[2] <= p.nearZ + 1.0f) {
+            front = false;
+            continue;
+        }
+        const float gx = v[0] / v[2] * p.f0 + p.cx, gy = v[1] / v[2] * p.f1 + p.cy;
+        x0 = std::min(x0, gx), y0 = std::min(y0, gy), x1 = std::max(x1, gx), y1 = std::max(y1, gy);
+    }
+    out = Constants{};
+    if (!front) return true;  // by the eye: neither sway nor look (the game's draw left such faces out)
+    if (swing > 0.0f) {  // as the game's leaves': the swing, the crown's bottom and height, the time
+        out.twin[0] = swing;
+        out.twin[1] = y1;
+        out.twin[2] = y1 - y0;
+        out.twin[3] = time;
+    }
+    const float* m = viewToWorld;  // its middle back into the world: the view's axes in it, then its place
+    const float world[3] = {m[9] + mid[0] * m[0] + mid[1] * m[3] + mid[2] * m[6],
+                            m[10] + mid[0] * m[1] + mid[1] * m[4] + mid[2] * m[7],
+                            m[11] + mid[0] * m[2] + mid[1] * m[5] + mid[2] * m[8]};
+    const float place[2] = {world[0], world[2]};
+    leafShadingOf(x0, y0, x1, y1, place, look, out);
+    if (crown && crownSeen && x1 - x0 >= 8.0f && mid[2] > 0.0f) {  // as noteCrown's for the game's leaves
+        crown->centre = critters::Point{world[0], world[1], world[2]};
+        crown->radius = std::clamp((x1 - x0) * 0.5f * mid[2] / p.f0, 1.0f, 12.0f);
+        *crownSeen = true;
+    }
+    return true;
 }
 
 inline void leafShading(const FrameRecord& rec, const DrawCmd& d, const LeafLook& look, Constants& c) {
