@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.19-beta.44 — what's new · 2026-11-15
+
+- **No freezes at the first read of the game's files.** The file table of the client's big archive (data.grf) was read anew by each part of the program — the wings, the party window, the reference — and the first time right on the game's thread: on a weak laptop the game stood still for up to 2 seconds. Now the table is read once, ahead, in the background, and every part takes it ready.
+- **The party window faster.** The names of the maps for members elsewhere are no longer looked up through every map each frame — on a laptop that took up to 2.5 ms of every frame.
+
 # uaRO Graphics 3.0.19-beta.43 — what's new · 2026-11-15
 
 - **The 3D view: HP bars no longer show through cave walls.** Whether a monster is seen is now judged by the drawn ground's own heights — the rocks and walls of caves (Payon Cave and others) hide the monsters behind them with their bars and names.
