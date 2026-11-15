@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.20-beta.17 — what's new · 2026-11-15
+
+- **Reports are easier now.** Ctrl+Shift+F10 always opens a new report with the screenshot - even while an answer's card shows at the top.
+- **The answers' card in the game no longer nags.** It is one card for all the new answers («Answers to your reports: N») and, unless the developer waits for your answer, it goes by itself after a few seconds. Opened, put off («Later») or gone, it does not come back in later games until a newer answer comes. With the game minimised, one Windows notification comes instead of several.
+- **Sending shows its progress.** After «Send» you see what goes on: «Collecting the game's logs…», «Preparing the screenshots: 1 of 2», «Uploading to uaro.kiev.ua…» - and the window does not freeze. «Thank you!» shows as soon as the site has the report; the screenshots in full quality follow with their own bar, and the window can be closed. The reports' list loads in the background too - the window opens at once.
+
 # uaRO Graphics 3.0.20-beta.16 — what's new · 2026-11-15
 
 - **«Models by our renderer»: the leaves on several threads.** The leaves of the trees our renderer draws are now placed by the processor on several threads, as the own ground is, not on one: where there are many trees the renderer has less to do a frame. The renderer's log now shows our models' and their leaves' time as parts of their own, not inside the own ground's.
