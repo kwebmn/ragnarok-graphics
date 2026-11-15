@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.46 — what's new · 2026-11-15
+
+- **The own ground faster.** The map's own ground is now built each frame on several of the processor's cores at once, not on one: in the 3D view on the fields this was the biggest part of the renderer's work — some 2.7 ms a frame. The ground comes out the same.
+
 # uaRO Graphics 3.0.19-beta.45 — what's new · 2026-11-15
 
 - **The 3D view: the cameras no longer go into a cave's rock.** The camera behind now comes in towards the character before a cave's wall instead of going into the rock and showing through it; the free camera (Ctrl+Shift+C) stops at the rock and slides along it. A cave's walls are the map's ground, not houses, so before only the walk map counted them, and there they lie at the floor.
