@@ -2854,16 +2854,30 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
         }
     }
     float2 tp = float2(0.0, 0.0);
-    bool found = false;
-    [unroll] for (int k = 0; k < 2; ++k) {
-        if (!viewToPixel(bladeView(float3(xz.x, y, xz.y)), tp)) return o;
-        float raw = sceneDepth.Load(int3(int2(tp), 0));
-        if (raw >= 0.99999) return o;
-        float3 w = grassWorld(viewFrom(int2(tp), raw));
-        y = w.y;
-        found = length(w.xz - xz) < 0.75 * gap + 0.35;
+    // 3.0.20-beta.28 (the owner: «когда водишь мышкой в 3д режиме трава то пропадает то появляется»): a root off the
+    // picture - a near blade's, hundreds of pixels tall on it, its root under the bottom edge - left its blade out:
+    // the edges went over the roots as the camera turned. Off the picture it stands on its cell's ground (its heights'
+    // middle; its foot unseen), its colour the picture's nearest - while its blade may still reach the picture
+    float3 q = bladeView(float3(xz.x, y, xz.y));
+    if (q.z <= nearZ) return o;
+    float2 tq = float2(q.x / q.z * f0 + cx, q.y / q.z * f1 + cy) * scale + 0.5 + float2(jitterX, jitterY);
+    if (all(tq >= 0.0) && all(tq < targetSize)) {
+        bool found = false;
+        [unroll] for (int k = 0; k < 2; ++k) {
+            if (!viewToPixel(bladeView(float3(xz.x, y, xz.y)), tp)) return o;
+            float raw = sceneDepth.Load(int3(int2(tp), 0));
+            if (raw >= 0.99999) return o;
+            float3 w = grassWorld(viewFrom(int2(tp), raw));
+            y = w.y;
+            found = length(w.xz - xz) < 0.75 * gap + 0.35;
+        }
+        if (!found) return o;  // something else seen there
+    } else {
+        float reachPx = 6.0 / q.z * max(f0, f1) * scale;  // a blade's most on the picture, leaning
+        if (!cellKnown || any(tq < -reachPx) || any(tq > targetSize + reachPx)) return o;
+        tp = clamp(tq, float2(1.0, 1.0), targetSize - 2.0);
     }
-    if (!found || y > uiPixels.w) return o;  // something else seen there; under the water (up is -y)
+    if (y > uiPixels.w) return o;  // under the water (up is -y)
     if (cellKnown && (y < span.x - 0.75 || y > span.y + 0.75)) return o;  // a deck, a bridge over the ground
     // 3.0.20-beta.26 (R-PKPE9D «впечатление что трава мигает»): its colour between the pixels round it, how green a
     // chance against its own
