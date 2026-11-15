@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.26 — what's new · 2026-11-15
+
+- **The 3D view's grass no longer blinks (R-PKPE9D).** Three causes, all gone. An olive meadow lies right on the edge of the «green ground» test, so a blade went and came as the point of its root crossed into the next pixel. Now the root's colour is taken smoothly between the pixels, and the blades by that edge (and by each ring's edge) shrink and grow instead of vanishing. Far blades narrower than two pixels trembled from frame to frame — now they are at least 2.5 pixels wide and as much fainter. With DLSS the blades are now marked in its mask like the characters and effects: DLSS takes them from the current frame rather than from its history by the motion of the ground under them (the swaying blades flickered for that).
+
 # uaRO Graphics 3.0.20-beta.25 — what's new · 2026-11-15
 
 - **The 3D view's grass reaches further and looks more natural (R-6YX3UF).** Until now the blades stood only some 55 units (≈11 cells) from the camera, their edge thinned at random. Now three rings stand round the camera: each further one twice as far out, its blades twice as far apart but wider and a little taller, so the density on the screen stays even — the grass goes on to some 220 units and fades out smoothly at its edge. The blades are lighter at the root (they were dark, like grey spikes) and a little greener than their ground. An olive meadow (prt_fild08) is no longer patchy: the grass grows all over it and still keeps off sand and paths. Weak graphics cards get two rings.
