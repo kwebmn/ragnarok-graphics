@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.29 — what's new · 2026-11-16
+
+- **3D view: the grass dense again, flowers without «triangles» (R-DWKJEN).** In beta.27 the flowers' heads were drawn as separate solid triangles and lay about the field like shards, and the grass thinned: it grew in only 65 % of the cells, as in the top view, the blades were narrower, and those turned side-on to the camera faded. Now a flower is as in the top view: its stem's top in the flower's colour (the stem a little wider). The grass grows in every cell and as wide as in beta.26, and only blades narrower than 2 pixels fade. The blades' own ways, the nested rings and the screen's edges stay as they were.
+
 # uaRO Graphics 3.0.20-beta.28 — what's new · 2026-11-15
 
 - **3D view: the grass by the screen's edges no longer vanishes as you move the mouse.** A blade was drawn only while its root was on the picture. Near blades are huge on the screen — hundreds of pixels tall — so as the camera turned and an edge of the screen (mostly the bottom one) went over their roots, whole tufts went and came. Now a root past the edge stands at its cell's ground height and takes its colour from the picture's nearest pixel, and the blade is drawn while any part of it may reach the screen.
