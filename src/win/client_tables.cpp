@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/read_budget.hpp"
 #include "core/buff_panel.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/info_card.hpp"
@@ -164,6 +165,23 @@ bool cardArtPixels(const std::string& file, std::vector<uint32_t>& argb, int& wi
     return uiPixels("cardbmp", file, argb, width, height);
 }
 
+namespace {
+// 3.0.20-beta.2 (R-JJE8HA: the tester's «Склад» on the release - hundreds of icons read on its first frame from a slow
+// disk, each from the game's archive and the AI texture pack: the game still for 15 s): their first reads kept to
+// kIconReadMs a frame (core/read_budget) - the rest in the next frames, drawn without their icon until then
+constexpr double kIconReadMs = 4.0, kFrameMs = 16.0;
+double clockMs() {
+    static const double perMs = [] {
+        LARGE_INTEGER f;
+        QueryPerformanceFrequency(&f);
+        return f.QuadPart > 0 ? double(f.QuadPart) / 1000.0 : 1.0;
+    }();
+    LARGE_INTEGER t;
+    QueryPerformanceCounter(&t);
+    return double(t.QuadPart) / perMs;
+}
+}  // namespace
+
 const panel::Picture* icon(const std::string& file, int side, float radius) {
     struct Sized {
         float radius = 0;
@@ -179,12 +197,23 @@ const panel::Picture* icon(const std::string& file, int side, float radius) {
     };
     static std::map<std::string, Read> icons;
     static int told = 0, toldPack = 0;
+    static readbudget::Budget budget(kIconReadMs, kFrameMs);  // 3.0.20-beta.2
+    static uint32_t waited = 0;
+    static bool waitTold = false;
     if (file.empty() || side <= 0) return nullptr;
     Read& r = icons[file];
     // 3.0.11-beta.74 (the owner: «иконки скилов, предметов ... грузить в текстур которые обработаны»): the AI texture
     // pack's picture (4x the game's) when it has one and [interface] pack_icons is on; read again when that changes
     const ULONGLONG now = GetTickCount64();
-    if (const int want = packpictures::iconsStamp(); want != r.madeFor || (r.retryAt && now >= r.retryAt)) {
+    const int want = packpictures::iconsStamp();
+    const bool due = want != r.madeFor || (r.retryAt && now >= r.retryAt);
+    const double readFrom = due ? clockMs() : 0.0;
+    if (due && !budget.allowed(readFrom) && ++waited && !waitTold && waited >= 20) {
+        waitTold = true;  // once a game: the icons' reads spread over the frames
+        LOG_INFO("client tables: the icons' first reads kept to %.0f ms a frame - %u waited for the next frames",
+                 kIconReadMs, waited);
+    }
+    if (due && budget.allowed(readFrom)) {
         const bool first = r.madeFor == -2;
         r.madeFor = want;
         r.retryAt = 0;
@@ -200,6 +229,7 @@ const panel::Picture* icon(const std::string& file, int side, float radius) {
         for (auto& [key, made] : r.sized)
             made.picture = r.argb.empty() ? panel::Picture{}
                                           : buffpanel::iconPicture(r.argb, r.w, r.h, true, key.first, made.radius);
+        budget.spend(clockMs() - readFrom);
     }
     if (r.argb.empty()) return nullptr;
     const auto key = std::make_pair(side, int(radius * 10));

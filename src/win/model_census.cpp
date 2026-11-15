@@ -14,6 +14,7 @@ namespace mc = ::uagfx::modelcensus;
 namespace {
 
 static_assert(sizeof(mc::FaceColours) == mc::kColourSize, "a face's colours and texture coordinates as the game's");
+static_assert(sizeof(mc::FaceLit) == 36, "a face's vertices' ints as the game's (+0x144)");
 
 using NodeDrawFn = void(__attribute__((thiscall)) *)(uint8_t* node, uint32_t a, uint32_t b, uint32_t c);
 constexpr int kDeepest = 64;     // nodes in nodes
@@ -36,6 +37,7 @@ double g_perMs = 0;
 mc::Tally g_tally;
 DWORD g_toldAt = 0;
 std::vector<mc::FaceColours> g_memory;
+std::vector<mc::FaceLit> g_lits;
 std::vector<mc::DrawnVertex> g_drawn;
 
 LONGLONG now() {
@@ -51,17 +53,26 @@ T at(uintptr_t place) {
     return v;
 }
 
-// the game's way of colouring this node this frame - read before its draw, which clears the flag
-mc::Way wayOf(const uint8_t* node) {
-    if (at<int32_t>(mc::kOtherWay)) return mc::Way::Other;
-    if (at<int32_t>(uintptr_t(node) + mc::kNodeSeeThrough)) return mc::Way::SeeThrough;
-    if (at<uint8_t>(mc::kNightWay)) return mc::Way::Night;
-    return mc::Way::Plain;
+// the game's colouring of this node this frame - read before its draw, which clears the half see-through flag: the way,
+// its three factors, the actor's alpha
+mc::Colouring colouringOf(const uint8_t* node) {
+    mc::Colouring c;
+    if (at<int32_t>(mc::kOtherWay))
+        c.way = mc::Way::Other;
+    else if (at<int32_t>(uintptr_t(node) + mc::kNodeSeeThrough))
+        c.way = mc::Way::SeeThrough;
+    else if (at<uint8_t>(mc::kLitWay))
+        c.way = mc::Way::Lit;
+    const uintptr_t factors = c.way == mc::Way::Other ? mc::kOtherFactors : mc::kFactors;
+    for (int k = 0; k < 3; ++k) c.factors[k] = at<float>(factors + uintptr_t(4 * k));
+    const uintptr_t actor = at<uint32_t>(uintptr_t(node) + mc::kNodeActor);
+    c.alpha = actor ? at<uint8_t>(actor + mc::kActorAlpha) : 0xFF;
+    return c;
 }
 
 // the node's faces in memory against the vertices its draw wrote into its block of the pool (the block found again by
 // its place from the pool's start: a child's growth may have moved the pool)
-void check(const uint8_t* node, const Call& call, mc::Way way) {
+void check(const uint8_t* node, const Call& call, const mc::Colouring& how) {
     const uintptr_t mesh = at<uint32_t>(uintptr_t(node) + mc::kNodeMesh);
     if (!mesh) return;
     const uint32_t faces = at<uint32_t>(mesh + mc::kMeshFaces);
@@ -70,6 +81,15 @@ void check(const uint8_t* node, const Call& call, mc::Way way) {
     if (!faces || faces > kMostFaces || !first || last < first || (last - first) / mc::kColourSize != faces) return;
     g_memory.resize(faces);
     std::memcpy(g_memory.data(), reinterpret_cast<const void*>(uintptr_t(first)), size_t(faces) * mc::kColourSize);
+    g_lits.clear();
+    if (how.way == mc::Way::Lit) {  // 3.0.20-beta.2: each vertex's ints - its colour plus its place's light
+        const uint32_t litFirst = at<uint32_t>(uintptr_t(node) + mc::kNodeLit);
+        const uint32_t litLast = at<uint32_t>(uintptr_t(node) + mc::kNodeLit + 4);
+        if (!litFirst || litLast < litFirst || (litLast - litFirst) / sizeof(mc::FaceLit) != faces) return;
+        g_lits.resize(faces);
+        std::memcpy(g_lits.data(), reinterpret_cast<const void*>(uintptr_t(litFirst)),
+                    size_t(faces) * sizeof(mc::FaceLit));
+    }
     const uint32_t begin = at<uint32_t>(call.vector + 4), end = at<uint32_t>(call.vector + 8);
     const uint64_t from = uint64_t(begin) + call.offset, to = from + uint64_t(call.count) * 32;
     if (!begin || to > end || call.count > kMostFaces * 3) return;
@@ -78,7 +98,7 @@ void check(const uint8_t* node, const Call& call, mc::Way way) {
         const uintptr_t v = uintptr_t(from + uint64_t(i) * 32);
         g_drawn[i] = mc::DrawnVertex{at<uint32_t>(v + 16), at<float>(v + 24), at<float>(v + 28)};
     }
-    g_tally.check(mc::compare(g_memory, g_drawn.data(), g_drawn.size()), way);
+    g_tally.check(mc::compare(g_memory, g_lits, how, g_drawn.data(), g_drawn.size()), how.way);
 }
 
 void __attribute__((thiscall)) drawHook(uint8_t* node, uint32_t a, uint32_t b, uint32_t c) {
@@ -88,7 +108,7 @@ void __attribute__((thiscall)) drawHook(uint8_t* node, uint32_t a, uint32_t b, u
     }
     const int depth = g_depth++;
     g_calls[depth] = Call{node};
-    const mc::Way way = wayOf(node);
+    const mc::Colouring how = colouringOf(node);
     const LONGLONG start = depth == 0 ? now() : 0;
     reinterpret_cast<NodeDrawFn>(g_draw)(node, a, b, c);
     if (depth == 0) g_ticks += now() - start;
@@ -98,7 +118,7 @@ void __attribute__((thiscall)) drawHook(uint8_t* node, uint32_t a, uint32_t b, u
     if (mesh) g_faces += at<uint32_t>(mesh + mc::kMeshFaces);
     if (g_calls[depth].grown && g_checks < kChecksAFrame) {
         ++g_checks;
-        check(node, g_calls[depth], way);
+        check(node, g_calls[depth], how);
     }
 }
 

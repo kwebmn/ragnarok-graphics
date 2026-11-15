@@ -27,3 +27,19 @@ RELEASED 15.11, main 8394155).
    4 nodes a frame checked; frame() at the present, a line every 30 s). Tests: model_census_* (3; the matcher's skip
    mutated -> RED). Ruling: the tests written first but the module's header written with its code before a run - the
    RED shown by a mutation instead; cost if wrong: none. Untested in the game.
+3.0.20-beta.1 SHIPPED (ff37304, update.ini 45ff42b).
+2. 3.0.20-beta.2. The owner's reports on beta.1 (R-V89FD6 payon, R-KGER4B prontera, R-BURESU prontera at night - one
+   session): the game's models a frame 449-958 nodes, 17.8-26.9 k faces, 1.55-2.12 ms (9-13 % of its frame); every
+   node checked in the «night» way (0x7710B9 set by day too), 27-61 % the same as +0x118, the rest x1.8-2.3. The code
+   (0x4DEDB0-0x4DEF7F) read: 0x7710B9 = lit - the drawn colour from +0x144 (each vertex's ints: the face's colour plus
+   its place's light, FUN_004E0070) x 0x7710E4/E8/EC (bytes 2 1 0); plain - +0x118 colour bytes x the same; other
+   (0x748878) - x 0x7710D8/DC/E0; half see-through - the colour, alpha 0x80; each product __ftol-truncated, its low
+   byte stored (no clamp); alpha the actor's +0x1ED. Done: modelcensus::Colouring / expected() / FaceLit; compare()
+   against the exact 32 bits; the driver reads the way, the factors and the alpha before the draw, +0x144 for lit.
+   Tests: model_census_expected_as_the_game_colours_each_way, model_census_lit_faces_checked_against_their_vertex_light
+   (+ the two kept). Also R-JJE8HA (the beta tester, auto «hang» on the RELEASE 3.0.19, i7-5820K, D:): after a death
+   prt_in loaded 8.23 s (cps.dll inflated 311 files, 7.3 MB in 8 s - a slow disk), then the Kafra «Склад» opened and
+   the game stood 15 s: cps.dll 53.6 % (the game's GetData 0x50D1A2 -> 0x5110C1) + zip::Index::read 46 % - our
+   clienttables::icon read every new icon at once (the game's .bmp, then the AI pack's copy). core/read_budget: the
+   icons' first reads kReadMs 4 a 16-ms window, the rest in the next ones (logged once when 20 waited). Test:
+   read_budget_spends_its_share_of_a_window_then_waits_for_the_next. Untested in the game.
