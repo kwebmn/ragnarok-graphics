@@ -442,3 +442,29 @@ TEST(pipeline_key_card_ground_is_a_key_of_its_own) {
     bad.shader = DrawShader::Smoke;
     CHECK(!validPipelineKey(packPipelineKey(bad)));
 }
+
+// 3.0.20-beta.33 (the owner's «6,7,8,9», 8 - the leaves on the card too): the card models' key with leaf_vs (bit 32 -
+// the key's first past 32 bits): the camera from the faces' buffer, the wind's sway as draw_vs's; never without the
+// card models' own
+TEST(pipeline_key_card_leaves_past_32_bits) {
+    DrawSetup s;
+    s.zEnable = true;
+    s.zWrite = true;
+    s.zFunc = CMP_LESSEQUAL;
+    s.cull = CULL_NONE;
+    s.alphaTest = true;
+    s.alphaFunc = CMP_GREATEREQUAL;
+    s.alphaRef = 0xCF;
+    PipelineKey k = pipelineKey(s, FVF_TL1);
+    k.cardModels = true;
+    const uint64_t models = packPipelineKey(k);
+    k.cardLeaves = true;
+    const uint64_t leaves = packPipelineKey(k);
+    CHECK(leaves != models && (leaves >> 32 & 1) == 1 && (models >> 32 & 1) == 0);
+    CHECK(unpackPipelineKey(leaves) == k && unpackPipelineKey(leaves).cardLeaves);
+    CHECK(validPipelineKey(leaves));
+    CHECK(parsePipelineKeys(pipelineKeysHeader() + pipelineKeyLine(leaves)) == (std::vector<uint64_t>{leaves}));
+    PipelineKey bad = k;
+    bad.cardModels = false;
+    CHECK(!validPipelineKey(packPipelineKey(bad)));
+}

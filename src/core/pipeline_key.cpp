@@ -13,7 +13,7 @@ bool PipelineKey::operator==(const PipelineKey& o) const {
            srcBlend == o.srcBlend && dstBlend == o.dstBlend && twoUv == o.twoUv && samples == o.samples &&
            alphaToCoverage == o.alphaToCoverage && layer == o.layer && glow == o.glow && water == o.water &&
            mask == o.mask && shader == o.shader && lean == o.lean && behind == o.behind && cardModels == o.cardModels &&
-           cardGround == o.cardGround;
+           cardGround == o.cardGround && cardLeaves == o.cardLeaves;
 }
 
 PipelineKey pipelineKey(const DrawSetup& s, uint32_t fvf) {
@@ -46,7 +46,8 @@ uint64_t packPipelineKey(const PipelineKey& k) {
            uint64_t(k.twoUv) << 17 | samplesCode(k.samples) << 18 | uint64_t(k.alphaToCoverage) << 20 |
            uint64_t(k.layer) << 21 | uint64_t(k.glow) << 22 | uint64_t(k.water) << 23 | uint64_t(k.mask) << 24 |
            uint64_t(uint8_t(k.shader) & 3) << 25 | uint64_t(k.lean) << 27 | uint64_t(k.behind) << 28 |
-           uint64_t(uint8_t(k.shader) >> 2 & 1) << 29 | uint64_t(k.cardModels) << 30 | uint64_t(k.cardGround) << 31;
+           uint64_t(uint8_t(k.shader) >> 2 & 1) << 29 | uint64_t(k.cardModels) << 30 | uint64_t(k.cardGround) << 31 |
+           uint64_t(k.cardLeaves) << 32;
 }
 
 PipelineKey unpackPipelineKey(uint64_t v) {
@@ -70,6 +71,7 @@ PipelineKey unpackPipelineKey(uint64_t v) {
     k.behind = (v >> 28 & 1) != 0;
     k.cardModels = (v >> 30 & 1) != 0;  // 3.0.20-beta.11
     k.cardGround = (v >> 31 & 1) != 0;  // 3.0.20-beta.23
+    k.cardLeaves = (v >> 32 & 1) != 0;  // 3.0.20-beta.33
     return k;
 }
 
@@ -114,6 +116,7 @@ bool validPipelineKey(uint64_t v) {
     if (k.cardModels && (!k.zEnable || !k.zWrite || k.blend || k.twoUv || k.layer || k.water || k.mask ||
                          k.shader != DrawShader::Game))
         return false;
+    if (k.cardLeaves && !k.cardModels) return false;  // 3.0.20-beta.33: the card models' leaves
     // 3.0.20-beta.23: the own ground from the card - depth tested, two texture coordinates (its strips blended over it)
     if (k.cardGround && (!k.zEnable || !k.twoUv || k.cardModels || k.behind || k.layer || k.water || k.mask ||
                          k.shader != DrawShader::Game))

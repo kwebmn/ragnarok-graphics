@@ -37,6 +37,8 @@ struct PipelineKey {
     bool cardModels = false;
     // 3.0.20-beta.23: the own ground from the card - ground_vs, the picture's indices number its vertices (bit 31)
     bool cardGround = false;
+    // 3.0.20-beta.33: the card models' with leaf_vs - their leaves, the camera from the faces' buffer (bit 32)
+    bool cardLeaves = false;
     bool operator==(const PipelineKey& o) const;
 };
 

@@ -191,6 +191,34 @@ struct LeafLook {
     camera::Projection projection;
 };
 
+// 3.0.20-beta.33 (the owner's «6,7,8,9», 8 - the leaves on the card): a crown's look by its box on the game's screen
+// (x0 y0 - x1 y1) and its place in the world (crown: x, z; none - no shade of its own) - leafShading's from a draw's
+// vertices, the card's leaves' from their node's box
+inline void leafShadingOf(float x0, float y0, float x1, float y1, const float* crown, const LeafLook& look,
+                          Constants& c) {
+    if (!look.volume && !look.through && !look.tints) return;
+    if (x1 - x0 < 2.0f || y1 - y0 < 2.0f) return;
+    c.stage1[1] |= 1u << 27;
+    c.sourceRect[0] = x0;
+    c.sourceRect[1] = y0;
+    c.sourceRect[2] = x1;
+    c.sourceRect[3] = y1;
+    const float len = std::sqrt(look.sun[0] * look.sun[0] + look.sun[1] * look.sun[1]);
+    c.uiPixels[0] = len > 1e-4f ? -look.sun[0] / len : 0.0f;  // towards the sun
+    c.uiPixels[1] = len > 1e-4f ? -look.sun[1] / len : -1.0f;
+    c.uiPixels[2] = look.volume ? 1.0f : 0.0f;
+    c.reproject[4] = look.through ? look.throughLight : 0.0f;
+    c.sourceClamp[0] = c.sourceClamp[1] = c.sourceClamp[2] = 1.0f;
+    if (!look.tints || !crown) return;
+    const trees::Shade sh = trees::shadeAt(crown[0], crown[1], look.season);
+    for (int k = 0; k < 3; ++k) {
+        c.sourceClamp[k] = sh.tint[k];
+        c.reproject[k] = sh.autumn[k];
+    }
+    c.reproject[3] = sh.autumnAmount;
+    c.reproject[5] = sh.rime;
+}
+
 inline void leafShading(const FrameRecord& rec, const DrawCmd& d, const LeafLook& look, Constants& c) {
     if (!look.volume && !look.through && !look.tints) return;
     const std::vector<uint8_t>& v = rec.vertexBytes();
@@ -206,31 +234,15 @@ inline void leafShading(const FrameRecord& rec, const DrawCmd& d, const LeafLook
         y1 = std::max(y1, xyzw[1]);
         rhw += xyzw[3];
     }
-    if (!n || x1 - x0 < 2.0f || y1 - y0 < 2.0f) return;
+    if (!n) return;
     rhw /= float(n);
-    if (look.volume || look.through || look.tints) c.stage1[1] |= 1u << 27;
-    c.sourceRect[0] = x0;
-    c.sourceRect[1] = y0;
-    c.sourceRect[2] = x1;
-    c.sourceRect[3] = y1;
-    const float len = std::sqrt(look.sun[0] * look.sun[0] + look.sun[1] * look.sun[1]);
-    c.uiPixels[0] = len > 1e-4f ? -look.sun[0] / len : 0.0f;  // towards the sun
-    c.uiPixels[1] = len > 1e-4f ? -look.sun[1] / len : -1.0f;
-    c.uiPixels[2] = look.volume ? 1.0f : 0.0f;
-    c.reproject[4] = look.through ? look.throughLight : 0.0f;
-    c.sourceClamp[0] = c.sourceClamp[1] = c.sourceClamp[2] = 1.0f;
-    if (!look.tints || !look.viewToWorld || rhw <= 0.0f) return;
     // 3.0.4-beta.18: the shade looked up where its leaves lie in the world (trees::crownPlace) - the box's middle on
     // the screen went round the crown as the camera turned, and the tree changed its shade with it
-    float wx = 0.0f, wz = 0.0f;
-    if (!trees::crownPlace(v.data() + d.vertexOffset, stride, n, look.viewToWorld, look.projection, wx, wz)) return;
-    const trees::Shade sh = trees::shadeAt(wx, wz, look.season);
-    for (int k = 0; k < 3; ++k) {
-        c.sourceClamp[k] = sh.tint[k];
-        c.reproject[k] = sh.autumn[k];
-    }
-    c.reproject[3] = sh.autumnAmount;
-    c.reproject[5] = sh.rime;
+    float crown[2] = {0.0f, 0.0f};
+    const bool placed = look.tints && look.viewToWorld && rhw > 0.0f &&
+                        trees::crownPlace(v.data() + d.vertexOffset, stride, n, look.viewToWorld, look.projection,
+                                          crown[0], crown[1]);
+    leafShadingOf(x0, y0, x1, y1, placed ? crown : nullptr, look, c);
 }
 
 }  // namespace uagfx::gpu

@@ -661,6 +661,7 @@ struct Renderer::Impl {
     ID3DBlob* weather3dPs = nullptr;
     ID3DBlob* modelVs = nullptr;  // 3.0.20-beta.11: the game's still models from the card (game_models.cpp)
     ID3DBlob* groundVs = nullptr;  // 3.0.20-beta.23: the own ground from the card (own_ground.cpp)
+    ID3DBlob* leafVs = nullptr;  // 3.0.20-beta.33: the game's models' leaves from the card (game_models.cpp)
     ID3D12PipelineState* weather3dPipelines[4] = {};
     std::string weather3dLogged;
     float weather3dDrift[2] = {0.0f, 0.0f};
@@ -1670,6 +1671,19 @@ struct Renderer::Impl {
     bool cardModelsReady() const {
         return modelVs && !gameFacesFailed && gameCards.faces() < gamemodels::kCardMostFaces;
     }
+    // 3.0.20-beta.33 (the owner's «6,7,8,9», 8 - the leaves on the card too): the leaves of the game's still models
+    // from the card while their own look is on - leaf_vs, a tree's leafy run a draw (its faces' numbers as instances),
+    // its sway and crown's look worked out from its node's box (leafShadingOf); the camera in the faces' buffer after
+    // the moving nodes' matrices (a slot's own), the frame's matrices kept for them
+    bool cardLeavesDraw = false;
+    Constants cardLeafLook{};  // the draw's own: its sway, its crown's look
+    uint32_t gameMatricesAt = 0, gameCameraAt = 0;  // the frame's, in the faces' buffer (uint4); 0 none
+    FrameRecord leafCardRec;
+    std::vector<UINT> leafCardCounts;
+    std::vector<Constants> leafCardLooks;
+    std::vector<uint32_t> leafCardPacked;
+    bool leavesFromCard() const { return cardModelsReady() && leafVs && leavesOwnWay(); }
+    void drawGameLeavesCard(const own_ground::Shading& fog);
     // 3.0.20-beta.23 (the owner's «берем», item 1 - «Своя земля» on the card): the own ground's vertices on the card in
     // their file's places (core/own_ground_card Layout: the smooth mesh's, the plain one's, the colours, the strips'
     // blends) - a default heap's buffer, t6 of the scene's table -, put up a few MB a picture, a chunk's colours sent

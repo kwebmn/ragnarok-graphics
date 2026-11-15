@@ -201,7 +201,16 @@ float4 modelClip(float3 v) {
     float zw = v.z <= farZ - 10.0 ? a * v.z - b : modelDepth(v.z) * v.z;
     return float4(kx * f0 * v.x + bx * v.z, by * v.z - ky * f1 * v.y, zw, v.z);
 }
-PsIn model_vs(ModelIn i) {
+// 3.0.20-beta.33 (the owner's «6,7,8,9», 8 - the leaves on the card too): a camera given (view -> world, 4 x 3 as
+// three float4 in r0-r11's order) - the leaves' own in t6 (leaf_vs: their look's numbers in r0-r5, as the game's)
+float3 viewBy(float3 w, float4 a, float4 b, float4 c) {
+    float3 ra = a.xyz, rb = float3(a.w, b.x, b.y), rc = float3(b.z, b.w, c.x);
+    float3 d = w - float3(c.y, c.z, c.w);
+    return float3(dot(d, cross(rb, rc)), dot(d, cross(rc, ra)), dot(d, cross(ra, rb))) / dot(ra, cross(rb, rc));
+}
+// model_vs's corner; `leaf` (leaf_vs): the camera from t6 at asuint(holeF), and the wind's sway as draw_vs's - the
+// tree's bottom and height on the screen in twinY, twinW, its swing twinX, the time twinH
+PsIn modelCorner(ModelIn i, bool leaf) {
     PsIn o = (PsIn)0;
     o.pos = float4(2.0, 2.0, 0.5, 1.0);  // past the target's right: the face left out
     uint at = (i.face & 0xFFFFFu) * 5;  // 3.0.20-beta.14: its moving node's place in the frame's list above (from 1)
@@ -212,7 +221,15 @@ PsIn model_vs(ModelIn i) {
     uint4 t0 = seamVertices.Load(int(at + 3));
     uint4 t1 = seamVertices.Load(int(at + 4));
     float3 v0, v1, v2;
-    if (slot == 0u) {
+    if (slot == 0u && leaf) {
+        uint k = asuint(holeF);
+        float4 ca = asfloat(seamVertices.Load(int(k)));
+        float4 cb = asfloat(seamVertices.Load(int(k + 1u)));
+        float4 cc = asfloat(seamVertices.Load(int(k + 2u)));
+        v0 = viewBy(asfloat(c0.xyz), ca, cb, cc);
+        v1 = viewBy(asfloat(c1.xyz), ca, cb, cc);
+        v2 = viewBy(asfloat(c2.xyz), ca, cb, cc);
+    } else if (slot == 0u) {
         v0 = modelView(asfloat(c0.xyz));
         v1 = modelView(asfloat(c1.xyz));
         v2 = modelView(asfloat(c2.xyz));
@@ -239,8 +256,16 @@ PsIn model_vs(ModelIn i) {
     o.specular = colourOf((uint(haze) << 24) | (asuint(holeH) & 0xFFFFFFu));
     o.uv0 = i.corner == 0 ? asfloat(t0.xy) : (i.corner == 1 ? asfloat(t0.zw) : asfloat(t1.xy));
     o.uv1 = float2(0.0, 0.0);
+    if (leaf && twinX > 0.0 && v.z > nearZ) {  // the wind's sway, draw_vs's: the crown's top swings, its trunk stays
+        float gx = v.x / v.z * f0 + cx, gy = v.y / v.z * f1 + cy;  // its place on the game's screen
+        float up = saturate((twinY - gy) / max(twinW, 1.0));
+        float wave = sin(twinH * 1.6 + gx * 0.013 + gy * 0.007) * 0.7 + sin(twinH * 2.9 + gx * 0.031) * 0.3;
+        o.pos.x += twinX * up * up * wave * (2.0 * scale / targetSize.x) * v.z;
+    }
     return o;
 }
+PsIn model_vs(ModelIn i) { return modelCorner(i, false); }
+PsIn leaf_vs(ModelIn i) { return modelCorner(i, true); }
 
 // 3.0.20-beta.23 (the owner's «берем», item 1 - «Своя земля» on the card): a map's own ground kept on the card in its
 // file's places (core/own_ground_card Layout in t6: two uint4 a vertex, then the colours and the strips' blends four a

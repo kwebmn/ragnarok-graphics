@@ -1998,6 +1998,7 @@ void Renderer::Impl::destroy() {
     releaseCom(weather3dVs);  // 3.0.19-beta.40
     releaseCom(modelVs);      // 3.0.20-beta.11
     releaseCom(groundVs);     // 3.0.20-beta.23
+    releaseCom(leafVs);       // 3.0.20-beta.33
     if (gameFaces) {
         gameFaces->Unmap(0, nullptr);
         gameFacesMapped = nullptr;

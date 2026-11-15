@@ -3,8 +3,10 @@
 #include <cstring>
 #include <string>
 
+#include "core/foliage.hpp"
 #include "core/game_models_place.hpp"
 #include "core/model_census.hpp"
+#include "win/gpu/draw_constants.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -294,7 +296,9 @@ bool Renderer::Impl::ensureGameFaces(uint32_t faces) {
     desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
     // 3.0.20-beta.14 (stage 4): after the faces, the frame's moving nodes' matrices - a region a slot (the list in
     // flight before this one may still read its own), kCardMostMoving of three uint4 each
-    desc.Width = UINT64(room) * gamemodels::kCardFaceWords * 4 + UINT64(kSlots) * gamemodels::kCardMostMoving * 48;
+    // 3.0.20-beta.33: and a camera a slot (the leaves', leaf_vs)
+    desc.Width = UINT64(room) * gamemodels::kCardFaceWords * 4 + UINT64(kSlots) * gamemodels::kCardMostMoving * 48 +
+                 UINT64(kSlots) * 48;
     desc.Height = 1;
     desc.DepthOrArraySize = 1;
     desc.MipLevels = 1;
@@ -329,7 +333,8 @@ bool Renderer::Impl::ensureGameFaces(uint32_t faces) {
     v.Format = DXGI_FORMAT_R32G32B32A32_UINT;
     v.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
     v.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    v.Buffer.NumElements = room * (gamemodels::kCardFaceWords / 4) + kSlots * gamemodels::kCardMostMoving * 3;
+    v.Buffer.NumElements =
+        room * (gamemodels::kCardFaceWords / 4) + kSlots * gamemodels::kCardMostMoving * 3 + kSlots * 3;
     device->CreateShaderResourceView(gameFaces, &v, cpuSrvHandle(gameFacesSrv));
     static bool told = false;
     if (!told) {
@@ -368,6 +373,14 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
     if (moving && frame.matrices.size() >= moving * 12) {
         cardMatrices = gameFacesRoom * (gamemodels::kCardFaceWords / 4) + slot * gamemodels::kCardMostMoving * 3;
         std::memcpy(gameFacesMapped + size_t(cardMatrices) * 16, frame.matrices.data(), moving * 48);
+    }
+    // 3.0.20-beta.33: the matrices kept for the leaves after, and their camera (leaf_vs) in this slot's own place
+    gameMatricesAt = cardMatrices;
+    gameCameraAt = 0;
+    if (open && leavesFromCard()) {
+        gameCameraAt = gameFacesRoom * (gamemodels::kCardFaceWords / 4) + kSlots * gamemodels::kCardMostMoving * 3 +
+                       slot * 3;
+        std::memcpy(gameFacesMapped + size_t(gameCameraAt) * 16, viewToWorld, 48);
     }
     static const std::vector<uint32_t> kNoMoving;
     gameCards.frameOf(frame.ids, cardMatrices ? frame.moving : kNoMoving, gameCardFrame);
@@ -468,6 +481,10 @@ void Renderer::Impl::checkGameModelsShown(const own_ground::Shading& fog) {
 void Renderer::Impl::drawGameLeaves(const own_ground::Shading& fog) {
     const gamemodels::Frame& frame = gameModelsNow.frame();
     if (!leavesOwnWay() || frame.empty() || !ownState.modelLikeKnown || !viewToWorldValid) return;
+    if (leavesFromCard() && gameCameraAt) {  // 3.0.20-beta.33: from the card, the camera put up with the models'
+        drawGameLeavesCard(fog);
+        return;
+    }
     gamemodels::Picture pic;
     if (!own_ground::viewOf(viewToWorld, pic.view)) return;
     pic.p = camera::projectionFor(gameWidth, gameHeight);
@@ -507,6 +524,128 @@ void Renderer::Impl::drawGameLeaves(const own_ground::Shading& fog) {
     if (vertexBase)
         for (const DrawCmd& d : leafRec.draws()) draw(leafRec, d);  // the world's path, as the game's trees
     flushDraws();
+    geometryList = 0;  // the game's record's vertices go up again with its next draw
+}
+
+// 3.0.20-beta.33 (the owner's «6,7,8,9», 8 - the leaves on the card too: 0.24-0.54 ms of the owner's frame placing
+// them on the processor, a tree a draw): a tree's leafy runs from the card a draw each (leaf_vs: their faces' numbers
+// as instances, a moving node's with its place in the frame's moving list), drawn as the game's trees are - their
+// sway and crown's look (leafShadingOf) worked out once a tree from its leafy runs' box, its eight corners onto the
+// screen; the camera put up with the models' (gameCameraAt). Their casters are the card's (noteGameCasters)
+void Renderer::Impl::drawGameLeavesCard(const own_ground::Shading& fog) {
+    const gamemodels::Frame& frame = gameModelsNow.frame();
+    own_ground::View view;
+    if (!own_ground::viewOf(viewToWorld, view)) return;
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    const LeafLook look = leafLook();
+    const bool sway = effects.foliage && effects.foliageStrength > 0;
+    leafCardRec.reset();
+    leafCardCounts.clear();
+    leafCardLooks.clear();
+    DrawSetup st = ownState.modelLike;
+    st.cull = d3d7::CULL_NONE;  // culled in leaf_vs as the game culls
+    const uint32_t state = leafCardRec.addState(st);
+    // a node's leaves: `bits` its faces' moving place, toView its matrix this frame (node -> view; none: still)
+    const auto tree = [&](uint32_t id, uint32_t bits, const float* toView) {
+        const std::vector<gamemodels::CardRun>* runs = gameCards.runsOfNode(id);
+        if (!runs) return;
+        float lo[3] = {1e30f, 1e30f, 1e30f}, hi[3] = {-1e30f, -1e30f, -1e30f};
+        bool any = false;
+        for (const gamemodels::CardRun& r : *runs) {
+            if (!r.count || !leafyTexture(r.texture)) continue;
+            any = true;
+            for (int a = 0; a < 3; ++a) lo[a] = std::min(lo[a], r.lo[a]), hi[a] = std::max(hi[a], r.hi[a]);
+        }
+        if (!any) return;
+        // the crown's box: its corners into the view, onto the game's screen; its middle in the world
+        float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f, mid[3] = {0.0f, 0.0f, 0.0f};
+        bool front = true;
+        for (int k = 0; k < 8; ++k) {
+            const float w[3] = {k & 1 ? hi[0] : lo[0], k & 2 ? hi[1] : lo[1], k & 4 ? hi[2] : lo[2]};
+            float v[3];
+            if (toView) {
+                for (int a = 0; a < 3; ++a)
+                    v[a] = w[0] * toView[a] + w[1] * toView[3 + a] + w[2] * toView[6 + a] + toView[9 + a];
+            } else {
+                own_ground::toView(view, w, v);
+            }
+            for (int a = 0; a < 3; ++a) mid[a] += v[a] * 0.125f;
+            if (v[2] <= p.nearZ + 1.0f) {
+                front = false;
+                continue;
+            }
+            const float gx = v[0] / v[2] * p.f0 + p.cx, gy = v[1] / v[2] * p.f1 + p.cy;
+            x0 = std::min(x0, gx), y0 = std::min(y0, gy), x1 = std::max(x1, gx), y1 = std::max(y1, gy);
+        }
+        Constants leaf{};
+        if (front) {
+            if (sway) {  // as draw.cpp's for the game's leaves: the swing, the crown's bottom and height, the time
+                leaf.twin[0] = foliage::kSwing * float(effects.foliageStrength) / 100.0f;
+                leaf.twin[1] = y1;
+                leaf.twin[2] = y1 - y0;
+                leaf.twin[3] = waterTime();
+            }
+            // its middle back into the world: the view's axes in it (viewToWorld's rows) and its place
+            const float crown[2] = {viewToWorld[9] + mid[0] * viewToWorld[0] + mid[1] * viewToWorld[3] +
+                                        mid[2] * viewToWorld[6],
+                                    viewToWorld[11] + mid[0] * viewToWorld[2] + mid[1] * viewToWorld[5] +
+                                        mid[2] * viewToWorld[8]};
+            leafShadingOf(x0, y0, x1, y1, crown, look, leaf);
+            // as draw.cpp's noteCrown for the game's leaves: the crown the falling leaves start from
+            if (effects.leafFall && frameCrowns.size() < 32 && x1 - x0 >= 8.0f && mid[2] > 0.0f) {
+                critters::Crown cr;
+                cr.centre = critters::Point{crown[0],
+                                            viewToWorld[10] + mid[0] * viewToWorld[1] + mid[1] * viewToWorld[4] +
+                                                mid[2] * viewToWorld[7],
+                                            crown[1]};
+                cr.radius = std::clamp((x1 - x0) * 0.5f * mid[2] / p.f0, 1.0f, 12.0f);
+                frameCrowns.push_back(cr);
+            }
+        }
+        for (const gamemodels::CardRun& r : *runs) {
+            if (!r.count || !leafyTexture(r.texture)) continue;
+            leafCardPacked.clear();
+            for (uint32_t f = 0; f < r.count; ++f) leafCardPacked.push_back((r.first + f) | bits);
+            uint32_t n = uint32_t((leafCardPacked.size() + 7) / 8);
+            if (n == 4) n = 5;  // never a quad's four: draw() takes those for sprites and effects
+            leafCardPacked.resize(size_t(n) * 8, 0u);
+            DrawCmd cmd;
+            cmd.state = state;
+            cmd.texture[0] = r.texture;
+            cmd.primitive = d3d7::PT_TRIANGLELIST;
+            cmd.fvf = d3d7::FVF_TL1;
+            leafCardRec.draw(cmd, leafCardPacked.data(), n, nullptr, 0);
+            leafCardCounts.push_back(UINT(r.count));
+            leafCardLooks.push_back(leaf);
+        }
+    };
+    for (const uint32_t id : frame.ids) tree(id, 0u, nullptr);
+    if (gameMatricesAt && frame.matrices.size() >= frame.moving.size() * 12)
+        for (size_t m = 0; m < frame.moving.size() && m < gamemodels::kCardMostMoving; ++m)
+            tree(frame.moving[m], uint32_t(m + 1) << gamemodels::kCardSlotShift, frame.matrices.data() + m * 12);
+    if (leafCardCounts.empty()) return;
+    static bool told = false;
+    if (!told) {
+        told = true;
+        LOG_INFO("game models: their leaves drawn from the card (leaf_vs) - %zu draws in the first picture, their "
+                 "sway and crowns' look from their boxes",
+                 leafCardCounts.size());
+    }
+    flushDraws();  // the draws gathered so far are of the record's vertices before these
+    prepareGeometry(leafCardRec);
+    if (vertexBase) {
+        cardFog = &fog;
+        ownPass = cardModelsDraw = cardLeavesDraw = true;
+        for (size_t n = 0; n < leafCardCounts.size(); ++n) {
+            cardCount = leafCardCounts[n];
+            cardLeafLook = leafCardLooks[n];
+            draw(leafCardRec, leafCardRec.draws()[n]);
+        }
+        flushDraws();
+        ownPass = cardModelsDraw = cardLeavesDraw = false;
+        cardCount = 0;
+        cardFog = nullptr;
+    }
     geometryList = 0;  // the game's record's vertices go up again with its next draw
 }
 

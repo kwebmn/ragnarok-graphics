@@ -699,6 +699,15 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         leafShading(rec, d, look, c);
         if (effects.leafFall) noteCrown(rec, d);
     }
+    if (cardLeavesDraw) {  // 3.0.20-beta.33: the card's leaves - their sway and crown's look worked out from their box
+        const Constants& l = cardLeafLook;
+        std::copy(l.twin, l.twin + 4, c.twin);
+        std::copy(l.sourceRect, l.sourceRect + 4, c.sourceRect);
+        std::copy(l.uiPixels, l.uiPixels + 3, c.uiPixels);
+        std::copy(l.sourceClamp, l.sourceClamp + 3, c.sourceClamp);
+        std::copy(l.reproject, l.reproject + 6, c.reproject);
+        c.stage1[1] |= l.stage1[1] & (1u << 27);
+    }
     if (matTex) materialConstants(d.fvf == d3d7::FVF_TL2, c);  // 1.8
     if (hilly) hillsConstants(c);  // 1.15
     if (sprite && !matTex && c.uiMode == 0) spriteConstants(c, t[0] ? t[0]->width : 0);  // 1.17
@@ -813,13 +822,16 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
         const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
         std::memcpy(c.projection, proj, sizeof proj);
-        std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
+        // 3.0.20-beta.33: the leaves' camera from the faces' buffer (holeF) - their r0-r5 the crown's look
+        if (!cardLeavesDraw) std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
         const uint32_t tint = cardFog ? cardFog->specularRgb() : 0u;
-        float bits, matrices;
+        const uint32_t matricesAt = cardLeavesDraw ? gameMatricesAt : cardMatrices;
+        float bits, matrices, camera;
         std::memcpy(&bits, &tint, sizeof bits);
-        std::memcpy(&matrices, &cardMatrices, sizeof matrices);  // 3.0.20-beta.14: holeG, the moving nodes' matrices
+        std::memcpy(&matrices, &matricesAt, sizeof matrices);  // 3.0.20-beta.14: holeG, the moving nodes' matrices
+        std::memcpy(&camera, &gameCameraAt, sizeof camera);
         const float fog[8] = {cardFog ? cardFog->fogA() : 255.0f, cardFog ? cardFog->fogB() : 0.0f, bits, 0.0f,
-                              matrices, 0.0f, 0.0f, 0.0f};
+                              matrices, 0.0f, 0.0f, cardLeavesDraw ? camera : 0.0f};
         std::memcpy(c.hole, fog, sizeof fog);
         next.card = cardCount;
     }

@@ -238,7 +238,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"grass3d_vs", "vs_5_0", &grass3dVs},          {"grass3d_ps", "ps_5_0", &grass3dPs},
                    {"weather3d_vs", "vs_5_0", &weather3dVs},      {"weather3d_ps", "ps_5_0", &weather3dPs},
                    {"model_vs", "vs_5_0", &modelVs},  // 3.0.20-beta.11: the game's still models from the card
-                   {"ground_vs", "vs_5_0", &groundVs}};  // 3.0.20-beta.23: the own ground from the card
+                   {"ground_vs", "vs_5_0", &groundVs},  // 3.0.20-beta.23: the own ground from the card
+                   {"leaf_vs", "vs_5_0", &leafVs}};  // 3.0.20-beta.33: the game's models' leaves from the card
     store.sink = startSink;  // 0.40
     store.context = startContext;
     store.total = 6 + int(sizeof effects / sizeof effects[0]);  // the six below and the effects'
@@ -520,6 +521,7 @@ ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fv
     k.behind = behindGround(s, fvf, groundDrawn) && !toLayer;  // 2.6.3: a model, a step behind the ground
     k.cardModels = cardModelsDraw && !toLayer;  // 3.0.20-beta.11: the game's still models from the card
     k.cardGround = cardGroundDraw && !toLayer;  // 3.0.20-beta.23: the own ground from the card
+    k.cardLeaves = cardLeavesDraw && cardModelsDraw && !toLayer;  // 3.0.20-beta.33: their leaves
     const uint64_t key = packPipelineKey(k);
     if (keyOut) *keyOut = key;  // 3.0.5-beta.3: the state's own draw shader is chosen by it
     return pipelineForKey(key);
@@ -620,8 +622,9 @@ bool Renderer::Impl::describePipeline(const PipelineKey& k, D3D12_GRAPHICS_PIPEL
         p.PS = {ps->GetBufferPointer(), ps->GetBufferSize()};
     }
     if (k.cardModels) {  // 3.0.20-beta.11: the game's still models from the card - an instance a face, its number
-        if (!modelVs) return false;
-        p.VS = {modelVs->GetBufferPointer(), modelVs->GetBufferSize()};
+        ID3DBlob* vs = k.cardLeaves ? leafVs : modelVs;  // 3.0.20-beta.33: their leaves' own
+        if (!vs) return false;
+        p.VS = {vs->GetBufferPointer(), vs->GetBufferSize()};
         layout[0] = {"TEXCOORD", 0, DXGI_FORMAT_R32_UINT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1};
         p.InputLayout = {layout, 1};
     }
