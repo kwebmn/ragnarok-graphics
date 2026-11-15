@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <map>
+#include <memory>
 #include <utility>
 
 #include "core/config.hpp"
@@ -105,6 +107,95 @@ struct Reader::Archive {
     grf::Archive g;
 };
 
+namespace {
+
+// 3.0.19-beta.44 (R-XHRKGN: 1.9 s stood still at the first wings - the HD data.grf's table read and its names folded
+// on the game's thread, and again by each reader: the party's map names, the pick card, the reference): a GRF opened
+// once a process - its table read, its names folded - and shared by every reader (a file handle each: openLike);
+// read ahead on a thread of its own (warmUp)
+// (MinGW here has no std::mutex: Windows' slim locks)
+struct Held {
+    explicit Held(SRWLOCK& l) : lock(l) { AcquireSRWLockExclusive(&lock); }
+    ~Held() { ReleaseSRWLockExclusive(&lock); }
+    Held(const Held&) = delete;
+    Held& operator=(const Held&) = delete;
+    SRWLOCK& lock;
+};
+
+struct Master {
+    SRWLOCK lock = SRWLOCK_INIT;
+    bool tried = false, ok = false;
+    std::string why;
+    grf::Archive archive;
+};
+
+Master& masterOf(const std::string& path) {
+    static SRWLOCK lock = SRWLOCK_INIT;
+    static std::map<std::string, std::unique_ptr<Master>> masters;
+    Held held(lock);
+    std::unique_ptr<Master>& m = masters[lower(path)];
+    if (!m) m = std::make_unique<Master>();
+    return *m;
+}
+
+bool openShared(const std::string& path, grf::Archive& out, std::string& why) {
+    Master& m = masterOf(path);
+    Held held(m.lock);  // the first opens it (the warm-up or a reader), the others wait
+    if (!m.tried) {
+        m.tried = true;
+        m.ok = m.archive.openToRead(path, m.why);
+        if (m.ok) m.archive.foldNames();
+    }
+    if (!m.ok) {
+        why = m.why;
+        return false;
+    }
+    return out.openLike(m.archive, why);
+}
+
+// The archives a reader of `dir` looks in (as Reader::read lists them): their paths and whether a GRF
+std::vector<std::pair<std::string, bool>> archivePaths(const std::string& dir, bool updatesOnly) {
+    std::vector<std::pair<std::string, bool>> out;
+    for (const std::string& file : updatesOnly ? updateFiles(dir) : archives(dir)) {
+        const std::string ext = lower(file.size() > 4 ? file.substr(file.size() - 4) : "");
+        if (ext != ".grf" && ext != ".zip" && ext != ".gpf") continue;
+        out.emplace_back(file.find(':') != std::string::npos ? file : dir + "\\" + file, ext != ".zip");
+    }
+    return out;
+}
+
+}  // namespace
+
+namespace {
+DWORD WINAPI warmUpThread(LPVOID p) {
+    const std::unique_ptr<std::string> gameDir(static_cast<std::string*>(p));
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_LOWEST);
+    Sleep(3000);  // the game's own start first
+    const DWORD start = GetTickCount();
+    int opened = 0, all = 0;
+    for (const auto& [path, isGrf] : archivePaths(*gameDir, false)) {
+        if (!isGrf) continue;
+        ++all;
+        grf::Archive reader;
+        std::string why;
+        if (openShared(path, reader, why)) ++opened;
+    }
+    LOG_INFO("game files: %d of %d archives' tables read ahead and their names folded in %lu ms - shared by every "
+             "reader (none on the game's thread)", opened, all, (unsigned long)(GetTickCount() - start));
+    return 0;
+}
+}  // namespace
+
+void warmUp(const std::string& gameDir) {
+    static LONG started = 0;
+    if (InterlockedCompareExchange(&started, 1, 0) != 0) return;  // once a process
+    auto* dir = new std::string(gameDir);
+    if (HANDLE t = CreateThread(nullptr, 0, &warmUpThread, dir, 0, nullptr))
+        CloseHandle(t);
+    else
+        delete dir;
+}
+
 Reader::Reader(std::string gameDir) : dir_(std::move(gameDir)) {}
 Reader::Reader(std::string gameDir, bool updatesOnly) : dir_(std::move(gameDir)), updatesOnly_(updatesOnly) {}
 Reader::~Reader() = default;
@@ -116,12 +207,10 @@ bool Reader::read(const std::string& entry, std::vector<uint8_t>& out, std::stri
     }
     if (!listed_) {
         listed_ = true;
-        for (const std::string& file : updatesOnly_ ? updateFiles(dir_) : archives(dir_)) {
+        for (const auto& [path, isGrf] : archivePaths(dir_, updatesOnly_)) {
             auto a = std::make_unique<Archive>();
-            a->path = file.find(':') != std::string::npos ? file : dir_ + "\\" + file;
-            const std::string ext = lower(file.size() > 4 ? file.substr(file.size() - 4) : "");
-            if (ext != ".grf" && ext != ".zip" && ext != ".gpf") continue;
-            a->grf = ext != ".zip";
+            a->path = path;
+            a->grf = isGrf;
             archives_.push_back(std::move(a));
         }
     }
@@ -132,7 +221,7 @@ bool Reader::read(const std::string& entry, std::vector<uint8_t>& out, std::stri
             a.tried = true;
             std::string why;
             const auto all = [](const std::string&) { return true; };
-            a.ok = a.grf ? a.g.openToRead(a.path, why) : a.zip.open(a.path, all, why);
+            a.ok = a.grf ? openShared(a.path, a.g, why) : a.zip.open(a.path, all, why);  // 3.0.19-beta.44: shared
             if (!a.ok) LOG_INFO("game files: %s cannot be read (%s)", a.path.c_str(), why.c_str());
         }
         if (!a.ok) continue;

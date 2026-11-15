@@ -214,3 +214,32 @@ TEST(grf_finds_a_name_whatever_its_letters_case) {
     CHECK(r.find("data\\texture\\effect\\icon07.tga") == nullptr);
     std::remove(path.c_str());
 }
+
+// 3.0.19-beta.44 (R-XHRKGN: 1.9 s stood still at the first wings - the HD data.grf's table read, then its names
+// folded, on the game's thread): the names folded ahead (foldNames, on a thread of its own) are shared by the archives
+// opened like it - each finds a name whatever its letters' case, the first gone or not
+TEST(grf_open_like_shares_its_folded_names) {
+    const std::string path = tempPath();
+    std::string error;
+    {
+        Archive a;
+        CHECK(a.open(path, true, error));
+        CHECK(a.append({{"data\\sprite\\Body.act", bytes(12, 4)}, {"data\\sprite\\head.spr", bytes(6, 5)}}, error));
+    }
+    auto master = std::make_unique<Archive>();
+    CHECK(master->openToRead(path, error));
+    master->foldNames();
+    Archive reader;
+    CHECK(reader.openLike(*master, error));
+    master.reset();
+    std::vector<uint8_t> out;
+    CHECK(reader.read("DATA\\SPRITE\\body.ACT", out, error) && out == bytes(12, 4));
+    CHECK(reader.read("data/sprite/HEAD.spr", out, error) && out == bytes(6, 5));
+    CHECK(reader.find("data\\sprite\\none.act") == nullptr);
+    Archive early;  // opened like one not folded yet: folds its own
+    Archive plain;
+    CHECK(plain.openToRead(path, error));
+    CHECK(early.openLike(plain, error));
+    CHECK(early.find("Data\\Sprite\\BODY.act") != nullptr);
+    std::remove(path.c_str());
+}

@@ -44,6 +44,10 @@ public:
     void close();
     bool isOpen() const { return file_ != nullptr; }
     const Entry* find(const std::string& name) const;
+    // 3.0.19-beta.44 (R-XHRKGN: 1.9 s stood still - a big archive's names folded at the first name not found as
+    // stored, on the game's thread): the names folded now (a thread of its own); the archives opened like this one
+    // after it share them (openLike)
+    void foldNames() const;
     size_t count() const { return entries_->size(); }
     std::vector<std::string> names() const;
     bool read(const std::string& name, std::vector<uint8_t>& out, std::string& error);
@@ -69,8 +73,9 @@ private:
     std::shared_ptr<Table> entries_ = std::make_shared<Table>();
     uint64_t end_ = 46;  // end of the last table written or read
     // 3.0.18-beta.187: the names folded (Latin letters small, «/» as «\», cp949's pairs as they are) - made at the
-    // first name not found as stored, made again when the table is another or grew; this reader's own
-    mutable std::map<std::string, const Entry*> folded_;
+    // first name not found as stored, made again when the table is another or grew; 3.0.19-beta.44: shared by the
+    // archives opened like this one (a new one made, never one changed: a reading thread each)
+    mutable std::shared_ptr<const std::map<std::string, const Entry*>> folded_;
     mutable const Table* foldedFor_ = nullptr;
     mutable size_t foldedSize_ = 0;
 };

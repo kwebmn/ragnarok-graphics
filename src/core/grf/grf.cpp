@@ -44,6 +44,9 @@ void Archive::close() {
     if (file_) std::fclose(file_);
     file_ = nullptr;
     entries_ = std::make_shared<Table>();  // another reader of the old table keeps it
+    folded_.reset();  // 3.0.19-beta.44: its names pointed into the old table
+    foldedFor_ = nullptr;
+    foldedSize_ = 0;
     path_.clear();
     end_ = kHeader;
 }
@@ -68,6 +71,9 @@ bool Archive::openLike(const Archive& other, std::string& error) {
     path_ = other.path_;
     entries_ = other.entries_;
     end_ = other.end_;
+    folded_ = other.folded_;  // 3.0.19-beta.44: its folded names too, when made
+    foldedFor_ = other.foldedFor_;
+    foldedSize_ = other.foldedSize_;
     return true;
 }
 
@@ -200,14 +206,18 @@ const Entry* Archive::find(const std::string& name) const {
     const auto it = entries_->find(name);
     if (it != entries_->end()) return &it->second;
     // 3.0.18-beta.187 (the tester's Wind Walk: the game asks «effect\ICON06.tga», the archive holds «icon06.tga»)
-    if (foldedFor_ != entries_.get() || foldedSize_ != entries_->size()) {
-        folded_.clear();
-        for (const auto& [stored, entry] : *entries_) folded_.emplace(folded(stored), &entry);
-        foldedFor_ = entries_.get();
-        foldedSize_ = entries_->size();
-    }
-    const auto f = folded_.find(folded(name));
-    return f == folded_.end() ? nullptr : f->second;
+    foldNames();
+    const auto f = folded_->find(folded(name));
+    return f == folded_->end() ? nullptr : f->second;
+}
+
+void Archive::foldNames() const {
+    if (folded_ && foldedFor_ == entries_.get() && foldedSize_ == entries_->size()) return;
+    auto made = std::make_shared<std::map<std::string, const Entry*>>();
+    for (const auto& [stored, entry] : *entries_) made->emplace(folded(stored), &entry);
+    folded_ = std::move(made);
+    foldedFor_ = entries_.get();
+    foldedSize_ = entries_->size();
 }
 
 bool Archive::read(const std::string& name, std::vector<uint8_t>& out, std::string& error) {

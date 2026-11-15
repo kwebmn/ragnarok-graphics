@@ -399,6 +399,30 @@ std::string mapWords(const std::map<std::string, std::string>& names, const std:
     return name + " " + std::to_string(std::atoi(code.c_str() + digits));
 }
 
+namespace {
+std::string withNumber(const std::string& name, size_t same, const std::string& code) {
+    size_t digits = code.size();
+    while (digits > 0 && std::isdigit(static_cast<unsigned char>(code[digits - 1]))) --digits;
+    if (same < 2 || digits == code.size() || code.size() - digits > 4) return name;
+    return name + " " + std::to_string(std::atoi(code.c_str() + digits));
+}
+}  // namespace
+
+MapWords::MapWords(const std::map<std::string, std::string>& names) {
+    for (const auto& [code, words] : names) {
+        const std::string s = shortName(words);
+        shortOf_[code] = s;
+        ++maps_[s];
+    }
+}
+
+std::string MapWords::of(const std::string& code) const {
+    const auto s = shortOf_.find(code);
+    if (s == shortOf_.end() || s->second.empty()) return code;
+    const auto n = maps_.find(s->second);
+    return withNumber(s->second, n == maps_.end() ? 0 : n->second, code);
+}
+
 std::string gameSpriteName(const std::string& raw) {
     if (raw.empty() || raw.size() > 48) return "";
     std::string out;

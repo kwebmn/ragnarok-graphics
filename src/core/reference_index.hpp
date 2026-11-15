@@ -195,6 +195,18 @@ std::string shortName(const std::string& name);
 // 3.0.11-beta.200 (the tester: «в паті лісті виводиться назва файла мапи»): a map's words for a list - the client's
 // name, its code's number added where the name is more than one map's («Payon Cave 3»), else its code
 std::string mapWords(const std::map<std::string, std::string>& names, const std::string& code);
+// 3.0.19-beta.44 (R-XHRKGN: the party's panel 2.5 ms a frame on a laptop - mapWords goes through every map's name for
+// each call): the same words, the short names' counts made once - for a list asked each frame
+class MapWords {
+public:
+    MapWords() = default;
+    explicit MapWords(const std::map<std::string, std::string>& names);
+    std::string of(const std::string& code) const;
+
+private:
+    std::map<std::string, std::string> shortOf_;  // a map's code -> its short name
+    std::map<std::string, size_t> maps_;          // a short name -> how many maps have it
+};
 // 3.0.11-beta.14: the client's sprite files a monster may have, the likeliest first: the server's sprite name, it
 // without an event's «_» or a variant's prefix (m_desert_wolf - desert_wolf: the client draws them alike), its name
 // 3.0.19-beta.2 (the owner: «да есть в игре такие монстры, посмотри в чем проблема»): `game` - the game's own name of

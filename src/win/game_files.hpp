@@ -12,6 +12,9 @@ namespace uagfx::win::gamefiles {
 
 bool readWhole(const std::string& path, std::vector<uint8_t>& out);  // a file whole, 64 MB at most; false empty
 std::vector<std::string> archives(const std::string& gameDir);       // as the game looks in them
+// 3.0.19-beta.44 (R-XHRKGN: 1.9 s stood still at the first wings): the GRFs' tables read and their names folded ahead,
+// once a process, on a thread of its own (lowest priority, after the game's own start) - every Reader then shares them
+void warmUp(const std::string& gameDir);
 
 // "data\wav\se_prtbird_01.wav" from the data folder or the archives; `from` - where it was. One thread's.
 class Reader {

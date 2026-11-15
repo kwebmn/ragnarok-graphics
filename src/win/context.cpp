@@ -1,6 +1,7 @@
 #include "win/key_walk.hpp"
 #include "win/present_watch.hpp"
 #include "win/threat_arc.hpp"
+#include "win/game_files.hpp"
 #include "win/ground_thin.hpp"
 #include "win/view3d.hpp"
 #include "win/walk_mode.hpp"
@@ -512,6 +513,7 @@ bool Context::open(std::string& error) {
     view3dwin::install();  // 3.0.19-beta.6: Ctrl+Shift+V, the 3D view
     groundthin::install();  // 3.0.19-beta.42: the game's far ground cells fewer in it
     wings::install();     // 3.0.18-beta.230: the nine headgears' wings (win/wings)
+    gamefiles::warmUp(gameDir());  // 3.0.19-beta.44: the game's archives' tables read ahead, off the game's thread
     setFullColour(config.fullColour);  // 2.5.18: the textures in their pictures' own colours
     setFastTextures(config.fastTextures);  // 2.5.20
     setSpriteDyes(config.aiNow.dyes);      // 2.5.23

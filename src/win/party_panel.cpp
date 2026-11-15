@@ -115,6 +115,8 @@ struct State {
     unsigned codePage = 0;         // 3.0.11-beta.83: the names' (the minimap's members)
     std::map<std::string, std::string> mapNames;  // 3.0.11-beta.200: the client's data\mapnametable.txt, read once
     bool namesRead = false;
+    refindex::MapWords mapWords;  // 3.0.19-beta.44: their words for the list, made once
+    bool mapWordsMade = false;
     bool on = false, shown = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -215,6 +217,16 @@ const std::map<std::string, std::string>& mapNames(State& s) {
             s.mapNames = refindex::mapNames(std::string(bytes.begin(), bytes.end()));
     }
     return s.mapNames;
+}
+
+// 3.0.19-beta.44 (R-XHRKGN: the panel 2.5 ms a frame on a laptop - refindex::mapWords went through the client's
+// ~1000 maps' names for each member elsewhere, each frame): its words with the names' counts made once
+const refindex::MapWords& mapWordsOf(State& s) {
+    if (!s.mapWordsMade) {
+        s.mapWordsMade = true;
+        s.mapWords = refindex::MapWords(mapNames(s));
+    }
+    return s.mapWords;
 }
 
 void take(State& s, uint32_t account, const std::string& name, const std::string& map, bool leader, bool online) {
@@ -823,7 +835,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         }
         m.leader = seat.leader;
         m.online = seat.online;
-        if (!seat.map.empty() && seat.map != here) m.where = refindex::mapWords(mapNames(s), seat.map);  // .200
+        // .200; 3.0.19-beta.44 (R-XHRKGN: 2.5 ms a frame) - the names' counts made once
+        if (!seat.map.empty() && seat.map != here) m.where = mapWordsOf(s).of(seat.map);
         if (seat.most > 0 && seat.hp >= 0) m.percent = int(int64_t(seat.hp) * 100 / seat.most);
         m.chosen = chosen != 0 && account == chosen;  // 3.0.11-beta.85: the pad's support skill would go on it
         s.members.push_back(m);

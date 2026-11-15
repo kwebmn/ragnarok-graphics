@@ -113,6 +113,21 @@ TEST(reference_index_map_words) {
     CHECK(refindex::mapWords(names, "new_map") == "new_map");
 }
 
+// 3.0.19-beta.44 (R-XHRKGN: the party's panel 2.5 ms a frame - mapWords went through every map's name for each member
+// elsewhere, each frame): the names' counts made once, the words alike
+TEST(reference_index_map_words_made_once) {
+    const std::map<std::string, std::string> names = refindex::mapNames(
+        "pay_dun00.rsw#Payon Cave #\npay_dun03.rsw#Payon Cave #\nprt_fild08.rsw#Prontera Field #\n"
+        "prt_fild10.rsw#Prontera Field #\nyuno_fild08.rsw#Kiel Hyre's Academy#\n"
+        "prontera.rsw#Prontera City, Capitol of Rune-Midgard#\n");
+    const refindex::MapWords words(names);
+    for (const char* code : {"pay_dun03", "pay_dun00", "prt_fild08", "yuno_fild08", "new_map", "prontera", ""})
+        CHECK_EQ(words.of(code), refindex::mapWords(names, code));
+    CHECK_EQ(words.of("prt_fild10"), std::string("Prontera Field 10"));
+    const refindex::MapWords none;
+    CHECK_EQ(none.of("pay_dun03"), std::string("pay_dun03"));  // no names: the code
+}
+
 // 3.0.18-beta.239 (the reference's rewrite, the owner's review of 13.11): a monster's entries of one thing - mob_db
 // lists Apple eight times for Hugeling - one drop: its chance 1 - (1 - a)(1 - b)..., the entries kept for the note;
 // the MVP's reward of the same thing apart; one source a monster for the thing's droppers
