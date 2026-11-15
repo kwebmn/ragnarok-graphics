@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.20-beta.18 — what's new · 2026-11-15
+
+- **«Houses and trees far off» in the game's colours again.** Since our renderer draws the models near, the game drew almost none of them itself, and the far houses and trees had nothing to learn their colours from (3-15 % matched in the reports). Now they learn from the models our renderer draws - with the exact places and colours, as in the game.
+- **The renderer's log splits the own ground's time into parts**: the ground's chunks (their colours too), the draws put together, the models past the far plane, the upload to the card. Once a minute it shows the slowest picture and how many chunks got their colours anew in it - to find the jerks.
+- **For Prontera's missing gate**: every 30 s the renderer writes into its log the models in front of the camera that show no face - and where they stand.
+
 # uaRO Graphics 3.0.20-beta.17 — what's new · 2026-11-15
 
 - **Reports are easier now.** Ctrl+Shift+F10 always opens a new report with the screenshot - even while an answer's card shows at the top.
