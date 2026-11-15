@@ -84,6 +84,11 @@ private:
 // 3.0.20-beta.4: whether the game's draw shows a face (0x4DED2E) - its corners' x y on the screen `a`, `b`, `c`: a
 // one-sided face by its turn, the other way round on a flipped node; a two-sided one always
 bool shown(const float a[2], const float b[2], const float c[2], bool twoSided, bool flipped);
+// 3.0.20-beta.21 (R-AKKMN4: a face with a corner behind the eye left out whole near walls in the 3D view): a face's
+// turn by its corners in the view (the eye at 0) - the game's turn on the screen (its projection's f0 times f1 given)
+// for corners in front, and the face's own facing past them: model_vs's, which lets the card cut a face at the near
+// plane instead of dropping it
+bool turnedInView(const float a[3], const float b[3], const float c[3], float f0f1);
 
 // 3.0.20-beta.5: whether a node's keys move it - `count` keys `stride` bytes apart, each one's value `valueBytes` long
 // at `valueAt` in it: one differing from the first's (the frames alone move nothing)

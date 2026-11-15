@@ -240,3 +240,29 @@ TEST(game_models_a_face_for_the_far_models) {
     gamemodels::faceForLearning(n, f, moved, sign, plain, corners, colours);
     CHECK(corners[0][0] == 101.0f && corners[1][1] == -5.0f);
 }
+
+// 3.0.20-beta.21 (R-AKKMN4 «отчет с пробелами в стенах»: in the 3D view a wall's face with a corner behind the eye
+// left out whole, as the game's own draw leaves it): a face's turn by the view's own triple product (the eye at 0) -
+// the card cuts such a face at the near plane itself - the same as the game's turn on the screen for every face whose
+// corners are in front, whatever the projection's signs
+TEST(game_models_the_turn_in_the_view_as_on_the_screen) {
+    uint32_t seed = 12345u;
+    const auto next = [&seed]() {
+        seed = seed * 1664525u + 1013904223u;
+        return float(seed >> 8) / float(1u << 24);
+    };
+    int same = 0, all = 0;
+    for (const float f1 : {100.0f, -100.0f})
+        for (int k = 0; k < 2000; ++k) {
+            float v[3][3], s[3][2];
+            for (int c = 0; c < 3; ++c) {
+                v[c][0] = next() * 40.0f - 20.0f, v[c][1] = next() * 40.0f - 20.0f, v[c][2] = 5.0f + next() * 95.0f;
+                s[c][0] = v[c][0] / v[c][2] * 100.0f + 50.0f, s[c][1] = v[c][1] / v[c][2] * f1 + 50.0f;
+            }
+            const bool onScreen = gamemodels::shown(s[0], s[1], s[2], false, false);  // shown: turned as the game
+            const bool inView = gamemodels::turnedInView(v[0], v[1], v[2], 100.0f * f1);
+            ++all;
+            same += onScreen == inView;
+        }
+    CHECK_EQ(same, all);
+}

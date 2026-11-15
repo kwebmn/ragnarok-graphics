@@ -132,6 +132,12 @@ void boxBy(const float m[12], const float lo[3], const float hi[3], float outLo[
     }
 }
 
+bool turnedInView(const float a[3], const float b[3], const float c[3], float f0f1) {
+    // the screen's (c - a) x (b - a) is -f0 f1 (a . (b x c)) / (za zb zc): its sign for corners in front
+    const float bc[3] = {b[1] * c[2] - b[2] * c[1], b[2] * c[0] - b[0] * c[2], b[0] * c[1] - b[1] * c[0]};
+    return -f0f1 * (a[0] * bc[0] + a[1] * bc[1] + a[2] * bc[2]) > 0.0f;
+}
+
 uint64_t Corners::key(int x, int y, int z) const {
     return (uint64_t(uint32_t(x) & 0x1FFFFF) << 42) | (uint64_t(uint32_t(y) & 0x1FFFFF) << 21) |
            uint64_t(uint32_t(z) & 0x1FFFFF);

@@ -166,9 +166,9 @@ PsIn seam_vs(SeamIn i) {
 // faces' buffer (t6, five uint4 a face: each corner's x y z with its colour, the corners' texture coordinates, the
 // face's flags - 1 two-sided, 2 its node mirrored). Put into the view and onto the screen as the processor's way
 // (core/game_models_place: own_ground's toView over the camera's inverse, placeView, the game's depth); a corner
-// behind the eye drops the face, the game's culling by its turn on the screen; then as draw_vs. The camera and the
-// projection in r0-r11 and f0-farZ as seam_vs's; the fog's line in holeX, holeY (the specular's alpha by the view
-// depth), its colour's bits in holeH (holeZ 0: no silhouette)
+// behind the eye drops the face (3.0.20-beta.21: cut by the card - modelClip), the game's culling by its turn; then
+// as draw_vs. The camera and the projection in r0-r11 and f0-farZ as seam_vs's; the fog's line in holeX, holeY (the
+// specular's alpha by the view depth), its colour's bits in holeH (holeZ 0: no silhouette)
 struct ModelIn {
     uint corner : SV_VertexID;
     uint face : TEXCOORD0;
@@ -183,12 +183,23 @@ float3 modelView(float3 w) {
 float3 modelMoved(float3 p, float4 a, float4 b, float4 c) {
     return p.x * a.xyz + p.y * float3(a.w, b.x, b.y) + p.z * float3(b.z, b.w, c.x) + float3(c.y, c.z, c.w);
 }
-float2 modelScreen(float3 v) { return float2(v.x / v.z * f0 + cx, v.y / v.z * f1 + cy); }
 float modelDepth(float zd) {  // own_ground depthFromInverse: the game's, past farZ - 10 squeezed below 1
     float a = farZ / (farZ - nearZ), b = farZ * nearZ / (farZ - nearZ), split = farZ - 10.0;
     if (zd <= split) return a - b / zd;
     float at = a - b / split;
     return min(at + (1.0 - at) * (1.0 - split / zd), 0.99999994);
+}
+// 3.0.20-beta.21 (R-AKKMN4 «отчет с пробелами в стенах»: in the 3D view, close to a wall, a face with a corner behind
+// the eye was left out whole - as the game's own draw leaves it): a corner straight into the card's clip space - the
+// screen's x and y and the depth times the view's z, w the view's z, none divided - so the card cuts a face at the near
+// plane itself (z 0 there: a z - b at the near plane); the same place as the screen's for a corner in front
+float4 modelClip(float3 v) {
+    float kx = 2.0 * scale / targetSize.x, ky = 2.0 * scale / targetSize.y;
+    float bx = (cx * scale + 0.5 + jitterX) * 2.0 / targetSize.x - 1.0;
+    float by = 1.0 - (cy * scale + 0.5 + jitterY) * 2.0 / targetSize.y;
+    float a = farZ / (farZ - nearZ), b = farZ * nearZ / (farZ - nearZ);
+    float zw = v.z <= farZ - 10.0 ? a * v.z - b : modelDepth(v.z) * v.z;
+    return float4(kx * f0 * v.x + bx * v.z, by * v.z - ky * f1 * v.y, zw, v.z);
 }
 PsIn model_vs(ModelIn i) {
     PsIn o = (PsIn)0;
@@ -214,16 +225,15 @@ PsIn model_vs(ModelIn i) {
         v1 = modelMoved(asfloat(c1.xyz), ma, mb, mc);
         v2 = modelMoved(asfloat(c2.xyz), ma, mb, mc);
     }
-    if (v0.z <= nearZ || v1.z <= nearZ || v2.z <= nearZ) return o;
-    float2 s0 = modelScreen(v0), s1 = modelScreen(v1), s2 = modelScreen(v2);
-    bool turned = (s2.x - s0.x) * (s1.y - s0.y) > (s1.x - s0.x) * (s2.y - s0.y);
+    // 3.0.20-beta.21: a face all behind the near plane left out; one across it cut by the card (modelClip); its turn
+    // by the view's triple product (the eye at 0: core gamemodels::turnedInView) - the game's on the screen for corners
+    // in front
+    if (v0.z <= nearZ && v1.z <= nearZ && v2.z <= nearZ) return o;
+    bool turned = -f0 * f1 * dot(v0, cross(v1, v2)) > 0.0;
     if ((t1.z & 1u) == 0u && turned == ((t1.z & 2u) != 0u)) return o;
     float3 v = i.corner == 0 ? v0 : (i.corner == 1 ? v1 : v2);
-    float2 s = i.corner == 0 ? s0 : (i.corner == 1 ? s1 : s2);
     uint tint = i.corner == 0 ? c0.w : (i.corner == 1 ? c1.w : c2.w);
-    float x = (s.x * scale + 0.5 + jitterX) * 2.0 / targetSize.x - 1.0;
-    float y = 1.0 - (s.y * scale + 0.5 + jitterY) * 2.0 / targetSize.y;
-    o.pos = float4(x * v.z, y * v.z, modelDepth(v.z) * v.z, v.z);
+    o.pos = modelClip(v);
     o.diffuse = colourOf(tint);
     float haze = clamp(floor(holeX + holeY * v.z + 0.5), 0.0, 255.0);
     o.specular = colourOf((uint(haze) << 24) | (asuint(holeH) & 0xFFFFFFu));
