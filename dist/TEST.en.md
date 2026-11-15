@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.14 — what's new · 2026-11-15
+
+- **«Models by our renderer»: the moving models too.** Flags, windmills and the other models the game moves by its animation are drawn by our renderer as well - from the card, in the same batches as the still ones: the game gives only where they are each frame. In Prontera that is almost half of the models' parts, so the game has even less to do. Their leaves, torch shadows and reflections in the water are as our other models'.
+
 # uaRO Graphics 3.0.20-beta.13 — what's new · 2026-11-15
 
 - **«Models by our renderer»: the trees sway again.** The leaves of the models our renderer draws are now drawn as the game's trees are - each tree on its own, through the world's usual path. So «Leaves in the wind», «Rounded tree crowns», «Sunlight through the leaves» and «Trees of different shades» apply to our trees too, and their shadows and reflections are taken as the game's trees'. The other models are still drawn from the card.
