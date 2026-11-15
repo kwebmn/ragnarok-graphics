@@ -410,6 +410,14 @@ void Renderer::Impl::noteGpuFrame() {
                      double(texturesTicks) * perFrame, double(submitTicks) * perFrame,
                      double(std::max<LONGLONG>(cpuTicks - around, 0)) * perFrame);
         geometryTicks = texturesTicks = drawsTicks = submitTicks = 0;
+        if (laterQueued || laterAtOnce)  // 3.0.20-beta.20
+            LOG_INFO("textures: %llu whole ones of the game's looked at after their upload (%zu waiting, %.1f MB), "
+                     "%llu at once (the queue full); %.2f ms at most a picture on them",
+                     static_cast<unsigned long long>(laterQueued), laterLooks.size(),
+                     double(laterLooks.bytes()) / 1048576.0, static_cast<unsigned long long>(laterAtOnce),
+                     laterMostMs);
+        laterQueued = laterDone = laterAtOnce = 0;
+        laterMostMs = 0;
     }
     cpuTicks = fenceTicks = pacerTicks = swapTicks = reflexTicks = 0;
     runCycles = runTsc = 0;              // 3.0.19-beta.52
@@ -1027,22 +1035,67 @@ D3D12_TEXTURE_COPY_LOCATION stage(Renderer::Impl& m, const uint32_t* argb, UINT 
 
 }  // namespace
 
+// 0.26: a whole picture - how much it looks like fire (an effect drawn from it lights around it); 0.36 its light; 0.64
+// its leaves (2.6.19: never a sprite cache's). 3.0.20-beta.20: apart - at the upload or after it (workLater)
+void Renderer::Impl::looksOf(Texture& t, const UploadCmd& u, const uint32_t* px, bool spriteCache) {
+    t.fire = effect_light::fireOf(px, t.width, t.height, t.fireColour);
+    t.light = effect_light::lightOf(px, t.width, t.height, t.lightColour);
+    t.leafy = foliage::leafyTexture(px, t.width, t.height, spriteCache);
+    (void)u;
+}
+
+// 3.0.20-beta.20: the whole textures' work kept from their uploads (laterLooks), the oldest first, `budgetMs` of it a
+// picture - their looks and the AI pack's key; a texture let go or of another size since: its work dropped
+void Renderer::Impl::workLater(double budgetMs) {
+    if (!laterLooks.size()) return;
+    LARGE_INTEGER start, now, frequency;
+    QueryPerformanceCounter(&start);
+    QueryPerformanceFrequency(&frequency);
+    uploadlater::Job j;
+    while (laterLooks.take(j)) {
+        const auto it = textures.find(j.upload.texture);
+        if (it != textures.end() && it->second.width == j.upload.rect.width() &&
+            it->second.height == j.upload.rect.height()) {
+            Texture& t = it->second;
+            looksOf(t, j.upload, j.pixels.data(), j.spriteCache);
+            if (ai) {
+                std::vector<uint32_t> game;  // 2.5.18: the texels the pack knows it by
+                ai->noteUpload(j.upload.texture, t, j.upload, full_colour::aiTexels(j.upload, j.pixels.data(), game),
+                               nullptr, 0, j.pixels.data());
+            }
+        }
+        ++laterDone;
+        QueryPerformanceCounter(&now);
+        const double spent = double(now.QuadPart - start.QuadPart) * 1000.0 / double(frequency.QuadPart);
+        if (spent >= budgetMs) break;
+    }
+    QueryPerformanceCounter(&now);
+    laterMostMs = std::max(laterMostMs, double(now.QuadPart - start.QuadPart) * 1000.0 / double(frequency.QuadPart));
+}
+
 void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     auto it = textures.find(u.texture);
     if (it == textures.end() || u.rect.empty()) return;
     profileMark("the game's textures written");  // 3.0.5-beta.2
     Texture& t = it->second;
-    // 0.26: a whole picture - how much it looks like fire (an effect drawn from it lights around it).
-    // 3.0.18-beta.178: not the driver's own (a number's sharp copy): no fire, light or leaves - as the game's cell
-    if (u.level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height &&
-        !u.own) {
-        t.fire = effect_light::fireOf(rec.pixels().data() + u.pixels, t.width, t.height, t.fireColour);
-        t.light = effect_light::lightOf(rec.pixels().data() + u.pixels, t.width, t.height, t.lightColour);  // 0.36
-        t.leafy = foliage::leafyTexture(rec.pixels().data() + u.pixels, t.width, t.height,  // 0.64
-                                        u.slotCount > 0 || !t.spriteCells.empty());  // 2.6.19: no sprite cache
+    const uint32_t* px = rec.pixels().data() + u.pixels;
+    const bool whole = u.level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width &&
+                       u.rect.bottom == t.height;
+    const bool spriteCache = u.slotCount > 0 || !t.spriteCells.empty();
+    // 3.0.18-beta.178: not the driver's own (a number's sharp copy): no fire, light or leaves - as the game's cell.
+    // 3.0.20-beta.20: a whole texture of the game's (not a sprite cache) - its looks and the AI pack's work after its
+    // upload (workLater); its AI picture of the old pixels let go now
+    bool later = false;
+    if (whole && !u.own && !spriteCache && !(ai && ai->atlas(u.texture))) {
+        if (ai) ai->rewritten(u.texture, t);
+        later = laterLooks.push(u, px, false);
+        if (later)
+            ++laterQueued;
+        else
+            ++laterAtOnce;  // the queue full: at once, as before
     }
-    const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, rec.pixels().data() + u.pixels, UINT(u.rect.width()),
-                                                  UINT(u.rect.height()));
+    if (whole && !u.own && !later) looksOf(t, u, px, spriteCache);
+    const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, px, UINT(u.rect.width()), UINT(u.rect.height()));
     if (!src.pResource) return;
     if (u.level == 0 && t.mat && t.matFor == t.resource) dropMaterial(t);  // 1.8: new pixels, a new material
     transition(t.resource, t.state, D3D12_RESOURCE_STATE_COPY_DEST);
@@ -1052,7 +1105,7 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     dst.SubresourceIndex = u.level;
     list->CopyTextureRegion(&dst, UINT(u.rect.left), UINT(u.rect.top), 0, &src, nullptr);
     if (u.slotCount) noteSpriteCells(t, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.32
-    if (ai && !u.own) {  // 3.0.18-beta.178: the driver's own picture is none of the pack's
+    if (ai && !u.own && !later) {  // 3.0.18-beta.178: the driver's own picture is none of the pack's
         std::vector<uint32_t> game;  // 2.5.18: the texels the pack knows it by
         ai->noteUpload(u.texture, t, u, full_colour::aiTexels(u, rec.pixels().data() + u.pixels, game),
                        u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount,  // with their sources
@@ -2943,6 +2996,7 @@ void Renderer::Impl::retireDying() {
             freeSrv.push_back(it->second.matSrv);
         }
         if (ai) ai->forget(id);
+        laterLooks.drop(id);  // 3.0.20-beta.20
         objectTextures.forget(id);  // 0.23.1
         textures.erase(it);
     }
@@ -2975,6 +3029,10 @@ void Renderer::execute(const FrameRecord& record) {
             (record.states()[d.state].blend ? blended : opaque).push_back(d.texture[0]);
         }
         m.pick.seen(opaque, blended);
+    }
+    {  // 3.0.20-beta.20: the whole textures' work kept from earlier uploads - a picture's share, more while many wait
+        Impl::CpuTime t(m.texturesTicks);
+        m.workLater(m.laterLooks.size() > 128 || m.laterLooks.bytes() > (32u << 20) ? 4.0 : 1.5);
     }
     for (const Command& c : record.commands()) {
         if (!m.open) break;  // the list could not go on (the GPU is lost): nothing more is recorded

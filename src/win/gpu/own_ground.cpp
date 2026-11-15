@@ -634,28 +634,17 @@ bool Renderer::Impl::drawOwnGround() {
         ks.alphaFunc = d3d7::CMP_GREATEREQUAL;
         ks.alphaRef = 0x80;
         const uint32_t state = o.rec.addState(st), blendState = o.rec.addState(bs), keyedState = o.rec.addState(ks);
-        for (std::vector<OwnState::Pending>& layer : o.pending) {
-            layer.resize(o.ids.size() + 1);
-            for (OwnState::Pending& pd : layer) pd.verts.clear(), pd.idx.clear();
-        }
-        const auto emit = [&](uint8_t layer, size_t t) {
-            OwnState::Pending& pd = o.pending[layer][t];
-            if (!pd.idx.empty()) {
-                DrawCmd cmd;
-                const bool keyed = t < g->textures.size() && g->textures[t].keyed;
-                cmd.state = layer == terrain::kGround ? (keyed ? keyedState : state) : blendState;
-                cmd.texture[0] = t < o.ids.size() ? o.ids[t] : 0;
-                cmd.keyed[0] = keyed;
-                cmd.texture[1] = o.atlas;
-                cmd.primitive = d3d7::PT_TRIANGLELIST;
-                cmd.fvf = d3d7::FVF_TL2;
-                o.rec.draw(cmd, pd.verts.data(), uint32_t(pd.verts.size()), pd.idx.data(), uint32_t(pd.idx.size()));
-                o.drawLayer.push_back(layer);
-                vertices += pd.verts.size();
-                triangles += pd.idx.size() / 3;
-            }
-            pd.verts.clear();
-            pd.idx.clear();
+        // 3.0.20-beta.20: a layer's texture's draw - its state, its pictures (the record's room made by place below)
+        const auto drawOf = [&](uint8_t layer, size_t t) {
+            DrawCmd cmd;
+            const bool keyed = t < g->textures.size() && g->textures[t].keyed;
+            cmd.state = layer == terrain::kGround ? (keyed ? keyedState : state) : blendState;
+            cmd.texture[0] = t < o.ids.size() ? o.ids[t] : 0;
+            cmd.keyed[0] = keyed;
+            cmd.texture[1] = o.atlas;
+            cmd.primitive = d3d7::PT_TRIANGLELIST;
+            cmd.fvf = d3d7::FVF_TL2;
+            return cmd;
         };
         const float sign[3] = {float(axes.x), float(axes.y), float(axes.z)};
         const float fineDepth = own_ground::fineDepthOf(g->zoom, p.f1, camera::wideView());
@@ -717,20 +706,56 @@ bool Renderer::Impl::drawOwnGround() {
             parallelChunks(jobs.size(), [&](size_t n) { ownChunk(making, jobs[n], o.outs[n]); });
         }
         CpuTimeWithin putting(cpuPartTicks[kCpuOwnDraws], cpuPartTicks[kCpuOwnGround]);
+        // 3.0.20-beta.20 (the owner's «делай 1 и 2», 2): the pieces placed in turn - a layer's texture's draw takes
+        // them in the chunks' order, a new one when the next would pass 65535 vertices (its vertices, and two more for
+        // each triangle cut where the depth is squeezed, as before)
+        o.batches.clear();
+        o.places.clear();
+        for (std::vector<uint32_t>& c : o.currentBatch) c.assign(o.ids.size() + 1, ~0u);
         for (size_t n = 0; n < jobs.size(); ++n) {
             const OwnState::ChunkOut& out = o.outs[n];
             for (size_t q = 0; q < out.used; ++q) {
                 const OwnState::Piece& pc = out.pieces[q];
-                OwnState::Pending& pd = o.pending[pc.layer][pc.tex];
-                // its vertices, and two more for each triangle cut where the depth is squeezed
-                if (pd.verts.size() + pc.vertexCount + pc.indexCount / 3 * 2 > 65535) emit(pc.layer, pc.tex);
-                const size_t base = pd.verts.size();
-                pd.verts.insert(pd.verts.end(), pc.verts.begin(), pc.verts.end());
-                for (const uint16_t ix : pc.idx) pd.idx.push_back(uint16_t(base + ix));
+                if (pc.layer >= 3 || pc.tex >= o.currentBatch[pc.layer].size() || pc.idx.empty()) continue;
+                uint32_t& b = o.currentBatch[pc.layer][pc.tex];
+                if (b == ~0u || o.batches[b].vertices + pc.vertexCount + pc.indexCount / 3 * 2 > 65535) {
+                    b = uint32_t(o.batches.size());
+                    o.batches.push_back(OwnState::Batch{pc.layer, uint32_t(pc.tex), 0, 0, 0});
+                }
+                OwnState::Batch& bt = o.batches[b];
+                o.places.push_back(OwnState::PiecePlace{uint32_t(n), uint32_t(q), b, bt.vertices, bt.indices});
+                bt.vertices += uint32_t(pc.verts.size());
+                bt.indices += uint32_t(pc.idx.size());
             }
         }
-        for (uint8_t layer = 0; layer < 3; ++layer)  // the ground, then the own bands, then the neighbours' strips
-            for (size_t t = 0; t < o.pending[layer].size(); ++t) emit(layer, t);
+        // the draws' rooms in the record: the ground, then the own bands, then the neighbours' strips, each layer's
+        // textures in their order, a texture's draws in theirs
+        o.batchOrder.resize(o.batches.size());
+        for (uint32_t k = 0; k < o.batchOrder.size(); ++k) o.batchOrder[k] = k;
+        std::stable_sort(o.batchOrder.begin(), o.batchOrder.end(), [&o](uint32_t x, uint32_t y) {
+            const OwnState::Batch &a = o.batches[x], &b = o.batches[y];
+            return a.layer != b.layer ? a.layer < b.layer : a.tex < b.tex;
+        });
+        for (const uint32_t k : o.batchOrder) {
+            OwnState::Batch& bt = o.batches[k];
+            bt.draw = o.rec.drawRoom(drawOf(bt.layer, bt.tex), bt.vertices, bt.indices);
+            o.drawLayer.push_back(bt.layer);
+            vertices += bt.vertices;
+            triangles += bt.indices / 3;
+        }
+        // then each piece copied into its place on the own ground's threads (every room made: none moves now)
+        uint8_t* intoVertices = o.rec.vertexData();
+        uint16_t* intoIndices = o.rec.indexData();
+        const std::vector<DrawCmd>& recDraws = o.rec.draws();
+        parallelChunks(o.places.size(), [&](size_t k) {
+            const OwnState::PiecePlace& at = o.places[k];
+            const OwnState::Piece& pc = o.outs[at.job].pieces[at.piece];
+            const DrawCmd& d = recDraws[o.batches[at.batch].draw];
+            std::memcpy(intoVertices + d.vertexOffset + size_t(at.vertex) * sizeof(own_ground::Tl2), pc.verts.data(),
+                        pc.verts.size() * sizeof(own_ground::Tl2));
+            uint16_t* to = intoIndices + d.firstIndex + at.index;
+            for (size_t i = 0; i < pc.idx.size(); ++i) to[i] = uint16_t(at.vertex + pc.idx[i]);
+        });
         putting.stop();
         {
             CpuTimeWithin t(cpuPartTicks[kCpuFarModels], cpuPartTicks[kCpuOwnGround]);

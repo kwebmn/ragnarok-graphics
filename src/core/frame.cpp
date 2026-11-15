@@ -44,6 +44,19 @@ void FrameRecord::draw(DrawCmd cmd, const void* vertices, uint32_t vertexCount, 
     commands_.push_back({Cmd::Draw, cmd.state < states_.size() && states_[cmd.state].ui, uint32_t(draws_.size() - 1)});
 }
 
+uint32_t FrameRecord::drawRoom(DrawCmd cmd, uint32_t vertexCount, uint32_t indexCount) {
+    ++work_;
+    cmd.vertexOffset = uint32_t(vertices_.size());
+    cmd.vertexCount = vertexCount;
+    vertices_.resize(vertices_.size() + size_t(vertexCount) * stride(cmd.fvf));
+    cmd.firstIndex = uint32_t(indices_.size());
+    cmd.indexCount = indexCount;
+    indices_.resize(indices_.size() + indexCount);
+    draws_.push_back(cmd);
+    commands_.push_back({Cmd::Draw, cmd.state < states_.size() && states_[cmd.state].ui, uint32_t(draws_.size() - 1)});
+    return uint32_t(draws_.size() - 1);
+}
+
 uint32_t FrameRecord::addPixels(const uint32_t* argb, size_t count) {
     const uint32_t at = uint32_t(pixels_.size());
     pixels_.insert(pixels_.end(), argb, argb + count);

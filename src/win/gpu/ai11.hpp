@@ -48,6 +48,12 @@ public:
     void noteWorldUse(uint32_t id, ai::Kind kind);  // drawn in the world as kind
     void noteUiUse(uint32_t id);                    // drawn in the interface: its big pictures
     void forget(uint32_t id);                       // the game released it
+    // 3.0.20-beta.20: a whole texture of the game's written anew, its noteUpload a picture or more later (the
+    // renderer's workLater11) - its copy of the old pixels let go at once; whether a texture is a sprite cache's
+    void rewritten(uint32_t id) {
+        if (ready_) dropCopy(id);
+    }
+    bool atlas(uint32_t id) const { return atlases_.count(id) != 0; }
     // A picture the game copies into a window (Renderer::requestIcon): made larger, it goes to the sink.
     void noteIcon(uint64_t key, int width, int height, const uint32_t* argb);
     void setIconSink(Renderer::IconSink sink, void* context) {

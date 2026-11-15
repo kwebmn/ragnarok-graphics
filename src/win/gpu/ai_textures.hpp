@@ -62,6 +62,10 @@ public:
     // an icon of the interface (the kind Icons) and stands in for interface draws.
     void noteUiUse(uint32_t id);
     void forget(uint32_t id);                       // the game released it
+    // 3.0.20-beta.20: a whole texture of the game's written anew, its noteUpload a picture or more later (the
+    // renderer's workLater) - its picture of the old pixels let go at once; whether a texture is a sprite cache's
+    void rewritten(uint32_t id, const Texture& t);
+    bool atlas(uint32_t id) const { return atlases_.count(id) != 0; }
     void setMap(const std::string& map);            // the map the game shows now, "" none
     // 0.14: an icon of the game's windows (Renderer::requestIcon); made larger, it goes to Impl::iconSink.
     void noteIcon(uint64_t key, int width, int height, const uint32_t* argb);

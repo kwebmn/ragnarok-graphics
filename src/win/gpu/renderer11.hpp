@@ -15,6 +15,7 @@
 #include "core/footsteps.hpp"
 #include "core/frame_profile.hpp"
 #include "core/game_camera.hpp"
+#include "core/upload_later.hpp"
 #include "core/game_models.hpp"
 #include "core/game_models_card.hpp"
 #include "core/game_models_place.hpp"
@@ -488,6 +489,12 @@ private:
     uint32_t modelFogVertices_ = 0;
     gamemodels::FrameState modelsNow_;
     uint64_t modelsDrawnFrames_ = 0, modelsDrawnFaces_ = 0, modelsDrawnNodes_ = 0, modelsUnknown_ = 0;
+    // 3.0.20-beta.20 (the owner's «делай 1 и 2», 1): a whole texture of the game's goes to the card at once, its looks
+    // and the AI pack's work on it after, a picture's budget at a time (core/upload_later); the counts for the log
+    uploadlater::Queue laterLooks_;
+    uint64_t laterQueued_ = 0, laterAtOnce_ = 0;
+    double laterMostMs_ = 0;
+    void workLater11(double budgetMs);
     // 3.0.20-beta.14 (stage 4): the frame's moving nodes' matrices' first uint4 in modelFaces_ (after the faces; holeG
     // of the draws), 0 none; of the nodes drawn, the moving ones
     uint32_t modelMatrices_ = 0;

@@ -32,6 +32,7 @@
 #include "core/ground_cells.hpp"
 #include "core/hills.hpp"
 #include "core/game_models_card.hpp"
+#include "core/upload_later.hpp"
 #include "win/gpu/threads.hpp"
 #include "core/game_models_place.hpp"
 #include "core/own_ground.hpp"
@@ -1449,12 +1450,7 @@ struct Renderer::Impl {
         bool wallsTold = false;
         std::string wallApartDraw;  // 3.0.18-beta.5: the first wall apart's draw, for the log
         FrameRecord rec, uploads;
-        struct Pending {  // a texture's vertices of the chunks in view, one draw (16-bit indices)
-            std::vector<own_ground::Tl2> verts;
-            std::vector<uint16_t> idx;
-        };
-        // by layer (terrain::kGround, 3.0.4-beta.12 the own bands and the neighbours' strips), by texture, last none
-        std::vector<Pending> pending[3];
+        // 3.0.20-beta.20: the layers' textures' vertices go straight into rec's draws (Batch, PiecePlace below)
         std::vector<uint8_t> drawLayer;  // of each of rec's draws
         // 3.0.4-beta.12: each vertex's diffuse kept (the mesh's, the distant one's) and each chunk's up to date - made
         // again round the corners the game gives another colour (own_ground::Shading::takeChanged)
@@ -1479,6 +1475,21 @@ struct Renderer::Impl {
             std::vector<Piece> pieces;
             size_t used = 0;
         };
+        // 3.0.20-beta.20 (the owner's «делай 1 и 2», 2 - «the own ground put into draws» 1.03 ms on the renderer's
+        // thread alone, each piece copied twice): the pieces placed in the record's draws - a layer's texture's draws
+        // (a new one past 65535 vertices as before), each piece's place in its draw; then copied there on the own
+        // ground's threads
+        struct Batch {
+            uint8_t layer = 0;
+            uint32_t tex = 0, vertices = 0, indices = 0, draw = 0;
+        };
+        struct PiecePlace {
+            uint32_t job = 0, piece = 0, batch = 0, vertex = 0, index = 0;
+        };
+        std::vector<Batch> batches;
+        std::vector<uint32_t> batchOrder;
+        std::vector<PiecePlace> places;
+        std::vector<uint32_t> currentBatch[3];  // by layer, by texture: its draw now, ~0u none
         std::vector<ChunkJob> jobs;
         std::vector<ChunkOut> outs;
         std::vector<int32_t> chunkAt;  // a chunk's index by its square of cells (kChunk), -1 none
@@ -1585,6 +1596,14 @@ struct Renderer::Impl {
     size_t gameMovingPlaced = 0;   // the processor's way's this picture
     const gamemodels::Node* gameNodeOf(const gamemodels::Frame& frame, size_t i, const float*& toView) const;
     void noteGameModelsForFar();  // 3.0.20-beta.18: the frame's nodes we drew into the far models' learning
+    // 3.0.20-beta.20 (the owner's «делай 1 и 2», 1 - textures' uploads 16-27 ms in the long frames): a whole texture
+    // of the game's goes to the card at once, its looks (fire, light, leaves) and the AI pack's work on it after, a
+    // picture's budget at a time (core/upload_later); the counts for the log
+    uploadlater::Queue laterLooks;
+    uint64_t laterQueued = 0, laterDone = 0, laterAtOnce = 0;
+    double laterMostMs = 0;
+    void looksOf(Texture& t, const UploadCmd& u, const uint32_t* px, bool spriteCache);
+    void workLater(double budgetMs);
     // 3.0.20-beta.18 (R-8UPTJW «кудато стена пропала»: Prontera's south gate, a still node mirrored on z, not seen): a
     // few of the frame's nodes a picture placed by the processor by the card's rules - those in front of the eye that
     // show no face told in the 30 s line (where they stand, their faces, mirrored or moving)

@@ -115,6 +115,12 @@ public:
     void clear(const ClearCmd& c);
     void viewport(const ViewportCmd& v);
     void draw(DrawCmd cmd, const void* vertices, uint32_t vertexCount, const uint16_t* indices, uint32_t indexCount);
+    // 3.0.20-beta.20: a draw's room - `vertexCount` vertices and `indexCount` indices written after (threads each into
+    // its own part: vertexData() + its vertexOffset, indexData() + its firstIndex, once every room is made - a later
+    // room may move them); the draw's number
+    uint32_t drawRoom(DrawCmd cmd, uint32_t vertexCount, uint32_t indexCount);
+    uint8_t* vertexData() { return vertices_.data(); }
+    uint16_t* indexData() { return indices_.data(); }
     // own (2.5.23): for slots[i] the frame in its own colours (the cell's size), or none (empty)
     void upload(uint32_t texture, uint32_t level, const Rect& rect, const uint32_t* argb,
                 const std::vector<SpriteCell>& slots = {}, PixelFormat fullFrom = PixelFormat::Unknown,

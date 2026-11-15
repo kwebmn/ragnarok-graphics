@@ -966,6 +966,7 @@ void Renderer11::releaseTexture(uint32_t id) {  // Direct3D 11 keeps it while qu
     const auto it = textures_.find(id);
     if (it == textures_.end()) return;
     if (ai_) ai_->forget(id);
+    laterLooks_.drop(id);  // 3.0.20-beta.20
     objectTextures_.forget(id);  // 0.61
     ++stats_.freed;
     // 0.89: a small one kept for the game's next of its size (32 MB of them at most) - a new surface's levels are
@@ -1267,10 +1268,23 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
         const bool whole = u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height;
         it->second.transparent = clear || (!whole && it->second.transparent);
     }
-    if (level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height &&
-        !u.own) {  // 3.0.18-beta.178: a number's sharp copy - no fire, light or leaves, as the game's cell
+    const bool whole =
+        level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height;
+    const bool spriteCache = u.slotCount > 0 || !it->second.cells.empty();
+    // 3.0.20-beta.20: a whole texture of the game's (not a sprite cache) - its looks and the AI pack's work after its
+    // upload (workLater11); its copy of the old pixels let go now
+    bool later = false;
+    if (whole && !u.own && !spriteCache && !(ai_ && ai_->atlas(u.texture))) {
+        if (ai_) ai_->rewritten(u.texture);
+        later = laterLooks_.push(u, rec.pixels().data() + u.pixels, false);
+        if (later)
+            ++laterQueued_;
+        else
+            ++laterAtOnce_;  // the queue full: at once, as before
+    }
+    if (whole && !u.own && !later) {  // 3.0.18-beta.178: a number's sharp copy - no fire, light or leaves
         it->second.leafy = foliage::leafyTexture(rec.pixels().data() + u.pixels, t.width, t.height,  // 0.64
-                                                 u.slotCount > 0 || !it->second.cells.empty());  // 2.6.19
+                                                 spriteCache);  // 2.6.19
         // 2.5.1: a whole picture - how much it looks like fire, or lights in its own colour (as device.cpp upload)
         it->second.fire = effect_light::fireOf(rec.pixels().data() + u.pixels, t.width, t.height,
                                                it->second.fireColour);
@@ -1278,12 +1292,41 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
                                                  it->second.lightColour);
     }
     if (u.slotCount) spriteCellsWritten(it->second.cells, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.60.1
-    if (ai_ && !u.own) {  // 0.47: its key, or the sprite cache's new frames with their sources
+    if (ai_ && !u.own && !later) {  // 0.47: its key, or the sprite cache's new frames with their sources
         std::vector<uint32_t> game;  // 2.5.18: the texels the pack knows it by
         ai_->noteUpload(u.texture, t.width, t.height, u, full_colour::aiTexels(u, rec.pixels().data() + u.pixels, game),
                         u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount,
                         rec.pixels().data());  // 2.5.23: a dyed frame's own colours
     }
+}
+
+// 3.0.20-beta.20: the whole textures' work kept from their uploads (laterLooks_), the oldest first, `budgetMs` of it a
+// picture - their looks and the AI pack's key; a texture let go or of another size since: its work dropped
+void Renderer11::workLater11(double budgetMs) {
+    if (!laterLooks_.size()) return;
+    LARGE_INTEGER start, now;
+    QueryPerformanceCounter(&start);
+    uploadlater::Job j;
+    while (laterLooks_.take(j)) {
+        const auto it = textures_.find(j.upload.texture);
+        if (it != textures_.end() && it->second.width == j.upload.rect.width() &&
+            it->second.height == j.upload.rect.height()) {
+            Texture& t = it->second;
+            const uint32_t* px = j.pixels.data();
+            t.leafy = foliage::leafyTexture(px, t.width, t.height, j.spriteCache);
+            t.fire = effect_light::fireOf(px, t.width, t.height, t.fireColour);
+            t.light = effect_light::lightOf(px, t.width, t.height, t.lightColour);
+            if (ai_) {
+                std::vector<uint32_t> game;  // 2.5.18: the texels the pack knows it by
+                const uint32_t* texels = full_colour::aiTexels(j.upload, px, game);
+                ai_->noteUpload(j.upload.texture, t.width, t.height, j.upload, texels, nullptr, 0, px);
+            }
+        }
+        QueryPerformanceCounter(&now);
+        if (double(now.QuadPart - start.QuadPart) / qpcPerMs_ >= budgetMs) break;
+    }
+    QueryPerformanceCounter(&now);
+    laterMostMs_ = std::max(laterMostMs_, double(now.QuadPart - start.QuadPart) / qpcPerMs_);
 }
 
 void Renderer11::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w) {
@@ -2257,6 +2300,10 @@ void Renderer11::execute(const FrameRecord& record) {
     {
         PartTime t(profileOn_ && pframes_[pslot_].open, pframes_[pslot_].geometry, qpcPerMs_);  // 3.0.5-beta.2
         geometry_ = uploadGeometry(record);
+    }
+    {  // 3.0.20-beta.20: the whole textures' work kept from earlier uploads - a picture's share, more while many wait
+        PartTime t(profileOn_ && pframes_[pslot_].open, pframes_[pslot_].textures, qpcPerMs_);
+        workLater11(laterLooks_.size() > 128 || laterLooks_.bytes() > (32u << 20) ? 4.0 : 1.5);
     }
     targetBound_ = false;
     for (const Command& c : record.commands()) {
@@ -4522,6 +4569,14 @@ void Renderer11::logGpu(ULONGLONG now) {
                      double(modelsUnknown_) / double(modelsDrawnFrames_), modelCards_.nodes(),
                      size_t(modelCards_.faces()));
         modelsDrawnFrames_ = modelsDrawnFaces_ = modelsDrawnNodes_ = modelsUnknown_ = modelsDrawnMoving_ = 0;
+        if (laterQueued_ || laterAtOnce_)  // 3.0.20-beta.20
+            LOG_INFO("Direct3D 11: %llu whole textures of the game's looked at after their upload (%zu waiting, "
+                     "%.1f MB), %llu at once (the queue full); %.2f ms at most a picture on them",
+                     static_cast<unsigned long long>(laterQueued_), laterLooks_.size(),
+                     double(laterLooks_.bytes()) / 1048576.0, static_cast<unsigned long long>(laterAtOnce_),
+                     laterMostMs_);
+        laterQueued_ = laterAtOnce_ = 0;
+        laterMostMs_ = 0;
         // 3.0.19-beta.43 (R-XHRKGN): the ground's draws by their first texture - told while any went white
         if (stats_.groundNone || stats_.groundGone)
             LOG_INFO("Direct3D 11: the ground's draws a frame - %.0f from the game's textures, %.0f from their HD "

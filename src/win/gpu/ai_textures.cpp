@@ -1513,6 +1513,10 @@ bool AiTextures::finishCell(Job& job) {
     return true;
 }
 
+void AiTextures::rewritten(uint32_t id, const Texture& t) {  // 3.0.20-beta.20
+    if (ready_ && t.ai) dropAi(id);
+}
+
 void AiTextures::dropAi(uint32_t id) {
     const auto item = items_.find(id);
     if (item != items_.end() && item->second.bytes) {

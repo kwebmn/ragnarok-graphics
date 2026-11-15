@@ -429,3 +429,25 @@ TEST(frame_a_draw_command_knows_it_is_the_interfaces) {
     f.putBack(tail);
     CHECK_EQ(f.firstInterface(), size_t(1));
 }
+
+// 3.0.20-beta.20 (the owner's «делай 1 и 2», 2 - «the own ground put into draws» 1.03 ms on the renderer's thread
+// alone, its pieces copied twice): a draw's room in the record - its vertices and indices written after, by threads
+// each into its own part, the draw as one made by draw()
+TEST(frame_a_draws_room_filled_after) {
+    FrameRecord r;
+    DrawCmd cmd;
+    cmd.fvf = d3d7::FVF_TL1;
+    cmd.primitive = d3d7::PT_TRIANGLELIST;
+    const uint32_t first = r.drawRoom(cmd, 3, 3);
+    const uint32_t second = r.drawRoom(cmd, 4, 6);
+    CHECK(first == 0 && second == 1 && r.draws().size() == 2);
+    const DrawCmd& a = r.draws()[0];
+    const DrawCmd& b = r.draws()[1];
+    CHECK(a.vertexCount == 3 && a.indexCount == 3 && b.vertexCount == 4 && b.indexCount == 6);
+    CHECK(b.vertexOffset == 3 * FrameRecord::stride(d3d7::FVF_TL1) && b.firstIndex == 3);
+    CHECK(r.vertexBytes().size() == 7 * FrameRecord::stride(d3d7::FVF_TL1) && r.indices().size() == 9);
+    r.vertexData()[b.vertexOffset] = 0x5A;
+    r.indexData()[b.firstIndex + 5] = 3;
+    CHECK(r.vertexBytes()[b.vertexOffset] == 0x5A && r.indices()[8] == 3);
+    CHECK(r.commands().size() == 2 && r.commands()[1].type == Cmd::Draw && r.commands()[1].index == 1);
+}
