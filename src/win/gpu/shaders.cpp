@@ -242,6 +242,72 @@ PsIn model_vs(ModelIn i) {
     return o;
 }
 
+// 3.0.20-beta.23 (the owner's «берем», item 1 - «Своя земля» on the card): a map's own ground kept on the card in its
+// file's places (core/own_ground_card Layout in t6: two uint4 a vertex, then the colours and the strips' blends four a
+// uint4), a vertex its number in the picture's indices - put as the processor puts it (own_ground_card putVertex and
+// clipOf, the same sums: into the view by the camera, the smooth ground eased onto the plain one, a strip's depth a
+// little nearer, the fog by its line); the game's depth on the squeeze's near side, the squeezed one past it - the card
+// cuts a triangle at the squeeze (SV_ClipDistance0.x) and at the near plane (.y), each piece one depth. The camera and
+// the projection in r0-r11 and f0-farZ; the fog's line in holeX, holeY, its colour's bits in holeH (holeZ 0: no
+// silhouette); holeG the vertices on the card, holeUy the smooth mesh's (as uint), eased from holeUz to holeF; sharpen
+// the draw's bits (as uint - the hills' light alone reads it, never on the own ground; twin is the materials' sun):
+// its layer, past the squeeze 4, the map's axes turned 8 x, 16 y, 32 z
+struct GroundOut {
+    float4 pos : SV_Position;
+    float4 diffuse : COLOR0;
+    float4 specular : COLOR1;
+    float2 uv0 : TEXCOORD0;
+    float2 uv1 : TEXCOORD1;
+    float4 cut : SV_ClipDistance0;
+};
+float3 groundView(float3 f, uint bits) {
+    float3 turn = float3((bits & 8u) != 0u ? -1.0 : 1.0, (bits & 16u) != 0u ? -1.0 : 1.0,
+                         (bits & 32u) != 0u ? -1.0 : 1.0);
+    return modelView(f * turn);
+}
+GroundOut ground_vs(uint id : SV_VertexID) {
+    GroundOut o;
+    uint bits = asuint(sharpen);
+    uint layer = bits & 3u;
+    uint total = asuint(holeG);
+    uint4 a = seamVertices.Load(int(id * 2u));
+    uint4 b = seamVertices.Load(int(id * 2u + 1u));
+    uint4 colours = seamVertices.Load(int(total * 2u + id / 4u));
+    uint4 blends = seamVertices.Load(int(total * 2u + (total + 3u) / 4u + id / 4u));
+    uint k = id & 3u;
+    uint colour = k == 0u ? colours.x : (k == 1u ? colours.y : (k == 2u ? colours.z : colours.w));
+    uint blend = k == 0u ? blends.x : (k == 1u ? blends.y : (k == 2u ? blends.z : blends.w));
+    float3 f = asfloat(a.xyz);
+    float3 v = groundView(f, bits);
+    if (id < asuint(holeUy) && v.z > holeUz) {  // the smooth ground eased onto the plain one as it nears the change
+        float e = min((v.z - holeUz) / (holeF - holeUz), 1.0);
+        float m = e * e * (3.0 - 2.0 * e);
+        v = groundView(float3(f.x, f.y + (asfloat(a.w) - f.y) * m, f.z), bits);
+    }
+    float zd = v.z;
+    float lift = layer == 2u ? 0.05 : (layer == 1u ? 0.12 : 0.0);
+    float zl = lift > 0.0 ? max(zd - lift, nearZ + 0.005) : zd;
+    float da = farZ / (farZ - nearZ), db = farZ * nearZ / (farZ - nearZ), split = farZ - 10.0;
+    bool beyond = (bits & 4u) != 0u;
+    float zw = lift > 0.0 ? (da - db / zl) * zd : da * zd - db;
+    if (beyond) {
+        float at = da - db / split;
+        zw = min(at + (1.0 - at) * (1.0 - split / zl), 0.99999994) * zd;
+    }
+    float kx = 2.0 * scale / targetSize.x, ky = 2.0 * scale / targetSize.y;
+    float bx = (cx * scale + 0.5 + jitterX) * 2.0 / targetSize.x - 1.0;
+    float by = 1.0 - (cy * scale + 0.5 + jitterY) * 2.0 / targetSize.y;
+    o.pos = float4(kx * f0 * v.x + bx * zd, by * zd - ky * f1 * v.y, zw, zd);
+    o.cut = float4(beyond ? zd - split : split - zd, zd - nearZ, 1.0, 1.0);
+    o.diffuse = colourOf(colour);
+    float haze = clamp(floor(holeX + holeY * zd + 0.5), 0.0, 255.0);
+    uint tint = layer == 0u ? (asuint(holeH) & 0xFFFFFFu) : (blend & 0xFFFFFFu);
+    o.specular = colourOf((uint(haze) << 24) | tint);
+    o.uv0 = asfloat(b.xy);
+    o.uv1 = asfloat(b.zw);
+    return o;
+}
+
 float4 arg(uint a, float4 diffuse, float4 current, float4 tex, float4 specular) {
     uint sel = a & 15;
     float4 v = float4(1, 1, 1, 1);  // TFACTOR: the client never sets it, D3D7's default is white

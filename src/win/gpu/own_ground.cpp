@@ -10,6 +10,7 @@
 #include "core/d3d7.hpp"
 #include "core/game_camera.hpp"
 #include "core/own_ground.hpp"
+#include "core/own_ground_card.hpp"
 #include "core/quad_batch.hpp"
 #include "core/trees.hpp"
 #include "core/water.hpp"
@@ -26,6 +27,8 @@ constexpr int kAtlasStrip = 256;                    // the lightmaps' rows a pie
 // i7-8700 (R-N6FC5V); 3.0.19-beta.20: core own_ground::fineDepthOf (the 3D view from 150, R-K2JPUU)
 constexpr int kRelitAPicture = 8;  // 3.0.4-beta.28: chunks made again a picture when the hills' light moved
 constexpr unsigned kWallsChecked = 32;  // 3.0.7-beta.3: the game's walls seen before the log tells how many are alike
+// 3.0.20-beta.23: the own ground's vertices put up on the card a picture (2 MB of them, their blends)
+constexpr uint32_t kGroundPiece = 65536;
 constexpr float kMorphFrom = 0.75f;  // 3.0.4-beta.29: of fineDepth - the smooth ground eased onto the plain past it
 
 double msSince(const LARGE_INTEGER& from) {
@@ -105,6 +108,10 @@ void Renderer::Impl::dropOwnGround() {
     ownState.sinceMade = 0;
     ownState.minuteFrames = ownState.minuteReused = 0;  // 3.0.4-beta.27
     std::fill(ownState.anew, ownState.anew + 8, 0u);
+    if (groundCard) discard(groundCard);  // 3.0.20-beta.23: the card may still read it - let go with its list
+    groundCard = nullptr;
+    groundCardSerial = groundCardUp = 0;
+    for (std::vector<uint8_t>& f : groundCardFresh) std::vector<uint8_t>().swap(f);
 }
 
 // At the picture's first ground draw of the game's: the map's own ground read (MapWorld), its textures made and their
@@ -357,38 +364,46 @@ void parallelChunks(size_t count, const std::function<void(size_t)>& body) {
     if (helped) WaitForThreadpoolWorkCallbacks(r.work, FALSE);
 }
 
+// a chunk's colours, the game's round its corners (3.0.20-beta.23: apart - the card's way sends them as they are)
+void Renderer::Impl::ownColours(const OwnMaking& m, const OwnState::ChunkJob& job) {
+    OwnState& o = ownState;
+    const OwnGround* g = m.g;
+    const terrain::Mesh& mesh = job.which ? g->distant : g->mesh;
+    const terrain::Chunk& ch = mesh.chunks[job.k];
+    std::vector<uint32_t>& colours = o.colours[job.which];  // this chunk's vertices alone written
+    for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
+        const terrain::Batch& bt = mesh.batches[b];
+        for (uint32_t v = bt.firstVertex; v < bt.firstVertex + bt.vertexCount; ++v) {
+            const terrain::Vertex& tv = mesh.vertices[v];
+            // 3.0.7-beta.3 (R-YXZM7Y): a wall in the game's light on it (terrain::wallLight), not the ground's
+            // beside it
+            const bool wall = terrain::isWall(tv);
+            uint32_t c = wall ? tv.color : o.shading.diffuseAt(tv.pos[0], tv.pos[2]);
+            if (o.lightOn && !wall) {  // 3.0.4-beta.26: the smooth hills' light; 3.0.4-beta.30 the corners' between
+                const float light =
+                    own_ground::lightAt(o.cornerLight, g->width, g->height, g->zoom, tv.pos[0], tv.pos[2]);
+                uint32_t lit = c & 0xFF000000u;
+                for (int part = 0; part < 3; ++part) {
+                    const float channel = float((c >> (part * 8)) & 0xFF) * light;
+                    lit |= uint32_t(std::clamp(int(channel + 0.5f), 0, 255)) << (part * 8);
+                }
+                c = lit;
+            }
+            // a neighbour's strip: its alpha how much the place is the neighbour's
+            colours[v] = bt.layer == terrain::kNeighbour ? (c & 0xFFFFFFu) | (tv.color & 0xFF000000u) : c;
+        }
+    }
+}
+
 void Renderer::Impl::ownChunk(const OwnMaking& m, const OwnState::ChunkJob& job, OwnState::ChunkOut& out) {
     OwnState& o = ownState;
     const OwnGround* g = m.g;
     const camera::Projection& p = m.p;
     const terrain::Mesh& mesh = job.which ? g->distant : g->mesh;
     const terrain::Chunk& ch = mesh.chunks[job.k];
-    std::vector<uint32_t>& colours = o.colours[job.which];  // this chunk's vertices alone written
+    const std::vector<uint32_t>& colours = o.colours[job.which];
     out.used = 0;
-    if (job.recolour) {  // its colours, the game's round its corners
-        for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
-            const terrain::Batch& bt = mesh.batches[b];
-            for (uint32_t v = bt.firstVertex; v < bt.firstVertex + bt.vertexCount; ++v) {
-                const terrain::Vertex& tv = mesh.vertices[v];
-                // 3.0.7-beta.3 (R-YXZM7Y): a wall in the game's light on it (terrain::wallLight), not the ground's
-                // beside it
-                const bool wall = terrain::isWall(tv);
-                uint32_t c = wall ? tv.color : o.shading.diffuseAt(tv.pos[0], tv.pos[2]);
-                if (o.lightOn && !wall) {  // 3.0.4-beta.26: the smooth hills' light; 3.0.4-beta.30 the corners' between
-                    const float light =
-                        own_ground::lightAt(o.cornerLight, g->width, g->height, g->zoom, tv.pos[0], tv.pos[2]);
-                    uint32_t lit = c & 0xFF000000u;
-                    for (int part = 0; part < 3; ++part) {
-                        const float channel = float((c >> (part * 8)) & 0xFF) * light;
-                        lit |= uint32_t(std::clamp(int(channel + 0.5f), 0, 255)) << (part * 8);
-                    }
-                    c = lit;
-                }
-                // a neighbour's strip: its alpha how much the place is the neighbour's
-                colours[v] = bt.layer == terrain::kNeighbour ? (c & 0xFFFFFFu) | (tv.color & 0xFF000000u) : c;
-            }
-        }
-    }
+    if (job.recolour) ownColours(m, job);
     thread_local std::vector<uint8_t> behind;
     for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
         const terrain::Batch& bt = mesh.batches[b];
@@ -404,34 +419,15 @@ void Renderer::Impl::ownChunk(const OwnMaking& m, const OwnState::ChunkJob& job,
         const size_t base = 0;  // its own, from 0: pending's place added as it goes in
         behind.assign(bt.vertexCount, 0);
         // the strips a little towards the camera: on the ground's own points, the bands near them (as the seams')
-        const float lift = bt.layer == terrain::kNeighbour ? 0.05f
-                           : bt.layer == terrain::kOwnBand ? 0.12f
-                                                           : 0.0f;
-        for (uint32_t i = 0; i < bt.vertexCount; ++i) {
-            const terrain::Vertex& tv = mesh.vertices[bt.firstVertex + i];
+        const float lift = bt.layer < 3 ? own_ground::card::kLift[bt.layer] : 0.0f;
+        for (uint32_t i = 0; i < bt.vertexCount; ++i) {  // 3.0.20-beta.23: in core, as ground_vs puts them
             own_ground::Tl2& t = pd.verts[base + i];
-            if (!own_ground::place(m.view, p, m.axes, tv.pos, t)) {
+            if (!own_ground::card::putVertex(m.putting, mesh.vertices[bt.firstVertex + i], job.which == 0, bt.layer,
+                                             t)) {
                 behind[i] = 1;
                 continue;
             }
-            float zd = 1.0f / t.rhw;
-            // 3.0.4-beta.29: the smooth ground eased onto the plain one as it nears the change (fineDepth) - a chunk
-            // changes to the plain ground lying on it already: no jump, no crack along their seam
-            if (job.which == 0 && zd > m.morphFrom && tv.plain != tv.pos[1]) {
-                const float f = std::min((zd - m.morphFrom) / (m.fineDepth - m.morphFrom), 1.0f);
-                const float mm = f * f * (3.0f - 2.0f * f);
-                const float eased[3] = {tv.pos[0], tv.pos[1] + (tv.plain - tv.pos[1]) * mm, tv.pos[2]};
-                own_ground::place(m.view, p, m.axes, eased, t);
-                zd = 1.0f / t.rhw;
-            }
-            if (lift > 0.0f) t.z = own_ground::depthOf(p, std::max(zd - lift, p.nearZ + 0.005f));
             t.diffuse = colours[bt.firstVertex + i];
-            const uint32_t fog = m.fogged ? o.shading.specularAt(zd) : m.plain;
-            t.specular = bt.layer == terrain::kGround ? fog : (fog & 0xFF000000u) | (tv.blend & 0xFFFFFFu);
-            t.u0 = tv.uv[0];
-            t.v0 = tv.uv[1];
-            t.u1 = tv.lm[0];
-            t.v1 = tv.lm[1];
         }
         for (uint32_t i = bt.firstIndex; i + 3 <= bt.firstIndex + bt.indexCount; i += 3) {
             const uint32_t a = mesh.indices[i], b2 = mesh.indices[i + 1], c = mesh.indices[i + 2];
@@ -572,6 +568,9 @@ bool Renderer::Impl::drawOwnGround() {
     }
     const bool blends = effects.groundSeams && mapOutdoors;  // outdoors, as the game's ground's seams (seamsWanted)
     // 3.0.4-beta.15: the record of the last picture again when nothing it was made of changed
+    // 3.0.20-beta.23 (the owner's «берем», item 1): the own ground from the card once all of it is up there - a piece
+    // more put up each picture until then, the processor's way meanwhile
+    const bool onCard = ensureGroundCard(*g);
     OwnState::Made now;
     std::memcpy(now.view, viewToWorld, sizeof now.view);
     now.width = gameWidth, now.height = gameHeight, now.serial = o.serial, now.blends = blends;
@@ -583,6 +582,7 @@ bool Renderer::Impl::drawOwnGround() {
     // 3.0.20-beta.4: the game's still models drawn by us, the frame's; 3.0.20-beta.11: none in the record while the
     // card draws them (drawGameModelsCard after it) - the record kept over their changes
     now.gameModels = cardModelsReady() ? 0 : gameFrameKey();
+    now.onCard = onCard;
     now.valid = true;
     // 3.0.4-beta.32 (R-Q3W727): the models' colours learnt anew at most every kModelsColoursEvery pictures
     const bool same = o.made.valid && !meanMoved && !lightMoved && !o.lightPending && o.changed.empty() &&
@@ -591,7 +591,7 @@ bool Renderer::Impl::drawOwnGround() {
                       o.made.models == now.models && o.made.seamsView == now.seamsView &&
                       !own_ground::modelsColoursDue(o.made.matched, now.matched, o.sinceMade) &&
                       o.made.fog[0] == now.fog[0] && o.made.fog[1] == now.fog[1] && o.made.like == now.like &&
-                      o.made.gameModels == now.gameModels;
+                      o.made.gameModels == now.gameModels && o.made.onCard == now.onCard;
     size_t chunks = o.madeChunks, vertices = o.madeVertices, triangles = o.madeTriangles;
     if (same) ++o.reused, ++o.minuteReused, o.sinceMade = std::min(o.sinceMade + 1, 1 << 20);
     if (!same && o.made.valid) {  // 3.0.4-beta.27: the first reason found
@@ -610,10 +610,10 @@ bool Renderer::Impl::drawOwnGround() {
         o.made = now;
         o.sinceMade = 0;
         chunks = vertices = triangles = 0;
-        const bool fogged = o.shading.fogged();
-        const uint32_t plain = o.shading.specularAt(0.0f);  // no fog: the game's specular everywhere
         o.rec.reset();
         o.drawLayer.clear();
+        o.drawCard.clear();  // 3.0.20-beta.23
+        o.drawBits.clear();
         DrawSetup st = o.like;
         st.cull = d3d7::CULL_NONE;                     // the axes may turn the cells over
         st.stage[0].mipFilter = d3d7::TFP_LINEAR;      // its pictures have their mipmaps: no shimmer far off
@@ -666,8 +666,9 @@ bool Renderer::Impl::drawOwnGround() {
                 lo[a] = std::min(box.lo[a] * sign[a], box.hi[a] * sign[a]);
                 hi[a] = std::max(box.lo[a] * sign[a], box.hi[a] * sign[a]);
             }
-            float nearest = 0.0f;
-            if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, mostDepth, nearest)) continue;
+            float nearest = 0.0f, farthest = 0.0f;
+            if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, mostDepth, nearest, &farthest))
+                continue;
             const int which = nearest > fineDepth && k < g->distant.chunks.size() ? 1 : 0;
             ++chunks;
             uint8_t& fresh = o.fresh[which][k];
@@ -681,8 +682,9 @@ bool Renderer::Impl::drawOwnGround() {
             if (recolour) {
                 ++o.chunksMade;
                 fresh = 1;
+                if (k < groundCardFresh[which].size()) groundCardFresh[which][k] = 0;  // 3.0.20-beta.23: sent anew
             }
-            jobs.push_back(OwnState::ChunkJob{k, which, recolour});
+            jobs.push_back(OwnState::ChunkJob{k, which, recolour, nearest, farthest});
         }
         if (o.outs.size() < jobs.size()) o.outs.resize(jobs.size());
         OwnMaking making;
@@ -694,69 +696,122 @@ bool Renderer::Impl::drawOwnGround() {
         making.morphFrom = morphFrom;
         making.from = from;
         making.blends = blends;
-        making.fogged = fogged;
-        making.plain = plain;
         making.textures = o.ids.size();
+        making.putting.view = view;
+        making.putting.p = p;
+        making.putting.axes = axes;
+        making.putting.morphFrom = morphFrom;
+        making.putting.fineDepth = fineDepth;
+        making.putting.fogA = o.shading.fogA();  // 255 and 0 when not fogged: specularAt(0) everywhere, as before
+        making.putting.fogB = o.shading.fogB();
+        making.putting.fogRgb = o.shading.specularRgb();
         uint32_t recoloured = 0;  // 3.0.20-beta.18: for the minute's line
         for (const OwnState::ChunkJob& job : jobs) recoloured += job.recolour ? 1u : 0u;
         if (recoloured > o.minuteMostRecoloured) o.minuteMostRecoloured = recoloured;
         o.recolouredNow = recoloured;
-        {  // 3.0.20-beta.18: the parts' own times
-            CpuTimeWithin t(cpuPartTicks[kCpuOwnChunks], cpuPartTicks[kCpuOwnGround]);
-            parallelChunks(jobs.size(), [&](size_t n) { ownChunk(making, jobs[n], o.outs[n]); });
-        }
-        CpuTimeWithin putting(cpuPartTicks[kCpuOwnDraws], cpuPartTicks[kCpuOwnGround]);
-        // 3.0.20-beta.20 (the owner's «делай 1 и 2», 2): the pieces placed in turn - a layer's texture's draw takes
-        // them in the chunks' order, a new one when the next would pass 65535 vertices (its vertices, and two more for
-        // each triangle cut where the depth is squeezed, as before)
-        o.batches.clear();
-        o.places.clear();
-        for (std::vector<uint32_t>& c : o.currentBatch) c.assign(o.ids.size() + 1, ~0u);
-        for (size_t n = 0; n < jobs.size(); ++n) {
-            const OwnState::ChunkOut& out = o.outs[n];
-            for (size_t q = 0; q < out.used; ++q) {
-                const OwnState::Piece& pc = out.pieces[q];
-                if (pc.layer >= 3 || pc.tex >= o.currentBatch[pc.layer].size() || pc.idx.empty()) continue;
-                uint32_t& b = o.currentBatch[pc.layer][pc.tex];
-                if (b == ~0u || o.batches[b].vertices + pc.vertexCount + pc.indexCount / 3 * 2 > 65535) {
-                    b = uint32_t(o.batches.size());
-                    o.batches.push_back(OwnState::Batch{pc.layer, uint32_t(pc.tex), 0, 0, 0});
-                }
-                OwnState::Batch& bt = o.batches[b];
-                o.places.push_back(OwnState::PiecePlace{uint32_t(n), uint32_t(q), b, bt.vertices, bt.indices});
-                bt.vertices += uint32_t(pc.verts.size());
-                bt.indices += uint32_t(pc.idx.size());
+        if (onCard) {
+            // 3.0.20-beta.23 (the owner's «берем», item 1 - «Своя земля» on the card): the chunks' colours made on the
+            // threads and sent, then their indices by layer, texture and side of the squeeze into the record's draws
+            // (ten a vertex) - ground_vs puts their vertices
+            {
+                CpuTimeWithin t(cpuPartTicks[kCpuOwnChunks], cpuPartTicks[kCpuOwnGround]);
+                parallelChunks(jobs.size(), [&](size_t n) {
+                    if (jobs[n].recolour) ownColours(making, jobs[n]);
+                });
             }
+            CpuTimeWithin putting(cpuPartTicks[kCpuOwnDraws], cpuPartTicks[kCpuOwnGround]);
+            flushDraws();  // the draws gathered so far before the colours' copies
+            for (const OwnState::ChunkJob& job : jobs)
+                if (job.recolour || job.k >= groundCardFresh[job.which].size() || !groundCardFresh[job.which][job.k])
+                    sendGroundColours(*g, job.which, job.k);
+            groundLists.begin(o.ids.size(), blends);
+            for (const OwnState::ChunkJob& job : jobs) {
+                const terrain::Mesh& mesh = job.which ? g->distant : g->mesh;
+                groundLists.add(mesh, job.which != 0, job.k, own_ground::card::hasNear(job.nearest, from),
+                                own_ground::card::hasPast(job.farthest, from));
+                vertices += mesh.chunks[job.k].vertexCount;
+            }
+            const std::vector<own_ground::card::Draw>& planned = groundLists.plan();
+            const uint32_t turned = (axes.x < 0 ? 8u : 0u) | (axes.y < 0 ? 16u : 0u) | (axes.z < 0 ? 32u : 0u);
+            o.cardRooms.clear();
+            for (const own_ground::card::Draw& dr : planned) {
+                uint32_t n = (dr.count + 9) / 10;
+                if (n == 4) n = 5;  // never a quad's four: draw() takes those for sprites and effects
+                const uint32_t room = o.rec.drawRoom(drawOf(dr.layer, dr.texture), n, 0);
+                o.cardRooms.push_back(room);
+                o.drawLayer.push_back(dr.layer);
+                o.drawCard.resize(size_t(room) + 1, 0u);
+                o.drawBits.resize(size_t(room) + 1, 0u);
+                o.drawCard[room] = dr.count;
+                o.drawBits[room] = uint32_t(dr.layer) | (dr.past ? 4u : 0u) | turned;
+                triangles += dr.count / 3;
+            }
+            uint8_t* into = o.rec.vertexData();
+            const std::vector<DrawCmd>& recDraws = o.rec.draws();
+            groundLists.fill(
+                groundLayout.fine,
+                [&](size_t k) { return reinterpret_cast<uint32_t*>(into + recDraws[o.cardRooms[k]].vertexOffset); },
+                parallelChunks);
+            o.cardMorph[0] = morphFrom, o.cardMorph[1] = fineDepth;
+            putting.stop();
+        } else {
+            {  // 3.0.20-beta.18: the parts' own times
+                CpuTimeWithin t(cpuPartTicks[kCpuOwnChunks], cpuPartTicks[kCpuOwnGround]);
+                parallelChunks(jobs.size(), [&](size_t n) { ownChunk(making, jobs[n], o.outs[n]); });
+            }
+            CpuTimeWithin putting(cpuPartTicks[kCpuOwnDraws], cpuPartTicks[kCpuOwnGround]);
+            // 3.0.20-beta.20 (the owner's «делай 1 и 2», 2): the pieces placed in turn - a layer's texture's draw
+            // takes them in the chunks' order, a new one when the next would pass 65535 vertices (its vertices, and
+            // two more for each triangle cut where the depth is squeezed, as before)
+            o.batches.clear();
+            o.places.clear();
+            for (std::vector<uint32_t>& c : o.currentBatch) c.assign(o.ids.size() + 1, ~0u);
+            for (size_t n = 0; n < jobs.size(); ++n) {
+                const OwnState::ChunkOut& out = o.outs[n];
+                for (size_t q = 0; q < out.used; ++q) {
+                    const OwnState::Piece& pc = out.pieces[q];
+                    if (pc.layer >= 3 || pc.tex >= o.currentBatch[pc.layer].size() || pc.idx.empty()) continue;
+                    uint32_t& b = o.currentBatch[pc.layer][pc.tex];
+                    if (b == ~0u || o.batches[b].vertices + pc.vertexCount + pc.indexCount / 3 * 2 > 65535) {
+                        b = uint32_t(o.batches.size());
+                        o.batches.push_back(OwnState::Batch{pc.layer, uint32_t(pc.tex), 0, 0, 0});
+                    }
+                    OwnState::Batch& bt = o.batches[b];
+                    o.places.push_back(OwnState::PiecePlace{uint32_t(n), uint32_t(q), b, bt.vertices, bt.indices});
+                    bt.vertices += uint32_t(pc.verts.size());
+                    bt.indices += uint32_t(pc.idx.size());
+                }
+            }
+            // the draws' rooms in the record: the ground, then the own bands, then the neighbours' strips, each layer's
+            // textures in their order, a texture's draws in theirs
+            o.batchOrder.resize(o.batches.size());
+            for (uint32_t k = 0; k < o.batchOrder.size(); ++k) o.batchOrder[k] = k;
+            std::stable_sort(o.batchOrder.begin(), o.batchOrder.end(), [&o](uint32_t x, uint32_t y) {
+                const OwnState::Batch &a = o.batches[x], &b = o.batches[y];
+                return a.layer != b.layer ? a.layer < b.layer : a.tex < b.tex;
+            });
+            for (const uint32_t k : o.batchOrder) {
+                OwnState::Batch& bt = o.batches[k];
+                bt.draw = o.rec.drawRoom(drawOf(bt.layer, bt.tex), bt.vertices, bt.indices);
+                o.drawLayer.push_back(bt.layer);
+                vertices += bt.vertices;
+                triangles += bt.indices / 3;
+            }
+            // then each piece copied into its place on the own ground's threads (every room made: none moves now)
+            uint8_t* intoVertices = o.rec.vertexData();
+            uint16_t* intoIndices = o.rec.indexData();
+            const std::vector<DrawCmd>& recDraws = o.rec.draws();
+            parallelChunks(o.places.size(), [&](size_t k) {
+                const OwnState::PiecePlace& at = o.places[k];
+                const OwnState::Piece& pc = o.outs[at.job].pieces[at.piece];
+                const DrawCmd& d = recDraws[o.batches[at.batch].draw];
+                std::memcpy(intoVertices + d.vertexOffset + size_t(at.vertex) * sizeof(own_ground::Tl2),
+                            pc.verts.data(), pc.verts.size() * sizeof(own_ground::Tl2));
+                uint16_t* to = intoIndices + d.firstIndex + at.index;
+                for (size_t i = 0; i < pc.idx.size(); ++i) to[i] = uint16_t(at.vertex + pc.idx[i]);
+            });
+            putting.stop();
         }
-        // the draws' rooms in the record: the ground, then the own bands, then the neighbours' strips, each layer's
-        // textures in their order, a texture's draws in theirs
-        o.batchOrder.resize(o.batches.size());
-        for (uint32_t k = 0; k < o.batchOrder.size(); ++k) o.batchOrder[k] = k;
-        std::stable_sort(o.batchOrder.begin(), o.batchOrder.end(), [&o](uint32_t x, uint32_t y) {
-            const OwnState::Batch &a = o.batches[x], &b = o.batches[y];
-            return a.layer != b.layer ? a.layer < b.layer : a.tex < b.tex;
-        });
-        for (const uint32_t k : o.batchOrder) {
-            OwnState::Batch& bt = o.batches[k];
-            bt.draw = o.rec.drawRoom(drawOf(bt.layer, bt.tex), bt.vertices, bt.indices);
-            o.drawLayer.push_back(bt.layer);
-            vertices += bt.vertices;
-            triangles += bt.indices / 3;
-        }
-        // then each piece copied into its place on the own ground's threads (every room made: none moves now)
-        uint8_t* intoVertices = o.rec.vertexData();
-        uint16_t* intoIndices = o.rec.indexData();
-        const std::vector<DrawCmd>& recDraws = o.rec.draws();
-        parallelChunks(o.places.size(), [&](size_t k) {
-            const OwnState::PiecePlace& at = o.places[k];
-            const OwnState::Piece& pc = o.outs[at.job].pieces[at.piece];
-            const DrawCmd& d = recDraws[o.batches[at.batch].draw];
-            std::memcpy(intoVertices + d.vertexOffset + size_t(at.vertex) * sizeof(own_ground::Tl2), pc.verts.data(),
-                        pc.verts.size() * sizeof(own_ground::Tl2));
-            uint16_t* to = intoIndices + d.firstIndex + at.index;
-            for (size_t i = 0; i < pc.idx.size(); ++i) to[i] = uint16_t(at.vertex + pc.idx[i]);
-        });
-        putting.stop();
         {
             CpuTimeWithin t(cpuPartTicks[kCpuFarModels], cpuPartTicks[kCpuOwnGround]);
             drawOwnModels(view, p, axes);  // 3.0.4-beta.14: the models past the far plane, into the same record
@@ -779,11 +834,27 @@ bool Renderer::Impl::drawOwnGround() {
         prepareGeometry(o.rec);
         if (vertexBase) {
             ownPass = true;
+            // 3.0.20-beta.23: the draws from the card read its vertices (t6), with this picture's fog and easing
+            const bool fromCard = std::any_of(o.drawCard.begin(), o.drawCard.end(), [](uint32_t n) { return n != 0; });
+            if (fromCard && groundCard) {
+                transition(groundCard, groundCardState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+                cardFog = &o.shading;
+                cardGroundMorph[0] = o.cardMorph[0], cardGroundMorph[1] = o.cardMorph[1];
+            }
             for (size_t k = 0; k < o.rec.draws().size(); ++k) {
                 seamPass = o.drawLayer[k] == terrain::kOwnBand || o.drawLayer[k] == terrain::kNeighbour;
                 seamOwnBand = o.drawLayer[k] == terrain::kOwnBand;
+                cardGroundDraw = groundCard && k < o.drawCard.size() && o.drawCard[k] != 0;
+                cardGroundCount = cardGroundDraw ? o.drawCard[k] : 0;
+                cardGroundBits = cardGroundDraw ? o.drawBits[k] : 0;
+                groundCardDraws += cardGroundDraw ? 1 : 0;
                 draw(o.rec, o.rec.draws()[k]);  // layer 3: the models (as the game's own models are drawn)
             }
+            if (fromCard) flushDraws();  // the last one from the card gathered with its constants
+            groundCardFrames += fromCard ? 1 : 0;
+            cardGroundDraw = false;
+            cardGroundCount = cardGroundBits = 0;
+            if (fromCard) cardFog = nullptr;
             seamPass = seamOwnBand = false;
             ownPass = false;
             // 3.0.20-beta.4: the game's still models drawn here when it leaves them
@@ -815,11 +886,15 @@ bool Renderer::Impl::drawOwnGround() {
         LOG_INFO("own ground: %s - %zu chunks of %zu in view, %zu draws, %zu vertices, %zu triangles, %.2f ms on the "
                  "CPU (frame %u: at most %zu vertices, %.2f ms; a frame %.1f corners given another colour, %.2f "
                  "chunks' colours made again; %.0f %% of the pictures drawn again as they were); strips between the "
-                 "textures %s",
+                 "textures %s; %s",
                  g->map.c_str(), chunks, g->mesh.chunks.size(), o.rec.draws().size(), vertices, triangles, built,
                  o.frames, o.most, o.slowest, double(o.cornersChanged) / double(o.frames),
                  double(o.chunksMade) / double(o.frames), 100.0 * double(o.reused) / double(o.frames),
-                 blends ? "on" : "off");
+                 blends ? "on" : "off",
+                 onCard                ? "its vertices put by the card (ground_vs)"
+                 : !groundOnCard()     ? "its vertices put by the processor (the card's way off)"
+                 : groundCardSerial == g->serial && groundCard ? "its vertices put by the processor while going up"
+                                                               : "its vertices put by the processor");
     // 3.0.17-beta.19 (R-7XY449: Prontera's ground white, its stones twice their colour - 242 for 120 - the rest of the
     // picture as it is): what the ground's colour is made of, the first picture and ten seconds on
     if (o.frames == 1 || o.frames == 600) {
@@ -841,11 +916,14 @@ bool Renderer::Impl::drawOwnGround() {
         LOG_INFO("own ground: %s - the last %u pictures: %.0f %% drawn again as they were; made anew for the camera "
                  "%u, the ground's colours %u, their mean %u, the hills' light %u, the fog %u, the state %u, the "
                  "models' colours %u, the rest %u; now the corners' mean #%08X, the fog %u-%u, stage ops %u/%u; the "
-                 "slowest made in %.2f ms (%u chunks given their colours anew in it, %u at most in a picture)",
+                 "slowest made in %.2f ms (%u chunks given their colours anew in it, %u at most in a picture); from "
+                 "the card in %u of the pictures, %.1f draws a picture",
                  g->map.c_str(), o.minuteFrames, 100.0 * double(o.minuteReused) / double(o.minuteFrames), o.anew[0],
                  o.anew[1], o.anew[2], o.anew[3], o.anew[4], o.anew[5], o.anew[6], o.anew[7], o.shading.meanColour(),
                  o.shading.specularAt(100.0f) >> 24, o.shading.specularAt(1000.0f) >> 24, o.like.stage[0].colorOp,
-                 o.like.stage[1].colorOp, o.minuteSlowest, o.minuteSlowestRecoloured, o.minuteMostRecoloured);
+                 o.like.stage[1].colorOp, o.minuteSlowest, o.minuteSlowestRecoloured, o.minuteMostRecoloured,
+                 groundCardFrames, groundCardFrames ? double(groundCardDraws) / double(groundCardFrames) : 0.0);
+        groundCardFrames = groundCardDraws = 0;
         o.minuteFrames = o.minuteReused = 0;
         o.minuteSlowest = 0;
         o.minuteSlowestRecoloured = o.minuteMostRecoloured = 0;
@@ -1293,6 +1371,99 @@ bool Renderer::Impl::drawOwnWater() {
     }
     geometryList = 0;  // the game's record's vertices go up again with its next draw
     return !lost;
+}
+
+// 3.0.20-beta.23 (the owner's «берем», item 1 - «Своя земля» on the card): the map's own ground made on the card - a
+// default heap's buffer of its Layout, its vertices and their blends put up kGroundPiece a picture through this list
+// (the upload ring's room), its colours sent a chunk at a time as they are made (sendGroundColours); true once all of
+// it is up. A buffer the card cannot make: the processor's way from then on
+bool Renderer::Impl::ensureGroundCard(const OwnGround& g) {
+    namespace card = own_ground::card;
+    if (!groundOnCard() || !open) return false;
+    if (groundCardSerial != g.serial) {
+        if (groundCard) discard(groundCard);  // the card may still read the last map's: let go with its list
+        groundCard = nullptr;
+        groundCardSerial = g.serial;
+        groundCardUp = 0;
+        groundCardPictures = 0;
+        groundLayout = card::layoutOf(g.mesh, g.distant);
+        groundCardFresh[0].assign(g.mesh.chunks.size(), 0);
+        groundCardFresh[1].assign(g.distant.chunks.size(), 0);
+        if (!groundLayout.all) return false;
+        D3D12_HEAP_PROPERTIES heap{};
+        heap.Type = D3D12_HEAP_TYPE_DEFAULT;
+        D3D12_RESOURCE_DESC desc{};
+        desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        desc.Width = UINT64(groundLayout.size()) * 16;
+        desc.Height = 1;
+        desc.DepthOrArraySize = 1;
+        desc.MipLevels = 1;
+        desc.Format = DXGI_FORMAT_UNKNOWN;
+        desc.SampleDesc.Count = 1;
+        desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        const HRESULT hr =
+            device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COPY_DEST,
+                                            nullptr, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&groundCard));
+        if (groundCardSrv == kNoSrv) groundCardSrv = allocSrv();
+        if (FAILED(hr) || !groundCard || groundCardSrv == kNoSrv) {
+            LOG_ERROR("own ground: no buffer on the card for %s's %u vertices (0x%08lX) - placed by the processor from "
+                      "now on",
+                      g.map.c_str(), groundLayout.all, static_cast<unsigned long>(hr));
+            if (groundCard) groundCard->Release();
+            groundCard = nullptr;
+            groundCardFailed = true;
+            return false;
+        }
+        nameResource(groundCard, "own ground on the card");
+        groundCardState = D3D12_RESOURCE_STATE_COPY_DEST;
+        D3D12_SHADER_RESOURCE_VIEW_DESC v{};
+        v.Format = DXGI_FORMAT_R32G32B32A32_UINT;
+        v.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+        v.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        v.Buffer.NumElements = groundLayout.size();
+        device->CreateShaderResourceView(groundCard, &v, cpuSrvHandle(groundCardSrv));
+    }
+    if (!groundCard) return false;
+    if (groundCardUp >= groundLayout.all) return true;
+    const uint32_t count = std::min(groundLayout.all - groundCardUp, kGroundPiece);
+    const UINT64 vertexBytes = UINT64(count) * card::kVertexWords * 4;
+    const Upload u = allocUpload(vertexBytes + UINT64(count) * 4, 16);
+    if (!u.cpu) return false;
+    uint32_t* words = reinterpret_cast<uint32_t*>(u.cpu);
+    card::vertexWords(g.mesh, g.distant, groundCardUp, count, words);
+    card::blendWords(g.mesh, g.distant, groundCardUp, count, words + size_t(count) * card::kVertexWords);
+    flushDraws();  // the draws gathered so far before the copies' barriers
+    transition(groundCard, groundCardState, D3D12_RESOURCE_STATE_COPY_DEST);
+    list->CopyBufferRegion(groundCard, UINT64(groundCardUp) * card::kVertexWords * 4, slots[slot].upload, u.offset,
+                           vertexBytes);
+    list->CopyBufferRegion(groundCard, UINT64(groundLayout.blendsAt()) * 16 + UINT64(groundCardUp) * 4,
+                           slots[slot].upload, u.offset + vertexBytes, UINT64(count) * 4);
+    groundCardUp += count;
+    ++groundCardPictures;
+    if (groundCardUp < groundLayout.all) return false;
+    LOG_INFO("own ground: %s on the card - %u vertices (%u of the smooth ground), %.1f MB, put up in %d picture(s); "
+             "ground_vs puts them",
+             g.map.c_str(), groundLayout.all, groundLayout.fine, double(groundLayout.size()) * 16.0 / 1048576.0,
+             groundCardPictures);
+    return true;
+}
+
+// 3.0.20-beta.23: a chunk's colours (OwnState::colours, made by ownColours) into the card's buffer
+void Renderer::Impl::sendGroundColours(const OwnGround& g, int which, size_t chunk) {
+    const terrain::Mesh& mesh = which ? g.distant : g.mesh;
+    if (!groundCard || chunk >= mesh.chunks.size() || chunk >= groundCardFresh[which].size()) return;
+    const terrain::Chunk& ch = mesh.chunks[chunk];
+    const std::vector<uint32_t>& colours = ownState.colours[which];
+    if (!ch.vertexCount || size_t(ch.firstVertex) + ch.vertexCount > colours.size()) return;
+    const UINT64 bytes = UINT64(ch.vertexCount) * 4;
+    const Upload u = allocUpload(bytes, 16);
+    if (!u.cpu) return;
+    std::memcpy(u.cpu, colours.data() + ch.firstVertex, size_t(bytes));
+    const uint32_t first = (which ? groundLayout.fine : 0u) + ch.firstVertex;
+    transition(groundCard, groundCardState, D3D12_RESOURCE_STATE_COPY_DEST);
+    list->CopyBufferRegion(groundCard, UINT64(groundLayout.coloursAt()) * 16 + UINT64(first) * 4, slots[slot].upload,
+                           u.offset, bytes);
+    groundCardFresh[which][chunk] = 1;
 }
 
 }  // namespace uagfx::gpu

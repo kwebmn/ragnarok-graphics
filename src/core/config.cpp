@@ -198,6 +198,7 @@ EffectSettings effectsOff() {
     e.smoothHills = false;
     e.ownGround = false;  // 3.0.4-beta.10
     e.ownFarModels = false;  // 3.0.4-beta.14
+    e.ownGroundCard = false;  // 3.0.20-beta.23
     e.groundSeams = false;
     e.materials = false;
     e.underwater = false;

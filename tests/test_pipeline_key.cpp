@@ -401,3 +401,44 @@ TEST(pipeline_key_card_models_is_a_key_of_its_own) {
     bad.dstBlend = BLEND_INVSRCALPHA;
     CHECK(!validPipelineKey(packPipelineKey(bad)));
 }
+
+// 3.0.20-beta.23 (the owner's «берем», item 1 - «Своя земля» on the card): a key of its own (bit 31) - ground_vs, no
+// vertices of the draw's own (the picture's indices number the card's) - for a draw of the world with two texture
+// coordinates, depth tested, its strips blended over it unwritten; never the layer, the water, the models' key or
+// another shader
+TEST(pipeline_key_card_ground_is_a_key_of_its_own) {
+    DrawSetup s;
+    s.zEnable = true;
+    s.zWrite = true;
+    s.zFunc = CMP_LESSEQUAL;
+    s.cull = CULL_NONE;
+    PipelineKey k = pipelineKey(s, FVF_TL2);
+    const uint64_t plain = packPipelineKey(k);
+    k.cardGround = true;
+    CHECK(unpackPipelineKey(packPipelineKey(k)) == k && unpackPipelineKey(packPipelineKey(k)).cardGround);
+    CHECK(packPipelineKey(k) != plain && validPipelineKey(packPipelineKey(k)));
+    CHECK((packPipelineKey(k) >> 31 & 1) == 1 && (plain >> 31 & 1) == 0);
+    PipelineKey strip = k;  // a neighbour's strip: blended over the ground, its depth not written
+    strip.zWrite = false;
+    strip.blend = true;
+    strip.srcBlend = BLEND_SRCALPHA;
+    strip.dstBlend = BLEND_INVSRCALPHA;
+    CHECK(validPipelineKey(packPipelineKey(strip)));
+    PipelineKey bad = k;
+    bad.twoUv = false;
+    CHECK(!validPipelineKey(packPipelineKey(bad)));
+    bad = k;
+    bad.cardModels = true;
+    CHECK(!validPipelineKey(packPipelineKey(bad)));
+    bad = k;
+    bad.water = true;
+    CHECK(!validPipelineKey(packPipelineKey(bad)));
+    bad = k;
+    bad.zEnable = false;
+    bad.zWrite = false;
+    bad.zFunc = CMP_ALWAYS;
+    CHECK(!validPipelineKey(packPipelineKey(bad)));
+    bad = k;
+    bad.shader = DrawShader::Smoke;
+    CHECK(!validPipelineKey(packPipelineKey(bad)));
+}

@@ -494,6 +494,9 @@ struct EffectSettings {
     // 3.0.4-beta.14 (the user chose «Дома и деревья вдали»), a part of own_ground: the map's houses, trees and
     // rocks from its files (core/own_models.hpp) past the game's far plane, where it cuts them off
     bool ownFarModels = true;
+    // 3.0.20-beta.23 (the owner's «берем», item 1), a part of own_ground: its vertices kept on the card and put there
+    // by ground_vs (core/own_ground_card.hpp) - the processor only picks the chunks in view; off: put by the processor
+    bool ownGroundCard = true;
     // 1.16: the remaster's world reflections (mirror.cpp): the last frame's opaque world turned over the water's
     // level, read by water_ps where the picture has nothing to reflect. Remaster mode. Off by default.
     bool worldReflections = false;

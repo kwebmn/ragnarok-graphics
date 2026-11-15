@@ -35,6 +35,8 @@ struct PipelineKey {
     bool behind = false;  // 2.6.3: one step of a 16-bit Z deeper (behindGround)
     // 3.0.20-beta.11: the game's still models from the card - model_vs, the faces' numbers as the instances (bit 30)
     bool cardModels = false;
+    // 3.0.20-beta.23: the own ground from the card - ground_vs, the picture's indices number its vertices (bit 31)
+    bool cardGround = false;
     bool operator==(const PipelineKey& o) const;
 };
 

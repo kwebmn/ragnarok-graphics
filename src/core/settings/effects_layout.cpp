@@ -93,7 +93,8 @@ const EffectLayout kEffects[] = {
     {"effects.ground_seams", {}, {}, {}, 3},  // 1.9
 
     {"effects.smooth_hills", {}, {"effects.smooth_hills_strength"}, {}, 3},  // 1.15
-    {"effects.own_ground", {"effects.own_far_models"}, {}, {}, 3},  // 3.0.4-beta.10, 3.0.4-beta.14 its far models
+    // 3.0.4-beta.10; 3.0.4-beta.14 its far models; 3.0.20-beta.23 its vertices on the card
+    {"effects.own_ground", {"effects.own_far_models", "effects.own_ground_card"}, {}, {}, 3},
     {"effects.world_reflections", {}, {}, {}, 3},  // 1.16
     {"effects.sprite_light", {}, {"effects.sprite_light_strength"}, {}, 2},  // 1.17
     {"effects.seasons", {"effects.season_snow", "effects.season_grass"}, {}, {}, 2},  // 1.20

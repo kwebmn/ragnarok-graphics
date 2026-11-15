@@ -36,6 +36,7 @@
 #include "win/gpu/threads.hpp"
 #include "core/game_models_place.hpp"
 #include "core/own_ground.hpp"
+#include "core/own_ground_card.hpp"
 #include "core/own_models.hpp"
 #include "core/seams.hpp"
 #include "core/seasons.hpp"
@@ -310,6 +311,7 @@ struct Renderer::Impl {
         D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         UINT indexCount = 0, firstIndex = 0;
         UINT card = 0;  // 3.0.20-beta.11: the game's still models' faces from the card - so many instances (model_vs)
+        UINT ground = 0;  // 3.0.20-beta.23: the own ground from the card - so many 32-bit indices (ground_vs)
         bool sameState(const PendingDraw& o) const {
             return pso == o.pso && textureKey == o.textureKey && samplers.ptr == o.samplers.ptr &&
                    hasScene == o.hasScene && sceneKey == o.sceneKey && topology == o.topology &&
@@ -658,6 +660,7 @@ struct Renderer::Impl {
     ID3DBlob* weather3dVs = nullptr;
     ID3DBlob* weather3dPs = nullptr;
     ID3DBlob* modelVs = nullptr;  // 3.0.20-beta.11: the game's still models from the card (game_models.cpp)
+    ID3DBlob* groundVs = nullptr;  // 3.0.20-beta.23: the own ground from the card (own_ground.cpp)
     ID3D12PipelineState* weather3dPipelines[4] = {};
     std::string weather3dLogged;
     float weather3dDrift[2] = {0.0f, 0.0f};
@@ -1452,6 +1455,10 @@ struct Renderer::Impl {
         FrameRecord rec, uploads;
         // 3.0.20-beta.20: the layers' textures' vertices go straight into rec's draws (Batch, PiecePlace below)
         std::vector<uint8_t> drawLayer;  // of each of rec's draws
+        // 3.0.20-beta.23: of each of rec's draws - its indices from the card (0: vertices of its own), ground_vs's bits
+        std::vector<uint32_t> drawCard, drawBits;
+        std::vector<uint32_t> cardRooms;  // the card's draws' places in rec, in the lists' order
+        float cardMorph[2] = {0.0f, 0.0f};  // the smooth ground's easing the record was made with
         // 3.0.4-beta.12: each vertex's diffuse kept (the mesh's, the distant one's) and each chunk's up to date - made
         // again round the corners the game gives another colour (own_ground::Shading::takeChanged)
         std::vector<uint32_t> colours[2];
@@ -1463,6 +1470,7 @@ struct Renderer::Impl {
             size_t k = 0;
             int which = 0;
             bool recolour = false;
+            float nearest = 0.0f, farthest = 0.0f;  // 3.0.20-beta.23: its box's view depths (the squeeze's sides)
         };
         struct Piece {
             uint8_t layer = 0;
@@ -1525,6 +1533,7 @@ struct Renderer::Impl {
             uint32_t fog[2] = {0, 0};
             DrawSetup like;
             uint64_t gameModels = 0;  // 3.0.20-beta.4: the frame's game models (their ids, factors, way) hashed
+            bool onCard = false;      // 3.0.20-beta.23: its ground from the card
             bool valid = false;
         } made;
         size_t gameTriangles = 0;  // 3.0.20-beta.4: the game's still models' in the record (drawGameModels)
@@ -1659,6 +1668,29 @@ struct Renderer::Impl {
     bool cardModelsReady() const {
         return modelVs && !gameFacesFailed && gameCards.faces() < gamemodels::kCardMostFaces;
     }
+    // 3.0.20-beta.23 (the owner's «берем», item 1 - «Своя земля» on the card): the own ground's vertices on the card in
+    // their file's places (core/own_ground_card Layout: the smooth mesh's, the plain one's, the colours, the strips'
+    // blends) - a default heap's buffer, t6 of the scene's table -, put up a few MB a picture, a chunk's colours sent
+    // as they are made; a picture's draws a layer's texture's on each side of the squeeze, their indices in the
+    // record's vertices (ten a vertex of 40 bytes) for ground_vs. The processor's way (ownChunk) until all is up
+    ID3D12Resource* groundCard = nullptr;
+    D3D12_RESOURCE_STATES groundCardState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT groundCardSrv = kNoSrv;
+    own_ground::card::Layout groundLayout;
+    uint32_t groundCardSerial = 0;  // the ground (OwnGround::serial) it is made for, 0 none
+    uint32_t groundCardUp = 0;      // its vertices put up so far
+    int groundCardPictures = 0;     // pictures putting them up, for the log
+    bool groundCardFailed = false;
+    std::vector<uint8_t> groundCardFresh[2];  // each chunk's colours on the card (the smooth mesh's, the plain one's)
+    own_ground::card::Lists groundLists;
+    bool cardGroundDraw = false;  // draw() draws a layer's texture from the card (cardGroundCount indices)
+    UINT cardGroundCount = 0;
+    uint32_t cardGroundBits = 0;          // ground_vs's: the layer, past the squeeze, the axes turned
+    float cardGroundMorph[2] = {0, 0};    // the picture's morphFrom, fineDepth
+    uint32_t groundCardDraws = 0, groundCardFrames = 0;  // the minute's, for the log
+    bool groundOnCard() const { return groundVs && !groundCardFailed && effects.ownGroundCard; }
+    bool ensureGroundCard(const OwnGround& g);  // made for g, a piece more put up; true: all of it is up
+    void sendGroundColours(const OwnGround& g, int which, size_t chunk);
     // 3.0.20-beta.12 (the owner's «да, делай» - stage 3): the game's still models we drew this picture into the
     // casters (sunVerts, sunCasters) - the water's reflections and the torches' shadows take them as the game's own
     void noteGameCasters();
@@ -1692,11 +1724,12 @@ struct Renderer::Impl {
         camera::Projection p;
         map::Axes axes;
         float fineDepth = 0, morphFrom = 0, from = 0;
-        bool blends = false, fogged = false;
-        uint32_t plain = 0;
+        bool blends = false;
         size_t textures = 0;
+        own_ground::card::Putting putting;  // 3.0.20-beta.23: a vertex's way, as the card's (core/own_ground_card)
     };
     void ownChunk(const OwnMaking& m, const OwnState::ChunkJob& job, OwnState::ChunkOut& out);
+    void ownColours(const OwnMaking& m, const OwnState::ChunkJob& job);  // 3.0.20-beta.23: a chunk's colours alone
     bool noteOwnWater(const FrameRecord& rec, const DrawCmd& d);  // 3.0.4-beta.20: true - a quad of the map's water
     void noteOwnWaterAhead(const FrameRecord& rec, size_t from);  // 3.0.4-beta.24: the record's first such on
     bool drawOwnWater();  // once a picture, before the game's first water or at the interface; false: lost

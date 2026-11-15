@@ -449,8 +449,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 2.2.4: DLSS's (upscaleMipBias) - not for what its mask keeps from the history (sprites, effects): their finer
     // texels it cannot gather, they would only shimmer
     const float mipBias = toWorld && !mask ? worldMipBias() : 0.0f;
-    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft || matTex || hilly || cardModelsDraw ? 5 : 2, mipBias,
-                  true))
+    if (!makeRoom(sampled[0], sampled[1], aniso,
+                  water || soft || matTex || hilly || cardModelsDraw || cardGroundDraw ? 5 : 2, mipBias, true))
         return;
     if (geometryList != listSerial) {  // also after a list that failed to close: its slot is used again (0.4.1 review)
         flushDraws();  // 2.5: the draws gathered so far are of the vertices uploaded before these
@@ -519,8 +519,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     next.textureKey = textureKey;
     next.textures = lastTextures;
     next.samplers = samplers;
-    // 3.0.20-beta.11: t6 the game's still models' faces while they are drawn from the card
-    const UINT t6 = cardModelsDraw ? gameFacesSrv : kNoSrv;
+    // 3.0.20-beta.11: t6 the game's still models' faces while they are drawn from the card; 3.0.20-beta.23 the own
+    // ground's vertices
+    const UINT t6 = cardModelsDraw ? gameFacesSrv : cardGroundDraw ? groundCardSrv : kNoSrv;
     const auto sceneOf = [&](UINT t2, UINT t3, UINT t5) {
         next.scene = sceneTable(t2, t3, t2, t5, t6);
         next.hasScene = true;
@@ -546,7 +547,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         transition(sceneDepth, sceneDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         sceneOf(sceneColorSrv, sceneDepthSrv, kNoSrv);
     }
-    if (cardModelsDraw && !next.hasScene) sceneOf(srv[0], srv[0], kNoSrv);  // 3.0.20-beta.11: t6 alone wanted
+    if ((cardModelsDraw || cardGroundDraw) && !next.hasScene) sceneOf(srv[0], srv[0], kNoSrv);  // t6 alone wanted
     Constants c{};
     c.targetSize[0] = float(toWorld ? renderWidth : width);
     c.targetSize[1] = float(toWorld ? renderHeight : height);
@@ -810,6 +811,26 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         std::memcpy(c.hole, fog, sizeof fog);
         next.card = cardCount;
     }
+    // 3.0.20-beta.23: the own ground from the card - the camera (viewToWorld) and the projection; the fog's line and
+    // its colour (holeX, holeY, holeH; holeZ 0: no silhouette), the vertices on the card and the smooth mesh's (holeG,
+    // holeUy), its easing (holeUz, holeF); the draw's bits in sharpen; so many indices (ground_vs)
+    if (cardGroundDraw) {
+        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
+        const uint32_t tint = cardFog ? cardFog->specularRgb() : 0u;
+        float words[4];
+        std::memcpy(&words[0], &tint, 4);
+        std::memcpy(&words[1], &groundLayout.all, 4);
+        std::memcpy(&words[2], &groundLayout.fine, 4);
+        std::memcpy(&words[3], &cardGroundBits, 4);
+        const float hole8[8] = {cardFog ? cardFog->fogA() : 255.0f, cardFog ? cardFog->fogB() : 0.0f, words[0], 0.0f,
+                                words[1], words[2], cardGroundMorph[0], cardGroundMorph[1]};
+        std::memcpy(c.hole, hole8, sizeof hole8);
+        c.sharpen = words[3];
+        next.ground = cardGroundCount;
+    }
     // 2.5: the draw goes on the gathered call when its state is the same and its vertices follow (draw_batch.hpp);
     // by itself as before: merging off, the game's own indices, a quad without the pattern
     next.pso = pso;
@@ -821,7 +842,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const UINT stride = FrameRecord::stride(d.fvf);
     batch::Draw shape{batch::kindOf(d.primitive, d.vertexCount, d.indexCount != 0), d.vertexOffset, d.vertexCount,
                       stride};
-    if (!mergeDraws || (shape.kind == batch::Kind::Quads && !ensureQuadIndices()) || next.card)
+    if (!mergeDraws || (shape.kind == batch::Kind::Quads && !ensureQuadIndices()) || next.card || next.ground)
         shape.kind = batch::Kind::Single;
     ++drawsGathered;
     if (pendingBatch.joins(shape) && next.sameState(pendingDraw)) {

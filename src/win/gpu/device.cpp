@@ -725,6 +725,14 @@ void Renderer::Impl::flushDraws() {
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &p.c, 0);
     const batch::Kind kind = pendingBatch.kind();
     list->IASetPrimitiveTopology(kind == batch::Kind::Quads ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST : p.topology);
+    if (p.ground) {  // 3.0.20-beta.23: the own ground from the card - its indices in this draw's vertices, 32-bit
+        const D3D12_INDEX_BUFFER_VIEW ib{vertexBase + pendingBatch.firstByte(), p.ground * 4, DXGI_FORMAT_R32_UINT};
+        list->IASetIndexBuffer(&ib);
+        list->DrawIndexedInstanced(p.ground, 1, 0, 0, 0);
+        ++drawCalls;
+        pendingBatch.close();
+        return;
+    }
     if (p.card) {  // 3.0.20-beta.11: the game's still models' faces from the card - their numbers, an instance each
         const D3D12_VERTEX_BUFFER_VIEW faces{vertexBase + pendingBatch.firstByte(), p.card * 4, 4};
         list->IASetVertexBuffers(0, 1, &faces);
@@ -1988,11 +1996,16 @@ void Renderer::Impl::destroy() {
     releaseCom(grass3dPs);
     releaseCom(weather3dVs);  // 3.0.19-beta.40
     releaseCom(modelVs);      // 3.0.20-beta.11
+    releaseCom(groundVs);     // 3.0.20-beta.23
     if (gameFaces) {
         gameFaces->Unmap(0, nullptr);
         gameFacesMapped = nullptr;
     }
     releaseCom(gameFaces);
+    releaseCom(groundCard);  // 3.0.20-beta.23
+    groundCardSrv = kNoSrv;
+    groundCardSerial = groundCardUp = 0;
+    groundCardFailed = false;
     gameFacesSrv = kNoSrv;  // the heaps go with the device: made again with the next one
     gameFacesRoom = gameFacesUp = 0;
     gameFacesFailed = false;
