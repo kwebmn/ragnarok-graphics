@@ -228,3 +228,6 @@ again in every face, all of it again whenever the view moved): the renderer's CP
    the list's changes), drawGameModelsCard(o.shading) after its draws every picture; drawGameModelsAlone: the card
    with gameFog. Log: «game models: drawn by us in N pictures (M of them from the card) ...». The device's teardown
    lets the faces' slot go. Untested in the game.
+   R-BA9PE2 and R-36ND9B (the owner, beta.11, 3D): CONFIRMED - all pictures from the card, renderer CPU 5.0-7.6 ms (off
+   9.3-9.8), the game's draws 1.2-2.2 (off 3.2-3.3), long frames renderer 3-23 of 1800 (off ~127). The owner skipped
+   the checks of the view from above (beta.9) and Direct3D 11 (beta.10): «давай это пропустим».
