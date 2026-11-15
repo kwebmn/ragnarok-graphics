@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.3 — what's new · 2026-11-15
+
+- **The game's models to the renderer (stage 2a of «Models by our renderer»).** The first time the game draws a still model on a map, the driver takes it as the game draws it — its vertices in the world, faces, texture coordinates, colours and textures — and hands it to the renderer. For now the renderer only keeps them and sets them against our own models from the map's files; the log says how many were taken and whether they match ours. The picture does not change.
+
 # uaRO Graphics 3.0.20-beta.2 — what's new · 2026-11-15
 
 - **Storage no longer freezes on a slow disk.** The things' icons are read from the game's archives and the texture pack only a few milliseconds a frame, the rest in the next frames. A storage of hundreds of things could stop the game for 15 seconds on a slow disk; now the icons fill in a moment after it opens.
