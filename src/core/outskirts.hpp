@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <vector>
 
 #include "core/gnd.hpp"
 #include "core/terrain.hpp"
@@ -15,7 +16,7 @@ namespace uagfx::outskirts {
 // by the map's sun, kept in each vertex's colour (grey, 127.5 the edge's own). Chunks of kChunkCells a side, their
 // quads the larger the further off; each chunk's edges hang a skirt down (no crack between two sizes), the map's edge
 // a curtain.
-// Where the edge lies under the map's water none of it - the sea past it is the next step's
+// 3.0.20-beta.31: where the edge lies under the map's water its bed, flat under the level (seaFrame's sea over it)
 constexpr int kRing = 320;        // cells off the edges (the 3D view's farthest sight some 3200 units)
 constexpr int kChunkCells = 32;
 constexpr int kWindow = 6;        // cells round a point of the edge it is smoothed over
@@ -28,5 +29,11 @@ struct Options {
 terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const terrain::Sun& sun, const Options& o);
 // the height (up along -y) at the cells' place (cx, cy) - its first corner 0, 0 - off the map's ground
 float heightAt(const gnd::Ground& g, const Options& o, float cx, float cy);
+// 3.0.20-beta.31 (6 and 7: the sea past a map's wet edges): the sea round the map at its water's level, as far as the
+// outskirts - four quads (two triangles each, x y z a corner, the world's places as the meshes') with the map's own
+// water inside them; where the outskirts' land stands over it, it hides it. None for a map without water or whose
+// edge lies under it at fewer than a quarter of its corners - a river's or a lake's at the edge, no sea (its land all
+// dry past the edge)
+std::vector<float> seaFrame(const gnd::Ground& g, const Options& o);
 
 }  // namespace uagfx::outskirts

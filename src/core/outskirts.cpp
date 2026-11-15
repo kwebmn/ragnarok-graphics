@@ -12,6 +12,7 @@ namespace {
 
 constexpr float kHills = 14.0f, kMountains = 380.0f;  // units up
 constexpr float kSkirt = 10.0f, kCurtain = 8.0f;      // units down
+constexpr float kSeaShare = 0.25f;  // 3.0.20-beta.31: the edge's corners under the water a sea's map has
 
 float hash2(int x, int y, uint32_t seed) {
     uint32_t h = uint32_t(x) * 0x8DA6B343u ^ uint32_t(y) * 0xD8163841u ^ (seed + 0x9E3779B9u) * 0xCB1AB31Fu;
@@ -96,9 +97,18 @@ public:
             }
         for (const auto& t : spans)
             spanOf_[t.first] = std::clamp(float(t.second.first / t.second.second), 0.0625f, 1.0f);
-        double sum = 0.0;
-        for (const EdgePoint& e : points_) sum += e.smooth;
-        meanHeight = points_.empty() ? 0.0f : float(sum / double(points_.size()));
+        // 3.0.20-beta.31: a sea's map - a quarter of its edge under the water at least (alberta 0.29, comodo 0.38,
+        // izlude 0.91); a river's or a lake's at the edge (prt_fild08 0.17, pay_fild01 0.13) no sea: the edge all dry
+        sea_ = wetShare() >= kSeaShare;
+        if (!sea_)
+            for (EdgePoint& e : points_) e.wet = 0.0f;
+        double sum = 0.0;  // the dry corners' - the land far off never sinks under the water
+        size_t dry = 0;
+        for (const EdgePoint& e : points_)
+            if (e.wet < 0.5f) sum += e.smooth, ++dry;
+        if (!dry)
+            for (const EdgePoint& e : points_) sum += e.smooth, ++dry;
+        meanHeight = dry ? float(sum / double(dry)) : 0.0f;
     }
     // a place on the border, between its corners
     EdgePoint at(float bx, float by) const {
@@ -179,8 +189,16 @@ private:
     std::vector<EdgePoint> points_;
     std::map<int, float> spanOf_;
     std::vector<bool> backside_;
+    bool sea_ = false;
+
 public:
-    float meanHeight = 0.0f;  // of the edge's corners' smoothed heights: the land far off settles to it
+    float meanHeight = 0.0f;  // of the edge's dry corners' smoothed heights: the land far off settles to it
+    bool sea() const { return sea_; }
+    float wetShare() const {  // the edge's corners under the water, of all
+        size_t wet = 0;
+        for (const EdgePoint& e : points_) wet += e.wet >= 0.5f ? 1 : 0;
+        return points_.empty() ? 0.0f : float(wet) / float(points_.size());
+    }
 };
 
 float heightOf(const gnd::Ground& g, const Options& o, const Edge& edge, float cx, float cy, float* wet = nullptr,
@@ -194,6 +212,11 @@ float heightOf(const gnd::Ground& g, const Options& o, const Edge& edge, float c
     // valleys went on straight out to the horizon
     float base = e.exact + (e.smooth - e.exact) * smoothBetween(0.0f, 8.0f, d);
     base += (edge.meanHeight - base) * smoothBetween(8.0f, 60.0f, d);
+    // 3.0.20-beta.31: past a wet edge the sea's bed - flat, 15 units under the water's level at least
+    if (o.water) {
+        const float bed = std::max(e.smooth, o.waterLevel + 15.0f);
+        base += (bed - base) * e.wet * smoothBetween(0.0f, 8.0f, d);
+    }
     const float hills = kHills * fbm(cx / 26.0f, cy / 26.0f, o.seed) * smoothBetween(0.0f, 12.0f, d);
     const float mountains =
         kMountains * smoothBetween(40.0f, 240.0f, d) * (0.3f + 0.7f * ridged(cx / 110.0f, cy / 110.0f, o.seed + 7u));
@@ -211,6 +234,24 @@ struct Part {
 float heightAt(const gnd::Ground& g, const Options& o, float cx, float cy) {
     const Edge edge(g, o);
     return heightOf(g, o, edge, cx, cy);
+}
+
+std::vector<float> seaFrame(const gnd::Ground& g, const Options& o) {
+    std::vector<float> out;
+    if (!o.water || g.width <= 0 || g.height <= 0) return out;
+    const Edge edge(g, o);
+    if (!edge.sea()) return out;
+    const float x0 = -0.5f * float(g.width) * g.zoom, x1 = -x0, z0 = -0.5f * float(g.height) * g.zoom, z1 = -z0;
+    const float r = float(o.ring) * g.zoom, X0 = x0 - r, X1 = x1 + r, Z0 = z0 - r, Z1 = z1 + r;
+    const auto quad = [&](float ax, float az, float bx, float bz) {
+        const float c[4][2] = {{ax, az}, {bx, az}, {ax, bz}, {bx, bz}};
+        for (const int k : {0, 1, 2, 1, 3, 2}) out.insert(out.end(), {c[k][0], o.waterLevel, c[k][1]});
+    };
+    quad(X0, Z0, X1, z0);  // north
+    quad(X0, z1, X1, Z1);  // south
+    quad(X0, z0, x0, z1);  // west
+    quad(x1, z0, X1, z1);  // east
+    return out;
 }
 
 terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const terrain::Sun& sun, const Options& o) {
@@ -279,7 +320,7 @@ terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const ter
                     float wet = 0.0f;
                     int texture = -1;
                     heightOf(g, o, edge, mx, my, &wet, &texture);
-                    if (texture < 0 || wet > 0.5f) continue;  // under the map's water: the sea's (the next step)
+                    if (texture < 0) continue;
                     Part& part = parts[texture];
                     if (part.grid.empty()) part.grid.assign(size_t(n + 1) * size_t(n + 1), -1);
                     const uint32_t a = vertexOf(part, texture, i, j), b = vertexOf(part, texture, i + 1, j);

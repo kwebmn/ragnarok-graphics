@@ -467,11 +467,12 @@ void MapWorld::loop() {
                         for (const char c : name) seed = (seed ^ uint8_t(c)) * 16777619u;
                         ring.seed = seed;
                         own->outskirts = outskirts::build(full, own->atlas, sun, ring);
+                        own->seaFrame = outskirts::seaFrame(full, ring);  // 3.0.20-beta.31: the sea past it
                         LOG_INFO("own ground: %s's outskirts - %u chunks, %u vertices, %u triangles past its edges, "
-                                 "%d cells off (the 3D view's horizon)",
+                                 "%d cells off (the 3D view's horizon)%s",
                                  name.c_str(), unsigned(own->outskirts.chunks.size()),
                                  unsigned(own->outskirts.vertices.size()), unsigned(own->outskirts.indices.size() / 3),
-                                 ring.ring);
+                                 ring.ring, own->seaFrame.empty() ? "" : "; the sea past its wet edges");
                     }
                     for (uint8_t r : resting) own->restingCells += r;
                     own->wallLight.assign(full.cells.size() * 2, 0u);

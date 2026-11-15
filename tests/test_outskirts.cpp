@@ -107,8 +107,10 @@ TEST(outskirts_lit_by_the_maps_mean_light) {
     CHECK(m.vertices[0].lm[0] == uv[0] && m.vertices[0].lm[1] == uv[1]);
 }
 
-// where the edge lies under the map's water none of it yet (its sea: the next step)
-TEST(outskirts_none_past_a_wet_edge) {
+// 3.0.20-beta.31 (6 and 7: the sea past a map's wet edge): where the edge lies under the map's water its bed - flat
+// under the water's level, no hills or mountains - and the sea's frame round the map at the level (the map's own water
+// inside it), as far as the outskirts: four quads; none for a map whose edges are all dry
+TEST(outskirts_a_sea_bed_and_the_seas_frame_past_a_wet_edge) {
     gnd::Ground g = groundOf();
     for (int y = 0; y < 16; ++y)
         for (int x = 0; x < 8; ++x)
@@ -118,11 +120,46 @@ TEST(outskirts_none_past_a_wet_edge) {
     o.water = true;
     o.waterLevel = 0.0f;
     const terrain::Mesh m = outskirts::build(g, atlas, terrain::Sun{}, o);
-    int westNear = 0, eastNear = 0;
+    int westNear = 0, westDry = 0, eastNear = 0;
     for (const terrain::Vertex& v : m.vertices) {
         const float cx = v.pos[0] / g.zoom + 8.0f, cy = v.pos[2] / g.zoom + 8.0f;
-        if (cy > 2.0f && cy < 14.0f && cx < -1.0f && cx > -10.0f) ++westNear;
+        if (cy > 2.0f && cy < 14.0f && cx < -1.0f && cx > -200.0f) {
+            ++westNear;
+            westDry += v.pos[1] <= o.waterLevel ? 1 : 0;  // up along -y: at or over the water
+        }
         if (cy > 2.0f && cy < 14.0f && cx > 17.0f && cx < 26.0f) ++eastNear;
     }
-    CHECK(westNear == 0 && eastNear > 0);
+    CHECK(westNear > 0 && westDry == 0 && eastNear > 0);  // the west's bed all under the water
+    const std::vector<float> frame = outskirts::seaFrame(g, o);
+    CHECK(frame.size() == 4 * 6 * 3);  // four quads, two triangles each, x y z a corner
+    for (size_t i = 1; i < frame.size(); i += 3) CHECK(frame[i] == o.waterLevel);
+    float most = 0.0f;
+    for (size_t i = 0; i < frame.size(); i += 3) most = std::max(most, std::fabs(frame[i]) / g.zoom);
+    CHECK(most >= float(o.ring));
+    const gnd::Ground dry = groundOf();
+    CHECK(outskirts::seaFrame(dry, o).empty());  // its edges all over the water
+    outskirts::Options none;
+    CHECK(outskirts::seaFrame(g, none).empty());  // no water on the map
+}
+
+// 3.0.20-beta.31: a map whose edge is wet only where a river or a lake leaves it (prt_fild08 0.17 of its edge's cells,
+// pay_fild01 0.13) is no sea's: no water past it, its land all dry - a quarter of the edge at least makes a sea map
+// (alberta 0.29, comodo 0.38, izlude 0.91)
+TEST(outskirts_a_river_at_the_edge_is_no_sea) {
+    gnd::Ground g = groundOf();
+    for (int y = 4; y < 12; ++y)  // a river's mouth: three columns of the west edge's middle under the water
+        for (int x = 0; x < 3; ++x)
+            for (float& h : g.cells[size_t(y) * 16 + size_t(x)].h) h = 10.0f;
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    outskirts::Options o;
+    o.water = true;
+    o.waterLevel = 0.0f;
+    CHECK(outskirts::seaFrame(g, o).empty());
+    const terrain::Mesh m = outskirts::build(g, atlas, terrain::Sun{}, o);
+    int under = 0;
+    for (const terrain::Vertex& v : m.vertices) {
+        const float cx = v.pos[0] / g.zoom + 8.0f;
+        if (cx < -12.0f && v.pos[1] > o.waterLevel) ++under;  // well off the edge: never under the water
+    }
+    CHECK(under == 0);
 }

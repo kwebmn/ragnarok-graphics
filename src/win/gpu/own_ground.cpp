@@ -1379,6 +1379,70 @@ bool Renderer::Impl::drawOwnWater() {
             }
         }
     }
+    // 3.0.20-beta.31 (the owner's «6,7,8,9», 6 and 7): in the 3D view the sea past the map's wet edges
+    // (outskirts::seaFrame, four quads round the map) at every depth - the game has none there: each triangle cut at
+    // the near plane, then where the depth is squeezed (one depth each piece, as the own ground's); its picture every
+    // four cells, as the game's water's
+    if (camera::wideView() && mapOutdoors && g->seaFrame.size() >= 9) {
+        const std::vector<float>& frame = g->seaFrame;
+        const float tile = 1.0f / (4.0f * g->zoom);
+        for (size_t t = 0; t + 9 <= frame.size(); t += 9) {
+            float c[3][3], f[3][3];
+            for (int k = 0; k < 3; ++k) {
+                for (int a = 0; a < 3; ++a) f[k][a] = frame[t + size_t(k) * 3 + size_t(a)];
+                const float w[3] = {f[k][0] * sign[0], f[k][1] * sign[1], f[k][2] * sign[2]};
+                own_ground::toView(view, w, c[k]);
+            }
+            const float zd[3] = {c[0][2], c[1][2], c[2][2]};
+            float front[4][3];
+            const int n = own_ground::pastDepth(zd, p.nearZ + 0.5f, front);  // the part in front of the near plane
+            for (int fan = 1; fan + 1 < n; ++fan) {
+                const float* shares[3] = {front[0], front[fan], front[fan + 1]};
+                float pc[3][3], pf[3][3];
+                for (int k = 0; k < 3; ++k)
+                    for (int a = 0; a < 3; ++a) {
+                        pc[k][a] = shares[k][0] * c[0][a] + shares[k][1] * c[1][a] + shares[k][2] * c[2][a];
+                        pf[k][a] = shares[k][0] * f[0][a] + shares[k][1] * f[1][a] + shares[k][2] * f[2][a];
+                    }
+                const float pz[3] = {pc[0][2], pc[1][2], pc[2][2]};
+                for (int side = 0; side < 2; ++side) {
+                    float part[4][3];
+                    const int m = side == 0 ? own_ground::nearDepth(pz, from, part)
+                                            : own_ground::pastDepth(pz, from, part);
+                    if (m < 3) continue;
+                    if (o.waterVerts.size() + 4 > 65535) emit();
+                    const size_t base = o.waterVerts.size();
+                    bool ok = true;
+                    for (int q = 0; q < m && ok; ++q) {
+                        float at[3] = {0, 0, 0}, place[3] = {0, 0, 0};
+                        for (int k = 0; k < 3; ++k)
+                            for (int a = 0; a < 3; ++a) {
+                                at[a] += part[q][k] * pc[k][a];
+                                place[a] += part[q][k] * pf[k][a];
+                            }
+                        own_ground::Tl2 placed;
+                        ok = own_ground::placeView(p, at, placed);
+                        own_ground::Tl1 v{};
+                        v.x = placed.x, v.y = placed.y, v.z = placed.z, v.rhw = placed.rhw;
+                        v.diffuse = colour;
+                        v.specular = fogged ? o.shading.specularAt(at[2]) : plain;
+                        v.u = place[0] * tile, v.v = place[2] * tile;
+                        o.waterVerts.push_back(v);
+                    }
+                    if (!ok) {
+                        o.waterVerts.resize(base);
+                        continue;
+                    }
+                    for (int q = 1; q + 1 < m; ++q) {
+                        o.waterIdx.push_back(uint16_t(base));
+                        o.waterIdx.push_back(uint16_t(base + size_t(q)));
+                        o.waterIdx.push_back(uint16_t(base + size_t(q) + 1));
+                        ++triangles;
+                    }
+                }
+            }
+        }
+    }
     emit();
     o.waterTriangles = triangles;
     o.waterMost = std::max(o.waterMost, triangles);
