@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.13 — what's new · 2026-11-15
+
+- **«Models by our renderer»: the trees sway again.** The leaves of the models our renderer draws are now drawn as the game's trees are - each tree on its own, through the world's usual path. So «Leaves in the wind», «Rounded tree crowns», «Sunlight through the leaves» and «Trees of different shades» apply to our trees too, and their shadows and reflections are taken as the game's trees'. The other models are still drawn from the card.
+
 # uaRO Graphics 3.0.20-beta.12 — what's new · 2026-11-15
 
 - **«Models by our renderer»: shadows and reflections.** The models our renderer draws are now reflected in water («World reflections in water») and cast shadows from torches and lamps («Shadows from torches and lamps») - as the game's models do. In Direct3D 11 our models are now drawn before the torches' light, the night's colours and the other passes over the world even in a frame without a single blended draw.
