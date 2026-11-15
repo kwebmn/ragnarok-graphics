@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.15 — what's new · 2026-11-15
+
+- **«Models by our renderer» is now on by default.** The map's models - still and moving ones - are drawn by our renderer: in the 3D view and from above, in Direct3D 12 and in Direct3D 11. The game has less to do, and where there are many models there are fewer jerks. It can be switched off in «Game and chat» → «Game» → «3D view» → «Models by our renderer» or by its tile in the console (~), tab «Quick». If you switched it off yourself or installed a beta from scratch after beta.4, it stays off - switch it on there.
+
 # uaRO Graphics 3.0.20-beta.14 — what's new · 2026-11-15
 
 - **«Models by our renderer»: the moving models too.** Flags, windmills and the other models the game moves by its animation are drawn by our renderer as well - from the card, in the same batches as the still ones: the game gives only where they are each frame. In Prontera that is almost half of the models' parts, so the game has even less to do. Their leaves, torch shadows and reflections in the water are as our other models'.
