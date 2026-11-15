@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.19-beta.43 — what's new · 2026-11-15
+
+- **The 3D view: HP bars no longer show through cave walls.** Whether a monster is seen is now judged by the drawn ground's own heights — the rocks and walls of caves (Payon Cave and others) hide the monsters behind them with their bars and names.
+- **Direct3D 11: the «white ground» shows in the log.** When part of the ground is drawn one flat light colour without its texture, the log now tells how much and why — the game gave no texture, or the texture never reached the card.
+
 # uaRO Graphics 3.0.19-beta.42 — what's new · 2026-11-15
 
 - **The 3D view: faster.** In the 3D view the game now works out the far cells of its ground (past the reflections' reach) once in 8 frames — our own ground is drawn in their place anyway, the game only gives it their colours. The game's thread does noticeably less work a frame, on the fields most. The switch «Faster far ground» is in Settings → Game → the 3D view.
