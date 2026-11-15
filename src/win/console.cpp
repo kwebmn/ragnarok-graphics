@@ -153,6 +153,15 @@ void Console::build(Lang lang, const Config& config) {
             if (settingOf(e.sliders[k])) rows_.push_back(Row{Kind::Slider, e.sliders[k], depth + 1});
     };
     if (!filter_.empty()) {
+        // 3.0.20-beta.6: the 3D view's rows found too, under «3D-режим»
+        bool named3d = false;
+        for (const std::string& k : consoletiles::sectionRows("view3d")) {
+            const IniSetting* st = settingOf(k);
+            if (!st || !settingMatches(*st, filter_, lang)) continue;
+            if (!named3d) rows_.push_back(Row{Kind::Heading, tr(lang, Text::View3dHeading), 0});
+            named3d = true;
+            interfaceRow(k.c_str(), 1);
+        }
         // 3.0.11-beta.302: the interface's rows found too, under their sections
         for (const InterfaceSection& sec : interfaceSections()) {
             bool named = false;
@@ -194,9 +203,7 @@ void Console::build(Lang lang, const Config& config) {
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleOften), 0});
             // 3.0.17-beta.27: the switches as tiles, four a row; a list or a slider as its row
             std::vector<std::string> tiles;
-            for (const char* k : {"effects.group_time", "effects.group_weather", "effects.grass",
-                                  "effects.torch_shadows", "effects.mage_effects", "frames.keep_fps",
-                                  "frames.fps_counter", "interface.net_badge", "interface.mob_hp"}) {
+            for (const char* k : consoletiles::quickKeys()) {  // 3.0.20-beta.6: «Моделі нашим рендером» among them
                 if (consolepins::pinned(pins_, k)) continue;
                 const IniSetting* st = settingOf(k);
                 if (st && st->control == Control::Check) tiles.push_back(k);
@@ -221,6 +228,13 @@ void Console::build(Lang lang, const Config& config) {
         if (all) rows_.push_back(Row{Kind::Box, "frames.fps_counter", 0});  // the frame counter (Ctrl+Shift+F11)
         // 3.0.5-beta.6: «Тест графіки» - not the first row, where the console opens: a Space there starts nothing
         if (all) rows_.push_back(Row{Kind::Test, "", 0});
+        // 3.0.20-beta.6 (the owner: «добавь в консоль эту настройку чтобы во время игры можно было переключать»): the
+        // 3D view's rows as the app's «3D-режим» - each as its control asks
+        if (all) {
+            const std::vector<std::string> view3d = consoletiles::sectionRows("view3d");
+            if (!view3d.empty()) rows_.push_back(Row{Kind::Heading, tr(lang, Text::View3dHeading), 0});
+            for (const std::string& k : view3d) interfaceRow(k.c_str(), 0);
+        }
         // 3.0.11-beta.2: the new interface on and off in the game; 3.0.11-beta.302 (the review «Ревизия
         // конфигуратора», D): its rows in the app's sections (core/settings/navigation interfaceSections) - every row
         // of them, the windows behind a row that opens them, the controller's on the Controller page

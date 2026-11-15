@@ -125,3 +125,12 @@ RELEASED 15.11, main 8394155).
    matrix - a node hung on a moving one is given back the frame it moves. Log: «(N of them with several keys all
    alike), ... (M of them hung on a moving one)». Tests: game_models_keys_move_a_node_only_when_their_values_differ,
    game_models_places_alike_within_the_float_noise_only. Untested in the game.
+3.0.20-beta.5 SHIPPED (8d3875a, update.ini d2474c8).
+6. 3.0.20-beta.6 - the owner on the switch: «где именно?», «нету тм такого, добавь в консоль эту настройку чтобы во
+   время игры можно было переключать». The app does show it (page_settings.cpp: «Гра й чат» -> the «Гра» part ->
+   «3D-режим», Detailed; his ini: utility.mode = detailed) - deep in a long column; my path «сторінка «Гра»» was wrong
+   (no such menu item). Built: core/console_tiles quickKeys() (the «Швидко» tiles moved out of win/console.cpp, plus
+   view3d.own_models) and sectionRows(section) (the schema's rows of a section, the developer's left out); the console's
+   «Усе» gets «3D-режим» (every [view3d] row as its control asks), its search finds [view3d] rows under «3D-режим».
+   Tests: console_tiles_quick_holds_the_models_switch_and_known_rows_only, console_tiles_section_rows_of_the_3d_view,
+   search_finds_the_models_by_our_renderer_switch (the app's search, Detailed and from Simple, View::GameChat).

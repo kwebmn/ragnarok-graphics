@@ -9,6 +9,12 @@ namespace uagfx::consoletiles {
 constexpr int kPerRow = 4;
 std::vector<std::vector<std::string>> rows(const std::vector<std::string>& keys);
 std::string join(const std::vector<std::string>& keys);
+// 3.0.20-beta.6 (the owner: «добавь в консоль эту настройку чтобы во время игры можно было переключать»): «Швидко»'s
+// switches - the rows switched most, «Моделі нашим рендером» while it is tried
+const std::vector<const char*>& quickKeys();
+// 3.0.20-beta.6: a section's rows as the console lists them («Усе», its search) - the schema's order, the developer's
+// left out
+std::vector<std::string> sectionRows(const char* section);
 std::vector<std::string> split(const std::string& joined);
 int move(int col, int step, int count);              // within 0..count-1, the edges kept (step 0: kept in it)
 int at(int x, int left, int width, int count);       // the tile under x of a row `width` wide (kPerRow places)

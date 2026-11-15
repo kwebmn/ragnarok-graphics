@@ -1,6 +1,9 @@
 // 3.0.17-beta.27 (the concept «простой старт», Task 6/8; the owner: «делай 1 и 2»): «Швидко»'s tiles, four a row,
 // and the chosen row's «що це дає» - its hint's first sentence - over the console's keys
+#include <algorithm>
+
 #include "core/console_tiles.hpp"
+#include "core/settings/schema.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -32,4 +35,25 @@ TEST(console_tiles_the_gist_of_a_hint) {
              std::string("Монстр, по якому…"));
     CHECK_EQ(consoletiles::gist("", 20), std::string());
     CHECK_EQ(consoletiles::gist("v1.5 shading. Rest", 80), std::string("v1.5 shading."));  // a dot inside a word stays
+}
+
+// 3.0.20-beta.6 (the owner: «добавь в консоль эту настройку чтобы во время игры можно было переключать»):
+// «Моделі нашим рендером» a tile of «Швидко» while it is tried; every tile a switch the schema knows
+TEST(console_tiles_quick_holds_the_models_switch_and_known_rows_only) {
+    bool models = false;
+    for (const char* k : consoletiles::quickKeys()) {
+        CHECK(settings::findSetting(k) != nullptr);
+        if (std::string(k) == "view3d.own_models") models = true;
+    }
+    CHECK(models);
+}
+
+// 3.0.20-beta.6: the 3D view's rows in the console («Усе» and its search) - the schema's [view3d] in its order
+TEST(console_tiles_section_rows_of_the_3d_view) {
+    const std::vector<std::string> rows = consoletiles::sectionRows("view3d");
+    CHECK(std::find(rows.begin(), rows.end(), "view3d.own_models") != rows.end());
+    CHECK(std::find(rows.begin(), rows.end(), "view3d.shoulder") < std::find(rows.begin(), rows.end(),
+                                                                            "view3d.own_models"));
+    for (const std::string& k : rows) CHECK(k.compare(0, 7, "view3d.") == 0);
+    CHECK(consoletiles::sectionRows("no_such_section").empty());
 }

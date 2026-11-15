@@ -2,8 +2,29 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
+
+#include "core/settings/navigation.hpp"
+#include "core/settings/schema.hpp"
 
 namespace uagfx::consoletiles {
+
+const std::vector<const char*>& quickKeys() {
+    static const std::vector<const char*> keys{"effects.group_time", "effects.group_weather", "effects.grass",
+                                               "effects.torch_shadows", "effects.mage_effects", "frames.keep_fps",
+                                               "frames.fps_counter", "interface.net_badge", "interface.mob_hp",
+                                               "view3d.own_models"};
+    return keys;
+}
+
+std::vector<std::string> sectionRows(const char* section) {
+    std::vector<std::string> out;
+    for (const settings::IniSetting& s : settings::iniSettings())
+        if (std::strcmp(s.section, section) == 0 && settings::levelOf(s) != settings::Mode::Developer)
+            out.push_back(settings::sectionKey(s));
+    return out;
+}
+
 
 std::vector<std::vector<std::string>> rows(const std::vector<std::string>& keys) {
     std::vector<std::vector<std::string>> out;

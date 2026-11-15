@@ -144,3 +144,17 @@ TEST(new_rows_are_the_unknown_keys) {
     CHECK(fresh.size() == 1 && fresh[0] == "a.two");
     CHECK(newRows(knownRowsText(now), now).empty());
 }
+
+// 3.0.20-beta.6 (the owner on «Моделі нашим рендером»: «где именно?», «нету тм такого»): the app's search finds it by
+// its Ukrainian name, on «Гра й чат» (its «Гра» part, «3D-режим»), in the Detailed mode and from the Simple one
+TEST(search_finds_the_models_by_our_renderer_switch) {
+    for (const Mode m : {Mode::Detailed, Mode::Simple}) {
+        bool found = false;
+        for (const Hit& h : findSettings("моделі нашим", Lang::Uk, m))
+            if (h.kind == HitKind::Ini && sectionKey(iniSettings()[h.index]) == "view3d.own_models") {
+                found = true;
+                CHECK(h.place.view == View::GameChat);
+            }
+        CHECK(found);
+    }
+}
