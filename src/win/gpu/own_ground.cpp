@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <functional>
 
 #include "core/d3d7.hpp"
 #include "core/game_camera.hpp"
@@ -298,6 +299,190 @@ void Renderer::Impl::noteOwnGround(const FrameRecord& rec, const DrawCmd& d) {
 // the cells' own bands, then the neighbours' strips (core/terrain.hpp), blended by the noise as the game's ground's
 // seams are (seamPass: shade() bit 31), a little towards the camera. A record of their own, as the seams' strips: the
 // game's geometry goes up again with its next draw.
+namespace {
+
+// 3.0.19-beta.46: Windows' own pool runs `body` for 0 .. count-1, this thread taking its share too; a few helpers -
+// a quarter of the processor's threads, three at most - the renderer's other work and the game's own thread left room
+struct ChunkRun {
+    PTP_WORK work = nullptr;
+    const std::function<void(size_t)>* body = nullptr;
+    size_t count = 0;
+    volatile LONG next = 0;
+    int helpers = -1;
+};
+
+void runChunks(ChunkRun& r) {
+    for (;;) {
+        const LONG n = InterlockedIncrement(&r.next) - 1;
+        if (n < 0 || size_t(n) >= r.count) return;
+        (*r.body)(size_t(n));
+    }
+}
+
+VOID CALLBACK chunkWork(PTP_CALLBACK_INSTANCE, PVOID context, PTP_WORK) { runChunks(*static_cast<ChunkRun*>(context)); }
+
+}  // namespace
+
+void parallelChunks(size_t count, const std::function<void(size_t)>& body) {
+    static ChunkRun r;  // the renderer's thread alone asks
+    if (r.helpers < 0) {
+        SYSTEM_INFO si{};
+        GetSystemInfo(&si);
+        r.helpers = std::clamp(int(si.dwNumberOfProcessors) / 4, 0, 3);
+        r.work = r.helpers > 0 ? CreateThreadpoolWork(&chunkWork, &r, nullptr) : nullptr;
+        LOG_INFO("own ground: its chunks made on %d thread(s) a picture (%lu of the processor's)",
+                 r.work ? r.helpers + 1 : 1, static_cast<unsigned long>(si.dwNumberOfProcessors));
+    }
+    r.body = &body;
+    r.count = count;
+    r.next = 0;
+    const bool helped = r.work && count >= 16;  // a few chunks: this thread alone
+    if (helped)
+        for (int h = 0; h < r.helpers; ++h) SubmitThreadpoolWork(r.work);
+    runChunks(r);
+    if (helped) WaitForThreadpoolWorkCallbacks(r.work, FALSE);
+}
+
+void Renderer::Impl::ownChunk(const OwnMaking& m, const OwnState::ChunkJob& job, OwnState::ChunkOut& out) {
+    OwnState& o = ownState;
+    const OwnGround* g = m.g;
+    const camera::Projection& p = m.p;
+    const terrain::Mesh& mesh = job.which ? g->distant : g->mesh;
+    const terrain::Chunk& ch = mesh.chunks[job.k];
+    std::vector<uint32_t>& colours = o.colours[job.which];  // this chunk's vertices alone written
+    out.used = 0;
+    if (job.recolour) {  // its colours, the game's round its corners
+        for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
+            const terrain::Batch& bt = mesh.batches[b];
+            for (uint32_t v = bt.firstVertex; v < bt.firstVertex + bt.vertexCount; ++v) {
+                const terrain::Vertex& tv = mesh.vertices[v];
+                // 3.0.7-beta.3 (R-YXZM7Y): a wall in the game's light on it (terrain::wallLight), not the ground's
+                // beside it
+                const bool wall = terrain::isWall(tv);
+                uint32_t c = wall ? tv.color : o.shading.diffuseAt(tv.pos[0], tv.pos[2]);
+                if (o.lightOn && !wall) {  // 3.0.4-beta.26: the smooth hills' light; 3.0.4-beta.30 the corners' between
+                    const float light =
+                        own_ground::lightAt(o.cornerLight, g->width, g->height, g->zoom, tv.pos[0], tv.pos[2]);
+                    uint32_t lit = c & 0xFF000000u;
+                    for (int part = 0; part < 3; ++part) {
+                        const float channel = float((c >> (part * 8)) & 0xFF) * light;
+                        lit |= uint32_t(std::clamp(int(channel + 0.5f), 0, 255)) << (part * 8);
+                    }
+                    c = lit;
+                }
+                // a neighbour's strip: its alpha how much the place is the neighbour's
+                colours[v] = bt.layer == terrain::kNeighbour ? (c & 0xFFFFFFu) | (tv.color & 0xFF000000u) : c;
+            }
+        }
+    }
+    thread_local std::vector<uint8_t> behind;
+    for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
+        const terrain::Batch& bt = mesh.batches[b];
+        if (bt.layer != terrain::kGround && !m.blends) continue;
+        if (out.used == out.pieces.size()) out.pieces.emplace_back();
+        OwnState::Piece& pd = out.pieces[out.used++];
+        pd.layer = bt.layer;
+        pd.tex = bt.texture >= 0 && size_t(bt.texture) < m.textures ? size_t(bt.texture) : m.textures;
+        pd.vertexCount = bt.vertexCount;
+        pd.indexCount = bt.indexCount;
+        pd.verts.assign(bt.vertexCount, own_ground::Tl2{});
+        pd.idx.clear();
+        const size_t base = 0;  // its own, from 0: pending's place added as it goes in
+        behind.assign(bt.vertexCount, 0);
+        // the strips a little towards the camera: on the ground's own points, the bands near them (as the seams')
+        const float lift = bt.layer == terrain::kNeighbour ? 0.05f
+                           : bt.layer == terrain::kOwnBand ? 0.12f
+                                                           : 0.0f;
+        for (uint32_t i = 0; i < bt.vertexCount; ++i) {
+            const terrain::Vertex& tv = mesh.vertices[bt.firstVertex + i];
+            own_ground::Tl2& t = pd.verts[base + i];
+            if (!own_ground::place(m.view, p, m.axes, tv.pos, t)) {
+                behind[i] = 1;
+                continue;
+            }
+            float zd = 1.0f / t.rhw;
+            // 3.0.4-beta.29: the smooth ground eased onto the plain one as it nears the change (fineDepth) - a chunk
+            // changes to the plain ground lying on it already: no jump, no crack along their seam
+            if (job.which == 0 && zd > m.morphFrom && tv.plain != tv.pos[1]) {
+                const float f = std::min((zd - m.morphFrom) / (m.fineDepth - m.morphFrom), 1.0f);
+                const float mm = f * f * (3.0f - 2.0f * f);
+                const float eased[3] = {tv.pos[0], tv.pos[1] + (tv.plain - tv.pos[1]) * mm, tv.pos[2]};
+                own_ground::place(m.view, p, m.axes, eased, t);
+                zd = 1.0f / t.rhw;
+            }
+            if (lift > 0.0f) t.z = own_ground::depthOf(p, std::max(zd - lift, p.nearZ + 0.005f));
+            t.diffuse = colours[bt.firstVertex + i];
+            const uint32_t fog = m.fogged ? o.shading.specularAt(zd) : m.plain;
+            t.specular = bt.layer == terrain::kGround ? fog : (fog & 0xFF000000u) | (tv.blend & 0xFFFFFFu);
+            t.u0 = tv.uv[0];
+            t.v0 = tv.uv[1];
+            t.u1 = tv.lm[0];
+            t.v1 = tv.lm[1];
+        }
+        for (uint32_t i = bt.firstIndex; i + 3 <= bt.firstIndex + bt.indexCount; i += 3) {
+            const uint32_t a = mesh.indices[i], b2 = mesh.indices[i + 1], c = mesh.indices[i + 2];
+            if (behind[a] || behind[b2] || behind[c]) continue;  // across the near plane: left out
+            const uint32_t tri[3] = {a, b2, c};
+            const float zd[3] = {1.0f / pd.verts[base + a].rhw, 1.0f / pd.verts[base + b2].rhw,
+                                 1.0f / pd.verts[base + c].rhw};
+            const bool nearer = zd[0] < m.from || zd[1] < m.from || zd[2] < m.from;
+            if (!nearer || (zd[0] < m.from && zd[1] < m.from && zd[2] < m.from)) {
+                for (uint32_t k = 0; k < 3; ++k) pd.idx.push_back(uint16_t(base + tri[k]));
+                continue;
+            }
+            // 3.0.4-beta.23 (R-W7A5XC): across the squeeze - its near side and its far side, each one depth
+            // (own_ground::nearDepth), the two points of the cut shared
+            float sides[2][4][3];
+            const int corners[2] = {own_ground::nearDepth(zd, m.from, sides[0]),
+                                    own_ground::pastDepth(zd, m.from, sides[1])};
+            float cutAt[2][3];
+            uint16_t cutIndex[2] = {0, 0};
+            int cuts = 0;
+            const auto vertexOf = [&](const float* w) {
+                for (int k = 0; k < 3; ++k)
+                    if (w[k] == 1.0f) return uint16_t(base + tri[k]);
+                for (int k = 0; k < cuts; ++k)
+                    if (w[0] == cutAt[k][0] && w[1] == cutAt[k][1] && w[2] == cutAt[k][2]) return cutIndex[k];
+                float at[3] = {0, 0, 0}, chn[2][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}}, uv[4] = {0, 0, 0, 0};
+                for (int k = 0; k < 3; ++k) {
+                    const own_ground::Tl2& sv = pd.verts[base + tri[k]];
+                    at[0] += w[k] * (sv.x - p.cx) * zd[k] / p.f0;
+                    at[1] += w[k] * (sv.y - p.cy) * zd[k] / p.f1;
+                    at[2] += w[k] * zd[k];
+                    for (int n = 0; n < 4; ++n) {
+                        chn[0][n] += w[k] * float((sv.diffuse >> (n * 8)) & 0xFF);
+                        chn[1][n] += w[k] * float((sv.specular >> (n * 8)) & 0xFF);
+                    }
+                    uv[0] += w[k] * sv.u0, uv[1] += w[k] * sv.v0, uv[2] += w[k] * sv.u1, uv[3] += w[k] * sv.v1;
+                }
+                own_ground::Tl2 t{};
+                own_ground::placeView(p, at, t);
+                if (lift > 0.0f) t.z = own_ground::depthOf(p, std::max(at[2] - lift, p.nearZ + 0.005f));
+                for (int n = 0; n < 4; ++n) {
+                    t.diffuse |= uint32_t(std::clamp(int(chn[0][n] + 0.5f), 0, 255)) << (n * 8);
+                    t.specular |= uint32_t(std::clamp(int(chn[1][n] + 0.5f), 0, 255)) << (n * 8);
+                }
+                t.u0 = uv[0], t.v0 = uv[1], t.u1 = uv[2], t.v1 = uv[3];
+                pd.verts.push_back(t);
+                if (cuts < 2) {
+                    std::copy(w, w + 3, cutAt[cuts]);
+                    cutIndex[cuts++] = uint16_t(pd.verts.size() - 1);
+                }
+                return uint16_t(pd.verts.size() - 1);
+            };
+            for (int side = 0; side < 2; ++side) {
+                uint16_t piece[4];
+                for (int q = 0; q < corners[side]; ++q) piece[q] = vertexOf(sides[side][q]);
+                for (int q = 1; q + 1 < corners[side]; ++q) {  // a fan round its first corner
+                    pd.idx.push_back(piece[0]);
+                    pd.idx.push_back(piece[q]);
+                    pd.idx.push_back(piece[q + 1]);
+                }
+            }
+        }
+    }
+}
+
 bool Renderer::Impl::drawOwnGround() {
     OwnState& o = ownState;
     o.drawn = true;
@@ -435,7 +620,6 @@ bool Renderer::Impl::drawOwnGround() {
             layer.resize(o.ids.size() + 1);
             for (OwnState::Pending& pd : layer) pd.verts.clear(), pd.idx.clear();
         }
-        std::vector<uint8_t> behind;
         const auto emit = [&](uint8_t layer, size_t t) {
             OwnState::Pending& pd = o.pending[layer][t];
             if (!pd.idx.empty()) {
@@ -462,6 +646,12 @@ bool Renderer::Impl::drawOwnGround() {
         const float from = own_ground::ownFrom(p);  // 3.0.4-beta.23: the triangles across it cut there
         const float morphFrom = fineDepth * kMorphFrom;  // 3.0.4-beta.29: the smooth ground eased from here on
         const float mostDepth = own_ground::mostDepthOf(camera::wideView(), camera::sightNow());  // .21, .24
+        // 3.0.19-beta.46 (the owner's «делай все»: 2.7 ms of the renderer's thread a frame on the fields in the 3D view
+        // - some 100000 vertices projected, coloured and cut a chunk at a time): the chunks in view chosen in turn
+        // (their light's turns as before), made on a few threads at once (ownChunk: each its own chunks), then put
+        // into the draws in the chunks' order - the same draws as before
+        std::vector<OwnState::ChunkJob>& jobs = o.jobs;
+        jobs.clear();
         for (size_t k = 0; k < g->mesh.chunks.size(); ++k) {
             const terrain::Chunk& box = g->mesh.chunks[k];
             float lo[3], hi[3];
@@ -472,9 +662,6 @@ bool Renderer::Impl::drawOwnGround() {
             float nearest = 0.0f;
             if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, mostDepth, nearest)) continue;
             const int which = nearest > fineDepth && k < g->distant.chunks.size() ? 1 : 0;
-            const terrain::Mesh& mesh = which ? g->distant : g->mesh;
-            const terrain::Chunk& ch = mesh.chunks[k];
-            std::vector<uint32_t>& colours = o.colours[which];
             ++chunks;
             uint8_t& fresh = o.fresh[which][k];
             if (fresh == 2) {  // 3.0.4-beta.28: in the light before it moved - a few a picture
@@ -483,136 +670,37 @@ bool Renderer::Impl::drawOwnGround() {
                 else
                     o.lightPending = true;
             }
-            if (!fresh) {  // its colours, the game's round its corners
+            const bool recolour = !fresh;  // its colours, the game's round its corners (ownChunk)
+            if (recolour) {
                 ++o.chunksMade;
-                for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
-                    const terrain::Batch& bt = mesh.batches[b];
-                    for (uint32_t v = bt.firstVertex; v < bt.firstVertex + bt.vertexCount; ++v) {
-                        const terrain::Vertex& tv = mesh.vertices[v];
-                        // 3.0.7-beta.3 (R-YXZM7Y): a wall in the game's light on it (terrain::wallLight), not the
-                        // ground's beside it
-                        const bool wall = terrain::isWall(tv);
-                        uint32_t c = wall ? tv.color : o.shading.diffuseAt(tv.pos[0], tv.pos[2]);
-                        if (o.lightOn && !wall) {  // 3.0.4-beta.26: the smooth hills' light; 3.0.4-beta.30 the corners'
-                                                   // between
-                            const float light =
-                                own_ground::lightAt(o.cornerLight, g->width, g->height, g->zoom, tv.pos[0], tv.pos[2]);
-                            uint32_t lit = c & 0xFF000000u;
-                            for (int part = 0; part < 3; ++part) {
-                                const float channel = float((c >> (part * 8)) & 0xFF) * light;
-                                lit |= uint32_t(std::clamp(int(channel + 0.5f), 0, 255)) << (part * 8);
-                            }
-                            c = lit;
-                        }
-                        // a neighbour's strip: its alpha how much the place is the neighbour's
-                        colours[v] = bt.layer == terrain::kNeighbour ? (c & 0xFFFFFFu) | (tv.color & 0xFF000000u) : c;
-                    }
-                }
                 fresh = 1;
             }
-            for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
-                const terrain::Batch& bt = mesh.batches[b];
-                if (bt.layer != terrain::kGround && !blends) continue;
-                const size_t tex =
-                    bt.texture >= 0 && size_t(bt.texture) < o.ids.size() ? size_t(bt.texture) : o.ids.size();
-                OwnState::Pending& pd = o.pending[bt.layer][tex];
+            jobs.push_back(OwnState::ChunkJob{k, which, recolour});
+        }
+        if (o.outs.size() < jobs.size()) o.outs.resize(jobs.size());
+        OwnMaking making;
+        making.g = g;
+        making.view = view;
+        making.p = p;
+        making.axes = axes;
+        making.fineDepth = fineDepth;
+        making.morphFrom = morphFrom;
+        making.from = from;
+        making.blends = blends;
+        making.fogged = fogged;
+        making.plain = plain;
+        making.textures = o.ids.size();
+        parallelChunks(jobs.size(), [&](size_t n) { ownChunk(making, jobs[n], o.outs[n]); });
+        for (size_t n = 0; n < jobs.size(); ++n) {
+            const OwnState::ChunkOut& out = o.outs[n];
+            for (size_t q = 0; q < out.used; ++q) {
+                const OwnState::Piece& pc = out.pieces[q];
+                OwnState::Pending& pd = o.pending[pc.layer][pc.tex];
                 // its vertices, and two more for each triangle cut where the depth is squeezed
-                if (pd.verts.size() + bt.vertexCount + bt.indexCount / 3 * 2 > 65535) emit(bt.layer, tex);
+                if (pd.verts.size() + pc.vertexCount + pc.indexCount / 3 * 2 > 65535) emit(pc.layer, pc.tex);
                 const size_t base = pd.verts.size();
-                pd.verts.resize(base + bt.vertexCount, own_ground::Tl2{});
-                behind.assign(bt.vertexCount, 0);
-                // the strips a little towards the camera: on the ground's own points, the bands near them (as the
-                // seams')
-                const float lift = bt.layer == terrain::kNeighbour ? 0.05f
-                                   : bt.layer == terrain::kOwnBand ? 0.12f
-                                                                   : 0.0f;
-                for (uint32_t i = 0; i < bt.vertexCount; ++i) {
-                    const terrain::Vertex& tv = mesh.vertices[bt.firstVertex + i];
-                    own_ground::Tl2& t = pd.verts[base + i];
-                    if (!own_ground::place(view, p, axes, tv.pos, t)) {
-                        behind[i] = 1;
-                        continue;
-                    }
-                    float zd = 1.0f / t.rhw;
-                    // 3.0.4-beta.29: the smooth ground eased onto the plain one as it nears the change (fineDepth) -
-                    // a chunk changes to the plain ground lying on it already: no jump, no crack along their seam
-                    if (which == 0 && zd > morphFrom && tv.plain != tv.pos[1]) {
-                        const float f = std::min((zd - morphFrom) / (fineDepth - morphFrom), 1.0f);
-                        const float m = f * f * (3.0f - 2.0f * f);
-                        const float eased[3] = {tv.pos[0], tv.pos[1] + (tv.plain - tv.pos[1]) * m, tv.pos[2]};
-                        own_ground::place(view, p, axes, eased, t);
-                        zd = 1.0f / t.rhw;
-                    }
-                    if (lift > 0.0f) t.z = own_ground::depthOf(p, std::max(zd - lift, p.nearZ + 0.005f));
-                    t.diffuse = colours[bt.firstVertex + i];
-                    const uint32_t fog = fogged ? o.shading.specularAt(zd) : plain;
-                    t.specular = bt.layer == terrain::kGround ? fog : (fog & 0xFF000000u) | (tv.blend & 0xFFFFFFu);
-                    t.u0 = tv.uv[0];
-                    t.v0 = tv.uv[1];
-                    t.u1 = tv.lm[0];
-                    t.v1 = tv.lm[1];
-                }
-                for (uint32_t i = bt.firstIndex; i + 3 <= bt.firstIndex + bt.indexCount; i += 3) {
-                    const uint32_t a = mesh.indices[i], b2 = mesh.indices[i + 1], c = mesh.indices[i + 2];
-                    if (behind[a] || behind[b2] || behind[c]) continue;  // across the near plane: left out
-                    const uint32_t tri[3] = {a, b2, c};
-                    const float zd[3] = {1.0f / pd.verts[base + a].rhw, 1.0f / pd.verts[base + b2].rhw,
-                                         1.0f / pd.verts[base + c].rhw};
-                    const bool nearer = zd[0] < from || zd[1] < from || zd[2] < from;
-                    if (!nearer || (zd[0] < from && zd[1] < from && zd[2] < from)) {
-                        for (uint32_t k : tri) pd.idx.push_back(uint16_t(base + k));
-                        continue;
-                    }
-                    // 3.0.4-beta.23 (R-W7A5XC): across the squeeze - its near side and its far side, each one depth
-                    // (own_ground::nearDepth), the two points of the cut shared
-                    float sides[2][4][3];
-                    const int corners[2] = {own_ground::nearDepth(zd, from, sides[0]),
-                                            own_ground::pastDepth(zd, from, sides[1])};
-                    float cutAt[2][3];
-                    uint16_t cutIndex[2] = {0, 0};
-                    int cuts = 0;
-                    const auto vertexOf = [&](const float* w) {
-                        for (int k = 0; k < 3; ++k)
-                            if (w[k] == 1.0f) return uint16_t(base + tri[k]);
-                        for (int k = 0; k < cuts; ++k)
-                            if (w[0] == cutAt[k][0] && w[1] == cutAt[k][1] && w[2] == cutAt[k][2]) return cutIndex[k];
-                        float at[3] = {0, 0, 0}, ch[2][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}}, uv[4] = {0, 0, 0, 0};
-                        for (int k = 0; k < 3; ++k) {
-                            const own_ground::Tl2& s = pd.verts[base + tri[k]];
-                            at[0] += w[k] * (s.x - p.cx) * zd[k] / p.f0;
-                            at[1] += w[k] * (s.y - p.cy) * zd[k] / p.f1;
-                            at[2] += w[k] * zd[k];
-                            for (int n = 0; n < 4; ++n) {
-                                ch[0][n] += w[k] * float((s.diffuse >> (n * 8)) & 0xFF);
-                                ch[1][n] += w[k] * float((s.specular >> (n * 8)) & 0xFF);
-                            }
-                            uv[0] += w[k] * s.u0, uv[1] += w[k] * s.v0, uv[2] += w[k] * s.u1, uv[3] += w[k] * s.v1;
-                        }
-                        own_ground::Tl2 t{};
-                        own_ground::placeView(p, at, t);
-                        if (lift > 0.0f) t.z = own_ground::depthOf(p, std::max(at[2] - lift, p.nearZ + 0.005f));
-                        for (int n = 0; n < 4; ++n) {
-                            t.diffuse |= uint32_t(std::clamp(int(ch[0][n] + 0.5f), 0, 255)) << (n * 8);
-                            t.specular |= uint32_t(std::clamp(int(ch[1][n] + 0.5f), 0, 255)) << (n * 8);
-                        }
-                        t.u0 = uv[0], t.v0 = uv[1], t.u1 = uv[2], t.v1 = uv[3];
-                        pd.verts.push_back(t);
-                        if (cuts < 2) {
-                            std::copy(w, w + 3, cutAt[cuts]);
-                            cutIndex[cuts++] = uint16_t(pd.verts.size() - 1);
-                        }
-                        return uint16_t(pd.verts.size() - 1);
-                    };
-                    for (int side = 0; side < 2; ++side) {
-                        uint16_t piece[4];
-                        for (int q = 0; q < corners[side]; ++q) piece[q] = vertexOf(sides[side][q]);
-                        for (int q = 1; q + 1 < corners[side]; ++q) {  // a fan round its first corner
-                            pd.idx.push_back(piece[0]);
-                            pd.idx.push_back(piece[q]);
-                            pd.idx.push_back(piece[q + 1]);
-                        }
-                    }
-                }
+                pd.verts.insert(pd.verts.end(), pc.verts.begin(), pc.verts.end());
+                for (const uint16_t ix : pc.idx) pd.idx.push_back(uint16_t(base + ix));
             }
         }
         for (uint8_t layer = 0; layer < 3; ++layer)  // the ground, then the own bands, then the neighbours' strips

@@ -1404,6 +1404,27 @@ struct Renderer::Impl {
         // again round the corners the game gives another colour (own_ground::Shading::takeChanged)
         std::vector<uint32_t> colours[2];
         std::vector<uint8_t> fresh[2];
+        // 3.0.19-beta.46 (the owner's «делай все»: the own ground 2.7 ms of the renderer's thread a frame on the fields
+        // in the 3D view): the chunks in view this picture, and each one's pieces - a batch's vertices and its
+        // indices from 0 - made on a few threads at once (ownChunk), then put into pending in the chunks' order
+        struct ChunkJob {
+            size_t k = 0;
+            int which = 0;
+            bool recolour = false;
+        };
+        struct Piece {
+            uint8_t layer = 0;
+            size_t tex = 0;
+            uint32_t vertexCount = 0, indexCount = 0;  // the batch's: pending's room asked as before
+            std::vector<own_ground::Tl2> verts;
+            std::vector<uint16_t> idx;
+        };
+        struct ChunkOut {
+            std::vector<Piece> pieces;
+            size_t used = 0;
+        };
+        std::vector<ChunkJob> jobs;
+        std::vector<ChunkOut> outs;
         std::vector<int32_t> chunkAt;  // a chunk's index by its square of cells (kChunk), -1 none
         int chunksWide = 0;
         std::vector<uint32_t> changed;
@@ -1487,6 +1508,20 @@ struct Renderer::Impl {
     void noteOwnModels(const FrameRecord& rec, const DrawCmd& d);  // 3.0.4-beta.14: the game's own models near
     void drawOwnModels(const own_ground::View& view, const camera::Projection& p, const map::Axes& axes);
     bool drawOwnGround();  // once a picture, the game's ground noted; false: lost
+    // 3.0.19-beta.46: a chunk of the own ground in view made - its colours anew when asked, its batches' pieces
+    // projected, coloured and cut (drawOwnGround's per chunk, on a thread of the few: it reads the picture's inputs
+    // alone and writes that chunk's colours and its out alone)
+    struct OwnMaking {
+        const OwnGround* g = nullptr;
+        own_ground::View view;
+        camera::Projection p;
+        map::Axes axes;
+        float fineDepth = 0, morphFrom = 0, from = 0;
+        bool blends = false, fogged = false;
+        uint32_t plain = 0;
+        size_t textures = 0;
+    };
+    void ownChunk(const OwnMaking& m, const OwnState::ChunkJob& job, OwnState::ChunkOut& out);
     bool noteOwnWater(const FrameRecord& rec, const DrawCmd& d);  // 3.0.4-beta.20: true - a quad of the map's water
     void noteOwnWaterAhead(const FrameRecord& rec, size_t from);  // 3.0.4-beta.24: the record's first such on
     bool drawOwnWater();  // once a picture, before the game's first water or at the interface; false: lost
