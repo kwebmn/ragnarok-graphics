@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.6 — what's new · 2026-11-15
+
+- **«Models by our renderer» in the game's console.** The console (Ctrl+`) shows the switch as a tile on the «Quick» tab among «Switched most», so it can be turned on and off right in the game. The «All» tab now has a «3D view» section with every setting of the 3D view, and the console's search finds them too.
+
 # uaRO Graphics 3.0.20-beta.5 — what's new · 2026-11-15
 
 - **«Models by our renderer» takes more models.** A part of a model now counts as still when its animation keys do not change its place (the game plays every model's animation, even a still one's); before, any part with several keys counted as moving — in Prontera 865 of 1628 parts stayed the game's. Parts hung on a moving model are checked against its place in the world every frame and never freeze.
