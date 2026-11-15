@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.8 — what's new · 2026-11-15
+
+- **«Models by our renderer» faster.** The renderer builds the game's models on several processor threads, as it does its own ground, and puts each vertex on the screen once a model rather than in every face. The picture is the same; in the beta.7 report this work cost the renderer about 2 ms a frame.
+
 # uaRO Graphics 3.0.20-beta.7 — what's new · 2026-11-15
 
 - **«Models by our renderer»: the models no longer vanish.** With the switch on, the game left out the still models (houses, the fountain, shops, trees) and our renderer did not draw them: it got the frame's list of models before the frame began, and the frame's first clear of the screen wiped that list. Now the list lives until the frame is shown, and our renderer draws those models. Because of this bug, animated parts the game draws itself (signs on roofs) hung over empty places. The renderer's log now has a line with how many models and triangles it drew a frame.
