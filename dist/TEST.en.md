@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.31 — what's new · 2026-11-16
+
+- **3D view: the sea past the edge of seaside maps.** Where a map's edge lies under water (Alberta, Izlude, Comodo, Hugel — a quarter of the edge or more), the sea now goes on to the horizon: past the edge a flat bed under the water, no hills or mountains, and over it the map's water at its level with the same modern water shader. The water is cut at the plane in front of the camera, so there are no holes by the shore. A river or a lake reaching the edge (prt_fild08, the Payon forest) is no sea: past the edge there is land. Far land on seaside maps no longer sinks to the mean of the wet edge.
+
 # uaRO Graphics 3.0.20-beta.30 — what's new · 2026-11-16
 
 - **3D view: land to the horizon past the map's edge.** Until now there was nothing past the map's rectangle in the 3D view, and the world looked like an island in the sky. Now land lies round the map: by the edge it carries on the map's own heights, further off it goes over into hills, and forty cells and more away mountains rise and fade into the horizon's haze. Its texture is the most common one on that edge of the map (never the «BACKSIDE» filler), its light the map's mean, its slopes lit by the map's sun. Drawn by the graphics card like the own ground; in the 3D view only, on maps under the sky, in Direct3D 12. Where the map's edge lies under water there is nothing yet — the sea past the edge comes in the next beta.
