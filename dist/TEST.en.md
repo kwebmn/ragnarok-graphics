@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.20 — what's new · 2026-11-15
+
+- **Fewer jerks when new textures come into the picture.** When the game loads new textures (houses, monsters, effects), the renderer used to look each one over several times in that same frame - whether it looks like fire, light or leaves - and look it up in the AI texture pack. Now the texture goes to the card at once and that work is done in the next frames bit by bit, up to 1.5 ms a frame. In the reports such frames took up to 16-27 ms. In Direct3D 12 and Direct3D 11 alike.
+- **The own ground lighter in the 3D view.** Its chunks now go straight into the frame, copied on several threads, with no copy in between. While the camera moves the renderer has less to do a frame.
+
 # uaRO Graphics 3.0.20-beta.19 — what's new · 2026-11-15
 
 - **One screenshot, shown as one.** A report takes one screenshot, but twice: a small JPEG in the report itself and the original in full quality after it. Now that is plain: «Preparing the screenshot», then «The screenshot in full quality: 3.2 of 12.5 MB».
