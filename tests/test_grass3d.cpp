@@ -32,27 +32,55 @@ TEST(config_view3d_grass_on_by_default_and_live) {
     CHECK(!(parseConfig("").effects == parseConfig("[view3d]\ngrass = 0\n").effects));
 }
 
-// 3.0.20-beta.25 (R-6YX3UF «трава в 3д режимі трошки далі не видна і якась вона не дуже»: none past some 55 units, its
-// edge thinned at random): rings of roots round the eye - each further one twice as far out, its roots twice as far
-// apart (as many of them), its blades wider by as much and a little taller; a ring's outer part thinned to the next
-// one's density, the last one's to none with its blades shrinking to nothing - no edge, no step between the rings
+// 3.0.20-beta.25 (R-6YX3UF «трава в 3д режимі трошки далі не видна»: none past some 55 units): rings of roots round
+// the eye, each twice as far out, its roots twice as far apart. 3.0.20-beta.27 (R-TBD86F «когда идешь трава двигается
+// не естественно»: beta.25's rings had roots of their own and blades twice and four times as wide - a ring's edge went
+// along with the eye, and the grass at a place changed its blades as it crossed): a ring takes the half units' cells
+// of its own step's corners alone - its roots the nearer rings' roots in the same spots, a level each (levelOf); the
+// finer ones grow in round them as the eye nears (presenceOf), a blade's width and height going with the distance
 TEST(grass3d_rings_reach_further_each_twice_as_sparse) {
     const grass3d::Grid g = grass3d::gridFor(false);
     CHECK(g.rings == grass3d::kRings && g.rings == 3);
     CHECK(g.roots() == uint32_t(g.side) * uint32_t(g.side) && g.blades() == g.roots() * 3u);
     CHECK(g.stepOf(1) == 2.0f * g.step && g.reachOf(1) == 2.0f * g.reachOf(0));
-    CHECK(g.reach() == g.reachOf(2) && g.reach() > 200.0f);
+    CHECK(g.reach() == g.reachOf(2) && g.reach() > 200.0f && g.fullTo() * 2.0f == g.reachOf(0));
     CHECK(grass3d::ringOf(g, 10.0f) == 0 && grass3d::ringOf(g, g.reachOf(0) + 1.0f) == 1);
     CHECK(grass3d::ringOf(g, g.reach() - 1.0f) == 2 && grass3d::ringOf(g, g.reach() + 1.0f) == -1);
-    CHECK(grass3d::keepOf(g, 0, g.reachOf(0) * 0.5f) == 1.0f);  // whole inside 60 % of its reach
-    CHECK(std::fabs(grass3d::keepOf(g, 0, g.reachOf(0) * 0.9999f) - 0.25f) < 0.01f);  // the next ring's density
-    CHECK(grass3d::keepOf(g, 1, g.reachOf(0) * 1.0001f) == 1.0f);  // a quarter as dense from there: the same
-    CHECK(grass3d::keepOf(g, 2, g.reach() * 0.9999f) < 0.01f);    // the last ring's to none
-    CHECK(grass3d::widthOf(0) == 1.0f && grass3d::widthOf(1) == 2.0f && grass3d::widthOf(2) == 4.0f);
-    CHECK(grass3d::heightOf(g, 0, 5.0f) == 1.0f && grass3d::heightOf(g, 1, g.reachOf(1) * 0.7f) > 1.0f);
-    CHECK(grass3d::heightOf(g, 2, g.reach() * 0.9999f) < 0.01f);  // shrinking to nothing at the last edge
     const grass3d::Grid thin = grass3d::gridFor(true);  // a weak card's: two rings of fewer roots
     CHECK(thin.rings == 2 && thin.blades() * 2u < g.blades() && thin.reach() > 80.0f);
+}
+
+// a root's level - the times its half units' cell halves evenly both ways (at most the last ring's); the level wanted
+// by the distance; how much of a root stands there - its level whole, none a level past it, the last over half a level
+TEST(grass3d_a_root_keeps_its_place_and_the_finer_ones_grow_in) {
+    CHECK(grass3d::levelOf(1, 0, 2) == 0 && grass3d::levelOf(0, 0, 2) == 2 && grass3d::levelOf(2, 4, 2) == 1);
+    CHECK(grass3d::levelOf(4, 8, 2) == 2 && grass3d::levelOf(-2, 2, 5) == 1 && grass3d::levelOf(-4, 12, 5) == 2);
+    CHECK(grass3d::levelOf(8, 16, 5) == 3 && grass3d::levelOf(1024, 0, 2) == 2);
+    const float full = 27.5f;  // all the roots up to it
+    CHECK(grass3d::needOf(10.0f, full) == 0.0f && grass3d::needOf(55.0f, full) == 1.0f);
+    CHECK(std::fabs(grass3d::needOf(110.0f, full) - 2.0f) < 1e-5f);
+    CHECK(grass3d::presenceOf(0, 0.0f, 3) == 1.0f && grass3d::presenceOf(0, 0.5f, 3) == 0.5f);
+    CHECK(grass3d::presenceOf(0, 1.0f, 3) == 0.0f && grass3d::presenceOf(1, 1.0f, 3) == 1.0f);
+    CHECK(grass3d::presenceOf(1, 1.5f, 3) == 0.5f && grass3d::presenceOf(2, 2.4f, 3) == 1.0f);
+    CHECK(grass3d::presenceOf(2, 2.75f, 3) == 0.5f && grass3d::presenceOf(2, 3.0f, 3) == 0.0f);
+    // the roots of a field 64 x 64 half units: a quarter of them a level on, none past the last - and no step
+    float before = 2.0f;
+    for (int k = 0; k <= 300; ++k) {
+        const float need = float(k) / 100.0f;
+        float sum = 0.0f;
+        for (int x = 0; x < 64; ++x)
+            for (int z = 0; z < 64; ++z) sum += grass3d::presenceOf(grass3d::levelOf(x, z, 2), need, 3);
+        const float density = sum / 4096.0f;
+        CHECK(density <= before && before - density < 0.02f + (k == 0 ? 2.0f : 0.0f));
+        if (k == 0) CHECK(density == 1.0f);
+        if (k == 100) CHECK(std::fabs(density - 0.25f) < 1e-4f);
+        if (k == 200) CHECK(std::fabs(density - 0.0625f) < 1e-4f);
+        if (k == 300) CHECK(density == 0.0f);
+        before = density;
+    }
+    CHECK(grass3d::widthAt(10.0f, full) == 1.0f && grass3d::widthAt(55.0f, full) == 2.0f);  // as wide on the screen
+    CHECK(grass3d::heightAt(0.0f, 3) == 1.0f && std::fabs(grass3d::heightAt(1.0f, 3) - 1.35f) < 1e-5f);
+    CHECK(std::fabs(grass3d::heightAt(5.0f, 3) - 1.7f) < 1e-5f);
 }
 
 // 3.0.20-beta.25 (R-6YX3UF: blades in patches on prt_fild08's olive meadow - its pixels' green 0.99-1.03 of their red,
@@ -95,6 +123,8 @@ TEST(grass3d_a_thin_blade_wider_and_fainter) {
     CHECK(wider == 1.0f && alpha == 1.0f);
     grass3d::fadeOf(grass3d::kMinPixels / 2.0f, wider, alpha);
     CHECK(wider == 2.0f && alpha == 0.5f);
-    grass3d::fadeOf(0.0f, wider, alpha);  // none across: kept finite
-    CHECK(alpha == 0.0f && wider > 0.0f && wider < 1e9f);
+    grass3d::fadeOf(0.1f, wider, alpha);  // 3.0.20-beta.27: six times at most, its coverage the same
+    CHECK(wider == grass3d::kMostWider && std::fabs(alpha - 1.0f / grass3d::kMostWider) < 1e-6f);
+    grass3d::fadeOf(0.0f, wider, alpha);  // none across: none
+    CHECK(alpha == 0.0f && wider == 1.0f);
 }

@@ -2785,6 +2785,30 @@ float3 bladeView(float3 w) {  // the world -> the view (viewToWorld's rows the v
     return float3(dot(d, float3(r0, r1, r2)), dot(d, float3(r3, r4, r5)), dot(d, float3(r6, r7, r8)));
 }
 
+// 3.0.20-beta.27 (R-TBD86F «когда идешь трава двигается не естественно»; the owner: «и трава не такая как вид
+// сверху»): the top view's grass in the world (grass_ps) - a root at most every half unit of it, in its cell's own spot
+// (grassNear's), there by the same chance (twinW: grass_ps's twinY), a flower in the same patches (uiPixels.z the
+// flowers' share, sourceRect.y the map's palette), its height grassHeight's: the same blades and flowers in the same
+// places, the colour going up a blade as up its (0.65 to 1.25 of the ground's). A ring the half units of its own step's
+// corners alone (core grass3d levelOf): a further ring's root the same root nearer, the finer ones growing in round it
+// (presenceOf); a blade's width and height going with the distance (widthAt, heightAt), each blade of a tuft turned
+// its own way in the world, a third of a turn from the next - beta.38's turned to the camera all turned with it
+// a blade's height and its tip's lean (world units) by its root's cell and its place in the tuft (0 the stem)
+void bladeShape(float2 cell, uint m, float tall, float2 xz, out float h, out float2 lean) {
+    float2 seed = cell + float2(float(m) * 3.7, float(m) * 1.3);
+    h = tall * (m == 0u ? 1.0 : 0.72 + 0.2 * hash12(seed + 2.9));
+    float fanTurn = hash12(seed + 7.3) * 6.2832;
+    float phase = hash12(seed + 6.6) * 6.2832;
+    lean = sourceRect.zw * (0.35 + 0.25 * sin(sharpen * 2.1 + phase)) * h;
+    lean += float2(sin(sharpen * 1.3 + phase), cos(sharpen * 1.1 + phase * 0.7)) * 0.07 * h;
+    lean += float2(cos(fanTurn), sin(fanTurn)) * (m == 0u ? 0.06 : 0.2) * h;  // the tuft fanned out, its stem up
+    if (footprint > 0.5) {  // the steps' hold: pushed away from the step, lower
+        float4 hold = trampleAt(xz);
+        lean += hold.xy * 2.0 * h * 0.8;
+        h *= 1.0 - 0.6 * saturate(hold.z);
+    }
+}
+
 BladeOut grass3d_vs(uint id : SV_VertexID) {
     BladeOut o;
     o.pos = float4(2.0, 2.0, 2.0, 1.0);  // off the picture: no blade
@@ -2796,33 +2820,33 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
     uint member = blade % 3u;  // 3.0.19-beta.38: a tuft of three a root (core grass3d::kTuft)
     blade = blade / 3u;
     uint side = uint(twinX + 0.5);
-    // 3.0.20-beta.25 (R-6YX3UF «трава в 3д режимі трошки далі не видна»): twinH rings of roots round the eye (core
-    // grass3d, the same sums) - each further one twice as far out, its roots twice as far apart, its blades wider by
-    // as much and a little taller; a ring's outer part thinned to the next one's density, the last one's to none
-    uint ring = blade / (side * side);
+    uint ring = blade / (side * side);  // 3.0.20-beta.25: twinH rings round the eye
     uint rings = max(uint(twinH + 0.5), 1u);
     blade = blade % (side * side);
-    float gap = max(twinY, 0.05) * float(1u << ring);
+    float step0 = max(twinY, 0.05);
+    float gap = step0 * float(1u << ring);
     float3 eye = float3(r9, r10, r11);
     float2 cid = floor(eye.xz / gap) - float(side / 2u) + float2(float(blade % side), float(blade / side));
-    float2 rid = cid + float(ring) * 17.3;  // each ring's own chances
-    if (hash12(rid + 0.7) > twinW) return o;
-    float2 xz = (cid + 0.15 + 0.7 * float2(hash12(rid + 1.7), hash12(rid + 9.1))) * gap;
-    float reach = float(side / 2u) * gap;
+    float2 cell = cid * float(1u << ring);  // the root's half unit's cell - the same one in every ring
+    if (hash12(cell) > twinW) return o;  // grass_ps's chance of a blade there
+    float2 xz = (cell + 0.3 + 0.4 * float2(hash12(cell + 11.3), hash12(cell + 5.7))) * step0;  // grassNear's spot
+    float full = float(side / 4u) * step0;  // every root up to it (core Grid::fullTo)
+    float reach = full * float(2u << ring);
     float dist = length(xz - eye.xz);
     if (dist >= reach || dist < (ring > 0u ? reach * 0.5 : 0.0)) return o;  // past it, or the ring within's
-    bool last = ring + 1u >= rings;
-    // 3.0.20-beta.26 (R-PKPE9D): a root by the thinning's edge grows and shrinks as the eye moves, not blinks
-    float growKeep = bladeGrow(1.0 - saturate((dist - reach * 0.6) / (reach * 0.4)) * (last ? 1.0 : 0.75),
-                               hash12(rid + 4.4));
+    int2 ic = int2(cell);
+    uint level = min(min(firstbitlow(uint(ic.x)), firstbitlow(uint(ic.y))), rings - 1u);
+    float need = dist <= full ? 0.0 : log2(dist / full);
+    float presence = level + 1u >= rings ? saturate((float(rings) - need) * 2.0) : saturate(float(level) + 1.0 - need);
+    float growKeep = bladeGrow(presence, hash12(cell + 4.4));  // 3.0.20-beta.26: grows in, not blinks
     if (growKeep <= 0.0) return o;
     float y = eye.y + 13.0;  // the feet's, about (y down: the eyes 13 over them)
     bool cellKnown = false;
     float2 span = float2(0.0, 0.0);
     if (sourceClamp.z > 0.0) {
-        int across = int(fmod(sourceClamp.w, 1024.0) + 0.5), down = int(sourceClamp.w / 1024.0);
+        int cellsAcross = int(fmod(sourceClamp.w, 1024.0) + 0.5), cellsDown = int(sourceClamp.w / 1024.0);
         int2 cellAt = int2(floor((xz - sourceClamp.xy) * sourceClamp.z));
-        if (all(cellAt >= int2(0, 0)) && cellAt.x < across && cellAt.y < down) {
+        if (all(cellAt >= int2(0, 0)) && cellAt.x < cellsAcross && cellAt.y < cellsDown) {
             span = mirrorTex.Load(int3(cellAt, 0)).rg;
             if (span.x > span.y) return o;  // none of the map's own ground in that cell
             cellKnown = true;
@@ -2841,50 +2865,51 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
     }
     if (!found || y > uiPixels.w) return o;  // something else seen there; under the water (up is -y)
     if (cellKnown && (y < span.x - 0.75 || y > span.y + 0.75)) return o;  // a deck, a bridge over the ground
-    // 3.0.20-beta.26 (R-PKPE9D «впечатление что трава мигает»: the meadow lies on beta.25's edge of the green - a root
-    // whose pixel crossed it came and went): its colour between the pixels round it, how green a chance against its own
+    // 3.0.20-beta.26 (R-PKPE9D «впечатление что трава мигает»): its colour between the pixels round it, how green a
+    // chance against its own
     float3 rc = groundColourAt(tp);
-    float growGreen = bladeGrow(bladeGreen(rc), hash12(rid + 21.7));
+    float growGreen = bladeGrow(bladeGreen(rc), hash12(cell + 21.7));
     if (growGreen <= 0.0) return o;  // not green ground
-    // 3.0.19-beta.38 (R-ZMGYMM «трава есть но слабая и практически не видно»): taller, a tuft fanned out, each
-    // blade turned to the camera (the view's right along the ground, a little off) - none seen edge on
-    float2 seed = rid + float2(float(member) * 3.7, float(member) * 1.3);
-    float h = (1.1 + 1.0 * hash12(seed + 2.1)) * 1.5;  // units: some 1.6-3, a character some 16
-    h *= (1.0 + 0.35 * float(ring)) * (last ? saturate((reach - dist) / (reach * 0.25)) : 1.0);  // .25: heightOf
-    h *= growKeep * growGreen;  // .26: by the edges, smaller
-    float2 facing = normalize(float2(r0, r2) + 1e-4);
-    float off = (hash12(seed + 3.3) - 0.5) * 1.0;  // radians off the camera's right
-    float2 across2 = float2(facing.x * cos(off) - facing.y * sin(off), facing.x * sin(off) + facing.y * cos(off)) *
-                     (0.08 + 0.06 * hash12(seed + 5.5)) * float(1u << ring);  // .25: widthOf
-    float fanTurn = hash12(seed + 7.3) * 6.2832;
-    float phase = hash12(seed + 6.6) * 6.2832;
-    float2 lean = sourceRect.zw * (0.35 + 0.25 * sin(sharpen * 2.1 + phase)) * h;
-    lean += float2(sin(sharpen * 1.3 + phase), cos(sharpen * 1.1 + phase * 0.7)) * 0.07 * h;
-    lean += float2(cos(fanTurn), sin(fanTurn)) * 0.18 * h;  // the tuft fanned out
-    if (footprint > 0.5) {  // the steps' hold: pushed away from the step, lower
-        float4 hold = trampleAt(xz);
-        lean += hold.xy * 2.0 * h * 0.8;
-        h *= 1.0 - 0.6 * saturate(hold.z);
-    }
+    // the top view's flower (grassFlower: in patches, a few in each) and height (grassHeight), in world units
+    bool flower = hash12(cell + 31.7) < uiPixels.z && valueNoise(xz * 0.07 + 3.3) > 0.72;
+    float tall = (0.45 + 0.55 * hash12(cell + 2.1)) * (flower ? 1.15 : 1.0) * 3.4 *
+                 (1.0 + 0.35 * min(need, float(rings - 1u))) * growKeep * growGreen;  // core heightAt
+    float wide = dist <= full ? 1.0 : dist / full;  // core widthAt: as wide on the screen past `full`
+    float h;
+    float2 lean;
+    bladeShape(cell, flower && member == 2u ? 0u : member, tall, xz, h, lean);
     float3 base = bladeView(float3(xz.x, y, xz.y));
     if (base.z <= nearZ + 1.0) return o;  // the whole blade in front of the eye
-    // 3.0.20-beta.26 (R-PKPE9D, under DLSS's jitter): one under kMinPixels (2.5) on the target that wide, as much
-    // fainter (core grass3d::fadeOf)
-    float across = 2.0 * length(across2) / base.z * f0 * scale;  // target pixels
-    float wider = across >= 2.5 ? 1.0 : 2.5 / max(across, 1e-3);
-    o.fade = across >= 2.5 ? 1.0 : across / 2.5;
-    if (o.fade < 0.03) return o;
-    across2 *= wider;
-    float3 at = corner == 2u ? float3(xz.x + lean.x, y - h, xz.y + lean.y)
-                             : float3(xz.x + (corner == 0u ? -across2.x : across2.x), y,
-                                      xz.y + (corner == 0u ? -across2.y : across2.y));
-    float3 v = bladeView(at);
+    float3 v;
+    if (flower && member == 2u) {  // a flower's head on its stem's tip, turned to the camera (grass_ps's colour)
+        float3 tipView = bladeView(float3(xz.x + lean.x, y - h, xz.y + lean.y));
+        float r = 0.22 * wide;
+        float2 offs = corner == 0u ? float2(-r, r * 0.6) : (corner == 1u ? float2(r, r * 0.6) : float2(0.0, -r));
+        v = tipView + float3(offs, 0.0);  // the view's x right, y down
+        o.colour = flowerColour(hash12(cell + 17.9), int(sourceRect.y + 0.5)) * (0.75 + 0.4 * rc.g);
+        o.tip = -1.0;
+        o.fade = 1.0;
+    } else {
+        // each blade of a tuft its own way in the world, a third of a turn from the next - none turned with the camera
+        float yaw = hash12(cell + 3.3) * 6.2832 + float(member) * 2.0944;
+        float2 across2 = float2(cos(yaw), sin(yaw)) * (0.06 + 0.04 * hash12(cell + float(member) * 3.7 + 5.5)) * wide;
+        // 3.0.20-beta.26 (R-PKPE9D, under DLSS's jitter): one under kMinPixels (2.5) across on the target that wide,
+        // at most kMostWider (6) times, as much fainter (core grass3d::fadeOf) - its width along the view's right
+        float across = 2.0 * abs(dot(across2, float2(r0, r2))) / base.z * f0 * scale;  // target pixels
+        float wider = across >= 2.5 ? 1.0 : min(2.5 / max(across, 1e-3), 6.0);
+        o.fade = across >= 2.5 ? 1.0 : (across > 0.0 ? 1.0 / wider : 0.0);
+        if (o.fade < 0.03) return o;
+        across2 *= wider;
+        float3 at = corner == 2u ? float3(xz.x + lean.x, y - h, xz.y + lean.y)
+                                 : float3(xz.x + (corner == 0u ? -across2.x : across2.x), y,
+                                          xz.y + (corner == 0u ? -across2.y : across2.y));
+        v = bladeView(at);
+        o.colour = rc * (0.92 + 0.16 * hash12(cell + float(member) * 3.7 + 8.8));  // each blade a little its own
+        o.tip = corner == 2u ? 1.0 : 0.0;
+    }
     float2 px = float2(v.x / v.z * f0 + cx, v.y / v.z * f1 + cy) * scale + 0.5 + float2(jitterX, jitterY);
     o.pos = float4(px.x * 2.0 / targetSize.x - 1.0, 1.0 - px.y * 2.0 / targetSize.y, 0.5, 1.0);
-    // each blade a little its own; 3.0.20-beta.25 a little greener than its ground (R-6YX3UF: grey spikes)
-    o.colour = rc * float3(0.94, 1.04, 0.9) * (0.88 + 0.24 * hash12(seed + 8.8));
     o.viewZ = v.z;
-    o.tip = corner == 2u ? 1.0 : 0.0;
     return o;
 }
 
@@ -2892,9 +2917,10 @@ float4 grass3d_ps(BladeOut i) : SV_Target {
     float raw = sceneDepth.Load(int3(int2(i.pos.xy), 0));
     float sceneZ = raw >= 0.99999 ? 1e6 : viewDepth(raw);
     if (sceneZ < i.viewZ - 0.08) discard;  // something nearer in front of it
-    // 3.0.19-beta.38: dark at the root, lighter and a little yellow at the tip - seen against its own ground;
-    // 3.0.20-beta.25 (R-6YX3UF «якась вона не дуже»: grey-black spikes) the root 0.66 of it, not 0.42, the tip 1.22
-    return float4(i.colour * lerp(0.66, 1.22, i.tip) + float3(0.045, 0.04, 0.0) * i.tip, i.fade);
+    // 3.0.20-beta.27 (the owner: «и трава не такая как вид сверху»): up a blade as grass_ps's - 0.65 of its ground's
+    // colour at the root to 1.25 at the tip; a flower's head (tip -1) its own colour
+    if (i.tip < -0.5) return float4(i.colour, i.fade);
+    return float4(i.colour * lerp(0.65, 1.25, saturate(i.tip)), i.fade);
 }
 
 // 3.0.19-beta.40 (the owner's «делаем все по порядку»: in the 3D view the weather fell as flat layers over the
