@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.21 — what's new · 2026-11-15
+
+- **No holes in walls by the camera in the 3D view.** When the camera came right up to a wall, a face with even one corner behind the camera vanished whole - the game does that itself - and a triangular hole opened in the wall. Now the card neatly cuts the models our renderer draws («Models by our renderer») at the edge in front of the camera, and the wall stays whole. With the switch off the game draws the models, and such holes stay there.
+
 # uaRO Graphics 3.0.20-beta.20 — what's new · 2026-11-15
 
 - **Fewer jerks when new textures come into the picture.** When the game loads new textures (houses, monsters, effects), the renderer used to look each one over several times in that same frame - whether it looks like fire, light or leaves - and look it up in the AI texture pack. Now the texture goes to the card at once and that work is done in the next frames bit by bit, up to 1.5 ms a frame. In the reports such frames took up to 16-27 ms. In Direct3D 12 and Direct3D 11 alike.
