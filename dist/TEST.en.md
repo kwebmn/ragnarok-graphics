@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.12 — what's new · 2026-11-15
+
+- **«Models by our renderer»: shadows and reflections.** The models our renderer draws are now reflected in water («World reflections in water») and cast shadows from torches and lamps («Shadows from torches and lamps») - as the game's models do. In Direct3D 11 our models are now drawn before the torches' light, the night's colours and the other passes over the world even in a frame without a single blended draw.
+
 # uaRO Graphics 3.0.20-beta.11 — what's new · 2026-11-15
 
 - **«Models by our renderer» in Direct3D 12 - now on the card.** As in Direct3D 11, the captured models go into the card's memory once, and each frame the renderer passes only the faces' numbers - the card puts them on the screen by the game's rules. The renderer no longer builds the models' triangles on the processor every frame, and the «own ground» is not rebuilt when the frame's list of models changes. If the card gives no room for the faces, the renderer goes back to building them on the processor. The renderer's log shows how many frames drew the models from the card.
