@@ -582,6 +582,7 @@ private:
     FrameRecord stampRec_;
     bool stampPass_ = false, stampLogged_ = false;
     void noteStamp(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
+    bool stampable(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) const;  // 3.0.20-beta.24: wings too
     void applyStamps();
     bool seasonsShown() const {
         return effects_.seasons && ((effects_.seasonSnow && year_.snow > 0.0f) ||

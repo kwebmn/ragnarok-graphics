@@ -220,6 +220,9 @@ TEST(effect_exe_soft_particles_but_not_a_hit_flash) {
     CHECK(!effect_exe::softEffect(true, uint8_t(Kind::HitFlash)));
     // 2.7.14: nor a card's star on the ground - added light at the card's own depth, put out the same way
     CHECK(!effect_exe::softEffect(true, uint8_t(Kind::Glint)));
+    // 3.0.20-beta.24: nor a wearer's wings (the driver's quads, the body's setup) - a part of the body, never faded
+    CHECK(!effect_exe::softEffect(true, uint8_t(Kind::Wings)));
+    CHECK(!effect_exe::softEffect(false, uint8_t(Kind::Wings)));
 }
 
 TEST(effect_exe_skills_laid_over_stay_solid) {

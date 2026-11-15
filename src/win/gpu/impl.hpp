@@ -1391,6 +1391,7 @@ struct Renderer::Impl {
     bool stampPass = false, stampLogged = false;
     uint8_t characterSource(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);  // 0 none
     void noteStamp(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
+    bool stampable(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);  // 3.0.20-beta.24: and wings
     bool applyStamps();  // false: lost
     bool silhouettePass = false;
     int silhouetteTold = 0;  // the log's first sprites near the character

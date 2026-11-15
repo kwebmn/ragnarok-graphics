@@ -68,9 +68,15 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool inner = seamPass || darknessPass || ownPass || silhouettePass || stampPass;
     // 3.0.16-beta.25: [effects] body_stamp - a character's sprite gathered for the depth; the gathered ones put down
     // before anything else is drawn
+    // 3.0.20-beta.24 (R-UAEQ32, R-59XPGD «текстура підрізається»): in the 3D view without it the characters' sprites
+    // and wings gathered all the world long, put down at its end (finishWorld, the interface's first draw) - the 3D
+    // sky goes where nothing has a depth and went over their parts against it; what is drawn after them stays over
+    const bool skyStamps = !effects.bodyStamp && sky3dPs && camera::wideView();
     if (!inner && effects.bodyStamp && !s.ui) {
-        if (characterSource(rec, d, s)) noteStamp(rec, d, s);
+        if (stampable(rec, d, s)) noteStamp(rec, d, s);
         else if (!stampRec.draws().empty() && !applyStamps()) return;
+    } else if (!inner && skyStamps && !s.ui) {
+        if (stampable(rec, d, s)) noteStamp(rec, d, s);
     } else if (!inner && !stampRec.draws().empty() && !applyStamps()) {
         return;
     }

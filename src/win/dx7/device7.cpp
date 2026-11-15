@@ -90,6 +90,7 @@ void drawWings(win::Context& c, const std::vector<win::wings::Quad>& quads, cons
         cmd.texture[0] = q.texture;
         cmd.primitive = d3d7::PT_TRIANGLESTRIP;
         cmd.fvf = d3d7::FVF_TL1;
+        cmd.effect = uint8_t(effect_exe::Kind::Wings);  // 3.0.20-beta.24: the renderers stamp them as the body
         c.record.draw(cmd, v, 4, nullptr, 0);
     }
 }

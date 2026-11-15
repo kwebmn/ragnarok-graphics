@@ -6,6 +6,7 @@
 #include <cstring>
 
 #include "core/d3d7.hpp"
+#include "core/effect_exe.hpp"
 #include "core/frame.hpp"
 #include "core/game_camera.hpp"
 #include "win/gpu/renderer11.hpp"
@@ -19,7 +20,7 @@
 namespace uagfx::gpu {
 namespace {
 
-constexpr size_t kMostStamps = 256;
+constexpr size_t kMostStamps = 1024;  // 3.0.20-beta.24: a frame's in the 3D view (256 before)
 constexpr float kStampBack = 3.0f;
 
 float depthOf(float w) { return camera::kFar / (camera::kFar - camera::kNear) * (1.0f - camera::kNear / w); }
@@ -65,6 +66,12 @@ void Renderer11::noteStamp(const FrameRecord& rec, const DrawCmd& d, const DrawS
     stampRec_.draw(cmd, out.data(), d.vertexCount, d.indexCount ? ix.data() + d.firstIndex : nullptr, d.indexCount);
 }
 
+// 3.0.20-beta.24: a character's sprite or a wearer's wings (effect_exe::Kind::Wings) - put into the depth as its body
+bool Renderer11::stampable(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) const {
+    if (d.effect == uint8_t(effect_exe::Kind::Wings)) return !s.ui && s.blend && d.vertexCount == 4;
+    return characterSource(rec, d, s) != 0;
+}
+
 void Renderer11::applyStamps() {
     if (stampRec_.draws().empty()) return;
     flushBatch();  // the game's draws gathered so far are of its own vertices
@@ -83,9 +90,13 @@ void Renderer11::applyStamps() {
         stampPass_ = false;
         std::swap(vertices_, seamVertices_);
         std::swap(indices_, seamIndices_);
-        if (!stampLogged_)
+        if (!stampLogged_ && effects_.bodyStamp)
             LOG_INFO("body stamp: %zu characters' sprites put into the depth %.0f units behind their feet - what is "
                      "drawn after them hides behind them (Direct3D 11, [effects] body_stamp)",
+                     n, double(kStampBack));
+        else if (!stampLogged_)  // 3.0.20-beta.24
+            LOG_INFO("3D sky: %zu characters' sprites and wings put into the depth %.0f units behind their feet at "
+                     "the world's end - the sky and its haze leave them be (Direct3D 11)",
                      n, double(kStampBack));
         stampLogged_ = true;
     }

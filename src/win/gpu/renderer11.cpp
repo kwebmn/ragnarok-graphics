@@ -1363,9 +1363,16 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 3.0.16-beta.35: [effects] body_stamp (body_stamp11.cpp) - a character's sprite gathered for the depth; the
     // gathered ones put down at the next draw of something else
     const bool innerPass = seamPass_ || darknessPass_ || silhouettePass_ || stampPass_ || modelPass_;
-    if (!innerPass && effects_.bodyStamp && !s.ui && remaster()) {
-        if (characterSource(rec, d, s)) noteStamp(rec, d, s);
+    // 3.0.20-beta.24 (R-UAEQ32: in the 3D view a character's parts against the sky not drawn): without it the
+    // characters' sprites and wings gathered all the world long, put down at its end - the 3D sky goes where nothing
+    // has a depth (as draw.cpp's); what is drawn after them stays over them
+    const bool stampsByHand = effects_.bodyStamp && remaster();
+    const bool skyStamps = !stampsByHand && sky3dPs_ && camera::wideView();
+    if (!innerPass && stampsByHand && !s.ui) {
+        if (stampable(rec, d, s)) noteStamp(rec, d, s);
         else if (!stampRec_.draws().empty()) applyStamps();
+    } else if (!innerPass && skyStamps && !s.ui) {
+        if (stampable(rec, d, s)) noteStamp(rec, d, s);
     } else if (!innerPass && !stampRec_.draws().empty()) {
         applyStamps();
     }
@@ -2506,6 +2513,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         LOG_DEBUG("picture %dx%d of the game shown as %dx%d at %d,%d in the %ux%u window", source.width(),
                   source.height(), fit.width(), fit.height(), fit.left, fit.top, swapWidth_, swapHeight_);
     }
+    if (!stampRec_.draws().empty()) applyStamps();  // 3.0.20-beta.24: the 3D view's characters before its sky
     // 3.0.5-beta.2: each pass its span ([debug] profile; the timed ones by their effect's name)
     if (worldDrawn_ && !stepsDone_) {
         pmark(effectName11(kTimeSteps11));

@@ -7,6 +7,7 @@
 
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
+#include "core/effect_exe.hpp"
 #include "core/frame.hpp"
 #include "core/game_camera.hpp"
 #include "core/sprite_exe.hpp"
@@ -16,7 +17,7 @@
 namespace uagfx::gpu {
 namespace {
 
-constexpr size_t kMostStamps = 256;     // a run of sprites
+constexpr size_t kMostStamps = 1024;    // a run of sprites (3.0.20-beta.24: a frame's in the 3D view; 256 before)
 constexpr float kStampBack = 3.0f;      // view units behind the feet: what stands at the character itself stays over
 
 float depthOf(float w) { return camera::kFar / (camera::kFar - camera::kNear) * (1.0f - camera::kNear / w); }
@@ -46,6 +47,12 @@ uint8_t Renderer::Impl::characterSource(const FrameRecord& rec, const DrawCmd& d
                    source == uint8_t(sprite_exe::Source::Npc)
                ? source
                : 0;
+}
+
+// 3.0.20-beta.24: a character's sprite or a wearer's wings (effect_exe::Kind::Wings) - put into the depth as its body
+bool Renderer::Impl::stampable(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
+    if (d.effect == uint8_t(effect_exe::Kind::Wings)) return !s.ui && s.blend && d.vertexCount == 4;
+    return characterSource(rec, d, s) != 0;
 }
 
 // 3.0.16-beta.25 (the owner: «давай» - nostalRE's body stamp): the game draws its characters writing no depth, so
@@ -104,9 +111,13 @@ bool Renderer::Impl::applyStamps() {
     }
     geometryList = 0;  // the game's record's vertices go up again with its next draw
     stampRec.reset();
-    if (!stampLogged)
+    if (!stampLogged && effects.bodyStamp)
         LOG_INFO("body stamp: %zu characters' sprites put into the depth %.0f units behind their feet - what is drawn "
                  "after them hides behind them ([effects] body_stamp)",
+                 n, double(kStampBack));
+    else if (!stampLogged)  // 3.0.20-beta.24
+        LOG_INFO("3D sky: %zu characters' sprites and wings put into the depth %.0f units behind their feet at the "
+                 "world's end - the sky and its haze leave them be",
                  n, double(kStampBack));
     stampLogged = true;
     return !lost;
