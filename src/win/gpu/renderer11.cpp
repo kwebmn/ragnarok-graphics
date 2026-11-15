@@ -1727,9 +1727,15 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[3] = waterLife();
         if (mirrorMade_) c.stage0[1] |= 1u << 27;  // 2.5.9 (draw.cpp 1.16): the world mirrored (t5)
         if (camera::wideView() && c.fogEnable == 0) {  // 3.0.19-beta.41: the 3D view's horizon its sky (water_ps)
-            const view3d::Sky sky = view3d::skyOf(float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f, !outdoors_);
+            const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+            const view3d::Sky sky = view3d::skyOf(night, !outdoors_);
             std::copy(sky.horizon, sky.horizon + 3, c.fogColor);
             c.fogColor[3] = 2.0f;
+            // 3.0.20-beta.32: the sky it reflects (draw.cpp's)
+            c.hole[0] = night;
+            c.hole[1] = outdoors_ ? 1.0f : 0.0f;
+            float toSun[3] = {0.0f, 0.0f, 0.0f};
+            if (outdoors_ && mapSun(toSun)) std::copy(toSun, toSun + 3, c.hole + 4);
         }
         if (ripplesWanted()) {  // 2.5.2 (draw.cpp 0.94): the three newest steps (x, z, age), one in each free vector
             float* slot[3] = {c.uiPixels, c.sourceRect, c.sourceClamp};

@@ -1315,6 +1315,38 @@ float3 reflectionIn(float3 p, float3 r, float2 size, out float weight) {
     }
     return float3(0.0, 0.0, 0.0);
 }
+float fbm4(float2 p) {
+    float s = 0.0, a = 0.5;
+    [unroll] for (int k = 0; k < 4; ++k) {
+        s += a * valueNoise(p);
+        p = p * 2.03 + float2(1.7, -0.9);
+        a *= 0.5;
+    }
+    return s;
+}
+
+// 3.0.20-beta.32 (the owner's «6,7,8,9», 7 - water in the 3D view): the 3D view's open sky along a way (the world's,
+// up -y) - sky3d_ps's and the water's reflection of it alike: the horizon's colour up to the zenith's by the night, the
+// sun the map's light comes from, soft clouds drifting by the time t
+float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t) {
+    float rise = -dir.y;  // the world's y points down
+    float3 zenith = lerp(float3(0.30, 0.52, 0.86), float3(0.015, 0.025, 0.07), night);
+    float3 sky = lerp(horizon, zenith, smoothstep(-0.03, 0.55, rise));
+    if (dot(toSun, toSun) > 0.25) {
+        float sunUp = saturate(dot(dir, normalize(toSun)));
+        float3 sunLight = float3(1.0, 0.92, 0.76) * (1.0 - night);
+        sky += sunLight * (pow(sunUp, 900.0) * 5.0 + pow(sunUp, 24.0) * 0.35 + pow(sunUp, 4.0) * 0.08);
+    }
+    float lift = max(rise, 0.0) + 0.1;
+    float2 flow = float2(t * 0.006, t * 0.003);
+    float2 across = dir.xz / lift * 0.8 + flow;
+    float puff = fbm4(across) * 0.65 + fbm4(across * 2.7 + 5.1) * 0.35;
+    float cover = smoothstep(0.5, 0.74, puff) * smoothstep(0.0, 0.2, rise);
+    float3 cloud = lerp(float3(0.97, 0.97, 0.98), float3(0.62, 0.65, 0.72), saturate((puff - 0.6) * 3.0));
+    cloud = lerp(cloud, horizon * 0.45, night * 0.85);
+    return lerp(sky, cloud, cover * 0.85);
+}
+
 float3 waterReflection(float3 p, float3 r, out float weight) { return reflectionIn(p, r, targetSize, weight); }
 
 // 2.7.17, the rain's puddles (floor_reflect_ps): what stands close by, in even steps of a unit, fading along the way.
@@ -1377,6 +1409,9 @@ float4 water(WaterIn i) {
     float2 g = float2(valueNoise(rq + float2(0.15, 0.0)) - n0, valueNoise(rq + float2(0.0, 0.15)) - n0) / 0.15;
     slope += float2(0.8 * g.x - 0.6 * g.y, 0.6 * g.x + 0.8 * g.y) * 0.05;
     slope *= 0.15 + 1.6 * waves;
+    // 3.0.20-beta.32: in the 3D view the far water calmer - from the eyes its ripples a field of glitter, a lake far
+    // off a mirror of the sky
+    if (fogColor.a > 1.5) slope *= lerp(1.0, 0.3, smoothstep(150.0, 900.0, i.view.z));
     // 0.94: rings where the last steps went (twinW of them: x, z, age in uiPixels, sourceRect, sourceClamp) - a
     // wave packet running out from each, fading as it spreads.
     [unroll] for (int s = 0; s < 3; ++s) {
@@ -1428,6 +1463,11 @@ float4 water(WaterIn i) {
     // horizon (fogColor's alpha 2: sky3d_ps's, day, night, a vault) - from the eyes the water at a grazing angle
     // reflects the horizon over it, not a blue of its own under the haze
     if (fogEnable == 0 && fogColor.a > 1.5) sky = fogColor.rgb * 0.92;
+    // 3.0.20-beta.32 (the owner's «6,7,8,9», 7): under the open sky the 3D sky itself along the way the water reflects
+    // - its zenith, sun and clouds (skyAlong; holeX the night, holeY 1 open, holeG-holeUz the way to the sun) - not one
+    // horizon's colour all over it
+    if (fogEnable == 0 && fogColor.a > 1.5 && holeY > 0.5)
+        sky = skyAlong(reflect(-toEye, n), fogColor.rgb, holeX, float3(holeG, holeUy, holeUz), t) * 0.92;
     float hit;
     float3 seen = waterReflection(i.view, reflect(normalize(i.view), nv), hit);
 #ifndef UAGFX_SAFE
@@ -2114,15 +2154,6 @@ GlowOut portal_draw_glow_ps(PsIn i) {  // the rings' light into the glow; the fl
     return o;
 }
 
-float fbm4(float2 p) {
-    float s = 0.0, a = 0.5;
-    [unroll] for (int k = 0; k < 4; ++k) {
-        s += a * valueNoise(p);
-        p = p * 2.03 + float2(1.7, -0.9);
-        a *= 0.5;
-    }
-    return s;
-}
 
 // A flame at q (x across, its half width 1; y up from its base 0 to its tip 1), premultiplied, and a few sparks rising
 // from it. hw and h are its half width and height in pixels (the sparks' size), seed its own pattern (0-1), flick its
@@ -2460,23 +2491,7 @@ float4 sky3d_ps(PresentOut i) : SV_Target {
         }
         return float4(dark, 1.0);
     }
-    float3 zenith = lerp(float3(0.30, 0.52, 0.86), float3(0.015, 0.025, 0.07), night);
-    float3 sky = lerp(horizon, zenith, smoothstep(-0.03, 0.55, rise));
-    float3 toSun = sourceClamp.xyz;
-    if (dot(toSun, toSun) > 0.25) {
-        float sunUp = saturate(dot(dir, normalize(toSun)));
-        float3 sunLight = float3(1.0, 0.92, 0.76) * (1.0 - night);
-        sky += sunLight * (pow(sunUp, 900.0) * 5.0 + pow(sunUp, 24.0) * 0.35 + pow(sunUp, 4.0) * 0.08);
-    }
-    float lift = max(rise, 0.0) + 0.1;
-    float2 flow = float2(sharpen * 0.006, sharpen * 0.003);
-    float2 across = dir.xz / lift * 0.8 + flow;
-    float puff = fbm4(across) * 0.65 + fbm4(across * 2.7 + 5.1) * 0.35;
-    float cover = smoothstep(0.5, 0.74, puff) * smoothstep(0.0, 0.2, rise);
-    float3 cloud = lerp(float3(0.97, 0.97, 0.98), float3(0.62, 0.65, 0.72), saturate((puff - 0.6) * 3.0));
-    cloud = lerp(cloud, horizon * 0.45, night * 0.85);
-    sky = lerp(sky, cloud, cover * 0.85);
-    return float4(sky, 1.0);
+    return float4(skyAlong(dir, horizon, night, sourceClamp.xyz, sharpen), 1.0);  // 3.0.20-beta.32: shared
 }
 
 // 0.82, the skills' sparks (torches.cpp applyEmbers), added on: about each place a skill burns or shines (t1, two
