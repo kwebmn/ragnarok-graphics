@@ -44,6 +44,7 @@
 #include "core/window_plan.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/gpu/ai11.hpp"
+#include "win/gpu/models_dump.hpp"
 #include "win/gpu/draw_constants.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -2632,6 +2633,18 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     modelsDone_ = modelLikeTaken_ = false;  // 3.0.20-beta.10: the next picture's
     modelFog_.beginFrame();
     modelFogVertices_ = 0;
+    if (modelsNow_.frame().dump) {  // 3.0.20-beta.22: «Записати моделі навколо» - this frame's nodes near the player
+        const map::Axes axes = mapWorld_.axes().known() ? mapWorld_.axes() : map::Axes{1, 1, 1};
+        dumpModelsAround(
+            modelsNow_.frame(), [this](uint32_t id) { return modelCards_.node(id); },
+            [this](uint32_t id) {
+                uint32_t faces = 0;
+                if (const auto* runs = modelCards_.runsOfNode(id))
+                    for (const gamemodels::CardRun& r : *runs) faces += r.count;
+                return faces;
+            },
+            viewToWorld_, camera::projectionFor(gameWidth_, gameHeight_), mapWorld_.world(), axes);
+    }
     modelsNow_.presented();
     if (mirrorCollecting()) {  // 2.5.9: this frame's opaque world for the next one's mirror
         mirrorVerts_.swap(casterVerts_);

@@ -22,5 +22,9 @@ void mapChanged();
 // left out of the game's draw so far this frame told (Msg::GameModelsFrame) when more came
 void setOn(bool on);
 void beforeRecord();
+// 3.0.20-beta.22 (R-8UPTJW's gate, R-7VAPER's warehouse - their walls missing): the console's «Записати моделі
+// навколо» - the next whole frame's nodes the game draws itself near the player written into the log (where they
+// stand in the world, their faces, mirrored or not), ours counted, the renderer asked for its side with that frame
+void dumpAround();
 
 }  // namespace uagfx::win::modelcensus

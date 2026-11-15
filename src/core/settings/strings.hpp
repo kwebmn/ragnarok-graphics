@@ -1006,6 +1006,8 @@ enum class Text : uint16_t {
     // 3.0.20-beta.19 (the owner: «такое впечатление что оно не один скрин отправляет а несколько»): one screenshot said
     // as one, its size in MB
     SendingShot, SendingFullMany, SendingFullDoneMany,
+    // 3.0.20-beta.22: the console's «Записати моделі навколо»
+    ConsoleDumpModels,
     Count
 };
 

@@ -1684,6 +1684,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     if (console_.takeTestAsk()) testStart();  // 3.0.5-beta.6
     if (console_.takeLayoutAsk()) hudedit::open(window, "the console");  // 3.0.11-beta.75
+    if (console_.takeDumpAsk()) modelcensus::dumpAround();               // 3.0.20-beta.22
     switch (menuwin::takeAsk()) {  // 3.0.18-beta.121 (the concept «Ігровий інтерфейс»): the menu's own, its card gone
         case uagfx::menuwin::Action::Settings:  // 3.0.18-beta.122: «Налаштування» (the console while it is off)
             if (!optionscardwin::toggleOpen("the menu")) Console::askOpen();

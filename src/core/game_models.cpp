@@ -60,6 +60,9 @@ void write(bridge::WireWriter& w, const Frame& f) {
     w.bytes(f.moving.data(), f.moving.size() * sizeof(uint32_t));
     w.u32(uint32_t(f.matrices.size()));
     w.bytes(f.matrices.data(), f.matrices.size() * sizeof(float));
+    w.u8(f.dump ? 1 : 0);  // 3.0.20-beta.22
+    w.f32(f.dumpAt[0]);
+    w.f32(f.dumpAt[1]);
 }
 
 bool read(bridge::WireReader& r, Frame& f) {
@@ -83,6 +86,9 @@ bool read(bridge::WireReader& r, Frame& f) {
     if (!m) return false;
     f.matrices.resize(floats);
     std::memcpy(f.matrices.data(), m, f.matrices.size() * sizeof(float));
+    f.dump = r.u8() != 0;  // 3.0.20-beta.22
+    f.dumpAt[0] = r.f32();
+    f.dumpAt[1] = r.f32();
     return r.ok();
 }
 

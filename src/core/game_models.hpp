@@ -52,6 +52,10 @@ struct Frame {
     // draw made it this frame
     std::vector<uint32_t> moving;
     std::vector<float> matrices;
+    // 3.0.20-beta.22 (R-8UPTJW's gate, R-7VAPER's warehouse): the console's «Записати моделі навколо» - the renderer
+    // writes the nodes near the player (the world's x and z) into its log with this frame
+    bool dump = false;
+    float dumpAt[2] = {0.0f, 0.0f};
     bool empty() const { return ids.empty() && moving.empty(); }
 };
 void write(bridge::WireWriter& w, const Frame& f);
@@ -72,6 +76,7 @@ public:
         frame_.ids.clear();
         frame_.moving.clear();  // 3.0.20-beta.14
         frame_.matrices.clear();
+        frame_.dump = false;  // 3.0.20-beta.22
     }
     const Frame& frame() const { return frame_; }
     bool shown() const { return shown_; }

@@ -8974,6 +8974,8 @@ constexpr Entry kTexts[] = {
      "Знімки в повній якості ({3}): {1} з {2} МБ", "Снимки в полном качестве ({3}): {1} из {2} МБ"},
     {Text::SendingFullDoneMany, "The screenshots in full quality are sent", "Знімки в повній якості надіслано",
      "Снимки в полном качестве отправлены"},
+    {Text::ConsoleDumpModels, "Write the models around into the log", "Записати моделі навколо в журнал",
+     "Записать модели вокруг в журнал"},  // 3.0.20-beta.22
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

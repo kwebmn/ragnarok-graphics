@@ -25,6 +25,7 @@
 #include "win/gpu/ai_textures.hpp"
 #include "core/pick.hpp"
 #include "win/gpu/impl.hpp"
+#include "win/gpu/models_dump.hpp"
 #include "win/gpu/remix9.hpp"
 #include "win/gpu/renderer11.hpp"
 #include "win/gpu/remote.hpp"
@@ -3348,6 +3349,22 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     }
     m.renderStarted = false;
     m.upscaledNow = false;
+    if (m.gameModelsNow.frame().dump) {  // 3.0.20-beta.22: «Записати моделі навколо» - the frame's nodes near you
+        const map::Axes axes = m.mapWorld.axes().known() ? m.mapWorld.axes() : map::Axes{1, 1, 1};
+        dumpModelsAround(
+            m.gameModelsNow.frame(),
+            [&m](uint32_t id) -> const gamemodels::Node* {
+                const auto it = m.gameModels.find(id);
+                return it == m.gameModels.end() ? nullptr : &it->second;
+            },
+            [&m](uint32_t id) {
+                uint32_t faces = 0;
+                if (const auto* runs = m.gameCards.runsOfNode(id))
+                    for (const gamemodels::CardRun& r : *runs) faces += r.count;
+                return faces;
+            },
+            m.viewToWorld, camera::projectionFor(m.gameWidth, m.gameHeight), m.mapWorld.world(), axes);
+    }
     m.gameModelsNow.presented();  // 3.0.20-beta.7: the frame's game models let go at its present alone (R-Y2JJKH)
     m.newPicture();  // 0.19-0.23: the next frame's water, shadows, torches, colours, depth of field
     if (m.upscale) {  // part 3: the next frame - a new jitter, this camera the previous one, a clean layer

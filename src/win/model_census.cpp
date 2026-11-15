@@ -2,6 +2,8 @@
 
 #include <windows.h>
 
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <unordered_map>
 #include <unordered_set>
@@ -14,6 +16,7 @@
 #include "win/context.hpp"
 #include "win/dx7/ground_batch.hpp"
 #include "win/entry_hook.hpp"
+#include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/view3d.hpp"
 
@@ -81,6 +84,22 @@ std::vector<uint32_t> g_frameMoving;
 std::vector<float> g_frameMatrices;
 size_t g_toldMoving = 0;
 uint32_t g_oursMoving = 0;
+// 3.0.20-beta.22: «Записати моделі навколо» - armed for the next whole frame (Next), that frame's (Now): the game's own
+// nodes within kDumpReach of the player, ours counted
+enum class Dump { None, Next, Now };
+Dump g_dump = Dump::None;
+struct DumpNode {
+    uint32_t id = 0, vertices = 0, faces = 0;
+    bool flipped = false;
+    float lo[3] = {0, 0, 0}, hi[3] = {0, 0, 0};
+};
+std::vector<DumpNode> g_dumpGame;
+uint32_t g_dumpOurs = 0, g_dumpOursMoving = 0, g_dumpGameAll = 0;
+bool g_dumpTold = false;
+float g_dumpAt[2] = {0, 0};
+int g_dumpCell[2] = {0, 0}, g_dumpSize[2] = {0, 0};
+constexpr float kDumpReach = 150.0f;  // the world's units: 30 cells
+constexpr size_t kDumpMost = 60;
 bool g_on = false;
 std::vector<uint32_t> g_frameIds;
 size_t g_told = 0;
@@ -266,6 +285,7 @@ void __attribute__((thiscall)) drawHook(uint8_t* node, uint32_t a, uint32_t b, u
     if (ours(node, how, reinterpret_cast<const float*>(uintptr_t(a)))) {
         g_frameIds.push_back(uint32_t(uintptr_t(node)));
         ++g_ours;
+        if (g_dump == Dump::Now) ++g_dumpOurs;  // 3.0.20-beta.22
         drawChildren(node, a, b, c);
         return;
     }
@@ -281,6 +301,7 @@ void __attribute__((thiscall)) drawHook(uint8_t* node, uint32_t a, uint32_t b, u
         g_frameMoving.push_back(uint32_t(uintptr_t(node)));
         g_frameMatrices.insert(g_frameMatrices.end(), m, m + 12);
         ++g_oursMoving;
+        if (g_dump == Dump::Now) ++g_dumpOurs, ++g_dumpOursMoving;  // 3.0.20-beta.22
         return;
     }
     const int depth = g_depth++;
@@ -389,7 +410,48 @@ void capture(uintptr_t node, bool flipped, const float* parent, const float* poi
 
 }  // namespace
 
+// 3.0.20-beta.22: a node the game draws itself in the dump's frame - where it stands in the world (its points by the
+// draw's matrix and the view's inverse), kept when near the player
+void dumpGameNode(const float* points, const float* matrix, int count) {
+    ++g_dumpGameAll;
+    const float* inverse = viewInverse();
+    const uintptr_t node = uintptr_t(g_calls[g_depth - 1].node);
+    if (!inverse || !matrix || !points || count <= 0 || count > int(kMostVertices)) return;
+    float world[12];
+    gamemodels::worldOf(matrix, inverse, world);
+    DumpNode d;
+    d.id = uint32_t(node);
+    d.vertices = uint32_t(count);
+    const uintptr_t mesh = at<uint32_t>(node + mc::kNodeMesh);
+    d.faces = mesh ? at<uint32_t>(mesh + mc::kMeshFaces) : 0;
+    d.flipped = g_calls[g_depth - 1].flipped;
+    for (int a = 0; a < 3; ++a) d.lo[a] = 1e30f, d.hi[a] = -1e30f;
+    for (int v = 0; v < count; ++v) {
+        float w[3];
+        gamemodels::transform(world, points + 3 * v, w);
+        for (int a = 0; a < 3; ++a) d.lo[a] = std::min(d.lo[a], w[a]), d.hi[a] = std::max(d.hi[a], w[a]);
+    }
+    const float cx = (d.lo[0] + d.hi[0]) / 2, cz = (d.lo[2] + d.hi[2]) / 2;
+    if (std::fabs(cx - g_dumpAt[0]) <= kDumpReach && std::fabs(cz - g_dumpAt[1]) <= kDumpReach &&
+        g_dumpGame.size() < kDumpMost)
+        g_dumpGame.push_back(d);
+}
+
+void finishDump() {
+    LOG_INFO("models dump at cell %d, %d (the world's x %.0f, z %.0f; the map %dx%d): this frame %u nodes drawn by our "
+             "renderer (%u of them moving), %u by the game itself - %zu of those within %.0f of the player:",
+             g_dumpCell[0], g_dumpCell[1], g_dumpAt[0], g_dumpAt[1], g_dumpSize[0], g_dumpSize[1], g_dumpOurs,
+             g_dumpOursMoving, g_dumpGameAll, g_dumpGame.size(), kDumpReach);
+    for (const DumpNode& d : g_dumpGame)
+        LOG_INFO("models dump: the game's own node %08X - %u vertices, %u faces%s; x %.0f..%.0f, z %.0f..%.0f, y "
+                 "%.0f..%.0f (about cell %.0f, %.0f)",
+                 d.id, d.vertices, d.faces, d.flipped ? ", mirrored" : "", d.lo[0], d.hi[0], d.lo[2], d.hi[2], d.lo[1],
+                 d.hi[1], (d.lo[0] + d.hi[0]) / 10.0f + float(g_dumpSize[0]) / 2.0f,
+                 (d.lo[2] + d.hi[2]) / 10.0f + float(g_dumpSize[1]) / 2.0f);
+}
+
 void noteProjection(const float* points, const float* matrix, int count) {
+    if (g_draw && g_dump == Dump::Now && g_depth > 0 && count > 0) dumpGameNode(points, matrix, count);
     if (!g_draw || g_depth <= 0 || count <= 0 || g_captures >= kCapturesAFrame) return;
     const uintptr_t node = uintptr_t(g_calls[g_depth - 1].node);
     if (!node || g_sent.count(uint32_t(node))) return;
@@ -421,11 +483,28 @@ void mapChanged() {
     ++g_map;
 }
 
+void dumpAround() {
+    int x = 0, y = 0, w = 0, h = 0;
+    if (!readPlayerCell(x, y, w, h)) {
+        LOG_INFO("models dump: the player's place is not known - nothing written");
+        return;
+    }
+    g_dumpCell[0] = x, g_dumpCell[1] = y, g_dumpSize[0] = w, g_dumpSize[1] = h;
+    g_dumpAt[0] = (float(x) - float(w) / 2.0f) * 5.0f;  // a cell's place in the world (the map's axes aside)
+    g_dumpAt[1] = (float(y) - float(h) / 2.0f) * 5.0f;
+    g_dump = Dump::Next;
+    LOG_INFO("models dump: asked at cell %d, %d on %s - the next whole frame written", x, y, readGameMap().c_str());
+}
+
 void setOn(bool on) { g_on = on; }
 
 void beforeRecord() {
-    if (g_frameIds.size() == g_told && g_frameMoving.size() == g_toldMoving) return;
+    const bool dumping = g_dump == Dump::Now && !g_dumpTold;  // 3.0.20-beta.22: the renderer asked once
+    if (g_frameIds.size() == g_told && g_frameMoving.size() == g_toldMoving && !dumping) return;
     gamemodels::Frame f;
+    f.dump = g_dump == Dump::Now;
+    f.dumpAt[0] = g_dumpAt[0], f.dumpAt[1] = g_dumpAt[1];
+    g_dumpTold = g_dumpTold || dumping;
     f.ids = g_frameIds;
     f.moving = g_frameMoving;  // 3.0.20-beta.14
     f.matrices = g_frameMatrices;
@@ -470,6 +549,15 @@ void frame() {
     if (g_nodes && frameMs > 0 && frameMs < 1000)
         g_tally.frame(mc::Frame{g_nodes, g_faces, g_perMs > 0 ? double(g_ticks) / g_perMs : 0.0}, frameMs);
     g_nodes = g_faces = g_checks = g_captures = 0;
+    if (g_dump == Dump::Now) {  // 3.0.20-beta.22: the dump's frame done
+        finishDump();
+        g_dump = Dump::None;
+    } else if (g_dump == Dump::Next) {
+        g_dump = Dump::Now;
+        g_dumpGame.clear();
+        g_dumpOurs = g_dumpOursMoving = g_dumpGameAll = 0;
+        g_dumpTold = false;
+    }
     if (!g_frameIds.empty() || !g_frameMoving.empty()) ++g_oursFrames;  // 3.0.20-beta.4
     g_frameIds.clear();
     g_frameMoving.clear();  // 3.0.20-beta.14

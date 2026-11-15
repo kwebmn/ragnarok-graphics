@@ -219,6 +219,7 @@ void Console::build(Lang lang, const Config& config) {
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleActions), 0});
             rows_.push_back(Row{Kind::Layout, "", 0});
             rows_.push_back(Row{Kind::Test, "", 0});
+            rows_.push_back(Row{Kind::Dump, "", 0});  // 3.0.20-beta.22: «Записати моделі навколо»
         }
         if (tab_ == kTabNew) {  // 3.0.17-beta.12: the rows new since the console showed them last
             rows_.push_back(Row{Kind::Heading, fresh_.empty() ? tr(lang, Text::ConsoleNewNone)
@@ -234,6 +235,7 @@ void Console::build(Lang lang, const Config& config) {
             const std::vector<std::string> view3d = consoletiles::sectionRows("view3d");
             if (!view3d.empty()) rows_.push_back(Row{Kind::Heading, tr(lang, Text::View3dHeading), 0});
             for (const std::string& k : view3d) interfaceRow(k.c_str(), 0);
+            rows_.push_back(Row{Kind::Dump, "", 0});  // 3.0.20-beta.22: «Записати моделі навколо»
         }
         // 3.0.11-beta.2: the new interface on and off in the game; 3.0.11-beta.302 (the review «Ревизия
         // конфигуратора», D): its rows in the app's sections (core/settings/navigation interfaceSections) - every row
@@ -384,6 +386,10 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
         layoutAsked_ = layoutAsked_ || step == 0;
         return false;
     }
+    if (r.kind == Kind::Dump) {  // 3.0.20-beta.22: Space or Enter - «Записати моделі навколо»; the console closes
+        dumpAsked_ = dumpAsked_ || step == 0;
+        return false;
+    }
     if (r.kind == Kind::Tabs) {  // 3.0.17-beta.4: Space or right the next tab, left the one before
         if (tab_ == kTabNew) markKnown();  // 3.0.17-beta.12: «Нове» left - seen
         tab_ = ((tab_ + (step < 0 ? -1 : 1)) % kTabs + kTabs) % kTabs;
@@ -529,8 +535,11 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
         dirty_ = true;
     }
     if (pressed(VK_RIGHT, right_, true, now)) changed = change(iniPath, config, 1) || changed;
-    if (testAsked_ || layoutAsked_) {  // 3.0.5-beta.6: the test runs over the game alone (3.0.11-beta.75: the layout)
-        LOG_INFO("console: %s chosen - closed", testAsked_ ? "«Тест графіки»" : "«Розмістити інтерфейс»");
+    // 3.0.5-beta.6: the test runs over the game alone (3.0.11-beta.75: the layout; 3.0.20-beta.22: the models' dump)
+    if (testAsked_ || layoutAsked_ || dumpAsked_) {
+        LOG_INFO("console: %s chosen - closed", testAsked_     ? "«Тест графіки»"
+                                                : layoutAsked_ ? "«Розмістити інтерфейс»"
+                                                               : "«Записати моделі навколо»");
         open_ = false;
         hide();
         comparing_.clear();
@@ -756,12 +765,13 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 text(fontH + r.depth * fontH * 2, y, wide(label), RGB(140, 180, 220));
                 continue;
             }
-            if (r.kind == Kind::Test || r.kind == Kind::Layout) {  // 3.0.5-beta.6 (3.0.11-beta.75: the layout)
+            if (r.kind == Kind::Test || r.kind == Kind::Layout || r.kind == Kind::Dump) {  // 3.0.5-beta.6 (.75, .22)
                 const int x = fontH + r.depth * fontH * 2;
                 text(x, y, L"▶", RGB(229, 169, 78));
-                text(x + fontH * 3 / 2, y,
-                     wide(tr(lang_, r.kind == Kind::Test ? Text::TestRow : Text::ConsoleHudEdit)),
-                     RGB(240, 236, 226));
+                const Text words = r.kind == Kind::Test     ? Text::TestRow
+                                   : r.kind == Kind::Layout ? Text::ConsoleHudEdit
+                                                            : Text::ConsoleDumpModels;
+                text(x + fontH * 3 / 2, y, wide(tr(lang_, words)), RGB(240, 236, 226));
                 continue;
             }
             if (r.kind == Kind::Tabs) {  // 3.0.17-beta.4: the tabs, the shown one bright between ‹ ›

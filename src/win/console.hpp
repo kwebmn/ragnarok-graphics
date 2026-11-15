@@ -48,6 +48,12 @@ public:
         layoutAsked_ = false;
         return asked;
     }
+    // 3.0.20-beta.22: «Записати моделі навколо» chosen (the console closed with it) - true once
+    bool takeDumpAsk() {
+        const bool asked = dumpAsked_;
+        dumpAsked_ = false;
+        return asked;
+    }
 
 private:
     // 2.2.1: Open - a group's effects shown or not; 2.6.22: Here - «Только на этой карте» (the console's own);
@@ -55,7 +61,7 @@ private:
     // 3.0.17-beta.4 (the concept «простой старт»): Tabs - the tabs' row (Швидко, Картинка, Інтерфейс, Текстури,
     // Усе), Look - one of «Як виглядає гра»'s three choices (key: its number)
     // 3.0.17-beta.27: Tiles - up to four switches side by side (key: theirs joined by '|', core/console_tiles)
-    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here, Test, Layout, Tabs, Look, Tiles };
+    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here, Test, Layout, Tabs, Look, Tiles, Dump };
     struct Row {
         Kind kind = Kind::Heading;
         std::string key;  // "effects.grass"; a heading's: its text (UTF-8)
@@ -100,6 +106,7 @@ private:
     bool thisMap_ = false; // «Только на этой карте», while the game runs
     bool testAsked_ = false;
     bool layoutAsked_ = false;  // 3.0.11-beta.75
+    bool dumpAsked_ = false;    // 3.0.20-beta.22
     std::string map_;
     std::vector<Row> rows_;
     int at_ = 0, top_ = 0;

@@ -211,11 +211,12 @@ TEST(game_models_frame_moving_kept_to_the_present) {
     CHECK(f.empty());
     f.moving = {7};
     f.matrices.assign(12, 1.0f);
+    f.dump = true;  // 3.0.20-beta.22: the ask to write the models around - this frame's alone
     CHECK(!f.empty());
     s.told(f);
     CHECK(!s.frame().empty());
     s.presented();
-    CHECK(s.frame().empty() && s.frame().matrices.empty());
+    CHECK(s.frame().empty() && s.frame().matrices.empty() && !s.frame().dump);
 }
 
 // 3.0.20-beta.18 (the owner's «ок», item 2 - with «Моделі нашим рендером» the game draws almost none of its models and
@@ -265,4 +266,28 @@ TEST(game_models_the_turn_in_the_view_as_on_the_screen) {
             same += onScreen == inView;
         }
     CHECK_EQ(same, all);
+}
+
+// 3.0.20-beta.22 (R-8UPTJW's gate, R-7VAPER's warehouse - their walls missing): the console's «Записати моделі
+// навколо» asks the renderer, with the frame's lists, to write the nodes near the player into its log - the ask and
+// the player's place (the world's x and z) go over the wire with the frame
+TEST(game_models_frame_carries_the_ask_to_write_the_models_around) {
+    gamemodels::Frame fr;
+    fr.ids = {1, 2};
+    fr.dump = true;
+    fr.dumpAt[0] = -460.0f, fr.dumpAt[1] = -280.0f;
+    std::vector<uint8_t> fb;
+    bridge::WireWriter fw(fb);
+    gamemodels::write(fw, fr);
+    bridge::WireReader fr2(fb.data(), fb.size());
+    gamemodels::Frame back;
+    CHECK(gamemodels::read(fr2, back) && fr2.left() == 0);
+    CHECK(back.dump && back.dumpAt[0] == -460.0f && back.dumpAt[1] == -280.0f && back.ids.size() == 2);
+    gamemodels::Frame plain;
+    std::vector<uint8_t> pb;
+    bridge::WireWriter pw(pb);
+    gamemodels::write(pw, plain);
+    bridge::WireReader pr(pb.data(), pb.size());
+    gamemodels::Frame plainBack;
+    CHECK(gamemodels::read(pr, plainBack) && !plainBack.dump);
 }
