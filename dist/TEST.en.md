@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.22 — what's new · 2026-11-15
+
+- **Console: «Write the models around into the log».** To find models missing walls (Prontera's south gate, the warehouse by the market). Stand by such a model, open the console (~), and on the «Quick» tab among the actions pick this row. The driver and the renderer write every model within 30 cells into the log: who draws it (the game or our renderer), how many faces show, where it stands, and the map's own models by its file. Then send a report - it shows what is wrong with the model. The row is in «All» → «3D view» too.
+
 # uaRO Graphics 3.0.20-beta.21 — what's new · 2026-11-15
 
 - **No holes in walls by the camera in the 3D view.** When the camera came right up to a wall, a face with even one corner behind the camera vanished whole - the game does that itself - and a triangular hole opened in the wall. Now the card neatly cuts the models our renderer draws («Models by our renderer») at the edge in front of the camera, and the wall stays whole. With the switch off the game draws the models, and such holes stay there.
