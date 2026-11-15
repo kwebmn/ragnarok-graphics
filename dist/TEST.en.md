@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.11 — what's new · 2026-11-15
+
+- **«Models by our renderer» in Direct3D 12 - now on the card.** As in Direct3D 11, the captured models go into the card's memory once, and each frame the renderer passes only the faces' numbers - the card puts them on the screen by the game's rules. The renderer no longer builds the models' triangles on the processor every frame, and the «own ground» is not rebuilt when the frame's list of models changes. If the card gives no room for the faces, the renderer goes back to building them on the processor. The renderer's log shows how many frames drew the models from the card.
+
 # uaRO Graphics 3.0.20-beta.10 — what's new · 2026-11-15
 
 - **«Models by our renderer» in Direct3D 11 too.** For weaker cards the switch now also works with Direct3D 11 as the renderer. Here the card builds the models itself: the captured models go into its memory once, in the world's places, and each frame the renderer passes only the list of faces - the card puts them on the screen by the game's rules (the same colours, culling, fog). It costs the processor almost nothing. To try it, choose «Graphics» → «Renderer» → «Graphics API» → «Direct3D 11 (older graphics cards, test)» in the settings and turn on the «Models by our renderer» tile (Ctrl+` → «Quick»).
