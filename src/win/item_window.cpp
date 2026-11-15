@@ -787,10 +787,7 @@ void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth
                       std::to_string(s.show.weightMost) + 'o' + std::to_string(s.show.overweight) + ';' +
                       std::to_string(s.show.zeny) + ';' +
                       (s.padNow ? "P;" : ";");
-    for (const iw::Item& it : s.items)
-        key += std::to_string(it.index) + ':' + std::to_string(it.id) + 'x' + std::to_string(it.count) + '+' +
-               std::to_string(it.refine) + (it.identified ? "" : "?") + (it.icon ? "i" : "") + (it.worn ? "E" : "") +
-               ',';
+    key += 'h' + std::to_string(iw::keyOf(s.items));  // 3.0.19-beta.47: the things as one number, not a string each
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
         drawn != s.key) {  // its grounds (3.0.18-beta.27: uaUI's or the picture)
         s.key = drawn;

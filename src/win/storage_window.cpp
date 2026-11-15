@@ -479,10 +479,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
                       (s.show.hoverClose ? "x" : "") + ';' + s.show.search + (s.show.typing ? "|t" : "") +
                       (s.show.typing && s.show.caretOn ? "c" : "") + (s.show.dropping ? "D" : "") + ';' +
                       std::to_string(s.places) + '/' + std::to_string(s.most) + ';' + (s.padNow ? "P;" : ";");
-    for (const iw::Item& it : s.items)
-        key += std::to_string(it.index) + ':' + std::to_string(it.id) + 'x' + std::to_string(it.count) + '+' +
-               std::to_string(it.refine) + (it.identified ? "" : "?") + (it.icon ? "i" : "") +
-               (it.starred ? "*" : "") + ',';
+    key += 'h' + std::to_string(iw::keyOf(s.items));  // 3.0.19-beta.47: the things as one number, not a string each
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
         drawn != s.key) {  // 3.0.18-beta.27: uaUI's or the picture
         s.key = drawn;

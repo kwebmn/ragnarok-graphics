@@ -8,6 +8,24 @@
 #include "core/ui_style.hpp"
 
 namespace uagfx::itemwin {
+
+uint64_t keyOf(const std::vector<Item>& items) {
+    uint64_t h = 1469598103934665603ull;
+    const auto mix = [&h](uint64_t v) {
+        for (int b = 0; b < 8; ++b) {
+            h ^= (v >> (b * 8)) & 0xFF;
+            h *= 1099511628211ull;
+        }
+    };
+    mix(items.size());
+    for (const Item& it : items) {
+        mix(uint64_t(uint32_t(it.index)) | uint64_t(uint32_t(it.id)) << 32);
+        mix(uint64_t(uint32_t(it.count)) | uint64_t(uint32_t(it.refine)) << 32);
+        mix(uint64_t(it.identified) | uint64_t(it.icon != nullptr) << 1 | uint64_t(it.worn) << 2 |
+            uint64_t(it.starred) << 3);
+    }
+    return h;
+}
 namespace {
 
 // The concept's sizes at scale 1 (v17_windows): 500 wide; the title 46, the tabs 32, the search 34, cells 48 eight a

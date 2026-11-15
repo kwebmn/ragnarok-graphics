@@ -573,3 +573,32 @@ TEST(items_wear_answered_not_assumed) {
     CHECK(w.check([](int) { return true; }, [](int) { return false; }, 4100) == itemwin::WearWatch::Answer::None);
     CHECK(w.check([](int) { return true; }, [](int i) { return i == 9; }, 4200) == itemwin::WearWatch::Answer::Worn);
 }
+
+// 3.0.19-beta.47 (R-XHRKGN: «Речі» 1-3 ms and «Склад» 1.2-2 ms a frame on a laptop - each frame a key string of every
+// thing's place, number, count, refine... made anew, hundreds of small strings for a storage of 600): their key one
+// number - any of those fields changed, another number
+TEST(items_key_of_the_things_changes_with_any_field) {
+    std::vector<uagfx::itemwin::Item> a(3);
+    for (int i = 0; i < 3; ++i) a[size_t(i)].index = i + 2, a[size_t(i)].id = 500 + i, a[size_t(i)].count = 1;
+    const uint64_t base = uagfx::itemwin::keyOf(a);
+    CHECK(uagfx::itemwin::keyOf(a) == base);
+    const auto changed = [&](auto change) {
+        std::vector<uagfx::itemwin::Item> b = a;
+        change(b[1]);
+        return uagfx::itemwin::keyOf(b) != base;
+    };
+    CHECK(changed([](uagfx::itemwin::Item& it) { it.count = 2; }));
+    CHECK(changed([](uagfx::itemwin::Item& it) { it.id = 909; }));
+    CHECK(changed([](uagfx::itemwin::Item& it) { it.index = 40; }));
+    CHECK(changed([](uagfx::itemwin::Item& it) { it.refine = 7; }));
+    CHECK(changed([](uagfx::itemwin::Item& it) { it.identified = false; }));
+    CHECK(changed([](uagfx::itemwin::Item& it) { it.worn = true; }));
+    CHECK(changed([](uagfx::itemwin::Item& it) { it.starred = true; }));
+    static const uagfx::panel::Picture pic;
+    CHECK(changed([](uagfx::itemwin::Item& it) { it.icon = &pic; }));
+    std::vector<uagfx::itemwin::Item> fewer(a.begin(), a.begin() + 2);
+    CHECK(uagfx::itemwin::keyOf(fewer) != base);
+    std::vector<uagfx::itemwin::Item> swapped = a;
+    std::swap(swapped[0], swapped[1]);
+    CHECK(uagfx::itemwin::keyOf(swapped) != base);  // the order too
+}

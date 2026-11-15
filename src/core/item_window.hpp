@@ -41,6 +41,11 @@ struct Item {
     uint32_t elementRgb = 0;  // 3.0.18-beta.144: its element's colour (0 none) - a dot in its cell, its tip's name
 };
 
+// 3.0.19-beta.47 (R-XHRKGN: «Речі» 1-3 ms and «Склад» 1.2-2 ms a frame on a laptop - each frame a key string of every
+// thing made anew): the things' key for a window's picture - their places, numbers, counts, refines, identified, icon
+// there, worn, starred, in their order - as one number (FNV-1a)
+uint64_t keyOf(const std::vector<Item>& items);
+
 // 3.0.11-beta.113 (the concept «Концепция окон и инвентаря», question 9 «давай»): «Усе», «Витратне» (potions, food,
 // scrolls), «Спорядження» (weapons, armour, the ammo), «Карти», «Різне» (the rest), «★» (the starred ones)
 enum class Tab : uint8_t { All, Use, Gear, Cards, Etc, Starred };
