@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.23 — what's new · 2026-11-15
+
+- **The own ground on the graphics card.** Until now the processor placed, coloured and cut every point of the own ground in view itself each frame — in the 3D view some 100 thousand points and 2–3 ms a frame. Now the ground's points are kept on the graphics card and it places them itself; the processor only picks the pieces of land in view and recolours those whose light changed. The ground looks the same, and the triangular holes in the ground by the camera in the 3D view are gone: the card cuts a triangle at the edge in front of the camera instead of dropping it whole. The switch «Ground on the graphics card» is under «Own ground» (on); switch it off to compare with the old way.
+
 # uaRO Graphics 3.0.20-beta.22 — what's new · 2026-11-15
 
 - **Console: «Write the models around into the log».** To find models missing walls (Prontera's south gate, the warehouse by the market). Stand by such a model, open the console (~), and on the «Quick» tab among the actions pick this row. The driver and the renderer write every model within 30 cells into the log: who draws it (the game or our renderer), how many faces show, where it stands, and the map's own models by its file. Then send a report - it shows what is wrong with the model. The row is in «All» → «3D view» too.
