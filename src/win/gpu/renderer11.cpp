@@ -1446,7 +1446,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     for (int i = 0; i < 2; ++i) {
         const uint32_t id = i == 0 && twin ? d.twin : d.texture[i];
         const auto it = id ? textures_.find(id) : textures_.end();
-        if (it != textures_.end()) t[i] = &it->second;
+        if (it != textures_.end())
+            t[i] = &it->second;
+        else if (id)
+            noteDrawnWhite(id, i);  // 3.0.19-beta.43
     }
     // 0.47: AI textures - a texture with a picture of its own is drawn from it (the world's; the interface's big
     // pictures), its mip levels sampled also where the game uses none: four times the texels would shimmer.
@@ -1489,6 +1492,16 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         } else if (!twin && d.texture[0] && t[0] != &white_) {
             ai_->noteUiUse(d.texture[0]);
         }
+    }
+    if (!s.ui && d.fvf == d3d7::FVF_TL2) {  // 3.0.19-beta.43: the ground's first texture, for the log
+        if (!d.texture[0])
+            ++stats_.groundNone;
+        else if (t[0] == &white_)
+            ++stats_.groundGone;
+        else if (aiDrawn[0])
+            ++stats_.groundCopy;
+        else
+            ++stats_.groundGame;
     }
     // 2.5.20: super-light - the ground's and the models' textures as their colour alone (light::kFlatWorld); the
     // sprites, the effects and the interface as they are
@@ -4175,6 +4188,15 @@ void Renderer11::applyWeather3d(int kind, const weather3d::Field& f) {
     ctx_->VSSetShaderResources(0, 4, none);
 }
 
+// 3.0.19-beta.43 (R-XHRKGN, R-MMMP29): as Direct3D 12's (draw.cpp) - a draw's texture that is not there (let go, or
+// never made) is drawn with the white one
+void Renderer11::noteDrawnWhite(uint32_t id, int stage) {
+    if (whiteTold_.size() >= 12 || std::find(whiteTold_.begin(), whiteTold_.end(), id) != whiteTold_.end()) return;
+    whiteTold_.push_back(id);
+    LOG_INFO("Direct3D 11: texture %u is not there - drawn white (stage %d)%s", id, stage,
+             whiteTold_.size() == 12 ? "; no more of these told" : "");
+}
+
 void Renderer11::saveScreenshot(const std::string& path) {
     ID3D11Texture2D* back = nullptr;
     if (!swap_ || FAILED(swap_->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back)))) return;
@@ -4429,6 +4451,13 @@ void Renderer11::logGpu(ULONGLONG now) {
                  static_cast<unsigned long long>(stats_.freed), static_cast<unsigned>(textures_.size()),
                  static_cast<unsigned>(pooledBytes_ >> 20),
                  seconds > 0 ? double(stats_.uploaded) / 1048576.0 / seconds : 0.0);
+        // 3.0.19-beta.43 (R-XHRKGN): the ground's draws by their first texture - told while any went white
+        if (stats_.groundNone || stats_.groundGone)
+            LOG_INFO("Direct3D 11: the ground's draws a frame - %.0f from the game's textures, %.0f from their HD "
+                     "copies, %.0f WHITE: %.0f the game gave no texture, %.0f whose texture is not there",
+                     double(stats_.groundGame) / n, double(stats_.groundCopy) / n,
+                     double(stats_.groundNone + stats_.groundGone) / n, double(stats_.groundNone) / n,
+                     double(stats_.groundGone) / n);
     }
     stats_ = Stats{};
     for (double& ms : effectMs_) ms = 0.0;

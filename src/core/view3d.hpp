@@ -140,6 +140,12 @@ void keepOffBoxes(const float from[3], float to[3], const std::vector<Box>& boxe
 // kSightMargin hides it
 constexpr float kSightStep = 3.0f, kSightEnds = 4.0f, kSightMargin = 0.5f;
 bool groundLetsSee(const float eye[3], const float to[3], const std::function<float(float x, float z)>& groundY);
+// 3.0.19-beta.43 (R-RRGQ5S: in pay_dun00 the bars still showed through the cave's walls - the heights were the walk
+// map's, uaRO.exe FUN_0042A8C0, a wall's cell there at the floor): the drawn ground's (C3dGround) - a cell's top face's
+// height at (x, z) from its four corners (x y z; the game's triangles 0 1 2 and 1 3 2, FUN_004E6800), false off it;
+// the cell at (x, z) of `wide` x `high` cells of `zoom` units centred on 0 (its rows from the other end `flipped`)
+bool heightOnFace(const float corners[4][3], float x, float z, float& y);
+bool cellOf(int wide, int high, float zoom, float x, float z, bool flipped, int& col, int& row);
 
 // 3.0.19-beta.39 (the owner's «делаем все по порядку»: the HP bars hidden behind the map's models too - a house, a
 // castle's wall, a tree): whether a model's box stands between the eye and `to` - the way going into its core

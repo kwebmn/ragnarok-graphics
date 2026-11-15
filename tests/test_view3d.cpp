@@ -601,3 +601,22 @@ TEST(view3d_free_camera_kept_off_the_models) {
     view3d::keepOffBoxes(from, over, boxes);
     CHECK(over[1] == -30.0f && std::fabs(over[0] - 15.0f) < 0.01f);  // x before y: stopped first, then up
 }
+
+// 3.0.19-beta.43 (R-RRGQ5S: in pay_dun00 the HP bars still showed through the cave's walls - the line of sight read
+// the walk map's heights, a wall's cell there at the floor): the drawn ground's height from a cell's top face (its
+// four corners, the game's triangles 0 1 2 and 1 3 2) and the cell at a place
+TEST(view3d_drawn_ground_height_from_a_cell_face) {
+    const float flat[4][3] = {{0, -5, 0}, {10, -5, 0}, {0, -5, 10}, {10, -5, 10}};
+    float y = 0;
+    CHECK(view3d::heightOnFace(flat, 3.0f, 7.0f, y) && std::fabs(y + 5.0f) < 1e-4f);
+    const float slope[4][3] = {{0, 0, 0}, {10, -5, 0}, {0, 0, 10}, {10, -5, 10}};  // rising along x (y down)
+    CHECK(view3d::heightOnFace(slope, 4.0f, 3.0f, y) && std::fabs(y + 2.0f) < 1e-4f);
+    CHECK(view3d::heightOnFace(slope, 8.0f, 9.0f, y) && std::fabs(y + 4.0f) < 1e-4f);  // the other triangle
+    CHECK(!view3d::heightOnFace(slope, 12.0f, 3.0f, y));                               // past its side
+    int col = -1, row = -1;
+    CHECK(view3d::cellOf(4, 6, 10.0f, -15.0f, 25.0f, false, col, row) && col == 0 && row == 5);
+    CHECK(view3d::cellOf(4, 6, 10.0f, -15.0f, 25.0f, true, col, row) && col == 0 && row == 0);
+    CHECK(view3d::cellOf(4, 6, 10.0f, 19.9f, -30.0f, false, col, row) && col == 3 && row == 0);
+    CHECK(!view3d::cellOf(4, 6, 10.0f, 20.0f, 0.0f, false, col, row));  // off the map
+    CHECK(!view3d::cellOf(4, 6, 0.0f, 0.0f, 0.0f, false, col, row));    // no ground
+}

@@ -266,6 +266,41 @@ void keepOffBoxes(const float from[3], float to[3], const std::vector<Box>& boxe
     std::copy(at, at + 3, to);
 }
 
+namespace {
+// (x, z)'s weights in the triangle a b c laid flat (x and z); false: outside it
+bool weightsIn(const float* a, const float* b, const float* c, float x, float z, float w[3]) {
+    const float d = (b[2] - c[2]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[2] - c[2]);
+    if (std::fabs(d) < 1e-6f) return false;
+    w[0] = ((b[2] - c[2]) * (x - c[0]) + (c[0] - b[0]) * (z - c[2])) / d;
+    w[1] = ((c[2] - a[2]) * (x - c[0]) + (a[0] - c[0]) * (z - c[2])) / d;
+    w[2] = 1.0f - w[0] - w[1];
+    constexpr float kEdge = -1e-4f;
+    return w[0] >= kEdge && w[1] >= kEdge && w[2] >= kEdge;
+}
+}  // namespace
+
+bool heightOnFace(const float corners[4][3], float x, float z, float& y) {
+    static const int kTriangles[2][3] = {{0, 1, 2}, {1, 3, 2}};
+    for (const auto& t : kTriangles) {
+        const float *a = corners[t[0]], *b = corners[t[1]], *c = corners[t[2]];
+        float w[3];
+        if (!weightsIn(a, b, c, x, z, w)) continue;
+        y = w[0] * a[1] + w[1] * b[1] + w[2] * c[1];
+        return std::isfinite(y);
+    }
+    return false;
+}
+
+bool cellOf(int wide, int high, float zoom, float x, float z, bool flipped, int& col, int& row) {
+    if (wide <= 0 || high <= 0 || !(zoom > 0.0f)) return false;
+    const float c = std::floor((x + float(wide) * zoom * 0.5f) / zoom);
+    const float r = std::floor((z + float(high) * zoom * 0.5f) / zoom);
+    if (!(c >= 0.0f && c < float(wide) && r >= 0.0f && r < float(high))) return false;
+    col = int(c);
+    row = flipped ? high - 1 - int(r) : int(r);
+    return true;
+}
+
 int serverDir(float angle) { return ((int(angle) + 180) / 45) & 7; }
 
 bool faceToward(float east, float north, float current, Facing& out) {

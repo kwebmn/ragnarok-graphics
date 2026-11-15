@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <unordered_map>
 #include <vector>
 
@@ -477,6 +478,34 @@ float groundY(uint32_t ground, float x, float z) {
     return reinterpret_cast<HeightFn>(uintptr_t(kGroundHeight))(ground, x, z);
 }
 
+// 3.0.19-beta.43 (R-RRGQ5S: the HP bars through pay_dun00's cave walls - groundY is the walk map's, a wall's cell
+// there at the floor): the drawn ground (C3dGround, the world's +0x38 - its cells +0x90, 0x54 bytes each, wide +8,
+// high +0xC, units a cell +0x10; a cell's top face +0x40, four corners 0x20 apart, x y z first: uaRO.exe FUN_004E6800)
+// - its height at (x, z), the rows tried both ways (the corners tell which holds the place); NaN: none there
+constexpr uint32_t kWorldDrawnGround = 0x38, kDrawnCells = 0x90, kDrawnCellBytes = 0x54, kDrawnTop = 0x40;
+float drawnGroundY(uint32_t world, float x, float z) {
+    uint32_t g = 0, cells = 0;
+    int32_t size[2] = {0, 0};
+    float zoom = 0.0f;
+    if (!world || !readGame(world + kWorldDrawnGround, &g, 4) || !g || !readGame(g + 8, size, sizeof size) ||
+        !readGame(g + 0x10, &zoom, 4) || !readGame(g + kDrawnCells, &cells, 4) || !cells || size[0] <= 0 ||
+        size[0] > 4096 || size[1] <= 0 || size[1] > 4096)
+        return std::numeric_limits<float>::quiet_NaN();
+    for (const bool flipped : {false, true}) {
+        int col = 0, row = 0;
+        if (!view3d::cellOf(size[0], size[1], zoom, x, z, flipped, col, row)) continue;
+        uint32_t face = 0;
+        const uint32_t cell = cells + (uint32_t(size[0]) * uint32_t(row) + uint32_t(col)) * kDrawnCellBytes;
+        if (!readGame(cell + kDrawnTop, &face, 4) || !face) continue;
+        float corners[4][3];
+        bool read = true;
+        for (int k = 0; k < 4 && read; ++k) read = readGame(face + uint32_t(k) * 0x20, corners[k], sizeof corners[k]);
+        float y = 0.0f;
+        if (read && view3d::heightOnFace(corners, x, z, y)) return y;
+    }
+    return std::numeric_limits<float>::quiet_NaN();
+}
+
 // The eye 2 over the ground under it at least (the game's build keeps its own eye over it the same way)
 void overGround(uint32_t ground, float eye[3]) {
     if (!ground) return;
@@ -833,11 +862,8 @@ uint32_t builds() { return uint32_t(g_state.builds); }
 bool seenActor(uint32_t id, const float to[3]) {
     State& s = g_state;
     if (s.mode == view3d::Mode::Off || !s.eyeKnown) return true;
-    const uint32_t ground = groundNow();
-    if (ground && !view3d::groundLetsSee(s.eyeNow, to, [ground](float x, float z) { return groundY(ground, x, z); }))
-        return false;
-    if (!s.worldNow) return true;
-    // 3.0.19-beta.39: the models on the way (the behind camera's tree walk), each actor's answer kept kSightEveryMs
+    // 3.0.19-beta.39: the models on the way (the behind camera's tree walk), each actor's answer kept kSightEveryMs;
+    // .43: the ground's too - the drawn ground's heights (a cave's walls), the walk map's where it has none, the higher
     constexpr DWORD kSightEveryMs = 200, kSightForgetMs = 5000;
     const DWORD now = GetTickCount();
     if (now - s.sightsSwept > kSightForgetMs) {
@@ -848,6 +874,22 @@ bool seenActor(uint32_t id, const float to[3]) {
     State::Sight& sight = s.sights[id];
     if (sight.at == 0 || now - sight.at >= kSightEveryMs) {
         sight.at = now;
+        const uint32_t ground = groundNow(), world = s.worldNow;
+        const auto heightAt = [ground, world](float x, float z) {
+            const float walk = ground ? groundY(ground, x, z) : std::numeric_limits<float>::quiet_NaN();
+            const float drawn = drawnGroundY(world, x, z);
+            return std::isfinite(drawn) && std::isfinite(walk) ? std::min(drawn, walk)  // y down: the higher
+                   : std::isfinite(drawn)                      ? drawn
+                                                               : walk;
+        };
+        if ((ground || world) && !view3d::groundLetsSee(s.eyeNow, to, heightAt)) {
+            sight.seen = false;
+            return false;
+        }
+        if (!world) {
+            sight.seen = true;
+            return true;
+        }
         std::vector<view3d::Box> boxes;
         std::vector<uint32_t> looked;
         int budget = 800;

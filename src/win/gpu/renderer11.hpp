@@ -1046,7 +1046,14 @@ private:
         uint64_t frames = 0, draws = 0, calls = 0, spared = 0, made = 0, reused = 0, freed = 0, uploaded = 0;
         uint64_t batches = 0;  // 0.90: the draw calls the game's draws went in
         LONGLONG ticks = 0;
+        // 3.0.19-beta.43 (R-XHRKGN, R-MMMP29: Geffen's and Aldebaran's paving one flat light colour): the ground's
+        // draws (two sets of coordinates) by their first texture - the game's, its HD copy, none given, not there
+        uint64_t groundGame = 0, groundCopy = 0, groundNone = 0, groundGone = 0;
     } stats_;
+    // 3.0.19-beta.43: as Direct3D 12's noteDrawnWhite - a draw's texture that is not there drawn white, told once
+    // each, 12 at most
+    std::vector<uint32_t> whiteTold_;
+    void noteDrawnWhite(uint32_t id, int stage);
     // 0.89: textures the game let go, kept for its next one of the same size and levels - it makes and frees small
     // ones again and again, and an old driver takes long to make each
     struct Pooled {
