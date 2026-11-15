@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.19 — what's new · 2026-11-15
+
+- **One screenshot, shown as one.** A report takes one screenshot, but twice: a small JPEG in the report itself and the original in full quality after it. Now that is plain: «Preparing the screenshot», then «The screenshot in full quality: 3.2 of 12.5 MB».
+- **Screenshots smaller and made faster.** PNGs are now compressed properly: a 4K screenshot takes 12.5 MB instead of 17.3 and is ready 2.5 times sooner. Ctrl+Shift+F12 and Ctrl+Shift+F10 jerk the game less, and a report's original reaches the site sooner. The quality is the same, pixel for pixel.
+
 # uaRO Graphics 3.0.20-beta.18 — what's new · 2026-11-15
 
 - **«Houses and trees far off» in the game's colours again.** Since our renderer draws the models near, the game drew almost none of them itself, and the far houses and trees had nothing to learn their colours from (3-15 % matched in the reports). Now they learn from the models our renderer draws - with the exact places and colours, as in the game.
