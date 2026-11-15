@@ -75,4 +75,34 @@ long long newestId(const std::vector<reports::Answer>& list) {
     return id;
 }
 
+Card cardOf(const std::vector<reports::Answer>& list, long long putOff) {
+    Card c;
+    const reports::Answer* newest = nullptr;
+    const reports::Answer* waiting = nullptr;
+    size_t count = 0;
+    for (const reports::Answer& a : list) {
+        if (a.id > 0 ? a.id <= putOff : putOff > 0) continue;
+        ++count;
+        c.newestId = std::max(c.newestId, a.id);
+        if (!newest || a.id > newest->id) newest = &a;
+        if (a.status == reports::Status::NeedInfo && (!waiting || a.id > waiting->id)) waiting = &a;
+    }
+    if (!count) return c;
+    c.shown = waiting ? waiting : newest;
+    c.more = count - 1;
+    c.waits = waiting != nullptr;
+    return c;
+}
+
+long long putOffOf(const std::string& text) {
+    long long id = 0;
+    size_t i = 0;
+    while (i < text.size() && (text[i] == ' ' || text[i] == '\t')) ++i;
+    const size_t from = i;
+    for (; i < text.size() && text[i] >= '0' && text[i] <= '9' && i - from < 18; ++i) id = id * 10 + (text[i] - '0');
+    return i > from ? id : 0;
+}
+
+std::string putOffText(long long id) { return std::to_string(std::max(id, 0LL)) + "\n"; }
+
 }  // namespace uagfx::answers

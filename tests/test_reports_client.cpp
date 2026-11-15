@@ -108,6 +108,21 @@ TEST(still_there_keeps_the_players_screenshots) {
     CHECK(w.posts.back().body.find("\"fixed\":false") != std::string::npos);
 }
 
+// 3.0.20-beta.17 (the owner: «саму отправку сделай чтобы она была прогрузками»): a shot in full goes in parts of 1 MB,
+// each part told as it went - the window's bar follows them
+TEST(an_original_tells_its_parts_as_they_go) {
+    fake::Windows& w = fake::reset();
+    const std::string key = app::computerKey(app::exeFolder());
+    w.postAnswers["/api/graphics/reports/R-ABCDEF/originals"] = {201, "{\"ok\":true}"};
+    const std::string png(2u * (1u << 20) + 5, 'x');  // three parts
+    std::vector<std::pair<size_t, size_t>> told;
+    std::string error;
+    CHECK(app::sendOriginal(key, "R-ABCDEF", "shot1.png", png, error,
+                            [&told](size_t done, size_t parts) { told.emplace_back(done, parts); }));
+    CHECK(told == (std::vector<std::pair<size_t, size_t>>{{1, 3}, {2, 3}, {3, 3}}));
+    CHECK_EQ(w.posts.size(), size_t(3));
+}
+
 // 3.0.9-beta.4: the game's watcher asks for answers only on a computer that sent a report (its key is there - never
 // made by asking), and keeps them in uaro-graphics\reports\answers.json for the driver
 TEST(the_watcher_keeps_the_answers_for_the_game) {

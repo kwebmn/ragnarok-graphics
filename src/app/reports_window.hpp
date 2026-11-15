@@ -23,6 +23,9 @@ struct ReportStart {
 // when the site could not be asked. 3.0.9-beta.4: `answers` - those answers then (the main window's strip)
 int showReports(HWND owner, const Model& m, settings::Lang l, int dpi, const ReportStart& start,
                 std::vector<reports::Answer>* answers = nullptr);
+// 3.0.20-beta.17: the new reports still going (their shots in full quality after them) waited for at the app's end,
+// `ms` at most - the window may have closed while they went
+void reportSendsWait(unsigned long ms);
 
 // The header's «Звернення (N)»: at the app's start, on a thread of its own - the waiting reports sent, the list asked.
 // `key`: computerKey's, made before the thread (two first-time makers would part with different keys).

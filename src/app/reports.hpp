@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -35,8 +36,9 @@ bool sendStillThere(const std::string& key, const std::string& code, const std::
 // 3.0.5-beta.5 (the user: «сделай так чтобы снимки делались без уменьшения качества»): a shot of a report just sent
 // in full - shotN.png beside its shotN.jpg (app/shots shotPng) - in parts of 1 MB in their order; the site shows it in
 // the JPEG's place from then on
+// 3.0.20-beta.17: `sent(done, parts)` after each part (the window's bar)
 bool sendOriginal(const std::string& key, const std::string& code, const std::string& name, const std::string& png,
-                  std::string& error);
+                  std::string& error, const std::function<void(size_t, size_t)>& sent = nullptr);
 // A shot of a conversation (the player's or the developer's), for the app to open; 3.0.10-beta.1: full - a report's
 // shot in its original quality (the PNG the app sent after it), else the report's small JPEG (the chat's thumbnails)
 bool fetchShot(const std::string& key, const std::string& code, const std::string& name, std::string& bytes,

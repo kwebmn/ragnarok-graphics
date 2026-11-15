@@ -42,9 +42,14 @@ struct State {
     FILETIME stamp{};
     bool stamped = false;
     ULONGLONG readAt = 0;
-    std::set<std::string> handled;  // opened or put off in this game (answers::key)
-    std::set<std::string> told;     // shown, or told from behind
+    // 3.0.20-beta.17: the newest answer put off - opened, «Пізніше» or the card gone by itself (answers-later.txt)
+    long long putOff = 0;
+    bool putOffRead = false;
+    std::set<std::string> told;  // shown, or told from behind
     reports::Answer current;
+    size_t more = 0;  // 3.0.20-beta.17: the card's other new answers
+    long long newestId = 0;
+    ULONGLONG shownAt = 0;
     bool shown = false, dirty = true, upload = true;
     card::Geometry geometry;
     panel::Picture picture;
@@ -60,6 +65,14 @@ State& state() {
 }
 
 std::string file() { return layout::join(gameDir(), layout::kAnswers); }
+std::string laterFile() { return layout::join(gameDir(), layout::kAnswersLater); }
+
+void readPutOff(State& s) {
+    if (s.putOffRead) return;
+    s.putOffRead = true;
+    std::string text;
+    if (readTextFile(laterFile(), text)) s.putOff = answers::putOffOf(text);
+}
 
 void readFile(State& s) {
     const ULONGLONG now = GetTickCount64();
@@ -83,20 +96,18 @@ void readFile(State& s) {
                  reports::statusToken(list.front().status));
 }
 
-const reports::Answer* next(const State& s) {
+// the answers the card stands for (not put off) marked told: no notification of them later
+void markTold(State& s) {
     for (const reports::Answer& a : s.list)
-        if (!s.handled.count(answers::key(a))) return &a;
-    return nullptr;
+        if (a.id > 0 ? a.id > s.putOff : s.putOff == 0) s.told.insert(answers::key(a));
 }
 
-// Behind other windows: each new answer told once by a Windows notification (when [notify] wants it)
+// Behind other windows: the new answers told by one Windows notification - the card's (when [notify] wants it)
 void tellBehind(State& s) {
-    for (const reports::Answer& a : s.list) {
-        const std::string key = answers::key(a);
-        if (s.handled.count(key) || s.told.count(key)) continue;
-        s.told.insert(key);
-        notifier::answer(a.code, reporttexts::status(language(), a.status, a.fixedIn));
-    }
+    const answers::Card c = answers::cardOf(s.list, s.putOff);
+    if (!c.shown || s.told.count(answers::key(*c.shown))) return;
+    markTold(s);
+    notifier::answer(c.shown->code, reporttexts::status(language(), c.shown->status, c.shown->fixedIn));
 }
 
 void hide(State& s) {
@@ -104,6 +115,16 @@ void hide(State& s) {
     s.shown = false;
     s.hover = s.pressed = card::Part::None;
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Card, nullptr, nullptr, false);
+}
+
+// 3.0.20-beta.17: the card's answers put off up to the newest of them - kept between games
+void putOffNow(State& s) {
+    if (s.newestId > s.putOff) {
+        s.putOff = s.newestId;
+        if (!writeFileAtomic(laterFile(), answers::putOffText(s.putOff)))
+            LOG_INFO("answers: %s could not be written - the card may come again next game", layout::kAnswersLater);
+    }
+    hide(s);
 }
 
 uint32_t chipWords(reports::Status st) {  // the status's name, lighter than its chip
@@ -140,20 +161,17 @@ void render(State& s) {
     const reports::Answer& a = s.current;
     const float sc = s.scale;
     const float titlePx = 13 * sc, chipPx = 11.5f * sc, quotePx = 13 * sc, buttonPx = 12.5f * sc, timePx = 11.5f * sc;
-    const std::wstring title = utf8Wide(settings::tr(lang, Text::CardTitle));
+    // 3.0.20-beta.17: «Відповіді на звернення: N» for several; «Відкрити» by a click alone (Ctrl+Shift+F10 is always
+    // «Нове звернення»)
+    const std::wstring title =
+        utf8Wide(s.more ? settings::fmt(settings::tr(lang, Text::CardTitleMany), {std::to_string(s.more + 1)})
+                        : std::string(settings::tr(lang, Text::CardTitle)));
     const std::wstring status = utf8Wide(reporttexts::status(lang, a.status, a.fixedIn));
     const std::wstring openShort = utf8Wide(settings::tr(lang, Text::AnswerOpen));
-    const std::wstring openFull = openShort + L" · Ctrl+Shift+F10";
     const std::wstring later = utf8Wide(settings::tr(lang, Text::CardLater));
-    card::Widths w{float(wordsWidth(status, chipPx, true) + 2), float(wordsWidth(openFull, buttonPx, true) + 2),
+    card::Widths w{float(wordsWidth(status, chipPx, true) + 2), float(wordsWidth(openShort, buttonPx, true) + 2),
                    float(wordsWidth(later, buttonPx, false) + 2)};
     card::Geometry g = card::geometry(sc, s.targetW, 2, w);
-    bool full = true;
-    if (g.later.x + g.later.w > float(g.width) - 14 * sc) {  // a narrow picture: the key's name off the button
-        full = false;
-        w.open = float(wordsWidth(openShort, buttonPx, true) + 2);
-        g = card::geometry(sc, s.targetW, 2, w);
-    }
     const float quoteW = g.quote.w;
     const auto fits = [&](const std::string& line) {
         return float(wordsWidth(utf8Wide(line), quotePx, false)) <= quoteW;
@@ -173,7 +191,7 @@ void render(State& s) {
     for (size_t i = 0; i < lines.size(); ++i)
         words.push_back(Words{panel::Box{g.quote.x, g.quote.y + float(i) * kLine * sc, g.quote.w, kLine * sc},
                               utf8Wide(lines[i]), 0xD6DDE9, quotePx, false, DT_LEFT});
-    words.push_back(Words{g.open, full ? openFull : openShort, 0xFFFFFF, buttonPx, true, DT_CENTER});
+    words.push_back(Words{g.open, openShort, 0xFFFFFF, buttonPx, true, DT_CENTER});
     words.push_back(Words{g.later, later, 0xD6DDE9, buttonPx, false, DT_CENTER});
     const std::string when = clock(a.at);
     if (!when.empty() && g.time.w > 0)
@@ -221,16 +239,14 @@ void block(const State& s, HWND game) {  // the pad's clicks there are the card'
 
 void open(State& s, const char* by) {
     const reports::Answer a = s.current;
-    s.handled.insert(answers::key(a));
-    hide(s);
+    putOffNow(s);  // all of the card's: «Звернення» shows the others with their dots
     LOG_INFO("answers: %s opened by %s - «Звернення» on it", a.code.c_str(), by);
     startAnswer(a.code);
 }
 
 void later(State& s) {
-    s.handled.insert(answers::key(s.current));
-    hide(s);
-    LOG_INFO("answers: %s put off until the next game («Пізніше»)", s.current.code.c_str());
+    LOG_INFO("answers: %s and %zu more put off («Пізніше») until a newer one", s.current.code.c_str(), s.more);
+    putOffNow(s);
 }
 
 }  // namespace
@@ -238,22 +254,36 @@ void later(State& s) {
 static void frameInner(HWND game, double k, int targetWidth, int targetHeight) {
     State& s = state();
     readFile(s);
+    readPutOff(s);
     const bool front = game && GetForegroundWindow() == game;
     if (game && !front) tellBehind(s);
-    const reports::Answer* a = front && k > 0 && targetWidth > 0 && targetHeight > 0 ? next(s) : nullptr;
-    if (!a) {
+    const answers::Card c = front && k > 0 && targetWidth > 0 && targetHeight > 0 ? answers::cardOf(s.list, s.putOff)
+                                                                                  : answers::Card{};
+    if (!c.shown) {
         hide(s);
         return;
     }
+    const reports::Answer* a = c.shown;
     const std::string key = answers::key(*a);
-    if (!s.shown || key != answers::key(s.current)) {
+    if (!s.shown || key != answers::key(s.current) || c.more != s.more) {
         if (key != answers::key(s.current) || !s.told.count(key))
-            LOG_INFO("answers: the card shown - %s (%s)", a->code.c_str(), reports::statusToken(a->status));
+            LOG_INFO("answers: the card shown - %s (%s), %zu more%s", a->code.c_str(), reports::statusToken(a->status),
+                     c.more, c.waits ? " - it waits for the player" : "");
         s.current = *a;
+        s.more = c.more;
         s.dirty = true;
         s.hover = s.pressed = card::Part::None;
+        s.shownAt = GetTickCount64();
     }
-    s.told.insert(key);  // seen in the game: no notification of it later
+    s.newestId = c.newestId;
+    markTold(s);  // seen in the game: no notification of them later
+    // 3.0.20-beta.17: nothing the developer waits on - the card goes by itself (not under the pointer)
+    if (!c.waits && s.hover == card::Part::None && s.pressed == card::Part::None &&
+        GetTickCount64() - s.shownAt >= answers::kCardShowsMs) {
+        LOG_INFO("answers: the card went by itself - %s and %zu more put off", a->code.c_str(), c.more);
+        putOffNow(s);
+        return;
+    }
     const float scale = std::clamp(float(k), 0.75f, 6.0f);
     if (float(k) != s.k || scale != s.scale || targetWidth != s.targetW || targetHeight != s.targetH) {
         s.k = float(k);
@@ -328,13 +358,6 @@ bool mouse(HWND game, UINT m, LPARAM lp, LRESULT& result) {
             open(s, "a click");
     }
     result = 0;
-    return true;
-}
-
-bool openByKey() {
-    State& s = state();
-    if (!s.shown) return false;
-    open(s, "Ctrl+Shift+F10");
     return true;
 }
 

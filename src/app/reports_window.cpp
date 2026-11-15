@@ -5,6 +5,7 @@
 #include <objbase.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cstdio>
 #include <memory>
 #include <tuple>
@@ -33,6 +34,13 @@ constexpr UINT kLoad = WM_APP + 1;  // the site asked once the window is on the 
 // list asked every 15 s on a thread (kPolled back, lParam a Polled of ours to delete), at once when the window comes
 // to the front; the open conversation read again when the list says it is behind and the window is in front
 constexpr UINT kPolled = WM_APP + 2;
+// 3.0.20-beta.17 (the owner: «саму отправку сделай чтобы она была прогрузками, впечатление что лагает отправка»): a new
+// report sent on a thread of its own (sendJob) - its steps (kSendStep: wParam a SendStage, lParam the shot's number
+// << 16 | how many), the outcome (kSendDone: lParam the SendJob, the window's to delete), then its shots in full
+// quality (kFullStep: wParam the permille sent; kFullDone: lParam a FullDone - the window's); the window's first list
+// on a thread too (kLoaded: lParam a Loaded, the window's) - the window never waits for the site
+constexpr UINT kSendStart = WM_APP + 3, kSendStep = WM_APP + 4, kSendDone = WM_APP + 5, kFullStep = WM_APP + 6,
+               kFullDone = WM_APP + 7, kLoaded = WM_APP + 8;
 constexpr UINT_PTR kPollTimer = 1;
 constexpr UINT kPollMs = 15000;
 constexpr size_t kMostPicked = 6;
@@ -45,6 +53,7 @@ enum Id {
     kPasteReply, kAttached, kSend, kNewHeading, kNewTitle, kNewSub, kWhat, kKindLabel, kKind0, kKind1, kKind2, kKind3,
     kPickLabel, kPick, kShotGame, kAddFile, kPaste, kShotRemove, kGoes, kPrivacy, kPrivacyMore, kSendHint, kCancel,
     kSendNew, kStatus, kClose, kTabOpen, kTabClosed, kSentIcon, kSentTitle, kSentBody, kSentOpen, kSentDone,
+    kSendingTitle, kSendingBar, kSendingStep, kSendingHint, kSentBar, kSentStep,  // 3.0.20-beta.17
     kPickerList = 300, kPickerAdd, kPickerCancel,
 };
 
@@ -266,6 +275,43 @@ DWORD WINAPI pollList(void* p) {
     return 0;
 }
 
+// 3.0.20-beta.17: the window's list asked at its start (or «Оновити») - the waiting reports sent first
+struct Loaded {
+    HWND window = nullptr;
+    std::wstring dir;
+    std::string key, error;
+    bool ok = false;
+    int waiting = 0;
+    std::vector<reports::Summary> list;
+};
+
+DWORD WINAPI loadList(void* p) {
+    auto* job = static_cast<Loaded*>(p);
+    sendQueued(job->dir);
+    job->ok = listReports(job->key, job->list, job->error);
+    job->waiting = queuedReports(job->dir);
+    if (!PostMessageW(job->window, kLoaded, 0, reinterpret_cast<LPARAM>(job))) delete job;
+    return 0;
+}
+
+// a progress bar going round (permille < 0: how long is not known) or filled so far
+void setBar(HWND bar, int permille) {
+    const LONG_PTR style = GetWindowLongPtrW(bar, GWL_STYLE);
+    if (permille < 0) {
+        if (!(style & PBS_MARQUEE)) SetWindowLongPtrW(bar, GWL_STYLE, style | PBS_MARQUEE);
+        SendMessageW(bar, PBM_SETMARQUEE, TRUE, 30);
+        return;
+    }
+    if (style & PBS_MARQUEE) {
+        SendMessageW(bar, PBM_SETMARQUEE, FALSE, 0);
+        SetWindowLongPtrW(bar, GWL_STYLE, style & ~LONG_PTR(PBS_MARQUEE));
+    }
+    SendMessageW(bar, PBM_SETRANGE32, 0, 1000);
+    SendMessageW(bar, PBM_SETPOS, WPARAM(std::clamp(permille, 0, 1000)), 0);
+}
+
+std::atomic<int> g_sends{0};  // 3.0.20-beta.17: new reports still going (reportSendsWait)
+
 // The cards would look the same (the list filled again only when not)
 bool sameCards(const std::vector<reports::Summary>& a, const std::vector<reports::Summary>& b) {
     if (a.size() != b.size()) return false;
@@ -333,6 +379,84 @@ struct Pick {
     std::string png;  // 3.0.5-beta.5: a pasted one in full (clipboardPng), sent after the report
 };
 
+// 3.0.20-beta.17: a new report on its way - what goes (the upload made on the window's thread: its logs and facts),
+// what came back
+enum class SendStage : WPARAM { Shots, Upload };
+struct FullDone {  // kFullDone's: whose, and why not ("" all sent)
+    unsigned serial = 0;
+    std::string why;
+};
+struct SendJob {
+    HWND window = nullptr;
+    unsigned serial = 0;  // the window's count of its sends: a late word of an older one left aside
+    std::wstring dir;
+    std::string key;
+    std::vector<Pick> picks;
+    report::Upload upload;
+    NewReport result;
+    std::string failedShot;  // a screenshot that could not be made ready: nothing went
+    size_t originals = 0;    // the shots in full quality going after it
+    bool listed = false;
+    std::vector<reports::Summary> list;  // the site's list after it
+};
+
+// The shots made ready (each a JPEG, and its PNG in full), the report to the site, the window told; then the shots in
+// full quality, part by part. The window may be gone meanwhile: the job goes on alone.
+DWORD WINAPI sendJob(void* p) {
+    auto* job = static_cast<SendJob*>(p);
+    const HRESULT com = CoInitializeEx(nullptr, COINIT_MULTITHREADED);  // WIC
+    const HWND window = job->window;
+    std::vector<std::pair<std::string, std::string>> originals;
+    const size_t n = job->picks.size();
+    for (size_t i = 0; i < n; ++i) {
+        PostMessageW(window, kSendStep, WPARAM(SendStage::Shots), LPARAM(((i + 1) << 16) | n));
+        const Pick& pick = job->picks[i];
+        std::string jpeg = pick.path.empty() ? pick.jpeg : shotJpeg(pick.path);
+        if (jpeg.empty()) {
+            job->failedShot = utf8(pick.name);
+            break;
+        }
+        const std::string shot = "shot" + std::to_string(job->upload.shots.size() + 1);
+        job->upload.shots.emplace_back(shot + ".jpg", std::move(jpeg));
+        std::string png = pick.path.empty() ? pick.png : shotPng(pick.path);
+        if (!png.empty()) originals.emplace_back(shot + ".png", std::move(png));
+    }
+    if (job->failedShot.empty()) {
+        PostMessageW(window, kSendStep, WPARAM(SendStage::Upload), 0);
+        job->result = sendNew(job->dir, job->upload);
+        if (!job->result.code.empty()) {
+            std::string error;
+            job->listed = listReports(job->key, job->list, error);
+        }
+    }
+    const std::string code = job->failedShot.empty() ? job->result.code : std::string();
+    const std::string key = job->key;
+    const unsigned serial = job->serial;
+    if (code.empty()) originals.clear();
+    job->originals = originals.size();
+    if (!PostMessageW(window, kSendDone, 0, reinterpret_cast<LPARAM>(job))) delete job;  // the window's from here
+    size_t total = 0, done = 0;
+    for (const auto& o : originals) total += o.second.size();
+    std::string why;
+    bool ok = true;
+    for (const auto& o : originals) {
+        const size_t before = done, size = o.second.size();
+        ok = sendOriginal(key, code, o.first, o.second, why, [&](size_t part, size_t) {
+            const size_t sent = before + std::min(size, part * (size_t(1) << 20));
+            PostMessageW(window, kFullStep, WPARAM(sent * 1000 / std::max<size_t>(total, 1)), LPARAM(serial));
+        });
+        if (!ok) break;
+        done += size;
+    }
+    if (!originals.empty()) {
+        auto* outcome = new FullDone{serial, ok ? "" : (why.empty() ? "?" : why)};
+        if (!PostMessageW(window, kFullDone, 0, reinterpret_cast<LPARAM>(outcome))) delete outcome;
+    }
+    if (SUCCEEDED(com)) CoUninitialize();
+    --g_sends;
+    return 0;
+}
+
 class ReportsWindow {
 public:
     ReportsWindow(const Model& m, Lang l, int dpi, const ReportStart& start)
@@ -357,7 +481,9 @@ public:
     std::vector<reports::Answer> answers() const { return reports::answersOf(list_); }  // 3.0.9-beta.4
 
 private:
-    enum class Pane { Hint, Talk, New, Sent };  // 3.0.9-beta.6: Sent - «Дякуємо» after a new one
+    // 3.0.9-beta.6: Sent - «Дякуємо» after a new one; 3.0.20-beta.17: Sending - its progress
+    enum class Pane { Hint, Talk, New, Sent, Sending };
+    enum class Full { None, Going, Done, Failed };  // 3.0.20-beta.17: the sent report's shots in full quality
 
     std::wstring t(Text x) const { return wtr(lang_, x); }
     std::wstring tf(Text x, const std::vector<std::string>& args) const { return wtrf(lang_, x, args); }
@@ -396,6 +522,12 @@ private:
     void attach(const std::string& jpeg);  // to the reply
     void sendNewReport();
     bool newTouched() const;
+    void startSendJob();                  // 3.0.20-beta.17: kSendStart - the upload made, the job's thread started
+    void sendStep(WPARAM stage, LPARAM at);
+    void sendDone(SendJob* p);
+    void fullStep(int permille, unsigned serial);
+    void fullDone(FullDone* p);
+    void loaded(Loaded* p);
 
     std::wstring statusText(reports::Status s, const std::string& fixedIn) const;
     std::wstring kindText(reports::Kind k) const;
@@ -428,6 +560,9 @@ private:
     int pasted_ = 0;
     bool polling_ = false;   // 3.0.10-beta.2
     ULONGLONG polledAt_ = 0;
+    bool sending_ = false, loading_ = false;  // 3.0.20-beta.17
+    Full full_ = Full::None;
+    unsigned sends_ = 0, fullSerial_ = 0;  // the sends made; the one whose shots in full go now
     std::wstring barText_;  // the bar's words in full (fitBar shows what fits)
 };
 
@@ -520,6 +655,15 @@ HWND ReportsWindow::create(HWND owner) {
     make(L"STATIC", L"", SS_CENTER | SS_NOPREFIX, kSentBody);
     markPrimary(make(L"BUTTON", t(Text::SentOpen), tab | BS_PUSHBUTTON, kSentOpen));
     make(L"BUTTON", t(Text::SentDone), tab | BS_PUSHBUTTON, kSentDone);
+    // 3.0.20-beta.17: «Надсилаю звернення…» - its bar going round, its step, «вікно можна закрити»; under «Дякуємо!»
+    // the shots in full quality going after it
+    SendMessageW(make(L"STATIC", t(Text::SendingTitle), SS_CENTER | SS_NOPREFIX, kSendingTitle), WM_SETFONT,
+                 reinterpret_cast<WPARAM>(big_), TRUE);
+    make(PROGRESS_CLASSW, L"", 0, kSendingBar);
+    make(L"STATIC", L"", SS_CENTER | SS_NOPREFIX, kSendingStep);
+    make(L"STATIC", t(Text::SendingHint), SS_CENTER | SS_NOPREFIX, kSendingHint);
+    make(PROGRESS_CLASSW, L"", 0, kSentBar);
+    make(L"STATIC", L"", SS_CENTER | SS_NOPREFIX, kSentStep);
     // the bottom row
     make(L"STATIC", L"", WS_VISIBLE | SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE | SS_ENDELLIPSIS, kStatus);
     make(L"BUTTON", t(Text::Close), WS_VISIBLE | tab | BS_PUSHBUTTON, kClose);
@@ -645,6 +789,12 @@ void ReportsWindow::layout() {
         y += at(44);
         move(kSentBody, x + rw / 8, y, rw - rw / 4, at(60));
         y += at(70);
+        if (full_ != Full::None) {  // 3.0.20-beta.17: the shots in full quality
+            const int barW = std::min(rw - at(80), at(360));
+            move(kSentBar, x + (rw - barW) / 2, y, barW, at(8));
+            move(kSentStep, x, y + at(14), rw, at(22));
+            y += at(46);
+        }
         const int bw = at(200);
         if (sentQueued_) {
             move(kSentDone, x + (rw - bw) / 2, y, bw, at(34));
@@ -652,6 +802,13 @@ void ReportsWindow::layout() {
             move(kSentOpen, x + rw / 2 - bw - gap / 2, y, bw, at(34));
             move(kSentDone, x + rw / 2 + gap / 2, y, bw, at(34));
         }
+    } else if (pane_ == Pane::Sending) {  // 3.0.20-beta.17: in the middle, as «Дякуємо!»
+        const int midY = top + std::max(at(60), (end - top) / 2 - at(90));
+        const int barW = std::min(rw - at(80), at(460));
+        move(kSendingTitle, x, midY, rw, at(40));
+        move(kSendingBar, x + (rw - barW) / 2, midY + at(58), barW, at(12));
+        move(kSendingStep, x, midY + at(82), rw, at(24));
+        move(kSendingHint, x, midY + at(118), rw, at(24));
     }
 }
 
@@ -662,9 +819,13 @@ void ReportsWindow::show(Pane p) {
                          kPickLabel, kPick, kShotGame, kAddFile, kPaste, kShotRemove, kGoes, kPrivacy, kPrivacyMore,
                          kSendHint, kCancel, kSendNew};
     const int sent[] = {kSentIcon, kSentTitle, kSentBody, kSentDone};
+    const int sending[] = {kSendingTitle, kSendingBar, kSendingStep, kSendingHint};  // 3.0.20-beta.17
     for (int id : talk) ShowWindow(GetDlgItem(hwnd_, id), p == Pane::Talk ? SW_SHOW : SW_HIDE);
     for (int id : fresh) ShowWindow(GetDlgItem(hwnd_, id), p == Pane::New ? SW_SHOW : SW_HIDE);
     for (int id : sent) ShowWindow(GetDlgItem(hwnd_, id), p == Pane::Sent ? SW_SHOW : SW_HIDE);
+    for (int id : sending) ShowWindow(GetDlgItem(hwnd_, id), p == Pane::Sending ? SW_SHOW : SW_HIDE);
+    ShowWindow(GetDlgItem(hwnd_, kSentBar), p == Pane::Sent && full_ == Full::Going ? SW_SHOW : SW_HIDE);
+    ShowWindow(GetDlgItem(hwnd_, kSentStep), p == Pane::Sent && full_ != Full::None ? SW_SHOW : SW_HIDE);
     ShowWindow(GetDlgItem(hwnd_, kSentOpen), p == Pane::Sent && !sentQueued_ ? SW_SHOW : SW_HIDE);
     if (p == Pane::New && start_.map.empty()) ShowWindow(GetDlgItem(hwnd_, kGoes), SW_HIDE);  // no map: no line
     ShowWindow(GetDlgItem(hwnd_, kHint), p == Pane::Hint ? SW_SHOW : SW_HIDE);
@@ -674,27 +835,35 @@ void ReportsWindow::show(Pane p) {
     InvalidateRect(hwnd_, nullptr, TRUE);
 }
 
+// 3.0.20-beta.17: the waiting reports sent and the list asked on a thread (loadList) - the window answers at once
 void ReportsWindow::load() {
-    HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
+    if (loading_) return;
+    loading_ = true;
     status(t(Text::ReportsLoading));
-    UpdateWindow(hwnd_);
-    const std::wstring dir = model_.paths().dir;
-    sendQueued(dir);
-    std::vector<reports::Summary> list;
-    std::string error;
-    if (listReports(key_, list, error)) {
-        list_ = list;
+    auto* job = new Loaded;
+    job->window = hwnd_;
+    job->dir = model_.paths().dir;
+    job->key = key_;
+    if (HANDLE thread = CreateThread(nullptr, 0, loadList, job, 0, nullptr))
+        CloseHandle(thread);
+    else
+        loadList(job);  // no thread: here, its answer posted all the same
+}
+
+void ReportsWindow::loaded(Loaded* p) {
+    std::unique_ptr<Loaded> job(p);
+    loading_ = false;
+    if (job->ok) {
+        list_ = std::move(job->list);
         loaded_ = true;
         status(L"");
     } else {
-        status(tf(Text::ReportsOffline, {error}));
+        status(tf(Text::ReportsOffline, {job->error}));
     }
-    const int waiting = queuedReports(dir);
-    if (waiting) status(tf(Text::ReportsWaiting, {std::to_string(waiting)}));
+    if (job->waiting) status(tf(Text::ReportsWaiting, {std::to_string(job->waiting)}));
     fillList();
     if (pane_ == Pane::Hint)
         SetWindowTextW(GetDlgItem(hwnd_, kHint), t(list_.empty() ? Text::ReportsEmpty : Text::ReportsPick).c_str());
-    SetCursor(old);
     if (!start_.code.empty()) {  // 3.0.9-beta.4: the game's answer card - its conversation at once
         const std::string code = start_.code;
         start_.code.clear();
@@ -1257,63 +1426,110 @@ bool ReportsWindow::newTouched() const {
     return GetWindowTextLengthW(GetDlgItem(hwnd_, kWhat)) > 0 || picks_.size() > (start_.shot.empty() ? 0u : 1u);
 }
 
+// 3.0.20-beta.17 (the owner: «саму отправку сделай чтобы она была прогрузками, впечатление что лагает отправка» -
+// it all went on the window's thread: the window froze, the shots in full quality held it too): its pane at once, the
+// logs gathered once it is on the screen (kSendStart), the rest on a thread (sendJob) - «Дякуємо!» as soon as the
+// site has it, the shots in full quality after it with their own bar
 void ReportsWindow::sendNewReport() {
+    if (sending_) return;
     const std::wstring what = textOf(GetDlgItem(hwnd_, kWhat));
     if (what.empty() && picks_.empty()) {
         status(t(Text::ReportNeedWords));
         return;
     }
-    HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
-    std::vector<std::pair<std::string, std::string>> shots;
-    std::vector<std::pair<std::string, std::string>> originals;  // 3.0.5-beta.5: the same in full, sent after it
-    for (const Pick& p : picks_) {  // 3.0.9-beta.6: every attached one
-        std::string jpeg = p.path.empty() ? p.jpeg : shotJpeg(p.path);
-        if (jpeg.empty()) {
-            SetCursor(old);
-            status(tf(Text::ReportShotFailed, {utf8(p.name)}));
-            return;
-        }
-        const std::string shot = "shot" + std::to_string(shots.size() + 1);
-        shots.emplace_back(shot + ".jpg", std::move(jpeg));
-        std::string png = p.path.empty() ? p.png : shotPng(p.path);
-        if (!png.empty()) originals.emplace_back(shot + ".png", std::move(png));
-    }
-    std::string comment = utf8(what);
+    sending_ = true;
+    status(L"");
+    SetWindowTextW(GetDlgItem(hwnd_, kSendingStep), t(Text::SendingLogs).c_str());
+    setBar(GetDlgItem(hwnd_, kSendingBar), -1);
+    show(Pane::Sending);
+    UpdateWindow(hwnd_);
+    PostMessageW(hwnd_, kSendStart, 0, 0);
+}
+
+void ReportsWindow::startSendJob() {
+    std::string comment = utf8(textOf(GetDlgItem(hwnd_, kWhat)));
     if (!start_.map.empty()) comment += (comment.empty() ? "" : "\n\n") + utf8(tf(Text::ReportMapLine, {start_.map}));
-    report::Upload u = makeUpload(model_, "manual", false, comment, {}, start_.logSlot);
+    auto job = std::make_unique<SendJob>();
+    job->window = hwnd_;
+    job->serial = ++sends_;
+    job->dir = model_.paths().dir;
+    job->key = key_;
+    job->picks = picks_;
+    job->upload = makeUpload(model_, "manual", false, comment, {}, start_.logSlot);
     for (int i = 0; i < 4; ++i)
         if (SendMessageW(GetDlgItem(hwnd_, kKind0 + i), BM_GETCHECK, 0, 0) == BST_CHECKED)
-            u.kind = reports::kindToken(kKinds[i]);
-    u.shots = shots;
-    const NewReport r = sendNew(model_.paths().dir, u);
+            job->upload.kind = reports::kindToken(kKinds[i]);
+    ++g_sends;
+    HANDLE thread = CreateThread(nullptr, 0, sendJob, job.get(), 0, nullptr);
+    if (!thread) {
+        --g_sends;
+        sending_ = false;
+        show(Pane::New);
+        status(tf(Text::ReportNewRefused, {"no thread to send it on"}));
+        return;
+    }
+    job.release();  // the thread's
+    CloseHandle(thread);
+}
+
+void ReportsWindow::sendStep(WPARAM stage, LPARAM at) {
+    const size_t shot = size_t(at) >> 16, shots = size_t(at) & 0xFFFF;
+    const std::wstring step = SendStage(stage) == SendStage::Shots
+                                  ? tf(Text::SendingShots, {std::to_string(shot), std::to_string(shots)})
+                                  : t(Text::SendingUpload);
+    SetWindowTextW(GetDlgItem(hwnd_, kSendingStep), step.c_str());
+}
+
+void ReportsWindow::sendDone(SendJob* p) {
+    std::unique_ptr<SendJob> job(p);
+    sending_ = false;
+    const bool here = pane_ == Pane::Sending;  // else the player went to a conversation meanwhile: the status line
+    if (!job->failedShot.empty()) {
+        if (here) show(Pane::New);
+        status(tf(Text::ReportShotFailed, {job->failedShot}));
+        return;
+    }
+    const NewReport& r = job->result;
     if (!r.code.empty()) {
         start_ = ReportStart{};
-        // 3.0.5-beta.5: the shots in full now that the report has its code - the site shows them in the JPEGs' place
-        std::string why;
-        size_t sentFull = 0;
-        if (!originals.empty()) status(t(Text::ReportOriginalsSending));
-        for (const auto& o : originals) {
-            if (!sendOriginal(key_, r.code, o.first, o.second, why)) break;
-            ++sentFull;
-        }
-        SetCursor(old);
-        status(sentFull == originals.size() ? tf(Text::ReportNewSent, {r.code})
-                                            : tf(Text::ReportOriginalsFailed, {r.code, why}));
-        std::vector<reports::Summary> list;
-        std::string error;
-        if (listReports(key_, list, error)) {
-            list_ = list;
+        if (job->listed) {
+            list_ = std::move(job->list);
             loaded_ = true;
         }
-        showSent(r.code, false);  // 3.0.9-beta.6: «Дякуємо!» and what comes next
+        full_ = job->originals ? Full::Going : Full::None;
+        fullSerial_ = job->serial;
+        if (full_ == Full::Going) {
+            setBar(GetDlgItem(hwnd_, kSentBar), 0);
+            SetWindowTextW(GetDlgItem(hwnd_, kSentStep), tf(Text::SendingFull, {"0"}).c_str());
+        }
+        status(tf(Text::ReportNewSent, {r.code}));
+        if (here)
+            showSent(r.code, false);  // 3.0.9-beta.6: «Дякуємо!» and what comes next
+        else
+            fillList();
     } else if (r.queued) {
-        SetCursor(old);
         start_ = ReportStart{};
-        showSent("", true);
+        full_ = Full::None;
+        if (here) showSent("", true);
     } else {
-        SetCursor(old);
+        if (here) show(Pane::New);
         status(tf(Text::ReportNewRefused, {r.error}));
     }
+}
+
+void ReportsWindow::fullStep(int permille, unsigned serial) {
+    if (full_ != Full::Going || serial != fullSerial_) return;
+    setBar(GetDlgItem(hwnd_, kSentBar), permille);
+    SetWindowTextW(GetDlgItem(hwnd_, kSentStep), tf(Text::SendingFull, {std::to_string(permille / 10)}).c_str());
+}
+
+void ReportsWindow::fullDone(FullDone* p) {
+    std::unique_ptr<FullDone> done(p);
+    if (full_ != Full::Going || done->serial != fullSerial_) return;
+    full_ = done->why.empty() ? Full::Done : Full::Failed;
+    const std::wstring words = done->why.empty() ? t(Text::SendingFullDone) : tf(Text::SendingFullFailed, {done->why});
+    SetWindowTextW(GetDlgItem(hwnd_, kSentStep), words.c_str());
+    if (pane_ == Pane::Sent) show(Pane::Sent);  // its bar off, the words stay
 }
 
 bool ReportsWindow::keys(const MSG& msg) {
@@ -1357,6 +1573,34 @@ LRESULT ReportsWindow::proc(UINT msg, WPARAM wp, LPARAM lp) {
         case kPolled:
             polled(reinterpret_cast<Polled*>(lp));
             return 0;
+        case kLoaded:  // 3.0.20-beta.17: the jobs' words
+            loaded(reinterpret_cast<Loaded*>(lp));
+            return 0;
+        case kSendStart:
+            startSendJob();
+            return 0;
+        case kSendStep:
+            sendStep(wp, lp);
+            return 0;
+        case kSendDone:
+            sendDone(reinterpret_cast<SendJob*>(lp));
+            return 0;
+        case kFullStep:
+            fullStep(int(wp), unsigned(lp));
+            return 0;
+        case kFullDone:
+            fullDone(reinterpret_cast<FullDone*>(lp));
+            return 0;
+        case WM_DESTROY: {  // 3.0.20-beta.17: the jobs' words still queued - theirs to let go
+            MSG m;
+            while (PeekMessageW(&m, hwnd_, kPolled, kLoaded, PM_REMOVE)) {
+                if (m.message == kPolled) delete reinterpret_cast<Polled*>(m.lParam);
+                if (m.message == kSendDone) delete reinterpret_cast<SendJob*>(m.lParam);
+                if (m.message == kFullDone) delete reinterpret_cast<FullDone*>(m.lParam);
+                if (m.message == kLoaded) delete reinterpret_cast<Loaded*>(m.lParam);
+            }
+            break;
+        }
         case WM_NOTIFY: {
             const NMHDR* n = reinterpret_cast<const NMHDR*>(lp);
             LRESULT drawn = 0;
@@ -1556,6 +1800,11 @@ int showReports(HWND owner, const Model& m, Lang l, int dpi, const ReportStart& 
     reportsKnown(w.reportCount());  // 3.0.10-beta.3: the app's checks every 5 minutes for a first report too
     if (answers && w.unread() >= 0) *answers = w.answers();
     return w.unread();
+}
+
+void reportSendsWait(unsigned long ms) {
+    const ULONGLONG until = GetTickCount64() + ms;
+    while (g_sends > 0 && GetTickCount64() < until) Sleep(50);
 }
 
 }  // namespace uagfx::app

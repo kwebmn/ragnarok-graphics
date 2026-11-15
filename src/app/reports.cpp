@@ -1,5 +1,6 @@
 #include "app/reports.hpp"
 
+#include <atomic>
 #include <ctime>
 #include <sstream>
 
@@ -207,7 +208,7 @@ bool sendStillThere(const std::string& key, const std::string& code, const std::
 }
 
 bool sendOriginal(const std::string& key, const std::string& code, const std::string& name, const std::string& png,
-                  std::string& error) {
+                  std::string& error, const std::function<void(size_t, size_t)>& sent) {
     constexpr size_t kPart = 1u << 20;  // the site takes a request of 8 MB at most: a part's base64 under 1.4 MB
     const size_t parts = (png.size() + kPart - 1) / kPart;
     if (!validCode(code) || png.empty() || parts > 48) {
@@ -223,6 +224,7 @@ bool sendOriginal(const std::string& key, const std::string& code, const std::st
         body.set("at", int64_t(i * kPart));  // what the site has of it so far: the parts go in their order
         body.set("data", report::base64(png.substr(i * kPart, kPart)));
         if (!post(reportPath(code) + "/originals", body, 201, error)) return false;
+        if (sent) sent(i + 1, parts);  // 3.0.20-beta.17
     }
     return true;
 }
@@ -256,6 +258,13 @@ NewReport sendNew(const std::wstring& dir, const report::Upload& u) {
 }
 
 int sendQueued(const std::wstring& dir) {
+    // 3.0.20-beta.17: «Звернення»'s list and a new report go on threads of their own now - one sends the waiting ones,
+    // another meanwhile leaves them to it
+    static std::atomic<bool> busy{false};
+    if (busy.exchange(true)) return 0;
+    struct Free {
+        ~Free() { busy = false; }
+    } lettingGo;
     int sent = 0;
     for (const std::wstring& file : queuedFiles(dir)) {
         std::string body, code, error;

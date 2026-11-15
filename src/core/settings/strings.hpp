@@ -999,6 +999,10 @@ enum class Text : uint16_t {
     View3dShoulderHint, View3dOwnModels, View3dOwnModelsHint, View3dWeather, View3dWeatherHint,
     View3dFastGround, View3dFastGroundHint,
     QualityBatchGround, QualityBatchGroundHint,
+    // 3.0.20-beta.17 (the owner: «сделай этот процес чтобы был гораздо приятнее»): the game's card for several answers;
+    // «Нове звернення» sent on a thread of its own with its progress
+    CardTitleMany, SendingTitle, SendingLogs, SendingShots, SendingUpload, SendingHint, SendingFull, SendingFullDone,
+    SendingFullFailed,
     Count
 };
 

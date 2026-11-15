@@ -11,9 +11,9 @@ namespace uagfx::card {
 
 // 3.0.9-beta.4 (the user: «делай все» - the support canvas' screen 2): the developer's answer in the game - a card at
 // the top centre of the game's picture, over its interface: a dot of the status's colour, «Відповідь на звернення»
-// and the code, the status in a chip on the right, the developer's words (two lines at most), «Відкрити ·
-// Ctrl+Shift+F10», «Пізніше» and the time. Its shapes here, its words by GDI over them (win/answer_card), as the
-// windows' panel's.
+// and the code, the status in a chip on the right, the developer's words (two lines at most), «Відкрити»
+// (3.0.20-beta.17: by a click alone - Ctrl+Shift+F10 is «Нове звернення»; «Відповіді на звернення: N» for several),
+// «Пізніше» and the time. Its shapes here, its words by GDI over them (win/answer_card), as the windows' panel's.
 struct Widths {  // the words' widths at the card's scale, the picture's pixels (win/answer_card measures them)
     float chip = 0, open = 0, later = 0;
 };

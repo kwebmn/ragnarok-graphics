@@ -1104,8 +1104,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const bool reportDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
                             GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F10) < 0;
     const bool shotNow = shotKey_.pressed(shotDown);
-    // 3.0.9-beta.4: while the answer card shows, the same key opens the answer - no «Нове звернення» then
-    bool reportNow = reportKey_.pressed(reportDown) && !answercard::openByKey();
+    // 3.0.20-beta.17 (the owner: «я жму контрол шифт ф10 а оно не выводит мне диалог, а предлагает прочитать»): always
+    // «Нове звернення» - the answer card opens by a click alone (3.0.9-beta.4 took the key while it showed)
+    bool reportNow = reportKey_.pressed(reportDown);
     if (menuReport_ > 0 && --menuReport_ == 0) reportNow = true;  // 3.0.18-beta.121: «Надіслати звіт» in the menu
     std::string screenshot;
     const bool bigNow = bigShot_ == 1;  // 3.0.13-beta.16: the big shot's last frame

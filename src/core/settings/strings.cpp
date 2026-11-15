@@ -8951,6 +8951,23 @@ constexpr Entry kTexts[] = {
      "йдуть одним малюванням: менше роботи процесору, та сама картинка. Вимкнено — кожна окремо, як дає гра.",
      "Игра передаёт свою землю по одной клетке — тысячи отрисовок за кадр. Клетки подряд с теми же картинками идут "
      "одной отрисовкой: меньше работы процессору, та же картинка. Выключено — каждая отдельно, как даёт игра."},
+    // 3.0.20-beta.17
+    {Text::CardTitleMany, "Answers to your reports: {1}", "Відповіді на звернення: {1}", "Ответы на обращения: {1}"},
+    {Text::SendingTitle, "Sending the report…", "Надсилаю звернення…", "Отправляю обращение…"},
+    {Text::SendingLogs, "Collecting the game's logs and settings", "Збираю журнали й налаштування гри",
+     "Собираю журналы и настройки игры"},
+    {Text::SendingShots, "Preparing the screenshots: {1} of {2}", "Готую знімки: {1} з {2}",
+     "Готовлю снимки: {1} из {2}"},
+    {Text::SendingUpload, "Uploading to uaro.kiev.ua…", "Передаю на uaro.kiev.ua…", "Передаю на uaro.kiev.ua…"},
+    {Text::SendingHint, "The window can be closed - the report goes on its own.",
+     "Вікно можна закрити — звернення надішлеться саме.", "Окно можно закрыть — обращение отправится само."},
+    {Text::SendingFull, "Screenshots in full quality: {1} %", "Знімки в повній якості: {1} %",
+     "Снимки в полном качестве: {1} %"},
+    {Text::SendingFullDone, "Screenshots in full quality sent", "Знімки в повній якості надіслано",
+     "Снимки в полном качестве отправлены"},
+    {Text::SendingFullFailed, "Screenshots in full quality not sent ({1}) - the site keeps the smaller ones",
+     "Знімки в повній якості не надіслано ({1}) — на сайті лишаються менші",
+     "Снимки в полном качестве не отправлены ({1}) — на сайте остаются меньшие"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

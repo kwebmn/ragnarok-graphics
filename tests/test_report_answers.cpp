@@ -79,3 +79,31 @@ TEST(report_answers_the_app_tells_of_a_new_one) {
     CHECK_EQ(answers::newestId(list), 240LL);
     CHECK_EQ(answers::newestId({}), 0LL);
 }
+
+// 3.0.20-beta.17 (the owner: «чтобы не задалбывало постоянно вверху сообщение в игре что надо ответить»): one card for
+// every answer newer than the ones put off - the one the developer waits on first (else the newest), with how many
+// more; it waits for the player only while the developer waits for an answer, else it goes by itself; put off as a
+// whole up to the newest of them, kept between games
+TEST(report_answers_one_card_for_the_new_ones) {
+    std::vector<reports::Answer> list(3);  // newest first, as the watcher writes them
+    list[0].id = 250;
+    list[0].code = "R-AAAAAA";
+    list[0].status = reports::Status::Closed;
+    list[1].id = 245;
+    list[1].code = "R-BBBBBB";
+    list[1].status = reports::Status::NeedInfo;
+    list[2].id = 240;
+    list[2].code = "R-CCCCCC";
+    list[2].status = reports::Status::Fixed;
+    answers::Card c = answers::cardOf(list, 0);
+    CHECK(c.shown && c.shown->code == "R-BBBBBB" && c.more == 2 && c.waits && c.newestId == 250);
+    c = answers::cardOf(list, 245);  // put off up to 245: the newest alone, nothing waits on the player
+    CHECK(c.shown && c.shown->id == 250 && c.more == 0 && !c.waits && c.newestId == 250);
+    CHECK(!answers::cardOf(list, 250).shown);
+    CHECK(!answers::cardOf({}, 0).shown);
+    CHECK(answers::kCardShowsMs >= 5000 && answers::kCardShowsMs <= 20000);
+    CHECK_EQ(answers::putOffOf(answers::putOffText(250)), 250LL);
+    CHECK_EQ(answers::putOffOf(""), 0LL);
+    CHECK_EQ(answers::putOffOf("x"), 0LL);
+    CHECK_EQ(answers::putOffOf("-5"), 0LL);
+}

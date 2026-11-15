@@ -90,6 +90,8 @@ constexpr const char* kLauncherArt = "uaro-graphics\\launcher";
 // 3.0.9-beta.4: the developer's answers not seen yet, as the game's watcher last heard them (core/report_answers) -
 // the driver shows them in the game
 constexpr const char* kAnswers = "uaro-graphics\\reports\\answers.json";
+// 3.0.20-beta.17: the answers the game's card put off (core/report_answers putOffOf) - the newest id, between games
+constexpr const char* kAnswersLater = "uaro-graphics\\reports\\answers-later.txt";
 // 3.0.11-beta.5: the game's reference (core/reference_pack) - the site's pack of its game database and pack.json, the
 // manifest of the pack there; the game's watcher keeps it fresh
 constexpr const char* kReference = "uaro-graphics\\reference";

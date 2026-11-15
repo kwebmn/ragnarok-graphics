@@ -113,6 +113,7 @@ ALLOWED = {
         "Shell_NotifyIconW",  # 3.0.10-beta.3: a new answer's notification while the app is behind (Windows NT 4)
     },
     "user32.dll": {
+        "PeekMessageW",  # 3.0.20-beta.17: «Звернення» lets its jobs' late words go (Windows 2000 has it)
         # 3.0.18-beta.193: the launcher - its hover (TrackMouseEvent: Windows 2000), its press, its menus (Windows NT)
         "AppendMenuW", "CreatePopupMenu", "DestroyMenu", "GetCapture", "TrackMouseEvent", "TrackPopupMenu",
         "GetClipboardData", "IsClipboardFormatAvailable", "UpdateWindow",  # 2.13: Ctrl+V of a screenshot

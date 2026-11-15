@@ -7,6 +7,7 @@
 #include "app/main_window.hpp"
 #include "app/modes.hpp"
 #include "app/report_send.hpp"
+#include "app/reports_window.hpp"
 #include "app/text.hpp"
 
 namespace {
@@ -63,6 +64,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR line, int show) {
             window.reportAtStart(start);
         }
         code = window.run(inst, show);
+        uagfx::app::reportSendsWait(120000);  // 3.0.20-beta.17: a report's shots in full quality still going
     }
     CoUninitialize();
     return code;

@@ -28,4 +28,22 @@ std::optional<reports::Answer> toAnnounce(const std::vector<reports::Answer>& li
                                           bool gameRunning, bool appInFront);
 long long newestId(const std::vector<reports::Answer>& list);  // 0: none
 
+// 3.0.20-beta.17 (the owner: «чтобы не задалбывало постоянно вверху сообщение в игре что надо ответить» - the card
+// came again for every answer and every game): the game's one card for the answers newer than the ones put off
+// (`putOff`: the newest id put off - by «Пізніше», by opening, by the card gone by itself; answers without an id only
+// while none is): the one the developer waits on (need_info) shown first, else the newest, with how many more; it
+// waits for the player only while the developer waits for an answer, else it goes after kCardShowsMs; `newestId` -
+// what putting it off puts off
+struct Card {
+    const reports::Answer* shown = nullptr;  // none: no card
+    size_t more = 0;
+    bool waits = false;
+    long long newestId = 0;
+};
+constexpr unsigned kCardShowsMs = 12000;
+Card cardOf(const std::vector<reports::Answer>& list, long long putOff);
+// uaro-graphics\reports\answers-later.txt (layout::kAnswersLater): the id put off, kept between games; 0 none
+long long putOffOf(const std::string& text);
+std::string putOffText(long long id);
+
 }  // namespace uagfx::answers
