@@ -301,6 +301,19 @@ bool cellOf(int wide, int high, float zoom, float x, float z, bool flipped, int&
     return true;
 }
 
+void keepOverGround(const float from[3], float to[3], const std::function<float(float x, float z)>& groundY) {
+    float at[3] = {from[0], to[1], from[2]};
+    for (const int axis : {0, 2}) {
+        float next[3] = {at[0], at[1], at[2]};
+        next[axis] = to[axis];
+        if (next[axis] == at[axis]) continue;
+        const float g = groundY(next[0], next[2]);
+        if (std::isfinite(g) && g < next[1] - kFreeClimb) continue;  // rock over the eye there (y down)
+        at[axis] = next[axis];
+    }
+    std::copy(at, at + 3, to);
+}
+
 int serverDir(float angle) { return ((int(angle) + 180) / 45) & 7; }
 
 bool faceToward(float east, float north, float current, Facing& out) {

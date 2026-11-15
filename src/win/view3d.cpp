@@ -98,6 +98,7 @@ struct State {
     bool eyeKnown = false;
     DWORD flewAt = 0;
     int freeStopsTold = 0;  // 3.0.19-beta.41: kept off a model
+    int freeRockTold = 0;   // 3.0.19-beta.45: kept out of the ground's rock
     uint64_t builds = 0;    // 3.0.19-beta.42: the camera's builds in the 3D view
     // 3.0.19-beta.39: the world (its models' tree) of the last frame, and each actor's models' answer of late
     uint32_t worldNow = 0;
@@ -506,10 +507,19 @@ float drawnGroundY(uint32_t world, float x, float z) {
     return std::numeric_limits<float>::quiet_NaN();
 }
 
-// The eye 2 over the ground under it at least (the game's build keeps its own eye over it the same way)
-void overGround(uint32_t ground, float eye[3]) {
-    if (!ground) return;
-    const float h = groundY(ground, eye[0], eye[2]);
+// 3.0.19-beta.43/.45 (R-RRGQ5S): the 3D view's ground - the drawn ground's height (a cave's walls) and the walk
+// map's (a bridge's deck), the higher of the two where both are known (y down); NaN: neither
+float heightNow(uint32_t ground, uint32_t world, float x, float z) {
+    const float walk = ground ? groundY(ground, x, z) : std::numeric_limits<float>::quiet_NaN();
+    const float drawn = drawnGroundY(world, x, z);
+    return std::isfinite(drawn) && std::isfinite(walk) ? std::min(drawn, walk) : std::isfinite(drawn) ? drawn : walk;
+}
+
+// The eye 2 over the ground under it at least (the game's build keeps its own eye over it the same way); .45 by
+// heightNow - over a cave's rock too
+void overGround(uint32_t ground, uint32_t world, float eye[3]) {
+    if (!ground && !world) return;
+    const float h = heightNow(ground, world, eye[0], eye[2]);
     if (std::isfinite(h) && eye[1] > h - 2.0f) eye[1] = h - 2.0f;  // y down
 }
 
@@ -611,8 +621,11 @@ void __attribute__((thiscall)) build(uint32_t view) {
     view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target, want);
     const uint32_t ground = groundNow();
     if (s.mode == view3d::Mode::Behind && ground) {  // 3.0.19-beta.10: a wall, a cliff behind - the eye before it
-        const float onGround = view3d::freeDistance(eye, target, want,
-                                                    [ground](float x, float z) { return groundY(ground, x, z); });
+        // 3.0.19-beta.45: by the drawn ground too - a cave's rock wall behind brings the eye in before it
+        const uint32_t drawnWorld = s.worldNow;
+        const float onGround = view3d::freeDistance(eye, target, want, [ground, drawnWorld](float x, float z) {
+            return heightNow(ground, drawnWorld, x, z);
+        });
         // 3.0.19-beta.12: the map's models too (a house, a roof, a wall of a castle)
         float free = onGround;
         uint32_t world = 0;
@@ -678,13 +691,25 @@ void __attribute__((thiscall)) build(uint32_t view) {
                          boxes.size(), looked.size());
             }
         }
+        // 3.0.19-beta.45: and out of the ground's rock rising over it (a cave's walls are the ground's, not models)
+        if (before[0] != s.freeEye[0] || before[2] != s.freeEye[2]) {
+            const uint32_t walk = groundNow(), drawnWorld = s.worldNow;
+            const float wanted[3] = {s.freeEye[0], s.freeEye[1], s.freeEye[2]};
+            view3d::keepOverGround(before, s.freeEye, [walk, drawnWorld](float x, float z) {
+                return heightNow(walk, drawnWorld, x, z);
+            });
+            if (s.freeRockTold < 5 && (wanted[0] != s.freeEye[0] || wanted[2] != s.freeEye[2])) {
+                ++s.freeRockTold;
+                LOG_INFO("3D view: the free camera kept out of the ground's rock (a wall over the eye)");
+            }
+        }
         std::copy(s.freeEye, s.freeEye + 3, eye);
         for (int i = 0; i < 3; ++i) target[i] = eye[i] + f[i] * 10.0f;
         const float head[3] = {feet[0], feet[1] - view3d::kHeadHeight, feet[2]};  // y down
         s.behindNow = std::sqrt((eye[0] - head[0]) * (eye[0] - head[0]) + (eye[1] - head[1]) * (eye[1] - head[1]) +
                                 (eye[2] - head[2]) * (eye[2] - head[2]));  // the own picture hidden only near it
     }
-    overGround(ground, eye);
+    overGround(ground, s.worldNow, eye);
     if (s.free) std::copy(eye, eye + 3, s.freeEye);  // kept over the ground
     std::copy(eye, eye + 3, s.eyeNow);
     s.eyeKnown = true;
@@ -875,13 +900,7 @@ bool seenActor(uint32_t id, const float to[3]) {
     if (sight.at == 0 || now - sight.at >= kSightEveryMs) {
         sight.at = now;
         const uint32_t ground = groundNow(), world = s.worldNow;
-        const auto heightAt = [ground, world](float x, float z) {
-            const float walk = ground ? groundY(ground, x, z) : std::numeric_limits<float>::quiet_NaN();
-            const float drawn = drawnGroundY(world, x, z);
-            return std::isfinite(drawn) && std::isfinite(walk) ? std::min(drawn, walk)  // y down: the higher
-                   : std::isfinite(drawn)                      ? drawn
-                                                               : walk;
-        };
+        const auto heightAt = [ground, world](float x, float z) { return heightNow(ground, world, x, z); };
         if ((ground || world) && !view3d::groundLetsSee(s.eyeNow, to, heightAt)) {
             sight.seen = false;
             return false;

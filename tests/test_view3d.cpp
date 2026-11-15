@@ -2,6 +2,7 @@
 // own camera replaced from the character's eyes or from behind
 // (concept https://claude.ai/artifact/RadnVxG35hjE9d8HgdqzAy)
 #include <cmath>
+#include <limits>
 
 #include <string>
 #include <vector>
@@ -619,4 +620,29 @@ TEST(view3d_drawn_ground_height_from_a_cell_face) {
     CHECK(view3d::cellOf(4, 6, 10.0f, 19.9f, -30.0f, false, col, row) && col == 3 && row == 0);
     CHECK(!view3d::cellOf(4, 6, 10.0f, 20.0f, 0.0f, false, col, row));  // off the map
     CHECK(!view3d::cellOf(4, 6, 0.0f, 0.0f, 0.0f, false, col, row));    // no ground
+}
+
+// 3.0.19-beta.45 (after R-RRGQ5S: the cameras read the walk map's heights too - a cave's walls at the floor there): the
+// free camera's step kept out of the ground rising over the eye (a cave's rock wall) axis by axis - along it it
+// slides; a low rise (a step, a slope) it goes up as before (overGround)
+TEST(view3d_free_camera_kept_out_of_rock) {
+    const auto cave = [](float x, float) { return x > 10.0f ? -33.0f : 0.0f; };  // y down: a wall's top 33 up past x 10
+    const float from[3] = {5.0f, -20.0f, 0.0f};
+    float to[3] = {12.0f, -20.0f, 3.0f};  // into the wall and aside: aside alone
+    view3d::keepOverGround(from, to, cave);
+    CHECK(to[0] == 5.0f && to[2] == 3.0f && to[1] == -20.0f);
+    float back[3] = {2.0f, -20.0f, 0.0f};  // away from it
+    view3d::keepOverGround(from, back, cave);
+    CHECK(back[0] == 2.0f);
+    const auto step = [](float x, float) { return x > 10.0f ? -21.0f : 0.0f; };  // 1 over the eye: within kFreeClimb
+    float up[3] = {12.0f, -20.0f, 0.0f};
+    view3d::keepOverGround(from, up, step);
+    CHECK(up[0] == 12.0f);
+    const auto unknown = [](float, float) { return std::numeric_limits<float>::quiet_NaN(); };
+    float any[3] = {30.0f, -20.0f, 0.0f};
+    view3d::keepOverGround(from, any, unknown);
+    CHECK(any[0] == 30.0f);  // no ground known: free
+    float high[3] = {12.0f, -40.0f, 0.0f};  // over the wall's top: free
+    view3d::keepOverGround(from, high, cave);
+    CHECK(high[0] == 12.0f && high[1] == -40.0f);
 }

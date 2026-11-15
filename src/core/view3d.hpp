@@ -133,6 +133,12 @@ void flyStep(float eye[3], const float f[3], const float right[3], int ahead, in
 // away from one, it goes
 constexpr float kFreeGap = 10.0f;
 void keepOffBoxes(const float from[3], float to[3], const std::vector<Box>& boxes);
+// 3.0.19-beta.45 (after R-RRGQ5S: a cave's walls are the ground's, not models): its step kept out of the ground rising
+// over the eye - its height up first, then x and z each: the ground at the new place (groundY, y down; NaN unknown)
+// more than kFreeClimb over the eye stops that axis (along a rock wall it slides); a lower rise it goes over
+// (overGround)
+constexpr float kFreeClimb = 2.0f;
+void keepOverGround(const float from[3], float to[3], const std::function<float(float x, float z)>& groundY);
 
 // 3.0.19-beta.38 (R-S3NQBF: in the 3D view the monsters' HP bars stood in the air over the hills hiding them):
 // whether the ground (groundY(x, z) its y there, y down) lets the eye see `to` - the way between sampled every
