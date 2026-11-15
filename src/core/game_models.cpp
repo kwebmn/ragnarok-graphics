@@ -73,6 +73,19 @@ bool shown(const float a[2], const float b[2], const float c[2], bool twoSided, 
     return turned != flipped;
 }
 
+bool keysMove(const uint8_t* keys, size_t count, size_t stride, size_t valueAt, size_t valueBytes) {
+    if (!keys || count < 2) return false;
+    for (size_t k = 1; k < count; ++k)
+        if (std::memcmp(keys + valueAt, keys + k * stride + valueAt, valueBytes) != 0) return true;
+    return false;
+}
+
+bool samePlace(const float a[12], const float b[12]) {
+    for (int i = 0; i < 12; ++i)
+        if (std::fabs(a[i] - b[i]) > (i < 9 ? 1e-3f : 0.01f)) return false;
+    return true;
+}
+
 void compose(const float a[12], const float b[12], float out[12]) {
     float m[12];
     for (int row = 0; row < 4; ++row)

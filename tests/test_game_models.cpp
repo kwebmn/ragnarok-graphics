@@ -101,3 +101,39 @@ TEST(game_models_faces_culled_as_the_game_culls_them) {
     CHECK(gamemodels::shown(a, b, c, true, false) && gamemodels::shown(a, c, b, true, true));
     CHECK(!gamemodels::shown(a, a, a, false, false) && gamemodels::shown(a, a, a, false, true));  // flat: as the game
 }
+
+// 3.0.20-beta.5 (R-UQPC3E: 865 of 1628 Prontera nodes «moving» by their keys' count): the game moves a node by its
+// keys of moving (+0xE8, 16 bytes: the frame, x y z) and turning (+0xF8, 20: the frame, a quaternion) - every model
+// runs its animation (the actor's kind 2 from its constructor FUN_004E0540), so a node moves only when the values of
+// its keys differ; frames alone do not move it
+TEST(game_models_keys_move_a_node_only_when_their_values_differ) {
+    struct Turn {
+        int32_t frame;
+        float q[4];
+    };
+    Turn keys[3] = {{0, {0.0f, 0.0f, 0.0f, 1.0f}}, {500, {0.0f, 0.0f, 0.0f, 1.0f}}, {1000, {0.0f, 0.0f, 0.0f, 1.0f}}};
+    const auto* bytes = reinterpret_cast<const uint8_t*>(keys);
+    CHECK(!gamemodels::keysMove(bytes, 3, sizeof(Turn), 4, 16));  // the frames differ, the turn does not
+    CHECK(!gamemodels::keysMove(bytes, 1, sizeof(Turn), 4, 16));
+    CHECK(!gamemodels::keysMove(nullptr, 0, sizeof(Turn), 4, 16));
+    keys[2].q[1] = 0.01f;
+    CHECK(gamemodels::keysMove(bytes, 3, sizeof(Turn), 4, 16));
+}
+
+// 3.0.20-beta.5: a node drawn by the renderer is placed by its parent's matrix in the world (the draw's first argument
+// times the view's inverse) - the same as when it was captured within the float noise of the view's inverse, else
+// given back to the game: a part hung on a moving node never stands still
+TEST(game_models_places_alike_within_the_float_noise_only) {
+    const float a[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 100, -20, 300};
+    float b[12];
+    for (int i = 0; i < 12; ++i) b[i] = a[i];
+    CHECK(gamemodels::samePlace(a, b));
+    b[9] += 0.004f;  // the noise of a far place
+    b[1] += 0.00005f;
+    CHECK(gamemodels::samePlace(a, b));
+    b[10] += 0.05f;  // moved
+    CHECK(!gamemodels::samePlace(a, b));
+    b[10] = a[10];
+    b[4] = 0.995f;  // turned
+    CHECK(!gamemodels::samePlace(a, b));
+}

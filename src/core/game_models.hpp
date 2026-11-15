@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <unordered_map>
 #include <vector>
@@ -51,6 +52,13 @@ bool read(bridge::WireReader& r, Frame& f);
 // 3.0.20-beta.4: whether the game's draw shows a face (0x4DED2E) - its corners' x y on the screen `a`, `b`, `c`: a
 // one-sided face by its turn, the other way round on a flipped node; a two-sided one always
 bool shown(const float a[2], const float b[2], const float c[2], bool twoSided, bool flipped);
+
+// 3.0.20-beta.5: whether a node's keys move it - `count` keys `stride` bytes apart, each one's value `valueBytes` long
+// at `valueAt` in it: one differing from the first's (the frames alone move nothing)
+bool keysMove(const uint8_t* keys, size_t count, size_t stride, size_t valueAt, size_t valueBytes);
+// 3.0.20-beta.5: two placing matrices the same within the float noise of the view's inverse - the rows of the turn and
+// the scale 1e-3 apart at most, the move 0.01
+bool samePlace(const float a[12], const float b[12]);
 
 // 4 x 3 matrices as the game keeps them (rows: x, y, z, the move; a point p -> p x m): `a` then `b`
 void compose(const float a[12], const float b[12], float out[12]);

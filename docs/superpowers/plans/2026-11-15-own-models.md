@@ -109,3 +109,19 @@ RELEASED 15.11, main 8394155).
    255) - when, unseen (a virtual call): the guard covers a relight. Cost if wrong: a model left to the game.
    Log: «models: N nodes drawn by our renderer in place of the game's in F frames (X a frame) ... K captured ones left
    to the game ..., M given back to it (moved or coloured anew since)». Untested in the game.
+3.0.20-beta.4 SHIPPED (eb64ae9, update.ini 221619b).
+5. 3.0.20-beta.5 - R-UQPC3E (the owner on beta.4, prontera 3D - [view3d] own_models not on: no [view3d] in his ini,
+   no «drawn by our renderer» line; a baseline: 59.9 fps at the limit 60, the game's side 23 of 1797 over 25 ms, the
+   renderer's 127 of 1797 (its dearest the game's draws themselves), models 1.73 ms of the game's frame (10 %),
+   colours 98.7-99.9 %, corners 99.3-99.4 %, no node kept for its textures) showed «865 moving» of 1628. The code read
+   again: every model runs its animation (FUN_004FA8B0 -> FUN_004E0940 for each actor seen; its kind +0xB0 = 2 from its
+   constructor FUN_004E0540, never set from the .rsw) -> FUN_004DE950 works each node's matrix out of its keys: moving
+   +0xE8 (16 bytes, FUN_00401520), turning +0xF8 (20, FUN_00401D30), +0x104/+0x108 (32, FUN_00402090: one default put
+   in by the setup FUN_004DF080 - the beta.4 rule's «moving keys» there never had more than one; the real moving keys
+   +0xE8 were not looked at). Rulings: (a) a node moves when its keys' values differ (gamemodels::keysMove; frames
+   alone do not) - cost if wrong: a model drawn still while the game moves it, caught by (b). (b) the guard compares
+   the parent's matrix in the world (the draw's first argument x the view's inverse, worked out again when CView +0x94
+   changes) within float noise (gamemodels::samePlace: 1e-3 the turn's rows, 0.01 the move) instead of the actor's
+   matrix - a node hung on a moving one is given back the frame it moves. Log: «(N of them with several keys all
+   alike), ... (M of them hung on a moving one)». Tests: game_models_keys_move_a_node_only_when_their_values_differ,
+   game_models_places_alike_within_the_float_noise_only. Untested in the game.

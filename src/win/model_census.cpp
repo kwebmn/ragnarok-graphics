@@ -34,6 +34,7 @@ struct Call {
     uint32_t vector = 0, offset = 0, count = 0;
     bool grown = false;
     bool flipped = false;  // 3.0.20-beta.4: the draw's second argument (its actor's scale mirrored)
+    const float* parent = nullptr;  // 3.0.20-beta.5: its first - the parent's matrix (the actor's x the view's)
 };
 
 uintptr_t g_draw = 0;
@@ -46,21 +47,27 @@ mc::Tally g_tally;
 DWORD g_toldAt = 0;
 // 3.0.20-beta.3 (stage 2a): the nodes sent on this map, its serial; the captures this frame; for the log
 std::unordered_set<uint32_t> g_sent;
-uint32_t g_map = 1, g_captures = 0, g_animated = 0, g_sentNodes = 0, g_sentFaces = 0;
+uint32_t g_map = 1, g_captures = 0, g_animated = 0, g_sentNodes = 0, g_sentFaces = 0, g_under = 0, g_alike = 0;
 constexpr uint32_t kCapturesAFrame = 8, kMostVertices = 65535;
-constexpr uint32_t kRotKeys = 0xF8, kPosKeys = 0x108, kNodeTextureCount = 0x88,
+// 3.0.20-beta.5: a node's keys of moving (+0xE8: 16 bytes - the frame, x y z; FUN_00401520) and turning (+0xF8: 20 -
+// the frame, a quaternion; FUN_00401D30), each the first and the last of a vector; its +0x108 (32 bytes, FUN_00402090)
+// holds the one default its setup FUN_004DF080 puts in
+constexpr uint32_t kMoveKeys = 0xE8, kTurnKeys = 0xF8, kNodeTextureCount = 0x88,
                    kNodeTextures = 0x90, kTextureSurface = 0xC, kMeshVertexCount = 0, kMeshVertices = 0xC,
                    kFaceTexture = 0xC, kFaceTwoSided = 0x10, kViewMatrix = 0x94;
 
 // 3.0.20-beta.4 (stage 2b): the still nodes captured (the renderer has them) with what placed and coloured them then -
-// the mesh, its actor's matrix (+0xC0, its render's FUN_004E0B20) and its own (+0xB4), its colours' and lights' lists
+// the mesh, its own matrix (+0xB4), its parent's in the world (3.0.20-beta.5), its colours' and lights' lists
 // (+0x118, +0x144: the lights worked out by FUN_004DF930 -> FUN_004E0070 from the map's light grid) and the first
 // face's of both; [view3d] own_models, the frame's nodes left out of the game's draw and how many of them were told
+// 3.0.20-beta.5 (R-UQPC3E, the code read again): the actor's matrix gave way to the parent's in the world (the draw's
+// first argument times the view's inverse) - a part hung on a moving node moves with it, its own matrix does not
 struct Still {
     uint32_t mesh = 0, colours = 0, lits = 0;
     uint32_t colour0[3] = {};
     int32_t lit0[9] = {};
-    float actor[12] = {}, local[12] = {};
+    float local[12] = {}, place[12] = {};
+    bool placed = false;
 };
 std::unordered_map<uint32_t, Still> g_still;
 bool g_on = false;
@@ -72,7 +79,10 @@ constexpr uint32_t kNodeMatrix = 0x409720, kNodeLocal = 0xB4, kNodeChildren = 0x
 // a texture of the game's with its own alpha (CTexture +0x10 format 1, A4R4G4B4): its faces go to the game's blended
 // list (FUN_00412020 with 1) - such a node stays the game's; the game's draw inside a rectangle of the screen
 // (0x7735EC, the faces whole within the renderer's +0x58..+0x64) likewise
-constexpr uint32_t kTextureFormat = 0x10, kFormatAlpha = 1, kInsideRect = 0x7735EC, kActorMatrix = 0xC0;
+constexpr uint32_t kTextureFormat = 0x10, kFormatAlpha = 1, kInsideRect = 0x7735EC;
+// 3.0.20-beta.5: the view's inverse, worked out again when the view's matrix (CView +0x94) changes
+uintptr_t g_viewAt = 0;
+float g_viewSeen[12] = {}, g_viewInverse[12] = {};
 
 std::vector<mc::FaceColours> g_memory;
 std::vector<mc::FaceLit> g_lits;
@@ -155,7 +165,20 @@ void drawChildren(uint8_t* node, uint32_t parent, uint32_t b, uint32_t c) {
     std::memset(node + mc::kNodeSeeThrough, 0, 4);
 }
 
-Still stillOf(uintptr_t node) {
+const float* viewInverse() {
+    const uintptr_t view = view3dwin::lastView();
+    if (!view) return nullptr;
+    float now[12];
+    std::memcpy(now, reinterpret_cast<const void*>(view + kViewMatrix), sizeof now);
+    if (view != g_viewAt || std::memcmp(now, g_viewSeen, sizeof now) != 0) {
+        std::memcpy(g_viewSeen, now, sizeof now);
+        view3d::inverse(now, g_viewInverse);
+        g_viewAt = view;
+    }
+    return g_viewInverse;
+}
+
+Still stillOf(uintptr_t node, const float* parent) {
     Still s;
     s.mesh = at<uint32_t>(node + mc::kNodeMesh);
     s.colours = at<uint32_t>(node + mc::kNodeColours);
@@ -164,28 +187,32 @@ Still stillOf(uintptr_t node) {
         std::memcpy(s.colour0, reinterpret_cast<const void*>(uintptr_t(s.colours)), sizeof s.colour0);
     if (s.lits && at<uint32_t>(node + mc::kNodeLit + 4) > s.lits)
         std::memcpy(s.lit0, reinterpret_cast<const void*>(uintptr_t(s.lits)), sizeof s.lit0);
-    const uintptr_t actor = at<uint32_t>(node + mc::kNodeActor);
-    if (actor) std::memcpy(s.actor, reinterpret_cast<const void*>(actor + kActorMatrix), sizeof s.actor);
     std::memcpy(s.local, reinterpret_cast<const void*>(node + kNodeLocal), sizeof s.local);
+    const float* inverse = viewInverse();
+    if (parent && inverse) {
+        gamemodels::compose(parent, inverse, s.place);
+        s.placed = true;
+    }
     return s;
 }
 
 bool same(const Still& a, const Still& b) {
     return a.mesh == b.mesh && a.colours == b.colours && a.lits == b.lits &&
            !std::memcmp(a.colour0, b.colour0, sizeof a.colour0) && !std::memcmp(a.lit0, b.lit0, sizeof a.lit0) &&
-           !std::memcmp(a.actor, b.actor, sizeof a.actor) && !std::memcmp(a.local, b.local, sizeof a.local);
+           !std::memcmp(a.local, b.local, sizeof a.local) && a.placed && b.placed &&
+           gamemodels::samePlace(a.place, b.place);
 }
 
 // whether this node is the renderer's this frame: the 3D view with [view3d] own_models, the renderer's word, a still
 // node it has, placed as when it was captured (else the game's from now on), coloured the plain or lit way (not half
 // see-through, not the other way), its actor not fading
-bool ours(const uint8_t* node, const mc::Colouring& how) {
+bool ours(const uint8_t* node, const mc::Colouring& how, const float* parent) {
     if (!g_on || !view3dwin::active() || how.alpha != 0xFF || (how.way != mc::Way::Plain && how.way != mc::Way::Lit) ||
         at<int32_t>(kInsideRect))
         return false;
     const auto it = g_still.find(uint32_t(uintptr_t(node)));
     if (it == g_still.end()) return false;
-    if (!same(it->second, stillOf(uintptr_t(node)))) {
+    if (!same(it->second, stillOf(uintptr_t(node), parent))) {
         g_still.erase(it);
         ++g_moved;
         return false;
@@ -200,7 +227,8 @@ void __attribute__((thiscall)) drawHook(uint8_t* node, uint32_t a, uint32_t b, u
         return;
     }
     const mc::Colouring how = colouringOf(node);
-    if (ours(node, how)) {  // 3.0.20-beta.4: the renderer draws it; its children as the game would
+    // 3.0.20-beta.4: the renderer draws it; its children as the game would
+    if (ours(node, how, reinterpret_cast<const float*>(uintptr_t(a)))) {
         g_frameIds.push_back(uint32_t(uintptr_t(node)));
         ++g_ours;
         drawChildren(node, a, b, c);
@@ -209,6 +237,7 @@ void __attribute__((thiscall)) drawHook(uint8_t* node, uint32_t a, uint32_t b, u
     const int depth = g_depth++;
     g_calls[depth] = Call{node};
     g_calls[depth].flipped = (b & 0xFF) != 0;
+    g_calls[depth].parent = reinterpret_cast<const float*>(uintptr_t(a));
     const LONGLONG start = depth == 0 ? now() : 0;
     reinterpret_cast<NodeDrawFn>(g_draw)(node, a, b, c);
     if (depth == 0) g_ticks += now() - start;
@@ -222,17 +251,29 @@ void __attribute__((thiscall)) drawHook(uint8_t* node, uint32_t a, uint32_t b, u
     }
 }
 
-// a node the game moves - its keys of turning or moving more than the one each node has - left to the game.
-// 3.0.20-beta.4 (R-B2EM7U: 2105 of 2254 «moving»): not its actor's +0x1F0 - that is a blocking kind (the game's
-// collision FUN_004EB3C0 takes a model with +0x1FC set and +0x1F0 0)
-bool animated(uintptr_t node) {
-    const uint32_t rot0 = at<uint32_t>(node + kRotKeys), rot1 = at<uint32_t>(node + kRotKeys + 4);
-    const uint32_t pos0 = at<uint32_t>(node + kPosKeys), pos1 = at<uint32_t>(node + kPosKeys + 4);
-    if (rot0 && rot1 > rot0 && (rot1 - rot0) / 0x14 > 1) return true;
-    return pos0 && pos1 > pos0 && (pos1 - pos0) / 0x20 > 1;
+// whether a node's keys of one kind move it: the values of its keys (`stride` bytes each, the value from 4 on, its
+// frame before it) differing; `several` set with more than one
+bool keysOf(uintptr_t node, uint32_t place, uint32_t stride, uint32_t bytes, bool& several) {
+    const uint32_t first = at<uint32_t>(node + place), last = at<uint32_t>(node + place + 4);
+    if (!first || last <= first) return false;
+    const uint32_t count = (last - first) / stride;
+    if (count > 1) several = true;
+    if (count > 65535) return true;  // out of reason: left to the game
+    return gamemodels::keysMove(reinterpret_cast<const uint8_t*>(uintptr_t(first)), count, stride, 4, bytes);
 }
 
-void capture(uintptr_t node, bool flipped, const float* points, const float* matrix, int count) {
+// a node the game moves - by its keys' values (3.0.20-beta.5, R-UQPC3E: by their count 865 of 1628 Prontera nodes
+// «moving»; every model runs its animation - the actor's kind 2 from its constructor FUN_004E0540 - so the values
+// decide); `alike` set for one with several keys all alike. 3.0.20-beta.4 (R-B2EM7U): not its actor's +0x1F0 - a
+// blocking kind (the game's collision FUN_004EB3C0)
+bool animated(uintptr_t node, bool* alike = nullptr) {
+    bool several = false;
+    const bool moves = keysOf(node, kMoveKeys, 16, 12, several) || keysOf(node, kTurnKeys, 0x14, 16, several);
+    if (alike && several && !moves) *alike = true;
+    return moves;
+}
+
+void capture(uintptr_t node, bool flipped, const float* parent, const float* points, const float* matrix, int count) {
     const uintptr_t view = view3dwin::lastView(), mesh = at<uint32_t>(node + mc::kNodeMesh);
     if (!view || !mesh || !points || !matrix) return;
     const uint32_t vertices = at<uint32_t>(mesh + kMeshVertexCount), faces = at<uint32_t>(mesh + mc::kMeshFaces);
@@ -282,7 +323,7 @@ void capture(uintptr_t node, bool flipped, const float* points, const float* mat
     r->addGameModel(n);
     g_sent.insert(uint32_t(node));
     if (drawable)
-        g_still[uint32_t(node)] = stillOf(node);  // 3.0.20-beta.4
+        g_still[uint32_t(node)] = stillOf(node, parent);  // 3.0.20-beta.4
     else
         ++g_keptBlended;
     ++g_sentNodes;
@@ -296,14 +337,18 @@ void noteProjection(const float* points, const float* matrix, int count) {
     const uintptr_t node = uintptr_t(g_calls[g_depth - 1].node);
     if (!node || g_sent.count(uint32_t(node))) return;
     ++g_captures;
-    bool moves = animated(node);  // 3.0.20-beta.4: or one of the nodes it hangs on, the game's draws round it
-    for (int d = 0; d + 1 < g_depth && !moves; ++d) moves = animated(uintptr_t(g_calls[d].node));
+    bool alike = false;
+    bool moves = animated(node, &alike);  // 3.0.20-beta.4: or one of the nodes it hangs on, the game's draws round it
+    bool under = false;
+    for (int d = 0; d + 1 < g_depth && !moves; ++d) moves = under = animated(uintptr_t(g_calls[d].node));
     if (moves) {
         g_sent.insert(uint32_t(node));  // looked at once: left to the game
         ++g_animated;
+        if (under) ++g_under;
         return;
     }
-    capture(node, g_calls[g_depth - 1].flipped, points, matrix, count);
+    if (alike) ++g_alike;
+    capture(node, g_calls[g_depth - 1].flipped, g_calls[g_depth - 1].parent, points, matrix, count);
 }
 
 void mapChanged() {
@@ -370,10 +415,11 @@ void frame() {
     g_toldAt = tick;
     if (const std::string line = g_tally.line(); !line.empty()) LOG_INFO("%s", line.c_str());
     g_tally.clear();
-    if (g_sentNodes || g_animated)  // 3.0.20-beta.3
-        LOG_INFO("models: %u static nodes captured as the game draws them (%u faces) and sent to the renderer, %u "
-                 "moving ones left to the game", g_sentNodes, g_sentFaces, g_animated);
-    g_sentNodes = g_sentFaces = g_animated = 0;
+    if (g_sentNodes || g_animated)  // 3.0.20-beta.3; 3.0.20-beta.5: those under a moving one, the alike keys
+        LOG_INFO("models: %u static nodes captured as the game draws them (%u faces) and sent to the renderer (%u of "
+                 "them with several keys all alike), %u moving ones left to the game (%u of them hung on a moving "
+                 "one)", g_sentNodes, g_sentFaces, g_alike, g_animated, g_under);
+    g_sentNodes = g_sentFaces = g_animated = g_under = g_alike = 0;
     if (g_ours || g_keptBlended || g_moved)  // 3.0.20-beta.4
         LOG_INFO("models: %u nodes drawn by our renderer in place of the game's in %u frames (%.0f a frame) - "
                  "[view3d] own_models; %u captured ones left to the game (a texture with its own alpha, or one the "
