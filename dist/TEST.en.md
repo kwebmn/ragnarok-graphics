@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.24 — what's new · 2026-11-15
+
+- **3D view: a character against the sky is no longer cut.** The 3D view's sky is drawn at the end of the frame wherever «nothing is», and the characters' sprites write no depth — so the part of a character, its clothes or wings against the sky vanished, only what was against the buildings and the ground stayed (R-UAEQ32, R-59XPGD). Now in the 3D view the shapes of characters, monsters, NPCs and wings are put into the depth before the frame's last passes. The sky and the haze leave them be, and the haze now falls on a character by its own distance, not by the distance of the house behind it. Effects drawn after a character stay over it as before. Direct3D 12 and Direct3D 11 alike.
+
 # uaRO Graphics 3.0.20-beta.23 — what's new · 2026-11-15
 
 - **The own ground on the graphics card.** Until now the processor placed, coloured and cut every point of the own ground in view itself each frame — in the 3D view some 100 thousand points and 2–3 ms a frame. Now the ground's points are kept on the graphics card and it places them itself; the processor only picks the pieces of land in view and recolours those whose light changed. The ground looks the same, and the triangular holes in the ground by the camera in the 3D view are gone: the card cuts a triangle at the edge in front of the camera instead of dropping it whole. The switch «Ground on the graphics card» is under «Own ground» (on); switch it off to compare with the old way.
