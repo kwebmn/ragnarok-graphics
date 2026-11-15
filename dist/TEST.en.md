@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.30 — what's new · 2026-11-16
+
+- **3D view: land to the horizon past the map's edge.** Until now there was nothing past the map's rectangle in the 3D view, and the world looked like an island in the sky. Now land lies round the map: by the edge it carries on the map's own heights, further off it goes over into hills, and forty cells and more away mountains rise and fade into the horizon's haze. Its texture is the most common one on that edge of the map (never the «BACKSIDE» filler), its light the map's mean, its slopes lit by the map's sun. Drawn by the graphics card like the own ground; in the 3D view only, on maps under the sky, in Direct3D 12. Where the map's edge lies under water there is nothing yet — the sea past the edge comes in the next beta.
+
 # uaRO Graphics 3.0.20-beta.29 — what's new · 2026-11-16
 
 - **3D view: the grass dense again, flowers without «triangles» (R-DWKJEN).** In beta.27 the flowers' heads were drawn as separate solid triangles and lay about the field like shards, and the grass thinned: it grew in only 65 % of the cells, as in the top view, the blades were narrower, and those turned side-on to the camera faded. Now a flower is as in the top view: its stem's top in the flower's colour (the stem a little wider). The grass grows in every cell and as wide as in beta.26, and only blades narrower than 2 pixels fade. The blades' own ways, the nested rings and the screen's edges stay as they were.
