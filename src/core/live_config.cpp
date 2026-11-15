@@ -824,6 +824,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
                                    flag(file.view3dFace)));
         n.view3dFace = file.view3dFace;
     }
+    if (file.view3dShoulder != running.view3dShoulder) {  // 3.0.19-beta.54
+        u.applied.push_back(change("3D view camera over the shoulder", flag(running.view3dShoulder),
+                                   flag(file.view3dShoulder)));
+        n.view3dShoulder = file.view3dShoulder;
+    }
     if (file.view3dFastGround != running.view3dFastGround) {  // 3.0.19-beta.42
         u.applied.push_back(change("3D view far ground less often", flag(running.view3dFastGround),
                                    flag(file.view3dFastGround)));

@@ -210,7 +210,7 @@ float behindDistanceOf(float gameDistance, float atEntry) {
 }
 
 void place(Mode m, const float feet[3], const float flat[3], const float up[3], float pitch, float eye[3],
-           float target[3], float distance) {
+           float target[3], float distance, bool shoulder) {
     const float p = pitch * kRad;
     float f[3] = {flat[0] * std::cos(p) + kWorldUp[0] * std::sin(p), kWorldUp[1] * std::sin(p),
                   flat[2] * std::cos(p) + kWorldUp[2] * std::sin(p)};
@@ -221,10 +221,38 @@ void place(Mode m, const float feet[3], const float flat[3], const float up[3], 
         float right[3];
         cross(up, f, right);  // the screen's right as the game's LookAt makes it
         if (!normalize(right)) right[0] = right[1] = right[2] = 0.0f;
-        for (int i = 0; i < 3; ++i)
-            eye[i] = feet[i] + kWorldUp[i] * kHeadHeight - f[i] * distance + right[i] * kShoulder;
+        const float over = kHeadHeight + (shoulder ? 0.0f : kCentreRise), aside = shoulder ? kShoulder : 0.0f;
+        for (int i = 0; i < 3; ++i) eye[i] = feet[i] + kWorldUp[i] * over - f[i] * distance + right[i] * aside;
     }
     for (int i = 0; i < 3; ++i) target[i] = eye[i] + f[i] * 10.0f;
+}
+
+bool orbitStep(Orbit& o, Look& look, bool shift, uint32_t now) {
+    if (shift && !o.on) {
+        if (!o.back) o.home = look;  // on its way back: the same home
+        o.on = true;
+        o.back = false;
+    } else if (!shift && o.on) {
+        o.on = false;
+        o.back = true;
+        o.leftAt = look;
+        o.backSince = now;
+    }
+    if (!o.back) return o.on;
+    const float t = float(now - o.backSince) / float(kOrbitBackMs);
+    if (t >= 1.0f) {
+        look = o.home;
+        o.back = false;
+        return false;
+    }
+    const float k = t <= 0.0f ? 0.0f : t * t * (3.0f - 2.0f * t);
+    float turn = std::fmod(o.home.yaw - o.leftAt.yaw, 360.0f);  // the shorter way round
+    if (turn > 180.0f) turn -= 360.0f;
+    if (turn <= -180.0f) turn += 360.0f;
+    const float yaw = std::fmod(o.leftAt.yaw + turn * k, 360.0f);
+    look.yaw = yaw < 0.0f ? yaw + 360.0f : yaw;
+    look.pitch = o.leftAt.pitch + (o.home.pitch - o.leftAt.pitch) * k;
+    return true;
 }
 
 float spriteDepth(float z, float rhw) {

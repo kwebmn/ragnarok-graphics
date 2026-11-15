@@ -939,6 +939,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.view3dAimPull);
         } else if (key == "view3d.face") {  // 3.0.19-beta.39
             setBool(val, c.view3dFace);
+        } else if (key == "view3d.shoulder") {  // 3.0.19-beta.54
+            setBool(val, c.view3dShoulder);
         } else if (key == "view3d.fast_ground") {  // 3.0.19-beta.42
             setBool(val, c.view3dFastGround);
         } else if (key == "view3d.distance") {  // 3.0.19-beta.24

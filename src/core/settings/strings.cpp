@@ -8900,6 +8900,17 @@ constexpr Entry kTexts[] = {
      "і інші гравці. Вимкнено — дивиться туди, куди дивився, коли зупинився.",
      "В 3D-режиме, когда персонаж стоит, он поворачивается туда, куда смотрит камера (8 направлений игры), — это "
      "видят и другие игроки. Выключено — смотрит туда, куда смотрел, когда остановился."},
+    {Text::View3dShoulder, "Camera over the shoulder", "Камера через плече", "Камера через плечо"},  // 3.0.19-beta.54
+    {Text::View3dShoulderHint,
+     "In the 3D view from behind, the camera stands to the right of the head: the character a little left of the "
+     "middle, the crosshair free - handy for shooting from afar. Off: the character in the middle, the camera a "
+     "little over its head. Shift held turns the camera round the character, letting go brings it back.",
+     "У 3D-режимі ззаду камера стоїть праворуч від голови: персонаж трохи лівіше від центру, приціл вільний — зручно "
+     "стріляти здалеку. Вимкнено — персонаж по центру, камера трохи над його головою. Shift затиснутий — камера "
+     "обертається навколо персонажа, відпустиш — повертається.",
+     "В 3D-режиме сзади камера стоит справа от головы: персонаж чуть левее центра, прицел свободен — удобно стрелять "
+     "издалека. Выключено — персонаж по центру, камера чуть над его головой. Зажатый Shift вращает камеру вокруг "
+     "персонажа, отпустишь — возвращается."},
     {Text::View3dWeather, "Weather in the 3D view", "Погода у 3D-режимі", "Погода в 3D-режиме"},  // 3.0.19-beta.40
     {Text::View3dWeatherHint,
      "In the 3D view the snow, the rain, the falling leaves and the motes in the air are particles in the world round "

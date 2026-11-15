@@ -113,6 +113,12 @@ struct State {
     float stoodAt[3] = {0, 0, 0};
     DWORD foughtAt = 0, facedAt = 0;
     int facesTold = 0;
+    // 3.0.19-beta.54: behind, the character in the middle unless [view3d] shoulder; Shift held turns the camera round
+    // it (core view3d::orbitStep) - the facing waits while it is round or on its way back
+    bool shoulder = false;
+    view3d::Orbit orbit;
+    bool orbitHolds = false;
+    int orbitsTold = 0;
     bool viewKnown = false;
     bool centred = false;
     bool looking = false;
@@ -302,6 +308,14 @@ void lockStep(State& s, float cx, float cy) {
     }
 }
 
+// 3.0.19-beta.54: the game mode waiting for a skill's target (its +0x3C4, castWaiting's) - Shift is the game's then
+bool skillWaits() {
+    constexpr uint32_t kModeClass = 0x69F388, kWait = 0x3C4;
+    const uint32_t mode = readGameMode();
+    uint32_t vtable = 0, wait = 0;
+    return mode && readGame(mode, &vtable, 4) && vtable == kModeClass && readGame(mode + kWait, &wait, 4) && wait;
+}
+
 // The mouse's own moves turn the view (the pad runtime holds the game's cursor and keeps them; without it the cursor's
 // own move since the last frame); the game's cursor at the crosshair - pulled onto a monster near it (its clicks and
 // its hover there). Alt held, or the window not in front: the cursor free.
@@ -345,6 +359,17 @@ void mouse(State& s) {
     s.counts += std::labs(cdx) + std::labs(cdy);
     s.mostPixels = std::max(s.mostPixels, std::max(std::labs(dx), std::labs(dy)));
     if (s.centred && (dx || dy)) view3d::turn(s.look, float(dx), float(dy), perUnit * s.mouseSpeed, s.sign);
+    // 3.0.19-beta.54 (the owner: «и чтобы с шифтом можно было крутить?»): behind, Shift held - not with Ctrl (the
+    // view's own keys), not while a skill waits for its target (the game's Shift then), not the free camera (its Shift
+    // flies faster) - the camera round the character, its facing waits; let go: back where it was
+    const bool shift = s.mode == view3d::Mode::Behind && !s.free && GetKeyState(VK_SHIFT) < 0 &&
+                       GetKeyState(VK_CONTROL) >= 0 && !skillWaits();
+    const bool wasRound = s.orbit.on;
+    s.orbitHolds = view3d::orbitStep(s.orbit, s.look, shift, GetTickCount());
+    if (!wasRound && s.orbit.on && s.orbitsTold < 5) {
+        ++s.orbitsTold;
+        LOG_INFO("3D view: Shift - the camera round the character (its facing waits); let go - back where it was");
+    }
     readAims(s);
     lockStep(s, float(cx), float(cy));
     // 3.0.19-beta.34 (the concept: «Колесо: ... от первого лица: смена цели среди тех, что в прицеле»): from the eyes
@@ -618,7 +643,7 @@ void __attribute__((thiscall)) build(uint32_t view) {
     std::memcpy(feet, at(view, kFeet), sizeof feet);
     std::memcpy(up, at(view, kUp), sizeof up);
     const float want = view3d::behindDistanceOf(*at(view, kDistanceTo), s.zoomAtEntry);  // beta.7/.15: the wheel
-    view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target, want);
+    view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target, want, s.shoulder);  // .54: centred or not
     const uint32_t ground = groundNow();
     if (s.mode == view3d::Mode::Behind && ground) {  // 3.0.19-beta.10: a wall, a cliff behind - the eye before it
         // 3.0.19-beta.45: by the drawn ground too - a cave's rock wall behind brings the eye in before it
@@ -654,7 +679,7 @@ void __attribute__((thiscall)) build(uint32_t view) {
             s.behindNow += (free - s.behindNow) * 0.12f;
         }
         if (s.behindNow < want - 0.01f)
-            view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target, s.behindNow);
+            view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target, s.behindNow, s.shoulder);
     }
     if (s.wantFree) {  // 3.0.19-beta.37: Ctrl+Shift+C
         s.wantFree = false;
@@ -839,6 +864,7 @@ void frame(const Config& config) {
     s.mouseSpeed = float(config.view3dMouse) / 100.0f;
     s.sight = config.view3dDistance;  // 3.0.19-beta.24
     s.aimPull = config.view3dAimPull;  // 3.0.19-beta.36
+    s.shoulder = config.view3dShoulder;  // 3.0.19-beta.54
     if (s.mode != view3d::Mode::Off && !inGameWorld()) {  // the login, the character list: the game's own
         s.mode = s.wanted = view3d::Mode::Off;
         walkmodewin::setOn(s.walkBefore);
@@ -864,7 +890,7 @@ void frame(const Config& config) {
         ClipCursor(nullptr);
         s.clipped = false;
     }
-    faceTheView(s, config.view3dFace);  // 3.0.19-beta.39
+    faceTheView(s, config.view3dFace && !s.orbitHolds);  // 3.0.19-beta.39; .54: not while Shift turns it round
 }
 
 bool active() { return g_state.mode != view3d::Mode::Off; }

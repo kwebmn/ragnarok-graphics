@@ -24,6 +24,9 @@ constexpr float kEyeHeight = 13.0f;      // the eyes over the feet (a character 
 constexpr float kHeadHeight = 14.0f;     // behind: the point the camera keeps in front of it
 constexpr float kBehindDistance = 45.0f;
 constexpr float kShoulder = 9.0f;        // behind: to the right of the head, the character left of the centre
+// 3.0.19-beta.54 (the owner: «может персонажа по центру поставить в 3д?»): behind and centred - the eye straight back
+// and this much over the head: the character in the middle, the crosshair over its head ([view3d] shoulder: the old)
+constexpr float kCentreRise = 6.0f;
 constexpr float kPitchMost = 80.0f;      // up and down
 
 struct Look {
@@ -41,7 +44,19 @@ float turnSign(const float view[12], float yawDegrees);
 // The eye and the point it looks at: `feet` the character's place, `flat` the way ahead laid flat, `up` the game's up
 // (CView +0x88), pitch in degrees (up positive); behind: `distance` back from the head (beta.7: the game's wheel)
 void place(Mode m, const float feet[3], const float flat[3], const float up[3], float pitch, float eye[3],
-           float target[3], float distance = kBehindDistance);
+           float target[3], float distance = kBehindDistance, bool shoulder = true);
+// 3.0.19-beta.54 (the owner: «и чтобы с шифтом можно было крутить?»): behind, Shift held - the mouse turns the camera
+// round the character and its facing waits; let go - the look back where it was before Shift, along the shorter way
+// round, over kOrbitBackMs (Shift again on the way: round from there, the same way home)
+constexpr uint32_t kOrbitBackMs = 250;
+struct Orbit {
+    bool on = false, back = false;
+    Look home{}, leftAt{};
+    uint32_t backSince = 0;
+};
+// A frame's step (`shift`: held and allowed now; `now` in ms): true while the facing waits - round or on its way
+// back, `look` set along the way
+bool orbitStep(Orbit& o, Look& look, bool shift, uint32_t now);
 // 3.0.19-beta.12 (R-ZQWGVD: behind, the eye went into Morocc's buildings): the game's boxes of things - a model's
 // (its +0x130: the half sizes, the centre, three axes - uaRO.exe FUN_004fa0f0; the axes may carry a scale, the half
 // sizes in their units), a ground node's (+0x2c the centre, +0x38 the half sizes, the world's axes)

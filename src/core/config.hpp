@@ -1029,6 +1029,9 @@ struct Config {
     bool view3dAimPull = false;
     // 3.0.19-beta.39: [view3d] face - standing, the character turned where the camera looks (core view3d::faceToward)
     bool view3dFace = true;
+    // 3.0.19-beta.54 (the owner: «может персонажа по центру поставить в 3д?»): [view3d] shoulder - behind, the camera
+    // to the right of the head as before (the crosshair free); off: the character in the middle (core view3d::place)
+    bool view3dShoulder = false;
     // 3.0.19-beta.42: [view3d] fast_ground - the game's far ground cells worked out one frame in 8 while the renderer's
     // own ground is drawn in their place (core/ground_thin)
     bool view3dFastGround = true;

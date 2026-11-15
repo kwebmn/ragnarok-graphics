@@ -646,3 +646,59 @@ TEST(view3d_free_camera_kept_out_of_rock) {
     view3d::keepOverGround(from, high, cave);
     CHECK(high[0] == 12.0f && high[1] == -40.0f);
 }
+
+// 3.0.19-beta.54 (the owner: «может персонажа по центру поставить в 3д?»): behind, the eye straight back from the head
+// and kCentreRise over it - the character in the middle, the crosshair over its head; [view3d] shoulder the old way
+TEST(view3d_behind_centred_the_eye_straight_back_and_over_the_head) {
+    const float feet[3] = {0.0f, 0.0f, 0.0f}, ahead[3] = {1.0f, 0.0f, 0.0f}, up[3] = {0.0f, -1.0f, 0.0f};
+    float eye[3], target[3];
+    view3d::place(view3d::Mode::Behind, feet, ahead, up, 0.0f, eye, target, 45.0f, false);
+    CHECK(near(eye[0], -45.0f) && near(eye[2], 0.0f));
+    CHECK(near(eye[1], -(view3d::kHeadHeight + view3d::kCentreRise)));  // y down
+    CHECK(target[0] > eye[0] && near(target[1], eye[1]) && near(target[2], 0.0f));
+    view3d::place(view3d::Mode::Behind, feet, ahead, up, 0.0f, eye, target, 45.0f, true);
+    CHECK(near(std::fabs(eye[2]), view3d::kShoulder) && near(eye[1], -view3d::kHeadHeight));
+}
+
+// 3.0.19-beta.54 (the owner: «и чтобы с шифтом можно было крутить?»): Shift held - the camera round the character, its
+// facing waits; let go - the look back where it was before Shift, along the shorter way round, over kOrbitBackMs
+TEST(view3d_orbit_with_shift_turns_round_then_back) {
+    view3d::Orbit o;
+    view3d::Look look{10.0f, -5.0f};
+    CHECK(!view3d::orbitStep(o, look, false, 0));  // no Shift: nothing waits
+    CHECK(view3d::orbitStep(o, look, true, 10));
+    look.yaw = 200.0f;  // the mouse turned the camera round
+    look.pitch = 20.0f;
+    CHECK(view3d::orbitStep(o, look, true, 50) && near(look.yaw, 200.0f));  // held: the mouse's own
+    CHECK(view3d::orbitStep(o, look, false, 100));  // let go: on its way back
+    CHECK(view3d::orbitStep(o, look, false, 100 + view3d::kOrbitBackMs / 2));
+    CHECK(near(look.yaw, 285.0f) && near(look.pitch, 7.5f));  // halfway: 200 -> 370 (= 10), the shorter way
+    CHECK(!view3d::orbitStep(o, look, false, 100 + view3d::kOrbitBackMs));
+    CHECK(near(look.yaw, 10.0f) && near(look.pitch, -5.0f));
+    CHECK(!view3d::orbitStep(o, look, false, 2000));  // done: the mouse's again
+}
+
+TEST(view3d_orbit_shift_again_on_the_way_back_keeps_where_it_was) {
+    view3d::Orbit o;
+    view3d::Look look{90.0f, 0.0f};
+    view3d::orbitStep(o, look, true, 0);
+    look.yaw = 180.0f;
+    view3d::orbitStep(o, look, false, 100);
+    view3d::orbitStep(o, look, false, 100 + view3d::kOrbitBackMs / 2);  // halfway back
+    CHECK(view3d::orbitStep(o, look, true, 200));                       // Shift again: round from here
+    look.yaw = 300.0f;
+    view3d::orbitStep(o, look, false, 300);
+    CHECK(!view3d::orbitStep(o, look, false, 300 + view3d::kOrbitBackMs));
+    CHECK(near(look.yaw, 90.0f));  // back where it was before the first Shift
+}
+
+// 3.0.19-beta.54: [view3d] shoulder - off unless the file says 1; shown on «Гра», applied at once
+TEST(config_view3d_shoulder_off_by_default) {
+    CHECK(!parseConfig("").view3dShoulder);
+    CHECK(parseConfig("[view3d]\nshoulder = 1\n").view3dShoulder);
+    const settings::IniSetting* row = settings::findSetting("view3d.shoulder");
+    CHECK(row != nullptr);
+    if (row) CHECK(row->page == settings::Page::Game && settings::tokenOf(*row, parseConfig("")) == "0");
+    CHECK(appliesNow("view3d.shoulder"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[view3d]\nshoulder = 1\n")).next.view3dShoulder);
+}
