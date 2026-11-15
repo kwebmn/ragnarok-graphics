@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.2 — what's new · 2026-11-15
+
+- **Storage no longer freezes on a slow disk.** The things' icons are read from the game's archives and the texture pack only a few milliseconds a frame, the rest in the next frames. A storage of hundreds of things could stop the game for 15 seconds on a slow disk; now the icons fill in a moment after it opens.
+- **Measuring the models: the colours checked exactly.** The log now works out the models' vertex colours as the game does — with the light of their place and the colour factors — and sets them against what it draws.
+
 # uaRO Graphics 3.0.20-beta.1 — what's new · 2026-11-15
 
 - **Measuring the models — stage 1 of «Models by our renderer».** Every 30 seconds the log shows how much of a frame the game spends on its models, how many of their nodes and faces it draws, and sets the faces' colours in the game's memory against those it draws. The picture does not change.
