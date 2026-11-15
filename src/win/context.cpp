@@ -2,6 +2,7 @@
 #include "win/present_watch.hpp"
 #include "win/threat_arc.hpp"
 #include "win/exe_hot.hpp"
+#include "win/model_census.hpp"
 #include "win/game_files.hpp"
 #include "win/ground_thin.hpp"
 #include "win/updates_hook.hpp"
@@ -516,6 +517,7 @@ bool Context::open(std::string& error) {
     view3dwin::install();  // 3.0.19-beta.6: Ctrl+Shift+V, the 3D view
     groundthin::install();  // 3.0.19-beta.42: the game's far ground cells fewer in it
     exehotwin::install();    // 3.0.19-beta.49: its vertex projection and its faces' sort ours
+    modelcensus::install();  // 3.0.20-beta.1: stage 1 of «Модели нашим рендером» - measured, nothing changed
     wings::install();     // 3.0.18-beta.230: the nine headgears' wings (win/wings)
     gamefiles::warmUp(gameDir());  // 3.0.19-beta.44: the game's archives' tables read ahead, off the game's thread
     setFullColour(config.fullColour);  // 2.5.18: the textures in their pictures' own colours
@@ -1691,6 +1693,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     g_parts.frame();
     stats_.ownMs += nowMs() - presentFrom - rendererMs;  // 3.0.18-beta.161
     notePace(presentFrom, rendererMs, foreground && !o.loading);  // 3.0.19-beta.51
+    modelcensus::frame();                                         // 3.0.20-beta.1
     readTallyFrame(GetCurrentThreadId());                // the reads of the game's memory: this thread's, a frame
     uapad::clientmem::countOn(GetCurrentThreadId());     // the controller's checks of it likewise
     logStats(false);

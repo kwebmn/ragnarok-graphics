@@ -10,6 +10,7 @@
 #include "win/entry_hook.hpp"
 #include "win/game_memory.hpp"
 #include "win/log.hpp"
+#include "win/model_census.hpp"
 
 namespace uagfx::win::exehotwin {
 namespace {
@@ -71,6 +72,7 @@ using GrowFn = void(__attribute__((thiscall)) *)(exehot::GameVector* self, uint3
 uintptr_t g_grow = 0;
 
 void __attribute__((thiscall)) growHook(exehot::GameVector* self, uint32_t at, uint32_t n, const void* blank) {
+    modelcensus::noteGrow(uint32_t(uintptr_t(self)), at, n);  // 3.0.20-beta.1: the node being drawn - its faces' block
     if (self && exehot::growAtEnd(*self, at, n)) {
         ++g_grown;
         tellOnce();
