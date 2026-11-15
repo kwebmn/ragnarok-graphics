@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.28 — what's new · 2026-11-15
+
+- **3D view: the grass by the screen's edges no longer vanishes as you move the mouse.** A blade was drawn only while its root was on the picture. Near blades are huge on the screen — hundreds of pixels tall — so as the camera turned and an edge of the screen (mostly the bottom one) went over their roots, whole tufts went and came. Now a root past the edge stands at its cell's ground height and takes its colour from the picture's nearest pixel, and the blade is drawn while any part of it may reach the screen.
+
 # uaRO Graphics 3.0.20-beta.27 — what's new · 2026-11-15
 
 - **The 3D view's grass is the top view's grass and no longer «slides» while walking (R-TBD86F).** In the 3D view the blades now stand where the usual top view draws them: the same spot in each cell, the same share of grass, the same height and the same colour up a blade. Flowers grow in the same patches too, in the map's and the season's colours. Walking no longer changes the grass: the blades no longer turn after the camera (each has its own way in the world, three in a tuft), a far blade is the same one as near with denser ones growing in round it, and width and height change smoothly with the distance rather than jumping at the rings' edges.
