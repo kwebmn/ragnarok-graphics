@@ -16,6 +16,7 @@
 #include "core/config.hpp"
 #include "core/daylight.hpp"
 #include "core/frame.hpp"
+#include "core/frame_pace.hpp"
 #include "core/image.hpp"
 #include "core/pixel.hpp"
 #include "core/scale.hpp"
@@ -137,6 +138,13 @@ private:
 
     CRITICAL_SECTION cs_;
     Stats stats_;
+    // 3.0.19-beta.51 (core/frame_pace): the game's side's long frames; the presents begun and the ones that ran to
+    // their end (one cut short leaves the next frame out: its time spans it), the last one's end
+    framepace::GameTally pace_;
+    uint32_t paceBegun_ = 0, paceEnded_ = 0;
+    double paceEnd_ = 0.0;
+    bool paceSkipped_ = true;
+    void notePace(double from, double rendererMs, bool counts);
     int scaledWidth_ = 0;  // the target size the last scale plan asked for (stage 3)
     int scaledHeight_ = 0;
     int scaledSamples_ = 1;  // and its samples per pixel (stage 4)

@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <atomic>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -70,11 +71,47 @@ const updates::Hit* hitOf(const char* name) {  // under g_lock
     return name ? g_index.find(name) : nullptr;
 }
 
+void* readUncounted(GetDataFn fn, void* self, const char* name, uint32_t* size);
+
+// 3.0.19-beta.51 (core/frame_pace): the reads on the thread that presents (the game's), a frame - only that thread
+// touches them; the thread's id read by the others too
+std::atomic<DWORD> g_paceThread{0};
+uint32_t g_paceReads = 0;
+double g_paceReadMs = 0.0;
+std::string g_paceSlowest;
+double g_paceSlowestMs = 0.0;
+
+double qpcMs() {
+    static const double perMs = [] {
+        LARGE_INTEGER hz{};
+        QueryPerformanceFrequency(&hz);
+        return hz.QuadPart > 0 ? double(hz.QuadPart) / 1000.0 : 0.0;
+    }();
+    LARGE_INTEGER now{};
+    QueryPerformanceCounter(&now);
+    return perMs > 0.0 ? double(now.QuadPart) / perMs : 0.0;
+}
+
+void* readInTurn(GetDataFn fn, void* self, const char* name, uint32_t* size) {
+    if (GetCurrentThreadId() != g_paceThread.load(std::memory_order_relaxed))
+        return readUncounted(fn, self, name, size);
+    const double from = qpcMs();
+    void* const data = readUncounted(fn, self, name, size);
+    const double ms = qpcMs() - from;
+    ++g_paceReads;
+    g_paceReadMs += ms;
+    if (ms > g_paceSlowestMs) {
+        g_paceSlowestMs = ms;
+        g_paceSlowest = name ? name : "?";
+    }
+    return data;
+}
+
 // 3.0.18-beta.251: the game's own GetData (`fn`: its trampoline when hooked) with no other thread reading its
 // archives meanwhile - its whole read (the window mapped, the entry deciphered and inflated into its copy) one at a
 // time. Nothing else is taken inside (no resource lock, no driver's wait): its map loader thread may hold the game's
 // resource lock while it waits here, never the other way round. A wait told in the log (core/updates tellWait).
-void* readInTurn(GetDataFn fn, void* self, const char* name, uint32_t* size) {
+void* readUncounted(GetDataFn fn, void* self, const char* name, uint32_t* size) {
     if (!g_inTurn) return fn(self, name, size);
     if (!TryEnterCriticalSection(&g_turn)) {
         LARGE_INTEGER a{}, b{}, hz{};
@@ -269,6 +306,17 @@ bool readGameFile(const std::string& name, std::string& out) {
     out.assign(static_cast<const char*>(data), size);
     VirtualFree(data, 0, MEM_RELEASE);  // as the game's own FUN_0050d080
     return true;
+}
+
+void takeFrameReads(framepace::GameFrame& frame) {
+    g_paceThread.store(GetCurrentThreadId(), std::memory_order_relaxed);
+    frame.reads = g_paceReads;
+    frame.readMs = g_paceReadMs;
+    frame.slowest.swap(g_paceSlowest);
+    frame.slowestMs = g_paceSlowestMs;
+    g_paceReads = 0;
+    g_paceReadMs = g_paceSlowestMs = 0.0;
+    g_paceSlowest.clear();
 }
 
 }  // namespace uagfx::win

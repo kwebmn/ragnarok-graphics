@@ -4,6 +4,7 @@
 #include "win/exe_hot.hpp"
 #include "win/game_files.hpp"
 #include "win/ground_thin.hpp"
+#include "win/updates_hook.hpp"
 #include "win/view3d.hpp"
 #include "win/walk_mode.hpp"
 #include "win/upkeep_watch.hpp"
@@ -868,6 +869,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     dx7::flushGroundBatch();  // 3.0.19-beta.50: the gathered ground cells into the frame before it goes
     dx7::setGroundBatch(config.batchGround);  // [quality] batch_ground, for the next frame
     const double presentFrom = nowMs();  // 3.0.18-beta.161: the driver's own work at a present (logStats)
+    ++paceBegun_;                          // 3.0.19-beta.51
     g_parts.begin(presentFrom);           // 3.0.18-beta.169: and by its parts
     actorIndexFrame();                     // 3.0.18-beta.168: the actors' index read again at its next ask
     // 3.0.3-beta.8: whether the game drew this picture anew - the windows' panel goes over such a one alone: the
@@ -1683,6 +1685,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     g_parts.mark("the rest of the present", nowMs());  // 3.0.18-beta.169: what no mark above took
     g_parts.frame();
     stats_.ownMs += nowMs() - presentFrom - rendererMs;  // 3.0.18-beta.161
+    notePace(presentFrom, rendererMs, foreground && !o.loading);  // 3.0.19-beta.51
     readTallyFrame(GetCurrentThreadId());                // the reads of the game's memory: this thread's, a frame
     uapad::clientmem::countOn(GetCurrentThreadId());     // the controller's checks of it likewise
     logStats(false);
@@ -2130,6 +2133,26 @@ void Context::noteWindow(bool minimized, bool foreground) {
     LOG_INFO("%s%s", line.c_str(), windowLines_ > 40 ? " (its changes are not logged any more)" : "");
 }
 
+// 3.0.19-beta.51 (R-EWK4E4: moc_fild10's 3D view at 56.6 fps under its limit of 60, each side some 7 ms to spare a
+// frame - frames lost in jerks; core/frame_pace): this present's frame by its parts - the game's own from the last
+// present's end, ours, the renderer's - with the game's archive reads in it. Not a loading picture's, nor one behind
+// another window, nor the first after such or after a present cut short.
+void Context::notePace(double from, double rendererMs, bool counts) {
+    const double end = nowMs();
+    framepace::GameFrame f;
+    takeFrameReads(f);
+    const bool whole = paceBegun_ == paceEnded_ + 1;
+    paceEnded_ = paceBegun_;
+    if (counts && whole && !paceSkipped_ && paceEnd_ > 0.0) {
+        f.made = std::max(0.0, from - paceEnd_);
+        f.renderer = rendererMs;
+        f.own = std::max(0.0, end - from - rendererMs);
+        pace_.add(f);
+    }
+    paceSkipped_ = !counts;
+    paceEnd_ = end;
+}
+
 void Context::logStats(bool final) {
     const DWORD now = GetTickCount();
     if (!stats_.since) stats_.since = now;
@@ -2149,6 +2172,8 @@ void Context::logStats(bool final) {
         LOG_INFO("%u frames in %.1f s (%.1f fps), %u reads of the frame from the GPU%s%s%s%s%s", stats_.frames,
                  ms / 1000.0, ms ? stats_.frames * 1000.0 / ms : 0.0, stats_.readBacks, crisp::stats().c_str(),
                  sharpframes::stats().c_str(), sharpspecks::stats().c_str(), busy, full);
+    if (const std::string pace = pace_.line(); !pace.empty()) LOG_INFO("%s", pace.c_str());  // 3.0.19-beta.51
+    pace_.clear();
     // 3.0.18-beta.161 (the owner: «делай 1 и 2» - the costs measured before the game's access is redone): the
     // driver's own work at a present, the game's memory it read (each read a call into Windows) and the controller's
     // checks of that memory (a VirtualQuery each)

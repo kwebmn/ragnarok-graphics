@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 
+#include "core/frame_pace.hpp"
+
 namespace uagfx::win {
 
 // 3.0.2-beta.5 (the user: the admin's new content as a GRF of his own in a folder of its own): the GRFs in
@@ -14,5 +16,8 @@ void logUpdates();
 // mounted, then DATA.INI's archives in its order with its own names - zips, GRFs) - the driver's own pictures (the
 // reference's sprites and icons). The game's thread only; false: another uaRO.exe build, or no such file.
 bool readGameFile(const std::string& name, std::string& out);
+// 3.0.19-beta.51 (core/frame_pace): the game's archive reads on the calling thread since its last call - how many,
+// their time, the slowest; from now on that thread's reads are the ones counted (the game's, at its present)
+void takeFrameReads(framepace::GameFrame& frame);
 
 }  // namespace uagfx::win

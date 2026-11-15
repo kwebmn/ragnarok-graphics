@@ -300,6 +300,16 @@ void Renderer::Impl::effectEnd(EffectTimer e) {
     slots[slot].effectTimed |= 1u << e;
 }
 
+namespace {
+
+// 3.0.19-beta.22: the passes' names for the log, in Impl::CpuPart's order; 3.0.19-beta.51: a long frame's dearest too
+const char* const kCpuPartNames[Renderer::Impl::kCpuParts] = {
+    "the game's ground noted (hills, seams, grass)", "the reflections' and torch shadows' casters",
+    "the game's ground for the own ground's colours", "the own ground", "the own water",
+    "the game's models for the far models' colours", "the characters' shadows"};
+
+}  // namespace
+
 void Renderer::Impl::noteGpuFrame() {
     if (!timer || !timerFrequency) return;
     ++gpuFrames;
@@ -375,17 +385,13 @@ void Renderer::Impl::noteGpuFrame() {
              "limit's wait, %.2f ms the swap chain's present%s", double(cpuTicks) * perFrame,
              double(fenceTicks) * perFrame, double(pacerTicks) * perFrame, double(swapTicks) * perFrame, reflexPart);
     {  // 3.0.19-beta.22 (R-8HBYXU): the passes' share of the drawing
-        static const char* const kPartNames[kCpuParts] = {
-            "the game's ground noted (hills, seams, grass)", "the reflections' and torch shadows' casters",
-            "the game's ground for the own ground's colours", "the own ground", "the own water",
-            "the game's models for the far models' colours", "the characters' shadows"};
         std::string parts;
         LONGLONG known = 0;
         for (int k = 0; k < kCpuParts; ++k) {
             known += cpuPartTicks[k];
             if (double(cpuPartTicks[k]) * perFrame < 0.01) continue;
             char part[96];
-            std::snprintf(part, sizeof part, "%s%s %.2f", parts.empty() ? "" : ", ", kPartNames[k],
+            std::snprintf(part, sizeof part, "%s%s %.2f", parts.empty() ? "" : ", ", kCpuPartNames[k],
                           double(cpuPartTicks[k]) * perFrame);
             parts += part;
         }
@@ -404,6 +410,10 @@ void Renderer::Impl::noteGpuFrame() {
     }
     cpuTicks = fenceTicks = pacerTicks = swapTicks = reflexTicks = 0;
     recentSwapMark = recentCpuMark = 0;  // 3.0.19-beta.8
+    // 3.0.19-beta.51: the long frames beside them; the frames' marks zeroed with the counters
+    if (const std::string pace = paceTally.line(); !pace.empty()) LOG_INFO("%s", pace.c_str());
+    paceTally.clear();
+    paceMarks = PaceMarks{paceMarks.at};
     if (drawsGathered)  // 2.5: how many of the game's draws went as one call
         LOG_INFO("draws: %u a frame in %u calls to the GPU", drawsGathered / std::max<uint32_t>(gpuFrames, 1),
                  drawCalls / std::max<uint32_t>(gpuFrames, 1));
@@ -412,6 +422,67 @@ void Renderer::Impl::noteGpuFrame() {
     gpuTicks = upscaleTicks = aiTicks = 0;
     gpuFrames = 0;
     gpuSince = now;
+}
+
+// 3.0.19-beta.51 (R-EWK4E4: moc_fild10's 3D view at 56.6 fps under its limit of 60 while the renderer had some 7 ms
+// a frame to spare - frames lost in jerks; core/frame_pace): a present to the next by the counters' growth - the
+// drawing, the frame limit's wait, the present's and Reflex's, the rest waiting for the game's next frame - with the
+// drawing's dearest part. Not a loading picture's or one behind another window, nor the first after such.
+void Renderer::Impl::notePace(bool counts) {
+    static const double perMs = [] {
+        LARGE_INTEGER f;
+        QueryPerformanceFrequency(&f);
+        return f.QuadPart > 0 ? double(f.QuadPart) / 1000.0 : 0.0;
+    }();
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    PaceMarks n;
+    n.at = now.QuadPart;
+    n.cpu = cpuTicks;
+    n.pacer = pacerTicks;
+    n.swap = swapTicks;
+    n.reflex = reflexTicks;
+    n.geometry = geometryTicks;
+    n.textures = texturesTicks;
+    n.draws = drawsTicks;
+    n.submit = submitTicks;
+    std::copy(cpuPartTicks, cpuPartTicks + kCpuParts, n.parts);
+    if (counts && !paceSkipped && paceMarks.at && perMs > 0.0) {
+        const PaceMarks& b = paceMarks;
+        const auto ms = [](LONGLONG later, LONGLONG before) {
+            return later > before ? double(later - before) / perMs : 0.0;
+        };
+        framepace::DrawnFrame f;
+        f.ms = ms(n.at, b.at);
+        f.drawing = ms(n.cpu, b.cpu);
+        f.pace = ms(n.pacer, b.pacer);
+        f.present = ms(n.swap, b.swap) + ms(n.reflex, b.reflex);
+        double known = 0.0;
+        for (int k = 0; k < kCpuParts; ++k) {
+            const double part = ms(n.parts[k], b.parts[k]);
+            known += part;
+            if (part > f.partMs) {
+                f.partMs = part;
+                f.part = kCpuPartNames[k];
+            }
+        }
+        const double draws = ms(n.draws, b.draws), geometry = ms(n.geometry, b.geometry);
+        const double textures = ms(n.textures, b.textures), submit = ms(n.submit, b.submit);
+        const std::pair<const char*, double> around[] = {
+            {"the game's draws themselves", std::max(draws - known, 0.0)},
+            {"their vertices' upload", geometry},
+            {"textures' uploads", textures},
+            {"the list's submit", submit},
+            {"the present's passes", std::max(f.drawing - draws - geometry - textures - submit, 0.0)}};
+        for (const auto& [name, partMs] : around)
+            if (partMs > f.partMs) {
+                f.partMs = partMs;
+                f.part = name;
+            }
+        paceTally.add(f);
+    }
+    paceSkipped = !counts;
+    paceMarks = n;
 }
 
 void Renderer::Impl::profileStart() {
@@ -3151,6 +3222,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         m.shotPath.clear();
     }
     m.profilePresent();  // 3.0.5-beta.2: before noteGpuFrame lets its counters go every half minute
+    m.notePace(!options.loading && options.foreground);  // 3.0.19-beta.51: likewise
     m.noteGpuFrame();
     m.notePresentation();  // 2.5.25
     if (paceAfter) {

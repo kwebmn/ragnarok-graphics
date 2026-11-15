@@ -17,6 +17,7 @@
 #include "core/pick.hpp"
 #include "core/effect_costs.hpp"
 #include "core/footsteps.hpp"
+#include "core/frame_pace.hpp"
 #include "core/frame_profile.hpp"
 #include "core/trample.hpp"
 #include "core/frame.hpp"
@@ -853,6 +854,17 @@ struct Renderer::Impl {
     // textures' uploads, the draws (with the parts above in them), the list's submit; the rest: the present's passes
     LONGLONG geometryTicks = 0, texturesTicks = 0, drawsTicks = 0, submitTicks = 0;
     LONGLONG cpuPartTicks[kCpuParts] = {};
+    // 3.0.19-beta.51 (R-EWK4E4, core/frame_pace): the counters above at the last present - a frame's spans are their
+    // growth since (zeroed with them every 30 s); its long frames for the log beside them; the last present a
+    // loading picture's or one behind another window (the next one's time spans it - not counted either)
+    struct PaceMarks {
+        LONGLONG at = 0, cpu = 0, pacer = 0, swap = 0, reflex = 0, geometry = 0, textures = 0, draws = 0, submit = 0;
+        LONGLONG parts[kCpuParts] = {};
+    };
+    PaceMarks paceMarks;
+    framepace::DrawnTally paceTally;
+    bool paceSkipped = true;
+    void notePace(bool counts);  // at a present, after the swap chain's
     struct CpuTime {
         LONGLONG& total;
         LARGE_INTEGER start{};
