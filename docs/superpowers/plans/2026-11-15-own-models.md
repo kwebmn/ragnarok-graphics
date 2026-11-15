@@ -43,3 +43,25 @@ RELEASED 15.11, main 8394155).
    clienttables::icon read every new icon at once (the game's .bmp, then the AI pack's copy). core/read_budget: the
    icons' first reads kReadMs 4 a 16-ms window, the rest in the next ones (logged once when 20 waited). Test:
    read_budget_spends_its_share_of_a_window_then_waits_for_the_next. Untested in the game.
+3.0.20-beta.2 SHIPPED (2821b68, update.ini 7f54add).
+3. 3.0.20-beta.3 (stage 2a). R-CFQAN3 (the owner on beta.2, prontera 3D): the colours as the game makes them from its
+   memory 99.1-100.0 % of 527-746 k vertices a 30 s (the lit way; the rest 128 apart at most - an alpha, likely fading
+   actors); the models 1.22-1.88 ms a frame (7-11 %), 588-799 nodes, 17.8-24.8 k faces. The game's map loader
+   (FUN_004EA9A0) makes an actor (0x200 bytes, FUN_004E0540) a .rsw object - its place copied to actor[0..2], turn
+   [3..5], scale [6..8], the animation's speed [0x2D] and kind [0x7C] (+0x1F0), the object's name at +0x2C, its root
+   node (0x150 bytes) at +0x28 (FUN_004E0CA0, node +4 the actor); the world's actors vector at +0x48..+0x4C - far ones
+   queued for the loader thread (FUN_004EE3C0), so not in the file's order. A node's children list +0xAC (MSVC list:
+   next, prev, the child at +8); its keys of turning +0xF8 (0x14 each) and moving +0x108 (0x20 each), one default each
+   when none; its mesh +0x9C: vertices count +0, vertices +0xC (12 bytes), faces +4 / +0x1C (0x18: vertex indices
+   +0/+2/+4, uv indices +6/+8/+0xA, texture +0xC, two-sided int +0x10); textures +0x88 count / +0x90 CTexture* (its
+   surface +0xC: our Surface7). Ruling: capture the game's own nodes as it draws them (the node from the census's call
+   stack in modelProjection, the node-to-view matrix x the inverse of the view at CView +0x94 = the world) instead of
+   colouring our .rsm-placed models - the game's exact geometry and colours, no face matching; cost if wrong: the
+   capture's world off (checked: the renderer's corners against ours). Done: core/game_models (Node/Face 84 bytes over
+   the wire, compose/worldOf/transform, Corners grid); Msg::GameModel (bridge kVersion 36); Remote::sendGameModel,
+   serve.cpp, Renderer::addGameModel (D3D12 keeps them: win/gpu/game_models.cpp - a new map's first clears, our own
+   corners by mapWorld.axes, a line «game models: ... corners on our own models X of Y» every 30 s when more came);
+   driver: modelcensus::noteProjection (8 a frame, once a node a map; animated - keys > 1 or the actor's kind - left to
+   the game), mapChanged at the map's change, dx7::gpuTextureOf, view3dwin::lastView; a line «models: N static nodes
+   captured ... M moving ones left to the game». Tests: game_models_* (3; Corners' neighbour cells mutated -> RED).
+   Lesson again: `near` is windef.h's macro (Corners::within). Untested in the game.

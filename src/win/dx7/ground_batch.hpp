@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 
 namespace uagfx::dx7 {
 
@@ -6,5 +7,8 @@ namespace uagfx::dx7 {
 // to go, a surface about to change), and [quality] batch_ground - free of Direct3D 7's own headers
 void flushGroundBatch();
 void setGroundBatch(bool on);
+// 3.0.20-beta.3 (stage 2a of «Модели нашим рендером»): the renderer's texture of a surface the game holds (its
+// CTexture +0xC); 0 for none of ours
+uint32_t gpuTextureOf(const void* surface);
 
 }  // namespace uagfx::dx7

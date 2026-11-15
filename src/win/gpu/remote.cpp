@@ -342,6 +342,14 @@ void Remote::setSeeThrough(const float hole[8], uint8_t flags) {
     send(Msg::SeeThrough, buffer_);
 }
 
+// 3.0.20-beta.3 (stage 2a of «Модели нашим рендером»): a node the driver captured, whole
+void Remote::sendGameModel(const gamemodels::Node& n) {
+    buffer_.clear();
+    WireWriter w(buffer_);
+    gamemodels::write(w, n);
+    send(Msg::GameModel, buffer_);
+}
+
 void Remote::sendIcon(uint64_t key, int width, int height, const uint32_t* argb) {
     buffer_.clear();
     WireWriter w(buffer_);

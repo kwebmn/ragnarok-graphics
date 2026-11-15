@@ -105,6 +105,10 @@ void Device7::setBatchGround(bool on) { g_batchGround = on; }
 
 void flushGroundBatch() { Device7::flushLive(); }
 void setGroundBatch(bool on) { Device7::setBatchGround(on); }
+uint32_t gpuTextureOf(const void* surface) {
+    Surface7* t = surface ? Surface7::from(static_cast<IDirectDrawSurface7*>(const_cast<void*>(surface))) : nullptr;
+    return t ? t->gpuTexture() : 0;
+}
 
 void Device7::flushLive() {
     if (g_live && g_live->batch_.quads) g_live->flushBatch();

@@ -258,6 +258,11 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             }
             break;
         }
+        case Msg::GameModel: {  // 3.0.20-beta.3
+            gamemodels::Node n;
+            if (gamemodels::read(rd, n)) renderer_.addGameModel(n);
+            break;
+        }
         case Msg::SeeThrough: {  // 3.0.13-beta.26
             float hole[8];
             for (float& v : hole) v = rd.f32();

@@ -1528,6 +1528,19 @@ struct Renderer::Impl {
     void noteOwnCell(const FrameRecord& rec, const DrawCmd& d, const own_ground::Tl2* v, uint32_t count);
     void noteOwnModels(const FrameRecord& rec, const DrawCmd& d);  // 3.0.4-beta.14: the game's own models near
     void drawOwnModels(const own_ground::View& view, const camera::Projection& p, const map::Axes& axes);
+    // 3.0.20-beta.3 (stage 2a of «Модели нашим рендером»): the game's static model nodes as the driver captured them
+    // (core/game_models), by their node, and the map they came on; their corners checked against our own models'
+    // (placed from the map's files) once those are up; a line every 30 s when more came (win/gpu/game_models.cpp)
+    std::unordered_map<uint32_t, gamemodels::Node> gameModels;
+    uint32_t gameModelsMap = 0;
+    size_t gameModelFaces = 0, gameModelCorners = 0, gameModelCornersOurs = 0, gameModelsTold = 0;
+    gamemodels::Corners ownCorners;
+    bool ownCornersMade = false;
+    std::vector<uint32_t> gameModelsUnchecked;  // came before our own corners were made
+    void addGameModel(const gamemodels::Node& n);
+    bool makeOwnCorners();
+    void checkGameModel(const gamemodels::Node& n);
+    void tellGameModels();
     bool drawOwnGround();  // once a picture, the game's ground noted; false: lost
     // 3.0.19-beta.46: a chunk of the own ground in view made - its colours anew when asked, its batches' pieces
     // projected, coloured and cut (drawOwnGround's per chunk, on a thread of the few: it reads the picture's inputs

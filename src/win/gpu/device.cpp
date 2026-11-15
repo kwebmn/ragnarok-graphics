@@ -411,6 +411,7 @@ void Renderer::Impl::noteGpuFrame() {
     cpuTicks = fenceTicks = pacerTicks = swapTicks = reflexTicks = 0;
     runCycles = runTsc = 0;              // 3.0.19-beta.52
     recentSwapMark = recentCpuMark = 0;  // 3.0.19-beta.8
+    tellGameModels();  // 3.0.20-beta.3
     // 3.0.19-beta.51: the long frames beside them; the frames' marks zeroed with the counters
     if (const std::string pace = paceTally.line(); !pace.empty()) LOG_INFO("%s", pace.c_str());
     paceTally.clear();
@@ -2315,6 +2316,12 @@ void Renderer::setCamera(bool valid, const float view[12], float targetZ) {
     if (m.viewToWorldValid)
         for (int r = 0; r < 4; ++r)
             for (int c = 0; c < 3; ++c) m.viewToWorld[3 * r + c] = inv[4 * r + c];
+}
+
+void Renderer::addGameModel(const gamemodels::Node& n) {
+    if (remix_ || d3d11_) return;
+    if (remote_) return remote_->sendGameModel(n);
+    impl_->addGameModel(n);
 }
 
 void Renderer::setSeeThrough(const float hole[8], uint8_t flags) {

@@ -3,11 +3,17 @@
 #include <windows.h>
 
 #include <cstring>
+#include <unordered_set>
 #include <vector>
 
+#include "core/game_models.hpp"
 #include "core/model_census.hpp"
+#include "core/view3d.hpp"
+#include "win/context.hpp"
+#include "win/dx7/ground_batch.hpp"
 #include "win/entry_hook.hpp"
 #include "win/log.hpp"
+#include "win/view3d.hpp"
 
 namespace uagfx::win::modelcensus {
 namespace mc = ::uagfx::modelcensus;
@@ -36,6 +42,14 @@ LONGLONG g_ticks = 0, g_lastFrame = 0;
 double g_perMs = 0;
 mc::Tally g_tally;
 DWORD g_toldAt = 0;
+// 3.0.20-beta.3 (stage 2a): the nodes sent on this map, its serial; the captures this frame; for the log
+std::unordered_set<uint32_t> g_sent;
+uint32_t g_map = 1, g_captures = 0, g_animated = 0, g_sentNodes = 0, g_sentFaces = 0;
+constexpr uint32_t kCapturesAFrame = 8, kMostVertices = 65535;
+constexpr uint32_t kRotKeys = 0xF8, kPosKeys = 0x108, kActorAnimation = 0x1F0, kNodeTextureCount = 0x88,
+                   kNodeTextures = 0x90, kTextureSurface = 0xC, kMeshVertexCount = 0, kMeshVertices = 0xC,
+                   kFaceTexture = 0xC, kFaceTwoSided = 0x10, kViewMatrix = 0x94;
+
 std::vector<mc::FaceColours> g_memory;
 std::vector<mc::FaceLit> g_lits;
 std::vector<mc::DrawnVertex> g_drawn;
@@ -122,7 +136,85 @@ void __attribute__((thiscall)) drawHook(uint8_t* node, uint32_t a, uint32_t b, u
     }
 }
 
+// a node the game moves (its keys of turning or moving, or its actor's own animation) - left to the game
+bool animated(uintptr_t node) {
+    const uint32_t rot0 = at<uint32_t>(node + kRotKeys), rot1 = at<uint32_t>(node + kRotKeys + 4);
+    const uint32_t pos0 = at<uint32_t>(node + kPosKeys), pos1 = at<uint32_t>(node + kPosKeys + 4);
+    if (rot0 && rot1 > rot0 && (rot1 - rot0) / 0x14 > 1) return true;
+    if (pos0 && pos1 > pos0 && (pos1 - pos0) / 0x20 > 1) return true;
+    const uintptr_t actor = at<uint32_t>(node + mc::kNodeActor);
+    return actor && at<int32_t>(actor + kActorAnimation) != 0;
+}
+
+void capture(uintptr_t node, const float* points, const float* matrix, int count) {
+    const uintptr_t view = view3dwin::lastView(), mesh = at<uint32_t>(node + mc::kNodeMesh);
+    if (!view || !mesh || !points || !matrix) return;
+    const uint32_t vertices = at<uint32_t>(mesh + kMeshVertexCount), faces = at<uint32_t>(mesh + mc::kMeshFaces);
+    const uintptr_t faceList = at<uint32_t>(mesh + mc::kMeshFaceList);
+    const uint32_t first = at<uint32_t>(node + mc::kNodeColours), last = at<uint32_t>(node + mc::kNodeColours + 4);
+    const uint32_t litFirst = at<uint32_t>(node + mc::kNodeLit), litLast = at<uint32_t>(node + mc::kNodeLit + 4);
+    const uint32_t textureCount = at<uint32_t>(node + kNodeTextureCount);
+    const uintptr_t textureList = at<uint32_t>(node + kNodeTextures);
+    if (uint32_t(count) != vertices || !vertices || vertices > kMostVertices || !faces || faces > kMostFaces ||
+        !faceList || !first || (last - first) / mc::kColourSize != faces || !textureCount || textureCount > 255 ||
+        !textureList)
+        return;
+    const bool lit = litFirst && litLast > litFirst && (litLast - litFirst) / sizeof(mc::FaceLit) == faces;
+    float viewMatrix[12], inverse[12], world[12];
+    std::memcpy(viewMatrix, reinterpret_cast<const void*>(view + kViewMatrix), sizeof viewMatrix);
+    view3d::inverse(viewMatrix, inverse);
+    gamemodels::worldOf(matrix, inverse, world);
+    gamemodels::Node n;
+    n.id = uint32_t(node);
+    n.map = g_map;
+    for (uint32_t t = 0; t < textureCount; ++t) {
+        const uintptr_t texture = at<uint32_t>(textureList + 4 * t);
+        n.textures.push_back(texture ? dx7::gpuTextureOf(reinterpret_cast<const void*>(
+                                           uintptr_t(at<uint32_t>(texture + kTextureSurface))))
+                                     : 0u);
+    }
+    n.vertices.resize(size_t(vertices) * 3);
+    for (uint32_t v = 0; v < vertices; ++v) gamemodels::transform(world, points + 3 * v, &n.vertices[3 * v]);
+    n.faces.resize(faces);
+    for (uint32_t f = 0; f < faces; ++f) {
+        gamemodels::Face& out = n.faces[f];
+        const uintptr_t face = faceList + uintptr_t(f) * 0x18;
+        for (int k = 0; k < 3; ++k) out.v[k] = at<uint16_t>(face + uintptr_t(2 * k));
+        if (out.v[0] >= vertices || out.v[1] >= vertices || out.v[2] >= vertices) return;
+        out.texture = uint8_t(at<uint16_t>(face + kFaceTexture) % textureCount);
+        out.flags = at<int32_t>(face + kFaceTwoSided) ? gamemodels::kTwoSided : 0;
+        const uintptr_t colours = first + uintptr_t(f) * mc::kColourSize;
+        std::memcpy(out.colour, reinterpret_cast<const void*>(colours), sizeof out.colour);
+        std::memcpy(out.uv, reinterpret_cast<const void*>(colours + 12), sizeof out.uv);
+        if (lit) std::memcpy(out.lit, reinterpret_cast<const void*>(litFirst + uintptr_t(f) * 36), sizeof out.lit);
+    }
+    auto* r = Context::get().renderer;
+    if (!r) return;
+    r->addGameModel(n);
+    g_sent.insert(uint32_t(node));
+    ++g_sentNodes;
+    g_sentFaces += faces;
+}
+
 }  // namespace
+
+void noteProjection(const float* points, const float* matrix, int count) {
+    if (!g_draw || g_depth <= 0 || count <= 0 || g_captures >= kCapturesAFrame) return;
+    const uintptr_t node = uintptr_t(g_calls[g_depth - 1].node);
+    if (!node || g_sent.count(uint32_t(node))) return;
+    ++g_captures;
+    if (animated(node)) {
+        g_sent.insert(uint32_t(node));  // looked at once: left to the game
+        ++g_animated;
+        return;
+    }
+    capture(node, points, matrix, count);
+}
+
+void mapChanged() {
+    g_sent.clear();
+    ++g_map;
+}
 
 void install() {
     if (g_draw) return;
@@ -157,7 +249,7 @@ void frame() {
     g_lastFrame = t;
     if (g_nodes && frameMs > 0 && frameMs < 1000)
         g_tally.frame(mc::Frame{g_nodes, g_faces, g_perMs > 0 ? double(g_ticks) / g_perMs : 0.0}, frameMs);
-    g_nodes = g_faces = g_checks = 0;
+    g_nodes = g_faces = g_checks = g_captures = 0;
     g_ticks = 0;
     const DWORD tick = GetTickCount();
     if (!g_toldAt) g_toldAt = tick;
@@ -165,6 +257,10 @@ void frame() {
     g_toldAt = tick;
     if (const std::string line = g_tally.line(); !line.empty()) LOG_INFO("%s", line.c_str());
     g_tally.clear();
+    if (g_sentNodes || g_animated)  // 3.0.20-beta.3
+        LOG_INFO("models: %u static nodes captured as the game draws them (%u faces) and sent to the renderer, %u "
+                 "moving ones left to the game", g_sentNodes, g_sentFaces, g_animated);
+    g_sentNodes = g_sentFaces = g_animated = 0;
 }
 
 }  // namespace uagfx::win::modelcensus

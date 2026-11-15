@@ -8,6 +8,7 @@
 #include "core/config.hpp"
 #include "core/effect_costs.hpp"
 #include "core/frame.hpp"
+#include "core/game_models.hpp"
 #include "core/gpu_timing.hpp"
 #include "core/image.hpp"
 #include "core/start_screen.hpp"
@@ -110,6 +111,9 @@ public:
     void setCamera(bool valid, const float view[12], float targetZ = 0);  // 1.4.2: targetZ - the character's depth
     // 3.0.13-beta.26: core/model_fade.hpp holeOf (zeros: none); .30 flags: 1 fade_models, 2 silhouette
     void setSeeThrough(const float hole[8], uint8_t flags);
+    // 3.0.20-beta.3 (stage 2a of «Модели нашим рендером»): a static model node of the game's as it draws it, captured
+    // by the driver - Direct3D 12's (through the bridge too) keep it; Direct3D 11 none
+    void addGameModel(const gamemodels::Node& n);
     int samples() const;  // of the target now
     // Stage 4: anisotropic filtering of the world's textures (0 = off, else 2-16), and alpha testing as coverage in
     // draws without blending while the target has several samples.

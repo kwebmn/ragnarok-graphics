@@ -8,7 +8,7 @@ namespace uagfx::bridge {
 // process (DLSS and frame generation exist only for 64-bit programs). They share one block of memory: BlockHeader,
 // the ring from the driver to the renderer, then the ring back (core/bridge_ring.hpp).
 constexpr uint32_t kMagic = 0x52423455;  // "U4BR"
-constexpr uint32_t kVersion = 35;  // 2: uploads carry the sprite cache's cells (0.13); 3: icons (0.14); 4: what
+constexpr uint32_t kVersion = 36;  // 2: uploads carry the sprite cache's cells (0.13); 3: icons (0.14); 4: what
                                   // sprite a cell's frame is of (0.16); 5: effects (0.18); 6: the water (0.19);
                                   // 7: soft shadows, the glow's light (0.20); 8: colours (0.21); 9: depth of
                                   // field (0.22); 10: smooth map light (0.22.6); 11: torches (0.23); 12: the
@@ -25,7 +25,8 @@ constexpr uint32_t kVersion = 35;  // 2: uploads carry the sprite cache's cells 
                                   // modes (2.5.20); 32: a dyed frame's own colours with its cell (2.5.23); 33: the
                                   // frames shown with frame generation, for the frame counter (2.5.24); 34:
                                   // whether Reflex holds the renderer's frames (2.5.26); 35: the picture the
-                                  // renderer last drew its own ground in place of the game's in (3.0.19-beta.42)
+                                  // renderer last drew its own ground in place of the game's in (3.0.19-beta.42);
+                                  // 36: the game's model nodes (GameModel, 3.0.20-beta.3)
 
 struct alignas(16) BlockHeader {
     uint32_t magic;
@@ -78,6 +79,7 @@ enum class Msg : uint32_t {
     ProfileCut,         // 3.0.5-beta.6: str tag, u8 by cuts - the graphics test's window ends (frame_profile::Flush)
     SeeThrough,         // 3.0.13-beta.26: 8 f32, the hole round the character (core/model_fade.hpp holeOf); .30 u8
                         // flags: 1 fade_models, 2 silhouette
+    GameModel,          // 3.0.20-beta.3: a static model node of the game's as it draws it (core/game_models write)
     // renderer -> driver
     Hello = 100,        // u8 ok, str adapter (ok) or what failed; u8 DLSS ready (when ok)
     Log,                // u8 level, str text

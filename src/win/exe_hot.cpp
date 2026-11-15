@@ -62,6 +62,7 @@ __attribute__((force_align_arg_pointer)) void modelProjection(const uint8_t* ren
     if (!renderer || count <= 0) return;
     const View v = viewOf(renderer);
     exehot::projectMany(v.f[0], v.f[1], v.centre[0], v.centre[1], v.nearZ, v.k, points, m, out, count);
+    modelcensus::noteProjection(points, m, count);  // 3.0.20-beta.3: a static node captured once a map
     ++g_nodes;
     g_vertices += uint64_t(count);
 }

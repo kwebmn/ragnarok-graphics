@@ -12,5 +12,11 @@ void frame();
 // the game's vertex pool grown at `at` by `n` vertices (win/exe_hot growHook) - the first in a node's own draw is its
 // faces' block
 void noteGrow(uint32_t vector, uint32_t at, uint32_t n);
+// 3.0.20-beta.3 (stage 2a): the node being drawn had its vertices projected (win/exe_hot modelProjection) - its
+// node-local points and the game's node-to-view matrix: a static node not yet sent on this map is captured whole
+// (core/game_models) and sent to the renderer, a few a frame
+void noteProjection(const float* points, const float* matrix, int count);
+// a new map: the nodes captured so far let go (the renderer lets them go at the new map's first)
+void mapChanged();
 
 }  // namespace uagfx::win::modelcensus

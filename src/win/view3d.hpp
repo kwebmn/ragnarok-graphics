@@ -38,5 +38,7 @@ bool seenActor(uint32_t id, const float to[3]);
 // camera's builds so far (the frames' turns)
 bool viewDepthOf(const float at[3], float& depth);
 uint32_t builds();
+// 3.0.20-beta.3: the game's view object of its last camera build (its +0x94 the view matrix), 0 before one
+uint32_t lastView();
 
 }  // namespace uagfx::win::view3dwin

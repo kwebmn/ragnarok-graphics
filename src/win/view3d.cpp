@@ -143,6 +143,7 @@ struct State {
 
 State g_state;  // the game's thread: its window's keys, its frame, its camera build
 uintptr_t g_build = 0;
+uint32_t g_lastView = 0;  // 3.0.20-beta.3 (lastView)
 
 // 3.0.19-beta.11 (R-H2UJ9X: from the eyes the character's own head and hair right in front of them): the character's
 // render (its class's virtual slot 3: Render(matrix) - as uaRO.exe's actors 0x5aa130 and 0x5aac50, its shadow and body)
@@ -607,6 +608,7 @@ void tell(State& s, uint32_t view, const float eye[3], const float feet[3], cons
 }
 
 void __attribute__((thiscall)) build(uint32_t view) {
+    g_lastView = view;  // 3.0.20-beta.3
     State& s = g_state;
     const auto original = reinterpret_cast<BuildFn>(g_build);
     if (s.wanted != s.mode) switchTo(s, view);
@@ -909,6 +911,7 @@ bool viewDepthOf(const float at[3], float& depth) {
 }
 
 uint32_t builds() { return uint32_t(g_state.builds); }
+uint32_t lastView() { return g_lastView; }
 
 bool seenActor(uint32_t id, const float to[3]) {
     State& s = g_state;
