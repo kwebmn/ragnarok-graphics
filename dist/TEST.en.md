@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.25 — what's new · 2026-11-15
+
+- **The 3D view's grass reaches further and looks more natural (R-6YX3UF).** Until now the blades stood only some 55 units (≈11 cells) from the camera, their edge thinned at random. Now three rings stand round the camera: each further one twice as far out, its blades twice as far apart but wider and a little taller, so the density on the screen stays even — the grass goes on to some 220 units and fades out smoothly at its edge. The blades are lighter at the root (they were dark, like grey spikes) and a little greener than their ground. An olive meadow (prt_fild08) is no longer patchy: the grass grows all over it and still keeps off sand and paths. Weak graphics cards get two rings.
+
 # uaRO Graphics 3.0.20-beta.24 — what's new · 2026-11-15
 
 - **3D view: a character against the sky is no longer cut.** The 3D view's sky is drawn at the end of the frame wherever «nothing is», and the characters' sprites write no depth — so the part of a character, its clothes or wings against the sky vanished, only what was against the buildings and the ground stayed (R-UAEQ32, R-59XPGD). Now in the 3D view the shapes of characters, monsters, NPCs and wings are put into the depth before the frame's last passes. The sky and the haze leave them be, and the haze now falls on a character by its own distance, not by the distance of the house behind it. Effects drawn after a character stay over it as before. Direct3D 12 and Direct3D 11 alike.
