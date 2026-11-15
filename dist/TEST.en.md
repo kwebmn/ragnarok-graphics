@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.16 — what's new · 2026-11-15
+
+- **«Models by our renderer»: the leaves on several threads.** The leaves of the trees our renderer draws are now placed by the processor on several threads, as the own ground is, not on one: where there are many trees the renderer has less to do a frame. The renderer's log now shows our models' and their leaves' time as parts of their own, not inside the own ground's.
+
 # uaRO Graphics 3.0.20-beta.15 — what's new · 2026-11-15
 
 - **«Models by our renderer» is now on by default.** The map's models - still and moving ones - are drawn by our renderer: in the 3D view and from above, in Direct3D 12 and in Direct3D 11. The game has less to do, and where there are many models there are fewer jerks. It can be switched off in «Game and chat» → «Game» → «3D view» → «Models by our renderer» or by its tile in the console (~), tab «Quick». If you switched it off yourself or installed a beta from scratch after beta.4, it stays off - switch it on there.
