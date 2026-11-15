@@ -722,7 +722,7 @@ bool Renderer::Impl::drawOwnGround() {
         for (uint8_t layer = 0; layer < 3; ++layer)  // the ground, then the own bands, then the neighbours' strips
             for (size_t t = 0; t < o.pending[layer].size(); ++t) emit(layer, t);
         drawOwnModels(view, p, axes);  // 3.0.4-beta.14: the models past the far plane, into the same record (layer 3)
-        drawGameModels(view, p);       // 3.0.20-beta.4: the game's still models the driver left out of its draw
+        drawGameModels(view, p, o.rec, &o.drawLayer, o.shading);  // 3.0.20-beta.4: the ones the driver left out
         o.madeChunks = chunks, o.madeVertices = vertices, o.madeTriangles = triangles;
     }
     const double built = msSince(start);

@@ -203,11 +203,11 @@ bool same(const Still& a, const Still& b) {
            gamemodels::samePlace(a.place, b.place);
 }
 
-// whether this node is the renderer's this frame: the 3D view with [view3d] own_models, the renderer's word, a still
-// node it has, placed as when it was captured (else the game's from now on), coloured the plain or lit way (not half
-// see-through, not the other way), its actor not fading
+// whether this node is the renderer's this frame: [view3d] own_models (3.0.20-beta.9: the view from above too - the
+// owner's «делай все сразу»), the renderer's word, a still node it has, placed as when it was captured (else the
+// game's from now on), coloured the plain or lit way (not half see-through, not the other way), its actor not fading
 bool ours(const uint8_t* node, const mc::Colouring& how, const float* parent) {
-    if (!g_on || !view3dwin::active() || how.alpha != 0xFF || (how.way != mc::Way::Plain && how.way != mc::Way::Lit) ||
+    if (!g_on || how.alpha != 0xFF || (how.way != mc::Way::Plain && how.way != mc::Way::Lit) ||
         at<int32_t>(kInsideRect))
         return false;
     const auto it = g_still.find(uint32_t(uintptr_t(node)));

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstring>
 
 #include "core/game_models_place.hpp"
 #include "core/model_census.hpp"
@@ -71,22 +72,23 @@ uint64_t Renderer::Impl::gameFrameKey() const {
 // game colours it (core/model_census expected: its lit ints or colour bytes x the factors), its texture the game's
 // own; with the game's model state (both sides drawn, as the models past the far plane), into the own ground's record
 // (layer 3)
-void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::Projection& p) {
+void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::Projection& p, FrameRecord& rec,
+                                    std::vector<uint8_t>* layers, const own_ground::Shading& fog) {
     OwnState& o = ownState;
     o.gameTriangles = o.gameNodes = o.gameUnknown = 0;
     const std::vector<uint32_t>& ids = gameModelsNow.frame().ids;
     if (ids.empty() || !o.modelLikeKnown) return;
     DrawSetup ms = o.modelLike;
     ms.cull = d3d7::CULL_NONE;
-    const uint32_t state = o.rec.addState(ms);
+    const uint32_t state = rec.addState(ms);
     gamemodels::Picture pic;
     pic.view = view;
     pic.p = p;
     pic.how.way = gameModelsNow.frame().lit ? modelcensus::Way::Lit : modelcensus::Way::Plain;
     std::copy(gameModelsNow.frame().factors, gameModelsNow.frame().factors + 3, pic.how.factors);
     pic.how.alpha = 0xFF;
-    pic.fog = o.shading.fogged() ? &o.shading : nullptr;
-    pic.plain = o.shading.specularAt(0.0f);
+    pic.fog = fog.fogged() ? &fog : nullptr;
+    pic.plain = fog.specularAt(0.0f);
     // 3.0.20-beta.8 (the owner's «давай по очереди», step 1 - R-XTEFYA: «the own ground» +2 ms a frame): the list's
     // nodes in turns of kGameNodesAJob, each turn placed on a thread of its own (parallelChunks, as the own ground's
     // chunks; core/game_models_place - each vertex once a node), then put into the draws in the list's order: the same
@@ -115,8 +117,8 @@ void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::
             cmd.texture[0] = texture;
             cmd.primitive = d3d7::PT_TRIANGLELIST;
             cmd.fvf = d3d7::FVF_TL1;
-            o.rec.draw(cmd, pd.verts.data(), uint32_t(pd.verts.size()), pd.idx.data(), uint32_t(pd.idx.size()));
-            o.drawLayer.push_back(3);
+            rec.draw(cmd, pd.verts.data(), uint32_t(pd.verts.size()), pd.idx.data(), uint32_t(pd.idx.size()));
+            if (layers) layers->push_back(3);
         }
         pd.verts.clear();
         pd.idx.clear();
@@ -145,6 +147,52 @@ void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::
         }
     }
     for (auto& [texture, pd] : gamePending) emit(texture);
+}
+
+// 3.0.20-beta.9: as the own ground's draws (drawOwnGround) - after the game's draws gathered so far, the own pass
+// (no sway of leaves - a draw holds many trees -, not a caster)
+bool Renderer::Impl::drawGameModelsAlone() {
+    gameAloneDrawn = true;
+    OwnState& o = ownState;
+    own_ground::View view;
+    const bool ready = o.modelLikeKnown && viewToWorldValid && own_ground::viewOf(viewToWorld, view);
+    if (ready && !gameModelsNow.frame().ids.empty()) {
+        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+        gameFog.fit();
+        gameRec.reset();
+        drawGameModels(view, p, gameRec, nullptr, gameFog);
+        if (!gameRec.draws().empty()) {
+            flushDraws();  // the game's draws gathered so far are of its own vertices, uploaded before these
+            prepareGeometry(gameRec);
+            if (!vertexBase) return true;
+            ownPass = true;
+            for (const DrawCmd& d : gameRec.draws()) draw(gameRec, d);
+            ownPass = false;
+            geometryList = 0;  // the game's record's vertices go up again with its next draw
+        }
+    }
+    gameModelsNow.drawn(ready);  // the driver's word: from the present on
+    return true;
+}
+
+// 3.0.20-beta.9: the fog of the game's world draws this picture - a few vertices of each (its specular's alpha by the
+// view depth), the line fitted when our models are drawn (Shading::fit)
+void Renderer::Impl::noteGameFog(const FrameRecord& rec, const DrawCmd& d) {
+    constexpr uint32_t kMostAPicture = 512, kADraw = 4;
+    if (gameFogVertices >= kMostAPicture || !d.vertexCount) return;
+    const uint32_t stride = FrameRecord::stride(d.fvf);
+    const std::vector<uint8_t>& vb = rec.vertexBytes();
+    if (stride < 24 || d.vertexOffset + size_t(d.vertexCount) * stride > vb.size()) return;
+    const uint32_t step = std::max<uint32_t>(1, d.vertexCount / kADraw);
+    for (uint32_t i = 0; i < d.vertexCount && gameFogVertices < kMostAPicture; i += step) {
+        float rhw;
+        uint32_t specular;
+        std::memcpy(&rhw, vb.data() + d.vertexOffset + size_t(i) * stride + 12, 4);
+        std::memcpy(&specular, vb.data() + d.vertexOffset + size_t(i) * stride + 20, 4);
+        if (rhw <= 0.0f) continue;
+        gameFog.fog(1.0f / rhw, specular);
+        ++gameFogVertices;
+    }
 }
 
 void Renderer::Impl::tellGameModels() {

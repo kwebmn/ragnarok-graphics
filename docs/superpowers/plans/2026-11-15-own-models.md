@@ -179,3 +179,17 @@ again in every face, all of it again whenever the view moved): the renderer's CP
    off 9.3-9.8); long frames over 25 ms in 30 s - the renderer's 16-20 of 1800 (beta.7 84-171, off 127), the game's
    8-9 (off 23-46); GPU calls 310-362 (off 509-774); the game's models 0.42-0.49 ms (off 1.73). Step 2 would take the
    remaining ~0.5-0.8 ms of «the own ground» on this machine.
+9. 3.0.20-beta.9 - the owner: «делай все сразу» (the view from above, Direct3D 11 with the card's path, step 2 on
+   Direct3D 12 - a beta each, in that order). The view from above: the driver's ours() no longer asks for the 3D view;
+   the renderer - drawGameModels(view, p, rec, layers, fog) into any record; drawGameModelsAlone() where no own ground
+   is drawn this picture («Своя земля» off, or its pictures not up): at the world's first blended draw or the
+   interface (after the own ground's triggers - decided by then), its own record gameRec, the own pass (no leaves'
+   sway, not a caster), gameModelsNow.drawn(ready) whatever the list (ready = the model state known, the camera, the
+   view) - the driver's word; the model state taken from the picture's first game model draw (TL1, z written, not
+   blended, no effect) always - before, only with the own ground (noteOwnModels, once a map); the fog fitted from a
+   few vertices of each game world draw (noteGameFog: 4 a draw, 512 a picture; Shading fog/fit per picture). The
+   driver sends the camera when own_models is on (Context::flush). A CPU part «the game's models by us (no own
+   ground)». The switch's hint: both views. Rulings: (a) the switch stays [view3d] own_models (the console's tile,
+   the app's «3D-режим») until it is on by default - cost: a 3D-section switch acting from above too (its hint says
+   so). (b) the leaves of our trees do not sway ([effects] foliage, a draw a tree in the game's) - cost: still trees
+   where the game's swayed (animated trees stay the game's). Untested in the game.

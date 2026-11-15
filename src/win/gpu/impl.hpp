@@ -856,7 +856,7 @@ struct Renderer::Impl {
     // 3.0.19-beta.22 (R-8HBYXU «всеравно тормозит»: the drawing 11.8 ms a frame in the 3D view, no parts known): the
     // processor's time of the passes that read the game's draws or make the own world's, for the log next to cpuTicks
     enum CpuPart { kCpuGroundNotes, kCpuCasters, kCpuOwnGroundNotes, kCpuOwnGround, kCpuOwnWater, kCpuOwnModelNotes,
-                   kCpuActorShadows, kCpuParts };
+                   kCpuActorShadows, kCpuGameModels, kCpuParts };
     // 3.0.19-beta.26 (R-24ZKYP: «the rest» 9.7-11.7 ms): the record's parts around them - the vertices' upload, the
     // textures' uploads, the draws (with the parts above in them), the list's submit; the rest: the present's passes
     LONGLONG geometryTicks = 0, texturesTicks = 0, drawsTicks = 0, submitTicks = 0;
@@ -1209,6 +1209,9 @@ struct Renderer::Impl {
         ownShownLast = ownState.frame;
         ownState.decided = ownState.frame = ownState.drawn = ownState.likeTaken = false;  // 3.0.4-beta.10
         ownState.waterDrawn = ownState.waterGame = false;  // 3.0.4-beta.20
+        gameAloneDrawn = gameLikeTaken = false;  // 3.0.20-beta.9
+        gameFog.beginFrame();
+        gameFogVertices = 0;
         ownState.shading.beginFrame();
         // 3.0.4-beta.14; 3.0.4-beta.33: the game's model triangles noted in turn (3.0.4-beta.34: kept over the clear)
         ownState.modelsTurn.next();
@@ -1555,7 +1558,19 @@ struct Renderer::Impl {
     bool ownCornersMade = false;
     std::vector<uint32_t> gameModelsUnchecked;  // came before our own corners were made
     void addGameModel(const gamemodels::Node& n);
-    void drawGameModels(const own_ground::View& view, const camera::Projection& p);  // 3.0.20-beta.4
+    // 3.0.20-beta.4; 3.0.20-beta.9: into `rec` (`layers` the own ground's layer of each draw, or none), the fog `fog`'s
+    void drawGameModels(const own_ground::View& view, const camera::Projection& p, FrameRecord& rec,
+                        std::vector<uint8_t>* layers, const own_ground::Shading& fog);
+    // 3.0.20-beta.9 (the owner's «делай все сразу» - the view from above): the game's still models by us where no own
+    // ground is drawn («Своя земля» off) - their own record (gameRec), at the world's first blended draw or the
+    // interface, as the own ground's; the fog learnt from the game's own draws (noteGameFog) and the game's model
+    // state from its first model draw of the picture (ownState.modelLike)
+    bool drawGameModelsAlone();
+    void noteGameFog(const FrameRecord& rec, const DrawCmd& d);
+    FrameRecord gameRec;
+    own_ground::Shading gameFog;
+    bool gameAloneDrawn = false, gameLikeTaken = false;
+    uint32_t gameFogVertices = 0;
     std::unordered_map<uint32_t, OwnState::ModelPending> gamePending;               // by the texture's id
     // 3.0.20-beta.8: the list's nodes placed in turns of kGameNodesAJob on the own ground's threads - each turn's
     // placed faces and its scratch

@@ -611,7 +611,8 @@ void Context::flush() {
     // too (only the older ones were listed: alone, the newer ones went without it)
     const bool world = drawnByRenderer(fx);
     // 2.5: Direct3D 11 takes it too - its water (0.99, never given it until now), haze, sky and weather
-    if (renderer->remix() || (enhanced_ && world)) {
+    // 3.0.20-beta.9: and the game's still models by the renderer ([view3d] own_models) - placed by this camera
+    if (renderer->remix() || (enhanced_ && (world || config.view3dOwnModels))) {
         float view[12];
         float targetZ = 0;
         const bool known = readGameCamera(view);

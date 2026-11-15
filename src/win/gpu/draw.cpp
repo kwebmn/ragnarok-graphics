@@ -145,6 +145,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         CpuTime t(cpuPartTicks[kCpuOwnGround]);
         if (!drawOwnGround()) return;
     }
+    // 3.0.20-beta.9 (the owner's «делай все сразу»): the game's still models by us where no own ground is drawn this
+    // picture - the view from above with «Своя земля» off, or its pictures not up yet
+    if (!inner && !ownState.frame && !gameAloneDrawn && (s.ui || s.blend)) {
+        CpuTime t(cpuPartTicks[kCpuGameModels]);
+        if (!drawGameModelsAlone()) return;
+    }
     // 3.0.4-beta.20: the own water past the far plane, after the characters (the modern water's copy of the world taken
     // there, as before). 3.0.4-beta.24 (R-PTAMG4 «на корабле видна полоса»): at the start of the game's sorted list -
     // its water and its models' keyed faces back to front, depth not written (uaRO.exe 0x40e4d0) -, not at its first
@@ -158,6 +164,15 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!inner && ownState.frame && !ownState.waterDrawn && s.ui) {
         CpuTime t(cpuPartTicks[kCpuOwnWater]);
         if (!drawOwnWater()) return;
+    }
+    // 3.0.20-beta.9: the game's model state of the picture from its first model draw (ours drawn in it, own ground or
+    // not), and the fog of its world draws (for ours without the own ground)
+    if (!inner && !s.ui && s.zWrite && !s.blend && d.effect == 0) {
+        if (d.fvf == d3d7::FVF_TL1 && !gameLikeTaken) {
+            ownState.modelLike = rec.states()[d.state];
+            ownState.modelLikeKnown = gameLikeTaken = true;
+        }
+        if (d.fvf == d3d7::FVF_TL1 || d.fvf == d3d7::FVF_TL2) noteGameFog(rec, d);
     }
     // 3.0.4-beta.14: a draw of the game's own models near - the far models' colours and state learnt from it. Not by
     // this picture's choice (ownState.frame): the game draws its models before its ground
