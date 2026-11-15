@@ -108,6 +108,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("battery_fps", std::to_string(running.batteryFps), std::to_string(file.batteryFps)));
         n.batteryFps = file.batteryFps;
     }
+    if (file.batchGround != running.batchGround) {  // 3.0.19-beta.50
+        u.applied.push_back(change("batch_ground", running.batchGround ? "1" : "0", file.batchGround ? "1" : "0"));
+        n.batchGround = file.batchGround;
+    }
     if (file.fullColour != running.fullColour) {  // 2.5.18: for the textures loaded from now on
         u.applied.push_back(change("full_colour", running.fullColour ? "1" : "0", file.fullColour ? "1" : "0"));
         n.fullColour = file.fullColour;
@@ -920,7 +924,7 @@ bool appliesNow(const std::string& k) {
            k == "display.window_art" ||
            k == "quality.render_scale" || k == "quality.world_scale" || k == "quality.full_colour" ||
            k == "quality.super_light" || k == "frames.battery_saver" || k == "frames.battery_fps" ||
-           k == "quality.sharpen" ||
+           k == "quality.sharpen" || k == "quality.batch_ground" ||  // 3.0.19-beta.50
            k == "quality.msaa" || k == "quality.taa" ||
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||

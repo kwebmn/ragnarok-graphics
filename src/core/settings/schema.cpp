@@ -595,6 +595,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::QualityWorldScaleHint, " %"},  // 2.5.16
         {"quality", "full_colour", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityFullColour,
          Text::QualityFullColourHint, ""},  // 2.5.18
+        {"quality", "batch_ground", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityBatchGround,
+         Text::QualityBatchGroundHint, ""},  // 3.0.19-beta.50
         {"quality", "sharpen", Page::Quality, Control::Slider, 0, 100, 5, {}, {}, Text::QualitySharpen,
          Text::QualitySharpenHint, ""},
         {"display", "ui_filter", Page::Quality, Control::Choice, 0, 0, 0, {"sharp", "smooth"},
@@ -1552,6 +1554,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "quality.render_scale") return std::to_string(c.renderScale);
     if (k == "quality.world_scale") return std::to_string(c.worldScale);  // 2.5.16
     if (k == "quality.full_colour") return c.fullColour ? "1" : "0";        // 2.5.18
+    if (k == "quality.batch_ground") return c.batchGround ? "1" : "0";      // 3.0.19-beta.50
     if (k == "quality.super_light") return c.superLight ? "1" : "0";        // 2.5.20
     if (k == "frames.battery_saver") return c.batterySaver ? "1" : "0";
     if (k == "frames.battery_fps") return std::to_string(c.batteryFps);

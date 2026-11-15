@@ -1505,6 +1505,8 @@ struct Renderer::Impl {
     void dropOwnGround();
     bool prepareOwnGround();  // its textures made and put up, a few a frame; true: drawn this picture
     void noteOwnGround(const FrameRecord& rec, const DrawCmd& d);
+    // 3.0.19-beta.50: one cell's face of it (a draw of the driver's gathered cells: each 4 vertices)
+    void noteOwnCell(const FrameRecord& rec, const DrawCmd& d, const own_ground::Tl2* v, uint32_t count);
     void noteOwnModels(const FrameRecord& rec, const DrawCmd& d);  // 3.0.4-beta.14: the game's own models near
     void drawOwnModels(const own_ground::View& view, const camera::Projection& p, const map::Axes& axes);
     bool drawOwnGround();  // once a picture, the game's ground noted; false: lost

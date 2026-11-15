@@ -5,8 +5,9 @@
 
 namespace uagfx::exehot {
 
-// 3.0.19-beta.49 (the owner's «давай» - uaRO.exe's hot parts rewritten, after __ftol, core/fast_ftol): two more of the
-// game's thread's busiest, sent to ours (win/exe_hot) when their first bytes are this build's.
+// 3.0.19-beta.49 (the owner's «давай» - uaRO.exe's hot parts rewritten; its __ftol is fisttp since 2.5.20, core/
+// ftol_exe): two more of the game's thread's busiest, sent to ours (win/exe_hot) when their first bytes are this
+// build's.
 
 // Its vertex projection (FUN_00412CB0, thiscall on the renderer's view - f0 +0, f1 +4, the screen's centre +0x2C
 // and +0x30 as integers; a point, the 4 x 3 view matrix, out x y z rhw; 102 calls, ~3.4 % of the thread): three

@@ -1012,6 +1012,8 @@ Config parseConfig(const std::string& text) {
             toInt(val, 50, 100, c.worldScale);  // 2.5.16
         } else if (key == "quality.full_colour") {
             setBool(val, c.fullColour);  // 2.5.18
+        } else if (key == "quality.batch_ground") {
+            setBool(val, c.batchGround);  // 3.0.19-beta.50
         } else if (key == "quality.super_light") {
             setBool(val, c.superLight);  // 2.5.20
         } else if (key == "quality.sharpen") {

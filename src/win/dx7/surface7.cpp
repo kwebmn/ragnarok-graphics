@@ -8,6 +8,7 @@
 #include "core/full_colour.hpp"
 #include "win/context.hpp"
 #include "win/crisp/crisp.hpp"
+#include "win/dx7/device7.hpp"
 #include "win/dx7/formats.hpp"
 #include "win/log.hpp"
 #include "win/sharp_frames.hpp"
@@ -262,6 +263,7 @@ HRESULT STDMETHODCALLTYPE Surface7::DeleteAttachedSurface(DWORD, LPDIRECTDRAWSUR
 HRESULT STDMETHODCALLTYPE Surface7::Blt(LPRECT dstRect, LPDIRECTDRAWSURFACE7 srcSurface, LPRECT srcRect, DWORD flags,
                                        LPDDBLTFX fx) {
     win::Guard guard;
+    Device7::flushLive();  // 3.0.19-beta.50: the gathered ground cells first, in their order
     Surface7* src = from(srcSurface);
     if (srcSurface && !src) return DDERR_INVALIDPARAMS;
     if (role_ == SurfaceRole::ZBuffer || (src && src->role_ == SurfaceRole::ZBuffer))
@@ -280,6 +282,7 @@ HRESULT STDMETHODCALLTYPE Surface7::Blt(LPRECT dstRect, LPDIRECTDRAWSURFACE7 src
 HRESULT STDMETHODCALLTYPE Surface7::BltFast(DWORD x, DWORD y, LPDIRECTDRAWSURFACE7 srcSurface, LPRECT srcRect,
                                            DWORD flags) {
     win::Guard guard;
+    Device7::flushLive();  // 3.0.19-beta.50: the gathered ground cells first, in their order
     Surface7* src = from(srcSurface);
     if (!src) return DDERR_INVALIDPARAMS;
     if (role_ == SurfaceRole::ZBuffer || src->role_ == SurfaceRole::ZBuffer)
@@ -353,6 +356,7 @@ HRESULT Surface7::blit(BlitAction action, const Rect& dr, Surface7* src, const R
 
 HRESULT STDMETHODCALLTYPE Surface7::Flip(LPDIRECTDRAWSURFACE7, DWORD) {
     win::Guard guard;
+    Device7::flushLive();  // 3.0.19-beta.50: the gathered ground cells first, in their order
     if (role_ != SurfaceRole::Primary || !next_) return DDERR_NOTFLIPPABLE;
     win::Context& c = win::Context::get();
     c.present(Rect{0, 0, c.shadow.width(), c.shadow.height()}, true);  // a copy: the back buffer keeps its pixels
@@ -412,6 +416,7 @@ HRESULT STDMETHODCALLTYPE Surface7::SetColorKey(DWORD flags, LPDDCOLORKEY key) {
 
 HRESULT STDMETHODCALLTYPE Surface7::GetDC(HDC* out) {
     win::Guard guard;
+    Device7::flushLive();  // 3.0.19-beta.50: the gathered ground cells first, in their order
     if (!out) return DDERR_INVALIDPARAMS;
     *out = nullptr;
     if (role_ != SurfaceRole::RenderTarget) return notImplemented("IDirectDrawSurface7::GetDC (not the render target)");
@@ -497,6 +502,7 @@ HRESULT STDMETHODCALLTYPE Surface7::Restore() { return DD_OK; }
 
 HRESULT STDMETHODCALLTYPE Surface7::Lock(LPRECT rect, LPDDSURFACEDESC2 desc, DWORD, HANDLE) {
     win::Guard guard;
+    Device7::flushLive();  // 3.0.19-beta.50: the gathered ground cells first, in their order
     if (!desc || !descSizeOk(desc->dwSize)) return DDERR_INVALIDPARAMS;
     if (locked_) return DDERR_SURFACEBUSY;
     const Rect r = rect ? toRect(*rect) : bounds();

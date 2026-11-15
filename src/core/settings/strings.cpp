@@ -8919,6 +8919,15 @@ constexpr Entry kTexts[] = {
      "В 3D-режиме игра обсчитывает дальние клетки своей земли раз в 8 кадров — вместо них всё равно рисуется наша "
      "собственная земля, игра лишь даёт ей свои цвета. Больше кадров на слабом процессоре. Выключено — каждая клетка "
      "каждый кадр."},
+    {Text::QualityBatchGround, "Ground in batches", "Земля пачками", "Земля пачками"},  // 3.0.19-beta.50
+    {Text::QualityBatchGroundHint,
+     "The game hands its ground over a cell at a time - thousands of draws a frame. Cells in a row with the same "
+     "pictures go as one draw: less work for the processor, the same picture. Off: a draw each, as the game gives "
+     "them.",
+     "Гра передає свою землю по одній клітинці — тисячі малювань за кадр. Клітинки поспіль з тими самими картинками "
+     "йдуть одним малюванням: менше роботи процесору, та сама картинка. Вимкнено — кожна окремо, як дає гра.",
+     "Игра передаёт свою землю по одной клетке — тысячи отрисовок за кадр. Клетки подряд с теми же картинками идут "
+     "одной отрисовкой: меньше работы процессору, та же картинка. Выключено — каждая отдельно, как даёт игра."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

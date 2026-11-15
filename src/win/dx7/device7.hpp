@@ -59,9 +59,29 @@ public:
     HRESULT STDMETHODCALLTYPE SetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE type, DWORD value) override;
     HRESULT STDMETHODCALLTYPE ValidateDevice(LPDWORD passes) override;
     HRESULT STDMETHODCALLTYPE LightEnable(DWORD idx, WINBOOL enable) override;
+    // 3.0.19-beta.50 (the owner: «3 можем сделать?»; core/quad_batch): [quality] batch_ground - the ground's cells
+    // gathered into one draw; flushLive - the live device's gathered cells recorded now (a texture's picture about to
+    // change: Surface7::changed)
+    static void setBatchGround(bool on);
+    static void flushLive();
 
 private:
     ~Device7() override;
+    // 3.0.19-beta.50: the ground's cells (4-vertex TL2 strips, uaRO.exe FUN_0040BF60) in a row with the same textures
+    // and states gathered - recorded as one triangle list when anything else comes: a state, a texture, the viewport,
+    // a clear, another draw, a texture's picture changed, the scene's end
+    struct QuadBatch {
+        std::vector<uint8_t> vertices;
+        std::vector<uint16_t> indices;
+        uint32_t quads = 0;
+        Surface7* textures[2] = {nullptr, nullptr};
+        uint32_t states = 0;  // DeviceStates' version as they came
+    };
+    QuadBatch batch_;
+    uint64_t batchedQuads_ = 0, batchDraws_ = 0;  // for the log
+    bool batchTold_ = false;
+    void flushBatch();
+    bool batched(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, DWORD vertexCount);
     HRESULT record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, DWORD vertexCount, const WORD* indices,
                    DWORD indexCount);
 

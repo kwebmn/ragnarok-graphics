@@ -2,13 +2,13 @@
 #include "win/present_watch.hpp"
 #include "win/threat_arc.hpp"
 #include "win/exe_hot.hpp"
-#include "win/fast_ftol.hpp"
 #include "win/game_files.hpp"
 #include "win/ground_thin.hpp"
 #include "win/view3d.hpp"
 #include "win/walk_mode.hpp"
 #include "win/upkeep_watch.hpp"
 #include "win/context.hpp"
+#include "win/dx7/ground_batch.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -514,7 +514,6 @@ bool Context::open(std::string& error) {
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     view3dwin::install();  // 3.0.19-beta.6: Ctrl+Shift+V, the 3D view
     groundthin::install();  // 3.0.19-beta.42: the game's far ground cells fewer in it
-    fastftolwin::install();  // 3.0.19-beta.48: uaRO.exe's __ftol one SSE3 fisttp
     exehotwin::install();    // 3.0.19-beta.49: its vertex projection and its faces' sort ours
     wings::install();     // 3.0.18-beta.230: the nine headgears' wings (win/wings)
     gamefiles::warmUp(gameDir());  // 3.0.19-beta.44: the game's archives' tables read ahead, off the game's thread
@@ -866,6 +865,8 @@ void removeReportChecks() {
 }
 
 void Context::present(const Rect& source, bool waitForVblank) {
+    dx7::flushGroundBatch();  // 3.0.19-beta.50: the gathered ground cells into the frame before it goes
+    dx7::setGroundBatch(config.batchGround);  // [quality] batch_ground, for the next frame
     const double presentFrom = nowMs();  // 3.0.18-beta.161: the driver's own work at a present (logStats)
     g_parts.begin(presentFrom);           // 3.0.18-beta.169: and by its parts
     actorIndexFrame();                     // 3.0.18-beta.168: the actors' index read again at its next ask

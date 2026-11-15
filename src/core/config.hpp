@@ -1104,6 +1104,9 @@ struct Config {
     // 2.5.18: [quality] full_colour - the textures in their pictures' own colours, not the 16-bit ones the game makes
     // (core/full_colour.hpp)
     bool fullColour = true;
+    // 3.0.19-beta.50: [quality] batch_ground - the game's ground cells in a row with the same textures and states drawn
+    // as one (win/dx7 Device7, core/quad_batch); 0: a draw each, as the game gives them
+    bool batchGround = true;
     // 2.5.20: [quality] super_light - the weakest cards' mode (core/light_mode.hpp): no effect, no AI picture, the
     // world at half size, its textures as their colour alone, 16-bit, in a running game and given back when it ends
     bool superLight = false;

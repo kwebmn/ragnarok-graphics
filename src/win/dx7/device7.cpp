@@ -1,4 +1,5 @@
 #include "win/dx7/device7.hpp"
+#include "win/dx7/ground_batch.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -13,6 +14,7 @@
 #include "core/version.hpp"
 #include "core/layout.hpp"
 #include "core/sprite_exe.hpp"
+#include "core/quad_batch.hpp"
 #include "core/view3d.hpp"
 #include "core/wings.hpp"
 #include "win/context.hpp"
@@ -94,7 +96,22 @@ void drawWings(win::Context& c, const std::vector<win::wings::Quad>& quads, cons
 
 }  // namespace
 
+namespace {
+Device7* g_live = nullptr;     // 3.0.19-beta.50: the device whose cells are gathered (one the game makes)
+bool g_batchGround = true;     // [quality] batch_ground
+}  // namespace
+
+void Device7::setBatchGround(bool on) { g_batchGround = on; }
+
+void flushGroundBatch() { Device7::flushLive(); }
+void setGroundBatch(bool on) { Device7::setBatchGround(on); }
+
+void Device7::flushLive() {
+    if (g_live && g_live->batch_.quads) g_live->flushBatch();
+}
+
 Device7::Device7(Surface7* target) : target_(target) {
+    g_live = this;
     target_->AddRef();
     const win::Context& c = win::Context::get();  // D3D7's default viewport: the whole target
     viewport_.dwWidth = DWORD(c.shadow.width());
@@ -103,6 +120,8 @@ Device7::Device7(Surface7* target) : target_(target) {
 }
 
 Device7::~Device7() {
+    batch_ = QuadBatch{};  // the game's device gone: its cells with it
+    if (g_live == this) g_live = nullptr;
     for (Surface7*& t : textures_)
         if (t) t->Release();
     target_->Release();
@@ -151,6 +170,7 @@ HRESULT STDMETHODCALLTYPE Device7::EnumTextureFormats(LPD3DENUMPIXELFORMATSCALLB
 
 HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
     win::Guard guard;
+    flushBatch();  // 3.0.19-beta.50
     scene_.beginScene();
     portals_.frame();  // 3.0.13-beta.15
     castLooks_.frame();  // 3.0.15-beta.2
@@ -193,6 +213,7 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
 
 HRESULT STDMETHODCALLTYPE Device7::EndScene() {
     win::Guard guard;
+    flushBatch();  // 3.0.19-beta.50: the frame's last gathered cells before its end
     ++captureFrame_;  // 3.0.15-beta.1
     // the GPU starts on the frame while the client gets ready to present it; 3.0.3-beta.12: the windows' panel into it
     win::Context::get().endScene();
@@ -201,6 +222,7 @@ HRESULT STDMETHODCALLTYPE Device7::EndScene() {
 
 HRESULT STDMETHODCALLTYPE Device7::SetRenderTarget(IDirectDrawSurface7* surface, DWORD) {
     win::Guard guard;
+    flushBatch();
     Surface7* t = Surface7::from(surface);
     if (!t || t->role() != SurfaceRole::RenderTarget) return DDERR_INVALIDPARAMS;
     t->AddRef();  // there is one GPU target; its depth stands for the attached Z-buffer
@@ -219,6 +241,7 @@ HRESULT STDMETHODCALLTYPE Device7::GetRenderTarget(IDirectDrawSurface7** surface
 
 HRESULT STDMETHODCALLTYPE Device7::Clear(DWORD count, D3DRECT* rects, DWORD flags, D3DCOLOR color, D3DVALUE z, DWORD) {
     win::Guard guard;
+    flushBatch();
     win::Context& c = win::Context::get();
     ClearCmd cmd;
     cmd.flags = flags & (d3d7::CLEAR_TARGET | d3d7::CLEAR_ZBUFFER);  // no stencil
@@ -243,6 +266,7 @@ HRESULT STDMETHODCALLTYPE Device7::SetTransform(D3DTRANSFORMSTATETYPE, D3DMATRIX
 
 HRESULT STDMETHODCALLTYPE Device7::SetViewport(D3DVIEWPORT7* data) {
     win::Guard guard;
+    flushBatch();
     if (!data) return DDERR_INVALIDPARAMS;
     viewport_ = *data;
     ViewportCmd v;
@@ -271,6 +295,7 @@ HRESULT STDMETHODCALLTYPE Device7::LightEnable(DWORD, WINBOOL) { return D3D_OK; 
 // own state, which only its methods read on that thread: the lock's entry and exit cost about as much as the game's
 // own work a frame ([debug] profile on 0.87).
 HRESULT STDMETHODCALLTYPE Device7::SetRenderState(D3DRENDERSTATETYPE state, DWORD value) {
+    if (batch_.quads) flushBatch();  // 3.0.19-beta.50: the gathered cells in the states they came in
     states_.setRender(uint32_t(state), value);
     scene_.renderState(uint32_t(state), value);
     static bool keyLogged = false;
@@ -292,6 +317,8 @@ HRESULT STDMETHODCALLTYPE Device7::PreLoad(IDirectDrawSurface7*) { return D3D_OK
 HRESULT STDMETHODCALLTYPE Device7::DrawPrimitive(D3DPRIMITIVETYPE type, DWORD fvf, void* vertices, DWORD vertexCount,
                                                 DWORD) {
     win::Guard guard;
+    if (batched(type, fvf, vertices, vertexCount)) return D3D_OK;  // 3.0.19-beta.50: a ground cell gathered
+    flushBatch();
     return record(type, fvf, vertices, vertexCount, nullptr, 0);
 }
 
@@ -299,7 +326,50 @@ HRESULT STDMETHODCALLTYPE Device7::DrawIndexedPrimitive(D3DPRIMITIVETYPE type, D
                                                        DWORD vertexCount, WORD* indices, DWORD indexCount, DWORD) {
     win::Guard guard;
     if (!indices || indexCount == 0) return DDERR_INVALIDPARAMS;
+    flushBatch();
     return record(type, fvf, vertices, vertexCount, indices, indexCount);
+}
+
+// 3.0.19-beta.50 (core/quad_batch): a ground cell - a 4-vertex TL2 strip - joins the cells gathered while the textures
+// and the states are those they came with (each of their changes records the gathered first)
+bool Device7::batched(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, DWORD vertexCount) {
+    if (!g_batchGround || type != D3DPT_TRIANGLESTRIP || fvf != d3d7::FVF_TL2 || vertexCount != 4 || !vertices)
+        return false;
+    if (batch_.quads &&
+        (batch_.textures[0] != textures_[0] || batch_.textures[1] != textures_[1] ||
+         batch_.states != states_.version() || batch_.quads >= quadbatch::kMostQuads))
+        flushBatch();
+    if (!batch_.quads) {
+        batch_.textures[0] = textures_[0];
+        batch_.textures[1] = textures_[1];
+        batch_.states = states_.version();
+    }
+    quadbatch::append(batch_.vertices, batch_.indices, static_cast<const uint8_t*>(vertices),
+                      FrameRecord::stride(fvf));
+    ++batch_.quads;
+    return true;
+}
+
+void Device7::flushBatch() {
+    if (!batch_.quads) return;
+    win::Guard guard;
+    QuadBatch b;
+    std::swap(b, batch_);  // record() may come back here (a draw of the driver's own): the batch empty by then
+    record(D3DPT_TRIANGLELIST, d3d7::FVF_TL2, b.vertices.data(), DWORD(b.quads * 4), b.indices.data(),
+           DWORD(b.indices.size()));
+    batchedQuads_ += b.quads;
+    ++batchDraws_;
+    if (!batchTold_ && batchDraws_ >= 50) {
+        batchTold_ = true;
+        LOG_INFO("draws: the ground's cells gathered - %llu cells in %llu draws so far, not a draw each "
+                 "([quality] batch_ground)", (unsigned long long)batchedQuads_, (unsigned long long)batchDraws_);
+    }
+    if (!batch_.quads) {  // none gathered meanwhile: their room kept for the next ones
+        b.vertices.clear();
+        b.indices.clear();
+        b.quads = 0;
+        std::swap(b, batch_);
+    }
 }
 
 // 3.0.15-beta.1: a skill effect's draw into uaro-graphics\logs\uaro-effects.txt (core/effect_capture.hpp) - betas
@@ -866,6 +936,7 @@ HRESULT STDMETHODCALLTYPE Device7::GetTexture(DWORD stage, IDirectDrawSurface7**
 
 HRESULT STDMETHODCALLTYPE Device7::SetTexture(DWORD stage, IDirectDrawSurface7* surface) {
     win::Guard guard;
+    flushBatch();  // 3.0.19-beta.50
     if (stage >= d3d7::kStages) return DDERR_INVALIDPARAMS;
     Surface7* t = Surface7::from(surface);
     if (surface && (!t || t->role() != SurfaceRole::Texture)) return DDERR_INVALIDPARAMS;
@@ -883,6 +954,7 @@ HRESULT STDMETHODCALLTYPE Device7::GetTextureStageState(DWORD stage, D3DTEXTURES
 
 HRESULT STDMETHODCALLTYPE Device7::SetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE type, DWORD value) {
     if (stage >= d3d7::kStages) return DDERR_INVALIDPARAMS;
+    if (batch_.quads) flushBatch();  // 3.0.19-beta.50
     states_.setStage(stage, uint32_t(type), value);
     return D3D_OK;
 }

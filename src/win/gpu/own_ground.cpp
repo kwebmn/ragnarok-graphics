@@ -10,6 +10,7 @@
 #include "core/d3d7.hpp"
 #include "core/game_camera.hpp"
 #include "core/own_ground.hpp"
+#include "core/quad_batch.hpp"
 #include "core/trees.hpp"
 #include "core/water.hpp"
 #include "win/gpu/impl.hpp"
@@ -236,14 +237,27 @@ void Renderer::Impl::noteOwnGround(const FrameRecord& rec, const DrawCmd& d) {
     }
     const std::vector<uint8_t>& vb = rec.vertexBytes();
     if (d.vertexOffset + size_t(d.vertexCount) * sizeof(own_ground::Tl2) > vb.size()) return;
-    const own_ground::Tl2* v = reinterpret_cast<const own_ground::Tl2*>(vb.data() + d.vertexOffset);
+    const own_ground::Tl2* all = reinterpret_cast<const own_ground::Tl2*>(vb.data() + d.vertexOffset);
+    // 3.0.19-beta.50 (core/quad_batch): the driver's gathered cells - a cell each 4 vertices, as one by one before
+    if (quadbatch::isBatch(d.vertexCount, d.indexCount)) {
+        for (uint32_t q = 0; q < d.vertexCount; q += 4) noteOwnCell(rec, d, all + q, 4);
+        return;
+    }
+    noteOwnCell(rec, d, all, d.vertexCount);
+}
+
+// A ground cell's face (its `count` vertices from `v`): the colours and fog it gives its corners (its walls' left to
+// the cells: their corners lie under other colours)
+void Renderer::Impl::noteOwnCell(const FrameRecord& rec, const DrawCmd& d, const own_ground::Tl2* v,
+                                 uint32_t count) {
+    OwnState& o = ownState;
     const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
     const float* m = viewToWorld;
     const map::Axes axes = mapWorld.axes().known() ? mapWorld.axes() : map::Axes{1, 1, 1};
     float lo[2] = {1e30f, 1e30f}, hi[2] = {-1e30f, -1e30f};
     float at[8][2];
-    const uint32_t n = std::min(d.vertexCount, 8u);
-    for (uint32_t i = 0; i < d.vertexCount; ++i) {
+    const uint32_t n = std::min(count, 8u);
+    for (uint32_t i = 0; i < count; ++i) {
         if (v[i].rhw <= 0.0f) return;
         const float vz = 1.0f / v[i].rhw, vx = (v[i].x - p.cx) * vz / p.f0, vy = (v[i].y - p.cy) * vz / p.f1;
         const float x = (vx * m[0] + vy * m[3] + vz * m[6] + m[9]) * float(axes.x);
@@ -260,17 +274,17 @@ void Renderer::Impl::noteOwnGround(const FrameRecord& rec, const DrawCmd& d) {
         if (g && g->serial == o.serial) {
             // 3.0.18-beta.5 (the owner: «засветление стен»): all its corners, and the first apart's stages
             uint32_t corners[4] = {};
-            const int count = int(std::min(d.vertexCount, 4u));
-            for (int i = 0; i < count; ++i) corners[i] = v[i].diffuse;
+            const int cornersCount = int(std::min(count, 4u));
+            for (int i = 0; i < cornersCount; ++i) corners[i] = v[i].diffuse;
             const bool apartBefore = !o.wallCheck.firstApart().empty();
-            o.wallCheck.note(lo, hi, v[0].diffuse, g->wallLight, corners, count);
+            o.wallCheck.note(lo, hi, v[0].diffuse, g->wallLight, corners, cornersCount);
             if (!apartBefore && !o.wallCheck.firstApart().empty()) {
                 const DrawSetup& w = rec.states()[d.state];
                 char text[160];
                 std::snprintf(text, sizeof text, "; its draw: stage 0 op %u (%u, %u), stage 1 op %u (%u, %u), "
                               "%u vertices, blend %d %d/%d", w.stage[0].colorOp, w.stage[0].colorArg1,
                               w.stage[0].colorArg2, w.stage[1].colorOp, w.stage[1].colorArg1, w.stage[1].colorArg2,
-                              d.vertexCount, int(w.blend), int(w.srcBlend), int(w.dstBlend));
+                              count, int(w.blend), int(w.srcBlend), int(w.dstBlend));
                 o.wallApartDraw = text;
             }
             if (o.wallCheck.seen() >= kWallsChecked) {
