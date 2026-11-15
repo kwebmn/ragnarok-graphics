@@ -1,6 +1,7 @@
 #include "win/key_walk.hpp"
 #include "win/present_watch.hpp"
 #include "win/threat_arc.hpp"
+#include "win/exe_hot.hpp"
 #include "win/fast_ftol.hpp"
 #include "win/game_files.hpp"
 #include "win/ground_thin.hpp"
@@ -514,6 +515,7 @@ bool Context::open(std::string& error) {
     view3dwin::install();  // 3.0.19-beta.6: Ctrl+Shift+V, the 3D view
     groundthin::install();  // 3.0.19-beta.42: the game's far ground cells fewer in it
     fastftolwin::install();  // 3.0.19-beta.48: uaRO.exe's __ftol one SSE3 fisttp
+    exehotwin::install();    // 3.0.19-beta.49: its vertex projection and its faces' sort ours
     wings::install();     // 3.0.18-beta.230: the nine headgears' wings (win/wings)
     gamefiles::warmUp(gameDir());  // 3.0.19-beta.44: the game's archives' tables read ahead, off the game's thread
     setFullColour(config.fullColour);  // 2.5.18: the textures in their pictures' own colours
