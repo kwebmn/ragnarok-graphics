@@ -18,21 +18,30 @@ namespace uagfx::own_ground::card {
 // squeeze (own_ground::ownFrom): ground_vs puts, eases, lifts and fogs each vertex as ownChunk does on the processor,
 // the card cutting the triangles at the near plane and at the squeeze itself
 
+// The meshes on the card in their order: the smooth one, the plain one, (3.0.20-beta.30) the outskirts' (none: empty)
+struct Meshes {
+    const terrain::Mesh* fine = nullptr;
+    const terrain::Mesh* plain = nullptr;
+    const terrain::Mesh* outskirts = nullptr;
+    const terrain::Mesh* at(int which) const { return which == 0 ? fine : which == 1 ? plain : outskirts; }
+};
 // The card's buffer in uint4: two a vertex (x y z and its plain height; its texture's u v, the lightmap's u v) - the
 // smooth mesh's first -, then the colours four a uint4, then the blends four a uint4
 struct Layout {
-    uint32_t fine = 0;  // the smooth mesh's vertices
-    uint32_t all = 0;   // with the plain one's
+    uint32_t fine = 0;   // the smooth mesh's vertices
+    uint32_t plain = 0;  // the plain one's
+    uint32_t all = 0;    // with the outskirts'
+    uint32_t baseOf(int which) const { return which == 0 ? 0u : which == 1 ? fine : fine + plain; }
     uint32_t coloursAt() const { return all * 2; }
     uint32_t blendsAt() const { return coloursAt() + (all + 3) / 4; }
     uint32_t size() const { return blendsAt() + (all + 3) / 4; }
 };
-Layout layoutOf(const terrain::Mesh& fine, const terrain::Mesh& plain);
+Layout layoutOf(const Meshes& m);
 constexpr uint32_t kVertexWords = 8;  // uint32 a vertex
-// the vertices [from, from + count) of the two meshes (the smooth one's first) as the card keeps them
-void vertexWords(const terrain::Mesh& fine, const terrain::Mesh& plain, uint32_t from, uint32_t count, uint32_t* out);
+// the vertices [from, from + count) of the meshes (in their order) as the card keeps them
+void vertexWords(const Meshes& m, uint32_t from, uint32_t count, uint32_t* out);
 // the blends (terrain::Vertex::blend) of the vertices [from, from + count), a uint32 each
-void blendWords(const terrain::Mesh& fine, const terrain::Mesh& plain, uint32_t from, uint32_t count, uint32_t* out);
+void blendWords(const Meshes& m, uint32_t from, uint32_t count, uint32_t* out);
 
 // Whether a chunk in view has parts nearer than the squeeze (`from`) - its least view depth below it - and as far or
 // farther (its greatest), by a margin: the smooth ground eased onto the plain one may leave the chunk's box a little
@@ -81,19 +90,20 @@ class Lists {
 public:
     // a picture's: the .gnd's textures; blends - the strips too
     void begin(size_t textures, bool blends);
-    // a chunk in view: of the plain mesh or the smooth one, the sides of the squeeze it has parts on
-    void add(const terrain::Mesh& mesh, bool plain, size_t chunk, bool nearSide, bool pastSide);
+    // a chunk in view: of the mesh `which` (0 the smooth one, 1 the plain, 2 the outskirts), the sides of the squeeze
+    // it has parts on
+    void add(const terrain::Mesh& mesh, int which, size_t chunk, bool nearSide, bool pastSide);
     // the draws by layer, texture, the near side before the past one; a draw's batches in the chunks' order
     const std::vector<Draw>& plan();
-    // each draw's indices - the vertices' numbers on the card (the plain mesh's after the `fine` smooth ones) - into
-    // where(draw), room for its count; a chunk a job of the parallel for (where called from its threads)
-    void fill(uint32_t fine, const std::function<uint32_t*(size_t draw)>& where, const ParallelFor& run) const;
+    // each draw's indices - the vertices' numbers on the card (by the layout's meshes' places) - into where(draw),
+    // room for its count; a chunk a job of the parallel for (where called from its threads)
+    void fill(const Layout& layout, const std::function<uint32_t*(size_t draw)>& where, const ParallelFor& run) const;
     size_t chunks() const { return added_.size(); }
 
 private:
     struct Added {
         const terrain::Mesh* mesh = nullptr;
-        bool plain = false;
+        int which = 0;
         size_t chunk = 0;
         bool nearSide = false, pastSide = false;
     };

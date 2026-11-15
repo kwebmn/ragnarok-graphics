@@ -59,7 +59,12 @@ struct Atlas {
     int width = 0, height = 0;
     std::vector<uint32_t> argb;
 };
+// 3.0.20-beta.30: after them one cell more, meanLightCell - the mean of the lightmaps of the cells' tops (the
+// outskirts' light, core/outskirts.hpp)
 Atlas lightmapAtlas(const gnd::Ground& g);
+inline int meanLightCell(const gnd::Ground& g) { return int(g.lightmaps.size()); }
+// where a lightmap's place (fu, fv: 0-1 over its 6 x 6 middle) lies in the atlas, 0-1
+void lightmapUv(const Atlas& atlas, int lightmap, float fu, float fv, float out[2]);
 
 // 3.0.7-beta.3 (R-YXZM7Y «посмотри насчет освещения стен»): the map's light as uaRO.exe lights its ground's vertices
 // (FUN_004e4190) - a surface's colour times min(1, ambient + diffuse * max(0, N . way)) a channel, cut, alpha 255. The

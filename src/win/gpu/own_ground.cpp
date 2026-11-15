@@ -29,6 +29,11 @@ constexpr int kRelitAPicture = 8;  // 3.0.4-beta.28: chunks made again a picture
 constexpr unsigned kWallsChecked = 32;  // 3.0.7-beta.3: the game's walls seen before the log tells how many are alike
 // 3.0.20-beta.23: the own ground's vertices put up on the card a picture (2 MB of them, their blends)
 constexpr uint32_t kGroundPiece = 65536;
+
+// a ground's mesh by its number (ChunkJob::which): the smooth one, the plain one, (3.0.20-beta.30) the outskirts
+const terrain::Mesh& meshOf(const OwnGround& g, int which) {
+    return which == 2 ? g.outskirts : which ? g.distant : g.mesh;
+}
 constexpr float kMorphFrom = 0.75f;  // 3.0.4-beta.29: of fineDepth - the smooth ground eased onto the plain past it
 
 double msSince(const LARGE_INTEGER& from) {
@@ -93,7 +98,7 @@ void Renderer::Impl::dropOwnGround() {
     ownState.up = ownState.groundUp = false;
     ownState.refused = false;  // 3.0.18-beta.204
     ownState.frame = false;
-    for (int m = 0; m < 2; ++m) {  // 3.0.4-beta.12
+    for (int m = 0; m < 3; ++m) {  // 3.0.4-beta.12
         std::vector<uint32_t>().swap(ownState.colours[m]);
         std::vector<uint8_t>().swap(ownState.fresh[m]);
     }
@@ -135,8 +140,10 @@ bool Renderer::Impl::prepareOwnGround() {
         o.wallsTold = false;
         o.colours[0].assign(g->mesh.vertices.size(), 0);  // 3.0.4-beta.12: the colours made as the chunks show
         o.colours[1].assign(g->distant.vertices.size(), 0);
+        o.colours[2].assign(g->outskirts.vertices.size(), 0);  // 3.0.20-beta.30
         o.fresh[0].assign(g->mesh.chunks.size(), 0);
         o.fresh[1].assign(g->distant.chunks.size(), 0);
+        o.fresh[2].assign(g->outskirts.chunks.size(), 0);
         o.chunksWide = (g->width + terrain::kChunk - 1) / terrain::kChunk;
         o.chunkAt.assign(size_t(o.chunksWide) * size_t((g->height + terrain::kChunk - 1) / terrain::kChunk), -1);
         for (size_t k = 0; k < g->mesh.chunks.size(); ++k) {
@@ -368,13 +375,26 @@ void parallelChunks(size_t count, const std::function<void(size_t)>& body) {
 void Renderer::Impl::ownColours(const OwnMaking& m, const OwnState::ChunkJob& job) {
     OwnState& o = ownState;
     const OwnGround* g = m.g;
-    const terrain::Mesh& mesh = job.which ? g->distant : g->mesh;
+    const terrain::Mesh& mesh = meshOf(*g, job.which);
     const terrain::Chunk& ch = mesh.chunks[job.k];
     std::vector<uint32_t>& colours = o.colours[job.which];  // this chunk's vertices alone written
+    const float halfX = 0.5f * float(g->width) * g->zoom, halfZ = 0.5f * float(g->height) * g->zoom;
     for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
         const terrain::Batch& bt = mesh.batches[b];
         for (uint32_t v = bt.firstVertex; v < bt.firstVertex + bt.vertexCount; ++v) {
             const terrain::Vertex& tv = mesh.vertices[v];
+            if (job.which == 2) {  // 3.0.20-beta.30: the outskirts - the edge's colour times their own slope's light
+                const uint32_t edge = o.shading.diffuseAt(std::clamp(tv.pos[0], -halfX, halfX),
+                                                          std::clamp(tv.pos[2], -halfZ, halfZ));
+                const float slope = float(tv.color & 0xFFu) / 127.5f;
+                uint32_t c = edge & 0xFF000000u;
+                for (int part = 0; part < 3; ++part) {
+                    const float channel = float((edge >> (part * 8)) & 0xFF) * slope;
+                    c |= uint32_t(std::clamp(int(channel + 0.5f), 0, 255)) << (part * 8);
+                }
+                colours[v] = c;
+                continue;
+            }
             // 3.0.7-beta.3 (R-YXZM7Y): a wall in the game's light on it (terrain::wallLight), not the ground's
             // beside it
             const bool wall = terrain::isWall(tv);
@@ -399,7 +419,7 @@ void Renderer::Impl::ownChunk(const OwnMaking& m, const OwnState::ChunkJob& job,
     OwnState& o = ownState;
     const OwnGround* g = m.g;
     const camera::Projection& p = m.p;
-    const terrain::Mesh& mesh = job.which ? g->distant : g->mesh;
+    const terrain::Mesh& mesh = meshOf(*g, job.which);
     const terrain::Chunk& ch = mesh.chunks[job.k];
     const std::vector<uint32_t>& colours = o.colours[job.which];
     out.used = 0;
@@ -659,8 +679,14 @@ bool Renderer::Impl::drawOwnGround() {
         // into the draws in the chunks' order - the same draws as before
         std::vector<OwnState::ChunkJob>& jobs = o.jobs;
         jobs.clear();
-        for (size_t k = 0; k < g->mesh.chunks.size(); ++k) {
-            const terrain::Chunk& box = g->mesh.chunks[k];
+        // 3.0.20-beta.30 (the owner's «6,7,8,9», 6): in the 3D view on a map under the sky the land past its edges too
+        // (core/outskirts.hpp) - its chunks after the map's, the third mesh
+        const bool outskirts = camera::wideView() && mapOutdoors && !g->outskirts.chunks.empty();
+        const size_t mapChunks = g->mesh.chunks.size();
+        for (size_t n = 0; n < mapChunks + (outskirts ? g->outskirts.chunks.size() : 0); ++n) {
+            const bool past = n >= mapChunks;
+            const size_t k = past ? n - mapChunks : n;
+            const terrain::Chunk& box = past ? g->outskirts.chunks[k] : g->mesh.chunks[k];
             float lo[3], hi[3];
             for (int a = 0; a < 3; ++a) {
                 lo[a] = std::min(box.lo[a] * sign[a], box.hi[a] * sign[a]);
@@ -669,7 +695,7 @@ bool Renderer::Impl::drawOwnGround() {
             float nearest = 0.0f, farthest = 0.0f;
             if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, mostDepth, nearest, &farthest))
                 continue;
-            const int which = nearest > fineDepth && k < g->distant.chunks.size() ? 1 : 0;
+            const int which = past ? 2 : nearest > fineDepth && k < g->distant.chunks.size() ? 1 : 0;
             ++chunks;
             uint8_t& fresh = o.fresh[which][k];
             if (fresh == 2) {  // 3.0.4-beta.28: in the light before it moved - a few a picture
@@ -726,8 +752,8 @@ bool Renderer::Impl::drawOwnGround() {
                     sendGroundColours(*g, job.which, job.k);
             groundLists.begin(o.ids.size(), blends);
             for (const OwnState::ChunkJob& job : jobs) {
-                const terrain::Mesh& mesh = job.which ? g->distant : g->mesh;
-                groundLists.add(mesh, job.which != 0, job.k, own_ground::card::hasNear(job.nearest, from),
+                const terrain::Mesh& mesh = meshOf(*g, job.which);
+                groundLists.add(mesh, job.which, job.k, own_ground::card::hasNear(job.nearest, from),
                                 own_ground::card::hasPast(job.farthest, from));
                 vertices += mesh.chunks[job.k].vertexCount;
             }
@@ -749,7 +775,7 @@ bool Renderer::Impl::drawOwnGround() {
             uint8_t* into = o.rec.vertexData();
             const std::vector<DrawCmd>& recDraws = o.rec.draws();
             groundLists.fill(
-                groundLayout.fine,
+                groundLayout,
                 [&](size_t k) { return reinterpret_cast<uint32_t*>(into + recDraws[o.cardRooms[k]].vertexOffset); },
                 parallelChunks);
             o.cardMorph[0] = morphFrom, o.cardMorph[1] = fineDepth;
@@ -1386,9 +1412,10 @@ bool Renderer::Impl::ensureGroundCard(const OwnGround& g) {
         groundCardSerial = g.serial;
         groundCardUp = 0;
         groundCardPictures = 0;
-        groundLayout = card::layoutOf(g.mesh, g.distant);
+        groundLayout = card::layoutOf(card::Meshes{&g.mesh, &g.distant, &g.outskirts});
         groundCardFresh[0].assign(g.mesh.chunks.size(), 0);
         groundCardFresh[1].assign(g.distant.chunks.size(), 0);
+        groundCardFresh[2].assign(g.outskirts.chunks.size(), 0);  // 3.0.20-beta.30
         if (!groundLayout.all) return false;
         D3D12_HEAP_PROPERTIES heap{};
         heap.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -1430,8 +1457,9 @@ bool Renderer::Impl::ensureGroundCard(const OwnGround& g) {
     const Upload u = allocUpload(vertexBytes + UINT64(count) * 4, 16);
     if (!u.cpu) return false;
     uint32_t* words = reinterpret_cast<uint32_t*>(u.cpu);
-    card::vertexWords(g.mesh, g.distant, groundCardUp, count, words);
-    card::blendWords(g.mesh, g.distant, groundCardUp, count, words + size_t(count) * card::kVertexWords);
+    const card::Meshes meshes{&g.mesh, &g.distant, &g.outskirts};
+    card::vertexWords(meshes, groundCardUp, count, words);
+    card::blendWords(meshes, groundCardUp, count, words + size_t(count) * card::kVertexWords);
     flushDraws();  // the draws gathered so far before the copies' barriers
     transition(groundCard, groundCardState, D3D12_RESOURCE_STATE_COPY_DEST);
     list->CopyBufferRegion(groundCard, UINT64(groundCardUp) * card::kVertexWords * 4, slots[slot].upload, u.offset,
@@ -1450,7 +1478,7 @@ bool Renderer::Impl::ensureGroundCard(const OwnGround& g) {
 
 // 3.0.20-beta.23: a chunk's colours (OwnState::colours, made by ownColours) into the card's buffer
 void Renderer::Impl::sendGroundColours(const OwnGround& g, int which, size_t chunk) {
-    const terrain::Mesh& mesh = which ? g.distant : g.mesh;
+    const terrain::Mesh& mesh = meshOf(g, which);
     if (!groundCard || chunk >= mesh.chunks.size() || chunk >= groundCardFresh[which].size()) return;
     const terrain::Chunk& ch = mesh.chunks[chunk];
     const std::vector<uint32_t>& colours = ownState.colours[which];
@@ -1459,7 +1487,7 @@ void Renderer::Impl::sendGroundColours(const OwnGround& g, int which, size_t chu
     const Upload u = allocUpload(bytes, 16);
     if (!u.cpu) return;
     std::memcpy(u.cpu, colours.data() + ch.firstVertex, size_t(bytes));
-    const uint32_t first = (which ? groundLayout.fine : 0u) + ch.firstVertex;
+    const uint32_t first = groundLayout.baseOf(which) + ch.firstVertex;
     transition(groundCard, groundCardState, D3D12_RESOURCE_STATE_COPY_DEST);
     list->CopyBufferRegion(groundCard, UINT64(groundLayout.coloursAt()) * 16 + UINT64(first) * 4, slots[slot].upload,
                            u.offset, bytes);

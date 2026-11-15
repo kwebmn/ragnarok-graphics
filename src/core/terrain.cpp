@@ -312,10 +312,18 @@ uint32_t wallLight(const gnd::Ground& g, int x, int y, bool right, const Sun& su
 
 bool isWall(const Vertex& v) { return v.normal[1] == 0.0f; }  // a top's or a strip's is never 0 (-1 before its unit)
 
+void lightmapUv(const Atlas& atlas, int lightmap, float fu, float fv, float out[2]) {
+    const int cols = std::max(atlas.width / 8, 1);
+    const float x = float(lightmap % cols) * 8.0f + 1.0f + fu * 6.0f;
+    const float y = float(lightmap / cols) * 8.0f + 1.0f + fv * 6.0f;
+    out[0] = atlas.width > 0 ? x / float(atlas.width) : 0.0f;
+    out[1] = atlas.height > 0 ? y / float(atlas.height) : 0.0f;
+}
+
 Atlas lightmapAtlas(const gnd::Ground& g) {
     Atlas a;
     const int cols = kAtlasWidth / 8;
-    const int rows = std::max(1, int((g.lightmaps.size() + size_t(cols) - 1) / size_t(cols)));
+    const int rows = std::max(1, int((g.lightmaps.size() + 1 + size_t(cols) - 1) / size_t(cols)));
     a.width = kAtlasWidth;
     a.height = rows * 8;
     a.argb.assign(size_t(a.width) * size_t(a.height), 0xFF000000u);
@@ -330,6 +338,26 @@ Atlas lightmapAtlas(const gnd::Ground& g) {
                     l.rgb[k * 3 + 2];
             }
     }
+    // 3.0.20-beta.30: the mean of the tops' lightmaps, a cell of one texel all over (the outskirts')
+    double sum[4] = {0, 0, 0, 0};
+    size_t count = 0;
+    for (const gnd::Cell& c : g.cells) {
+        if (c.top < 0 || size_t(c.top) >= g.surfaces.size()) continue;
+        const size_t lm = g.surfaces[size_t(c.top)].lightmap;
+        if (lm >= g.lightmaps.size()) continue;
+        const gnd::Lightmap& l = g.lightmaps[lm];
+        for (int k = 0; k < 64; ++k) {
+            sum[0] += l.brightness[k];
+            for (int ch = 0; ch < 3; ++ch) sum[1 + ch] += l.rgb[k * 3 + ch];
+        }
+        count += 64;
+    }
+    const auto mean = [&](int k) { return count ? uint32_t(std::lround(sum[k] / double(count))) : (k ? 0u : 255u); };
+    const uint32_t texel = mean(0) << 24 | mean(1) << 16 | mean(2) << 8 | mean(3);
+    const size_t i = g.lightmaps.size();
+    const int ox = int(i % size_t(cols)) * 8, oy = int(i / size_t(cols)) * 8;
+    for (int y = 0; y < 8; ++y)
+        for (int x = 0; x < 8; ++x) a.argb[size_t(oy + y) * size_t(a.width) + size_t(ox + x)] = texel;
     return a;
 }
 

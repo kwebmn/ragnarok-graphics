@@ -1463,8 +1463,8 @@ struct Renderer::Impl {
         float cardMorph[2] = {0.0f, 0.0f};  // the smooth ground's easing the record was made with
         // 3.0.4-beta.12: each vertex's diffuse kept (the mesh's, the distant one's) and each chunk's up to date - made
         // again round the corners the game gives another colour (own_ground::Shading::takeChanged)
-        std::vector<uint32_t> colours[2];
-        std::vector<uint8_t> fresh[2];
+        std::vector<uint32_t> colours[3];  // 3.0.20-beta.30: the outskirts' third (core/outskirts.hpp)
+        std::vector<uint8_t> fresh[3];
         // 3.0.19-beta.46 (the owner's «делай все»: the own ground 2.7 ms of the renderer's thread a frame on the fields
         // in the 3D view): the chunks in view this picture, and each one's pieces - a batch's vertices and its
         // indices from 0 - made on a few threads at once (ownChunk), then put into pending in the chunks' order
@@ -1683,7 +1683,8 @@ struct Renderer::Impl {
     uint32_t groundCardUp = 0;      // its vertices put up so far
     int groundCardPictures = 0;     // pictures putting them up, for the log
     bool groundCardFailed = false;
-    std::vector<uint8_t> groundCardFresh[2];  // each chunk's colours on the card (the smooth mesh's, the plain one's)
+    // each chunk's colours on the card (the smooth mesh's, the plain one's, the outskirts')
+    std::vector<uint8_t> groundCardFresh[3];
     own_ground::card::Lists groundLists;
     bool cardGroundDraw = false;  // draw() draws a layer's texture from the card (cardGroundCount indices)
     UINT cardGroundCount = 0;

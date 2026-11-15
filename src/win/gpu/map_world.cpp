@@ -12,6 +12,7 @@
 #include "core/gnd.hpp"
 #include "core/grf/grf.hpp"
 #include "core/jpeg_image.hpp"
+#include "core/outskirts.hpp"
 #include "core/own_ground.hpp"
 #include "core/own_models.hpp"
 #include "core/pack_source.hpp"
@@ -458,6 +459,20 @@ void MapWorld::loop() {
                                                           : terrain::Sun{};
                     own->mesh = terrain::build(full, sizeof(void*) == 8 ? 3 : 2, own->atlas, laid, &resting, &sun);
                     own->distant = terrain::build(full, 1, own->atlas, nullptr, nullptr, &sun);
+                    {  // 3.0.20-beta.30 (the owner's «6,7,8,9», 6): the land past its edges - the 3D view's horizon
+                        outskirts::Options ring;
+                        ring.water = w.waterKnown;
+                        ring.waterLevel = w.waterLevel;
+                        uint32_t seed = 2166136261u;  // the map's name hashed (FNV-1a): its own hills, every time
+                        for (const char c : name) seed = (seed ^ uint8_t(c)) * 16777619u;
+                        ring.seed = seed;
+                        own->outskirts = outskirts::build(full, own->atlas, sun, ring);
+                        LOG_INFO("own ground: %s's outskirts - %u chunks, %u vertices, %u triangles past its edges, "
+                                 "%d cells off (the 3D view's horizon)",
+                                 name.c_str(), unsigned(own->outskirts.chunks.size()),
+                                 unsigned(own->outskirts.vertices.size()), unsigned(own->outskirts.indices.size() / 3),
+                                 ring.ring);
+                    }
                     for (uint8_t r : resting) own->restingCells += r;
                     own->wallLight.assign(full.cells.size() * 2, 0u);
                     for (int y = 0; y < full.height; ++y)
@@ -514,6 +529,7 @@ void MapWorld::loop() {
                     if (room != own_ground::Room::Whole) {
                         own->models = terrain::Mesh();
                         std::vector<OwnGround::Picture>().swap(own->modelTextures);
+                        own->outskirts = terrain::Mesh();  // 3.0.20-beta.30
                     }
                     if (room == own_ground::Room::Coarse) {  // the plain ground near too (distant empty: mesh all)
                         own->mesh = std::move(own->distant);

@@ -88,30 +88,39 @@ Clip clipOf(const Putting& pu, const terrain::Vertex& tv, bool smooth, uint8_t l
     return c;
 }
 
-Layout layoutOf(const terrain::Mesh& fine, const terrain::Mesh& plain) {
+namespace {
+
+size_t countOf(const terrain::Mesh* m) { return m ? m->vertices.size() : 0; }
+
+// the vertex the card's number n is of
+const terrain::Vertex& vertexAt(const Meshes& m, size_t n) {
+    const size_t fine = countOf(m.fine), plain = countOf(m.plain);
+    if (n < fine) return m.fine->vertices[n];
+    if (n < fine + plain) return m.plain->vertices[n - fine];
+    return m.outskirts->vertices[n - fine - plain];
+}
+
+}  // namespace
+
+Layout layoutOf(const Meshes& m) {
     Layout l;
-    l.fine = uint32_t(fine.vertices.size());
-    l.all = l.fine + uint32_t(plain.vertices.size());
+    l.fine = uint32_t(countOf(m.fine));
+    l.plain = uint32_t(countOf(m.plain));
+    l.all = l.fine + l.plain + uint32_t(countOf(m.outskirts));
     return l;
 }
 
-void vertexWords(const terrain::Mesh& fine, const terrain::Mesh& plain, uint32_t from, uint32_t count, uint32_t* out) {
-    const size_t smooth = fine.vertices.size();
+void vertexWords(const Meshes& m, uint32_t from, uint32_t count, uint32_t* out) {
     for (uint32_t i = 0; i < count; ++i) {
-        const size_t n = size_t(from) + i;
-        const terrain::Vertex& v = n < smooth ? fine.vertices[n] : plain.vertices[n - smooth];
+        const terrain::Vertex& v = vertexAt(m, size_t(from) + i);
         uint32_t* w = out + size_t(i) * kVertexWords;
         w[0] = bitsOf(v.pos[0]), w[1] = bitsOf(v.pos[1]), w[2] = bitsOf(v.pos[2]), w[3] = bitsOf(v.plain);
         w[4] = bitsOf(v.uv[0]), w[5] = bitsOf(v.uv[1]), w[6] = bitsOf(v.lm[0]), w[7] = bitsOf(v.lm[1]);
     }
 }
 
-void blendWords(const terrain::Mesh& fine, const terrain::Mesh& plain, uint32_t from, uint32_t count, uint32_t* out) {
-    const size_t smooth = fine.vertices.size();
-    for (uint32_t i = 0; i < count; ++i) {
-        const size_t n = size_t(from) + i;
-        out[i] = (n < smooth ? fine.vertices[n] : plain.vertices[n - smooth]).blend;
-    }
+void blendWords(const Meshes& m, uint32_t from, uint32_t count, uint32_t* out) {
+    for (uint32_t i = 0; i < count; ++i) out[i] = vertexAt(m, size_t(from) + i).blend;
 }
 
 void Lists::begin(size_t textures, bool blends) {
@@ -123,9 +132,9 @@ void Lists::begin(size_t textures, bool blends) {
     partsFrom_.clear();
 }
 
-void Lists::add(const terrain::Mesh& mesh, bool plain, size_t chunk, bool nearSide, bool pastSide) {
+void Lists::add(const terrain::Mesh& mesh, int which, size_t chunk, bool nearSide, bool pastSide) {
     if (chunk >= mesh.chunks.size() || (!nearSide && !pastSide)) return;
-    added_.push_back(Added{&mesh, plain, chunk, nearSide, pastSide});
+    added_.push_back(Added{&mesh, which, chunk, nearSide, pastSide});
 }
 
 const std::vector<Draw>& Lists::plan() {
@@ -168,7 +177,8 @@ const std::vector<Draw>& Lists::plan() {
     return draws_;
 }
 
-void Lists::fill(uint32_t fine, const std::function<uint32_t*(size_t draw)>& where, const ParallelFor& run) const {
+void Lists::fill(const Layout& layout, const std::function<uint32_t*(size_t draw)>& where,
+                 const ParallelFor& run) const {
     run(added_.size(), [&](size_t a) {
         const Added& ad = added_[a];
         const terrain::Mesh& m = *ad.mesh;
@@ -176,7 +186,7 @@ void Lists::fill(uint32_t fine, const std::function<uint32_t*(size_t draw)>& whe
             const Part& p = parts_[k];
             const terrain::Batch& bt = m.batches[p.batch];
             uint32_t* to = where(p.draw) + p.at;
-            const uint32_t base = (ad.plain ? fine : 0u) + bt.firstVertex;
+            const uint32_t base = layout.baseOf(ad.which) + bt.firstVertex;
             const uint32_t* from = m.indices.data() + bt.firstIndex;
             for (uint32_t i = 0; i < bt.indexCount; ++i) to[i] = base + from[i];
         }

@@ -77,25 +77,30 @@ const card::ParallelFor kBackwards = [](size_t count, const std::function<void(s
 }  // namespace
 
 TEST(own_ground_card_lays_the_vertices_then_the_colours_and_the_blends) {
-    const card::Layout l = card::layoutOf(fineMesh(), plainMesh());
-    CHECK(l.fine == 9 && l.all == 15);
+    const terrain::Mesh fine = fineMesh(), plain = plainMesh();
+    const card::Layout l = card::layoutOf(card::Meshes{&fine, &plain, nullptr});
+    CHECK(l.fine == 9 && l.all == 15 && l.baseOf(1) == 9 && l.baseOf(2) == 15);
     CHECK(l.coloursAt() == 30 && l.blendsAt() == 34 && l.size() == 38);  // 15 colours: four uint4
-    const card::Layout none = card::layoutOf(terrain::Mesh{}, terrain::Mesh{});
+    const terrain::Mesh empty;
+    const card::Layout none = card::layoutOf(card::Meshes{&empty, &empty, nullptr});
     CHECK(none.all == 0 && none.size() == 0);
+    // 3.0.20-beta.30: the outskirts (core/outskirts.hpp) a third mesh after the two
+    const card::Layout three = card::layoutOf(card::Meshes{&fine, &plain, &plain});
+    CHECK(three.all == 21 && three.baseOf(2) == 15);
 }
 
 TEST(own_ground_card_keeps_a_vertex_as_two_uint4) {
     const terrain::Mesh fine = fineMesh(), plain = plainMesh();
     std::vector<uint32_t> w(2 * card::kVertexWords, 0u);
-    card::vertexWords(fine, plain, 8, 2, w.data());  // the smooth mesh's last, the plain one's first
+    card::vertexWords(card::Meshes{&fine, &plain, nullptr}, 8, 2, w.data());  // the smooth mesh's last, the plain's first
     CHECK(w[0] == bitsOf(8.0f) && w[1] == bitsOf(-16.0f) && w[2] == bitsOf(24.0f) && w[3] == bitsOf(8.5f));
     CHECK(w[4] == bitsOf(8.25f) && w[5] == bitsOf(8.5f) && w[6] == bitsOf(8.75f) && w[7] == bitsOf(9.0f));
     CHECK(w[8] == bitsOf(100.0f) && w[11] == bitsOf(0.0f) && w[12] == bitsOf(100.25f));
     std::vector<uint32_t> b(15, 0u);
-    card::blendWords(fine, plain, 0, 15, b.data());
+    card::blendWords(card::Meshes{&fine, &plain, nullptr}, 0, 15, b.data());
     CHECK(b[0] == 0x00A0B0C0u && b[8] == 0x00A0B0C8u && b[10] == 0x00010203u && b[14] == 0x00010203u * 5u);
     uint32_t piece[2] = {0, 0};
-    card::blendWords(fine, plain, 8, 2, piece);  // a piece of them, as the card's are put up
+    card::blendWords(card::Meshes{&fine, &plain, nullptr}, 8, 2, piece);  // a piece of them, as the card's are put up
     CHECK(piece[0] == 0x00A0B0C8u && piece[1] == 0u);
 }
 
@@ -110,9 +115,9 @@ TEST(own_ground_card_lists_a_pictures_chunks_by_layer_texture_and_side) {
     const terrain::Mesh fine = fineMesh(), plain = plainMesh();
     card::Lists lists;
     lists.begin(2, true);  // the map's two textures; the strips too
-    lists.add(fine, false, 0, true, false);
-    lists.add(plain, true, 1, true, true);  // across the squeeze: on both sides
-    lists.add(fine, false, 1, false, true);
+    lists.add(fine, 0, 0, true, false);
+    lists.add(plain, 1, 1, true, true);  // across the squeeze: on both sides
+    lists.add(fine, 0, 1, false, true);
     CHECK(lists.chunks() == 3);
     const std::vector<card::Draw>& d = lists.plan();
     CHECK(d.size() == 4);
@@ -122,7 +127,8 @@ TEST(own_ground_card_lists_a_pictures_chunks_by_layer_texture_and_side) {
     CHECK(d[3].layer == terrain::kNeighbour && d[3].texture == 0 && !d[3].past && d[3].count == 3);
     std::vector<std::vector<uint32_t>> into(d.size());
     for (size_t k = 0; k < d.size(); ++k) into[k].assign(d[k].count, 999u);
-    lists.fill(card::layoutOf(fine, plain).fine, [&into](size_t k) { return into[k].data(); }, kBackwards);
+    lists.fill(card::layoutOf(card::Meshes{&fine, &plain, nullptr}), [&into](size_t k) { return into[k].data(); },
+               kBackwards);
     CHECK(into[0] == (std::vector<uint32_t>{0, 1, 2, 2, 1, 0, 14, 12, 13}));  // plain chunk 1: 9 + 3 + its own
     CHECK(into[1] == (std::vector<uint32_t>{14, 12, 13}));
     CHECK(into[2] == (std::vector<uint32_t>{6, 7, 8}));
@@ -133,7 +139,7 @@ TEST(own_ground_card_lists_leave_the_strips_out_without_the_blends) {
     const terrain::Mesh fine = fineMesh(), plain = plainMesh();
     card::Lists lists;
     lists.begin(2, false);
-    lists.add(fine, false, 0, true, true);
+    lists.add(fine, 0, 0, true, true);
     const std::vector<card::Draw>& d = lists.plan();
     CHECK(d.size() == 2 && d[0].layer == terrain::kGround && !d[0].past && d[1].past && d[1].count == 6);
     lists.begin(2, true);
@@ -230,4 +236,23 @@ TEST(own_ground_card_clips_a_vertex_where_the_processor_puts_it) {
     terrain::Vertex behind = vertexOf(0.0f, 0.0f, 0u);
     behind.pos[2] = -500.0f;
     CHECK(card::clipOf(pu, behind, true, terrain::kGround, false).cut[1] < 0.0f);
+}
+
+// 3.0.20-beta.30 (the owner's «6,7,8,9», 6: the land past a map's edges, core/outskirts.hpp): a third mesh's chunks
+// drawn with the others, their vertices' numbers after the smooth and the plain ones'
+TEST(own_ground_card_lists_take_the_outskirts_after_the_two) {
+    const terrain::Mesh fine = fineMesh(), plain = plainMesh();
+    const terrain::Mesh outskirts = plainMesh();
+    card::Lists lists;
+    lists.begin(2, true);
+    lists.add(outskirts, 2, 0, true, false);
+    const std::vector<card::Draw>& d = lists.plan();
+    CHECK(d.size() == 1 && d[0].texture == 1 && d[0].count == 3);
+    std::vector<uint32_t> into(3, 999u);
+    lists.fill(card::layoutOf(card::Meshes{&fine, &plain, &outskirts}), [&into](size_t) { return into.data(); },
+               kBackwards);
+    CHECK(into == (std::vector<uint32_t>{15, 16, 17}));  // 9 + 6 + its own 0 1 2
+    std::vector<uint32_t> w(card::kVertexWords, 0u);
+    card::vertexWords(card::Meshes{&fine, &plain, &outskirts}, 15, 1, w.data());  // the outskirts' first
+    CHECK(w[0] == bitsOf(100.0f));
 }
