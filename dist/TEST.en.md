@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.5 — what's new · 2026-11-15
+
+- **«Models by our renderer» takes more models.** A part of a model now counts as still when its animation keys do not change its place (the game plays every model's animation, even a still one's); before, any part with several keys counted as moving — in Prontera 865 of 1628 parts stayed the game's. Parts hung on a moving model are checked against its place in the world every frame and never freeze.
+
 # uaRO Graphics 3.0.20-beta.4 — what's new · 2026-11-15
 
 - **Models by our renderer — a trial (stage 2b).** A new switch «Models by our renderer» on the «Game» page, under «3D view» (off). When it is on, in the 3D view the map's still models (houses, trees, walls) are drawn by our renderer — with the same colours, textures and faces as the game's — and the game itself does not work them out. Moving models, the ones that turn see-through in front of the character and models with semi-transparent textures stay the game's. Their shadows and reflections are not there yet. The log tells how many models a frame our renderer drew.
