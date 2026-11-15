@@ -414,9 +414,10 @@ bool Renderer::Impl::applyGrass3d() {
     }
     c.twin[0] = float(grid.side);
     c.twin[1] = grid.step;
-    // 3.0.20-beta.27 (the owner: «и трава не такая как вид сверху»): grass_ps's blades and flowers - its share of the
-    // half units with a blade, of the roots with a flower, the map's flowers' palette
-    c.twin[2] = 0.65f * float(std::clamp(effects.grassAmount, 0, 100)) / 100.0f;
+    // 3.0.20-beta.27 (the owner: «и трава не такая как вид сверху»): grass_ps's flowers - their share of the roots,
+    // the map's palette; 3.0.20-beta.29 (R-DWKJEN: the field thin) every half unit's root as beta.26's, not grass_ps's
+    // 0.65 of them
+    c.twin[2] = float(std::clamp(effects.grassAmount, 0, 100)) / 100.0f;
     c.twin[3] = float(grid.rings);  // 3.0.20-beta.25
     if (effects.flowers && mapPlace.flowers >= 0) {
         c.uiPixels[2] = 0.12f;

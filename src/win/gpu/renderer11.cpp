@@ -3350,8 +3350,8 @@ void Renderer11::applyGrass3d() {
     }
     c.twin[0] = float(grid.side);
     c.twin[1] = grid.step;
-    // 3.0.20-beta.27: grass_ps's blades and flowers (as Direct3D 12's applyGrass3d)
-    c.twin[2] = 0.65f * float(std::clamp(effects_.grassAmount, 0, 100)) / 100.0f;
+    // 3.0.20-beta.27: grass_ps's flowers (as Direct3D 12's applyGrass3d); 3.0.20-beta.29 every half unit's root
+    c.twin[2] = float(std::clamp(effects_.grassAmount, 0, 100)) / 100.0f;
     c.twin[3] = float(grid.rings);  // 3.0.20-beta.25
     if (effects_.flowers && place_.flowers >= 0) {
         c.uiPixels[2] = 0.12f;

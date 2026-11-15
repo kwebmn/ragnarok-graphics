@@ -2762,6 +2762,7 @@ struct BladeOut {
     float viewZ : TEXCOORD1;
     float tip : TEXCOORD2;
     float fade : TEXCOORD3;  // 3.0.20-beta.26: a thin blade's alpha (core grass3d::fadeOf)
+    float4 head : TEXCOORD4;  // 3.0.20-beta.29: a flower's colour up its stem's top (a 1), as grass_ps's head
 };
 // 3.0.20-beta.26 (R-PKPE9D «впечатление что трава мигает»): core grass3d's greenness and growOf, the same sums
 float bladeGreen(float3 c) {
@@ -2816,6 +2817,7 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
     o.viewZ = 0.0;
     o.tip = 0.0;
     o.fade = 0.0;
+    o.head = float4(0.0, 0.0, 0.0, 0.0);
     uint blade = id / 3u, corner = id % 3u;
     uint member = blade % 3u;  // 3.0.19-beta.38: a tuft of three a root (core grass3d::kTuft)
     blade = blade / 3u;
@@ -2891,36 +2893,31 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
     float wide = dist <= full ? 1.0 : dist / full;  // core widthAt: as wide on the screen past `full`
     float h;
     float2 lean;
-    bladeShape(cell, flower && member == 2u ? 0u : member, tall, xz, h, lean);
+    bladeShape(cell, member, tall, xz, h, lean);
     float3 base = bladeView(float3(xz.x, y, xz.y));
     if (base.z <= nearZ + 1.0) return o;  // the whole blade in front of the eye
-    float3 v;
-    if (flower && member == 2u) {  // a flower's head on its stem's tip, turned to the camera (grass_ps's colour)
-        float3 tipView = bladeView(float3(xz.x + lean.x, y - h, xz.y + lean.y));
-        float r = 0.22 * wide;
-        float2 offs = corner == 0u ? float2(-r, r * 0.6) : (corner == 1u ? float2(r, r * 0.6) : float2(0.0, -r));
-        v = tipView + float3(offs, 0.0);  // the view's x right, y down
-        o.colour = flowerColour(hash12(cell + 17.9), int(sourceRect.y + 0.5)) * (0.75 + 0.4 * rc.g);
-        o.tip = -1.0;
-        o.fade = 1.0;
-    } else {
-        // each blade of a tuft its own way in the world, a third of a turn from the next - none turned with the camera
-        float yaw = hash12(cell + 3.3) * 6.2832 + float(member) * 2.0944;
-        float2 across2 = float2(cos(yaw), sin(yaw)) * (0.06 + 0.04 * hash12(cell + float(member) * 3.7 + 5.5)) * wide;
-        // 3.0.20-beta.26 (R-PKPE9D, under DLSS's jitter): one under kMinPixels (2.5) across on the target that wide,
-        // at most kMostWider (6) times, as much fainter (core grass3d::fadeOf) - its width along the view's right
-        float across = 2.0 * abs(dot(across2, float2(r0, r2))) / base.z * f0 * scale;  // target pixels
-        float wider = across >= 2.5 ? 1.0 : min(2.5 / max(across, 1e-3), 6.0);
-        o.fade = across >= 2.5 ? 1.0 : (across > 0.0 ? 1.0 / wider : 0.0);
-        if (o.fade < 0.03) return o;
-        across2 *= wider;
-        float3 at = corner == 2u ? float3(xz.x + lean.x, y - h, xz.y + lean.y)
-                                 : float3(xz.x + (corner == 0u ? -across2.x : across2.x), y,
-                                          xz.y + (corner == 0u ? -across2.y : across2.y));
-        v = bladeView(at);
-        o.colour = rc * (0.92 + 0.16 * hash12(cell + float(member) * 3.7 + 8.8));  // each blade a little its own
-        o.tip = corner == 2u ? 1.0 : 0.0;
-    }
+    // 3.0.20-beta.29 (R-DWKJEN: beta.27's heads of flowers, flat triangles of their own, lay about the field like
+    // shards): a flower as grass_ps's - its stem's top coloured (above 0.78 of it), the stem a little wider for it
+    bool stem = flower && member == 0u;
+    if (stem) o.head = float4(flowerColour(hash12(cell + 17.9), int(sourceRect.y + 0.5)) * (0.75 + 0.4 * rc.g), 1.0);
+    // each blade of a tuft its own way in the world, a third of a turn from the next - none turned with the camera;
+    // 3.0.20-beta.29 (R-DWKJEN: the field thin again) as wide as beta.26's
+    float yaw = hash12(cell + 3.3) * 6.2832 + float(member) * 2.0944;
+    float2 across2 = float2(cos(yaw), sin(yaw)) * (0.08 + 0.06 * hash12(cell + float(member) * 3.7 + 5.5)) * wide *
+                     (stem ? 1.6 : 1.0);
+    // 3.0.20-beta.26 (R-PKPE9D, under DLSS's jitter): one under kMinPixels (beta.29: 2, not 2.5 - a blade seen side
+    // on faded) across on the target that wide, at most kMostWider (6) times, as much fainter (core grass3d::fadeOf)
+    float across = 2.0 * abs(dot(across2, float2(r0, r2))) / base.z * f0 * scale;  // target pixels
+    float wider = across >= 2.0 ? 1.0 : min(2.0 / max(across, 1e-3), 6.0);
+    o.fade = across >= 2.0 ? 1.0 : (across > 0.0 ? 1.0 / wider : 0.0);
+    if (o.fade < 0.03) return o;
+    across2 *= wider;
+    float3 at = corner == 2u ? float3(xz.x + lean.x, y - h, xz.y + lean.y)
+                             : float3(xz.x + (corner == 0u ? -across2.x : across2.x), y,
+                                      xz.y + (corner == 0u ? -across2.y : across2.y));
+    float3 v = bladeView(at);
+    o.colour = rc * (0.92 + 0.16 * hash12(cell + float(member) * 3.7 + 8.8));  // each blade a little its own
+    o.tip = corner == 2u ? 1.0 : 0.0;
     float2 px = float2(v.x / v.z * f0 + cx, v.y / v.z * f1 + cy) * scale + 0.5 + float2(jitterX, jitterY);
     o.pos = float4(px.x * 2.0 / targetSize.x - 1.0, 1.0 - px.y * 2.0 / targetSize.y, 0.5, 1.0);
     o.viewZ = v.z;
@@ -2932,8 +2929,8 @@ float4 grass3d_ps(BladeOut i) : SV_Target {
     float sceneZ = raw >= 0.99999 ? 1e6 : viewDepth(raw);
     if (sceneZ < i.viewZ - 0.08) discard;  // something nearer in front of it
     // 3.0.20-beta.27 (the owner: «и трава не такая как вид сверху»): up a blade as grass_ps's - 0.65 of its ground's
-    // colour at the root to 1.25 at the tip; a flower's head (tip -1) its own colour
-    if (i.tip < -0.5) return float4(i.colour, i.fade);
+    // colour at the root to 1.25 at the tip; 3.0.20-beta.29 a flower's stem its flower's colour above 0.78 of it
+    if (i.head.a > 0.5 && i.tip > 0.78) return float4(i.head.rgb, i.fade);
     return float4(i.colour * lerp(0.65, 1.25, saturate(i.tip)), i.fade);
 }
 

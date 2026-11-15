@@ -87,7 +87,7 @@ inline float growOf(float p, float u) {
 // 3.0.20-beta.26 (R-PKPE9D, under DLSS's jitter): a blade narrower than kMinPixels on the target drawn that wide, as
 // much fainter - a far blade under two pixels wide flickered from frame to frame
 // 3.0.20-beta.27: at most kMostWider times (a blade seen nearly edge on), its coverage the same - alpha 1 / wider
-constexpr float kMinPixels = 2.5f, kMostWider = 6.0f;
+constexpr float kMinPixels = 2.0f, kMostWider = 6.0f;  // 3.0.20-beta.29: 2 (R-DWKJEN: side-on blades faded)
 inline void fadeOf(float pixels, float& wider, float& alpha) {
     if (pixels >= kMinPixels) {
         wider = alpha = 1.0f;
