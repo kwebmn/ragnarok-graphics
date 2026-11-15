@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.10 — what's new · 2026-11-15
+
+- **«Models by our renderer» in Direct3D 11 too.** For weaker cards the switch now also works with Direct3D 11 as the renderer. Here the card builds the models itself: the captured models go into its memory once, in the world's places, and each frame the renderer passes only the list of faces - the card puts them on the screen by the game's rules (the same colours, culling, fog). It costs the processor almost nothing. To try it, choose «Graphics» → «Renderer» → «Graphics API» → «Direct3D 11 (older graphics cards, test)» in the settings and turn on the «Models by our renderer» tile (Ctrl+` → «Quick»).
+
 # uaRO Graphics 3.0.20-beta.9 — what's new · 2026-11-15
 
 - **«Models by our renderer» in the normal view too.** The switch now works not only in the 3D view but also in the normal view from above. With «Own ground» off, our renderer draws the models in a pass of their own at the same point of the frame; it takes the fog and the models' state from the game's own draws. The renderer now gets the game's camera even when «Models by our renderer» is the only thing on.
