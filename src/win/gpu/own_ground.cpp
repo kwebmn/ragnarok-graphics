@@ -708,7 +708,15 @@ bool Renderer::Impl::drawOwnGround() {
         making.fogged = fogged;
         making.plain = plain;
         making.textures = o.ids.size();
-        parallelChunks(jobs.size(), [&](size_t n) { ownChunk(making, jobs[n], o.outs[n]); });
+        uint32_t recoloured = 0;  // 3.0.20-beta.18: for the minute's line
+        for (const OwnState::ChunkJob& job : jobs) recoloured += job.recolour ? 1u : 0u;
+        if (recoloured > o.minuteMostRecoloured) o.minuteMostRecoloured = recoloured;
+        o.recolouredNow = recoloured;
+        {  // 3.0.20-beta.18: the parts' own times
+            CpuTimeWithin t(cpuPartTicks[kCpuOwnChunks], cpuPartTicks[kCpuOwnGround]);
+            parallelChunks(jobs.size(), [&](size_t n) { ownChunk(making, jobs[n], o.outs[n]); });
+        }
+        CpuTimeWithin putting(cpuPartTicks[kCpuOwnDraws], cpuPartTicks[kCpuOwnGround]);
         for (size_t n = 0; n < jobs.size(); ++n) {
             const OwnState::ChunkOut& out = o.outs[n];
             for (size_t q = 0; q < out.used; ++q) {
@@ -723,7 +731,11 @@ bool Renderer::Impl::drawOwnGround() {
         }
         for (uint8_t layer = 0; layer < 3; ++layer)  // the ground, then the own bands, then the neighbours' strips
             for (size_t t = 0; t < o.pending[layer].size(); ++t) emit(layer, t);
-        drawOwnModels(view, p, axes);  // 3.0.4-beta.14: the models past the far plane, into the same record (layer 3)
+        putting.stop();
+        {
+            CpuTimeWithin t(cpuPartTicks[kCpuFarModels], cpuPartTicks[kCpuOwnGround]);
+            drawOwnModels(view, p, axes);  // 3.0.4-beta.14: the models past the far plane, into the same record
+        }
         // 3.0.20-beta.4: the ones the driver left out (the processor's way, while the card's is missing)
         if (!cardModelsReady()) {  // 3.0.20-beta.16: their own part of the drawing's time
             CpuTimeWithin t(cpuPartTicks[kCpuGameModels], cpuPartTicks[kCpuOwnGround]);
@@ -732,7 +744,12 @@ bool Renderer::Impl::drawOwnGround() {
         o.madeChunks = chunks, o.madeVertices = vertices, o.madeTriangles = triangles;
     }
     const double built = msSince(start);
+    if (!same && built > o.minuteSlowest) {  // 3.0.20-beta.18
+        o.minuteSlowest = built;
+        o.minuteSlowestRecoloured = o.recolouredNow;
+    }
     if (!o.rec.draws().empty()) {
+        CpuTimeWithin uploading(cpuPartTicks[kCpuOwnUpload], cpuPartTicks[kCpuOwnGround]);  // 3.0.20-beta.18
         flushDraws();  // the game's draws gathered so far are of its own vertices, uploaded before these
         prepareGeometry(o.rec);
         if (vertexBase) {
@@ -757,9 +774,10 @@ bool Renderer::Impl::drawOwnGround() {
         }
         geometryList = 0;  // the game's record's vertices go up again with its next draw
     }
-    if (cardModelsReady()) {  // 3.0.20-beta.11: from the card, every picture (3.0.20-beta.16: its own time)
+    {  // 3.0.20-beta.11: from the card, every picture (3.0.20-beta.16: its own time)
         CpuTimeWithin t(cpuPartTicks[kCpuGameModels], cpuPartTicks[kCpuOwnGround]);
-        drawGameModelsCard(o.shading);
+        if (cardModelsReady()) drawGameModelsCard(o.shading);
+        noteGameModelsForFar();  // 3.0.20-beta.18: the far models learn their colours from ours
     }
     {  // 3.0.20-beta.13: their leaves as the game's trees (3.0.20-beta.16: their own time)
         CpuTimeWithin t(cpuPartTicks[kCpuGameLeaves], cpuPartTicks[kCpuOwnGround]);
@@ -797,12 +815,15 @@ bool Renderer::Impl::drawOwnGround() {
         // 3.0.18-beta.189: and the corners' mean, the fog's alpha 100 and 1000 units away and the state's ops now
         LOG_INFO("own ground: %s - the last %u pictures: %.0f %% drawn again as they were; made anew for the camera "
                  "%u, the ground's colours %u, their mean %u, the hills' light %u, the fog %u, the state %u, the "
-                 "models' colours %u, the rest %u; now the corners' mean #%08X, the fog %u-%u, stage ops %u/%u",
+                 "models' colours %u, the rest %u; now the corners' mean #%08X, the fog %u-%u, stage ops %u/%u; the "
+                 "slowest made in %.2f ms (%u chunks given their colours anew in it, %u at most in a picture)",
                  g->map.c_str(), o.minuteFrames, 100.0 * double(o.minuteReused) / double(o.minuteFrames), o.anew[0],
                  o.anew[1], o.anew[2], o.anew[3], o.anew[4], o.anew[5], o.anew[6], o.anew[7], o.shading.meanColour(),
                  o.shading.specularAt(100.0f) >> 24, o.shading.specularAt(1000.0f) >> 24, o.like.stage[0].colorOp,
-                 o.like.stage[1].colorOp);
+                 o.like.stage[1].colorOp, o.minuteSlowest, o.minuteSlowestRecoloured, o.minuteMostRecoloured);
         o.minuteFrames = o.minuteReused = 0;
+        o.minuteSlowest = 0;
+        o.minuteSlowestRecoloured = o.minuteMostRecoloured = 0;
         std::fill(o.anew, o.anew + 8, 0u);
     }
     // 3.0.4-beta.14: whether the own models stand where the game's do - of the game's model triangles near, how many

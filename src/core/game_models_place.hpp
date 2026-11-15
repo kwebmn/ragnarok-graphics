@@ -55,6 +55,12 @@ struct Corner {
 void place(const Node& n, const Picture& pic, std::vector<Corner>& scratch, Placed& out,
            const std::vector<bool>* only = nullptr, const float* toView = nullptr);
 
+// 3.0.20-beta.18 (the owner's «ок», item 2): a face of a node we drew as the game's draw of it was, for the far models'
+// learning (own_models::Learning::note) - its corners in the file's places (`toWorld` a moving node's matrix into the
+// world, none: its vertices are the world's; then `sign`, the map's axes), the colours the game gives them (`how`)
+void faceForLearning(const Node& n, const Face& f, const float* toWorld, const float sign[3],
+                     const modelcensus::Colouring& how, float corners[3][3], uint32_t colours[3]);
+
 // 3.0.20-beta.16 (the owner: «делать» - R-GZDPF9: our models and their leaves ~2.3 ms of the renderer's frame, the
 // leaves placed on one thread): the frame's nodes' leaves - a node with a leafy texture (`leafy`: the renderer's flag
 // by its texture id) kept with those textures alone, each placed into its own output (place() with them; `toView` a

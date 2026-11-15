@@ -307,7 +307,9 @@ const char* const kCpuPartNames[Renderer::Impl::kCpuParts] = {
     "the game's ground noted (hills, seams, grass)", "the reflections' and torch shadows' casters",
     "the game's ground for the own ground's colours", "the own ground", "the own water",
     "the game's models for the far models' colours", "the characters' shadows",
-    "the game's models by us", "their leaves (a tree a draw)"};  // 3.0.20-beta.9; 3.0.20-beta.16
+    "the game's models by us", "their leaves (a tree a draw)",  // 3.0.20-beta.9; 3.0.20-beta.16
+    "the own ground's chunks (their colours too)", "the own ground put into draws", "the models past the far plane",
+    "the own ground uploaded and drawn"};  // 3.0.20-beta.18
 
 }  // namespace
 

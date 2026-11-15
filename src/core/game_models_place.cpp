@@ -61,6 +61,17 @@ void place(const Node& n, const Picture& pic, std::vector<Corner>& scratch, Plac
     }
 }
 
+void faceForLearning(const Node& n, const Face& f, const float* toWorld, const float sign[3],
+                     const modelcensus::Colouring& how, float corners[3][3], uint32_t colours[3]) {
+    for (int c = 0; c < 3; ++c) {
+        const float* p = &n.vertices[size_t(f.v[c]) * 3];
+        float w[3] = {p[0], p[1], p[2]};
+        if (toWorld) transform(toWorld, p, w);
+        for (int a = 0; a < 3; ++a) corners[c][a] = w[a] * sign[a];
+        colours[c] = modelcensus::expected(how, f.colour[c], &f.lit[3 * c]);
+    }
+}
+
 void Leaves::add(const Node& n, const float* toView, const std::function<bool(uint32_t)>& leafy) {
     if (wanted_.size() <= used_) wanted_.resize(used_ + 1);
     std::vector<bool>& wanted = wanted_[used_];

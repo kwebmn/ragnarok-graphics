@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
+#include <string>
 
 #include "core/game_models_place.hpp"
 #include "core/model_census.hpp"
@@ -178,6 +180,47 @@ const gamemodels::Node* Renderer::Impl::gameNodeOf(const gamemodels::Frame& fram
     if (it == gameModels.end() || it->second.moving == still) return nullptr;
     if (!still) toView = &frame.matrices[12 * k];
     return &it->second;
+}
+
+// 3.0.20-beta.18 (the owner's «ок», item 2 - R-DHG86V 15 %, R-8UPTJW 3 % of the noted triangles where ours lie: with
+// «Моделі нашим рендером» the game draws almost none of its models, and the far models learnt their colours from little
+// else): the frame's nodes we drew noted as the game's draws of them were (noteOwnModels) - their corners in the file's
+// places, the colours the game gives them - in the same turns (own_models::NotingTurn); the leaves drawn the world's
+// way are noted there already
+void Renderer::Impl::noteGameModelsForFar() {
+    OwnState& o = ownState;
+    const OwnGround* g = mapWorld.ownGround();
+    const gamemodels::Frame& frame = gameModelsNow.frame();
+    if (!g || g->serial != o.serial || !effects.ownFarModels || frame.empty() || !viewToWorldValid) return;
+    own_models::NotingTurn& turn = o.modelsTurn;
+    if (turn.noted >= own_models::kMostNoted) return;
+    const map::Axes axes = mapWorld.axes().known() ? mapWorld.axes() : map::Axes{1, 1, 1};
+    const float sign[3] = {float(axes.x), float(axes.y), float(axes.z)};
+    const modelcensus::Colouring how = gamemodels::colouringOf(frame);
+    const bool leavesApart = leavesOwnWay();
+    for (size_t i = 0; i < frame.ids.size() + frame.moving.size() && turn.noted < own_models::kMostNoted; ++i) {
+        const float* toView = nullptr;
+        const gamemodels::Node* n = gameNodeOf(frame, i, toView);
+        if (!n) continue;
+        const uint32_t faces = uint32_t(n->faces.size());
+        if (turn.passed + faces <= turn.from) {  // before this picture's turn
+            turn.passed += faces;
+            continue;
+        }
+        float toWorld[12];
+        if (toView) gamemodels::compose(toView, viewToWorld, toWorld);
+        for (const gamemodels::Face& f : n->faces) {
+            if (turn.noted >= own_models::kMostNoted) break;
+            if (turn.passed++ < turn.from) continue;
+            const uint32_t texture = f.texture < n->textures.size() ? n->textures[f.texture] : 0;
+            if (!texture || (leavesApart && leafyTexture(texture))) continue;
+            float corners[3][3];
+            uint32_t colours[3];
+            gamemodels::faceForLearning(*n, f, toView ? toWorld : nullptr, sign, how, corners, colours);
+            o.learning.note(corners, colours);
+            ++turn.noted;
+        }
+    }
 }
 
 // 3.0.20-beta.9: as the own ground's draws (drawOwnGround) - after the game's draws gathered so far, the own pass
@@ -377,6 +420,45 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
     gameDrawnNodes += o.gameNodes;
     gameDrawnUnknown += o.gameUnknown;
     gameDrawnMoving += gameCardFrame.moving;  // 3.0.20-beta.14
+    checkGameModelsShown(fog);  // 3.0.20-beta.18
+}
+
+void Renderer::Impl::checkGameModelsShown(const own_ground::Shading& fog) {
+    const gamemodels::Frame& frame = gameModelsNow.frame();
+    const size_t all = frame.ids.size() + frame.moving.size();
+    gamemodels::Picture pic;
+    if (!all || !own_ground::viewOf(viewToWorld, pic.view)) return;
+    pic.p = camera::projectionFor(gameWidth, gameHeight);
+    pic.how = gamemodels::colouringOf(frame);
+    pic.fog = fog.fogged() ? &fog : nullptr;
+    pic.plain = fog.specularAt(0.0f);
+    constexpr int kAPicture = 4;
+    for (int k = 0; k < kAPicture; ++k) {
+        const size_t i = shownCheckAt++ % all;
+        const float* toView = nullptr;
+        const gamemodels::Node* n = gameNodeOf(frame, i, toView);
+        if (!n || n->faces.empty()) continue;
+        shownOut.clear();
+        gamemodels::place(*n, pic, shownScratch, shownOut, nullptr, toView);
+        size_t before = 0;  // its corners in front of the eye
+        for (size_t v = 0; v < n->vertices.size() / 3 && v < shownScratch.size(); ++v) before += shownScratch[v].ok;
+        if (!before) continue;
+        ++shownChecked;
+        if (shownOut.triangles) continue;
+        ++shownNone;
+        if (shownExamples.size() >= 4) continue;
+        float at[3] = {n->vertices[0], n->vertices[1], n->vertices[2]};  // its first corner in the world
+        if (toView) {
+            float toWorld[12];
+            gamemodels::compose(toView, viewToWorld, toWorld);
+            gamemodels::transform(toWorld, &n->vertices[0], at);
+        }
+        char example[160];
+        std::snprintf(example, sizeof example, "x %.0f z %.0f y %.0f - %zu faces, %zu corners in front%s%s", at[0],
+                      at[2], at[1], n->faces.size(), before, n->flipped ? ", mirrored" : "",
+                      n->moving ? ", moving" : "");
+        shownExamples.push_back(example);
+    }
 }
 
 // 3.0.20-beta.13 (the owner: «не качаются деревья»): the frame's game models' leaves drawn as the game's own trees - a
@@ -438,6 +520,16 @@ void Renderer::Impl::tellGameModels() {
                  double(gameDrawnMoving) / double(gameDrawnFrames), double(gameDrawnUnknown) / double(gameDrawnFrames));
         gameDrawnFrames = gameDrawnTriangles = gameDrawnNodes = gameDrawnUnknown = gameDrawnByCard = 0;
         gameDrawnMoving = 0;
+    }
+    if (shownChecked) {  // 3.0.20-beta.18
+        std::string examples;
+        for (const std::string& e : shownExamples) examples += (examples.empty() ? "" : "; ") + e;
+        LOG_INFO("game models: %llu of %llu nodes checked by the processor showed no face though in front of the "
+                 "eye%s%s",
+                 static_cast<unsigned long long>(shownNone), static_cast<unsigned long long>(shownChecked),
+                 examples.empty() ? "" : " - ", examples.c_str());
+        shownChecked = shownNone = 0;
+        shownExamples.clear();
     }
     if (gameModels.size() == gameModelsTold) return;
     gameModelsTold = gameModels.size();

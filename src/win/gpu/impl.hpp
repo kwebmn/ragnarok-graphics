@@ -857,8 +857,12 @@ struct Renderer::Impl {
     // processor's time of the passes that read the game's draws or make the own world's, for the log next to cpuTicks
     // 3.0.20-beta.16 (R-GZDPF9: «the own ground» 4.28 ms with our models and their leaves in it): kCpuGameModels the
     // game's models by us wherever drawn (taken out of the own ground's), kCpuGameLeaves their leaves
+    // 3.0.20-beta.18 (the owner's «ок», item 1 - R-DHG86V: «the own ground» the dearest of 29-66 long frames in 30 s,
+    // 8.8-15.7 ms at most): its parts apart - its chunks made (their colours too), put into draws, the models past the
+    // far plane, uploaded and drawn
     enum CpuPart { kCpuGroundNotes, kCpuCasters, kCpuOwnGroundNotes, kCpuOwnGround, kCpuOwnWater, kCpuOwnModelNotes,
-                   kCpuActorShadows, kCpuGameModels, kCpuGameLeaves, kCpuParts };
+                   kCpuActorShadows, kCpuGameModels, kCpuGameLeaves, kCpuOwnChunks, kCpuOwnDraws, kCpuFarModels,
+                   kCpuOwnUpload, kCpuParts };
     // 3.0.19-beta.26 (R-24ZKYP: «the rest» 9.7-11.7 ms): the record's parts around them - the vertices' upload, the
     // textures' uploads, the draws (with the parts above in them), the list's submit; the rest: the present's passes
     LONGLONG geometryTicks = 0, texturesTicks = 0, drawsTicks = 0, submitTicks = 0;
@@ -899,11 +903,14 @@ struct Renderer::Impl {
         LONGLONG& outer;
         LARGE_INTEGER start{};
         CpuTimeWithin(LONGLONG& mine, LONGLONG& around) : own(mine), outer(around) { QueryPerformanceCounter(&start); }
-        ~CpuTimeWithin() {
+        ~CpuTimeWithin() { stop(); }
+        void stop() {  // 3.0.20-beta.18: ended before its scope
+            if (!start.QuadPart) return;
             LARGE_INTEGER now;
             QueryPerformanceCounter(&now);
             own += now.QuadPart - start.QuadPart;
             outer -= now.QuadPart - start.QuadPart;
+            start.QuadPart = 0;
         }
     };
 
@@ -1522,6 +1529,9 @@ struct Renderer::Impl {
         // colours, the mean, the light, the fog, the state, the models' colours, the rest; and the minute's own counts
         uint32_t anew[8] = {0, 0, 0, 0, 0, 0, 0, 0};
         uint32_t minuteFrames = 0, minuteReused = 0;
+        // 3.0.20-beta.18: the minute's slowest picture made (ms) and its chunks given their colours anew; the most so
+        double minuteSlowest = 0;
+        uint32_t minuteSlowestRecoloured = 0, minuteMostRecoloured = 0, recolouredNow = 0;
         // 3.0.18-beta.189 (R-VHMGXR: the ground washed, the models not): the corners' mean last told and how many
         // times its jumps were told on this map
         uint32_t meanTold = 0;
@@ -1574,6 +1584,16 @@ struct Renderer::Impl {
     uint64_t gameDrawnMoving = 0;  // 3.0.20-beta.14: of those nodes, the moving ones (by their matrices)
     size_t gameMovingPlaced = 0;   // the processor's way's this picture
     const gamemodels::Node* gameNodeOf(const gamemodels::Frame& frame, size_t i, const float*& toView) const;
+    void noteGameModelsForFar();  // 3.0.20-beta.18: the frame's nodes we drew into the far models' learning
+    // 3.0.20-beta.18 (R-8UPTJW «кудато стена пропала»: Prontera's south gate, a still node mirrored on z, not seen): a
+    // few of the frame's nodes a picture placed by the processor by the card's rules - those in front of the eye that
+    // show no face told in the 30 s line (where they stand, their faces, mirrored or moving)
+    void checkGameModelsShown(const own_ground::Shading& fog);
+    size_t shownCheckAt = 0;
+    uint64_t shownChecked = 0, shownNone = 0;
+    std::vector<std::string> shownExamples;
+    gamemodels::Placed shownOut;
+    std::vector<gamemodels::Corner> shownScratch;
     gamemodels::Corners ownCorners;
     bool ownCornersMade = false;
     std::vector<uint32_t> gameModelsUnchecked;  // came before our own corners were made

@@ -6,6 +6,7 @@
 
 #include "core/bridge_wire.hpp"
 #include "core/game_models.hpp"
+#include "core/game_models_place.hpp"
 #include "core/view3d.hpp"
 #include "test.hpp"
 
@@ -215,4 +216,27 @@ TEST(game_models_frame_moving_kept_to_the_present) {
     CHECK(!s.frame().empty());
     s.presented();
     CHECK(s.frame().empty() && s.frame().matrices.empty());
+}
+
+// 3.0.20-beta.18 (the owner's «ок», item 2 - with «Моделі нашим рендером» the game draws almost none of its models and
+// the far models learnt their colours from little: R-DHG86V 15 %, R-8UPTJW 3 % of the noted triangles ours): a face we
+// drew as the game's draw of it was for that learning - its corners in the file's places (a moving node's by its
+// matrix into the world, then the map's axes), the colours the game gives them
+TEST(game_models_a_face_for_the_far_models) {
+    gamemodels::Node n;
+    n.vertices = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    gamemodels::Face f;
+    f.v[0] = 0, f.v[1] = 1, f.v[2] = 2;
+    f.colour[0] = 0x00102030u, f.colour[1] = 0x00405060u, f.colour[2] = 0x00708090u;
+    const modelcensus::Colouring plain{modelcensus::Way::Plain, {1.0f, 1.0f, 1.0f}, 0xFF};
+    const float sign[3] = {1.0f, -1.0f, 1.0f};
+    float corners[3][3];
+    uint32_t colours[3];
+    gamemodels::faceForLearning(n, f, nullptr, sign, plain, corners, colours);
+    CHECK(corners[0][0] == 1.0f && corners[0][1] == -2.0f && corners[2][2] == 9.0f);
+    CHECK(colours[0] == modelcensus::expected(plain, 0x00102030u, f.lit) && colours[2] == modelcensus::expected(
+                                                                               plain, 0x00708090u, &f.lit[6]));
+    const float moved[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 100, 0, 0};  // a moving node's own space into the world
+    gamemodels::faceForLearning(n, f, moved, sign, plain, corners, colours);
+    CHECK(corners[0][0] == 101.0f && corners[1][1] == -5.0f);
 }
