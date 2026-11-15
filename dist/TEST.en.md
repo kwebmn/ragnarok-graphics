@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.1 — what's new · 2026-11-15
+
+- **Measuring the models — stage 1 of «Models by our renderer».** Every 30 seconds the log shows how much of a frame the game spends on its models, how many of their nodes and faces it draws, and sets the faces' colours in the game's memory against those it draws. The picture does not change.
+
 # uaRO Graphics 3.0.19 — what's new · 2026-11-15
 
 A new 3D view (Ctrl+Shift+V): the camera behind the character or through its eyes, grass, weather and sky in depth. The game is faster — parts of the game itself rewritten, the ground drawn in batches. The «Reference» shows every monster and your step in quests.
