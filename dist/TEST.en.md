@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.4 — what's new · 2026-11-15
+
+- **Models by our renderer — a trial (stage 2b).** A new switch «Models by our renderer» on the «Game» page, under «3D view» (off). When it is on, in the 3D view the map's still models (houses, trees, walls) are drawn by our renderer — with the same colours, textures and faces as the game's — and the game itself does not work them out. Moving models, the ones that turn see-through in front of the character and models with semi-transparent textures stay the game's. Their shadows and reflections are not there yet. The log tells how many models a frame our renderer drew.
+- **The «moving» models' rule fixed.** Stage 2a took almost every model for a moving one (2105 of 2254 in the report) by a mark that really means «the model blocks the way»; now only models with their own animation count as moving.
+
 # uaRO Graphics 3.0.20-beta.3 — what's new · 2026-11-15
 
 - **The game's models to the renderer (stage 2a of «Models by our renderer»).** The first time the game draws a still model on a map, the driver takes it as the game draws it — its vertices in the world, faces, texture coordinates, colours and textures — and hands it to the renderer. For now the renderer only keeps them and sets them against our own models from the map's files; the log says how many were taken and whether they match ours. The picture does not change.
