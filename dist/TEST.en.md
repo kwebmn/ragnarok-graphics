@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.53 — what's new · 2026-11-15
+
+- **Models faster in the game itself.** Each frame the game filled the vertex room for every face of every model with blank values it then either overwrote at once or never read — the game's own busiest place in the 3D view. Now the room just grows with nothing written, and each model's vertices are projected onto the screen in a row by our code instead of a call per vertex. The same picture, the same numbers.
+
 # uaRO Graphics 3.0.19-beta.52 — what's new · 2026-11-15
 
 - **More on jerks in the log.** The «frames' pace» lines now also tell how much of a long frame its thread really ran (or was kept from the processor), how many of the game's draws it had, and how long the renderer waited for the card. The picture does not change.
