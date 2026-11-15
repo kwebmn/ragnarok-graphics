@@ -2761,7 +2761,24 @@ struct BladeOut {
     float3 colour : TEXCOORD0;
     float viewZ : TEXCOORD1;
     float tip : TEXCOORD2;
+    float fade : TEXCOORD3;  // 3.0.20-beta.26: a thin blade's alpha (core grass3d::fadeOf)
 };
+// 3.0.20-beta.26 (R-PKPE9D «впечатление что трава мигает»): core grass3d's greenness and growOf, the same sums
+float bladeGreen(float3 c) {
+    float a = min((c.g / max(c.r, 1e-4) - 0.96) / 0.05, (c.g / max(c.b, 1e-4) - 1.08) / 0.08);
+    return saturate(min(a, (c.g - 0.08) / 0.04));
+}
+float bladeGrow(float p, float u) { return saturate((p * 1.15 - u) / 0.15); }
+// the picture's colour at a place on it (target pixels) between its four pixels' middles round it - a root's colour
+// glides as the camera moves, not jumps a pixel at a time (uiPixels.xy the picture's size)
+float3 groundColourAt(float2 tp) {
+    float2 p = clamp(tp - 0.5, float2(0.0, 0.0), max(uiPixels.xy - 2.0, float2(0.0, 0.0)));
+    int2 i = int2(floor(p));
+    float2 f = p - floor(p);
+    float3 a = sceneColor.Load(int3(i, 0)).rgb, b = sceneColor.Load(int3(i + int2(1, 0), 0)).rgb;
+    float3 c = sceneColor.Load(int3(i + int2(0, 1), 0)).rgb, d = sceneColor.Load(int3(i + int2(1, 1), 0)).rgb;
+    return lerp(lerp(a, b, f.x), lerp(c, d, f.x), f.y);
+}
 
 float3 bladeView(float3 w) {  // the world -> the view (viewToWorld's rows the view's axes in the world)
     float3 d = w - float3(r9, r10, r11);
@@ -2774,6 +2791,7 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
     o.colour = float3(0.0, 0.0, 0.0);
     o.viewZ = 0.0;
     o.tip = 0.0;
+    o.fade = 0.0;
     uint blade = id / 3u, corner = id % 3u;
     uint member = blade % 3u;  // 3.0.19-beta.38: a tuft of three a root (core grass3d::kTuft)
     blade = blade / 3u;
@@ -2794,7 +2812,10 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
     float dist = length(xz - eye.xz);
     if (dist >= reach || dist < (ring > 0u ? reach * 0.5 : 0.0)) return o;  // past it, or the ring within's
     bool last = ring + 1u >= rings;
-    if (hash12(rid + 4.4) >= 1.0 - saturate((dist - reach * 0.6) / (reach * 0.4)) * (last ? 1.0 : 0.75)) return o;
+    // 3.0.20-beta.26 (R-PKPE9D): a root by the thinning's edge grows and shrinks as the eye moves, not blinks
+    float growKeep = bladeGrow(1.0 - saturate((dist - reach * 0.6) / (reach * 0.4)) * (last ? 1.0 : 0.75),
+                               hash12(rid + 4.4));
+    if (growKeep <= 0.0) return o;
     float y = eye.y + 13.0;  // the feet's, about (y down: the eyes 13 over them)
     bool cellKnown = false;
     float2 span = float2(0.0, 0.0);
@@ -2820,14 +2841,17 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
     }
     if (!found || y > uiPixels.w) return o;  // something else seen there; under the water (up is -y)
     if (cellKnown && (y < span.x - 0.75 || y > span.y + 0.75)) return o;  // a deck, a bridge over the ground
-    float3 rc = sceneColor.Load(int3(int2(tp), 0)).rgb;
-    // 3.0.20-beta.25 (R-6YX3UF: an olive meadow in patches): core grass3d::greenGround
-    if (rc.g < rc.r * 0.985 || rc.g < rc.b * 1.12 || rc.g < 0.1) return o;  // not green ground
+    // 3.0.20-beta.26 (R-PKPE9D «впечатление что трава мигает»: the meadow lies on beta.25's edge of the green - a root
+    // whose pixel crossed it came and went): its colour between the pixels round it, how green a chance against its own
+    float3 rc = groundColourAt(tp);
+    float growGreen = bladeGrow(bladeGreen(rc), hash12(rid + 21.7));
+    if (growGreen <= 0.0) return o;  // not green ground
     // 3.0.19-beta.38 (R-ZMGYMM «трава есть но слабая и практически не видно»): taller, a tuft fanned out, each
     // blade turned to the camera (the view's right along the ground, a little off) - none seen edge on
     float2 seed = rid + float2(float(member) * 3.7, float(member) * 1.3);
     float h = (1.1 + 1.0 * hash12(seed + 2.1)) * 1.5;  // units: some 1.6-3, a character some 16
     h *= (1.0 + 0.35 * float(ring)) * (last ? saturate((reach - dist) / (reach * 0.25)) : 1.0);  // .25: heightOf
+    h *= growKeep * growGreen;  // .26: by the edges, smaller
     float2 facing = normalize(float2(r0, r2) + 1e-4);
     float off = (hash12(seed + 3.3) - 0.5) * 1.0;  // radians off the camera's right
     float2 across2 = float2(facing.x * cos(off) - facing.y * sin(off), facing.x * sin(off) + facing.y * cos(off)) *
@@ -2844,6 +2868,13 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
     }
     float3 base = bladeView(float3(xz.x, y, xz.y));
     if (base.z <= nearZ + 1.0) return o;  // the whole blade in front of the eye
+    // 3.0.20-beta.26 (R-PKPE9D, under DLSS's jitter): one under kMinPixels (2.5) on the target that wide, as much
+    // fainter (core grass3d::fadeOf)
+    float across = 2.0 * length(across2) / base.z * f0 * scale;  // target pixels
+    float wider = across >= 2.5 ? 1.0 : 2.5 / max(across, 1e-3);
+    o.fade = across >= 2.5 ? 1.0 : across / 2.5;
+    if (o.fade < 0.03) return o;
+    across2 *= wider;
     float3 at = corner == 2u ? float3(xz.x + lean.x, y - h, xz.y + lean.y)
                              : float3(xz.x + (corner == 0u ? -across2.x : across2.x), y,
                                       xz.y + (corner == 0u ? -across2.y : across2.y));
@@ -2863,7 +2894,7 @@ float4 grass3d_ps(BladeOut i) : SV_Target {
     if (sceneZ < i.viewZ - 0.08) discard;  // something nearer in front of it
     // 3.0.19-beta.38: dark at the root, lighter and a little yellow at the tip - seen against its own ground;
     // 3.0.20-beta.25 (R-6YX3UF «якась вона не дуже»: grey-black spikes) the root 0.66 of it, not 0.42, the tip 1.22
-    return float4(i.colour * lerp(0.66, 1.22, i.tip) + float3(0.045, 0.04, 0.0) * i.tip, 1.0);
+    return float4(i.colour * lerp(0.66, 1.22, i.tip) + float3(0.045, 0.04, 0.0) * i.tip, i.fade);
 }
 
 // 3.0.19-beta.40 (the owner's «делаем все по порядку»: in the 3D view the weather fell as flat layers over the

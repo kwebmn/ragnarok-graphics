@@ -45,12 +45,13 @@ ID3D12PipelineState* Renderer::Impl::blendPipeline(ID3DBlob*& ps, ID3D12Pipeline
     b.SrcBlend = mode == 1 || mode == 3 ? D3D12_BLEND_ONE : mode == 2 ? D3D12_BLEND_ZERO : D3D12_BLEND_SRC_ALPHA;
     b.DestBlend = mode == 1 ? D3D12_BLEND_ONE : mode == 2 ? D3D12_BLEND_SRC_COLOR : D3D12_BLEND_INV_SRC_ALPHA;
     b.BlendOp = D3D12_BLEND_OP_ADD;
-    b.SrcBlendAlpha = D3D12_BLEND_ZERO;
-    b.DestBlendAlpha = D3D12_BLEND_ONE;
+    b.SrcBlendAlpha = mode == 4 ? D3D12_BLEND_ONE : D3D12_BLEND_ZERO;  // 3.0.20-beta.26: 4 its coverage laid in
+    b.DestBlendAlpha = mode == 4 ? D3D12_BLEND_INV_SRC_ALPHA : D3D12_BLEND_ONE;
     b.BlendOpAlpha = D3D12_BLEND_OP_ADD;
     b.LogicOp = D3D12_LOGIC_OP_NOOP;
     b.RenderTargetWriteMask =
-        D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
+        mode == 4 ? D3D12_COLOR_WRITE_ENABLE_ALL
+                  : D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
     if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
                                                    reinterpret_cast<void**>(&pipelines[code])))) {
         LOG_ERROR("%s: the pipeline onto %u samples failed: none", what, 1u << code);

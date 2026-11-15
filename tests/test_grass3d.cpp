@@ -56,13 +56,45 @@ TEST(grass3d_rings_reach_further_each_twice_as_sparse) {
 }
 
 // 3.0.20-beta.25 (R-6YX3UF: blades in patches on prt_fild08's olive meadow - its pixels' green 0.99-1.03 of their red,
-// the test 1.04): a blade on a pixel whose green is at least 0.985 of its red and 1.12 of its blue - the meadow 64-93 %
-// of its pixels in the report's shot, its sand 0-4 %, the old test 3-44 % and 0-1 %
-TEST(grass3d_green_ground_takes_an_olive_meadow_not_sand) {
-    CHECK(grass3d::greenGround(116.0f / 255.0f, 118.0f / 255.0f, 96.0f / 255.0f));    // the meadow, left
-    CHECK(grass3d::greenGround(131.0f / 255.0f, 130.0f / 255.0f, 103.0f / 255.0f));   // by the feet
-    CHECK(!grass3d::greenGround(175.0f / 255.0f, 167.0f / 255.0f, 146.0f / 255.0f));  // its sand
-    CHECK(!grass3d::greenGround(103.0f / 255.0f, 93.0f / 255.0f, 73.0f / 255.0f));    // a tree's bark
-    CHECK(!grass3d::greenGround(0.05f, 0.06f, 0.04f));                                 // the dark
-    CHECK(!grass3d::greenGround(0.5f, 0.5f, 0.5f));                                    // grey stone
+// the test 1.04); 3.0.20-beta.26 (R-PKPE9D «впечатление что трава мигает»: beta.25's 0.985 a hard edge the meadow lies
+// on - a root whose pixel crossed it as the camera moved came and went): how green a pixel is, 0 to 1 - none below
+// 0.96 of its red or 1.08 of its blue, all past 1.01 and 1.16; the report's meadow, its sand
+TEST(grass3d_greenness_of_an_olive_meadow_not_sand) {
+    CHECK(grass3d::greenness(116.0f / 255.0f, 118.0f / 255.0f, 96.0f / 255.0f) == 1.0f);  // the meadow, left
+    const float feet = grass3d::greenness(131.0f / 255.0f, 130.0f / 255.0f, 103.0f / 255.0f);  // by the feet
+    CHECK(feet > 0.5f && feet < 0.8f);
+    CHECK(grass3d::greenness(175.0f / 255.0f, 167.0f / 255.0f, 146.0f / 255.0f) == 0.0f);  // its sand
+    CHECK(grass3d::greenness(103.0f / 255.0f, 93.0f / 255.0f, 73.0f / 255.0f) == 0.0f);    // a tree's bark
+    CHECK(grass3d::greenness(0.05f, 0.06f, 0.04f) == 0.0f);                                 // the dark
+    CHECK(grass3d::greenness(0.5f, 0.5f, 0.5f) == 0.0f);                                    // grey stone
+    CHECK(grass3d::greenness(0.0f, 0.4f, 0.0f) == 1.0f);                                    // no red, no blue
+}
+
+// 3.0.20-beta.26 (R-PKPE9D): a root by an edge - of the green ground, of a ring's thinning - grows and shrinks with how
+// far it lies inside it, never comes and goes whole: its height share by its chance p and its own number u (0-1); all
+// of them whole at p 1, none at 0
+TEST(grass3d_a_root_by_an_edge_grows_not_blinks) {
+    CHECK(grass3d::growOf(1.0f, 0.0f) == 1.0f && grass3d::growOf(1.0f, 0.999f) == 1.0f);
+    CHECK(grass3d::growOf(0.0f, 0.0f) == 0.0f && grass3d::growOf(0.0f, 0.5f) == 0.0f);
+    const float edge = grass3d::growOf(0.5f, 0.5f);  // just inside: small, a little further in: whole
+    CHECK(edge > 0.0f && edge < 0.6f && grass3d::growOf(0.6f, 0.5f) == 1.0f);
+    CHECK(grass3d::growOf(0.5f, 0.6f) == 0.0f);
+    float before = 0.0f;  // as the chance rises the root only grows
+    for (int k = 0; k <= 100; ++k) {
+        const float g = grass3d::growOf(float(k) / 100.0f, 0.37f);
+        CHECK(g >= before);
+        before = g;
+    }
+}
+
+// 3.0.20-beta.26 (R-PKPE9D, under DLSS's jitter: a far blade under two pixels wide flickered from frame to frame): a
+// blade narrower than kMinPixels on the target drawn that wide, as much fainter
+TEST(grass3d_a_thin_blade_wider_and_fainter) {
+    float wider = 0.0f, alpha = 0.0f;
+    grass3d::fadeOf(5.0f, wider, alpha);
+    CHECK(wider == 1.0f && alpha == 1.0f);
+    grass3d::fadeOf(grass3d::kMinPixels / 2.0f, wider, alpha);
+    CHECK(wider == 2.0f && alpha == 0.5f);
+    grass3d::fadeOf(0.0f, wider, alpha);  // none across: kept finite
+    CHECK(alpha == 0.0f && wider > 0.0f && wider < 1e9f);
 }

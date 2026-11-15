@@ -383,8 +383,10 @@ bool Renderer::Impl::applyGrass3d() {
     grass3dDone = true;
     EffectTime timing(*this, kTimeGrass);
     if (!ensureScene("3D grass")) return true;
-    ID3D12PipelineState* pso = blendPipeline(grass3dPs, grass3dPipelines, upscale ? 1 : samples, "3D grass", 0,
-                                             grass3dVs);
+    // 3.0.20-beta.26 (R-PKPE9D «впечатление что трава мигает», DLSS Quality): under DLSS the blades' coverage into its
+    // mask as the characters' - their history taken by the ground's motion under them, the swaying ones flickered
+    ID3D12PipelineState* pso = upscale ? blendPipeline(grass3dPs, grass3dMaskPipelines, 1, "3D grass", 4, grass3dVs)
+                                       : blendPipeline(grass3dPs, grass3dPipelines, samples, "3D grass", 0, grass3dVs);
     if (!pso) return true;
     if (!copySceneColor() || !copySceneDepth()) return false;
     const bool held = uploadTrample();

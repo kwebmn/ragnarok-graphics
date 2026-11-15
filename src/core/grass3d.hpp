@@ -52,9 +52,37 @@ inline float heightOf(const Grid& g, int ring, float dist) {
     const float reach = g.reachOf(ring), left = (reach - dist) / (reach * 0.25f);
     return tall * (left <= 0.0f ? 0.0f : left >= 1.0f ? 1.0f : left);
 }
-// 3.0.20-beta.25: whether a pixel's colour (0-1) is green ground for a blade - prt_fild08's olive meadow (its green
-// 0.99-1.03 of its red) in, its sand (0.94-0.96) out; the 3.0.19-beta.33 test (1.04 of the red) left the meadow in
-// patches
-inline bool greenGround(float r, float g, float b) { return g >= r * 0.985f && g >= b * 1.12f && g >= 0.1f; }
+// 3.0.20-beta.25: green ground for a blade - prt_fild08's olive meadow (its green 0.99-1.03 of its red) in, its sand
+// (0.94-0.96) out; the 3.0.19-beta.33 test (1.04 of the red) left the meadow in patches. 3.0.20-beta.26 (R-PKPE9D
+// «впечатление что трава мигает»: beta.25's edge at 0.985 ran through the meadow - a root whose pixel crossed it as the
+// camera moved came and went): how green, 0 to 1 - none below 0.96 of its red or 1.08 of its blue, all past 1.01 and
+// 1.16 (grass3d_vs bladeGreen)
+inline float greenness(float r, float g, float b) {
+    const float byRed = (g / (r > 1e-4f ? r : 1e-4f) - 0.96f) / 0.05f;
+    const float byBlue = (g / (b > 1e-4f ? b : 1e-4f) - 1.08f) / 0.08f;
+    float a = byRed < byBlue ? byRed : byBlue;
+    const float byLight = (g - 0.08f) / 0.04f;
+    a = a < byLight ? a : byLight;
+    return a <= 0.0f ? 0.0f : a >= 1.0f ? 1.0f : a;
+}
+// 3.0.20-beta.26: a root by an edge (of the green ground, of a ring's thinning) grows and shrinks with how far inside
+// it lies, never comes and goes whole - its height's share by its chance p (0-1) and its own number u (0-1): all whole
+// at p 1, none at 0, those just inside small (grass3d_vs bladeGrow)
+constexpr float kGrowBand = 0.15f;
+inline float growOf(float p, float u) {
+    const float a = (p * (1.0f + kGrowBand) - u) / kGrowBand;
+    return a <= 0.0f ? 0.0f : a >= 1.0f ? 1.0f : a;
+}
+// 3.0.20-beta.26 (R-PKPE9D, under DLSS's jitter): a blade narrower than kMinPixels on the target drawn that wide, as
+// much fainter - a far blade under two pixels wide flickered from frame to frame
+constexpr float kMinPixels = 2.5f;
+inline void fadeOf(float pixels, float& wider, float& alpha) {
+    if (pixels >= kMinPixels) {
+        wider = alpha = 1.0f;
+        return;
+    }
+    wider = kMinPixels / (pixels > 1e-3f ? pixels : 1e-3f);
+    alpha = pixels > 0.0f ? pixels / kMinPixels : 0.0f;
+}
 
 }  // namespace uagfx::grass3d

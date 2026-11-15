@@ -1185,8 +1185,9 @@ struct Renderer::Impl {
                                      const char* what);  // 0.73
     ID3D12PipelineState* mulPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
                                      const char* what);  // 0.77
-    // mode: 0 by alpha, 1 added, 2 multiplied, 3 premultiplied (0.86); vs: present_vs's full-screen triangle unless
-    // given (3.0.5-beta.19: the weather's quads)
+    // mode: 0 by alpha, 1 added, 2 multiplied, 3 premultiplied (0.86); 4 (3.0.20-beta.26) by alpha, its alpha laid
+    // into the target's too (DLSS's mask, as the characters'); vs: present_vs's full-screen triangle unless given
+    // (3.0.5-beta.19: the weather's quads)
     ID3D12PipelineState* blendPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
                                        const char* what, int mode, ID3DBlob* vs = nullptr);
     void notePortal(const FrameRecord& rec, const DrawCmd& d);
@@ -1834,6 +1835,7 @@ struct Renderer::Impl {
     ID3DBlob* grass3dVs = nullptr;
     ID3DBlob* grass3dPs = nullptr;
     ID3D12PipelineState* grass3dPipelines[4] = {};
+    ID3D12PipelineState* grass3dMaskPipelines[4] = {};  // 3.0.20-beta.26: under DLSS, the blades into its mask
     bool grass3dDone = false;
     std::string grass3dLogged;
     bool grass3dDue() const {
