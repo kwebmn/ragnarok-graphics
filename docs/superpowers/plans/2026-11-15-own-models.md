@@ -259,3 +259,4 @@ again in every face, all of it again whenever the view moved): the renderer's CP
    drawGameLeaves (after the card or the own ground's record, and in the standalone pass); Direct3D 11 drawGameLeaves11
    (its own vertex buffer swapped in as the darkness pass does). core: place(..., only), CardStore::node(id). Test
    game_models_place_only_the_textures_wanted. Untested in the game.
+   The owner on beta.13: «двигаются деревья» - CONFIRMED.
