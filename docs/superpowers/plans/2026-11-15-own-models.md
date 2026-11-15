@@ -173,3 +173,9 @@ again in every face, all of it again whenever the view moved): the renderer's CP
    ~0.6-0.8 ms of the renderer's a frame left for our models (placing ~0.3 on 4 threads, the merge's copy of ~1.4 MB,
    its upload); step 2 would leave ~0.1. Waiting for the owner's beta.8 report (the same place) to size it; a cheaper
    step between: the colours baked a node when the factors change (expected() 3 a face a frame now).
+   R-TEPJQW (the owner, beta.8, prontera 144,191 3D, on): step 1 CONFIRMED - 383-403 nodes / 12.8k triangles a
+   picture, 0 unknown, the shot complete; render64 «the own ground» 2.47-2.76 ms (beta.7 3.94-4.29; off 1.62-2.29),
+   «the game's draws themselves» 2.02-2.17 (off 3.23-3.34), the renderer's CPU 7.8-8.1 ms a frame (beta.7 9.6-10.7;
+   off 9.3-9.8); long frames over 25 ms in 30 s - the renderer's 16-20 of 1800 (beta.7 84-171, off 127), the game's
+   8-9 (off 23-46); GPU calls 310-362 (off 509-774); the game's models 0.42-0.49 ms (off 1.73). Step 2 would take the
+   remaining ~0.5-0.8 ms of «the own ground» on this machine.
