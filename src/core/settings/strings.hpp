@@ -1003,6 +1003,9 @@ enum class Text : uint16_t {
     // «Нове звернення» sent on a thread of its own with its progress
     CardTitleMany, SendingTitle, SendingLogs, SendingShots, SendingUpload, SendingHint, SendingFull, SendingFullDone,
     SendingFullFailed,
+    // 3.0.20-beta.19 (the owner: «такое впечатление что оно не один скрин отправляет а несколько»): one screenshot said
+    // as one, its size in MB
+    SendingShot, SendingFullMany, SendingFullDoneMany,
     Count
 };
 

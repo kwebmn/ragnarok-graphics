@@ -8961,13 +8961,19 @@ constexpr Entry kTexts[] = {
     {Text::SendingUpload, "Uploading to uaro.kiev.ua…", "Передаю на uaro.kiev.ua…", "Передаю на uaro.kiev.ua…"},
     {Text::SendingHint, "The window can be closed - the report goes on its own.",
      "Вікно можна закрити — звернення надішлеться саме.", "Окно можно закрыть — обращение отправится само."},
-    {Text::SendingFull, "Screenshots in full quality: {1} %", "Знімки в повній якості: {1} %",
-     "Снимки в полном качестве: {1} %"},
-    {Text::SendingFullDone, "Screenshots in full quality sent", "Знімки в повній якості надіслано",
+    {Text::SendingFull, "The screenshot in full quality: {1} of {2} MB", "Знімок у повній якості: {1} з {2} МБ",
+     "Снимок в полном качестве: {1} из {2} МБ"},
+    {Text::SendingFullDone, "The screenshot in full quality is sent", "Знімок у повній якості надіслано",
+     "Снимок в полном качестве отправлен"},
+    {Text::SendingFullFailed, "Full quality not sent ({1}) - the site keeps the usual screenshot",
+     "Повну якість не надіслано ({1}) — на сайті лишається звичайний знімок",
+     "Полное качество не отправлено ({1}) — на сайте остаётся обычный снимок"},
+    // 3.0.20-beta.19
+    {Text::SendingShot, "Preparing the screenshot", "Готую знімок", "Готовлю снимок"},
+    {Text::SendingFullMany, "The screenshots in full quality ({3}): {1} of {2} MB",
+     "Знімки в повній якості ({3}): {1} з {2} МБ", "Снимки в полном качестве ({3}): {1} из {2} МБ"},
+    {Text::SendingFullDoneMany, "The screenshots in full quality are sent", "Знімки в повній якості надіслано",
      "Снимки в полном качестве отправлены"},
-    {Text::SendingFullFailed, "Screenshots in full quality not sent ({1}) - the site keeps the smaller ones",
-     "Знімки в повній якості не надіслано ({1}) — на сайті лишаються менші",
-     "Снимки в полном качестве не отправлены ({1}) — на сайте остаются меньшие"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

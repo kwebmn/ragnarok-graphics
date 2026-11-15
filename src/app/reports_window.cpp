@@ -396,6 +396,7 @@ struct SendJob {
     NewReport result;
     std::string failedShot;  // a screenshot that could not be made ready: nothing went
     size_t originals = 0;    // the shots in full quality going after it
+    size_t originalKb = 0;   // 3.0.20-beta.19: their size
     bool listed = false;
     std::vector<reports::Summary> list;  // the site's list after it
 };
@@ -434,6 +435,7 @@ DWORD WINAPI sendJob(void* p) {
     const unsigned serial = job->serial;
     if (code.empty()) originals.clear();
     job->originals = originals.size();
+    for (const auto& o : originals) job->originalKb += o.second.size() / 1024;
     if (!PostMessageW(window, kSendDone, 0, reinterpret_cast<LPARAM>(job))) delete job;  // the window's from here
     size_t total = 0, done = 0;
     for (const auto& o : originals) total += o.second.size();
@@ -443,7 +445,7 @@ DWORD WINAPI sendJob(void* p) {
         const size_t before = done, size = o.second.size();
         ok = sendOriginal(key, code, o.first, o.second, why, [&](size_t part, size_t) {
             const size_t sent = before + std::min(size, part * (size_t(1) << 20));
-            PostMessageW(window, kFullStep, WPARAM(sent * 1000 / std::max<size_t>(total, 1)), LPARAM(serial));
+            PostMessageW(window, kFullStep, WPARAM(sent / 1024), LPARAM(serial));  // 3.0.20-beta.19: KB sent
         });
         if (!ok) break;
         done += size;
@@ -525,7 +527,8 @@ private:
     void startSendJob();                  // 3.0.20-beta.17: kSendStart - the upload made, the job's thread started
     void sendStep(WPARAM stage, LPARAM at);
     void sendDone(SendJob* p);
-    void fullStep(int permille, unsigned serial);
+    void fullStep(size_t kb, unsigned serial);
+    std::wstring fullText(size_t kb) const;  // 3.0.20-beta.19: «Знімок у повній якості: 3,2 з 9,8 МБ»
     void fullDone(FullDone* p);
     void loaded(Loaded* p);
 
@@ -563,6 +566,7 @@ private:
     bool sending_ = false, loading_ = false;  // 3.0.20-beta.17
     Full full_ = Full::None;
     unsigned sends_ = 0, fullSerial_ = 0;  // the sends made; the one whose shots in full go now
+    size_t fullKb_ = 0, fullCount_ = 0;     // 3.0.20-beta.19: their size, how many
     std::wstring barText_;  // the bar's words in full (fitBar shows what fits)
 };
 
@@ -1474,9 +1478,9 @@ void ReportsWindow::startSendJob() {
 
 void ReportsWindow::sendStep(WPARAM stage, LPARAM at) {
     const size_t shot = size_t(at) >> 16, shots = size_t(at) & 0xFFFF;
-    const std::wstring step = SendStage(stage) == SendStage::Shots
-                                  ? tf(Text::SendingShots, {std::to_string(shot), std::to_string(shots)})
-                                  : t(Text::SendingUpload);
+    const std::wstring step = SendStage(stage) != SendStage::Shots ? t(Text::SendingUpload)
+                              : shots == 1                         ? t(Text::SendingShot)  // 3.0.20-beta.19
+                                           : tf(Text::SendingShots, {std::to_string(shot), std::to_string(shots)});
     SetWindowTextW(GetDlgItem(hwnd_, kSendingStep), step.c_str());
 }
 
@@ -1498,9 +1502,11 @@ void ReportsWindow::sendDone(SendJob* p) {
         }
         full_ = job->originals ? Full::Going : Full::None;
         fullSerial_ = job->serial;
+        fullKb_ = job->originalKb;
+        fullCount_ = job->originals;
         if (full_ == Full::Going) {
             setBar(GetDlgItem(hwnd_, kSentBar), 0);
-            SetWindowTextW(GetDlgItem(hwnd_, kSentStep), tf(Text::SendingFull, {"0"}).c_str());
+            SetWindowTextW(GetDlgItem(hwnd_, kSentStep), fullText(0).c_str());
         }
         status(tf(Text::ReportNewSent, {r.code}));
         if (here)
@@ -1517,17 +1523,35 @@ void ReportsWindow::sendDone(SendJob* p) {
     }
 }
 
-void ReportsWindow::fullStep(int permille, unsigned serial) {
+void ReportsWindow::fullStep(size_t kb, unsigned serial) {
     if (full_ != Full::Going || serial != fullSerial_) return;
-    setBar(GetDlgItem(hwnd_, kSentBar), permille);
-    SetWindowTextW(GetDlgItem(hwnd_, kSentStep), tf(Text::SendingFull, {std::to_string(permille / 10)}).c_str());
+    setBar(GetDlgItem(hwnd_, kSentBar), int(std::min<size_t>(kb, fullKb_) * 1000 / std::max<size_t>(fullKb_, 1)));
+    SetWindowTextW(GetDlgItem(hwnd_, kSentStep), fullText(kb).c_str());
+}
+
+// 3.0.20-beta.19: one shot said as one; MB with the language's decimal sign
+std::wstring ReportsWindow::fullText(size_t kb) const {
+    const auto mb = [this](size_t k) {
+        char text[32];
+        std::snprintf(text, sizeof text, "%.1f", double(k) / 1024.0);
+        std::string s = text;
+        if (lang_ != Lang::En)
+            for (char& ch : s)
+                if (ch == '.') ch = ',';
+        return s;
+    };
+    const std::string sent = mb(std::min(kb, fullKb_)), all = mb(fullKb_);
+    return fullCount_ > 1 ? tf(Text::SendingFullMany, {sent, all, std::to_string(fullCount_)})
+                          : tf(Text::SendingFull, {sent, all});
 }
 
 void ReportsWindow::fullDone(FullDone* p) {
     std::unique_ptr<FullDone> done(p);
     if (full_ != Full::Going || done->serial != fullSerial_) return;
     full_ = done->why.empty() ? Full::Done : Full::Failed;
-    const std::wstring words = done->why.empty() ? t(Text::SendingFullDone) : tf(Text::SendingFullFailed, {done->why});
+    const std::wstring words = !done->why.empty() ? tf(Text::SendingFullFailed, {done->why})
+                               : fullCount_ > 1   ? t(Text::SendingFullDoneMany)
+                                                  : t(Text::SendingFullDone);
     SetWindowTextW(GetDlgItem(hwnd_, kSentStep), words.c_str());
     if (pane_ == Pane::Sent) show(Pane::Sent);  // its bar off, the words stay
 }
@@ -1586,7 +1610,7 @@ LRESULT ReportsWindow::proc(UINT msg, WPARAM wp, LPARAM lp) {
             sendDone(reinterpret_cast<SendJob*>(lp));
             return 0;
         case kFullStep:
-            fullStep(int(wp), unsigned(lp));
+            fullStep(size_t(wp), unsigned(lp));
             return 0;
         case kFullDone:
             fullDone(reinterpret_cast<FullDone*>(lp));
