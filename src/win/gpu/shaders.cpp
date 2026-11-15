@@ -2778,14 +2778,23 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
     uint member = blade % 3u;  // 3.0.19-beta.38: a tuft of three a root (core grass3d::kTuft)
     blade = blade / 3u;
     uint side = uint(twinX + 0.5);
-    float gap = max(twinY, 0.05);
+    // 3.0.20-beta.25 (R-6YX3UF «трава в 3д режимі трошки далі не видна»): twinH rings of roots round the eye (core
+    // grass3d, the same sums) - each further one twice as far out, its roots twice as far apart, its blades wider by
+    // as much and a little taller; a ring's outer part thinned to the next one's density, the last one's to none
+    uint ring = blade / (side * side);
+    uint rings = max(uint(twinH + 0.5), 1u);
+    blade = blade % (side * side);
+    float gap = max(twinY, 0.05) * float(1u << ring);
     float3 eye = float3(r9, r10, r11);
     float2 cid = floor(eye.xz / gap) - float(side / 2u) + float2(float(blade % side), float(blade / side));
-    if (hash12(cid + 0.7) > twinW) return o;
-    float2 xz = (cid + 0.15 + 0.7 * float2(hash12(cid + 1.7), hash12(cid + 9.1))) * gap;
+    float2 rid = cid + float(ring) * 17.3;  // each ring's own chances
+    if (hash12(rid + 0.7) > twinW) return o;
+    float2 xz = (cid + 0.15 + 0.7 * float2(hash12(rid + 1.7), hash12(rid + 9.1))) * gap;
     float reach = float(side / 2u) * gap;
     float dist = length(xz - eye.xz);
-    if (dist > reach || (dist > reach * 0.6 && hash12(cid + 4.4) < (dist - reach * 0.6) / (reach * 0.4))) return o;
+    if (dist >= reach || dist < (ring > 0u ? reach * 0.5 : 0.0)) return o;  // past it, or the ring within's
+    bool last = ring + 1u >= rings;
+    if (hash12(rid + 4.4) >= 1.0 - saturate((dist - reach * 0.6) / (reach * 0.4)) * (last ? 1.0 : 0.75)) return o;
     float y = eye.y + 13.0;  // the feet's, about (y down: the eyes 13 over them)
     bool cellKnown = false;
     float2 span = float2(0.0, 0.0);
@@ -2812,15 +2821,17 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
     if (!found || y > uiPixels.w) return o;  // something else seen there; under the water (up is -y)
     if (cellKnown && (y < span.x - 0.75 || y > span.y + 0.75)) return o;  // a deck, a bridge over the ground
     float3 rc = sceneColor.Load(int3(int2(tp), 0)).rgb;
-    if (rc.g < rc.r * 1.04 || rc.g < rc.b * 1.15 || rc.g < 0.12) return o;  // not green ground
+    // 3.0.20-beta.25 (R-6YX3UF: an olive meadow in patches): core grass3d::greenGround
+    if (rc.g < rc.r * 0.985 || rc.g < rc.b * 1.12 || rc.g < 0.1) return o;  // not green ground
     // 3.0.19-beta.38 (R-ZMGYMM «трава есть но слабая и практически не видно»): taller, a tuft fanned out, each
     // blade turned to the camera (the view's right along the ground, a little off) - none seen edge on
-    float2 seed = cid + float2(float(member) * 3.7, float(member) * 1.3);
+    float2 seed = rid + float2(float(member) * 3.7, float(member) * 1.3);
     float h = (1.1 + 1.0 * hash12(seed + 2.1)) * 1.5;  // units: some 1.6-3, a character some 16
+    h *= (1.0 + 0.35 * float(ring)) * (last ? saturate((reach - dist) / (reach * 0.25)) : 1.0);  // .25: heightOf
     float2 facing = normalize(float2(r0, r2) + 1e-4);
     float off = (hash12(seed + 3.3) - 0.5) * 1.0;  // radians off the camera's right
     float2 across2 = float2(facing.x * cos(off) - facing.y * sin(off), facing.x * sin(off) + facing.y * cos(off)) *
-                     (0.08 + 0.06 * hash12(seed + 5.5));
+                     (0.08 + 0.06 * hash12(seed + 5.5)) * float(1u << ring);  // .25: widthOf
     float fanTurn = hash12(seed + 7.3) * 6.2832;
     float phase = hash12(seed + 6.6) * 6.2832;
     float2 lean = sourceRect.zw * (0.35 + 0.25 * sin(sharpen * 2.1 + phase)) * h;
@@ -2839,7 +2850,8 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
     float3 v = bladeView(at);
     float2 px = float2(v.x / v.z * f0 + cx, v.y / v.z * f1 + cy) * scale + 0.5 + float2(jitterX, jitterY);
     o.pos = float4(px.x * 2.0 / targetSize.x - 1.0, 1.0 - px.y * 2.0 / targetSize.y, 0.5, 1.0);
-    o.colour = rc * (0.88 + 0.24 * hash12(seed + 8.8));  // each blade a little its own
+    // each blade a little its own; 3.0.20-beta.25 a little greener than its ground (R-6YX3UF: grey spikes)
+    o.colour = rc * float3(0.94, 1.04, 0.9) * (0.88 + 0.24 * hash12(seed + 8.8));
     o.viewZ = v.z;
     o.tip = corner == 2u ? 1.0 : 0.0;
     return o;
@@ -2849,8 +2861,9 @@ float4 grass3d_ps(BladeOut i) : SV_Target {
     float raw = sceneDepth.Load(int3(int2(i.pos.xy), 0));
     float sceneZ = raw >= 0.99999 ? 1e6 : viewDepth(raw);
     if (sceneZ < i.viewZ - 0.08) discard;  // something nearer in front of it
-    // 3.0.19-beta.38: dark at the root, lighter and a little yellow at the tip - seen against its own ground
-    return float4(i.colour * lerp(0.42, 1.38, i.tip) + float3(0.045, 0.04, 0.0) * i.tip, 1.0);
+    // 3.0.19-beta.38: dark at the root, lighter and a little yellow at the tip - seen against its own ground;
+    // 3.0.20-beta.25 (R-6YX3UF «якась вона не дуже»: grey-black spikes) the root 0.66 of it, not 0.42, the tip 1.22
+    return float4(i.colour * lerp(0.66, 1.22, i.tip) + float3(0.045, 0.04, 0.0) * i.tip, 1.0);
 }
 
 // 3.0.19-beta.40 (the owner's «делаем все по порядку»: in the 3D view the weather fell as flat layers over the

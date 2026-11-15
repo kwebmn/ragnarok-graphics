@@ -413,6 +413,7 @@ bool Renderer::Impl::applyGrass3d() {
     c.twin[0] = float(grid.side);
     c.twin[1] = grid.step;
     c.twin[2] = float(std::clamp(effects.grassAmount, 0, 100)) / 100.0f;  // .38: every root at 100 %
+    c.twin[3] = float(grid.rings);  // 3.0.20-beta.25
     c.sharpen = waterTime();
     if (windShared()) {
         c.sourceRect[2] = windNow.x * windNow.strength;
@@ -429,9 +430,10 @@ bool Renderer::Impl::applyGrass3d() {
     }
     if (grass3dLogged != mapName) {
         grass3dLogged = mapName;
-        LOG_INFO("3D grass: on %s - %u tufts of %u blades round the eye, %.1f apart (%.0f each way)%s",
-                 mapName.c_str(), grid.blades(), grass3d::kTuft, double(grid.step), double(grid.reach()),
-                 cells != kNoSrv ? ", on the map's own ground" : "");
+        LOG_INFO("3D grass: on %s - %u tufts of %u blades round the eye in %d rings, %.1f apart at first (%.0f each "
+                 "way, %.0f in all)%s",
+                 mapName.c_str(), grid.blades(), grass3d::kTuft, grid.rings, double(grid.step),
+                 double(grid.reachOf(0)), double(grid.reach()), cells != kNoSrv ? ", on the map's own ground" : "");
     }
     return worldPass(pso, w, h, c, sceneColorSrv, true, held ? trampleSrv : sceneColorSrv, nullptr, grid.vertices(),
                      cells);

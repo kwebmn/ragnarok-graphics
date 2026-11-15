@@ -14,13 +14,47 @@ constexpr float kStep = 0.5f, kStepThin = 0.6f;
 // blades a root, taller, turned to the camera, darker at the root and lighter at the tip - one thin blade of the
 // ground's own colour was lost in it
 constexpr uint32_t kTuft = 3;
+// 3.0.20-beta.25 (R-6YX3UF «трава в 3д режимі трошки далі не видна і якась вона не дуже»: none past some 55 units, its
+// edge thinned at random): rings of roots round the eye - the first as the grid was, each further one twice as far
+// out, its roots twice as far apart (side x side of them again, those of the rings within left out), its blades wider
+// by as much and a little taller; a ring's outer part thinned to the next one's density, the last one's to none with
+// its blades shrinking to nothing (grass3d_vs the same sums)
+constexpr int kRings = 3, kRingsThin = 2;
 struct Grid {
     int side = kSide;
     float step = kStep;
-    uint32_t blades() const { return uint32_t(side) * uint32_t(side); }  // the roots
+    int rings = kRings;
+    uint32_t roots() const { return uint32_t(side) * uint32_t(side); }  // a ring's
+    uint32_t blades() const { return roots() * uint32_t(rings); }        // the roots of them all
     uint32_t vertices() const { return blades() * 3u * kTuft; }
-    float reach() const { return float(side / 2) * step; }  // from the eye
+    float stepOf(int ring) const { return step * float(1 << ring); }
+    float reachOf(int ring) const { return float(side / 2) * stepOf(ring); }  // from the eye
+    float reach() const { return reachOf(rings - 1); }
 };
-inline Grid gridFor(bool thin) { return thin ? Grid{kSideThin, kStepThin} : Grid{kSide, kStep}; }
+inline Grid gridFor(bool thin) { return thin ? Grid{kSideThin, kStepThin, kRingsThin} : Grid{kSide, kStep, kRings}; }
+// the ring a root `dist` from the eye is of; -1 past them all
+inline int ringOf(const Grid& g, float dist) {
+    for (int k = 0; k < g.rings; ++k)
+        if (dist < g.reachOf(k)) return k;
+    return -1;
+}
+// the chance a root of `ring` is kept: all of them inside 60 % of its reach, then fewer to the next ring's density at
+// its edge (a quarter), the last ring's to none
+inline float keepOf(const Grid& g, int ring, float dist) {
+    const float reach = g.reachOf(ring);
+    const float t = dist <= reach * 0.6f ? 0.0f : dist >= reach ? 1.0f : (dist - reach * 0.6f) / (reach * 0.4f);
+    return 1.0f - t * (ring + 1 >= g.rings ? 1.0f : 0.75f);
+}
+inline float widthOf(int ring) { return float(1 << ring); }
+inline float heightOf(const Grid& g, int ring, float dist) {
+    const float tall = 1.0f + 0.35f * float(ring);
+    if (ring + 1 < g.rings) return tall;
+    const float reach = g.reachOf(ring), left = (reach - dist) / (reach * 0.25f);
+    return tall * (left <= 0.0f ? 0.0f : left >= 1.0f ? 1.0f : left);
+}
+// 3.0.20-beta.25: whether a pixel's colour (0-1) is green ground for a blade - prt_fild08's olive meadow (its green
+// 0.99-1.03 of its red) in, its sand (0.94-0.96) out; the 3.0.19-beta.33 test (1.04 of the red) left the meadow in
+// patches
+inline bool greenGround(float r, float g, float b) { return g >= r * 0.985f && g >= b * 1.12f && g >= 0.1f; }
 
 }  // namespace uagfx::grass3d
