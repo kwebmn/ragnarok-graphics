@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.33 — what's new · 2026-11-16
+
+- **The models' leaves from the graphics card (Direct3D 12).** Until now the leaves of the trees drawn by «Models by our renderer» were laid out by the processor every frame, face by face (0.24–0.54 ms of a frame in the reports). Now the leaves' faces come from the same graphics card memory as the models themselves, and the processor only works out each tree's crown box — for the wind's sway, the crown's volume, the light through the leaves, the tints and the crowns the falling leaves start from. The sway is the same formula, so it looks the same. The reflections in the water and the torches' shadows take the leaves from the card.
+
 # uaRO Graphics 3.0.20-beta.32 — what's new · 2026-11-16
 
 - **3D view: the water reflects the real sky.** Where there was nothing on the screen to reflect, the water reflected one even horizon colour and looked flat at a low angle. Now it reflects the 3D view's sky itself along the way the reflection looks: the horizon up to the zenith, the map's sun and the drifting clouds (one function draws the sky and its reflection, so they match). The fine ripples calm far off: distant water is a smooth mirror of the sky rather than a field of glints. Direct3D 12 and Direct3D 11.
