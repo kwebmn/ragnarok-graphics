@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.19-beta.54 — what's new · 2026-11-15
+
+- **The character in the middle in 3D.** From behind, the character now stands in the middle of the screen and the camera a little over its head — the crosshair over the head. The old way, over the shoulder: the switch «Camera over the shoulder» in the «3D view» section of the «Game» page.
+- **Shift: the camera round the character.** Hold Shift and move the mouse: the camera turns round the character while it keeps its facing — look at it from the front or the side. Let go and the camera glides back behind it. While a skill waits for its target, Shift works as in the game.
+
 # uaRO Graphics 3.0.19-beta.53 — what's new · 2026-11-15
 
 - **Models faster in the game itself.** Each frame the game filled the vertex room for every face of every model with blank values it then either overwrote at once or never read — the game's own busiest place in the 3D view. Now the room just grows with nothing written, and each model's vertices are projected onto the screen in a row by our code instead of a call per vertex. The same picture, the same numbers.
