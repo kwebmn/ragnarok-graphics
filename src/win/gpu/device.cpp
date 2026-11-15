@@ -714,6 +714,14 @@ void Renderer::Impl::flushDraws() {
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &p.c, 0);
     const batch::Kind kind = pendingBatch.kind();
     list->IASetPrimitiveTopology(kind == batch::Kind::Quads ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST : p.topology);
+    if (p.card) {  // 3.0.20-beta.11: the game's still models' faces from the card - their numbers, an instance each
+        const D3D12_VERTEX_BUFFER_VIEW faces{vertexBase + pendingBatch.firstByte(), p.card * 4, 4};
+        list->IASetVertexBuffers(0, 1, &faces);
+        list->DrawInstanced(3, p.card, 0, 0);
+        ++drawCalls;
+        pendingBatch.close();
+        return;
+    }
     const UINT stride = pendingBatch.stride();
     const D3D12_VERTEX_BUFFER_VIEW vb{vertexBase + pendingBatch.firstByte(), pendingBatch.vertices() * stride, stride};
     list->IASetVertexBuffers(0, 1, &vb);
@@ -1923,6 +1931,15 @@ void Renderer::Impl::destroy() {
     releaseCom(grass3dVs);  // 3.0.19-beta.33
     releaseCom(grass3dPs);
     releaseCom(weather3dVs);  // 3.0.19-beta.40
+    releaseCom(modelVs);      // 3.0.20-beta.11
+    if (gameFaces) {
+        gameFaces->Unmap(0, nullptr);
+        gameFacesMapped = nullptr;
+    }
+    releaseCom(gameFaces);
+    gameFacesSrv = kNoSrv;  // the heaps go with the device: made again with the next one
+    gameFacesRoom = gameFacesUp = 0;
+    gameFacesFailed = false;
     releaseCom(weather3dPs);
     releaseCom(crittersData);
     releaseCom(hillsData);  // 1.15

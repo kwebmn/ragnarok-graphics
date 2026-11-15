@@ -31,6 +31,7 @@
 #include "core/gpu_timing.hpp"
 #include "core/ground_cells.hpp"
 #include "core/hills.hpp"
+#include "core/game_models_card.hpp"
 #include "core/game_models_place.hpp"
 #include "core/own_ground.hpp"
 #include "core/own_models.hpp"
@@ -310,6 +311,7 @@ struct Renderer::Impl {
         Constants c{};
         D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         UINT indexCount = 0, firstIndex = 0;
+        UINT card = 0;  // 3.0.20-beta.11: the game's still models' faces from the card - so many instances (model_vs)
         bool sameState(const PendingDraw& o) const {
             return pso == o.pso && textureKey == o.textureKey && samplers.ptr == o.samplers.ptr &&
                    hasScene == o.hasScene && sceneKey == o.sceneKey && topology == o.topology &&
@@ -657,6 +659,7 @@ struct Renderer::Impl {
     // weather3d) - blown by the shared wind as far as weather3dDrift (world units, x and z) so far
     ID3DBlob* weather3dVs = nullptr;
     ID3DBlob* weather3dPs = nullptr;
+    ID3DBlob* modelVs = nullptr;  // 3.0.20-beta.11: the game's still models from the card (game_models.cpp)
     ID3D12PipelineState* weather3dPipelines[4] = {};
     std::string weather3dLogged;
     float weather3dDrift[2] = {0.0f, 0.0f};
@@ -962,7 +965,8 @@ struct Renderer::Impl {
     // pass: they go first)
     bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors = 2, float bias = 0.0f,
                   bool fromDraw = false);
-    D3D12_GPU_DESCRIPTOR_HANDLE sceneTable(UINT t2, UINT t3, UINT t4, UINT t5 = kNoSrv);  // 0.19, kRootScene
+    // 0.19, kRootScene; 3.0.20-beta.11: t6 - the game's still models' faces for model_vs (t2 when none)
+    D3D12_GPU_DESCRIPTOR_HANDLE sceneTable(UINT t2, UINT t3, UINT t4, UINT t5 = kNoSrv, UINT t6 = kNoSrv);
     // 3.0.5-beta.3: `keyOut` - the pipeline's key (the state's own draw shader is chosen by it, variantPipeline)
     ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer = false,
                                      bool toGlow = false, bool water = false, bool mask = false,
@@ -1554,6 +1558,7 @@ struct Renderer::Impl {
     // 3.0.20-beta.7 (R-Y2JJKH: the models left out and none drawn, nothing in the log to tell): the pictures that drew
     // the game's still models in the last 30 s, their triangles, nodes and nodes unknown to the renderer
     uint64_t gameDrawnFrames = 0, gameDrawnTriangles = 0, gameDrawnNodes = 0, gameDrawnUnknown = 0;
+    uint64_t gameDrawnByCard = 0;  // 3.0.20-beta.11: of those pictures, from the card
     gamemodels::Corners ownCorners;
     bool ownCornersMade = false;
     std::vector<uint32_t> gameModelsUnchecked;  // came before our own corners were made
@@ -1577,6 +1582,26 @@ struct Renderer::Impl {
     static constexpr size_t kGameNodesAJob = 8;
     std::vector<gamemodels::Placed> gameOuts;
     std::vector<std::vector<gamemodels::Corner>> gameScratch;
+    // 3.0.20-beta.11 (the owner's «делай все сразу», step 2): the game's still models from the card - their faces in
+    // the card's form (core/game_models_card) in a buffer the card reads (an upload heap's, mapped; t6 of the scene's
+    // table), the frame's faces of a texture an instance each (their numbers in the record's vertices), model_vs; the
+    // processor's way (drawGameModels) where the card's is missing or failed
+    gamemodels::CardStore gameCards;
+    gamemodels::CardFrame gameCardFrame;
+    ID3D12Resource* gameFaces = nullptr;
+    uint8_t* gameFacesMapped = nullptr;
+    UINT gameFacesSrv = kNoSrv;
+    uint32_t gameFacesRoom = 0, gameFacesUp = 0;
+    bool gameFacesFailed = false;
+    FrameRecord cardRec;
+    std::vector<UINT> cardCounts;
+    bool cardModelsDraw = false;  // draw() draws a texture's faces from the card (cardCount of them)
+    UINT cardCount = 0;
+    const own_ground::Shading* cardFog = nullptr;  // the fog they take (the own ground's or gameFog)
+    std::vector<uint32_t> cardPacked;
+    bool cardModelsReady() const { return modelVs && !gameFacesFailed; }
+    bool ensureGameFaces(uint32_t faces);
+    void drawGameModelsCard(const own_ground::Shading& fog);
     uint64_t gameFrameKey() const;
     bool makeOwnCorners();
     void checkGameModel(const gamemodels::Node& n);

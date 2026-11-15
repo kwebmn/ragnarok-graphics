@@ -146,7 +146,8 @@ TEST(pipeline_key_each_form_the_renderer_never_makes_is_rejected) {
     CHECK(validPipelineKey(packPipelineKey(good) | uint64_t(1) << 27));   // 2.5: bit 27 is the lean shader
     CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 28));  // 2.6.3: a step deeper - never blended
     CHECK(validPipelineKey(packPipelineKey(good) | uint64_t(1) << 29));   // 2.7.54: bit 29 the warp's shader
-    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 30));  // a bit past the packed fields
+    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 30));  // 3.0.20-beta.11: card models never blended
+    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 31));  // a bit past the packed fields
     CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 63));
 }
 
@@ -362,4 +363,41 @@ TEST(pipeline_key_glass_is_an_interface_draw_in_the_layer) {
     k.shader = DrawShader::Backdrop;
     CHECK(validPipelineKey(packPipelineKey(k)));
     CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
+}
+
+// 3.0.20-beta.11 (the owner's «делай все сразу», step 2: the game's still models from the card in Direct3D 12): a key
+// of its own - model_vs and the faces' numbers as the instances - for a draw of the world with the game's one texture
+// coordinate, never the layer, the water or another shader
+TEST(pipeline_key_card_models_is_a_key_of_its_own) {
+    DrawSetup s;
+    s.zEnable = true;
+    s.zWrite = true;
+    s.zFunc = CMP_LESSEQUAL;
+    s.cull = CULL_NONE;
+    PipelineKey k = pipelineKey(s, FVF_TL1);
+    const uint64_t plain = packPipelineKey(k);
+    k.cardModels = true;
+    CHECK(unpackPipelineKey(packPipelineKey(k)) == k && unpackPipelineKey(packPipelineKey(k)).cardModels);
+    CHECK(packPipelineKey(k) != plain && validPipelineKey(packPipelineKey(k)));
+    k.behind = true;  // a model a step behind the ground, as the game's own
+    CHECK(validPipelineKey(packPipelineKey(k)));
+    PipelineKey bad = k;
+    bad.twoUv = true;
+    CHECK(!validPipelineKey(packPipelineKey(bad)));
+    bad = k;
+    bad.layer = true;
+    bad.zEnable = false;
+    bad.zWrite = false;
+    bad.zFunc = CMP_ALWAYS;
+    bad.behind = false;
+    CHECK(!validPipelineKey(packPipelineKey(bad)));
+    bad = k;
+    bad.water = true;
+    CHECK(!validPipelineKey(packPipelineKey(bad)));
+    bad = k;
+    bad.behind = false;
+    bad.blend = true;
+    bad.srcBlend = BLEND_SRCALPHA;
+    bad.dstBlend = BLEND_INVSRCALPHA;
+    CHECK(!validPipelineKey(packPipelineKey(bad)));
 }

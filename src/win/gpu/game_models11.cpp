@@ -17,13 +17,7 @@ namespace uagfx::gpu {
 
 namespace {
 
-constexpr uint32_t kFaceWords = 20;  // five uint4 a face (model_vs)
-
-uint32_t bitsOf(float f) {
-    uint32_t u;
-    std::memcpy(&u, &f, sizeof u);
-    return u;
-}
+constexpr uint32_t kFaceWords = gamemodels::kCardFaceWords;  // five uint4 a face (model_vs)
 
 template <typename T>
 void release(T*& p) {
@@ -31,61 +25,15 @@ void release(T*& p) {
     p = nullptr;
 }
 
-// the frame's colouring as a key: its factors' bits and its way (never 0)
-uint64_t keyOf(const gamemodels::Frame& f) {
-    uint64_t h = 1469598103934665603ull;
-    const auto mix = [&h](uint32_t v) {
-        for (int b = 0; b < 4; ++b) h = (h ^ ((v >> (8 * b)) & 0xFF)) * 1099511628211ull;
-    };
-    for (const float k : f.factors) mix(bitsOf(k));
-    mix(f.lit ? 1u : 0u);
-    return h | 1;
-}
-
 }  // namespace
 
 void Renderer11::addGameModel(const gamemodels::Node& n) {
     if (n.map != modelsMap_) {  // a new map's first: the last map's let go
-        models_.clear();
-        modelFaceData_.clear();
+        modelCards_.clear();
         modelFacesUp_ = 0;
         modelsMap_ = n.map;
     }
-    if (models_.count(n.id)) return;
-    ModelNode11& m = models_[n.id];
-    m.node = n;
-    m.first = uint32_t(modelFaceData_.size() / kFaceWords);
-    // its faces by texture - the game's order kept within one -, the ones of a texture the renderer has not left out
-    for (size_t f = 0; f < n.faces.size(); ++f)
-        if (n.faces[f].texture < n.textures.size() && n.textures[n.faces[f].texture]) m.order.push_back(uint16_t(f));
-    std::stable_sort(m.order.begin(), m.order.end(), [&n](uint16_t a, uint16_t b) {
-        return n.textures[n.faces[a].texture] < n.textures[n.faces[b].texture];
-    });
-    for (size_t k = 0; k < m.order.size(); ++k) {
-        const gamemodels::Face& f = n.faces[m.order[k]];
-        const uint32_t texture = n.textures[f.texture];
-        if (m.runs.empty() || m.runs.back().texture != texture)
-            m.runs.push_back(ModelRun11{texture, m.first + uint32_t(k), 0});
-        ++m.runs.back().count;
-        uint32_t words[kFaceWords] = {};
-        for (int c = 0; c < 3; ++c) {
-            const float* p = &n.vertices[size_t(f.v[c]) * 3];
-            for (int a = 0; a < 3; ++a) words[4 * c + a] = bitsOf(p[a]);
-        }
-        for (int i = 0; i < 6; ++i) words[12 + i] = bitsOf(f.uv[i]);
-        words[18] = ((f.flags & gamemodels::kTwoSided) ? 1u : 0u) | (n.flipped ? 2u : 0u);
-        modelFaceData_.insert(modelFaceData_.end(), words, words + kFaceWords);
-    }
-    if (modelColoursKey_) bakeModelColours(m);
-}
-
-// a node's corners' colours as the game colours them this frame (modelHow_) - each face's words 3, 7 and 11
-void Renderer11::bakeModelColours(ModelNode11& m) {
-    for (size_t k = 0; k < m.order.size(); ++k) {
-        const gamemodels::Face& f = m.node.faces[m.order[k]];
-        uint32_t* words = modelFaceData_.data() + size_t(m.first + k) * kFaceWords;
-        for (int c = 0; c < 3; ++c) words[4 * c + 3] = modelcensus::expected(modelHow_, f.colour[c], &f.lit[3 * c]);
-    }
+    modelCards_.add(n);  // 3.0.20-beta.11: core/game_models_card - coloured at once when the colours are known
 }
 
 // room on the card for `faces` faces: grown twice at a time, everything written again then
@@ -146,45 +94,21 @@ void Renderer11::drawGameModels11() {
     const gamemodels::Frame& frame = modelsNow_.frame();
     if (ready && !frame.ids.empty()) {
         // the colours as the game makes them with this frame's factors (again for every node when they changed)
-        const uint64_t key = keyOf(frame);
-        if (key != modelColoursKey_) {
-            modelColoursKey_ = key;
-            modelHow_.way = frame.lit ? modelcensus::Way::Lit : modelcensus::Way::Plain;
-            std::copy(frame.factors, frame.factors + 3, modelHow_.factors);
-            modelHow_.alpha = 0xFF;
-            for (auto& [id, m] : models_) bakeModelColours(m);
+        const uint64_t key = gamemodels::colouringKey(frame);
+        if (key != modelCards_.colouredWith()) {
+            modelCards_.colour(gamemodels::colouringOf(frame), key);
             modelFacesUp_ = 0;
         }
-        const uint32_t faces = uint32_t(modelFaceData_.size() / kFaceWords);
+        const uint32_t faces = modelCards_.faces();
         if (faces && ensureModelFaces(faces)) {
             if (modelFacesUp_ < faces) {  // the faces not on the card yet
                 const D3D11_BOX box{modelFacesUp_ * kFaceWords * 4, 0, 0, faces * kFaceWords * 4, 1, 1};
-                const uint32_t* fresh = modelFaceData_.data() + size_t(modelFacesUp_) * kFaceWords;
+                const uint32_t* fresh = modelCards_.words().data() + size_t(modelFacesUp_) * kFaceWords;
                 ctx_->UpdateSubresource(modelFaces_, 0, &box, fresh, 0, 0);
                 modelFacesUp_ = faces;
             }
-            // the frame's faces by texture, the textures in the order first met
-            modelTextures_.clear();
-            modelTextureAt_.clear();
-            for (std::vector<uint32_t>& list : modelTextureFaces_) list.clear();
-            uint64_t nodes = 0, unknown = 0;
-            for (const uint32_t id : frame.ids) {
-                const auto it = models_.find(id);
-                if (it == models_.end()) {
-                    ++unknown;
-                    continue;
-                }
-                ++nodes;
-                for (const ModelRun11& r : it->second.runs) {
-                    const auto [at, fresh] = modelTextureAt_.try_emplace(r.texture, uint32_t(modelTextures_.size()));
-                    if (fresh) {
-                        modelTextures_.push_back(r.texture);
-                        if (modelTextureFaces_.size() < modelTextures_.size()) modelTextureFaces_.emplace_back();
-                    }
-                    std::vector<uint32_t>& list = modelTextureFaces_[at->second];
-                    for (uint32_t k = 0; k < r.count; ++k) list.push_back(r.first + k);
-                }
-            }
+            modelCards_.frameOf(frame.ids, modelFrame_);  // the frame's faces by texture, the textures first met
+            const uint64_t nodes = modelFrame_.nodes, unknown = modelFrame_.unknown;
             modelInstanceData_.clear();
             modelDraws_.clear();
             modelRec_.reset();
@@ -192,14 +116,14 @@ void Renderer11::drawGameModels11() {
             st.cull = d3d7::CULL_NONE;  // culled in model_vs as the game culls
             const uint32_t state = modelRec_.addState(st);
             static const uint8_t kNone[3 * 32] = {};  // the record's draw: three vertices of nothing (model_vs reads)
-            for (size_t t = 0; t < modelTextures_.size(); ++t) {
-                const std::vector<uint32_t>& list = modelTextureFaces_[t];
+            for (size_t t = 0; t < modelFrame_.textures.size(); ++t) {
+                const std::vector<uint32_t>& list = modelFrame_.faces[t];
                 if (list.empty()) continue;
                 modelDraws_.push_back(ModelDraw11{uint32_t(modelInstanceData_.size()), uint32_t(list.size())});
                 modelInstanceData_.insert(modelInstanceData_.end(), list.begin(), list.end());
                 DrawCmd cmd;
                 cmd.state = state;
-                cmd.texture[0] = modelTextures_[t];
+                cmd.texture[0] = modelFrame_.textures[t];
                 cmd.primitive = d3d7::PT_TRIANGLELIST;
                 cmd.fvf = d3d7::FVF_TL1;
                 modelRec_.draw(cmd, kNone, 3, nullptr, 0);

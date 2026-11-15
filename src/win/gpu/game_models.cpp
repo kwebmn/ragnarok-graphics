@@ -12,6 +12,8 @@ namespace uagfx::gpu {
 // first one lets the last map's go
 void Renderer::Impl::addGameModel(const gamemodels::Node& n) {
     if (n.map != gameModelsMap) {
+        gameCards.clear();  // 3.0.20-beta.11
+        gameFacesUp = 0;
         gameModels.clear();
         gameModelFaces = gameModelCorners = gameModelCornersOurs = gameModelsTold = 0;
         ownCorners.clear();
@@ -21,6 +23,7 @@ void Renderer::Impl::addGameModel(const gamemodels::Node& n) {
     }
     const auto [it, fresh] = gameModels.insert_or_assign(n.id, n);
     if (!fresh) return;  // the same node again: the first one kept its count
+    gameCards.add(n);  // 3.0.20-beta.11: in the card's form too
     gameModelFaces += n.faces.size();
     if (makeOwnCorners())
         checkGameModel(it->second);
@@ -156,7 +159,10 @@ bool Renderer::Impl::drawGameModelsAlone() {
     OwnState& o = ownState;
     own_ground::View view;
     const bool ready = o.modelLikeKnown && viewToWorldValid && own_ground::viewOf(viewToWorld, view);
-    if (ready && !gameModelsNow.frame().ids.empty()) {
+    if (ready && !gameModelsNow.frame().ids.empty() && cardModelsReady()) {  // 3.0.20-beta.11: from the card
+        gameFog.fit();
+        drawGameModelsCard(gameFog);
+    } else if (ready && !gameModelsNow.frame().ids.empty()) {
         const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
         gameFog.fit();
         gameRec.reset();
@@ -170,6 +176,10 @@ bool Renderer::Impl::drawGameModelsAlone() {
             ownPass = false;
             geometryList = 0;  // the game's record's vertices go up again with its next draw
         }
+        ++gameDrawnFrames;  // 3.0.20-beta.11: for the log
+        gameDrawnTriangles += o.gameTriangles;
+        gameDrawnNodes += o.gameNodes;
+        gameDrawnUnknown += o.gameUnknown;
     }
     gameModelsNow.drawn(ready);  // the driver's word: from the present on
     return true;
@@ -195,13 +205,136 @@ void Renderer::Impl::noteGameFog(const FrameRecord& rec, const DrawCmd& d) {
     }
 }
 
+// 3.0.20-beta.11: room in the card's buffer of faces for `faces` - an upload heap's (the card reads it where it lies,
+// the processor writes into it mapped), grown twice at a time; the last one let go once the card is done with it
+bool Renderer::Impl::ensureGameFaces(uint32_t faces) {
+    if (gameFaces && gameFacesRoom >= faces) return true;
+    uint32_t room = std::max<uint32_t>(gameFacesRoom, 4096);
+    while (room < faces) room *= 2;
+    D3D12_HEAP_PROPERTIES heap{};
+    heap.Type = D3D12_HEAP_TYPE_UPLOAD;
+    D3D12_RESOURCE_DESC desc{};
+    desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    desc.Width = UINT64(room) * gamemodels::kCardFaceWords * 4;
+    desc.Height = 1;
+    desc.DepthOrArraySize = 1;
+    desc.MipLevels = 1;
+    desc.Format = DXGI_FORMAT_UNKNOWN;
+    desc.SampleDesc.Count = 1;
+    desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    ID3D12Resource* made = nullptr;
+    HRESULT hr = device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ,
+                                                 nullptr, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&made));
+    void* mapped = nullptr;
+    if (SUCCEEDED(hr)) {
+        const D3D12_RANGE none{0, 0};
+        hr = made->Map(0, &none, &mapped);
+    }
+    if (gameFacesSrv == kNoSrv) gameFacesSrv = allocSrv();
+    if (FAILED(hr) || !mapped || gameFacesSrv == kNoSrv) {
+        LOG_ERROR("game models: no buffer on the card for %u faces (0x%08lX) - placed by the processor from now on",
+                  room, static_cast<unsigned long>(hr));
+        if (made) made->Release();
+        gameFacesFailed = true;
+        return false;
+    }
+    if (gameFaces) {  // the card may still read the old one: let go with its list
+        gameFaces->Unmap(0, nullptr);
+        discard(gameFaces);
+    }
+    gameFaces = made;
+    gameFacesMapped = static_cast<uint8_t*>(mapped);
+    gameFacesRoom = room;
+    gameFacesUp = 0;
+    D3D12_SHADER_RESOURCE_VIEW_DESC v{};
+    v.Format = DXGI_FORMAT_R32G32B32A32_UINT;
+    v.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+    v.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    v.Buffer.NumElements = room * (gamemodels::kCardFaceWords / 4);
+    device->CreateShaderResourceView(gameFaces, &v, cpuSrvHandle(gameFacesSrv));
+    static bool told = false;
+    if (!told) {
+        told = true;
+        LOG_INFO("game models: drawn from the card - their faces in a buffer of %u (model_vs)", room);
+    }
+    return true;
+}
+
+// 3.0.20-beta.11 (the owner's «делай все сразу», step 2): the frame's game models from the card - their colours made
+// again when the game's factors changed, the faces not there yet written, then a draw a texture: its faces' numbers in
+// the record's vertices (eight a vertex of 32 bytes), drawn by model_vs an instance a face, with the game's model
+// state, as the own ground's draws (the own pass: no leaves' sway, not a caster)
+void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
+    OwnState& o = ownState;
+    const gamemodels::Frame& frame = gameModelsNow.frame();
+    o.gameTriangles = o.gameNodes = o.gameUnknown = 0;
+    if (frame.ids.empty() || !o.modelLikeKnown || !viewToWorldValid) return;
+    const uint64_t key = gamemodels::colouringKey(frame);
+    if (key != gameCards.colouredWith()) {
+        gameCards.colour(gamemodels::colouringOf(frame), key);
+        gameFacesUp = 0;
+    }
+    const uint32_t faces = gameCards.faces();
+    if (!faces || !ensureGameFaces(faces)) return;
+    if (gameFacesUp < faces) {
+        const size_t from = size_t(gameFacesUp) * gamemodels::kCardFaceWords;
+        std::memcpy(gameFacesMapped + from * 4, gameCards.words().data() + from,
+                    (size_t(faces) * gamemodels::kCardFaceWords - from) * 4);
+        gameFacesUp = faces;
+    }
+    gameCards.frameOf(frame.ids, gameCardFrame);
+    cardRec.reset();
+    cardCounts.clear();
+    DrawSetup st = o.modelLike;
+    st.cull = d3d7::CULL_NONE;  // culled in model_vs as the game culls
+    const uint32_t state = cardRec.addState(st);
+    for (size_t t = 0; t < gameCardFrame.textures.size(); ++t) {
+        const std::vector<uint32_t>& list = gameCardFrame.faces[t];
+        if (list.empty()) continue;
+        cardPacked.assign(list.begin(), list.end());
+        cardPacked.resize((list.size() + 7) / 8 * 8, 0u);
+        DrawCmd cmd;
+        cmd.state = state;
+        cmd.texture[0] = gameCardFrame.textures[t];
+        cmd.primitive = d3d7::PT_TRIANGLELIST;
+        cmd.fvf = d3d7::FVF_TL1;
+        cardRec.draw(cmd, cardPacked.data(), uint32_t(cardPacked.size() / 8), nullptr, 0);
+        cardCounts.push_back(UINT(list.size()));
+        o.gameTriangles += list.size();
+    }
+    o.gameNodes = gameCardFrame.nodes;
+    o.gameUnknown = gameCardFrame.unknown;
+    if (cardCounts.empty()) return;
+    flushDraws();  // the draws gathered so far are of the record's vertices before these
+    prepareGeometry(cardRec);
+    if (vertexBase) {
+        cardFog = &fog;
+        ownPass = cardModelsDraw = true;
+        for (size_t n = 0; n < cardCounts.size(); ++n) {
+            cardCount = cardCounts[n];
+            draw(cardRec, cardRec.draws()[n]);
+        }
+        flushDraws();
+        ownPass = cardModelsDraw = false;
+        cardCount = 0;
+        cardFog = nullptr;
+    }
+    geometryList = 0;  // the game's record's vertices go up again with its next draw
+    ++gameDrawnFrames;
+    ++gameDrawnByCard;
+    gameDrawnTriangles += o.gameTriangles;
+    gameDrawnNodes += o.gameNodes;
+    gameDrawnUnknown += o.gameUnknown;
+}
+
 void Renderer::Impl::tellGameModels() {
     if (gameDrawnFrames) {  // 3.0.20-beta.7
-        LOG_INFO("game models: drawn by us in %llu pictures - %.0f triangles a picture, %.0f nodes, %.1f of the "
-                 "frame's nodes unknown to the renderer",
-                 static_cast<unsigned long long>(gameDrawnFrames), double(gameDrawnTriangles) / double(gameDrawnFrames),
-                 double(gameDrawnNodes) / double(gameDrawnFrames), double(gameDrawnUnknown) / double(gameDrawnFrames));
-        gameDrawnFrames = gameDrawnTriangles = gameDrawnNodes = gameDrawnUnknown = 0;
+        LOG_INFO("game models: drawn by us in %llu pictures (%llu of them from the card) - %.0f triangles a picture, "
+                 "%.0f nodes, %.1f of the frame's nodes unknown to the renderer",
+                 static_cast<unsigned long long>(gameDrawnFrames), static_cast<unsigned long long>(gameDrawnByCard),
+                 double(gameDrawnTriangles) / double(gameDrawnFrames), double(gameDrawnNodes) / double(gameDrawnFrames),
+                 double(gameDrawnUnknown) / double(gameDrawnFrames));
+        gameDrawnFrames = gameDrawnTriangles = gameDrawnNodes = gameDrawnUnknown = gameDrawnByCard = 0;
     }
     if (gameModels.size() == gameModelsTold) return;
     gameModelsTold = gameModels.size();

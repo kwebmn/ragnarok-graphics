@@ -33,6 +33,8 @@ struct PipelineKey {
     DrawShader shader = DrawShader::Game;  // 0.24: Smoke (bit 25, as 0.24 saved it); 0.30: two bits; 2.7.54 bit 29
     bool lean = false;  // 2.5: the draw shader without the world's extras (draw_lean_ps) - the game's shader only
     bool behind = false;  // 2.6.3: one step of a 16-bit Z deeper (behindGround)
+    // 3.0.20-beta.11: the game's still models from the card - model_vs, the faces' numbers as the instances (bit 30)
+    bool cardModels = false;
     bool operator==(const PipelineKey& o) const;
 };
 

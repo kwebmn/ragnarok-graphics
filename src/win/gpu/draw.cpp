@@ -449,7 +449,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 2.2.4: DLSS's (upscaleMipBias) - not for what its mask keeps from the history (sprites, effects): their finer
     // texels it cannot gather, they would only shimmer
     const float mipBias = toWorld && !mask ? worldMipBias() : 0.0f;
-    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft || matTex || hilly ? 5 : 2, mipBias, true)) return;
+    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft || matTex || hilly || cardModelsDraw ? 5 : 2, mipBias,
+                  true))
+        return;
     if (geometryList != listSerial) {  // also after a list that failed to close: its slot is used again (0.4.1 review)
         flushDraws();  // 2.5: the draws gathered so far are of the vertices uploaded before these
         prepareGeometry(rec);
@@ -517,10 +519,13 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     next.textureKey = textureKey;
     next.textures = lastTextures;
     next.samplers = samplers;
+    // 3.0.20-beta.11: t6 the game's still models' faces while they are drawn from the card
+    const UINT t6 = cardModelsDraw ? gameFacesSrv : kNoSrv;
     const auto sceneOf = [&](UINT t2, UINT t3, UINT t5) {
-        next.scene = sceneTable(t2, t3, t2, t5);
+        next.scene = sceneTable(t2, t3, t2, t5, t6);
         next.hasScene = true;
-        next.sceneKey = uint64_t(t2) << 40 | uint64_t(t3) << 20 | uint64_t(t5 == kNoSrv ? t2 : t5);
+        next.sceneKey = (uint64_t(t2) << 40 | uint64_t(t3) << 20 | uint64_t(t5 == kNoSrv ? t2 : t5)) ^
+                        (t6 == kNoSrv ? 0 : (uint64_t(t6) + 1) * 0x9E3779B97F4A7C15ull);
     };
     if (water) {  // the picture and the depth under the water (t2, t3)
         transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -541,6 +546,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         transition(sceneDepth, sceneDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         sceneOf(sceneColorSrv, sceneDepthSrv, kNoSrv);
     }
+    if (cardModelsDraw && !next.hasScene) sceneOf(srv[0], srv[0], kNoSrv);  // 3.0.20-beta.11: t6 alone wanted
     Constants c{};
     c.targetSize[0] = float(toWorld ? renderWidth : width);
     c.targetSize[1] = float(toWorld ? renderHeight : height);
@@ -788,6 +794,21 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // state meanwhile
     if (shader == DrawShader::Game && !water)
         if (ID3D12PipelineState* own = variantPipeline(psoKey, c)) pso = own;
+    // 3.0.20-beta.11: the game's still models from the card - the camera (viewToWorld, as seam_vs reads it), the
+    // projection, the fog's line and colour (hole[0..2]; holeZ 0: no silhouette); so many faces, an instance each
+    if (cardModelsDraw) {
+        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
+        const uint32_t tint = cardFog ? cardFog->specularRgb() : 0u;
+        float bits;
+        std::memcpy(&bits, &tint, sizeof bits);
+        const float fog[8] = {cardFog ? cardFog->fogA() : 255.0f, cardFog ? cardFog->fogB() : 0.0f, bits, 0.0f,
+                              0.0f, 0.0f, 0.0f, 0.0f};
+        std::memcpy(c.hole, fog, sizeof fog);
+        next.card = cardCount;
+    }
     // 2.5: the draw goes on the gathered call when its state is the same and its vertices follow (draw_batch.hpp);
     // by itself as before: merging off, the game's own indices, a quad without the pattern
     next.pso = pso;
@@ -799,7 +820,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const UINT stride = FrameRecord::stride(d.fvf);
     batch::Draw shape{batch::kindOf(d.primitive, d.vertexCount, d.indexCount != 0), d.vertexOffset, d.vertexCount,
                       stride};
-    if (!mergeDraws || (shape.kind == batch::Kind::Quads && !ensureQuadIndices())) shape.kind = batch::Kind::Single;
+    if (!mergeDraws || (shape.kind == batch::Kind::Quads && !ensureQuadIndices()) || next.card)
+        shape.kind = batch::Kind::Single;
     ++drawsGathered;
     if (pendingBatch.joins(shape) && next.sameState(pendingDraw)) {
         pendingBatch.add(shape);

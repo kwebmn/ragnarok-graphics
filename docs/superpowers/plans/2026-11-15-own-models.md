@@ -209,3 +209,22 @@ again in every face, all of it again whenever the view moved): the renderer's CP
    faces, the trigger before the seams at the world's first blended draw or the interface, the present's resets and
    modelsNow_.presented(), logGpu's line. Renderer: addGameModel/gameModelsFrame/gameModelsLately to d3d11_ (in this
    process). Own_ground::Shading fogA/fogB/specularRgb read. DXC: 91 shaders ok. Untested in the game.
+3.0.20-beta.10 SHIPPED (b19cabf, update.ini 2e9935d).
+11. 3.0.20-beta.11 - step 2 on Direct3D 12, the card's way. core/game_models_card (CardStore: a node's faces in the
+   card's form by texture - add/colour/frameOf, colouringOf/colouringKey; shared with Direct3D 11, which moved to it;
+   tests game_models_card_*). core/pipeline_key: cardModels (bit 30; valid only opaque, depth tested and written, one
+   uv, not the layer, the water, the mask or another shader; tests). The root signature's scene table t2-t6 (was
+   t2-t5): sceneTable() makes five (t6 = t2 when none), makeRoom's slack +3 (a texture table and a scene table after
+   one call: 7 = 5 + 2, the passes checked: torches, ao, waterfalls, actor shadows 5 + 2g, water 3, TAA 5).
+   Rulings: (a) not t1 - shade() samples tex1 always, a buffer there would be read as a texture by the generic PS;
+   t6 is declared only by the vertex shaders (seamVertices, Buffer<uint4>), the same model_vs as Direct3D 11. (b) the
+   faces in an upload heap's buffer, mapped (the card reads it where it lies; growth discards the old with its list) -
+   cost: the card reads 240 bytes a face a picture over the bus; a default heap's copy later if it shows. (c) the faces'
+   numbers ride in the record's vertices (eight a 32-byte vertex, FVF_TL1) - no new upload path; flushDraws'
+   card branch: the view {vertexBase + firstByte, 4 a face, stride 4}, DrawInstanced(3, faces, 0, 0). draw(): the card
+   pass (ownPass + cardModelsDraw): room 5, the scene table with t6 (srv[0] for t2-t5 when nothing else is wanted),
+   the constants (projection, viewToWorld in reproject, the fog in hole[0..2], holeZ 0), next.card, a draw by itself.
+   drawOwnGround: no game models in the record while the card draws them (now.gameModels 0 - the record kept over
+   the list's changes), drawGameModelsCard(o.shading) after its draws every picture; drawGameModelsAlone: the card
+   with gameFog. Log: «game models: drawn by us in N pictures (M of them from the card) ...». The device's teardown
+   lets the faces' slot go. Untested in the game.

@@ -580,7 +580,9 @@ bool Renderer::Impl::drawOwnGround() {
     now.models = effects.ownFarModels && o.up, now.seamsView = seamsView, now.matched = o.learning.changes();
     now.fog[0] = o.shading.specularAt(100.0f), now.fog[1] = o.shading.specularAt(1000.0f);
     now.like = o.like;
-    now.gameModels = gameFrameKey();  // 3.0.20-beta.4: the game's still models drawn by us, the frame's
+    // 3.0.20-beta.4: the game's still models drawn by us, the frame's; 3.0.20-beta.11: none in the record while the
+    // card draws them (drawGameModelsCard after it) - the record kept over their changes
+    now.gameModels = cardModelsReady() ? 0 : gameFrameKey();
     now.valid = true;
     // 3.0.4-beta.32 (R-Q3W727): the models' colours learnt anew at most every kModelsColoursEvery pictures
     const bool same = o.made.valid && !meanMoved && !lightMoved && !o.lightPending && o.changed.empty() &&
@@ -722,7 +724,8 @@ bool Renderer::Impl::drawOwnGround() {
         for (uint8_t layer = 0; layer < 3; ++layer)  // the ground, then the own bands, then the neighbours' strips
             for (size_t t = 0; t < o.pending[layer].size(); ++t) emit(layer, t);
         drawOwnModels(view, p, axes);  // 3.0.4-beta.14: the models past the far plane, into the same record (layer 3)
-        drawGameModels(view, p, o.rec, &o.drawLayer, o.shading);  // 3.0.20-beta.4: the ones the driver left out
+        // 3.0.20-beta.4: the ones the driver left out (the processor's way, while the card's is missing)
+        if (!cardModelsReady()) drawGameModels(view, p, o.rec, &o.drawLayer, o.shading);
         o.madeChunks = chunks, o.madeVertices = vertices, o.madeTriangles = triangles;
     }
     const double built = msSince(start);
@@ -740,7 +743,7 @@ bool Renderer::Impl::drawOwnGround() {
             ownPass = false;
             // 3.0.20-beta.4: the game's still models drawn here when it leaves them
             gameModelsNow.drawn(o.modelLikeKnown);
-            if (!gameModelsNow.frame().ids.empty()) {  // 3.0.20-beta.7: for the log (tellGameModels)
+            if (!gameModelsNow.frame().ids.empty() && !cardModelsReady()) {  // 3.0.20-beta.7: for the log
                 ++gameDrawnFrames;
                 gameDrawnTriangles += o.gameTriangles;
                 gameDrawnNodes += o.gameNodes;
@@ -749,6 +752,7 @@ bool Renderer::Impl::drawOwnGround() {
         }
         geometryList = 0;  // the game's record's vertices go up again with its next draw
     }
+    if (cardModelsReady()) drawGameModelsCard(o.shading);  // 3.0.20-beta.11: from the card, every picture
     ++o.frames;
     o.slowest = std::max(o.slowest, built);
     o.most = std::max(o.most, vertices);

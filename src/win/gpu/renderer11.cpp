@@ -4514,7 +4514,8 @@ void Renderer11::logGpu(ULONGLONG now) {
                      static_cast<unsigned long long>(modelsDrawnFrames_),
                      double(modelsDrawnFaces_) / double(modelsDrawnFrames_),
                      double(modelsDrawnNodes_) / double(modelsDrawnFrames_),
-                     double(modelsUnknown_) / double(modelsDrawnFrames_), models_.size(), modelFaceData_.size() / 20);
+                     double(modelsUnknown_) / double(modelsDrawnFrames_), modelCards_.nodes(),
+                     size_t(modelCards_.faces()));
         modelsDrawnFrames_ = modelsDrawnFaces_ = modelsDrawnNodes_ = modelsUnknown_ = 0;
         // 3.0.19-beta.43 (R-XHRKGN): the ground's draws by their first texture - told while any went white
         if (stats_.groundNone || stats_.groundGone)
