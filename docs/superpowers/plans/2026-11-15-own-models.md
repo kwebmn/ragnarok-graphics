@@ -281,3 +281,11 @@ again in every face, all of it again whenever the view moved): the renderer's CP
    Fix found on the way: FrameState::presented() let go of the still list only - the moving one and its matrices too
    now (test game_models_frame_moving_kept_to_the_present). Tests: game_models_card_moving_faces_join_the_batches_
    with_their_place, game_models_box_by_a_matrix (+ beta.14's earlier wire/place/card ones). Untested in the game.
+3.0.20-beta.14 SHIPPED (1fd61a9, update.ini 0d742f1).
+15. 3.0.20-beta.15 - stage 5 (the owner's «делай все»: «Моделі нашим рендером» on by default, its own beta): config
+   view3dOwnModels = true (the app's switch and the console tile follow the default), dist ini own_models = 1 with
+   its note, the hint without «a trial» and with the moving models (all three languages). Ruling: no one-time ini
+   change for files that hold own_models = 0 - the template has said 0 since beta.4 only on fresh beta installs, and
+   a player's own 0 cannot be told from it; the notes say so - cost if wrong: a few testers keep it off until they
+   switch it. Tests: config_models_by_our_renderer_on_by_default; config_view3d_own_models_off_by_default became
+   config_view3d_own_models_switch (the default's word changed by the owner's decision).

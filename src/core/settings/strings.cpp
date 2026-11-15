@@ -8914,15 +8914,15 @@ constexpr Entry kTexts[] = {
     {Text::View3dOwnModels, "Models by our renderer", "Моделі нашим рендером",
      "Модели нашим рендером"},  // 3.0.20-beta.4
     {Text::View3dOwnModelsHint,
-     "A trial: the still models of the map (houses, trees, walls) are drawn by our renderer as the game draws them - "
+     "The map's models (houses, trees, walls, flags, windmills) are drawn by our renderer as the game draws them - "
      "in the 3D view and from above -, and the game itself does not work them out: fewer jerks where there are many "
-     "of them. Moving ones and see-through ones stay the game's. Their shadows and reflections are not there yet.",
-     "Проба: нерухомі моделі карти (будинки, дерева, стіни) малює наш рендер такими, як їх малює гра, — і в 3D-режимі, "
-     "і в звичайному вигляді, — а сама гра їх не обраховує: менше ривків там, де їх багато. Рухомі й прозорі лишаються "
-     "грі. Їхніх тіней і відображень поки немає.",
-     "Проба: неподвижные модели карты (дома, деревья, стены) рисует наш рендер такими, как их рисует игра, — и в "
-     "3D-режиме, и в обычном виде, — а сама игра их не обсчитывает: меньше рывков там, где их много. Подвижные и "
-     "прозрачные остаются игре. Их теней и отражений пока нет."},
+     "of them. See-through ones and ones fading away stay the game's.",
+     "Моделі карти (будинки, дерева, стіни, прапори, млини) малює наш рендер такими, як їх малює гра, — і в "
+     "3D-режимі, і в звичайному вигляді, — а сама гра їх не обраховує: менше ривків там, де їх багато. Прозорі й ті, "
+     "що зникають, лишаються грі.",
+     "Модели карты (дома, деревья, стены, флаги, мельницы) рисует наш рендер такими, как их рисует игра, — и в "
+     "3D-режиме, и в обычном виде, — а сама игра их не обсчитывает: меньше рывков там, где их много. Прозрачные и "
+     "исчезающие остаются игре."},
     {Text::View3dWeather, "Weather in the 3D view", "Погода у 3D-режимі", "Погода в 3D-режиме"},  // 3.0.19-beta.40
     {Text::View3dWeatherHint,
      "In the 3D view the snow, the rain, the falling leaves and the motes in the air are particles in the world round "

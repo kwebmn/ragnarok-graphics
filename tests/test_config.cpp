@@ -2090,3 +2090,16 @@ TEST(config_interface_element_colours) {
     CHECK(appliesNow("interface.element_colours"));
     CHECK(!liveUpdate(noUi(""), noUi("element_colours = 0\n")).next.elementColours);
 }
+
+// 3.0.20-beta.15 (the owner's «делай все»: stage 5 of «Модели нашим рендером»): [view3d] own_models on by default - in
+// the code, the shipped settings and the app's switch; 0 keeps the game's own draw of the models
+TEST(config_models_by_our_renderer_on_by_default) {
+    CHECK(parseConfig("").view3dOwnModels);
+    CHECK(!parseConfig("[view3d]\nown_models = 0\n").view3dOwnModels);
+    std::ifstream f(std::string(UAGFX_SOURCE_DIR) + "/dist/uaro-graphics.ini", std::ios::binary);
+    const std::string ini((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    CHECK(!ini.empty() && parseConfig(ini).view3dOwnModels);
+    const settings::IniSetting* s = settings::findSetting("view3d.own_models");
+    CHECK(s != nullptr);
+    if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("1"));
+}

@@ -703,14 +703,14 @@ TEST(config_view3d_shoulder_off_by_default) {
     CHECK(liveUpdate(parseConfig(""), parseConfig("[view3d]\nshoulder = 1\n")).next.view3dShoulder);
 }
 
-// 3.0.20-beta.4 (stage 2b of «Модели нашим рендером»): [view3d] own_models - off unless the file says 1; on «Гра»,
-// applied at once
-TEST(config_view3d_own_models_off_by_default) {
-    CHECK(!parseConfig("").view3dOwnModels);
+// 3.0.20-beta.4 (stage 2b of «Модели нашим рендером»): [view3d] own_models - on «Гра», applied at once; 3.0.20-beta.15
+// on unless the file says 0 (the owner's «делай все», stage 5; config_models_by_our_renderer_on_by_default)
+TEST(config_view3d_own_models_switch) {
+    CHECK(!parseConfig("[view3d]\nown_models = 0\n").view3dOwnModels);
     CHECK(parseConfig("[view3d]\nown_models = 1\n").view3dOwnModels);
     const settings::IniSetting* row = settings::findSetting("view3d.own_models");
     CHECK(row != nullptr);
-    if (row) CHECK(row->page == settings::Page::Game && settings::tokenOf(*row, parseConfig("")) == "0");
+    if (row) CHECK(row->page == settings::Page::Game && settings::tokenOf(*row, parseConfig("")) == "1");
     CHECK(appliesNow("view3d.own_models"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[view3d]\nown_models = 1\n")).next.view3dOwnModels);
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[view3d]\nown_models = 0\n")).next.view3dOwnModels);
 }
