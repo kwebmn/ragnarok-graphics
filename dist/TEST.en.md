@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.9 — what's new · 2026-11-15
+
+- **«Models by our renderer» in the normal view too.** The switch now works not only in the 3D view but also in the normal view from above. With «Own ground» off, our renderer draws the models in a pass of their own at the same point of the frame; it takes the fog and the models' state from the game's own draws. The renderer now gets the game's camera even when «Models by our renderer» is the only thing on.
+
 # uaRO Graphics 3.0.20-beta.8 — what's new · 2026-11-15
 
 - **«Models by our renderer» faster.** The renderer builds the game's models on several processor threads, as it does its own ground, and puts each vertex on the screen once a model rather than in every face. The picture is the same; in the beta.7 report this work cost the renderer about 2 ms a frame.
