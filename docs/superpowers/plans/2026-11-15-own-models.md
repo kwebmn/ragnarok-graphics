@@ -165,3 +165,11 @@ again in every face, all of it again whenever the view moved): the renderer's CP
    as before (room = (65535 - size) / 3 * 3): the same draws as one thread made. Thread safety: gameModels read only,
    Shading::specularAt pure. Tests: game_models_place_a_node_as_the_game_draws_it, game_models_place_a_flipped_node_
    culls_the_other_way. Untested in the game.
+3.0.20-beta.8 SHIPPED (53c6661, update.ini 16ca7e6).
+   Step 2 notes (before building it): a world-space vertex path exists in Direct3D 11 alone - seam_vs (shaders.cpp,
+   3.0.5-beta.13: Buffer<uint4> t6 vertices, Buffer<uint> t7 indices, the camera in r0-r11, the projection f0-farZ,
+   then draw_vs's pixels with scale and DLSS's jitter; ground11.cpp seams::Store). Direct3D 12 has none and its root
+   signature is full (64 DWORDs, see-through facts) - step 2 there needs a table slot first. Estimate after step 1:
+   ~0.6-0.8 ms of the renderer's a frame left for our models (placing ~0.3 on 4 threads, the merge's copy of ~1.4 MB,
+   its upload); step 2 would leave ~0.1. Waiting for the owner's beta.8 report (the same place) to size it; a cheaper
+   step between: the colours baked a node when the factors change (expected() 3 a face a frame now).
