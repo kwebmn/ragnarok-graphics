@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.48 — what's new · 2026-11-15
+
+- **Faster everywhere: one of the game's own functions rewritten.** The game's float-to-integer conversion (uaRO.exe calls it from over a thousand places, some hundred thousand times a frame — the ground's colours, the models, the sprites) switched the maths coprocessor's mode twice each time. Now it is one modern instruction with the same result — some 3.5 % of the game's thread freed, in 2D and in 3D. On very old processors without SSE3 it stays as it was.
+
 # uaRO Graphics 3.0.19-beta.47 — what's new · 2026-11-15
 
 - **«Речі», «Склад» and the cart faster.** Each frame they built a long string of all their things to notice a change — with hundreds of things in the storage that took 1–2 ms of every frame on a laptop. Now a change is noticed by one number.
