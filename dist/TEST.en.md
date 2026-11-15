@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.49 — what's new · 2026-11-15
+
+- **Two more parts of the game itself rewritten.** The projection of vertices onto the screen (the game computes it for every vertex of the ground, the models and the sprites) took three divisions a vertex — now one, with the same result. And the sort of the faces before drawing went through two pointers in memory for each comparison — now the keys are read once, in a row, and sorted. Together some 3–4 % of the game's thread.
+
 # uaRO Graphics 3.0.19-beta.48 — what's new · 2026-11-15
 
 - **Faster everywhere: one of the game's own functions rewritten.** The game's float-to-integer conversion (uaRO.exe calls it from over a thousand places, some hundred thousand times a frame — the ground's colours, the models, the sprites) switched the maths coprocessor's mode twice each time. Now it is one modern instruction with the same result — some 3.5 % of the game's thread freed, in 2D and in 3D. On very old processors without SSE3 it stays as it was.
