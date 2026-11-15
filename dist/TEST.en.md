@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.47 — what's new · 2026-11-15
+
+- **«Речі», «Склад» and the cart faster.** Each frame they built a long string of all their things to notice a change — with hundreds of things in the storage that took 1–2 ms of every frame on a laptop. Now a change is noticed by one number.
+
 # uaRO Graphics 3.0.19-beta.46 — what's new · 2026-11-15
 
 - **The own ground faster.** The map's own ground is now built each frame on several of the processor's cores at once, not on one: in the 3D view on the fields this was the biggest part of the renderer's work — some 2.7 ms a frame. The ground comes out the same.
