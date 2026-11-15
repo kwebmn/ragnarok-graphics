@@ -18,6 +18,7 @@ void write(bridge::WireWriter& w, const Node& n) {
     w.bytes(n.vertices.data(), n.vertices.size() * sizeof(float));
     w.u32(uint32_t(n.faces.size()));
     w.bytes(n.faces.data(), n.faces.size() * sizeof(Face));
+    w.u8(n.flipped ? 1 : 0);  // 3.0.20-beta.4
 }
 
 bool read(bridge::WireReader& r, Node& n) {
@@ -43,7 +44,33 @@ bool read(bridge::WireReader& r, Node& n) {
         if (face.v[0] >= vertices || face.v[1] >= vertices || face.v[2] >= vertices ||
             (face.texture >= n.textures.size() && !n.textures.empty()))
             return false;
+    n.flipped = r.u8() != 0;
     return r.ok();
+}
+
+void write(bridge::WireWriter& w, const Frame& f) {
+    w.u32(uint32_t(f.ids.size()));
+    w.bytes(f.ids.data(), f.ids.size() * sizeof(uint32_t));
+    for (const float k : f.factors) w.f32(k);
+    w.u8(f.lit ? 1 : 0);
+}
+
+bool read(bridge::WireReader& r, Frame& f) {
+    const uint32_t n = r.u32();
+    if (!r.ok() || n > kMostVertices) return false;
+    const uint8_t* ids = r.take(size_t(n) * sizeof(uint32_t));
+    if (!ids) return false;
+    f.ids.resize(n);
+    std::memcpy(f.ids.data(), ids, f.ids.size() * sizeof(uint32_t));
+    for (float& k : f.factors) k = r.f32();
+    f.lit = r.u8() != 0;
+    return r.ok();
+}
+
+bool shown(const float a[2], const float b[2], const float c[2], bool twoSided, bool flipped) {
+    if (twoSided) return true;
+    const bool turned = (c[0] - a[0]) * (b[1] - a[1]) > (b[0] - a[0]) * (c[1] - a[1]);
+    return turned != flipped;
 }
 
 void compose(const float a[12], const float b[12], float out[12]) {

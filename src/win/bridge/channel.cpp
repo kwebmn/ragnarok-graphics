@@ -50,6 +50,7 @@ bool Channel::create(const std::string& name, uint32_t toHostBytes, uint32_t toC
     b->toHost = toHostBytes;
     b->toClient = toClientBytes;
     b->presented.store(0);
+    b->gameModelsAt.store(0);  // 3.0.20-beta.4
     b->ownGroundAt.store(0);  // 3.0.19-beta.42
     Ring(view_ + sizeof(BlockHeader), toHostBytes).init();
     Ring(view_ + sizeof(BlockHeader) + toHostBytes, toClientBytes).init();
@@ -248,6 +249,19 @@ bool Channel::ownGroundLately() const {
     if (!view_) return false;
     const auto* b = reinterpret_cast<const BlockHeader*>(view_);
     const uint32_t at = b->ownGroundAt.load();
+    return at != 0 && b->presented.load() - at < kOwnGroundLately;
+}
+
+void Channel::noteGameModels(bool drawn) {
+    if (!view_ || !drawn) return;
+    auto* b = reinterpret_cast<BlockHeader*>(view_);
+    b->gameModelsAt.store(b->presented.load() + 1);  // the picture about to be told shown
+}
+
+bool Channel::gameModelsLately() const {
+    if (!view_) return false;
+    const auto* b = reinterpret_cast<const BlockHeader*>(view_);
+    const uint32_t at = b->gameModelsAt.load();
     return at != 0 && b->presented.load() - at < kOwnGroundLately;
 }
 

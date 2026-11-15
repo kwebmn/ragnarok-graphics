@@ -29,6 +29,7 @@ TEST(game_models_node_goes_over_the_wire_whole) {
     f.texture = 1;
     f.flags = gamemodels::kTwoSided;
     n.faces = {f, f};
+    n.flipped = true;  // 3.0.20-beta.4
     std::vector<uint8_t> bytes;
     bridge::WireWriter w(bytes);
     gamemodels::write(w, n);
@@ -38,7 +39,7 @@ TEST(game_models_node_goes_over_the_wire_whole) {
     CHECK(back.id == n.id && back.map == 7 && back.textures == n.textures && back.vertices == n.vertices);
     CHECK(back.faces.size() == 2 && back.faces[1].v[2] == 2 && near(back.faces[1].uv[5], 0.5f));
     CHECK(back.faces[0].colour[1] == 0xFF8040u && back.faces[0].lit[8] == 300 && back.faces[0].texture == 1);
-    CHECK(back.faces[0].flags == gamemodels::kTwoSided);
+    CHECK(back.faces[0].flags == gamemodels::kTwoSided && back.flipped);
     bridge::WireReader cut(bytes.data(), bytes.size() - 3);
     CHECK(!gamemodels::read(cut, back));  // cut short: refused
 }
@@ -70,4 +71,33 @@ TEST(game_models_corners_found_near_ours_only) {
     const float edge[3] = {10.0f, -5.0f, 20.9f};  // in the next cell, yet within reach of a
     CHECK(ours.within(nearA, 0.25f) && ours.within(nearB, 0.25f) && !ours.within(away, 0.25f));
     CHECK(ours.within(edge, 1.0f) && !ours.within(edge, 0.5f));
+}
+
+// 3.0.20-beta.4 (stage 2b): the frame's nodes drawn by us in place of the game's, its colour factors and way
+TEST(game_models_frame_goes_over_the_wire_whole) {
+    gamemodels::Frame f;
+    f.ids = {0x1000u, 0x2000u, 0x3000u};
+    f.factors[0] = 1.0f, f.factors[1] = 0.75f, f.factors[2] = 0.5f;
+    f.lit = true;
+    std::vector<uint8_t> bytes;
+    bridge::WireWriter w(bytes);
+    gamemodels::write(w, f);
+    bridge::WireReader r(bytes.data(), bytes.size());
+    gamemodels::Frame back;
+    CHECK(gamemodels::read(r, back) && r.left() == 0);
+    CHECK(back.ids == f.ids && back.lit && back.factors[1] == 0.75f && back.factors[2] == 0.5f);
+    bridge::WireReader cut(bytes.data(), 6);
+    CHECK(!gamemodels::read(cut, back));
+}
+
+// 3.0.20-beta.4 (stage 2b): a face the game draws as its own draw culls them (0x4DED2E): one-sided - shown with its
+// corners on the screen turned (x2 - x0)(y1 - y0) > (x1 - x0)(y2 - y0), the other way round for a mirrored model (its
+// actor's scale below 0 on an odd number of axes: the draw's second argument); two-sided - always
+TEST(game_models_faces_culled_as_the_game_culls_them) {
+    const float a[2] = {0, 0}, b[2] = {10, 0}, c[2] = {0, 10};
+    CHECK(gamemodels::shown(a, c, b, false, false));   // 10 * 10 > 0 * 0
+    CHECK(!gamemodels::shown(a, b, c, false, false));  // 0 * 0 <= 10 * 10
+    CHECK(gamemodels::shown(a, b, c, false, true) && !gamemodels::shown(a, c, b, false, true));
+    CHECK(gamemodels::shown(a, b, c, true, false) && gamemodels::shown(a, c, b, true, true));
+    CHECK(!gamemodels::shown(a, a, a, false, false) && gamemodels::shown(a, a, a, false, true));  // flat: as the game
 }

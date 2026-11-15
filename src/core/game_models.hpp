@@ -30,10 +30,27 @@ struct Node {
     std::vector<uint32_t> textures;  // the renderer's texture ids
     std::vector<float> vertices;     // x y z in the world each
     std::vector<Face> faces;
+    // 3.0.20-beta.4: its actor's scale below 0 on an odd number of axes (the game's draw's second argument, its actor's
+    // render FUN_004E0B20): its faces' turn on the screen the other way round
+    bool flipped = false;
 };
 
 void write(bridge::WireWriter& w, const Node& n);
 bool read(bridge::WireReader& r, Node& n);  // false: cut short or out of reason
+
+// 3.0.20-beta.4 (stage 2b): a frame's nodes the renderer draws in place of the game's (the driver left them out of the
+// game's draw), the game's colour factors (0x7710E4/E8/EC) and whether it lights them by their places (0x7710B9)
+struct Frame {
+    std::vector<uint32_t> ids;
+    float factors[3] = {1.0f, 1.0f, 1.0f};
+    bool lit = false;
+};
+void write(bridge::WireWriter& w, const Frame& f);
+bool read(bridge::WireReader& r, Frame& f);
+
+// 3.0.20-beta.4: whether the game's draw shows a face (0x4DED2E) - its corners' x y on the screen `a`, `b`, `c`: a
+// one-sided face by its turn, the other way round on a flipped node; a two-sided one always
+bool shown(const float a[2], const float b[2], const float c[2], bool twoSided, bool flipped);
 
 // 4 x 3 matrices as the game keeps them (rows: x, y, z, the move; a point p -> p x m): `a` then `b`
 void compose(const float a[12], const float b[12], float out[12]);

@@ -63,6 +63,9 @@ public:
     static constexpr uint32_t kOwnGroundLately = 3;
     void noteOwnGround(bool drawn);
     bool ownGroundLately() const;
+    // 3.0.20-beta.4: the same for the game's still models drawn by the renderer ([view3d] own_models)
+    void noteGameModels(bool drawn);
+    bool gameModelsLately() const;
     bool waitPresented(uint32_t count, DWORD ms);
 
 private:

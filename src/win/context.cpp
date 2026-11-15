@@ -625,6 +625,7 @@ void Context::flush() {
         renderer->setSeeThrough(hole ? hole_ : none, hole ? holeFlags_ : uint8_t(0));
         holeSent_ = hole;
     }
+    modelcensus::beforeRecord();  // 3.0.20-beta.4: the frame's nodes left out of the game's draw, before its draws
     renderer->execute(record);
 }
 
@@ -872,6 +873,7 @@ void removeReportChecks() {
 void Context::present(const Rect& source, bool waitForVblank) {
     dx7::flushGroundBatch();  // 3.0.19-beta.50: the gathered ground cells into the frame before it goes
     dx7::setGroundBatch(config.batchGround);  // [quality] batch_ground, for the next frame
+    modelcensus::setOn(config.view3dOwnModels);  // 3.0.20-beta.4: [view3d] own_models, for the next frame
     const double presentFrom = nowMs();  // 3.0.18-beta.161: the driver's own work at a present (logStats)
     ++paceBegun_;                          // 3.0.19-beta.51
     paceRunFrom_ = gpu::RunMark::now();    // 3.0.19-beta.52

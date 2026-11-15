@@ -702,3 +702,15 @@ TEST(config_view3d_shoulder_off_by_default) {
     CHECK(appliesNow("view3d.shoulder"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[view3d]\nshoulder = 1\n")).next.view3dShoulder);
 }
+
+// 3.0.20-beta.4 (stage 2b of «Модели нашим рендером»): [view3d] own_models - off unless the file says 1; on «Гра»,
+// applied at once
+TEST(config_view3d_own_models_off_by_default) {
+    CHECK(!parseConfig("").view3dOwnModels);
+    CHECK(parseConfig("[view3d]\nown_models = 1\n").view3dOwnModels);
+    const settings::IniSetting* row = settings::findSetting("view3d.own_models");
+    CHECK(row != nullptr);
+    if (row) CHECK(row->page == settings::Page::Game && settings::tokenOf(*row, parseConfig("")) == "0");
+    CHECK(appliesNow("view3d.own_models"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[view3d]\nown_models = 1\n")).next.view3dOwnModels);
+}

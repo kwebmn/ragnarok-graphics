@@ -114,6 +114,11 @@ public:
     // 3.0.20-beta.3 (stage 2a of «Модели нашим рендером»): a static model node of the game's as it draws it, captured
     // by the driver - Direct3D 12's (through the bridge too) keep it; Direct3D 11 none
     void addGameModel(const gamemodels::Node& n);
+    // 3.0.20-beta.4 (stage 2b): the frame's nodes the renderer draws in place of the game's; whether it drew them in
+    // one of the last pictures (the driver's: through the bridge; the renderer's own: the last picture)
+    void gameModelsFrame(const gamemodels::Frame& f);
+    bool gameModelsLately() const;
+    bool gameModelsShown() const;
     int samples() const;  // of the target now
     // Stage 4: anisotropic filtering of the world's textures (0 = off, else 2-16), and alpha testing as coverage in
     // draws without blending while the target has several samples.

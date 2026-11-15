@@ -18,5 +18,9 @@ void noteGrow(uint32_t vector, uint32_t at, uint32_t n);
 void noteProjection(const float* points, const float* matrix, int count);
 // a new map: the nodes captured so far let go (the renderer lets them go at the new map's first)
 void mapChanged();
+// 3.0.20-beta.4 (stage 2b): [view3d] own_models, each frame; before the frame's record goes to the renderer: the nodes
+// left out of the game's draw so far this frame told (Msg::GameModelsFrame) when more came
+void setOn(bool on);
+void beforeRecord();
 
 }  // namespace uagfx::win::modelcensus

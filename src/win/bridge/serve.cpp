@@ -258,6 +258,11 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             }
             break;
         }
+        case Msg::GameModelsFrame: {  // 3.0.20-beta.4
+            gamemodels::Frame f;
+            if (gamemodels::read(rd, f)) renderer_.gameModelsFrame(f);
+            break;
+        }
         case Msg::GameModel: {  // 3.0.20-beta.3
             gamemodels::Node n;
             if (gamemodels::read(rd, n)) renderer_.addGameModel(n);

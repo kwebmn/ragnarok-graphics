@@ -1194,8 +1194,16 @@ struct Renderer::Impl {
         mapPlace = seasons::withYear(mapPlace, mapYear);  // 2.7.5: no insects in winter
     }
     bool ownShownLast = false;  // 3.0.19-beta.42: the last picture's ground the own one in place of the game's
+    // 3.0.20-beta.4 (stage 2b): the frame's game models to draw (Msg::GameModelsFrame); whether the renderer could
+    // draw them the last picture (its own ground drawn, the game's model state known) - the driver's word to leave them
+    // out of the game's draw
+    gamemodels::Frame gameFrame;
+    bool gameShownLast = false, gameReadyNow = false;
     void newPicture() {
         ownShownLast = ownState.frame;
+        gameShownLast = gameReadyNow;  // 3.0.20-beta.4
+        gameReadyNow = false;
+        gameFrame.ids.clear();
         ownState.decided = ownState.frame = ownState.drawn = ownState.likeTaken = false;  // 3.0.4-beta.10
         ownState.waterDrawn = ownState.waterGame = false;  // 3.0.4-beta.20
         ownState.shading.beginFrame();
@@ -1476,8 +1484,10 @@ struct Renderer::Impl {
             size_t matched = 0;
             uint32_t fog[2] = {0, 0};
             DrawSetup like;
+            uint64_t gameModels = 0;  // 3.0.20-beta.4: the frame's game models (their ids, factors, way) hashed
             bool valid = false;
         } made;
+        size_t gameTriangles = 0;  // 3.0.20-beta.4: the game's still models' in the record (drawGameModels)
         size_t madeChunks = 0, madeVertices = 0, madeTriangles = 0, reused = 0;
         // 3.0.4-beta.26: the smooth hills' light baked into the colours made - its sun (file places), its light all
         // round and its strength as they were made
@@ -1538,6 +1548,9 @@ struct Renderer::Impl {
     bool ownCornersMade = false;
     std::vector<uint32_t> gameModelsUnchecked;  // came before our own corners were made
     void addGameModel(const gamemodels::Node& n);
+    void drawGameModels(const own_ground::View& view, const camera::Projection& p);  // 3.0.20-beta.4
+    std::unordered_map<uint32_t, OwnState::ModelPending> gamePending;               // by the texture's id
+    uint64_t gameFrameKey() const;
     bool makeOwnCorners();
     void checkGameModel(const gamemodels::Node& n);
     void tellGameModels();

@@ -33,6 +33,7 @@ public:
     void bridgeTimes(double& sendMs, double& waitMs) const;
     // 3.0.19-beta.42: the renderer drew its own ground in place of the game's lately (bridge::Channel)
     bool ownGroundLately() const { return channel_.ownGroundLately(); }
+    bool gameModelsLately() const { return channel_.gameModelsLately(); }  // 3.0.20-beta.4
     // 2.2.1: the renderer's work a frame, as it last sent it (Msg::Timing, twice a second)
     bool timing(GpuTiming& out) const {
         out = timing_;
@@ -49,6 +50,7 @@ public:
     void setCamera(bool valid, const float view[12], float targetZ = 0);
     void setSeeThrough(const float hole[8], uint8_t flags);  // 3.0.13-beta.26
     void sendGameModel(const gamemodels::Node& n);             // 3.0.20-beta.3
+    void sendGameModelsFrame(const gamemodels::Frame& f);      // 3.0.20-beta.4
     void setMap(const std::string& map);
     void sendIcon(uint64_t key, int width, int height, const uint32_t* argb);
     void setIconSink(Renderer::IconSink sink, void* context) {

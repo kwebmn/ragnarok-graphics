@@ -824,6 +824,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
                                    flag(file.view3dFace)));
         n.view3dFace = file.view3dFace;
     }
+    if (file.view3dOwnModels != running.view3dOwnModels) {  // 3.0.20-beta.4
+        u.applied.push_back(change("3D view models by our renderer", flag(running.view3dOwnModels),
+                                   flag(file.view3dOwnModels)));
+        n.view3dOwnModels = file.view3dOwnModels;
+    }
     if (file.view3dShoulder != running.view3dShoulder) {  // 3.0.19-beta.54
         u.applied.push_back(change("3D view camera over the shoulder", flag(running.view3dShoulder),
                                    flag(file.view3dShoulder)));

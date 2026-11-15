@@ -350,6 +350,14 @@ void Remote::sendGameModel(const gamemodels::Node& n) {
     send(Msg::GameModel, buffer_);
 }
 
+// 3.0.20-beta.4 (stage 2b): the frame's nodes drawn by the renderer in place of the game's, its colour factors
+void Remote::sendGameModelsFrame(const gamemodels::Frame& f) {
+    buffer_.clear();
+    WireWriter w(buffer_);
+    gamemodels::write(w, f);
+    send(Msg::GameModelsFrame, buffer_);
+}
+
 void Remote::sendIcon(uint64_t key, int width, int height, const uint32_t* argb) {
     buffer_.clear();
     WireWriter w(buffer_);

@@ -523,6 +523,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.19-beta.54 (the owner: «может персонажа по центру поставить в 3д?»): behind, the camera over the shoulder
         {"view3d", "shoulder", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dShoulder,
          Text::View3dShoulderHint, ""},
+        // 3.0.20-beta.4 (stage 2b of «Модели нашим рендером»): the game's still models by the renderer
+        {"view3d", "own_models", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dOwnModels,
+         Text::View3dOwnModelsHint, ""},
         // 3.0.19-beta.42 (the owner's «делаем все по порядку»: the speed): the game's far ground cells less often
         {"view3d", "fast_ground", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dFastGround,
          Text::View3dFastGroundHint, ""},
@@ -1532,6 +1535,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "view3d.aim_pull") return c.view3dAimPull ? "1" : "0";
     if (k == "view3d.face") return c.view3dFace ? "1" : "0";  // 3.0.19-beta.39
     if (k == "view3d.shoulder") return c.view3dShoulder ? "1" : "0";  // 3.0.19-beta.54
+    if (k == "view3d.own_models") return c.view3dOwnModels ? "1" : "0";  // 3.0.20-beta.4
     if (k == "view3d.fast_ground") return c.view3dFastGround ? "1" : "0";  // 3.0.19-beta.42
     if (k == "buffs.timers") return c.buffTimers ? "1" : "0";                   // 3.0.4-beta.6
     if (k.compare(0, 7, "notify.") == 0) {                   // 3.0.4-beta.3

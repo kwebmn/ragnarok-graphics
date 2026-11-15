@@ -1,3 +1,4 @@
+#include "core/model_census.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -45,6 +46,89 @@ void Renderer::Impl::checkGameModel(const gamemodels::Node& n) {
         ++gameModelCorners;
         if (ownCorners.within(&n.vertices[i], 0.5f)) ++gameModelCornersOurs;
     }
+}
+
+// 3.0.20-beta.4: the frame's game models, hashed (FNV-1a) - the own ground's record is made again when they change
+uint64_t Renderer::Impl::gameFrameKey() const {
+    if (gameFrame.ids.empty()) return 0;
+    uint64_t h = 1469598103934665603ull;
+    const auto mix = [&h](const void* p, size_t n) {
+        const auto* b = static_cast<const uint8_t*>(p);
+        for (size_t i = 0; i < n; ++i) h = (h ^ b[i]) * 1099511628211ull;
+    };
+    mix(gameFrame.ids.data(), gameFrame.ids.size() * sizeof(uint32_t));
+    mix(gameFrame.factors, sizeof gameFrame.factors);
+    const uint8_t lit = gameFrame.lit ? 1 : 0;
+    mix(&lit, 1);
+    return h | 1;
+}
+
+// 3.0.20-beta.4 (stage 2b of «Модели нашим рендером»): the game's still models the driver left out of its draw this
+// frame (gameFrame.ids), from their captured nodes - each corner placed as the own ground's, coloured as the game
+// colours it (core/model_census expected: its lit ints or colour bytes x the factors), its texture the game's own; with
+// the game's model state (both sides drawn, as the models past the far plane), into the own ground's record (layer 3)
+void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::Projection& p) {
+    OwnState& o = ownState;
+    o.gameTriangles = 0;
+    if (gameFrame.ids.empty() || !o.modelLikeKnown) return;
+    DrawSetup ms = o.modelLike;
+    ms.cull = d3d7::CULL_NONE;
+    const uint32_t state = o.rec.addState(ms);
+    const bool fogged = o.shading.fogged();
+    const uint32_t plain = o.shading.specularAt(0.0f);
+    modelcensus::Colouring how;
+    how.way = gameFrame.lit ? modelcensus::Way::Lit : modelcensus::Way::Plain;
+    std::copy(gameFrame.factors, gameFrame.factors + 3, how.factors);
+    how.alpha = 0xFF;
+    for (auto& [id, pd] : gamePending) pd.verts.clear(), pd.idx.clear();
+    const auto emit = [&](uint32_t texture) {
+        OwnState::ModelPending& pd = gamePending[texture];
+        if (!pd.idx.empty()) {
+            DrawCmd cmd;
+            cmd.state = state;
+            cmd.texture[0] = texture;
+            cmd.primitive = d3d7::PT_TRIANGLELIST;
+            cmd.fvf = d3d7::FVF_TL1;
+            o.rec.draw(cmd, pd.verts.data(), uint32_t(pd.verts.size()), pd.idx.data(), uint32_t(pd.idx.size()));
+            o.drawLayer.push_back(3);
+        }
+        pd.verts.clear();
+        pd.idx.clear();
+    };
+    for (const uint32_t id : gameFrame.ids) {
+        const auto it = gameModels.find(id);
+        if (it == gameModels.end()) continue;
+        const gamemodels::Node& n = it->second;
+        for (const gamemodels::Face& f : n.faces) {
+            const uint32_t texture = f.texture < n.textures.size() ? n.textures[f.texture] : 0;
+            if (!texture) continue;
+            own_ground::Tl1 t[3];
+            bool ok = true;
+            for (int k = 0; k < 3 && ok; ++k) {
+                float seen[3];
+                own_ground::toView(view, &n.vertices[size_t(f.v[k]) * 3], seen);
+                own_ground::Tl2 placed;
+                ok = own_ground::placeView(p, seen, placed);
+                t[k].x = placed.x, t[k].y = placed.y, t[k].z = placed.z, t[k].rhw = placed.rhw;
+                t[k].diffuse = modelcensus::expected(how, f.colour[k], &f.lit[3 * k]);
+                t[k].specular = fogged ? o.shading.specularAt(seen[2]) : plain;
+                t[k].u = f.uv[2 * k], t[k].v = f.uv[2 * k + 1];
+            }
+            if (!ok) continue;  // a corner behind the eye: as the game, not drawn
+            // 3.0.20-beta.4: culled as the game's draw culls - by its turn on the screen, two-sided ones never
+            const float s0[2] = {t[0].x, t[0].y}, s1[2] = {t[1].x, t[1].y}, s2[2] = {t[2].x, t[2].y};
+            if (!gamemodels::shown(s0, s1, s2, (f.flags & gamemodels::kTwoSided) != 0, n.flipped)) continue;
+            OwnState::ModelPending& pd = gamePending[texture];
+            if (pd.verts.size() + 3 > 65535) emit(texture);
+            const uint16_t base = uint16_t(pd.verts.size());
+            for (int k = 0; k < 3; ++k) {
+                pd.verts.push_back(t[k]);
+                pd.idx.push_back(uint16_t(base + k));
+            }
+            ++o.gameTriangles;
+        }
+    }
+    for (auto& [texture, pd] : gamePending) emit(texture);
 }
 
 void Renderer::Impl::tellGameModels() {

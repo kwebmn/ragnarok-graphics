@@ -996,7 +996,7 @@ enum class Text : uint16_t {
     View3dMouseHint, View3dKeysNote, View3dDistance, View3dDistanceHint, View3dVault, View3dVaultHint,
     View3dGrass, View3dGrassHint, View3dThreat, View3dThreatHint,
     View3dAimPull, View3dAimPullHint, View3dFace, View3dFaceHint, View3dShoulder,
-    View3dShoulderHint, View3dWeather, View3dWeatherHint,
+    View3dShoulderHint, View3dOwnModels, View3dOwnModelsHint, View3dWeather, View3dWeatherHint,
     View3dFastGround, View3dFastGroundHint,
     QualityBatchGround, QualityBatchGroundHint,
     Count

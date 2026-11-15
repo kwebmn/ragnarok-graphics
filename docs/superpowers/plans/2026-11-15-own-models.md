@@ -65,3 +65,47 @@ RELEASED 15.11, main 8394155).
    the game), mapChanged at the map's change, dx7::gpuTextureOf, view3dwin::lastView; a line «models: N static nodes
    captured ... M moving ones left to the game». Tests: game_models_* (3; Corners' neighbour cells mutated -> RED).
    Lesson again: `near` is windef.h's macro (Corners::within). Untested in the game.
+3.0.20-beta.3 SHIPPED (f3e5224, update.ini 238e5d9).
+   R-B2EM7U (the owner on beta.3, prontera): 165 static nodes captured (8989 faces, 66 textures), their corners on our
+   own models 7185 of 7200 (99.8 %) - the capture's world is right; but «2105 moving ones left to the game»: actor
+   +0x1F0 is NOT the animation's kind - the game's collision (FUN_004EB3C0/4F0/580: +0x1FC set and +0x1F0 == 0 ->
+   the model blocks) - a blocking type; animated = a node's keys of turning (+0xF8, 0x14) or moving (+0x108, 0x20)
+   more than one. Fix in 2b.
+   PLAN 2b (next beta): [view3d] own_models «Моделі нашим рендером» (off; live; «3D-режим» on «Гра»). Driver: the
+   node draw hook, in the 3D view with the switch on and the renderer's word (BlockHeader gameModelsAt, as
+   ownGroundAt, Channel noteGameModels/gameModelsLately), for a node sent (g_sent), static, not half see-through
+   (+0x124), its actor's alpha 0xFF: not the game's draw - its matrix by the game's own FUN_00409720 (thiscall ecx = the
+   out 4x3, stack: node +0xB4, the parent's matrix; ret 8) and its children drawn as the game does (list +0xAC, each
+   child's vtable slot 0 thiscall (matrix, a3, a4)); the node's id into the frame's list. At the game's EndScene (before
+   the frame's record) Msg::GameModelsFrame: the factors 0x7710E4/E8/EC, the lit way, the ids drawn by us this frame.
+   Renderer: drawGameModels beside drawOwnModels (own_ground.cpp layer 3, the own models' DrawSetup modelLike): for
+   each id of the frame's list its faces - world -> file places by mapWorld.axes, own_ground::place each corner, the
+   colour (lit ints or the colour bytes) x the factors truncated, low byte, alpha 0xFF; pieces by texture, two-sided ->
+   no cull; noteGameModels when drawn. Stage 3 later: casters, reflections, model_fade from ours.
+4. 3.0.20-beta.4 - stage 2b: the renderer draws the captured still nodes in the 3D view in place of the game's
+   ([view3d] own_models «Моделі нашим рендером», off, on «Гра» under «3D-режим»). The game's node draw read whole
+   again (decomp FUN_004DE9F0): the node's matrix FUN_00409720(out = local +0xB4 x the parent's = the draw's first
+   argument); faces culled on the screen by (x2-x0)(y1-y0) <= (x1-x0)(y2-y0) unless two-sided, the other way round
+   when the second argument is set - its actor's render FUN_004E0B20 passes the parity of its scale's axes below 0
+   (a mirrored model); the third argument: faces whole within the screen (and within the renderer's +0x58..+0x64 when
+   0x7735EC is set) - no visible change, left out; faces by texture into the game's lists FUN_00412020: blended (1)
+   when the actor's alpha is not 0xFF or the texture is CTexture +0x10 format 1 (A4R4G4B4, its own alpha); +0x124
+   cleared at the end; the children with (the node's matrix, the 2nd, the 3rd). FUN_004f6ad0 (the lit way's call) is
+   a getter. The actor's fade (+0x1EC/+0x1ED, 5 a frame down to 0x5A) is its render's, after the node draw: kept.
+   Rulings: (a) the renderer culls in software as the game's (gamemodels::shown, the node's `flipped` over the wire)
+   with CULL_NONE - the game's own rule, D3D's cull would follow the game's set state; cost if wrong: faces missing
+   or showing from behind (seen at once in the 3D view). (b) a node with a texture of its own alpha, or one the
+   renderer does not know (gpuTextureOf 0), stays the game's (its blended list is sorted and drawn later than ours) -
+   cost: fewer nodes ours. (c) 0x7735EC set -> the game's. (d) the in-process D3D12 renderer (no remote) answers
+   gameModelsLately false - only the 64-bit host draws them; cost: none drawn by ours there. (e) the frame's list is
+   sent at every flush whose list grew (Context::flush before execute; all node draws come before the game's lists
+   are drawn at its scene's end), cleared at modelcensus::frame (the end of present). Fixed: animated() = the keys only
+   (R-B2EM7U). Tests: game_models_faces_culled_as_the_game_culls_them (the flat face: culled, flipped shown - as the
+   game's <=), the wire round trip with `flipped`, config_view3d_own_models_off_by_default, game_models_frame_*.
+   (f) a still node is ours only while placed and coloured as when captured (its mesh, its actor's +0xC0, its own
+   +0xB4, its +0x118/+0x144 lists and their first face's values) - else given back to the game for the map; a node
+   under an animated one (the census's call stack) is left to the game at its capture. The lights +0x144 are worked
+   out by FUN_004DF930 -> FUN_004E0070 (the vertex's place in the map's light grid FUN_004E7510 + its colour, at most
+   255) - when, unseen (a virtual call): the guard covers a relight. Cost if wrong: a model left to the game.
+   Log: «models: N nodes drawn by our renderer in place of the game's in F frames (X a frame) ... K captured ones left
+   to the game ..., M given back to it (moved or coloured anew since)». Untested in the game.

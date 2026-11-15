@@ -2324,6 +2324,15 @@ void Renderer::addGameModel(const gamemodels::Node& n) {
     impl_->addGameModel(n);
 }
 
+void Renderer::gameModelsFrame(const gamemodels::Frame& f) {
+    if (remix_ || d3d11_) return;
+    if (remote_) return remote_->sendGameModelsFrame(f);
+    impl_->gameFrame = f;
+}
+
+bool Renderer::gameModelsLately() const { return remote_ && remote_->gameModelsLately(); }  // 3.0.20-beta.4
+bool Renderer::gameModelsShown() const { return !remix_ && !d3d11_ && !remote_ && impl_ && impl_->gameShownLast; }
+
 void Renderer::setSeeThrough(const float hole[8], uint8_t flags) {
     if (remix_) return;
     if (d3d11_) return d3d11_->setSeeThrough(hole, flags);

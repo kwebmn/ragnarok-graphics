@@ -8,7 +8,7 @@ namespace uagfx::bridge {
 // process (DLSS and frame generation exist only for 64-bit programs). They share one block of memory: BlockHeader,
 // the ring from the driver to the renderer, then the ring back (core/bridge_ring.hpp).
 constexpr uint32_t kMagic = 0x52423455;  // "U4BR"
-constexpr uint32_t kVersion = 36;  // 2: uploads carry the sprite cache's cells (0.13); 3: icons (0.14); 4: what
+constexpr uint32_t kVersion = 37;  // 2: uploads carry the sprite cache's cells (0.13); 3: icons (0.14); 4: what
                                   // sprite a cell's frame is of (0.16); 5: effects (0.18); 6: the water (0.19);
                                   // 7: soft shadows, the glow's light (0.20); 8: colours (0.21); 9: depth of
                                   // field (0.22); 10: smooth map light (0.22.6); 11: torches (0.23); 12: the
@@ -26,7 +26,8 @@ constexpr uint32_t kVersion = 36;  // 2: uploads carry the sprite cache's cells 
                                   // frames shown with frame generation, for the frame counter (2.5.24); 34:
                                   // whether Reflex holds the renderer's frames (2.5.26); 35: the picture the
                                   // renderer last drew its own ground in place of the game's in (3.0.19-beta.42);
-                                  // 36: the game's model nodes (GameModel, 3.0.20-beta.3)
+                                  // 36: the game's model nodes (GameModel, 3.0.20-beta.3); 37: a frame's nodes
+                                  // drawn by the renderer (GameModelsFrame), gameModelsAt (3.0.20-beta.4)
 
 struct alignas(16) BlockHeader {
     uint32_t magic;
@@ -37,7 +38,10 @@ struct alignas(16) BlockHeader {
     // 3.0.19-beta.42: the picture (its count in presented) the renderer last drew its own ground in place of the
     // game's in, 0 none - the driver then lets the game work out its far ground cells less often (core/ground_thin)
     std::atomic<uint32_t> ownGroundAt;
-    uint32_t reserved[10];
+    // 3.0.20-beta.4: likewise the picture it last drew the game's still models in (core/game_models) - the driver then
+    // leaves them out of the game's draw ([view3d] own_models)
+    std::atomic<uint32_t> gameModelsAt;
+    uint32_t reserved[9];
 };
 static_assert(sizeof(BlockHeader) == 64, "the same layout in both processes");
 
@@ -80,6 +84,7 @@ enum class Msg : uint32_t {
     SeeThrough,         // 3.0.13-beta.26: 8 f32, the hole round the character (core/model_fade.hpp holeOf); .30 u8
                         // flags: 1 fade_models, 2 silhouette
     GameModel,          // 3.0.20-beta.3: a static model node of the game's as it draws it (core/game_models write)
+    GameModelsFrame,    // 3.0.20-beta.4: the frame's nodes drawn by the renderer, the colour factors (game_models Frame)
     // renderer -> driver
     Hello = 100,        // u8 ok, str adapter (ok) or what failed; u8 DLSS ready (when ok)
     Log,                // u8 level, str text
