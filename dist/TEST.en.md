@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.19-beta.51 — what's new · 2026-11-15
+
+- **The log catches jerks.** Every 30 seconds the log now shows how many frames took longer than 25 ms (a visible jerk at 60 fps) and where the time went: the game's own frame (and whether it read files from its archives then), our driver or the renderer — and the dearest part of the renderer's drawing. The picture does not change: this is to find where the 3D view loses its frames.
+
 # uaRO Graphics 3.0.19-beta.50 — what's new · 2026-11-15
 
 - **The ground in batches.** The game hands its ground over a cell at a time — thousands of separate draws a frame, each going the whole way through the driver. Now cells in a row with the same pictures and settings are gathered into one draw: less work for the processor, the same picture. The switch «Ground in batches» is in Settings → Quality.
