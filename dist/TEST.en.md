@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.34 — what's new · 2026-11-16
+
+- **The models' leaves from the graphics card — in Direct3D 11 too.** As 3.0.20-beta.33 did for Direct3D 12: the leaves of the trees drawn by «Models by our renderer» come from the graphics card memory where the models are, and the processor only works out each tree's sway and look once.
+- **A new switch «Leaves on the graphics card»** (Effects, next to «Ground on the graphics card»), on. Switch it off to compare with the old way: if the card's leaves look different — the sway, the crown's volume, the light through the leaves — send a report with both.
+
 # uaRO Graphics 3.0.20-beta.33 — what's new · 2026-11-16
 
 - **The models' leaves from the graphics card (Direct3D 12).** Until now the leaves of the trees drawn by «Models by our renderer» were laid out by the processor every frame, face by face (0.24–0.54 ms of a frame in the reports). Now the leaves' faces come from the same graphics card memory as the models themselves, and the processor only works out each tree's crown box — for the wind's sway, the crown's volume, the light through the leaves, the tints and the crowns the falling leaves start from. The sway is the same formula, so it looks the same. The reflections in the water and the torches' shadows take the leaves from the card.
