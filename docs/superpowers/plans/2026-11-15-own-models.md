@@ -289,3 +289,4 @@ again in every face, all of it again whenever the view moved): the renderer's CP
    a player's own 0 cannot be told from it; the notes say so - cost if wrong: a few testers keep it off until they
    switch it. Tests: config_models_by_our_renderer_on_by_default; config_view3d_own_models_off_by_default became
    config_view3d_own_models_switch (the default's word changed by the owner's decision).
+3.0.20-beta.15 SHIPPED (371070f, update.ini ccfb96e).
