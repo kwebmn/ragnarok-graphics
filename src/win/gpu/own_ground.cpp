@@ -754,6 +754,7 @@ bool Renderer::Impl::drawOwnGround() {
         geometryList = 0;  // the game's record's vertices go up again with its next draw
     }
     if (cardModelsReady()) drawGameModelsCard(o.shading);  // 3.0.20-beta.11: from the card, every picture
+    drawGameLeaves(o.shading);  // 3.0.20-beta.13: their leaves as the game's trees
     ++o.frames;
     o.slowest = std::max(o.slowest, built);
     o.most = std::max(o.most, vertices);

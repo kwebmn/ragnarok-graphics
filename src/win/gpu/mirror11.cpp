@@ -35,7 +35,9 @@ void Renderer11::noteModelCasters() {
     const gamemodels::Frame& frame = modelsNow_.frame();
     if (frame.ids.empty() || !modelLikeKnown_) return;
     modelCards_.runsOf(frame.ids, modelRuns_);
+    const bool leavesApart = leavesOwnWay();  // 3.0.20-beta.13: their casters noted as the game's (noteCaster)
     for (const gamemodels::CardRun& r : modelRuns_) {
+        if (leavesApart && leafyTexture(r.texture)) continue;
         if (casterVerts_.size() / 6 + size_t(r.count) * 3 > kMostCasterVerts) break;
         Caster11 c;
         c.first = uint32_t(casterVerts_.size() / 6);

@@ -36,7 +36,9 @@ void Renderer::Impl::noteGameCasters() {
     const DrawSetup& s = ownState.modelLike;
     const bool wide = camera::wideView();
     const float eye[3] = {viewToWorld[9], viewToWorld[10], viewToWorld[11]};
+    const bool leavesApart = leavesOwnWay();  // 3.0.20-beta.13: their casters noted as the game's (noteCaster)
     for (const gamemodels::CardRun& r : gameRuns) {
+        if (leavesApart && leafyTexture(r.texture)) continue;
         if (sunVerts.size() / 6 + size_t(r.count) * 3 > kMostSunVerts) break;
         if (wide) {  // far off in the 3D view - none, as the game's draws there
             float apart = 0.0f;

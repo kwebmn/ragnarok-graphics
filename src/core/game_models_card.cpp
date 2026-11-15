@@ -72,6 +72,11 @@ bool CardStore::add(const Node& n) {
     return true;
 }
 
+const Node* CardStore::node(uint32_t id) const {
+    const auto it = nodes_.find(id);
+    return it == nodes_.end() ? nullptr : &it->second.node;
+}
+
 void CardStore::clear() {
     nodes_.clear();
     words_.clear();

@@ -245,3 +245,17 @@ again in every face, all of it again whenever the view moved): the renderer's CP
    if wrong: none, the pass only moves up). Noted, not done: our far models' colours learnt from the game's model
    draws (noteOwnModels) see fewer of them while ours are on (R-36ND9B: 37 % matched, 74 % before) - the far models'
    colours slower to learn; the leaves of our trees do not sway (beta.9's ruling). Untested in the game.
+3.0.20-beta.12 SHIPPED (7820544, update.ini 603276c).
+13. 3.0.20-beta.13 - the owner on beta.12: «не качаются деревья» (and «там прям потемнело рано», «в пронте» - not
+   ours: the server's own night, SI_NIGHT on prontera at 12:42 and 15:12 in R-XTEFYA/R-36ND9B («server's night: its
+   darkness left out»), the clock «Від сервера» following it within a minute; «Авто (годинник комп'ютера)» or
+   «День 13:00» otherwise - told him). The leaves' looks (the wind's sway yExtent, leafShading's volume, light
+   through, tints by crownPlace) are per draw - one draw a tree - and ours were batched inner draws. Ruling: while any
+   of them is on (foliage, tree_volume, leaf_light, tree_tints), a node's leafy textures (the renderer's leafy flag)
+   are drawn as the game's own tree draws - placed by the processor (gamemodels::place with `only`, a draw a node's
+   leafy texture), through the world's path (not the own/model pass): the looks, the casters (noteCaster) and the far
+   models' learning as the game's; left out of the card's draws, the processor's batches and our casters - cost: the
+   leaves placed by the processor every picture (Prontera's still trees ~ a few thousand faces). Direct3D 12
+   drawGameLeaves (after the card or the own ground's record, and in the standalone pass); Direct3D 11 drawGameLeaves11
+   (its own vertex buffer swapped in as the darkness pass does). core: place(..., only), CardStore::node(id). Test
+   game_models_place_only_the_textures_wanted. Untested in the game.

@@ -1604,6 +1604,21 @@ struct Renderer::Impl {
     // casters (sunVerts, sunCasters) - the water's reflections and the torches' shadows take them as the game's own
     void noteGameCasters();
     std::vector<gamemodels::CardRun> gameRuns;
+    // 3.0.20-beta.13 (the owner: «не качаются деревья»): the leaves of the game's still models drawn as the game's own
+    // trees while any look of the leaves is on - a draw a node's leafy texture, placed by the processor, through the
+    // world's path (the wind's sway, the crowns' volume, the light through, the tints; the casters as the game's)
+    bool leavesOwnWay() const {
+        return effects.foliage || effects.treeVolume || effects.leafLight || effects.treeTints;
+    }
+    bool leafyTexture(uint32_t id) const {
+        const auto it = textures.find(id);
+        return it != textures.end() && it->second.leafy;
+    }
+    void drawGameLeaves(const own_ground::Shading& fog);
+    FrameRecord leafRec;
+    gamemodels::Placed leafOut;
+    std::vector<gamemodels::Corner> leafScratch;
+    std::vector<bool> leafWanted;
     bool ensureGameFaces(uint32_t faces);
     void drawGameModelsCard(const own_ground::Shading& fog);
     uint64_t gameFrameKey() const;

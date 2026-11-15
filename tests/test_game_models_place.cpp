@@ -80,3 +80,14 @@ TEST(game_models_place_a_flipped_node_culls_the_other_way) {
     out.clear();
     CHECK(out.textures() == 0 && out.triangles == 0 && out.nodes == 0);
 }
+
+// 3.0.20-beta.13 (the owner: «не качаются деревья»): a node's leaves placed alone - the faces of the textures wanted
+// (by the node's texture index), drawn a tree a draw through the world's path as the game's own trees
+TEST(game_models_place_only_the_textures_wanted) {
+    const gamemodels::Picture pic = straightOn();
+    gamemodels::Placed out;
+    std::vector<gamemodels::Corner> scratch;
+    const std::vector<bool> leaves = {false, true, false};  // the node's second texture (renderer's 9) alone
+    gamemodels::place(nodeOf(), pic, scratch, out, &leaves);
+    CHECK(out.textures() == 1 && out.texture(0) == 9 && out.vertices(0).size() == 3 && out.triangles == 1);
+}

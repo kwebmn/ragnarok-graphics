@@ -48,7 +48,9 @@ struct Corner {
 
 // the node's faces into `out`: each vertex into the view and onto the screen once (own_ground::toView, placeView); a
 // face with a corner behind the eye left out (as the game), culled as the game's draw culls (shown), its corners
-// coloured as the game colours them (modelcensus::expected), its texture's id the renderer's (0: unknown - left out)
-void place(const Node& n, const Picture& pic, std::vector<Corner>& scratch, Placed& out);
+// coloured as the game colours them (modelcensus::expected), its texture's id the renderer's (0: unknown - left out).
+// 3.0.20-beta.13: `only` - the node's textures wanted, by its texture index (the leaves alone); none: all
+void place(const Node& n, const Picture& pic, std::vector<Corner>& scratch, Placed& out,
+           const std::vector<bool>* only = nullptr);
 
 }  // namespace uagfx::gamemodels

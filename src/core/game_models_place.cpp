@@ -21,7 +21,8 @@ std::vector<own_ground::Tl1>& Placed::of(uint32_t texture) {
     return verts_[last_];
 }
 
-void place(const Node& n, const Picture& pic, std::vector<Corner>& scratch, Placed& out) {
+void place(const Node& n, const Picture& pic, std::vector<Corner>& scratch, Placed& out,
+           const std::vector<bool>* only) {
     const size_t vertices = n.vertices.size() / 3;
     scratch.resize(vertices);
     for (size_t v = 0; v < vertices; ++v) {
@@ -37,7 +38,7 @@ void place(const Node& n, const Picture& pic, std::vector<Corner>& scratch, Plac
     ++out.nodes;
     for (const Face& f : n.faces) {
         const uint32_t texture = f.texture < n.textures.size() ? n.textures[f.texture] : 0;
-        if (!texture) continue;
+        if (!texture || (only && (f.texture >= only->size() || !(*only)[f.texture]))) continue;
         const Corner* c[3] = {&scratch[f.v[0]], &scratch[f.v[1]], &scratch[f.v[2]]};
         if (!c[0]->ok || !c[1]->ok || !c[2]->ok) continue;  // a corner behind the eye: as the game, not drawn
         const float s0[2] = {c[0]->x, c[0]->y}, s1[2] = {c[1]->x, c[1]->y}, s2[2] = {c[2]->x, c[2]->y};

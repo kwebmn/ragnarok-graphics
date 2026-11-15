@@ -254,6 +254,7 @@ Renderer11::~Renderer11() {
     drop(modelFacesSrv_);
     drop(modelFaces_);
     drop(modelInstances_);
+    drop(leafVertices_);  // 3.0.20-beta.13
     drop(mirrorVs_);
     drop(mirrorPs_);
     drop(mirrorLayout_);

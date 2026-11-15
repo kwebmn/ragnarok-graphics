@@ -17,6 +17,7 @@
 #include "core/game_camera.hpp"
 #include "core/game_models.hpp"
 #include "core/game_models_card.hpp"
+#include "core/game_models_place.hpp"
 #include "core/model_census.hpp"
 #include "core/own_ground.hpp"
 #include "core/portal.hpp"
@@ -493,6 +494,22 @@ private:
     // 3.0.20-beta.12 (stage 3): the game's still models we drew this picture into the casters (casterVerts_, casters_)
     void noteModelCasters();
     std::vector<gamemodels::CardRun> modelRuns_;
+    // 3.0.20-beta.13 (the owner: «не качаются деревья»): the game's still models' leaves drawn as the game's own trees
+    // while any look of the leaves is on - a draw a node's leafy texture, placed by the processor, the world's path
+    bool leavesOwnWay() const {
+        return effects_.foliage || effects_.treeVolume || effects_.leafLight || effects_.treeTints;
+    }
+    bool leafyTexture(uint32_t id) const {
+        const auto it = textures_.find(id);
+        return it != textures_.end() && it->second.leafy;
+    }
+    void drawGameLeaves11();
+    FrameRecord leafRec_;
+    gamemodels::Placed leafOut_;
+    std::vector<gamemodels::Corner> leafScratch_;
+    std::vector<bool> leafWanted_;
+    ID3D11Buffer* leafVertices_ = nullptr;
+    UINT leafVertexBytes_ = 0;
     struct SeamBatch11 {    // applySeams' batch: the groups giving its state and textures, its pieces of each size
         uint32_t in = 0, shows = 0;
         std::vector<uint32_t> pieces[2];  // seamStore_.shown()'s

@@ -42,6 +42,7 @@ public:
     const std::vector<uint32_t>& words() const { return words_; }
     uint32_t faces() const { return uint32_t(words_.size() / kCardFaceWords); }
     size_t nodes() const { return nodes_.size(); }
+    const Node* node(uint32_t id) const;  // 3.0.20-beta.13: a node kept (its leaves placed by the processor)
     void frameOf(const std::vector<uint32_t>& ids, CardFrame& out) const;
     // 3.0.20-beta.12 (stage 3: our models in the torches' shadows and the water's reflections): the frame's nodes'
     // runs, and a run's corners appended as the casters' vertices - x y z, u v, the colour's bits as a float

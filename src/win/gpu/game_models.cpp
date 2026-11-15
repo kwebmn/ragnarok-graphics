@@ -133,6 +133,7 @@ void Renderer::Impl::drawGameModels(const own_ground::View& view, const camera::
         o.gameUnknown += out.unknown;
         for (size_t t = 0; t < out.textures(); ++t) {
             const uint32_t texture = out.texture(t);
+            if (leavesOwnWay() && leafyTexture(texture)) continue;  // 3.0.20-beta.13: drawGameLeaves draws them
             const std::vector<own_ground::Tl1>& v = out.vertices(t);
             for (size_t at = 0; at < v.size();) {
                 OwnState::ModelPending& pd = gamePending[texture];
@@ -182,6 +183,7 @@ bool Renderer::Impl::drawGameModelsAlone() {
         gameDrawnNodes += o.gameNodes;
         gameDrawnUnknown += o.gameUnknown;
     }
+    if (ready) drawGameLeaves(gameFog);  // 3.0.20-beta.13
     gameModelsNow.drawn(ready);  // the driver's word: from the present on
     return true;
 }
@@ -289,9 +291,10 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
     DrawSetup st = o.modelLike;
     st.cull = d3d7::CULL_NONE;  // culled in model_vs as the game culls
     const uint32_t state = cardRec.addState(st);
+    const bool leavesApart = leavesOwnWay();  // 3.0.20-beta.13: drawn as the game's trees (drawGameLeaves)
     for (size_t t = 0; t < gameCardFrame.textures.size(); ++t) {
         const std::vector<uint32_t>& list = gameCardFrame.faces[t];
-        if (list.empty()) continue;
+        if (list.empty() || (leavesApart && leafyTexture(gameCardFrame.textures[t]))) continue;
         cardPacked.assign(list.begin(), list.end());
         cardPacked.resize((list.size() + 7) / 8 * 8, 0u);
         DrawCmd cmd;
@@ -327,6 +330,54 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
     gameDrawnTriangles += o.gameTriangles;
     gameDrawnNodes += o.gameNodes;
     gameDrawnUnknown += o.gameUnknown;
+}
+
+// 3.0.20-beta.13 (the owner: «не качаются деревья»): the frame's game models' leaves drawn as the game's own trees - a
+// draw a node's leafy texture (as its own draw items), placed by the processor, coloured as the game, through the
+// world's path: the wind's sway by the draw's extent, the crowns' volume, the light through, the tints by its place,
+// its casters noted as the game's
+void Renderer::Impl::drawGameLeaves(const own_ground::Shading& fog) {
+    const gamemodels::Frame& frame = gameModelsNow.frame();
+    if (!leavesOwnWay() || frame.ids.empty() || !ownState.modelLikeKnown || !viewToWorldValid) return;
+    gamemodels::Picture pic;
+    if (!own_ground::viewOf(viewToWorld, pic.view)) return;
+    pic.p = camera::projectionFor(gameWidth, gameHeight);
+    pic.how = gamemodels::colouringOf(frame);
+    pic.fog = fog.fogged() ? &fog : nullptr;
+    pic.plain = fog.specularAt(0.0f);
+    leafRec.reset();
+    DrawSetup st = ownState.modelLike;
+    st.cull = d3d7::CULL_NONE;  // culled by place() as the game culls
+    const uint32_t state = leafRec.addState(st);
+    for (const uint32_t id : frame.ids) {
+        const auto it = gameModels.find(id);
+        if (it == gameModels.end()) continue;
+        const gamemodels::Node& n = it->second;
+        leafWanted.assign(n.textures.size(), false);
+        bool any = false;
+        for (size_t t = 0; t < n.textures.size(); ++t)
+            if (n.textures[t] && leafyTexture(n.textures[t])) leafWanted[t] = any = true;
+        if (!any) continue;
+        leafOut.clear();
+        gamemodels::place(n, pic, leafScratch, leafOut, &leafWanted);
+        for (size_t t = 0; t < leafOut.textures(); ++t) {
+            const std::vector<own_ground::Tl1>& v = leafOut.vertices(t);
+            if (v.empty() || v.size() > 65535) continue;
+            DrawCmd cmd;
+            cmd.state = state;
+            cmd.texture[0] = leafOut.texture(t);
+            cmd.primitive = d3d7::PT_TRIANGLELIST;
+            cmd.fvf = d3d7::FVF_TL1;
+            leafRec.draw(cmd, v.data(), uint32_t(v.size()), nullptr, 0);
+        }
+    }
+    if (leafRec.draws().empty()) return;
+    flushDraws();  // the draws gathered so far are of the record's vertices before these
+    prepareGeometry(leafRec);
+    if (vertexBase)
+        for (const DrawCmd& d : leafRec.draws()) draw(leafRec, d);  // the world's path, as the game's trees
+    flushDraws();
+    geometryList = 0;  // the game's record's vertices go up again with its next draw
 }
 
 void Renderer::Impl::tellGameModels() {
