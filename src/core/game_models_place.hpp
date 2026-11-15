@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #include "core/game_camera.hpp"
@@ -53,5 +54,32 @@ struct Corner {
 // 3.0.20-beta.14: `toView` - a moving node's node-to-view matrix this frame (its own vertices by it, the camera aside)
 void place(const Node& n, const Picture& pic, std::vector<Corner>& scratch, Placed& out,
            const std::vector<bool>* only = nullptr, const float* toView = nullptr);
+
+// 3.0.20-beta.16 (the owner: «делать» - R-GZDPF9: our models and their leaves ~2.3 ms of the renderer's frame, the
+// leaves placed on one thread): the frame's nodes' leaves - a node with a leafy texture (`leafy`: the renderer's flag
+// by its texture id) kept with those textures alone, each placed into its own output (place() with them; `toView` a
+// moving one's matrix) in turns of `aJob` nodes by the parallel for given - the renderer's threads (parallelChunks:
+// its helpers join from 16 jobs on, so a node a job); its draws made after in the nodes' order, a draw a node's
+// texture (the world's path takes a tree a draw)
+using ParallelFor = std::function<void(size_t count, const std::function<void(size_t)>& body)>;
+class Leaves {
+public:
+    void clear() { used_ = 0; }
+    void add(const Node& n, const float* toView, const std::function<bool(uint32_t)>& leafy);
+    void place(const Picture& pic, const ParallelFor& run, size_t aJob = 1);
+    size_t size() const { return used_; }
+    const Placed& placed(size_t i) const { return outs_[i]; }
+
+private:
+    struct Item {
+        const Node* node = nullptr;
+        const float* toView = nullptr;
+    };
+    std::vector<Item> items_;
+    std::vector<std::vector<bool>> wanted_;  // by the node's texture index
+    std::vector<Placed> outs_;
+    std::vector<std::vector<Corner>> scratch_;  // a job's
+    size_t used_ = 0;
+};
 
 }  // namespace uagfx::gamemodels

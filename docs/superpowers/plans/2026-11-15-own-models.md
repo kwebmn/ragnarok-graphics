@@ -290,3 +290,14 @@ again in every face, all of it again whenever the view moved): the renderer's CP
    switch it. Tests: config_models_by_our_renderer_on_by_default; config_view3d_own_models_off_by_default became
    config_view3d_own_models_switch (the default's word changed by the owner's decision).
 3.0.20-beta.15 SHIPPED (371070f, update.ini ccfb96e).
+   R-GZDPF9 (owner, beta.15, prontera 3D): STAGE 4 CONFIRMED - 1201 nodes a frame by us, 658 moving, 0 unknown, all
+   from the card; the game's own models 0.19 ms (1 %) vs 1.74 (off) and 0.56 (beta.11). Renderer CPU 8.98 ms, «the
+   own ground» 4.28 (its terrain 1.99 - 249 chunks in view vs 18 in R-36ND9B), long frames 52/1787.
+16. 3.0.20-beta.16 - the owner: «делать» (the proposal: split «the own ground» in the log, the leaves on several
+   threads). core gamemodels::Leaves: a node with a leafy texture kept with those textures alone, each placed into its
+   own Placed by an injected parallel for (a node a job: parallelChunks' helpers join from 16 jobs), the draws made
+   after in the frame's order - both renderers (threads.hpp declares parallelChunks for Direct3D 11's file too). Test
+   game_models_leaves_a_node_each_whatever_the_order. Direct3D 12's CPU parts: «the game's models by us» wherever
+   drawn and «their leaves (a tree a draw)», timed within the own ground's or the standalone pass's span and taken
+   out of it (CpuTimeWithin). The census of corners on our own models skips the moving nodes (their corners are their
+   own space - R-GZDPF9's 83.9 % was that); its line counts them apart. Untested in the game.

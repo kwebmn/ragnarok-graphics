@@ -49,6 +49,7 @@ bool Renderer::Impl::makeOwnCorners() {
 }
 
 void Renderer::Impl::checkGameModel(const gamemodels::Node& n) {
+    if (n.moving) return;  // 3.0.20-beta.16: its own space, not the world's places of our models
     for (size_t i = 0; i + 2 < n.vertices.size(); i += 3) {
         ++gameModelCorners;
         if (ownCorners.within(&n.vertices[i], 0.5f)) ++gameModelCornersOurs;
@@ -210,7 +211,10 @@ bool Renderer::Impl::drawGameModelsAlone() {
         gameDrawnUnknown += o.gameUnknown;
         gameDrawnMoving += gameMovingPlaced;  // 3.0.20-beta.14
     }
-    if (ready) drawGameLeaves(gameFog);  // 3.0.20-beta.13
+    if (ready) {  // 3.0.20-beta.13 (3.0.20-beta.16: their own time)
+        CpuTimeWithin t(cpuPartTicks[kCpuGameLeaves], cpuPartTicks[kCpuGameModels]);
+        drawGameLeaves(gameFog);
+    }
     gameModelsNow.drawn(ready);  // the driver's word: from the present on
     return true;
 }
@@ -388,28 +392,28 @@ void Renderer::Impl::drawGameLeaves(const own_ground::Shading& fog) {
     pic.how = gamemodels::colouringOf(frame);
     pic.fog = fog.fogged() ? &fog : nullptr;
     pic.plain = fog.specularAt(0.0f);
+    // 3.0.20-beta.16 (R-GZDPF9): the nodes with leaves placed a node each on the own ground's threads
+    // (core gamemodels::Leaves), their draws after in the frame's order
+    gameLeaves.clear();
+    const auto leafy = [this](uint32_t texture) { return leafyTexture(texture); };
+    for (size_t i = 0; i < frame.ids.size() + frame.moving.size(); ++i) {  // 3.0.20-beta.14: the moving ones too
+        const float* toView = nullptr;
+        if (const gamemodels::Node* n = gameNodeOf(frame, i, toView)) gameLeaves.add(*n, toView, leafy);
+    }
+    if (!gameLeaves.size()) return;
+    gameLeaves.place(pic, parallelChunks);
     leafRec.reset();
     DrawSetup st = ownState.modelLike;
     st.cull = d3d7::CULL_NONE;  // culled by place() as the game culls
     const uint32_t state = leafRec.addState(st);
-    for (size_t i = 0; i < frame.ids.size() + frame.moving.size(); ++i) {  // 3.0.20-beta.14: the moving ones too
-        const float* toView = nullptr;
-        const gamemodels::Node* found = gameNodeOf(frame, i, toView);
-        if (!found) continue;
-        const gamemodels::Node& n = *found;
-        leafWanted.assign(n.textures.size(), false);
-        bool any = false;
-        for (size_t t = 0; t < n.textures.size(); ++t)
-            if (n.textures[t] && leafyTexture(n.textures[t])) leafWanted[t] = any = true;
-        if (!any) continue;
-        leafOut.clear();
-        gamemodels::place(n, pic, leafScratch, leafOut, &leafWanted, toView);
-        for (size_t t = 0; t < leafOut.textures(); ++t) {
-            const std::vector<own_ground::Tl1>& v = leafOut.vertices(t);
+    for (size_t k = 0; k < gameLeaves.size(); ++k) {
+        const gamemodels::Placed& out = gameLeaves.placed(k);
+        for (size_t t = 0; t < out.textures(); ++t) {
+            const std::vector<own_ground::Tl1>& v = out.vertices(t);
             if (v.empty() || v.size() > 65535) continue;
             DrawCmd cmd;
             cmd.state = state;
-            cmd.texture[0] = leafOut.texture(t);
+            cmd.texture[0] = out.texture(t);
             cmd.primitive = d3d7::PT_TRIANGLELIST;
             cmd.fvf = d3d7::FVF_TL1;
             leafRec.draw(cmd, v.data(), uint32_t(v.size()), nullptr, 0);
@@ -439,11 +443,14 @@ void Renderer::Impl::tellGameModels() {
     gameModelsTold = gameModels.size();
     makeOwnCorners();
     std::unordered_map<uint32_t, bool> textures;
-    for (const auto& [id, n] : gameModels)
+    size_t moving = 0;  // 3.0.20-beta.16: their corners are their own space - not checked against our models
+    for (const auto& [id, n] : gameModels) {
         for (const uint32_t t : n.textures) textures[t] = true;
-    LOG_INFO("game models: %s - %zu static nodes captured as the game draws them, %zu faces, %zu textures; their "
-             "corners on our own models (placed from the map's files) %zu of %zu (%.1f %%)%s",
-             mapName.c_str(), gameModels.size(), gameModelFaces, textures.size(), gameModelCornersOurs,
+        if (n.moving) ++moving;
+    }
+    LOG_INFO("game models: %s - %zu nodes captured as the game draws them (%zu of them moving), %zu faces, %zu "
+             "textures; the still ones' corners on our own models (placed from the map's files) %zu of %zu (%.1f %%)%s",
+             mapName.c_str(), gameModels.size(), moving, gameModelFaces, textures.size(), gameModelCornersOurs,
              gameModelCorners, gameModelCorners ? gameModelCornersOurs * 100.0 / double(gameModelCorners) : 0.0,
              ownCornersMade ? "" : " - our own models not up yet");
 }

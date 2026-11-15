@@ -1,6 +1,7 @@
 // 3.0.20-beta.8 (the owner's «давай по очереди», step 1: the renderer's CPU +2 ms a frame building the game's still
 // models anew whenever the view moved - R-XTEFYA): a node's faces placed for a picture on a renderer's thread of its
 // own, each vertex placed once a node - the same vertices the one-thread build made
+#include <functional>
 #include <vector>
 
 #include "core/game_models_place.hpp"
@@ -108,4 +109,45 @@ TEST(game_models_place_a_moving_node_by_its_matrix) {
     gamemodels::place(n, pic, scratch, out, nullptr, toView);
     CHECK(out.triangles == 1 && out.vertices(0).size() == 3);
     CHECK(out.vertices(0)[0].x == 50.0f && out.vertices(0)[0].y == 50.0f && out.vertices(0)[1].y == 60.0f);
+}
+
+// 3.0.20-beta.16 (the owner: «делать» - R-GZDPF9: our models and their leaves ~2.3 ms of the renderer's frame, the
+// leaves placed on one thread): the frame's nodes' leaves a node each - a node with a leafy texture kept with those
+// textures alone (one with none left out), each placed into its own output by the parallel for given (here the jobs
+// taken backwards: the outputs by node all the same), a moving one by its matrix
+TEST(game_models_leaves_a_node_each_whatever_the_order) {
+    const gamemodels::Picture pic = straightOn();
+    const gamemodels::Node a = nodeOf();  // textures 7, 9 and an unknown one
+    gamemodels::Node bare = nodeOf();
+    bare.textures = {5, 6, 0};  // nothing leafy
+    gamemodels::Node moving;
+    moving.textures = {9};
+    moving.vertices = {0, 0, 0, 1, 0, 0, 0, 1, 0};
+    moving.faces = {faceOf(0, 2, 1, 0)};
+    moving.moving = true;
+    const float ahead[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10};
+    const auto leafy = [](uint32_t t) { return t == 9; };
+    gamemodels::Leaves leaves;
+    leaves.add(a, nullptr, leafy);
+    leaves.add(bare, nullptr, leafy);
+    leaves.add(moving, ahead, leafy);
+    CHECK(leaves.size() == 2);
+    std::vector<size_t> jobs;
+    leaves.place(
+        pic,
+        [&jobs](size_t count, const std::function<void(size_t)>& body) {
+            for (size_t i = count; i-- > 0;) {
+                jobs.push_back(i);
+                body(i);
+            }
+        },
+        1);
+    CHECK(jobs == (std::vector<size_t>{1, 0}));
+    const gamemodels::Placed& first = leaves.placed(0);  // texture 9's face alone, as place() with `only`
+    CHECK(first.textures() == 1 && first.texture(0) == 9 && first.vertices(0).size() == 3 && first.triangles == 1);
+    const gamemodels::Placed& second = leaves.placed(1);
+    CHECK(second.textures() == 1 && second.texture(0) == 9 && second.vertices(0).size() == 3);
+    CHECK(second.vertices(0)[0].x == 50.0f && second.vertices(0)[0].y == 50.0f && second.vertices(0)[1].y == 60.0f);
+    leaves.clear();
+    CHECK(leaves.size() == 0);
 }

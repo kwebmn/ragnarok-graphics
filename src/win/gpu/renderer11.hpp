@@ -510,9 +510,7 @@ private:
     }
     void drawGameLeaves11();
     FrameRecord leafRec_;
-    gamemodels::Placed leafOut_;
-    std::vector<gamemodels::Corner> leafScratch_;
-    std::vector<bool> leafWanted_;
+    gamemodels::Leaves leaves11_;  // 3.0.20-beta.16: placed a node each on the own ground's threads
     ID3D11Buffer* leafVertices_ = nullptr;
     UINT leafVertexBytes_ = 0;
     struct SeamBatch11 {    // applySeams' batch: the groups giving its state and textures, its pieces of each size

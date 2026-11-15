@@ -725,7 +725,10 @@ bool Renderer::Impl::drawOwnGround() {
             for (size_t t = 0; t < o.pending[layer].size(); ++t) emit(layer, t);
         drawOwnModels(view, p, axes);  // 3.0.4-beta.14: the models past the far plane, into the same record (layer 3)
         // 3.0.20-beta.4: the ones the driver left out (the processor's way, while the card's is missing)
-        if (!cardModelsReady()) drawGameModels(view, p, o.rec, &o.drawLayer, o.shading);
+        if (!cardModelsReady()) {  // 3.0.20-beta.16: their own part of the drawing's time
+            CpuTimeWithin t(cpuPartTicks[kCpuGameModels], cpuPartTicks[kCpuOwnGround]);
+            drawGameModels(view, p, o.rec, &o.drawLayer, o.shading);
+        }
         o.madeChunks = chunks, o.madeVertices = vertices, o.madeTriangles = triangles;
     }
     const double built = msSince(start);
@@ -754,8 +757,14 @@ bool Renderer::Impl::drawOwnGround() {
         }
         geometryList = 0;  // the game's record's vertices go up again with its next draw
     }
-    if (cardModelsReady()) drawGameModelsCard(o.shading);  // 3.0.20-beta.11: from the card, every picture
-    drawGameLeaves(o.shading);  // 3.0.20-beta.13: their leaves as the game's trees
+    if (cardModelsReady()) {  // 3.0.20-beta.11: from the card, every picture (3.0.20-beta.16: its own time)
+        CpuTimeWithin t(cpuPartTicks[kCpuGameModels], cpuPartTicks[kCpuOwnGround]);
+        drawGameModelsCard(o.shading);
+    }
+    {  // 3.0.20-beta.13: their leaves as the game's trees (3.0.20-beta.16: their own time)
+        CpuTimeWithin t(cpuPartTicks[kCpuGameLeaves], cpuPartTicks[kCpuOwnGround]);
+        drawGameLeaves(o.shading);
+    }
     ++o.frames;
     o.slowest = std::max(o.slowest, built);
     o.most = std::max(o.most, vertices);

@@ -32,6 +32,7 @@
 #include "core/ground_cells.hpp"
 #include "core/hills.hpp"
 #include "core/game_models_card.hpp"
+#include "win/gpu/threads.hpp"
 #include "core/game_models_place.hpp"
 #include "core/own_ground.hpp"
 #include "core/own_models.hpp"
@@ -59,10 +60,6 @@
 #include "win/gpu/upscaler.hpp"
 
 namespace uagfx::gpu {
-
-// 3.0.20-beta.8: the own ground's threads (own_ground.cpp) - `count` jobs, the renderer's thread among them, the call
-// back when all are done; the game's still models placed on them too (game_models.cpp)
-void parallelChunks(size_t count, const std::function<void(size_t)>& body);
 
 class AiTextures;  // ai_textures.hpp
 
@@ -858,8 +855,10 @@ struct Renderer::Impl {
     LONGLONG reflexTicks = 0;  // 2.5.26: Reflex's sleep after the present (Upscaler::afterPresent)
     // 3.0.19-beta.22 (R-8HBYXU «всеравно тормозит»: the drawing 11.8 ms a frame in the 3D view, no parts known): the
     // processor's time of the passes that read the game's draws or make the own world's, for the log next to cpuTicks
+    // 3.0.20-beta.16 (R-GZDPF9: «the own ground» 4.28 ms with our models and their leaves in it): kCpuGameModels the
+    // game's models by us wherever drawn (taken out of the own ground's), kCpuGameLeaves their leaves
     enum CpuPart { kCpuGroundNotes, kCpuCasters, kCpuOwnGroundNotes, kCpuOwnGround, kCpuOwnWater, kCpuOwnModelNotes,
-                   kCpuActorShadows, kCpuGameModels, kCpuParts };
+                   kCpuActorShadows, kCpuGameModels, kCpuGameLeaves, kCpuParts };
     // 3.0.19-beta.26 (R-24ZKYP: «the rest» 9.7-11.7 ms): the record's parts around them - the vertices' upload, the
     // textures' uploads, the draws (with the parts above in them), the list's submit; the rest: the present's passes
     LONGLONG geometryTicks = 0, texturesTicks = 0, drawsTicks = 0, submitTicks = 0;
@@ -892,6 +891,19 @@ struct Renderer::Impl {
             QueryPerformanceCounter(&now);
             total += now.QuadPart - start.QuadPart;
             start.QuadPart = 0;
+        }
+    };
+    // 3.0.20-beta.16: a part timed within another's span - its time its own, taken out of the other's
+    struct CpuTimeWithin {
+        LONGLONG& own;
+        LONGLONG& outer;
+        LARGE_INTEGER start{};
+        CpuTimeWithin(LONGLONG& mine, LONGLONG& around) : own(mine), outer(around) { QueryPerformanceCounter(&start); }
+        ~CpuTimeWithin() {
+            LARGE_INTEGER now;
+            QueryPerformanceCounter(&now);
+            own += now.QuadPart - start.QuadPart;
+            outer -= now.QuadPart - start.QuadPart;
         }
     };
 
@@ -1624,9 +1636,7 @@ struct Renderer::Impl {
     }
     void drawGameLeaves(const own_ground::Shading& fog);
     FrameRecord leafRec;
-    gamemodels::Placed leafOut;
-    std::vector<gamemodels::Corner> leafScratch;
-    std::vector<bool> leafWanted;
+    gamemodels::Leaves gameLeaves;  // 3.0.20-beta.16: placed a node each on the own ground's threads
     bool ensureGameFaces(uint32_t faces);
     void drawGameModelsCard(const own_ground::Shading& fog);
     uint64_t gameFrameKey() const;

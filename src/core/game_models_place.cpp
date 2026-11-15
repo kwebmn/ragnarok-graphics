@@ -1,5 +1,7 @@
 #include "core/game_models_place.hpp"
 
+#include <algorithm>
+
 namespace uagfx::gamemodels {
 
 void Placed::clear() {
@@ -57,6 +59,33 @@ void place(const Node& n, const Picture& pic, std::vector<Corner>& scratch, Plac
         }
         ++out.triangles;
     }
+}
+
+void Leaves::add(const Node& n, const float* toView, const std::function<bool(uint32_t)>& leafy) {
+    if (wanted_.size() <= used_) wanted_.resize(used_ + 1);
+    std::vector<bool>& wanted = wanted_[used_];
+    wanted.assign(n.textures.size(), false);
+    bool any = false;
+    for (size_t t = 0; t < n.textures.size(); ++t)
+        if (n.textures[t] && leafy(n.textures[t])) wanted[t] = any = true;
+    if (!any) return;
+    if (items_.size() <= used_) items_.resize(used_ + 1);
+    items_[used_++] = Item{&n, toView};
+}
+
+void Leaves::place(const Picture& pic, const ParallelFor& run, size_t aJob) {
+    if (!used_) return;
+    aJob = std::max<size_t>(aJob, 1);
+    if (outs_.size() < used_) outs_.resize(used_);
+    const size_t jobs = (used_ + aJob - 1) / aJob;
+    if (scratch_.size() < jobs) scratch_.resize(jobs);
+    run(jobs, [&](size_t job) {
+        const size_t end = std::min(used_, (job + 1) * aJob);
+        for (size_t k = job * aJob; k < end; ++k) {
+            outs_[k].clear();
+            gamemodels::place(*items_[k].node, pic, scratch_[job], outs_[k], &wanted_[k], items_[k].toView);
+        }
+    });
 }
 
 }  // namespace uagfx::gamemodels

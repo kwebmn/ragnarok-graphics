@@ -11,6 +11,7 @@
 
 #include "core/frame.hpp"
 #include "win/gpu/renderer11.hpp"
+#include "win/gpu/threads.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::gpu {
@@ -195,27 +196,28 @@ void Renderer11::drawGameLeaves11() {
     modelFog_.fit();
     pic.fog = modelFog_.fogged() ? &modelFog_ : nullptr;
     pic.plain = modelFog_.specularAt(0.0f);
+    // 3.0.20-beta.16 (R-GZDPF9): the nodes with leaves placed a node each on the own ground's threads
+    // (core gamemodels::Leaves), their draws after in the frame's order
+    leaves11_.clear();
+    const auto leafy = [this](uint32_t texture) { return leafyTexture(texture); };
+    for (size_t i = 0; i < frame.ids.size() + frame.moving.size(); ++i) {  // 3.0.20-beta.14: the moving ones too
+        const float* toView = nullptr;
+        if (const gamemodels::Node* n = modelNodeOf(frame, i, toView)) leaves11_.add(*n, toView, leafy);
+    }
+    if (!leaves11_.size()) return;
+    leaves11_.place(pic, parallelChunks);
     leafRec_.reset();
     DrawSetup st = modelLike_;
     st.cull = d3d7::CULL_NONE;  // culled by place() as the game culls
     const uint32_t state = leafRec_.addState(st);
-    for (size_t i = 0; i < frame.ids.size() + frame.moving.size(); ++i) {  // 3.0.20-beta.14: the moving ones too
-        const float* toView = nullptr;
-        const gamemodels::Node* n = modelNodeOf(frame, i, toView);
-        if (!n) continue;
-        leafWanted_.assign(n->textures.size(), false);
-        bool any = false;
-        for (size_t t = 0; t < n->textures.size(); ++t)
-            if (n->textures[t] && leafyTexture(n->textures[t])) leafWanted_[t] = any = true;
-        if (!any) continue;
-        leafOut_.clear();
-        gamemodels::place(*n, pic, leafScratch_, leafOut_, &leafWanted_, toView);
-        for (size_t t = 0; t < leafOut_.textures(); ++t) {
-            const std::vector<own_ground::Tl1>& v = leafOut_.vertices(t);
+    for (size_t k = 0; k < leaves11_.size(); ++k) {
+        const gamemodels::Placed& out = leaves11_.placed(k);
+        for (size_t t = 0; t < out.textures(); ++t) {
+            const std::vector<own_ground::Tl1>& v = out.vertices(t);
             if (v.empty() || v.size() > 65535) continue;
             DrawCmd cmd;
             cmd.state = state;
-            cmd.texture[0] = leafOut_.texture(t);
+            cmd.texture[0] = out.texture(t);
             cmd.primitive = d3d7::PT_TRIANGLELIST;
             cmd.fvf = d3d7::FVF_TL1;
             leafRec_.draw(cmd, v.data(), uint32_t(v.size()), nullptr, 0);
