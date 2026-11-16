@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.20-beta.54 — what's new · 2026-11-16
+
+- **3D view: a cave's vault made of the map's own rock.** Until now the vault was a plain warm stone with blurred stains, the same in every cave. Now it wears the rock this map's ledges and walls are painted with: mossy stones in Payon cave, white stone in the orc cave, red rock in Magma, ice in the ice cave.
+  - The game's cave textures are painted sheets, «blackness → rock → floor»; they cannot lie whole on a vault. So the driver cuts a square that is all rock out of a sheet and lays it in shifted pieces that blend into one another: no seams, no repeats.
+  - Checked without the game on 118 dungeon maps: 86 have rock for the mosaic; on 21 the walls are bricks, tiles or painted panels (lhz_dun, ama_dun, kh_dun01), and there the vault stays a plain stone but in those walls' colour; 11 more have no textures in the client.
+  - The switch **«The map's own rock on the vault»** is on: «Game and chat» → «Game» → «3D view», or the console (Ctrl+`) → «Quick». It needs «Vault in the caves». It works on Direct3D 12 and 11, with «Own ground» and without it.
+- **3D view: the ceiling indoors in the walls' colour.** The ceiling of beta.52 had one grey-brown colour. Now its colour comes from the upper half of the map's tall models (walls, pillars) in the map's light: wood-brown in the houses of Prontera and Geffen, grey-green in Glast Heim. Checked on sixteen maps; where there are no tall models (the pyramids) the colour is as before.
+
 # uaRO Graphics 3.0.20-beta.53 — what's new · 2026-11-16
 
 - **No grass on stone — for everybody.** The rule of beta.46 (grass grows only on cells whose own texture is green) worked only with «Own ground» turned on. Now it works without it too, and on Direct3D 11: the driver reads the map's ground textures itself, one at a time, and keeps none in memory. It covers both «Grass» (the top view) and «Grass in the 3D view».
