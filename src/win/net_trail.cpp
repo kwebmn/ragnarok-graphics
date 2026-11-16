@@ -27,6 +27,13 @@ constexpr uint32_t kConnectFrom = 0x418AF0, kConnectTo = 0x418C60, kCloseFrom = 
                    kWriteFrom = 0x418DB0, kWriteTo = 0x418EB0, kReadFrom = 0x418EB0, kReadTo = 0x418FA0;
 constexpr unsigned kCloseSocketOrdinal = 3;  // ws2_32.dll's closesocket
 constexpr uint64_t kReportEveryMs = 60000;   // a report a minute at most from here (the app keeps its own count)
+// 3.0.20-beta.64: uaRO Pad (inside the driver, pad/win/hooks.cpp) takes the same functions - closesocket's import
+// and the game's recv and send pointers, each found by ws2_32.dll's own function still being there. Ours go in over
+// its, never before it: the pad mounts at the DLL's load and looks at the pointers every quarter second of the game's
+// message pump - so closesocket's import at the first poll (beta.60-63 took it at the load, before the pad: the pad's
+// own hook found no slot and never heard of a socket closed), and the pointers once the pad has them, or after this
+// long with ws2_32's own still there (no pad)
+constexpr DWORD kPadGraceMs = 3000;
 
 // ws2_32.dll's own, not imported into ddraw.dll (the game has it): a socket is a pointer's width, an error is -1
 // and its number the thread's last error (WSAGetLastError is GetLastError)
@@ -38,7 +45,8 @@ using CloseFn = int(WINAPI*)(Socket);
 
 struct State {
     CRITICAL_SECTION lock;
-    bool lockMade = false, sameExe = false, swapped = false, told = false;
+    bool lockMade = false, sameExe = false, swapped = false, told = false, closeTried = false;
+    DWORD firstLook = 0;
     nettrail::Trail trail;
     RecvFn recv = nullptr;
     SendFn send = nullptr;
@@ -221,10 +229,6 @@ void install() {
     // this uaRO.exe's connection code where it is known to be: its read's and write's calls
     st.sameExe = std::memcmp(reinterpret_cast<const void*>(uintptr_t(kRecvCallAt)), kRecvCall, sizeof kRecvCall) == 0 &&
                  std::memcmp(reinterpret_cast<const void*>(uintptr_t(kSendCallAt)), kSendCall, sizeof kSendCall) == 0;
-    if (!st.sameExe) return;
-    void* was = nullptr;
-    if (patchSlot(importSlotByOrdinal("ws2_32.dll", kCloseSocketOrdinal), reinterpret_cast<void*>(&closeHook), &was))
-        st.close = reinterpret_cast<CloseFn>(was);
 }
 
 void sitesTaken(int taken, int all) {
@@ -234,18 +238,43 @@ void sitesTaken(int taken, int all) {
 
 void beforePoll() {
     State& st = state();
-    if (!st.sameExe || st.swapped) return;
+    if (!st.sameExe) return;
+    if (!st.closeTried) {  // 3.0.20-beta.64: now, over the pad's (it took the slot at the DLL's load)
+        st.closeTried = true;
+        void* was = nullptr;
+        if (patchSlot(importSlotByOrdinal("ws2_32.dll", kCloseSocketOrdinal), reinterpret_cast<void*>(&closeHook),
+                      &was))
+            st.close = reinterpret_cast<CloseFn>(was);
+    }
     auto** recvAt = reinterpret_cast<void**>(uintptr_t(kRecvSlot));
     auto** sendAt = reinterpret_cast<void**>(uintptr_t(kSendSlot));
+    void* const ourRecv = reinterpret_cast<void*>(&recvHook);
+    void* const ourSend = reinterpret_cast<void*>(&sendHook);
     if (!*recvAt || !*sendAt) return;  // the game has not asked ws2_32.dll for them yet
-    st.recv = reinterpret_cast<RecvFn>(*recvAt);
-    st.send = reinterpret_cast<SendFn>(*sendAt);
-    *recvAt = reinterpret_cast<void*>(&recvHook);
-    *sendAt = reinterpret_cast<void*>(&sendHook);
+    if (*recvAt == ourRecv && *sendAt == ourSend) return;
+    // ws2_32's own still there: the pad's turn first (the game may also fill them anew - the pad then takes them again)
+    const HMODULE ws = GetModuleHandleA("ws2_32.dll");
+    void* const realRecv = ws ? reinterpret_cast<void*>(GetProcAddress(ws, "recv")) : nullptr;
+    void* const realSend = ws ? reinterpret_cast<void*>(GetProcAddress(ws, "send")) : nullptr;
+    const DWORD now = GetTickCount();
+    if (!st.firstLook) st.firstLook = now ? now : 1;
+    const bool bare = *recvAt == realRecv || *sendAt == realSend;
+    if (bare && now - st.firstLook < kPadGraceMs) return;
+    if (*recvAt != ourRecv) {
+        st.recv = reinterpret_cast<RecvFn>(*recvAt);
+        *recvAt = ourRecv;
+    }
+    if (*sendAt != ourSend) {
+        st.send = reinterpret_cast<SendFn>(*sendAt);
+        *sendAt = ourSend;
+    }
+    st.firstLook = 0;  // filled anew later: the pad's turn first again
+    if (st.swapped) return;
     st.swapped = true;
-    LOG_INFO("net trail: the game's connections watched - its reads and writes%s, %d of its %d call sites (the "
+    LOG_INFO("net trail: the game's connections watched - its reads and writes%s%s, %d of its %d call sites (the "
              "login screens' loop, the connects); a connection lost is told the developers by itself ([report] "
              "disconnects)",
+             bare ? "" : " (over uaRO Pad's own)",
              st.close ? ", every closesocket" : " (closesocket's import not found: who closes is not known)",
              st.sites, st.sitesAll);
 }
