@@ -2029,6 +2029,14 @@ void Renderer::Impl::destroy() {
     releaseCom(sky3dPs);
     for (ID3D12PipelineState*& p : sky3dHazePipelines) releaseCom(p);  // 3.0.20-beta.48
     releaseCom(sky3dHazePs);
+    for (ID3D12PipelineState*& p : sunShadowPipelines) releaseCom(p);  // 3.0.20-beta.50
+    releaseCom(sunCasterPso);
+    releaseCom(sunMap);
+    releaseCom(sunVertices);
+    releaseCom(sunIndices);
+    releaseCom(sunCasterVs);
+    releaseCom(sunCasterPs);
+    releaseCom(sunShadowPs);
     releaseCom(floorReflectPipeline);  // 0.72, 0.86
     for (ID3D12PipelineState*& p : halfOverPipelines) releaseCom(p);
     releaseCom(halfOverPs);
@@ -2807,7 +2815,8 @@ bool Renderer::create(std::string& error) {
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kGpuSrvCount, true, m.gpuSrv) ||
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, kSamplerCount, true, m.samplerHeap) ||
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, kRtvCount, false, m.rtvHeap) ||
-        !heap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 5, false, m.dsvHeap)) {  // 1.16: kDsvMirror; 3.0.16-beta.16 kDsvShadow
+        // 1.16: kDsvMirror; 3.0.16-beta.16 kDsvShadow; 3.0.20-beta.50 kDsvSun
+        !heap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 6, false, m.dsvHeap)) {
         error = "descriptor heaps";
         return false;
     }

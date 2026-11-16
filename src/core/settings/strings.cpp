@@ -8969,6 +8969,18 @@ constexpr Entry kTexts[] = {
      "In the 3D view a warm band glows along the horizon while the night comes or goes, the most on the sun's side.",
      "У 3D-режимі вздовж обрію тепла смуга, поки ніч настає чи минає, найяскравіша з боку сонця.",
      "В 3D-режиме вдоль горизонта тёплая полоса, пока ночь наступает или уходит, ярче всего со стороны солнца."},
+    {Text::View3dShadows, "Shadows of houses and trees (trial)", "Тіні від будинків і дерев (проба)",
+     "Тени от домов и деревьев (проба)"},  // 3.0.20-beta.50
+    {Text::View3dShadowsHint,
+     "A trial. In the 3D view under the open sky houses, trees and the ground cast real shadows - on the ground and "
+     "the grass, sharp and where the things stand; the shadows painted on the map are taken out meanwhile. Needs "
+     "«Own ground» and Direct3D 12. Off at first.",
+     "Проба. У 3D-режимі під відкритим небом будинки, дерева й рельєф відкидають справжню тінь — на землю й траву, "
+     "чітку й саме там, де стоять речі; намальовані на карті тіні на цей час прибираються. Потрібні «Своя земля» й "
+     "Direct3D 12. Спочатку вимкнено.",
+     "Проба. В 3D-режиме под открытым небом дома, деревья и рельеф отбрасывают настоящую тень — на землю и траву, "
+     "чёткую и именно там, где стоят вещи; нарисованные на карте тени на это время убираются. Нужны «Своя земля» и "
+     "Direct3D 12. Сначала выключено."},
     {Text::View3dFastGround, "Faster far ground", "Швидша далека земля", "Быстрее дальняя земля"},  // 3.0.19-beta.42
     {Text::View3dFastGroundHint,
      "In the 3D view the game works out its far ground's cells once in 8 frames - our own ground is drawn in their "

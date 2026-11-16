@@ -920,6 +920,7 @@ bool Renderer::Impl::finishWorld() {
     if (aoDue() && !applyAo()) return false;
     if (seamsDue() && !applySeams()) return false;            // 1.9
     if (groundLifeDue() && !applyGroundLife()) return false;  // 1.7
+    if (sunShadowsDue() && !applySunShadows()) return false;  // 3.0.20-beta.50: the 3D view's real shadows (trial)
     if (skyFillDue() && !applySkyFill()) return false;        // 3.0.20-beta.48: no blended draw came - the sky now
     if (grassDue() && !applyGrass()) return false;            // 0.81
     if (grass3dDue() && !applyGrass3d()) return false;        // 3.0.19-beta.33

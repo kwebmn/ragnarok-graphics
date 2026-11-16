@@ -553,6 +553,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.skyStars ? 1 : 0);        // 3.0.20-beta.49
     w.u8(e.skyMoon ? 1 : 0);
     w.u8(e.skyDawn ? 1 : 0);
+    w.u8(e.sunShadows3d ? 1 : 0);    // 3.0.20-beta.50
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

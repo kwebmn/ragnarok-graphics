@@ -187,6 +187,11 @@ struct EffectSettings {
     // 3D sky's parts (sky3d_ps's skyAlong, the water's reflection of it): stars and the moon at night, a warm glow
     // along the horizon while the night comes and goes; each its own switch, on at first; not of the presets
     bool skyStars = true, skyMoon = true, skyDawn = true;
+    // 3.0.20-beta.50 (the owner's «делай 1-9», 2 - a trial): [view3d] shadows - in the 3D view under the open sky the
+    // houses', the trees' and the ground's shadows from the map's own models and ground (core/sun_shadows), the
+    // painted ones taken out of the own ground's light meanwhile; Direct3D 12, with the own ground. Off at first
+    // (2.1.4 took «Тени от солнца» and «Настоящие тени» out at the owner's word); not of the presets
+    bool sunShadows3d = false;
     // 3.0.16-beta.25 (the owner: «давай» - the body's stamp, from nostalRE): body_stamp - after the game's characters'
     // sprites (drawn writing no depth) each one's shape put into the depth a little behind its feet: an effect drawn
     // after them falls behind the body where it lies behind it (a ring's far half), in front where it lies in front

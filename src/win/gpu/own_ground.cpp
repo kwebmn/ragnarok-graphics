@@ -90,6 +90,9 @@ void Renderer::Impl::dropOwnGround() {
     ownState.waterFrames = 0;
     ownState.waterMost = 0;
     if (ownState.atlas && textures.count(ownState.atlas)) dying.push_back(ownState.atlas);
+    if (ownState.atlasSunless && textures.count(ownState.atlasSunless)) dying.push_back(ownState.atlasSunless);
+    ownState.atlasSunless = 0;  // 3.0.20-beta.50
+    ownState.atlasSunlessRow = 0;
     ownState.serial = 0;
     ownState.ids.clear();
     ownState.atlas = 0;
@@ -220,6 +223,7 @@ bool Renderer::Impl::prepareOwnGround() {
         if (putUp(g->modelTextures, o.modelIds, o.modelTexture, o.modelLevel) ||
             putUp(g->waterPictures, o.waterIds, o.waterPicture, o.waterPictureLevel))
             continue;
+
         o.up = true;
         break;
     }
@@ -665,6 +669,10 @@ bool Renderer::Impl::drawOwnGround() {
     // card draws them (drawGameModelsCard after it) - the record kept over their changes
     now.gameModels = cardModelsReady() ? 0 : gameFrameKey();
     now.onCard = onCard;
+    // 3.0.20-beta.50 (the trial of real shadows): its light without the painted shadows while ours are drawn
+    const bool sunless = sunShadowsReady(*g);
+    now.sunless = sunless;
+    sunlessDrawn = sunless;
     now.valid = true;
     // 3.0.4-beta.32 (R-Q3W727): the models' colours learnt anew at most every kModelsColoursEvery pictures
     const bool same = o.made.valid && !meanMoved && !lightMoved && !o.lightPending && o.changed.empty() &&
@@ -673,7 +681,8 @@ bool Renderer::Impl::drawOwnGround() {
                       o.made.models == now.models && o.made.seamsView == now.seamsView &&
                       !own_ground::modelsColoursDue(o.made.matched, now.matched, o.sinceMade) &&
                       o.made.fog[0] == now.fog[0] && o.made.fog[1] == now.fog[1] && o.made.like == now.like &&
-                      o.made.gameModels == now.gameModels && o.made.onCard == now.onCard;
+                      o.made.gameModels == now.gameModels && o.made.onCard == now.onCard &&
+                      o.made.sunless == now.sunless;
     size_t chunks = o.madeChunks, vertices = o.madeVertices, triangles = o.madeTriangles;
     if (same) ++o.reused, ++o.minuteReused, o.sinceMade = std::min(o.sinceMade + 1, 1 << 20);
     if (!same && o.made.valid) {  // 3.0.4-beta.27: the first reason found
@@ -723,7 +732,7 @@ bool Renderer::Impl::drawOwnGround() {
             cmd.state = layer == terrain::kGround ? (keyed ? keyedState : state) : blendState;
             cmd.texture[0] = t < o.ids.size() ? o.ids[t] : 0;
             cmd.keyed[0] = keyed;
-            cmd.texture[1] = o.atlas;
+            cmd.texture[1] = sunless ? o.atlasSunless : o.atlas;  // 3.0.20-beta.50: no painted shadows under ours
             cmd.primitive = d3d7::PT_TRIANGLELIST;
             cmd.fvf = d3d7::FVF_TL2;
             return cmd;

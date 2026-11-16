@@ -3670,6 +3670,81 @@ float torch_shadow_ps(TorchShadowIn i) : SV_Depth {
     if (footprint > 0.5 && tex0.Sample(samp0, i.uv).a < twinY) discard;
     return saturate(len / cy);
 }
+
+// 3.0.20-beta.50 (the owner's «делай 1-9», 2 - a trial of real shadows in the 3D view; core/sun_shadows,
+// sun_shadows.cpp): the map's own models and ground seen from the sun's side into a map of depths, and that map laid
+// over the picture. The box (the map file's places): sourceRect.xyz the light's right and .w its half side,
+// sourceClamp.xyz its up and .w its depth each way, fogColor.xyz the way to the sun, twinX twinY twinW its middle.
+// A place in it (core placeIn): across, down, how deep (0 the sun's side)
+float3 sunPlace(float3 w) {
+    float3 d = w - float3(twinX, twinY, twinW);
+    return float3(0.5 + dot(d, sourceRect.xyz) / (2.0 * sourceRect.w),
+                  0.5 - dot(d, sourceClamp.xyz) / (2.0 * sourceRect.w),
+                  0.5 - dot(d, fogColor.xyz) / (2.0 * sourceClamp.w));
+}
+struct SunCasterOut {
+    float4 pos : SV_Position;
+    float2 uv : TEXCOORD0;
+};
+SunCasterOut sun_caster_vs(float3 p : POSITION, float2 uv : TEXCOORD0) {
+    SunCasterOut o;
+    float3 at = sunPlace(p);
+    o.pos = float4(at.x * 2.0 - 1.0, 1.0 - at.y * 2.0, at.z, 1.0);
+    o.uv = uv;
+    return o;
+}
+// footprint 1: a model's picture's holes (its key made clear: leaves, fences) cast none
+void sun_caster_ps(SunCasterOut i) {
+    if (footprint > 0.5 && tex0.Sample(samp0, i.uv).a < 0.5) discard;
+}
+// The map over the picture, multiplied in: a pixel's place in the world from its depth (r0-r11, f0-farZ), into the
+// map file's by the axes' signs (holeX, holeY, holeH), into the box. In the shade where the map (t1; uiPixels.w its
+// side) holds something nearer the sun there - sixteen of its texels round the place, a tent over them: a soft edge.
+// As dark as the map's makers painted their shadows (twinH; fogColor.w how much of it). A face turned from the sun
+// is dark by the map's own light already - none over it (its way from its neighbours' depths, the nearer of each
+// two); none by the box's edges.
+float3 sunFileAt(int2 wp) {
+    float3 v = viewAt(wp);
+    float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
+    return w * float3(holeX, holeY, holeH);
+}
+float4 sun_shadow_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;  // nothing drawn there
+    float3 here = sunFileAt(wp);
+    float3 place = sunPlace(here);
+    float2 fromEdge = min(place.xy, 1.0 - place.xy);
+    float inside = smoothstep(0.0, 0.06, min(fromEdge.x, fromEdge.y));
+    if (inside <= 0.0 || place.z <= 0.0 || place.z >= 1.0) discard;
+    int2 last = int2(uiPixels.xy) - 1;
+    float3 left = sunFileAt(max(wp - int2(1, 0), int2(0, 0))), right = sunFileAt(min(wp + int2(1, 0), last));
+    float3 above = sunFileAt(max(wp - int2(0, 1), int2(0, 0))), below = sunFileAt(min(wp + int2(0, 1), last));
+    float3 across = dot(right - here, right - here) < dot(here - left, here - left) ? right - here : here - left;
+    float3 down = dot(below - here, below - here) < dot(here - above, here - above) ? below - here : here - above;
+    float3 n = cross(across, down);
+    float len = length(n);
+    if (len < 1e-9) discard;
+    n /= len;
+    float3 eye = float3(r9, r10, r11) * float3(holeX, holeY, holeH);
+    if (dot(n, eye - here) < 0.0) n = -n;  // towards the eye
+    float facing = dot(n, fogColor.xyz);
+    float lit = saturate(facing * 4.0);
+    if (lit <= 0.0) discard;
+    float bias = (1.5 + 3.0 * (1.0 - saturate(facing))) / (2.0 * sourceClamp.w);
+    float2 at = place.xy * uiPixels.w - 0.5;
+    float2 base = floor(at), part = at - base;
+    float shade = 0.0;
+    [unroll] for (int y = -1; y <= 2; ++y) {
+        [unroll] for (int x = -1; x <= 2; ++x) {
+            float depth = tex1.Load(int3(int2(base) + int2(x, y), 0)).r;
+            float wx = x < 0 ? 1.0 - part.x : (x > 1 ? part.x : 1.0);
+            float wy = y < 0 ? 1.0 - part.y : (y > 1 ? part.y : 1.0);
+            shade += (depth < place.z - bias ? 1.0 : 0.0) * wx * wy;
+        }
+    }
+    float k = lerp(1.0, twinH, shade / 9.0 * fogColor.w * lit * inside);
+    return float4(k, k, k, 1.0);
+}
 #endif
 
 // 0.80, footprints (ao.cpp applySteps): on the ground (the picture's depth, the camera backwards) about each step of

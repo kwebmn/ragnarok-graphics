@@ -236,6 +236,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"critters_vs", "vs_5_0", &crittersVs},        {"material_ps", "ps_5_0", &materialPs},
                    {"mirror_vs", "vs_5_0", &mirrorVs},            {"mirror_ps", "ps_5_0", &mirrorPs},
                    {"torch_shadow_vs", "vs_5_0", &torchShadowVs}, {"torch_shadow_ps", "ps_5_0", &torchShadowPs},
+                   {"sun_caster_vs", "vs_5_0", &sunCasterVs},     {"sun_caster_ps", "ps_5_0", &sunCasterPs},
+                   {"sun_shadow_ps", "ps_5_0", &sunShadowPs},  // 3.0.20-beta.50: the 3D view's real shadows (trial)
                    {"meadow_vs", "vs_5_0", &grass3dVs},           {"meadow_ps", "ps_5_0", &grass3dPs},
                    {"meadow_roots_ps", "ps_5_0", &grass3dRootsPs},  // 3.0.20-beta.47: the 3D view's grass, a meadow
                    {"weather3d_vs", "vs_5_0", &weather3dVs},      {"weather3d_ps", "ps_5_0", &weather3dPs},

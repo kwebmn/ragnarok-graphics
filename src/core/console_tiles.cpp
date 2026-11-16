@@ -13,7 +13,8 @@ const std::vector<const char*>& quickKeys() {
     static const std::vector<const char*> keys{"effects.group_time", "effects.group_weather", "effects.grass",
                                                "effects.torch_shadows", "effects.mage_effects", "frames.keep_fps",
                                                "frames.fps_counter", "interface.net_badge", "interface.mob_hp",
-                                               "view3d.own_models"};
+                                               "view3d.own_models",
+                                               "view3d.shadows"};  // 3.0.20-beta.50: while the trial is tried
     return keys;
 }
 

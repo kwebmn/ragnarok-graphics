@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "core/ground_cells.hpp"
+#include "core/sun_shadows.hpp"
 #include "core/terrain.hpp"
 
 namespace uagfx::gpu {
@@ -32,6 +33,10 @@ struct OwnGround {
     // past the edges is drawn its batches are left out: the land lies there
     std::vector<uint8_t> fillerTextures;
     terrain::Atlas atlas;
+    // 3.0.20-beta.50 (the trial of real shadows in the 3D view): what the ground's light without its painted shadows
+    // is made of (sun_shadows::sunlessRows of the atlas) and how dark the map paints its shadows
+    sun_shadows::Sunless sunless;
+    float shade = sun_shadows::kShadeUsual;
     std::vector<float> cornerNormals;  // 3.0.4-beta.26: the cells' corners' (own_ground::cornerNormals) - its light
     unsigned restingCells = 0;  // 3.0.6-beta.3: the cells a model rests on (terrain::restingOn), for the log
     // 3.0.7-beta.3 (R-YXZM7Y «посмотри насчет освещения стен»): the light the game gives its walls (terrain::wallLight,

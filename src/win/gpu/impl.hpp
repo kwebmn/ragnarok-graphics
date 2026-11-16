@@ -150,6 +150,7 @@ constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 constexpr UINT kDsvMirror = 3;  // 1.16: the mirrored world's depth
 constexpr UINT kDsvShadow = 4;  // 3.0.16-beta.16: the torches' and lamps' shadows' atlas (torch_shadows.cpp)
+constexpr UINT kDsvSun = 5;     // 3.0.20-beta.50: the 3D view's real shadows' map (sun_shadows.cpp)
 
 // What the open command list draws into (bindPass); the glow's passes add its target as the second one (0.18).
 enum Pass { kPassNone = 0, kPassTarget, kPassWorld, kPassLayer, kPassTargetGlow, kPassWorldGlow };
@@ -615,6 +616,38 @@ struct Renderer::Impl {
     ID3DBlob* sky3dPs = nullptr;
     ID3D12PipelineState* sky3dPipelines[4] = {};
     bool sky3dDone = false;
+    // 3.0.20-beta.50 (the owner's «делай 1-9», 2 - a trial; core/sun_shadows, sun_shadows.cpp): real shadows in the 3D
+    // view - the map's own models and ground (the own ground's, whole on the card in buffers of their own) seen from
+    // the sun's side into a map of depths, laid over the picture before its blended draws; the own ground drawn with
+    // its light without the painted shadows meanwhile ([view3d] shadows, off at first)
+    ID3DBlob* sunCasterVs = nullptr;
+    ID3DBlob* sunCasterPs = nullptr;
+    ID3DBlob* sunShadowPs = nullptr;
+    ID3D12PipelineState* sunCasterPso = nullptr;
+    ID3D12PipelineState* sunShadowPipelines[4] = {};
+    ID3D12Resource* sunMap = nullptr;
+    D3D12_RESOURCE_STATES sunMapState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    UINT sunMapSrv = kNoSrv;
+    ID3D12Resource* sunVertices = nullptr;  // x y z, u v a vertex: the ground's, then the models'
+    ID3D12Resource* sunIndices = nullptr;   // the ground's in one run, then the models' a texture a run
+    struct SunRun {
+        int texture = -1;  // the models' texture (the own ground's modelIds); -1 the ground: no holes
+        uint32_t first = 0, count = 0;
+    };
+    std::vector<SunRun> sunRuns;
+    uint32_t sunCastersOf = 0;  // the own ground (its serial) the buffers hold
+    uint64_t sunVertexBytes = 0, sunIndexBytes = 0;
+    bool sunShadowsFailed = false, sunShadowsDone = false, sunlessDrawn = false;
+    std::string sunShadowsLogged;
+    // wanted now: the switch, the 3D view under the open sky, shaders made
+    bool sunShadowsWanted() const {
+        return effects.sunShadows3d && !sunShadowsFailed && sunCasterVs && sunCasterPs && sunShadowPs &&
+               camera::wideView() && mapOutdoors && viewToWorldValid;
+    }
+    bool sunShadowsReady(const OwnGround& g);  // wanted, and its buffers and the sunless light up: drawn this picture
+    bool ensureSunCasters(const OwnGround& g);
+    bool sunShadowsDue() const { return sunlessDrawn && !sunShadowsDone; }
+    bool applySunShadows();  // once a picture, after the own ground, before the blended draws; false: lost
     // 3.0.20-beta.48: the sky laid where nothing is drawn before the world's blended draws (they stay over it), the
     // haze over what is drawn at the world's end as before
     ID3DBlob* sky3dHazePs = nullptr;
@@ -1300,6 +1333,7 @@ struct Renderer::Impl {
         mistDone = false;
         sky3dDone = false;  // 3.0.19-beta.6
         skyFillDone = false;  // 3.0.20-beta.48
+        sunShadowsDone = sunlessDrawn = false;  // 3.0.20-beta.50
         floorReflectDone = false;  // 0.72
         bloomDone = false;  // 0.78
         stepsDone = false;  // 0.80
@@ -1496,6 +1530,10 @@ struct Renderer::Impl {
     struct OwnState {
         uint32_t serial = 0;        // the ground (OwnGround::serial) its textures are of; 0 none
         std::vector<uint32_t> ids;  // the .gnd's textures (0: none - drawn white)
+        // 3.0.20-beta.50: the lightmaps without the painted shadows (the trial of real shadows) - made when the
+        // trial is on, put up a strip a picture after the rest; drawn with in place of `atlas` while its shadows are
+        uint32_t atlasSunless = 0;
+        int atlasSunlessRow = 0;
         uint32_t atlas = 0;         // the lightmaps'
         size_t texture = 0, level = 0;  // the next picture to put up, a few a frame
         int atlasRow = 0;
@@ -1596,6 +1634,7 @@ struct Renderer::Impl {
             DrawSetup like;
             uint64_t gameModels = 0;  // 3.0.20-beta.4: the frame's game models (their ids, factors, way) hashed
             bool onCard = false;      // 3.0.20-beta.23: its ground from the card
+            bool sunless = false;     // 3.0.20-beta.50: its light without the painted shadows
             bool valid = false;
         } made;
         size_t gameTriangles = 0;  // 3.0.20-beta.4: the game's still models' in the record (drawGameModels)

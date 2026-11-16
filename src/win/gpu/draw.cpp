@@ -188,6 +188,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!inner && !s.ui && s.blend && seamsDue() && !applySeams()) return;  // 1.9: before the soft shadows
     if (!inner && !s.ui && s.blend && aoDue() && !applyAo()) return;
     if (!inner && !s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
+    // 3.0.20-beta.50 (a trial): the 3D view's real shadows over the world drawn so far - before the sky and the grass
+    // (its blades take the ground's colour), before the characters
+    if (!inner && !s.ui && s.blend && sunShadowsDue() && !applySunShadows()) return;
     // 3.0.20-beta.48: the 3D view's sky where nothing is drawn, before the world's blended draws - an effect, an item,
     // a blade of grass against it stays over it
     if (!inner && !s.ui && s.blend && skyFillDue() && !applySkyFill()) return;
@@ -570,7 +573,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.22.6: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly. 3.0.4-beta.26: and the own
     // ground's (its atlas 2048 wide, the cells laid as the game lays them: terrain::lightmapAtlas)
     if (effects.smoothLight && !s.ui && d.fvf == d3d7::FVF_TL2 && t[1] &&
-        ((t[1]->width == 256 && t[1]->height == 256) || (ownPass && d.texture[1] && d.texture[1] == ownState.atlas)))
+        ((t[1]->width == 256 && t[1]->height == 256) ||
+         (ownPass && d.texture[1] && (d.texture[1] == ownState.atlas || d.texture[1] == ownState.atlasSunless))))
         c.stage1[1] |= 1u << 25;
     c.alphaTest = s.alphaTest ? uint32_t(s.alphaFunc) | uint32_t(s.alphaRef) << 8 | 1u << 16 : 0u;
     // 3.0.15-beta.4 (beta.2-.3 set these before the line above wrote alphaTest anew: the game's look stayed)

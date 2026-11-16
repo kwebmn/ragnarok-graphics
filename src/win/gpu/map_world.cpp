@@ -131,7 +131,9 @@ void MapWorld::ownPicturesUp() {
     for (OwnGround::Picture& p : own_->textures) std::vector<std::vector<uint32_t>>().swap(p.levels);
     for (OwnGround::Picture& p : own_->modelTextures) std::vector<std::vector<uint32_t>>().swap(p.levels);
     for (OwnGround::Picture& p : own_->waterPictures) std::vector<std::vector<uint32_t>>().swap(p.levels);
-    std::vector<uint32_t>().swap(own_->atlas.argb);
+    // 3.0.20-beta.50: the lightmaps kept where there is room (the 64-bit renderer) - the ground's light without its
+    // painted shadows is made of them when the 3D view's real shadows are turned on, any time
+    if (sizeof(void*) == 4) std::vector<uint32_t>().swap(own_->atlas.argb);
 }
 
 void MapWorld::poll() {
@@ -353,6 +355,8 @@ void MapWorld::loop() {
                     own->height = full.height;
                     own->zoom = full.zoom;
                     own->atlas = terrain::lightmapAtlas(full);
+                    own->sunless = sun_shadows::sunlessOf(full);  // 3.0.20-beta.50: for the trial of real shadows
+                    own->shade = sun_shadows::shadeOf(full);
                     own->cornerNormals = own_ground::cornerNormals(full);  // 3.0.4-beta.26: the smooth hills' light
                     // 3.0.4-beta.12: the strips between the cells, none round a patch laid by hand
                     const std::vector<uint8_t>* laid = ground.laid.size() == full.cells.size() ? &ground.laid : nullptr;
