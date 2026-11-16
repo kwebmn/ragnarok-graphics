@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.35 — what's new · 2026-11-16
+
+- **The 3D view's grass no longer changes in the distance (R-G8FGSV).** Each blade's root took its height from what its pixel showed. But looking along the ground a far pixel covers up to three units of it, so on slopes the far grass found its ground one moment and not the next: it came and went and jumped up and down with every camera move and DLSS's frame jitter. Now a root is found by halving along its upright line between its cell's heights — to the pixel, and on slopes all the far grass stays put.
+- **A thin blade seen edge on no longer lies down.** It is widened to two pixels so as not to vanish — now across the view, not along itself (it used to lie down away from the eye and stand up again as the camera turned).
+
 # uaRO Graphics 3.0.20-beta.34 — what's new · 2026-11-16
 
 - **The models' leaves from the graphics card — in Direct3D 11 too.** As 3.0.20-beta.33 did for Direct3D 12: the leaves of the trees drawn by «Models by our renderer» come from the graphics card memory where the models are, and the processor only works out each tree's sway and look once.
