@@ -216,6 +216,27 @@ float3 leafTurned(float3 w) {
     float3 d = (w - float3(r6, r7, r8)) * r11;
     return float3(r6 + d.x * r9 - d.z * r10, r7 + d.y, r8 + d.x * r10 + d.z * r9);
 }
+// 3.0.20-beta.73 (the owner on the 3D view: «деревья очень примитивные ... это не деревья»; [view3d] crown_volume):
+// a leaf face drawn again stood up - turned a right angle about the line from the crown's middle's upright line
+// through the face's own middle, laid flat (r9 its way: 1 up, -1 down), -r11 of its size about its middle (r11 under
+// 0 tells a stood copy; core foliage::stoodAbout). False - no copy of this face: it lies on the trunk's own line, or
+// it stands already (its plane's upright share under 0.6, foliage::kStoodFlat: a bush's upright leaf, a hanging frond)
+bool leafStood(inout float3 a, inout float3 b, inout float3 c) {
+    float3 mid = (a + b + c) / 3.0;
+    float2 outward = mid.xz - float2(r6, r8);
+    float len = length(outward);
+    float3 n = cross(b - a, c - a);
+    float nl = length(n);
+    bool stands = len >= 1e-3 && nl > 1e-9 && abs(n.y) >= 0.6 * nl;
+    if (stands) {
+        float3 axis = float3(outward.x / len, 0.0, outward.y / len);
+        float3 da = (a - mid) * -r11, db = (b - mid) * -r11, dc = (c - mid) * -r11;
+        a = mid + axis * dot(axis, da) + cross(axis, da) * r9;
+        b = mid + axis * dot(axis, db) + cross(axis, db) * r9;
+        c = mid + axis * dot(axis, dc) + cross(axis, dc) * r9;
+    }
+    return stands;
+}
 // model_vs's corner; `leaf` (leaf_vs): the camera from t6 at asuint(holeF), and the wind's sway as draw_vs's - the
 // tree's bottom and height on the screen in twinY, twinW, its swing twinX, the time twinH
 PsIn modelCorner(ModelIn i, bool leaf) {
@@ -234,9 +255,17 @@ PsIn modelCorner(ModelIn i, bool leaf) {
         float4 ca = asfloat(seamVertices.Load(int(k)));
         float4 cb = asfloat(seamVertices.Load(int(k + 1u)));
         float4 cc = asfloat(seamVertices.Load(int(k + 2u)));
-        v0 = viewBy(leafTurned(asfloat(c0.xyz)), ca, cb, cc);
-        v1 = viewBy(leafTurned(asfloat(c1.xyz)), ca, cb, cc);
-        v2 = viewBy(leafTurned(asfloat(c2.xyz)), ca, cb, cc);
+        float3 w0 = asfloat(c0.xyz), w1 = asfloat(c1.xyz), w2 = asfloat(c2.xyz);
+        if (r11 < 0.0) {  // 3.0.20-beta.73: a stood copy - none of a face that stands already
+            if (!leafStood(w0, w1, w2)) return o;
+        } else {
+            w0 = leafTurned(w0);
+            w1 = leafTurned(w1);
+            w2 = leafTurned(w2);
+        }
+        v0 = viewBy(w0, ca, cb, cc);
+        v1 = viewBy(w1, ca, cb, cc);
+        v2 = viewBy(w2, ca, cb, cc);
     } else if (slot == 0u) {
         v0 = modelView(asfloat(c0.xyz));
         v1 = modelView(asfloat(c1.xyz));
@@ -255,7 +284,8 @@ PsIn modelCorner(ModelIn i, bool leaf) {
     // in front
     if (v0.z <= nearZ && v1.z <= nearZ && v2.z <= nearZ) return o;
     bool turned = -f0 * f1 * dot(v0, cross(v1, v2)) > 0.0;
-    if ((t1.z & 1u) == 0u && turned == ((t1.z & 2u) != 0u)) return o;
+    // (3.0.20-beta.73: a stood leaf copy is seen from both its sides - its other side is the crown's body too)
+    if ((t1.z & 1u) == 0u && turned == ((t1.z & 2u) != 0u) && !(leaf && slot == 0u && r11 < 0.0)) return o;
     float3 v = i.corner == 0 ? v0 : (i.corner == 1 ? v1 : v2);
     uint tint = i.corner == 0 ? c0.w : (i.corner == 1 ? c1.w : c2.w);
     o.pos = modelClip(v);

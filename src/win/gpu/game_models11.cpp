@@ -318,6 +318,8 @@ void Renderer11::drawGameLeavesCard11() {
         if (crownSeen) frameCrowns_.push_back(crown);
         // 3.0.20-beta.51 ([view3d] dense_crowns, as Direct3D 12's): a still tree's leaves twice more, turned
         const bool dense = effects_.denseCrowns && camera::wideView() && !toView;
+        // 3.0.20-beta.73 ([view3d] crown_volume, as Direct3D 12's): each leaf face twice more, stood up
+        const bool volume = effects_.crownVolume && camera::wideView() && !toView;
         for (const gamemodels::CardRun& r : *runs) {
             if (!r.count || !leafyTexture(r.texture)) continue;
             leafCardDraws_.push_back(ModelDraw11{uint32_t(leafCardData_.size()), r.count});
@@ -336,6 +338,14 @@ void Renderer11::drawGameLeavesCard11() {
                 leafCardDraws_.push_back(same);
                 leafCardRec_.draw(cmd, kNone, 3, nullptr, 0);
                 leafCardLooks_.push_back(turned);
+            }
+            for (int copy = 0; volume && copy < foliage::kCrownStood; ++copy) {
+                Constants stood = leaf;
+                foliage::crownStood(copy, stood.reproject + 9);
+                const ModelDraw11 same = leafCardDraws_.back();  // the same faces again
+                leafCardDraws_.push_back(same);
+                leafCardRec_.draw(cmd, kNone, 3, nullptr, 0);
+                leafCardLooks_.push_back(stood);
             }
         }
     };

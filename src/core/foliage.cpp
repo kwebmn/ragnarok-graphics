@@ -63,4 +63,33 @@ void turnedAbout(const float middle[3], const float turn[3], float p[3]) {
     p[2] = middle[2] + d[0] * turn[1] + d[2] * turn[0];
 }
 
+void crownStood(int copy, float out[3]) {
+    out[0] = copy <= 0 ? 1.0f : -1.0f;
+    out[1] = 0.0f;
+    out[2] = -kStoodSize;
+}
+
+bool stoodAbout(const float middle[3], const float turn[3], float a[3], float b[3], float c[3]) {
+    if (!(turn[2] < 0.0f)) return false;
+    const float mid[3] = {(a[0] + b[0] + c[0]) / 3.0f, (a[1] + b[1] + c[1]) / 3.0f, (a[2] + b[2] + c[2]) / 3.0f};
+    const float ox = mid[0] - middle[0], oz = mid[2] - middle[2];
+    const float len = std::sqrt(ox * ox + oz * oz);
+    if (len < 1e-3f) return false;
+    // its plane: flat enough?
+    const float e1[3] = {b[0] - a[0], b[1] - a[1], b[2] - a[2]}, e2[3] = {c[0] - a[0], c[1] - a[1], c[2] - a[2]};
+    const float n[3] = {e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]};
+    const float nl = std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+    if (!(nl > 1e-9f) || std::fabs(n[1]) < kStoodFlat * nl) return false;
+    const float axis[3] = {ox / len, 0.0f, oz / len};
+    const float size = -turn[2], way = turn[0];
+    for (float* p : {a, b, c}) {
+        const float d[3] = {(p[0] - mid[0]) * size, (p[1] - mid[1]) * size, (p[2] - mid[2]) * size};
+        const float along = axis[0] * d[0] + axis[1] * d[1] + axis[2] * d[2];
+        const float cross[3] = {axis[1] * d[2] - axis[2] * d[1], axis[2] * d[0] - axis[0] * d[2],
+                                axis[0] * d[1] - axis[1] * d[0]};
+        for (int i = 0; i < 3; ++i) p[i] = mid[i] + axis[i] * along + cross[i] * way;
+    }
+    return true;
+}
+
 }  // namespace uagfx::foliage

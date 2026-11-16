@@ -599,6 +599,9 @@ void Renderer::Impl::drawGameLeavesCard(const own_ground::Shading& fog) {
         // 3.0.20-beta.51 ([view3d] dense_crowns): a still tree's leaves twice more in the 3D view, turned about the
         // crown's middle - the same faces, another look
         const bool dense = effects.denseCrowns && camera::wideView() && !toView;
+        // 3.0.20-beta.73 ([view3d] crown_volume, a trial): and each leaf face twice more stood up on the trunk's
+        // line - a body for the crown seen from the side (core foliage::crownStood, leaf_vs leafStood)
+        const bool volume = effects.crownVolume && camera::wideView() && !toView;
         for (const gamemodels::CardRun& r : *runs) {
             if (!r.count || !leafyTexture(r.texture)) continue;
             leafCardPacked.clear();
@@ -620,6 +623,13 @@ void Renderer::Impl::drawGameLeavesCard(const own_ground::Shading& fog) {
                 leafCardRec.draw(cmd, leafCardPacked.data(), n, nullptr, 0);
                 leafCardCounts.push_back(UINT(r.count));
                 leafCardLooks.push_back(turned);
+            }
+            for (int copy = 0; volume && copy < foliage::kCrownStood; ++copy) {
+                Constants stood = leaf;
+                foliage::crownStood(copy, stood.reproject + 9);
+                leafCardRec.draw(cmd, leafCardPacked.data(), n, nullptr, 0);
+                leafCardCounts.push_back(UINT(r.count));
+                leafCardLooks.push_back(stood);
             }
         }
     };

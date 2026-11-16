@@ -550,6 +550,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.20-beta.51 (the owner's «делай 1-9», 4): fuller crowns, off at first
         {"view3d", "dense_crowns", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dDenseCrowns,
          Text::View3dDenseCrownsHint, "", &E::denseCrowns},
+        // 3.0.20-beta.73 (the owner: the trees are primitive from the eyes' level): a body for the crowns, a trial
+        {"view3d", "crown_volume", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dCrownVolume,
+         Text::View3dCrownVolumeHint, "", &E::crownVolume},
         // 3.0.19-beta.36 (the concept's threat's arc): a red arc on the side one out of sight hits from
         {"view3d", "threat", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dThreat,
          Text::View3dThreatHint, ""},
