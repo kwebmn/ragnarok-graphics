@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.66 — what's new · 2026-11-16
+
+- **A lost connection's note tells when the game before this one ended.** The first note sent by itself (R-BTF3ZP) showed it: the character server answered «the server still remembers the last login» (code 8) a tenth of a second after the connect, and the game had been closed on a map and started again six seconds before. The note now tells by itself when the previous game's log on this computer ended and what its last connection was, and gives the spans under a second in milliseconds.
+
 # uaRO Graphics 3.0.20-beta.65 — what's new · 2026-11-16
 
 - **A report tells more exactly why a house is missing (R-64G2U9, R-7VX6Q9: houses missing in Prontera in the view from above).** The models' record in a report showed the map's first forty models, not the ones nearest the character: from above the «cone of sight» holds about a thousand of Prontera's models, and the house in question did not fit in. Now the nearest and the largest are written, the game's frame number is taken while it draws (because of it every model was said to be one «the game did not come to»), and the picture's check (beta.61) picks the largest faces near. If you see a house or a part of one missing, send a report from the same place once more.
