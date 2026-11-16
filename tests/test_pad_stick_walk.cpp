@@ -138,3 +138,28 @@ TEST(stick_walk_tells_the_way_it_marched) {
     CHECK((to.y > 100) == (along.north > 0));
 }
 
+
+// 3.0.20-beta.58 (the owner: «когда я в 3д режиме нажимаю один раз на кнопку вперед то делать шаг небольшой, например
+// на клетку, а если держу то увеличивать шаг. также и с геймпадом, если оттянул сильно стик то больше шаг, меньше
+// оттянул то меньше шаг. получается что когда я нажимаю один раз то он сильно далеко отбегает»): the first ask went
+// the whole lead ahead (3 to 6 cells) - a tap ran on. How far ahead now: a cell while the key or the stick has been
+// held under kTapMs, then a cell more every kGrowMs up to the full lead; and by how far the stick is pushed
+TEST(stick_walk_a_tap_is_a_step_and_a_hold_walks_on) {
+    using namespace uapad::stickwalk;
+    const int full = 5;
+    // a key (pushed whole): a cell at once, the same until kTapMs, then growing to the full lead
+    CHECK(leadNow(full, 0, 1.0) == 1);
+    CHECK(leadNow(full, kTapMs - 1, 1.0) == 1);
+    CHECK(leadNow(full, kTapMs, 1.0) == 2);
+    CHECK(leadNow(full, kTapMs + kGrowMs, 1.0) == 3);
+    CHECK(leadNow(full, kTapMs + 3 * kGrowMs, 1.0) == 5);
+    CHECK(leadNow(full, 60000, 1.0) == 5);  // never past the full lead
+    // the stick held long: by how far it is pushed - a cell at the dead zone's edge, the full lead from kFullPush
+    CHECK(leadNow(full, 60000, 0.0) == 1);
+    CHECK(leadNow(full, 60000, 0.2) == 1);
+    CHECK(leadNow(full, 60000, 0.5) == 3);
+    CHECK(leadNow(full, 60000, kFullPush) == 5 && leadNow(full, 60000, 1.0) == 5);
+    // both at once: the lesser - a quick flick of the stick is a step too
+    CHECK(leadNow(full, 50, 1.0) == 1 && leadNow(full, kTapMs + kGrowMs, 0.5) == 3);
+    CHECK(leadNow(1, 60000, 1.0) == 1 && leadNow(0, 0, 1.0) == 1);  // a lead of nothing is still a cell
+}

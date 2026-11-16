@@ -475,6 +475,7 @@ void Controller::walkDirect(const PadState& pad, float mag, const WorldState& wo
     if (mag > cfg_.deadzone) {
         if (!walking_) {
             walking_ = true;
+            walkSinceMs_ = now;  // 3.0.20-beta.58
             approach_.reset();
             stopAttacking();  // walking ends a fight; a held A starts it again afterwards
             stickDest_.reset();
@@ -487,7 +488,10 @@ void Controller::walkDirect(const PadState& pad, float mag, const WorldState& wo
             camera_.toWorld(pad.lx / mag, -pad.ly / mag, east, north);
             way_ = stickwalk::wayOf(east, north, std::make_pair(0.0, 1.0));
         }
-        const int lead = stickwalk::lead(world.selfSpeed());
+        // 3.0.20-beta.58: a tap a step, a hold the full lead; the stick's push its share of it (stickwalk::leadNow)
+        const double push = cfg_.deadzone < 0.99f ? (double(mag) - cfg_.deadzone) / (1.0 - cfg_.deadzone) : 1.0;
+        const int lead = stickwalk::leadNow(stickwalk::lead(world.selfSpeed()), now - walkSinceMs_, push,
+                                            world.selfSpeed());
         const Cell dest = stickwalk::destination(me, way_, lead, ground_, &walkCut_, &walkAlong_);
         walkLead_ = lead;
         walkTo_ = dest;
@@ -503,7 +507,10 @@ void Controller::walkDirect(const PadState& pad, float mag, const WorldState& wo
     walkCut_ = false;
     if (!walking_) return;
     walking_ = false;  // let go: the cell it steps into along its way, no further and no step back
-    const Cell stop = stickwalk::stopCell(me, way_, ground_);
+    Cell stop = stickwalk::stopCell(me, way_, ground_);
+    // 3.0.20-beta.58: a tap - the cell asked for is the one it stands on or the next one: it stops there, not a
+    // cell past it (the character's cell is the nearer one: past a step's middle it is the cell asked for already)
+    if (asked_ && cellDistance(me, asked_->to) <= 1) stop = asked_->to;
     stickDest_.reset();
     asked_.reset();
     out.packets.push_back(buildWalk(stop));

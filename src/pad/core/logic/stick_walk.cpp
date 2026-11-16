@@ -59,6 +59,15 @@ int lead(uint16_t speedMs) {
     return std::clamp(int(std::lround(kLeadMs / speed)) + 1, kLeadLeast, kLeadMost);
 }
 
+int leadNow(int full, uint32_t heldMs, double push, uint16_t speedMs) {
+    const int most = std::max(full, 1);
+    const uint32_t tap = speedMs ? std::clamp<uint32_t>(uint32_t(speedMs) * 2 / 3, 100, 140) : kTapMs;
+    const uint32_t grow = speedMs ? tap : kGrowMs;
+    const int byTime = heldMs < tap ? 1 : int(std::min<uint64_t>(uint64_t(most), 2 + uint64_t(heldMs - tap) / grow));
+    const int byPush = int(std::lround(double(most) * std::clamp(push / kFullPush, 0.0, 1.0)));
+    return std::max(1, std::min(byTime, byPush));
+}
+
 Cell destination(Cell here, Way way, int lead, const GroundGrid* ground, bool* cut, Way* along) {
     if (ground && ground->known() && !ground->at(here.x, here.y)) ground = nullptr;  // the grid not this map's
     bool stopped = false;

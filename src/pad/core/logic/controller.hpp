@@ -257,6 +257,7 @@ private:
     bool rtHeld_ = false;
     std::array<uint32_t, 16> repeatAtMs_{};  // by button bit: when a held button fires again
     bool walking_ = false;
+    uint32_t walkSinceMs_ = 0;  // 3.0.20-beta.58: when the stick's (or the keys') walk began - a tap is a step
     int ringX_ = 0;  // the walking point's offset from the centre, px
     int ringY_ = 0;
     double ringAngle_ = 0;

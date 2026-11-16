@@ -3155,11 +3155,14 @@ float4 meadow_roots_ps(PresentOut i) : SV_Target {
     rc = lerp(rc, sum / count, 0.8);
     // the top view's flower (grassFlower: in patches, a few in each)
     bool flower = hash12(cell + 31.7) < uiPixels.z && valueNoise(xz * 0.07 + 3.3) > 0.72;
-    float3 hold = float3(0.0, 0.0, 0.0);  // the steps' hold: pushed away from the step, lower
+    // the steps' hold: pushed away from the step (.xy), the share of its height left there (.z - 1 where no step
+    // fell). 3.0.20-beta.58: by the share LEFT (core grass3d troddenTo) - it was taken for how hard the spot was
+    // trodden, and the whole field stood at 0.4 of its height while any step held (while you walked)
+    float3 hold = float3(0.0, 0.0, 1.0);
     if (footprint > 0.5) hold = trampleAt(xz).xyz;
     float tall = (0.7 + 0.3 * hash12(cell + 2.1)) * (1.6 + 3.0 * clump * sqrt(clump)) * (flower ? 1.1 : 1.0) *
                  (1.0 + 0.35 * min(need, float(rings - 1))) * growKeep * growGreen * byEdge *
-                 (1.0 - 0.6 * saturate(hold.z));  // core tallOf, heightAt
+                 (0.4 + 0.6 * saturate(hold.z));  // core tallOf, heightAt, troddenTo
     if (tall < 0.05) return none;
     float hue = valueNoise(xz * 0.045 + float2(20.0, 5.0));  // the field's patches of lighter and darker green
     float3 marks = float3(floor(saturate(hue) * 127.0 + 0.5) * 2.0 + (flower ? 1.0 : 0.0),

@@ -1,11 +1,14 @@
 // 3.0.19-beta.33 (the owner: «кстати, я так траву в 3д и не увидел»; the 3D view's concept: «объёмная трава с
 // цветами»): the 3D view's grass as blades in the world round the eye - their grid, and its switch [view3d] grass
 #include <cmath>
+#include <deque>
 
 #include "core/config.hpp"
+#include "core/footsteps.hpp"
 #include "core/grass3d.hpp"
 #include "core/live_config.hpp"
 #include "core/settings/schema.hpp"
+#include "core/trample.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -213,4 +216,33 @@ TEST(grass3d_the_meadow_has_clumps_and_an_edge) {
     const grass3d::Grid g = grass3d::gridFor(false);
     CHECK(grass3d::fourthOf(g, 10.0f) == 1.0f && grass3d::fourthOf(g, g.reachOf(0) * 0.95f) == 0.0f);
     CHECK(grass3d::fourthOf(g, g.fullTo() * 1.5f) > 0.0f && grass3d::fourthOf(g, g.fullTo() * 1.5f) < 1.0f);
+}
+
+// 3.0.20-beta.58 (the owner: «когда двигаешься трава становится маленькой, когда останавливаешься большой»): the
+// steps' grid (core/trample) keeps the share of a blade's height LEFT at a spot - 1 where no step fell, 0 trodden
+// flat - and reads 1 past its edges. The 3D view's grass took that share for how hard the spot was trodden: with any
+// step still holding (you walk) the whole field stood at 0.4 of its height and the trodden spots at their full one;
+// with none left (you stand a while) the grid went and the field rose. A tuft's height by the share left: whole
+// where none trod, kTrodLeast of it where trodden flat
+TEST(grass3d_a_tufts_height_by_the_share_the_steps_left) {
+    CHECK(grass3d::troddenTo(1.0f) == 1.0f);                      // no step there: its whole height
+    CHECK(std::fabs(grass3d::troddenTo(0.0f) - grass3d::kTrodLeast) < 1e-6f);  // trodden flat
+    CHECK(grass3d::troddenTo(0.5f) > grass3d::troddenTo(0.2f));   // the more left the taller
+    CHECK(grass3d::troddenTo(7.0f) == 1.0f && grass3d::troddenTo(-3.0f) == grass3d::kTrodLeast);
+    // the steps' own grid: where no step fell the share left is whole - a field walked through keeps its height
+    std::deque<footsteps::Step> steps;
+    footsteps::Step s;
+    s.x = 100.0f, s.z = 50.0f;
+    s.born = 0.0f;
+    steps.push_back(s);
+    trample::Grid grid;
+    trample::build(steps, 0.1f, 10.0f, grid);
+    CHECK(!grid.texels.empty());
+    const auto leftAt = [&](int x, int z) {
+        return float(grid.texels[(size_t(z) * size_t(trample::Grid::kSide) + size_t(x)) * 4 + 2]) / 127.0f;
+    };
+    CHECK(leftAt(0, 0) > 0.99f);  // its edge: nothing trodden - what the shader reads past it
+    const int mx = int((100.0f - grid.originX) / grid.cell), mz = int((50.0f - grid.originZ) / grid.cell);
+    CHECK(leftAt(mx, mz) < 0.5f);  // under the step
+    CHECK(grass3d::troddenTo(leftAt(0, 0)) > 0.99f && grass3d::troddenTo(leftAt(mx, mz)) < 0.75f);
 }

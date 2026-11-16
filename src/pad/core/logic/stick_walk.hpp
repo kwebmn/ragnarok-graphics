@@ -27,6 +27,21 @@ double turnBetween(Way a, Way b);  // radians, 0 .. pi
 // game's 150) and a cell more - 3 to 6 cells
 int lead(uint16_t speedMs);
 
+// 3.0.20-beta.58 (the owner: «когда я в 3д режиме нажимаю один раз на кнопку вперед то делать шаг небольшой, например
+// на клетку, а если держу то увеличивать шаг. также и с геймпадом, если оттянул сильно стик то больше шаг, меньше
+// оттянул то меньше шаг. получается что когда я нажимаю один раз то он сильно далеко отбегает»): the first ask went
+// the whole lead ahead - a tap ran 3 to 6 cells. How far ahead now, of the full lead `full`:
+//  - by the time the key or the stick has been held: a cell under a tap's length, then a cell more every such
+//    length - two thirds of the time the character takes to walk a cell (its speed, ms a cell; within 100-140; 0 not
+//    known: kTapMs, kGrowMs): the next ask is there before it gets to the cell asked for, it never stands waiting
+//    while the lead grows (tests/test_walk_glide);
+//  - by how far the stick is pushed (`push`: its share past the dead zone, a key 1): the full lead from kFullPush,
+//    a cell at least;
+// the lesser of the two
+constexpr uint32_t kTapMs = 100, kGrowMs = 100;
+constexpr double kFullPush = 0.85;
+int leadNow(int full, uint32_t heldMs, double push, uint16_t speedMs = 0);
+
 // The cell to ask for: the last walkable one along the way within `lead` cells (none known: `lead` cells on); blocked
 // at once - slid along the wall: the way turned 45° either side or along either axis, the one walking furthest (the
 // nearer the stick's way on a tie); nowhere - `here`. 3.0.11-beta.103: `cut` (when given) - whether the march that

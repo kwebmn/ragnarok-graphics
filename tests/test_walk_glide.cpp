@@ -70,7 +70,9 @@ Run walk(double degrees, const GroundGrid* ground) {
         aim.lead = float(c.walkLead());
         uagfx::groundway::glide(gl, aim, 16);
         const double ex = std::cos(gl.angle) * gl.len, ez = std::sin(gl.angle) * gl.len;
-        if (now > 400) r.worst = std::max(r.worst, std::hypot(ex - beforeX, ez - beforeZ));
+        // (3.0.20-beta.58: the lead grows from a cell to its whole over the walk's first half second - the arrow
+        // with it; it holds still from then on)
+        if (now > 1000) r.worst = std::max(r.worst, std::hypot(ex - beforeX, ez - beforeZ));
         if (aim.cut) r.wallGap = std::hypot(aim.x0 + ex - aim.cellX, aim.z0 + ez - aim.cellZ);
         beforeX = ex;
         beforeZ = ez;
@@ -92,4 +94,52 @@ TEST(walk_glide_ends_at_a_wall_with_the_controller) {
     const Run r = walk(0, &g);
     CHECK(r.wallGap < 0.1);  // the end on the last cell short of it (109), the character standing there
     CHECK(r.worst < 0.35);   // shortened softly as the wall came within the lead
+}
+
+// 3.0.20-beta.58 (the owner: «когда я нажимаю один раз то он сильно далеко отбегает»): a tap is a step - the first
+// ask a cell ahead - and a held key walks on without a halt: the lead grows a cell every two thirds of a cell's walk,
+// the next ask there before the character gets to the cell asked for
+TEST(walk_a_tap_steps_a_cell_and_a_hold_never_waits) {
+    // a tap of 80 ms, as the server and the game play it: a cell, no further
+    {
+        Controller c(Config{});
+        c.setDirectWalk(true);
+        c.setLook(0, 1);
+        WorldState w = world();
+        PadState p = pad();
+        p.lx = 1.0f;
+        Walker k;
+        for (uint32_t now = 100; now < 100 + 2000; now += 16) {
+            c.setSelfCell(Cell{int(std::lround(k.x())), int(std::lround(k.y()))});
+            const TickOutput o = c.tick(now < 180 ? p : pad(), w, view(), now);
+            for (const Bytes& b : o.packets)
+                if (pid(b) == 0x00a7) k.dest = decodePos3(b.data(), 5);
+            k.advance(16);
+        }
+        CHECK(k.at == (Cell{101, 100}));
+    }
+    // held two seconds: from its first step on it never stands (a frame's 16 ms at a cell's edge at most), and it
+    // gets as far as an unbroken walk does - a cell every 150 ms
+    {
+        Controller c(Config{});
+        c.setDirectWalk(true);
+        c.setLook(0, 1);
+        WorldState w = world();
+        PadState p = pad();
+        p.lx = 1.0f;
+        Walker k;
+        double before = k.x(), stood = 0, longest = 0;
+        for (uint32_t now = 100; now < 100 + 2000; now += 16) {
+            c.setSelfCell(Cell{int(std::lround(k.x())), int(std::lround(k.y()))});
+            const TickOutput o = c.tick(p, w, view(), now);
+            for (const Bytes& b : o.packets)
+                if (pid(b) == 0x00a7) k.dest = decodePos3(b.data(), 5);
+            k.advance(16);
+            stood = k.x() > before + 1e-9 ? 0.0 : stood + 16.0;
+            if (now > 132) longest = std::max(longest, stood);
+            before = k.x();
+        }
+        CHECK(longest <= 16.0);
+        CHECK(k.x() >= 100.0 + 2000.0 / 150.0 - 1.0);
+    }
 }

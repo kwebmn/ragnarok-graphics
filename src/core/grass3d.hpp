@@ -149,6 +149,16 @@ inline float widthAt(float dist, float full) { return dist <= full ? 1.0f : dist
 inline float heightAt(float need, int rings) {
     return 1.0f + 0.35f * (need < float(rings - 1) ? need : float(rings - 1));
 }
+// 3.0.20-beta.58 (the owner: «когда двигаешься трава становится маленькой, когда останавливаешься большой»): a tuft's
+// height by the share of it the steps left at its spot (core/trample: 1 where no step fell and past the grid's
+// edges, 0 trodden flat) - whole where none trod, kTrodLeast of it where trodden flat. Until now the shaders took the
+// share left for how hard the spot was trodden: while any step held, the whole field stood at 0.4 of its height
+// (meadow_roots_ps)
+constexpr float kTrodLeast = 0.4f;
+inline float troddenTo(float left) {
+    const float share = left <= 0.0f ? 0.0f : left >= 1.0f ? 1.0f : left;
+    return kTrodLeast + (1.0f - kTrodLeast) * share;
+}
 // 3.0.20-beta.25: green ground for a blade - prt_fild08's olive meadow (its green 0.99-1.03 of its red) in, its sand
 // (0.94-0.96) out; the 3.0.19-beta.33 test (1.04 of the red) left the meadow in patches. 3.0.20-beta.26 (R-PKPE9D
 // «впечатление что трава мигает»: beta.25's edge at 0.985 ran through the meadow - a root whose pixel crossed it as the

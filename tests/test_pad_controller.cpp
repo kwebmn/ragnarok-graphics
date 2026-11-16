@@ -47,19 +47,24 @@ TEST(ctl_direct_walk_along_the_stick) {
     p.lx = 1.0f;
     TickOutput o = c.tick(p, w, view(), 100);
     CHECK(!o.mouse.active);  // the mouse is left alone
-    // 3.0.11-beta.102: 5 cells ahead at the game's speed (150 ms a cell), the same at any zoom
-    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x00a7 && decodePos3(pkt(o, 0).data(), 5) == (Cell{105, 100}));
-    CHECK(c.walkTarget() && *c.walkTarget() == (Cell{105, 100}));
-    o = c.tick(p, w, view(), 200);  // still far from it: no new ask
+    // 3.0.20-beta.58 (the owner: «когда я нажимаю один раз то он сильно далеко отбегает»): a tap's reach first - a
+    // cell; held, a cell more every 100 ms (two thirds of a cell's walk at the game's 150 ms a cell)
+    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x00a7 && decodePos3(pkt(o, 0).data(), 5) == (Cell{101, 100}));
+    CHECK(c.walkTarget() && *c.walkTarget() == (Cell{101, 100}));
+    o = c.tick(p, w, view(), 150);  // within the tap: nothing more
     CHECK(o.packets.empty());
-    c.setSelfCell(Cell{103, 100});  // the game's own cell: halfway there - asked on before it arrives and stands
-    o = c.tick(p, w, view(), 400);
+    o = c.tick(p, w, view(), 200);  // held on: two cells - before the character gets to the first
+    CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{102, 100}));
+    // 3.0.11-beta.102: held, 5 cells ahead at the game's speed, the same at any zoom; the game's own cell halfway
+    // there - asked on before it arrives and stands
+    c.setSelfCell(Cell{103, 100});
+    o = c.tick(p, w, view(), 700);
     CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{108, 100}));
     p.lx = 0;
     p.ly = 1.0f;  // up: north - another way at once
-    o = c.tick(p, w, view(), 520);
+    o = c.tick(p, w, view(), 820);
     CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{103, 105}));
-    o = c.tick(pad(), w, view(), 700);  // let go: the cell it steps into, no further
+    o = c.tick(pad(), w, view(), 1000);  // let go: the cell it steps into, no further
     CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x00a7 && decodePos3(pkt(o, 0).data(), 5) == (Cell{103, 101}));
     CHECK(!c.walkTarget());
 }
@@ -75,7 +80,10 @@ TEST(ctl_keys_walk_without_the_mouse_mode) {
     p.keyWalk = true;
     TickOutput o = c.tick(p, w, view(), 100);
     CHECK(!o.mouse.active);
-    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x00a7 && decodePos3(pkt(o, 0).data(), 5) == (Cell{105, 100}));
+    // (3.0.20-beta.58: a tap's reach first - a cell)
+    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x00a7 && decodePos3(pkt(o, 0).data(), 5) == (Cell{101, 100}));
+    o = c.tick(p, w, view(), 700);  // the arrow held: the whole lead
+    CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{105, 100}));
 }
 
 TEST(ctl_keys_walk_with_the_pad_off) {
@@ -88,7 +96,9 @@ TEST(ctl_keys_walk_with_the_pad_off) {
     p.ly = 1.0f;
     p.keyWalk = true;
     TickOutput o = c.tick(p, w, view(), 100);
-    CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{100, 105}));
+    CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{100, 101}));  // a tap's reach
+    o = c.tick(p, w, view(), 700);
+    CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{100, 105}));  // held
 }
 
 TEST(ctl_keys_let_go_stops) {
@@ -114,10 +124,12 @@ TEST(ctl_direct_walk_turns_with_the_camera) {
     PadState p = pad();
     p.ly = 1.0f;
     TickOutput o = c.tick(p, w, view(), 100);
+    CHECK(!o.packets.empty() && decodePos3(pkt(o, 0).data(), 5) == (Cell{101, 100}));  // (a tap's reach)
+    o = c.tick(p, w, view(), 700);
     CHECK(!o.packets.empty() && decodePos3(pkt(o, 0).data(), 5) == (Cell{105, 100}));
     p.ly = 0;
     p.lx = 1.0f;
-    o = c.tick(p, w, view(), 300);
+    o = c.tick(p, w, view(), 900);
     CHECK(!o.packets.empty() && decodePos3(pkt(o, 0).data(), 5) == (Cell{100, 95}));
 }
 
@@ -134,15 +146,17 @@ TEST(ctl_direct_walk_stops_short_of_a_wall_and_goes_round_a_post) {
     PadState p = pad();
     p.lx = 1.0f;
     TickOutput o = c.tick(p, w, view(), 100);
+    CHECK(!o.packets.empty() && decodePos3(pkt(o, 0).data(), 5) == (Cell{101, 100}));  // (a tap's reach)
+    o = c.tick(p, w, view(), 700);  // held: the whole lead, short of the wall
     CHECK(!o.packets.empty() && decodePos3(pkt(o, 0).data(), 5) == (Cell{103, 100}));
     g.walk[size_t(100) * 200 + 101] = 0;  // a post right in front: round it, short of the wall
-    o = c.tick(p, w, view(), 500);
+    o = c.tick(p, w, view(), 1100);
     CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{103, 103}));
     CHECK(c.walkTarget() && *c.walkTarget() == (Cell{103, 103}));
     for (int x = 99; x <= 101; ++x)  // boxed in: nowhere to go, nothing asked
         for (int y = 99; y <= 101; ++y)
             if (x != 100 || y != 100) g.walk[size_t(y) * 200 + size_t(x)] = 0;
-    o = c.tick(p, w, view(), 1700);
+    o = c.tick(p, w, view(), 2300);
     CHECK(o.packets.empty() && c.walkTarget() && *c.walkTarget() == (Cell{100, 100}));
 }
 
@@ -161,16 +175,19 @@ TEST(ctl_direct_walk_tells_the_arrow_its_way_and_a_wall) {
     PadState p = pad();
     p.lx = 1.0f;
     c.tick(p, w, view(), 100);
-    CHECK(std::fabs(c.walkWay().east - 1) < 1e-9 && std::fabs(c.walkWay().north) < 1e-9 && c.walkCut());
+    // (3.0.20-beta.58: a tap's reach is a cell - the wall four cells off is not in its way yet)
+    CHECK(std::fabs(c.walkWay().east - 1) < 1e-9 && std::fabs(c.walkWay().north) < 1e-9 && !c.walkCut());
+    c.tick(p, w, view(), 700);  // held: the whole lead meets the wall
+    CHECK(c.walkCut());
     p.lx = 0;
     p.ly = 1.0f;
-    c.tick(p, w, view(), 300);
+    c.tick(p, w, view(), 900);
     CHECK(std::fabs(c.walkWay().north - 1) < 1e-9 && !c.walkCut());  // north: open ground
     p.ly = 0;
     p.lx = 1.0f;
-    c.tick(p, w, view(), 500);
+    c.tick(p, w, view(), 1100);
     CHECK(c.walkCut());
-    c.tick(pad(), w, view(), 700);  // let go
+    c.tick(pad(), w, view(), 1300);  // let go
     CHECK(!c.walkCut());
 }
 
@@ -191,9 +208,11 @@ TEST(ctl_direct_walk_tells_the_way_it_marches_and_the_lead) {
     c.tick(p, w, view(), 100);
     const double d = std::sqrt(0.5);
     CHECK(std::fabs(c.walkWay().east - d) < 1e-6 && std::fabs(std::fabs(c.walkWay().north) - d) < 1e-6);
-    CHECK_EQ(c.walkLead(), 5);
+    CHECK_EQ(c.walkLead(), 1);  // 3.0.20-beta.58: a tap's reach
+    c.tick(p, w, view(), 700);
+    CHECK_EQ(c.walkLead(), 5);  // held: the lead by the speed
     g.walk[size_t(100) * 200 + 101] = 1;  // gone: straight on again
-    c.tick(p, w, view(), 300);
+    c.tick(p, w, view(), 900);
     CHECK(std::fabs(c.walkWay().east - 1) < 1e-9);
 }
 
