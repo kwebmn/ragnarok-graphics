@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.72 — what's new · 2026-11-16
+
+- **Far mountains on the horizon (3D view).** Far ranges now stand along the horizon in three layers, each paler into the haze: mountains over the fields, dunes in the desert, snowy peaks in the snow, low islands where the sea lies past the map's edge. At dusk they are dark against the glow, at night barely seen, and the water mirrors them. They stay in place as the camera turns. None under a roof and on the maps that hang in the sky (Yuno, Gonryun). The switch: «Гра» → «3D-режим» → «Далекі гори на обрії», in the console too.
+
 # uaRO Graphics 3.0.20-beta.71 — what's new · 2026-11-16
 
 - **In houses the black blocks beside the rooms became walls (3D view).** The game's makers raised blocks of black filler beside the rooms: only the side towards the room has the wall's picture, the top and the other sides are black, and here and there a side is missing. From above nobody saw that; from the eyes' level they stand in the view. In the 3D view such blocks now take the picture of their room's wall: the whole picture on their sides, its upper band on their tops. The view from above stays as it was. It works on payon_in01, alberta_in, aldeba_in, izlude_in, in_orcs01, prt_castle and the like, where the driver draws the ground itself (Direct3D 12, «Своя земля»). The switch: «Гра» → «3D-режим» → «Стіни замість чорних блоків у будинках», in the console too; a change shows from the next map. The rooms' open sides and the dark over the walls up to the ceiling are still there.
