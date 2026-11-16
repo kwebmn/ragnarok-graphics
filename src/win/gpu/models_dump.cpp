@@ -99,10 +99,12 @@ void dumpModelsAround(const gamemodels::Frame& frame, const NodeOf& nodeOf, cons
         size_t known = 0;
         for (const uint32_t t : n->textures) known += t != 0;
         LOG_INFO("models dump: ours %08X %s - %zu faces (%u kept on the card, %zu of %zu textures known), %u shown now "
-                 "by the card's rules, %zu of %zu corners in front%s; x %.0f..%.0f, z %.0f..%.0f, y %.0f..%.0f",
+                 "by the card's rules, %zu of %zu corners in front%s%s; x %.0f..%.0f, z %.0f..%.0f, y %.0f..%.0f",
                  id, still ? "still" : "moving", n->faces.size(), cardFaces(id), known, n->textures.size(), shown,
-                 front, n->vertices.size() / 3, n->flipped ? ", mirrored" : "", lo[0], hi[0], lo[2], hi[2], lo[1],
-                 hi[1]);
+                 front, n->vertices.size() / 3, n->flipped ? ", mirrored" : "",
+                 n->addedFaces ? (", " + std::to_string(n->addedFaces) + " of its faces ours, closing its gaps").c_str()
+                               : "",
+                 lo[0], hi[0], lo[2], hi[2], lo[1], hi[1]);
     }
     if (unknown) LOG_INFO("models dump: %zu of the frame's nodes unknown to the renderer", unknown);
     if (!map) return;

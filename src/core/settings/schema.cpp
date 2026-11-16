@@ -511,6 +511,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.20-beta.54 (5, part 2): the map's own rock on a dungeon's vault
         {"view3d", "vault_rock", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dVaultRock,
          Text::View3dVaultRockHint, "", &E::vaultRock},
+        // 3.0.20-beta.56 (R-2BX4BG): the gaps of the models made for the view from above closed
+        {"view3d", "close_gaps", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dCloseGaps,
+         Text::View3dCloseGapsHint, "", &E::closeGaps},
         // 3.0.19-beta.33 (the owner: «я так траву в 3д и не увидел»): the grass as blades in the world
         {"view3d", "grass", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dGrass,
          Text::View3dGrassHint, "", &E::grass3d},

@@ -1707,6 +1707,7 @@ struct Renderer::Impl {
     std::unordered_map<uint32_t, gamemodels::Node> gameModels;
     uint32_t gameModelsMap = 0;
     size_t gameModelFaces = 0, gameModelCorners = 0, gameModelCornersOurs = 0, gameModelsTold = 0;
+    size_t gapsClosedNodes = 0, gapsClosedFaces = 0, gapsClosedTold = 0;  // 3.0.20-beta.56 (core/model_gaps)
     // 3.0.20-beta.7 (R-Y2JJKH: the models left out and none drawn, nothing in the log to tell): the pictures that drew
     // the game's still models in the last 30 s, their triangles, nodes and nodes unknown to the renderer
     uint64_t gameDrawnFrames = 0, gameDrawnTriangles = 0, gameDrawnNodes = 0, gameDrawnUnknown = 0;

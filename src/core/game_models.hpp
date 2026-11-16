@@ -37,6 +37,9 @@ struct Node {
     // 3.0.20-beta.14 (stage 4): a node the game moves - its vertices its own (node space), put into the view by the
     // frame's matrix for it (Frame::matrices); a still one's are in the world
     bool moving = false;
+    // 3.0.20-beta.56 (core/model_gaps): the vertices and faces at its end that are not the game's - the renderer's
+    // own, closing the gaps of a model made for the view from above (never sent: the renderer adds them)
+    uint32_t addedVertices = 0, addedFaces = 0;
 };
 
 void write(bridge::WireWriter& w, const Node& n);

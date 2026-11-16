@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstring>
 
+#include "core/model_gaps.hpp"
 #include "core/daylight.hpp"
 #include "core/foliage.hpp"
 #include "core/frame.hpp"
@@ -36,6 +37,19 @@ void Renderer11::addGameModel(const gamemodels::Node& n) {
         modelCards_.clear();
         modelFacesUp_ = 0;
         modelsMap_ = n.map;
+    }
+    // 3.0.20-beta.56 (R-2BX4BG, [view3d] close_gaps; as Direct3D 12's): a still model's gaps closed as it is kept
+    if (effects_.closeGaps && !n.moving && !modelCards_.node(n.id)) {
+        gamemodels::Node closed = n;
+        if (const size_t added = model_gaps::close(closed)) {
+            static bool told = false;
+            if (!told)
+                LOG_INFO("game models: a node's gaps closed (a model made for the view from above), %zu faces added "
+                         "- and so every such node from now ([view3d] close_gaps, Direct3D 11)", added);
+            told = true;
+            modelCards_.add(closed);
+            return;
+        }
     }
     modelCards_.add(n);  // 3.0.20-beta.11: core/game_models_card - coloured at once when the colours are known
 }

@@ -8903,6 +8903,19 @@ constexpr Entry kTexts[] = {
      "Вимкнено — рівний камінь, як раніше. Потрібне «Склепіння в печерах».",
      "Свод пещеры покрыт рисунком той скалы, из которой сделаны её собственные стены и уступы, в свете карты. "
      "Выключено — ровный камень, как раньше. Нужен «Свод в пещерах»."},
+    {Text::View3dCloseGaps, "Close the gaps in models", "Закривати щілини в моделях",  // 3.0.20-beta.56
+     "Закрывать щели в моделях"},
+    {Text::View3dCloseGapsHint,
+     "Some of the game's models were made for the view from above: a rock's cap hangs over its base with nothing "
+     "between, a pagoda's tier has no walls up to its roof. From the eyes' level you see through them. The driver "
+     "closes such gaps in the models it draws itself. Needs «Models by our renderer»; a change shows from the next "
+     "map.",
+     "Частину моделей гри зроблено для вигляду згори: шапка скелі висить над основою, між ними нічого немає, ярус "
+     "пагоди не має стін до даху. З рівня очей крізь них видно наскрізь. Драйвер закриває такі щілини в моделях, "
+     "які малює сам. Потрібні «Моделі нашим рендером»; зміна діє з наступної карти.",
+     "Часть моделей игры сделана для вида сверху: шапка скалы висит над основанием, между ними ничего нет, у яруса "
+     "пагоды нет стен до крыши. С уровня глаз сквозь них видно насквозь. Драйвер закрывает такие щели в моделях, "
+     "которые рисует сам. Нужны «Модели нашим рендером»; изменение действует со следующей карты."},
     {Text::View3dGrass, "Grass in the 3D view", "Трава у 3D-режимі", "Трава в 3D-режиме"},  // 3.0.19-beta.33
     {Text::View3dGrassHint,
      "In the 3D view the grass grows as blades on the green ground round you, swaying in the wind and trodden by "

@@ -3,6 +3,7 @@
 #include <cstring>
 #include <string>
 
+#include "core/model_gaps.hpp"
 #include "core/foliage.hpp"
 #include "core/game_models_place.hpp"
 #include "core/model_census.hpp"
@@ -24,12 +25,25 @@ void Renderer::Impl::addGameModel(const gamemodels::Node& n) {
         ownCorners.clear();
         ownCornersMade = false;
         gameModelsUnchecked.clear();
+        gapsClosedNodes = gapsClosedFaces = 0;
         gameModelsMap = n.map;
     }
-    const auto [it, fresh] = gameModels.insert_or_assign(n.id, n);
+    // 3.0.20-beta.56 (R-2BX4BG «скала прозрачная какая-то», [view3d] close_gaps): a still model made for the view
+    // from above - a cap hung over an open-topped base - with its gap closed (core/model_gaps), as it is kept
+    gamemodels::Node closed;
+    const gamemodels::Node* kept = &n;
+    if (effects.closeGaps && !n.moving) {
+        closed = n;
+        if (model_gaps::close(closed)) kept = &closed;
+    }
+    const auto [it, fresh] = gameModels.insert_or_assign(n.id, *kept);
     if (!fresh) return;  // the same node again: the first one kept its count
-    gameCards.add(n);  // 3.0.20-beta.11: in the card's form too
+    gameCards.add(*kept);  // 3.0.20-beta.11: in the card's form too
     gameModelFaces += n.faces.size();
+    if (kept->addedFaces) {
+        ++gapsClosedNodes;
+        gapsClosedFaces += kept->addedFaces;
+    }
     if (makeOwnCorners())
         checkGameModel(it->second);
     else
@@ -55,7 +69,9 @@ bool Renderer::Impl::makeOwnCorners() {
 
 void Renderer::Impl::checkGameModel(const gamemodels::Node& n) {
     if (n.moving) return;  // 3.0.20-beta.16: its own space, not the world's places of our models
-    for (size_t i = 0; i + 2 < n.vertices.size(); i += 3) {
+    // (3.0.20-beta.56: the game's own corners - not those added to close its gaps)
+    const size_t own = n.vertices.size() - size_t(n.addedVertices) * 3;
+    for (size_t i = 0; i + 2 < own; i += 3) {
         ++gameModelCorners;
         if (ownCorners.within(&n.vertices[i], 0.5f)) ++gameModelCornersOurs;
     }
@@ -671,6 +687,12 @@ void Renderer::Impl::tellGameModels() {
              mapName.c_str(), gameModels.size(), moving, gameModelFaces, textures.size(), gameModelCornersOurs,
              gameModelCorners, gameModelCorners ? gameModelCornersOurs * 100.0 / double(gameModelCorners) : 0.0,
              ownCornersMade ? "" : " - our own models not up yet");
+    if (gapsClosedNodes != gapsClosedTold) {  // 3.0.20-beta.56
+        gapsClosedTold = gapsClosedNodes;
+        LOG_INFO("game models: %s - the gaps of %zu nodes closed (models made for the view from above: a part's open "
+                 "top raised to the part over it), %zu faces added ([view3d] close_gaps)",
+                 mapName.c_str(), gapsClosedNodes, gapsClosedFaces);
+    }
 }
 
 }  // namespace uagfx::gpu

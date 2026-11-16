@@ -16,7 +16,8 @@ const std::vector<const char*>& quickKeys() {
                                                "view3d.own_models",
                                                "view3d.shadows",        // 3.0.20-beta.50: while the trial is tried
                                                "view3d.dense_crowns",   // 3.0.20-beta.51
-                                               "view3d.vault_rock"};    // 3.0.20-beta.54: to tell in a dungeon
+                                               "view3d.vault_rock",     // 3.0.20-beta.54: to tell in a dungeon
+                                               "view3d.close_gaps"};    // 3.0.20-beta.56
     return keys;
 }
 
