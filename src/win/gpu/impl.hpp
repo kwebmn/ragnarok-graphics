@@ -144,7 +144,8 @@ constexpr UINT kRtvShafts = kRtvTorch + 1;  // 2.5.7: the light in the air at ha
 constexpr UINT kRtvGrassMask = kRtvShafts + 1;  // 3.0.5-beta.12: where a blade's root can stand (grass_mask_ps)
 constexpr UINT kRtvGrassTiles = kRtvGrassMask + 1;  // 3.0.5-beta.20: the picture's 8 x 8 tiles with a marked root
 constexpr UINT kRtvAoDepth = kRtvGrassTiles + 1;  // 3.0.5-beta.21: the soft shadows' pixels' view depths
-constexpr UINT kRtvCount = kRtvAoDepth + 1;
+constexpr UINT kRtvGrassRoots = kRtvAoDepth + 1;  // 3.0.20-beta.47: the 3D view's grass's roots (meadow_roots_ps)
+constexpr UINT kRtvCount = kRtvGrassRoots + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 constexpr UINT kDsvMirror = 3;  // 1.16: the mirrored world's depth
@@ -1915,10 +1916,21 @@ struct Renderer::Impl {
     ID3DBlob* grass3dPs = nullptr;
     ID3D12PipelineState* grass3dPipelines[4] = {};
     ID3D12PipelineState* grass3dMaskPipelines[4] = {};  // 3.0.20-beta.26: under DLSS, the blades into its mask
+    // 3.0.20-beta.47 (the meadow): the roots' picture - a root a texel (the grid's side wide, a ring a band of side
+    // rows; four floats), found once a frame by meadow_roots_ps; meadow_vs draws the tufts from it
+    ID3DBlob* grass3dRootsPs = nullptr;
+    ID3D12PipelineState* grass3dRootsPipeline = nullptr;
+    ID3D12Resource* grass3dRoots = nullptr;
+    D3D12_RESOURCE_STATES grass3dRootsState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    UINT grass3dRootsSrv = kNoSrv;
+    int grass3dRootsWidth = 0, grass3dRootsHeight = 0;
+    bool grass3dRootsFailed = false;
+    bool ensureGrass3dRoots(int w, int h);
     bool grass3dDone = false;
     std::string grass3dLogged;
     bool grass3dDue() const {
-        return effects.grass && effects.grassAmount > 0 && effects.grass3d && grass3dPs && grass3dVs && grassHere() &&
+        return effects.grass && effects.grassAmount > 0 && effects.grass3d && grass3dPs && grass3dVs &&
+               grass3dRootsPs && !grass3dRootsFailed && grassHere() &&
                groundDrawn && !grass3dDone && viewToWorldValid && camera::wideView();
     }
     bool applyGrass3d();

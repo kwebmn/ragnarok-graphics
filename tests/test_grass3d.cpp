@@ -15,8 +15,11 @@ TEST(grass3d_grid_round_the_eye) {
     CHECK(g.side == grass3d::kSide && g.step > 0.0f);
     CHECK(g.blades() == uint32_t(g.side) * uint32_t(g.side) * uint32_t(g.rings));  // 3.0.20-beta.25: each ring's
     CHECK(g.reachOf(0) > 40.0f && g.reachOf(0) < 80.0f);   // the first ring about the eye
-    CHECK(g.vertices() == g.blades() * 3u * grass3d::kTuft);  // a tuft of kTuft triangles a root (3.0.19-beta.38)
-    CHECK(grass3d::kTuft == 3u);
+    // 3.0.20-beta.47 (the meadow): a tuft of four bent blades of three links in the first ring, of three blades of
+    // two links further off - 15 and 9 vertices a blade
+    CHECK(grass3d::bladeVertices(grass3d::kLinksNear) == 15u && grass3d::bladeVertices(grass3d::kLinksFar) == 9u);
+    CHECK(g.tuftVertices(0) == 60u && g.tuftVertices(1) == 27u && g.tuftVertices(2) == 27u);
+    CHECK(g.vertices() == g.roots() * (60u + 27u * 2u));
     const grass3d::Grid thin = grass3d::gridFor(true);  // a weak card's, keep_fps's: fewer, a little further apart
     CHECK(thin.blades() * 2u <= g.blades() && thin.step > g.step);
     CHECK(thin.reach() > 30.0f);
@@ -41,7 +44,7 @@ TEST(config_view3d_grass_on_by_default_and_live) {
 TEST(grass3d_rings_reach_further_each_twice_as_sparse) {
     const grass3d::Grid g = grass3d::gridFor(false);
     CHECK(g.rings == grass3d::kRings && g.rings == 3);
-    CHECK(g.roots() == uint32_t(g.side) * uint32_t(g.side) && g.blades() == g.roots() * 3u);
+    CHECK(g.roots() == uint32_t(g.side) * uint32_t(g.side) && g.blades() == g.roots() * 3u);  // its rings' roots
     CHECK(g.stepOf(1) == 2.0f * g.step && g.reachOf(1) == 2.0f * g.reachOf(0));
     CHECK(g.reach() == g.reachOf(2) && g.reach() > 200.0f && g.fullTo() * 2.0f == g.reachOf(0));
     CHECK(grass3d::ringOf(g, 10.0f) == 0 && grass3d::ringOf(g, g.reachOf(0) + 1.0f) == 1);
@@ -127,4 +130,87 @@ TEST(grass3d_a_thin_blade_wider_and_fainter) {
     CHECK(wider == grass3d::kMostWider && std::fabs(alpha - 1.0f / grass3d::kMostWider) < 1e-6f);
     grass3d::fadeOf(0.0f, wider, alpha);  // none across: none
     CHECK(alpha == 0.0f && wider == 1.0f);
+}
+
+// 3.0.20-beta.47 (the owner's «делай 1-9», 1 - «Трава-луг»; R-YAB82P «трава гораздо лучше, но в 3д она не
+// смотрится»): the meadow's blades - which corner of which blade of which tuft a vertex is (the renderers' meadow_vs
+// counts the same way); the furthest ring's first, each ring's tufts row by row from the furthest row (the painter's
+// order: a near blade over a far one, their colours no longer one)
+TEST(grass3d_a_vertex_is_a_corner_of_a_blade_of_a_tuft) {
+    const grass3d::Grid g = grass3d::gridFor(false);
+    grass3d::Corner c = grass3d::cornerOf(g, 0);
+    CHECK(c.ring == g.rings - 1 && c.tuft == 0u && c.member == 0u && c.joint == 0u && c.side == -1);
+    // a far blade's nine: a quad (two triangles) then its point
+    const int joints[9] = {0, 0, 1, 1, 0, 1, 1, 1, 2}, sides[9] = {-1, 1, -1, -1, 1, 1, -1, 1, 0};
+    for (uint32_t k = 0; k < 9; ++k) {
+        c = grass3d::cornerOf(g, k);
+        CHECK(int(c.joint) == joints[k] && c.side == sides[k] && c.member == 0u && c.tuft == 0u);
+    }
+    c = grass3d::cornerOf(g, 9);
+    CHECK(c.member == 1u && c.joint == 0u && c.tuft == 0u);
+    c = grass3d::cornerOf(g, 27);
+    CHECK(c.tuft == 1u && c.member == 0u && c.ring == g.rings - 1);
+    // the rings in turn, the first ring's last: four blades of three links
+    const uint32_t outer = g.roots() * 27u;  // a further ring's vertices
+    c = grass3d::cornerOf(g, outer);
+    CHECK(c.ring == g.rings - 2 && c.tuft == 0u);
+    c = grass3d::cornerOf(g, outer * 2u);
+    CHECK(c.ring == 0 && c.tuft == 0u && c.member == 0u && c.joint == 0u);
+    c = grass3d::cornerOf(g, outer * 2u + 14u);  // its first blade's point: the third joint
+    CHECK(c.ring == 0 && c.member == 0u && c.joint == 3u && c.side == 0);
+    c = grass3d::cornerOf(g, outer * 2u + 15u * 3u + 6u);  // the fourth blade's second quad
+    CHECK(c.member == 3u && c.joint == 1u && c.side == -1);
+    c = grass3d::cornerOf(g, g.vertices() - 1u);
+    CHECK(c.ring == 0 && c.tuft == g.roots() - 1u && c.member == 3u && c.joint == 3u && c.side == 0);
+}
+
+TEST(grass3d_tufts_are_drawn_from_the_furthest_row) {
+    int column = -1, row = -1;
+    grass3d::tuftAt(4, 0, 0.1f, 0.9f, column, row);  // looking along +z: the row of the largest z first
+    CHECK(row == 3 && column == 0);
+    grass3d::tuftAt(4, 15, 0.1f, 0.9f, column, row);
+    CHECK(row == 0 && column == 3);
+    grass3d::tuftAt(4, 0, 0.1f, -0.9f, column, row);  // along -z: the row of the least z
+    CHECK(row == 0);
+    grass3d::tuftAt(4, 0, 0.9f, 0.1f, column, row);  // along +x: the furthest column, row by row along it
+    CHECK(column == 3 && row == 0);
+    grass3d::tuftAt(4, 5, -0.9f, 0.1f, column, row);  // along -x: the second column's second
+    CHECK(column == 1 && row == 1);
+    // every tuft once, whichever way
+    const float ways[3][2] = {{0.3f, 0.8f}, {-0.7f, 0.2f}, {0.6f, -0.6f}};
+    for (const float* way : {ways[0], ways[1], ways[2]}) {
+        bool seen[25] = {};
+        for (uint32_t n = 0; n < 25; ++n) {
+            grass3d::tuftAt(5, n, way[0], way[1], column, row);
+            CHECK(column >= 0 && column < 5 && row >= 0 && row < 5 && !seen[row * 5 + column]);
+            if (column >= 0 && column < 5 && row >= 0 && row < 5) seen[row * 5 + column] = true;
+        }
+    }
+}
+
+TEST(grass3d_a_roots_colour_goes_whole_in_one_number) {
+    // the roots' picture keeps a root's colour in one float: three bytes in its 24 bits, none lost
+    for (const int* c : {(const int[3]){0, 0, 0}, (const int[3]){255, 255, 255}, (const int[3]){76, 138, 50},
+                         (const int[3]){1, 254, 128}}) {
+        const float packed = grass3d::packBytes(c[0], c[1], c[2]);
+        int out[3] = {-1, -1, -1};
+        grass3d::unpackBytes(packed, out);
+        CHECK(out[0] == c[0] && out[1] == c[1] && out[2] == c[2]);
+    }
+}
+
+TEST(grass3d_the_meadow_has_clumps_and_an_edge) {
+    // taller where the field's own noise is high, never bare; fewer roots where it is low
+    CHECK(std::fabs(grass3d::tallOf(0.0f) - grass3d::kTallLow) < 1e-4f);
+    CHECK(std::fabs(grass3d::tallOf(1.0f) - grass3d::kTallHigh) < 1e-4f);
+    CHECK(grass3d::tallOf(0.5f) > grass3d::kTallLow && grass3d::tallOf(0.5f) < grass3d::tallOf(0.8f));
+    CHECK(grass3d::kTallLow >= 1.0f && grass3d::kTallHigh <= 5.0f);  // a character stands some 16 tall
+    CHECK(std::fabs(grass3d::chanceOf(0.0f) - grass3d::kThin) < 1e-4f && grass3d::chanceOf(1.0f) == 1.0f);
+    // by the green's edge the grass goes down to nothing, not ends in a wall: by the share of green round the root
+    CHECK(grass3d::edgeOf(0.2f) == 0.0f && grass3d::edgeOf(0.9f) == 1.0f);
+    CHECK(grass3d::edgeOf(0.5f) > 0.2f && grass3d::edgeOf(0.5f) < 0.8f);
+    // the fourth blade of a near tuft gone before the first ring's edge (a further ring draws three)
+    const grass3d::Grid g = grass3d::gridFor(false);
+    CHECK(grass3d::fourthOf(g, 10.0f) == 1.0f && grass3d::fourthOf(g, g.reachOf(0) * 0.95f) == 0.0f);
+    CHECK(grass3d::fourthOf(g, g.fullTo() * 1.5f) > 0.0f && grass3d::fourthOf(g, g.fullTo() * 1.5f) < 1.0f);
 }

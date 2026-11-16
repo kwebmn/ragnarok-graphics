@@ -235,7 +235,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"critters_vs", "vs_5_0", &crittersVs},        {"material_ps", "ps_5_0", &materialPs},
                    {"mirror_vs", "vs_5_0", &mirrorVs},            {"mirror_ps", "ps_5_0", &mirrorPs},
                    {"torch_shadow_vs", "vs_5_0", &torchShadowVs}, {"torch_shadow_ps", "ps_5_0", &torchShadowPs},
-                   {"grass3d_vs", "vs_5_0", &grass3dVs},          {"grass3d_ps", "ps_5_0", &grass3dPs},
+                   {"meadow_vs", "vs_5_0", &grass3dVs},           {"meadow_ps", "ps_5_0", &grass3dPs},
+                   {"meadow_roots_ps", "ps_5_0", &grass3dRootsPs},  // 3.0.20-beta.47: the 3D view's grass, a meadow
                    {"weather3d_vs", "vs_5_0", &weather3dVs},      {"weather3d_ps", "ps_5_0", &weather3dPs},
                    {"model_vs", "vs_5_0", &modelVs},  // 3.0.20-beta.11: the game's still models from the card
                    {"ground_vs", "vs_5_0", &groundVs},  // 3.0.20-beta.23: the own ground from the card

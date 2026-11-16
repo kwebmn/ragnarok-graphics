@@ -2041,6 +2041,8 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : grassPipelines) releaseCom(p);  // 0.81
     for (ID3D12PipelineState*& p : grass3dPipelines) releaseCom(p);  // 3.0.19-beta.33
     for (ID3D12PipelineState*& p : grass3dMaskPipelines) releaseCom(p);  // 3.0.20-beta.26
+    releaseCom(grass3dRootsPipeline);  // 3.0.20-beta.47
+    releaseCom(grass3dRoots);
     for (ID3D12PipelineState*& p : weather3dPipelines) releaseCom(p);  // 3.0.19-beta.40
     releaseCom(grassMaskPipeline);  // 3.0.5-beta.12
     releaseCom(grassMask);
@@ -2058,6 +2060,7 @@ void Renderer::Impl::destroy() {
     releaseCom(crittersVs);
     releaseCom(grass3dVs);  // 3.0.19-beta.33
     releaseCom(grass3dPs);
+    releaseCom(grass3dRootsPs);
     releaseCom(weather3dVs);  // 3.0.19-beta.40
     releaseCom(modelVs);      // 3.0.20-beta.11
     releaseCom(groundVs);     // 3.0.20-beta.23

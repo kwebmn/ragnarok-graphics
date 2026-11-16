@@ -228,6 +228,8 @@ Renderer11::~Renderer11() {
     drop(crittersVs_);  // 2.5.4
     drop(grass3dVs_);  // 3.0.19-beta.37
     drop(grass3dPs_);
+    drop(grass3dRootsPs_);  // 3.0.20-beta.47
+    dropTarget(grass3dRoots_);
     drop(weather3dVs_);  // 3.0.19-beta.40
     drop(weather3dPs_);
     drop(crittersPs_);
@@ -473,7 +475,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[72] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[73] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -531,12 +533,13 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"torch_shadow_vs", vs, shaderSource(), {}, true},  // 3.0.16-beta.35: the torches' shadows
                    {"torch_shadow_ps", ps, shaderSource(), {}, true},
                    {"sky3d_ps", ps, shaderSource(), {}, true},  // 3.0.19-beta.6: the 3D view's sky and haze
-                   {"grass3d_vs", vs, shaderSource(), {}, true},  // 3.0.19-beta.37: the 3D view's grass
-                   {"grass3d_ps", ps, shaderSource(), {}, true},
+                   {"meadow_vs", vs, shaderSource(), {}, true},  // 3.0.19-beta.37: the 3D view's grass
+                   {"meadow_ps", ps, shaderSource(), {}, true},  // (3.0.20-beta.47: a meadow)
                    {"weather3d_vs", vs, shaderSource(), {}, true},  // 3.0.19-beta.40: the 3D view's weather
                    {"weather3d_ps", ps, shaderSource(), {}, true},
                    {"model_vs", vs, shaderSource(), {}, true},  // 3.0.20-beta.10: the game's still models
-                   {"leaf_vs", vs, shaderSource(), {}, true}};  // 3.0.20-beta.34: their leaves
+                   {"leaf_vs", vs, shaderSource(), {}, true},  // 3.0.20-beta.34: their leaves
+                   {"meadow_roots_ps", ps, shaderSource(), {}, true}};  // 3.0.20-beta.47: the 3D grass's roots
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -693,6 +696,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[69].code.empty() || !psOf(wants[69], weather3dPs_)) weather3dPs_ = nullptr;
     if (wants[70].code.empty() || !vsOf(wants[70], modelVs_)) modelVs_ = nullptr;  // 3.0.20-beta.10
     if (wants[71].code.empty() || !vsOf(wants[71], leafVs_)) leafVs_ = nullptr;  // 3.0.20-beta.34
+    if (wants[72].code.empty() || !psOf(wants[72], grass3dRootsPs_)) grass3dRootsPs_ = nullptr;  // 3.0.20-beta.47
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -3466,11 +3470,25 @@ void Renderer11::applyGrass3d() {
     }
     if (grass3dLogged_ != map_) {
         grass3dLogged_ = map_;
-        LOG_INFO("3D grass: on %s - %u tufts of %u blades round the eye in %d rings, %.1f apart at first (%.0f in "
-                 "all, Direct3D 11)%s",
-                 map_.c_str(), grid.blades(), grass3d::kTuft, grid.rings, double(grid.step), double(grid.reach()),
+        LOG_INFO("3D grass: on %s - a meadow: %u roots round the eye in %d rings, %.1f apart at first (%.0f in all), "
+                 "tufts of %u bent blades near and %u further off, each root found once a frame (%dx%d, Direct3D "
+                 "11)%s",
+                 map_.c_str(), grid.blades(), grid.rings, double(grid.step), double(grid.reach()),
+                 grass3d::kBladesNear, grass3d::kBladesFar, grid.side, grid.side * grid.rings,
                  cells ? ", on the map's own ground" : "");
     }
+    // 3.0.20-beta.47 (the meadow, as Direct3D 12's applyGrass3d): the roots first, each once - a texel of their
+    // picture (four floats); then the tufts from it
+    if (grass3dRoots_.width != grid.side || grass3dRoots_.height != grid.side * grid.rings) {
+        dropTarget(grass3dRoots_);
+        if (!makeTarget(grass3dRoots_, grid.side, grid.side * grid.rings, DXGI_FORMAT_R32G32B32A32_FLOAT)) {
+            LOG_ERROR("3D grass: no video memory for its roots at %dx%d - no grass in the 3D view (Direct3D 11)",
+                      grid.side, grid.side * grid.rings);
+            drop(grass3dRootsPs_);  // not tried again
+            return;
+        }
+    }
+    maskPass(grass3dRootsPs_, grass3dRoots_, c, nullptr, depthSrv_, scene_.srv, held ? trampleSrv_ : nullptr, cells);
     targetBound_ = false;  // the next draw binds the target, the viewport and the game's shaders again
     ID3D11ShaderResourceView* none[6] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
     ctx_->PSSetShaderResources(0, 6, none);
@@ -3493,9 +3511,8 @@ void Renderer11::applyGrass3d() {
     ctx_->VSSetConstantBuffers(0, 1, &constants_);
     ctx_->PSSetConstantBuffers(0, 1, &constants_);
     passSamplers();
-    ID3D11ShaderResourceView* views[6] = {nullptr, held ? trampleSrv_ : nullptr, scene_.srv, depthSrv_, nullptr,
-                                          cells};
-    ctx_->VSSetShaderResources(0, 6, views);  // the blades stand on the picture and its depth
+    ID3D11ShaderResourceView* views[6] = {grass3dRoots_.srv, nullptr, scene_.srv, depthSrv_, nullptr, cells};
+    ctx_->VSSetShaderResources(0, 6, views);  // the tufts from their roots' picture; the picture's depth hides them
     ctx_->PSSetShaderResources(0, 6, views);
     ctx_->Draw(grid.vertices(), 0);
     ctx_->PSSetShaderResources(0, 6, none);

@@ -14,7 +14,17 @@ constexpr float kStep = 0.5f, kStepThin = 0.6f;
 // 3.0.19-beta.38 (R-ZMGYMM «трава есть но слабая и практически не видно», R-WGTX3Z «травы нету»): a tuft of kTuft
 // blades a root, taller, turned to the camera, darker at the root and lighter at the tip - one thin blade of the
 // ground's own colour was lost in it
-constexpr uint32_t kTuft = 3;
+// 3.0.20-beta.47 (the owner's «делай 1-9», 1 - «Трава-луг»; R-YAB82P «трава гораздо лучше, но в 3д она не
+// смотрится»: short straight triangles of one height and the ground's own colour - a brush): the meadow. A tuft of
+// bent blades - kBladesNear of kLinksNear links in the first ring, kBladesFar of kLinksFar further off (a link a quad,
+// the last a point); the field's own clumps and bald spots (tallOf, chanceOf by its noise), the blades going down to
+// nothing by the green's edge (edgeOf), a root's colour that of the ground round it. A root is found once a frame, a
+// texel of the roots' picture (side wide, a ring a band of side rows; the renderers' meadow_roots_ps) - beta.33-46
+// searched it anew for each of a tuft's nine vertices. Looked at on prt_fild08's own ground pictures before the
+// shader: /root/uagfx-tools/audit/meadow/meadow_sim.py
+constexpr uint32_t kBladesNear = 4, kBladesFar = 3;
+constexpr uint32_t kLinksNear = 3, kLinksFar = 2;
+constexpr uint32_t bladeVertices(uint32_t links) { return links * 6u - 3u; }
 // 3.0.20-beta.25 (R-6YX3UF «трава в 3д режимі трошки далі не видна і якась вона не дуже»: none past some 55 units, its
 // edge thinned at random): rings of roots round the eye - the first as the grid was, each further one twice as far
 // out, its roots twice as far apart (side x side of them again, those of the rings within left out).
@@ -31,13 +41,89 @@ struct Grid {
     int rings = kRings;
     uint32_t roots() const { return uint32_t(side) * uint32_t(side); }  // a ring's
     uint32_t blades() const { return roots() * uint32_t(rings); }        // the roots of them all
-    uint32_t vertices() const { return blades() * 3u * kTuft; }
+    uint32_t tuftVertices(int ring) const {
+        return ring == 0 ? kBladesNear * bladeVertices(kLinksNear) : kBladesFar * bladeVertices(kLinksFar);
+    }
+    uint32_t vertices() const { return roots() * (tuftVertices(0) + tuftVertices(1) * uint32_t(rings - 1)); }
     float stepOf(int ring) const { return step * float(1 << ring); }
     float fullTo() const { return float(side / 4) * step; }  // every root up to it
     float reachOf(int ring) const { return float(side / 2) * stepOf(ring); }  // from the eye
     float reach() const { return reachOf(rings - 1); }
 };
 inline Grid gridFor(bool thin) { return thin ? Grid{kSideThin, kStepThin, kRingsThin} : Grid{kSide, kStep, kRings}; }
+// 3.0.20-beta.47: which corner a vertex is - the furthest ring's tufts first (the painter's order: the near blades
+// over the far), a tuft's blades in turn, a blade's quads from its root (two triangles each), then its point. joint:
+// 0 the root ... the links' number the tip; side: -1, 1, 0 the tip itself
+struct Corner {
+    int ring = 0;
+    uint32_t tuft = 0, member = 0, joint = 0;
+    int side = 0;
+};
+inline Corner cornerOf(const Grid& g, uint32_t vertex) {
+    Corner c;
+    // (not "far": windef.h makes it nothing)
+    const uint32_t ringVertices = g.roots() * g.tuftVertices(1), outer = ringVertices * uint32_t(g.rings - 1);
+    uint32_t local = vertex - outer;
+    if (vertex < outer) {
+        const uint32_t turn = vertex / ringVertices;
+        c.ring = g.rings - 1 - int(turn);
+        local = vertex - turn * ringVertices;
+    }
+    const uint32_t links = c.ring == 0 ? kLinksNear : kLinksFar;
+    const uint32_t perBlade = bladeVertices(links), perTuft = g.tuftVertices(c.ring);
+    c.tuft = local / perTuft;
+    const uint32_t v = local % perTuft, k = v % perBlade;
+    c.member = v / perBlade;
+    if (k >= 6u * (links - 1u)) {  // its point: the last joint's two corners, then the tip
+        const uint32_t t = k - 6u * (links - 1u);
+        c.joint = t == 2u ? links : links - 1u;
+        c.side = t == 0u ? -1 : t == 1u ? 1 : 0;
+    } else {
+        const int joints[6] = {0, 0, 1, 1, 0, 1}, sides[6] = {-1, 1, -1, -1, 1, 1};
+        c.joint = k / 6u + uint32_t(joints[k % 6u]);
+        c.side = sides[k % 6u];
+    }
+    return c;
+}
+// the root (its column and row on a ring's grid) of the tuft drawn n-th: row by row from the furthest, the rows
+// across the way the eye looks (forwardX, forwardZ: the view's forward along the ground)
+inline void tuftAt(int side, uint32_t n, float forwardX, float forwardZ, int& column, int& row) {
+    const int a = int(n % uint32_t(side)), b = int(n / uint32_t(side));
+    if (std::fabs(forwardZ) >= std::fabs(forwardX)) {
+        column = a;
+        row = forwardZ >= 0.0f ? side - 1 - b : b;
+    } else {
+        row = a;
+        column = forwardX >= 0.0f ? side - 1 - b : b;
+    }
+}
+// three bytes in one float's 24 bits (the roots' picture: a root's colour; its hue, flower and the steps' push)
+inline float packBytes(int a, int b, int c) { return float(a + b * 256 + c * 65536); }
+inline void unpackBytes(float packed, int out[3]) {
+    // a whole number as it is: half added to one past 2^23 rounds it off (floats there a unit apart)
+    const int v = int(packed);
+    out[0] = v & 255;
+    out[1] = (v >> 8) & 255;
+    out[2] = (v >> 16) & 255;
+}
+// the field's own shape by its noise (0-1): a tuft's height from kTallLow in its bald spots to kTallHigh in its
+// clumps (a character stands some 16 tall), three roots of four left in the bald spots
+constexpr float kTallLow = 1.6f, kTallHigh = 4.6f, kThin = 0.75f;
+inline float tallOf(float clump) { return kTallLow + (kTallHigh - kTallLow) * clump * std::sqrt(clump); }
+inline float chanceOf(float clump) { return kThin + (1.0f - kThin) * clump; }
+// a root's height's share by the share of green ground round it (its own place and four places 1.6 off): none under
+// a quarter, whole from 0.85 - beta.33-46's blades stood whole up to the last green pixel, a wall along the sand
+constexpr float kEdgeFrom = 0.25f, kEdgeBand = 0.6f, kEdgeOff = 1.6f;
+inline float edgeOf(float share) {
+    const float a = (share - kEdgeFrom) / kEdgeBand;
+    return a <= 0.0f ? 0.0f : a >= 1.0f ? 1.0f : a;
+}
+// the fourth blade of a first-ring tuft: whole near, gone before the ring's edge (the next ring draws three)
+inline float fourthOf(const Grid& g, float dist) {
+    const float a = (dist - g.fullTo() * 1.25f) / (g.fullTo() * 0.55f);
+    const float t = a <= 0.0f ? 0.0f : a >= 1.0f ? 1.0f : a;
+    return 1.0f - t * t * (3.0f - 2.0f * t);
+}
 // the ring a root `dist` from the eye is of; -1 past them all
 inline int ringOf(const Grid& g, float dist) {
     for (int k = 0; k < g.rings; ++k)

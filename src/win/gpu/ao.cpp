@@ -378,7 +378,8 @@ bool Renderer::Impl::uploadTrample() {
 }
 
 // 3.0.19-beta.33 (the owner: «кстати, я так траву в 3д и не увидел»; core/grass3d): the 3D view's grass - blades in
-// the world round the eye, a triangle each (grass3d_vs), over the world by their alpha before the characters
+// the world round the eye (3.0.20-beta.47: a meadow - meadow_roots_ps, meadow_vs), over the world by their alpha
+// before the characters
 bool Renderer::Impl::applyGrass3d() {
     grass3dDone = true;
     EffectTime timing(*this, kTimeGrass);
@@ -392,6 +393,7 @@ bool Renderer::Impl::applyGrass3d() {
     const bool held = uploadTrample();
     const int w = sceneWidth, h = sceneHeight;
     const grass3d::Grid grid = grass3d::gridFor(effects.grassThin);
+    if (!ensureGrass3dRoots(grid.side, grid.side * grid.rings)) return true;
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
@@ -440,13 +442,60 @@ bool Renderer::Impl::applyGrass3d() {
     }
     if (grass3dLogged != mapName) {
         grass3dLogged = mapName;
-        LOG_INFO("3D grass: on %s - %u tufts of %u blades round the eye in %d rings, %.1f apart at first (%.0f each "
-                 "way, %.0f in all)%s",
-                 mapName.c_str(), grid.blades(), grass3d::kTuft, grid.rings, double(grid.step),
-                 double(grid.reachOf(0)), double(grid.reach()), cells != kNoSrv ? ", on the map's own ground" : "");
+        LOG_INFO("3D grass: on %s - a meadow: %u roots round the eye in %d rings, %.1f apart at first (%.0f each "
+                 "way, %.0f in all), tufts of %u bent blades near and %u further off, each root found once a frame "
+                 "(%dx%d)%s",
+                 mapName.c_str(), grid.blades(), grid.rings, double(grid.step), double(grid.reachOf(0)),
+                 double(grid.reach()), grass3d::kBladesNear, grass3d::kBladesFar, grid.side, grid.side * grid.rings,
+                 cells != kNoSrv ? ", on the map's own ground" : "");
     }
-    return worldPass(pso, w, h, c, sceneColorSrv, true, held ? trampleSrv : sceneColorSrv, nullptr, grid.vertices(),
-                     cells);
+    // 3.0.20-beta.47: the roots first, each once - a texel of their picture; then the tufts from it
+    if (!effectPass(grass3dRootsPipeline, grass3dRoots, grass3dRootsState, rtvHandle(kRtvGrassRoots), grid.side,
+                    grid.side * grid.rings, c, sceneColorSrv, true, held ? trampleSrv : sceneColorSrv, nullptr, 3,
+                    cells))
+        return false;
+    transition(grass3dRoots, grass3dRootsState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    return worldPass(pso, w, h, c, grass3dRootsSrv, true, held ? trampleSrv : grass3dRootsSrv, nullptr,
+                     grid.vertices(), cells);
+}
+
+// 3.0.20-beta.47: the 3D view's grass's roots' picture and its pipeline; false when they cannot be made (logged
+// once: no grass in the 3D view)
+bool Renderer::Impl::ensureGrass3dRoots(int w, int h) {
+    if (!grass3dRootsPs || grass3dRootsFailed) return false;
+    if (!grass3dRootsPipeline) {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+            fullScreenPipeline(root, presentVs, grass3dRootsPs, DXGI_FORMAT_R32G32B32A32_FLOAT, 1);
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&grass3dRootsPipeline)))) {
+            grass3dRootsPipeline = nullptr;
+            grass3dRootsFailed = true;
+            LOG_ERROR("3D grass: its roots' pipeline failed - no grass in the 3D view");
+            return false;
+        }
+    }
+    if (grass3dRoots && w == grass3dRootsWidth && h == grass3dRootsHeight) return true;
+    discard(grass3dRoots);
+    grass3dRoots = nullptr;
+    grass3dRootsWidth = w;
+    grass3dRootsHeight = h;
+    D3D12_CLEAR_VALUE none{};
+    none.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    grass3dRoots = createTexture2D(device, w, h, 1, DXGI_FORMAT_R32G32B32A32_FLOAT,
+                                   D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET, &none);
+    grass3dRootsState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    if (grass3dRoots && grass3dRootsSrv == kNoSrv) grass3dRootsSrv = allocSrv();
+    if (!grass3dRoots || grass3dRootsSrv == kNoSrv) {
+        discard(grass3dRoots);
+        grass3dRoots = nullptr;
+        grass3dRootsFailed = true;  // not tried again
+        LOG_ERROR("3D grass: no video memory for its roots at %dx%d - no grass in the 3D view", w, h);
+        return false;
+    }
+    nameResource(grass3dRoots, "3D grass roots");
+    device->CreateRenderTargetView(grass3dRoots, nullptr, rtvHandle(kRtvGrassRoots));
+    device->CreateShaderResourceView(grass3dRoots, nullptr, cpuSrvHandle(grass3dRootsSrv));
+    return true;
 }
 
 // 0.81: grass blades from the green ground (grass_ps), trodden down where the last frame's steps are.

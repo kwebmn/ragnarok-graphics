@@ -635,6 +635,7 @@ private:
     }
     bool grass3dWanted() const {  // 3.0.19-beta.37
         return effects_.grass && effects_.grassAmount > 0 && effects_.grass3d && grass3dVs_ && grass3dPs_ &&
+               grass3dRootsPs_ &&
                grassHere() && cameraValid_ && camera::wideView();
     }
     void applyGrass3d();
@@ -956,6 +957,8 @@ private:
     // 3.0.19-beta.37 (the owner: «сделай» - the 3D view's grass on Direct3D 11 too): as Direct3D 12's (core/grass3d)
     ID3D11VertexShader* grass3dVs_ = nullptr;
     ID3D11PixelShader* grass3dPs_ = nullptr;
+    ID3D11PixelShader* grass3dRootsPs_ = nullptr;  // 3.0.20-beta.47: the meadow's roots, each found once a frame
+    Target grass3dRoots_;
     bool grass3dDone_ = false;
     std::string grass3dLogged_;
     ID3D11PixelShader* crittersPs_ = nullptr;
