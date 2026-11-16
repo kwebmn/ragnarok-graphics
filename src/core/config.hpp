@@ -192,6 +192,10 @@ struct EffectSettings {
     // painted ones taken out of the own ground's light meanwhile; Direct3D 12, with the own ground. Off at first
     // (2.1.4 took «Тени от солнца» and «Настоящие тени» out at the owner's word); not of the presets
     bool sunShadows3d = false;
+    // 3.0.20-beta.51 (the owner's «делай 1-9», 4): [view3d] dense_crowns - in the 3D view the leaves of the trees
+    // drawn from the card ([effects] leaves_card) twice more, turned about the crown's middle (core/foliage
+    // crownTurn): fuller crowns from the eyes' level. Off at first; not of the presets
+    bool denseCrowns = false;
     // 3.0.16-beta.25 (the owner: «давай» - the body's stamp, from nostalRE): body_stamp - after the game's characters'
     // sprites (drawn writing no depth) each one's shape put into the depth a little behind its feet: an effect drawn
     // after them falls behind the body where it lies behind it (a ring's far half), in front where it lies in front

@@ -2,7 +2,10 @@
 #include <cmath>
 #include <vector>
 
+#include "core/config.hpp"
 #include "core/foliage.hpp"
+#include "core/live_config.hpp"
+#include "core/settings/schema.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -71,4 +74,41 @@ TEST(foliage_a_tree_swings_as_far_in_the_world_wherever_it_stands) {
     CHECK(std::fabs(foliage::swingAt(swing, 5.0f, 60.0f) - swing * foliage::kMostSwing) < 1e-3f);
     CHECK(std::fabs(foliage::swingAt(swing, 0.0f, 60.0f) - swing * foliage::kMostSwing) < 1e-3f);
     CHECK(foliage::swingAt(0.0f, 100.0f, 60.0f) == 0.0f);
+}
+
+// 3.0.20-beta.51 (the owner's «делай 1-9», 4 - denser crowns in the 3D view): a tree's crown is a few flat cards of
+// leaves - from above they cover one another, from the eyes' level their edges and the gaps between them show. Its
+// leaves drawn twice more, turned about the crown's middle (its upright line) a sixth and a third of a turn and a
+// little smaller - on prt_fild08's commonest tree (나무01, 64 faces) the gaps close
+// (/root/uagfx-tools/audit/sunshadow/crown_tree01.png)
+TEST(foliage_a_crowns_leaves_again_turned_about_its_middle) {
+    CHECK(foliage::kCrownCopies == 2);
+    float turn[3];
+    foliage::crownTurn(0, turn);
+    CHECK(std::fabs(turn[0] - 0.5f) < 1e-5f && std::fabs(turn[1] - 0.8660254f) < 1e-5f && turn[2] == 0.94f);
+    foliage::crownTurn(1, turn);
+    CHECK(std::fabs(turn[0] + 0.5f) < 1e-5f && std::fabs(turn[1] - 0.8660254f) < 1e-5f && turn[2] == 0.88f);
+    const float middle[3] = {100.0f, -30.0f, 50.0f};
+    float p[3] = {110.0f, -40.0f, 50.0f};  // ten aside, ten over the middle (up along -y)
+    foliage::crownTurn(0, turn);
+    foliage::turnedAbout(middle, turn, p);
+    // a sixth of a turn about the upright line, 0.94 of the way from the middle
+    CHECK(std::fabs(p[0] - (100.0f + 9.4f * 0.5f)) < 1e-4f && std::fabs(p[2] - (50.0f + 9.4f * 0.8660254f)) < 1e-4f);
+    CHECK(std::fabs(p[1] - (-30.0f - 9.4f)) < 1e-4f);
+    float at[3] = {100.0f, -30.0f, 50.0f};  // the middle stays
+    foliage::turnedAbout(middle, turn, at);
+    CHECK(at[0] == 100.0f && at[1] == -30.0f && at[2] == 50.0f);
+    const float none[3] = {1.0f, 0.0f, 0.0f};  // no size: as it is (the leaves' first drawing)
+    float same[3] = {7.0f, 8.0f, 9.0f};
+    foliage::turnedAbout(middle, none, same);
+    CHECK(same[0] == 7.0f && same[1] == 8.0f && same[2] == 9.0f);
+}
+
+TEST(config_view3d_dense_crowns_off_by_default_and_live) {
+    CHECK(!parseConfig("").effects.denseCrowns);
+    CHECK(parseConfig("[view3d]\ndense_crowns = 1\n").effects.denseCrowns);
+    const settings::IniSetting* row = settings::findSetting("view3d.dense_crowns");
+    CHECK(row != nullptr);
+    if (row) CHECK(row->page == settings::Page::Game && row->control == settings::Control::Check);
+    CHECK(appliesNow("view3d.dense_crowns"));
 }

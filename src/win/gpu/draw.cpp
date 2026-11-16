@@ -713,7 +713,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         std::copy(l.sourceRect, l.sourceRect + 4, c.sourceRect);
         std::copy(l.uiPixels, l.uiPixels + 3, c.uiPixels);
         std::copy(l.sourceClamp, l.sourceClamp + 3, c.sourceClamp);
-        std::copy(l.reproject, l.reproject + 6, c.reproject);
+        std::copy(l.reproject, l.reproject + 12, c.reproject);  // 3.0.20-beta.51: r6-r11 a crown's copy's turn
         c.stage1[1] |= l.stage1[1] & (1u << 27);
     }
     if (matTex) materialConstants(d.fvf == d3d7::FVF_TL2, c);  // 1.8

@@ -579,6 +579,9 @@ void Renderer::Impl::drawGameLeavesCard(const own_ground::Shading& fog) {
                           effects.leafFall && frameCrowns.size() < 32 ? &crown : nullptr, &crownSeen))
             return;
         if (crownSeen) frameCrowns.push_back(crown);
+        // 3.0.20-beta.51 ([view3d] dense_crowns): a still tree's leaves twice more in the 3D view, turned about the
+        // crown's middle - the same faces, another look
+        const bool dense = effects.denseCrowns && camera::wideView() && !toView;
         for (const gamemodels::CardRun& r : *runs) {
             if (!r.count || !leafyTexture(r.texture)) continue;
             leafCardPacked.clear();
@@ -594,6 +597,13 @@ void Renderer::Impl::drawGameLeavesCard(const own_ground::Shading& fog) {
             leafCardRec.draw(cmd, leafCardPacked.data(), n, nullptr, 0);
             leafCardCounts.push_back(UINT(r.count));
             leafCardLooks.push_back(leaf);
+            for (int copy = 0; dense && copy < foliage::kCrownCopies; ++copy) {
+                Constants turned = leaf;
+                foliage::crownTurn(copy, turned.reproject + 9);
+                leafCardRec.draw(cmd, leafCardPacked.data(), n, nullptr, 0);
+                leafCardCounts.push_back(UINT(r.count));
+                leafCardLooks.push_back(turned);
+            }
         }
     };
     for (const uint32_t id : frame.ids) tree(id, 0u, nullptr);

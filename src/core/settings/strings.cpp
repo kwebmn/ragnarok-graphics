@@ -8981,6 +8981,17 @@ constexpr Entry kTexts[] = {
      "Проба. В 3D-режиме под открытым небом дома, деревья и рельеф отбрасывают настоящую тень — на землю и траву, "
      "чёткую и именно там, где стоят вещи; нарисованные на карте тени на это время убираются. Нужны «Своя земля» и "
      "Direct3D 12. Сначала выключено."},
+    {Text::View3dDenseCrowns, "Fuller tree crowns", "Густіші крони дерев", "Кроны деревьев гуще"},  // 3.0.20-beta.51
+    {Text::View3dDenseCrownsHint,
+     "In the 3D view a tree's leaves are drawn twice more, turned about its trunk: the flat cards of the crown no "
+     "longer show their edges and gaps from the side. Needs «Models by our renderer» and «Leaves on the graphics "
+     "card». Off at first.",
+     "У 3D-режимі листя дерева малюється ще двічі, повернуте довкола стовбура: пласкі картки крони більше не "
+     "показують збоку свої ребра й просвіти. Потрібні «Моделі нашим рендером» і «Листя на відеокарті». Спочатку "
+     "вимкнено.",
+     "В 3D-режиме листва дерева рисуется ещё дважды, повёрнутая вокруг ствола: плоские карточки кроны больше не "
+     "показывают сбоку свои рёбра и просветы. Нужны «Модели нашим рендером» и «Листва на видеокарте». Сначала "
+     "выключено."},
     {Text::View3dFastGround, "Faster far ground", "Швидша далека земля", "Быстрее дальняя земля"},  // 3.0.19-beta.42
     {Text::View3dFastGroundHint,
      "In the 3D view the game works out its far ground's cells once in 8 frames - our own ground is drawn in their "

@@ -211,6 +211,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.skyMoon = rd.u8() != 0;
             e.skyDawn = rd.u8() != 0;
             e.sunShadows3d = rd.u8() != 0;    // 3.0.20-beta.50
+            e.denseCrowns = rd.u8() != 0;     // 3.0.20-beta.51
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

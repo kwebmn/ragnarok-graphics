@@ -284,6 +284,9 @@ inline bool cardTreeLook(const std::vector<gamemodels::CardRun>& runs, const Lea
                             m[11] + mid[0] * m[2] + mid[1] * m[5] + mid[2] * m[8]};
     const float place[2] = {world[0], world[2]};
     leafShadingOf(x0, y0, x1, y1, place, look, out);
+    // 3.0.20-beta.51: the crown's middle in the world (leaf_vs r6-r8) - its leaves drawn again turn about it (r9-r11
+    // the turn, none here: foliage::crownTurn by the caller)
+    for (int k = 0; k < 3; ++k) out.reproject[6 + k] = world[k];
     if (crown && crownSeen && x1 - x0 >= 8.0f && mid[2] > 0.0f) {  // as noteCrown's for the game's leaves
         crown->centre = critters::Point{world[0], world[1], world[2]};
         crown->radius = std::clamp((x1 - x0) * 0.5f * mid[2] / p.f0, 1.0f, 12.0f);

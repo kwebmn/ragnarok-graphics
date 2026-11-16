@@ -521,6 +521,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.20-beta.50 (the owner's «делай 1-9», 2): a trial of real shadows, off at first
         {"view3d", "shadows", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dShadows,
          Text::View3dShadowsHint, "", &E::sunShadows3d},
+        // 3.0.20-beta.51 (the owner's «делай 1-9», 4): fuller crowns, off at first
+        {"view3d", "dense_crowns", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dDenseCrowns,
+         Text::View3dDenseCrownsHint, "", &E::denseCrowns},
         // 3.0.19-beta.36 (the concept's threat's arc): a red arc on the side one out of sight hits from
         {"view3d", "threat", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dThreat,
          Text::View3dThreatHint, ""},

@@ -41,4 +41,18 @@ float swingAt(float swing, float depth, float fov) {
     return swing * std::min(k, kMostSwing);
 }
 
+void crownTurn(int copy, float out[3]) {
+    static const float kTurns[kCrownCopies][3] = {{0.5f, 0.8660254f, 0.94f}, {-0.5f, 0.8660254f, 0.88f}};  // 60, 120
+    const int k = std::clamp(copy, 0, kCrownCopies - 1);
+    for (int a = 0; a < 3; ++a) out[a] = kTurns[k][a];
+}
+
+void turnedAbout(const float middle[3], const float turn[3], float p[3]) {
+    if (!(turn[2] > 0.0f)) return;
+    const float d[3] = {(p[0] - middle[0]) * turn[2], (p[1] - middle[1]) * turn[2], (p[2] - middle[2]) * turn[2]};
+    p[0] = middle[0] + d[0] * turn[0] - d[2] * turn[1];
+    p[1] = middle[1] + d[1];
+    p[2] = middle[2] + d[0] * turn[1] + d[2] * turn[0];
+}
+
 }  // namespace uagfx::foliage

@@ -21,5 +21,13 @@ constexpr float kSwing = 4.0f;
 // the eye, a depth of nothing). The renderers take it in the 3D view alone: the top view's as it ever was
 constexpr float kUsualDepth = 350.0f, kUsualFov = 15.0f, kMostSwing = 3.0f;
 float swingAt(float swing, float depth, float fov);
+// 3.0.20-beta.51 (the owner's «делай 1-9», 4 - denser crowns in the 3D view): a crown's leaves drawn kCrownCopies
+// times more, each turned about the crown's middle's upright line and a little smaller - the flat cards' edges and
+// gaps, seen from the eyes' level, closed. A copy's turn: its cosine, its sine, its size (leaf_vs: r9, r10, r11; a
+// size of 0: the leaves as they are)
+constexpr int kCrownCopies = 2;
+void crownTurn(int copy, float out[3]);
+// a place turned so about `middle` (up along -y): leaf_vs's sums
+void turnedAbout(const float middle[3], const float turn[3], float p[3]);
 
 }  // namespace uagfx::foliage
