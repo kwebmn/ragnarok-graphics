@@ -920,10 +920,17 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     // 1.9.6: every [effects] key the settings know, by its word in the file - the list written out by hand stopped at
     // 0.33, and a change of a newer one alone (grass, foliage, the sky, the living world...) was not applied until
     // one of the listed changed with it: the console's switches seemed not to work.
+    // 3.0.20-beta.77 (the owner: «когда нажимаю включить в консоли через пробел оно не включается почему» - his log:
+    // «settings: view3d.crown_volume = 1» ten times, none taken): and every switch and number kept among the effects
+    // under another section - the 3D view's seventeen ([view3d] ceiling, shadows, dense_crowns, crown_volume, ranges,
+    // camera_walls, ...) were changed alone to no end: nothing in the list, and the running settings stayed as they
+    // were (win/context watchSettings) till an [effects] key changed or the game started again. Told with their
+    // section; an [effects] key by its word alone, as before.
     for (const settings::IniSetting& k : settings::iniSettings()) {
-        if (std::string(k.section) != "effects") continue;
+        const bool effects = std::string(k.section) == "effects";
+        if (!effects && !k.flag && !k.number) continue;
         const std::string was = settings::tokenOf(k, running), now = settings::tokenOf(k, file);
-        if (was != now) u.applied.push_back(change(k.key, was, now));
+        if (was != now) u.applied.push_back(change(effects ? k.key : settings::sectionKey(k).c_str(), was, now));
     }
     n.effects = file.effects;
     if (file.logLevel != running.logLevel) {

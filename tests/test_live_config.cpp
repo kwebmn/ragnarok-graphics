@@ -1,7 +1,10 @@
 #include <algorithm>
+#include <cstdio>
+#include <string>
 
 #include "core/daylight.hpp"
 #include "core/live_config.hpp"
+#include "core/settings/schema.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -354,4 +357,50 @@ TEST(live_config_language_change_is_told) {
                       [](const std::string& a) { return a.find("language") != std::string::npos; }));
     CHECK(appliesNow("utility.language"));
     CHECK(parseConfig("").language.empty());
+}
+
+// 3.0.20-beta.77 (the owner 17.11: «когда нажимаю включить в консоли через пробел оно не включается почему» - his
+// log: «settings: view3d.crown_volume = 1» ten times in four seconds, «view3d.dense_crowns = 0» ten times, none of
+// them followed by «uaro-graphics.ini changed»; a change of [effects] grass was): the 3D view's switches are kept
+// among the effects, and the list of the applied looked at the [effects] section's keys alone - with nothing in it
+// the running settings stayed as they were (1.9.6's fault again, a section further)
+TEST(live_config_a_3d_views_switch_alone_applies_now) {
+    const LiveUpdate u = liveUpdate(parseConfig("[view3d]\ncrown_volume = 0\ndense_crowns = 1\n"),
+                                    parseConfig("[view3d]\ncrown_volume = 1\ndense_crowns = 1\n"));
+    CHECK(u.next.effects.crownVolume);
+    CHECK_EQ(u.applied.size(), size_t(1));
+    if (!u.applied.empty()) CHECK_EQ(u.applied[0], std::string("view3d.crown_volume 0 -> 1"));
+    const LiveUpdate d = liveUpdate(parseConfig("[view3d]\ndense_crowns = 1\n"),
+                                    parseConfig("[view3d]\ndense_crowns = 0\n"));
+    CHECK(!d.next.effects.denseCrowns);
+    CHECK_EQ(d.applied.size(), size_t(1));
+    // an [effects] key told as before, by its word alone
+    const LiveUpdate g = liveUpdate(parseConfig("[effects]\ngrass = 1\n"), parseConfig("[effects]\ngrass = 0\n"));
+    CHECK_EQ(g.applied.size(), size_t(1));
+    if (!g.applied.empty()) CHECK_EQ(g.applied[0], std::string("grass 1 -> 0"));
+}
+
+// every switch and number the settings keep among the effects, whatever its section: changed alone, it is applied
+TEST(live_config_every_setting_kept_among_the_effects_applies_alone) {
+    std::string lost;
+    int looked = 0;
+    for (const settings::IniSetting& k : settings::iniSettings()) {
+        if (!k.flag && !k.number) continue;
+        ++looked;
+        const Config running = parseConfig("");
+        Config file = running;
+        if (k.flag) {
+            file.effects.*k.flag = !(running.effects.*k.flag);
+        } else {
+            const int now = running.effects.*k.number;
+            file.effects.*k.number = now == k.max ? k.min : k.max;
+        }
+        const LiveUpdate u = liveUpdate(running, file);
+        const bool taken = k.flag ? u.next.effects.*k.flag == file.effects.*k.flag
+                                  : u.next.effects.*k.number == file.effects.*k.number;
+        if (u.applied.empty() || !taken) lost += settings::sectionKey(k) + " ";
+    }
+    CHECK(looked > 100);
+    if (!lost.empty()) std::printf("  not applied when changed alone: %s\n", lost.c_str());
+    CHECK_EQ(lost, std::string());
 }
