@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.73 — what's new · 2026-11-16
+
+- **A trial: crowns with a body in the 3D view.** A tree's leaves in the game are flat plates in tiers, made for the view from above; from the eyes' level you see their edges and the sky between them. Each flat leaf plate can now be drawn twice more, stood on its edge along the line from the trunk: the tiers become a crown. Leaves that stand already (bushes) are not doubled. A trial, off at first: «Гра» → «3D-режим» → «Об'ємні крони», in the console too. Needs «Моделі нашим рендером» and «Листя на відеокарті».
+
 # uaRO Graphics 3.0.20-beta.72 — what's new · 2026-11-16
 
 - **Far mountains on the horizon (3D view).** Far ranges now stand along the horizon in three layers, each paler into the haze: mountains over the fields, dunes in the desert, snowy peaks in the snow, low islands where the sea lies past the map's edge. At dusk they are dark against the glow, at night barely seen, and the water mirrors them. They stay in place as the camera turns. None under a roof and on the maps that hang in the sky (Yuno, Gonryun). The switch: «Гра» → «3D-режим» → «Далекі гори на обрії», in the console too.
