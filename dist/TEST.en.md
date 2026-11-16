@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.74 — what's new · 2026-11-17
+
+- **Fixed: houses and bridges missing whole or in parts** («Моделі нашим рендером»). A model's picture reached the renderer only when the game itself drew a face with it, and the game draws a model itself in one frame alone. If the model was only entering the picture by its edge in that frame (turning the camera in the 3D view, walking up to a bridge), or a face was turned away, its picture never came and those faces were not drawn. That is how the trading post in Prontera and parts of the bridges on gef_fild07 and yuno_fild01 went missing. All of a model's pictures are now sent at once.
+
 # uaRO Graphics 3.0.20-beta.73 — what's new · 2026-11-16
 
 - **A trial: crowns with a body in the 3D view.** A tree's leaves in the game are flat plates in tiers, made for the view from above; from the eyes' level you see their edges and the sky between them. Each flat leaf plate can now be drawn twice more, stood on its edge along the line from the trunk: the tiers become a crown. Leaves that stand already (bushes) are not doubled. A trial, off at first: «Гра» → «3D-режим» → «Об'ємні крони», in the console too. Needs «Моделі нашим рендером» and «Листя на відеокарті».
