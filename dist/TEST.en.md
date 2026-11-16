@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.70 — what's new · 2026-11-16
+
+- **The 3D view's camera stops at real walls.** Behind the character the camera was kept by the box round a model: a gate's box holds its opening, a house's box the air under its roof, and a box the character stood in was left out whole, so the camera went through walls. The camera now goes by the models' own triangles as the game drew them: through a gate's opening and under a roof's overhang, and it stops at a house's wall. Leaves, fences, lamp posts and trunks do not stop it. A model not seen yet on this map is kept by its box. The free camera likewise. The switch: «Гра» → «3D-режим» → «Камера впирається у справжні стіни», in the console too.
+- **What is right at the camera dissolves.** In the 3D view a wall, a tree or a monster nearer than 12 units to the camera dissolves into dots instead of being cut by a straight edge at 10 units. The switch: «Розчиняти те, що впритул до камери», in the console too.
+
 # uaRO Graphics 3.0.20-beta.69 — what's new · 2026-11-16
 
 - **The 3D view's grass does not flicker as the view turns.** The tufts are laid over one another far to near. The rows were; inside a row the tufts went by their column's number whichever way the camera looked: near to far for half of the ways, and at the view's diagonals the blades' overlaps swapped. Now inside a row they go from the furthest too.
