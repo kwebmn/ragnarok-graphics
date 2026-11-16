@@ -98,3 +98,18 @@ TEST(upload_later_looks_as_the_textures_own_functions_give_them) {
     uploadlater::lookAt(std::move(j), false, l);  // no AI pack: no view, no key
     CHECK(l.serial == 8 && l.game.empty() && l.aiKey.empty() && l.pixels == px);
 }
+
+// 3.0.20-beta.45 (the audit, from a tester's log: «1 waiting» in every line - a texture the game writes every frame):
+// the looks' thread answers a picture later, and by then the texture was written again - beta.36 took only the looks
+// of its newest upload, so such a texture never got any (its fire, its light, its leaves, its AI key). The looks of
+// any upload of this texture are taken - one write behind at worst; those of the texture that had this number before
+// it (let go, the number given again) are not
+TEST(upload_later_takes_the_looks_of_an_upload_a_write_behind) {
+    CHECK(uploadlater::takes(5, 9, 9));    // its newest
+    CHECK(uploadlater::takes(5, 9, 8));    // a write behind: still this texture's
+    CHECK(uploadlater::takes(5, 9, 5));    // its first
+    CHECK(!uploadlater::takes(5, 9, 4));   // the texture before it under the same number
+    CHECK(!uploadlater::takes(5, 9, 10));  // none such yet
+    CHECK(!uploadlater::takes(0, 0, 0));   // never written whole
+    CHECK(!uploadlater::takes(0, 0, 3));
+}

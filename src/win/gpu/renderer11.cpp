@@ -1278,7 +1278,10 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
     // 3.0.20-beta.20: a whole texture of the game's (not a sprite cache) - its looks and the AI pack's work after its
     // upload (workLater11); its copy of the old pixels let go now
     bool later = false;
-    if (whole && !u.own) it->second.looksSerial = ++looksSerialNext_;  // 3.0.20-beta.36: older pixels' looks not taken
+    if (whole && !u.own) {  // 3.0.20-beta.36: its uploads numbered - the looks' thread answers later
+        it->second.looksSerial = ++looksSerialNext_;
+        if (!it->second.looksFirst) it->second.looksFirst = it->second.looksSerial;
+    }
     if (whole && !u.own && !spriteCache && !(ai_ && ai_->atlas(u.texture))) {
         if (ai_) ai_->rewritten(u.texture);
         later = laterLooks_.push(u, rec.pixels().data() + u.pixels, false, it->second.looksSerial);
@@ -1350,8 +1353,9 @@ void Renderer11::workLaterTaken11(double budgetMs) {
     while (looksWorker_.take(l)) {
         any = true;
         const auto it = textures_.find(l.texture);
-        if (it != textures_.end() && it->second.looksSerial == l.serial && it->second.width == l.width &&
-            it->second.height == l.height) {
+        // 3.0.20-beta.45: of any upload of this texture's own - a write behind too (as device.cpp)
+        if (it != textures_.end() && uploadlater::takes(it->second.looksFirst, it->second.looksSerial, l.serial) &&
+            it->second.width == l.width && it->second.height == l.height) {
             Texture& t = it->second;
             t.leafy = l.leafy;
             t.fire = l.fire;

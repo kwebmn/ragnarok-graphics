@@ -191,6 +191,7 @@ private:
         float fire = 0.0f, fireColour[3] = {0, 0, 0};
         float light = 0.0f, lightColour[3] = {0, 0, 0};
         uint32_t looksSerial = 0;  // 3.0.20-beta.36: its last whole upload's (the looks of older pixels not taken)
+        uint32_t looksFirst = 0;   // 3.0.20-beta.45: its first whole upload's - the looks of its own uploads taken
         // 1.14: its material (materials11.cpp) and the picture it was made from (the game's or the AI's)
         ID3D11Texture2D* mat = nullptr;
         ID3D11ShaderResourceView* matSrv = nullptr;

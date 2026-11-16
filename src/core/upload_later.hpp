@@ -40,6 +40,13 @@ struct Looks {
     const uint32_t* texels() const { return game.empty() ? pixels.data() : game.data(); }
 };
 void lookAt(Job&& j, bool aiKey, Looks& out);
+// 3.0.20-beta.45 (the audit): whether a texture takes the looks made of its upload `serial` - `first` its first whole
+// upload's number (0: never written whole), `last` its newest. Any upload of this texture's own, a write behind too:
+// beta.36 took the newest alone, and a texture the game writes every frame (its looks a picture late each time)
+// never got any; not one of the texture that had its number before it
+inline bool takes(uint32_t first, uint32_t last, uint32_t serial) {
+    return first != 0 && serial >= first && serial <= last;
+}
 
 class Queue {
 public:

@@ -1075,8 +1075,10 @@ void Renderer::Impl::workLaterTaken(double budgetMs) {
     while (looksWorker.take(l)) {
         any = true;
         const auto it = textures.find(l.texture);
-        if (it != textures.end() && it->second.looksSerial == l.serial && it->second.width == l.width &&
-            it->second.height == l.height) {
+        // 3.0.20-beta.45: of any upload of this texture's own - a write behind too (written every frame it never
+        // got its looks: each answer came after the next write)
+        if (it != textures.end() && uploadlater::takes(it->second.looksFirst, it->second.looksSerial, l.serial) &&
+            it->second.width == l.width && it->second.height == l.height) {
             Texture& t = it->second;
             t.fire = l.fire;
             t.light = l.light;
@@ -1152,7 +1154,10 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     // 3.0.20-beta.20: a whole texture of the game's (not a sprite cache) - its looks and the AI pack's work after its
     // upload (workLater); its AI picture of the old pixels let go now
     bool later = false;
-    if (whole && !u.own) t.looksSerial = ++looksSerialNext;  // 3.0.20-beta.36: older pixels' looks not taken
+    if (whole && !u.own) {  // 3.0.20-beta.36: its uploads numbered - the looks' thread answers later
+        t.looksSerial = ++looksSerialNext;
+        if (!t.looksFirst) t.looksFirst = t.looksSerial;
+    }
     if (whole && !u.own && !spriteCache && !(ai && ai->atlas(u.texture))) {
         if (ai) ai->rewritten(u.texture, t);
         later = laterLooks.push(u, px, false, t.looksSerial);

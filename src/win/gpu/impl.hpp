@@ -185,6 +185,7 @@ struct Texture {
     float light = 0.0f;  // 0.36: how much it lights in its own colour (core/effect_light.hpp: lightOf)
     float lightColour[3] = {0, 0, 0};
     uint32_t looksSerial = 0;  // 3.0.20-beta.36: its last whole upload's (the looks of older pixels not taken)
+    uint32_t looksFirst = 0;   // 3.0.20-beta.45: its first whole upload's - the looks of its own uploads taken
     // 0.32: a sprite cache's cells and what each holds now (sprite_exe::Source) - the characters cast shadows.
     std::vector<SpriteCell> spriteCells;
     // 1.8: its material (materials.cpp) - relief, height, gloss - made from the picture matFor (the game's or the AI's)
