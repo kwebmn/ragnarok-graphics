@@ -153,6 +153,14 @@ bool insideAt(const Ground& g, float x, float z) {
     return g.inside[size_t(fz) * size_t(g.width) + size_t(fx)] != 0;
 }
 
+bool bareAt(const Ground& g, float x, float z) {
+    if (g.bare.size() < size_t(g.width) * size_t(g.height)) return false;
+    const float fx = std::floor(x / g.zoom + float(g.width) * 0.5f);
+    const float fz = std::floor(z / g.zoom + float(g.height) * 0.5f);
+    if (!(fx >= 0.0f && fz >= 0.0f && fx < float(g.width) && fz < float(g.height))) return false;
+    return g.bare[size_t(fz) * size_t(g.width) + size_t(fx)] != 0;
+}
+
 bool heightAt(const Ground& g, float x, float z, float& y) {
     if (g.corners.size() < size_t(g.width) * size_t(g.height) * 4) return false;
     const float fx = x / g.zoom + float(g.width) * 0.5f, fz = z / g.zoom + float(g.height) * 0.5f;

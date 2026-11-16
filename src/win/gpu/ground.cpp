@@ -267,6 +267,10 @@ bool Renderer::Impl::ensureHills() {
 // 2.2.1: the grass's ground (core/ground_cells.hpp, made as the frame began from the last frame's) into its texture
 // once a frame, in the grass's pass's list before it records.
 void Renderer::Impl::dropHalls() {
+    // 3.0.20-beta.46 (R-HGTAKK): nor on the cells whose own texture is not green (Prontera's paving: tufts stood in
+    // its joints and blinked as the camera moved)
+    if (mapWorld.bareKnown())
+        ground_cells::dropWhere(groundCells, [this](float x, float z) { return mapWorld.bareAt(x, z); });
     if (!mapWorld.hallsKnown()) return;
     const size_t n = ground_cells::dropWhere(groundCells, [this](float x, float z) { return mapWorld.insideAt(x, z); });
     if (n == 0 || hallsLogged) return;

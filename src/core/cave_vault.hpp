@@ -3,6 +3,8 @@
 #include <vector>
 
 #include "core/ground_heights.hpp"
+#include "core/rsm.hpp"
+#include "core/rsw.hpp"
 
 namespace uagfx::cave_vault {
 
@@ -24,6 +26,36 @@ constexpr float kWallShare = 0.92f, kFloorShare = 0.2f;
 constexpr float kLeastOver = 6.0f, kLeastRoom = 48.0f, kMostRoom = 160.0f, kLeastRelief = 12.0f, kFlatRoom = 80.0f;
 constexpr int kSmoothCells = 3;
 bool build(const ground_heights::Ground& g, Vault& out);
+// 3.0.20-beta.46 (R-3T9MZC «колоны как будто в воздухе», pay_dun00: its pillars 외부소품\동굴리얼기둥.rsm stand 31-34
+// tall - the walls' height, 33 - their flared heads' black caps hanging 15-30 under a vault mirrored up to 48-66 over
+// the passage): the vault comes down to the posts that reach the walls' height - a funnel of rock round each one's
+// head, its cap kPostSink within the rock, the vault's own height again kPostSpread past the head's edge.
+// A post: a model its makers named a pillar («기둥») or a stalactite («종유석»), standing tall (kPostLeast), no wider
+// than tall, its top tenth at least kPostHead of its widest across both ways - a pillar's head; a stalagmite ends in
+// a point, a boulder is wider than tall. By the name too: in the census of the 113 dungeon maps' models
+// (/root/uagfx-tools/audit/vault) the shape alone took statues, a clock, curtains, book shelves and trees as well
+struct Post {
+    float x = 0.0f, z = 0.0f;  // its head's middle, the map file's place
+    float radius = 0.0f;       // its head's half width (the wider way)
+    float top = 0.0f;          // up positive
+};
+constexpr float kPostLeast = 20.0f, kPostHead = 0.5f, kPostReach = 0.75f;
+constexpr float kPostSink = 1.5f, kPostPad = 2.0f, kPostSpread = 22.0f;
+constexpr int kFine = 4;  // the vault's heights a cell's side once it has posts (a funnel some 20 units across)
+// Whether a model's file (as the map names it, cp949 bytes) is named a pillar or a stalactite - the words whole, by
+// the name's own characters
+bool postName(const std::string& file);
+// A model as the map stands it (rsw::placeInMap of its faces' corners): whether a post, and which
+bool postOf(const rsm::Model& model, const rsw::Model& at, Post& out);
+// The vault's heights `times` a cell's side: the same vault between the cells' middles (heightAt's), a crease where
+// two cells' slopes met smoothed away
+void refine(Vault& v, int times);
+// The vault brought down onto the posts whose tops reach kPostReach of the way from their floor to the walls' top and
+// that it lies over; the number of them. None under a plain dome (no walls' height known)
+size_t restOn(Vault& v, const ground_heights::Ground& g, const std::vector<Post>& posts);
+// A map's vault with its posts: build's, and where some post reaches it refined by kFine and brought down onto them
+// (met: how many); no such post - build's own, a height a cell
+bool build(const ground_heights::Ground& g, const std::vector<Post>& posts, Vault& out, size_t* met = nullptr);
 // Over a place of the map file (x, z: the .rsw's, the map's middle at 0), between the cells' middles; false off it
 bool heightAt(const Vault& v, float x, float z, float& up);
 // The maps given one: the dungeons' by their names («dun»: pay_dun00, gef_dun01, orcsdun01 ...; anthell) - a house's

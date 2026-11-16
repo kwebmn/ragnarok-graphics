@@ -1,6 +1,7 @@
 #include "win/gpu/map_world.hpp"
 
 #include <algorithm>
+#include <deque>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -43,6 +44,7 @@ struct MapWorld::Shared {
     rsw::World done;
     ground_heights::Ground doneGround;  // 2.6.18: its .gnd's heights (none: not read)
     std::vector<grass_beds::Box> doneBeds;  // 3.0.1-beta.3: its flower beds' tops
+    std::vector<cave_vault::Post> donePosts;  // 3.0.20-beta.46: a dungeon's posts
     bool ownWanted = false;                 // 3.0.4-beta.10: the own ground read with the map
     std::unique_ptr<OwnGround> doneOwn;
     bool doneOk = false;
@@ -92,6 +94,7 @@ void MapWorld::setMap(const std::string& name) {
     world_ = rsw::World{};
     ground_ = ground_heights::Ground{};
     beds_.clear();
+    posts_.clear();
     placed_.clear();
     lamps_.clear();
     seen_.clear();
@@ -138,6 +141,7 @@ void MapWorld::poll() {
         world_ = std::move(shared_->done);
         ground_ = std::move(shared_->doneGround);
         beds_ = std::move(shared_->doneBeds);
+        posts_ = std::move(shared_->donePosts);
         own_ = std::move(shared_->doneOwn);  // 3.0.4-beta.10
         if (!ownWanted_) own_.reset();       // read before it was turned off
         if (own_) own_->serial = ++ownSerial_;
@@ -186,6 +190,12 @@ bool MapWorld::insideAt(float x, float z) const {
     if (!hallsKnown()) return false;
     const map::Point at = map::toWorld(axes_, map::Point{x, 0.0f, z});
     return ground_heights::insideAt(ground_, at.x, at.z);
+}
+
+bool MapWorld::bareAt(float x, float z) const {
+    if (!bareKnown()) return false;
+    const map::Point at = map::toWorld(axes_.known() ? axes_ : map::Axes{1, 1, 1}, map::Point{x, 0.0f, z});
+    return ground_heights::bareAt(ground_, at.x, at.z);
 }
 
 void MapWorld::noteTorch(const map::Point& world) {
@@ -483,6 +493,25 @@ void MapWorld::loop() {
                     // 3.0.20-beta.42: the land's own within the map's rectangle too (the open cells it fills)
                     own->cells = ground_cells::ofMeshes({&own->mesh, &own->distant, &own->outskirts}, full.width,
                                                         full.height, full.zoom, 1, 1, 1);
+                    {  // 3.0.20-beta.46 (R-HGTAKK): the cells whose own texture is not green - no grass's ground
+                        std::vector<ground_cells::Picture> pictures(own->textures.size());
+                        for (size_t i = 0; i < own->textures.size(); ++i) {
+                            const OwnGround::Picture& p = own->textures[i];
+                            if (!p.levels.empty()) pictures[i] = {p.width, p.height, p.levels[0].data()};
+                        }
+                        const std::vector<uint8_t> grassy = ground_cells::grassyCells(full, pictures);
+                        size_t bare = 0;
+                        if (grassy.size() == size_t(ground.width) * size_t(ground.height)) {
+                            ground.bare.resize(grassy.size());
+                            for (size_t i = 0; i < grassy.size(); ++i) {
+                                ground.bare[i] = grassy[i] ? uint8_t(0) : uint8_t(1);
+                                bare += grassy[i] ? 0 : 1;
+                            }
+                        }
+                        LOG_INFO("grass: %s - %zu of its %zu cells' own textures are not green (under %.2f by the "
+                                 "grass's measure: paving, sand, rock) - no grass on them",
+                                 name.c_str(), bare, grassy.size(), double(ground_cells::kGrassy));
+                    }
                     for (uint8_t r : resting) own->restingCells += r;
                     own->wallLight.assign(full.cells.size() * 2, 0u);
                     for (int y = 0; y < full.height; ++y)
@@ -563,30 +592,45 @@ void MapWorld::loop() {
                 LOG_INFO("own ground: %s - no room for it in the game's memory: the game's own ground", name.c_str());
             }
         }
+        // a model's file read once (the data folder, then the archives); an empty model where it is not read
+        std::deque<std::pair<std::string, rsm::Model>> readModels;  // a deque: a model given out stays where it is
+        const auto modelOf = [&](const std::string& file) -> const rsm::Model& {
+            const std::string key = lower(file);
+            for (const auto& known : readModels)
+                if (known.first == key) return known.second;
+            const std::string entry = "data\\model\\" + file;
+            std::vector<uint8_t> mb;
+            std::string why;
+            bool found = win::gamefiles::readWhole(dir + "\\" + entry, mb);
+            for (size_t i = 0; i < archives.size() && !found; ++i) {
+                Archive& a = *archives[i];
+                if (!open(a)) continue;
+                found = a.grf ? a.g.find(entry) && a.g.read(entry, mb, why)
+                              : a.zip.has(entry) && a.zip.read(entry, mb, why);
+            }
+            rsm::Model model;
+            if (!found || !rsm::parse(mb.data(), mb.size(), model, why)) model = rsm::Model{};
+            readModels.emplace_back(key, std::move(model));
+            return readModels.back().second;
+        };
         // 3.0.1-beta.3 (R-SA3W7Y): its flower beds' tops, the grass's ground too - each bed's model read once
         std::vector<grass_beds::Box> beds;
-        std::vector<std::pair<std::string, rsm::Model>> bedModels;
         for (const rsw::Model& m : w.models) {
             if (!ok || !grass_beds::bedModel(m.file)) continue;
-            auto it = std::find_if(bedModels.begin(), bedModels.end(),
-                                   [&](const auto& b) { return b.first == lower(m.file); });
-            if (it == bedModels.end()) {
-                const std::string entry = "data\\model\\" + m.file;
-                std::vector<uint8_t> mb;
-                std::string why;
-                bool found = win::gamefiles::readWhole(dir + "\\" + entry, mb);
-                for (size_t i = 0; i < archives.size() && !found; ++i) {
-                    Archive& a = *archives[i];
-                    if (!open(a)) continue;
-                    found = a.grf ? a.g.find(entry) && a.g.read(entry, mb, why)
-                                  : a.zip.has(entry) && a.zip.read(entry, mb, why);
-                }
-                rsm::Model model;
-                if (!found || !rsm::parse(mb.data(), mb.size(), model, why)) model = rsm::Model{};
-                bedModels.emplace_back(lower(m.file), model);
-                it = bedModels.end() - 1;
+            for (const grass_beds::Box& b : grass_beds::place(modelOf(m.file), m)) beds.push_back(b);
+        }
+        // 3.0.20-beta.46 (R-3T9MZC «колоны как будто в воздухе», pay_dun00): a dungeon's posts - its models that
+        // stand tall and wide-topped (cave_vault::postOf); the 3D view's vault comes down to those that reach its
+        // walls' height
+        std::vector<cave_vault::Post> posts;
+        if (ok && cave_vault::forMap(name)) {
+            for (const rsw::Model& m : w.models) {
+                cave_vault::Post post;
+                if (cave_vault::postOf(modelOf(m.file), m, post)) posts.push_back(post);
             }
-            for (const grass_beds::Box& b : grass_beds::place(it->second, m)) beds.push_back(b);
+            LOG_INFO("map objects: %u of %s's %u models stand as posts (tall, wide-topped) - the 3D view's vault "
+                     "comes down to those that reach its walls' height",
+                     unsigned(posts.size()), name.c_str(), unsigned(w.models.size()));
         }
         if (!beds.empty())
             LOG_INFO("map objects: %u flower beds' tops on %s - the grass grows on them", unsigned(beds.size()),
@@ -596,6 +640,7 @@ void MapWorld::loop() {
         shared_->done = std::move(w);
         shared_->doneGround = std::move(ground);
         shared_->doneBeds = std::move(beds);
+        shared_->donePosts = std::move(posts);
         shared_->doneOwn = std::move(own);
         shared_->doneOk = ok;
         shared_->doneReady = true;

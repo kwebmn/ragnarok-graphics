@@ -2449,22 +2449,30 @@ float vaultY(float2 xz) {
 // the ray meets none within the haze's reach and a little past
 float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
     float reachEnd = max(sourceRect.w, 1.0) + 100.0;
-    float stride = reachEnd / 48.0;
-    if (eye.y - vaultY(eye.xz) <= 0.0) return float4(dark, 0.0);  // the eye over it (y points down)
+    float room = eye.y - vaultY(eye.xz);  // the air over the ray's point up to the vault (y points down)
+    if (room <= 0.0) return float4(dark, 0.0);  // the eye over it
+    // 3.0.20-beta.46 (R-3T9MZC: the vault comes down to a dungeon's posts - a funnel some 20 units across by a post's
+    // head): a step as long as the room over the ray lets it be - the vault no steeper than 1.5 along the ground and
+    // the ray's own climb - a unit and 2 % of the way at least, 64 of them. Beta.32's 48 even steps of 15.6 stepped
+    // over a funnel's edge and a far ridge's: against steps of half a unit 2242-4155 pixels of 518400 wrong from
+    // four places in pay_dun00, this way 238-337 (/root/uagfx-tools/audit/vault/vaultview.cpp)
+    float flat = length(dir.xz), climb = max(-dir.y, 0.0);
     float before = 0.0, t = 0.0;
     bool met = false;
-    [loop] for (int k = 1; k <= 48; ++k) {
-        t = stride * float(k);
+    [loop] for (int k = 0; k < 64; ++k) {
+        t = before + max(room / (1.5 * flat + climb + 1e-3), 1.0 + 0.02 * before);
         float3 q = eye + dir * t;
-        if (q.y - vaultY(q.xz) <= 0.0) {
+        room = q.y - vaultY(q.xz);
+        if (room <= 0.0) {
             met = true;
             break;
         }
         before = t;
+        if (before >= reachEnd) break;
     }
     if (!met) return float4(dark, 0.0);
     float near0 = before, far0 = t;
-    [unroll] for (int j = 0; j < 5; ++j) {
+    [unroll] for (int j = 0; j < 6; ++j) {
         float half0 = 0.5 * (near0 + far0);
         float3 q = eye + dir * half0;
         if (q.y - vaultY(q.xz) <= 0.0) far0 = half0;

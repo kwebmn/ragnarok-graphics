@@ -313,3 +313,21 @@ TEST(ground_heights_halls_floors_read_with_the_map) {
     ground_heights::Ground none;
     CHECK(!ground_heights::insideAt(none, 0.0f, 0.0f));
 }
+
+// 3.0.20-beta.46 (R-HGTAKK «в пронте мигает трава, но по идее ее на асфальте быть не должно»): the cells whose own
+// texture is not green (ground_cells::grassyCells: Prontera's paving, its joints greenish) - no grass's ground, by
+// the map file's place as the halls' floors
+TEST(ground_heights_bare_cells_by_the_files_place) {
+    ground_heights::Ground g;
+    g.width = 2, g.height = 2;
+    g.zoom = 10.0f;
+    g.bare = {0, 1, 1, 0};
+    CHECK(!ground_heights::bareAt(g, -5.0f, -5.0f));
+    CHECK(ground_heights::bareAt(g, 5.0f, -5.0f));
+    CHECK(ground_heights::bareAt(g, -5.0f, 5.0f));
+    CHECK(!ground_heights::bareAt(g, 5.0f, 5.0f));
+    CHECK(!ground_heights::bareAt(g, 25.0f, 5.0f));  // off the map
+    ground_heights::Ground none;
+    none.width = 2, none.height = 2;
+    CHECK(!ground_heights::bareAt(none, 5.0f, -5.0f));  // not known: as before
+}

@@ -3621,6 +3621,9 @@ void Renderer11::applyGrass() {
 
 // 3.0.18-beta.252 (R-9UNG8S): the halls' floors (MapWorld::insideAt) out of the grass's ground, once known
 void Renderer11::dropHalls() {
+    // 3.0.20-beta.46 (R-HGTAKK): nor on the cells whose own texture is not green, where known (ground.cpp's)
+    if (mapWorld_.bareKnown())
+        ground_cells::dropWhere(groundCells_, [this](float x, float z) { return mapWorld_.bareAt(x, z); });
     if (!mapWorld_.hallsKnown()) return;
     const size_t n =
         ground_cells::dropWhere(groundCells_, [this](float x, float z) { return mapWorld_.insideAt(x, z); });
@@ -4202,11 +4205,13 @@ ID3D11ShaderResourceView* Renderer11::vaultTexture() {
     if (key != vaultKey_) {
         vaultKey_ = key;
         vaultUploaded_ = false;
-        vaultMade_ = cave_vault::build(*mapWorld_.ground(), vaultMap_);
+        size_t met = 0;  // 3.0.20-beta.46 (R-3T9MZC): down to the posts that reach its walls' height (haze.cpp's)
+        vaultMade_ = cave_vault::build(*mapWorld_.ground(), mapWorld_.posts(), vaultMap_, &met);
         if (vaultMade_)
             LOG_INFO("3D sky: %s - a vault over its passages, its relief mirrored about its walls' top %.0f (its "
-                     "floors %.0f), %dx%d cells (Direct3D 11)", map_.c_str(), vaultMap_.wallTop,
-                     vaultMap_.floorLevel, vaultMap_.width, vaultMap_.height);
+                     "floors %.0f), %dx%d heights %.1f apart; it comes down to %zu of the map's %zu posts (Direct3D "
+                     "11)", map_.c_str(), vaultMap_.wallTop, vaultMap_.floorLevel, vaultMap_.width,
+                     vaultMap_.height, double(vaultMap_.zoom), met, mapWorld_.posts().size());
     }
     if (!vaultMade_) return nullptr;
     if (!vaultUploaded_) {

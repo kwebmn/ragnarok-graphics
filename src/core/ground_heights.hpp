@@ -18,6 +18,9 @@ struct Ground {
     std::vector<float> corners;  // 4 a cell, row by row: (x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1)
     std::vector<uint8_t> laid;   // 2.7.57: 1 a cell in a patch laid by hand (laidPatches), row by row
     std::vector<uint8_t> inside;  // 3.0.18-beta.252: 1 a cell whose top is a hall's floor (interiorTexture), row by row
+    // 3.0.20-beta.46: 1 a cell whose own texture is not green - no grass's ground (ground_cells::grassyCells, set by
+    // who has the map's pictures); none: not known
+    std::vector<uint8_t> bare;
 };
 
 // 2.7.57 (R-8YJSCR: Prontera's mats torn at their edges, «в версии первоначальной там они прямоугольные»; R-NSHM8K:
@@ -35,6 +38,8 @@ bool laidAt(const Ground& g, float x, float z);
 bool interiorTexture(const std::string& name);
 // Whether the cell at the map file's (x, z) has a hall's floor on top; false off the map or none known.
 bool insideAt(const Ground& g, float x, float z);
+// 3.0.20-beta.46 (R-HGTAKK): whether the cell at the map file's (x, z) is a bare one; false off the map or none known
+bool bareAt(const Ground& g, float x, float z);
 
 // A .gnd (1.7: textures, lightmaps, surfaces, then 28 bytes a cell) read to its cells' heights; false, with why.
 bool parse(const uint8_t* data, size_t size, Ground& out, std::string& error);

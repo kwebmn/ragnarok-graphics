@@ -36,5 +36,21 @@ Grid ofMeshes(const std::vector<const terrain::Mesh*>& meshes, int width, int he
 // z) `off` names - a hall's floor, its texture of a folder «...내부» (ground_heights::interiorTexture) - left with no
 // ground: no grass there (a castle's green carpet, Payon's green tiles). The number of cells so taken out.
 size_t dropWhere(Grid& g, const std::function<bool(float x, float z)>& off);
+// 3.0.20-beta.46 (R-HGTAKK «в пронте мигает трава, но по идее ее на асфальте быть не должно»): whether each cell of
+// the map (row by row) grows grass by its own texture - the part of its top's picture the cell shows (its surface's
+// corners), green by kGrassy of the grass's own measure at least on the whole (the shaders' bladeGreen); 1 too for a
+// cell whose picture is not known or that has no top (the land past the ground's edge may lie there). Measured on the
+// HD client's own pictures (/root/uagfx-tools/audit/grassy): Prontera's paving 0.01-0.10 (its joints greenish - the
+// tufts stood in them), Payon's and Geffen's at most 0.10 and 0.08; the lawns from 0.53, a forest floor's thin grass
+// from 0.10 (13 cells of Payon's 27000 under kGrassy). The picture the game's own, unlit: the 3D view's grass asked
+// the pixel of the picture shown alone - a root on a joint one frame, on a stone the next
+struct Picture {
+    int width = 0, height = 0;
+    const uint32_t* argb = nullptr;  // row by row, as the ground's coordinates read it
+};
+constexpr float kGrassy = 0.12f;
+// a cell's picture's part's mean green by that measure, 0-1; under 0: not known (no top, no picture)
+float greenOfCell(const gnd::Ground& g, size_t cell, const std::vector<Picture>& pictures);
+std::vector<uint8_t> grassyCells(const gnd::Ground& g, const std::vector<Picture>& pictures);
 
 }  // namespace uagfx::ground_cells

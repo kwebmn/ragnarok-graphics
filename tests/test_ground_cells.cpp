@@ -1,3 +1,4 @@
+#include <cmath>
 #include <utility>
 #include <vector>
 
@@ -103,4 +104,48 @@ TEST(ground_cells_of_the_own_grounds_meshes_the_whole_map) {
     CHECK(m.span[0] == -3.0f && m.span[1] == -2.0f && m.span[2] > m.span[3]);
     CHECK(m.span[4] == 4.0f && m.span[5] == 5.5f);
     CHECK(ground_cells::ofMeshes({}, 3, 1, 10.0f, 1, 1, 1).side == 0.0f);  // nothing to make it of
+}
+
+// 3.0.20-beta.46 (R-HGTAKK «в пронте мигает трава, но по идее ее на асфальте быть не должно»): the 3D view's grass
+// asked the picture's pixel at each root whether the ground is green - lit and graded as it is shown, a grey paving
+// stone's joint passes one frame and not the next. Where the map's own ground is known a cell grows grass by its own
+// texture: the part of the picture the cell shows, a quarter of it green at least (the game's own picture, unlit - no
+// time of day in it); a cell of paving has none
+TEST(ground_cells_grass_by_the_cells_own_texture) {
+    gnd::Ground g;
+    g.width = 6, g.height = 1;
+    g.zoom = 10.0f;
+    g.textures = {"grass.bmp", "paving.bmp", "sheet.bmp", "missing.bmp", "olive.bmp"};
+    // the pictures 8 x 8: grass green; paving grey with three mossy texels; a sheet - its left half grass, its right
+    // half paving (two tiles side by side); the fourth not found
+    // an olive meadow - green by 0.4 of the grass's measure all over: the grass grows thinner there, but it grows
+    std::vector<uint32_t> grass(64, 0xFF4C8A32u), paving(64, 0xFF8C8A84u), sheet(64), olive(64, 0xFFC8C496u);
+    paving[5] = paving[20] = paving[41] = 0xFF5A8C3Cu;
+    for (int i = 0; i < 64; ++i) sheet[size_t(i)] = i % 8 < 4 ? 0xFF4C8A32u : 0xFF8C8A84u;
+    const std::vector<ground_cells::Picture> pictures = {
+        {8, 8, grass.data()}, {8, 8, paving.data()}, {8, 8, sheet.data()}, {0, 0, nullptr}, {8, 8, olive.data()}};
+    const auto surface = [&](int texture, float u0, float u1) {
+        gnd::Surface s;
+        s.u[0] = u0, s.u[1] = u1, s.u[2] = u0, s.u[3] = u1;
+        s.v[0] = 0.0f, s.v[1] = 0.0f, s.v[2] = 1.0f, s.v[3] = 1.0f;
+        s.texture = int16_t(texture);
+        g.surfaces.push_back(s);
+        return int32_t(g.surfaces.size() - 1);
+    };
+    const int32_t tops[6] = {surface(0, 0.0f, 1.0f), surface(1, 0.0f, 1.0f), surface(2, 0.0f, 0.5f),
+                             surface(2, 0.5f, 1.0f), surface(3, 0.0f, 1.0f), surface(4, 0.0f, 1.0f)};
+    for (int x = 0; x < 6; ++x) {
+        gnd::Cell c{};
+        c.top = tops[x];
+        g.cells.push_back(c);
+    }
+    const std::vector<uint8_t> grassy = ground_cells::grassyCells(g, pictures);
+    // grass; paving (its moss too little); the sheet's grass tile; its paving tile; a picture not found - as before;
+    // the olive meadow
+    CHECK(grassy == (std::vector<uint8_t>{1, 0, 1, 0, 1, 1}));
+    CHECK(ground_cells::greenOfCell(g, 0, pictures) > 0.99f && ground_cells::greenOfCell(g, 4, pictures) < 0.0f);
+    CHECK(std::fabs(ground_cells::greenOfCell(g, 5, pictures) - 0.4f) < 0.05f);
+    CHECK(ground_cells::greenOfCell(g, 1, pictures) < 0.06f);  // three mossy texels of 64
+    g.cells[0].top = -1;  // no top: the land past the ground's edge may lie there - not this rule's to say
+    CHECK(ground_cells::grassyCells(g, pictures)[0] == 1);
 }

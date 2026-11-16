@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "core/cave_vault.hpp"
 #include "core/grass_beds.hpp"
 #include "core/ground_heights.hpp"
 #include "core/map_axes.hpp"
@@ -45,6 +46,12 @@ public:
     // once the .gnd is read and the axes found
     bool insideAt(float x, float z) const;
     bool hallsKnown() const { return ground() && axes_.known() && !ground_.inside.empty(); }
+    // 3.0.20-beta.46 (R-HGTAKK «в пронте мигает трава, но по идее ее на асфальте быть не должно»): whether the ground
+    // at the world's x and z is of a texture that is not green (ground_cells::grassyCells: paving, sand, rock) - no
+    // grass's ground; false not known (the map's pictures are read with the own ground alone). The axes not found
+    // yet: the file's own, as the own ground is drawn till then
+    bool bareAt(float x, float z) const;
+    bool bareKnown() const { return ground() && !ground_.bare.empty(); }
     uint64_t laidKey() const {
         return ground() && axes_.known() ? uint64_t(reads_) << 8 | uint64_t(axes_.x + 1) << 4 | uint64_t(axes_.z + 1)
                                          : 0;
@@ -56,6 +63,9 @@ public:
     std::vector<grass_beds::Box> beds() const {
         return ready_ ? grass_beds::inWorld(beds_, axes_) : std::vector<grass_beds::Box>{};
     }
+    // 3.0.20-beta.46 (R-3T9MZC «колоны как будто в воздухе»): a dungeon's posts (cave_vault::postOf of its models:
+    // tall, wide-topped), the map file's places - the 3D view's vault comes down to them; none not read, no dungeon
+    const std::vector<cave_vault::Post>& posts() const { return posts_; }
     // 3.0.4-beta.10: the own ground (own_ground_data.hpp) read with the map while it is wanted - turned on for a map
     // read without it, the map is read again; none not wanted, not read yet, or no .gnd. Its pictures let go once the
     // renderer has them (ownPicturesUp).
@@ -80,6 +90,7 @@ private:
     rsw::World world_;
     ground_heights::Ground ground_;  // 2.6.18
     std::vector<grass_beds::Box> beds_;  // 3.0.1-beta.3: in the file's places
+    std::vector<cave_vault::Post> posts_;  // 3.0.20-beta.46
     bool ready_ = false;
     uint32_t reads_ = 0;  // 2.7.57: the maps read so far (laidKey)
     map::Axes axes_;

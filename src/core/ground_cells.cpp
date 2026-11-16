@@ -127,6 +127,52 @@ Grid ofMeshes(const std::vector<const terrain::Mesh*>& meshes, int width, int he
     return g;
 }
 
+namespace {
+
+// the shaders' bladeGreen (grass3d_vs, grass_ps): how green a colour is by the grass's measure, 0-1
+float greenOf(uint32_t argb) {
+    const float r = float((argb >> 16) & 0xFF) / 255.0f, gr = float((argb >> 8) & 0xFF) / 255.0f,
+                b = float(argb & 0xFF) / 255.0f;
+    const float a = std::min((gr / std::max(r, 1e-4f) - 0.96f) / 0.05f, (gr / std::max(b, 1e-4f) - 1.08f) / 0.08f);
+    return std::clamp(std::min(a, (gr - 0.08f) / 0.04f), 0.0f, 1.0f);
+}
+
+}  // namespace
+
+float greenOfCell(const gnd::Ground& g, size_t cell, const std::vector<Picture>& pictures) {
+    if (cell >= g.cells.size()) return -1.0f;
+    const gnd::Cell& c = g.cells[cell];
+    if (c.top < 0 || size_t(c.top) >= g.surfaces.size()) return -1.0f;
+    const gnd::Surface& s = g.surfaces[size_t(c.top)];
+    if (s.texture < 0 || size_t(s.texture) >= pictures.size()) return -1.0f;
+    const Picture& p = pictures[size_t(s.texture)];
+    if (!p.argb || p.width <= 0 || p.height <= 0) return -1.0f;
+    constexpr int kAcross = 8;  // its picture's part looked at so many times each way
+    const float u0 = std::min({s.u[0], s.u[1], s.u[2], s.u[3]}), u1 = std::max({s.u[0], s.u[1], s.u[2], s.u[3]});
+    const float v0 = std::min({s.v[0], s.v[1], s.v[2], s.v[3]}), v1 = std::max({s.v[0], s.v[1], s.v[2], s.v[3]});
+    float sum = 0.0f;
+    for (int j = 0; j < kAcross; ++j)
+        for (int k = 0; k < kAcross; ++k) {
+            const float u = u0 + (u1 - u0) * (float(k) + 0.5f) / float(kAcross);
+            const float v = v0 + (v1 - v0) * (float(j) + 0.5f) / float(kAcross);
+            const int x = std::clamp(floorInt(u * float(p.width)), 0, p.width - 1);
+            const int y = std::clamp(floorInt(v * float(p.height)), 0, p.height - 1);
+            sum += greenOf(p.argb[size_t(y) * size_t(p.width) + size_t(x)]);
+        }
+    return sum / float(kAcross * kAcross);
+}
+
+std::vector<uint8_t> grassyCells(const gnd::Ground& g, const std::vector<Picture>& pictures) {
+    const int w = std::max(g.width, 0), h = std::max(g.height, 0);
+    std::vector<uint8_t> out(size_t(w) * size_t(h), 1);
+    if (g.cells.size() < out.size()) return out;
+    for (size_t i = 0; i < out.size(); ++i) {
+        const float green = greenOfCell(g, i, pictures);
+        out[i] = green < 0.0f || green >= kGrassy ? 1 : 0;
+    }
+    return out;
+}
+
 size_t dropWhere(Grid& g, const std::function<bool(float x, float z)>& off) {
     if (g.side <= 0.0f || g.width <= 0 || g.height <= 0 || g.span.size() < size_t(g.width) * size_t(g.height) * 2)
         return 0;

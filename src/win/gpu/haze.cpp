@@ -135,11 +135,14 @@ UINT Renderer::Impl::vaultTexture() {
     if (key != vaultKey) {
         vaultKey = key;
         vaultUploaded = false;
-        vaultMade = cave_vault::build(*mapWorld.ground(), vaultMap);
+        // 3.0.20-beta.46 (R-3T9MZC «колоны как будто в воздухе»): down to the posts that reach its walls' height
+        size_t met = 0;
+        vaultMade = cave_vault::build(*mapWorld.ground(), mapWorld.posts(), vaultMap, &met);
         if (vaultMade)
             LOG_INFO("3D sky: %s - a vault over its passages, its relief mirrored about its walls' top %.0f (its "
-                     "floors %.0f), %dx%d cells", mapName.c_str(), vaultMap.wallTop, vaultMap.floorLevel,
-                     vaultMap.width, vaultMap.height);
+                     "floors %.0f), %dx%d heights %.1f apart; it comes down to %zu of the map's %zu posts",
+                     mapName.c_str(), vaultMap.wallTop, vaultMap.floorLevel, vaultMap.width, vaultMap.height,
+                     double(vaultMap.zoom), met, mapWorld.posts().size());
     }
     if (!vaultMade) return kNoSrv;
     if (!vaultUploaded) {
