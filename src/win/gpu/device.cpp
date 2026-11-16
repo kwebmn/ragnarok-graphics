@@ -3484,7 +3484,8 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
                     for (const gamemodels::CardRun& r : *runs) faces += r.count;
                 return faces;
             },
-            m.viewToWorld, camera::projectionFor(m.gameWidth, m.gameHeight), m.mapWorld.world(), axes);
+            m.viewToWorld, camera::projectionFor(m.gameWidth, m.gameHeight), m.mapWorld.world(), axes,
+            [&m](const std::function<void(const gamemodels::Node&)>& each) { m.gameCards.each(each); });
     }
     m.gameModelsNow.presented();  // 3.0.20-beta.7: the frame's game models let go at its present alone (R-Y2JJKH)
     m.newPicture();  // 0.19-0.23: the next frame's water, shadows, torches, colours, depth of field

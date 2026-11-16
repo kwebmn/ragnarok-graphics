@@ -14,10 +14,14 @@ namespace uagfx::gpu {
 // player (still or moving, their faces kept on the card, those the card's rules show now, their corners in front of the
 // eye, mirrored or not, where they stand in the world) and the map's own models there by their files, into the log;
 // both renderers, at the frame's present
+// 3.0.20-beta.55 (R-4PJUBK: prontera's 교역소.rsm 165 ahead of the player - past the 150 - not in the picture): and
+// each of the map's models in front of the eye within kDumpAhead with no node of this frame at its place - with the
+// nodes kept there from before (allNodes: every node the renderer keeps), if any: drawn once, not this frame
 using NodeOf = std::function<const gamemodels::Node*(uint32_t id)>;
 using CardFacesOf = std::function<uint32_t(uint32_t id)>;
+using AllNodes = std::function<void(const std::function<void(const gamemodels::Node&)>&)>;
 void dumpModelsAround(const gamemodels::Frame& frame, const NodeOf& nodeOf, const CardFacesOf& cardFaces,
                       const float viewToWorld[12], const camera::Projection& p, const rsw::World* map,
-                      const map::Axes& axes);
+                      const map::Axes& axes, const AllNodes& allNodes);
 
 }  // namespace uagfx::gpu

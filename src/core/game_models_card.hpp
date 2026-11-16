@@ -65,6 +65,11 @@ public:
     uint32_t faces() const { return uint32_t(words_.size() / kCardFaceWords); }
     size_t nodes() const { return nodes_.size(); }
     const Node* node(uint32_t id) const;  // 3.0.20-beta.13: a node kept (its leaves placed by the processor)
+    // 3.0.20-beta.55: every node kept (the models' dump: what stands at a place from before)
+    template <typename Each>
+    void each(Each&& each) const {
+        for (const auto& kept : nodes_) each(kept.second.node);
+    }
     void frameOf(const std::vector<uint32_t>& ids, CardFrame& out) const;
     // 3.0.20-beta.14: the frame's moving nodes too - their faces with their places (kCardSlotShift), after the still
     void frameOf(const std::vector<uint32_t>& ids, const std::vector<uint32_t>& moving, CardFrame& out) const;

@@ -2747,7 +2747,8 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
                     for (const gamemodels::CardRun& r : *runs) faces += r.count;
                 return faces;
             },
-            viewToWorld_, camera::projectionFor(gameWidth_, gameHeight_), mapWorld_.world(), axes);
+            viewToWorld_, camera::projectionFor(gameWidth_, gameHeight_), mapWorld_.world(), axes,
+            [this](const std::function<void(const gamemodels::Node&)>& each) { modelCards_.each(each); });
     }
     modelsNow_.presented();
     if (mirrorCollecting()) {  // 2.5.9: this frame's opaque world for the next one's mirror

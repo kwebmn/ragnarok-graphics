@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -98,6 +99,8 @@ struct DumpNode {
     float lo[3] = {0, 0, 0}, hi[3] = {0, 0, 0};
 };
 std::vector<DumpNode> g_dumpGame;
+// 3.0.20-beta.55 (R-4PJUBK): the nodes the game drew itself in the dump's frame - against each model's root node
+std::unordered_set<uint32_t> g_dumpDrawn;
 uint32_t g_dumpOurs = 0, g_dumpOursMoving = 0, g_dumpGameAll = 0;
 bool g_dumpTold = false;
 float g_dumpAt[2] = {0, 0};
@@ -312,6 +315,7 @@ void __attribute__((thiscall)) drawHook(uint8_t* node, uint32_t a, uint32_t b, u
     g_calls[depth] = Call{node};
     g_calls[depth].flipped = (b & 0xFF) != 0;
     g_calls[depth].parent = reinterpret_cast<const float*>(uintptr_t(a));
+    if (g_dump == Dump::Now) g_dumpDrawn.insert(uint32_t(uintptr_t(node)));  // 3.0.20-beta.55
     const LONGLONG start = depth == 0 ? now() : 0;
     reinterpret_cast<NodeDrawFn>(g_draw)(node, a, b, c);
     if (depth == 0) g_ticks += now() - start;
@@ -444,6 +448,99 @@ void dumpGameNode(const float* points, const float* matrix, int count) {
         g_dumpGame.push_back(d);
 }
 
+// 3.0.20-beta.55 (R-4PJUBK «там где портал дом куда-то пропал»: prontera's 프론테라\교역소.rsm, a house 165 ahead of
+// the player, not in the picture - the dump of beta.22 and .44 looked 150 round the player, at our nodes alone, and
+// could not tell why): the dump's frame asks the game itself. Each of the map's models (the world's actors, CView
+// +0x1b4 the world, its vector +0x48..+0x4c; uaRO.exe FUN_004fa8b0 draws them by the view's leaves) that stands in
+// front of the eye and was not drawn - neither left to our renderer nor drawn by the game: whether the game came to
+// it this frame (its mark +0x1e4 against the frame's number, the renderer's +0x34 - set even when its own box fails
+// the view's test), what the game's own test of its box says now (FUN_004fa0f0 on the view's planes, +0xF4: 0 out, 1
+// in, 2 across), its alpha, its root node. The three answers tell the three causes apart: the game never came to it
+// (its leaves out of the view's lists), its box failed the test, or it was drawn and lost on our side
+constexpr uint32_t kRendererAt = 0x6EE3D8, kRendererFrame = 0x34, kViewWorldAt = 0x1B4, kViewPlanes = 0xF4;
+constexpr uint32_t kWorldActors = 0x48, kActorNode = 0x28, kActorName = 0x2C, kActorBox = 0x130, kActorMark = 0x1E4;
+constexpr uint32_t kActorAlpha = 0x1ED, kBoxTest = 0x4FA0F0;
+constexpr uint8_t kBoxTestBytes[16] = {0x55, 0x8B, 0xEC, 0x8B, 0x55, 0x08, 0x53, 0x56,
+                                       0x57, 0x32, 0xDB, 0x33, 0xF6, 0x8D, 0x79, 0x0C};
+using BoxTestFn = char(__attribute__((thiscall)) *)(uint32_t planes, const float* box);
+constexpr float kActorsReach = 800.0f;
+constexpr size_t kActorsMost = 40;
+
+// a name of the game's (CP949 bytes) in UTF-8 for the log; what is no text: its bytes' count
+std::string nameOf(uint32_t at) {
+    char raw[41] = {};
+    if (!readGame(at, raw, 40)) return "?";
+    const int length = int(strnlen(raw, 40));
+    if (length <= 0) return "(no name)";
+    wchar_t wide[48] = {};
+    const int n = MultiByteToWideChar(949, 0, raw, length, wide, 47);
+    char out[160] = {};
+    const int m = n > 0 ? WideCharToMultiByte(CP_UTF8, 0, wide, n, out, int(sizeof out) - 1, nullptr, nullptr) : 0;
+    return m > 0 ? std::string(out, size_t(m)) : std::string("(") + std::to_string(length) + " bytes)";
+}
+
+void dumpActors() {
+    const uint32_t view = view3dwin::lastView();
+    uint32_t world = 0, first = 0, last = 0, renderer = 0, frame = 0;
+    float m[12];
+    if (!view || !readGame(view + kViewWorldAt, &world, 4) || !world || !readGame(world + kWorldActors, &first, 4) ||
+        !readGame(world + kWorldActors + 4, &last, 4) || last < first || last - first > 4 * 65536 ||
+        !readGame(view + kViewMatrix, m, sizeof m) || !readGame(kRendererAt, &renderer, 4) || !renderer ||
+        !readGame(renderer + kRendererFrame, &frame, 4)) {
+        LOG_INFO("models dump: the game's own list of the map's models is not where this build has it - not asked");
+        return;
+    }
+    uint8_t bytes[sizeof kBoxTestBytes];
+    const bool test = readGame(kBoxTest, bytes, sizeof bytes) && !std::memcmp(bytes, kBoxTestBytes, sizeof bytes);
+    std::unordered_set<uint32_t> ours(g_frameIds.begin(), g_frameIds.end());
+    ours.insert(g_frameMoving.begin(), g_frameMoving.end());
+    size_t inFront = 0, byUs = 0, byGame = 0, lost = 0, told = 0;
+    for (uint32_t p = first; p < last; p += 4) {
+        uint32_t actor = 0, root = 0, mark = 0;
+        float pos[3], box[15];
+        uint8_t alpha = 0;
+        if (!readGame(p, &actor, 4) || !actor || !readGame(actor, pos, sizeof pos) ||
+            !readGame(actor + kActorBox, box, sizeof box) || !readGame(actor + kActorNode, &root, 4) ||
+            !readGame(actor + kActorMark, &mark, 4) || !readGame(actor + kActorAlpha, &alpha, 1))
+            continue;
+        // its box's middle in the view (a row vector by the view's 4 x 3): ahead, aside, and its reach
+        const float* c = box + 3;
+        const float aside = c[0] * m[0] + c[1] * m[3] + c[2] * m[6] + m[9];
+        const float ahead = c[0] * m[2] + c[1] * m[5] + c[2] * m[8] + m[11];
+        const float reach = std::fabs(box[0]) + std::fabs(box[1]) + std::fabs(box[2]);
+        if (!(ahead > 10.0f && ahead < kActorsReach) || std::fabs(aside) > ahead * 1.2f + reach) continue;
+        ++inFront;
+        if (ours.count(root)) {
+            ++byUs;
+            continue;
+        }
+        if (g_dumpDrawn.count(root)) {
+            ++byGame;
+            continue;
+        }
+        ++lost;
+        if (told >= kActorsMost) continue;
+        ++told;
+        const int answer = test ? int(reinterpret_cast<BoxTestFn>(uintptr_t(kBoxTest))(view + kViewPlanes, box)) : -1;
+        const bool sent = g_sent.count(root) != 0;
+        LOG_INFO("models dump: NOT DRAWN - the game's model «%s» at x %.0f, z %.0f, y %.0f (its box's middle %.0f "
+                 "ahead, %.0f aside; half sizes %.0f %.0f %.0f): the game %s this frame (its mark %u, the frame %u); "
+                 "the game's own test of its box says %s; its alpha %u; its root node %08X %s",
+                 nameOf(actor + kActorName).c_str(), pos[0], pos[2], pos[1], ahead, aside, box[0], box[1], box[2],
+                 mark == frame ? "came to it" : "did not come to it", mark, frame,
+                 answer == 0 ? "out of the view" : answer == 1 ? "in the view" : answer == 2 ? "across its edge"
+                                                                                               : "nothing (not asked)",
+                 unsigned(alpha), root,
+                 g_still.count(root) ? "captured, still - ours when the game draws it"
+                 : g_moving.count(root) ? "captured, moving - ours when the game draws it"
+                 : sent ? "captured once, the game's since (moved or coloured anew)" : "never captured");
+    }
+    LOG_INFO("models dump: of the map's %u models %zu stand in front of the eye within %.0f - %zu left to our renderer "
+             "this frame, %zu drawn by the game itself, %zu not drawn at all%s",
+             unsigned((last - first) / 4), inFront, kActorsReach, byUs, byGame, lost,
+             lost > told ? " (the first of them written above)" : lost ? " (written above)" : "");
+}
+
 void finishDump() {
     LOG_INFO("models dump at cell %d, %d (the world's x %.0f, z %.0f; the map %dx%d): this frame %u nodes drawn by our "
              "renderer (%u of them moving), %u by the game itself - %zu of those within %.0f of the player:",
@@ -459,6 +556,7 @@ void finishDump() {
                  d.lo[0], d.hi[0], d.lo[2], d.hi[2], d.lo[1], d.hi[1],
                  (d.lo[0] + d.hi[0]) / 10.0f + float(g_dumpSize[0]) / 2.0f,
                  (d.lo[2] + d.hi[2]) / 10.0f + float(g_dumpSize[1]) / 2.0f);
+    dumpActors();  // 3.0.20-beta.55
 }
 
 void noteProjection(const float* points, const float* matrix, int count) {
@@ -566,6 +664,7 @@ void frame() {
     } else if (g_dump == Dump::Next) {
         g_dump = Dump::Now;
         g_dumpGame.clear();
+        g_dumpDrawn.clear();
         g_dumpOurs = g_dumpOursMoving = g_dumpGameAll = 0;
         g_dumpTold = false;
     }

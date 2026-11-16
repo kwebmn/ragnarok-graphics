@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -18,6 +19,15 @@ namespace {
 
 constexpr float kDumpReach = 150.0f;  // the world's units: 30 cells (the driver's own)
 constexpr size_t kDumpMost = 60;
+constexpr float kDumpAhead = 800.0f;  // 3.0.20-beta.55: the map's models in front of the eye so far
+constexpr size_t kDumpAheadMost = 40;
+
+// a node's place on the ground: its corners' least and most x and z (a still one's are the world's)
+struct Stand {
+    float x0 = 1e30f, z0 = 1e30f, x1 = -1e30f, z1 = -1e30f;
+    uint32_t id = 0, faces = 0;
+    bool holds(float x, float z) const { return x >= x0 - 2.0f && x <= x1 + 2.0f && z >= z0 - 2.0f && z <= z1 + 2.0f; }
+};
 
 // a map's file name (CP949 bytes) in UTF-8 for the log
 std::string utf8Of949(const std::string& bytes) {
@@ -41,7 +51,7 @@ bool nearPlayer(const float lo[3], const float hi[3], const float at[2]) {
 
 void dumpModelsAround(const gamemodels::Frame& frame, const NodeOf& nodeOf, const CardFacesOf& cardFaces,
                       const float viewToWorld[12], const camera::Projection& p, const rsw::World* map,
-                      const map::Axes& axes) {
+                      const map::Axes& axes, const AllNodes& allNodes) {
     gamemodels::Picture pic;
     const bool viewOk = own_ground::viewOf(viewToWorld, pic.view);
     pic.p = p;
@@ -53,7 +63,8 @@ void dumpModelsAround(const gamemodels::Frame& frame, const NodeOf& nodeOf, cons
     gamemodels::Placed out;
     std::vector<gamemodels::Corner> scratch;
     size_t told = 0, unknown = 0;
-    for (size_t i = 0; i < frame.ids.size() + frame.moving.size() && told < kDumpMost; ++i) {
+    std::vector<Stand> stands;  // 3.0.20-beta.55: where this frame's nodes stand
+    for (size_t i = 0; i < frame.ids.size() + frame.moving.size(); ++i) {
         const bool still = i < frame.ids.size();
         const size_t k = still ? 0 : i - frame.ids.size();
         const uint32_t id = still ? frame.ids[i] : frame.moving[k];
@@ -71,7 +82,11 @@ void dumpModelsAround(const gamemodels::Frame& frame, const NodeOf& nodeOf, cons
             if (toView) gamemodels::transform(toWorld, &n->vertices[v], w);
             for (int a = 0; a < 3; ++a) lo[a] = std::min(lo[a], w[a]), hi[a] = std::max(hi[a], w[a]);
         }
-        if (!nearPlayer(lo, hi, frame.dumpAt)) continue;
+        Stand here;
+        here.x0 = lo[0], here.x1 = hi[0], here.z0 = lo[2], here.z1 = hi[2];
+        here.id = id;
+        stands.push_back(here);
+        if (!nearPlayer(lo, hi, frame.dumpAt) || told >= kDumpMost) continue;
         ++told;
         uint32_t shown = 0;
         size_t front = 0;
@@ -101,6 +116,55 @@ void dumpModelsAround(const gamemodels::Frame& frame, const NodeOf& nodeOf, cons
                  utf8Of949(m.file).c_str(), x, z, y, m.rot[0], m.rot[1], m.rot[2], m.scale[0], m.scale[1],
                  m.scale[2]);
     }
+    // 3.0.20-beta.55: the map's models in front of the eye that no node of this frame stands at
+    std::vector<Stand> kept;  // every still node the renderer keeps
+    if (allNodes)
+        allNodes([&kept](const gamemodels::Node& n) {
+            if (n.moving || n.vertices.size() < 3) return;
+            Stand s;
+            for (size_t v = 0; v + 2 < n.vertices.size(); v += 3) {
+                s.x0 = std::min(s.x0, n.vertices[v]), s.x1 = std::max(s.x1, n.vertices[v]);
+                s.z0 = std::min(s.z0, n.vertices[v + 2]), s.z1 = std::max(s.z1, n.vertices[v + 2]);
+            }
+            s.id = n.id;
+            s.faces = uint32_t(n.faces.size());
+            kept.push_back(s);
+        });
+    const float* v = viewToWorld;  // rows: the view's right, up and forward in the world, then the eye
+    size_t ahead = 0, drawn = 0, missing = 0, written = 0;
+    for (const rsw::Model& m : map->models) {
+        const float x = m.pos[0] * float(axes.x), z = m.pos[2] * float(axes.z), y = m.pos[1] * float(axes.y);
+        const float d[3] = {x - v[9], y - v[10], z - v[11]};
+        const float forward = d[0] * v[6] + d[1] * v[7] + d[2] * v[8];
+        const float aside = d[0] * v[0] + d[1] * v[1] + d[2] * v[2];
+        if (!(forward > 10.0f && forward < kDumpAhead) || std::fabs(aside) > forward * 1.2f + 30.0f) continue;
+        ++ahead;
+        bool here = false;
+        for (const Stand& s : stands) here = here || s.holds(x, z);
+        if (here) {
+            ++drawn;
+            continue;
+        }
+        ++missing;
+        if (written >= kDumpAheadMost) continue;
+        ++written;
+        std::string before;
+        size_t others = 0;
+        for (const Stand& s : kept) {
+            if (!s.holds(x, z)) continue;
+            char one[48];
+            std::snprintf(one, sizeof one, "%s%08X (%u faces)", before.empty() ? "" : ", ", s.id, s.faces);
+            if (others++ < 4) before += one;
+        }
+        LOG_INFO("models dump: NO NODE of this frame at the map's %s - x %.0f, z %.0f (%.0f ahead, %.0f aside); the "
+                 "renderer keeps %s",
+                 utf8Of949(m.file).c_str(), x, z, forward, aside,
+                 before.empty() ? "no node there at all: never captured"
+                                : ("these there from before, not in this frame's list: " + before).c_str());
+    }
+    LOG_INFO("models dump: of the map's %zu models %zu stand in front of the eye within %.0f - a node of this frame "
+             "at %zu of them, none at %zu%s", map->models.size(), ahead, kDumpAhead, drawn, missing,
+             missing > written ? " (the first of them written above)" : missing ? " (written above)" : "");
 }
 
 }  // namespace uagfx::gpu
