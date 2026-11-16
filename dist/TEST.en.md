@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.45 — what's new · 2026-11-16
+
+- **An audit of the textures' thread (3.0.20-beta.36): a texture the game rewrites every frame was left unlooked at.** The thread answers a frame later, and by then the game had written the texture again — so the answer was dropped as stale. Such a texture never got its fire, light, leaves or AI pack key. Found from a line in a tester's log («1 waiting» every time). Now the look of any write of the same texture is taken, even one write behind.
+
 # uaRO Graphics 3.0.20-beta.44 — what's new · 2026-11-16
 
 - **Names of items on the ground no longer stay after the items are gone (R-RDA885).** The server tells that an item is gone only to those who see it at that moment. After a teleport within the same map, a respawn or a new login on the same map nobody told, and the name plates stayed for good. Now items are forgotten at every entry to a map, when they are more than 60 cells away, and when the server has not told of them again for three minutes (a dropped item lies a minute on the server).
