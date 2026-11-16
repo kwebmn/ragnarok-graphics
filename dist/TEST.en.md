@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.20-beta.48 — what's new · 2026-11-16
+
+- **3D view: skills, items and grass are no longer cut by the sky.** Until now the sky was drawn at the end and covered everything seen against it but the characters. Now the sky is laid before the effects: a skill's flash, an item on the ground or a blade of grass against the sky stays visible. The haze over what is drawn still comes at the end. The night no longer darkens the sky a second time.
+- **3D view: the black ring round the maps is covered by land.** Many maps have filler cells with a black texture round their ground (BACKSIDE.BMP, BLACK.BMP): level with the ground in Geffen, Morocc and Aldebaran, 112 units lower on mjolnir_01. The land past the map's edge now begins at the real ground and covers them. Filler under the water stays the sea's bed as it was (Alberta has 6427 such cells). Nothing changed in the usual top view.
+- **3D view: «Butterflies», dragonflies and fireflies are two and a half times smaller.** Their size was chosen for the top view: a butterfly's wings span 2.6 units and a character stands about 16 tall.
+- **3D view: far trees sway as near ones do.** The swing of «Leaves in the wind» is set in screen pixels, so a tree 800 units off swung as many pixels as a tree near by. Now the swing is the same in the world wherever the tree stands.
+
 # uaRO Graphics 3.0.20-beta.47 — what's new · 2026-11-16
 
 - **Grass in the 3D view — a meadow instead of a brush (R-YAB82P).** Until now a blade was one straight triangle, all of one height and of the colour of the ground under them. Now it is a tuft of bent blades: four near you, three further off; the stem upright, the rest fanned out and leaning.
