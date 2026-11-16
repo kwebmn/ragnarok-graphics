@@ -18,6 +18,10 @@
 #include "win/cart_window.hpp"
 #include "win/storage_window.hpp"
 #include "win/trade_window.hpp"
+#include "win/view3d.hpp"
+
+#include <array>
+#include <unordered_map>
 
 namespace uagfx::win {
 namespace {
@@ -225,6 +229,52 @@ int __attribute__((thiscall)) droppedOn(uint32_t manager, int x, int y, uint32_t
     return 1;
 }
 
+// 3.0.20-beta.63 (the owner in the 3D view: «иногда название монстра в воздухе летает»): the game names the actor
+// under its cursor through whatever stands before it - its pick goes by the sprites' boxes on the screen alone. From
+// above nothing much stands before a monster; from the eyes a hill, a house or a tree does all the time, and the
+// name hung in the air over them (the monsters' HP bars did the same: R-S3NQBF). The game's hover naming
+// (FUN_00560e20: the game mode, the actor's id; five calls) left out for an actor the 3D view's eye does not see -
+// view3dwin::seenActor, the bars' own rule (the ground's heights and the models' boxes on the way). The pick itself
+// stays: a monster by a tree can be hit as before
+using HoverFn = void(__attribute__((thiscall)) *)(void* mode, uint32_t actor);
+constexpr uint32_t kHoverName = 0x560E20, kOwnId = 0x771F7C;
+const uint8_t kHoverNameCode[] = {0x55, 0x8B, 0xEC, 0x6A, 0xFF, 0x68, 0xC8, 0xFE, 0x68, 0x00};
+struct HoverSite {
+    uint32_t at;
+    uint8_t call[5];
+};
+const HoverSite kHoverSites[] = {{0x56256A, {0xE8, 0xB1, 0xE8, 0xFF, 0xFF}},
+                                 {0x562DC3, {0xE8, 0x58, 0xE0, 0xFF, 0xFF}},
+                                 {0x562F76, {0xE8, 0xA5, 0xDE, 0xFF, 0xFF}},
+                                 {0x56301D, {0xE8, 0xFE, 0xDD, 0xFF, 0xFF}},
+                                 {0x566E96, {0xE8, 0x85, 0x9F, 0xFF, 0xFF}}};
+uint64_t g_namesHidden = 0;
+
+void __attribute__((thiscall)) hoverName(void* mode, uint32_t actor) {
+    uint32_t own = 0;
+    readGame(kOwnId, &own, 4);
+    if (actor && actor != own && view3dwin::active()) {
+        static std::unordered_map<uint32_t, std::array<float, 3>> places;
+        static DWORD readAt = 0;
+        const DWORD now = GetTickCount();
+        if (now - readAt >= 100 || places.empty()) {  // the actors' places, ten times a second at most
+            readAt = now;
+            readActorPlaces(places);
+        }
+        const auto at = places.find(actor);
+        if (at != places.end()) {
+            const float head[3] = {at->second[0], at->second[1] - 12.0f, at->second[2]};  // y down
+            if (!view3dwin::seenActor(actor, head)) {
+                if (g_namesHidden++ < 5)
+                    LOG_INFO("world mouse: the 3D view - the actor under the cursor (%u) stands behind the ground or "
+                             "a model: its name not shown", actor);
+                return;
+            }
+        }
+    }
+    reinterpret_cast<HoverFn>(uintptr_t(kHoverName))(mode, actor);
+}
+
 // A call's 4 bytes after its E8 to `to`
 bool redirect(uint32_t call, const void* to) {
     auto* rel = reinterpret_cast<uint8_t*>(uintptr_t(call + 1));
@@ -269,6 +319,18 @@ bool installWorldMouse() {
         return false;
     }
     done = 1;
+    {  // 3.0.20-beta.63: the hover's naming, where this build has it
+        bool same = std::memcmp(reinterpret_cast<const void*>(uintptr_t(kHoverName)), kHoverNameCode,
+                                sizeof kHoverNameCode) == 0;
+        for (const HoverSite& h : kHoverSites)
+            same = same && std::memcmp(reinterpret_cast<const void*>(uintptr_t(h.at)), h.call, sizeof h.call) == 0;
+        int taken = 0;
+        if (same)
+            for (const HoverSite& h : kHoverSites) taken += redirect(h.at, reinterpret_cast<const void*>(&hoverName));
+        LOG_INFO("world mouse: the names of actors the 3D view's eye does not see %s (%d of %zu calls of 0x%X)",
+                 taken ? "are not shown" : "are shown as the game shows them - its code is not where this build has it",
+                 taken, std::size(kHoverSites), kHoverName);
+    }
     LOG_INFO("world mouse: the driver's parts in the picture are windows for the game (uaRO.exe 0x%X), the world's "
              "actors under them hidden (0x%X), a drag let go over them a window's (0x%X) - the world under them does "
              "not react to the cursor", kCall, kPickCall, kDropCall);
