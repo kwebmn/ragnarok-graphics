@@ -95,6 +95,7 @@ void Renderer11::noteStanding(const FrameRecord& rec, const DrawCmd& d) {
 }
 
 std::vector<int> Renderer11::drawTorchShadows(const std::vector<point_shadows::Candidate>& lights) {
+    flushCasters11();  // 3.0.20-beta.37: the frame's noted so far worked out
     std::vector<int> picked;
     shadowedLights_.clear();
     if (!shadowCollecting() || lights.empty() || casters_.empty()) return picked;

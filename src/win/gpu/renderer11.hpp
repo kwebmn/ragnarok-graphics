@@ -530,6 +530,7 @@ private:
     Constants leafLook_{};  // the draw's own
     uint32_t modelCameraAt_ = 0, modelMatricesKept_ = 0;  // uint4 in modelFaces_; 0 none
     FrameRecord leafCardRec_;
+    std::vector<gamemodels::FramePart> modelParts_;  // 3.0.20-beta.37: the frame's faces gathered in parts
     std::vector<ModelDraw11> leafCardDraws_;
     std::vector<uint32_t> leafCardData_;
     std::vector<Constants> leafCardLooks_;
@@ -562,6 +563,19 @@ private:
     };
     std::vector<float> casterVerts_, mirrorVerts_;  // this frame's; the last frame's, drawn into the mirror
     std::vector<Caster11> casters_, mirrorCasters_;
+    // 3.0.20-beta.37 (the owner's «6,7,8,9», 9): the game's opaque draws noted for the casters, worked out together
+    // on the frame's threads (flushCasters11) - a chunk's own lists, put after each other in the draws' order
+    struct CasterPart11 {
+        std::vector<float> verts;
+        std::vector<Caster11> casters;
+    };
+    std::vector<const DrawCmd*> casterDraws_;
+    const FrameRecord* casterRec_ = nullptr;
+    std::vector<CasterPart11> casterParts_;
+    void flushCasters11();
+    static void casterOf11(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s, const camera::Projection& p,
+                           const float* m, bool bgraVertices, std::vector<float>& casterVerts,
+                           std::vector<Caster11>& casters);
     ID3D11VertexShader* mirrorVs_ = nullptr;
     ID3D11PixelShader* mirrorPs_ = nullptr;
     ID3D11InputLayout* mirrorLayout_ = nullptr;

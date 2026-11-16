@@ -147,7 +147,17 @@ void Renderer11::drawGameModels11() {
             }
             static const std::vector<uint32_t> kNoMoving;
             // the frame's faces by texture, the textures first met
-            modelCards_.frameOf(frame.ids, modelMatrices_ ? frame.moving : kNoMoving, modelFrame_);
+            // 3.0.20-beta.37 (as game_models.cpp): many nodes - gathered in parts on the frame's threads
+            const std::vector<uint32_t>& movingNow = modelMatrices_ ? frame.moving : kNoMoving;
+            if (frame.ids.size() + movingNow.size() >= kPartsFrom) {
+                if (modelParts_.size() < kFrameParts) modelParts_.resize(kFrameParts);
+                parallelChunks(kFrameParts, [&](size_t k) {
+                    modelCards_.framePart(frame.ids, movingNow, k, kFrameParts, modelParts_[k]);
+                });
+                gamemodels::joinParts(modelParts_, kFrameParts, modelFrame_);
+            } else {
+                modelCards_.frameOf(frame.ids, movingNow, modelFrame_);
+            }
             const uint64_t nodes = modelFrame_.nodes, unknown = modelFrame_.unknown;
             modelInstanceData_.clear();
             modelDraws_.clear();

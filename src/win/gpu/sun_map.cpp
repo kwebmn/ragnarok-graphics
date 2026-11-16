@@ -10,6 +10,7 @@
 #include "core/daylight.hpp"
 #include "core/game_camera.hpp"
 #include "win/gpu/impl.hpp"
+#include "win/gpu/threads.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::gpu {
@@ -82,10 +83,11 @@ void Renderer::Impl::noteGameCasters() {
     }
 }
 
-void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
-    if (sunVerts.size() / 6 >= kMostSunVerts || (d.primitive != d3d7::PT_TRIANGLELIST &&
-                                                 d.primitive != d3d7::PT_TRIANGLESTRIP))
-        return;
+// 3.0.20-beta.37 (the owner's «6,7,8,9», 9 - the frame's work on more threads): a game's opaque draw's casters (as
+// noteCaster worked them out at the draw) into a chunk's own lists - on any of the frame's threads
+static void casterOf(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s, const camera::Projection& p,
+                     const float* m, std::vector<float>& sunVerts, std::vector<Renderer::Impl::SunCaster>& sunCasters) {
+    if (d.primitive != d3d7::PT_TRIANGLELIST && d.primitive != d3d7::PT_TRIANGLESTRIP) return;
     const std::vector<uint8_t>& vb = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
     if (d.vertexOffset + size_t(d.vertexCount) * stride > vb.size()) return;
@@ -94,13 +96,11 @@ void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const 
         std::memcpy(&rhw, vb.data() + d.vertexOffset + 12, sizeof rhw);
         if (rhw > 0.0f && 1.0f / rhw > kCasterReachWide) return;
     }
-    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
-    const float* m = viewToWorld;
     const std::vector<uint16_t>& ix = rec.indices();
     const uint32_t n = d.indexCount ? d.indexCount : d.vertexCount;
     const bool strip = d.primitive == d3d7::PT_TRIANGLESTRIP;
     const uint32_t triangles = strip ? (n >= 3 ? n - 2 : 0) : n / 3;
-    SunCaster c;
+    Renderer::Impl::SunCaster c;
     c.first = uint32_t(sunVerts.size() / 6);
     c.texture = d.texture[0];
     c.alphaTest = s.alphaTest || s.colorKey || d.keyed[0];
@@ -141,6 +141,48 @@ void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const 
             c.hi[k] = std::max(c.hi[k], sunVerts[size_t(i) * 6 + size_t(k)]);
         }
     sunCasters.push_back(c);
+}
+
+// 1.12: an opaque draw of the world into the casters - 3.0.20-beta.37 noted now, worked out with the frame's others at
+// once on its threads (flushCasters: before the torches' shadows take them and at the submit; the game's models put
+// theirs at once - their order no matter, all drawn with the depth)
+void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
+    (void)s;
+    if (casterRec && casterRec != &rec) flushCasters();
+    casterRec = &rec;
+    casterDraws.push_back(&d);
+}
+
+void Renderer::Impl::flushCasters() {
+    if (casterDraws.empty() || !casterRec) {
+        casterDraws.clear();
+        return;
+    }
+    CpuTime t(cpuPartTicks[kCpuCasters]);  // in no other part's span (the models' put theirs without it)
+    const FrameRecord& rec = *casterRec;
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    const size_t n = casterDraws.size(), chunks = std::min<size_t>(n, 64);
+    if (casterParts.size() < chunks) casterParts.resize(chunks);
+    parallelChunks(chunks, [&](size_t k) {
+        CasterPart& part = casterParts[k];
+        part.verts.clear();
+        part.casters.clear();
+        for (size_t i = n * k / chunks; i < n * (k + 1) / chunks; ++i) {
+            const DrawCmd& d = *casterDraws[i];
+            casterOf(rec, d, rec.states()[d.state], p, viewToWorld, part.verts, part.casters);
+        }
+    });
+    for (size_t k = 0; k < chunks; ++k) {  // in the draws' order, as many as kMostSunVerts
+        const CasterPart& part = casterParts[k];
+        const uint32_t base = uint32_t(sunVerts.size() / 6);
+        if (base >= kMostSunVerts) break;
+        sunVerts.insert(sunVerts.end(), part.verts.begin(), part.verts.end());
+        for (SunCaster c : part.casters) {
+            c.first += base;
+            sunCasters.push_back(c);
+        }
+    }
+    casterDraws.clear();
 }
 
 // 1.17: the constants of a character's sprite (shaders.cpp spriteLight): the way to the sun on the screen and its

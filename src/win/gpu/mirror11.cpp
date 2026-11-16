@@ -9,6 +9,7 @@
 #include "core/d3d7.hpp"
 #include "core/game_camera.hpp"
 #include "win/gpu/renderer11.hpp"
+#include "win/gpu/threads.hpp"
 #include "win/log.hpp"
 
 // 2.5.9: the world's reflections in the water with Direct3D 11, as Direct3D 12's mirror.cpp - the frame's opaque world
@@ -70,15 +71,15 @@ void Renderer11::noteModelCasters() {
     }
 }
 
-void Renderer11::noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
-    if (casterVerts_.size() / 6 >= kMostCasterVerts ||
-        (d.primitive != d3d7::PT_TRIANGLELIST && d.primitive != d3d7::PT_TRIANGLESTRIP))
-        return;
+// 3.0.20-beta.37 (the owner's «6,7,8,9», 9 - as Direct3D 12's casterOf): a game's opaque draw's casters (as
+// noteCaster worked them out at the draw) into a chunk's own lists - on any of the frame's threads
+void Renderer11::casterOf11(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s, const camera::Projection& p,
+                            const float* m, bool bgraVertices_, std::vector<float>& casterVerts_,
+                            std::vector<Caster11>& casters_) {
+    if (d.primitive != d3d7::PT_TRIANGLELIST && d.primitive != d3d7::PT_TRIANGLESTRIP) return;
     const std::vector<uint8_t>& vb = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
     if (d.vertexOffset + size_t(d.vertexCount) * stride > vb.size()) return;
-    const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
-    const float* m = viewToWorld_;
     const std::vector<uint16_t>& ix = rec.indices();
     const uint32_t n = d.indexCount ? d.indexCount : d.vertexCount;
     const bool strip = d.primitive == d3d7::PT_TRIANGLESTRIP;
@@ -128,6 +129,46 @@ void Renderer11::noteCaster(const FrameRecord& rec, const DrawCmd& d, const Draw
             c.hi[k] = std::max(c.hi[k], casterVerts_[size_t(i) * 6 + size_t(k)]);
         }
     casters_.push_back(c);
+}
+
+// 3.0.20-beta.37: noted now, worked out with the frame's others at once on its threads (flushCasters11: before the
+// torches' shadows take them and at the frame's end; the game's models put theirs at once - their order no matter)
+void Renderer11::noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
+    (void)s;
+    if (casterRec_ && casterRec_ != &rec) flushCasters11();
+    casterRec_ = &rec;
+    casterDraws_.push_back(&d);
+}
+
+void Renderer11::flushCasters11() {
+    if (casterDraws_.empty() || !casterRec_) {
+        casterDraws_.clear();
+        return;
+    }
+    const FrameRecord& rec = *casterRec_;
+    const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+    const size_t n = casterDraws_.size(), chunks = std::min<size_t>(n, 64);
+    if (casterParts_.size() < chunks) casterParts_.resize(chunks);
+    parallelChunks(chunks, [&](size_t k) {
+        CasterPart11& part = casterParts_[k];
+        part.verts.clear();
+        part.casters.clear();
+        for (size_t i = n * k / chunks; i < n * (k + 1) / chunks; ++i) {
+            const DrawCmd& d = *casterDraws_[i];
+            casterOf11(rec, d, rec.states()[d.state], p, viewToWorld_, bgraVertices_, part.verts, part.casters);
+        }
+    });
+    for (size_t k = 0; k < chunks; ++k) {  // in the draws' order, as many as kMostCasterVerts
+        const CasterPart11& part = casterParts_[k];
+        const uint32_t base = uint32_t(casterVerts_.size() / 6);
+        if (base >= kMostCasterVerts) break;
+        casterVerts_.insert(casterVerts_.end(), part.verts.begin(), part.verts.end());
+        for (Caster11 c : part.casters) {
+            c.first += base;
+            casters_.push_back(c);
+        }
+    }
+    casterDraws_.clear();
 }
 
 // Before the frame's first water: the last frame's casters turned over the water's level and drawn by the game's

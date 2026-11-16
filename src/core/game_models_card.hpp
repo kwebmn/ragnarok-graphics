@@ -38,6 +38,15 @@ struct CardFrame {
     uint32_t nodes = 0, unknown = 0, moving = 0;
 };
 
+// 3.0.20-beta.37 (the owner's «6,7,8,9», 9 - the frame's work on more threads): a part of the frame's faces
+// (CardStore::framePart: a run of its nodes, on any thread) with its own textures' places; the parts put together in
+// their order are the frame's faces gathered at once (frameOf)
+struct FramePart {
+    CardFrame frame;
+    std::unordered_map<uint32_t, uint32_t> at;
+};
+void joinParts(const std::vector<FramePart>& parts, size_t count, CardFrame& out);
+
 class CardStore {
 public:
     bool add(const Node& n);  // false: known already
@@ -52,6 +61,9 @@ public:
     void frameOf(const std::vector<uint32_t>& ids, CardFrame& out) const;
     // 3.0.20-beta.14: the frame's moving nodes too - their faces with their places (kCardSlotShift), after the still
     void frameOf(const std::vector<uint32_t>& ids, const std::vector<uint32_t>& moving, CardFrame& out) const;
+    // 3.0.20-beta.37: part k of `parts` of them - the still ones, then the moving, cut into runs in that order
+    void framePart(const std::vector<uint32_t>& ids, const std::vector<uint32_t>& moving, size_t k, size_t parts,
+                   FramePart& out) const;
     // 3.0.20-beta.12 (stage 3: our models in the torches' shadows and the water's reflections): the frame's nodes'
     // runs, and a run's corners appended as the casters' vertices - x y z, u v, the colour's bits as a float
     void runsOf(const std::vector<uint32_t>& ids, std::vector<CardRun>& out) const;
@@ -69,7 +81,7 @@ private:
         std::vector<CardRun> runs;
     };
     void colourOf(Kept& k);
-    void into(const Kept& k, uint32_t slot, CardFrame& out) const;
+    void into(const Kept& k, uint32_t slot, CardFrame& out, std::unordered_map<uint32_t, uint32_t>& at) const;
     std::unordered_map<uint32_t, Kept> nodes_;
     std::vector<uint32_t> words_;
     modelcensus::Colouring how_;

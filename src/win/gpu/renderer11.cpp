@@ -2343,6 +2343,8 @@ void Renderer11::dropWorld() {
 }
 
 void Renderer11::execute(const FrameRecord& record) {
+    casterDraws_.clear();  // 3.0.20-beta.37: never a draw of an older record's (each worked out at the frame's end)
+    casterRec_ = nullptr;
     if (lost_ || !target_.texture || record.empty()) return;
     LARGE_INTEGER started;  // 0.89: the processor's time in drawing, for the log
     QueryPerformanceCounter(&started);
@@ -2394,6 +2396,9 @@ void Renderer11::execute(const FrameRecord& record) {
                 break;
         }
     }
+    flushCasters11();  // 3.0.20-beta.37: the casters noted, worked out on the frame's threads
+    casterDraws_.clear();
+    casterRec_ = nullptr;
     flushBatch();
     geometry_ = false;
     pmark("(the game's own work in between)");  // 3.0.5-beta.2: until the driver's next work of the frame

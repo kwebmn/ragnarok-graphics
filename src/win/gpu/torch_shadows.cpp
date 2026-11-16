@@ -71,6 +71,7 @@ void Renderer::Impl::noteStanding(const FrameRecord& rec, const DrawCmd& d) {
 // casters' triangles (x y z, u v, the game's colour - as the mirror's) from a light's place into one face of its cube,
 // their distance from it (of its reach) as the depth (shaders.cpp torch_shadow_vs/ps); no colour target.
 std::vector<int> Renderer::Impl::drawTorchShadows(const std::vector<point_shadows::Candidate>& lights) {
+    flushCasters();  // 3.0.20-beta.37: the frame's noted so far worked out
     std::vector<int> picked;
     shadowedLights.clear();  // 3.0.16-beta.20
     if (!shadowCollecting() || lights.empty() || sunCasters.empty() || !open) return picked;

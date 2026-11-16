@@ -153,3 +153,30 @@ TEST(game_models_card_moving_faces_join_the_batches_with_their_place) {
     CHECK(gamemodels::kCardMostMoving == (1u << (32 - gamemodels::kCardSlotShift)) - 1);
     CHECK(gamemodels::kCardMostFaces == 1u << gamemodels::kCardSlotShift);
 }
+
+// 3.0.20-beta.37 (the owner's «6,7,8,9», 9 - the frame's work on more threads): the frame's faces gathered in parts -
+// each a run of its nodes (the still ones, then the moving), on any thread - and put together in their order are the
+// frame's faces gathered at once: the same textures in the same order, the same faces, the same counts
+TEST(game_models_card_frame_in_parts_is_the_frame_at_once) {
+    gamemodels::CardStore store;
+    std::vector<uint32_t> ids, moving;
+    for (uint32_t id = 1; id <= 40; ++id) {
+        gamemodels::Node n = nodeOf(id);
+        n.textures = {9 + id % 3, 7 + id % 5, 0};  // textures first met all along
+        n.moving = id % 9 == 0;
+        store.add(n);
+        (n.moving ? moving : ids).push_back(id);
+    }
+    ids.push_back(77);  // unknown
+    gamemodels::CardFrame once;
+    store.frameOf(ids, moving, once);
+    for (size_t parts : {size_t(1), size_t(3), size_t(7), size_t(64)}) {
+        std::vector<gamemodels::FramePart> got(parts);
+        for (size_t k = 0; k < parts; ++k) store.framePart(ids, moving, k, parts, got[k]);
+        gamemodels::CardFrame joined;
+        gamemodels::joinParts(got, parts, joined);
+        CHECK(joined.textures == once.textures);
+        CHECK(joined.nodes == once.nodes && joined.unknown == once.unknown && joined.moving == once.moving);
+        for (size_t t = 0; t < once.textures.size(); ++t) CHECK(joined.faces[t] == once.faces[t]);
+    }
+}

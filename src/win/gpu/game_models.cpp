@@ -8,6 +8,7 @@
 #include "core/model_census.hpp"
 #include "win/gpu/draw_constants.hpp"
 #include "win/gpu/impl.hpp"
+#include "win/gpu/threads.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::gpu {
@@ -384,7 +385,18 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
         std::memcpy(gameFacesMapped + size_t(gameCameraAt) * 16, viewToWorld, 48);
     }
     static const std::vector<uint32_t> kNoMoving;
-    gameCards.frameOf(frame.ids, cardMatrices ? frame.moving : kNoMoving, gameCardFrame);
+    // 3.0.20-beta.37 (the owner's «6,7,8,9», 9): many nodes - gathered in parts on the frame's threads, put together
+    // in their order (core gamemodels::joinParts: the same as at once)
+    const std::vector<uint32_t>& movingNow = cardMatrices ? frame.moving : kNoMoving;
+    if (frame.ids.size() + movingNow.size() >= kPartsFrom) {
+        if (cardParts.size() < kFrameParts) cardParts.resize(kFrameParts);
+        parallelChunks(kFrameParts, [&](size_t k) {
+            gameCards.framePart(frame.ids, movingNow, k, kFrameParts, cardParts[k]);
+        });
+        gamemodels::joinParts(cardParts, kFrameParts, gameCardFrame);
+    } else {
+        gameCards.frameOf(frame.ids, movingNow, gameCardFrame);
+    }
     cardRec.reset();
     cardCounts.clear();
     DrawSetup st = o.modelLike;

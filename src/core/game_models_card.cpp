@@ -124,7 +124,7 @@ void CardStore::frameOf(const std::vector<uint32_t>& ids, const std::vector<uint
             continue;
         }
         if (it->second.node.moving) continue;  // 3.0.20-beta.14: its own space - only with its matrix
-        into(it->second, 0, out);
+        into(it->second, 0, out, at_);
     }
     for (size_t m = 0; m < moving.size() && m < kCardMostMoving; ++m) {  // 3.0.20-beta.14
         const auto it = nodes_.find(moving[m]);
@@ -132,17 +132,74 @@ void CardStore::frameOf(const std::vector<uint32_t>& ids, const std::vector<uint
             ++out.unknown;
             continue;
         }
-        into(it->second, uint32_t(m + 1), out);
+        into(it->second, uint32_t(m + 1), out, at_);
         ++out.moving;
     }
     out.faces.resize(std::max(out.faces.size(), out.textures.size()));
 }
 
-void CardStore::into(const Kept& k, uint32_t slot, CardFrame& out) const {
+void CardStore::framePart(const std::vector<uint32_t>& ids, const std::vector<uint32_t>& moving, size_t k, size_t parts,
+                          FramePart& part) const {
+    CardFrame& out = part.frame;
+    out.textures.clear();
+    for (std::vector<uint32_t>& list : out.faces) list.clear();
+    out.nodes = out.unknown = out.moving = 0;
+    part.at.clear();
+    const size_t still = ids.size(), all = still + std::min<size_t>(moving.size(), kCardMostMoving);
+    if (!parts || k >= parts) return;
+    for (size_t i = all * k / parts; i < all * (k + 1) / parts; ++i) {
+        if (i < still) {  // as frameOf's
+            const auto it = nodes_.find(ids[i]);
+            if (it == nodes_.end()) {
+                ++out.unknown;
+                continue;
+            }
+            if (it->second.node.moving) continue;
+            into(it->second, 0, out, part.at);
+            continue;
+        }
+        const size_t m = i - still;
+        const auto it = nodes_.find(moving[m]);
+        if (it == nodes_.end() || !it->second.node.moving) {
+            ++out.unknown;
+            continue;
+        }
+        into(it->second, uint32_t(m + 1), out, part.at);
+        ++out.moving;
+    }
+    out.faces.resize(std::max(out.faces.size(), out.textures.size()));
+}
+
+void joinParts(const std::vector<FramePart>& parts, size_t count, CardFrame& out) {
+    out.textures.clear();
+    for (std::vector<uint32_t>& list : out.faces) list.clear();
+    out.nodes = out.unknown = out.moving = 0;
+    std::unordered_map<uint32_t, uint32_t> at;
+    at.reserve(256);
+    for (size_t k = 0; k < count && k < parts.size(); ++k) {
+        const CardFrame& p = parts[k].frame;
+        out.nodes += p.nodes;
+        out.unknown += p.unknown;
+        out.moving += p.moving;
+        for (size_t t = 0; t < p.textures.size(); ++t) {
+            const auto [place, fresh] = at.try_emplace(p.textures[t], uint32_t(out.textures.size()));
+            if (fresh) {
+                out.textures.push_back(p.textures[t]);
+                if (out.faces.size() < out.textures.size()) out.faces.emplace_back();
+            }
+            std::vector<uint32_t>& list = out.faces[place->second];
+            list.insert(list.end(), p.faces[t].begin(), p.faces[t].end());
+        }
+    }
+    out.faces.resize(std::max(out.faces.size(), out.textures.size()));
+}
+
+void CardStore::into(const Kept& k, uint32_t slot, CardFrame& out,
+                     std::unordered_map<uint32_t, uint32_t>& places) const {
     ++out.nodes;
     const uint32_t high = slot << kCardSlotShift;
     for (const CardRun& r : k.runs) {
-        const auto [at, fresh] = at_.try_emplace(r.texture, uint32_t(out.textures.size()));
+        const auto [at, fresh] = places.try_emplace(r.texture, uint32_t(out.textures.size()));
         if (fresh) {
             out.textures.push_back(r.texture);
             if (out.faces.size() < out.textures.size()) out.faces.emplace_back();

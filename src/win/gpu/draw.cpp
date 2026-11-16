@@ -122,10 +122,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         noteGround(rec, d);  // 1.9; 1.15 the smooth hills of the next frame; 2.2.1 the grass's ground
     }
     // 1.16: an opaque draw of the world into the next frame's mirror (2.2: the sun's map is gone)
-    if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite && (mirrorCollecting() || shadowCollecting())) {
-        CpuTime t(cpuPartTicks[kCpuCasters]);
+    // 3.0.20-beta.37: noted, worked out with the frame's others on its threads (flushCasters - its time there)
+    if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite && (mirrorCollecting() || shadowCollecting()))
         noteCaster(rec, d, s);  // 3.0.16-beta.16: the torches' shadows too
-    }
     // 3.0.16-beta.18: a character's sprite - the torches' shadows of it
     if (!inner && !s.ui && s.blend && d.vertexCount == 4 && d.texture[0] && shadowCollecting()) noteStanding(rec, d);
     // 3.0.4-beta.10: the own ground in place of the game's (own_ground.cpp) - the game's ground draws noted, not drawn,

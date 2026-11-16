@@ -412,6 +412,22 @@ void Renderer::Impl::noteGpuFrame() {
                      double(texturesTicks) * perFrame, double(submitTicks) * perFrame,
                      double(std::max<LONGLONG>(cpuTicks - around, 0)) * perFrame);
         geometryTicks = texturesTicks = drawsTicks = submitTicks = 0;
+        {  // 3.0.20-beta.37: the game's draws' own work by kind
+            static const char* const kKindNames[kDrawKinds] = {"the interface", "the ground", "the world's solid",
+                                                               "quads (sprites, items)", "effects", "other blended"};
+            std::string kinds;
+            const double frames = double(std::max<uint32_t>(gpuFrames, 1));
+            for (int k = 0; k < kDrawKinds; ++k) {
+                if (!kindDraws[k]) continue;
+                char part[96];
+                std::snprintf(part, sizeof part, "%s%s %.0f draws %.2f ms", kinds.empty() ? "" : ", ", kKindNames[k],
+                              double(kindDraws[k]) / frames, double(kindTicks[k]) * perFrame);
+                kinds += part;
+                kindTicks[k] = 0;
+                kindDraws[k] = 0;
+            }
+            if (!kinds.empty()) LOG_INFO("CPU: the game's draws a frame by kind, their own work - %s", kinds.c_str());
+        }
         if (laterQueued || laterAtOnce)  // 3.0.20-beta.20
             LOG_INFO("textures: %llu whole ones of the game's looked at after their upload (%zu waiting, %.1f MB), "
                      "%llu at once (the queue full); %.2f ms at most a picture on them",
@@ -3068,6 +3084,8 @@ void Renderer::execute(const FrameRecord& record) {
     Impl& m = *impl_;
     Impl::CpuTime cpu(m.cpuTicks);              // 0.86
     RunTime cpuRun(m.runCycles, m.runTsc);  // 3.0.19-beta.52: how much of it the thread ran
+    m.casterDraws.clear();  // 3.0.20-beta.37: never a draw of an older record's (each is worked out before the submit)
+    m.casterRec = nullptr;
     if (m.lost || !m.target || record.empty() || !m.begin()) return;
     if (m.upscale && m.upscaler && !m.renderStarted) {  // part 3: latency markers
         m.renderStarted = true;
@@ -3104,12 +3122,33 @@ void Renderer::execute(const FrameRecord& record) {
             }
             case Cmd::WriteTarget: m.writeTarget(record, record.writes()[c.index]); break;
             case Cmd::Draw: {
-                Impl::CpuTime t(m.drawsTicks);  // 3.0.19-beta.26
-                m.draw(record, record.draws()[c.index]);
+                // 3.0.19-beta.26: in the draws' time; 3.0.20-beta.37 its own work by its kind too
+                const DrawCmd& d = record.draws()[c.index];
+                const DrawSetup& s = record.states()[d.state];
+                const int kind = s.ui ? Impl::kKindUi
+                                 : d.effect ? Impl::kKindEffects
+                                 : !s.blend ? (d.fvf == d3d7::FVF_TL2 ? Impl::kKindGround : Impl::kKindSolid)
+                                 : d.vertexCount == 4 ? Impl::kKindQuads
+                                                      : Impl::kKindBlended;
+                LARGE_INTEGER from, to;
+                QueryPerformanceCounter(&from);
+                const LONGLONG partsBefore = m.partsNow();
+                m.draw(record, d);
+                QueryPerformanceCounter(&to);
+                const LONGLONG spent = to.QuadPart - from.QuadPart;
+                m.drawsTicks += spent;
+                m.kindTicks[kind] += std::max<LONGLONG>(spent - (m.partsNow() - partsBefore), 0);
+                ++m.kindDraws[kind];
                 break;
             }
         }
     }
+    {
+        Impl::CpuTime t(m.drawsTicks);  // 3.0.20-beta.37: the casters noted, in the draws' time as before
+        m.flushCasters();
+    }
+    m.casterDraws.clear();
+    m.casterRec = nullptr;
     const UINT64 before = m.fenceValue;
     Impl::CpuTime submitTime(m.submitTicks);  // 3.0.19-beta.26
     m.submit();

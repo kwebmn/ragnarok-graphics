@@ -874,6 +874,16 @@ struct Renderer::Impl {
     // textures' uploads, the draws (with the parts above in them), the list's submit; the rest: the present's passes
     LONGLONG geometryTicks = 0, texturesTicks = 0, drawsTicks = 0, submitTicks = 0;
     LONGLONG cpuPartTicks[kCpuParts] = {};
+    // 3.0.20-beta.37 (the owner's «6,7,8,9», 9): the game's draws' own work by their kind (without the parts above in
+    // them) - which of them the renderer's thread spends «the game's draws themselves» on
+    enum DrawKind { kKindUi, kKindGround, kKindSolid, kKindQuads, kKindEffects, kKindBlended, kDrawKinds };
+    LONGLONG kindTicks[kDrawKinds] = {};
+    uint64_t kindDraws[kDrawKinds] = {};
+    LONGLONG partsNow() const {
+        LONGLONG sum = 0;
+        for (const LONGLONG t : cpuPartTicks) sum += t;
+        return sum;
+    }
     // 3.0.19-beta.51 (R-EWK4E4, core/frame_pace): the counters above at the last present - a frame's spans are their
     // growth since (zeroed with them every 30 s); its long frames for the log beside them; the last present a
     // loading picture's or one behind another window (the next one's time spans it - not counted either)
@@ -1684,6 +1694,7 @@ struct Renderer::Impl {
     Constants cardLeafLook{};  // the draw's own: its sway, its crown's look
     uint32_t gameMatricesAt = 0, gameCameraAt = 0;  // the frame's, in the faces' buffer (uint4); 0 none
     FrameRecord leafCardRec;
+    std::vector<gamemodels::FramePart> cardParts;  // 3.0.20-beta.37: the frame's faces gathered in parts
     std::vector<UINT> leafCardCounts;
     std::vector<Constants> leafCardLooks;
     std::vector<uint32_t> leafCardPacked;
@@ -1765,6 +1776,16 @@ struct Renderer::Impl {
     };
     std::vector<float> sunVerts;
     std::vector<SunCaster> sunCasters;
+    // 3.0.20-beta.37 (the owner's «6,7,8,9», 9): the game's opaque draws noted for the casters, worked out together
+    // on the frame's threads (flushCasters) - a chunk's own lists, put after each other in the draws' order
+    struct CasterPart {
+        std::vector<float> verts;
+        std::vector<SunCaster> casters;
+    };
+    std::vector<const DrawCmd*> casterDraws;
+    const FrameRecord* casterRec = nullptr;
+    std::vector<CasterPart> casterParts;
+    void flushCasters();
     // 1.16: the world mirrored under the water (mirror.cpp) - the last frame's casters turned over the water's level,
     // drawn at half the scene's size before the frame's first water, read by water_ps (t5)
     std::vector<float> mirrorVerts;
