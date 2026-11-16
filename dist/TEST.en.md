@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.20-beta.76 — what's new · 2026-11-17
+
+- **A picture that stops because the renderer's process ended now comes as a report by itself.** Until now such a case was never told: the player closed the game with its still picture, and the log looked like a fine end.
+- **The renderer writes where it stands when it does not answer for long.** When one of the game's messages takes over 2 seconds, the log gets the place in the code and the calls on the stack. Before, the log was silent about such seconds.
+- **DLSS no longer switches on in a map's first seconds.** Its start runs 8–9 seconds in the background; now, when it ends right after a map is entered, the picture's switch waits three seconds. This is the likely cause of the renderer's end on 16.11: of the 79 games in the logs it ended in the one where DLSS's start finished half a second after the map's name.
+
 # uaRO Graphics 3.0.20-beta.75 — what's new · 2026-11-17
 
 - **Automatic reports of a game that ended badly are no longer lost.** Such a report goes once in 6 hours at most, and an automatic report of a lost connection took that count too: after a lost connection a crash was not told for 6 hours. Lost connections are now counted apart, and a new version's first crash is told at once.
