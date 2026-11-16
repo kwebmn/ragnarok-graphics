@@ -446,6 +446,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     const bool sharpSpecks = tag.kind == effect_exe::Kind::Skill && textures_[0] && c.enhanced() &&
                              look0.sharpSpecks && !textures_[0]->spriteCache();  // the sprites' cells: as they are
     if (sharpSpecks) {
+        win::sharpspecks::work();  // 3.0.20-beta.68: a painted picture's copy in the making - a few rows more
         Surface7* t = textures_[0];
         if (win::sharpspecks::wanted(t->gpuTexture(), t->topDirty()) && t->topArgb(specks_) &&
             specks_.size() == size_t(t->width()) * size_t(t->height()))

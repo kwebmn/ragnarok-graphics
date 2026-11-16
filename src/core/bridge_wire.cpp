@@ -80,7 +80,7 @@ uint8_t* putRect(uint8_t* p, const Rect& r) {
 }
 
 // The bytes of each kind's item, as written: the reader counts with them too
-constexpr size_t kCommandBytes = 5, kClearBytes = 28, kViewportBytes = 24, kDrawBytes = 63, kUploadBytes = 38,
+constexpr size_t kCommandBytes = 5, kClearBytes = 28, kViewportBytes = 24, kDrawBytes = 67, kUploadBytes = 38,
                  kSlotBytes = 21, kWriteBytes = 20, kStageBytes = 16, kSetupBytes = 17 + 2 * kStageBytes;
 
 uint8_t* putStage(uint8_t* p, const StageSetup& s) {
@@ -196,6 +196,7 @@ uint8_t* putRecord(uint8_t* p, const FrameRecord& r) {
         p = put(p, int32_t(d.twinTile[1]));
         p = put(p, d.twinScale);
         *p++ = d.sharpCopy ? 1 : 0;  // 3.0.18-beta.178
+        p = put(p, d.sharpArt);      // 3.0.20-beta.68
     }
     p = put(p, uint32_t(r.uploads().size()));
     for (const UploadCmd& u : r.uploads()) {
@@ -308,6 +309,7 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
         p = get(p, d.twinTile[1]);
         p = get(p, d.twinScale);
         d.sharpCopy = *p++ != 0;
+        p = get(p, d.sharpArt);
     }
     if (!items(kUploadBytes)) return fail();
     r.uploads_.resize(n);

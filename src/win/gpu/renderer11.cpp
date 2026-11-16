@@ -45,6 +45,7 @@
 #include "win/gpu/adapters.hpp"
 #include "win/gpu/ai11.hpp"
 #include "win/gpu/models_dump.hpp"
+#include "win/gpu/sharp_art_stats.hpp"
 #include "win/gpu/draw_constants.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -1638,6 +1639,20 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
             ai_->noteUiUse(d.texture[0]);
         }
     }
+    // 3.0.20-beta.68 (core/sharp_art, the owner's item 7; gpu/draw.cpp): a skill's painted picture - from the driver's
+    // copy four times larger, where the pack's AI picture of it is not drawn; smooth through the copy's levels
+    bool artDrawn = false;
+    if (d.sharpArt && !(d.twin && s.ui)) {
+        const auto art = aiDrawn[0] ? textures_.end() : textures_.find(d.sharpArt);
+        if (art != textures_.end() && art->second.srv) {
+            srvs[0] = art->second.srv;
+            artDrawn = true;
+            sampled[0].magFilter = d3d7::TFG_LINEAR;
+            sampled[0].minFilter = d3d7::TFN_LINEAR;
+            sampled[0].mipFilter = d3d7::TFP_LINEAR;
+        }
+        sharpArt_.note(artDrawn, aiDrawn[0], "Direct3D 11");
+    }
     if (!s.ui && d.fvf == d3d7::FVF_TL2) {  // 3.0.19-beta.43: the ground's first texture, for the log
         if (!d.texture[0])
             ++stats_.groundNone;
@@ -1714,7 +1729,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.colorKey = s.colorKey ? 1u : 0u;
     c.uiMode = uint32_t(uiFilterMode(s.ui, scale_, uiSharp_ ? UiFilter::Sharp : UiFilter::Smooth));
     // the AI's picture has the detail the game's pixels lack: sampled as it is; 3.0.18-beta.178: a sharp copy too
-    if (aiDrawn[0] || d.sharpCopy) c.uiMode = 0;
+    if (aiDrawn[0] || d.sharpCopy || artDrawn) c.uiMode = 0;
     if (d.effect == uint8_t(effect_exe::Kind::Panel)) c.uiMode = 0;  // 3.0.3-beta.8: at the target's pixels
     if (twin) {  // the tile's first game pixel is the window's place plus the tile's (spec §6)
         float quad[4];
@@ -1883,10 +1898,11 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool softAdd = effect_exe::softAdd(effects_.skillsSoft, !s.ui && adds, d.effect, s.srcBlend);
     if (softAdd && s.srcBlend == d3d7::BLEND_SRCALPHA) c.alphaTest |= 1u << 23;
     // 3.0.11-beta.197: an HD copy added with the source's factor one - its colour times its alpha (gpu/draw.cpp)
-    if (aicopy::colourTimesAlpha(aiDrawn[0], s.blend, s.srcBlend)) {
+    // 3.0.20-beta.68: a painted picture's copy likewise
+    if (aicopy::colourTimesAlpha(aiDrawn[0] || artDrawn, s.blend, s.srcBlend)) {
         c.alphaTest |= 1u << 23;
         static int told = 0;
-        if (told < 5) {
+        if (aiDrawn[0] && told < 5) {
             ++told;
             LOG_INFO("AI textures: an HD copy added with the source's factor one (its alpha unused) - its colour times "
                      "its alpha (Direct3D 11, destination factor %u)", unsigned(s.dstBlend));

@@ -35,6 +35,7 @@
 #include "core/model_probe.hpp"
 #include "core/upload_later.hpp"
 #include "win/gpu/looks_worker.hpp"
+#include "win/gpu/sharp_art_stats.hpp"
 #include "win/gpu/threads.hpp"
 #include "core/game_models_place.hpp"
 #include "core/own_ground.hpp"
@@ -1220,6 +1221,7 @@ struct Renderer::Impl {
         std::vector<UINT> counts;
     };
     ModelProbe modelProbe;
+    SharpArtStats sharpArt;  // 3.0.20-beta.68
     void probeModels(const own_ground::Shading& fog);  // after our models are drawn; the dump's frame alone
     bool probeDepths();                                // the points' depths now into modelProbe.depths
     void probeAgain(int step, const own_ground::Shading& fog);

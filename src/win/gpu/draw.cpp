@@ -445,6 +445,16 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
             if (aiDrawn[i] && !mips) sampled[i].mipFilter = d3d7::TFP_LINEAR;
         }
     if (modelProbe.flags & 1) aiDrawn[0] = aiDrawn[1] = false;  // 3.0.20-beta.61: the dump's look - the game's own
+    // 3.0.20-beta.68 (core/sharp_art, the owner's item 7): a skill's painted picture - from the driver's copy four
+    // times larger, where the pack's AI picture of it is not drawn; smooth through the copy's levels
+    const auto art = d.sharpArt && !aiDrawn[0] && !(d.twin && s.ui) ? textures.find(d.sharpArt) : textures.end();
+    const bool artDrawn = art != textures.end() && art->second.resource != nullptr;
+    if (artDrawn) {
+        sampled[0].magFilter = d3d7::TFG_LINEAR;
+        sampled[0].minFilter = d3d7::TFN_LINEAR;
+        sampled[0].mipFilter = d3d7::TFP_LINEAR;
+    }
+    if (d.sharpArt) sharpArt.note(artDrawn, aiDrawn[0], "Direct3D 12");
     // A new list, if this draw needs one, starts before the draw records anything; the record's geometry then goes
     // into the new list's slot (1B review M4: the old slot is reused while the new list may still read it).
     // 1.8, the materials: a draw of the ground or a model (it writes depth, not a sprite, not leaves) - its texture's
@@ -505,6 +515,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         if (aiDrawn[i]) {
             transition(t[i]->ai, t[i]->aiState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
             srv[i] = t[i]->aiSrv;
+        } else if (i == 0 && artDrawn) {  // 3.0.20-beta.68: the painted picture's copy
+            transition(art->second.resource, art->second.state, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            srv[i] = art->second.srv;
         } else {
             transition(t[i]->resource, t[i]->state, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
             srv[i] = t[i]->srv;
@@ -617,10 +630,11 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // head): an HD copy keeps its edge's colour under its see-through texels (for its filtering), the game's own
     // picture black there - a draw adding it with the source's factor one, its alpha unused, showed that colour as a
     // square; the copy's colour times its alpha, as the game's own would add
-    if (aicopy::colourTimesAlpha(aiDrawn[0], s.blend, s.srcBlend)) {
+    // 3.0.20-beta.68: a painted picture's copy likewise - its edge's colour goes on under its half-clear texels
+    if (aicopy::colourTimesAlpha(aiDrawn[0] || artDrawn, s.blend, s.srcBlend)) {
         c.alphaTest |= 1u << 23;
         static int told = 0;
-        if (told < 5) {
+        if (aiDrawn[0] && told < 5) {
             ++told;
             const auto it = textures.find(d.texture[0]);
             LOG_INFO("AI textures: an HD copy added with the source's factor one (its alpha unused) - its colour times "
@@ -666,7 +680,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.colorKey = s.colorKey ? 1u : 0u;
     c.uiMode = uint32_t(uiFilterMode(s.ui, scale, uiSharp ? UiFilter::Sharp : UiFilter::Smooth));
     // The AI's picture has the detail the game pixels lack: sampled as it is, not one tap per game pixel.
-    if (aiDrawn[0] || d.sharpCopy) c.uiMode = 0;  // 3.0.18-beta.178: a number's sharp copy likewise
+    if (aiDrawn[0] || d.sharpCopy || artDrawn) c.uiMode = 0;  // 3.0.18-beta.178: a number's sharp copy likewise
     if (d.effect == uint8_t(effect_exe::Kind::Panel) || d.effect == uint8_t(effect_exe::Kind::Backdrop))
         c.uiMode = 0;  // 3.0.3-beta.8: at the target's pixels (3.0.18-beta.64: the glass too)
     if (twin) {  // the tile's first game pixel is the window's place plus the tile's (spec §6)

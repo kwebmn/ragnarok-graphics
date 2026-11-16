@@ -145,9 +145,9 @@ uint64_t fnv(const std::vector<uint8_t>& b) {
 TEST(bridge_a_busy_record_writes_the_same_bytes_as_before) {
     const std::vector<uint8_t> bytes = bytesOf(busyRecord());
     // as written field by field (3.0.6-beta.2: 12655 bytes); 3.0.18-beta.178: a byte more a draw (sharpCopy) and an
-    // upload (own)
-    CHECK_EQ(bytes.size(), size_t(12698));
-    CHECK_EQ(fnv(bytes), uint64_t(0x432f44fc9b030f0eull));
+    // upload (own); 3.0.20-beta.68: four more a draw (sharpArt) - 41 draws
+    CHECK_EQ(bytes.size(), size_t(12862));
+    CHECK_EQ(fnv(bytes), uint64_t(0x100f1efcbb93589eull));
 
     FrameRecord back;
     WireReader rd(bytes.data(), bytes.size());
@@ -241,10 +241,10 @@ TEST(bridge_a_big_block_appended_whole) {
 // message into the shared ring - its copies 14 %): the record put straight into room of its size, the same bytes
 TEST(bridge_a_record_put_in_place_is_the_same_bytes) {
     const FrameRecord busy = busyRecord();
-    CHECK_EQ(recordBytes(busy), size_t(12698));
+    CHECK_EQ(recordBytes(busy), size_t(12862));
     std::vector<uint8_t> room(recordBytes(busy));
     CHECK(putRecord(room.data(), busy) == room.data() + room.size());
-    CHECK_EQ(fnv(room), uint64_t(0x432f44fc9b030f0eull));  // as written field by field (above)
+    CHECK_EQ(fnv(room), uint64_t(0x100f1efcbb93589eull));  // as written field by field (above)
     const FrameRecord kinds[2] = {FrameRecord{}, sampleRecord()};
     for (const FrameRecord& r : kinds) {
         std::vector<uint8_t> in(recordBytes(r));

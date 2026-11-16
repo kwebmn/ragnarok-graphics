@@ -1083,14 +1083,17 @@ constexpr Entry kTexts[] = {
     {Text::FxSkillLooks, "Skills' look", "Вигляд умінь", "Вид умений"},
     {Text::FxSkillLooksHint,
      "Every class's skills: as the game draws them; the game's own made sharp (the skills' snowflakes and sparkles "
-     "drawn anew at the screen's resolution); redrawn in the classes' new looks; or redrawn and soft - the game's own "
-     "light, tinted. The sparkles are sharp in the redrawn looks too.",
+     "drawn anew at the screen's resolution, their painted pictures - letters, bells, angels, wings - four times "
+     "finer); redrawn in the classes' new looks; or redrawn and soft - the game's own light, tinted. The sparkles and "
+     "the painted pictures are sharp in the redrawn looks too.",
      "Уміння всіх професій: як їх малює гра; власний вигляд гри, тільки чіткий (сніжинки й іскри вмінь намальовано "
-     "заново в роздільності екрана); перемальовані в новому вигляді професій; або перемальовані й м'які — власне "
-     "світло гри, підфарбоване. Іскри чіткі й у перемальованих.",
+     "заново в роздільності екрана, мальовані картинки — написи, дзвони, ангели, крила — учетверо детальніші); "
+     "перемальовані в новому вигляді професій; або перемальовані й м'які — власне світло гри, підфарбоване. Іскри й "
+     "мальовані картинки чіткі й у перемальованих.",
      "Умения всех профессий: как их рисует игра; собственный вид игры, только чёткий (снежинки и искры умений "
-     "нарисованы заново в разрешении экрана); перерисованные в новом виде профессий; или перерисованные и мягкие — "
-     "собственный свет игры, подкрашенный. Искры чёткие и в перерисованных."},
+     "нарисованы заново в разрешении экрана, рисованные картинки — надписи, колокола, ангелы, крылья — вчетверо "
+     "подробнее); перерисованные в новом виде профессий; или перерисованные и мягкие — собственный свет игры, "
+     "подкрашенный. Искры и рисованные картинки чёткие и в перерисованных."},
     {Text::FxSkillLooksOriginal, "Original", "Оригінал", "Оригинал"},
     {Text::FxSkillLooksImproved, "Improved original", "Покращений оригінал", "Улучшенный оригинал"},
     {Text::FxSkillLooksRedrawn, "Redrawn", "Перемальовані", "Перерисованные"},

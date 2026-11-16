@@ -37,6 +37,7 @@
 #include "core/weather3d.hpp"
 #include "core/wind.hpp"
 #include "win/gpu/looks_worker.hpp"
+#include "win/gpu/sharp_art_stats.hpp"
 #include "win/gpu/draw_constants.hpp"
 #include "win/gpu/map_world.hpp"
 #include "core/frame.hpp"
@@ -1189,6 +1190,7 @@ private:
         uint64_t kindFrames = 0, kindDraws[6] = {};
         LONGLONG kindTicks[6] = {};
     } stats_;
+    SharpArtStats sharpArt_;  // 3.0.20-beta.68: the skills' painted pictures (gpu/sharp_art_stats.hpp)
     static constexpr uint64_t kKindEvery = 8;
     // 3.0.19-beta.43: as Direct3D 12's noteDrawnWhite - a draw's texture that is not there drawn white, told once
     // each, 12 at most

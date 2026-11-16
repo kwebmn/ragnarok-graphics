@@ -46,6 +46,9 @@ struct DrawCmd {
     // 3.0.18-beta.178: a number's frame drawn from its sharp copy (win/sharp_frames) - sampled as it is, not one tap
     // a game pixel as the interface's magnified pictures are
     bool sharpCopy = false;
+    // 3.0.20-beta.68: a skill's painted picture has a copy four times larger (win/sharp_specks, core/sharp_art) - the
+    // copy's texture; texture[0] stays the game's own, whose AI picture of the player's pack is drawn before it; 0 none
+    uint32_t sharpArt = 0;
 };
 
 // AI textures (0.13): a cell of the game's sprite cache that got a new frame - the whole cell, the frame in its top
