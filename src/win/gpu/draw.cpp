@@ -134,8 +134,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
             ownState.decided = true;
             ownState.frame = prepareOwnGround();
         }
-        if (ownState.frame) {
-            CpuTime t(cpuPartTicks[kCpuOwnGroundNotes]);
+        if (ownState.frame) {  // 3.0.20-beta.38: noted, worked out on the frame's threads (flushOwnNotes: its time)
             noteOwnGround(rec, d);
             return;
         }

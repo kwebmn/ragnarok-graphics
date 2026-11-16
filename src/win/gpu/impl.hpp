@@ -1449,6 +1449,25 @@ struct Renderer::Impl {
     // (MapWorld::ownGround) drawn in place of the game's ground draws: smooth, its pictures in full colour, on past
     // the game's far plane; in the game's own colours and fog, learnt from its ground draws (own_ground::Shading),
     // which are noted and left out
+    // 3.0.20-beta.38 (the owner's «6,7,8,9», 9): a part of the frame's ground notes, worked out on its threads
+    // (flushOwnNotes) - its cells' corners and the colours they give them, its fog vertices, its walls
+    struct OwnNotePart {
+        struct Corner {
+            float x, z;
+            uint32_t diffuse;
+            bool first;
+        };
+        struct Wall {
+            const DrawCmd* d = nullptr;
+            float lo[2] = {}, hi[2] = {};
+            uint32_t corners[4] = {};
+            int cornersCount = 0;
+            uint32_t count = 0;
+        };
+        std::vector<Corner> corners;
+        std::vector<Wall> walls;
+        own_ground::FogSums fog;
+    };
     struct OwnState {
         uint32_t serial = 0;        // the ground (OwnGround::serial) its textures are of; 0 none
         std::vector<uint32_t> ids;  // the .gnd's textures (0: none - drawn white)
@@ -1466,6 +1485,9 @@ struct Renderer::Impl {
         // 3.0.7-beta.3 (R-YXZM7Y): the game's walls against the light the own ground gives them, once in the log
         own_ground::WallCheck wallCheck;
         bool wallsTold = false;
+        std::vector<const DrawCmd*> notes;  // 3.0.20-beta.38: the frame's ground draws noted, not worked out yet
+        const FrameRecord* notesRec = nullptr;
+        std::vector<OwnNotePart> noteParts;
         std::string wallApartDraw;  // 3.0.18-beta.5: the first wall apart's draw, for the log
         FrameRecord rec, uploads;
         // 3.0.20-beta.20: the layers' textures' vertices go straight into rec's draws (Batch, PiecePlace below)
@@ -1602,8 +1624,8 @@ struct Renderer::Impl {
     void dropOwnGround();
     bool prepareOwnGround();  // its textures made and put up, a few a frame; true: drawn this picture
     void noteOwnGround(const FrameRecord& rec, const DrawCmd& d);
-    // 3.0.19-beta.50: one cell's face of it (a draw of the driver's gathered cells: each 4 vertices)
-    void noteOwnCell(const FrameRecord& rec, const DrawCmd& d, const own_ground::Tl2* v, uint32_t count);
+    void flushOwnNotes(LONGLONG* outer);  // 3.0.20-beta.38: the noted ones worked out (outer: the span it is in)
+    void noteOwnWall(const FrameRecord& rec, const OwnNotePart::Wall& w);
     void noteOwnModels(const FrameRecord& rec, const DrawCmd& d);  // 3.0.4-beta.14: the game's own models near
     void drawOwnModels(const own_ground::View& view, const camera::Projection& p, const map::Axes& axes);
     // 3.0.20-beta.3 (stage 2a of «Модели нашим рендером»): the game's static model nodes as the driver captured them

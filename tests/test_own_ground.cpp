@@ -206,6 +206,34 @@ TEST(own_ground_a_corner_keeps_one_cell_s_colour) {
     CHECK_EQ(s.diffuseAt(20.0f, 10.0f) & 0xFFu, 0x20u);
 }
 
+// 3.0.20-beta.38 (the owner's «6,7,8,9», 9 - the frame's work on more threads): the game's ground's fog vertices summed
+// in parts (each a run of the frame's ground draws, on any thread) and added in their order make the same fog line
+// as taken one by one: the same alpha where it is, the game's colour the last vertex's
+TEST(own_ground_fog_summed_in_parts_is_the_fog_one_by_one) {
+    own_ground::Shading once, parts;
+    once.reset(4, 4, 10.0f);
+    parts.reset(4, 4, 10.0f);
+    std::vector<own_ground::FogSums> sums(3);
+    for (int i = 0; i < 90; ++i) {
+        const float zd = 50.0f + 13.0f * float(i);
+        const uint32_t alpha = uint32_t(std::max(0, 255 - i * 2)), rgb = 0x102030u + uint32_t(i);
+        once.fog(zd, alpha << 24 | rgb);
+        sums[size_t(i / 30)].add(zd, alpha << 24 | rgb);
+    }
+    for (const own_ground::FogSums& f : sums) parts.fogOf(f);
+    once.fit();
+    parts.fit();
+    CHECK(once.fogged() && parts.fogged());
+    for (float zd : {0.0f, 300.0f, 900.0f, 1500.0f}) CHECK_EQ(parts.specularAt(zd), once.specularAt(zd));
+    own_ground::Shading clear;  // nothing fogged: none
+    clear.reset(4, 4, 10.0f);
+    own_ground::FogSums none;
+    none.add(100.0f, 0xFF000000u | 0x445566u);
+    clear.fogOf(none);
+    clear.fit();
+    CHECK(!clear.fogged() && clear.specularAt(500.0f) == (0xFF000000u | 0x445566u));
+}
+
 TEST(own_ground_keeps_room_in_the_game_s_memory) {
     // 3.0.4-beta.20: uaRO.exe is 32-bit and not large address aware - 2 GB for the game, the driver and the card's
     // driver; lighthalzen's own world takes 214 MB as it is read. Less than kKeepFree left: the far models let go,

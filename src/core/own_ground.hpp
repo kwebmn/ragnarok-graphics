@@ -136,6 +136,15 @@ int channelsApart(uint32_t a, uint32_t b);
 
 // The game's own colours of its ground, learnt from its draws: each cell corner's vertex colour (the colour the game
 // lights its ground with) and the fog of this frame (the specular's alpha by the view depth)
+// 3.0.20-beta.38 (the owner's «6,7,8,9», 9 - the frame's work on more threads): a part of a frame's fog vertices of the
+// game's ground (its notes worked out on the frame's threads) - added to the shading's in their order (Shading::fogOf)
+struct FogSums {
+    double n = 0, sz = 0, sa = 0, szz = 0, sza = 0;
+    bool fogged = false, any = false;
+    uint32_t lastRgb = 0;
+    void add(float zd, uint32_t specular);
+};
+
 class Shading {
 public:
     void reset(int width, int height, float zoom);  // a map's cells, its corners all unseen
@@ -147,6 +156,7 @@ public:
     uint32_t diffuseAt(float x, float z) const;
     void beginFrame();
     void fog(float zd, uint32_t specular);  // a vertex of the game's ground this frame: its depth and its specular
+    void fogOf(const FogSums& part);         // 3.0.20-beta.38: a part's of them
     void fit();                             // the frame's fog line, once its vertices are in
     uint32_t specularAt(float zd) const;    // alpha by the line (none seen: 255), the game's colour
     bool fogged() const { return fogged_; }

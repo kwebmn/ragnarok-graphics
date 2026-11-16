@@ -249,25 +249,20 @@ void Renderer::Impl::noteOwnGround(const FrameRecord& rec, const DrawCmd& d) {
         o.like = rec.states()[d.state];
         o.likeKnown = o.likeTaken = true;
     }
-    const std::vector<uint8_t>& vb = rec.vertexBytes();
-    if (d.vertexOffset + size_t(d.vertexCount) * sizeof(own_ground::Tl2) > vb.size()) return;
-    const own_ground::Tl2* all = reinterpret_cast<const own_ground::Tl2*>(vb.data() + d.vertexOffset);
-    // 3.0.19-beta.50 (core/quad_batch): the driver's gathered cells - a cell each 4 vertices, as one by one before
-    if (quadbatch::isBatch(d.vertexCount, d.indexCount)) {
-        for (uint32_t q = 0; q < d.vertexCount; q += 4) noteOwnCell(rec, d, all + q, 4);
-        return;
-    }
-    noteOwnCell(rec, d, all, d.vertexCount);
+    // 3.0.20-beta.38 (the owner's «6,7,8,9», 9 - the frame's work on more threads): noted now, worked out with the
+    // frame's others at once on its threads (flushOwnNotes: when the own ground is drawn, at the frame's end)
+    if (o.notesRec && o.notesRec != &rec) flushOwnNotes(nullptr);
+    o.notesRec = &rec;
+    o.notes.push_back(&d);
 }
 
-// A ground cell's face (its `count` vertices from `v`): the colours and fog it gives its corners (its walls' left to
-// the cells: their corners lie under other colours)
-void Renderer::Impl::noteOwnCell(const FrameRecord& rec, const DrawCmd& d, const own_ground::Tl2* v,
-                                 uint32_t count) {
-    OwnState& o = ownState;
-    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
-    const float* m = viewToWorld;
-    const map::Axes axes = mapWorld.axes().known() ? mapWorld.axes() : map::Axes{1, 1, 1};
+namespace {
+
+// A ground cell's face (its `count` vertices from `v`): its corners in the file's places and the colours it gives them
+// (the cell's first corner - its least x and z - its own, the others fill only), its vertices' fog; a wall (upright)
+// apart, for the renderer's thread (its check logs). On any of the frame's threads (3.0.20-beta.38)
+void ownCellOf(const own_ground::Tl2* v, uint32_t count, const DrawCmd& d, const camera::Projection& p, const float* m,
+               const map::Axes& axes, bool walls, Renderer::Impl::OwnNotePart& out) {
     float lo[2] = {1e30f, 1e30f}, hi[2] = {-1e30f, -1e30f};
     float at[8][2];
     const uint32_t n = std::min(count, 8u);
@@ -279,43 +274,99 @@ void Renderer::Impl::noteOwnCell(const FrameRecord& rec, const DrawCmd& d, const
         if (i < n) at[i][0] = x, at[i][1] = z;
         lo[0] = std::min(lo[0], x), hi[0] = std::max(hi[0], x);
         lo[1] = std::min(lo[1], z), hi[1] = std::max(hi[1], z);
-        o.shading.fog(vz, v[i].specular);
+        out.fog.add(vz, v[i].specular);
     }
     if (hi[0] - lo[0] < 1.0f || hi[1] - lo[1] < 1.0f) {  // a wall: upright
-        // 3.0.7-beta.3 (R-YXZM7Y «посмотри насчет освещения стен»): its colour against the light the own ground gives
-        // it (terrain::wallLight) - in the log once kWallsChecked walls of the map's are seen
-        const OwnGround* g = o.wallsTold ? nullptr : mapWorld.ownGround();
-        if (g && g->serial == o.serial) {
-            // 3.0.18-beta.5 (the owner: «засветление стен»): all its corners, and the first apart's stages
-            uint32_t corners[4] = {};
-            const int cornersCount = int(std::min(count, 4u));
-            for (int i = 0; i < cornersCount; ++i) corners[i] = v[i].diffuse;
-            const bool apartBefore = !o.wallCheck.firstApart().empty();
-            o.wallCheck.note(lo, hi, v[0].diffuse, g->wallLight, corners, cornersCount);
-            if (!apartBefore && !o.wallCheck.firstApart().empty()) {
-                const DrawSetup& w = rec.states()[d.state];
-                char text[160];
-                std::snprintf(text, sizeof text, "; its draw: stage 0 op %u (%u, %u), stage 1 op %u (%u, %u), "
-                              "%u vertices, blend %d %d/%d", w.stage[0].colorOp, w.stage[0].colorArg1,
-                              w.stage[0].colorArg2, w.stage[1].colorOp, w.stage[1].colorArg1, w.stage[1].colorArg2,
-                              count, int(w.blend), int(w.srcBlend), int(w.dstBlend));
-                o.wallApartDraw = text;
-            }
-            if (o.wallCheck.seen() >= kWallsChecked) {
-                o.wallsTold = true;
-                const std::string& apart = o.wallCheck.firstApart();
-                LOG_INFO("own ground: %s's walls - %u of the game's seen, %u lit as ours (a channel 2 apart at "
-                         "most)%s%s%s",
-                         g->map.c_str(), o.wallCheck.seen(), o.wallCheck.alike(),
-                         apart.empty() ? "" : "; first apart: ", apart.c_str(), o.wallApartDraw.c_str());
-            }
-        }
+        if (!walls) return;
+        Renderer::Impl::OwnNotePart::Wall w;
+        w.d = &d;
+        std::copy(lo, lo + 2, w.lo);
+        std::copy(hi, hi + 2, w.hi);
+        w.count = count;
+        w.cornersCount = int(std::min(count, 4u));
+        for (int i = 0; i < w.cornersCount; ++i) w.corners[i] = v[i].diffuse;
+        out.walls.push_back(w);
         return;
     }
-    // 3.0.4-beta.15: the cell's first corner (its least x and z) gives its corner's colour; the others fill only
     for (uint32_t i = 0; i < n; ++i) {
         const bool first = at[i][0] - lo[0] < 0.5f && at[i][1] - lo[1] < 0.5f;
-        o.shading.note(at[i][0], at[i][1], v[i].diffuse, first);
+        out.corners.push_back(Renderer::Impl::OwnNotePart::Corner{at[i][0], at[i][1], v[i].diffuse, first});
+    }
+}
+
+}  // namespace
+
+// 3.0.20-beta.38: the frame's ground draws noted so far - their cells worked out in parts on the frame's threads, then
+// in their order into the shading (the corners' colours, the fog) and the walls' check, as one by one before.
+// outer: the part whose span it is in (its time taken out of it)
+void Renderer::Impl::flushOwnNotes(LONGLONG* outer) {
+    OwnState& o = ownState;
+    if (o.notes.empty() || !o.notesRec) {
+        o.notes.clear();
+        return;
+    }
+    LONGLONG none = 0;
+    CpuTimeWithin t(cpuPartTicks[kCpuOwnGroundNotes], outer ? *outer : none);
+    const FrameRecord& rec = *o.notesRec;
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    const map::Axes axes = mapWorld.axes().known() ? mapWorld.axes() : map::Axes{1, 1, 1};
+    const OwnGround* g = o.wallsTold ? nullptr : mapWorld.ownGround();
+    const bool walls = g && g->serial == o.serial;
+    const std::vector<uint8_t>& vb = rec.vertexBytes();
+    const size_t n = o.notes.size(), chunks = std::min<size_t>(n, 64);
+    if (o.noteParts.size() < chunks) o.noteParts.resize(chunks);
+    parallelChunks(chunks, [&](size_t k) {
+        OwnNotePart& part = o.noteParts[k];
+        part.corners.clear();
+        part.walls.clear();
+        part.fog = own_ground::FogSums{};
+        for (size_t i = n * k / chunks; i < n * (k + 1) / chunks; ++i) {
+            const DrawCmd& d = *o.notes[i];
+            if (d.vertexOffset + size_t(d.vertexCount) * sizeof(own_ground::Tl2) > vb.size()) continue;
+            const own_ground::Tl2* all = reinterpret_cast<const own_ground::Tl2*>(vb.data() + d.vertexOffset);
+            // 3.0.19-beta.50 (core/quad_batch): the driver's gathered cells - a cell each 4 vertices
+            if (quadbatch::isBatch(d.vertexCount, d.indexCount)) {
+                for (uint32_t q = 0; q + 4 <= d.vertexCount; q += 4)
+                    ownCellOf(all + q, 4, d, p, viewToWorld, axes, walls, part);
+            } else {
+                ownCellOf(all, d.vertexCount, d, p, viewToWorld, axes, walls, part);
+            }
+        }
+    });
+    for (size_t k = 0; k < chunks; ++k) {
+        const OwnNotePart& part = o.noteParts[k];
+        o.shading.fogOf(part.fog);
+        for (const OwnNotePart::Wall& w : part.walls) noteOwnWall(rec, w);
+        for (const OwnNotePart::Corner& c : part.corners) o.shading.note(c.x, c.z, c.diffuse, c.first);
+    }
+    o.notes.clear();
+}
+
+// 3.0.7-beta.3 (R-YXZM7Y «посмотри насчет освещения стен»): a wall of the game's ground - its colour against the light
+// the own ground gives it (terrain::wallLight); in the log once kWallsChecked walls of the map's are seen
+void Renderer::Impl::noteOwnWall(const FrameRecord& rec, const OwnNotePart::Wall& w) {
+    OwnState& o = ownState;
+    const OwnGround* g = o.wallsTold ? nullptr : mapWorld.ownGround();
+    if (!g || g->serial != o.serial) return;
+    // 3.0.18-beta.5 (the owner: «засветление стен»): all its corners, and the first apart's stages
+    const bool apartBefore = !o.wallCheck.firstApart().empty();
+    o.wallCheck.note(w.lo, w.hi, w.corners[0], g->wallLight, w.corners, w.cornersCount);
+    if (!apartBefore && !o.wallCheck.firstApart().empty()) {
+        const DrawSetup& s = rec.states()[w.d->state];
+        char text[160];
+        std::snprintf(text, sizeof text, "; its draw: stage 0 op %u (%u, %u), stage 1 op %u (%u, %u), "
+                      "%u vertices, blend %d %d/%d", s.stage[0].colorOp, s.stage[0].colorArg1,
+                      s.stage[0].colorArg2, s.stage[1].colorOp, s.stage[1].colorArg1, s.stage[1].colorArg2,
+                      w.count, int(s.blend), int(s.srcBlend), int(s.dstBlend));
+        o.wallApartDraw = text;
+    }
+    if (o.wallCheck.seen() >= kWallsChecked) {
+        o.wallsTold = true;
+        const std::string& apart = o.wallCheck.firstApart();
+        LOG_INFO("own ground: %s's walls - %u of the game's seen, %u lit as ours (a channel 2 apart at "
+                 "most)%s%s%s",
+                 g->map.c_str(), o.wallCheck.seen(), o.wallCheck.alike(),
+                 apart.empty() ? "" : "; first apart: ", apart.c_str(), o.wallApartDraw.c_str());
     }
 }
 
@@ -525,6 +576,7 @@ bool Renderer::Impl::drawOwnGround() {
     QueryPerformanceCounter(&start);
     const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
     const map::Axes axes = mapWorld.axes().known() ? mapWorld.axes() : map::Axes{1, 1, 1};
+    flushOwnNotes(&cpuPartTicks[kCpuOwnGround]);  // 3.0.20-beta.38: the game's ground noted so far, worked out
     o.shading.fit();
     // the corners the game gave another colour: the chunks round them made again
     bool meanMoved = false;

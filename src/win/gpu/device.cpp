@@ -3086,6 +3086,8 @@ void Renderer::execute(const FrameRecord& record) {
     RunTime cpuRun(m.runCycles, m.runTsc);  // 3.0.19-beta.52: how much of it the thread ran
     m.casterDraws.clear();  // 3.0.20-beta.37: never a draw of an older record's (each is worked out before the submit)
     m.casterRec = nullptr;
+    m.ownState.notes.clear();  // 3.0.20-beta.38: as the casters
+    m.ownState.notesRec = nullptr;
     if (m.lost || !m.target || record.empty() || !m.begin()) return;
     if (m.upscale && m.upscaler && !m.renderStarted) {  // part 3: latency markers
         m.renderStarted = true;
@@ -3146,7 +3148,10 @@ void Renderer::execute(const FrameRecord& record) {
     {
         Impl::CpuTime t(m.drawsTicks);  // 3.0.20-beta.37: the casters noted, in the draws' time as before
         m.flushCasters();
+        m.flushOwnNotes(nullptr);  // 3.0.20-beta.38: the game's ground noted after the own ground was drawn
     }
+    m.ownState.notes.clear();
+    m.ownState.notesRec = nullptr;
     m.casterDraws.clear();
     m.casterRec = nullptr;
     const UINT64 before = m.fenceValue;

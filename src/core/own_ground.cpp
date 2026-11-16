@@ -203,6 +203,29 @@ void Shading::fog(float zd, uint32_t specular) {
     specularRgb_ = specular & 0xFFFFFFu;
 }
 
+void FogSums::add(float zd, uint32_t specular) {
+    const double a = double(specular >> 24);
+    n += 1.0;
+    sz += zd;
+    sa += a;
+    szz += double(zd) * zd;
+    sza += double(zd) * a;
+    fogged = fogged || a < 255.0;
+    any = true;
+    lastRgb = specular & 0xFFFFFFu;
+}
+
+void Shading::fogOf(const FogSums& part) {
+    if (!part.any) return;
+    n_ += part.n;
+    sz_ += part.sz;
+    sa_ += part.sa;
+    szz_ += part.szz;
+    sza_ += part.sza;
+    fogged_ = fogged_ || part.fogged;
+    specularRgb_ = part.lastRgb;
+}
+
 void Shading::fit() {
     fogA_ = 255.0f;
     fogB_ = 0.0f;
