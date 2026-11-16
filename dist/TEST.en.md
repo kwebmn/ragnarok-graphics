@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.44 — what's new · 2026-11-16
+
+- **Names of items on the ground no longer stay after the items are gone (R-RDA885).** The server tells that an item is gone only to those who see it at that moment. After a teleport within the same map, a respawn or a new login on the same map nobody told, and the name plates stayed for good. Now items are forgotten at every entry to a map, when they are more than 60 cells away, and when the server has not told of them again for three minutes (a dropped item lies a minute on the server).
+- **Every report now writes down the models round the character by itself.** Three reports of missing parts of models (Prontera's gate, the bridge on gef_fild07) came without the console's models dump, and there was nothing to find the cause from. Now Ctrl+Shift+F10 puts into the log the list of models near by: who draws each (we or the game), where it stands, how many of its faces show, and whether the game made it see-through.
+
 # uaRO Graphics 3.0.20-beta.43 — what's new · 2026-11-16
 
 - **An audit of the horizon: the land past the edge no longer runs out in straight bands.** Each point's height past the edge came from the nearest corner of the map's ground, so whatever met the map's edge — a wall, a moat, a step — ran straight outward for sixty cells more: two straight banks left Prontera's south gate. Now the land's base is a smooth sheet stretched between the map's ground edge and the edge's mean height 60 cells off: every point lies midway between its neighbours. A narrow step of the edge dies out within its own width. The hills and mountains over it are as before.
