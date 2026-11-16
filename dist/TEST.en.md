@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.20-beta.57 — what's new · 2026-11-16
+
+- **3D view: in houses only the room you are in is shown (R-J3GKD9).** A house's map is many separate rooms side by side (payon_in01 has 12, prt_in 28) with nothing between them. From above one room fills the screen; from the eyes' level the others stood lit in the dark behind the room's open sides. Now the driver finds the map's rooms (floors joined to one another) and in the 3D view draws only the one your character stands in: the floors, the walls and whoever stands in the other rooms disappear as if nothing were there.
+  - The switch **«Only the room you are in»** is on: «Game and chat» → «Game» → «3D view», or the console (Ctrl+`) → «Quick». It needs «Ceiling indoors». Direct3D 12 and 11.
+- **The ceiling now stands over each room's own floor.** In payon_in01 the rooms' floors are raised 6–17 units over the map's black base, and the ceiling of beta.52 was measured from the base. So it hung 22 units over the floor, under the 3D view's camera, and was not seen. Now each room's ceiling stands at the walls' height over its own floor.
+
 # uaRO Graphics 3.0.20-beta.56 — what's new · 2026-11-16
 
 - **3D view: the «transparent rock» in Payon cave (R-2BX4BG).** The «mushroom rock» model (외부소품\버섯바위) is, in the game's own file, a cap hung 3.9 units over its base; there is nothing between them and the cap is open below. It was made for the view from above, where the cap hides the gap; from the eyes' level the wall shows through it. Now the driver closes such gaps in the models it draws itself: the open top of the lower part is raised to the part over it, and the open bottom of the upper part gets an underside. The new faces take the picture and colours of their neighbours.
