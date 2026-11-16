@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.20-beta.42 — what's new · 2026-11-16
+
+- **An audit of the horizon (3.0.20-beta.30–31): the land past the edge begins where the map's real ground ends.** Nearly every map keeps one to three rings of empty cells round its ground (Prontera three, prt_fild08 two, Geffen one). The land past the edge began at the map's rectangle, so between the map's ground and it lay a trench 10–30 units wide: near the map's edge the sky showed in it. Now the empty cells reached from outside are the land's too, and its heights at the edge are those of the map's own ground corners. A hole the map's ground closes round is left alone.
+- **The sea of seaside maps reaches the map's ground.** The map's water ends with its ground, and the sea began at the rectangle — a strip without water between them (Izlude, Alberta). Now the sea covers the empty cells within the map too.
+- **Maps hung in the sky stay in the sky.** Yuno, Gonryun and the novices' training fields (nine tenths of their outer band of cells empty) get no land round them any more.
+- **The colour of the land past the edge.** It came from the colour at the map's rectangle — and grey filler cells with half the light often lie there (Geffen, Morocc, Rachel, Veins), so the land was darker than the map all the way to the horizon. Now at the edge it is the colour of the nearest corner of the map's ground, and four cells on the map's mean colour.
+- **The haze over the sea.** The sea is a few huge triangles from the camera to the horizon, and the haze ran straight between their ends: the sea was less hazed than the land beside it. Now the triangles are cut where the haze begins and ends.
+- «Grass in the 3D view» grows on the filled cells within the map too.
+
 # uaRO Graphics 3.0.20-beta.41 — what's new · 2026-11-16
 
 - **An audit of «Grass in the 3D view»: the grass knew only a part of the map.** So as not to grow on decks and in halls the grass checks itself against the ground cells' heights. Over «Own ground» in the 3D view those heights were never refreshed: they stayed the ones seen in the first frames on the map (or even the last map's). So where you were not looking then there could be no grass, or it vanished near the screen's edges as you moved the mouse. Now the heights come from «Own ground» itself for the whole map at once, once a map, as it loads.
