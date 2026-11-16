@@ -459,9 +459,6 @@ void MapWorld::loop() {
                                                           : terrain::Sun{};
                     own->mesh = terrain::build(full, sizeof(void*) == 8 ? 3 : 2, own->atlas, laid, &resting, &sun);
                     own->distant = terrain::build(full, 1, own->atlas, nullptr, nullptr, &sun);
-                    // 3.0.20-beta.41: the grass's cells of the whole map (60 ms here, not on the renderer's thread)
-                    own->cells = ground_cells::ofMeshes({&own->mesh, &own->distant}, full.width, full.height,
-                                                        full.zoom, 1, 1, 1);
                     {  // 3.0.20-beta.30 (the owner's «6,7,8,9», 6): the land past its edges - the 3D view's horizon
                         outskirts::Options ring;
                         ring.water = w.waterKnown;
@@ -469,14 +466,23 @@ void MapWorld::loop() {
                         uint32_t seed = 2166136261u;  // the map's name hashed (FNV-1a): its own hills, every time
                         for (const char c : name) seed = (seed ^ uint8_t(c)) * 16777619u;
                         ring.seed = seed;
-                        own->outskirts = outskirts::build(full, own->atlas, sun, ring);
-                        own->seaFrame = outskirts::seaFrame(full, ring);  // 3.0.20-beta.31: the sea past it
+                        // 3.0.20-beta.31: the sea past it (3.0.20-beta.42: made with it, one plan for both)
+                        own->outskirts = outskirts::build(full, own->atlas, sun, ring, &own->seaFrame);
+                        own->edgeCorners.assign(size_t(full.width + 1) * size_t(full.height + 1), 0);
+                        for (const terrain::Vertex& v : own->outskirts.vertices) {
+                            const uint32_t corner = v.blend & 0xFFFFFFu;
+                            if (corner < own->edgeCorners.size()) own->edgeCorners[corner] = 1;
+                        }
                         LOG_INFO("own ground: %s's outskirts - %u chunks, %u vertices, %u triangles past its edges, "
                                  "%d cells off (the 3D view's horizon)%s",
                                  name.c_str(), unsigned(own->outskirts.chunks.size()),
                                  unsigned(own->outskirts.vertices.size()), unsigned(own->outskirts.indices.size() / 3),
                                  ring.ring, own->seaFrame.empty() ? "" : "; the sea past its wet edges");
                     }
+                    // 3.0.20-beta.41: the grass's cells of the whole map (60 ms here, not on the renderer's thread);
+                    // 3.0.20-beta.42: the land's own within the map's rectangle too (the open cells it fills)
+                    own->cells = ground_cells::ofMeshes({&own->mesh, &own->distant, &own->outskirts}, full.width,
+                                                        full.height, full.zoom, 1, 1, 1);
                     for (uint8_t r : resting) own->restingCells += r;
                     own->wallLight.assign(full.cells.size() * 2, 0u);
                     for (int y = 0; y < full.height; ++y)
@@ -534,6 +540,9 @@ void MapWorld::loop() {
                         own->models = terrain::Mesh();
                         std::vector<OwnGround::Picture>().swap(own->modelTextures);
                         own->outskirts = terrain::Mesh();  // 3.0.20-beta.30
+                        // 3.0.20-beta.42: and the sea with it - without the land the sea lay round the dry sides too
+                        std::vector<float>().swap(own->seaFrame);
+                        std::vector<uint8_t>().swap(own->edgeCorners);
                     }
                     if (room == own_ground::Room::Coarse) {  // the plain ground near too (distant empty: mesh all)
                         own->mesh = std::move(own->distant);

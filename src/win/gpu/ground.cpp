@@ -290,8 +290,8 @@ void Renderer::Impl::useOwnCells() {
         if (axesKey == 8 && g->cells.side > 0.0f)
             groundCells = g->cells;
         else
-            groundCells = ground_cells::ofMeshes({&g->mesh, &g->distant}, g->width, g->height, g->zoom, axes.x,
-                                                 axes.y, axes.z);
+            groundCells = ground_cells::ofMeshes({&g->mesh, &g->distant, &g->outskirts}, g->width, g->height,
+                                                 g->zoom, axes.x, axes.y, axes.z);
         dropHalls();  // no grass on the halls' floors
         grass_beds::addTo(groundCells, mapWorld.beds());  // the flower beds' tops too
         ownCells = groundCells;

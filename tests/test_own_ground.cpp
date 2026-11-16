@@ -234,6 +234,66 @@ TEST(own_ground_fog_summed_in_parts_is_the_fog_one_by_one) {
     CHECK(!clear.fogged() && clear.specularAt(500.0f) == (0xFF000000u | 0x445566u));
 }
 
+// 3.0.20-beta.42 (the audit of the horizon): the colour of the land past the ground by the corner of the ground it lies
+// nearest to - that corner's own as the game draws it where the land begins (no step in light at the seam), the mean
+// of the corners seen a few cells on. Beta.30 took the colour at the map's rectangle: a filler cell's grey there (half
+// the ground's light on geffen, morocc, rachel) darkened the land all the way to the horizon
+TEST(own_ground_the_lands_colour_from_its_corner_to_the_maps_mean) {
+    own_ground::Shading s;
+    s.reset(4, 4, 10.0f);
+    // corner (1, 1) dark, the others seen light: the mean near the light ones
+    for (int j = 0; j <= 4; ++j)
+        for (int i = 0; i <= 4; ++i)
+            if (!(i == 4 && j == 4))
+                s.note(float(i - 2) * 10.0f, float(j - 2) * 10.0f, i == 1 && j == 1 ? 0xFF404040u : 0xFFE0E0E0u, true);
+    const uint32_t corner = 1 * 5 + 1, mean = s.meanColour();
+    CHECK((mean & 0xFFu) > 0xD0u);
+    CHECK_EQ(s.landColour(corner, 0.0f), 0xFF404040u);                 // at the ground's edge: the corner's own
+    CHECK_EQ(s.landColour(corner, own_ground::kLandBlend), mean);      // a few cells on: the map's mean
+    CHECK_EQ(s.landColour(corner, 100.0f), mean);
+    const uint32_t between = s.landColour(corner, own_ground::kLandBlend * 0.5f) & 0xFFu;
+    CHECK(between > 0x60u && between < 0xD0u);
+    CHECK_EQ(s.landColour(4 * 5 + 4, 0.0f), mean);  // a corner the game has not drawn yet: the mean
+    CHECK_EQ(s.landColour(999999u, 0.0f), mean);    // none such: the mean
+}
+
+// 3.0.20-beta.42 (the audit of the horizon): a triangle cut at view depths into the pieces between them - for what
+// must run straight across a piece: the fog's line, flat nearer than where it begins and past where it ends, and the
+// depth squeezed past the far plane. Beta.31's sea, eight triangles from the eye to the horizon, took the fog between
+// its corners' clamped ends: half hazed where the land beside it was all haze
+TEST(own_ground_a_triangle_cut_at_depths_into_the_pieces_between) {
+    const float zd[3] = {10.0f, 1000.0f, 400.0f};
+    const float cuts[2] = {100.0f, 500.0f};
+    own_ground::DepthPiece pieces[own_ground::kMostDepthPieces];
+    const int n = own_ground::cutByDepths(zd, cuts, 2, pieces);
+    CHECK(n == 3);
+    float area = 0.0f;
+    bool bands[3] = {false, false, false};
+    for (int k = 0; k < n; ++k) {
+        const own_ground::DepthPiece& p = pieces[k];
+        CHECK(p.corners >= 3 && p.corners <= own_ground::kMostPieceCorners && p.band >= 0 && p.band <= 2);
+        bands[p.band] = true;
+        const float lo = p.band == 0 ? -1e30f : cuts[p.band - 1], hi = p.band == 2 ? 1e30f : cuts[p.band];
+        for (int c = 0; c < p.corners; ++c) {
+            const float sum = p.share[c][0] + p.share[c][1] + p.share[c][2];
+            const float z = p.share[c][0] * zd[0] + p.share[c][1] * zd[1] + p.share[c][2] * zd[2];
+            CHECK(std::fabs(sum - 1.0f) < 1e-4f && z >= lo - 0.01f && z <= hi + 0.01f);
+        }
+        // its size among the shares (the triangle's own 0.5 there): a fan round its first corner
+        for (int c = 1; c + 1 < p.corners; ++c) {
+            const float ax = p.share[c][1] - p.share[0][1], ay = p.share[c][2] - p.share[0][2];
+            const float bx = p.share[c + 1][1] - p.share[0][1], by = p.share[c + 1][2] - p.share[0][2];
+            area += 0.5f * std::fabs(ax * by - ay * bx);
+        }
+    }
+    CHECK(bands[0] && bands[1] && bands[2]);
+    CHECK(std::fabs(area - 0.5f) < 1e-4f);  // all of the triangle, nothing twice
+    // none of its depths between the cuts: one piece, the triangle itself, in its band
+    const float flat[3] = {200.0f, 300.0f, 250.0f};
+    CHECK(own_ground::cutByDepths(flat, cuts, 2, pieces) == 1 && pieces[0].band == 1 && pieces[0].corners == 3);
+    CHECK(own_ground::cutByDepths(flat, cuts, 0, pieces) == 1 && pieces[0].band == 0);
+}
+
 TEST(own_ground_keeps_room_in_the_game_s_memory) {
     // 3.0.4-beta.20: uaRO.exe is 32-bit and not large address aware - 2 GB for the game, the driver and the card's
     // driver; lighthalzen's own world takes 214 MB as it is read. Less than kKeepFree left: the far models let go,

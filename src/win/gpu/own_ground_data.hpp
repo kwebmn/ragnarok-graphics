@@ -25,6 +25,9 @@ struct OwnGround {
     // 3.0.20-beta.30 (the owner's «6,7,8,9», 6): the land past its edges (core/outskirts.hpp) - the 3D view's horizon
     terrain::Mesh outskirts;
     std::vector<float> seaFrame;  // 3.0.20-beta.31: the sea past its wet edges (outskirts::seaFrame), x y z a corner
+    // 3.0.20-beta.42: 1 a corner of the ground (row by row of width + 1) some vertex of the outskirts takes its colour
+    // from (its blend) - the land's chunks are coloured again when the game gives one of them another colour
+    std::vector<uint8_t> edgeCorners;
     terrain::Atlas atlas;
     std::vector<float> cornerNormals;  // 3.0.4-beta.26: the cells' corners' (own_ground::cornerNormals) - its light
     unsigned restingCells = 0;  // 3.0.6-beta.3: the cells a model rests on (terrain::restingOn), for the log

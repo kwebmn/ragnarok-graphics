@@ -13,6 +13,8 @@ namespace {
 constexpr float kHills = 14.0f, kMountains = 380.0f;  // units up
 constexpr float kSkirt = 10.0f, kCurtain = 8.0f;      // units down
 constexpr float kSeaShare = 0.25f;  // 3.0.20-beta.31: the edge's corners under the water a sea's map has
+constexpr int kBand = 6;            // 3.0.20-beta.42: the map's outer band of cells ...
+constexpr float kHung = 0.9f;       // ... so much of it open: a map its makers hung in the sky (yuno, gonryun)
 
 float hash2(int x, int y, uint32_t seed) {
     uint32_t h = uint32_t(x) * 0x8DA6B343u ^ uint32_t(y) * 0xD8163841u ^ (seed + 0x9E3779B9u) * 0xCB1AB31Fu;
@@ -57,16 +59,26 @@ float ridged(float x, float y, uint32_t seed) {  // 0-1, sharp ridges
     return sum / total;
 }
 
-// What the edge is at a corner of it: the corners' height there, its window's mean height, the share of the window's
-// cells under the water, its most common texture
+// What the ground is at a corner of its edge: the corners' height there, its window's mean height, the share of the
+// window's cells under the water, its most common texture
 struct EdgePoint {
     float exact = 0.0f, smooth = 0.0f, wet = 0.0f;
     int texture = -1;
+    bool made = false;
 };
 
-class Edge {
+// 3.0.20-beta.42 (the audit of the horizon): the land's plan. Beta.30's land began at the map's rectangle - but most
+// maps keep one to three rings of cells without a top round their ground, and between the ground and the land lay a
+// trench of nothing. The plan: which cells are the ground's (a top), which open ones the land fills (all past the
+// rectangle, within it those reached from outside through open cells - a hole the ground closes round is the map's
+// own), and for every corner as far as the land goes the nearest corner of the ground and how far it is (cells) - the
+// land's heights, pictures and colours go by that corner, as beta.30's went by the rectangle's edge
+class Plan {
 public:
-    Edge(const gnd::Ground& g, const Options& o) : g_(g), o_(o) {
+    Plan(const gnd::Ground& g, const Options& o) : g_(g), o_(o), w_(g.width), h_(g.height) {
+        r_ = ((std::max(o.ring, 0) + kChunkCells - 1) / kChunkCells) * kChunkCells + 2 * kChunkCells;
+        side_ = w_ + 2 * r_ + 1;
+        rows_ = h_ + 2 * r_ + 1;
         // the maps' filler round their edges (BACKSIDE.bmp): never the outskirts' picture
         backside_.resize(g.textures.size(), false);
         for (size_t t = 0; t < g.textures.size(); ++t) {
@@ -74,22 +86,78 @@ public:
             for (char& c : low) c = char(std::tolower(uint8_t(c)));
             backside_[t] = low.find("backside") != std::string::npos;
         }
-        points_.resize(size_t(2 * (g.width + g.height)));
-        for (int x = 0; x <= g.width; ++x) {
-            points_[indexOf(x, 0)] = make(x, 0);
-            points_[indexOf(x, g.height)] = make(x, g.height);
+        // the open cells reached from outside, and the outer band's share of open ones
+        out_.assign(size_t(w_) * size_t(h_), 0);
+        std::vector<int> stack;
+        size_t band = 0, bandOpen = 0;
+        for (int y = 0; y < h_; ++y)
+            for (int x = 0; x < w_; ++x) {
+                const bool open = !top(x, y);
+                if (x < kBand || y < kBand || x >= w_ - kBand || y >= h_ - kBand) ++band, bandOpen += open ? 1 : 0;
+                if (open && (x == 0 || y == 0 || x == w_ - 1 || y == h_ - 1)) {
+                    out_[size_t(y) * size_t(w_) + size_t(x)] = 1;
+                    stack.push_back(y * w_ + x);
+                }
+            }
+        hung_ = band > 0 && float(bandOpen) >= kHung * float(band);
+        while (!stack.empty()) {
+            const int at = stack.back();
+            stack.pop_back();
+            const int x = at % w_, y = at / w_;
+            const int nx[4] = {x - 1, x + 1, x, x}, ny[4] = {y, y, y - 1, y + 1};
+            for (int k = 0; k < 4; ++k) {
+                if (nx[k] < 0 || ny[k] < 0 || nx[k] >= w_ || ny[k] >= h_ || top(nx[k], ny[k])) continue;
+                uint8_t& seen = out_[size_t(ny[k]) * size_t(w_) + size_t(nx[k])];
+                if (seen) continue;
+                seen = 1;
+                stack.push_back(ny[k] * w_ + nx[k]);
+            }
         }
-        for (int y = 0; y <= g.height; ++y) {
-            points_[indexOf(0, y)] = make(0, y);
-            points_[indexOf(g.width, y)] = make(g.width, y);
+        // every corner's nearest corner of the ground: the way to it (cells), two sweeps over the corners
+        // (8SSEDT); a corner of the ground itself 0, 0
+        way_.assign(size_t(side_) * size_t(rows_) * 2, kFar);
+        for (int y = 0; y < h_; ++y)
+            for (int x = 0; x < w_; ++x) {
+                if (!top(x, y)) continue;
+                any_ = true;
+                for (int k = 0; k < 4; ++k) {
+                    int16_t* v = wayAt(x + (k & 1), y + (k >> 1));
+                    v[0] = v[1] = 0;
+                }
+            }
+        if (!any_) return;
+        const auto take = [&](int16_t* p, int i, int j, int oi, int oj) {
+            const int ni = i + oi, nj = j + oj;
+            if (ni < -r_ || nj < -r_ || ni > w_ + r_ || nj > h_ + r_) return;
+            const int16_t* n = wayAt(ni, nj);
+            if (n[0] == kFar) return;
+            const int dx = n[0] + oi, dy = n[1] + oj;
+            if (p[0] == kFar || dx * dx + dy * dy < int(p[0]) * p[0] + int(p[1]) * p[1])
+                p[0] = int16_t(dx), p[1] = int16_t(dy);
+        };
+        for (int j = -r_; j <= h_ + r_; ++j) {
+            for (int i = -r_; i <= w_ + r_; ++i) {
+                int16_t* p = wayAt(i, j);
+                take(p, i, j, -1, 0), take(p, i, j, 0, -1), take(p, i, j, -1, -1), take(p, i, j, 1, -1);
+            }
+            for (int i = w_ + r_; i >= -r_; --i) take(wayAt(i, j), i, j, 1, 0);
         }
+        for (int j = h_ + r_; j >= -r_; --j) {
+            for (int i = w_ + r_; i >= -r_; --i) {
+                int16_t* p = wayAt(i, j);
+                take(p, i, j, 1, 0), take(p, i, j, 0, 1), take(p, i, j, 1, 1), take(p, i, j, -1, 1);
+            }
+            for (int i = -r_; i <= w_ + r_; ++i) take(wayAt(i, j), i, j, -1, 0);
+        }
+        heights_.assign(size_t(side_) * size_t(rows_), kUnset);
+        edges_.assign(size_t(w_ + 1) * size_t(h_ + 1), EdgePoint{});
         // a texture's cells a picture: the mean over its cells
         std::map<int, std::pair<double, int>> spans;
-        for (int y = 0; y < g.height; ++y)
-            for (int x = 0; x < g.width; ++x) {
-                const gnd::Cell& c = g.cells[size_t(y) * size_t(g.width) + size_t(x)];
-                if (c.top < 0 || size_t(c.top) >= g.surfaces.size()) continue;
-                const gnd::Surface& s = g.surfaces[size_t(c.top)];
+        for (int y = 0; y < h_; ++y)
+            for (int x = 0; x < w_; ++x) {
+                const gnd::Cell* c = top(x, y);
+                if (!c) continue;
+                const gnd::Surface& s = g.surfaces[size_t(c->top)];
                 const float span = 0.5f * (std::fabs(s.u[1] - s.u[0]) + std::fabs(s.v[2] - s.v[0]));
                 if (span <= 0.0f) continue;
                 spans[s.texture].first += span;
@@ -97,57 +165,117 @@ public:
             }
         for (const auto& t : spans)
             spanOf_[t.first] = std::clamp(float(t.second.first / t.second.second), 0.0625f, 1.0f);
-        // 3.0.20-beta.31: a sea's map - a quarter of its edge under the water at least (alberta 0.29, comodo 0.38,
-        // izlude 0.91); a river's or a lake's at the edge (prt_fild08 0.17, pay_fild01 0.13) no sea: the edge all dry
-        sea_ = wetShare() >= kSeaShare;
-        if (!sea_)
-            for (EdgePoint& e : points_) e.wet = 0.0f;
+        // the ground's edge: its corners that are an open cell's the land fills too. 3.0.20-beta.31: a sea's map - a
+        // quarter of them under the water at least (alberta 0.29, comodo 0.38, izlude 0.91); a river's or a lake's
+        // at the edge (prt_fild08 0.17, pay_fild01 0.13) no sea: the edge all dry
+        std::vector<uint32_t> rim;
+        for (int j = 0; j <= h_; ++j)
+            for (int i = 0; i <= w_; ++i) {
+                const int16_t* v = wayAt(i, j);
+                if (v[0] != 0 || v[1] != 0) continue;
+                if (covered(i - 1, j - 1) || covered(i, j - 1) || covered(i - 1, j) || covered(i, j))
+                    rim.push_back(uint32_t(j) * uint32_t(w_ + 1) + uint32_t(i));
+            }
+        size_t wet = 0;
+        for (const uint32_t c : rim) {
+            EdgePoint& e = edges_[c];
+            e = make(int(c % uint32_t(w_ + 1)), int(c / uint32_t(w_ + 1)));
+            wet += e.wet >= 0.5f ? 1 : 0;
+        }
+        wetShare_ = rim.empty() ? 0.0f : float(wet) / float(rim.size());
+        sea_ = o.water && wetShare_ >= kSeaShare;
         double sum = 0.0;  // the dry corners' - the land far off never sinks under the water
         size_t dry = 0;
-        for (const EdgePoint& e : points_)
+        for (const uint32_t c : rim) {
+            EdgePoint& e = edges_[c];
+            if (!sea_) e.wet = 0.0f;
             if (e.wet < 0.5f) sum += e.smooth, ++dry;
+        }
         if (!dry)
-            for (const EdgePoint& e : points_) sum += e.smooth, ++dry;
+            for (const uint32_t c : rim) sum += edges_[c].smooth, ++dry;
         meanHeight = dry ? float(sum / double(dry)) : 0.0f;
     }
-    // a place on the border, between its corners
-    EdgePoint at(float bx, float by) const {
-        const bool side = bx <= 0.0f || bx >= float(g_.width);  // x fixed: along y
-        const float along = side ? by : bx;
-        const float fixed = side ? bx : by;
-        const int lo = std::clamp(int(std::floor(along)), 0, side ? g_.height : g_.width);
-        const int hi = std::min(lo + 1, side ? g_.height : g_.width);
-        const float t = std::clamp(along - float(lo), 0.0f, 1.0f);
-        const int f = int(std::lround(fixed));
-        const EdgePoint& a = points_[side ? indexOf(f, lo) : indexOf(lo, f)];
-        const EdgePoint& b = points_[side ? indexOf(f, hi) : indexOf(hi, f)];
-        EdgePoint p;
-        p.exact = a.exact + (b.exact - a.exact) * t;
-        p.smooth = a.smooth + (b.smooth - a.smooth) * t;
-        p.wet = a.wet + (b.wet - a.wet) * t;
-        p.texture = t < 0.5f ? a.texture : b.texture;
-        return p;
+
+    bool any() const { return any_; }    // a cell of ground at all
+    bool hung() const { return hung_; }  // in the sky by its makers: no land round it
+    bool sea() const { return sea_; }
+    float wetShare() const { return wetShare_; }
+    int reach() const { return r_; }
+    // an open cell the land fills: any past the rectangle, within it one reached from outside
+    bool covered(int x, int y) const {
+        if (x < 0 || y < 0 || x >= w_ || y >= h_) return true;
+        return out_[size_t(y) * size_t(w_) + size_t(x)] != 0;
+    }
+    bool ground(int x, int y) const { return top(x, y) != nullptr; }
+    // a corner's (as far as reach() off the rectangle; past it: the last one's) way to the ground, cells
+    float distance(int i, int j) const {
+        const int16_t* v = wayAt(clampI(i), clampJ(j));
+        return std::sqrt(float(int(v[0]) * v[0] + int(v[1]) * v[1]));
+    }
+    // its nearest corner of the ground, row by row of width + 1
+    uint32_t corner(int i, int j) const {
+        i = clampI(i), j = clampJ(j);
+        const int16_t* v = wayAt(i, j);
+        return uint32_t(std::clamp(j + v[1], 0, h_)) * uint32_t(w_ + 1) + uint32_t(std::clamp(i + v[0], 0, w_));
+    }
+    const EdgePoint& edge(int i, int j) const {
+        const uint32_t c = corner(i, j);
+        EdgePoint& e = edges_[c];
+        if (!e.made) {
+            e = make(int(c % uint32_t(w_ + 1)), int(c / uint32_t(w_ + 1)));
+            if (!sea_) e.wet = 0.0f;
+        }
+        return e;
+    }
+    // the land's height at a corner (up along -y): at the ground's edge the ground's own, a few cells on its edge's
+    // smoothed, then the edge's mean, the hills, the mountains to the horizon
+    float height(int i, int j) const {
+        i = clampI(i), j = clampJ(j);
+        float& kept = heights_[size_t(j + r_) * size_t(side_) + size_t(i + r_)];
+        if (kept != kUnset) return kept;
+        const float d = distance(i, j);
+        const EdgePoint& e = edge(i, j);
+        float base = e.exact;
+        if (d > 0.0f) {
+            // the edge's own at it, smoothed a few cells on; 3.0.20-beta.30: the edge's mean further off - its ridges
+            // and valleys went on straight out to the horizon
+            base += (e.smooth - e.exact) * smoothBetween(0.0f, 8.0f, d);
+            base += (meanHeight - base) * smoothBetween(8.0f, 60.0f, d);
+            // 3.0.20-beta.31: past a wet edge the sea's bed - flat, 15 units under the water's level at least
+            if (o_.water) {
+                const float bed = std::max(e.smooth, o_.waterLevel + 15.0f);
+                base += (bed - base) * e.wet * smoothBetween(0.0f, 8.0f, d);
+            }
+            const float cx = float(i), cy = float(j);
+            const float hills = kHills * fbm(cx / 26.0f, cy / 26.0f, o_.seed) * smoothBetween(0.0f, 12.0f, d);
+            const float mountains = kMountains * smoothBetween(40.0f, 240.0f, d) *
+                                    (0.3f + 0.7f * ridged(cx / 110.0f, cy / 110.0f, o_.seed + 7u));
+            base -= (hills + mountains) * (1.0f - e.wet);
+        }
+        kept = base;
+        return base;
     }
     float spanOf(int texture) const {
         const auto it = spanOf_.find(texture);
         return it == spanOf_.end() ? 0.25f : it->second;
     }
+    float meanHeight = 0.0f;  // of the edge's dry corners' smoothed heights: the land far off settles to it
 
 private:
-    size_t indexOf(int x, int y) const {  // round the border, clockwise from the first corner
-        const int w = g_.width, h = g_.height;
-        if (y <= 0) return size_t(std::clamp(x, 0, w));
-        if (x >= w) return size_t(w + std::clamp(y, 0, h));
-        if (y >= h) return size_t(w + h + (w - std::clamp(x, 0, w)));
-        return size_t((2 * w + h + (h - std::clamp(y, 0, h))) % (2 * (w + h)));
-    }
+    static constexpr int16_t kFar = 16000;
+    static constexpr float kUnset = -3.0e38f;
+    int clampI(int i) const { return std::clamp(i, -r_, w_ + r_); }
+    int clampJ(int j) const { return std::clamp(j, -r_, h_ + r_); }
+    int16_t* wayAt(int i, int j) { return &way_[(size_t(j + r_) * size_t(side_) + size_t(i + r_)) * 2]; }
+    const int16_t* wayAt(int i, int j) const { return &way_[(size_t(j + r_) * size_t(side_) + size_t(i + r_)) * 2]; }
     const gnd::Cell* top(int x, int y) const {
-        if (x < 0 || y < 0 || x >= g_.width || y >= g_.height) return nullptr;
-        const gnd::Cell& c = g_.cells[size_t(y) * size_t(g_.width) + size_t(x)];
+        if (x < 0 || y < 0 || x >= w_ || y >= h_) return nullptr;
+        const gnd::Cell& c = g_.cells[size_t(y) * size_t(w_) + size_t(x)];
         return c.top >= 0 && size_t(c.top) < g_.surfaces.size() ? &c : nullptr;
     }
     EdgePoint make(int x, int y) const {
         EdgePoint p;
+        p.made = true;
         double exact = 0.0;
         int n = 0;
         for (int j = y - 1; j <= y; ++j)
@@ -186,42 +314,16 @@ private:
     }
     const gnd::Ground& g_;
     const Options& o_;
-    std::vector<EdgePoint> points_;
+    int w_ = 0, h_ = 0, r_ = 0, side_ = 0, rows_ = 0;
+    std::vector<uint8_t> out_;      // a cell of the map row by row: 1 open and reached from outside
+    std::vector<int16_t> way_;      // a corner's way to its nearest corner of the ground: x, y (cells)
+    mutable std::vector<float> heights_;
+    mutable std::vector<EdgePoint> edges_;  // by the ground's corners, made when first asked for
     std::map<int, float> spanOf_;
     std::vector<bool> backside_;
-    bool sea_ = false;
-
-public:
-    float meanHeight = 0.0f;  // of the edge's dry corners' smoothed heights: the land far off settles to it
-    bool sea() const { return sea_; }
-    float wetShare() const {  // the edge's corners under the water, of all
-        size_t wet = 0;
-        for (const EdgePoint& e : points_) wet += e.wet >= 0.5f ? 1 : 0;
-        return points_.empty() ? 0.0f : float(wet) / float(points_.size());
-    }
+    bool any_ = false, hung_ = false, sea_ = false;
+    float wetShare_ = 0.0f;
 };
-
-float heightOf(const gnd::Ground& g, const Options& o, const Edge& edge, float cx, float cy, float* wet = nullptr,
-               int* texture = nullptr) {
-    const float bx = std::clamp(cx, 0.0f, float(g.width)), by = std::clamp(cy, 0.0f, float(g.height));
-    const float d = std::hypot(cx - bx, cy - by);
-    const EdgePoint e = edge.at(bx, by);
-    if (wet) *wet = e.wet;
-    if (texture) *texture = e.texture;
-    // the edge's own at it, smoothed a few cells on; 3.0.20-beta.30: the edge's mean further off - its ridges and
-    // valleys went on straight out to the horizon
-    float base = e.exact + (e.smooth - e.exact) * smoothBetween(0.0f, 8.0f, d);
-    base += (edge.meanHeight - base) * smoothBetween(8.0f, 60.0f, d);
-    // 3.0.20-beta.31: past a wet edge the sea's bed - flat, 15 units under the water's level at least
-    if (o.water) {
-        const float bed = std::max(e.smooth, o.waterLevel + 15.0f);
-        base += (bed - base) * e.wet * smoothBetween(0.0f, 8.0f, d);
-    }
-    const float hills = kHills * fbm(cx / 26.0f, cy / 26.0f, o.seed) * smoothBetween(0.0f, 12.0f, d);
-    const float mountains =
-        kMountains * smoothBetween(40.0f, 240.0f, d) * (0.3f + 0.7f * ridged(cx / 110.0f, cy / 110.0f, o.seed + 7u));
-    return base - (hills + mountains) * (1.0f - e.wet);
-}
 
 struct Part {
     std::vector<terrain::Vertex> vertices;
@@ -229,18 +331,12 @@ struct Part {
     std::vector<int32_t> grid;  // a corner's vertex, -1 none yet
 };
 
-}  // namespace
-
-float heightAt(const gnd::Ground& g, const Options& o, float cx, float cy) {
-    const Edge edge(g, o);
-    return heightOf(g, o, edge, cx, cy);
-}
-
-std::vector<float> seaFrame(const gnd::Ground& g, const Options& o) {
+// 3.0.20-beta.31 (6 and 7: the sea past a map's wet edges), 3.0.20-beta.42 (over the open cells within the map too -
+// its own water ends where its ground does): four quads round the rectangle, then the open cells within it the land
+// fills, their rows' runs joined downwards
+std::vector<float> seaOf(const gnd::Ground& g, const Options& o, const Plan& plan) {
     std::vector<float> out;
-    if (!o.water || g.width <= 0 || g.height <= 0) return out;
-    const Edge edge(g, o);
-    if (!edge.sea()) return out;
+    if (!o.water || !plan.any() || plan.hung() || !plan.sea()) return out;
     const float x0 = -0.5f * float(g.width) * g.zoom, x1 = -x0, z0 = -0.5f * float(g.height) * g.zoom, z1 = -z0;
     const float r = float(o.ring) * g.zoom, X0 = x0 - r, X1 = x1 + r, Z0 = z0 - r, Z1 = z1 + r;
     const auto quad = [&](float ax, float az, float bx, float bz) {
@@ -251,13 +347,60 @@ std::vector<float> seaFrame(const gnd::Ground& g, const Options& o) {
     quad(X0, z1, X1, Z1);  // south
     quad(X0, z0, x0, z1);  // west
     quad(x1, z0, X1, z1);  // east
+    struct Box {
+        int x0, x1, y0, y1;  // cells: x0 .. x1 - 1, y0 .. y1 - 1
+    };
+    std::vector<Box> open, done;
+    for (int y = 0; y <= g.height; ++y) {
+        std::vector<Box> next;
+        for (int x = 0; y < g.height && x < g.width;) {
+            if (!plan.covered(x, y)) {
+                ++x;
+                continue;
+            }
+            int end = x;
+            while (end < g.width && plan.covered(end, y)) ++end;
+            Box b{x, end, y, y + 1};
+            for (Box& before : open)
+                if (before.x0 == b.x0 && before.x1 == b.x1 && before.y1 == y) {  // the same run a row up: one box
+                    b.y0 = before.y0;
+                    before.y1 = -1;  // taken on
+                }
+            next.push_back(b);
+            x = end;
+        }
+        for (const Box& before : open)
+            if (before.y1 >= 0) done.push_back(before);
+        open.swap(next);
+    }
+    for (const Box& b : done)
+        quad(x0 + float(b.x0) * g.zoom, z0 + float(b.y0) * g.zoom, x0 + float(b.x1) * g.zoom,
+             z0 + float(b.y1) * g.zoom);
     return out;
 }
 
-terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const terrain::Sun& sun, const Options& o) {
+}  // namespace
+
+float heightAt(const gnd::Ground& g, const Options& o, float cx, float cy) {
+    const Plan plan(g, o);
+    if (!plan.any()) return 0.0f;
+    return plan.height(int(std::lround(cx)), int(std::lround(cy)));
+}
+
+std::vector<float> seaFrame(const gnd::Ground& g, const Options& o) {
+    if (!o.water || g.width <= 0 || g.height <= 0 || g.cells.size() < size_t(g.width) * size_t(g.height)) return {};
+    const Plan plan(g, o);
+    return seaOf(g, o, plan);
+}
+
+terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const terrain::Sun& sun, const Options& o,
+                    std::vector<float>* sea) {
     terrain::Mesh m;
+    if (sea) sea->clear();
     if (g.width <= 0 || g.height <= 0 || g.cells.size() < size_t(g.width) * size_t(g.height)) return m;
-    const Edge edge(g, o);
+    const Plan plan(g, o);
+    if (!plan.any() || plan.hung()) return m;  // 3.0.20-beta.42: a map hung in the sky keeps the sky round it
+    if (sea) *sea = seaOf(g, o, plan);
     float lm[2];
     terrain::lightmapUv(atlas, terrain::meanLightCell(g), 0.5f, 0.5f, lm);
     const float half[2] = {float(g.width) / 2.0f, float(g.height) / 2.0f};
@@ -270,23 +413,21 @@ terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const ter
             const float gapY = float(std::max({0, oy - g.height, -(oy + kChunkCells)}));
             const float dmin = std::hypot(gapX, gapY);
             if (dmin > float(o.ring)) continue;
-            if (ox >= 0 && oy >= 0 && ox + kChunkCells <= g.width && oy + kChunkCells <= g.height) continue;
             const int q = dmin < 32.0f ? 1 : dmin < 96.0f ? 2 : dmin < 192.0f ? 4 : dmin < 288.0f ? 8 : 16;
             const int n = kChunkCells / q;
             std::map<int, Part> parts;
             const auto vertexOf = [&](Part& part, int texture, int i, int j) -> uint32_t {
                 int32_t& at = part.grid[size_t(j) * size_t(n + 1) + size_t(i)];
                 if (at >= 0) return uint32_t(at);
-                const float cx = float(ox + i * q), cy = float(oy + j * q);
+                const int cx = ox + i * q, cy = oy + j * q;
                 terrain::Vertex v{};
-                v.pos[0] = (cx - half[0]) * g.zoom;
-                v.pos[1] = heightOf(g, o, edge, cx, cy);
-                v.pos[2] = (cy - half[1]) * g.zoom;
+                v.pos[0] = (float(cx) - half[0]) * g.zoom;
+                v.pos[1] = plan.height(cx, cy);
+                v.pos[2] = (float(cy) - half[1]) * g.zoom;
                 v.plain = v.pos[1];
-                const float e = 0.5f * float(q);
-                const float across = 2.0f * e * g.zoom;
-                const float dx = (heightOf(g, o, edge, cx + e, cy) - heightOf(g, o, edge, cx - e, cy)) / across;
-                const float dz = (heightOf(g, o, edge, cx, cy + e) - heightOf(g, o, edge, cx, cy - e)) / across;
+                const float across = 2.0f * float(q) * g.zoom;
+                const float dx = (plan.height(cx + q, cy) - plan.height(cx - q, cy)) / across;
+                const float dz = (plan.height(cx, cy + q) - plan.height(cx, cy - q)) / across;
                 const float len = std::sqrt(dx * dx + 1.0f + dz * dz);
                 v.normal[0] = dx / len, v.normal[1] = -1.0f / len, v.normal[2] = dz / len;
                 const float into[3] = {-v.normal[0], -v.normal[1], -v.normal[2]};
@@ -294,10 +435,13 @@ terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const ter
                 const float ratio = flatLight > 0.0f ? std::clamp(light / flatLight, 0.35f, 2.0f) : 1.0f;
                 const uint32_t grey = uint32_t(std::clamp(ratio * 127.5f, 0.0f, 255.0f) + 0.5f);
                 v.color = 0xFF000000u | grey << 16 | grey << 8 | grey;
-                const float span = edge.spanOf(texture);
-                v.uv[0] = cx * span;
-                v.uv[1] = cy * span;
+                const float span = plan.spanOf(texture);
+                v.uv[0] = float(cx) * span;
+                v.uv[1] = float(cy) * span;
                 v.lm[0] = lm[0], v.lm[1] = lm[1];
+                // 3.0.20-beta.42: its corner of the ground and how far off, for its colour (the renderer's)
+                const uint32_t off = uint32_t(std::clamp(std::lround(plan.distance(cx, cy) * 16.0f), 0L, 255L));
+                v.blend = (plan.corner(cx, cy) & 0xFFFFFFu) | off << 24;
                 at = int32_t(part.vertices.size());
                 part.vertices.push_back(v);
                 return uint32_t(at);
@@ -313,20 +457,28 @@ terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const ter
             for (int j = 0; j < n; ++j)
                 for (int i = 0; i < n; ++i) {
                     const int x0 = ox + i * q, y0 = oy + j * q;
-                    if (x0 >= 0 && y0 >= 0 && x0 + q <= g.width && y0 + q <= g.height) continue;  // the map's own
+                    // the ground's own, or a hole it closes round (q 1 wherever a chunk touches the rectangle)
+                    if (q == 1 && !plan.covered(x0, y0)) continue;
                     const float mx = float(x0) + 0.5f * float(q), my = float(y0) + 0.5f * float(q);
                     const float bx = std::clamp(mx, 0.0f, float(g.width)), by = std::clamp(my, 0.0f, float(g.height));
                     if (std::hypot(mx - bx, my - by) > float(o.ring)) continue;
-                    float wet = 0.0f;
-                    int texture = -1;
-                    heightOf(g, o, edge, mx, my, &wet, &texture);
+                    // its picture: its corner's nearest to the ground (a larger one's middle)
+                    int ci = x0 + q / 2, cj = y0 + q / 2;
+                    if (q == 1) {
+                        float least = 1e30f;
+                        for (int k = 0; k < 4; ++k) {
+                            const float d = plan.distance(x0 + (k & 1), y0 + (k >> 1));
+                            if (d < least) least = d, ci = x0 + (k & 1), cj = y0 + (k >> 1);
+                        }
+                    }
+                    const int texture = plan.edge(ci, cj).texture;
                     if (texture < 0) continue;
                     Part& part = parts[texture];
                     if (part.grid.empty()) part.grid.assign(size_t(n + 1) * size_t(n + 1), -1);
                     const uint32_t a = vertexOf(part, texture, i, j), b = vertexOf(part, texture, i + 1, j);
                     const uint32_t c = vertexOf(part, texture, i, j + 1), d = vertexOf(part, texture, i + 1, j + 1);
                     part.indices.insert(part.indices.end(), {a, b, c, b, d, c});
-                    // the chunk's edges a skirt down, the map's edge a curtain
+                    // the chunk's edges a skirt down; where the ground begins a curtain
                     const auto hang = [&](uint32_t p0, uint32_t p1, float down) {
                         const uint32_t u0 = under(part, p0, down), u1 = under(part, p1, down);
                         part.indices.insert(part.indices.end(), {p0, p1, u0, p1, u1, u0});
@@ -335,11 +487,12 @@ terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const ter
                     if (i == n - 1) hang(b, d, kSkirt);
                     if (j == 0) hang(a, b, kSkirt);
                     if (j == n - 1) hang(c, d, kSkirt);
-                    const bool alongY = y0 >= 0 && y0 + q <= g.height, alongX = x0 >= 0 && x0 + q <= g.width;
-                    if (alongY && x0 + q == 0) hang(b, d, kCurtain);    // west of the map: its east side
-                    if (alongY && x0 == g.width) hang(a, c, kCurtain);  // east of it: its west side
-                    if (alongX && y0 + q == 0) hang(c, d, kCurtain);    // north
-                    if (alongX && y0 == g.height) hang(a, b, kCurtain);  // south
+                    if (q == 1) {  // 3.0.20-beta.42: by the ground's own cells, wherever they lie
+                        if (plan.ground(x0 - 1, y0)) hang(a, c, kCurtain);  // the ground west of it
+                        if (plan.ground(x0 + 1, y0)) hang(b, d, kCurtain);  // east
+                        if (plan.ground(x0, y0 - 1)) hang(a, b, kCurtain);  // north
+                        if (plan.ground(x0, y0 + 1)) hang(c, d, kCurtain);  // south
+                    }
                 }
             if (parts.empty()) continue;
             terrain::Chunk ch;

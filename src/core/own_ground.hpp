@@ -103,6 +103,18 @@ int pastDepth(const float zd[3], float from, float out[4][3]);
 // (ownFrom), each piece one depth (the GPU carries a depth straight across a triangle, and the game's depth at one
 // corner with the squeezed one at another made it nearer than either: walls in front of roofs, R-W7A5XC)
 int nearDepth(const float zd[3], float to, float out[4][3]);
+// 3.0.20-beta.42 (the audit of the horizon): a triangle (its corners' view depths zd) cut at the depths `cuts`
+// (ascending, `count` of them, kMostDepthCuts at most) into the pieces between them - band 0 nearer than the first,
+// band `count` past the last; a piece's corners the shares of the triangle's three, in order round it. For what must
+// run straight across a piece: the fog's line, flat nearer than where it begins and past where it ends, and the depth
+// squeezed past the far plane (beta.31's sea - eight triangles from the eye to the horizon - took the fog between its
+// corners' clamped ends: half hazed where the land beside it was all haze). The number of pieces made
+constexpr int kMostDepthCuts = 4, kMostDepthPieces = kMostDepthCuts + 1, kMostPieceCorners = 8;
+struct DepthPiece {
+    int band = 0, corners = 0;
+    float share[kMostPieceCorners][3];
+};
+int cutByDepths(const float zd[3], const float* cuts, int count, DepthPiece out[kMostDepthPieces]);
 
 // Whether a box of the world (lo, hi) may show: not when all of it lies behind the near plane, past `most` or off one
 // side of the screen (width x height game pixels); nearest: its corners' least view depth (0 round the eye);
@@ -136,6 +148,8 @@ int channelsApart(uint32_t a, uint32_t b);
 
 // The game's own colours of its ground, learnt from its draws: each cell corner's vertex colour (the colour the game
 // lights its ground with) and the fog of this frame (the specular's alpha by the view depth)
+constexpr float kLandBlend = 4.0f;  // 3.0.20-beta.42: cells off the ground the land's colour is the map's mean by
+
 // 3.0.20-beta.38 (the owner's «6,7,8,9», 9 - the frame's work on more threads): a part of a frame's fog vertices of the
 // game's ground (its notes worked out on the frame's threads) - added to the shading's in their order (Shading::fogOf)
 struct FogSums {
@@ -165,6 +179,10 @@ public:
     float fogB() const { return fogB_; }
     uint32_t specularRgb() const { return specularRgb_; }
     uint32_t meanColour() const { return mean(); }  // 3.0.17-beta.19: the corners seen, for the log (none: white)
+    // 3.0.20-beta.42 (the audit of the horizon): the colour of the land past the ground (core/outskirts.hpp) by the
+    // corner of the ground it lies nearest to (its number row by row of width + 1) and how far off (cells): the
+    // corner's own as the game draws it where the land begins, the mean of the corners seen from kLandBlend cells on
+    uint32_t landColour(uint32_t corner, float cells) const;
     // 3.0.4-beta.12: the corners given another colour since the last call (index j * (width + 1) + i, in the order
     // seen) - the renderer makes the colours round them again; mean: the mean the unseen ones take moved by more than
     // a little (all to make again)

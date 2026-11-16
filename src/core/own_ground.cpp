@@ -80,6 +80,46 @@ int nearDepth(const float zd[3], float to, float out[4][3]) {
     return pastDepth(turned, -to, out);
 }
 
+int cutByDepths(const float zd[3], const float* cuts, int count, DepthPiece out[kMostDepthPieces]) {
+    count = std::clamp(count, 0, kMostDepthCuts);
+    // what is left of the triangle past the cuts so far: a convex shape among the shares
+    float rest[kMostPieceCorners][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
+    int left = 3, made = 0;
+    const auto depthOf = [&](const float* s) { return s[0] * zd[0] + s[1] * zd[1] + s[2] * zd[2]; };
+    for (int band = 0; band <= count && left >= 3; ++band) {
+        DepthPiece& piece = out[made];
+        piece.band = band;
+        piece.corners = 0;
+        if (band == count) {  // past the last cut: all that is left
+            for (int i = 0; i < left; ++i) std::copy(rest[i], rest[i] + 3, piece.share[piece.corners++]);
+            ++made;
+            break;
+        }
+        const float cut = cuts[band];
+        float past[kMostPieceCorners][3];
+        int pastN = 0;
+        for (int i = 0; i < left; ++i) {
+            const int j = (i + 1) % left;
+            const float zi = depthOf(rest[i]), zj = depthOf(rest[j]);
+            const bool here = zi <= cut, next = zj <= cut;  // this side of the cut: the piece's
+            if (here && piece.corners < kMostPieceCorners)
+                std::copy(rest[i], rest[i] + 3, piece.share[piece.corners++]);
+            if (!here && pastN < kMostPieceCorners) std::copy(rest[i], rest[i] + 3, past[pastN++]);
+            if (here != next) {  // the edge crosses it: a corner of both
+                const float t = (cut - zi) / (zj - zi);
+                float mid[3];
+                for (int k = 0; k < 3; ++k) mid[k] = rest[i][k] + (rest[j][k] - rest[i][k]) * t;
+                if (piece.corners < kMostPieceCorners) std::copy(mid, mid + 3, piece.share[piece.corners++]);
+                if (pastN < kMostPieceCorners) std::copy(mid, mid + 3, past[pastN++]);
+            }
+        }
+        if (piece.corners >= 3) ++made;
+        left = pastN;
+        for (int i = 0; i < pastN; ++i) std::copy(past[i], past[i] + 3, rest[i]);
+    }
+    return made;
+}
+
 bool boxInView(const View& v, const camera::Projection& p, int width, int height, const float lo[3], const float hi[3],
                float most, float& nearest, float* farthest) {
     // 3.0.4-beta.12: by the view's planes - through the eye and the screen's edges, the near one, `most` - which hold
@@ -176,6 +216,19 @@ uint32_t Shading::diffuseAt(float x, float z) const {
         const float a = float((c00 >> k) & 0xFF) + (float((c10 >> k) & 0xFF) - float((c00 >> k) & 0xFF)) * tx;
         const float b = float((c01 >> k) & 0xFF) + (float((c11 >> k) & 0xFF) - float((c01 >> k) & 0xFF)) * tx;
         out |= uint32_t(std::clamp(a + (b - a) * tz, 0.0f, 255.0f) + 0.5f) << k;  // lround: a library call
+    }
+    return out;
+}
+
+uint32_t Shading::landColour(uint32_t corner, float cells) const {
+    const uint32_t mean = this->mean();
+    const uint32_t own = corner < corners_.size() && corners_[corner] ? corners_[corner] : mean;
+    float t = std::clamp(cells / kLandBlend, 0.0f, 1.0f);
+    t = t * t * (3.0f - 2.0f * t);
+    uint32_t out = 0;
+    for (int k = 0; k < 32; k += 8) {
+        const float a = float((own >> k) & 0xFF), b = float((mean >> k) & 0xFF);
+        out |= uint32_t(std::clamp(a + (b - a) * t, 0.0f, 255.0f) + 0.5f) << k;
     }
     return out;
 }

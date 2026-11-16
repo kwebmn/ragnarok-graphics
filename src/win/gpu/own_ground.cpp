@@ -429,14 +429,15 @@ void Renderer::Impl::ownColours(const OwnMaking& m, const OwnState::ChunkJob& jo
     const terrain::Mesh& mesh = meshOf(*g, job.which);
     const terrain::Chunk& ch = mesh.chunks[job.k];
     std::vector<uint32_t>& colours = o.colours[job.which];  // this chunk's vertices alone written
-    const float halfX = 0.5f * float(g->width) * g->zoom, halfZ = 0.5f * float(g->height) * g->zoom;
     for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
         const terrain::Batch& bt = mesh.batches[b];
         for (uint32_t v = bt.firstVertex; v < bt.firstVertex + bt.vertexCount; ++v) {
             const terrain::Vertex& tv = mesh.vertices[v];
             if (job.which == 2) {  // 3.0.20-beta.30: the outskirts - the edge's colour times their own slope's light
-                const uint32_t edge = o.shading.diffuseAt(std::clamp(tv.pos[0], -halfX, halfX),
-                                                          std::clamp(tv.pos[2], -halfZ, halfZ));
+                // 3.0.20-beta.42 (the audit): the colour of the ground's corner it lies nearest to where the land
+                // begins, the map's mean a few cells on (Shading::landColour; the vertex's blend names the corner) -
+                // not the colour at the map's rectangle: a filler cell's grey there darkened the land to the horizon
+                const uint32_t edge = o.shading.landColour(tv.blend & 0xFFFFFFu, float(tv.blend >> 24) / 16.0f);
                 const float slope = float(tv.color & 0xFFu) / 127.5f;
                 uint32_t c = edge & 0xFF000000u;
                 for (int part = 0; part < 3; ++part) {
@@ -595,6 +596,12 @@ bool Renderer::Impl::drawOwnGround() {
     if (meanMoved) {
         for (std::vector<uint8_t>& f : o.fresh) std::fill(f.begin(), f.end(), uint8_t(0));
     } else {
+        // 3.0.20-beta.42: a corner of the ground's edge the land past it takes its colour from - the land's chunks
+        // made again, a few a picture (as in a moved light)
+        bool edgeChanged = false;
+        for (uint32_t c : o.changed) edgeChanged = edgeChanged || (c < g->edgeCorners.size() && g->edgeCorners[c]);
+        if (edgeChanged)
+            for (uint8_t& f : o.fresh[2]) f = f ? uint8_t(2) : uint8_t(0);
         for (uint32_t c : o.changed) {
             const int i = int(c % uint32_t(g->width + 1)), j = int(c / uint32_t(g->width + 1));
             for (int cy = j - 1; cy <= j; ++cy)
@@ -1438,6 +1445,16 @@ bool Renderer::Impl::drawOwnWater() {
     if (camera::wideView() && mapOutdoors && g->seaFrame.size() >= 9) {
         const std::vector<float>& frame = g->seaFrame;
         const float tile = 1.0f / (4.0f * g->zoom);
+        // the depths its triangles are cut at, ascending: where the depth is squeezed, where the fog begins and ends
+        float seaCuts[own_ground::kMostDepthCuts] = {from, 0.0f, 0.0f, 0.0f};
+        int seaCutCount = 1;
+        if (fogged && std::fabs(o.shading.fogB()) > 1e-6f)
+            for (const float alpha : {255.0f, 0.0f}) {
+                const float at = (alpha - o.shading.fogA()) / o.shading.fogB();
+                if (std::isfinite(at) && at > p.nearZ + 1.0f && at < 1.0e6f) seaCuts[seaCutCount++] = at;
+            }
+        for (int a = 1; a < seaCutCount; ++a)  // three at most: put in order by hand
+            for (int b = a; b > 0 && seaCuts[b] < seaCuts[b - 1]; --b) std::swap(seaCuts[b], seaCuts[b - 1]);
         for (size_t t = 0; t + 9 <= frame.size(); t += 9) {
             float c[3][3], f[3][3];
             for (int k = 0; k < 3; ++k) {
@@ -1457,20 +1474,23 @@ bool Renderer::Impl::drawOwnWater() {
                         pf[k][a] = shares[k][0] * f[0][a] + shares[k][1] * f[1][a] + shares[k][2] * f[2][a];
                     }
                 const float pz[3] = {pc[0][2], pc[1][2], pc[2][2]};
-                for (int side = 0; side < 2; ++side) {
-                    float part[4][3];
-                    const int m = side == 0 ? own_ground::nearDepth(pz, from, part)
-                                            : own_ground::pastDepth(pz, from, part);
+                // 3.0.20-beta.42 (the audit): cut where the depth is squeezed and where the fog's line begins and
+                // ends too - across so large a triangle the fog went straight between its corners' clamped ends
+                own_ground::DepthPiece pieces[own_ground::kMostDepthPieces];
+                const int made = own_ground::cutByDepths(pz, seaCuts, seaCutCount, pieces);
+                for (int piece = 0; piece < made; ++piece) {
+                    const own_ground::DepthPiece& part = pieces[piece];
+                    const int m = part.corners;
                     if (m < 3) continue;
-                    if (o.waterVerts.size() + 4 > 65535) emit();
+                    if (o.waterVerts.size() + own_ground::kMostPieceCorners > 65535) emit();
                     const size_t base = o.waterVerts.size();
                     bool ok = true;
                     for (int q = 0; q < m && ok; ++q) {
                         float at[3] = {0, 0, 0}, place[3] = {0, 0, 0};
                         for (int k = 0; k < 3; ++k)
                             for (int a = 0; a < 3; ++a) {
-                                at[a] += part[q][k] * pc[k][a];
-                                place[a] += part[q][k] * pf[k][a];
+                                at[a] += part.share[q][k] * pc[k][a];
+                                place[a] += part.share[q][k] * pf[k][a];
                             }
                         own_ground::Tl2 placed;
                         ok = own_ground::placeView(p, at, placed);

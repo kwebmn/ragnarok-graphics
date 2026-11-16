@@ -163,3 +163,139 @@ TEST(outskirts_a_river_at_the_edge_is_no_sea) {
     }
     CHECK(under == 0);
 }
+
+namespace {
+
+// groundOf with its outermost `rings` rows and columns of cells without a top (as most of the game's maps: one to
+// three rings of nothing round the ground), and one cell in the middle too - a hole the ground closes round
+gnd::Ground ringedOf(int rings) {
+    gnd::Ground g = groundOf();
+    for (int y = 0; y < 16; ++y)
+        for (int x = 0; x < 16; ++x)
+            if (x < rings || y < rings || x >= 16 - rings || y >= 16 - rings)
+                g.cells[size_t(y) * 16 + size_t(x)].top = -1;
+    g.cells[8 * 16 + 8].top = -1;
+    return g;
+}
+
+// the cells (their first corners, cells' units) the mesh's triangles cover within the map's own rectangle
+std::set<std::pair<int, int>> coveredIn(const terrain::Mesh& m, const gnd::Ground& g) {
+    std::set<std::pair<int, int>> cells;
+    for (const terrain::Batch& b : m.batches)
+        for (uint32_t i = b.firstIndex; i + 3 <= b.firstIndex + b.indexCount; i += 3) {
+            float cx = 0.0f, cy = 0.0f, p[3][2];
+            for (uint32_t k = 0; k < 3; ++k) {
+                const terrain::Vertex& v = m.vertices[b.firstVertex + m.indices[i + k]];
+                p[k][0] = v.pos[0] / g.zoom, p[k][1] = v.pos[2] / g.zoom;
+                cx += p[k][0] / 3.0f, cy += p[k][1] / 3.0f;
+            }
+            // not a skirt's or a curtain's (upright: no size seen from above)
+            const float size = (p[1][0] - p[0][0]) * (p[2][1] - p[0][1]) - (p[1][1] - p[0][1]) * (p[2][0] - p[0][0]);
+            if (std::fabs(size) < 1e-4f) continue;
+            const int x = int(std::floor(cx + float(g.width) / 2.0f)), y = int(std::floor(cy + float(g.height) / 2.0f));
+            if (x >= 0 && y >= 0 && x < g.width && y < g.height) cells.insert({x, y});
+        }
+    return cells;
+}
+
+}  // namespace
+
+// 3.0.20-beta.42 (the audit of the horizon): most of the game's maps keep one to three rings of cells without a top
+// round their ground (prontera three, prt_fild08 two, geffen one) - beta.30's land began at the map's rectangle, and
+// between the ground and it lay a trench of nothing ten to thirty units wide (the sky seen in it from near the edge).
+// The land begins where the ground ends: the open cells reached from outside are its own, a hole the ground closes
+// round is not; at the ground's edge its heights are the ground's own corners'
+TEST(outskirts_begin_where_the_ground_ends_not_at_the_maps_rectangle) {
+    const gnd::Ground g = ringedOf(2);
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    outskirts::Options o;
+    const terrain::Mesh m = outskirts::build(g, atlas, terrain::Sun{}, o);
+    const std::set<std::pair<int, int>> in = coveredIn(m, g);
+    int rings = 0, ground = 0;
+    for (const auto& c : in) {
+        const bool ring = c.first < 2 || c.second < 2 || c.first >= 14 || c.second >= 14;
+        rings += ring ? 1 : 0, ground += ring ? 0 : 1;
+    }
+    CHECK(rings == 16 * 16 - 12 * 12);  // every open cell of the two rings
+    CHECK(ground == 0);                 // none of the ground's own, nor the hole in its middle (8, 8)
+    // at the ground's edge the ground's own corner heights: its west side's corners (x = 2) -20 (the west column's
+    // -30 cells are open now), and no step up or down to the land's first vertices there
+    CHECK(std::fabs(outskirts::heightAt(g, o, 2.0f, 8.0f) - -20.0f) < 0.01f);
+    CHECK(std::fabs(outskirts::heightAt(g, o, 8.0f, 14.0f) - -20.0f) < 0.01f);
+    CHECK(std::fabs(outskirts::heightAt(g, o, 1.0f, 8.0f) - -20.0f) < 4.0f);  // a cell on: near it yet
+    float most = 0.0f;  // and still off to the horizon
+    for (const terrain::Vertex& v : m.vertices) most = std::max(most, std::fabs(v.pos[0]) / g.zoom);
+    CHECK(most >= float(o.ring));
+}
+
+// 3.0.20-beta.42: a vertex of the land knows the corner of the ground it lies nearest to and how far off (its
+// `blend`: the corner's number row by row of width + 1 in the low 24 bits, the distance in sixteenths of a cell, 255
+// at most, in the high 8) - the renderer gives it that corner's colour as the game draws it, going over to the map's
+// mean a few cells on (beta.30 took the colour at the rectangle's edge: the filler's grey, half the ground's light)
+TEST(outskirts_vertices_know_their_corner_of_the_ground) {
+    const gnd::Ground g = ringedOf(1);
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    const terrain::Mesh m = outskirts::build(g, atlas, terrain::Sun{}, outskirts::Options{});
+    int atEdge = 0, far = 0;
+    for (const terrain::Vertex& v : m.vertices) {
+        const uint32_t corner = v.blend & 0xFFFFFFu, sixteenths = v.blend >> 24;
+        const int i = int(corner % 17u), j = int(corner / 17u);
+        CHECK(i >= 1 && i <= 15 && j >= 1 && j <= 15);  // a corner of the ground (its cells 1..14)
+        const float cx = v.pos[0] / g.zoom + 8.0f, cy = v.pos[2] / g.zoom + 8.0f;
+        const float d = std::hypot(cx - float(i), cy - float(j));
+        if (d < 15.9f) CHECK(std::fabs(float(sixteenths) / 16.0f - d) < 0.1f);
+        else CHECK(sixteenths == 255u);
+        atEdge += d < 0.01f ? 1 : 0, far += sixteenths == 255u ? 1 : 0;
+    }
+    CHECK(atEdge > 0 && far > 0);
+}
+
+// 3.0.20-beta.42: a map its makers hung in the sky (yuno, gonryun: nine tenths and more of its outer band of cells
+// open) keeps the sky round it - no land, no sea
+TEST(outskirts_none_round_a_map_hung_in_the_sky) {
+    gnd::Ground g = groundOf();
+    for (int y = 0; y < 16; ++y)
+        for (int x = 0; x < 16; ++x)
+            if (x < 6 || y < 6 || x >= 10 || y >= 10) g.cells[size_t(y) * 16 + size_t(x)].top = -1;  // an island
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    outskirts::Options o;
+    o.water = true;
+    o.waterLevel = -100.0f;  // all of it under the water: still none
+    CHECK(outskirts::build(g, atlas, terrain::Sun{}, o).vertices.empty());
+    CHECK(outskirts::seaFrame(g, o).empty());
+}
+
+// 3.0.20-beta.42: the sea of a seaside map covers the open cells within the map's rectangle too (izlude's outer ring
+// and half the next) - beta.31's frame began at the rectangle, a strip without water between the map's and the sea
+TEST(outskirts_the_sea_covers_the_open_cells_within_the_map) {
+    gnd::Ground g = ringedOf(1);
+    g.cells[8 * 16 + 8].top = 0;  // no hole
+    for (gnd::Cell& c : g.cells)
+        for (float& h : c.h) h = 10.0f;  // all under the water
+    outskirts::Options o;
+    o.water = true;
+    o.waterLevel = 0.0f;
+    const std::vector<float> frame = outskirts::seaFrame(g, o);
+    CHECK(frame.size() > 4 * 6 * 3 && frame.size() % 9 == 0);
+    // the ring's cells' middles each under a triangle of it, the ground's own cells' not
+    const auto under = [&](float px, float pz) {
+        for (size_t t = 0; t + 9 <= frame.size(); t += 9) {
+            const float ax = frame[t], az = frame[t + 2], bx = frame[t + 3], bz = frame[t + 5], cx = frame[t + 6],
+                        cz = frame[t + 8];
+            const float d0 = (bx - ax) * (pz - az) - (bz - az) * (px - ax);
+            const float d1 = (cx - bx) * (pz - bz) - (cz - bz) * (px - bx);
+            const float d2 = (ax - cx) * (pz - cz) - (az - cz) * (px - cx);
+            if ((d0 >= 0 && d1 >= 0 && d2 >= 0) || (d0 <= 0 && d1 <= 0 && d2 <= 0)) return true;
+        }
+        return false;
+    };
+    int ring = 0, ground = 0;
+    for (int y = 0; y < 16; ++y)
+        for (int x = 0; x < 16; ++x) {
+            const bool covered = under((float(x) + 0.5f - 8.0f) * g.zoom, (float(y) + 0.5f - 8.0f) * g.zoom);
+            const bool open = x < 1 || y < 1 || x >= 15 || y >= 15;
+            ring += open && covered ? 1 : 0, ground += !open && covered ? 1 : 0;
+        }
+    CHECK(ring == 16 * 16 - 14 * 14 && ground == 0);
+    for (size_t i = 1; i < frame.size(); i += 3) CHECK(frame[i] == o.waterLevel);
+}
