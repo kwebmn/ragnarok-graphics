@@ -1159,7 +1159,12 @@ private:
         // 3.0.19-beta.43 (R-XHRKGN, R-MMMP29: Geffen's and Aldebaran's paving one flat light colour): the ground's
         // draws (two sets of coordinates) by their first texture - the game's, its HD copy, none given, not there
         uint64_t groundGame = 0, groundCopy = 0, groundNone = 0, groundGone = 0;
+        // 3.0.20-beta.39 (the owner's «6,7,8,9», 9): the game's draws by their kind (as Direct3D 12's) - timed in
+        // every kKindEvery-th picture alone (a clock read twice a draw is dear on an old processor)
+        uint64_t kindFrames = 0, kindDraws[6] = {};
+        LONGLONG kindTicks[6] = {};
     } stats_;
+    static constexpr uint64_t kKindEvery = 8;
     // 3.0.19-beta.43: as Direct3D 12's noteDrawnWhite - a draw's texture that is not there drawn white, told once
     // each, 12 at most
     std::vector<uint32_t> whiteTold_;

@@ -2367,6 +2367,8 @@ void Renderer11::execute(const FrameRecord& record) {
         workLater11(laterLooks_.size() > 128 || laterLooks_.bytes() > (32u << 20) ? 4.0 : 1.5);
     }
     targetBound_ = false;
+    const bool kindTimed = stats_.frames % kKindEvery == 0;  // 3.0.20-beta.39: this picture's draws by kind
+    if (kindTimed) ++stats_.kindFrames;
     for (const Command& c : record.commands()) {
         if (c.type != Cmd::Draw) flushBatch();  // 0.90: the game's draws before it go first
         switch (c.type) {
@@ -2389,10 +2391,22 @@ void Renderer11::execute(const FrameRecord& record) {
                 writeTarget(record, record.writes()[c.index]);
                 break;
             case Cmd::Draw:
-                if (profileOn_)
+                if (profileOn_) {
                     profiledDraw(record, record.draws()[c.index]);
-                else
+                } else if (kindTimed) {  // 3.0.20-beta.39: by its kind (Direct3D 12's)
+                    const DrawCmd& d = record.draws()[c.index];
+                    const DrawSetup& s = record.states()[d.state];
+                    const int kind = s.ui ? 0 : d.effect ? 4 : !s.blend ? (d.fvf == d3d7::FVF_TL2 ? 1 : 2)
+                                                                        : d.vertexCount == 4 ? 3 : 5;
+                    LARGE_INTEGER from, to;
+                    QueryPerformanceCounter(&from);
+                    draw(record, d);
+                    QueryPerformanceCounter(&to);
+                    stats_.kindTicks[kind] += to.QuadPart - from.QuadPart;
+                    ++stats_.kindDraws[kind];
+                } else {
                     draw(record, record.draws()[c.index]);
+                }
                 break;
         }
     }
@@ -4643,6 +4657,23 @@ void Renderer11::logGpu(ULONGLONG now) {
                  static_cast<unsigned long long>(stats_.freed), static_cast<unsigned>(textures_.size()),
                  static_cast<unsigned>(pooledBytes_ >> 20),
                  seconds > 0 ? double(stats_.uploaded) / 1048576.0 / seconds : 0.0);
+        if (stats_.kindFrames) {  // 3.0.20-beta.39 (the owner's «6,7,8,9», 9): as Direct3D 12's
+            static const char* const kKindNames[6] = {"the interface", "the ground", "the world's solid",
+                                                      "quads (sprites, items)", "effects", "other blended"};
+            std::string kinds;
+            const double timed = double(stats_.kindFrames);
+            for (int k = 0; k < 6; ++k) {
+                if (!stats_.kindDraws[k]) continue;
+                char part[96];
+                std::snprintf(part, sizeof part, "%s%s %.0f draws %.2f ms", kinds.empty() ? "" : ", ", kKindNames[k],
+                              double(stats_.kindDraws[k]) / timed,
+                              double(stats_.kindTicks[k]) * 1000.0 / double(freq.QuadPart) / timed);
+                kinds += part;
+            }
+            if (!kinds.empty())
+                LOG_INFO("Direct3D 11: the game's draws a frame by kind, the processor's time (every %llu-th picture "
+                         "timed) - %s", static_cast<unsigned long long>(kKindEvery), kinds.c_str());
+        }
         if (modelsDrawnFrames_)  // 3.0.20-beta.10
             LOG_INFO("Direct3D 11: the game's models drawn by us on the card in %llu pictures - %.0f faces a picture, "
                      "%.0f nodes (%.0f of them moving, by their matrices), %.1f of the frame's nodes unknown; %zu "
