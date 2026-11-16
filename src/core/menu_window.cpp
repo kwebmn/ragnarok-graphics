@@ -102,6 +102,21 @@ int buttonAt(const Layout& L, float x, float y) {
     return -1;
 }
 
+std::string shownKey(Kind k, const Layout& L, const Show& sh, bool pad, unsigned style, const Texts& t) {
+    std::string key = std::to_string(int(k)) + ';' + std::to_string(L.x) + ',' + std::to_string(L.y) + ';' +
+                      std::to_string(L.w) + 'x' + std::to_string(L.h) + ';' + std::to_string(L.s) + ';' +
+                      std::to_string(sh.hover) + ',' + std::to_string(sh.focus) + (pad ? "P" : "") +
+                      (sh.keys ? "K" : "") + '#' + std::to_string(style);
+    // its words, each with its length before it (a line's end is no other line's start)
+    const auto add = [&](const std::string& words) { key += '|' + std::to_string(words.size()) + ':' + words; };
+    for (const std::string* words : {&t.menu, &t.dead, &t.revive, &t.savePoint, &t.charSelect, &t.exit, &t.back,
+                                     &t.settings, &t.layout, &t.test, &t.report, &t.keys, &t.keysBack, &t.account,
+                                     &t.enter, &t.esc, &t.recapTitle})
+        add(*words);
+    for (const std::string& hit : t.recap) add(hit);
+    return key;
+}
+
 std::vector<Words> words(const Layout& L, Kind k, const Show& sh, const Texts& t, const Measure& m) {
     std::vector<Words> out;
     const float s = L.s;

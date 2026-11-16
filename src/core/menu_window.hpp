@@ -59,6 +59,11 @@ int buttonAt(const Layout& L, float x, float y);  // the picture's pixels; -1 no
 using Words = itemwin::Words;
 using Measure = itemwin::Measure;
 std::vector<Words> words(const Layout& L, Kind k, const Show& sh, const Texts& t, const Measure& m);
+// 3.0.20-beta.67 (R-SZ3QVM «загинув на мапі ice dungeon, а в списку дамага - стара інформація про алармів»: the card
+// was painted anew by its kind, place and focus alone - a death with as many lines of hits as the one before showed
+// that one's): everything the card shows as one key - painted anew when it differs. `pad`: the controller's buttons
+// named in it; `style`: the interface's style's generation
+std::string shownKey(Kind k, const Layout& L, const Show& sh, bool pad, unsigned style, const Texts& t);
 
 // 3.0.18-beta.225: the keys list (the settings app's «Головне» one, settings::Text::MainKeysList) a line a key:
 // «keys — what» (« - » too); a line without either: its words whole

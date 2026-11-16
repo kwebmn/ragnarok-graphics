@@ -158,3 +158,47 @@ TEST(menu_keys_view) {
     CHECK(long1 >= 2);  // the long one wrapped onto lines of its own
     CHECK(v.layout.y + v.layout.h <= 1080);
 }
+
+// 3.0.20-beta.67 (R-SZ3QVM «загинув на мапі ice dungeon, а в списку дамага - стара інформація про алармів»: the card
+// was painted anew by a key of its kind, place and focus alone - a death with as many lines of hits as the one before
+// kept that one's lines, Alarm's of the clock tower in the ice cave): everything the card shows makes its key
+TEST(menu_window_the_cards_key_holds_what_it_shows) {
+    menuwin::Texts alarms = texts();
+    alarms.recapTitle = "Останні удари · 2666 шкоди";
+    alarms.recap = {"Alarm · #202 · 2399 · 0,0 с до того", "Alarm · удар · 0 · 1,0 с до того"};
+    menuwin::Texts snow = alarms;
+    snow.recapTitle = "Останні удари · 2207 шкоди";
+    snow.recap = {"Snowier · удар · 291 · 0,0 с до того", "Ice Titan · удар · 205 · 0,4 с до того"};
+    const menuwin::Layout L = menuwin::layout(menuwin::Kind::Dead, 1280, 960, 1.0f, 2);
+    menuwin::Show sh;
+    sh.focus = menuwin::firstFocus(menuwin::Kind::Dead);
+    const std::string was = menuwin::shownKey(menuwin::Kind::Dead, L, sh, false, 7, alarms);
+    CHECK_EQ(menuwin::shownKey(menuwin::Kind::Dead, L, sh, false, 7, alarms), was);  // the same card: not painted again
+    CHECK(menuwin::shownKey(menuwin::Kind::Dead, L, sh, false, 7, snow) != was);  // as many lines, other hits
+    menuwin::Texts oneLine = alarms;  // a line's words alone
+    oneLine.recap[1] = "Alarm · удар · 12 · 1,0 с до того";
+    CHECK(menuwin::shownKey(menuwin::Kind::Dead, L, sh, false, 7, oneLine) != was);
+    // and what made the key before: the kind, the place, the scale, the pointer and the focus, the controller, the
+    // keys' card, the style
+    CHECK(menuwin::shownKey(menuwin::Kind::DeadToken, L, sh, false, 7, alarms) != was);
+    menuwin::Layout moved = L;
+    moved.x += 3;
+    CHECK(menuwin::shownKey(menuwin::Kind::Dead, moved, sh, false, 7, alarms) != was);
+    menuwin::Layout larger = L;
+    larger.s = 1.25f;
+    CHECK(menuwin::shownKey(menuwin::Kind::Dead, larger, sh, false, 7, alarms) != was);
+    menuwin::Show hover = sh;
+    hover.hover = 1;
+    CHECK(menuwin::shownKey(menuwin::Kind::Dead, L, hover, false, 7, alarms) != was);
+    menuwin::Show keys = sh;
+    keys.keys = true;
+    CHECK(menuwin::shownKey(menuwin::Kind::Dead, L, keys, false, 7, alarms) != was);
+    CHECK(menuwin::shownKey(menuwin::Kind::Dead, L, sh, true, 7, alarms) != was);
+    CHECK(menuwin::shownKey(menuwin::Kind::Dead, L, sh, false, 8, alarms) != was);
+    // a line's end is no other line's start («ab», «c» against «a», «bc»)
+    menuwin::Texts a = texts(), b = texts();
+    a.recap = {"ab", "c"};
+    b.recap = {"a", "bc"};
+    CHECK(menuwin::shownKey(menuwin::Kind::Dead, L, sh, false, 7, a) !=
+          menuwin::shownKey(menuwin::Kind::Dead, L, sh, false, 7, b));
+}

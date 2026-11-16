@@ -266,11 +266,10 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         if (row >= 0) s.show.hover = row;
     }
     s.padNow = uapad::runtime::navLook().shown;
-    const std::string key = std::to_string(int(kind)) + ';' + std::to_string(s.layout.x) + ',' +
-                            std::to_string(s.layout.y) + ';' + std::to_string(s.scale) + ';' +
-                            std::to_string(s.show.hover) + ',' + std::to_string(s.show.focus) +
-                            (s.padNow ? "P" : "") + (s.show.keys ? "K" : "") + '#' +
-                            std::to_string(uistyle::generation());
+    // 3.0.20-beta.67 (R-SZ3QVM: the ice cave's death with the clock tower's Alarms in its list): the key of all the
+    // card shows, the death's hits too
+    const std::string key =
+        mw::shownKey(kind, s.layout, s.show, s.padNow, unsigned(uistyle::generation()), texts(s.padNow));
     if (const std::string drawn = key + (uaui::ready() ? "u" : ""); drawn != s.key) {  // 3.0.18-beta.34
         s.key = drawn;
         render(s);
