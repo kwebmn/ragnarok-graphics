@@ -915,6 +915,8 @@ private:
     // 3.0.20-beta.57 (R-J3GKD9; as Direct3D 12's roomsTexture, roomNow): a house's rooms a cell, the player's room
     ID3D11ShaderResourceView* roomsTexture();
     int roomNow() const;
+    bool inAnotherRoom(const FrameRecord& rec, const DrawCmd& d);  // 3.0.20-beta.59 (as Direct3D 12's)
+    int frameRoom_ = -1;
     ID3D11Texture2D* roomsMap_ = nullptr;
     ID3D11ShaderResourceView* roomsSrv_ = nullptr;
     uint64_t roomsKey_ = 0;

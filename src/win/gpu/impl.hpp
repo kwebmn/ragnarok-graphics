@@ -1186,6 +1186,11 @@ struct Renderer::Impl {
     // widened numbers; sky3d_haze_ps's t0) and the room the player stands in this picture (0: none - all drawn)
     UINT roomsTexture();
     int roomNow() const;
+    // 3.0.20-beta.59 (R-4Q8PHP «просматриваются порталы через стены»): a blended draw of the game's that stands in
+    // another room (core rooms::roomOfDraw) - left out; this picture's room of the player asked once (-1: not yet)
+    bool inAnotherRoom(const FrameRecord& rec, const DrawCmd& d);
+    int frameRoom = -1;
+    uint64_t roomDrawsLeft = 0;
     ID3D12Resource* roomsMap = nullptr;
     D3D12_RESOURCE_STATES roomsState = D3D12_RESOURCE_STATE_COPY_DEST;
     UINT roomsSrv = kNoSrv;
@@ -1353,6 +1358,7 @@ struct Renderer::Impl {
         sky3dDone = false;  // 3.0.19-beta.6
         skyFillDone = false;  // 3.0.20-beta.48
         sunShadowsDone = sunlessDrawn = false;  // 3.0.20-beta.50
+        frameRoom = -1;  // 3.0.20-beta.59
         floorReflectDone = false;  // 0.72
         bloomDone = false;  // 0.78
         stepsDone = false;  // 0.80

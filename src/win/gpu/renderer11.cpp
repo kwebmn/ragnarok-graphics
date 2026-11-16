@@ -1419,6 +1419,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 3.0.16-beta.35: [effects] body_stamp (body_stamp11.cpp) - a character's sprite gathered for the depth; the
     // gathered ones put down at the next draw of something else
     const bool innerPass = seamPass_ || darknessPass_ || silhouettePass_ || stampPass_ || modelPass_;
+    // 3.0.20-beta.59 (R-4Q8PHP; as Direct3D 12's draw.cpp): a blended draw of the game's in another room - not drawn
+    if (!innerPass && !s.ui && s.blend && inAnotherRoom(rec, d)) return;
     // 3.0.20-beta.24 (R-UAEQ32: in the 3D view a character's parts against the sky not drawn): without it the
     // characters' sprites and wings gathered all the world long, put down at its end - the 3D sky goes where nothing
     // has a depth (as draw.cpp's); what is drawn after them stays over them
@@ -2708,6 +2710,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     mistDone_ = weatherDone_ = false;  // 2.5
     sky3dDone_ = false;  // 3.0.19-beta.6
     skyFillDone_ = false;  // 3.0.20-beta.48
+    frameRoom_ = -1;       // 3.0.20-beta.59
     bloomDone_ = stepsDone_ = false;  // 2.5.2
     heatDone_ = floorDone_ = false;  // 2.5.3
     heatSpots_.clear();
@@ -4292,6 +4295,21 @@ int Renderer11::roomNow() const {
     const float tz = cameraTargetZ_ > 0.0f ? cameraTargetZ_ : 0.0f;
     const map::Axes axes = mapWorld_.axes();
     return rooms::roomAt(*rooms, (tz * m[6] + m[9]) * float(axes.x), (tz * m[8] + m[11]) * float(axes.z));
+}
+
+bool Renderer11::inAnotherRoom(const FrameRecord& rec, const DrawCmd& d) {
+    if (frameRoom_ < 0) frameRoom_ = camera::wideView() && !outdoors_ ? roomNow() : 0;
+    const rooms::Map* rooms = mapWorld_.rooms();
+    if (frameRoom_ <= 0 || !rooms) return false;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    const size_t looked = size_t(std::min<uint32_t>(d.vertexCount, 4)) * stride;
+    if (!d.vertexCount || stride < 16 || d.vertexOffset + looked > v.size()) return false;
+    const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+    const map::Axes axes = mapWorld_.axes();
+    const int room = rooms::roomOfDraw(*rooms, v.data() + d.vertexOffset, stride, d.vertexCount, viewToWorld_, p.f0,
+                                       p.f1, p.cx, p.cy, axes.x, axes.z);
+    return room != 0 && room != frameRoom_;
 }
 
 ID3D11ShaderResourceView* Renderer11::roomsTexture() {

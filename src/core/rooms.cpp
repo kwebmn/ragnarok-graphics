@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 #include "core/outskirts.hpp"
 
@@ -97,6 +98,24 @@ int roomAt(const Map& m, float x, float z) {
     const float cz = std::floor(z / m.zoom + float(m.height) * 0.5f);
     if (!(cx >= 0.0f && cz >= 0.0f && cx < float(m.width) && cz < float(m.height))) return 0;
     return m.widened[size_t(cz) * size_t(m.width) + size_t(cx)];
+}
+
+int roomOfDraw(const Map& m, const uint8_t* vertices, size_t stride, uint32_t count, const float viewToWorld[12],
+               float f0, float f1, float cx, float cy, int axisX, int axisZ) {
+    if (!vertices || !count || stride < 16 || !(f0 > 0.0f) || !(f1 > 0.0f)) return 0;
+    const uint32_t looked = std::min<uint32_t>(count, 4);
+    const float* v = viewToWorld;
+    float wx = 0.0f, wz = 0.0f;
+    for (uint32_t k = 0; k < looked; ++k) {
+        float c[4];
+        std::memcpy(c, vertices + size_t(k) * stride, sizeof c);
+        if (!(c[3] > 1e-6f)) return 0;
+        const float depth = 1.0f / c[3];
+        const float x = (c[0] - cx) * depth / f0, y = (c[1] - cy) * depth / f1;
+        wx += v[9] + x * v[0] + y * v[3] + depth * v[6];
+        wz += v[11] + x * v[2] + y * v[5] + depth * v[8];
+    }
+    return roomAt(m, wx / float(looked) * float(axisX), wz / float(looked) * float(axisZ));
 }
 
 }  // namespace uagfx::rooms

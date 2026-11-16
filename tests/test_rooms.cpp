@@ -4,6 +4,8 @@
 // lit in the dark behind the room's open sides. The rooms of a map: its cells with a top of no filler texture, joined
 // side to side (/root/uagfx-tools/audit/ceiling/roomcheck.cpp) - for the renderer to draw the one the player is in
 #include <cmath>
+#include <utility>
+#include <vector>
 
 #include "core/cave_vault.hpp"
 #include "core/config.hpp"
@@ -109,4 +111,41 @@ TEST(config_view3d_one_room_on_by_default_and_live) {
     CHECK(row != nullptr);
     if (row) CHECK(row->page == settings::Page::Game && row->control == settings::Control::Check);
     CHECK(appliesNow("view3d.one_room"));
+}
+
+// 3.0.20-beta.59 (R-4Q8PHP, the owner on beta.57: «просматриваются порталы через стены»): the other rooms are painted
+// out by the picture's depth - a portal's rings and sparks, drawn blended with no depth of their own, stayed lit over
+// the dark where nothing stands behind them. A blended draw of the game's is left out when it stands in another
+// room: the room of its first corners put back into the world
+TEST(rooms_a_draws_room_by_its_corners_in_the_world) {
+    const rooms::Map m = rooms::build(house());
+    // the eye 50 over the map's middle, looking straight down: the screen's x the world's x, its y the world's z;
+    // a pixel half a unit of the world at the floor (f 100, the depth 50)
+    const float view[12] = {1, 0, 0, 0, 0, 1, 0, 1, 0, 0, -50, 0};
+    const auto corners = [](float wx, float wz) {
+        std::vector<float> v;
+        for (const auto& d : {std::pair<float, float>{-2, -2}, {2, -2}, {-2, 2}, {2, 2}})
+            v.insert(v.end(), {(wx + d.first) * 2.0f, (wz + d.second) * 2.0f, 0.5f, 1.0f / 50.0f, 0.0f, 0.0f});
+        return v;
+    };
+    const auto roomOf = [&](float wx, float wz) {
+        const std::vector<float> v = corners(wx, wz);
+        return rooms::roomOfDraw(m, reinterpret_cast<const uint8_t*>(v.data()), 24, 4, view, 100.0f, 100.0f, 0.0f,
+                                 0.0f, 1, 1);
+    };
+    CHECK(roomOf(60.0f, 20.0f) == 1);      // in the large room (cells 18..25 by 10..15)
+    CHECK(roomOf(-100.0f, -50.0f) == 2);   // in the other one
+    CHECK(roomOf(0.0f, 80.0f) == 0);       // over no room
+    // the map's x the other way round in the world (its axis -1): the world's -60 is the file's 60
+    {
+        const std::vector<float> v = corners(-60.0f, 20.0f);
+        CHECK(rooms::roomOfDraw(m, reinterpret_cast<const uint8_t*>(v.data()), 24, 4, view, 100.0f, 100.0f, 0.0f, 0.0f,
+                                -1, 1) == 1);
+    }
+    // nothing to tell by: no corners, a corner of no depth
+    CHECK(rooms::roomOfDraw(m, nullptr, 24, 0, view, 100.0f, 100.0f, 0.0f, 0.0f, 1, 1) == 0);
+    std::vector<float> flat = corners(60.0f, 20.0f);
+    for (size_t i = 3; i < flat.size(); i += 6) flat[i] = 0.0f;
+    CHECK(rooms::roomOfDraw(m, reinterpret_cast<const uint8_t*>(flat.data()), 24, 4, view, 100.0f, 100.0f, 0.0f, 0.0f,
+                            1, 1) == 0);
 }

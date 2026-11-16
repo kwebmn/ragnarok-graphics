@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -25,5 +26,12 @@ constexpr int kWiden = 2, kLeastCells = 12, kMost = 254;
 Map build(const gnd::Ground& g);
 // the room at a place of the map's file (its middle at 0, 0), a room's widened cells its own; 0: none
 int roomAt(const Map& m, float x, float z);
+// 3.0.20-beta.59 (R-4Q8PHP «просматриваются порталы через стены»): the room a draw of the game's stands in - its first
+// corners (four at most; each x, y on the game's screen, z, 1 / depth first; `stride` bytes apart) put back into the
+// world by the view (viewToWorld's rows: the view's right, down and forward in the world, the eye; f0, f1, cx, cy
+// the projection), their middle by the map's axes (the world's x and z against the file's); 0: none, or nothing to
+// tell by (no corner, a corner of no depth)
+int roomOfDraw(const Map& m, const uint8_t* vertices, size_t stride, uint32_t count, const float viewToWorld[12],
+               float f0, float f1, float cx, float cy, int axisX, int axisZ);
 
 }  // namespace uagfx::rooms

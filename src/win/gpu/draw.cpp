@@ -66,6 +66,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     crumb(span);
     // 1.9: the driver's own draws (no hooks, nothing noted); 3.0.4-beta.10 the own ground's
     const bool inner = seamPass || darknessPass || ownPass || silhouettePass || stampPass;
+    // 3.0.20-beta.59 (R-4Q8PHP «просматриваются порталы через стены»): in a house the game's blended draws that
+    // stand in another room than the player's - not drawn
+    if (!inner && !s.ui && s.blend && inAnotherRoom(rec, d)) return;
     // 3.0.16-beta.25: [effects] body_stamp - a character's sprite gathered for the depth; the gathered ones put down
     // before anything else is drawn
     // 3.0.20-beta.24 (R-UAEQ32, R-59XPGD «текстура підрізається»): in the 3D view without it the characters' sprites

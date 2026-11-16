@@ -200,6 +200,28 @@ int Renderer::Impl::roomNow() const {
     return rooms::roomAt(*rooms, (tz * m[6] + m[9]) * float(axes.x), (tz * m[8] + m[11]) * float(axes.z));
 }
 
+// 3.0.20-beta.59 (R-4Q8PHP): whether a blended draw of the game's stands in another room than the player's - a
+// portal's rings and sparks, an effect, a sprite there: left out (they lay lit over the dark, with no depth of their
+// own for the haze's pass to tell them by)
+bool Renderer::Impl::inAnotherRoom(const FrameRecord& rec, const DrawCmd& d) {
+    if (frameRoom < 0) frameRoom = camera::wideView() && !mapOutdoors ? roomNow() : 0;
+    const rooms::Map* rooms = mapWorld.rooms();
+    if (frameRoom <= 0 || !rooms) return false;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    const size_t looked = size_t(std::min<uint32_t>(d.vertexCount, 4)) * stride;
+    if (!d.vertexCount || stride < 16 || d.vertexOffset + looked > v.size()) return false;
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    const map::Axes axes = mapWorld.axes();
+    const int room = rooms::roomOfDraw(*rooms, v.data() + d.vertexOffset, stride, d.vertexCount, viewToWorld, p.f0,
+                                       p.f1, p.cx, p.cy, axes.x, axes.z);
+    if (room == 0 || room == frameRoom) return false;
+    if (roomDrawsLeft++ == 0)
+        LOG_INFO("3D sky: on %s the game's blended draws in the other rooms are left out too - a portal's rings and "
+                 "sparks, an effect, a sprite there ([view3d] one_room)", mapName.c_str());
+    return true;
+}
+
 // the rooms a cell on the card - once a map
 UINT Renderer::Impl::roomsTexture() {
     const rooms::Map* rooms = mapWorld.rooms();
