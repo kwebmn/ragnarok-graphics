@@ -326,8 +326,13 @@ void Renderer::Impl::probeModels(const own_ground::Shading& fog) {
         if (r.there[0] == int(r.points)) continue;
         ++told;
         const auto t = textures.find(r.texture);
-        char facts[160] = "not kept by the renderer";
-        if (t != textures.end())  // its holes: a place on one shows what is behind it with the face drawn all right
+        char facts[200] = "not kept by the renderer";
+        // its holes: a place on one shows what is behind it with the face drawn all right. 3.0.20-beta.74
+        // (R-U5PP9T): a picture the game never sent whole (looksFirst) has nothing in it - its holes not known
+        if (t != textures.end() && !t->second.looksFirst)
+            std::snprintf(facts, sizeof facts, "%dx%d, ITS TEXELS NEVER CAME FROM THE GAME%s", t->second.width,
+                          t->second.height, t->second.mat ? ", a material" : "");
+        else if (t != textures.end())
             std::snprintf(facts, sizeof facts, "%dx%d, %d %% of it holes%s%s%s", t->second.width, t->second.height,
                           int(t->second.holes), t->second.leafy ? ", leafy" : "",
                           t->second.ai ? ", an HD copy" : "", t->second.mat ? ", a material" : "");

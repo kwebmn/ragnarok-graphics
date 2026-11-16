@@ -118,6 +118,19 @@ int holesOf(const void* surface) {
     return foliage::holesPercent(texels.data(), t->width(), t->height());
 }
 
+bool sendTexelsOf(const void* surface) {
+    Surface7* t = surface ? Surface7::from(static_cast<IDirectDrawSurface7*>(const_cast<void*>(surface))) : nullptr;
+    if (!t) return false;
+    win::Guard guard;
+    const bool waited = t->topDirty();
+    try {  // called from the game's own code (its model's draw): nothing may be thrown back into it
+        t->sync(win::Context::get().record);
+    } catch (...) {  // no memory for the texels now: they wait on, as before
+        return false;
+    }
+    return waited;
+}
+
 void Device7::flushLive() {
     if (g_live && g_live->batch_.quads) g_live->flushBatch();
 }

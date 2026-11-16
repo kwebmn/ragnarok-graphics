@@ -117,6 +117,7 @@ bool g_on = false;
 std::vector<uint32_t> g_frameIds;
 size_t g_told = 0;
 uint32_t g_ours = 0, g_oursFrames = 0, g_keptBlended = 0, g_moved = 0;
+uint32_t g_lateTextures = 0, g_lateNodes = 0;  // 3.0.20-beta.74: pictures sent at their node's capture, for the log
 using MatrixFn = void(__attribute__((thiscall)) *)(float* out, const void* local, const void* parent);
 constexpr uint32_t kNodeMatrix = 0x409720, kNodeLocal = 0xB4, kNodeChildren = 0xAC;
 // a texture of the game's with its own alpha (CTexture +0x10 format 1, A4R4G4B4): its faces go to the game's blended
@@ -438,6 +439,19 @@ void capture(uintptr_t node, bool flipped, const float* parent, const float* poi
     }
     auto* r = Context::get().renderer;
     if (!r) return;
+    // 3.0.20-beta.74 (R-U5PP9T, a house of Prontera gone whole; dx7::sendTexelsOf): the game draws this node itself
+    // in this frame alone - its pictures no face of which is drawn now would never go to the renderer. All of them
+    // sent now, the ones that waited counted
+    if (drawable) {
+        uint32_t late = 0;
+        for (uint32_t t = 0; t < textureCount; ++t) {
+            const uintptr_t texture = at<uint32_t>(textureList + 4 * t);
+            const uint32_t surface = texture ? at<uint32_t>(texture + kTextureSurface) : 0;
+            if (surface && dx7::sendTexelsOf(reinterpret_cast<const void*>(uintptr_t(surface)))) ++late;
+        }
+        g_lateTextures += late;
+        if (late) ++g_lateNodes;
+    }
     r->addGameModel(n);
     g_sent.insert(uint32_t(node));
     if (drawable && moving)  // 3.0.20-beta.14
@@ -745,6 +759,11 @@ void frame() {
                  "with several keys all alike), %u of them moving - their own vertices, placed by the frame's "
                  "matrices (%u of them hung on a moving one)", g_sentNodes, g_sentFaces, g_alike, g_animated, g_under);
     g_sentNodes = g_sentFaces = g_animated = g_under = g_alike = 0;
+    if (g_lateTextures)  // 3.0.20-beta.74
+        LOG_INFO("models: %u pictures of %u nodes were not with the renderer yet at their capture - sent then (before "
+                 "3.0.20-beta.74 only a draw of the game's own sent one: a picture whose faces were turned away or "
+                 "off the screen in the node's one frame with the game never came)", g_lateTextures, g_lateNodes);
+    g_lateTextures = g_lateNodes = 0;
     if (g_solids.triangles() != g_solidsTold) {  // 3.0.20-beta.70: as more of the map is seen
         g_solidsTold = g_solids.triangles();
         LOG_INFO("models: the 3D view's camera goes by the still nodes' own triangles - %zu triangles of %zu nodes "
