@@ -30,6 +30,14 @@ bool leafy(const uint32_t* argb, int width, int height) {
     return hole > 0.12 && hole < 0.85 && mg > mr * 1.08 && mg > mb * 1.15 && mg > 40.0 && mb <= mr + 8.0;
 }
 
+int holesPercent(const uint32_t* argb, int width, int height) {
+    if (!argb || width <= 0 || height <= 0) return 0;
+    const size_t n = size_t(width) * size_t(height);
+    size_t holes = 0;
+    for (size_t i = 0; i < n; ++i) holes += (argb[i] >> 24) < 128;
+    return int((holes * 100 + n / 2) / n);
+}
+
 bool leafyTexture(const uint32_t* argb, int width, int height, bool spriteCache) {
     return !spriteCache && leafy(argb, width, height);
 }

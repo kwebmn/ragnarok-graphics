@@ -1083,6 +1083,7 @@ void Renderer::Impl::workLaterTaken(double budgetMs) {
             t.fire = l.fire;
             t.light = l.light;
             t.leafy = l.leafy;
+            t.holes = uint8_t(l.holes);  // 3.0.20-beta.61
             std::copy(l.fireColour, l.fireColour + 3, t.fireColour);
             std::copy(l.lightColour, l.lightColour + 3, t.lightColour);
             if (ai)  // its key worked out there (none: the pack came on since - here)
@@ -1105,6 +1106,7 @@ void Renderer::Impl::looksOf(Texture& t, const UploadCmd& u, const uint32_t* px,
     t.fire = effect_light::fireOf(px, t.width, t.height, t.fireColour);
     t.light = effect_light::lightOf(px, t.width, t.height, t.lightColour);
     t.leafy = foliage::leafyTexture(px, t.width, t.height, spriteCache);
+    t.holes = uint8_t(foliage::holesPercent(px, t.width, t.height));  // 3.0.20-beta.61
     (void)u;
 }
 
@@ -2143,6 +2145,7 @@ void Renderer::Impl::destroy() {
     releaseCom(presentPs);
     releaseCom(readback);
     releaseCom(shotBuffer);
+    releaseCom(modelProbe.buffer);  // 3.0.20-beta.61
     releaseCom(target);
     releaseCom(depth);
     releaseCom(resolved);

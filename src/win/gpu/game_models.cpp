@@ -277,6 +277,7 @@ bool Renderer::Impl::drawGameModelsAlone() {
     if (ready) {  // 3.0.20-beta.13 (3.0.20-beta.16: their own time)
         CpuTimeWithin t(cpuPartTicks[kCpuGameLeaves], cpuPartTicks[kCpuGameModels]);
         drawGameLeaves(gameFog);
+        probeModels(gameFog);  // 3.0.20-beta.61: the models' dump looks at the picture
     }
     gameModelsNow.drawn(ready);  // the driver's word: from the present on
     return true;

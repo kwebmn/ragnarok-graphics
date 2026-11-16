@@ -444,12 +444,14 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
             const bool mips = sampled[i].mipFilter == d3d7::TFP_POINT || sampled[i].mipFilter == d3d7::TFP_LINEAR;
             if (aiDrawn[i] && !mips) sampled[i].mipFilter = d3d7::TFP_LINEAR;
         }
+    if (modelProbe.flags & 1) aiDrawn[0] = aiDrawn[1] = false;  // 3.0.20-beta.61: the dump's look - the game's own
     // A new list, if this draw needs one, starts before the draw records anything; the record's geometry then goes
     // into the new list's slot (1B review M4: the old slot is reused while the new list may still read it).
     // 1.8, the materials: a draw of the ground or a model (it writes depth, not a sprite, not leaves) - its texture's
     // material made first, in a pass of its own, then read with it (t2).
     Texture* matTex = nullptr;
-    if (materialsWanted() && !s.ui && !water && !smoke && !lava && !ray && !soft && !quad && !adds && !d.twin &&
+    if (materialsWanted() && !(modelProbe.flags & 2) && !s.ui && !water && !smoke && !lava && !ray && !soft &&
+        !quad && !adds && !d.twin &&
         (s.zWrite || seamPass) && d.texture[0] && d.texture[0] != white) {
         const auto it = textures.find(d.texture[0]);
         if (it != textures.end() && !it->second.leafy && ensureMaterial(it->first, it->second, aiDrawn[0]))

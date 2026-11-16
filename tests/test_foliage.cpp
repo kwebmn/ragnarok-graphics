@@ -112,3 +112,14 @@ TEST(config_view3d_dense_crowns_off_by_default_and_live) {
     if (row) CHECK(row->page == settings::Page::Game && row->control == settings::Control::Check);
     CHECK(appliesNow("view3d.dense_crowns"));
 }
+
+// 3.0.20-beta.61: the models' dump tells a texture's share of holes with a face of it not found in the picture
+TEST(foliage_a_pictures_share_of_holes) {
+    std::vector<uint32_t> px(100, 0xFF808080u);
+    CHECK_EQ(foliage::holesPercent(px.data(), 10, 10), 0);
+    for (int i = 0; i < 77; ++i) px[size_t(i)] = 0x00000000u;
+    CHECK_EQ(foliage::holesPercent(px.data(), 10, 10), 77);
+    px[99] = 0x7F123456u;  // under a half: a hole too
+    CHECK_EQ(foliage::holesPercent(px.data(), 10, 10), 78);
+    CHECK_EQ(foliage::holesPercent(nullptr, 10, 10), 0);
+}

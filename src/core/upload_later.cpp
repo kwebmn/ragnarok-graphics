@@ -28,6 +28,7 @@ void lookAt(Job&& j, bool aiKey, Looks& out) {
     out.fire = effect_light::fireOf(px, out.width, out.height, out.fireColour);
     out.light = effect_light::lightOf(px, out.width, out.height, out.lightColour);
     out.leafy = foliage::leafyTexture(px, out.width, out.height, out.spriteCache);
+    out.holes = foliage::holesPercent(px, out.width, out.height);  // 3.0.20-beta.61
     if (!aiKey) return;
     const uint32_t* texels = full_colour::aiTexels(out.upload, px, out.game);
     if (texels == px) out.game.clear();

@@ -980,6 +980,7 @@ bool Renderer::Impl::drawOwnGround() {
         CpuTimeWithin t(cpuPartTicks[kCpuGameLeaves], cpuPartTicks[kCpuOwnGround]);
         drawGameLeaves(o.shading);
     }
+    probeModels(o.shading);  // 3.0.20-beta.61: the models' dump looks at the picture (a report's frame alone)
     ++o.frames;
     o.slowest = std::max(o.slowest, built);
     o.most = std::max(o.most, vertices);

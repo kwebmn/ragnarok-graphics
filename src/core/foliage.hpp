@@ -10,6 +10,9 @@ bool leafy(const uint32_t* argb, int width, int height);
 // (`spriteCache`): it holds the characters', monsters' and items' frames (the Pyramids' green Poporings came out
 // leaves and shed them).
 bool leafyTexture(const uint32_t* argb, int width, int height, bool spriteCache);
+// 3.0.20-beta.61: how much of a picture is holes (alpha under a half), in percent - the models' dump tells it of a
+// texture whose face is not in the picture (a place on a hole is no proof of a face not drawn)
+int holesPercent(const uint32_t* argb, int width, int height);
 
 // 2.7.30: the swing at a tree's top at foliage_strength 100 % (game pixels) - 1.2 until 2.7.29, a pixel or two of the
 // picture (the tester in Payon's forest: «Листя на вітрі не вижу»)

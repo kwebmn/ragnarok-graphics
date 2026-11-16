@@ -32,6 +32,7 @@
 #include "core/ground_cells.hpp"
 #include "core/hills.hpp"
 #include "core/game_models_card.hpp"
+#include "core/model_probe.hpp"
 #include "core/upload_later.hpp"
 #include "win/gpu/looks_worker.hpp"
 #include "win/gpu/threads.hpp"
@@ -169,6 +170,7 @@ struct Texture {
     int levels = 1;
     UINT srv = 0;  // index in the CPU SRV heap
     bool leafy = false;  // 0.64: leaves (core/foliage.hpp): swayed in the world
+    uint8_t holes = 0;   // 3.0.20-beta.61: its see-through share, percent (foliage::holesPercent) - the models' dump's
     D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COPY_DEST;
     // AI textures (ai_textures.hpp): the network's version, drawn in the world instead while it is shown.
     ID3D12Resource* ai = nullptr;
@@ -1190,6 +1192,37 @@ struct Renderer::Impl {
     // another room (core rooms::roomOfDraw) - left out; this picture's room of the player asked once (-1: not yet)
     bool inAnotherRoom(const FrameRecord& rec, const DrawCmd& d);
     int frameRoom = -1;
+    // 3.0.20-beta.61 (R-HBPQ54 «зникли частини мосту», R-3W4TYM «теж моста немає», the owner's «дырка, которая
+    // пробивает его насквозь»: faces of ours the frame lists and the processor counts as shown, not in the picture):
+    // the models' dump looks at the picture itself (models_probe.cpp, core/model_probe) - the depth read back where
+    // a face of each texture of our nodes near the player should be, right after our draw; those not there drawn
+    // again in other ways, each looked at in turn: without the material, with the game's own picture (no HD copy),
+    // without the alpha test, placed by the processor. Told in the log with the models' state. The dump's frame only
+    struct ModelProbe {
+        static constexpr int kSteps = 5;
+        static constexpr size_t kMostPoints = 48;
+        struct Run {
+            uint32_t node = 0, texture = 0, first = 0, count = 0;
+            size_t firstPoint = 0, points = 0;
+            int there[kSteps] = {};  // of its points, after each step
+            int nearer = 0;          // after our own draw: something stood in front
+            float want[2] = {0.0f, 0.0f}, found = 0.0f;  // its first point not there: the face's depth, the one read
+            bool missing = false;
+        };
+        std::vector<Run> runs;
+        std::vector<modelprobe::Point> points;
+        std::vector<float> depths;  // a step's, read back
+        ID3D12Resource* buffer = nullptr;
+        bool done = false;  // this picture's
+        int flags = 0;      // draw()'s while a step draws: 1 the game's own picture, 2 no material
+        FrameRecord rec;
+        std::vector<uint32_t> packed;
+        std::vector<UINT> counts;
+    };
+    ModelProbe modelProbe;
+    void probeModels(const own_ground::Shading& fog);  // after our models are drawn; the dump's frame alone
+    bool probeDepths();                                // the points' depths now into modelProbe.depths
+    void probeAgain(int step, const own_ground::Shading& fog);
     uint64_t roomDrawsLeft = 0;
     ID3D12Resource* roomsMap = nullptr;
     D3D12_RESOURCE_STATES roomsState = D3D12_RESOURCE_STATE_COPY_DEST;
@@ -1359,6 +1392,7 @@ struct Renderer::Impl {
         skyFillDone = false;  // 3.0.20-beta.48
         sunShadowsDone = sunlessDrawn = false;  // 3.0.20-beta.50
         frameRoom = -1;  // 3.0.20-beta.59
+        modelProbe.done = false;  // 3.0.20-beta.61
         floorReflectDone = false;  // 0.72
         bloomDone = false;  // 0.78
         stepsDone = false;  // 0.80

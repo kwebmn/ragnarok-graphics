@@ -34,6 +34,7 @@ struct Looks {
     bool spriteCache = false;
     float fire = 0.0f, fireColour[3] = {}, light = 0.0f, lightColour[3] = {};
     bool leafy = false;
+    int holes = 0;  // 3.0.20-beta.61: foliage::holesPercent
     std::vector<uint32_t> pixels;
     std::vector<uint32_t> game;  // the pack's view of a 16-bit texture's full colours; empty: the pixels themselves
     std::string aiKey;           // ai::keyName of its texels; empty without the pack
