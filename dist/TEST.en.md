@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.36 — what's new · 2026-11-16
+
+- **The frame's work on several threads, step 1: textures.** Each new texture of the game has to be looked at: does it look like fire, does it glow, is it leaves, and its key for the AI pack. Until now the renderer's thread did it between frames (up to 1 ms a frame in the reports, on a GTX 970). Now a thread of its own at a lower priority does it while the renderer draws, and the renderer only takes what is done. So in Direct3D 12 and in Direct3D 11.
+- **A more exact speed log:** in the line «CPU: of the drawing a frame» the part «the rest (the present's passes)» no longer holds the wait for the graphics card (the line above shows it anyway).
+
 # uaRO Graphics 3.0.20-beta.35 — what's new · 2026-11-16
 
 - **The 3D view's grass no longer changes in the distance (R-G8FGSV).** Each blade's root took its height from what its pixel showed. But looking along the ground a far pixel covers up to three units of it, so on slopes the far grass found its ground one moment and not the next: it came and went and jumped up and down with every camera move and DLSS's frame jitter. Now a root is found by halving along its upright line between its cell's heights — to the pixel, and on slopes all the far grass stays put.
