@@ -145,7 +145,7 @@ if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     # project is 32-bit (cmake/mingw-x86_64.cmake builds only this).
     file(GLOB UAGFX_HOST_SOURCES CONFIGURE_DEPENDS src/win/gpu/*.cpp src/win/bridge/*.cpp)
     add_executable(uaro-render64 WIN32 src/host/main.cpp src/host/pack_builder.cpp src/host/streamline.cpp
-                   src/host/studio_engine.cpp
+                   src/host/studio_engine.cpp src/host/hang_watch.cpp
                    ${UAGFX_HOST_SOURCES} src/win/log.cpp src/win/paths.cpp src/win/dpi.cpp
                    src/win/game_files.cpp)  # 3.0.4-beta.7: map_world's archives
     # NVIDIA Streamline's headers (MIT); its DLLs are loaded at run time from uaro-graphics\dlss\.

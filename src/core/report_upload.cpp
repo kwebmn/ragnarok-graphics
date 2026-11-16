@@ -159,6 +159,11 @@ std::string reasonOfLog(const std::string& log) {
     if (log.find("the GPU device was removed") != std::string::npos ||
         log.find("the graphics card was lost") != std::string::npos)
         return "gpu-lost";
+    // 3.0.20-beta.76: the 64-bit renderer's process gone (win/gpu/remote.cpp setLost: «... (exit code 0x...); the
+    // picture stops here, restart the game») - a bad end however the game itself ended: the player closes the game
+    // with its still picture by hand, and its log ends as a fine one's (the owner's of 16.11 22:40:59 - exit code
+    // 0xc0000409 six seconds into a map, no report)
+    if (log.find("the picture stops here") != std::string::npos) return "crash";
     // The game opens DirectDraw again as it changes modes: its last opening must have been closed.
     const size_t opened = log.rfind("(uaRO renderer)");
     if (opened == std::string::npos) return "";

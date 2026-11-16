@@ -24,6 +24,8 @@
 #include "core/version.hpp"
 #include "host/pack_builder.hpp"
 #include "host/studio_engine.hpp"
+#include "core/late_start.hpp"
+#include "host/hang_watch.hpp"
 #include "host/streamline.hpp"
 #include "win/bridge/channel.hpp"
 #include "win/bridge/serve.hpp"
@@ -169,6 +171,9 @@ struct LateDlss {
     ULONGLONG started = 0;
     HANDLE thread = nullptr;
     bool done = false;  // the main thread has acted on the state
+    // 3.0.20-beta.76 (core/late_start.hpp), the main thread's: the picture's handing over to Streamline keeps out of
+    // a map's first seconds - the last map's name's tick (0: none so far), when the handing over first came due
+    uint64_t mapAt = 0, switchAsked = 0;
 };
 
 DWORD WINAPI startDlssLate(void* context) {
@@ -205,6 +210,7 @@ private:
     std::vector<uint8_t> iconOut_;  // its own: an icon comes back in the middle of other work
     std::vector<uint8_t> startOut_;  // 0.40
     LateDlss late_;
+    bool lateHeldTold_ = false;  // 3.0.20-beta.76
 };
 
 void Host::startProgress(void* self, const start::Progress& p) {
@@ -318,6 +324,7 @@ int Host::run(const Args& a) {
         if (!late_.thread)
             LOG_ERROR("DLSS: its start could not be run (error %lu); drawing without it", GetLastError());
     }
+    host::hangwatch::start();  // 3.0.20-beta.76: a message this thread stays in for seconds told with its place
     for (;;) {
         Msg type;
         const uint8_t* data = nullptr;
@@ -326,14 +333,19 @@ int Host::run(const Args& a) {
         const DWORD wait = late_.thread && !late_.done ? 100 : INFINITE;
         if (!channel_.receive(type, data, size, wait)) {
             if (wait == INFINITE || channel_.peerGone()) break;  // the game has gone
+            host::hangwatch::busy(0);
             checkLateDlss();
+            host::hangwatch::idle();
             continue;
         }
         if (type == Msg::Quit) break;
+        host::hangwatch::busy(uint32_t(type));
         dispatch(type, data, size);
         if (type == Msg::Present) checkLateDlss();
         server_.sendLost();
+        host::hangwatch::idle();
     }
+    host::hangwatch::stop();
     if (late_.thread) {  // a start still running when the game closes: nothing is taken down under it
         if (WaitForSingleObject(late_.thread, 10000) != WAIT_OBJECT_0) ExitProcess(0);
         CloseHandle(late_.thread);
@@ -349,11 +361,28 @@ void Host::checkLateDlss() {
     if (!late_.thread || late_.done) return;
     const int state = late_.state.load(std::memory_order_acquire);
     if (state == 0) return;
-    late_.done = true;
     if (state == 2) {
+        late_.done = true;
         LOG_ERROR("DLSS: %s; drawing without it", late_.why.c_str());
         return;
     }
+    // 3.0.20-beta.76 (core/late_start.hpp): the picture's handing over to Streamline - the card waited for, the swap
+    // chain let go - not in a map's first seconds: after them
+    const uint64_t now = GetTickCount64();
+    if (!late_.switchAsked) late_.switchAsked = now;
+    if (!latestart::quiet(now, late_.mapAt, late_.switchAsked)) {
+        if (!lateHeldTold_) {
+            lateHeldTold_ = true;
+            LOG_INFO("DLSS: its start is done, a map has just begun - the picture goes over to Streamline after the "
+                     "map's first %u s", unsigned(latestart::kMapQuietMs / 1000));
+        }
+        return;
+    }
+    late_.done = true;
+    // told before the step: the owner's renderer went silent about here (16.11 22:40:54) and was gone five seconds
+    // later - with the hang watch's line the log tells where
+    LOG_INFO("DLSS: its start in the background is done (%.1f s) - the picture goes over to Streamline",
+             double(now - late_.started) / 1000.0);
     if (!renderer_.upgradeFactory(&host::Dlss::upgrade)) {
         LOG_ERROR("DLSS: Streamline could not take over the DXGI factory; drawing without it");
         return;
@@ -366,6 +395,9 @@ void Host::checkLateDlss() {
 
 void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
     if (type == Msg::Present) return present(data, size);
+    // 3.0.20-beta.76 (core/late_start.hpp): a map's name (not "": the name's bytes after their count) - the picture's
+    // handing over to Streamline keeps out of its first seconds
+    if (type == Msg::Map && size > 4) late_.mapAt = GetTickCount64();
     if (type == Msg::SetSurface) {
         WireReader rd(data, size);
         const uint64_t handle = rd.u64();

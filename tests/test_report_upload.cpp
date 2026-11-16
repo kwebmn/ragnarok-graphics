@@ -103,6 +103,28 @@ TEST(report_upload_tells_what_went_wrong_from_the_log) {
     CHECK(reasonOfLog(opened + hang + "ERROR crash: exception 0xc0000005 at x") == "crash");  // a crash wins
 }
 
+// 3.0.20-beta.76 (the owner's own log of 16.11 22:40:59, beta.68: «the 64-bit renderer exited (exit code
+// 0xc0000409); the picture stops here, restart the game» six seconds into Prontera - he closed the game by hand, it
+// «closed the renderer», and the watcher took the log for a fine end: no report ever came of the 64-bit renderer's
+// death): the renderer's process gone is a bad end however the game itself ended; a lost graphics card stays the
+// card's
+TEST(report_upload_takes_the_64_bit_renderers_death_for_a_bad_end) {
+    const std::string opened = "x DirectDrawCreateEx = 0x00000000 (uaRO renderer)\n";
+    const std::string closed = "INFO  DirectDraw released, renderer closed\n";
+    const std::string died = "22:40:59.433 ERROR the 64-bit renderer exited (exit code 0xc0000409); the picture stops "
+                             "here, restart the game\n";
+    CHECK(reasonOfLog(opened + died + closed) == "crash");
+    CHECK(reasonOfLog(opened + died) == "crash");
+    CHECK(reasonOfLog(opened + "ERROR the 64-bit renderer is gone (exit code 0x00000000); the picture stops here, "
+                               "restart the game\n" + closed) == "crash");
+    // an earlier game's in the same log (the game opens DirectDraw again as it changes modes: one log a game) too
+    CHECK(reasonOfLog(opened + died + closed + opened + closed) == "crash");
+    // the card lost, told by the renderer through the same words: the card's
+    CHECK(reasonOfLog(opened + "ERROR render64: Present: the GPU device was removed (0x887a0005) (exit code "
+                               "0x00000000); the picture stops here, restart the game\n" + closed) == "gpu-lost");
+    CHECK(reasonOfLog(opened + closed).empty());
+}
+
 TEST(report_upload_tells_the_api_from_the_log) {
     CHECK(apiOfLog("INFO  Direct3D 11 renderer on NVIDIA\n") == "d3d11");
     CHECK(apiOfLog("Direct3D 11 renderer on A\nDirect3D 12 renderer on A\n") == "d3d12");  // the last start
