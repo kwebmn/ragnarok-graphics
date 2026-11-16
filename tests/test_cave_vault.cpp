@@ -1,10 +1,13 @@
 // 3.0.19-beta.32 (the 3D view's concept https://claude.ai/artifact/RadnVxG35hjE9d8HgdqzAy, decision 4: «Подземелья:
 // свод из отражённого рельефа пещеры и туман, без отдельной настройки плотности»): a cave's vault from its ground's
 // heights, mirrored up about the walls' top - down to the walls over them, a dome over the passages
+#include <algorithm>
 #include <cmath>
 
 #include "core/cave_vault.hpp"
 #include "core/config.hpp"
+#include "core/gnd.hpp"
+#include "core/ground_cells.hpp"
 #include "core/live_config.hpp"
 #include "core/settings/schema.hpp"
 #include "core/rsm.hpp"
@@ -293,4 +296,273 @@ TEST(config_view3d_ceiling_on_by_default_and_live) {
     CHECK(row != nullptr);
     if (row) CHECK(row->page == settings::Page::Game && row->control == settings::Control::Check);
     CHECK(appliesNow("view3d.ceiling"));
+}
+
+// 3.0.20-beta.54 (the owner's «делай 1-9», 5, part 2 - «свод пещер получает рисунок скалы самой карты вместо шума»):
+// the dungeon's own rock - the texture its raised ground wears most: its walls' faces by their area and its tops that
+// stand steep or between the passages and the walls' top; the makers' fillers never. By the census of the 118 dungeon
+// maps (/root/uagfx-tools/audit/vault/rockpick.cpp): pay_dun00 동굴던전03, anthell01 antflat-3, iz_dun03 iz-03
+namespace {
+
+// a cave 12 x 12: its outer ring walls 40 high with the makers' filler on top, the next ring a ledge 20 high of
+// `ledge` (a texture's number), the rest floors with two steep cells of moss; `turned`: the ledge's picture laid the
+// other way round (its u along the cell's other side)
+gnd::Ground rocky(int ledge, bool turned = false) {
+    gnd::Ground g;
+    g.width = 12, g.height = 12;
+    g.zoom = 10.0f;
+    g.textures = {"floor.bmp", "rock.bmp", "BACKSIDE.BMP", "moss.bmp"};
+    const auto surface = [&](int texture, float span, bool other = false) {
+        gnd::Surface s;
+        for (int k = 0; k < 4; ++k) {
+            const float along = (k & 1) ? span : 0.0f, across = (k & 2) ? span : 0.0f;
+            s.u[k] = other ? across : along;
+            s.v[k] = other ? along : across;
+        }
+        s.texture = int16_t(texture);
+        g.surfaces.push_back(s);
+        return int32_t(g.surfaces.size() - 1);
+    };
+    const int32_t floorTop = surface(0, 0.5f), ledgeTop = surface(ledge, 0.25f, turned), blackTop = surface(2, 1.0f);
+    const int32_t mossTop = surface(3, 0.5f), ledgeWall = surface(ledge, 0.25f), blackWall = surface(2, 1.0f);
+    for (int y = 0; y < 12; ++y)
+        for (int x = 0; x < 12; ++x) {
+            const int ring = std::min(std::min(x, y), std::min(11 - x, 11 - y));
+            gnd::Cell c{};
+            const float up = ring == 0 ? 40.0f : ring == 1 ? 20.0f : 0.0f;
+            for (float& h : c.h) h = -up;
+            c.top = ring == 0 ? blackTop : ring == 1 ? ledgeTop : floorTop;
+            if (ring == 0) c.front = c.right = blackWall;
+            if (ring == 1) c.front = c.right = ledgeWall;
+            if ((x == 5 && y == 5) || (x == 6 && y == 6)) {  // a hummock: steep
+                c.h[2] = c.h[3] = -8.0f;
+                c.top = mossTop;
+            }
+            g.cells.push_back(c);
+        }
+    return g;
+}
+
+}  // namespace
+
+TEST(cave_vault_its_rock_is_what_the_raised_ground_wears) {
+    const cave_vault::Rock rock = cave_vault::rockPicture(rocky(1));
+    CHECK(rock.texture == 1);                      // the ledge's and its faces' - not the floor's, not the moss's
+    CHECK(std::fabs(rock.cells - 4.0f) < 1e-4f);  // a quarter of the picture a cell
+    CHECK(std::fabs(cave_vault::rockPicture(rocky(1, true)).cells - 4.0f) < 1e-4f);  // laid the other way round
+    // the makers' filler never: the walls' tops and their faces wear it, more than anything
+    CHECK(cave_vault::rockPicture(rocky(2)).texture == -1);  // (the ledge the filler's too: two cells of moss no rock)
+    gnd::Ground low = rocky(1);
+    for (gnd::Cell& c : low.cells) {
+        for (float& h : c.h) h = 0.0f;
+        c.front = c.right = -1;
+    }
+    CHECK(cave_vault::rockPicture(low).texture == -1);  // nothing raised: none - the vault's own noise
+    CHECK(cave_vault::rockPicture(gnd::Ground{}).texture == -1);
+    gnd::Ground odd = rocky(1);
+    odd.surfaces[1].texture = 99;  // a surface of a texture the file has not: left out, no crash
+    CHECK(cave_vault::rockPicture(odd).texture == 1);
+}
+
+// the picture on the vault by the map's own light alone (rockOf's without its warm stone - the picture has its own)
+TEST(cave_vault_its_rock_picture_lit_by_the_maps_light) {
+    const float ambient[3] = {0.4f, 0.35f, 0.3f}, diffuse[3] = {0.6f, 0.5f, 0.4f};
+    float light[3] = {};
+    cave_vault::rockLight(true, ambient, diffuse, light);
+    CHECK(std::fabs(light[0] - (0.4f + 0.6f * 0.35f)) < 1e-4f && std::fabs(light[2] - (0.3f + 0.4f * 0.35f)) < 1e-4f);
+    const float bright[3] = {0.9f, 0.9f, 0.9f}, dark[3] = {0, 0, 0};
+    cave_vault::rockLight(true, bright, bright, light);
+    CHECK(light[1] == 1.0f);  // no brighter than the picture
+    cave_vault::rockLight(true, dark, dark, light);
+    CHECK(light[1] == cave_vault::kRockLightLeast);  // never black
+    cave_vault::rockLight(false, ambient, diffuse, light);
+    CHECK(light[0] == cave_vault::kRockLightUnlit && light[2] == cave_vault::kRockLightUnlit);
+}
+
+// 3.0.20-beta.54 (the ceilings of beta.52 «в цвет верхней части стен»): the ceiling's colour by the room's walls -
+// over a map's tall models the faces of their upper half, each by its area, in their textures' mean colours
+TEST(cave_vault_a_ceilings_colour_by_the_walls_upper_part) {
+    // a wall 40 tall, 10 wide: its lower half of texture 0, its upper half of texture 1 (two faces), and a small
+    // face of texture 2 at its very top
+    rsm::Model wall;
+    wall.textures = {"plinth.bmp", "plaster.bmp", "trim.bmp", "unknown.bmp"};
+    const auto quad = [&](float y0, float y1, float w, int texture) {
+        rsm::Face a, b;
+        const float p[4][3] = {{0, y0, 0}, {w, y0, 0}, {w, y1, 0}, {0, y1, 0}};
+        for (int c = 0; c < 3; ++c) {
+            a.pos[0][c] = p[0][c], a.pos[1][c] = p[1][c], a.pos[2][c] = p[2][c];
+            b.pos[0][c] = p[0][c], b.pos[1][c] = p[2][c], b.pos[2][c] = p[3][c];
+        }
+        a.texture = b.texture = texture;
+        wall.faces.push_back(a);
+        wall.faces.push_back(b);
+    };
+    quad(0.0f, -20.0f, 10.0f, 0);   // the plinth (up along -y)
+    quad(-20.0f, -38.0f, 10.0f, 1);  // the plaster: 180 of area
+    quad(-38.0f, -40.0f, 10.0f, 2);  // the trim: 20
+    quad(-30.0f, -40.0f, 5.0f, 3);   // a picture not known: not weighed
+    const std::vector<cave_vault::Mean> means = {
+        {{0.2f, 0.1f, 0.1f}, true}, {{0.8f, 0.7f, 0.6f}, true}, {{0.4f, 0.3f, 0.2f}, true}, {{0, 0, 0}, false}};
+    cave_vault::Tone tone;
+    cave_vault::wallTone(wall, standing(0, 0, 1), means, tone);
+    float rgb[3] = {};
+    CHECK(cave_vault::toneOf(tone, rgb));
+    // 180 of the plaster and 20 of the trim; none of the plinth
+    CHECK(std::fabs(rgb[0] - (0.8f * 180.0f + 0.4f * 20.0f) / 200.0f) < 1e-3f);
+    CHECK(std::fabs(rgb[2] - (0.6f * 180.0f + 0.2f * 20.0f) / 200.0f) < 1e-3f);
+    // twice as large a wall weighs four times as much: the room's colour is its large walls'
+    cave_vault::Tone two;
+    cave_vault::wallTone(wall, standing(0, 0, 2), means, two);
+    CHECK(std::fabs(two.weight - 4.0 * tone.weight) < 1e-2 * tone.weight);
+    cave_vault::Tone none;
+    CHECK(!cave_vault::toneOf(none, rgb));
+    cave_vault::wallTone(rsm::Model{}, standing(0, 0, 1), means, none);
+    CHECK(!cave_vault::toneOf(none, rgb));
+    // a picture's mean colour: its see-through texels (alpha 0) left out; none of it seen - not known
+    const uint32_t texels[4] = {0xFF804020u, 0xFF402010u, 0x00FF00FFu, 0x00FF00FFu};
+    const cave_vault::Mean m = cave_vault::meanOf(texels, 4);
+    CHECK(m.known && std::fabs(m.rgb[0] - (128.0f + 64.0f) / 510.0f) < 1e-4f);
+    CHECK(std::fabs(m.rgb[2] - (32.0f + 16.0f) / 510.0f) < 1e-4f);
+    CHECK(!cave_vault::meanOf(texels + 2, 2).known && !cave_vault::meanOf(nullptr, 0).known);
+    // the ceiling's colour: the walls' by the map's light, a little under them (it faces down); none known - rockOf's
+    const float ambient[3] = {0.5f, 0.5f, 0.5f}, diffuse[3] = {1.0f, 1.0f, 1.0f}, walls[3] = {0.8f, 0.6f, 0.4f};
+    float out[3] = {};
+    cave_vault::ceilingColour(true, walls, true, ambient, diffuse, out);
+    CHECK(std::fabs(out[0] - 0.8f * 0.85f * cave_vault::kCeilingShade) < 1e-4f);
+    CHECK(std::fabs(out[2] - 0.4f * 0.85f * cave_vault::kCeilingShade) < 1e-4f);
+    float stone[3] = {};
+    cave_vault::rockOf(true, ambient, diffuse, stone);
+    cave_vault::ceilingColour(false, walls, true, ambient, diffuse, out);
+    CHECK(out[0] == stone[0] && out[1] == stone[1] && out[2] == stone[2]);
+}
+
+TEST(config_view3d_vault_rock_on_by_default_and_live) {
+    CHECK(parseConfig("").effects.vaultRock);
+    CHECK(!parseConfig("[view3d]\nvault_rock = 0\n").effects.vaultRock);
+    const settings::IniSetting* row = settings::findSetting("view3d.vault_rock");
+    CHECK(row != nullptr);
+    if (row) CHECK(row->page == settings::Page::Game && row->control == settings::Control::Check);
+    CHECK(appliesNow("view3d.vault_rock"));
+}
+
+// 3.0.20-beta.54: the rock's own picture. A cave's ground textures are painted sheets, four cells by four - the
+// makers' blackness (the walls' unseen tops), a band of rock, the floor's sand (pay_dun00's 동굴던전01-03, orcsdun01's
+// ge-flat2-4: /root/uagfx-tools/audit/vault/rock_candidates.png) - none of them lies whole on a vault. The vault
+// takes a patch: the largest square of a sheet that is all rock - within the parts the raised ground shows (not
+// those the floors show), clear of the blackness and its soft edge
+namespace {
+
+// a cave as rocky(1)'s, its ledge two rings wide, laid from a sheet 64 x 64: the ledge's cells show its second and
+// third rows (v 0.25-0.75), the walls' tops its first (v 0-0.25: black), the floors its last (v 0.75-1: sand)
+gnd::Ground sheeted() {
+    gnd::Ground g;
+    g.width = 12, g.height = 12;
+    g.zoom = 10.0f;
+    g.textures = {"sheet.bmp"};
+    const auto surface = [&](float u0, float v0) {
+        gnd::Surface s;
+        for (int k = 0; k < 4; ++k) {
+            s.u[k] = u0 + ((k & 1) ? 0.25f : 0.0f);
+            s.v[k] = v0 + ((k & 2) ? 0.25f : 0.0f);
+        }
+        s.texture = 0;
+        g.surfaces.push_back(s);
+        return int32_t(g.surfaces.size() - 1);
+    };
+    for (int y = 0; y < 12; ++y)
+        for (int x = 0; x < 12; ++x) {
+            const int ring = std::min(std::min(x, y), std::min(11 - x, 11 - y));
+            gnd::Cell c{};
+            const float up = ring == 0 ? 40.0f : ring <= 2 ? 20.0f : 0.0f;
+            for (float& h : c.h) h = -up;
+            const float u0 = 0.25f * float(x % 4);
+            c.top = ring == 0 ? surface(u0, 0.0f) : ring <= 2 ? surface(u0, 0.25f + 0.25f * float(y % 2))
+                                                             : surface(u0, 0.75f);
+            g.cells.push_back(c);
+        }
+    return g;
+}
+
+// the sheet: black down to row 16, then the rock coming out of it over 6 rows (a soft edge: the rock's own colour,
+// a seventh of it more each row), rock (two greys speckled in no order, a crack or two) to row 48, sand under it
+std::vector<uint32_t> sheet() {
+    std::vector<uint32_t> p(64 * 64);
+    for (int y = 0; y < 64; ++y)
+        for (int x = 0; x < 64; ++x) {
+            const uint32_t speck =
+                (uint32_t(x) * 374761393u + uint32_t(y) * 668265263u) ^ (uint32_t(x * y) * 2246822519u);
+            uint32_t c = ((speck >> 13) & 1) ? 0xFF6A7A52u : 0xFF56664Au;  // rock
+            if (y < 16) c = 0xFF000000u;
+            else if (y < 22)
+                c = 0xFF000000u | uint32_t(0x6A * (y - 15) / 7) << 16 | uint32_t(0x7A * (y - 15) / 7) << 8 |
+                    uint32_t(0x52 * (y - 15) / 7);
+            else if (y >= 48) c = 0xFFB4A05Au;  // sand
+            p[size_t(y) * 64 + size_t(x)] = c;
+        }
+    p[size_t(30) * 64 + 20] = p[size_t(37) * 64 + 41] = 0xFF050505u;  // cracks: a texel each - still rock
+    return p;
+}
+
+}  // namespace
+
+TEST(cave_vault_its_rock_patch_is_all_rock) {
+    const gnd::Ground g = sheeted();
+    const std::vector<uint32_t> pic = sheet();
+    size_t asked = 0;
+    const ground_cells::PictureOf pictureOf = [&](size_t texture, ground_cells::Picture& out) {
+        ++asked;
+        if (texture != 0) return false;
+        out = {64, 64, pic.data()};
+        return true;
+    };
+    const cave_vault::Patch patch = cave_vault::rockPatch(g, pictureOf);
+    CHECK(patch.texture == 0 && asked == 1);
+    CHECK(std::fabs(patch.texels - 64.0f * 0.25f / 10.0f) < 1e-4f);  // 1.6 texels a unit
+    // within the rows the ledge shows (16-48), clear of the blackness and of its soft edge's dark half (the rows to
+    // 18: under kPatchBright of the rock's brightness) and of the sand (from 48): a square as large as fits - and no
+    // larger than kPatchUnits of the world
+    CHECK(patch.side >= 20 && patch.side <= int(cave_vault::kPatchUnits * patch.texels + 0.5f));
+    CHECK(patch.y >= 19 && patch.y + patch.side <= 48);
+    CHECK(patch.x >= 0 && patch.x + patch.side <= 64);
+    // its mean colour the rock's (the two greys', near enough)
+    CHECK(patch.known && std::fabs(patch.mean[0] - 0.376f) < 0.03f && std::fabs(patch.mean[1] - 0.439f) < 0.03f);
+    // the floor's stuff within the parts the raised ground shows (a sheet's corner of sand: pay_dun00's 동굴던전03) is
+    // not the rock: of the squares that fit, one of a single hue - clear of the sand from column 44
+    std::vector<uint32_t> cornered = pic;
+    for (int y = 34; y < 48; ++y)
+        for (int x = 44; x < 64; ++x) cornered[size_t(y) * 64 + size_t(x)] = 0xFFB4A05Au;
+    const cave_vault::Patch clean = cave_vault::rockPatch(g, [&](size_t, ground_cells::Picture& out) {
+        out = {64, 64, cornered.data()};
+        return true;
+    });
+    CHECK(clean.side >= 20 && clean.x + clean.side <= 44 && clean.y >= 19 && clean.y + clean.side <= 48);
+    CHECK(std::fabs(clean.mean[2] - 0.286f) < 0.03f);  // no sand in its colour
+    // a wall of bricks is no rock to lay in pieces - courses of mortar from side to side, straight lines a mosaic
+    // would break (of the 107 dungeons' patches: lhz_dun01's bricks, gon_dun01's tiles, kh_dun01's painted «A-1»,
+    // ama_dun03's painted screen). No patch then: the vault's own stone in the bricks' colour
+    std::vector<uint32_t> bricks = pic;
+    for (int y = 22; y < 48; ++y)
+        for (int x = 0; x < 64; ++x) {
+            const bool mortar = y % 6 == 0 || (x + (y / 6 % 2) * 6) % 12 == 0;
+            bricks[size_t(y) * 64 + size_t(x)] = mortar ? 0xFF403830u : 0xFF8A6A52u;
+        }
+    const cave_vault::Patch laid = cave_vault::rockPatch(g, [&](size_t, ground_cells::Picture& out) {
+        out = {64, 64, bricks.data()};
+        return true;
+    });
+    CHECK(laid.side == 0 && laid.known && laid.mean[0] > 0.35f && laid.mean[0] > laid.mean[2] + 0.1f);
+    // a sheet with too little rock on it for a patch: none - its colour all the same (the rock's texels seen)
+    std::vector<uint32_t> thin = pic;
+    for (int y = 26; y < 48; ++y)
+        for (int x = 0; x < 64; ++x) thin[size_t(y) * 64 + size_t(x)] = 0xFF000000u;
+    const ground_cells::PictureOf thinOf = [&](size_t, ground_cells::Picture& out) {
+        out = {64, 64, thin.data()};
+        return true;
+    };
+    const cave_vault::Patch none = cave_vault::rockPatch(g, thinOf);
+    CHECK(none.side == 0 && none.known && none.mean[1] > 0.3f);
+    // the picture not found: nothing known
+    const cave_vault::Patch lost = cave_vault::rockPatch(g, [](size_t, ground_cells::Picture&) { return false; });
+    CHECK(lost.side == 0 && !lost.known);
+    CHECK(cave_vault::rockPatch(gnd::Ground{}, pictureOf).side == 0);
 }

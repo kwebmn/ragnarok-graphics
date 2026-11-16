@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 
+#include "core/gnd.hpp"
+#include "core/ground_cells.hpp"
 #include "core/ground_heights.hpp"
 #include "core/rsm.hpp"
 #include "core/rsw.hpp"
@@ -84,5 +86,76 @@ bool forMap(const std::string& map);
 // - kRockUnlit
 constexpr float kRock[3] = {0.62f, 0.55f, 0.46f}, kRockUnlit[3] = {0.18f, 0.16f, 0.14f};
 void rockOf(bool lightKnown, const float ambient[3], const float diffuse[3], float out[3]);
+// 3.0.20-beta.54 (the owner's «делай 1-9», 5, part 2 - «свод пещер получает рисунок скалы самой карты вместо шума»):
+// a dungeon's own rock - the ground's texture its raised ground wears most: its walls' faces (their area in cells)
+// and its tops that stand steep (kRockSteep between a cell's corners) or between the passages and the walls' top
+// (from kRockRaised of the way up); the makers' fillers never (outskirts::fillerTexture). cells: how many cells one
+// picture of it lies over (the median of those surfaces'; 4 where none tells). texture -1: none - under kRockLeast
+// cells of it in all: the vault's own noise. By the census of the 118 dungeon maps
+// (/root/uagfx-tools/audit/vault/rockpick.cpp): pay_dun00 동굴던전03, anthell01 antflat-3, iz_dun03 iz-03, mag_dun01
+// 용암던젼_15, orcsdun01 ge-flat2 - a quarter of the picture a cell nearly everywhere
+struct Rock {
+    int texture = -1;
+    float cells = 4.0f;
+};
+constexpr float kRockSteep = 5.0f, kRockRaised = 0.35f, kRockLeast = 40.0f;
+Rock rockPicture(const gnd::Ground& g);
+// The rock's own picture for the vault. A cave's ground textures are painted sheets, four cells by four - the makers'
+// blackness (the walls' unseen tops), a band of rock, the floor's sand or earth (pay_dun00's 동굴던전01-03, orcsdun01's
+// ge-flat2-4, iz_dun03's iz-03: /root/uagfx-tools/audit/vault/rock_candidates.png); of six dungeons looked at one
+// (mag_dun01) wears a rock that lies whole. So a patch: the largest square of a sheet that is all rock -
+//  - within the parts of it the raised ground shows more than the floors do (a cell's part: its top's corners in
+//    the picture; a floor: a cell neither steep nor raised, under the walls' top);
+//  - clear of the blackness and its soft edge: its brightness, evened over a few texels (a crack is still rock),
+//    kPatchBright of the rock's usual at least;
+//  - of one stuff: a sheet's corner of the floor's sand among the parts the raised ground shows is not the rock
+//    (pay_dun00's 동굴던전03) - of the squares that fit, at the full size, three quarters and a half of it, the
+//    largest whose ninths' hues (red, green, blue as shares of their sum - a shadow changes none) lie within
+//    kPatchSame of the whole's; none such: the one of the most even hue;
+//  - no wall of bricks, no tiles, no painted panel: straight lines from side to side that a mosaic would break. A
+//    patch's rows' and columns' edges (a row's: its texels' mean difference in brightness from the next row's) - one
+//    of them kPatchLines times the usual one: lined - no patch, the vault's own stone in its colour. By the patches
+//    of 107 dungeons (/root/uagfx-tools/audit/vault/patches_all.png): the rocks 1.2-2.4 (pay_dun00 1.6, orcsdun01
+//    2.4), tiles and bricks from 3.2 (lhz_dun03), kh_dun01's painted «A-1» 13, ama_dun01's panel 46;
+// kPatchUnits of the world across at most, kPatchLeastUnits at least - the sheets tried in the order of rockPicture's
+// measure, kRockTries of them. The renderers lay it over the vault in turned and shifted pieces blended into one
+// another (sky3d_ps rockMosaic), no seam and no repeat. side 0: none found; `known`: mean is the rock's colour all
+// the same (the patch's, or the rock's texels seen) - the vault's noise in it
+struct Patch {
+    int texture = -1;            // the ground's texture it is cut from
+    int x = 0, y = 0, side = 0;  // its square, the picture's texels
+    float texels = 6.4f;         // the picture's texels a world unit, as the ground lays it
+    float mean[3] = {0.0f, 0.0f, 0.0f};
+    bool known = false;
+};
+constexpr float kPatchUnits = 20.0f, kPatchLeastUnits = 7.5f, kPatchBright = 0.6f, kPatchSame = 0.035f;
+constexpr float kPatchLines = 2.6f;
+constexpr int kRockTries = 4;
+Patch rockPatch(const gnd::Ground& g, const ground_cells::PictureOf& pictureOf);
+// The picture on the vault by the map's own light alone - rockOf's without its warm stone (the picture has its own):
+// ambient and 0.35 of its diffuse, within kRockLightLeast and 1; none known kRockLightUnlit
+constexpr float kRockLightLeast = 0.12f, kRockLightUnlit = 0.3f;
+void rockLight(bool lightKnown, const float ambient[3], const float diffuse[3], float out[3]);
+// 3.0.20-beta.54 (beta.52's ceilings «в цвет верхней части стен»): a ceiling's colour by its room's walls. Over a
+// map's tall models (kPostLeast) the faces of their upper half (a face's middle at the model's middle height or
+// over it, as the map stands it), each by its area, in their textures' mean colours (means: by the model's
+// textures; one not known is not weighed) - summed into a Tone, the colour its mean
+struct Mean {
+    float rgb[3] = {0.0f, 0.0f, 0.0f};
+    bool known = false;
+};
+// a picture's mean colour, its see-through texels (alpha 0) left out; none of it seen: not known
+Mean meanOf(const uint32_t* argb, size_t count);
+struct Tone {
+    double rgb[3] = {0.0, 0.0, 0.0};
+    double weight = 0.0;
+};
+void wallTone(const rsm::Model& model, const rsw::Model& at, const std::vector<Mean>& means, Tone& sum);
+bool toneOf(const Tone& sum, float out[3]);  // false: nothing weighed
+// The ceiling's colour: the walls' by the map's light (rockLight), kCeilingShade of it - it faces down; the walls'
+// colour not known: rockOf's stone
+constexpr float kCeilingShade = 0.9f;
+void ceilingColour(bool wallsKnown, const float walls[3], bool lightKnown, const float ambient[3],
+                   const float diffuse[3], float out[3]);
 
 }  // namespace uagfx::cave_vault

@@ -199,6 +199,8 @@ Renderer11::~Renderer11() {
     drop(trampleData_);
     drop(vaultSrv_);  // 3.0.19-beta.32
     drop(vaultData_);
+    drop(vaultRockSrv_);  // 3.0.20-beta.54
+    drop(vaultRock_);
     drop(smokePs_);
     drop(smokeGlowPs_);
     drop(lavaPs_);
@@ -4222,6 +4224,7 @@ void Renderer11::skyPass(bool fill) {
     c.sharpen = waterTime();
     // 3.0.19-beta.32: as Direct3D 12's
     ID3D11ShaderResourceView* vaultT = vault && fill ? vaultTexture() : nullptr;
+    ID3D11ShaderResourceView* rockT = nullptr;  // 3.0.20-beta.54
     if (vaultT) {
         const map::Axes axes = mapWorld_.axes();
         c.footprint = 1.0f;
@@ -4234,16 +4237,83 @@ void Renderer11::skyPass(bool fill) {
         // 3.0.19-beta.38 (R-S3NQBF): its rock by the map's own light (sourceClamp - no sun under a vault)
         const rsw::World* rw = mapWorld_.world();
         const float none[3] = {0, 0, 0};
-        cave_vault::rockOf(rw && rw->lightKnown, rw ? rw->lightAmbient : none, rw ? rw->lightDiffuse : none,
-                           c.sourceClamp);
+        const bool lit = rw && rw->lightKnown;
+        const float* ambient = rw ? rw->lightAmbient : none;
+        const float* diffuse = rw ? rw->lightDiffuse : none;
+        cave_vault::rockOf(lit, ambient, diffuse, c.sourceClamp);
         c.sourceClamp[3] = vaultMap_.ceiling;  // 3.0.20-beta.52: a ceiling's height (0: a vault)
+        // 3.0.20-beta.54 (as Direct3D 12's): a ceiling in its walls' colour; a vault in the map's own rock
+        if (vaultMap_.ceiling > 0.0f) {
+            float walls[3];
+            const bool known = mapWorld_.wallsColour(walls);
+            cave_vault::ceilingColour(known, walls, lit, ambient, diffuse, c.sourceClamp);
+        } else if (effects_.vaultRock && mapWorld_.vaultRock().known) {
+            const MapWorld::VaultRock& rock = mapWorld_.vaultRock();
+            float light[3];
+            cave_vault::rockLight(lit, ambient, diffuse, light);
+            rockT = vaultRockTexture();
+            if (rockT) {
+                std::copy(rock.mean, rock.mean + 3, c.hole);
+                c.hole[3] = float(rock.patch.width);
+                c.hole[4] = float(vaultRockLevels_);
+                c.hole[5] = rock.texels;
+                std::copy(light, light + 3, c.sourceClamp);
+            } else {
+                for (int k = 0; k < 3; ++k) c.sourceClamp[k] = std::clamp(rock.mean[k] * light[k], 0.04f, 0.9f);
+            }
+        }
     }
     if (fill && sky3dLogged_ != map_) {
         sky3dLogged_ = map_;
         LOG_INFO("3D sky: on %s - %s, the night %.2f (Direct3D 11, field of view %.0f)", map_.c_str(),
                  vault ? "a dark vault" : "the open sky", night, camera::fovNow());
     }
-    worldPass(fill ? sky3dPs_ : sky3dHazePs_, c, false, 1, depthSrv_, nullptr, vaultT);
+    worldPass(fill ? sky3dPs_ : sky3dHazePs_, c, false, 1, depthSrv_, rockT, vaultT);
+}
+
+// 3.0.20-beta.54: the map's own rock's patch on the card, its levels too - once a map (haze.cpp's)
+ID3D11ShaderResourceView* Renderer11::vaultRockTexture() {
+    const MapWorld::VaultRock& rock = mapWorld_.vaultRock();
+    const uint64_t key = mapWorld_.laidKey();
+    if (vaultRockFailed_ || !key || rock.patch.levels.empty() || rock.patch.width <= 0) return nullptr;
+    if (key == vaultRockKey_ && vaultRockSrv_) return vaultRockSrv_;
+    drop(vaultRockSrv_);
+    drop(vaultRock_);
+    vaultRockKey_ = 0;
+    const int side = rock.patch.width;
+    std::vector<D3D11_SUBRESOURCE_DATA> data;  // the levels of the sizes the card expects
+    while (data.size() < rock.patch.levels.size()) {
+        const int size = std::max(side >> int(data.size()), 1);
+        const std::vector<uint32_t>& level = rock.patch.levels[data.size()];
+        if (level.size() != size_t(size) * size_t(size)) break;
+        D3D11_SUBRESOURCE_DATA one{};
+        one.pSysMem = level.data();
+        one.SysMemPitch = UINT(size) * 4;
+        data.push_back(one);
+    }
+    if (data.empty()) return nullptr;
+    D3D11_TEXTURE2D_DESC d{};
+    d.Width = d.Height = UINT(side);
+    d.MipLevels = UINT(data.size());
+    d.ArraySize = 1;
+    d.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    d.SampleDesc.Count = 1;
+    d.Usage = D3D11_USAGE_IMMUTABLE;
+    d.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    if (FAILED(device_->CreateTexture2D(&d, data.data(), &vaultRock_)) ||
+        FAILED(device_->CreateShaderResourceView(vaultRock_, nullptr, &vaultRockSrv_))) {
+        drop(vaultRockSrv_);
+        drop(vaultRock_);
+        vaultRockFailed_ = true;  // not tried again
+        LOG_ERROR("3D sky: no memory for the vault's rock (%dx%d, Direct3D 11) - the vault's own stone", side, side);
+        return nullptr;
+    }
+    vaultRockKey_ = key;
+    vaultRockLevels_ = int(data.size());
+    LOG_INFO("3D sky: %s's vault in the map's own rock - a patch of %dx%d texels with %d levels, %.1f units of the "
+             "world across, laid as a mosaic ([view3d] vault_rock, Direct3D 11)", map_.c_str(), side, side,
+             vaultRockLevels_, double(float(side) / std::max(rock.texels, 1e-3f)));
+    return vaultRockSrv_;
 }
 
 ID3D11ShaderResourceView* Renderer11::vaultTexture() {

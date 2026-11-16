@@ -1173,6 +1173,15 @@ struct Renderer::Impl {
     D3D12_RESOURCE_STATES vaultState = D3D12_RESOURCE_STATE_COPY_DEST;
     UINT vaultSrv = kNoSrv;
     int vaultTexW = 0, vaultTexH = 0;
+    // 3.0.20-beta.54 (the owner's «делай 1-9», 5, part 2): the map's own rock for its vault - MapWorld::vaultRock's
+    // patch with its levels on the card (sky3d_ps rockMosaic's t0); kNoSrv: none
+    UINT vaultRockTexture();
+    ID3D12Resource* vaultRock = nullptr;
+    D3D12_RESOURCE_STATES vaultRockState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT vaultRockSrv = kNoSrv;
+    uint64_t vaultRockKey = 0;
+    int vaultRockLevels = 0;
+    bool vaultRockFailed = false;
     // 0.72: indoors (a polished or wet floor) and in the rain; a field under a dry sky does not shine
     float floorReflectAmount() const {
         if (!effects.floorReflections || !floorReflectPs || !halfOverPs) return 0.0f;

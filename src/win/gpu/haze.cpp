@@ -117,6 +117,7 @@ bool Renderer::Impl::skyPass(bool fill) {
     // 3.0.19-beta.32: a dungeon's vault (t1: its heights a cell; fogColor its cell's units, its cells, the up axis's
     // sign; twinW/twinH the ground's x and z signs)
     const UINT vaultT = vault && fill ? vaultTexture() : kNoSrv;
+    UINT rockT = kNoSrv;  // 3.0.20-beta.54
     if (vaultT != kNoSrv) {
         const map::Axes axes = mapWorld.axes();
         c.footprint = 1.0f;
@@ -129,9 +130,33 @@ bool Renderer::Impl::skyPass(bool fill) {
         // 3.0.19-beta.38 (R-S3NQBF): its rock by the map's own light (sourceClamp - no sun under a vault)
         const rsw::World* rw = mapWorld.world();
         const float none[3] = {0, 0, 0};
-        cave_vault::rockOf(rw && rw->lightKnown, rw ? rw->lightAmbient : none, rw ? rw->lightDiffuse : none,
-                           c.sourceClamp);
+        const bool lit = rw && rw->lightKnown;
+        const float* ambient = rw ? rw->lightAmbient : none;
+        const float* diffuse = rw ? rw->lightDiffuse : none;
+        cave_vault::rockOf(lit, ambient, diffuse, c.sourceClamp);
         c.sourceClamp[3] = vaultMap.ceiling;  // 3.0.20-beta.52: a ceiling's height (0: a vault)
+        // 3.0.20-beta.54 (the owner's «делай 1-9», 5, part 2): a ceiling in its walls' upper part's colour; a
+        // dungeon's vault in the map's own rock - a patch of it laid as a mosaic (t0, hole: its mean colour, its
+        // side, its levels, its texels a unit), or its colour alone on the vault's stone ([view3d] vault_rock)
+        if (vaultMap.ceiling > 0.0f) {
+            float walls[3];
+            const bool known = mapWorld.wallsColour(walls);
+            cave_vault::ceilingColour(known, walls, lit, ambient, diffuse, c.sourceClamp);
+        } else if (effects.vaultRock && mapWorld.vaultRock().known) {
+            const MapWorld::VaultRock& rock = mapWorld.vaultRock();
+            float light[3];
+            cave_vault::rockLight(lit, ambient, diffuse, light);
+            rockT = vaultRockTexture();
+            if (rockT != kNoSrv) {
+                std::copy(rock.mean, rock.mean + 3, c.hole);
+                c.hole[3] = float(rock.patch.width);
+                c.hole[4] = float(vaultRockLevels);
+                c.hole[5] = rock.texels;
+                std::copy(light, light + 3, c.sourceClamp);
+            } else {
+                for (int k = 0; k < 3; ++k) c.sourceClamp[k] = std::clamp(rock.mean[k] * light[k], 0.04f, 0.9f);
+            }
+        }
     }
     if (fill && sky3dLogged != mapName) {
         sky3dLogged = mapName;
@@ -141,7 +166,71 @@ bool Renderer::Impl::skyPass(bool fill) {
                                                                                                     : "none",
                  camera::fovNow());
     }
-    return worldPass(pso, w, h, c, sceneDepthSrv, true, vaultT);
+    return worldPass(pso, w, h, c, rockT != kNoSrv ? rockT : sceneDepthSrv, true, vaultT);
+}
+
+// 3.0.20-beta.54: the map's own rock's patch on the card, its levels too - once a map
+UINT Renderer::Impl::vaultRockTexture() {
+    const MapWorld::VaultRock& rock = mapWorld.vaultRock();
+    const uint64_t key = mapWorld.laidKey();
+    if (vaultRockFailed || !key || rock.patch.levels.empty() || rock.patch.width <= 0) return kNoSrv;
+    if (key == vaultRockKey && vaultRock) return vaultRockSrv;
+    if (vaultRock) discard(vaultRock);
+    vaultRock = nullptr;
+    vaultRockKey = 0;
+    const int side = rock.patch.width;
+    int levels = 0;  // those of the sizes the card expects (each half of the one before, 1 at least)
+    while (size_t(levels) < rock.patch.levels.size() &&
+           rock.patch.levels[size_t(levels)].size() ==
+               size_t(std::max(side >> levels, 1)) * size_t(std::max(side >> levels, 1)))
+        ++levels;
+    if (levels == 0) return kNoSrv;
+    vaultRock = createTexture2D(device, side, side, levels, DXGI_FORMAT_B8G8R8A8_UNORM, D3D12_RESOURCE_FLAG_NONE,
+                                D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+    if (vaultRock && vaultRockSrv == kNoSrv) vaultRockSrv = allocSrv();
+    if (!vaultRock || vaultRockSrv == kNoSrv) {
+        LOG_ERROR("3D sky: no memory for the vault's rock (%dx%d) - the vault's own stone", side, side);
+        releaseCom(vaultRock);
+        vaultRockFailed = true;  // not tried again
+        return kNoSrv;
+    }
+    nameResource(vaultRock, "vault's rock");
+    vaultRockState = D3D12_RESOURCE_STATE_COPY_DEST;
+    device->CreateShaderResourceView(vaultRock, nullptr, cpuSrvHandle(vaultRockSrv));
+    flushDraws();  // the draws gathered so far before the copies
+    for (int l = 0; l < levels; ++l) {
+        const int size = std::max(side >> l, 1);
+        const UINT row = UINT(size) * 4, pitch = (row + 255u) & ~255u;  // rows 256 bytes apart
+        const Upload u = allocUpload(UINT64(pitch) * UINT(size), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+        if (!u.cpu) {  // the next frame again
+            discard(vaultRock);
+            vaultRock = nullptr;
+            return kNoSrv;
+        }
+        for (int y = 0; y < size; ++y)
+            std::memcpy(u.cpu + size_t(y) * pitch, rock.patch.levels[size_t(l)].data() + size_t(y) * size_t(size),
+                        row);
+        D3D12_TEXTURE_COPY_LOCATION src{}, to{};
+        src.pResource = slots[slot].upload;
+        src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+        src.PlacedFootprint.Offset = u.offset;
+        src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        src.PlacedFootprint.Footprint.Width = UINT(size);
+        src.PlacedFootprint.Footprint.Height = UINT(size);
+        src.PlacedFootprint.Footprint.Depth = 1;
+        src.PlacedFootprint.Footprint.RowPitch = pitch;
+        to.pResource = vaultRock;
+        to.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        to.SubresourceIndex = UINT(l);
+        list->CopyTextureRegion(&to, 0, 0, 0, &src, nullptr);
+    }
+    transition(vaultRock, vaultRockState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    vaultRockKey = key;
+    vaultRockLevels = levels;
+    LOG_INFO("3D sky: %s's vault in the map's own rock - a patch of %dx%d texels with %d levels, %.1f units of the "
+             "world across, laid as a mosaic ([view3d] vault_rock)", mapName.c_str(), side, side, levels,
+             double(float(side) / std::max(rock.texels, 1e-3f)));
+    return vaultRockSrv;
 }
 
 UINT Renderer::Impl::vaultTexture() {

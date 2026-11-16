@@ -2037,6 +2037,7 @@ void Renderer::Impl::destroy() {
     releaseCom(sunCasterVs);
     releaseCom(sunCasterPs);
     releaseCom(sunShadowPs);
+    releaseCom(vaultRock);  // 3.0.20-beta.54
     releaseCom(floorReflectPipeline);  // 0.72, 0.86
     for (ID3D12PipelineState*& p : halfOverPipelines) releaseCom(p);
     releaseCom(halfOverPs);

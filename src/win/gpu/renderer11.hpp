@@ -905,6 +905,13 @@ private:
     bool vaultMade_ = false, vaultUploaded_ = false, vaultFailed_ = false;
     ID3D11Texture2D* vaultData_ = nullptr;
     ID3D11ShaderResourceView* vaultSrv_ = nullptr;
+    // 3.0.20-beta.54: the map's own rock for its vault (as Direct3D 12's vaultRockTexture) - sky3d_ps's t0
+    ID3D11ShaderResourceView* vaultRockTexture();
+    ID3D11Texture2D* vaultRock_ = nullptr;
+    ID3D11ShaderResourceView* vaultRockSrv_ = nullptr;
+    uint64_t vaultRockKey_ = 0;
+    int vaultRockLevels_ = 0;
+    bool vaultRockFailed_ = false;
     ID3D11Texture2D* trampleData_ = nullptr;    // its texels (grass_ps's t1)
     ID3D11ShaderResourceView* trampleSrv_ = nullptr;
     bool trampleFailed_ = false;

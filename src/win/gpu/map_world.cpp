@@ -47,6 +47,9 @@ struct MapWorld::Shared {
     std::vector<grass_beds::Box> doneBeds;  // 3.0.1-beta.3: its flower beds' tops
     std::vector<cave_vault::Post> donePosts;  // 3.0.20-beta.46: a dungeon's posts
     float doneWalls = 0.0f;                   // 3.0.20-beta.52: indoors, the walls' height by the models
+    float doneWallsColour[3] = {0.0f, 0.0f, 0.0f};  // 3.0.20-beta.54: and their upper part's colour
+    bool doneWallsColourKnown = false;
+    MapWorld::VaultRock doneRock;             // 3.0.20-beta.54: a dungeon's own rock for its vault
     bool ownWanted = false;                 // 3.0.4-beta.10: the own ground read with the map
     std::unique_ptr<OwnGround> doneOwn;
     bool doneOk = false;
@@ -98,6 +101,8 @@ void MapWorld::setMap(const std::string& name) {
     beds_.clear();
     posts_.clear();
     walls_ = 0.0f;
+    wallsColourKnown_ = false;
+    rock_ = VaultRock{};
     placed_.clear();
     lamps_.clear();
     seen_.clear();
@@ -148,6 +153,9 @@ void MapWorld::poll() {
         beds_ = std::move(shared_->doneBeds);
         posts_ = std::move(shared_->donePosts);
         walls_ = shared_->doneWalls;
+        std::copy(shared_->doneWallsColour, shared_->doneWallsColour + 3, wallsColour_);
+        wallsColourKnown_ = shared_->doneWallsColourKnown;
+        rock_ = std::move(shared_->doneRock);
         own_ = std::move(shared_->doneOwn);  // 3.0.4-beta.10
         if (!ownWanted_) own_.reset();       // read before it was turned off
         if (own_) own_->serial = ++ownSerial_;
@@ -310,8 +318,57 @@ void MapWorld::loop() {
             LOG_INFO("map objects: %s from %s - %u lamps, %u effects (%u torches, %u the game does not show)",
                      name.c_str(), from.c_str(), unsigned(w.lights.size()), unsigned(w.effects.size()), torches, hidden);
         }
+        std::string readWhy;  // (3.0.20-beta.54: the readers here - the walls' colour indoors reads pictures too)
+        // a file of the game's: the data folder first, then its archives (names as written, or lower case)
+        const auto readGame = [&](const std::string& entry, std::vector<uint8_t>& out) {
+            const std::string low = lower(entry);
+            bool got = win::gamefiles::readWhole(dir + "\\" + entry, out);
+            for (size_t i = 0; i < archives.size() && !got; ++i) {
+                Archive& a = *archives[i];
+                if (!open(a)) continue;
+                got = a.grf ? (a.g.find(entry) && a.g.read(entry, out, readWhy)) ||
+                                  (a.g.find(low) && a.g.read(low, out, readWhy))
+                            : a.zip.has(low) && a.zip.read(low, out, readWhy);
+            }
+            return got;
+        };
+        // a texture in full colour with its mipmaps, each half of the one before; `keyed`: the magenta
+        // see-through (3.0.4-beta.14, the models' leaves and fences, as the game keys them; 3.0.9-beta.3
+        // the ground's too - R-6JBVTG, Izlude's bridge and wall)
+        // (3.0.20-beta.53: `mips` false - its first level alone, for what only looks at it)
+        const auto picture = [&](const std::string& name, bool keyed, bool mips = true) {
+            OwnGround::Picture pic;
+            std::vector<uint8_t> tb;
+            std::vector<uint32_t> argb;
+            int pw = 0, ph = 0;
+            bool alpha = false;
+            const std::string low = lower(name);
+            const bool tga = low.size() > 4 && low.compare(low.size() - 4, 4, ".tga") == 0;
+            const bool jpg = low.size() > 4 && low.compare(low.size() - 4, 4, ".jpg") == 0;  // the water's
+            if (!readGame("data\\texture\\" + name, tb) ||
+                !(tga   ? pack::decodeTga(tb.data(), tb.size(), argb, pw, ph, alpha)
+                  : jpg ? jpeg::decode(tb.data(), tb.size(), argb, pw, ph)
+                        : pack::decodeBmp(tb.data(), tb.size(), argb, pw, ph)) ||
+                pw <= 0 || ph <= 0)
+                return pic;
+            // keyed to the game's own see-through texel (0x0421 in its 16 bits): the AI textures know it
+            if (keyed && !tga) pic.keyed = full_colour::keyMagenta(argb);
+            pic.width = pw;
+            pic.height = ph;
+            pic.levels.push_back(std::move(argb));
+            while (mips && (pw > 1 || ph > 1)) {
+                std::vector<uint32_t> half;
+                int hw = 0, hh = 0;
+                full_colour::halve(pic.levels.back(), pw, ph, half, hw, hh);
+                if (half.empty()) break;
+                pic.levels.push_back(std::move(half));
+                pw = hw, ph = hh;
+            }
+            return pic;
+        };
         // 2.6.18: its ground's heights, where its .rsw came from or after it (the walls between a fire and a shadow)
         ground_heights::Ground ground;
+        MapWorld::VaultRock rock;        // 3.0.20-beta.54
         std::unique_ptr<OwnGround> own;  // 3.0.4-beta.10
         if (ok) {
             const std::string gnd = "data\\" + name + ".gnd";
@@ -328,53 +385,6 @@ void MapWorld::loop() {
                 LOG_INFO("map objects: %s.gnd is in neither the data folder nor DATA.INI's archives", name.c_str());
             else if (!ground_heights::parse(gb.data(), gb.size(), ground, why))
                 LOG_INFO("map objects: %s.gnd (%s): %s", name.c_str(), gfrom.c_str(), why.c_str());
-            // a file of the game's: the data folder first, then its archives (names as written, or lower case)
-            const auto readGame = [&](const std::string& entry, std::vector<uint8_t>& out) {
-                const std::string low = lower(entry);
-                bool got = win::gamefiles::readWhole(dir + "\\" + entry, out);
-                for (size_t i = 0; i < archives.size() && !got; ++i) {
-                    Archive& a = *archives[i];
-                    if (!open(a)) continue;
-                    got = a.grf ? (a.g.find(entry) && a.g.read(entry, out, why)) ||
-                                      (a.g.find(low) && a.g.read(low, out, why))
-                                : a.zip.has(low) && a.zip.read(low, out, why);
-                }
-                return got;
-            };
-            // a texture in full colour with its mipmaps, each half of the one before; `keyed`: the magenta
-            // see-through (3.0.4-beta.14, the models' leaves and fences, as the game keys them; 3.0.9-beta.3
-            // the ground's too - R-6JBVTG, Izlude's bridge and wall)
-            // (3.0.20-beta.53: `mips` false - its first level alone, for what only looks at it)
-            const auto picture = [&](const std::string& name, bool keyed, bool mips = true) {
-                OwnGround::Picture pic;
-                std::vector<uint8_t> tb;
-                std::vector<uint32_t> argb;
-                int pw = 0, ph = 0;
-                bool alpha = false;
-                const std::string low = lower(name);
-                const bool tga = low.size() > 4 && low.compare(low.size() - 4, 4, ".tga") == 0;
-                const bool jpg = low.size() > 4 && low.compare(low.size() - 4, 4, ".jpg") == 0;  // the water's
-                if (!readGame("data\\texture\\" + name, tb) ||
-                    !(tga   ? pack::decodeTga(tb.data(), tb.size(), argb, pw, ph, alpha)
-                      : jpg ? jpeg::decode(tb.data(), tb.size(), argb, pw, ph)
-                            : pack::decodeBmp(tb.data(), tb.size(), argb, pw, ph)) ||
-                    pw <= 0 || ph <= 0)
-                    return pic;
-                // keyed to the game's own see-through texel (0x0421 in its 16 bits): the AI textures know it
-                if (keyed && !tga) pic.keyed = full_colour::keyMagenta(argb);
-                pic.width = pw;
-                pic.height = ph;
-                pic.levels.push_back(std::move(argb));
-                while (mips && (pw > 1 || ph > 1)) {
-                    std::vector<uint32_t> half;
-                    int hw = 0, hh = 0;
-                    full_colour::halve(pic.levels.back(), pw, ph, half, hw, hh);
-                    if (half.empty()) break;
-                    pic.levels.push_back(std::move(half));
-                    pw = hw, ph = hh;
-                }
-                return pic;
-            };
             EnterCriticalSection(&shared_->lock);
             const bool ownWanted = shared_->ownWanted;
             LeaveCriticalSection(&shared_->lock);
@@ -616,11 +626,59 @@ void MapWorld::loop() {
             }
             // 3.0.20-beta.53 (the owner's «делай 1-9», 8 - «трава не на камне у всех»): beta.46's rule - no grass on a
             // cell whose own texture is not green - where the own ground did not give it (it is off or was not made;
-            // Direct3D 11 has none): the ground's file once more, its tops' textures read one at a time, none kept
-            if (!gfrom.empty() && ground.width > 0 && ground.bare.empty() && grassGrows(name)) try {
+            // Direct3D 11 has none): the ground's file once more, its tops' textures read one at a time, none kept.
+            // 3.0.20-beta.54: and a dungeon's own rock for the 3D view's vault, the same way
+            const bool wantBare = ground.width > 0 && ground.bare.empty() && grassGrows(name);
+            const bool wantRock = cave_vault::forMap(name);
+            if (!gfrom.empty() && (wantBare || wantRock)) try {
                 gnd::Ground lite;
-                if (gnd::parse(gb.data(), gb.size(), lite, why) && lite.width == ground.width &&
-                    lite.height == ground.height) {
+                const bool parsed = gnd::parse(gb.data(), gb.size(), lite, why);
+                if (parsed && wantRock) {
+                    OwnGround::Picture held;  // the one picture in memory: the last asked for - the patch's, if any
+                    const cave_vault::Patch found =
+                        cave_vault::rockPatch(lite, [&](size_t texture, ground_cells::Picture& out) {
+                            held = picture(lite.textures[texture], true, false);
+                            if (held.levels.empty()) return false;
+                            out = {held.width, held.height, held.levels[0].data()};
+                            return true;
+                        });
+                    rock.known = found.known;
+                    rock.texels = found.texels;
+                    std::copy(found.mean, found.mean + 3, rock.mean);
+                    if (found.side > 0 && !held.levels.empty() && found.x + found.side <= held.width &&
+                        found.y + found.side <= held.height) {
+                        std::vector<uint32_t> cut(size_t(found.side) * size_t(found.side));
+                        for (int y = 0; y < found.side; ++y)
+                            std::copy_n(held.levels[0].data() + size_t(found.y + y) * size_t(held.width) +
+                                            size_t(found.x),
+                                        size_t(found.side), cut.data() + size_t(y) * size_t(found.side));
+                        rock.patch.width = rock.patch.height = found.side;
+                        rock.patch.levels.push_back(std::move(cut));
+                        for (int pw = found.side, ph = found.side; pw > 1 || ph > 1;) {
+                            std::vector<uint32_t> half;
+                            int hw = 0, hh = 0;
+                            full_colour::halve(rock.patch.levels.back(), pw, ph, half, hw, hh);
+                            if (half.empty()) break;
+                            rock.patch.levels.push_back(std::move(half));
+                            pw = hw, ph = hh;
+                        }
+                    }
+                    if (found.side > 0)
+                        LOG_INFO("map objects: %s's own rock for the 3D view's vault - a patch of %dx%d texels of "
+                                 "its ground's %s (at %d, %d), %.1f units of the world across, its colour %.2f %.2f "
+                                 "%.2f", name.c_str(), found.side, found.side,
+                                 lite.textures[size_t(found.texture)].c_str(), found.x, found.y,
+                                 double(float(found.side) / found.texels), double(found.mean[0]),
+                                 double(found.mean[1]), double(found.mean[2]));
+                    else if (found.known)
+                        LOG_INFO("map objects: %s's ground has no patch of rock large enough for the 3D view's vault "
+                                 "- its rock's colour alone (%.2f %.2f %.2f) on the vault's own stone", name.c_str(),
+                                 double(found.mean[0]), double(found.mean[1]), double(found.mean[2]));
+                    else
+                        LOG_INFO("map objects: %s's ground shows no rock of its own (or its pictures were not read) "
+                                 "- the 3D view's vault as before", name.c_str());
+                }
+                if (parsed && wantBare && lite.width == ground.width && lite.height == ground.height) {
                     OwnGround::Picture held;  // the one picture in memory
                     size_t read = 0, missing = 0;
                     int waits = 0;
@@ -652,9 +710,10 @@ void MapWorld::loop() {
                              name.c_str(), bare, grassy.size(), double(ground_cells::kGrassy), read, missing);
                 }
             } catch (const std::bad_alloc&) {
-                ground.bare.clear();
-                LOG_INFO("grass: %s - no room to read its ground's textures: the grass by the screen's colour alone",
-                         name.c_str());
+                if (wantBare) ground.bare.clear();
+                rock = MapWorld::VaultRock{};
+                LOG_INFO("map objects: %s - no room to read its ground's textures: the grass by the screen's colour "
+                         "alone, the vault's own stone", name.c_str());
             }
         }
         // a model's file read once (the data folder, then the archives); an empty model where it is not read
@@ -702,17 +761,44 @@ void MapWorld::loop() {
                      name.c_str());
         // 3.0.20-beta.52 (the owner's «делай 1-9», 5): indoors - a house, a castle's hall - the walls' height by its
         // tall models, for the 3D view's ceiling where the ground makes no walls
-        float walls = 0.0f;
-        if (ok && cave_vault::ceilingFor(name, outdoors(name))) {
+        float walls = 0.0f, wallsColour[3] = {0.0f, 0.0f, 0.0f};
+        bool wallsColourKnown = false;
+        if (ok && cave_vault::ceilingFor(name, outdoors(name))) try {
             std::vector<float> tall;
+            // 3.0.20-beta.54: and their upper part's colour, the ceiling's - each texture's mean colour read once
+            cave_vault::Tone tone;
+            std::vector<std::pair<std::string, cave_vault::Mean>> meanOfTexture;
             for (const rsw::Model& m : w.models) {
-                const float h = cave_vault::tallOf(modelOf(m.file), m);
-                if (h >= cave_vault::kPostLeast) tall.push_back(h);
+                const rsm::Model& model = modelOf(m.file);
+                const float h = cave_vault::tallOf(model, m);
+                if (h < cave_vault::kPostLeast) continue;
+                tall.push_back(h);
+                std::vector<cave_vault::Mean> means(model.textures.size());
+                for (size_t t = 0; t < model.textures.size(); ++t) {
+                    const std::string key = lower(model.textures[t]);
+                    size_t k = 0;
+                    while (k < meanOfTexture.size() && meanOfTexture[k].first != key) ++k;
+                    if (k == meanOfTexture.size()) {
+                        const OwnGround::Picture pic = picture(model.textures[t], true, false);
+                        cave_vault::Mean mean;
+                        if (!pic.levels.empty()) mean = cave_vault::meanOf(pic.levels[0].data(), pic.levels[0].size());
+                        meanOfTexture.emplace_back(key, mean);
+                    }
+                    means[t] = meanOfTexture[k].second;
+                }
+                cave_vault::wallTone(model, m, means, tone);
             }
             walls = cave_vault::wallsByModels(tall);
-            LOG_INFO("map objects: %s is indoors - %u of its %u models stand tall, the walls' height by them %.0f "
-                     "(the 3D view's ceiling)", name.c_str(), unsigned(tall.size()), unsigned(w.models.size()),
-                     double(walls));
+            wallsColourKnown = cave_vault::toneOf(tone, wallsColour);
+            LOG_INFO("map objects: %s is indoors - %u of its %u models stand tall, the walls' height by them %.0f, "
+                     "their upper part's colour %.2f %.2f %.2f%s (the 3D view's ceiling; %u of their textures read)",
+                     name.c_str(), unsigned(tall.size()), unsigned(w.models.size()), double(walls),
+                     double(wallsColour[0]), double(wallsColour[1]), double(wallsColour[2]),
+                     wallsColourKnown ? "" : " - not known", unsigned(meanOfTexture.size()));
+        } catch (const std::bad_alloc&) {
+            wallsColourKnown = false;
+            LOG_INFO("map objects: %s - no room to read its walls' textures: the ceiling in its plain stone",
+                     name.c_str());
         }
         EnterCriticalSection(&shared_->lock);
         shared_->doneName = name;
@@ -721,6 +807,9 @@ void MapWorld::loop() {
         shared_->doneBeds = std::move(beds);
         shared_->donePosts = std::move(posts);
         shared_->doneWalls = walls;
+        std::copy(wallsColour, wallsColour + 3, shared_->doneWallsColour);
+        shared_->doneWallsColourKnown = wallsColourKnown;
+        shared_->doneRock = std::move(rock);
         shared_->doneOwn = std::move(own);
         shared_->doneOk = ok;
         shared_->doneReady = true;

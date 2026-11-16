@@ -8894,6 +8894,15 @@ constexpr Entry kTexts[] = {
      "темна порожнеча над стінами, як раніше.",
      "В 3D-режиме в домах и залах замков есть потолок — ровный, на высоте стен, чуть темнее у стен. Выключено — "
      "тёмная пустота над стенами, как раньше."},
+    {Text::View3dVaultRock, "The map's own rock on the vault", "Скеля карти на склепінні",  // 3.0.20-beta.54
+     "Скала карты на своде"},
+    {Text::View3dVaultRockHint,
+     "A cave's vault wears the picture of the rock its own walls and ledges are made of, in the map's light. Off: "
+     "the plain stone it had before. Needs «Vault in the caves».",
+     "Склепіння печери вкрите малюнком тієї скелі, з якої зроблено її власні стіни й уступи, у світлі карти. "
+     "Вимкнено — рівний камінь, як раніше. Потрібне «Склепіння в печерах».",
+     "Свод пещеры покрыт рисунком той скалы, из которой сделаны её собственные стены и уступы, в свете карты. "
+     "Выключено — ровный камень, как раньше. Нужен «Свод в пещерах»."},
     {Text::View3dGrass, "Grass in the 3D view", "Трава у 3D-режимі", "Трава в 3D-режиме"},  // 3.0.19-beta.33
     {Text::View3dGrassHint,
      "In the 3D view the grass grows as blades on the green ground round you, swaying in the wind and trodden by "

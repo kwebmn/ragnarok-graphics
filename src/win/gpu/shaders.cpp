@@ -2505,6 +2505,56 @@ float vaultY(float2 xz) {
     return -fogColor.w * lerp(lerp(h00, h10, f.x), lerp(h01, h11, f.x), f.y);
 }
 
+// 3.0.20-beta.54 (the owner's «делай 1-9», 5, part 2 - the map's own rock on its vault; core cave_vault rockPatch):
+// t0 a patch of the map's own rock, holeZ texels a side with holeG levels, holeUy of its texels a unit of the world,
+// its mean colour holeX holeY holeH. A level's texels between four of them - by Load: the pass's samplers neither
+// wrap nor know the levels, and a piece never leaves the patch
+float3 rockPatchLevel(float2 texel, float level) {
+    float k = exp2(-level);
+    float size = max(floor(holeZ * k), 1.0);
+    float2 p = clamp(texel * k - 0.5, 0.0, size - 1.0);
+    float2 lo = floor(p), f = p - lo;
+    float2 hi = min(lo + 1.0, size - 1.0);
+    int l = int(level);
+    float3 c00 = tex0.Load(int3(int(lo.x), int(lo.y), l)).rgb, c10 = tex0.Load(int3(int(hi.x), int(lo.y), l)).rgb;
+    float3 c01 = tex0.Load(int3(int(lo.x), int(hi.y), l)).rgb, c11 = tex0.Load(int3(int(hi.x), int(hi.y), l)).rgb;
+    return lerp(lerp(c00, c10, f.x), lerp(c01, c11, f.x), f.y);
+}
+float3 rockPatchAt(float2 texel, float lod) {
+    float last = max(holeG - 1.0, 0.0);
+    float l = clamp(lod, 0.0, last), l0 = floor(l);
+    return lerp(rockPatchLevel(texel, l0), rockPatchLevel(texel, min(l0 + 1.0, last)), l - l0);
+}
+// a corner of the lattice's own piece of the patch at a place of the world: about a middle of its own in the patch
+// (so far from its edges that the piece stays within), no turn - the rock's grain runs one way over the whole vault
+float3 rockPiece(float2 corner, float2 xz, float lod, float piece) {
+    float reach = piece * holeUy;                 // a piece's reach, the patch's texels
+    float room = holeZ - 2.0 * reach - 2.0;       // where its middle may lie
+    float2 at = float2(corner.x + 0.5 * corner.y, 0.8660254 * corner.y) * piece;  // the corner in the world
+    float2 middle = reach + 1.0 + room * float2(hash12(corner + 17.3), hash12(corner * 1.7 + 41.9));
+    return rockPatchAt(middle + (xz - at) * holeUy, lod) - float3(holeX, holeY, holeH);
+}
+// The patch laid over the vault in pieces: a lattice of triangles a third of the patch on a side, each corner a
+// piece; a place takes its triangle's three corners' pieces by its nearness to each (the cube of it: a narrow
+// seam), their difference from the patch's mean kept as large as one piece's - no seam, no repeat, no washed-out
+// middle between the pieces
+float3 rockMosaic(float2 xz, float lod) {
+    float piece = holeZ / max(holeUy, 1e-3) / 3.0;
+    float2 u = xz / piece;
+    float2 s = float2(u.x - 0.57735027 * u.y, 1.15470054 * u.y);
+    float2 b = floor(s), f = s - b;
+    bool lower = f.x + f.y < 1.0;
+    float3 w = lower ? float3(1.0 - f.x - f.y, f.y, f.x) : float3(f.x + f.y - 1.0, 1.0 - f.y, 1.0 - f.x);
+    float2 v0 = lower ? b : b + float2(1.0, 1.0);
+    float2 v1 = lower ? b + float2(0.0, 1.0) : b + float2(1.0, 0.0);
+    float2 v2 = lower ? b + float2(1.0, 0.0) : b + float2(0.0, 1.0);
+    w = w * w * w;
+    w /= max(w.x + w.y + w.z, 1e-6);
+    float3 sum = rockPiece(v0, xz, lod, piece) * w.x + rockPiece(v1, xz, lod, piece) * w.y +
+                 rockPiece(v2, xz, lod, piece) * w.z;
+    return max(float3(holeX, holeY, holeH) + sum / sqrt(max(dot(w, w), 1e-6)), 0.0);
+}
+
 // The vault a ray from the eye meets, in its rock's light and the haze (footprint 1: there is one); its alpha 0 where
 // the ray meets none within the haze's reach and a little past
 float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
@@ -2555,6 +2605,14 @@ float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
     // (sourceClamp.rgb, core cave_vault::rockOf), the haze's colour if none
     float3 base = dot(sourceClamp.xyz, sourceClamp.xyz) > 1e-6 ? sourceClamp.xyz : sourceRect.rgb * 1.15;
     float3 stone = base * lit * rock;
+    // 3.0.20-beta.54: the map's own rock (holeZ: there is a patch of it; base the map's light alone then) - its
+    // level by a pixel's size there, the more of the picture the flatter the ray lies along the vault
+    [branch] if (holeZ > 0.5 && flatCeiling < 0.5) {
+        float pixel = far0 / max(f0 * scale, 1e-3);
+        float facing = max(abs(dot(dir, n)), 0.08);
+        float lod = log2(max(holeUy * pixel / sqrt(facing), 1e-3));
+        stone = rockMosaic(at.xz, lod) * base * lit * (0.86 + 0.24 * fbm4(at.xz * 0.045));
+    }
     float reach = max(sourceRect.w, 1.0);
     float haze = smoothstep(reach * 0.1, reach, far0);
     haze = max(haze * haze * 0.92, smoothstep(reach, reach + 100.0, far0));

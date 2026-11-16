@@ -199,6 +199,9 @@ struct EffectSettings {
     // 3.0.20-beta.52 (the owner's «делай 1-9», 5): [view3d] ceiling - in the 3D view a flat ceiling at the walls' top
     // in a house or a castle's hall (core/cave_vault buildCeiling); a dark nothing over the walls until now
     bool ceiling3d = true;
+    // 3.0.20-beta.54 (the owner's «делай 1-9», 5, part 2): [view3d] vault_rock - a dungeon's vault wears the picture
+    // of the map's own rock (core/cave_vault rockPicture) in place of its noise
+    bool vaultRock = true;
     // 3.0.16-beta.25 (the owner: «давай» - the body's stamp, from nostalRE): body_stamp - after the game's characters'
     // sprites (drawn writing no depth) each one's shape put into the depth a little behind its feet: an effect drawn
     // after them falls behind the body where it lies behind it (a ring's far half), in front where it lies in front

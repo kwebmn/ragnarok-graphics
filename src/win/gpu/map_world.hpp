@@ -69,6 +69,22 @@ public:
     // 3.0.20-beta.52: indoors (a house, a castle's hall) the walls' height by the map's tall models (cave_vault::
     // wallsByModels) - the 3D view's ceiling lies over it where the ground makes no walls; 0 not known, not indoors
     float wallsHeight() const { return walls_; }
+    // 3.0.20-beta.54 (the owner's «делай 1-9», 5, part 2): the ceiling's colour by the room's walls - the upper half
+    // of the map's tall models, in their textures' mean colours (cave_vault::wallTone); false: not known
+    bool wallsColour(float out[3]) const {
+        for (int k = 0; k < 3; ++k) out[k] = wallsColour_[k];
+        return wallsColourKnown_;
+    }
+    // 3.0.20-beta.54: a dungeon's own rock for the 3D view's vault (cave_vault::rockPatch): a patch of one of its
+    // ground's sheets with its levels (none: empty), the patch's texels a unit of the world, its mean colour (`known`
+    // - the rock's own where no patch was found: the vault's noise in it)
+    struct VaultRock {
+        OwnGround::Picture patch;
+        float texels = 6.4f;
+        float mean[3] = {0.0f, 0.0f, 0.0f};
+        bool known = false;
+    };
+    const VaultRock& vaultRock() const { return rock_; }
     // 3.0.4-beta.10: the own ground (own_ground_data.hpp) read with the map while it is wanted - turned on for a map
     // read without it, the map is read again; none not wanted, not read yet, or no .gnd. Its pictures let go once the
     // renderer has them (ownPicturesUp).
@@ -95,6 +111,9 @@ private:
     std::vector<grass_beds::Box> beds_;  // 3.0.1-beta.3: in the file's places
     std::vector<cave_vault::Post> posts_;  // 3.0.20-beta.46
     float walls_ = 0.0f;                   // 3.0.20-beta.52
+    float wallsColour_[3] = {0.0f, 0.0f, 0.0f};  // 3.0.20-beta.54
+    bool wallsColourKnown_ = false;
+    VaultRock rock_;
     bool ready_ = false;
     uint32_t reads_ = 0;  // 2.7.57: the maps read so far (laidKey)
     map::Axes axes_;

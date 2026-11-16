@@ -508,6 +508,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.20-beta.52 (the owner's «делай 1-9», 5): a ceiling in the houses and the castles' halls
         {"view3d", "ceiling", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dCeiling,
          Text::View3dCeilingHint, "", &E::ceiling3d},
+        // 3.0.20-beta.54 (5, part 2): the map's own rock on a dungeon's vault
+        {"view3d", "vault_rock", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dVaultRock,
+         Text::View3dVaultRockHint, "", &E::vaultRock},
         // 3.0.19-beta.33 (the owner: «я так траву в 3д и не увидел»): the grass as blades in the world
         {"view3d", "grass", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dGrass,
          Text::View3dGrassHint, "", &E::grass3d},
