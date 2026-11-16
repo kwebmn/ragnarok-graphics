@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.53 — what's new · 2026-11-16
+
+- **No grass on stone — for everybody.** The rule of beta.46 (grass grows only on cells whose own texture is green) worked only with «Own ground» turned on. Now it works without it too, and on Direct3D 11: the driver reads the map's ground textures itself, one at a time, and keeps none in memory. It covers both «Grass» (the top view) and «Grass in the 3D view».
+  Checked without the game on real maps and the client's textures: both ways give the same cells (0 differences). In Prontera 21,282 of 30,576 cells stay without grass (the paving), in Geffen 8,383 of 14,400, in Payon 1,474 of 27,000. If a texture cannot be read, its cells behave as before.
+
 # uaRO Graphics 3.0.20-beta.52 — what's new · 2026-11-16
 
 - **3D view: «Ceiling indoors».** In houses and halls there was a dark nothing over the walls. Now there is a flat ceiling at the walls' height, a little darker by walls that stand higher than it. The height comes from the map: where the walls are made of ground, from their top; where they are models, from the height of the map's tall models. On sixteen maps checked it came out as 32 units over the floor in the houses of Prontera, Geffen, Morocc, Aldebaran and in the church (a character stands about 16 tall), 32 in the Sphinx, 42 in the pyramids, 62 and 92 in Glast Heim's halls.
