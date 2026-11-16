@@ -1,6 +1,7 @@
 // 3.0.19-beta.33 (the owner: «кстати, я так траву в 3д и не увидел»; the 3D view's concept: «объёмная трава с
 // цветами»): the 3D view's grass as blades in the world round the eye - their grid, and its switch [view3d] grass
 #include <cmath>
+#include <cstdio>
 #include <deque>
 
 #include "core/config.hpp"
@@ -169,16 +170,17 @@ TEST(grass3d_a_vertex_is_a_corner_of_a_blade_of_a_tuft) {
 
 TEST(grass3d_tufts_are_drawn_from_the_furthest_row) {
     int column = -1, row = -1;
+    // (3.0.20-beta.69: inside a row from the furthest too - a little to +x here, the largest column first)
     grass3d::tuftAt(4, 0, 0.1f, 0.9f, column, row);  // looking along +z: the row of the largest z first
-    CHECK(row == 3 && column == 0);
+    CHECK(row == 3 && column == 3);
     grass3d::tuftAt(4, 15, 0.1f, 0.9f, column, row);
-    CHECK(row == 0 && column == 3);
+    CHECK(row == 0 && column == 0);
     grass3d::tuftAt(4, 0, 0.1f, -0.9f, column, row);  // along -z: the row of the least z
-    CHECK(row == 0);
+    CHECK(row == 0 && column == 3);
     grass3d::tuftAt(4, 0, 0.9f, 0.1f, column, row);  // along +x: the furthest column, row by row along it
-    CHECK(column == 3 && row == 0);
-    grass3d::tuftAt(4, 5, -0.9f, 0.1f, column, row);  // along -x: the second column's second
-    CHECK(column == 1 && row == 1);
+    CHECK(column == 3 && row == 3);
+    grass3d::tuftAt(4, 5, -0.9f, 0.1f, column, row);  // along -x: the second column's second from the furthest
+    CHECK(column == 1 && row == 2);
     // every tuft once, whichever way
     const float ways[3][2] = {{0.3f, 0.8f}, {-0.7f, 0.2f}, {0.6f, -0.6f}};
     for (const float* way : {ways[0], ways[1], ways[2]}) {
@@ -268,4 +270,35 @@ TEST(grass3d_the_field_tapers_to_nothing_at_its_reach) {
     const grass3d::Grid thin = grass3d::gridFor(true);
     CHECK_EQ(grass3d::taperOf(thin, thin.reach() * 0.5f), 1.0f);
     CHECK_EQ(grass3d::taperOf(thin, thin.reach()), 0.0f);
+}
+
+// 3.0.20-beta.69 (the owner's check list, 3: «не мигает почти, но есть чуть-чуть заметное мелькание» as the view
+// turns): the tufts are laid over one another by their alpha, so they must come far to near. The rows did; inside a
+// row the tufts went by their column's number whichever way the eye looked - near to far for half of the ways, and
+// the other way round once the view crossed a diagonal: the blades' overlaps flipped there. A tuft's neighbour that
+// stands further along the view is always drawn before it.
+TEST(grass3d_tufts_are_painted_far_to_near_every_way) {
+    const int side = 6;
+    for (int deg = 5; deg < 360; deg += 10) {
+        const float rad = float(deg) * 3.14159265f / 180.0f;
+        const float fx = std::cos(rad), fz = std::sin(rad);
+        int order[6][6];
+        for (uint32_t n = 0; n < uint32_t(side * side); ++n) {
+            int column = -1, row = -1;
+            grass3d::tuftAt(side, n, fx, fz, column, row);
+            order[row][column] = int(n);
+        }
+        int wrong = 0;
+        const int steps[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        for (int row = 0; row < side; ++row)
+            for (int column = 0; column < side; ++column)
+                for (const auto& s : steps) {
+                    const int c = column + s[0], r = row + s[1];
+                    if (c < 0 || r < 0 || c >= side || r >= side) continue;
+                    const float further = float(s[0]) * fx + float(s[1]) * fz;  // along the view
+                    if (further > 0.0f && order[r][c] > order[row][column]) ++wrong;
+                }
+        if (wrong) std::printf("  looking %d degrees: %d neighbours drawn over a nearer tuft\n", deg, wrong);
+        CHECK_EQ(wrong, 0);
+    }
 }

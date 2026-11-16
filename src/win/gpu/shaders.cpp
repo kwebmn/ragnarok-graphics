@@ -3240,10 +3240,11 @@ BladeOut meadow_vs(uint id : SV_VertexID) {
     }
     // the tuft drawn at this turn: row by row from the furthest, the rows across the way the eye looks (tuftAt)
     float3 ahead = float3(r6, r7, r8);
+    // 3.0.20-beta.69: inside a row from the furthest too (the tufts' overlaps flipped at the view's diagonals)
     uint a = tuft % side, b = tuft / side;
-    uint column = a, row = ahead.z >= 0.0 ? side - 1u - b : b;
+    uint column = ahead.x >= 0.0 ? side - 1u - a : a, row = ahead.z >= 0.0 ? side - 1u - b : b;
     if (abs(ahead.z) < abs(ahead.x)) {
-        row = a;
+        row = ahead.z >= 0.0 ? side - 1u - a : a;
         column = ahead.x >= 0.0 ? side - 1u - b : b;
     }
     float4 root = tex0.Load(int3(int(column), int(row + ring * side), 0));

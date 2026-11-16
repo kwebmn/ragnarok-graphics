@@ -87,13 +87,16 @@ inline Corner cornerOf(const Grid& g, uint32_t vertex) {
 }
 // the root (its column and row on a ring's grid) of the tuft drawn n-th: row by row from the furthest, the rows
 // across the way the eye looks (forwardX, forwardZ: the view's forward along the ground)
+// 3.0.20-beta.69 (the check list's 3, «чуть-чуть заметное мелькание» as the view turns): inside a row from the
+// furthest too - they went by their number whichever way the eye looked: near to far for half of the ways, and the
+// blades' overlaps (laid by their alpha) flipped as the view crossed a diagonal
 inline void tuftAt(int side, uint32_t n, float forwardX, float forwardZ, int& column, int& row) {
     const int a = int(n % uint32_t(side)), b = int(n / uint32_t(side));
     if (std::fabs(forwardZ) >= std::fabs(forwardX)) {
-        column = a;
+        column = forwardX >= 0.0f ? side - 1 - a : a;
         row = forwardZ >= 0.0f ? side - 1 - b : b;
     } else {
-        row = a;
+        row = forwardZ >= 0.0f ? side - 1 - a : a;
         column = forwardX >= 0.0f ? side - 1 - b : b;
     }
 }
