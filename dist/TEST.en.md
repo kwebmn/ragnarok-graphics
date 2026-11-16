@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.20-beta.41 — what's new · 2026-11-16
+
+- **An audit of «Grass in the 3D view»: the grass knew only a part of the map.** So as not to grow on decks and in halls the grass checks itself against the ground cells' heights. Over «Own ground» in the 3D view those heights were never refreshed: they stayed the ones seen in the first frames on the map (or even the last map's). So where you were not looking then there could be no grass, or it vanished near the screen's edges as you moved the mouse. Now the heights come from «Own ground» itself for the whole map at once, once a map, as it loads.
+- **Grass behind a low wall, a rock or a hill's ridge no longer hangs in the air.** The root search of 3.0.20-beta.35 took any nearer surface for the ground, and roots behind an obstacle rose to its edge (in a model, 36 of 72 roots behind a board). Now a surface counts as the ground only when it lies right before the root, and the root found is checked once more. Grass under an overhanging crown or roof, missed before, is found.
+- **Roots on steep slopes near by stand more exactly:** the search's steps now go by the distance and the cell's steepness (up to 12, not 7), fewer far off.
+
 # uaRO Graphics 3.0.20-beta.40 — what's new · 2026-11-16
 
 - **An audit of the leaves from the card (3.0.20-beta.33–34): five mistakes fixed.**
