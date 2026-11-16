@@ -4,6 +4,10 @@
 // texture let go taking its work with it, so much kept at most
 #include <vector>
 
+#include "core/ai/texture_cache.hpp"
+#include "core/effect_light.hpp"
+#include "core/foliage.hpp"
+#include "core/full_colour.hpp"
 #include "core/upload_later.hpp"
 #include "test.hpp"
 
@@ -48,4 +52,49 @@ TEST(upload_later_lets_go_and_holds_so_much) {
     int kept = 0;
     for (uint32_t t = 10; t < 20; ++t) kept += q.push(wholeOf(t, side, side), big.data(), false) ? 1 : 0;
     CHECK(kept == int(uploadlater::kMostBytes / (size_t(side) * side * 4)) && q.bytes() <= uploadlater::kMostBytes);
+}
+
+// 3.0.20-beta.36 (the owner's «6,7,8,9», 9 - the frame's work on more threads): a job carries its upload's serial - what
+// a helper thread made of older pixels is not taken once a newer upload of the texture came
+TEST(upload_later_carries_its_uploads_serial) {
+    uploadlater::Queue q;
+    const std::vector<uint32_t> a(4, 0xFF0000FFu), b(4, 0xFF00FF00u);
+    CHECK(q.push(wholeOf(1, 2, 2), a.data(), false, 7));
+    CHECK(q.push(wholeOf(1, 2, 2), b.data(), false, 9));  // the newer one in its place
+    uploadlater::Job j;
+    CHECK(q.take(j) && j.serial == 9 && j.pixels == b);
+}
+
+// its looks and the AI pack's key worked out from the job alone (a helper thread's), as the renderers worked them out
+// themselves: the same functions over its pixels; the pack's view of a 16-bit texture's full colours its texels
+TEST(upload_later_looks_as_the_textures_own_functions_give_them) {
+    std::vector<uint32_t> px(256);  // 16 x 16: green leaves with clear holes, an orange glow along the top
+    for (int i = 0; i < 256; ++i) px[size_t(i)] = i % 5 == 0 ? 0x00000000u : i < 40 ? 0xFFFF8020u : 0xFF208030u;
+    UploadCmd u = wholeOf(3, 16, 16);
+    u.fullFrom = 0;
+    uploadlater::Queue q;
+    CHECK(q.push(u, px.data(), false, 5));
+    uploadlater::Job j;
+    CHECK(q.take(j));
+    uploadlater::Looks l;
+    uploadlater::lookAt(std::move(j), true, l);
+    float fire[3] = {}, light[3] = {};
+    const float fireAmount = effect_light::fireOf(px.data(), 16, 16, fire);
+    const float lightAmount = effect_light::lightOf(px.data(), 16, 16, light);
+    CHECK(l.texture == 3 && l.serial == 5 && l.width == 16 && l.height == 16 && !l.spriteCache);
+    CHECK(l.fire == fireAmount && l.fireColour[0] == fire[0] && l.fireColour[2] == fire[2]);
+    CHECK(l.light == lightAmount && l.lightColour[1] == light[1]);
+    CHECK(l.leafy == foliage::leafyTexture(px.data(), 16, 16, false));
+    CHECK(l.pixels == px && l.game.empty() && l.texels() == l.pixels.data());
+    CHECK(l.aiKey == ai::keyName(ai::textureKey(px.data(), 16, 16)));
+    u.fullFrom = uint8_t(PixelFormat::A4R4G4B4);  // the game's 16 bits: the pack knows it by those texels
+    CHECK(q.push(u, px.data(), false, 6) && q.take(j));
+    uploadlater::lookAt(std::move(j), true, l);
+    std::vector<uint32_t> view;
+    full_colour::gameView(PixelFormat::A4R4G4B4, px.data(), px.size(), view);
+    CHECK(l.serial == 6 && l.game == view && l.texels() == l.game.data());
+    CHECK(l.aiKey == ai::keyName(ai::textureKey(view.data(), 16, 16)));
+    CHECK(q.push(u, px.data(), false, 8) && q.take(j));
+    uploadlater::lookAt(std::move(j), false, l);  // no AI pack: no view, no key
+    CHECK(l.serial == 8 && l.game.empty() && l.aiKey.empty() && l.pixels == px);
 }

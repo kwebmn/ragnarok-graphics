@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <string>
 #include <vector>
 
 #include "core/frame.hpp"
@@ -20,11 +21,30 @@ struct Job {
     UploadCmd upload;  // its texture, rect, level, formats; its pixels from 0 of `pixels`
     std::vector<uint32_t> pixels;
     bool spriteCache = false;
+    uint32_t serial = 0;  // 3.0.20-beta.36: its upload's (the renderer's count) - a newer one's work goes in alone
 };
+
+// 3.0.20-beta.36 (the owner's «6,7,8,9», 9 - the frame's work on more threads): what the work makes of a job - its
+// looks (fire, light, leaves) and, with the AI pack, the pack's view of it and its key, all from the job alone (a
+// helper thread's); its pixels kept for the pack, which takes them on the renderer's thread
+struct Looks {
+    uint32_t texture = 0, serial = 0;
+    UploadCmd upload;
+    int width = 0, height = 0;
+    bool spriteCache = false;
+    float fire = 0.0f, fireColour[3] = {}, light = 0.0f, lightColour[3] = {};
+    bool leafy = false;
+    std::vector<uint32_t> pixels;
+    std::vector<uint32_t> game;  // the pack's view of a 16-bit texture's full colours; empty: the pixels themselves
+    std::string aiKey;           // ai::keyName of its texels; empty without the pack
+    const uint32_t* texels() const { return game.empty() ? pixels.data() : game.data(); }
+};
+void lookAt(Job&& j, bool aiKey, Looks& out);
 
 class Queue {
 public:
-    bool push(const UploadCmd& u, const uint32_t* pixels, bool spriteCache);  // false: full - work on it now
+    // false: full - work on it now
+    bool push(const UploadCmd& u, const uint32_t* pixels, bool spriteCache, uint32_t serial = 0);
     bool take(Job& out);                                                      // the oldest; false: none
     void drop(uint32_t texture);
     size_t size() const { return jobs_.size(); }

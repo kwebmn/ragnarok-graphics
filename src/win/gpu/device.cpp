@@ -401,9 +401,10 @@ void Renderer::Impl::noteGpuFrame() {
         }
         for (LONGLONG& t : cpuPartTicks) t = 0;
         // 3.0.19-beta.26: the draws' own handling (the parts above are inside the draws), the uploads, the submit;
-        // what is left: the present's passes (the effects over the world, DLSS, the haze, the interface's)
+        // what is left: the present's passes (the effects over the world, DLSS, the haze, the interface's) -
+        // 3.0.20-beta.36 without the wait for the card (the line above's, R-G8FGSV: 1.23 of «the rest»'s 2.22 ms)
         const LONGLONG drawsOwn = std::max<LONGLONG>(drawsTicks - known, 0);
-        const LONGLONG around = drawsTicks + geometryTicks + texturesTicks + submitTicks;
+        const LONGLONG around = drawsTicks + geometryTicks + texturesTicks + submitTicks + fenceTicks;
         if (!parts.empty())
             LOG_INFO("CPU: of the drawing a frame - %s; the game's draws themselves %.2f, their vertices' upload %.2f, "
                      "textures' uploads %.2f, the list's submit %.2f; the rest (the present's passes) %.2f ms",
@@ -495,7 +496,8 @@ void Renderer::Impl::notePace(bool counts) {
             {"their vertices' upload", geometry},
             {"textures' uploads", textures},
             {"the list's submit", submit},
-            {"the present's passes", std::max(f.drawing - draws - geometry - textures - submit, 0.0)}};
+            // 3.0.20-beta.36: without the wait for the card (in the drawing, apart in f.card)
+            {"the present's passes", std::max(f.drawing - draws - geometry - textures - submit - f.card, 0.0)}};
         for (const auto& [name, partMs] : around)
             if (partMs > f.partMs) {
                 f.partMs = partMs;
@@ -1044,6 +1046,41 @@ D3D12_TEXTURE_COPY_LOCATION stage(Renderer::Impl& m, const uint32_t* argb, UINT 
 
 }  // namespace
 
+// 3.0.20-beta.36 (the owner's «6,7,8,9», 9): the textures' work on the looks' thread - handed it as it has room, what it
+// made taken into the textures still of those pixels (looksSerial) and to the AI pack, `budgetMs` of it a picture
+void Renderer::Impl::workLaterTaken(double budgetMs) {
+    uploadlater::Job j;
+    while (looksWorker.room() && laterLooks.take(j)) looksWorker.give(std::move(j), ai != nullptr);
+    LARGE_INTEGER start, now, frequency;
+    QueryPerformanceCounter(&start);
+    QueryPerformanceFrequency(&frequency);
+    uploadlater::Looks l;
+    bool any = false;
+    while (looksWorker.take(l)) {
+        any = true;
+        const auto it = textures.find(l.texture);
+        if (it != textures.end() && it->second.looksSerial == l.serial && it->second.width == l.width &&
+            it->second.height == l.height) {
+            Texture& t = it->second;
+            t.fire = l.fire;
+            t.light = l.light;
+            t.leafy = l.leafy;
+            std::copy(l.fireColour, l.fireColour + 3, t.fireColour);
+            std::copy(l.lightColour, l.lightColour + 3, t.lightColour);
+            if (ai)  // its key worked out there (none: the pack came on since - here)
+                ai->noteUpload(l.texture, t, l.upload, l.texels(), nullptr, 0, l.pixels.data(),
+                               l.aiKey.empty() ? nullptr : &l.aiKey);
+        }
+        ++laterDone;
+        QueryPerformanceCounter(&now);
+        if (double(now.QuadPart - start.QuadPart) * 1000.0 / double(frequency.QuadPart) >= budgetMs) break;
+    }
+    if (!any) return;
+    while (looksWorker.room() && laterLooks.take(j)) looksWorker.give(std::move(j), ai != nullptr);  // its room again
+    QueryPerformanceCounter(&now);
+    laterMostMs = std::max(laterMostMs, double(now.QuadPart - start.QuadPart) * 1000.0 / double(frequency.QuadPart));
+}
+
 // 0.26: a whole picture - how much it looks like fire (an effect drawn from it lights around it); 0.36 its light; 0.64
 // its leaves (2.6.19: never a sprite cache's). 3.0.20-beta.20: apart - at the upload or after it (workLater)
 void Renderer::Impl::looksOf(Texture& t, const UploadCmd& u, const uint32_t* px, bool spriteCache) {
@@ -1056,6 +1093,10 @@ void Renderer::Impl::looksOf(Texture& t, const UploadCmd& u, const uint32_t* px,
 // 3.0.20-beta.20: the whole textures' work kept from their uploads (laterLooks), the oldest first, `budgetMs` of it a
 // picture - their looks and the AI pack's key; a texture let go or of another size since: its work dropped
 void Renderer::Impl::workLater(double budgetMs) {
+    if (looksWorker.running()) {  // 3.0.20-beta.36: on a thread of its own - here only what it made goes in
+        workLaterTaken(budgetMs);
+        return;
+    }
     if (!laterLooks.size()) return;
     LARGE_INTEGER start, now, frequency;
     QueryPerformanceCounter(&start);
@@ -1095,9 +1136,10 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     // 3.0.20-beta.20: a whole texture of the game's (not a sprite cache) - its looks and the AI pack's work after its
     // upload (workLater); its AI picture of the old pixels let go now
     bool later = false;
+    if (whole && !u.own) t.looksSerial = ++looksSerialNext;  // 3.0.20-beta.36: older pixels' looks not taken
     if (whole && !u.own && !spriteCache && !(ai && ai->atlas(u.texture))) {
         if (ai) ai->rewritten(u.texture, t);
-        later = laterLooks.push(u, px, false);
+        later = laterLooks.push(u, px, false, t.looksSerial);
         if (later)
             ++laterQueued;
         else

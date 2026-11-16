@@ -36,6 +36,7 @@
 #include "core/weather.hpp"
 #include "core/weather3d.hpp"
 #include "core/wind.hpp"
+#include "win/gpu/looks_worker.hpp"
 #include "win/gpu/draw_constants.hpp"
 #include "win/gpu/map_world.hpp"
 #include "core/frame.hpp"
@@ -189,6 +190,7 @@ private:
         // 2.5.1: how much its picture looks like fire and its colour, or lights in its own colour (core/effect_light)
         float fire = 0.0f, fireColour[3] = {0, 0, 0};
         float light = 0.0f, lightColour[3] = {0, 0, 0};
+        uint32_t looksSerial = 0;  // 3.0.20-beta.36: its last whole upload's (the looks of older pixels not taken)
         // 1.14: its material (materials11.cpp) and the picture it was made from (the game's or the AI's)
         ID3D11Texture2D* mat = nullptr;
         ID3D11ShaderResourceView* matSrv = nullptr;
@@ -494,9 +496,12 @@ private:
     // 3.0.20-beta.20 (the owner's «делай 1 и 2», 1): a whole texture of the game's goes to the card at once, its looks
     // and the AI pack's work on it after, a picture's budget at a time (core/upload_later); the counts for the log
     uploadlater::Queue laterLooks_;
+    LooksWorker looksWorker_;  // 3.0.20-beta.36: their work on a thread of its own
+    uint32_t looksSerialNext_ = 0;
     uint64_t laterQueued_ = 0, laterAtOnce_ = 0;
     double laterMostMs_ = 0;
     void workLater11(double budgetMs);
+    void workLaterTaken11(double budgetMs);  // 3.0.20-beta.36: the looks' thread's
     // 3.0.20-beta.14 (stage 4): the frame's moving nodes' matrices' first uint4 in modelFaces_ (after the faces; holeG
     // of the draws), 0 none; of the nodes drawn, the moving ones
     uint32_t modelMatrices_ = 0;

@@ -1278,9 +1278,10 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
     // 3.0.20-beta.20: a whole texture of the game's (not a sprite cache) - its looks and the AI pack's work after its
     // upload (workLater11); its copy of the old pixels let go now
     bool later = false;
+    if (whole && !u.own) it->second.looksSerial = ++looksSerialNext_;  // 3.0.20-beta.36: older pixels' looks not taken
     if (whole && !u.own && !spriteCache && !(ai_ && ai_->atlas(u.texture))) {
         if (ai_) ai_->rewritten(u.texture);
-        later = laterLooks_.push(u, rec.pixels().data() + u.pixels, false);
+        later = laterLooks_.push(u, rec.pixels().data() + u.pixels, false, it->second.looksSerial);
         if (later)
             ++laterQueued_;
         else
@@ -1307,6 +1308,10 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
 // 3.0.20-beta.20: the whole textures' work kept from their uploads (laterLooks_), the oldest first, `budgetMs` of it a
 // picture - their looks and the AI pack's key; a texture let go or of another size since: its work dropped
 void Renderer11::workLater11(double budgetMs) {
+    if (looksWorker_.running()) {  // 3.0.20-beta.36: on a thread of its own - here only what it made goes in
+        workLaterTaken11(budgetMs);
+        return;
+    }
     if (!laterLooks_.size()) return;
     LARGE_INTEGER start, now;
     QueryPerformanceCounter(&start);
@@ -1329,6 +1334,39 @@ void Renderer11::workLater11(double budgetMs) {
         QueryPerformanceCounter(&now);
         if (double(now.QuadPart - start.QuadPart) / qpcPerMs_ >= budgetMs) break;
     }
+    QueryPerformanceCounter(&now);
+    laterMostMs_ = std::max(laterMostMs_, double(now.QuadPart - start.QuadPart) / qpcPerMs_);
+}
+
+// 3.0.20-beta.36 (as device.cpp's workLaterTaken): the looks' thread's work - handed it as it has room, what it made
+// taken into the textures still of those pixels and to the AI pack, `budgetMs` of it a picture
+void Renderer11::workLaterTaken11(double budgetMs) {
+    uploadlater::Job j;
+    while (looksWorker_.room() && laterLooks_.take(j)) looksWorker_.give(std::move(j), ai_ != nullptr);
+    LARGE_INTEGER start, now;
+    QueryPerformanceCounter(&start);
+    uploadlater::Looks l;
+    bool any = false;
+    while (looksWorker_.take(l)) {
+        any = true;
+        const auto it = textures_.find(l.texture);
+        if (it != textures_.end() && it->second.looksSerial == l.serial && it->second.width == l.width &&
+            it->second.height == l.height) {
+            Texture& t = it->second;
+            t.leafy = l.leafy;
+            t.fire = l.fire;
+            t.light = l.light;
+            std::copy(l.fireColour, l.fireColour + 3, t.fireColour);
+            std::copy(l.lightColour, l.lightColour + 3, t.lightColour);
+            if (ai_)  // its key worked out there (none: the pack came on since - here)
+                ai_->noteUpload(l.texture, t.width, t.height, l.upload, l.texels(), nullptr, 0, l.pixels.data(),
+                                l.aiKey.empty() ? nullptr : &l.aiKey);
+        }
+        QueryPerformanceCounter(&now);
+        if (double(now.QuadPart - start.QuadPart) / qpcPerMs_ >= budgetMs) break;
+    }
+    if (!any) return;
+    while (looksWorker_.room() && laterLooks_.take(j)) looksWorker_.give(std::move(j), ai_ != nullptr);
     QueryPerformanceCounter(&now);
     laterMostMs_ = std::max(laterMostMs_, double(now.QuadPart - start.QuadPart) / qpcPerMs_);
 }

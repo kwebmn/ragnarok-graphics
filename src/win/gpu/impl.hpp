@@ -33,6 +33,7 @@
 #include "core/hills.hpp"
 #include "core/game_models_card.hpp"
 #include "core/upload_later.hpp"
+#include "win/gpu/looks_worker.hpp"
 #include "win/gpu/threads.hpp"
 #include "core/game_models_place.hpp"
 #include "core/own_ground.hpp"
@@ -183,6 +184,7 @@ struct Texture {
     float fireColour[3] = {0, 0, 0};
     float light = 0.0f;  // 0.36: how much it lights in its own colour (core/effect_light.hpp: lightOf)
     float lightColour[3] = {0, 0, 0};
+    uint32_t looksSerial = 0;  // 3.0.20-beta.36: its last whole upload's (the looks of older pixels not taken)
     // 0.32: a sprite cache's cells and what each holds now (sprite_exe::Source) - the characters cast shadows.
     std::vector<SpriteCell> spriteCells;
     // 1.8: its material (materials.cpp) - relief, height, gloss - made from the picture matFor (the game's or the AI's)
@@ -1612,10 +1614,13 @@ struct Renderer::Impl {
     // of the game's goes to the card at once, its looks (fire, light, leaves) and the AI pack's work on it after, a
     // picture's budget at a time (core/upload_later); the counts for the log
     uploadlater::Queue laterLooks;
+    LooksWorker looksWorker;  // 3.0.20-beta.36: their work on a thread of its own
+    uint32_t looksSerialNext = 0;
     uint64_t laterQueued = 0, laterDone = 0, laterAtOnce = 0;
     double laterMostMs = 0;
     void looksOf(Texture& t, const UploadCmd& u, const uint32_t* px, bool spriteCache);
     void workLater(double budgetMs);
+    void workLaterTaken(double budgetMs);  // 3.0.20-beta.36: the looks' thread's
     // 3.0.20-beta.18 (R-8UPTJW «кудато стена пропала»: Prontera's south gate, a still node mirrored on z, not seen): a
     // few of the frame's nodes a picture placed by the processor by the card's rules - those in front of the eye that
     // show no face told in the 30 s line (where they stand, their faces, mirrored or moving)

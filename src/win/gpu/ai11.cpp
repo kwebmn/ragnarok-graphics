@@ -149,7 +149,7 @@ uint64_t Ai11::videoMemory(uint64_t* used) const {
 }
 
 void Ai11::noteUpload(uint32_t id, int width, int height, const UploadCmd& u, const uint32_t* argb,
-                      const SpriteCell* cells, uint32_t cellCount, const uint32_t* pixels) {
+                      const SpriteCell* cells, uint32_t cellCount, const uint32_t* pixels, const std::string* key) {
     if (!ready_ || u.level != 0 || !argb) return;
     if (cellCount || atlases_.count(id)) {  // the game's sprite cache: cell by cell
         noteCells(id, width, height, u, argb, cells, cellCount, pixels);
@@ -172,7 +172,7 @@ void Ai11::noteUpload(uint32_t id, int width, int height, const UploadCmd& u, co
     }
     item.width = width;
     item.height = height;
-    item.key = ai::keyName(ai::textureKey(argb, width, height));
+    item.key = key ? *key : ai::keyName(ai::textureKey(argb, width, height));
     item.soft = ai::softPicture(argb, width, height) || ai::softAlpha(argb, width, height);
     item.alike.clear();
     if (pictures_->hasAlike(width, height)) pictures_->alikeName(argb, width, height, item.alike);

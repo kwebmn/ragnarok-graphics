@@ -1539,7 +1539,8 @@ void AiTextures::drop(Item& item) {
 }
 
 void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb,
-                            const SpriteCell* cells, uint32_t cellCount, const uint32_t* pixels) {
+                            const SpriteCell* cells, uint32_t cellCount, const uint32_t* pixels,
+                            const std::string* key) {
     if (!ready_ || u.level != 0) return;
     if (cellCount || atlases_.count(id)) {  // a sprite cache: cell by cell
         noteCells(id, t, u, argb, cells, cellCount, pixels);
@@ -1579,7 +1580,7 @@ void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const u
     keptBytes_ += n * 4;
     item.width = t.width;
     item.height = t.height;
-    item.key = ai::keyName(ai::textureKey(argb, t.width, t.height));
+    item.key = key ? *key : ai::keyName(ai::textureKey(argb, t.width, t.height));
     // Ahead: a texture of a kind the pack's index knows (or this run saw) goes before it is drawn, after the drawn.
     ai::Kind kind = ai::Kind::None;
     if (pictures_->knownKind(item.key, kind)) begin(id, item, kind, true);

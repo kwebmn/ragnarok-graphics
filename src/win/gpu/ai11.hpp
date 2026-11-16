@@ -43,8 +43,10 @@ public:
     // A texture's pixels as the game uploads them - level 0 of a whole one gives its key; cells: the cells of the
     // game's sprite cache that got a new frame (UploadCmd::slots); pixels (2.5.23): the record's, where a dyed
     // frame's own colours are (SpriteCell::own).
+    // 3.0.20-beta.36: key - its ai::keyName worked out on the textures' looks thread (LooksWorker); none: here
     void noteUpload(uint32_t id, int width, int height, const UploadCmd& u, const uint32_t* argb,
-                    const SpriteCell* cells, uint32_t cellCount, const uint32_t* pixels = nullptr);
+                    const SpriteCell* cells, uint32_t cellCount, const uint32_t* pixels = nullptr,
+                    const std::string* key = nullptr);
     void noteWorldUse(uint32_t id, ai::Kind kind);  // drawn in the world as kind
     void noteUiUse(uint32_t id);                    // drawn in the interface: its big pictures
     void forget(uint32_t id);                       // the game released it
