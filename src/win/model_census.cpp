@@ -89,6 +89,7 @@ uint32_t g_oursMoving = 0;
 // nodes within kDumpReach of the player, ours counted
 enum class Dump { None, Next, Now };
 Dump g_dump = Dump::None;
+uint32_t g_dumpFrame = 0;  // 3.0.20-beta.65: the game's number of the dump's frame (0: not noted yet)
 struct DumpNode {
     uint32_t id = 0, vertices = 0, faces = 0;
     bool flipped = false;
@@ -286,6 +287,13 @@ void __attribute__((thiscall)) drawHook(uint8_t* node, uint32_t a, uint32_t b, u
     if (g_depth >= kDeepest || !node) {
         reinterpret_cast<NodeDrawFn>(g_draw)(node, a, b, c);
         return;
+    }
+    // 3.0.20-beta.65: the dump's frame's own number, as the game holds it while it draws that frame's models - by the
+    // dump's end (the present) the game has counted on: R-64G2U9's lines told «did not come to it this frame» of
+    // every model, the ones it had just tested too (their marks the frame before the number read then)
+    if (g_dump == Dump::Now && !g_dumpFrame) {
+        uint32_t renderer = 0;  // uaRO.exe's renderer (0x6EE3D8), its frame's number at +0x34 (dumpActors' own)
+        if (readGame(0x6EE3D8, &renderer, 4) && renderer) readGame(renderer + 0x34, &g_dumpFrame, 4);
     }
     const mc::Colouring how = colouringOf(node);
     // 3.0.20-beta.4: the renderer draws it; its children as the game would
@@ -490,49 +498,68 @@ void dumpActors() {
         LOG_INFO("models dump: the game's own list of the map's models is not where this build has it - not asked");
         return;
     }
+    // the frame the dump is of: its number noted as its models were drawn; none drawn - the one before the present's
+    if (g_dumpFrame) frame = g_dumpFrame;
+    else if (frame) --frame;
     uint8_t bytes[sizeof kBoxTestBytes];
     const bool test = readGame(kBoxTest, bytes, sizeof bytes) && !std::memcmp(bytes, kBoxTestBytes, sizeof bytes);
     std::unordered_set<uint32_t> ours(g_frameIds.begin(), g_frameIds.end());
     ours.insert(g_frameMoving.begin(), g_frameMoving.end());
     size_t inFront = 0, byUs = 0, byGame = 0, lost = 0, told = 0;
+    // 3.0.20-beta.65 (R-64G2U9, R-7VX6Q9 «тут тоже нету дома» from above: the eye's cone holds a thousand of
+    // Prontera's models there, 900 of them legitimately off the picture - the forty written were the map's first,
+    // lamps and paving 600 away, not the house missing beside the player): the ones not drawn nearest the player
+    // first, by the ground's distance from the dump's place
+    struct Lost {
+        float away;
+        uint32_t actor, root, mark;
+        float pos[3], box[15], ahead, aside;
+        uint8_t alpha;
+    };
+    std::vector<Lost> losts;
     for (uint32_t p = first; p < last; p += 4) {
-        uint32_t actor = 0, root = 0, mark = 0;
-        float pos[3], box[15];
-        uint8_t alpha = 0;
-        if (!readGame(p, &actor, 4) || !actor || !readGame(actor, pos, sizeof pos) ||
-            !readGame(actor + kActorBox, box, sizeof box) || !readGame(actor + kActorNode, &root, 4) ||
-            !readGame(actor + kActorMark, &mark, 4) || !readGame(actor + kActorAlpha, &alpha, 1))
+        Lost l{};
+        if (!readGame(p, &l.actor, 4) || !l.actor || !readGame(l.actor, l.pos, sizeof l.pos) ||
+            !readGame(l.actor + kActorBox, l.box, sizeof l.box) || !readGame(l.actor + kActorNode, &l.root, 4) ||
+            !readGame(l.actor + kActorMark, &l.mark, 4) || !readGame(l.actor + kActorAlpha, &l.alpha, 1))
             continue;
         // its box's middle in the view (a row vector by the view's 4 x 3): ahead, aside, and its reach
-        const float* c = box + 3;
-        const float aside = c[0] * m[0] + c[1] * m[3] + c[2] * m[6] + m[9];
-        const float ahead = c[0] * m[2] + c[1] * m[5] + c[2] * m[8] + m[11];
-        const float reach = std::fabs(box[0]) + std::fabs(box[1]) + std::fabs(box[2]);
-        if (!(ahead > 10.0f && ahead < kActorsReach) || std::fabs(aside) > ahead * 1.2f + reach) continue;
+        const float* c = l.box + 3;
+        l.aside = c[0] * m[0] + c[1] * m[3] + c[2] * m[6] + m[9];
+        l.ahead = c[0] * m[2] + c[1] * m[5] + c[2] * m[8] + m[11];
+        const float reach = std::fabs(l.box[0]) + std::fabs(l.box[1]) + std::fabs(l.box[2]);
+        if (!(l.ahead > 10.0f && l.ahead < kActorsReach) || std::fabs(l.aside) > l.ahead * 1.2f + reach) continue;
         ++inFront;
-        if (ours.count(root)) {
+        if (ours.count(l.root)) {
             ++byUs;
             continue;
         }
-        if (g_dumpDrawn.count(root)) {
+        if (g_dumpDrawn.count(l.root)) {
             ++byGame;
             continue;
         }
         ++lost;
-        if (told >= kActorsMost) continue;
+        l.away = std::hypot(c[0] - g_dumpAt[0], c[2] - g_dumpAt[1]);
+        losts.push_back(l);
+    }
+    std::sort(losts.begin(), losts.end(), [](const Lost& a, const Lost& b) { return a.away < b.away; });
+    for (const Lost& l : losts) {
+        if (told >= kActorsMost) break;
         ++told;
-        const int answer = test ? int(reinterpret_cast<BoxTestFn>(uintptr_t(kBoxTest))(view + kViewPlanes, box)) : -1;
-        const bool sent = g_sent.count(root) != 0;
-        LOG_INFO("models dump: NOT DRAWN - the game's model «%s» at x %.0f, z %.0f, y %.0f (its box's middle %.0f "
-                 "ahead, %.0f aside; half sizes %.0f %.0f %.0f): the game %s this frame (its mark %u, the frame %u); "
-                 "the game's own test of its box says %s; its alpha %u; its root node %08X %s",
-                 nameOf(actor + kActorName).c_str(), pos[0], pos[2], pos[1], ahead, aside, box[0], box[1], box[2],
-                 mark == frame ? "came to it" : "did not come to it", mark, frame,
+        const int answer =
+            test ? int(reinterpret_cast<BoxTestFn>(uintptr_t(kBoxTest))(view + kViewPlanes, const_cast<float*>(l.box)))
+                 : -1;
+        const bool sent = g_sent.count(l.root) != 0;
+        LOG_INFO("models dump: NOT DRAWN - the game's model «%s» at x %.0f, z %.0f, y %.0f, %.0f from the player (its "
+                 "box's middle %.0f ahead, %.0f aside; half sizes %.0f %.0f %.0f): the game %s this frame (its mark "
+                 "%u, the frame %u); the game's own test of its box says %s; its alpha %u; its root node %08X %s",
+                 nameOf(l.actor + kActorName).c_str(), l.pos[0], l.pos[2], l.pos[1], l.away, l.ahead, l.aside,
+                 l.box[0], l.box[1], l.box[2], l.mark == frame ? "came to it" : "did not come to it", l.mark, frame,
                  answer == 0 ? "out of the view" : answer == 1 ? "in the view" : answer == 2 ? "across its edge"
                                                                                                : "nothing (not asked)",
-                 unsigned(alpha), root,
-                 g_still.count(root) ? "captured, still - ours when the game draws it"
-                 : g_moving.count(root) ? "captured, moving - ours when the game draws it"
+                 unsigned(l.alpha), l.root,
+                 g_still.count(l.root) ? "captured, still - ours when the game draws it"
+                 : g_moving.count(l.root) ? "captured, moving - ours when the game draws it"
                  : sent ? "captured once, the game's since (moved or coloured anew)" : "never captured");
     }
     LOG_INFO("models dump: of the map's %u models %zu stand in front of the eye within %.0f - %zu left to our renderer "
@@ -663,6 +690,7 @@ void frame() {
         g_dump = Dump::None;
     } else if (g_dump == Dump::Next) {
         g_dump = Dump::Now;
+        g_dumpFrame = 0;  // 3.0.20-beta.65
         g_dumpGame.clear();
         g_dumpDrawn.clear();
         g_dumpOurs = g_dumpOursMoving = g_dumpGameAll = 0;

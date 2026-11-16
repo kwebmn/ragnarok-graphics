@@ -197,12 +197,20 @@ void Renderer::Impl::probeModels(const own_ground::Shading& fog) {
     mp.points.clear();
     const std::vector<uint32_t>& words = gameCards.words();
     const bool leavesApart = leavesOwnWay();
+    // 3.0.20-beta.65 (R-64G2U9: Prontera's frame holds hundreds of nodes near the player - cherry petals, lamps,
+    // paving): every near run looked over, the ones with the largest faces on the picture kept (a house's walls,
+    // a bridge's deck), not the frame's first ones
+    struct Found {
+        ModelProbe::Run run;
+        modelprobe::Point best[2];
+        float area;
+    };
+    std::vector<Found> largest;
     for (const uint32_t id : frame.ids) {
         const auto found = gameModels.find(id);
         const std::vector<gamemodels::CardRun>* runs = gameCards.runsOfNode(id);
         if (found == gameModels.end() || !runs || found->second.moving) continue;
         for (const gamemodels::CardRun& r : *runs) {
-            if (mp.points.size() + 2 > ModelProbe::kMostPoints) break;
             if (!r.count || (leavesApart && leafyTexture(r.texture))) continue;  // the leaves sway: not theirs
             if (std::fabs((r.lo[0] + r.hi[0]) / 2 - frame.dumpAt[0]) > kProbeReach ||
                 std::fabs((r.lo[2] + r.hi[2]) / 2 - frame.dumpAt[1]) > kProbeReach)
@@ -231,13 +239,22 @@ void Renderer::Impl::probeModels(const own_ground::Shading& fog) {
                 }
             }
             if (!bests) continue;
-            ModelProbe::Run run;
-            run.node = id, run.texture = r.texture, run.first = r.first, run.count = r.count;
-            run.firstPoint = mp.points.size(), run.points = size_t(bests);
-            for (int b = 0; b < bests; ++b) mp.points.push_back(best[b]);
-            mp.runs.push_back(run);
+            Found f;
+            f.run.node = id, f.run.texture = r.texture, f.run.first = r.first, f.run.count = r.count;
+            f.run.points = size_t(bests);
+            f.best[0] = best[0], f.best[1] = best[bests > 1 ? 1 : 0];
+            f.area = std::max(best[0].area, bests > 1 ? best[1].area : 0.0f);
+            largest.push_back(f);
         }
     }
+    std::sort(largest.begin(), largest.end(), [](const Found& a, const Found& b) { return a.area > b.area; });
+    for (Found& f : largest) {
+        if (mp.points.size() + f.run.points > ModelProbe::kMostPoints) break;
+        f.run.firstPoint = mp.points.size();
+        for (size_t b = 0; b < f.run.points; ++b) mp.points.push_back(f.best[b]);
+        mp.runs.push_back(f.run);
+    }
+    const size_t nearRuns = largest.size();
     const DrawSetup& like = ownState.modelLike;
     char state[240];
     std::snprintf(state, sizeof state,
@@ -300,9 +317,9 @@ void Renderer::Impl::probeModels(const own_ground::Shading& fog) {
         "our own draw", "without its material", "with the game's own picture (no HD copy)", "without the alpha test",
         "placed by the processor, not the card"};
     LOG_INFO("models dump: the picture looked at where our faces should be - %zu texture(s) of our still nodes near "
-             "the player, %zu place(s) on the %dx%d depth: %zu not in the picture after our draw, %zu behind "
-             "something nearer; our models' state: %s",
-             mp.runs.size(), mp.points.size(), sceneWidth, sceneHeight, missingFirst, hidden, state);
+             "the player (the largest on the picture of %zu), %zu place(s) on the %dx%d depth: %zu not in the picture "
+             "after our draw, %zu behind something nearer; our models' state: %s",
+             mp.runs.size(), nearRuns, mp.points.size(), sceneWidth, sceneHeight, missingFirst, hidden, state);
     size_t told = 0;
     for (size_t n = 0; n < mp.runs.size() && told < 24; ++n) {
         const ModelProbe::Run& r = mp.runs[n];
