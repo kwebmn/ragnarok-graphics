@@ -2903,20 +2903,51 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
     float3 q = bladeView(float3(xz.x, y, xz.y));
     if (q.z <= nearZ) return o;
     float2 tq = float2(q.x / q.z * f0 + cx, q.y / q.z * f1 + cy) * scale + 0.5 + float2(jitterX, jitterY);
-    if (all(tq >= 0.0) && all(tq < targetSize)) {
-        bool found = false;
-        [unroll] for (int k = 0; k < 2; ++k) {
-            if (!viewToPixel(bladeView(float3(xz.x, y, xz.y)), tp)) return o;
-            float raw = sceneDepth.Load(int3(int2(tp), 0));
-            if (raw >= 0.99999) return o;
-            float3 w = grassWorld(viewFrom(int2(tp), raw));
-            y = w.y;
-            found = length(w.xz - xz) < 0.75 * gap + 0.35;
+    bool rooted = false, off = !(all(tq >= 0.0) && all(tq < targetSize));
+    float edge = -1e30;  // where its line leaves the picture's bottom, its ground under it (y down)
+    if (!off) {
+        // 3.0.20-beta.35 (R-G8FGSV «прямо форму она меняет постоянно»): its height by halves along its upright line
+        // between its cell's heights - where the picture's surface crosses it, a pixel up or down at most. Beta.25-29
+        // took the ground seen at its pixel, twice over: looking along the ground a pixel is far off along it (three
+        // units at 220), and the far roots came and went and jumped up and down as the camera moved and DLSS's jitter
+        // shook the pixels
+        float top = cellKnown ? span.x - 1.0 : y - 60.0, bottom = cellKnown ? span.y + 1.0 : y + 60.0;
+        bool air = false;
+        int halves = cellKnown ? 7 : 9;
+        [loop] for (int k = 0; k < halves; ++k) {
+            float mid = 0.5 * (top + bottom);
+            float3 m = bladeView(float3(xz.x, mid, xz.y));
+            if (m.z <= nearZ + 0.01) return o;
+            float2 mp;
+            if (!viewToPixel(m, mp)) {  // off the picture: towards the root's own place on it
+                off = true;
+                if (mp.y > tq.y) bottom = mid;
+                else top = mid;
+                continue;
+            }
+            float raw = sceneDepth.Load(int3(int2(mp), 0));
+            if (raw < 0.99999 && viewDepth(raw) <= m.z) {  // behind what the picture shows there: under its ground
+                bottom = mid;
+                rooted = true;
+            } else {  // the picture further there: in the air
+                top = mid;
+                air = true;
+            }
         }
-        if (!found) return o;  // something else seen there
-    } else {
+        if (!air) return o;  // covered all the way down its line: a house, a deck, a monster
+        if (rooted) {
+            y = 0.5 * (top + bottom);
+            viewToPixel(bladeView(float3(xz.x, y, xz.y)), tp);
+        } else if (!off) {
+            return o;  // the picture further all the way down: no ground of its seen there
+        } else {
+            edge = bottom;  // in the air down to the picture's edge: its ground under it
+        }
+    }
+    if (!rooted) {  // its ground off the picture: its cell's middle, never over the edge its line leaves by
         float reachPx = 6.0 / q.z * max(f0, f1) * scale;  // a blade's most on the picture, leaning
         if (!cellKnown || any(tq < -reachPx) || any(tq > targetSize + reachPx)) return o;
+        y = max(0.5 * (span.x + span.y), edge);
         tp = clamp(tq, float2(1.0, 1.0), targetSize - 2.0);
     }
     if (y > uiPixels.w) return o;  // under the water (up is -y)
@@ -2947,11 +2978,17 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
                      (stem ? 1.6 : 1.0);
     // 3.0.20-beta.26 (R-PKPE9D, under DLSS's jitter): one under kMinPixels (beta.29: 2, not 2.5 - a blade seen side
     // on faded) across on the target that wide, at most kMostWider (6) times, as much fainter (core grass3d::fadeOf)
-    float across = 2.0 * abs(dot(across2, float2(r0, r2))) / base.z * f0 * scale;  // target pixels
+    float2 right = float2(r0, r2);
+    right = dot(right, right) > 1e-8 ? normalize(right) : float2(1.0, 0.0);
+    float halfAcross = abs(dot(across2, right));  // its half width across the view, world units
+    float across = 2.0 * halfAcross / base.z * f0 * scale;  // target pixels
     float wider = across >= 2.0 ? 1.0 : min(2.0 / max(across, 1e-3), 6.0);
     o.fade = across >= 2.0 ? 1.0 : (across > 0.0 ? 1.0 / wider : 0.0);
     if (o.fade < 0.03) return o;
-    across2 *= wider;
+    // 3.0.20-beta.35 (R-G8FGSV «прямо форму она меняет постоянно»): widened across the view, not along its own way -
+    // seen edge on, beta.26-29's lay down along the ground, up to six times its width away from the eye, and stood up
+    // again as the camera turned
+    across2 += right * (halfAcross * (wider - 1.0) * (dot(across2, right) < 0.0 ? -1.0 : 1.0));
     float3 at = corner == 2u ? float3(xz.x + lean.x, y - h, xz.y + lean.y)
                              : float3(xz.x + (corner == 0u ? -across2.x : across2.x), y,
                                       xz.y + (corner == 0u ? -across2.y : across2.y));
