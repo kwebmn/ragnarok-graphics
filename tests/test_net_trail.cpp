@@ -289,3 +289,60 @@ TEST(trail_the_files_first_line_is_the_reports_words) {
     CHECK_EQ(nettrail::firstLine("one line"), std::string("one line"));
     CHECK_EQ(nettrail::firstLine(""), std::string(""));
 }
+
+// 3.0.20-beta.66 (R-BTF3ZP, the first drop told by itself: the character server's notice 8 a tenth of a second
+// after the connect - the game had been closed on a map six seconds before and started again): the game before this
+// one, from its log's last lines - when it ended and what its last connection was
+TEST(trail_the_game_before_this_one_from_its_logs_end) {
+    const std::string tail =
+        "21:16:24.321 INFO  net trail: connection 3 - the map server 51.77.43.93:5121\n"
+        "21:17:08.396 INFO  net trail: connection 6 - the character server 51.77.43.93:6121\n"
+        "21:17:08.717 INFO  net trail: connection 7 - the map server 51.77.43.93:5121\n"
+        "21:17:12.000 INFO  render64: draws: 600 a frame\n"
+        "21:17:14.433 INFO  DirectDraw released, renderer closed\n";
+    const nettrail::Before b = nettrail::beforeOf(tail);
+    CHECK(b.known);
+    CHECK_EQ(b.endTime, std::string("21:17:14.433"));
+    CHECK_EQ(b.endMs, ((21 * 60 + 17) * 60 + 14) * 1000 + 433);
+    CHECK_EQ(b.lastLink, std::string("connection 7 - the map server 51.77.43.93:5121"));
+    CHECK_EQ(b.linkTime, std::string("21:17:08.717"));
+    nettrail::Clock drop;
+    drop.ms = 5000, drop.hour = 21, drop.minute = 17, drop.second = 20, drop.milli = 298;
+    CHECK_EQ(nettrail::sinceBefore(b, drop, 5000), 5865);
+    const std::string fact = nettrail::beforeFact(b, drop, 5000);
+    CHECK(has(fact, "21:17:14.433"));
+    CHECK(has(fact, "5.8 s before"));
+    CHECK(has(fact, "connection 7 - the map server"));
+    // over midnight; a day apart is not «before»
+    nettrail::Clock night;
+    night.ms = 0, night.hour = 0, night.minute = 0, night.second = 3, night.milli = 0;
+    nettrail::Before late = b;
+    late.endMs = ((23 * 60 + 59) * 60 + 58) * 1000;
+    CHECK_EQ(nettrail::sinceBefore(late, night, 0), 5000);
+    nettrail::Clock morning = night;
+    morning.hour = 9;
+    CHECK_EQ(nettrail::sinceBefore(b, morning, 0), -1);  // half a day: another sitting
+    // nothing to read
+    CHECK(!nettrail::beforeOf("").known);
+    CHECK(!nettrail::beforeOf("no time here\n").known);
+    CHECK_EQ(nettrail::beforeFact(nettrail::Before{}, drop, 5000), std::string(""));
+}
+
+TEST(trail_the_summary_tells_of_a_game_closed_just_before) {
+    nettrail::Trail t;
+    t.connected(0, 100, kIp, 6900, Role::Account, true, 0);
+    t.closed(60, 100, Closer::Game);
+    t.connected(140, 104, kIp, 6121, Role::Char, true, 0);
+    const uint8_t notice[3] = {0x81, 0x00, 8};
+    t.received(260, 104, 7, 0);
+    t.packet(265, Mode::Login, 0x0081, notice, sizeof notice);
+    t.closed(265, 104, Closer::Game);
+    CHECK(t.dropPending(265 + nettrail::kNoticeJoinMs));
+    const nettrail::Drop d = t.takeDrop();
+    const std::string said = t.summary(d, "", 5865);
+    CHECK(has(said, "Попередній запуск гри"));
+    CHECK(has(said, "5,8 с"));
+    CHECK(has(said, "125 мс"));  // the connection's life: under a second in milliseconds
+    CHECK(!has(t.summary(d, "", -1), "Попередній запуск гри"));
+    CHECK(!has(t.summary(d, "", 700000), "Попередній запуск гри"));  // long ago: not this drop's story
+}

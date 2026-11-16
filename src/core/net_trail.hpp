@@ -107,7 +107,8 @@ public:
     const std::vector<Link>& links() const { return links_; }
     const std::deque<Event>& events() const { return events_; }
     // the drop in Ukrainian for the report's first words: what, how, when, what was before
-    std::string summary(const Drop& d, const std::string& map) const;
+    // `sinceGameMs`: how long before the drop the game before this one ended (sinceBefore; -1 not known)
+    std::string summary(const Drop& d, const std::string& map, int sinceGameMs = -1) const;
     // the report's file: the drop in English, `facts` (the caller's lines), every connection, the trail's events
     std::string text(const Drop& d, const Clock& clock, const std::string& version,
                      const std::vector<std::string>& facts) const;
@@ -135,6 +136,21 @@ constexpr size_t kSendADay = 6;
 bool maySend(const std::string& stamps, long long now, std::string& next);
 // the trail's file: its first line the summary for the report's words (the driver writes it so), "" none
 std::string firstLine(const std::string& file);
+
+// 3.0.20-beta.66 (R-BTF3ZP: the notice 8 six seconds after a game was closed on a map and started again): the game
+// before this one on this computer, from the end of its log (the driver keeps it as .prev.log) - its last line's
+// time and its last connection's line; a drop within kBeforeMostMs of that end is told with it
+struct Before {
+    bool known = false;
+    int endMs = -1;  // of the day
+    std::string endTime, lastLink, linkTime;
+};
+constexpr int kBeforeMostMs = 10 * 60 * 1000;
+Before beforeOf(const std::string& logsEnd);
+// milliseconds from that game's end to the drop (the drop's moment `dropMs` by the clock given); -1: not known, or
+// more than kBeforeMostMs - another sitting
+int sinceBefore(const Before& b, const Clock& clock, uint32_t dropMs);
+std::string beforeFact(const Before& b, const Clock& clock, uint32_t dropMs);  // the file's line; "" none
 
 const char* roleName(Role r);        // "account", "character", "map"
 const char* errorName(int error);    // Winsock's: "reset by the server or the network"; "" unknown

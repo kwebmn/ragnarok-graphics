@@ -16,7 +16,8 @@ std::string hexId(uint16_t id) {
 // "0.8 s", "12.5 s", "3 min 05 s", "1 h 02 min"
 std::string spanEn(uint32_t ms) {
     char b[40];
-    if (ms < 60000) std::snprintf(b, sizeof b, "%u.%u s", ms / 1000, ms % 1000 / 100);
+    if (ms < 1000) std::snprintf(b, sizeof b, "%u ms", ms);  // 3.0.20-beta.66: «0.0 s» told nothing
+    else if (ms < 60000) std::snprintf(b, sizeof b, "%u.%u s", ms / 1000, ms % 1000 / 100);
     else if (ms < 3600000) std::snprintf(b, sizeof b, "%u min %02u s", ms / 60000, ms % 60000 / 1000);
     else std::snprintf(b, sizeof b, "%u h %02u min", ms / 3600000, ms % 3600000 / 60000);
     return b;
@@ -25,7 +26,8 @@ std::string spanEn(uint32_t ms) {
 // the same in Ukrainian: "0,8 с", "3 хв 05 с", "1 год 02 хв"
 std::string spanUk(uint32_t ms) {
     char b[48];
-    if (ms < 60000) std::snprintf(b, sizeof b, "%u,%u с", ms / 1000, ms % 1000 / 100);
+    if (ms < 1000) std::snprintf(b, sizeof b, "%u мс", ms);
+    else if (ms < 60000) std::snprintf(b, sizeof b, "%u,%u с", ms / 1000, ms % 1000 / 100);
     else if (ms < 3600000) std::snprintf(b, sizeof b, "%u хв %02u с", ms / 60000, ms % 60000 / 1000);
     else std::snprintf(b, sizeof b, "%u год %02u хв", ms / 3600000, ms % 3600000 / 60000);
     return b;
@@ -110,10 +112,29 @@ std::string withName(int error, const char* name) {
     return out;
 }
 
-std::string timeAt(const Clock& c, uint32_t ms) {
+// the time of day (milliseconds) at a moment of the game's clock
+int64_t dayMsAt(const Clock& c, uint32_t ms) {
     const int64_t day = 24ll * 3600 * 1000;
-    int64_t at = ((int64_t(c.hour) * 60 + c.minute) * 60 + c.second) * 1000 + c.milli - int64_t(int32_t(c.ms - ms));
-    at = ((at % day) + day) % day;
+    const int64_t at =
+        ((int64_t(c.hour) * 60 + c.minute) * 60 + c.second) * 1000 + c.milli - int64_t(int32_t(c.ms - ms));
+    return ((at % day) + day) % day;
+}
+
+// "HH:MM:SS.mmm" at `p` -> the day's milliseconds; -1 for anything else
+int clockAt(const std::string& s, size_t p) {
+    static const char kShape[] = "dd:dd:dd.ddd";
+    if (p + 12 > s.size()) return -1;
+    for (size_t i = 0; i < 12; ++i) {
+        const char ch = s[p + i];
+        if (kShape[i] == 'd' ? ch < '0' || ch > '9' : ch != kShape[i]) return -1;
+    }
+    const auto two = [&](size_t at) { return (s[p + at] - '0') * 10 + (s[p + at + 1] - '0'); };
+    const int milli = (s[p + 9] - '0') * 100 + (s[p + 10] - '0') * 10 + (s[p + 11] - '0');
+    return ((two(0) * 60 + two(3)) * 60 + two(6)) * 1000 + milli;
+}
+
+std::string timeAt(const Clock& c, uint32_t ms) {
+    const int64_t at = dayMsAt(c, ms);
     char b[24];
     std::snprintf(b, sizeof b, "%02d:%02d:%02d.%03d", int(at / 3600000), int(at / 60000 % 60), int(at / 1000 % 60),
                   int(at % 1000));
@@ -121,6 +142,53 @@ std::string timeAt(const Clock& c, uint32_t ms) {
 }
 
 }  // namespace
+
+Before beforeOf(const std::string& logsEnd) {
+    Before b;
+    static const char kLink[] = "net trail: connection ";
+    size_t end = logsEnd.size();
+    while (end > 0) {  // the lines from the last one back
+        size_t start = logsEnd.rfind('\n', end - 1);
+        start = start == std::string::npos ? 0 : start + 1;
+        size_t stop = end;
+        while (stop > start && (logsEnd[stop - 1] == '\n' || logsEnd[stop - 1] == '\r')) --stop;
+        const int at = clockAt(logsEnd, start);
+        if (at >= 0 && stop > start) {
+            if (!b.known) {
+                b.known = true;
+                b.endMs = at;
+                b.endTime = logsEnd.substr(start, 12);
+            }
+            const size_t link = logsEnd.find(kLink, start);
+            if (link != std::string::npos && link < stop) {
+                b.lastLink = logsEnd.substr(link + sizeof kLink - 1 - 11, stop - (link + sizeof kLink - 1 - 11));
+                b.linkTime = logsEnd.substr(start, 12);
+                break;
+            }
+        }
+        if (!start) break;
+        end = start - 1;
+        if (!end && logsEnd[0] == '\n') break;
+    }
+    return b;
+}
+
+int sinceBefore(const Before& b, const Clock& clock, uint32_t dropMs) {
+    if (!b.known || b.endMs < 0) return -1;
+    const int64_t day = 24ll * 3600 * 1000;
+    const int64_t since = ((dayMsAt(clock, dropMs) - b.endMs) % day + day) % day;
+    return since <= kBeforeMostMs ? int(since) : -1;
+}
+
+std::string beforeFact(const Before& b, const Clock& clock, uint32_t dropMs) {
+    if (!b.known) return "";
+    const int since = sinceBefore(b, clock, dropMs);
+    std::string t = "the game before this one on this computer: its log ended at " + b.endTime;
+    if (since >= 0) t += " (" + spanEn(uint32_t(since)) + " before this drop)";
+    else t += " (long before this drop)";
+    if (!b.lastLink.empty()) t += ", its last " + b.lastLink + " at " + b.linkTime;
+    return t;
+}
 
 const char* roleName(Role r) {
     switch (r) {
@@ -390,7 +458,7 @@ Drop Trail::takeDrop() {
     return drop_;
 }
 
-std::string Trail::summary(const Drop& d, const std::string& map) const {
+std::string Trail::summary(const Drop& d, const std::string& map, int sinceGameMs) const {
     std::string s = "Розрив: ";
     const std::string who = roleUk(d.role);
     if (d.notice) {
@@ -418,6 +486,9 @@ std::string Trail::summary(const Drop& d, const std::string& map) const {
                  spanUk(d.sinceBeforeMs) + " до початку цього.";
     }
     if (d.gapMs >= kGapFromMs) s += " Незадовго до розриву гра не опитувала мережу " + spanUk(d.gapMs) + ".";
+    if (sinceGameMs >= 0 && sinceGameMs <= kBeforeMostMs)
+        s += " Попередній запуск гри на цьому комп'ютері завершився за " + spanUk(uint32_t(sinceGameMs)) +
+             " до розриву.";
     if (!d.lastIds.empty()) {
         s += " Останні пакети сервера:";
         for (const uint16_t id : d.lastIds) s += " " + hexId(id);

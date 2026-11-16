@@ -146,6 +146,22 @@ std::string trailFile() {
     return logfiles::slotted(log.substr(0, slash + 1) + "uaro-disconnect.txt", wlog::slot());
 }
 
+// the last `most` bytes of a file, "" when it is not there
+std::string endOf(const std::string& path, long most) {
+    std::string out;
+    FILE* f = path.empty() ? nullptr : std::fopen(path.c_str(), "rb");
+    if (!f) return out;
+    if (std::fseek(f, 0, SEEK_END) == 0) {
+        const long size = std::ftell(f), from = size > most ? size - most : 0;
+        if (size > 0 && std::fseek(f, from, SEEK_SET) == 0) {
+            out.resize(size_t(size - from));
+            out.resize(std::fread(&out[0], 1, out.size(), f));
+        }
+    }
+    std::fclose(f);
+    return out;
+}
+
 // a drop: its file written (the summary first, then the trail) and the settings app asked to send it
 void tell(State& st, const nettrail::Drop& d) {
     std::vector<std::string> facts;
@@ -172,8 +188,12 @@ void tell(State& st, const nettrail::Drop& d) {
     std::snprintf(line, sizeof line, "this game runs for %.1f min; log slot %d; drops told before in it: %u",
                   double(now - st.startedMs) / 60000.0, wlog::slot(), st.reports);
     facts.push_back(line);
-    const std::string said = st.trail.summary(d, st.map);
-    const std::string text = st.trail.text(d, clockNow(), kVersion, facts);
+    // 3.0.20-beta.66 (R-BTF3ZP): the game before this one - the end of its log, kept beside this game's
+    const nettrail::Clock clock = clockNow();
+    const nettrail::Before before = nettrail::beforeOf(endOf(logfiles::previous(wlog::path()), 16384));
+    if (const std::string fact = nettrail::beforeFact(before, clock, d.ms); !fact.empty()) facts.push_back(fact);
+    const std::string said = st.trail.summary(d, st.map, nettrail::sinceBefore(before, clock, d.ms));
+    const std::string text = st.trail.text(d, clock, kVersion, facts);
     LOG_INFO("net trail: a connection lost - %s server, %s%s; its connection %.1f s old, %llu B in, %llu B out; "
              "connection %d of its kind in this game, back to the characters %d time(s) before",
              nettrail::roleName(d.role),
