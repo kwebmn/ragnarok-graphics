@@ -1306,6 +1306,8 @@ struct Renderer::Impl {
         if (hillsWanted() && !groundTris.empty()) hillsGrid = hills::build(groundTris);
         if (grassCellsWanted() && !groundTris.empty()) {
             groundCells = ground_cells::build(groundTris);
+            groundCellsFrom = 0;  // 3.0.20-beta.41: the last frame's of the game's ground, not the own ground's map
+            groundCellsFresh = false;
             dropHalls();  // 3.0.18-beta.252: no grass on the halls' floors
             grass_beds::addTo(groundCells, mapWorld.beds());  // 3.0.1-beta.3: the flower beds' tops too
         }
@@ -1440,6 +1442,16 @@ struct Renderer::Impl {
         return effects.grass && effects.grassAmount > 0 && grassPs && grassHere() && viewToWorldValid;
     }
     bool ensureGroundCells();  // the texture holds this frame's cells; false: none this frame
+    // 3.0.20-beta.41 (the audit of the 3D view's grass): over the own ground in the 3D view none of the game's ground
+    // is noted (draw.cpp) and the grass's cells stayed those of the frames before - a part of the map, or another
+    // map's. There the whole map's, from the own ground's meshes (ground_cells::ofMeshes), made once a map: ownCells
+    // of the own ground ownCellsOf (by the axes ownCellsAxes); groundCellsFrom the own ground groundCells hold now (0:
+    // the game's ground's), groundCellsFresh - their texture holds them already
+    ground_cells::Grid ownCells;
+    uint32_t ownCellsOf = 0, groundCellsFrom = 0;
+    int ownCellsAxes = 0;
+    bool groundCellsFresh = false;
+    void useOwnCells();
     void hillsConstants(Constants& c) const;
     void sunInWorld(float out[3]) const;  // the way to the sun (as the materials find it), up along -y
     bool seamsDue() const { return seamsWanted() && !seamsDone && !groundTris.empty() && !ownState.frame; }

@@ -276,10 +276,51 @@ void Renderer::Impl::dropHalls() {
              groundCells.height);
 }
 
+void Renderer::Impl::useOwnCells() {
+    if (!(ownState.decided && ownState.frame && camera::wideView())) return;  // the game's ground is noted
+    const OwnGround* g = mapWorld.ownGround();
+    if (!g || g->serial != ownState.serial) return;
+    const map::Axes axes = mapWorld.axes().known() ? mapWorld.axes() : map::Axes{1, 1, 1};
+    const int axesKey = (axes.x < 0 ? 1 : 0) | (axes.y < 0 ? 2 : 0) | (axes.z < 0 ? 4 : 0) | 8;
+    if (groundCellsFrom == g->serial && ownCellsAxes == axesKey) return;  // they are the own ground's already
+    if (ownCellsOf != g->serial || ownCellsAxes != axesKey) {
+        LARGE_INTEGER from, to, frequency;
+        QueryPerformanceCounter(&from);
+        // made with the map (MapWorld's thread) for the file's own axes; any other: here, now
+        if (axesKey == 8 && g->cells.side > 0.0f)
+            groundCells = g->cells;
+        else
+            groundCells = ground_cells::ofMeshes({&g->mesh, &g->distant}, g->width, g->height, g->zoom, axes.x,
+                                                 axes.y, axes.z);
+        dropHalls();  // no grass on the halls' floors
+        grass_beds::addTo(groundCells, mapWorld.beds());  // the flower beds' tops too
+        ownCells = groundCells;
+        ownCellsOf = g->serial;
+        ownCellsAxes = axesKey;
+        QueryPerformanceCounter(&to);
+        QueryPerformanceFrequency(&frequency);
+        size_t with = 0;
+        for (size_t i = 0; i + 1 < ownCells.span.size(); i += 2) with += ownCells.span[i] <= ownCells.span[i + 1];
+        LOG_INFO("grass: %s's whole ground for the 3D view's grass - %dx%d cells from the own ground's meshes, %zu "
+                 "of them with ground, taken in %.1f ms (over the own ground the game's ground is not noted)",
+                 g->map.c_str(), ownCells.width, ownCells.height, with,
+                 double(to.QuadPart - from.QuadPart) * 1000.0 / double(frequency.QuadPart));
+    } else {
+        groundCells = ownCells;
+    }
+    groundCellsFrom = g->serial;
+    groundCellsFresh = false;
+    groundCellsUp = groundCellsTried = false;  // this frame's texture again
+}
+
 bool Renderer::Impl::ensureGroundCells() {
     if (groundCellsTried) return groundCellsUp;
     groundCellsTried = true;
     if (groundCellsFailed) return false;
+    if (groundCellsFresh && groundCellsData) {  // 3.0.20-beta.41: the own ground's, the same every frame - up already
+        groundCellsUp = true;
+        return true;
+    }
     const ground_cells::Grid& g = groundCells;
     if (g.side <= 0.0f || g.width <= 0 || g.height <= 0 || g.span.size() < size_t(g.width) * size_t(g.height) * 2)
         return false;
@@ -318,6 +359,7 @@ bool Renderer::Impl::ensureGroundCells() {
     list->CopyTextureRegion(&to, 0, 0, 0, &src, nullptr);
     transition(groundCellsData, groundCellsState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     groundCellsUp = true;
+    groundCellsFresh = groundCellsFrom != 0;  // 3.0.20-beta.41: the own ground's stay as they are
     if (!groundCellsLogged)
         LOG_INFO("grass: %dx%d cells of %s's ground, %.1f a side", g.width, g.height, mapName.c_str(),
                  double(g.side));

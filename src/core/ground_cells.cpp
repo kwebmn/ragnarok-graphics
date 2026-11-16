@@ -69,6 +69,64 @@ Grid build(const std::vector<seams::Triangle>& ground) {
     return g;
 }
 
+Grid ofMeshes(const std::vector<const terrain::Mesh*>& meshes, int width, int height, float zoom, int signX, int signY,
+              int signZ) {
+    Grid g;
+    if (meshes.empty() || width <= 0 || height <= 0 || zoom < 0.5f) return g;
+    // at most kMostSide a side, about the map's middle
+    const int w = std::min(width, kMostSide), h = std::min(height, kMostSide);
+    const int x0 = (width - w) / 2, z0 = (height - h) / 2;  // the first of the file's cells kept
+    g.side = zoom;
+    g.width = w;
+    g.height = h;
+    g.originX = -0.5f * float(w) * zoom;  // the map's middle at 0 either way round
+    g.originZ = -0.5f * float(h) * zoom;
+    g.span.assign(size_t(w) * size_t(h) * 2, 0.0f);
+    for (size_t i = 0; i < g.span.size(); i += 2) {
+        g.span[i] = 1e30f;
+        g.span[i + 1] = -1e30f;
+    }
+    const float up = signY < 0 ? -1.0f : 1.0f;
+    for (const terrain::Mesh* mesh : meshes) {
+        if (!mesh) continue;
+        for (const terrain::Batch& b : mesh->batches) {
+            if (b.layer != terrain::kGround) continue;
+            for (uint32_t i = b.firstIndex; i + 3 <= b.firstIndex + b.indexCount; i += 3) {
+                const terrain::Vertex* v[3];
+                bool ok = true;
+                for (int k = 0; k < 3 && ok; ++k) {
+                    const size_t at = size_t(b.firstVertex) + mesh->indices[i + size_t(k)];
+                    ok = at < mesh->vertices.size();
+                    if (ok) v[k] = &mesh->vertices[at];
+                }
+                // a wall's (terrain::isWall: also one with no face at all, two corners at one place)
+                if (!ok || terrain::isWall(*v[0]) || terrain::isWall(*v[1]) || terrain::isWall(*v[2])) continue;
+                // the ground's own faces only: the cliffs' walls stand up between two heights (as build's)
+                const float ax = v[1]->pos[0] - v[0]->pos[0], ay = v[1]->pos[1] - v[0]->pos[1],
+                            az = v[1]->pos[2] - v[0]->pos[2], bx = v[2]->pos[0] - v[0]->pos[0],
+                            by = v[2]->pos[1] - v[0]->pos[1], bz = v[2]->pos[2] - v[0]->pos[2];
+                const float nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+                const float nn = nx * nx + ny * ny + nz * nz;
+                if (nn < 1e-12f || std::fabs(ny) < 0.6f * std::sqrt(nn)) continue;
+                const float cx = (v[0]->pos[0] + v[1]->pos[0] + v[2]->pos[0]) / 3.0f;
+                const float cz = (v[0]->pos[2] + v[1]->pos[2] + v[2]->pos[2]) / 3.0f;
+                int ix = floorInt(cx / zoom + 0.5f * float(width)) - x0;
+                int iz = floorInt(cz / zoom + 0.5f * float(height)) - z0;
+                if (ix < 0 || iz < 0 || ix >= w || iz >= h) continue;
+                if (signX < 0) ix = w - 1 - ix;
+                if (signZ < 0) iz = h - 1 - iz;
+                float* s = &g.span[(size_t(iz) * size_t(w) + size_t(ix)) * 2];
+                for (const terrain::Vertex* p : v)
+                    for (const float y : {p->pos[1] * up, p->plain * up}) {
+                        s[0] = std::min(s[0], y);
+                        s[1] = std::max(s[1], y);
+                    }
+            }
+        }
+    }
+    return g;
+}
+
 size_t dropWhere(Grid& g, const std::function<bool(float x, float z)>& off) {
     if (g.side <= 0.0f || g.width <= 0 || g.height <= 0 || g.span.size() < size_t(g.width) * size_t(g.height) * 2)
         return 0;

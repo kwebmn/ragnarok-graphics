@@ -459,6 +459,9 @@ void MapWorld::loop() {
                                                           : terrain::Sun{};
                     own->mesh = terrain::build(full, sizeof(void*) == 8 ? 3 : 2, own->atlas, laid, &resting, &sun);
                     own->distant = terrain::build(full, 1, own->atlas, nullptr, nullptr, &sun);
+                    // 3.0.20-beta.41: the grass's cells of the whole map (60 ms here, not on the renderer's thread)
+                    own->cells = ground_cells::ofMeshes({&own->mesh, &own->distant}, full.width, full.height,
+                                                        full.zoom, 1, 1, 1);
                     {  // 3.0.20-beta.30 (the owner's «6,7,8,9», 6): the land past its edges - the 3D view's horizon
                         outskirts::Options ring;
                         ring.water = w.waterKnown;

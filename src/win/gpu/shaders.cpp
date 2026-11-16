@@ -2911,9 +2911,19 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
         // took the ground seen at its pixel, twice over: looking along the ground a pixel is far off along it (three
         // units at 220), and the far roots came and went and jumped up and down as the camera moved and DLSS's jitter
         // shook the pixels
+        // 3.0.20-beta.41 (the audit): a point of the line is under the ground only where the picture's surface lies
+        // near in front of it - as far as the ground over it can (the way to it by its steepness); something nearer
+        // than that (a wall, a ridge, a crown before it) hides it, and the search goes on down. Beta.35 took any
+        // nearer surface for the ground: the roots behind a low wall or a ridge rose to its edge and stood in the air
+        // (in a model of it 36 of 72 roots behind a board ten units before them). As many halves as bring it within
+        // half a pixel there (a steep cell near by: twelve, not seven)
         float top = cellKnown ? span.x - 1.0 : y - 60.0, bottom = cellKnown ? span.y + 1.0 : y + 60.0;
-        bool air = false;
-        int halves = cellKnown ? 7 : 9;
+        float top0 = top;
+        float pixelWorld = q.z / (f1 * scale);  // a pixel's height at the root, world units
+        float away = max(length(xz - eye.xz), 1.0);
+        int halves = clamp(int(ceil(log2((bottom - top) / max(0.5 * pixelWorld, 0.008)))), 4, 12);
+        bool over = false;  // a point of the line over its ground (or hidden) met
+        float gap = 0.0;    // how far before the last point under the ground the picture's surface lies
         [loop] for (int k = 0; k < halves; ++k) {
             float mid = 0.5 * (top + bottom);
             float3 m = bladeView(float3(xz.x, mid, xz.y));
@@ -2926,22 +2936,35 @@ BladeOut grass3d_vs(uint id : SV_VertexID) {
                 continue;
             }
             float raw = sceneDepth.Load(int3(int2(mp), 0));
-            if (raw < 0.99999 && viewDepth(raw) <= m.z) {  // behind what the picture shows there: under its ground
+            float before = raw >= 0.99999 ? -1.0 : m.z - viewDepth(raw);  // the surface before it (under 0: behind)
+            float steep = max(abs(mid - eye.y) / away, 0.05);
+            float most = ((mid - top0) + 1.0 + 1.5 * pixelWorld) / steep + 0.3;
+            if (before >= 0.0 && before <= most) {  // its own ground before it: under the ground
                 bottom = mid;
                 rooted = true;
-            } else {  // the picture further there: in the air
+                gap = before;
+            } else {  // the picture further there (in the air), or something nearer in the way: on down
                 top = mid;
-                air = true;
+                over = true;
             }
         }
-        if (!air) return o;  // covered all the way down its line: a house, a deck, a monster
-        if (rooted) {
-            y = 0.5 * (top + bottom);
-            viewToPixel(bladeView(float3(xz.x, y, xz.y)), tp);
-        } else if (!off) {
-            return o;  // the picture further all the way down: no ground of its seen there
+        if (rooted && over) {
+            // the ground itself met, not an edge of something nearer the line passes behind: the surface before the
+            // last point under it as near as the ground's own lie lets it be (its cell's tilt known: by that)
+            float yb = 0.5 * (top + bottom);
+            float tilt = cellKnown ? (span.y - span.x) * sourceClamp.z : 0.3;
+            float steepEnd = max(abs(yb - eye.y) / away - tilt, 0.03);
+            rooted = gap <= ((bottom - top) + 1.5 * pixelWorld) / steepEnd + 0.3;
+            if (rooted) {
+                y = yb;
+                viewToPixel(bladeView(float3(xz.x, y, xz.y)), tp);
+            }
         } else {
-            edge = bottom;  // in the air down to the picture's edge: its ground under it
+            rooted = false;
+        }
+        if (!rooted) {
+            if (!off) return o;  // no ground of its seen there: hidden, a hole, covered down all its line
+            edge = bottom;       // in the air down to the picture's edge: its ground under it
         }
     }
     if (!rooted) {  // its ground off the picture: its cell's middle, never over the edge its line leaves by

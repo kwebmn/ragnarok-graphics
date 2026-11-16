@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "core/ground_cells.hpp"
 #include "core/terrain.hpp"
 
 namespace uagfx::gpu {
@@ -18,6 +19,9 @@ struct OwnGround {
     terrain::Mesh mesh;  // smooth
     terrain::Mesh distant;  // the game's own cells, for the ground far off - the same chunks, one for one (not "far":
                             // windef.h makes it nothing)
+    // 3.0.20-beta.41 (the audit of the 3D view's grass): the whole map's cells for the grass (ground_cells::ofMeshes
+    // of the two above, the file's axes) - over the own ground in the 3D view none of the game's ground is noted
+    ground_cells::Grid cells;
     // 3.0.20-beta.30 (the owner's «6,7,8,9», 6): the land past its edges (core/outskirts.hpp) - the 3D view's horizon
     terrain::Mesh outskirts;
     std::vector<float> seaFrame;  // 3.0.20-beta.31: the sea past its wet edges (outskirts::seaFrame), x y z a corner

@@ -429,6 +429,7 @@ bool Renderer::Impl::applyGrass3d() {
         c.sourceRect[3] = windNow.z * windNow.strength;
     }
     UINT cells = kNoSrv;
+    useOwnCells();  // 3.0.20-beta.41: over the own ground the whole map's cells (none of the game's ground noted)
     if (ensureGroundCells()) {
         const ground_cells::Grid& g = groundCells;
         c.sourceClamp[0] = g.originX;
