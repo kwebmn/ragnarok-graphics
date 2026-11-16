@@ -19,6 +19,7 @@
 #include "core/first_game.hpp"
 #include "core/layout.hpp"
 #include "core/log_files.hpp"
+#include "core/net_trail.hpp"
 #include "core/reports.hpp"
 #include "core/settings/log_digest.hpp"
 #include "core/start_failures.hpp"
@@ -386,6 +387,44 @@ int sendTestReport(const std::wstring& file, int logSlot) {
                                              : "error: " + (r.error.empty() ? std::string("refused") : r.error);
     writeFileAtomic(answer, said);
     return r.code.empty() ? 1 : 0;
+}
+
+int sendNetReport(const std::wstring& file, int logSlot) {
+    std::string trail;
+    if (!readFile(file, trail) || trail.empty()) return 1;
+    Model m;
+    const Config& config = m.now().config;
+    if (!config.reportDisconnects) return 0;
+    const std::wstring sentPath = ourPlace(m.paths().dir, layout::kNetReportsSent);
+    std::string stamps, next;
+    readFile(sentPath, stamps);
+    if (!nettrail::maySend(stamps, static_cast<long long>(std::time(nullptr)), next)) return 0;
+    writeFileAtomic(sentPath, next);
+    const std::string words = nettrail::firstLine(trail);
+    report::Upload u;
+    if (config.reportAuto) {  // the player's leave for the logs: all of a report but the skills' record
+        u = makeUpload(m, "disconnect", true, words, {}, logSlot);
+        u.files.erase(std::remove_if(u.files.begin(), u.files.end(),
+                                     [](const std::pair<std::string, std::string>& f) {
+                                         return f.first == "uaro-effects.txt" || f.first == "uaro-pack.log";
+                                     }),
+                      u.files.end());
+        if (u.files.size() >= report::kMostFiles) u.files.resize(report::kMostFiles - 1);
+    } else {  // the trail alone: the version and what was lost - no logs, no settings, nothing of the computer
+        u.reason = "disconnect";
+        u.automatic = true;
+        u.version = kVersion;
+        u.comment = words;
+        u.computer = computerKey(m.paths().dir);
+        const size_t body = trail.find("\n\n");
+        const size_t from = body == std::string::npos ? 0 : body + 2;
+        const size_t end = trail.find("\n\n", from);
+        u.report = trail.substr(from, end == std::string::npos ? std::string::npos : end - from);
+    }
+    if (u.comment.size() > report::kMostComment) u.comment.resize(report::kMostComment);
+    u.files.emplace_back("uaro-disconnect.txt", report::tailOf(trail, 256u << 10));
+    const NewReport r = sendNew(m.paths().dir, u);
+    return r.code.empty() && !r.queued ? 1 : 0;
 }
 
 }  // namespace uagfx::app

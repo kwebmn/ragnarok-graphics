@@ -109,6 +109,10 @@ Args parseArgs(const std::wstring& line) {
             a.mode = Args::Mode::TestReport;
             a.testFile = next;
             ++i;
+        } else if (k == L"--net-report") {  // 3.0.20-beta.60
+            a.mode = Args::Mode::NetReport;
+            a.netFile = next;
+            ++i;
         } else if (k == L"--map") {
             a.reportMap = next;
             ++i;
@@ -141,6 +145,7 @@ std::wstring argsLine(const Args& a) {
         case Args::Mode::UninstallRun: s = L"--uninstall-run"; break;
         case Args::Mode::Setup: s = L"--setup"; break;
         case Args::Mode::TestReport: s = L"--test-report \"" + a.testFile + L"\""; break;
+        case Args::Mode::NetReport: s = L"--net-report \"" + a.netFile + L"\""; break;
     }
     if (a.quiet) s += L" --quiet";
     if (!a.dir.empty()) s += L" --dir \"" + a.dir + L"\"";

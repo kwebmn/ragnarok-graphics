@@ -1586,6 +1586,23 @@ constexpr Entry kTexts[] = {
      "розробникам на uaro.kiev.ua (не частіше одного на 6 годин). Діє з наступного запуску гри.",
      "После игры, в которой рендер не запустился, видеокарта отвалилась или игра закрылась, не закрыв рендер, отчёт "
      "уходит разработчикам на uaro.kiev.ua (не чаще одного в 6 часов). Действует со следующего запуска игры."},
+    // 3.0.20-beta.60 (the owner: «клиент выбрасывает с дисконнектом, надо его отловить»)
+    {Text::ReportDisconnects, "Tell the developers when the connection to the server is lost",
+     "Повідомляти розробників про розриви зв'язку із сервером",
+     "Сообщать разработчикам о разрывах связи с сервером"},
+    {Text::ReportDisconnectsHint,
+     "When the game loses its connection to a server of uaRO, or the server itself tells it to leave, a short note "
+     "goes to the developers at uaro.kiev.ua by itself: when and how the connection ended, the connections the game "
+     "opened before it, the map and this program's version - no login, no password, no chat. With «Send a report by "
+     "itself» on, the logs go with it. At most one in 10 minutes, six a day.",
+     "Коли гра втрачає з'єднання із сервером uaRO або сервер сам повідомляє про від'єднання, розробникам на "
+     "uaro.kiev.ua сама йде коротка довідка: коли і як обірвалося з'єднання, які з'єднання гра відкривала до того, "
+     "карта й версія програми - без логіна, пароля й листування. Якщо ввімкнено «Надсилати звіт самостійно», разом "
+     "ідуть журнали. Не частіше одного на 10 хвилин, шість на добу.",
+     "Когда игра теряет соединение с сервером uaRO или сервер сам сообщает об отключении, разработчикам на "
+     "uaro.kiev.ua сама уходит короткая справка: когда и как оборвалось соединение, какие соединения игра открывала "
+     "до этого, карта и версия программы - без логина, пароля и переписки. Если включено «Отправлять отчёт "
+     "самостоятельно», вместе уходят журналы. Не чаще одного в 10 минут, шесть в сутки."},
     {Text::PackMakeHeading, "Make the pack on this computer",
      "Зробити пакет на цьому комп'ютері",
      "Сделать пакет на этом компьютере"},

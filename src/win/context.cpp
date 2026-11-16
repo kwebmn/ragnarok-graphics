@@ -136,6 +136,7 @@
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
 #include "win/net_predict.hpp"
+#include "win/net_trail.hpp"
 #include "win/net_watch.hpp"
 #include "win/pad_carry.hpp"
 #include "win/storage_window.hpp"
@@ -1232,6 +1233,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uaui::begin(window, true, gameCodePage(config), pk, pw, ph, config.uiTheme);  // 3.0.18-beta.11: uaUI's frame, its parts next
     g_parts.mark("uaui begin", nowMs());
     netwatchwin::frame();  // 3.0.11-beta.122: the map server's connection read each second (the minimap's badge)
+    nettrailwin::frame(config.reportDisconnects, map_, foreground);  // 3.0.20-beta.60: a lost connection told
     g_parts.mark("netwatchwin", nowMs());
     netsmoothwin::setOn(config.smoothFixes);  // 3.0.11-beta.123: [interface] smooth_fixes
     netwatchwin::setQuickAcks(config.quickAcks);  // 3.0.11-beta.128: [debug] quick_acks

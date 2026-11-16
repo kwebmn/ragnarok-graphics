@@ -27,6 +27,7 @@
 #include "win/minimap_proto.hpp"
 #include "win/mob_hp.hpp"
 #include "win/npc_tag.hpp"
+#include "win/net_trail.hpp"
 #include "win/net_watch.hpp"
 #include "win/ask_card.hpp"
 #include "win/npc_talk.hpp"
@@ -66,9 +67,54 @@ PollFn g_poll = nullptr;
 
 char __attribute__((thiscall)) poll(void* connection) {
     netwatchwin::polled();  // 3.0.11-beta.131: the game reads its socket now
+    nettrailwin::beforePoll();  // 3.0.20-beta.60: the connections' trail
     const char fine = g_poll(connection);
+    nettrailwin::polled(nettrail::Mode::Game, fine != 0);
     if (!fine) notifier::disconnected();
     return fine;
+}
+
+// 3.0.20-beta.60 (the owner: «клиент выбрасывает с дисконнектом, надо его отловить»): the login mode's loop too
+// (FUN_005a1df0: the account, the character and the map server's connection until the map is entered) - its
+// question to the connection at 0x5A1E15 and its packets' ids at 0x5A1E90, and the game's four connects (FUN_00418af0:
+// 0x5A101E the account server, 0x5A12C1 the character server, 0x5A18F5 the map server, 0x57EE80 a map on another
+// server) - for the connections' trail (win/net_trail.cpp)
+constexpr uint32_t kLoginPollAt = 0x5A1E15, kLoginTakeAt = 0x5A1E90, kConnect = 0x418AF0;
+const uint8_t kLoginPollCall[] = {0xE8, 0x46, 0x6E, 0xE7, 0xFF};
+const uint8_t kLoginTakeCall[] = {0xE8, 0xBB, 0x74, 0xE7, 0xFF};
+// push ebp; mov ebp, esp; sub esp, 8; push ebx; push esi; mov esi, ecx; push edi; lea edi, [esi+0x58]
+const uint8_t kConnectCode[] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x08, 0x53, 0x56, 0x8B, 0xF1, 0x57, 0x8D, 0x7E, 0x58};
+struct ConnectSite {
+    uint32_t at;
+    uint8_t call[5];
+};
+const ConnectSite kAccountSite{0x5A101E, {0xE8, 0xCD, 0x7A, 0xE7, 0xFF}};
+const ConnectSite kCharSite{0x5A12C1, {0xE8, 0x2A, 0x78, 0xE7, 0xFF}};
+const ConnectSite kZoneSite{0x5A18F5, {0xE8, 0xF6, 0x71, 0xE7, 0xFF}};
+const ConnectSite kMovedSite{0x57EE80, {0xE8, 0x6B, 0x9C, 0xE9, 0xFF}};
+using ConnectFn = uint32_t(__attribute__((thiscall)) *)(void* connection, char* address);
+ConnectFn g_connect = nullptr;
+
+char __attribute__((thiscall)) pollLogin(void* connection) {
+    nettrailwin::beforePoll();
+    const char fine = g_poll(connection);
+    nettrailwin::polled(nettrail::Mode::Login, fine != 0);
+    return fine;
+}
+
+uint32_t connectAs(void* connection, char* address, nettrail::Role role) {
+    const uint32_t answer = g_connect(connection, address);  // its low byte: 1 the connect went off
+    nettrailwin::connected(connection, address, role, (answer & 0xFF) != 0);
+    return answer;
+}
+uint32_t __attribute__((thiscall)) connectAccount(void* connection, char* address) {
+    return connectAs(connection, address, nettrail::Role::Account);
+}
+uint32_t __attribute__((thiscall)) connectChar(void* connection, char* address) {
+    return connectAs(connection, address, nettrail::Role::Char);
+}
+uint32_t __attribute__((thiscall)) connectZone(void* connection, char* address) {
+    return connectAs(connection, address, nettrail::Role::Zone);
 }
 
 // The call at `at` (its bytes `call`, the function's first bytes `code`) through `to` instead
@@ -86,8 +132,15 @@ bool redirect(uint32_t at, const uint8_t* call, uint32_t fn, const uint8_t* code
     return true;
 }
 
+uint16_t __attribute__((thiscall)) takeLogin(void* connection, const uint8_t* packet) {
+    const uint16_t id = g_take(connection, packet);
+    nettrailwin::packet(nettrail::Mode::Login, id, packet, 4);  // 3.0.20-beta.60: its id and first value
+    return id;
+}
+
 uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet) {
     const uint16_t id = g_take(connection, packet);
+    nettrailwin::packet(nettrail::Mode::Game, id, packet, 4);  // 3.0.20-beta.60: the connections' trail
     netwatchwin::packet(connection, id, packet);  // 3.0.11-beta.122: the connection watched, the position fixes
     groundunitswin::packet(id, packet);           // 3.0.11-beta.143: the own walls and pillars standing
     groundwin::packet(id, packet);  // 3.0.11-beta.283: the items on the ground
@@ -138,6 +191,24 @@ void installPacketTap() {
     g_on = true;
     g_poll = reinterpret_cast<PollFn>(uintptr_t(kPoll));  // 3.0.7-beta.6: the server gone
     redirect(kPollAt, kPollCall, kPoll, kPollCode, sizeof kPollCode, reinterpret_cast<void*>(&poll));
+    // 3.0.20-beta.60: the login mode's loop and the connects, for the connections' trail
+    nettrailwin::install();
+    int sites = 0;  // of the six: told with the trail's first line
+    sites += redirect(kLoginPollAt, kLoginPollCall, kPoll, kPollCode, sizeof kPollCode,
+                      reinterpret_cast<void*>(&pollLogin));
+    sites += redirect(kLoginTakeAt, kLoginTakeCall, kTakeId, kTakeIdCode, sizeof kTakeIdCode,
+                      reinterpret_cast<void*>(&takeLogin));
+    g_connect = reinterpret_cast<ConnectFn>(uintptr_t(kConnect));
+    const struct {
+        const ConnectSite& site;
+        void* to;
+    } connects[] = {{kAccountSite, reinterpret_cast<void*>(&connectAccount)},
+                    {kCharSite, reinterpret_cast<void*>(&connectChar)},
+                    {kZoneSite, reinterpret_cast<void*>(&connectZone)},
+                    {kMovedSite, reinterpret_cast<void*>(&connectZone)}};
+    for (const auto& c : connects)
+        sites += redirect(c.site.at, c.site.call, kConnect, kConnectCode, sizeof kConnectCode, c.to);
+    nettrailwin::sitesTaken(sites, 6);
 }
 
 bool packetTapOn() { return g_on; }

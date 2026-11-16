@@ -481,6 +481,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.renderThread);
         } else if (key == "report.auto") {
             setBool(val, c.reportAuto);
+        } else if (key == "report.disconnects") {  // 3.0.20-beta.60
+            setBool(val, c.reportDisconnects);
         } else if (key == "pad.enabled") {  // 2.9
             setBool(val, c.padEnabled);
         } else if (key == "launcher.direct_start") {  // 2.11

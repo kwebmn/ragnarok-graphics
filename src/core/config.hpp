@@ -656,6 +656,11 @@ struct Config {
     // 0.51: [report] auto - a report to the developers (uaro.kiev.ua) when a game ended badly: the settings app's
     // watcher, started by the driver, sends it after the game (core/report_upload.hpp).
     bool reportAuto = false;
+    // 3.0.20-beta.60 (the owner: «клиент выбрасывает с дисконнектом, надо его отловить ... отправлять отчёт на
+    // сервер»): [report] disconnects - a connection to the game's servers lost: its trail (core/net_trail.hpp - the
+    // connections, how each ended, the servers' notices; no login, no words) sent by the settings app by itself;
+    // with [report] auto the logs go with it
+    bool reportDisconnects = true;
     // 2.2.1: [stats] send - the anonymous statistics of the settings played with (core/usage.hpp), asked once by the
     // settings app; id - this installation's random number there (no name, no login)
     bool statsSend = false;

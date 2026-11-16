@@ -137,6 +137,28 @@ bool startTestReport(const std::string& file) {
     return true;
 }
 
+bool startNetReport(const std::string& file) {
+    const std::string exe = gameDir() + "\\uaro-graphics.exe";
+    if (!fileExists(exe)) {
+        LOG_INFO("net trail: uaro-graphics.exe is not next to the game - the trail stays in %s", file.c_str());
+        return false;
+    }
+    std::string line = "\"" + exe + "\" --net-report \"" + file + "\"";
+    if (wlog::slot() > 1) line += " --log-slot " + std::to_string(wlog::slot());
+    STARTUPINFOA si{};
+    si.cb = sizeof si;
+    PROCESS_INFORMATION pi{};
+    if (!CreateProcessA(exe.c_str(), &line[0], nullptr, nullptr, FALSE, BELOW_NORMAL_PRIORITY_CLASS, nullptr,
+                        gameDir().c_str(), &si, &pi)) {
+        LOG_ERROR("net trail: uaro-graphics.exe would not start (error %lu)", GetLastError());
+        return false;
+    }
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    LOG_INFO("net trail: the settings app sends the lost connection's trail (%s)", file.c_str());
+    return true;
+}
+
 namespace {
 
 // The game's own arguments: its command line after the exe's path.

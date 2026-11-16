@@ -887,6 +887,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         n.keepFps = file.keepFps;
     }
     if (file.allowTearing != running.allowTearing) u.waiting.push_back("allow_tearing");
+    if (file.reportDisconnects != running.reportDisconnects) {  // 3.0.20-beta.60: a lost connection told or not
+        u.applied.push_back(
+            change("report disconnects", flag(running.reportDisconnects), flag(file.reportDisconnects)));
+        n.reportDisconnects = file.reportDisconnects;
+    }
     if (file.statsSend != running.statsSend) {  // 2.2.1: the statistics at once
         u.applied.push_back(change("stats", flag(running.statsSend), flag(file.statsSend)));
         n.statsSend = file.statsSend;
@@ -943,6 +948,7 @@ bool appliesNow(const std::string& k) {
            k == "debug.profile" || k == "debug.xray" || k == "debug.seams_view" || k == "frames.fps_counter" ||
            k == "debug.quick_acks" ||  // 3.0.11-beta.128
            k == "utility.language" ||  // 3.0.11-beta.174
+           k == "report.disconnects" ||  // 3.0.20-beta.60
            k == "stats.send" || k.compare(0, 8, "windows.") == 0 || k.compare(0, 8, "effects.") == 0 ||
            k.compare(0, 6, "panel.") == 0 ||  // 3.0.3-beta.8
            k.compare(0, 10, "interface.") == 0 ||  // 3.0.11-beta.1: the minimap; 3.0.11-beta.6: its hints

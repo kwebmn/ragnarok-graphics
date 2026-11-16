@@ -135,6 +135,7 @@ enum class Text : uint16_t {
     RenderGpu, RenderGpuHint, RenderGpuAuto, RenderGpuItem, RenderGpuMissing,
     // 0.51: reports to the developers
     ReportHeading, ReportNote, ReportAuto, ReportAutoHint,
+    ReportDisconnects, ReportDisconnectsHint,  // 3.0.20-beta.60: a lost connection told by itself
     // 0.53 (the site's download gone in 2.5.28)
     PackMakeHeading,
     // 0.54

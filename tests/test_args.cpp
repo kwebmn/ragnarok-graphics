@@ -103,6 +103,18 @@ TEST(args_read_the_graphics_tests_report) {
     CHECK(app::argsLine(t) == L"--test-report \"C:\\Ігри\\ua RO\\uaro-graphics\\graphics-test.txt\" --log-slot 2");
 }
 
+// 3.0.20-beta.60 (the owner: «клиент выбрасывает с дисконнектом, надо его отловить»): a lost connection's trail -
+// the settings app sends it without a window, for that game window's logs
+TEST(args_read_a_lost_connections_report) {
+    const std::wstring file = L"C:\\Ігри\\ua RO\\uaro-graphics\\logs\\uaro-disconnect.txt";
+    const Args t = app::parseArgs(L"--net-report \"" + file + L"\" --log-slot 3");
+    CHECK(t.mode == Args::Mode::NetReport);
+    CHECK(t.netFile == file);
+    CHECK_EQ(t.logSlot, 3);
+    CHECK(app::parseArgs(app::argsLine(t)).mode == Args::Mode::NetReport);
+    CHECK(app::parseArgs(app::argsLine(t)).netFile == t.netFile);
+}
+
 // 3.0.9-beta.4: the game's answer card («Відкрити») - «Звернення» opened on that conversation; the site's codes only
 TEST(args_answer_round_trip) {
     const Args r = app::parseArgs(L"--answer R-7BDUE3");

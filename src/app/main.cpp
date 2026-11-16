@@ -41,6 +41,10 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR line, int show) {
     }
     if (args.mode == uagfx::app::Args::Mode::TestReport)  // 3.0.5-beta.6: «Тест графіки»'s end, no window
         return uagfx::app::sendTestReport(args.testFile, args.logSlot);
+    if (args.mode == uagfx::app::Args::Mode::NetReport) {  // 3.0.20-beta.60: a lost connection's trail, no window
+        SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
+        return uagfx::app::sendNetReport(args.netFile, args.logSlot);
+    }
     INITCOMMONCONTROLSEX icc{sizeof icc, ICC_STANDARD_CLASSES | ICC_BAR_CLASSES | ICC_LISTVIEW_CLASSES |
                                           ICC_PROGRESS_CLASS};
     InitCommonControlsEx(&icc);

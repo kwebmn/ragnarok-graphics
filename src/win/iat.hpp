@@ -8,6 +8,9 @@ namespace uagfx::win {
 // pad's, which chains after another's hook through it.
 IMAGE_THUNK_DATA* importSlot(const char* dll, const char* name);
 
+// 3.0.20-beta.60: the slot of a function uaRO.exe imports by its number (ws2_32.dll's: closesocket is 3); null: none
+IMAGE_THUNK_DATA* importSlotByOrdinal(const char* dll, unsigned ordinal);
+
 // The slot's function: `hook` in, what was there kept in `old` - the real one, or another's hook that then chains
 bool patchSlot(IMAGE_THUNK_DATA* slot, void* hook, void** old);
 

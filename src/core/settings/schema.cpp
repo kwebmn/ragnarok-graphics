@@ -58,6 +58,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 0.51: the Diagnostics page's own check box
         {"report", "auto", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ReportAuto,
          Text::ReportAutoHint, ""},
+        // 3.0.20-beta.60: a lost connection's trail to the developers by itself (core/net_trail.hpp)
+        {"report", "disconnects", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ReportDisconnects,
+         Text::ReportDisconnectsHint, ""},
         {"stats", "send", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::StatsSend,
          Text::StatsSendHint, ""},  // 2.2.1
         // 2.9: uaRO Pad inside the driver, on by default; the Main page shows it too
@@ -1378,6 +1381,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "renderer.api") return apiToken(c.api);
     if (k == "renderer.gpu") return c.gpu.empty() ? "auto" : c.gpu;
     if (k == "report.auto") return c.reportAuto ? "1" : "0";
+    if (k == "report.disconnects") return c.reportDisconnects ? "1" : "0";  // 3.0.20-beta.60
     if (k == "pad.enabled") return c.padEnabled ? "1" : "0";  // 2.9
     if (k == "launcher.direct_start") return c.directStart ? "1" : "0";  // 2.11
     if (k == "client.cps") return c.clientCps ? "1" : "0";  // 3.0.1-beta.5

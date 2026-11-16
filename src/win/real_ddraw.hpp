@@ -49,5 +49,8 @@ void startAnswer(const std::string& code);  // 3.0.9-beta.4: uaro-graphics.exe -
 // 3.0.5-beta.6: «Тест графіки»'s result (its table in `file`) sent by the settings app without a window
 // (uaro-graphics.exe --test-report, app/test_report); false when it could not start
 bool startTestReport(const std::string& file);
+// 3.0.20-beta.60: uaro-graphics.exe --net-report "<file>" - a lost connection's trail sent by the settings app, no
+// window (app/report_send sendNetReport); false: the app is not there
+bool startNetReport(const std::string& file);
 
 }  // namespace uagfx::win

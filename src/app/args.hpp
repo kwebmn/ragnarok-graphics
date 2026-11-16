@@ -8,8 +8,10 @@ namespace uagfx::app {
 // rollback, repair, removal (and its second half from a copy in %TEMP%).
 struct Args {
     // 3.0.5-beta.6: TestReport - «Тест графіки»'s table sent without a window (app/report_send sendTestReport)
+    // 3.0.20-beta.60: NetReport - a lost connection's trail sent without a window (app/report_send sendNetReport)
     enum class Mode {
-        Settings, Watch, Install, Update, AskUpdate, Rollback, Repair, Uninstall, UninstallRun, Setup, TestReport
+        Settings, Watch, Install, Update, AskUpdate, Rollback, Repair, Uninstall, UninstallRun, Setup, TestReport,
+        NetReport
     };
     Mode mode = Mode::Settings;
     unsigned long pid = 0;  // --watch N, --ask-update N, --after N: the process waited for
@@ -25,6 +27,7 @@ struct Args {
     // 3.0.3-beta.1: --log-slot N - the game window whose logs these are (core/log_files slotted; 1-8, else 1)
     int logSlot = 1;
     std::wstring testFile;  // 3.0.5-beta.6: --test-report "<file>" - the table the driver wrote
+    std::wstring netFile;   // 3.0.20-beta.60: --net-report "<file>" - the trail the driver wrote
     // 3.0.9-beta.4: --answer R-XXXXXX - the game's answer card («Відкрити»): «Звернення» on that conversation; only a
     // code of the site's (core/report_answers plainCode), else none
     std::wstring answer;

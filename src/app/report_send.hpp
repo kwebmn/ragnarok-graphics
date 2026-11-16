@@ -25,6 +25,12 @@ int watchGame(unsigned long pid, int logSlot = 1);
 // графіки» (win/context_test.cpp): its table as the report's words, reason and kind "test", the logs and the settings
 // with it, no window; "<file>.sent" gets the report's code, or "error: <why>" - the game says it on the screen
 int sendTestReport(const std::wstring& file, int logSlot = 1);
+// 3.0.20-beta.60 (the owner: «клиент выбрасывает с дисконнектом, надо его отловить ... отправлять отчёт на сервер»):
+// uaro-graphics.exe --net-report "<file>" [--log-slot N], started by the driver when the game lost a connection
+// (win/net_trail.cpp): the trail's first line as the report's words, the reason "disconnect", automatic, the trail
+// its file - with [report] auto the logs and the settings too; [report] disconnects off: nothing; ten minutes apart,
+// six a day (core/net_trail maySend). No window; kept for later when the site does not answer (app/reports)
+int sendNetReport(const std::wstring& file, int logSlot = 1);
 // 2.2.1: uaro-graphics\usage.jsonl (core/usage.hpp) to uaro.kiev.ua, with the player's leave ([stats] send) - once a
 // day (force: now). 2.2.2: the driver's file is taken whole first (renamed usage-sending.jsonl: a running game starts
 // a new one, nothing it writes meanwhile is lost), sent in parts, then deleted - a part not sent stays for the next

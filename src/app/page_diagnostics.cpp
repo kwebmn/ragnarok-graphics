@@ -26,6 +26,7 @@ constexpr int kMyReports = 1309;
 constexpr int kAutoReport = 1310;
 constexpr int kStats = 1315;  // 2.2.1: the anonymous statistics
 constexpr int kStatsNow = 1316;  // 2.2.2: sent at a press
+constexpr int kNetReport = 1317;  // 3.0.20-beta.60: a lost connection told by itself
 
 struct Row {
     std::wstring check;
@@ -82,6 +83,8 @@ public:
         p.note(t(Text::ReportNote));
         p.buttons({{kNewReport, t(Text::ReportsNew)}, {kMyReports, t(Text::ReportsOpen)}});
         p.check(kAutoReport, t(Text::ReportAuto), m.token(*findSetting("report.auto")) == "1", t(Text::ReportAutoHint));
+        p.check(kNetReport, t(Text::ReportDisconnects), m.token(*findSetting("report.disconnects")) == "1",
+                t(Text::ReportDisconnectsHint));  // 3.0.20-beta.60
         p.check(kStats, t(Text::StatsSend), m.now().config.statsSend, t(Text::StatsSendHint));  // 2.2.1
         if (m.now().config.statsSend) {  // 2.2.2: when they last went, what waits, and sent at a press
             std::string last;
@@ -136,6 +139,10 @@ public:
         } else if (id == kAutoReport) {
             const bool on = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
             m.setToken(*findSetting("report.auto"), on ? "1" : "0");
+            host_.changed();
+        } else if (id == kNetReport) {  // 3.0.20-beta.60
+            const bool on = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
+            m.setToken(*findSetting("report.disconnects"), on ? "1" : "0");
             host_.changed();
         }
     }
