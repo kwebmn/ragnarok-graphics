@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.20-beta.46 — what's new · 2026-11-16
+
+- **Grass no longer grows on paving (R-HGTAKK).** In the 3D view lone tufts of grass stood among Prontera's paving stones and blinked as the camera moved. The cause: the joints between the stones are greenish, and the grass, which checked only the colour of a point on the screen, took a joint for a lawn. Now grass grows only on cells whose own texture is green. Measured on the client's real textures: the paving of Prontera, Payon and Geffen is 1–10 % green, the lawns from 53 %. It works with «Own ground» on (Direct3D 12).
+- **In the caves the vault comes down to the pillars (R-3T9MZC).** In the 3D view the pillars of pay_dun00 ended in black caps in the air: they are as tall as the walls (31–34), and the vault over a passage lies at 48–66. Now round every pillar that reaches the walls' height the vault comes down to it as a funnel of rock. The pillars are found by their models' names («pillar», «stalactite») and shape; the 113 dungeon maps have 1840 of them, among them Izlude's dungeon, the Clock Tower, Glast Heim and Turtle Island.
+- **The vault's outline is more exact.** Until now the ray's step towards the vault was even, 15.6 units, and thin ledges were stepped over: on test pictures of pay_dun00 2242–4155 points of 518,400 were wrong. Now the step goes by the distance to the vault — 238–337 wrong points.
+
 # uaRO Graphics 3.0.20-beta.45 — what's new · 2026-11-16
 
 - **An audit of the textures' thread (3.0.20-beta.36): a texture the game rewrites every frame was left unlooked at.** The thread answers a frame later, and by then the game had written the texture again — so the answer was dropped as stale. Such a texture never got its fire, light, leaves or AI pack key. Found from a line in a tester's log («1 waiting» every time). Now the look of any write of the same texture is taken, even one write behind.
