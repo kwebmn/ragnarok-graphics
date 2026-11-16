@@ -8886,6 +8886,14 @@ constexpr Entry kTexts[] = {
      "опускається до них, над проходами піднімається куполом, удалині тоне в серпанку. Вимкнено — темне небо, як було.",
      "В 3D-режиме над проходами подземелья каменный свод: его собственный рельеф, отражённый вверх, — над стенами "
      "опускается к ним, над проходами поднимается куполом, вдали тонет в дымке. Выключено — тёмное небо, как было."},
+    {Text::View3dCeiling, "Ceiling indoors", "Стеля в приміщеннях", "Потолок в помещениях"},  // 3.0.20-beta.52
+    {Text::View3dCeilingHint,
+     "In the 3D view the houses and the castles' halls have a ceiling - flat, at the height of their walls, a "
+     "little darker by the walls. Off: a dark nothing over the walls, as before.",
+     "У 3D-режимі в будинках і залах замків є стеля — рівна, на висоті стін, трохи темніша біля стін. Вимкнено — "
+     "темна порожнеча над стінами, як раніше.",
+     "В 3D-режиме в домах и залах замков есть потолок — ровный, на высоте стен, чуть темнее у стен. Выключено — "
+     "тёмная пустота над стенами, как раньше."},
     {Text::View3dGrass, "Grass in the 3D view", "Трава у 3D-режимі", "Трава в 3D-режиме"},  // 3.0.19-beta.33
     {Text::View3dGrassHint,
      "In the 3D view the grass grows as blades on the green ground round you, swaying in the wind and trodden by "

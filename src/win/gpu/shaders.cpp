@@ -2545,6 +2545,12 @@ float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
     float3 n = normalize(float3(-gx, 1.0, -gz));  // towards the floor (+y)
     float lit = 0.5 + 0.5 * saturate(dot(n, normalize(float3(0.25, 1.0, 0.15))));
     float rock = 0.78 + 0.32 * fbm4(at.xz * 0.045) + 0.12 * fbm4(at.xz * 0.21 + 3.7);
+    // 3.0.20-beta.52 (core cave_vault buildCeiling; sourceClamp.w its height, 0 a vault): a ceiling indoors - even,
+    // a plaster's faint stains, darker by a wall that stands higher than it (the ceiling rises over such a wall)
+    float flatCeiling = sourceClamp.w > 0.0 ? 1.0 : 0.0;
+    rock = lerp(rock, 0.95 + 0.07 * (rock - 0.98), flatCeiling);
+    float byWall = saturate((-fogColor.w * vaultY(at.xz) - sourceClamp.w) / 4.0) * flatCeiling;
+    rock *= 1.0 - 0.35 * byWall;
     // 3.0.19-beta.38 (R-S3NQBF: near black under walls three times lighter): its rock by the map's own light
     // (sourceClamp.rgb, core cave_vault::rockOf), the haze's colour if none
     float3 base = dot(sourceClamp.xyz, sourceClamp.xyz) > 1e-6 ? sourceClamp.xyz : sourceRect.rgb * 1.15;

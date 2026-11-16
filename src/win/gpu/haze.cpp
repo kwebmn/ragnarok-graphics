@@ -131,6 +131,7 @@ bool Renderer::Impl::skyPass(bool fill) {
         const float none[3] = {0, 0, 0};
         cave_vault::rockOf(rw && rw->lightKnown, rw ? rw->lightAmbient : none, rw ? rw->lightDiffuse : none,
                            c.sourceClamp);
+        c.sourceClamp[3] = vaultMap.ceiling;  // 3.0.20-beta.52: a ceiling's height (0: a vault)
     }
     if (fill && sky3dLogged != mapName) {
         sky3dLogged = mapName;
@@ -144,7 +145,11 @@ bool Renderer::Impl::skyPass(bool fill) {
 }
 
 UINT Renderer::Impl::vaultTexture() {
-    if (!effects.caveVault || vaultFailed || !cave_vault::forMap(mapName)) return kNoSrv;
+    // 3.0.20-beta.52: a dungeon's vault ([view3d] vault) or, in a house or a hall, a ceiling ([view3d] ceiling)
+    const bool dungeon = cave_vault::forMap(mapName);
+    const bool wanted = dungeon ? effects.caveVault
+                                : effects.ceiling3d && cave_vault::ceilingFor(mapName, mapOutdoors);
+    if (vaultFailed || !wanted) return kNoSrv;
     const uint64_t key = mapWorld.laidKey();  // the ground read and its axes known
     if (!key || !mapWorld.ground()) return kNoSrv;
     if (key != vaultKey) {
@@ -152,8 +157,16 @@ UINT Renderer::Impl::vaultTexture() {
         vaultUploaded = false;
         // 3.0.20-beta.46 (R-3T9MZC «колоны как будто в воздухе»): down to the posts that reach its walls' height
         size_t met = 0;
-        vaultMade = cave_vault::build(*mapWorld.ground(), mapWorld.posts(), vaultMap, &met);
-        if (vaultMade)
+        if (!dungeon) {
+            vaultMade = cave_vault::buildCeiling(*mapWorld.ground(), mapWorld.wallsHeight(), vaultMap);
+            if (vaultMade)
+                LOG_INFO("3D sky: %s - a ceiling at %.0f over its floors %.0f (its walls' top %.0f, by its models "
+                         "%.0f), %dx%d heights", mapName.c_str(), vaultMap.ceiling, vaultMap.floorLevel,
+                         vaultMap.wallTop, mapWorld.wallsHeight(), vaultMap.width, vaultMap.height);
+        } else {
+            vaultMade = cave_vault::build(*mapWorld.ground(), mapWorld.posts(), vaultMap, &met);
+        }
+        if (vaultMade && dungeon)
             LOG_INFO("3D sky: %s - a vault over its passages, its relief mirrored about its walls' top %.0f (its "
                      "floors %.0f), %dx%d heights %.1f apart; it comes down to %zu of the map's %zu posts",
                      mapName.c_str(), vaultMap.wallTop, vaultMap.floorLevel, vaultMap.width, vaultMap.height,

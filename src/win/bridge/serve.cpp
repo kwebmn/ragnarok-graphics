@@ -212,6 +212,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.skyDawn = rd.u8() != 0;
             e.sunShadows3d = rd.u8() != 0;    // 3.0.20-beta.50
             e.denseCrowns = rd.u8() != 0;     // 3.0.20-beta.51
+            e.ceiling3d = rd.u8() != 0;       // 3.0.20-beta.52
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

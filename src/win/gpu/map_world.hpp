@@ -66,6 +66,9 @@ public:
     // 3.0.20-beta.46 (R-3T9MZC «колоны как будто в воздухе»): a dungeon's posts (cave_vault::postOf of its models:
     // tall, wide-topped), the map file's places - the 3D view's vault comes down to them; none not read, no dungeon
     const std::vector<cave_vault::Post>& posts() const { return posts_; }
+    // 3.0.20-beta.52: indoors (a house, a castle's hall) the walls' height by the map's tall models (cave_vault::
+    // wallsByModels) - the 3D view's ceiling lies over it where the ground makes no walls; 0 not known, not indoors
+    float wallsHeight() const { return walls_; }
     // 3.0.4-beta.10: the own ground (own_ground_data.hpp) read with the map while it is wanted - turned on for a map
     // read without it, the map is read again; none not wanted, not read yet, or no .gnd. Its pictures let go once the
     // renderer has them (ownPicturesUp).
@@ -91,6 +94,7 @@ private:
     ground_heights::Ground ground_;  // 2.6.18
     std::vector<grass_beds::Box> beds_;  // 3.0.1-beta.3: in the file's places
     std::vector<cave_vault::Post> posts_;  // 3.0.20-beta.46
+    float walls_ = 0.0f;                   // 3.0.20-beta.52
     bool ready_ = false;
     uint32_t reads_ = 0;  // 2.7.57: the maps read so far (laidKey)
     map::Axes axes_;

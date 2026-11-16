@@ -4236,6 +4236,7 @@ void Renderer11::skyPass(bool fill) {
         const float none[3] = {0, 0, 0};
         cave_vault::rockOf(rw && rw->lightKnown, rw ? rw->lightAmbient : none, rw ? rw->lightDiffuse : none,
                            c.sourceClamp);
+        c.sourceClamp[3] = vaultMap_.ceiling;  // 3.0.20-beta.52: a ceiling's height (0: a vault)
     }
     if (fill && sky3dLogged_ != map_) {
         sky3dLogged_ = map_;
@@ -4246,15 +4247,27 @@ void Renderer11::skyPass(bool fill) {
 }
 
 ID3D11ShaderResourceView* Renderer11::vaultTexture() {
-    if (!effects_.caveVault || vaultFailed_ || !cave_vault::forMap(map_)) return nullptr;
+    // 3.0.20-beta.52 (as Direct3D 12's): a dungeon's vault or, in a house or a hall, a ceiling
+    const bool dungeon = cave_vault::forMap(map_);
+    const bool wanted = dungeon ? effects_.caveVault
+                                : effects_.ceiling3d && cave_vault::ceilingFor(map_, outdoors_);
+    if (vaultFailed_ || !wanted) return nullptr;
     const uint64_t key = mapWorld_.laidKey();
     if (!key || !mapWorld_.ground()) return nullptr;
     if (key != vaultKey_) {
         vaultKey_ = key;
         vaultUploaded_ = false;
         size_t met = 0;  // 3.0.20-beta.46 (R-3T9MZC): down to the posts that reach its walls' height (haze.cpp's)
-        vaultMade_ = cave_vault::build(*mapWorld_.ground(), mapWorld_.posts(), vaultMap_, &met);
-        if (vaultMade_)
+        if (!dungeon) {
+            vaultMade_ = cave_vault::buildCeiling(*mapWorld_.ground(), mapWorld_.wallsHeight(), vaultMap_);
+            if (vaultMade_)
+                LOG_INFO("3D sky: %s - a ceiling at %.0f over its floors %.0f (its walls' top %.0f, by its models "
+                         "%.0f), %dx%d heights (Direct3D 11)", map_.c_str(), vaultMap_.ceiling, vaultMap_.floorLevel,
+                         vaultMap_.wallTop, mapWorld_.wallsHeight(), vaultMap_.width, vaultMap_.height);
+        } else {
+            vaultMade_ = cave_vault::build(*mapWorld_.ground(), mapWorld_.posts(), vaultMap_, &met);
+        }
+        if (vaultMade_ && dungeon)
             LOG_INFO("3D sky: %s - a vault over its passages, its relief mirrored about its walls' top %.0f (its "
                      "floors %.0f), %dx%d heights %.1f apart; it comes down to %zu of the map's %zu posts (Direct3D "
                      "11)", map_.c_str(), vaultMap_.wallTop, vaultMap_.floorLevel, vaultMap_.width,

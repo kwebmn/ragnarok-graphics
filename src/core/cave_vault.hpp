@@ -21,11 +21,29 @@ struct Vault {
     std::vector<float> up;      // over each cell's middle, up positive (the ground's -y), row by row
     float wallTop = 0.0f;       // the walls' top it is mirrored about (up positive)
     float floorLevel = 0.0f;    // the passages' (the heights' kFloorShare percentile)
+    float ceiling = 0.0f;       // 3.0.20-beta.52: a ceiling's height (buildCeiling); 0: a dungeon's vault
 };
 constexpr float kWallShare = 0.92f, kFloorShare = 0.2f;
 constexpr float kLeastOver = 6.0f, kLeastRoom = 48.0f, kMostRoom = 160.0f, kLeastRelief = 12.0f, kFlatRoom = 80.0f;
 constexpr int kSmoothCells = 3;
 bool build(const ground_heights::Ground& g, Vault& out);
+// 3.0.20-beta.52 (the owner's «делай 1-9», 5 - ceilings indoors): a house's or a castle's hall (ceilingFor: not under
+// the sky, no dungeon) had a dark nothing over its walls in the 3D view. A ceiling - flat: kCeilingOver over the
+// walls' top where the map's ground makes its walls (its relief kLeastRelief at least); where its walls are models,
+// over their height from its floor (modelsTop: wallsByModels of its tall models, 0 none known - kCeilingFlat then).
+// Over a wall higher than it: kLeastOver over that wall
+constexpr float kCeilingOver = 2.0f, kCeilingFlat = 44.0f;
+bool buildCeiling(const ground_heights::Ground& g, float modelsTop, Vault& out);
+// the walls' height by a map's models: the 80th of a hundred of the heights given (its models that stand kPostLeast
+// tall at least - walls, pillars, tall shelves); none: 0
+float wallsByModels(std::vector<float> tall);
+// a model's height as the map stands it (its faces' corners, rsw::placeInMap); 0 none
+float tallOf(const rsm::Model& model, const rsw::Model& at);
+// the maps given a ceiling: a house's or a hall's by its name - «_in» in it or «in_» before it, a church, a
+// castle's inside («castle», Glast Heim's gl_cas and gl_knt), a tower, the pyramids («pryd») - while not under the
+// sky and no dungeon. The rest of what outdoors() takes for a roof keeps its dark sky: a guild castle is mostly
+// courtyards, an arena, a maze or a graveyard has no roof
+bool ceilingFor(const std::string& map, bool outdoors);
 // 3.0.20-beta.46 (R-3T9MZC «колоны как будто в воздухе», pay_dun00: its pillars 외부소품\동굴리얼기둥.rsm stand 31-34
 // tall - the walls' height, 33 - their flared heads' black caps hanging 15-30 under a vault mirrored up to 48-66 over
 // the passage): the vault comes down to the posts that reach the walls' height - a funnel of rock round each one's

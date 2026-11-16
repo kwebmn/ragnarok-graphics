@@ -13,6 +13,7 @@
 #include "core/gnd.hpp"
 #include "core/grf/grf.hpp"
 #include "core/jpeg_image.hpp"
+#include "core/outdoors.hpp"
 #include "core/outskirts.hpp"
 #include "core/own_ground.hpp"
 #include "core/own_models.hpp"
@@ -45,6 +46,7 @@ struct MapWorld::Shared {
     ground_heights::Ground doneGround;  // 2.6.18: its .gnd's heights (none: not read)
     std::vector<grass_beds::Box> doneBeds;  // 3.0.1-beta.3: its flower beds' tops
     std::vector<cave_vault::Post> donePosts;  // 3.0.20-beta.46: a dungeon's posts
+    float doneWalls = 0.0f;                   // 3.0.20-beta.52: indoors, the walls' height by the models
     bool ownWanted = false;                 // 3.0.4-beta.10: the own ground read with the map
     std::unique_ptr<OwnGround> doneOwn;
     bool doneOk = false;
@@ -95,6 +97,7 @@ void MapWorld::setMap(const std::string& name) {
     ground_ = ground_heights::Ground{};
     beds_.clear();
     posts_.clear();
+    walls_ = 0.0f;
     placed_.clear();
     lamps_.clear();
     seen_.clear();
@@ -144,6 +147,7 @@ void MapWorld::poll() {
         ground_ = std::move(shared_->doneGround);
         beds_ = std::move(shared_->doneBeds);
         posts_ = std::move(shared_->donePosts);
+        walls_ = shared_->doneWalls;
         own_ = std::move(shared_->doneOwn);  // 3.0.4-beta.10
         if (!ownWanted_) own_.reset();       // read before it was turned off
         if (own_) own_->serial = ++ownSerial_;
@@ -653,12 +657,27 @@ void MapWorld::loop() {
         if (!beds.empty())
             LOG_INFO("map objects: %u flower beds' tops on %s - the grass grows on them", unsigned(beds.size()),
                      name.c_str());
+        // 3.0.20-beta.52 (the owner's «делай 1-9», 5): indoors - a house, a castle's hall - the walls' height by its
+        // tall models, for the 3D view's ceiling where the ground makes no walls
+        float walls = 0.0f;
+        if (ok && cave_vault::ceilingFor(name, outdoors(name))) {
+            std::vector<float> tall;
+            for (const rsw::Model& m : w.models) {
+                const float h = cave_vault::tallOf(modelOf(m.file), m);
+                if (h >= cave_vault::kPostLeast) tall.push_back(h);
+            }
+            walls = cave_vault::wallsByModels(tall);
+            LOG_INFO("map objects: %s is indoors - %u of its %u models stand tall, the walls' height by them %.0f "
+                     "(the 3D view's ceiling)", name.c_str(), unsigned(tall.size()), unsigned(w.models.size()),
+                     double(walls));
+        }
         EnterCriticalSection(&shared_->lock);
         shared_->doneName = name;
         shared_->done = std::move(w);
         shared_->doneGround = std::move(ground);
         shared_->doneBeds = std::move(beds);
         shared_->donePosts = std::move(posts);
+        shared_->doneWalls = walls;
         shared_->doneOwn = std::move(own);
         shared_->doneOk = ok;
         shared_->doneReady = true;

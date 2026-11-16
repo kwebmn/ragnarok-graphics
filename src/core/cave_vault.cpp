@@ -60,6 +60,52 @@ bool build(const ground_heights::Ground& g, Vault& out) {
     return true;
 }
 
+bool buildCeiling(const ground_heights::Ground& g, float modelsTop, Vault& out) {
+    out = Vault{};
+    const size_t cells = size_t(std::max(g.width, 0)) * size_t(std::max(g.height, 0));
+    if (cells == 0 || g.corners.size() < cells * 4) return false;
+    std::vector<float> floor(cells);
+    for (size_t i = 0; i < cells; ++i) {
+        const float* h = &g.corners[i * 4];
+        floor[i] = -(h[0] + h[1] + h[2] + h[3]) * 0.25f;  // up positive
+    }
+    out.width = g.width;
+    out.height = g.height;
+    out.zoom = g.zoom;
+    out.wallTop = percentile(floor, kWallShare);
+    out.floorLevel = percentile(floor, kFloorShare);
+    out.ceiling = out.wallTop - out.floorLevel >= kLeastRelief
+                      ? out.wallTop + kCeilingOver
+                      : out.floorLevel + (modelsTop > 0.0f ? modelsTop + kCeilingOver : kCeilingFlat);
+    out.up.resize(cells);
+    for (size_t i = 0; i < cells; ++i) out.up[i] = std::max(out.ceiling, floor[i] + kLeastOver);
+    return true;
+}
+
+float wallsByModels(std::vector<float> tall) { return tall.empty() ? 0.0f : percentile(std::move(tall), 0.8f); }
+
+float tallOf(const rsm::Model& model, const rsw::Model& at) {
+    float lo = 1e30f, hi = -1e30f;
+    for (const rsm::Face& f : model.faces)
+        for (int k = 0; k < 3; ++k) {
+            float p[3] = {f.pos[k][0], f.pos[k][1], f.pos[k][2]};
+            rsw::placeInMap(at, p);
+            lo = std::min(lo, p[1]);
+            hi = std::max(hi, p[1]);
+        }
+    return hi > lo ? hi - lo : 0.0f;
+}
+
+bool ceilingFor(const std::string& map, bool outdoors) {
+    if (outdoors || map.empty() || forMap(map)) return false;
+    std::string m;
+    for (char c : map) m += char(std::tolower(static_cast<unsigned char>(c)));
+    if (m.rfind("in_", 0) == 0) return true;
+    for (const char* word : {"_in", "church", "castle", "gl_cas", "gl_knt", "tower", "pryd"})
+        if (m.find(word) != std::string::npos) return true;
+    return false;
+}
+
 bool postName(const std::string& file) {
     static const std::string kWords[] = {"\xB1\xE2\xB5\xD5", "\xC1\xBE\xC0\xAF\xBC\xAE"};  // 기둥, 종유석
     for (size_t i = 0; i < file.size();) {

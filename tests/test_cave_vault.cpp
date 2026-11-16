@@ -4,6 +4,9 @@
 #include <cmath>
 
 #include "core/cave_vault.hpp"
+#include "core/config.hpp"
+#include "core/live_config.hpp"
+#include "core/settings/schema.hpp"
 #include "core/rsm.hpp"
 #include "core/rsw.hpp"
 #include "test.hpp"
@@ -242,4 +245,52 @@ TEST(cave_vault_built_with_its_posts_finer_only_where_one_reaches_it) {
     CHECK(met == 0 && same.width == 40 && same.up == plain.up);
     CHECK(cave_vault::build(g, {}, same) && same.width == 40 && same.up == plain.up);
     CHECK(!cave_vault::build(ground_heights::Ground{}, {post}, same, &met) && met == 0);
+}
+
+// 3.0.20-beta.52 (the owner's «делай 1-9», 5 - ceilings indoors): in a house or a castle's hall (no sky, no
+// dungeon) the 3D view showed a dark nothing over the walls. A ceiling: flat, kCeilingOver over the walls' top where
+// the map's ground makes its walls; where its walls are models (its ground flat) at their height - the 80th of a
+// hundred of its tall models' heights - or kCeilingFlat with none known
+TEST(cave_vault_a_ceiling_indoors_flat_at_the_walls_top) {
+    cave_vault::Vault v;
+    CHECK(cave_vault::buildCeiling(cave(40, 40, 36.0f), 0.0f, v));
+    CHECK(v.width == 40 && v.height == 40 && std::fabs(v.wallTop - 36.0f) < 0.5f);
+    CHECK(std::fabs(v.ceiling - (36.0f + cave_vault::kCeilingOver)) < 0.5f);
+    CHECK(std::fabs(upAt(v, 10, 20) - v.ceiling) < 0.01f);  // a room's middle
+    CHECK(std::fabs(upAt(v, 5, 6) - v.ceiling) < 0.01f);    // and by its wall: flat
+    CHECK(upAt(v, 1, 1) >= 36.0f + cave_vault::kLeastOver - 0.01f);  // over a wall's top never under it
+    float up = 0.0f;
+    CHECK(cave_vault::heightAt(v, -95.0f, 5.0f, up) && std::fabs(up - v.ceiling) < 0.01f);
+    // walls of models over a flat ground: by the models' height, or the usual room
+    CHECK(cave_vault::buildCeiling(cave(30, 30, 0.0f), 52.0f, v));
+    CHECK(std::fabs(v.ceiling - (52.0f + cave_vault::kCeilingOver)) < 0.01f);
+    CHECK(std::fabs(upAt(v, 10, 15) - v.ceiling) < 0.01f);
+    CHECK(cave_vault::buildCeiling(cave(30, 30, 0.0f), 0.0f, v));
+    CHECK(std::fabs(v.ceiling - cave_vault::kCeilingFlat) < 0.01f);
+    CHECK(!cave_vault::buildCeiling(ground_heights::Ground{}, 0.0f, v));
+    // a vault is none: its ceiling 0
+    CHECK(cave_vault::build(cave(40, 40, 40.0f), v) && v.ceiling == 0.0f);
+    // the walls' height by the models: the 80th of a hundred of the tall ones' heights
+    CHECK(cave_vault::wallsByModels({}) == 0.0f);
+    CHECK(std::fabs(cave_vault::wallsByModels({40.0f, 42.0f, 38.0f, 41.0f, 30.0f, 22.0f, 40.0f, 39.0f, 40.0f, 90.0f}) -
+                    41.0f) < 0.01f);
+    // which maps: a house's or a hall's by its name - «_in», «in_», a church, a castle's inside, a tower, the
+    // pyramids; not a dungeon (its vault), not under the sky, and none of the rest the sky's rule takes for a roof
+    // (a guild castle is mostly courtyards, an arena or a graveyard has no roof at all)
+    for (const char* in : {"prt_in", "payon_in01", "in_sphinx1", "prt_church", "prt_castle", "gl_cas01", "gl_knt01",
+                           "c_tower2", "gef_tower", "moc_pryd03", "PRT_IN"})
+        CHECK(cave_vault::ceilingFor(in, false));
+    for (const char* out : {"pay_dun00", "aldeg_cas01", "prtg_cas03", "pvp_y_1-1", "gl_chyard", "bat_a01",
+                            "prt_maze01", "job_thief1", ""})
+        CHECK(!cave_vault::ceilingFor(out, false));
+    CHECK(!cave_vault::ceilingFor("prontera", true) && !cave_vault::ceilingFor("prt_in", true));
+}
+
+TEST(config_view3d_ceiling_on_by_default_and_live) {
+    CHECK(parseConfig("").effects.ceiling3d);
+    CHECK(!parseConfig("[view3d]\nceiling = 0\n").effects.ceiling3d);
+    const settings::IniSetting* row = settings::findSetting("view3d.ceiling");
+    CHECK(row != nullptr);
+    if (row) CHECK(row->page == settings::Page::Game && row->control == settings::Control::Check);
+    CHECK(appliesNow("view3d.ceiling"));
 }
