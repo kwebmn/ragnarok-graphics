@@ -101,12 +101,12 @@ bool Renderer::Impl::ensureSunCasters(const OwnGround& g) {
     const uint32_t base = uint32_t(ground.vertices.size());  // the models' vertices after the ground's
     int most = -1;
     for (const terrain::Batch& b : models.batches) most = std::max(most, b.texture);
-    for (int texture = -1; texture <= most; ++texture) {  // (-1: a face of no picture - whole)
+    for (int picture = -1; picture <= most; ++picture) {  // (-1: a face of no picture - whole)
         SunRun r;
-        r.texture = texture < 0 ? -2 : texture;
+        r.texture = picture < 0 ? -2 : picture;
         r.first = at;
         for (const terrain::Batch& b : models.batches) {
-            if (b.texture != texture) continue;
+            if (b.texture != picture) continue;
             for (uint32_t i = 0; i < b.indexCount; ++i)
                 into[at + i] = base + b.firstVertex + models.indices[b.firstIndex + i];
             at += b.indexCount;
