@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.51 — what's new · 2026-11-16
+
+- **3D view: «Fuller tree crowns».** A tree's crown in the game is a few flat cards of leaves: from above they cover one another, and from the eyes' level their edges and the gaps between them show. With the new switch each tree's leaves are drawn twice more, turned about the crown's middle by 60° and 120° and a little smaller. On a computed picture of prt_fild08's commonest tree (나무01) the gaps close and the crown is dense from every side. No new pictures are needed; «Leaves in the wind» and «Rounded tree crowns» work as before.
+  The switch is off at first: «Game and chat» → «Game» → «3D view», or the console (Ctrl+`) → «Quick». It needs «Models by our renderer» and «Leaves on the graphics card». Three times as many leaves are drawn — watch the frame rate in a forest.
+
 # uaRO Graphics 3.0.20-beta.50 — what's new · 2026-11-16
 
 - **A trial: shadows of houses and trees in the 3D view.** A new switch **«Shadows of houses and trees (trial)»**, off at first: «Game and chat» → «Game» → «3D view», or the console (Ctrl+`) → «Quick». It works under the open sky with «Own ground» on Direct3D 12.
