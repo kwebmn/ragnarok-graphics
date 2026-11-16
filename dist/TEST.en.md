@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.64 — what's new · 2026-11-16
+
+- **A fault of betas .60 to .63 fixed: uaRO Pad did not learn of a connection closed.** The watch for lost connections (beta.60) put its own hook on the socket's closing before uaRO Pad put its own, and the pad's hook then did not go in: after going back to the characters or to a map on another server the pad could take the old connection for the game's. The watch now goes in after the pad and over it (for the socket's closing, its reads and its writes). If you play with a controller, update.
+
 # uaRO Graphics 3.0.20-beta.63 — what's new · 2026-11-16
 
 - **3D view: a monster's name no longer hangs in the air.** The game names whoever is under the cursor through anything that stands before it: it looks only at the sprites' frames on the screen. From above hardly anything stands before a monster; from the eyes' level a hill, a house or a tree hides it all the time, and the name hung over them with no monster to see. In the 3D view the name is now not shown when the eye does not see the one pointed at (the HP bars' own rule: the ground's heights and the models on the way). Clicking a monster works as before.
