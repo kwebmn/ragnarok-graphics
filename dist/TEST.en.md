@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.39 — what's new · 2026-11-16
+
+- **Direct3D 11's speed log:** a new line «Direct3D 11: the game's draws a frame by kind» — how much processor time a frame goes to the interface, the ground, the solid world, sprites, effects (timed every 8th frame, so the timing itself costs nothing on a weak processor). As Direct3D 12 has since 3.0.20-beta.37: these lines show what to move to other threads next.
+
 # uaRO Graphics 3.0.20-beta.38 — what's new · 2026-11-16
 
 - **The frame's work on several threads, step 3: the own ground's colours.** «Own ground» takes its colours and fog from how the game draws its ground: every vertex of every cell has to be turned into the world (0.3–0.56 ms a frame in the 3D view). Now the game's draws only write down a list, and it is worked out in parts on several threads right before the own ground is drawn; the corners' colours and the fog are put together in the same order as before. Direct3D 12 only (the own ground is there only).
