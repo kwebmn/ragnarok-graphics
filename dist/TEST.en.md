@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.38 — what's new · 2026-11-16
+
+- **The frame's work on several threads, step 3: the own ground's colours.** «Own ground» takes its colours and fog from how the game draws its ground: every vertex of every cell has to be turned into the world (0.3–0.56 ms a frame in the 3D view). Now the game's draws only write down a list, and it is worked out in parts on several threads right before the own ground is drawn; the corners' colours and the fog are put together in the same order as before. Direct3D 12 only (the own ground is there only).
+
 # uaRO Graphics 3.0.20-beta.37 — what's new · 2026-11-16
 
 - **The frame's work on several threads, step 2: shadows and reflections, models.** For the reflections in the water and the torches' shadows every opaque draw of the game is turned into the world's coordinates. Until now that happened one by one right during the draws (0.2–0.4 ms a frame). Now the draws only write down a list, and it is worked out all at once, in parts on several threads, before the torches' shadows and at the frame's end. Likewise the face lists of «Models by our renderer» by texture are gathered in parts on several threads when there are many models. Direct3D 12 and Direct3D 11.
