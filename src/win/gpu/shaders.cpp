@@ -1387,10 +1387,17 @@ float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, 
         sky += float3(0.35, 0.12, 0.10) * (glow * exp(-up * 2.0) * side * 0.25);  // a rose higher up
     }
     float lift = max(rise, 0.0) + 0.1;
-    float2 flow = float2(t * 0.006, t * 0.003);
-    float2 across = dir.xz / lift * 0.8 + flow;
-    float puff = fbm4(across) * 0.65 + fbm4(across * 2.7 + 5.1) * 0.35;
-    float cover = smoothstep(0.5, 0.74, puff) * smoothstep(0.0, 0.2, rise);
+    // 3.0.20-beta.62: the clouds and the veil worked out over the horizon alone (none under it: their share is 0
+    // there) - the haze's pass asks the sky's colour for every far pixel of the ground too (sky3d_haze_ps)
+    float puff = 0.0, cover = 0.0, veil = 0.0;
+    [branch] if (rise > 0.0) {
+        float2 flow = float2(t * 0.006, t * 0.003);
+        float2 across = dir.xz / lift * 0.8 + flow;
+        puff = fbm4(across) * 0.65 + fbm4(across * 2.7 + 5.1) * 0.35;
+        cover = smoothstep(0.5, 0.74, puff) * smoothstep(0.0, 0.2, rise);
+        veil = smoothstep(0.55, 0.9, fbm4(dir.xz / lift * 0.3 + float2(t * 0.002, -t * 0.0015) + 17.0)) *
+               smoothstep(0.05, 0.3, rise);
+    }
     // the stars: a grid over the dome (the direction folded flat, its cells about a degree), a star in a tenth of
     // them - each its own place, brightness and twinkle; none through a cloud
     if ((has & 1u) != 0u && night > 0.02 && rise > 0.0) {
@@ -1406,7 +1413,9 @@ float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, 
     float3 sunLight = float3(0.0, 0.0, 0.0);
     if (sunKnown) {
         sunLight = lerp(float3(1.0, 0.92, 0.76), float3(1.0, 0.62, 0.36), glow * 0.7) * (1.0 - night);  // low: warm
-        sky += sunLight * (pow(sunUp, 900.0) * 5.0 + pow(sunUp, 24.0) * 0.35 + pow(sunUp, 4.0) * 0.08);
+        // 3.0.20-beta.62: parts' 8 - the sun's halo without its disc (the haze over a thing standing before it)
+        float sunDisc = (has & 8u) != 0u ? 0.0 : pow(sunUp, 900.0) * 5.0;
+        sky += sunLight * (sunDisc + pow(sunUp, 24.0) * 0.35 + pow(sunUp, 4.0) * 0.08);
         if ((has & 2u) != 0u && night > 0.02) {  // the moon: a disc some 2.6 degrees across, darker seas on it
             float disc = smoothstep(0.99970, 0.99978, dot(dir, sunWay));
             float3 aside = normalize(cross(sunWay, float3(0.3, 0.1, 0.9)));
@@ -1417,8 +1426,6 @@ float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, 
         }
     }
     // a thin veil high up, slower than the clouds under it
-    float veil = smoothstep(0.55, 0.9, fbm4(dir.xz / lift * 0.3 + float2(t * 0.002, -t * 0.0015) + 17.0)) *
-                 smoothstep(0.05, 0.3, rise);
     sky = lerp(sky, lerp(float3(0.96, 0.97, 0.99), horizon * 0.6, night * 0.9), veil * 0.22);
     float3 cloud = lerp(float3(0.97, 0.97, 0.98), float3(0.62, 0.65, 0.72), saturate((puff - 0.6) * 3.0));
     cloud = lerp(cloud, cloud * float3(1.12, 0.86, 0.72), glow * 0.5);  // at dawn and dusk warm
@@ -1547,9 +1554,14 @@ float4 water(WaterIn i) {
     // 3.0.20-beta.32 (the owner's «6,7,8,9», 7): under the open sky the 3D sky itself along the way the water reflects
     // - its zenith, sun and clouds (skyAlong; holeX the night, holeY 1 open, holeG-holeUz the way to the sun) - not one
     // horizon's colour all over it
-    if (fogEnable == 0 && fogColor.a > 1.5 && holeY > 0.5)
-        sky = skyAlong(reflect(-toEye, n), fogColor.rgb, holeX, float3(holeG, holeUy, holeUz), t,
+    // 3.0.20-beta.62 (the owner: «на воде небо не отражается»): the sky's mirror by calmer waves than the water's own
+    // (a fifth of their slope) - each ripple threw the way to the sky degrees aside, its moon, stars and clouds
+    // scattered into noise no one could tell for a sky
+    if (fogEnable == 0 && fogColor.a > 1.5 && holeY > 0.5) {
+        float3 calm = normalize(float3(-slope.x * 0.2, -1.0, -slope.y * 0.2));
+        sky = skyAlong(reflect(-toEye, calm), fogColor.rgb, holeX, float3(holeG, holeUy, holeUz), t,
                        max(holeY - 1.0, 0.0)) * 0.92;  // 3.0.20-beta.49: holeY 1 and the sky's parts
+    }
     float hit;
     float3 seen = waterReflection(i.view, reflect(normalize(i.view), nv), hit);
 #ifndef UAGFX_SAFE
@@ -2662,9 +2674,25 @@ float4 sky3d_haze_ps(PresentOut i) : SV_Target {
     haze = haze * haze * (vault ? 0.92 : 0.78);
     // 3.0.19-beta.21 (R-4JGBJS): whole 100 past the reach (core view3d::kHazeWholePast) - the own ground ends
     // there in the 3D view, the game's far plane (1500) no edge
-    haze = max(haze, smoothstep(reach, reach + 100.0, dist));
+    float whole = smoothstep(reach, reach + 100.0, dist);
+    haze = max(haze, whole);
     if (haze < 0.003) discard;
-    return float4(sourceRect.rgb, haze);
+    // 3.0.20-beta.62 (the owner: «в дали здания, если не влазят в дальность, обрезанные», «горизонт есть, но сделать
+    // бы его красивее»): under the open sky the haze's colour is the sky's own along the pixel's way - its horizon
+    // with the dawn's band and the sun's halo for the far ground, its blue (the night's dark) for what stands
+    // against it, and where the haze is whole the sky itself, stars, moon and clouds: a far house dissolves into the
+    // sky behind it. Until now one colour, the horizon's - a thing at the sight's end stood as a cut-out of that
+    // colour against the sky's own shades
+    float3 tone = sourceRect.rgb;
+    [branch] if (!vault) {
+        float3 way = normalize(seen.x * float3(r0, r1, r2) + seen.y * float3(r3, r4, r5) + seen.z * float3(r6, r7, r8));
+        float night = saturate(twinX);
+        float soft = float((uint(uiPixels.z + 0.5) & 4u) | 8u);  // the dawn's glow; no stars, no moon, no sun's disc
+        tone = skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, soft);
+        [branch] if (whole > 0.0)
+            tone = lerp(tone, skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, uiPixels.z), whole);
+    }
+    return float4(tone, haze);
 }
 
 float4 sky3d_ps(PresentOut i) : SV_Target {
@@ -3030,8 +3058,11 @@ float4 meadow_roots_ps(PresentOut i) : SV_Target {
     int2 ic = int2(cell);
     uint level = min(min(firstbitlow(uint(ic.x)), firstbitlow(uint(ic.y))), uint(rings - 1));
     float need = dist <= full ? 0.0 : log2(dist / full);
-    float presence = int(level) + 1 >= rings ? saturate((float(rings) - need) * 2.0)
-                                             : saturate(float(level) + 1.0 - need);
+    // 3.0.20-beta.62 (the owner: «трава вдали дорисовывается, что-то надо придумать, чтобы не так заметно было»): the
+    // last level's roots stand to the reach - they came and went one by one over its last third (155-220 units),
+    // each sprouting to its whole height in some 8 units of the walk, a third taller than a near one and as wide on
+    // the screen; all the tufts go down to nothing from the reach's half to its end instead (taper below)
+    float presence = int(level) + 1 >= rings ? 1.0 : saturate(float(level) + 1.0 - need);
     float growKeep = bladeGrow(presence, hash12(cell + 4.4));  // 3.0.20-beta.26: grows in, not blinks
     if (growKeep <= 0.0) return none;
     // 3.0.20-beta.47: the field's own clumps and bald spots (core grass3d tallOf, chanceOf)
@@ -3160,8 +3191,10 @@ float4 meadow_roots_ps(PresentOut i) : SV_Target {
     // trodden, and the whole field stood at 0.4 of its height while any step held (while you walked)
     float3 hold = float3(0.0, 0.0, 1.0);
     if (footprint > 0.5) hold = trampleAt(xz).xyz;
+    float gridReach = full * float(1 << rings);  // the grass's reach (core Grid::reach)
+    float taper = 1.0 - smoothstep(gridReach * 0.5, gridReach * 0.97, dist);  // core grass3d taperOf
     float tall = (0.7 + 0.3 * hash12(cell + 2.1)) * (1.6 + 3.0 * clump * sqrt(clump)) * (flower ? 1.1 : 1.0) *
-                 (1.0 + 0.35 * min(need, float(rings - 1))) * growKeep * growGreen * byEdge *
+                 (1.0 + 0.35 * min(need, float(rings - 1))) * growKeep * growGreen * byEdge * taper *
                  (0.4 + 0.6 * saturate(hold.z));  // core tallOf, heightAt, troddenTo
     if (tall < 0.05) return none;
     float hue = valueNoise(xz * 0.045 + float2(20.0, 5.0));  // the field's patches of lighter and darker green

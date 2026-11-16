@@ -246,3 +246,26 @@ TEST(grass3d_a_tufts_height_by_the_share_the_steps_left) {
     CHECK(leftAt(mx, mz) < 0.5f);  // under the step
     CHECK(grass3d::troddenTo(leftAt(0, 0)) > 0.99f && grass3d::troddenTo(leftAt(mx, mz)) < 0.75f);
 }
+
+// 3.0.20-beta.62 (the owner: «трава вдали дорисовывается, что-то надо придумать, чтобы не так заметно было»): the
+// tufts go down to nothing toward the grass's reach - none sprouts at its edge
+TEST(grass3d_the_field_tapers_to_nothing_at_its_reach) {
+    const grass3d::Grid g = grass3d::gridFor(false);
+    CHECK(std::fabs(g.reach() - 220.0f) < 0.01f);
+    CHECK_EQ(grass3d::taperOf(g, 0.0f), 1.0f);
+    CHECK_EQ(grass3d::taperOf(g, 110.0f), 1.0f);       // whole to the reach's half
+    CHECK(grass3d::taperOf(g, 160.0f) < 0.6f);
+    CHECK(grass3d::taperOf(g, 160.0f) > 0.4f);
+    CHECK(grass3d::taperOf(g, 200.0f) < 0.07f);        // where the last roots used to sprout whole
+    CHECK_EQ(grass3d::taperOf(g, 214.0f), 0.0f);
+    CHECK_EQ(grass3d::taperOf(g, 500.0f), 0.0f);
+    float before = 1.0f;
+    for (float d = 100.0f; d <= 220.0f; d += 2.0f) {  // never up again: nothing grows as the eye goes away
+        const float now = grass3d::taperOf(g, d);
+        CHECK(now <= before);
+        before = now;
+    }
+    const grass3d::Grid thin = grass3d::gridFor(true);
+    CHECK_EQ(grass3d::taperOf(thin, thin.reach() * 0.5f), 1.0f);
+    CHECK_EQ(grass3d::taperOf(thin, thin.reach()), 0.0f);
+}

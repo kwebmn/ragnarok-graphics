@@ -144,6 +144,16 @@ inline float presenceOf(int level, float need, int rings) {
     const float a = level + 1 >= rings ? (float(rings) - need) * 2.0f : float(level) + 1.0f - need;
     return a <= 0.0f ? 0.0f : a >= 1.0f ? 1.0f : a;
 }
+// 3.0.20-beta.62 (the owner: «трава вдали дорисовывается, что-то надо придумать, чтобы не так заметно было»): a
+// tuft's height's share by its distance - whole to the reach's half, none at its end: the field goes down into the
+// ground's own picture, no tuft sprouts at its edge. The last level's roots stand to the reach (presenceOf's last
+// half level left them one by one, each at its whole height - the meadow's shaders take 1 there now)
+constexpr float kTaperFrom = 0.5f, kTaperTo = 0.97f;
+inline float taperOf(const Grid& g, float dist) {
+    const float a = (dist - g.reach() * kTaperFrom) / (g.reach() * (kTaperTo - kTaperFrom));
+    const float t = a <= 0.0f ? 0.0f : a >= 1.0f ? 1.0f : a;
+    return 1.0f - t * t * (3.0f - 2.0f * t);
+}
 // a blade's width (times the nearest's) - as wide on the screen past `full` - and height (a third more a level wanted)
 inline float widthAt(float dist, float full) { return dist <= full ? 1.0f : dist / full; }
 inline float heightAt(float need, int rings) {
