@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.20-beta.47 — what's new · 2026-11-16
+
+- **Grass in the 3D view — a meadow instead of a brush (R-YAB82P).** Until now a blade was one straight triangle, all of one height and of the colour of the ground under them. Now it is a tuft of bent blades: four near you, three further off; the stem upright, the rest fanned out and leaning.
+  - The field has clumps and bald spots: a tuft's height goes smoothly from 1.6 to 4.6 units (a character stands about 16 tall).
+  - The root is darker, the tip lighter and a little yellower; patches of lighter and darker green go over the field. The colour comes from the ground round the root, not from one point of it, so the field no longer speckles.
+  - By the edge of the green the grass goes down to nothing instead of ending in a wall.
+  - The wind goes over the field in waves.
+  - Near blades are drawn over far ones.
+  - Each tuft's root is found once a frame; until now nine times, once for every vertex.
+  The switch is the same: «Grass in the 3D view». The grass of the usual top view has not changed. The look was settled on computed pictures; it has not been checked in the game yet.
+
 # uaRO Graphics 3.0.20-beta.46 — what's new · 2026-11-16
 
 - **Grass no longer grows on paving (R-HGTAKK).** In the 3D view lone tufts of grass stood among Prontera's paving stones and blinked as the camera moved. The cause: the joints between the stones are greenish, and the grass, which checked only the colour of a point on the screen, took a joint for a lawn. Now grass grows only on cells whose own texture is green. Measured on the client's real textures: the paving of Prontera, Payon and Geffen is 1–10 % green, the lawns from 53 %. It works with «Own ground» on (Direct3D 12).
