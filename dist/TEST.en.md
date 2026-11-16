@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.67 — what's new · 2026-11-16
+
+- **The death screen shows the hits of this very death (R-SZ3QVM).** The «Останні удари» list could stay from the death before: the ice cave showed «Alarm» of the clock tower. The card was painted anew only when its place, size or the lit button changed, and it did not notice new lines of hits of the same count. Now the card is painted anew by the list's words too.
+
 # uaRO Graphics 3.0.20-beta.66 — what's new · 2026-11-16
 
 - **A lost connection's note tells when the game before this one ended.** The first note sent by itself (R-BTF3ZP) showed it: the character server answered «the server still remembers the last login» (code 8) a tenth of a second after the connect, and the game had been closed on a map and started again six seconds before. The note now tells by itself when the previous game's log on this computer ended and what its last connection was, and gives the spans under a second in milliseconds.
