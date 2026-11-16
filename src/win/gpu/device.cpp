@@ -2027,6 +2027,8 @@ void Renderer::Impl::destroy() {
     releaseCom(mistPs);
     for (ID3D12PipelineState*& p : sky3dPipelines) releaseCom(p);  // 3.0.19-beta.6
     releaseCom(sky3dPs);
+    for (ID3D12PipelineState*& p : sky3dHazePipelines) releaseCom(p);  // 3.0.20-beta.48
+    releaseCom(sky3dHazePs);
     releaseCom(floorReflectPipeline);  // 0.72, 0.86
     for (ID3D12PipelineState*& p : halfOverPipelines) releaseCom(p);
     releaseCom(halfOverPs);

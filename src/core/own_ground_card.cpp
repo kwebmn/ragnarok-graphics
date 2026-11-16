@@ -123,9 +123,10 @@ void blendWords(const Meshes& m, uint32_t from, uint32_t count, uint32_t* out) {
     for (uint32_t i = 0; i < count; ++i) out[i] = vertexAt(m, size_t(from) + i).blend;
 }
 
-void Lists::begin(size_t textures, bool blends) {
+void Lists::begin(size_t textures, bool blends, const std::vector<uint8_t>* leftOut) {
     textures_ = textures;
     blends_ = blends;
+    leftOut_ = leftOut;
     added_.clear();
     draws_.clear();
     parts_.clear();
@@ -153,6 +154,7 @@ const std::vector<Draw>& Lists::plan() {
             if (bt.layer > terrain::kNeighbour || bt.indexCount == 0 || (bt.layer != terrain::kGround && !blends_))
                 continue;
             const size_t tex = bt.texture >= 0 && size_t(bt.texture) < textures_ ? size_t(bt.texture) : textures_;
+            if (leftOut_ && ad.which != 2 && tex < leftOut_->size() && (*leftOut_)[tex]) continue;  // the filler's
             for (int side = 0; side < 2; ++side) {
                 if (!(side ? ad.pastSide : ad.nearSide)) continue;
                 const size_t g = (size_t(bt.layer) * (textures_ + 1) + tex) * 2 + size_t(side);

@@ -102,7 +102,7 @@ void World::fireflies(const Switches& on, const Frame& f) {
         const float lit = std::pow(std::max(0.0f, std::sin(cycle * 2.0f * kPi)), 3.0f);  // dark half the time
         Point p = g.at;
         p.y = f.centre.y - g.altitude - 0.25f * std::sin(float(f.now) * 1.3f + g.phase * 6.0f);
-        Sprite s = sprite(Firefly, p, 0.5f, dusk);
+        Sprite s = sprite(Firefly, p, 0.5f * f.flyingSize, dusk);
         s.p1 = lit;
         out_.push_back(s);
     }
@@ -154,7 +154,8 @@ void World::flies(const Switches& on, const Frame& f) {
             }
             Point p = x.at;
             p.y = f.waterLevel - x.altitude - 0.15f * std::sin(float(f.now) * 7.0f + x.phase * 0.01f);
-            Sprite s = sprite(Dragonfly, p, 0.85f, 1.0f);  // 1.25: 1.4 was a stick with a rim from above
+            // 1.25: 1.4 was a stick with a rim from above
+            Sprite s = sprite(Dragonfly, p, 0.85f * f.flyingSize, 1.0f);
             s.p1 = x.phase;
             s.headingX = std::cos(x.heading);
             s.headingZ = std::sin(x.heading);
@@ -167,13 +168,13 @@ void World::flies(const Switches& on, const Frame& f) {
         x.at.z += std::sin(x.heading) * 1.6f * f.dt;
         Point p = x.at;
         p.y = f.centre.y - x.altitude - 0.4f * std::sin(float(f.now) * 2.5f + x.colour);
-        Sprite s = sprite(Butterfly, p, 1.3f, 1.0f);  // 1.8.2: 0.7 was a speck at 4K
+        Sprite s = sprite(Butterfly, p, 1.3f * f.flyingSize, 1.0f);  // 1.8.2: 0.7 was a speck at 4K
         s.p1 = x.phase;
         s.p2 = x.colour;
         s.headingX = std::cos(x.heading);
         s.headingZ = std::sin(x.heading);
         out_.push_back(s);
-        Sprite shadow = sprite(Shadow, Point{x.at.x, f.centre.y, x.at.z}, 0.6f, 0.18f);
+        Sprite shadow = sprite(Shadow, Point{x.at.x, f.centre.y, x.at.z}, 0.6f * f.flyingSize, 0.18f);
         out_.push_back(shadow);
     }
 }

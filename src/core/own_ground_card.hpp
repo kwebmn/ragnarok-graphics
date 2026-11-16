@@ -88,8 +88,9 @@ using ParallelFor = std::function<void(size_t count, const std::function<void(si
 
 class Lists {
 public:
-    // a picture's: the .gnd's textures; blends - the strips too
-    void begin(size_t textures, bool blends);
+    // a picture's: the .gnd's textures; blends - the strips too; leftOut (3.0.20-beta.48): 1 a texture whose batches
+    // of the map's two meshes are left out (the makers' filler where the land past the edge is drawn), kept till plan()
+    void begin(size_t textures, bool blends, const std::vector<uint8_t>* leftOut = nullptr);
     // a chunk in view: of the mesh `which` (0 the smooth one, 1 the plain, 2 the outskirts), the sides of the squeeze
     // it has parts on
     void add(const terrain::Mesh& mesh, int which, size_t chunk, bool nearSide, bool pastSide);
@@ -112,6 +113,7 @@ private:
     };
     size_t textures_ = 0;
     bool blends_ = false;
+    const std::vector<uint8_t>* leftOut_ = nullptr;
     std::vector<Added> added_;
     std::vector<Draw> draws_;
     std::vector<uint32_t> counts_, drawOf_;  // by group (layer, texture, side)

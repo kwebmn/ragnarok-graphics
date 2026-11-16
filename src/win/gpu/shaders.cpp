@@ -1696,6 +1696,9 @@ float moonBeam(float2 g, float t) {
 // torches' light (after this) shines out of it. sharpen how much (0-1). 0.74: first the time of day's light (twinX,
 // twinY, twinW: its tint, 1 none); 0.79: and the region's look - its tint in that too, its saturation 1 + sourceRect.w.
 float4 night_ps(PresentOut i) : SV_Target {
+    // 3.0.20-beta.48: the 3D view's sky laid before the night (fogColor.x 1) has its own night - left as it is
+    if (fogColor.x > 0.5 && sceneDepth.Load(int3(int2(i.pos.xy), 0)) >= 0.99999)
+        return float4(sceneColor.Load(int3(int2(i.pos.xy), 0)).rgb, 1.0);
     float3 c = sceneColor.Load(int3(int2(i.pos.xy), 0)).rgb * float3(twinX, twinY, twinW);
     float grey = dot(c, float3(0.2126, 0.7152, 0.0722));
     c = max(lerp(float3(grey, grey, grey), c, 1.0 + sourceRect.w), 0.0);
@@ -2495,23 +2498,31 @@ float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
     return float4(lerp(stone, dark, haze), 1.0);
 }
 
+// 3.0.20-beta.48 (the owner's «делай 1-9», 6): the two apart. The sky (sky3d_ps) is laid where nothing is drawn
+// before the world's blended draws - a skill's effect, an item or a blade of grass seen against it stays over it;
+// until now the one pass came at the world's end and went over all of them but the characters, whose shapes were
+// put into the depth for it. The haze over what is drawn (sky3d_haze_ps) stays at the world's end.
+float4 sky3d_haze_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;  // nothing drawn there: the sky's own
+    bool vault = twinY > 0.5;
+    float dist = length(viewAt(wp));
+    float reach = max(sourceRect.w, 1.0);
+    float haze = smoothstep(reach * 0.1, reach, dist);
+    haze = haze * haze * (vault ? 0.92 : 0.78);
+    // 3.0.19-beta.21 (R-4JGBJS): whole 100 past the reach (core view3d::kHazeWholePast) - the own ground ends
+    // there in the 3D view, the game's far plane (1500) no edge
+    haze = max(haze, smoothstep(reach, reach + 100.0, dist));
+    if (haze < 0.003) discard;
+    return float4(sourceRect.rgb, haze);
+}
+
 float4 sky3d_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
+    if (sceneDepth.Load(int3(wp, 0)) < 0.99999) discard;  // something drawn there: the haze's (sky3d_haze_ps)
     float night = saturate(twinX);
     bool vault = twinY > 0.5;
     float3 horizon = sourceRect.rgb;
-    float depthHere = sceneDepth.Load(int3(wp, 0));
-    if (depthHere < 0.99999) {
-        float dist = length(viewAt(wp));
-        float reach = max(sourceRect.w, 1.0);
-        float haze = smoothstep(reach * 0.1, reach, dist);
-        haze = haze * haze * (vault ? 0.92 : 0.78);
-        // 3.0.19-beta.21 (R-4JGBJS): whole 100 past the reach (core view3d::kHazeWholePast) - the own ground ends
-        // there in the 3D view, the game's far plane (1500) no edge
-        haze = max(haze, smoothstep(reach, reach + 100.0, dist));
-        if (haze < 0.003) discard;
-        return float4(horizon, haze);
-    }
     float2 g = (float2(wp) - float2(jitterX, jitterY)) / max(scale, 1e-3);
     float3 ray = float3((g.x - cx) / max(f0, 1e-3), (g.y - cy) / max(f1, 1e-3), 1.0);
     float3 dir = normalize(ray.x * float3(r0, r1, r2) + ray.y * float3(r3, r4, r5) + ray.z * float3(r6, r7, r8));

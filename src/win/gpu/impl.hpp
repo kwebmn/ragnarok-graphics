@@ -615,6 +615,16 @@ struct Renderer::Impl {
     ID3DBlob* sky3dPs = nullptr;
     ID3D12PipelineState* sky3dPipelines[4] = {};
     bool sky3dDone = false;
+    // 3.0.20-beta.48: the sky laid where nothing is drawn before the world's blended draws (they stay over it), the
+    // haze over what is drawn at the world's end as before
+    ID3DBlob* sky3dHazePs = nullptr;
+    ID3D12PipelineState* sky3dHazePipelines[4] = {};
+    bool skyFillDone = false;
+    bool skyFillDue() const {
+        return sky3dPs && sky3dHazePs && camera::wideView() && groundDrawn && !skyFillDone && viewToWorldValid;
+    }
+    bool applySkyFill();
+    bool skyPass(bool fill);
     std::string sky3dLogged;  // the map it was told on
     // 0.73, light in the air (haze.cpp, shafts_ps): the torches' pass leaves its lights' count.
     ID3DBlob* shaftsPs = nullptr;
@@ -1117,7 +1127,7 @@ struct Renderer::Impl {
     bool applyMist();  // once a frame, the world drawn and lit; false: lost
     ID3D12PipelineState* mistPipeline(UINT samples);
     bool sky3dDue() const {  // 3.0.19-beta.6: the 3D view - the game's field of view wider than its own
-        return sky3dPs && camera::wideView() && groundDrawn && !sky3dDone && viewToWorldValid;
+        return sky3dPs && sky3dHazePs && camera::wideView() && groundDrawn && !sky3dDone && viewToWorldValid;
     }
     bool applySky3d();  // once a frame, after the mists; false: lost
     // 3.0.19-beta.32 (the concept's decision 4, core/cave_vault): a dungeon's vault for the 3D sky - its heights a
@@ -1289,6 +1299,7 @@ struct Renderer::Impl {
         sceneDepthFresh = false;
         mistDone = false;
         sky3dDone = false;  // 3.0.19-beta.6
+        skyFillDone = false;  // 3.0.20-beta.48
         floorReflectDone = false;  // 0.72
         bloomDone = false;  // 0.78
         stepsDone = false;  // 0.80
@@ -1798,6 +1809,9 @@ struct Renderer::Impl {
         float fineDepth = 0, morphFrom = 0, from = 0;
         bool blends = false;
         size_t textures = 0;
+        // 3.0.20-beta.48: 1 a texture whose batches of the map's two meshes are left out - the makers' filler where
+        // the land past the edges is drawn (none: all drawn)
+        const std::vector<uint8_t>* leftOut = nullptr;
         own_ground::card::Putting putting;  // 3.0.20-beta.23: a vertex's way, as the card's (core/own_ground_card)
     };
     void ownChunk(const OwnMaking& m, const OwnState::ChunkJob& job, OwnState::ChunkOut& out);

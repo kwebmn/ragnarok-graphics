@@ -256,3 +256,37 @@ TEST(own_ground_card_lists_take_the_outskirts_after_the_two) {
     card::vertexWords(card::Meshes{&fine, &plain, &outskirts}, 15, 1, w.data());  // the outskirts' first
     CHECK(w[0] == bitsOf(100.0f));
 }
+
+// 3.0.20-beta.48 (the audit's question 3; the owner's «делай 1-9», 6): the makers' filler round a map's ground
+// (BACKSIDE.BMP, BLACK.BMP: a black ring between the ground and the 3D view's land past it) is the land's own there -
+// its textures' batches of the map's two meshes left out of the picture's draws, the strips of them too; never the
+// outskirts' own
+TEST(own_ground_card_lists_leave_the_fillers_textures_out) {
+    const terrain::Mesh fine = fineMesh(), plain = plainMesh();
+    card::Lists lists;
+    lists.begin(2, true);
+    lists.add(fine, 0, 0, true, false);
+    lists.add(plain, 1, 1, true, true);
+    lists.add(fine, 0, 1, false, true);
+    const size_t all = lists.plan().size();
+    CHECK(all == 4);
+    const std::vector<uint8_t> out = {0, 1};  // the map's texture 1 the filler's
+    lists.begin(2, true, &out);
+    lists.add(fine, 0, 0, true, false);
+    lists.add(plain, 1, 1, true, true);
+    lists.add(fine, 0, 1, false, true);
+    const std::vector<card::Draw>& d = lists.plan();
+    // texture 1's two draws gone: the one with no picture (white) and the strip of texture 0 left
+    CHECK(d.size() == 2);
+    CHECK(d[0].layer == terrain::kGround && d[0].texture == 2 && d[0].past && d[0].count == 3);
+    CHECK(d[1].layer == terrain::kNeighbour && d[1].texture == 0 && !d[1].past && d[1].count == 3);
+    std::vector<std::vector<uint32_t>> into(d.size());
+    for (size_t k = 0; k < d.size(); ++k) into[k].assign(d[k].count, 999u);
+    lists.fill(card::layoutOf(card::Meshes{&fine, &plain, nullptr}), [&into](size_t k) { return into[k].data(); },
+               kBackwards);
+    CHECK(into[0] == (std::vector<uint32_t>{6, 7, 8}) && into[1] == (std::vector<uint32_t>{3, 5, 4}));
+    // the outskirts (the third mesh) keep theirs whatever the number
+    lists.begin(2, true, &out);
+    lists.add(plain, 2, 1, true, false);
+    CHECK(lists.plan().size() == 1 && lists.plan()[0].texture == 1);
+}

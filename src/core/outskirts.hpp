@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "core/gnd.hpp"
@@ -42,6 +43,22 @@ struct Options {
 // sea: seaFrame's of the same map, made with it (one plan for both)
 terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const terrain::Sun& sun, const Options& o,
                     std::vector<float>* sea = nullptr);
+// 3.0.20-beta.48 (the audit's question 3; the owner's «делай 1-9», 6): the makers' filler - a ground texture named
+// BACKSIDE.BMP or BLACK.BMP (its file's own name, any case, whatever its folder). Its cells lie round the ground at
+// the editor's height 0 whatever the ground beside them (of 19 maps looked at: level with it in geffen, morocc,
+// aldebaran; 112 under it on mjolnir_01, 71 on pay_fild01, 49 on umbala; alberta and payon use BLACK.BMP) - a black
+// ring between the ground and the land. The land takes a filler's cell as an open one, wherever it lies (those the
+// ground closes round too); a map is none the more hung in the sky for them. Not one under the map's water - the
+// map's own sea bed (alberta: 6427 cells of BLACK.BMP under its sea), left as it is
+bool fillerTexture(const std::string& name);
+// whether the cell (x, y) is a filler's the land takes: its top of a filler's texture, none of its corners under the
+// map's water; false off the map
+bool fillerCell(const gnd::Ground& g, const Options& o, int x, int y);
+// Those cells' tops given textures of their own - each filler's texture named again at the list's end, the tops'
+// surfaces copied - so that a renderer can leave their batches out where the land is drawn (the 3D view) and draw
+// them elsewhere (the top view: the map's black border as ever). 1 a texture so appended, by the ground's textures
+// after it; none to take: empty, the ground as it was
+std::vector<uint8_t> splitFiller(gnd::Ground& g, const Options& o);
 // the land's height (up along -y) at the cells' corner (cx, cy) - the map's first corner 0, 0
 float heightAt(const gnd::Ground& g, const Options& o, float cx, float cy);
 // 3.0.20-beta.43: the corners x0..x1 by y0..y1 at once, row by row (one plan for all of them)

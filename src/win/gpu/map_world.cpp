@@ -334,6 +334,20 @@ void MapWorld::loop() {
                     LOG_INFO("own ground: %s.gnd (%s): %s", name.c_str(), gfrom.c_str(), why.c_str());
                     own.reset();
                 } else {
+                    {  // 3.0.20-beta.48 (the audit's question 3): the makers' filler round the ground (BACKSIDE.BMP,
+                       // BLACK.BMP; dry) the 3D view's land takes - its cells' tops given textures of their own, for
+                       // the renderer to leave out where the land is drawn. Before the pictures are read (theirs too)
+                        outskirts::Options filler;
+                        filler.water = w.waterKnown;
+                        filler.waterLevel = w.waterLevel;
+                        own->fillerTextures = outskirts::splitFiller(full, filler);
+                        size_t cells = 0;
+                        for (int y = 0; y < full.height; ++y)
+                            for (int x = 0; x < full.width; ++x) cells += outskirts::fillerCell(full, filler, x, y);
+                        if (cells)
+                            LOG_INFO("own ground: %s - %zu cells of the makers' filler round its ground (a black "
+                                     "ring): the 3D view's land takes them", name.c_str(), cells);
+                    }
                     own->map = name;
                     own->width = full.width;
                     own->height = full.height;

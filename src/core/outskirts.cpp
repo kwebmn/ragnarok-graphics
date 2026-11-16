@@ -73,19 +73,24 @@ struct EdgePoint {
 // rectangle, within it those reached from outside through open cells - a hole the ground closes round is the map's
 // own), and for every corner as far as the land goes the nearest corner of the ground and how far it is (cells) - the
 // land's heights, pictures and colours go by that corner, as beta.30's went by the rectangle's edge
+// a cell none of whose corners lie under the map's water (up along -y: under it greater)
+bool dryCell(const gnd::Cell& c, const Options& o) {
+    if (!o.water) return true;
+    for (const float h : c.h)
+        if (h > o.waterLevel) return false;
+    return true;
+}
+
 class Plan {
 public:
     Plan(const gnd::Ground& g, const Options& o) : g_(g), o_(o), w_(g.width), h_(g.height) {
         r_ = ((std::max(o.ring, 0) + kChunkCells - 1) / kChunkCells) * kChunkCells + 2 * kChunkCells;
         side_ = w_ + 2 * r_ + 1;
         rows_ = h_ + 2 * r_ + 1;
-        // the maps' filler round their edges (BACKSIDE.bmp): never the outskirts' picture
+        // the maps' filler round their edges (BACKSIDE.BMP, BLACK.BMP): never the outskirts' picture; 3.0.20-beta.48
+        // its cells the land's own (top() takes them for open)
         backside_.resize(g.textures.size(), false);
-        for (size_t t = 0; t < g.textures.size(); ++t) {
-            std::string low = g.textures[t];
-            for (char& c : low) c = char(std::tolower(uint8_t(c)));
-            backside_[t] = low.find("backside") != std::string::npos;
-        }
+        for (size_t t = 0; t < g.textures.size(); ++t) backside_[t] = fillerTexture(g.textures[t]);
         // the open cells reached from outside, and the outer band's share of open ones
         out_.assign(size_t(w_) * size_t(h_), 0);
         std::vector<int> stack;
@@ -93,7 +98,9 @@ public:
         for (int y = 0; y < h_; ++y)
             for (int x = 0; x < w_; ++x) {
                 const bool open = !top(x, y);
-                if (x < kBand || y < kBand || x >= w_ - kBand || y >= h_ - kBand) ++band, bandOpen += open ? 1 : 0;
+                // hung in the sky by the cells with no top at all - a ring of filler is no sky
+                if (x < kBand || y < kBand || x >= w_ - kBand || y >= h_ - kBand)
+                    ++band, bandOpen += topped(x, y) ? 0 : 1;
                 if (open && (x == 0 || y == 0 || x == w_ - 1 || y == h_ - 1)) {
                     out_[size_t(y) * size_t(w_) + size_t(x)] = 1;
                     stack.push_back(y * w_ + x);
@@ -113,6 +120,10 @@ public:
                 stack.push_back(ny[k] * w_ + nx[k]);
             }
         }
+        // 3.0.20-beta.48: a filler's cell the land's wherever it lies - one the ground closes round too
+        for (int y = 0; y < h_; ++y)
+            for (int x = 0; x < w_; ++x)
+                if (topped(x, y) && !top(x, y)) out_[size_t(y) * size_t(w_) + size_t(x)] = 1;
         // every corner's nearest corner of the ground: the way to it (cells), two sweeps over the corners
         // (8SSEDT); a corner of the ground itself 0, 0
         way_.assign(size_t(side_) * size_t(rows_) * 2, kFar);
@@ -282,10 +293,19 @@ private:
     int clampJ(int j) const { return std::clamp(j, -r_, h_ + r_); }
     int16_t* wayAt(int i, int j) { return &way_[(size_t(j + r_) * size_t(side_) + size_t(i + r_)) * 2]; }
     const int16_t* wayAt(int i, int j) const { return &way_[(size_t(j + r_) * size_t(side_) + size_t(i + r_)) * 2]; }
-    const gnd::Cell* top(int x, int y) const {
-        if (x < 0 || y < 0 || x >= w_ || y >= h_) return nullptr;
+    // a cell with a top at all (the makers' filler too)
+    bool topped(int x, int y) const {
+        if (x < 0 || y < 0 || x >= w_ || y >= h_) return false;
         const gnd::Cell& c = g_.cells[size_t(y) * size_t(w_) + size_t(x)];
-        return c.top >= 0 && size_t(c.top) < g_.surfaces.size() ? &c : nullptr;
+        return c.top >= 0 && size_t(c.top) < g_.surfaces.size();
+    }
+    // a cell of the ground: with a top that is not the makers' filler lying dry (3.0.20-beta.48, fillerCell's rule)
+    const gnd::Cell* top(int x, int y) const {
+        if (!topped(x, y)) return nullptr;
+        const gnd::Cell& c = g_.cells[size_t(y) * size_t(w_) + size_t(x)];
+        const int t = g_.surfaces[size_t(c.top)].texture;
+        if (!(t >= 0 && size_t(t) < backside_.size() && backside_[size_t(t)])) return &c;
+        return dryCell(c, o_) ? nullptr : &c;
     }
     // 3.0.20-beta.43: the land's base - a sheet between the ground's edge (its corners' own heights) and the edge's
     // mean kSettle cells off, every corner between the mean of its four neighbours: sweeps to and fro, each corner
@@ -432,6 +452,52 @@ std::vector<float> seaOf(const gnd::Ground& g, const Options& o, const Plan& pla
 }
 
 }  // namespace
+
+bool fillerCell(const gnd::Ground& g, const Options& o, int x, int y) {
+    if (x < 0 || y < 0 || x >= g.width || y >= g.height) return false;
+    const size_t at = size_t(y) * size_t(g.width) + size_t(x);
+    if (at >= g.cells.size()) return false;
+    const gnd::Cell& c = g.cells[at];
+    if (c.top < 0 || size_t(c.top) >= g.surfaces.size()) return false;
+    const int t = g.surfaces[size_t(c.top)].texture;
+    return t >= 0 && size_t(t) < g.textures.size() && fillerTexture(g.textures[size_t(t)]) && dryCell(c, o);
+}
+
+std::vector<uint8_t> splitFiller(gnd::Ground& g, const Options& o) {
+    const size_t before = g.textures.size();
+    std::map<int32_t, int32_t> copies;  // a filler's surface -> its copy
+    std::map<int, int> again;           // a filler's texture -> its own named again
+    for (int y = 0; y < g.height; ++y)
+        for (int x = 0; x < g.width; ++x) {
+            if (!fillerCell(g, o, x, y)) continue;
+            gnd::Cell& c = g.cells[size_t(y) * size_t(g.width) + size_t(x)];
+            if (size_t(g.surfaces[size_t(c.top)].texture) >= before) continue;  // a copy's already
+            auto copy = copies.find(c.top);
+            if (copy == copies.end()) {
+                gnd::Surface s = g.surfaces[size_t(c.top)];
+                auto t = again.find(s.texture);
+                if (t == again.end()) {
+                    g.textures.push_back(g.textures[size_t(s.texture)]);
+                    t = again.emplace(int(s.texture), int(g.textures.size() - 1)).first;
+                }
+                s.texture = int16_t(t->second);
+                g.surfaces.push_back(s);
+                copy = copies.emplace(c.top, int32_t(g.surfaces.size() - 1)).first;
+            }
+            c.top = copy->second;
+        }
+    if (g.textures.size() == before) return {};
+    std::vector<uint8_t> own(g.textures.size(), 0);
+    for (size_t t = before; t < g.textures.size(); ++t) own[t] = 1;
+    return own;
+}
+
+bool fillerTexture(const std::string& name) {
+    const size_t cut = name.find_last_of("\\/");
+    std::string file = cut == std::string::npos ? name : name.substr(cut + 1);
+    for (char& c : file) c = char(std::tolower(uint8_t(c)));
+    return file == "backside.bmp" || file == "black.bmp";
+}
 
 float heightAt(const gnd::Ground& g, const Options& o, float cx, float cy) {
     const Plan plan(g, o);

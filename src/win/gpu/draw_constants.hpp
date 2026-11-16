@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "core/critters.hpp"
+#include "core/foliage.hpp"
 #include "core/frame.hpp"
 #include "core/game_camera.hpp"
 #include "core/game_models_card.hpp"
@@ -181,6 +182,14 @@ inline bool yExtent(const FrameRecord& rec, const DrawCmd& d, float& top, float&
     }
     return bottom - top > 2.0f;
 }
+// 3.0.20-beta.48: a draw's first corner's depth in the view (its vertices x, y, z and 1 / depth) - 0 none
+inline float firstDepth(const FrameRecord& rec, const DrawCmd& d) {
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    if (!d.vertexCount || d.vertexOffset + 16 > v.size()) return 0.0f;
+    float rhw = 0.0f;
+    std::memcpy(&rhw, v.data() + d.vertexOffset + 12, sizeof rhw);
+    return rhw > 1e-6f ? 1.0f / rhw : 0.0f;
+}
 
 // 1.7, the trees (core/trees.hpp): a draw of leaves lit as a round crown, lit through towards the sun, its own shade
 // and the season's colours (shaders.cpp leafLight; 2.7.10: the gusts in their sway gone). sun: the way the shadows
@@ -258,6 +267,8 @@ inline bool cardTreeLook(const std::vector<gamemodels::CardRun>& runs, const Lea
     if (!gamemodels::screenBoxOf(corners, p, box)) return false;  // all of it behind the eye: no face of it shows
     const float x0 = box[0], y0 = box[1], x1 = box[2], y1 = box[3];
     // off the screen whole (its sway's reach and a little more round it): none of it shows either
+    // 3.0.20-beta.48: in the 3D view as far in the world wherever the tree stands (foliage::swingAt by its depth)
+    if (swing > 0.0f && camera::wideView()) swing = foliage::swingAt(swing, mid[2], camera::fovNow());
     const float reach = swing + 8.0f;
     if (x1 < -reach || y1 < -reach || x0 > 2.0f * p.cx + 1.0f + reach || y0 > 2.0f * p.cy + 1.0f + reach) return false;
     out = Constants{};

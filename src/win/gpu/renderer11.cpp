@@ -176,6 +176,7 @@ Renderer11::~Renderer11() {
     drop(drawGlowLeanPs_);
     drop(mistPs_);
     drop(sky3dPs_);  // 3.0.19-beta.6
+    drop(sky3dHazePs_);  // 3.0.20-beta.48
     drop(weatherPs_);
     drop(aoPs_);  // 2.5.1
     drop(aoBlurPs_);
@@ -475,7 +476,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[73] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[74] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -539,7 +540,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"weather3d_ps", ps, shaderSource(), {}, true},
                    {"model_vs", vs, shaderSource(), {}, true},  // 3.0.20-beta.10: the game's still models
                    {"leaf_vs", vs, shaderSource(), {}, true},  // 3.0.20-beta.34: their leaves
-                   {"meadow_roots_ps", ps, shaderSource(), {}, true}};  // 3.0.20-beta.47: the 3D grass's roots
+                   {"meadow_roots_ps", ps, shaderSource(), {}, true},  // 3.0.20-beta.47: the 3D grass's roots
+                   {"sky3d_haze_ps", ps, shaderSource(), {}, true}};  // 3.0.20-beta.48: the 3D sky's haze apart
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -697,6 +699,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[70].code.empty() || !vsOf(wants[70], modelVs_)) modelVs_ = nullptr;  // 3.0.20-beta.10
     if (wants[71].code.empty() || !vsOf(wants[71], leafVs_)) leafVs_ = nullptr;  // 3.0.20-beta.34
     if (wants[72].code.empty() || !psOf(wants[72], grass3dRootsPs_)) grass3dRootsPs_ = nullptr;  // 3.0.20-beta.47
+    if (wants[73].code.empty() || !psOf(wants[73], sky3dHazePs_)) sky3dHazePs_ = nullptr;  // 3.0.20-beta.48
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -1557,6 +1560,12 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         flushBatch();
         applyGroundLife();
     }
+    // 3.0.20-beta.48 (as Direct3D 12's draw.cpp): the 3D view's sky where nothing is drawn, before the world's
+    // blended draws - an effect, an item, a blade of grass against it stays over it
+    if (passes && !skyFillDone_ && sky3dPs_ && sky3dHazePs_ && camera::wideView() && cameraValid_) {
+        flushBatch();
+        skyPass(true);
+    }
     if (passes && !grassDone_ && grassWanted()) {  // 2.5.4: under the characters
         flushBatch();
         applyGrass();
@@ -1730,6 +1739,9 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         const unsigned long long now = GetTickCount64();
         if (!clockStart_) clockStart_ = now;
         c.twin[0] = foliage::kSwing * float(effects_.foliageStrength) / 100.0f;  // 2.7.30
+        // 3.0.20-beta.48 (as Direct3D 12's): in the 3D view as far in the world wherever the tree stands
+        if (camera::wideView())
+            c.twin[0] = foliage::swingAt(c.twin[0], firstDepth(rec, d), camera::fovNow());
         c.twin[1] = swayBottom;
         c.twin[2] = swayBottom - swayTop;
         c.twin[3] = float(double(now - clockStart_) / 1000.0);
@@ -2688,6 +2700,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     lightDone_ = nightDone_ = dayKept_ = dayWanted_ = false;  // 0.61, 0.63, 2.7.47, 3.0.5-beta.20
     mistDone_ = weatherDone_ = false;  // 2.5
     sky3dDone_ = false;  // 3.0.19-beta.6
+    skyFillDone_ = false;  // 3.0.20-beta.48
     bloomDone_ = stepsDone_ = false;  // 2.5.2
     heatDone_ = floorDone_ = false;  // 2.5.3
     heatSpots_.clear();
@@ -2818,7 +2831,10 @@ void Renderer11::applyNight() {  // 0.63: as the colours, night_ps by its streng
     // has light to draw (applyTorchLight), a frame without any spared the copy
     dayWanted_ = torchesWanted();
     nightLook_ = c;
-    worldPass(nightPs_, c, 2, 0, beams ? depthSrv_ : nullptr);  // the copy just made
+    // 3.0.20-beta.48: the 3D view's sky is in the picture already - night_ps leaves it (after the look is kept)
+    const bool skyLaid = skyFillDone_ && camera::wideView() && depthViews();
+    c.fogColor[0] = skyLaid ? 1.0f : 0.0f;
+    worldPass(nightPs_, c, 2, 0, beams || skyLaid ? depthSrv_ : nullptr);  // the copy just made
 }
 
 // 2.7.47: the picture before the night (scene_, the copy applyNight has just made) kept in day_ with the look night_ps
@@ -3693,6 +3709,7 @@ void Renderer11::applyCritters() {
     if (!crittersVs_ || !crittersPs_ || !on.any() || !cameraValid_ || !target_.texture || !depthViews()) return;
     const float now = waterTime();
     critters::Frame f;
+    f.flyingSize = camera::wideView() ? critters::kFlyingWide : 1.0f;  // 3.0.20-beta.48 (as Direct3D 12's)
     f.now = double(now);
     f.dt = crittersTime_ > 0.0f ? std::clamp(now - crittersTime_, 0.0f, 0.1f) : 0.0f;
     crittersTime_ = now;
@@ -4169,9 +4186,16 @@ void Renderer11::applyMist() {
 
 // 3.0.19-beta.6 (the 3D view; Direct3D 12's haze.cpp applySky3d): the sky where nothing is drawn, a haze to it over
 // what is, by its distance - the game's camera from behind or the eyes sees past all the game ever drew
-void Renderer11::applySky3d() {
+void Renderer11::applySky3d() {  // the haze over what is drawn, at the world's end
     sky3dDone_ = true;
-    if (!sky3dPs_ || !camera::wideView() || !cameraValid_ || !target_.texture || !depthViews())
+    if (!skyFillDone_) skyPass(true);  // no blended draw this picture: the sky now
+    skyPass(false);
+}
+
+// 3.0.20-beta.48: the sky where nothing is drawn (fill; before the world's blended draws) or the haze over what is
+void Renderer11::skyPass(bool fill) {
+    if (fill) skyFillDone_ = true;
+    if (!sky3dPs_ || !sky3dHazePs_ || !camera::wideView() || !cameraValid_ || !target_.texture || !depthViews())
         return;
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
@@ -4191,7 +4215,8 @@ void Renderer11::applySky3d() {
     c.twin[0] = night;
     c.twin[1] = vault ? 1.0f : 0.0f;
     c.sharpen = waterTime();
-    ID3D11ShaderResourceView* vaultT = vault ? vaultTexture() : nullptr;  // 3.0.19-beta.32: as Direct3D 12's
+    // 3.0.19-beta.32: as Direct3D 12's
+    ID3D11ShaderResourceView* vaultT = vault && fill ? vaultTexture() : nullptr;
     if (vaultT) {
         const map::Axes axes = mapWorld_.axes();
         c.footprint = 1.0f;
@@ -4207,12 +4232,12 @@ void Renderer11::applySky3d() {
         cave_vault::rockOf(rw && rw->lightKnown, rw ? rw->lightAmbient : none, rw ? rw->lightDiffuse : none,
                            c.sourceClamp);
     }
-    if (sky3dLogged_ != map_) {
+    if (fill && sky3dLogged_ != map_) {
         sky3dLogged_ = map_;
         LOG_INFO("3D sky: on %s - %s, the night %.2f (Direct3D 11, field of view %.0f)", map_.c_str(),
                  vault ? "a dark vault" : "the open sky", night, camera::fovNow());
     }
-    worldPass(sky3dPs_, c, false, 1, depthSrv_, nullptr, vaultT);
+    worldPass(fill ? sky3dPs_ : sky3dHazePs_, c, false, 1, depthSrv_, nullptr, vaultT);
 }
 
 ID3D11ShaderResourceView* Renderer11::vaultTexture() {

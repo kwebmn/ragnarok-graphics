@@ -68,6 +68,7 @@ bool Renderer::Impl::applyCritters() {
     const double seconds = effectSeconds();  // 3.0.6-beta.2: never round - their next flights wait by it
     const float now = effect_clock::forShaders(seconds);
     critters::Frame f;
+    f.flyingSize = camera::wideView() ? critters::kFlyingWide : 1.0f;  // 3.0.20-beta.48: from the eyes' level small
     f.now = seconds;
     f.dt = crittersTime > 0.0 ? float(std::clamp(seconds - crittersTime, 0.0, 0.1)) : 0.0f;
     crittersTime = seconds;

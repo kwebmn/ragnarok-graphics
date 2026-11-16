@@ -273,7 +273,9 @@ bool Renderer::Impl::applyNight() {
     // 2.7.20: the moon's beams on the ground of the fields and the towns - night_ps by the depth, kept to the map
     const bool beams =
         effects.moonLight && effects.moonBeams && effects.nightNow > 0 && mapOutdoors && viewToWorldValid;
-    if (!copySceneColor() || (beams && !copySceneDepth())) return false;
+    // 3.0.20-beta.48: the 3D view's sky is in the picture already - night_ps leaves it (it has its own night)
+    const bool skyLaid = skyFillDone && camera::wideView();
+    if (!copySceneColor() || ((beams || skyLaid) && !copySceneDepth())) return false;
     Constants c{};
     if (beams) {
         const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
@@ -302,6 +304,7 @@ bool Renderer::Impl::applyNight() {
     // has lights to draw (applyTorches), a frame without any spared the copy
     dayWanted = torchDue();
     nightLook = c;
+    c.fogColor[0] = skyLaid ? 1.0f : 0.0f;  // after the look is kept: the lights' pass has other use for it
     return worldPass(nightPipelines[code], sceneWidth, sceneHeight, c, sceneColorSrv, true);
 }
 
@@ -917,6 +920,7 @@ bool Renderer::Impl::finishWorld() {
     if (aoDue() && !applyAo()) return false;
     if (seamsDue() && !applySeams()) return false;            // 1.9
     if (groundLifeDue() && !applyGroundLife()) return false;  // 1.7
+    if (skyFillDue() && !applySkyFill()) return false;        // 3.0.20-beta.48: no blended draw came - the sky now
     if (grassDue() && !applyGrass()) return false;            // 0.81
     if (grass3dDue() && !applyGrass3d()) return false;        // 3.0.19-beta.33
     if (stepsDue() && !applySteps()) return false;            // 0.80: on the ground, under the night

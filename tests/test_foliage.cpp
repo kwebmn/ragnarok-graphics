@@ -53,3 +53,22 @@ TEST(foliage_a_blue_green_bench_is_no_leaves) {
     CHECK(foliage::leafy(with(0xFF294912u).data(), 32, 32));
     CHECK(foliage::leafy(with(0xFF1B2F1Du).data(), 32, 32));
 }
+
+// 3.0.20-beta.48 (the owner's «делай 1-9», 6; the audit's question 4): the swing is a number of the game's pixels,
+// sized for the top view - every tree some 350 from its narrow lens. From the eyes' level a tree at 30 and a tree at
+// 800 swung as many pixels: the far crowns tossed about. In the 3D view a tree swings as far in the world as in the
+// top view, wherever it stands
+TEST(foliage_a_tree_swings_as_far_in_the_world_wherever_it_stands) {
+    const float swing = foliage::kSwing;
+    // the top view's own
+    CHECK(std::fabs(foliage::swingAt(swing, foliage::kUsualDepth, foliage::kUsualFov) - swing) < 1e-3f);
+    const float wide = foliage::swingAt(swing, 350.0f, 60.0f);  // a wide lens shows the same swing in fewer pixels
+    CHECK(std::fabs(wide - swing * 0.228f) < 0.02f);
+    CHECK(std::fabs(foliage::swingAt(swing, 175.0f, 60.0f) - 2.0f * wide) < 1e-3f);  // half as far: twice the pixels
+    CHECK(std::fabs(foliage::swingAt(swing, 1400.0f, 60.0f) - 0.25f * wide) < 1e-3f);
+    CHECK(foliage::swingAt(swing, 800.0f, 60.0f) < foliage::swingAt(swing, 30.0f, 60.0f) * 0.1f);
+    // a crown at the eye: no more than kMostSwing times the top view's pixels; a depth of nothing likewise
+    CHECK(std::fabs(foliage::swingAt(swing, 5.0f, 60.0f) - swing * foliage::kMostSwing) < 1e-3f);
+    CHECK(std::fabs(foliage::swingAt(swing, 0.0f, 60.0f) - swing * foliage::kMostSwing) < 1e-3f);
+    CHECK(foliage::swingAt(0.0f, 100.0f, 60.0f) == 0.0f);
+}

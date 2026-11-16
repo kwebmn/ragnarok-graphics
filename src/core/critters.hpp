@@ -61,6 +61,8 @@ struct Switches {
     }
 };
 
+constexpr float kFlyingWide = 0.4f;  // 3.0.20-beta.48: a butterfly's wings 1 unit across, a character 16 tall
+
 struct Crown {  // a tree's leaves drawn this frame
     Point centre;
     float radius = 3.0f;
@@ -82,6 +84,10 @@ struct Frame {
     std::function<bool(const Point&, float&)> ground;
     float day = 1.0f;     // 0-1: daylight (living::daytime)
     float night = 0.0f;   // 0-1
+    // 3.0.20-beta.48: the flying creatures' size's share (butterflies, dragonflies, fireflies, the butterflies'
+    // shadows) - sized for the top view; the renderers give kFlyingWide of it in the 3D view. (Not "small": rpcndr.h
+    // makes it char)
+    float flyingSize = 1.0f;
 };
 
 // 2.6.12: where a flame the game drew burns in the world - its tip, four fifths of the way up from its base, back

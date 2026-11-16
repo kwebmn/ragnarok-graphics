@@ -188,6 +188,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!inner && !s.ui && s.blend && seamsDue() && !applySeams()) return;  // 1.9: before the soft shadows
     if (!inner && !s.ui && s.blend && aoDue() && !applyAo()) return;
     if (!inner && !s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
+    // 3.0.20-beta.48: the 3D view's sky where nothing is drawn, before the world's blended draws - an effect, an item,
+    // a blade of grass against it stays over it
+    if (!inner && !s.ui && s.blend && skyFillDue() && !applySkyFill()) return;
     if (!inner && !s.ui && s.blend && grassDue() && !applyGrass()) return;  // 0.81: the grass under the characters
     if (!inner && !s.ui && s.blend && grass3dDue() && !applyGrass3d()) return;  // 3.0.19-beta.33: the 3D view's
     // 0.32: the characters' shadows likewise - from this draw on the frame's characters stand on the ground - and
@@ -688,6 +691,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     float swayTop = 0.0f, swayBottom = 0.0f;  // 0.64: leaves in the wind
     if (leaves && effects.foliage && effects.foliageStrength > 0 && yExtent(rec, d, swayTop, swayBottom)) {
         c.twin[0] = foliage::kSwing * float(effects.foliageStrength) / 100.0f;  // 2.7.30
+        // 3.0.20-beta.48: in the 3D view as far in the world wherever the tree stands - by its first corner's depth
+        if (camera::wideView())
+            c.twin[0] = foliage::swingAt(c.twin[0], firstDepth(rec, d), camera::fovNow());
         c.twin[1] = swayBottom;
         c.twin[2] = swayBottom - swayTop;
         c.twin[3] = waterTime();

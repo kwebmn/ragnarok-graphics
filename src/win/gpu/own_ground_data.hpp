@@ -28,6 +28,9 @@ struct OwnGround {
     // 3.0.20-beta.42: 1 a corner of the ground (row by row of width + 1) some vertex of the outskirts takes its colour
     // from (its blend) - the land's chunks are coloured again when the game gives one of them another colour
     std::vector<uint8_t> edgeCorners;
+    // 3.0.20-beta.48: 1 a texture of the .gnd's that is the makers' filler (outskirts::fillerTexture) - where the land
+    // past the edges is drawn its batches are left out: the land lies there
+    std::vector<uint8_t> fillerTextures;
     terrain::Atlas atlas;
     std::vector<float> cornerNormals;  // 3.0.4-beta.26: the cells' corners' (own_ground::cornerNormals) - its light
     unsigned restingCells = 0;  // 3.0.6-beta.3: the cells a model rests on (terrain::restingOn), for the log

@@ -265,3 +265,42 @@ TEST(critters_birds_never_settle_on_the_water) {
     }
     CHECK_EQ(any, 0);
 }
+
+// 3.0.20-beta.48 (the owner's «делай 1-9», 6 - the 3D view's small things; his own picture of Prontera: butterflies
+// the size of an NPC's head): a butterfly's wings span 2.6 units - sized for the top view («0.7 was a speck at 4K»),
+// a character standing 16 tall. From the eyes' level the flying creatures are drawn at Frame::flyingSize of that (the
+// renderers: 0.4 in the 3D view), their shadows with them
+TEST(critters_the_flying_ones_smaller_in_the_3d_view) {
+    critters::World w;
+    w.setPlace(living::placeOf("prt_fild08", true, false));
+    critters::Switches on;
+    on.butterflies = true;
+    critters::Frame f;
+    f.centreKnown = true;
+    f.dt = 0.016f;
+    w.update(on, f);
+    float butterfly = 0.0f, shadow = 0.0f;
+    for (const critters::Sprite& s : w.sprites()) {
+        if (s.kind == critters::Butterfly) butterfly = s.size;
+        if (s.kind == critters::Shadow) shadow = s.size;
+    }
+    CHECK(std::fabs(butterfly - 1.3f) < 1e-4f && std::fabs(shadow - 0.6f) < 1e-4f);  // the top view's, as ever
+    f.flyingSize = 0.4f;
+    w.update(on, f);
+    for (const critters::Sprite& s : w.sprites()) {
+        if (s.kind == critters::Butterfly) butterfly = s.size;
+        if (s.kind == critters::Shadow) shadow = s.size;
+    }
+    CHECK(std::fabs(butterfly - 0.52f) < 1e-4f && std::fabs(shadow - 0.24f) < 1e-4f);
+    // the night's fireflies too
+    on.nightFireflies = true;
+    f.night = 1.0f;
+    f.day = 0.0f;
+    float lit = 0.0f;
+    for (int k = 0; k < 4 && lit == 0.0f; ++k) {
+        w.update(on, f);
+        for (const critters::Sprite& s : w.sprites())
+            if (s.kind == critters::Firefly) lit = s.size;
+    }
+    CHECK(std::fabs(lit - 0.2f) < 1e-4f);
+}

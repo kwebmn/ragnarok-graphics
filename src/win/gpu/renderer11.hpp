@@ -267,6 +267,7 @@ private:
     // same shaders, with the game's camera (setCamera) and the depth (t3) (2.7.17: the sky past the map's edge gone)
     void applyMist();
     void applySky3d();  // 3.0.19-beta.6: the 3D view's sky and haze (sky3d_ps)
+    void skyPass(bool fill);  // 3.0.20-beta.48: the sky before the world's blended draws, the haze at its end
     void applyWeather();
     // 2.5.1: the soft shadows where surfaces meet (ao.cpp: a mask at a half or a quarter of the size, blurred twice,
     // multiplied in) - before the characters
@@ -848,6 +849,8 @@ private:
     // 2.5: the mists and the weather (applyMist, applyWeather)
     ID3D11PixelShader* mistPs_ = nullptr;
     ID3D11PixelShader* sky3dPs_ = nullptr;  // 3.0.19-beta.6
+    ID3D11PixelShader* sky3dHazePs_ = nullptr;  // 3.0.20-beta.48: the haze apart (sky3d_haze_ps)
+    bool skyFillDone_ = false;
     ID3D11PixelShader* weatherPs_ = nullptr;
     // 3.0.5-beta.19: the particles as small quads (weather_vs, weather_quad_ps) - not sand's
     ID3D11VertexShader* weatherVs_ = nullptr;

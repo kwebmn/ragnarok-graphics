@@ -480,6 +480,9 @@ void Renderer::Impl::ownChunk(const OwnMaking& m, const OwnState::ChunkJob& job,
     for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
         const terrain::Batch& bt = mesh.batches[b];
         if (bt.layer != terrain::kGround && !m.blends) continue;
+        if (m.leftOut && job.which != 2 && bt.texture >= 0 && size_t(bt.texture) < m.leftOut->size() &&
+            (*m.leftOut)[size_t(bt.texture)])
+            continue;  // 3.0.20-beta.48: the makers' filler - the land's own there
         if (out.used == out.pieces.size()) out.pieces.emplace_back();
         OwnState::Piece& pd = out.pieces[out.used++];
         pd.layer = bt.layer;
@@ -741,6 +744,9 @@ bool Renderer::Impl::drawOwnGround() {
         // 3.0.20-beta.30 (the owner's «6,7,8,9», 6): in the 3D view on a map under the sky the land past its edges too
         // (core/outskirts.hpp) - its chunks after the map's, the third mesh
         const bool outskirts = camera::wideView() && mapOutdoors && !g->outskirts.chunks.empty();
+        // 3.0.20-beta.48 (the audit's question 3): where the land is drawn the makers' filler round the ground is
+        // left out - the land lies there (a black ring between the ground and it until now)
+        const std::vector<uint8_t>* leftOut = outskirts && !g->fillerTextures.empty() ? &g->fillerTextures : nullptr;
         const size_t mapChunks = g->mesh.chunks.size();
         for (size_t n = 0; n < mapChunks + (outskirts ? g->outskirts.chunks.size() : 0); ++n) {
             const bool past = n >= mapChunks;
@@ -782,6 +788,7 @@ bool Renderer::Impl::drawOwnGround() {
         making.from = from;
         making.blends = blends;
         making.textures = o.ids.size();
+        making.leftOut = leftOut;
         making.putting.view = view;
         making.putting.p = p;
         making.putting.axes = axes;
@@ -809,7 +816,7 @@ bool Renderer::Impl::drawOwnGround() {
             for (const OwnState::ChunkJob& job : jobs)
                 if (job.recolour || job.k >= groundCardFresh[job.which].size() || !groundCardFresh[job.which][job.k])
                     sendGroundColours(*g, job.which, job.k);
-            groundLists.begin(o.ids.size(), blends);
+            groundLists.begin(o.ids.size(), blends, leftOut);
             for (const OwnState::ChunkJob& job : jobs) {
                 const terrain::Mesh& mesh = meshOf(*g, job.which);
                 groundLists.add(mesh, job.which, job.k, own_ground::card::hasNear(job.nearest, from),

@@ -70,10 +70,23 @@ bool Renderer::Impl::applyMist() {
 // 3.0.19-beta.6 (the 3D view, core/view3d): the game's camera from behind or from the eyes sees past all the game ever
 // drew - a sky where nothing is drawn (the horizon's colour up to the zenith's, the sun the map's light comes from,
 // soft clouds; a dark vault in a dungeon) and a haze to it over what is, by its distance (sky3d_ps). After the mists.
-bool Renderer::Impl::applySky3d() {
+bool Renderer::Impl::applySky3d() {  // the haze over what is drawn, at the world's end
     sky3dDone = true;
+    if (!skyFillDone && !applySkyFill()) return false;  // no blended draw this picture: the sky now
+    return skyPass(false);
+}
+
+// 3.0.20-beta.48: the sky where nothing is drawn - before the world's blended draws
+bool Renderer::Impl::applySkyFill() {
+    skyFillDone = true;
+    return skyPass(true);
+}
+
+bool Renderer::Impl::skyPass(bool fill) {
     if (!ensureScene("3D sky")) return true;
-    ID3D12PipelineState* pso = alphaPipeline(sky3dPs, sky3dPipelines, upscale ? 1 : samples, "3D sky");
+    const UINT n = upscale ? 1 : samples;
+    ID3D12PipelineState* pso = fill ? alphaPipeline(sky3dPs, sky3dPipelines, n, "3D sky")
+                                    : alphaPipeline(sky3dHazePs, sky3dHazePipelines, n, "3D sky's haze");
     if (!pso) return true;
     if (!copySceneDepth()) return false;
     const int w = sceneWidth, h = sceneHeight;
@@ -101,7 +114,7 @@ bool Renderer::Impl::applySky3d() {
     c.sharpen = waterTime();
     // 3.0.19-beta.32: a dungeon's vault (t1: its heights a cell; fogColor its cell's units, its cells, the up axis's
     // sign; twinW/twinH the ground's x and z signs)
-    const UINT vaultT = vault ? vaultTexture() : kNoSrv;
+    const UINT vaultT = vault && fill ? vaultTexture() : kNoSrv;
     if (vaultT != kNoSrv) {
         const map::Axes axes = mapWorld.axes();
         c.footprint = 1.0f;
@@ -117,7 +130,7 @@ bool Renderer::Impl::applySky3d() {
         cave_vault::rockOf(rw && rw->lightKnown, rw ? rw->lightAmbient : none, rw ? rw->lightDiffuse : none,
                            c.sourceClamp);
     }
-    if (sky3dLogged != mapName) {
+    if (fill && sky3dLogged != mapName) {
         sky3dLogged = mapName;
         LOG_INFO("3D sky: on %s - %s, the night %.2f, the sun %s (field of view %.0f)", mapName.c_str(),
                  vault ? "a dark vault" : "the open sky", night,

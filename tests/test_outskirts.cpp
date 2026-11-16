@@ -328,3 +328,90 @@ TEST(outskirts_base_hangs_smooth_from_the_grounds_edge) {
     CHECK(std::fabs(there - beside) < 4.0f);  // 40 at the edge
     CHECK(at(-1, 7) < at(-1, 20) - 15.0f);    // by the edge the bank still stands (up along -y)
 }
+
+// 3.0.20-beta.48 (the audit's question 3; the owner's «делай 1-9», 6): the makers' filler - cells with a top of
+// BACKSIDE.BMP or BLACK.BMP round the ground, at the editor's height 0 whatever the ground beside them (on
+// mjolnir_01 112 under it, on umbala 49; level with it in geffen, morocc, aldebaran): a black ring between the ground
+// and the land past it. The land takes them as open cells - those the outside reaches and those the ground closes
+// round alike (a filler cell is left out of the 3D view's draws wherever it lies); its heights from the real
+// ground's corners
+TEST(outskirts_the_makers_filler_is_the_lands_own) {
+    CHECK(outskirts::fillerTexture("BACKSIDE.BMP") && outskirts::fillerTexture("backside.bmp"));
+    CHECK(outskirts::fillerTexture("BLACK.BMP") && outskirts::fillerTexture("folder\\Black.bmp"));
+    CHECK(!outskirts::fillerTexture("a.bmp") && !outskirts::fillerTexture("black_stone.bmp"));
+    CHECK(!outskirts::fillerTexture("") && !outskirts::fillerTexture("backside2.bmp"));
+    gnd::Ground g = groundOf();
+    g.textures.push_back("BACKSIDE.BMP");
+    gnd::Surface filler = g.surfaces[0];
+    filler.texture = 2;
+    g.surfaces.push_back(filler);
+    for (int y = 0; y < 16; ++y)
+        for (int x = 0; x < 16; ++x)
+            if (x == 0 || y == 0 || x == 15 || y == 15 || (x == 8 && y == 8)) {
+                gnd::Cell& c = g.cells[size_t(y) * 16 + size_t(x)];
+                c.top = 2;
+                for (float& h : c.h) h = 30.0f;  // fifty under the ground beside it (up along -y)
+            }
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    outskirts::Options o;
+    const terrain::Mesh m = outskirts::build(g, atlas, terrain::Sun{}, o);
+    const std::set<std::pair<int, int>> in = coveredIn(m, g);
+    int ring = 0, ground = 0;
+    for (const auto& c : in) {
+        const bool edge = c.first == 0 || c.second == 0 || c.first == 15 || c.second == 15;
+        ring += edge ? 1 : 0, ground += edge ? 0 : 1;
+    }
+    CHECK(ring == 60);                         // every filler cell of the ring
+    CHECK(ground == 1 && in.count({8, 8}));    // and the one the ground closes round; none of the ground's own
+    // the land's heights from the real ground's corners (-20), not the filler's 30
+    CHECK(std::fabs(outskirts::heightAt(g, o, 1.0f, 8.0f) - -20.0f) < 0.01f);
+    CHECK(std::fabs(outskirts::heightAt(g, o, 0.0f, 8.0f) - -20.0f) < 4.0f);
+    CHECK(std::fabs(outskirts::heightAt(g, o, 8.5f, 8.5f) - -20.0f) < 0.5f);  // over the closed one: level with it
+    // the land's picture never the filler's
+    for (const terrain::Batch& b : m.batches) CHECK(b.texture != 2);
+    // a map with a ring of filler is none hung in the sky for it
+    CHECK(!m.vertices.empty());
+    CHECK(outskirts::fillerCell(g, o, 0, 5) && outskirts::fillerCell(g, o, 8, 8) && !outskirts::fillerCell(g, o, 5, 5));
+    CHECK(!outskirts::fillerCell(g, o, -1, 5) && !outskirts::fillerCell(g, o, 16, 5));
+    // a filler's cell under the map's water is the map's own sea bed (alberta: 6427 cells of BLACK.BMP under its
+    // sea) - left as it is, the land beginning past it
+    outskirts::Options wet;
+    wet.water = true;
+    wet.waterLevel = 10.0f;  // the filler's cells at 30 lie twenty under it (up along -y)
+    CHECK(!outskirts::fillerCell(g, wet, 0, 5) && !outskirts::fillerCell(g, wet, 8, 8));
+    const std::set<std::pair<int, int>> none = coveredIn(outskirts::build(g, atlas, terrain::Sun{}, wet), g);
+    CHECK(none.empty());
+    wet.waterLevel = 40.0f;  // the water under them: dry
+    CHECK(outskirts::fillerCell(g, wet, 0, 5));
+}
+
+// 3.0.20-beta.48: the filler's cells the land takes get textures of their own - each filler's picture again at the
+// list's end, their tops' surfaces copied - so that the renderer can leave their batches out of the 3D view's draws
+// (the land lies there) and still draw them in the top view; a wet one keeps the map's own
+TEST(outskirts_the_fillers_dry_cells_get_a_texture_of_their_own) {
+    gnd::Ground g = groundOf();
+    g.textures.push_back("BLACK.BMP");
+    gnd::Surface filler = g.surfaces[0];
+    filler.texture = 2;
+    g.surfaces.push_back(filler);
+    g.cells[0].top = 2;                    // dry: at -30 (the west column)
+    g.cells[1].top = 2;                    // dry
+    g.cells[2 * 16 + 5].top = 2;           // under the water
+    for (float& h : g.cells[2 * 16 + 5].h) h = 30.0f;
+    outskirts::Options o;
+    o.water = true;
+    o.waterLevel = 10.0f;
+    const size_t surfaces = g.surfaces.size();
+    const std::vector<uint8_t> own = outskirts::splitFiller(g, o);
+    CHECK(own == (std::vector<uint8_t>{0, 0, 0, 1}));
+    CHECK(g.textures.size() == 4 && g.textures[3] == "BLACK.BMP");
+    CHECK(g.surfaces.size() == surfaces + 1);  // one copy of the filler's surface for the two cells that shared it
+    CHECK(g.cells[0].top == g.cells[1].top && g.cells[0].top >= int32_t(surfaces));
+    CHECK(g.surfaces[size_t(g.cells[0].top)].texture == 3);
+    CHECK(g.cells[2 * 16 + 5].top == 2 && g.surfaces[2].texture == 2);  // the wet one the map's own
+    CHECK(outskirts::fillerCell(g, o, 0, 0) && !outskirts::fillerCell(g, o, 5, 2));  // told the same after it
+    // none to take: nothing appended
+    gnd::Ground plain = groundOf();
+    CHECK(outskirts::splitFiller(plain, o).empty() && plain.textures.size() == 2);
+}
+

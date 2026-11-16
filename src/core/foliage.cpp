@@ -34,4 +34,11 @@ bool leafyTexture(const uint32_t* argb, int width, int height, bool spriteCache)
     return !spriteCache && leafy(argb, width, height);
 }
 
+float swingAt(float swing, float depth, float fov) {
+    const float half = 3.14159265f / 360.0f;  // half a lens, radians a degree
+    const float lens = std::tan(kUsualFov * half) / std::tan(std::clamp(fov, 1.0f, 170.0f) * half);
+    const float k = depth > 1.0f ? kUsualDepth / depth * lens : kMostSwing;
+    return swing * std::min(k, kMostSwing);
+}
+
 }  // namespace uagfx::foliage
