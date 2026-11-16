@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.68 — what's new · 2026-11-16
+
+- **The skills' painted pictures are sharp.** The «AGI UP!» letters, Gloria's nun, the angels of Magnificat and Impositio Manus, Kyrie Eleison's bells and cross, Assumptio's priest and wings are pixel art of 64–128 texels that the game stretches two to five times and smooths. The driver now makes a copy of such a picture four times finer (the way the damage digits are made), and the game still places, colours and moves it. The rule knows 233 such pictures of the game's 1503 effect pictures and leaves glows, rings and lightning alone. Where the HD texture pack has a picture drawn by the neural network, that one is shown. It works in every «Вигляд умінь» choice but «Оригінал»; there is no switch of its own.
+- **Storm Gust's snowflakes are sharp in a long game too.** The driver stopped looking at new skill pictures after the first 64 of a game's start. The limit now counts the copies made alone.
+
 # uaRO Graphics 3.0.20-beta.67 — what's new · 2026-11-16
 
 - **The death screen shows the hits of this very death (R-SZ3QVM).** The «Останні удари» list could stay from the death before: the ice cave showed «Alarm» of the clock tower. The card was painted anew only when its place, size or the lit button changed, and it did not notice new lines of hits of the same count. Now the card is painted anew by the list's words too.
