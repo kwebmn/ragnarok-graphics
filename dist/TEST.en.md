@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.65 — what's new · 2026-11-16
+
+- **A report tells more exactly why a house is missing (R-64G2U9, R-7VX6Q9: houses missing in Prontera in the view from above).** The models' record in a report showed the map's first forty models, not the ones nearest the character: from above the «cone of sight» holds about a thousand of Prontera's models, and the house in question did not fit in. Now the nearest and the largest are written, the game's frame number is taken while it draws (because of it every model was said to be one «the game did not come to»), and the picture's check (beta.61) picks the largest faces near. If you see a house or a part of one missing, send a report from the same place once more.
+
 # uaRO Graphics 3.0.20-beta.64 — what's new · 2026-11-16
 
 - **A fault of betas .60 to .63 fixed: uaRO Pad did not learn of a connection closed.** The watch for lost connections (beta.60) put its own hook on the socket's closing before uaRO Pad put its own, and the pad's hook then did not go in: after going back to the characters or to a map on another server the pad could take the old connection for the game's. The watch now goes in after the pad and over it (for the socket's closing, its reads and its writes). If you play with a controller, update.
