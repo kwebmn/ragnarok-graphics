@@ -538,6 +538,8 @@ private:
         return effects_.leavesCard && modelVs_ && leafVs_ && modelLayout_ && leavesOwnWay() &&
                modelCards_.faces() < gamemodels::kCardMostFaces;
     }
+    // 3.0.20-beta.40: this picture's leaves are the card's - its camera up (drawGameModels11)
+    bool leavesOnCardNow11() const { return leavesFromCard11() && modelCameraAt_ != 0; }
     LeafLook leafLookNow() const;  // the trees' look now (draw's leafShading, the card's leaves)
     void drawGameLeavesCard11();
     FrameRecord leafRec_;

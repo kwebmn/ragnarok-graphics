@@ -1,9 +1,11 @@
 // 3.0.20-beta.11 (the owner's «делай все сразу»: the card's way in both renderers): the game's still models kept in the
 // card's form - five uint4 a face (each corner's x y z and colour, the texture coordinates, the flags) by texture, the
 // colours as the game makes them, the frame's faces by texture for its draws
+#include <cmath>
 #include <cstring>
 #include <vector>
 
+#include "core/game_camera.hpp"
 #include "core/game_models_card.hpp"
 #include "test.hpp"
 
@@ -132,6 +134,11 @@ TEST(game_models_card_moving_nodes_drawn_apart) {
     const float moved[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 100, 0, 0};
     store.cornersOf((*runs)[0], corners, moved);
     CHECK(corners.size() == 18 && corners[0] == 101.0f && corners[1] == 2.0f && corners[6] == 104.0f);
+    // 3.0.20-beta.40: the still nodes' runs (the casters' list) leave a moving one out though listed with them - its
+    // corners are its own space
+    std::vector<gamemodels::CardRun> still;
+    store.runsOf({5, 6}, still);
+    CHECK(still.size() == 2 && still[0].first >= 3);  // node 6's two alone (node 5's faces are the card's first three)
 }
 
 // 3.0.20-beta.14: the frame's moving nodes' faces join the batches by texture - each face's number with its node's
@@ -179,4 +186,35 @@ TEST(game_models_card_frame_in_parts_is_the_frame_at_once) {
         CHECK(joined.nodes == once.nodes && joined.unknown == once.unknown && joined.moving == once.moving);
         for (size_t t = 0; t < once.textures.size(); ++t) CHECK(joined.faces[t] == once.faces[t]);
     }
+}
+
+// 3.0.20-beta.40 (the audit of the leaves on the card): a tree's crown box on the game's screen when the tree stands
+// by the eye - the part of the box in front of the near plane, its edges cut there. Beta.33 gave a tree with one
+// corner behind the eye neither sway nor look: in the 3D view every tree one stands by
+TEST(game_models_card_a_box_by_the_eye_keeps_its_screen_box) {
+    camera::Projection p;
+    p.f0 = 1000.0f, p.f1 = 1000.0f, p.cx = 800.0f, p.cy = 450.0f;
+    p.nearZ = 10.0f, p.farZ = 1500.0f;
+    const auto cornersOf = [](float x0, float x1, float y0, float y1, float z0, float z1, float out[8][3]) {
+        for (int k = 0; k < 8; ++k) {
+            out[k][0] = k & 1 ? x1 : x0;
+            out[k][1] = k & 2 ? y1 : y0;
+            out[k][2] = k & 4 ? z1 : z0;
+        }
+    };
+    float c[8][3], box[4];
+    cornersOf(-1.0f, 1.0f, -2.0f, 2.0f, 20.0f, 40.0f, c);  // all in front: its corners' own
+    CHECK(gamemodels::screenBoxOf(c, p, box));
+    CHECK(std::fabs(box[0] - 750.0f) < 0.01f && std::fabs(box[2] - 850.0f) < 0.01f);  // +-1 / 20 * 1000 about 800
+    CHECK(std::fabs(box[1] - 350.0f) < 0.01f && std::fabs(box[3] - 550.0f) < 0.01f);  // +-2 / 20 * 1000 about 450
+    cornersOf(-1.0f, 1.0f, -2.0f, 2.0f, 5.0f, 40.0f, c);  // across the near plane: cut at it
+    CHECK(gamemodels::screenBoxOf(c, p, box));
+    CHECK(std::fabs(box[0] - 700.0f) < 0.5f && std::fabs(box[2] - 900.0f) < 0.5f);  // +-1 / 10 * 1000
+    CHECK(std::fabs(box[1] - 250.0f) < 0.5f && std::fabs(box[3] - 650.0f) < 0.5f);  // +-2 / 10 * 1000
+    cornersOf(-30.0f, 30.0f, -60.0f, 5.0f, -25.0f, 25.0f, c);  // round the eye itself: wide, but a box
+    CHECK(gamemodels::screenBoxOf(c, p, box));
+    CHECK(box[0] < 0.0f && box[2] > 1600.0f && box[1] < 0.0f && box[3] > 900.0f);
+    CHECK(std::isfinite(box[0]) && std::isfinite(box[1]) && std::isfinite(box[2]) && std::isfinite(box[3]));
+    cornersOf(-1.0f, 1.0f, -2.0f, 2.0f, -40.0f, 5.0f, c);  // all behind it: none
+    CHECK(!gamemodels::screenBoxOf(c, p, box));
 }

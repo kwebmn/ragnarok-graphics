@@ -12,7 +12,9 @@ LooksWorker::~LooksWorker() {
     stop_ = true;
     ReleaseSRWLockExclusive(&lock_);
     WakeConditionVariable(&wake_);
-    WaitForSingleObject(thread_, 2000);  // a texture's work at most (the process' end: the thread gone already)
+    // a texture's work at most (the process' end: the thread gone already); as long as the renderer's other threads
+    // are given - it reads this object until it ends
+    WaitForSingleObject(thread_, 15000);
     CloseHandle(thread_);
 }
 
@@ -39,6 +41,7 @@ void LooksWorker::give(uploadlater::Job&& j, bool aiKey) {
     todo_.push_back(std::move(w));
     ReleaseSRWLockExclusive(&lock_);
     WakeConditionVariable(&wake_);
+    if (!given_) progressAt_ = GetTickCount64();
     ++given_;
 }
 
@@ -51,6 +54,16 @@ bool LooksWorker::take(uploadlater::Looks& out) {
     }
     ReleaseSRWLockExclusive(&lock_);
     if (any && given_) --given_;
+    if (any) {
+        progressAt_ = GetTickCount64();
+    } else if (given_ && !raised_ && thread_ && GetTickCount64() - progressAt_ > kLateMs) {
+        // below the game's and the renderer's it got no turn at all: textures would wait for their fire, light, leaves
+        // and AI pictures as long as the processor stays busy
+        raised_ = true;
+        SetThreadPriority(thread_, THREAD_PRIORITY_NORMAL);
+        LOG_INFO("textures: their looks' thread got no turn for %llu ms with %zu textures in hand - its priority the "
+                 "renderer's from now on", kLateMs, given_);
+    }
     return any;
 }
 

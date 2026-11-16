@@ -1721,6 +1721,9 @@ struct Renderer::Impl {
     std::vector<Constants> leafCardLooks;
     std::vector<uint32_t> leafCardPacked;
     bool leavesFromCard() const { return effects.leavesCard && cardModelsReady() && leafVs && leavesOwnWay(); }
+    // 3.0.20-beta.40: this picture's leaves are the card's - its camera up (drawGameModelsCard); else the processor's,
+    // drawn the world's way (their casters and the far models' colours noted there)
+    bool leavesOnCardNow() const { return leavesFromCard() && gameCameraAt != 0; }
     void drawGameLeavesCard(const own_ground::Shading& fog);
     // 3.0.20-beta.23 (the owner's «берем», item 1 - «Своя земля» on the card): the own ground's vertices on the card in
     // their file's places (core/own_ground_card Layout: the smooth mesh's, the plain one's, the colours, the strips'

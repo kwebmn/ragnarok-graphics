@@ -179,6 +179,7 @@ void Renderer11::drawGameModels11() {
                 cmd.fvf = d3d7::FVF_TL1;
                 modelRec_.draw(cmd, kNone, 3, nullptr, 0);
             }
+            bool castersNoted = false;
             flushBatch();  // the game's draws gathered so far
             if (!modelDraws_.empty() &&
                 fillBuffer(modelInstances_, modelInstanceBytes_, D3D11_BIND_VERTEX_BUFFER, modelInstanceData_.data(),
@@ -193,12 +194,16 @@ void Renderer11::drawGameModels11() {
                 modelDraw_ = ModelDraw11{};
                 modelPass_ = false;
                 noteModelCasters();  // 3.0.20-beta.12: the reflections and the torches' shadows take them
+                castersNoted = true;
                 ++modelsDrawnFrames_;
                 modelsDrawnFaces_ += modelInstanceData_.size();
                 modelsDrawnNodes_ += nodes;
                 modelsUnknown_ += unknown;
                 modelsDrawnMoving_ += modelFrame_.moving;  // 3.0.20-beta.14
             }
+            // 3.0.20-beta.40: the card's leaves' casters when no other face of the frame was drawn (a picture of
+            // leaves alone left them out)
+            if (!castersNoted && leavesOnCardNow11()) noteModelCasters();
             modelMatrices_ = 0;
         }
     }
@@ -212,7 +217,7 @@ void Renderer11::drawGameModels11() {
 void Renderer11::drawGameLeaves11() {
     const gamemodels::Frame& frame = modelsNow_.frame();
     if (!leavesOwnWay() || frame.empty() || !modelLikeKnown_ || !cameraValid_) return;
-    if (leavesFromCard11() && modelCameraAt_) {  // 3.0.20-beta.34: from the card, the camera put up with the models'
+    if (leavesOnCardNow11()) {  // 3.0.20-beta.34: from the card, the camera put up with the models'
         drawGameLeavesCard11();
         return;
     }
@@ -288,7 +293,8 @@ void Renderer11::drawGameLeavesCard11() {
     const auto leafy = [this](uint32_t texture) { return leafyTexture(texture); };
     const auto tree = [&](uint32_t id, uint32_t bits, const float* toView) {
         const std::vector<gamemodels::CardRun>* runs = modelCards_.runsOfNode(id);
-        if (!runs) return;
+        // 3.0.20-beta.40: a still one listed as moving or the other way round - left out, as frameOf leaves it
+        if (!runs || modelCards_.moving(id) != (toView != nullptr)) return;
         Constants leaf{};
         critters::Crown crown;
         bool crownSeen = false;

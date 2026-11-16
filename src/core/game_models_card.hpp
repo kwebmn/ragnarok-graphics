@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "core/game_camera.hpp"
 #include "core/game_models.hpp"
 #include "core/model_census.hpp"
 
@@ -37,6 +38,12 @@ struct CardFrame {
     std::vector<std::vector<uint32_t>> faces;
     uint32_t nodes = 0, unknown = 0, moving = 0;
 };
+
+// 3.0.20-beta.40 (the audit of the leaves on the card): a box's place on the game's screen - its eight corners in the
+// view (x, y, depth; corner k's bits its sides: 1 x, 2 y, 4 z), the part of it in front of the near plane, its twelve
+// edges cut there: out x0, y0, x1, y1 in the game's pixels. False: all of it behind the eye. (Beta.33-39 gave a tree
+// with a corner behind the eye neither its sway nor its crown's look - in the 3D view every tree one stands by.)
+bool screenBoxOf(const float corners[8][3], const camera::Projection& p, float out[4]);
 
 // 3.0.20-beta.37 (the owner's «6,7,8,9», 9 - the frame's work on more threads): a part of the frame's faces
 // (CardStore::framePart: a run of its nodes, on any thread) with its own textures' places; the parts put together in

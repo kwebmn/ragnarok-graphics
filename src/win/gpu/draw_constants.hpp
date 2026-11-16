@@ -225,7 +225,8 @@ inline void leafShadingOf(float x0, float y0, float x1, float y1, const float* c
 // 3.0.20-beta.34: a tree of the card's leaves (Direct3D 12's drawGameLeavesCard, Direct3D 11's drawGameLeaves11) - its
 // leafy runs' box (toView: a moving node's matrix, node -> view; none: still, its runs in the world), its eight corners
 // onto the game's screen: its sway (swing 0: none; the time) and its crown's look (leafShadingOf) into `out`; the crown
-// the falling leaves start from into `crown` when given (false then: none). False: no leafy run
+// the falling leaves start from into `crown` when given (false then: none). False: no leafy run, or none of its box
+// on the screen (behind the eye, off it) - not drawn
 template <typename Leafy>
 inline bool cardTreeLook(const std::vector<gamemodels::CardRun>& runs, const Leafy& leafy, const float* toView,
                          const own_ground::View& view, const camera::Projection& p, const float* viewToWorld,
@@ -240,27 +241,26 @@ inline bool cardTreeLook(const std::vector<gamemodels::CardRun>& runs, const Lea
         for (int a = 0; a < 3; ++a) lo[a] = std::min(lo[a], r.lo[a]), hi[a] = std::max(hi[a], r.hi[a]);
     }
     if (!any) return false;
-    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f, mid[3] = {0.0f, 0.0f, 0.0f};
-    bool front = true;
+    // its corners in the view; 3.0.20-beta.40: its place on the screen the part of it in front of the near plane
+    // (gamemodels::screenBoxOf) - a tree by the eye, a corner of its box behind it, kept neither sway nor look
+    float corners[8][3], mid[3] = {0.0f, 0.0f, 0.0f};
     for (int k = 0; k < 8; ++k) {
         const float w[3] = {k & 1 ? hi[0] : lo[0], k & 2 ? hi[1] : lo[1], k & 4 ? hi[2] : lo[2]};
-        float v[3];
         if (toView) {
             for (int a = 0; a < 3; ++a)
-                v[a] = w[0] * toView[a] + w[1] * toView[3 + a] + w[2] * toView[6 + a] + toView[9 + a];
+                corners[k][a] = w[0] * toView[a] + w[1] * toView[3 + a] + w[2] * toView[6 + a] + toView[9 + a];
         } else {
-            own_ground::toView(view, w, v);
+            own_ground::toView(view, w, corners[k]);
         }
-        for (int a = 0; a < 3; ++a) mid[a] += v[a] * 0.125f;
-        if (v[2] <= p.nearZ + 1.0f) {
-            front = false;
-            continue;
-        }
-        const float gx = v[0] / v[2] * p.f0 + p.cx, gy = v[1] / v[2] * p.f1 + p.cy;
-        x0 = std::min(x0, gx), y0 = std::min(y0, gy), x1 = std::max(x1, gx), y1 = std::max(y1, gy);
+        for (int a = 0; a < 3; ++a) mid[a] += corners[k][a] * 0.125f;
     }
+    float box[4];
+    if (!gamemodels::screenBoxOf(corners, p, box)) return false;  // all of it behind the eye: no face of it shows
+    const float x0 = box[0], y0 = box[1], x1 = box[2], y1 = box[3];
+    // off the screen whole (its sway's reach and a little more round it): none of it shows either
+    const float reach = swing + 8.0f;
+    if (x1 < -reach || y1 < -reach || x0 > 2.0f * p.cx + 1.0f + reach || y0 > 2.0f * p.cy + 1.0f + reach) return false;
     out = Constants{};
-    if (!front) return true;  // by the eye: neither sway nor look (the game's draw left such faces out)
     if (swing > 0.0f) {  // as the game's leaves': the swing, the crown's bottom and height, the time
         out.twin[0] = swing;
         out.twin[1] = y1;

@@ -41,6 +41,11 @@ private:
     size_t given_ = 0;  // given and not taken back (the renderer's thread alone)
     HANDLE thread_ = nullptr;
     bool tried_ = false, stop_ = false;
+    // 3.0.20-beta.40 (the audit): the last time it gave anything back (or was first given work) - none for kLateMs
+    // with work in hand: the processor's threads all busy over it, its priority the renderer's from then on
+    unsigned long long progressAt_ = 0;
+    bool raised_ = false;
+    static constexpr unsigned long long kLateMs = 500;
 };
 
 }  // namespace uagfx::gpu

@@ -170,6 +170,31 @@ void CardStore::framePart(const std::vector<uint32_t>& ids, const std::vector<ui
     out.faces.resize(std::max(out.faces.size(), out.textures.size()));
 }
 
+bool screenBoxOf(const float corners[8][3], const camera::Projection& p, float out[4]) {
+    const float cut = p.nearZ + 0.01f;  // model_vs leaves a face out behind nearZ, the card cuts one across it there
+    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f;
+    bool any = false;
+    const auto put = [&](float x, float y, float z) {
+        const float gx = x / z * p.f0 + p.cx, gy = y / z * p.f1 + p.cy;
+        x0 = std::min(x0, gx), y0 = std::min(y0, gy), x1 = std::max(x1, gx), y1 = std::max(y1, gy);
+        any = true;
+    };
+    for (int k = 0; k < 8; ++k)
+        if (corners[k][2] >= cut) put(corners[k][0], corners[k][1], corners[k][2]);
+    for (int k = 0; k < 8; ++k)
+        for (int bit = 1; bit <= 4; bit <<= 1) {  // each edge once: from the corner without the bit
+            if (k & bit) continue;
+            const float* a = corners[k];
+            const float* b = corners[k | bit];
+            if ((a[2] >= cut) == (b[2] >= cut)) continue;
+            const float t = (cut - a[2]) / (b[2] - a[2]);
+            put(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, cut);
+        }
+    if (!any) return false;
+    out[0] = x0, out[1] = y0, out[2] = x1, out[3] = y1;
+    return true;
+}
+
 void joinParts(const std::vector<FramePart>& parts, size_t count, CardFrame& out) {
     out.textures.clear();
     for (std::vector<uint32_t>& list : out.faces) list.clear();
@@ -213,7 +238,9 @@ void CardStore::runsOf(const std::vector<uint32_t>& ids, std::vector<CardRun>& o
     out.clear();
     for (const uint32_t id : ids) {
         const auto it = nodes_.find(id);
-        if (it != nodes_.end()) out.insert(out.end(), it->second.runs.begin(), it->second.runs.end());
+        // 3.0.20-beta.40: not a moving one's (listed still by mistake) - its corners are its own space
+        if (it != nodes_.end() && !it->second.node.moving)
+            out.insert(out.end(), it->second.runs.begin(), it->second.runs.end());
     }
 }
 

@@ -216,7 +216,8 @@ void Renderer::Impl::noteGameModelsForFar() {
             if (turn.noted >= own_models::kMostNoted) break;
             if (turn.passed++ < turn.from) continue;
             const uint32_t texture = f.texture < n->textures.size() ? n->textures[f.texture] : 0;
-            if (!texture || (leavesApart && leafyTexture(texture))) continue;
+            // 3.0.20-beta.40: the leaves from the card are no draws of the world's way - noted here as the rest
+            if (!texture || (leavesApart && !leavesOnCardNow() && leafyTexture(texture))) continue;
             float corners[3][3];
             uint32_t colours[3];
             gamemodels::faceForLearning(*n, f, toView ? toWorld : nullptr, sign, how, corners, colours);
@@ -407,13 +408,18 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
         const std::vector<uint32_t>& list = gameCardFrame.faces[t];
         if (list.empty() || (leavesApart && leafyTexture(gameCardFrame.textures[t]))) continue;
         cardPacked.assign(list.begin(), list.end());
-        cardPacked.resize((list.size() + 7) / 8 * 8, 0u);
+        // 3.0.20-beta.40 (the audit): never four vertices - draw() takes four for a sprite's quad (ai::flatQuad of the
+        // faces' numbers read as places said yes): 25 to 32 faces of a texture in a picture went without their
+        // material and into DLSS's mask, a picture at a time as the camera turned
+        size_t packed = (list.size() + 7) / 8;
+        if (packed == 4) packed = 5;
+        cardPacked.resize(packed * 8, 0u);
         DrawCmd cmd;
         cmd.state = state;
         cmd.texture[0] = gameCardFrame.textures[t];
         cmd.primitive = d3d7::PT_TRIANGLELIST;
         cmd.fvf = d3d7::FVF_TL1;
-        cardRec.draw(cmd, cardPacked.data(), uint32_t(cardPacked.size() / 8), nullptr, 0);
+        cardRec.draw(cmd, cardPacked.data(), uint32_t(packed), nullptr, 0);
         cardCounts.push_back(UINT(list.size()));
         o.gameTriangles += list.size();
     }
@@ -421,6 +427,7 @@ void Renderer::Impl::drawGameModelsCard(const own_ground::Shading& fog) {
     o.gameUnknown = gameCardFrame.unknown;
     if (cardCounts.empty()) {
         cardMatrices = 0;
+        noteGameCasters();  // 3.0.20-beta.40: the card's leaves' (a picture of leaves alone left them out)
         return;
     }
     flushDraws();  // the draws gathered so far are of the record's vertices before these
@@ -494,7 +501,7 @@ void Renderer::Impl::checkGameModelsShown(const own_ground::Shading& fog) {
 void Renderer::Impl::drawGameLeaves(const own_ground::Shading& fog) {
     const gamemodels::Frame& frame = gameModelsNow.frame();
     if (!leavesOwnWay() || frame.empty() || !ownState.modelLikeKnown || !viewToWorldValid) return;
-    if (leavesFromCard() && gameCameraAt) {  // 3.0.20-beta.33: from the card, the camera put up with the models'
+    if (leavesOnCardNow()) {  // 3.0.20-beta.33: from the card, the camera put up with the models'
         drawGameLeavesCard(fog);
         return;
     }
@@ -563,7 +570,8 @@ void Renderer::Impl::drawGameLeavesCard(const own_ground::Shading& fog) {
     // a node's leaves: `bits` its faces' moving place, toView its matrix this frame (node -> view; none: still)
     const auto tree = [&](uint32_t id, uint32_t bits, const float* toView) {
         const std::vector<gamemodels::CardRun>* runs = gameCards.runsOfNode(id);
-        if (!runs) return;
+        // 3.0.20-beta.40: a still one listed as moving or the other way round - left out, as frameOf leaves it
+        if (!runs || gameCards.moving(id) != (toView != nullptr)) return;
         Constants leaf{};
         critters::Crown crown;
         bool crownSeen = false;
