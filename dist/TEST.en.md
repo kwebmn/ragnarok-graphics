@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.20-beta.50 — what's new · 2026-11-16
+
+- **A trial: shadows of houses and trees in the 3D view.** A new switch **«Shadows of houses and trees (trial)»**, off at first: «Game and chat» → «Game» → «3D view», or the console (Ctrl+`) → «Quick». It works under the open sky with «Own ground» on Direct3D 12.
+  - The shadow is worked out from the real geometry: all of the map's models and its ground, which lie whole on the graphics card. It does not depend on where the camera looks. The shadows of 2.1.2–2.1.4 were built from what the frame showed, so they jumped with the camera.
+  - The shadows painted on the map are taken out of the ground's light meanwhile, so two shadows no longer argue: one is left. It is as dark as this map's painted shadows are.
+  - The shadow falls on the ground, the models and the grass; light passes through the holes in the leaves. Its edge is soft, a texel of the shadows' map is 0.3 units (the painted shadows have 1.7).
+  - Checked without the game on prt_fild08: our shadows fall where the painted ones do (correlation 0.91), so the sun's direction is right.
+  - Not there yet: shadows on characters and monsters, the shadow swaying with its crown. A short stall is possible when it is first turned on on a map.
+
 # uaRO Graphics 3.0.20-beta.49 — what's new · 2026-11-16
 
 - **3D view: the night sky and the glow of dawn.** Until now the night sky was the day's turned dark: no stars, no moon, and dawn and dusk looked like noon. Now:
