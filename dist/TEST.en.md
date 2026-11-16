@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.52 — what's new · 2026-11-16
+
+- **3D view: «Ceiling indoors».** In houses and halls there was a dark nothing over the walls. Now there is a flat ceiling at the walls' height, a little darker by walls that stand higher than it. The height comes from the map: where the walls are made of ground, from their top; where they are models, from the height of the map's tall models. On sixteen maps checked it came out as 32 units over the floor in the houses of Prontera, Geffen, Morocc, Aldebaran and in the church (a character stands about 16 tall), 32 in the Sphinx, 42 in the pyramids, 62 and 92 in Glast Heim's halls.
+  Maps of houses and halls get a ceiling by their names («_in», «in_», a church, a castle's inside, a tower, the pyramids). Guild castles, arenas and mazes stay as they were: they have many open courtyards. The switch is on: «Game and chat» → «Game» → «3D view» → «Ceiling indoors». Not checked in the game yet.
+
 # uaRO Graphics 3.0.20-beta.51 — what's new · 2026-11-16
 
 - **3D view: «Fuller tree crowns».** A tree's crown in the game is a few flat cards of leaves: from above they cover one another, and from the eyes' level their edges and the gaps between them show. With the new switch each tree's leaves are drawn twice more, turned about the crown's middle by 60° and 120° and a little smaller. On a computed picture of prt_fild08's commonest tree (나무01) the gaps close and the crown is dense from every side. No new pictures are needed; «Leaves in the wind» and «Rounded tree crowns» work as before.
