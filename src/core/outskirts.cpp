@@ -151,6 +151,17 @@ public:
         }
         heights_.assign(size_t(side_) * size_t(rows_), kUnset);
         edges_.assign(size_t(w_ + 1) * size_t(h_ + 1), EdgePoint{});
+        // a corner of the ground: its cells' own heights there (their mean where they meet at a step)
+        exact_.assign(size_t(w_ + 1) * size_t(h_ + 1), 0.0f);
+        for (int j = 0; j <= h_; ++j)
+            for (int i = 0; i <= w_; ++i) {
+                double sum = 0.0;
+                int n = 0;
+                for (int y = j - 1; y <= j; ++y)
+                    for (int x = i - 1; x <= i; ++x)
+                        if (const gnd::Cell* c = top(x, y)) sum += c->h[(i - x) + 2 * (j - y)], ++n;
+                if (n) exact_[size_t(j) * size_t(w_ + 1) + size_t(i)] = float(sum / n);
+            }
         // a texture's cells a picture: the mean over its cells
         std::map<int, std::pair<double, int>> spans;
         for (int y = 0; y < h_; ++y)
@@ -194,6 +205,7 @@ public:
         if (!dry)
             for (const uint32_t c : rim) sum += edges_[c].smooth, ++dry;
         meanHeight = dry ? float(sum / double(dry)) : 0.0f;
+        settle();
     }
 
     bool any() const { return any_; }    // a cell of ground at all
@@ -234,23 +246,25 @@ public:
         float& kept = heights_[size_t(j + r_) * size_t(side_) + size_t(i + r_)];
         if (kept != kUnset) return kept;
         const float d = distance(i, j);
-        const EdgePoint& e = edge(i, j);
-        float base = e.exact;
+        // 3.0.20-beta.43: the sheet settled between the ground's edge and the edge's mean (settle) - beta.30's base
+        // went by each corner's nearest corner of the edge alone, its ridges and valleys straight out
+        float base = base_[size_t(j + r_) * size_t(side_) + size_t(i + r_)];
         if (d > 0.0f) {
-            // the edge's own at it, smoothed a few cells on; 3.0.20-beta.30: the edge's mean further off - its ridges
-            // and valleys went on straight out to the horizon
-            base += (e.smooth - e.exact) * smoothBetween(0.0f, 8.0f, d);
-            base += (meanHeight - base) * smoothBetween(8.0f, 60.0f, d);
+            // the sheet's last cells eased onto the mean it ends at: no crease round the map kSettle cells off
+            base += (meanHeight - base) * smoothBetween(0.6f * float(kSettle), float(kSettle), d);
+            const EdgePoint& e = edge(i, j);
             // 3.0.20-beta.31: past a wet edge the sea's bed - flat, 15 units under the water's level at least
             if (o_.water) {
                 const float bed = std::max(e.smooth, o_.waterLevel + 15.0f);
                 base += (bed - base) * e.wet * smoothBetween(0.0f, 8.0f, d);
             }
-            const float cx = float(i), cy = float(j);
-            const float hills = kHills * fbm(cx / 26.0f, cy / 26.0f, o_.seed) * smoothBetween(0.0f, 12.0f, d);
-            const float mountains = kMountains * smoothBetween(40.0f, 240.0f, d) *
-                                    (0.3f + 0.7f * ridged(cx / 110.0f, cy / 110.0f, o_.seed + 7u));
-            base -= (hills + mountains) * (1.0f - e.wet);
+            if (o_.relief) {
+                const float cx = float(i), cy = float(j);
+                const float hills = kHills * fbm(cx / 26.0f, cy / 26.0f, o_.seed) * smoothBetween(0.0f, 12.0f, d);
+                const float mountains = kMountains * smoothBetween(40.0f, 240.0f, d) *
+                                        (0.3f + 0.7f * ridged(cx / 110.0f, cy / 110.0f, o_.seed + 7u));
+                base -= (hills + mountains) * (1.0f - e.wet);
+            }
         }
         kept = base;
         return base;
@@ -272,6 +286,42 @@ private:
         if (x < 0 || y < 0 || x >= w_ || y >= h_) return nullptr;
         const gnd::Cell& c = g_.cells[size_t(y) * size_t(w_) + size_t(x)];
         return c.top >= 0 && size_t(c.top) < g_.surfaces.size() ? &c : nullptr;
+    }
+    // 3.0.20-beta.43: the land's base - a sheet between the ground's edge (its corners' own heights) and the edge's
+    // mean kSettle cells off, every corner between the mean of its four neighbours: sweeps to and fro, each corner
+    // taken past the mean of its neighbours (successive over-relaxation), from a first guess by the distance alone
+    void settle() {
+        base_.assign(size_t(side_) * size_t(rows_), meanHeight);
+        std::vector<uint32_t> between;
+        const int most = kSettle * kSettle;
+        for (int j = -r_; j <= h_ + r_; ++j)
+            for (int i = -r_; i <= w_ + r_; ++i) {
+                const int16_t* v = wayAt(i, j);
+                const int d2 = int(v[0]) * v[0] + int(v[1]) * v[1];
+                if (d2 >= most) continue;
+                const size_t at = size_t(j + r_) * size_t(side_) + size_t(i + r_);
+                const float own = exact_[corner(i, j)];
+                if (d2 == 0) {
+                    base_[at] = own;
+                    continue;
+                }
+                base_[at] = own + (meanHeight - own) * smoothBetween(0.0f, float(kSettle), std::sqrt(float(d2)));
+                between.push_back(uint32_t(at));
+            }
+        constexpr int kSweeps = 120;
+        constexpr float kOver = 1.9f;
+        const ptrdiff_t row = side_;
+        for (int sweep = 0; sweep < kSweeps; ++sweep) {
+            const auto relax = [&](uint32_t at) {
+                float* p = &base_[at];
+                const float mean = 0.25f * (p[-1] + p[1] + p[-row] + p[row]);
+                *p += kOver * (mean - *p);
+            };
+            if (sweep & 1)
+                for (size_t k = between.size(); k-- > 0;) relax(between[k]);
+            else
+                for (const uint32_t at : between) relax(at);
+        }
     }
     EdgePoint make(int x, int y) const {
         EdgePoint p;
@@ -319,6 +369,8 @@ private:
     std::vector<int16_t> way_;      // a corner's way to its nearest corner of the ground: x, y (cells)
     mutable std::vector<float> heights_;
     mutable std::vector<EdgePoint> edges_;  // by the ground's corners, made when first asked for
+    std::vector<float> exact_;              // the ground's corners' own heights
+    std::vector<float> base_;               // 3.0.20-beta.43: the land's base, every corner as far as it goes
     std::map<int, float> spanOf_;
     std::vector<bool> backside_;
     bool any_ = false, hung_ = false, sea_ = false;
@@ -385,6 +437,16 @@ float heightAt(const gnd::Ground& g, const Options& o, float cx, float cy) {
     const Plan plan(g, o);
     if (!plan.any()) return 0.0f;
     return plan.height(int(std::lround(cx)), int(std::lround(cy)));
+}
+
+std::vector<float> heightsOf(const gnd::Ground& g, const Options& o, int x0, int y0, int x1, int y1) {
+    std::vector<float> out;
+    const Plan plan(g, o);
+    if (!plan.any() || x1 < x0 || y1 < y0) return out;
+    out.reserve(size_t(x1 - x0 + 1) * size_t(y1 - y0 + 1));
+    for (int y = y0; y <= y1; ++y)
+        for (int x = x0; x <= x1; ++x) out.push_back(plan.height(x, y));
+    return out;
 }
 
 std::vector<float> seaFrame(const gnd::Ground& g, const Options& o) {

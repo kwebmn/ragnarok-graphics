@@ -299,3 +299,32 @@ TEST(outskirts_the_sea_covers_the_open_cells_within_the_map) {
     CHECK(ring == 16 * 16 - 14 * 14 && ground == 0);
     for (size_t i = 1; i < frame.size(); i += 3) CHECK(frame[i] == o.waterLevel);
 }
+
+// 3.0.20-beta.43 (the audit of the horizon): the land's base hangs smooth between the ground's edge and the edge's
+// mean far off - every corner of it the mean of its four neighbours (a sheet stretched over the ground's edge: a narrow
+// step of the edge dies out within its own width). Beta.30's took each corner's height from its nearest corner of the
+// edge alone: a wall or a moat meeting the map's edge ran straight out for sixty cells (two straight banks out of
+// Prontera's south gate)
+TEST(outskirts_base_hangs_smooth_from_the_grounds_edge) {
+    gnd::Ground g = groundOf();
+    for (int y = 6; y < 9; ++y)  // a narrow bank at the west edge: three cells 40 over the rest
+        for (int x = 0; x < 2; ++x)
+            for (float& h : g.cells[size_t(y) * 16 + size_t(x)].h) h = -70.0f;
+    outskirts::Options o;
+    o.relief = false;  // the base alone: no hills, no mountains
+    // at the edge the ground's own corners yet
+    CHECK(std::fabs(outskirts::heightAt(g, o, 0.0f, 7.0f) - -70.0f) < 0.01f);
+    const std::vector<float> h = outskirts::heightsOf(g, o, -40, -12, 0, 28);  // corners x -40..0, y -12..28
+    const int w = 41;
+    const auto at = [&](int x, int y) { return h[size_t(y + 12) * size_t(w) + size_t(x + 40)]; };
+    float worst = 0.0f;
+    for (int y = -11; y < 28; ++y)
+        for (int x = -30; x < -1; ++x)  // the sheet itself (its last cells, from 36 off, ease onto the mean)
+            worst = std::max(worst, std::fabs(at(x, y) - 0.25f * (at(x - 1, y) + at(x + 1, y) + at(x, y - 1) +
+                                                                  at(x, y + 1))));
+    CHECK(worst < 0.05f);
+    // the bank dies out within a few cells: twelve cells off its line the land where it would be without it
+    const float there = at(-12, 7), beside = at(-12, 20);
+    CHECK(std::fabs(there - beside) < 4.0f);  // 40 at the edge
+    CHECK(at(-1, 7) < at(-1, 20) - 15.0f);    // by the edge the bank still stands (up along -y)
+}

@@ -20,12 +20,19 @@ namespace uagfx::outskirts {
 constexpr int kRing = 320;        // cells off the edges (the 3D view's farthest sight some 3200 units)
 constexpr int kChunkCells = 32;
 constexpr int kWindow = 6;        // cells round a point of the edge it is smoothed over
+constexpr int kSettle = 60;       // 3.0.20-beta.43: cells off the ground the land's base is the edge's mean by
 struct Options {
     int ring = kRing;
     bool water = false;  // the map's water: its level (up along -y, under it greater)
     float waterLevel = 0.0f;
     uint32_t seed = 0;  // the hills' own (the map's name hashed)
+    bool relief = true;  // 3.0.20-beta.43: its hills and mountains (off: the land's base alone)
 };
+// 3.0.20-beta.43 (the audit of the horizon): the land's base hangs smooth between the ground's edge (its own corners'
+// heights) and the edge's mean kSettle cells off - every corner the mean of its four neighbours, a sheet over the
+// edge: a narrow step of the edge dies out within its own width. Beta.30's base took each corner's height from its
+// nearest corner of the edge alone - a wall or a moat meeting the edge ran straight out for sixty cells. The hills
+// and the mountains over it as before.
 // 3.0.20-beta.42 (the audit of the horizon): the land begins where the map's ground ends, not at its rectangle - the
 // open cells (no top) reached from outside are the land's too (most maps keep one to three rings of them: a trench of
 // nothing lay between the ground and beta.30's land); a hole the ground closes round stays the map's. A map hung in
@@ -37,6 +44,8 @@ terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const ter
                     std::vector<float>* sea = nullptr);
 // the land's height (up along -y) at the cells' corner (cx, cy) - the map's first corner 0, 0
 float heightAt(const gnd::Ground& g, const Options& o, float cx, float cy);
+// 3.0.20-beta.43: the corners x0..x1 by y0..y1 at once, row by row (one plan for all of them)
+std::vector<float> heightsOf(const gnd::Ground& g, const Options& o, int x0, int y0, int x1, int y1);
 // 3.0.20-beta.31 (6 and 7: the sea past a map's wet edges): the sea round the map at its water's level, as far as the
 // outskirts - four quads (two triangles each, x y z a corner, the world's places as the meshes') with the map's own
 // water inside them; where the outskirts' land stands over it, it hides it. None for a map without water or whose
