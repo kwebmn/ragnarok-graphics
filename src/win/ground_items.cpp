@@ -80,7 +80,9 @@ std::string nameOf(int item, bool identified, unsigned codePage, const refindex:
 }  // namespace
 
 void packet(uint16_t id, const uint8_t* packet) {
-    if (id == 0x009d || id == 0x009e || id == 0x00a1) state().ground.packet(id, packet);
+    // 3.0.20-beta.44 (R-RDA885): and a map's entry (0x0073, 0x0091, 0x0092) - the items known forgotten
+    if (id == 0x009d || id == 0x009e || id == 0x00a1 || id == 0x0073 || id == 0x0091 || id == 0x0092)
+        state().ground.packet(id, packet, GetTickCount64());
 }
 
 static void frameInner(HWND game, bool names, bool highlight, unsigned codePage, double k, int targetWidth,
@@ -94,6 +96,9 @@ static void frameInner(HWND game, bool names, bool highlight, unsigned codePage,
         s.ground.clear();
     }
     if (s.ground.items().empty()) return;
+    s.ground.forgetOld(GetTickCount64());  // 3.0.20-beta.44: one the server never told gone
+    int px = 0, py = 0, mapW = 0, mapH = 0;
+    if (readPlayerCell(px, py, mapW, mapH)) s.ground.forgetFar(px, py, gi::kOutOfSight);
     const bool alt = names && (GetAsyncKeyState(VK_MENU) & 0x8000) && GetForegroundWindow() == game;
     if (alt && !s.altTold) {
         s.altTold = true;

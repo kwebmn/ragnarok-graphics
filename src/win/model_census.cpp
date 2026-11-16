@@ -91,6 +91,10 @@ Dump g_dump = Dump::None;
 struct DumpNode {
     uint32_t id = 0, vertices = 0, faces = 0;
     bool flipped = false;
+    // 3.0.20-beta.44 (R-HBPQ54 «зникли частини мосту»): why the game draws it itself - its actor's alpha (under 255:
+    // the game fades a model over the player to 0x5A and draws it see-through), the way it is coloured
+    uint8_t alpha = 0xFF;
+    mc::Way way = mc::Way::Plain;
     float lo[3] = {0, 0, 0}, hi[3] = {0, 0, 0};
 };
 std::vector<DumpNode> g_dumpGame;
@@ -425,6 +429,9 @@ void dumpGameNode(const float* points, const float* matrix, int count) {
     const uintptr_t mesh = at<uint32_t>(node + mc::kNodeMesh);
     d.faces = mesh ? at<uint32_t>(mesh + mc::kMeshFaces) : 0;
     d.flipped = g_calls[g_depth - 1].flipped;
+    const mc::Colouring how = colouringOf(reinterpret_cast<const uint8_t*>(node));
+    d.alpha = how.alpha;
+    d.way = how.way;
     for (int a = 0; a < 3; ++a) d.lo[a] = 1e30f, d.hi[a] = -1e30f;
     for (int v = 0; v < count; ++v) {
         float w[3];
@@ -443,10 +450,14 @@ void finishDump() {
              g_dumpCell[0], g_dumpCell[1], g_dumpAt[0], g_dumpAt[1], g_dumpSize[0], g_dumpSize[1], g_dumpOurs,
              g_dumpOursMoving, g_dumpGameAll, g_dumpGame.size(), kDumpReach);
     for (const DumpNode& d : g_dumpGame)
-        LOG_INFO("models dump: the game's own node %08X - %u vertices, %u faces%s; x %.0f..%.0f, z %.0f..%.0f, y "
-                 "%.0f..%.0f (about cell %.0f, %.0f)",
-                 d.id, d.vertices, d.faces, d.flipped ? ", mirrored" : "", d.lo[0], d.hi[0], d.lo[2], d.hi[2], d.lo[1],
-                 d.hi[1], (d.lo[0] + d.hi[0]) / 10.0f + float(g_dumpSize[0]) / 2.0f,
+        LOG_INFO("models dump: the game's own node %08X - %u vertices, %u faces%s, its actor's alpha %u%s, coloured "
+                 "the %s way; x %.0f..%.0f, z %.0f..%.0f, y %.0f..%.0f (about cell %.0f, %.0f)",
+                 d.id, d.vertices, d.faces, d.flipped ? ", mirrored" : "", unsigned(d.alpha),
+                 d.alpha != 0xFF ? " (faded by the game: see-through)" : "",
+                 d.way == mc::Way::Plain ? "plain" : d.way == mc::Way::Lit ? "lit"
+                 : d.way == mc::Way::SeeThrough ? "half see-through" : "other",
+                 d.lo[0], d.hi[0], d.lo[2], d.hi[2], d.lo[1], d.hi[1],
+                 (d.lo[0] + d.hi[0]) / 10.0f + float(g_dumpSize[0]) / 2.0f,
                  (d.lo[2] + d.hi[2]) / 10.0f + float(g_dumpSize[1]) / 2.0f);
 }
 

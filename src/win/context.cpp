@@ -1128,6 +1128,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
                      view[6], view[7], view[8], view[9], view[10], view[11], screenWidth, screenHeight);
         if (reportNow) {
             removeReportChecks();  // 3.0.18-beta.248: no check shots any more
+            // 3.0.20-beta.44 (R-8UPTJW, R-P5WKZU a gate, R-HBPQ54 a bridge - parts of a model missing, and no report
+            // had the console's models dump with it): every report writes the models round the player into both logs
+            // by itself - who draws each (we, the game), its place, its faces shown
+            if (config.view3dOwnModels) modelcensus::dumpAround();
             startReport(screenshot, readGameMap());
         }
     }
