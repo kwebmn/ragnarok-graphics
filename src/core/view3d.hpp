@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <functional>
+#include <string>
 #include <vector>
 
 namespace uagfx::view3d {
@@ -222,6 +223,21 @@ float hazeReach(float skyReach, float sight);
 Sky skyOf(float night, bool vault);
 // 3.0.20-beta.49: the open sky's parts as one number for the shaders (skyAlong): 1 the stars, 2 the moon, 4 the
 // dawn's and the dusk's glow ([view3d] stars, moon, dawn)
-constexpr int skyParts(bool stars, bool moon, bool dawn) { return (stars ? 1 : 0) | (moon ? 2 : 0) | (dawn ? 4 : 0); }
+// 3.0.20-beta.72 (the owner's check list, 5: «горизонт есть, но сделать бы его красивее», then «да, нужны
+// подробности чтобы было красивее»): far ranges along the horizon, drawn in the sky itself (skyAlong: three layers
+// of crests, each paler into the haze, fixed to the world's ways) - behind the land past the map's edges, which ends
+// in the haze at the sight. Their kind by the map: mountains, a desert's dunes, snowy peaks, low islands where the
+// sea lies past the edges; none under a roof, on a map its makers hung in the sky, with [view3d] ranges off.
+// (shaders.cpp skyRanges; the look tried in /root/uagfx-tools/audit/horizon/ranges_sim.py)
+enum class Ranges : uint8_t { None, Mountains, Dunes, Snow, Low };
+Ranges rangesFor(bool wanted, bool outdoors, bool hung, bool sea, bool sand, bool snow);
+// A map hung in the sky by its makers, by its name - where the ground's file is not read to tell (core/outskirts
+// tells by the file: nine tenths of its outer band open)
+bool hungMap(const std::string& name);
+// (8 is the shaders' own: the sun's halo without its disc; 16 the ranges, their kind less one in the next two bits)
+constexpr int skyParts(bool stars, bool moon, bool dawn, Ranges ranges = Ranges::None) {
+    return (stars ? 1 : 0) | (moon ? 2 : 0) | (dawn ? 4 : 0) |
+           (ranges != Ranges::None ? 16 | (int(ranges) - 1) << 5 : 0);
+}
 
 }  // namespace uagfx::view3d

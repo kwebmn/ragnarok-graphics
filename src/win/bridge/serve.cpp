@@ -218,6 +218,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.oneRoom3d = rd.u8() != 0;       // 3.0.20-beta.57
             e.nearFade3d = rd.u8() != 0;      // 3.0.20-beta.70
             e.roomWalls3d = rd.u8() != 0;     // 3.0.20-beta.71
+            e.skyRanges = rd.u8() != 0;       // 3.0.20-beta.72
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

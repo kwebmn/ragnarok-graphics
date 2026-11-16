@@ -67,6 +67,17 @@ bool Renderer::Impl::applyMist() {
     return worldPass(pso, w, h, c, sceneDepthSrv, true);
 }
 
+int Renderer::Impl::skyPartsNow() const {
+    // a map hung in the sky: by its name, or by its ground's file where the own ground was read (no land past its
+    // edges made for it); the sea past wet edges likewise
+    const OwnGround* g = mapWorld.ownGround();
+    const bool hung = view3d::hungMap(mapName) || (g && g->outskirts.chunks.empty());
+    const bool sea = g && !g->seaFrame.empty();
+    return view3d::skyParts(effects.skyStars, effects.skyMoon, effects.skyDawn,
+                            view3d::rangesFor(effects.skyRanges, mapOutdoors, hung, sea, mapPlace.sand,
+                                              mapPlace.snow));
+}
+
 // 3.0.19-beta.6 (the 3D view, core/view3d): the game's camera from behind or from the eyes sees past all the game ever
 // drew - a sky where nothing is drawn (the horizon's colour up to the zenith's, the sun the map's light comes from,
 // soft clouds; a dark vault in a dungeon) and a haze to it over what is, by its distance (sky3d_ps). After the mists.
@@ -103,7 +114,7 @@ bool Renderer::Impl::skyPass(bool fill) {
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
     // 3.0.20-beta.49: the open sky's parts - stars, the moon, the dawn's glow ([view3d] stars, moon, dawn)
-    c.uiPixels[2] = float(view3d::skyParts(effects.skyStars, effects.skyMoon, effects.skyDawn));
+    c.uiPixels[2] = float(skyPartsNow());  // 3.0.20-beta.72: and the far ranges along the horizon
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     const bool vault = !mapOutdoors;
     const view3d::Sky sky = view3d::skyOf(night, vault);  // the horizon's colour, the haze's reach

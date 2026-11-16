@@ -1003,6 +1003,7 @@ enum class Text : uint16_t {
     View3dCloseGaps, View3dCloseGapsHint,  // 3.0.20-beta.56
     View3dCameraWalls, View3dCameraWallsHint, View3dNearFade, View3dNearFadeHint,  // 3.0.20-beta.70
     View3dRoomWalls, View3dRoomWallsHint,  // 3.0.20-beta.71
+    View3dRanges, View3dRangesHint,  // 3.0.20-beta.72
     View3dGrass, View3dGrassHint, View3dThreat, View3dThreatHint,
     View3dAimPull, View3dAimPullHint, View3dFace, View3dFaceHint, View3dShoulder,
     View3dShoulderHint, View3dOwnModels, View3dOwnModelsHint, View3dWeather, View3dWeatherHint,

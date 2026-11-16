@@ -735,3 +735,32 @@ TEST(config_view3d_sky_parts_on_by_default_and_live) {
     }
     CHECK(!(parseConfig("").effects == parseConfig("[view3d]\nmoon = 0\n").effects));
 }
+
+// 3.0.20-beta.72 (the owner's check list, 5: «горизонт есть, но сделать бы его красивее», then «да, нужны
+// подробности чтобы было красивее»): far ranges along the horizon in the 3D view's sky (shaders.cpp skyAlong) -
+// which kind a map takes, and how the kind goes to the shaders with the sky's other parts
+TEST(view3d_far_ranges_by_the_map) {
+    using view3d::Ranges;
+    // (wanted, outdoors, hung in the sky, the sea past its edges, sand, snow)
+    CHECK(view3d::rangesFor(true, true, false, false, false, false) == Ranges::Mountains);
+    CHECK(view3d::rangesFor(true, true, false, false, true, false) == Ranges::Dunes);
+    CHECK(view3d::rangesFor(true, true, false, false, false, true) == Ranges::Snow);
+    CHECK(view3d::rangesFor(true, true, false, true, false, false) == Ranges::Low);  // islands past the water
+    CHECK(view3d::rangesFor(true, true, false, true, true, false) == Ranges::Low);   // a desert's coast: the sea's
+    // none: switched off, under a roof, a map its makers hung in the sky (no land round it)
+    CHECK(view3d::rangesFor(false, true, false, false, false, false) == Ranges::None);
+    CHECK(view3d::rangesFor(true, false, false, false, false, false) == Ranges::None);
+    CHECK(view3d::rangesFor(true, true, true, false, false, false) == Ranges::None);
+    // the sky's parts: 16 with ranges, their kind in the next two bits; the old three as they were
+    CHECK_EQ(view3d::skyParts(true, true, true, Ranges::None), 7);
+    CHECK_EQ(view3d::skyParts(false, false, false, Ranges::Mountains), 16);
+    CHECK_EQ(view3d::skyParts(true, false, true, Ranges::Dunes), 5 + 16 + 32);
+    CHECK_EQ(view3d::skyParts(false, false, false, Ranges::Snow), 16 + 64);
+    CHECK_EQ(view3d::skyParts(false, false, false, Ranges::Low), 16 + 96);
+    // the maps hung in the sky by their names (where the ground's file is not read to tell)
+    CHECK(view3d::hungMap("yuno"));
+    CHECK(view3d::hungMap("gonryun"));
+    CHECK(!view3d::hungMap("prontera"));
+    CHECK(!view3d::hungMap("yuno_fild01"));  // Yuno's fields lie on the ground
+    CHECK(!view3d::hungMap(""));
+}

@@ -528,6 +528,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.20-beta.71 (the owner's pick (a) of the interiors' options): a house's black blocks as its walls
         {"view3d", "room_walls", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dRoomWalls,
          Text::View3dRoomWallsHint, "", &E::roomWalls3d},
+        // 3.0.20-beta.72 (the owner: the horizon wants details): far ranges along it
+        {"view3d", "ranges", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dRanges,
+         Text::View3dRangesHint, "", &E::skyRanges},
         // 3.0.19-beta.33 (the owner: «я так траву в 3д и не увидел»): the grass as blades in the world
         {"view3d", "grass", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dGrass,
          Text::View3dGrassHint, "", &E::grass3d},

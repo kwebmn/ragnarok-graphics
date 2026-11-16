@@ -1380,6 +1380,59 @@ float fbm4(float2 p) {
 // and its glow; 4 a warm band along the horizon while the night comes and goes and while a day's sun stands low, the
 // most on the sun's side. A thin high veil of cloud over the drifting ones, the clouds lit from the sun's side.
 // Until now the night sky was the day's turned dark: no star, no moon, dawn and dusk as noon
+// 3.0.20-beta.72 (the owner's check list, 5: «горизонт есть, но сделать бы его красивее», then «да, нужны
+// подробности чтобы было красивее»; core view3d::Ranges): far ranges along the horizon - three layers of crests
+// about the world's ways (the way's circle: a crest stays where it is as the eye turns), a nearer one darker, their
+// feet paler into the haze. kind: 0 mountains, 1 a desert's dunes, 2 snowy peaks, 3 low islands past a sea. Their
+// edge a pixel wide at 1080p (0.0012 of the rise: no gradients here - the haze and the water ask from branches).
+// The look tried in /root/uagfx-tools/audit/horizon/ranges_sim.py, the same numbers.
+float rangeCrest(float2 p) {  // three octaves of ridged noise, 0-1
+    float crest = 0.0, share = 0.5;
+    for (int k = 0; k < 3; ++k) {
+        float v = 1.0 - abs(2.0 * valueNoise(p) - 1.0);
+        crest += share * v * v;
+        p = p * 2.07 + float2(3.1, -1.7);
+        share *= 0.5;
+    }
+    return crest / 0.875;
+}
+float3 skyRanges(float3 sky, float3 dir, float3 horizon, float night, uint kind) {
+    static const float kBase[3] = {0.018, 0.008, 0.0};
+    static const float kAmp[3] = {0.075, 0.050, 0.032};
+    static const float kFreq[3] = {3.0, 5.0, 9.0};
+    static const float kSeed[3] = {11.3, 47.9, 83.1};
+    static const float kStrength[3] = {0.32, 0.55, 0.80};
+    float rise = -dir.y;
+    float2 way = dir.xz / max(length(dir.xz), 1e-4);
+    float tall = kind == 1u ? 0.7 : kind == 2u ? 1.15 : kind == 3u ? 0.55 : 1.0;
+    float3 tint = kind == 1u ? float3(0.86, 0.72, 0.52)
+                : kind == 2u ? float3(0.62, 0.70, 0.86)
+                : kind == 3u ? float3(0.50, 0.60, 0.78) : float3(0.55, 0.62, 0.78);
+    float3 dark = horizon * tint;
+    for (int k = 0; k < 3; ++k) {
+        if (!(kind == 3u && k == 2)) {  // islands: two layers
+            float2 p = way * kFreq[k] + kSeed[k];
+            float n = rangeCrest(p);
+            if (kind == 1u) {  // dunes: smooth swells
+                float2 q = way * (kFreq[k] * 0.7) + kSeed[k];
+                n = valueNoise(q) * 0.7 + valueNoise(q * 2.3 + float2(1.9, 4.2)) * 0.3;
+            }
+            float top = (kBase[k] + kAmp[k] * n) * tall;
+            if (kind == 3u) top *= smoothstep(0.35, 0.65, valueNoise(way * 2.2 + kSeed[k] * 0.37));  // here and there
+            float edge = saturate((top - rise) / 0.0012 + 0.5);
+            float within = saturate(rise / max(top, 1e-4));
+            float3 c = lerp(horizon, lerp(horizon, dark, kStrength[k]), 0.45 + 0.55 * within);  // its foot in the haze
+            if (kind == 2u) {  // snow on the higher peaks' upper part
+                float snow = smoothstep(0.50, 0.80, within) * smoothstep(0.45, 0.70, n);
+                float3 white = lerp(float3(0.93, 0.95, 1.0), horizon, 0.25 + 0.5 * night) * (1.0 - 0.6 * night);
+                c = lerp(c, white, snow * (0.9 - 0.25 * float(k)));
+            }
+            sky = lerp(sky, c, edge);
+        }
+    }
+    return sky;
+}
+
 float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, float parts) {
     float rise = -dir.y;  // the world's y points down
     uint has = uint(parts + 0.5);
@@ -1446,7 +1499,11 @@ float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, 
     cloud += sunLight * (pow(sunUp, 6.0) * 0.18);                       // lit from the sun's side
     cloud = lerp(cloud, horizon * 0.45, night * 0.85);
     if ((has & 2u) != 0u && sunKnown) cloud += float3(0.16, 0.18, 0.26) * (pow(sunUp, 10.0) * night);  // the moon's rim
-    return lerp(sky, cloud, cover * 0.85);
+    float3 whole = lerp(sky, cloud, cover * 0.85);
+    // 3.0.20-beta.72: the far ranges before it all, along the horizon alone (their highest crest 0.107 up)
+    [branch] if ((has & 16u) != 0u && rise > -0.01 && rise < 0.13)
+        whole = skyRanges(whole, dir, horizon, night, (has >> 5) & 3u);
+    return whole;
 }
 
 float3 waterReflection(float3 p, float3 r, out float weight) { return reflectionIn(p, r, targetSize, weight); }

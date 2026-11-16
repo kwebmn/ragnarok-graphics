@@ -1166,6 +1166,9 @@ struct Renderer::Impl {
         return sky3dPs && sky3dHazePs && camera::wideView() && groundDrawn && !sky3dDone && viewToWorldValid;
     }
     bool applySky3d();  // once a frame, after the mists; false: lost
+    // 3.0.20-beta.72: the open sky's parts for skyAlong - the stars, the moon, the dawn's glow and the far ranges
+    // along the horizon with their kind by the map (view3d::skyParts, rangesFor)
+    int skyPartsNow() const;
     // 3.0.19-beta.32 (the concept's decision 4, core/cave_vault): a dungeon's vault for the 3D sky - its heights a
     // texture (a texel a cell, R32_FLOAT, sky3d_ps's t1) made of the map's ground once its axes are known; kNoSrv none
     UINT vaultTexture();

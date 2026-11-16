@@ -268,6 +268,7 @@ private:
     // same shaders, with the game's camera (setCamera) and the depth (t3) (2.7.17: the sky past the map's edge gone)
     void applyMist();
     void applySky3d();  // 3.0.19-beta.6: the 3D view's sky and haze (sky3d_ps)
+    int skyPartsNow() const;  // 3.0.20-beta.72: the sky's parts with the far ranges (as Direct3D 12's)
     void skyPass(bool fill);  // 3.0.20-beta.48: the sky before the world's blended draws, the haze at its end
     void applyWeather();
     // 2.5.1: the soft shadows where surfaces meet (ao.cpp: a mask at a half or a quarter of the size, blurred twice,

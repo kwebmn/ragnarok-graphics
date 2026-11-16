@@ -406,6 +406,23 @@ float hazeReach(float skyReach, float sight) {
     return std::max(std::min(skyReach, sight - kHazeWholePast), kHazeWholePast);
 }
 
+Ranges rangesFor(bool wanted, bool outdoors, bool hung, bool sea, bool sand, bool snow) {
+    if (!wanted || !outdoors || hung) return Ranges::None;
+    if (sea) return Ranges::Low;
+    if (snow) return Ranges::Snow;
+    return sand ? Ranges::Dunes : Ranges::Mountains;
+}
+
+bool hungMap(const std::string& name) {
+    // Yuno and Gonryun stand on rocks in the sky, the airships fly, the novices' second ground and the Schwarzwald
+    // guilds' hall hang in nothing (outskirts' own count of their open outer band)
+    static const char* const kHung[] = {"yuno", "gonryun", "airplane", "airplane_01", "sch_gld", "new_zone02",
+                                        "new_1-2",  "new_2-2", "new_3-2",  "new_4-2",    "new_5-2"};
+    for (const char* hung : kHung)
+        if (name == hung) return true;
+    return false;
+}
+
 Sky skyOf(float night, bool vault) {
     static const float kDay[3] = {0.76f, 0.83f, 0.90f}, kNight[3] = {0.09f, 0.11f, 0.17f};
     static const float kVault[3] = {0.075f, 0.068f, 0.062f};

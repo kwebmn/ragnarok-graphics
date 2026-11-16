@@ -775,9 +775,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
             // 3.0.20-beta.32: the sky it reflects (skyAlong) - the night, open, the way to the sun (holeZ 0: no hole)
             c.hole[0] = night;
             // 3.0.20-beta.49: 1 under the open sky, and the sky's parts (stars, the moon, the dawn's glow)
-            c.hole[1] = mapOutdoors
-                            ? 1.0f + float(view3d::skyParts(effects.skyStars, effects.skyMoon, effects.skyDawn))
-                            : 0.0f;
+            c.hole[1] = mapOutdoors ? 1.0f + float(skyPartsNow()) : 0.0f;  // 3.0.20-beta.72: the far ranges too
             float toSun[3] = {0.0f, 0.0f, 0.0f};
             if (mapOutdoors && mapSun(toSun)) std::copy(toSun, toSun + 3, c.hole + 4);
         }

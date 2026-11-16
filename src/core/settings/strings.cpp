@@ -8988,6 +8988,18 @@ constexpr Entry kTexts[] = {
      "комнате. В 3D-режиме верх и остальные стороны блоков получают рисунок стены этой комнаты. Вид сверху "
      "остаётся таким, как был. Работает там, где землю рисует сам драйвер (Direct3D 12, «Своя земля»); изменение "
      "действует со следующей карты."},
+    // 3.0.20-beta.72 (the owner: «горизонт есть, но сделать бы его красивее», «да, нужны подробности»)
+    {Text::View3dRanges, "Far mountains on the horizon", "Далекі гори на обрії", "Далёкие горы на горизонте"},
+    {Text::View3dRangesHint,
+     "In the 3D view far ranges stand along the horizon in three layers, each paler into the haze: mountains over the "
+     "fields, dunes in the desert, snowy peaks in the snow, low islands where the sea lies past the map's edge. At "
+     "dusk they are dark against the glow. None under a roof and on the maps that hang in the sky.",
+     "У 3D-режимі вздовж обрію стоять далекі пасма в три шари, кожне блідіше в серпанку: гори над полями, дюни в "
+     "пустелі, снігові вершини на снігу, низькі острови там, де за краєм карти море. У сутінках вони темні на тлі "
+     "заграви. Під дахом і на картах, що висять у небі, їх немає.",
+     "В 3D-режиме вдоль горизонта стоят далёкие гряды в три слоя, каждая бледнее в дымке: горы над полями, дюны в "
+     "пустыне, снежные вершины на снегу, низкие острова там, где за краем карты море. В сумерках они тёмные на фоне "
+     "зарева. Под крышей и на картах, висящих в небе, их нет."},
     {Text::View3dGrass, "Grass in the 3D view", "Трава у 3D-режимі", "Трава в 3D-режиме"},  // 3.0.19-beta.33
     {Text::View3dGrassHint,
      "In the 3D view the grass grows as blades on the green ground round you, swaying in the wind and trodden by "

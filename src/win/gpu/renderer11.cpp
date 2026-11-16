@@ -1809,9 +1809,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
             // 3.0.20-beta.32: the sky it reflects (draw.cpp's)
             c.hole[0] = night;
             // 3.0.20-beta.49: 1 under the open sky, and the sky's parts (stars, the moon, the dawn's glow)
-            c.hole[1] = outdoors_
-                            ? 1.0f + float(view3d::skyParts(effects_.skyStars, effects_.skyMoon, effects_.skyDawn))
-                            : 0.0f;
+            c.hole[1] = outdoors_ ? 1.0f + float(skyPartsNow()) : 0.0f;  // 3.0.20-beta.72: the far ranges too
             float toSun[3] = {0.0f, 0.0f, 0.0f};
             if (outdoors_ && mapSun(toSun)) std::copy(toSun, toSun + 3, c.hole + 4);
         }
@@ -4215,6 +4213,13 @@ void Renderer11::applyMist() {
 
 // 3.0.19-beta.6 (the 3D view; Direct3D 12's haze.cpp applySky3d): the sky where nothing is drawn, a haze to it over
 // what is, by its distance - the game's camera from behind or the eyes sees past all the game ever drew
+int Renderer11::skyPartsNow() const {
+    // 3.0.20-beta.72: no ground's file read here - a map hung in the sky by its name, no sea known
+    return view3d::skyParts(effects_.skyStars, effects_.skyMoon, effects_.skyDawn,
+                            view3d::rangesFor(effects_.skyRanges, outdoors_, view3d::hungMap(map_), false,
+                                              place_.sand, place_.snow));
+}
+
 void Renderer11::applySky3d() {  // the haze over what is drawn, at the world's end
     sky3dDone_ = true;
     if (!skyFillDone_) skyPass(true);  // no blended draw this picture: the sky now
@@ -4235,7 +4240,7 @@ void Renderer11::skyPass(bool fill) {
     c.uiPixels[0] = float(target_.width);
     c.uiPixels[1] = float(target_.height);
     // 3.0.20-beta.49: the open sky's parts - stars, the moon, the dawn's glow (as Direct3D 12's)
-    c.uiPixels[2] = float(view3d::skyParts(effects_.skyStars, effects_.skyMoon, effects_.skyDawn));
+    c.uiPixels[2] = float(skyPartsNow());  // 3.0.20-beta.72: and the far ranges
     const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
     const bool vault = !outdoors_;
     const view3d::Sky sky = view3d::skyOf(night, vault);
