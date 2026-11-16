@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.20-beta.56 — what's new · 2026-11-16
+
+- **3D view: the «transparent rock» in Payon cave (R-2BX4BG).** The «mushroom rock» model (외부소품\버섯바위) is, in the game's own file, a cap hung 3.9 units over its base; there is nothing between them and the cap is open below. It was made for the view from above, where the cap hides the gap; from the eyes' level the wall shows through it. Now the driver closes such gaps in the models it draws itself: the open top of the lower part is raised to the part over it, and the open bottom of the upper part gets an underside. The new faces take the picture and colours of their neighbours.
+  - Checked without the game on 2,782 of the client's model files: 20 different models are closed (the mushroom rock, Payon's gate, a statue's pedestal, a few buildings and furniture), the rest stay as they were. Narrow supports (a table's leg under its top) and large gaps (over 12 units) are left alone.
+  - The switch **«Close the gaps in models»** is on: «Game and chat» → «Game» → «3D view», or the console (Ctrl+`) → «Quick». It needs «Models by our renderer»; a change of the switch shows from the next map. Direct3D 12 and 11.
+
 # uaRO Graphics 3.0.20-beta.55 — what's new · 2026-11-16
 
 - **The house missing in Prontera (R-4PJUBK): a report now says why.** The trading post (프론테라\교역소), 165 units in front of the character, is not in the picture. The models' record in a report looked only 150 units round the player, so the cause cannot be read from it. Now every report (Ctrl+Shift+F10) writes all of the map's models in front of the camera within 800 units that are not in the frame, and for each one the game's own answer: whether the game came to the model this frame, what its own visibility test says, whether our renderer has captured the model. There is no fix in this beta yet: one report from the same place is needed.
