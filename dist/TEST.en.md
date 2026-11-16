@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.55 — what's new · 2026-11-16
+
+- **The house missing in Prontera (R-4PJUBK): a report now says why.** The trading post (프론테라\교역소), 165 units in front of the character, is not in the picture. The models' record in a report looked only 150 units round the player, so the cause cannot be read from it. Now every report (Ctrl+Shift+F10) writes all of the map's models in front of the camera within 800 units that are not in the frame, and for each one the game's own answer: whether the game came to the model this frame, what its own visibility test says, whether our renderer has captured the model. There is no fix in this beta yet: one report from the same place is needed.
+
 # uaRO Graphics 3.0.20-beta.54 — what's new · 2026-11-16
 
 - **3D view: a cave's vault made of the map's own rock.** Until now the vault was a plain warm stone with blurred stains, the same in every cave. Now it wears the rock this map's ledges and walls are painted with: mossy stones in Payon cave, white stone in the orc cave, red rock in Magma, ice in the ice cave.
