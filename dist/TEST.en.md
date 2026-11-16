@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.59 — what's new · 2026-11-16
+
+- **3D view: the other rooms' portals no longer glow through the dark (R-4Q8PHP).** In beta.57 a house's other rooms were hidden by the picture's depth. The game draws a portal's rings and sparks see-through, with no depth of their own, so they stayed visible where nothing stands behind them. Now whatever the game draws see-through in another room (a portal, an effect, a sprite) is not drawn at all. The switch is the same: «Only the room you are in». Direct3D 12 and 11.
+
 # uaRO Graphics 3.0.20-beta.58 — what's new · 2026-11-16
 
 - **The grass in the 3D view no longer shrinks while you walk.** The steps' grid keeps, for each spot, the share of a blade's height left after a step: 1 where nobody stepped, 0 trodden flat. The 3D view's grass read that share the wrong way round, as how hard the spot was trodden. So while there was any fresh step on the map (you walk) the whole field stood at 40 % of its height and the steps themselves at full height; when the steps faded (you stood a while) the field grew. Now untrodden grass always stands at its full height and only the trail of steps is pressed down.
