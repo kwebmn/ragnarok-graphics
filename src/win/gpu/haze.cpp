@@ -102,6 +102,8 @@ bool Renderer::Impl::skyPass(bool fill) {
     }
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
+    // 3.0.20-beta.49: the open sky's parts - stars, the moon, the dawn's glow ([view3d] stars, moon, dawn)
+    c.uiPixels[2] = float(view3d::skyParts(effects.skyStars, effects.skyMoon, effects.skyDawn));
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     const bool vault = !mapOutdoors;
     const view3d::Sky sky = view3d::skyOf(night, vault);  // the horizon's colour, the haze's reach

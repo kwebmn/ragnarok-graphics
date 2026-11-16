@@ -183,6 +183,10 @@ struct EffectSettings {
     // 3.0.19-beta.40: [view3d] weather - in the 3D view the weather as particles in the world round the eye (core/
     // weather3d), falling in depth; off: the screen's layers as in the game's own view
     bool weather3d = true;
+    // 3.0.20-beta.49 (the owner's «делай 1-9», 3 - the 3D view's night sky and dawn): [view3d] stars, moon, dawn - the
+    // 3D sky's parts (sky3d_ps's skyAlong, the water's reflection of it): stars and the moon at night, a warm glow
+    // along the horizon while the night comes and goes; each its own switch, on at first; not of the presets
+    bool skyStars = true, skyMoon = true, skyDawn = true;
     // 3.0.16-beta.25 (the owner: «давай» - the body's stamp, from nostalRE): body_stamp - after the game's characters'
     // sprites (drawn writing no depth) each one's shape put into the depth a little behind its feet: an effect drawn
     // after them falls behind the body where it lies behind it (a ring's far half), in front where it lies in front

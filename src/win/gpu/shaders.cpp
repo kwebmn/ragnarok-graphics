@@ -1353,22 +1353,70 @@ float fbm4(float2 p) {
 // 3.0.20-beta.32 (the owner's «6,7,8,9», 7 - water in the 3D view): the 3D view's open sky along a way (the world's,
 // up -y) - sky3d_ps's and the water's reflection of it alike: the horizon's colour up to the zenith's by the night, the
 // sun the map's light comes from, soft clouds drifting by the time t
-float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t) {
+// 3.0.20-beta.49 (the owner's «делай 1-9», 3 - the night sky and dawn; core view3d::skyParts): `parts` - 1 stars at
+// night, small and twinkling, behind the clouds; 2 the moon where the map's light comes from at night, a pale disc
+// and its glow; 4 a warm band along the horizon while the night comes and goes and while a day's sun stands low, the
+// most on the sun's side. A thin high veil of cloud over the drifting ones, the clouds lit from the sun's side.
+// Until now the night sky was the day's turned dark: no star, no moon, dawn and dusk as noon
+float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, float parts) {
     float rise = -dir.y;  // the world's y points down
+    uint has = uint(parts + 0.5);
     float3 zenith = lerp(float3(0.30, 0.52, 0.86), float3(0.015, 0.025, 0.07), night);
     float3 sky = lerp(horizon, zenith, smoothstep(-0.03, 0.55, rise));
-    if (dot(toSun, toSun) > 0.25) {
-        float sunUp = saturate(dot(dir, normalize(toSun)));
-        float3 sunLight = float3(1.0, 0.92, 0.76) * (1.0 - night);
-        sky += sunLight * (pow(sunUp, 900.0) * 5.0 + pow(sunUp, 24.0) * 0.35 + pow(sunUp, 4.0) * 0.08);
+    bool sunKnown = dot(toSun, toSun) > 0.25;
+    float3 sunWay = sunKnown ? normalize(toSun) : float3(0.0, -1.0, 0.0);
+    float sunUp = saturate(dot(dir, sunWay));
+    // the glow of dawn and dusk: the night half come (4 n (1 - n)), or the day's sun low over the horizon
+    float glow = 0.0;
+    if ((has & 4u) != 0u) {
+        float lowSun = sunKnown ? (1.0 - night) * smoothstep(0.30, 0.05, -sunWay.y) : 0.0;
+        glow = saturate(max(4.0 * night * (1.0 - night), lowSun));
+        float2 flatDir = dir.xz / max(length(dir.xz), 1e-4);
+        float2 flatSun = sunWay.xz / max(length(sunWay.xz), 1e-4);
+        float side = 0.35 + 0.65 * saturate(0.5 + 0.5 * dot(flatDir, flatSun));
+        float up = max(rise, 0.0);
+        sky = lerp(sky, float3(1.0, 0.56, 0.27), glow * exp(-up * 5.0) * side * 0.55);
+        sky += float3(0.35, 0.12, 0.10) * (glow * exp(-up * 2.0) * side * 0.25);  // a rose higher up
     }
     float lift = max(rise, 0.0) + 0.1;
     float2 flow = float2(t * 0.006, t * 0.003);
     float2 across = dir.xz / lift * 0.8 + flow;
     float puff = fbm4(across) * 0.65 + fbm4(across * 2.7 + 5.1) * 0.35;
     float cover = smoothstep(0.5, 0.74, puff) * smoothstep(0.0, 0.2, rise);
+    // the stars: a grid over the dome (the direction folded flat, its cells about a degree), a star in a tenth of
+    // them - each its own place, brightness and twinkle; none through a cloud
+    if ((has & 1u) != 0u && night > 0.02 && rise > 0.0) {
+        float2 dome = dir.xz / (abs(dir.x) + abs(dir.y) + abs(dir.z)) * 90.0;
+        float2 cell = floor(dome);
+        float pick = hash12(cell + 0.37);
+        float bright = saturate((pick - 0.90) / 0.10);
+        float2 place = cell + 0.5 + (float2(hash12(cell + 3.1), hash12(cell + 7.7)) - 0.5) * 0.6;
+        float twinkle = 0.75 + 0.25 * sin(t * (1.5 + 3.0 * hash12(cell + 1.3)) + pick * 40.0);
+        float star = smoothstep(0.10 + 0.08 * bright, 0.0, length(dome - place)) * (0.35 + 0.65 * bright) * twinkle;
+        sky += float3(0.85, 0.90, 1.0) * (step(0.90, pick) * star * night * smoothstep(0.0, 0.2, rise) * (1.0 - cover));
+    }
+    float3 sunLight = float3(0.0, 0.0, 0.0);
+    if (sunKnown) {
+        sunLight = lerp(float3(1.0, 0.92, 0.76), float3(1.0, 0.62, 0.36), glow * 0.7) * (1.0 - night);  // low: warm
+        sky += sunLight * (pow(sunUp, 900.0) * 5.0 + pow(sunUp, 24.0) * 0.35 + pow(sunUp, 4.0) * 0.08);
+        if ((has & 2u) != 0u && night > 0.02) {  // the moon: a disc some 2.6 degrees across, darker seas on it
+            float disc = smoothstep(0.99970, 0.99978, dot(dir, sunWay));
+            float3 aside = normalize(cross(sunWay, float3(0.3, 0.1, 0.9)));
+            float2 on = float2(dot(dir, aside), dot(dir, cross(sunWay, aside))) * 70.0;
+            float3 moon = float3(0.90, 0.93, 1.0) * (0.78 + 0.22 * valueNoise(on + 4.3));
+            sky = lerp(sky, moon, disc * night);
+            sky += float3(0.55, 0.62, 0.80) * ((pow(sunUp, 220.0) * 0.30 + pow(sunUp, 14.0) * 0.07) * night);
+        }
+    }
+    // a thin veil high up, slower than the clouds under it
+    float veil = smoothstep(0.55, 0.9, fbm4(dir.xz / lift * 0.3 + float2(t * 0.002, -t * 0.0015) + 17.0)) *
+                 smoothstep(0.05, 0.3, rise);
+    sky = lerp(sky, lerp(float3(0.96, 0.97, 0.99), horizon * 0.6, night * 0.9), veil * 0.22);
     float3 cloud = lerp(float3(0.97, 0.97, 0.98), float3(0.62, 0.65, 0.72), saturate((puff - 0.6) * 3.0));
+    cloud = lerp(cloud, cloud * float3(1.12, 0.86, 0.72), glow * 0.5);  // at dawn and dusk warm
+    cloud += sunLight * (pow(sunUp, 6.0) * 0.18);                       // lit from the sun's side
     cloud = lerp(cloud, horizon * 0.45, night * 0.85);
+    if ((has & 2u) != 0u && sunKnown) cloud += float3(0.16, 0.18, 0.26) * (pow(sunUp, 10.0) * night);  // the moon's rim
     return lerp(sky, cloud, cover * 0.85);
 }
 
@@ -1492,7 +1540,8 @@ float4 water(WaterIn i) {
     // - its zenith, sun and clouds (skyAlong; holeX the night, holeY 1 open, holeG-holeUz the way to the sun) - not one
     // horizon's colour all over it
     if (fogEnable == 0 && fogColor.a > 1.5 && holeY > 0.5)
-        sky = skyAlong(reflect(-toEye, n), fogColor.rgb, holeX, float3(holeG, holeUy, holeUz), t) * 0.92;
+        sky = skyAlong(reflect(-toEye, n), fogColor.rgb, holeX, float3(holeG, holeUy, holeUz), t,
+                       max(holeY - 1.0, 0.0)) * 0.92;  // 3.0.20-beta.49: holeY 1 and the sky's parts
     float hit;
     float3 seen = waterReflection(i.view, reflect(normalize(i.view), nv), hit);
 #ifndef UAGFX_SAFE
@@ -2535,7 +2584,8 @@ float4 sky3d_ps(PresentOut i) : SV_Target {
         }
         return float4(dark, 1.0);
     }
-    return float4(skyAlong(dir, horizon, night, sourceClamp.xyz, sharpen), 1.0);  // 3.0.20-beta.32: shared
+    // 3.0.20-beta.32: shared with the water's reflection; 3.0.20-beta.49: uiPixels.z the sky's parts
+    return float4(skyAlong(dir, horizon, night, sourceClamp.xyz, sharpen, uiPixels.z), 1.0);
 }
 
 // 0.82, the skills' sparks (torches.cpp applyEmbers), added on: about each place a skill burns or shines (t1, two

@@ -8950,6 +8950,25 @@ constexpr Entry kTexts[] = {
      "ховаються за стінами. Вимкнено — шари поверх картинки, як у звичайному огляді.",
      "В 3D-режиме снег, дождь, листопад и пылинки в воздухе — частицы в мире вокруг вас: падают в глубину и прячутся "
      "за стенами. Выключено — слои поверх картинки, как в обычном обзоре."},
+    {Text::View3dStars, "Stars at night", "Зорі вночі", "Звёзды ночью"},  // 3.0.20-beta.49
+    {Text::View3dStarsHint,
+     "In the 3D view the night sky has stars - small, twinkling, hidden behind the clouds. Off: an even dark sky.",
+     "У 3D-режимі на нічному небі є зорі — дрібні, мерехтливі, за хмарами їх не видно. Вимкнено — рівне темне небо.",
+     "В 3D-режиме на ночном небе есть звёзды — мелкие, мерцающие, за облаками их не видно. Выключено — ровное "
+     "тёмное небо."},
+    {Text::View3dMoon, "The moon in the sky", "Місяць на небі", "Луна на небе"},
+    {Text::View3dMoonHint,
+     "In the 3D view at night the moon stands where the map's light comes from - a pale disc with a soft glow; the "
+     "water reflects it.",
+     "У 3D-режимі вночі місяць стоїть там, звідки на карту падає світло, — блідий диск із м'яким сяйвом; вода його "
+     "відбиває.",
+     "В 3D-режиме ночью луна стоит там, откуда на карту падает свет, — бледный диск с мягким сиянием; вода её "
+     "отражает."},
+    {Text::View3dDawn, "Dawn and dusk glow", "Заграва на світанку й увечері", "Заря на рассвете и закате"},
+    {Text::View3dDawnHint,
+     "In the 3D view a warm band glows along the horizon while the night comes or goes, the most on the sun's side.",
+     "У 3D-режимі вздовж обрію тепла смуга, поки ніч настає чи минає, найяскравіша з боку сонця.",
+     "В 3D-режиме вдоль горизонта тёплая полоса, пока ночь наступает или уходит, ярче всего со стороны солнца."},
     {Text::View3dFastGround, "Faster far ground", "Швидша далека земля", "Быстрее дальняя земля"},  // 3.0.19-beta.42
     {Text::View3dFastGroundHint,
      "In the 3D view the game works out its far ground's cells once in 8 frames - our own ground is drawn in their "

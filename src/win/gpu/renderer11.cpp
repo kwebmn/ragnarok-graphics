@@ -1785,7 +1785,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
             c.fogColor[3] = 2.0f;
             // 3.0.20-beta.32: the sky it reflects (draw.cpp's)
             c.hole[0] = night;
-            c.hole[1] = outdoors_ ? 1.0f : 0.0f;
+            // 3.0.20-beta.49: 1 under the open sky, and the sky's parts (stars, the moon, the dawn's glow)
+            c.hole[1] = outdoors_
+                            ? 1.0f + float(view3d::skyParts(effects_.skyStars, effects_.skyMoon, effects_.skyDawn))
+                            : 0.0f;
             float toSun[3] = {0.0f, 0.0f, 0.0f};
             if (outdoors_ && mapSun(toSun)) std::copy(toSun, toSun + 3, c.hole + 4);
         }
@@ -4205,6 +4208,8 @@ void Renderer11::skyPass(bool fill) {
     c.scale = float(scale_);
     c.uiPixels[0] = float(target_.width);
     c.uiPixels[1] = float(target_.height);
+    // 3.0.20-beta.49: the open sky's parts - stars, the moon, the dawn's glow (as Direct3D 12's)
+    c.uiPixels[2] = float(view3d::skyParts(effects_.skyStars, effects_.skyMoon, effects_.skyDawn));
     const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
     const bool vault = !outdoors_;
     const view3d::Sky sky = view3d::skyOf(night, vault);

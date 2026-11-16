@@ -217,5 +217,8 @@ constexpr int kSightDefault = 1200, kSightLeast = 800, kSightMost = 1500;
 // The haze's reach in the 3D view for a sight: whole kHazeWholePast past it at the sight, a nearer sky's kept
 float hazeReach(float skyReach, float sight);
 Sky skyOf(float night, bool vault);
+// 3.0.20-beta.49: the open sky's parts as one number for the shaders (skyAlong): 1 the stars, 2 the moon, 4 the
+// dawn's and the dusk's glow ([view3d] stars, moon, dawn)
+constexpr int skyParts(bool stars, bool moon, bool dawn) { return (stars ? 1 : 0) | (moon ? 2 : 0) | (dawn ? 4 : 0); }
 
 }  // namespace uagfx::view3d

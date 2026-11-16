@@ -511,6 +511,13 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.19-beta.40 (the owner's «делаем все по порядку»): the weather as particles in the world
         {"view3d", "weather", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dWeather,
          Text::View3dWeatherHint, "", &E::weather3d},
+        // 3.0.20-beta.49 (the owner's «делай 1-9», 3): the 3D sky's parts, each its own switch
+        {"view3d", "stars", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dStars,
+         Text::View3dStarsHint, "", &E::skyStars},
+        {"view3d", "moon", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dMoon,
+         Text::View3dMoonHint, "", &E::skyMoon},
+        {"view3d", "dawn", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dDawn,
+         Text::View3dDawnHint, "", &E::skyDawn},
         // 3.0.19-beta.36 (the concept's threat's arc): a red arc on the side one out of sight hits from
         {"view3d", "threat", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dThreat,
          Text::View3dThreatHint, ""},

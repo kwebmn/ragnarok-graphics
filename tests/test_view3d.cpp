@@ -714,3 +714,24 @@ TEST(config_view3d_own_models_switch) {
     CHECK(appliesNow("view3d.own_models"));
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[view3d]\nown_models = 0\n")).next.view3dOwnModels);
 }
+
+// 3.0.20-beta.49 (the owner's «делай 1-9», 3 - the 3D view's night sky and dawn): the sky's parts - stars and the
+// moon at night, a warm glow along the horizon at dawn and dusk - each a switch of [view3d], on at first; the
+// renderers give sky3d_ps and the water's reflection the parts as one number
+TEST(config_view3d_sky_parts_on_by_default_and_live) {
+    const EffectSettings e = parseConfig("").effects;
+    CHECK(e.skyStars && e.skyMoon && e.skyDawn);
+    CHECK_EQ(view3d::skyParts(true, true, true), 7);
+    CHECK_EQ(view3d::skyParts(false, true, true), 6);
+    CHECK_EQ(view3d::skyParts(true, false, false), 1);
+    CHECK_EQ(view3d::skyParts(false, false, false), 0);
+    const EffectSettings off = parseConfig("[view3d]\nstars = 0\nmoon = 0\ndawn = 0\n").effects;
+    CHECK(!off.skyStars && !off.skyMoon && !off.skyDawn);
+    for (const char* key : {"view3d.stars", "view3d.moon", "view3d.dawn"}) {
+        const settings::IniSetting* row = settings::findSetting(key);
+        CHECK(row != nullptr);
+        if (row) CHECK(row->page == settings::Page::Game && row->control == settings::Control::Check);
+        CHECK(appliesNow(key));
+    }
+    CHECK(!(parseConfig("").effects == parseConfig("[view3d]\nmoon = 0\n").effects));
+}
