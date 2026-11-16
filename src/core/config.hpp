@@ -206,6 +206,9 @@ struct EffectSettings {
     // the view from above (a cap hung over an open-topped base) closed in the models our renderer draws
     // (core/model_gaps); a node as it is captured - a change shows from the next map
     bool closeGaps = true;
+    // 3.0.20-beta.57 (R-J3GKD9 «тут другие комнаты видны»): [view3d] one_room - in a house's map (many rooms side by
+    // side, core/rooms) the 3D view draws the room the player stands in alone: the others as if nothing were there
+    bool oneRoom3d = true;
     // 3.0.16-beta.25 (the owner: «давай» - the body's stamp, from nostalRE): body_stamp - after the game's characters'
     // sprites (drawn writing no depth) each one's shape put into the depth a little behind its feet: an effect drawn
     // after them falls behind the body where it lies behind it (a ring's far half), in front where it lies in front

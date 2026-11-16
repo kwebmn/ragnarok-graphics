@@ -256,7 +256,7 @@ TEST(cave_vault_built_with_its_posts_finer_only_where_one_reaches_it) {
 // hundred of its tall models' heights - or kCeilingFlat with none known
 TEST(cave_vault_a_ceiling_indoors_flat_at_the_walls_top) {
     cave_vault::Vault v;
-    CHECK(cave_vault::buildCeiling(cave(40, 40, 36.0f), 0.0f, v));
+    CHECK(cave_vault::buildCeiling(cave(40, 40, 36.0f), 0.0f, nullptr, v));
     CHECK(v.width == 40 && v.height == 40 && std::fabs(v.wallTop - 36.0f) < 0.5f);
     CHECK(std::fabs(v.ceiling - (36.0f + cave_vault::kCeilingOver)) < 0.5f);
     CHECK(std::fabs(upAt(v, 10, 20) - v.ceiling) < 0.01f);  // a room's middle
@@ -265,12 +265,12 @@ TEST(cave_vault_a_ceiling_indoors_flat_at_the_walls_top) {
     float up = 0.0f;
     CHECK(cave_vault::heightAt(v, -95.0f, 5.0f, up) && std::fabs(up - v.ceiling) < 0.01f);
     // walls of models over a flat ground: by the models' height, or the usual room
-    CHECK(cave_vault::buildCeiling(cave(30, 30, 0.0f), 52.0f, v));
+    CHECK(cave_vault::buildCeiling(cave(30, 30, 0.0f), 52.0f, nullptr, v));
     CHECK(std::fabs(v.ceiling - (52.0f + cave_vault::kCeilingOver)) < 0.01f);
     CHECK(std::fabs(upAt(v, 10, 15) - v.ceiling) < 0.01f);
-    CHECK(cave_vault::buildCeiling(cave(30, 30, 0.0f), 0.0f, v));
+    CHECK(cave_vault::buildCeiling(cave(30, 30, 0.0f), 0.0f, nullptr, v));
     CHECK(std::fabs(v.ceiling - cave_vault::kCeilingFlat) < 0.01f);
-    CHECK(!cave_vault::buildCeiling(ground_heights::Ground{}, 0.0f, v));
+    CHECK(!cave_vault::buildCeiling(ground_heights::Ground{}, 0.0f, nullptr, v));
     // a vault is none: its ceiling 0
     CHECK(cave_vault::build(cave(40, 40, 40.0f), v) && v.ceiling == 0.0f);
     // the walls' height by the models: the 80th of a hundred of the tall ones' heights

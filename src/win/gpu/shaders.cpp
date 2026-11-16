@@ -2619,6 +2619,27 @@ float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
     return float4(lerp(stone, dark, haze), 1.0);
 }
 
+// what a ray from the eye meets under a roof where nothing is drawn: the vault or the ceiling over it, the dark past it
+float3 underVault(float3 dir, float3 horizon) {
+    float rise = -dir.y;  // the world's y points down
+    float3 dark = horizon * lerp(0.55, 0.25, smoothstep(0.0, 0.6, rise));
+    if (footprint > 0.5 && rise > -0.3) {  // 3.0.19-beta.32: the vault over the passages
+        float4 v = vaultSeen(float3(r9, r10, r11), dir, dark);
+        if (v.a > 0.5) return v.rgb;
+    }
+    return dark;
+}
+
+// 3.0.20-beta.57 (R-J3GKD9 «тут другие комнаты видны», core/rooms): a house's map keeps its rooms side by side -
+// t0 the map's rooms a cell (a room's number, widened to the cells beside it; 0 none), holeUz the number of the room
+// the player stands in (0: no rooms). A place of the world in another room, or in none
+bool otherRoom(float2 xz) {
+    float2 cells = fogColor.yz;
+    float2 g = float2(xz.x * twinW, xz.y * twinH) / max(fogColor.x, 1e-3) + cells * 0.5;
+    int2 at = int2(clamp(floor(g), float2(0.0, 0.0), cells - 1.0));
+    return abs(tex0.Load(int3(at, 0)).r * 255.0 - holeUz) > 0.5;
+}
+
 // 3.0.20-beta.48 (the owner's «делай 1-9», 6): the two apart. The sky (sky3d_ps) is laid where nothing is drawn
 // before the world's blended draws - a skill's effect, an item or a blade of grass seen against it stays over it;
 // until now the one pass came at the world's end and went over all of them but the characters, whose shapes were
@@ -2627,7 +2648,15 @@ float4 sky3d_haze_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;  // nothing drawn there: the sky's own
     bool vault = twinY > 0.5;
-    float dist = length(viewAt(wp));
+    float3 seen = viewAt(wp);
+    // 3.0.20-beta.57: what is drawn of another room - its floor, its walls, those who stand in it - gives way to what
+    // the eye would see with nothing there
+    [branch] if (holeUz > 0.5) {
+        float3 eye = float3(r9, r10, r11);
+        float3 world = eye + seen.x * float3(r0, r1, r2) + seen.y * float3(r3, r4, r5) + seen.z * float3(r6, r7, r8);
+        if (otherRoom(world.xz)) return float4(underVault(normalize(world - eye), sourceRect.rgb), 1.0);
+    }
+    float dist = length(seen);
     float reach = max(sourceRect.w, 1.0);
     float haze = smoothstep(reach * 0.1, reach, dist);
     haze = haze * haze * (vault ? 0.92 : 0.78);
@@ -2647,15 +2676,7 @@ float4 sky3d_ps(PresentOut i) : SV_Target {
     float2 g = (float2(wp) - float2(jitterX, jitterY)) / max(scale, 1e-3);
     float3 ray = float3((g.x - cx) / max(f0, 1e-3), (g.y - cy) / max(f1, 1e-3), 1.0);
     float3 dir = normalize(ray.x * float3(r0, r1, r2) + ray.y * float3(r3, r4, r5) + ray.z * float3(r6, r7, r8));
-    float rise = -dir.y;  // the world's y points down
-    if (vault) {
-        float3 dark = horizon * lerp(0.55, 0.25, smoothstep(0.0, 0.6, rise));
-        if (footprint > 0.5 && rise > -0.3) {  // 3.0.19-beta.32: the vault over the passages
-            float4 v = vaultSeen(float3(r9, r10, r11), dir, dark);
-            if (v.a > 0.5) return float4(v.rgb, 1.0);
-        }
-        return float4(dark, 1.0);
-    }
+    if (vault) return float4(underVault(dir, horizon), 1.0);
     // 3.0.20-beta.32: shared with the water's reflection; 3.0.20-beta.49: uiPixels.z the sky's parts
     return float4(skyAlong(dir, horizon, night, sourceClamp.xyz, sharpen, uiPixels.z), 1.0);
 }

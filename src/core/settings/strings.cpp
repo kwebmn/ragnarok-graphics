@@ -8894,6 +8894,18 @@ constexpr Entry kTexts[] = {
      "темна порожнеча над стінами, як раніше.",
      "В 3D-режиме в домах и залах замков есть потолок — ровный, на высоте стен, чуть темнее у стен. Выключено — "
      "тёмная пустота над стенами, как раньше."},
+    {Text::View3dOneRoom, "Only the room you are in", "Лише кімната, де ви стоїте",  // 3.0.20-beta.57
+     "Только комната, где вы стоите"},
+    {Text::View3dOneRoomHint,
+     "A house's map keeps many rooms side by side with nothing between them; from the eyes' level the others stood "
+     "lit in the dark behind the room's open sides. In the 3D view only the room your character stands in is "
+     "drawn. Needs «Ceiling indoors».",
+     "Карта будинку тримає багато кімнат поруч, між ними нічого немає; з рівня очей інші кімнати світилися в "
+     "темряві за відкритими сторонами. У 3D-режимі малюється лише кімната, де стоїть персонаж. Потрібна «Стеля в "
+     "приміщеннях».",
+     "Карта дома держит много комнат рядом, между ними ничего нет; с уровня глаз другие комнаты светились в "
+     "темноте за открытыми сторонами. В 3D-режиме рисуется только комната, где стоит персонаж. Нужен «Потолок в "
+     "помещениях»."},
     {Text::View3dVaultRock, "The map's own rock on the vault", "Скеля карти на склепінні",  // 3.0.20-beta.54
      "Скала карты на своде"},
     {Text::View3dVaultRockHint,

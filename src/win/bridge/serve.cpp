@@ -215,6 +215,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.ceiling3d = rd.u8() != 0;       // 3.0.20-beta.52
             e.vaultRock = rd.u8() != 0;       // 3.0.20-beta.54
             e.closeGaps = rd.u8() != 0;       // 3.0.20-beta.56
+            e.oneRoom3d = rd.u8() != 0;       // 3.0.20-beta.57
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

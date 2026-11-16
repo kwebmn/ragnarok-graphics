@@ -912,6 +912,13 @@ private:
     uint64_t vaultRockKey_ = 0;
     int vaultRockLevels_ = 0;
     bool vaultRockFailed_ = false;
+    // 3.0.20-beta.57 (R-J3GKD9; as Direct3D 12's roomsTexture, roomNow): a house's rooms a cell, the player's room
+    ID3D11ShaderResourceView* roomsTexture();
+    int roomNow() const;
+    ID3D11Texture2D* roomsMap_ = nullptr;
+    ID3D11ShaderResourceView* roomsSrv_ = nullptr;
+    uint64_t roomsKey_ = 0;
+    bool roomsFailed_ = false;
     ID3D11Texture2D* trampleData_ = nullptr;    // its texels (grass_ps's t1)
     ID3D11ShaderResourceView* trampleSrv_ = nullptr;
     bool trampleFailed_ = false;

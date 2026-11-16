@@ -201,6 +201,8 @@ Renderer11::~Renderer11() {
     drop(vaultData_);
     drop(vaultRockSrv_);  // 3.0.20-beta.54
     drop(vaultRock_);
+    drop(roomsSrv_);  // 3.0.20-beta.57
+    drop(roomsMap_);
     drop(smokePs_);
     drop(smokeGlowPs_);
     drop(lavaPs_);
@@ -4224,7 +4226,8 @@ void Renderer11::skyPass(bool fill) {
     c.twin[1] = vault ? 1.0f : 0.0f;
     c.sharpen = waterTime();
     // 3.0.19-beta.32: as Direct3D 12's
-    ID3D11ShaderResourceView* vaultT = vault && fill ? vaultTexture() : nullptr;
+    const int room = vault ? roomNow() : 0;  // 3.0.20-beta.57 (R-J3GKD9; as Direct3D 12's)
+    ID3D11ShaderResourceView* vaultT = vault && (fill || room) ? vaultTexture() : nullptr;
     ID3D11ShaderResourceView* rockT = nullptr;  // 3.0.20-beta.54
     if (vaultT) {
         const map::Axes axes = mapWorld_.axes();
@@ -4242,7 +4245,14 @@ void Renderer11::skyPass(bool fill) {
         const float* ambient = rw ? rw->lightAmbient : none;
         const float* diffuse = rw ? rw->lightDiffuse : none;
         cave_vault::rockOf(lit, ambient, diffuse, c.sourceClamp);
-        c.sourceClamp[3] = vaultMap_.ceiling;  // 3.0.20-beta.52: a ceiling's height (0: a vault)
+        // 3.0.20-beta.52: a ceiling's height (0: a vault); 3.0.20-beta.57: over each room's floor - far over them here
+        c.sourceClamp[3] = vaultMap_.perRoom ? 1e6f : vaultMap_.ceiling;
+        if (room && vaultMap_.ceiling > 0.0f) {  // 3.0.20-beta.57: the rooms a cell (t0), the player's
+            if (ID3D11ShaderResourceView* roomsT = roomsTexture()) {
+                rockT = roomsT;
+                c.hole[6] = float(room);
+            }
+        }
         // 3.0.20-beta.54 (as Direct3D 12's): a ceiling in its walls' colour; a vault in the map's own rock
         if (vaultMap_.ceiling > 0.0f) {
             float walls[3];
@@ -4270,6 +4280,53 @@ void Renderer11::skyPass(bool fill) {
                  vault ? "a dark vault" : "the open sky", night, camera::fovNow());
     }
     worldPass(fill ? sky3dPs_ : sky3dHazePs_, c, false, 1, depthSrv_, rockT, vaultT);
+}
+
+// 3.0.20-beta.57 (R-J3GKD9; haze.cpp's): the room the player stands in, 0 none; the rooms a cell on the card
+int Renderer11::roomNow() const {
+    const rooms::Map* rooms = mapWorld_.rooms();
+    if (!rooms || rooms->count < 2 || !effects_.oneRoom3d || !effects_.ceiling3d || !cameraValid_ ||
+        !mapWorld_.axes().known() || !cave_vault::ceilingFor(map_, outdoors_))
+        return 0;
+    const float* m = viewToWorld_;
+    const float tz = cameraTargetZ_ > 0.0f ? cameraTargetZ_ : 0.0f;
+    const map::Axes axes = mapWorld_.axes();
+    return rooms::roomAt(*rooms, (tz * m[6] + m[9]) * float(axes.x), (tz * m[8] + m[11]) * float(axes.z));
+}
+
+ID3D11ShaderResourceView* Renderer11::roomsTexture() {
+    const rooms::Map* rooms = mapWorld_.rooms();
+    const uint64_t key = mapWorld_.laidKey();
+    if (roomsFailed_ || !key || !rooms || rooms->width <= 0 || rooms->height <= 0 ||
+        rooms->widened.size() < size_t(rooms->width) * size_t(rooms->height))
+        return nullptr;
+    if (key == roomsKey_ && roomsSrv_) return roomsSrv_;
+    drop(roomsSrv_);
+    drop(roomsMap_);
+    roomsKey_ = 0;
+    D3D11_TEXTURE2D_DESC d{};
+    d.Width = UINT(rooms->width);
+    d.Height = UINT(rooms->height);
+    d.MipLevels = d.ArraySize = 1;
+    d.Format = DXGI_FORMAT_R8_UNORM;
+    d.SampleDesc.Count = 1;
+    d.Usage = D3D11_USAGE_IMMUTABLE;
+    d.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    D3D11_SUBRESOURCE_DATA data{};
+    data.pSysMem = rooms->widened.data();
+    data.SysMemPitch = UINT(rooms->width);
+    if (FAILED(device_->CreateTexture2D(&d, &data, &roomsMap_)) ||
+        FAILED(device_->CreateShaderResourceView(roomsMap_, nullptr, &roomsSrv_))) {
+        drop(roomsSrv_);
+        drop(roomsMap_);
+        roomsFailed_ = true;  // not tried again
+        LOG_ERROR("3D sky: no memory for the map's rooms (Direct3D 11) - all of them drawn");
+        return nullptr;
+    }
+    roomsKey_ = key;
+    LOG_INFO("3D sky: on %s the room the player stands in drawn alone - %d rooms on the map ([view3d] one_room, "
+             "Direct3D 11)", map_.c_str(), rooms->count);
+    return roomsSrv_;
 }
 
 // 3.0.20-beta.54: the map's own rock's patch on the card, its levels too - once a map (haze.cpp's)
@@ -4330,7 +4387,8 @@ ID3D11ShaderResourceView* Renderer11::vaultTexture() {
         vaultUploaded_ = false;
         size_t met = 0;  // 3.0.20-beta.46 (R-3T9MZC): down to the posts that reach its walls' height (haze.cpp's)
         if (!dungeon) {
-            vaultMade_ = cave_vault::buildCeiling(*mapWorld_.ground(), mapWorld_.wallsHeight(), vaultMap_);
+            vaultMade_ = cave_vault::buildCeiling(*mapWorld_.ground(), mapWorld_.wallsHeight(), mapWorld_.rooms(),
+                                                  vaultMap_);
             if (vaultMade_)
                 LOG_INFO("3D sky: %s - a ceiling at %.0f over its floors %.0f (its walls' top %.0f, by its models "
                          "%.0f), %dx%d heights (Direct3D 11)", map_.c_str(), vaultMap_.ceiling, vaultMap_.floorLevel,

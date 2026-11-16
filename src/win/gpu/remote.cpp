@@ -558,6 +558,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.ceiling3d ? 1 : 0);       // 3.0.20-beta.52
     w.u8(e.vaultRock ? 1 : 0);       // 3.0.20-beta.54
     w.u8(e.closeGaps ? 1 : 0);       // 3.0.20-beta.56
+    w.u8(e.oneRoom3d ? 1 : 0);       // 3.0.20-beta.57
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

@@ -1182,6 +1182,16 @@ struct Renderer::Impl {
     uint64_t vaultRockKey = 0;
     int vaultRockLevels = 0;
     bool vaultRockFailed = false;
+    // 3.0.20-beta.57 (R-J3GKD9 «тут другие комнаты видны»): a house's rooms a cell on the card (core/rooms, their
+    // widened numbers; sky3d_haze_ps's t0) and the room the player stands in this picture (0: none - all drawn)
+    UINT roomsTexture();
+    int roomNow() const;
+    ID3D12Resource* roomsMap = nullptr;
+    D3D12_RESOURCE_STATES roomsState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT roomsSrv = kNoSrv;
+    uint64_t roomsKey = 0;
+    bool roomsFailed = false;
+    std::string roomsLogged;
     // 0.72: indoors (a polished or wet floor) and in the rain; a field under a dry sky does not shine
     float floorReflectAmount() const {
         if (!effects.floorReflections || !floorReflectPs || !halfOverPs) return 0.0f;

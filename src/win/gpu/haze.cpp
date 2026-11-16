@@ -116,7 +116,10 @@ bool Renderer::Impl::skyPass(bool fill) {
     c.sharpen = waterTime();
     // 3.0.19-beta.32: a dungeon's vault (t1: its heights a cell; fogColor its cell's units, its cells, the up axis's
     // sign; twinW/twinH the ground's x and z signs)
-    const UINT vaultT = vault && fill ? vaultTexture() : kNoSrv;
+    // 3.0.20-beta.57 (R-J3GKD9): in a house the room the player stands in - the haze's pass paints the others out, so
+    // it takes the ceiling too
+    const int room = vault ? roomNow() : 0;
+    const UINT vaultT = vault && (fill || room) ? vaultTexture() : kNoSrv;
     UINT rockT = kNoSrv;  // 3.0.20-beta.54
     if (vaultT != kNoSrv) {
         const map::Axes axes = mapWorld.axes();
@@ -134,7 +137,22 @@ bool Renderer::Impl::skyPass(bool fill) {
         const float* ambient = rw ? rw->lightAmbient : none;
         const float* diffuse = rw ? rw->lightDiffuse : none;
         cave_vault::rockOf(lit, ambient, diffuse, c.sourceClamp);
-        c.sourceClamp[3] = vaultMap.ceiling;  // 3.0.20-beta.52: a ceiling's height (0: a vault)
+        // 3.0.20-beta.52: a ceiling's height (0: a vault); 3.0.20-beta.57: over each room's own floor - far over
+        // all of them here (no wall of the ground stands over a ceiling of its own height)
+        c.sourceClamp[3] = vaultMap.perRoom ? 1e6f : vaultMap.ceiling;
+        if (room && vaultMap.ceiling > 0.0f) {  // 3.0.20-beta.57: the rooms a cell (t0), the player's
+            const UINT roomsT = roomsTexture();
+            if (roomsT != kNoSrv) {
+                rockT = roomsT;
+                c.hole[6] = float(room);
+                if (roomsLogged != mapName) {
+                    roomsLogged = mapName;
+                    LOG_INFO("3D sky: on %s the room the player stands in (%d of %d) drawn alone - the others as "
+                             "if nothing were there ([view3d] one_room)", mapName.c_str(), room,
+                             mapWorld.rooms() ? mapWorld.rooms()->count : 0);
+                }
+            }
+        }
         // 3.0.20-beta.54 (the owner's «делай 1-9», 5, part 2): a ceiling in its walls' upper part's colour; a
         // dungeon's vault in the map's own rock - a patch of it laid as a mosaic (t0, hole: its mean colour, its
         // side, its levels, its texels a unit), or its colour alone on the vault's stone ([view3d] vault_rock)
@@ -167,6 +185,69 @@ bool Renderer::Impl::skyPass(bool fill) {
                  camera::fovNow());
     }
     return worldPass(pso, w, h, c, rockT != kNoSrv ? rockT : sceneDepthSrv, true, vaultT);
+}
+
+// 3.0.20-beta.57 (R-J3GKD9): the room the player stands in - by the place the game's camera looks at (the eye where
+// that is not known), in the map's file's places; 0: no rooms on this map, the switch off, or no room there
+int Renderer::Impl::roomNow() const {
+    const rooms::Map* rooms = mapWorld.rooms();
+    if (!rooms || rooms->count < 2 || !effects.oneRoom3d || !effects.ceiling3d || !viewToWorldValid ||
+        !mapWorld.axes().known() || !cave_vault::ceilingFor(mapName, mapOutdoors))
+        return 0;
+    const float* m = viewToWorld;
+    const float tz = cameraTargetZ > 0.0f ? cameraTargetZ : 0.0f;
+    const map::Axes axes = mapWorld.axes();
+    return rooms::roomAt(*rooms, (tz * m[6] + m[9]) * float(axes.x), (tz * m[8] + m[11]) * float(axes.z));
+}
+
+// the rooms a cell on the card - once a map
+UINT Renderer::Impl::roomsTexture() {
+    const rooms::Map* rooms = mapWorld.rooms();
+    const uint64_t key = mapWorld.laidKey();
+    if (roomsFailed || !key || !rooms || rooms->width <= 0 || rooms->height <= 0 ||
+        rooms->widened.size() < size_t(rooms->width) * size_t(rooms->height))
+        return kNoSrv;
+    if (key == roomsKey && roomsMap) return roomsSrv;
+    if (roomsMap) discard(roomsMap);
+    roomsMap = nullptr;
+    roomsKey = 0;
+    roomsMap = createTexture2D(device, rooms->width, rooms->height, 1, DXGI_FORMAT_R8_UNORM, D3D12_RESOURCE_FLAG_NONE,
+                               D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+    if (roomsMap && roomsSrv == kNoSrv) roomsSrv = allocSrv();
+    if (!roomsMap || roomsSrv == kNoSrv) {
+        LOG_ERROR("3D sky: no memory for the map's rooms (%dx%d) - all of them drawn", rooms->width, rooms->height);
+        releaseCom(roomsMap);
+        roomsFailed = true;  // not tried again
+        return kNoSrv;
+    }
+    nameResource(roomsMap, "map's rooms");
+    roomsState = D3D12_RESOURCE_STATE_COPY_DEST;
+    device->CreateShaderResourceView(roomsMap, nullptr, cpuSrvHandle(roomsSrv));
+    const UINT row = UINT(rooms->width), pitch = (row + 255u) & ~255u;  // rows 256 bytes apart
+    const Upload u = allocUpload(UINT64(pitch) * UINT(rooms->height), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+    if (!u.cpu) {  // the next frame again
+        discard(roomsMap);
+        roomsMap = nullptr;
+        return kNoSrv;
+    }
+    for (int y = 0; y < rooms->height; ++y)
+        std::memcpy(u.cpu + size_t(y) * pitch, rooms->widened.data() + size_t(y) * size_t(rooms->width), row);
+    flushDraws();  // the draws gathered so far before the copy
+    D3D12_TEXTURE_COPY_LOCATION src{}, to{};
+    src.pResource = slots[slot].upload;
+    src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    src.PlacedFootprint.Offset = u.offset;
+    src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8_UNORM;
+    src.PlacedFootprint.Footprint.Width = UINT(rooms->width);
+    src.PlacedFootprint.Footprint.Height = UINT(rooms->height);
+    src.PlacedFootprint.Footprint.Depth = 1;
+    src.PlacedFootprint.Footprint.RowPitch = pitch;
+    to.pResource = roomsMap;
+    to.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    list->CopyTextureRegion(&to, 0, 0, 0, &src, nullptr);
+    transition(roomsMap, roomsState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    roomsKey = key;
+    return roomsSrv;
 }
 
 // 3.0.20-beta.54: the map's own rock's patch on the card, its levels too - once a map
@@ -247,7 +328,8 @@ UINT Renderer::Impl::vaultTexture() {
         // 3.0.20-beta.46 (R-3T9MZC «колоны как будто в воздухе»): down to the posts that reach its walls' height
         size_t met = 0;
         if (!dungeon) {
-            vaultMade = cave_vault::buildCeiling(*mapWorld.ground(), mapWorld.wallsHeight(), vaultMap);
+            vaultMade = cave_vault::buildCeiling(*mapWorld.ground(), mapWorld.wallsHeight(), mapWorld.rooms(),
+                                                 vaultMap);
             if (vaultMade)
                 LOG_INFO("3D sky: %s - a ceiling at %.0f over its floors %.0f (its walls' top %.0f, by its models "
                          "%.0f), %dx%d heights", mapName.c_str(), vaultMap.ceiling, vaultMap.floorLevel,

@@ -508,6 +508,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.20-beta.52 (the owner's «делай 1-9», 5): a ceiling in the houses and the castles' halls
         {"view3d", "ceiling", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dCeiling,
          Text::View3dCeilingHint, "", &E::ceiling3d},
+        // 3.0.20-beta.57 (R-J3GKD9): a house's other rooms hidden
+        {"view3d", "one_room", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dOneRoom,
+         Text::View3dOneRoomHint, "", &E::oneRoom3d},
         // 3.0.20-beta.54 (5, part 2): the map's own rock on a dungeon's vault
         {"view3d", "vault_rock", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dVaultRock,
          Text::View3dVaultRockHint, "", &E::vaultRock},

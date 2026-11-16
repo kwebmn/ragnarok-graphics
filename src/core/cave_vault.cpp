@@ -62,7 +62,7 @@ bool build(const ground_heights::Ground& g, Vault& out) {
     return true;
 }
 
-bool buildCeiling(const ground_heights::Ground& g, float modelsTop, Vault& out) {
+bool buildCeiling(const ground_heights::Ground& g, float modelsTop, const rooms::Map* rooms, Vault& out) {
     out = Vault{};
     const size_t cells = size_t(std::max(g.width, 0)) * size_t(std::max(g.height, 0));
     if (cells == 0 || g.corners.size() < cells * 4) return false;
@@ -81,6 +81,37 @@ bool buildCeiling(const ground_heights::Ground& g, float modelsTop, Vault& out) 
                       : out.floorLevel + (modelsTop > 0.0f ? modelsTop + kCeilingOver : kCeilingFlat);
     out.up.resize(cells);
     for (size_t i = 0; i < cells; ++i) out.up[i] = std::max(out.ceiling, floor[i] + kLeastOver);
+    if (!rooms || rooms->count <= 0 || rooms->width != g.width || rooms->height != g.height ||
+        rooms->widened.size() < cells || rooms->floor.size() <= size_t(rooms->count))
+        return true;
+    // 3.0.20-beta.57: over each room's own floor; a cell of no room its nearest room's (from the rooms outwards)
+    const float room = modelsTop > 0.0f ? modelsTop + kCeilingOver : kCeilingFlat;
+    std::vector<uint8_t> nearest(rooms->widened.begin(), rooms->widened.begin() + std::ptrdiff_t(cells));
+    std::vector<uint32_t> edge, next;
+    for (size_t i = 0; i < cells; ++i)
+        if (nearest[i]) edge.push_back(uint32_t(i));
+    while (!edge.empty()) {
+        next.clear();
+        for (const uint32_t k : edge) {
+            const int x = int(k % uint32_t(g.width)), y = int(k / uint32_t(g.width));
+            const int beside[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+            for (const auto& d : beside) {
+                const int nx = x + d[0], ny = y + d[1];
+                if (nx < 0 || ny < 0 || nx >= g.width || ny >= g.height) continue;
+                const size_t j = size_t(ny) * size_t(g.width) + size_t(nx);
+                if (nearest[j]) continue;
+                nearest[j] = nearest[k];
+                next.push_back(uint32_t(j));
+            }
+        }
+        edge.swap(next);
+    }
+    std::vector<float> ceilings;
+    for (int r = 1; r <= rooms->count; ++r) ceilings.push_back(rooms->floor[size_t(r)] + room);
+    for (size_t i = 0; i < cells; ++i)
+        if (nearest[i]) out.up[i] = rooms->floor[nearest[i]] + room;
+    out.ceiling = percentile(ceilings, 0.5f);
+    out.perRoom = true;
     return true;
 }
 

@@ -5,6 +5,7 @@
 #include "core/gnd.hpp"
 #include "core/ground_cells.hpp"
 #include "core/ground_heights.hpp"
+#include "core/rooms.hpp"
 #include "core/rsm.hpp"
 #include "core/rsw.hpp"
 
@@ -24,6 +25,7 @@ struct Vault {
     float wallTop = 0.0f;       // the walls' top it is mirrored about (up positive)
     float floorLevel = 0.0f;    // the passages' (the heights' kFloorShare percentile)
     float ceiling = 0.0f;       // 3.0.20-beta.52: a ceiling's height (buildCeiling); 0: a dungeon's vault
+    bool perRoom = false;       // 3.0.20-beta.57: a ceiling over each room's own floor (`ceiling` their middle one)
 };
 constexpr float kWallShare = 0.92f, kFloorShare = 0.2f;
 constexpr float kLeastOver = 6.0f, kLeastRoom = 48.0f, kMostRoom = 160.0f, kLeastRelief = 12.0f, kFlatRoom = 80.0f;
@@ -34,8 +36,12 @@ bool build(const ground_heights::Ground& g, Vault& out);
 // walls' top where the map's ground makes its walls (its relief kLeastRelief at least); where its walls are models,
 // over their height from its floor (modelsTop: wallsByModels of its tall models, 0 none known - kCeilingFlat then).
 // Over a wall higher than it: kLeastOver over that wall
+// 3.0.20-beta.57 (R-J3GKD9, payon_in01: its rooms' floors 6 to 17 over a black base at 0 - the ceiling stood 32 over
+// the base, 22 over a room's floor, under the 3D view's camera 25 over the feet): with the map's rooms known
+// (core/rooms) a ceiling over each room's own floor - its walls' height by the models (or kCeilingFlat with none
+// known) over the room's floor; a cell of no room: its nearest room's
 constexpr float kCeilingOver = 2.0f, kCeilingFlat = 44.0f;
-bool buildCeiling(const ground_heights::Ground& g, float modelsTop, Vault& out);
+bool buildCeiling(const ground_heights::Ground& g, float modelsTop, const rooms::Map* rooms, Vault& out);
 // the walls' height by a map's models: the 80th of a hundred of the heights given (its models that stand kPostLeast
 // tall at least - walls, pillars, tall shelves); none: 0
 float wallsByModels(std::vector<float> tall);

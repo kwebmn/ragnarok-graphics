@@ -50,6 +50,7 @@ struct MapWorld::Shared {
     float doneWallsColour[3] = {0.0f, 0.0f, 0.0f};  // 3.0.20-beta.54: and their upper part's colour
     bool doneWallsColourKnown = false;
     MapWorld::VaultRock doneRock;             // 3.0.20-beta.54: a dungeon's own rock for its vault
+    rooms::Map doneRooms;                     // 3.0.20-beta.57: a house's rooms
     bool ownWanted = false;                 // 3.0.4-beta.10: the own ground read with the map
     std::unique_ptr<OwnGround> doneOwn;
     bool doneOk = false;
@@ -103,6 +104,7 @@ void MapWorld::setMap(const std::string& name) {
     walls_ = 0.0f;
     wallsColourKnown_ = false;
     rock_ = VaultRock{};
+    rooms_ = rooms::Map{};
     placed_.clear();
     lamps_.clear();
     seen_.clear();
@@ -156,6 +158,7 @@ void MapWorld::poll() {
         std::copy(shared_->doneWallsColour, shared_->doneWallsColour + 3, wallsColour_);
         wallsColourKnown_ = shared_->doneWallsColourKnown;
         rock_ = std::move(shared_->doneRock);
+        rooms_ = std::move(shared_->doneRooms);
         own_ = std::move(shared_->doneOwn);  // 3.0.4-beta.10
         if (!ownWanted_) own_.reset();       // read before it was turned off
         if (own_) own_->serial = ++ownSerial_;
@@ -369,6 +372,7 @@ void MapWorld::loop() {
         // 2.6.18: its ground's heights, where its .rsw came from or after it (the walls between a fire and a shadow)
         ground_heights::Ground ground;
         MapWorld::VaultRock rock;        // 3.0.20-beta.54
+        rooms::Map roomsOfMap;           // 3.0.20-beta.57
         std::unique_ptr<OwnGround> own;  // 3.0.4-beta.10
         if (ok) {
             const std::string gnd = "data\\" + name + ".gnd";
@@ -630,9 +634,24 @@ void MapWorld::loop() {
             // 3.0.20-beta.54: and a dungeon's own rock for the 3D view's vault, the same way
             const bool wantBare = ground.width > 0 && ground.bare.empty() && grassGrows(name);
             const bool wantRock = cave_vault::forMap(name);
-            if (!gfrom.empty() && (wantBare || wantRock)) try {
+            // 3.0.20-beta.57 (R-J3GKD9): a house's rooms - its floors joined side to side
+            const bool wantRooms = cave_vault::ceilingFor(name, outdoors(name));
+            if (!gfrom.empty() && (wantBare || wantRock || wantRooms)) try {
                 gnd::Ground lite;
                 const bool parsed = gnd::parse(gb.data(), gb.size(), lite, why);
+                if (parsed && wantRooms) {
+                    roomsOfMap = rooms::build(lite);
+                    float lowest = 0.0f, highest = 0.0f;
+                    for (int r = 1; r <= roomsOfMap.count; ++r) {
+                        const float up = roomsOfMap.floor[size_t(r)];
+                        lowest = r == 1 ? up : std::min(lowest, up);
+                        highest = r == 1 ? up : std::max(highest, up);
+                    }
+                    LOG_INFO("map objects: %s is %d room(s) side by side (floors joined side to side, %d cells at "
+                             "least), their floors %.0f to %.0f up - the 3D view's ceiling over each one's own "
+                             "floor, the one the player is in drawn alone ([view3d] one_room)",
+                             name.c_str(), roomsOfMap.count, rooms::kLeastCells, double(lowest), double(highest));
+                }
                 if (parsed && wantRock) {
                     OwnGround::Picture held;  // the one picture in memory: the last asked for - the patch's, if any
                     const cave_vault::Patch found =
@@ -712,6 +731,7 @@ void MapWorld::loop() {
             } catch (const std::bad_alloc&) {
                 if (wantBare) ground.bare.clear();
                 rock = MapWorld::VaultRock{};
+                roomsOfMap = rooms::Map{};
                 LOG_INFO("map objects: %s - no room to read its ground's textures: the grass by the screen's colour "
                          "alone, the vault's own stone", name.c_str());
             }
@@ -810,6 +830,7 @@ void MapWorld::loop() {
         std::copy(wallsColour, wallsColour + 3, shared_->doneWallsColour);
         shared_->doneWallsColourKnown = wallsColourKnown;
         shared_->doneRock = std::move(rock);
+        shared_->doneRooms = std::move(roomsOfMap);
         shared_->doneOwn = std::move(own);
         shared_->doneOk = ok;
         shared_->doneReady = true;

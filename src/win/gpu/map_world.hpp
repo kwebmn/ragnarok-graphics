@@ -85,6 +85,9 @@ public:
         bool known = false;
     };
     const VaultRock& vaultRock() const { return rock_; }
+    // 3.0.20-beta.57 (R-J3GKD9 «тут другие комнаты видны»): a house's rooms (core/rooms) - for the 3D view's ceiling
+    // over each room's own floor and for drawing the one the player is in alone; null: none known, not indoors
+    const rooms::Map* rooms() const { return rooms_.count > 0 ? &rooms_ : nullptr; }
     // 3.0.4-beta.10: the own ground (own_ground_data.hpp) read with the map while it is wanted - turned on for a map
     // read without it, the map is read again; none not wanted, not read yet, or no .gnd. Its pictures let go once the
     // renderer has them (ownPicturesUp).
@@ -114,6 +117,7 @@ private:
     float wallsColour_[3] = {0.0f, 0.0f, 0.0f};  // 3.0.20-beta.54
     bool wallsColourKnown_ = false;
     VaultRock rock_;
+    rooms::Map rooms_;  // 3.0.20-beta.57
     bool ready_ = false;
     uint32_t reads_ = 0;  // 2.7.57: the maps read so far (laidKey)
     map::Axes axes_;
