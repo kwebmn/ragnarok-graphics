@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.20-beta.40 — what's new · 2026-11-16
+
+- **An audit of the leaves from the card (3.0.20-beta.33–34): five mistakes fixed.**
+  - A tree you stand by in the 3D view lost its sway and its crown's look («Leaves in the wind», «Rounded tree crowns», the tints): one corner of its box behind the camera was enough. Now the crown's box is that of the part of the tree in front of the camera.
+  - Trees not in the picture at all (behind the camera, off the screen) are no longer drawn — less work for the processor.
+  - «Houses and trees far off» stopped learning the leaves' colours from our trees (they never saw the card's leaves). They learn again.
+  - When the models in a picture were leaves alone (bushes), those went missing from «World reflections in water» and «Shadows from torches and lamps».
+  - A node listed as still though it moves (or the other way round) would have been drawn out of place — now left out, as the models themselves leave it.
+- **«Models by our renderer»: materials blinking.** With 25 to 32 faces of one texture in a picture the renderer took the draw for a sprite: for that picture the faces went without their material («Materials: stone, brick, bark») and into DLSS's mask. A mistake since 3.0.20-beta.11.
+- **The textures' thread (3.0.20-beta.36):** when every core is busy and the thread gets no turn for half a second, its priority rises to normal — textures will not wait for their fire, light and AI pictures.
+
 # uaRO Graphics 3.0.20-beta.39 — what's new · 2026-11-16
 
 - **Direct3D 11's speed log:** a new line «Direct3D 11: the game's draws a frame by kind» — how much processor time a frame goes to the interface, the ground, the solid world, sprites, effects (timed every 8th frame, so the timing itself costs nothing on a weak processor). As Direct3D 12 has since 3.0.20-beta.37: these lines show what to move to other threads next.
