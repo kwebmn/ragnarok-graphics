@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.75 — what's new · 2026-11-17
+
+- **Automatic reports of a game that ended badly are no longer lost.** Such a report goes once in 6 hours at most, and an automatic report of a lost connection took that count too: after a lost connection a crash was not told for 6 hours. Lost connections are now counted apart, and a new version's first crash is told at once.
+
 # uaRO Graphics 3.0.20-beta.74 — what's new · 2026-11-17
 
 - **Fixed: houses and bridges missing whole or in parts** («Моделі нашим рендером»). A model's picture reached the renderer only when the game itself drew a face with it, and the game draws a model itself in one frame alone. If the model was only entering the picture by its edge in that frame (turning the camera in the 3D view, walking up to a bridge), or a face was turned away, its picture never came and those faces were not drawn. That is how the trading post in Prontera and parts of the bridges on gef_fild07 and yuno_fild01 went missing. All of a model's pictures are now sent at once.
