@@ -131,6 +131,9 @@ float spriteDepth(float z, float rhw);
 // eyes always; behind, under kOwnNear from the head, and once out shown again only past kOwnShownAgain (the eye pulled
 // in at a wall and let out by steps no longer turns it on and off); `behind` 0 - not known yet
 constexpr float kOwnNear = 12.0f, kOwnShownAgain = 16.0f;
+// 3.0.20-beta.70 (the owner's pick 2 of the camera's options): [view3d] near_fade - the world's surfaces dissolve
+// from kNearWhole from the eye down to kNearGone, the game's near plane (shaders.cpp nearFade holds the same)
+constexpr float kNearGone = 10.0f, kNearWhole = 12.0f;
 bool ownOut(Mode m, float behind, bool outBefore);
 
 // 3.0.19-beta.37 (the owner: «можнол попробовать» - the concept's photo mode with a free camera, Ctrl+Shift+C): the

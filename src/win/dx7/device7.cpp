@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "core/device_caps.hpp"
+#include "core/foliage.hpp"
 #include "core/frame.hpp"
 #include "core/glint.hpp"
 #include "core/mage_looks.hpp"
@@ -109,6 +110,12 @@ void setGroundBatch(bool on) { Device7::setBatchGround(on); }
 uint32_t gpuTextureOf(const void* surface) {
     Surface7* t = surface ? Surface7::from(static_cast<IDirectDrawSurface7*>(const_cast<void*>(surface))) : nullptr;
     return t ? t->gpuTexture() : 0;
+}
+int holesOf(const void* surface) {
+    Surface7* t = surface ? Surface7::from(static_cast<IDirectDrawSurface7*>(const_cast<void*>(surface))) : nullptr;
+    std::vector<uint32_t> texels;
+    if (!t || !t->topArgb(texels) || texels.size() != size_t(t->width()) * size_t(t->height())) return -1;
+    return foliage::holesPercent(texels.data(), t->width(), t->height());
 }
 
 void Device7::flushLive() {

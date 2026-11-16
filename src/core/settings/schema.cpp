@@ -520,6 +520,11 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.20-beta.56 (R-2BX4BG): the gaps of the models made for the view from above closed
         {"view3d", "close_gaps", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dCloseGaps,
          Text::View3dCloseGapsHint, "", &E::closeGaps},
+        // 3.0.20-beta.70 (the owner's picks 1 and 2 of the camera's options)
+        {"view3d", "camera_walls", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dCameraWalls,
+         Text::View3dCameraWallsHint, "", &E::cameraWalls3d},
+        {"view3d", "near_fade", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dNearFade,
+         Text::View3dNearFadeHint, "", &E::nearFade3d},
         // 3.0.19-beta.33 (the owner: «я так траву в 3д и не увидел»): the grass as blades in the world
         {"view3d", "grass", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dGrass,
          Text::View3dGrassHint, "", &E::grass3d},

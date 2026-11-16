@@ -861,7 +861,21 @@ void seeThrough(float4 pos, float2 uv, float2 du, float2 dv, inout float4 c) {
     c.a = a * lerp(0.3, 0.95, rim);
 }
 
+// 3.0.20-beta.70 (the owner's pick 2 of the camera's options, «растворять то, что ближе 12 единиц»): in the 3D view
+// a surface nearer the eye than kNearWhole dissolves by a 4 x 4 screen pattern down to the near plane (10, the
+// game's own), where it was cut as by a knife (core view3d::kNearGone, kNearWhole; alphaTest bit 29)
+static const float kNearGone = 10.0, kNearWhole = 12.0;
+static const float kNearPattern[16] = {0.0, 8.0,  2.0, 10.0, 12.0, 4.0, 14.0, 6.0,
+                                       3.0, 11.0, 1.0, 9.0,  15.0, 7.0, 13.0, 5.0};
+void nearFade(float4 pos) {
+    float whole = (pos.w - kNearGone) / (kNearWhole - kNearGone);
+    uint2 at = uint2(pos.xy) & 3u;
+    float bar = (kNearPattern[at.y * 4u + at.x] + 0.5) / 16.0;
+    if (whole < 1.0 && whole <= bar) discard;
+}
+
 float4 shade(PsIn i) {
+    if (((alphaTest >> 29) & 1) != 0) nearFade(i.pos);
     float2 uv0 = ((stage0.y >> 16) & 7) == 1 ? i.uv1 : i.uv0;
     float2 du = ddx(uv0);  // outside any branch; the interface path only uses explicit gradients
     float2 dv = ddy(uv0);

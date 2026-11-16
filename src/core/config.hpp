@@ -209,6 +209,12 @@ struct EffectSettings {
     // 3.0.20-beta.57 (R-J3GKD9 «тут другие комнаты видны»): [view3d] one_room - in a house's map (many rooms side by
     // side, core/rooms) the 3D view draws the room the player stands in alone: the others as if nothing were there
     bool oneRoom3d = true;
+    // 3.0.20-beta.70 (the owner's picks of the camera's options, «а и б»): [view3d] camera_walls - the 3D view's
+    // camera stops at the drawn models' own triangles (core/camera_solids), not at their boxes; [view3d] near_fade -
+    // what stands nearer the eye than view3d::kNearWhole dissolves by a screen pattern down to the near plane, where
+    // it was cut as by a knife
+    bool cameraWalls3d = true;
+    bool nearFade3d = true;
     // 3.0.16-beta.25 (the owner: «давай» - the body's stamp, from nostalRE): body_stamp - after the game's characters'
     // sprites (drawn writing no depth) each one's shape put into the depth a little behind its feet: an effect drawn
     // after them falls behind the body where it lies behind it (a ring's far half), in front where it lies in front

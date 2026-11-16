@@ -683,6 +683,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (aiDrawn[0] || d.sharpCopy || artDrawn) c.uiMode = 0;  // 3.0.18-beta.178: a number's sharp copy likewise
     if (d.effect == uint8_t(effect_exe::Kind::Panel) || d.effect == uint8_t(effect_exe::Kind::Backdrop))
         c.uiMode = 0;  // 3.0.3-beta.8: at the target's pixels (3.0.18-beta.64: the glass too)
+    // 3.0.20-beta.70 (the owner's pick 2 of the camera's options; shade()'s nearFade): in the 3D view the world's
+    // draws dissolve nearer the eye than view3d::kNearWhole
+    if (effects.nearFade3d && camera::wideView() && !s.ui) c.alphaTest |= 1u << 29;
     if (twin) {  // the tile's first game pixel is the window's place plus the tile's (spec §6)
         float quad[4];
         uiPixels(rec, d, quad);

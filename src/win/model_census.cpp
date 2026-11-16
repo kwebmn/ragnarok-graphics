@@ -81,6 +81,11 @@ struct Moving {
     uint32_t mesh = 0, colours = 0, lits = 0;
 };
 std::unordered_map<uint32_t, Moving> g_moving;
+// 3.0.20-beta.70 (core/camera_solids): the still nodes' triangles in the world for the 3D view's camera; a texture's
+// share of holes looked at once (its surface -> percent, -1 not ours)
+solids::Set g_solids;
+std::unordered_map<uint32_t, int> g_holes;
+size_t g_solidsTold = 0;
 std::vector<uint32_t> g_frameMoving;
 std::vector<float> g_frameMatrices;
 size_t g_toldMoving = 0;
@@ -390,6 +395,20 @@ void capture(uintptr_t node, bool flipped, const float* parent, const float* poi
                                      : 0u);
         if (!n.textures.back() || at<int32_t>(texture + kTextureFormat) == int32_t(kFormatAlpha)) drawable = false;
     }
+    // 3.0.20-beta.70: which of its pictures have holes (leaves, a fence): their faces are no wall for the camera
+    std::vector<uint8_t> open(textureCount, 0);
+    if (!moving)
+        for (uint32_t t = 0; t < textureCount; ++t) {
+            const uintptr_t texture = at<uint32_t>(textureList + 4 * t);
+            const uint32_t surface = texture ? at<uint32_t>(texture + kTextureSurface) : 0;
+            if (!surface) continue;
+            auto known = g_holes.find(surface);
+            if (known == g_holes.end()) {
+                if (g_holes.size() > 8192) g_holes.clear();
+                known = g_holes.emplace(surface, dx7::holesOf(reinterpret_cast<const void*>(uintptr_t(surface)))).first;
+            }
+            open[t] = known->second >= solids::kOpenHoles ? 1 : 0;
+        }
     n.vertices.resize(size_t(vertices) * 3);
     n.moving = moving;  // 3.0.20-beta.14: its own vertices, placed by the frame's matrix for it
     if (moving)
@@ -408,6 +427,14 @@ void capture(uintptr_t node, bool flipped, const float* parent, const float* poi
         std::memcpy(out.colour, reinterpret_cast<const void*>(colours), sizeof out.colour);
         std::memcpy(out.uv, reinterpret_cast<const void*>(colours + 12), sizeof out.uv);
         if (lit) std::memcpy(out.lit, reinterpret_cast<const void*>(litFirst + uintptr_t(f) * 36), sizeof out.lit);
+    }
+    if (!moving) {  // 3.0.20-beta.70: its triangles for the camera's way (the corners in the world already)
+        std::vector<solids::Face> walls(faces);
+        for (uint32_t f = 0; f < faces; ++f) {
+            walls[f] = solids::Face{{n.faces[f].v[0], n.faces[f].v[1], n.faces[f].v[2]},
+                                    open[n.faces[f].texture] != 0};
+        }
+        g_solids.add(uint32_t(node), n.vertices.data(), vertices, walls.data(), walls.size());
     }
     auto* r = Context::get().renderer;
     if (!r) return;
@@ -608,7 +635,12 @@ void noteProjection(const float* points, const float* matrix, int count) {
     capture(node, g_calls[g_depth - 1].flipped, g_calls[g_depth - 1].parent, points, matrix, count);
 }
 
+const solids::Set& solidsNow() { return g_solids; }
+
 void mapChanged() {
+    g_solids.clear();  // 3.0.20-beta.70
+    g_holes.clear();
+    g_solidsTold = 0;
     g_sent.clear();
     g_still.clear();
     g_moving.clear();  // 3.0.20-beta.14
@@ -713,6 +745,12 @@ void frame() {
                  "with several keys all alike), %u of them moving - their own vertices, placed by the frame's "
                  "matrices (%u of them hung on a moving one)", g_sentNodes, g_sentFaces, g_alike, g_animated, g_under);
     g_sentNodes = g_sentFaces = g_animated = g_under = g_alike = 0;
+    if (g_solids.triangles() != g_solidsTold) {  // 3.0.20-beta.70: as more of the map is seen
+        g_solidsTold = g_solids.triangles();
+        LOG_INFO("models: the 3D view's camera goes by the still nodes' own triangles - %zu triangles of %zu nodes "
+                 "known on this map, %zu faces of pictures with holes (leaves, fences) left out; a model not drawn "
+                 "yet by its box", g_solids.triangles(), g_solids.parts(), g_solids.leftOut());
+    }
     if (g_ours || g_oursMoving || g_keptBlended || g_moved)  // 3.0.20-beta.4; 3.0.20-beta.14: the moving ones
         LOG_INFO("models: %u nodes drawn by our renderer in place of the game's in %u frames (%.0f a frame; %.0f of "
                  "them moving, by their matrices) - [view3d] own_models; %u captured ones left to the game (a texture "

@@ -17,6 +17,7 @@
 #include "win/game_camera.hpp"
 #include "win/game_memory.hpp"
 #include "win/log.hpp"
+#include "win/model_census.hpp"
 #include "win/uaui.hpp"
 #include "win/walk_mode.hpp"
 #include "win/world_mouse.hpp"
@@ -90,6 +91,7 @@ struct State {
     int wheelsTold = 0;       // 3.0.19-beta.34: the wheel's locks told
     float viewNow[12] = {};   // 3.0.19-beta.36: the view matrix written last (viewAxes)
     bool aimPull = false;     // 3.0.19-beta.36: [view3d] aim_pull
+    bool cameraWalls = true;  // 3.0.20-beta.70: [view3d] camera_walls - by the models' own triangles
     // 3.0.19-beta.37 (the owner: «можнол попробовать» - the photo mode with a free camera): Ctrl+Shift+C in the 3D
     // view - the camera off the character, flown by W A S D, Space up, C down (Shift faster)
     bool free = false, wantFree = false, skipFreeChar = false;
@@ -434,6 +436,7 @@ void adoptTilt(uint32_t view, State& s) {
 // models (+0x4c..+0x50); a model's own box at +0x130 (FUN_004fa0f0)
 constexpr uint32_t kViewWorld = 0x1B4, kWorldTree = 0x68, kNodeCentre = 0x2C, kNodeHalf = 0x38, kNodeModels = 0x4C;
 constexpr uint32_t kModelBox = 0x130;
+constexpr uint32_t kModelRoot = 0x28;  // 3.0.20-beta.70: its root node (win/model_census's kActorNode)
 constexpr int kTreeDepth = 5;
 
 bool finiteAll(const float* f, int n, float most) {
@@ -480,6 +483,12 @@ void boxesOnTheWay(uint32_t node, int depth, const float head[3], const float ey
             uint32_t model = 0;
             if (!readGame(p, &model, 4) || !model || std::find(seen.begin(), seen.end(), model) != seen.end()) continue;
             seen.push_back(model);
+            // 3.0.20-beta.70 (the owner's pick 1): a model the game has drawn is known by its own triangles
+            // (win/model_census solidsNow) - its box is no wall then
+            uint32_t root = 0;
+            if (g_state.cameraWalls && readGame(model + kModelRoot, &root, 4) && root &&
+                modelcensus::solidsNow().has(root))
+                continue;
             view3d::Box mb;
             if (modelBox(model, mb)) out.push_back(mb);
         }
@@ -665,11 +674,20 @@ void __attribute__((thiscall)) build(uint32_t view) {
             s.waySeen.clear();
             int budget = 2000;
             boxesOnTheWay(world + kWorldTree, 0, head, eye, s.wayBoxes, s.waySeen, budget);
-            const float byModels = view3d::freeOfBoxes(eye, target, want, s.wayBoxes);
+            // 3.0.20-beta.70: by the drawn models' own triangles (the eye three units wide); the boxes left are those
+            // of models not drawn yet
+            const solids::Set& walls = modelcensus::solidsNow();
+            const float byBoxes = view3d::freeOfBoxes(eye, target, want, s.wayBoxes);
+            const float byWalls =
+                s.cameraWalls ? solids::freeOfSolids(eye, target, want, walls, solids::kEyeRadius) : want;
+            const float byModels = std::min(byBoxes, byWalls);
             if (byModels < onGround - 0.5f && s.modelPullsTold < 10 && byModels < s.behindNow - 0.5f) {
                 ++s.modelPullsTold;
-                LOG_INFO("3D view: behind - brought in to %.0f of %.0f before a model (%zu model(s) on the way, %zu "
-                         "looked at)", byModels, want, s.wayBoxes.size(), s.waySeen.size());
+                LOG_INFO("3D view: behind - brought in to %.0f of %.0f before a model: by its own triangles %.0f "
+                         "(%zu triangles of %zu nodes known on this map), by the boxes of models not drawn yet %.0f "
+                         "(%zu of %zu looked at)",
+                         byModels, want, byWalls, walls.triangles(), walls.parts(), byBoxes, s.wayBoxes.size(),
+                         s.waySeen.size());
             }
             free = std::min(free, byModels);
         }
@@ -711,11 +729,14 @@ void __attribute__((thiscall)) build(uint32_t view) {
             boxesOnTheWay(s.worldNow + kWorldTree, 0, before, s.freeEye, boxes, looked, budget);
             const float wanted[3] = {s.freeEye[0], s.freeEye[1], s.freeEye[2]};
             view3d::keepOffBoxes(before, s.freeEye, boxes);
+            // 3.0.20-beta.70: and off the drawn models' own triangles - through a gate's opening it flies
+            if (s.cameraWalls) solids::keepOffSolids(before, s.freeEye, modelcensus::solidsNow());
             if (s.freeStopsTold < 5 && (wanted[0] != s.freeEye[0] || wanted[1] != s.freeEye[1] ||
                                         wanted[2] != s.freeEye[2])) {
                 ++s.freeStopsTold;
-                LOG_INFO("3D view: the free camera kept off a model (%zu model(s) near its way, %zu looked at)",
-                         boxes.size(), looked.size());
+                LOG_INFO("3D view: the free camera kept off a model (%zu box(es) of models not drawn yet near its "
+                         "way, %zu looked at; %zu triangles known)",
+                         boxes.size(), looked.size(), modelcensus::solidsNow().triangles());
             }
         }
         // 3.0.19-beta.45: and out of the ground's rock rising over it (a cave's walls are the ground's, not models)
@@ -866,6 +887,11 @@ void frame(const Config& config) {
     s.mouseSpeed = float(config.view3dMouse) / 100.0f;
     s.sight = config.view3dDistance;  // 3.0.19-beta.24
     s.aimPull = config.view3dAimPull;  // 3.0.19-beta.36
+    if (config.effects.cameraWalls3d != s.cameraWalls) {  // 3.0.20-beta.70
+        s.cameraWalls = config.effects.cameraWalls3d;
+        LOG_INFO("3D view: [view3d] camera_walls = %d - the camera kept out of the models by %s",
+                 s.cameraWalls ? 1 : 0, s.cameraWalls ? "their own triangles as the game drew them" : "their boxes");
+    }
     s.shoulder = config.view3dShoulder;  // 3.0.19-beta.54
     if (s.mode != view3d::Mode::Off && !inGameWorld()) {  // the login, the character list: the game's own
         s.mode = s.wanted = view3d::Mode::Off;

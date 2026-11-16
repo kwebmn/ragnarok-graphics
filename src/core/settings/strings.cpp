@@ -8948,6 +8948,31 @@ constexpr Entry kTexts[] = {
      "Часть моделей игры сделана для вида сверху: шапка скалы висит над основанием, между ними ничего нет, у яруса "
      "пагоды нет стен до крыши. С уровня глаз сквозь них видно насквозь. Драйвер закрывает такие щели в моделях, "
      "которые рисует сам. Нужны «Модели нашим рендером»; изменение действует со следующей карты."},
+    // 3.0.20-beta.70 (the owner's picks of the camera's options, «а и б»)
+    {Text::View3dCameraWalls, "The camera stops at real walls", "Камера впирається у справжні стіни",
+     "Камера упирается в настоящие стены"},
+    {Text::View3dCameraWallsHint,
+     "Behind the character the camera is kept out of the houses and walls by their own shape, as the game drew them, "
+     "not by the boxes round them: it goes through a gate's opening and under a roof's overhang, and no longer "
+     "through the walls of the house you stand in. Leaves, fences, lamp posts and trunks do not stop it. A model "
+     "not seen yet on this map is kept by its box. The free camera too.",
+     "Камеру позаду персонажа не пускає в будинки й стіни їхня власна форма — така, якою її намалювала гра, а не "
+     "коробки довкола: вона проходить в отвір брами й під звисом даху і більше не проходить крізь стіни будинку, в "
+     "якому ви стоїте. Листя, паркани, ліхтарі й стовбури її не зупиняють. Модель, якої на цій карті ще не було "
+     "видно, тримає своєю коробкою. Вільну камеру теж.",
+     "Камеру позади персонажа не пускает в дома и стены их собственная форма — такая, какой её нарисовала игра, а "
+     "не коробки вокруг: она проходит в проём ворот и под свес крыши и больше не проходит сквозь стены дома, в "
+     "котором вы стоите. Листья, заборы, фонари и стволы её не останавливают. Модель, которой на этой карте ещё "
+     "не было видно, держит своей коробкой. Свободную камеру тоже."},
+    {Text::View3dNearFade, "Dissolve what is right at the camera", "Розчиняти те, що впритул до камери",
+     "Растворять то, что вплотную к камере"},
+    {Text::View3dNearFadeHint,
+     "In the 3D view a wall, a tree or a monster nearer than 12 units to the camera dissolves into dots towards it. "
+     "Off: it is cut off sharply at 10 units, as before.",
+     "У 3D-режимі стіна, дерево чи монстр ближче ніж за 12 одиниць до камери розчиняється крапками в її бік. "
+     "Вимкнено — різко обрізається на 10 одиницях, як раніше.",
+     "В 3D-режиме стена, дерево или монстр ближе 12 единиц к камере растворяется точками в её сторону. Выключено "
+     "— резко обрезается на 10 единицах, как раньше."},
     {Text::View3dGrass, "Grass in the 3D view", "Трава у 3D-режимі", "Трава в 3D-режиме"},  // 3.0.19-beta.33
     {Text::View3dGrassHint,
      "In the 3D view the grass grows as blades on the green ground round you, swaying in the wind and trodden by "

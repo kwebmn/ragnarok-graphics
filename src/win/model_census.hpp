@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdint>
 
+#include "core/camera_solids.hpp"
+
 namespace uagfx::win::modelcensus {
 
 // 3.0.20-beta.1 (stage 1 of «Модели нашим рендером»): the game's model node draw (core/model_census kNodeDraw) hooked -
@@ -26,5 +28,8 @@ void beforeRecord();
 // навколо» - the next whole frame's nodes the game draws itself near the player written into the log (where they
 // stand in the world, their faces, mirrored or not), ours counted, the renderer asked for its side with that frame
 void dumpAround();
+// 3.0.20-beta.70 (the owner's pick 1 of the camera's options; core/camera_solids): the still nodes captured on this
+// map as triangles in the world - for the 3D view's camera, in place of their models' boxes; the game's thread's
+const solids::Set& solidsNow();
 
 }  // namespace uagfx::win::modelcensus
