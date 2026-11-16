@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.20-beta.37 — what's new · 2026-11-16
+
+- **The frame's work on several threads, step 2: shadows and reflections, models.** For the reflections in the water and the torches' shadows every opaque draw of the game is turned into the world's coordinates. Until now that happened one by one right during the draws (0.2–0.4 ms a frame). Now the draws only write down a list, and it is worked out all at once, in parts on several threads, before the torches' shadows and at the frame's end. Likewise the face lists of «Models by our renderer» by texture are gathered in parts on several threads when there are many models. Direct3D 12 and Direct3D 11.
+- **A new log line:** «CPU: the game's draws a frame by kind» — how much of the renderer's own work goes to the interface, the ground, the solid world, sprites, effects. It will show what to move next; please send a report after playing in a field and in a town.
+
 # uaRO Graphics 3.0.20-beta.36 — what's new · 2026-11-16
 
 - **The frame's work on several threads, step 1: textures.** Each new texture of the game has to be looked at: does it look like fire, does it glow, is it leaves, and its key for the AI pack. Until now the renderer's thread did it between frames (up to 1 ms a frame in the reports, on a GTX 970). Now a thread of its own at a lower priority does it while the renderer draws, and the renderer only takes what is done. So in Direct3D 12 and in Direct3D 11.
