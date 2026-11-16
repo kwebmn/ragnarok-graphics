@@ -52,5 +52,11 @@ constexpr float kGrassy = 0.12f;
 // a cell's picture's part's mean green by that measure, 0-1; under 0: not known (no top, no picture)
 float greenOfCell(const gnd::Ground& g, size_t cell, const std::vector<Picture>& pictures);
 std::vector<uint8_t> grassyCells(const gnd::Ground& g, const std::vector<Picture>& pictures);
+// 3.0.20-beta.53 (the owner's «делай 1-9», 8): the same with one picture in memory at a time - where there is no own
+// ground to hold them all (it is off, there is no room for it, Direct3D 11). pictureOf gives a texture's picture,
+// good until its next call (false: not known - its cells as before); asked once for each texture a top wears, in the
+// textures' order
+using PictureOf = std::function<bool(size_t texture, Picture& out)>;
+std::vector<uint8_t> grassyCells(const gnd::Ground& g, const PictureOf& pictureOf);
 
 }  // namespace uagfx::ground_cells

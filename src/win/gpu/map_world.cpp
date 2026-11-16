@@ -328,6 +328,53 @@ void MapWorld::loop() {
                 LOG_INFO("map objects: %s.gnd is in neither the data folder nor DATA.INI's archives", name.c_str());
             else if (!ground_heights::parse(gb.data(), gb.size(), ground, why))
                 LOG_INFO("map objects: %s.gnd (%s): %s", name.c_str(), gfrom.c_str(), why.c_str());
+            // a file of the game's: the data folder first, then its archives (names as written, or lower case)
+            const auto readGame = [&](const std::string& entry, std::vector<uint8_t>& out) {
+                const std::string low = lower(entry);
+                bool got = win::gamefiles::readWhole(dir + "\\" + entry, out);
+                for (size_t i = 0; i < archives.size() && !got; ++i) {
+                    Archive& a = *archives[i];
+                    if (!open(a)) continue;
+                    got = a.grf ? (a.g.find(entry) && a.g.read(entry, out, why)) ||
+                                      (a.g.find(low) && a.g.read(low, out, why))
+                                : a.zip.has(low) && a.zip.read(low, out, why);
+                }
+                return got;
+            };
+            // a texture in full colour with its mipmaps, each half of the one before; `keyed`: the magenta
+            // see-through (3.0.4-beta.14, the models' leaves and fences, as the game keys them; 3.0.9-beta.3
+            // the ground's too - R-6JBVTG, Izlude's bridge and wall)
+            // (3.0.20-beta.53: `mips` false - its first level alone, for what only looks at it)
+            const auto picture = [&](const std::string& name, bool keyed, bool mips = true) {
+                OwnGround::Picture pic;
+                std::vector<uint8_t> tb;
+                std::vector<uint32_t> argb;
+                int pw = 0, ph = 0;
+                bool alpha = false;
+                const std::string low = lower(name);
+                const bool tga = low.size() > 4 && low.compare(low.size() - 4, 4, ".tga") == 0;
+                const bool jpg = low.size() > 4 && low.compare(low.size() - 4, 4, ".jpg") == 0;  // the water's
+                if (!readGame("data\\texture\\" + name, tb) ||
+                    !(tga   ? pack::decodeTga(tb.data(), tb.size(), argb, pw, ph, alpha)
+                      : jpg ? jpeg::decode(tb.data(), tb.size(), argb, pw, ph)
+                            : pack::decodeBmp(tb.data(), tb.size(), argb, pw, ph)) ||
+                    pw <= 0 || ph <= 0)
+                    return pic;
+                // keyed to the game's own see-through texel (0x0421 in its 16 bits): the AI textures know it
+                if (keyed && !tga) pic.keyed = full_colour::keyMagenta(argb);
+                pic.width = pw;
+                pic.height = ph;
+                pic.levels.push_back(std::move(argb));
+                while (mips && (pw > 1 || ph > 1)) {
+                    std::vector<uint32_t> half;
+                    int hw = 0, hh = 0;
+                    full_colour::halve(pic.levels.back(), pw, ph, half, hw, hh);
+                    if (half.empty()) break;
+                    pic.levels.push_back(std::move(half));
+                    pw = hw, ph = hh;
+                }
+                return pic;
+            };
             EnterCriticalSection(&shared_->lock);
             const bool ownWanted = shared_->ownWanted;
             LeaveCriticalSection(&shared_->lock);
@@ -364,52 +411,6 @@ void MapWorld::loop() {
                     own->cornerNormals = own_ground::cornerNormals(full);  // 3.0.4-beta.26: the smooth hills' light
                     // 3.0.4-beta.12: the strips between the cells, none round a patch laid by hand
                     const std::vector<uint8_t>* laid = ground.laid.size() == full.cells.size() ? &ground.laid : nullptr;
-                    // a file of the game's: the data folder first, then its archives (names as written, or lower case)
-                    const auto readGame = [&](const std::string& entry, std::vector<uint8_t>& out) {
-                        const std::string low = lower(entry);
-                        bool got = win::gamefiles::readWhole(dir + "\\" + entry, out);
-                        for (size_t i = 0; i < archives.size() && !got; ++i) {
-                            Archive& a = *archives[i];
-                            if (!open(a)) continue;
-                            got = a.grf ? (a.g.find(entry) && a.g.read(entry, out, why)) ||
-                                              (a.g.find(low) && a.g.read(low, out, why))
-                                        : a.zip.has(low) && a.zip.read(low, out, why);
-                        }
-                        return got;
-                    };
-                    // a texture in full colour with its mipmaps, each half of the one before; `keyed`: the magenta
-                    // see-through (3.0.4-beta.14, the models' leaves and fences, as the game keys them; 3.0.9-beta.3
-                    // the ground's too - R-6JBVTG, Izlude's bridge and wall)
-                    const auto picture = [&](const std::string& name, bool keyed) {
-                        OwnGround::Picture pic;
-                        std::vector<uint8_t> tb;
-                        std::vector<uint32_t> argb;
-                        int pw = 0, ph = 0;
-                        bool alpha = false;
-                        const std::string low = lower(name);
-                        const bool tga = low.size() > 4 && low.compare(low.size() - 4, 4, ".tga") == 0;
-                        const bool jpg = low.size() > 4 && low.compare(low.size() - 4, 4, ".jpg") == 0;  // the water's
-                        if (!readGame("data\\texture\\" + name, tb) ||
-                            !(tga   ? pack::decodeTga(tb.data(), tb.size(), argb, pw, ph, alpha)
-                              : jpg ? jpeg::decode(tb.data(), tb.size(), argb, pw, ph)
-                                    : pack::decodeBmp(tb.data(), tb.size(), argb, pw, ph)) ||
-                            pw <= 0 || ph <= 0)
-                            return pic;
-                        // keyed to the game's own see-through texel (0x0421 in its 16 bits): the AI textures know it
-                        if (keyed && !tga) pic.keyed = full_colour::keyMagenta(argb);
-                        pic.width = pw;
-                        pic.height = ph;
-                        pic.levels.push_back(std::move(argb));
-                        while (pw > 1 || ph > 1) {
-                            std::vector<uint32_t> half;
-                            int hw = 0, hh = 0;
-                            full_colour::halve(pic.levels.back(), pw, ph, half, hw, hh);
-                            if (half.empty()) break;
-                            pic.levels.push_back(std::move(half));
-                            pw = hw, ph = hh;
-                        }
-                        return pic;
-                    };
                     unsigned found = 0;
                     for (const std::string& t : full.textures) {
                         own->textures.push_back(picture(t, true));
@@ -612,6 +613,48 @@ void MapWorld::loop() {
             } catch (const std::bad_alloc&) {
                 own.reset();
                 LOG_INFO("own ground: %s - no room for it in the game's memory: the game's own ground", name.c_str());
+            }
+            // 3.0.20-beta.53 (the owner's «делай 1-9», 8 - «трава не на камне у всех»): beta.46's rule - no grass on a
+            // cell whose own texture is not green - where the own ground did not give it (it is off or was not made;
+            // Direct3D 11 has none): the ground's file once more, its tops' textures read one at a time, none kept
+            if (!gfrom.empty() && ground.width > 0 && ground.bare.empty() && grassGrows(name)) try {
+                gnd::Ground lite;
+                if (gnd::parse(gb.data(), gb.size(), lite, why) && lite.width == ground.width &&
+                    lite.height == ground.height) {
+                    OwnGround::Picture held;  // the one picture in memory
+                    size_t read = 0, missing = 0;
+                    int waits = 0;
+                    const std::vector<uint8_t> grassy = ground_cells::grassyCells(
+                        lite, [&](size_t texture, ground_cells::Picture& out) {
+                            held = picture(lite.textures[texture], true, false);
+                            // the game's archives may be busy while it loads the map (3.0.18-beta.204): once more
+                            for (; held.levels.empty() && waits < 3; ++waits) {
+                                Sleep(250);
+                                held = picture(lite.textures[texture], true, false);
+                            }
+                            if (held.levels.empty()) {
+                                ++missing;
+                                return false;
+                            }
+                            ++read;
+                            out = {held.width, held.height, held.levels[0].data()};
+                            return true;
+                        });
+                    size_t bare = 0;
+                    ground.bare.resize(grassy.size());
+                    for (size_t i = 0; i < grassy.size(); ++i) {
+                        ground.bare[i] = grassy[i] ? uint8_t(0) : uint8_t(1);
+                        bare += grassy[i] ? 0 : 1;
+                    }
+                    LOG_INFO("grass: %s - %zu of its %zu cells' own textures are not green (under %.2f by the grass's "
+                             "measure: paving, sand, rock) - no grass on them; without the own ground: %zu of its "
+                             "tops' textures read one at a time, %zu not found (their cells as before)",
+                             name.c_str(), bare, grassy.size(), double(ground_cells::kGrassy), read, missing);
+                }
+            } catch (const std::bad_alloc&) {
+                ground.bare.clear();
+                LOG_INFO("grass: %s - no room to read its ground's textures: the grass by the screen's colour alone",
+                         name.c_str());
             }
         }
         // a model's file read once (the data folder, then the archives); an empty model where it is not read

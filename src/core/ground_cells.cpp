@@ -173,6 +173,31 @@ std::vector<uint8_t> grassyCells(const gnd::Ground& g, const std::vector<Picture
     return out;
 }
 
+std::vector<uint8_t> grassyCells(const gnd::Ground& g, const PictureOf& pictureOf) {
+    const int w = std::max(g.width, 0), h = std::max(g.height, 0);
+    std::vector<uint8_t> out(size_t(w) * size_t(h), 1);
+    if (g.cells.size() < out.size() || !pictureOf) return out;
+    std::vector<std::vector<uint32_t>> cellsOf(g.textures.size());  // the cells whose tops wear each texture
+    for (size_t i = 0; i < out.size(); ++i) {
+        const gnd::Cell& c = g.cells[i];
+        if (c.top < 0 || size_t(c.top) >= g.surfaces.size()) continue;
+        const int texture = g.surfaces[size_t(c.top)].texture;
+        if (texture >= 0 && size_t(texture) < cellsOf.size()) cellsOf[size_t(texture)].push_back(uint32_t(i));
+    }
+    std::vector<Picture> one(g.textures.size());  // the one known at the time
+    for (size_t t = 0; t < cellsOf.size(); ++t) {
+        Picture p;
+        if (cellsOf[t].empty() || !pictureOf(t, p)) continue;
+        one[t] = p;
+        for (const uint32_t i : cellsOf[t]) {
+            const float green = greenOfCell(g, i, one);
+            out[i] = green < 0.0f || green >= kGrassy ? 1 : 0;
+        }
+        one[t] = Picture{};
+    }
+    return out;
+}
+
 size_t dropWhere(Grid& g, const std::function<bool(float x, float z)>& off) {
     if (g.side <= 0.0f || g.width <= 0 || g.height <= 0 || g.span.size() < size_t(g.width) * size_t(g.height) * 2)
         return 0;

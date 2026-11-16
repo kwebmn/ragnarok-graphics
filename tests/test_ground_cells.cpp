@@ -149,3 +149,50 @@ TEST(ground_cells_grass_by_the_cells_own_texture) {
     g.cells[0].top = -1;  // no top: the land past the ground's edge may lie there - not this rule's to say
     CHECK(ground_cells::grassyCells(g, pictures)[0] == 1);
 }
+
+// 3.0.20-beta.53 (the owner's «делай 1-9», 8 - «трава не на камне у всех»): beta.46's rule needed the own ground - its
+// pictures all in memory at once. Without it (the own ground off, no room for it, Direct3D 11) the same answer with
+// one picture in memory at a time: each texture a top wears asked for once, its cells judged, the next
+TEST(ground_cells_grass_by_the_cells_own_texture_a_picture_at_a_time) {
+    gnd::Ground g;
+    g.width = 5, g.height = 1;
+    g.zoom = 10.0f;
+    g.textures = {"grass.bmp", "paving.bmp", "unused.bmp", "missing.bmp", "wall.bmp"};
+    std::vector<uint32_t> grass(64, 0xFF4C8A32u), paving(64, 0xFF8C8A84u);
+    const auto surface = [&](int texture) {
+        gnd::Surface s;
+        s.u[0] = 0.0f, s.u[1] = 1.0f, s.u[2] = 0.0f, s.u[3] = 1.0f;
+        s.v[0] = 0.0f, s.v[1] = 0.0f, s.v[2] = 1.0f, s.v[3] = 1.0f;
+        s.texture = int16_t(texture);
+        g.surfaces.push_back(s);
+        return int32_t(g.surfaces.size() - 1);
+    };
+    const int32_t tops[5] = {surface(1), surface(0), surface(3), surface(1), surface(0)};
+    for (int x = 0; x < 5; ++x) {
+        gnd::Cell c{};
+        c.top = tops[x];
+        g.cells.push_back(c);
+    }
+    g.cells[2].front = surface(4);  // a wall's texture alone: no top wears it - never asked for
+    std::vector<size_t> asked;
+    std::vector<uint32_t> held;  // the one picture in memory
+    const auto pictureOf = [&](size_t texture, ground_cells::Picture& out) {
+        asked.push_back(texture);
+        if (texture > 1) return false;  // not found
+        held = texture == 0 ? grass : paving;
+        out = {8, 8, held.data()};
+        return true;
+    };
+    const std::vector<uint8_t> grassy = ground_cells::grassyCells(g, pictureOf);
+    // paving, grass, a picture not found (as before: the screen's colour decides), paving, grass
+    CHECK(grassy == (std::vector<uint8_t>{0, 1, 1, 0, 1}));
+    // each texture the tops wear once, in the textures' order; the unused one and the wall's never
+    CHECK(asked == (std::vector<size_t>{0, 1, 3}));
+    // the same as with them all at once
+    const std::vector<ground_cells::Picture> pictures = {
+        {8, 8, grass.data()}, {8, 8, paving.data()}, {0, 0, nullptr}, {0, 0, nullptr}, {0, 0, nullptr}};
+    CHECK(grassy == ground_cells::grassyCells(g, pictures));
+    g.cells[1].top = -1;  // no top: not this rule's to say
+    CHECK(ground_cells::grassyCells(g, pictureOf)[1] == 1);
+    CHECK(ground_cells::grassyCells(gnd::Ground{}, pictureOf).empty());
+}
