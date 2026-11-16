@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.43 — what's new · 2026-11-16
+
+- **An audit of the horizon: the land past the edge no longer runs out in straight bands.** Each point's height past the edge came from the nearest corner of the map's ground, so whatever met the map's edge — a wall, a moat, a step — ran straight outward for sixty cells more: two straight banks left Prontera's south gate. Now the land's base is a smooth sheet stretched between the map's ground edge and the edge's mean height 60 cells off: every point lies midway between its neighbours. A narrow step of the edge dies out within its own width. The hills and mountains over it are as before.
+
 # uaRO Graphics 3.0.20-beta.42 — what's new · 2026-11-16
 
 - **An audit of the horizon (3.0.20-beta.30–31): the land past the edge begins where the map's real ground ends.** Nearly every map keeps one to three rings of empty cells round its ground (Prontera three, prt_fild08 two, Geffen one). The land past the edge began at the map's rectangle, so between the map's ground and it lay a trench 10–30 units wide: near the map's edge the sky showed in it. Now the empty cells reached from outside are the land's too, and its heights at the edge are those of the map's own ground corners. A hole the map's ground closes round is left alone.
