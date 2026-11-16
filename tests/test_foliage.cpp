@@ -164,7 +164,8 @@ TEST(foliage_a_crowns_leaf_face_stood_on_the_trunks_line) {
     float s0[3] = {110.0f, -30.0f, 50.0f}, s1[3] = {110.0f, -40.0f, 50.0f}, s2[3] = {116.0f, -35.0f, 50.0f};  // upright
     CHECK(!foliage::stoodAbout(middle, turn, s0, s1, s2));
     CHECK(s1[1] == -40.0f && s2[0] == 116.0f);
-    float d0[3] = {108.0f, -30.0f, 50.0f}, d1[3] = {114.0f, -27.0f, 44.0f}, d2[3] = {114.0f, -27.0f, 56.0f};  // drooping
+    // a tier's plate that hangs a little
+    float d0[3] = {108.0f, -30.0f, 50.0f}, d1[3] = {114.0f, -27.0f, 44.0f}, d2[3] = {114.0f, -27.0f, 56.0f};
     CHECK(foliage::stoodAbout(middle, turn, d0, d1, d2));  // a tier's plate hangs a little and is flat enough
     float plain[3] = {0.5f, 0.8660254f, 0.94f};
     float p0[3] = {108.0f, -30.0f, 50.0f}, p1[3] = {114.0f, -30.0f, 44.0f}, p2[3] = {114.0f, -30.0f, 56.0f};
