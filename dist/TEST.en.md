@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.20-beta.49 — what's new · 2026-11-16
+
+- **3D view: the night sky and the glow of dawn.** Until now the night sky was the day's turned dark: no stars, no moon, and dawn and dusk looked like noon. Now:
+  - **«Stars at night»** — small twinkling stars; the clouds hide them.
+  - **«The moon in the sky»** — a pale disc with a soft glow where the map's light comes from; the clouds by it are lit.
+  - **«Dawn and dusk glow»** — a warm band along the horizon while the night comes or goes, the most on the sun's side; the clouds turn warm.
+  - A thin high veil lies over the clouds, and the clouds are lit from the sun's side.
+  The water of the 3D view reflects the same sky, so the stars and the moon show in it too. All three switches are on; they are in «Game and chat» → «Game» → «3D view» and in the console (Ctrl+` → «All»). The look was settled on computed pictures; it has not been checked in the game yet.
+
 # uaRO Graphics 3.0.20-beta.48 — what's new · 2026-11-16
 
 - **3D view: skills, items and grass are no longer cut by the sky.** Until now the sky was drawn at the end and covered everything seen against it but the characters. Now the sky is laid before the effects: a skill's flash, an item on the ground or a blade of grass against the sky stays visible. The haze over what is drawn still comes at the end. The night no longer darkens the sky a second time.
