@@ -55,9 +55,12 @@ NewReport sendNew(const std::wstring& dir, const report::Upload& u);
 int sendQueued(const std::wstring& dir);  // how many went
 int queuedReports(const std::wstring& dir);
 
-// uaro-graphics\reports.txt (0.51): the codes sent from this computer, newest first; when the last automatic one
-// went (seconds since 1970, 0 never) - the watcher sends one in 6 hours at most.
-void noteSentIn(const std::wstring& dir, const std::string& code, const std::string& reason, bool automatic);
-long long lastAutomaticIn(const std::wstring& dir);
+// uaro-graphics\reports.txt (0.51): the codes sent from this computer, newest first; when the last report of a game's
+// bad end went (seconds since 1970, 0 never) - the watcher sends one in 6 hours at most. 3.0.20-beta.75: of
+// `version`'s games, and not a lost connection's report (core/reports lastBadEnd) - the owner's crash of 17.11 was
+// not told: his lost connection's automatic report three hours before had taken the six hours
+void noteSentIn(const std::wstring& dir, const std::string& code, const std::string& reason, bool automatic,
+                const std::string& version);
+long long lastBadEndIn(const std::wstring& dir, const std::string& version);
 
 }  // namespace uagfx::app

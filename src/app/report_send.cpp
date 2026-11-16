@@ -360,7 +360,8 @@ int watchGame(unsigned long pid, int logSlot) {
     if (reason.empty()) return 0;
     Model m;
     if (!m.now().config.reportAuto) return 0;  // turned off meanwhile
-    if (std::time(nullptr) - lastAutomaticIn(m.paths().dir) < kAutoEvery) return 0;
+    // 3.0.20-beta.75: of this version's games, a lost connection's report apart (core/reports lastBadEnd)
+    if (std::time(nullptr) - lastBadEndIn(m.paths().dir, kVersion) < kAutoEvery) return 0;
     // 2.13: kept for later when the site does not answer (app/reports), and in the tester's «Звернення»
     const NewReport r = sendNew(m.paths().dir, makeUpload(m, reason, true, "", {}, logSlot));
     return r.code.empty() && !r.queued ? 1 : 0;

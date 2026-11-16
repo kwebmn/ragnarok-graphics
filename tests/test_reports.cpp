@@ -192,3 +192,33 @@ TEST(reports_answers_of_the_unread_newest_first) {
     CHECK(a[1].status == reports::Status::NeedInfo);
     CHECK_EQ(a[2].code, std::string("R-DDDDD4"));
 }
+
+// 3.0.20-beta.75 (the owner 17.11 after a crash: «посмотри, нету ли отчетов по вылету?» - none had come): the
+// watcher tells of a game's bad end once in six hours at most, and it counted ANY automatic report - the lost
+// connection's report of 21:17 (beta.60's, which has a count of its own) kept a crash from being told till 03:17.
+// A lost connection's report is no part of that count; and a bad end of another version than the one last told of
+// is told at once - a new beta's first crash is news (several betas a day).
+TEST(reports_a_lost_connections_report_does_not_hold_a_crashs_back) {
+    const std::string sent = "1794850000 R-AAAAAA manual manual\n"
+                             "1794860000 R-BBBBBB crash auto\n"  // a line of before beta.75: no version
+                             "1794870000 R-CCCCCC disconnect auto 3.0.20-beta.72\n";
+    // the last bad end told: the crash's, not the lost connection's after it (a line with no version: any version's)
+    CHECK_EQ(reports::lastBadEnd(sent, "3.0.20-beta.74"), 1794860000ll);
+    CHECK_EQ(reports::lastBadEnd("1794870000 R-CCCCCC disconnect auto 3.0.20-beta.72\n", "3.0.20-beta.74"), 0ll);
+    CHECK_EQ(reports::lastBadEnd("1794850000 R-AAAAAA manual manual 3.0.20-beta.74\n", "3.0.20-beta.74"), 0ll);
+    CHECK_EQ(reports::lastBadEnd("", "3.0.20-beta.74"), 0ll);
+    CHECK_EQ(reports::lastBadEnd("garbage\n\n12 R-X\n", "3.0.20-beta.74"), 0ll);
+}
+
+TEST(reports_a_new_versions_first_bad_end_is_told_at_once) {
+    const std::string sent = reports::sentLine(1794860000ll, "R-BBBBBB", "crash", true, "3.0.20-beta.73") +
+                             reports::sentLine(1794861000ll, "R-DDDDDD", "hang", true, "3.0.20-beta.74");
+    CHECK_EQ(sent, std::string("1794860000 R-BBBBBB crash auto 3.0.20-beta.73\n"
+                               "1794861000 R-DDDDDD hang auto 3.0.20-beta.74\n"));
+    CHECK_EQ(reports::lastBadEnd(sent, "3.0.20-beta.73"), 1794860000ll);
+    CHECK_EQ(reports::lastBadEnd(sent, "3.0.20-beta.74"), 1794861000ll);  // any bad end: a hang, a failed start
+    CHECK_EQ(reports::lastBadEnd(sent, "3.0.20-beta.75"), 0ll);           // nothing told of this version yet
+    // a line's words kept to one each (the file is read by its spaces)
+    CHECK_EQ(reports::sentLine(5, "R-EEEEEE", "start failed", false, ""),
+             std::string("5 R-EEEEEE start-failed manual\n"));
+}

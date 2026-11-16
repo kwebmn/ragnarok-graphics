@@ -48,30 +48,6 @@ bool post(const std::string& path, const json::Value& body, long expected, std::
     return true;
 }
 
-struct Sent {
-    long long time = 0;
-    std::string code, reason;
-    bool automatic = false;
-};
-
-std::vector<Sent> readSent(const std::wstring& dir) {  // oldest first
-    std::vector<Sent> out;
-    std::string text;
-    if (!readFile(sentFile(dir), text)) return out;
-    std::istringstream in(text);
-    std::string line;
-    while (std::getline(in, line)) {
-        std::istringstream l(line);
-        Sent s;
-        std::string kind;
-        if (l >> s.time >> s.code >> s.reason >> kind) {
-            s.automatic = kind == "auto";
-            out.push_back(s);
-        }
-    }
-    return out;
-}
-
 enum class Outcome { Sent, Keep, Refused };
 
 // One report's JSON to the site: its code when it went
@@ -111,7 +87,8 @@ void noteQueued(const std::wstring& dir, const std::string& body, const std::str
     json::Value v;
     std::string ignored;
     json::parse(body, v, ignored);
-    noteSentIn(dir, code, v["reason"].asString().empty() ? "manual" : v["reason"].asString(), v["auto"].asBool());
+    noteSentIn(dir, code, v["reason"].asString().empty() ? "manual" : v["reason"].asString(), v["auto"].asBool(),
+               v["version"].asString());
 }
 
 }  // namespace
@@ -244,7 +221,7 @@ NewReport sendNew(const std::wstring& dir, const report::Upload& u) {
     const std::string body = report::uploadJson(u);
     switch (postReport(body, r.code, r.error)) {
         case Outcome::Sent:
-            noteSentIn(dir, r.code, u.reason, u.automatic);
+            noteSentIn(dir, r.code, u.reason, u.automatic, u.version);
             sendQueued(dir);  // the site answers: the waiting ones go too
             break;
         case Outcome::Keep:
@@ -282,21 +259,20 @@ int sendQueued(const std::wstring& dir) {
 
 int queuedReports(const std::wstring& dir) { return int(queuedFiles(dir).size()); }
 
-void noteSentIn(const std::wstring& dir, const std::string& code, const std::string& reason, bool automatic) {
+void noteSentIn(const std::wstring& dir, const std::string& code, const std::string& reason, bool automatic,
+                const std::string& version) {
     deleteFile(join(dir, L"uaro-graphics\\crash.dmp"));  // 0.52: on the site now
     std::string text;
     readFile(sentFile(dir), text);
-    text += std::to_string(static_cast<long long>(std::time(nullptr))) + " " + code + " " + reason + " " +
-            (automatic ? "auto" : "manual") + "\n";
+    text += reports::sentLine(static_cast<long long>(std::time(nullptr)), code, reason, automatic, version);
     makeFolder(join(dir, wide(layout::kOurs)));
     writeFileAtomic(sentFile(dir), report::tailOf(text, 16u << 10));
 }
 
-long long lastAutomaticIn(const std::wstring& dir) {
-    long long last = 0;
-    for (const Sent& s : readSent(dir))
-        if (s.automatic && s.time > last) last = s.time;
-    return last;
+long long lastBadEndIn(const std::wstring& dir, const std::string& version) {
+    std::string text;
+    readFile(sentFile(dir), text);
+    return reports::lastBadEnd(text, version);
 }
 
 }  // namespace uagfx::app

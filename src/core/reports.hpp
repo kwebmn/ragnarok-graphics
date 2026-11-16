@@ -61,6 +61,18 @@ std::vector<Answer> answersOf(const std::vector<Summary>& list);
 // «Підтверджую» / «Ще є» once the fix is here: «Виправлено в X» and this install at X or later.
 bool canConfirm(const Conversation& c, const std::string& installedVersion);
 
+// The reports this computer sent (uaro-graphics\reports.txt, app/reports noteSentIn): a line each - its time
+// (seconds), its code, its reason, "auto" or "manual", and since 3.0.20-beta.75 the version that sent it; a word
+// each (a space in one becomes "-").
+std::string sentLine(long long time, const std::string& code, const std::string& reason, bool automatic,
+                     const std::string& version);
+// 3.0.20-beta.75 (the owner after a crash: «посмотри, нету ли отчетов по вылету?» - none had come): when the last
+// report of a game's bad end went from here (the watcher's: a crash, a hang, a start that failed; 0 none) - it tells
+// of one in six hours at most. Counted: the automatic ones of `version` (a line with no version: any version's) -
+// NOT a lost connection's ("disconnect": core/net_trail maySend counts those), which held a crash's report back for
+// six hours; and not another version's - a new beta's first bad end is told at once.
+long long lastBadEnd(const std::string& sentText, const std::string& version);
+
 // The site writes its times in UTC with an offset; the app shows them in the player's clock.
 struct Civil {
     int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;

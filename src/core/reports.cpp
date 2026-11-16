@@ -248,4 +248,53 @@ std::string shown(const Civil& local) {
     return text;
 }
 
+namespace {
+
+std::string oneWord(std::string s) {  // the file is read by its spaces
+    for (char& ch : s)
+        if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n') ch = '-';
+    return s;
+}
+
+}  // namespace
+
+std::string sentLine(long long time, const std::string& code, const std::string& reason, bool automatic,
+                     const std::string& version) {
+    std::string line = std::to_string(time) + " " + oneWord(code) + " " + oneWord(reason) + " " +
+                       (automatic ? "auto" : "manual");
+    if (!version.empty()) line += " " + oneWord(version);
+    return line + "\n";
+}
+
+long long lastBadEnd(const std::string& sentText, const std::string& version) {
+    long long last = 0;
+    size_t at = 0;
+    while (at < sentText.size()) {
+        size_t end = sentText.find('\n', at);
+        if (end == std::string::npos) end = sentText.size();
+        std::string words[5];
+        int count = 0;
+        for (size_t i = at; i < end && count < 5;) {
+            while (i < end && (sentText[i] == ' ' || sentText[i] == '\r')) ++i;
+            const size_t from = i;
+            while (i < end && sentText[i] != ' ' && sentText[i] != '\r') ++i;
+            if (i > from) words[count++] = sentText.substr(from, i - from);
+        }
+        at = end + 1;
+        if (count < 4 || words[3] != "auto" || words[2] == "disconnect") continue;
+        if (count == 5 && !version.empty() && words[4] != version) continue;  // another version's
+        long long time = 0;
+        bool digits = !words[0].empty() && words[0].size() <= 18;
+        for (const char ch : words[0]) {
+            if (ch < '0' || ch > '9') {
+                digits = false;
+                break;
+            }
+            time = time * 10 + (ch - '0');
+        }
+        if (digits && time > last) last = time;
+    }
+    return last;
+}
+
 }  // namespace uagfx::reports
