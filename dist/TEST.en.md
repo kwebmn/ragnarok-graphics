@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.63 — what's new · 2026-11-16
+
+- **3D view: a monster's name no longer hangs in the air.** The game names whoever is under the cursor through anything that stands before it: it looks only at the sprites' frames on the screen. From above hardly anything stands before a monster; from the eyes' level a hill, a house or a tree hides it all the time, and the name hung over them with no monster to see. In the 3D view the name is now not shown when the eye does not see the one pointed at (the HP bars' own rule: the ground's heights and the models on the way). Clicking a monster works as before.
+
 # uaRO Graphics 3.0.20-beta.62 — what's new · 2026-11-16
 
 - **3D view: far buildings no longer stand as cut-outs, a softer horizon.** The haze far off painted everything one colour, the horizon's, so a building at the sight's end stood as a patch of that colour against the sky. The haze now takes the sky's own colour along each pixel's way: the far ground goes over into the horizon's band (with the warm glow at dawn and dusk), and what stands against the sky dissolves into the sky itself, stars, moon and clouds. Under the open sky only; caves and houses as before.
