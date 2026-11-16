@@ -32,6 +32,12 @@ struct OwnGround {
     // 3.0.20-beta.48: 1 a texture of the .gnd's that is the makers' filler (outskirts::fillerTexture) - where the land
     // past the edges is drawn its batches are left out: the land lies there
     std::vector<uint8_t> fillerTextures;
+    // 3.0.20-beta.71 (the owner's pick (a) of the interiors' options; core/room_blocks): a house's black blocks
+    // beside its rooms given the rooms' wall pictures - for the 3D view alone: what a texture's faces show in the
+    // view from above (roomblocks::Done::fromAbove: the makers' black, or kNotDrawn for the sides made), and 1 a
+    // texture of faces left out there; empty: none dressed
+    std::vector<int> fromAbove;
+    std::vector<uint8_t> madeTextures;
     terrain::Atlas atlas;
     // 3.0.20-beta.50 (the trial of real shadows in the 3D view): what the ground's light without its painted shadows
     // is made of (sun_shadows::sunlessRows of the atlas) and how dark the map paints its shadows

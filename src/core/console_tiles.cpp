@@ -20,7 +20,8 @@ const std::vector<const char*>& quickKeys() {
                                                "view3d.close_gaps",     // 3.0.20-beta.56
                                                "view3d.one_room",       // 3.0.20-beta.57
                                                "view3d.camera_walls",   // 3.0.20-beta.70: to compare in a town
-                                               "view3d.near_fade"};
+                                               "view3d.near_fade",
+                                               "view3d.room_walls"};    // 3.0.20-beta.71: to tell in a house
     return keys;
 }
 

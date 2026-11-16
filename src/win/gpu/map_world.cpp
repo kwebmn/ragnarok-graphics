@@ -17,6 +17,7 @@
 #include "core/outskirts.hpp"
 #include "core/own_ground.hpp"
 #include "core/own_models.hpp"
+#include "core/room_blocks.hpp"
 #include "core/pack_source.hpp"
 #include "core/layout.hpp"
 #include "core/updates.hpp"
@@ -52,6 +53,7 @@ struct MapWorld::Shared {
     MapWorld::VaultRock doneRock;             // 3.0.20-beta.54: a dungeon's own rock for its vault
     rooms::Map doneRooms;                     // 3.0.20-beta.57: a house's rooms
     bool ownWanted = false;                 // 3.0.4-beta.10: the own ground read with the map
+    bool roomWalls = true;                  // 3.0.20-beta.71: [view3d] room_walls
     std::unique_ptr<OwnGround> doneOwn;
     bool doneOk = false;
     bool doneReady = false;
@@ -121,6 +123,14 @@ void MapWorld::ask(const std::string& name) {
     LeaveCriticalSection(&shared_->lock);
     if (!thread_) thread_ = CreateThread(nullptr, 0, &MapWorld::threadMain, this, 0, nullptr);
     SetEvent(shared_->wake);
+}
+
+void MapWorld::setRoomWalls(bool wanted) {
+    if (wanted == roomWalls_) return;
+    roomWalls_ = wanted;
+    EnterCriticalSection(&shared_->lock);
+    shared_->roomWalls = wanted;
+    LeaveCriticalSection(&shared_->lock);
 }
 
 void MapWorld::setOwnGround(bool wanted) {
@@ -391,6 +401,7 @@ void MapWorld::loop() {
                 LOG_INFO("map objects: %s.gnd (%s): %s", name.c_str(), gfrom.c_str(), why.c_str());
             EnterCriticalSection(&shared_->lock);
             const bool ownWanted = shared_->ownWanted;
+            const bool roomWalls = shared_->roomWalls;  // 3.0.20-beta.71
             LeaveCriticalSection(&shared_->lock);
             // 3.0.4-beta.10: the own ground - its whole .gnd, its textures. 3.0.4-beta.20: no room for it in the game's
             // memory (32-bit) - the game's own ground, the game goes on
@@ -401,6 +412,24 @@ void MapWorld::loop() {
                     LOG_INFO("own ground: %s.gnd (%s): %s", name.c_str(), gfrom.c_str(), why.c_str());
                     own.reset();
                 } else {
+                    // 3.0.20-beta.71 (the owner's check list, 18 «есть стены чёрные», his pick (a) of the interiors'
+                    // options): in a house the makers' black blocks beside the rooms given the room's own wall
+                    // picture - for the 3D view (core/room_blocks); before the filler's own textures and the pictures
+                    if (roomWalls && cave_vault::ceilingFor(name, outdoors(name))) {
+                        const rooms::Map houseRooms = rooms::build(full);
+                        roomblocks::Done dressed = roomblocks::dress(full, houseRooms);
+                        if (dressed.tops || dressed.sides || dressed.made) {
+                            own->fromAbove = std::move(dressed.fromAbove);
+                            own->madeTextures.assign(own->fromAbove.size(), 0);
+                            for (size_t t = 0; t < own->fromAbove.size(); ++t)
+                                own->madeTextures[t] = own->fromAbove[t] == roomblocks::kNotDrawn ? 1 : 0;
+                            LOG_INFO("own ground: %s - the black blocks beside %zu of its %d room(s) given the "
+                                     "room's wall picture for the 3D view: %zu tops, %zu black sides, %zu sides made "
+                                     "where the makers left none ([view3d] room_walls); from above as they were",
+                                     name.c_str(), dressed.rooms, houseRooms.count, dressed.tops, dressed.sides,
+                                     dressed.made);
+                        }
+                    }
                     {  // 3.0.20-beta.48 (the audit's question 3): the makers' filler round the ground (BACKSIDE.BMP,
                        // BLACK.BMP; dry) the 3D view's land takes - its cells' tops given textures of their own, for
                        // the renderer to leave out where the land is drawn. Before the pictures are read (theirs too)

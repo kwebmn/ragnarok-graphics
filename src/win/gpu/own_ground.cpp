@@ -126,6 +126,7 @@ void Renderer::Impl::dropOwnGround() {
 // pictures put up - a few a frame, the full colours with their mipmaps (the AI textures know them by their 16-bit
 // texels, as the game's), the lightmaps in strips. True: drawn this picture in place of the game's.
 bool Renderer::Impl::prepareOwnGround() {
+    mapWorld.setRoomWalls(effects.roomWalls3d);  // 3.0.20-beta.71: from the next map read
     mapWorld.setOwnGround(true);
     mapWorld.poll();
     const OwnGround* g = mapWorld.ownGround();
@@ -726,11 +727,17 @@ bool Renderer::Impl::drawOwnGround() {
         ks.alphaRef = 0x80;
         const uint32_t state = o.rec.addState(st), blendState = o.rec.addState(bs), keyedState = o.rec.addState(ks);
         // 3.0.20-beta.20: a layer's texture's draw - its state, its pictures (the record's room made by place below)
+        // 3.0.20-beta.71 (core/room_blocks): a house's blocks dressed in their rooms' wall pictures show them in
+        // the 3D view alone - from above their faces take the makers' black they had
+        const bool dressedShown = camera::wideView();
         const auto drawOf = [&](uint8_t layer, size_t t) {
             DrawCmd cmd;
             const bool keyed = t < g->textures.size() && g->textures[t].keyed;
             cmd.state = layer == terrain::kGround ? (keyed ? keyedState : state) : blendState;
-            cmd.texture[0] = t < o.ids.size() ? o.ids[t] : 0;
+            const size_t shown = !dressedShown && t < g->fromAbove.size() && g->fromAbove[t] >= 0
+                                     ? size_t(g->fromAbove[t])
+                                     : t;
+            cmd.texture[0] = shown < o.ids.size() ? o.ids[shown] : 0;
             cmd.keyed[0] = keyed;
             cmd.texture[1] = sunless ? o.atlasSunless : o.atlas;  // 3.0.20-beta.50: no painted shadows under ours
             cmd.primitive = d3d7::PT_TRIANGLELIST;
@@ -755,7 +762,10 @@ bool Renderer::Impl::drawOwnGround() {
         const bool outskirts = camera::wideView() && mapOutdoors && !g->outskirts.chunks.empty();
         // 3.0.20-beta.48 (the audit's question 3): where the land is drawn the makers' filler round the ground is
         // left out - the land lies there (a black ring between the ground and it until now)
-        const std::vector<uint8_t>* leftOut = outskirts && !g->fillerTextures.empty() ? &g->fillerTextures : nullptr;
+        // 3.0.20-beta.71: and from above the sides made for a house's dressed blocks - the makers left none there
+        const std::vector<uint8_t>* leftOut = outskirts && !g->fillerTextures.empty() ? &g->fillerTextures
+                                              : !dressedShown && !g->madeTextures.empty() ? &g->madeTextures
+                                                                                           : nullptr;
         const size_t mapChunks = g->mesh.chunks.size();
         for (size_t n = 0; n < mapChunks + (outskirts ? g->outskirts.chunks.size() : 0); ++n) {
             const bool past = n >= mapChunks;

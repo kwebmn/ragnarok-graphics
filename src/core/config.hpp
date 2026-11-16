@@ -215,6 +215,10 @@ struct EffectSettings {
     // it was cut as by a knife
     bool cameraWalls3d = true;
     bool nearFade3d = true;
+    // 3.0.20-beta.71 (the owner's pick (a) of the interiors' options, «ок, а»): [view3d] room_walls - in a house's
+    // map the makers' black blocks beside the rooms given the room's own wall picture in the 3D view
+    // (core/room_blocks; where the driver draws the ground itself); a change shows from the next map
+    bool roomWalls3d = true;
     // 3.0.16-beta.25 (the owner: «давай» - the body's stamp, from nostalRE): body_stamp - after the game's characters'
     // sprites (drawn writing no depth) each one's shape put into the depth a little behind its feet: an effect drawn
     // after them falls behind the body where it lies behind it (a ring's far half), in front where it lies in front

@@ -8973,6 +8973,21 @@ constexpr Entry kTexts[] = {
      "Вимкнено — різко обрізається на 10 одиницях, як раніше.",
      "В 3D-режиме стена, дерево или монстр ближе 12 единиц к камере растворяется точками в её сторону. Выключено "
      "— резко обрезается на 10 единицах, как раньше."},
+    // 3.0.20-beta.71 (the owner's pick (a) of the interiors' options, «ок, а»)
+    {Text::View3dRoomWalls, "Walls in place of a house's black blocks", "Стіни замість чорних блоків у будинках",
+     "Стены вместо чёрных блоков в домах"},
+    {Text::View3dRoomWallsHint,
+     "In a house the game's makers raised black blocks beside the rooms; only the side towards the room has the "
+     "wall's picture. In the 3D view the blocks' tops and other sides take the picture of that room's wall. The "
+     "view from above stays as it was. Where the driver draws the ground itself (Direct3D 12, «Own ground»); a change "
+     "shows from the next map.",
+     "У будинках автори гри підняли біля кімнат чорні блоки; малюнок стіни має лише бік, обернений до кімнати. У "
+     "3D-режимі верх та інші боки блоків отримують малюнок стіни цієї кімнати. Вигляд згори лишається таким, як "
+     "був. Працює там, де землю малює сам драйвер (Direct3D 12, «Своя земля»); зміна діє з наступної карти.",
+     "В домах авторы игры подняли возле комнат чёрные блоки; рисунок стены есть только у стороны, обращённой к "
+     "комнате. В 3D-режиме верх и остальные стороны блоков получают рисунок стены этой комнаты. Вид сверху "
+     "остаётся таким, как был. Работает там, где землю рисует сам драйвер (Direct3D 12, «Своя земля»); изменение "
+     "действует со следующей карты."},
     {Text::View3dGrass, "Grass in the 3D view", "Трава у 3D-режимі", "Трава в 3D-режиме"},  // 3.0.19-beta.33
     {Text::View3dGrassHint,
      "In the 3D view the grass grows as blades on the green ground round you, swaying in the wind and trodden by "
