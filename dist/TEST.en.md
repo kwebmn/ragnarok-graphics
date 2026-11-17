@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.21-beta.4 — what's new · 2026-11-17
+
+A row of the "Settings" window (Alt+O) now says itself why it does nothing at the moment.
+
+- **A yellowish line under the row:** "Works on Direct3D 12 only", "Works in the 3D view only", "To work it needs on: «Modern water»" or "A change shows from the next map". Before, this was hidden in a long hint and the row looked like any other.
+- **An effect's parts** say they need the effect itself, and **effects** say they need their group ("Fire and smoke", "Water"…). When nothing is in the way there is no line.
+- No value has changed.
+
 # uaRO Graphics 3.0.21-beta.3 — what's new · 2026-11-17
 
 The third step to tidy settings: the "Settings" window (Alt+O) is the player's main place now — it holds everything that applies at once, not only the interface.
