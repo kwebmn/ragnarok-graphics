@@ -42,28 +42,28 @@ public:
     // point; the wheel's the screen's) - a click chooses a row and switches it (a slider or a choice: its left half
     // less, its right half more), the wheel scrolls; true: it was over the console (not the game's or the parts')
     static bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
-    // 3.0.11-beta.75: «Розмістити інтерфейс» chosen (the console closed with it) - true once
-    bool takeLayoutAsk() {
-        const bool asked = layoutAsked_;
-        layoutAsked_ = false;
-        return asked;
-    }
     // 3.0.20-beta.22: «Записати моделі навколо» chosen (the console closed with it) - true once
     bool takeDumpAsk() {
         const bool asked = dumpAsked_;
         dumpAsked_ = false;
         return asked;
     }
+    // 3.0.21-beta.7: the row that leads to «Налаштування» chosen (the console closed with it) - true once
+    bool takeSettingsAsk() {
+        const bool asked = settingsAsked_;
+        settingsAsked_ = false;
+        return asked;
+    }
 
 private:
     // 2.2.1: Open - a group's effects shown or not; 2.6.22: Here - «Только на этой карте» (the console's own);
     // 3.0.5-beta.6: Test - «Тест графіки» (core/graphics_test)
-    // 3.0.17-beta.4 (the concept «простой старт»): Tabs - the tabs' row (Швидко, Картинка, Інтерфейс, Текстури,
-    // Усе), Look - one of «Як виглядає гра»'s three choices (key: its number)
-    // 3.0.17-beta.27: Tiles - up to four switches side by side (key: theirs joined by '|', core/console_tiles)
+    // 3.0.17-beta.4: Tabs - the tabs' row
     // 3.0.21-beta.2 (the concept «Настройки uaRO Graphics», variant 4, step 2: the console's laboratory): About -
     // what the row over it says about itself (a trial's version, what it needs, when a change shows); never chosen
-    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here, Test, Layout, Tabs, Look, Tiles, Dump, About };
+    // 3.0.21-beta.7: Settings - «Налаштування гри — у вікні «Налаштування» (Alt+O)», the first row of «Проби»: who
+    // opens the console for what it held before is led to where it is now (Space or Enter opens the window)
+    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here, Test, Tabs, Dump, About, Settings };
     static bool passive(Kind k) { return k == Kind::Heading || k == Kind::About; }
     struct Row {
         Kind kind = Kind::Heading;
@@ -84,34 +84,25 @@ private:
 
     bool open_ = false;
     bool groupOpen_[kEffectGroups] = {};  // 2.2.1: the groups opened to their effects
-    bool windowsOpen_ = false;             // 3.0.11-beta.302: the new look's windows shown
-    // 3.0.17-beta.4: the tab shown (kTabQuick first) and the rows pinned to «Швидко» (Insert; core/console_pins)
-    // 3.0.17-beta.12: «Нове» - the rows new since the console last showed them (cache\console-known.txt)
-    // 3.0.21-beta.2: «Проби» and «Діагностика» - the laboratory's tabs (core/settings/catalogue)
-    static constexpr int kTabQuick = 0, kTabNew = 1, kTabPicture = 2, kTabInterface = 3, kTabTextures = 4,
-                         kTabTrials = 5, kTabDiag = 6, kTabAll = 7, kTabs = 8;
-    std::vector<std::string> fresh_;  // the rows new to the console, read with the pins
-    std::string knownPath_;
-    void markKnown();
-    int tab_ = kTabQuick;
+    // 3.0.17-beta.4: the rows pinned with Insert (core/console_pins) - they head «Проби» now
+    // 3.0.21-beta.7: the laboratory's tabs alone (core/settings/catalogue) - «Проби», «Діагностика», «Ціна ефектів»
+    static constexpr int kTabTrials = 0, kTabDiag = 1, kTabCosts = 2, kTabs = 3;
+    int tab_ = kTabTrials;
     std::vector<std::string> pins_;
     std::string pinsPath_;
     bool pinsRead_ = false;
     Key insert_;
     void readPins(const std::string& iniPath);
     bool rowPinnable(const Row& r) const;
-    int tileCol_ = 0;                  // 3.0.17-beta.27: the tile chosen in a Tiles row
-    int drawnTilesLeft_ = 0, drawnTilesWidth_ = 1;  // where a Tiles row's four places were drawn (the mouse's)
-    std::string chosenKey() const;     // the chosen row's setting - a Tiles row's: its chosen tile's
-    static constexpr const char* kWindowsKey = "iface:windows";
+    std::string chosenKey() const;     // the chosen row's setting
     void interfaceRow(const char* key, int depth);
     void labRow(const std::string& key, const Config& config);  // 3.0.21-beta.2: its control and its About
     std::string filter_;   // 2.6.22: the letters typed (UTF-8)
     std::wstring typed_;   // and those not taken yet (wndProc's WM_CHAR; 8 Backspace)
     bool thisMap_ = false; // «Только на этой карте», while the game runs
     bool testAsked_ = false;
-    bool layoutAsked_ = false;  // 3.0.11-beta.75
     bool dumpAsked_ = false;    // 3.0.20-beta.22
+    bool settingsAsked_ = false;  // 3.0.21-beta.7
     std::string map_;
     std::vector<Row> rows_;
     int at_ = 0, top_ = 0;

@@ -5,7 +5,7 @@
 #include <string>
 
 #include "core/config.hpp"
-#include "core/console_tiles.hpp"
+#include "core/settings/catalogue.hpp"
 #include "core/game_camera.hpp"
 #include "core/live_config.hpp"
 #include "core/settings/effects_layout.hpp"
@@ -887,7 +887,9 @@ TEST(config_interface_minimap) {
     // requests and the NPC's inputs; .151: the game's message boxes and its login; .204: the tip of the day; .205:
     // the emotion list; .206: the command list; .207: the chat rooms; .209: Alt+D's console; .211: the popups;
     // .212: the whisper windows; 3.0.18-beta.103: opening one's shop (as my_shop); 3.0.18-beta.180: the map loading bar
-    CHECK(u.waiting.empty() && u.applied.size() == 48 && u.applied[0] == "minimap 0 -> 1");
+    // 3.0.21-beta.7: not «Налаштування» ("options 0 -> 1" before, between the mercenary and the friends) - it is on
+    // with either look
+    CHECK(u.waiting.empty() && u.applied.size() == 47 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
     CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "equip 0 -> 1" && u.applied[6] == "npc_talk 0 -> 1");
     CHECK(u.applied[7] == "shop 0 -> 1" && u.applied[8] == "storage 0 -> 1" && u.applied[9] == "trade 0 -> 1");
@@ -896,18 +898,18 @@ TEST(config_interface_minimap) {
           u.applied[15] == "char_select 0 -> 1" && u.applied[16] == "char_make 0 -> 1" &&
           u.applied[17] == "cart 0 -> 1" && u.applied[18] == "counts 0 -> 1" && u.applied[19] == "vending 0 -> 1");
     CHECK(u.applied[20] == "picks 0 -> 1" && u.applied[21] == "party_setup 0 -> 1" && u.applied[22] == "pet 0 -> 1");
-    CHECK(u.applied[23] == "homun 0 -> 1" && u.applied[24] == "merc 0 -> 1" && u.applied[25] == "options 0 -> 1");
-    CHECK(u.applied[26] == "social 0 -> 1" && u.applied[27] == "servers 0 -> 1" && u.applied[28] == "guild 0 -> 1");
-    CHECK(u.applied[29] == "my_shop 0 -> 1" && u.applied[30] == "vend_setup 0 -> 1" &&
-          u.applied[31] == "whisper_setup 0 -> 1" &&
-          u.applied[32] == "macros 0 -> 1" && u.applied[33] == "tips 0 -> 1" &&
-          u.applied[34] == "loading_bar 0 -> 1" && u.applied[35] == "emotes 0 -> 1");
-    CHECK(u.applied[36] == "commands 0 -> 1" && u.applied[37] == "chat_rooms 0 -> 1" &&
-          u.applied[38] == "detail_console 0 -> 1" && u.applied[39] == "popups 0 -> 1" &&
-          u.applied[40] == "whispers 0 -> 1");
-    CHECK(u.applied[41] == "cast 0 -> 1" && u.applied[42] == "chat 0 -> 1" && u.applied[43] == "hotbar 0 -> 1");
-    CHECK(u.applied[44] == "tracker 0 -> 1" && u.applied[45] == "party 0 -> 1" && u.applied[46] == "target 0 -> 1");
-    CHECK(u.applied[47] == "character off -> bars");
+    CHECK(u.applied[23] == "homun 0 -> 1" && u.applied[24] == "merc 0 -> 1");
+    CHECK(u.applied[25] == "social 0 -> 1" && u.applied[26] == "servers 0 -> 1" && u.applied[27] == "guild 0 -> 1");
+    CHECK(u.applied[28] == "my_shop 0 -> 1" && u.applied[29] == "vend_setup 0 -> 1" &&
+          u.applied[30] == "whisper_setup 0 -> 1" &&
+          u.applied[31] == "macros 0 -> 1" && u.applied[32] == "tips 0 -> 1" &&
+          u.applied[33] == "loading_bar 0 -> 1" && u.applied[34] == "emotes 0 -> 1");
+    CHECK(u.applied[35] == "commands 0 -> 1" && u.applied[36] == "chat_rooms 0 -> 1" &&
+          u.applied[37] == "detail_console 0 -> 1" && u.applied[38] == "popups 0 -> 1" &&
+          u.applied[39] == "whispers 0 -> 1");
+    CHECK(u.applied[40] == "cast 0 -> 1" && u.applied[41] == "chat 0 -> 1" && u.applied[42] == "hotbar 0 -> 1");
+    CHECK(u.applied[43] == "tracker 0 -> 1" && u.applied[44] == "party 0 -> 1" && u.applied[45] == "target 0 -> 1");
+    CHECK(u.applied[46] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -1737,16 +1739,24 @@ TEST(config_interface_merc) {
     CHECK(liveUpdate(noUi(""), noUi("merc = 1\n")).next.mercWindow);
 }
 
-// 3.0.11-beta.162: [interface] options - the game's options window as a card, on with the new minimap, at once
-TEST(config_interface_options) {
-    CHECK(!noUi("").optionsWindow);
-    CHECK(noUi("minimap = 1\n").optionsWindow);
-    CHECK(!noUi("minimap = 1\noptions = 0\n").optionsWindow);
-    CHECK(noUi("options = 1\n").optionsWindow);
-    const settings::IniSetting* s = settings::findSetting("interface.options");
+// 3.0.11-beta.162: the game's options window as a card. 3.0.21-beta.7 (the concept «Настройки uaRO Graphics», variant
+// 4): «Налаштування» is the player's place for everything that applies at once - it is there whatever the interface's
+// look, and its switch is a diagnostic of its own name, [interface] settings_window. The old line [interface] options
+// is not read: the looks «Новий екран, вікна гри» and «Класичний» wrote it as 0, and such a player was left with the
+// console alone - the laboratory now
+TEST(config_interface_settings_window) {
+    CHECK(noUi("").optionsWindow);
+    CHECK(noUi("minimap = 0\n").optionsWindow);  // the classic interface too
+    CHECK(noUi("minimap = 1\noptions = 0\n").optionsWindow);
+    CHECK(noUi("minimap = 0\noptions = 0\n").optionsWindow);
+    CHECK(!noUi("settings_window = 0\n").optionsWindow);
+    CHECK(noUi("settings_window = 1\n").optionsWindow);
+    CHECK(settings::findSetting("interface.options") == nullptr);
+    const settings::IniSetting* s = settings::findSetting("interface.settings_window");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
-    CHECK(appliesNow("interface.options"));
-    CHECK(liveUpdate(noUi(""), noUi("options = 1\n")).next.optionsWindow);
+    if (s) CHECK_EQ(settings::tokenOf(*s, noUi("")), std::string("1"));
+    CHECK(appliesNow("interface.settings_window"));
+    CHECK(!liveUpdate(noUi(""), noUi("settings_window = 0\n")).next.optionsWindow);
 }
 
 // 3.0.11-beta.163: [interface] social - the friends and party window as a card, on with the new minimap, at once
@@ -2117,7 +2127,7 @@ TEST(config_interface_far_bars) {
     if (s) CHECK_EQ(settings::tokenOf(*s, noUi("")), std::string("1"));
     CHECK(appliesNow("interface.far_bars"));
     CHECK(!liveUpdate(noUi(""), noUi("far_bars = 0\n")).next.farBars);
-    const auto& quick = consoletiles::quickKeys();
-    CHECK(std::find_if(quick.begin(), quick.end(),
-                       [](const char* k) { return std::string(k) == "interface.far_bars"; }) != quick.end());
+    // 3.0.21-beta.7: no tile of the console any more («Швидко» is gone) - a row of «Налаштування»'s «Бій»
+    const settings::catalogue::Group* group = settings::catalogue::groupOf("interface.far_bars");
+    CHECK(group && group->name == settings::Text::InterfaceSecFight);
 }

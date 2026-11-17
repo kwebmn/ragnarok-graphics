@@ -1341,7 +1341,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     hotbarwin::frame(window, config.hotbar, config.hotbarPerCharacter, config.padHints, config.hotbarAmmo,
                      config.groundCounts, gameCodePage(config), pk, pw, ph);  // .125 the ammo's pill, .143 the walls
     g_parts.mark("hotbarwin", nowMs());
-    consolehint::frame(gameCodePage(config));  // 3.0.17-beta.11: «Alt+D» once, on the first map
+    consolehint::frame(gameCodePage(config));  // 3.0.17-beta.11: where the settings are, once (.21-beta.7: Alt+O)
     g_parts.mark("consolehint", nowMs());
     farbars::setOn(config.farBars);      // 3.0.20-beta.84 (R-7WTVBF): [interface] far_bars
     ammosound::frame(config.ammoSound);  // 3.0.11-beta.129: [interface] ammo_sound - the chime at 10 left and at none
@@ -1697,7 +1697,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
         settingsKnown_ = false;
     }
     if (console_.takeTestAsk()) testStart();  // 3.0.5-beta.6
-    if (console_.takeLayoutAsk()) hudedit::open(window, "the console");  // 3.0.11-beta.75
+    // 3.0.21-beta.7: the console is the laboratory - «Розмістити інтерфейс» (3.0.11-beta.75) is «Налаштування»'s,
+    // and the console's first row leads to «Налаштування»
+    if (optionscardwin::takeLayoutAsk()) hudedit::open(window, "«Налаштування»");
+    if (console_.takeSettingsAsk()) optionscardwin::open("the console");
+    if (detailwin::takeAsk() && !optionscardwin::open("Alt+D")) Console::askOpen();
     if (console_.takeDumpAsk()) modelcensus::dumpAround();               // 3.0.20-beta.22
     switch (menuwin::takeAsk()) {  // 3.0.18-beta.121 (the concept «Ігровий інтерфейс»): the menu's own, its card gone
         case uagfx::menuwin::Action::Settings:  // 3.0.18-beta.122: «Налаштування» (the console while it is off)

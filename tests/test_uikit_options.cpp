@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdio>
 #include <string>
 
@@ -40,6 +41,8 @@ TEST(uikit_options_groups_parts_and_the_opening_line) {
     m.searchHint = "Пошук у налаштуваннях";
     m.hint = "Усе змінюється одразу";
     m.none = "Нічого не знайдено";
+    m.layoutBtn = "Розмістити інтерфейс";  // 3.0.21-beta.7: the console's action moved here
+    m.consoleBtn = "Проби й діагностика…";
     m.nav = {ol::NavView{"Як виглядає гра", 9}, ol::NavView{"Звук і сповіщення", 24}, ol::NavView{"Гра й мережа", 0}};
     m.sec = 1;
     m.rows.push_back(toggleRow("Шепіт", true, "Сповіщення"));
@@ -66,7 +69,7 @@ TEST(uikit_options_groups_parts_and_the_opening_line) {
     CHECK_EQ(m.rows.size(), ol::kLeastRows);
     for (const ol::RowView& r : m.rows) CHECK_EQ(r.choices.size(), ol::kMostChoices);
     m.shownRows = 5;
-    int opened = -1, toggled = -1;
+    int opened = -1, toggled = -1, layouts = 0;
     std::string error;
     Rml::ElementDocument* doc = rmlhost::load(
         ol::rml(),
@@ -75,6 +78,9 @@ TEST(uikit_options_groups_parts_and_the_opening_line) {
             const auto none = [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {};
             for (const char* e : {"sec_go", "set_slider", "set_step", "set_choice", "open_console", "opt_close"})
                 c.BindEventCallback(e, none);
+            c.BindEventCallback("open_layout", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+                ++layouts;
+            });
             c.BindEventCallback("set_more", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
                 opened = a.empty() ? -2 : a[0].Get<int>();
             });
@@ -127,6 +133,17 @@ TEST(uikit_options_groups_parts_and_the_opening_line) {
     Rml::Element* knob = doc->QuerySelector(".spane .tg");
     if (knob) knob->Click();
     CHECK_EQ(toggled, 0);
+    // the foot: «Розмістити інтерфейс» and the way to the console, side by side at the right
+    CHECK_EQ(shownOf(doc, ".sfoot .btn"), 2);
+    Rml::ElementList foot;
+    doc->QuerySelectorAll(foot, ".sfoot .btn");
+    CHECK_EQ(foot.size(), size_t(2));
+    if (foot.size() == 2) {
+        CHECK(foot[0]->GetAbsoluteLeft() + foot[0]->GetOffsetWidth() <= foot[1]->GetAbsoluteLeft() + 1);
+        CHECK(std::abs(foot[0]->GetAbsoluteTop() - foot[1]->GetAbsoluteTop()) < 2);
+        foot[0]->Click();
+    }
+    CHECK_EQ(layouts, 1);
     // nothing found: the note in the rows' place
     for (ol::RowView& r : m.rows) r = ol::RowView{};
     ol::pad(m.rows, m.rows.size());

@@ -36,7 +36,7 @@ State& state() {
 void frame(unsigned codePage) {
     State& s = state();
     if (s.done) return;
-    const std::string flag = gameDir() + "\\" + layout::kConsoleHint;
+    const std::string flag = gameDir() + "\\" + layout::kSettingsHint;
     if (!s.checked) {
         s.checked = true;
         if (GetFileAttributesA(flag.c_str()) != INVALID_FILE_ATTRIBUTES) {
@@ -56,7 +56,7 @@ void frame(unsigned codePage) {
                                       codePage);
     reinterpret_cast<PushFn>(uintptr_t(kPush))(kWindowMgr, 1, text.c_str(), kLineColour, 0);
     writeFileAtomic(flag, std::string("shown\r\n"));
-    LOG_INFO("console hint: «Alt+D» told in the chat once");
+    LOG_INFO("settings hint: «Alt+O» told in the chat once");
 }
 
 }  // namespace uagfx::win::consolehint

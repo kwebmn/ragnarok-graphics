@@ -38,5 +38,11 @@ bool box(int& x, int& y, int& w, int& h);
 void setSettings(const Config* config, const std::string& iniPath);
 bool takeChanged();
 bool toggleOpen(const char* why);
+// 3.0.21-beta.7: the console is the laboratory alone - what it gave a player is here. available(): «Налаштування»
+// can be opened now (its switch on, the character in the world); open(): opened, left open when it is (false: not
+// available); takeLayoutAsk(): «Розмістити інтерфейс» of its foot pressed (the window closed with it) - true once
+bool available();
+bool open(const char* why);
+bool takeLayoutAsk();
 
 }  // namespace uagfx::win::optionscardwin

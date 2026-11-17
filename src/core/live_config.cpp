@@ -573,8 +573,8 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("merc", flag(running.mercWindow), flag(file.mercWindow)));
         n.mercWindow = file.mercWindow;
     }
-    if (file.optionsWindow != running.optionsWindow) {  // 3.0.11-beta.162: the options card, at once
-        u.applied.push_back(change("options", flag(running.optionsWindow), flag(file.optionsWindow)));
+    if (file.optionsWindow != running.optionsWindow) {  // 3.0.11-beta.162: «Налаштування», at once
+        u.applied.push_back(change("settings_window", flag(running.optionsWindow), flag(file.optionsWindow)));
         n.optionsWindow = file.optionsWindow;
     }
     if (file.socialWindow != running.socialWindow) {  // 3.0.11-beta.163: the friends and party card, at once

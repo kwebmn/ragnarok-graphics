@@ -26,6 +26,19 @@ TEST(choice_presets_choices_own_their_keys) {
             }
 }
 
+// 3.0.21-beta.7: «Налаштування» is not a part of the interface's look - no look turns the player's own place off (the
+// looks «Новий екран, вікна гри» and «Класичний» wrote [interface] options = 0 before)
+TEST(choice_presets_the_looks_leave_the_settings_window) {
+    for (int v = 0; v < presets::variants(presets::Choice::Interface); ++v)
+        for (const auto& [key, token] : presets::keysOf(presets::Choice::Interface, v)) {
+            CHECK(key != "interface.options");
+            CHECK(key != "interface.settings_window");
+        }
+    const Config classic = parseConfig("[interface]\nminimap = 0\n");
+    CHECK_EQ(presets::match(presets::Choice::Interface, classic).variant, int(presets::Ui::Classic));
+    CHECK(classic.optionsWindow);
+}
+
 TEST(choice_presets_match_the_settings) {
     const Config fresh = parseConfig("[effects]\npreset = auto\n");  // as dist/uaro-graphics.ini
     CHECK_EQ(presets::match(presets::Choice::Picture, fresh).variant, int(presets::Picture::Auto));

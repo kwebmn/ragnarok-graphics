@@ -1,71 +1,8 @@
 #include "core/console_tiles.hpp"
 
-#include <algorithm>
 #include <cstdint>
-#include <cstring>
-
-#include "core/settings/catalogue.hpp"
-#include "core/settings/navigation.hpp"
-#include "core/settings/schema.hpp"
 
 namespace uagfx::consoletiles {
-
-// 3.0.21-beta.2 (the concept «Настройки uaRO Graphics», variant 4, step 2): no list of its own - the catalogue's rows
-// marked «switched most» (core/settings/catalogue), in its order; the trials went to the console's «Проби»
-const std::vector<const char*>& quickKeys() {
-    static const std::vector<const char*> keys = [] {
-        std::vector<const char*> out;
-        for (const settings::catalogue::Row* r : settings::catalogue::often()) out.push_back(r->key.c_str());
-        return out;
-    }();
-    return keys;
-}
-
-std::vector<std::string> sectionRows(const char* section) {
-    std::vector<std::string> out;
-    for (const settings::IniSetting& s : settings::iniSettings())
-        if (std::strcmp(s.section, section) == 0 && settings::levelOf(s) != settings::Mode::Developer)
-            out.push_back(settings::sectionKey(s));
-    return out;
-}
-
-
-std::vector<std::vector<std::string>> rows(const std::vector<std::string>& keys) {
-    std::vector<std::vector<std::string>> out;
-    for (size_t i = 0; i < keys.size(); ++i) {
-        if (i % kPerRow == 0) out.emplace_back();
-        out.back().push_back(keys[i]);
-    }
-    return out;
-}
-
-std::string join(const std::vector<std::string>& keys) {
-    std::string s;
-    for (const std::string& k : keys) s += (s.empty() ? "" : "|") + k;
-    return s;
-}
-
-std::vector<std::string> split(const std::string& joined) {
-    std::vector<std::string> out;
-    size_t at = 0;
-    while (at <= joined.size() && !joined.empty()) {
-        const size_t bar = joined.find('|', at);
-        out.push_back(joined.substr(at, bar == std::string::npos ? std::string::npos : bar - at));
-        if (bar == std::string::npos) break;
-        at = bar + 1;
-    }
-    return out;
-}
-
-int move(int col, int step, int count) {
-    if (count <= 0) return 0;
-    return std::clamp(col + (step < 0 ? -1 : step > 0 ? 1 : 0), 0, count - 1);
-}
-
-int at(int x, int left, int width, int count) {
-    if (count <= 0 || width <= 0) return 0;
-    return std::clamp((x - left) * kPerRow / width, 0, count - 1);
-}
 
 std::string gist(const std::string& hint, size_t most) {
     size_t end = hint.size();

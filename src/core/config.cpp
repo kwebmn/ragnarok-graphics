@@ -417,7 +417,6 @@ Config parseConfig(const std::string& text) {
     bool petSet = false;                          // 3.0.11-beta.159
     bool homunSet = false;                        // 3.0.11-beta.160
     bool mercSet = false;                         // 3.0.11-beta.161
-    bool optionsSet = false;                      // 3.0.11-beta.162
     bool socialSet = false;                       // 3.0.11-beta.163
     bool serverSet = false;                       // 3.0.11-beta.164
     bool guildSet = false;                        // 3.0.11-beta.165
@@ -801,9 +800,8 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.merc") {  // 3.0.11-beta.161: the mercenary
             mercSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.mercWindow);
-        } else if (key == "interface.options") {  // 3.0.11-beta.162: the game's options
-            optionsSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
-            setBool(val, c.optionsWindow);
+        } else if (key == "interface.settings_window") {  // 3.0.21-beta.7: «Налаштування» (its old line,
+            setBool(val, c.optionsWindow);                //  [interface] options, is not read)
         } else if (key == "interface.social") {  // 3.0.11-beta.163: the friends and the party
             socialSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.socialWindow);
@@ -1228,7 +1226,6 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !petSet) c.petWindow = true;                // 3.0.11-beta.159
     if (c.newMinimap && !homunSet) c.homunWindow = true;            // 3.0.11-beta.160
     if (c.newMinimap && !mercSet) c.mercWindow = true;              // 3.0.11-beta.161
-    if (c.newMinimap && !optionsSet) c.optionsWindow = true;        // 3.0.11-beta.162
     if (c.newMinimap && !socialSet) c.socialWindow = true;          // 3.0.11-beta.163
     if (c.newMinimap && !serverSet) c.serverWindow = true;          // 3.0.11-beta.164
     if (c.newMinimap && !guildSet) c.guildWindow = true;            // 3.0.11-beta.165

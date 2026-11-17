@@ -43,7 +43,6 @@ struct Row {
     std::vector<Need> needs;
     bool nextMap = false;                // a change shows from the next map
     bool atStart = false;                // read before the game starts though the driver takes it at once
-    bool often = false;                  // switched most: a tile of the console's «Швидко»
 };
 struct Group {
     Area area;
@@ -59,14 +58,13 @@ Home homeOf(const Row& r);
 bool met(const Need& n, const Config& shown, bool direct3d12, bool view3d);
 
 // 3.0.21-beta.2 (step 2: the console's laboratory): the trials by area, in the catalogue's order; the diagnostics
-// that apply at once (the rest wait for the game's start: the settings app's developer page); the rows switched most
+// that apply at once (the rest wait for the game's start: the settings app's developer page)
 struct LabSection {
     Area area;
     std::vector<const Row*> rows;
 };
 std::vector<LabSection> trials();
 std::vector<const Row*> liveDiagnostics();
-std::vector<const Row*> often();
 
 // What a row says about itself under its name: the version a trial came with, what it needs - each with whether it
 // is met now -, when a change shows

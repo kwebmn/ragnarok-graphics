@@ -275,22 +275,20 @@ TEST(catalogue_a_row_tells_about_itself) {
                        std::string());
 }
 
-// «Швидко»'s tiles are the catalogue's rows marked «switched most»: settings for good that apply at once, each a
-// switch (a tile) or a list (a row of its own); never a trial (those are the laboratory's)
-TEST(catalogue_the_rows_switched_most) {
-    const std::vector<const catalogue::Row*> rows = catalogue::often();
-    CHECK(rows.size() >= 7);
-    const auto has = [&](const char* key) {
-        return std::any_of(rows.begin(), rows.end(), [&](const catalogue::Row* r) { return r->key == key; });
-    };
-    CHECK(has("effects.grass") && has("interface.mob_hp") && has("frames.fps_counter"));
-    CHECK(!has("view3d.crown_volume") && !has("view3d.shadows") && !has("effects.mage_effects"));
-    for (const catalogue::Row* r : rows) {
-        CHECK(r->status == catalogue::Status::Permanent);
-        CHECK(catalogue::homeOf(*r) == catalogue::Home::Game);
-        const IniSetting* s = findSetting(r->key);
-        CHECK(s && (s->control == Control::Check || s->control == Control::Choice));
-    }
+// 3.0.21-beta.7: the switch of «Налаштування» itself is not a row of «Налаштування» (turned off there, the window
+// with every other row was gone) - a diagnostic of the console, which Ctrl+~ opens whatever is off
+TEST(catalogue_the_settings_window_is_switched_in_the_laboratory) {
+    CHECK(catalogue::find("interface.options") == nullptr);
+    const catalogue::Row* r = catalogue::find("interface.settings_window");
+    CHECK(r != nullptr);
+    if (!r) return;
+    CHECK(r->status == catalogue::Status::Diagnostic);
+    CHECK(catalogue::homeOf(*r) == catalogue::Home::Lab);
+    bool live = false;
+    for (const catalogue::Row* d : catalogue::liveDiagnostics()) live = live || d->key == "interface.settings_window";
+    CHECK(live);
+    const IniSetting* st = findSetting("interface.settings_window");
+    CHECK(st && settingMatches(*st, "Картка налаштувань гри", Lang::Uk));  // its name until 3.0.21-beta.7
 }
 
 // 3.0.21-beta.4 («строка сама говорит, почему не работает»): what keeps a row from doing anything now - the renderer,
@@ -364,11 +362,16 @@ TEST(catalogue_names_say_what_is_seen) {
     CHECK_EQ(name("display.dpi_aware", Lang::Uk), std::string("Вікно з масштабом Windows"));
     CHECK_EQ(name("renderer.remix", Lang::Uk), std::string("RTX Remix"));
     CHECK_EQ(name("renderer.render_thread", Lang::Uk), std::string("Direct3D 11 у власному потоці"));
+    // 3.0.21-beta.7: the console is the laboratory - Alt+D in the game's detail window's place opens «Налаштування»
+    CHECK_EQ(name("interface.detail_console", Lang::Uk), std::string("Alt+D відкриває «Налаштування»"));
+    CHECK_EQ(name("interface.detail_console", Lang::Ru), std::string("Alt+D открывает «Настройки»"));
     // found by the name before, in each language
     const IniSetting* models = findSetting("view3d.own_models");
     CHECK(models && settingMatches(*models, "моделі нашим рендером", Lang::Uk));
     CHECK(models && settingMatches(*models, "модели нашим рендером", Lang::Ru));
     CHECK(models && settingMatches(*models, "models by our renderer", Lang::En));
+    const IniSetting* detail = findSetting("interface.detail_console");
+    CHECK(detail && settingMatches(*detail, "консоль графіки", Lang::Uk));
     const IniSetting* glass = findSetting("interface.uaui_glass");
     CHECK(glass && settingMatches(*glass, "нова бібліотека", Lang::Uk));
     // the file's name stays in the hint

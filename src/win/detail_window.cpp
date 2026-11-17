@@ -4,7 +4,6 @@
 
 #include <cstdint>
 
-#include "win/console.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_memory.hpp"
 #include "win/log.hpp"
@@ -19,6 +18,7 @@ constexpr int kDetailWindow = 0x39;
 using DeleteFn = char(__attribute__((thiscall)) *)(uint32_t manager, int id);
 
 bool g_on = false;
+bool g_ask = false;
 int g_told = 0;
 
 }  // namespace
@@ -36,8 +36,16 @@ void beforeGameDraw() {
     SIZE_T n = 0;
     WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(w + kShown)), &off, 4, &n);
     reinterpret_cast<DeleteFn>(uintptr_t(kDeleteWindow))(kWindowMgr, kDetailWindow);
-    Console::askOpen();
-    if (g_told++ < 20) LOG_INFO("detail: the game's detail window (Alt+D) closed - the driver's console instead");
+    // 3.0.21-beta.7: the real settings are «Налаштування»'s (the console is the laboratory: trials, diagnostics) -
+    // asked for here, opened by the present (takeAsk), where the menu's «Налаштування» opens it
+    g_ask = true;
+    if (g_told++ < 20) LOG_INFO("detail: the game's detail window (Alt+D) closed - «Налаштування» instead");
+}
+
+bool takeAsk() {
+    const bool asked = g_ask;
+    g_ask = false;
+    return asked;
 }
 
 }  // namespace uagfx::win::detailwin

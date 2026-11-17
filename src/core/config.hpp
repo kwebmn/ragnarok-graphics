@@ -980,8 +980,11 @@ struct Config {
     bool homunWindow = false;
     // 3.0.11-beta.161: [interface] merc - the mercenary's window (Ctrl+R, win/merc_card) as a card
     bool mercWindow = false;
-    // 3.0.11-beta.162: [interface] options - the game's options window (Alt+O, win/options_card) as a card
-    bool optionsWindow = false;
+    // 3.0.11-beta.162: the game's options window (Alt+O, win/options_card) as a card. 3.0.21-beta.7: it is
+    // «Налаштування», the player's place for everything that applies at once - on whatever the interface's look;
+    // [interface] settings_window is its switch, a diagnostic (the old line [interface] options is not read: two of the
+    // three looks wrote it as 0)
+    bool optionsWindow = true;
     // 3.0.11-beta.163: [interface] social - the friends and party window (win/social_card) as a card
     bool socialWindow = false;
     // 3.0.11-beta.164: [interface] servers - the game's server select (win/server_card) as a card

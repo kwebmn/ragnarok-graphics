@@ -76,6 +76,7 @@ struct State {
     const Config* config = nullptr;
     std::string iniPath;
     bool changed = false;
+    bool layoutAsked = false;  // 3.0.21-beta.7: «Розмістити інтерфейс» pressed
     uisheet::Sheet sheet;  // 3.0.18-beta.34: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -346,12 +347,9 @@ static void useRow(State& s, int row, int what, int value) {
     if (!s.config || s.iniPath.empty()) return;
     bool wrote = false;
     if (key.rfind("picture.", 0) == 0) {
-        // 3.0.18-beta.132 (R-4BXZPM «пропал новый интерфейс на настройках»):
-        // «Новий екран, вікна гри» or «Класичний» chosen here turned [interface] options
-        // off - this very window gone; it stays (the game's other windows as chosen)
-        if (what == 2)
-            wrote = settingedit::setLook(s.iniPath, settings::presets::Choice(key.back() - '0'), value,
-                                         {"interface.options"});
+        // 3.0.18-beta.132 (R-4BXZPM «пропал новый интерфейс на настройках»): «Новий екран, вікна гри» or
+        // «Класичний» chosen here turned this very window off. 3.0.21-beta.7: no look holds its switch any more
+        if (what == 2) wrote = settingedit::setLook(s.iniPath, settings::presets::Choice(key.back() - '0'), value);
     } else if (const settings::IniSetting* st = settings::findSetting(key)) {
         if (what == 0 && st->tokens.size() > 1)
             wrote = settingedit::set(s.iniPath, *s.config, key, st->tokens[s.m.rows[size_t(row)].on ? 0 : 1]);
@@ -411,6 +409,11 @@ static void liveFrame(State& s) {
         m.BindEventCallback("set_more", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             if (!a.empty()) useRow(state(), a[0].Get<int>(), 3, 0);
         });
+        // 3.0.21-beta.7: «Розмістити інтерфейс» - the console's action before (the console is the laboratory now)
+        m.BindEventCallback("open_layout", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            state().layoutAsked = true;
+            closeIt(state());
+        });
         m.BindEventCallback("open_console", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
             Console::askOpen();
             closeIt(state());
@@ -431,6 +434,7 @@ static void liveFrame(State& s) {
         s.m.searchHint = say(settings::Text::SearchCue);
         s.m.none = say(settings::Text::SettingsWinNone);
         s.m.consoleBtn = say(settings::Text::SettingsWinConsole);
+        s.m.layoutBtn = say(settings::Text::MenuLayout);  // 3.0.21-beta.7: «Розмістити інтерфейс»
         std::vector<NavView> nav;  // 3.0.21-beta.3: the catalogue's areas, each with its rows' count
         for (const settingswin::Nav& n : settingswin::nav()) nav.push_back(NavView{say(n.name), n.rows});
         s.m.nav = std::move(nav);
@@ -557,9 +561,21 @@ bool takeChanged() {
     return c;
 }
 
+bool takeLayoutAsk() {
+    State& s = state();
+    const bool asked = s.layoutAsked;
+    s.layoutAsked = false;
+    return asked;
+}
+
+bool available() {
+    const State& s = state();
+    return s.on && inGameWorld();
+}
+
 bool toggleOpen(const char* why) {
     State& s = state();
-    if (!s.on || !inGameWorld()) return false;
+    if (!available()) return false;
     if (gameOptions()) {
         closeIt(s);
     } else {  // the game's own window made (its Alt+O): the new look shows it
@@ -568,6 +584,12 @@ bool toggleOpen(const char* why) {
     }
     LOG_INFO("options: «Налаштування» %s (%s)", gameOptions() ? "opened" : "closed", why);
     return true;
+}
+
+bool open(const char* why) {
+    if (!available()) return false;
+    if (gameOptions()) return true;  // open already: left so
+    return toggleOpen(why);
 }
 
 }  // namespace uagfx::win::optionscardwin

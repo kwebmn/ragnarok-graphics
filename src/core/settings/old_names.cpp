@@ -91,6 +91,11 @@ const Old kOld[] = {
     {"renderer.render_thread",
      {"Direct3D 11 on a thread of its own (test)", "Direct3D 11 у власному потоці (перевірка)",
       "Direct3D 11 в своём потоке (проверка)"}},
+    // until 3.0.21-beta.7: Alt+D opened the console (the laboratory now)
+    {"interface.detail_console",
+     {"Alt+D opens the graphics console", "Alt+D відкриває консоль графіки", "Alt+D открывает консоль графики"}},
+    // until 3.0.21-beta.7: a card of the interface's look, [interface] options
+    {"interface.settings_window", {"Game options card", "Картка налаштувань гри", "Карточка настроек игры"}},
 };
 
 }  // namespace

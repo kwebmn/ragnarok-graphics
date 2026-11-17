@@ -19,12 +19,12 @@
 #include "core/settings/catalogue.hpp"
 #include "core/settings/effects_layout.hpp"
 #include "core/settings/ini_edit.hpp"
-#include "core/settings/choice_presets.hpp"
 #include "core/settings/navigation.hpp"
 #include "core/settings/schema.hpp"
 #include "core/settings/search.hpp"
 #include "win/context.hpp"  // 3.0.4-beta.35: the card's level now (judged by its speed)
 #include "win/log.hpp"
+#include "win/options_card.hpp"
 #include "win/setting_edit.hpp"
 #include "win/view3d.hpp"
 #include "win/paths.hpp"
@@ -79,12 +79,6 @@ void eraseLast(std::string& utf8) {
 const IniSetting* settingOf(const std::string& key) { return findSetting(key); }
 
 std::string groupKey(int g) { return std::string("effects.group_") + effect_groups::groupWord(g); }
-
-// 3.0.21-beta.2: a row the players' tabs list - a trial or a diagnostic is the laboratory's alone
-bool playersRow(const std::string& key) {
-    const catalogue::Row* r = catalogue::find(key);
-    return !r || r->status == catalogue::Status::Permanent;
-}
 
 catalogue::About aboutNow(const std::string& key, const Config& shown, Lang lang) {
     const catalogue::Row* r = catalogue::find(key);
@@ -158,6 +152,14 @@ void Console::labRow(const std::string& key, const Config& config) {
     if (!aboutNow(key, shownConfig(config), lang_).empty()) rows_.push_back(Row{Kind::About, key, 0});
 }
 
+// 3.0.21-beta.7 (the concept «Настройки uaRO Graphics», variant 4; the owner on the new «Налаштування»: «работает»):
+// the console is the laboratory alone. «Проби» - the rows pinned with Insert, then the catalogue's trials by area,
+// each with the version it came with and what it needs; «Діагностика» - «Тест графіки», the models' dump, the
+// diagnostics that apply at once and the texture pack's kinds (off hidden at once: to compare in the game); «Ціна
+// ефектів» - the effects by their groups with what each costs the card (2.2.1), the set and the clock over them,
+// «Лише те, що є на цій карті», Tab held to compare. What a player sets lives in «Налаштування» (Alt+O): the three
+// choices, the tiles of «Швидко», «Нове», «Інтерфейс», «Текстури» and «Усе» are gone from here. Letters typed
+// (2.6.22): the trials, the diagnostics and the effects they find, under their names.
 void Console::build(Lang lang, const Config& config) {
     rows_.clear();
     const EffectLayout* fx = effectLayout();
@@ -174,77 +176,57 @@ void Console::build(Lang lang, const Config& config) {
         for (int k = 0; k < 5 && e.sliders[k]; ++k)
             if (settingOf(e.sliders[k])) rows_.push_back(Row{Kind::Slider, e.sliders[k], depth + 1});
     };
+    const std::vector<const catalogue::Row*> diagnostics = catalogue::liveDiagnostics();
     if (!filter_.empty()) {
-        // 3.0.20-beta.6: the 3D view's rows found too, under «3D-режим»
-        bool named3d = false;
-        for (const std::string& k : consoletiles::sectionRows("view3d")) {
-            const IniSetting* st = settingOf(k);
-            if (!st || !settingMatches(*st, filter_, lang)) continue;
-            if (!named3d) rows_.push_back(Row{Kind::Heading, tr(lang, Text::View3dHeading), 0});
-            named3d = true;
-            interfaceRow(k.c_str(), 1);
-        }
-        // 3.0.11-beta.302: the interface's rows found too, under their sections
-        for (const InterfaceSection& sec : interfaceSections()) {
-            bool named = false;
-            for (const char* k : sec.keys) {
-                const IniSetting* st = settingOf(k);
-                if (!st || !settingMatches(*st, filter_, lang)) continue;
-                if (!named) rows_.push_back(Row{Kind::Heading, tr(lang, sec.heading), 0});
+        const auto found = [&](const catalogue::Row* r) {
+            const IniSetting* st = settingOf(r->key);
+            return st && settingMatches(*st, filter_, lang);
+        };
+        bool named = false;
+        for (const catalogue::LabSection& sec : catalogue::trials())
+            for (const catalogue::Row* r : sec.rows) {
+                if (!found(r)) continue;
+                if (!named) rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleTabTrials), 0});
                 named = true;
-                interfaceRow(k, 1);
+                labRow(r->key, config);
             }
+        named = false;
+        for (const catalogue::Row* r : diagnostics) {
+            if (!found(r)) continue;
+            if (!named) rows_.push_back(Row{Kind::Heading, tr(lang, Text::PageDiagnostics), 0});
+            named = true;
+            labRow(r->key, config);
         }
         for (int g = 0; g < kEffectGroups; ++g) {
             const IniSetting* group = settingOf(groupKey(g));
             if (!group) continue;
             const bool all = settingMatches(*group, filter_, lang);
-            bool named = false;
+            named = false;
             for (int i = 0; i < effect_groups::memberCount(); ++i) {
                 const effect_groups::Member& m = effect_groups::members()[i];
                 const EffectLayout* e = m.group == g ? layoutOf(m) : nullptr;
                 if (!e || !here(e->box, config)) continue;
-                bool found = all || settingMatches(*settingOf(e->box), filter_, lang);
-                for (int k = 0; k < kLayoutChecks && e->checks[k] && !found; ++k)
-                    if (const IniSetting* c = settingOf(e->checks[k])) found = settingMatches(*c, filter_, lang);
-                for (int k = 0; k < 5 && e->sliders[k] && !found; ++k)
-                    if (const IniSetting* v = settingOf(e->sliders[k])) found = settingMatches(*v, filter_, lang);
-                if (!found) continue;
+                bool hit = all || settingMatches(*settingOf(e->box), filter_, lang);
+                for (int k = 0; k < kLayoutChecks && e->checks[k] && !hit; ++k)
+                    if (const IniSetting* c = settingOf(e->checks[k])) hit = settingMatches(*c, filter_, lang);
+                for (int k = 0; k < 5 && e->sliders[k] && !hit; ++k)
+                    if (const IniSetting* v = settingOf(e->sliders[k])) hit = settingMatches(*v, filter_, lang);
+                if (!hit) continue;
                 if (!named) rows_.push_back(Row{Kind::Heading, tr(lang, group->label), 0});
                 named = true;
                 effect(*e, 1);
             }
         }
-        if (rows_.empty()) rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleNothing), 0});
+        if (rows_.empty()) {  // nothing of the laboratory's: what a player sets is searched in «Налаштування»
+            rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleNothing), 0});
+            if (optionscardwin::available()) rows_.push_back(Row{Kind::Settings, "", 0});
+        }
     } else {
         rows_.push_back(Row{Kind::Tabs, "", 0});  // 3.0.17-beta.4
-        const bool all = tab_ == kTabAll;
-        if (tab_ == kTabQuick) {  // the three choices, the rows switched most, the player's pinned, the two actions
-            rows_.push_back(Row{Kind::Heading, tr(lang, Text::LookHead), 0});
-            for (int k = 0; k < presets::kChoices; ++k) rows_.push_back(Row{Kind::Look, std::to_string(k), 0});
-            rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleOften), 0});
-            // 3.0.17-beta.27: the switches as tiles, four a row; a list or a slider as its row
-            std::vector<std::string> tiles;
-            for (const char* k : consoletiles::quickKeys()) {  // 3.0.20-beta.6: «Моделі нашим рендером» among them
-                if (consolepins::pinned(pins_, k) || !playersRow(k)) continue;
-                const IniSetting* st = settingOf(k);
-                if (st && st->control == Control::Check) tiles.push_back(k);
-                else interfaceRow(k, 0);
-            }
-            for (const auto& row : consoletiles::rows(tiles))
-                rows_.push_back(Row{Kind::Tiles, consoletiles::join(row), 0});
-            if (!fresh_.empty())  // 3.0.17-beta.12: the way to «Нове»
-                rows_.push_back(
-                    Row{Kind::Heading, fmt(tr(lang, Text::ConsoleNewCount), {std::to_string(fresh_.size())}), 0});
-            if (!pins_.empty()) rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsolePinned), 0});
-            for (const std::string& k : pins_) interfaceRow(k.c_str(), 0);
-            rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleActions), 0});
-            rows_.push_back(Row{Kind::Layout, "", 0});
-        }
-        // 3.0.21-beta.2 (the concept «Настройки uaRO Graphics», variant 4, step 2): the laboratory. «Проби» - the
-        // catalogue's trials by area, each with the version it came with and what it needs; «Діагностика» -
-        // «Тест графіки», the models' dump and the diagnostics that apply at once
         if (tab_ == kTabTrials) {
+            if (optionscardwin::available()) rows_.push_back(Row{Kind::Settings, "", 0});  // the way to «Налаштування»
+            if (!pins_.empty()) rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsolePinned), 0});
+            for (const std::string& k : pins_) interfaceRow(k.c_str(), 0);  // 3.0.17-beta.4: the player's own
             const std::vector<catalogue::LabSection> lab = catalogue::trials();
             if (lab.empty()) rows_.push_back(Row{Kind::Heading, tr(lang, Text::LabNoTrials), 0});
             for (const catalogue::LabSection& sec : lab) {
@@ -255,87 +237,49 @@ void Console::build(Lang lang, const Config& config) {
         }
         if (tab_ == kTabDiag) {
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleActions), 0});
-            rows_.push_back(Row{Kind::Test, "", 0});
+            rows_.push_back(Row{Kind::Test, "", 0});  // 3.0.5-beta.6: «Тест графіки»
             rows_.push_back(Row{Kind::Dump, "", 0});  // 3.0.20-beta.22: «Записати моделі навколо»
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::PageDiagnostics), 0});
-            for (const catalogue::Row* r : catalogue::liveDiagnostics()) labRow(r->key, config);
+            for (const catalogue::Row* r : diagnostics) labRow(r->key, config);
+            // 2.2.1: the AI pictures of the texture pack - a kind off hidden at once, on at once when the game
+            // started with it: here to compare in the game (set for good in the settings app)
+            rows_.push_back(Row{Kind::Heading, tr(lang, Text::PageAi), 0});
+            for (const char* k : {"ai.enabled", "ai.ground", "ai.objects", "ai.monsters", "ai.players", "ai.npcs",
+                                  "ai.items", "ai.effects", "ai.icons"})
+                if (settingOf(k)) rows_.push_back(Row{Kind::Box, k, std::string(k) == "ai.enabled" ? 0 : 1});
         }
-        if (tab_ == kTabNew) {  // 3.0.17-beta.12: the rows new since the console showed them last
-            rows_.push_back(Row{Kind::Heading, fresh_.empty() ? tr(lang, Text::ConsoleNewNone)
-                                                              : tr(lang, Text::ConsoleNewNote), 0});
-            for (const std::string& k : fresh_) interfaceRow(k.c_str(), 0);
-        }
-        if (all) rows_.push_back(Row{Kind::Box, "frames.fps_counter", 0});  // the frame counter (Ctrl+Shift+F11)
-        // 3.0.20-beta.6 (the owner: «добавь в консоль эту настройку чтобы во время игры можно было переключать»): the
-        // 3D view's rows as the app's «3D-режим» - each as its control asks
-        if (all) {
-            const std::vector<std::string> view3d = consoletiles::sectionRows("view3d");
-            if (!view3d.empty()) rows_.push_back(Row{Kind::Heading, tr(lang, Text::View3dHeading), 0});
-            for (const std::string& k : view3d)
-                if (playersRow(k)) interfaceRow(k.c_str(), 0);
-        }
-        // 3.0.11-beta.2: the new interface on and off in the game; 3.0.11-beta.302 (the review «Ревизия
-        // конфигуратора», D): its rows in the app's sections (core/settings/navigation interfaceSections) - every row
-        // of them, the windows behind a row that opens them, the controller's on the Controller page
-        if ((all || tab_ == kTabInterface) && settingOf("interface.minimap")) {
-            rows_.push_back(Row{Kind::Heading, tr(lang, Text::InterfaceHeading), 0});
-            rows_.push_back(Row{Kind::Layout, "", 0});  // 3.0.11-beta.75: «Розміщення інтерфейсу»
-            for (const InterfaceSection& sec : interfaceSections()) {
-                rows_.push_back(Row{Kind::Heading, tr(lang, sec.heading), 0});
-                if (sec.folded) {
-                    rows_.push_back(Row{Kind::Open, kWindowsKey, 0});
-                    if (!windowsOpen_) continue;
+        if (tab_ == kTabCosts) {
+            rows_.push_back(Row{Kind::Heading, tr(lang, Text::FxPreset), 0});
+            rows_.push_back(Row{Kind::Choice, "effects.preset", 0});
+            rows_.push_back(Row{Kind::Choice, "effects.tier", 0});
+            // 2.6.19: the time of day for all the effects, by the set and the mode
+            if (settingOf("effects.clock")) {
+                rows_.push_back(Row{Kind::Choice, "effects.clock", 0});
+                rows_.push_back(Row{Kind::Slider, "effects.night_strength", 1});
+                if (settingOf("effects.season")) rows_.push_back(Row{Kind::Choice, "effects.season", 0});  // 2.6.22
+                if (settingOf("effects.weather_kind")) rows_.push_back(Row{Kind::Choice, "effects.weather_kind", 0});
+                if (settingOf("effects.skill_looks"))
+                    rows_.push_back(Row{Kind::Choice, "effects.skill_looks", 0});  // .183
+            }
+            rows_.push_back(Row{Kind::Here, "", 0});  // 2.6.22
+            for (int g = 0; g < kEffectGroups; ++g) {
+                if (!settingOf(groupKey(g))) continue;
+                int listed = 0;
+                for (int i = 0; i < effect_groups::memberCount(); ++i) {
+                    const effect_groups::Member& m = effect_groups::members()[i];
+                    const EffectLayout* e = m.group == g ? layoutOf(m) : nullptr;
+                    listed += e && here(e->box, config) ? 1 : 0;
                 }
-                for (const char* k : sec.keys)
-                    if (playersRow(k)) interfaceRow(k, 0);
-            }
-            for (const char* k : padInterfaceKeys()) interfaceRow(k, 0);  // the controller's here too: in the game
-        }
-        // 3.0.3-beta.8: the game windows' panel (the user: on or off in the console too)
-        if ((all || tab_ == kTabInterface) && settingOf("panel.show")) {
-            rows_.push_back(Row{Kind::Heading, tr(lang, Text::PanelHeading), 0});
-            rows_.push_back(Row{Kind::Box, "panel.show", 0});
-            rows_.push_back(Row{Kind::Choice, "panel.layout", 1});
-            rows_.push_back(Row{Kind::Slider, "panel.size", 1});
-            rows_.push_back(Row{Kind::Slider, "panel.opacity", 1});
-        }
-        // 2.2.1: the AI pictures of the texture pack - a kind off hidden at once, on at once when the game started
-        // with it
-        if (all || tab_ == kTabTextures) rows_.push_back(Row{Kind::Heading, tr(lang, Text::PageAi), 0});
-        for (const char* k : {"ai.enabled", "ai.ground", "ai.objects", "ai.monsters", "ai.players", "ai.npcs",
-                              "ai.items", "ai.effects", "ai.icons"})
-            if ((all || tab_ == kTabTextures) && settingOf(k))
-                rows_.push_back(Row{Kind::Box, k, std::string(k) == "ai.enabled" ? 0 : 1});
-        const bool picture = all || tab_ == kTabPicture;
-        if (picture) rows_.push_back(Row{Kind::Heading, tr(lang, Text::FxPreset), 0});
-        if (picture) rows_.push_back(Row{Kind::Choice, "effects.preset", 0});
-        if (picture) rows_.push_back(Row{Kind::Choice, "effects.tier", 0});
-        // 2.6.19: the time of day for all the effects, by the set and the mode
-        if (picture && settingOf("effects.clock")) {
-            rows_.push_back(Row{Kind::Choice, "effects.clock", 0});
-            rows_.push_back(Row{Kind::Slider, "effects.night_strength", 1});
-            if (settingOf("effects.season")) rows_.push_back(Row{Kind::Choice, "effects.season", 0});  // 2.6.22
-            if (settingOf("effects.weather_kind")) rows_.push_back(Row{Kind::Choice, "effects.weather_kind", 0});
-            if (settingOf("effects.skill_looks")) rows_.push_back(Row{Kind::Choice, "effects.skill_looks", 0});  // .183
-        }
-        if (picture) rows_.push_back(Row{Kind::Here, "", 0});  // 2.6.22
-        for (int g = 0; g < kEffectGroups && picture; ++g) {
-            if (!settingOf(groupKey(g))) continue;
-            int listed = 0;
-            for (int i = 0; i < effect_groups::memberCount(); ++i) {
-                const effect_groups::Member& m = effect_groups::members()[i];
-                const EffectLayout* e = m.group == g ? layoutOf(m) : nullptr;
-                listed += e && here(e->box, config) ? 1 : 0;
-            }
-            if (!listed) continue;
-            rows_.push_back(Row{Kind::Box, groupKey(g), 0});
-            if (effect_groups::hasStrength(g)) rows_.push_back(Row{Kind::Slider, groupKey(g) + "_strength", 1});
-            rows_.push_back(Row{Kind::Open, groupKey(g), 1});
-            if (!groupOpen_[g]) continue;
-            for (int i = 0; i < effect_groups::memberCount(); ++i) {
-                const effect_groups::Member& m = effect_groups::members()[i];
-                const EffectLayout* e = m.group == g ? layoutOf(m) : nullptr;
-                if (e && here(e->box, config)) effect(*e, 2);
+                if (!listed) continue;
+                rows_.push_back(Row{Kind::Box, groupKey(g), 0});
+                if (effect_groups::hasStrength(g)) rows_.push_back(Row{Kind::Slider, groupKey(g) + "_strength", 1});
+                rows_.push_back(Row{Kind::Open, groupKey(g), 1});
+                if (!groupOpen_[g]) continue;
+                for (int i = 0; i < effect_groups::memberCount(); ++i) {
+                    const effect_groups::Member& m = effect_groups::members()[i];
+                    const EffectLayout* e = m.group == g ? layoutOf(m) : nullptr;
+                    if (e && here(e->box, config)) effect(*e, 2);
+                }
             }
         }
     }
@@ -351,28 +295,9 @@ void Console::readPins(const std::string& iniPath) {
     pinsPath_ = (slash == std::string::npos ? std::string() : iniPath.substr(0, slash + 1)) + layout::kConsolePins;
     std::string text;
     if (readTextFile(pinsPath_, text)) pins_ = consolepins::parse(text);
-    // 3.0.17-beta.12: the rows the console has not shown yet (none at its first start: nothing marked)
-    knownPath_ = (slash == std::string::npos ? std::string() : iniPath.substr(0, slash + 1)) + layout::kConsoleKnown;
-    std::vector<std::string> keys;
-    for (const IniSetting& s : iniSettings())
-        if (levelOf(s) != Mode::Developer) keys.push_back(sectionKey(s));
-    std::string known;
-    const bool had = readTextFile(knownPath_, known);
-    fresh_ = newRows(known, keys);
-    if (!had) writeFileAtomic(knownPath_, knownRowsText(keys));
-}
-
-// 3.0.17-beta.12: «Нове» seen - every row known from now on
-void Console::markKnown() {
-    if (fresh_.empty() || knownPath_.empty()) return;
-    std::vector<std::string> keys;
-    for (const IniSetting& s : iniSettings())
-        if (levelOf(s) != Mode::Developer) keys.push_back(sectionKey(s));
-    writeFileAtomic(knownPath_, knownRowsText(keys));
 }
 
 bool Console::rowPinnable(const Row& r) const {
-    if (r.kind == Kind::Tiles) return true;  // 3.0.17-beta.27: its chosen tile
     return (r.kind == Kind::Box || r.kind == Kind::Check || r.kind == Kind::Slider || r.kind == Kind::Choice) &&
            settingOf(r.key);
 }
@@ -380,9 +305,7 @@ bool Console::rowPinnable(const Row& r) const {
 std::string Console::chosenKey() const {
     if (rows_.empty() || at_ < 0 || at_ >= int(rows_.size())) return "";
     const Row& r = rows_[size_t(at_)];
-    if (r.kind != Kind::Tiles) return passive(r.kind) ? "" : r.key;
-    const std::vector<std::string> keys = consoletiles::split(r.key);
-    return keys.empty() ? "" : keys[size_t(consoletiles::move(tileCol_, 0, int(keys.size())))];
+    return passive(r.kind) ? "" : r.key;
 }
 
 bool Console::here(const std::string& key, const Config& config) const {
@@ -409,7 +332,6 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
     if (r.kind == Kind::Open) {  // 2.2.1: a group's effects shown or hidden - Space, Enter, right opens, left closes
         for (int g = 0; g < kEffectGroups; ++g)
             if (r.key == groupKey(g)) groupOpen_[g] = step == 0 ? !groupOpen_[g] : step > 0;
-        if (r.key == kWindowsKey) windowsOpen_ = step == 0 ? !windowsOpen_ : step > 0;  // 3.0.11-beta.302
         build(lang_, config);
         dirty_ = true;
         return false;
@@ -418,31 +340,18 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
         testAsked_ = testAsked_ || step == 0;
         return false;
     }
-    if (r.kind == Kind::Layout) {  // 3.0.11-beta.75: Space or Enter - «Розміщення інтерфейсу»; the console closes
-        layoutAsked_ = layoutAsked_ || step == 0;
-        return false;
-    }
     if (r.kind == Kind::Dump) {  // 3.0.20-beta.22: Space or Enter - «Записати моделі навколо»; the console closes
         dumpAsked_ = dumpAsked_ || step == 0;
         return false;
     }
+    if (r.kind == Kind::Settings) {  // 3.0.21-beta.7: Space or Enter - «Налаштування» opens; the console closes
+        settingsAsked_ = settingsAsked_ || step == 0;
+        return false;
+    }
     if (r.kind == Kind::Tabs) {  // 3.0.17-beta.4: Space or right the next tab, left the one before
-        if (tab_ == kTabNew) markKnown();  // 3.0.17-beta.12: «Нове» left - seen
         tab_ = ((tab_ + (step < 0 ? -1 : 1)) % kTabs + kTabs) % kTabs;
         build(lang_, config);
         at_ = top_ = 0;
-        dirty_ = true;
-        return false;
-    }
-    if (r.kind == Kind::Look) {  // 3.0.17-beta.4: «Як виглядає гра» - the next variant's keys written
-        const presets::Choice c = presets::Choice(std::atoi(r.key.c_str()));
-        const int n = presets::variants(c);
-        const int to = ((presets::match(c, shownConfig(config)).variant + (step < 0 ? -1 : 1)) % n + n) % n;
-        return settingedit::setLook(iniPath, c, to);
-    }
-    if (r.kind == Kind::Tiles && step != 0) {  // 3.0.17-beta.27: left and right choose the tile
-        const int count = int(consoletiles::split(r.key).size());
-        tileCol_ = consoletiles::move(consoletiles::move(tileCol_, 0, count), step, count);
         dirty_ = true;
         return false;
     }
@@ -566,16 +475,16 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
         const std::string key = chosenKey();  // 3.0.17-beta.27: a tile's
         pins_ = consolepins::toggle(pins_, key);
         if (!pinsPath_.empty()) writeFileAtomic(pinsPath_, consolepins::format(pins_));
-        LOG_INFO("console: %s %s «Швидко»", key.c_str(), consolepins::pinned(pins_, key) ? "pinned to" : "taken off");
-        if (tab_ == kTabQuick) build(lang_, config);
+        LOG_INFO("console: %s %s", key.c_str(), consolepins::pinned(pins_, key) ? "pinned" : "its pin taken off");
+        if (tab_ == kTabTrials) build(lang_, config);  // 3.0.21-beta.7: the pinned rows head «Проби»
         dirty_ = true;
     }
     if (pressed(VK_RIGHT, right_, true, now)) changed = change(iniPath, config, 1) || changed;
     // 3.0.5-beta.6: the test runs over the game alone (3.0.11-beta.75: the layout; 3.0.20-beta.22: the models' dump)
-    if (testAsked_ || layoutAsked_ || dumpAsked_) {
-        LOG_INFO("console: %s chosen - closed", testAsked_     ? "«Тест графіки»"
-                                                : layoutAsked_ ? "«Розмістити інтерфейс»"
-                                                               : "«Записати моделі навколо»");
+    if (testAsked_ || dumpAsked_ || settingsAsked_) {
+        LOG_INFO("console: %s chosen - closed", testAsked_   ? "«Тест графіки»"
+                                                : dumpAsked_ ? "«Записати моделі навколо»"
+                                                             : "«Налаштування»");
         open_ = false;
         hide();
         comparing_.clear();
@@ -592,9 +501,6 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
         if (passive(rows_[size_t(row)].kind)) continue;
         at_ = row;
         dirty_ = true;
-        if (rows_[size_t(row)].kind == Kind::Tiles)  // 3.0.17-beta.27: the tile under the mouse
-            tileCol_ = consoletiles::at(c.x, drawnTilesLeft_, drawnTilesWidth_,
-                                        int(consoletiles::split(rows_[size_t(row)].key).size()));
         const IniSetting* s = settingOf(chosenKey());
         const bool stepped = s && (s->control == Control::Slider || s->control == Control::Choice);
         const int half = int(drawnBox_.right - drawnBox_.left) / 2;
@@ -660,7 +566,6 @@ bool Console::mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 }
 
 void Console::hide() {
-    if (tab_ == kTabNew) markKnown();  // 3.0.17-beta.12: closed on «Нове» - seen
     if (window_ && IsWindowVisible(window_)) ShowWindow(window_, SW_HIDE);
     shownText_.clear();
 }
@@ -677,20 +582,12 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
     const bool mouseIn = drawnLine_ > 0 && PtInRect(&drawnBox_, mouseAt);
     if (mouseIn) state += "|m" + std::to_string(mouseAt.x) + "," + std::to_string(mouseAt.y);
     for (const Row& r : rows_)
-        if (r.kind == Kind::Tiles) {  // 3.0.17-beta.27
-            for (const std::string& k : consoletiles::split(r.key))
-                if (const IniSetting* s = settingOf(k)) state += tokenOf(*s, config) + ",";
-        } else if (r.kind == Kind::About) {  // 3.0.21-beta.2: what it needs is met or not
+        if (r.kind == Kind::About) {  // 3.0.21-beta.2: what it needs is met or not
             state += catalogue::aboutText(aboutNow(r.key, config, lang_), lang_, "+", "-") + ",";
         } else if (r.kind != Kind::Heading) {
             if (const IniSetting* s = settingOf(r.key)) state += tokenOf(*s, config) + ",";
         }
-    state += "|c" + std::to_string(tileCol_);
     state += "|t" + std::to_string(tab_) + "|" + consolepins::format(pins_);  // 3.0.17-beta.4
-    for (int k = 0; k < presets::kChoices; ++k) {
-        const presets::Match m = presets::match(presets::Choice(k), config);
-        state += "|" + std::to_string(m.variant) + "/" + std::to_string(m.changed);
-    }
     if (!dirty_ && state == shownText_ && window_ && IsWindowVisible(window_)) return;
     dirty_ = false;
     shownText_ = state;
@@ -788,16 +685,6 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                           DT_SINGLELINE | DT_LEFT | DT_NOPREFIX | DT_END_ELLIPSIS);
                 continue;
             }
-            if (r.kind == Kind::Open && r.key == kWindowsKey) {  // 3.0.11-beta.302: the new look's windows
-                size_t n = 0;
-                for (const InterfaceSection& sec : interfaceSections())
-                    if (sec.folded) n += sec.keys.size();
-                const std::string label =
-                    windowsOpen_ ? std::string(tr(lang_, Text::InterfaceWindowsHide))
-                                 : fmt(tr(lang_, Text::InterfaceWindowsShow), {std::to_string(n)});
-                text(fontH + r.depth * fontH * 2, y, wide(label), RGB(140, 180, 220));
-                continue;
-            }
             if (r.kind == Kind::Open) {  // 2.2.1: "the group's effects >" (2.6.22: "3 of 7 on") or "hide the effects"
                 int g = 0, count = 0, lit = 0;
                 while (g < kEffectGroups && r.key != groupKey(g)) ++g;
@@ -814,19 +701,18 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 text(fontH + r.depth * fontH * 2, y, wide(label), RGB(140, 180, 220));
                 continue;
             }
-            if (r.kind == Kind::Test || r.kind == Kind::Layout || r.kind == Kind::Dump) {  // 3.0.5-beta.6 (.75, .22)
+            if (r.kind == Kind::Test || r.kind == Kind::Dump || r.kind == Kind::Settings) {  // 3.0.5-beta.6 (.22, .7)
                 const int x = fontH + r.depth * fontH * 2;
                 text(x, y, L"▶", RGB(229, 169, 78));
-                const Text words = r.kind == Kind::Test     ? Text::TestRow
-                                   : r.kind == Kind::Layout ? Text::ConsoleHudEdit
-                                                            : Text::ConsoleDumpModels;
+                const Text words = r.kind == Kind::Test   ? Text::TestRow
+                                   : r.kind == Kind::Dump ? Text::ConsoleDumpModels
+                                                          : Text::ConsoleToSettings;
                 text(x + fontH * 3 / 2, y, wide(tr(lang_, words)), RGB(240, 236, 226));
                 continue;
             }
             if (r.kind == Kind::Tabs) {  // 3.0.17-beta.4: the tabs, the shown one bright between ‹ ›
-                const Text names[kTabs] = {Text::ConsoleTabQuick,  Text::ConsoleTabNew,  Text::LookPicture,
-                                           Text::LookUi,           Text::LookTextures,   Text::ConsoleTabTrials,
-                                           Text::PageDiagnostics,  Text::ConsoleTabAll};
+                // 3.0.21-beta.7: the laboratory's three
+                const Text names[kTabs] = {Text::ConsoleTabTrials, Text::PageDiagnostics, Text::ConsoleTabCosts};
                 // 3.0.21-beta.2: eight tabs - in a narrow console the row starts at the first tab that leaves
                 // the shown one inside it
                 std::wstring words[kTabs];
@@ -850,42 +736,6 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 for (int k = from; k < kTabs && x + widths[k] <= w - fontH / 2; ++k) {
                     text(x, y, words[k], k == tab_ ? RGB(229, 169, 78) : RGB(170, 170, 170), k == tab_);
                     x += widths[k] + gap;
-                }
-                continue;
-            }
-            if (r.kind == Kind::Look) {  // 3.0.17-beta.4: «Картинка: Ремастер · змінено 2»
-                const presets::Choice ch = presets::Choice(std::atoi(r.key.c_str()));
-                const presets::Match m = presets::match(ch, config);
-                std::string value = tr(lang_, presets::nameOf(ch, m.variant));
-                if (m.changed > 0)
-                    value = fmt(tr(lang_, Text::LookChanged), {value, std::to_string(m.changed)});
-                text(fontH, y, wide(tr(lang_, presets::headOf(ch))), RGB(200, 200, 190));
-                textRight(w - fontH, y, L"\u2039 " + wide(value) + L" \u203a", RGB(240, 236, 226));
-                continue;
-            }
-            if (r.kind == Kind::Tiles) {  // 3.0.17-beta.27: four places a row, each its switch - lit when on
-                const std::vector<std::string> keys = consoletiles::split(r.key);
-                const int left = fontH, width = w - 2 * fontH, gap = std::max(2, fontH / 3);
-                drawnTilesLeft_ = left;
-                drawnTilesWidth_ = width;
-                const int chosen = top_ + i == at_ ? consoletiles::move(tileCol_, 0, int(keys.size())) : -1;
-                for (int k = 0; k < int(keys.size()); ++k) {
-                    const IniSetting* ts = settingOf(keys[size_t(k)]);
-                    if (!ts) continue;
-                    const bool on = tokenOf(*ts, config) == ts->tokens[1];
-                    const int x0 = left + k * width / consoletiles::kPerRow, x1 = left + (k + 1) * width /
-                                                                                    consoletiles::kPerRow - gap;
-                    const uint32_t fill = k == chosen ? 0x004A5A6Au : on ? 0x00243C2Cu : 0x0024282Eu;
-                    for (int yy = std::max(0, y - line / 8); yy < std::min(h, y + line - line / 8); ++yy)
-                        std::fill(px + size_t(yy) * size_t(w) + size_t(x0), px + size_t(yy) * size_t(w) + size_t(x1),
-                                  fill);
-                    text(x0 + gap, y, on ? L"■" : L"□", on ? RGB(143, 194, 122) : RGB(150, 150, 150));
-                    std::wstring label = wide(tr(lang_, ts->label));
-                    RECT place{x0 + gap + fontH * 3 / 2, y, x1 - gap, y + line};
-                    SelectObject(dc, font);
-                    SetTextColor(dc, on ? RGB(240, 236, 226) : RGB(170, 170, 170));
-                    DrawTextW(dc, label.c_str(), int(label.size()), &place,
-                              DT_SINGLELINE | DT_LEFT | DT_NOPREFIX | DT_END_ELLIPSIS);
                 }
                 continue;
             }

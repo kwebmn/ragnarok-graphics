@@ -151,7 +151,7 @@ TEST(settings_window_a_group_of_details_is_one_line) {
         more = l.more;
     }
     CHECK_EQ(lines, 1);
-    CHECK_EQ(more, 36);
+    CHECK_EQ(more, 35);  // 3.0.21-beta.7: «Налаштування»'s own switch left the list (a diagnostic of the console)
 }
 
 // The search: the rows of every entry whose words match - details too -, under their groups' names; the game's own

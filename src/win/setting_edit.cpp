@@ -52,11 +52,9 @@ bool set(const std::string& iniPath, const Config& config, const std::string& ke
     return true;
 }
 
-bool setLook(const std::string& iniPath, settings::presets::Choice c, int variant,
-             const std::vector<std::string>& keep) {
+bool setLook(const std::string& iniPath, settings::presets::Choice c, int variant) {
     std::vector<IniEdit> edits;
     for (const auto& [key, token] : settings::presets::keysOf(c, variant)) {
-        if (std::find(keep.begin(), keep.end(), key) != keep.end()) continue;
         const size_t dot = key.find('.');
         edits.push_back({key.substr(0, dot), key.substr(dot + 1), token});
     }

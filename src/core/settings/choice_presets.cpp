@@ -11,11 +11,12 @@ using Keys = std::vector<std::pair<std::string, std::string>>;
 // The new interface's screen (what [interface] minimap turns on with it, config.cpp's newMinimap list) ...
 const char* const kScreen[] = {"buffs", "character", "target", "party", "tracker", "hotbar", "cast", "chat"};
 const char* const kScreenOn[] = {"column", "bars", "1", "1", "1", "1", "1", "1"};
-// ... and its windows
+// ... and its windows. 3.0.21-beta.7: not «Налаштування» ("options" before) - the player's own place stays whatever
+// the look
 const char* const kWindows[] = {
     "items", "status", "skills", "equip", "npc_talk", "shop", "storage", "trade", "menu", "cards", "asks",
     "messages", "login", "char_select", "char_make", "cart", "counts", "vending", "picks", "party_setup", "pet",
-    "homun", "merc", "options", "social", "servers", "guild", "my_shop", "vend_setup", "whisper_setup", "macros",
+    "homun", "merc", "social", "servers", "guild", "my_shop", "vend_setup", "whisper_setup", "macros",
     "tips", "loading_bar",
     "emotes", "commands", "chat_rooms", "detail_console", "popups", "whispers"};
 

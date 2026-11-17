@@ -53,8 +53,10 @@ TEST(strings_newest_texts_in_their_places) {
     CHECK_EQ(en(Text::RoextWindowX), std::string("The window's place: X"));
     CHECK(en(Text::RoextWindowPlaceHint).rfind("Where the game's window", 0) == 0);
     CHECK_EQ(en(Text::MainKeys), std::string("Keys in the game"));
-    CHECK(en(Text::MainKeysList).rfind("Ctrl+~ (the key left of 1)", 0) == 0);
-    CHECK(en(Text::PlayKeysLine).rfind("In the game: Ctrl+~", 0) == 0);
+    // 3.0.21-beta.7: «Settings» (Alt+O) first - the console is the laboratory
+    CHECK(en(Text::MainKeysList).rfind("Alt+O - «Settings»", 0) == 0);
+    CHECK(en(Text::MainKeysList).find("\nCtrl+~ (the key left of 1) - the console: trials") != std::string::npos);
+    CHECK(en(Text::PlayKeysLine).rfind("In the game: Alt+O the settings", 0) == 0);
     CHECK_EQ(en(Text::ServiceUpdates), std::string("The client's graphics updates"));
     CHECK(en(Text::UpdatesSome).rfind("Archives in the updates folder", 0) == 0);
     CHECK_EQ(en(Text::ViewHelp), std::string("Help"));

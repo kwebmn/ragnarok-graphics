@@ -47,10 +47,9 @@ constexpr const char* kKnownRows = "uaro-graphics\\cache\\known-rows.txt";
 constexpr const char* kFirstGameSent = "uaro-graphics\\cache\\first-game.sent";
 // 3.0.17-beta.1: the installed version's failed starts (core/start_failures) - the rollback offered after two
 constexpr const char* kStartFailures = "uaro-graphics\\cache\\start-failures.txt";
-// 3.0.17-beta.12: the rows Alt+D's «Нове» has shown (core/settings/navigation knownRowsText)
-constexpr const char* kConsoleKnown = "uaro-graphics\\cache\\console-known.txt";
-// 3.0.17-beta.11: the game's chat told «Alt+D» once (win/console_hint)
-constexpr const char* kConsoleHint = "uaro-graphics\\cache\\console-hint.txt";
+// 3.0.17-beta.11: the game's chat told where the settings are, once (win/console_hint). 3.0.21-beta.7: they are in
+// «Налаштування» (Alt+O), not in the console - a file of a new name, so that who was told «Alt+D» is told once more
+constexpr const char* kSettingsHint = "uaro-graphics\\cache\\settings-hint.txt";
 // 3.0.17-beta.10: the version the player saw «Гра» with - none: the first start's cards, another: «Оновлено до»
 constexpr const char* kSeenVersion = "uaro-graphics\\cache\\seen-version.txt";
 // 3.0.17-beta.7: [debug] record_scene's file (core/scene_record)

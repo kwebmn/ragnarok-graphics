@@ -6,8 +6,10 @@ namespace uagfx::win::detailwin {
 // не потрібна»): [interface] detail_console - the game's «Arrange Detail» window (Alt+D, the old basic info's button,
 // «Список команд»: UI window 0x39 at g_windowMgr + 0x168, class 0x698798 - object detail, shadows, trilinear, almost
 // nothing with this renderer) closed as it opens, before the game draws it, and the driver's console opened instead.
-// On the game's thread.
+// On the game's thread. 3.0.21-beta.7: «Налаштування» instead (the console is the laboratory alone) - takeAsk():
+// Alt+D was pressed, true once (the present opens «Налаштування»; the console while that is switched off)
 void frame(bool on);
 void beforeGameDraw();
+bool takeAsk();
 
 }  // namespace uagfx::win::detailwin

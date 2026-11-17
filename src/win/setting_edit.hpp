@@ -14,10 +14,9 @@ namespace uagfx::win::settingedit {
 bool set(const std::string& iniPath, const Config& config, const std::string& key, const std::string& token);
 // 3.0.21-beta.4: Direct3D 12 draws the game now (many rows need it: core/settings/catalogue)
 bool direct3d12();
-// One of «Як виглядає гра»'s choices - its variant's keys written
-// (3.0.18-beta.132: `keep` - its keys left as they are, "interface.options" by «Налаштування» itself)
-bool setLook(const std::string& iniPath, settings::presets::Choice c, int variant,
-             const std::vector<std::string>& keep = {});
+// One of «Як виглядає гра»'s choices - its variant's keys written (3.0.21-beta.7: «Налаштування» is no key of a
+// look, so the window choosing one stays without a list of keys to keep)
+bool setLook(const std::string& iniPath, settings::presets::Choice c, int variant);
 // The settings as the console shows them - each effect's switch as the set has it (the AI pictures as the file says)
 Config shown(const Config& c);
 

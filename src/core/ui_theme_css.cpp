@@ -730,9 +730,11 @@ select selectbox option:checked { color: #e6cb8a; }
 .sw .snone { display: block; margin-top: 20dp; font-size: 13dp; color: #9aa3b5; }
 .sw .sfoot { display: flex; flex-direction: row; justify-content: space-between; align-items: center;
     padding: 9dp 12dp; border-top: 1dp #ffffff1a; }
-.sw .sfoot .sfh { font-size: 12dp; color: #9aa3b5; }
-.sw .sfoot .btn { display: block; padding: 4dp 10dp; border-radius: 7dp; border: 1dp #e6cb8a66; color: #e6cb8a;
-    font-size: 12dp; }
+.sw .sfoot .sfh { display: block; flex: 1; padding-right: 10dp; font-size: 12dp; color: #9aa3b5; }
+/* 3.0.21-beta.7: two buttons at the right - «Розмістити інтерфейс», the way to the console */
+.sw .sfoot .sfb { display: flex; flex-direction: row; flex: none; }
+.sw .sfoot .btn { display: block; margin-left: 8dp; padding: 4dp 10dp; border-radius: 7dp; border: 1dp #e6cb8a66;
+    color: #e6cb8a; font-size: 12dp; }
 .tw { width: 460dp; }
 .tw .count { margin-left: 10dp; font-size: 11.5dp; color: #9aa3b5; }
 .tw .msg { display: block; margin: 2dp 0 12dp 0; font-size: 13dp; line-height: 19dp; }

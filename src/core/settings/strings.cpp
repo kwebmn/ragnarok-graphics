@@ -1620,16 +1620,16 @@ constexpr Entry kTexts[] = {
     {Text::FramesFpsCounterHint,
      "Frames a second, the frame time and the graphics card's work a frame (GPU, DLSS apart) in the game window's top "
      "left corner. The frames a second stay at the limit (60) whatever is on - the GPU's milliseconds show what an "
-     "effect costs: watch them as you switch it (the console, Ctrl+~, has each effect's own). Ctrl+Shift+F11 in the "
-     "game shows and hides it at any time.",
+     "effect costs: watch them as you switch it (the console's «Effects' cost» tab, Ctrl+~, has each effect's own). "
+     "Ctrl+Shift+F11 in the game shows and hides it at any time.",
      "Кадри за секунду, час кадру й робота відеокарти за кадр (GPU, окремо DLSS) у лівому верхньому куті вікна гри. "
      "Кадри за секунду лишаються на межі (60), хоч би що було ввімкнено, — мілісекунди GPU показують, скільки коштує "
-     "ефект: дивіться на них, перемикаючи його (у консолі, Ctrl+~, — ціна кожного ефекту окремо). Ctrl+Shift+F11 у грі "
-     "показує й ховає його будь-коли.",
+     "ефект: дивіться на них, перемикаючи його (у консолі, Ctrl+~, на вкладці «Ціна ефектів» — ціна кожного ефекту "
+     "окремо). Ctrl+Shift+F11 у грі показує й ховає його будь-коли.",
      "Кадры в секунду, время кадра и работа видеокарты за кадр (GPU, отдельно DLSS) в левом верхнем углу окна игры. "
      "Кадры в секунду остаются на пределе (60), что бы ни было включено, — миллисекунды GPU показывают, сколько стоит "
-     "эффект: смотрите на них, переключая его (в консоли, Ctrl+~, — цена каждого эффекта отдельно). Ctrl+Shift+F11 в "
-     "игре показывает и прячет его в любой момент."},
+     "эффект: смотрите на них, переключая его (в консоли, Ctrl+~, на вкладке «Цена эффектов» — цена каждого эффекта "
+     "отдельно). Ctrl+Shift+F11 в игре показывает и прячет его в любой момент."},
     {Text::ServiceProfiles, "Profiles",
      "Профілі",
      "Профили"},
@@ -2739,17 +2739,17 @@ constexpr Entry kTexts[] = {
      "Там, где трава встречается с дорогой или песком, граница между ними больше не идёт ступеньками вдоль клеток "
      "земли: она петляет, одна текстура заходит в другую. На полях и в городах; плиточный пол подземелий сохраняет "
      "ровные края (Direct3D 12). Со «Своя земля» так же смешиваются текстуры своей земли."},
-    {Text::ConsoleTitle, "uaRO Graphics - effects",
-     "uaRO Graphics — ефекти",
-     "uaRO Graphics — эффекты"},
+    {Text::ConsoleTitle, "uaRO Graphics - laboratory",  // 3.0.21-beta.7: the trials, the diagnostics, the effects' cost
+     "uaRO Graphics — лабораторія",
+     "uaRO Graphics — лаборатория"},
     {Text::ConsoleKeys,
      "Up/Down choose · Space on/off, a group's effects · Left/Right value, the tab · letters search · hold Tab to "
-     "compare · Insert ★ to «Quick» · Ctrl+Shift+F11 frame counter · ↻ at the game's next start · ~ or Esc close",
+     "compare · Insert ★ pin · Ctrl+Shift+F11 frame counter · ↻ at the game's next start · ~ or Esc close",
      "↑↓ вибір · Пробіл увімк/вимк, ефекти групи · ←→ значення, вкладка · літери — пошук · затисніть Tab — "
-     "порівняти · Insert — ★ у «Швидко» · Ctrl+Shift+F11 — лічильник кадрів · ↻ — після перезапуску гри · ~ або Esc "
+     "порівняти · Insert — ★ закріпити · Ctrl+Shift+F11 — лічильник кадрів · ↻ — після перезапуску гри · ~ або Esc "
      "— закрити",
      "↑↓ выбор · Пробел вкл/выкл, эффекты группы · ←→ значение, вкладка · буквы — поиск · зажмите Tab — сравнить · "
-     "Insert — ★ в «Быстро» · Ctrl+Shift+F11 — счётчик кадров · ↻ — после перезапуска игры · ~ или Esc — закрыть"},
+     "Insert — ★ закрепить · Ctrl+Shift+F11 — счётчик кадров · ↻ — после перезапуска игры · ~ или Esc — закрыть"},
     {Text::FxSmoothHills, "Hills without steps of light", "Пагорби без сходинок світла", "Холмы без ступенек света"},
     {Text::FxSmoothHillsHint,
      "The game lights its ground cell by cell, and a hill shows as steps of light. The ground is lit by the sun over "
@@ -3704,9 +3704,11 @@ constexpr Entry kTexts[] = {
     {Text::SeenClose, "Got it", "Зрозуміло", "Понятно"},
     {Text::PlayNewFeaturesShort, "\xE2\x98\x85 New features", "\xE2\x98\x85 Нові можливості",
      "\xE2\x98\x85 Новые возможности"},
-    {Text::ConsoleHintLine, "uaRO Graphics: Alt+D - quick settings (the picture, the interface, the textures).",
-     "uaRO Graphics: Alt+D — швидкі налаштування (картинка, інтерфейс, текстури).",
-     "uaRO Graphics: Alt+D — быстрые настройки (картинка, интерфейс, текстуры)."},
+    // 3.0.21-beta.7: the settings are «Налаштування»'s (Alt+O) - «Alt+D - quick settings» before
+    {Text::ConsoleHintLine,
+     "uaRO Graphics: Alt+O - the settings (the picture, the interface, the sound, the controls).",
+     "uaRO Graphics: Alt+O — налаштування (картинка, інтерфейс, звук, керування).",
+     "uaRO Graphics: Alt+O — настройки (картинка, интерфейс, звук, управление)."},
     {Text::CardSuggest, "For {1} ({2}): picture «{3}», textures «{4}»", "Для {1} ({2}): картинка «{3}», текстури «{4}»",
      "Для {1} ({2}): картинка «{3}», текстуры «{4}»"},
     {Text::CardMemory, "{1} GB", "{1} ГБ", "{1} ГБ"},
@@ -3722,19 +3724,9 @@ constexpr Entry kTexts[] = {
     {Text::MoreRowsShow, "{1} more settings \xE2\x80\xBA", "Ще {1} налаштувань \xE2\x80\xBA",
      "Ещё {1} настроек \xE2\x80\xBA"},
     {Text::MoreRowsHide, "Hide the extra settings", "Сховати додаткові", "Скрыть дополнительные"},
-    {Text::ConsoleTabQuick, "Quick", "Швидко", "Быстро"},
-    {Text::ConsoleTabAll, "All", "Усе", "Всё"},
-    {Text::ConsoleOften, "Switched most", "Часто перемикають", "Часто переключают"},
     {Text::ConsolePinned, "\xE2\x98\x85 Pinned by you", "\xE2\x98\x85 Закріплені вами",
      "\xE2\x98\x85 Закреплённые вами"},
     {Text::ConsoleActions, "Actions", "Дії", "Действия"},
-    {Text::ConsoleTabNew, "New", "Нове", "Новое"},
-    {Text::ConsoleNewCount, "\xE2\x98\x85 New: {1} - the «New» tab", "\xE2\x98\x85 Нового: {1} - вкладка «Нове»",
-     "\xE2\x98\x85 Нового: {1} - вкладка «Новое»"},
-    {Text::ConsoleNewNone, "Nothing new since you looked", "Нічого нового відтоді, як ви дивилися",
-     "Ничего нового с тех пор, как вы смотрели"},
-    {Text::ConsoleNewNote, "New since you looked - try them here", "Нове відтоді, як ви дивилися, - спробуйте тут",
-     "Новое с тех пор, как вы смотрели, - попробуйте здесь"},
     {Text::MainIntro,
      "What a game needs first. The rest set before a start is on the pages; what applies at once - in the game, Alt+O.",
      "Головне для гри. Решта, що робиться до запуску, — на сторінках ліворуч; те, що діє одразу, — у грі: Alt+O.",
@@ -4645,7 +4637,8 @@ constexpr Entry kTexts[] = {
      "Де відкривається вікно гри розміру зі сторінки «Екран» (його лівий верхній кут), як було в ROExt.",
      "Где открывается окно игры размера со страницы «Экран» (его левый верхний угол), как было в ROExt."},
     {Text::MainKeys, "Keys in the game", "Клавіші в грі", "Клавиши в игре"},
-    {Text::MainKeysList, "Ctrl+~ (the key left of 1) - the effects console: effects on and off right in the game\n"
+    {Text::MainKeysList, "Alt+O - «Settings»: everything that applies at once, right in the game\n"
+     "Ctrl+~ (the key left of 1) - the console: trials, diagnostics, what each effect costs\n"
      "Ctrl+Shift+F10 - «New report» to the developers, with a screenshot\n"
      "Ctrl+Shift+F11 - the frame counter\n"
      "Ctrl+Shift+F12 - a screenshot at full size (the ScreenShot folder)\n"
@@ -4656,7 +4649,8 @@ constexpr Entry kTexts[] = {
      "` - the walk mode: W A S D walk, Tab the target, Space attack, F pick up, R talk, C sit, Q / E the camera, "
      "1-9 the bar, Enter the chat\n"
      "Arrows in a window - move its frame (after the first arrow); Enter presses, Esc closes, PgUp / PgDn the tabs",
-     "Ctrl+~ (клавіша ліворуч від 1) — консоль ефектів: вмикати й вимикати ефекти просто в грі\n"
+     "Alt+O — «Налаштування»: усе, що діє одразу, просто в грі\n"
+     "Ctrl+~ (клавіша ліворуч від 1) — консоль: проби, діагностика, ціна ефектів\n"
      "Ctrl+Shift+F10 — «Нове звернення» до розробників зі знімком екрана\n"
      "Ctrl+Shift+F11 — лічильник кадрів\n"
      "Ctrl+Shift+F12 — знімок екрана в повному розмірі (тека ScreenShot)\n"
@@ -4668,7 +4662,8 @@ constexpr Entry kTexts[] = {
      "Q / E — камера, 1–9 — панель, Enter — чат\n"
      "Стрілки у вікні — ведуть його рамку (після першої стрілки); Enter натискає, Esc закриває, PgUp / PgDn — "
      "вкладки",
-     "Ctrl+~ (клавиша слева от 1) — консоль эффектов: включать и выключать эффекты прямо в игре\n"
+     "Alt+O — «Настройки»: всё, что действует сразу, прямо в игре\n"
+     "Ctrl+~ (клавиша слева от 1) — консоль: пробы, диагностика, цена эффектов\n"
      "Ctrl+Shift+F10 — «Новое обращение» к разработчикам со снимком экрана\n"
      "Ctrl+Shift+F11 — счётчик кадров\n"
      "Ctrl+Shift+F12 — снимок экрана в полном размере (папка ScreenShot)\n"
@@ -4681,11 +4676,11 @@ constexpr Entry kTexts[] = {
      "Стрелки в окне — ведут его рамку (после первой стрелки); Enter нажимает, Esc закрывает, PgUp / PgDn — "
      "вкладки"},
     {Text::PlayKeysLine,
-     "In the game: Ctrl+~ the effects console, Ctrl+Shift+F10 a report, Pause the original look. Every key is on "
+     "In the game: Alt+O the settings, Ctrl+Shift+F10 a report, Pause the original look. Every key is on "
      "«Main».",
-     "У грі: Ctrl+~ — консоль ефектів, Ctrl+Shift+F10 — звернення, Pause — оригінальний вигляд. Усі клавіші — на "
+     "У грі: Alt+O — налаштування, Ctrl+Shift+F10 — звернення, Pause — оригінальний вигляд. Усі клавіші — на "
      "«Головне».",
-     "В игре: Ctrl+~ — консоль эффектов, Ctrl+Shift+F10 — обращение, Pause — оригинальный вид. Все клавиши — на "
+     "В игре: Alt+O — настройки, Ctrl+Shift+F10 — обращение, Pause — оригинальный вид. Все клавиши — на "
      "«Главное»."},
     {Text::ServiceUpdates, "The client's graphics updates", "Оновлення графіки клієнта", "Обновления графики клиента"},
     {Text::ClientUpdates, "Mount the updates of the updates folder", "Підключати оновлення з теки updates",
@@ -4728,7 +4723,7 @@ constexpr Entry kTexts[] = {
      "• The gamepad: Xbox and PlayStation work at once, its buttons on «Gamepad».\n"
      "• The game's libraries: our own in place of the old ones of the 2000s, each can be turned off on «Service».\n"
      "• «Graphics test»: for 105 seconds the game goes through every effects set by itself and sends the developers "
-     "how it runs on your computer - on «Play» or in the game's console (~).",
+     "how it runs on your computer - on «Play» or in the game's console (~), the «Diagnostics» tab.",
      "• uaRO Graphics малює гру наново на вашій відеокарті: чітка картинка будь-якого розміру, згладжування, світло й "
      "ефекти, ШІ-текстури.\n"
      "• «Гра» відкривається перед грою: новини сервера й хто онлайн, оновлення, кнопка «Грати».\n"
@@ -4738,7 +4733,7 @@ constexpr Entry kTexts[] = {
      "• Геймпад: Xbox і PlayStation працюють одразу, кнопки — на «Геймпад».\n"
      "• Бібліотеки гри: свої замість старих, 2000-х років; кожну можна вимкнути на «Сервіс».\n"
      "• «Тест графіки»: 105 секунд гра сама проходить усі набори ефектів і надсилає розробникам, як вона йде на "
-     "вашому комп'ютері — на «Гра» або в консолі гри (~).",
+     "вашому комп'ютері — на «Гра» або в консолі гри (~), вкладка «Діагностика».",
      "• uaRO Graphics рисует игру заново на вашей видеокарте: чёткая картинка любого размера, сглаживание, свет и "
      "эффекты, ИИ-текстуры.\n"
      "• «Игра» открывается перед игрой: новости сервера и кто онлайн, обновления, кнопка «Играть».\n"
@@ -4748,7 +4743,7 @@ constexpr Entry kTexts[] = {
      "• Геймпад: Xbox и PlayStation работают сразу, кнопки — на «Геймпад».\n"
      "• Библиотеки игры: свои вместо старых, 2000-х годов; каждую можно выключить на «Сервис».\n"
      "• «Тест графики»: 105 секунд игра сама проходит все наборы эффектов и отправляет разработчикам, как она идёт "
-     "на вашем компьютере — на «Игра» или в консоли игры (~)."},
+     "на вашем компьютере — на «Игра» или в консоли игры (~), вкладка «Диагностика»."},
     {Text::HelpViewPlay,
      "The server's news and who is online, the update channel and the updates, the «Play» button, the graphics test "
      "and its last result.",
@@ -5017,11 +5012,11 @@ constexpr Entry kTexts[] = {
      "её, прежде чем она останется."},
     {Text::InterfaceNote,
      "Parts of the new interface to try. Each switch works at once, in a running game too; off brings the game's own "
-     "part back. In the game the console (~) has them too.",
-     "Частини нового інтерфейсу, щоб спробувати. Кожен перемикач діє одразу, і в запущеній грі; вимкнено - частина гри "
-     "повертається. У грі вони є і в консолі (~).",
+     "part back. In the game they are in «Settings» (Alt+O).",
+     "Частини нового інтерфейсу, щоб спробувати. Кожен перемикач діє одразу, і в запущеній грі; вимкнено - частина "
+     "гри повертається. У грі вони — у «Налаштуваннях» (Alt+O).",
      "Части нового интерфейса, чтобы попробовать. Каждый переключатель действует сразу, и в запущенной игре; "
-     "выключено - часть игры возвращается. В игре они есть и в консоли (~)."},
+     "выключено - часть игры возвращается. В игре они — в «Настройках» (Alt+O)."},
     // 3.0.4-beta.1: the output device ([sound] output)
     {Text::SoundOutput, "Sound output device",
      "Пристрій виводу звуку",
@@ -5381,9 +5376,10 @@ constexpr Entry kTexts[] = {
      "105 секунд: игра сама показывает каждый набор эффектов и отправляет разработчикам, как он идёт на этом "
      "компьютере. Игра запустится, а тест начнётся через 10 секунд после входа на карту — встаньте в спокойном месте."},
     {Text::PlayTestButton, "Run the graphics test", "Запустити тест графіки", "Запустить тест графики"},
-    {Text::PlayTestRunning, "The game is running: open its console (~) and choose «Graphics test».",
-     "Гра вже запущена: відкрийте в ній консоль (~) і виберіть «Тест графіки».",
-     "Игра уже запущена: откройте в ней консоль (~) и выберите «Тест графики»."},
+    {Text::PlayTestRunning,
+     "The game is running: open its console (~), the «Diagnostics» tab, and choose «Graphics test».",
+     "Гра вже запущена: відкрийте в ній консоль (~), вкладку «Діагностика», і виберіть «Тест графіки».",
+     "Игра уже запущена: откройте в ней консоль (~), вкладку «Диагностика», и выберите «Тест графики»."},
     {Text::PlayTestLast, "The last test, {1}:", "Останній тест, {1}:", "Последний тест, {1}:"},
     {Text::PlayTestSent, "Sent to the developers: {1}.", "Надіслано розробникам: {1}.",
      "Отправлено разработчикам: {1}."},
@@ -5695,8 +5691,6 @@ constexpr Entry kTexts[] = {
     {Text::HudPartChat, "Chat", "Чат", "Чат"},
     {Text::HudPartHunt, "Hunt", "Полювання", "Охота"},  // 3.0.11-beta.278
     {Text::HudPartMvp, "MVP", "MVP", "MVP"},  // 3.0.11-beta.280
-    {Text::ConsoleHudEdit, "Arrange the interface (Ctrl+Shift+L)", "Розмістити інтерфейс (Ctrl+Shift+L)",
-     "Разместить интерфейс (Ctrl+Shift+L)"},
     {Text::InterfaceLayoutNote,
      "The parts' places and sizes: in the game drag a part with the mouse (a click stays a click), the grip at its "
      "corner sizes it, twice on the grip puts it back; Ctrl+Shift+L shows them all framed.",
@@ -6738,15 +6732,20 @@ constexpr Entry kTexts[] = {
     {Text::MercKills, "Kills", "Убито", "Убито"},
     {Text::MercDismiss, "Dismiss", "Звільнити", "Уволить"},
     // 3.0.11-beta.162: the game's options
-    {Text::InterfaceOptions, "Game options card", "Картка налаштувань гри", "Карточка настроек игры"},
+    {Text::InterfaceOptions,
+     "The «Settings» window by Alt+O",
+     "Вікно «Налаштування» за Alt+O",
+     "Окно «Настройки» по Alt+O"},
     {Text::InterfaceOptionsHint,
-     "The game's options window (Alt+O) as a card in the new look: the music and the sounds with their volumes, the "
-     "cursor's snap to a target for the attack, the skills and the things, the game's windows opaque. Off: the game's "
-     "own window.",
-     "Вікно налаштувань гри (Alt+O) карткою в новому вигляді: музика і звуки з гучністю, прилипання курсора до цілі "
-     "для атаки, навичок і речей, непрозорі вікна гри. Вимкнено: власне вікно гри.",
-     "Окно настроек игры (Alt+O) карточкой в новом виде: музыка и звуки с громкостью, прилипание курсора к цели для "
-     "атаки, навыков и вещей, непрозрачные окна игры. Выключено: собственное окно игры."},
+     "Alt+O opens «Settings» of uaRO Graphics: everything that applies at once, and the game's own options (the "
+     "music and the sounds with their volumes, the cursor's snap to a target, the game's windows opaque). Off: the "
+     "game's own options window - to check with when ours fails; uaRO Graphics has no settings in the game then.",
+     "Alt+O відкриває «Налаштування» uaRO Graphics: усе, що діє одразу, і налаштування самої гри (музика і звуки з "
+     "гучністю, прилипання курсора до цілі, непрозорі вікна гри). Вимкнено: власне вікно налаштувань гри — для "
+     "перевірки, якщо наше не працює; налаштувань uaRO Graphics у грі тоді немає.",
+     "Alt+O открывает «Настройки» uaRO Graphics: всё, что действует сразу, и настройки самой игры (музыка и звуки с "
+     "громкостью, прилипание курсора к цели, непрозрачные окна игры). Выключено: собственное окно настроек игры — "
+     "для проверки, если наше не работает; настроек uaRO Graphics в игре тогда нет."},
     {Text::OptionsTitle, "Game options", "Налаштування гри", "Настройки игры"},
     {Text::OptionsMusic, "Music", "Музика", "Музыка"},
     {Text::OptionsSounds, "Sounds", "Звуки", "Звуки"},
@@ -6983,17 +6982,19 @@ constexpr Entry kTexts[] = {
     {Text::RoomOwner, "Make the owner", "Зробити власником", "Сделать владельцем"},
     {Text::RoomFriend, "Add as a friend", "У друзі", "В друзья"},
     // 3.0.11-beta.209: Alt+D - the driver's console
-    {Text::InterfaceDetailConsole, "Alt+D opens the graphics console", "Alt+D відкриває консоль графіки",
-     "Alt+D открывает консоль графики"},
+    {Text::InterfaceDetailConsole,
+     "Alt+D opens «Settings»",
+     "Alt+D відкриває «Налаштування»",
+     "Alt+D открывает «Настройки»"},
     {Text::InterfaceDetailConsoleHint,
      "The game's own detail window (Alt+D: object detail, shadows, trilinear) changes almost nothing with this "
-     "renderer - Alt+D opens this console with the real settings instead (as Ctrl+` does). Off: the game's window.",
+     "renderer - Alt+D opens «Settings» with the real settings instead (as Alt+O does). Off: the game's window.",
      "Власне вікно деталізації гри (Alt+D: деталізація об'єктів, тіні, трилінійна фільтрація) з цим рендерером майже "
-     "нічого не змінює — Alt+D натомість відкриває цю консоль зі справжніми налаштуваннями (як Ctrl+`). Вимкнено: "
+     "нічого не змінює — Alt+D натомість відкриває «Налаштування» зі справжніми налаштуваннями (як Alt+O). Вимкнено: "
      "вікно гри.",
      "Собственное окно детализации игры (Alt+D: детализация объектов, тени, трилинейная фильтрация) с этим "
-     "рендерером почти ничего не меняет — Alt+D вместо него открывает эту консоль с настоящими настройками (как "
-     "Ctrl+`). Выключено: окно игры."},
+     "рендерером почти ничего не меняет — Alt+D вместо него открывает «Настройки» с настоящими настройками (как "
+     "Alt+O). Выключено: окно игры."},
     // 3.0.11-beta.210: the guild card's other tabs
     {Text::GuildTabPositions, "Positions", "Посади", "Должности"},
     {Text::GuildTabSkills, "Skills", "Навички", "Навыки"},
@@ -9263,6 +9264,9 @@ constexpr Entry kTexts[] = {
      "пошуком; проби й діагностика — у консолі (Ctrl+~). Нижче — головне з кожного розділу.",
      "То, что действует сразу, настраивается в игре, а не здесь: Alt+O открывает «Настройки» со всем по разделам и "
      "поиском; пробы и диагностика — в консоли (Ctrl+~). Ниже — главное из каждого раздела."},
+    {Text::ConsoleTabCosts, "Effects' cost", "Ціна ефектів", "Цена эффектов"},  // 3.0.21-beta.7
+    {Text::ConsoleToSettings, "The game's settings are in the «Settings» window (Alt+O)",
+     "Налаштування гри — у вікні «Налаштування» (Alt+O)", "Настройки игры — в окне «Настройки» (Alt+O)"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

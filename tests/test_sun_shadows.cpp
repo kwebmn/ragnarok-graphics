@@ -11,7 +11,6 @@
 
 #include "core/settings/catalogue.hpp"
 #include "core/config.hpp"
-#include "core/console_tiles.hpp"
 #include "core/live_config.hpp"
 #include "core/settings/schema.hpp"
 #include "core/sun_shadows.hpp"
@@ -167,8 +166,7 @@ TEST(sun_shadows_the_painted_shadows_out_of_the_grounds_light) {
 }
 
 // its switch: [view3d] shadows - a trial, off at first (the owner 2026-10-15: «тени тоже мне кажется лишнее» -
-// 2.1.4 took the old ones out); live. 3.0.21-beta.2: a trial of the catalogue - a row of the console's «Проби», not a
-// tile of «Швидко»
+// 2.1.4 took the old ones out); live. 3.0.21-beta.2: a trial of the catalogue - a row of the console's «Проби»
 TEST(config_view3d_shadows_a_trial_off_by_default) {
     CHECK(!parseConfig("").effects.sunShadows3d);
     CHECK(parseConfig("[view3d]\nshadows = 1\n").effects.sunShadows3d);
@@ -177,9 +175,6 @@ TEST(config_view3d_shadows_a_trial_off_by_default) {
     CHECK(row != nullptr);
     if (row) CHECK(row->page == settings::Page::Game && row->control == settings::Control::Check);
     CHECK(appliesNow("view3d.shadows"));
-    bool tile = false;
-    for (const char* k : consoletiles::quickKeys()) tile = tile || std::string(k) == "view3d.shadows";
-    CHECK(!tile);
     const settings::catalogue::Row* trial = settings::catalogue::find("view3d.shadows");
     CHECK(trial && trial->status == settings::catalogue::Status::Trial);
 }

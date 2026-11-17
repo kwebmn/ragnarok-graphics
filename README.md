@@ -55,7 +55,8 @@ stay.
 
 | Keys | What |
 |---|---|
-| `~` | The console: quality, groups and effects (letters search), the AI textures, the frame counter — changed live |
+| `Alt+O` | «Settings»: everything that applies at once — the picture, the 3D view, the interface, the controls, the sound, the speed |
+| `~` | The console, a laboratory: trials, diagnostics, what each effect costs (letters search) |
 | `Pause` or `Scroll Lock` | Every improvement off and on again, to compare |
 | `Ctrl+Shift+F11` | The frame counter: frames a second, milliseconds, the graphics card's milliseconds |
 | `Ctrl+Shift+F12` | A screenshot of the picture as shown, into the game's `ScreenShot` folder |
@@ -63,7 +64,7 @@ stay.
 | `Ctrl+Shift+F8` | The texture under the cursor opened in uaRO Studio |
 | `Ctrl+Shift+F7` | That texture's picture off and on again (A/B) |
 
-In the console, hold `Tab` on an effect or a group to see the picture — and the card's milliseconds — without it.
+On the console's «Effects' cost» tab, hold `Tab` on an effect or a group to see the picture — and the card's milliseconds — without it.
 
 ## Requirements
 

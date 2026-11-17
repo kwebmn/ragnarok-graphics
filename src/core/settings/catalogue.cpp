@@ -223,7 +223,7 @@ std::vector<Group> build() {
                          D("interface.npc_talk"), D("interface.npc_remember", "interface.npc_talk"),
                          D("interface.shop"), D("interface.storage"), D("interface.trade"), D("interface.cart"),
                          D("interface.vending"), D("interface.my_shop"), D("interface.vend_setup"),
-                         D("interface.menu"), D("interface.options"), D("interface.cards"), D("interface.asks"),
+                         D("interface.menu"), D("interface.cards"), D("interface.asks"),
                          D("interface.messages"), D("interface.counts"), D("interface.picks"),
                          D("interface.party_setup"), D("interface.pet"), D("interface.homun"), D("interface.merc"),
                          D("interface.social"), D("interface.guild"), D("interface.servers"),
@@ -321,7 +321,10 @@ std::vector<Group> build() {
     // --- «Діагностика»
     out.push_back(group(Area::Diagnostics, Text::PageDiagnostics,
                         {diag("debug.log"), diag("debug.profile"), diag("debug.xray"), diag("debug.seams_view"),
-                         diag("interface.uaui_showcase")}));
+                         diag("interface.uaui_showcase"),
+                         // 3.0.21-beta.7: «Налаштування» itself - turned off there, the window with every other
+                         // row was gone; the console opens whatever is off
+                         diag("interface.settings_window")}));
     out.push_back(group(Area::Diagnostics, Text::PageDebug,
                         {diag("debug.weak_card"), diag("debug.shader_variants"), diag("debug.record_scene"),
                          diag("debug.state_cache"), diag("debug.merge_draws"), diag("debug.fast_pick"),
@@ -354,16 +357,8 @@ std::vector<Group> build() {
         "effects.own_ground",     "effects.world_reflections", "effects.seasons",      "effects.rain_wet",
         "effects.night_windows",  "effects.shared_wind",      "effects.lit_dust",      "effects.rain_splashes",
         "effects.dragonflies",    "ai.generate"};
-    // 3.0.21-beta.2: the tiles of the console's «Швидко» - the rows switched most and, until «Налаштування» (Alt+O)
-    // holds «3D-режим», the 3D view's switches the owner compares (the trials are the laboratory's)
-    static const char* const kOften[] = {
-        "effects.group_time",  "effects.group_weather", "effects.grass",        "effects.torch_shadows",
-        "frames.fps_counter",  "interface.net_badge",   "interface.mob_hp",     "interface.far_bars",
-        "view3d.own_models",   "view3d.vault_rock",     "view3d.close_gaps",    "view3d.one_room",
-        "view3d.camera_walls", "view3d.near_fade",      "view3d.room_walls",    "view3d.ranges"};
     for (Group& g : out)
         for (Row& r : g.rows) {
-            for (const char* k : kOften) r.often = r.often || r.key == k;
             for (const EffectNeed& n : kEffectNeeds)
                 if (r.key == n.key) r.needs.push_back(Need{NeedKind::Row, n.needs});
             for (const char* k : kDirect3D12)
@@ -449,14 +444,6 @@ std::vector<const Row*> liveDiagnostics() {
     for (const Group& g : groups())
         for (const Row& r : g.rows)
             if (r.status == Status::Diagnostic && appliesNow(r.key)) out.push_back(&r);
-    return out;
-}
-
-std::vector<const Row*> often() {
-    std::vector<const Row*> out;
-    for (const Group& g : groups())
-        for (const Row& r : g.rows)
-            if (r.often) out.push_back(&r);
     return out;
 }
 

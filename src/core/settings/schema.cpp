@@ -366,8 +366,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceHomunHint, ""},  // 3.0.11-beta.160
         {"interface", "merc", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceMerc,
          Text::InterfaceMercHint, ""},  // 3.0.11-beta.161
-        {"interface", "options", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceOptions,
-         Text::InterfaceOptionsHint, ""},  // 3.0.11-beta.162
+        // 3.0.11-beta.162; 3.0.21-beta.7: «Налаштування» for every look - its switch a diagnostic, its key new
+        {"interface", "settings_window", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceOptions, Text::InterfaceOptionsHint, ""},
         {"interface", "social", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceSocial,
          Text::InterfaceSocialHint, ""},  // 3.0.11-beta.163
         {"interface", "servers", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceServers,
@@ -1535,7 +1536,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.pet") return c.petWindow ? "1" : "0";                 // 3.0.11-beta.159
     if (k == "interface.homun") return c.homunWindow ? "1" : "0";             // 3.0.11-beta.160
     if (k == "interface.merc") return c.mercWindow ? "1" : "0";               // 3.0.11-beta.161
-    if (k == "interface.options") return c.optionsWindow ? "1" : "0";         // 3.0.11-beta.162
+    if (k == "interface.settings_window") return c.optionsWindow ? "1" : "0";  // 3.0.11-beta.162 (.7: its key)
     if (k == "interface.social") return c.socialWindow ? "1" : "0";           // 3.0.11-beta.163
     if (k == "interface.servers") return c.serverWindow ? "1" : "0";          // 3.0.11-beta.164
     if (k == "interface.guild") return c.guildWindow ? "1" : "0";             // 3.0.11-beta.165

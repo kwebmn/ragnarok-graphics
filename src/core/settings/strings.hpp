@@ -362,8 +362,8 @@ enum class Text : uint16_t {
     SeenHead, SeenNote, SeenClose, PlayNewFeaturesShort, ConsoleHintLine,
     CardSuggest, CardMemory, CardIntegrated, CardByGame, CardByMemory, CardApply, CardFits,  // 3.0.17-beta.9
     MoreRowsShow, MoreRowsHide,  // 3.0.17-beta.5: a part's detailed rows folded
-    ConsoleTabQuick, ConsoleTabAll, ConsoleOften, ConsolePinned, ConsoleActions, ConsoleTabNew, ConsoleNewCount,
-    ConsoleNewNone, ConsoleNewNote,  // 3.0.17-beta.4: Alt+D's tabs
+    // 3.0.17-beta.4: Alt+D's tabs (3.0.21-beta.7: «Швидко», «Усе», «Нове» and their words went with the tabs)
+    ConsolePinned, ConsoleActions,
     MainIntro, MainPicture, MainQualityLow, MainQualityMedium, MainQualityHigh, MainQualitySuperLight, MainQualityOwn,
     MainQualityHint, MainOther, MainRecommended, MainWhatsNew, MainState, MainDriver,
     MainUpdateNone, MainUpdateNew, MainNoD3d, MainDlss, MainNoDlss, MainHd, MainPack, MainNoPack, MainMakePack,
@@ -541,7 +541,7 @@ enum class Text : uint16_t {
     InterfacePackIcons, InterfacePackIconsHint,        // 3.0.11-beta.74
     // 3.0.11-beta.75: «Розміщення інтерфейсу» - its bar, the parts' names, the console's row, the app's note
     HudEditTitle, HudEditHint, HudEditReset, HudEditDone, HudPartCharacter, HudPartMinimap, HudPartBuffs,
-    HudPartTracker, HudPartHotbar, HudPartTarget, HudPartParty, HudPartChat, HudPartHunt, HudPartMvp, ConsoleHudEdit,
+    HudPartTracker, HudPartHotbar, HudPartTarget, HudPartParty, HudPartChat, HudPartHunt, HudPartMvp,
     InterfaceLayoutNote,
     HudEditUnseen,
     InterfaceHotbarOwn, InterfaceHotbarOwnHint, HotbarUnlearned,  // 3.0.11-beta.78
@@ -1036,6 +1036,8 @@ enum class Text : uint16_t {
     LoginHintBusy,
     // 3.0.21-beta.6 (variant 4, step 4): the settings app holds what is set before the game starts
     ViewScreenRender, SearchInGame, HelpInGame,
+    // 3.0.21-beta.7: the console is the laboratory alone - its third tab, its row that leads to «Налаштування»
+    ConsoleTabCosts, ConsoleToSettings,
     Count
 };
 

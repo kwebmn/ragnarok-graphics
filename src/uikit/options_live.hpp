@@ -36,6 +36,7 @@ struct NavView {
 struct Model {
     int sec = 0, shownRows = 0;  // the entry shown; the rows with words (the list is padded: never shorter)
     Rml::String query, title, hint, searchHint, none, consoleBtn, ground = "#10141cf0";
+    Rml::String layoutBtn;  // 3.0.21-beta.7: «Розмістити інтерфейс» (the console's action before)
     std::vector<NavView> nav;
     std::vector<RowView> rows;
 };
@@ -48,7 +49,7 @@ void pad(std::vector<RowView>& rows, size_t shownBefore);
 
 const char* rml();
 // The window's variables. Its events are the caller's: sec_go(i), set_toggle(i), set_slider(i), set_step(i, by),
-// set_choice(i, j), set_more(i), open_console(), opt_close()
+// set_choice(i, j), set_more(i), open_layout(), open_console(), opt_close()
 void bind(Rml::DataModelConstructor& c, Model& m);
 
 }  // namespace uagfx::uikit::options
