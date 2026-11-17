@@ -204,7 +204,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     if (on != s.on) {
         s.on = on;
         s.key.clear();
-        LOG_INFO("options: [interface] options = %d", on ? 1 : 0);
+        LOG_INFO("options: [interface] settings_window = %d", on ? 1 : 0);  // 3.0.21-beta.7: its key now
     }
     const bool world = inGameWorld();
     const uint32_t window = world ? gameOptions() : 0;
