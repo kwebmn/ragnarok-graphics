@@ -52,6 +52,10 @@ bool Channel::create(const std::string& name, uint32_t toHostBytes, uint32_t toC
     b->presented.store(0);
     b->gameModelsAt.store(0);  // 3.0.20-beta.4
     b->ownGroundAt.store(0);  // 3.0.19-beta.42
+    b->placeMessage.store(0);  // 3.0.20-beta.83
+    b->placeStep.store(0);
+    b->placeSince.store(0);
+    for (std::atomic<uint32_t>& done : b->placeDone) done.store(0);
     Ring(view_ + sizeof(BlockHeader), toHostBytes).init();
     Ring(view_ + sizeof(BlockHeader) + toHostBytes, toClientBytes).init();
     return attach(false, name, error);
@@ -231,6 +235,40 @@ bool Channel::receive(Msg& type, const uint8_t*& data, uint32_t& size, DWORD ms)
         const DWORD left = ms == INFINITE ? 100 : DWORD(std::min<ULONGLONG>(ms - spent, 100));
         wait(dataIn_, left);  // short slices: a missed signal or the peer's exit is noticed soon
     }
+}
+
+void Channel::placeTaken(uint32_t message, uint32_t nowMs) {
+    if (!view_) return;
+    auto* b = reinterpret_cast<BlockHeader*>(view_);
+    b->placeStep.store(0, std::memory_order_relaxed);
+    b->placeSince.store(nowMs, std::memory_order_relaxed);
+    b->placeMessage.store(message, std::memory_order_release);
+}
+
+void Channel::placeDone() {
+    if (!view_) return;
+    auto* b = reinterpret_cast<BlockHeader*>(view_);
+    const uint32_t message = b->placeMessage.load(std::memory_order_relaxed);
+    if (!message) return;
+    for (int i = 3; i > 0; --i)
+        b->placeDone[i].store(b->placeDone[i - 1].load(std::memory_order_relaxed), std::memory_order_relaxed);
+    b->placeDone[0].store(message, std::memory_order_relaxed);
+    b->placeMessage.store(0, std::memory_order_release);
+}
+
+void Channel::placeStep(uint32_t step) {
+    if (view_) reinterpret_cast<BlockHeader*>(view_)->placeStep.store(step, std::memory_order_relaxed);
+}
+
+renderplace::Place Channel::place() const {
+    renderplace::Place p;
+    if (!view_) return p;
+    const auto* b = reinterpret_cast<const BlockHeader*>(view_);
+    p.message = b->placeMessage.load();
+    p.step = b->placeStep.load();
+    p.sinceMs = b->placeSince.load();
+    for (int i = 0; i < renderplace::kDone; ++i) p.done[i] = b->placeDone[i].load();
+    return p;
 }
 
 void Channel::notifyPresented() {

@@ -38,10 +38,10 @@ uint64_t g_words[kWords];
 
 // The loaded images, read while the watched thread moves: the list is the loader's (its lock) - never asked of a
 // thread that may stand inside it
-void readModules() {
-    const HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, 0);
-    if (snap == INVALID_HANDLE_VALUE) return;
+std::vector<stackscan::Module> modulesNow() {
     std::vector<stackscan::Module> now;
+    const HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, 0);
+    if (snap == INVALID_HANDLE_VALUE) return now;
     MODULEENTRY32W e{};
     e.dwSize = sizeof e;
     for (BOOL more = Module32FirstW(snap, &e); more; more = Module32NextW(snap, &e)) {
@@ -50,6 +50,11 @@ void readModules() {
         now.push_back(stackscan::Module{uint64_t(uintptr_t(e.modBaseAddr)), e.modBaseSize, name});
     }
     CloseHandle(snap);
+    return now;
+}
+
+void readModules() {
+    std::vector<stackscan::Module> now = modulesNow();
     if (!now.empty()) g_modules.swap(now);
 }
 
@@ -205,6 +210,32 @@ void idle() {
     if (since && g_toldSerial.load() == g_serial.load())
         LOG_INFO("hang: the renderer's thread moved on after %.1f s (%s)",
                  double(GetTickCount64() - since) / 1000.0, nameOf(g_what.load()));
+}
+
+// 3.0.20-beta.83 (host/faults.cpp): the calling thread's own stack - read in place, no other thread held
+std::string callsHere() {
+    volatile uint64_t mark = 0;
+    const uint64_t here = uint64_t(uintptr_t(&mark));
+    // the stack's top: the end of the reservation the word lies in (its regions on up, committed, in use)
+    MEMORY_BASIC_INFORMATION at{};
+    if (!VirtualQuery(const_cast<const uint64_t*>(&mark), &at, sizeof at) || !at.AllocationBase)
+        return "(its stack not found)";
+    uint64_t top = uint64_t(uintptr_t(at.BaseAddress)) + at.RegionSize;
+    for (int regions = 0; regions < 64; ++regions) {
+        MEMORY_BASIC_INFORMATION r{};
+        if (!VirtualQuery(reinterpret_cast<const void*>(uintptr_t(top)), &r, sizeof r) ||
+            r.AllocationBase != at.AllocationBase || !r.RegionSize)
+            break;
+        top = uint64_t(uintptr_t(r.BaseAddress)) + r.RegionSize;
+    }
+    if (here >= top) return "(its stack not found)";
+    const size_t count = std::min<size_t>(size_t((top - here) / 8), kWords);
+    std::vector<uint64_t> words(count);
+    std::memcpy(words.data(), reinterpret_cast<const void*>(uintptr_t(here)), count * 8);
+    const std::vector<stackscan::Module> modules = modulesNow();
+    const std::vector<stackscan::Frame> frames =
+        stackscan::scan(words.data(), count, modules, readSelf, nullptr, kMostCalls);
+    return stackscan::calls(frames, modules);
 }
 
 void stop() {

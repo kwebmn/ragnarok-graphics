@@ -7,6 +7,7 @@
 
 #include "core/bridge_protocol.hpp"
 #include "core/bridge_ring.hpp"
+#include "core/render_place.hpp"
 
 namespace uagfx::win::bridge {
 
@@ -67,6 +68,13 @@ public:
     void noteGameModels(bool drawn);
     bool gameModelsLately() const;
     bool waitPresented(uint32_t count, DWORD ms);
+    // 3.0.20-beta.83 (R-EGT98G, core/render_place.hpp): the renderer - a message taken (its type, GetTickCount) and
+    // done, the step in it; the driver - where the renderer's thread stood (the block is the driver's: it stays
+    // when the renderer's process is gone)
+    void placeTaken(uint32_t message, uint32_t nowMs);
+    void placeDone();
+    void placeStep(uint32_t step);
+    renderplace::Place place() const;
 
 private:
     bool attach(bool host, const std::string& name, std::string& error);

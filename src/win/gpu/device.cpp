@@ -24,6 +24,7 @@
 #include "win/gpu/adapters.hpp"
 #include "win/gpu/ai_textures.hpp"
 #include "core/pick.hpp"
+#include "core/render_place.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/gpu/models_dump.hpp"
 #include "win/gpu/remix9.hpp"
@@ -3117,6 +3118,7 @@ void Renderer::execute(const FrameRecord& record) {
     m.ownState.notes.clear();  // 3.0.20-beta.38: as the casters
     m.ownState.notesRec = nullptr;
     if (m.lost || !m.target || record.empty() || !m.begin()) return;
+    renderplace::step(renderplace::kGeometry);  // 3.0.20-beta.83 (R-EGT98G): where it stands, for the driver
     if (m.upscale && m.upscaler && !m.renderStarted) {  // part 3: latency markers
         m.renderStarted = true;
         m.upscaler->renderStart();
@@ -3136,12 +3138,16 @@ void Renderer::execute(const FrameRecord& record) {
         }
         m.pick.seen(opaque, blended);
     }
+    renderplace::step(renderplace::kLooks);
     {  // 3.0.20-beta.20: the whole textures' work kept from earlier uploads - a picture's share, more while many wait
         Impl::CpuTime t(m.texturesTicks);
         m.workLater(m.laterLooks.size() > 128 || m.laterLooks.bytes() > (32u << 20) ? 4.0 : 1.5);
     }
+    uint32_t stepNow = renderplace::kLooks;
     for (const Command& c : record.commands()) {
         if (!m.open) break;  // the list could not go on (the GPU is lost): nothing more is recorded
+        const uint32_t stepOf = c.type == Cmd::Upload ? renderplace::kUploads : renderplace::kDraws;
+        if (stepOf != stepNow) renderplace::step(stepNow = stepOf);
         switch (c.type) {
             case Cmd::Clear: m.clear(record.clears()[c.index]); break;
             case Cmd::Viewport: m.setViewport(record.viewports()[c.index]); break;
@@ -3173,6 +3179,7 @@ void Renderer::execute(const FrameRecord& record) {
             }
         }
     }
+    renderplace::step(renderplace::kAfterDraws);
     {
         Impl::CpuTime t(m.drawsTicks);  // 3.0.20-beta.37: the casters noted, in the draws' time as before
         m.flushCasters();
@@ -3183,6 +3190,7 @@ void Renderer::execute(const FrameRecord& record) {
     m.casterDraws.clear();
     m.casterRec = nullptr;
     const UINT64 before = m.fenceValue;
+    renderplace::step(renderplace::kSubmit);
     Impl::CpuTime submitTime(m.submitTicks);  // 3.0.19-beta.26
     m.submit();
     submitTime.stop();
@@ -3278,6 +3286,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         return;
     }
     if (!m.target || !window || source.empty()) return;
+    renderplace::step(renderplace::kCompose);  // 3.0.20-beta.83
     // Part 3: frame generation must be off while the swap chain changes, for frames it has no inputs for, while
     // the game's window is not in front (NVIDIA asks for it off before the window is minimised or moved; the game in
     // full screen minimises itself when it loses the focus), and on a composition surface, whose swap chain
@@ -3446,6 +3455,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
     Impl::CpuTime swapped(m.swapTicks);  // 2.1.1
     // 3.0.19-beta.9: across the cards - the screen's card copies the frame into its buffer and presents it
+    renderplace::step(renderplace::kShow);  // 3.0.20-beta.83
     const HRESULT hr = m.cross.on ? m.crossPresent(index, sync, flags) : m.swapChain->Present(sync, flags);
     swapped.stop();
     if (!m.shotPath.empty()) {  // 0.54: the copy done, the PNG written

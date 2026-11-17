@@ -142,6 +142,16 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
         const std::string text = fileFor(f.path, f.most);
         if (!text.empty()) u.files.emplace_back(f.name, text);
     }
+    // 3.0.20-beta.83 (R-EGT98G): the 64-bit renderer died in the game before this one (its log says so) - that
+    // renderer's own log, kept as uaro-render64.prev.log at this game's start (its last lines, flushed each)
+    std::string previousGame;
+    readFile(wide(logfiles::previous(utf8(gameLog))), previousGame);
+    if (previousGame.find("the 64-bit renderer exited") != std::string::npos &&
+        u.files.size() < report::kMostFiles) {
+        const std::wstring render64 = slotted(ourPlace(dir, layout::now(layout::File::Render64Log)), logSlot);
+        const std::string text = fileFor(wide(logfiles::previous(utf8(render64))), 512u << 10);
+        if (!text.empty()) u.files.emplace_back("uaro-render64.prev.log", text);
+    }
     // 3.0.3-beta.1: the other game windows' logs - of games running beside it, or just over (12 hours)
     FILETIME now{};
     GetSystemTimeAsFileTime(&now);
@@ -155,15 +165,22 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
         const std::string text = fileFor(other, 256u << 10);
         if (!text.empty()) u.files.emplace_back("uaro-graphics-" + std::to_string(slot) + ".log", text);
     }
-    // 0.52: a crash's minidump (win/crash.cpp) of the last week
-    const std::wstring dump = dir + L"\\uaro-graphics\\crash.dmp";
-    WIN32_FILE_ATTRIBUTE_DATA a{};
-    if (GetFileAttributesExW(dump.c_str(), GetFileExInfoStandard, &a)) {
-        FILETIME now{};
-        GetSystemTimeAsFileTime(&now);
-        const auto ticks = [](const FILETIME& t) { return (static_cast<unsigned long long>(t.dwHighDateTime) << 32) |
-                                                          t.dwLowDateTime; };
-        if (ticks(now) - ticks(a.ftLastWriteTime) < 7ull * 24 * 3600 * 10000000ull) readFile(dump, u.dump);
+    // 0.52: a crash's minidump (win/crash.cpp) of the last week - 3.0.20-beta.83: the game's or uaro-render64.exe's
+    // (crash-render64.dmp), the newer one
+    {
+        std::wstring newest;
+        uint64_t newestAt = 0;
+        for (const wchar_t* name : {L"crash.dmp", L"crash-render64.dmp"}) {
+            const std::wstring dump = dir + L"\\uaro-graphics\\" + name;
+            WIN32_FILE_ATTRIBUTE_DATA a{};
+            if (!GetFileAttributesExW(dump.c_str(), GetFileExInfoStandard, &a)) continue;
+            const uint64_t at = ticks(a.ftLastWriteTime);
+            if (ticks(now) - at < 7ull * 24 * 3600 * 10000000ull && at > newestAt) {
+                newest = dump;
+                newestAt = at;
+            }
+        }
+        if (!newest.empty()) readFile(newest, u.dump);
     }
     // 3.0.20-beta.82 (R-9VCE45, core/texel_check.hpp): the frame of Assumptio's glow checked on Direct3D 11 - as
     // the card held it and as the game's memory did - of the last 12 hours

@@ -6,6 +6,7 @@
 #include "core/bridge_wire.hpp"
 #include "core/game_camera.hpp"
 #include "core/layout.hpp"
+#include "core/render_place.hpp"
 #include "win/gpu/local_host.hpp"
 #include "win/log.hpp"
 
@@ -184,6 +185,9 @@ void Remote::setLost(const std::string& why) {
         GetExitCodeProcess(process_.hProcess, &code);
     LOG_ERROR("%s (exit code 0x%08lx); the picture stops here, restart the game", why.c_str(),
               static_cast<unsigned long>(code));
+    // 3.0.20-beta.83 (R-EGT98G, core/render_place.hpp): where its thread stood - kept in the bridge's block, which
+    // is the driver's and outlives the renderer's process
+    LOG_ERROR("the 64-bit renderer's thread stood %s", renderplace::describe(channel_.place(), GetTickCount()).c_str());
 }
 
 void Remote::handle(Msg type, const uint8_t* data, uint32_t size) {

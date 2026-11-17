@@ -57,7 +57,7 @@ LONG WINAPI onCrash(EXCEPTION_POINTERS* e) {
             CloseHandle(file);
             if (ok) g_crashDumped = true;  // 3.0.18-beta.145: a hang after it keeps it (the cause is in it)
             if (ok)
-                LOG_ERROR("crash: a minidump is in uaro-graphics\\crash.dmp");
+                LOG_ERROR("crash: a minidump is in %s", g_dump);
             else
                 DeleteFileA(g_dump);
         }
@@ -84,13 +84,13 @@ bool writeHangDump() {
     return ok != FALSE;
 }
 
-void installCrashHandler(const std::string& gameDir) {
+void installCrashHandler(const std::string& gameDir, const char* dumpName) {
     static bool installed = false;
     if (installed) return;
     installed = true;
     const std::string folder = gameDir + "\\uaro-graphics";
     CreateDirectoryA(folder.c_str(), nullptr);
-    lstrcpynA(g_dump, (folder + "\\crash.dmp").c_str(), MAX_PATH);
+    lstrcpynA(g_dump, (folder + "\\" + dumpName).c_str(), MAX_PATH);
     g_previous = SetUnhandledExceptionFilter(onCrash);
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <string>
 
 // 3.0.20-beta.76 (the owner's log of 16.11 22:40:54-22:40:59, beta.68: the 64-bit renderer silent for five seconds
 // at a map's first frames - the moment DLSS's start in its background ends -, then gone with exit code 0xC0000409;
@@ -14,5 +15,8 @@ void start();              // once, on the renderer's own thread (the one that t
 void busy(uint32_t what);  // a message taken: its type (0: the look at the background start)
 void idle();               // done with it
 void stop();
+// 3.0.20-beta.83 (host/faults.cpp): the calls on the calling thread's own stack, the newest first, named by the
+// images loaded now ("a.dll+0x1 < b.exe+0x2")
+std::string callsHere();
 
 }  // namespace uagfx::host::hangwatch

@@ -25,12 +25,15 @@
 #include "host/pack_builder.hpp"
 #include "host/studio_engine.hpp"
 #include "core/late_start.hpp"
+#include "core/render_place.hpp"
+#include "host/faults.hpp"
 #include "host/hang_watch.hpp"
 #include "host/streamline.hpp"
 #include "win/bridge/channel.hpp"
 #include "win/bridge/serve.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/gpu/renderer.hpp"
+#include "win/crash.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 
@@ -40,6 +43,12 @@ using bridge::WireReader;
 using bridge::WireWriter;
 
 namespace {
+
+// 3.0.20-beta.83 (R-EGT98G, core/render_place.hpp): the renderer's steps into the bridge's block
+win::bridge::Channel* g_placeChannel = nullptr;
+void placeStep(uint32_t step) {
+    if (g_placeChannel) g_placeChannel->placeStep(step);
+}
 
 struct Args {
     std::string channel;
@@ -325,6 +334,8 @@ int Host::run(const Args& a) {
             LOG_ERROR("DLSS: its start could not be run (error %lu); drawing without it", GetLastError());
     }
     host::hangwatch::start();  // 3.0.20-beta.76: a message this thread stays in for seconds told with its place
+    g_placeChannel = &channel_;  // 3.0.20-beta.83: where this thread stands, for the driver if it dies
+    renderplace::setStepSink(&placeStep);
     for (;;) {
         Msg type;
         const uint8_t* data = nullptr;
@@ -340,11 +351,15 @@ int Host::run(const Args& a) {
         }
         if (type == Msg::Quit) break;
         host::hangwatch::busy(uint32_t(type));
+        channel_.placeTaken(uint32_t(type), GetTickCount());
         dispatch(type, data, size);
         if (type == Msg::Present) checkLateDlss();
         server_.sendLost();
+        channel_.placeDone();
         host::hangwatch::idle();
     }
+    renderplace::setStepSink(nullptr);
+    g_placeChannel = nullptr;
     host::hangwatch::stop();
     if (late_.thread) {  // a start still running when the game closes: nothing is taken down under it
         if (WaitForSingleObject(late_.thread, 10000) != WAIT_OBJECT_0) ExitProcess(0);
@@ -451,6 +466,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         return host::runStudio(a.dir, a.studio);
     }
     wlog::open(layout::join(a.dir, layout::now(layout::File::Render64Log)), level, a.logSlot);
+    win::installCrashHandler(a.dir, "crash-render64.dmp");  // 3.0.20-beta.83 (R-EGT98G)
+    host::faults::install();
     if (a.channel.empty() || !a.parent) {
         LOG_ERROR("uaro-render64.exe is started by the uaRO Graphics driver in the game, not by hand");
         return 1;
