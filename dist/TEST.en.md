@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.21-beta.6 — what's new · 2026-11-17
+
+The fourth step to tidy settings: the settings app holds only what is set before the game starts.
+
+- **Eight pages instead of eleven:** "Main", "Screen and renderer", "AI textures", "Sound", "Controller", "Game and chat", "Service", "Help". "Graphics" joined "Screen"; the "Effects" and "Interface" pages are gone — everything that applies at once is set in the game: Alt+O.
+- **The "Simple" and "Detailed" modes are gone.** A page shows its main rows, the rest is behind "N more settings ›".
+- **The search finds everything.** A row that lives in the game can be changed right in the results, and a line under it says where it is in the game: "In the game: Alt+O → Picture → Water".
+- **"Help"** also describes what is set in the game: the main of each section of the "Settings" window.
+- "Main" is as it was: the three choices of "How the game looks", quality, DLSS, sound.
+- The developer's mode is switched on with Ctrl+Shift+D, as before.
+
 # uaRO Graphics 3.0.21-beta.5 — what's new · 2026-11-17
 
 Names that say what is seen on the screen, and a guard against throwing out your own window by accident.
