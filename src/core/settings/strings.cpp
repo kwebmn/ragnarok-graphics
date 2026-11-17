@@ -9110,15 +9110,27 @@ constexpr Entry kTexts[] = {
     {Text::View3dCrownVolume, "Crowns with a body", "Об'ємні крони", "Объёмные кроны"},
     {Text::View3dCrownVolumeHint,
      "A tree's leaves in the game are flat plates in tiers, made for the view from above; from the side you see their "
-     "edges and the sky between them. In the 3D view every leaf plate is drawn twice more, stood on its edge along "
+     "edges and the sky between them. In the 3D view every leaf plate is drawn once more, stood on its edge along "
      "the line from the trunk: the tiers become a crown. Needs «Models by our renderer» and «Leaves on the graphics "
-     "card». A trial, off at first.",
+     "card». Off at first.",
      "Листя дерева в грі — пласкі пластини ярусами, зроблені для вигляду згори; збоку видно їхні ребра й небо між "
-     "ними. У 3D-режимі кожна пластина листя малюється ще двічі, поставлена на ребро вздовж лінії від стовбура: "
-     "яруси стають кроною. Потрібні «Моделі нашим рендером» і «Листя на відеокарті». Проба, спочатку вимкнено.",
+     "ними. У 3D-режимі кожна пластина листя малюється ще раз, поставлена на ребро вздовж лінії від стовбура: "
+     "яруси стають кроною. Потрібні «Моделі нашим рендером» і «Листя на відеокарті». Спочатку вимкнено.",
      "Листва дерева в игре — плоские пластины ярусами, сделанные для вида сверху; сбоку видны их рёбра и небо между "
-     "ними. В 3D-режиме каждая пластина листвы рисуется ещё дважды, поставленная на ребро вдоль линии от ствола: "
-     "ярусы становятся кроной. Нужны «Модели нашим рендером» и «Листва на видеокарте». Проба, сначала выключено."},
+     "ними. В 3D-режиме каждая пластина листвы рисуется ещё раз, поставленная на ребро вдоль линии от ствола: "
+     "ярусы становятся кроной. Нужны «Модели нашим рендером» и «Листва на видеокарте». Сначала выключено."},
+    // 3.0.20-beta.79 (the owner on the trial of the crowns: «доработать»)
+    {Text::View3dCrownLight, "Light and shade in the crowns", "Світло й тінь у кронах", "Свет и тень в кронах"},
+    {Text::View3dCrownLightHint,
+     "In the 3D view a tree's crown is lit by its real shape: lighter on top and on the sun's side, darker inside and "
+     "underneath - a crown with depth, not an even green patch. Needs «Models by our renderer» and «Leaves on the "
+     "graphics card». Off: the crown lit as in the view from above.",
+     "У 3D-режимі крона дерева освітлена за своєю справжньою формою: світліша згори й з боку сонця, темніша "
+     "всередині та знизу — крона з глибиною, а не рівна зелена пляма. Потрібні «Моделі нашим рендером» і «Листя на "
+     "відеокарті». Вимкнено — крона освітлена, як у вигляді згори.",
+     "В 3D-режиме крона дерева освещена по своей настоящей форме: светлее сверху и со стороны солнца, темнее "
+     "внутри и снизу — крона с глубиной, а не ровное зелёное пятно. Нужны «Модели нашим рендером» и «Листва на "
+     "видеокарте». Выключено — крона освещена, как в виде сверху."},
     {Text::View3dFastGround, "Faster far ground", "Швидша далека земля", "Быстрее дальняя земля"},  // 3.0.19-beta.42
     {Text::View3dFastGroundHint,
      "In the 3D view the game works out its far ground's cells once in 8 frames - our own ground is drawn in their "

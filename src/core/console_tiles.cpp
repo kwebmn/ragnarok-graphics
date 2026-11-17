@@ -23,7 +23,8 @@ const std::vector<const char*>& quickKeys() {
                                                "view3d.near_fade",
                                                "view3d.room_walls",     // 3.0.20-beta.71: to tell in a house
                                                "view3d.ranges",         // 3.0.20-beta.72
-                                               "view3d.crown_volume"};  // 3.0.20-beta.73: the trial of the crowns
+                                               "view3d.crown_volume",   // 3.0.20-beta.73: the trial of the crowns
+                                               "view3d.crown_light"};   // 3.0.20-beta.79: the crowns' own light
     return keys;
 }
 

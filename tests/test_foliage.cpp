@@ -126,22 +126,23 @@ TEST(foliage_a_pictures_share_of_holes) {
 
 // 3.0.20-beta.73 (the owner on the 3D view: «деревья очень примитивные, когда сверху не так, но когда в 3д там видно
 // все недостатки - это не деревья, можно что-то сделать?»): a tree's leaves are flat plates in tiers, made for the
-// view from above - from the eyes' level they are seen edge-on, the sky between them. Each leaf face is drawn twice
-// more, stood up on the line from the trunk through its own middle (one copy up, one down), a little smaller: the
-// tiers get a body (tried on the game's own trees: /root/uagfx-tools/audit/trees/crowns2.py)
+// view from above - from the eyes' level they are seen edge-on, the sky between them. Each leaf face is drawn again,
+// stood up on the line from the trunk through its own middle, a little smaller: the tiers get a body (tried on the
+// game's own trees: /root/uagfx-tools/audit/trees/crowns2.py). 3.0.20-beta.79 (the owner's verdict on the trial:
+// «доработать»): beta.73's two copies, one up and one down, stood in ONE plane - the second the first's mirror over
+// it, the fin twice as thick: a wall of leaves. Now one copy a face, up or down by the face's own number
 TEST(foliage_a_crowns_leaf_face_stood_on_the_trunks_line) {
-    CHECK(foliage::kCrownStood == 2);
+    CHECK(foliage::kCrownStood == 1);
     float turn[3];
     foliage::crownStood(0, turn);
-    CHECK(turn[0] == 1.0f && turn[1] == 0.0f && turn[2] == -foliage::kStoodSize);  // a size under 0: stood, not turned
-    foliage::crownStood(1, turn);
-    CHECK(turn[0] == -1.0f && turn[2] == -foliage::kStoodSize);
+    CHECK(turn[0] == 0.0f && turn[1] == 0.0f && turn[2] == -foliage::kStoodSize);  // a size under 0: stood, not turned
+    CHECK(foliage::stoodWay(0) == 1.0f && foliage::stoodWay(1) == -1.0f && foliage::stoodWay(7) == -1.0f &&
+          foliage::stoodWay(10) == 1.0f);  // the way by the face's own number
     // a flat face of a tier, ten out from the trunk along +x (the crown's middle at 100, -30, 50; up along -y)
     const float middle[3] = {100.0f, -30.0f, 50.0f};
     float a[3] = {108.0f, -30.0f, 50.0f}, b[3] = {114.0f, -30.0f, 44.0f}, c[3] = {114.0f, -30.0f, 56.0f};
     const float mid[3] = {(a[0] + b[0] + c[0]) / 3, -30.0f, (a[2] + b[2] + c[2]) / 3};
-    foliage::crownStood(0, turn);
-    CHECK(foliage::stoodAbout(middle, turn, a, b, c));
+    CHECK(foliage::stoodAbout(middle, turn, a, b, c, 4));
     // its middle stays; it stands: its corners keep their place along the trunk's line and leave the tier's plane
     CHECK(std::fabs((a[0] + b[0] + c[0]) / 3 - mid[0]) < 1e-4f);
     CHECK(std::fabs((a[1] + b[1] + c[1]) / 3 - mid[1]) < 1e-4f);
@@ -150,27 +151,77 @@ TEST(foliage_a_crowns_leaf_face_stood_on_the_trunks_line) {
     CHECK(std::fabs(std::fabs(b[1] - c[1]) - 12.0f * foliage::kStoodSize) < 1e-3f);  // its width now its height
     CHECK(std::fabs(a[1] + 30.0f) < 1e-4f);  // the corner on the line stays in the tier
     CHECK(std::fabs((b[0] - mid[0]) - (114.0f - mid[0]) * foliage::kStoodSize) < 1e-3f);  // and a little smaller
-    // the other copy: the other way up
+    // the next face's copy: the other way up - in the same plane, mirrored (one a face, no fin twice as thick)
     float a2[3] = {108.0f, -30.0f, 50.0f}, b2[3] = {114.0f, -30.0f, 44.0f}, c2[3] = {114.0f, -30.0f, 56.0f};
-    foliage::crownStood(1, turn);
-    CHECK(foliage::stoodAbout(middle, turn, a2, b2, c2));
+    CHECK(foliage::stoodAbout(middle, turn, a2, b2, c2, 5));
     CHECK(std::fabs((b2[1] + 30.0f) + (b[1] + 30.0f)) < 1e-3f);
+    CHECK(std::fabs(b2[2] - 50.0f) < 1e-4f);
+    // a way given in the turn wins over the face's number (beta.73's copies)
+    const float up[3] = {1.0f, 0.0f, -foliage::kStoodSize};
+    float a3[3] = {108.0f, -30.0f, 50.0f}, b3[3] = {114.0f, -30.0f, 44.0f}, c3[3] = {114.0f, -30.0f, 56.0f};
+    CHECK(foliage::stoodAbout(middle, up, a3, b3, c3, 5));
+    CHECK(std::fabs(b3[1] - b[1]) < 1e-4f);
     // no copy (false, the corners as they are): a face on the trunk's own line (no way out from it); a face that
     // stands already - a bush's upright leaf, a hanging frond (its plane steeper than kStoodFlat tells); a turn that
     // is no stood copy's
     float t0[3] = {100.0f, -40.0f, 50.0f}, t1[3] = {100.0f, -41.0f, 50.0f}, t2[3] = {100.0f, -42.0f, 50.0f};
-    CHECK(!foliage::stoodAbout(middle, turn, t0, t1, t2));
+    CHECK(!foliage::stoodAbout(middle, turn, t0, t1, t2, 0));
     CHECK(t1[1] == -41.0f);
     float s0[3] = {110.0f, -30.0f, 50.0f}, s1[3] = {110.0f, -40.0f, 50.0f}, s2[3] = {116.0f, -35.0f, 50.0f};  // upright
-    CHECK(!foliage::stoodAbout(middle, turn, s0, s1, s2));
+    CHECK(!foliage::stoodAbout(middle, turn, s0, s1, s2, 0));
     CHECK(s1[1] == -40.0f && s2[0] == 116.0f);
     // a tier's plate that hangs a little
     float d0[3] = {108.0f, -30.0f, 50.0f}, d1[3] = {114.0f, -27.0f, 44.0f}, d2[3] = {114.0f, -27.0f, 56.0f};
-    CHECK(foliage::stoodAbout(middle, turn, d0, d1, d2));  // a tier's plate hangs a little and is flat enough
+    CHECK(foliage::stoodAbout(middle, turn, d0, d1, d2, 0));  // a tier's plate hangs a little and is flat enough
     float plain[3] = {0.5f, 0.8660254f, 0.94f};
     float p0[3] = {108.0f, -30.0f, 50.0f}, p1[3] = {114.0f, -30.0f, 44.0f}, p2[3] = {114.0f, -30.0f, 56.0f};
-    CHECK(!foliage::stoodAbout(middle, plain, p0, p1, p2));
+    CHECK(!foliage::stoodAbout(middle, plain, p0, p1, p2, 0));
     CHECK(p1[2] == 44.0f);
+}
+
+// 3.0.20-beta.79 (the owner on the trial of the crowns: «доработать»; his beta.77 shot of prt_fild06 - the crowns one
+// even green, a wall): a crown's light was its box on the screen's (1.7, made for the view from above), the same
+// everywhere on it from the side. [view3d] crown_light: each leaf corner lit by its place in its crown's box in the
+// world - darker inside the crown and under it, its top in the sky's light, the sun's side brighter (offline:
+// /root/uagfx-tools/audit/trees3 lit2.py, scene.py); the crown as bright as before on the whole
+TEST(foliage_the_crown_lit_by_its_own_shape) {
+    const float middle[3] = {0.0f, -40.0f, 0.0f}, half[2] = {20.0f, 15.0f};
+    float toSun[3] = {0.5f, -0.707f, 0.5f};  // up along -y
+    const float len = std::sqrt(toSun[0] * toSun[0] + toSun[1] * toSun[1] + toSun[2] * toSun[2]);
+    for (float& v : toSun) v /= len;
+    const auto at = [&](float x, float y, float z) {
+        const float p[3] = {x, y, z};
+        return foliage::crownLight(p, middle, half, toSun);
+    };
+    const float top = at(0.0f, -55.0f, 0.0f), bottom = at(0.0f, -25.0f, 0.0f), centre = at(0.0f, -40.0f, 0.0f);
+    const float sunny = at(14.0f, -40.0f, 14.0f), away = at(-14.0f, -40.0f, -14.0f);
+    CHECK(top > bottom + 0.2f);       // its top in the sky's light, its bottom in its own shade
+    CHECK(centre < sunny && centre < away && centre < top);  // inside it darker than anywhere on it
+    CHECK(sunny > away + 0.1f);       // the sun's side brighter
+    CHECK(centre >= foliage::kCrownLeast && top <= foliage::kCrownMost);
+    // over its whole surface about as bright as the crown was (the game's light kept on the whole)
+    double sum = 0.0;
+    int n = 0;
+    for (int i = 0; i < 40; ++i)
+        for (int j = 0; j < 80; ++j) {
+            const float u = -1.0f + (float(i) + 0.5f) / 20.0f, phi = (float(j) + 0.5f) * 6.2831853f / 80.0f;
+            const float r = std::sqrt(std::max(0.0f, 1.0f - u * u));
+            sum += at(half[0] * r * std::cos(phi), middle[1] - half[1] * u, half[0] * r * std::sin(phi));
+            ++n;
+        }
+    const double mean = sum / n;
+    CHECK(mean > 0.95 && mean < 1.15);
+    // a crown of no size: as it is
+    const float none[2] = {0.0f, 15.0f};
+    const float p[3] = {3.0f, -50.0f, 2.0f};
+    CHECK(foliage::crownLight(p, middle, none, toSun) == 1.0f);
+}
+
+TEST(config_view3d_crown_light_off_by_default_and_live) {
+    CHECK(!parseConfig("").effects.crownLight);
+    CHECK(parseConfig("[view3d]\ncrown_light = 1\n").effects.crownLight);
+    const settings::IniSetting* row = settings::findSetting("view3d.crown_light");
+    CHECK(row && row->flag == &EffectSettings::crownLight);
 }
 
 TEST(config_view3d_crown_volume_off_by_default_and_live) {

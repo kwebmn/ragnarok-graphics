@@ -305,6 +305,10 @@ void Renderer11::drawGameLeavesCard11() {
     const uint32_t state = leafCardRec_.addState(st);
     static const uint8_t kNone[3 * 32] = {};  // the record's draw: three vertices of nothing (leaf_vs reads)
     const auto leafy = [this](uint32_t texture) { return leafyTexture(texture); };
+    // 3.0.20-beta.79 ([view3d] crown_light, as Direct3D 12's): the still crowns lit by their shape
+    float sunWay[3] = {0.0f, -1.0f, 0.0f};
+    if (effects_.crownLight) mapSun(sunWay);
+    const float* crownSun = effects_.crownLight && camera::wideView() ? sunWay : nullptr;
     const auto tree = [&](uint32_t id, uint32_t bits, const float* toView) {
         const std::vector<gamemodels::CardRun>* runs = modelCards_.runsOfNode(id);
         // 3.0.20-beta.40: a still one listed as moving or the other way round - left out, as frameOf leaves it
@@ -313,12 +317,12 @@ void Renderer11::drawGameLeavesCard11() {
         critters::Crown crown;
         bool crownSeen = false;
         if (!cardTreeLook(*runs, leafy, toView, view, p, viewToWorld_, look, swing, time, leaf,
-                          effects_.leafFall && frameCrowns_.size() < 32 ? &crown : nullptr, &crownSeen))
+                          effects_.leafFall && frameCrowns_.size() < 32 ? &crown : nullptr, &crownSeen, crownSun))
             return;
         if (crownSeen) frameCrowns_.push_back(crown);
         // 3.0.20-beta.51 ([view3d] dense_crowns, as Direct3D 12's): a still tree's leaves twice more, turned
         const bool dense = effects_.denseCrowns && camera::wideView() && !toView;
-        // 3.0.20-beta.73 ([view3d] crown_volume, as Direct3D 12's): each leaf face twice more, stood up
+        // 3.0.20-beta.73 ([view3d] crown_volume, as Direct3D 12's): each leaf face once more, stood up
         const bool volume = effects_.crownVolume && camera::wideView() && !toView;
         for (const gamemodels::CardRun& r : *runs) {
             if (!r.count || !leafyTexture(r.texture)) continue;

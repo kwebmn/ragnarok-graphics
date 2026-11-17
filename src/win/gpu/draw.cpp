@@ -864,6 +864,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         const float fog[8] = {cardFog ? cardFog->fogA() : 255.0f, cardFog ? cardFog->fogB() : 0.0f, bits, 0.0f,
                               matrices, 0.0f, 0.0f, cardLeavesDraw ? camera : 0.0f};
         std::memcpy(c.hole, fog, sizeof fog);
+        if (cardLeavesDraw) crownLightOf(cardLeafLook, c);  // 3.0.20-beta.79: [view3d] crown_light
         next.card = cardCount;
     }
     // 3.0.20-beta.23: the own ground from the card - the camera (viewToWorld) and the projection; the fog's line and

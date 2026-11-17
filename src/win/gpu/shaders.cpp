@@ -218,10 +218,11 @@ float3 leafTurned(float3 w) {
 }
 // 3.0.20-beta.73 (the owner on the 3D view: «деревья очень примитивные ... это не деревья»; [view3d] crown_volume):
 // a leaf face drawn again stood up - turned a right angle about the line from the crown's middle's upright line
-// through the face's own middle, laid flat (r9 its way: 1 up, -1 down), -r11 of its size about its middle (r11 under
-// 0 tells a stood copy; core foliage::stoodAbout). False - no copy of this face: it lies on the trunk's own line, or
-// it stands already (its plane's upright share under 0.6, foliage::kStoodFlat: a bush's upright leaf, a hanging frond)
-bool leafStood(inout float3 a, inout float3 b, inout float3 c) {
+// through the face's own middle, laid flat (`way`: 1 up, -1 down - r9, or by the face's own number when r9 is 0:
+// 3.0.20-beta.79, one copy a face), -r11 of its size about its middle (r11 under 0 tells a stood copy; core
+// foliage::stoodAbout). False - no copy of this face: it lies on the trunk's own line, or it stands already (its
+// plane's upright share under 0.6, foliage::kStoodFlat: a bush's upright leaf, a hanging frond)
+bool leafStood(inout float3 a, inout float3 b, inout float3 c, float way) {
     float3 mid = (a + b + c) / 3.0;
     float2 outward = mid.xz - float2(r6, r8);
     float len = length(outward);
@@ -231,11 +232,24 @@ bool leafStood(inout float3 a, inout float3 b, inout float3 c) {
     if (stands) {
         float3 axis = float3(outward.x / len, 0.0, outward.y / len);
         float3 da = (a - mid) * -r11, db = (b - mid) * -r11, dc = (c - mid) * -r11;
-        a = mid + axis * dot(axis, da) + cross(axis, da) * r9;
-        b = mid + axis * dot(axis, db) + cross(axis, db) * r9;
-        c = mid + axis * dot(axis, dc) + cross(axis, dc) * r9;
+        a = mid + axis * dot(axis, da) + cross(axis, da) * way;
+        b = mid + axis * dot(axis, db) + cross(axis, db) * way;
+        c = mid + axis * dot(axis, dc) + cross(axis, dc) * way;
     }
     return stands;
+}
+// 3.0.20-beta.79 (the owner on the trial of the crowns: «доработать»; [view3d] crown_light - core foliage::crownLight
+// holds the same): a still tree's leaf corner lit by its place in its crown's box in the world - r6-r8 the box's
+// middle, footprint and sharpen its half sizes across and up (0: no such light), holeUy, holeUz and sourceClamp.w the
+// way to the sun; darker inside the crown and under it, the sun's side brighter, the whole as bright as the game's
+float crownLight(float3 w) {
+    float3 d = (w - float3(r6, r7, r8)) / float3(footprint, sharpen, footprint);
+    float rho = length(d);
+    float3 n = d / max(rho, 1e-4);
+    float inside = 0.68 + 0.32 * saturate((rho - 0.1) / 0.8);
+    float below = 0.7 + 0.3 * saturate(0.55 - 0.6 * n.y);
+    float toward = 1.0 + 0.25 * dot(n, float3(holeUy, holeUz, sourceClamp.w));
+    return clamp(inside * below * toward * 1.22, 0.25, 1.3);
 }
 // model_vs's corner; `leaf` (leaf_vs): the camera from t6 at asuint(holeF), and the wind's sway as draw_vs's - the
 // tree's bottom and height on the screen in twinY, twinW, its swing twinX, the time twinH
@@ -250,6 +264,7 @@ PsIn modelCorner(ModelIn i, bool leaf) {
     uint4 t0 = seamVertices.Load(int(at + 3));
     uint4 t1 = seamVertices.Load(int(at + 4));
     float3 v0, v1, v2;
+    float crownLit = 1.0;  // 3.0.20-beta.79: [view3d] crown_light
     if (slot == 0u && leaf) {
         uint k = asuint(holeF);
         float4 ca = asfloat(seamVertices.Load(int(k)));
@@ -257,12 +272,13 @@ PsIn modelCorner(ModelIn i, bool leaf) {
         float4 cc = asfloat(seamVertices.Load(int(k + 2u)));
         float3 w0 = asfloat(c0.xyz), w1 = asfloat(c1.xyz), w2 = asfloat(c2.xyz);
         if (r11 < 0.0) {  // 3.0.20-beta.73: a stood copy - none of a face that stands already
-            if (!leafStood(w0, w1, w2)) return o;
+            if (!leafStood(w0, w1, w2, r9 != 0.0 ? r9 : ((i.face & 1u) != 0u ? -1.0 : 1.0))) return o;
         } else {
             w0 = leafTurned(w0);
             w1 = leafTurned(w1);
             w2 = leafTurned(w2);
         }
+        if (footprint > 0.0) crownLit = crownLight(i.corner == 0 ? w0 : (i.corner == 1 ? w1 : w2));
         v0 = viewBy(w0, ca, cb, cc);
         v1 = viewBy(w1, ca, cb, cc);
         v2 = viewBy(w2, ca, cb, cc);
@@ -290,6 +306,7 @@ PsIn modelCorner(ModelIn i, bool leaf) {
     uint tint = i.corner == 0 ? c0.w : (i.corner == 1 ? c1.w : c2.w);
     o.pos = modelClip(v);
     o.diffuse = colourOf(tint);
+    o.diffuse.rgb *= crownLit;
     float haze = clamp(floor(holeX + holeY * v.z + 0.5), 0.0, 255.0);
     o.specular = colourOf((uint(haze) << 24) | (asuint(holeH) & 0xFFFFFFu));
     o.uv0 = i.corner == 0 ? asfloat(t0.xy) : (i.corner == 1 ? asfloat(t0.zw) : asfloat(t1.xy));
@@ -654,7 +671,9 @@ float3 leafLight(float2 pos, float2 uv, float2 du, float2 dv, float3 c) {
         // ones, darker and cooler; the top in the sky's light
         float under = saturate(q.y * 0.5 + 0.5);
         float3 depth = lerp(float3(1.08, 1.06, 1.0), float3(0.68, 0.74, 0.82), under * under);
-        c *= lerp(float3(1.0, 1.0, 1.0), (0.93 + 0.27 * lit) * hollow * depth, uiPixels.z);
+        // 3.0.20-beta.79: none of this round light on the screen for a crown lit by its shape in the world (leaf_vs
+        // crownLight, uiPixels.w)
+        if (uiPixels.w <= 0.5) c *= lerp(float3(1.0, 1.0, 1.0), (0.93 + 0.27 * lit) * hollow * depth, uiPixels.z);
     }
     if (r4 > 0.0) {
         float2 o = (du * sun.x + dv * sun.y) * 4.0 * scale;

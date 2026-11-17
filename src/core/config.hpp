@@ -197,9 +197,13 @@ struct EffectSettings {
     // crownTurn): fuller crowns from the eyes' level. Off at first; not of the presets
     bool denseCrowns = false;
     // 3.0.20-beta.73 (the owner: «деревья очень примитивные ... в 3д видно все недостатки»): [view3d] crown_volume -
-    // a tree's leaf faces drawn twice more, stood up on the trunk's line (core foliage::crownStood): a body for the
-    // crown seen from the side. A trial, off - on the owner's word
+    // a tree's leaf faces drawn again, stood up on the trunk's line (core foliage::crownStood): a body for the crown
+    // seen from the side (3.0.20-beta.79: once a face, not twice). Off - on the owner's word
     bool crownVolume = false;
+    // 3.0.20-beta.79 (the owner on the trial of the crowns: «доработать»): [view3d] crown_light - a still tree's leaves
+    // on the card lit by their place in the crown in the world (core foliage::crownLight): darker inside and under it,
+    // the sun's side brighter. Off at first, as every new light
+    bool crownLight = false;
     // 3.0.20-beta.52 (the owner's «делай 1-9», 5): [view3d] ceiling - in the 3D view a flat ceiling at the walls' top
     // in a house or a castle's hall (core/cave_vault buildCeiling); a dark nothing over the walls until now
     bool ceiling3d = true;

@@ -1011,6 +1011,7 @@ enum class Text : uint16_t {
     View3dShadows, View3dShadowsHint,  // 3.0.20-beta.50: a trial of real shadows
     View3dDenseCrowns, View3dDenseCrownsHint,  // 3.0.20-beta.51: fuller crowns
     View3dCrownVolume, View3dCrownVolumeHint,  // 3.0.20-beta.73: a body for the crowns
+    View3dCrownLight, View3dCrownLightHint,    // 3.0.20-beta.79: a crown's light by its shape
     View3dFastGround, View3dFastGroundHint,
     QualityBatchGround, QualityBatchGroundHint,
     // 3.0.20-beta.17 (the owner: «сделай этот процес чтобы был гораздо приятнее»): the game's card for several answers;

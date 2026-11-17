@@ -563,6 +563,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.roomWalls3d ? 1 : 0);     // 3.0.20-beta.71
     w.u8(e.skyRanges ? 1 : 0);       // 3.0.20-beta.72
     w.u8(e.crownVolume ? 1 : 0);     // 3.0.20-beta.73
+    w.u8(e.crownLight ? 1 : 0);      // 3.0.20-beta.79
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

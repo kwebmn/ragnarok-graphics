@@ -235,12 +235,13 @@ inline void leafShadingOf(float x0, float y0, float x1, float y1, const float* c
 // leafy runs' box (toView: a moving node's matrix, node -> view; none: still, its runs in the world), its eight corners
 // onto the game's screen: its sway (swing 0: none; the time) and its crown's look (leafShadingOf) into `out`; the crown
 // the falling leaves start from into `crown` when given (false then: none). False: no leafy run, or none of its box
-// on the screen (behind the eye, off it) - not drawn
+// on the screen (behind the eye, off it) - not drawn. 3.0.20-beta.79: `crownSun` the way to the sun in the world when a
+// still tree's crown is lit by its shape ([view3d] crown_light, leaf_vs crownLight; null: not)
 template <typename Leafy>
 inline bool cardTreeLook(const std::vector<gamemodels::CardRun>& runs, const Leafy& leafy, const float* toView,
                          const own_ground::View& view, const camera::Projection& p, const float* viewToWorld,
                          const LeafLook& look, float swing, float time, Constants& out, critters::Crown* crown,
-                         bool* crownSeen) {
+                         bool* crownSeen, const float* crownSun = nullptr) {
     if (crownSeen) *crownSeen = false;
     float lo[3] = {1e30f, 1e30f, 1e30f}, hi[3] = {-1e30f, -1e30f, -1e30f};
     bool any = false;
@@ -287,12 +288,34 @@ inline bool cardTreeLook(const std::vector<gamemodels::CardRun>& runs, const Lea
     // 3.0.20-beta.51: the crown's middle in the world (leaf_vs r6-r8) - its leaves drawn again turn about it (r9-r11
     // the turn, none here: foliage::crownTurn by the caller)
     for (int k = 0; k < 3; ++k) out.reproject[6 + k] = world[k];
+    // 3.0.20-beta.79 ([view3d] crown_light): a still tree's crown lit by its shape in the world (leaf_vs crownLight) -
+    // its box's half sizes across and up (footprint, sharpen), the way to the sun (hole[5], hole[6], sourceClamp[3]:
+    // holeUy, holeUz, sourceClamp.w); leafLight leaves its round light on the screen to it (uiPixels.w). The renderers
+    // copy them with the crown's look (crownLightOf)
+    if (crownSun && !toView) {
+        out.footprint = std::max(hi[0] - lo[0], hi[2] - lo[2]) * 0.5f;
+        out.sharpen = (hi[1] - lo[1]) * 0.5f;
+        out.hole[5] = crownSun[0];
+        out.hole[6] = crownSun[1];
+        out.sourceClamp[3] = crownSun[2];
+        out.uiPixels[3] = 1.0f;
+    }
     if (crown && crownSeen && x1 - x0 >= 8.0f && mid[2] > 0.0f) {  // as noteCrown's for the game's leaves
         crown->centre = critters::Point{world[0], world[1], world[2]};
         crown->radius = std::clamp((x1 - x0) * 0.5f * mid[2] / p.f0, 1.0f, 12.0f);
         *crownSeen = true;
     }
     return true;
+}
+
+// 3.0.20-beta.79: a card tree's crown light (cardTreeLook) into a draw's constants - after its fog's hole[] is set
+inline void crownLightOf(const Constants& look, Constants& c) {
+    c.footprint = look.footprint;
+    c.sharpen = look.sharpen;
+    c.uiPixels[3] = look.uiPixels[3];
+    c.sourceClamp[3] = look.sourceClamp[3];
+    c.hole[5] = look.hole[5];
+    c.hole[6] = look.hole[6];
 }
 
 inline void leafShading(const FrameRecord& rec, const DrawCmd& d, const LeafLook& look, Constants& c) {

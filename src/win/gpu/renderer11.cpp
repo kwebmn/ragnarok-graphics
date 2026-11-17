@@ -2002,6 +2002,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         const float fog[8] = {modelFog_.fogA(), modelFog_.fogB(), bits, 0.0f, matrices, 0.0f, 0.0f,
                               leafPass_ ? camera : 0.0f};  // holeZ 0
         std::memcpy(c.hole, fog, sizeof fog);
+        if (leafPass_) crownLightOf(leafLook_, c);  // 3.0.20-beta.79: [view3d] crown_light
     }
     if (seamPass_) {  // 2.5.9 (draw.cpp 1.9): a strip across a seam - its alpha from the noise over the world
         c.stage1[1] |= 1u << 31;

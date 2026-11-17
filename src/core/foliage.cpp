@@ -63,13 +63,27 @@ void turnedAbout(const float middle[3], const float turn[3], float p[3]) {
     p[2] = middle[2] + d[0] * turn[1] + d[2] * turn[0];
 }
 
-void crownStood(int copy, float out[3]) {
-    out[0] = copy <= 0 ? 1.0f : -1.0f;
+void crownStood(int, float out[3]) {
+    out[0] = 0.0f;  // the way by the face's own number (stoodWay)
     out[1] = 0.0f;
     out[2] = -kStoodSize;
 }
 
-bool stoodAbout(const float middle[3], const float turn[3], float a[3], float b[3], float c[3]) {
+float stoodWay(uint32_t face) { return (face & 1u) != 0u ? -1.0f : 1.0f; }
+
+float crownLight(const float p[3], const float middle[3], const float half[2], const float toSun[3]) {
+    if (!(half[0] > 0.0f) || !(half[1] > 0.0f)) return 1.0f;
+    const float d[3] = {(p[0] - middle[0]) / half[0], (p[1] - middle[1]) / half[1], (p[2] - middle[2]) / half[0]};
+    const float rho = std::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+    const float k = 1.0f / std::max(rho, 1e-4f);
+    const float n[3] = {d[0] * k, d[1] * k, d[2] * k};
+    const float inner = kCrownInner + (1.0f - kCrownInner) * std::clamp((rho - 0.1f) / 0.8f, 0.0f, 1.0f);
+    const float under = kCrownUnder + (1.0f - kCrownUnder) * std::clamp(0.55f - 0.6f * n[1], 0.0f, 1.0f);
+    const float sun = 1.0f + kCrownSun * (n[0] * toSun[0] + n[1] * toSun[1] + n[2] * toSun[2]);
+    return std::clamp(inner * under * sun * kCrownGain, kCrownLeast, kCrownMost);
+}
+
+bool stoodAbout(const float middle[3], const float turn[3], float a[3], float b[3], float c[3], uint32_t face) {
     if (!(turn[2] < 0.0f)) return false;
     const float mid[3] = {(a[0] + b[0] + c[0]) / 3.0f, (a[1] + b[1] + c[1]) / 3.0f, (a[2] + b[2] + c[2]) / 3.0f};
     const float ox = mid[0] - middle[0], oz = mid[2] - middle[2];
@@ -81,7 +95,7 @@ bool stoodAbout(const float middle[3], const float turn[3], float a[3], float b[
     const float nl = std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
     if (!(nl > 1e-9f) || std::fabs(n[1]) < kStoodFlat * nl) return false;
     const float axis[3] = {ox / len, 0.0f, oz / len};
-    const float size = -turn[2], way = turn[0];
+    const float size = -turn[2], way = turn[0] != 0.0f ? turn[0] : stoodWay(face);
     for (float* p : {a, b, c}) {
         const float d[3] = {(p[0] - mid[0]) * size, (p[1] - mid[1]) * size, (p[2] - mid[2]) * size};
         const float along = axis[0] * d[0] + axis[1] * d[1] + axis[2] * d[2];

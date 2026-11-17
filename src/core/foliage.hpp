@@ -34,20 +34,37 @@ void crownTurn(int copy, float out[3]);
 void turnedAbout(const float middle[3], const float turn[3], float p[3]);
 // 3.0.20-beta.73 (the owner on the 3D view: «деревья очень примитивные ... это не деревья, можно что-то сделать?»): a
 // tree's leaves are flat plates in tiers, made for the view from above; from the eyes' level they are seen edge-on,
-// the sky between them. Each leaf face drawn kCrownStood times more, stood up - turned a right angle about the line
-// from the crown's middle's upright line through the face's own middle, laid flat (one copy up, the other down),
-// kStoodSize of its size about its middle: the tiers get a body. A stood copy's turn: its way up (1 or -1), nothing,
-// its size under 0 (leaf_vs: r9, r10, r11 - a size under 0 tells a stood copy from a turned one). Tried on the
-// game's own trees from the eyes' level and from above: /root/uagfx-tools/audit/trees/crowns2.py (across the line
-// too: spikes - left out).
-constexpr int kCrownStood = 2;
+// the sky between them. Each leaf face drawn again, stood up - turned a right angle about the line from the crown's
+// middle's upright line through the face's own middle, laid flat - kStoodSize of its size about its middle: the
+// tiers get a body. Tried on the game's own trees from the eyes' level and from above:
+// /root/uagfx-tools/audit/trees/crowns2.py (across the line too: spikes - left out). 3.0.20-beta.79 (the owner's
+// verdict on the trial: «доработать»): beta.73 drew two copies a face, one up and one down - both in the same plane,
+// the second the first's mirror over it: every fin twice as thick, the crown a wall of leaves (his beta.77 shot of
+// prt_fild06). Now kCrownStood copy, up or down by the face's own number (stoodWay): the same body, half the leaves.
+// A stood copy's turn: its way up (1 or -1; 0 - by the face's number), nothing, its size under 0 (leaf_vs: r9, r10,
+// r11 - a size under 0 tells a stood copy from a turned one)
+constexpr int kCrownStood = 1;
 constexpr float kStoodSize = 0.85f;
 // only a flat plate gets its stood copies: its plane's upright share (its normal's, 0-1) this at least - a bush's
 // upright leaf, a hanging frond stand already
 constexpr float kStoodFlat = 0.6f;
 void crownStood(int copy, float out[3]);
-// A leaf face's corners stood so (leaf_vs's sums). False, the corners as they are - no copy of this face: a face on
-// the trunk's own line, one that stands already, a turn that is no stood copy's.
-bool stoodAbout(const float middle[3], const float turn[3], float a[3], float b[3], float c[3]);
+// the way a face's stood copy goes by its number among the faces (leaf_vs: the instance's face): up for an even one
+float stoodWay(uint32_t face);
+// A leaf face's corners stood so (leaf_vs's sums); `face` its number (the way when the turn gives none). False, the
+// corners as they are - no copy of this face: a face on the trunk's own line, one that stands already, a turn that is
+// no stood copy's.
+bool stoodAbout(const float middle[3], const float turn[3], float a[3], float b[3], float c[3], uint32_t face = 0);
+
+// 3.0.20-beta.79 (the owner on the trial of the crowns: «доработать»; his beta.77 shot - every crown one even green):
+// a crown's own light ([view3d] crown_light) - the light of a leaf's corner at `p` by its place in its crown's box in
+// the world (`middle`, `half`: across and up; up along -y): darker inside the crown (kCrownInner at its middle) and
+// under it (kCrownUnder at its bottom), the side towards the sun (`toSun`, of length 1) kCrownSun brighter and the far
+// one darker, all times kCrownGain - the crown on the whole as bright as the game's (offline:
+// /root/uagfx-tools/audit/trees3 lit2.py, scene.py); kCrownLeast-kCrownMost. A crown of no size: 1. leaf_vs's
+// crownLight holds the same
+constexpr float kCrownInner = 0.68f, kCrownUnder = 0.7f, kCrownSun = 0.25f, kCrownGain = 1.22f;
+constexpr float kCrownLeast = 0.25f, kCrownMost = 1.3f;
+float crownLight(const float p[3], const float middle[3], const float half[2], const float toSun[3]);
 
 }  // namespace uagfx::foliage

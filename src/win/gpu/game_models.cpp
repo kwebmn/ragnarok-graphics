@@ -584,6 +584,11 @@ void Renderer::Impl::drawGameLeavesCard(const own_ground::Shading& fog) {
     const uint32_t state = leafCardRec.addState(st);
     const float swing = sway ? foliage::kSwing * float(effects.foliageStrength) / 100.0f : 0.0f;
     const auto leafy = [this](uint32_t texture) { return leafyTexture(texture); };
+    // 3.0.20-beta.79 ([view3d] crown_light): the still crowns lit by their shape - the sun overhead on a map that tells
+    // no light of its own
+    float sunWay[3] = {0.0f, -1.0f, 0.0f};
+    if (effects.crownLight) mapSun(sunWay);
+    const float* crownSun = effects.crownLight && camera::wideView() ? sunWay : nullptr;
     // a node's leaves: `bits` its faces' moving place, toView its matrix this frame (node -> view; none: still)
     const auto tree = [&](uint32_t id, uint32_t bits, const float* toView) {
         const std::vector<gamemodels::CardRun>* runs = gameCards.runsOfNode(id);
@@ -593,14 +598,14 @@ void Renderer::Impl::drawGameLeavesCard(const own_ground::Shading& fog) {
         critters::Crown crown;
         bool crownSeen = false;
         if (!cardTreeLook(*runs, leafy, toView, view, p, viewToWorld, look, swing, waterTime(), leaf,
-                          effects.leafFall && frameCrowns.size() < 32 ? &crown : nullptr, &crownSeen))
+                          effects.leafFall && frameCrowns.size() < 32 ? &crown : nullptr, &crownSeen, crownSun))
             return;
         if (crownSeen) frameCrowns.push_back(crown);
         // 3.0.20-beta.51 ([view3d] dense_crowns): a still tree's leaves twice more in the 3D view, turned about the
         // crown's middle - the same faces, another look
         const bool dense = effects.denseCrowns && camera::wideView() && !toView;
-        // 3.0.20-beta.73 ([view3d] crown_volume, a trial): and each leaf face twice more stood up on the trunk's
-        // line - a body for the crown seen from the side (core foliage::crownStood, leaf_vs leafStood)
+        // 3.0.20-beta.73 ([view3d] crown_volume): and each leaf face once more stood up on the trunk's line - a body
+        // for the crown seen from the side (core foliage::crownStood, leaf_vs leafStood; beta.79: once, not twice)
         const bool volume = effects.crownVolume && camera::wideView() && !toView;
         for (const gamemodels::CardRun& r : *runs) {
             if (!r.count || !leafyTexture(r.texture)) continue;
