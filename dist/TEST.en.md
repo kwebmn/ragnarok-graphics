@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.21-beta.3 — what's new · 2026-11-17
+
+The third step to tidy settings: the "Settings" window (Alt+O) is the player's main place now — it holds everything that applies at once, not only the interface.
+
+- **Eight sections on the left:** "How the game looks", "Picture", "3D view", "Interface", "Controls", "Sound and notifications", "Speed and screen", "Game and network". Beside each: how many settings it holds.
+- **New in the window:** the effects ("Picture": quality, time of day, weather, 14 groups), "3D view", notifications, camera, quality and frames, several game windows. Before, these were only in the console or in the settings app.
+- **The main things first.** Each group shows its basic rows; "N more settings ›" opens the parts and the sliders, "Hide the extra settings" folds them. A part sits indented under its row.
+- **The first screen is the same:** the three choices of "How the game looks", under them the music and sound volumes, the snaps and the game's opaque windows.
+- **The search looks in every section** and labels what it finds: "Interface · Minimap".
+- The window holds only what applies at once. What needs a game restart (DLSS, the sound engine, textures) stays in uaRO Graphics' settings; the trials and the diagnostics are in the console (Ctrl+~).
+
 # uaRO Graphics 3.0.21-beta.2 — what's new · 2026-11-17
 
 The second step to tidy settings: the console (Ctrl+~) has a "laboratory" now — the trials and the diagnostics have tabs of their own and no longer sit among the tiles of "Quick".
