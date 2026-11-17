@@ -50,6 +50,8 @@ constexpr const char* kStartFailures = "uaro-graphics\\cache\\start-failures.txt
 // 3.0.17-beta.11: the game's chat told where the settings are, once (win/console_hint). 3.0.21-beta.7: they are in
 // «Налаштування» (Alt+O), not in the console - a file of a new name, so that who was told «Alt+D» is told once more
 constexpr const char* kSettingsHint = "uaro-graphics\\cache\\settings-hint.txt";
+// 3.0.21-beta.13: the key hints shown and learned (core/key_hints Seen)
+constexpr const char* kKeyHints = "uaro-graphics\\cache\\key-hints.txt";
 // 3.0.17-beta.10: the version the player saw «Гра» with - none: the first start's cards, another: «Оновлено до»
 constexpr const char* kSeenVersion = "uaro-graphics\\cache\\seen-version.txt";
 // 3.0.17-beta.7: [debug] record_scene's file (core/scene_record)

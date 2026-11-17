@@ -9287,6 +9287,42 @@ constexpr Entry kTexts[] = {
      "возвращает обычный. То же делает Ctrl+Shift+V."},
     {Text::CharOwnBehind, "View from behind", "Вигляд з-за спини", "Вид из-за спины"},
     {Text::CharOwnEyes, "First-person view", "Вигляд від першої особи", "Вид от первого лица"},
+    // 3.0.21-beta.13: the key hints
+    {Text::KeyWheel, "Wheel", "Колесо", "Колесо"},
+    {Text::KeySpace, "Space", "Пробіл", "Пробел"},
+    {Text::KeyClick, "click", "клік", "клик"},
+    {Text::KeyClickAlone, "Click", "Клік", "Клик"},
+    {Text::KeyHintCursor, "the cursor for the windows", "курсор для вікон", "курсор для окон"},
+    {Text::KeyHintDistance, "nearer / farther", "ближче / далі", "ближе / дальше"},
+    {Text::KeyHintRound, "the camera round the character", "камера навколо персонажа", "камера вокруг персонажа"},
+    {Text::KeyHintTarget, "the monster by the crosshair", "монстр біля прицілу", "монстр у прицела"},
+    {Text::KeyHintToEyes, "first-person view", "від першої особи", "от первого лица"},
+    {Text::KeyHintToUsual, "the usual view", "звичайний вигляд", "обычный вид"},
+    {Text::KeyHintHoldAlt, "hold it to press in the window", "затисніть, щоб натискати у вікні",
+     "зажмите, чтобы нажимать в окне"},
+    {Text::KeyHintFly, "fly", "політ", "полёт"},
+    {Text::KeyHintUp, "up", "угору", "вверх"},
+    {Text::KeyHintDown, "down", "униз", "вниз"},
+    {Text::KeyHintFaster, "faster", "швидше", "быстрее"},
+    {Text::KeyHintBack, "back to the character", "до персонажа", "к персонажу"},
+    {Text::KeyHintSkillEnemy, "the skill on the monster under the crosshair", "уміння на монстра під прицілом",
+     "умение на монстра под прицелом"},
+    {Text::KeyHintSkillFriend, "on the one under the crosshair, else on yourself",
+     "на того, хто під прицілом, інакше на себе", "на того, кто под прицелом, иначе на себя"},
+    {Text::KeyHintPick, "pick", "вибрати", "выбрать"},
+    {Text::KeyHintPickRun, "a run", "підряд", "подряд"},
+    {Text::KeyHintPickAll, "all", "усе", "всё"},
+    {Text::InterfaceKeyHints, "Key hints", "Підказки клавіш", "Подсказки клавиш"},
+    {Text::InterfaceKeyHintsHint,
+     "Where the keys or the mouse do something else - the 3D view, the free camera, the storage - a line at the "
+     "bottom says what to press. Each shows a few times; one you have used no longer shows. Off and on again: they "
+     "all show again.",
+     "Там, де клавіші чи миша роблять інше, — 3D-режим, вільна камера, склад, — рядок унизу каже, що натискати. "
+     "Кожна з'являється кілька разів; ту, якою ви вже скористалися, більше не видно. Вимкнути й увімкнути знову — "
+     "покажуться всі.",
+     "Там, где клавиши или мышь делают другое, — 3D-режим, свободная камера, склад, — строка внизу говорит, что "
+     "нажимать. Каждая появляется несколько раз; ту, которой вы уже воспользовались, больше не видно. Выключить и "
+     "включить снова — покажутся все."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

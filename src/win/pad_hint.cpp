@@ -113,4 +113,6 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     (void)renderer;
 }
 
+bool shown() { return state().shown; }
+
 }  // namespace uagfx::win::padhintwin

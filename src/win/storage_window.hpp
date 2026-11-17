@@ -57,4 +57,6 @@ bool moving();  // its title dragged now
 // 3.0.18-beta.156: the item number at a place of it (0 none) - the «how many» counted by weight
 int idAtPlace(int index);
 
+int pickedCount();  // 3.0.21-beta.13: the things picked now (core/key_hints)
+
 }  // namespace uagfx::win::storagewin

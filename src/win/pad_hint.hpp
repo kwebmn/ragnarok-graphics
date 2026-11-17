@@ -14,5 +14,6 @@ namespace uagfx::win::padhintwin {
 // skill bar (core/pad_hint), while [interface] pad_hints is on. On the game's thread.
 void frame(HWND game, bool on, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
+bool shown();  // 3.0.21-beta.13: its line on the screen now (the key hints go over it)
 
 }  // namespace uagfx::win::padhintwin

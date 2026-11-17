@@ -82,6 +82,7 @@ struct State {
     float mouseSpeed = 1.0f;
     float behindNow = 0.0f;  // 3.0.19-beta.10: the distance behind used (in at once before a wall, out slowly)
     float onTopStep = view3d::kOnTopStep;  // 3.0.21-beta.12: the game's of this frame (kOnTopStepAt)
+    uint32_t casts = 0;                    // 3.0.21-beta.13: skills cast by a click on the crosshair (the key hints)
     float onTopTold = 0.0f;
     bool ownOut = false;     // 3.0.19-beta.18: the character's own picture left out now (view3d::ownOut)
     int sight = view3d::kSightDefault;  // 3.0.19-beta.24: [view3d] distance
@@ -317,13 +318,16 @@ void lockStep(State& s, float cx, float cy) {
     }
 }
 
-// 3.0.19-beta.54: the game mode waiting for a skill's target (its +0x3C4, castWaiting's) - Shift is the game's then
-bool skillWaits() {
+// 3.0.19-beta.54: the game mode waiting for a skill's target (its +0x3C4, castWaiting's) - Shift is the game's then;
+// 3.0.21-beta.13: its kind (2 an enemy's, 4 a friend's, 0 none) for the key hints
+int skillWaitKind() {
     constexpr uint32_t kModeClass = 0x69F388, kWait = 0x3C4;
     const uint32_t mode = readGameMode();
     uint32_t vtable = 0, wait = 0;
-    return mode && readGame(mode, &vtable, 4) && vtable == kModeClass && readGame(mode + kWait, &wait, 4) && wait;
+    if (!mode || !readGame(mode, &vtable, 4) || vtable != kModeClass || !readGame(mode + kWait, &wait, 4)) return 0;
+    return int(wait);
 }
+bool skillWaits() { return skillWaitKind() != 0; }
 
 // The mouse's own moves turn the view (the pad runtime holds the game's cursor and keeps them; without it the cursor's
 // own move since the last frame); the game's cursor at the crosshair - pulled onto a monster near it (its clicks and
@@ -952,6 +956,14 @@ bool active() { return g_state.mode != view3d::Mode::Off; }
 
 float onTopStep() { return g_state.onTopStep; }
 
+bool behind() { return g_state.mode == view3d::Mode::Behind; }
+
+bool freeCamera() { return g_state.mode != view3d::Mode::Off && g_state.free; }
+
+int skillWait() { return g_state.mode != view3d::Mode::Off ? skillWaitKind() : 0; }
+
+uint32_t clickCasts() { return g_state.casts; }
+
 bool looking() { return g_state.mode != view3d::Mode::Off && g_state.looking; }
 
 bool fromTheEyes() { return g_state.mode == view3d::Mode::First; }
@@ -1051,6 +1063,7 @@ bool castWaiting(bool shift) {
     use(player, 0, kUseOn, int(target), skill, range);
     use(player, 0, kUseLevel, level, 0, 0);
     reinterpret_cast<ModeMsgFn>(uintptr_t(modeFn))(mode, kWaitEnds, 0, 0, 0);
+    ++s.casts;  // 3.0.21-beta.13
     if (s.castsTold < 10) {
         ++s.castsTold;
         LOG_INFO("3D view: the skill %d Lv %d the game waited a target for (%s) on %s %u at the press%s", skill, level,

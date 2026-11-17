@@ -1189,4 +1189,7 @@ bool moving() { return state().shown && state().moving; }  // 3.0.11-beta.111
 
 const std::vector<iw::Item>& lastBag() { return state().items; }
 
+// 3.0.21-beta.13: the things picked now (Ctrl, Shift, Ctrl+A) - the key hints' picks learned
+int pickedCount() { return int(state().picked.count()); }
+
 }  // namespace uagfx::win::itemswin

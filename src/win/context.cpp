@@ -147,6 +147,7 @@
 #include "win/trade_window.hpp"
 #include "win/skill_window.hpp"
 #include "win/pad_hint.hpp"
+#include "win/key_hint.hpp"
 #include "win/pad_tiles.hpp"
 #include "win/target_card.hpp"
 #include "win/tracker.hpp"
@@ -1303,6 +1304,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     oskwin::frame(window, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.214: the on-screen keyboard
     g_parts.mark("oskwin", nowMs());
     padhintwin::frame(window, config.padHints, pk, pw, ph);  // 3.0.11-beta.92: the hint line in the interface's style
+    keyhintwin::frame(window, config, pk, pw, ph);  // 3.0.21-beta.13: the key hints (Alt in the 3D view, ...)
     g_parts.mark("padhintwin", nowMs());
     // 3.0.11-beta.39: [interface] party - the party's panel under the character block
     partywin::setAlarm(config.partyAlarm);  // 3.0.11-beta.282

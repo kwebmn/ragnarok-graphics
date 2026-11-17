@@ -862,6 +862,9 @@ struct Config {
     bool walkMode = false;
     // 3.0.18-beta.209 (stage 3): [interface] space_action - Space with the chat line empty acts (the pad's A)
     bool spaceAction = true;
+    // 3.0.21-beta.13 (the owner: «надо пройтись и в таких моментах наделать подсказки»): [interface] control_hints - a
+    // line at the bottom says what to press where the keys or the mouse do something else (core/key_hints); on
+    bool keyHints = true;
     // 3.0.11-beta.90 (stage 6): [interface] pad_tiles - Start opens the windows' tile (win/pad_tiles); off: the pad's
     // own menu, as before
     bool padTiles = true;

@@ -41,4 +41,6 @@ void moveTo(int x, int y, bool keep = true);
 int idAtPlace(int index);
 bool put(int index, int count);  // 3.0.18-beta.156: a bag thing put into the cart (the game's own drop)
 
+int pickedCount();  // 3.0.21-beta.13: the things picked now (core/key_hints)
+
 }  // namespace uagfx::win::cartwin

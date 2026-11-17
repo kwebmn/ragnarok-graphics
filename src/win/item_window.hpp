@@ -74,4 +74,6 @@ bool giveDrag(uint32_t drag);
 // thing - its place, number, kind, where it is worn, count - its icon and its cell's middle on the target; false none
 bool padThing(uagfx::padcarry::Thing& t, float& x, float& y, const panel::Picture*& icon, std::string& name);
 
+int pickedCount();  // 3.0.21-beta.13: the things picked now (core/key_hints)
+
 }  // namespace uagfx::win::itemswin

@@ -29,6 +29,12 @@ bool ask(view3d::Mode m, const char* why);
 bool active();                           // the 3D view on
 // 3.0.21-beta.12 (R-EV2ABB): the step the game drew its over-everything sprites with this frame (core view3d::overAll)
 float onTopStep();
+// 3.0.21-beta.13 (core/key_hints): from behind; the free camera on; the skill the game waits a target for (2 an
+// enemy's, 4 a friend's, 0 none - off the 3D view 0); the skills cast by a click on the crosshair so far
+bool behind();
+bool freeCamera();
+int skillWait();
+uint32_t clickCasts();
 bool looking();                          // and the mouse turns it (not Alt): the crosshair in the cursor's place
 bool fromTheEyes();                      // 3.0.19-beta.13: the view from the character's eyes
 bool ownHidden();                        // 3.0.19-beta.15: the character's own picture left out (eyes, or right behind)

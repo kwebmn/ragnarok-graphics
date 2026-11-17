@@ -240,7 +240,8 @@ std::vector<Group> build() {
                          D("panel.opacity", "panel.show")}));
     // --- «Керування»
     out.push_back(group(Area::Controls, Text::InterfaceSecKeys,
-                        {B("interface.arrows_walk"), B("interface.walk_mode"), B("interface.space_action"),
+                        {B("interface.control_hints"), B("interface.arrows_walk"), B("interface.walk_mode"),
+                         B("interface.space_action"),
                          D("interface.key_hunt"), D("interface.key_mvp"), D("interface.key_tracker"),
                          D("interface.key_party"), D("interface.key_recap"), D("interface.detail_console")}));
     out.push_back(group(Area::Controls, Text::CameraHeading,

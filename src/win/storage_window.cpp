@@ -862,4 +862,7 @@ int idAtPlace(int index) {  // 3.0.18-beta.156
     return 0;
 }
 
+// 3.0.21-beta.13: the things picked now (Ctrl, Shift, Ctrl+A) - the key hints' picks learned
+int pickedCount() { return int(state().picked.count()); }
+
 }  // namespace uagfx::win::storagewin

@@ -253,6 +253,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceWalkMode, Text::InterfaceWalkModeHint, ""},
         {"interface", "space_action", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.18-beta.209
          Text::InterfaceSpaceAction, Text::InterfaceSpaceActionHint, ""},
+        {"interface", "control_hints", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.21-beta.13
+         Text::InterfaceKeyHints, Text::InterfaceKeyHintsHint, ""},
         {"interface", "walk_arrow", Page::Interface, Control::Choice, 0, 0, 0,
          {"chevrons", "slim", "concept", "ring", "dots", "cell", "off"},
          {Text::WalkArrowChevrons, Text::WalkArrowSlim, Text::WalkArrowConcept, Text::WalkArrowRing,
@@ -1484,6 +1486,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.walk_mark") return c.walkMark ? "1" : "0";                         // 3.0.11-beta.105
     if (k == "interface.arrows_walk") return c.arrowsWalk ? "1" : "0";  // 3.0.18-beta.207
     if (k == "interface.walk_mode") return c.walkMode ? "1" : "0";      // 3.0.18-beta.208
+    if (k == "interface.control_hints") return c.keyHints ? "1" : "0";      // 3.0.21-beta.13
     if (k == "interface.space_action") return c.spaceAction ? "1" : "0";  // 3.0.18-beta.209
     if (k == "interface.pad_tiles") return c.padTiles ? "1" : "0";                         // 3.0.11-beta.90
     if (k == "interface.minimap_way") return wayOnGroundToken(c.minimapWay);  // 3.0.11-beta.33

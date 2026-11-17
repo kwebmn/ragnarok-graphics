@@ -1043,6 +1043,11 @@ enum class Text : uint16_t {
     SettingsMoreHead,  // 3.0.21-beta.11: the small heading over a group's details (no line that opens them)
     // 3.0.21-beta.12: the 3D view's two icons on the character block - their switch, its hint, their tips
     InterfaceView3dButtons, InterfaceView3dButtonsHint, CharOwnBehind, CharOwnEyes,
+    // 3.0.21-beta.13: the key hints (core/key_hints) - the keys' names, what they do, their switch
+    KeyWheel, KeySpace, KeyClick, KeyClickAlone, KeyHintCursor, KeyHintDistance, KeyHintRound, KeyHintTarget,
+    KeyHintToEyes, KeyHintToUsual, KeyHintHoldAlt, KeyHintFly, KeyHintUp, KeyHintDown, KeyHintFaster, KeyHintBack,
+    KeyHintSkillEnemy, KeyHintSkillFriend, KeyHintPick, KeyHintPickRun, KeyHintPickAll, InterfaceKeyHints,
+    InterfaceKeyHintsHint,
     Count
 };
 
