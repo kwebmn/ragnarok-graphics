@@ -135,6 +135,23 @@ constexpr float kOwnNear = 12.0f, kOwnShownAgain = 16.0f;
 // 3.0.20-beta.70 (the owner's pick 2 of the camera's options): [view3d] near_fade - the world's surfaces dissolve
 // from kNearWhole from the eye down to kNearGone, the game's near plane (shaders.cpp nearFade holds the same)
 constexpr float kNearGone = 10.0f, kNearWhole = 12.0f;
+// 3.0.20-beta.78 (R-SCCWB2 «кудато пропал урон», R-HZD6EP «нету цифр урона ... в 3д режиме, в 2д есть»): the game keeps
+// some sprites over everything - the damage digits (숫자.spr, its class 0x69F6DC), Miss, Critical and Lucky (msg.spr,
+// 0x69FD90), the target's cursor (cursors.spr, 0x69F188): a render object's +0x8E - by giving them no depth of their
+// own: every clip is drawn AT the near plane (uaRO.exe FUN_00546C50), rhw 1 / kOnTopNear less kOnTopBack steps of
+// kOnTopStep, a step more for the object's layer (+0x6C) and for each clip of its frame. near_fade took them for
+// surfaces at the eye and dissolved every one. Whether a draw (TL vertices, `stride` bytes each, x y z rhw first) is
+// such a sprite: each vertex on one of those steps, kOnTopLayers either side of the game's own; a sprite that only
+// stands near the camera falls between the steps
+constexpr float kOnTopNear = 10.0f, kOnTopStep = 9.0e-6f;  // 0x69F104, 0x6D5EF4
+constexpr int kOnTopBack = 20, kOnTopLayers = 20;          // 0x69F174
+constexpr double kOnTopOff = 0.05;  // of a step: the game's own rounding is about a thousandth of one
+bool overAll(const void* vertices, uint32_t count, size_t stride);
+// What near_fade dissolves: the world's draws in the 3D view (`wide`) - not the interface's, not a sprite the game
+// keeps over everything
+constexpr bool nearFades(bool on, bool wide, bool ui, bool keptOverAll) {
+    return on && wide && !ui && !keptOverAll;
+}
 bool ownOut(Mode m, float behind, bool outBefore);
 
 // 3.0.19-beta.37 (the owner: «можнол попробовать» - the concept's photo mode with a free camera, Ctrl+Shift+C): the

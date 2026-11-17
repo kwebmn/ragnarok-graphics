@@ -2,6 +2,7 @@
 // own camera replaced from the character's eyes or from behind
 // (concept https://claude.ai/artifact/RadnVxG35hjE9d8HgdqzAy)
 #include <cmath>
+#include <cstdint>
 #include <limits>
 
 #include <string>
@@ -537,6 +538,67 @@ TEST(view3d_effects_at_the_eyes_left_out) {
     CHECK(view3d::effectAtTheEyes(face, 3, sizeof(V), false));  // anyone's at the very eyes: out
     const V behind[3] = {{0, 0, 0, -1.0f}, {1, 0, 0, -1.0f}, {0, 1, 0, -1.0f}};
     CHECK(!view3d::effectAtTheEyes(behind, 3, sizeof(V), true));  // no depth known: kept
+}
+
+// 3.0.20-beta.78 (R-SCCWB2 «кудато пропал урон», R-HZD6EP «нету цифр урона ... в 3д режиме, в 2д есть»): the game keeps
+// its damage numbers, Miss, Critical and the target's cursor over everything by drawing them AT its near plane,
+// wherever they stand (uaRO.exe FUN_00546C50, a render object's +0x8E: rhw 1 / 10 less 20 steps of 9e-6, a step more
+// for its layer and for each clip of its frame) - and [view3d] near_fade, which dissolves what is right at the
+// camera (3.0.20-beta.70), took every one of them for a surface at the eye. Known by that depth: every vertex on one
+// of the game's own steps there; a sprite that only stands near the camera is not one
+namespace {
+struct TopV {
+    float x, y, z, rhw;
+    uint32_t diffuse, specular;
+    float u, v;
+};
+float onTopRhw(int layer, int clip) {  // as the game works it out
+    const float step = 9.0e-6f;
+    return float(layer) * step + ((1.0f / 10.0f + float(clip) * step) - step * 20.0f);
+}
+std::vector<TopV> spriteQuad(float top, float bottom) {
+    return {{0, 0, 0, top, 0, 0, 0, 0}, {9, 0, 0, top, 0, 0, 1, 0}, {0, 9, 0, bottom, 0, 0, 0, 1},
+            {9, 9, 0, bottom, 0, 0, 1, 1}};
+}
+bool overAll(float top, float bottom) {
+    const std::vector<TopV> q = spriteQuad(top, bottom);
+    return view3d::overAll(q.data(), 4, sizeof(TopV));
+}
+}  // namespace
+
+TEST(view3d_the_games_sprites_kept_over_everything_known_by_their_depth) {
+    CHECK(near(1.0f / onTopRhw(0, 0), 10.018f, 1e-3f));  // a damage digit: 10.018 from the eye wherever it stands
+    CHECK(overAll(onTopRhw(0, 0), onTopRhw(0, 0)));
+    for (int layer = -3; layer <= 3; ++layer)  // an object's layer, a frame's clips
+        for (int clip = 0; clip < 12; ++clip) CHECK(overAll(onTopRhw(layer, clip), onTopRhw(layer, clip)));
+    CHECK(overAll(onTopRhw(-1, 0), onTopRhw(-1, 1)));  // two of its steps in a draw
+    // a monster's sprite near the camera: dissolved as the walls are
+    CHECK(!overAll(1.0f / 10.5f, 1.0f / 10.5f));
+    CHECK(!overAll(1.0f / 12.0f, 1.0f / 12.0f));
+    CHECK(!overAll(1.0f / 56.0f, 1.0f / 56.0f));
+    // one that stands at a digit's own depth but between the game's steps (10.0184 from the eye), or past them
+    CHECK(!overAll(onTopRhw(0, 0) + 0.4f * 9.0e-6f, onTopRhw(0, 0) + 0.4f * 9.0e-6f));
+    CHECK(!overAll(onTopRhw(0, 0) - 30.0f * 9.0e-6f, onTopRhw(0, 0) - 30.0f * 9.0e-6f));
+    CHECK(!overAll(1.0f / 9.5f, 1.0f / 9.5f));  // nearer than the near plane: the card cuts it
+    CHECK(!overAll(onTopRhw(0, 0), 1.0f / 11.0f));  // a surface through that depth, its other end farther
+    CHECK(!overAll(-onTopRhw(0, 0), -onTopRhw(0, 0)) && !overAll(0.0f, 0.0f));  // behind the eye, no depth
+    const std::vector<TopV> digit = spriteQuad(onTopRhw(0, 0), onTopRhw(0, 0));
+    CHECK(!view3d::overAll(nullptr, 4, sizeof(TopV)) && !view3d::overAll(digit.data(), 0, sizeof(TopV)));
+    CHECK(!view3d::overAll(digit.data(), 4, 12));  // vertices with no rhw
+    struct Wide {  // the ground's vertex kind (two texture coordinates): the same place for rhw
+        TopV v;
+        float u1, v1;
+    };
+    const Wide wide[3] = {{digit[0], 0, 0}, {digit[1], 0, 0}, {digit[2], 0, 0}};
+    CHECK(view3d::overAll(wide, 3, sizeof(Wide)));
+}
+
+TEST(view3d_what_dissolves_right_at_the_camera) {
+    CHECK(view3d::nearFades(true, true, false, false));    // the world's draw in the 3D view
+    CHECK(!view3d::nearFades(true, true, false, true));    // a damage number, Miss, the target's cursor: whole
+    CHECK(!view3d::nearFades(true, true, true, false));    // the interface
+    CHECK(!view3d::nearFades(true, false, false, false));  // the game's own view: as the game draws it
+    CHECK(!view3d::nearFades(false, true, false, false));  // [view3d] near_fade off
 }
 
 // 3.0.19-beta.39 (the owner's «делаем все по порядку»: the character standing turned where the camera looks): the

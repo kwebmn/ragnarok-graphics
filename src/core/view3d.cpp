@@ -262,6 +262,22 @@ float spriteDepth(float z, float rhw) {
     return std::max(0.0f, camera::kFar / (camera::kFar - camera::kNear) * (1.0f - camera::kNear / v));
 }
 
+bool overAll(const void* vertices, uint32_t count, size_t stride) {
+    if (!vertices || !count || stride < 4 * sizeof(float)) return false;
+    const auto* p = static_cast<const uint8_t*>(vertices);
+    const double top = 1.0 / double(kOnTopNear), step = double(kOnTopStep);
+    for (uint32_t i = 0; i < count; ++i) {
+        float rhw = 0;
+        std::memcpy(&rhw, p + i * stride + 3 * sizeof(float), sizeof rhw);
+        // its steps from the near plane's own rhw: -kOnTopBack for a first clip on the layer 0; past 0 it is nearer
+        // than the near plane (the card cuts it)
+        const double steps = (double(rhw) - top) / step, whole = std::round(steps);
+        if (!(std::fabs(steps - whole) <= kOnTopOff)) return false;  // between the game's steps; no number at all
+        if (whole > 0.0 || whole < -double(kOnTopBack + kOnTopLayers)) return false;
+    }
+    return true;
+}
+
 bool effectAtTheEyes(const void* vertices, uint32_t count, size_t stride, bool own) {
     if (!vertices || stride < 4 * sizeof(float)) return false;
     const auto* p = static_cast<const uint8_t*>(vertices);

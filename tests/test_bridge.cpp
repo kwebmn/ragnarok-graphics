@@ -145,9 +145,9 @@ uint64_t fnv(const std::vector<uint8_t>& b) {
 TEST(bridge_a_busy_record_writes_the_same_bytes_as_before) {
     const std::vector<uint8_t> bytes = bytesOf(busyRecord());
     // as written field by field (3.0.6-beta.2: 12655 bytes); 3.0.18-beta.178: a byte more a draw (sharpCopy) and an
-    // upload (own); 3.0.20-beta.68: four more a draw (sharpArt) - 41 draws
-    CHECK_EQ(bytes.size(), size_t(12862));
-    CHECK_EQ(fnv(bytes), uint64_t(0x100f1efcbb93589eull));
+    // upload (own); 3.0.20-beta.68: four more a draw (sharpArt) - 41 draws; 3.0.20-beta.78: a byte more (overAll)
+    CHECK_EQ(bytes.size(), size_t(12903));
+    CHECK_EQ(fnv(bytes), uint64_t(0x0b94666a180b0e94ull));
 
     FrameRecord back;
     WireReader rd(bytes.data(), bytes.size());
@@ -157,6 +157,28 @@ TEST(bridge_a_busy_record_writes_the_same_bytes_as_before) {
     CHECK_EQ(back.draws()[40].twinScale, 1.0 + 39 * 0.125);
     CHECK_EQ(int(back.draws()[40].effectId), 39 * 1000 + 7);
     CHECK_EQ(back.draws()[2].indexCount, 0u);  // k 1: no indices
+}
+
+// 3.0.20-beta.78 (R-SCCWB2, R-HZD6EP: no damage numbers in the 3D view): a draw of a sprite the game keeps over
+// everything (core view3d::overAll) reaches the renderer told so - [view3d] near_fade leaves it whole
+TEST(bridge_a_draw_kept_over_everything_crosses) {
+    FrameRecord a;
+    DrawSetup s;
+    DrawCmd d;
+    d.state = a.addState(s);
+    d.primitive = d3d7::PT_TRIANGLESTRIP;
+    d.fvf = d3d7::FVF_TL1;
+    const std::vector<uint8_t> vertices(4 * FrameRecord::stride(d3d7::FVF_TL1), 1);
+    a.draw(d, vertices.data(), 4, nullptr, 0);
+    d.overAll = true;
+    a.draw(d, vertices.data(), 4, nullptr, 0);
+    const std::vector<uint8_t> bytes = bytesOf(a);
+    FrameRecord b;
+    WireReader rd(bytes.data(), bytes.size());
+    CHECK(readRecord(rd, b) && rd.left() == 0);
+    CHECK_EQ(b.draws().size(), size_t(2));
+    CHECK(!b.draws()[0].overAll && b.draws()[1].overAll);
+    CHECK(!b.draws()[1].sharpCopy && b.draws()[1].sharpArt == 0);  // its neighbours as they were
 }
 
 TEST(bridge_a_cells_own_colours_past_the_pixels_are_refused) {
@@ -241,10 +263,10 @@ TEST(bridge_a_big_block_appended_whole) {
 // message into the shared ring - its copies 14 %): the record put straight into room of its size, the same bytes
 TEST(bridge_a_record_put_in_place_is_the_same_bytes) {
     const FrameRecord busy = busyRecord();
-    CHECK_EQ(recordBytes(busy), size_t(12862));
+    CHECK_EQ(recordBytes(busy), size_t(12903));
     std::vector<uint8_t> room(recordBytes(busy));
     CHECK(putRecord(room.data(), busy) == room.data() + room.size());
-    CHECK_EQ(fnv(room), uint64_t(0x100f1efcbb93589eull));  // as written field by field (above)
+    CHECK_EQ(fnv(room), uint64_t(0x0b94666a180b0e94ull));  // as written field by field (above)
     const FrameRecord kinds[2] = {FrameRecord{}, sampleRecord()};
     for (const FrameRecord& r : kinds) {
         std::vector<uint8_t> in(recordBytes(r));

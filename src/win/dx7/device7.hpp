@@ -122,6 +122,9 @@ private:
     // 3.0.19-beta.18 (R-57KBSF): the 3D view's actors' sprites with their depth nearer (core view3d::spriteDepth)
     std::vector<uint8_t> upright_;
     bool uprightTold_ = false;
+    // 3.0.20-beta.78: the sprites the game keeps over everything, told to the renderer in the 3D view
+    bool overAllTold_ = false;
+    uint32_t overAllDraws_ = 0;
     // 2.7.37, diagnostics (the tester: «все умения, и даже когда кастуется что-то, какие-то очень яркие»): the skills'
     // draws made softer and the draws that add light of no effect known, told every 10 s
     uint32_t skillDraws_ = 0, plainAdds_ = 0;

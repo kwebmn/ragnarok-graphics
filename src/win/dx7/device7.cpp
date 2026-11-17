@@ -728,7 +728,10 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
                          w.vertices, w.primitive, w.colourMin, w.colourMax, w.srcBlend, w.dstBlend, w.texWidth,
                          w.texHeight);
             }
-            skillDraws_ = plainAdds_ = wideAdds_ = wideOvers_ = 0;
+            if (overAllDraws_)  // 3.0.20-beta.78
+                LOG_INFO("3D view: in 10 s %u draws of the sprites the game keeps over everything (damage numbers, "
+                         "Miss, the target's cursor) - whole at the camera", overAllDraws_);
+            skillDraws_ = plainAdds_ = wideAdds_ = wideOvers_ = overAllDraws_ = 0;
             widestAdd_ = widestOver_ = PlainAdd{};
             skillsTold_ = now;
         }
@@ -873,11 +876,27 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         win::groundmarks::draw(c.record, c.screenWidth, c.screenHeight);  // 3.0.11-beta.87: the target's ring
         win::threatarcwin::draw(c.record, c.screenWidth, c.screenHeight);  // 3.0.19-beta.36: the threat's arc
     }
+    // 3.0.20-beta.78 (R-SCCWB2 «кудато пропал урон», R-HZD6EP «нету цифр урона ... в 3д режиме, в 2д есть»): a sprite
+    // the game keeps over everything - a damage number, Miss, Critical, the target's cursor - is drawn at its near
+    // plane wherever it stands (core view3d::overAll), and [view3d] near_fade, which dissolves what is right at the
+    // camera, took every one of them away. Told to the renderer: left whole
+    if (!setup.ui && win::view3dwin::active() && view3d::overAll(vertices, vertexCount, FrameRecord::stride(fvf))) {
+        cmd.overAll = true;
+        ++overAllDraws_;
+        if (!overAllTold_) {
+            overAllTold_ = true;
+            float first[4];
+            std::memcpy(first, vertices, sizeof first);
+            LOG_INFO("3D view: a sprite the game keeps over everything (a damage number, Miss, the target's cursor) "
+                     "- drawn %.3f from the eye wherever it stands, at the game's near plane; left whole there "
+                     "([view3d] near_fade dissolves what is right at the camera)", 1.0f / first[3]);
+        }
+    }
     // 3.0.19-beta.18 (R-57KBSF «некоторые нпс утоплены в пол»): in the 3D view a character's, a monster's, an NPC's
     // sprite a few units nearer than its feet (core view3d::spriteDepth) - the game's own nearness, made for its far
     // camera, is a hundredth of a unit at the eye's distances and the ground in front of the feet covered them
     if (win::view3dwin::active() && fvf == d3d7::FVF_TL1 && vertexCount == 4 && !indices && !setup.ui &&
-        tag.kind == effect_exe::Kind::None && textures_[0]) {
+        tag.kind == effect_exe::Kind::None && textures_[0] && !cmd.overAll) {
         const auto* v = static_cast<const uint8_t*>(vertices);
         float u = 0.0f, w = 0.0f;
         for (DWORD i = 0; i < 4; ++i) {

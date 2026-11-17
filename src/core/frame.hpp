@@ -49,6 +49,9 @@ struct DrawCmd {
     // 3.0.20-beta.68: a skill's painted picture has a copy four times larger (win/sharp_specks, core/sharp_art) - the
     // copy's texture; texture[0] stays the game's own, whose AI picture of the player's pack is drawn before it; 0 none
     uint32_t sharpArt = 0;
+    // 3.0.20-beta.78: a sprite the game keeps over everything - a damage number, Miss, the target's cursor - drawn at
+    // its near plane wherever it stands (core view3d::overAll): [view3d] near_fade leaves it whole
+    bool overAll = false;
 };
 
 // AI textures (0.13): a cell of the game's sprite cache that got a new frame - the whole cell, the frame in its top

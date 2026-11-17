@@ -1732,7 +1732,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (aiDrawn[0] || d.sharpCopy || artDrawn) c.uiMode = 0;
     if (d.effect == uint8_t(effect_exe::Kind::Panel)) c.uiMode = 0;  // 3.0.3-beta.8: at the target's pixels
     // 3.0.20-beta.70 (the owner's pick 2 of the camera's options; shade()'s nearFade, gpu/draw.cpp)
-    if (effects_.nearFade3d && camera::wideView() && !s.ui) c.alphaTest |= 1u << 29;
+    if (view3d::nearFades(effects_.nearFade3d, camera::wideView(), s.ui, d.overAll)) c.alphaTest |= 1u << 29;
     if (twin) {  // the tile's first game pixel is the window's place plus the tile's (spec §6)
         float quad[4];
         uiPixels(rec, d, quad);
