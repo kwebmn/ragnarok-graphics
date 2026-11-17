@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "core/settings/auto_setup.hpp"
+#include "core/settings/catalogue.hpp"
 #include "core/settings/navigation.hpp"
 #include "core/settings/strings.hpp"
 
@@ -20,5 +21,12 @@ std::vector<HelpRow> helpRows(View v, Mode mode, const Machine& machine);
 
 // A view's one line of what it is for
 Text helpOf(View v);
+
+// 3.0.21-beta.6 (variant 4, step 4: the app holds what is set before the game starts, the rest lives in the game's
+// «Налаштування»): the main of an area of the game's window - its basic rows, each once, in the catalogue's order;
+// «Картинка» as the Effects page told it (the set, the clock, the groups). None for an area with nothing in the game
+std::vector<HelpRow> helpRowsInGame(catalogue::Area area, const Machine& machine);
+// An area's one line of what it is for; Text::Count - none
+Text helpOfArea(catalogue::Area area);
 
 }  // namespace uagfx::settings

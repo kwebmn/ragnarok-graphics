@@ -94,7 +94,9 @@ public:
                 regRows(p, [](const RegSetting& s) { return s.control == Control::Slider; });
                 p.gap();
                 p.heading(t(Text::GfxSoundOurs));  // 0.91: uaro-graphics.ini's [sound]
-                buildOutput(p);                    // 3.0.4-beta.1: first, the device it plays on
+                // 3.0.4-beta.1: first, the device it plays on (3.0.21-beta.6: when it is the app's - it moves at
+                // once, so it lives in the game's «Налаштування» and on «Головне»)
+                if (const IniSetting* output = findSetting("sound.output"); output && inApp(*output)) buildOutput(p);
                 buildRows(p);
                 break;
             case settings::Page::Game:
@@ -555,20 +557,33 @@ private:
 
     // A row of the part being built that the mode shows (2.6) and its values call for.
     // 2.15: and this computer can use (fitsMachine: DLSS on NVIDIA, HDR with an HDR screen)
+    // 3.0.21-beta.6 (the concept «Настройки uaRO Graphics», variant 4, step 4; the owner: «делай»): the app's pages
+    // hold what is set before the game starts (navigation inApp) - a row that applies at once lives in the game's
+    // «Налаштування»; the rows' levels in the modes' place - a basic row is shown, a detail behind its part's «Ще N
+    // налаштувань ›», the developers' in their mode (everything unfolded there)
     bool listed(const IniSetting& s) const {
-        return s.page == which_ && (levelOf(s) <= host_.mode() || (folds(s) && expanded().count(int(which_)))) &&
-               shown(s) && fitsMachine(sectionKey(s), host_.model().machine());
+        if (s.page != which_ || !inApp(s) || !shown(s) || !fitsMachine(sectionKey(s), host_.model().machine()))
+            return false;
+        if (host_.mode() == settings::Mode::Developer) return true;
+        const settings::Mode level = levelOf(s);
+        if (level == settings::Mode::Developer) return false;
+        return level == settings::Mode::Simple || expanded().count(int(which_)) != 0;
     }
 
-    // 3.0.17-beta.5 (the concept «простой старт»: the deep settings «не прятать, но не сразу на виду»): in the
-    // simple mode a part's detailed rows are behind its «Ще N налаштувань ›», opened for the app's run
+    // 3.0.17-beta.5 (the concept «простой старт»: the deep settings «не прятать, но не сразу на виду»): a part's
+    // detailed rows are behind its «Ще N налаштувань ›», opened for the app's run (3.0.21-beta.6: in the one mode)
     bool folds(const IniSetting& s) const {
-        return host_.mode() == settings::Mode::Simple && levelOf(s) == settings::Mode::Detailed;
+        return host_.mode() != settings::Mode::Developer && inApp(s) && levelOf(s) == settings::Mode::Detailed;
     }
     static std::set<int>& expanded() {
         static std::set<int> parts;
         return parts;
     }
+
+public:
+    static void openPart(int which) { expanded().insert(which); }  // 3.0.21-beta.6: the search's way to a folded row
+
+private:
     int foldedCount(const char* section) const {
         int n = 0;
         for (const IniSetting& s : iniSettings())
@@ -791,6 +806,8 @@ void runAutoSetup(PageHost& host) {
     host.message(wtr(l, Text::AutoPending), false);
     host.rebuild();  // the page shows the new values
 }
+
+void expandPart(settings::Page which) { SettingsPage::openPart(int(which)); }
 
 std::unique_ptr<Page> makeSettingsPage(PageHost& host, std::vector<settings::Page> left,
                                        std::vector<settings::Page> right) {

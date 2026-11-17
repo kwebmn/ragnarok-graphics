@@ -36,6 +36,21 @@ public:
             if (v == View::Effects) p.note(t(Text::HelpEffectsMore));
             if (!rows.empty()) p.note(rows, Tone::Normal);
         }
+        // 3.0.21-beta.6 (variant 4, step 4): what applies at once lives in the game's «Налаштування» (Alt+O) - the
+        // main of each of its sections told here too
+        p.gap();
+        p.heading(t(Text::MenuSettings) + L" \u2014 Alt+O");
+        p.note(t(Text::HelpInGame), Tone::Normal);
+        for (int a = 0; a < catalogue::kAreaCount; ++a) {
+            std::wstring rows;
+            for (const HelpRow& r : helpRowsInGame(catalogue::Area(a), host_.model().machine()))
+                rows += (rows.empty() ? L"• " : L"\n• ") + t(r.label) + (r.hint == r.label ? L"" : L" — " + t(r.hint));
+            if (rows.empty()) continue;
+            p.gap();
+            p.heading(t(catalogue::areaName(catalogue::Area(a))));
+            if (const Text what = helpOfArea(catalogue::Area(a)); what != Text::Count) p.note(t(what), Tone::Normal);
+            p.note(rows, Tone::Normal);
+        }
     }
 };
 

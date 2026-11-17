@@ -1,3 +1,4 @@
+#include "core/settings/catalogue.hpp"
 #include "core/settings/search.hpp"
 
 #include <algorithm>
@@ -174,7 +175,7 @@ bool settingMatches(const IniSetting& s, const std::string& query, Lang) {
 const std::vector<Action>& actions() {
     static const std::vector<Action> list{
         {Text::PadHeading, {View::Pad, 0}, Mode::Simple},
-        {Text::GameQualityHeading, {View::Graphics, 0}, Mode::Detailed},
+        {Text::GameQualityHeading, {View::Screen, 0}, Mode::Detailed},  // 3.0.21-beta.6: «Екран і рендер»
         {Text::ScreenShow, {View::Screen, 0}, Mode::Detailed},
         {Text::ScreenUi, {View::Screen, 0}, Mode::Detailed},
         {Text::AiGroupsHeading, {View::Ai, 1}, Mode::Detailed},
@@ -217,22 +218,28 @@ std::vector<Hit> findSettings(const std::string& query, Lang l, Mode m) {
     };
     std::vector<Ranked> found;
     // .301: the mode's own first, a match in the name before one in a hint alone, then the list's order
-    const auto add = [&](HitKind kind, size_t index, Place place, Mode level, bool named = true) {
+    const auto add = [&](HitKind kind, size_t index, Place place, Mode level, bool named = true,
+                         bool elsewhere = false) {
         const size_t at = size_t(std::find(list.begin(), list.end(), place.view) - list.begin());
+        // 3.0.21-beta.6: a match in a name first - the app's own rows, then those that live in the game -, then
+        // the matches in a hint alone the same way
         const size_t rank = (at < list.size() ? at : list.size() + size_t(place.view)) + (level > m ? 1000 : 0) +
-                            (named ? 0 : 500);
-        found.push_back({rank, {kind, index, place, std::max(level, m)}});
+                            (named ? 0 : 5000) + (elsewhere ? 2000 : 0);
+        found.push_back({rank, {kind, index, place, std::max(level, m), elsewhere}});
     };
     const std::vector<IniSetting>& rows = iniSettings();
     for (size_t i = 0; i < rows.size(); ++i) {
         const IniSetting& s = rows[i];
         if (levelOf(s) > most) continue;
+        // 3.0.21-beta.6: a row hidden behind a choice is the file's alone - not found
+        const catalogue::Row* cat = catalogue::find(sectionKey(s));
+        if (cat && catalogue::homeOf(*cat) == catalogue::Home::File) continue;
         std::string text = allWords(s);
         if (m == Mode::Developer) text += "\n" + sectionKey(s);  // the ini's own words too
         if (!queryMatches(text, query)) continue;
         const bool main = m == Mode::Simple && mainKey(sectionKey(s));
         add(HitKind::Ini, i, main ? Place{View::Main, 0} : placeOf(s), main ? Mode::Simple : levelOf(s),
-            queryMatches(allNames(s), query));
+            queryMatches(allNames(s), query), !main && !inApp(s));
     }
     {  // the game's own key: the Detailed mode's pages
         const std::vector<RegSetting>& reg = regSettings();

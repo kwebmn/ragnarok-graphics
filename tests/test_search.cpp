@@ -31,7 +31,7 @@ TEST(search_finds_effects_by_russian_label) {
     CHECK(hasRow(hits, "effects.torch"));
     for (const Hit& h : hits)
         if (h.kind == HitKind::Ini && sectionKey(iniSettings()[h.index]) == "effects.torch")
-            CHECK(h.place.view == View::Effects);
+            CHECK(h.elsewhere);  // 3.0.21-beta.6: it lives in the game's «Налаштування», not on a page of the app
 }
 
 TEST(search_hides_developer_rows) {
@@ -40,17 +40,16 @@ TEST(search_hides_developer_rows) {
     CHECK(hasRow(findSettings("shader_variants", Lang::En, Mode::Developer), "debug.shader_variants"));
 }
 
-TEST(search_simple_places_main_rows) {
-    const std::vector<Hit> hits = findSettings("DLSS", Lang::Ru, Mode::Simple);
+// 3.0.21-beta.6: one mode - a basic row and the details folded under it are found alike, on «Екран і рендер»; the
+// developers' rows not
+TEST(search_in_the_one_mode_finds_basic_rows_and_details) {
+    const std::vector<Hit> hits = findSettings("DLSS", Lang::Ru, Mode::Detailed);
     CHECK(hasRow(hits, "quality.dlss"));
-    // 3.0.11-beta.301: the Detailed mode's rows found too, after the mode's own and marked to switch the mode
     CHECK(hasRow(hits, "quality.dlss_model"));
-    bool other = false;
-    for (const Hit& h : hits) {
-        if (h.level == Mode::Simple) CHECK(!other && (h.place.view == View::Main || h.place.view == View::Effects));
-        other = other || h.level != Mode::Simple;
-    }
-    CHECK(other);
+    CHECK(!hasRow(hits, "quality.dlss_jitter"));
+    for (const Hit& h : hits)
+        if (h.kind == HitKind::Ini && sectionKey(iniSettings()[h.index]) == "quality.dlss")
+            CHECK(h.place.view == View::Screen && !h.elsewhere && h.level == Mode::Detailed);
 }
 
 // 3.0.11-beta.301 (the review: «травы» found 4 of «трава»'s 13, a Russian word nothing in the Ukrainian app, «шрифт»
@@ -81,7 +80,7 @@ TEST(search_finds_actions_and_game_rows) {
     CHECK(backups);
     bool fog = false;  // the game's own key: its fog, on the Quality page (now Graphics)
     for (const Hit& h : findSettings("туман", Lang::Ru, Mode::Detailed))
-        fog = fog || (h.kind == HitKind::Reg && h.place.view == View::Graphics);
+        fog = fog || (h.kind == HitKind::Reg && h.place.view == View::Screen);  // 3.0.21-beta.6: «Екран і рендер»
     CHECK(fog);
 }
 
@@ -97,7 +96,8 @@ TEST(search_keeps_the_lists_order) {
         if (at < lastView) ++runs;
         lastView = at;
     }
-    CHECK(runs <= 2);
+    // 3.0.21-beta.6: four runs at most - a name's matches (the app's rows, then the game's), a hint's (the same way)
+    CHECK(runs <= 4);
     CHECK(hits.size() <= 80);
 }
 
@@ -153,8 +153,49 @@ TEST(search_finds_the_models_by_our_renderer_switch) {
         for (const Hit& h : findSettings("моделі нашим", Lang::Uk, m))
             if (h.kind == HitKind::Ini && sectionKey(iniSettings()[h.index]) == "view3d.own_models") {
                 found = true;
-                CHECK(h.place.view == View::GameChat);
+                CHECK(h.elsewhere);  // 3.0.21-beta.6: in the game's «Налаштування»
             }
         CHECK(found);
     }
+}
+
+// 3.0.21-beta.6 (variant 4, step 4): the app's search finds the rows that live in the game too - changed right in
+// the results, each marked «elsewhere» for the line that says where it lives; the app's own rows come first; the
+// effects hidden behind «Вигляд умінь» are not found
+TEST(search_finds_what_lives_in_the_game_after_the_apps_own) {
+    const auto rowOf = [](const Hit& h) {
+        return h.kind == HitKind::Ini ? sectionKey(iniSettings()[h.index]) : std::string();
+    };
+    bool grass = false, dlss = false;
+    for (const Hit& h : findSettings("трава", Lang::Uk, Mode::Detailed))
+        if (rowOf(h) == "effects.grass") grass = h.elsewhere;
+    CHECK(grass);
+    for (const Hit& h : findSettings("dlss", Lang::Uk, Mode::Detailed))
+        if (rowOf(h) == "quality.dlss") dlss = !h.elsewhere && h.place.view == View::Screen;
+    CHECK(dlss);
+    // «звук»: the rows named so - the app's («Об'ємний звук») before the game's («Звук сповіщень») - and only then
+    // those whose hints alone say it
+    int app = -1, game = -1, n = 0;
+    for (const Hit& h : findSettings("звук", Lang::Uk, Mode::Detailed)) {
+        if (rowOf(h) == "sound.engine") app = n;
+        if (rowOf(h) == "notify.sound") game = n;
+        ++n;
+    }
+    CHECK(app >= 0 && game > app);
+    // a row named by the word comes before one that only tells of it in its hint, wherever they live
+    int named = -1, told = -1;
+    n = 0;
+    for (const Hit& h : findSettings("згладжування", Lang::Uk, Mode::Detailed)) {
+        if (rowOf(h) == "quality.msaa") named = n;  // «Згладжування країв (MSAA)», in the game
+        if (rowOf(h) == "quality.dlss") told = n;   // «NVIDIA DLSS», the app's: its hint says it
+        ++n;
+    }
+    CHECK(named >= 0 && (told < 0 || told > named));
+    for (const Hit& h : findSettings("маг", Lang::Uk, Mode::Detailed)) CHECK(rowOf(h) != "effects.mage_effects");
+    // a trial that applies at once is the console's: found in the developer's mode alone, elsewhere
+    CHECK(!hasRow(findSettings("крони", Lang::Uk, Mode::Detailed), "view3d.crown_volume"));
+    bool crown = false;
+    for (const Hit& h : findSettings("крони", Lang::Uk, Mode::Developer))
+        if (rowOf(h) == "view3d.crown_volume") crown = h.elsewhere;
+    CHECK(crown);
 }

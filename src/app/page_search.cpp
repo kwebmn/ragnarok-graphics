@@ -4,6 +4,7 @@
 #include "app/page.hpp"
 #include "app/setting_ids.hpp"
 #include "core/effect_groups.hpp"
+#include "core/settings/catalogue.hpp"
 #include "core/settings/effects_layout.hpp"
 #include "core/settings/game_settings.hpp"
 #include "core/settings/search.hpp"
@@ -65,10 +66,20 @@ public:
             const Hit& h = hits_[n];
             p.gap(8);
             if (!buildHit(p, h)) p.note(t(labelOf(h)), Tone::Normal);
-            if (h.level > host_.mode())  // 3.0.11-beta.301: a row of another mode - its button switches to it
-                p.note(tf(Text::SearchOtherMode, {utf8(t(modeName(h.level)))}), Tone::Normal);
-            p.buttons({{kGoFirst + int(n), whereOf(h)}});
+            where(p, n);
         }
+    }
+
+    // 3.0.21-beta.6 (variant 4, step 4): under a found row - the button to its page, or, for a row that lives in the
+    // game, where it is there («У грі: Alt+O → Картинка → Вода»)
+    void where(Panel& p, size_t n) {
+        const Hit& h = hits_[n];
+        if (h.elsewhere && h.kind == HitKind::Ini) {
+            const std::string place = gamePlace(iniSettings()[h.index], host_.lang());
+            if (!place.empty()) p.note(tf(Text::SearchInGame, {place}), Tone::Normal);
+            return;
+        }
+        p.buttons({{kGoFirst + int(n), whereOf(h)}});
     }
 
     // 3.0.17-beta.6 (the concept «простой старт»: «Нові можливості», «Лише змінені»): the rows new to the player, or
@@ -84,7 +95,9 @@ public:
             if (!fitsMachine(sectionKey(s), machine) || levelOf(s) == Mode::Developer) continue;
             const std::string rec = changed ? m.recommended(s) : "";
             if (fresh ? !m.isNew(sectionKey(s)) : rec.empty() || rec == m.token(s)) continue;
-            hits_.push_back(Hit{HitKind::Ini, i, placeOf(s), levelOf(s)});
+            const catalogue::Row* row = catalogue::find(sectionKey(s));
+            if (row && catalogue::homeOf(*row) == catalogue::Home::File) continue;  // 3.0.21-beta.6: the file's alone
+            hits_.push_back(Hit{HitKind::Ini, i, placeOf(s), levelOf(s), !inApp(s)});
         }
         const Text head = fresh ? Text::NewListHead : Text::ChangedListHead;
         p.heading(hits_.empty() ? t(fresh ? Text::NewListNone : Text::ChangedListNone)
@@ -94,7 +107,7 @@ public:
             const Hit& h = hits_[n];
             p.gap(8);
             if (!buildHit(p, h)) p.note(t(labelOf(h)), Tone::Normal);
-            p.buttons({{kGoFirst + int(n), whereOf(h)}});
+            where(p, n);
         }
         return true;
     }
@@ -102,8 +115,9 @@ public:
     void command(int id, int code) override {
         if (id >= kGoFirst && id < kGoFirst + int(hits_.size())) {
             const Hit& h = hits_[size_t(id - kGoFirst)];
-            if (code != BN_CLICKED) return;
-            if (h.level > host_.mode()) host_.switchMode(h.level);  // .301
+            if (code != BN_CLICKED || h.elsewhere) return;
+            // 3.0.21-beta.6: a detail folded behind «Ще N налаштувань ›» - its part opened on the way
+            if (h.kind == HitKind::Ini) expandPart(iniSettings()[h.index].page);
             host_.showView(h.place.view, h.place.tab);
             return;
         }

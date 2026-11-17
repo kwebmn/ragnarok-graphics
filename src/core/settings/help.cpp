@@ -109,7 +109,8 @@ std::vector<const IniSetting*> schemaRows(View v, Mode mode, const Machine& mach
     }
     for (const IniSetting& s : iniSettings()) {
         const std::string k = sectionKey(s);
-        if (levelOf(s) <= mode && fitsMachine(k, machine) && inView(s.page, v)) out.push_back(&s);
+        // 3.0.21-beta.6: the rows the app's pages list (what lives in the game is told apart: helpRowsInGame)
+        if (inApp(s) && levelOf(s) <= mode && fitsMachine(k, machine) && inView(s.page, v)) out.push_back(&s);
     }
     return out;
 }
@@ -139,6 +140,33 @@ std::vector<HelpRow> helpRows(View v, Mode mode, const Machine& machine) {
     for (const OwnRow& o : kOwnRows)  // those whose row is not shown: at the end too
         if (o.view == v && o.from <= mode) add(o.row);
     return out;
+}
+
+std::vector<HelpRow> helpRowsInGame(catalogue::Area area, const Machine& machine) {
+    std::vector<HelpRow> out;
+    const auto add = [&](const IniSetting* s) {
+        for (const HelpRow& x : out)
+            if (x.label == s->label) return;
+        out.push_back({s->label, s->hint});
+    };
+    if (area == catalogue::Area::Picture) {  // as the Effects page told it
+        for (const IniSetting* s : schemaRows(View::Effects, Mode::Detailed, machine)) add(s);
+        return out;
+    }
+    for (const catalogue::Group& g : catalogue::groups()) {
+        if (g.area != area) continue;
+        for (const catalogue::Row& r : g.rows) {
+            if (r.level != catalogue::Level::Basic || catalogue::homeOf(r) != catalogue::Home::Game) continue;
+            if (const IniSetting* s = findSetting(r.key); s && fitsMachine(r.key, machine)) add(s);
+        }
+    }
+    return out;
+}
+
+Text helpOfArea(catalogue::Area area) {
+    if (area == catalogue::Area::Picture) return Text::HelpViewEffects;
+    if (area == catalogue::Area::Interface) return Text::HelpViewInterface;
+    return Text::Count;
 }
 
 Text helpOf(View v) {

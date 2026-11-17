@@ -692,12 +692,12 @@ TEST(model_keeps_the_channel_through_a_reset) {
 }
 
 // 2.6: the modes, the window's place and the version whose notes were shown - the app's own keys of [utility].
-TEST(model_new_install_starts_simple) {
+TEST(model_new_install_starts_in_the_one_mode) {  // 3.0.21-beta.6: the modes gone - what «Докладний» was
     fake::Windows& w = fake::reset();
     fake::gameKey(w.registry.common, 1920, 1080, false);
     app::Model m;
     CHECK(!m.usedBefore());
-    CHECK(m.startMode() == Mode::Simple);
+    CHECK(m.startMode() == Mode::Detailed);
     CHECK(!m.savedPlace());
     CHECK(m.seenVersion().empty());
 }

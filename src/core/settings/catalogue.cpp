@@ -286,7 +286,8 @@ std::vector<Group> build() {
                          D("display.window_art"), trial("display.dpi_aware", "3.0.11-beta.292")}));
     out.push_back(group(Area::Speed, Text::PageRender,
                         {B("renderer.api"), B("renderer.gpu"), D("renderer.bridge"), D("renderer.safe_mode"),
-                         X("renderer.cross_present"), trial("renderer.remix", ""),
+                         // a laptop's two cards: set before the game is playable at all (R-T8FGMM: 5 frames a second)
+                         X("renderer.cross_present").start(), trial("renderer.remix", ""),
                          trial("renderer.render_thread", "2.5.12")}));
     // what our renderer draws in the game's place - in the top view too
     out.push_back(group(Area::Speed, Text::CatOwnWorld,
@@ -301,7 +302,9 @@ std::vector<Group> build() {
                         {B("interface.smooth_fixes"), trial("interface.predict_walk", "3.0.11-beta.130"),
                          B("connection.patient_entry"), D("connection.entry_pause", "connection.patient_entry")}));
     out.push_back(group(Area::Game, Text::PageService,
-                        {B("report.auto"), B("report.disconnects"), B("stats.send"), B("launcher.direct_start")}));
+                        // what is told the developers is agreed in the settings app (its first start asks)
+                        {B("report.auto"), B("report.disconnects").start(), B("stats.send").start(),
+                         B("launcher.direct_start")}));
     out.push_back(group(Area::Game, Text::CatClientFiles,
                         {B("client.updates"), D("client.cps"), D("client.bink"), D("client.ijl"), D("client.mss"),
                          D("client.roext")}));

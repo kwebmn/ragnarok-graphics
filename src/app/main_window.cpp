@@ -582,7 +582,8 @@ void MainWindow::resetView() {
     if (!ask(wtr(lang_, Text::ResetPageAsk))) return;
     for (const settings::IniSetting& s : iniSettings()) {
         const settings::Place at = placeOf(s);
-        if (at.view != shown_ || at.tab != tab_ || levelOf(s) > mode()) continue;
+        // 3.0.21-beta.6: the rows the page holds - not those of its old pages that live in the game now
+        if (at.view != shown_ || at.tab != tab_ || levelOf(s) > mode() || !inApp(s)) continue;
         const std::string want = model_->recommended(s);
         if (!want.empty() && want != model_->token(s)) model_->setToken(s, want);
     }
@@ -694,7 +695,12 @@ std::unique_ptr<Page> MainWindow::makeView() {
         case settings::View::Help: return makeHelpPage(*this);  // 3.0.2-beta.6: «Довідка»
         case settings::View::Graphics:
             return makeSettingsPage(*this, {P::Render, P::Quality}, {P::Smoothing, P::Frames});
-        case settings::View::Screen: return makeScreenPage(*this);
+        case settings::View::Screen: {  // 3.0.21-beta.6: «Екран і рендер» - the screen, then what draws the game
+            std::vector<std::unique_ptr<Page>> parts;
+            parts.push_back(makeScreenPage(*this));
+            parts.push_back(makeSettingsPage(*this, {P::Render, P::Quality}, {P::Smoothing, P::Frames}));
+            return makePartsPage(*this, std::move(parts));
+        }
         case settings::View::Effects: return makeEffectsPage(*this);
         case settings::View::Ai:
             if (tab_ == 2) return makePackPage(*this);
@@ -1100,7 +1106,8 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                     buildPage();
                 }
             } else if (id >= kModeFirst && id < kModeFirst + kModeCount && code == BN_CLICKED) {
-                setMode(Mode(id - kModeFirst));
+                // 3.0.21-beta.6: the developer's button alone is shown - a press switches it on and off
+                setMode(mode_ == Mode::Developer ? Mode::Detailed : Mode::Developer);
             } else if (id == kSearch && code == EN_CHANGE) {
                 SetTimer(hwnd_, kSearchTimer, 250, nullptr);
             } else if (id == kResetView && code == BN_CLICKED) {
@@ -1148,8 +1155,10 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 showLauncher(true);  // 3.0.18-beta.200 (the owner): «Закрити» closes the settings, not the launcher
             } else if (id == IDOK && GetFocus() == search_) {  // 2.6: Enter in the search - the first one's page
                 const auto hits = findSettings(utf8(searchText()), lang_, mode_);
-                if (!hits.empty()) {
-                    if (hits.front().level > mode_) setMode(hits.front().level);  // 3.0.11-beta.301
+                // 3.0.21-beta.6: a row that lives in the game has no page here - it is changed in the results
+                if (!hits.empty() && !hits.front().elsewhere) {
+                    if (hits.front().kind == settings::HitKind::Ini)
+                        expandPart(settings::iniSettings()[hits.front().index].page);
                     showView(hits.front().place.view, hits.front().place.tab);
                 }
             } else if (id == IDCANCEL && GetFocus() == search_ && GetWindowTextLengthW(search_) > 0) {
@@ -1442,8 +1451,10 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
 
 // --- 3.0.18-beta.193: the launcher (app/launcher_view, docs/superpowers/specs/2026-11-12-launcher-design.md) ---
 
+// 3.0.21-beta.6 (variant 4, step 4): no modes to choose - one for every player; the developer's button alone, while
+// it is the mode or after Ctrl+Shift+D
 bool MainWindow::modeShown(int i) const {
-    return Mode(i) != Mode::Developer || mode_ == Mode::Developer || developerShown_;
+    return Mode(i) == Mode::Developer && (mode_ == Mode::Developer || developerShown_);
 }
 
 // The settings' own controls shown or hidden as a whole: the launcher covers the client while it is in front

@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cstring>
 
+#include "core/live_config.hpp"
 #include "core/settings/catalogue.hpp"
 
 namespace uagfx::settings {
@@ -14,14 +15,6 @@ const char* const kMainKeys[] = {"quality.super_light", "quality.dlss",   "frame
                                  "frames.fps_limit",    "frames.vsync",   "display.hdr",
                                  "sound.engine",        "frames.battery_saver", "ai.enabled",
                                  "sound.output"};  // 3.0.4-beta.1
-
-// The switches for checks and reports - besides every key of [debug].
-const char* const kDeveloperKeys[] = {"renderer.render_thread", "renderer.remix",
-                                      "roext.window_x", "roext.window_y"};  // 3.0.1-beta.8: ROExt's own place
-
-bool effectsSimple(const std::string& k) {  // the effects' set and its groups (Simple mode's Effects page)
-    return k == "effects.preset" || k.compare(0, 14, "effects.group_") == 0;
-}
 
 }  // namespace
 
@@ -51,16 +44,15 @@ Text modeName(Mode m) {
     return Text::ModeDeveloper;
 }
 
-Mode startMode(std::optional<Mode> saved, bool usedBefore) {
-    if (saved) return *saved;
-    return usedBefore ? Mode::Detailed : Mode::Simple;
+Mode startMode(std::optional<Mode> saved, bool) {
+    return saved && *saved == Mode::Developer ? Mode::Developer : Mode::Detailed;  // 3.0.21-beta.6: one mode
 }
 
 Text viewName(View v) {
     switch (v) {
         case View::Main: return Text::ViewMain;
         case View::Graphics: return Text::ViewGraphics;
-        case View::Screen: return Text::PageScreen;
+        case View::Screen: return Text::ViewScreenRender;  // 3.0.21-beta.6: with «Графіка»'s rows
         case View::Effects: return Text::PageEffects;
         case View::Ai: return Text::PageAi;
         case View::Sound: return Text::PageSound;
@@ -79,8 +71,10 @@ std::vector<View> viewsOf(Mode m) {
     // 3.0.17-beta.5 (the concept «простой старт»): every page in the simple mode too - its detailed rows folded
     // behind «Ще N налаштувань ›» (page_settings), not hidden with their pages. 3.0.18-beta.193: «Гра» out - the
     // launcher is the app's first screen, the settings behind its gear
-    std::vector<View> list{View::Main,  View::Graphics, View::Screen,    View::Effects, View::Ai,     View::Sound,
-                           View::Pad,   View::GameChat, View::Interface, View::Service, View::Help};
+    // 3.0.21-beta.6 (variant 4, step 4): what is set before the game starts - «Ефекти» and «Інтерфейс» live in
+    // the game's «Налаштування» (Alt+O), «Графіка»'s rows that wait for a start are «Екран і рендер»'s
+    std::vector<View> list{View::Main, View::Screen,   View::Ai,      View::Sound,
+                           View::Pad,  View::GameChat, View::Service, View::Help};
     if (m == Mode::Developer) list.push_back(View::Debug);
     return list;
 }
@@ -103,8 +97,8 @@ Text tabName(View v, int tab) {
 std::vector<Page> partsOf(View v, int tab) {
     switch (v) {
         case View::Main: return {};
-        case View::Graphics: return {Page::Render, Page::Quality, Page::Smoothing, Page::Frames};
-        case View::Screen: return {Page::Screen};
+        case View::Graphics: return {};  // 3.0.21-beta.6: no entry of the list - its pages are «Екран і рендер»'s
+        case View::Screen: return {Page::Screen, Page::Render, Page::Quality, Page::Smoothing, Page::Frames};
         case View::Effects: return {Page::Effects};
         case View::Ai: return {tab == 2 ? Page::Pack : tab == 3 ? Page::AiCache : Page::Ai};
         case View::Sound: return {Page::Sound};
@@ -124,7 +118,7 @@ Place placeOf(Page p) {
         case Page::Render:
         case Page::Quality:
         case Page::Smoothing:
-        case Page::Frames: return {View::Graphics, 0};
+        case Page::Frames:
         case Page::Screen: return {View::Screen, 0};
         case Page::Effects: return {View::Effects, 0};
         case Page::Ai: return {View::Ai, 0};
@@ -158,13 +152,35 @@ bool mainKey(const std::string& sectionKey) {
 }
 
 Mode levelOf(const IniSetting& s) {
-    const std::string k = sectionKey(s);
-    // 3.0.11-beta.3: the new interface's switches in every mode (its own item is in the simple list too)
-    if (mainKey(k) || effectsSimple(k) || k.compare(0, 10, "interface.") == 0) return Mode::Simple;
-    if (s.page == Page::Debug || std::strcmp(s.section, "debug") == 0) return Mode::Developer;
-    for (const char* d : kDeveloperKeys)
-        if (k == d) return Mode::Developer;
-    return Mode::Detailed;
+    // 3.0.21-beta.6: from the catalogue - a trial or a diagnostic is the developers', a basic row is shown, a detail
+    // or the technique folds
+    const catalogue::Row* r = catalogue::find(sectionKey(s));
+    if (!r) return Mode::Detailed;
+    if (r->status != catalogue::Status::Permanent) return Mode::Developer;
+    return r->level == catalogue::Level::Basic ? Mode::Simple : Mode::Detailed;
+}
+
+bool inApp(const IniSetting& s) {
+    const catalogue::Row* r = catalogue::find(sectionKey(s));
+    if (!r) return false;
+    const catalogue::Home home = catalogue::homeOf(*r);
+    if (home == catalogue::Home::Start) return true;
+    return home == catalogue::Home::Lab && (!appliesNow(r->key) || s.page == Page::Debug);
+}
+
+std::string gamePlace(const IniSetting& s, Lang l) {
+    const std::string key = sectionKey(s);
+    const catalogue::Row* r = catalogue::find(key);
+    const catalogue::Group* g = catalogue::groupOf(key);
+    if (!r || !g || inApp(s)) return {};
+    const catalogue::Home home = catalogue::homeOf(*r);
+    const std::string to = " \xE2\x86\x92 ";
+    if (home == catalogue::Home::Game)
+        return "Alt+O" + to + tr(l, catalogue::areaName(g->area)) + to + tr(l, g->name);
+    if (home == catalogue::Home::Lab)
+        return "Ctrl+~" + to +
+               tr(l, r->status == catalogue::Status::Trial ? Text::ConsoleTabTrials : Text::PageDiagnostics);
+    return {};
 }
 
 bool fitsMachine(const std::string& k, const Machine& m) {
@@ -236,8 +252,8 @@ const std::vector<const char*>& padInterfaceKeys() {
     return list;
 }
 
-bool resettable(View v, int tab) {
-    return v == View::Graphics || v == View::Effects || v == View::Sound || (v == View::Ai && tab < 2);
+bool resettable(View v, int tab) {  // 3.0.21-beta.6: «Екран і рендер» holds «Графіка»'s rows
+    return v == View::Screen || v == View::Sound || (v == View::Ai && tab < 2);
 }
 
 }  // namespace uagfx::settings

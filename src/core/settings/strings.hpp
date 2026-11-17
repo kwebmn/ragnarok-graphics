@@ -1034,6 +1034,8 @@ enum class Text : uint16_t {
     WhyDirect3D12, WhyView3d, WhyNeeds, WhyNextMap,
     // 3.0.21-beta.5 (R-KQRYFF): the login card - the login typed plays in another game window
     LoginHintBusy,
+    // 3.0.21-beta.6 (variant 4, step 4): the settings app holds what is set before the game starts
+    ViewScreenRender, SearchInGame, HelpInGame,
     Count
 };
 

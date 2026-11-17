@@ -3736,8 +3736,10 @@ constexpr Entry kTexts[] = {
     {Text::ConsoleNewNote, "New since you looked - try them here", "Нове відтоді, як ви дивилися, - спробуйте тут",
      "Новое с тех пор, как вы смотрели, - попробуйте здесь"},
     {Text::MainIntro,
-     "What a game needs. Everything else is in the Detailed mode.", "Головне для гри. Усе інше - у докладному режимі.",
-     "Главное для игры. Всё остальное - в подробном режиме."},
+     "What a game needs first. The rest set before a start is on the pages; what applies at once - in the game, Alt+O.",
+     "Головне для гри. Решта, що робиться до запуску, — на сторінках ліворуч; те, що діє одразу, — у грі: Alt+O.",
+     "Главное для игры. Остальное, что делается до запуска, — на страницах слева; то, что действует сразу, — в "
+     "игре: Alt+O."},
     {Text::MainPicture, "Picture", "Картинка", "Картинка"},
     {Text::MainQualityLow, "Low", "Низька", "Низкое"},
     {Text::MainQualityMedium, "Medium", "Середня", "Среднее"},
@@ -3782,11 +3784,12 @@ constexpr Entry kTexts[] = {
     {Text::SearchMany, "Only the first {1} are shown: add a word.", "Показано лише перші {1}: додайте слово.",
      "Показаны только первые {1}: добавьте слово."},
     {Text::SearchHow,
-     "Change them right here; the button under each opens its page. Enter opens the first one's page, Esc goes back.",
-     "Змінюйте прямо тут; кнопка під кожним відкриває його сторінку. Enter відкриває сторінку першого, Esc повертає "
-     "назад.",
-     "Меняйте прямо здесь; кнопка под каждым открывает его страницу. Enter открывает страницу первого, Esc "
-     "возвращает назад."},
+     "Change them right here; the button under each opens its page, and a row that lives in the game says where. "
+     "Enter opens the first one's page, Esc goes back.",
+     "Змінюйте прямо тут; кнопка під рядком відкриває його сторінку, а рядок, що живе у грі, каже де. Enter "
+     "відкриває сторінку першого, Esc повертає назад.",
+     "Меняйте прямо здесь; кнопка под строкой открывает её страницу, а строка, которая живёт в игре, говорит где. "
+     "Enter открывает страницу первой, Esc возвращает назад."},
     {Text::SearchOtherMode, "In the {1} mode: its button switches the app to it",
      "У режимі {1}: кнопка перемкне застосунок у нього", "В режиме {1}: кнопка переключит приложение в него"},
     // 3.0.11-beta.302: «Інтерфейс» in sections
@@ -4765,9 +4768,9 @@ constexpr Entry kTexts[] = {
      "Повний екран чи вікно, розмір вікна й інтерфейсу.",
      "Полный экран или окно, размер окна и интерфейса."},
     {Text::HelpViewEffects,
-     "The world's effects - light, weather, water, grass, sky - in groups, each its own switch; in the game, Ctrl+~.",
-     "Ефекти світу — світло, погода, вода, трава, небо — групами, у кожного свій вимикач; у грі — Ctrl+~.",
-     "Эффекты мира — свет, погода, вода, трава, небо — группами, у каждого свой выключатель; в игре — Ctrl+~."},
+     "The world's effects - light, weather, water, grass, sky - in groups, each its own switch; in the game, Alt+O.",
+     "Ефекти світу — світло, погода, вода, трава, небо — групами, у кожного свій вимикач; у грі — Alt+O.",
+     "Эффекты мира — свет, погода, вода, трава, небо — группами, у каждого свой выключатель; в игре — Alt+O."},
     {Text::HelpViewAi,
      "The AI textures: the game's textures made sharper by neural networks - what to improve, the models, the pack.",
      "ШІ-текстури: текстури гри, зроблені чіткішими нейромережами, — що покращувати, моделі, пакет.",
@@ -9251,6 +9254,15 @@ constexpr Entry kTexts[] = {
     {Text::LoginHintBusy, "Plays in game window {1}: a login here disconnects it there",
      "Грає у вікні гри {1}: вхід тут від'єднає його там",
      "Играет в окне игры {1}: вход здесь отключит его там"},  // 3.0.21-beta.5
+    {Text::ViewScreenRender, "Screen and renderer", "Екран і рендер", "Экран и рендер"},  // 3.0.21-beta.6
+    {Text::SearchInGame, "In the game: {1}", "У грі: {1}", "В игре: {1}"},
+    {Text::HelpInGame,
+     "What applies at once is set in the game, not here: Alt+O opens «Settings» with everything by sections, each "
+     "with a search; the trials and the diagnostics are in the console (Ctrl+~). Below, the main of each section.",
+     "Те, що діє одразу, налаштовується у грі, а не тут: Alt+O відкриває «Налаштування» з усім за розділами й "
+     "пошуком; проби й діагностика — у консолі (Ctrl+~). Нижче — головне з кожного розділу.",
+     "То, что действует сразу, настраивается в игре, а не здесь: Alt+O открывает «Настройки» со всем по разделам и "
+     "поиском; пробы и диагностика — в консоли (Ctrl+~). Ниже — главное из каждого раздела."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

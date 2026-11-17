@@ -12,14 +12,18 @@ namespace uagfx::settings {
 
 // 2.6: the settings app's modes - each shows its own list of pages and the rows of its level and below; the rows it
 // hides keep their values and their keys in the ini.
+// 3.0.21-beta.6 (the concept «Настройки uaRO Graphics», variant 4, step 4; the owner: «делай»): one mode for every
+// player - Detailed (every page's own parts shown); the rows by their levels in its place: a row of the Simple level
+// (the catalogue's basic) is shown, one of the Detailed level (a detail, the technique) folds behind «Ще N
+// налаштувань ›», the Developer's (a trial, a diagnostic) show in the developer's mode alone (Ctrl+Shift+D).
 enum class Mode : uint8_t { Simple, Detailed, Developer };
 constexpr int kModeCount = 3;
 
 const char* modeToken(Mode m);  // [utility] mode: "simple", "detailed", "developer"
 std::optional<Mode> parseMode(const std::string& token);  // any case
 Text modeName(Mode m);
-// The mode the app opens in: the one chosen in it, else Simple for a new install and Detailed for one the app ran in
-// before (it holds the language or the statistics' answer).
+// The mode the app opens in: the developer's when it was chosen, else the one mode there is (3.0.21-beta.6: a
+// file's «simple» of before too)
 Mode startMode(std::optional<Mode> saved, bool usedBefore);
 
 // 2.6: an entry of the list on the left - one or more of the old pages (Page), Main a page of its own made of rows of
@@ -45,8 +49,15 @@ struct Place {
 Place placeOf(Page p);  // where an old page is now (the AI page's "Make again" opens the pack's tab)
 Place placeOf(const IniSetting& s);  // its page's, the AI models' on the tab of the models
 
-// The lowest mode that shows a row of uaro-graphics.ini's schema.
+// A row's level as the app's pages take it (3.0.21-beta.6: from the catalogue - see Mode).
 Mode levelOf(const IniSetting& s);
+// 3.0.21-beta.6: a row the app's pages list - it waits for the game's start (catalogue::Home::Start), or it is the
+// developers' and waits for a start or is their own page's. A row that applies at once lives in the game's
+// «Налаштування» (Alt+O), a trial or a diagnostic that applies at once in the console.
+bool inApp(const IniSetting& s);
+// Where a row that is not the app's lives: «Alt+O → Картинка → Вода», «Ctrl+~ → Проби», «Ctrl+~ → Діагностика»; "" for
+// a row of the app's own or of the file alone
+std::string gamePlace(const IniSetting& s, Lang l);
 bool mainKey(const std::string& sectionKey);  // a row the Main page shows (the Simple ones but the effects')
         // the rows of the Simple level
      // the rows of the Developer level

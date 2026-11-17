@@ -29,6 +29,9 @@ struct Hit {
     size_t index;  // into iniSettings(), regSettings() or actions()
     Place place;
     Mode level = Mode::Simple;  // .301: the mode that shows it (found from a simpler one too)
+    // 3.0.21-beta.6: a row that is not on a page of the app - it lives in the game's «Налаштування» or in the console
+    // (navigation gamePlace says where); changed in the results all the same
+    bool elsewhere = false;
 };
 
 // A button or a part of a page worth finding by its name (making the pack, the backups, the gamepad...).
