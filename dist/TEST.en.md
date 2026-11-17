@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.22-beta.1 — what's new · 2026-11-17
+
+The exchange with the server on one line with the ping.
+
+- **One plate under the minimap now:** «● 40 ms ↓2.1 ↑0.3 KB/s» and the graph at its right, as wide as the minimap. Received (↓) in blue, sent (↑) in violet, «KB/s» in grey.
+- As before, it goes on and off with the ping: Alt+O → «Interface» → «Minimap» → «Ping on the minimap».
+
 # uaRO Graphics 3.0.21 — what's new · 2026-11-17
 
 The settings in order: everything that applies at once is in the «Settings» window (Alt+O), the console is the laboratory, and the settings app holds what is set before the game starts. Also the 3D view's buttons and key hints, the exchange with the server beside the ping, and fixes.
