@@ -162,6 +162,9 @@ bool FileTextureDatabase::ReleaseTexture(RenderInterface* render_interface, cons
 		return true;
 	}
 
+	// uaRO Graphics 3.0.21-beta.14 (R-DP7PVN): a failed load cleared too - a picture's source named again
+	// (core/ui_sources) loads again when it is next needed, not never
+	texture = {};
 	return false;
 }
 

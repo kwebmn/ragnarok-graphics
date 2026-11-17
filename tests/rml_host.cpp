@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cstdio>
 #include <map>
+#include <set>
 #include <vector>
 #include <cstring>
 
@@ -15,6 +16,8 @@ namespace {
 
 std::string g_log;
 Work g_work;  // 3.0.21-beta.8: what the frame under way cost
+std::map<std::string, int> g_loads;  // 3.0.21-beta.14: the textures' loads by source
+std::set<std::string> g_failing;     // and the sources whose loads fail
 
 class System final : public Rml::SystemInterface {
 public:
@@ -60,7 +63,12 @@ public:
         placed_[g] = Placed{t.x, t.y, cut_, by_};
     }
     void ReleaseGeometry(Rml::CompiledGeometryHandle g) override { placed_.erase(g); }
-    Rml::TextureHandle LoadTexture(Rml::Vector2i& dimensions, const Rml::String&) override {
+    Rml::TextureHandle LoadTexture(Rml::Vector2i& dimensions, const Rml::String& source) override {
+        ++g_loads[source];  // 3.0.21-beta.14: each source's loads counted, the failing ones refused
+        if (g_failing.count(source)) {
+            dimensions = {0, 0};
+            return 0;
+        }
         dimensions = {32, 32};
         return 1;
     }
@@ -203,6 +211,12 @@ Work frame() {
     }
     context()->Render();
     return g_work;
+}
+
+void failTextures(const std::set<std::string>& sources) { g_failing = sources; }
+int textureLoads(const std::string& source) {
+    const auto it = g_loads.find(source);
+    return it == g_loads.end() ? 0 : it->second;
 }
 
 void close(Rml::ElementDocument* doc) {

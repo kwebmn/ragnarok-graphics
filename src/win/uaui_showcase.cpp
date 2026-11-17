@@ -1,6 +1,7 @@
 #include "win/uaui_showcase.hpp"
 
 #include <cstdio>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -53,6 +54,7 @@ const char* kDemo = R"(<rml><head><link type="text/template" href="uaui:window.r
 struct State {
     uaui::Doc doc;
     std::vector<ItemView> items;
+    std::map<const panel::Picture*, std::string> iconPrev;  // 3.0.21-beta.14: each icon's source (uaui::picture)
     std::vector<Rml::String> lines;
     float hp = 0;
     Rml::String name, pick = "standard", size = "small";  // 3.0.18-beta.59: «Форма»
@@ -106,9 +108,9 @@ void frame(bool on) {
         std::vector<ItemView> items;
         for (const auto& it : itemswin::lastBag()) {
             if (items.size() >= 60) break;
-            char src[32];
-            std::snprintf(src, sizeof src, "icon:%llx", (unsigned long long)uintptr_t(it.icon));
-            items.push_back({it.icon ? src : "", it.count});
+            // 3.0.21-beta.14 (R-DP7PVN): named as every picture is - an «icon:<address>» source loads no more
+            items.push_back({it.icon ? uaui::picture(it.icon, uaui::stamp(it.icon), s.iconPrev[it.icon]) : "",
+                             it.count});
         }
         bool same = items.size() == s.items.size();
         for (size_t i = 0; same && i < items.size(); ++i)

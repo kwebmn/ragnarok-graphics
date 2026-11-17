@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cctype>
+#include <memory>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -24,6 +25,7 @@
 #include "core/uaui_mesh.hpp"
 #include "core/ui_icons.hpp"
 #include "core/ui_scene.hpp"
+#include "core/ui_sources.hpp"
 #include "core/ui_theme.hpp"
 #include "core/ui_theme_css.hpp"
 #include "core/ui_motion.hpp"
@@ -111,8 +113,10 @@ struct Stats {
 struct Texture {
     int w = 0, h = 0;
     std::vector<uint32_t> px;
+    std::shared_ptr<const std::vector<uint32_t>> shared;  // 3.0.21-beta.14: a named picture's copy (core/ui_sources)
     uint32_t id = 0;  // the renderer's
     bool upload = true;
+    const uint32_t* pixels() const { return shared ? shared->data() : px.data(); }
 };
 
 struct Batch {
@@ -153,6 +157,9 @@ struct State {
     std::unordered_map<uintptr_t, ::uagfx::uaui::Meshed> meshed;
     uintptr_t nextGeometry = 1, nextTexture = 16;
     std::unordered_map<uintptr_t, Texture> textures;
+    // 3.0.21-beta.14 (R-DP7PVN): the pictures named for RmlUi (picture()), each source with its copy - LoadTexture
+    // reads the copy, never the address in the source
+    ::uagfx::uisources::Sources named;
     std::vector<uint32_t> released;
     std::vector<Batch> batches;
     // 3.0.18-beta.27: the windows' documents (z-index 10) after the parts' (auto) - the batches from `split` on
@@ -394,21 +401,24 @@ public:
     }
     Rml::TextureHandle LoadTexture(Rml::Vector2i& dimensions, const Rml::String& source) override {
         State& s = state();
-        // 3.0.18-beta.9: a picture the driver keeps (an icon of client_tables, a portrait), as it is -
-        // «pic:<address>:<generation>» (uaui::picture), «icon:<address>»
+        // 3.0.18-beta.9: a picture the driver keeps (an icon of client_tables, a portrait) - «pic:<address>:
+        // <generation>» (uaui::picture). 3.0.21-beta.14 (R-DP7PVN: RmlUi loads a source frames after it was named -
+        // the address read back was a picture gone by then, its garbage size a std::bad_alloc that ended the game):
+        // the copy kept for the source when it was named (core/ui_sources); a source not kept does not load
         if (source.rfind("icon:", 0) == 0 || source.rfind("pic:", 0) == 0) {
-            const char* at = source.c_str() + (source[0] == 'i' ? 5 : 4);
-            const auto* pic = reinterpret_cast<const panel::Picture*>(uintptr_t(std::strtoull(at, nullptr, 16)));
-            if (pic && pic->width > 0 && pic->height > 0 && pic->px.size() >= size_t(pic->width) * pic->height) {
+            const ::uagfx::uisources::Kept* k = s.named.find(source);
+            if (k && k->px) {
                 Texture t;
-                t.w = pic->width;
-                t.h = pic->height;
-                t.px.assign(pic->px.begin(), pic->px.begin() + ptrdiff_t(size_t(t.w) * t.h));
+                t.w = k->width;
+                t.h = k->height;
+                t.shared = k->px;
                 dimensions = {t.w, t.h};
                 const uintptr_t h = s.nextTexture++;
                 s.textures.emplace(h, std::move(t));
                 return Rml::TextureHandle(h);
             }
+            dimensions = {0, 0};
+            return 0;
         }
         if (s.logged < 20) {
             ++s.logged;
@@ -1595,17 +1605,14 @@ bool readyAnywhere() {
 float dp() { return uistyle::partScale(state().k); }
 
 std::string picture(const panel::Picture* p, int generation, std::string& previous) {
-    if (!p) {
-        if (!previous.empty()) Rml::ReleaseTexture(previous), previous.clear();
-        return {};
-    }
-    char src[48];
-    std::snprintf(src, sizeof src, "pic:%llx:%d", (unsigned long long)uintptr_t(p), generation);
-    if (previous != src) {
-        if (!previous.empty()) Rml::ReleaseTexture(previous);
-        previous = src;
-    }
-    return previous;
+    // 3.0.21-beta.14 (R-DP7PVN): the source kept with a copy of the picture as it is now (core/ui_sources); RmlUi
+    // lets a texture go when no place shows its source (it used to at any place's change - one shown by another
+    // place loaded again from the address), and forgets a failed load of a source named anew
+    static std::vector<std::string> release;
+    release.clear();
+    std::string src = state().named.name(p, generation, previous, release);
+    for (const std::string& r : release) Rml::ReleaseTexture(r);
+    return src;
 }
 
 int stamp(const panel::Picture* p) {
@@ -2088,7 +2095,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
             if (t != s.textures.end()) {
                 if (!t->second.id) t->second.id = renderer.createTexture(t->second.w, t->second.h, 1);
                 if (t->second.id && t->second.upload) {
-                    record.upload(t->second.id, 0, Rect{0, 0, t->second.w, t->second.h}, t->second.px.data());
+                    record.upload(t->second.id, 0, Rect{0, 0, t->second.w, t->second.h}, t->second.pixels());
                     t->second.upload = false;
                 }
                 texture = t->second.id;

@@ -4,12 +4,18 @@
 
 #include <dbghelp.h>
 
+#include <cstdlib>
+#include <exception>
+#include <string>
+
+#include "core/exception_words.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win {
 namespace {
 
 LPTOP_LEVEL_EXCEPTION_FILTER g_previous = nullptr;
+std::terminate_handler g_previousTerminate = nullptr;
 char g_dump[MAX_PATH] = {};
 volatile bool g_crashDumped = false;  // 3.0.18-beta.145: a crash's dump written this run
 LONG g_once = 0;
@@ -65,6 +71,22 @@ LONG WINAPI onCrash(EXCEPTION_POINTERS* e) {
     return g_previous ? g_previous(e) : EXCEPTION_CONTINUE_SEARCH;
 }
 
+// 3.0.21-beta.14 (R-DP7PVN: a game ended a second after a picture's load and its log said nothing - no exception
+// for onCrash, its DLLs told of the exit): a C++ exception out of the driver's code meets the game's own frames, which
+// have no unwinding for it, and std::terminate ends the game (msvcrt's abort: «Runtime Error!», exit code 3). Now the
+// log says what left and a dump is written; the end is as before.
+[[noreturn]] void onTerminate() {
+    static LONG once = 0;
+    if (InterlockedExchange(&once, 1) == 0) {
+        const std::string what = exceptionWords(std::current_exception());
+        LOG_ERROR("crash: a C++ exception left the driver's code - %s (thread %lu); the game ends", what.c_str(),
+                  GetCurrentThreadId());
+        if (writeHangDump()) LOG_ERROR("crash: a minidump is in %s", g_dump);
+    }
+    if (g_previousTerminate) g_previousTerminate();
+    std::abort();
+}
+
 }  // namespace
 
 bool writeHangDump() {
@@ -92,6 +114,7 @@ void installCrashHandler(const std::string& gameDir, const char* dumpName) {
     CreateDirectoryA(folder.c_str(), nullptr);
     lstrcpynA(g_dump, (folder + "\\" + dumpName).c_str(), MAX_PATH);
     g_previous = SetUnhandledExceptionFilter(onCrash);
+    g_previousTerminate = std::set_terminate(onTerminate);  // 3.0.21-beta.14
 }
 
 }  // namespace uagfx::win

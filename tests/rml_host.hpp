@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <set>
 #include <string>
 
 #include <RmlUi/Core.h>
@@ -22,6 +23,9 @@ struct Work {
     int measured = 0;  // 3.0.21-beta.9: words measured - a layout of the document measures them again
 };
 Work frame();
+// 3.0.21-beta.14: the textures' loads asked by RmlUi, by source; the sources whose loads fail (none by default)
+void failTextures(const std::set<std::string>& sources);
+int textureLoads(const std::string& source);
 void close(Rml::ElementDocument* doc);
 const std::string& log();  // RmlUi's warnings and errors since the start
 
