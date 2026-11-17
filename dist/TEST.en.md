@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.85 — what's new · 2026-11-17
+
+- **3D view: names and the words over heads in their places (R-H3S9MY).** The game places the name under the cursor and the words over a head (the chat, a skill's shout) from the character's point on the screen, and writes that point only when it draws the character itself. In the 3D view the camera turns with the mouse, and for a character the game did not draw that frame the point stayed an old one, so the words hung somewhere else, often in the sky. Now in the 3D view the name and the words are placed by the game's own formulas from the character's feet as the camera sees them now. For a character behind the camera, a hill or a house they are not shown, as the monsters' HP bars are not. The usual view is as it was.
+
 # uaRO Graphics 3.0.20-beta.84 — what's new · 2026-11-17
 
 - **HP bars with a far camera (R-7WTVBF).** The game draws the HP and SP bar under a character the same size always, so with the camera far out it was huge next to the small figure. Now, with the camera past the usual (from 500), the bars under the characters get smaller with them, down to 60 % (from a distance of about 830). The monsters' HP bars get smaller the same way. The 3D view is as it was. The switch «Smaller HP bars with a far camera» is in «Interface» → «Fight» and in the console, on.
