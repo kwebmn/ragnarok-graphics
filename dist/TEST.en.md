@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.21-beta.17 — what's new · 2026-11-17
+
+The exchange with the server beside the ping.
+
+- **The ping's plate under the minimap has a second line,** for example «↓2.1 ↑0.3 KB/s»: ↓ is what the game receives from the server, ↑ what it sends to it - the mean of the last 5 seconds, as Windows counts it on the game's own connection.
+- The log's minute line about the network tells the exchange too - it helps with the reports about lag.
+- The plate goes on and off with the ping: Alt+O → «Interface» → «Minimap» → «Ping on the minimap».
+
 # uaRO Graphics 3.0.21-beta.16 — what's new · 2026-11-17
 
 The trials decided before 3.0.21.
