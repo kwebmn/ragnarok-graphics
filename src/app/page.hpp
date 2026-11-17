@@ -99,8 +99,6 @@ std::unique_ptr<Page> makeSettingsPage(PageHost& host, std::vector<settings::Pag
                                        std::vector<settings::Page> right = {});
 // 2.6: pages one under another; a control's command goes to the page that made it.
 std::unique_ptr<Page> makePartsPage(PageHost& host, std::vector<std::unique_ptr<Page>> parts);
-// 3.0.21-beta.6: a part's folded rows («Ще N налаштувань ›») opened - the search's way to a row among them
-void expandPart(settings::Page which);
 std::unique_ptr<Page> makeScreenPage(PageHost& host);
 std::unique_ptr<Page> makeDiagnosticsPage(PageHost& host);
 std::unique_ptr<Page> makeServicePage(PageHost& host);

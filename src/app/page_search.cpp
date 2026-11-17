@@ -116,8 +116,6 @@ public:
         if (id >= kGoFirst && id < kGoFirst + int(hits_.size())) {
             const Hit& h = hits_[size_t(id - kGoFirst)];
             if (code != BN_CLICKED || h.elsewhere) return;
-            // 3.0.21-beta.6: a detail folded behind «Ще N налаштувань ›» - its part opened on the way
-            if (h.kind == HitKind::Ini) expandPart(iniSettings()[h.index].page);
             host_.showView(h.place.view, h.place.tab);
             return;
         }

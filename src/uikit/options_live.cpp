@@ -25,9 +25,9 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    data-if="n.count > 0">{{n.count}}</span></div></div>
  <div id="spane" class="spane"><div class="snote" data-if="note != ''">{{note}}</div><div class="srow"
    data-for="r, i : srows"><div class="sgrp" data-if="r.group != ''">{{r.group}}<span class="srst ctl"
-   data-if="r.reset != ''" data-event-click="set_reset(i)">{{r.reset}}</span></div><div class="smore ctl"
-   data-if="r.more" data-event-click="set_more(i)">{{r.label}}</div><div class="sro" data-if="!r.more"
-   data-class-sub="r.sub"><div class="st"><span
+   data-if="r.reset != ''" data-event-click="set_reset(i)">{{r.reset}}</span></div><div class="ssub"
+   data-if="r.subhead">{{r.label}}</div><div class="sro" data-if="!r.subhead" data-class-sub="r.sub"
+   data-class-det="r.det"><div class="st"><span
    class="sl">{{r.label}}</span><span class="shn" data-if="r.hint != ''">{{r.hint}}</span><span class="swn"
    data-if="r.warn != ''">{{r.warn}}</span></div><div
    class="sctl"><span class="tg ctl" data-if="r.toggle" data-class-on="r.on"
@@ -51,7 +51,38 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 const char* rml() { return kRml; }
 
 void fit(std::vector<RowView>& rows) {
-    for (RowView& r : rows) r.sliders.assign(r.slider && !r.more ? 1 : 0, 0);
+    for (RowView& r : rows) r.sliders.assign(r.slider && !r.subhead ? 1 : 0, 0);
+}
+
+int cull(Rml::ElementDocument* doc, bool all) {
+    Rml::Element* pane = doc ? doc->GetElementById("spane") : nullptr;
+    if (!pane) return 0;
+    const float top = pane->GetAbsoluteTop(), view = pane->GetClientHeight();
+    const float from = top - view, to = top + 2 * view;  // the view and a view's height over and under it
+    int hidden = 0;
+    for (int i = 0; i < pane->GetNumChildren(); ++i) {
+        Rml::Element* row = pane->GetChild(i);
+        if (!row->IsClassSet("srow")) continue;
+        // the row's own lines (its wrapper stands in the line: no box of its own); none laid out yet - shown
+        float first = 1e9f, last = -1e9f;
+        for (int k = 0; k < row->GetNumChildren(); ++k) {
+            Rml::Element* line = row->GetChild(k);
+            const float height = line->GetOffsetHeight();
+            if (height <= 0) continue;
+            const float y = line->GetAbsoluteTop();
+            first = std::min(first, y);
+            last = std::max(last, y + height);
+        }
+        const bool off = !all && first <= last && (last < from || first > to);
+        // The row's own property, not a class: a class set on one row has RmlUi match the theme's rules again for
+        // every row of the pane and all in them (Element::DirtyDefinition, SelfAndSiblings) - measured 1.4 ms a
+        // frame while scrolling 183 rows; the property costs nothing (as RmlUi's own data-visible does it)
+        const bool was = row->GetLocalStyleProperties().count(Rml::PropertyId::Visibility) != 0;
+        if (off && !was) row->SetProperty(Rml::PropertyId::Visibility, Rml::Property(Rml::Style::Visibility::Hidden));
+        if (!off && was) row->RemoveProperty(Rml::PropertyId::Visibility);
+        hidden += off ? 1 : 0;
+    }
+    return hidden;
 }
 
 bool sliderMoved(const Rml::Event& e, const Model& m, int row, int& value) {
@@ -86,7 +117,8 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         v.RegisterMember("choices", &RowView::choices);
         v.RegisterMember("sliders", &RowView::sliders);
         v.RegisterMember("key", &RowView::key);
-        v.RegisterMember("more", &RowView::more);
+        v.RegisterMember("subhead", &RowView::subhead);
+        v.RegisterMember("det", &RowView::det);
         v.RegisterMember("sub", &RowView::sub);
     }
     c.RegisterArray<std::vector<RowView>>();

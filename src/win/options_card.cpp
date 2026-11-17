@@ -72,7 +72,6 @@ struct State {
     // 3.0.18-beta.122: «Налаштування» - the section, the search, the rows shown, the config and the file they write
     uikit::options::Model m;  // 3.0.21-beta.3: what the markup shows (the entry, the search, the list, the rows)
     int shownSec = -1;
-    std::set<int> open;  // the catalogue's groups opened to their details
     Rml::String shownQuery;
     ULONGLONG builtAt = 0, hotUntil = 0;  // when the rows were built last; built each frame until then
     std::string rowsKey;
@@ -264,7 +263,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
 
 // 3.0.18-beta.122: «Налаштування»'s rows, as they are now. 3.0.21-beta.3 (the concept «Настройки uaRO Graphics»,
 // variant 4, step 3): from the catalogue's lines (core settingswin) - the entry's groups one under another: a group's
-// name over its first line, its rows, the line that opens its details - or every entry's rows the search finds, each
+// name over its first line, its rows, its details under a small heading - or every entry's rows the search finds, each
 // group named «entry · group»
 static std::vector<SetRowView> buildRows(const State& s) {
     namespace sw = uagfx::settingswin;
@@ -278,7 +277,7 @@ static std::vector<SetRowView> buildRows(const State& s) {
                           nav[size_t(s.m.sec)].area == sw::kChangedArea;
     const std::vector<sw::Line> list = searching  ? sw::find(s.m.query, lang)
                                        : offEntry ? sw::changedLines(shown, s.defaults)
-                                                  : sw::lines(s.m.sec, s.open);
+                                                  : sw::lines(s.m.sec);
     // where the game is now: what a row's reasons for doing nothing are judged by (the renderer, the view, the map)
     settings::catalogue::Now place;
     place.direct3d12 = settingedit::direct3d12();
@@ -297,15 +296,15 @@ static std::vector<SetRowView> buildRows(const State& s) {
             // the group's way back to the shipped values, while it has rows off them
             if (s.config && f.group >= 0 && !sw::resetsOf(f.group, shown, s.defaults).empty())
                 r.reset = say(settings::Text::SettingsDefaults);
-            r.opens = f.group;
+            r.groupIndex = f.group;
         }
-        if (f.what == sw::Line::What::More) {
-            r.more = true;
-            r.opens = f.group;
-            r.key = "more." + std::to_string(f.group);
-            r.label = f.more > 0 ? settings::fmt(settings::tr(lang, settings::Text::MoreRowsShow),
-                                                 {std::to_string(f.more)})
-                                 : std::string(settings::tr(lang, settings::Text::MoreRowsHide));
+        r.det = f.detail;
+        if (f.what == sw::Line::What::Sub) {
+            // 3.0.21-beta.11 (the owner: «раскрытие в настройках лучше убрать … можно както выделить внутри что это
+            // подгрупа»): the small heading over a group's details - they stand at once, nothing opens or folds
+            r.subhead = true;
+            r.key = "sub." + std::to_string(f.group);
+            r.label = say(settings::Text::SettingsMoreHead);
         } else if (f.kind == sw::Kind::Game) {
             const int i = f.key.back() - '0';
             r.label = t.toggles[i];
@@ -349,7 +348,8 @@ static std::string rowsKeyOf(const std::vector<SetRowView>& rows) {
     std::string k;
     for (const SetRowView& r : rows) {
         k += r.key + (r.on ? "+" : "-") + std::to_string(r.value) + r.group + (r.sub ? "s" : "") + r.warn + r.reset;
-        if (r.more) k += r.label;  // «Ще N» or the folding line
+        if (r.subhead) k += r.label;
+        if (r.det) k += 'd';
         for (const ChoiceView& c : r.choices) k += c.on ? '1' : '0';
         k += '|';
     }
@@ -361,12 +361,7 @@ static std::string rowsKeyOf(const std::vector<SetRowView>& rows) {
 static void useRow(State& s, int row, int what, int value) {
     if (row < 0 || size_t(row) >= s.m.rows.size()) return;
     const std::string key = s.m.rows[size_t(row)].key;
-    if (s.m.rows[size_t(row)].more) {  // 3.0.21-beta.3: a group's details opened or folded
-        const int group = s.m.rows[size_t(row)].opens;
-        if (what == 3 && !s.open.erase(group)) s.open.insert(group);
-        s.rowsKey.clear();
-        return;
-    }
+    if (s.m.rows[size_t(row)].subhead) return;  // a heading: no control
     if (key.rfind("game.", 0) == 0) {
         const int i = key.back() - '0';
         if (what == 0) toggle(s, i);
@@ -397,7 +392,7 @@ static void useRow(State& s, int row, int what, int value) {
 }
 
 // The live window at the middle of the screen, as wide as its markup makes it
-static void placeLive(State& s) {
+static void placeLive(State& s, bool anew = false) {
     int x = s.layout.x, y = s.layout.y;
     int bx = 0, by = 0, bw = 0, bh = 0;
     if (s.live.doc.box(bx, by, bw, bh) && bw > 0) {
@@ -405,6 +400,9 @@ static void placeLive(State& s) {
         y = std::max(0, (s.targetH - bh) / 3);
     }
     s.live.frame(s.shown, x, y, int(winstack::Win::Options), ".ctl");
+    // 3.0.21-beta.11: every entry is long now (no folding) - the rows far from the pane's view are not drawn;
+    // `anew`: the rows were told again this frame - all shown until they are laid out
+    if (s.shown) uikit::options::cull(s.live.doc.doc(), anew);
 }
 
 // 3.0.21-beta.10: the rows a group's «Типові» sends back - one written, then the next once the driver has read
@@ -480,7 +478,7 @@ static void liveFrame(State& s) {
             if (a.empty() || !st.config) return;
             const int row = a[0].Get<int>();
             if (row < 0 || size_t(row) >= st.m.rows.size() || st.m.rows[size_t(row)].reset.empty()) return;
-            const int group = st.m.rows[size_t(row)].opens;
+            const int group = st.m.rows[size_t(row)].groupIndex;
             const std::vector<settingswin::Reset> back =
                 settingswin::resetsOf(group, settingedit::shown(*st.config), st.defaults);
             LOG_INFO("options: «Типові» of the group %d - %d row(s) go back to their defaults", group,
@@ -489,9 +487,6 @@ static void liveFrame(State& s) {
         });
         m.BindEventCallback("set_choice", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             if (a.size() >= 2) useRow(state(), a[0].Get<int>(), 2, a[1].Get<int>());
-        });
-        m.BindEventCallback("set_more", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
-            if (!a.empty()) useRow(state(), a[0].Get<int>(), 3, 0);
         });
         // 3.0.21-beta.7: «Розмістити інтерфейс» - the console's action before (the console is the laboratory now)
         m.BindEventCallback("open_layout", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
@@ -592,14 +587,15 @@ static void liveFrame(State& s) {
     // options_live fit(): how 3.0.18-beta.132's padding became needless)
     uikit::options::fit(rows);
     const std::string key = rowsKeyOf(rows) + std::to_string(s.m.sec);
-    if (key != s.rowsKey) {
+    const bool anew = key != s.rowsKey;
+    if (anew) {
         s.rowsKey = key;
         s.m.shownRows = int(rows.size());
         s.m.rows = std::move(rows);
         s.live.doc.dirty("srows");
         s.live.doc.dirty("shown_rows");
     }
-    placeLive(s);
+    placeLive(s, anew);
 }
 
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {

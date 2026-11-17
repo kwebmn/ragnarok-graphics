@@ -3721,9 +3721,6 @@ constexpr Entry kTexts[] = {
      "Подобрано по памяти видеокарты; после игры — по тому, как она её рисовала."},
     {Text::CardApply, "Choose for my card", "Підібрати під відеокарту", "Подобрать под видеокарту"},
     {Text::CardFits, "Already as for your card", "Уже як для вашої відеокарти", "Уже как для вашей видеокарты"},
-    {Text::MoreRowsShow, "{1} more settings \xE2\x80\xBA", "Ще {1} налаштувань \xE2\x80\xBA",
-     "Ещё {1} настроек \xE2\x80\xBA"},
-    {Text::MoreRowsHide, "Hide the extra settings", "Сховати додаткові", "Скрыть дополнительные"},
     {Text::ConsolePinned, "\xE2\x98\x85 Pinned by you", "\xE2\x98\x85 Закріплені вами",
      "\xE2\x98\x85 Закреплённые вами"},
     {Text::ConsoleActions, "Actions", "Дії", "Действия"},
@@ -9279,6 +9276,7 @@ constexpr Entry kTexts[] = {
      "Работает только на Direct3D 11"},
     {Text::WhyNotHere, "Nothing of it shows on this map", "На цій карті цього не видно",
      "На этой карте этого не видно"},
+    {Text::SettingsMoreHead, "More", "Додатково", "Дополнительно"},  // 3.0.21-beta.11: over a group's details
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

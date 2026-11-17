@@ -5,6 +5,10 @@
 #include <RmlUi/Core/DataModelHandle.h>
 #include <RmlUi/Core/Types.h>
 
+namespace Rml {
+class ElementDocument;
+}
+
 namespace uagfx::uikit::options {
 
 // 3.0.18-beta.82 (item 4): the game's options a live window - its volumes the library's sliders, its switches
@@ -13,9 +17,10 @@ namespace uagfx::uikit::options {
 // console writes them (win/setting_edit).
 // 3.0.21-beta.3 (the concept «Настройки uaRO Graphics», the owner: «Вариант 4. Каждому месту своё дело», step 3):
 // the player's one place in the game - the list's entries are the catalogue's areas, each with its rows' count; the
-// pane an entry's groups one under another: a group's name over its first row, a part indented under its row, a line
-// that opens the group's details in a row's place. Here its markup and what it shows (win/options_card fills it from
-// core settingswin and takes its events); laid out by RmlUi in the host's tests too.
+// pane an entry's groups one under another: a group's name over its first row, a part indented under its row, the
+// group's details under a small heading (3.0.21-beta.11: at once - 3.0.21-beta.3's line that opened them is gone).
+// Here its markup and what it shows (win/options_card fills it from core settingswin and takes its events); laid
+// out by RmlUi in the host's tests too.
 struct ChoiceView {
     Rml::String label;
     bool on = false;
@@ -30,8 +35,11 @@ struct RowView {
     int value = 0, min = 0, max = 0, step = 1;
     std::vector<ChoiceView> choices;
     std::vector<int> sliders;  // 3.0.21-beta.8: one when the row is a slider (fit): its part is made only then
-    bool more = false, sub = false;  // the line that opens a group's details or folds them; a part of the row over it
-    int opens = 0;                   // more: the catalogue's group
+    // 3.0.21-beta.11 (the owner: «раскрытие в настройках лучше убрать … можно както выделить внутри что это
+    // подгрупа»): no line that opens or folds - subhead: the small heading over a group's details (its words in
+    // `label`, no control); det: a row of those details (set in, a rule on its left); sub: a part of the row over it
+    bool subhead = false, det = false, sub = false;
+    int groupIndex = 0;  // on the row that heads its group: the catalogue's group («Типові» brings it back)
 };
 struct NavView {
     Rml::String name;
@@ -63,9 +71,17 @@ void fit(std::vector<RowView>& rows);
 // and the window wrote that value under the new row's name
 bool sliderMoved(const Rml::Event& e, const Model& m, int row, int& value);
 
+// 3.0.21-beta.11: with no folding every entry is long, and RmlUi walks, clips and hands over every shown element
+// each frame, in the pane's view or not. Called each frame after the layout: the rows further than a view's height
+// from the pane's view are hidden from its drawing (visibility: their place kept, so the scroll's length stays),
+// the rest shown; the property is set only when a row crosses that line. `all`: every row shown - for the frame the
+// rows are told anew (the places are the layout's before: a row hidden by them could stand in the view now). The
+// rows hidden
+int cull(Rml::ElementDocument* doc, bool all = false);
+
 const char* rml();
 // The window's variables. Its events are the caller's: sec_go(i), set_toggle(i), set_slider(i), set_step(i, by),
-// set_choice(i, j), set_more(i), set_reset(i), open_layout(), open_console(), opt_close()
+// set_choice(i, j), set_reset(i), open_layout(), open_console(), opt_close()
 void bind(Rml::DataModelConstructor& c, Model& m);
 
 }  // namespace uagfx::uikit::options

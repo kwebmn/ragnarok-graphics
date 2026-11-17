@@ -361,7 +361,6 @@ enum class Text : uint16_t {
     KindAllNew, KindNewLookOldUi, KindWeakPc, KindClassic, KindHead, KindNote, KindSkip,  // 3.0.17-beta.10
     SeenHead, SeenNote, SeenClose, PlayNewFeaturesShort, ConsoleHintLine,
     CardSuggest, CardMemory, CardIntegrated, CardByGame, CardByMemory, CardApply, CardFits,  // 3.0.17-beta.9
-    MoreRowsShow, MoreRowsHide,  // 3.0.17-beta.5: a part's detailed rows folded
     // 3.0.17-beta.4: Alt+D's tabs (3.0.21-beta.7: «Швидко», «Усе», «Нове» and their words went with the tabs)
     ConsolePinned, ConsoleActions,
     MainIntro, MainPicture, MainQualityLow, MainQualityMedium, MainQualityHigh, MainQualitySuperLight, MainQualityOwn,
@@ -1041,6 +1040,7 @@ enum class Text : uint16_t {
     // 3.0.21-beta.10: «Налаштування» - a group's way back to the shipped values, the entry of what is off them, the
     // note of an entry that does nothing now; why a change does not show (the other renderer, the map)
     SettingsDefaults, SettingsChanged, SettingsChangedNone, SettingsNote3d, WhyDirect3D11, WhyNotHere,
+    SettingsMoreHead,  // 3.0.21-beta.11: the small heading over a group's details (no line that opens them)
     Count
 };
 

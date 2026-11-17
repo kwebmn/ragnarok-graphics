@@ -1156,11 +1156,8 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             } else if (id == IDOK && GetFocus() == search_) {  // 2.6: Enter in the search - the first one's page
                 const auto hits = findSettings(utf8(searchText()), lang_, mode_);
                 // 3.0.21-beta.6: a row that lives in the game has no page here - it is changed in the results
-                if (!hits.empty() && !hits.front().elsewhere) {
-                    if (hits.front().kind == settings::HitKind::Ini)
-                        expandPart(settings::iniSettings()[hits.front().index].page);
+                if (!hits.empty() && !hits.front().elsewhere)
                     showView(hits.front().place.view, hits.front().place.tab);
-                }
             } else if (id == IDCANCEL && GetFocus() == search_ && GetWindowTextLengthW(search_) > 0) {
                 clearSearch();  // Esc in the search: the view back
                 buildPage();

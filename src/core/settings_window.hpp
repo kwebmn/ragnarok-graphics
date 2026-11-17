@@ -17,7 +17,10 @@ namespace uagfx::settingswin {
 // simple start's three choices - keys "picture.0".."2" - and the game's own six: music, sounds, the three snaps,
 // opaque windows - "game.0".."game.5": nothing the game's Alt+O had is lost), then the catalogue's areas that hold
 // rows living in the game, each with their count. The pane: an entry's groups one under another - a group's name,
-// its basic rows, then a line that opens its details (the parts, the sliders, each window's own switch).
+// its basic rows, then its details (the parts, the sliders, each window's own switch).
+// 3.0.21-beta.11 (the owner: «раскрытие в настройках лучше убрать, пускай сразу будет все вместе, можно както
+// выделить внутри что это подгрупа, но раскрытие делать не стоит»): the details stand at once under a small heading
+// of their own - no line that opens or folds them (3.0.21-beta.3's «Ще N налаштувань ›»).
 enum class Kind : uint8_t { Game, Picture, Keys };
 
 struct Nav {
@@ -33,19 +36,20 @@ const std::vector<Nav>& nav();
 constexpr int kLookGroup = -1, kGameGroup = -2;
 
 struct Line {
-    enum class What : uint8_t { Row, More };
+    enum class What : uint8_t { Row, Sub };  // Sub: the small heading over a group's details («Додатково»)
     What what = What::Row;
     Kind kind = Kind::Keys;
     std::string key;         // Row: "interface.minimap", "game.0", "picture.1"
-    int group = kLookGroup;  // the group it is in; More: the group it opens or folds
+    int group = kLookGroup;  // the group it is in
     int entry = 0;           // the list's entry its group is in (the search's lines name it)
     settings::Text groupName = settings::Text::LookHead;
     bool heads = false;      // its group's first line: the group's name goes over it
     bool part = false;       // a part of a row over it
-    int more = 0;            // More: the details it opens; 0 - they are open, it folds them
+    bool detail = false;     // a row of the group's inner part: after the small heading
 };
-// An entry's lines; `open` - the groups opened to their details
-std::vector<Line> lines(int entry, const std::set<int>& open);
+// An entry's lines: each group's basic rows, then - under the small heading - its details; a group of details alone
+// has no heading
+std::vector<Line> lines(int entry);
 // The search: every row of every entry matching each word of the query (labels and hints in the language; the game's
 // own and the choices by their names), details too, under their groups' names; an empty query finds nothing
 std::vector<Line> find(const std::string& query, settings::Lang l);

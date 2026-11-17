@@ -37,8 +37,10 @@ ol::RowView toggleRow(const char* label, bool on, const char* group = "") {
 
 // 3.0.21-beta.3 (the concept «Настройки uaRO Graphics», variant 4, step 3): «Налаштування» (Alt+O) laid out by RmlUi
 // from the catalogue's lines - the list's entries with their counts, a group's name over its first row, a part
-// indented under its row, the line that opens a group's details in a row's place, the padding rows hidden
-TEST(uikit_options_groups_parts_and_the_opening_line) {
+// indented under its row. 3.0.21-beta.11 (the owner: «раскрытие в настройках лучше убрать, пускай сразу будет все
+// вместе, можно както выделить внутри что это подгрупа»): a group's details stand at once under a small heading
+// («Додатково»), set in from the rows over them with a rule on their left - no line that opens or folds
+TEST(uikit_options_groups_parts_and_the_details_heading) {
     static ol::Model m;
     m = ol::Model{};
     m.title = "Налаштування";
@@ -57,11 +59,13 @@ TEST(uikit_options_groups_parts_and_the_opening_line) {
     seconds.slider = true, seconds.min = 3, seconds.max = 60, seconds.value = 10, seconds.vtext = "10 s";
     seconds.sub = true;
     m.rows.push_back(seconds);
-    ol::RowView more;
-    more.key = "more.7";
-    more.label = "Ще 14 налаштувань";
-    more.more = true, more.opens = 7;
-    m.rows.push_back(more);
+    ol::RowView head;  // the small heading over the group's details
+    head.label = "Додатково";
+    head.subhead = true;
+    m.rows.push_back(head);
+    ol::RowView trade = toggleRow("Запит обміну", true);
+    trade.det = true;
+    m.rows.push_back(trade);
     ol::RowView look;
     look.key = "picture.0";
     look.label = "Картинка";
@@ -70,11 +74,11 @@ TEST(uikit_options_groups_parts_and_the_opening_line) {
     m.rows.push_back(look);
     m.rows[1].warn = "Працює лише на Direct3D 12";  // 3.0.21-beta.4: why the row does nothing now
     ol::fit(m.rows);  // 3.0.21-beta.8: as the window does - the list as long as it is, no spare rows or choices
-    CHECK_EQ(m.rows.size(), size_t(5));
-    CHECK_EQ(m.rows[4].choices.size(), size_t(2));
+    CHECK_EQ(m.rows.size(), size_t(6));
+    CHECK_EQ(m.rows[5].choices.size(), size_t(2));
     CHECK_EQ(m.rows[0].choices.size(), size_t(0));
-    m.shownRows = 5;
-    int opened = -1, toggled = -1, layouts = 0;
+    m.shownRows = 6;
+    int toggled = -1, layouts = 0;
     std::string error;
     Rml::ElementDocument* doc = rmlhost::load(
         ol::rml(),
@@ -85,9 +89,6 @@ TEST(uikit_options_groups_parts_and_the_opening_line) {
                 c.BindEventCallback(e, none);
             c.BindEventCallback("open_layout", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
                 ++layouts;
-            });
-            c.BindEventCallback("set_more", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
-                opened = a.empty() ? -2 : a[0].Get<int>();
             });
             c.BindEventCallback("set_toggle", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
                 toggled = a.empty() ? -2 : a[0].Get<int>();
@@ -102,27 +103,31 @@ TEST(uikit_options_groups_parts_and_the_opening_line) {
     CHECK_EQ(shownOf(doc, ".snav .sn"), 3);
     CHECK_EQ(shownOf(doc, ".snav .sn.on"), 1);
     CHECK_EQ(shownOf(doc, ".snav .cnt"), 2);
-    // the pane: four rows with controls and the opening line in a row's place
-    CHECK_EQ(shownOf(doc, ".spane .sro"), 4);
-    CHECK_EQ(shownOf(doc, ".spane .smore"), 1);
+    // the pane: five rows with controls, the small heading in a row's place
+    CHECK_EQ(shownOf(doc, ".spane .sro"), 5);
+    CHECK_EQ(shownOf(doc, ".spane .ssub"), 1);
+    CHECK_EQ(shownOf(doc, ".spane .sro.det"), 1);
     CHECK_EQ(shownOf(doc, ".spane .sgrp"), 2);  // the groups' names over their first rows
     CHECK_EQ(shownOf(doc, ".spane .sro.sub"), 1);  // the part under its row
-    CHECK_EQ(shownOf(doc, ".spane .tg"), 2);
-    CHECK_EQ(shownOf(doc, ".spane .tg.on"), 1);
+    CHECK_EQ(shownOf(doc, ".spane .tg"), 3);
+    CHECK_EQ(shownOf(doc, ".spane .tg.on"), 2);
     CHECK_EQ(shownOf(doc, ".spane .chs .ch"), 2);
     CHECK_EQ(shownOf(doc, ".spane .chs .ch.on"), 1);
     CHECK_EQ(shownOf(doc, ".spane .snone"), 0);
     CHECK_EQ(shownOf(doc, ".spane .swn"), 1);  // one row says why it does nothing
     Rml::Element* pane = doc->GetElementById("spane");
     CHECK(pane != nullptr);
-    Rml::Element* line = nullptr;  // every row holds the line's element: the shown one is the group's
+    // the heading is no control (nothing opens): the pad does not stop on it; the detail under it starts to the
+    // right of the basic rows, the heading on its line
+    Rml::Element* line = nullptr;
     {
         Rml::ElementList all;
-        doc->QuerySelectorAll(all, ".spane .smore");
+        doc->QuerySelectorAll(all, ".spane .ssub");
         for (Rml::Element* e : all)
             if (!line && e->IsVisible(true)) line = e;
     }
-    CHECK(line && line->IsClassSet("ctl"));
+    CHECK(line && !line->IsClassSet("ctl"));
+    Rml::Element* inner = doc->QuerySelector(".spane .sro.det");
     // the part starts to the right of its row's name
     Rml::Element* part = doc->QuerySelector(".spane .sro.sub");
     Rml::ElementList rows;
@@ -132,9 +137,9 @@ TEST(uikit_options_groups_parts_and_the_opening_line) {
         if (!first && e->IsVisible(true)) first = e;
     CHECK(part && first && part->GetAbsoluteLeft() + part->GetBox().GetEdge(Rml::BoxArea::Padding, Rml::BoxEdge::Left) >
                                first->GetAbsoluteLeft() + 8);
-    // a click on the line asks to open its group; a click on a switch names its row
-    if (line) line->Click();
-    CHECK_EQ(opened, 3);
+    CHECK(inner && first && line && inner->GetAbsoluteLeft() > first->GetAbsoluteLeft() + 6 &&
+          line->GetAbsoluteTop() < inner->GetAbsoluteTop());
+    // a click on a switch names its row
     Rml::Element* knob = doc->QuerySelector(".spane .tg");
     if (knob) knob->Click();
     CHECK_EQ(toggled, 0);
@@ -154,7 +159,7 @@ TEST(uikit_options_groups_parts_and_the_opening_line) {
     m.shownRows = 0;
     rmlhost::update();
     CHECK_EQ(shownOf(doc, ".spane .sro"), 0);
-    CHECK_EQ(shownOf(doc, ".spane .smore"), 0);
+    CHECK_EQ(shownOf(doc, ".spane .ssub"), 0);
     CHECK_EQ(shownOf(doc, ".spane .snone"), 1);
     rmlhost::close(doc);
 }
@@ -188,7 +193,7 @@ TEST(uikit_options_left_alone_makes_nothing_anew) {
         [&](Rml::DataModelConstructor& c) {
             ol::bind(c, m);
             const auto none = [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {};
-            for (const char* e : {"sec_go", "set_toggle", "set_slider", "set_step", "set_choice", "set_more",
+            for (const char* e : {"sec_go", "set_toggle", "set_slider", "set_step", "set_choice",
                                   "open_layout", "open_console", "opt_close"})
                 c.BindEventCallback(e, none);
         },
@@ -237,7 +242,7 @@ TEST(uikit_options_parts_stand_where_they_stood) {
     c.slider = true, c.min = 3, c.max = 60, c.value = 10, c.vtext = "10 s", c.sub = true;
     m.rows.push_back(c);
     ol::RowView d;
-    d.key = "more.7", d.label = "Ще 14 налаштувань", d.more = true, d.opens = 7;
+    d.label = "Додатково", d.subhead = true;
     m.rows.push_back(d);
     ol::RowView e;
     e.key = "picture.0", e.label = "Картинка", e.group = "Як виглядає гра";
@@ -254,7 +259,7 @@ TEST(uikit_options_parts_stand_where_they_stood) {
         [&](Rml::DataModelConstructor& cc) {
             ol::bind(cc, m);
             const auto none = [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {};
-            for (const char* ev : {"sec_go", "set_toggle", "set_slider", "set_step", "set_choice", "set_more",
+            for (const char* ev : {"sec_go", "set_toggle", "set_slider", "set_step", "set_choice",
                                    "open_layout", "open_console", "opt_close"})
                 cc.BindEventCallback(ev, none);
         },
@@ -267,7 +272,7 @@ TEST(uikit_options_parts_stand_where_they_stood) {
     };
     const Gold gold[] = {
         {".sgrp", {{334.0f, 168.0f, 529.0f, 13.2f}, {334.0f, 353.8f, 529.0f, 13.2f}}},
-        {".smore", {{334.0f, 313.4f, 529.0f, 26.4f}}},
+        {".ssub", {{342.0f, 313.4f, 521.0f, 26.2f}}},  // 3.0.21-beta.11: the details' heading (the fold line's place)
         {".sro", {{334.0f, 183.2f, 529.0f, 44.4f}, {334.0f, 227.6f, 529.0f, 44.4f}, {334.0f, 272.0f, 529.0f, 41.4f},
                   {334.0f, 369.0f, 529.0f, 41.4f}, {334.0f, 410.4f, 529.0f, 37.0f}}},
         {".sl", {{334.0f, 190.2f, 479.0f, 15.6f}, {334.0f, 234.6f, 479.0f, 15.6f}, {350.0f, 284.4f, 231.0f, 15.6f},
@@ -315,14 +320,14 @@ Rml::ElementDocument* loadPlain(ol::Model& m, std::string* error = nullptr) {
         [&](Rml::DataModelConstructor& c) {
             ol::bind(c, m);
             const auto none = [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {};
-            for (const char* e : {"sec_go", "set_toggle", "set_slider", "set_step", "set_choice", "set_more",
+            for (const char* e : {"sec_go", "set_toggle", "set_slider", "set_step", "set_choice",
                                   "open_layout", "open_console", "opt_close"})
                 c.BindEventCallback(e, none);
         },
         100, 60, error);
 }
 
-// Rows of every kind in turn: a switch, a slider, a choice of `chips`, the line that opens a group
+// Rows of every kind in turn: a switch, a slider, a choice of `chips`, the small heading of a group's details
 std::vector<ol::RowView> mixedRows(int count, int chips) {
     std::vector<ol::RowView> rows;
     for (int i = 0; i < count; ++i) {
@@ -332,7 +337,7 @@ std::vector<ol::RowView> mixedRows(int count, int chips) {
             r.toggle = false;
             for (int c = 0; c < chips; ++c) r.choices.push_back(ol::ChoiceView{"Вибір " + std::to_string(c), c == 0});
         }
-        if (i % 4 == 3) r.toggle = false, r.more = true, r.opens = i;
+        if (i % 4 == 3) r.toggle = false, r.subhead = true;
         if (i % 3 == 0) r.hint = "Що це дає";
         rows.push_back(r);
     }
@@ -360,7 +365,7 @@ TEST(uikit_options_a_shorter_list_leaves_no_warnings) {
     if (!doc) return;
     CHECK_EQ(error, std::string());
     CHECK_EQ(shownOf(doc, ".spane .sro"), 30);
-    CHECK_EQ(shownOf(doc, ".spane .smore"), 10);
+    CHECK_EQ(shownOf(doc, ".spane .ssub"), 10);
     CHECK_EQ(shownOf(doc, ".spane .chs .ch"), 60);
     const std::string before = rmlhost::log();
     // another entry: fewer rows, of other kinds at the same places, fewer choices
@@ -371,7 +376,7 @@ TEST(uikit_options_a_shorter_list_leaves_no_warnings) {
     if (rmlhost::log() != before) std::printf("    RmlUi: %s", rmlhost::log().substr(before.size()).c_str());
     CHECK_EQ(rmlhost::log(), before);
     CHECK_EQ(shownOf(doc, ".spane .sro"), 4);
-    CHECK_EQ(shownOf(doc, ".spane .smore"), 1);
+    CHECK_EQ(shownOf(doc, ".spane .ssub"), 1);
     CHECK_EQ(shownOf(doc, ".spane .chs .ch"), 2);
     CHECK_EQ(shownOf(doc, ".spane input.ctl"), 1);
     // and a longer one again
@@ -456,7 +461,7 @@ TEST(uikit_options_a_slider_is_moved_by_a_person_alone) {
         [&](Rml::DataModelConstructor& c) {
             ol::bind(c, m);
             const auto none = [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {};
-            for (const char* e : {"sec_go", "set_toggle", "set_step", "set_choice", "set_more", "open_layout",
+            for (const char* e : {"sec_go", "set_toggle", "set_step", "set_choice", "open_layout",
                                   "open_console", "opt_close"})
                 c.BindEventCallback(e, none);
             c.BindEventCallback("set_slider", [&](Rml::DataModelHandle, Rml::Event& e, const Rml::VariantList& a) {
@@ -596,7 +601,7 @@ TEST(uikit_options_a_group_s_way_back_and_the_entry_s_note) {
         [&](Rml::DataModelConstructor& cc) {
             ol::bind(cc, m);
             const auto none = [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {};
-            for (const char* e : {"sec_go", "set_toggle", "set_slider", "set_step", "set_choice", "set_more",
+            for (const char* e : {"sec_go", "set_toggle", "set_slider", "set_step", "set_choice",
                                   "open_layout", "open_console", "opt_close"})
                 cc.BindEventCallback(e, none);
             cc.BindEventCallback("set_reset", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& v) {
@@ -641,5 +646,83 @@ TEST(uikit_options_a_group_s_way_back_and_the_entry_s_note) {
     CHECK(!rowsAfter.empty() && rowsAfter[0]->GetAbsoluteTop() > firstTop + 10);
     Rml::Element* note = doc->QuerySelector(".spane .snote");
     CHECK(note && !rowsAfter.empty() && note->GetAbsoluteTop() < rowsAfter[0]->GetAbsoluteTop());
+    rmlhost::close(doc);
+}
+
+// 3.0.21-beta.11: with no folding every entry is long («Картинка» 183 rows), and RmlUi walks, clips and hands over
+// every shown element each frame, in the pane's view or not. The rows far from the view are hidden from its drawing
+// (their place kept): a frame draws what is in the view and a view's height round it
+TEST(uikit_options_draws_only_the_rows_near_the_view) {
+    static ol::Model m;
+    m = ol::Model{};
+    m.title = "Налаштування";
+    m.nav = {ol::NavView{"Картинка", 183}};
+    for (int i = 0; i < 180; ++i) {
+        ol::RowView r = toggleRow(("Рядок " + std::to_string(i)).c_str(), i % 2 == 0, i % 12 == 0 ? "Група" : "");
+        r.hint = "Що це дає";
+        m.rows.push_back(r);
+    }
+    ol::fit(m.rows);
+    m.shownRows = 180;
+    Rml::ElementDocument* doc = loadPlain(m);
+    CHECK(doc != nullptr);
+    if (!doc) return;
+    Rml::Element* pane = doc->GetElementById("spane");
+    CHECK(pane != nullptr);
+    if (!pane) return;
+    for (int i = 0; i < 3; ++i) rmlhost::frame();
+    const int whole = rmlhost::frame().drawn;  // every row handed over, clipped or not
+    const int hidden = ol::cull(doc);
+    CHECK(hidden > 120);  // most of the 180 rows are far under the view
+    rmlhost::frame();
+    const rmlhost::Work near = rmlhost::frame();
+    if (near.drawn * 3 > whole) std::printf("    drawn %d of %d\n", near.drawn, whole);
+    CHECK(near.drawn * 3 < whole);
+    CHECK_EQ(near.measured, 0);  // hiding lays nothing out again
+    CHECK_EQ(ol::cull(doc), hidden);  // nothing moved: the same rows, no class set anew
+    const auto rowsShown = [&]() {
+        std::vector<int> shown;
+        Rml::ElementList rows;
+        doc->QuerySelectorAll(rows, ".spane .sro");
+        for (size_t i = 0; i < rows.size(); ++i)
+            if (rows[i]->IsVisible(true)) shown.push_back(int(i));
+        return shown;
+    };
+    std::vector<int> top = rowsShown();
+    CHECK(!top.empty() && top.front() == 0 && top.back() < 60);
+    // every row in the pane's view is drawn
+    const float viewTop = pane->GetAbsoluteTop(), viewBottom = viewTop + pane->GetClientHeight();
+    Rml::ElementList rows;
+    doc->QuerySelectorAll(rows, ".spane .sro");
+    for (Rml::Element* r : rows) {
+        const float y = r->GetAbsoluteTop();
+        if (y + r->GetOffsetHeight() > viewTop && y < viewBottom) CHECK(r->IsVisible(true));
+    }
+    // scrolled to the end: the last rows drawn, the first hidden; the rows keep their places (the scroll's length)
+    const float length = pane->GetScrollHeight();
+    pane->SetScrollTop(length);
+    rmlhost::frame();
+    ol::cull(doc);
+    rmlhost::frame();
+    CHECK(std::fabs(pane->GetScrollHeight() - length) < 1.0f);
+    std::vector<int> bottom = rowsShown();
+    CHECK(!bottom.empty() && bottom.back() == 179 && bottom.front() > 120);
+    // the rows told anew (another entry, a search, a row's value): the classes are of the layout before - every row
+    // shown for that frame, none left hidden in the view; the frame after hides by the new layout
+    CHECK_EQ(ol::cull(doc, true), 0);
+    rmlhost::frame();
+    CHECK_EQ(int(rowsShown().size()), 180);
+    CHECK(ol::cull(doc) > 120);
+    rmlhost::frame();
+    CHECK(int(rowsShown().size()) < 60);
+    // a short entry: nothing to hide
+    m.rows.resize(6);
+    m.shownRows = 6;
+    rmlhost::update();
+    pane->SetScrollTop(0);
+    rmlhost::frame();
+    CHECK_EQ(ol::cull(doc), 0);
+    rmlhost::frame();
+    CHECK_EQ(int(rowsShown().size()), 6);
     rmlhost::close(doc);
 }

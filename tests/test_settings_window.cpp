@@ -37,7 +37,7 @@ TEST(settings_window_lists_the_areas_that_live_in_the_game) {
     CHECK_EQ(int(nav.size()), 9);  // 3.0.21-beta.10: «Змінені» closes the list
     if (nav.size() != 9) return;
     CHECK(nav[8].name == settings::Text::SettingsChanged && nav[8].area == settingswin::kChangedArea);
-    CHECK(settingswin::lines(8, {}).empty());  // its lines are changedLines(): they go by the settings
+    CHECK(settingswin::lines(8).empty());  // its lines are changedLines(): they go by the settings
     CHECK(nav[0].name == settings::Text::LookHead && nav[0].area == -1 && nav[0].rows == 9);
     const settings::Text names[7] = {settings::Text::LookPicture, settings::Text::View3dHeading,
                                      settings::Text::ViewInterface, settings::Text::CatControls,
@@ -59,7 +59,7 @@ TEST(settings_window_lists_the_areas_that_live_in_the_game) {
 
 // The first entry: the simple start's three choices, then the game's own six - what the game's Alt+O had
 TEST(settings_window_first_entry_keeps_the_game_s_own) {
-    const std::vector<settingswin::Line> first = settingswin::lines(0, {});
+    const std::vector<settingswin::Line> first = settingswin::lines(0);
     CHECK_EQ(int(first.size()), 9);
     if (first.size() != 9) return;
     CHECK(first[0].kind == settingswin::Kind::Picture && first[0].key == "picture.0" && first[0].heads);
@@ -67,66 +67,67 @@ TEST(settings_window_first_entry_keeps_the_game_s_own) {
     CHECK(first[3].kind == settingswin::Kind::Game && first[3].key == "game.0" && first[3].heads);
     CHECK(first[3].groupName == settings::Text::OptionsTitle && first[8].key == "game.5");
     for (const settingswin::Line& l : first) CHECK(l.what == settingswin::Line::What::Row);
-    CHECK(settingswin::lines(-1, {}).empty() && settingswin::lines(99, {}).empty());
+    CHECK(settingswin::lines(-1).empty() && settingswin::lines(99).empty());
 }
 
-// The pane: an area's groups one under another - the group's name over its first line, its basic rows, then a line
-// that opens its details
-TEST(settings_window_a_group_shows_its_basic_rows_then_more) {
+// The pane: an area's groups one under another - the group's name over its first line, its basic rows, then its
+// details at once. 3.0.21-beta.11 (the owner: «раскрытие в настройках лучше убрать, пускай сразу будет все вместе,
+// можно както выделить внутри что это подгрупа, но раскрытие делать не стоит»): no line that opens or folds - the
+// details stand under a small heading of their own («Додатково»), marked as the group's inner part
+TEST(settings_window_a_group_shows_all_its_rows) {
     const int sound = entryNamed(settings::Text::CatSound);
     CHECK(sound > 0);
     if (sound <= 0) return;
-    const std::vector<settingswin::Line> folded = settingswin::lines(sound, {});
-    // «Звук»: the output, the world's sounds - and not the engine (it waits for the game's start)
-    CHECK(holds(folded, "sound.output") && holds(folded, "sound.ambience"));
-    CHECK(!holds(folded, "sound.engine") && !holds(folded, "sound.rate"));
-    CHECK(!holds(folded, "sound.ambience_volume"));  // a detail: behind «Ще»
-    // «Сповіщення»: its seven basic rows, then «Ще 14»
-    CHECK(holds(folded, "notify.on") && holds(folded, "notify.whisper") && holds(folded, "notify.sound"));
-    CHECK(!holds(folded, "notify.trade") && !holds(folded, "notify.buff_seconds"));
+    const std::vector<settingswin::Line> all = settingswin::lines(sound);
+    // «Звук»: the output, the world's sounds with their volume - and not the engine (it waits for the game's start)
+    CHECK(holds(all, "sound.output") && holds(all, "sound.ambience") && holds(all, "sound.ambience_volume"));
+    CHECK(!holds(all, "sound.engine") && !holds(all, "sound.rate"));
+    // «Сповіщення»: its seven basic rows, the small heading, its fourteen details
+    CHECK(holds(all, "notify.on") && holds(all, "notify.whisper") && holds(all, "notify.sound"));
+    CHECK(holds(all, "notify.trade") && holds(all, "notify.buff_seconds") && holds(all, "notify.report_answer"));
     const settings::catalogue::Group* notify = settings::catalogue::groupOf("notify.on");
-    int notifyGroup = -1, basics = 0, heads = 0;
-    const settingswin::Line* more = nullptr;
-    for (const settingswin::Line& l : folded) {
+    int notifyGroup = -1, heads = 0;
+    for (const settingswin::Line& l : all) {
         if (l.key == "notify.on") notifyGroup = l.group;
         heads += l.heads ? 1 : 0;
     }
-    for (const settingswin::Line& l : folded) {
+    CHECK_EQ(heads, 2);  // two groups: «Звук», «Сповіщення»
+    int before = 0, after = 0, subs = 0, tops = 0;
+    bool afterSub = false, order = true;
+    for (const settingswin::Line& l : all) {
         if (l.group != notifyGroup) continue;
         CHECK(notify && l.groupName == notify->name);
-        if (l.what == settingswin::Line::What::More) more = &l;
-        else ++basics;
+        if (l.what == settingswin::Line::What::Sub) {
+            ++subs;
+            afterSub = true;
+            CHECK(l.key.empty() && !l.heads);
+            continue;
+        }
+        (afterSub ? after : before) += 1;
+        tops += !afterSub && !l.part ? 1 : 0;
+        order = order && l.detail == afterSub;  // the basic rows (their parts under them), the heading, the details
     }
-    CHECK_EQ(basics, 7);
-    CHECK(more && more->more == 14);
-    CHECK_EQ(heads, 2);  // two groups: «Звук», «Сповіщення»
-    CHECK(folded.back().what == settingswin::Line::What::More);  // the line after a group's rows
-    // opened: every row of the group in the catalogue's order - a part right under its row -, then the folding line
-    const std::vector<settingswin::Line> opened = settingswin::lines(sound, {notifyGroup});
-    CHECK(holds(opened, "notify.trade") && holds(opened, "notify.report_answer"));
-    CHECK(!holds(opened, "sound.ambience_volume"));  // the other group stays folded
+    CHECK_EQ(tops, 7);            // the seven basic rows
+    CHECK_EQ(before + after, 21);  // every row of the group, once
+    CHECK(after > 0);
+    CHECK_EQ(subs, 1);
+    CHECK(order);
+    // a part stands right under its row, in the catalogue's order
     size_t ending = 0, seconds = 0;
-    for (size_t i = 0; i < opened.size(); ++i) {
-        if (opened[i].key == "notify.buff_ending") ending = i;
-        if (opened[i].key == "notify.buff_seconds") seconds = i;
+    for (size_t i = 0; i < all.size(); ++i) {
+        if (all[i].key == "notify.buff_ending") ending = i;
+        if (all[i].key == "notify.buff_seconds") seconds = i;
     }
-    CHECK(ending > 0 && seconds == ending + 1 && opened[seconds].part && !opened[ending].part);
-    int opens = 0;
-    for (const settingswin::Line& l : opened)
-        if (l.group == notifyGroup && l.what == settingswin::Line::What::More) opens += l.more == 0 ? 1 : 100;
-    CHECK_EQ(opens, 1);  // one line, folding
-    CHECK_EQ(int(opened.size()), int(folded.size()) + 14);
+    CHECK(ending > 0 && seconds == ending + 1 && all[seconds].part && !all[ending].part);
 }
 
 // Everything it lists applies at once; the trials and the diagnostics are the console's, the hidden effects the file's
 TEST(settings_window_lists_only_what_applies_at_once) {
     const std::vector<settingswin::Nav>& nav = settingswin::nav();
-    std::set<int> all;
-    for (int g = 0; g < int(settings::catalogue::groups().size()); ++g) all.insert(g);
     std::set<std::string> seen;
     for (size_t e = 1; e < nav.size(); ++e) {
         int rows = 0;
-        for (const settingswin::Line& l : settingswin::lines(int(e), all)) {
+        for (const settingswin::Line& l : settingswin::lines(int(e))) {
             if (l.what != settingswin::Line::What::Row) continue;
             ++rows;
             CHECK(l.kind == settingswin::Kind::Keys && settings::findSetting(l.key) != nullptr);
@@ -143,21 +144,25 @@ TEST(settings_window_lists_only_what_applies_at_once) {
     CHECK(!seen.count("quality.dlss") && !seen.count("ai.enabled") && !seen.count("windows.start_count"));
 }
 
-// A group with no basic row (each window's own switch; what our renderer draws) is its name and the opening line
-TEST(settings_window_a_group_of_details_is_one_line) {
+// A group with no basic row (each window's own switch; what our renderer draws): its name and its rows at once - no
+// small heading (nothing stands over them), none marked as an inner part
+TEST(settings_window_a_group_of_details_alone) {
     const int ui = entryNamed(settings::Text::ViewInterface);
     CHECK(ui > 0);
     if (ui <= 0) return;
     const settings::catalogue::Group* windows = settings::catalogue::groupOf("interface.items");
-    int lines = 0, more = 0;
-    for (const settingswin::Line& l : settingswin::lines(ui, {})) {
+    int rows = 0, subs = 0, marked = 0, heads = 0;
+    for (const settingswin::Line& l : settingswin::lines(ui)) {
         if (!windows || l.groupName != windows->name) continue;
-        ++lines;
-        CHECK(l.heads && l.what == settingswin::Line::What::More);
-        more = l.more;
+        if (l.what == settingswin::Line::What::Sub) ++subs;
+        else ++rows;
+        marked += l.detail ? 1 : 0;
+        heads += l.heads ? 1 : 0;
     }
-    CHECK_EQ(lines, 1);
-    CHECK_EQ(more, 35);  // 3.0.21-beta.7: «Налаштування»'s own switch left the list (a diagnostic of the console)
+    CHECK_EQ(rows, 35);
+    CHECK_EQ(subs, 0);
+    CHECK_EQ(marked, 0);
+    CHECK_EQ(heads, 1);
 }
 
 // The search: the rows of every entry whose words match - details too -, under their groups' names; the game's own

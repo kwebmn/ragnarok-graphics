@@ -184,12 +184,6 @@ public:
 
     void command(int id, int code) override {
         Model& m = host_.model();
-        if (id >= kMoreRows && id < kMoreRows + settings::kPageCount && code == BN_CLICKED) {  // 3.0.17-beta.5
-            std::set<int>& open = expanded();
-            if (!open.erase(id - kMoreRows)) open.insert(id - kMoreRows);
-            host_.rebuild();
-            return;
-        }
         if (id >= kRows && (id - kRows) % 4 == 3 && code == STN_CLICKED) {  // 3.0.11-beta.303: a dot - recommended
             const size_t i = size_t(id - kRows) / 4;
             if (i < iniSettings().size()) {
@@ -559,38 +553,14 @@ private:
     // 2.15: and this computer can use (fitsMachine: DLSS on NVIDIA, HDR with an HDR screen)
     // 3.0.21-beta.6 (the concept «Настройки uaRO Graphics», variant 4, step 4; the owner: «делай»): the app's pages
     // hold what is set before the game starts (navigation inApp) - a row that applies at once lives in the game's
-    // «Налаштування»; the rows' levels in the modes' place - a basic row is shown, a detail behind its part's «Ще N
-    // налаштувань ›», the developers' in their mode (everything unfolded there)
+    // «Налаштування»; the rows' levels in the modes' place - the basic rows and the details are shown, the
+    // developers' in their mode.
+    // 3.0.21-beta.11 (the owner: «раскрытие в настройках лучше убрать, пускай сразу будет все вместе … раскрытие
+    // делать не стоит»): a part's details stand at once in their places - no «Ще N налаштувань ›» (3.0.17-beta.5)
     bool listed(const IniSetting& s) const {
         if (s.page != which_ || !inApp(s) || !shown(s) || !fitsMachine(sectionKey(s), host_.model().machine()))
             return false;
-        if (host_.mode() == settings::Mode::Developer) return true;
-        const settings::Mode level = levelOf(s);
-        if (level == settings::Mode::Developer) return false;
-        return level == settings::Mode::Simple || expanded().count(int(which_)) != 0;
-    }
-
-    // 3.0.17-beta.5 (the concept «простой старт»: the deep settings «не прятать, но не сразу на виду»): a part's
-    // detailed rows are behind its «Ще N налаштувань ›», opened for the app's run (3.0.21-beta.6: in the one mode)
-    bool folds(const IniSetting& s) const {
-        return host_.mode() != settings::Mode::Developer && inApp(s) && levelOf(s) == settings::Mode::Detailed;
-    }
-    static std::set<int>& expanded() {
-        static std::set<int> parts;
-        return parts;
-    }
-
-public:
-    static void openPart(int which) { expanded().insert(which); }  // 3.0.21-beta.6: the search's way to a folded row
-
-private:
-    int foldedCount(const char* section) const {
-        int n = 0;
-        for (const IniSetting& s : iniSettings())
-            if (s.page == which_ && folds(s) && shown(s) && fitsMachine(sectionKey(s), host_.model().machine()) &&
-                (!section || std::strcmp(s.section, section) == 0))
-                ++n;
-        return n;
+        return host_.mode() == settings::Mode::Developer || levelOf(s) != settings::Mode::Developer;
     }
 
     // 2.4.2: DLSS's own size shows under Own size, its model with DLSS on
@@ -728,11 +698,6 @@ private:
             if (!appliesNow(sectionKey(s)) && (next == all.size() || appliesNow(sectionKey(all[next]))))
                 p.note(t(Text::AfterRestart));
         }
-        if (const int folded = foldedCount(section); folded > 0) {  // 3.0.17-beta.5
-            const bool open = expanded().count(int(which_)) != 0;
-            p.buttons({{kMoreRows + int(which_),
-                        open ? t(Text::MoreRowsHide) : tf(Text::MoreRowsShow, {std::to_string(folded)})}});
-        }
         if (!liveNote) return;
         p.gap();
         p.note(t(m.now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
@@ -806,8 +771,6 @@ void runAutoSetup(PageHost& host) {
     host.message(wtr(l, Text::AutoPending), false);
     host.rebuild();  // the page shows the new values
 }
-
-void expandPart(settings::Page which) { SettingsPage::openPart(int(which)); }
 
 std::unique_ptr<Page> makeSettingsPage(PageHost& host, std::vector<settings::Page> left,
                                        std::vector<settings::Page> right) {

@@ -69,7 +69,7 @@ const std::vector<Nav>& nav() {
     return list;
 }
 
-std::vector<Line> lines(int entry, const std::set<int>& open) {
+std::vector<Line> lines(int entry) {
     std::vector<Line> out;
     const std::vector<Nav>& list = nav();
     if (entry < 0 || size_t(entry) >= list.size()) return out;
@@ -82,20 +82,37 @@ std::vector<Line> lines(int entry, const std::set<int>& open) {
     const std::vector<cat::Group>& groups = cat::groups();
     for (size_t g = 0; g < groups.size(); ++g) {
         if (int(groups[g].area) != list[size_t(entry)].area) continue;
-        int details = 0;
-        for (const cat::Row& r : groups[g].rows) details += inGame(r) && r.level != cat::Level::Basic ? 1 : 0;
-        const bool opened = open.count(int(g)) != 0;
+        // A row with its parts right under it is one piece (the catalogue keeps a part after its row); a piece is
+        // basic or a detail by its first row. The basic pieces, then the details at once: with both - the small
+        // heading between them, the details marked as the group's inner part
+        struct Piece {
+            bool basic = false;
+            std::vector<const cat::Row*> rows;
+        };
+        std::vector<Piece> pieces;
         for (const cat::Row& r : groups[g].rows) {
-            if (!inGame(r) || (r.level != cat::Level::Basic && !opened)) continue;
-            Line l = row(Kind::Keys, r.key, int(g), entry, groups[g].name);
-            l.part = !r.under.empty();
-            out.push_back(std::move(l));
+            if (!inGame(r)) continue;
+            if (pieces.empty() || r.under.empty()) pieces.push_back(Piece{r.level == cat::Level::Basic, {}});
+            pieces.back().rows.push_back(&r);
         }
-        if (details > 0) {
-            Line more = row(Kind::Keys, "", int(g), entry, groups[g].name);
-            more.what = Line::What::More;
-            more.more = opened ? 0 : details;
-            out.push_back(std::move(more));
+        int basics = 0, details = 0;
+        for (const Piece& p : pieces) (p.basic ? basics : details) += 1;
+        for (int pass = 0; pass < 2; ++pass) {
+            const bool inner = pass == 1 && basics > 0;
+            if (inner && details > 0) {
+                Line sub = row(Kind::Keys, "", int(g), entry, groups[g].name);
+                sub.what = Line::What::Sub;
+                out.push_back(std::move(sub));
+            }
+            for (const Piece& p : pieces) {
+                if (p.basic != (pass == 0)) continue;
+                for (const cat::Row* r : p.rows) {
+                    Line l = row(Kind::Keys, r->key, int(g), entry, groups[g].name);
+                    l.part = !r->under.empty();
+                    l.detail = inner;
+                    out.push_back(std::move(l));
+                }
+            }
         }
     }
     head(out);

@@ -711,10 +711,14 @@ select selectbox option:checked { color: #e6cb8a; }
 .sw .snote { display: block; margin: 10dp 0 0 0; font-size: 12dp; color: #d6a460; }
 .sw .sro { display: flex; flex-direction: row; align-items: center; padding: 7dp 0; border-bottom: 1dp #ffffff0c; }
 .sw .st { display: block; flex: 1; padding-right: 12dp; }
-/* 3.0.21-beta.3: a part under its row; the line that opens a group's details */
+/* 3.0.21-beta.3: a part under its row */
 .sw .sro.sub { padding-left: 16dp; }
-.sw .smore { display: block; padding: 7dp 0 5dp 0; font-size: 12dp; color: #8cb4dc; }
-.sw .smore:hover { color: #e6cb8a; }
+/* 3.0.21-beta.11: a group's details at once (no line that opens them) - the small heading over them, and they
+   set in from the rows over them with a rule on their left: the group's inner part */
+.sw .ssub { display: block; margin-left: 8dp; padding: 10dp 0 3dp 10dp; border-left: 2dp #ffffff1f; font-size: 11dp;
+    color: #9aa3b5; }
+.sw .sro.det { margin-left: 8dp; padding-left: 10dp; border-left: 2dp #ffffff1f; }
+.sw .sro.det.sub { padding-left: 26dp; }
 .sw .sl { display: block; font-size: 13dp; color: #eef2f8; }
 .sw .shn { display: block; font-size: 11.5dp; color: #9aa3b5; }
 .sw .swn { display: block; font-size: 11.5dp; color: #d6a460; }
