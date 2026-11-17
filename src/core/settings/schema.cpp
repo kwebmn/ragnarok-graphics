@@ -472,6 +472,9 @@ const std::vector<IniSetting>& iniSettings() {
         {"interface", "character", Page::Interface, Control::Choice, 0, 0, 0, {"off", "bars", "rings"},
          {Text::InterfaceCharacterOff, Text::InterfaceCharacterBars, Text::InterfaceCharacterRings},
          Text::InterfaceCharacter, Text::InterfaceCharacterHint, ""},
+        // 3.0.21-beta.12: the 3D view's two icons in the character block's second row
+        {"interface", "view3d_buttons", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceView3dButtons, Text::InterfaceView3dButtonsHint, ""},
         // 3.0.11-beta.7: «Довідник» - Ctrl+F in the game
         {"interface", "reference", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceReference,
          Text::InterfaceReferenceHint, ""},
@@ -1487,6 +1490,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.buffs") return buffsLookToken(c.buffs);               // 3.0.11-beta.35
     if (k == "interface.buffs_overflow") return buffsOverflowToken(c.buffsOverflow);  // 3.0.11-beta.63
     if (k == "interface.character") return characterLookToken(c.character);  // 3.0.11-beta.36
+    if (k == "interface.view3d_buttons") return c.view3dButtons ? "1" : "0";  // 3.0.21-beta.12
     if (k == "interface.target") return c.targetCard ? "1" : "0";              // 3.0.11-beta.38
     if (k == "interface.party") return c.partyPanel ? "1" : "0";               // 3.0.11-beta.39
     if (k == "interface.tracker") return c.tracker ? "1" : "0";                // 3.0.11-beta.70

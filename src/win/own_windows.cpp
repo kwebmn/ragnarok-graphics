@@ -10,6 +10,7 @@
 #include "win/recap_window.hpp"
 #include "win/reference_window.hpp"
 #include "win/tracker.hpp"
+#include "win/view3d.hpp"
 
 namespace uagfx::win::ownwin {
 namespace {
@@ -69,6 +70,9 @@ bool lit(closedwin::Own o) {
         case Own::Tracker: return !trackerwin::hiddenNow();
         case Own::Party: return !closed(closedwin::Window::Party);
         case Own::Recap: return recapwin::isOpen();
+        // 3.0.21-beta.12: the 3D view's looks - lit while theirs is the view
+        case Own::Behind: return view3dwin::wanted() == view3d::Mode::Behind;
+        case Own::Eyes: return view3dwin::wanted() == view3d::Mode::First;
         default: return false;
     }
 }
@@ -84,6 +88,13 @@ void press(closedwin::Own o, const char* why) {
         case Own::Recap: recapwin::toggle(why); break;
         case Own::Settings:  // 3.0.18-beta.122: «Налаштування» (the console while the new options' look is off)
             if (!optionscardwin::toggleOpen(why)) Console::askOpen();
+            break;
+        // 3.0.21-beta.12: a view's own button - that view, or the game's own back when it is the view already
+        case Own::Behind:
+            view3dwin::ask(view3d::pressed(view3dwin::wanted(), view3d::Mode::Behind), why);
+            break;
+        case Own::Eyes:
+            view3dwin::ask(view3d::pressed(view3dwin::wanted(), view3d::Mode::First), why);
             break;
         default: break;
     }

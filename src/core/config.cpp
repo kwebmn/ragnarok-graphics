@@ -594,6 +594,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.hotbarPerCharacter);
         } else if (key == "interface.hotbar_ammo") {  // 3.0.11-beta.125: the ammo left over the hotbar
             setBool(val, c.hotbarAmmo);
+        } else if (key == "interface.view3d_buttons") {  // 3.0.21-beta.12: the 3D view's icons on the block
+            setBool(val, c.view3dButtons);
         } else if (key == "interface.hotbar_supplies") {  // 3.0.16-beta.8: gems, stones, spheres over the hotbar
             setBool(val, c.hotbarSupplies);
         } else if (key == "interface.skill_needs") {  // 3.0.16-beta.13

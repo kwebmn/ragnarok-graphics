@@ -9277,6 +9277,16 @@ constexpr Entry kTexts[] = {
     {Text::WhyNotHere, "Nothing of it shows on this map", "На цій карті цього не видно",
      "На этой карте этого не видно"},
     {Text::SettingsMoreHead, "More", "Додатково", "Дополнительно"},  // 3.0.21-beta.11: over a group's details
+    {Text::InterfaceView3dButtons, "3D view buttons", "Кнопки 3D-режиму", "Кнопки 3D-режима"},
+    {Text::InterfaceView3dButtonsHint,
+     "Two icons in the character block's second row: the view from behind and the first-person view. A press turns "
+     "the view on, another one brings the usual view back. The same as Ctrl+Shift+V.",
+     "Два значки в другому ряду блока персонажа: вигляд з-за спини та від першої особи. Клік вмикає вигляд, ще один "
+     "повертає звичайний. Те саме робить Ctrl+Shift+V.",
+     "Два значка во втором ряду блока персонажа: вид из-за спины и от первого лица. Клик включает вид, ещё один "
+     "возвращает обычный. То же делает Ctrl+Shift+V."},
+    {Text::CharOwnBehind, "View from behind", "Вигляд з-за спини", "Вид из-за спины"},
+    {Text::CharOwnEyes, "First-person view", "Вигляд від першої особи", "Вид от первого лица"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

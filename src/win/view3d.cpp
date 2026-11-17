@@ -62,6 +62,10 @@ constexpr uint32_t kSpriteTilt = 0x6B789C;
 // culling FUN_004f9e60 alone) - in the 3D view [view3d] distance: the game culls its ground and models there, the
 // haze whole there (core view3d::hazeReach), the own ground just past it
 constexpr uint32_t kCullFar = 0x69C5DC;
+// 3.0.21-beta.12 (R-EV2ABB): the step of the sprites the game keeps over everything (core view3d::overAll) - written
+// by its camera's update each frame (uaRO.exe 0x4FAE13: 9e-6 x 300 / its distance x sin(tilt) / sin(45)), read at
+// the camera's build, after it
+constexpr uint32_t kOnTopStepAt = 0x6D5EF4;
 // 3.0.19-beta.11: the crosshair pulled onto a monster this near (of the game's height), onto the Tab-locked one from
 // this far; the lock let go when it is not on the screen for kLockLostMs
 constexpr float kPullReach = 0.045f, kLockReach = 0.14f;
@@ -77,6 +81,8 @@ struct State {
     int fovFirst = int(view3d::kFirstFov), fovBehind = int(view3d::kBehindFov);  // 3.0.19-beta.10: [view3d]
     float mouseSpeed = 1.0f;
     float behindNow = 0.0f;  // 3.0.19-beta.10: the distance behind used (in at once before a wall, out slowly)
+    float onTopStep = view3d::kOnTopStep;  // 3.0.21-beta.12: the game's of this frame (kOnTopStepAt)
+    float onTopTold = 0.0f;
     bool ownOut = false;     // 3.0.19-beta.18: the character's own picture left out now (view3d::ownOut)
     int sight = view3d::kSightDefault;  // 3.0.19-beta.24: [view3d] distance
     int sightTold = 0;
@@ -620,6 +626,14 @@ void __attribute__((thiscall)) build(uint32_t view) {
     g_lastView = view;  // 3.0.20-beta.3
     State& s = g_state;
     const auto original = reinterpret_cast<BuildFn>(g_build);
+    // 3.0.21-beta.12 (R-EV2ABB «не видна анимация урона»): the over-everything sprites' step of this frame - the
+    // game's camera update (before this build) wrote it from its distance, which the 3D view's wheel moves
+    s.onTopStep = *reinterpret_cast<const float*>(uintptr_t(kOnTopStepAt));
+    if (s.mode != view3d::Mode::Off && std::fabs(s.onTopStep - s.onTopTold) > 0.25f * s.onTopTold) {
+        LOG_INFO("3D view: the game's step of the sprites kept over everything %.3g (9e-06 at its distance 300) - "
+                 "the damage numbers, Miss and the target's cursor known by it", s.onTopStep);
+        s.onTopTold = s.onTopStep;
+    }
     if (s.wanted != s.mode) switchTo(s, view);
     // 3.0.19-beta.18: the last frame's distance; 3.0.19-beta.37: the free camera's as from behind (seen, unless near)
     s.ownOut = view3d::ownOut(s.free ? view3d::Mode::Behind : s.mode, s.behindNow, s.ownOut);
@@ -921,7 +935,22 @@ void frame(const Config& config) {
     faceTheView(s, config.view3dFace && !s.orbitHolds);  // 3.0.19-beta.39; .54: not while Shift turns it round
 }
 
+bool available() { return g_build != 0; }
+
+view3d::Mode wanted() { return g_state.wanted; }
+
+bool ask(view3d::Mode m, const char* why) {
+    State& s = g_state;
+    if (!g_build || !inGameWorld()) return false;
+    if (m == s.wanted) return true;
+    s.wanted = m;
+    LOG_INFO("3D view: %s - the view %s", why, view3d::nameOf(m));
+    return true;
+}
+
 bool active() { return g_state.mode != view3d::Mode::Off; }
+
+float onTopStep() { return g_state.onTopStep; }
 
 bool looking() { return g_state.mode != view3d::Mode::Off && g_state.looking; }
 

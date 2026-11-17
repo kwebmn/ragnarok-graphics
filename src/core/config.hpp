@@ -783,6 +783,10 @@ struct Config {
     // момент когда они заканчиваются»): [interface] hotbar_ammo - the ammo worn and how many left on a pill over the
     // hotbar (core/hotbar_panel Ammo, win/ammo_watch); on
     bool hotbarAmmo = true;
+    // 3.0.21-beta.12 (the owner: «думаю также пора кнопку в интерфейс с 3д режимами вставить»): [interface]
+    // view3d_buttons - the 3D view's two icons in the character block's second row (core/closed_windows Own::Behind,
+    // Own::Eyes); on
+    bool view3dButtons = true;
     // 3.0.16-beta.8 (the owner: «для магов и пристов показывать количество гемов, а для монков ... сферы»):
     // [interface] hotbar_supplies - what the bar's skills spend (gems, Holy Water, stones, bottles) and the spirit
     // spheres on pills after the ammo's (core/supplies, win/sphere_watch); off

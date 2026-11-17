@@ -74,7 +74,9 @@ const EffectNeed kEffectNeeds[] = {
     {"effects.swamp", "effects.water"},              {"effects.world_reflections", "effects.water"},
     {"effects.ripples", "effects.water"},            {"effects.rain_wet", "effects.weather"},
     {"effects.wet_ground", "effects.weather"},       {"effects.night_windows", "effects.materials"},
-    {"effects.lit_dust", "effects.motes"},           {"effects.lit_dust", "effects.indoor_dust"}};
+    {"effects.lit_dust", "effects.motes"},           {"effects.lit_dust", "effects.indoor_dust"},
+    // 3.0.21-beta.12: the 3D view's icons stand on the character block
+    {"interface.view3d_buttons", "interface.character"}};
 
 // A key as a pointer that stays (a Need holds one): the strings made while the groups are built are kept here
 const char* keep(const std::string& key) {
@@ -180,7 +182,8 @@ std::vector<Group> build() {
                          D("interface.layout_per_char"), D("interface.pack_icons"), D("interface.low_hp_edge"),
                          D("interface.element_colours"), B("interface.reference")}));
     out.push_back(group(Area::Interface, Text::InterfaceSecPanels,
-                        {B("interface.character"), B("interface.target"), B("interface.party"), B("interface.buffs"),
+                        {B("interface.character"), D("interface.view3d_buttons", "interface.character"),
+                         B("interface.target"), B("interface.party"), B("interface.buffs"),
                          D("interface.buffs_overflow", "interface.buffs"), D("buffs.timers", "interface.buffs"),
                          B("interface.tracker"), B("interface.cast"), B("interface.exp_bars"),
                          D("interface.exp_gain"), D("interface.item_toast"), D("interface.hunt_panel"),

@@ -29,6 +29,19 @@ TEST(view3d_modes_cycle_normal_behind_first) {
     CHECK(view3d::fovFor(view3d::Mode::Behind) > 45.0f);
 }
 
+// 3.0.21-beta.12 (the owner: «пора кнопку в интерфейс с 3д режимами вставить»): a view's own button - pressed, that
+// view; pressed while it is the view, the game's own back (each button one thing: its view on and off)
+TEST(view3d_a_views_button_turns_it_on_and_off) {
+    using view3d::Mode;
+    CHECK(view3d::pressed(Mode::Off, Mode::Behind) == Mode::Behind);
+    CHECK(view3d::pressed(Mode::Off, Mode::First) == Mode::First);
+    CHECK(view3d::pressed(Mode::Behind, Mode::First) == Mode::First);  // straight to the other, no round by the key
+    CHECK(view3d::pressed(Mode::First, Mode::Behind) == Mode::Behind);
+    CHECK(view3d::pressed(Mode::Behind, Mode::Behind) == Mode::Off);
+    CHECK(view3d::pressed(Mode::First, Mode::First) == Mode::Off);
+    CHECK(view3d::pressed(Mode::First, Mode::Off) == Mode::Off);
+}
+
 TEST(view3d_mouse_turns_by_the_sign_and_holds_the_pitch) {
     view3d::Look l;
     view3d::turn(l, 100.0f, 0.0f, 0.15f, 1.0f);
@@ -591,6 +604,39 @@ TEST(view3d_the_games_sprites_kept_over_everything_known_by_their_depth) {
     };
     const Wide wide[3] = {{digit[0], 0, 0}, {digit[1], 0, 0}, {digit[2], 0, 0}};
     CHECK(view3d::overAll(wide, 3, sizeof(Wide)));
+}
+
+// 3.0.21-beta.12 (R-EV2ABB, the owner: «когда в 3д режиме я бью или ктото бьет мобов не видна анимация урона»): the
+// game's step there is no constant - its camera's update (uaRO.exe 0x4FAE13) writes it each frame as 9e-6 x 300 / its
+// camera's distance x sin(tilt) / sin(45): with the wheel's distance (546, 862 in the report) the digits stood
+// between the 9e-6 steps, near_fade took them for a surface at the eye and dissolved them. Known by the step the game
+// drew them with (read at the camera's build)
+TEST(view3d_the_games_sprites_kept_over_everything_at_any_distance) {
+    for (const float distance : {300.0f, 473.0f, 545.9f, 861.8f, 1000.0f, 150.0f}) {
+        const float step = 9.0e-6f * (300.0f / distance);  // the game's tilt -45 in the 3D view
+        int fixed = 0, known = 0, all = 0;
+        for (int layer = -3; layer <= 3; ++layer)
+            for (int clip = 0; clip < 12; ++clip) {
+                const float rhw = float(layer) * step + ((1.0f / 10.0f + float(clip) * step) - step * 20.0f);
+                const std::vector<TopV> q = spriteQuad(rhw, rhw);
+                ++all;
+                known += view3d::overAll(q.data(), 4, sizeof(TopV), step) ? 1 : 0;
+                fixed += view3d::overAll(q.data(), 4, sizeof(TopV)) ? 1 : 0;
+            }
+        CHECK_EQ(known, all);  // every one, by the game's own step
+        if (distance == 545.9f) CHECK(fixed < all / 4);  // by a 9e-6 step: R-EV2ABB's digits, most of them missed
+    }
+    // still not a sprite that stands near the camera, nor one between the steps
+    const float step = 9.0e-6f * (300.0f / 545.9f);
+    const std::vector<TopV> near10 = spriteQuad(1.0f / 10.5f, 1.0f / 10.5f);
+    CHECK(!view3d::overAll(near10.data(), 4, sizeof(TopV), step));
+    const float between = 1.0f / 10.0f - 20.4f * step;
+    const std::vector<TopV> off = spriteQuad(between, between);
+    CHECK(!view3d::overAll(off.data(), 4, sizeof(TopV), step));
+    // a step the game cannot have (none read, a broken value): the constant one
+    const std::vector<TopV> digit = spriteQuad(onTopRhw(0, 0), onTopRhw(0, 0));
+    CHECK(view3d::overAll(digit.data(), 4, sizeof(TopV), 0.0f));
+    CHECK(view3d::overAll(digit.data(), 4, sizeof(TopV), -1.0f));
 }
 
 TEST(view3d_what_dissolves_right_at_the_camera) {

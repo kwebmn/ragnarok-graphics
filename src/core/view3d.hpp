@@ -12,6 +12,9 @@ namespace uagfx::view3d {
 // the world, its sprites (perspective already: 0x412d60) and its clicks through that camera. World y points down.
 enum class Mode : uint8_t { Off, Behind, First };
 Mode next(Mode m);  // Ctrl+Shift+V: the game's own -> behind -> first person -> the game's own
+// 3.0.21-beta.12 (the owner: «пора кнопку в интерфейс с 3д режимами вставить»): a view's own button on the
+// interface pressed while the view is `now` - that view, or the game's own back when it is the view already
+Mode pressed(Mode now, Mode button);
 const char* nameOf(Mode m);
 
 constexpr float kGameFov = 15.0f;    // the game's own vertical field of view (degrees)
@@ -146,7 +149,11 @@ constexpr float kNearGone = 10.0f, kNearWhole = 12.0f;
 constexpr float kOnTopNear = 10.0f, kOnTopStep = 9.0e-6f;  // 0x69F104, 0x6D5EF4
 constexpr int kOnTopBack = 20, kOnTopLayers = 20;          // 0x69F174
 constexpr double kOnTopOff = 0.05;  // of a step: the game's own rounding is about a thousandth of one
-bool overAll(const void* vertices, uint32_t count, size_t stride);
+// 3.0.21-beta.12 (R-EV2ABB: «в 3д режиме ... не видна анимация урона»): the step is the game's of this frame - its
+// camera's update (uaRO.exe 0x4FAE13) writes 0x6D5EF4 = kOnTopStep x 300 / its distance x sin(tilt) / sin(45), and
+// the 3D view's wheel moves that distance (546, 862 in the report: the digits between the 9e-6 steps, dissolved).
+// `step`: the game's as it drew them (win/view3d reads it at the camera's build); none or not a step - kOnTopStep
+bool overAll(const void* vertices, uint32_t count, size_t stride, float step = kOnTopStep);
 // What near_fade dissolves: the world's draws in the 3D view (`wide`) - not the interface's, not a sprite the game
 // keeps over everything
 constexpr bool nearFades(bool on, bool wide, bool ui, bool keptOverAll) {

@@ -19,6 +19,7 @@ enum class Icon : uint8_t {
     PadUp, PadRight, PadDown, PadLeft,
     Gamepad,  // 3.0.11-beta.90: the windows' tile's «Контролер»
     Battle,   // 3.0.11-beta.147: the hotbar's battle mode button
+    ViewBehind, ViewEyes,  // 3.0.21-beta.12: the 3D view's looks on the character block - a camera, an eye
     kCount
 };
 

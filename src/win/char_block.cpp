@@ -543,6 +543,8 @@ uiicons::Icon ownIcon(closedwin::Own o) {
         case Own::Tracker: return uiicons::Icon::Quest;
         case Own::Party: return uiicons::Icon::Npc;
         case Own::Recap: return uiicons::Icon::Warn;
+        case Own::Behind: return uiicons::Icon::ViewBehind;  // 3.0.21-beta.12: a camera
+        case Own::Eyes: return uiicons::Icon::ViewEyes;      // an eye
         default: return uiicons::Icon::Tables;
     }
 }
@@ -552,7 +554,7 @@ std::string ownTip(closedwin::Own o) {
     static const settings::Text kTips[size_t(Own::Count)] = {
         settings::Text::CharOwnReference, settings::Text::CharOwnHunt,  settings::Text::CharOwnMvp,
         settings::Text::CharOwnTracker,   settings::Text::CharOwnParty, settings::Text::CharOwnRecap,
-        settings::Text::CharOwnSettings};
+        settings::Text::CharOwnSettings,  settings::Text::CharOwnBehind, settings::Text::CharOwnEyes};
     if (size_t(o) >= size_t(Own::Count)) return "";
     const std::string key = ownwin::keyOf(o);  // 3.0.18-beta.125: the key the player gave it
     return say(kTips[size_t(o)]) + (key.empty() ? "" : " \xC2\xB7 " + key);

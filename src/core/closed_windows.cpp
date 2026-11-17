@@ -36,6 +36,7 @@ std::vector<Own> row(const Switches& on) {
     if (on.tracker) out.push_back(Own::Tracker);
     if (on.party) out.push_back(Own::Party);
     if (on.recap) out.push_back(Own::Recap);
+    if (on.view3d) out.push_back(Own::Behind), out.push_back(Own::Eyes);  // 3.0.21-beta.12
     out.push_back(Own::Settings);
     return out;
 }
@@ -52,6 +53,7 @@ bool ownOfKey(unsigned vk, const Keys& keys, Own& out) {
 std::string keyName(Own o, const Keys& keys) {
     if (o == Own::Reference) return "Ctrl+F";
     if (o == Own::Settings) return "Alt+O";
+    if (o == Own::Behind || o == Own::Eyes) return "Ctrl+Shift+V";  // 3.0.21-beta.12: the key that walks the views
     const char c = size_t(o) < keys.size() ? keys[size_t(o)] : 0;
     return c ? std::string("Ctrl+") + c : std::string();
 }

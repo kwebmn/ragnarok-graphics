@@ -73,6 +73,11 @@ ICONS = [
     # 3.0.11-beta.147: the hotbar's battle mode button (in the pencil's place) - two crossed swords
     ('Battle', '<path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6M16 16l4 4M19 21l2-2"/>'
                '<path d="M14.5 6.5L18 3h3v3l-3.5 3.5"/><path d="M5 14l4 4M7 17l-3 3M3 19l2 2"/>'),
+    # 3.0.21-beta.12: the 3D view's two looks on the character block - a camera (the view from behind), an eye (the
+    # first-person view)
+    ('ViewBehind', '<rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 10.5l6-3v9l-6-3"/>'),
+    ('ViewEyes', '<path d="M2.5 12C5 7.5 8.3 5.5 12 5.5s7 2 9.5 6.5c-2.5 4.5-5.8 6.5-9.5 6.5s-7-2-9.5-6.5z"/>'
+                 '<circle cx="12" cy="12" r="3"/>'),
 ]
 
 NUMBER = r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?'

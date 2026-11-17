@@ -75,3 +75,31 @@ TEST(ui_icon_colour_and_strength) {
     uiicons::draw(q, Icon::Back, 3, 3, 24, 0xFFFFFF, 0.5f);
     for (const uint32_t c : q.px) CHECK((c & 0xFF) <= 0x80);
 }
+
+// 3.0.21-beta.12: the 3D view's two looks on the character block - a camera (from behind) and an eye (first person)
+TEST(ui_icons_of_the_3d_views) {
+    const float k = 2.0f;  // 48 px
+    const auto px = [&](float v) { return 4 + int(v * k); };
+    panel::Picture eye = blank(56, 56);
+    uiicons::draw(eye, Icon::ViewEyes, 4, 4, 48, 0xFFFFFF);
+    CHECK(at(eye, px(12 + 3), px(12)) != 0);   // the pupil's ring
+    CHECK(at(eye, px(12), px(12 - 3)) != 0);
+    CHECK_EQ(at(eye, px(12), px(12)), 0u);       // its middle empty
+    CHECK(at(eye, px(12), px(5.5f)) != 0);     // the upper lid's top
+    CHECK(at(eye, px(12), px(18.5f)) != 0);    // the lower lid's bottom
+    CHECK(at(eye, px(2.5f), px(12)) != 0);     // the corners
+    CHECK(at(eye, px(21.4f), px(12)) != 0);
+    CHECK_EQ(at(eye, px(4), px(5)), 0u);
+    panel::Picture cam = blank(56, 56);
+    uiicons::draw(cam, Icon::ViewBehind, 4, 4, 48, 0xFFFFFF);
+    CHECK(at(cam, px(9), px(7)) != 0);         // the body's top and bottom
+    CHECK(at(cam, px(9), px(17)) != 0);
+    CHECK(at(cam, px(3), px(12)) != 0);        // its left side
+    CHECK_EQ(at(cam, px(9), px(12)), 0u);        // its inside empty
+    CHECK(at(cam, px(21), px(12)) != 0);       // the lens's wide end
+    CHECK_EQ(at(cam, px(12), px(3)), 0u);
+    int differ = 0;
+    for (int y = 0; y < 56; ++y)
+        for (int x = 0; x < 56; ++x) differ += (at(eye, x, y) != 0) != (at(cam, x, y) != 0) ? 1 : 0;
+    CHECK(differ > 200);  // told apart at a glance
+}

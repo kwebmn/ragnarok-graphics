@@ -1499,6 +1499,21 @@ TEST(config_interface_smooth_fixes) {
     CHECK(!liveUpdate(noUi(""), noUi("smooth_fixes = 0\n")).next.smoothFixes);
 }
 
+// 3.0.21-beta.12 (the owner: «думаю также пора кнопку в интерфейс с 3д режимами вставить»): [interface]
+// view3d_buttons - the 3D view's two icons in the character block's second row; on at first, a row of the game's
+// «Налаштування» (a part of «Блок персонажа»), at once
+TEST(config_interface_view3d_buttons) {
+    CHECK(noUi("").view3dButtons);
+    CHECK(!noUi("view3d_buttons = 0\n").view3dButtons);
+    const settings::IniSetting* s = settings::findSetting("interface.view3d_buttons");
+    CHECK(s != nullptr && s->control == settings::Control::Check);
+    if (s) CHECK_EQ(settings::tokenOf(*s, noUi("view3d_buttons = 0\n")), std::string("0"));
+    CHECK(appliesNow("interface.view3d_buttons"));
+    const LiveUpdate u = liveUpdate(noUi(""), noUi("view3d_buttons = 0\n"));
+    CHECK(!u.next.view3dButtons && u.waiting.empty());
+    CHECK(u.applied.size() == 1 && u.applied[0] == "view3d_buttons 1 -> 0");
+}
+
 // 3.0.11-beta.125 (the owner: «когда играю арчером ... не видно сколько осталось»): [interface] hotbar_ammo - the ammo
 // worn and how many left on a pill over the hotbar; on at first, a box of «Інтерфейс», at once
 TEST(config_interface_hotbar_ammo) {

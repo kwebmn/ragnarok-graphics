@@ -35,6 +35,8 @@ Mode next(Mode m) {
     }
 }
 
+Mode pressed(Mode now, Mode button) { return button == Mode::Off || now == button ? Mode::Off : button; }
+
 const char* nameOf(Mode m) {
     switch (m) {
         case Mode::Behind: return "behind";
@@ -262,10 +264,11 @@ float spriteDepth(float z, float rhw) {
     return std::max(0.0f, camera::kFar / (camera::kFar - camera::kNear) * (1.0f - camera::kNear / v));
 }
 
-bool overAll(const void* vertices, uint32_t count, size_t stride) {
+bool overAll(const void* vertices, uint32_t count, size_t stride, float gameStep) {
     if (!vertices || !count || stride < 4 * sizeof(float)) return false;
     const auto* p = static_cast<const uint8_t*>(vertices);
-    const double top = 1.0 / double(kOnTopNear), step = double(kOnTopStep);
+    const bool sane = std::isfinite(gameStep) && gameStep > 1.0e-8f && gameStep < 1.0e-3f;
+    const double top = 1.0 / double(kOnTopNear), step = double(sane ? gameStep : kOnTopStep);
     for (uint32_t i = 0; i < count; ++i) {
         float rhw = 0;
         std::memcpy(&rhw, p + i * stride + 3 * sizeof(float), sizeof rhw);

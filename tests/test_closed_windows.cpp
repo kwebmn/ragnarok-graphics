@@ -52,3 +52,27 @@ TEST(closed_windows_own_row_and_keys) {
     CHECK(!closedwin::ownOfKey('K', mine, o));
     CHECK_EQ(closedwin::keyName(closedwin::Own::Recap, mine), std::string());
 }
+
+// 3.0.21-beta.12 (the owner: «думаю также пора кнопку в интерфейс с 3д режимами вставить»): the 3D view's two looks
+// in the character block's second row - after our windows, before «Налаштування»; the 3D view's own key in their
+// tips, no Ctrl letter of their own
+TEST(closed_windows_the_3d_views_stand_in_the_row) {
+    using closedwin::Own;
+    closedwin::Switches on;
+    on.hunt = on.view3d = true;
+    const std::vector<Own> row = closedwin::row(on);
+    CHECK_EQ(row.size(), size_t(4));
+    if (row.size() == 4)
+        CHECK(row[0] == Own::Hunt && row[1] == Own::Behind && row[2] == Own::Eyes && row[3] == Own::Settings);
+    on.view3d = false;
+    CHECK_EQ(closedwin::row(on).size(), size_t(2));  // the 3D view not here (or its buttons switched off): none
+    closedwin::Switches all;
+    all.reference = all.hunt = all.mvp = all.tracker = all.party = all.recap = all.view3d = true;
+    CHECK_EQ(closedwin::row(all).size(), size_t(9));  // the most: nine icons, as wide as the block (372 at scale 1)
+    const closedwin::Keys& k = closedwin::kDefaultKeys;
+    CHECK_EQ(closedwin::keyName(Own::Behind, k), std::string("Ctrl+Shift+V"));
+    CHECK_EQ(closedwin::keyName(Own::Eyes, k), std::string("Ctrl+Shift+V"));
+    Own o{};
+    for (unsigned vk = 'A'; vk <= 'Z'; ++vk)
+        if (closedwin::ownOfKey(vk, k, o)) CHECK(o != Own::Behind && o != Own::Eyes);
+}

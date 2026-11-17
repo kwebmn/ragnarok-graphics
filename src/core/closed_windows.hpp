@@ -22,22 +22,27 @@ inline void set(Set& s, Window w, bool closed) { s.set(size_t(w), closed); }
 // 3.0.18-beta.120 (stage 3): the character block's second row - our windows («Довідник»,
 // «Полювання», «Таймери босів», «Відстеження», «Група», «Що мене
 // вбило», «Налаштування»), each shown when its switch is on (settings always)
-enum class Own : uint8_t { Reference, Hunt, Mvp, Tracker, Party, Recap, Settings, Count };
+// 3.0.21-beta.12 (the owner: «думаю также пора кнопку в интерфейс с 3д режимами вставить»): and the 3D view's two
+// looks - «Вигляд з-за спини», «Вигляд від першої особи» -, each its own button (pressed: that view; pressed while
+// lit: the game's own view back - core view3d::pressed), after our windows and before «Налаштування»; shown where
+// the 3D view works and [interface] view3d_buttons is on. No Ctrl letter of their own: Ctrl+Shift+V walks the views
+enum class Own : uint8_t { Reference, Hunt, Mvp, Tracker, Party, Recap, Settings, Behind, Eyes, Count };
 struct Switches {
     bool reference = false, hunt = false, mvp = false, tracker = false, party = false, recap = false;
+    bool view3d = false;
 };
 std::vector<Own> row(const Switches& on);
 // 3.0.18-beta.125 (item 2: «Клавіші»): each window's Ctrl letter by Own ('A'..'Z', 0 none;
 // «Довідник»'s F and «Налаштування»'s Alt+O their own, fixed) - [interface] key_hunt, key_mvp,
 // key_tracker, key_party, key_recap
 using Keys = std::array<char, size_t(Own::Count)>;
-constexpr Keys kDefaultKeys = {'F', 'H', 'B', 'J', 'G', 'K', 0};
+constexpr Keys kDefaultKeys = {'F', 'H', 'B', 'J', 'G', 'K', 0, 0, 0};
 // The letters the game leaves free with Ctrl (uaRO.exe FUN_004d96e0 takes A, E, O, P, Q, R, T, V with it; ours F, M,
 // W; C, X, Z, S the fields' own) - a key's choices
 constexpr const char* kFreeLetters = "BDGHIJKLNUY";
 // Ctrl+letter's window among the five (not «Довідник»'s Ctrl+F - its own); false: none of ours
 bool ownOfKey(unsigned vk, const Keys& keys, Own& out);
-// "Ctrl+H"; «Довідник» "Ctrl+F", «Налаштування» "Alt+O"; "" none
+// "Ctrl+H"; «Довідник» "Ctrl+F", «Налаштування» "Alt+O", the 3D view's looks "Ctrl+Shift+V"; "" none
 std::string keyName(Own o, const Keys& keys);
 
 }  // namespace uagfx::closedwin

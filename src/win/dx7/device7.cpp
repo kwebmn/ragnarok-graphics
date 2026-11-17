@@ -880,7 +880,10 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // the game keeps over everything - a damage number, Miss, Critical, the target's cursor - is drawn at its near
     // plane wherever it stands (core view3d::overAll), and [view3d] near_fade, which dissolves what is right at the
     // camera, took every one of them away. Told to the renderer: left whole
-    if (!setup.ui && win::view3dwin::active() && view3d::overAll(vertices, vertexCount, FrameRecord::stride(fvf))) {
+    // 3.0.21-beta.12 (R-EV2ABB «в 3д режиме ... не видна анимация урона»): by the game's step of this frame - it
+    // follows the game's camera distance, which the 3D view's wheel moves (a fixed 9e-6 missed most of them)
+    if (!setup.ui && win::view3dwin::active() &&
+        view3d::overAll(vertices, vertexCount, FrameRecord::stride(fvf), win::view3dwin::onTopStep())) {
         cmd.overAll = true;
         ++overAllDraws_;
         if (!overAllTold_) {

@@ -392,6 +392,22 @@ TEST(catalogue_a_row_says_why_a_change_does_not_show) {
 // 3.0.21-beta.5 (the concept's question 5, the owner: «делай» on the list of names): a name says what is seen - the
 // inner words (our renderer, a library's file, «нова бібліотека», a trial's «(експеримент)») are out of the names
 // of the rows players see; a row is still found by the name it had
+// 3.0.21-beta.12: the 3D view's buttons on the character block - a part of «Блок персонажа» (shown right under it in
+// the game's «Налаштування»), nothing to do while the block is off
+TEST(catalogue_the_3d_views_buttons_are_a_part_of_the_character_block) {
+    const catalogue::Row* r = catalogue::find("interface.view3d_buttons");
+    CHECK(r != nullptr);
+    if (!r) return;
+    CHECK(r->under == "interface.character" && r->status == catalogue::Status::Permanent);
+    CHECK(catalogue::homeOf(*r) == catalogue::Home::Game);
+    const catalogue::Group* g = catalogue::groupOf("interface.view3d_buttons");
+    CHECK(g != nullptr && g == catalogue::groupOf("interface.character"));
+    const std::string why = catalogue::whyNot(*r, parseConfig("[interface]\ncharacter = off\n"), catalogue::Now{},
+                                              Lang::Uk);
+    CHECK(why.find("Блок персонажа") != std::string::npos);
+    CHECK(catalogue::whyNot(*r, parseConfig(""), catalogue::Now{}, Lang::Uk).empty());
+}
+
 TEST(catalogue_names_say_what_is_seen) {
     const auto name = [](const char* key, Lang l) {
         const IniSetting* s = findSetting(key);

@@ -2,6 +2,7 @@
 #include <windows.h>
 
 #include "core/config.hpp"
+#include "core/view3d.hpp"
 
 namespace uagfx::win::view3dwin {
 
@@ -18,7 +19,16 @@ bool key(UINT m, WPARAM wp, LPARAM lp);  // Ctrl+Shift+V; true: ours (the game s
 // each frame: the cursor held in the window while looking, the log; 3.0.19-beta.10: [view3d]'s fields of view and
 // mouse speed taken (for the camera's next build)
 void frame(const Config& config);
+// 3.0.21-beta.12 (the owner: «думаю также пора кнопку в интерфейс с 3д режимами вставить»): the views by the
+// interface's buttons (the character block's second row, win/own_windows) - whether the 3D view works with this
+// build of uaRO.exe (the camera's hook in), the view asked for now (the game's own, behind, first person), and a
+// view asked for as Ctrl+Shift+V asks (taken at the camera's next build); false: not here or not in the world
+bool available();
+view3d::Mode wanted();
+bool ask(view3d::Mode m, const char* why);
 bool active();                           // the 3D view on
+// 3.0.21-beta.12 (R-EV2ABB): the step the game drew its over-everything sprites with this frame (core view3d::overAll)
+float onTopStep();
 bool looking();                          // and the mouse turns it (not Alt): the crosshair in the cursor's place
 bool fromTheEyes();                      // 3.0.19-beta.13: the view from the character's eyes
 bool ownHidden();                        // 3.0.19-beta.15: the character's own picture left out (eyes, or right behind)

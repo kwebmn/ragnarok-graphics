@@ -1261,6 +1261,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         closedwin::Switches own;
         own.reference = config.referenceWindow, own.hunt = config.huntPanel, own.mvp = config.mvpTimers;
         own.tracker = config.tracker, own.party = config.partyPanel, own.recap = config.deathRecap;
+        own.view3d = config.view3dButtons && view3dwin::available();  // 3.0.21-beta.12: the 3D view's two looks
         ownwin::setSwitches(own);
         ownwin::setKeys(config.ownKeys);  // 3.0.18-beta.125
     }

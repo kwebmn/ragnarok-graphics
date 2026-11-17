@@ -289,6 +289,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("hotbar_ammo", flag(running.hotbarAmmo), flag(file.hotbarAmmo)));
         n.hotbarAmmo = file.hotbarAmmo;
     }
+    if (file.view3dButtons != running.view3dButtons) {  // 3.0.21-beta.12: the 3D view's icons, at once
+        u.applied.push_back(change("view3d_buttons", flag(running.view3dButtons), flag(file.view3dButtons)));
+        n.view3dButtons = file.view3dButtons;
+    }
     if (file.elementColours != running.elementColours) {  // 3.0.18-beta.144: the things' element colours
         u.applied.push_back(change("element_colours", flag(running.elementColours), flag(file.elementColours)));
         n.elementColours = file.elementColours;
