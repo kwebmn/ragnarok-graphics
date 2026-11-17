@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.84 — what's new · 2026-11-17
+
+- **HP bars with a far camera (R-7WTVBF).** The game draws the HP and SP bar under a character the same size always, so with the camera far out it was huge next to the small figure. Now, with the camera past the usual (from 500), the bars under the characters get smaller with them, down to 60 % (from a distance of about 830). The monsters' HP bars get smaller the same way. The 3D view is as it was. The switch «Smaller HP bars with a far camera» is in «Interface» → «Fight» and in the console, on.
+
 # uaRO Graphics 3.0.20-beta.83 — what's new · 2026-11-17
 
 - **Diagnostics: the 64-bit renderer vanishing.** Twice the renderer vanished with exit code 0xC0000409 about 5 seconds after a map loaded, this time on a GTX 970, so DLSS is not the cause. The renderer now keeps marking which of the game's messages it is handling and at which step, and if it vanishes the game logs exactly where it stood. A C library error or an ordinary crash is logged with its place and a dump. A report after such a game carries the vanished renderer's log and its dump. Nothing changes on screen.
