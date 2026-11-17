@@ -58,4 +58,50 @@ inline void take(Table& t, uint32_t pid) {
         if (e.pid == pid) e = Entry{0, 0, 0};
 }
 
+// 3.0.21-beta.5 (R-KQRYFF: a tester's second game window entered with the account the first one played; the server
+// threw the first one out with «another one logged in with this account» and the driver reported a lost connection):
+// the game window that plays `login` among the other games' (busy()), 0 none - the login card says so under its
+// field before «Увійти» is pressed
+inline int windowOf(const std::vector<Busy>& others, uint64_t login) {
+    for (const Busy& b : others)
+        if (b.login == login) return b.window;
+    return 0;
+}
+
+// The logins taken over: a game whose login the server accepts while another game of this session plays it leaves
+// a line here (a block of its own); the game thrown out finds it by its login and the time of the server's notice -
+// the player's own other window, not a drop to report
+constexpr const wchar_t* kTakenBlock = L"Local\\uaro-graphics-logins-taken-1";
+struct Taken {
+    uint64_t login;  // accounts::loginHash
+    uint64_t ms;     // the session's clock (GetTickCount64) when the server accepted it there; 0 - a free entry
+    uint32_t seq;    // the game window that took it
+    uint32_t pid;
+};
+static_assert(sizeof(Taken) == 24, "the shared block's entries");
+struct TakenTable {
+    Taken e[kMost];
+};
+
+// A line put: in a free entry, else in the oldest one's place
+inline void putTaken(TakenTable& t, uint64_t login, uint32_t seq, uint32_t pid, uint64_t ms) {
+    int at = 0;
+    for (int i = 1; i < kMost; ++i)
+        if (t.e[i].ms < t.e[at].ms) at = i;
+    t.e[at] = Taken{login, ms ? ms : 1, seq, pid};
+}
+
+// The game window that took `login` within `withinMs` of `ms` (before or after) - another process's, the nearest in
+// time; 0 none
+inline int takenBy(const TakenTable& t, uint64_t login, uint32_t selfPid, uint64_t ms, uint64_t withinMs) {
+    int window = 0;
+    uint64_t nearest = withinMs + 1;
+    for (const Taken& e : t.e) {
+        if (!e.ms || e.login != login || e.pid == selfPid) continue;
+        const uint64_t apart = e.ms > ms ? e.ms - ms : ms - e.ms;
+        if (apart < nearest) nearest = apart, window = int(e.seq);
+    }
+    return window;
+}
+
 }  // namespace uagfx::gamelogins

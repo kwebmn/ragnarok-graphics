@@ -13,5 +13,8 @@ namespace uagfx::win::gamelogins {
 void accepted(const std::string& login);
 void left();
 std::vector<uagfx::gamelogins::Busy> others();  // looked at once a second at most
+// 3.0.21-beta.5 (R-KQRYFF): the game window of this session that entered with this game's login within `withinMs`
+// of `ms` (the session's clock, GetTickCount64) - it threw this one out; 0 none
+int takenOver(unsigned long long ms, unsigned long long withinMs);
 
 }  // namespace uagfx::win::gamelogins

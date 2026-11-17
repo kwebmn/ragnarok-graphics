@@ -241,6 +241,14 @@ std::string layoutName() {
 
 // 3.0.11-beta.172: the hint under the field the keys go to - Caps Lock on, Cyrillic in the login (its layout)
 void hintOf(lc::Fields& f) {
+    // 3.0.21-beta.5 (R-KQRYFF): the login in the field plays in another game window - said under it before anything
+    // else: «Увійти» here would throw that window out
+    if (!f.account.empty())
+        if (const int other = ::uagfx::gamelogins::windowOf(gamelogins::others(), accounts::loginHash(f.account))) {
+            f.hintField = loginerr::Field::Account;
+            f.hint = settings::fmt(say(settings::Text::LoginHintBusy), {std::to_string(other)});
+            return;
+        }
     const bool caps = (GetKeyState(VK_CAPITAL) & 1) != 0;
     const loginhint::Hint h = f.focus == lc::Focus::Account    ? loginhint::forAccount(f.account, caps)
                               : f.focus == lc::Focus::Password ? loginhint::forPassword(caps)

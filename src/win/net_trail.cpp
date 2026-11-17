@@ -9,6 +9,7 @@
 #include "core/log_files.hpp"
 #include "core/version.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_logins.hpp"
 #include "win/iat.hpp"
 #include "win/log.hpp"
 #include "win/net_watch.hpp"
@@ -206,6 +207,15 @@ void tell(State& st, const nettrail::Drop& d) {
                       : d.error ? (std::string(", error ") + std::to_string(d.error)).c_str() : "",
              double(d.ageMs) / 1000.0, static_cast<unsigned long long>(d.in), static_cast<unsigned long long>(d.out),
              d.ofRole, d.restarts);
+    // 3.0.21-beta.5 (R-KQRYFF): «another one logged in with this account» when another game window of this computer
+    // entered with this window's login - the player's own second window, nothing for the developers
+    if (d.notice && d.noticeCode == nettrail::kNoticeOtherLogin) {
+        const uint64_t at = now - uint64_t(GetTickCount() - d.ms);
+        if (const int by = gamelogins::takenOver(at, nettrail::kOwnWindowMs)) {
+            LOG_INFO("net trail: not sent - game window %d of this computer entered with this window's login", by);
+            return;
+        }
+    }
     ++st.reports;
     if (!st.on) {
         LOG_INFO("net trail: not sent - [report] disconnects is off");

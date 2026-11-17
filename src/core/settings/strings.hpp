@@ -1032,6 +1032,8 @@ enum class Text : uint16_t {
     ConsoleTabTrials, LabTrialsOf, LabNoTrials, LabSince, LabNeeds, LabAfterRestart, LabNextMap,
     // 3.0.21-beta.4: a row says why it does nothing now (core/settings/catalogue whyNot)
     WhyDirect3D12, WhyView3d, WhyNeeds, WhyNextMap,
+    // 3.0.21-beta.5 (R-KQRYFF): the login card - the login typed plays in another game window
+    LoginHintBusy,
     Count
 };
 

@@ -7,6 +7,8 @@
 #include "core/settings/catalogue.hpp"
 #include "core/settings/effects_layout.hpp"
 #include "core/settings/navigation.hpp"
+#include "core/settings/old_names.hpp"
+#include "core/settings/search.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -233,18 +235,20 @@ TEST(catalogue_a_row_tells_about_itself) {
     CHECK_EQ(a.since, std::string("3.0.20-beta.73"));
     CHECK_EQ(int(a.needs.size()), 3);
     if (a.needs.size() != 3) return;
-    CHECK_EQ(a.needs[0].name, std::string("Моделі нашим рендером"));
-    CHECK_EQ(a.needs[1].name, std::string("Листя на відеокарті"));
+    CHECK_EQ(a.needs[0].name, std::string("Будинки й дерева малює uaRO Graphics"));  // 3.0.21-beta.5: renamed
+    CHECK_EQ(a.needs[1].name, std::string("Листя дерев швидше: рахує відеокарта"));
     CHECK_EQ(a.needs[2].name, std::string("3D-режим"));
     CHECK(a.needs[0].met && a.needs[1].met && a.needs[2].met && a.allMet());
     CHECK(!a.afterRestart && !a.nextMap && !a.empty());
     CHECK_EQ(catalogue::aboutText(a, Lang::Uk, "+", "-"),
-             std::string("з 3.0.20-beta.73 · потрібні: +Моделі нашим рендером, +Листя на відеокарті, +3D-режим"));
+             std::string("з 3.0.20-beta.73 · потрібні: +Будинки й дерева малює uaRO Graphics, +Листя дерев швидше: "
+                         "рахує відеокарта, +3D-режим"));
     // the top view with the models off: two needs not met
     a = catalogue::about(*crown, parseConfig("[view3d]\nown_models = 0\n"), true, false, Lang::Ru);
     CHECK(!a.needs[0].met && a.needs[1].met && !a.needs[2].met && !a.allMet());
     CHECK_EQ(catalogue::aboutText(a, Lang::Ru, "+", "-"),
-             std::string("с 3.0.20-beta.73 · нужны: -Модели нашим рендером, +Листва на видеокарте, -3D-режим"));
+             std::string("с 3.0.20-beta.73 · нужны: -Дома и деревья рисует uaRO Graphics, +Листва деревьев быстрее: "
+                         "считает видеокарта, -3D-режим"));
     // a row that waits for the game's start; one whose change shows from the next map; Direct3D 12
     const catalogue::Row* dpi = catalogue::find("display.dpi_aware");
     CHECK(dpi && catalogue::about(*dpi, on, true, false, Lang::Uk).afterRestart);
@@ -325,4 +329,70 @@ TEST(catalogue_a_row_says_why_it_does_nothing) {
              std::string("Щоб працювало, увімкніть: «Стеля в приміщеннях»"));
     // when a change shows
     CHECK_EQ(why("view3d.close_gaps", on, true, true), std::string("Зміна діє з наступної карти"));
+}
+
+// 3.0.21-beta.5 (the concept's question 5, the owner: «делай» on the list of names): a name says what is seen - the
+// inner words (our renderer, a library's file, «нова бібліотека», a trial's «(експеримент)») are out of the names
+// of the rows players see; a row is still found by the name it had
+TEST(catalogue_names_say_what_is_seen) {
+    const auto name = [](const char* key, Lang l) {
+        const IniSetting* s = findSetting(key);
+        return std::string(s ? tr(l, s->label) : "?");
+    };
+    CHECK_EQ(name("view3d.own_models", Lang::Uk), std::string("Будинки й дерева малює uaRO Graphics"));
+    CHECK_EQ(name("view3d.own_models", Lang::Ru), std::string("Дома и деревья рисует uaRO Graphics"));
+    CHECK_EQ(name("effects.own_ground_card", Lang::Uk), std::string("Своя земля швидше: рахує відеокарта"));
+    CHECK_EQ(name("effects.leaves_card", Lang::Uk), std::string("Листя дерев швидше: рахує відеокарта"));
+    CHECK_EQ(name("quality.batch_ground", Lang::Uk), std::string("Земля гри швидше: одним малюванням"));
+    CHECK_EQ(name("client.roext", Lang::Uk), std::string("Вікно, миша й клавіші гри — від uaRO Graphics"));
+    CHECK_EQ(name("client.cps", Lang::Uk), std::string("Читання архівів гри — від uaRO Graphics"));
+    CHECK_EQ(name("client.bink", Lang::Uk), std::string("Без відеобібліотеки Bink"));
+    CHECK_EQ(name("client.ijl", Lang::Uk), std::string("Картинки JPEG і знімки екрана — від uaRO Graphics"));
+    CHECK_EQ(name("client.mss", Lang::Uk), std::string("Звук гри — від uaRO Graphics"));
+    CHECK_EQ(name("renderer.bridge", Lang::Uk), std::string("Малювати в окремому 64-бітному процесі"));
+    CHECK_EQ(name("renderer.cross_present", Lang::Uk),
+             std::string("Ноутбук із двома відеокартами: показ через відеокарту екрана"));
+    CHECK_EQ(name("quality.taa", Lang::Uk), std::string("Згладжування TAA (будь-яка відеокарта)"));
+    CHECK_EQ(name("interface.uaui_motion", Lang::Uk), std::string("Плавний рух вікон і кнопок"));
+    CHECK_EQ(name("interface.uaui_effects", Lang::Uk), std::string("Тіні й світіння вікон"));
+    CHECK_EQ(name("interface.uaui_glass", Lang::Uk), std::string("Скляні вікна"));
+    CHECK_EQ(name("interface.pack_icons", Lang::Uk), std::string("Чіткі іконки з пакета текстур"));
+    CHECK_EQ(name("sound.engine", Lang::Uk), std::string("Об'ємний звук"));
+    CHECK_EQ(name("view3d.shadows", Lang::Uk), std::string("Тіні від будинків і дерев"));
+    CHECK_EQ(name("interface.predict_walk", Lang::Uk), std::string("Хода без очікування сервера"));
+    CHECK_EQ(name("interface.minimap_reach", Lang::Uk), std::string("Підсвітити, куди можна дійти"));
+    CHECK_EQ(name("display.dpi_aware", Lang::Uk), std::string("Вікно з масштабом Windows"));
+    CHECK_EQ(name("renderer.remix", Lang::Uk), std::string("RTX Remix"));
+    CHECK_EQ(name("renderer.render_thread", Lang::Uk), std::string("Direct3D 11 у власному потоці"));
+    // found by the name before, in each language
+    const IniSetting* models = findSetting("view3d.own_models");
+    CHECK(models && settingMatches(*models, "моделі нашим рендером", Lang::Uk));
+    CHECK(models && settingMatches(*models, "модели нашим рендером", Lang::Ru));
+    CHECK(models && settingMatches(*models, "models by our renderer", Lang::En));
+    const IniSetting* glass = findSetting("interface.uaui_glass");
+    CHECK(glass && settingMatches(*glass, "нова бібліотека", Lang::Uk));
+    // the file's name stays in the hint
+    const IniSetting* ijl = findSetting("client.ijl");
+    CHECK(ijl && std::string(tr(Lang::Uk, ijl->hint)).find("ijl15.dll") != std::string::npos);
+    const IniSetting* mss = findSetting("client.mss");
+    CHECK(mss && std::string(tr(Lang::Uk, mss->hint)).find("mss32.dll") != std::string::npos);
+    const IniSetting* cps = findSetting("client.cps");
+    CHECK(cps && std::string(tr(Lang::Ru, cps->hint)).find("cps.dll") != std::string::npos);
+    // no name of a row players see holds the inner words, in any language
+    const char* const inner[] = {".dll",          "нова бібліотека", "новая библиотека", "new library",
+                                 "(експеримент)", "(эксперимент)",   "(experiment)",     "(an experiment)",
+                                 "(проба)",       "(trial)",         "(тест)",           "(test)",
+                                 "(перевірка)",   "(проверка)",      "рендером",         "пачками"};
+    for (const catalogue::Group& g : catalogue::groups())
+        for (const catalogue::Row& r : g.rows) {
+            if (r.status == catalogue::Status::Diagnostic) continue;
+            const IniSetting* s = findSetting(r.key);
+            if (!s) continue;
+            for (Lang l : {Lang::Uk, Lang::Ru, Lang::En})
+                for (const char* word : inner) {
+                    const bool has = std::string(tr(l, s->label)).find(word) != std::string::npos;
+                    if (has) std::printf("    %s: «%s» holds «%s»\n", r.key.c_str(), tr(l, s->label), word);
+                    CHECK(!has);
+                }
+        }
 }

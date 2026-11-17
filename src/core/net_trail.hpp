@@ -29,6 +29,10 @@ constexpr size_t kMostEvents = 400, kMostLinks = 64, kLastIds = 8;
 constexpr uint32_t kNoticeJoinMs = 3000;  // a notice and the connection's end after it are one drop
 constexpr uint32_t kGapFromMs = 1000, kGapWindowMs = 30000;  // the loop's pauses worth telling, how long kept
 constexpr uint16_t kNoticeId = 0x0081, kRestartAck = 0x00B3, kQuitAck = 0x018B;
+// 3.0.21-beta.5 (R-KQRYFF): the notice «another one logged in with this account» - the player's own other game
+// window when it took the login (core/game_logins takenBy) within kOwnWindowMs of it: not a drop to report
+constexpr int kNoticeOtherLogin = 2;
+constexpr uint32_t kOwnWindowMs = 15000;
 
 struct Event {
     uint32_t ms = 0;  // the game's clock (GetTickCount)

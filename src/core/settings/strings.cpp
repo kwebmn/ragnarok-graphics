@@ -107,8 +107,10 @@ constexpr Entry kTexts[] = {
     {Text::QualityHighResHint, "Draw the game at the window's real pixels: with Windows scaling the world is sharper.",
      "Малювати гру в справжніх точках вікна: при масштабі Windows світ чіткіший.",
      "Рисовать игру в настоящих точках окна: при масштабе Windows мир чётче."},
-    {Text::QualityDpiAware, "Window with Windows scaling (test)", "Вікно з масштабом Windows (тест)",
-     "Окно с масштабом Windows (тест)"},
+    {Text::QualityDpiAware,
+     "Window with Windows scaling",
+     "Вікно з масштабом Windows",
+     "Окно с масштабом Windows"},
     {Text::QualityDpiAwareHint,
      "For Windows scaling of 125-175 %: the game's window is told to follow it, so it covers the monitor pixel for "
      "pixel and Windows shows the picture straight on it - even frames instead of jumps between 72 and 48. Takes "
@@ -517,9 +519,10 @@ constexpr Entry kTexts[] = {
     {Text::Factor4, "4×", "4×", "4×"},
     {Text::Factor8, "8×", "8×", "8×"},
     {Text::Factor16, "16×", "16×", "16×"},
-    {Text::RenderBridge, "64-bit renderer",
-     "64-бітний рендер",
-     "64-битный рендер"},
+    {Text::RenderBridge,
+     "Draw in a separate 64-bit process",
+     "Малювати в окремому 64-бітному процесі",
+     "Рисовать в отдельном 64-битном процессе"},
     {Text::RenderBridgeHint,
      "Draws in a separate 64-bit process, uaro-render64.exe: DLSS and frame generation need it. The picture should "
      "look the same.",
@@ -527,8 +530,10 @@ constexpr Entry kTexts[] = {
      "бути та сама.",
      "Рисует в отдельном 64-битном процессе uaro-render64.exe: он нужен для DLSS и генерации кадров. Картинка "
      "должна быть та же."},
-    {Text::RenderThread, "Direct3D 11 on a thread of its own (test)", "Direct3D 11 у власному потоці (перевірка)",
-     "Direct3D 11 в своём потоке (проверка)"},
+    {Text::RenderThread,
+     "Direct3D 11 on a thread of its own",
+     "Direct3D 11 у власному потоці",
+     "Direct3D 11 в своём потоке"},
     {Text::RenderThreadHint,
      "With Direct3D 11 the game's thread only writes down what to draw, and a thread of its own draws it on another "
      "core of the processor - as the 64-bit renderer does for Direct3D 12. More frames where the processor holds the "
@@ -601,7 +606,7 @@ constexpr Entry kTexts[] = {
      "Сколько зерна текстур сглаживает реалистичная модель: 0 — оставляет всё (песок и трава чёткие), 100 — "
      "гладкие, будто нарисованные. Стены и пол почти одинаковы при любом значении. Текстуры, сделанные с другим "
      "значением, делаются заново."},
-    {Text::RenderRemix, "RTX Remix (experiment)", "RTX Remix (експеримент)", "RTX Remix (эксперимент)"},
+    {Text::RenderRemix, "RTX Remix", "RTX Remix", "RTX Remix"},
     {Text::RenderRemixHint,
      "Draws through Direct3D 9 for NVIDIA RTX Remix: path tracing, and DLSS 5 once NVIDIA adds it to Remix "
      "(announced for 23 October 2026). Needs RTX Remix's d3d9.dll and .trex folder next to uaRO.exe and rtx.conf "
@@ -1829,9 +1834,10 @@ constexpr Entry kTexts[] = {
      "світло рожеве вранці й золоте ввечері.",
      "Солнце движется по часу «Часов»: тени персонажей поворачиваются, длинные утром и вечером, короткие в полдень; "
      "свет розовый утром и золотой вечером."},
-    {Text::SmoothTaa, "TAA (any graphics card)",
-     "TAA (будь-яка відеокарта)",
-     "TAA (любая видеокарта)"},
+    {Text::SmoothTaa,
+     "TAA smoothing (any graphics card)",
+     "Згладжування TAA (будь-яка відеокарта)",
+     "Сглаживание TAA (любая видеокарта)"},
     {Text::SmoothTaaHint,
      "Temporal anti-aliasing of the renderer's own for cards without DLSS (AMD, Intel): each frame is blended with "
      "the last, so edges and thin lines stop shimmering. Direct3D 12; DLSS goes first; MSAA is not used with it.",
@@ -2205,9 +2211,7 @@ constexpr Entry kTexts[] = {
      "увімкненими «Опадами», Direct3D 12).",
      "На картах, где идёт дождь, земля чуть темнее, а лужи кое-где отражают дома, деревья и персонажей (с включёнными "
      "«Осадками», Direct3D 12)."},
-    {Text::GfxSoundEngine, "Surround sound (new engine)",
-     "Об'ємний звук (новий рушій)",
-     "Объёмный звук (новый движок)"},
+    {Text::GfxSoundEngine, "Surround sound", "Об'ємний звук", "Объёмный звук"},
     {Text::GfxSoundEngineHint,
      "The sounds of monsters, skills and hits played by uaRO Graphics itself: around you on any speakers (stereo, "
      "5.1, 7.1), quieter and duller far off, with the echo of the place. Windows 10 and later; without it the game's "
@@ -4517,45 +4521,48 @@ constexpr Entry kTexts[] = {
      "the game is closed.",
      "Свої замість старих бібліотек гри 2000-х; вимкнена повертає оригінал гри. Діє, коли гра закрита.",
      "Свои вместо старых библиотек игры 2000-х; выключенная возвращает оригинал игры. Действует, когда игра закрыта."},
-    {Text::ClientCps, "Files' compression: our zlib (cps.dll)",
-     "Стиснення файлів гри — свій zlib (cps.dll)",
-     "Сжатие файлов игры — свой zlib (cps.dll)"},
-    {Text::ClientCpsHint, "The game reads its archives through it. Off: the game's cps.dll of the 2000s.",
-     "Через неї гра читає свої архіви. Вимкнено — старий cps.dll гри.",
-     "Через неё игра читает свои архивы. Выключено — старый cps.dll игры."},
-    {Text::ClientBink, "Bink video: none (binkw32.dll)",
-     "Відео Bink — без нього (binkw32.dll)",
-     "Видео Bink — без него (binkw32.dll)"},
+    {Text::ClientCps,
+     "Reading the game's archives by uaRO Graphics",
+     "Читання архівів гри — від uaRO Graphics",
+     "Чтение архивов игры — от uaRO Graphics"},
+    {Text::ClientCpsHint,
+     "Our cps.dll (our own zlib): the game reads its archives through it. Off: the game's cps.dll of the 2000s.",
+     "Наша cps.dll (свій zlib): через неї гра читає свої архіви. Вимкнено — старий cps.dll гри.",
+     "Наша cps.dll (свой zlib): через неё игра читает свои архивы. Выключено — старый cps.dll игры."},
+    {Text::ClientBink, "Without the Bink video library", "Без відеобібліотеки Bink", "Без видеобиблиотеки Bink"},
     {Text::ClientBinkHint,
-     "The game has no Bink video to show (its opening is not in the client): ours holds none of RAD's code. Off: "
-     "RAD's binkw32.dll.",
-     "Відео Bink гра не показує (вступного ролика в клієнті немає): наша заміна без коду RAD. Вимкнено — binkw32.dll "
-     "від RAD.",
-     "Видео Bink игра не показывает (вступительного ролика в клиенте нет): наша замена без кода RAD. Выключено — "
-     "binkw32.dll от RAD."},
-    {Text::ClientIjl, "JPEG pictures: ours (ijl15.dll)",
-     "Картинки JPEG — свої (ijl15.dll)",
-     "Картинки JPEG — свои (ijl15.dll)"},
+     "The game has no Bink video to show (its opening is not in the client): our binkw32.dll holds none of RAD's "
+     "code. Off: RAD's binkw32.dll.",
+     "Відео Bink гра не показує (вступного ролика в клієнті немає): наша binkw32.dll без коду RAD. Вимкнено — "
+     "binkw32.dll від RAD.",
+     "Видео Bink игра не показывает (вступительного ролика в клиенте нет): наша binkw32.dll без кода RAD. Выключено "
+     "— binkw32.dll от RAD."},
+    {Text::ClientIjl,
+     "JPEG pictures and screenshots by uaRO Graphics",
+     "Картинки JPEG і знімки екрана — від uaRO Graphics",
+     "Картинки JPEG и снимки экрана — от uaRO Graphics"},
     {Text::ClientIjlHint,
-     "The game's JPEG pictures (the loading screens) are read through it and its Print Screen shots written. Off: "
-     "Intel JPEG Library 1.5 of 2000.",
-     "Через неї гра читає картинки JPEG (екрани завантаження) і записує знімки Print Screen. Вимкнено — Intel JPEG "
-     "Library 1.5 2000 року.",
-     "Через неё игра читает картинки JPEG (экраны загрузки) и записывает снимки Print Screen. Выключено — Intel JPEG "
-     "Library 1.5 2000 года."},
-    {Text::ClientMss, "Game sound: ours (mss32.dll)",
-     "Звук гри — свій (mss32.dll)",
-     "Звук игры — свой (mss32.dll)"},
+     "Our ijl15.dll: the game's JPEG pictures (the loading screens) are read through it and its Print Screen shots "
+     "written. Off: Intel JPEG Library 1.5 of 2000.",
+     "Наша ijl15.dll: через неї гра читає картинки JPEG (екрани завантаження) і записує знімки Print Screen. "
+     "Вимкнено — Intel JPEG Library 1.5 2000 року.",
+     "Наша ijl15.dll: через неё игра читает картинки JPEG (экраны загрузки) и записывает снимки Print Screen. "
+     "Выключено — Intel JPEG Library 1.5 2000 года."},
+    {Text::ClientMss,
+     "The game's sound by uaRO Graphics",
+     "Звук гри — від uaRO Graphics",
+     "Звук игры — от uaRO Graphics"},
     {Text::ClientMssHint,
-     "The game's effects and music play through it, over Windows' XAudio2 (Windows 10 and later; on older Windows the "
-     "game's own stays). Off: RAD's Miles Sound System 6.",
-     "Через неї звучать ефекти й музика гри, через XAudio2 Windows (Windows 10 і новіші; на старіших лишається "
-     "оригінал). Вимкнено — Miles Sound System 6 від RAD.",
-     "Через неё звучат эффекты и музыка игры, через XAudio2 Windows (Windows 10 и новее; на более старых остаётся "
-     "оригинал). Выключено — Miles Sound System 6 от RAD."},
-    {Text::ClientRoext, "Window, mouse and keys: ROExt's work in the driver (dinput8.dll)",
-     "Вікно, миша й клавіші — робота ROExt у драйвері (dinput8.dll)",
-     "Окно, мышь и клавиши — работа ROExt в драйвере (dinput8.dll)"},
+     "Our mss32.dll: the game's effects and music play through it, over Windows' XAudio2 (Windows 10 and later; on "
+     "older Windows the game's own stays). Off: RAD's Miles Sound System 6.",
+     "Наша mss32.dll: через неї звучать ефекти й музика гри, через XAudio2 Windows (Windows 10 і новіші; на старіших "
+     "лишається оригінал). Вимкнено — Miles Sound System 6 від RAD.",
+     "Наша mss32.dll: через неё звучат эффекты и музыка игры, через XAudio2 Windows (Windows 10 и новее; на более "
+     "старых остаётся оригинал). Выключено — Miles Sound System 6 от RAD."},
+    {Text::ClientRoext,
+     "The game's window, mouse and keys by uaRO Graphics",
+     "Вікно, миша й клавіші гри — від uaRO Graphics",
+     "Окно, мышь и клавиши игры — от uaRO Graphics"},
     {Text::ClientRoextHint,
      "The driver does what ROExt did (its settings on «Game and chat»), its dinput8.dll is no longer needed. Off: "
      "ROExt's dinput8.dll and its dinput8.ini.",
@@ -5265,7 +5272,10 @@ constexpr Entry kTexts[] = {
      "обрізає, — коли камера далеко, земля не порожня. Їхні кольори беруться з того, як гра малює їх поблизу.",
      "Со своей землёй дома, деревья и скалы карты рисует сам uaRO Graphics из файлов карты и за краем, где игра их "
      "обрезает, — когда камера далеко, земля не пустая. Их цвета берутся из того, как игра рисует их вблизи."},
-    {Text::FxOwnGroundCard, "Ground on the graphics card", "Земля на відеокарті", "Земля на видеокарте"},
+    {Text::FxOwnGroundCard,
+     "Own ground faster: the graphics card computes it",
+     "Своя земля швидше: рахує відеокарта",
+     "Своя земля быстрее: считает видеокарта"},
     {Text::FxOwnGroundCardHint,
      "The own ground's points are kept on the graphics card and put in place by it - the processor only picks the "
      "pieces of land in view. Faster, most of all in the 3D view; switch off to compare with the old way.",
@@ -5273,17 +5283,20 @@ constexpr Entry kTexts[] = {
      "в полі зору. Швидше, найбільше в 3D-режимі; вимкніть, щоб порівняти з давнім способом.",
      "Точки своей земли лежат на видеокарте, и на место их ставит она сама — процессор только выбирает куски земли "
      "в поле зрения. Быстрее, больше всего в 3D-режиме; выключите, чтобы сравнить со старым способом."},
-    {Text::FxLeavesCard, "Leaves on the graphics card", "Листя на відеокарті", "Листва на видеокарте"},
+    {Text::FxLeavesCard,
+     "Tree leaves faster: the graphics card computes them",
+     "Листя дерев швидше: рахує відеокарта",
+     "Листва деревьев быстрее: считает видеокарта"},
     {Text::FxLeavesCardHint,
-     "The leaves of the trees drawn by «Models by our renderer» come from the graphics card, where the models are - "
-     "the processor only works out each tree's sway and look once. Faster where there are many trees; switch off "
-     "to compare with the old way.",
-     "Листя дерев, які малює «Моделі нашим рендером», береться з відеокарти, де лежать і самі моделі, — процесор "
-     "лише раз на дерево рахує, як воно гойдається й виглядає. Швидше там, де багато дерев; вимкніть, щоб порівняти "
-     "з давнім способом.",
-     "Листва деревьев, которые рисует «Модели нашим рендером», берётся с видеокарты, где лежат и сами модели, — "
-     "процессор только раз на дерево считает, как оно качается и выглядит. Быстрее там, где много деревьев; "
-     "выключите, чтобы сравнить со старым способом."},
+     "With «Houses and trees drawn by uaRO Graphics» on, the leaves of those trees come from the graphics card, "
+     "where the models are - the processor only works out each tree's sway and look once. Faster where there are "
+     "many trees; switch off to compare with the old way.",
+     "Коли увімкнено «Будинки й дерева малює uaRO Graphics», листя цих дерев береться з відеокарти, де лежать і самі "
+     "моделі, — процесор лише раз на дерево рахує, як воно гойдається й виглядає. Швидше там, де багато дерев; "
+     "вимкніть, щоб порівняти з давнім способом.",
+     "Когда включено «Дома и деревья рисует uaRO Graphics», листва этих деревьев берётся с видеокарты, где лежат и "
+     "сами модели, — процессор только раз на дерево считает, как оно качается и выглядит. Быстрее там, где много "
+     "деревьев; выключите, чтобы сравнить со старым способом."},
     {Text::CameraZoomLimit, "Camera no further out than the character shows",
      "Камера не далі, ніж видно персонажа",
      "Камера не дальше, чем виден персонаж"},
@@ -5556,8 +5569,10 @@ constexpr Entry kTexts[] = {
      "переносит их туда; с этим переключателем они доезжают туда за пятую долю секунды. Дальние перемещения "
      "(телепорт, отбрасывание) остаются мгновенными."},
     // 3.0.11-beta.130 (the network plan's step 5; the owner «делаем»)
-    {Text::InterfacePredictWalk, "Walk without waiting for the server (an experiment)",
-     "Хода без очікування сервера (експеримент)", "Ходьба без ожидания сервера (эксперимент)"},
+    {Text::InterfacePredictWalk,
+     "Walk without waiting for the server",
+     "Хода без очікування сервера",
+     "Ходьба без ожидания сервера"},
     {Text::InterfacePredictWalkHint,
      "The character starts walking at the click instead of after the server's answer - a ping sooner. When the "
      "server does not let it walk (a cast, a stun) or answers too late, the character is put back. Off at first.",
@@ -5621,8 +5636,10 @@ constexpr Entry kTexts[] = {
     {Text::CharOverweight2, "Overweight 90 %: no attacks or skills", "Перевантаження 90 %: атаки й уміння заборонені",
      "Перегруз 90 %: атаки и умения запрещены"},
     // 3.0.11-beta.65: the concept's «Подсветка, куда можно дойти» - an experiment
-    {Text::InterfaceMinimapReach, "Light where you can walk (an experiment)",
-     "Підсвітити, куди можна дійти (експеримент)", "Подсветить, куда можно дойти (эксперимент)"},
+    {Text::InterfaceMinimapReach,
+     "Light where you can walk",
+     "Підсвітити, куди можна дійти",
+     "Подсветить, куда можно дойти"},
     {Text::InterfaceMinimapReachHint,
      "The new minimap and its big map dim what you cannot reach on foot from where you stand - other parts of the "
      "map (floors, islands, ledges) by the server's own map data. An experiment: people, monsters and traps are not "
@@ -5645,8 +5662,10 @@ constexpr Entry kTexts[] = {
      "512 x 512."},
     // 3.0.11-beta.74 (the owner: «иконки скилов, предметов, и всего остального также по возможности грузить в текстур
     // которые обработаны»)
-    {Text::InterfacePackIcons, "Icons from the AI texture pack", "Іконки з пака текстур ШІ",
-     "Иконки из пака текстур ИИ"},
+    {Text::InterfacePackIcons,
+     "Sharp icons from the texture pack",
+     "Чіткі іконки з пакета текстур",
+     "Чёткие иконки из пакета текстур"},
     {Text::InterfacePackIconsHint,
      "The new interface's icons and pictures - skills, items, status effects, monsters - drawn from the AI texture "
      "pack's pictures, four times bigger than the game's, wherever the pack has them (uaro-textures.zip). Off: the "
@@ -8387,8 +8406,10 @@ constexpr Entry kTexts[] = {
      "увімкненою новою бібліотекою інтерфейсу.",
      "Окно с компонентами новой библиотеки: вкладки, предметы из сумки, список, кнопки, переключатели. Работает с "
      "включённой новой библиотекой интерфейса."},
-    {Text::InterfaceUauiMotion, "Smooth motion (new library)", "Плавний рух (нова бібліотека)",
-     "Плавное движение (новая библиотека)"},
+    {Text::InterfaceUauiMotion,
+     "Smooth motion of windows and buttons",
+     "Плавний рух вікон і кнопок",
+     "Плавное движение окон и кнопок"},
     {Text::InterfaceUauiMotionHint,
      "Parts drawn by the new library move softly: windows slide in, cells and buttons light up and press, "
      "HP and SP bars glide, the low HP plate pulses, new items and experience float in. Works with the "
@@ -8399,8 +8420,10 @@ constexpr Entry kTexts[] = {
      "Части, которые рисует новая библиотека, двигаются мягко: окна выезжают, клетки и кнопки плавно "
      "подсвечиваются и нажимаются, полоски HP и SP скользят, табличка низкого HP пульсирует, новые вещи и "
      "опыт выплывают. Работает с включённой новой библиотекой интерфейса."},
-    {Text::InterfaceUauiEffects, "Effects (new library)", "Ефекти (нова бібліотека)",
-     "Эффекты (новая библиотека)"},
+    {Text::InterfaceUauiEffects,
+     "Shadows and glow of the windows",
+     "Тіні й світіння вікон",
+     "Тени и свечение окон"},
     {Text::InterfaceUauiEffectsHint,
      "Parts drawn by the new library get soft shadows under windows and panels, a glow on the chosen and "
      "ready cells, a gentle sheen on bars and buttons, round corners cut cleanly. Works with the new "
@@ -8411,8 +8434,7 @@ constexpr Entry kTexts[] = {
      "Части, которые рисует новая библиотека, получают мягкие тени под окнами и панелями, свечение на "
      "выбранных и готовых клетках, лёгкий блик на полосках и кнопках, чисто обрезанные круглые углы. "
      "Работает с включённой новой библиотекой интерфейса."},
-    {Text::InterfaceUauiGlass, "Frosted glass windows (new library)", "Скляні вікна (нова бібліотека)",
-     "Стеклянные окна (новая библиотека)"},
+    {Text::InterfaceUauiGlass, "Frosted glass windows", "Скляні вікна", "Стеклянные окна"},
     {Text::InterfaceUauiGlassHint,
      "Windows of the new library show the world behind them softly blurred, like frosted glass. Direct3D "
      "12 only; costs some video card time. Works with the new interface library on.",
@@ -8860,8 +8882,10 @@ constexpr Entry kTexts[] = {
      "restart the game",
      "uaRO Graphics: кожен кадр ішов на екран {1} мс — з наступного запуску гру малює {2}, перезапустіть гру",
      "uaRO Graphics: каждый кадр шёл на экран {1} мс — со следующего запуска игру рисует {2}, перезапустите игру"},
-    {Text::RenderCrossPresent, "Frames through the screen's graphics card", "Кадр через відеокарту екрана",
-     "Кадр через видеокарту экрана"},
+    {Text::RenderCrossPresent,
+     "Laptop with two graphics cards: show through the screen's card",
+     "Ноутбук із двома відеокартами: показ через відеокарту екрана",
+     "Ноутбук с двумя видеокартами: показ через видеокарту экрана"},
     {Text::RenderCrossPresentHint,
      "For a laptop with two graphics cards whose screen hangs off the integrated one: the game is drawn on the fast "
      "card and each frame is handed to the screen's card, which shows it. Turn it on when the frame counter shows "
@@ -8955,14 +8979,15 @@ constexpr Entry kTexts[] = {
     {Text::View3dCloseGapsHint,
      "Some of the game's models were made for the view from above: a rock's cap hangs over its base with nothing "
      "between, a pagoda's tier has no walls up to its roof. From the eyes' level you see through them. The driver "
-     "closes such gaps in the models it draws itself. Needs «Models by our renderer»; a change shows from the next "
-     "map.",
+     "closes such gaps in the models it draws itself. Needs «Houses and trees drawn by uaRO Graphics» on; a change "
+     "shows from the next map.",
      "Частину моделей гри зроблено для вигляду згори: шапка скелі висить над основою, між ними нічого немає, ярус "
-     "пагоди не має стін до даху. З рівня очей крізь них видно наскрізь. Драйвер закриває такі щілини в моделях, "
-     "які малює сам. Потрібні «Моделі нашим рендером»; зміна діє з наступної карти.",
+     "пагоди не має стін до даху. З рівня очей крізь них видно наскрізь. Драйвер закриває такі щілини в моделях, які "
+     "малює сам. Потрібно ввімкнути «Будинки й дерева малює uaRO Graphics»; зміна діє з наступної карти.",
      "Часть моделей игры сделана для вида сверху: шапка скалы висит над основанием, между ними ничего нет, у яруса "
      "пагоды нет стен до крыши. С уровня глаз сквозь них видно насквозь. Драйвер закрывает такие щели в моделях, "
-     "которые рисует сам. Нужны «Модели нашим рендером»; изменение действует со следующей карты."},
+     "которые рисует сам. Нужно включить «Дома и деревья рисует uaRO Graphics»; изменение действует со следующей "
+     "карты."},
     // 3.0.20-beta.70 (the owner's picks of the camera's options, «а и б»)
     {Text::View3dCameraWalls, "The camera stops at real walls", "Камера впирається у справжні стіни",
      "Камера упирается в настоящие стены"},
@@ -9059,8 +9084,10 @@ constexpr Entry kTexts[] = {
      "В 3D-режиме сзади камера стоит справа от головы: персонаж чуть левее центра, прицел свободен — удобно стрелять "
      "издалека. Выключено — персонаж по центру, камера чуть над его головой. Зажатый Shift вращает камеру вокруг "
      "персонажа, отпустишь — возвращается."},
-    {Text::View3dOwnModels, "Models by our renderer", "Моделі нашим рендером",
-     "Модели нашим рендером"},  // 3.0.20-beta.4
+    {Text::View3dOwnModels,
+     "Houses and trees drawn by uaRO Graphics",
+     "Будинки й дерева малює uaRO Graphics",
+     "Дома и деревья рисует uaRO Graphics"},  // 3.0.20-beta.4
     {Text::View3dOwnModelsHint,
      "The map's models (houses, trees, walls, flags, windmills) are drawn by our renderer as the game draws them - "
      "in the 3D view and from above -, and the game itself does not work them out: fewer jerks where there are many "
@@ -9098,8 +9125,10 @@ constexpr Entry kTexts[] = {
      "In the 3D view a warm band glows along the horizon while the night comes or goes, the most on the sun's side.",
      "У 3D-режимі вздовж обрію тепла смуга, поки ніч настає чи минає, найяскравіша з боку сонця.",
      "В 3D-режиме вдоль горизонта тёплая полоса, пока ночь наступает или уходит, ярче всего со стороны солнца."},
-    {Text::View3dShadows, "Shadows of houses and trees (trial)", "Тіні від будинків і дерев (проба)",
-     "Тени от домов и деревьев (проба)"},  // 3.0.20-beta.50
+    {Text::View3dShadows,
+     "Shadows of houses and trees",
+     "Тіні від будинків і дерев",
+     "Тени от домов и деревьев"},  // 3.0.20-beta.50
     {Text::View3dShadowsHint,
      "A trial. In the 3D view under the open sky houses, trees and the ground cast real shadows - on the ground and "
      "the grass, sharp and where the things stand; the shadows painted on the map are taken out meanwhile. Needs "
@@ -9113,39 +9142,41 @@ constexpr Entry kTexts[] = {
     {Text::View3dDenseCrowns, "Fuller tree crowns", "Густіші крони дерев", "Кроны деревьев гуще"},  // 3.0.20-beta.51
     {Text::View3dDenseCrownsHint,
      "In the 3D view a tree's leaves are drawn twice more, turned about its trunk: the flat cards of the crown no "
-     "longer show their edges and gaps from the side. Needs «Models by our renderer» and «Leaves on the graphics "
-     "card». Off at first.",
+     "longer show their edges and gaps from the side. Needs «Houses and trees drawn by uaRO Graphics» and «Tree "
+     "leaves faster: the graphics card computes them» on. Off at first.",
      "У 3D-режимі листя дерева малюється ще двічі, повернуте довкола стовбура: пласкі картки крони більше не "
-     "показують збоку свої ребра й просвіти. Потрібні «Моделі нашим рендером» і «Листя на відеокарті». Спочатку "
-     "вимкнено.",
+     "показують збоку свої ребра й просвіти. Потрібно ввімкнути «Будинки й дерева малює uaRO Graphics» і «Листя "
+     "дерев швидше: рахує відеокарта». Спочатку вимкнено.",
      "В 3D-режиме листва дерева рисуется ещё дважды, повёрнутая вокруг ствола: плоские карточки кроны больше не "
-     "показывают сбоку свои рёбра и просветы. Нужны «Модели нашим рендером» и «Листва на видеокарте». Сначала "
-     "выключено."},
+     "показывают сбоку свои рёбра и просветы. Нужно включить «Дома и деревья рисует uaRO Graphics» и «Листва "
+     "деревьев быстрее: считает видеокарта». Сначала выключено."},
     // 3.0.20-beta.73 (the owner: «деревья очень примитивные ... в 3д видно все недостатки - это не деревья»)
     {Text::View3dCrownVolume, "Crowns with a body", "Об'ємні крони", "Объёмные кроны"},
     {Text::View3dCrownVolumeHint,
-     "A tree's leaves in the game are flat plates in tiers, made for the view from above; from the side you see their "
-     "edges and the sky between them. In the 3D view every leaf plate is drawn once more, stood on its edge along "
-     "the line from the trunk: the tiers become a crown. Needs «Models by our renderer» and «Leaves on the graphics "
-     "card». Off at first.",
+     "A tree's leaves in the game are flat plates in tiers, made for the view from above; from the side you see "
+     "their edges and the sky between them. In the 3D view every leaf plate is drawn once more, stood on its edge "
+     "along the line from the trunk: the tiers become a crown. Needs «Houses and trees drawn by uaRO Graphics» and "
+     "«Tree leaves faster: the graphics card computes them» on. Off at first.",
      "Листя дерева в грі — пласкі пластини ярусами, зроблені для вигляду згори; збоку видно їхні ребра й небо між "
-     "ними. У 3D-режимі кожна пластина листя малюється ще раз, поставлена на ребро вздовж лінії від стовбура: "
-     "яруси стають кроною. Потрібні «Моделі нашим рендером» і «Листя на відеокарті». Спочатку вимкнено.",
+     "ними. У 3D-режимі кожна пластина листя малюється ще раз, поставлена на ребро вздовж лінії від стовбура: яруси "
+     "стають кроною. Потрібно ввімкнути «Будинки й дерева малює uaRO Graphics» і «Листя дерев швидше: рахує "
+     "відеокарта». Спочатку вимкнено.",
      "Листва дерева в игре — плоские пластины ярусами, сделанные для вида сверху; сбоку видны их рёбра и небо между "
-     "ними. В 3D-режиме каждая пластина листвы рисуется ещё раз, поставленная на ребро вдоль линии от ствола: "
-     "ярусы становятся кроной. Нужны «Модели нашим рендером» и «Листва на видеокарте». Сначала выключено."},
+     "ними. В 3D-режиме каждая пластина листвы рисуется ещё раз, поставленная на ребро вдоль линии от ствола: ярусы "
+     "становятся кроной. Нужно включить «Дома и деревья рисует uaRO Graphics» и «Листва деревьев быстрее: считает "
+     "видеокарта». Сначала выключено."},
     // 3.0.20-beta.79 (the owner on the trial of the crowns: «доработать»)
     {Text::View3dCrownLight, "Light and shade in the crowns", "Світло й тінь у кронах", "Свет и тень в кронах"},
     {Text::View3dCrownLightHint,
-     "In the 3D view a tree's crown is lit by its real shape: lighter on top and on the sun's side, darker inside and "
-     "underneath - a crown with depth, not an even green patch. Needs «Models by our renderer» and «Leaves on the "
-     "graphics card». Off: the crown lit as in the view from above.",
+     "In the 3D view a tree's crown is lit by its real shape: lighter on top and on the sun's side, darker inside "
+     "and underneath - a crown with depth, not an even green patch. Needs «Houses and trees drawn by uaRO Graphics» "
+     "and «Tree leaves faster: the graphics card computes them» on. Off: the crown lit as in the view from above.",
      "У 3D-режимі крона дерева освітлена за своєю справжньою формою: світліша згори й з боку сонця, темніша "
-     "всередині та знизу — крона з глибиною, а не рівна зелена пляма. Потрібні «Моделі нашим рендером» і «Листя на "
-     "відеокарті». Вимкнено — крона освітлена, як у вигляді згори.",
-     "В 3D-режиме крона дерева освещена по своей настоящей форме: светлее сверху и со стороны солнца, темнее "
-     "внутри и снизу — крона с глубиной, а не ровное зелёное пятно. Нужны «Модели нашим рендером» и «Листва на "
-     "видеокарте». Выключено — крона освещена, как в виде сверху."},
+     "всередині та знизу — крона з глибиною, а не рівна зелена пляма. Потрібно ввімкнути «Будинки й дерева малює "
+     "uaRO Graphics» і «Листя дерев швидше: рахує відеокарта». Вимкнено — крона освітлена, як у вигляді згори.",
+     "В 3D-режиме крона дерева освещена по своей настоящей форме: светлее сверху и со стороны солнца, темнее внутри "
+     "и снизу — крона с глубиной, а не ровное зелёное пятно. Нужно включить «Дома и деревья рисует uaRO Graphics» и "
+     "«Листва деревьев быстрее: считает видеокарта». Выключено — крона освещена, как в виде сверху."},
     {Text::View3dFastGround, "Faster far ground", "Швидша далека земля", "Быстрее дальняя земля"},  // 3.0.19-beta.42
     {Text::View3dFastGroundHint,
      "In the 3D view the game works out its far ground's cells once in 8 frames - our own ground is drawn in their "
@@ -9157,7 +9188,10 @@ constexpr Entry kTexts[] = {
      "В 3D-режиме игра обсчитывает дальние клетки своей земли раз в 8 кадров — вместо них всё равно рисуется наша "
      "собственная земля, игра лишь даёт ей свои цвета. Больше кадров на слабом процессоре. Выключено — каждая клетка "
      "каждый кадр."},
-    {Text::QualityBatchGround, "Ground in batches", "Земля пачками", "Земля пачками"},  // 3.0.19-beta.50
+    {Text::QualityBatchGround,
+     "The game's ground faster: in one draw",
+     "Земля гри швидше: одним малюванням",
+     "Земля игры быстрее: одной отрисовкой"},  // 3.0.19-beta.50
     {Text::QualityBatchGroundHint,
      "The game hands its ground over a cell at a time - thousands of draws a frame. Cells in a row with the same "
      "pictures go as one draw: less work for the processor, the same picture. Off: a draw each, as the game gives "
@@ -9214,6 +9248,9 @@ constexpr Entry kTexts[] = {
     {Text::WhyNeeds, "To work it needs on: {1}", "Щоб працювало, увімкніть: {1}", "Чтобы работало, включите: {1}"},
     {Text::WhyNextMap, "A change shows from the next map", "Зміна діє з наступної карти",
      "Изменение действует со следующей карты"},
+    {Text::LoginHintBusy, "Plays in game window {1}: a login here disconnects it there",
+     "Грає у вікні гри {1}: вхід тут від'єднає його там",
+     "Играет в окне игры {1}: вход здесь отключит его там"},  // 3.0.21-beta.5
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
