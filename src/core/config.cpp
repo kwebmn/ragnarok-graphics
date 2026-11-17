@@ -628,6 +628,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.bossBars);
         } else if (key == "interface.who_hits") {  // 3.0.13-beta.13
             setBool(val, c.whoHits);
+        } else if (key == "interface.far_bars") {  // 3.0.20-beta.84 (R-7WTVBF)
+            setBool(val, c.farBars);
 
         } else if (key == "interface.quick_teleport") {  // 3.0.13-beta.7
             setBool(val, c.quickTeleport);

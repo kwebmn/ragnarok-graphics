@@ -96,6 +96,8 @@ struct Bar {
 };
 Bar barOver(const float box[4], bool target, int screenHeight);
 // 3.0.13-beta.3: a boss's bar - wider and taller about the same middle, its bottom where it was
+// 3.0.20-beta.84 (R-7WTVBF): a bar `scale` times its size, its bottom middle kept ([interface] far_bars)
+Bar scaled(Bar b, float scale);
 Bar ranked(Bar b, Rank rank);
 // 3.0.11-beta.148 (the owner: «хп над мобом дергается когда тот ходит», «когда моба атакую, хп дергается туда сюда»):
 // a bar steady over its monster - across the middle of its feet on the screen (its place in the world as the game

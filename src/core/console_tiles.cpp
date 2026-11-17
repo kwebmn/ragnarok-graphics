@@ -13,6 +13,7 @@ const std::vector<const char*>& quickKeys() {
     static const std::vector<const char*> keys{"effects.group_time", "effects.group_weather", "effects.grass",
                                                "effects.torch_shadows", "effects.mage_effects", "frames.keep_fps",
                                                "frames.fps_counter", "interface.net_badge", "interface.mob_hp",
+                                               "interface.far_bars",     // 3.0.20-beta.84: to compare at far zoom
                                                "view3d.own_models",
                                                "view3d.shadows",        // 3.0.20-beta.50: while the trial is tried
                                                "view3d.dense_crowns",   // 3.0.20-beta.51

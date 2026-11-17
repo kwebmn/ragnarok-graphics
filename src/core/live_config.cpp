@@ -373,6 +373,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("who_hits", flag(running.whoHits), flag(file.whoHits)));
         n.whoHits = file.whoHits;
     }
+    if (file.farBars != running.farBars) {  // 3.0.20-beta.84 (R-7WTVBF)
+        u.applied.push_back(change("far_bars", flag(running.farBars), flag(file.farBars)));
+        n.farBars = file.farBars;
+    }
     if (file.bossBars != running.bossBars) {  // 3.0.13-beta.3
         u.applied.push_back(change("boss_bars", flag(running.bossBars), flag(file.bossBars)));
         n.bossBars = file.bossBars;

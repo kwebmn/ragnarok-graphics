@@ -1,9 +1,11 @@
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <iterator>
 #include <string>
 
 #include "core/config.hpp"
+#include "core/console_tiles.hpp"
 #include "core/game_camera.hpp"
 #include "core/live_config.hpp"
 #include "core/settings/effects_layout.hpp"
@@ -2102,4 +2104,20 @@ TEST(config_models_by_our_renderer_on_by_default) {
     const settings::IniSetting* s = settings::findSetting("view3d.own_models");
     CHECK(s != nullptr);
     if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("1"));
+}
+
+// 3.0.20-beta.84 (R-7WTVBF «когда отдаляю, то полоска хп выглядит огромной»): [interface] far_bars - the bars under the
+// characters and over the monsters smaller with the camera further out than the game's own views; on at first, a box of
+// «Інтерфейс» and the console, at once
+TEST(config_interface_far_bars) {
+    CHECK(noUi("").farBars);
+    CHECK(!noUi("far_bars = 0\n").farBars);
+    const settings::IniSetting* s = settings::findSetting("interface.far_bars");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    if (s) CHECK_EQ(settings::tokenOf(*s, noUi("")), std::string("1"));
+    CHECK(appliesNow("interface.far_bars"));
+    CHECK(!liveUpdate(noUi(""), noUi("far_bars = 0\n")).next.farBars);
+    const auto& quick = consoletiles::quickKeys();
+    CHECK(std::find_if(quick.begin(), quick.end(),
+                       [](const char* k) { return std::string(k) == "interface.far_bars"; }) != quick.end());
 }

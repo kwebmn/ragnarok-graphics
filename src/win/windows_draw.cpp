@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -11,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/gauge_scale.hpp"
 #include "core/world_windows.hpp"
 #include "win/world_signs.hpp"
 #include "win/char_block.hpp"
@@ -62,6 +64,7 @@
 #include "win/menu_window.hpp"
 #include "win/trade_window.hpp"
 #include "win/view3d.hpp"
+#include "win/far_bars.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -164,6 +167,65 @@ size_t holdShown(uint32_t manager, bool gauges, std::vector<std::pair<uint32_t, 
     return others;  // the shown ones left drawn
 }
 
+// 3.0.20-beta.84 (R-7WTVBF «когда отдаляю, то полоска хп выглядит огромной»): [interface] far_bars - the faces the
+// pass of the world's windows filed (the renderer's list from entry `from` on) that lie in a shown gauge's box (each
+// gauge one face of its surface's texture, FUN_00403880 -> FUN_00417c70: its vertices at the face's + 0, their count
+// at + 4, its indices' count at + 0x10, 32 bytes a vertex with x and y first - as FUN_0040f320 draws it) smaller
+// toward their stack's top middle by the camera's distance (core/gauge_scale, win/far_bars)
+constexpr uint32_t kWindowBox = 0x14;  // x, y, width, height (FUN_004cd720 draws the surface there)
+constexpr size_t kFaceStride = 32;     // D3DFVF 0x1C4: x y z rhw, two colours, u v
+int g_farTold = 0, g_farMissTold = 0;
+
+bool interfaceList(uint32_t list[2]) {
+    uint32_t renderer = 0;
+    return readGame(kRenderer, &renderer, 4) && renderer && readGame(renderer + kInterfaceList, list, 8) &&
+           list[1] >= list[0] && (list[1] - list[0]) % 8 == 0 && (list[1] - list[0]) / 8 <= 100000;
+}
+
+void shrinkGauges(uint32_t manager, size_t from) {
+    const float scale = farbars::scaleNow();
+    if (!(scale < 1.0f)) return;
+    std::vector<std::array<int, 4>> boxes;
+    const uint32_t head = *reinterpret_cast<const uint32_t*>(uintptr_t(manager + kWindowsList));
+    size_t seen = 0;
+    for (uint32_t node = head ? *reinterpret_cast<const uint32_t*>(uintptr_t(head)) : 0;
+         node && node != head && seen < kMostWindows; node = *reinterpret_cast<const uint32_t*>(uintptr_t(node))) {
+        ++seen;
+        const uint32_t w = *reinterpret_cast<const uint32_t*>(uintptr_t(node + 8));
+        if (!w || !*reinterpret_cast<const int32_t*>(uintptr_t(w + kWindowShown)) ||
+            !gaugescale::gaugeClass(*reinterpret_cast<const uint32_t*>(uintptr_t(w))))
+            continue;
+        std::array<int, 4> box{};
+        if (readGame(w + kWindowBox, box.data(), sizeof box) && box[2] > 0 && box[3] > 0 && box[2] <= 512 &&
+            box[3] <= 64)
+            boxes.push_back(box);
+    }
+    uint32_t list[2] = {};
+    if (boxes.empty() || !interfaceList(list)) return;
+    const std::vector<std::array<float, 2>> anchors = gaugescale::anchors(boxes);
+    size_t shrunk = 0, faces = 0;
+    for (uint32_t at = list[0] + uint32_t(from) * 8; at < list[1]; at += 8) {
+        ++faces;
+        uint32_t face = 0, f[5] = {};
+        if (!readGame(at + 4, &face, 4) || !face || !readGame(face, f, sizeof f) || !f[0] || !f[1] || f[1] > 8 || f[4])
+            continue;
+        auto* vertices = reinterpret_cast<uint8_t*>(uintptr_t(f[0]));
+        const int b = gaugescale::boxOf(vertices, f[1], kFaceStride, boxes);
+        if (b < 0) continue;
+        gaugescale::scaleVertices(vertices, f[1], kFaceStride, anchors[size_t(b)][0], anchors[size_t(b)][1], scale);
+        ++shrunk;
+    }
+    if (shrunk && g_farTold < 3) {
+        ++g_farTold;
+        LOG_INFO("windows draw: %zu face(s) of %zu shown gauge(s) under the characters at %.0f %% of their size "
+                 "([interface] far_bars)", shrunk, boxes.size(), scale * 100.0f);
+    } else if (!shrunk && g_farMissTold < 2) {
+        ++g_farMissTold;
+        LOG_INFO("windows draw: %zu shown gauge(s), none of the pass's %zu face(s) in their boxes - the bars under the "
+                 "characters at the game's size ([interface] far_bars)", boxes.size(), faces);
+    }
+}
+
 // 3.0.16-beta.7: [interface] signs - the shops' and the chat rooms' signs drawn anew (win/world_signs): their shown
 // flags held at 0 through both passes of the game's draw (kept in `held` to put back - the clicks still find them)
 void holdSigns(uint32_t manager, std::vector<std::pair<uint32_t, int32_t>>& held) {
@@ -243,7 +305,10 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     std::vector<std::pair<uint32_t, int32_t>> held, signs;
     holdSigns(manager, signs);  // 3.0.16-beta.7
     const size_t gauges = holdShown(manager, false, held);  // 3.0.11-beta.191: the bars under the characters first
+    uint32_t filed[2] = {};  // 3.0.20-beta.84: the interface's faces before that pass
+    const bool listed = gauges > 0 && interfaceList(filed);
     if (gauges > 0) reinterpret_cast<DrawFn>(uintptr_t(kDraw))(manager);
+    if (listed) shrinkGauges(manager, (filed[1] - filed[0]) / 8);
     putBack(held);
     Context::get().markGameWindows(interfaceFaces());  // 3.0.11-beta.109: its own windows from here on - over ours
     if (g_told < 1) {

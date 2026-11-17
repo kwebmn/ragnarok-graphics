@@ -15,6 +15,7 @@
 #include "core/reference_index.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/runtime.hpp"
+#include "win/far_bars.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_memory.hpp"
 #include "win/log.hpp"
@@ -244,6 +245,7 @@ static void frameInner(HWND game, MobHp mode, double k, int targetWidth, int tar
     if (camera) readActorPlaces(s.places);
     const uint32_t nowMs = GetTickCount();
     int steady = 0;
+    const float barsScale = farbars::scaleNow();  // 3.0.20-beta.84 (R-7WTVBF): [interface] far_bars
     for (const mobhp::Shown& m : list) {
         const auto it = s.boxes.find(m.id);
         if (it == s.boxes.end()) continue;  // not on the screen now
@@ -274,7 +276,7 @@ static void frameInner(HWND game, MobHp mode, double k, int targetWidth, int tar
         mobhp::Rank rank = mobhp::Rank::Normal;  // 3.0.13-beta.3
         if (s.bossBars)
             if (const auto c = s.classes.find(m.id); c != s.classes.end()) rank = rankOf(s, c->second);
-        b = mobhp::ranked(b, rank);
+        b = mobhp::ranked(mobhp::scaled(b, barsScale), rank);
         s.bars.push_back(Bar{b.x * kk, b.y * kk, b.w * kk, b.h * kk, b.y, m.hp, m.id, m.target, rank,
                              s.whoHits && s.hitters.hitting(m.id, nowMs)});
         if (!m.target) continue;

@@ -189,6 +189,16 @@ bool readCameraTargetDepth(float& z) {
     return std::isfinite(z) && z > camera::kNear && z < camera::kFar;
 }
 
+bool readCameraDistance(float& distance) {
+    const Asked asked(__builtin_return_address(0));
+    uint32_t cview = 0;
+    const uint32_t mode = gameMode();
+    if (!mode || !read(mode + camera::kModeView, &cview, 4) || !cview ||
+        !read(cview + camera::kViewDistance, &distance, 4))
+        return false;
+    return std::isfinite(distance) && distance > 0.0f && distance < 100000.0f;
+}
+
 bool readCameraAndTarget(float view[12], float at[3]) {
     const Asked asked(__builtin_return_address(0));
     uint32_t cview = 0;

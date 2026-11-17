@@ -103,6 +103,7 @@
 #include "win/shop_window.hpp"
 #include "win/net_smooth.hpp"
 #include "win/ammo_sound.hpp"
+#include "win/far_bars.hpp"
 #include "win/ask_card.hpp"
 #include "win/info_card.hpp"
 #include "win/cart_window.hpp"
@@ -1342,6 +1343,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     g_parts.mark("hotbarwin", nowMs());
     consolehint::frame(gameCodePage(config));  // 3.0.17-beta.11: «Alt+D» once, on the first map
     g_parts.mark("consolehint", nowMs());
+    farbars::setOn(config.farBars);      // 3.0.20-beta.84 (R-7WTVBF): [interface] far_bars
     ammosound::frame(config.ammoSound);  // 3.0.11-beta.129: [interface] ammo_sound - the chime at 10 left and at none
     g_parts.mark("ammosound", nowMs());
     // 3.0.11-beta.42: [interface] items and status - «Речі» and «Характеристики» while the game's own are open

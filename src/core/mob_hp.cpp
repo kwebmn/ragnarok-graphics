@@ -75,6 +75,16 @@ uint32_t fillColour(int hp, Rank rank) {
     return rank == Rank::Mvp ? 0xFFF2C14Eu : 0xFFB07CFFu;  // the interface's gold; a violet
 }
 
+Bar scaled(Bar b, float scale) {
+    if (!(scale > 0.0f) || scale >= 1.0f) return b;
+    const float mid = b.x + b.w / 2, bottom = b.y + b.h;
+    b.w *= scale;
+    b.h *= scale;
+    b.x = mid - b.w / 2;
+    b.y = bottom - b.h;
+    return b;
+}
+
 Bar ranked(Bar b, Rank rank) {
     if (rank == Rank::Normal) return b;
     const float wide = rank == Rank::Mvp ? 1.7f : 1.35f, tall = rank == Rank::Mvp ? 1.6f : 1.3f;

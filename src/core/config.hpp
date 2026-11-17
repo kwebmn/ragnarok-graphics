@@ -818,6 +818,10 @@ struct Config {
     bool bossBars = false;
     // 3.0.13-beta.13 (the owner's pick 44 of «50 идей»): [interface] who_hits - the monsters hitting the character
     bool whoHits = false;
+    // 3.0.20-beta.84 (R-7WTVBF «когда отдаляю, то полоска хп выглядит огромной»): [interface] far_bars - the bars
+    // under the characters (the game's) and over the monsters (ours) smaller with the camera further out than the
+    // game's own views, as the characters are (core/gauge_scale); on
+    bool farBars = true;
     // 3.0.13-beta.7 (the owner's pick 18 of «50 идей»): [interface] quick_teleport - a teleport on the same map without
     // the game's 255 ms of darkening (win/teleport_fade)
     bool quickTeleport = false;

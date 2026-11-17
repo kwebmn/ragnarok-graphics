@@ -561,6 +561,7 @@ enum class Text : uint16_t {
     InterfaceFollow, InterfaceFollowHint,  // 3.0.13-beta.11
     InterfaceLongChat, InterfaceLongChatHint,  // 3.0.13-beta.12
     InterfaceWhoHits, InterfaceWhoHitsHint,  // 3.0.13-beta.13
+    InterfaceFarBars, InterfaceFarBarsHint,  // 3.0.20-beta.84
     InterfaceChatColourParty, InterfaceChatColourGuild, InterfaceChatColourOwn, InterfaceChatColourOthers,  // .3
     InterfaceChatLog, InterfaceChatLogHint, InterfaceChatColourHint, ChatColourDefault, ChatColourBlue, ChatColourGreen,
     ChatColourYellow, ChatColourOrange,

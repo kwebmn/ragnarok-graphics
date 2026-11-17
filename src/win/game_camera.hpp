@@ -18,6 +18,9 @@ bool readGameCamera(float view[12]);
 bool readCameraTargetDepth(float& z);
 // 3.0.13-beta.17: the game's camera (world -> view) and the point it looks at - the character - in the world
 bool readCameraAndTarget(float view[12], float at[3]);
+// 3.0.20-beta.84 (R-7WTVBF): the camera's distance as the game zooms it (CView kViewDistance: 230 the closest, 300
+// at a launch, the driver's 1400 the furthest); false outside the game
+bool readCameraDistance(float& distance);
 
 // AI textures (0.12): the map the game shows ("prontera"), from the same game mode as the camera; "" when there is no
 // world (the login, the character list) or the exe is another build.

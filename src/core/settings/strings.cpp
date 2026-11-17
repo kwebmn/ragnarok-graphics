@@ -5816,6 +5816,18 @@ constexpr Entry kTexts[] = {
      "персонажем їх рахує — одразу видно, коли натовп росте.",
      "Монстры, бившие вас последние секунды, получают красную рамку вокруг полоски HP, а червоне ⚔ 3 над персонажем "
      "их считает — сразу видно, когда толпа растёт."},
+    {Text::InterfaceFarBars, "Smaller HP bars with a far camera", "Менші смужки HP на дальній камері",
+     "Меньше полоски HP на дальней камере"},  // 3.0.20-beta.84 (R-7WTVBF)
+    {Text::InterfaceFarBarsHint,
+     "The game draws the HP and SP bars under the characters the same size whatever the camera, so with the camera "
+     "far out they look huge by the small figures. Past the usual camera they get smaller with the characters, down "
+     "to 60 %; the monsters' HP bars too.",
+     "Гра малює смужки HP і SP під персонажами одного розміру за будь-якої камери, тож на дальній камері вони "
+     "здаються величезними поруч із маленькими фігурками. Далі звичайної камери вони меншають разом із "
+     "персонажами, до 60 %; смужки HP монстрів теж.",
+     "Игра рисует полоски HP и SP под персонажами одного размера при любой камере, поэтому на дальней камере они "
+     "кажутся огромными рядом с маленькими фигурками. Дальше обычной камеры они уменьшаются вместе с "
+     "персонажами, до 60 %; полоски HP монстров тоже."},
     {Text::InterfaceChatColourParty, "Chat: the party's colour", "Чат: колір групи", "Чат: цвет группы"},  // .3
     {Text::InterfaceChatColourGuild, "Chat: the guild's colour", "Чат: колір гільдії", "Чат: цвет гильдии"},
     {Text::InterfaceChatColourOwn, "Chat: your own lines", "Чат: ваші рядки", "Чат: ваши строки"},

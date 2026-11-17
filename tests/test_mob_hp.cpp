@@ -160,3 +160,21 @@ TEST(mob_hp_hitters_held_a_while) {
     h.gone(2);
     CHECK(h.count(7002) == 0);
 }
+
+// 3.0.20-beta.84 (R-7WTVBF): [interface] far_bars - a monster's bar smaller with the camera far out, its bottom middle
+// kept (the gap over the head as it was)
+TEST(mob_hp_a_bar_smaller_with_a_far_camera) {
+    mobhp::Bar b;
+    b.x = 100.0f;
+    b.y = 50.0f;
+    b.w = 40.0f;
+    b.h = 4.0f;
+    const mobhp::Bar s = mobhp::scaled(b, 0.5f);
+    CHECK_EQ(s.w, 20.0f);
+    CHECK_EQ(s.h, 2.0f);
+    CHECK_EQ(s.x, 110.0f);  // its middle at 120 still
+    CHECK_EQ(s.y, 52.0f);   // its bottom at 54 still
+    const mobhp::Bar same = mobhp::scaled(b, 1.0f);
+    CHECK_EQ(same.w, 40.0f);
+    CHECK_EQ(same.y, 50.0f);
+}
