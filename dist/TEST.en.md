@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.21-beta.7 — what's new · 2026-11-17
+
+The last step to settings in order: the console (Ctrl+~) is the laboratory alone.
+
+- **Three tabs in the console:** «Trials», «Diagnostics», «Effects' cost». The tabs «Quick», «New», «Picture», «Interface», «Textures» and «All» are gone - everything they held is set in the «Settings» window (Alt+O). The console's first row leads there.
+- **«Settings» (Alt+O) is there for everyone,** whatever look of the interface is chosen. Before, «New screen, the game's windows» and «Classic» left the game's own window on Alt+O, and uaRO Graphics could be set in the game only in the console. The window's switch moved to the console: «Diagnostics» → «The «Settings» window by Alt+O».
+- **«Arrange the interface»** is a button at the foot of «Settings» (an action of the console before). In the game's menu and by Ctrl+Shift+L it is as before.
+- **Alt+D** opens «Settings» (the console before).
+- Rows pinned in the console with Insert now head the «Trials» tab.
+- «Graphics test» and «Write the models around into the log» are on the «Diagnostics» tab, with the texture pack's kinds of pictures - to compare them in the game.
+- The game's chat shows a hint once: «Alt+O - the settings».
+
 # uaRO Graphics 3.0.21-beta.6 — what's new · 2026-11-17
 
 The fourth step to tidy settings: the settings app holds only what is set before the game starts.
