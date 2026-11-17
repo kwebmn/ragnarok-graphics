@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.80 — what's new · 2026-11-17
+
+- **Fixed: the ground's ledge walls brighter than the game's.** This is «Своя земля» in the view from above and in the 3D view. In dungeons and at night the walls of cliffs and ledges were almost twice as bright as in the game itself (pay_dun00: 0.40 instead of 0.23), and on some maps (payon, morocc, hugel) they had a yellowish tint the game does not have. Two causes: the game colours a wall's corner by the top of the cell at that corner of the grid, not by the wall's own colour, and it darkens all its ground by its own factors at night and in dungeons. Our walls now do the same. Hence the «wall glare» that came only sometimes: by day the factors are 1.
+
 # uaRO Graphics 3.0.20-beta.79 — what's new · 2026-11-17
 
 - **Reworked «Об'ємні крони».** The leaves' copy stood on its edge is now one, not two: the two lay in one plane, one over the other, and the crown became a solid wall of leaves. The crown keeps its shape, with more gaps between the leaves.
