@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.21-beta.5 — what's new · 2026-11-17
+
+Names that say what is seen on the screen, and a guard against throwing out your own window by accident.
+
+- **23 rows renamed:** the inner words left the names for the hints. The main ones: "Models by our renderer" → "Houses and trees drawn by uaRO Graphics"; "Ground on the graphics card" → "Own ground faster: the graphics card computes it"; "Leaves on the graphics card" → "Tree leaves faster: the graphics card computes them"; "Ground in batches" → "The game's ground faster: in one draw"; "64-bit renderer" → "Draw in a separate 64-bit process"; "Effects (new library)" → "Shadows and glow of the windows". The trials' names lost "(trial)", "(experiment)", "(test)": that a row is a trial is told by the console's "Trials" tab.
+- The values and the keys in the file are the same. The search still finds a row by its old name.
+- **The login card warns of a login in use.** When the field holds a login that already plays in another game window, a line appears under it: "Plays in game window N: a login here disconnects it there".
+- **Being thrown out by your own second window is no lost connection.** When the first window is thrown out by a login from another window of the same computer, no automatic report goes to the developers.
+
 # uaRO Graphics 3.0.21-beta.4 — what's new · 2026-11-17
 
 A row of the "Settings" window (Alt+O) now says itself why it does nothing at the moment.
