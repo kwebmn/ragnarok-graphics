@@ -81,7 +81,7 @@ struct State {
     int hoverLayer = -1;
     std::string net;  // 3.0.11-beta.122: the round trip's badge painted
     uint32_t netRgb = 0;
-    std::string netRate;        // 3.0.21-beta.17: the exchange's line under it («↓2,1 ↑0,3 КБ/с»), "" not known
+    std::string netIn, netOut;  // 3.0.21-beta.17: the exchange - KB a second received, sent («2,1»); "" not known
     std::vector<int> netGraph;  // 3.0.11-beta.127: its plate's graph painted (the last minute, ms; -1 a stall)
     bool on = false, shown = false, dirty = true, upload = true;
     int style = -1;  // 3.0.11-beta.47: core/ui_style's generation painted
@@ -823,7 +823,9 @@ void render(State& s) {
     t.style = settings::tr(language(), settings::Text::MinimapLayerScheme);  // 3.0.11-beta.120
     t.net = s.net;  // 3.0.11-beta.122
     t.netRgb = s.netRgb;
-    t.netRate = s.netRate;  // 3.0.21-beta.17
+    t.netIn = s.netIn;  // 3.0.21-beta.17, 3.0.22-beta.1: on the round trip's line
+    t.netOut = s.netOut;
+    t.netUnit = settings::tr(language(), settings::Text::NetKbps);
     if (foundHere(s))  // 3.0.11-beta.213: «Poring · 12»
         t.found = s.found.result().what + " \xC2\xB7 " + std::to_string(s.found.result().points.size());
     t.route = !s.plotLines.empty() ? s.plotLines : s.routeLines;  // 3.0.11-beta.71: the way set on the map first
@@ -835,7 +837,7 @@ void render(State& s) {
     const float grow = std::sqrt(std::max(1.0f, hudedit::sizeOf(hudlayout::Part::Minimap)));
     s.layout = minimap::layout(s.targetW, s.targetH, s.scale, !t.route.empty(), s.folded ? 0 : int(t.list.size()),
                                !t.net.empty(), !t.found.empty(), grow,  // .127: the round trip's plate; .213 search
-                               !t.netRate.empty());                     // 3.0.21-beta.17: the exchange's line
+                               !t.netIn.empty());                       // 3.0.22-beta.1: the exchange on its line
     hudedit::place(hudlayout::Part::Minimap, s.k, s.targetW, s.targetH, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
     const uicost::Paint cost("minimap", s.layout.w, s.layout.h);  // 3.0.11-beta.55 (beta.57: its size known)
@@ -1207,17 +1209,19 @@ static void frameInner(HWND game, const Show& show, double k, int targetWidth, i
         }
         // 3.0.21-beta.17 (the owner: «там где пинг показывать скорость обмена данными туда сюда»): under it the
         // exchange each way, KB a second over the last 5 s (Windows' own counts of the game's connection)
-        std::string rate;
+        std::string in, out;
         netwatch::Rates r;
         if (!net.empty() && netwatchwin::rates(r)) {
             const char point = language() == settings::Lang::En ? '.' : ',';
-            rate = settings::fmt(settings::tr(language(), settings::Text::NetRate),
-                                 {netwatch::kilobytes(r.inBps, point), netwatch::kilobytes(r.outBps, point)});
+            in = netwatch::kilobytes(r.inBps, point);
+            out = netwatch::kilobytes(r.outBps, point);
         }
-        if (rate != s.netRate) {
-            if (s.netRate.empty() && !rate.empty())
-                LOG_INFO("minimap: the exchange under the round trip - %s", rate.c_str());
-            s.netRate = rate;
+        if (in != s.netIn || out != s.netOut) {
+            if (s.netIn.empty() && !in.empty())
+                LOG_INFO("minimap: the exchange on the round trip's line - %s KB/s in, %s out", in.c_str(),
+                         out.c_str());
+            s.netIn = in;
+            s.netOut = out;
             s.dirty = true;
         }
         // 3.0.11-beta.127: its plate's graph - a new reading each second

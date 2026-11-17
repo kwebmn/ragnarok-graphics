@@ -5512,21 +5512,21 @@ constexpr Entry kTexts[] = {
      "The time to the game's server and back on a small plate under the minimap's bar, with a graph of the last "
      "minute (a bar each second), measured by Windows on the game's own connection: green under 120 ms, amber under "
      "250 ms, red slower or when packets were lost; «stall» in red - the connection waited for a lost packet (the "
-     "world jumps after it: that was the network, not the game). Under it, the exchange with the server each way: ↓ "
-     "received, ↑ sent, KB a second over the last 5 seconds.",
+     "world jumps after it: that was the network, not the game). Beside it, the exchange with the server each way: ↓ "
+     "received (blue), ↑ sent (violet), KB a second over the last 5 seconds.",
      "Час до сервера гри й назад на невеликій плашці під смугою мінікарти, з графіком за останню хвилину (стовпчик "
      "щосекунди), як його міряє Windows на з'єднанні самої гри: зелений - до 120 мс, бурштиновий - до 250 мс, "
      "червоний - повільніше або коли пакети губилися; «обрив» червоним - з'єднання чекало на загублений пакет (світ "
-     "після нього стрибає: це була мережа, не гра). Під ним - обмін із сервером в обидва боки: ↓ отримано, ↑ "
-     "надіслано, КБ за секунду за останні 5 секунд.",
+     "після нього стрибає: це була мережа, не гра). Поруч - обмін із сервером в обидва боки: ↓ отримано (блакитним), "
+     "↑ надіслано (фіолетовим), КБ за секунду за останні 5 секунд.",
      "Время до сервера игры и обратно на небольшой плашке под полосой миникарты, с графиком за последнюю минуту "
      "(столбик каждую секунду), как его меряет Windows на соединении самой игры: зелёный - до 120 мс, янтарный - до "
      "250 мс, красный - медленнее или когда пакеты терялись; «обрыв» красным - соединение ждало потерянный пакет "
-     "(мир после него прыгает: это была сеть, не игра). Под ним - обмен с сервером в обе стороны: ↓ получено, ↑ "
-     "отправлено, КБ в секунду за последние 5 секунд."},
+     "(мир после него прыгает: это была сеть, не игра). Рядом - обмен с сервером в обе стороны: ↓ получено "
+     "(голубым), ↑ отправлено (фиолетовым), КБ в секунду за последние 5 секунд."},
     {Text::NetMs, "{1} ms", "{1} мс", "{1} мс"},
     {Text::NetStall, "stall", "обрив", "обрыв"},
-    {Text::NetRate, "↓{1} ↑{2} KB/s", "↓{1} ↑{2} КБ/с", "↓{1} ↑{2} КБ/с"},  // 3.0.21-beta.17: the exchange
+    {Text::NetKbps, "KB/s", "КБ/с", "КБ/с"},  // 3.0.21-beta.17, 3.0.22-beta.1: the exchange's unit
     // 3.0.11-beta.123: the position fixes glided to
     {Text::InterfaceSmoothFixes, "Smooth position fixes", "Плавні поправки позиції", "Плавные поправки позиции"},
     {Text::InterfaceSmoothFixesHint,

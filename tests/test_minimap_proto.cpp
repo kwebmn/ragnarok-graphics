@@ -599,32 +599,44 @@ TEST(minimap_fan_as_wide_as_the_view) {
     CHECK(std::fabs(minimap::Scene{}.fanHalf - 0.66f) < 1e-6f);
 }
 
-// 3.0.21-beta.17 (the owner: «надо там где пинг показывать скорость обмена данными туда сюда»): the round trip's plate
-// a line taller with the exchange's speed under the round trip - «↓2,1 ↑0,3 КБ/с»; the graph stays on the first line
+// 3.0.21-beta.17 (the owner: «надо там где пинг показывать скорость обмена данными туда сюда»), 3.0.22-beta.1 (the
+// owner: «сделай в одну строку обмен с пингом и покрасивее, разными цветами прием и отдачу нарисуй»): the exchange on
+// the round trip's line - «↓2,1» blue, «↑0,3» violet, «КБ/с» muted, between the round trip and its graph; the plate
+// as wide as the map, as high as before
 TEST(minimap_proto_the_round_trips_plate_tells_the_exchange) {
     const minimap::Layout one = minimap::layout(1920, 1080, 1.0f, false, 0, true);
-    const minimap::Layout two = minimap::layout(1920, 1080, 1.0f, false, 0, true, false, 1.0f, true);
-    CHECK(two.net.w == one.net.w && two.net.h > one.net.h + 10);
-    const panel::Box g1 = minimap::netGraphBox(one), g2 = minimap::netGraphBox(two);
-    CHECK(g1.y == g2.y && g1.h == g2.h);  // the graph where it was
+    const minimap::Layout wide = minimap::layout(1920, 1080, 1.0f, false, 0, true, false, 1.0f, true);
+    CHECK(wide.net.h == one.net.h);  // one line
+    CHECK(wide.net.w > one.net.w && wide.net.w <= wide.map.w + 0.5f);
+    const panel::Box g1 = minimap::netGraphBox(one), g2 = minimap::netGraphBox(wide);
+    CHECK(g1.y == g2.y && g1.h == g2.h && g1.w == g2.w);  // the graph as it was, at the plate's right end
+    CHECK(std::abs(g2.x + g2.w - (wide.net.x + wide.net.w - 8)) < 1);
     minimap::Texts t;
     t.net = "40 мс";
-    t.netRate = "↓2,1 ↑0,3 КБ/с";
+    t.netIn = "2,1";
+    t.netOut = "0,3";
+    t.netUnit = "КБ/с";
     const minimap::Scene sc;
-    const std::vector<minimap::Words> w = minimap::frameWords(two, sc, t);
-    const minimap::Words* ping = nullptr;
-    const minimap::Words* rate = nullptr;
-    for (const minimap::Words& x : w) {
-        if (x.text.find("40 мс") != std::string::npos) ping = &x;
-        if (x.text == t.netRate) rate = &x;
+    const std::vector<minimap::Words> w = minimap::frameWords(wide, sc, t);
+    const auto find = [&](const std::string& text, bool whole) -> const minimap::Words* {
+        for (const minimap::Words& x : w)
+            if (whole ? x.text == text : x.text.find(text) != std::string::npos) return &x;
+        return nullptr;
+    };
+    const minimap::Words *ping = find("40 мс", false), *in = find("↓2,1", true), *out = find("↑0,3", true),
+                         *unit = find("КБ/с", true);
+    CHECK(ping && in && out && unit);
+    if (ping && in && out && unit) {
+        CHECK(in->rgb == minimap::kNetInRgb && out->rgb == minimap::kNetOutRgb && in->rgb != out->rgb);
+        CHECK(unit->rgb != in->rgb && unit->rgb != out->rgb);
+        const auto middle = [](const minimap::Words* x) { return x->box.y + x->box.h / 2; };
+        CHECK(std::abs(middle(in) - middle(ping)) < 1.5f && std::abs(middle(unit) - middle(ping)) < 1.5f);
+        CHECK(in->box.x > ping->box.x + 20);  // after the round trip's words
+        CHECK(out->box.x >= in->box.x + in->box.w && unit->box.x >= out->box.x + out->box.w);
+        CHECK(unit->box.x + unit->box.w <= g2.x);  // before the graph
     }
-    CHECK(ping && rate);
-    if (ping && rate) {
-        CHECK(rate->box.y >= ping->box.y + ping->box.h - 4);  // under the round trip
-        CHECK(rate->box.y + rate->box.h <= two.net.y + two.net.h + 0.5f);
-        CHECK(rate->box.x == ping->box.x);
-    }
-    t.netRate.clear();  // not known yet: no line
-    for (const minimap::Words& x : minimap::frameWords(one, sc, t)) CHECK(x.text.find("КБ/с") == std::string::npos);
+    t.netIn.clear();  // not known yet: none of it
+    for (const minimap::Words& x : minimap::frameWords(one, sc, t))
+        CHECK(x.text.find("↓") == std::string::npos && x.text != "КБ/с");
 }
 

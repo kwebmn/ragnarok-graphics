@@ -80,7 +80,7 @@ struct Layout {
     // still (an enlarged minimap: its size's root)
     float grow = 1;
 };
-// 3.0.21-beta.17: netRate - the round trip's plate a line taller for the exchange's speed (Texts::netRate)
+// 3.0.21-beta.17, 3.0.22-beta.1: netRate - the round trip's plate as wide as the map, the exchange on its line
 Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net = false, bool found = false,
               float grow = 1.0f, bool netRate = false);
 panel::Box netGraphBox(const Layout& L);  // 3.0.11-beta.127: the plate's graph (w 0 none)
@@ -231,10 +231,14 @@ struct Texts {
     std::string style;            // 3.0.11-beta.120: «Схема» (its button pointed at)
     std::string net;              // 3.0.11-beta.122: the round trip («45 мс», on its plate since .127); "" none
     uint32_t netRgb = 0;          // its colour
-    std::string netRate;          // 3.0.21-beta.17: the exchange's speed under it («↓2,1 ↑0,3 КБ/с»); "" none
+    // 3.0.21-beta.17, 3.0.22-beta.1 (the owner: «сделай в одну строку обмен с пингом и покрасивее, разными цветами
+    // прием и отдачу нарисуй»): the exchange on the round trip's line - KB a second received and sent («2,1»), the
+    // unit («КБ/с»); netIn "" none
+    std::string netIn, netOut, netUnit;
     std::string found;            // 3.0.11-beta.213: the search's plate («Poring · 12»); "" none
 };
 constexpr uint32_t kFoundRgb = 0xFF8A3D;  // 3.0.11-beta.213: a search's marks and its plate's words
+constexpr uint32_t kNetInRgb = 0x6CB8FF, kNetOutRgb = 0xC08CFF;  // 3.0.22-beta.1: the exchange - received, sent
 // 3.0.18-beta.26 (uaUI's minimap): the map's square alone in `out` (L.map's size: its pixels, the marks, the rounded
 // corners); words() split - the Kafras' «K» on the map (the square's pixels) and the rest (the panel's)
 void paintMapSquare(panel::Picture& out, const Layout& L, const Scene& sc);
