@@ -80,8 +80,9 @@ struct Layout {
     // still (an enlarged minimap: its size's root)
     float grow = 1;
 };
+// 3.0.21-beta.17: netRate - the round trip's plate a line taller for the exchange's speed (Texts::netRate)
 Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net = false, bool found = false,
-              float grow = 1.0f);
+              float grow = 1.0f, bool netRate = false);
 panel::Box netGraphBox(const Layout& L);  // 3.0.11-beta.127: the plate's graph (w 0 none)
 enum class Part : uint8_t {
     None, Map, ZoomIn, ZoomOut, Expand, Caption, Fold, Route, Stop, List, Layer, Style,
@@ -230,6 +231,7 @@ struct Texts {
     std::string style;            // 3.0.11-beta.120: «Схема» (its button pointed at)
     std::string net;              // 3.0.11-beta.122: the round trip («45 мс», on its plate since .127); "" none
     uint32_t netRgb = 0;          // its colour
+    std::string netRate;          // 3.0.21-beta.17: the exchange's speed under it («↓2,1 ↑0,3 КБ/с»); "" none
     std::string found;            // 3.0.11-beta.213: the search's plate («Poring · 12»); "" none
 };
 constexpr uint32_t kFoundRgb = 0xFF8A3D;  // 3.0.11-beta.213: a search's marks and its plate's words

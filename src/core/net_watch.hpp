@@ -15,7 +15,20 @@ struct Tcp {  // a reading of the socket (TCP_INFO_v0's)
     uint32_t rttUs = 0, minRttUs = 0;
     uint64_t bytesRetrans = 0;
     uint32_t timeouts = 0;
+    uint64_t bytesIn = 0, bytesOut = 0;  // 3.0.21-beta.17: the connection's bytes so far, each way
 };
+
+// 3.0.21-beta.17 (the owner: «надо там где пинг показывать скорость обмена данными туда сюда»): the bytes a second each
+// way, over the last kRateReadings readings of one connection (about 5 s); a reading with fewer bytes than the one
+// before (another connection) or kRateGapMs after it starts them anew
+struct Rates {
+    int inBps = 0, outBps = 0;
+};
+constexpr int kRateReadings = 6;
+constexpr uint64_t kRateGapMs = 10000;
+// KB (1024 bytes) a second for the plate: one decimal under 10 («2,1» with ',' given), whole from 10 («23»), «0»
+// under 0.05
+std::string kilobytes(int bytesPerSecond, char decimal);
 
 // The badge's: not known yet; under 120 ms; under 250 ms; 250 ms and more or bytes sent again in the last 10 s; a
 // time-out in the last 5 s
@@ -37,6 +50,7 @@ inline bool inBacklog(uint64_t nowMs, uint64_t longGapAtMs) {
 class Watch {
 public:
     void tcp(const Tcp& t, uint64_t nowMs);  // a reading (about each second)
+    bool rates(Rates& r) const;              // 3.0.21-beta.17: false until two readings of one connection
     void packet(uint64_t nowMs);             // a packet from the server
     void fix(bool own, int cells, uint64_t nowMs);  // a position fix - the character's own or another's, how far
     Level level(uint64_t nowMs) const;
@@ -69,6 +83,12 @@ private:
     uint64_t lossAt_ = 0;                            // 3.0.11-beta.137
     int holdMs_ = 0, holds_ = 0, holdMost_ = 0;
     bool holdTold_ = true;
+    struct Count {  // 3.0.21-beta.17: a reading's bytes, for the rates
+        uint64_t in = 0, out = 0, atMs = 0;
+    };
+    Count counts_[kRateReadings];
+    int countNext_ = 0, countN_ = 0;
+    uint64_t periodIn_ = 0, periodOut_ = 0;  // the period's bytes each way (one connection's readings joined)
 };
 
 }  // namespace uagfx::netwatch

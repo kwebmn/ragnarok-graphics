@@ -525,7 +525,7 @@ enum class Text : uint16_t {
     // 3.0.11-beta.120: the maps' picture
     InterfaceMinimapStyle, InterfaceMinimapStyleHint, MinimapStylePicture, MinimapStyleScheme, MinimapLayerScheme,
     // 3.0.11-beta.122: the round trip's badge
-    InterfaceNetBadge, InterfaceNetBadgeHint, NetMs, NetStall,
+    InterfaceNetBadge, InterfaceNetBadgeHint, NetMs, NetStall, NetRate,
     // 3.0.11-beta.123: the position fixes glided to
     InterfaceSmoothFixes, InterfaceSmoothFixesHint,
     InterfacePredictWalk, InterfacePredictWalkHint,  // 3.0.11-beta.130

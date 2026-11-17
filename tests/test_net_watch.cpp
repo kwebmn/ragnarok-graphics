@@ -149,3 +149,64 @@ TEST(net_watch_the_last_loss) {
     w.tcp(tcp(45, 300, 1), 10000);  // nothing new
     CHECK(w.lastLossMs() == 9000);
 }
+
+// 3.0.21-beta.17 (the owner: «надо там где пинг показывать скорость обмена данными туда сюда»): the bytes a second
+// each way from the socket's own counts (TCP_INFO_v0's BytesIn, BytesOut), over the last readings (about 5 s)
+TEST(net_watch_rates_from_the_sockets_counts) {
+    netwatch::Watch w;
+    netwatch::Rates r;
+    netwatch::Tcp t = tcp(40, 0, 0);
+    t.bytesIn = 100000;
+    t.bytesOut = 20000;
+    w.tcp(t, 1000);
+    CHECK(!w.rates(r));  // one reading: nothing to tell yet
+    for (int i = 1; i <= 8; ++i) {  // 2 KB in and 300 bytes out each second
+        t.bytesIn += 2048;
+        t.bytesOut += 300;
+        w.tcp(t, 1000 + uint64_t(i) * 1000);
+    }
+    CHECK(w.rates(r));
+    CHECK_EQ(r.inBps, 2048);
+    CHECK_EQ(r.outBps, 300);
+    t.bytesIn += 51200;  // a burst in the last second: the 5 seconds' mean, not the second alone
+    w.tcp(t, 10000);
+    CHECK(w.rates(r));
+    CHECK_EQ(r.inBps, (4 * 2048 + 51200) / 5);
+    t.bytesIn = 500;  // another connection (a new map server): its counts from 0 - anew
+    t.bytesOut = 50;
+    w.tcp(t, 11000);
+    CHECK(!w.rates(r));
+    t.bytesIn += 1000;
+    t.bytesOut += 100;
+    w.tcp(t, 12000);
+    CHECK(w.rates(r) && r.inBps == 1000 && r.outBps == 100);
+    w.tcp(t, 30000);  // 18 s without a reading: anew
+    CHECK(!w.rates(r));
+}
+
+TEST(net_watch_kilobytes_a_second_in_words) {
+    CHECK_EQ(netwatch::kilobytes(2150, ','), std::string("2,1"));
+    CHECK_EQ(netwatch::kilobytes(300, ','), std::string("0,3"));
+    CHECK_EQ(netwatch::kilobytes(300, '.'), std::string("0.3"));
+    CHECK_EQ(netwatch::kilobytes(23552, ','), std::string("23"));
+    CHECK_EQ(netwatch::kilobytes(10200, ','), std::string("10"));  // 9.96: past one decimal
+    CHECK_EQ(netwatch::kilobytes(0, ','), std::string("0"));
+    CHECK_EQ(netwatch::kilobytes(20, ','), std::string("0"));  // under 0.05 KB
+}
+
+// 3.0.21-beta.17: the minute's line tells the exchange - the period's bytes each way a second on average
+TEST(net_watch_the_logs_line_tells_the_exchange) {
+    netwatch::Watch w;
+    netwatch::Tcp t = tcp(40, 0, 0);
+    t.bytesIn = 5000;
+    t.bytesOut = 500;
+    w.tcp(t, 1000);
+    t.bytesIn += 30 * 2048;
+    t.bytesOut += 30 * 300;
+    w.tcp(t, 31000);
+    t.bytesIn += 30 * 2048;
+    t.bytesOut += 30 * 300;
+    w.tcp(t, 61000);
+    CHECK(has(w.line(61000), "the exchange 2.0 KB/s in, 0.3 KB/s out"));
+    CHECK(has(w.line(121000), "the exchange 0.0 KB/s in, 0.0 KB/s out"));  // no readings since: nothing exchanged
+}

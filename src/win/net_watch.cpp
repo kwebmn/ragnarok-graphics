@@ -383,6 +383,8 @@ void frame() {
     t.rttUs = info.rttUs;
     t.minRttUs = info.minRttUs;
     t.bytesRetrans = info.bytesRetrans;
+    t.bytesIn = info.bytesIn;  // 3.0.21-beta.17: the exchange's speed on the minimap's plate
+    t.bytesOut = info.bytesOut;
     t.timeouts = info.timeoutEpisodes;
     s.watch.tcp(t, now);
     if (s.watch.stalled())
@@ -415,5 +417,7 @@ void setQuickAcks(bool on) {
 }
 
 std::vector<int> graph() { return state().watch.graph(); }
+
+bool rates(netwatch::Rates& r) { return state().watch.rates(r); }
 
 }  // namespace uagfx::win::netwatchwin

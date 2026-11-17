@@ -15,6 +15,7 @@ namespace {
 constexpr float kSide = 220, kMargin = 10, kGap = 6, kBarH = 30, kRouteH = 46, kLineH = 19, kListPad = 7;
 // 3.0.11-beta.127: the round trip's plate - 20 high, its words 58 wide, a graph of 60 bars a pixel each, 12 high
 constexpr float kNetH = 20, kNetText = 58, kNetGraphW = 60, kNetGraphH = 12, kNetPad = 8;
+constexpr float kNetRateH = 14;  // 3.0.21-beta.17: the exchange's line under the round trip
 constexpr uint32_t kNetGood = 0x5FD08A, kNetFair = 0xF0A050, kNetBad = 0xFF7D6E, kNetStall = 0xFF5A4E;
 constexpr float kButton = 22, kButtonGap = 4, kRadius = 10;
 constexpr float kBigFooter = 44;  // 3.0.11-beta.119: the big map's row of the layers' chips
@@ -796,7 +797,8 @@ std::vector<uint32_t> schemePixels(const walkgrid::Grid& g, const std::vector<ui
     return out;
 }
 
-Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net, bool found, float grow) {
+Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net, bool found, float grow,
+              bool netRate) {
     Layout L;
     const float s = std::max(0.5f, scale);
     L.s = s;
@@ -820,7 +822,7 @@ Layout layout(int targetW, int targetH, float scale, bool route, int listLines, 
     if (net) {  // 3.0.11-beta.127: the round trip's plate, its own under the bar
         y += std::round(4 * s);
         const float w = std::round((kNetPad + kNetText + 6 + kNetGraphW + kNetPad) * s);
-        L.net = panel::Box{0, y, w, std::round(kNetH * s)};
+        L.net = panel::Box{0, y, w, std::round(kNetH * s) + (netRate ? std::round(kNetRateH * s) : 0.0f)};
         y += L.net.h;
     }
     if (found) {  // 3.0.11-beta.213: a search's plate, as wide as the map
@@ -853,7 +855,8 @@ Layout layout(int targetW, int targetH, float scale, bool route, int listLines, 
 panel::Box netGraphBox(const Layout& L) {
     if (L.net.w <= 0) return panel::Box{};
     const float s = L.s, w = std::round(kNetGraphW * s), h = std::round(kNetGraphH * s);
-    return panel::Box{L.net.x + L.net.w - std::round(kNetPad * s) - w, L.net.y + std::round((L.net.h - h) / 2), w, h};
+    const float line = std::round(kNetH * s);  // 3.0.21-beta.17: on the first line, the exchange's under it
+    return panel::Box{L.net.x + L.net.w - std::round(kNetPad * s) - w, L.net.y + std::round((line - h) / 2), w, h};
 }
 
 int layerAt(const Layout& L, float x, float y) {
@@ -935,8 +938,13 @@ std::vector<Words> frameWords(const Layout& L, const Scene& sc, const Texts& t) 
         out.push_back(Words{L.foundClear, "\xE2\x9C\x95", kText, 11 * s, false, Align::Center});  // ✕
     }
     if (L.net.w > 0 && !t.net.empty())  // 3.0.11-beta.127: the round trip on its plate (.122: on the bar)
-        out.push_back(Words{panel::Box{L.net.x + std::round(kNetPad * s), L.net.y, std::round(kNetText * s), L.net.h},
+        out.push_back(Words{panel::Box{L.net.x + std::round(kNetPad * s), L.net.y, std::round(kNetText * s),
+                                       std::round(kNetH * s)},
                             "\xE2\x97\x8F " + t.net, t.netRgb ? t.netRgb : kMuted, 11.5f * s, true, Align::Left});
+    if (L.net.w > 0 && !t.net.empty() && !t.netRate.empty() && L.net.h > std::round(kNetH * s))  // 3.0.21-beta.17
+        out.push_back(Words{panel::Box{L.net.x + std::round(kNetPad * s), L.net.y + std::round((kNetH - 3) * s),
+                                       L.net.w - 2 * std::round(kNetPad * s), std::round(kNetRateH * s)},
+                            t.netRate, kMuted, 10.5f * s, false, Align::Left});
     if (L.route.w > 0 && !t.route.empty()) {
         const panel::Box& r = L.route;
         const float rightW = std::round(48 * s);

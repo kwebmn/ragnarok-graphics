@@ -1,6 +1,7 @@
 #include "core/net_watch.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 
 namespace uagfx::netwatch {
@@ -38,6 +39,43 @@ void Watch::tcp(const Tcp& t, uint64_t nowMs) {
     rttSum_ += t.rttUs;
     ++rttCount_;
     rttMost_ = std::max(rttMost_, t.rttUs);
+    if (countN_ > 0) {  // 3.0.21-beta.17: another connection (its counts lower) or a long gap - the rates anew
+        const Count& was = counts_[(countNext_ + kRateReadings - 1) % kRateReadings];
+        const bool same = t.bytesIn >= was.in && t.bytesOut >= was.out;
+        if (same) {  // the minute's line: what the same connection exchanged since
+            periodIn_ += t.bytesIn - was.in;
+            periodOut_ += t.bytesOut - was.out;
+        }
+        if (!same || nowMs <= was.atMs || nowMs - was.atMs > kRateGapMs) countN_ = 0;
+    }
+    counts_[countNext_] = Count{t.bytesIn, t.bytesOut, nowMs};
+    countNext_ = (countNext_ + 1) % kRateReadings;
+    countN_ = std::min(countN_ + 1, kRateReadings);
+}
+
+bool Watch::rates(Rates& r) const {
+    if (countN_ < 2) return false;
+    const Count& newest = counts_[(countNext_ + kRateReadings - 1) % kRateReadings];
+    const Count& oldest = counts_[(countNext_ + kRateReadings - countN_) % kRateReadings];
+    if (newest.atMs <= oldest.atMs) return false;
+    const uint64_t ms = newest.atMs - oldest.atMs;
+    r.inBps = int((newest.in - oldest.in) * 1000 / ms);
+    r.outBps = int((newest.out - oldest.out) * 1000 / ms);
+    return true;
+}
+
+std::string kilobytes(int bytesPerSecond, char decimal) {
+    const double kb = double(std::max(bytesPerSecond, 0)) / 1024.0;
+    char text[32];
+    if (kb < 0.05) return "0";
+    if (kb >= 9.95) {
+        std::snprintf(text, sizeof text, "%lld", static_cast<long long>(std::llround(kb)));
+        return text;
+    }
+    std::snprintf(text, sizeof text, "%.1f", kb);
+    for (char* c = text; *c; ++c)
+        if (*c == '.') *c = decimal;
+    return text;
 }
 
 void Watch::packet(uint64_t nowMs) {
@@ -97,15 +135,20 @@ bool Watch::due(uint64_t nowMs) const { return known_ && nowMs - periodAt_ >= kP
 std::string Watch::line(uint64_t nowMs) {
     const uint32_t average = rttCount_ ? uint32_t(rttSum_ / rttCount_) : last_.rttUs;
     const uint32_t most = rttCount_ ? rttMost_ : last_.rttUs;
-    char text[448];
+    // 3.0.21-beta.17: the period's exchange each way, KB a second on average
+    const double seconds = nowMs > periodAt_ ? double(nowMs - periodAt_) / 1000.0 : 0.0;
+    const double in = seconds > 0 ? double(periodIn_) / 1024.0 / seconds : 0.0;
+    const double out = seconds > 0 ? double(periodOut_) / 1024.0 / seconds : 0.0;
+    char text[512];
     std::snprintf(text, sizeof text,
                   "the map server - round trip %u ms (at most %u, least %u), %llu bytes sent again, %u time-out%s; "
                   "the longest pause between its packets %.1f s; %d position fix%s (yours %d), %d cells at most; "
-                  "%d hold%s by the server's lost packets (at most %d ms)",
+                  "%d hold%s by the server's lost packets (at most %d ms); the exchange %.1f KB/s in, %.1f KB/s out",
                   average / 1000, most / 1000, last_.minRttUs / 1000, static_cast<unsigned long long>(resent_),
                   timeouts_, timeouts_ == 1 ? "" : "s", double(longestGap_) / 1000.0, fixes_,
-                  fixes_ == 1 ? "" : "es", ownFixes_, fixMost_, holds_, holds_ == 1 ? "" : "s", holdMost_);
+                  fixes_ == 1 ? "" : "es", ownFixes_, fixMost_, holds_, holds_ == 1 ? "" : "s", holdMost_, in, out);
     periodAt_ = nowMs;  // a new period
+    periodIn_ = periodOut_ = 0;
     rttSum_ = 0;
     rttCount_ = 0;
     rttMost_ = 0;
