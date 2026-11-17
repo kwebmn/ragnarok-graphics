@@ -33,7 +33,7 @@ enum class Text : uint16_t {
     ScreenResult, ScreenCrispest, ScreenTooBig, ScreenTooSmall, ScreenBadNumber, ScreenNowWindow,
     ScreenNowFullscreen, ScreenRoext,
     ScreenFirstRun, ScreenAltTab,
-    QualityHighRes, QualityHighResHint, QualityDpiAware, QualityDpiAwareHint, QualityRenderScale,
+    QualityHighRes, QualityHighResHint, QualityRenderScale,
     QualityRenderScaleHint, QualityWorldScale,
     QualityWorldScaleHint, QualityFullColour, QualityFullColourHint, QualitySharpen,
     QualitySharpenHint, QualityUiFilter, QualityUiFilterHint, UiSharp, UiSmooth, QualityCrispText,
@@ -69,7 +69,7 @@ enum class Text : uint16_t {
     ServiceGameSettings, GameSave, GameLoad, LayoutReset, GameSettingsNote, GameLoadAsk, LayoutResetAsk, GameSaved,
     GameLoaded, LayoutResetDone, ErrReadFile, FileFilterReg, DiagGpuValueCapped, GameSettingsRunning, ErrPartialFile,
     PageSmoothing, SmoothMsaa, SmoothMsaaHint, SmoothA2c, SmoothA2cHint, SmoothAniso, SmoothAnisoHint, SmoothOff,
-    Factor2, Factor4, Factor8, Factor16, RenderBridge, RenderBridgeHint, RenderThread, RenderThreadHint,
+    Factor2, Factor4, Factor8, Factor16, RenderBridge, RenderBridgeHint,
     SmoothDlss, SmoothDlssHint, DlssDlaa, DlssQuality, DlssBalanced, DlssPerformance, DlssUltra,
     FramesGeneration, FramesGenerationHint, Times3, AiEnable, AiEnableHint, AiBudget, AiBudgetHint,
     AiDenoise, AiDenoiseHint, RenderRemix, RenderRemixHint,
@@ -535,7 +535,6 @@ enum class Text : uint16_t {
     InterfaceAmmoSound, InterfaceAmmoSoundHint,  // 3.0.11-beta.129
     InterfaceElementColours, InterfaceElementColoursHint,  // 3.0.18-beta.144
     CharOverweight1, CharOverweight2,            // 3.0.11-beta.139
-    InterfaceMinimapReach, InterfaceMinimapReachHint,  // 3.0.11-beta.65
     InterfaceMinimapHd, InterfaceMinimapHdHint,        // 3.0.11-beta.72
     InterfacePackIcons, InterfacePackIconsHint,        // 3.0.11-beta.74
     // 3.0.11-beta.75: «Розміщення інтерфейсу» - its bar, the parts' names, the console's row, the app's note

@@ -24,8 +24,7 @@ namespace uagfx::win::minimapproto {
 struct Show {
     bool on = false, npcs = true, warps = true, mobs = true;
     WayOnGround way = WayOnGround::Steps;  // 3.0.11-beta.33: [interface] minimap_way - the way on the ground
-    bool reach = false;  // 3.0.11-beta.65: [interface] minimap_reach - what cannot be reached on foot dimmed
-    bool hd = true;      // 3.0.11-beta.72: [interface] minimap_hd - the map's picture 4x bigger when there is one
+    bool hd = true;  // 3.0.11-beta.72: [interface] minimap_hd - the map's picture 4x bigger when there is one
     // 3.0.11-beta.119 (R-5Z6J2S): [interface] minimap_kafra / minimap_party - the Kafras, the party's faces; each
     // layer (with npcs and warps) also switched by the maps' own buttons, written to uaro-graphics.ini
     bool kafra = true, party = true;

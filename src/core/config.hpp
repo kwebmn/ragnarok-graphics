@@ -665,9 +665,6 @@ struct Config {
     std::string bridgePresent = "auto";
     // 3.0.4-beta.8: [renderer] bridge_wine = 1 - the 64-bit renderer under Wine too (core/platform.hpp; a try)
     bool bridgeWine = false;
-    // 2.5.12 (test): [renderer] render_thread = 1 - Direct3D 11 draws on a thread of its own in the game's process
-    // (gpu/local_host.cpp): the game's thread only writes the frame down, as for uaro-render64.exe
-    bool renderThread = false;
     // 0.50.2: [renderer] gpu - the name of the graphics card to draw on (Windows' own, as the Renderer page lists
     // them); "" (auto): the fast one of several (core/gpu_order.hpp).
     std::string gpu;
@@ -757,14 +754,12 @@ struct Config {
     // 1-3 cells glided to instead of jumped (win/net_smooth)
     bool smoothFixes = true;
     // 3.0.11-beta.130 (the network plan's step 5; the owner «делаем»): [interface] predict_walk - the character's walk
-    // told at the click and the server's answer joined to it (core/net_predict, win/net_predict); an experiment, off
+    // told at the click and the server's answer joined to it (core/net_predict, win/net_predict); off (3.0.21-beta.16:
+    // a setting of «Мережа», no longer a trial)
     bool predictWalk = false;
     // 3.0.11-beta.33: [interface] minimap_way - the way followed drawn on the ground (win/ground_way): as footprints
     // (the owner: «такими типа следами типа шажков»), as the strip of 3.0.11-beta.31, or not
     WayOnGround minimapWay = WayOnGround::Steps;
-    // 3.0.11-beta.65: [interface] minimap_reach - the concept's «Подсветка, куда можно дойти», an experiment (off): the
-    // minimap and its big map dim what the player cannot reach on foot (walkgrid parts)
-    bool minimapReach = false;
     // 3.0.11-beta.72 (the owner: «сами картинки карт маленькие и не аккуратные»): [interface] minimap_hd - the map's
     // picture four times bigger when the game has one (the AI pack's, the old client's texture_x4.zip); on
     bool minimapHd = true;
@@ -1127,9 +1122,6 @@ struct Config {
     int windowWidth = 0;   // window mode: inner size in pixels; 0 = the size the game asks for
     int windowHeight = 0;
     bool highResolution = true;  // draw at the window's real pixels under Windows scaling (stage 3); false = 0.2
-    // 3.0.11-beta.292: the game's window made per-monitor DPI aware (its creation only; the game's thread stays
-    // unaware): a whole pixel window, no DWM stretch at 175 % (R-PSFZ8K 3839x2159). After the game's restart
-    bool dpiAware = false;
     UiFilter uiFilter = UiFilter::Sharp;
     bool crispText = true;       // window text and lines at the window's real pixels when k > 1 (stage 6)
     // 3.0.18-beta.178: the damage digits, Miss, Guard, Critical!!, Lucky and the crits' stars from sharp copies of

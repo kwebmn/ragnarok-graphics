@@ -107,20 +107,6 @@ constexpr Entry kTexts[] = {
     {Text::QualityHighResHint, "Draw the game at the window's real pixels: with Windows scaling the world is sharper.",
      "Малювати гру в справжніх точках вікна: при масштабі Windows світ чіткіший.",
      "Рисовать игру в настоящих точках окна: при масштабе Windows мир чётче."},
-    {Text::QualityDpiAware,
-     "Window with Windows scaling",
-     "Вікно з масштабом Windows",
-     "Окно с масштабом Windows"},
-    {Text::QualityDpiAwareHint,
-     "For Windows scaling of 125-175 %: the game's window is told to follow it, so it covers the monitor pixel for "
-     "pixel and Windows shows the picture straight on it - even frames instead of jumps between 72 and 48. Takes "
-     "effect after the game's restart. If the mouse misses, turn it off.",
-     "Для масштабу Windows 125–175 %: вікно гри повідомляє Windows, що саме зважає на масштаб, тож закриває монітор "
-     "точка в точку, і Windows показує картинку прямо на ньому — рівні кадри замість стрибків між 72 і 48. Діє після "
-     "перезапуску гри. Якщо миша промахується — вимкніть.",
-     "Для масштаба Windows 125–175 %: окно игры сообщает Windows, что само учитывает масштаб, поэтому закрывает "
-     "монитор точка в точку, и Windows показывает картинку прямо на нём — ровные кадры вместо скачков между 72 и 48. "
-     "Действует после перезапуска игры. Если мышь промахивается — выключите."},
     {Text::QualityRenderScale, "Render scale", "Масштаб рендера", "Масштаб рендера"},
     {Text::QualityRenderScaleHint,
      "Over 100 %: the frame is drawn larger and shrunk when shown - smoother edges, more work for the graphics card. "
@@ -530,20 +516,6 @@ constexpr Entry kTexts[] = {
      "бути та сама.",
      "Рисует в отдельном 64-битном процессе uaro-render64.exe: он нужен для DLSS и генерации кадров. Картинка "
      "должна быть та же."},
-    {Text::RenderThread,
-     "Direct3D 11 on a thread of its own",
-     "Direct3D 11 у власному потоці",
-     "Direct3D 11 в своём потоке"},
-    {Text::RenderThreadHint,
-     "With Direct3D 11 the game's thread only writes down what to draw, and a thread of its own draws it on another "
-     "core of the processor - as the 64-bit renderer does for Direct3D 12. More frames where the processor holds the "
-     "game back: an older computer, many effects.",
-     "З Direct3D 11 потік гри лише записує, що малювати, а малює власний потік на іншому ядрі процесора — як "
-     "64-бітний рендер для Direct3D 12. Більше кадрів там, де гру стримує процесор: старіший комп'ютер, багато "
-     "ефектів.",
-     "С Direct3D 11 поток игры только записывает, что рисовать, а рисует собственный поток на другом ядре процессора "
-     "— как 64-битный рендер для Direct3D 12. Больше кадров там, где игру сдерживает процессор: старый компьютер, "
-     "много эффектов."},
     {Text::SmoothDlss, "NVIDIA DLSS", "NVIDIA DLSS", "NVIDIA DLSS"},
     {Text::SmoothDlssHint,
      "A technology of NVIDIA for GeForce RTX cards, in the 64-bit renderer (it starts by itself). DLAA smooths at "
@@ -5634,20 +5606,6 @@ constexpr Entry kTexts[] = {
     {Text::CharOverweight2, "Overweight 90 %: no attacks or skills", "Перевантаження 90 %: атаки й уміння заборонені",
      "Перегруз 90 %: атаки и умения запрещены"},
     // 3.0.11-beta.65: the concept's «Подсветка, куда можно дойти» - an experiment
-    {Text::InterfaceMinimapReach,
-     "Light where you can walk",
-     "Підсвітити, куди можна дійти",
-     "Подсветить, куда можно дойти"},
-    {Text::InterfaceMinimapReachHint,
-     "The new minimap and its big map dim what you cannot reach on foot from where you stand - other parts of the "
-     "map (floors, islands, ledges) by the server's own map data. An experiment: people, monsters and traps are not "
-     "counted; after a teleport it shows once the game knows your cell.",
-     "Нова мінікарта та її велика карта притемнюють усе, куди звідси не дійти пішки, — інші частини карти (поверхи, "
-     "острівці, уступи) за даними самого сервера. Експеримент: люди, монстри й пастки не враховані; після телепорту "
-     "підсвітка з'являється, щойно гра знає вашу клітинку.",
-     "Новая миникарта и её большая карта затемняют всё, куда отсюда не дойти пешком, — другие части карты (этажи, "
-     "островки, уступы) по данным самого сервера. Эксперимент: люди, монстры и ловушки не учтены; после телепорта "
-     "подсветка появляется, как только игра знает вашу клетку."},
     // 3.0.11-beta.72 (the owner: «сами картинки карт маленькие и не аккуратные»)
     {Text::InterfaceMinimapHd, "Sharp map pictures", "Чіткі картинки карт", "Чёткие картинки карт"},
     {Text::InterfaceMinimapHdHint,

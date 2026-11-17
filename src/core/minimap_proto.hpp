@@ -157,15 +157,14 @@ struct Layers {
 };
 // 3.0.13-beta.2 (reports: the minimap the interface's dearest picture - 150-200 paintings in 30 s, 3.2 ms each, half
 // of it the map's pixels made anew for every step): the map's pixels round the view made once, a margin about it -
-// each painting copies its square out; made anew when the view leaves the margin or the picture, zoom or reach change
+// each painting copies its square out; made anew when the view leaves the margin or the picture or zoom change
 struct MapCache {
     std::vector<uint32_t> px;
     int w = 0, h = 0;
     float left = 0, top = 0, cellPx = 0;  // the cache's top-left corner in cells, its zoom
     const void* level = nullptr;          // the picture's level it was made of
     int mapW = 0, mapH = 0;
-    std::vector<uint8_t> reach;  // the reach it dimmed by (empty: none)
-    int made = 0;                // how many times made (the log, the tests)
+    int made = 0;  // how many times made (the log, the tests)
 };
 
 struct Scene {
@@ -197,10 +196,6 @@ struct Scene {
     Part hover = Part::None;
     BigPart bigHover = BigPart::None;
     float opacity = 1;  // Ctrl+Tab's see-through
-    // 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment, [interface] minimap_reach): the
-    // map's cells reached on foot from the player (walkgrid::reachMask: map.w x map.h, rows from y 0) - another
-    // part's walked-on cells dimmed (3.0.11-beta.126: not the walls nor the ground); null or another size: none
-    const std::vector<uint8_t>* reach = nullptr;
     // 3.0.11-beta.127: the plate's graph - the round trips of the last minute (ms), the oldest first; -1 a stall
     const std::vector<int>* netGraph = nullptr;
     Layers layers;        // 3.0.11-beta.119: the buttons' and the chips' looks (the marks given already shown ones)

@@ -132,7 +132,7 @@ TEST(help_tells_the_main_of_what_lives_in_the_game) {
     CHECK(!has(picture, "effects.water_foam"));  // a part: on its row in the game
     const std::vector<HelpRow> ui = helpRowsInGame(Area::Interface, Machine{});
     CHECK(has(ui, "interface.minimap") && has(ui, "interface.mob_hp"));
-    CHECK(!has(ui, "interface.items") && !has(ui, "interface.minimap_reach"));  // a detail; a trial
+    CHECK(!has(ui, "interface.items"));  // a detail
     const std::vector<HelpRow> sound = helpRowsInGame(Area::Sound, Machine{});
     CHECK(has(sound, "notify.whisper") && has(sound, "sound.output") && !has(sound, "sound.engine"));
     CHECK(helpRowsInGame(Area::Textures, Machine{}).empty());     // all of it waits for a start: the app's

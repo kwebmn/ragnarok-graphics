@@ -19,14 +19,14 @@ TEST(safe_mode_after_two_failed_starts) {
 TEST(safe_config_turns_the_risky_parts_off) {
     Config c;
     c.api = Api::D3d12;
-    c.bridge = c.remix = c.hdr = c.renderThread = true;
+    c.bridge = c.remix = c.hdr = true;
     c.dlss = "dlaa";
     c.frameGeneration = 2;
     c.ai.enabled = true;
     c.ai.generate = true;
     safe::apply(c);
     CHECK(c.api == Api::D3d11);
-    CHECK(!c.bridge && !c.remix && !c.hdr && !c.renderThread);
+    CHECK(!c.bridge && !c.remix && !c.hdr);
     CHECK(c.dlss == "off" && c.frameGeneration == 0);
     CHECK(!c.ai.on());
     CHECK(c.effects == effectsOff());

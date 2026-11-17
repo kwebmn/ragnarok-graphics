@@ -62,62 +62,6 @@ TEST(minimap_proto_view_keeps_inside_the_map) {
     CHECK(px > 15 && px < 25 && py > 15 && py < 25);
 }
 
-// 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment, [interface] minimap_reach): the cells
-// not reached on foot from the player dimmed on the map's picture, those reached as they are; 3.0.11-beta.126: only
-// the walked-on cells of another part (walkgrid::kElsewhere) - a wall or the map's ground stays as the picture has it
-TEST(minimap_proto_dims_what_cannot_be_reached) {
-    const std::vector<uint32_t> argb(64 * 64, 0xFFE0E0E0);  // a light map
-    minimap::Scene sc;
-    sc.argb = &argb;
-    sc.imgW = sc.imgH = 64;
-    sc.map = minimap::MapSize{40, 40};
-    std::vector<uint8_t> reach(40 * 40, walkgrid::kElsewhere);
-    for (int y = 0; y < 40; ++y)
-        for (int x = 0; x < 20; ++x) reach[size_t(y * 40 + x)] = 1;  // the west half reached
-    const minimap::Big b = minimap::bigLayout(1920, 1080, 1.0f, sc.map);
-    panel::Picture plain, dimmed;
-    minimap::paintBigMap(plain, b, sc);
-    sc.reach = &reach;
-    minimap::paintBigMap(dimmed, b, sc);
-    const auto at = [&](const panel::Picture& p, float fx, float fy) {
-        return p.px[size_t(float(p.height) * fy) * size_t(p.width) + size_t(float(p.width) * fx)];
-    };
-    CHECK_EQ(at(dimmed, 0.25f, 0.5f), at(plain, 0.25f, 0.5f));  // the west: as it was
-    const uint32_t east = at(dimmed, 0.75f, 0.5f), was = at(plain, 0.75f, 0.5f);
-    CHECK((east >> 24) == 0xFF && ((east >> 16) & 0xFF) < ((was >> 16) & 0xFF) / 2 + 8);  // the east: dimmed
-    CHECK(((east >> 16) & 0xFF) > 0x30);  // still seen
-    std::vector<uint8_t> wrong(7, 1);  // a mask of another map's size: none
-    sc.reach = &wrong;
-    minimap::paintBigMap(dimmed, b, sc);
-    CHECK(dimmed.px == plain.px);
-}
-
-// 3.0.11-beta.126 (R-4ZHJ3R «посмотри на карту», R-4T7N4D «она какаято не красивая»: c_tower2's map one flat grey with
-// minimap_reach on - its light ground, 168, dimmed to 40 % is its dark corridors' 65): the walls and the ground kept
-TEST(minimap_proto_reach_keeps_the_walls_as_drawn) {
-    std::vector<uint32_t> argb(40 * 40, 0xFFA8A8A8);  // the dungeon's light ground (not walked on)
-    for (int y = 0; y < 40; ++y)
-        for (int x = 18; x < 22; ++x) argb[size_t(y * 40 + x)] = 0xFF414141;  // a dark corridor down the middle
-    minimap::Scene sc;
-    sc.argb = &argb;
-    sc.imgW = sc.imgH = 40;
-    sc.map = minimap::MapSize{40, 40};
-    std::vector<uint8_t> reach(40 * 40, 0);  // walls
-    for (int y = 0; y < 40; ++y)
-        for (int x = 18; x < 22; ++x) reach[size_t(y * 40 + x)] = 1;  // the corridor reached
-    const minimap::Big b = minimap::bigLayout(1920, 1080, 1.0f, sc.map);
-    panel::Picture plain, lit;
-    minimap::paintBigMap(plain, b, sc);
-    sc.reach = &reach;
-    minimap::paintBigMap(lit, b, sc);
-    const auto at = [&](const panel::Picture& p, float fx, float fy) {
-        return p.px[size_t(float(p.height) * fy) * size_t(p.width) + size_t(float(p.width) * fx)];
-    };
-    CHECK_EQ(at(lit, 0.2f, 0.5f), at(plain, 0.2f, 0.5f));  // the ground as drawn: still lighter than the corridor
-    CHECK_EQ(at(lit, 0.5f, 0.5f), at(plain, 0.5f, 0.5f));
-    CHECK(((at(lit, 0.2f, 0.5f) >> 16) & 0xFF) > ((at(lit, 0.5f, 0.5f) >> 16) & 0xFF) + 60);
-}
-
 TEST(minimap_proto_ctrl_tab_goes_round_as_the_games) {
     // 3.0.11-beta.4 (the owner: «на Ctrl+Tab ничего не происходит»): the game's own round - opaque, see-through, hidden
     CHECK(minimap::next(minimap::Look::Opaque) == minimap::Look::Faded);

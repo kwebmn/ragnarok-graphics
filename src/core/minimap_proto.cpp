@@ -183,14 +183,6 @@ void roundCorners(panel::Picture& p, const panel::Box& b, float r) {
         }
 }
 
-// 3.0.11-beta.65: a cell not reached on foot - its picture at 40 %, still seen (3.0.11-beta.126: a walked-on one of
-// another part only - a wall or the map's ground dimmed made c_tower2's light ground its dark corridors' grey)
-uint32_t dimmed(uint32_t argb) {
-    uint32_t out = argb & 0xFF000000;
-    for (int sh = 0; sh <= 16; sh += 8) out |= (((argb >> sh) & 0xFF) * 2 / 5) << sh;
-    return out;
-}
-
 // 3.0.11-beta.72: two pixels mixed, `t` of 256 the second's share - the four channels at once, two in each half
 uint32_t mix(uint32_t a, uint32_t b, uint32_t t) {
     const uint32_t rb = ((a & 0x00FF00FFu) * (256 - t) + (b & 0x00FF00FFu) * t) >> 8;
@@ -401,21 +393,14 @@ void mapPixelsMade(panel::Picture& out, const panel::Box& box, const Scene& sc, 
         bool in;     // over the map
         int x0, x1;  // the level's two columns
         uint32_t wx;  // between them, of 256
-        int cell;    // 3.0.11-beta.65: the map's cell column under it
     };
-    // 3.0.11-beta.65: the cells not reached from the player dimmed (the reached ones as they are); 3.0.11-beta.126:
-    // walked on, another part's (walkgrid::reachMask's kElsewhere) - the walls and the ground as drawn
-    const std::vector<uint8_t>* reach =
-        sc.reach && sc.reach->size() == size_t(std::max(0, sc.map.w)) * size_t(std::max(0, sc.map.h)) ? sc.reach
-                                                                                                      : nullptr;
     std::vector<Column> columns;
     columns.reserve(size_t(std::max(0, int(box.w))));
     for (int x = 0; x < int(box.w); ++x) {
         const int tx = int(box.x) + x;
         if (tx < 0 || tx >= out.width) continue;
-        Column c{tx, false, 0, 0, 0, 0};
+        Column c{tx, false, 0, 0, 0};
         const float cx = v.left + (float(x) + 0.5f) / v.cellPx;
-        c.cell = std::clamp(int(std::floor(cx)), 0, std::max(0, sc.map.w - 1));
         if (lv && cx >= 0 && cx < float(sc.map.w)) {
             const float fx = std::clamp(cx / float(sc.map.w) * float(lv->w) - 0.5f, 0.0f, float(lv->w - 1));
             c.in = true;
@@ -440,16 +425,12 @@ void mapPixelsMade(panel::Picture& out, const panel::Box& box, const Scene& sc, 
         const uint32_t wy = std::min(256u, uint32_t((fy - float(y0)) * 256.0f + 0.5f));
         const uint32_t* top = lv->px.data() + size_t(y0) * size_t(lv->w);
         const uint32_t* low = lv->px.data() + size_t(y1) * size_t(lv->w);
-        const uint8_t* reached =  // 3.0.11-beta.65: this row's cells
-            reach ? reach->data() + size_t(std::clamp(int(std::floor(cy)), 0, sc.map.h - 1)) * size_t(sc.map.w)
-                  : nullptr;
         for (const Column& c : columns) {
             uint32_t pixel = kGround;
             if (c.in) {
                 // between the four nearest, premultiplied - a see-through one adds nothing: the ground shows there
                 const uint32_t p = mix(mix(top[c.x0], top[c.x1], c.wx), mix(low[c.x0], low[c.x1], c.wx), wy);
                 pixel = overGround(p);
-                if (reached && reached[c.cell] == walkgrid::kElsewhere && (p >> 24)) pixel = dimmed(pixel);
             }
             row[c.at] = pixel;
         }
@@ -465,8 +446,6 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
         mapPixelsMade(out, box, sc, v);
         return;
     }
-    const std::vector<uint8_t>* reach =
-        sc.reach && sc.reach->size() == size_t(sc.map.w) * size_t(sc.map.h) ? sc.reach : nullptr;
     const auto offsets = [&](int& ox, int& oy) {
         ox = int(std::lround((v.left - mc->left) * v.cellPx));
         oy = int(std::lround((mc->top - v.top) * v.cellPx));
@@ -474,7 +453,7 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
     };
     int ox = 0, oy = 0;
     const bool same = mc->level == pic->levels.front().px.data() && mc->cellPx == v.cellPx && mc->mapW == sc.map.w &&
-                      mc->mapH == sc.map.h && (reach ? *reach == mc->reach : mc->reach.empty());
+                      mc->mapH == sc.map.h;
     if (!same || !offsets(ox, oy)) {
         const int margin = std::max(8, bw / 3);
         mc->w = bw + 2 * margin;
@@ -485,8 +464,6 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
         mc->level = pic->levels.front().px.data();
         mc->mapW = sc.map.w;
         mc->mapH = sc.map.h;
-        if (reach) mc->reach = *reach;
-        else mc->reach.clear();
         panel::Picture made;
         made.width = mc->w;
         made.height = mc->h;

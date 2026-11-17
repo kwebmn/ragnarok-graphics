@@ -63,7 +63,7 @@ bool needed(int failedInRow, bool asked) { return asked || failedInRow >= 2; }
 
 void apply(Config& c) {
     if (c.api != Api::System) c.api = Api::D3d11;
-    c.bridge = c.remix = c.hdr = c.renderThread = false;
+    c.bridge = c.remix = c.hdr = false;
     c.dlss = "off";
     c.frameGeneration = 0;
     c.ai.enabled = c.ai.generate = false;

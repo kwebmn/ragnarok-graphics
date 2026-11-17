@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "core/config.hpp"
 #include "core/live_config.hpp"
@@ -59,8 +60,7 @@ TEST(catalogue_trials_and_diagnostics_are_marked) {
     const catalogue::Row* crown = catalogue::find("view3d.crown_volume");
     CHECK(crown && crown->status == catalogue::Status::Trial);
     if (crown) CHECK_EQ(std::string(crown->since), std::string("3.0.20-beta.73"));
-    for (const char* k : {"view3d.shadows", "view3d.dense_crowns", "view3d.crown_light", "interface.minimap_reach",
-                          "interface.predict_walk", "renderer.remix", "renderer.render_thread", "display.dpi_aware"}) {
+    for (const char* k : {"view3d.shadows", "view3d.dense_crowns", "view3d.crown_light", "renderer.remix"}) {
         const catalogue::Row* r = catalogue::find(k);
         CHECK(r && r->status == catalogue::Status::Trial);
     }
@@ -200,8 +200,9 @@ TEST(catalogue_feeds_the_interface_sections) {
 // row says about itself
 TEST(catalogue_the_laboratory_lists_the_trials_by_area) {
     const std::vector<catalogue::LabSection> lab = catalogue::trials();
-    CHECK(lab.size() >= 3);
-    if (lab.empty()) return;
+    CHECK_EQ(lab.size(), size_t(2));  // 3.0.21-beta.16: the 3D view's four and RTX Remix («Швидкість і екран») left
+    if (lab.size() != 2) return;
+    CHECK(lab[1].area == catalogue::Area::Speed);
     CHECK(lab[0].area == catalogue::Area::View3d);  // the catalogue's order
     CHECK_EQ(int(lab[0].rows.size()), 4);
     CHECK_EQ(lab[0].rows[0]->key, std::string("view3d.shadows"));
@@ -250,11 +251,12 @@ TEST(catalogue_a_row_tells_about_itself) {
              std::string("с 3.0.20-beta.73 · нужны: -Дома и деревья рисует uaRO Graphics, +Листва деревьев быстрее: "
                          "считает видеокарта, -3D-режим"));
     // a row that waits for the game's start; one whose change shows from the next map; Direct3D 12
-    const catalogue::Row* dpi = catalogue::find("display.dpi_aware");
-    CHECK(dpi && catalogue::about(*dpi, on, true, false, Lang::Uk).afterRestart);
-    if (dpi)
-        CHECK_EQ(catalogue::aboutText(catalogue::about(*dpi, on, true, false, Lang::Uk), Lang::Uk, "+", "-"),
-                 std::string("з 3.0.11-beta.292 · після перезапуску гри"));
+    // (3.0.21-beta.16: «Вікно з масштабом Windows» removed - RTX Remix, a trial that waits for the start, in its place)
+    const catalogue::Row* remix = catalogue::find("renderer.remix");
+    CHECK(remix && catalogue::about(*remix, on, true, false, Lang::Uk).afterRestart);
+    if (remix)
+        CHECK_EQ(catalogue::aboutText(catalogue::about(*remix, on, true, false, Lang::Uk), Lang::Uk, "+", "-"),
+                 std::string("потрібні: +Direct3D 12 · після перезапуску гри"));
     const catalogue::Row* gaps = catalogue::find("view3d.close_gaps");
     CHECK(gaps && catalogue::about(*gaps, on, true, true, Lang::Uk).nextMap);
     const catalogue::Row* grass = catalogue::find("effects.grass");
@@ -434,10 +436,7 @@ TEST(catalogue_names_say_what_is_seen) {
     CHECK_EQ(name("sound.engine", Lang::Uk), std::string("Об'ємний звук"));
     CHECK_EQ(name("view3d.shadows", Lang::Uk), std::string("Тіні від будинків і дерев"));
     CHECK_EQ(name("interface.predict_walk", Lang::Uk), std::string("Хода без очікування сервера"));
-    CHECK_EQ(name("interface.minimap_reach", Lang::Uk), std::string("Підсвітити, куди можна дійти"));
-    CHECK_EQ(name("display.dpi_aware", Lang::Uk), std::string("Вікно з масштабом Windows"));
     CHECK_EQ(name("renderer.remix", Lang::Uk), std::string("RTX Remix"));
-    CHECK_EQ(name("renderer.render_thread", Lang::Uk), std::string("Direct3D 11 у власному потоці"));
     // 3.0.21-beta.7: the console is the laboratory - Alt+D in the game's detail window's place opens «Налаштування»
     CHECK_EQ(name("interface.detail_console", Lang::Uk), std::string("Alt+D відкриває «Налаштування»"));
     CHECK_EQ(name("interface.detail_console", Lang::Ru), std::string("Alt+D открывает «Настройки»"));
@@ -474,4 +473,22 @@ TEST(catalogue_names_say_what_is_seen) {
                     CHECK(!has);
                 }
         }
+}
+
+// 3.0.21-beta.16 (before 3.0.21, the owner's «ок» to the trials' verdicts): «Підсвітити, куди можна дійти», «Вікно з
+// масштабом Windows» and «Direct3D 11 у власному потоці» removed whole; «Хода без очікування сервера» a setting of
+// its group (a detail, off); the crowns, the 3D view's shadows and RTX Remix stay trials
+TEST(catalogue_trials_decided_for_3_0_21) {
+    for (const char* k : {"interface.minimap_reach", "display.dpi_aware", "renderer.render_thread"}) {
+        CHECK(catalogue::find(k) == nullptr);
+        CHECK(findSetting(k) == nullptr);
+    }
+    const catalogue::Row* walk = catalogue::find("interface.predict_walk");
+    CHECK(walk && walk->status == catalogue::Status::Permanent && walk->level == catalogue::Level::Detail);
+    if (walk) CHECK(catalogue::homeOf(*walk) == catalogue::Home::Game);
+    std::vector<std::string> trials;
+    for (const catalogue::LabSection& s : catalogue::trials())
+        for (const catalogue::Row* r : s.rows) trials.push_back(r->key);
+    CHECK(trials == (std::vector<std::string>{"view3d.shadows", "view3d.dense_crowns", "view3d.crown_volume",
+                                              "view3d.crown_light", "renderer.remix"}));
 }

@@ -202,8 +202,7 @@ std::vector<Group> build() {
                         {B("interface.minimap_style"), B("interface.minimap_npcs"), B("interface.minimap_warps"),
                          B("interface.minimap_kafra"), B("interface.minimap_party"), B("interface.minimap_mobs"),
                          B("interface.minimap_way"), D("interface.minimap_hd"), D("interface.minimap_classic"),
-                         D("interface.minimap_view"), D("interface.net_badge"),
-                         trial("interface.minimap_reach", "3.0.11-beta.65")}));
+                         D("interface.minimap_view"), D("interface.net_badge")}));
     out.push_back(group(Area::Interface, Text::InterfaceSecFight,
                         {B("interface.mob_hp"), D("interface.mob_hp_percent", "interface.mob_hp"),
                          D("interface.far_bars", "interface.mob_hp"), B("interface.boss_bars"),
@@ -291,13 +290,11 @@ std::vector<Group> build() {
     out.push_back(group(Area::Speed, Text::PageScreen,
                         {B("display.high_resolution"), B("display.hdr"), D("display.ui_native"),
                          D("display.ui_filter"), D("display.crisp_text"), D("display.crisp_numbers"),
-                         D("display.window_art").need("display.crisp_text"),
-                         trial("display.dpi_aware", "3.0.11-beta.292")}));
+                         D("display.window_art").need("display.crisp_text")}));
     out.push_back(group(Area::Speed, Text::PageRender,
                         {B("renderer.api"), B("renderer.gpu"), D("renderer.bridge"), D("renderer.safe_mode"),
                          // a laptop's two cards: set before the game is playable at all (R-T8FGMM: 5 frames a second)
-                         X("renderer.cross_present").start(), trial("renderer.remix", ""),
-                         trial("renderer.render_thread", "2.5.12")}));
+                         X("renderer.cross_present").start(), trial("renderer.remix", "")}));
     // what our renderer draws in the game's place - in the top view too
     out.push_back(group(Area::Speed, Text::CatOwnWorld,
                         {X("view3d.own_models"), X("view3d.fast_ground"),
@@ -308,7 +305,7 @@ std::vector<Group> build() {
                          B("windows.start_count").start(), D("windows.others_light"), D("windows.others_music"),
                          D("windows.others_sounds")}));
     out.push_back(group(Area::Game, Text::InterfaceSecNet,
-                        {B("interface.smooth_fixes"), trial("interface.predict_walk", "3.0.11-beta.130"),
+                        {B("interface.smooth_fixes"), D("interface.predict_walk"),  // 3.0.21-beta.16: a setting
                          B("connection.patient_entry"), D("connection.entry_pause", "connection.patient_entry")}));
     out.push_back(group(Area::Game, Text::PageService,
                         // what is told the developers is agreed in the settings app (its first start asks)

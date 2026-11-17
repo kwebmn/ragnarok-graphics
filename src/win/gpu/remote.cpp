@@ -7,7 +7,6 @@
 #include "core/game_camera.hpp"
 #include "core/layout.hpp"
 #include "core/render_place.hpp"
-#include "win/gpu/local_host.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::gpu {
@@ -27,11 +26,6 @@ constexpr DWORD kAnswerMs = 10000;            // a renderer that does not answer
 }  // namespace
 
 Remote::~Remote() {
-    if (thread_) {  // 2.5.12: its thread ends at the Quit; one that does not is left (the game is closing)
-        if (!lost_) channel_.send(Msg::Quit, nullptr, 0, 2000);
-        if (WaitForSingleObject(thread_, 5000) != WAIT_OBJECT_0) LOG_ERROR("%s did not end in time", who_.c_str());
-        CloseHandle(thread_);
-    }
     if (process_.hProcess) {
         if (!lost_ && channel_.send(Msg::Quit, nullptr, 0, 2000) &&
             WaitForSingleObject(process_.hProcess, 3000) == WAIT_OBJECT_0) {
@@ -68,7 +62,6 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
         LOG_INFO("scene record: %s", recordFile_ != INVALID_HANDLE_VALUE ? "on, to 15 s after the first map"
                                                                           : "the file could not be made");
     }
-    if (o.thread) return startThread(name, error);
     std::string cmd = "\"" + o.hostExe + "\" --channel " + name + " --parent " +
                       std::to_string(GetCurrentProcessId()) + " --dir \"" + o.gameDir + "\" --log " +
                       std::to_string(o.logLevel) + " --log-slot " + std::to_string(o.logSlot) + " --present " +
@@ -113,33 +106,6 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
     }
     adapter_ = text;
     upscales_ = rd.u8() != 0 && rd.ok();
-    return true;
-}
-
-// 2.5.12: Direct3D 11's own thread instead of the 64-bit process - the same Hello, up to the same 90 s (the first
-// start compiles its shaders)
-bool Remote::startThread(const std::string& name, std::string& error) {
-    who_ = "Direct3D 11's thread";
-    thread_ = startLocalHost(name, options_);
-    if (!thread_) {
-        error = "its thread could not be started (error " + std::to_string(GetLastError()) + ")";
-        return false;
-    }
-    channel_.setPeer(thread_);
-    std::vector<uint8_t> hello;
-    if (!await(Msg::Hello, hello, 90000)) {
-        error = lost_ ? who_ + " ended at its start" : who_ + " did not answer";
-        return false;
-    }
-    WireReader rd(hello.data(), hello.size());
-    const bool ok = rd.u8() != 0;
-    const std::string text = rd.str();
-    if (!ok || !rd.ok()) {
-        error = text;
-        return false;
-    }
-    adapter_ = text;
-    upscales_ = false;
     return true;
 }
 

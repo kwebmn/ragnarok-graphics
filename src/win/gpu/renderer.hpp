@@ -43,8 +43,6 @@ struct BridgeOptions {
     int logLevel = 1;                // LogLevel
     int logSlot = 1;                 // 3.0.3-beta.1: the game's log's slot - uaro-render64.exe's log takes it too
     std::string gpu;                 // 0.50.2: [renderer] gpu, "" the fast card
-    // 2.5.12: Direct3D 11 on a thread of its own in this process instead (gpu/local_host.cpp) - the same messages
-    bool thread = false;
     std::string shaderCache;  // its shaders' file
     bool stateCache = true;   // [debug] state_cache, merge_draws
     bool mergeDraws = true;

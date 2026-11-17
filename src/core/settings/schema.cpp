@@ -170,9 +170,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceExpGainHint, ""},
         {"interface", "minimap_mobs", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceMinimapMobs, Text::InterfaceMinimapMobsHint, ""},
-        // 3.0.11-beta.65: where one can walk from here - the concept's experiment
-        {"interface", "minimap_reach", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
-         Text::InterfaceMinimapReach, Text::InterfaceMinimapReachHint, ""},
         // 3.0.11-beta.72: the maps' pictures four times bigger when the game has them
         {"interface", "minimap_hd", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceMinimapHd, Text::InterfaceMinimapHdHint, ""},
@@ -638,16 +635,12 @@ const std::vector<IniSetting>& iniSettings() {
          Text::RenderCrossPresentHint, ""},
         {"renderer", "safe_mode", Page::Render, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::RenderSafeMode,
          Text::RenderSafeModeHint, ""},
-        {"renderer", "render_thread", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderThread,
-         Text::RenderThreadHint, ""},  // 2.5.12
         {"renderer", "remix", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderRemix,
          Text::RenderRemixHint, ""},
         {"quality", "super_light", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualitySuperLight,
          Text::QualitySuperLightHint, ""},  // 2.5.20: first - over the rest of the page
         {"display", "high_resolution", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityHighRes,
          Text::QualityHighResHint, ""},
-        {"display", "dpi_aware", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityDpiAware,
-         Text::QualityDpiAwareHint, ""},  // 3.0.11-beta.292
         {"quality", "render_scale", Page::Quality, Control::Slider, 50, 200, 10, {}, {}, Text::QualityRenderScale,
          Text::QualityRenderScaleHint, " %"},
         {"quality", "world_scale", Page::Quality, Control::Slider, 50, 100, 5, {}, {}, Text::QualityWorldScale,
@@ -1454,7 +1447,6 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.chat_own") return c.chatOwn;
     if (k == "interface.chat_others") return c.chatOthers;
     if (k == "interface.minimap_party") return c.minimapParty ? "1" : "0";
-    if (k == "interface.minimap_reach") return c.minimapReach ? "1" : "0";  // 3.0.11-beta.65
     if (k == "interface.minimap_hd") return c.minimapHd ? "1" : "0";        // 3.0.11-beta.72
     if (k == "interface.pack_icons") return c.packIcons ? "1" : "0";        // 3.0.11-beta.74
     if (k == "interface.hotbar_per_character") return c.hotbarPerCharacter ? "1" : "0";  // 3.0.11-beta.78
@@ -1616,10 +1608,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "stats.send") return c.statsSend ? "1" : "0";
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";
     if (k == "renderer.cross_present") return c.crossPresent ? "1" : "0";  // 3.0.19-beta.9
-    if (k == "renderer.render_thread") return c.renderThread ? "1" : "0";
     if (k == "renderer.remix") return c.remix ? "1" : "0";
     if (k == "display.high_resolution") return c.highResolution ? "1" : "0";
-    if (k == "display.dpi_aware") return c.dpiAware ? "1" : "0";
     if (k == "quality.render_scale") return std::to_string(c.renderScale);
     if (k == "quality.world_scale") return std::to_string(c.worldScale);  // 2.5.16
     if (k == "quality.full_colour") return c.fullColour ? "1" : "0";        // 2.5.18

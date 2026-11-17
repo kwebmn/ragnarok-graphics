@@ -390,25 +390,7 @@ bool Context::open(std::string& error) {
     if (d3d11) {
         std::string why;
         const std::string shaders = ourFile(layout::File::ShadersD3d11);
-        bool made = false;
-        if (config.renderThread) {  // 2.5.12 (test): on a thread of its own - the game's thread only writes frames down
-            gpu::BridgeOptions o;
-            o.thread = true;
-            o.gameDir = gameDir();
-            o.shaderCache = shaders;
-            o.ai = config.ai;
-            o.stateCache = config.stateCache;
-            o.mergeDraws = config.mergeDraws;
-            o.shaderVariants = config.shaderVariants;  // 2.5.16
-            o.recordScene = config.recordScene;        // 3.0.17-beta.7
-            o.logLevel = int(config.logLevel);
-            made = r->createRemote(o, why);
-            if (made)
-                LOG_INFO("Direct3D 11: drawing on a thread of its own ([renderer] render_thread = 1)");
-            else
-                LOG_ERROR("Direct3D 11's thread: %s; drawing on the game's thread", why.c_str());
-        }
-        if (!made && !r->createD3D11(shaders, why)) {
+        if (!r->createD3D11(shaders, why)) {
             error = "Direct3D 11: " + why;
             delete r;
             return false;
@@ -1225,7 +1207,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uistyle::setPictures(packpictures::iconsStamp());
     // 3.0.11-beta.1: [interface] minimap - the new interface's minimap prototype in the game's own one's corner
     minimapproto::Show minimapShow{config.newMinimap, config.minimapNpcs, config.minimapWarps, config.minimapMobs,
-                                   config.minimapWay, config.minimapReach, config.minimapHd};
+                                   config.minimapWay, config.minimapHd};
     minimapShow.kafra = config.minimapKafra;  // 3.0.11-beta.119: the map's layers
     minimapShow.party = config.minimapParty;
     minimapShow.viewFan = config.minimapView;  // 3.0.11-beta.187

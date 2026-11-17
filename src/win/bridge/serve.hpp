@@ -13,8 +13,7 @@
 namespace uagfx::win::bridge {
 
 // 2.5.12: the renderer's end of the bridge - each of the driver's messages turned into the renderer's call, its answer
-// sent back. uaro-render64.exe's (Direct3D 12, DLSS), and in the game's own process Direct3D 11's thread of its own
-// (gpu/local_host.cpp). Present, SetSurface and Quit stay the caller's.
+// sent back: uaro-render64.exe's (Direct3D 12, DLSS). Present, SetSurface and Quit stay the caller's.
 class Server {
 public:
     Server(gpu::Renderer& renderer, Channel& channel) : renderer_(renderer), channel_(channel) {}

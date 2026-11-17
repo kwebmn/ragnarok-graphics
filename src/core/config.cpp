@@ -476,8 +476,6 @@ Config parseConfig(const std::string& text) {
             if (val == "system") c.api = Api::System;  // 2.12
         } else if (key == "renderer.bridge") {
             setBool(val, c.bridge);
-        } else if (key == "renderer.render_thread") {  // 2.5.12
-            setBool(val, c.renderThread);
         } else if (key == "report.auto") {
             setBool(val, c.reportAuto);
         } else if (key == "report.disconnects") {  // 3.0.20-beta.60
@@ -582,8 +580,6 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.chat_fade") {  // 3.0.11-beta.240
             const int v = std::atoi(val.c_str());
             c.chatFade = v == 30 ? 30 : v == 0 && val == "0" ? 0 : 12;
-        } else if (key == "interface.minimap_reach") {  // 3.0.11-beta.65: where one can walk, an experiment
-            setBool(val, c.minimapReach);
         } else if (key == "interface.minimap_hd") {  // 3.0.11-beta.72: the maps' pictures four times bigger
             setBool(val, c.minimapHd);
         } else if (key == "interface.pack_icons") {  // 3.0.11-beta.74: the panels' icons from the AI pack
@@ -1005,8 +1001,6 @@ Config parseConfig(const std::string& text) {
             if (val == "borderless") c.mode = DisplayMode::Borderless;
         } else if (key == "display.high_resolution") {
             setBool(val, c.highResolution);
-        } else if (key == "display.dpi_aware") {
-            setBool(val, c.dpiAware);
         } else if (key == "display.ui_filter") {
             if (val == "sharp") c.uiFilter = UiFilter::Sharp;
             if (val == "smooth") c.uiFilter = UiFilter::Smooth;

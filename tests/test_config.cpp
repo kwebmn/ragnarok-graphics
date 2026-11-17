@@ -530,16 +530,6 @@ TEST(config_reads_xray_off_by_default) {
     CHECK(!parseConfig("[debug]\nxray = 0\n").xray);
 }
 
-TEST(config_render_thread) {
-    // 2.5.12: [renderer] render_thread - Direct3D 11 on a thread of its own; off unless asked for (a test)
-    CHECK(!parseConfig("").renderThread);
-    CHECK(parseConfig("[renderer]\nrender_thread = 1\n").renderThread);
-    CHECK(!parseConfig("[renderer]\nrender_thread = 0\n").renderThread);
-    const settings::IniSetting* s = settings::findSetting("renderer.render_thread");
-    CHECK(s != nullptr);
-    if (s) CHECK(settings::tokenOf(*s, parseConfig("[renderer]\nrender_thread = 1\n")) == "1");
-}
-
 TEST(config_world_scale) {
     // 2.5.16: Direct3D 11 draws the world at 50-100 % of the picture, the interface sharp
     CHECK_EQ(parseConfig("").worldScale, 100);
@@ -959,22 +949,6 @@ TEST(config_interface_loading_bar) {
     for (const settings::InterfaceSection& sec : settings::interfaceSections())
         for (const char* k : sec.keys) listed = listed || std::strcmp(k, "interface.loading_bar") == 0;
     CHECK(listed);
-}
-
-// 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment, off): [interface] minimap_reach - the
-// minimap dims what the player cannot reach on foot; a box of «Інтерфейс», applied at once
-TEST(config_reads_the_reach_on_the_minimap) {
-    CHECK(!noUi("").minimapReach);
-    CHECK(noUi("minimap_reach = 1\n").minimapReach);
-    CHECK(!noUi("minimap = 1\n").minimapReach);  // an experiment: not with the new minimap
-    const settings::IniSetting* s = settings::findSetting("interface.minimap_reach");
-    CHECK(s != nullptr);
-    if (!s) return;
-    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
-    CHECK_EQ(settings::tokenOf(*s, noUi("minimap_reach = 1\n")), std::string("1"));
-    CHECK(appliesNow("interface.minimap_reach"));
-    const LiveUpdate u = liveUpdate(noUi(""), noUi("minimap_reach = 1\n"));
-    CHECK(u.next.minimapReach);
 }
 
 // 3.0.11-beta.72 (the owner: «сами картинки карт маленькие и не аккуратные»): [interface] minimap_hd - the map's

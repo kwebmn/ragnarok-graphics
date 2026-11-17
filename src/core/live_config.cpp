@@ -23,7 +23,6 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     u.next = running;
     Config& n = u.next;
     if (file.bridge != running.bridge) u.waiting.push_back("bridge");
-    if (file.dpiAware != running.dpiAware) u.waiting.push_back("dpi_aware");  // the window is made with it
     if (file.remix != running.remix) u.waiting.push_back("remix");
     if (file.dlss != running.dlss) u.waiting.push_back("dlss");
     if (file.frameGeneration != running.frameGeneration) u.waiting.push_back("frame_generation");
@@ -263,10 +262,6 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (file.minimapMobs != running.minimapMobs) {
         u.applied.push_back(change("minimap_mobs", flag(running.minimapMobs), flag(file.minimapMobs)));
         n.minimapMobs = file.minimapMobs;
-    }
-    if (file.minimapReach != running.minimapReach) {  // 3.0.11-beta.65: where one can walk, at once
-        u.applied.push_back(change("minimap_reach", flag(running.minimapReach), flag(file.minimapReach)));
-        n.minimapReach = file.minimapReach;
     }
     if (file.minimapHd != running.minimapHd) {  // 3.0.11-beta.72: the maps' pictures, at once
         u.applied.push_back(change("minimap_hd", flag(running.minimapHd), flag(file.minimapHd)));

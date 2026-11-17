@@ -86,14 +86,13 @@ TEST(schema_live_keys_are_the_specs) {
     for (const IniSetting& s : iniSettings()) {
         const std::string k = sectionKey(s);
         CHECK(appliesNow(k) == (k != "renderer.bridge" && k != "renderer.remix" &&
-                                k != "renderer.render_thread" &&  // 2.5.12: the renderer's own thread, at the start
                                 k != "renderer.api" && k != "renderer.gpu" && k != "report.auto" &&
                                 k != "pad.enabled" &&  // 2.9: the pad is mounted at the game's start
                                 k != "launcher.direct_start" &&  // 2.11: read as the game starts
                                 k.compare(0, 7, "client.") != 0 &&  // 3.0.1-beta.5: the libraries, the game closed
                                 k.compare(0, 6, "roext.") != 0 &&   // 3.0.1-beta.8: read as the game starts
                                 k != "renderer.safe_mode" &&     // 2.12: the start's renderer
-                                k != "display.ui_native" && k != "display.dpi_aware" &&
+                                k != "display.ui_native" &&
                                 k != "display.hdr" &&
                                 k.compare(0, 12, "quality.dlss") != 0 &&  // 2.4.2: its own size and model too
                                 k != "frames.allow_tearing" && k != "frames.frame_generation" &&

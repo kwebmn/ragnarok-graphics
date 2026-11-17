@@ -123,7 +123,7 @@ TEST(nav_debug_rows_are_developer) {
     CHECK(rows >= 15);
     CHECK(partsOf(View::Debug, 0) == std::vector<Page>({Page::Debug}));
     CHECK(placeOf(Page::Debug).view == View::Debug);
-    for (const char* k : {"renderer.render_thread", "renderer.remix", "debug.profile", "debug.log",
+    for (const char* k : {"renderer.remix", "debug.profile", "debug.log",
                           "renderer.bridge_present", "quality.dlss_jitter", "debug.shader_variants"})
         CHECK(findSetting(k) && findSetting(k)->page == Page::Debug);
 }
@@ -179,7 +179,7 @@ TEST(nav_the_app_holds_what_waits_for_a_start) {
                           "camera.tilt", "windows.title_name", "panel.show", "connection.patient_entry"})
         CHECK(!in(k));
     // the developers': those that wait for a start, and their own page's
-    for (const char* k : {"renderer.remix", "display.dpi_aware", "debug.state_cache", "debug.log", "debug.profile"})
+    for (const char* k : {"renderer.remix", "debug.state_cache", "debug.log", "debug.profile"})
         CHECK(in(k));
     CHECK(!in("view3d.crown_volume"));      // a trial that applies at once: the console's «Проби»
     CHECK(!in("interface.uaui_showcase"));  // the console's «Діагностика»
