@@ -367,8 +367,18 @@ void WallCheck::reset(int width, int height, float zoom) {
     firstApart_.clear();
 }
 
+uint32_t byFactors(uint32_t argb, const float factors[3]) {
+    uint32_t out = argb & 0xFF000000u;
+    for (int k = 0; k < 3; ++k) {  // red, green, blue
+        const int shift = 16 - 8 * k;
+        const float v = float((argb >> shift) & 0xFFu) * std::max(factors[k], 0.0f);
+        out |= uint32_t(std::min(v, 255.0f)) << shift;
+    }
+    return out;
+}
+
 void WallCheck::note(const float lo[2], const float hi[2], uint32_t diffuse, const std::vector<uint32_t>& light,
-                     const uint32_t* corners, int count) {
+                     const uint32_t* corners, int count, const float* factors) {
     if (light.size() != checked_.size()) return;
     const bool right = hi[0] - lo[0] < 1.0f;  // upright along z: a right side, its x a cell's edge
     const float mx = (lo[0] + hi[0]) * 0.5f / zoom_ + float(width_) / 2.0f;
@@ -377,8 +387,8 @@ void WallCheck::note(const float lo[2], const float hi[2], uint32_t diffuse, con
     const int y = right ? int(std::floor(mz)) : int(std::lround(mz)) - 1;
     if (x < 0 || y < 0 || x >= width_ || y >= height_) return;
     const size_t k = (size_t(y) * size_t(width_) + size_t(x)) * 2 + (right ? 0 : 1);
-    const uint32_t ours = light[k];
-    if (!ours || checked_[k]) return;
+    const uint32_t ours = factors && light[k] ? byFactors(light[k], factors) : light[k];
+    if (!light[k] || checked_[k]) return;
     checked_[k] = 1;
     ++seen_;
     bool close = true;

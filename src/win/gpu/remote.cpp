@@ -331,6 +331,9 @@ void Remote::setCamera(bool valid, const float view[12], float targetZ) {
     w.f32(valid ? targetZ : 0.0f);  // 1.4.2
     w.f32(camera::fovNow());       // 3.0.19-beta.6: the 3D view's field of view
     w.f32(camera::sightNow());     // 3.0.19-beta.24: its sight
+    float factors[3];
+    camera::groundFactors(factors);  // 3.0.20-beta.80: the factors the game draws its ground with
+    for (float f : factors) w.f32(f);
     send(Msg::Camera, buffer_);
 }
 

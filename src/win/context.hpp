@@ -268,6 +268,10 @@ private:
     // this game; the effects' costs written for the settings app every half minute
     void keepFrameRate(const Config& config, HWND window);
     void watchNewMapTyping();  // 3.0.18-beta.186
+    // 3.0.20-beta.80 (the owner: «засветление стен»): the factors uaRO.exe draws its ground with this moment
+    // (0x7710E4, E8, EC - FUN_004E5E20) into camera::setGroundFactors, for the own ground's walls; 1 when not read
+    void noteGroundFactors();
+    bool groundFactorsTold_ = false;
     static constexpr uint64_t kTypingWatchMs = 5000;
     uint64_t mapCameMs_ = 0;  // when this map came (0: none watched)
     int typingTold_ = 0;

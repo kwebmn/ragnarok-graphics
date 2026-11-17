@@ -346,6 +346,107 @@ TEST(terrain_walls_lit_as_the_game_lights_them) {
           std::fabs(plain.way[2] - 0.5f) < 1e-4f);
 }
 
+namespace {
+
+// 3.0.20-beta.80: walled()'s cells, each top a colour of its own, the walls' own colours another (unused by the game);
+// cell (0, 1) with no top when `noTop`
+gnd::Ground walledColoured(bool noTop) {
+    Writer w;
+    w.bytes("GRGN", 4);
+    const uint8_t version[2] = {1, 7};
+    w.bytes(version, 2);
+    w.i32(2);
+    w.i32(2);
+    w.f32(10.0f);
+    w.i32(1);
+    w.i32(80);
+    w.text("wall.bmp", 80);
+    w.i32(3);
+    w.i32(8);
+    w.i32(8);
+    w.i32(1);
+    for (int l = 0; l < 3; ++l) {
+        for (int i = 0; i < 64; ++i) w.bytes("\xff", 1);
+        for (int i = 0; i < 64; ++i) w.bytes("\x10\x20\x30", 3);
+    }
+    // surfaces: 0 cell (0, 0)'s top, 1 its right side, 2 its far side, 3 (1, 0)'s top, 4 (0, 1)'s, 5 (1, 1)'s
+    static const char* kColours[6] = {"\xff\xff\xff\xff", "\x30\x20\x10\xff", "\x31\x21\x11\xff",
+                                      "\x80\xff\x20\xff", "\x00\x80\xff\xff", "\x20\x40\x80\xff"};
+    w.i32(6);
+    for (int s = 0; s < 6; ++s) {
+        for (int k = 0; k < 4; ++k) w.f32(0.01f * float(k));
+        for (int k = 0; k < 4; ++k) w.f32(0.5f + 0.01f * float(k));
+        w.i16(0);
+        w.u16(uint16_t(s % 3));
+        w.bytes(kColours[s], 4);
+    }
+    const auto cell = [&](float h, int top, int front, int right) {
+        for (int k = 0; k < 4; ++k) w.f32(h);
+        w.i32(top), w.i32(front), w.i32(right);
+    };
+    cell(-10, 0, 2, 1);
+    cell(0, 3, -1, -1);
+    cell(0, noTop ? -1 : 4, -1, -1);
+    cell(0, 5, -1, -1);
+    gnd::Ground g;
+    std::string error;
+    const std::vector<uint8_t> b = w.b;
+    CHECK(gnd::parse(b.data(), b.size(), g, error));
+    return g;
+}
+
+}  // namespace
+
+// 3.0.20-beta.80 (the owner: «засветление стен», moc_pryd05, in_sphinx1 - «иногда случается, иногда нет»; the walls'
+// check in the logs: pay_dun00 0 of 32 alike, the game's ff3b3b3b against ours ff666666, payon's walls yellow where
+// the game's are grey, fields' black ones grey): uaRO.exe colours a wall's corner by the TOP of the cell at that
+// corner of the grid, not by the wall's own surface (FUN_004E4190, its jump tables 0x4E5990, 0x4E59A0) - a right side's
+// corners 0 and 2 (at x + 1, y + 1) by cell (x + 1, y + 1)'s top, 1 and 3 (at x + 1, y) by (x + 1, y)'s; a far side's
+// 0 and 2 (at x, y + 1) by (x, y + 1)'s, 1 and 3 (at x + 1, y + 1) by (x + 1, y + 1)'s; no such cell or top - black.
+// Each in the wall's own light (offline on the logs' walls: /root/uagfx-tools/audit/wallcolour/wallcheck.cpp)
+TEST(terrain_walls_take_their_colours_from_the_tops_at_their_corners) {
+    const float diffuse[3] = {0.4f, 0.6f, 0.8f}, ambient[3] = {0.2f, 0.3f, 0.1f};
+    const terrain::Sun sun = terrain::sunOf(240, 60, diffuse, ambient);
+    // cell (0, 0) the higher: its walls face the lower cells, -x and -z (as walled()'s, the light on them 0.75, 0.433)
+    const float acrossX[3] = {-1.0f, 0.0f, 0.0f}, acrossZ[3] = {0.0f, 0.0f, -1.0f};
+    const gnd::Ground g = walledColoured(false);
+    const uint32_t top10 = g.surfaces[3].color, top01 = g.surfaces[4].color, top11 = g.surfaces[5].color;
+    CHECK_EQ(top11, 0xFF804020u);
+    for (int k = 0; k < 4; ++k) {
+        CHECK_EQ(terrain::wallLight(g, 0, 0, true, sun, k), terrain::lit(k % 2 == 0 ? top11 : top10, sun, acrossX));
+        CHECK_EQ(terrain::wallLight(g, 0, 0, false, sun, k), terrain::lit(k % 2 == 0 ? top01 : top11, sun, acrossZ));
+    }
+    // the walls' own colours not taken
+    CHECK(terrain::wallLight(g, 0, 0, true, sun, 0) != terrain::lit(g.surfaces[1].color, sun, acrossX));
+    // no top at the corner: black, as the game's
+    const gnd::Ground open = walledColoured(true);
+    CHECK_EQ(terrain::wallLight(open, 0, 0, false, sun, 0), 0xFF000000u);
+    CHECK_EQ(terrain::wallLight(open, 0, 0, false, sun, 2), 0xFF000000u);
+    CHECK_EQ(terrain::wallLight(open, 0, 0, false, sun, 1), terrain::lit(top11, sun, acrossZ));
+    // no wall there: 0
+    CHECK_EQ(terrain::wallLight(g, 1, 1, true, sun, 0), 0u);
+    // the mesh's walls take them corner by corner, plain and smooth alike
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    const float right[4][3] = {{0, -10, 0}, {0, -10, -10}, {0, 0, 0}, {0, 0, -10}};
+    const float far[4][3] = {{-10, -10, 0}, {0, -10, 0}, {-10, 0, 0}, {0, 0, 0}};
+    for (int n : {1, 4}) {
+        const terrain::Mesh m = terrain::build(g, n, atlas, nullptr, nullptr, &sun);
+        int seen = 0;
+        for (const terrain::Vertex& v : m.vertices) {
+            if (!terrain::isWall(v)) continue;
+            const bool isRight = std::fabs(v.normal[0]) > 0.5f;
+            const float(*at)[3] = isRight ? right : far;
+            int k = 0;
+            while (k < 4 && !(v.pos[0] == at[k][0] && v.pos[1] == at[k][1] && v.pos[2] == at[k][2])) ++k;
+            CHECK(k < 4);
+            if (k == 4) continue;
+            ++seen;
+            CHECK_EQ(v.color, terrain::wallLight(g, 0, 0, isRight, sun, k));
+        }
+        CHECK_EQ(seen, 8);
+    }
+}
+
 TEST(terrain_in_chunks_for_the_view) {
     // the renderer projects the chunks in view alone: each its own vertices and batches, all of them together the mesh
     const gnd::Ground g = parsed();

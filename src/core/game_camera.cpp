@@ -41,6 +41,20 @@ void setSight(float units) {
 
 float sightNow() { return g_sight.load(std::memory_order_relaxed); }
 
+namespace {
+std::atomic<float> g_groundFactors[3] = {1.0f, 1.0f, 1.0f};  // 3.0.20-beta.80
+}  // namespace
+
+void setGroundFactors(const float rgb[3]) {
+    for (int k = 0; k < 3; ++k)
+        g_groundFactors[k].store(std::isfinite(rgb[k]) && rgb[k] >= 0.0f && rgb[k] <= 4.0f ? rgb[k] : 1.0f,
+                                 std::memory_order_relaxed);
+}
+
+void groundFactors(float out[3]) {
+    for (int k = 0; k < 3; ++k) out[k] = g_groundFactors[k].load(std::memory_order_relaxed);
+}
+
 SetSizeFields setSizeFields(float fovDegrees, int width, int height) {
     SetSizeFields s;
     if (width <= 0 || height <= 0) return s;

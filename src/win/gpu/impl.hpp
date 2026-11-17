@@ -1708,6 +1708,8 @@ struct Renderer::Impl {
         // round and its strength as they were made
         bool lightOn = false;
         float lightSun[3] = {0.0f, 0.0f, 0.0f}, lightAmbient = 0.0f, lightStrength = 0.0f;
+        // 3.0.20-beta.80: the game's ground factors its walls' colours were made in (camera::groundFactors)
+        float wallFactors[3] = {1.0f, 1.0f, 1.0f};
         bool lightPending = false;  // 3.0.4-beta.28: chunks in view still in the light before it moved
         std::vector<float> cornerLight;  // 3.0.4-beta.30: the light at each corner of the cells (cornerLights)
         // 3.0.4-beta.27 (the reuse 0 % in R-35N5QN and later): why a picture was made anew - the camera, the corners'

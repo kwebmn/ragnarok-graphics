@@ -79,7 +79,12 @@ Sun sunOf(int longitude, int latitude, const float diffuse[3], const float ambie
 uint32_t lit(uint32_t surface, const Sun& sun, const float normal[3]);  // ARGB
 // The light the game gives a cell's right side (right) or its far side: lit by its normal into the higher side (the
 // next cell's first corner against this one's (x, y + 1), as FUN_004e4190 has it); 0 when it has none
-uint32_t wallLight(const gnd::Ground& g, int x, int y, bool right, const Sun& sun);
+// 3.0.20-beta.80 (the owner: «засветление стен»): the colour of a wall's corner (0-3, gnd::Surface's order) as uaRO.exe
+// gives it (FUN_004E4190, its jump tables 0x4E5990, 0x4E59A0) - the TOP's colour of the cell at that corner of the
+// grid, not the wall's own surface's: a right side's 0 and 2 by cell (x + 1, y + 1), 1 and 3 by (x + 1, y); a far
+// side's 0 and 2 by (x, y + 1), 1 and 3 by (x + 1, y + 1); no such cell or top - black (0xFF000000). In the wall's
+// own light (lit, its way across by which cell stands higher). 0: no wall there
+uint32_t wallLight(const gnd::Ground& g, int x, int y, bool right, const Sun& sun, int corner = 0);
 // A wall's vertex - upright, its normal across: its colour the game's light on it (lit, by build), where a top's is
 // the game's own as the renderer learns it
 bool isWall(const Vertex& v);

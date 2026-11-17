@@ -85,6 +85,12 @@ bool wideView();
 // process from the bridge's Camera message as the field of view; out of (kNear, kFar]: kFar
 void setSight(float units);
 float sightNow();
+// 3.0.20-beta.80 (the owner: «засветление стен» - «иногда случается, иногда нет»): the factors uaRO.exe draws every
+// surface of its ground with this moment (FUN_004E5E20: 0x7710E4, E8, EC - the server's night, a dungeon's darkness)
+// - the own ground's walls in them, as its tops in the game's corners already are. In the renderer's process from the
+// bridge's Camera message as the field of view; none known, or out of [0, 4]: 1
+void setGroundFactors(const float rgb[3]);
+void groundFactors(float out[3]);
 // The renderer's fields SetSize (0x40d760) makes for a field of view: f0, f1 and the culling's slopes (+0 .. +0xc)
 struct SetSizeFields {
     float f0 = 0, f1 = 0, slopeH = 0, slopeV = 0;

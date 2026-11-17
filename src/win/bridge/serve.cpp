@@ -267,9 +267,13 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             // 3.0.19-beta.6: the field of view the game draws with (the 3D view widens it) - every projection here
             const float fov = rd.left() >= 4 ? rd.f32() : camera::kFov;
             const float sight = rd.left() >= 4 ? rd.f32() : camera::kFar;  // 3.0.19-beta.24
+            float factors[3] = {1.0f, 1.0f, 1.0f};  // 3.0.20-beta.80: the game's ground factors
+            if (rd.left() >= 12)
+                for (float& f : factors) f = rd.f32();
             if (rd.ok()) {
                 camera::setFov(fov);
                 camera::setSight(sight);
+                camera::setGroundFactors(factors);
                 renderer_.setCamera(valid, view, targetZ);
             }
             break;

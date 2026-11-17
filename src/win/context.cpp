@@ -25,8 +25,10 @@
 #include "core/effect_exe.hpp"
 #include "core/effect_groups.hpp"
 #include "core/first_game.hpp"
+#include "core/game_camera.hpp"
 #include "core/grid_cell.hpp"
 #include "core/merc_ai.hpp"
+#include "core/model_census.hpp"
 #include "core/layout.hpp"
 #include "core/live_config.hpp"
 #include "core/outdoors.hpp"
@@ -618,6 +620,7 @@ void Context::flush() {
         float targetZ = 0;
         const bool known = readGameCamera(view);
         if (!known || !readCameraTargetDepth(targetZ)) targetZ = 0;
+        noteGroundFactors();  // 3.0.20-beta.80
         renderer->setCamera(known, view, targetZ);
     }
     // 3.0.13-beta.26: [effects] fade_models - the hole round the character, told while there is one
@@ -1487,6 +1490,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         float targetZ = 0;
         const bool known = readGameCamera(view);
         if (!known || !readCameraTargetDepth(targetZ)) targetZ = 0;
+        noteGroundFactors();  // 3.0.20-beta.80
         renderer->setCamera(known, view, targetZ);
         if (known != cameraKnown_) {
             cameraKnown_ = known;
@@ -1814,6 +1818,17 @@ void Context::watchMapLoad(const std::string& map, bool world, bool picture) {
 // «обратно с портуешь через НПЦ чат стае активним і скіли не працюють бо пічатаються в строку»): a new map's first
 // seconds - the battle mode's typing on with the chat's field empty and no Enter of the player's since the map came (an
 // NPC's «Next» or a warp's menu before it, the game's own way in after): off, the letters the skills' again
+void Context::noteGroundFactors() {
+    float f[3] = {1.0f, 1.0f, 1.0f};
+    if (!knownGameBuild() || !readGame(::uagfx::modelcensus::kFactors, f, sizeof f)) f[0] = f[1] = f[2] = 1.0f;
+    camera::setGroundFactors(f);
+    if (!groundFactorsTold_ && (f[0] != 1.0f || f[1] != 1.0f || f[2] != 1.0f)) {
+        groundFactorsTold_ = true;
+        LOG_INFO("own ground: the game draws its ground in the factors %.3f %.3f %.3f now (uaRO.exe 0x7710E4 - the "
+                 "night, a dungeon's darkness): the own ground's walls in them too", f[0], f[1], f[2]);
+    }
+}
+
 void Context::watchNewMapTyping() {
     if (!mapCameMs_) return;
     const uint64_t now = GetTickCount64();

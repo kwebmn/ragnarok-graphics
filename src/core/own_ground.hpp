@@ -209,13 +209,17 @@ private:
 // them (terrain::wallLight) - an upright draw of the game's ground, its box in the file's places, found among the map's
 // walls (its right side: x a cell's edge; its far side: z), its colour and ours a channel 2 apart at most; each wall
 // once. For the log: the mechanism proved on the players' maps
+// 3.0.20-beta.80: a colour as uaRO.exe draws its ground's (FUN_004E5E20) - each channel times its factor, cut (its
+// __ftol), 255 at most; its alpha as it is (camera::groundFactors)
+uint32_t byFactors(uint32_t argb, const float factors[3]);
 class WallCheck {
 public:
     void reset(int width, int height, float zoom);
     // its box (x, z), its colour; light: 2 a cell, row by row - its right side's, its far side's (0 none)
     // 3.0.18-beta.5: corners (count of them) - the draw's colours, told for the first wall apart
+    // 3.0.20-beta.80: factors - the game's of the moment (byFactors), ours in them; none: as they are
     void note(const float lo[2], const float hi[2], uint32_t diffuse, const std::vector<uint32_t>& light,
-              const uint32_t* corners = nullptr, int count = 0);
+              const uint32_t* corners = nullptr, int count = 0, const float* factors = nullptr);
     unsigned seen() const { return seen_; }
     unsigned alike() const { return alike_; }
     const std::string& firstApart() const { return firstApart_; }  // "x,y right side: the game's …, ours …"

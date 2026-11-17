@@ -448,6 +448,35 @@ TEST(own_ground_wall_check_tells_the_corners_of_the_first_wall_apart) {
                                          "ff162626 ff334c4c ff000000"));
 }
 
+// 3.0.20-beta.80 (the owner: «засветление стен» - «иногда случается, иногда нет»): uaRO.exe draws every surface of its
+// ground with its colour times the light's factors of the moment (FUN_004E5E20: 0x7710E4, E8, EC) - under the
+// server's night, in a dungeon (pay_dun00 0.58: the game's walls ff3b3b3b, the own ground's ff666666 = 0x66 x 0.58),
+// in prt_in (0.82 red and green, 1 blue). The own ground's tops took it from the game's corners; its walls did not
+TEST(own_ground_a_wall_in_the_game_s_factors_of_the_moment) {
+    const float none[3] = {1.0f, 1.0f, 1.0f}, dungeon[3] = {0.58f, 0.58f, 0.58f}, night[3] = {0.82f, 0.82f, 1.0f};
+    CHECK_EQ(own_ground::byFactors(0xFF666666u, none), 0xFF666666u);
+    CHECK_EQ(own_ground::byFactors(0xFF666666u, dungeon), 0xFF3B3B3Bu);  // as the game drew pay_dun00's
+    CHECK_EQ(own_ground::byFactors(0xFFCCCCFFu, night), 0xFFA7A7FFu);    // prt_in's: the game's ffa7a9ff
+    const float brighter[3] = {1.5f, 2.0f, 0.0f};
+    CHECK_EQ(own_ground::byFactors(0x80C0A010u, brighter), 0x80FFFF00u);  // whole at 255, its alpha kept
+    // the walls' check: the game's colour against ours in the factors it drew with
+    std::vector<uint32_t> light(4 * 2 * 2, 0u);
+    light[(0 * 4 + 1) * 2] = 0xFF666666u;
+    own_ground::WallCheck w;
+    w.reset(4, 2, 10.0f);
+    const float rightLo[2] = {-0.02f, -10.0f}, rightHi[2] = {0.01f, 0.0f};
+    w.note(rightLo, rightHi, 0xFF3B3B3Bu, light, nullptr, 0, dungeon);
+    CHECK(w.seen() == 1 && w.alike() == 1);
+    // the factors kept for the renderer, as the game's camera is: none known - 1
+    float f[3] = {0.0f, 0.0f, 0.0f};
+    camera::groundFactors(f);
+    CHECK(f[0] == 1.0f && f[1] == 1.0f && f[2] == 1.0f);
+    camera::setGroundFactors(night);
+    camera::groundFactors(f);
+    CHECK(f[0] == 0.82f && f[1] == 0.82f && f[2] == 1.0f);
+    camera::setGroundFactors(none);
+}
+
 // 3.0.18-beta.189 (R-VHMGXR: the ground washed, the models not): the game's corners' mean told when it jumps
 TEST(own_ground_channels_apart) {
     CHECK_EQ(own_ground::channelsApart(0xFF364031u, 0xFF364031u), 0);

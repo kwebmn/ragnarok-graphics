@@ -355,7 +355,10 @@ void Renderer::Impl::noteOwnWall(const FrameRecord& rec, const OwnNotePart::Wall
     if (!g || g->serial != o.serial) return;
     // 3.0.18-beta.5 (the owner: «засветление стен»): all its corners, and the first apart's stages
     const bool apartBefore = !o.wallCheck.firstApart().empty();
-    o.wallCheck.note(w.lo, w.hi, w.corners[0], g->wallLight, w.corners, w.cornersCount);
+    // 3.0.20-beta.80: ours in the factors the game drew its walls with (camera::groundFactors)
+    float factors[3];
+    camera::groundFactors(factors);
+    o.wallCheck.note(w.lo, w.hi, w.corners[0], g->wallLight, w.corners, w.cornersCount, factors);
     if (!apartBefore && !o.wallCheck.firstApart().empty()) {
         const DrawSetup& s = rec.states()[w.d->state];
         char text[160];
@@ -453,9 +456,12 @@ void Renderer::Impl::ownColours(const OwnMaking& m, const OwnState::ChunkJob& jo
                 continue;
             }
             // 3.0.7-beta.3 (R-YXZM7Y): a wall in the game's light on it (terrain::wallLight), not the ground's
-            // beside it
+            // beside it; 3.0.20-beta.80 (the owner: «засветление стен»): and in the factors the game draws its ground
+            // with this moment (camera::groundFactors - the night, a dungeon's darkness), as its tops are in the
+            // game's own corners' colours
             const bool wall = terrain::isWall(tv);
-            uint32_t c = wall ? tv.color : o.shading.diffuseAt(tv.pos[0], tv.pos[2]);
+            uint32_t c =
+                wall ? own_ground::byFactors(tv.color, o.wallFactors) : o.shading.diffuseAt(tv.pos[0], tv.pos[2]);
             if (o.lightOn && !wall) {  // 3.0.4-beta.26: the smooth hills' light; 3.0.4-beta.30 the corners' between
                 const float light =
                     own_ground::lightAt(o.cornerLight, g->width, g->height, g->zoom, tv.pos[0], tv.pos[2]);
@@ -652,6 +658,20 @@ bool Renderer::Impl::drawOwnGround() {
         // clock moves a little every minute or two, and all of the view at once was a hitch of 10 ms
         for (std::vector<uint8_t>& f : o.fresh)
             for (uint8_t& c : f) c = c ? uint8_t(2) : uint8_t(0);
+    }
+    // 3.0.20-beta.80 (the owner: «засветление стен» - «иногда случается, иногда нет»): the factors the game draws its
+    // ground with moved (the night coming, a dungeon's own) - the walls made again in them, a few chunks a picture as
+    // in a moved light
+    {
+        float factors[3];
+        camera::groundFactors(factors);
+        bool moved = false;
+        for (int k = 0; k < 3; ++k) moved = moved || std::fabs(factors[k] - o.wallFactors[k]) > 0.004f;
+        if (moved) {
+            std::copy(factors, factors + 3, o.wallFactors);
+            for (std::vector<uint8_t>& f : o.fresh)
+                for (uint8_t& c : f) c = c ? uint8_t(2) : uint8_t(0);
+        }
     }
     const bool blends = effects.groundSeams && mapOutdoors;  // outdoors, as the game's ground's seams (seamsWanted)
     // 3.0.4-beta.15: the record of the last picture again when nothing it was made of changed
