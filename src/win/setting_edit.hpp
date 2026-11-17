@@ -12,6 +12,8 @@ namespace uagfx::win::settingedit {
 // while a set decides them - the set made the player's own first (in the same write). False: not written (the same
 // already, not a key of the schema, the file not writable)
 bool set(const std::string& iniPath, const Config& config, const std::string& key, const std::string& token);
+// 3.0.21-beta.4: Direct3D 12 draws the game now (many rows need it: core/settings/catalogue)
+bool direct3d12();
 // One of «Як виглядає гра»'s choices - its variant's keys written
 // (3.0.18-beta.132: `keep` - its keys left as they are, "interface.options" by «Налаштування» itself)
 bool setLook(const std::string& iniPath, settings::presets::Choice c, int variant,

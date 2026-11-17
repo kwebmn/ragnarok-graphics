@@ -712,6 +712,7 @@ select selectbox option:checked { color: #e6cb8a; }
 .sw .smore:hover { color: #e6cb8a; }
 .sw .sl { display: block; font-size: 13dp; color: #eef2f8; }
 .sw .shn { display: block; font-size: 11.5dp; color: #9aa3b5; }
+.sw .swn { display: block; font-size: 11.5dp; color: #d6a460; }
 .sw .sctl { display: flex; flex-direction: row; align-items: center; flex: none; }
 .sw .tg { display: block; position: relative; width: 38dp; height: 22dp; border-radius: 11dp;
     background-color: #ffffff22; }

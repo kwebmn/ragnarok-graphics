@@ -9208,6 +9208,12 @@ constexpr Entry kTexts[] = {
     {Text::LabNeeds, "needs: {1}", "потрібні: {1}", "нужны: {1}"},
     {Text::LabAfterRestart, "after the game restarts", "після перезапуску гри", "после перезапуска игры"},
     {Text::LabNextMap, "from the next map", "з наступної карти", "со следующей карты"},
+    {Text::WhyDirect3D12, "Works on Direct3D 12 only", "Працює лише на Direct3D 12",
+     "Работает только на Direct3D 12"},  // 3.0.21-beta.4
+    {Text::WhyView3d, "Works in the 3D view only", "Працює лише у 3D-режимі", "Работает только в 3D-режиме"},
+    {Text::WhyNeeds, "To work it needs on: {1}", "Щоб працювало, увімкніть: {1}", "Чтобы работало, включите: {1}"},
+    {Text::WhyNextMap, "A change shows from the next map", "Зміна діє з наступної карти",
+     "Изменение действует со следующей карты"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

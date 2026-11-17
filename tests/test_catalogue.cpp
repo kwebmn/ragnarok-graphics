@@ -256,9 +256,13 @@ TEST(catalogue_a_row_tells_about_itself) {
     const catalogue::Row* grass = catalogue::find("effects.grass");
     CHECK(grass != nullptr);
     if (grass) {
+        // 3.0.21-beta.4: an effect needs its group on too - «Трава й дерева» (on), then Direct3D 12 (not here)
         const catalogue::About g11 = catalogue::about(*grass, on, false, false, Lang::Uk);
-        CHECK_EQ(int(g11.needs.size()), 1);
-        CHECK(!g11.needs.empty() && g11.needs[0].name == "Direct3D 12" && !g11.needs[0].met);
+        CHECK_EQ(int(g11.needs.size()), 2);
+        if (g11.needs.size() == 2) {
+            CHECK(g11.needs[0].name == "Трава й дерева" && g11.needs[0].met);
+            CHECK(g11.needs[1].name == "Direct3D 12" && !g11.needs[1].met);
+        }
     }
     // a row with nothing to say: no line under it
     const catalogue::Row* bars = catalogue::find("interface.far_bars");
@@ -283,4 +287,42 @@ TEST(catalogue_the_rows_switched_most) {
         const IniSetting* s = findSetting(r->key);
         CHECK(s && (s->control == Control::Check || s->control == Control::Choice));
     }
+}
+
+// 3.0.21-beta.4 («строка сама говорит, почему не работает»): what keeps a row from doing anything now - the renderer,
+// the view, a row it needs that is off (an effect's part needs its effect, an effect its group); nothing said when
+// nothing is in its way
+TEST(catalogue_a_row_says_why_it_does_nothing) {
+    const Config on = parseConfig("");
+    const auto why = [&](const char* key, const Config& c, bool d3d12, bool view3d, Lang l = Lang::Uk) {
+        const catalogue::Row* r = catalogue::find(key);
+        return r ? catalogue::whyNot(*r, c, d3d12, view3d, l) : std::string("?");
+    };
+    CHECK_EQ(why("interface.far_bars", on, true, false), std::string());
+    CHECK_EQ(why("effects.grass", on, true, false), std::string());
+    CHECK_EQ(why("effects.grass", on, false, false), std::string("Працює лише на Direct3D 12"));
+    CHECK_EQ(why("effects.grass", on, false, false, Lang::Ru), std::string("Работает только на Direct3D 12"));
+    // a part of an effect needs the effect on; an effect needs its group on
+    CHECK_EQ(why("effects.torch_flame", on, true, false), std::string());
+    CHECK_EQ(why("effects.torch_flame", parseConfig("[effects]\ntorch = 0\n"), true, false),
+             std::string("Щоб працювало, увімкніть: «Живі смолоскипи»"));
+    CHECK_EQ(why("effects.torch", parseConfig("[effects]\ngroup_fire = 0\n"), true, false),
+             std::string("Щоб працювало, увімкніть: «Вогонь і дим»"));
+    CHECK_EQ(why("effects.group_fire_strength", parseConfig("[effects]\ngroup_fire = 0\n"), true, false),
+             std::string("Щоб працювало, увімкніть: «Вогонь і дим»"));
+    CHECK_EQ(why("effects.torch_flame", parseConfig("[effects]\ngroup_fire = 0\ntorch = 0\n"), true, false),
+             std::string("Щоб працювало, увімкніть: «Вогонь і дим», «Живі смолоскипи»"));
+    CHECK_EQ(why("effects.group_fire", parseConfig("[effects]\ngroup_fire = 0\n"), true, false), std::string());
+    // another row it needs, and the renderer, in one line
+    CHECK_EQ(why("effects.dew", on, true, false), std::string("Щоб працювало, увімкніть: «Трава»"));
+    CHECK_EQ(why("effects.footprints", parseConfig("[effects]\nactor_shadows = 0\n"), false, false),
+             std::string("Працює лише на Direct3D 12 \xC2\xB7 Щоб працювало, увімкніть: «Тіні від сонця й вогню»"));
+    // the 3D view's own area needs no telling that it is the 3D view's; a row of another area does
+    CHECK_EQ(why("view3d.vault", on, true, false), std::string());
+    CHECK_EQ(why("view3d.fast_ground", on, true, false), std::string("Працює лише у 3D-режимі"));
+    CHECK_EQ(why("view3d.fast_ground", on, true, true), std::string());
+    CHECK_EQ(why("view3d.one_room", parseConfig("[view3d]\nceiling = 0\n"), true, true),
+             std::string("Щоб працювало, увімкніть: «Стеля в приміщеннях»"));
+    // when a change shows
+    CHECK_EQ(why("view3d.close_gaps", on, true, true), std::string("Зміна діє з наступної карти"));
 }

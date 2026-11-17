@@ -1030,6 +1030,8 @@ enum class Text : uint16_t {
     CatClientFiles, CatAiWork,
     // 3.0.21-beta.2 (step 2): the console's laboratory - «Проби» and what a row says about itself
     ConsoleTabTrials, LabTrialsOf, LabNoTrials, LabSince, LabNeeds, LabAfterRestart, LabNextMap,
+    // 3.0.21-beta.4: a row says why it does nothing now (core/settings/catalogue whyNot)
+    WhyDirect3D12, WhyView3d, WhyNeeds, WhyNextMap,
     Count
 };
 

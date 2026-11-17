@@ -9,6 +9,7 @@
 #include "win/context.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
+#include "win/real_ddraw.hpp"
 
 namespace uagfx::win::settingedit {
 
@@ -19,6 +20,11 @@ Config shown(const Config& c) {
     s.effects = effect_groups::shown(c.effects, Context::get().cardLevel());
     s.ai = c.aiNow;  // 2.2.1: the AI pictures as the file says now (shown so at once)
     return s;
+}
+
+bool direct3d12() {
+    const RendererChoice& c = startup().choice;
+    return c.renderer == Renderer::Uaro && c.api != Api::D3d11;
 }
 
 bool set(const std::string& iniPath, const Config& config, const std::string& key, const std::string& token) {

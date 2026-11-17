@@ -1,6 +1,7 @@
 #include "core/settings/catalogue.hpp"
 
 #include <cstring>
+#include <deque>
 #include <map>
 #include <utility>
 
@@ -73,6 +74,15 @@ const EffectNeed kEffectNeeds[] = {
     {"effects.wet_ground", "effects.weather"},       {"effects.night_windows", "effects.materials"},
     {"effects.lit_dust", "effects.motes"},           {"effects.lit_dust", "effects.indoor_dust"}};
 
+// A key as a pointer that stays (a Need holds one): the strings made while the groups are built are kept here
+const char* keep(const std::string& key) {
+    static std::deque<std::string> kept;
+    for (const std::string& k : kept)
+        if (k == key) return k.c_str();
+    kept.push_back(key);
+    return kept.back().c_str();
+}
+
 bool detailBox(const char* key) {
     for (const char* k : kDetailBoxes)
         if (std::strcmp(k, key) == 0) return true;
@@ -89,7 +99,10 @@ void effectGroups(std::vector<Group>& out) {
         if (!named) continue;
         Group grp{Area::Picture, named->label, {}};
         grp.rows.push_back(B(switchKey));
-        if (effect_groups::hasStrength(g)) grp.rows.push_back(D(switchKey + "_strength", switchKey));
+        // 3.0.21-beta.4: a group off draws none of its effects (effect_groups::effective) - its strength and its
+        // effects need it on; an effect's parts and sliders need the effect on
+        if (effect_groups::hasStrength(g))
+            grp.rows.push_back(D(switchKey + "_strength", switchKey).need(keep(switchKey)));
         if (word == "time") {
             grp.rows.push_back(B("effects.clock"));
             grp.rows.push_back(D("effects.night_strength", "effects.clock"));
@@ -104,14 +117,15 @@ void effectGroups(std::vector<Group>& out) {
             if (!findSetting(box)) continue;
             // a hidden one (behind «Вигляд умінь») is the file's alone: the technique
             const bool hidden = hiddenEffect(box.c_str());
-            grp.rows.push_back(hidden ? X(box) : detailBox(m.key) ? D(box) : B(box));
+            grp.rows.push_back((hidden ? X(box) : detailBox(m.key) ? D(box) : B(box)).need(keep(switchKey)));
             for (int e = 0; e < effectLayoutCount(); ++e) {
                 if (box != fx[e].box) continue;
                 for (int k = 0; k < kLayoutChecks && fx[e].checks[k]; ++k)
-                    if (findSetting(fx[e].checks[k])) grp.rows.push_back(D(fx[e].checks[k], box));
+                    if (findSetting(fx[e].checks[k]))
+                        grp.rows.push_back(D(fx[e].checks[k], box).need(keep(switchKey)).need(keep(box)));
                 for (int k = 0; k < 5 && fx[e].sliders[k]; ++k) {
                     if (!findSetting(fx[e].sliders[k])) continue;
-                    Said s = D(fx[e].sliders[k], box);
+                    Said s = D(fx[e].sliders[k], box).need(keep(switchKey)).need(keep(box));
                     if (fx[e].needs[k]) s.needs.push_back(Need{NeedKind::Row, fx[e].needs[k]});
                     grp.rows.push_back(std::move(s));
                 }
@@ -481,6 +495,30 @@ std::string aboutText(const About& a, Lang l, const char* yes, const char* no) {
     }
     if (a.afterRestart) parts.push_back(tr(l, Text::LabAfterRestart));
     if (a.nextMap) parts.push_back(tr(l, Text::LabNextMap));
+    std::string out;
+    for (const std::string& p : parts) out += (out.empty() ? "" : " \xC2\xB7 ") + p;
+    return out;
+}
+
+std::string whyNot(const Row& r, const Config& shown, bool direct3d12, bool view3d, Lang l) {
+    std::vector<std::string> parts;
+    std::string rows;
+    bool card = false, view = false;
+    const Group* g = groupOf(r.key);
+    for (const Need& n : r.needs) {
+        if (met(n, shown, direct3d12, view3d)) continue;
+        if (n.kind == NeedKind::Direct3D12) {
+            card = true;
+        } else if (n.kind == NeedKind::View3d) {
+            view = !g || g->area != Area::View3d;
+        } else if (const IniSetting* s = n.key ? findSetting(n.key) : nullptr) {
+            rows += (rows.empty() ? "" : ", ") + std::string("\xC2\xAB") + tr(l, s->label) + "\xC2\xBB";
+        }
+    }
+    if (card) parts.push_back(tr(l, Text::WhyDirect3D12));
+    if (view) parts.push_back(tr(l, Text::WhyView3d));
+    if (!rows.empty()) parts.push_back(fmt(tr(l, Text::WhyNeeds), {rows}));
+    if (r.nextMap) parts.push_back(tr(l, Text::WhyNextMap));
     std::string out;
     for (const std::string& p : parts) out += (out.empty() ? "" : " \xC2\xB7 ") + p;
     return out;

@@ -22,6 +22,7 @@ struct ChoiceView {
 };
 struct RowView {
     Rml::String key, group, label, hint, vtext;  // group: the group's name over this row (its first), "" none
+    Rml::String warn;  // 3.0.21-beta.4: what keeps the row from doing anything now, "" nothing
     bool toggle = false, on = false, slider = false;
     int value = 0, min = 0, max = 0, step = 1;
     std::vector<ChoiceView> choices;

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "core/console_tiles.hpp"
+#include "core/settings/catalogue.hpp"
 #include "core/window_stack.hpp"
 #include "core/options_card.hpp"
 #include "core/settings/strings.hpp"
@@ -29,6 +30,7 @@
 #include "win/uaui.hpp"
 #include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
+#include "win/view3d.hpp"
 #include "win/console.hpp"
 #include "win/setting_edit.hpp"
 #include "win/words.hpp"
@@ -290,6 +292,10 @@ static std::vector<SetRowView> buildRows(const State& s) {
             r.label = say(st->label);
             // a row, not a page: its hint's first sentence (the whole of it stays the settings app's)
             r.hint = consoletiles::gist(settings::tr(lang, st->hint), 130);
+            // 3.0.21-beta.4: what keeps it from doing anything now (Direct3D 12, the 3D view, a row it needs)
+            if (const settings::catalogue::Row* cat = settings::catalogue::find(f.key))
+                r.warn = settings::catalogue::whyNot(*cat, shown, settingedit::direct3d12(), view3dwin::active(),
+                                                     lang);
             const std::string now = s.config ? settings::tokenOf(*st, shown) : "";
             if (st->control == settings::Control::Check) {
                 r.toggle = true, r.on = st->tokens.size() > 1 && now == st->tokens[1];
@@ -311,7 +317,7 @@ static std::vector<SetRowView> buildRows(const State& s) {
 static std::string rowsKeyOf(const std::vector<SetRowView>& rows) {
     std::string k;
     for (const SetRowView& r : rows) {
-        k += r.key + (r.on ? "+" : "-") + std::to_string(r.value) + r.group + (r.sub ? "s" : "");
+        k += r.key + (r.on ? "+" : "-") + std::to_string(r.value) + r.group + (r.sub ? "s" : "") + r.warn;
         if (r.more) k += r.label;  // «Ще N» or the folding line
         for (const ChoiceView& c : r.choices) k += c.on ? '1' : '0';
         k += '|';

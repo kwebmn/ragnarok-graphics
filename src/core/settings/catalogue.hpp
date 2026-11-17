@@ -85,5 +85,10 @@ About about(const Row& r, const Config& shown, bool direct3d12, bool view3d, Lan
 // «з 3.0.20-beta.73 · потрібні: ■ Моделі нашим рендером, □ Direct3D 12 · після перезапуску гри»; `yes` and `no` -
 // the marks before a need that is met and one that is not
 std::string aboutText(const About& a, Lang l, const char* yes, const char* no);
+// 3.0.21-beta.4 (a row says itself why it does nothing): what is in a row's way now - «Працює лише на Direct3D
+// 12», «Працює лише у 3D-режимі» (not said of «3D-режим»'s own rows: their area's name says it), «Щоб працювало,
+// увімкніть: «Трава»» - and when a change shows («Зміна діє з наступної карти»), joined by « · »; empty when
+// there is nothing to say
+std::string whyNot(const Row& r, const Config& shown, bool direct3d12, bool view3d, Lang l);
 
 }  // namespace uagfx::settings::catalogue

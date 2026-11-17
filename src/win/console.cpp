@@ -86,15 +86,10 @@ bool playersRow(const std::string& key) {
     return !r || r->status == catalogue::Status::Permanent;
 }
 
-// Direct3D 12 draws the game now (a need of many rows)
-bool direct3d12Now() {
-    const RendererChoice& c = startup().choice;
-    return c.renderer == Renderer::Uaro && c.api != Api::D3d11;
-}
-
 catalogue::About aboutNow(const std::string& key, const Config& shown, Lang lang) {
     const catalogue::Row* r = catalogue::find(key);
-    return r ? catalogue::about(*r, shown, direct3d12Now(), view3dwin::active(), lang) : catalogue::About{};
+    return r ? catalogue::about(*r, shown, settingedit::direct3d12(), view3dwin::active(), lang)
+             : catalogue::About{};
 }
 
 // 2.2: the settings as the console shows them - each effect's switch as the set has it (the groups aside: they

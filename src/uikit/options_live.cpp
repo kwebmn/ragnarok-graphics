@@ -21,7 +21,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    data-if="r.group != ''">{{r.group}}</div><div class="smore ctl" data-if="r.more"
    data-event-click="set_more(i)">{{r.label}}</div><div class="sro" data-if="!r.more"
    data-class-sub="r.sub"><div class="st"><span
-   class="sl">{{r.label}}</span><span class="shn" data-if="r.hint != ''">{{r.hint}}</span></div><div
+   class="sl">{{r.label}}</span><span class="shn" data-if="r.hint != ''">{{r.hint}}</span><span class="swn"
+   data-if="r.warn != ''">{{r.warn}}</span></div><div
    class="sctl"><span class="tg ctl" data-if="r.toggle" data-class-on="r.on"
    data-event-click="set_toggle(i)"><span class="kn"></span></span><input class="ctl" data-if="r.slider"
    type="range" data-attr-min="r.min" data-attr-max="r.max" data-attr-step="r.step" data-attr-value="r.value"
@@ -58,6 +59,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         v.RegisterMember("group", &RowView::group);
         v.RegisterMember("label", &RowView::label);
         v.RegisterMember("hint", &RowView::hint);
+        v.RegisterMember("warn", &RowView::warn);
         v.RegisterMember("vtext", &RowView::vtext);
         v.RegisterMember("toggle", &RowView::toggle);
         v.RegisterMember("on", &RowView::on);

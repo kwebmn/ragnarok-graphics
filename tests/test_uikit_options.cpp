@@ -61,6 +61,7 @@ TEST(uikit_options_groups_parts_and_the_opening_line) {
     look.group = "Як виглядає гра";
     look.choices = {ol::ChoiceView{"Як у грі", false}, ol::ChoiceView{"Ремастер", true}};
     m.rows.push_back(look);
+    m.rows[1].warn = "Працює лише на Direct3D 12";  // 3.0.21-beta.4: why the row does nothing now
     ol::pad(m.rows, 0);  // as the window does: never a shorter list, every row its twelve choices
     CHECK_EQ(m.rows.size(), ol::kLeastRows);
     for (const ol::RowView& r : m.rows) CHECK_EQ(r.choices.size(), ol::kMostChoices);
@@ -100,6 +101,7 @@ TEST(uikit_options_groups_parts_and_the_opening_line) {
     CHECK_EQ(shownOf(doc, ".spane .chs .ch"), 2);
     CHECK_EQ(shownOf(doc, ".spane .chs .ch.on"), 1);
     CHECK_EQ(shownOf(doc, ".spane .snone"), 0);
+    CHECK_EQ(shownOf(doc, ".spane .swn"), 1);  // one row says why it does nothing
     Rml::Element* pane = doc->GetElementById("spane");
     CHECK(pane != nullptr);
     Rml::Element* line = nullptr;  // every row holds the line's element: the shown one is the group's
