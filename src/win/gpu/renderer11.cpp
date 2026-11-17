@@ -42,6 +42,8 @@
 #include "core/twin_grid.hpp"
 #include "core/water.hpp"
 #include "core/window_plan.hpp"
+#include "core/layout.hpp"
+#include "core/texel_check.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/gpu/ai11.hpp"
 #include "win/gpu/models_dump.hpp"
@@ -57,6 +59,15 @@ template <typename T>
 void drop(T*& p) {
     if (p) p->Release();
     p = nullptr;
+}
+
+// 3.0.20-beta.82: a file of these bytes (the texel check's pictures); false when nothing went
+bool writeBytes(const std::string& path, const std::string& bytes) {
+    if (bytes.empty()) return false;
+    FILE* f = std::fopen(path.c_str(), "wb");
+    if (!f) return false;
+    const bool written = std::fwrite(bytes.data(), 1, bytes.size(), f) == bytes.size();
+    return std::fclose(f) == 0 && written;
 }
 
 const char* const kFrameEnd = "(the frame's end)";  // 3.0.5-beta.2: [debug] profile's last mark of a frame
@@ -922,6 +933,7 @@ uint32_t Renderer11::createTexture(int width, int height, int levels) {
         if (p.width != width || p.height != height || p.levels != t.levels) continue;
         t.texture = p.texture;
         t.srv = p.srv;
+        t.pooled = true;  // 3.0.20-beta.82: the texel check tells it
         pooledBytes_ -= textureBytes(width, height, t.levels);
         pool_.erase(pool_.begin() + long(i));
         ++stats_.reused;
@@ -1274,6 +1286,11 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
     const D3D11_BOX box = boxOf(u.rect);
     ctx_->UpdateSubresource(t.texture, UINT(level), &box, rec.pixels().data() + u.pixels, UINT(u.rect.width()) * 4,
                             0);
+    if (level == 0) {  // 3.0.20-beta.82: what of level 0 went up since the texture was made (the texel check)
+        ++it->second.sent0;
+        if (u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height)
+            it->second.sentWhole0 = true;
+    }
     stats_.uploaded += uint64_t(u.rect.width()) * uint64_t(u.rect.height()) * 4;  // 0.89
     if (level == 0) {  // 2.5.20: super-light's flat textures keep the shape of one with transparent texels
         const uint32_t* px = rec.pixels().data() + u.pixels;
@@ -1909,6 +1926,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         }
     }
     if (addedSprite) {  // 3.0.19-beta.5 (R-P75FMG, gpu/draw.cpp): what else the frame added as light takes
+        checkAddedTexels(rec, d, stride);  // 3.0.20-beta.82 (R-9VCE45)
         static int told = 0;
         if (told < 3) {
             ++told;
@@ -5086,6 +5104,79 @@ void Renderer11::profiledDraw(const FrameRecord& rec, const DrawCmd& d) {
     inDraw_ = false;
     QueryPerformanceCounter(&b);
     if (f.open) f.drawsOwn += profileMs(b.QuadPart - a.QuadPart - flushInDraw_);
+}
+
+// 3.0.20-beta.82 (R-9VCE45 «В готелі такий силует», core/texel_check.hpp): Assumptio's glow takes the game's own
+// picture of the frame (3.0.19-beta.5) and showed the hotel's bricks where it is see-through - the card's texels of the
+// frame against the game's memory, the first kTexelChecks times a game; the first one's both as pictures for a report
+void Renderer11::checkAddedTexels(const FrameRecord& rec, const DrawCmd& d, size_t stride) {
+    if (texelChecks_ >= kTexelChecks || !gameTexels_ || !d.texture[0]) return;
+    const auto it = textures_.find(d.texture[0]);
+    if (it == textures_.end() || !it->second.texture) return;
+    const Texture& t = it->second;
+    const Rect r = texelcheck::rectOf(rec.vertexBytes(), d.vertexOffset, stride, d.vertexCount, t.width, t.height);
+    if (r.empty() || size_t(r.width()) * size_t(r.height()) > kMostCheckedTexels) return;
+    ++texelChecks_;
+    std::vector<uint32_t> card, game;
+    if (!readTexels(t, r, card) || !gameTexels_(gameTexelsContext_, d.texture[0], r, game) ||
+        game.size() != card.size()) {
+        LOG_INFO("texel check (Direct3D 11): Assumptio's glow - its frame %dx%d at %d,%d of a %dx%d texture not read "
+                 "from %s",
+                 r.width(), r.height(), r.left, r.top, t.width, t.height,
+                 card.empty() ? "the card" : "the game's memory");
+        return;
+    }
+    const texelcheck::Compare c = texelcheck::compare(game.data(), card.data(), card.size());
+    std::string pictures;
+    if (texelChecks_ == 1) {
+        const std::string dir = win::gameDir();
+        const bool saved =
+            writeBytes(layout::join(dir, layout::kTexelCheckCard), texelcheck::bmpOf(card.data(), r.width(),
+                                                                                       r.height())) &&
+            writeBytes(layout::join(dir, layout::kTexelCheckGame), texelcheck::bmpOf(game.data(), r.width(),
+                                                                                       r.height()));
+        pictures = saved ? "; both as pictures: uaro-graphics\\logs\\texel-check-card.bmp, texel-check-game.bmp"
+                         : "; its pictures could not be written";
+    }
+    LOG_INFO("texel check (Direct3D 11): Assumptio's glow - its frame %dx%d at %d,%d of a %dx%d texture: %u of its %u "
+             "texels on the card apart from the game's memory - %u seen on the card where the game's are see-through "
+             "(their mean #%08X), %u the other way round; the card's texture %s, its level 0 sent whole since: %s "
+             "(%u uploads of it)%s",
+             r.width(), r.height(), r.left, r.top, t.width, t.height, unsigned(c.differ), unsigned(c.texels),
+             unsigned(c.cardOnly), unsigned(c.cardOnlyMean), unsigned(c.gameOnly),
+             t.pooled ? "taken from the pool (one the game let go of)" : "made new", t.sentWhole0 ? "yes" : "NO",
+             unsigned(t.sent0), pictures.c_str());
+}
+
+// 3.0.20-beta.82: level 0's texels of r as the card holds them (ARGB, the B8G8R8A8 texels as they lie)
+bool Renderer11::readTexels(const Texture& t, const Rect& r, std::vector<uint32_t>& out) {
+    out.clear();
+    if (!t.texture || r.empty()) return false;
+    D3D11_TEXTURE2D_DESC d{};
+    d.Width = UINT(r.width());
+    d.Height = UINT(r.height());
+    d.MipLevels = 1;
+    d.ArraySize = 1;
+    d.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    d.SampleDesc.Count = 1;
+    d.Usage = D3D11_USAGE_STAGING;
+    d.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    ID3D11Texture2D* staging = nullptr;
+    if (FAILED(device_->CreateTexture2D(&d, nullptr, &staging))) return false;
+    const D3D11_BOX box{UINT(r.left), UINT(r.top), 0, UINT(r.right), UINT(r.bottom), 1};
+    ctx_->CopySubresourceRegion(staging, 0, 0, 0, 0, t.texture, 0, &box);
+    D3D11_MAPPED_SUBRESOURCE m{};
+    const bool mapped = SUCCEEDED(ctx_->Map(staging, 0, D3D11_MAP_READ, 0, &m));
+    if (mapped) {
+        const size_t w = size_t(r.width());
+        out.resize(w * size_t(r.height()));
+        for (int y = 0; y < r.height(); ++y)
+            std::memcpy(out.data() + size_t(y) * w, static_cast<const uint8_t*>(m.pData) + size_t(y) * m.RowPitch,
+                        w * 4);
+        ctx_->Unmap(staging, 0);
+    }
+    drop(staging);
+    return mapped;
 }
 
 }  // namespace uagfx::gpu

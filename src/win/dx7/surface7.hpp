@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "core/blit.hpp"
 #include "core/frame.hpp"
@@ -33,6 +34,10 @@ public:
     static Surface7* create(const SurfacePlan& plan, DWORD caps, std::string& error);
     // A surface the client hands back to us; nullptr when it is not one of ours.
     static Surface7* from(IDirectDrawSurface7* s);
+    // 3.0.20-beta.82 (core/texel_check.hpp): level 0's texels of r of the game's texture whose GPU texture is
+    // `gpuTexture`, as an upload sends them - the renderer's check of its copy (Renderer::setGameTexels; called
+    // from Context::flush, under the driver's lock); false: no such texture, or r not inside it
+    static bool gameTexels(void* context, uint32_t gpuTexture, const Rect& r, std::vector<uint32_t>& out);
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** out) override;
     ULONG STDMETHODCALLTYPE AddRef() override;

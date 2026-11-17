@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <unordered_map>
 #include <vector>
 
 #include "core/d3d7.hpp"
@@ -10,6 +11,7 @@
 #include "win/crisp/crisp.hpp"
 #include "win/dx7/device7.hpp"
 #include "win/dx7/formats.hpp"
+#include "win/dx7/game_texels.hpp"
 #include "win/log.hpp"
 #include "win/sharp_frames.hpp"
 #include "win/sprite_hook.hpp"
@@ -41,6 +43,12 @@ void zPixelFormat(DDPIXELFORMAT& pf) {
     pf.dwZBitMask = 0xFFFF;
 }
 
+// 3.0.20-beta.82 (core/texel_check.hpp): the game's textures by their GPU texture
+std::unordered_map<uint32_t, Surface7*>& byGpu() {
+    static std::unordered_map<uint32_t, Surface7*> textures;
+    return textures;
+}
+
 }  // namespace
 
 Surface7::Surface7(SurfaceRole role, DWORD caps, int width, int height, PixelFormat format)
@@ -55,6 +63,7 @@ Surface7::~Surface7() {
     delete next_;
     if (zBuffer_) zBuffer_->Release();
     if (clipper_) clipper_->Release();
+    if (gpuTexture_) byGpu().erase(gpuTexture_);  // 3.0.20-beta.82
     if (gpuTexture_ && c.renderer) c.renderer->releaseTexture(gpuTexture_);
 }
 
@@ -81,6 +90,7 @@ Surface7* Surface7::create(const SurfacePlan& plan, DWORD caps, std::string& err
                 delete s;
                 return nullptr;
             }
+            byGpu()[s->gpuTexture_] = s;  // 3.0.20-beta.82
             Surface7* last = s;
             for (int i = 1; i < s->levels_->levels(); ++i) {
                 const Image& img = s->levels_->level(i);
@@ -135,6 +145,15 @@ const sprite_cells::Cell* Surface7::spriteNumberAt(float u, float v, int& width,
 Surface7* Surface7::from(IDirectDrawSurface7* s) {
     Surface7* p = static_cast<Surface7*>(s);
     return p && p->magic_ == kMagic ? p : nullptr;
+}
+
+bool Surface7::gameTexels(void*, uint32_t gpuTexture, const Rect& r, std::vector<uint32_t>& out) {
+    const auto it = byGpu().find(gpuTexture);
+    return it != byGpu().end() && it->second->levels_ && it->second->levels_->argbOf(r, out);
+}
+
+bool gameTexels(void* context, uint32_t gpuTexture, const Rect& r, std::vector<uint32_t>& out) {
+    return Surface7::gameTexels(context, gpuTexture, r, out);
 }
 
 bool Surface7::fullColour(int x, int y, int w, int h, const uint32_t* picture, int pitch) {

@@ -11,6 +11,7 @@
 #include "win/upkeep_watch.hpp"
 #include "win/context.hpp"
 #include "win/dx7/ground_batch.hpp"
+#include "win/dx7/game_texels.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -547,6 +548,7 @@ bool Context::open(std::string& error) {
     installHitHook();                  // 0.96: the hits' sounds (the flash itself is effects.hit_flash)
     weightrules::install();            // 3.0.11-beta.202: the game's line about the weight at uaRO's 70 %
     renderer->setIconSink(&crisp::iconReady, nullptr);
+    renderer->setGameTexels(&dx7::gameTexels, nullptr);  // 3.0.20-beta.82 (R-9VCE45)
     renderer->setGameDir(gameDir());  // 0.25: the maps' files (uaro-render64.exe has the folder already)
     crisp::setAiIcons(config.ai.on() && config.ai.icons && (renderer->remote() || aiHere) && config.crispText,
                       config.ai.uiPieces);

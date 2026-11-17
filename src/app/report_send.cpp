@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -163,6 +164,20 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
         const auto ticks = [](const FILETIME& t) { return (static_cast<unsigned long long>(t.dwHighDateTime) << 32) |
                                                           t.dwLowDateTime; };
         if (ticks(now) - ticks(a.ftLastWriteTime) < 7ull * 24 * 3600 * 10000000ull) readFile(dump, u.dump);
+    }
+    // 3.0.20-beta.82 (R-9VCE45, core/texel_check.hpp): the frame of Assumptio's glow checked on Direct3D 11 - as
+    // the card held it and as the game's memory did - of the last 12 hours
+    for (const char* picture : {layout::kTexelCheckCard, layout::kTexelCheckGame}) {
+        const std::wstring path = ourPlace(dir, picture);
+        WIN32_FILE_ATTRIBUTE_DATA p{};
+        if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &p)) continue;
+        FILETIME now{};
+        GetSystemTimeAsFileTime(&now);
+        const uint64_t when = (uint64_t(p.ftLastWriteTime.dwHighDateTime) << 32) | p.ftLastWriteTime.dwLowDateTime;
+        const uint64_t nowTicks = (uint64_t(now.dwHighDateTime) << 32) | now.dwLowDateTime;
+        std::string bytes;
+        if (nowTicks - when < 12ull * 3600 * 10000000ull && readFile(path, bytes))
+            u.images.emplace_back(std::string(picture).substr(std::string(picture).rfind('\\') + 1), bytes);
     }
     return u;
 }

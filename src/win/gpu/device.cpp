@@ -2438,6 +2438,10 @@ void Renderer::setIconSink(IconSink sink, void* context) {
     if (remote_) remote_->setIconSink(sink, context);
 }
 
+void Renderer::setGameTexels(GameTexels source, void* context) {  // 3.0.20-beta.82: Direct3D 11 only
+    if (d3d11_) d3d11_->setGameTexels(source, context);
+}
+
 void Renderer::setMap(const std::string& map) {
     if (remix_) return;
     if (d3d11_) return d3d11_->setMap(map);  // 0.79: the region's look

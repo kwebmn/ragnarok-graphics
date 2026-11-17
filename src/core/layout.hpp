@@ -78,6 +78,10 @@ constexpr const char* kCameraMemory = "uaro-graphics\\camera.txt";
 constexpr const char* kChatLogs = "uaro-graphics\\chat-logs";
 // 3.0.15-beta.1: the skills' effects as the game draws them, in betas (core/effect_capture.hpp), sent with a report
 constexpr const char* kEffectCapture = "uaro-graphics\\logs\\uaro-effects.txt";
+// 3.0.20-beta.82 (R-9VCE45, core/texel_check.hpp): the first frame of Assumptio's glow checked on Direct3D 11 - its
+// texels as the card holds them and as the game's memory does, sent with a report
+constexpr const char* kTexelCheckCard = "uaro-graphics\\logs\\texel-check-card.bmp";
+constexpr const char* kTexelCheckGame = "uaro-graphics\\logs\\texel-check-game.bmp";
 // 3.0.20-beta.60: when the lost connections' trails went (core/net_trail maySend: ten minutes apart, six a day)
 constexpr const char* kNetReportsSent = "uaro-graphics\\cache\\net-reports-sent.txt";
 // 2.13: «Звернення» (app/reports): the computer's random key - the site's reports belong to it, no login - and the

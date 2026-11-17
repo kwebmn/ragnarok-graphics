@@ -178,6 +178,10 @@ public:
     void setAiShown(uint8_t kinds, uint8_t sprites);
     void requestIcon(uint64_t key, int width, int height, const uint32_t* argb);
     void setIconSink(Renderer::IconSink sink, void* context);
+    void setGameTexels(Renderer::GameTexels source, void* context) {  // 3.0.20-beta.82
+        gameTexels_ = source;
+        gameTexelsContext_ = context;
+    }
     void finish();
     bool lost() const { return lost_; }
 
@@ -201,6 +205,10 @@ private:
         ID3D11ShaderResourceView* flat = nullptr;
         int flatLevel = 0;
         bool transparent = false;  // a texel of its level 0 not opaque
+        // 3.0.20-beta.82 (the texel check's line): taken from pool_ (a texture the game let go of), level 0's
+        // uploads since and whether one of them was the whole level
+        bool pooled = false, sentWhole0 = false;
+        uint32_t sent0 = 0;
     };
     struct Target {  // a picture drawn into and read from
         ID3D11Texture2D* texture = nullptr;
@@ -433,6 +441,15 @@ private:
     // drawn by then); darknessLaid_: this frame's is down - one after it is drawn in its place
     FrameRecord darknessRec_;
     bool darknessPass_ = false, darknessLaid_ = false;
+    // 3.0.20-beta.82 (R-9VCE45, core/texel_check.hpp): Assumptio's glow drawn from the game's own picture - its
+    // texels on the card against the game's memory (Renderer::setGameTexels), the first kTexelChecks times a game
+    static constexpr int kTexelChecks = 3;
+    static constexpr size_t kMostCheckedTexels = 34000;  // a picture under the report's 140 000 bytes an image
+    Renderer::GameTexels gameTexels_ = nullptr;
+    void* gameTexelsContext_ = nullptr;
+    int texelChecks_ = 0;
+    void checkAddedTexels(const FrameRecord& rec, const DrawCmd& d, size_t stride);
+    bool readTexels(const Texture& t, const Rect& r, std::vector<uint32_t>& out);
     // 3.0.13-beta.30: [effects] silhouette - the character's sprites drawn again where something hides them
     FrameRecord silhouetteRec_;
     FrameRecord silhouetteRaw_;  // 3.0.17-beta.24: the character's sprites as the game drew them, this picture

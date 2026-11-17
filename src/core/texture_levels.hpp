@@ -31,6 +31,9 @@ public:
     // a dye (the cell's size; else none).
     void slotWritten(Rect r, uint8_t source = 0, const std::vector<uint32_t>* own = nullptr);
     void sync(FrameRecord& record, uint32_t texture);  // records the changed rectangles as uploads
+    // 3.0.20-beta.82 (core/texel_check.hpp): level 0's texels of r as an upload sends them (keyed, in full colour
+    // where kept); false when r is empty or not all inside level 0
+    bool argbOf(const Rect& r, std::vector<uint32_t>& out) const;
     // 2.5.18: the game's own texels of level 0 before it made them 16-bit (core/full_colour.hpp): r of level 0, argb
     // r.width() * r.height() of them; mips - it made its mip levels of level 0 again. The next upload sends them in
     // full colour where the 16-bit texels are still theirs, the mip levels made of them; false: none kept - no 16-bit

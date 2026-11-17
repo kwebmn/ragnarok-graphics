@@ -95,6 +95,14 @@ void TextureLevels::slotWritten(Rect r, uint8_t source, const std::vector<uint32
     slotOwn_.push_back(whole ? *own : std::vector<uint32_t>());
 }
 
+bool TextureLevels::argbOf(const Rect& r, std::vector<uint32_t>& out) const {
+    Rect inside = r;
+    if (images_.empty() || r.empty() || !clipRect(images_[0].bounds(), inside) || !(inside == r)) return false;
+    toArgbRect(images_[0], r, key_, out);
+    mergeFull(r, out);  // where the game's full colours wait for their upload, as sync sends them
+    return true;
+}
+
 void TextureLevels::sync(FrameRecord& record, uint32_t texture) {
     if (!anyDirty_) return;
     std::vector<uint32_t> argb;

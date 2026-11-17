@@ -119,3 +119,18 @@ TEST(texlevels_after_a_sync_only_what_changed_goes_again) {
     t.sync(r, 1);
     CHECK_EQ(r.uploads().size(), size_t(3));
 }
+
+// 3.0.20-beta.82 (R-9VCE45, core/texel_check.hpp): level 0's texels of a rectangle as the card is sent them - what the
+// card's copy is checked against
+TEST(texlevels_the_texels_of_a_rectangle_as_the_card_gets_them) {
+    TextureLevels t(8, 8, PixelFormat::A1R5G5B5, 1);
+    t.level(0).setPixel(2, 3, 0xFFFF);  // white, seen
+    t.level(0).setPixel(3, 3, 0x7C00);  // red, see-through (alpha bit clear)
+    std::vector<uint32_t> argb;
+    CHECK(t.argbOf(Rect{2, 3, 4, 4}, argb));
+    CHECK_EQ(argb.size(), size_t(2));
+    CHECK_EQ(argb[0], 0xFFFFFFFFu);
+    CHECK_EQ(argb[1] >> 24, 0u);
+    CHECK(!t.argbOf(Rect{6, 6, 9, 9}, argb));  // not all inside level 0
+    CHECK(!t.argbOf(Rect{2, 2, 2, 4}, argb));  // nothing
+}

@@ -214,6 +214,10 @@ public:
     void setStartSink(StartSink sink, void* context);
     void requestIcon(uint64_t key, int width, int height, const uint32_t* argb);
     void setIconSink(IconSink sink, void* context);
+    // 3.0.20-beta.82 (R-9VCE45, core/texel_check.hpp): where the renderer gets the game's own texels of a texture -
+    // its copy on the card checked against them (Direct3D 11: Assumptio's glow, the first three times a game)
+    using GameTexels = bool (*)(void* context, uint32_t texture, const Rect& r, std::vector<uint32_t>& argb);
+    void setGameTexels(GameTexels source, void* context);
     // Part 3, DLSS started after the device (in the background, so that the game does not wait for it): the DXGI
     // factory becomes Streamline's (upgrade = slUpgradeInterface) and the swap chain is made again through it at the
     // next present, so that Streamline sees every present. False: the factory stays the system's.
