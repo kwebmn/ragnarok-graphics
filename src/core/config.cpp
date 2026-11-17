@@ -928,7 +928,7 @@ Config parseConfig(const std::string& text) {
         } else if (key == "panel.size" || key == "panel.opacity") {
             int n = 0;
             if (toInt(val, -100000, 100000, n)) {
-                if (key == "panel.size") c.panelSize = std::clamp(n, 75, 150);
+                if (key == "panel.size") c.panelSize = std::clamp(n, 50, 150);  // 3.0.21-beta.15: half
                 else c.panelOpacity = std::clamp(n, 40, 100);
             }
         } else if (key == "panel.place") {

@@ -278,7 +278,7 @@ TEST(window_panel_menu_rows_follow_the_settings) {
     CHECK_EQ(rows.size(), size_t(7));
     if (rows.size() != 7) return;
     CHECK(rows[0].kind == panel::MenuRow::Kind::Choice && rows[0].segments == 3 && rows[0].chosen == 1);
-    CHECK(rows[1].kind == panel::MenuRow::Kind::Choice && rows[1].segments == 4 && rows[1].chosen == 2);
+    CHECK(rows[1].kind == panel::MenuRow::Kind::Choice && rows[1].segments == 5 && rows[1].chosen == 3);
     CHECK(rows[2].kind == panel::MenuRow::Kind::Choice && rows[2].segments == 5 && rows[2].chosen == 1);
     CHECK(rows[3].kind == panel::MenuRow::Kind::Check && rows[3].on);
     CHECK(rows[4].kind == panel::MenuRow::Kind::Check && !rows[4].on);
@@ -294,7 +294,7 @@ TEST(window_panel_menu_rows_follow_the_settings) {
 TEST(window_panel_menu_pick_changes_the_setting) {
     Config c;
     panel::MenuChange ch;
-    CHECK(panel::menuPick(c, panel::MenuHit{1, 3}, ch));
+    CHECK(panel::menuPick(c, panel::MenuHit{1, 4}, ch));  // 3.0.21-beta.15: 50 75 100 125 150
     CHECK_EQ(c.panelSize, 150);
     CHECK(ch.section == "panel" && ch.key == "size" && ch.value == "150" && !ch.hide);
     CHECK(panel::menuPick(c, panel::MenuHit{0, 1}, ch));
@@ -325,7 +325,7 @@ TEST(window_panel_menu_says_its_rows) {
     if (t.size() != 7) return;
     CHECK(t[0].label == "Вигляд" && t[0].segments.size() == 3 && t[0].segments[1] == "Стовпчиком");
     if (t[0].segments.size() == 3) CHECK(t[0].segments[2] == "Іконки");
-    CHECK(t[1].label == "Розмір" && t[1].segments.size() == 4 && t[1].segments[0] == "75 %");
+    CHECK(t[1].label == "Розмір" && t[1].segments.size() == 5 && t[1].segments[0] == "50 %");
     CHECK(t[2].label == "Непрозорість" && t[2].segments.size() == 5 && t[2].segments[4] == "100 %");
     CHECK(t[3].label == "Музика в інших вікнах гри" && t[3].segments.empty());
     CHECK(t[4].label == "Звуки в інших вікнах гри");
@@ -626,4 +626,61 @@ TEST(window_panel_words_width_asks_the_drawing_engine_when_one_is_set) {
     CHECK(panel::wordsWidth("", 12.5f, true) == 0.0f);
     panel::setMeasure(nullptr);
     CHECK(panel::wordsWidth("123 / 456", 12.5f, true) == table);
+}
+
+// 3.0.21-beta.15 (the owner: «а це вікно можливо зробити щоб теж можно було зменшити - досить велике»): the panel
+// sized as the other windows are - its bottom right corner pulled, 50-150 % ([panel] size), the gold corner pointed
+TEST(window_panel_has_a_corner_to_pull) {
+    for (const panel::Layout l : {panel::Layout::Row, panel::Layout::Column, panel::Layout::Icons}) {
+        const panel::Geometry g = panel::geometry(2, l, 2.0f, 3840);
+        CHECK(g.corner.w > 0 && g.corner.h > 0);
+        CHECK(std::abs(g.corner.x + g.corner.w - float(g.width)) < 0.5f);
+        CHECK(std::abs(g.corner.y + g.corner.h - float(g.height)) < 0.5f);
+        CHECK(panel::hitTest(g, float(g.width) - 2, float(g.height) - 2).part == panel::Part::Corner);
+    }
+    const panel::Geometry g = panel::geometry(2, panel::Layout::Column, 1.0f, 1920);
+    CHECK(panel::hitTest(g, g.close.x + g.close.w / 2, g.close.y + g.close.h / 2).part == panel::Part::Close);
+    CHECK(panel::hitTest(g, 40, 10).part == panel::Part::Top);
+    const panel::Box& last = g.cards.back().plate;
+    CHECK(panel::hitTest(g, last.x + last.w / 2, last.y + last.h / 2).part == panel::Part::Card);
+}
+
+TEST(window_panel_corner_pulled_gives_its_size) {
+    CHECK_EQ(panel::pulledSize(100, 400, 200, 300, 150), 75);  // a quarter smaller
+    CHECK_EQ(panel::pulledSize(100, 400, 200, 360, 180), 90);
+    CHECK_EQ(panel::pulledSize(100, 400, 200, 100, 50), 50);     // no smaller than half
+    CHECK_EQ(panel::pulledSize(100, 400, 200, 1000, 600), 150);  // no larger than 150 %
+    CHECK_EQ(panel::pulledSize(75, 300, 150, 360, 180), 90);     // from 75 %: 1.2 times
+    CHECK_EQ(panel::pulledSize(100, 400, 200, 412, 203), 100);   // in steps of 5 %
+    CHECK_EQ(panel::pulledSize(100, 0, 0, 10, 10), 100);         // no box yet: as it was
+}
+
+TEST(window_panel_paints_its_corner_while_pointed) {
+    for (const panel::Layout l : {panel::Layout::Column, panel::Layout::Icons}) {
+        const panel::Geometry g = panel::geometry(2, l, 2.0f, 3840);
+        const std::vector<panel::Card> cards(2);
+        panel::Picture plain, pointed;
+        panel::paint(plain, g, cards, panel::Part::None, l);
+        panel::paint(pointed, g, cards, panel::Part::Corner, l);
+        int gold = 0, outside = 0;
+        for (int y = 0; y < g.height; ++y)
+            for (int x = 0; x < g.width; ++x) {
+                const uint32_t a = at(plain, float(x), float(y)), b = at(pointed, float(x), float(y));
+                if (a == b) continue;
+                if (!g.corner.contains(float(x), float(y)))
+                    ++outside;
+                else
+                    gold += redOf(b) > 180 && greenOf(b) > 150 && blueOf(b) < 170;
+            }
+        CHECK(gold > 10);      // the gold corner, as the other windows' (.wgr)
+        CHECK_EQ(outside, 0);  // nothing else changes
+    }
+}
+
+TEST(window_panel_menu_offers_half_its_size) {
+    const std::vector<panel::MenuText> t = panel::menuTexts(settings::Lang::Uk);
+    CHECK(t.size() > 1);
+    if (t.size() > 1) CHECK(!t[1].segments.empty() && t[1].segments.front() == "50 %");
+    CHECK_EQ(panel::kLeastSize, 50);
+    CHECK_EQ(panel::kMostSize, 150);
 }

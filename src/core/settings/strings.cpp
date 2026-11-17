@@ -4964,10 +4964,12 @@ constexpr Entry kTexts[] = {
     {Text::WindowsPanelColumn, "In a column", "Стовпчиком", "Столбиком"},
     {Text::WindowsPanelSize, "The panel's size", "Розмір панелі", "Размер панели"},
     {Text::WindowsPanelSizeHint,
-     "The panel grows with the game's interface («Interface size»); this makes it larger or smaller still.",
-     "Панель росте разом з інтерфейсом гри («Розмір інтерфейсу»); тут її можна зробити ще більшою або меншою.",
+     "The panel grows with the game's interface («Interface size»); this makes it larger or smaller still. In the "
+     "game: pull its bottom right corner.",
+     "Панель росте разом з інтерфейсом гри («Розмір інтерфейсу»); тут її можна зробити ще більшою або меншою. У грі "
+     "— потягніть за її правий нижній кут.",
      "Панель растёт вместе с интерфейсом игры («Размер интерфейса»); здесь её можно сделать ещё крупнее или "
-     "мельче."},
+     "мельче. В игре — потяните за её правый нижний угол."},
     {Text::PanelTitle, "Windows", "Вікна", "Окна"},
     {Text::PanelWindow, "window {1}", "вікно {1}", "окно {1}"},
     {Text::PanelHeading, "The windows' panel", "Панель вікон", "Панель окон"},

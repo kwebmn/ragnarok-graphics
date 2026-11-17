@@ -754,7 +754,8 @@ TEST(config_reads_the_windows_panel) {
     CHECK_EQ(c.panelOpacity, 60);
     CHECK_EQ(c.panelPlace, std::string("1.000 0.500"));
     CHECK_EQ(parseConfig("[panel]\nsize = 400\n").panelSize, 150);
-    CHECK_EQ(parseConfig("[panel]\nsize = 10\n").panelSize, 75);
+    CHECK_EQ(parseConfig("[panel]\nsize = 10\n").panelSize, 50);  // 3.0.21-beta.15: down to half (its corner)
+    CHECK_EQ(parseConfig("[panel]\nsize = 55\n").panelSize, 55);
     CHECK_EQ(parseConfig("[panel]\nopacity = 5\n").panelOpacity, 40);
     for (const char* key : {"panel.show", "panel.layout", "panel.size", "panel.opacity"}) {
         const settings::IniSetting* s = settings::findSetting(key);

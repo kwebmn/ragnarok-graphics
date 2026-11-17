@@ -77,6 +77,11 @@ private:
     bool dragging_ = false;
     float dragFromX_ = 0, dragFromY_ = 0;
     int dragStartX_ = 0, dragStartY_ = 0;
+    // 3.0.21-beta.15: its corner pulled - [panel] size from sizeFrom_ as the box grows from (sizeW0_, sizeH0_), its
+    // top left kept; written to the file when let go
+    bool sizing_ = false;
+    int sizeFrom_ = 100;
+    float sizeW0_ = 0, sizeH0_ = 0, sizeFromX_ = 0, sizeFromY_ = 0;
     uint32_t texture_ = 0;
     int texW_ = 0, texH_ = 0;
     bool underCursor_ = false;  // 3.0.3-beta.9: drawn under the game's own cursor (found in the frame)

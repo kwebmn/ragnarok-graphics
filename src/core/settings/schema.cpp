@@ -486,7 +486,7 @@ const std::vector<IniSetting>& iniSettings() {
         {"panel", "layout", Page::Game, Control::Choice, 0, 0, 0, {"row", "column", "icons"},  // 3.0.3-beta.11: icons
          {Text::WindowsPanelRow, Text::WindowsPanelColumn, Text::WindowsPanelIcons}, Text::WindowsPanelLayout,
          Text::WindowsPanelLayoutHint, ""},
-        {"panel", "size", Page::Game, Control::Slider, 75, 150, 25, {}, {}, Text::WindowsPanelSize,
+        {"panel", "size", Page::Game, Control::Slider, 50, 150, 5, {}, {}, Text::WindowsPanelSize,  // 3.0.21-beta.15
          Text::WindowsPanelSizeHint, " %"},
         {"panel", "opacity", Page::Game, Control::Slider, 40, 100, 10, {}, {}, Text::PanelOpacity,
          Text::PanelOpacityHint, " %"},

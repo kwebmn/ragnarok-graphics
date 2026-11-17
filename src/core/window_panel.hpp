@@ -33,17 +33,24 @@ struct Geometry {
     float scale = 1, radius = 0;
     Box top, grip, title, close;  // dragged by its top row; the close «x» hides it
     Box layout;  // the button that lays the cards the other way (the user: «по горизонтали так и по вертикали»)
+    // 3.0.21-beta.15 (the owner: «а це вікно можливо зробити щоб теж можно було зменшити - досить велике»): its bottom
+    // right corner - pulled, it sizes the panel as the other windows are sized ([panel] size, pulledSize)
+    Box corner;
     std::vector<CardBoxes> cards;
     bool narrow = false;  // a row wider than half the window: the number, the start of the name and the bars
 };
 Geometry geometry(int count, Layout layout, float scale, int roomWidth);
 
-enum class Part : uint8_t { None, Top, Close, Layout, Card };
+enum class Part : uint8_t { None, Top, Close, Layout, Card, Corner };
 struct Hit {
     Part part = Part::None;
     int card = -1;
 };
 Hit hitTest(const Geometry& g, float x, float y);
+// 3.0.21-beta.15: [panel] size after its corner went from (w0, h0) to (w, h) - the box's width and height shares
+// together (as core/window_sizes' pulled) from `from` %, in steps of 5 %, kLeastSize-kMostSize
+constexpr int kLeastSize = 50, kMostSize = 150;
+int pulledSize(int from, float w0, float h0, float w, float h);
 
 // Where it stands: fractions of the room left beside it (0 the left or top edge, 1 the right or bottom), so it keeps
 // to its edge in a window of any size; 8 (x the scale) from the window's edges. The first place: left, under the
@@ -99,8 +106,8 @@ struct Picture {
 };
 // 3.0.18-beta.12: uaUI's - while on, blank() gives each picture its own scene to record into (the game's thread)
 void setRecording(bool on);
-// `hovered`: the top row's button under the cursor (Close, Layout); `layout`: the cards' now - the button shows the
-// other one
+// `hovered`: the top row's button under the cursor (Close, Layout), or its corner (Corner: the gold corner of the
+// other windows' size grip, while pointed or pulled); `layout`: the cards' now - the button shows the other one
 void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part hovered, Layout layout);
 // 3.0.3-beta.11: the tip with the name of the icon under the mouse - its top left for a tip w x h (the target's pixels)
 // above the tile (`tile` where it is in the target), centred on it; no room above: under it; inside the room
@@ -165,7 +172,7 @@ void paintMenu(Picture& out, const MenuGeometry& g, const std::vector<MenuRow>& 
 // Its rows, in this order: the cards' layout (a row, a column), [panel] size (kMenuSizes) and opacity
 // (kMenuOpacities); the other game windows' music, sounds and light ([windows] others_*); hide the panel. A size or
 // an opacity the menu does not offer (set in the settings): none of its own chosen
-constexpr int kMenuSizes[] = {75, 100, 125, 150};
+constexpr int kMenuSizes[] = {50, 75, 100, 125, 150};  // 3.0.21-beta.15: down to half
 constexpr int kMenuOpacities[] = {60, 70, 80, 90, 100};
 std::vector<MenuRow> menuRows(const Config& c);
 struct MenuText {

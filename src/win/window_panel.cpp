@@ -74,8 +74,8 @@ void WindowPanel::frame(HWND game, bool main, Config& config, double k, int targ
                       targetWidth > 0 && targetHeight > 0;
     if (!want) {
         if (shown_) {
-            if (dragging_ && GetCapture() == game) ReleaseCapture();
-            dragging_ = false;
+            if ((dragging_ || sizing_) && GetCapture() == game) ReleaseCapture();
+            dragging_ = sizing_ = false;
             uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Panel, nullptr, nullptr, false);
         }
         shown_ = false;
@@ -107,7 +107,10 @@ void WindowPanel::frame(HWND game, bool main, Config& config, double k, int targ
         render();
         move = move || geometry_.width != w || geometry_.height != h;  // a card more or less: kept at its edge
     }
-    if (move && !dragging_) {
+    if (sizing_) {  // 3.0.21-beta.15: its corner pulled - it grows from its top left, inside the picture
+        x_ = std::clamp(x_, 0, std::max(0, targetW_ - geometry_.width));
+        y_ = std::clamp(y_, 0, std::max(0, targetH_ - geometry_.height));
+    } else if (move && !dragging_) {
         const panel::Point p =
             panel::position(place_, geometry_.width, geometry_.height, targetW_, targetH_, geometry_.scale);
         x_ = p.x;
@@ -255,7 +258,7 @@ void WindowPanel::block(HWND game) {
     if (!GetClientRect(game, &client) || targetW_ <= 0 || targetH_ <= 0) return;
     const RECT r = clientBox(client, targetW_, targetH_, x_, y_, geometry_.width, geometry_.height);
     // its menu open: every click is its or closes it
-    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Panel, game, &r, dragging_ || menuOpen_);
+    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Panel, game, &r, dragging_ || sizing_ || menuOpen_);
 }
 
 bool WindowPanel::mouse(HWND game, UINT m, LPARAM lp, LRESULT& result) {
@@ -275,11 +278,12 @@ bool WindowPanel::mouse(HWND game, UINT m, LPARAM lp, LRESULT& result) {
         const bool over = tx >= float(x_) && ty >= float(y_) && tx < float(x_ + geometry_.width) &&
                           ty < float(y_ + geometry_.height);
         const bool menu = onMenu();
-        if (!over && !menu && !dragging_) return false;
-        SetCursor(LoadCursor(nullptr, menu                                     ? IDC_ARROW
-                                      : dragging_ || h.part == panel::Part::Top ? IDC_SIZEALL
-                                      : h.part == panel::Part::None             ? IDC_ARROW
-                                                                                : IDC_HAND));
+        if (!over && !menu && !dragging_ && !sizing_) return false;
+        SetCursor(LoadCursor(nullptr, menu                                         ? IDC_ARROW
+                                      : sizing_ || h.part == panel::Part::Corner    ? IDC_SIZENWSE
+                                      : dragging_ || h.part == panel::Part::Top     ? IDC_SIZEALL
+                                      : h.part == panel::Part::None                 ? IDC_ARROW
+                                                                                    : IDC_HAND));
         result = TRUE;
         return true;
     }
@@ -329,6 +333,14 @@ bool WindowPanel::mouse(HWND game, UINT m, LPARAM lp, LRESULT& result) {
         return true;
     }
     if (m == WM_MOUSEMOVE) {
+        if (sizing_) {  // 3.0.21-beta.15: the words kept legible - its scale not under the frame's 0.75
+            const int least = int(std::ceil(0.75f / std::max(k_, 0.01f) * 20.0f)) * 5;
+            const int size = std::max(least, panel::pulledSize(sizeFrom_, sizeW0_, sizeH0_, sizeW0_ + tx - sizeFromX_,
+                                                               sizeH0_ + ty - sizeFromY_));
+            if (config_ && size != config_->panelSize) config_->panelSize = size;
+            block(game);
+            return true;
+        }
         if (dragging_) {
             x_ = std::clamp(dragStartX_ + int(std::lround(tx - dragFromX_)), 0,
                             std::max(0, targetW_ - geometry_.width));
@@ -339,8 +351,10 @@ bool WindowPanel::mouse(HWND game, UINT m, LPARAM lp, LRESULT& result) {
         }
         const panel::Hit h = over ? hitAt(tx, ty) : panel::Hit{};
         const int hover = h.part == panel::Part::Card ? h.card : -1;
-        const panel::Part part =
-            h.part == panel::Part::Close || h.part == panel::Part::Layout ? h.part : panel::Part::None;
+        const panel::Part part = h.part == panel::Part::Close || h.part == panel::Part::Layout ||
+                                         h.part == panel::Part::Corner
+                                     ? h.part
+                                     : panel::Part::None;
         if (hover != hover_ || part != hoverPart_) {
             hover_ = hover;
             hoverPart_ = part;
@@ -351,7 +365,16 @@ bool WindowPanel::mouse(HWND game, UINT m, LPARAM lp, LRESULT& result) {
     if (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) {
         if (!over) return false;
         const panel::Hit h = hitAt(tx, ty);
-        if (h.part == panel::Part::Top) {
+        if (h.part == panel::Part::Corner && config_) {  // 3.0.21-beta.15: sized as the other windows
+            sizing_ = true;
+            sizeFrom_ = config_->panelSize;
+            sizeW0_ = float(geometry_.width);
+            sizeH0_ = float(geometry_.height);
+            sizeFromX_ = tx;
+            sizeFromY_ = ty;
+            SetCapture(game);
+            block(game);
+        } else if (h.part == panel::Part::Top) {
             dragging_ = true;
             dragFromX_ = tx;
             dragFromY_ = ty;
@@ -364,6 +387,16 @@ bool WindowPanel::mouse(HWND game, UINT m, LPARAM lp, LRESULT& result) {
         return true;
     }
     if (m == WM_LBUTTONUP) {
+        if (sizing_) {
+            sizing_ = false;
+            if (GetCapture() == game) ReleaseCapture();
+            keepPlace();
+            if (config_ && editIniFile(ourFile(layout::File::Ini),
+                                       {{"panel", "size", std::to_string(config_->panelSize)}}))
+                LOG_INFO("windows: the panel sized by its corner - [panel] size = %d", config_->panelSize);
+            block(game);
+            return true;
+        }
         if (dragging_) {
             dragging_ = false;
             if (GetCapture() == game) ReleaseCapture();

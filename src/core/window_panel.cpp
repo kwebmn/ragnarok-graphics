@@ -22,6 +22,13 @@ constexpr float kIcon = 30, kIconGap = 4, kIconEdge = 4, kIconGrip = 12;  // 3.0
 constexpr uint32_t kGround = 0x111319, kGreen = 0x4ADE80, kBlue = 0x60A5FA, kRed = 0xF87171, kWhite = 0xFFFFFF;
 constexpr uint32_t kCurrent = 0x3B82F6, kCurrentEdge = 0x60A5FA;
 constexpr uint32_t kOrange = 0xFB923C;  // 3.0.4-beta.4: a card's character hit
+constexpr float kCorner = 14;         // 3.0.21-beta.15: the corner pulled to size it
+constexpr uint32_t kGold = 0xE6CB8A;  // the other windows' size grip (.wgr)
+
+void cornerBox(Geometry& g) {
+    const float c = kCorner * g.scale;
+    g.corner = Box{float(g.width) - c, float(g.height) - c, c, c};
+}
 
 // Signed distance to a rounded box (negative inside)
 float roundBox(float px, float py, const Box& b, float r) {
@@ -200,6 +207,14 @@ void bar(Picture& p, const Box& b, int percent, bool hp) {
     roundRect(p, fill, b.h / 2, barColour(percent, hp), 1.0f);
 }
 
+// 3.0.21-beta.15: the size grip - a gold corner inside the panel's rounded one, as the other windows' .wgr
+void cornerGrip(Picture& p, const Geometry& g) {
+    const float s = g.scale, t = 2.5f * s, len = 10 * s, inset = 3 * s;
+    const float x1 = float(g.width) - inset, y1 = float(g.height) - inset;
+    roundRect(p, Box{x1 - t, y1 - len, t, len}, t / 2, kGold, 1.0f);
+    roundRect(p, Box{x1 - len, y1 - t, len, t}, t / 2, kGold, 1.0f);
+}
+
 }  // namespace
 
 Geometry geometry(int count, Layout layout, float s, int roomWidth) {
@@ -227,6 +242,7 @@ Geometry geometry(int count, Layout layout, float s, int roomWidth) {
             c.sp = Box{(x + 5) * s, (y + 25) * s, (kIcon - 10) * s, 3 * s};
             g.cards.push_back(c);
         }
+        cornerBox(g);
         return g;
     }
     const bool row = layout == Layout::Row;
@@ -265,6 +281,7 @@ Geometry geometry(int count, Layout layout, float s, int roomWidth) {
         c.sp = Box{(x + 10) * s, (y + bars + 8) * s, (cw - 20) * s, kBar * s};
         g.cards.push_back(c);
     }
+    cornerBox(g);
     return g;
 }
 
@@ -275,6 +292,8 @@ Hit hitTest(const Geometry& g, float x, float y) {
         h.part = Part::Close;
     } else if (g.layout.contains(x, y)) {
         h.part = Part::Layout;
+    } else if (g.corner.contains(x, y)) {  // 3.0.21-beta.15: over a card's corner too, as the other windows' grip
+        h.part = Part::Corner;
     } else if (g.top.contains(x, y)) {
         h.part = Part::Top;
     } else {
@@ -285,6 +304,12 @@ Hit hitTest(const Geometry& g, float x, float y) {
             }
     }
     return h;
+}
+
+int pulledSize(int from, float w0, float h0, float w, float h) {
+    float size = float(from);
+    if (w0 > 0 && h0 > 0) size *= (w / w0 + h / h0) / 2;
+    return std::clamp(int(std::lround(size / 5)) * 5, kLeastSize, kMostSize);
 }
 
 Place parsePlace(const std::string& text) {
@@ -607,6 +632,7 @@ void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part
             bar(out, b.hp, c.hp, true);
             bar(out, b.sp, c.sp, false);
         }
+        if (hovered == Part::Corner) cornerGrip(out, g);
         return;
     }
     for (float gx : {10.0f, 15.0f})  // the grip: dragged by the top row
@@ -636,6 +662,7 @@ void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part
         bar(out, b.hp, c.hp, true);
         bar(out, b.sp, c.sp, false);
     }
+    if (hovered == Part::Corner) cornerGrip(out, g);
 }
 
 namespace {
