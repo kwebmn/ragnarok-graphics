@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.21-beta.8 — what's new · 2026-11-17
+
+The open «Settings» window (Alt+O) no longer slows the game (R-SPPSF3).
+
+- **The window takes no frames.** With the window open the game lost a third to three quarters of its frames: in the report, 136–141 frames a second on the first page and 49–50 on a long entry against over 200 without the window. The window held every row it had ever shown, each with twelve spare choice buttons; now it holds only the rows of the open entry.
+- Rows scrolled past the window's edge are no longer worked out anew every frame.
+- **The log says what the window costs.** When «Settings» closes, the log gets a line: frames a second, the card's work a frame and the driver's own work - with the window and in the 5 seconds before it.
+
 # uaRO Graphics 3.0.21-beta.7 — what's new · 2026-11-17
 
 The last step to settings in order: the console (Ctrl+~) is the laboratory alone.
