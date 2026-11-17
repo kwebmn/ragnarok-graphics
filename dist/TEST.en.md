@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.21-beta.10 — what's new · 2026-11-17
+
+In the «Settings» window (Alt+O): a way back to the defaults, and hints of why a change does not show.
+
+- **«Defaults» by a group's name.** When something in a group is off its default, «Defaults» appears at the right of the group's name: one click brings the whole group back. No more looking for the values.
+- **A new entry, «Changed».** The last in the list on the left, with a count: every setting that differs from its default, by groups - each can be brought back with its own «Defaults».
+- **A row says why a change does not show:** «Nothing of it shows on this map» (the weather indoors, the seasons in the desert, grass in a cave), «Works on Direct3D 11 only» («World resolution»), «To work it needs on: …» (smooth edges of leaves - MSAA, the windows' buttons and frames - «Crisp text», frames on battery - the battery saver), «A change shows from the next map» (the softer level 99 aura, full-colour textures).
+- **The «3D view» entry in the usual view** warns at its top: these settings work in the 3D view (Ctrl+Shift+V); a change will not show now.
+
 # uaRO Graphics 3.0.21-beta.9 — what's new · 2026-11-17
 
 The «Settings» window (Alt+O) changed sliders by itself (R-MSAM96).
