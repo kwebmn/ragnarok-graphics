@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.21-beta.16 — what's new · 2026-11-17
+
+The trials decided before 3.0.21.
+
+- **«Walk without waiting for the server»** is now an ordinary setting, not a trial: Alt+O → «Game and network» → «Connection», under «More». Off, as before.
+- **Removed:** «Light where you can walk», «Window with Windows scaling» and «Direct3D 11 on a thread of its own». If you had them on, the game works as with them off.
+- Left as trials in the console: the tree crowns, «Shadows of houses and trees» (3D view) and «RTX Remix».
+
 # uaRO Graphics 3.0.21-beta.15 — what's new · 2026-11-17
 
 The «Windows» panel can now be made smaller, as the other windows can.
