@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.21-beta.13 — what's new · 2026-11-17
+
+Key hints: where the keys or the mouse do something else, a line at the bottom says what to press.
+
+- **The 3D view.** On entering: «Alt - the cursor for the windows · Wheel - nearer / farther · Shift - the camera round the character · Tab - the monster by the crosshair · Ctrl+Shift+V - first-person view». In the first-person view there is no wheel and no Shift, and Ctrl+Shift+V is «the usual view».
+- **A window open in the 3D view.** «Alt - hold it to press in the window». The line stays while the window is open. Once you hold Alt, this hint no longer shows.
+- **The free camera (Ctrl+Shift+C).** «W A S D - fly · Space - up · C - down · Shift - faster · Ctrl+Shift+C - back to the character».
+- **A skill waiting for its target in the 3D view.** «Click - the skill on the monster under the crosshair»; for heals and buffs - «on the one under the crosshair, else on yourself».
+- **The storage and the cart.** «Ctrl+click - pick · Shift+click - a run · Ctrl+A - all».
+- Each hint shows up to five times, and one you have already used no longer shows. To turn them off: Alt+O → «Controls» → «Keys» → «Key hints». Off and on again - they all show again.
+
 # uaRO Graphics 3.0.21-beta.12 — what's new · 2026-11-17
 
 The 3D view's buttons on the screen, and damage numbers in the 3D view.
