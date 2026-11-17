@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.21-beta.2 — what's new · 2026-11-17
+
+The second step to tidy settings: the console (Ctrl+~) has a "laboratory" now — the trials and the diagnostics have tabs of their own and no longer sit among the tiles of "Quick".
+
+- **The "Trials" tab.** Everything still being tried, by area: "Trials: 3D view" ("Shadows of houses and trees (trial)", "Fuller tree crowns", "Crowns with a body", "Light and shade in the crowns"), "Trials: Interface", "Trials: Speed and screen", "Trials: Game and network".
+- **A trial says what it needs.** A line under each: the version it came with, the settings it needs and whether they are on now (■ yes, □ no), whether it works only after the game restarts. When something is missing the line turns yellowish.
+- **The "Diagnostics" tab.** "Graphics test", "Write the models around into the log", "Detailed log", "Measure where the game spends its time", "X-ray of the AI pictures", "Ground seams view".
+- **"Quick" is shorter:** the trials left its tiles for "Trials", "Graphics test" moved to "Diagnostics". The trials and the diagnostics are no longer repeated on the "Interface" and "All" tabs; typing letters still finds them.
+
 # uaRO Graphics 3.0.21-beta.1 — what's new · 2026-11-17
 
 The first step to tidy settings: all 573 rows are now described in one catalogue, and the settings app, the console and the "Settings" window (Alt+O) read "Interface" from it instead of a list of their own each.
