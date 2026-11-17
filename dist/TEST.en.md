@@ -1,3 +1,37 @@
+# uaRO Graphics 3.0.21 — what's new · 2026-11-17
+
+The settings in order: everything that applies at once is in the «Settings» window (Alt+O), the console is the laboratory, and the settings app holds what is set before the game starts. Also the 3D view's buttons and key hints, the exchange with the server beside the ping, and fixes.
+
+## Settings
+
+- **The «Settings» window (Alt+O) is the main place.** Eight sections on the left: «How the game looks», «Picture», «3D view», «Interface», «Controls», «Sound and notifications», «Speed and screen», «Game and network». Everything that applies at once is here: the effects, the 3D view, notifications, the camera, quality and frames, several game windows. The window is there whatever look of the interface is chosen, and Alt+D opens it too.
+- **Everything shows at once:** each group's main rows first, the rest under them, under the heading «More».
+- **«Defaults»** by a group's name brings the whole group back in one click, and the entry **«Changed»** gathers everything that differs from its default.
+- **A row says why a change does not show:** «Works on Direct3D 12 only», «Works in the 3D view only», «To work it needs on: …», «A change shows from the next map», «Nothing of it shows on this map».
+- **The search** looks in every section and labels what it finds: «Interface · Minimap».
+- **The names say what you see:** 23 rows renamed - for example, «Models by our renderer» is now «Houses and trees drawn by uaRO Graphics». The search finds the old name too.
+- **The settings app** holds only what is set before the game starts: eight pages instead of eleven. Its search finds everything and says where a row is in the game.
+- **The console (Ctrl+~) is the laboratory:** the tabs «Trials», «Diagnostics», «Effects' cost». Each trial says the version it came with and what it needs.
+- The open «Settings» window no longer takes the game's frames.
+- The settings' values have not changed: nothing needs turning on again.
+- **Trials:** «Walk without waiting for the server» is an ordinary setting now (Alt+O → «Game and network» → «Connection»). Removed: «Light where you can walk», «Window with Windows scaling» and «Direct3D 11 on a thread of its own».
+
+## The 3D view and controls
+
+- **Two buttons on the character block:** the view from behind and the first-person view; another click brings the usual view back. To remove them: Alt+O → «Interface» → «Panels on the screen» → «3D view buttons».
+- **Damage numbers, Miss, Critical and the target's cursor** show at any camera distance.
+- **Key hints:** where the keys or the mouse do something else, a line at the bottom says what to press - in the 3D view, with a window open (hold Alt), in the free camera, when a skill waits for its target, and in the storage and the cart. Each shows up to five times. To turn them off: Alt+O → «Controls» → «Keys» → «Key hints».
+
+## Interface and network
+
+- **The exchange with the server** under the ping on the minimap: «↓2.1 ↑0.3 KB/s».
+- **The «Windows» panel** is sized by pulling its bottom right corner, from 50 to 150 %.
+- **The login card warns of a login in use:** «Plays in game window N: a login here disconnects it there». A disconnect by your own second window is not sent as a lost connection.
+
+## Fixes
+
+- The game could close after a card of the «Reference» opened: the windows' pictures now come from their own copies. If the game still closes on an error in our code, the log says what it was.
+
 # uaRO Graphics 3.0.21-beta.17 — what's new · 2026-11-17
 
 The exchange with the server beside the ping.
