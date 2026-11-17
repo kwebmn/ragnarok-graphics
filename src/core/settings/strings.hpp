@@ -1028,6 +1028,8 @@ enum class Text : uint16_t {
     // catalogue's areas and the groups with no name before (core/settings/catalogue)
     CatControls, CatSound, CatSpeed, CatGame, CatView3dCamera, CatView3dRooms, CatView3dSky, CatOwnWorld,
     CatClientFiles, CatAiWork,
+    // 3.0.21-beta.2 (step 2): the console's laboratory - «Проби» and what a row says about itself
+    ConsoleTabTrials, LabTrialsOf, LabNoTrials, LabSince, LabNeeds, LabAfterRestart, LabNextMap,
     Count
 };
 

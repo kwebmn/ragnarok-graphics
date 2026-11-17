@@ -4,28 +4,20 @@
 #include <cstdint>
 #include <cstring>
 
+#include "core/settings/catalogue.hpp"
 #include "core/settings/navigation.hpp"
 #include "core/settings/schema.hpp"
 
 namespace uagfx::consoletiles {
 
+// 3.0.21-beta.2 (the concept «Настройки uaRO Graphics», variant 4, step 2): no list of its own - the catalogue's rows
+// marked «switched most» (core/settings/catalogue), in its order; the trials went to the console's «Проби»
 const std::vector<const char*>& quickKeys() {
-    static const std::vector<const char*> keys{"effects.group_time", "effects.group_weather", "effects.grass",
-                                               "effects.torch_shadows", "effects.mage_effects", "frames.keep_fps",
-                                               "frames.fps_counter", "interface.net_badge", "interface.mob_hp",
-                                               "interface.far_bars",     // 3.0.20-beta.84: to compare at far zoom
-                                               "view3d.own_models",
-                                               "view3d.shadows",        // 3.0.20-beta.50: while the trial is tried
-                                               "view3d.dense_crowns",   // 3.0.20-beta.51
-                                               "view3d.vault_rock",     // 3.0.20-beta.54: to tell in a dungeon
-                                               "view3d.close_gaps",     // 3.0.20-beta.56
-                                               "view3d.one_room",       // 3.0.20-beta.57
-                                               "view3d.camera_walls",   // 3.0.20-beta.70: to compare in a town
-                                               "view3d.near_fade",
-                                               "view3d.room_walls",     // 3.0.20-beta.71: to tell in a house
-                                               "view3d.ranges",         // 3.0.20-beta.72
-                                               "view3d.crown_volume",   // 3.0.20-beta.73: the trial of the crowns
-                                               "view3d.crown_light"};   // 3.0.20-beta.79: the crowns' own light
+    static const std::vector<const char*> keys = [] {
+        std::vector<const char*> out;
+        for (const settings::catalogue::Row* r : settings::catalogue::often()) out.push_back(r->key.c_str());
+        return out;
+    }();
     return keys;
 }
 

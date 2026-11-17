@@ -9198,6 +9198,13 @@ constexpr Entry kTexts[] = {
     {Text::CatOwnWorld, "The world by our renderer", "Світ нашим рендером", "Мир нашим рендером"},
     {Text::CatClientFiles, "The client's files", "Файли клієнта", "Файлы клиента"},
     {Text::CatAiWork, "How the network works", "Робота нейромережі", "Работа нейросети"},
+    {Text::ConsoleTabTrials, "Trials", "Проби", "Пробы"},  // 3.0.21-beta.2: the console's laboratory
+    {Text::LabTrialsOf, "Trials: {1}", "Проби: {1}", "Пробы: {1}"},
+    {Text::LabNoTrials, "No trials now.", "Проб зараз немає.", "Проб сейчас нет."},
+    {Text::LabSince, "since {1}", "з {1}", "с {1}"},
+    {Text::LabNeeds, "needs: {1}", "потрібні: {1}", "нужны: {1}"},
+    {Text::LabAfterRestart, "after the game restarts", "після перезапуску гри", "после перезапуска игры"},
+    {Text::LabNextMap, "from the next map", "з наступної карти", "со следующей карты"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

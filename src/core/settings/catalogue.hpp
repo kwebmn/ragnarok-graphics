@@ -43,6 +43,7 @@ struct Row {
     std::vector<Need> needs;
     bool nextMap = false;                // a change shows from the next map
     bool atStart = false;                // read before the game starts though the driver takes it at once
+    bool often = false;                  // switched most: a tile of the console's «Швидко»
 };
 struct Group {
     Area area;
@@ -56,5 +57,33 @@ const Group* groupOf(const std::string& sectionKey);
 Home homeOf(const Row& r);
 // A need met by the settings as they are shown (an effects' set decides its switches), the renderer and the view
 bool met(const Need& n, const Config& shown, bool direct3d12, bool view3d);
+
+// 3.0.21-beta.2 (step 2: the console's laboratory): the trials by area, in the catalogue's order; the diagnostics
+// that apply at once (the rest wait for the game's start: the settings app's developer page); the rows switched most
+struct LabSection {
+    Area area;
+    std::vector<const Row*> rows;
+};
+std::vector<LabSection> trials();
+std::vector<const Row*> liveDiagnostics();
+std::vector<const Row*> often();
+
+// What a row says about itself under its name: the version a trial came with, what it needs - each with whether it
+// is met now -, when a change shows
+struct NeedWord {
+    std::string name;  // the needed row's name, «Direct3D 12», «3D-режим»
+    bool met = true;
+};
+struct About {
+    std::string since;
+    std::vector<NeedWord> needs;
+    bool afterRestart = false, nextMap = false;
+    bool empty() const { return since.empty() && needs.empty() && !afterRestart && !nextMap; }
+    bool allMet() const;
+};
+About about(const Row& r, const Config& shown, bool direct3d12, bool view3d, Lang l);
+// «з 3.0.20-beta.73 · потрібні: ■ Моделі нашим рендером, □ Direct3D 12 · після перезапуску гри»; `yes` and `no` -
+// the marks before a need that is met and one that is not
+std::string aboutText(const About& a, Lang l, const char* yes, const char* no);
 
 }  // namespace uagfx::settings::catalogue

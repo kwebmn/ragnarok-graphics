@@ -337,8 +337,16 @@ std::vector<Group> build() {
         "effects.own_ground",     "effects.world_reflections", "effects.seasons",      "effects.rain_wet",
         "effects.night_windows",  "effects.shared_wind",      "effects.lit_dust",      "effects.rain_splashes",
         "effects.dragonflies",    "ai.generate"};
+    // 3.0.21-beta.2: the tiles of the console's «Швидко» - the rows switched most and, until «Налаштування» (Alt+O)
+    // holds «3D-режим», the 3D view's switches the owner compares (the trials are the laboratory's)
+    static const char* const kOften[] = {
+        "effects.group_time",  "effects.group_weather", "effects.grass",        "effects.torch_shadows",
+        "frames.fps_counter",  "interface.net_badge",   "interface.mob_hp",     "interface.far_bars",
+        "view3d.own_models",   "view3d.vault_rock",     "view3d.close_gaps",    "view3d.one_room",
+        "view3d.camera_walls", "view3d.near_fade",      "view3d.room_walls",    "view3d.ranges"};
     for (Group& g : out)
         for (Row& r : g.rows) {
+            for (const char* k : kOften) r.often = r.often || r.key == k;
             for (const EffectNeed& n : kEffectNeeds)
                 if (r.key == n.key) r.needs.push_back(Need{NeedKind::Row, n.needs});
             for (const char* k : kDirect3D12)
@@ -406,6 +414,76 @@ bool met(const Need& n, const Config& shown, bool direct3d12, bool view3d) {
     const IniSetting* s = n.key ? findSetting(n.key) : nullptr;
     if (!s || s->tokens.empty()) return true;
     return tokenOf(*s, shown) != s->tokens[0];  // a check on, a list off its first word
+}
+
+std::vector<LabSection> trials() {
+    std::vector<LabSection> out;
+    for (const Group& g : groups())
+        for (const Row& r : g.rows) {
+            if (r.status != Status::Trial) continue;
+            if (out.empty() || out.back().area != g.area) out.push_back(LabSection{g.area, {}});
+            out.back().rows.push_back(&r);
+        }
+    return out;
+}
+
+std::vector<const Row*> liveDiagnostics() {
+    std::vector<const Row*> out;
+    for (const Group& g : groups())
+        for (const Row& r : g.rows)
+            if (r.status == Status::Diagnostic && appliesNow(r.key)) out.push_back(&r);
+    return out;
+}
+
+std::vector<const Row*> often() {
+    std::vector<const Row*> out;
+    for (const Group& g : groups())
+        for (const Row& r : g.rows)
+            if (r.often) out.push_back(&r);
+    return out;
+}
+
+bool About::allMet() const {
+    for (const NeedWord& n : needs)
+        if (!n.met) return false;
+    return true;
+}
+
+About about(const Row& r, const Config& shown, bool direct3d12, bool view3d, Lang l) {
+    About a;
+    a.since = r.since;
+    for (const Need& n : r.needs) {
+        NeedWord w;
+        w.met = met(n, shown, direct3d12, view3d);
+        if (n.kind == NeedKind::Direct3D12) {
+            w.name = "Direct3D 12";
+        } else if (n.kind == NeedKind::View3d) {
+            w.name = tr(l, Text::View3dHeading);
+        } else {
+            const IniSetting* s = n.key ? findSetting(n.key) : nullptr;
+            if (!s) continue;
+            w.name = tr(l, s->label);
+        }
+        a.needs.push_back(std::move(w));
+    }
+    a.afterRestart = !appliesNow(r.key);
+    a.nextMap = r.nextMap;
+    return a;
+}
+
+std::string aboutText(const About& a, Lang l, const char* yes, const char* no) {
+    std::vector<std::string> parts;
+    if (!a.since.empty()) parts.push_back(fmt(tr(l, Text::LabSince), {a.since}));
+    if (!a.needs.empty()) {
+        std::string list;
+        for (const NeedWord& n : a.needs) list += (list.empty() ? "" : ", ") + std::string(n.met ? yes : no) + n.name;
+        parts.push_back(fmt(tr(l, Text::LabNeeds), {list}));
+    }
+    if (a.afterRestart) parts.push_back(tr(l, Text::LabAfterRestart));
+    if (a.nextMap) parts.push_back(tr(l, Text::LabNextMap));
+    std::string out;
+    for (const std::string& p : parts) out += (out.empty() ? "" : " \xC2\xB7 ") + p;
+    return out;
 }
 
 }  // namespace uagfx::settings::catalogue

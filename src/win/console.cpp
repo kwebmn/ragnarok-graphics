@@ -16,6 +16,7 @@
 #include "core/effect_costs.hpp"
 #include "core/effect_groups.hpp"
 #include "core/effect_where.hpp"
+#include "core/settings/catalogue.hpp"
 #include "core/settings/effects_layout.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/choice_presets.hpp"
@@ -25,6 +26,7 @@
 #include "win/context.hpp"  // 3.0.4-beta.35: the card's level now (judged by its speed)
 #include "win/log.hpp"
 #include "win/setting_edit.hpp"
+#include "win/view3d.hpp"
 #include "win/paths.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/window_input.hpp"
@@ -77,6 +79,23 @@ void eraseLast(std::string& utf8) {
 const IniSetting* settingOf(const std::string& key) { return findSetting(key); }
 
 std::string groupKey(int g) { return std::string("effects.group_") + effect_groups::groupWord(g); }
+
+// 3.0.21-beta.2: a row the players' tabs list - a trial or a diagnostic is the laboratory's alone
+bool playersRow(const std::string& key) {
+    const catalogue::Row* r = catalogue::find(key);
+    return !r || r->status == catalogue::Status::Permanent;
+}
+
+// Direct3D 12 draws the game now (a need of many rows)
+bool direct3d12Now() {
+    const RendererChoice& c = startup().choice;
+    return c.renderer == Renderer::Uaro && c.api != Api::D3d11;
+}
+
+catalogue::About aboutNow(const std::string& key, const Config& shown, Lang lang) {
+    const catalogue::Row* r = catalogue::find(key);
+    return r ? catalogue::about(*r, shown, direct3d12Now(), view3dwin::active(), lang) : catalogue::About{};
+}
 
 // 2.2: the settings as the console shows them - each effect's switch as the set has it (the groups aside: they
 // stay over the switches, as on the Effects page); a set other than custom decides them, not the file's lines.
@@ -134,6 +153,14 @@ void Console::interfaceRow(const char* key, int depth) {
     if (s->control == Control::Check) rows_.push_back(Row{Kind::Box, key, depth});
     if (s->control == Control::Choice) rows_.push_back(Row{Kind::Choice, key, depth});
     if (s->control == Control::Slider) rows_.push_back(Row{Kind::Slider, key, depth});
+}
+
+// 3.0.21-beta.2: a row of the laboratory - its control, then what it says about itself (when it has anything to say)
+void Console::labRow(const std::string& key, const Config& config) {
+    const size_t before = rows_.size();
+    interfaceRow(key.c_str(), 0);
+    if (rows_.size() == before) return;
+    if (!aboutNow(key, shownConfig(config), lang_).empty()) rows_.push_back(Row{Kind::About, key, 0});
 }
 
 void Console::build(Lang lang, const Config& config) {
@@ -204,7 +231,7 @@ void Console::build(Lang lang, const Config& config) {
             // 3.0.17-beta.27: the switches as tiles, four a row; a list or a slider as its row
             std::vector<std::string> tiles;
             for (const char* k : consoletiles::quickKeys()) {  // 3.0.20-beta.6: «Моделі нашим рендером» among them
-                if (consolepins::pinned(pins_, k)) continue;
+                if (consolepins::pinned(pins_, k) || !playersRow(k)) continue;
                 const IniSetting* st = settingOf(k);
                 if (st && st->control == Control::Check) tiles.push_back(k);
                 else interfaceRow(k, 0);
@@ -218,8 +245,25 @@ void Console::build(Lang lang, const Config& config) {
             for (const std::string& k : pins_) interfaceRow(k.c_str(), 0);
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleActions), 0});
             rows_.push_back(Row{Kind::Layout, "", 0});
+        }
+        // 3.0.21-beta.2 (the concept «Настройки uaRO Graphics», variant 4, step 2): the laboratory. «Проби» - the
+        // catalogue's trials by area, each with the version it came with and what it needs; «Діагностика» -
+        // «Тест графіки», the models' dump and the diagnostics that apply at once
+        if (tab_ == kTabTrials) {
+            const std::vector<catalogue::LabSection> lab = catalogue::trials();
+            if (lab.empty()) rows_.push_back(Row{Kind::Heading, tr(lang, Text::LabNoTrials), 0});
+            for (const catalogue::LabSection& sec : lab) {
+                rows_.push_back(Row{Kind::Heading,
+                                    fmt(tr(lang, Text::LabTrialsOf), {tr(lang, catalogue::areaName(sec.area))}), 0});
+                for (const catalogue::Row* r : sec.rows) labRow(r->key, config);
+            }
+        }
+        if (tab_ == kTabDiag) {
+            rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleActions), 0});
             rows_.push_back(Row{Kind::Test, "", 0});
             rows_.push_back(Row{Kind::Dump, "", 0});  // 3.0.20-beta.22: «Записати моделі навколо»
+            rows_.push_back(Row{Kind::Heading, tr(lang, Text::PageDiagnostics), 0});
+            for (const catalogue::Row* r : catalogue::liveDiagnostics()) labRow(r->key, config);
         }
         if (tab_ == kTabNew) {  // 3.0.17-beta.12: the rows new since the console showed them last
             rows_.push_back(Row{Kind::Heading, fresh_.empty() ? tr(lang, Text::ConsoleNewNone)
@@ -227,15 +271,13 @@ void Console::build(Lang lang, const Config& config) {
             for (const std::string& k : fresh_) interfaceRow(k.c_str(), 0);
         }
         if (all) rows_.push_back(Row{Kind::Box, "frames.fps_counter", 0});  // the frame counter (Ctrl+Shift+F11)
-        // 3.0.5-beta.6: «Тест графіки» - not the first row, where the console opens: a Space there starts nothing
-        if (all) rows_.push_back(Row{Kind::Test, "", 0});
         // 3.0.20-beta.6 (the owner: «добавь в консоль эту настройку чтобы во время игры можно было переключать»): the
         // 3D view's rows as the app's «3D-режим» - each as its control asks
         if (all) {
             const std::vector<std::string> view3d = consoletiles::sectionRows("view3d");
             if (!view3d.empty()) rows_.push_back(Row{Kind::Heading, tr(lang, Text::View3dHeading), 0});
-            for (const std::string& k : view3d) interfaceRow(k.c_str(), 0);
-            rows_.push_back(Row{Kind::Dump, "", 0});  // 3.0.20-beta.22: «Записати моделі навколо»
+            for (const std::string& k : view3d)
+                if (playersRow(k)) interfaceRow(k.c_str(), 0);
         }
         // 3.0.11-beta.2: the new interface on and off in the game; 3.0.11-beta.302 (the review «Ревизия
         // конфигуратора», D): its rows in the app's sections (core/settings/navigation interfaceSections) - every row
@@ -249,7 +291,8 @@ void Console::build(Lang lang, const Config& config) {
                     rows_.push_back(Row{Kind::Open, kWindowsKey, 0});
                     if (!windowsOpen_) continue;
                 }
-                for (const char* k : sec.keys) interfaceRow(k, 0);
+                for (const char* k : sec.keys)
+                    if (playersRow(k)) interfaceRow(k, 0);
             }
             for (const char* k : padInterfaceKeys()) interfaceRow(k, 0);  // the controller's here too: in the game
         }
@@ -268,8 +311,6 @@ void Console::build(Lang lang, const Config& config) {
                               "ai.items", "ai.effects", "ai.icons"})
             if ((all || tab_ == kTabTextures) && settingOf(k))
                 rows_.push_back(Row{Kind::Box, k, std::string(k) == "ai.enabled" ? 0 : 1});
-        if (all && settingOf("debug.xray")) rows_.push_back(Row{Kind::Box, "debug.xray", 1});  // 2.3: Ctrl+Shift+F9
-        if (all && settingOf("debug.seams_view")) rows_.push_back(Row{Kind::Choice, "debug.seams_view", 1});  // 2.7.8
         const bool picture = all || tab_ == kTabPicture;
         if (picture) rows_.push_back(Row{Kind::Heading, tr(lang, Text::FxPreset), 0});
         if (picture) rows_.push_back(Row{Kind::Choice, "effects.preset", 0});
@@ -304,7 +345,7 @@ void Console::build(Lang lang, const Config& config) {
         }
     }
     at_ = std::clamp(at_, 0, std::max(0, int(rows_.size()) - 1));
-    while (at_ + 1 < int(rows_.size()) && rows_[size_t(at_)].kind == Kind::Heading) ++at_;
+    while (at_ + 1 < int(rows_.size()) && passive(rows_[size_t(at_)].kind)) ++at_;
 }
 
 // 3.0.17-beta.4: the pins next to uaro-graphics.ini, read once
@@ -344,7 +385,7 @@ bool Console::rowPinnable(const Row& r) const {
 std::string Console::chosenKey() const {
     if (rows_.empty() || at_ < 0 || at_ >= int(rows_.size())) return "";
     const Row& r = rows_[size_t(at_)];
-    if (r.kind != Kind::Tiles) return r.kind == Kind::Heading ? "" : r.key;
+    if (r.kind != Kind::Tiles) return passive(r.kind) ? "" : r.key;
     const std::vector<std::string> keys = consoletiles::split(r.key);
     return keys.empty() ? "" : keys[size_t(consoletiles::move(tileCol_, 0, int(keys.size())))];
 }
@@ -416,7 +457,7 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
         dirty_ = true;
         return false;
     }
-    const IniSetting* s = r.kind == Kind::Heading ? nullptr : settingOf(chosenKey());  // .27: a tile's
+    const IniSetting* s = passive(r.kind) ? nullptr : settingOf(chosenKey());  // .27: a tile's
     if (!s) return false;
     const Config shown = shownConfig(config);
     const std::string now = tokenOf(*s, shown);
@@ -510,7 +551,7 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
         int to = at_;
         for (int k = 0; k < std::abs(by); ++k) {
             int step = to + (by > 0 ? 1 : -1);
-            while (step >= 0 && step < n && rows_[size_t(step)].kind == Kind::Heading) step += by > 0 ? 1 : -1;
+            while (step >= 0 && step < n && passive(rows_[size_t(step)].kind)) step += by > 0 ? 1 : -1;
             if (step < 0 || step >= n) break;
             to = step;
         }
@@ -553,7 +594,7 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
         if (drawnLine_ <= 0 || c.y < drawnFirstRow_) continue;
         const int row = top_ + (c.y - drawnFirstRow_) / drawnLine_;
         if ((c.y - drawnFirstRow_) / drawnLine_ >= drawnVisible_ || row < 0 || row >= n) continue;
-        if (rows_[size_t(row)].kind == Kind::Heading) continue;
+        if (passive(rows_[size_t(row)].kind)) continue;
         at_ = row;
         dirty_ = true;
         if (rows_[size_t(row)].kind == Kind::Tiles)  // 3.0.17-beta.27: the tile under the mouse
@@ -644,6 +685,8 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
         if (r.kind == Kind::Tiles) {  // 3.0.17-beta.27
             for (const std::string& k : consoletiles::split(r.key))
                 if (const IniSetting* s = settingOf(k)) state += tokenOf(*s, config) + ",";
+        } else if (r.kind == Kind::About) {  // 3.0.21-beta.2: what it needs is met or not
+            state += catalogue::aboutText(aboutNow(r.key, config, lang_), lang_, "+", "-") + ",";
         } else if (r.kind != Kind::Heading) {
             if (const IniSetting* s = settingOf(r.key)) state += tokenOf(*s, config) + ",";
         }
@@ -739,6 +782,17 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 text(fontH, y, wide(r.key), RGB(229, 169, 78), true);
                 continue;
             }
+            if (r.kind == Kind::About) {  // 3.0.21-beta.2: under its row's name, dim; warm while a need is not met
+                const catalogue::About a = aboutNow(r.key, config, lang_);
+                const std::wstring words =
+                    wide(catalogue::aboutText(a, lang_, "\xE2\x96\xA0 ", "\xE2\x96\xA1 "));  // ■ met, □ not
+                RECT place{fontH + fontH * 3 / 2, y, w - fontH, y + line};
+                SelectObject(dc, font);
+                SetTextColor(dc, a.allMet() ? RGB(150, 160, 160) : RGB(214, 164, 96));
+                DrawTextW(dc, words.c_str(), int(words.size()), &place,
+                          DT_SINGLELINE | DT_LEFT | DT_NOPREFIX | DT_END_ELLIPSIS);
+                continue;
+            }
             if (r.kind == Kind::Open && r.key == kWindowsKey) {  // 3.0.11-beta.302: the new look's windows
                 size_t n = 0;
                 for (const InterfaceSection& sec : interfaceSections())
@@ -775,17 +829,32 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 continue;
             }
             if (r.kind == Kind::Tabs) {  // 3.0.17-beta.4: the tabs, the shown one bright between ‹ ›
-                const Text names[kTabs] = {Text::ConsoleTabQuick, Text::ConsoleTabNew, Text::LookPicture,
-                                           Text::LookUi,           Text::LookTextures,    Text::ConsoleTabAll};
-                int x = fontH;
+                const Text names[kTabs] = {Text::ConsoleTabQuick,  Text::ConsoleTabNew,  Text::LookPicture,
+                                           Text::LookUi,           Text::LookTextures,   Text::ConsoleTabTrials,
+                                           Text::PageDiagnostics,  Text::ConsoleTabAll};
+                // 3.0.21-beta.2: eight tabs - in a narrow console the row starts at the first tab that leaves
+                // the shown one inside it
+                std::wstring words[kTabs];
+                int widths[kTabs] = {};
+                const int gap = fontH * 3 / 2;
                 for (int k = 0; k < kTabs; ++k) {
-                    const std::wstring word = k == tab_ ? L"\u2039 " + wide(tr(lang_, names[k])) + L" \u203a"
-                                                        : wide(tr(lang_, names[k]));
-                    text(x, y, word, k == tab_ ? RGB(229, 169, 78) : RGB(170, 170, 170), k == tab_);
+                    words[k] = k == tab_ ? L"\u2039 " + wide(tr(lang_, names[k])) + L" \u203a"
+                                         : wide(tr(lang_, names[k]));
                     SIZE sz{};
                     SelectObject(dc, k == tab_ ? bold : font);
-                    GetTextExtentPoint32W(dc, word.c_str(), int(word.size()), &sz);
-                    x += int(sz.cx) + fontH * 3 / 2;
+                    GetTextExtentPoint32W(dc, words[k].c_str(), int(words[k].size()), &sz);
+                    widths[k] = int(sz.cx);
+                }
+                int from = 0;
+                for (; from < tab_; ++from) {
+                    int end = fontH;
+                    for (int k = from; k <= tab_; ++k) end += widths[k] + (k < tab_ ? gap : 0);
+                    if (end <= w - fontH) break;
+                }
+                int x = fontH;
+                for (int k = from; k < kTabs && x + widths[k] <= w - fontH / 2; ++k) {
+                    text(x, y, words[k], k == tab_ ? RGB(229, 169, 78) : RGB(170, 170, 170), k == tab_);
+                    x += widths[k] + gap;
                 }
                 continue;
             }

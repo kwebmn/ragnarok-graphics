@@ -61,7 +61,10 @@ private:
     // 3.0.17-beta.4 (the concept «простой старт»): Tabs - the tabs' row (Швидко, Картинка, Інтерфейс, Текстури,
     // Усе), Look - one of «Як виглядає гра»'s three choices (key: its number)
     // 3.0.17-beta.27: Tiles - up to four switches side by side (key: theirs joined by '|', core/console_tiles)
-    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here, Test, Layout, Tabs, Look, Tiles, Dump };
+    // 3.0.21-beta.2 (the concept «Настройки uaRO Graphics», variant 4, step 2: the console's laboratory): About -
+    // what the row over it says about itself (a trial's version, what it needs, when a change shows); never chosen
+    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here, Test, Layout, Tabs, Look, Tiles, Dump, About };
+    static bool passive(Kind k) { return k == Kind::Heading || k == Kind::About; }
     struct Row {
         Kind kind = Kind::Heading;
         std::string key;  // "effects.grass"; a heading's: its text (UTF-8)
@@ -84,8 +87,9 @@ private:
     bool windowsOpen_ = false;             // 3.0.11-beta.302: the new look's windows shown
     // 3.0.17-beta.4: the tab shown (kTabQuick first) and the rows pinned to «Швидко» (Insert; core/console_pins)
     // 3.0.17-beta.12: «Нове» - the rows new since the console last showed them (cache\console-known.txt)
+    // 3.0.21-beta.2: «Проби» and «Діагностика» - the laboratory's tabs (core/settings/catalogue)
     static constexpr int kTabQuick = 0, kTabNew = 1, kTabPicture = 2, kTabInterface = 3, kTabTextures = 4,
-                         kTabAll = 5, kTabs = 6;
+                         kTabTrials = 5, kTabDiag = 6, kTabAll = 7, kTabs = 8;
     std::vector<std::string> fresh_;  // the rows new to the console, read with the pins
     std::string knownPath_;
     void markKnown();
@@ -101,6 +105,7 @@ private:
     std::string chosenKey() const;     // the chosen row's setting - a Tiles row's: its chosen tile's
     static constexpr const char* kWindowsKey = "iface:windows";
     void interfaceRow(const char* key, int depth);
+    void labRow(const std::string& key, const Config& config);  // 3.0.21-beta.2: its control and its About
     std::string filter_;   // 2.6.22: the letters typed (UTF-8)
     std::wstring typed_;   // and those not taken yet (wndProc's WM_CHAR; 8 Backspace)
     bool thisMap_ = false; // «Только на этой карте», while the game runs

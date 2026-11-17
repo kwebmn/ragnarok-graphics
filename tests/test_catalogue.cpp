@@ -193,3 +193,94 @@ TEST(catalogue_feeds_the_interface_sections) {
     CHECK(std::any_of(pad.begin(), pad.end(), [](const char* k) { return std::string(k) == "interface.pad_walk"; }));
     CHECK(std::none_of(pad.begin(), pad.end(), [](const char* k) { return std::string(k) == "pad.enabled"; }));
 }
+
+// 3.0.21-beta.2 (step 2: the console's laboratory): the trials by area, the diagnostics that apply at once, what a
+// row says about itself
+TEST(catalogue_the_laboratory_lists_the_trials_by_area) {
+    const std::vector<catalogue::LabSection> lab = catalogue::trials();
+    CHECK(lab.size() >= 3);
+    if (lab.empty()) return;
+    CHECK(lab[0].area == catalogue::Area::View3d);  // the catalogue's order
+    CHECK_EQ(int(lab[0].rows.size()), 4);
+    CHECK_EQ(lab[0].rows[0]->key, std::string("view3d.shadows"));
+    int listed = 0, trials = 0;
+    for (const catalogue::LabSection& s : lab)
+        for (const catalogue::Row* r : s.rows) {
+            CHECK(r->status == catalogue::Status::Trial);
+            ++listed;
+        }
+    for (const catalogue::Group& g : catalogue::groups())
+        for (const catalogue::Row& r : g.rows) trials += r.status == catalogue::Status::Trial ? 1 : 0;
+    CHECK_EQ(listed, trials);  // each once
+    for (size_t i = 1; i < lab.size(); ++i) CHECK(lab[i].area != lab[i - 1].area);  // an area one section
+    // the diagnostics the console can switch: those that apply at once
+    const std::vector<const catalogue::Row*> diag = catalogue::liveDiagnostics();
+    const auto has = [&](const char* key) {
+        return std::any_of(diag.begin(), diag.end(), [&](const catalogue::Row* r) { return r->key == key; });
+    };
+    CHECK(has("debug.log") && has("debug.xray") && has("debug.quick_acks") && has("interface.uaui_showcase"));
+    CHECK(!has("debug.state_cache"));  // waits for the game's start: the settings app's developer page
+    CHECK(!has("roext.window_x"));
+    CHECK(!has("view3d.shadows"));     // a trial is not a diagnostic
+}
+
+TEST(catalogue_a_row_tells_about_itself) {
+    const Config on = parseConfig("");
+    const catalogue::Row* crown = catalogue::find("view3d.crown_volume");
+    CHECK(crown != nullptr);
+    if (!crown) return;
+    catalogue::About a = catalogue::about(*crown, on, true, true, Lang::Uk);
+    CHECK_EQ(a.since, std::string("3.0.20-beta.73"));
+    CHECK_EQ(int(a.needs.size()), 3);
+    if (a.needs.size() != 3) return;
+    CHECK_EQ(a.needs[0].name, std::string("Моделі нашим рендером"));
+    CHECK_EQ(a.needs[1].name, std::string("Листя на відеокарті"));
+    CHECK_EQ(a.needs[2].name, std::string("3D-режим"));
+    CHECK(a.needs[0].met && a.needs[1].met && a.needs[2].met && a.allMet());
+    CHECK(!a.afterRestart && !a.nextMap && !a.empty());
+    CHECK_EQ(catalogue::aboutText(a, Lang::Uk, "+", "-"),
+             std::string("з 3.0.20-beta.73 · потрібні: +Моделі нашим рендером, +Листя на відеокарті, +3D-режим"));
+    // the top view with the models off: two needs not met
+    a = catalogue::about(*crown, parseConfig("[view3d]\nown_models = 0\n"), true, false, Lang::Ru);
+    CHECK(!a.needs[0].met && a.needs[1].met && !a.needs[2].met && !a.allMet());
+    CHECK_EQ(catalogue::aboutText(a, Lang::Ru, "+", "-"),
+             std::string("с 3.0.20-beta.73 · нужны: -Модели нашим рендером, +Листва на видеокарте, -3D-режим"));
+    // a row that waits for the game's start; one whose change shows from the next map; Direct3D 12
+    const catalogue::Row* dpi = catalogue::find("display.dpi_aware");
+    CHECK(dpi && catalogue::about(*dpi, on, true, false, Lang::Uk).afterRestart);
+    if (dpi)
+        CHECK_EQ(catalogue::aboutText(catalogue::about(*dpi, on, true, false, Lang::Uk), Lang::Uk, "+", "-"),
+                 std::string("з 3.0.11-beta.292 · після перезапуску гри"));
+    const catalogue::Row* gaps = catalogue::find("view3d.close_gaps");
+    CHECK(gaps && catalogue::about(*gaps, on, true, true, Lang::Uk).nextMap);
+    const catalogue::Row* grass = catalogue::find("effects.grass");
+    CHECK(grass != nullptr);
+    if (grass) {
+        const catalogue::About g11 = catalogue::about(*grass, on, false, false, Lang::Uk);
+        CHECK_EQ(int(g11.needs.size()), 1);
+        CHECK(!g11.needs.empty() && g11.needs[0].name == "Direct3D 12" && !g11.needs[0].met);
+    }
+    // a row with nothing to say: no line under it
+    const catalogue::Row* bars = catalogue::find("interface.far_bars");
+    CHECK(bars && catalogue::about(*bars, on, true, false, Lang::Uk).empty());
+    if (bars) CHECK_EQ(catalogue::aboutText(catalogue::about(*bars, on, true, false, Lang::Uk), Lang::Uk, "+", "-"),
+                       std::string());
+}
+
+// «Швидко»'s tiles are the catalogue's rows marked «switched most»: settings for good that apply at once, each a
+// switch (a tile) or a list (a row of its own); never a trial (those are the laboratory's)
+TEST(catalogue_the_rows_switched_most) {
+    const std::vector<const catalogue::Row*> rows = catalogue::often();
+    CHECK(rows.size() >= 7);
+    const auto has = [&](const char* key) {
+        return std::any_of(rows.begin(), rows.end(), [&](const catalogue::Row* r) { return r->key == key; });
+    };
+    CHECK(has("effects.grass") && has("interface.mob_hp") && has("frames.fps_counter"));
+    CHECK(!has("view3d.crown_volume") && !has("view3d.shadows") && !has("effects.mage_effects"));
+    for (const catalogue::Row* r : rows) {
+        CHECK(r->status == catalogue::Status::Permanent);
+        CHECK(catalogue::homeOf(*r) == catalogue::Home::Game);
+        const IniSetting* s = findSetting(r->key);
+        CHECK(s && (s->control == Control::Check || s->control == Control::Choice));
+    }
+}
