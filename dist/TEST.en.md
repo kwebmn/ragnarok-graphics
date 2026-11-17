@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.21-beta.11 — what's new · 2026-11-17
+
+Nothing unfolds in the settings any more: everything is shown at once.
+
+- **The «Settings» window (Alt+O).** The lines «N more settings ›» and «Hide the extra settings» are gone. In each group the main rows come first and the rest stand right under them - under a small heading, «More», set in with a thin rule on the left. A part still stands indented under its row.
+- **The settings app.** Its pages show everything at once too: no «N more settings ›» button.
+- **Long entries do not load the computer.** «Picture» now shows all its 183 rows; the window draws only those near the visible part of the list.
+
 # uaRO Graphics 3.0.21-beta.10 — what's new · 2026-11-17
 
 In the «Settings» window (Alt+O): a way back to the defaults, and hints of why a change does not show.
