@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.21-beta.14 — what's new · 2026-11-17
+
+The game closed after a card of the «Reference» opened.
+
+- **The «Reference» and the windows' pictures.** The game could close a second after a card opened (it did with Prontera's card, opened from the line under the minimap). A window's picture was looked for where it no longer was. Now every picture comes from its own copy, and one that is gone simply does not show.
+- **If the game still closes on an error in our code,** the log says what it was and a dump is kept for the report.
+
 # uaRO Graphics 3.0.21-beta.13 — what's new · 2026-11-17
 
 Key hints: where the keys or the mouse do something else, a line at the bottom says what to press.
