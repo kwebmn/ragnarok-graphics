@@ -4,6 +4,8 @@
 #include <cctype>
 #include <cstring>
 
+#include "core/settings/catalogue.hpp"
+
 namespace uagfx::settings {
 namespace {
 
@@ -175,67 +177,25 @@ bool fitsMachine(const std::string& k, const Machine& m) {
     return true;
 }
 
+// 3.0.21-beta.1 (the concept «Настройки uaRO Graphics», the owner: «Вариант 4»): read from the catalogue, no list of
+// its own - the groups that hold [interface] rows (those rows alone), in the catalogue's order; the controller's are
+// the Controller page's (padInterfaceKeys). A group of «Інтерфейс» with no basic row (each window's own switch) shows
+// behind a button.
 const std::vector<InterfaceSection>& interfaceSections() {
-    static const std::vector<InterfaceSection> list{
-        {Text::InterfaceSecMain,
-         {"interface.minimap", "interface.size", "interface.text_size", "interface.item_windows",
-          "interface.panel_opacity",
-          "interface.window_opacity", "interface.animations", "interface.cursor",
-          "interface.layout_per_char", "interface.pack_icons", "interface.low_hp_edge",
-          "interface.reference", "interface.theme", "interface.uaui_showcase",
-          "interface.uaui_motion",
-          "interface.uaui_effects",
-          "interface.uaui_glass"}},
-        {Text::InterfaceSecPanels,
-         {"interface.character", "interface.target", "interface.party", "interface.buffs", "interface.buffs_overflow",
-          "interface.hotbar", "interface.hotbar_per_character", "interface.hotbar_ammo", "interface.hotbar_supplies",
-          "interface.skill_needs", "interface.combo_window", "interface.broken_gear", "interface.pet_hunger",
-          "interface.ammo_sound", "interface.element_colours",
-          "interface.chat", "interface.chat_fade", "interface.chat_log", "interface.long_chat", "interface.skill_jokes",
-          "interface.swear_filter", "interface.chat_party", "interface.chat_guild",
-          "interface.chat_own", "interface.chat_others", "interface.tracker", "interface.cast", "interface.exp_bars",
-          "interface.exp_gain", "interface.item_toast", "interface.hunt_panel", "interface.mvp_timers"}},
-        {Text::InterfaceSecMinimap,
-         {"interface.minimap_style", "interface.minimap_hd", "interface.minimap_classic", "interface.minimap_view",
-          "interface.minimap_npcs", "interface.minimap_warps", "interface.minimap_kafra", "interface.minimap_party",
-          "interface.minimap_mobs", "interface.minimap_way", "interface.minimap_reach"}},
-        {Text::InterfaceSecFight,
-         {"interface.mob_hp", "interface.mob_hp_percent", "interface.boss_bars", "interface.who_hits",
-          "interface.far_bars",
-          "interface.quick_teleport",
-          "interface.screen_shake", "interface.esc_cutin", "interface.follow",
-          "interface.target_ring",
-          "interface.mob_card",
-          "interface.delay_ring", "interface.skill_cells", "interface.mouse_cell", "interface.ground_counts",
-          "interface.ground_timers",
-          "interface.death_recap",
-          "interface.potion_warn", "interface.party_alarm"}},
-        {Text::InterfaceSecGround, {"interface.drop_names", "interface.drop_highlight", "interface.signs"}},
-        {Text::InterfaceSecLogin,
-         {"interface.login", "interface.login_status", "interface.login_news", "interface.login_view",
-          "interface.char_select", "interface.char_make", "interface.portraits", "interface.char_carousel"}},
-        {Text::InterfaceSecHomun,
-         {"interface.homun_ai", "interface.homun_aggressive", "interface.homun_defend", "interface.homun_skills"}},
-        {Text::InterfaceSecNet, {"interface.smooth_fixes", "interface.predict_walk", "interface.net_badge"}},
-        // 3.0.18-beta.125 (the concept «Ігровий інтерфейс»): our windows' keys
-        {Text::InterfaceSecKeys,
-         {"interface.arrows_walk", "interface.walk_mode", "interface.space_action", "interface.key_hunt",
-          "interface.key_mvp",
-          "interface.key_tracker", "interface.key_party", "interface.key_recap"}},
-        {Text::InterfaceSecWindows,
-         {"interface.items",     "interface.status",       "interface.skills",       "interface.equip",
-          "interface.npc_talk",  "interface.npc_remember", "interface.shop",         "interface.storage",
-          "interface.trade",     "interface.cart",         "interface.vending",      "interface.my_shop",
-          "interface.vend_setup",
-          "interface.menu",      "interface.options",      "interface.cards",        "interface.asks",
-          "interface.messages",  "interface.counts",       "interface.picks",        "interface.party_setup",
-          "interface.pet",       "interface.homun",        "interface.merc",         "interface.social",
-          "interface.guild",     "interface.servers",      "interface.whispers",     "interface.whisper_setup",
-          "interface.macros",    "interface.tips",         "interface.loading_bar",  "interface.emotes",
-          "interface.commands",
-          "interface.chat_rooms", "interface.detail_console", "interface.popups"},
-         true},
-    };
+    static const std::vector<InterfaceSection> list = [] {
+        std::vector<InterfaceSection> out;
+        for (const catalogue::Group& g : catalogue::groups()) {
+            if (g.area == catalogue::Area::Controls && g.name == Text::PagePad) continue;
+            InterfaceSection sec{g.name, {}, g.area == catalogue::Area::Interface};
+            for (const catalogue::Row& r : g.rows) {
+                if (r.key.compare(0, 10, "interface.") != 0) continue;
+                sec.keys.push_back(r.key.c_str());
+                sec.folded = sec.folded && r.level != catalogue::Level::Basic;
+            }
+            if (!sec.keys.empty()) out.push_back(std::move(sec));
+        }
+        return out;
+    }();
     return list;
 }
 
@@ -264,8 +224,15 @@ std::string knownRowsText(const std::vector<std::string>& keysNow) {
 }
 
 const std::vector<const char*>& padInterfaceKeys() {
-    static const std::vector<const char*> list{"interface.pad_hints", "interface.pad_tiles", "interface.pad_walk",
-                                               "interface.walk_arrow", "interface.walk_mark"};
+    // 3.0.21-beta.1: the catalogue's «Контролер», its [interface] rows
+    static const std::vector<const char*> list = [] {
+        std::vector<const char*> out;
+        for (const catalogue::Group& g : catalogue::groups())
+            if (g.area == catalogue::Area::Controls && g.name == Text::PagePad)
+                for (const catalogue::Row& r : g.rows)
+                    if (r.key.compare(0, 10, "interface.") == 0) out.push_back(r.key.c_str());
+        return out;
+    }();
     return list;
 }
 

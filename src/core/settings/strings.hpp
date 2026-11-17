@@ -1024,6 +1024,10 @@ enum class Text : uint16_t {
     SendingShot, SendingFullMany, SendingFullDoneMany,
     // 3.0.20-beta.22: the console's «Записати моделі навколо»
     ConsoleDumpModels,
+    // 3.0.21-beta.1 (the concept «Настройки uaRO Graphics», the owner: «Вариант 4. Каждому месту своё дело»): the
+    // catalogue's areas and the groups with no name before (core/settings/catalogue)
+    CatControls, CatSound, CatSpeed, CatGame, CatView3dCamera, CatView3dRooms, CatView3dSky, CatOwnWorld,
+    CatClientFiles, CatAiWork,
     Count
 };
 

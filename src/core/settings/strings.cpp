@@ -9188,6 +9188,16 @@ constexpr Entry kTexts[] = {
      "Снимки в полном качестве отправлены"},
     {Text::ConsoleDumpModels, "Write the models around into the log", "Записати моделі навколо в журнал",
      "Записать модели вокруг в журнал"},  // 3.0.20-beta.22
+    {Text::CatControls, "Controls", "Керування", "Управление"},  // 3.0.21-beta.1: the catalogue's
+    {Text::CatSound, "Sound and notifications", "Звук і сповіщення", "Звук и уведомления"},
+    {Text::CatSpeed, "Speed and screen", "Швидкість і екран", "Скорость и экран"},
+    {Text::CatGame, "Game and network", "Гра й мережа", "Игра и сеть"},
+    {Text::CatView3dCamera, "Camera and aim", "Камера й приціл", "Камера и прицел"},
+    {Text::CatView3dRooms, "Rooms and caves", "Приміщення й печери", "Помещения и пещеры"},
+    {Text::CatView3dSky, "Sky and horizon", "Небо й обрій", "Небо и горизонт"},
+    {Text::CatOwnWorld, "The world by our renderer", "Світ нашим рендером", "Мир нашим рендером"},
+    {Text::CatClientFiles, "The client's files", "Файли клієнта", "Файлы клиента"},
+    {Text::CatAiWork, "How the network works", "Робота нейромережі", "Работа нейросети"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
