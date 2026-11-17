@@ -1038,6 +1038,9 @@ enum class Text : uint16_t {
     ViewScreenRender, SearchInGame, HelpInGame,
     // 3.0.21-beta.7: the console is the laboratory alone - its third tab, its row that leads to «Налаштування»
     ConsoleTabCosts, ConsoleToSettings,
+    // 3.0.21-beta.10: «Налаштування» - a group's way back to the shipped values, the entry of what is off them, the
+    // note of an entry that does nothing now; why a change does not show (the other renderer, the map)
+    SettingsDefaults, SettingsChanged, SettingsChangedNone, SettingsNote3d, WhyDirect3D11, WhyNotHere,
     Count
 };
 

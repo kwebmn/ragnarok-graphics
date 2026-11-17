@@ -23,6 +23,9 @@ struct ChoiceView {
 struct RowView {
     Rml::String key, group, label, hint, vtext;  // group: the group's name over this row (its first), "" none
     Rml::String warn;  // 3.0.21-beta.4: what keeps the row from doing anything now, "" nothing
+    // 3.0.21-beta.10: on the row that heads its group - «Типові» when the group has rows off their defaults (a click:
+    // set_reset(i)), "" none
+    Rml::String reset;
     bool toggle = false, on = false, slider = false;
     int value = 0, min = 0, max = 0, step = 1;
     std::vector<ChoiceView> choices;
@@ -38,6 +41,7 @@ struct Model {
     int sec = 0, shownRows = 0;  // the entry shown; its rows' count (0: «nothing found» in their place)
     Rml::String query, title, hint, searchHint, none, consoleBtn, ground = "#10141cf0";
     Rml::String layoutBtn;  // 3.0.21-beta.7: «Розмістити інтерфейс» (the console's action before)
+    Rml::String note;       // 3.0.21-beta.10: what the entry says over its rows («3D-режим» in the usual view), "" none
     std::vector<NavView> nav;
     std::vector<RowView> rows;
 };
@@ -61,7 +65,7 @@ bool sliderMoved(const Rml::Event& e, const Model& m, int row, int& value);
 
 const char* rml();
 // The window's variables. Its events are the caller's: sec_go(i), set_toggle(i), set_slider(i), set_step(i, by),
-// set_choice(i, j), set_more(i), open_layout(), open_console(), opt_close()
+// set_choice(i, j), set_more(i), set_reset(i), open_layout(), open_console(), opt_close()
 void bind(Rml::DataModelConstructor& c, Model& m);
 
 }  // namespace uagfx::uikit::options

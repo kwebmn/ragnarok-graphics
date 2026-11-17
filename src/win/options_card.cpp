@@ -34,6 +34,7 @@
 #include "win/ui_sheet.hpp"
 #include "win/view3d.hpp"
 #include "win/console.hpp"
+#include "win/context.hpp"
 #include "win/setting_edit.hpp"
 #include "win/words.hpp"
 
@@ -80,6 +81,17 @@ struct State {
     bool changed = false;
     bool layoutAsked = false;  // 3.0.21-beta.7: «Розмістити інтерфейс» pressed
     int quietTold = 0;         // 3.0.21-beta.9: sliders' changes not taken for moves, told in the log
+    // 3.0.21-beta.10 (the owner: «надо кнопку по умолчанию сделать. чтобы не искать»): the settings as shipped for
+    // this card's level (core settingswin defaults), the rows of a group on their way back - written one a config
+    // read, each by the settings as they stand then (an effect's switch may turn a set into the player's own)
+    Config defaults;
+    int defaultsLevel = -1;
+    std::vector<settingswin::Reset> backQueue;
+    std::string backKey, backToken;
+    int backWait = 0;
+    std::string shownNote;
+    ULONGLONG countAt = 0;  // when «Змінені» is counted next
+    int warnTold = 0;
     uisheet::Sheet sheet;  // 3.0.18-beta.34: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -258,10 +270,21 @@ static std::vector<SetRowView> buildRows(const State& s) {
     namespace sw = uagfx::settingswin;
     const settings::Lang lang = language();
     const bool searching = !s.m.query.empty();
-    const std::vector<sw::Line> list = searching ? sw::find(s.m.query, lang) : sw::lines(s.m.sec, s.open);
     const std::vector<sw::Nav>& nav = sw::nav();
     const oc::Texts t = texts();
     const Config shown = s.config ? settingedit::shown(*s.config) : Config{};
+    // 3.0.21-beta.10: «Змінені» - the rows off their defaults, under their groups' names as the search's
+    const bool offEntry = !searching && s.m.sec >= 0 && size_t(s.m.sec) < nav.size() &&
+                          nav[size_t(s.m.sec)].area == sw::kChangedArea;
+    const std::vector<sw::Line> list = searching  ? sw::find(s.m.query, lang)
+                                       : offEntry ? sw::changedLines(shown, s.defaults)
+                                                  : sw::lines(s.m.sec, s.open);
+    // where the game is now: what a row's reasons for doing nothing are judged by (the renderer, the view, the map)
+    settings::catalogue::Now place;
+    place.direct3d12 = settingedit::direct3d12();
+    place.view3d = view3dwin::active();
+    place.map = readGameMap();
+    place.ownEntry = !searching && !offEntry;
     std::vector<SetRowView> out;
     for (const sw::Line& f : list) {
         SetRowView r;
@@ -269,8 +292,12 @@ static std::vector<SetRowView> buildRows(const State& s) {
         r.sub = f.part;
         if (f.heads) {
             r.group = say(f.groupName);
-            if (searching && f.entry > 0 && size_t(f.entry) < nav.size())
+            if ((searching || offEntry) && f.entry > 0 && size_t(f.entry) < nav.size())
                 r.group = say(nav[size_t(f.entry)].name) + " \xC2\xB7 " + r.group;
+            // the group's way back to the shipped values, while it has rows off them
+            if (s.config && f.group >= 0 && !sw::resetsOf(f.group, shown, s.defaults).empty())
+                r.reset = say(settings::Text::SettingsDefaults);
+            r.opens = f.group;
         }
         if (f.what == sw::Line::What::More) {
             r.more = true;
@@ -296,10 +323,10 @@ static std::vector<SetRowView> buildRows(const State& s) {
             r.label = say(st->label);
             // a row, not a page: its hint's first sentence (the whole of it stays the settings app's)
             r.hint = consoletiles::gist(settings::tr(lang, st->hint), 130);
-            // 3.0.21-beta.4: what keeps it from doing anything now (Direct3D 12, the 3D view, a row it needs)
+            // 3.0.21-beta.4: what keeps it from doing anything now (Direct3D 12, the 3D view, a row it needs);
+            // 3.0.21-beta.10: the map that has nothing of it, Direct3D 11's own
             if (const settings::catalogue::Row* cat = settings::catalogue::find(f.key))
-                r.warn = settings::catalogue::whyNot(*cat, shown, settingedit::direct3d12(), view3dwin::active(),
-                                                     lang);
+                r.warn = settings::catalogue::whyNot(*cat, shown, place, lang);
             const std::string now = s.config ? settings::tokenOf(*st, shown) : "";
             if (st->control == settings::Control::Check) {
                 r.toggle = true, r.on = st->tokens.size() > 1 && now == st->tokens[1];
@@ -321,7 +348,7 @@ static std::vector<SetRowView> buildRows(const State& s) {
 static std::string rowsKeyOf(const std::vector<SetRowView>& rows) {
     std::string k;
     for (const SetRowView& r : rows) {
-        k += r.key + (r.on ? "+" : "-") + std::to_string(r.value) + r.group + (r.sub ? "s" : "") + r.warn;
+        k += r.key + (r.on ? "+" : "-") + std::to_string(r.value) + r.group + (r.sub ? "s" : "") + r.warn + r.reset;
         if (r.more) k += r.label;  // «Ще N» or the folding line
         for (const ChoiceView& c : r.choices) k += c.on ? '1' : '0';
         k += '|';
@@ -363,6 +390,10 @@ static void useRow(State& s, int row, int what, int value) {
     }
     s.changed = s.changed || wrote;
     s.hotUntil = GetTickCount64() + 700;  // the row's new value shown as soon as the driver has read the file
+    // 3.0.21-beta.10 (the owner: «иногда когда чтото в настройках выбираю то ничего не меняется»): the facts for a
+    // report - a row changed while it says itself that a change does not show now
+    if (wrote && !s.m.rows[size_t(row)].warn.empty() && s.warnTold++ < 40)
+        LOG_INFO("options: «%s» changed while its row says: %s", key.c_str(), s.m.rows[size_t(row)].warn.c_str());
 }
 
 // The live window at the middle of the screen, as wide as its markup makes it
@@ -374,6 +405,28 @@ static void placeLive(State& s) {
         y = std::max(0, (s.targetH - bh) / 3);
     }
     s.live.frame(s.shown, x, y, int(winstack::Win::Options), ".ctl");
+}
+
+// 3.0.21-beta.10: the rows a group's «Типові» sends back - one written, then the next once the driver has read
+// the file with it (or a second on): each is written by the settings as they stand then
+static void backStep(State& s) {
+    if (s.backQueue.empty() || !s.config || s.iniPath.empty()) return;
+    if (s.backWait > 0) {
+        const settings::IniSetting* st = settings::findSetting(s.backKey);
+        const bool taken = !st || settings::tokenOf(*st, settingedit::shown(*s.config)) == s.backToken;
+        if (!taken && --s.backWait > 0) return;
+        s.backWait = 0;
+    }
+    while (!s.backQueue.empty()) {
+        const settingswin::Reset back = s.backQueue.front();
+        s.backQueue.erase(s.backQueue.begin());
+        if (!settingedit::set(s.iniPath, *s.config, back.key, back.token)) continue;  // so already
+        s.changed = true;
+        s.backKey = back.key, s.backToken = back.token;
+        s.backWait = 120;  // frames at most for the driver to read the file again
+        s.hotUntil = GetTickCount64() + 700;
+        return;
+    }
 }
 
 // 3.0.18-beta.81: the live window's model and place
@@ -421,6 +474,19 @@ static void liveFrame(State& s) {
             const int step = r.key.rfind("game.", 0) == 0 ? kPadStep : std::max(1, r.step);
             useRow(st, i, 1, std::clamp(r.value + by * step, r.min, r.max));
         });
+        // 3.0.21-beta.10: «Типові» of a group - its rows off their defaults go back, one a config read (backStep)
+        m.BindEventCallback("set_reset", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
+            if (a.empty() || !st.config) return;
+            const int row = a[0].Get<int>();
+            if (row < 0 || size_t(row) >= st.m.rows.size() || st.m.rows[size_t(row)].reset.empty()) return;
+            const int group = st.m.rows[size_t(row)].opens;
+            const std::vector<settingswin::Reset> back =
+                settingswin::resetsOf(group, settingedit::shown(*st.config), st.defaults);
+            LOG_INFO("options: «Типові» of the group %d - %d row(s) go back to their defaults", group,
+                     int(back.size()));
+            st.backQueue.insert(st.backQueue.end(), back.begin(), back.end());
+        });
         m.BindEventCallback("set_choice", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             if (a.size() >= 2) useRow(state(), a[0].Get<int>(), 2, a[1].Get<int>());
         });
@@ -441,9 +507,15 @@ static void liveFrame(State& s) {
         });
     });
     if (!s.live.made()) return;
+    backStep(s);  // 3.0.21-beta.10: a group on its way back goes on though the window is closed meanwhile
     if (!s.shown) {  // 3.0.18-beta.170 (R-CD8KCP: 0.14 ms a frame while closed): nothing built for a hidden card
         s.live.frame(false, s.layout.x, s.layout.y, int(winstack::Win::Options), ".ctl");
         return;
+    }
+    if (const int level = Context::get().cardLevel(); level != s.defaultsLevel) {
+        s.defaultsLevel = level;
+        s.defaults = settingswin::defaults(level);
+        s.rowsKey.clear();
     }
     const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
     const Rml::String title = say(settings::Text::MenuSettings);
@@ -484,6 +556,37 @@ static void liveFrame(State& s) {
         return;
     }
     s.builtAt = now;
+    {  // 3.0.21-beta.10: what the entry says over its rows; «Змінені»'s count and its words when nothing is off
+        const std::vector<settingswin::Nav>& list = settingswin::nav();
+        const bool searching = !s.m.query.empty();
+        const settings::Text note = searching ? settings::Text::Count
+                                              : settingswin::noteOf(s.m.sec, view3dwin::active());
+        const std::string words = note == settings::Text::Count ? std::string() : say(note);
+        if (words != s.shownNote) {
+            s.shownNote = words;
+            s.m.note = words;
+            s.live.doc.dirty("note");
+        }
+        const bool off = !searching && s.m.sec >= 0 && size_t(s.m.sec) < list.size() &&
+                         list[size_t(s.m.sec)].area == settingswin::kChangedArea;
+        const Rml::String none = say(off ? settings::Text::SettingsChangedNone : settings::Text::SettingsWinNone);
+        if (none != s.m.none) {
+            s.m.none = none;
+            s.live.doc.dirty("none");
+        }
+        // counted at once after something is done in the window, else once a second (every row's value is read)
+        if (s.config && !searching && (now < s.hotUntil || now >= s.countAt)) {
+            s.countAt = now + 1000;
+            for (size_t i = 0; i < s.m.nav.size() && i < list.size(); ++i) {
+                if (list[i].area != settingswin::kChangedArea) continue;
+                const int count = int(settingswin::changedLines(settingedit::shown(*s.config), s.defaults).size());
+                if (count != s.m.nav[i].count) {
+                    s.m.nav[i].count = count;
+                    s.live.doc.dirty("nav");
+                }
+            }
+        }
+    }
     std::vector<SetRowView> rows = buildRows(s);
     // 3.0.21-beta.8 (R-SPPSF3): the list as long as the entry - no spare rows kept from a longer one (uikit
     // options_live fit(): how 3.0.18-beta.132's padding became needless)

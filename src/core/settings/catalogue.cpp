@@ -6,7 +6,9 @@
 #include <utility>
 
 #include "core/effect_groups.hpp"
+#include "core/effect_where.hpp"
 #include "core/live_config.hpp"
+#include "core/outdoors.hpp"
 #include "core/settings/effects_layout.hpp"
 #include "core/settings/schema.hpp"
 
@@ -266,9 +268,10 @@ std::vector<Group> build() {
     // --- «Швидкість і екран»
     out.push_back(group(Area::Speed, Text::PageQuality,
                         {B("quality.super_light"), B("quality.render_scale"), D("quality.world_scale"),
-                         B("quality.sharpen"), X("quality.full_colour")}));
+                         // «Змінене в грі діє на текстури, завантажені після зміни»
+                         B("quality.sharpen"), X("quality.full_colour").next()}));
     out.push_back(group(Area::Speed, Text::PageSmoothing,
-                        {B("quality.msaa"), B("quality.taa"), D("quality.alpha_to_coverage"),
+                        {B("quality.msaa"), B("quality.taa"), D("quality.alpha_to_coverage").need("quality.msaa"),
                          D("quality.anisotropy"), B("quality.dlss"),
                          D("quality.dlss_model", "quality.dlss").need("quality.dlss"),
                          D("quality.dlss_scale", "quality.dlss").need("quality.dlss"),
@@ -276,14 +279,16 @@ std::vector<Group> build() {
                          D("quality.dlss_height", "quality.dlss").need("quality.dlss")}));
     out.push_back(group(Area::Speed, Text::PageFrames,
                         {B("frames.vsync"), B("frames.fps_limit"), B("frames.fps_counter"),
-                         B("frames.battery_saver"), D("frames.battery_fps", "frames.battery_saver"),
+                         B("frames.battery_saver"),
+                         D("frames.battery_fps", "frames.battery_saver").need("frames.battery_saver"),
                          D("frames.save_power"), D("frames.keep_fps"), D("frames.light_skills"),
                          B("frames.frame_generation").need("quality.dlss"), D("frames.reflex"),
                          D("frames.allow_tearing")}));
     out.push_back(group(Area::Speed, Text::PageScreen,
                         {B("display.high_resolution"), B("display.hdr"), D("display.ui_native"),
                          D("display.ui_filter"), D("display.crisp_text"), D("display.crisp_numbers"),
-                         D("display.window_art"), trial("display.dpi_aware", "3.0.11-beta.292")}));
+                         D("display.window_art").need("display.crisp_text"),
+                         trial("display.dpi_aware", "3.0.11-beta.292")}));
     out.push_back(group(Area::Speed, Text::PageRender,
                         {B("renderer.api"), B("renderer.gpu"), D("renderer.bridge"), D("renderer.safe_mode"),
                          // a laptop's two cards: set before the game is playable at all (R-T8FGMM: 5 frames a second)
@@ -365,6 +370,10 @@ std::vector<Group> build() {
                 if (r.key == k) r.needs.push_back(Need{NeedKind::Direct3D12});
             if (r.key.compare(0, 7, "view3d.") == 0 && r.key != "view3d.own_models")
                 r.needs.push_back(Need{NeedKind::View3d});
+            // 3.0.21-beta.10: «Роздільність світу» is Direct3D 11's (its hint's first words); the aura is made when
+            // the character appears - «після телепорту чи нової карти»
+            if (r.key == "quality.world_scale") r.needs.push_back(Need{NeedKind::Direct3D11});
+            if (r.key == "effects.aura") r.nextMap = true;
         }
     return out;
 }
@@ -422,6 +431,7 @@ Home homeOf(const Row& r) {
 
 bool met(const Need& n, const Config& shown, bool direct3d12, bool view3d) {
     if (n.kind == NeedKind::Direct3D12) return direct3d12;
+    if (n.kind == NeedKind::Direct3D11) return !direct3d12;
     if (n.kind == NeedKind::View3d) return view3d;
     const IniSetting* s = n.key ? findSetting(n.key) : nullptr;
     if (!s || s->tokens.empty()) return true;
@@ -461,6 +471,8 @@ About about(const Row& r, const Config& shown, bool direct3d12, bool view3d, Lan
         w.met = met(n, shown, direct3d12, view3d);
         if (n.kind == NeedKind::Direct3D12) {
             w.name = "Direct3D 12";
+        } else if (n.kind == NeedKind::Direct3D11) {
+            w.name = "Direct3D 11";
         } else if (n.kind == NeedKind::View3d) {
             w.name = tr(l, Text::View3dHeading);
         } else {
@@ -491,23 +503,51 @@ std::string aboutText(const About& a, Lang l, const char* yes, const char* no) {
 }
 
 std::string whyNot(const Row& r, const Config& shown, bool direct3d12, bool view3d, Lang l) {
+    Now now;
+    now.direct3d12 = direct3d12;
+    now.view3d = view3d;
+    return whyNot(r, shown, now, l);
+}
+
+namespace {
+
+// The map cannot show what the row is about (core/effect_where: by the map's name - the open sky, the desert, a
+// cave…): an effect's own switch, a part by the effect it stands under, the season by «Пори року». The weather's
+// kind is a choice: whichever is chosen falls under the open sky alone - said indoors only
+bool notHere(const Row& r, const std::string& map, const EffectSettings& e) {
+    if (r.key == "effects.weather_kind") return !outdoors(map);
+    std::string effect;
+    if (r.key == "effects.season") effect = "effects.seasons";
+    else if (effect_groups::memberOf(r.key)) effect = r.key;
+    else if (!r.under.empty() && effect_groups::memberOf(r.under)) effect = r.under;
+    return !effect.empty() && !effect_where::worksOn(effect, map, e);
+}
+
+}  // namespace
+
+std::string whyNot(const Row& r, const Config& shown, const Now& now, Lang l) {
     std::vector<std::string> parts;
     std::string rows;
-    bool card = false, view = false;
+    bool card12 = false, card11 = false, view = false;
     const Group* g = groupOf(r.key);
     for (const Need& n : r.needs) {
-        if (met(n, shown, direct3d12, view3d)) continue;
+        if (met(n, shown, now.direct3d12, now.view3d)) continue;
         if (n.kind == NeedKind::Direct3D12) {
-            card = true;
+            card12 = true;
+        } else if (n.kind == NeedKind::Direct3D11) {
+            card11 = true;
         } else if (n.kind == NeedKind::View3d) {
-            view = !g || g->area != Area::View3d;
+            view = !now.ownEntry || !g || g->area != Area::View3d;
         } else if (const IniSetting* s = n.key ? findSetting(n.key) : nullptr) {
             rows += (rows.empty() ? "" : ", ") + std::string("\xC2\xAB") + tr(l, s->label) + "\xC2\xBB";
         }
     }
-    if (card) parts.push_back(tr(l, Text::WhyDirect3D12));
+    if (card12) parts.push_back(tr(l, Text::WhyDirect3D12));
+    if (card11) parts.push_back(tr(l, Text::WhyDirect3D11));
     if (view) parts.push_back(tr(l, Text::WhyView3d));
     if (!rows.empty()) parts.push_back(fmt(tr(l, Text::WhyNeeds), {rows}));
+    // 3.0.21-beta.10: the map cannot show it (the weather indoors, the year in the desert, grass in a cave)
+    if (!now.map.empty() && notHere(r, now.map, shown.effects)) parts.push_back(tr(l, Text::WhyNotHere));
     if (r.nextMap) parts.push_back(tr(l, Text::WhyNextMap));
     std::string out;
     for (const std::string& p : parts) out += (out.empty() ? "" : " \xC2\xB7 ") + p;

@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "core/config.hpp"
 #include "core/settings/strings.hpp"
 
 namespace uagfx::settingswin {
@@ -21,9 +22,11 @@ enum class Kind : uint8_t { Game, Picture, Keys };
 
 struct Nav {
     settings::Text name;
-    int area = -1;  // the catalogue's area; -1 the first entry («Як виглядає гра»)
+    int area = -1;  // the catalogue's area; -1 the first entry («Як виглядає гра»); kChangedArea the last, «Змінені»
     int rows = 0;   // the rows it holds
 };
+// 3.0.21-beta.10: the list's last entry, «Змінені» - the rows off their defaults (changedLines; lines() gives none)
+constexpr int kChangedArea = -2;
 const std::vector<Nav>& nav();
 
 // The first entry's two groups (the catalogue's groups are 0 and up)
@@ -46,5 +49,23 @@ std::vector<Line> lines(int entry, const std::set<int>& open);
 // The search: every row of every entry matching each word of the query (labels and hints in the language; the game's
 // own and the choices by their names), details too, under their groups' names; an empty query finds nothing
 std::vector<Line> find(const std::string& query, settings::Lang l);
+
+// 3.0.21-beta.10 (the owner after R-MSAM96 - eight sliders to bring back by hand: «надо кнопку по умолчанию сделать.
+// чтобы не искать»): the window knows what is not as shipped.
+// The settings as shipped, as the window shows them: the driver's own defaults but «Якість ефектів» (the shipped
+// file says auto), each effect's switch as that set gives it on a card of this level (core/effect_groups shown)
+Config defaults(int cardLevel);
+// A row of the window off its default (`shown`: the settings as the window shows them). An effect's own switch
+// counts only while «Якість ефектів» is «Свої»: a set decides it otherwise, and the set's row is the one off
+bool changed(const std::string& key, const Config& shown, const Config& defaults);
+// A group's rows off their defaults with the values that bring them back, in the group's order
+struct Reset {
+    std::string key, token;
+};
+std::vector<Reset> resetsOf(int group, const Config& shown, const Config& defaults);
+// «Змінені»: every row off its default, under its group's name (as the search's lines)
+std::vector<Line> changedLines(const Config& shown, const Config& defaults);
+// What an entry says over its rows: «3D-режим» in the usual view - its rows do nothing now. Text::Count: nothing
+settings::Text noteOf(int entry, bool view3d);
 
 }  // namespace uagfx::settingswin

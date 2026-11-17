@@ -329,6 +329,66 @@ TEST(catalogue_a_row_says_why_it_does_nothing) {
     CHECK_EQ(why("view3d.close_gaps", on, true, true), std::string("Зміна діє з наступної карти"));
 }
 
+// 3.0.21-beta.10 (the owner: «иногда когда чтото в настройках выбираю то ничего не меняется. если надо перегружать
+// для этого игру то надо делать подсказку»; his log: «Пора року» five times in three seconds, the 3D view's «Кут
+// огляду» dragged in the usual view): a row says every reason known for a change not to show now - the other
+// renderer, a row it stands on, the map that has nothing of it, the next map
+TEST(catalogue_a_row_says_why_a_change_does_not_show) {
+    const Config on = parseConfig("");
+    const auto why = [&](const char* key, const Config& c, const catalogue::Now& now, Lang l = Lang::Uk) {
+        const catalogue::Row* r = catalogue::find(key);
+        return r ? catalogue::whyNot(*r, c, now, l) : std::string("?");
+    };
+    catalogue::Now top;  // Direct3D 12, the usual view, the map not known
+    // a row of the 3D view listed outside its own entry (the search, «Змінені») says the view it needs
+    catalogue::Now found = top;
+    found.ownEntry = false;
+    CHECK_EQ(why("view3d.fov_first", on, top), std::string());  // in its entry the entry's note says it once
+    CHECK_EQ(why("view3d.fov_first", on, found), std::string("Працює лише у 3D-режимі"));
+    found.view3d = true;
+    CHECK_EQ(why("view3d.fov_first", on, found), std::string());
+    // «Роздільність світу» is Direct3D 11's
+    CHECK_EQ(why("quality.world_scale", on, top), std::string("Працює лише на Direct3D 11"));
+    CHECK_EQ(why("quality.world_scale", on, top, Lang::Ru), std::string("Работает только на Direct3D 11"));
+    catalogue::Now eleven = top;
+    eleven.direct3d12 = false;
+    CHECK_EQ(why("quality.world_scale", on, eleven), std::string());
+    // rows that stand on another row
+    CHECK_EQ(why("quality.alpha_to_coverage", parseConfig("[quality]\nmsaa = 1\n"), top),
+             std::string("Щоб працювало, увімкніть: «Згладжування країв (MSAA)»"));
+    CHECK_EQ(why("quality.alpha_to_coverage", parseConfig("[quality]\nmsaa = 4\n"), top), std::string());
+    CHECK_EQ(why("display.window_art", parseConfig("[display]\ncrisp_text = 0\n"), top),
+             std::string("Щоб працювало, увімкніть: «Чіткий текст»"));
+    CHECK_EQ(why("frames.battery_fps", parseConfig("[frames]\nbattery_saver = 0\n"), top),
+             std::string("Щоб працювало, увімкніть: «Берегти батарею ноутбука»"));
+    // the map: nothing of it shows here - the weather indoors, the year in a cave or the desert; a map not known
+    // says nothing, a field says nothing
+    catalogue::Now indoors = top;
+    indoors.map = "prt_in";
+    CHECK_EQ(why("effects.weather_kind", on, indoors), std::string("На цій карті цього не видно"));
+    CHECK_EQ(why("effects.weather", on, indoors, Lang::Ru), std::string("На этой карте этого не видно"));
+    CHECK_EQ(why("effects.season", on, indoors), std::string("На цій карті цього не видно"));
+    CHECK_EQ(why("effects.grass", on, indoors), std::string("На цій карті цього не видно"));
+    // a part of an effect the map lacks says it too, after what it needs
+    CHECK_EQ(why("effects.dew", on, indoors),
+             std::string("Щоб працювало, увімкніть: «Трава» \xC2\xB7 На цій карті цього не видно"));
+    catalogue::Now field = top;
+    field.map = "prt_fild08";
+    // the weather's kind is a choice: any kind falls on a field, whatever is chosen now; «Погода» itself shows
+    // nothing while the sky chosen is clear (the field has no weather of its own)
+    CHECK_EQ(why("effects.weather_kind", on, field), std::string());
+    CHECK_EQ(why("effects.weather", on, field), std::string("На цій карті цього не видно"));
+    CHECK_EQ(why("effects.weather", parseConfig("[effects]\nweather_kind = rain\n"), field), std::string());
+    CHECK_EQ(why("effects.season", on, field), std::string());
+    CHECK_EQ(why("effects.grass", on, field), std::string());
+    catalogue::Now desert = top;
+    desert.map = "moc_fild01";
+    CHECK_EQ(why("effects.season", on, desert), std::string("На цій карті цього не видно"));
+    // when a change shows: the aura is made when the character appears, the full colours with a texture's loading
+    CHECK_EQ(why("effects.aura", on, top), std::string("Зміна діє з наступної карти"));
+    CHECK_EQ(why("quality.full_colour", on, top), std::string("Зміна діє з наступної карти"));
+}
+
 // 3.0.21-beta.5 (the concept's question 5, the owner: «делай» on the list of names): a name says what is seen - the
 // inner words (our renderer, a library's file, «нова бібліотека», a trial's «(експеримент)») are out of the names
 // of the rows players see; a row is still found by the name it had

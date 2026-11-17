@@ -703,7 +703,12 @@ select selectbox option:checked { color: #e6cb8a; }
 .sw .sn.on { background-color: #e6cb8a22; color: #e6cb8a; }
 .sw .sn .cnt { font-size: 11dp; color: #9aa3b5; }
 .sw .spane { display: block; flex: 1; padding: 4dp 14dp 12dp 14dp; overflow-y: auto; }
-.sw .sgrp { display: block; margin: 14dp 0 2dp 0; font-size: 11dp; color: #9aa3b5; }
+.sw .sgrp { display: block; position: relative; margin: 14dp 0 2dp 0; font-size: 11dp; color: #9aa3b5; }
+/* 3.0.21-beta.10: a group's way back to the shipped values, at the right end of its name; an entry's note */
+.sw .srst { display: block; position: absolute; right: 0; top: -3dp; padding: 2dp 7dp; border-radius: 6dp;
+    font-size: 11dp; color: #8cb4dc; }
+.sw .srst:hover { color: #e6cb8a; background-color: #ffffff10; }
+.sw .snote { display: block; margin: 10dp 0 0 0; font-size: 12dp; color: #d6a460; }
 .sw .sro { display: flex; flex-direction: row; align-items: center; padding: 7dp 0; border-bottom: 1dp #ffffff0c; }
 .sw .st { display: block; flex: 1; padding-right: 12dp; }
 /* 3.0.21-beta.3: a part under its row; the line that opens a group's details */

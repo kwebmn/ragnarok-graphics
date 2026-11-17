@@ -1,6 +1,10 @@
 #include <algorithm>
 #include <set>
 
+#include <fstream>
+#include <sstream>
+
+#include "core/effect_groups.hpp"
 #include "core/live_config.hpp"
 #include "core/settings/catalogue.hpp"
 #include "core/settings/schema.hpp"
@@ -30,8 +34,10 @@ int entryNamed(settings::Text name) {
 // diagnostic
 TEST(settings_window_lists_the_areas_that_live_in_the_game) {
     const std::vector<settingswin::Nav>& nav = settingswin::nav();
-    CHECK_EQ(int(nav.size()), 8);
-    if (nav.size() != 8) return;
+    CHECK_EQ(int(nav.size()), 9);  // 3.0.21-beta.10: «Змінені» closes the list
+    if (nav.size() != 9) return;
+    CHECK(nav[8].name == settings::Text::SettingsChanged && nav[8].area == settingswin::kChangedArea);
+    CHECK(settingswin::lines(8, {}).empty());  // its lines are changedLines(): they go by the settings
     CHECK(nav[0].name == settings::Text::LookHead && nav[0].area == -1 && nav[0].rows == 9);
     const settings::Text names[7] = {settings::Text::LookPicture, settings::Text::View3dHeading,
                                      settings::Text::ViewInterface, settings::Text::CatControls,
@@ -43,7 +49,7 @@ TEST(settings_window_lists_the_areas_that_live_in_the_game) {
     CHECK(entryNamed(settings::Text::PageDiagnostics) < 0);
     // an entry's count: its rows living in the game - every one of them once over the list
     int rows = 0, inGame = 0;
-    for (size_t i = 1; i < nav.size(); ++i) rows += nav[i].rows;
+    for (size_t i = 1; i + 1 < nav.size(); ++i) rows += nav[i].rows;
     for (const settings::catalogue::Group& g : settings::catalogue::groups())
         for (const settings::catalogue::Row& r : g.rows)
             inGame += settings::catalogue::homeOf(r) == settings::catalogue::Home::Game ? 1 : 0;
@@ -177,4 +183,83 @@ TEST(settings_window_search) {
     CHECK(!holds(settingswin::find("крони", settings::Lang::Uk), "view3d.crown_volume"));
     CHECK(settingswin::find("", settings::Lang::Uk).empty());
     CHECK(settingswin::find("zzzzqqq", settings::Lang::En).empty());
+}
+
+// 3.0.21-beta.10 (the owner after R-MSAM96, eight sliders to bring back by hand: «надо кнопку по умолчанию сделать.
+// чтобы не искать»): the window knows what is not as shipped. The default of a row is the shipped file's value - the
+// driver's own but «Якість ефектів» (the file says auto), each effect's switch as that set gives it on this card
+TEST(settings_window_defaults_are_the_shipped_file_s) {
+    std::ifstream f(std::string(UAGFX_SOURCE_DIR) + "/dist/uaro-graphics.ini");
+    std::stringstream text;
+    text << f.rdbuf();
+    CHECK(text.str().size() > 1000);
+    for (int level : {1, 2, 3}) {
+        Config shipped = parseConfig(text.str());
+        shipped.effects = effect_groups::shown(shipped.effects, level);
+        const Config defaults = settingswin::defaults(level);
+        int rows = 0;
+        for (const settings::catalogue::Group& g : settings::catalogue::groups())
+            for (const settings::catalogue::Row& r : g.rows) {
+                if (settings::catalogue::homeOf(r) != settings::catalogue::Home::Game) continue;
+                const settings::IniSetting* st = settings::findSetting(r.key);
+                if (!st) continue;
+                ++rows;
+                if (settings::tokenOf(*st, defaults) != settings::tokenOf(*st, shipped))
+                    std::printf("    %s: default %s, shipped %s (level %d)\n", r.key.c_str(),
+                                settings::tokenOf(*st, defaults).c_str(), settings::tokenOf(*st, shipped).c_str(),
+                                level);
+                CHECK_EQ(settings::tokenOf(*st, defaults), settings::tokenOf(*st, shipped));
+            }
+        CHECK(rows > 400);
+    }
+}
+
+TEST(settings_window_tells_what_is_off_its_default) {
+    const int level = 3;
+    const Config defaults = settingswin::defaults(level);
+    const auto shownOf = [&](const std::string& ini) {
+        Config c = parseConfig("[effects]\npreset = auto\n" + ini);
+        c.effects = effect_groups::shown(c.effects, level);
+        return c;
+    };
+    // as shipped: nothing to bring back
+    CHECK(settingswin::changedLines(defaults, defaults).empty());
+    CHECK(!settingswin::changed("effects.grade_brightness", defaults, defaults));
+    // R-MSAM96's file: the colour's sliders and the 3D view's
+    const Config hurt = shownOf("grade_brightness = 50\ngrade_contrast = 100\ngrade_saturation = 100\n"
+                                "[view3d]\nmouse = 25\nfov_first = 50\n[quality]\nrender_scale = 50\n");
+    CHECK(settingswin::changed("effects.grade_brightness", hurt, defaults));
+    CHECK(settingswin::changed("view3d.mouse", hurt, defaults));
+    CHECK(!settingswin::changed("effects.grade_vignette", hurt, defaults));
+    const std::vector<settingswin::Line> lines = settingswin::changedLines(hurt, defaults);
+    CHECK_EQ(lines.size(), size_t(6));
+    CHECK(holds(lines, "effects.grade_brightness") && holds(lines, "view3d.fov_first") &&
+          holds(lines, "quality.render_scale"));
+    int heads = 0;
+    for (const settingswin::Line& l : lines) heads += l.heads ? 1 : 0;
+    CHECK_EQ(heads, 3);  // «Весь екран», «Камера й приціл», «Якість» - each named over its first row
+    for (const settingswin::Line& l : lines) CHECK(l.what == settingswin::Line::What::Row && l.entry > 0);
+    // a group's way back: its rows off their defaults with the values that bring them back
+    const settings::catalogue::Group* colour = settings::catalogue::groupOf("effects.grade_brightness");
+    CHECK(colour != nullptr);
+    int group = -1;
+    for (size_t g = 0; g < settings::catalogue::groups().size(); ++g)
+        if (&settings::catalogue::groups()[g] == colour) group = int(g);
+    const std::vector<settingswin::Reset> back = settingswin::resetsOf(group, hurt, defaults);
+    CHECK_EQ(back.size(), size_t(3));
+    std::set<std::string> to;
+    for (const settingswin::Reset& r : back) to.insert(r.key + "=" + r.token);
+    CHECK(to == (std::set<std::string>{"effects.grade_brightness=100", "effects.grade_contrast=108",
+                                       "effects.grade_saturation=115"}));
+    CHECK(settingswin::resetsOf(group, defaults, defaults).empty());
+    // an effect's own switch: a set decides it - no row of the player's is off while «Якість ефектів» is a set...
+    const Config strong = shownOf("preset = strong\n");
+    const std::vector<settingswin::Line> set = settingswin::changedLines(strong, defaults);
+    CHECK(holds(set, "effects.preset"));
+    for (const settingswin::Line& l : set) CHECK(effect_groups::memberOf(l.key) == nullptr);
+    // ... with «Свої» each switch is the player's own: off when it is not as the shipped set has it
+    const Config own = shownOf("preset = custom\ngrass = 0\n");
+    CHECK(settingswin::changed("effects.preset", own, defaults));
+    CHECK(settingswin::changed("effects.grass", own, defaults) ==
+          (settings::tokenOf(*settings::findSetting("effects.grass"), defaults) == std::string("1")));
 }

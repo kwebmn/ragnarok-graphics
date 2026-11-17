@@ -572,3 +572,74 @@ TEST(uikit_ring_is_placed_only_when_it_changes) {
     CHECK(!ring->IsVisible());
     rmlhost::close(doc);
 }
+
+// 3.0.21-beta.10 (the owner: «надо кнопку по умолчанию сделать. чтобы не искать»; «если надо перегружать для этого
+// игру то надо делать подсказку»): a group whose rows are off their defaults shows «Типові» at the right end of its
+// name - a click names the row that heads the group; an entry that does nothing now says so over its rows
+TEST(uikit_options_a_group_s_way_back_and_the_entry_s_note) {
+    static ol::Model m;
+    m = ol::Model{};
+    m.title = "Налаштування";
+    m.nav = {ol::NavView{"Як виглядає гра", 9}, ol::NavView{"3D-режим", 22}, ol::NavView{"Змінені", 3}};
+    m.sec = 1;
+    ol::RowView a = toggleRow("Стеля в приміщеннях", true, "Приміщення");
+    ol::RowView b = toggleRow("Склепіння", true);
+    ol::RowView c = toggleRow("Кут огляду", false, "Камера й приціл");
+    c.toggle = false, c.slider = true, c.min = 50, c.max = 110, c.value = 50, c.vtext = "50";
+    c.reset = "Типові";  // its group has rows off their defaults
+    m.rows = {a, b, c};
+    ol::fit(m.rows);
+    m.shownRows = 3;
+    std::vector<int> resets;
+    Rml::ElementDocument* doc = rmlhost::load(
+        ol::rml(),
+        [&](Rml::DataModelConstructor& cc) {
+            ol::bind(cc, m);
+            const auto none = [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {};
+            for (const char* e : {"sec_go", "set_toggle", "set_slider", "set_step", "set_choice", "set_more",
+                                  "open_layout", "open_console", "opt_close"})
+                cc.BindEventCallback(e, none);
+            cc.BindEventCallback("set_reset", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& v) {
+                resets.push_back(v.empty() ? -1 : v[0].Get<int>());
+            });
+        },
+        100, 60);
+    CHECK(doc != nullptr);
+    if (!doc) return;
+    CHECK_EQ(shownOf(doc, ".spane .sgrp"), 2);
+    CHECK_EQ(shownOf(doc, ".spane .srst"), 1);  // only the group with something to bring back
+    CHECK_EQ(shownOf(doc, ".spane .snote"), 0);
+    Rml::Element* link = nullptr;
+    Rml::Element* name = nullptr;
+    {
+        Rml::ElementList all;
+        doc->QuerySelectorAll(all, ".spane .srst");
+        for (Rml::Element* e : all)
+            if (!link && e->IsVisible(true)) link = e;
+        if (link) name = link->GetParentNode();
+    }
+    CHECK(link && link->IsClassSet("ctl"));  // the pad reaches it
+    if (link && name) {
+        // at the right end of the group's line, on the line of its name
+        const float right = link->GetAbsoluteLeft() + link->GetOffsetWidth();
+        const float lineRight = name->GetAbsoluteLeft() + name->GetOffsetWidth();
+        CHECK(std::fabs(right - lineRight) < 1.5f);
+        CHECK(std::fabs((link->GetAbsoluteTop() + link->GetOffsetHeight() / 2) -
+                        (name->GetAbsoluteTop() + name->GetOffsetHeight() / 2)) < 3.0f);
+        link->Click();
+    }
+    CHECK(resets == (std::vector<int>{2}));
+    // the entry's note: over the rows, pushing them down
+    Rml::ElementList rowsBefore;
+    doc->QuerySelectorAll(rowsBefore, ".spane .sro");
+    const float firstTop = rowsBefore.empty() ? 0 : rowsBefore[0]->GetAbsoluteTop();
+    m.note = "Ці налаштування діють у 3D-режимі (Ctrl+Shift+V). Зараз звичайний вигляд: змін не буде видно.";
+    rmlhost::update();
+    CHECK_EQ(shownOf(doc, ".spane .snote"), 1);
+    Rml::ElementList rowsAfter;
+    doc->QuerySelectorAll(rowsAfter, ".spane .sro");
+    CHECK(!rowsAfter.empty() && rowsAfter[0]->GetAbsoluteTop() > firstTop + 10);
+    Rml::Element* note = doc->QuerySelector(".spane .snote");
+    CHECK(note && !rowsAfter.empty() && note->GetAbsoluteTop() < rowsAfter[0]->GetAbsoluteTop());
+    rmlhost::close(doc);
+}

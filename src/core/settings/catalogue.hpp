@@ -27,8 +27,9 @@ enum class Status : uint8_t { Permanent, Trial, Diagnostic };
 // Lab - a trial or a diagnostic: the console; File - only in uaro-graphics.ini (the effects hidden behind a choice)
 enum class Home : uint8_t { Game, Start, Lab, File };
 
-// What a row needs to do anything: another row on (a check on, a list not at its first word), Direct3D 12, the 3D view
-enum class NeedKind : uint8_t { Row, Direct3D12, View3d };
+// What a row needs to do anything: another row on (a check on, a list not at its first word), Direct3D 12, the 3D
+// view; 3.0.21-beta.10: Direct3D 11 («Роздільність світу» is its alone)
+enum class NeedKind : uint8_t { Row, Direct3D12, View3d, Direct3D11 };
 struct Need {
     NeedKind kind;
     const char* key = nullptr;  // Row: "effects.grass"
@@ -56,6 +57,15 @@ const Group* groupOf(const std::string& sectionKey);
 Home homeOf(const Row& r);
 // A need met by the settings as they are shown (an effects' set decides its switches), the renderer and the view
 bool met(const Need& n, const Config& shown, bool direct3d12, bool view3d);
+
+// 3.0.21-beta.10 (the owner: «иногда когда чтото в настройках выбираю то ничего не меняется … надо делать
+// подсказку»): where the game is now - what a row's reasons are judged by
+struct Now {
+    bool direct3d12 = true, view3d = false;
+    std::string map;       // the map's name; "" not known - nothing is said of the map
+    bool ownEntry = true;  // the row is listed in its own area's entry: a row of «3D-режим» there does not say the
+                           // view it needs (the entry's note says it once); in the search and «Змінені» it does
+};
 
 // 3.0.21-beta.2 (step 2: the console's laboratory): the trials by area, in the catalogue's order; the diagnostics
 // that apply at once (the rest wait for the game's start: the settings app's developer page)
@@ -88,5 +98,8 @@ std::string aboutText(const About& a, Lang l, const char* yes, const char* no);
 // увімкніть: «Трава»» - and when a change shows («Зміна діє з наступної карти»), joined by « · »; empty when
 // there is nothing to say
 std::string whyNot(const Row& r, const Config& shown, bool direct3d12, bool view3d, Lang l);
+// 3.0.21-beta.10: and by the map - «На цій карті цього не видно» for an effect (or a part of it, the weather's kind,
+// the season) the map cannot show (core/effect_where); «Працює лише на Direct3D 11»
+std::string whyNot(const Row& r, const Config& shown, const Now& now, Lang l);
 
 }  // namespace uagfx::settings::catalogue

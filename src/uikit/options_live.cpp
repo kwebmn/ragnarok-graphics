@@ -23,9 +23,10 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
  <div class="snav"><div class="sn ctl" data-for="n, i : nav" data-class-on="i == sec && query == ''"
    data-event-click="sec_go(i)"><span class="nn">{{n.name}}</span><span class="cnt"
    data-if="n.count > 0">{{n.count}}</span></div></div>
- <div id="spane" class="spane"><div class="srow" data-for="r, i : srows"><div class="sgrp"
-   data-if="r.group != ''">{{r.group}}</div><div class="smore ctl" data-if="r.more"
-   data-event-click="set_more(i)">{{r.label}}</div><div class="sro" data-if="!r.more"
+ <div id="spane" class="spane"><div class="snote" data-if="note != ''">{{note}}</div><div class="srow"
+   data-for="r, i : srows"><div class="sgrp" data-if="r.group != ''">{{r.group}}<span class="srst ctl"
+   data-if="r.reset != ''" data-event-click="set_reset(i)">{{r.reset}}</span></div><div class="smore ctl"
+   data-if="r.more" data-event-click="set_more(i)">{{r.label}}</div><div class="sro" data-if="!r.more"
    data-class-sub="r.sub"><div class="st"><span
    class="sl">{{r.label}}</span><span class="shn" data-if="r.hint != ''">{{r.hint}}</span><span class="swn"
    data-if="r.warn != ''">{{r.warn}}</span></div><div
@@ -73,6 +74,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         v.RegisterMember("label", &RowView::label);
         v.RegisterMember("hint", &RowView::hint);
         v.RegisterMember("warn", &RowView::warn);
+        v.RegisterMember("reset", &RowView::reset);
         v.RegisterMember("vtext", &RowView::vtext);
         v.RegisterMember("toggle", &RowView::toggle);
         v.RegisterMember("on", &RowView::on);
@@ -104,6 +106,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("none", &m.none);
     c.Bind("console_btn", &m.consoleBtn);
     c.Bind("layout_btn", &m.layoutBtn);
+    c.Bind("note", &m.note);
     c.Bind("ground", &m.ground);
 }
 

@@ -9267,6 +9267,18 @@ constexpr Entry kTexts[] = {
     {Text::ConsoleTabCosts, "Effects' cost", "Ціна ефектів", "Цена эффектов"},  // 3.0.21-beta.7
     {Text::ConsoleToSettings, "The game's settings are in the «Settings» window (Alt+O)",
      "Налаштування гри — у вікні «Налаштування» (Alt+O)", "Настройки игры — в окне «Настройки» (Alt+O)"},
+    {Text::SettingsDefaults, "Defaults", "Типові", "По умолчанию"},  // 3.0.21-beta.10
+    {Text::SettingsChanged, "Changed", "Змінені", "Изменённые"},
+    {Text::SettingsChangedNone, "Every setting here is at its default", "Усі налаштування тут типові",
+     "Все настройки здесь по умолчанию"},
+    {Text::SettingsNote3d,
+     "These settings work in the 3D view (Ctrl+Shift+V). The usual view is on now: a change will not show.",
+     "Ці налаштування діють у 3D-режимі (Ctrl+Shift+V). Зараз звичайний вигляд: змін не буде видно.",
+     "Эти настройки действуют в 3D-режиме (Ctrl+Shift+V). Сейчас обычный вид: изменений не будет видно."},
+    {Text::WhyDirect3D11, "Works on Direct3D 11 only", "Працює лише на Direct3D 11",
+     "Работает только на Direct3D 11"},
+    {Text::WhyNotHere, "Nothing of it shows on this map", "На цій карті цього не видно",
+     "На этой карте этого не видно"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
