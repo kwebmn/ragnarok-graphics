@@ -29,6 +29,7 @@
 #include "win/window_input.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
+#include "uikit/ring.hpp"  // after win/uaui.hpp (windowsx.h's macros cleared there)
 #include "win/ui_sheet.hpp"
 #include "win/words.hpp"
 
@@ -74,6 +75,7 @@ struct State {
     std::vector<std::string> iconPrev;
     Rml::String title, hint, ground = "#10141cf0";
     uisheet::NavSet nav;
+    uikit::Ring ring;  // 3.0.21-beta.9: the pad's ring as it was last set
     uisheet::Sheet sheet;  // 3.0.18-beta.32: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -338,17 +340,8 @@ static void liveFrame(State& s) {
             m.BindEventCallback("shut", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) { close(); });
         });
         s.nav.shown = [] { return state().liveShown; };
-        s.nav.ring = [](const panel::Box* b) {
-            if (Rml::Element* r = state().live.byId("ring")) {
-                r->SetProperty("display", b ? "block" : "none");
-                if (b) {
-                    const float d = 3 * uaui::dp();
-                    r->SetProperty("left", std::to_string(b->x - d) + "px");
-                    r->SetProperty("top", std::to_string(b->y - d) + "px");
-                    r->SetProperty("width", std::to_string(b->w + 2 * d) + "px");
-                    r->SetProperty("height", std::to_string(b->h + 2 * d) + "px");
-                }
-            }
+        s.nav.ring = [](const panel::Box* b) {  // 3.0.21-beta.9: set only when it changes (uikit/ring)
+            state().ring.place(state().live.byId("ring"), b, 3 * uaui::dp());
         };
     }
     if (!s.live.made()) return;

@@ -3,6 +3,7 @@
 #include <windowsx.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <set>
 #include <string>
@@ -17,6 +18,7 @@
 #include "core/settings_window.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "uikit/applying.hpp"
 #include "uikit/options_live.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
@@ -77,6 +79,7 @@ struct State {
     std::string iniPath;
     bool changed = false;
     bool layoutAsked = false;  // 3.0.21-beta.7: «Розмістити інтерфейс» pressed
+    int quietTold = 0;         // 3.0.21-beta.9: sliders' changes not taken for moves, told in the log
     uisheet::Sheet sheet;  // 3.0.18-beta.34: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -389,9 +392,24 @@ static void liveFrame(State& s) {
         m.BindEventCallback("set_toggle", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             if (!a.empty()) useRow(state(), a[0].Get<int>(), 0, 0);
         });
+        // 3.0.21-beta.9 (R-MSAM96, R-SPPSF3: sliders written that no hand had moved - «Яскравість» 50, «Масштаб
+        // рендера» 50): only a person's move counts (uikit options_live sliderMoved) - not the «change» RmlUi tells
+        // while a row's own values reach a slider left by the row that stood there before
         m.BindEventCallback("set_slider", [](Rml::DataModelHandle, Rml::Event& e, const Rml::VariantList& a) {
+            State& st = state();
             if (a.empty()) return;
-            useRow(state(), a[0].Get<int>(), 1, std::atoi(e.GetParameter<Rml::String>("value", "0").c_str()));
+            const int row = a[0].Get<int>();
+            int value = 0;
+            if (uikit::options::sliderMoved(e, st.m, row, value)) {
+                useRow(st, row, 1, value);
+            } else if (uikit::applying() && row >= 0 && size_t(row) < st.m.rows.size()) {
+                // the facts for a report: what would have been written before
+                const SetRowView& r = st.m.rows[size_t(row)];
+                const int told = int(std::lround(e.GetParameter<float>("value", 0.0f)));
+                if (told != r.value && st.quietTold++ < 20)
+                    LOG_INFO("options: «%s»'s slider told %d as the rows changed (its row holds %d) - not a move, "
+                             "not written", r.key.c_str(), told, r.value);
+            }
         });
         // 3.0.18-beta.124: − and + by a slider (the pad's way to it): a step of its own (the volumes 8)
         m.BindEventCallback("set_step", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {

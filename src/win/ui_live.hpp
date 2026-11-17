@@ -5,6 +5,8 @@
 
 #include "win/card_drag.hpp"
 #include "win/uaui.hpp"
+// after win/uaui.hpp: it clears windowsx.h's macros of RmlUi's names before RmlUi's headers
+#include "uikit/ring.hpp"
 #include "win/ui_sheet.hpp"
 #include "win/window_shadow.hpp"
 
@@ -30,6 +32,7 @@ public:
 
     uaui::Doc doc;
     uisheet::NavSet nav;
+    uikit::Ring ring_;  // 3.0.21-beta.9: the pad's ring as it was last set
     // 3.0.18-beta.92 (the owner: «не все окна перетаскиваются»): every live window moved by a press on its ground -
     // its shift from the place its part gives (kept while the game runs); a part with a drag of its own sets `ownDrag`
     CardDrag drag;

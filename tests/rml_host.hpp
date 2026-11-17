@@ -19,6 +19,7 @@ void update();  // the models' changes into the layout (every model dirtied whol
 // another place or cut than the frame before (what win/uaui meshes anew)
 struct Work {
     int compiled = 0, words = 0, moved = 0, drawn = 0;
+    int measured = 0;  // 3.0.21-beta.9: words measured - a layout of the document measures them again
 };
 Work frame();
 void close(Rml::ElementDocument* doc);

@@ -69,6 +69,10 @@ protected:
 	//            data view at the same tree depth, negative numbers are updated first.
 	DataView(Element* element, int sort_offset);
 
+	// uaRO Graphics 3.0.21-beta.9: a view that learns its place among its element's views only when it is
+	// initialized (data-attr-value: after the element's other attributes)
+	void AddSortOffset(int sort_offset);
+
 private:
 	ObserverPtr<Element> attached_element;
 	int sort_order;

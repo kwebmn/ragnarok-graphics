@@ -8,6 +8,7 @@
 #include <cstring>
 
 #include "core/ui_theme_css.hpp"
+#include "uikit/applying.hpp"
 
 namespace rmlhost {
 namespace {
@@ -118,6 +119,7 @@ public:
     const Rml::FontMetrics& GetFontMetrics(Rml::FontFaceHandle h) override { return metrics_[int(h)]; }
     int GetStringWidth(Rml::FontFaceHandle h, Rml::StringView text, const Rml::TextShapingContext&,
                        Rml::Character) override {
+        ++g_work.measured;
         const int key = int(h);
         int letters = 0;
         for (const char* c = text.begin(); c != text.end(); ++c)
@@ -179,19 +181,26 @@ Rml::ElementDocument* load(const std::string& rml, const std::function<void(Rml:
     d->SetProperty(Rml::PropertyId::Left, Rml::Property(x, Rml::Unit::PX));
     d->SetProperty(Rml::PropertyId::Top, Rml::Property(y, Rml::Unit::PX));
     d->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
-    for (int i = 0; i < 4; ++i) c->Update();  // the data views, then the layout of what they showed
+    {
+        const uagfx::uikit::Applying applying;  // as win/uaui: the models' values reach the elements here
+        for (int i = 0; i < 4; ++i) c->Update();  // the data views, then the layout of what they showed
+    }
     if (error) *error = g_log.substr(before);
     return d;
 }
 
 void update() {
     for (Rml::DataModelHandle& h : g_handles) h.DirtyAllVariables();
+    const uagfx::uikit::Applying applying;
     for (int i = 0; i < 4; ++i) context()->Update();
 }
 
 Work frame() {
     g_work = Work{};
-    context()->Update();
+    {
+        const uagfx::uikit::Applying applying;
+        context()->Update();
+    }
     context()->Render();
     return g_work;
 }

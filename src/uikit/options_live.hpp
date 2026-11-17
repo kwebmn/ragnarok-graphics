@@ -51,6 +51,14 @@ struct Model {
 // level down - updated after the list has let its spare elements go. fit(): each row's parts as its kind asks
 void fit(std::vector<RowView>& rows);
 
+// 3.0.21-beta.9 (R-MSAM96 «картинка сильно поменялась, не могу разобратся что включил»: «Яскравість» 100 -> 50,
+// «Контраст» 108 -> 100, «Насиченість» 115 -> 100 written with no hand on them; R-SPPSF3: «Масштаб рендера» -> 50):
+// a slider's «change» is the person's move only outside RmlUi's update (uikit/applying) and when it names another
+// value than the row holds - true with that value (within the row's range). A row's slider is the element of the
+// row that stood at its place before: the new row's least or most cut the value left in it, RmlUi told «change»,
+// and the window wrote that value under the new row's name
+bool sliderMoved(const Rml::Event& e, const Model& m, int row, int& value);
+
 const char* rml();
 // The window's variables. Its events are the caller's: sec_go(i), set_toggle(i), set_slider(i), set_step(i, by),
 // set_choice(i, j), set_more(i), open_layout(), open_console(), opt_close()

@@ -2,11 +2,13 @@
 #include <cmath>
 #include <cstdio>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "rml_host.hpp"
 #include "test.hpp"
 #include "uikit/options_live.hpp"
+#include "uikit/ring.hpp"
 
 using namespace uagfx;
 namespace ol = uagfx::uikit::options;
@@ -422,5 +424,151 @@ TEST(uikit_options_holds_only_what_it_shows) {
     m.shownRows = 3;
     rmlhost::update();
     CHECK(elements(doc) - empty <= 3 * 15);
+    rmlhost::close(doc);
+}
+
+// 3.0.21-beta.9 (R-MSAM96 «картинка сильно поменялась, не могу разобратся что включил в настройках»; its log: 17:35:33
+// «settings: effects.grade_brightness = 50», then contrast = 100 and saturation = 100 in the next two frames, no hand
+// on them; R-SPPSF3's: «quality.render_scale = 50» the same way). RmlUi's slider sends «change» not only when a person
+// moves it: also when a model's values reach its element - a row's slider is the element of the row that stood at
+// that place before, and its new least or most cuts the value it still holds; the window took that for the person's
+// move and wrote it into uaro-graphics.ini under the NEW row's name. A change is the person's only outside RmlUi's
+// update (uikit::Applying), and a slider shows its row's value whatever stood there before
+TEST(uikit_options_a_slider_is_moved_by_a_person_alone) {
+    static ol::Model m;
+    m = ol::Model{};
+    m.title = "Налаштування";
+    m.nav = {ol::NavView{"Як виглядає гра", 9}, ol::NavView{"Картинка", 183}};
+    const auto slider = [](const char* key, int least, int most, int value) {
+        ol::RowView r;
+        r.key = key, r.label = key;
+        r.slider = true, r.min = least, r.max = most, r.value = value, r.vtext = std::to_string(value) + " %";
+        return r;
+    };
+    // an entry: sliders with small values, as «Різкість» 50 of 0..100 or a share 30 of 0..50
+    m.rows = {slider("quality.sharpen", 0, 100, 50), slider("effects.some_share", 0, 50, 30),
+              slider("effects.other", 0, 100, 100), slider("effects.low", 0, 40, 10)};
+    ol::fit(m.rows);
+    m.shownRows = 4;
+    std::vector<std::pair<int, int>> moved;
+    Rml::ElementDocument* doc = rmlhost::load(
+        ol::rml(),
+        [&](Rml::DataModelConstructor& c) {
+            ol::bind(c, m);
+            const auto none = [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {};
+            for (const char* e : {"sec_go", "set_toggle", "set_step", "set_choice", "set_more", "open_layout",
+                                  "open_console", "opt_close"})
+                c.BindEventCallback(e, none);
+            c.BindEventCallback("set_slider", [&](Rml::DataModelHandle, Rml::Event& e, const Rml::VariantList& a) {
+                int value = 0;
+                if (!a.empty() && ol::sliderMoved(e, m, a[0].Get<int>(), value))
+                    moved.emplace_back(a[0].Get<int>(), value);
+            });
+        },
+        100, 60);
+    CHECK(doc != nullptr);
+    if (!doc) return;
+    const auto shown = [&]() {
+        std::vector<int> values;
+        Rml::ElementList inputs;
+        doc->QuerySelectorAll(inputs, ".spane input.ctl");
+        for (Rml::Element* e : inputs) values.push_back(int(std::lround(e->GetAttribute("value", -1.0f))));
+        return values;
+    };
+    CHECK(moved.empty());  // the values that reach new sliders are not a person's
+    CHECK(shown() == (std::vector<int>{50, 30, 100, 10}));
+    // another entry: other rows at the same places, each with a range that does not hold the value left there -
+    // «Яскравість» 100 of 50..150 where 30 stood, a row of 100..200 where 100 of 0..100 stood
+    m.rows = {slider("effects.grade_contrast", 50, 150, 108), slider("effects.grade_brightness", 50, 150, 100),
+              slider("effects.far", 100, 200, 150), slider("effects.grade_saturation", 0, 200, 115),
+              slider("effects.new_fifth", 60, 90, 75)};
+    ol::fit(m.rows);
+    m.shownRows = 5;
+    rmlhost::update();
+    if (!moved.empty())
+        for (const auto& [row, value] : moved) std::printf("    taken for a move: row %d = %d\n", row, value);
+    CHECK(moved.empty());
+    CHECK(shown() == (std::vector<int>{108, 100, 150, 115, 75}));  // each slider shows its row's own value
+    // and back: the first entry's rows again
+    m.rows = {slider("quality.sharpen", 0, 100, 50), slider("effects.some_share", 0, 50, 30),
+              slider("effects.other", 0, 100, 100), slider("effects.low", 0, 40, 10)};
+    ol::fit(m.rows);
+    m.shownRows = 4;
+    rmlhost::update();
+    CHECK(moved.empty());
+    CHECK(shown() == (std::vector<int>{50, 30, 100, 10}));
+    // a person's move (the slider's value set outside RmlUi's update, as its drag does): told, with the row and the
+    // value; the same value again is no move
+    Rml::ElementList inputs;
+    doc->QuerySelectorAll(inputs, ".spane input.ctl");
+    CHECK_EQ(inputs.size(), size_t(4));
+    if (inputs.size() == 4) {
+        inputs[1]->SetAttribute("value", 45);
+        CHECK(moved == (std::vector<std::pair<int, int>>{{1, 45}}));
+        moved.clear();
+        inputs[0]->SetAttribute("value", 50);  // what the row holds already
+        CHECK(moved.empty());
+    }
+    rmlhost::close(doc);
+}
+
+// 3.0.21-beta.9 (R-MSAM96's log, 3.0.21-beta.8: «options: open 107.1 s - 88 frames a second …, the driver's own work
+// 8.04 ms a frame; in the 5 s before it … 0.86 ms» - the lighter document alone did not help): the pad's ring of a
+// live window was hidden anew every frame (SetProperty "display: none" with no pad in hand), and RmlUi lays the whole
+// document out again when a property that can change the layout is set - even to the value it has. The ring's
+// properties are set only when it shows, hides or moves (uikit/ring)
+TEST(uikit_ring_is_placed_only_when_it_changes) {
+    static ol::Model m;
+    m = ol::Model{};
+    m.title = "Налаштування";
+    m.nav = {ol::NavView{"Картинка", 183}};
+    m.rows = mixedRows(60, 3);
+    m.shownRows = 60;
+    Rml::ElementDocument* doc = loadPlain(m);
+    CHECK(doc != nullptr);
+    if (!doc) return;
+    Rml::Element* ring = doc->GetElementById("ring");
+    CHECK(ring != nullptr);
+    if (!ring) return;
+    for (int i = 0; i < 3; ++i) rmlhost::frame();
+    // what 3.0.21-beta.8 did each frame: the document laid out again (its words measured), nothing changed
+    ring->SetProperty("display", "none");
+    rmlhost::frame();
+    ring->SetProperty("display", "none");
+    const rmlhost::Work again = rmlhost::frame();
+    CHECK(again.measured > 0);
+    // the ring's keeper: hidden once, then nothing set - the frames measure nothing
+    uikit::Ring keeper;
+    keeper.place(ring, nullptr, 3.0f);
+    rmlhost::frame();
+    int measured = 0, set = 0;
+    for (int i = 0; i < 5; ++i) {
+        set += keeper.place(ring, nullptr, 3.0f) ? 1 : 0;
+        measured += rmlhost::frame().measured;
+    }
+    CHECK_EQ(set, 0);
+    CHECK_EQ(measured, 0);
+    // the pad takes a control: shown round it, once
+    const panel::Box box{40, 60, 120, 24};
+    CHECK(keeper.place(ring, &box, 3.0f));
+    rmlhost::frame();
+    CHECK(ring->IsVisible());
+    CHECK(std::fabs(ring->GetProperty("left")->Get<float>() - 37.0f) < 0.01f);
+    CHECK(std::fabs(ring->GetProperty("width")->Get<float>() - 126.0f) < 0.01f);
+    set = measured = 0;
+    for (int i = 0; i < 5; ++i) {
+        set += keeper.place(ring, &box, 3.0f) ? 1 : 0;
+        measured += rmlhost::frame().measured;
+    }
+    CHECK_EQ(set, 0);
+    CHECK_EQ(measured, 0);
+    // another control, another scale of the same one: moved
+    const panel::Box next{40, 96, 120, 24};
+    CHECK(keeper.place(ring, &next, 3.0f));
+    CHECK(keeper.place(ring, &next, 4.0f));
+    CHECK(!keeper.place(ring, &next, 4.0f));
+    CHECK(keeper.place(ring, nullptr, 4.0f));
+    rmlhost::frame();
+    CHECK(!ring->IsVisible());
     rmlhost::close(doc);
 }

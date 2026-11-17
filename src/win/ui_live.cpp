@@ -15,16 +15,12 @@ bool Window::make(const char* name, const char* rml, const std::function<void(Rm
     if (!doc.make(name, rml, bind)) return false;
     nav.shown = [this] { return shown; };
     nav.ring = [this](const panel::Box* b) {
-        Rml::Element* r = doc.byId("ring");
-        if (!r) return;
-        r->SetProperty("display", b ? "block" : "none");
-        if (!b) return;
-        // .152; .222: laid out at its size (its dp scale, no transform) - the boxes are its own pixels
+        // .152; .222: laid out at its size (its dp scale, no transform) - the boxes are its own pixels.
+        // 3.0.21-beta.9 (R-MSAM96's log: a live window open cost 8 ms a frame): asked every frame (NavSet::set ->
+        // showRing) - the element's properties set only when the ring shows, hides or moves (uikit/ring); hidden
+        // anew each frame, it had RmlUi lay the whole window out again each frame
         const float d = 3 * uaui::dp() * (doc.zoomed() > 0 ? doc.zoomed() : 1);
-        r->SetProperty("left", std::to_string(b->x - d) + "px");
-        r->SetProperty("top", std::to_string(b->y - d) + "px");
-        r->SetProperty("width", std::to_string(b->w + 2 * d) + "px");
-        r->SetProperty("height", std::to_string(b->h + 2 * d) + "px");
+        ring_.place(doc.byId("ring"), b, d);
     };
     return true;
 }

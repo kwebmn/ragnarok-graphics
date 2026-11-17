@@ -24,6 +24,11 @@ bool DataView::IsValid() const
 	return static_cast<bool>(attached_element);
 }
 
+void DataView::AddSortOffset(int sort_offset)
+{
+	sort_order += sort_offset;  // uaRO Graphics 3.0.21-beta.9
+}
+
 DataView::DataView(Element* element, int bias) : attached_element(element->GetObserverPtr()), sort_order(bias + 1000)
 {
 	RMLUI_ASSERT(bias >= -1000 && bias <= 999);

@@ -3,3 +3,5 @@ Only the core: Include/RmlUi/{Core,Config,Core.h}, Source/Core without FontEngin
 Local changes (search «uaRO Graphics»): 3.0.18-beta.176 a hidden document skips its elements' update and layout;
 3.0.18-beta.222 ElementDocument::SetDpScale - a document's own dp scale (Element::Update, ElementStyle ComputeLength,
 ElementScroll, ElementUtilities::GetDensityIndependentPixelRatio).
+3.0.21-beta.9 data-attr-value is updated after its element's other attribute views (DataView::AddSortOffset,
+DataViewCommon::Initialize): a slider gets its min and max first, then its value.

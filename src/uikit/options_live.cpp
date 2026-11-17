@@ -1,8 +1,11 @@
 #include "uikit/options_live.hpp"
 
+#include "uikit/applying.hpp"
+
 #include <RmlUi/Core.h>
 
 #include <algorithm>
+#include <cmath>
 
 namespace uagfx::uikit::options {
 namespace {
@@ -48,6 +51,14 @@ const char* rml() { return kRml; }
 
 void fit(std::vector<RowView>& rows) {
     for (RowView& r : rows) r.sliders.assign(r.slider && !r.more ? 1 : 0, 0);
+}
+
+bool sliderMoved(const Rml::Event& e, const Model& m, int row, int& value) {
+    if (applying()) return false;  // the model's own values reaching the element: not a person's move
+    if (row < 0 || size_t(row) >= m.rows.size() || !m.rows[size_t(row)].slider) return false;
+    const RowView& r = m.rows[size_t(row)];
+    value = std::clamp(int(std::lround(e.GetParameter<float>("value", 0.0f))), r.min, r.max);
+    return value != r.value;
 }
 
 void bind(Rml::DataModelConstructor& c, Model& m) {

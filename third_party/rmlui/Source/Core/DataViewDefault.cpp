@@ -26,7 +26,14 @@ bool DataViewCommon::Initialize(DataModel& model, Element* element, const String
 {
 	// The modifier can be overridden in the constructor
 	if (modifier.empty())
+	{
 		modifier = in_modifier;
+		// uaRO Graphics 3.0.21-beta.9 (R-MSAM96): data-attr-value after the element's other attributes, as
+		// data-value is - a slider given its value before its new min and max cut it to the old range and showed
+		// another value than its row's (the views of one element were updated in no fixed order)
+		if (modifier == "value")
+			AddSortOffset(SortOffset_DataValue);
+	}
 
 	expression = MakeUnique<DataExpression>(expression_str);
 	DataExpressionInterface expr_interface(&model, element);

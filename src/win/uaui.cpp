@@ -30,6 +30,7 @@
 #include <map>
 #include "core/layout.hpp"
 #include "core/window_panel.hpp"
+#include "uikit/applying.hpp"
 #include "win/paths.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
@@ -1964,7 +1965,12 @@ void end() {
     for (Doc* d : s.docs)  // a frame after showing: the fade in runs (the theme's transition)
         if (d->fadePending && d->shown()) d->doc()->SetClass("away", false), d->fadePending = false;
     const double t0 = clockNow();  // 3.0.18-beta.161: our parts' frames so far, RmlUi's own update next
-    s.context->Update();
+    {
+        // 3.0.21-beta.9 (R-MSAM96): the models' values reach the elements here - a «change» an element tells of
+        // them is not a person's (uikit/applying; «Налаштування» wrote such sliders into uaro-graphics.ini)
+        const uikit::Applying applying;
+        s.context->Update();
+    }
     // 3.0.18-beta.10 (the owner: «когда мышкой колесиком скролю мир увеличивается и уменьшается»): the document under
     // the game's cursor a window for the game (win/world_mouse)
     RECT client{};
