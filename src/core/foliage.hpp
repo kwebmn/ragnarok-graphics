@@ -65,6 +65,8 @@ bool stoodAbout(const float middle[3], const float turn[3], float a[3], float b[
 // crownLight holds the same
 constexpr float kCrownInner = 0.68f, kCrownUnder = 0.7f, kCrownSun = 0.25f, kCrownGain = 1.22f;
 constexpr float kCrownLeast = 0.25f, kCrownMost = 1.3f;
+// a crown's box this much across and up at least (half sizes) to be lit so - a flat plate of leaves is not
+constexpr float kCrownLeastHalf = 0.5f;
 float crownLight(const float p[3], const float middle[3], const float half[2], const float toSun[3]);
 
 }  // namespace uagfx::foliage

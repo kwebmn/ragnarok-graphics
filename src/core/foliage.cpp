@@ -72,7 +72,7 @@ void crownStood(int, float out[3]) {
 float stoodWay(uint32_t face) { return (face & 1u) != 0u ? -1.0f : 1.0f; }
 
 float crownLight(const float p[3], const float middle[3], const float half[2], const float toSun[3]) {
-    if (!(half[0] > 0.0f) || !(half[1] > 0.0f)) return 1.0f;
+    if (!(half[0] > kCrownLeastHalf) || !(half[1] > kCrownLeastHalf)) return 1.0f;
     const float d[3] = {(p[0] - middle[0]) / half[0], (p[1] - middle[1]) / half[1], (p[2] - middle[2]) / half[0]};
     const float rho = std::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
     const float k = 1.0f / std::max(rho, 1e-4f);

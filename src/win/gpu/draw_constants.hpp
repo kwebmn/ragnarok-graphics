@@ -292,9 +292,11 @@ inline bool cardTreeLook(const std::vector<gamemodels::CardRun>& runs, const Lea
     // its box's half sizes across and up (footprint, sharpen), the way to the sun (hole[5], hole[6], sourceClamp[3]:
     // holeUy, holeUz, sourceClamp.w); leafLight leaves its round light on the screen to it (uiPixels.w). The renderers
     // copy them with the crown's look (crownLightOf)
-    if (crownSun && !toView) {
-        out.footprint = std::max(hi[0] - lo[0], hi[2] - lo[2]) * 0.5f;
-        out.sharpen = (hi[1] - lo[1]) * 0.5f;
+    // (a crown of no height or width - its leaves on one plate - none: leaf_vs divides by them)
+    const float across = std::max(hi[0] - lo[0], hi[2] - lo[2]) * 0.5f, up = (hi[1] - lo[1]) * 0.5f;
+    if (crownSun && !toView && across > foliage::kCrownLeastHalf && up > foliage::kCrownLeastHalf) {
+        out.footprint = across;
+        out.sharpen = up;
         out.hole[5] = crownSun[0];
         out.hole[6] = crownSun[1];
         out.sourceClamp[3] = crownSun[2];

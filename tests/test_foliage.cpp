@@ -211,10 +211,12 @@ TEST(foliage_the_crown_lit_by_its_own_shape) {
         }
     const double mean = sum / n;
     CHECK(mean > 0.95 && mean < 1.15);
-    // a crown of no size: as it is
-    const float none[2] = {0.0f, 15.0f};
+    // a crown of no size: as it is - nor one of no height, its leaves on one plate (leaf_vs would divide by it)
+    const float none[2] = {0.0f, 15.0f}, flat[2] = {20.0f, 0.0f}, thin[2] = {20.0f, 0.4f};
     const float p[3] = {3.0f, -50.0f, 2.0f};
     CHECK(foliage::crownLight(p, middle, none, toSun) == 1.0f);
+    CHECK(foliage::crownLight(p, middle, flat, toSun) == 1.0f);
+    CHECK(foliage::crownLight(p, middle, thin, toSun) == 1.0f);
 }
 
 TEST(config_view3d_crown_light_off_by_default_and_live) {

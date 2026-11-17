@@ -243,7 +243,7 @@ bool leafStood(inout float3 a, inout float3 b, inout float3 c, float way) {
 // middle, footprint and sharpen its half sizes across and up (0: no such light), holeUy, holeUz and sourceClamp.w the
 // way to the sun; darker inside the crown and under it, the sun's side brighter, the whole as bright as the game's
 float crownLight(float3 w) {
-    float3 d = (w - float3(r6, r7, r8)) / float3(footprint, sharpen, footprint);
+    float3 d = (w - float3(r6, r7, r8)) / max(float3(footprint, sharpen, footprint), 0.5);
     float rho = length(d);
     float3 n = d / max(rho, 1e-4);
     float inside = 0.68 + 0.32 * saturate((rho - 0.1) / 0.8);
