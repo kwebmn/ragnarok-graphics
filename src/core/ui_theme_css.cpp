@@ -723,6 +723,12 @@ select selectbox option:checked { color: #e6cb8a; }
 .sw .sctl input.range { width: 140dp; margin: 0 6dp 0 10dp; }
 .sw .sv { display: block; width: 52dp; font-size: 12dp; color: #cfd3dc; text-align: center; }
 .sw .chs { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; max-width: 330dp; }
+/* 3.0.21-beta.8: the lists' own elements - plain wrappers (uikit/options_live): a row (in the line, as the row's
+   unnamed wrapper was: a block would stand 2dp off the row over it), a slider's part, a choice */
+.sw .srow { display: inline; }
+.sw .slw { display: flex; flex-direction: row; align-items: center; flex: none; }
+.sw .chw { display: block; margin: 2dp 0 2dp 4dp; }
+.sw .chw .ch { margin: 0; }
 .sw .ch { display: block; margin: 2dp 0 2dp 4dp; padding: 3dp 9dp; border-radius: 6dp; border: 1dp #ffffff1a;
     font-size: 12dp; color: #cfd3dc; }
 .sw .ch:hover { background-color: #ffffff10; }

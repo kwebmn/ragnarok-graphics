@@ -312,4 +312,22 @@ std::u32string codepoints(std::string_view text) {
     return out;
 }
 
+bool meshAt(Meshed& c, const std::vector<Point>& points, const std::vector<int>& indices, float dx, float dy,
+            const float* m, const ClipBox* clip, float k, float half) {
+    const bool clipped = clip != nullptr, transformed = m != nullptr;
+    const bool same = c.made && c.dx == dx && c.dy == dy && c.k == k && c.half == half && c.clipped == clipped &&
+                      c.transformed == transformed &&
+                      (!clipped || (c.clip.x0 == clip->x0 && c.clip.y0 == clip->y0 && c.clip.x1 == clip->x1 &&
+                                    c.clip.y1 == clip->y1 && c.clip.hull == clip->hull)) &&
+                      (!transformed || std::equal(m, m + 16, c.m));
+    if (same) return false;
+    c.v.clear();
+    triangles(points, indices, dx, dy, m, clip, k, half, c.v);
+    c.made = true;
+    c.dx = dx, c.dy = dy, c.k = k, c.half = half, c.clipped = clipped, c.transformed = transformed;
+    if (clipped) c.clip = *clip;
+    if (transformed) std::copy(m, m + 16, c.m);
+    return true;
+}
+
 }  // namespace uagfx::uaui

@@ -14,6 +14,13 @@ Rml::Context* context(int w = 1920, int h = 1080);
 Rml::ElementDocument* load(const std::string& rml, const std::function<void(Rml::DataModelConstructor&)>& bind,
                            float x = 0, float y = 0, std::string* error = nullptr);
 void update();  // the models' changes into the layout (every model dirtied whole)
+// 3.0.21-beta.8 (R-SPPSF3: «Налаштування» open - the card's fan loud): a frame as the game's - Update and Render,
+// no model dirtied - and what it cost: geometries compiled, words made into letters, and geometries drawn at
+// another place or cut than the frame before (what win/uaui meshes anew)
+struct Work {
+    int compiled = 0, words = 0, moved = 0, drawn = 0;
+};
+Work frame();
 void close(Rml::ElementDocument* doc);
 const std::string& log();  // RmlUi's warnings and errors since the start
 

@@ -1715,7 +1715,13 @@ void Context::present(const Rect& source, bool waitForVblank) {
     ++stats_.frames;
     g_parts.mark("the rest of the present", nowMs());  // 3.0.18-beta.169: what no mark above took
     g_parts.frame();
-    stats_.ownMs += nowMs() - presentFrom - rendererMs;  // 3.0.18-beta.161
+    const double ownMs = nowMs() - presentFrom - rendererMs;
+    stats_.ownMs += ownMs;  // 3.0.18-beta.161
+    // 3.0.21-beta.8 (R-SPPSF3 «когда открываю Alt-O начинает сильно гудеть на видеокарте вентилятор»): what
+    // «Налаштування» costs - the frames a second, the card's work and ours while it was open against the five seconds
+    // before, told as it closes
+    if (windowLoad_.frame(nowMs() / 1000.0, optionscardwin::shown(), timed ? gpuNow.gpuMs : -1.0, ownMs))
+        LOG_INFO("options: %s", windowLoad_.told().c_str());
     notePace(presentFrom, rendererMs, foreground && !o.loading);  // 3.0.19-beta.51
     modelcensus::frame();                                         // 3.0.20-beta.1
     readTallyFrame(GetCurrentThreadId());                // the reads of the game's memory: this thread's, a frame

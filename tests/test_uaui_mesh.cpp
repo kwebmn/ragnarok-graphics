@@ -186,3 +186,42 @@ TEST(uaui_mesh_cuts_a_big_radial_gradient_by_its_radius) {
     CHECK(ix.size() / 3 <= 6000);  // a few thousand triangles at most, not 131 thousand (its clear middle whole)
     CHECK(ix.size() / 3 > 100);
 }
+
+// 3.0.21-beta.8 (R-SPPSF3: «Налаштування» open on a long entry - 93 geometries meshed anew every frame): a geometry
+// is meshed again only when its place, its cut or its transform changes - one cut away whole too. Its empty mesh was
+// taken for «not meshed yet»: every row scrolled out of the pane was cut again each frame
+TEST(uaui_mesh_keeps_what_was_cut_away_whole) {
+    const std::vector<uaui::Point> pts = {{0, 0, 0xFFFFFFFFu, 0, 0}, {10, 0, 0xFFFFFFFFu, 1, 0},
+                                          {0, 10, 0xFFFFFFFFu, 0, 1}, {10, 10, 0xFFFFFFFFu, 1, 1}};
+    const std::vector<int> ix = {0, 1, 2, 1, 3, 2};
+    uaui::ClipBox pane;
+    pane.x0 = 0, pane.y0 = 0, pane.x1 = 100, pane.y1 = 100;
+    uaui::Meshed below;  // a row under the pane's bottom edge
+    CHECK(uaui::meshAt(below, pts, ix, 20, 500, nullptr, &pane, 1.0f, 0.5f));
+    CHECK(below.v.empty());
+    CHECK(!uaui::meshAt(below, pts, ix, 20, 500, nullptr, &pane, 1.0f, 0.5f));  // the next frame: kept
+    CHECK(!uaui::meshAt(below, pts, ix, 20, 500, nullptr, &pane, 1.0f, 0.5f));
+    // scrolled into the pane: meshed anew, its six vertices; then kept
+    CHECK(uaui::meshAt(below, pts, ix, 20, 50, nullptr, &pane, 1.0f, 0.5f));
+    CHECK_EQ(below.v.size(), size_t(6));
+    CHECK(!uaui::meshAt(below, pts, ix, 20, 50, nullptr, &pane, 1.0f, 0.5f));
+    CHECK_EQ(below.v.size(), size_t(6));
+    // another cut, another scale, a transform, no cut at all: each meshed anew once
+    uaui::ClipBox narrow = pane;
+    narrow.x1 = 25;
+    CHECK(uaui::meshAt(below, pts, ix, 20, 50, nullptr, &narrow, 1.0f, 0.5f));
+    CHECK(!uaui::meshAt(below, pts, ix, 20, 50, nullptr, &narrow, 1.0f, 0.5f));
+    CHECK(uaui::meshAt(below, pts, ix, 20, 50, nullptr, &narrow, 2.0f, 0.5f));
+    const float turn[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 5, 0, 0, 1};
+    CHECK(uaui::meshAt(below, pts, ix, 20, 50, turn, &narrow, 2.0f, 0.5f));
+    CHECK(!uaui::meshAt(below, pts, ix, 20, 50, turn, &narrow, 2.0f, 0.5f));
+    CHECK(uaui::meshAt(below, pts, ix, 20, 50, nullptr, nullptr, 2.0f, 0.5f));
+    CHECK(!uaui::meshAt(below, pts, ix, 20, 50, nullptr, nullptr, 2.0f, 0.5f));
+    // a rounded mask's outline is a part of the cut
+    uaui::ClipBox masked = pane;
+    masked.hull = {0, 0, 100, 0, 100, 100, 0, 100};
+    CHECK(uaui::meshAt(below, pts, ix, 20, 50, nullptr, &masked, 2.0f, 0.5f));
+    CHECK(!uaui::meshAt(below, pts, ix, 20, 50, nullptr, &masked, 2.0f, 0.5f));
+    masked.hull[2] = 90;
+    CHECK(uaui::meshAt(below, pts, ix, 20, 50, nullptr, &masked, 2.0f, 0.5f));
+}

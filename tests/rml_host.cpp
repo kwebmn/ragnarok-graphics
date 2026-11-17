@@ -13,6 +13,7 @@ namespace rmlhost {
 namespace {
 
 std::string g_log;
+Work g_work;  // 3.0.21-beta.8: what the frame under way cost
 
 class System final : public Rml::SystemInterface {
 public:
@@ -34,20 +35,38 @@ public:
 };
 
 class Render final : public Rml::RenderInterface {
+    struct Placed {
+        float x = 0, y = 0;
+        bool cut = false;
+        Rml::Rectanglei by;
+    };
+    std::map<Rml::CompiledGeometryHandle, Placed> placed_;  // each geometry as the frame before drew it
+    Rml::CompiledGeometryHandle next_ = 1;
+    bool cut_ = false;
+    Rml::Rectanglei by_;
+
 public:
     Rml::CompiledGeometryHandle CompileGeometry(Rml::Span<const Rml::Vertex>, Rml::Span<const int>) override {
-        return 1;
+        ++g_work.compiled;
+        return next_++;
     }
-    void RenderGeometry(Rml::CompiledGeometryHandle, Rml::Vector2f, Rml::TextureHandle) override {}
-    void ReleaseGeometry(Rml::CompiledGeometryHandle) override {}
+    void RenderGeometry(Rml::CompiledGeometryHandle g, Rml::Vector2f t, Rml::TextureHandle) override {
+        ++g_work.drawn;
+        const auto it = placed_.find(g);
+        const bool same = it != placed_.end() && it->second.x == t.x && it->second.y == t.y &&
+                          it->second.cut == cut_ && (!cut_ || it->second.by == by_);
+        if (!same) ++g_work.moved;
+        placed_[g] = Placed{t.x, t.y, cut_, by_};
+    }
+    void ReleaseGeometry(Rml::CompiledGeometryHandle g) override { placed_.erase(g); }
     Rml::TextureHandle LoadTexture(Rml::Vector2i& dimensions, const Rml::String&) override {
         dimensions = {32, 32};
         return 1;
     }
     Rml::TextureHandle GenerateTexture(Rml::Span<const Rml::byte>, Rml::Vector2i) override { return 1; }
     void ReleaseTexture(Rml::TextureHandle) override {}
-    void EnableScissorRegion(bool) override {}
-    void SetScissorRegion(Rml::Rectanglei) override {}
+    void EnableScissorRegion(bool on) override { cut_ = on; }
+    void SetScissorRegion(Rml::Rectanglei r) override { by_ = r; }
 };
 
 class Files final : public Rml::FileInterface {
@@ -108,6 +127,7 @@ public:
     int GenerateString(Rml::RenderManager&, Rml::FontFaceHandle h, Rml::FontEffectsHandle, Rml::StringView text,
                        Rml::Vector2f, Rml::ColourbPremultiplied, float, const Rml::TextShapingContext& c,
                        Rml::TexturedMeshList&) override {
+        ++g_work.words;
         return GetStringWidth(h, text, c, Rml::Character::Null);
     }
     int GetVersion(Rml::FontFaceHandle) override { return 1; }
@@ -167,6 +187,13 @@ Rml::ElementDocument* load(const std::string& rml, const std::function<void(Rml:
 void update() {
     for (Rml::DataModelHandle& h : g_handles) h.DirtyAllVariables();
     for (int i = 0; i < 4; ++i) context()->Update();
+}
+
+Work frame() {
+    g_work = Work{};
+    context()->Update();
+    context()->Render();
+    return g_work;
 }
 
 void close(Rml::ElementDocument* doc) {

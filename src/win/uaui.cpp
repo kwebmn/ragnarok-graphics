@@ -148,14 +148,8 @@ struct State {
     std::unordered_map<uintptr_t, Geometry> geometries;
     // 3.0.18-beta.70 (the big six, C): a geometry's triangles in the game's pixels as last made - made again only
     // when it moved, its clip or transform changed, or the scale did
-    struct Meshed {
-        float dx = 0, dy = 0, k = 0, half = 0;
-        bool clipped = false, transformed = false;
-        ::uagfx::uaui::ClipBox clip{};
-        float m[16] = {};
-        std::vector<glint::Vertex> v;
-    };
-    std::unordered_map<uintptr_t, Meshed> meshed;
+    // 3.0.21-beta.8: core/uaui_mesh's Meshed - a geometry cut away whole is remembered too
+    std::unordered_map<uintptr_t, ::uagfx::uaui::Meshed> meshed;
     uintptr_t nextGeometry = 1, nextTexture = 16;
     std::unordered_map<uintptr_t, Texture> textures;
     std::vector<uint32_t> released;
@@ -2101,21 +2095,10 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
             runSmooth = smooth;
             runGlass = b.glass;
         }
-        State::Meshed& c = s.meshed[b.geometry];
-        const bool same = !c.v.empty() && c.dx == b.dx && c.dy == b.dy && c.k == k && c.half == half &&
-                          c.clipped == b.clipped && c.transformed == b.transformed &&
-                          (!b.clipped || (c.clip.x0 == b.clip.x0 && c.clip.y0 == b.clip.y0 && c.clip.x1 == b.clip.x1 &&
-                                          c.clip.y1 == b.clip.y1 && c.clip.hull == b.clip.hull)) &&
-                          (!b.transformed || std::equal(b.m, b.m + 16, c.m));
-        if (!same) {
-            c.v.clear();
-            ::uagfx::uaui::triangles(g->second.points, g->second.indices, b.dx, b.dy, b.transformed ? b.m : nullptr,
-                                     b.clipped ? &b.clip : nullptr, k, half, c.v);
-            c.dx = b.dx, c.dy = b.dy, c.k = k, c.half = half, c.clipped = b.clipped, c.transformed = b.transformed;
-            c.clip = b.clip;
-            std::copy(b.m, b.m + 16, c.m);
+        ::uagfx::uaui::Meshed& c = s.meshed[b.geometry];
+        if (::uagfx::uaui::meshAt(c, g->second.points, g->second.indices, b.dx, b.dy, b.transformed ? b.m : nullptr,
+                                  b.clipped ? &b.clip : nullptr, k, half))
             ++s.stats.remeshed;
-        }
         verts.insert(verts.end(), c.v.begin(), c.v.end());
     }
     flush();

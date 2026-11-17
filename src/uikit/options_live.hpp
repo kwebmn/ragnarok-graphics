@@ -26,6 +26,7 @@ struct RowView {
     bool toggle = false, on = false, slider = false;
     int value = 0, min = 0, max = 0, step = 1;
     std::vector<ChoiceView> choices;
+    std::vector<int> sliders;  // 3.0.21-beta.8: one when the row is a slider (fit): its part is made only then
     bool more = false, sub = false;  // the line that opens a group's details or folds them; a part of the row over it
     int opens = 0;                   // more: the catalogue's group
 };
@@ -34,18 +35,21 @@ struct NavView {
     int count = 0;  // beside the name when over 0: its rows, or what the search found in it
 };
 struct Model {
-    int sec = 0, shownRows = 0;  // the entry shown; the rows with words (the list is padded: never shorter)
+    int sec = 0, shownRows = 0;  // the entry shown; its rows' count (0: «nothing found» in their place)
     Rml::String query, title, hint, searchHint, none, consoleBtn, ground = "#10141cf0";
     Rml::String layoutBtn;  // 3.0.21-beta.7: «Розмістити інтерфейс» (the console's action before)
     std::vector<NavView> nav;
     std::vector<RowView> rows;
 };
 
-// 3.0.18-beta.132 (R-4BXZPM «srows[1].choices[10].on»): never shorter lists than before - a shorter one left RmlUi
-// rows past its end for a frame. The rows padded to `shownBefore` (kLeastRows at least) with empty hidden ones, every
-// row's choices to kMostChoices (the markup reads a row's first choice)
-constexpr size_t kMostChoices = 12, kLeastRows = 24;
-void pad(std::vector<RowView>& rows, size_t shownBefore);
+// 3.0.21-beta.8 (R-SPPSF3: «Налаштування» open - the game from 222 frames a second to 136, to 49 on a long entry):
+// the list is as long as the entry shown, a row's choices as many as it has. 3.0.18-beta.132 (R-4BXZPM
+// «srows[1].choices[10].on») padded both - every row ever shown kept, each with twelve choices: 56 elements a row,
+// 11 000 after a long entry, and RmlUi walks them all each frame. The padding hid a read past the end of a list just
+// made shorter: RmlUi updates the views of one depth in no fixed order, and a list's own elements carried views
+// (data-if, data-class) at the depth of the list's view. Now a list's elements are plain wrappers, their views a
+// level down - updated after the list has let its spare elements go. fit(): each row's parts as its kind asks
+void fit(std::vector<RowView>& rows);
 
 const char* rml();
 // The window's variables. Its events are the caller's: sec_go(i), set_toggle(i), set_slider(i), set_step(i, by),

@@ -7,6 +7,9 @@
 namespace uagfx::uikit::options {
 namespace {
 
+// 3.0.21-beta.8: an element a list makes (data-for) carries no view of its own - .srow, .slw and .chw are plain
+// wrappers, the views a level down (see fit() in the header); a slider's part and the choices exist only in the rows
+// that have them
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw ow sw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span><span class="hk">Alt+O</span></div>
@@ -17,21 +20,20 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
  <div class="snav"><div class="sn ctl" data-for="n, i : nav" data-class-on="i == sec && query == ''"
    data-event-click="sec_go(i)"><span class="nn">{{n.name}}</span><span class="cnt"
    data-if="n.count > 0">{{n.count}}</span></div></div>
- <div id="spane" class="spane"><div data-for="r, i : srows" data-if="r.label != ''"><div class="sgrp"
+ <div id="spane" class="spane"><div class="srow" data-for="r, i : srows"><div class="sgrp"
    data-if="r.group != ''">{{r.group}}</div><div class="smore ctl" data-if="r.more"
    data-event-click="set_more(i)">{{r.label}}</div><div class="sro" data-if="!r.more"
    data-class-sub="r.sub"><div class="st"><span
    class="sl">{{r.label}}</span><span class="shn" data-if="r.hint != ''">{{r.hint}}</span><span class="swn"
    data-if="r.warn != ''">{{r.warn}}</span></div><div
    class="sctl"><span class="tg ctl" data-if="r.toggle" data-class-on="r.on"
-   data-event-click="set_toggle(i)"><span class="kn"></span></span><input class="ctl" data-if="r.slider"
-   type="range" data-attr-min="r.min" data-attr-max="r.max" data-attr-step="r.step" data-attr-value="r.value"
-   data-event-change="set_slider(i)"/><span class="ch ctl" data-if="r.slider"
-   data-event-click="set_step(i, -1)">&#x2212;</span><span class="sv" data-if="r.slider">{{r.vtext}}</span><span
-   class="ch ctl" data-if="r.slider" data-event-click="set_step(i, 1)">+</span><div class="chs"
-   data-if="r.choices.size > 0 && r.choices[0].label != ''"><span class="ch ctl"
-   data-for="c, j : r.choices" data-if="c.label != ''" data-class-on="c.on"
-   data-event-click="set_choice(i, j)">{{c.label}}</span></div></div></div></div>
+   data-event-click="set_toggle(i)"><span class="kn"></span></span><div class="slw"
+   data-for="s : r.sliders"><input class="ctl" type="range" data-attr-min="r.min" data-attr-max="r.max"
+   data-attr-step="r.step" data-attr-value="r.value" data-event-change="set_slider(i)"/><span class="ch ctl"
+   data-event-click="set_step(i, -1)">&#x2212;</span><span class="sv">{{r.vtext}}</span><span
+   class="ch ctl" data-event-click="set_step(i, 1)">+</span></div><div class="chs"><span class="chw"
+   data-for="c, j : r.choices"><span class="ch ctl" data-class-on="c.on"
+   data-event-click="set_choice(i, j)">{{c.label}}</span></span></div></div></div></div>
    <div class="snone" data-if="shown_rows == 0">{{none}}</div></div>
 </div>
 <div class="sfoot"><span class="sfh">{{hint}}</span><div class="sfb"><span class="btn ctl"
@@ -44,10 +46,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 
 const char* rml() { return kRml; }
 
-void pad(std::vector<RowView>& rows, size_t shownBefore) {
-    while (rows.size() < std::max(shownBefore, kLeastRows)) rows.push_back(RowView{});
-    for (RowView& r : rows)
-        while (r.choices.size() < kMostChoices) r.choices.push_back(ChoiceView{});
+void fit(std::vector<RowView>& rows) {
+    for (RowView& r : rows) r.sliders.assign(r.slider && !r.more ? 1 : 0, 0);
 }
 
 void bind(Rml::DataModelConstructor& c, Model& m) {
@@ -56,6 +56,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         v.RegisterMember("on", &ChoiceView::on);
     }
     c.RegisterArray<std::vector<ChoiceView>>();
+    c.RegisterArray<std::vector<int>>();
     if (auto v = c.RegisterStruct<RowView>()) {
         v.RegisterMember("group", &RowView::group);
         v.RegisterMember("label", &RowView::label);
@@ -70,6 +71,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         v.RegisterMember("max", &RowView::max);
         v.RegisterMember("step", &RowView::step);
         v.RegisterMember("choices", &RowView::choices);
+        v.RegisterMember("sliders", &RowView::sliders);
         v.RegisterMember("key", &RowView::key);
         v.RegisterMember("more", &RowView::more);
         v.RegisterMember("sub", &RowView::sub);

@@ -12,6 +12,7 @@
 #include "core/map_load.hpp"
 #include "core/glint.hpp"
 #include "core/graphics_test.hpp"
+#include "core/window_load.hpp"
 #include "core/hit_flash.hpp"
 #include "core/config.hpp"
 #include "core/daylight.hpp"
@@ -306,6 +307,7 @@ private:
     bool keepOnMap_ = false;
     uint64_t costsWritten_ = 0;
     FpsOverlay fps_;
+    windowload::Watch windowLoad_;  // 3.0.21-beta.8 (R-SPPSF3): what «Налаштування» costs, told as it closes
     Console console_;               // 1.9.3: ~ - the effects' switches over the game
     std::string consoleOff_;        // the effect the console holds off, and the settings without it
     EffectSettings compareFx_;

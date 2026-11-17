@@ -49,6 +49,22 @@ void softRing(float x, float y, float w, float h, float r, float blur, uint32_t 
 void triangles(const std::vector<Point>& points, const std::vector<int>& indices, float dx, float dy, const float* m,
                const ClipBox* clip, float k, float half, std::vector<glint::Vertex>& out);
 
+// 3.0.21-beta.8 (R-SPPSF3: «Налаштування» open on a long entry - 93 geometries meshed anew every frame): a geometry
+// meshed for a place, a cut and a transform is meshed again only when one of them changes - one cut away whole too
+// (its mesh empty: an empty mesh was taken for «not meshed yet», and every row scrolled out of a pane was cut again
+// each frame)
+struct Meshed {
+    bool made = false;
+    float dx = 0, dy = 0, k = 0, half = 0;
+    bool clipped = false, transformed = false;
+    ClipBox clip{};
+    float m[16] = {};
+    std::vector<glint::Vertex> v;  // as triangles() gives them
+};
+// The geometry's triangles at this place in `c.v` - kept when `c` holds them for it, else meshed (true: meshed anew)
+bool meshAt(Meshed& c, const std::vector<Point>& points, const std::vector<int>& indices, float dx, float dy,
+            const float* m, const ClipBox* clip, float k, float half);
+
 // 3.0.18-beta.64: the rounded box filled with `argb` (the glass's shape)
 void roundedBox(float x, float y, float w, float h, float r, uint32_t argb, std::vector<Point>& points,
                 std::vector<int>& indices);

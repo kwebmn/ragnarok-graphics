@@ -467,14 +467,13 @@ static void liveFrame(State& s) {
     }
     s.builtAt = now;
     std::vector<SetRowView> rows = buildRows(s);
-    // 3.0.18-beta.132 (R-4BXZPM «srows[1].choices[10].on»): never shorter lists than before - a shorter one left
-    // RmlUi rows past its end for a frame; the spare rows and choices empty and hidden
-    uikit::options::pad(rows, s.m.rows.size());
+    // 3.0.21-beta.8 (R-SPPSF3): the list as long as the entry - no spare rows kept from a longer one (uikit
+    // options_live fit(): how 3.0.18-beta.132's padding became needless)
+    uikit::options::fit(rows);
     const std::string key = rowsKeyOf(rows) + std::to_string(s.m.sec);
     if (key != s.rowsKey) {
         s.rowsKey = key;
-        s.m.shownRows =
-            int(std::count_if(rows.begin(), rows.end(), [](const SetRowView& r) { return !r.label.empty(); }));
+        s.m.shownRows = int(rows.size());
         s.m.rows = std::move(rows);
         s.live.doc.dirty("srows");
         s.live.doc.dirty("shown_rows");
