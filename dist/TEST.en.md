@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.82 — what's new · 2026-11-17
+
+- **Diagnostics: a rectangle round the character under Assumptio on Direct3D 11.** Under Assumptio the game draws the body and head a second time, a little larger, as light. On Direct3D 11 another picture, such as a wall, can show in that frame's see-through part. The first three such frames of a game are now checked: as the graphics card holds them against the game's memory. The result goes into the log, and both pictures of the first frame go with a report. Nothing changes on screen.
+
 # uaRO Graphics 3.0.20-beta.81 — what's new · 2026-11-17
 
 - **Fixed: «Світло й тінь у кронах» on a tree with a flat crown.** When all of a crown's leaves lie at one height, the light divided by zero and such a tree could turn black. Such a crown now keeps the game's light.
