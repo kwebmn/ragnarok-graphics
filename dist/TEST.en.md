@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.78 — what's new · 2026-11-17
+
+- **Fixed: no damage numbers in the 3D view.** Since 3.0.20-beta.70 the damage numbers, and Miss, Critical and Lucky with them, were gone in the 3D view; in the game's own view they showed. The game draws them over everything, 10 units from the camera wherever the monster stands, and the switch «Розчиняти те, що впритул до камери» dissolves whatever is nearer than 12 units. It now leaves them alone.
+
 # uaRO Graphics 3.0.20-beta.77 — what's new · 2026-11-17
 
 - **Fixed: the 3D view's switches did not act from the console or the settings app while the game ran.** Seventeen switches were written into the file, but the game took the new value only after a restart or after some effect was changed: «Об'ємні крони», «Густіші крони дерев», «Тіні від будинків і дерев (проба)», «Стеля в приміщеннях», «Склепіння в печерах», «Скеля карти на склепінні», «Лише кімната, де ви стоїте», «Закривати щілини в моделях», «Камера впирається у справжні стіни», «Розчиняти те, що впритул до камери», «Стіни замість чорних блоків у будинках», «Далекі гори на обрії», «Трава у 3D-режимі», «Погода у 3D-режимі», «Зорі вночі», «Місяць на небі», «Заграва на світанку й увечері». They now act at once.
