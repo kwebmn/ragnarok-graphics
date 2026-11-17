@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.21-beta.1 — what's new · 2026-11-17
+
+The first step to tidy settings: all 573 rows are now described in one catalogue, and the settings app, the console and the "Settings" window (Alt+O) read "Interface" from it instead of a list of their own each.
+
+- **"Interface" is laid out the same in all three places.** "Panels on the screen" held 32 rows; it is three sections now: "Panels on the screen", "Hotbar" and "Chat".
+- A few rows moved to where one looks for them: "Ping on the minimap" to "Minimap", "Delay after a skill on the hotbar" and "Walls and traps on the hotbar" to "Hotbar", "Alt+D opens the graphics console" to "Keys".
+- In every section the main rows come first, then the parts and the sliders.
+- No value has changed: nothing to switch on or off again.
+
 # uaRO Graphics 3.0.20 — what's new · 2026-11-17
 
 Houses, trees and bridges are now drawn by our renderer and the frame is worked out on several threads, so there are fewer hitches. The 3D view gets a meadow instead of a brush of grass, stars and the moon, mountains on the horizon, ceilings in houses and vaults of the cave's own rock. The program tells the developers by itself about lost connections.
