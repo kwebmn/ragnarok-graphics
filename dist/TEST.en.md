@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.21-beta.15 — what's new · 2026-11-17
+
+The «Windows» panel can now be made smaller, as the other windows can.
+
+- **Pull the bottom right corner of the «Windows» panel** - it gets smaller or larger, from 50 to 150 %. With the mouse over the corner, it lights up gold. The size is kept.
+- The panel's menu (the right mouse button on it) offers 50 % under «Size». The same size is in Alt+O → «Interface» → «The windows' panel» → «The panel's size».
+
 # uaRO Graphics 3.0.21-beta.14 — what's new · 2026-11-17
 
 The game closed after a card of the «Reference» opened.
