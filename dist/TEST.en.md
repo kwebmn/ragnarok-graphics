@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.21-beta.12 — what's new · 2026-11-17
+
+The 3D view's buttons on the screen, and damage numbers in the 3D view.
+
+- **Two 3D view buttons on the character block** (the second row, before «Settings»): a camera - the view from behind, an eye - the first-person view. A click turns the view on, another one brings the usual view back. The button of the view that is on is lit. Ctrl+Shift+V works as before.
+- To remove the buttons: Alt+O → «Interface» → «Panels on the screen» → «3D view buttons» (under «Character block»).
+- **Damage numbers show in the 3D view again.** With the camera moved away or nearer by the wheel, the damage numbers, Miss, Critical and the target's cursor vanished. Now they show at any distance.
+
 # uaRO Graphics 3.0.21-beta.11 — what's new · 2026-11-17
 
 Nothing unfolds in the settings any more: everything is shown at once.
