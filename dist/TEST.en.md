@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.20-beta.83 — what's new · 2026-11-17
+
+- **Diagnostics: the 64-bit renderer vanishing.** Twice the renderer vanished with exit code 0xC0000409 about 5 seconds after a map loaded, this time on a GTX 970, so DLSS is not the cause. The renderer now keeps marking which of the game's messages it is handling and at which step, and if it vanishes the game logs exactly where it stood. A C library error or an ordinary crash is logged with its place and a dump. A report after such a game carries the vanished renderer's log and its dump. Nothing changes on screen.
+
 # uaRO Graphics 3.0.20-beta.82 — what's new · 2026-11-17
 
 - **Diagnostics: a rectangle round the character under Assumptio on Direct3D 11.** Under Assumptio the game draws the body and head a second time, a little larger, as light. On Direct3D 11 another picture, such as a wall, can show in that frame's see-through part. The first three such frames of a game are now checked: as the graphics card holds them against the game's memory. The result goes into the log, and both pictures of the first frame go with a report. Nothing changes on screen.
