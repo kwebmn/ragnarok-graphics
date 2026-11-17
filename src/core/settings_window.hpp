@@ -1,4 +1,5 @@
 #pragma once
+#include <set>
 #include <string>
 #include <vector>
 
@@ -8,22 +9,42 @@ namespace uagfx::settingswin {
 
 // 3.0.18-beta.122 (the concept «Ігровий інтерфейс», Claude Doc 3zHfHfPfhA5nCjqGU5xb1Z, stages 5-6; the owner: «можна
 // заменять но чтобы там были те возможности которые там сейчас есть»): «Налаштування» - the game's options window
-// (Alt+O) in a new look with ours beside its own. Its sections: «Гра» (the game's six: music, sounds, the three snaps,
-// opaque windows - keys "game.0".."game.5"), «Картинка» (the three choices of the simple start - "picture.0".."2"),
-// then the settings app's «Інтерфейс» sections (their keys of uaro-graphics.ini's schema)
+// (Alt+O) in a new look with ours beside its own.
+// 3.0.21-beta.3 (the concept «Настройки uaRO Graphics», Claude Doc JzcE4xZDus82grUxsQjgy7; the owner: «Вариант 4.
+// Каждому месту своё дело», step 3): the player's one place in the game - every row that applies at once, read from
+// the catalogue (core/settings/catalogue), no list of its own. The list on the left: «Як виглядає гра» first (the
+// simple start's three choices - keys "picture.0".."2" - and the game's own six: music, sounds, the three snaps,
+// opaque windows - "game.0".."game.5": nothing the game's Alt+O had is lost), then the catalogue's areas that hold
+// rows living in the game, each with their count. The pane: an entry's groups one under another - a group's name,
+// its basic rows, then a line that opens its details (the parts, the sliders, each window's own switch).
 enum class Kind : uint8_t { Game, Picture, Keys };
-struct Section {
+
+struct Nav {
     settings::Text name;
-    Kind kind;
-    std::vector<std::string> keys;
+    int area = -1;  // the catalogue's area; -1 the first entry («Як виглядає гра»)
+    int rows = 0;   // the rows it holds
 };
-const std::vector<Section>& sections();
-// The search: each section's rows matching every word of the query (labels and hints in the language; the game's own
-// and the choices by their names), the sections in order; an empty query finds nothing
-struct Found {
-    int section = 0;
-    std::string key;
+const std::vector<Nav>& nav();
+
+// The first entry's two groups (the catalogue's groups are 0 and up)
+constexpr int kLookGroup = -1, kGameGroup = -2;
+
+struct Line {
+    enum class What : uint8_t { Row, More };
+    What what = What::Row;
+    Kind kind = Kind::Keys;
+    std::string key;         // Row: "interface.minimap", "game.0", "picture.1"
+    int group = kLookGroup;  // the group it is in; More: the group it opens or folds
+    int entry = 0;           // the list's entry its group is in (the search's lines name it)
+    settings::Text groupName = settings::Text::LookHead;
+    bool heads = false;      // its group's first line: the group's name goes over it
+    bool part = false;       // a part of a row over it
+    int more = 0;            // More: the details it opens; 0 - they are open, it folds them
 };
-std::vector<Found> find(const std::string& query, settings::Lang l);
+// An entry's lines; `open` - the groups opened to their details
+std::vector<Line> lines(int entry, const std::set<int>& open);
+// The search: every row of every entry matching each word of the query (labels and hints in the language; the game's
+// own and the choices by their names), details too, under their groups' names; an empty query finds nothing
+std::vector<Line> find(const std::string& query, settings::Lang l);
 
 }  // namespace uagfx::settingswin

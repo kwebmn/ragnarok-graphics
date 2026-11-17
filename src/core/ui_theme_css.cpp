@@ -706,6 +706,10 @@ select selectbox option:checked { color: #e6cb8a; }
 .sw .sgrp { display: block; margin: 14dp 0 2dp 0; font-size: 11dp; color: #9aa3b5; }
 .sw .sro { display: flex; flex-direction: row; align-items: center; padding: 7dp 0; border-bottom: 1dp #ffffff0c; }
 .sw .st { display: block; flex: 1; padding-right: 12dp; }
+/* 3.0.21-beta.3: a part under its row; the line that opens a group's details */
+.sw .sro.sub { padding-left: 16dp; }
+.sw .smore { display: block; padding: 7dp 0 5dp 0; font-size: 12dp; color: #8cb4dc; }
+.sw .smore:hover { color: #e6cb8a; }
 .sw .sl { display: block; font-size: 13dp; color: #eef2f8; }
 .sw .shn { display: block; font-size: 11.5dp; color: #9aa3b5; }
 .sw .sctl { display: flex; flex-direction: row; align-items: center; flex: none; }

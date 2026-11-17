@@ -8458,10 +8458,13 @@ constexpr Entry kTexts[] = {
     {Text::MenuReport, "Send a report", "Надіслати звіт", "Отправить отчёт"},
     // 3.0.18-beta.122 (the concept «Ігровий інтерфейс»): «Налаштування» in place of the
     // game's Alt+O
-    {Text::SettingsWinHint, "Everything changes at once", "Усе змінюється одразу", "Всё меняется сразу"},
+    // 3.0.21-beta.3 (variant 4: «Налаштування» holds what applies at once, the settings app what waits for a start)
+    {Text::SettingsWinHint, "Applies at once. The rest is in uaRO Graphics' settings, before the game starts",
+     "Діє одразу. Решта — у налаштуваннях uaRO Graphics до запуску гри",
+     "Действует сразу. Остальное — в настройках uaRO Graphics до запуска игры"},
     {Text::SettingsWinNone, "Nothing found", "Нічого не знайдено", "Ничего не найдено"},
-    {Text::SettingsWinConsole, "All graphics settings\xE2\x80\xA6 (Alt+D)",
-     "Усі налаштування графіки\xE2\x80\xA6 (Alt+D)", "Все настройки графики\xE2\x80\xA6 (Alt+D)"},
+    {Text::SettingsWinConsole, "Trials and diagnostics\xE2\x80\xA6", "Проби й діагностика\xE2\x80\xA6",
+     "Пробы и диагностика\xE2\x80\xA6"},
     // 3.0.18-beta.125 (the concept «Ігровий інтерфейс»: «Клавіші»): our windows' keys
     {Text::InterfaceSecKeys, "Keys", "Клавіші", "Клавиши"},
     {Text::InterfaceKeyHunt, "Key: Hunt", "Клавіша: Полювання", "Клавиша: Охота"},
