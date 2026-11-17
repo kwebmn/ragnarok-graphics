@@ -1,3 +1,40 @@
+# uaRO Graphics 3.0.20 — what's new · 2026-11-17
+
+Houses, trees and bridges are now drawn by our renderer and the frame is worked out on several threads, so there are fewer hitches. The 3D view gets a meadow instead of a brush of grass, stars and the moon, mountains on the horizon, ceilings in houses and vaults of the cave's own rock. The program tells the developers by itself about lost connections.
+
+## Speed
+
+- **«Models by our renderer» is on for everyone.** The map's houses, trees and bridges are drawn by our renderer: in the usual view and in the 3D view, on Direct3D 12 and Direct3D 11. The models live on the graphics card, so where there are many of them there are fewer hitches. Turn it off in «Game and chat» → «Game» → «3D view» → «Models by our renderer» or with a tile in the console (~), tab «Quick».
+- **«Ground on the graphics card»** (Direct3D 12): the card places the ground's points itself, which takes 2–3 ms a frame off the processor in the 3D view. **«Leaves on the graphics card»** does the same for the trees' leaves.
+- **The frame on several threads:** sorting out new textures, the shadows and reflections and the own ground's colours are worked out alongside the drawing.
+- Fewer hitches when new textures come into the frame.
+- **The storage no longer hangs on a slow disk:** the items' icons are read a little each frame.
+- Screenshots are smaller and quicker: a 4K shot takes 12.5 MB instead of 17.3 and is ready 2.5 times sooner.
+
+## 3D view
+
+- **The grass is a meadow, not a brush:** bent blades, tufts and bald spots. It grows further out, does not blink or slide as you walk, does not shrink while you move and does not hang behind walls. No grass on stone or paving, in the usual view too.
+- **Sky and horizon:** stars and the moon at night, a glow at dawn and dusk, the water mirrors the real sky. Far mountains on the horizon; past the map's edge, land and sea to the horizon instead of a black ring.
+- **Caves and houses:** a cave's vault of the map's own rock. In houses a ceiling in the walls' colour, only the room you stand in is seen, and the black blocks by the rooms became walls. The «see-through rock» in the Payon cave is closed.
+- **The camera** stops at real walls, and what is right at it dissolves.
+- Names, the words over heads and monsters' names stay in their places instead of hanging in the air.
+- The 3D view's switches take effect at once, from the console and from the settings.
+- **Trials, off at first:** «Shadows of houses and trees (trial)», «Fuller tree crowns», «Crowns with a body», «Light and shade in the crowns».
+
+## Support and reports
+
+- Ctrl+Shift+F10 always opens a new request. The answers card is one for all answers and does not nag, and sending shows its progress.
+- **The program tells the developers by itself** about a lost connection to the server and about the picture stopping because the renderer fell. Lost connections can be switched off with «Tell the developers when the connection to the server is lost». Automatic crash reports are no longer lost.
+
+## Other
+
+- **«Smaller HP bars with a far camera»:** with the camera further out than usual, the bars under characters and over monsters get smaller, down to 60 %.
+- Skills' painted pictures are sharp: «AGI UP!», Gloria, Magnificat, Kyrie Eleison, Impositio Manus, Assumptio. Storm Gust's snowflakes stay sharp in a long game too.
+- The death screen shows the hits of that very death.
+- Names of items on the ground no longer stay after the items are gone.
+- Walking with the keys and the stick: a short press is one step.
+- The walls of the ground's ledges are as in the game, without extra light or a yellow tint. Far houses and trees are in the game's colours again.
+
 # uaRO Graphics 3.0.20-beta.85 — what's new · 2026-11-17
 
 - **3D view: names and the words over heads in their places (R-H3S9MY).** The game places the name under the cursor and the words over a head (the chat, a skill's shout) from the character's point on the screen, and writes that point only when it draws the character itself. In the 3D view the camera turns with the mouse, and for a character the game did not draw that frame the point stayed an old one, so the words hung somewhere else, often in the sky. Now in the 3D view the name and the words are placed by the game's own formulas from the character's feet as the camera sees them now. For a character behind the camera, a hill or a house they are not shown, as the monsters' HP bars are not. The usual view is as it was.
