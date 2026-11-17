@@ -94,6 +94,10 @@ ALLOWED = {
         # 0.43: the texture pack's reader (core/texture_pack.cpp), the builder's process name, libwebp
         "_chsize", "_wcsicmp", "islower", "isspace",
         "wcsstr", "wcstoul", "time", "_wcstoui64",  # 0.51: --watch, the reports sent
+        # 3.0.21-beta.10: the catalogue's «На цій карті цього не видно» reads core/effect_where, whose seasons go by
+        # the computer's calendar (core/living, core/trees: std::localtime). In msvcrt.dll since Windows NT; the
+        # driver's own ddraw.dll has imported it since 2.x
+        "localtime",
         "bsearch", "log10", "qsort",  # 3.0.18-beta.203: libwebp's decoder in the app (the launcher's logo)
     },
     "ole32.dll": {
