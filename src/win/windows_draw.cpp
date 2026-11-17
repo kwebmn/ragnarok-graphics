@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -12,7 +13,10 @@
 #include <utility>
 #include <vector>
 
+#include "core/game_camera.hpp"
 #include "core/gauge_scale.hpp"
+#include "core/own_ground.hpp"
+#include "core/world_words.hpp"
 #include "core/world_windows.hpp"
 #include "win/world_signs.hpp"
 #include "win/char_block.hpp"
@@ -226,6 +230,127 @@ void shrinkGauges(uint32_t manager, size_t from) {
     }
 }
 
+// 3.0.20-beta.85 (R-H3S9MY «ник персонажа который ходит гдето не рядом с ним а на верху, также непонятно с мобами
+// бывает такое»): in the 3D view an actor's words over its head (its + 0x214, FUN_0054ac00) and the hovered one's name
+// (the game mode's + 0x2DC; the actor's id at + 0x314, the name's place at + 0x40C - under the feet for an actor whose
+// + 0x94 is 0) placed as the game places them (core/world_words), from the actor's feet as the 3D view's camera puts
+// them on the screen now - the game's own point (+ 0x98, + 0x9C) and scale (+ 0x48) are its render's, an older
+// frame's for an actor the game did not draw. Behind the eye, behind the ground or a model, or the character left
+// out - not drawn (their shown flags put back after the game's draw)
+using MoveFn = void(__attribute__((thiscall)) *)(uint32_t window, int x, int y);
+constexpr uint32_t kActorWords = 0x214, kActorNameUnder = 0x94, kActorPoint = 0x98;
+constexpr uint32_t kModeHoverName = 0x2DC, kModeHovered = 0x314, kModeNamePlace = 0x40C;
+constexpr uint32_t kSpriteScale = 0x695798, kSpriteNorm = 0x6D5EFC, kOwnAccount = 0x771F7C;
+constexpr uint32_t kWindowMove = 0x18;  // the window's vtable: Move(x, y), as the game moves them
+// their classes (FUN_004418f0; FUN_005674f0 by the name's place: FUN_00441bf0's, or its subclass for 2 and 3) - a
+// pointer of another kind at an actor's + 0x214 (a ground item's) never taken for one
+constexpr uint32_t kWordsClass = 0x696068, kNameClass = 0x696100, kNameSideClass = 0x69F3F4;
+int g_wordsTold = 0, g_wordsHiddenTold = 0;
+
+bool shownWindow(uint32_t w, uint32_t wantClass, uint32_t orClass = 0) {
+    uint32_t table = 0;
+    int32_t shown = 0;
+    return w && readGame(w, &table, 4) && (table == wantClass || (orClass && table == orClass)) &&
+           readGame(w + kWindowShown, &shown, 4) && shown;
+}
+
+void moveWindow(uint32_t w, worldwords::Point to) {
+    int32_t box[2] = {};
+    uint32_t table = 0, move = 0;
+    if (!readGame(w + kWindowBox, box, sizeof box) || (box[0] == to.x && box[1] == to.y) || !readGame(w, &table, 4) ||
+        !table || !readGame(table + kWindowMove, &move, 4) || !move)
+        return;
+    reinterpret_cast<MoveFn>(uintptr_t(move))(w, to.x, to.y);
+}
+
+// any words over a head shown now (most frames none: the actors not walked)
+bool anyWords(uint32_t manager) {
+    const uint32_t head = *reinterpret_cast<const uint32_t*>(uintptr_t(manager + kWindowsList));
+    size_t seen = 0;
+    for (uint32_t node = head ? *reinterpret_cast<const uint32_t*>(uintptr_t(head)) : 0;
+         node && node != head && seen < kMostWindows; node = *reinterpret_cast<const uint32_t*>(uintptr_t(node))) {
+        ++seen;
+        if (shownWindow(*reinterpret_cast<const uint32_t*>(uintptr_t(node + 8)), kWordsClass)) return true;
+    }
+    return false;
+}
+
+void placeWorldWords(uint32_t manager, std::vector<std::pair<uint32_t, int32_t>>& hidden) {
+    if (!view3dwin::active()) return;
+    const uint32_t mode = *reinterpret_cast<const uint32_t*>(uintptr_t(kModeNowAt));
+    uint32_t renderer = 0, nameWindow = 0, hovered = 0, own = 0, namePlace = 0;
+    int32_t size[2] = {};
+    float view[12], k = 0.0f, norm = 0.0f;
+    if (!mode || !readGame(kRenderer, &renderer, 4) || !renderer || !readGame(renderer + 0x24, size, sizeof size) ||
+        size[0] <= 0 || size[1] <= 0 || !readGameCamera(view) || !readGame(kSpriteScale, &k, 4) ||
+        !readGame(kSpriteNorm, &norm, 4))
+        return;
+    readGame(mode + kModeHoverName, &nameWindow, 4);
+    readGame(mode + kModeHovered, &hovered, 4);
+    readGame(mode + kModeNamePlace, &namePlace, 4);
+    readGame(kOwnAccount, &own, 4);
+    if (!shownWindow(nameWindow, kNameClass, kNameSideClass)) nameWindow = 0;
+    if (!nameWindow && !anyWords(manager)) return;
+    static std::vector<ActorAt> actors;
+    readActors(actors);
+    const worldwords::Screen screen{size[0], size[1]};
+    const camera::Projection p = camera::projectionFor(size[0], size[1]);
+    for (const ActorAt& a : actors) {
+        uint32_t words = 0;
+        readGame(a.actor + kActorWords, &words, 4);
+        if (!shownWindow(words, kWordsClass)) words = 0;
+        const uint32_t name = a.id == hovered ? nameWindow : 0;
+        if (!words && !name) continue;
+        const float c[3] = {a.at[0] * view[0] + a.at[1] * view[3] + a.at[2] * view[6] + view[9],
+                            a.at[0] * view[1] + a.at[1] * view[4] + a.at[2] * view[7] + view[10],
+                            a.at[0] * view[2] + a.at[1] * view[5] + a.at[2] * view[8] + view[11]};
+        own_ground::Tl2 feet{};
+        const float head[3] = {a.at[0], a.at[1] - 12.0f, a.at[2]};  // y down
+        const char* why = nullptr;
+        if (a.id == own && view3dwin::ownHidden())
+            why = "the character left out";
+        else if (!own_ground::placeView(p, c, feet) || !std::isfinite(feet.x) || !std::isfinite(feet.y))
+            why = "behind the eye";
+        else if (a.id != own && !view3dwin::seenActor(a.id, head))
+            why = "behind the ground or a model";
+        if (why) {
+            for (const uint32_t w : {words, name}) {
+                if (!w) continue;
+                auto* shown = reinterpret_cast<int32_t*>(uintptr_t(w + kWindowShown));
+                hidden.emplace_back(w, *shown);
+                *shown = 0;
+            }
+            if (g_wordsHiddenTold < 3) {
+                ++g_wordsHiddenTold;
+                LOG_INFO("3D view: actor %u's words over its head not drawn - %s", a.id, why);
+            }
+            continue;
+        }
+        const float scale = worldwords::scaleOf(feet.rhw, p.f0, k, norm);
+        int32_t point[2] = {};
+        readGame(a.actor + kActorPoint, point, sizeof point);
+        for (const uint32_t w : {words, name}) {
+            int32_t wh[2] = {};
+            if (!w || !readGame(w + kWindowBox + 8, wh, sizeof wh)) continue;
+            int32_t own94 = 1;  // 0: the name under the feet whatever the game mode's place
+            readGame(a.actor + kActorNameUnder, &own94, 4);
+            const int place = own94 ? int(namePlace) : 0;
+            const worldwords::Point to = w == words
+                                             ? worldwords::wordsAt(feet.x, feet.y, scale, wh[0], wh[1], screen)
+                                             : worldwords::nameAt(place, feet.x, feet.y, scale, wh[0], wh[1], screen);
+            if (g_wordsTold < 6) {
+                ++g_wordsTold;
+                int32_t was[2] = {};
+                readGame(w + kWindowBox, was, sizeof was);
+                LOG_INFO("3D view: actor %u's %s at %d, %d - from its feet on the screen now (%.0f, %.0f, scale %.2f); "
+                         "the game had it at %d, %d from its point %d, %d", a.id, w == words ? "words" : "name",
+                         to.x, to.y, feet.x, feet.y, scale, was[0], was[1], point[0], point[1]);
+            }
+            moveWindow(w, to);
+        }
+    }
+}
+
 // 3.0.16-beta.7: [interface] signs - the shops' and the chat rooms' signs drawn anew (win/world_signs): their shown
 // flags held at 0 through both passes of the game's draw (kept in `held` to put back - the clicks still find them)
 void holdSigns(uint32_t manager, std::vector<std::pair<uint32_t, int32_t>>& held) {
@@ -302,8 +427,9 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     hideReplaced();
     std::vector<std::pair<uint32_t, int32_t>> ownHeld;  // 3.0.19-beta.17
     if (view3dwin::ownHidden()) holdOwnGauge(ownHeld);
-    std::vector<std::pair<uint32_t, int32_t>> held, signs;
+    std::vector<std::pair<uint32_t, int32_t>> held, signs, words;
     holdSigns(manager, signs);  // 3.0.16-beta.7
+    placeWorldWords(manager, words);  // 3.0.20-beta.85 (R-H3S9MY): the 3D view's
     const size_t gauges = holdShown(manager, false, held);  // 3.0.11-beta.191: the bars under the characters first
     uint32_t filed[2] = {};  // 3.0.20-beta.84: the interface's faces before that pass
     const bool listed = gauges > 0 && interfaceList(filed);
@@ -326,6 +452,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     putBack(held);
     putBack(signs);
     putBack(ownHeld);
+    putBack(words);
 }
 
 // 3.0.11-beta.203 (the tester: «при логіні ... там залишились в старому стилі please wait вікна»): the login's modes

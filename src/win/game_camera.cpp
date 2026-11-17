@@ -671,6 +671,29 @@ void readActorPlaces(std::unordered_map<uint32_t, std::array<float, 3>>& out) {
     }
 }
 
+void readActors(std::vector<ActorAt>& out) {
+    const Asked asked(__builtin_return_address(0));
+    out.clear();
+    uint32_t world = 0, head = 0, node = 0, player = 0;
+    const uint32_t mode = gameMode();
+    if (!mode || !read(mode + kModeWorld, &world, 4) || !world) return;
+    const auto add = [&out](uint32_t actor) {
+        ActorAt a;
+        a.actor = actor;
+        if (actor && read(actor + kActorId, &a.id, 4) && a.id && read(actor + 4, a.at, sizeof a.at) &&
+            std::isfinite(a.at[0]) && std::isfinite(a.at[1]) && std::isfinite(a.at[2]))
+            out.push_back(a);
+    };
+    if (read(world + kWorldPlayer, &player, 4)) add(player);
+    if (!read(world + kWorldActors, &head, 4) || !head || !read(head, &node, 4)) return;
+    for (size_t n = 0; node && node != head && n < 4096; ++n) {
+        uint32_t actor = 0;
+        if (!read(node + 8, &actor, 4)) return;
+        add(actor);
+        if (!read(node, &node, 4)) return;
+    }
+}
+
 int actorsOfId(uint32_t id, uint32_t actor, bool& listed) {
     const Asked asked(__builtin_return_address(0));
     listed = false;

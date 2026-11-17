@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "core/char_status.hpp"
 
@@ -56,6 +57,13 @@ void readActorBoxes(std::unordered_map<uint32_t, std::array<float, 4>>& out,
 // 3.0.11-beta.148: every actor's place in the world at once (the world's actors' list, as readActorWorld's) - its id
 // to x, height, z; the character itself not among them
 void readActorPlaces(std::unordered_map<uint32_t, std::array<float, 3>>& out);
+// 3.0.20-beta.85 (R-H3S9MY): the world's actors with their addresses - each one's address, id and place (+4), the
+// character's first (the world's player, not in the list)
+struct ActorAt {
+    uint32_t actor = 0, id = 0;
+    float at[3] = {};
+};
+void readActors(std::vector<ActorAt>& out);
 // 3.0.11-beta.249 (R-GKXJT6, a monster shown standing while the server walked it): how many of the world's actors
 // carry the id, and whether `actor` is one of them
 int actorsOfId(uint32_t id, uint32_t actor, bool& listed);
