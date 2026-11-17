@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.21-beta.9 — what's new · 2026-11-17
+
+The «Settings» window (Alt+O) changed sliders by itself (R-MSAM96).
+
+- **Fixed: sliders changed with no hand on them.** When another entry opened in the window or a group unfolded, a new row's slider took the value of the row that had stood in its place, and the window wrote it into the settings. That is how «Brightness» became 50 %, «Render scale» 50 %, and the «3D view» sliders their least. Now only a slider moved by hand counts.
+- **If the picture or the 3D view changed by itself after betas 3–8, check the sliders.** The defaults: «Picture» → «Whole screen» → «Colour»: «Brightness» 100, «Contrast» 108, «Saturation» 115, «Vignette» 25. «3D view» → «Camera and aim»: «Field of view from the eyes» 70, «Field of view from behind» 60, «Mouse speed» 100, «View distance» 1200. «Speed and screen» → «Quality»: «Render scale» 100.
+- **Open windows load the game less.** The pad's ring made the whole window be laid out again every frame; now only when it shows or moves. This goes for every window of the new interface, most of all «Settings» on a long entry.
+
 # uaRO Graphics 3.0.21-beta.8 — what's new · 2026-11-17
 
 The open «Settings» window (Alt+O) no longer slows the game (R-SPPSF3).
