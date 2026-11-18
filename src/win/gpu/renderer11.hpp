@@ -887,6 +887,7 @@ private:
     ID3D11PixelShader* mistPs_ = nullptr;
     ID3D11PixelShader* sky3dPs_ = nullptr;  // 3.0.19-beta.6
     ID3D11PixelShader* sky3dHazePs_ = nullptr;  // 3.0.20-beta.48: the haze apart (sky3d_haze_ps)
+    ID3D11PixelShader* horizonBakePs_ = nullptr;  // 3.0.22-beta.11: the horizon's strip (horizon_bake_ps)
     bool skyFillDone_ = false;
     ID3D11PixelShader* weatherPs_ = nullptr;
     // 3.0.5-beta.19: the particles as small quads (weather_vs, weather_quad_ps) - not sand's

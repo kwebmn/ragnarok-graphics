@@ -189,6 +189,7 @@ Renderer11::~Renderer11() {
     drop(mistPs_);
     drop(sky3dPs_);  // 3.0.19-beta.6
     drop(sky3dHazePs_);  // 3.0.20-beta.48
+    drop(horizonBakePs_);  // 3.0.22-beta.11
     drop(weatherPs_);
     drop(aoPs_);  // 2.5.1
     drop(aoBlurPs_);
@@ -492,7 +493,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[74] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[75] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -557,7 +558,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"model_vs", vs, shaderSource(), {}, true},  // 3.0.20-beta.10: the game's still models
                    {"leaf_vs", vs, shaderSource(), {}, true},  // 3.0.20-beta.34: their leaves
                    {"meadow_roots_ps", ps, shaderSource(), {}, true},  // 3.0.20-beta.47: the 3D grass's roots
-                   {"sky3d_haze_ps", ps, shaderSource(), {}, true}};  // 3.0.20-beta.48: the 3D sky's haze apart
+                   {"sky3d_haze_ps", ps, shaderSource(), {}, true},  // 3.0.20-beta.48: the 3D sky's haze apart
+                   {"horizon_bake_ps", ps, shaderSource(), {}, true}};  // 3.0.22-beta.11: the horizon's strip
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -716,6 +718,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[71].code.empty() || !vsOf(wants[71], leafVs_)) leafVs_ = nullptr;  // 3.0.20-beta.34
     if (wants[72].code.empty() || !psOf(wants[72], grass3dRootsPs_)) grass3dRootsPs_ = nullptr;  // 3.0.20-beta.47
     if (wants[73].code.empty() || !psOf(wants[73], sky3dHazePs_)) sky3dHazePs_ = nullptr;  // 3.0.20-beta.48
+    if (wants[74].code.empty() || !psOf(wants[74], horizonBakePs_)) horizonBakePs_ = nullptr;  // 3.0.22-beta.11
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});

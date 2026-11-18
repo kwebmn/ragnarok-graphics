@@ -48,7 +48,7 @@ float farLand(const Climate& c, float x, float z, float far, float hills) {
         return hills + far * c.mountAmp * terrace * (0.35f + 0.65f * cut);
     }
     default: {  // Hills, Alps, Waste: eroded ridges
-        const float e = 0.5f + 0.5f * eroded(mx, mz, 9, c.seed);
+        const float e = std::max(0.0f, 0.5f + 0.5f * eroded(mx, mz, 9, c.seed));  // pow wants it >= 0
         const float ridge = 1.0f - std::fabs(noise(mx * 0.7f, mz * 0.7f, c.seed + 77));
         float m;
         if (c.land == Land::Alps)

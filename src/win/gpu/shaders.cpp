@@ -1482,7 +1482,284 @@ float3 skyRanges(float3 sky, float3 dir, float3 horizon, float night, uint kind)
     return sky;
 }
 
-float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, float parts) {
+// 3.0.22-beta.11 (the owner 19.11: «я хочу панорамы горизонта в клиенте красивые», «я хочу чтобы ты нарисовал это на
+// видеокарте, не генерировал с помощью ИИ готовое»; core/horizon, core/horizon_terrain - the CPU twin of every
+// function here, the same numbers): the 3D view's horizon drawn by the card. horizon_bake_ps ray-marches the
+// region's land into a 360° strip a slice of rows at a time - colour and coverage into one target, the normal, the
+// sun's shadow and the haze into the other, both premultiplied by the coverage; skyPanorama lays it over the sky each
+// frame (t1 the colour, t0 the rest), lit by the night, the sun and the haze. The bake's numbers (core horizon::pack):
+#define hzLand int(r0 + 0.5)
+#define hzSeed uint(r1 + 0.5)
+#define hzMapRadius r2
+#define hzHillAmp r3
+#define hzHillFreq r4
+#define hzMountAmp r5
+#define hzMountFreq r6
+#define hzMountStart r7
+#define hzMountFull r8
+#define hzSnowLine r9
+#define hzTreeLine r10
+#define hzHaze r11
+#define hzGrass float3(holeX, holeY, holeH)
+#define hzForest float3(holeZ, holeG, holeUy)
+#define hzSteps int(holeUz + 0.5)
+#define hzShadowSteps int(holeF + 0.5)
+#define hzRock fogColor.rgb
+#define hzEye fogColor.a
+#define hzSnow sourceRect.rgb
+#define hzSun sourceClamp.xyz
+#define hzStripW twinX
+#define hzStripH twinY
+#define hzSand float3(f0, f1, cx)
+static const float hzRiseLow = -0.05, hzRiseHigh = 0.35, hzLandRise = 1400.0, hzRoof = 0.30;
+
+uint hzHash(int x, int y, uint seed) {
+    uint h = uint(x) * 374761393u + uint(y) * 668265263u + seed * 2246822519u;
+    h = (h ^ (h >> 13)) * 1274126177u;
+    return h ^ (h >> 16);
+}
+float hzSmooth(float a, float b, float x) {
+    float t = saturate((x - a) / (b - a));
+    return t * t * (3.0 - 2.0 * t);
+}
+float hzCorner(int x, int y, uint seed) { return float(hzHash(x, y, seed) & 0xFFFFFFu) / 16777216.0; }
+float3 hzNoised(float2 p, uint seed) {  // value noise in [-1, 1] and its derivatives
+    float2 i = floor(p), f = p - i;
+    float2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+    float2 du = 30.0 * f * f * (f * (f - 2.0) + 1.0);
+    int x = int(i.x), y = int(i.y);
+    float a = hzCorner(x, y, seed), b = hzCorner(x + 1, y, seed), c = hzCorner(x, y + 1, seed);
+    float d = hzCorner(x + 1, y + 1, seed);
+    float k1 = b - a, k2 = c - a, k4 = a - b - c + d;
+    return float3(2.0 * (a + k1 * u.x + k2 * u.y + k4 * u.x * u.y) - 1.0, 2.0 * du.x * (k1 + k4 * u.y),
+                  2.0 * du.y * (k2 + k4 * u.x));
+}
+float hzNoise(float2 p, uint seed) { return hzNoised(p, seed).x; }
+float hzFbm(float2 p, int octaves, uint seed) {
+    float sum = 0.0, amp = 0.5;
+    [loop] for (int i = 0; i < 9; ++i) {
+        if (i >= octaves) break;
+        sum += amp * hzNoise(p, seed + uint(i) * 17u);
+        amp *= 0.5;
+        p = float2(1.6 * p.x - 1.2 * p.y, 1.2 * p.x + 1.6 * p.y);
+    }
+    return sum;
+}
+float hzEroded(float2 p, int octaves, uint seed) {  // derivative-damped: smooth valleys, sharp ridges
+    float sum = 0.0, amp = 1.0;
+    float2 d = float2(0.0, 0.0);
+    [loop] for (int i = 0; i < 9; ++i) {
+        if (i >= octaves) break;
+        float3 n = hzNoised(p, seed + uint(i) * 31u);
+        d += n.yz;
+        sum += amp * n.x / (1.0 + dot(d, d));
+        amp *= 0.5;
+        p = float2(1.6 * p.x - 1.2 * p.y, 1.2 * p.x + 1.6 * p.y);
+    }
+    return sum;
+}
+// the far land by its kind (horizon::Land: 0 hills, 1 alps, 2 desert, 3 sea, 4 karst, 5 canyon, 6 waste)
+float hzFarLand(float2 p, float far, float hills) {
+    float2 m = p * hzMountFreq;
+    int land = hzLand;
+    [branch] if (land == 2) {  // dunes along a wind; mesas with terraced cliffs far off
+        float wind = 0.3 * hzNoise(p * 0.0006, hzSeed + 7u);
+        float dune = 1.0 - abs(hzNoise(float2(p.x * 0.0021 + wind, p.y * 0.0009), hzSeed + 5u));
+        float n = 0.5 + 0.5 * hzFbm(m, 4, hzSeed + 9u);
+        float mesa = hzSmooth(0.52, 0.56, n) * (0.8 + 0.2 * hzSmooth(0.6, 0.75, n));
+        float steps = floor(n * 6.0) / 6.0;
+        return hzHillAmp * (0.35 + 0.65 * dune * dune) + far * hzMountAmp * mesa * (0.55 + 0.45 * steps);
+    }
+    [branch] if (land == 3) {  // islands out of the sea (below 0)
+        float isl = 0.5 + 0.5 * hzFbm(m, 6, hzSeed + 3u);
+        float ground = hzSmooth(0.56, 0.70, isl);
+        float e = 0.5 + 0.5 * hzEroded(m * 3.0, 7, hzSeed + 11u);
+        return ground * hzMountAmp * (0.25 + 0.75 * e) - (1.0 - ground) * 60.0;
+    }
+    [branch] if (land == 4) {  // tall narrow pillars with rounded tops
+        float n = 0.5 + 0.5 * hzFbm(m, 4, hzSeed + 9u);
+        float pillar = hzSmooth(0.56, 0.61, n);
+        float top = 0.7 + 0.3 * (0.5 + 0.5 * hzEroded(m * 2.0, 5, hzSeed + 13u));
+        return hills + far * hzMountAmp * pillar * top;
+    }
+    [branch] if (land == 5) {  // terraced plateaus cut by winding canyons
+        float n = 0.5 + 0.5 * hzFbm(m, 5, hzSeed + 9u);
+        float s = n * 5.0, f = s - floor(s);
+        float terrace = (floor(s) + hzSmooth(0.7, 1.0, f)) / 5.0;
+        float cut = hzSmooth(0.0, 0.12, abs(hzNoise(m * 1.7, hzSeed + 21u)));
+        return hills + far * hzMountAmp * terrace * (0.35 + 0.65 * cut);
+    }
+    float e = max(0.0, 0.5 + 0.5 * hzEroded(m, 9, hzSeed));  // hills, alps, waste: eroded ridges
+    float ridge = 1.0 - abs(hzNoise(m * 0.7, hzSeed + 77u));
+    float shape = land == 1 ? pow(e, 1.6) * (0.6 + 0.4 * ridge * ridge)
+                : land == 6 ? pow(e, 1.4) * (0.6 + 0.4 * ridge)
+                            : e * e * (0.75 + 0.25 * ridge * ridge);
+    return hills + far * hzMountAmp * shape;
+}
+float hzHeightAt(float2 p) {  // units up from the map's ground; 0 within the map; < 0 the sea
+    float d = length(p);
+    float belt = hzSmooth(hzMapRadius, hzMapRadius + hzLandRise, d);
+    if (belt <= 0.0) return 0.0;
+    float hills = hzHillAmp * (0.5 + 0.5 * hzFbm(p * hzHillFreq, 5, hzSeed + 101u));
+    float h = hzFarLand(p, hzSmooth(hzMountStart, hzMountFull, d), hills) * belt;
+    if (h <= 0.0) return h;
+    float roof = hzRoof * d;  // a soft roof: the strip's top row stays sky
+    return roof * tanh(h / roof);
+}
+float3 hzNormal(float2 p, float eps) {
+    float hx = hzHeightAt(p + float2(eps, 0.0)) - hzHeightAt(p - float2(eps, 0.0));
+    float hz = hzHeightAt(p + float2(0.0, eps)) - hzHeightAt(p - float2(0.0, eps));
+    return normalize(float3(-hx, 2.0 * eps, -hz));
+}
+float3 hzAlbedo(float2 p, float height, float up) {
+    float tex = 0.5 + 0.5 * hzFbm(p * 0.004, 4, hzSeed + 400u);
+    int land = hzLand;
+    [branch] if (land == 2 || land == 5) {
+        float3 rock = hzRock * (0.8 + 0.4 * tex);
+        if (land == 5) rock *= 0.85 + 0.3 * (0.5 + 0.5 * sin(height * 0.02 + 3.0 * tex));  // bands in the cliffs
+        float3 a = lerp(hzSand * (0.9 + 0.2 * tex), rock, hzSmooth(0.80, 0.65, up));
+        float sn = hzSmooth(hzSnowLine - 180.0, hzSnowLine + 120.0, height) * hzSmooth(0.42, 0.66, up);
+        return lerp(a, hzSnow, sn);
+    }
+    if (land == 3) {
+        if (height < 0.5) return float3(0.02, 0.09, 0.15);  // the sea
+        if (height < 25.0) return hzSand * (0.9 + 0.2 * tex);  // a beach
+    }
+    float forest = hzSmooth(0.48, 0.56, 0.5 + 0.5 * hzFbm(p * 0.0011, 5, hzSeed + 500u)) * hzSmooth(0.70, 0.85, up) *
+                   hzSmooth(hzTreeLine + 150.0, hzTreeLine - 150.0, height);
+    float3 grass = hzGrass * (0.75 + 0.5 * tex);
+    float3 trees = hzForest * (0.7 + 0.6 * (0.5 + 0.5 * hzNoise(p * 0.05, hzSeed + 600u)));
+    float3 a = lerp(grass, trees, forest);
+    a = lerp(a, hzRock * (0.75 + 0.5 * tex), hzSmooth(0.78, 0.6, up));
+    float snowAt = height + 260.0 * hzFbm(p * 0.003, 3, hzSeed + 700u);
+    return lerp(a, hzSnow, hzSmooth(hzSnowLine - 180.0, hzSnowLine + 120.0, snowAt) * hzSmooth(0.42, 0.66, up));
+}
+struct HzHit {
+    float hit, distance, height, coverage;
+    float2 at;
+};
+// A ray from the eye over the map's middle (dir unit, y up) from the map's edge out: a hit, or the least angular
+// clearance's coverage (the skyline's soft edge) with the place it passed closest
+HzHit hzMarch(float3 dir, int steps, float pixelAngle) {
+    HzHit o;
+    o.hit = 0.0;
+    o.distance = 0.0;
+    o.height = 0.0;
+    o.coverage = 0.0;
+    o.at = float2(0.0, 0.0);
+    float flat = length(dir.xz);
+    if (flat < 1e-4) return o;
+    float maxH = max(hzMountAmp, 0.0) + hzHillAmp + 200.0;
+    float t = hzMapRadius / flat, prev = t, least = 1e9;
+    if (hzEye + dir.y * t <= 0.0) return o;  // it meets the ground within the map: the game's own
+    int i = 0;
+    [loop] for (; i < 128; ++i) {
+        if (i >= steps || t >= 80000.0) break;
+        float2 xz = dir.xz * t;
+        float y = hzEye + dir.y * t;
+        if (y > maxH && dir.y > 0.0) return o;
+        float h = hzHeightAt(xz), dy = y - h;
+        if (dy / t < least) {
+            least = dy / t;
+            o.at = xz;
+            o.height = h;
+            o.distance = t;
+            o.coverage = least < pixelAngle ? saturate(1.0 - least / pixelAngle) : 0.0;
+        }
+        if (dy < 0.0015 * t) {
+            float a = prev, b = t;
+            [unroll] for (int k = 0; k < 6; ++k) {
+                float mid = 0.5 * (a + b);
+                if (hzEye + dir.y * mid - hzHeightAt(dir.xz * mid) < 0.0) b = mid;
+                else a = mid;
+            }
+            o.hit = 1.0;
+            o.distance = b;
+            o.at = dir.xz * b;
+            o.height = hzHeightAt(o.at);
+            o.coverage = 1.0;
+            return o;
+        }
+        prev = t;
+        t += max(0.004 * t + 1.0, 0.4 * dy);
+    }
+    if (i >= steps && dir.y < 0.08 && hzEye + dir.y * t < maxH) {  // along the horizon: far land in the haze
+        o.hit = 1.0;
+        o.distance = t;
+        o.at = dir.xz * t;
+        o.height = hzHeightAt(o.at);
+        o.coverage = 1.0;
+    }
+    return o;
+}
+float hzShadow(float3 at, float3 n, float3 toSun, int steps) {  // the sun's soft shadow, 1 lit
+    if (steps <= 0) return 1.0;
+    if (toSun.y <= 0.0) return 0.0;
+    float lit = 1.0, st = 8.0;
+    [loop] for (int i = 0; i < 24; ++i) {
+        if (i >= steps || st >= 9000.0) break;
+        float3 s = at + n + toSun * st;
+        float gap = s.y - hzHeightAt(s.xz);
+        lit = min(lit, 12.0 * gap / st);
+        if (lit < 0.001) break;
+        st += max(8.0, gap * 0.5);
+    }
+    return saturate(lit);
+}
+float hzHazeOf(float distance, float height) {
+    return 1.0 - exp(-distance * hzHaze * (1.0 - 0.45 * hzSmooth(0.0, 3000.0, height)));
+}
+// The strip's texel at u (wrapped) and v (clamped), bilinear by Load - no sampler's seam where u wraps
+float4 hzFetch(Texture2D t, float u, float v) {
+    uint w, h;
+    t.GetDimensions(w, h);
+    float x = u * float(w) - 0.5, y = v * float(h) - 0.5;
+    float fx = floor(x), fy = floor(y);
+    float ax = x - fx, ay = y - fy;
+    int x0 = int(fx), x1;
+    if (x0 < 0) x0 += int(w);
+    x1 = x0 + 1 >= int(w) ? 0 : x0 + 1;
+    int y0 = clamp(int(fy), 0, int(h) - 1), y1 = clamp(int(fy) + 1, 0, int(h) - 1);
+    float4 a = t.Load(int3(x0, y0, 0)), b = t.Load(int3(x1, y0, 0));
+    float4 c = t.Load(int3(x0, y1, 0)), d = t.Load(int3(x1, y1, 0));
+    return lerp(lerp(a, b, ax), lerp(c, d, ax), ay);
+}
+float3 hzDisplay(float3 linearColour) {  // core horizon::toDisplay
+    float3 x = max(linearColour, 0.0) * 0.8;
+    return pow(saturate(x * (2.51 * x + 0.03) / (x * (2.43 * x + 0.59) + 0.14)), 1.0 / 2.2);
+}
+void hzLightAt(float night, out float3 sun, out float3 ambient) {  // core horizon::lightAt
+    float n = saturate(night);
+    float3 daySun = float3(1.90, 1.75, 1.50), dayAmb = float3(0.042, 0.126, 0.328);
+    float3 duskSun = float3(1.70, 0.85, 0.36), duskAmb = float3(0.050, 0.070, 0.160);
+    float3 nightSun = float3(0.10, 0.12, 0.18), nightAmb = float3(0.020, 0.030, 0.060);
+    float t = n < 0.5 ? n / 0.5 : (n - 0.5) / 0.5;
+    sun = n < 0.5 ? lerp(daySun, duskSun, t) : lerp(duskSun, nightSun, t);
+    ambient = n < 0.5 ? lerp(dayAmb, duskAmb, t) : lerp(duskAmb, nightAmb, t);
+}
+// The panorama over the sky along dir (the world's, y down), its land lit by the night and the map's sun, its feet
+// into the horizon's colour by the baked haze, faded in by `fade` once its bake is done
+float3 skyPanorama(float3 sky, float3 dir, float3 horizon, float night, float3 toSun, float fade) {
+    float rise = -dir.y;
+    float v = (hzRiseHigh - rise) / (hzRiseHigh - hzRiseLow);
+    if (fade <= 0.0 || v < 0.0 || v > 1.0) return sky;
+    float u = frac(atan2(dir.z, dir.x) / 6.2831853 + 1.0);
+    float4 colour = hzFetch(tex1, u, v);
+    if (colour.a <= 0.002) return sky;
+    float4 detail = hzFetch(tex0, u, v) / colour.a;  // both premultiplied by the coverage
+    float3 albedo = colour.rgb / colour.a;
+    float3 n = float3(detail.r * 2.0 - 1.0, 0.0, detail.g * 2.0 - 1.0);
+    n.y = sqrt(saturate(1.0 - n.x * n.x - n.z * n.z));
+    bool sunKnown = dot(toSun, toSun) > 0.25;
+    float3 toward = sunKnown ? normalize(float3(toSun.x, -toSun.y, toSun.z)) : normalize(float3(0.5, 0.7, 0.5));
+    float3 sun, ambient;
+    hzLightAt(night, sun, ambient);
+    float3 lit = albedo * (ambient * (0.55 + 0.45 * n.y) + sun * max(dot(n, toward), 0.0) * saturate(detail.b));
+    float3 shown = lerp(hzDisplay(lit), horizon, saturate(detail.a));
+    return lerp(sky, shown, saturate(colour.a) * fade);
+}
+
+float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, float parts, float fade) {
     float rise = -dir.y;  // the world's y points down
     uint has = uint(parts + 0.5);
     float3 zenith = lerp(float3(0.30, 0.52, 0.86), float3(0.015, 0.025, 0.07), night);
@@ -1550,9 +1827,14 @@ float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, 
     if ((has & 2u) != 0u && sunKnown) cloud += float3(0.16, 0.18, 0.26) * (pow(sunUp, 10.0) * night);  // the moon's rim
     float3 whole = lerp(sky, cloud, cover * 0.85);
     // 3.0.20-beta.72: the far ranges before it all, along the horizon alone (their highest crest 0.107 up)
+    float3 shown = whole;
     [branch] if ((has & 16u) != 0u && rise > -0.01 && rise < 0.13)
-        whole = skyRanges(whole, dir, horizon, night, (has >> 5) & 3u);
-    return whole;
+        shown = skyRanges(whole, dir, horizon, night, (has >> 5) & 3u);
+    // 3.0.22-beta.11: the region's land drawn by the card (128, view3d::kPanoramaPart) - the ranges fading out as it
+    // fades in
+    [branch] if ((has & 128u) != 0u)
+        shown = skyPanorama(lerp(shown, whole, fade), dir, horizon, night, toSun, fade);
+    return shown;
 }
 
 float3 waterReflection(float3 p, float3 r, out float weight) { return reflectionIn(p, r, targetSize, weight); }
@@ -1680,7 +1962,7 @@ float4 water(WaterIn i) {
     if (fogEnable == 0 && fogColor.a > 1.5 && holeY > 0.5) {
         float3 calm = normalize(float3(-slope.x * 0.2, -1.0, -slope.y * 0.2));
         sky = skyAlong(reflect(-toEye, calm), fogColor.rgb, holeX, float3(holeG, holeUy, holeUz), t,
-                       max(holeY - 1.0, 0.0)) * 0.92;  // 3.0.20-beta.49: holeY 1 and the sky's parts
+                       max(holeY - 1.0, 0.0), 0.0) * 0.92;  // 3.0.20-beta.49: holeY 1 and the sky's parts
     }
     float hit;
     float3 seen = waterReflection(i.view, reflect(normalize(i.view), nv), hit);
@@ -2808,9 +3090,9 @@ float4 sky3d_haze_ps(PresentOut i) : SV_Target {
         float3 way = normalize(seen.x * float3(r0, r1, r2) + seen.y * float3(r3, r4, r5) + seen.z * float3(r6, r7, r8));
         float night = saturate(twinX);
         float soft = float((uint(uiPixels.z + 0.5) & 4u) | 8u);  // the dawn's glow; no stars, no moon, no sun's disc
-        tone = skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, soft);
-        [branch] if (whole > 0.0)
-            tone = lerp(tone, skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, uiPixels.z), whole);
+        tone = skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, soft, 0.0);
+        [branch] if (whole > 0.0)  // 3.0.22-beta.11: holeX the panorama's fade
+            tone = lerp(tone, skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, uiPixels.z, holeX), whole);
     }
     return float4(tone, haze);
 }
@@ -2825,8 +3107,36 @@ float4 sky3d_ps(PresentOut i) : SV_Target {
     float3 ray = float3((g.x - cx) / max(f0, 1e-3), (g.y - cy) / max(f1, 1e-3), 1.0);
     float3 dir = normalize(ray.x * float3(r0, r1, r2) + ray.y * float3(r3, r4, r5) + ray.z * float3(r6, r7, r8));
     if (vault) return float4(underVault(dir, horizon), 1.0);
-    // 3.0.20-beta.32: shared with the water's reflection; 3.0.20-beta.49: uiPixels.z the sky's parts
-    return float4(skyAlong(dir, horizon, night, sourceClamp.xyz, sharpen, uiPixels.z), 1.0);
+    // 3.0.20-beta.32: shared with the water's reflection; 3.0.20-beta.49: uiPixels.z the sky's parts;
+    // 3.0.22-beta.11: holeX the horizon panorama's fade
+    return float4(skyAlong(dir, horizon, night, sourceClamp.xyz, sharpen, uiPixels.z, holeX), 1.0);
+}
+
+// 3.0.22-beta.11: the horizon's strip, the rows the scissor lets through - a ray each texel (core horizon::march)
+// from the map's middle, its land's colour and coverage into SV_Target0, its normal (x and z), the sun's shadow and
+// the haze into SV_Target1, both premultiplied by the coverage
+struct HzOut {
+    float4 colour : SV_Target0;
+    float4 detail : SV_Target1;
+};
+HzOut horizon_bake_ps(PresentOut i) {
+    HzOut o;
+    o.colour = float4(0.0, 0.0, 0.0, 0.0);
+    o.detail = float4(0.0, 0.0, 0.0, 0.0);
+    float u = i.pos.x / hzStripW, v = i.pos.y / hzStripH;
+    float rise = hzRiseHigh - v * (hzRiseHigh - hzRiseLow);
+    float az = 6.2831853 * u, flat = sqrt(saturate(1.0 - rise * rise));
+    HzHit hit = hzMarch(float3(cos(az) * flat, rise, sin(az) * flat), hzSteps, 6.2831853 / hzStripW);
+    if (hit.coverage <= 0.0) return o;
+    float3 n = hzNormal(hit.at, 0.8 + 0.0018 * hit.distance);
+    float3 albedo = hzAlbedo(hit.at, hit.height, n.y);
+    bool sunKnown = dot(hzSun, hzSun) > 0.25;
+    float3 sun = normalize(float3(hzSun.x, -hzSun.y, hzSun.z) + float3(0.0, 1e-4, 0.0));  // the world's y down -> up
+    float shadow = sunKnown ? hzShadow(float3(hit.at.x, hit.height, hit.at.y), n, sun, hzShadowSteps) : 1.0;
+    float haze = hzHazeOf(hit.distance, hit.height);
+    o.colour = float4(albedo * hit.coverage, hit.coverage);
+    o.detail = float4((n.xz * 0.5 + 0.5) * hit.coverage, shadow * hit.coverage, haze * hit.coverage);
+    return o;
 }
 
 // 0.82, the skills' sparks (torches.cpp applyEmbers), added on: about each place a skill burns or shines (t1, two

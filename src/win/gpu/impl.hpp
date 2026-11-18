@@ -617,6 +617,7 @@ struct Renderer::Impl {
     bool mistLogged = false;
     // 3.0.19-beta.6 (the 3D view, core/view3d; haze.cpp applySky3d): a sky where nothing is drawn, a haze to it
     ID3DBlob* sky3dPs = nullptr;
+    ID3DBlob* horizonBakePs = nullptr;  // 3.0.22-beta.11: the horizon's strip (horizon.cpp)
     ID3D12PipelineState* sky3dPipelines[4] = {};
     bool sky3dDone = false;
     // 3.0.20-beta.50 (the owner's «делай 1-9», 2 - a trial; core/sun_shadows, sun_shadows.cpp): real shadows in the 3D

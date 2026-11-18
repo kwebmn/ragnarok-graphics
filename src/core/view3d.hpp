@@ -259,6 +259,9 @@ Ranges rangesFor(bool wanted, bool outdoors, bool hung, bool sea, bool sand, boo
 // tells by the file: nine tenths of its outer band open)
 bool hungMap(const std::string& name);
 // (8 is the shaders' own: the sun's halo without its disc; 16 the ranges, their kind less one in the next two bits)
+// 3.0.22-beta.11: 128 - the horizon panorama is bound (t1 its colour, t0 the rest; core/horizon), set by the sky
+// passes alone (the water's reflection keeps the ranges)
+constexpr int kPanoramaPart = 128;
 constexpr int skyParts(bool stars, bool moon, bool dawn, Ranges ranges = Ranges::None) {
     return (stars ? 1 : 0) | (moon ? 2 : 0) | (dawn ? 4 : 0) |
            (ranges != Ranges::None ? 16 | (int(ranges) - 1) << 5 : 0);
