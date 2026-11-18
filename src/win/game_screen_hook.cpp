@@ -24,6 +24,17 @@ CRITICAL_SECTION g_lock;
 bool g_read = false;
 std::optional<GameScreen> g_screen;
 int g_answered = 0, g_taken = 0;
+volatile LONG g_fullScreen = -1;  // 3.0.22-beta.6: ISFULLSCREENMODE as the game read it
+
+// 3.0.22-beta.6: the game's read of ISFULLSCREENMODE noted, whoever answered it
+void noteMode(LPCSTR name, LONG result, const DWORD* type, const BYTE* data, const DWORD* size) {
+    if (result != ERROR_SUCCESS || !name || !data || !size || *size < 4 || lstrcmpiA(name, "ISFULLSCREENMODE") != 0)
+        return;
+    if (type && *type != REG_DWORD) return;
+    DWORD v = 0;
+    std::memcpy(&v, data, 4);
+    InterlockedExchange(&g_fullScreen, v ? 1 : 0);
+}
 
 std::string file() { return layout::join(gameDir(), layout::kGameScreen); }
 
@@ -46,7 +57,11 @@ LONG WINAPI queryHook(HKEY key, LPCSTR name, LPDWORD reserved, LPDWORD type, LPB
         if (ours) ++g_answered;
         LeaveCriticalSection(&g_lock);
     }
-    if (!ours) return g_query(key, name, reserved, type, data, size);
+    if (!ours) {
+        const LONG r = g_query(key, name, reserved, type, data, size);
+        noteMode(name, r, type, data, size);
+        return r;
+    }
     const std::string bytes = v.isSz() ? v.text + std::string(1, '\0') : std::string(v.bytes.begin(), v.bytes.end());
     const DWORD need = DWORD(bytes.size());
     if (type) *type = v.type;
@@ -61,6 +76,7 @@ LONG WINAPI queryHook(HKEY key, LPCSTR name, LPDWORD reserved, LPDWORD type, LPB
     }
     std::memcpy(data, bytes.data(), need);
     *size = need;
+    noteMode(name, ERROR_SUCCESS, type, data, size);
     return ERROR_SUCCESS;
 }
 
@@ -94,6 +110,8 @@ LONG WINAPI setHook(HKEY key, LPCSTR name, DWORD reserved, DWORD type, const BYT
 }
 
 }  // namespace
+
+int gameFullScreen() { return int(InterlockedCompareExchange(&g_fullScreen, -1, -1)); }
 
 void installGameScreen() {
     InitializeCriticalSection(&g_lock);

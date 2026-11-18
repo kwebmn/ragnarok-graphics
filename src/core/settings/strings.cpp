@@ -9344,6 +9344,21 @@ constexpr Entry kTexts[] = {
      "Набор «Для ноутбука» не добавил кадров: {1} FPS в игре, было {2}."},
     {Text::LaptopUndo, "Put it back", "Повернути як було", "Вернуть как было"},
     {Text::PlateClose, "Close", "Закрити", "Закрыть"},
+    // 3.0.22-beta.6 (idea 10): [display] dpi_aware
+    {Text::QualityDpiAware, "The window in real pixels", "Вікно в справжніх пікселях", "Окно в настоящих пикселях"},
+    {Text::QualityDpiAwareHint,
+     "When Windows' scaling leaves the game's window a pixel short of the monitor (4K at 175 %), the window is made in "
+     "the screen's real pixels: it covers the monitor, and Windows shows the picture straight - without the jerks of "
+     "its own composition. «Auto» - only there and only in full screen. After the game's restart.",
+     "Коли масштаб Windows лишає вікно гри на піксель меншим за монітор (4K при 175 %), вікно робиться в справжніх "
+     "пікселях екрана: воно закриває монітор, і Windows показує картинку напряму — без ривків свого складання. "
+     "«Авто» — лише там і лише в повному екрані. Після перезапуску гри.",
+     "Когда масштаб Windows оставляет окно игры на пиксель меньше монитора (4K при 175 %), окно делается в настоящих "
+     "пикселях экрана: оно закрывает монитор, и Windows показывает картинку напрямую — без рывков своего сложения. "
+     "«Авто» — только там и только в полном экране. После перезапуска игры."},
+    {Text::DpiAwareAuto, "Auto", "Авто", "Авто"},
+    {Text::DpiAwareOn, "On", "Увімкнено", "Включено"},
+    {Text::DpiAwareOff, "Off", "Вимкнено", "Выключено"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

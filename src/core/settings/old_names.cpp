@@ -10,6 +10,9 @@ struct Old {
 
 // Their labels until 2.6.21
 const Old kOld[] = {
+    // 3.0.22-beta.6: the 3.0.11-beta.292 trial's
+    {"display.dpi_aware",
+     {"Window with Windows scaling (test)", "Вікно з масштабом Windows (тест)", "Окно с масштабом Windows (тест)"}},
     {"effects.day_cycle", {"Time of day", "Час доби", "Время суток"}},
     {"effects.night_windows", {"Windows at night", "Вікна вночі", "Окна ночью"}},
     {"effects.no_server_night", {"No server night", "Без ночі сервера", "Без ночи сервера"}},

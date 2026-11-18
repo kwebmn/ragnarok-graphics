@@ -8,5 +8,8 @@ namespace uagfx::win {
 // the game's first query. No file (the old client, an app before 3.0.17-beta.18): the registry's, as before.
 void installGameScreen();
 void tellGameScreen();  // its line into the log once that is open
+// 3.0.22-beta.6 (core/dpi_aware): the screen's mode the game read before it made its window (ISFULLSCREENMODE, from
+// the file or the registry) - 1 full screen, 0 a window, -1 not read yet
+int gameFullScreen();
 
 }  // namespace uagfx::win

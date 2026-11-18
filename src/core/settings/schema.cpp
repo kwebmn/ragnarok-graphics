@@ -664,6 +664,9 @@ const std::vector<IniSetting>& iniSettings() {
         {"display", "window_art", Page::Quality, Control::Choice, 0, 0, 0, {"xbr", "ai", "pixels"},
          {Text::WindowArtXbr, Text::WindowArtAi, Text::WindowArtPixels}, Text::QualityWindowArt,
          Text::QualityWindowArtHint, ""},
+        {"display", "dpi_aware", Page::Quality, Control::Choice, 0, 0, 0, {"auto", "1", "0"},  // 3.0.22-beta.6
+         {Text::DpiAwareAuto, Text::DpiAwareOn, Text::DpiAwareOff}, Text::QualityDpiAware, Text::QualityDpiAwareHint,
+         ""},
         {"quality", "dlss", Page::Smoothing, Control::Choice, 0, 0, 0,
          {"off", "dlaa", "quality", "balanced", "performance", "ultra", "custom"},
          {Text::SmoothOff, Text::DlssDlaa, Text::DlssQuality, Text::DlssBalanced, Text::DlssPerformance,
@@ -1622,6 +1625,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "quality.sharpen") return std::to_string(c.sharpen);
     if (k == "display.ui_filter") return uiFilterToken(c.uiFilter);
     if (k == "display.window_art") return windowArtToken(c.windowArt);
+    if (k == "display.dpi_aware") return dpiAwareToken(c.dpiAware);  // 3.0.22-beta.6
     if (k == "display.crisp_text") return c.crispText ? "1" : "0";
     if (k == "display.crisp_numbers") return c.crispNumbers ? "1" : "0";  // 3.0.18-beta.178
     if (k == "quality.dlss") return c.dlss;

@@ -290,7 +290,8 @@ std::vector<Group> build() {
     out.push_back(group(Area::Speed, Text::PageScreen,
                         {B("display.high_resolution"), B("display.hdr"), D("display.ui_native"),
                          D("display.ui_filter"), D("display.crisp_text"), D("display.crisp_numbers"),
-                         D("display.window_art").need("display.crisp_text")}));
+                         D("display.window_art").need("display.crisp_text"),
+                         D("display.dpi_aware")}));  // 3.0.22-beta.6: the window in real pixels where it is needed
     out.push_back(group(Area::Speed, Text::PageRender,
                         {B("renderer.api"), B("renderer.gpu"), D("renderer.bridge"), D("renderer.safe_mode"),
                          // a laptop's two cards: set before the game is playable at all (R-T8FGMM: 5 frames a second)

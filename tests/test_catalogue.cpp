@@ -479,10 +479,13 @@ TEST(catalogue_names_say_what_is_seen) {
 // масштабом Windows» and «Direct3D 11 у власному потоці» removed whole; «Хода без очікування сервера» a setting of
 // its group (a detail, off); the crowns, the 3D view's shadows and RTX Remix stay trials
 TEST(catalogue_trials_decided_for_3_0_21) {
-    for (const char* k : {"interface.minimap_reach", "display.dpi_aware", "renderer.render_thread"}) {
+    for (const char* k : {"interface.minimap_reach", "renderer.render_thread"}) {
         CHECK(catalogue::find(k) == nullptr);
         CHECK(findSetting(k) == nullptr);
     }
+    // 3.0.22-beta.6 (idea 10, «убрать рывки 72/48»): «Вікно в справжніх пікселях» back - a setting, auto by default
+    const catalogue::Row* dpi = catalogue::find("display.dpi_aware");
+    CHECK(dpi && dpi->status == catalogue::Status::Permanent && dpi->level == catalogue::Level::Detail);
     const catalogue::Row* walk = catalogue::find("interface.predict_walk");
     CHECK(walk && walk->status == catalogue::Status::Permanent && walk->level == catalogue::Level::Detail);
     if (walk) CHECK(catalogue::homeOf(*walk) == catalogue::Home::Game);

@@ -54,6 +54,9 @@ enum class CharacterLook : uint8_t { Off, Bars, Rings };
 // [display] window_art (0.41): how crisp text enlarges the windows' buttons, frames and labels - xBR (core/xbr.hpp),
 // the AI (with [ai] ui_pieces) or as the game's pixels.
 enum class WindowArt { Xbr, Ai, Pixels };
+// 3.0.22-beta.6 (idea 10, core/dpi_aware): the game's window per-monitor DPI aware - where Windows' scaling leaves it
+// short of the monitor in full screen (auto), always, never
+enum class DpiAware : uint8_t { Off, On, Auto };
 
 // [ai] (0.12; 0.11's [quality] ai_textures, ai_budget and ai_denoise are read when [ai] has no such key): the world's
 // textures enlarged by a neural network (Real-ESRGAN): 0.48 - the pictures of the texture pack uaro-textures.zip next
@@ -1131,6 +1134,10 @@ struct Config {
     // the game's own frames (core/sharp_frames.hpp) - as the game has them, xBR four times larger
     bool crispNumbers = true;
     WindowArt windowArt = WindowArt::Xbr;  // 0.41
+    // 3.0.22-beta.6 (idea 10; the 3.0.11-beta.292 trial back, removed in 3.0.21-beta.16): [display] dpi_aware - the
+    // game's window made per-monitor DPI aware at its creation (the game's thread stays unaware), so that it covers its
+    // monitor pixel for pixel (R-PSFZ8K: 3839x2159 at 175 %, composed by DWM - the 72/48 judder). After a restart.
+    DpiAware dpiAware = DpiAware::Auto;
     int renderScale = 100;       // %, 100-200: the frame is drawn this much larger and shrunk when shown
     int sharpen = 50;            // 0-100: contrast adaptive sharpening of the picture on screen; 0 = off
     int msaa = 4;                // stage 4: samples per pixel at polygon edges - 0 (off), 2, 4 or 8
@@ -1259,5 +1266,6 @@ const char* buffsOverflowToken(BuffsOverflow b);  // 3.0.11-beta.63
 const char* characterLookToken(CharacterLook c);  // 3.0.11-beta.36
 const char* panelLayoutToken(PanelLayout l);  // 3.0.3-beta.7
 const char* windowArtToken(WindowArt a);
+const char* dpiAwareToken(DpiAware a);  // "0", "1", "auto"
 
 }  // namespace uagfx

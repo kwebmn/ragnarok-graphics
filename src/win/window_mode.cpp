@@ -2,13 +2,16 @@
 
 #include <atomic>
 #include <cstdio>
+#include <string>
 #include <vector>
 
 #include "core/config.hpp"
+#include "core/dpi_aware.hpp"
 #include "core/layout.hpp"
 #include "core/roext.hpp"
 #include "core/window_plan.hpp"
 #include "win/dpi.hpp"
+#include "win/game_screen_hook.hpp"
 #include "win/iat.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -192,6 +195,67 @@ Fn user32(const char* name) {
 }
 
 }  // namespace
+
+namespace {
+
+using CreateFn = HWND(WINAPI*)(DWORD, LPCSTR, LPCSTR, DWORD, int, int, int, int, HWND, HMENU, HINSTANCE, LPVOID);
+using SetContextFn = DPI_AWARENESS_CONTEXT(WINAPI*)(DPI_AWARENESS_CONTEXT);
+using MonitorDpiFn = HRESULT(WINAPI*)(HMONITOR, int, UINT*, UINT*);  // shcore's GetDpiForMonitor
+using SystemDpiFn = UINT(WINAPI*)();
+CreateFn g_create = nullptr;
+SetContextFn g_setContext = nullptr;
+DpiAware g_dpiMode = DpiAware::Auto;
+int g_dpiMonitor = 0;
+
+// The monitor's real pixels and its effective DPI, measured per-monitor aware (an unaware thread is told 96)
+UINT monitorDpi(RECT& mon) {
+    RealPixels real;
+    mon = monitorRect(g_dpiMonitor);
+    UINT dpi = 0, dpiY = 0;
+    static const HMODULE shcore = LoadLibraryA("shcore.dll");
+    static const MonitorDpiFn ofMonitor =
+        shcore ? reinterpret_cast<MonitorDpiFn>(reinterpret_cast<void*>(GetProcAddress(shcore, "GetDpiForMonitor")))
+               : nullptr;
+    if (ofMonitor && FAILED(ofMonitor(MonitorFromRect(&mon, MONITOR_DEFAULTTOPRIMARY), 0, &dpi, &dpiY))) dpi = 0;
+    if (!dpi)
+        if (const SystemDpiFn system = user32<SystemDpiFn>("GetDpiForSystem")) dpi = system();
+    return dpi;
+}
+
+HWND WINAPI createAware(DWORD ex, LPCSTR cls, LPCSTR name, DWORD style, int x, int y, int w, int h, HWND parent,
+                        HMENU menu, HINSTANCE inst, LPVOID param) {
+    if (!roext::isGameWindow(ex, style, parent != nullptr, menu != nullptr, param != nullptr))
+        return g_create(ex, cls, name, style, x, y, w, h, parent, menu, inst, param);
+    RECT mon{};
+    const UINT dpi = monitorDpi(mon);
+    const int full = gameFullScreen(), mw = int(mon.right - mon.left), mh = int(mon.bottom - mon.top);
+    const bool aware = dpiaware::wanted(g_dpiMode, full, mw, mh, dpi);
+    LOG_INFO("window: [display] dpi_aware = %s - %s, the monitor %dx%d at %u dpi%s: the game's window %s",
+             dpiAwareToken(g_dpiMode), full == 1 ? "full screen" : full == 0 ? "a window" : "the mode not read",
+             mw, mh, dpi, dpiaware::inexact(mw, mh, dpi) ? " (not whole points)" : "",
+             aware ? "made per-monitor DPI aware" : "as Windows scales it");
+    if (!aware) return g_create(ex, cls, name, style, x, y, w, h, parent, menu, inst, param);
+    const DPI_AWARENESS_CONTEXT old = g_setContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    const HWND made = g_create(ex, cls, name, style, x, y, w, h, parent, menu, inst, param);
+    if (old) g_setContext(old);
+    LOG_INFO("window: the game's window is %s", made ? windowDpiAwareness(made) : "not made");
+    return made;
+}
+
+}  // namespace
+
+void installDpiAware() {
+    if (!GetModuleHandleA("dinput.dll")) return;  // the game alone, as installRoext
+    std::string text;
+    readTextFile(ourFile(layout::File::Ini), text);
+    const Config c = parseConfig(text);
+    g_dpiMode = c.dpiAware;
+    g_dpiMonitor = c.monitor;
+    if (g_dpiMode == DpiAware::Off) return;
+    g_setContext = user32<SetContextFn>("SetThreadDpiAwarenessContext");
+    if (!g_setContext) return;  // Windows before 10 1607: nothing to do
+    hookImport("user32.dll", "CreateWindowExA", &createAware, g_create);
+}
 
 const char* windowDpiAwareness(HWND hwnd) {
     static const WindowContextFn of = user32<WindowContextFn>("GetWindowDpiAwarenessContext");

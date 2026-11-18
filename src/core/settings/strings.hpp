@@ -1054,6 +1054,8 @@ enum class Text : uint16_t {
     // 3.0.22-beta.5 (idea 4): the set «Для ноутбука» - the first start's card, «Гра»'s plate
     KindLaptop, LauncherFirstFitsLaptop, LookBattery, LaptopOffer, LaptopTry, LaptopBetter, LaptopOk, LaptopNoBetter,
     LaptopUndo, PlateClose,
+    // 3.0.22-beta.6 (idea 10): [display] dpi_aware back - the window in the screen's real pixels where it is needed
+    QualityDpiAware, QualityDpiAwareHint, DpiAwareAuto, DpiAwareOn, DpiAwareOff,
     Count
 };
 

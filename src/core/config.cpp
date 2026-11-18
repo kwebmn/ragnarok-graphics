@@ -1004,6 +1004,14 @@ Config parseConfig(const std::string& text) {
         } else if (key == "display.ui_filter") {
             if (val == "sharp") c.uiFilter = UiFilter::Sharp;
             if (val == "smooth") c.uiFilter = UiFilter::Smooth;
+        } else if (key == "display.dpi_aware") {  // 3.0.22-beta.6
+            if (val == "auto") {
+                c.dpiAware = DpiAware::Auto;
+            } else {
+                bool on = c.dpiAware == DpiAware::On;
+                setBool(val, on);
+                c.dpiAware = on ? DpiAware::On : DpiAware::Off;
+            }
         } else if (key == "display.window_art") {
             if (val == "xbr") c.windowArt = WindowArt::Xbr;
             if (val == "ai") c.windowArt = WindowArt::Ai;
@@ -1363,6 +1371,8 @@ const char* characterLookToken(CharacterLook c) {
 const char* panelLayoutToken(PanelLayout l) {
     return l == PanelLayout::Icons ? "icons" : l == PanelLayout::Column ? "column" : "row";
 }
+
+const char* dpiAwareToken(DpiAware a) { return a == DpiAware::Auto ? "auto" : a == DpiAware::On ? "1" : "0"; }
 
 const char* windowArtToken(WindowArt a) {
     return a == WindowArt::Ai ? "ai" : a == WindowArt::Pixels ? "pixels" : "xbr";
