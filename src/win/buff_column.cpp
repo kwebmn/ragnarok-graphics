@@ -402,7 +402,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
  <ua-ring class="abs" sector="1" square="1" fill="#00000000" track="#00000099" data-if="b.left >= 0"
       data-style-left="b.x + 'px'" data-style-top="b.y + 'px'" data-style-width="b.w + 'px'" data-style-height="b.h + 'px'"
       data-attr-value="b.left" style="position: absolute;"></ua-ring>
- <div class="bad" data-if="b.debuff" data-style-left="b.fx - dp + 'px'" data-style-top="b.fy - dp + 'px'"
+ <div class="badframe" data-if="b.debuff" data-style-left="b.fx - dp + 'px'" data-style-top="b.fy - dp + 'px'"
       data-style-width="b.fw + 2 * dp + 'px'" data-style-height="b.fh + 2 * dp + 'px'" data-style-border-radius="6 * dp + 'px'"></div>
  <div class="hover" data-if="i == hover" data-style-left="b.fx - 1.5 * dp + 'px'" data-style-top="b.fy - 1.5 * dp + 'px'"
       data-style-width="b.fw + 3 * dp + 'px'" data-style-height="b.fh + 3 * dp + 'px'" data-style-border-radius="6.5 * dp + 'px'"></div>

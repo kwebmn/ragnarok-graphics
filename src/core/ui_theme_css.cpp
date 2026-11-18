@@ -267,7 +267,7 @@ select selectbox option:checked { color: #e6cb8a; }
 .bc .outline { position: absolute; background-color: #000000b3; }
 .bc .icon { position: absolute; background-color: #1b1d24; }
 .bc .icon img { width: 100%; height: 100%; }
-.bc .bad { position: absolute; border: 1.6rem #ff5a4ef2; }
+.bc .badframe { position: absolute; border: 1.6rem #ff5a4ef2; }
 .bc .hover { position: absolute; border: 1.5rem #ffffffd9; }
 .bc .time { position: absolute; text-align: center; font-size: 11.5rem; font-weight: bold;
             font-effect: outline(2px #000000d9); }

@@ -165,6 +165,48 @@ TEST(ui_scopes_a_windows_class_reaches_no_other_window) {
     CHECK(told.empty());
 }
 
+// 3.0.22-beta.9 (R-WUDXJN, the beta tester: «поламаний еффект провоку»): `.bc .bad` drew a debuff's red frame - and
+// as its time's and name's labels carry the class «bad» too (their colour), a second red box lay round the time «7»,
+// wider than the icon. A rule of the buffs' column that draws a border reaches none of its labels.
+TEST(ui_scopes_the_buffs_frame_lies_round_no_label) {
+    std::string css = uitheme::builtInCss();
+    for (size_t a = css.find("/*"); a != std::string::npos; a = css.find("/*", a)) {
+        const size_t b = css.find("*/", a + 2);
+        css.erase(a, b == std::string::npos ? std::string::npos : b + 2 - a);
+    }
+    std::vector<std::set<std::string>> bordered;  // the last compounds' classes of `.bc ...` rules with a border
+    for (size_t open = css.find('{'), from = 0; open != std::string::npos; open = css.find('{', from)) {
+        const size_t close = css.find('}', open);
+        if (close == std::string::npos) break;
+        const std::string body = css.substr(open + 1, close - open - 1);
+        std::istringstream in(css.substr(from, open - from));
+        from = close + 1;
+        if (body.find("border:") == std::string::npos && body.find("border-width") == std::string::npos) continue;
+        for (std::string one; std::getline(in, one, ',');) {
+            if (leadClasses(one) != std::set<std::string>{"bc"}) continue;
+            const size_t last = one.find_last_of(" \t\r\n>", one.find_last_not_of(" \t\r\n"));
+            if (last != std::string::npos) bordered.push_back(leadClasses(one.substr(last + 1)));
+        }
+    }
+    CHECK(!bordered.empty());
+    int labels = 0;
+    for (const Doc& d : sourceDocs()) {
+        if (!d.body.count("bc")) continue;
+        for (const std::set<std::string>& element : d.elements) {
+            if (!element.count("time") && !element.count("name")) continue;
+            ++labels;
+            for (const std::set<std::string>& rule : bordered)
+                if (!rule.empty() && within(rule, element)) {
+                    std::string name;
+                    for (const std::string& c : rule) name += "." + c;
+                    std::printf("  .bc %s draws a border round a label of %s\n", name.c_str(), d.where.c_str());
+                    CHECK(false);
+                }
+        }
+    }
+    CHECK(labels >= 2);
+}
+
 TEST(ui_scrollbar_parts_are_controls) {
     for (const char* tag : {"scrollbarvertical", "scrollbarhorizontal", "slidertrack", "sliderbar", "sliderarrowdec",
                             "sliderarrowinc", "scrollbarcorner"})
