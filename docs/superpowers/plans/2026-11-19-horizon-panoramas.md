@@ -59,7 +59,7 @@ Direct3D 11 (Renderer11) each own their strip, bake pass and binding; the settin
   - `bool wanted(bool on, bool wideView, bool outdoors, bool hung);`
   - `struct Key { std::string region; float sun[3]; bool weak; float mapRadius; bool operator==(const Key&) const; };`
     - what a bake depends on (sun compared within 1e-3)
-  - `constexpr int kPackedFloats = 38; void pack(const Climate& c, float mapRadius, const float sun[3], const Level& l,
+  - `constexpr int kPackedFloats = 44; void pack(const Climate& c, float mapRadius, const float sun[3], const Level& l,
     int row0, int row1, float out[kPackedFloats]);` - index layout written as a table in horizon.hpp
 
 - [ ] **Step 1: Write the failing tests** `horizon_climates_by_region`, `horizon_strip_geometry`, `horizon_wanted`,
@@ -72,7 +72,7 @@ Direct3D 11 (Renderer11) each own their strip, bake pass and binding; the settin
     `rowOfRise(0.35) == 0`, `rowOfRise(-0.05) == 1`, `riseOfRow(0.5) == 0.15f` (±1e-5).
   - `wanted(true,true,true,false)` true; any of on/wideView/outdoors false or hung true -> false.
   - Key equality ignores sun differences under 1e-3; `pack` puts land at [0], seed at [1], row0/row1 at [36]/[37],
-    the level's width/height at [32]/[33].
+    the level's width/height at [32]/[33], sand at [38..40] (Ruling 19.11: 44 floats - sand needed f0..farZ).
 - [ ] **Step 2:** `./build-host/uagfx_tests horizon` -> FAIL (does not compile: no core/horizon.hpp).
 - [ ] **Step 3: Implement** horizon.hpp/.cpp. Climate numbers start from the mock-up's (Prontera: hillAmp 170,
   hillFreq 1/1400, mountAmp 4600, mountFreq 1/7600, mountStart 3000, mountFull 9000, snowLine 1500, treeLine 1300,
