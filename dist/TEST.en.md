@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.22-beta.5 — what's new · 2026-11-18
+
+The «For a laptop» set: a lighter mode for weak laptops, with the frames before and after shown on «Game».
+
+- **The first start on a laptop:** the weak computer's card is now «For a laptop». It has «Auto», «HD, light» and battery saving: on the battery the game runs at 30 frames with lighter effects, on the mains nothing is limited.
+- **A plate on «Game».** When the laptop, plugged in, gives less than 45 FPS on average on the maps (counted after five minutes of play), a plate «Laptop: 39 FPS in the game on average…» shows with «Try it».
+- **The frames compared.** After five minutes of play with the set the plate tells what it gave: «The «For a laptop» set: 52 FPS in the game, it was 39». When it gave no more frames, «Put it back» is there.
+- The frames are counted only on the mains, with the game in front and on a map. ✕ closes the plate.
+- Battery saving on its own: Alt+O → «Speed and screen» → «Frames» → «Save the laptop's battery».
+
 # uaRO Graphics 3.0.22-beta.4 — what's new · 2026-11-18
 
 The Taekwon mission: where to find its monster.
