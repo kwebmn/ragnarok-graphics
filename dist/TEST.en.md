@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.22-beta.4 — what's new · 2026-11-18
+
+The Taekwon mission: where to find its monster.
+
+- **When a Taekwon takes a mission,** a line shows in the chat: «Taekwon mission: Poring - lives on prt_fild08 (75), pay_fild01 (40)…» - up to four maps with the most of them.
+- **When the monster lives nowhere on this server,** the line says so plainly: such a mission cannot be done, and the server does not let you change the target.
+- The maps come from the «Reference».
+
 # uaRO Graphics 3.0.22-beta.3 — what's new · 2026-11-18
 
 A lost connection: now it says what happened, and after a network drop the game logs in again by itself.
