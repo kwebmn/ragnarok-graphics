@@ -216,6 +216,9 @@ public:
     // its copy on the card checked against them (Direct3D 11: Assumptio's glow, the first three times a game)
     using GameTexels = bool (*)(void* context, uint32_t texture, const Rect& r, std::vector<uint32_t>& argb);
     void setGameTexels(GameTexels source, void* context);
+    // 3.0.22-beta.10 (R-3SA4RB, core/ground_light.hpp): a report - the next ground draw's light map checked against
+    // the game's memory, both as pictures (Direct3D 11)
+    void askGroundLightCheck();
     // Part 3, DLSS started after the device (in the background, so that the game does not wait for it): the DXGI
     // factory becomes Streamline's (upgrade = slUpgradeInterface) and the swap chain is made again through it at the
     // next present, so that Streamline sees every present. False: the factory stays the system's.

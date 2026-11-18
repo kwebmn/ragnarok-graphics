@@ -103,4 +103,55 @@ Seen seenOf(const uint32_t* argb, int width, int height) {
     return s;
 }
 
+Light lightOf(const uint32_t* argb, size_t n) {
+    Light l;
+    if (!argb) return l;
+    uint64_t sum[4] = {0, 0, 0, 0};
+    for (size_t i = 0; i < n; ++i) {
+        const uint32_t t = argb[i];
+        ++l.texels;
+        if (channel(t, 16) >= 240 && channel(t, 8) >= 240 && channel(t, 0) >= 240) ++l.white;
+        if (channel(t, 24) < kNear) ++l.clear;
+        for (int j = 0; j < 4; ++j) sum[j] += uint64_t(channel(t, j * 8));
+    }
+    if (l.texels)
+        for (int j = 0; j < 4; ++j) l.mean |= uint32_t((sum[j] + l.texels / 2) / l.texels) << (j * 8);
+    return l;
+}
+
+size_t apart(const uint32_t* game, const uint32_t* card, size_t n) {
+    if (!game || !card) return 0;
+    size_t count = 0;
+    for (size_t i = 0; i < n; ++i)
+        for (int shift = 0; shift < 32; shift += 8)
+            if (std::abs(channel(game[i], shift) - channel(card[i], shift)) > kNear) {
+                ++count;
+                break;
+            }
+    return count;
+}
+
+std::vector<uint32_t> halved(const uint32_t* argb, int width, int height) {
+    if (!argb || width <= 0 || height <= 0) return {};
+    const int w = std::max(1, width / 2), h = std::max(1, height / 2);
+    std::vector<uint32_t> out(size_t(w) * size_t(h));
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            uint32_t sum[4] = {0, 0, 0, 0};
+            uint32_t n = 0;
+            for (int dy = 0; dy < 2; ++dy)
+                for (int dx = 0; dx < 2; ++dx) {
+                    const int sx = 2 * x + dx, sy = 2 * y + dy;
+                    if (sx >= width || sy >= height) continue;
+                    const uint32_t t = argb[size_t(sy) * size_t(width) + size_t(sx)];
+                    for (int j = 0; j < 4; ++j) sum[j] += uint32_t(channel(t, j * 8));
+                    ++n;
+                }
+            uint32_t v = 0;
+            for (int j = 0; j < 4; ++j) v |= ((sum[j] + n / 2) / n) << (j * 8);
+            out[size_t(y) * size_t(w) + size_t(x)] = v;
+        }
+    return out;
+}
+
 }  // namespace uagfx::texelcheck

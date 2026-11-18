@@ -89,6 +89,10 @@ constexpr const char* kEffectCapture = "uaro-graphics\\logs\\uaro-effects.txt";
 // texels as the card holds them and as the game's memory does, sent with a report
 constexpr const char* kTexelCheckCard = "uaro-graphics\\logs\\texel-check-card.bmp";
 constexpr const char* kTexelCheckGame = "uaro-graphics\\logs\\texel-check-game.bmp";
+// 3.0.22-beta.10 (R-3SA4RB, core/ground_light.hpp): the ground's light map checked on Direct3D 11 at a report - as the
+// card holds it and as the game's memory does, half their side, sent with the report
+constexpr const char* kGroundLightCard = "uaro-graphics\\logs\\ground-light-card.bmp";
+constexpr const char* kGroundLightGame = "uaro-graphics\\logs\\ground-light-game.bmp";
 // 3.0.20-beta.60: when the lost connections' trails went (core/net_trail maySend: ten minutes apart, six a day)
 constexpr const char* kNetReportsSent = "uaro-graphics\\cache\\net-reports-sent.txt";
 // 2.13: «Звернення» (app/reports): the computer's random key - the site's reports belong to it, no login - and the

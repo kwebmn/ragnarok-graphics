@@ -1670,15 +1670,27 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         }
         sharpArt_.note(artDrawn, aiDrawn[0], "Direct3D 11");
     }
-    if (!s.ui && d.fvf == d3d7::FVF_TL2) {  // 3.0.19-beta.43: the ground's first texture, for the log
-        if (!d.texture[0])
-            ++stats_.groundNone;
-        else if (t[0] == &white_)
-            ++stats_.groundGone;
-        else if (aiDrawn[0])
-            ++stats_.groundCopy;
-        else
-            ++stats_.groundGame;
+    // 3.0.19-beta.43: the ground's first texture, for the log; 3.0.22-beta.10 (R-3SA4RB, core/ground_light.hpp): and
+    // its light map (stage 1) - checked against the game's memory once a map and at a report
+    if (!s.ui && d.fvf == d3d7::FVF_TL2) {
+        const auto sourceOf = [&](int i) {
+            return !d.texture[i]     ? groundlight::Source::None
+                   : t[i] == &white_ ? groundlight::Source::Gone
+                   : aiDrawn[i]      ? groundlight::Source::Copy
+                                     : groundlight::Source::Game;
+        };
+        const groundlight::Source s0 = sourceOf(0), s1 = sourceOf(1);
+        const bool smooth = effects_.smoothLight && t[1]->width == 256 && t[1]->height == 256;  // as c.stage1 below
+        groundlight::note(stats_.ground, s0, s1, s.stage[1].colorOp, smooth);
+        groundlight::note(groundMap_, s0, s1, s.stage[1].colorOp, smooth);
+        const bool due = !groundMapChecked_ && groundChecks_ < kGroundChecks && GetTickCount64() - groundMapAt_ >= 3000;
+        if (groundAsked_ || due) {
+            const bool pictures = groundAsked_;
+            groundAsked_ = false;
+            groundMapChecked_ = true;
+            if (!pictures) ++groundChecks_;
+            checkGroundLight(d, t[1] == &white_ ? nullptr : t[1], s1, pictures);
+        }
     }
     // 2.5.20: super-light - the ground's and the models' textures as their colour alone (light::kFlatWorld); the
     // sprites, the effects and the interface as they are
@@ -2813,6 +2825,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     QueryPerformanceCounter(&ended);
     stats_.ticks += ended.QuadPart - started.QuadPart;
     ++stats_.frames;
+    ++groundMapFrames_;  // 3.0.22-beta.10
     timeFrame();
     double unmeasured = 0.0;  // 3.0.5-beta.2: the waits of a frame [debug] profile did not measure
     {
@@ -4951,13 +4964,11 @@ void Renderer11::logGpu(ULONGLONG now) {
                      laterMostMs_);
         laterQueued_ = laterAtOnce_ = 0;
         laterMostMs_ = 0;
-        // 3.0.19-beta.43 (R-XHRKGN): the ground's draws by their first texture - told while any went white
-        if (stats_.groundNone || stats_.groundGone)
-            LOG_INFO("Direct3D 11: the ground's draws a frame - %.0f from the game's textures, %.0f from their HD "
-                     "copies, %.0f WHITE: %.0f the game gave no texture, %.0f whose texture is not there",
-                     double(stats_.groundGame) / n, double(stats_.groundCopy) / n,
-                     double(stats_.groundNone + stats_.groundGone) / n, double(stats_.groundNone) / n,
-                     double(stats_.groundGone) / n);
+        // 3.0.19-beta.43 (R-XHRKGN): the ground's draws by their textures - told while any went WHITE (3.0.22-beta.10:
+        // the light map's stage too, core/ground_light.hpp)
+        if (groundlight::white(stats_.ground))
+            LOG_INFO("Direct3D 11: the ground's draws a frame, some drawn WHITE - %s",
+                     groundlight::text(stats_.ground, n).c_str());
     }
     stats_ = Stats{};
     for (double& ms : effectMs_) ms = 0.0;
@@ -5146,6 +5157,67 @@ void Renderer11::checkAddedTexels(const FrameRecord& rec, const DrawCmd& d, size
              unsigned(c.cardOnly), unsigned(c.cardOnlyMean), unsigned(c.gameOnly),
              t.pooled ? "taken from the pool (one the game let go of)" : "made new", t.sentWhole0 ? "yes" : "NO",
              unsigned(t.sent0), pictures.c_str());
+}
+
+// 3.0.22-beta.10 (R-3SA4RB «Вийшов з пронти і такий баг»: the ground one flat white on the R7 M370 laptop, the third
+// time, though its own textures were there - core/ground_light.hpp): the game draws the ground as light.rgb + light.a x
+// the rest (stage 1, op 18), so a light map not there, or a white one, makes it white. The map's ground draws by their
+// stages' textures, and this draw's light map on the card against the game's memory; at a report both as pictures
+void Renderer11::checkGroundLight(const DrawCmd& d, const Texture* light, groundlight::Source source, bool pictures) {
+    const std::string tally = groundlight::text(groundMap_, double(std::max<uint64_t>(groundMapFrames_, 1)));
+    const char* when = pictures ? "at a report" : "3 s into the map";
+    if (!light || !light->texture) {
+        LOG_INFO("ground light (Direct3D 11): %s's ground %s - this draw's light map (texture %u) %s, drawn WHITE; the "
+                 "map's ground a frame: %s",
+                 map_.c_str(), when, unsigned(d.texture[1]),
+                 source == groundlight::Source::None ? "none given" : "not there", tally.c_str());
+        return;
+    }
+    const Texture& t = *light;
+    const Rect r{0, 0, t.width, t.height};
+    std::vector<uint32_t> card, game;
+    const bool whole = !r.empty() && size_t(t.width) * size_t(t.height) <= kMostLightTexels;
+    const bool cardRead = whole && readTexels(t, r, card);
+    const bool gameRead = whole && gameTexels_ && gameTexels_(gameTexelsContext_, d.texture[1], r, game) &&
+                          game.size() == size_t(t.width) * size_t(t.height);
+    const auto sum = [](const char* where, bool read, const std::vector<uint32_t>& texels) {
+        char out[160];
+        if (!read) {
+            std::snprintf(out, sizeof out, "%s not read", where);
+        } else {
+            const texelcheck::Light l = texelcheck::lightOf(texels.data(), texels.size());
+            std::snprintf(out, sizeof out, "%s its mean #%08X, white %u, clear %u", where, unsigned(l.mean),
+                          unsigned(l.white), unsigned(l.clear));
+        }
+        return std::string(out);
+    };
+    std::string apart = "not set side by side";
+    if (cardRead && gameRead)
+        apart = std::to_string(texelcheck::apart(game.data(), card.data(), card.size())) + " of its " +
+                std::to_string(card.size()) + " texels apart";
+    std::string saved;
+    if (pictures) {
+        const std::string dir = win::gameDir();
+        const int w = std::max(1, t.width / 2), h = std::max(1, t.height / 2);
+        const auto write = [&](const char* name, bool read, const std::vector<uint32_t>& texels) {
+            return read && writeBytes(layout::join(dir, name),
+                                      texelcheck::bmpOf(texelcheck::halved(texels.data(), t.width, t.height).data(),
+                                                        w, h));
+        };
+        const bool a = write(layout::kGroundLightCard, cardRead, card);
+        const bool b = write(layout::kGroundLightGame, gameRead, game);
+        saved = a || b ? std::string("; as pictures (half their side): ") + (a ? "ground-light-card.bmp" : "") +
+                             (a && b ? ", " : "") + (b ? "ground-light-game.bmp" : "")
+                       : "; its pictures not written";
+    }
+    LOG_INFO("ground light (Direct3D 11): %s's ground %s - this draw's light map %dx%d (texture %u, %s): %s; %s; %s; "
+             "the card's texture %s, its level 0 sent whole since: %s (%u uploads of it); the map's ground a frame: "
+             "%s%s",
+             map_.c_str(), when, t.width, t.height, unsigned(d.texture[1]),
+             source == groundlight::Source::Copy ? "drawn from an HD copy" : "drawn as the game's",
+             sum("on the card", cardRead, card).c_str(), sum("in the game's memory", gameRead, game).c_str(),
+             apart.c_str(), t.pooled ? "taken from the pool (one the game let go of)" : "made new",
+             t.sentWhole0 ? "yes" : "NO", unsigned(t.sent0), tally.c_str(), saved.c_str());
 }
 
 // 3.0.20-beta.82: level 0's texels of r as the card holds them (ARGB, the B8G8R8A8 texels as they lie)

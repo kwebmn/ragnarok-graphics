@@ -97,3 +97,42 @@ TEST(texel_check_seen_on_the_card_alone) {
     const texelcheck::Seen none = texelcheck::seenOf(nullptr, 0, 0);
     CHECK(none.texels == 0 && none.seen == 0 && none.mean == 0);
 }
+
+// 3.0.22-beta.10 (R-3SA4RB: the laptop's ground one flat white on Direct3D 11, the third time): the ground's light map
+// - the game draws the ground as light.rgb + light.a x its texture (stage 1, op 18): a white light map makes it white.
+// Its texels in sum: white (r, g and b >= 240, whatever the alpha), clear (alpha < kNear), their mean
+TEST(texel_check_a_light_map_in_sum) {
+    const std::vector<uint32_t> t = {0xFFFFFFFFu, 0x10F0F2F4u, 0x00000000u, 0x80204060u};
+    const texelcheck::Light l = texelcheck::lightOf(t.data(), t.size());
+    CHECK_EQ(l.texels, size_t(4));
+    CHECK_EQ(l.white, size_t(2));
+    CHECK_EQ(l.clear, size_t(1));
+    CHECK_EQ(l.mean, 0x64848C95u);
+    const texelcheck::Light none = texelcheck::lightOf(nullptr, 0);
+    CHECK(none.texels == 0 && none.white == 0 && none.mean == 0);
+}
+
+// A light map's colour is added where its alpha is 0 too: two of them apart by any channel more than kNear
+TEST(texel_check_light_maps_apart_by_any_channel) {
+    const std::vector<uint32_t> game = {0x00102030u, 0x00102030u, 0xFF000000u, 0x80808080u};
+    const std::vector<uint32_t> card = {0x00102030u, 0x00FFFFFFu, 0xFF000000u, 0x80808090u};
+    CHECK_EQ(texelcheck::apart(game.data(), card.data(), game.size()), size_t(1));
+    CHECK_EQ(texelcheck::compare(game.data(), card.data(), game.size()).differ, size_t(0));  // the frames' measure
+    CHECK_EQ(texelcheck::apart(nullptr, card.data(), card.size()), size_t(0));
+}
+
+// A 256x256 light map's picture under a report's 150 KB an image: half its side each way, each texel the mean of 2x2
+TEST(texel_check_a_picture_halved) {
+    const std::vector<uint32_t> t = {0xFF000000u, 0xFF0000FFu, 0x00FFFFFFu, 0x00FFFFFFu,
+                                     0xFF000000u, 0xFF0000FFu, 0x00000000u, 0x00000000u};
+    const std::vector<uint32_t> h = texelcheck::halved(t.data(), 4, 2);
+    CHECK_EQ(h.size(), size_t(2));
+    CHECK_EQ(h[0], 0xFF000080u);
+    CHECK_EQ(h[1], 0x00808080u);
+    const std::vector<uint32_t> one = texelcheck::halved(t.data(), 1, 1);  // a side of one stays one
+    CHECK(one.size() == 1 && one[0] == 0xFF000000u);
+    // 3 wide: one texel, of the first 2x2 - t[0], t[1] and the next row's t[3], t[4]
+    const std::vector<uint32_t> odd = texelcheck::halved(t.data(), 3, 2);
+    CHECK(odd.size() == 1 && odd[0] == 0xBF404080u);
+    CHECK(texelcheck::halved(nullptr, 4, 2).empty());
+}

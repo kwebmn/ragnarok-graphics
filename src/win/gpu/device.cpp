@@ -2446,6 +2446,10 @@ void Renderer::setGameTexels(GameTexels source, void* context) {  // 3.0.20-beta
     if (d3d11_) d3d11_->setGameTexels(source, context);
 }
 
+void Renderer::askGroundLightCheck() {  // 3.0.22-beta.10: Direct3D 11 only
+    if (d3d11_) d3d11_->askGroundLightCheck();
+}
+
 void Renderer::setMap(const std::string& map) {
     if (remix_) return;
     if (d3d11_) return d3d11_->setMap(map);  // 0.79: the region's look

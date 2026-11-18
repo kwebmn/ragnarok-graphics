@@ -41,4 +41,18 @@ struct Seen {
 };
 Seen seenOf(const uint32_t* argb, int width, int height);
 
+// 3.0.22-beta.10 (R-3SA4RB: the ground one flat white on Direct3D 11, core/ground_light.hpp): the ground's light map -
+// the game adds its colour (light.rgb + light.a x the rest), so a white one makes the ground white. Its texels in sum:
+// white (r, g and b >= 240, whatever the alpha), clear (alpha < kNear), their mean ARGB
+struct Light {
+    size_t texels = 0, white = 0, clear = 0;
+    uint32_t mean = 0;
+};
+Light lightOf(const uint32_t* argb, size_t n);
+// Two light maps' texels apart by any channel more than kNear - its colour counts where its alpha is 0 too
+size_t apart(const uint32_t* game, const uint32_t* card, size_t n);
+// A picture of half the side each way (at least 1), each texel the mean of its 2x2 - a light map under a report's
+// 150 KB an image; empty for none
+std::vector<uint32_t> halved(const uint32_t* argb, int width, int height);
+
 }  // namespace uagfx::texelcheck

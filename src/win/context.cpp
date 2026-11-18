@@ -1126,6 +1126,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
             // had the console's models dump with it): every report writes the models round the player into both logs
             // by itself - who draws each (we, the game), its place, its faces shown
             if (config.view3dOwnModels) modelcensus::dumpAround();
+            // 3.0.22-beta.10 (R-3SA4RB: the ground one flat white on Direct3D 11): its light map, as the card holds it
+            if (renderer) renderer->askGroundLightCheck();
             startReport(screenshot, readGameMap());
         }
     }

@@ -41,6 +41,7 @@
 #include "win/gpu/draw_constants.hpp"
 #include "win/gpu/map_world.hpp"
 #include "core/frame.hpp"
+#include "core/ground_light.hpp"
 #include "core/image.hpp"
 #include "core/trees.hpp"
 #include "core/map_objects.hpp"
@@ -152,6 +153,10 @@ public:
         mistLogged_ = weatherLogged_ = false;
         mapWorld_.setMap(map);  // 2.5.1: its file - the lamps' lights
         if (!map.empty()) fadeStart_ = waterTime();  // 2.5.2: the world comes in from black (0.83)
+        groundMap_ = groundlight::Tally{};  // 3.0.22-beta.10: the new map's ground, its light map checked anew
+        groundMapFrames_ = 0;
+        groundMapAt_ = GetTickCount64();
+        groundMapChecked_ = false;
     }
     void setGameDir(const std::string& dir) { mapWorld_.setGameDir(dir); }  // 2.5.1: the map files
     void noteObjectTexture(uint32_t id, uint8_t kind) { objectTextures_.note(id, objects::Kind(kind)); }  // 0.61
@@ -182,6 +187,7 @@ public:
         gameTexels_ = source;
         gameTexelsContext_ = context;
     }
+    void askGroundLightCheck() { groundAsked_ = true; }  // 3.0.22-beta.10: a report - the next ground draw's
     void finish();
     bool lost() const { return lost_; }
 
@@ -450,6 +456,18 @@ private:
     int texelChecks_ = 0;
     void checkAddedTexels(const FrameRecord& rec, const DrawCmd& d, size_t stride);
     bool readTexels(const Texture& t, const Rect& r, std::vector<uint32_t>& out);
+    // 3.0.22-beta.10 (R-3SA4RB: the laptop's ground one flat white, the third time - its own textures there,
+    // core/ground_light.hpp): the ground's light map (stage 1) checked once a map, 3 s after its start, and at a
+    // report - the map's ground draws by their stages' textures, the light map on the card against the game's memory,
+    // at a report both as pictures (half their side)
+    static constexpr int kGroundChecks = 24;                 // a game's, the reports' apart
+    static constexpr size_t kMostLightTexels = 512 * 512;   // a light map read whole up to this
+    groundlight::Tally groundMap_;
+    uint64_t groundMapFrames_ = 0;
+    ULONGLONG groundMapAt_ = 0;
+    bool groundMapChecked_ = false, groundAsked_ = false;
+    int groundChecks_ = 0;
+    void checkGroundLight(const DrawCmd& d, const Texture* light, groundlight::Source source, bool pictures);
     // 3.0.13-beta.30: [effects] silhouette - the character's sprites drawn again where something hides them
     FrameRecord silhouetteRec_;
     FrameRecord silhouetteRaw_;  // 3.0.17-beta.24: the character's sprites as the game drew them, this picture
@@ -1201,8 +1219,9 @@ private:
         uint64_t batches = 0;  // 0.90: the draw calls the game's draws went in
         LONGLONG ticks = 0;
         // 3.0.19-beta.43 (R-XHRKGN, R-MMMP29: Geffen's and Aldebaran's paving one flat light colour): the ground's
-        // draws (two sets of coordinates) by their first texture - the game's, its HD copy, none given, not there
-        uint64_t groundGame = 0, groundCopy = 0, groundNone = 0, groundGone = 0;
+        // draws (two sets of coordinates) by their first texture - the game's, its HD copy, none given, not there;
+        // 3.0.22-beta.10 (R-3SA4RB, core/ground_light.hpp): and by their light map (stage 1), its op
+        groundlight::Tally ground;
         // 3.0.20-beta.39 (the owner's «6,7,8,9», 9): the game's draws by their kind (as Direct3D 12's) - timed in
         // every kKindEvery-th picture alone (a clock read twice a draw is dear on an old processor)
         uint64_t kindFrames = 0, kindDraws[6] = {};

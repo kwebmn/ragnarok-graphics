@@ -184,8 +184,10 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
         if (!newest.empty()) readFile(newest, u.dump);
     }
     // 3.0.20-beta.82 (R-9VCE45, core/texel_check.hpp): the frame of Assumptio's glow checked on Direct3D 11 - as
-    // the card held it and as the game's memory did - of the last 12 hours
-    for (const char* picture : {layout::kTexelCheckCard, layout::kTexelCheckGame}) {
+    // the card held it and as the game's memory did - of the last 12 hours; 3.0.22-beta.10 (R-3SA4RB): the ground's
+    // light map likewise, at a report
+    for (const char* picture : {layout::kTexelCheckCard, layout::kTexelCheckGame, layout::kGroundLightCard,
+                                layout::kGroundLightGame}) {
         const std::wstring path = ourPlace(dir, picture);
         WIN32_FILE_ATTRIBUTE_DATA p{};
         if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &p)) continue;
