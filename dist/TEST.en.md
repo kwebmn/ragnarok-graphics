@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.22-beta.8 — what's new · 2026-11-18
+
+Diagnostics for two rare problems: a picture that freezes right after entering a map, and a square around a character under Assumptio.
+
+- **The picture froze on the loading bar** (the renderer closed by itself, code 0xC0000409): if the renderer spends over a second creating one texture, it logs the texture's size and where it stands, and writes its own dump to uaro-graphics\crash-render64.dmp. The next report takes them along.
+- A report after such a close now always takes the renderer's log of the previous game - before, it missed it when the log worded the line differently.
+- **A square around a character under Assumptio** on Direct3D 12: the glow's first three passes log what the texture holds on the graphics card, and the first one also saves it as a picture for the report. If the square shows up, send a report: Ctrl+Shift+F10 in the game.
+
 # uaRO Graphics 3.0.22-beta.7 — what's new · 2026-11-18
 
 Items without dragging: Alt+right click moves a whole stack, and a double click when selling puts up the whole stack.
