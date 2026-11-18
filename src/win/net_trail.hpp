@@ -24,5 +24,7 @@ void beforePoll();  // a mode's loop is about to ask its connection: the reads a
 void polled(nettrail::Mode mode, bool fine);
 // each present: [report] disconnects, the map and whether the game's window is in front - a drop told then
 void frame(bool on, const std::string& map, bool foreground);
+// 3.0.22-beta.3 (ideas 1, 2): the last drop told, if within `withinMs` of now - the game's «Disconnected» box says it
+bool lastDrop(unsigned long long withinMs, nettrail::Drop& out);
 
 }  // namespace uagfx::win::nettrailwin

@@ -306,7 +306,8 @@ std::vector<Group> build() {
                          D("windows.others_sounds")}));
     out.push_back(group(Area::Game, Text::InterfaceSecNet,
                         {B("interface.smooth_fixes"), D("interface.predict_walk"),  // 3.0.21-beta.16: a setting
-                         B("connection.patient_entry"), D("connection.entry_pause", "connection.patient_entry")}));
+                         B("connection.patient_entry"), D("connection.entry_pause", "connection.patient_entry"),
+                         B("connection.auto_relogin")}));  // 3.0.22-beta.3
     out.push_back(group(Area::Game, Text::PageService,
                         // what is told the developers is agreed in the settings app (its first start asks)
                         {B("report.auto"), B("report.disconnects").start(), B("stats.send").start(),

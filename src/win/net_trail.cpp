@@ -46,6 +46,8 @@ using CloseFn = int(WINAPI*)(Socket);
 
 struct State {
     CRITICAL_SECTION lock;
+    nettrail::Drop last;           // 3.0.22-beta.3: the last drop told, for the game's «Disconnected» box
+    unsigned long long lastAt = 0;  // its GetTickCount64 (0 none)
     bool lockMade = false, sameExe = false, swapped = false, told = false, closeTried = false;
     DWORD firstLook = 0;
     nettrail::Trail trail;
@@ -165,6 +167,8 @@ std::string endOf(const std::string& path, long most) {
 
 // a drop: its file written (the summary first, then the trail) and the settings app asked to send it
 void tell(State& st, const nettrail::Drop& d) {
+    st.last = d;  // 3.0.22-beta.3 (ideas 1, 2)
+    st.lastAt = GetTickCount64();
     std::vector<std::string> facts;
     char line[200];
     int x = 0, y = 0, width = 0, height = 0;
@@ -351,6 +355,13 @@ void frame(bool on, const std::string& map, bool foreground) {
     st.map = map;
     st.foreground = foreground;
     if (st.sameExe) check(st);  // a notice's drop waits for its connection's end
+}
+
+bool lastDrop(unsigned long long withinMs, nettrail::Drop& out) {
+    const State& st = state();
+    if (!st.lastAt || GetTickCount64() - st.lastAt > withinMs) return false;
+    out = st.last;
+    return true;
 }
 
 }  // namespace uagfx::win::nettrailwin

@@ -1109,6 +1109,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.fpsCounter);
         } else if (key == "connection.patient_entry") {
             setBool(val, c.connection.patientEntry);  // 2.6.17
+        } else if (key == "connection.auto_relogin") {
+            setBool(val, c.connection.autoRelogin);  // 3.0.22-beta.3
         } else if (key == "connection.entry_pause") {
             setBool(val, c.connection.entryPause);
         } else if (key == "frames.fps_limit") {

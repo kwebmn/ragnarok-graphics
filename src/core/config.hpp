@@ -654,6 +654,9 @@ constexpr int kRecoveredLeast = 50, kRecoveredMost = 100;
 struct ConnectionSettings {
     bool patientEntry = true;  // patient_entry: wait for the map up to a minute, a failed connect made again
     bool entryPause = true;    // entry_pause: after a failed entry the next selection waits till the map forgets it
+    // 3.0.22-beta.3 (idea 2): auto_relogin - after a network drop on a map the game logs in again by itself
+    // (core/net_reconnect: a countdown, Esc cancels; «Полиця»'s login and character)
+    bool autoRelogin = true;
 };
 
 struct Config {

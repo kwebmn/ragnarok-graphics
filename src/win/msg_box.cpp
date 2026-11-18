@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "core/net_reconnect.hpp"
 #include "core/window_stack.hpp"
 #include "core/ask_card.hpp"
 #include "core/game_words.hpp"
@@ -25,6 +26,7 @@
 #include "win/log.hpp"
 #include "win/login_card.hpp"
 #include "win/login_refusal.hpp"
+#include "win/net_trail.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -112,6 +114,12 @@ struct State {
     int told = 0;
     bool toldAgain = false;  // a call while its box is up logged (once a box)
     bool ownWords = false;   // 3.0.11-beta.172: `text` is the card's own (UTF-8), not the game's
+    // 3.0.22-beta.3 (ideas 1, 2): a drop's box - its words with the cause (UTF-8), the re-login's countdown
+    bool relogin = true;
+    std::string dropWords;
+    ULONGLONG reloginAt = 0;
+    int reloginShown = -1;
+    reconnect::Tries tries;
 };
 
 State& state() {
@@ -170,6 +178,26 @@ int __attribute__((thiscall)) errorMsg(uint32_t manager, const char* text, int k
         s.kind = kind == 2 ? ac::Kind::Question : kind == 4 ? ac::Kind::Choice : ac::Kind::Message;
         s.toldAgain = false;
         if (s.told++ < 30) LOG_INFO("messages: the game's box (kind %d) - «%s»", kind, words.c_str());
+        // 3.0.22-beta.3 (idea 1): a box right after a drop says its cause; (idea 2) a network's drop on a map counts
+        // down to a re-login
+        nettrail::Drop d;
+        s.reloginAt = 0;
+        if (s.kind == ac::Kind::Message && nettrailwin::lastDrop(3000, d)) {
+            const std::string cause = reconnect::words(d, language());
+            if (!cause.empty()) {
+                s.dropWords = utf8Of(widened(s.text, s.codePage)) + "\n" + cause;
+                s.text = s.dropWords;
+                s.ownWords = true;
+                LOG_INFO("messages: the drop's cause under the box - %s", cause.c_str());
+            }
+            const ULONGLONG now = GetTickCount64();
+            if (s.relogin && reconnect::worthy(d) && s.tries.allow(now) && !cause.empty()) {
+                s.reloginAt = now + ULONGLONG(reconnect::kCountdownS) * 1000;
+                s.reloginShown = -1;
+                LOG_INFO("messages: a network's drop on a map - in again by itself in %d s (Esc cancels)",
+                         reconnect::kCountdownS);
+            }
+        }
     } else if (b) {
         if (s.told++ < 30) LOG_INFO("messages: a line added to the game's box - «%s»", words.c_str());
     } else if (!s.toldAgain) {
@@ -304,6 +332,22 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
                        int targetHeight) {
     State& s = state();
     s.codePage = codePage;
+    if (s.reloginAt) {  // 3.0.22-beta.3 (idea 2): the countdown, then the box answered and the login in again
+        const ULONGLONG now = GetTickCount64();
+        if (!s.shown && now > s.reloginAt + 3000) {
+            s.reloginAt = 0;  // the box gone some other way
+        } else if (now >= s.reloginAt) {
+            s.reloginAt = 0;
+            s.tries.tried(now);
+            loginwin::relogin();
+            LOG_INFO("messages: the countdown over - the box answered, the login in again by itself");
+            press(s, ac::Button::Ok);
+        } else if (const int left = int((s.reloginAt - now + 999) / 1000); left != s.reloginShown) {
+            s.reloginShown = left;
+            s.text = s.dropWords + "\n" + reconnect::countdown(left, language());
+            s.key.clear();
+        }
+    }
     if (on != s.on) {
         s.on = on;
         s.key.clear();
@@ -454,8 +498,17 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     return false;  // the old edition gone: the live window alone
 }
 
+void setRelogin(bool on) { state().relogin = on; }
+
 bool key(UINT m, WPARAM wp, LPARAM) {
     State& s = state();
+    if (s.reloginAt && s.shown && m == WM_KEYDOWN && wp == VK_ESCAPE) {  // 3.0.22-beta.3: the re-login cancelled
+        s.reloginAt = 0;
+        s.text = s.dropWords;
+        s.key.clear();
+        LOG_INFO("messages: the re-login cancelled (Esc) - the box as it was");
+        return true;
+    }
     if (!s.shown || s.card.kind == ac::Kind::Wait || m != WM_KEYDOWN || (wp != VK_RETURN && wp != VK_ESCAPE))
         return false;
     bool wait = false;

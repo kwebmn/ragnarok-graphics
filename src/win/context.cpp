@@ -1358,6 +1358,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     g_parts.mark("infocardwin", nowMs());
     askcardwin::frame(window, config.askWindows, config.countWindow, gameCodePage(config), pk, pw, ph);  // .150, .155
     g_parts.mark("askcardwin", nowMs());
+    msgboxwin::setRelogin(config.connection.autoRelogin);  // 3.0.22-beta.3: [connection] auto_relogin
     msgboxwin::frame(window, config.messageBoxes, gameCodePage(config), pk, pw, ph);   // 3.0.11-beta.151
     g_parts.mark("msgboxwin", nowMs());
     weightrules::frame();  // 3.0.11-beta.202: msgstringtable's line about the weight at 70 %

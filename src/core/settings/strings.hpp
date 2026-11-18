@@ -1047,6 +1047,9 @@ enum class Text : uint16_t {
     KeyHintToEyes, KeyHintToUsual, KeyHintHoldAlt, KeyHintFly, KeyHintUp, KeyHintDown, KeyHintFaster, KeyHintBack,
     KeyHintSkillEnemy, KeyHintSkillFriend, KeyHintPick, KeyHintPickRun, KeyHintPickAll, InterfaceKeyHints,
     InterfaceKeyHintsHint,
+    // 3.0.22-beta.3 (ideas 1, 2): a drop's cause under the game's «Disconnected from Server.»; the re-login's countdown
+    DropOtherLogin, DropGm, DropStillOnline, DropServerNotice, DropServerClosed, DropNetwork, ReconnectIn,
+    ConnectionAutoRelogin, ConnectionAutoReloginHint,
     Count
 };
 

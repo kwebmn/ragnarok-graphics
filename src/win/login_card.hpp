@@ -35,6 +35,9 @@ bool active();
 const std::string& account();
 // 3.0.11-beta.173: the game's «Failed to Connect to Server.» for the login (win/msg_box answered it unseen)
 void connectFailed();
+// 3.0.22-beta.3 (idea 2, core/net_reconnect): the game back at its login after a network drop - the login played last
+// logged in again with «Одразу в гру» once its window shows (a minute at most), if «Полиця» keeps its password
+void relogin();
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 // 3.0.11-beta.175 (the login concept's shelf): «kweb додано на полицю · Скасувати» at the screen's top for 6 s after
 // the login the card sent was accepted and put on the shelf - drawn over the windows (the character select, or the

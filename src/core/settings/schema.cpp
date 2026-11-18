@@ -1339,6 +1339,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::ConnPatientEntryHint, ""},  // 2.6.17
         {"connection", "entry_pause", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ConnEntryPause,
          Text::ConnEntryPauseHint, ""},
+        {"connection", "auto_relogin", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ConnectionAutoRelogin,
+         Text::ConnectionAutoReloginHint, ""},  // 3.0.22-beta.3
         {"debug", "log", Page::Debug, Control::Check, 0, 1, 1, {"normal", "verbose"}, {}, Text::DiagVerboseLog,
          Text::DiagVerboseLogHint, ""},
         {"debug", "profile", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DiagProfile,
@@ -1690,6 +1692,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "frames.save_power") return c.savePower ? "1" : "0";
     if (k == "frames.fps_counter") return c.fpsCounter ? "1" : "0";
     if (k == "connection.patient_entry") return c.connection.patientEntry ? "1" : "0";  // 2.6.17
+    if (k == "connection.auto_relogin") return c.connection.autoRelogin ? "1" : "0";  // 3.0.22-beta.3
     if (k == "connection.entry_pause") return c.connection.entryPause ? "1" : "0";
     if (k == "display.ui_native") return c.uiNative ? "1" : "0";
     if (k == "display.hdr") return c.hdr ? "1" : "0";

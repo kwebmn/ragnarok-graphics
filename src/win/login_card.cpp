@@ -149,6 +149,7 @@ struct State {
     std::string loggedIn;  // the accepted login (the game's words)
     // 3.0.11-beta.176: the login a shelf row sent with one click, and «Одразу в гру»'s character (UTF-8; "" the select)
     std::string oneClick, autoName;
+    ULONGLONG reloginAt = 0;  // 3.0.22-beta.3: asked after a network drop (msg_box's countdown)
     // 3.0.11-beta.176-177: what shows in the login window's place - the card, «Полиця», «Продовжити»
     enum class Mode : uint8_t { Card, Shelf, Continue, Site };  // 3.0.11-beta.180: the site sign-in card
     Mode mode = Mode::Card;
@@ -996,6 +997,24 @@ static void frameInner(HWND game, bool on, bool status, bool news, loginview::Vi
     // the card whichever view
     const accounts::Shelf& shelf = accountsstore::shelf();
     const bool any = !shelf.list.empty(), forOne = loginshelfwin::classicChosen();
+    if (s.reloginAt && window) {  // 3.0.22-beta.3 (idea 2): the login played last, in again by itself
+        const bool fresh = GetTickCount64() - s.reloginAt < 60000;
+        s.reloginAt = 0;
+        const accounts::Account* again = nullptr;
+        for (const accounts::Account& a : shelf.list)
+            if (a.login == s.loggedIn && a.keepPassword && !a.password.empty() && !a.refused) again = &a;
+        if (fresh && again && s.places.known()) {
+            const accounts::Account a = *again;
+            LOG_INFO("login: in again by itself after the network drop - the shelf's %016llx with %s",
+                     (unsigned long long)accounts::loginHash(a.login),
+                     a.last.name.empty() ? "the select" : "its character");
+            loginWith(a, a.last.name.empty(), a.last.name);
+        } else {
+            LOG_INFO("login: not in again by itself - %s", !fresh   ? "a minute passed"
+                                                             : !again ? "no password kept for the login on «Полиця»"
+                                                                      : "the login window not known");
+        }
+    }
     sitesigninwin::probe();  // 3.0.11-beta.180: the site's client API there? (asked once; again while not)
     startRegister();         // 3.0.18-beta.205: the launcher's «Створити акаунт»
     if (sitesigninwin::takeSignedIn()) siteaccounts::refresh(true);  // 3.0.11-beta.181: the shelf from the site
@@ -1344,6 +1363,8 @@ bool active() {
     const State& s = state();
     return s.on && s.tookLast;
 }
+
+void relogin() { state().reloginAt = GetTickCount64(); }
 
 void connectFailed() {
     State& s = state();

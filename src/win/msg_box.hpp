@@ -11,6 +11,9 @@ class Renderer;
 
 namespace uagfx::win::msgboxwin {
 
+// 3.0.22-beta.3 (idea 2): [connection] auto_relogin, each frame - a network drop's box counts down and logs in again
+void setRelogin(bool on);
+
 // 3.0.11-beta.151 (task 3 of the remaining windows, the login's part): [interface] messages - the game's message box
 // (UIWindowMgr::ErrorMsg 0x4CEDF0: «Unregistered ID ...», «Disconnected from server», its questions - the box at
 // g_windowMgr + 0x70, its class 0x697940, SendMsg FUN_00455b10: message 6 with a button's id ends its own wait) and its

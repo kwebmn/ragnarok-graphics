@@ -923,6 +923,9 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (file.connection.entryPause != running.connection.entryPause)
         u.applied.push_back(
             change("entry_pause", flag(running.connection.entryPause), flag(file.connection.entryPause)));
+    if (file.connection.autoRelogin != running.connection.autoRelogin)  // 3.0.22-beta.3
+        u.applied.push_back(
+            change("auto_relogin", flag(running.connection.autoRelogin), flag(file.connection.autoRelogin)));
     n.connection = file.connection;
     // 1.9.6: every [effects] key the settings know, by its word in the file - the list written out by hand stopped at
     // 0.33, and a change of a newer one alone (grass, foliage, the sky, the living world...) was not applied until

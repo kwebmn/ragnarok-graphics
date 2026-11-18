@@ -9287,6 +9287,36 @@ constexpr Entry kTexts[] = {
      "Там, где клавиши или мышь делают другое, — 3D-режим, свободная камера, склад, — строка внизу говорит, что "
      "нажимать. Каждая появляется несколько раз; ту, которой вы уже воспользовались, больше не видно. Выключить и "
      "включить снова — покажутся все."},
+    // 3.0.22-beta.3 (ideas 1, 2): a drop's cause for the player, the re-login's countdown, its switch
+    {Text::DropOtherLogin,
+     "Someone logged in with this account elsewhere - the server disconnects the one already playing.",
+     "Під цим обліковим записом увійшли з іншого місця — сервер від'єднує того, хто вже грав.",
+     "Под этой учётной записью вошли из другого места — сервер отключает того, кто уже играл."},
+    {Text::DropGm, "A game master disconnected you.", "Вас від'єднав ігровий майстер.", "Вас отключил игровой мастер."},
+    {Text::DropStillOnline, "The server still remembered your last login - log in again in a few seconds.",
+     "Сервер ще пам'ятав попередній вхід — увійдіть ще раз за кілька секунд.",
+     "Сервер ещё помнил прошлый вход — войдите ещё раз через несколько секунд."},
+    {Text::DropServerNotice, "The server ended the connection (code {1}).", "Сервер завершив з'єднання (код {1}).",
+     "Сервер завершил соединение (код {1})."},
+    {Text::DropServerClosed, "The connection was closed from the other side - the server or the network between you.",
+     "З'єднання закрила інша сторона — сервер або мережа між вами.",
+     "Соединение закрыла другая сторона — сервер или сеть между вами."},
+    {Text::DropNetwork, "The connection to the server broke (the network, error {1}).",
+     "Зв'язок із сервером обірвався (мережа, помилка {1}).", "Связь с сервером оборвалась (сеть, ошибка {1})."},
+    {Text::ReconnectIn, "Logging in again in {1} s · Esc to cancel", "Повторний вхід через {1} с · Esc — скасувати",
+     "Повторный вход через {1} с · Esc — отменить"},
+    {Text::ConnectionAutoRelogin, "Log in again after a network drop", "Повторний вхід після обриву зв'язку",
+     "Повторный вход после обрыва связи"},
+    {Text::ConnectionAutoReloginHint,
+     "When the connection to the map server breaks (the network, not a kick), the «Disconnected» box counts down 10 "
+     "seconds and the game logs in again by itself with the same login and character from «Полиця» - Esc cancels it. "
+     "Three times in ten minutes at most; not when someone logged in with your account elsewhere.",
+     "Коли зв'язок із сервером карти обривається (мережа, не кік), вікно «Disconnected» відлічує 10 секунд, і гра сама "
+     "входить знову тим самим логіном і персонажем з «Полиці» — Esc скасовує. Не більше трьох разів за десять хвилин; "
+     "не тоді, коли у ваш обліковий запис увійшли з іншого місця.",
+     "Когда связь с сервером карты обрывается (сеть, не кик), окно «Disconnected» отсчитывает 10 секунд, и игра сама "
+     "входит снова тем же логином и персонажем с «Полки» — Esc отменяет. Не больше трёх раз за десять минут; не "
+     "тогда, когда в вашу учётную запись вошли из другого места."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
