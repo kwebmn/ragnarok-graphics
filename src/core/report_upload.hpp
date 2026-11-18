@@ -45,6 +45,9 @@ bool codeOf(const std::string& answer, std::string& code);
 // 3.0.18-beta.3: "hang" when the hang watch told it standing still meanwhile),
 // "" when nothing did.
 std::string reasonOfLog(const std::string& log);
+// 3.0.22-beta.8 (R-JW5W4N): the log tells the 64-bit renderer's death - however the driver words it («... exited ...»,
+// «... is gone ...»: win/gpu/remote.cpp setLost), its line ends «the picture stops here»
+bool rendererDied(const std::string& log);
 // The graphics API the game's last start drew with, from its log: "d3d12", "d3d11", "system" (the system's
 // DirectDraw: the renderer could not start), "" unknown.
 std::string apiOfLog(const std::string& log);

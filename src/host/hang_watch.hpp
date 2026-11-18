@@ -12,7 +12,9 @@
 namespace uagfx::host::hangwatch {
 
 void start();              // once, on the renderer's own thread (the one that takes the messages)
-void busy(uint32_t what);  // a message taken: its type (0: the look at the background start)
+// A message taken: its type (0: the look at the background start); 3.0.22-beta.8: a texture's creation with its size
+// (told with it; core/hang_policy: from 1 s, with the renderer's own minidump)
+void busy(uint32_t what, int width = 0, int height = 0, int levels = 0);
 void idle();               // done with it
 void stop();
 // 3.0.20-beta.83 (host/faults.cpp): the calls on the calling thread's own stack, the newest first, named by the

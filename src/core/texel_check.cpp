@@ -79,4 +79,28 @@ std::string bmpOf(const uint32_t* argb, int width, int height) {
     return b;
 }
 
+Seen seenOf(const uint32_t* argb, int width, int height) {
+    Seen s;
+    if (!argb || width <= 0 || height <= 0) return s;
+    uint64_t sum[4] = {0, 0, 0, 0};
+    Rect b{width, height, 0, 0};
+    for (int y = 0; y < height; ++y)
+        for (int x = 0; x < width; ++x) {
+            const uint32_t t = argb[size_t(y) * size_t(width) + size_t(x)];
+            const bool edge = x == 0 || y == 0 || x == width - 1 || y == height - 1;
+            ++s.texels;
+            if (edge) ++s.edge;
+            if ((t >> 24) < 128) continue;
+            ++s.seen;
+            if (edge) ++s.edgeSeen;
+            for (int c = 0; c < 4; ++c) sum[c] += (t >> (24 - 8 * c)) & 0xFF;
+            b.left = std::min(b.left, x), b.top = std::min(b.top, y);
+            b.right = std::max(b.right, x + 1), b.bottom = std::max(b.bottom, y + 1);
+        }
+    if (!s.seen) return s;
+    s.bounds = b;
+    for (int c = 0; c < 4; ++c) s.mean |= uint32_t((sum[c] + s.seen / 2) / s.seen) << (24 - 8 * c);
+    return s;
+}
+
 }  // namespace uagfx::texelcheck

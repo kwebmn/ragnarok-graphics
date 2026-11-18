@@ -1225,6 +1225,27 @@ struct Renderer::Impl {
     };
     ModelProbe modelProbe;
     SharpArtStats sharpArt;  // 3.0.20-beta.68
+    // 3.0.22-beta.8 (R-QVKRKE: Assumptio's square on Direct3D 12 too; core/texel_check Seen): the first frames of
+    // Assumptio's glow - the texels its draw samples copied into a readback buffer in its own list, read once that
+    // list has run (its slot's next begin): the card's picture alone - this process holds no game memory
+    struct TexelProbe {
+        ID3D12Resource* buffer = nullptr;
+        Rect rect;
+        int textureWidth = 0, textureHeight = 0;
+        UINT pitch = 0, slot = 0;
+        bool pending = false;
+        unsigned srcBlend = 0, dstBlend = 0, effect = 0;
+        uint32_t bits = 0;
+        bool glow = false;
+    };
+    static constexpr int kTexelProbes = 3;
+    static constexpr size_t kMostProbedTexels = 34000;  // a picture under the report's 140 000 bytes an image
+    TexelProbe texelProbe;
+    int texelProbes = 0;  // made this game
+    std::string gameDir;  // 3.0.22-beta.8: uaro-render64.exe's game folder (the probe's picture into its logs)
+    void probeAddedTexels(const FrameRecord& rec, const DrawCmd& d, Texture& t, size_t stride, unsigned srcBlend,
+                          unsigned dstBlend, uint32_t bits, bool glow);
+    void readTexelProbe(UINT slotIndex);  // the slot's last list has finished
     void probeModels(const own_ground::Shading& fog);  // after our models are drawn; the dump's frame alone
     bool probeDepths();                                // the points' depths now into modelProbe.depths
     void probeAgain(int step, const own_ground::Shading& fog);

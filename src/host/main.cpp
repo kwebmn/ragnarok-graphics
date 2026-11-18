@@ -350,7 +350,14 @@ int Host::run(const Args& a) {
             continue;
         }
         if (type == Msg::Quit) break;
-        host::hangwatch::busy(uint32_t(type));
+        int width = 0, height = 0, levels = 0;
+        if (type == Msg::CreateTexture) {  // 3.0.22-beta.8 (R-JW5W4N): its size for the watch's line
+            WireReader rd(data, size);
+            rd.u32();
+            width = rd.i32(), height = rd.i32(), levels = rd.i32();
+            if (!rd.ok()) width = height = levels = 0;
+        }
+        host::hangwatch::busy(uint32_t(type), width, height, levels);
         channel_.placeTaken(uint32_t(type), GetTickCount());
         dispatch(type, data, size);
         if (type == Msg::Present) checkLateDlss();

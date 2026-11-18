@@ -73,3 +73,27 @@ TEST(texel_check_a_bmp_of_the_texels) {
     CHECK(uint8_t(b[54]) == 0x44 && uint8_t(b[55]) == 0x33 && uint8_t(b[56]) == 0x22 && uint8_t(b[57]) == 0x11);
     CHECK(texelcheck::bmpOf(t.data(), 0, 2).empty());
 }
+
+// 3.0.22-beta.8 (R-QVKRKE: Assumptio's square on Direct3D 12 too, where the renderer has no game memory to set the
+// card against): the card's texels of the glow's frame read alone - the seen ones (alpha >= 128), their bounds, their
+// mean, and how many of the frame's outer ring are seen: a character's frame little, a filled rectangle all of it
+TEST(texel_check_seen_on_the_card_alone) {
+    const int w = 20, h = 30;
+    std::vector<uint32_t> sprite(size_t(w) * h, 0u);
+    for (int y = 10; y < 25; ++y)
+        for (int x = 6; x < 14; ++x) sprite[size_t(y) * w + size_t(x)] = 0xFF804020u;
+    sprite[0] = 0x40FFFFFFu;  // faint: not seen
+    const texelcheck::Seen a = texelcheck::seenOf(sprite.data(), w, h);
+    CHECK_EQ(a.texels, size_t(w * h));
+    CHECK_EQ(a.seen, size_t(15 * 8));
+    CHECK(a.bounds.left == 6 && a.bounds.top == 10 && a.bounds.right == 14 && a.bounds.bottom == 25);
+    CHECK_EQ(a.edge, size_t(2 * w + 2 * (h - 2)));
+    CHECK_EQ(a.edgeSeen, size_t(0));
+    CHECK_EQ(a.mean, 0xFF804020u);
+    const std::vector<uint32_t> filled(size_t(w) * h, 0xFFFFFFFFu);
+    const texelcheck::Seen b = texelcheck::seenOf(filled.data(), w, h);
+    CHECK_EQ(b.edgeSeen, b.edge);
+    CHECK_EQ(b.seen, size_t(w * h));
+    const texelcheck::Seen none = texelcheck::seenOf(nullptr, 0, 0);
+    CHECK(none.texels == 0 && none.seen == 0 && none.mean == 0);
+}

@@ -153,6 +153,8 @@ bool codeOf(const std::string& answer, std::string& code) {
     return true;
 }
 
+bool rendererDied(const std::string& log) { return log.find("the picture stops here") != std::string::npos; }
+
 std::string reasonOfLog(const std::string& log) {
     if (log.find("crash: exception 0x") != std::string::npos) return "crash";  // 0.52: win/crash.cpp
     if (log.find("the uaRO renderer could not start") != std::string::npos) return "start-failed";
@@ -163,7 +165,7 @@ std::string reasonOfLog(const std::string& log) {
     // picture stops here, restart the game») - a bad end however the game itself ended: the player closes the game
     // with its still picture by hand, and its log ends as a fine one's (the owner's of 16.11 22:40:59 - exit code
     // 0xc0000409 six seconds into a map, no report)
-    if (log.find("the picture stops here") != std::string::npos) return "crash";
+    if (rendererDied(log)) return "crash";
     // The game opens DirectDraw again as it changes modes: its last opening must have been closed.
     const size_t opened = log.rfind("(uaRO renderer)");
     if (opened == std::string::npos) return "";

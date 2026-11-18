@@ -146,7 +146,8 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
     // renderer's own log, kept as uaro-render64.prev.log at this game's start (its last lines, flushed each)
     std::string previousGame;
     readFile(wide(logfiles::previous(utf8(gameLog))), previousGame);
-    if (previousGame.find("the 64-bit renderer exited") != std::string::npos &&
+    // 3.0.22-beta.8 (R-JW5W4N): by the line's end - the driver words it «... exited ...» or «... is gone ...»
+    if (report::rendererDied(previousGame) &&
         u.files.size() < report::kMostFiles) {
         const std::wstring render64 = slotted(ourPlace(dir, layout::now(layout::File::Render64Log)), logSlot);
         const std::string text = fileFor(wide(logfiles::previous(utf8(render64))), 512u << 10);

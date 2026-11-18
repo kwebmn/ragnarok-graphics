@@ -131,3 +131,14 @@ TEST(report_upload_tells_the_api_from_the_log) {
     CHECK(apiOfLog("INFO  DirectDrawCreateEx = 0x00000000\n") == "system");  // 2.2: passed to the system's DirectDraw
     CHECK(apiOfLog("").empty());
 }
+
+// 3.0.22-beta.8 (R-JW5W4N): the 64-bit renderer's death however the driver words it - «exited» (at its start) or «is
+// gone» (a message not sent) - both lines end «the picture stops here»; the next game's report takes the dead
+// renderer's own log (uaro-render64.prev.log) by it - by «exited» alone it missed «is gone»
+TEST(report_upload_the_renderer_died_either_wording) {
+    CHECK(rendererDied("07:24:37.627 ERROR the 64-bit renderer is gone (exit code 0xc0000409); the picture "
+                               "stops here, restart the game\n"));
+    CHECK(rendererDied("ERROR the 64-bit renderer exited at its start (exit code 0xc0000409); the picture "
+                               "stops here, restart the game"));
+    CHECK(!rendererDied("07:25:39.450 INFO  DirectDraw released, renderer closed\n"));
+}

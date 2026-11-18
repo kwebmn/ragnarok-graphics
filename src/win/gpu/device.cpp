@@ -16,6 +16,8 @@
 #include "core/png_write.hpp"
 #include "core/shot_spec.hpp"
 #include "core/region_look.hpp"
+#include "core/layout.hpp"
+#include "core/texel_check.hpp"
 #include "core/effect_light.hpp"
 #include "core/game_camera.hpp"
 #include "core/pipeline_key.hpp"
@@ -183,6 +185,7 @@ bool Renderer::Impl::begin() {
         list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes);
     }
     profileRead(s, slot);  // 3.0.5-beta.2
+    readTexelProbe(slot);  // 3.0.22-beta.8 (R-QVKRKE)
     profileStart();
     collectVariants();  // 3.0.5-beta.3: the states' own draw shaders made meanwhile
     open = true;
@@ -2474,6 +2477,7 @@ void Renderer::setShaderCache(const std::string& file) { impl_->shaderCacheFile 
 void Renderer::setGameDir(const std::string& dir) {
     if (d3d11_) return d3d11_->setGameDir(dir);  // 2.5.1: the map files, for the lamps
     if (remix_ || remote_) return;  // uaro-render64.exe is given it at its start
+    impl_->gameDir = dir;  // 3.0.22-beta.8: the texel probe's picture
     impl_->mapWorld.setGameDir(dir);
 }
 
@@ -3265,6 +3269,90 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
     D3D12_RANGE none{0, 0};
     m.readback->Unmap(0, &none);
     return true;
+}
+
+// 3.0.22-beta.8 (R-QVKRKE): Assumptio's glow's frame as the card holds it - copied in this draw's list, read later
+void Renderer::Impl::probeAddedTexels(const FrameRecord& rec, const DrawCmd& d, Texture& t, size_t stride,
+                                      unsigned srcBlend, unsigned dstBlend, uint32_t bits, bool glow) {
+    if (texelProbes >= kTexelProbes || texelProbe.pending || !t.resource || !open) return;
+    const Rect r = texelcheck::rectOf(rec.vertexBytes(), d.vertexOffset, stride, d.vertexCount, t.width, t.height);
+    if (r.empty() || size_t(r.width()) * size_t(r.height()) > kMostProbedTexels) return;
+    const UINT pitch = UINT(alignUp(UINT64(r.width()) * 4, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
+    ID3D12Resource* buffer = createBuffer(device, D3D12_HEAP_TYPE_READBACK, UINT64(pitch) * UINT64(r.height()),
+                                          D3D12_RESOURCE_STATE_COPY_DEST);
+    if (!buffer) return;
+    ++texelProbes;
+    transition(t.resource, t.state, D3D12_RESOURCE_STATE_COPY_SOURCE);
+    D3D12_TEXTURE_COPY_LOCATION dst{};
+    dst.pResource = buffer;
+    dst.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    dst.PlacedFootprint.Offset = 0;
+    dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    dst.PlacedFootprint.Footprint.Width = UINT(r.width());
+    dst.PlacedFootprint.Footprint.Height = UINT(r.height());
+    dst.PlacedFootprint.Footprint.Depth = 1;
+    dst.PlacedFootprint.Footprint.RowPitch = pitch;
+    D3D12_TEXTURE_COPY_LOCATION src{};
+    src.pResource = t.resource;
+    src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    src.SubresourceIndex = 0;
+    const D3D12_BOX box{UINT(r.left), UINT(r.top), 0, UINT(r.right), UINT(r.bottom), 1};
+    list->CopyTextureRegion(&dst, 0, 0, 0, &src, &box);
+    transition(t.resource, t.state, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);  // as this draw samples it
+    texelProbe = TexelProbe{};
+    texelProbe.buffer = buffer;
+    texelProbe.rect = r;
+    texelProbe.textureWidth = t.width;
+    texelProbe.textureHeight = t.height;
+    texelProbe.pitch = pitch;
+    texelProbe.slot = slot;
+    texelProbe.pending = true;
+    texelProbe.srcBlend = srcBlend;
+    texelProbe.dstBlend = dstBlend;
+    texelProbe.effect = d.effectId;
+    texelProbe.bits = bits;
+    texelProbe.glow = glow;
+}
+
+void Renderer::Impl::readTexelProbe(UINT slotIndex) {
+    TexelProbe& p = texelProbe;
+    if (!p.pending || p.slot != slotIndex) return;
+    p.pending = false;
+    const Rect r = p.rect;
+    std::vector<uint32_t> card;
+    uint8_t* data = nullptr;
+    D3D12_RANGE all{0, SIZE_T(UINT64(p.pitch) * UINT64(r.height()))};
+    if (SUCCEEDED(p.buffer->Map(0, &all, reinterpret_cast<void**>(&data)))) {
+        const size_t w = size_t(r.width());
+        card.resize(w * size_t(r.height()));
+        for (int y = 0; y < r.height(); ++y)
+            std::memcpy(card.data() + size_t(y) * w, data + UINT64(y) * p.pitch, w * 4);
+        D3D12_RANGE none{0, 0};
+        p.buffer->Unmap(0, &none);
+    }
+    releaseCom(p.buffer);  // its list has run
+    if (card.empty()) {
+        LOG_INFO("texel check (Direct3D 12): Assumptio's glow - its frame %dx%d at %d,%d not read from the card",
+                 r.width(), r.height(), r.left, r.top);
+        return;
+    }
+    const texelcheck::Seen seen = texelcheck::seenOf(card.data(), r.width(), r.height());
+    std::string picture;
+    if (texelProbes == 1 && !gameDir.empty()) {  // the first one's picture, for a report
+        std::ofstream f(layout::join(gameDir, layout::kTexelCheckCard), std::ios::binary | std::ios::trunc);
+        const std::string bmp = texelcheck::bmpOf(card.data(), r.width(), r.height());
+        f.write(bmp.data(), std::streamsize(bmp.size()));
+        picture = f.good() ? "; as a picture: uaro-graphics\\logs\\texel-check-card.bmp"
+                           : "; its picture could not be written";
+    }
+    LOG_INFO("texel check (Direct3D 12): Assumptio's glow - its frame %dx%d at %d,%d of a %dx%d texture, on the card: "
+             "%u of its %u texels seen (alpha >= 128) at %d,%d-%d,%d, their mean #%08X; %u of its %u edge texels seen "
+             "(a filled rectangle: all of them); the draw - blend %u/%u, effect %u, the shaders' bits 0x%08x, into "
+             "the glow %d%s",
+             r.width(), r.height(), r.left, r.top, p.textureWidth, p.textureHeight, unsigned(seen.seen),
+             unsigned(seen.texels), seen.bounds.left, seen.bounds.top, seen.bounds.right, seen.bounds.bottom,
+             unsigned(seen.mean), unsigned(seen.edgeSeen), unsigned(seen.edge), p.srcBlend, p.dstBlend, p.effect,
+             unsigned(p.bits), p.glow ? 1 : 0, picture.c_str());
 }
 
 void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rect& source,

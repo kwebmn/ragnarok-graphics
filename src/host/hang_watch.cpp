@@ -12,16 +12,16 @@
 #include <vector>
 
 #include "core/bridge_protocol.hpp"
+#include "core/hang_policy.hpp"
 #include "core/stack_scan.hpp"
+#include "win/crash.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::host::hangwatch {
 namespace {
 
 constexpr size_t kWords = 8192;  // the stack's top 64 KB
-constexpr DWORD kEveryMs = 250;
-constexpr uint64_t kTellAtMs[] = {2000, 6000, 20000};
-constexpr size_t kTells = sizeof kTellAtMs / sizeof kTellAtMs[0];
+constexpr DWORD kEveryMs = 250;  // 3.0.22-beta.8: the tells' moments by the message (core/hang_policy)
 // the images' list read again so long after the watch's start (the renderer's own libraries, DLSS's some eight
 // seconds in, what a map brings), then every two minutes
 constexpr uint64_t kModulesAtMs[] = {3000, 12000, 40000};
@@ -32,6 +32,7 @@ HANDLE g_main = nullptr, g_thread = nullptr, g_stop = nullptr;
 uint64_t g_stackLow = 0, g_stackTop = 0;  // the watched thread's stack, the whole of its room
 std::atomic<uint64_t> g_since{0};  // the tick its message was taken at; 0: none
 std::atomic<uint32_t> g_what{0}, g_serial{0}, g_toldSerial{0};
+std::atomic<int32_t> g_width{0}, g_height{0}, g_levels{0};  // 3.0.22-beta.8: a texture's creation - its size
 // the watch thread's own
 std::vector<stackscan::Module> g_modules;
 uint64_t g_words[kWords];
@@ -101,8 +102,22 @@ const char* nameOf(uint32_t what) {
         case bridge::Msg::SetTarget: return "the target's size";
         case bridge::Msg::SetEffects: return "the effects' settings";
         case bridge::Msg::ReadTarget: return "a read of the picture";
+        case bridge::Msg::CreateTexture: return "a texture's creation";  // 3.0.22-beta.8
+        case bridge::Msg::ReleaseTexture: return "a texture's release";
         default: return what ? "another message" : "the look at DLSS's start";
     }
+}
+
+// 3.0.22-beta.8: the message's own words - a texture's creation with its size
+std::string named(uint32_t what) {
+    std::string out = nameOf(what);
+    if (what == uint32_t(bridge::Msg::CreateTexture)) {
+        char size[64];
+        std::snprintf(size, sizeof size, " %dx%d, %d level(s)", int(g_width.load()), int(g_height.load()),
+                      int(g_levels.load()));
+        out += size;
+    }
+    return out;
 }
 
 void tell(uint64_t forMs, uint32_t what) {
@@ -124,7 +139,7 @@ void tell(uint64_t forMs, uint32_t what) {
     }
     if (!taken) {
         LOG_ERROR("hang: the renderer's thread has been in one message (%s, type %u) for %.1f s - its stack could "
-                  "not be read", nameOf(what), unsigned(what), double(forMs) / 1000.0);
+                  "not be read", named(what).c_str(), unsigned(what), double(forMs) / 1000.0);
         return;
     }
     std::vector<stackscan::Module> modules = g_modules;
@@ -141,7 +156,7 @@ void tell(uint64_t forMs, uint32_t what) {
         stackscan::scan(g_words, count, modules, readSelf, nullptr, kMostCalls);
     LOG_ERROR("hang: the renderer's thread has been in one message (%s, type %u) for %.1f s - it stands at %s; the "
               "calls on its stack, the newest first: %s",
-              nameOf(what), unsigned(what), double(forMs) / 1000.0, stackscan::place(c.Rip, modules).c_str(),
+              named(what).c_str(), unsigned(what), double(forMs) / 1000.0, stackscan::place(c.Rip, modules).c_str(),
               stackscan::calls(frames, modules).c_str());
 }
 
@@ -152,6 +167,7 @@ DWORD WINAPI watch(void*) {
     size_t reads = 0;
     uint32_t serial = 0;
     size_t told = 0;
+    bool dumped = false;  // 3.0.22-beta.8: the renderer's own minidump written this game
     while (WaitForSingleObject(g_stop, kEveryMs) == WAIT_TIMEOUT) {
         const uint64_t since = g_since.load(), now = GetTickCount64();
         const uint32_t current = g_serial.load();
@@ -165,9 +181,21 @@ DWORD WINAPI watch(void*) {
             continue;
         }
         if (current != serial) serial = current, told = 0;
-        if (told < kTells && now - since >= kTellAtMs[told]) {
+        const uint32_t what = g_what.load();
+        const std::vector<uint64_t>& at = hangpolicy::tellsFor(what);
+        if (told < at.size() && now - since >= at[told]) {
             g_toldSerial.store(serial);
-            tell(now - since, g_what.load());
+            tell(now - since, what);
+            // 3.0.22-beta.8 (R-JW5W4N): a texture's creation standing a second - the renderer's own minidump while
+            // the thread still stands there (the fast fail that may follow leaves none)
+            if (hangpolicy::dumpAt(what, told, dumped)) {
+                dumped = true;
+                if (win::writeHangDump())
+                    LOG_ERROR("hang: a minidump of the renderer as its thread stands there - "
+                              "uaro-graphics\\crash-render64.dmp");
+                else
+                    LOG_ERROR("hang: the renderer's minidump could not be written");
+            }
             ++told;
         }
     }
@@ -192,14 +220,16 @@ void start() {
         g_main = nullptr;
         return;
     }
+    win::prepareHangDump();  // 3.0.22-beta.8: dbghelp found now, not while a thread stands in the loader
     g_stop = CreateEventA(nullptr, TRUE, FALSE, nullptr);
     g_thread = g_stop ? CreateThread(nullptr, 0, watch, nullptr, 0, nullptr) : nullptr;
     if (g_thread)
         LOG_INFO("hang watch: the renderer's thread watched - a message it stays in for over 2 s is told with where "
-                 "the thread stands");
+                 "the thread stands; a texture's creation or release from 1 s, with the renderer's minidump");
 }
 
-void busy(uint32_t what) {
+void busy(uint32_t what, int width, int height, int levels) {
+    g_width.store(width), g_height.store(height), g_levels.store(levels);
     g_what.store(what);
     g_serial.fetch_add(1);
     g_since.store(GetTickCount64());

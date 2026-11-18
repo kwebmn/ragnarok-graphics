@@ -655,6 +655,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                      unsigned(s.srcBlend), unsigned(s.dstBlend), unsigned(d.effectId), unsigned(c.alphaTest),
                      toGlow ? 1 : 0);
         }
+        // 3.0.22-beta.8 (R-QVKRKE: the square on Direct3D 12 too): the frame's texels as the card holds them
+        probeAddedTexels(rec, d, *t[0], FrameRecord::stride(d.fvf), unsigned(s.srcBlend), unsigned(s.dstBlend),
+                         c.alphaTest, toGlow);
     }
     if (soft) {  // 0.67: its fade (shaders.cpp shade())
         c.alphaTest |= 1u << 20;

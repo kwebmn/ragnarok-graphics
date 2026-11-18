@@ -89,13 +89,23 @@ LONG WINAPI onCrash(EXCEPTION_POINTERS* e) {
 
 }  // namespace
 
+using WriteDumpFn = BOOL(WINAPI*)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE, PMINIDUMP_EXCEPTION_INFORMATION,
+                                  PMINIDUMP_USER_STREAM_INFORMATION, PMINIDUMP_CALLBACK_INFORMATION);
+static WriteDumpFn g_writeDump = nullptr;  // 3.0.22-beta.8: found ahead (prepareHangDump)
+
+static WriteDumpFn writeDumpFn() {
+    if (g_writeDump) return g_writeDump;
+    HMODULE help = LoadLibraryA("dbghelp.dll");
+    void* found = help ? reinterpret_cast<void*>(GetProcAddress(help, "MiniDumpWriteDump")) : nullptr;
+    g_writeDump = reinterpret_cast<WriteDumpFn>(found);
+    return g_writeDump;
+}
+
+bool prepareHangDump() { return writeDumpFn() != nullptr; }
+
 bool writeHangDump() {
     if (!g_dump[0] || g_crashDumped) return false;  // 3.0.18-beta.145: the crash's dump kept
-    using WriteFn = BOOL(WINAPI*)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE, PMINIDUMP_EXCEPTION_INFORMATION,
-                                  PMINIDUMP_USER_STREAM_INFORMATION, PMINIDUMP_CALLBACK_INFORMATION);
-    HMODULE help = LoadLibraryA("dbghelp.dll");
-    const auto write =
-        help ? reinterpret_cast<WriteFn>(reinterpret_cast<void*>(GetProcAddress(help, "MiniDumpWriteDump"))) : nullptr;
+    const WriteDumpFn write = writeDumpFn();
     if (!write) return false;
     HANDLE file = CreateFileA(g_dump, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (file == INVALID_HANDLE_VALUE) return false;

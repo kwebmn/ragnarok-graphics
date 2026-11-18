@@ -30,4 +30,15 @@ Rect rectOf(const std::vector<uint8_t>& bytes, size_t offset, size_t stride, uin
 // A 32-bit BMP of width x height ARGB texels, rows top-down (B G R A bytes each); "" for none
 std::string bmpOf(const uint32_t* argb, int width, int height);
 
+// 3.0.22-beta.8 (R-QVKRKE: the same square on Direct3D 12, where the renderer - uaro-render64.exe - has no game memory
+// to set the card against): the card's texels of the glow's frame read alone. Seen: alpha >= 128. A character's frame
+// is seen in its middle, its outer ring little; a filled rectangle - what the square looks like - all of it
+struct Seen {
+    size_t texels = 0, seen = 0;
+    size_t edge = 0, edgeSeen = 0;  // the outer ring of texels, how many of them seen
+    Rect bounds;                    // of the seen ones (empty: none)
+    uint32_t mean = 0;              // their mean ARGB (0: none)
+};
+Seen seenOf(const uint32_t* argb, int width, int height);
+
 }  // namespace uagfx::texelcheck
