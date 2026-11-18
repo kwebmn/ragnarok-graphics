@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.22-beta.6 — what's new · 2026-11-18
+
+Even frames on 4K at 175 %: the game's window in real pixels again, now by itself.
+
+- **«The window in real pixels».** When Windows' scaling leaves the game's window a pixel short of the monitor (4K at 175 %: 3839×2159 instead of 3840×2160), Windows composes the picture itself and the frames jerk between 72 and 48. Now in full screen the window is made in real pixels: it covers the monitor and the picture goes to the screen straight.
+- This is what the trial «Window with Windows scaling (test)», removed in 3.0.21, did. Now it is on by itself («Auto»), only in full screen and only where the scale does not divide evenly. At 100 %, or 1920×1080 at 125 %, nothing changes.
+- To change: Alt+O → «Speed and screen» → «Screen» → «More» → «The window in real pixels» («Auto», «On», «Off»). After the game's restart.
+
 # uaRO Graphics 3.0.22-beta.5 — what's new · 2026-11-18
 
 The «For a laptop» set: a lighter mode for weak laptops, with the frames before and after shown on «Game».
