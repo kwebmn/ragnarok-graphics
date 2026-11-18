@@ -70,4 +70,22 @@ constexpr float kEyeHeight = 40.0f;  // the bake's eye over the map's ground
 void pack(const Climate& c, float mapRadius, const float sun[3], const Level& level, int row0, int row1,
           float out[kPackedFloats]);
 
+// The bake's progress (the renderers' twin state): a new key or level starts it anew from the top row; a slice of
+// rows a frame; ready after the last; faded in over kFadeMs once ready
+struct Bake {
+    Key key;
+    Level level;
+    int rowsDone = 0, frames = 0;
+    bool started = false, ready = false;
+    uint64_t startedAt = 0, readyAt = 0;
+};
+struct Slice {
+    int row0 = 0, row1 = 0;  // the rows to draw now; row1 <= row0: none
+    bool restart = false;    // a new key or level: (re)made textures, drawn anew
+    bool last = false;       // this slice ends the bake
+};
+constexpr uint64_t kFadeMs = 1000;
+Slice step(Bake& b, const Key& key, const Level& level, uint64_t now);
+float fadeOf(const Bake& b, uint64_t now);
+
 }  // namespace uagfx::horizon

@@ -1,5 +1,6 @@
 #include "core/horizon.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 namespace uagfx::horizon {
@@ -213,6 +214,38 @@ void pack(const Climate& c, float mapRadius, const float sun[3], const Level& le
     out[36] = float(row0);
     out[37] = float(row1);
     rgb(38, c.sand);
+}
+
+Slice step(Bake& b, const Key& key, const Level& level, uint64_t now) {
+    Slice s;
+    const bool sameLevel = b.level.width == level.width && b.level.height == level.height &&
+                           b.level.steps == level.steps && b.level.shadowSteps == level.shadowSteps &&
+                           b.level.slices == level.slices;
+    if (!b.started || !(b.key == key) || !sameLevel) {
+        b = Bake{};
+        b.key = key;
+        b.level = level;
+        b.started = true;
+        b.startedAt = now;
+        s.restart = true;
+    }
+    if (b.ready || level.height <= 0 || level.slices <= 0) return s;
+    const int per = (level.height + level.slices - 1) / level.slices;
+    s.row0 = b.rowsDone;
+    s.row1 = std::min(level.height, b.rowsDone + per);
+    b.rowsDone = s.row1;
+    ++b.frames;
+    if (b.rowsDone >= level.height) {
+        b.ready = true;
+        b.readyAt = now;
+        s.last = true;
+    }
+    return s;
+}
+
+float fadeOf(const Bake& b, uint64_t now) {
+    if (!b.ready) return 0.0f;
+    return now <= b.readyAt ? 0.0f : std::min(1.0f, float(now - b.readyAt) / float(kFadeMs));
 }
 
 }  // namespace uagfx::horizon

@@ -166,3 +166,39 @@ TEST(horizon_light_by_the_night) {
     const horizon::Rgb mid = horizon::toDisplay({0.18f, 0.18f, 0.18f});
     CHECK(mid.r > 0.3f && mid.r < 0.6f);
 }
+
+// The bake's progress, the renderers' twin state (core horizon::Bake): a slice of rows a frame, ready after the last,
+// faded in over a second; a new key (another region's map mid-bake, another level) starts it anew
+TEST(horizon_bake_by_slices) {
+    horizon::Bake b;
+    const horizon::Key k{"Prontera", {0.5f, -0.7f, 0.5f}, false, 1000.0f};
+    const horizon::Level l = horizon::levelFor(false);  // 384 rows over 8 frames: 48 a frame
+    horizon::Slice s = horizon::step(b, k, l, 1000);
+    CHECK(s.restart && s.row0 == 0 && s.row1 == 48 && !s.last);
+    CHECK(!b.ready && horizon::fadeOf(b, 1000) == 0.0f);
+    for (int i = 1; i < 8; ++i) s = horizon::step(b, k, l, 1000 + uint64_t(i) * 16);
+    CHECK(s.last && s.row0 == 336 && s.row1 == 384 && !s.restart);
+    CHECK(b.ready && b.frames == 8);
+    const uint64_t at = 1000 + 7 * 16;
+    s = horizon::step(b, k, l, at + 100);
+    CHECK(s.row1 <= s.row0 && !s.restart && !s.last);  // nothing more to draw
+    CHECK(horizon::fadeOf(b, at + 500) > 0.45f && horizon::fadeOf(b, at + 500) < 0.55f);
+    CHECK(horizon::fadeOf(b, at + 2000) == 1.0f);
+}
+
+TEST(horizon_bake_restarts_on_a_new_key) {
+    horizon::Bake b;
+    const horizon::Level l = horizon::levelFor(false);
+    const horizon::Key k{"Prontera", {0.5f, -0.7f, 0.5f}, false, 1000.0f};
+    horizon::step(b, k, l, 0);
+    horizon::step(b, k, l, 16);
+    horizon::Key m = k;
+    m.region = "Payon";
+    const horizon::Slice s = horizon::step(b, m, l, 32);  // a map of another region mid-bake
+    CHECK(s.restart && s.row0 == 0 && !b.ready && horizon::fadeOf(b, 32) == 0.0f);
+    horizon::Bake w;
+    for (int i = 0; i < 8; ++i) horizon::step(w, k, l, uint64_t(i));
+    CHECK(w.ready);
+    const horizon::Slice r = horizon::step(w, k, horizon::levelFor(true), 100);  // the weak level's textures
+    CHECK(r.restart && r.row0 == 0 && r.row1 == 12 && !w.ready);  // 192 rows over 16 frames
+}
