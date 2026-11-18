@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.22-beta.7 — what's new · 2026-11-18
+
+Items without dragging: Alt+right click moves a whole stack, and a double click when selling puts up the whole stack.
+
+- **Alt+right click.** A thing in «Items» goes whole into the storage when the storage is open, into the cart when the cart is open. Alt+right click in «Storage» or «Cart» takes the thing into the bag. No amount window: the whole stack moves (into the bag - as much as the weight lets in). With no storage or cart open, a right click shows the description as before.
+- **Selling to NPCs.** In the «Sell» tab a double click on a thing puts the whole stack up for sale, as in the old client. Shift+click does the same (in the «Buy» tab it adds 10) - now the keys' row at the bottom of the window says so.
+- **Several things at once** (Ctrl+click, Shift+click, Ctrl+A and the button at the bottom of the window): the last stack now moves whole too - before, the amount window stayed open for it.
+- The hint line at the bottom of the screen in the storage and the cart starts with Alt+right click and shows a few more times, even to those who already know how to pick several things.
+
 # uaRO Graphics 3.0.22-beta.6 — what's new · 2026-11-18
 
 Even frames on 4K at 175 %: the game's window in real pixels again, now by itself.
