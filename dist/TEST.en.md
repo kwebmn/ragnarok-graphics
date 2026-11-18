@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.22-beta.3 — what's new · 2026-11-18
+
+A lost connection: now it says what happened, and after a network drop the game logs in again by itself.
+
+- **Under «Disconnected from Server.» - the cause:** «Someone logged in with this account elsewhere», «A game master disconnected you», «The connection to the server broke (the network, error 10054)», «The connection was closed from the other side - the server or the network between you», and so on.
+- **Logging in again after a network drop.** When the connection to the map server breaks through no doing of the server's, the box counts down «Logging in again in 10 s · Esc to cancel». Then the game logs in by itself with the same login and character from «Полиця» - if its password is kept there.
+- Not when someone logged in with the account elsewhere, after a game master's kick, nor in the first minute on a map. Three times in ten minutes at most.
+- To turn it off: Alt+O → «Game and network» → «Connection» → «Log in again after a network drop».
+
 # uaRO Graphics 3.0.22-beta.2 — what's new · 2026-11-18
 
 Fewer hitches while the game reads its files: talking to NPCs, new NPCs and monsters on a map.
