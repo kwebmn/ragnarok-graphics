@@ -49,6 +49,8 @@ shopwin::Texts texts() {
     t.info = "опис";
     t.close = "Закрити";
     t.space = "Пробіл";
+    t.click = "клік";
+    t.all = "усе";
     t.editHint = "Enter — готово · Esc — скасувати · найбільше {1}";
     return t;
 }
@@ -102,6 +104,37 @@ TEST(shop_window_cart_puts_takes_back_and_keeps_within_the_most) {
     d.zeny = 30;
     shopwin::put(d, 0, 1);  // not money enough for one
     CHECK(d.cart.empty());
+}
+
+// 3.0.22-beta.7 (a player: «in old client you double click to mark for sell all»; the owner: «делай»): a click on a
+// list's row puts one; Ctrl one fewer; sold: Shift or a double click's second click all of it; bought: Shift ten
+TEST(shop_window_a_click_puts_one_shift_or_twice_all_sold) {
+    using shopwin::Tab;
+    CHECK_EQ(shopwin::clickBy(Tab::Buy, false, false, false), 1);
+    CHECK_EQ(shopwin::clickBy(Tab::Buy, true, false, false), 10);
+    CHECK_EQ(shopwin::clickBy(Tab::Buy, false, false, true), 1);  // bought: a double click two
+    CHECK_EQ(shopwin::clickBy(Tab::Buy, false, true, false), -1);
+    CHECK_EQ(shopwin::clickBy(Tab::Sell, false, false, false), 1);
+    CHECK_EQ(shopwin::clickBy(Tab::Sell, true, false, false), shopwin::kMostBought);
+    CHECK_EQ(shopwin::clickBy(Tab::Sell, false, false, true), shopwin::kMostBought);
+    CHECK_EQ(shopwin::clickBy(Tab::Sell, false, true, true), -1);
+    shopwin::Data d = data();  // a double click on 12 arrows sold: the first click one, the second all 12
+    d.tab = Tab::Sell;
+    d.wares[1].count = 12;
+    shopwin::put(d, 1, shopwin::clickBy(Tab::Sell, false, false, false));
+    shopwin::put(d, 1, shopwin::clickBy(Tab::Sell, false, false, true));
+    CHECK_EQ(shopwin::amountOf(d.cart, 1), 12);
+}
+
+// The keys' row under the shop (no controller): Shift+click after Space's +1 - all of it sold, ten bought
+TEST(shop_window_footer_keys_say_shift_click) {
+    const shopwin::Texts t = texts();
+    const std::vector<shopwin::FooterKey> sell = shopwin::footerKeys(t, shopwin::Tab::Sell);
+    const std::vector<shopwin::FooterKey> buy = shopwin::footerKeys(t, shopwin::Tab::Buy);
+    CHECK_EQ(sell.size(), size_t(8));
+    CHECK(sell[2].cap == "Пробіл" && sell[3].cap == "Shift+клік" && sell[3].words == "усе");
+    CHECK(buy.size() == 8 && buy[3].cap == "Shift+клік" && buy[3].words == "+10");
+    CHECK(sell[7].cap == "Esc" && sell[7].words == "Закрити");
 }
 
 TEST(shop_window_the_amount_typed) {

@@ -277,12 +277,8 @@ void fill(Model& m, const sw::Data& d, const std::vector<int>& shown, const sw::
             k.words = *words;
             m.keys.push_back(k);
         }
-    } else {  // the keys (from the left)
-        const std::pair<std::string, const std::string*> items[7] = {
-            {"\xE2\x86\x91\xE2\x86\x93", &t.choose}, {"\xE2\x86\x90\xE2\x86\x92", &t.toCart},
-            {t.space, &t.plus}, {"0\xE2\x80\x93" "9", &t.typeAmount}, {"Del", &t.remove}, {"F1", &t.info},
-            {"Esc", &t.close}};
-        for (const auto& [cap, words] : items) m.keys.push_back(KeyV{cap, *words, "", 0, 0});
+    } else {  // the keys (from the left; 3.0.22-beta.7: Shift+click among them - core's footerKeys)
+        for (const sw::FooterKey& k : sw::footerKeys(t, d.tab)) m.keys.push_back(KeyV{k.cap, k.words, "", 0, 0});
     }
 }
 

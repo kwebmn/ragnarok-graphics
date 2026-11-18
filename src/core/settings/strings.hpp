@@ -1056,6 +1056,7 @@ enum class Text : uint16_t {
     LaptopUndo, PlateClose,
     // 3.0.22-beta.6 (idea 10): [display] dpi_aware back - the window in the screen's real pixels where it is needed
     QualityDpiAware, QualityDpiAwareHint, DpiAwareAuto, DpiAwareOn, DpiAwareOff,
+    KeyRightClick, KeyHintMove,  // 3.0.22-beta.7: Alt+right click moves a thing whole (the storage's key hint)
     Count
 };
 

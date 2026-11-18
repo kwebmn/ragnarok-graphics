@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 
+#include "core/settings/strings.hpp"
 #include "rml_host.hpp"
 #include "test.hpp"
 #include "uikit/shop_live.hpp"
@@ -83,4 +85,49 @@ TEST(uikit_shop_refit_finds_wares_cart_and_buttons) {
     CHECK(L.cart.x > L.list.x + L.list.w);
     CHECK(L.footer.y >= L.list.y + L.list.h);
     rmlhost::close(doc);
+}
+
+// 3.0.22-beta.7: the footer's keys with «Shift+click» among them (eight) - in the shop's width in every language
+TEST(uikit_shop_footer_keys_fit) {
+    using settings::Text;
+    for (const settings::Lang l : {settings::Lang::Uk, settings::Lang::Ru, settings::Lang::En}) {
+        sw::Data d;
+        d.tab = sw::Tab::Sell;
+        d.wares.push_back(sw::Ware{1750, 1, 1, 12, 0, true, "Arrow", nullptr});
+        const std::vector<int> shown = {0};
+        sw::Show sh;
+        sw::Texts t;
+        t.buy = settings::tr(l, Text::ShopBuy);
+        t.sell = settings::tr(l, Text::ShopSell);
+        t.choose = settings::tr(l, Text::ShopChoose);
+        t.toCart = settings::tr(l, Text::ShopToCart);
+        t.plus = "+1";
+        t.typeAmount = settings::tr(l, Text::ShopKeyAmount);
+        t.remove = settings::tr(l, Text::ShopRemove);
+        t.info = settings::tr(l, Text::ShopInfo);
+        t.close = settings::tr(l, Text::SkillsPadClose);
+        t.space = settings::tr(l, Text::ShopSpace);
+        t.click = settings::tr(l, Text::KeyClick);
+        t.all = settings::tr(l, Text::KeyHintPickAll);
+        static sl::Model m;
+        sl::fill(m, d, shown, sh, t, 1, none, glyph);
+        CHECK_EQ(m.keys.size(), size_t(8));
+        std::string error;
+        Rml::ElementDocument* doc =
+            rmlhost::load(sl::rml(), [&](Rml::DataModelConstructor& c) { sl::bind(c, m); }, 0, 0, &error);
+        CHECK_EQ(error, std::string());
+        if (!doc) continue;
+        Rml::ElementList found, keys;
+        doc->QuerySelectorAll(found, ".foot .key");  // data-for's own element stays hidden among them
+        for (Rml::Element* k : found)
+            if (k->IsVisible() && k->GetBox().GetSize(Rml::BoxArea::Border).x > 0) keys.push_back(k);
+        CHECK_EQ(keys.size(), size_t(8));
+        const float width = doc->GetBox().GetSize(Rml::BoxArea::Border).x;
+        float right = 0;
+        for (Rml::Element* k : keys)
+            right = std::max(right, k->GetAbsoluteOffset(Rml::BoxArea::Border).x +
+                                        k->GetBox().GetSize(Rml::BoxArea::Border).x);
+        CHECK(right > 0 && right <= width - 16);  // the footer's padding on the right kept
+        rmlhost::close(doc);
+    }
 }

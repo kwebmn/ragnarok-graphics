@@ -102,7 +102,7 @@ struct State {
     itempick::Picked picked;
     std::vector<std::pair<int, int>> putQueue;  // place, count
     bool putToCart = false;
-    ULONGLONG putAt = 0;
+    itempick::Pace putPace;  // 3.0.22-beta.7: the batch's pace - the last one's «how many» answered too
     bool searchAll = false;  // 3.0.18-beta.72: Ctrl+A in the search
     WindowShadow shadow;  // 3.0.11-beta.49
     WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
@@ -618,7 +618,7 @@ static void putPicked(State& s, const char* how) {
         for (const iw::Item& it : s.items)
             if (it.index == place && !it.worn) s.putQueue.emplace_back(place, it.count);
     s.putToCart = to == 2;
-    s.putAt = 0;
+    s.putPace.next = 0;
     s.picked.clear();
     if (s.told++ < 20)
         LOG_INFO("items: %s - %zu picked thing(s) into the %s", how, s.putQueue.size(),
@@ -626,17 +626,34 @@ static void putPicked(State& s, const char* how) {
     s.key.clear();
 }
 
-static void putSteps(State& s) {
-    if (s.putQueue.empty() || GetTickCount64() < s.putAt) return;
-    if (askcardwin::countAll()) {  // the last one's «how many» - all of it
-        s.putAt = GetTickCount64() + 250;
-        return;
+// 3.0.22-beta.7 (a player: «Alt + Right Click instead of dragging»; the owner: «делай»): a thing whole into the
+// storage open, else the cart open - a batch of one (its «how many» answered «all of it»); false: no place to put it
+// (no storage, no cart) or worn - the click is the card's
+static bool moveWhole(State& s, size_t at, const char* how) {
+    const int to = putTarget();
+    if (!to || at >= s.items.size() || s.items[at].worn) return false;
+    const iw::Item& it = s.items[at];
+    for (const auto& queued : s.putQueue)
+        if (queued.first == it.index) return true;  // on its way already
+    if (s.putQueue.empty()) {
+        s.putToCart = to == 2;
+        s.putPace.next = 0;
     }
-    const auto [place, count] = s.putQueue.front();
-    s.putQueue.erase(s.putQueue.begin());
-    if (s.putToCart) cartwin::put(place, count);
-    else storagewin::put(place, count);
-    s.putAt = GetTickCount64() + 250;
+    s.putQueue.emplace_back(it.index, it.count);
+    if (s.told++ < 20)
+        LOG_INFO("items: %s on #%d x%d - the whole of it into the %s", how, it.id, it.count,
+                 s.putToCart ? "cart" : "storage");
+    s.key.clear();
+    return true;
+}
+
+static void putSteps(State& s) {
+    itempick::step(s.putPace, GetTickCount64(), s.putQueue.size(), askcardwin::countAll, [&] {
+        const auto [place, count] = s.putQueue.front();
+        s.putQueue.erase(s.putQueue.begin());
+        if (s.putToCart) cartwin::put(place, count);
+        else storagewin::put(place, count);
+    });
 }
 
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight, bool toast) {
@@ -930,6 +947,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     }
     if (m == WM_RBUTTONDOWN && h.part == iw::Part::Cell && h.index < int(s.shownItems.size())) {
         const size_t at = size_t(s.shownItems[size_t(h.index)]);
+        if (GetKeyState(VK_MENU) < 0 && moveWhole(s, at, "Alt+right click")) return true;  // 3.0.22-beta.7
         const bool shown = card(s, at);
         if (s.told++ < 20)
             LOG_INFO("items: #%d's card %s", s.items[at].id, shown ? "asked of the game's item window (0xC)"

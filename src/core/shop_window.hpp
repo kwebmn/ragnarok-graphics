@@ -112,7 +112,20 @@ struct Texts {
     // «кількість», «прибрати», «опис», «Закрити», the space bar's name; the typing's hint («... найбільше {1}»)
     std::string choose, toCart, plus, minus, typeAmount, remove, info, close, space;
     std::string editHint;
+    std::string click, all;  // 3.0.22-beta.7: «клік» (the cap «Shift+клік»), «усе»
 };
+
+// 3.0.22-beta.7 (a player: «in old client you double click to mark for sell all»; the owner: «делай»): what a click
+// on a list's row puts in the cart - Ctrl one fewer; sold: Shift or a double click's second click all of it (put()
+// keeps it to what the bag holds); bought: Shift ten; else one
+int clickBy(Tab tab, bool shift, bool ctrl, bool twice);
+
+// The keys' row under the shop without the controller: ↑↓ choose, ←→ list / cart, Space +1, Shift+click all (sold)
+// or +10 (bought; 3.0.22-beta.7 - it was told nowhere), 0–9 amount, Del take back, F1 description, Esc close
+struct FooterKey {
+    std::string cap, words;
+};
+std::vector<FooterKey> footerKeys(const Texts& t, Tab tab);
 
 using Measure = std::function<float(const std::string& utf8, float px, bool bold)>;
 

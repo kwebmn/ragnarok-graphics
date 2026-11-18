@@ -9359,6 +9359,8 @@ constexpr Entry kTexts[] = {
     {Text::DpiAwareAuto, "Auto", "Авто", "Авто"},
     {Text::DpiAwareOn, "On", "Увімкнено", "Включено"},
     {Text::DpiAwareOff, "Off", "Вимкнено", "Выключено"},
+    {Text::KeyRightClick, "right click", "ПКМ", "ПКМ"},  // 3.0.22-beta.7
+    {Text::KeyHintMove, "move", "перенести", "перенести"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

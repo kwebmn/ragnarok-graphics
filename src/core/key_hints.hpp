@@ -16,7 +16,7 @@ namespace uagfx::keyhint {
 // two come together: the one where a player is stuck first. No Windows here.
 enum class Moment : uint8_t { View3dWindow, View3dSkill, FreeCamera, View3d, ItemPicks, Count };
 constexpr int kMoments = int(Moment::Count);
-const char* keyOf(Moment m);  // "view3d_window", "view3d_skill", "free_camera", "view3d", "item_picks"
+const char* keyOf(Moment m);  // "view3d_window", "view3d_skill", "free_camera", "view3d", "item_moves"
 
 // What the game is in this frame
 struct Now {
@@ -27,7 +27,7 @@ struct Now {
     bool altHeld = false;
     bool freeCamera = false;  // Ctrl+Shift+C
     int skillWait = 0;        // the game waits for a skill's target: 2 an enemy's, 4 a friend's; 0 none
-    bool itemsShared = false; // the storage or the cart open (their picks: Ctrl, Shift, Ctrl+A)
+    bool itemsShared = false; // the storage or the cart open (Alt+right click; their picks: Ctrl, Shift, Ctrl+A)
 };
 std::array<bool, kMoments> momentsOf(const Now& n);
 

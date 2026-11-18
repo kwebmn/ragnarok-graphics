@@ -62,22 +62,24 @@ std::vector<PadItem> padItems(const Texts& t) {
             {padglyph::Button::B, &t.close}};
 }
 
-struct KeyItem {
-    std::string cap;
-    const std::string* words;
-};
+}  // namespace
 
-std::vector<KeyItem> keyItems(const Texts& t) {
-    return {{"\xE2\x86\x91\xE2\x86\x93", &t.choose},  // ↑↓
-            {"\xE2\x86\x90\xE2\x86\x92", &t.toCart},  // ←→
-            {t.space, &t.plus},
-            {"0\xE2\x80\x93" "9", &t.typeAmount},  // 0–9
-            {"Del", &t.remove},
-            {"F1", &t.info},
-            {"Esc", &t.close}};
+int clickBy(Tab tab, bool shift, bool ctrl, bool twice) {
+    if (ctrl) return -1;
+    if (tab == Tab::Sell) return shift || twice ? kMostBought : 1;
+    return shift ? 10 : 1;
 }
 
-}  // namespace
+std::vector<FooterKey> footerKeys(const Texts& t, Tab tab) {
+    return {{"\xE2\x86\x91\xE2\x86\x93", t.choose},  // ↑↓
+            {"\xE2\x86\x90\xE2\x86\x92", t.toCart},  // ←→
+            {t.space, t.plus},
+            {"Shift+" + t.click, tab == Tab::Sell ? t.all : std::string("+10")},
+            {"0\xE2\x80\x93" "9", t.typeAmount},  // 0–9
+            {"Del", t.remove},
+            {"F1", t.info},
+            {"Esc", t.close}};
+}
 
 int mostFor(const Data& d, int ware) {
     const Ware* w = wareAt(d, ware);
@@ -314,8 +316,8 @@ Layout layout(int x, int y, float scale, const Data& d, const std::vector<int>& 
         }
     } else {  // the keys and their words, from its left
         float left = side;
-        for (const KeyItem& k : keyItems(t)) {
-            const float capW = m(k.cap, 11 * s, true) + 12 * s, ww = m(*k.words, 12 * s, false) + 2;
+        for (const FooterKey& k : footerKeys(t, d.tab)) {
+            const float capW = m(k.cap, 11 * s, true) + 12 * s, ww = m(k.words, 12 * s, false) + 2;
             L.keyCaps.push_back(panel::Box{left, L.footer.y + (L.footer.h - kCapH * s) / 2, capW, kCapH * s});
             L.keyWords.push_back(panel::Box{left + capW + 6 * s, L.footer.y, ww, L.footer.h});
             left += capW + 6 * s + ww + 16 * s;

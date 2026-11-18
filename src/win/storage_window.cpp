@@ -80,7 +80,7 @@ struct State {
     // (Ctrl / Shift / Ctrl+A), those being taken into the bag (one each 250 ms, a stack's count all)
     itempick::Picked picked;
     std::vector<int> takeQueue;
-    ULONGLONG takeAt = 0;
+    itempick::Pace takePace;  // 3.0.22-beta.7: the batch's pace - the last one's «how many» answered too
     bool searchAll = false;  // 3.0.18-beta.72: Ctrl+A in the search
     itemgridui::Ui grid;  // 3.0.18-beta.27: the window drawn by uaUI
     int gridGen = 0;
@@ -355,26 +355,35 @@ bool closeGameWindow() {
 void takePicked(State& s, const char* how) {
     if (!s.picked.count()) return;
     s.takeQueue = s.picked.list();
-    s.takeAt = 0;
+    s.takePace.next = 0;
     s.picked.clear();
     if (s.told++ < 30) LOG_INFO("storage: %s - %zu picked thing(s) into the bag", how, s.takeQueue.size());
     s.key.clear();
 }
 
 void takeSteps(State& s) {
-    if (s.takeQueue.empty() || GetTickCount64() < s.takeAt) return;
-    if (askcardwin::countAll()) {  // the last one's «how many» - all of it
-        s.takeAt = GetTickCount64() + 250;
-        return;
-    }
-    const int index = s.takeQueue.front();
-    s.takeQueue.erase(s.takeQueue.begin());
-    for (const iw::Item& it : s.items)
-        if (it.index == index) {
-            take(s, it);
-            break;
-        }
-    s.takeAt = GetTickCount64() + 250;
+    itempick::step(s.takePace, GetTickCount64(), s.takeQueue.size(), askcardwin::countAll, [&] {
+        const int index = s.takeQueue.front();
+        s.takeQueue.erase(s.takeQueue.begin());
+        for (const iw::Item& it : s.items)
+            if (it.index == index) {
+                take(s, it);
+                break;
+            }
+    });
+}
+
+// 3.0.22-beta.7 (a player: «Alt + Right Click instead of dragging»; the owner: «делай»): a thing whole into the bag -
+// a batch of one (its «how many» answered «all of it», no more than the weight lets in)
+void takeWhole(State& s, size_t at, const char* how) {
+    if (at >= s.items.size()) return;
+    const iw::Item& it = s.items[at];
+    for (const int queued : s.takeQueue)
+        if (queued == it.index) return;  // on its way already
+    if (s.takeQueue.empty()) s.takePace.next = 0;
+    s.takeQueue.push_back(it.index);
+    if (s.told++ < 30) LOG_INFO("storage: %s on #%d x%d - the whole of it into the bag", how, it.id, it.count);
+    s.key.clear();
 }
 
 std::vector<int> shownPlaces(const State& s) {
@@ -662,6 +671,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     }
     if (m == WM_RBUTTONDOWN && h.part == iw::Part::Cell && h.index < int(s.shownItems.size())) {
         const size_t at = size_t(s.shownItems[size_t(h.index)]);
+        if (GetKeyState(VK_MENU) < 0) {  // 3.0.22-beta.7: Alt+right click - the thing whole into the bag
+            takeWhole(s, at, "Alt+right click");
+            return true;
+        }
         const bool shownCard = card(s, at);
         if (s.told++ < 30)
             LOG_INFO("storage: #%d's card %s", s.items[at].id,

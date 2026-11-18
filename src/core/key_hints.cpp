@@ -18,8 +18,9 @@ std::string say(settings::Lang l, Text t) { return settings::tr(l, t); }
 }  // namespace
 
 const char* keyOf(Moment m) {
+    // 3.0.22-beta.7: «item_picks» became «item_moves» - its line has Alt+right click first now, shown anew to all
     static const char* const kKeys[kMoments] = {"view3d_window", "view3d_skill", "free_camera", "view3d",
-                                                "item_picks"};
+                                                "item_moves"};
     return size_t(m) < size_t(kMoments) ? kKeys[size_t(m)] : "";
 }
 
@@ -57,7 +58,8 @@ std::vector<Part> partsOf(Moment m, const Now& n, settings::Lang l) {
         }
         case Moment::ItemPicks: {
             const std::string click = say(l, Text::KeyClick);
-            return {{"Ctrl+" + click, say(l, Text::KeyHintPick)},
+            return {{"Alt+" + say(l, Text::KeyRightClick), say(l, Text::KeyHintMove)},  // 3.0.22-beta.7
+                    {"Ctrl+" + click, say(l, Text::KeyHintPick)},
                     {"Shift+" + click, say(l, Text::KeyHintPickRun)},
                     {"Ctrl+A", say(l, Text::KeyHintPickAll)}};
         }

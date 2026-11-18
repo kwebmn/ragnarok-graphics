@@ -43,4 +43,22 @@ void Picked::clear() {
     last_ = -1;
 }
 
+bool step(Pace& p, uint64_t now, size_t left, const std::function<bool()>& answer, const std::function<void()>& move) {
+    if (left == 0 && now >= p.lastUntil) {  // nothing queued, the last one's «how many» not awaited
+        p.lastUntil = 0;
+        return false;
+    }
+    if (answer()) {  // a «how many» up: all of it - the next move a step later
+        p.next = now + kStepMs;
+        if (left > 0) return true;
+        p.lastUntil = 0;  // the last one's: the batch is over
+        return false;
+    }
+    if (left == 0 || now < p.next) return true;
+    move();
+    p.next = now + kStepMs;
+    if (left == 1) p.lastUntil = now + kLastWaitMs;  // that was the last one
+    return true;
+}
+
 }  // namespace uagfx::itempick

@@ -90,8 +90,11 @@ TEST(key_hints_lines) {
     const std::vector<kh::Part> friendly = kh::partsOf(Moment::View3dSkill, n, settings::Lang::Uk);
     CHECK(enemy.size() == 1 && friendly.size() == 1 && enemy[0].words != friendly[0].words);
     CHECK(friendly[0].words.find("себе") != std::string::npos);
-    CHECK_EQ(keysOf(kh::partsOf(Moment::ItemPicks, n, settings::Lang::Uk)),
-             std::string("[Ctrl+клік][Shift+клік][Ctrl+A]"));
+    // 3.0.22-beta.7: Alt+right click moves a thing whole - first in the storage's and the cart's line
+    const std::vector<kh::Part> items = kh::partsOf(Moment::ItemPicks, n, settings::Lang::Uk);
+    CHECK_EQ(keysOf(items), std::string("[Alt+ПКМ][Ctrl+клік][Shift+клік][Ctrl+A]"));
+    CHECK(items[0].words == "перенести");
+    CHECK_EQ(kh::partsOf(Moment::ItemPicks, n, settings::Lang::En)[0].keys, std::string("Alt+right click"));
     // the other languages: their own words
     const std::vector<kh::Part> ru = kh::partsOf(Moment::View3dWindow, n, settings::Lang::Ru);
     const std::vector<kh::Part> en = kh::partsOf(Moment::View3dWindow, n, settings::Lang::En);
@@ -111,6 +114,10 @@ TEST(key_hints_seen_kept) {
     CHECK_EQ(odd.times[size_t(Moment::View3d)], kh::kTimes);  // no more than it can be
     CHECK(odd.learned[size_t(Moment::View3dWindow)]);
     CHECK_EQ(odd.times[size_t(Moment::FreeCamera)], 0);
+    // 3.0.22-beta.7: the storage's line changed (Alt+right click first) under a new name - shown anew to all
+    CHECK_EQ(std::string(kh::keyOf(Moment::ItemPicks)), std::string("item_moves"));
+    const kh::Seen old = kh::read("item_picks learned\nitem_picks 5\n");
+    CHECK(!old.learned[size_t(Moment::ItemPicks)] && old.times[size_t(Moment::ItemPicks)] == 0);
 }
 
 // A moment's line shows from its start for its time at most (counted once it showed a second), the first kTimes

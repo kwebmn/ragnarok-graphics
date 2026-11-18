@@ -133,6 +133,8 @@ struct State {
     bool eatChar = false;  // 3.0.11-beta.101: the next character is a key the shop took (not the chat's)
     int cardWare = -1;     // the ware whose item card is open
     int told = 0, pressesTold = 0;
+    int lastWare = -1;  // 3.0.22-beta.7: the ware a click put in last (a double click's first click), and when
+    ULONGLONG lastWareClick = 0;
 };
 
 State& state() {
@@ -338,6 +340,8 @@ sw::Texts texts() {
     t.close = say(settings::Text::SkillsPadClose);
     t.space = say(settings::Text::ShopSpace);
     t.editHint = say(settings::Text::ShopEditHint);
+    t.click = say(settings::Text::KeyClick);  // 3.0.22-beta.7: «Shift+клік — усе» in the footer
+    t.all = say(settings::Text::KeyHintPickAll);
     return t;
 }
 
@@ -805,17 +809,26 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     if (h.part != sw::Part::Search) s.show.typing = false;
     if (h.part != sw::Part::Amount && s.show.edit.ware >= 0) sw::endEdit(s.data, s.show.edit);
-    const int many = s.data.tab == sw::Tab::Sell ? sw::kMostBought : 10;  // Shift: ten bought, all of it sold
     switch (h.part) {
         case sw::Part::Close: closeDeal(s, "its close"); break;
         case sw::Part::Tab: switchTab(s, h.index == 1 ? sw::Tab::Sell : sw::Tab::Buy, "a click on its tab"); break;
         case sw::Part::Search: s.show.typing = true; break;
-        case sw::Part::Ware:  // one more (Shift ten, Ctrl one fewer); the frame on it
+        case sw::Part::Ware: {  // one more (Shift ten, Ctrl one fewer; sold: Shift or a double click all); framed
+            const int ware = wareOf(h.index);
+            const ULONGLONG now = GetTickCount64();
+            const bool twice = m == WM_LBUTTONDBLCLK ||
+                               (ware >= 0 && ware == s.lastWare && now - s.lastWareClick <= GetDoubleClickTime());
+            s.lastWare = twice ? -1 : ware;  // a third click starts anew
+            s.lastWareClick = now;
             s.show.framed = true;
             s.show.cartFocus = false;
             s.show.ware = h.index;
-            putIn(s, wareOf(h.index), ctrl ? -1 : shift ? many : 1);
+            putIn(s, ware, sw::clickBy(s.data.tab, shift, ctrl, twice));
+            if (twice && !ctrl && s.data.tab == sw::Tab::Sell && ware >= 0 && s.told++ < 30)
+                LOG_INFO("shop: a double click on #%d - all of it to sell: %d", s.data.wares[size_t(ware)].id,
+                         sw::amountOf(s.data.cart, ware));
             break;
+        }
         case sw::Part::Line:
             s.show.framed = true;
             s.show.cartFocus = true;
