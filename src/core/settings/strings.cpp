@@ -9005,6 +9005,14 @@ constexpr Entry kTexts[] = {
      "В 3D-режиме вдоль горизонта стоят далёкие гряды в три слоя, каждая бледнее в дымке: горы над полями, дюны в "
      "пустыне, снежные вершины на снегу, низкие острова там, где за краем карты море. В сумерках они тёмные на фоне "
      "зарева. Под крышей и на картах, висящих в небе, их нет."},
+    {Text::View3dPanorama, "Horizon panorama", "Панорама обрію", "Панорама горизонта"},
+    {Text::View3dPanoramaHint,
+     "In the 3D view the graphics card draws the region's land all round the horizon - mountains, hills, a desert, "
+     "the sea with islands - when you enter the region, lit by the day and the night. Off: the far ranges.",
+     "У 3D-режимі відеокарта малює довкола обрію землю регіону - гори, пагорби, пустелю, море з островами - коли "
+     "ви входите в регіон, освітлену вдень і вночі. Вимкнено - далекі пасма.",
+     "В 3D-режиме видеокарта рисует вокруг горизонта землю региона - горы, холмы, пустыню, море с островами - когда "
+     "вы входите в регион, освещённую днём и ночью. Выключено - далёкие гряды."},
     {Text::View3dGrass, "Grass in the 3D view", "Трава у 3D-режимі", "Трава в 3D-режиме"},  // 3.0.19-beta.33
     {Text::View3dGrassHint,
      "In the 3D view the grass grows as blades on the green ground round you, swaying in the wind and trodden by "

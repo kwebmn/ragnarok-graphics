@@ -536,6 +536,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.20-beta.72 (the owner: the horizon wants details): far ranges along it
         {"view3d", "ranges", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dRanges,
          Text::View3dRangesHint, "", &E::skyRanges},
+        // 3.0.22-beta.11 (the owner: «панорамы горизонта ... нарисовал это на видеокарте»): the region's land
+        {"view3d", "panorama", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dPanorama,
+         Text::View3dPanoramaHint, "", &E::skyPanorama},
         // 3.0.19-beta.33 (the owner: «я так траву в 3д и не увидел»): the grass as blades in the world
         {"view3d", "grass", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dGrass,
          Text::View3dGrassHint, "", &E::grass3d},

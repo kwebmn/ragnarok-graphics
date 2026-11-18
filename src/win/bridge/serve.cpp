@@ -221,6 +221,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.skyRanges = rd.u8() != 0;       // 3.0.20-beta.72
             e.crownVolume = rd.u8() != 0;     // 3.0.20-beta.73
             e.crownLight = rd.u8() != 0;      // 3.0.20-beta.79
+            e.skyPanorama = rd.u8() != 0;     // 3.0.22-beta.11
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

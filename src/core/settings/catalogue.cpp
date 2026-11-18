@@ -166,8 +166,8 @@ std::vector<Group> build() {
                          D("view3d.room_walls").need("effects.own_ground").next(),
                          D("view3d.close_gaps").need("view3d.own_models").next()}));
     out.push_back(group(Area::View3d, Text::CatView3dSky,
-                        {B("view3d.ranges"), B("view3d.weather"), B("view3d.stars"), B("view3d.moon"),
-                         B("view3d.dawn")}));
+                        {B("view3d.panorama"), B("view3d.ranges"), B("view3d.weather"), B("view3d.stars"),
+                         B("view3d.moon"), B("view3d.dawn")}));
     out.push_back(group(Area::View3d, Text::FxGroupPlants,
                         {B("view3d.grass"), trial("view3d.shadows", "3.0.20-beta.50").need("effects.own_ground"),
                          trial("view3d.dense_crowns", "3.0.20-beta.51").need(kCrowns).need("effects.leaves_card"),
