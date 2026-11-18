@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.10 — what's new · 2026-11-18
+
+Diagnostics for a white ground on Direct3D 11.
+
+- **The ground filled with one light colour** (seen on laptops with Direct3D 11): the game draws the ground with the map's light, and if that light is white or missing, the ground turns white. Now on each map and at a report the game logs what the ground is drawn with and checks the map's light on the graphics card against the game's memory, and the report takes both as pictures. If the ground is white again, send a report while it is on screen: Ctrl+Shift+F10 in the game.
+
 # uaRO Graphics 3.0.22-beta.9 — what's new · 2026-11-18
 
 A fix for the debuffs' red outline in «Buffs on the character».
