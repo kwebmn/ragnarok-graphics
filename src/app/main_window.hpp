@@ -11,6 +11,7 @@
 #include "app/rebuilds.hpp"
 #include "app/reports_window.hpp"
 #include "app/ui.hpp"
+#include "core/laptop_set.hpp"
 #include "core/settings/changelog.hpp"
 
 namespace uagfx::app {
@@ -116,7 +117,12 @@ private:
     settings::Lang changelogLang_ = settings::Lang::En;
     bool changelogBeta_ = false, changelogRead_ = false;
     std::string seen_;  // cache\seen-version.txt: the version the player last saw the news of
-    enum class Plate : uint8_t { None, Rollback, Safe, Off } plate_ = Plate::None;
+    // 3.0.22-beta.5 (idea 4, core/laptop_set): «Для ноутбука» offered, what it gave (more frames, none more)
+    enum class Plate : uint8_t { None, Rollback, Safe, Off, LaptopOffer, LaptopBetter, LaptopNoBetter };
+    Plate plate_ = Plate::None;
+    laptopset::Try laptopTry_;  // the try as laptop-try.txt has it
+    double laptopFps_ = 0;      // the frames without the set the offer told
+    void laptopPlate(bool closed);  // the plate's button (closed: its «✕»)
     std::string rollBack_;           // the plate's version back to
     std::wstring launcherShownSig_;  // what the launcher shows: nothing painted again when it is the same
     // 3.0.18-beta.194: the look picker's last pick - its keys' tokens before it, kept 5 s for «Скасувати»

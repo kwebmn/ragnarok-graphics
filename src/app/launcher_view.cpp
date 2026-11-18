@@ -580,6 +580,11 @@ void LauncherView::shade(std::vector<uint32_t>& px) const {
     }
 }
 
+settings::Text LauncherView::fitsWord(int kind) const {
+    return data_.laptop && kind == int(settings::presets::Kind::WeakPc) ? settings::Text::LauncherFirstFitsLaptop
+                                                                         : settings::Text::LauncherFirstFits;
+}
+
 bool LauncherView::hovered(Part p, int index) const {
     return hover_.part == p && (index < 0 || hover_.index == index);
 }
@@ -757,14 +762,20 @@ void LauncherView::compose() {
         }
     }
     // the plate over the icons, its button at its right
-    plateButton_ = Box{};
+    plateButton_ = plateClose_ = Box{};
     if (L.plate.w > 0) {
         panel::roundRect(pic_, pb(L.plate), 9 * s, kCard, 0.94f, kWarn, 0.6f, edge);
         const Style st{Face::SemiBold, 13, kGoldHi};
+        const float ch = L.plate.h - 14 * s, cw = data_.plateClose ? ch : 0.0f;  // 3.0.22-beta.5: «✕» at its right
         const float bw = std::min(L.plate.w * 0.5f, float(widthOf(dc, st, data_.plateButton)) + 28 * s);
-        plateButton_ = Box{L.plate.x + L.plate.w - 8 * s - bw, L.plate.y + 7 * s, bw, L.plate.h - 14 * s};
-        const bool on = hovered(Part::Plate);
+        const float right = L.plate.x + L.plate.w - 8 * s - (cw > 0 ? cw + 6 * s : 0.0f);
+        plateButton_ = Box{right - bw, L.plate.y + 7 * s, bw, ch};
+        const bool on = hovered(Part::Plate, 0);
         panel::roundRect(pic_, pb(plateButton_), 7 * s, kGold, on ? 0.3f : 0.14f, kGold, 0.8f, edge);
+        if (cw > 0) {
+            plateClose_ = Box{L.plate.x + L.plate.w - 8 * s - cw, L.plate.y + 7 * s, cw, ch};
+            if (hovered(Part::Plate, 1)) panel::roundRect(pic_, pb(plateClose_), 7 * s, kCard, 0.6f, kLine, 1.0f, edge);
+        }
     }
     // the keyboard's ring
     const std::vector<Hit> order = focusOrder();
@@ -1008,9 +1019,13 @@ void LauncherView::words(HDC dc) {
             y += lineH;
         }
         const float base = middle + ascentOf(dc, Style{Face::SemiBold, 13, kText}) * 0.36f;
-        const Style button{Face::SemiBold, 13, hovered(Part::Plate) ? kWhite : kGoldHi};
+        const Style button{Face::SemiBold, 13, hovered(Part::Plate, 0) ? kWhite : kGoldHi};
         line(dc, button, fit(dc, button, data_.plateButton, int(plateButton_.w - 16 * s)),
              plateButton_.x + plateButton_.w / 2, base, 0);
+        if (plateClose_.w > 0) {  // 3.0.22-beta.5
+            const Style x{Face::Other, 13, hovered(Part::Plate, 1) ? kWhite : kMuted};
+            line(dc, x, L"\x2715", plateClose_.x + plateClose_.w / 2, middle + ascentOf(dc, x) * 0.36f, 0);
+        }
     }
 }
 
@@ -1693,7 +1708,7 @@ void LauncherView::composeFirst() {
         }
         if (fits) {  // «для вашої відеокарти» on its picture
             const Style st{Face::SemiBold, 11, kOnGold};
-            const float pw = float(widthOf(memDc_, st, t(Text::LauncherFirstFits))) + 18 * s;
+            const float pw = float(widthOf(memDc_, st, t(fitsWord(i)))) + 18 * s;
             panel::roundRect(pic_, pb(Box{c.x + 12 * s, c.y + 12 * s, std::min(pw, c.w - 24 * s), 22 * s}), 11 * s,
                              kGold, 1.0f);
         }
@@ -1727,7 +1742,9 @@ void LauncherView::wordsFirst(HDC dc) {
         const float x = c.x + 12 * s, width = c.w - 24 * s;
         float y = c.y + 6 * s + (c.w - 12 * s) * 9.0f / 16.0f + 22 * s;
         const Style name{Face::SemiBold, 14.5f, fits ? kGoldHi : firstHover_ == i ? kWhite : kText};
-        for (const std::wstring& l : wrap(dc, name, t(presets::kindName(presets::Kind(i))), int(width), 2)) {
+        const bool laptopCard = data_.laptop && i == int(presets::Kind::WeakPc);  // 3.0.22-beta.5
+        const Text kindWord = laptopCard ? Text::KindLaptop : presets::kindName(presets::Kind(i));
+        for (const std::wstring& l : wrap(dc, name, t(kindWord), int(width), 2)) {
             line(dc, name, l, x, y, -1);
             y += 18 * s;
         }
@@ -1740,7 +1757,7 @@ void LauncherView::wordsFirst(HDC dc) {
         if (fits) {
             const Style st{Face::SemiBold, 11, kOnGold};
             const Box pill{c.x + 12 * s, c.y + 12 * s, c.w - 24 * s, 22 * s};
-            const std::wstring said = fit(dc, st, t(Text::LauncherFirstFits), int(pill.w - 18 * s));
+            const std::wstring said = fit(dc, st, t(fitsWord(i)), int(pill.w - 18 * s));
             line(dc, st, said, pill.x + 9 * s, pill.y + pill.h / 2 + ascentOf(dc, st) * 0.36f, -1);
         }
     }
@@ -1753,7 +1770,10 @@ void LauncherView::wordsFirst(HDC dc) {
 
 Hit LauncherView::hitAt(int x, int y) const {
     Hit h = launcherview::hitAt(layout_, float(x), float(y));
-    if (h.part == Part::Plate && !plateButton_.contains(float(x), float(y))) h = Hit{};  // the plate's button alone
+    if (h.part == Part::Plate)  // the plate's button alone (index 0), 3.0.22-beta.5: its «✕» (1)
+        h = plateClose_.contains(float(x), float(y))    ? Hit{Part::Plate, 1}
+            : plateButton_.contains(float(x), float(y)) ? Hit{Part::Plate, 0}
+                                                        : Hit{};
     if (h.part == Part::Account && !accountPill_.contains(float(x), float(y))) h = Hit{};  // .205: the pill alone
     return h;
 }
@@ -1768,7 +1788,8 @@ std::vector<Hit> LauncherView::focusOrder() const {
     order.push_back(Hit{Part::Channel, 0});  // 3.0.18-beta.202
     order.push_back(Hit{Part::Channel, 1});
     order.push_back(Hit{Part::Version});
-    if (layout_.plate.w > 0) order.push_back(Hit{Part::Plate});
+    if (layout_.plate.w > 0) order.push_back(Hit{Part::Plate, 0});
+    if (plateClose_.w > 0) order.push_back(Hit{Part::Plate, 1});  // 3.0.22-beta.5
     if (accountPill_.w > 0) order.push_back(Hit{Part::Account});  // 3.0.18-beta.205
     order.push_back(Hit{Part::Language});
     return order;
@@ -1788,7 +1809,7 @@ Box LauncherView::boxOf(Hit hit) const {
     case Part::Account: return accountPill_;  // 3.0.18-beta.205
     case Part::Channel: return hit.index >= 0 && hit.index < 2 ? L.channel[hit.index] : Box{};
     case Part::Language: return L.language;
-    case Part::Plate: return plateButton_;
+    case Part::Plate: return hit.index == 1 ? plateClose_ : plateButton_;
     default: break;
     }
     for (int i = 0; i < launcherview::kDockIcons; ++i)

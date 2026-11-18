@@ -54,6 +54,10 @@ constexpr const char* kSettingsHint = "uaro-graphics\\cache\\settings-hint.txt";
 constexpr const char* kKeyHints = "uaro-graphics\\cache\\key-hints.txt";
 // 3.0.22-beta.2: the game's slow archive reads by map (core/read_ahead) - read ahead at the next start and map
 constexpr const char* kReadAhead = "uaro-graphics\\cache\\read-ahead.txt";
+// 3.0.22-beta.5 (core/laptop_set): a laptop's frames on the maps with the set «Для ноутбука» and without it (the
+// driver's), and its try (the settings app's: the frames before it, the tokens it changed)
+constexpr const char* kLaptopFrames = "uaro-graphics\\cache\\laptop-frames.txt";
+constexpr const char* kLaptopTry = "uaro-graphics\\cache\\laptop-try.txt";
 // 3.0.17-beta.10: the version the player saw «Гра» with - none: the first start's cards, another: «Оновлено до»
 constexpr const char* kSeenVersion = "uaro-graphics\\cache\\seen-version.txt";
 // 3.0.17-beta.7: [debug] record_scene's file (core/scene_record)

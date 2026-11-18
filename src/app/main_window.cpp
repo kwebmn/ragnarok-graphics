@@ -1,5 +1,6 @@
 #include "app/main_window.hpp"
 
+#include <cmath>
 #include <commctrl.h>
 #include <commdlg.h>
 #include <shellapi.h>
@@ -1560,6 +1561,8 @@ void MainWindow::refreshLauncher() {
             d.kindLooks[k] = wtr(lang_, presets::nameOf(presets::Choice::Picture, per.picture)) + L" \x00B7 " +
                              wtr(lang_, presets::nameOf(presets::Choice::Interface, per.ui)) + L" \x00B7 " +
                              wtr(lang_, presets::nameOf(presets::Choice::Textures, per.textures));
+            if (machine.battery && presets::Kind(k) == presets::Kind::WeakPc)  // 3.0.22-beta.5: «Для ноутбука»
+                d.kindLooks[k] += L" \x00B7 " + wtr(lang_, Text::LookBattery);
         }
         // 3.0.18-beta.199: what was put in for the card at the start, «Пропустити» keeps it
         if (!machine.adapter.empty())
@@ -1607,7 +1610,36 @@ void MainWindow::refreshLauncher() {
         plate_ = Plate::Off;
         d.plateText = wtr(lang_, Text::SwitchedOff);
         d.plateButton = wtr(lang_, Text::LauncherPlateOn);
+    } else if (machine.battery) {  // 3.0.22-beta.5 (idea 4): «Для ноутбука» offered by the frames, then what it gave
+        laptopset::Record r;
+        std::string text;
+        if (readFile(dir + L"\\" + wide(layout::kLaptopFrames), text)) laptopset::parse(text, r);
+        laptopTry_ = laptopset::Try{};
+        text.clear();
+        if (readFile(dir + L"\\" + wide(layout::kLaptopTry), text)) laptopset::parse(text, laptopTry_);
+        laptopFps_ = r.other.fps;
+        const auto fps = [](double v) { return std::to_string(int(std::lround(v))); };
+        switch (laptopset::plate(true, laptopset::on(m.now().config), r, laptopTry_)) {
+            case laptopset::Plate::Offer:
+                plate_ = Plate::LaptopOffer;
+                d.plateText = wtrf(lang_, Text::LaptopOffer, {fps(r.other.fps)});
+                d.plateButton = wtr(lang_, Text::LaptopTry);
+                break;
+            case laptopset::Plate::Better:
+                plate_ = Plate::LaptopBetter;
+                d.plateText = wtrf(lang_, Text::LaptopBetter, {fps(r.laptop.fps), fps(laptopTry_.before)});
+                d.plateButton = wtr(lang_, Text::LaptopOk);
+                break;
+            case laptopset::Plate::NoBetter:
+                plate_ = Plate::LaptopNoBetter;
+                d.plateText = wtrf(lang_, Text::LaptopNoBetter, {fps(r.laptop.fps), fps(laptopTry_.before)});
+                d.plateButton = wtr(lang_, Text::LaptopUndo);
+                break;
+            case laptopset::Plate::None: break;
+        }
+        d.plateClose = plate_ != Plate::None;
     }
+    d.laptop = machine.battery;
     // what changed: the newest versions, how many since the player's last look
     d.newFor = int(settings::changelog::newerThan(changelog_, seen_));
     d.news.assign(changelog_.begin(), changelog_.begin() + std::ptrdiff_t(std::min<size_t>(changelog_.size(), 3)));
@@ -1621,7 +1653,8 @@ void MainWindow::refreshLauncher() {
                        std::to_wstring(int(d.fitsCard)) + L"|" + std::to_wstring(int(d.undoable)) + L"|" +
                        wide(d.seen) + L"|" + std::to_wstring(int(d.firstRun)) + L"." +
                        std::to_wstring(d.suggestedKind) + L"|" + d.cardCheck + L"|" + d.firstFound + L"|" +
-                       std::to_wstring(int(d.beta)) + L"|" + std::to_wstring(d.windows);
+                       std::to_wstring(int(d.beta)) + L"|" + std::to_wstring(d.windows) + L"|" +
+                       std::to_wstring(int(d.laptop)) + std::to_wstring(int(d.plateClose));
     for (const LauncherData::Look& l : d.looks)
         sig += L"|" + std::to_wstring(l.variant) + L"." + std::to_wstring(l.changed);
     for (const launcher::News& n : d.info.news) sig += L"|" + wide(n.title);
@@ -1764,6 +1797,10 @@ void MainWindow::launcherAction(launcherview::Part part, int index) {
             return;
         }
         case Part::Plate: {
+            if (plate_ == Plate::LaptopOffer || plate_ == Plate::LaptopBetter || plate_ == Plate::LaptopNoBetter) {
+                laptopPlate(index == 1);  // 3.0.22-beta.5
+                return;
+            }
             std::wstring err;
             if (plate_ == Plate::Rollback && !rollBack_.empty()) {
                 rollBackTo(*this, rollBack_);
@@ -1892,7 +1929,45 @@ void MainWindow::firstRunAction(int kind) {
     for (const auto& [choice, variant] : picks)
         for (const auto& [key, token] : presets::keysOf(choice, variant))
             if (const settings::IniSetting* s = settings::findSetting(key)) m.setToken(*s, token);
+    if (machine.battery && presets::Kind(kind) == presets::Kind::WeakPc)  // 3.0.22-beta.5: «Для ноутбука»
+        if (const settings::IniSetting* s = settings::findSetting("frames.battery_saver")) m.setToken(*s, "1");
     doApply(false);
+}
+
+// 3.0.22-beta.5 (idea 4, core/laptop_set): «Спробувати» - the set put in, the frames before it and the tokens it
+// changed kept; «Добре» - told; «Повернути як було» - the tokens back; «✕» - the offer declined, or told
+void MainWindow::laptopPlate(bool closed) {
+    Model& m = *model_;
+    laptopset::Try& t = laptopTry_;
+    bool apply = false;
+    if (plate_ == Plate::LaptopOffer) {
+        if (closed) {
+            t.declined = true;
+        } else {
+            t.before = laptopFps_;
+            t.undo.clear();
+            for (const auto& [key, token] : laptopset::keys())
+                if (const settings::IniSetting* s = settings::findSetting(key)) {
+                    t.undo.emplace_back(key, m.token(*s));
+                    m.setToken(*s, token);
+                }
+            apply = true;
+        }
+    } else {
+        t.told = true;
+        if (!closed && plate_ == Plate::LaptopNoBetter) {
+            for (const auto& [key, token] : t.undo)
+                if (const settings::IniSetting* s = settings::findSetting(key)) m.setToken(*s, token);
+            apply = true;
+        }
+    }
+    CreateDirectoryW((m.paths().dir + L"\\" + wide(layout::kCache)).c_str(), nullptr);
+    writeFileAtomic(m.paths().dir + L"\\" + wide(layout::kLaptopTry), laptopset::format(t));
+    if (apply) {
+        doApply(false);
+    } else {
+        refreshLauncher();
+    }
 }
 
 std::vector<std::pair<std::string, std::string>> MainWindow::cardSet(bool probe) {

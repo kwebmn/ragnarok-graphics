@@ -9326,6 +9326,24 @@ constexpr Entry kTexts[] = {
      "change the target.",
      "Місія таеквона: {1} — на цьому сервері не водиться, тож місію не виконати; змінити ціль сервер не дає.",
      "Миссия тхэквондо: {1} — на этом сервере не водится, так что миссию не выполнить; сменить цель сервер не даёт."},
+    // 3.0.22-beta.5 (idea 4): the set «Для ноутбука»
+    {Text::KindLaptop, "For a laptop", "Для ноутбука", "Для ноутбука"},
+    {Text::LauncherFirstFitsLaptop, "for your laptop", "для вашого ноутбука", "для вашего ноутбука"},
+    {Text::LookBattery, "battery saving", "економія батареї", "экономия батареи"},
+    {Text::LaptopOffer,
+     "Laptop: {1} FPS in the game on average. The «For a laptop» set is lighter: «Auto», «HD, light» and the battery "
+     "saving.",
+     "Ноутбук: у грі в середньому {1} FPS. Набір «Для ноутбука» легший: «Авто», «HD економно» й економія батареї.",
+     "Ноутбук: в игре в среднем {1} FPS. Набор «Для ноутбука» легче: «Авто», «HD экономно» и экономия батареи."},
+    {Text::LaptopTry, "Try it", "Спробувати", "Попробовать"},
+    {Text::LaptopBetter, "The «For a laptop» set: {1} FPS in the game, it was {2}.",
+     "Набір «Для ноутбука»: {1} FPS у грі, було {2}.", "Набор «Для ноутбука»: {1} FPS в игре, было {2}."},
+    {Text::LaptopOk, "Good", "Добре", "Хорошо"},
+    {Text::LaptopNoBetter, "The «For a laptop» set gave no more frames: {1} FPS in the game, it was {2}.",
+     "Набір «Для ноутбука» не додав кадрів: {1} FPS у грі, було {2}.",
+     "Набор «Для ноутбука» не добавил кадров: {1} FPS в игре, было {2}."},
+    {Text::LaptopUndo, "Put it back", "Повернути як було", "Вернуть как было"},
+    {Text::PlateClose, "Close", "Закрити", "Закрыть"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

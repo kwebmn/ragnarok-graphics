@@ -55,6 +55,9 @@ struct LauncherData {
     bool firstRun = false;
     int suggestedKind = 0;
     std::wstring kindLooks[launcherview::kKindCards];
+    // 3.0.22-beta.5 (idea 4, core/laptop_set): a laptop - the weak computer's card is «Для ноутбука»; the plate with a
+    // «✕» of its own (the laptop's plates: index 1 of Part::Plate)
+    bool laptop = false, plateClose = false;
 };
 
 class LauncherHost {
@@ -154,6 +157,8 @@ private:
     void wordsFirst(HDC dc);
     void firstPress(int card);  // 0..3 a card, kKindCards «Пропустити»
     bool hovered(launcherview::Part p, int index = -1) const;
+    // 3.0.22-beta.5: the first start's badge - «для вашого ноутбука» on a laptop's «Для ноутбука», else the card's
+    settings::Text fitsWord(int kind) const;
     bool pressedOn(launcherview::Part p) const;
     std::wstring t(settings::Text x) const;
     std::wstring tf(settings::Text x, const std::vector<std::string>& args) const;
@@ -180,6 +185,7 @@ private:
     int dpi_ = 96;
     launcherview::Layout layout_;
     launcherview::Box pill_, plateButton_;  // the server's pill, the plate's button (composed, then written on)
+    launcherview::Box plateClose_;          // 3.0.22-beta.5: the plate's «✕» (data_.plateClose)
     launcherview::Box accountPill_;         // 3.0.18-beta.205: «Створити акаунт» as drawn (w 0: not shown)
     launcherview::Hit hover_, pressed_;
     int focus_ = -1;  // in focusOrder(); -1: no ring (until Tab)

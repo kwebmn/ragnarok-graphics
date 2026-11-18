@@ -1,5 +1,6 @@
 #include "win/frame_recent.hpp"
 #include "win/key_walk.hpp"
+#include "win/laptop_frames.hpp"
 #include "win/present_watch.hpp"
 #include "win/read_ahead.hpp"
 #include "win/threat_arc.hpp"
@@ -1677,6 +1678,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
         }
     } else {
         noteUsage(foreground, out.cx, out.cy, timed ? &gpuNow : nullptr);  // 2.2.1
+        // 3.0.22-beta.5 (idea 4): a laptop's frames with «Для ноутбука» and without it, for «Гра»
+        laptopframes::frame(startup().computer.battery == 1, foreground && !map_.empty() && renderer, config,
+                            o.fpsLimit);
     }
     if (console_.present(window, foreground, iniPath(), config, map_,
                          timed ? &gpuNow : nullptr)) {  // 1.9.3; 2.6.22: the map for «Только на этой карте»

@@ -1051,6 +1051,9 @@ enum class Text : uint16_t {
     DropOtherLogin, DropGm, DropStillOnline, DropServerNotice, DropServerClosed, DropNetwork, ReconnectIn,
     ConnectionAutoRelogin, ConnectionAutoReloginHint,
     TkMissionWhere, TkMissionMore, TkMissionNowhere,  // 3.0.22-beta.4 (idea 3): the Taekwon mission's monster
+    // 3.0.22-beta.5 (idea 4): the set «Для ноутбука» - the first start's card, «Гра»'s plate
+    KindLaptop, LauncherFirstFitsLaptop, LookBattery, LaptopOffer, LaptopTry, LaptopBetter, LaptopOk, LaptopNoBetter,
+    LaptopUndo, PlateClose,
     Count
 };
 
