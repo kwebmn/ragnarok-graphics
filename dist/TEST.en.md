@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.22-beta.2 — what's new · 2026-11-18
+
+Fewer hitches while the game reads its files: talking to NPCs, new NPCs and monsters on a map.
+
+- **Reading ahead.** The files the game read slowly from the disk (NPCs' and monsters' sprites, the talk window's buttons, sounds) are remembered for each map. Next time they are read in advance in the background at the lowest priority: the common ones at the game's start, a map's own 2 s after entering it. The game then takes them from Windows' cache, not from the disk. It helps laptops with slow disks the most.
+- It works from the second game: the first time the list is only being made.
+- **The log now tells where the time goes when an NPC's talk opens:** the longest frame round it and how much of it the game itself, our driver and the file reads took. If the talk still hitches, send a report (Ctrl+Shift+F10) right after a few talks.
+
 # uaRO Graphics 3.0.22-beta.1 — what's new · 2026-11-17
 
 The exchange with the server on one line with the ping.
