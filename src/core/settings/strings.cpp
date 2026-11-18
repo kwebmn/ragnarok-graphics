@@ -9317,6 +9317,15 @@ constexpr Entry kTexts[] = {
      "Когда связь с сервером карты обрывается (сеть, не кик), окно о разрыве отсчитывает 10 секунд, и игра сама "
      "входит снова тем же логином и персонажем с «Полка» — Esc отменяет. Не больше трёх раз за десять минут; не "
      "тогда, когда в вашу учётную запись вошли из другого места."},
+    // 3.0.22-beta.4 (idea 3, R-JGEFVM): the Taekwon mission's monster in the chat
+    {Text::TkMissionWhere, "Taekwon mission: {1} - lives on {2}.", "Місія таеквона: {1} — водиться на {2}.",
+     "Миссия тхэквондо: {1} — водится на {2}."},
+    {Text::TkMissionMore, "and {1} more", "і ще {1}", "и ещё {1}"},
+    {Text::TkMissionNowhere,
+     "Taekwon mission: {1} - lives nowhere on this server, so the mission cannot be done; the server does not let you "
+     "change the target.",
+     "Місія таеквона: {1} — на цьому сервері не водиться, тож місію не виконати; змінити ціль сервер не дає.",
+     "Миссия тхэквондо: {1} — на этом сервере не водится, так что миссию не выполнить; сменить цель сервер не даёт."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

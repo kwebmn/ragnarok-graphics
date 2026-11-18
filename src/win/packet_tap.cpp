@@ -8,6 +8,7 @@
 #include "win/skill_delay_watch.hpp"
 #include "win/sphere_watch.hpp"
 #include "win/combo_watch.hpp"
+#include "win/tk_mission.hpp"
 #include "win/upkeep_watch.hpp"
 #include "win/packet_tap.hpp"
 
@@ -148,6 +149,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
     spherewatch::packet(id, packet);              // 3.0.16-beta.8: the own spirit spheres (coins)
     combowatch::packet(id, packet);               // 3.0.16-beta.13: the own combo window
     upkeepwatch::packet(id, packet);              // 3.0.16-beta.13: broken gear, the pet's and homunculus's hunger
+    tkmissionwin::packet(id, packet);             // 3.0.22-beta.4: the Taekwon mission's monster
     const packets::Event e = packets::parse(packet, kReadable);
     if (!std::holds_alternative<std::monostate>(e)) {
         notifier::packet(e);

@@ -7,6 +7,7 @@
 #include "win/model_census.hpp"
 #include "win/game_files.hpp"
 #include "win/ground_thin.hpp"
+#include "win/tk_mission.hpp"
 #include "win/updates_hook.hpp"
 #include "win/view3d.hpp"
 #include "win/walk_mode.hpp"
@@ -1329,6 +1330,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
                      config.groundCounts, gameCodePage(config), pk, pw, ph);  // .125 the ammo's pill, .143 the walls
     g_parts.mark("hotbarwin", nowMs());
     consolehint::frame(gameCodePage(config));  // 3.0.17-beta.11: where the settings are, once (.21-beta.7: Alt+O)
+    tkmissionwin::frame(gameCodePage(config));  // 3.0.22-beta.4: the Taekwon mission's monster in the chat
     g_parts.mark("consolehint", nowMs());
     farbars::setOn(config.farBars);      // 3.0.20-beta.84 (R-7WTVBF): [interface] far_bars
     ammosound::frame(config.ammoSound);  // 3.0.11-beta.129: [interface] ammo_sound - the chime at 10 left and at none
