@@ -152,3 +152,17 @@ TEST(horizon_terrain_march) {
         }
     }
 }
+
+// The panorama's light by the time (the sky pass's twin): the night darker, the dusk warmer than the day; and the
+// land's colour into the screen's (ACES, gamma) the same way in the shader and the preview
+TEST(horizon_light_by_the_night) {
+    const horizon::LightSet day = horizon::lightAt(0.0f), dusk = horizon::lightAt(0.5f), night = horizon::lightAt(1.0f);
+    CHECK(night.sun.r + night.sun.g + night.sun.b < 0.25f * (day.sun.r + day.sun.g + day.sun.b));
+    CHECK(night.ambient.b < day.ambient.b);
+    CHECK(dusk.sun.r / dusk.sun.b > day.sun.r / day.sun.b);
+    const horizon::Rgb black = horizon::toDisplay({0, 0, 0}), bright = horizon::toDisplay({4, 4, 4});
+    CHECK(black.r == 0.0f && black.g == 0.0f && black.b == 0.0f);
+    CHECK(bright.r > 0.95f && bright.r <= 1.0f);
+    const horizon::Rgb mid = horizon::toDisplay({0.18f, 0.18f, 0.18f});
+    CHECK(mid.r > 0.3f && mid.r < 0.6f);
+}

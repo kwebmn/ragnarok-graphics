@@ -167,6 +167,7 @@ Hit march(const Climate& c, float mapRadius, float eyeHeight, float dirX, float 
     if (flat < 1e-4f) return out;
     const float maxH = std::max(c.mountAmp, 0.0f) + c.hillAmp + 200.0f, tMax = 80000.0f;
     float t = mapRadius / flat, prev = t, least = 1e9f;
+    if (eyeHeight + dirUp * t <= 0.0f) return out;  // it meets the ground within the map: the game's own
     int i = 0;
     for (; i < steps && t < tMax; ++i) {
         const float x = dirX * t, y = eyeHeight + dirUp * t, z = dirZ * t;
@@ -228,6 +229,29 @@ float shadowAt(const Climate& c, float mapRadius, Vec3 at, Vec3 normal, Vec3 toS
 
 float hazeOf(const Climate& c, float distance, float height) {
     return 1.0f - std::exp(-distance * c.haze * (1.0f - 0.45f * smooth(0.0f, 3000.0f, height)));
+}
+
+}  // namespace uagfx::horizon
+
+namespace uagfx::horizon {
+
+LightSet lightAt(float night) {
+    static const LightSet kDay{{1.90f, 1.75f, 1.50f}, {0.042f, 0.126f, 0.328f}};
+    static const LightSet kDusk{{1.70f, 0.85f, 0.36f}, {0.050f, 0.070f, 0.160f}};
+    static const LightSet kNight{{0.10f, 0.12f, 0.18f}, {0.020f, 0.030f, 0.060f}};
+    const float n = clamp01(night);
+    const LightSet& a = n < 0.5f ? kDay : kDusk;
+    const LightSet& b = n < 0.5f ? kDusk : kNight;
+    const float t = n < 0.5f ? n / 0.5f : (n - 0.5f) / 0.5f;
+    return {mix(a.sun, b.sun, t), mix(a.ambient, b.ambient, t)};
+}
+
+Rgb toDisplay(const Rgb& linear) {
+    const auto curve = [](float v) {
+        const float x = std::max(0.0f, v) * kExposure;
+        return std::pow(clamp01(x * (2.51f * x + 0.03f) / (x * (2.43f * x + 0.59f) + 0.14f)), 1.0f / 2.2f);
+    };
+    return {curve(linear.r), curve(linear.g), curve(linear.b)};
 }
 
 }  // namespace uagfx::horizon

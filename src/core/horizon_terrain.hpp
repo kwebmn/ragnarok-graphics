@@ -40,4 +40,14 @@ float shadowAt(const Climate& c, float mapRadius, Vec3 at, Vec3 normal, Vec3 toS
 // How much of the haze's colour lies over land this far and this high (0..1)
 float hazeOf(const Climate& c, float distance, float height);
 
+// The panorama's light each frame (the sky pass's skyPanorama, the same numbers): by the night (0 day, 0.5 dusk -
+// the warm low sun, 1 night - the moon's cold dim light), linear. lit = albedo x (ambient x (0.55 + 0.45 up) +
+// sun x max(N.L, 0) x shadow), then toDisplay, then the haze to the sky's horizon colour (the screen's colours)
+struct LightSet {
+    Rgb sun, ambient;
+};
+LightSet lightAt(float night);
+constexpr float kExposure = 0.8f;
+Rgb toDisplay(const Rgb& linear);  // ACES-like curve of linear x kExposure, then gamma 2.2
+
 }  // namespace uagfx::horizon
