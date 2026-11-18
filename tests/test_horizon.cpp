@@ -3,6 +3,7 @@
 #include <string>
 
 #include "core/horizon.hpp"
+#include "core/horizon_terrain.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -80,4 +81,74 @@ TEST(horizon_key_and_pack) {
     CHECK(out[32] == 4096.0f && out[33] == 384.0f);
     CHECK(out[36] == 48.0f && out[37] == 96.0f);
     CHECK(out[38] == lutie.sand.r && out[40] == lutie.sand.b);
+}
+
+// The CPU twin of the bake shader's land (core/horizon_terrain; shaders.cpp hz... the same math): its shape, its
+// materials and the ray's march - the tests and the preview tool see what the card draws
+
+namespace {
+
+const char* const kRegions[] = {"Alberta", "Amatsu",  "Ayothaya", "Comodo",      "Einbroch", "Geffen", "Glast Heim",
+                                "Hugel",   "Juno",    "Kunlun",   "Lighthalzen", "Louyang",  "Lutie",  "Morroc",
+                                "Niflheim", "Payon",  "Prontera", "Rachel",      "Umbala",   "Veins"};
+
+float meanOnCircle(const horizon::Climate& c, float radius) {
+    float sum = 0.0f;
+    for (int k = 0; k < 64; ++k) {
+        const float a = 6.2831853f * float(k) / 64.0f;
+        sum += horizon::heightAt(c, 1500.0f, radius * std::cos(a), radius * std::sin(a));
+    }
+    return sum / 64.0f;
+}
+
+bool within(const horizon::Rgb& a, const horizon::Rgb& b, float d) {
+    return std::fabs(a.r - b.r) <= d && std::fabs(a.g - b.g) <= d && std::fabs(a.b - b.b) <= d;
+}
+
+}  // namespace
+
+TEST(horizon_terrain_shape) {
+    const horizon::Climate hills = horizon::climateOf("Prontera"), alps = horizon::climateOf("Lutie");
+    CHECK(horizon::heightAt(hills, 1500.0f, 100.0f, 200.0f) == 0.0f);  // the map itself
+    CHECK(horizon::heightAt(hills, 1500.0f, 5000.0f, -2500.0f) == horizon::heightAt(hills, 1500.0f, 5000.0f, -2500.0f));
+    CHECK(meanOnCircle(hills, 10000.0f) > meanOnCircle(hills, 3500.0f));
+    CHECK(meanOnCircle(alps, 10000.0f) > meanOnCircle(alps, 3500.0f));
+    const horizon::Climate sea = horizon::climateOf("Alberta"), desert = horizon::climateOf("Morroc");
+    bool below = false, under = true;
+    for (int k = 0; k < 256; ++k) {
+        const float a = 6.2831853f * float(k) / 256.0f;
+        below = below || horizon::heightAt(sea, 1500.0f, 8000.0f * std::cos(a), 8000.0f * std::sin(a)) < 0.0f;
+        under = under && horizon::heightAt(desert, 1500.0f, 8000.0f * std::cos(a), 8000.0f * std::sin(a)) <
+                             desert.mountAmp + desert.hillAmp;
+    }
+    CHECK(below);
+    CHECK(under);
+}
+
+TEST(horizon_terrain_materials) {
+    const horizon::Climate alps = horizon::climateOf("Lutie");
+    CHECK(within(horizon::albedoAt(alps, 7000.0f, 300.0f, alps.snowLine + 400.0f, 0.9f), alps.snow, 0.1f));
+    CHECK(within(horizon::albedoAt(alps, 7000.0f, 300.0f, alps.snowLine + 400.0f, 0.4f), alps.rock, 0.15f));
+    const horizon::Climate sea = horizon::climateOf("Alberta");
+    const horizon::Rgb water = horizon::albedoAt(sea, 7000.0f, 300.0f, -30.0f, 1.0f);
+    CHECK(water.b > water.r);  // the sea is blue
+}
+
+TEST(horizon_terrain_march) {
+    const horizon::Climate hills = horizon::climateOf("Prontera");
+    const float pixel = 6.2831853f / 4096.0f;
+    const horizon::Hit ground = horizon::march(hills, 1500.0f, horizon::kEyeHeight, 1.0f, -0.02f, 0.0f, 128, pixel);
+    CHECK(ground.hit && ground.coverage == 1.0f && ground.distance > 1500.0f);
+    // the strip's top row is sky in every climate all round: no land cut flat by it
+    for (const char* region : kRegions) {
+        const horizon::Climate c = horizon::climateOf(region);
+        for (int k = 0; k < 32; ++k) {
+            const float a = 6.2831853f * float(k) / 32.0f;
+            const float flat = std::sqrt(1.0f - horizon::kRiseHigh * horizon::kRiseHigh);
+            const horizon::Hit top = horizon::march(c, 1500.0f, horizon::kEyeHeight, flat * std::cos(a),
+                                                    horizon::kRiseHigh, flat * std::sin(a), 128, pixel);
+            if (top.hit || top.coverage > 0.0f) std::printf("  %s: land at the top row, way %d\n", region, k);
+            CHECK(!top.hit && top.coverage == 0.0f);
+        }
+    }
 }
