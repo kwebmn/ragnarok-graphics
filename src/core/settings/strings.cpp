@@ -9308,14 +9308,14 @@ constexpr Entry kTexts[] = {
     {Text::ConnectionAutoRelogin, "Log in again after a network drop", "Повторний вхід після обриву зв'язку",
      "Повторный вход после обрыва связи"},
     {Text::ConnectionAutoReloginHint,
-     "When the connection to the map server breaks (the network, not a kick), the «Disconnected» box counts down 10 "
-     "seconds and the game logs in again by itself with the same login and character from «Полиця» - Esc cancels it. "
+     "When the connection to the map server breaks (the network, not a kick), the box about it counts down 10 "
+     "seconds and the game logs in again by itself with the same login and character from «Shelf» - Esc cancels it. "
      "Three times in ten minutes at most; not when someone logged in with your account elsewhere.",
-     "Коли зв'язок із сервером карти обривається (мережа, не кік), вікно «Disconnected» відлічує 10 секунд, і гра сама "
-     "входить знову тим самим логіном і персонажем з «Полиці» — Esc скасовує. Не більше трьох разів за десять хвилин; "
-     "не тоді, коли у ваш обліковий запис увійшли з іншого місця.",
-     "Когда связь с сервером карты обрывается (сеть, не кик), окно «Disconnected» отсчитывает 10 секунд, и игра сама "
-     "входит снова тем же логином и персонажем с «Полки» — Esc отменяет. Не больше трёх раз за десять минут; не "
+     "Коли зв'язок із сервером карти обривається (мережа, не кік), вікно про розрив відлічує 10 секунд, і гра сама "
+     "входить знову тим самим логіном і персонажем з «Полиця» — Esc скасовує. Не більше трьох разів за десять "
+     "хвилин; не тоді, коли у ваш обліковий запис увійшли з іншого місця.",
+     "Когда связь с сервером карты обрывается (сеть, не кик), окно о разрыве отсчитывает 10 секунд, и игра сама "
+     "входит снова тем же логином и персонажем с «Полка» — Esc отменяет. Не больше трёх раз за десять минут; не "
      "тогда, когда в вашу учётную запись вошли из другого места."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
