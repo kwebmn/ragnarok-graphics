@@ -14,6 +14,7 @@
 #include "core/config.hpp"
 #include "core/grf/grf.hpp"
 #include "core/layout.hpp"
+#include "core/read_ahead.hpp"
 #include "core/updates.hpp"
 #include "core/updates_exe.hpp"
 #include "win/entry_hook.hpp"
@@ -80,6 +81,7 @@ uint32_t g_paceReads = 0;
 double g_paceReadMs = 0.0;
 std::string g_paceSlowest;
 double g_paceSlowestMs = 0.0;
+std::vector<std::string> g_slowReads;  // 3.0.22-beta.2: the slow ones' names (core/read_ahead), the same thread's
 
 double qpcMs() {
     static const double perMs = [] {
@@ -100,6 +102,7 @@ void* readInTurn(GetDataFn fn, void* self, const char* name, uint32_t* size) {
     const double ms = qpcMs() - from;
     ++g_paceReads;
     g_paceReadMs += ms;
+    if (readahead::slow(ms) && name && g_slowReads.size() < 64) g_slowReads.emplace_back(name);
     if (ms > g_paceSlowestMs) {
         g_paceSlowestMs = ms;
         g_paceSlowest = name ? name : "?";
@@ -317,6 +320,12 @@ void takeFrameReads(framepace::GameFrame& frame) {
     g_paceReads = 0;
     g_paceReadMs = g_paceSlowestMs = 0.0;
     g_paceSlowest.clear();
+}
+
+std::vector<std::string> takeSlowReads() {
+    std::vector<std::string> out;
+    out.swap(g_slowReads);
+    return out;
 }
 
 }  // namespace uagfx::win

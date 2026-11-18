@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 
 #include "core/frame_pace.hpp"
 
@@ -19,5 +20,8 @@ bool readGameFile(const std::string& name, std::string& out);
 // 3.0.19-beta.51 (core/frame_pace): the game's archive reads on the calling thread since its last call - how many,
 // their time, the slowest; from now on that thread's reads are the ones counted (the game's, at its present)
 void takeFrameReads(framepace::GameFrame& frame);
+// 3.0.22-beta.2 (core/read_ahead): the game's slow archive reads on that thread since the last call (their names, 64
+// at most) - kept by map and read ahead at the next start and map (win/read_ahead)
+std::vector<std::string> takeSlowReads();
 
 }  // namespace uagfx::win

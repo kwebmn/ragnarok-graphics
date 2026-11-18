@@ -152,4 +152,37 @@ std::string DrawnTally::line() const {
     return line;
 }
 
+void Recent::add(const GameFrame& f, double atMs) {
+    frames_[next_] = f;
+    at_[next_] = atMs;
+    next_ = (next_ + 1) % kRecent;
+    count_ = std::min(count_ + 1, kRecent);
+}
+
+bool Recent::longestBetween(double fromMs, double toMs, GameFrame& longest, uint32_t& frames, uint32_t& reads,
+                            double& readMs) const {
+    frames = reads = 0;
+    readMs = 0.0;
+    for (size_t k = 0; k < count_; ++k) {
+        const size_t i = (next_ + kRecent - count_ + k) % kRecent;
+        if (at_[i] < fromMs || at_[i] > toMs) continue;
+        if (!frames || frames_[i].ms() > longest.ms()) longest = frames_[i];
+        ++frames;
+        reads += frames_[i].reads;
+        readMs += frames_[i].readMs;
+    }
+    return frames > 0;
+}
+
+std::string eventWords(const GameFrame& longest, uint32_t frames, uint32_t reads, double readMs, double spanS) {
+    std::string out = format("in the %.1f s round it %u frames, the longest %.1f ms - the game's own %.1f", spanS,
+                             frames, longest.ms(), longest.made);
+    if (longest.ran >= 0.0) out += format(" (ran %.1f)", longest.ran);
+    out += format(", ours %.1f, the renderer's %.1f; ", longest.own, longest.renderer);
+    if (!reads) return out + "no archive reads";
+    out += format("archive reads %u (%.1f ms)", reads, readMs);
+    if (!longest.slowest.empty()) out += format(", the slowest %s %.1f ms", longest.slowest.c_str(), longest.slowestMs);
+    return out;
+}
+
 }  // namespace uagfx::framepace

@@ -1,3 +1,4 @@
+#include "win/frame_recent.hpp"
 #include "win/npc_talk.hpp"
 
 #include <windowsx.h>
@@ -95,6 +96,8 @@ struct State {
     WindowShadow shadow;
     WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
     bool on = false, shown = false;
+    ULONGLONG openedAt = 0;  // 3.0.22-beta.2: the talk's opening - its frames told 1.5 s later
+    int openTold = 0;
     // 3.0.18-beta.238 (the tester: «пробивається старе біле окошко, бо дальше змінюється на нове»): ours can show
     // (on, a game window, its scale and size known) - the game's text and menu windows held from their first draw
     bool canShow = false;
@@ -388,6 +391,7 @@ static void frameInner(HWND game, bool on, bool remember, unsigned codePage, dou
         LOG_INFO("npc: the talk in the interface's window - %zu line(s), %zu option(s), the NPC %u",
                  s.talk.lines.size(), s.talk.options.size(), s.npc);
     }
+    if (!s.shown && s.openTold < 20) s.openedAt = GetTickCount64();
     s.shown = true;
     block(s, game);
 }
@@ -472,6 +476,13 @@ static void liveFrame(State& s) {
 void frame(HWND game, bool on, bool remember, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, remember, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    // 3.0.22-beta.2 (the owner: «когда нажимаю на нпс, оно какбуто подлагивает»): the frames round the talk's opening
+    if (s.openedAt && GetTickCount64() >= s.openedAt + 1500) {
+        if (const std::string w = framerecent::around(s.openedAt, 1500); !w.empty())
+            LOG_INFO("npc: the talk's opening - %s", w.c_str());
+        s.openedAt = 0;
+        ++s.openTold;
+    }
     s.canShow = on && game && k > 0 && targetWidth > 0 && targetHeight > 0;  // 3.0.18-beta.238
     liveFrame(s);  // the old edition (the sheet) gone: the live window alone
 }

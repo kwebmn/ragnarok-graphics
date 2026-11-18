@@ -149,3 +149,51 @@ TEST(frame_pace_renderer_side_tells_how_much_its_drawing_ran_and_the_card) {
     CHECK(has(line, "its drawing ran 24 % of its time in them (99 % in the others), the card's slot 0.1 ms a frame "
                     "in them"));
 }
+
+// 3.0.22-beta.2 (the owner: «когда нажимаю на нпс, оно какбуто подлагивает»): the last frames kept with their times -
+// the longest round an event (an NPC's talk opening) told with its parts
+TEST(frame_pace_the_longest_frame_round_an_event) {
+    framepace::Recent r;
+    framepace::GameFrame f;
+    for (int i = 0; i < 100; ++i) {
+        f = framepace::GameFrame{};
+        f.made = 10.0;
+        f.own = 2.0;
+        if (i == 60) {
+            f.made = 90.0;  // the talk's frame
+            f.reads = 3;
+            f.readMs = 40.0;
+            f.slowest = "data\\texture\\ui\\btn_ok.bmp";
+            f.slowestMs = 25.0;
+        }
+        r.add(f, 1000.0 + i * 16.0);
+    }
+    framepace::GameFrame longest;
+    uint32_t frames = 0, reads = 0;
+    double readMs = 0.0;
+    CHECK(r.longestBetween(1000.0 + 50 * 16.0, 1000.0 + 70 * 16.0, longest, frames, reads, readMs));
+    CHECK_EQ(frames, 21u);
+    CHECK(longest.made == 90.0 && longest.slowest == "data\\texture\\ui\\btn_ok.bmp");
+    CHECK(reads == 3u && readMs == 40.0);
+    CHECK(!r.longestBetween(0.0, 500.0, longest, frames, reads, readMs));  // none then
+    for (int i = 0; i < int(framepace::kRecent) + 10; ++i) r.add(f, 5000.0 + i * 16.0);
+    CHECK(!r.longestBetween(1000.0 + 50 * 16.0, 1000.0 + 70 * 16.0, longest, frames, reads, readMs));  // gone
+}
+
+TEST(frame_pace_an_events_words) {
+    framepace::GameFrame f;
+    f.made = 70.0;
+    f.ran = 52.0;
+    f.own = 9.0;
+    f.renderer = 6.0;
+    f.slowest = "data\\texture\\ui\\btn_ok.bmp";
+    f.slowestMs = 25.0;
+    CHECK_EQ(framepace::eventWords(f, 180, 4, 41.0, 3.0),
+             std::string("in the 3.0 s round it 180 frames, the longest 85.0 ms - the game's own 70.0 (ran 52.0), "
+                         "ours 9.0, the renderer's 6.0; archive reads 4 (41.0 ms), the slowest "
+                         "data\\texture\\ui\\btn_ok.bmp 25.0 ms"));
+    f.ran = -1.0;
+    CHECK_EQ(framepace::eventWords(f, 10, 0, 0.0, 3.0),
+             std::string("in the 3.0 s round it 10 frames, the longest 85.0 ms - the game's own 70.0, ours 9.0, "
+                         "the renderer's 6.0; no archive reads"));
+}

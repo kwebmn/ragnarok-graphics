@@ -55,6 +55,26 @@ private:
     double ran_[2] = {}, made_[2] = {};  // the others, the long ones
 };
 
+// 3.0.22-beta.2 (the owner: «когда нажимаю на нпс, оно какбуто подлагивает»): the game's last kRecent frames with
+// the times they ended - the longest round an event (an NPC's talk opening) told with its parts
+constexpr size_t kRecent = 240;
+class Recent {
+public:
+    void add(const GameFrame& f, double atMs);
+    // the longest of the frames that ended in [fromMs, toMs], how many there were and their archive reads; false none
+    bool longestBetween(double fromMs, double toMs, GameFrame& longest, uint32_t& frames, uint32_t& reads,
+                        double& readMs) const;
+
+private:
+    GameFrame frames_[kRecent];
+    double at_[kRecent] = {};
+    size_t next_ = 0, count_ = 0;
+};
+
+// "in the 3.0 s round it 180 frames, the longest 85.0 ms - the game's own 70.0 (ran 52.0), ours 9.0, the renderer's
+// 6.0; archive reads 4 (41.0 ms), the slowest x.bmp 25.0 ms" - an event's frames for the log
+std::string eventWords(const GameFrame& longest, uint32_t frames, uint32_t reads, double readMs, double spanS);
+
 // The renderer's side, a present to the next
 struct DrawnFrame {
     double ms = 0.0;

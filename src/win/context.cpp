@@ -1,5 +1,7 @@
+#include "win/frame_recent.hpp"
 #include "win/key_walk.hpp"
 #include "win/present_watch.hpp"
+#include "win/read_ahead.hpp"
 #include "win/threat_arc.hpp"
 #include "win/exe_hot.hpp"
 #include "win/model_census.hpp"
@@ -1538,6 +1540,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     testFrame(foreground);  // 3.0.5-beta.6: «Тест графіки» - its set is effects() below
     keepFrameRate(config, window);
     g_parts.mark("keepFrameRate", nowMs());
+    readaheadwin::frame(map_);  // 3.0.22-beta.2: the slow reads kept by map, a map's read ahead off this thread
     // 3.0.18-beta.186: [frames] light_skills - the game's light skill effects when the frames run short in a crowd
     if (const int fps = lightskillswin::frame(config.lightSkills, keepAim(config), foreground, map_); fps >= 0)
         sayOnScreen(wideOf(settings::fmt(settings::tr(language(), settings::Text::LightSkillsOnNote),
@@ -2187,6 +2190,7 @@ void Context::notePace(double from, double rendererMs, bool counts) {
         const gpu::RunMark& b = paceRunFrom_;
         if (a.tsc && b.tsc > a.tsc && b.cycles >= a.cycles)
             f.ran = framepace::ranOf(f.made, b.cycles - a.cycles, b.tsc - a.tsc);
+        framerecent::add(f);  // 3.0.22-beta.2: an NPC's talk opening told by its frames
         pace_.add(f);
     }
     paceSkipped_ = !counts;

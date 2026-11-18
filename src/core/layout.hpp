@@ -52,6 +52,8 @@ constexpr const char* kStartFailures = "uaro-graphics\\cache\\start-failures.txt
 constexpr const char* kSettingsHint = "uaro-graphics\\cache\\settings-hint.txt";
 // 3.0.21-beta.13: the key hints shown and learned (core/key_hints Seen)
 constexpr const char* kKeyHints = "uaro-graphics\\cache\\key-hints.txt";
+// 3.0.22-beta.2: the game's slow archive reads by map (core/read_ahead) - read ahead at the next start and map
+constexpr const char* kReadAhead = "uaro-graphics\\cache\\read-ahead.txt";
 // 3.0.17-beta.10: the version the player saw «Гра» with - none: the first start's cards, another: «Оновлено до»
 constexpr const char* kSeenVersion = "uaro-graphics\\cache\\seen-version.txt";
 // 3.0.17-beta.7: [debug] record_scene's file (core/scene_record)
