@@ -19,6 +19,8 @@ hills (core/outskirts, D3D12 only). Both renderers draw the sky (haze.cpp skyPas
   mountains from formulas; no ready-made pictures, no AI art.
 - Approach 1 of three (below): the card bakes a 360° panorama of procedural terrain when a region is entered; the sky
   lights it every frame.
+- The CPU previews (https://claude.ai/artifact/Sze9VhwrhVwx5JQND6fFUW - Prontera by day and at sunset, Lutie, Morroc,
+  Alberta): «очень неплохо». It must follow the day and the night. On by default in the 3D view: «сразу включать».
 
 ## Approaches (GPU-drawn)
 
@@ -62,7 +64,7 @@ hills (core/outskirts, D3D12 only). Both renderers draw the sky (haze.cpp skyPas
 
 - Shaders compile with FXC on players' PCs: check with `dxc -HV 2018`; loops with fixed upper bounds ([loop]).
 - Direct3D 11 feature level 11_0 (pixel shaders 5.0; no compute needed - the bake is a pixel pass into the strip).
-- New visual effects ship OFF by default (the owner's restrained-look rule) - see Open questions.
+- New visual effects ship off by default (the restrained-look rule) - the owner made this one ON by default.
 - Settings: [view3d] section, Alt+O «3D-режим» page, strings uk/ru/en; the D3D12 renderer is uaro-render64.exe: a new
   effects field crosses the bridge (remote.cpp writes, serve.cpp reads, protocol bumped) as `skyRanges` did.
 - Each change a beta (3.0.22-beta.N); builds `nice -n 19 ionice -c3`, `-j4`.
@@ -113,7 +115,7 @@ hills (core/outskirts, D3D12 only). Both renderers draw the sky (haze.cpp skyPas
 ### The setting
 
 - `[view3d] panorama` - «Панорама обрію» / «Панорама горизонта» / «Horizon panorama», a hint saying what it draws and
-  that the card draws it at a region's entry. Default: off (the rule) unless the owner says otherwise. A change applies
+  that the card draws it at a region's entry. Default: ON (the owner's «сразу включать»). A change applies
   at once (live config); `[view3d] ranges` stays for when it is off.
 - Log: «horizon: <map> - the <region> climate baked (WxH, N steps, N frames, N ms on the card)» / «... none: <why>».
 
@@ -123,6 +125,9 @@ hills (core/outskirts, D3D12 only). Both renderers draw the sky (haze.cpp skyPas
 2. Direct3D 12: the bake pass, the strip, the sky's sampling and light, the setting over the bridge, the log.
 3. Direct3D 11: the same; the weak-card level.
 4. Tuning by region with the owner's screenshots; the water's reflection; seasons if wanted.
+5. (Proposed to the owner 19.11) The 3D sky's sun moves with the time of day - low at dawn and dusk, so it sets behind
+   the ridges as in the sunset preview; today the sun is the map's fixed light (`mapSun`). The panorama's baked
+   shadows are then re-baked in the background when the sun has moved a few degrees.
 
 ## Left to the builder
 
@@ -133,4 +138,4 @@ hills (core/outskirts, D3D12 only). Both renderers draw the sky (haze.cpp skyPas
 
 ## Open questions (the owner's)
 
-- On by default in the 3D view, or off as the rule says?
+- None open: default ON decided 19.11. The moving sun (phase 5) was proposed, not yet answered.
