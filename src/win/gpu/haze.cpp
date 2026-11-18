@@ -95,6 +95,7 @@ bool Renderer::Impl::applySkyFill() {
 
 bool Renderer::Impl::skyPass(bool fill) {
     if (!ensureScene("3D sky")) return true;
+    if (fill) horizonFrame();  // 3.0.22-beta.11: the horizon's strip - its bake's next slice (horizon.cpp)
     const UINT n = upscale ? 1 : samples;
     ID3D12PipelineState* pso = fill ? alphaPipeline(sky3dPs, sky3dPipelines, n, "3D sky")
                                     : alphaPipeline(sky3dHazePs, sky3dHazePipelines, n, "3D sky's haze");
@@ -195,7 +196,17 @@ bool Renderer::Impl::skyPass(bool fill) {
                                                                                                     : "none",
                  camera::fovNow());
     }
-    return worldPass(pso, w, h, c, rockT != kNoSrv ? rockT : sceneDepthSrv, true, vaultT);
+    UINT t0 = rockT != kNoSrv ? rockT : sceneDepthSrv, t1 = vaultT;
+    // 3.0.22-beta.11 (core/horizon): the region's land drawn by the card - under the open sky t0 and t1 are free
+    if (!vault && horizonShown) {
+        for (int k = 0; k < 2; ++k)
+            transition(horizonTex[k], horizonState[k], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        t1 = horizonSrv[0];
+        t0 = horizonSrv[1];
+        c.uiPixels[2] = float(skyPartsNow() | view3d::kPanoramaPart);
+        c.hole[0] = horizonFade;
+    }
+    return worldPass(pso, w, h, c, t0, true, t1);
 }
 
 // 3.0.20-beta.57 (R-J3GKD9): the room the player stands in - by the place the game's camera looks at (the eye where

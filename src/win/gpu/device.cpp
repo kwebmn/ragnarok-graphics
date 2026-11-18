@@ -2054,6 +2054,11 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : halfAddPipelines) releaseCom(p);
     releaseCom(shaftsTarget);
     releaseCom(shaftsPs);
+    for (ID3D12Resource*& t : horizonTex) releaseCom(t);  // 3.0.22-beta.11: baked anew on the next device
+    releaseCom(horizonBakePipeline);
+    horizonBake = horizon::Bake{};
+    horizonW = horizonH = 0;
+    horizonShown = horizonFailed = false;
     for (ID3D12PipelineState*& p : embersPipelines) releaseCom(p);  // 0.82
     releaseCom(embersPs);
     releaseCom(embersData);
@@ -2880,6 +2885,7 @@ bool Renderer::create(std::string& error) {
     for (UINT& srv : m.bloomSrv) srv = m.allocSrv();  // 0.78
     m.floorSrv = m.allocSrv();  // 0.86
     m.shaftsSrv = m.allocSrv();  // 2.5.7
+    for (UINT& srv : m.horizonSrv) srv = m.allocSrv();  // 3.0.22-beta.11
     if (!m.createPipelines(error)) return false;
 
     // The texture bound wherever the client binds none: D3D7 reads it as white (states.md §5).

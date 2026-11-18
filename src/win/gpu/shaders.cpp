@@ -1668,7 +1668,7 @@ HzHit hzMarch(float3 dir, int steps, float pixelAngle) {
         }
         if (dy < 0.0015 * t) {
             float a = prev, b = t;
-            [unroll] for (int k = 0; k < 6; ++k) {
+            [loop] for (int k = 0; k < 6; ++k) {  // a loop: the height's code once, not six times
                 float mid = 0.5 * (a + b);
                 if (hzEye + dir.y * mid - hzHeightAt(dir.xz * mid) < 0.0) b = mid;
                 else a = mid;

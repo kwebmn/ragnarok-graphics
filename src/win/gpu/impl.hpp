@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "core/cave_vault.hpp"
+#include "core/horizon.hpp"
 #include "core/point_shadows.hpp"
 #include "core/pick.hpp"
 #include "core/effect_costs.hpp"
@@ -147,7 +148,8 @@ constexpr UINT kRtvGrassMask = kRtvShafts + 1;  // 3.0.5-beta.12: where a blade'
 constexpr UINT kRtvGrassTiles = kRtvGrassMask + 1;  // 3.0.5-beta.20: the picture's 8 x 8 tiles with a marked root
 constexpr UINT kRtvAoDepth = kRtvGrassTiles + 1;  // 3.0.5-beta.21: the soft shadows' pixels' view depths
 constexpr UINT kRtvGrassRoots = kRtvAoDepth + 1;  // 3.0.20-beta.47: the 3D view's grass's roots (meadow_roots_ps)
-constexpr UINT kRtvCount = kRtvGrassRoots + 1;
+constexpr UINT kRtvHorizon = kRtvGrassRoots + 1;  // 3.0.22-beta.11: the horizon's strip, two targets (horizon.cpp)
+constexpr UINT kRtvCount = kRtvHorizon + 2;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 constexpr UINT kDsvMirror = 3;  // 1.16: the mirrored world's depth
@@ -670,6 +672,19 @@ struct Renderer::Impl {
     ID3D12PipelineState* halfAddPipelines[4] = {};
     ID3D12Resource* shaftsTarget = nullptr;
     D3D12_RESOURCE_STATES shaftsState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    // 3.0.22-beta.11 (core/horizon; horizon.cpp): the horizon panorama's strip - [0] its land's colour and coverage
+    // (the sky passes' t1), [1] the normal, the sun's shadow and the haze (t0) - and its bake's progress
+    ID3D12Resource* horizonTex[2] = {nullptr, nullptr};
+    D3D12_RESOURCE_STATES horizonState[2] = {D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET};
+    UINT horizonSrv[2] = {0, 0};
+    int horizonW = 0, horizonH = 0;
+    ID3D12PipelineState* horizonBakePipeline = nullptr;
+    horizon::Bake horizonBake;
+    bool horizonShown = false, horizonFailed = false;
+    float horizonFade = 0.0f;
+    void horizonFrame();  // the sky's fill pass, first: the bake's next slice; whether the strip is shown now
+    bool horizonTextures(const horizon::Level& level);
+    bool horizonBakeSlice(int row0, int row1);  // false: the GPU lost
     UINT shaftsSrv = 0;
     int shaftsWidth = 0, shaftsHeight = 0;
     bool shaftsDone = false;
