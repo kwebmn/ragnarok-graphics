@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.9 — what's new · 2026-11-18
+
+A fix for the debuffs' red outline in «Buffs on the character».
+
+- **A debuff in an extra red frame** (Provoke, for one): a debuff's icon had a second red frame drawn round its time «7», wider than the icon itself, and with the names shown round its name too. Now the red outline goes round the icon alone; the time and the name are plain red text.
+
 # uaRO Graphics 3.0.22-beta.8 — what's new · 2026-11-18
 
 Diagnostics for two rare problems: a picture that freezes right after entering a map, and a square around a character under Assumptio.
