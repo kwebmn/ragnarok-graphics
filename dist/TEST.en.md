@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.22-beta.27 — what's new · 2026-11-20
+
+«Guild»: the party, positions, the window with no guild.
+
+- **«Members» → the member's card**: «Invite to the party» - an invite to one in the game; the master gets «Positions and expelling...»: the game's own members' window opens, where positions are changed and members expelled.
+- **Alt+G with no guild**: the window tells how to join (ask a master or an officer) and how to make one (an Emperium and `/guild Name`). Alt+G again, ✕ or Esc closes it.
+
 # uaRO Graphics 3.0.22-beta.26 — what's new · 2026-11-19
 
 The new «Guild» window.
