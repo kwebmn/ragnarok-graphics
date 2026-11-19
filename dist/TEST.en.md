@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.20 — what's new · 2026-11-19
+
+Karst towers on the horizon of Louyang and Kunlun.
+
+- **No more «stairs» on the horizon**: on the Louyang and Kunlun maps the panorama drew wide plateaus with white walls stacked in steps. Now there are separate haystack towers, as in Guilin: rounded tops, steep sides overgrown with green, grey rock here and there; in clusters with plain between them, most of them low, a few tall.
+
 # uaRO Graphics 3.0.22-beta.19 — what's new · 2026-11-19
 
 Grass off the cobbles, the smog over the horizon too.
