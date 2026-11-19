@@ -3150,11 +3150,21 @@ float4 sky3d_haze_ps(PresentOut i) : SV_Target {
     [branch] if (!vault) {
         float3 way = normalize(seen.x * float3(r0, r1, r2) + seen.y * float3(r3, r4, r5) + seen.z * float3(r6, r7, r8));
         float night = saturate(twinX);
-        // 3.0.22-beta.13 (R-XHUSQB «дымка, или что-то белое», R-D4PY2Y «чего домик в дали белый?»): the panorama's
-        // land in it too - what is far fades into the land behind it, not into the white of the sky over that land;
-        // till then short of the sight's end the haze went white, past it the land's green, a pale band between
-        float soft = float((uint(uiPixels.z + 0.5) & (4u | 128u)) | 8u);  // the dawn's glow, the panorama; no stars,
-        tone = skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, soft, holeX);  // moon, sun's disc
+        float soft = float((uint(uiPixels.z + 0.5) & 4u) | 8u);  // the dawn's glow; no stars, moon, sun's disc
+        // 3.0.22-beta.21 (the owner's R-CRTNNN, payon: «какие-то квадраты, не поля»): the air's colour - the sky's
+        // along the way, a shade darker and bluer under the horizon (core horizon::airOf, the panorama's own haze)
+        tone = skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, soft, 0.0) *
+               lerp(float3(1.0, 1.0, 1.0), float3(0.80, 0.86, 0.94), smoothstep(0.0, -0.02, -way.y));
+        // 3.0.22-beta.13 (R-XHUSQB «дымка, или что-то белое», R-D4PY2Y «чего домик в дали белый?»): the panorama's land
+        // in it - what is far fades into the land behind it; 3.0.22-beta.21: from 0.6 of the reach on alone, where the
+        // haze nears whole (beta.13 took it all the way: over flat land its colour along each way drew fans from the
+        // eye)
+        [branch] if ((uint(uiPixels.z + 0.5) & 128u) != 0u) {
+            float landShare = smoothstep(reach * 0.6, reach, dist);
+            [branch] if (landShare > 0.0)
+                tone = lerp(tone, skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, soft + 128.0, holeX),
+                            landShare);
+        }
         [branch] if (whole > 0.0)  // 3.0.22-beta.11: holeX the panorama's fade
             tone = lerp(tone, skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, uiPixels.z, holeX), whole);
         tone = gameFogOver(tone, -way.y);  // 3.0.22-beta.19
