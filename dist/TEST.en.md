@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.22-beta.19 — what's new · 2026-11-19
+
+Grass off the cobbles, the smog over the horizon too.
+
+- **No grass on cobbles**: on Hugel's cobbles the grass grew in the joints between the stones and flickered a little - the moss in the joints was green enough for the old rule. Now a cell that is mostly pale stone counts as paving: grass grows on it only where it is as green as a lawn's edge. Forest floors and meadows are as before.
+- **The game's fog over the horizon too**: in the 3D view, when a map is in the game's own fog (like Einbroch's smog), the sky near the horizon and the panorama are now in the same fog - no clear green strip through the gate any more.
+
 # uaRO Graphics 3.0.22-beta.18 — what's new · 2026-11-19
 
 The compare key shows the old graphics for real.
