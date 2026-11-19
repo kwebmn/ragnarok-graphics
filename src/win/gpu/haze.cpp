@@ -67,6 +67,13 @@ bool Renderer::Impl::applyMist() {
     return worldPass(pso, w, h, c, sceneDepthSrv, true);
 }
 
+bool Renderer::Impl::skySun(float toSun[3]) const {
+    float way[3];
+    if (!mapSun(way)) return false;
+    view3d::skySun(effects.dayCycle ? effects.dayNow : -1, way, toSun);
+    return true;
+}
+
 int Renderer::Impl::skyPartsNow() const {
     // a map hung in the sky: by its name, or by its ground's file where the own ground was read (no land past its
     // edges made for it); the sea past wet edges likewise
@@ -75,7 +82,8 @@ int Renderer::Impl::skyPartsNow() const {
     const bool sea = g && !g->seaFrame.empty();
     return view3d::skyParts(effects.skyStars, effects.skyMoon, effects.skyDawn,
                             view3d::rangesFor(effects.skyRanges, mapOutdoors, hung, sea, mapPlace.sand,
-                                              mapPlace.snow));
+                                              mapPlace.snow),
+                            effects.dayCycle);  // 3.0.22-beta.15: the moon opposite the moving sun
 }
 
 // 3.0.19-beta.6 (the 3D view, core/view3d): the game's camera from behind or from the eyes sees past all the game ever
@@ -122,7 +130,7 @@ bool Renderer::Impl::skyPass(bool fill) {
     std::copy(sky.horizon, sky.horizon + 3, c.sourceRect);
     c.sourceRect[3] = view3d::hazeReach(sky.reach, camera::sightNow());  // 3.0.19-beta.24: whole at the sight
     float toSun[3] = {0.0f, 0.0f, 0.0f};
-    if (!vault && mapSun(toSun)) std::copy(toSun, toSun + 3, c.sourceClamp);
+    if (!vault && skySun(toSun)) std::copy(toSun, toSun + 3, c.sourceClamp);  // 3.0.22-beta.15: by the clock
     c.twin[0] = night;
     c.twin[1] = vault ? 1.0f : 0.0f;
     c.sharpen = waterTime();

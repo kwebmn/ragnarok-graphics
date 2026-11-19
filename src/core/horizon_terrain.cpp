@@ -253,6 +253,18 @@ LightSet lightAt(float night) {
     return {mix(a.sun, b.sun, t), mix(a.ambient, b.ambient, t)};
 }
 
+LightSet lightAt(float night, float rise) {
+    LightSet l = lightAt(night);
+    const float low = (1.0f - clamp01(night)) * smooth(0.30f, 0.05f, rise);
+    if (low > 0.0f) {
+        const LightSet warm = lightAt(0.5f);
+        l.sun = mix(l.sun, warm.sun, low);
+        l.ambient = mix(l.ambient, warm.ambient, 0.5f * low);
+    }
+    l.sun = scaled(l.sun, smooth(-0.02f, 0.10f, rise));
+    return l;
+}
+
 Rgb toDisplay(const Rgb& linear) {
     const auto curve = [](float v) {
         const float x = std::max(0.0f, v) * kExposure;

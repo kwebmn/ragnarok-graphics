@@ -1300,6 +1300,9 @@ struct Renderer::Impl {
     // 2.1.3: the map's own sun (its file's light: the way its painted shadows fall), the way to it in the world (up
     // along -y); false when the file or the maps' axes are not known
     bool mapSun(float toSun[3]) const;
+    // 3.0.22-beta.15: the 3D sky's sun - the map's own, round the day by the clock while the sun moves by it ([effects]
+    // day_cycle; view3d::skySun) - the sky passes, the 3D view's water, the panorama
+    bool skySun(float toSun[3]) const;
     float sunHeight() const;  // 2.1.3: the sun above the horizon (radians) - the day's, or the map's without the cycle
     bool heatWanted() const { return effects.heat && effects.heatStrength > 0 && heatPs; }
     // 3.0.16-beta.37: [effects] hallucination_wave - how much the picture sways now (0-1): in over two seconds, out

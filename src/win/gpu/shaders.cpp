@@ -1742,9 +1742,20 @@ void hzLightAt(float night, out float3 sun, out float3 ambient) {  // core horiz
     sun = n < 0.5 ? lerp(daySun, duskSun, t) : lerp(duskSun, nightSun, t);
     ambient = n < 0.5 ? lerp(dayAmb, duskAmb, t) : lerp(duskAmb, nightAmb, t);
 }
+// 3.0.22-beta.15: core horizon::lightAt(night, rise) - a low day's sun warmer, none of its own at the horizon and under
+void hzLightFor(float night, float rise, out float3 sun, out float3 ambient) {
+    hzLightAt(night, sun, ambient);
+    float low = (1.0 - saturate(night)) * hzSmooth(0.30, 0.05, rise);
+    float3 warmSun, warmAmbient;
+    hzLightAt(0.5, warmSun, warmAmbient);
+    sun = lerp(sun, warmSun, low);
+    ambient = lerp(ambient, warmAmbient, 0.5 * low);
+    sun *= hzSmooth(-0.02, 0.10, rise);
+}
 // The panorama over the sky along dir (the world's, y down), its land lit by the night and the map's sun, its feet
-// into the horizon's colour by the baked haze, faded in by `fade` once its bake is done
-float3 skyPanorama(float3 sky, float3 dir, float3 horizon, float night, float3 toSun, float fade) {
+// into the horizon's colour by the baked haze, faded in by `fade` once its bake is done; 3.0.22-beta.15 `sunMoves`
+// (view3d::kSunMovesPart): the sun under the horizon, the moon opposite it lights the land
+float3 skyPanorama(float3 sky, float3 dir, float3 horizon, float night, float3 toSun, float fade, bool sunMoves) {
     float rise = -dir.y;
     float v = (hzRiseHigh - rise) / (hzRiseHigh - hzRiseLow);
     if (fade <= 0.0 || v < 0.0 || v > 1.0) return sky;
@@ -1762,9 +1773,10 @@ float3 skyPanorama(float3 sky, float3 dir, float3 horizon, float night, float3 t
     float3 n = float3(detail.r * 2.0 - 1.0, 0.0, detail.g * 2.0 - 1.0);
     n.y = sqrt(saturate(1.0 - n.x * n.x - n.z * n.z));
     bool sunKnown = dot(toSun, toSun) > 0.25;
-    float3 toward = sunKnown ? normalize(float3(toSun.x, -toSun.y, toSun.z)) : normalize(float3(0.5, 0.7, 0.5));
+    float3 light = sunMoves && toSun.y > 0.0 ? -toSun : toSun;  // core view3d::lightWay
+    float3 toward = sunKnown ? normalize(float3(light.x, -light.y, light.z)) : normalize(float3(0.5, 0.7, 0.5));
     float3 sun, ambient;
-    hzLightAt(night, sun, ambient);
+    hzLightFor(night, toward.y, sun, ambient);  // toward up: its y the sine of the light's height
     float3 lit = albedo * (ambient * (0.55 + 0.45 * n.y) + sun * max(dot(n, toward), 0.0) * saturate(detail.b));
     float3 shown = lerp(hzDisplay(lit), horizon, saturate(detail.a));
     return lerp(sky, shown, cover * fade);
@@ -1778,6 +1790,10 @@ float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, 
     bool sunKnown = dot(toSun, toSun) > 0.25;
     float3 sunWay = sunKnown ? normalize(toSun) : float3(0.0, -1.0, 0.0);
     float sunUp = saturate(dot(dir, sunWay));
+    // 3.0.22-beta.15 (256, view3d::kSunMovesPart): the sun moving by the clock, the moon stands opposite it - till
+    // then (and with the sun still) both where the map's light comes from
+    float3 moonWay = (has & 256u) != 0u ? -sunWay : sunWay;
+    float moonUp = saturate(dot(dir, moonWay));
     // the glow of dawn and dusk: the night half come (4 n (1 - n)), or the day's sun low over the horizon
     float glow = 0.0;
     if ((has & 4u) != 0u) {
@@ -1821,12 +1837,12 @@ float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, 
         float sunDisc = (has & 8u) != 0u ? 0.0 : pow(sunUp, 900.0) * 5.0;
         sky += sunLight * (sunDisc + pow(sunUp, 24.0) * 0.35 + pow(sunUp, 4.0) * 0.08);
         if ((has & 2u) != 0u && night > 0.02) {  // the moon: a disc some 2.6 degrees across, darker seas on it
-            float disc = smoothstep(0.99970, 0.99978, dot(dir, sunWay));
-            float3 aside = normalize(cross(sunWay, float3(0.3, 0.1, 0.9)));
-            float2 on = float2(dot(dir, aside), dot(dir, cross(sunWay, aside))) * 70.0;
+            float disc = smoothstep(0.99970, 0.99978, dot(dir, moonWay));
+            float3 aside = normalize(cross(moonWay, float3(0.3, 0.1, 0.9)));
+            float2 on = float2(dot(dir, aside), dot(dir, cross(moonWay, aside))) * 70.0;
             float3 moon = float3(0.90, 0.93, 1.0) * (0.78 + 0.22 * valueNoise(on + 4.3));
             sky = lerp(sky, moon, disc * night);
-            sky += float3(0.55, 0.62, 0.80) * ((pow(sunUp, 220.0) * 0.30 + pow(sunUp, 14.0) * 0.07) * night);
+            sky += float3(0.55, 0.62, 0.80) * ((pow(moonUp, 220.0) * 0.30 + pow(moonUp, 14.0) * 0.07) * night);
         }
     }
     // a thin veil high up, slower than the clouds under it
@@ -1835,7 +1851,8 @@ float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, 
     cloud = lerp(cloud, cloud * float3(1.12, 0.86, 0.72), glow * 0.5);  // at dawn and dusk warm
     cloud += sunLight * (pow(sunUp, 6.0) * 0.18);                       // lit from the sun's side
     cloud = lerp(cloud, horizon * 0.45, night * 0.85);
-    if ((has & 2u) != 0u && sunKnown) cloud += float3(0.16, 0.18, 0.26) * (pow(sunUp, 10.0) * night);  // the moon's rim
+    // the moon's rim
+    if ((has & 2u) != 0u && sunKnown) cloud += float3(0.16, 0.18, 0.26) * (pow(moonUp, 10.0) * night);
     float3 whole = lerp(sky, cloud, cover * 0.85);
     // 3.0.20-beta.72: the far ranges before it all, along the horizon alone (their highest crest 0.107 up)
     float3 shown = whole;
@@ -1844,7 +1861,7 @@ float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, 
     // 3.0.22-beta.11: the region's land drawn by the card (128, view3d::kPanoramaPart) - the ranges fading out as it
     // fades in
     [branch] if ((has & 128u) != 0u)
-        shown = skyPanorama(lerp(shown, whole, fade), dir, horizon, night, toSun, fade);
+        shown = skyPanorama(lerp(shown, whole, fade), dir, horizon, night, toSun, fade, (has & 256u) != 0u);
     return shown;
 }
 

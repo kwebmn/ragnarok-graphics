@@ -243,3 +243,52 @@ TEST(horizon_sea_shines_toward_the_horizon) {
     CHECK(horizon::seaShine(-0.01f) > horizon::seaShine(-0.03f));
     CHECK(horizon::seaShine(0.02f) == horizon::seaShine(-0.02f));
 }
+
+// 3.0.22-beta.15 (the owner 19.11 «можно» - the sun moving by the clock): the sun moved on more than a degree - the
+// strip's shadows drawn again slice by slice while it stays shown (no fade, no new textures); less than a degree, or
+// while they are being drawn, nothing new till they are done; the weak level draws no shadows, the sun nothing there
+TEST(horizon_bake_relights_as_the_sun_moves) {
+    horizon::Bake b;
+    const horizon::Level l = horizon::levelForCard(2);  // 64 frames of 6 rows
+    const horizon::Key k{"Prontera", {0.5f, -0.7f, 0.5f}, false, 1000.0f};
+    for (int i = 0; i < 64; ++i) horizon::step(b, k, l, uint64_t(i));
+    CHECK(b.ready);
+    horizon::Key small = k;
+    small.sun[0] += 0.01f;  // half a degree
+    const horizon::Slice none = horizon::step(b, small, l, 4000);
+    CHECK(!none.restart && !none.relight && none.row1 <= none.row0);
+    horizon::Key m = k;
+    m.sun[0] = 0.6f;
+    const horizon::Slice s = horizon::step(b, m, l, 5000);
+    CHECK(!s.restart && s.relight && s.row0 == 0 && s.row1 == 6 && !s.last);
+    CHECK(b.ready && horizon::fadeOf(b, 5000) == 1.0f);
+    horizon::Key again = m;
+    again.sun[2] = 0.3f;  // on again while its shadows are drawn: those finished first
+    horizon::Slice t = horizon::step(b, again, l, 5001);
+    CHECK(t.relight && t.row0 == 6 && !t.restart);
+    for (int i = 2; i < 64; ++i) t = horizon::step(b, again, l, 5000 + uint64_t(i));
+    CHECK(t.last && t.relight && b.ready && t.row1 == 384 && b.frames == 64);  // the first bake's frames kept
+    const horizon::Slice next = horizon::step(b, again, l, 6000);  // then for the sun as it stands now
+    CHECK(next.relight && next.row0 == 0);
+    horizon::Bake w;
+    const horizon::Level weak = horizon::levelForCard(1);
+    for (int i = 0; i < 24; ++i) horizon::step(w, k, weak, uint64_t(i));
+    CHECK(w.ready);
+    const horizon::Slice n = horizon::step(w, m, weak, 100);
+    CHECK(!n.restart && !n.relight && n.row1 <= n.row0);
+}
+
+// 3.0.22-beta.15: the panorama's light by the height of what lights it (the sky pass's twin): as before high up; a
+// low sun's warmer; at the horizon and under it none of its own, the ambient left
+TEST(horizon_light_by_the_height_of_its_source) {
+    const horizon::LightSet day = horizon::lightAt(0.0f), high = horizon::lightAt(0.0f, 0.7f);
+    CHECK(high.sun.r == day.sun.r && high.sun.g == day.sun.g && high.sun.b == day.sun.b);
+    CHECK(high.ambient.r == day.ambient.r && high.ambient.b == day.ambient.b);
+    const horizon::LightSet low = horizon::lightAt(0.0f, 0.12f);
+    CHECK(low.sun.r / low.sun.b > day.sun.r / day.sun.b);  // golden
+    const horizon::LightSet edge = horizon::lightAt(0.0f, -0.02f), under = horizon::lightAt(1.0f, -0.3f);
+    CHECK(edge.sun.r == 0.0f && edge.sun.g == 0.0f && edge.sun.b == 0.0f);
+    CHECK(under.sun.r == 0.0f && under.ambient.b > 0.0f);
+    const horizon::LightSet moon = horizon::lightAt(1.0f, 0.6f), night = horizon::lightAt(1.0f);
+    CHECK(moon.sun.b == night.sun.b);  // a high moon's light the night's as it was
+}

@@ -262,9 +262,19 @@ bool hungMap(const std::string& name);
 // 3.0.22-beta.11: 128 - the horizon panorama is bound (t1 its colour, t0 the rest; core/horizon), set by the sky
 // passes alone (the water's reflection keeps the ranges)
 constexpr int kPanoramaPart = 128;
-constexpr int skyParts(bool stars, bool moon, bool dawn, Ranges ranges = Ranges::None) {
+// 3.0.22-beta.15 (the owner 19.11: «можно» - the sun moving with the time of day, setting behind the panorama's
+// ridges; [effects] day_cycle «Сонце рухається за годинником»): the 3D sky's sun at `minute` of the day (0-1439) - at
+// 13:00 the map's own light (mapWay, the world's axes, y down: its painted light and the sky agree at noon), rising at
+// 6:00 and setting at 20:00 on the horizon a quarter turn either side of it, along one circle under the horizon by
+// night, never a leap; minute < 0 (the day cycle off) or no light known: mapWay as it is
+void skySun(int minute, const float mapWay[3], float out[3]);
+// The way the light comes from: the sun, or (the sun under the horizon) the moon opposite it
+void lightWay(const float sun[3], float out[3]);
+// 256 - the sun moves by the clock: the shader's moon opposite the sun (skyAlong; till then both at the map's way)
+constexpr int kSunMovesPart = 256;
+constexpr int skyParts(bool stars, bool moon, bool dawn, Ranges ranges = Ranges::None, bool sunMoves = false) {
     return (stars ? 1 : 0) | (moon ? 2 : 0) | (dawn ? 4 : 0) |
-           (ranges != Ranges::None ? 16 | (int(ranges) - 1) << 5 : 0);
+           (ranges != Ranges::None ? 16 | (int(ranges) - 1) << 5 : 0) | (sunMoves ? kSunMovesPart : 0);
 }
 
 }  // namespace uagfx::view3d

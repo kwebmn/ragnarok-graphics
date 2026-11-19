@@ -2,6 +2,7 @@
 // bake and of the sky's light, so a climate is tuned here before a beta. Writes for each region:
 //   <region>.bmp        by day, the camera toward its tallest land, the sun from the side
 //   <region>-dusk.bmp   the same at dusk (the night 0.5), the sun low ahead
+//   <region>-sunset.bmp 3.0.22-beta.15 (the moving sun): before the dusk, the sun 7 degrees up ahead behind the ridges
 //   <region>-strip.bmp  the whole circle as the strip holds it (a quarter of its texels), by day
 // Usage: horizon_preview <outdir> [width height]
 #include <algorithm>
@@ -51,7 +52,10 @@ Rgb skyOf(Vec3 dir, const View& v) {
     Rgb sky = mixed(horizon, zenith, std::min(1.0f, std::pow(up / 0.55f, 0.8f)));
     const float sun = std::max(0.0f, dir.x * v.toSun.x + dir.y * v.toSun.y + dir.z * v.toSun.z);
     const float glow = 0.35f * std::pow(sun, 16.0f) + 2.0f * std::pow(sun, 900.0f);
-    const Rgb tint = v.night > 0.3f ? Rgb{1.0f, 0.62f, 0.35f} : Rgb{1.0f, 0.95f, 0.85f};
+    // a low sun's warm (skyAlong's lowSun): the night half come, or the day's sun under 0.3 up
+    const float t = std::clamp((v.toSun.y - 0.30f) / (0.05f - 0.30f), 0.0f, 1.0f);
+    const float low = std::max(v.night > 0.3f ? 1.0f : 0.0f, (1.0f - v.night) * t * t * (3.0f - 2.0f * t));
+    const Rgb tint = mixed(Rgb{1.0f, 0.95f, 0.85f}, Rgb{1.0f, 0.62f, 0.35f}, low);
     return {std::min(1.0f, sky.r + tint.r * glow), std::min(1.0f, sky.g + tint.g * glow),
             std::min(1.0f, sky.b + tint.b * glow)};
 }
@@ -69,7 +73,7 @@ Rgb seen(const Climate& c, Vec3 dir, const View& v, const Level& level, float pi
     const Vec3 n = normalAt(c, kMapRadius, h.x, h.z, 0.8f + 0.0018f * h.distance);
     const Rgb albedo = albedoAt(c, h.x, h.z, h.height, n.y);
     const float shadow = shadowAt(c, kMapRadius, {h.x, h.height, h.z}, n, v.toSun, level.shadowSteps);
-    const LightSet l = lightAt(v.night);
+    const LightSet l = lightAt(v.night, v.toSun.y);  // 3.0.22-beta.15: by its height, as the sky pass
     const float ndl = std::max(0.0f, n.x * v.toSun.x + n.y * v.toSun.y + n.z * v.toSun.z) * shadow;
     const float amb = 0.55f + 0.45f * n.y;
     const Rgb lit{albedo.r * (l.ambient.r * amb + l.sun.r * ndl), albedo.g * (l.ambient.g * amb + l.sun.g * ndl),
@@ -175,6 +179,9 @@ int main(int argc, char** argv) {
         dusk.night = 0.5f;
         dusk.toSun = wayOf(yaw - 0.35f, 4.0f * kPi / 180.0f);
         perspective(c, yaw, dusk, w, h, dir + "/" + name + "-dusk.bmp");
+        View sunset;
+        sunset.toSun = wayOf(yaw - 0.15f, 7.0f * kPi / 180.0f);
+        perspective(c, yaw, sunset, w, h, dir + "/" + name + "-sunset.bmp");
         strip(c, day, dir + "/" + name + "-strip.bmp");
         std::printf("%s\n", region);
         std::fflush(stdout);

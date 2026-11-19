@@ -442,6 +442,29 @@ bool hungMap(const std::string& name) {
     return false;
 }
 
+void skySun(int minute, const float mapWay[3], float out[3]) {
+    for (int k = 0; k < 3; ++k) out[k] = mapWay[k];
+    const float len = std::sqrt(mapWay[0] * mapWay[0] + mapWay[1] * mapWay[1] + mapWay[2] * mapWay[2]);
+    if (minute < 0 || len < 1e-4f) return;
+    const float n[3] = {mapWay[0] / len, mapWay[1] / len, mapWay[2] / len};  // noon's
+    const float flat = std::sqrt(n[0] * n[0] + n[2] * n[2]);
+    // where it rises: on the horizon, a quarter turn from noon's way (and so square to it)
+    const float r[3] = {flat > 1e-4f ? n[2] / flat : 1.0f, 0.0f, flat > 1e-4f ? -n[0] / flat : 0.0f};
+    constexpr float kPi = 3.14159265f;
+    const float h = float(minute % 1440) / 60.0f;
+    // along the circle: 0 rising (6:00), a quarter at noon (13:00), half setting (20:00); the night's ten hours the
+    // other half, under the horizon
+    const float a = h >= 6.0f && h <= 20.0f ? kPi * (h - 6.0f) / 14.0f
+                                            : kPi + kPi * ((h < 6.0f ? h + 24.0f : h) - 20.0f) / 10.0f;
+    const float c = std::cos(a), s = std::sin(a);
+    for (int k = 0; k < 3; ++k) out[k] = (c * r[k] + s * n[k]) * len;
+}
+
+void lightWay(const float sun[3], float out[3]) {
+    const bool under = sun[1] > 0.0f;  // the world's y down
+    for (int k = 0; k < 3; ++k) out[k] = under ? -sun[k] : sun[k];
+}
+
 Sky skyOf(float night, bool vault) {
     static const float kDay[3] = {0.76f, 0.83f, 0.90f}, kNight[3] = {0.09f, 0.11f, 0.17f};
     static const float kVault[3] = {0.075f, 0.068f, 0.062f};

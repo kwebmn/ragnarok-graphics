@@ -52,6 +52,10 @@ struct LightSet {
     Rgb sun, ambient;
 };
 LightSet lightAt(float night);
+// 3.0.22-beta.15 (the moving sun): the light by the height of what gives it (`rise` the sine of its height over the
+// horizon) - lightAt(night) high up; a low day's sun warmer (as the sky's glow, shaders.cpp skyAlong lowSun); its own
+// light gone at the horizon and under it, the ambient left
+LightSet lightAt(float night, float rise);
 constexpr float kExposure = 0.8f;
 Rgb toDisplay(const Rgb& linear);  // ACES-like curve of linear x kExposure, then gamma 2.2
 

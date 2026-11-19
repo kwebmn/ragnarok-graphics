@@ -222,24 +222,38 @@ Slice step(Bake& b, const Key& key, const Level& level, uint64_t now) {
     const bool sameLevel = b.level.width == level.width && b.level.height == level.height &&
                            b.level.steps == level.steps && b.level.shadowSteps == level.shadowSteps &&
                            b.level.slices == level.slices;
-    if (!b.started || !(b.key == key) || !sameLevel) {
+    const bool sameLand = b.key.region == key.region && b.key.weak == key.weak &&
+                          std::fabs(b.key.mapRadius - key.mapRadius) < 1.0f;
+    float moved = 0.0f;
+    for (int k = 0; k < 3; ++k) moved += (b.key.sun[k] - key.sun[k]) * (b.key.sun[k] - key.sun[k]);
+    if (!b.started || !sameLand || !sameLevel) {
         b = Bake{};
         b.key = key;
         b.level = level;
         b.started = true;
         b.startedAt = now;
         s.restart = true;
+    } else if (b.ready && !b.relighting && level.shadowSteps > 0 && moved > kRelightAngle * kRelightAngle) {
+        // 3.0.22-beta.15: the sun moved on - its shadows drawn again over the strip as it stands, shown meanwhile
+        for (int k = 0; k < 3; ++k) b.key.sun[k] = key.sun[k];
+        b.rowsDone = 0;
+        b.relighting = true;
     }
-    if (b.ready || level.height <= 0 || level.slices <= 0) return s;
+    if (b.rowsDone >= level.height || level.height <= 0 || level.slices <= 0) return s;
     const int per = (level.height + level.slices - 1) / level.slices;
     s.row0 = b.rowsDone;
     s.row1 = std::min(level.height, b.rowsDone + per);
     b.rowsDone = s.row1;
-    ++b.frames;
+    s.relight = b.relighting;
+    if (!b.relighting) ++b.frames;
     if (b.rowsDone >= level.height) {
-        b.ready = true;
-        b.readyAt = now;
         s.last = true;
+        if (b.relighting) {
+            b.relighting = false;
+        } else {
+            b.ready = true;
+            b.readyAt = now;
+        }
     }
     return s;
 }

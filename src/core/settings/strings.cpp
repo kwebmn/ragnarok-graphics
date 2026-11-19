@@ -1801,11 +1801,14 @@ constexpr Entry kTexts[] = {
     {Text::FxDayCycle, "The sun moves by the clock", "Сонце рухається за годинником", "Солнце движется по часам"},
     {Text::FxDayCycleHint,
      "The sun moves by the Clock's hour: the characters' shadows turn and are long in the morning and the evening, "
-     "short at noon; the light is pink in the morning and golden in the evening.",
+     "short at noon; the light is pink in the morning and golden in the evening. In the 3D view the sun crosses the "
+     "sky - it rises at 6:00 and sets at 20:00 behind the horizon's ridges, the moon opposite it at night.",
      "Сонце рухається за годиною «Годинника»: тіні персонажів повертаються, довгі вранці й увечері, короткі опівдні; "
-     "світло рожеве вранці й золоте ввечері.",
+     "світло рожеве вранці й золоте ввечері. У 3D-режимі сонце йде небом — сходить о 6:00 і заходить о 20:00 за "
+     "хребти обрію, а вночі навпроти нього місяць.",
      "Солнце движется по часу «Часов»: тени персонажей поворачиваются, длинные утром и вечером, короткие в полдень; "
-     "свет розовый утром и золотой вечером."},
+     "свет розовый утром и золотой вечером. В 3D-режиме солнце идёт по небу — восходит в 6:00 и заходит в 20:00 за "
+     "хребты горизонта, а ночью напротив него луна."},
     {Text::SmoothTaa,
      "TAA smoothing (any graphics card)",
      "Згладжування TAA (будь-яка відеокарта)",

@@ -104,7 +104,7 @@ void Renderer::Impl::horizonFrame() {
     horizon::Key key;
     key.region = region_look::of(mapName, 100).region;
     float toSun[3] = {0.0f, 0.0f, 0.0f};
-    if (mapSun(toSun)) std::copy(toSun, toSun + 3, key.sun);
+    if (skySun(toSun)) view3d::lightWay(toSun, key.sun);  // 3.0.22-beta.15: the shadows of the sun or the moon
     const int card = effect_groups::cardLevel(true, adapterMb);
     key.weak = card <= 1;
     key.mapRadius = 0.5f * float(std::max(g->width, g->height)) * g->zoom;
@@ -116,7 +116,7 @@ void Renderer::Impl::horizonFrame() {
         return;
     }
     if (s.row1 > s.row0 && !horizonBakeSlice(s.row0, s.row1)) return;  // the GPU lost
-    if (s.last)
+    if (s.last && !s.relight)  // 3.0.22-beta.15: the moving sun's shadows drawn again, unlogged
         LOG_INFO("horizon: %s - the %s climate baked (%dx%d, %d steps, %d shadow steps, %d frames, %llu ms)",
                  mapName.c_str(), key.region.empty() ? "default" : key.region.c_str(), level.width, level.height,
                  level.steps, level.shadowSteps, horizonBake.frames,

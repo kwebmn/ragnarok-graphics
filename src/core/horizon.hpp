@@ -47,7 +47,9 @@ float rowOfRise(float rise);
 // The 3D view looks at a horizon: the switch, the wide view on, the map outdoors and not hung in the sky
 bool wanted(bool on, bool wideView, bool outdoors, bool hung);
 
-// What a bake depends on: a change of any bakes again (the sun compared within 1e-3)
+// What a bake depends on: the region, the level, the map's size - a bake anew (step); the sun moved on over
+// kRelightAngle - its shadows drawn again (3.0.22-beta.15); == compares the sun within 1e-3
+constexpr float kRelightAngle = 0.0175f;  // a degree
 struct Key {
     std::string region;
     float sun[3] = {0, 0, 0};  // the map's sun, the world's axes (y down)
@@ -76,13 +78,15 @@ void pack(const Climate& c, float mapRadius, const float sun[3], const Level& le
 struct Bake {
     Key key;
     Level level;
-    int rowsDone = 0, frames = 0;
+    int rowsDone = 0, frames = 0;  // frames: the first bake's
     bool started = false, ready = false;
+    bool relighting = false;  // 3.0.22-beta.15: its shadows drawn again for the sun moved on, the strip shown
     uint64_t startedAt = 0, readyAt = 0;
 };
 struct Slice {
     int row0 = 0, row1 = 0;  // the rows to draw now; row1 <= row0: none
     bool restart = false;    // a new key or level: (re)made textures, drawn anew
+    bool relight = false;    // 3.0.22-beta.13: the sun moved on - its shadows drawn again, the strip shown meanwhile
     bool last = false;       // this slice ends the bake
 };
 constexpr uint64_t kFadeMs = 1000;

@@ -872,3 +872,51 @@ TEST(view3d_far_ranges_by_the_map) {
     CHECK(!view3d::hungMap("yuno_fild01"));  // Yuno's fields lie on the ground
     CHECK(!view3d::hungMap(""));
 }
+
+// 3.0.22-beta.15 (the owner 19.11: «можно» - the sun moving with the time of day, setting behind the panorama's
+// ridges): the 3D sky's sun - at 13:00 the map's own light, rising at 6:00 and setting at 20:00 a quarter turn either
+// side of it, under the horizon by night, never a leap; the light's way by night the moon opposite it, at the map's
+// way at 1:00; the sky's parts tell the shader the moon stands opposite the sun (256) while the sun moves
+TEST(view3d_sky_sun_goes_round_the_day) {
+    const float len = std::sqrt(0.5f * 0.5f + 0.707f * 0.707f + 0.5f * 0.5f);
+    const float map[3] = {0.5f / len, -0.707f / len, 0.5f / len};  // the world's y down: -y up
+    float s[3];
+    view3d::skySun(-1, map, s);  // the day cycle off: the map's own light
+    CHECK(s[0] == map[0] && s[1] == map[1] && s[2] == map[2]);
+    view3d::skySun(13 * 60, map, s);  // noon: the map's way
+    CHECK(std::fabs(s[0] - map[0]) < 0.02f && std::fabs(s[1] - map[1]) < 0.02f && std::fabs(s[2] - map[2]) < 0.02f);
+    view3d::skySun(6 * 60, map, s);
+    CHECK(std::fabs(s[1]) < 1e-3f);  // rising on the horizon
+    view3d::skySun(20 * 60, map, s);
+    CHECK(std::fabs(s[1]) < 1e-3f);  // setting on it
+    float rise[3], set[3];
+    view3d::skySun(6 * 60, map, rise);
+    view3d::skySun(20 * 60, map, set);
+    CHECK(rise[0] * set[0] + rise[2] * set[2] < -0.9f);  // on opposite sides
+    view3d::skySun(0, map, s);
+    CHECK(s[1] > 0.3f);  // under the horizon at midnight
+    float before[3];
+    view3d::skySun(1439, map, before);
+    CHECK(std::fabs(before[0] - s[0]) + std::fabs(before[1] - s[1]) + std::fabs(before[2] - s[2]) < 0.02f);
+    float l[3];
+    view3d::lightWay(s, l);  // by night the moon opposite
+    CHECK(l[0] == -s[0] && l[1] == -s[1] && l[2] == -s[2] && l[1] < 0.0f);
+    view3d::lightWay(map, l);  // by day the sun itself
+    CHECK(l[0] == map[0] && l[1] == map[1] && l[2] == map[2]);
+    view3d::skySun(60, map, s);
+    view3d::lightWay(s, l);  // 1:00: the moon where the map's light comes from
+    CHECK(std::fabs(l[0] - map[0]) < 0.02f && std::fabs(l[1] - map[1]) < 0.02f && std::fabs(l[2] - map[2]) < 0.02f);
+    bool smooth = true;
+    float a[3], b[3];
+    for (int m = 0; m < 1440; ++m) {
+        view3d::skySun(m, map, a);
+        view3d::skySun((m + 1) % 1440, map, b);
+        smooth = smooth && std::fabs(a[0] - b[0]) + std::fabs(a[1] - b[1]) + std::fabs(a[2] - b[2]) < 0.03f;
+    }
+    CHECK(smooth);
+    const float none[3] = {0.0f, 0.0f, 0.0f};
+    view3d::skySun(13 * 60, none, s);  // no light known: none moved
+    CHECK(s[0] == 0.0f && s[1] == 0.0f && s[2] == 0.0f);
+    CHECK_EQ(view3d::skyParts(true, true, true, view3d::Ranges::None, true), 7 | view3d::kSunMovesPart);
+    CHECK_EQ(view3d::skyParts(true, true, true, view3d::Ranges::None, false), 7);
+}

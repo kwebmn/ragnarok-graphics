@@ -403,6 +403,7 @@ private:
     bool crittersNeedFire() const { return effects_.embers; }  // 2.6.12
     // 2.5.5: the sun (actor_shadows.cpp): the way to it from the map's file, else the day's; on the screen
     bool mapSun(float toSun[3]) const;
+    bool skySun(float toSun[3]) const;  // 3.0.22-beta.15 (Direct3D 12's): round the day while the sun moves
     float sunHeight() const;
     void sunGround(float out[3]) const;
     void sunOnScreen(float out[2]) const;

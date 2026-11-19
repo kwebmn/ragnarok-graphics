@@ -1849,7 +1849,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
             // 3.0.20-beta.49: 1 under the open sky, and the sky's parts (stars, the moon, the dawn's glow)
             c.hole[1] = outdoors_ ? 1.0f + float(skyPartsNow()) : 0.0f;  // 3.0.20-beta.72: the far ranges too
             float toSun[3] = {0.0f, 0.0f, 0.0f};
-            if (outdoors_ && mapSun(toSun)) std::copy(toSun, toSun + 3, c.hole + 4);
+            if (outdoors_ && skySun(toSun)) std::copy(toSun, toSun + 3, c.hole + 4);  // 3.0.22-beta.15
         }
         if (ripplesWanted()) {  // 2.5.2 (draw.cpp 0.94): the three newest steps (x, z, age), one in each free vector
             float* slot[3] = {c.uiPixels, c.sourceRect, c.sourceClamp};
@@ -4254,11 +4254,19 @@ void Renderer11::applyMist() {
 
 // 3.0.19-beta.6 (the 3D view; Direct3D 12's haze.cpp applySky3d): the sky where nothing is drawn, a haze to it over
 // what is, by its distance - the game's camera from behind or the eyes sees past all the game ever drew
+bool Renderer11::skySun(float toSun[3]) const {
+    float way[3];
+    if (!mapSun(way)) return false;
+    view3d::skySun(effects_.dayCycle ? effects_.dayNow : -1, way, toSun);
+    return true;
+}
+
 int Renderer11::skyPartsNow() const {
     // 3.0.20-beta.72: no ground's file read here - a map hung in the sky by its name, no sea known
     return view3d::skyParts(effects_.skyStars, effects_.skyMoon, effects_.skyDawn,
                             view3d::rangesFor(effects_.skyRanges, outdoors_, view3d::hungMap(map_), false,
-                                              place_.sand, place_.snow));
+                                              place_.sand, place_.snow),
+                            effects_.dayCycle);  // 3.0.22-beta.15: the moon opposite the moving sun
 }
 
 void Renderer11::applySky3d() {  // the haze over what is drawn, at the world's end
@@ -4289,7 +4297,7 @@ void Renderer11::skyPass(bool fill) {
     std::copy(sky.horizon, sky.horizon + 3, c.sourceRect);
     c.sourceRect[3] = view3d::hazeReach(sky.reach, camera::sightNow());  // 3.0.19-beta.24: whole at the sight
     float toSun[3] = {0.0f, 0.0f, 0.0f};
-    if (!vault && mapSun(toSun)) std::copy(toSun, toSun + 3, c.sourceClamp);
+    if (!vault && skySun(toSun)) std::copy(toSun, toSun + 3, c.sourceClamp);  // 3.0.22-beta.15: by the clock
     c.twin[0] = night;
     c.twin[1] = vault ? 1.0f : 0.0f;
     c.sharpen = waterTime();
@@ -4403,7 +4411,7 @@ void Renderer11::horizonFrame() {
     horizon::Key key;
     key.region = region_look::of(map_, 100).region;
     float toSun[3] = {0.0f, 0.0f, 0.0f};
-    if (mapSun(toSun)) std::copy(toSun, toSun + 3, key.sun);
+    if (skySun(toSun)) view3d::lightWay(toSun, key.sun);  // 3.0.22-beta.15: the sun's or the moon's way
     key.weak = effect_groups::cardLevel(false, 0) <= 1;  // Direct3D 11: the weak level (as the automatic setup's)
     key.mapRadius = 0.5f * float(std::max(g->width, g->height)) * g->zoom;
     const horizon::Level level = horizon::levelForCard(1);  // Direct3D 11: the weak level
@@ -4420,7 +4428,7 @@ void Renderer11::horizonFrame() {
         }
     }
     if (s.row1 > s.row0) horizonBakeSlice(s.row0, s.row1);
-    if (s.last)
+    if (s.last && !s.relight)
         LOG_INFO("horizon: %s - the %s climate baked (%dx%d, %d steps, %d shadow steps, %d frames, %llu ms; "
                  "Direct3D 11)",
                  map_.c_str(), key.region.empty() ? "default" : key.region.c_str(), level.width, level.height,
