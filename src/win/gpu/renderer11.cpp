@@ -35,6 +35,8 @@
 #include "core/png_write.hpp"
 #include "core/shot_spec.hpp"
 #include "core/region_look.hpp"
+#include "core/effect_groups.hpp"
+#include "win/gpu/horizon_constants.hpp"
 #include "core/sprite_exe.hpp"
 #include "core/scale.hpp"
 #include "core/shader_cache.hpp"
@@ -241,6 +243,10 @@ Renderer11::~Renderer11() {
     drop(grassTilesPs_);  // 3.0.5-beta.20
     drop(grassNearPs_);
     dropTarget(grassTiles_);
+    dropTarget(horizon_[0]);  // 3.0.22-beta.11: baked anew on the next device
+    dropTarget(horizon_[1]);
+    horizonBake_ = horizon::Bake{};
+    horizonShown_ = horizonFailed_ = false;
     drop(groundCellsSrv_);
     drop(groundCellsData_);
     drop(crittersVs_);  // 2.5.4
@@ -4266,6 +4272,7 @@ void Renderer11::skyPass(bool fill) {
     if (fill) skyFillDone_ = true;
     if (!sky3dPs_ || !sky3dHazePs_ || !camera::wideView() || !cameraValid_ || !target_.texture || !depthViews())
         return;
+    if (fill) horizonFrame();  // 3.0.22-beta.11: the horizon's strip - its bake's next slice
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
@@ -4340,7 +4347,87 @@ void Renderer11::skyPass(bool fill) {
         LOG_INFO("3D sky: on %s - %s, the night %.2f (Direct3D 11, field of view %.0f)", map_.c_str(),
                  vault ? "a dark vault" : "the open sky", night, camera::fovNow());
     }
-    worldPass(fill ? sky3dPs_ : sky3dHazePs_, c, false, 1, depthSrv_, rockT, vaultT);
+    ID3D11ShaderResourceView* t0 = rockT;
+    ID3D11ShaderResourceView* t1 = vaultT;
+    // 3.0.22-beta.11 (core/horizon): the region's land drawn by the card - under the open sky t0 and t1 are free
+    if (!vault && horizonShown_) {
+        t1 = horizon_[0].srv;
+        t0 = horizon_[1].srv;
+        c.uiPixels[2] = float(skyPartsNow() | view3d::kPanoramaPart);
+        c.hole[0] = horizonFade_;
+    }
+    worldPass(fill ? sky3dPs_ : sky3dHazePs_, c, false, 1, depthSrv_, t0, t1);
+}
+
+// 3.0.22-beta.11 (core/horizon; as Direct3D 12's horizon.cpp): the strip's rows row0..row1 drawn by horizon_bake_ps
+// into its two targets; the next pass binds its own target again (targetBound_)
+void Renderer11::horizonBakeSlice(int row0, int row1) {
+    targetBound_ = false;
+    ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
+    ctx_->PSSetShaderResources(0, 4, none);
+    ID3D11RenderTargetView* rtvs[2] = {horizon_[0].rtv, horizon_[1].rtv};
+    ctx_->OMSetRenderTargets(2, rtvs, nullptr);
+    const D3D11_VIEWPORT vp{0.0f, 0.0f, float(horizon_[0].width), float(horizon_[0].height), 0.0f, 1.0f};
+    ctx_->RSSetViewports(1, &vp);
+    const D3D11_RECT rows{0, row0, horizon_[0].width, row1};
+    ctx_->RSSetScissorRects(1, &rows);
+    Constants c{};
+    c.targetSize[0] = float(horizon_[0].width);
+    c.targetSize[1] = float(horizon_[0].height);
+    float packed[horizon::kPackedFloats];
+    horizon::pack(horizon::climateOf(horizonBake_.key.region), horizonBake_.key.mapRadius, horizonBake_.key.sun,
+                  horizonBake_.level, row0, row1, packed);
+    horizonConstants(packed, c);
+    setConstants(c);
+    ctx_->OMSetBlendState(blendState(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO, D3D11_COLOR_WRITE_ENABLE_ALL), nullptr,
+                          0xFFFFFFFF);
+    ctx_->OMSetDepthStencilState(depthState(false, false, d3d7::CMP_ALWAYS), 0);
+    ctx_->RSSetState(rasterState(d3d7::CULL_NONE));
+    ctx_->IASetInputLayout(nullptr);
+    ctx_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    ctx_->VSSetShader(presentVs_, nullptr, 0);
+    ctx_->PSSetShader(horizonBakePs_, nullptr, 0);
+    ctx_->VSSetConstantBuffers(0, 1, &constants_);
+    ctx_->PSSetConstantBuffers(0, 1, &constants_);
+    ctx_->Draw(3, 0);
+    ID3D11RenderTargetView* unbound[2] = {nullptr, nullptr};
+    ctx_->OMSetRenderTargets(2, unbound, nullptr);  // read by the sky passes next
+}
+
+void Renderer11::horizonFrame() {
+    horizonShown_ = false;
+    if (!horizonBakePs_ || horizonFailed_) return;
+    if (!horizon::wanted(effects_.skyPanorama, camera::wideView(), outdoors_, view3d::hungMap(map_))) return;
+    const ground_heights::Ground* g = mapWorld_.ground();
+    if (!g || g->width <= 0 || g->height <= 0) return;  // the map's ground not read yet: its size not known
+    horizon::Key key;
+    key.region = region_look::of(map_, 100).region;
+    float toSun[3] = {0.0f, 0.0f, 0.0f};
+    if (mapSun(toSun)) std::copy(toSun, toSun + 3, key.sun);
+    key.weak = effect_groups::cardLevel(false, 0) <= 1;  // Direct3D 11: the weak level (as the automatic setup's)
+    key.mapRadius = 0.5f * float(std::max(g->width, g->height)) * g->zoom;
+    const horizon::Level level = horizon::levelFor(key.weak);
+    const ULONGLONG now = GetTickCount64();
+    const horizon::Slice s = horizon::step(horizonBake_, key, level, now);
+    if (s.restart && (horizon_[0].width != level.width || horizon_[0].height != level.height)) {
+        for (Target& t : horizon_) dropTarget(t);
+        if (!makeTarget(horizon_[0], level.width, level.height, DXGI_FORMAT_R8G8B8A8_UNORM) ||
+            !makeTarget(horizon_[1], level.width, level.height, DXGI_FORMAT_R8G8B8A8_UNORM)) {
+            horizonFailed_ = true;
+            LOG_ERROR("horizon: no video memory for its strip at %dx%d - the far ranges stay (Direct3D 11)",
+                      level.width, level.height);
+            return;
+        }
+    }
+    if (s.row1 > s.row0) horizonBakeSlice(s.row0, s.row1);
+    if (s.last)
+        LOG_INFO("horizon: %s - the %s climate baked (%dx%d, %d steps, %d shadow steps, %d frames, %llu ms; "
+                 "Direct3D 11)",
+                 map_.c_str(), key.region.empty() ? "default" : key.region.c_str(), level.width, level.height,
+                 level.steps, level.shadowSteps, horizonBake_.frames,
+                 static_cast<unsigned long long>(now - horizonBake_.startedAt));
+    horizonShown_ = horizonBake_.ready;
+    horizonFade_ = horizon::fadeOf(horizonBake_, now);
 }
 
 // 3.0.20-beta.57 (R-J3GKD9; haze.cpp's): the room the player stands in, 0 none; the rooms a cell on the card

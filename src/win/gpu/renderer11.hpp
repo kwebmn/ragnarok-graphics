@@ -42,6 +42,7 @@
 #include "win/gpu/map_world.hpp"
 #include "core/frame.hpp"
 #include "core/ground_light.hpp"
+#include "core/horizon.hpp"
 #include "core/image.hpp"
 #include "core/trees.hpp"
 #include "core/map_objects.hpp"
@@ -888,6 +889,14 @@ private:
     ID3D11PixelShader* sky3dPs_ = nullptr;  // 3.0.19-beta.6
     ID3D11PixelShader* sky3dHazePs_ = nullptr;  // 3.0.20-beta.48: the haze apart (sky3d_haze_ps)
     ID3D11PixelShader* horizonBakePs_ = nullptr;  // 3.0.22-beta.11: the horizon's strip (horizon_bake_ps)
+    // 3.0.22-beta.11 (core/horizon; as Direct3D 12's horizon.cpp): the horizon panorama's strip - [0] its land's colour
+    // and coverage (the sky passes' t1), [1] the normal, the sun's shadow and the haze (t0) - and its bake's progress
+    Target horizon_[2];
+    horizon::Bake horizonBake_;
+    bool horizonShown_ = false, horizonFailed_ = false;
+    float horizonFade_ = 0.0f;
+    void horizonFrame();  // the sky's fill pass, first: the bake's next slice; whether the strip is shown now
+    void horizonBakeSlice(int row0, int row1);
     bool skyFillDone_ = false;
     ID3D11PixelShader* weatherPs_ = nullptr;
     // 3.0.5-beta.19: the particles as small quads (weather_vs, weather_quad_ps) - not sand's
