@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.22-beta.26 — what's new · 2026-11-19
+
+The new «Guild» window.
+
+- **«Guild» (Alt+G) is a wide window, as «Skills» is**: the guild's emblem and name on top, six tabs, the list on the left, the description on the right, hints at the bottom.
+- **«Skills»**: the game's skill icons, four groups (castle, growth, the master's auras, guild wars), the level as dots, what each skill gives - by our server's rules. Locked skills shown grey with «Needs: ...». Guild's Glory gone - it is off on the server. On the right: the levels, where it works, the cooldown, the needs. The master gets «+», «Use», a double click and a drag onto the hotbar; the shared 5-minute cooldown shows in the list.
+- **«Information»**: the experience bar to the next level, castles, your tax, allies and enemies, the guild's notice - now for everyone, and «The guild gives you» (the auras and the war bonuses). On the right: who is in the game.
+- **«Members»**: the ones in the game first; class, level, position, the share given in per cent; search (Ctrl+F) and sorting by a click on a column's name; on the right the member's card - «Write», «Add to friends».
+- «Positions», «Expelled», «Notice» in the same window; the controller: LB/RB - tabs, the D-pad - choose, A - use, Y - raise, X - onto the hotbar.
+
 # uaRO Graphics 3.0.22-beta.25 — what's new · 2026-11-19
 
 Pause - the old client, whole.
