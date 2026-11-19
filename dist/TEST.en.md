@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.18 — what's new · 2026-11-19
+
+The compare key shows the old graphics for real.
+
+- **Pause / Scroll Lock turns off everything new**: along with the effects it now also turns off the 3D view (the game's own camera comes back), our world models and the thinning of the far ground - the game's old graphics on screen. Press it again and everything comes back, the 3D view too. Before, on Comodo for one, the ground was not drawn after turning it off and everything was flooded with water.
+
 # uaRO Graphics 3.0.22-beta.17 — what's new · 2026-11-19
 
 Fixes from reports.
