@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.22-beta.17 — what's new · 2026-11-19
+
+Fixes from reports.
+
+- **The novice academy's hall is a room**: on new_zone02 the 3D view showed the open sky over the hall and a white void past its door; now a vault covers it, as in other rooms.
+- **Jawaii's horizon is the sea**: behind the tropical island the panorama drew snowy Alps; now it shows the sea with islands, as at Comodo.
+- **An honest message about the report limit**: when the site has already taken its limit of reports from your address this hour, the app no longer says «no connection» - it says the report waits and goes by itself within the hour.
+
 # uaRO Graphics 3.0.22-beta.16 — what's new · 2026-11-19
 
 The horizon panorama: mountains with their feet, the land past the map's edge without hills of its own.
