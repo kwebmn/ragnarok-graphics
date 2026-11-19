@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.23 — what's new · 2026-11-19
+
+A sandstorm.
+
+- **A sandstorm over Morroc**: where the wind carries sand (around Morroc), once every 40 minutes a storm rises - for half a minute a thick wall of sand rolls with the wind, more grains flying faster; in the 3D view you see only a quarter of the usual distance and the horizon turns sandy. Then the storm passes. It starts at the same moment for every player. Off until you turn it on: Alt+O → «Picture» → «Weather: rain, snow, sand» → «Precipitation» → «Sandstorm».
+
 # uaRO Graphics 3.0.22-beta.22 — what's new · 2026-11-19
 
 Walls in the Pyramid maze in the 3D view.
