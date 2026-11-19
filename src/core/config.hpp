@@ -432,6 +432,12 @@ struct EffectSettings {
     int clock = 0;  // 2.6.11: daylight::Clock - the computer's clock (0), or a moment the player chose
     int season = 0;  // 2.6.22: seasons::Choice - the computer's calendar (0), or a season the player chose
     int weatherKind = 0;  // 2.6.22: weather::Choice - the map's own (0), clear, or a weather the player chose
+    // 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 2): [effects] timelapse_speed - Ctrl+Shift+T's minutes of the day
+    // a second (core daylight::Lapse); 12: an hour in 5 s, the day in 2 minutes
+    int timelapseSpeed = 12;
+    // 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 3): [effects] season_fade - the year changing on a map shown over
+    // so many seconds (core seasons::ease): the snow lies down and melts little by little; 0: at once
+    int seasonFade = 20;
     // 0.78: bloom - the bright parts of the picture (sunlit tiles, snow, windows, fire) glow softly. 0.84: off by
     // default. (2.6.11: the filmic curve with it gone at the player's word.)
     bool bloom = false;
@@ -608,6 +614,8 @@ int nightAmount(const EffectSettings& e, int hour, int minute);
 // 2.6.11: dayNow and nightNow by the clock the player chose ([effects] clock) or the computer's (localMinute);
 // 2.6.19: «От сервера» the server clock's minute (daylight::ServerClock; below 0 nothing heard)
 void applyClock(EffectSettings& e, int localMinute, int serverMinute = -1);
+// 3.0.22-beta.24: Ctrl+Shift+T's minute (core daylight::Lapse) in the clock's place - the day and its night by it
+void applyLapse(EffectSettings& e, int minute);
 
 // uaro-graphics.ini. Unknown keys and values that do not parse leave the default in place.
 // 0.91: [sound] - the game's sound through the driver (core/sound_mix.hpp, win/sound_hook.cpp)
@@ -1118,6 +1126,11 @@ struct Config {
     // 3.0.19-beta.42: [view3d] fast_ground - the game's far ground cells worked out one frame in 8 while the renderer's
     // own ground is drawn in their place (core/ground_thin)
     bool view3dFastGround = true;
+    // 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 1 - the cinema camera): [view3d] free_speed - the free camera's and
+    // its flight's speed, percent of the usual; free_smooth - it gathers speed and comes to rest gently, the mouse's
+    // turn eased (core view3d::glideStep, easeLook); off: at once as before
+    int view3dFreeSpeed = 100;
+    bool view3dFreeSmooth = true;
     bool buffTimers = true;  // 3.0.4-beta.6, [buffs] timers: the time left on the buff icons (win/buff_overlay)
     bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player

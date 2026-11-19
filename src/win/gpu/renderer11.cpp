@@ -2436,6 +2436,7 @@ void Renderer11::execute(const FrameRecord& record) {
     casterDraws_.clear();  // 3.0.20-beta.37: never a draw of an older record's (each worked out at the frame's end)
     casterRec_ = nullptr;
     if (lost_ || !target_.texture || record.empty()) return;
+    easeYear();  // 3.0.22-beta.24: the year changing in sight
     LARGE_INTEGER started;  // 0.89: the processor's time in drawing, for the log
     QueryPerformanceCounter(&started);
     profileOpen();  // 3.0.5-beta.2

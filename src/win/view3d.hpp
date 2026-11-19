@@ -33,6 +33,11 @@ float onTopStep();
 // enemy's, 4 a friend's, 0 none - off the 3D view 0); the skills cast by a click on the crosshair so far
 bool behind();
 bool freeCamera();
+// 3.0.22-beta.24 (the cinema camera): the flight's points set (Ctrl+Shift+P), its flight on (Ctrl+Shift+O); a note for
+// the screen once (settings::Text and its {1}): a point set, the points cleared, two points needed, nine at most
+int flightPoints();
+bool flying();
+bool takeNote(int& text, int& arg);
 int skillWait();
 uint32_t clickCasts();
 bool looking();                          // and the mouse turns it (not Alt): the crosshair in the cursor's place

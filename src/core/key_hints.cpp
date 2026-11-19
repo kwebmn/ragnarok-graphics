@@ -18,9 +18,10 @@ std::string say(settings::Lang l, Text t) { return settings::tr(l, t); }
 }  // namespace
 
 const char* keyOf(Moment m) {
-    // 3.0.22-beta.7: «item_picks» became «item_moves» - its line has Alt+right click first now, shown anew to all
-    static const char* const kKeys[kMoments] = {"view3d_window", "view3d_skill", "free_camera", "view3d",
-                                                "item_moves"};
+    // 3.0.22-beta.7: «item_picks» became «item_moves» - its line has Alt+right click first now, shown anew to all;
+    // 3.0.22-beta.24: «free_camera» became «free_camera_points» (Ctrl+Shift+P in it now) the same way
+    static const char* const kKeys[kMoments] = {"view3d_window", "view3d_skill", "free_flight", "free_camera_points",
+                                                "time_lapse",    "view3d",       "item_moves"};
     return size_t(m) < size_t(kMoments) ? kKeys[size_t(m)] : "";
 }
 
@@ -28,7 +29,9 @@ std::array<bool, kMoments> momentsOf(const Now& n) {
     std::array<bool, kMoments> a{};
     a[size_t(Moment::View3dWindow)] = n.view3d && !n.freeCamera && n.looking && n.windowOpen;
     a[size_t(Moment::View3dSkill)] = n.view3d && !n.freeCamera && n.looking && n.skillWait != 0;
-    a[size_t(Moment::FreeCamera)] = n.view3d && n.freeCamera;
+    a[size_t(Moment::Flight)] = n.view3d && n.freeCamera && n.flightPoints > 0;
+    a[size_t(Moment::FreeCamera)] = n.view3d && n.freeCamera && n.flightPoints == 0;
+    a[size_t(Moment::TimeLapse)] = n.lapse != 0;
     a[size_t(Moment::View3d)] = n.view3d && !n.freeCamera;
     a[size_t(Moment::ItemPicks)] = n.itemsShared;
     return a;
@@ -40,12 +43,20 @@ std::vector<Part> partsOf(Moment m, const Now& n, settings::Lang l) {
         case Moment::View3dSkill:
             return {{say(l, Text::KeyClickAlone),
                      say(l, n.skillWait == 4 ? Text::KeyHintSkillFriend : Text::KeyHintSkillEnemy)}};
+        case Moment::Flight:  // 3.0.22-beta.24
+            return {{"Ctrl+Shift+P", say(l, Text::KeyHintPointMore)},
+                    {"Ctrl+Shift+O", say(l, n.flying ? Text::KeyHintFlightStop : Text::KeyHintFlight)},
+                    {"Ctrl+Shift+L", say(l, Text::KeyHintPointsClear)},
+                    {"Ctrl+Shift+C", say(l, Text::KeyHintBack)}};
         case Moment::FreeCamera:
             return {{"W A S D", say(l, Text::KeyHintFly)},
                     {say(l, Text::KeySpace), say(l, Text::KeyHintUp)},
                     {"C", say(l, Text::KeyHintDown)},
                     {"Shift", say(l, Text::KeyHintFaster)},
+                    {"Ctrl+Shift+P", say(l, Text::KeyHintPoint)},
                     {"Ctrl+Shift+C", say(l, Text::KeyHintBack)}};
+        case Moment::TimeLapse:  // 3.0.22-beta.24
+            return {{"Ctrl+Shift+T", say(l, n.lapse == 1 ? Text::KeyHintTimeStop : Text::KeyHintClockBack)}};
         case Moment::View3d: {
             std::vector<Part> out = {{"Alt", say(l, Text::KeyHintCursor)}};
             if (n.behind) {
@@ -98,7 +109,9 @@ std::string write(const Seen& s) {
 uint32_t capOf(Moment m) {
     switch (m) {
         case Moment::View3dWindow:
-        case Moment::View3dSkill: return 0;
+        case Moment::View3dSkill:
+        case Moment::TimeLapse: return 0;  // 3.0.22-beta.24: while the time runs or stands
+        case Moment::Flight:
         case Moment::FreeCamera: return 10000;
         default: return 8000;
     }

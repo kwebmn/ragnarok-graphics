@@ -65,3 +65,26 @@ TEST(daylight_server_clock_starts_as_the_server_says) {
     daylight::ServerClock s;
     CHECK_EQ(s.minute(true, 5.0), 0);  // the game came up in the server's night: night at once
 }
+
+// 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 2): Ctrl+Shift+T - the time runs from the minute shown, stops, and
+// gives the clock back
+TEST(daylight_lapse_runs_stops_and_gives_the_clock_back) {
+    daylight::Lapse l;
+    CHECK(l.minute(0.0, 12.0) == -1);
+    l.press(18 * 60 + 30, 100.0);
+    CHECK(l.state() == daylight::Lapse::State::Running);
+    CHECK(l.minute(100.0, 12.0) == 18 * 60 + 30);
+    int m = 0;
+    for (int i = 1; i <= 10; ++i) m = l.minute(100.0 + i, 12.0);  // ten seconds at 12 minutes a second
+    CHECK(m == 20 * 60 + 30);
+    CHECK(l.minute(150.0, 12.0) == 20 * 60 + 42);  // a stall of the game: a second's worth at most
+    l.press(0, 150.0);
+    CHECK(l.state() == daylight::Lapse::State::Held);
+    CHECK(l.minute(160.0, 12.0) == 20 * 60 + 42);  // held: it stays
+    l.press(0, 160.0);
+    CHECK(l.state() == daylight::Lapse::State::Off && l.minute(161.0, 12.0) == -1);
+    daylight::Lapse night;  // past midnight it goes round
+    night.press(23 * 60 + 59, 0.0);
+    night.minute(0.0, 60.0);
+    CHECK(night.minute(1.0, 60.0) == 59);
+}

@@ -582,6 +582,11 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.19-beta.42 (the owner's «делаем все по порядку»: the speed): the game's far ground cells less often
         {"view3d", "fast_ground", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dFastGround,
          Text::View3dFastGroundHint, ""},
+        // 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 1 - the cinema camera): the free camera's speed and smoothness
+        {"view3d", "free_speed", Page::Game, Control::Slider, 10, 300, 10, {}, {}, Text::View3dFreeSpeed,
+         Text::View3dFreeSpeedHint, " %"},
+        {"view3d", "free_smooth", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dFreeSmooth,
+         Text::View3dFreeSmoothHint, ""},
         // 3.0.4-beta.6: the time left on the buff icons
         {"buffs", "timers", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::BuffTimers,
          Text::BuffTimersHint, ""},
@@ -1043,6 +1048,12 @@ const std::vector<IniSetting>& iniSettings() {
         {"effects", "season", Page::Effects, Control::Choice, 0, 0, 0, {"auto", "spring", "summer", "autumn", "winter"},
          {Text::FxSeasonAuto, Text::FxSeasonSpring, Text::FxSeasonSummer, Text::FxSeasonAutumn, Text::FxSeasonWinter},
          Text::FxSeason, Text::FxSeasonHint, ""},
+        // 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 2, 3): Ctrl+Shift+T's minutes a second; the year's change
+        // seconds
+        {"effects", "timelapse_speed", Page::Effects, Control::Slider, 1, 60, 1, {}, {}, Text::FxTimelapseSpeed,
+         Text::FxTimelapseSpeedHint, "", nullptr, &E::timelapseSpeed},
+        {"effects", "season_fade", Page::Effects, Control::Slider, 0, 120, 5, {}, {}, Text::FxSeasonFade,
+         Text::FxSeasonFadeHint, " s", nullptr, &E::seasonFade},
         // 2.6.22: the weather for all that goes by it (core/weather.hpp Choice)
         {"effects", "weather_kind", Page::Effects, Control::Choice, 0, 0, 0,
          {"auto", "clear", "rain", "snow", "leaves", "sand"},
@@ -1600,6 +1611,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "view3d.shoulder") return c.view3dShoulder ? "1" : "0";  // 3.0.19-beta.54
     if (k == "view3d.own_models") return c.view3dOwnModels ? "1" : "0";  // 3.0.20-beta.4
     if (k == "view3d.fast_ground") return c.view3dFastGround ? "1" : "0";  // 3.0.19-beta.42
+    if (k == "view3d.free_speed") return std::to_string(c.view3dFreeSpeed);  // 3.0.22-beta.24
+    if (k == "view3d.free_smooth") return c.view3dFreeSmooth ? "1" : "0";
     if (k == "buffs.timers") return c.buffTimers ? "1" : "0";                   // 3.0.4-beta.6
     if (k.compare(0, 7, "notify.") == 0) {                   // 3.0.4-beta.3
         const NotifySettings& n = c.notify;

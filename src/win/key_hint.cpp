@@ -15,6 +15,7 @@
 #include "win/paths.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/storage_window.hpp"
+#include "win/time_lapse.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
 #include "win/view3d.hpp"
@@ -36,6 +37,7 @@ struct State {
     kh::Layout layout;
     std::string key;
     uint32_t casts = 0;
+    int lapseWas = 0;  // 3.0.22-beta.24: Ctrl+Shift+T's state the last frame
     kh::Moment last = kh::Moment::Count;
     int told = 0;
 };
@@ -91,6 +93,9 @@ void frame(HWND game, const Config& config, double k, int targetWidth, int targe
         n.freeCamera = view3dwin::freeCamera();
         n.skillWait = view3dwin::skillWait();
         n.itemsShared = storagewin::shown() || cartwin::shown();
+        n.flightPoints = view3dwin::flightPoints();  // 3.0.22-beta.24
+        n.flying = view3dwin::flying();
+        n.lapse = timelapsewin::state();
         std::array<bool, kh::kMoments> done{};
         // what the player has just done of what the lines say: Alt with a window open in the 3D view, a skill cast by
         // a click on the crosshair, a thing picked in the storage, the cart or the bag beside them
@@ -98,6 +103,10 @@ void frame(HWND game, const Config& config, double k, int targetWidth, int targe
         const uint32_t casts = view3dwin::clickCasts();
         done[size_t(kh::Moment::View3dSkill)] = casts != s.casts;
         s.casts = casts;
+        // 3.0.22-beta.24: a flight flown; the time-lapse taken round to the clock's own again
+        done[size_t(kh::Moment::Flight)] = n.flying;
+        done[size_t(kh::Moment::TimeLapse)] = s.lapseWas == 2 && n.lapse == 0;
+        s.lapseWas = n.lapse;
         done[size_t(kh::Moment::ItemPicks)] =
             n.itemsShared && storagewin::pickedCount() + cartwin::pickedCount() + itemswin::pickedCount() > 0;
         bool changed = false;

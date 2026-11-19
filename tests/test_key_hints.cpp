@@ -52,6 +52,12 @@ TEST(key_hints_moments) {
     n.view3d = n.looking = n.freeCamera = true;
     a = kh::momentsOf(n);
     CHECK(has(a, Moment::FreeCamera) && !has(a, Moment::View3d));
+    n.flightPoints = 1;  // 3.0.22-beta.24: a point set - the flight's line in the free camera's place
+    a = kh::momentsOf(n);
+    CHECK(has(a, Moment::Flight) && !has(a, Moment::FreeCamera));
+    n = kh::Now{};
+    n.lapse = 2;  // the time stopped: its line, in any view
+    CHECK(has(kh::momentsOf(n), Moment::TimeLapse));
     n = kh::Now{};
     n.view3d = n.looking = true;
     n.skillWait = 2;
@@ -83,7 +89,21 @@ TEST(key_hints_lines) {
     next = partWith(eyes, "Ctrl+Shift+V");
     CHECK(next && next->words == "звичайний вигляд");
     CHECK_EQ(keysOf(kh::partsOf(Moment::FreeCamera, n, settings::Lang::Uk)),
-             std::string("[W A S D][Пробіл][C][Shift][Ctrl+Shift+C]"));
+             std::string("[W A S D][Пробіл][C][Shift][Ctrl+Shift+P][Ctrl+Shift+C]"));
+    // 3.0.22-beta.24 (the owner 19.11 «делай 1-4»): the flight's line once a point is set; the time-lapse's
+    n.flightPoints = 2;
+    const std::vector<kh::Part> flight = kh::partsOf(Moment::Flight, n, settings::Lang::Uk);
+    CHECK_EQ(keysOf(flight), std::string("[Ctrl+Shift+P][Ctrl+Shift+O][Ctrl+Shift+L][Ctrl+Shift+C]"));
+    CHECK(flight[1].words == "пролетіти");
+    n.flying = true;
+    CHECK(kh::partsOf(Moment::Flight, n, settings::Lang::Uk)[1].words == "зупинити політ");
+    n.flightPoints = 0;
+    n.flying = false;
+    n.lapse = 1;
+    CHECK(kh::partsOf(Moment::TimeLapse, n, settings::Lang::Uk)[0].words == "зупинити час");
+    n.lapse = 2;
+    CHECK(kh::partsOf(Moment::TimeLapse, n, settings::Lang::Uk)[0].words == "знову «Годинник»");
+    n.lapse = 0;
     n.skillWait = 2;
     const std::vector<kh::Part> enemy = kh::partsOf(Moment::View3dSkill, n, settings::Lang::Uk);
     n.skillWait = 4;
@@ -114,6 +134,10 @@ TEST(key_hints_seen_kept) {
     CHECK_EQ(odd.times[size_t(Moment::View3d)], kh::kTimes);  // no more than it can be
     CHECK(odd.learned[size_t(Moment::View3dWindow)]);
     CHECK_EQ(odd.times[size_t(Moment::FreeCamera)], 0);
+    // 3.0.22-beta.24: the free camera's line with Ctrl+Shift+P under a new name - shown anew to all
+    CHECK_EQ(std::string(kh::keyOf(Moment::FreeCamera)), std::string("free_camera_points"));
+    const kh::Seen camera = kh::read("free_camera learned\nfree_camera 5\n");
+    CHECK(!camera.learned[size_t(Moment::FreeCamera)] && camera.times[size_t(Moment::FreeCamera)] == 0);
     // 3.0.22-beta.7: the storage's line changed (Alt+right click first) under a new name - shown anew to all
     CHECK_EQ(std::string(kh::keyOf(Moment::ItemPicks)), std::string("item_moves"));
     const kh::Seen old = kh::read("item_picks learned\nitem_picks 5\n");

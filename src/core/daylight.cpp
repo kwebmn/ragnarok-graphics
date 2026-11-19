@@ -29,6 +29,28 @@ int ServerClock::minute(bool night, double now) {
     return int(minute_);
 }
 
+void Lapse::press(int minuteShown, double now) {
+    switch (state_) {
+        case State::Off:
+            state_ = State::Running;
+            minute_ = double(((minuteShown % 1440) + 1440) % 1440);
+            last_ = now;
+            break;
+        case State::Running: state_ = State::Held; break;
+        case State::Held: state_ = State::Off; break;
+    }
+}
+
+int Lapse::minute(double now, double perSecond) {
+    if (state_ == State::Off) return -1;
+    if (state_ == State::Running && last_ >= 0.0) {
+        minute_ += std::clamp(now - last_, 0.0, 1.0) * std::max(perSecond, 0.0);
+        minute_ = std::fmod(minute_, 1440.0);
+    }
+    last_ = now;
+    return std::clamp(int(minute_), 0, 1439);
+}
+
 Light at(int minute) {
     Light l;
     if (minute < 0) return l;

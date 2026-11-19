@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -127,12 +128,22 @@ public:
         }
     }
     // 2.6.22: the map's trees, place and year by the month of the season chosen (effects.season)
-    void takeSeason() {
+    // 3.0.22-beta.24: a new map takes its year at once, another season chosen on it goes there by easeYear
+    void takeSeason(bool newMap = false) {
         const int month = seasons::monthFor(effects_.season, trees::monthNow());
         season_ = trees::seasonOf(map_, month);
         place_ = living::placeOf(map_, outdoors_, season_ == trees::Season::Autumn);
-        year_ = seasons::of(map_, month, outdoors_, place_);
-        place_ = seasons::withYear(place_, year_);  // 2.7.5: no insects in winter
+        yearTarget_ = seasons::of(map_, month, outdoors_, place_);
+        if (newMap) year_ = yearTarget_;
+        place_ = seasons::withYear(place_, yearTarget_);  // 2.7.5: no insects in winter
+    }
+    // 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 3): once a frame the year shown a step nearer the map's
+    void easeYear() {
+        const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        const float seconds = yearAt_ < 0.0 ? 0.0f : float(std::min(now - yearAt_, 0.25));
+        yearAt_ = now;
+        if (!seasons::same(year_, yearTarget_))
+            year_ = seasons::ease(year_, yearTarget_, seconds, float(effects_.seasonFade));
     }
     void setMap(const std::string& map) {  // 0.79: the region's look; 1.7: the trees' season
         map_ = map;
@@ -145,7 +156,7 @@ public:
         desert_ = desert(map);  // 2.5.2: the prints in the sand
         footTracker_.clear();
         lavaLogged_ = false;
-        takeSeason();  // 2.5.4: as Direct3D 12's; 2.6.22: the chosen season's
+        takeSeason(true);  // 2.5.4: as Direct3D 12's; 2.6.22: the chosen season's; 3.0.22-beta.24: at once
         waterLevelKnown_ = false;
         groundLifeLogged_ = grassLogged_ = false;
         critterWorld_.setPlace(place_);  // 2.5.4: a new map - everything goes
@@ -1012,7 +1023,9 @@ private:
     ID3D11PixelShader* grassNearPs_ = nullptr;
     Target grassTiles_;
     living::Place place_;
-    seasons::Look year_;
+    seasons::Look year_;        // 3.0.22-beta.24: as shown now
+    seasons::Look yearTarget_;  // 3.0.22-beta.24: the map's, year_ going there
+    double yearAt_ = -1.0;
     float waterLevel_ = 0.0f;  // the last water seen, its height in the world (up is -y)
     float waterTop_ = 0.0f;    // 2.7.3: the highest its waves have come on this map (the grass's line)
     bool waterLevelKnown_ = false, waterLevelNoted_ = false;

@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 
 namespace uagfx::daylight {
 
@@ -46,6 +47,25 @@ public:
 
 private:
     double minute_ = 13 * 60.0;  // the evening runs from 13:00 to 24:00 (the night), the morning from 0:00 to 13:00
+    double last_ = -1.0;
+};
+
+// 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 2 - the day going into the night in one take for the channel's
+// videos): Ctrl+Shift+T in the game - the time runs from the minute shown at [effects] timelapse_speed minutes a
+// second; again - it stops where it is; again - the clock's own once more. The sun, the moon, the night and the lights
+// all go by it (the minute given to applyLapse). A choice of the «Годинник» anew turns it off.
+class Lapse {
+public:
+    enum class State : uint8_t { Off, Running, Held };
+    State state() const { return state_; }
+    void press(int minuteShown, double now);  // Off -> Running (from minuteShown) -> Held -> Off
+    // The minute now, 0-1439 (running it goes on, a stall of the game at most a second's worth; held it stays); off -1
+    int minute(double now, double perSecond);
+    void off() { state_ = State::Off; }
+
+private:
+    State state_ = State::Off;
+    double minute_ = 0.0;
     double last_ = -1.0;
 };
 

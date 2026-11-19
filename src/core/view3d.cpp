@@ -415,6 +415,135 @@ void flyStep(float eye[3], const float f[3], const float right[3], int ahead, in
         for (int i = 0; i < 3; ++i) eye[i] = feet[i] + d[i] / len * kFreeReach;
 }
 
+namespace {
+
+void keepWithin(float eye[3], const float feet[3]) {
+    float d[3] = {eye[0] - feet[0], eye[1] - feet[1], eye[2] - feet[2]};
+    const float len = std::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+    if (len > kFreeReach)
+        for (int i = 0; i < 3; ++i) eye[i] = feet[i] + d[i] / len * kFreeReach;
+}
+
+float shortWay(float from, float to) {  // degrees, -180..180
+    float d = std::fmod(to - from, 360.0f);
+    if (d > 180.0f) d -= 360.0f;
+    if (d < -180.0f) d += 360.0f;
+    return d;
+}
+
+float catmull(float p0, float p1, float p2, float p3, float u) {
+    return 0.5f * (2.0f * p1 + (p2 - p0) * u + (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * u * u +
+                   (3.0f * p1 - p0 - 3.0f * p2 + p3) * u * u * u);
+}
+
+// A point of the curve: segment i (from point i to i + 1) at u; yaws unwrapped along the points
+Waypoint curveAt(const std::vector<Waypoint>& p, const std::vector<float>& yaws, size_t i, float u) {
+    const size_t n = p.size();
+    const size_t i0 = i > 0 ? i - 1 : 0, i2 = std::min(i + 1, n - 1), i3 = std::min(i + 2, n - 1);
+    Waypoint w;
+    for (int k = 0; k < 3; ++k) w.eye[k] = catmull(p[i0].eye[k], p[i].eye[k], p[i2].eye[k], p[i3].eye[k], u);
+    w.yaw = catmull(yaws[i0], yaws[i], yaws[i2], yaws[i3], u);
+    w.pitch = catmull(p[i0].pitch, p[i].pitch, p[i2].pitch, p[i3].pitch, u);
+    w.pitch = std::clamp(w.pitch, -kPitchMost, kPitchMost);
+    return w;
+}
+
+constexpr int kFlightSamples = 24;  // a segment's steps for its length
+
+struct Track {
+    std::vector<float> yaws;  // unwrapped
+    std::vector<float> at;    // the length so far at each sample (segment * kFlightSamples + step)
+    float total = 0.0f;
+};
+
+Track trackOf(const std::vector<Waypoint>& p) {
+    Track t;
+    t.yaws.resize(p.size());
+    for (size_t i = 0; i < p.size(); ++i)
+        t.yaws[i] = i == 0 ? p[0].yaw : t.yaws[i - 1] + shortWay(t.yaws[i - 1], p[i].yaw);
+    if (p.size() < 2) return t;
+    Waypoint last = p[0];
+    t.at.push_back(0.0f);
+    for (size_t i = 0; i + 1 < p.size(); ++i)
+        for (int s = 1; s <= kFlightSamples; ++s) {
+            const Waypoint w = curveAt(p, t.yaws, i, float(s) / float(kFlightSamples));
+            const float dx = w.eye[0] - last.eye[0], dy = w.eye[1] - last.eye[1], dz = w.eye[2] - last.eye[2];
+            const float turn = std::max(std::fabs(w.yaw - last.yaw), std::fabs(w.pitch - last.pitch));
+            t.total += std::max(std::sqrt(dx * dx + dy * dy + dz * dz), turn * kFlightDegreeUnits);
+            t.at.push_back(t.total);
+            last = w;
+        }
+    return t;
+}
+
+float eased(float x) {  // the share of the way at the share of the time: a steady pace, its ends eased
+    constexpr float r = kFlightRamp;
+    x = std::clamp(x, 0.0f, 1.0f);
+    if (x < r) return x * x / (2.0f * r * (1.0f - r));
+    if (x > 1.0f - r) return 1.0f - (1.0f - x) * (1.0f - x) / (2.0f * r * (1.0f - r));
+    return (x - r / 2.0f) / (1.0f - r);
+}
+
+}  // namespace
+
+void glideStep(float eye[3], Glide& g, const float f[3], const float right[3], int ahead, int aside, int rise,
+               float seconds, bool fast, float scale, bool smooth, const float feet[3]) {
+    seconds = std::max(seconds, 0.0f);
+    const float v = kFreeSpeed * (fast ? kFreeFast : 1.0f) * std::max(scale, 0.0f);
+    float want[3];
+    for (int i = 0; i < 3; ++i)
+        want[i] = (f[i] * float(ahead) + right[i] * float(aside) + kWorldUp[i] * float(rise)) * v;
+    const float k = smooth ? 1.0f - std::exp(-seconds / kGlideEase) : 1.0f;
+    for (int i = 0; i < 3; ++i) g.v[i] += (want[i] - g.v[i]) * k;
+    if (!ahead && !aside && !rise && std::fabs(g.v[0]) + std::fabs(g.v[1]) + std::fabs(g.v[2]) < 0.05f)
+        g.v[0] = g.v[1] = g.v[2] = 0.0f;  // come to rest
+    for (int i = 0; i < 3; ++i) eye[i] += g.v[i] * seconds;
+    keepWithin(eye, feet);
+}
+
+void easeLook(Look& shown, const Look& wanted, float seconds) {
+    const float k = 1.0f - std::exp(-std::max(seconds, 0.0f) / kLookEase);
+    float yaw = std::fmod(shown.yaw + shortWay(shown.yaw, wanted.yaw) * k, 360.0f);
+    shown.yaw = yaw < 0.0f ? yaw + 360.0f : yaw;
+    shown.pitch += (wanted.pitch - shown.pitch) * k;
+}
+
+float flightSeconds(const std::vector<Waypoint>& points, float speed) {
+    if (points.size() < 2 || !(speed > 0.0f)) return 0.0f;
+    return std::max(trackOf(points).total / (speed * (1.0f - kFlightRamp)), 0.5f);
+}
+
+FlightPose flightAt(const std::vector<Waypoint>& points, float seconds, float speed) {
+    FlightPose pose;
+    if (points.empty()) {
+        pose.done = true;
+        return pose;
+    }
+    const Waypoint& end = points.back();
+    const float whole = flightSeconds(points, speed);
+    if (points.size() < 2 || whole <= 0.0f || seconds >= whole) {
+        std::copy(end.eye, end.eye + 3, pose.eye);
+        pose.yaw = end.yaw;
+        pose.pitch = end.pitch;
+        pose.done = true;
+        return pose;
+    }
+    const Track t = trackOf(points);
+    const float want = eased(seconds / whole) * t.total;
+    size_t s = 1;
+    while (s + 1 < t.at.size() && t.at[s] < want) ++s;
+    const float span = t.at[s] - t.at[s - 1];
+    const float step = float(s - 1) + (span > 1e-6f ? (want - t.at[s - 1]) / span : 1.0f);
+    const size_t seg = std::min(size_t(step) / kFlightSamples, points.size() - 2);
+    const float u = std::clamp((step - float(seg * kFlightSamples)) / float(kFlightSamples), 0.0f, 1.0f);
+    const Waypoint w = curveAt(points, t.yaws, seg, u);
+    std::copy(w.eye, w.eye + 3, pose.eye);
+    const float yaw = std::fmod(w.yaw, 360.0f);
+    pose.yaw = yaw < 0.0f ? yaw + 360.0f : yaw;
+    pose.pitch = w.pitch;
+    return pose;
+}
+
 bool ownOut(Mode m, float behind, bool outBefore) {
     if (m == Mode::First) return true;
     if (m != Mode::Behind || !(behind > 0.0f)) return false;

@@ -1864,12 +1864,18 @@ float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, 
         float sunDisc = (has & 8u) != 0u ? 0.0 : pow(sunUp, 900.0) * 5.0;
         sky += sunLight * (sunDisc + pow(sunUp, 24.0) * 0.35 + pow(sunUp, 4.0) * 0.08);
         if ((has & 2u) != 0u && night > 0.02) {  // the moon: a disc some 2.6 degrees across, darker seas on it
-            float disc = smoothstep(0.99970, 0.99978, dot(dir, moonWay));
+            // 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 4 - the moonrise): low over the horizon a little larger
+            // and warmer, as the air shows it
+            float lowMoon = 1.0 - smoothstep(0.0, 0.35, -moonWay.y);
+            float disc = smoothstep(lerp(0.99970, 0.99953, lowMoon), lerp(0.99978, 0.99965, lowMoon),
+                                    dot(dir, moonWay));
             float3 aside = normalize(cross(moonWay, float3(0.3, 0.1, 0.9)));
-            float2 on = float2(dot(dir, aside), dot(dir, cross(moonWay, aside))) * 70.0;
-            float3 moon = float3(0.90, 0.93, 1.0) * (0.78 + 0.22 * valueNoise(on + 4.3));
+            float2 on = float2(dot(dir, aside), dot(dir, cross(moonWay, aside))) * lerp(70.0, 56.0, lowMoon);
+            float3 moon = lerp(float3(0.90, 0.93, 1.0), float3(1.0, 0.80, 0.56), lowMoon * 0.75) *
+                          (0.78 + 0.22 * valueNoise(on + 4.3));
             sky = lerp(sky, moon, disc * night);
-            sky += float3(0.55, 0.62, 0.80) * ((pow(moonUp, 220.0) * 0.30 + pow(moonUp, 14.0) * 0.07) * night);
+            sky += lerp(float3(0.55, 0.62, 0.80), float3(0.80, 0.60, 0.42), lowMoon * 0.6) *
+                   ((pow(moonUp, 220.0) * 0.30 + pow(moonUp, 14.0) * 0.07) * night);
         }
     }
     // a thin veil high up, slower than the clouds under it

@@ -3247,6 +3247,15 @@ constexpr Entry kTexts[] = {
      "From September to February the green ground goes drier, towards straw; from March to May it is greener.",
      "З вересня по лютий зелена земля сухіша, ближче до соломи; з березня по травень — зеленіша.",
      "С сентября по февраль зелёная земля суше, ближе к соломе; с марта по май — зеленее."},
+    // 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 3): the year changing in sight
+    {Text::FxSeasonFade, "Season change, seconds", "Зміна пори року, секунд", "Смена времени года, секунд"},
+    {Text::FxSeasonFadeHint,
+     "When «Season» is chosen anew on the same map, the snow lies down and melts, the grass dries and greens little by "
+     "little over so many seconds; 0: at once. A new map shows its season at once.",
+     "Коли «Пора року» обрано наново на тій самій карті, сніг лягає й тане, трава жовтіє чи зеленіє поступово за "
+     "стільки секунд; 0 — одразу. Нова карта показує свою пору року одразу.",
+     "Когда «Время года» выбрано заново на той же карте, снег ложится и тает, трава желтеет или зеленеет постепенно "
+     "за столько секунд; 0 — сразу. Новая карта показывает своё время года сразу."},
     {Text::FxPollen, "Pollen outdoors", "Пилок надворі", "Пыльца на улице"},
     {Text::FxPollenHint,
      "Over the fields and the towns without weather of their own, pollen floats in the air; less of it at night.",
@@ -3844,6 +3853,19 @@ constexpr Entry kTexts[] = {
     {Text::FxClockSunset, "Sunset 18:30", "Захід 18:30", "Закат 18:30"},
     {Text::FxClockNight, "Night 0:00", "Ніч 0:00", "Ночь 0:00"},
     {Text::FxClockDeepNight, "Deep night 3:00", "Глибока ніч 3:00", "Глубокая ночь 3:00"},  // 2.7.16
+    // 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 2): Ctrl+Shift+T - the time running fast
+    {Text::FxTimelapseSpeed, "Time-lapse, minutes a second", "Прискорений час, хвилин за секунду",
+     "Ускоренное время, минут в секунду"},
+    {Text::FxTimelapseSpeedHint,
+     "Ctrl+Shift+T in the game: the time of day runs fast from the moment shown - the sun goes down, the night and the "
+     "lights come, the moon rises (with «The sun moves by the clock»); again - it stops there; again - the Clock's "
+     "choice once more. Minutes of the day a second: 12 is an hour in 5 seconds, the whole day in 2 minutes.",
+     "Ctrl+Shift+T у грі: час доби біжить швидко від показаної миті — сонце сідає, приходять ніч і вогні, сходить "
+     "місяць (із «Сонце рухається за годинником»); ще раз — час зупиняється; ще раз — повертається вибір «Годинник». "
+     "Хвилин доби за секунду: 12 — година за 5 секунд, уся доба за 2 хвилини.",
+     "Ctrl+Shift+T в игре: время суток бежит быстро от показанного момента — солнце садится, приходят ночь и огни, "
+     "восходит луна (с «Солнце движется по часам»); ещё раз — время останавливается; ещё раз — возвращается выбор "
+     "«Часы». Минут суток в секунду: 12 — час за 5 секунд, все сутки за 2 минуты."},
     {Text::FxMoonLight, "Moonlight", "Місячне світло", "Лунный свет"},  // 2.7.18
     {Text::FxMoonLightHint,
      "At night the moon is the night's light: the map stays bright under it, silver-blue and muted - plainly night, "
@@ -4624,6 +4646,8 @@ constexpr Entry kTexts[] = {
      "Ctrl+Shift+F11 - the frame counter\n"
      "Ctrl+Shift+F12 - a screenshot at full size (the ScreenShot folder)\n"
      "Pause or Scroll Lock - every improvement off, and on again: to compare with the original look\n"
+     "Ctrl+Alt+F12 - the photo mode: the interface and the cursor hidden for a clean shot or a recording\n"
+     "Ctrl+Shift+T - the time of day runs fast; again - it stops; again - the Clock's own\n"
      "Arrows (the chat line empty) - walk; two at once - diagonally; Ctrl+arrows - the camera\n"
      "Ctrl+Home - the camera as at the game's start\n"
      "Space (the chat line empty) - attack, else pick up, else talk to the NPC near\n"
@@ -4636,6 +4660,8 @@ constexpr Entry kTexts[] = {
      "Ctrl+Shift+F11 — лічильник кадрів\n"
      "Ctrl+Shift+F12 — знімок екрана в повному розмірі (тека ScreenShot)\n"
      "Pause або Scroll Lock — усі покращення вимкнути й увімкнути знову: порівняти з оригінальним виглядом\n"
+     "Ctrl+Alt+F12 — режим фото: інтерфейс і курсор сховано для чистого знімка чи запису\n"
+     "Ctrl+Shift+T — час доби біжить швидко; ще раз — зупиняється; ще раз — знову «Годинник»\n"
      "Стрілки (рядок чату порожній) — ходьба; дві разом — навскіс; Ctrl+стрілки — камера\n"
      "Ctrl+Home — камера як на початку гри\n"
      "Пробіл (рядок чату порожній) — атака, інакше підібрати, інакше заговорити з NPC поруч\n"
@@ -4649,6 +4675,8 @@ constexpr Entry kTexts[] = {
      "Ctrl+Shift+F11 — счётчик кадров\n"
      "Ctrl+Shift+F12 — снимок экрана в полном размере (папка ScreenShot)\n"
      "Pause или Scroll Lock — все улучшения выключить и включить снова: сравнить с оригинальным видом\n"
+     "Ctrl+Alt+F12 — режим фото: интерфейс и курсор спрятаны для чистого снимка или записи\n"
+     "Ctrl+Shift+T — время суток бежит быстро; ещё раз — останавливается; ещё раз — снова «Часы»\n"
      "Стрелки (строка чата пуста) — ходьба; две вместе — по диагонали; Ctrl+стрелки — камера\n"
      "Ctrl+Home — камера как в начале игры\n"
      "Пробел (строка чата пуста) — атака, иначе подобрать, иначе заговорить с NPC рядом\n"
@@ -8907,13 +8935,16 @@ constexpr Entry kTexts[] = {
     {Text::View3dKeysNote,
      "In the game Ctrl+Shift+V switches the game's camera → from behind → from the eyes → back. The mouse turns the "
      "view, the crosshair goes red over a monster; hold Alt for the cursor (the windows, the interface). "
-     "Ctrl+Shift+C - the free camera for shots: W A S D fly it, Space up, C down, Shift faster.",
+     "Ctrl+Shift+C - the free camera for shots: W A S D fly it, Space up, C down, Shift faster; Ctrl+Shift+P a "
+     "flight point, Ctrl+Shift+O flies through the points, Ctrl+Shift+L clears them.",
      "У грі Ctrl+Shift+V перемикає: камера гри → з-за спини → від першої особи → назад. Миша повертає погляд, над "
      "монстром приціл червоніє; затисніть Alt, щоб з'явився курсор (вікна, інтерфейс). Ctrl+Shift+C — вільна камера "
-     "для знімків: W A S D — політ, пробіл — угору, C — униз, Shift — швидше.",
+     "для знімків: W A S D — політ, пробіл — угору, C — униз, Shift — швидше; Ctrl+Shift+P — точка польоту, "
+     "Ctrl+Shift+O — пролетіти через точки, Ctrl+Shift+L — стерти їх.",
      "В игре Ctrl+Shift+V переключает: камера игры → из-за спины → от первого лица → назад. Мышь поворачивает взгляд, "
      "над монстром прицел краснеет; зажмите Alt, чтобы появился курсор (окна, интерфейс). Ctrl+Shift+C — свободная "
-     "камера для снимков: W A S D — полёт, пробел — вверх, C — вниз, Shift — быстрее."},
+     "камера для снимков: W A S D — полёт, пробел — вверх, C — вниз, Shift — быстрее; Ctrl+Shift+P — точка полёта, "
+     "Ctrl+Shift+O — пролететь через точки, Ctrl+Shift+L — стереть их."},
     {Text::View3dDistance, "View distance", "Дальність огляду", "Дальность обзора"},  // 3.0.19-beta.24
     {Text::View3dDistanceHint,
      "How far the 3D view sees (1500 - as far as the game draws). Nearer - more frames: the game draws less, and the "
@@ -9107,12 +9138,15 @@ constexpr Entry kTexts[] = {
      "тёмное небо."},
     {Text::View3dMoon, "The moon in the sky", "Місяць на небі", "Луна на небе"},
     {Text::View3dMoonHint,
-     "In the 3D view at night the moon stands where the map's light comes from - a pale disc with a soft glow; the "
-     "water reflects it.",
-     "У 3D-режимі вночі місяць стоїть там, звідки на карту падає світло, — блідий диск із м'яким сяйвом; вода його "
-     "відбиває.",
-     "В 3D-режиме ночью луна стоит там, откуда на карту падает свет, — бледный диск с мягким сиянием; вода её "
-     "отражает."},
+     "In the 3D view at night the moon - a pale disc with a soft glow, the water reflecting it. With «The sun moves by "
+     "the clock» it goes round opposite the sun: it rises as the sun sets, low over the horizon warmer and larger; "
+     "else it stands where the map's light comes from.",
+     "У 3D-режимі вночі місяць — блідий диск із м'яким сяйвом, вода його відбиває. Із «Сонце рухається за "
+     "годинником» він ходить небом навпроти сонця: сходить, коли сонце сідає, низько над обрієм тепліший і більший; "
+     "інакше стоїть там, звідки на карту падає світло.",
+     "В 3D-режиме ночью луна — бледный диск с мягким сиянием, вода её отражает. С «Солнце движется по часам» она "
+     "ходит по небу напротив солнца: восходит, когда солнце садится, низко над горизонтом теплее и больше; иначе "
+     "стоит там, откуда на карту падает свет."},
     {Text::View3dDawn, "Dawn and dusk glow", "Заграва на світанку й увечері", "Заря на рассвете и закате"},
     {Text::View3dDawnHint,
      "In the 3D view a warm band glows along the horizon while the night comes or goes, the most on the sun's side.",
@@ -9181,6 +9215,31 @@ constexpr Entry kTexts[] = {
      "В 3D-режиме игра обсчитывает дальние клетки своей земли раз в 8 кадров — вместо них всё равно рисуется наша "
      "собственная земля, игра лишь даёт ей свои цвета. Больше кадров на слабом процессоре. Выключено — каждая клетка "
      "каждый кадр."},
+    // 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 1 - the cinema camera for the channel's videos)
+    {Text::View3dFreeSpeed, "Free camera speed", "Швидкість вільної камери", "Скорость свободной камеры"},
+    {Text::View3dFreeSpeedHint,
+     "How fast the free camera (Ctrl+Shift+C) and its flight through the points go; Shift - three times faster.",
+     "Як швидко летять вільна камера (Ctrl+Shift+C) і її політ через точки; Shift — утричі швидше.",
+     "Как быстро летят свободная камера (Ctrl+Shift+C) и её полёт через точки; Shift — втрое быстрее."},
+    {Text::View3dFreeSmooth, "Smooth free camera", "Плавна вільна камера", "Плавная свободная камера"},
+    {Text::View3dFreeSmoothHint,
+     "The free camera gathers speed and comes to rest gently and the mouse turns it softly - for filming. In the free "
+     "camera Ctrl+Shift+P sets a flight point (up to 9), Ctrl+Shift+O flies through them smoothly and stops the "
+     "flight, Ctrl+Shift+L clears them. Off: it starts and stops at once, as before.",
+     "Вільна камера плавно набирає швидкість і зупиняється, а миша повертає її м'якше — для зйомки. У вільній камері "
+     "Ctrl+Shift+P ставить точку польоту (до 9), Ctrl+Shift+O плавно пролітає через них і зупиняє політ, "
+     "Ctrl+Shift+L стирає точки. Вимкнено — рушає й зупиняється одразу, як раніше.",
+     "Свободная камера плавно набирает скорость и останавливается, а мышь поворачивает её мягче — для съёмки. В "
+     "свободной камере Ctrl+Shift+P ставит точку полёта (до 9), Ctrl+Shift+O плавно пролетает через них и "
+     "останавливает полёт, Ctrl+Shift+L стирает точки. Выключено — трогается и останавливается сразу, как раньше."},
+    {Text::FlightPointNote, "Flight point {1} of 9 - Ctrl+Shift+O: fly through them",
+     "Точка польоту {1} із 9 — Ctrl+Shift+O: пролетіти", "Точка полёта {1} из 9 — Ctrl+Shift+O: пролететь"},
+    {Text::FlightClearedNote, "Flight points cleared", "Точки польоту стерто", "Точки полёта стёрты"},
+    {Text::FlightTwoPointsNote, "A flight needs two points: Ctrl+Shift+P",
+     "Для польоту потрібні дві точки: Ctrl+Shift+P",
+     "Для полёта нужны две точки: Ctrl+Shift+P"},
+    {Text::FlightMostNote, "Nine points at most - Ctrl+Shift+L clears them",
+     "Не більше дев'яти точок — Ctrl+Shift+L стирає їх", "Не больше девяти точек — Ctrl+Shift+L стирает их"},
     {Text::QualityBatchGround,
      "The game's ground faster: in one draw",
      "Земля гри швидше: одним малюванням",
@@ -9292,6 +9351,13 @@ constexpr Entry kTexts[] = {
     {Text::KeyHintToUsual, "the usual view", "звичайний вигляд", "обычный вид"},
     {Text::KeyHintHoldAlt, "hold it to press in the window", "затисніть, щоб натискати у вікні",
      "зажмите, чтобы нажимать в окне"},
+    {Text::KeyHintPoint, "a flight point", "точка польоту", "точка полёта"},  // 3.0.22-beta.24
+    {Text::KeyHintPointMore, "another point", "ще точка", "ещё точка"},
+    {Text::KeyHintFlight, "fly through", "пролетіти", "пролететь"},
+    {Text::KeyHintFlightStop, "stop the flight", "зупинити політ", "остановить полёт"},
+    {Text::KeyHintPointsClear, "clear the points", "стерти точки", "стереть точки"},
+    {Text::KeyHintTimeStop, "stop the time", "зупинити час", "остановить время"},
+    {Text::KeyHintClockBack, "the Clock again", "знову «Годинник»", "снова «Часы»"},
     {Text::KeyHintFly, "fly", "політ", "полёт"},
     {Text::KeyHintUp, "up", "угору", "вверх"},
     {Text::KeyHintDown, "down", "униз", "вниз"},

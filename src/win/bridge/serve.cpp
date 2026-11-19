@@ -223,6 +223,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.crownLight = rd.u8() != 0;      // 3.0.20-beta.79
             e.skyPanorama = rd.u8() != 0;     // 3.0.22-beta.11
             e.sandstorm = rd.u8() != 0;       // 3.0.22-beta.23
+            e.seasonFade = rd.i32();          // 3.0.22-beta.24
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

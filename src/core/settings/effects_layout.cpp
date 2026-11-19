@@ -97,7 +97,7 @@ const EffectLayout kEffects[] = {
     {"effects.own_ground", {"effects.own_far_models", "effects.own_ground_card"}, {}, {}, 3},
     {"effects.world_reflections", {}, {}, {}, 3},  // 1.16
     {"effects.sprite_light", {}, {"effects.sprite_light_strength"}, {}, 2},  // 1.17
-    {"effects.seasons", {"effects.season_snow", "effects.season_grass"}, {}, {}, 2},  // 1.20
+    {"effects.seasons", {"effects.season_snow", "effects.season_grass"}, {"effects.season_fade"}, {}, 2},  // 1.20
     {"effects.rain_wet", {}, {}, {}, 2},  // 1.20
     {"effects.night_windows", {}, {}, {}, 2},  // 1.21
     {"effects.shared_wind", {}, {}, {}, 2},  // 1.22

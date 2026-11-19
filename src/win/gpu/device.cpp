@@ -2462,7 +2462,7 @@ void Renderer::setMap(const std::string& map) {
     if (remote_) return remote_->setMap(map);
     impl_->mapWorld.setMap(map);
     impl_->mapName = map;  // 0.31: lava's maps
-    impl_->takeSeason();  // 1.7 the trees', 1.20 the year's; 2.6.22: the chosen season's month
+    impl_->takeSeason(true);  // 1.7 the trees', 1.20 the year's; 2.6.22: the chosen season's month; .24 at once
     impl_->mapOutdoors = outdoors(map);  // 0.33: the open sky's effects
     impl_->mapGrass = grassGrows(map);   // 3.0.18-beta.252: and a castle's courtyards
     impl_->mapCastle = castleGrounds(map);
@@ -3133,6 +3133,7 @@ void Renderer::execute(const FrameRecord& record) {
     m.ownState.notes.clear();  // 3.0.20-beta.38: as the casters
     m.ownState.notesRec = nullptr;
     if (m.lost || !m.target || record.empty() || !m.begin()) return;
+    m.easeYear();  // 3.0.22-beta.24: the year changing in sight
     renderplace::step(renderplace::kGeometry);  // 3.0.20-beta.83 (R-EGT98G): where it stands, for the driver
     if (m.upscale && m.upscaler && !m.renderStarted) {  // part 3: latency markers
         m.renderStarted = true;

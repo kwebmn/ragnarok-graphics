@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "core/game_camera.hpp"
+#include "core/settings/strings.hpp"
 #include "core/view3d.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/chat_window.hpp"
@@ -105,9 +106,26 @@ struct State {
     float freeEye[3] = {0, 0, 0};
     float eyeNow[3] = {0, 0, 0};  // the eye of the last frame (the free camera starts there)
     bool eyeKnown = false;
-    DWORD flewAt = 0;
+    double flewAt = 0.0;  // 3.0.22-beta.24: precise seconds (preciseNow), 0 none yet
     int freeStopsTold = 0;  // 3.0.19-beta.41: kept off a model
     int freeRockTold = 0;   // 3.0.19-beta.45: kept out of the ground's rock
+    // 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 1 - the cinema camera for the channel's videos): the flight's glide,
+    // the look shown (eased toward the mouse's, or the flight's), [view3d] free_speed and free_smooth; the flight's
+    // points (Ctrl+Shift+P; another map's world clears them), Ctrl+Shift+O flying them since flightAt (pose: this
+    // frame's); a note for the screen (settings::Text, its {1})
+    view3d::Glide glide;
+    view3d::Look shown;
+    bool shownKnown = false;
+    double lookAt = 0.0;
+    float freeScale = 1.0f;
+    bool freeSmooth = true;
+    std::vector<view3d::Waypoint> points;
+    uint32_t pointsWorld = 0;
+    bool flying = false;
+    double flightAt = 0.0;
+    view3d::FlightPose pose;
+    bool wantPoint = false, wantFly = false, wantClear = false, skipFlightChar = false;
+    int noteText = 0, noteArg = 0;
     uint64_t builds = 0;    // 3.0.19-beta.42: the camera's builds in the 3D view
     // 3.0.19-beta.39: the world (its models' tree) of the last frame, and each actor's models' answer of late
     uint32_t worldNow = 0;
@@ -626,6 +644,89 @@ void tell(State& s, uint32_t view, const float eye[3], const float feet[3], cons
     s.pixels = s.counts = s.mostPixels = s.jumps = 0;
 }
 
+// 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 1 - the cinema camera): the flight's keys taken (a point at the eye and
+// the look shown; the flight started or stopped; the points cleared), then the look shown this frame - the flight's
+// pose, or eased toward the mouse's in the free camera ([view3d] free_smooth), else the mouse's own
+// 3.0.22-beta.24: the camera's own clock - the performance counter's seconds (GetTickCount's 16 ms steps made a flight
+// shiver on a recording)
+double preciseNow() {
+    LARGE_INTEGER f, c;
+    QueryPerformanceFrequency(&f);
+    QueryPerformanceCounter(&c);
+    return double(c.QuadPart) / double(f.QuadPart > 0 ? f.QuadPart : 1);
+}
+
+void lookShown(State& s) {
+    const double now = preciseNow();
+    const double gap = s.lookAt > 0.0 ? now - s.lookAt : 1.0;
+    const float seconds = float(std::min(gap, 0.1));
+    s.lookAt = now;
+    if (gap > 0.25) s.shown = s.look;  // a pause (the 3D view off, a load): no swing back to an old look
+    if (!s.points.empty() && s.worldNow != s.pointsWorld) {  // another map: its own points
+        LOG_INFO("3D view: the flight's %zu point(s) cleared - another map", s.points.size());
+        s.points.clear();
+        s.flying = false;
+    }
+    const auto note = [&s](settings::Text text, int arg) {
+        s.noteText = int(text);
+        s.noteArg = arg;
+    };
+    if (s.wantPoint) {
+        s.wantPoint = false;
+        if (int(s.points.size()) >= view3d::kWaypointsMost) {
+            note(settings::Text::FlightMostNote, 0);
+        } else {
+            view3d::Waypoint w;
+            std::copy(s.freeEye, s.freeEye + 3, w.eye);
+            w.yaw = s.shown.yaw;
+            w.pitch = s.shown.pitch;
+            s.points.push_back(w);
+            s.pointsWorld = s.worldNow;
+            note(settings::Text::FlightPointNote, int(s.points.size()));
+            LOG_INFO("3D view: flight point %zu at (%.0f, %.0f, %.0f), yaw %.0f, pitch %.0f", s.points.size(),
+                     w.eye[0], w.eye[1], w.eye[2], w.yaw, w.pitch);
+        }
+    }
+    if (s.wantClear) {
+        s.wantClear = false;
+        s.points.clear();
+        s.flying = false;
+        note(settings::Text::FlightClearedNote, 0);
+        LOG_INFO("3D view: the flight's points cleared (Ctrl+Shift+L)");
+    }
+    if (s.wantFly) {
+        s.wantFly = false;
+        if (s.flying) {
+            s.flying = false;
+            LOG_INFO("3D view: the flight stopped (Ctrl+Shift+O)");
+        } else if (s.points.size() < 2) {
+            note(settings::Text::FlightTwoPointsNote, 0);
+        } else {
+            s.flying = true;
+            s.flightAt = now;  // precise seconds
+            s.glide = view3d::Glide{};
+            LOG_INFO("3D view: the flight through %zu points, %.1f s at %d %% of the speed (Ctrl+Shift+O)",
+                     s.points.size(), view3d::flightSeconds(s.points, view3d::kFreeSpeed * s.freeScale),
+                     int(s.freeScale * 100.0f + 0.5f));
+        }
+    }
+    if (s.free && s.flying) {
+        s.pose = view3d::flightAt(s.points, float(now - s.flightAt), view3d::kFreeSpeed * s.freeScale);
+        s.shown.yaw = s.pose.yaw;
+        s.shown.pitch = s.pose.pitch;
+        s.look = s.shown;  // the mouse goes on from here after it
+        if (s.pose.done) {
+            s.flying = false;
+            LOG_INFO("3D view: the flight done - at its last point");
+        }
+    } else if (s.free && s.freeSmooth && s.shownKnown) {
+        view3d::easeLook(s.shown, s.look, seconds);
+    } else {
+        s.shown = s.look;
+    }
+    s.shownKnown = true;
+}
+
 void __attribute__((thiscall)) build(uint32_t view) {
     g_lastView = view;  // 3.0.20-beta.3
     State& s = g_state;
@@ -655,9 +756,10 @@ void __attribute__((thiscall)) build(uint32_t view) {
     mouse(s);
     adoptYaw(view, s);
     adoptTilt(view, s);
-    *at(view, kYaw) = s.look.yaw;
-    *at(view, kYawTo) = s.look.yaw;
-    s.wroteYaw = s.look.yaw;
+    lookShown(s);  // 3.0.22-beta.24: the free camera's eased look, or its flight's
+    *at(view, kYaw) = s.shown.yaw;
+    *at(view, kYawTo) = s.shown.yaw;
+    s.wroteYaw = s.shown.yaw;
     *at(view, kTilt) = kHeldTilt;
     *at(view, kTiltTo) = kHeldTilt;
     s.wroteTilt = kHeldTilt;
@@ -667,12 +769,12 @@ void __attribute__((thiscall)) build(uint32_t view) {
     std::memcpy(m, at(view, kView), sizeof m);
     float flat[3];
     if (!view3d::ahead(m, flat)) return;  // the game's own this frame
-    s.sign = view3d::turnSign(m, s.look.yaw);
+    s.sign = view3d::turnSign(m, s.shown.yaw);
     float feet[3], up[3], eye[3], target[3];
     std::memcpy(feet, at(view, kFeet), sizeof feet);
     std::memcpy(up, at(view, kUp), sizeof up);
     const float want = view3d::behindDistanceOf(*at(view, kDistanceTo), s.zoomAtEntry);  // beta.7/.15: the wheel
-    view3d::place(s.mode, feet, flat, up, s.look.pitch, eye, target, want, s.shoulder);  // .54: centred or not
+    view3d::place(s.mode, feet, flat, up, s.shown.pitch, eye, target, want, s.shoulder);  // .54: centred or not
     const uint32_t ground = groundNow();
     if (s.mode == view3d::Mode::Behind && ground) {  // 3.0.19-beta.10: a wall, a cliff behind - the eye before it
         // 3.0.19-beta.45: by the drawn ground too - a cave's rock wall behind brings the eye in before it
@@ -723,22 +825,29 @@ void __attribute__((thiscall)) build(uint32_t view) {
         s.wantFree = false;
         s.free = !s.free && s.eyeKnown;
         if (s.free) std::copy(s.eyeNow, s.eyeNow + 3, s.freeEye);
-        s.flewAt = 0;
+        s.flewAt = 0.0;
+        s.glide = view3d::Glide{};  // 3.0.22-beta.24: from rest; the flight over with the free camera
+        s.flying = false;
         LOG_INFO("3D view: the free camera %s", s.free ? "on - W A S D fly it, Space up, C down, Shift faster; the "
                                                          "character stays" : "off - back with the character");
     }
     if (s.free) {
         float f[3], right[3];
-        view3d::axesOf(flat, up, s.look.pitch, f, right);
-        const DWORD tick = GetTickCount();
-        const float seconds = s.flewAt ? std::min(float(tick - s.flewAt) / 1000.0f, 0.1f) : 0.0f;
-        s.flewAt = tick;
+        view3d::axesOf(flat, up, s.shown.pitch, f, right);
+        const double flewNow = preciseNow();  // 3.0.22-beta.24: precise, as the flight's
+        const float seconds = s.flewAt > 0.0 ? float(std::min(flewNow - s.flewAt, 0.1)) : 0.0f;
+        s.flewAt = flewNow;
         const auto held = [](int vk) { return GetAsyncKeyState(vk) < 0 ? 1 : 0; };
         const bool keys = !walkmodewin::typing() && GetKeyState(VK_CONTROL) >= 0 && GetKeyState(VK_MENU) >= 0;
         const float before[3] = {s.freeEye[0], s.freeEye[1], s.freeEye[2]};
-        if (keys)
-            view3d::flyStep(s.freeEye, f, right, held('W') - held('S'), held('D') - held('A'),
-                            held(VK_SPACE) - held('C'), seconds, held(VK_SHIFT) != 0, feet);
+        if (s.flying) {  // 3.0.22-beta.24: the flight through the points - its pose of this frame (lookShown)
+            std::copy(s.pose.eye, s.pose.eye + 3, s.freeEye);
+        } else {  // 3.0.22-beta.24: gliding - it gathers speed and comes to rest ([view3d] free_smooth, free_speed)
+            const bool on = keys;
+            view3d::glideStep(s.freeEye, s.glide, f, right, on ? held('W') - held('S') : 0,
+                              on ? held('D') - held('A') : 0, on ? held(VK_SPACE) - held('C') : 0, seconds,
+                              held(VK_SHIFT) != 0, s.freeScale, s.freeSmooth, feet);
+        }
         // 3.0.19-beta.41 (item 7): kept off the map's models (a house, a castle's wall, a tree) - along them it slides
         if (s.worldNow && (before[0] != s.freeEye[0] || before[1] != s.freeEye[1] || before[2] != s.freeEye[2])) {
             std::vector<view3d::Box> boxes;
@@ -820,6 +929,17 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     if (m == WM_CHAR && s.skipFreeChar) {  // 3.0.19-beta.37: Ctrl+Shift+C's letter (0x03)
         s.skipFreeChar = false;
         return wp == 0x03;
+    }
+    if (m == WM_CHAR && s.skipFlightChar) {  // 3.0.22-beta.24: Ctrl+Shift+P, O, L's letters
+        s.skipFlightChar = false;
+        return wp == 0x10 || wp == 0x0F || wp == 0x0C;
+    }
+    // 3.0.22-beta.24 (the cinema camera): in the free camera Ctrl+Shift+P a flight point, O the flight, L clears them
+    if (m == WM_KEYDOWN && (wp == 'P' || wp == 'O' || wp == 'L') && s.free && s.mode != view3d::Mode::Off &&
+        GetKeyState(VK_CONTROL) < 0 && GetKeyState(VK_SHIFT) < 0 && GetKeyState(VK_MENU) >= 0) {
+        s.skipFlightChar = true;
+        if (((lp >> 30) & 1) == 0) (wp == 'P' ? s.wantPoint : wp == 'O' ? s.wantFly : s.wantClear) = true;
+        return true;
     }
     // 3.0.19-beta.37: Ctrl+Shift+C - the free camera on and off in the 3D view
     if (m == WM_KEYDOWN && wp == 'C' && GetKeyState(VK_CONTROL) < 0 && GetKeyState(VK_SHIFT) < 0 &&
@@ -911,6 +1031,8 @@ void frame(const Config& config) {
                  s.cameraWalls ? 1 : 0, s.cameraWalls ? "their own triangles as the game drew them" : "their boxes");
     }
     s.shoulder = config.view3dShoulder;  // 3.0.19-beta.54
+    s.freeScale = float(config.view3dFreeSpeed) / 100.0f;  // 3.0.22-beta.24
+    s.freeSmooth = config.view3dFreeSmooth;
     if (s.mode != view3d::Mode::Off && !inGameWorld()) {  // the login, the character list: the game's own
         s.mode = s.wanted = view3d::Mode::Off;
         walkmodewin::setOn(s.walkBefore);
@@ -959,6 +1081,15 @@ float onTopStep() { return g_state.onTopStep; }
 bool behind() { return g_state.mode == view3d::Mode::Behind; }
 
 bool freeCamera() { return g_state.mode != view3d::Mode::Off && g_state.free; }
+int flightPoints() { return int(g_state.points.size()); }  // 3.0.22-beta.24
+bool flying() { return g_state.mode != view3d::Mode::Off && g_state.free && g_state.flying; }
+bool takeNote(int& text, int& arg) {
+    if (!g_state.noteText) return false;
+    text = g_state.noteText;
+    arg = g_state.noteArg;
+    g_state.noteText = 0;
+    return true;
+}
 
 int skillWait() { return g_state.mode != view3d::Mode::Off ? skillWaitKind() : 0; }
 

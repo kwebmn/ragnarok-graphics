@@ -256,6 +256,11 @@ int nightAmount(const EffectSettings& e, int hour, int minute) {
     return int(strength * f + 0.5);
 }
 
+void applyLapse(EffectSettings& e, int minute) {
+    e.dayNow = std::clamp(minute, 0, 1439);
+    e.nightNow = nightAmount(e, e.dayNow / 60, e.dayNow % 60);  // the night's own curve, the deep one too
+}
+
 void applyClock(EffectSettings& e, int localMinute, int serverMinute) {
     const int minute = daylight::minuteOf(e.clock, localMinute, serverMinute);
     e.dayNow = minute;
@@ -949,6 +954,11 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.view3dOwnModels);
         } else if (key == "view3d.fast_ground") {  // 3.0.19-beta.42
             setBool(val, c.view3dFastGround);
+        } else if (key == "view3d.free_smooth") {  // 3.0.22-beta.24
+            setBool(val, c.view3dFreeSmooth);
+        } else if (key == "view3d.free_speed") {  // 3.0.22-beta.24
+            int n = 0;
+            if (toInt(val, -100000, 100000, n)) c.view3dFreeSpeed = std::clamp(n, 10, 300);
         } else if (key == "view3d.distance") {  // 3.0.19-beta.24
             int n = 0;
             if (toInt(val, -100000, 100000, n)) c.view3dDistance = std::clamp(n, 800, 1500);

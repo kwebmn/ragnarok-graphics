@@ -494,7 +494,7 @@ TEST(view3d_free_camera_flies_within_its_reach) {
     const float y0 = eye[1];
     view3d::flyStep(eye, f, right, 0, 0, 1, 0.25f, false, feet);  // up: the world's y down
     CHECK(eye[1] < y0 - 9.0f);
-    float far[3] = {0, -13, 240};
+    float far[3] = {0, -13, view3d::kFreeReach - 10.0f};
     view3d::flyStep(far, f, right, 1, 0, 0, 2.0f, false, feet);  // past the reach: kept at it
     const float d = std::sqrt(far[0] * far[0] + far[1] * far[1] + far[2] * far[2]);
     CHECK(d <= view3d::kFreeReach + 1e-2f && d > view3d::kFreeReach - 1.0f);
@@ -919,4 +919,81 @@ TEST(view3d_sky_sun_goes_round_the_day) {
     CHECK(s[0] == 0.0f && s[1] == 0.0f && s[2] == 0.0f);
     CHECK_EQ(view3d::skyParts(true, true, true, view3d::Ranges::None, true), 7 | view3d::kSunMovesPart);
     CHECK_EQ(view3d::skyParts(true, true, true, view3d::Ranges::None, false), 7);
+}
+
+// 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 1 - the cinema camera): the free camera glides - it gathers speed and
+// comes to rest gently; not smooth - at once, as before; [view3d] free_speed scales it
+TEST(view3d_free_camera_glides_to_its_speed_and_comes_to_rest) {
+    const float f[3] = {0, 0, 1}, right[3] = {1, 0, 0}, feet[3] = {0, 0, 0};
+    float eye[3] = {0, -13, 0};
+    view3d::Glide g;
+    view3d::glideStep(eye, g, f, right, 1, 0, 0, 0.1f, false, 1.0f, true, feet);
+    CHECK(g.v[2] > 0.0f && g.v[2] < view3d::kFreeSpeed * 0.5f);  // not at full speed at once
+    for (int i = 0; i < 40; ++i) view3d::glideStep(eye, g, f, right, 1, 0, 0, 0.1f, false, 1.0f, true, feet);
+    CHECK(std::fabs(g.v[2] - view3d::kFreeSpeed) < 0.5f);  // four seconds on: at its speed
+    view3d::glideStep(eye, g, f, right, 0, 0, 0, 0.1f, false, 1.0f, true, feet);
+    CHECK(g.v[2] > view3d::kFreeSpeed * 0.5f);  // the key let go: still moving
+    for (int i = 0; i < 60; ++i) view3d::glideStep(eye, g, f, right, 0, 0, 0, 0.1f, false, 1.0f, true, feet);
+    CHECK(g.v[0] == 0.0f && g.v[1] == 0.0f && g.v[2] == 0.0f);  // at rest
+    const float z = eye[2];
+    view3d::glideStep(eye, g, f, right, 0, 0, 0, 1.0f, false, 1.0f, true, feet);
+    CHECK(eye[2] == z);
+    view3d::Glide at;
+    float sharp[3] = {0, -13, 0};
+    view3d::glideStep(sharp, at, f, right, 1, 0, 0, 0.5f, false, 0.5f, false, feet);  // not smooth, half the speed
+    CHECK(std::fabs(sharp[2] - view3d::kFreeSpeed * 0.5f * 0.5f) < 1e-3f);
+    float far[3] = {0, -13, view3d::kFreeReach - 1.0f};
+    view3d::Glide fast;
+    view3d::glideStep(far, fast, f, right, 1, 0, 0, 1.0f, true, 1.0f, false, feet);
+    const float d = std::sqrt(far[0] * far[0] + far[1] * far[1] + far[2] * far[2]);
+    CHECK(d <= view3d::kFreeReach + 1e-2f);
+}
+
+TEST(view3d_free_look_eases_the_short_way_round) {
+    view3d::Look shown{350.0f, 0.0f}, wanted{10.0f, 20.0f};
+    view3d::easeLook(shown, wanted, 0.05f);
+    CHECK((shown.yaw > 350.0f && shown.yaw < 360.0f) || shown.yaw < 10.0f);  // through north, not round
+    CHECK(shown.pitch > 0.0f && shown.pitch < 20.0f);
+    for (int i = 0; i < 60; ++i) view3d::easeLook(shown, wanted, 0.05f);
+    CHECK(std::fabs(shown.yaw - 10.0f) < 0.05f && std::fabs(shown.pitch - 20.0f) < 0.05f);
+}
+
+TEST(view3d_flight_through_the_points) {
+    std::vector<view3d::Waypoint> pts(2);
+    pts[0].eye[0] = 0, pts[0].eye[2] = 0, pts[0].yaw = 350.0f, pts[0].pitch = 0.0f;
+    pts[1].eye[0] = 0, pts[1].eye[2] = 200, pts[1].yaw = 10.0f, pts[1].pitch = -10.0f;
+    const float speed = view3d::kFreeSpeed;
+    const float whole = view3d::flightSeconds(pts, speed);
+    CHECK(whole > 200.0f / speed && whole < 200.0f / speed * 1.5f);  // the steady pace plus its eased ends
+    const view3d::FlightPose start = view3d::flightAt(pts, 0.0f, speed);
+    CHECK(!start.done && std::fabs(start.eye[2]) < 1e-3f && std::fabs(start.yaw - 350.0f) < 1e-3f);
+    const view3d::FlightPose mid = view3d::flightAt(pts, whole * 0.5f, speed);
+    CHECK(std::fabs(mid.eye[2] - 100.0f) < 1.0f);                 // halfway at half the time (the ramps alike)
+    CHECK(mid.yaw > 355.0f || mid.yaw < 5.0f);                     // the short way: through north
+    const view3d::FlightPose early = view3d::flightAt(pts, whole * 0.1f, speed);
+    CHECK(early.eye[2] > 0.0f && early.eye[2] < 200.0f * 0.1f);   // gathering speed: behind the steady pace
+    const view3d::FlightPose end = view3d::flightAt(pts, whole + 1.0f, speed);
+    CHECK(end.done && std::fabs(end.eye[2] - 200.0f) < 1e-3f && std::fabs(end.yaw - 10.0f) < 1e-3f);
+    float last = -1.0f;  // the way only forward
+    bool forward = true;
+    for (int i = 0; i <= 50; ++i) {
+        const float z = view3d::flightAt(pts, whole * float(i) / 50.0f, speed).eye[2];
+        forward = forward && z >= last - 1e-3f;
+        last = z;
+    }
+    CHECK(forward);
+    std::vector<view3d::Waypoint> pan(2);  // a turn in place takes its time too
+    pan[1].yaw = 90.0f;
+    CHECK(view3d::flightSeconds(pan, speed) > 5.0f);
+    std::vector<view3d::Waypoint> one(1);
+    CHECK(view3d::flightSeconds(one, speed) == 0.0f && view3d::flightAt(one, 0.0f, speed).done);
+    std::vector<view3d::Waypoint> three(3);  // through the middle point
+    three[1].eye[0] = 100, three[2].eye[0] = 100, three[2].eye[2] = 100;
+    bool through = false;
+    const float t3 = view3d::flightSeconds(three, speed);
+    for (int i = 0; i <= 200; ++i) {
+        const view3d::FlightPose p = view3d::flightAt(three, t3 * float(i) / 200.0f, speed);
+        through = through || (std::fabs(p.eye[0] - 100.0f) < 1.5f && std::fabs(p.eye[2]) < 1.5f);
+    }
+    CHECK(through);
 }

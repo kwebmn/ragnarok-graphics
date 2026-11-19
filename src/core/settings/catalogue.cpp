@@ -110,6 +110,7 @@ void effectGroups(std::vector<Group>& out) {
         if (word == "time") {
             grp.rows.push_back(B("effects.clock"));
             grp.rows.push_back(D("effects.night_strength", "effects.clock"));
+            grp.rows.push_back(D("effects.timelapse_speed", "effects.clock"));  // 3.0.22-beta.24: Ctrl+Shift+T
             grp.rows.push_back(B("effects.season"));
         }
         if (word == "weather") grp.rows.push_back(B("effects.weather_kind"));
@@ -159,7 +160,8 @@ std::vector<Group> build() {
     out.push_back(group(Area::View3d, Text::CatView3dCamera,
                         {B("view3d.fov_first"), B("view3d.fov_behind"), B("view3d.mouse"), B("view3d.distance"),
                          D("view3d.shoulder"), D("view3d.face"), D("view3d.aim_pull"), D("view3d.threat"),
-                         D("view3d.camera_walls"), D("view3d.near_fade")}));
+                         D("view3d.camera_walls"), D("view3d.near_fade"), B("view3d.free_speed"),
+                         B("view3d.free_smooth")}));  // 3.0.22-beta.24: the cinema camera
     out.push_back(group(Area::View3d, Text::CatView3dRooms,
                         {B("view3d.ceiling"), D("view3d.one_room", "view3d.ceiling").need("view3d.ceiling"),
                          B("view3d.vault"), D("view3d.vault_rock", "view3d.vault").need("view3d.vault"),

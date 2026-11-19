@@ -1,5 +1,7 @@
 #include "core/seasons.hpp"
 
+#include <algorithm>
+
 #include "core/trees.hpp"
 
 namespace uagfx::seasons {
@@ -34,6 +36,24 @@ living::Place withYear(living::Place place, const Look& year) {
     }
     return place;
 }
+
+namespace {
+float toward(float from, float to, float step) {
+    return from < to ? std::min(to, from + step) : std::max(to, from - step);
+}
+}  // namespace
+
+Look ease(const Look& shown, const Look& target, float seconds, float fadeSeconds) {
+    if (!(fadeSeconds > 0.0f)) return target;
+    const float step = std::max(seconds, 0.0f) / fadeSeconds;
+    Look l;
+    l.snow = toward(shown.snow, target.snow, step);
+    l.dry = toward(shown.dry, target.dry, step);
+    l.lush = toward(shown.lush, target.lush, step);
+    return l;
+}
+
+bool same(const Look& a, const Look& b) { return a.snow == b.snow && a.dry == b.dry && a.lush == b.lush; }
 
 int monthFor(int choice, int localMonth) {
     static const int kMonths[kSeasons] = {0, 4, 7, 10, 1};  // April, July, October, January

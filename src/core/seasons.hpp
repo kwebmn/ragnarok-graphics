@@ -27,4 +27,10 @@ int monthFor(int choice, int localMonth);  // localMonth: the computer's, 1-12
 // 2.7.6: no flowers in the grass either
 living::Place withYear(living::Place place, const Look& year);
 
+// 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 3 - the city whitening in sight for the channel's videos): the year
+// changing on the same map (the «Пора року» chosen anew, a new month) shown little by little - each of snow, dry and
+// lush goes toward its new value by a whole step in fadeSeconds (0: at once); a new map takes its year at once
+Look ease(const Look& shown, const Look& target, float seconds, float fadeSeconds);
+bool same(const Look& a, const Look& b);
+
 }  // namespace uagfx::seasons

@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "core/seasons.hpp"
 #include "test.hpp"
 
@@ -58,4 +60,21 @@ TEST(seasons_no_insects_while_snow_lies) {
     // and no flowers in the grass under the snow (R-NV24QA: yellow and violet among the white)
     CHECK(field.flowers >= 0 && winter.flowers < 0);
     CHECK(seasons::withYear(field, seasons::of("prt_fild08", 7, true, field)).flowers == field.flowers);
+}
+
+// 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 3): the year changing in sight - the snow lies down and melts by a
+// whole step in the fade's seconds; 0 - at once
+TEST(seasons_change_little_by_little) {
+    seasons::Look autumn, winter;
+    autumn.dry = 0.35f;
+    winter.snow = 0.7f, winter.dry = 0.3f;
+    seasons::Look shown = seasons::ease(autumn, winter, 5.0f, 20.0f);
+    CHECK(std::fabs(shown.snow - 0.25f) < 1e-5f && std::fabs(shown.dry - 0.3f) < 1e-5f);
+    shown = seasons::ease(shown, winter, 5.0f, 20.0f);
+    CHECK(std::fabs(shown.snow - 0.5f) < 1e-5f);
+    shown = seasons::ease(shown, winter, 5.0f, 20.0f);
+    CHECK(seasons::same(shown, winter));  // never past it
+    shown = seasons::ease(shown, autumn, 2.0f, 20.0f);  // melting the same way
+    CHECK(std::fabs(shown.snow - 0.6f) < 1e-5f);
+    CHECK(seasons::same(seasons::ease(autumn, winter, 0.016f, 0.0f), winter));  // 0: at once
 }

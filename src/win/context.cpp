@@ -152,6 +152,7 @@
 #include "win/skill_window.hpp"
 #include "win/pad_hint.hpp"
 #include "win/key_hint.hpp"
+#include "win/time_lapse.hpp"
 #include "win/pad_tiles.hpp"
 #include "win/target_card.hpp"
 #include "win/tracker.hpp"
@@ -1285,6 +1286,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     keywalk::setSpace(config.spaceAction);                     // 3.0.18-beta.209: Space acts
     walkmodewin::frame(config, iniPath());                     // 3.0.18-beta.208: the walk mode
     view3dwin::frame(config);                                  // 3.0.19-beta.6: the 3D view
+    if (int text = 0, arg = 0; view3dwin::takeNote(text, arg))  // 3.0.22-beta.24: the flight's points
+        sayOnScreen(wideOf(settings::fmt(settings::tr(language(), settings::Text(text)), {std::to_string(arg)})));
     // 3.0.19-beta.42; 3.0.22-beta.18 (R-WSFMDB): never while the compare key shows the game's own picture - the own
     // ground off then, the game's far cells left out drew no ground at all (comodo all water)
     groundthin::setOn(config.view3dFastGround && enhanced_);
@@ -1581,6 +1584,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
                                : -1;
         applyClock(fx, t.wHour * 60 + t.wMinute, server);
     }
+    // 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 2): Ctrl+Shift+T - the time running fast in the clock's place
+    if (const int lapsed = timelapsewin::frame(fx.clock, fx.dayNow, fx.timelapseSpeed); lapsed >= 0)
+        applyLapse(fx, lapsed);
     // 3.0.16-beta.37: [effects] hallucination_wave - the character under Hallucination now (its icon 34 in the game's
     // list of the player's icons, 0x728484..0x728488 - FUN_00593d00's)
     if (fx.hallucinationWave && inGameWorld()) {

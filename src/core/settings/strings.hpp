@@ -315,7 +315,8 @@ enum class Text : uint16_t {
     // 2.4: the parts of the effects
     FxWaterFoam, FxWaterFoamHint, FxWaterGlints, FxWaterGlintsHint, FxCaustics, FxCausticsHint, FxWaterfalls,
     FxWaterfallsHint, FxStepDust, FxStepDustHint, FxSeasonSnow, FxSeasonSnowHint,
-    FxSeasonGrass, FxSeasonGrassHint, FxPollen, FxPollenHint, FxIndoorDust, FxIndoorDustHint, FxRainSplashes,
+    FxSeasonGrass, FxSeasonGrassHint, FxSeasonFade, FxSeasonFadeHint, FxPollen, FxPollenHint, FxIndoorDust,
+    FxIndoorDustHint, FxRainSplashes,
     FxRainSplashesHint, FxSandstorm, FxSandstormHint, FxDesertHeat, FxDesertHeatHint, FxSkyRays,
     FxSkyRaysHint, FxTreeSeasons, FxTreeSeasonsHint, FxDragonflies, FxDragonfliesHint,
     DiagRegistryOld,  // 2.4.2
@@ -379,7 +380,7 @@ enum class Text : uint16_t {
     FxNoServerNight, FxNoServerNightHint,  // 2.6.13
     FxClock, FxClockHint, FxClockAuto, FxClockServer, FxClockDawn, FxClockMorning, FxClockDay,  // 2.6.11
     FxClockSunset,
-    FxClockNight, FxClockDeepNight,
+    FxClockNight, FxClockDeepNight, FxTimelapseSpeed, FxTimelapseSpeedHint,
     FxMoonLight, FxMoonLightHint, FxMoonStrength, FxMoonStrengthHint, FxFirefliesLight, FxFirefliesLightHint,  // 2.7.18
     FxMoonBeams, FxMoonBeamsHint,  // 2.7.20
     FxLightOrbs, FxLightOrbsHint,  // 2.7.25
@@ -1013,7 +1014,8 @@ enum class Text : uint16_t {
     View3dDenseCrowns, View3dDenseCrownsHint,  // 3.0.20-beta.51: fuller crowns
     View3dCrownVolume, View3dCrownVolumeHint,  // 3.0.20-beta.73: a body for the crowns
     View3dCrownLight, View3dCrownLightHint,    // 3.0.20-beta.79: a crown's light by its shape
-    View3dFastGround, View3dFastGroundHint,
+    View3dFastGround, View3dFastGroundHint, View3dFreeSpeed, View3dFreeSpeedHint, View3dFreeSmooth,
+    View3dFreeSmoothHint, FlightPointNote, FlightClearedNote, FlightTwoPointsNote, FlightMostNote,
     QualityBatchGround, QualityBatchGroundHint,
     // 3.0.20-beta.17 (the owner: «сделай этот процес чтобы был гораздо приятнее»): the game's card for several answers;
     // «Нове звернення» sent on a thread of its own with its progress
@@ -1046,7 +1048,9 @@ enum class Text : uint16_t {
     InterfaceView3dButtons, InterfaceView3dButtonsHint, CharOwnBehind, CharOwnEyes,
     // 3.0.21-beta.13: the key hints (core/key_hints) - the keys' names, what they do, their switch
     KeyWheel, KeySpace, KeyClick, KeyClickAlone, KeyHintCursor, KeyHintDistance, KeyHintRound, KeyHintTarget,
-    KeyHintToEyes, KeyHintToUsual, KeyHintHoldAlt, KeyHintFly, KeyHintUp, KeyHintDown, KeyHintFaster, KeyHintBack,
+    KeyHintToEyes, KeyHintToUsual, KeyHintHoldAlt, KeyHintPoint, KeyHintPointMore, KeyHintFlight,
+    KeyHintFlightStop, KeyHintPointsClear, KeyHintTimeStop, KeyHintClockBack, KeyHintFly, KeyHintUp, KeyHintDown,
+    KeyHintFaster, KeyHintBack,
     KeyHintSkillEnemy, KeyHintSkillFriend, KeyHintPick, KeyHintPickRun, KeyHintPickAll, InterfaceKeyHints,
     InterfaceKeyHintsHint,
     // 3.0.22-beta.3 (ideas 1, 2): a drop's cause under the game's «Disconnected from Server.»; the re-login's countdown

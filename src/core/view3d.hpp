@@ -164,8 +164,39 @@ bool ownOut(Mode m, float behind, bool outBefore);
 // 3.0.19-beta.37 (the owner: «можнол попробовать» - the concept's photo mode with a free camera, Ctrl+Shift+C): the
 // free camera's step - its eye moved along the view (f), its right and the world's up by the keys held (ahead, aside,
 // rise: -1, 0, 1) at kFreeSpeed units a second (Shift kFreeFast times) over `seconds`, kept within kFreeReach of the
-// character's feet (the server shows what is near it alone)
-constexpr float kFreeSpeed = 40.0f, kFreeFast = 3.0f, kFreeReach = 250.0f;
+// character's feet (the server shows what is near it alone). 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 1 - the
+// cinema camera for the channel's videos): its reach 250 -> 1200 (a city from above in one flight; the monsters
+// and the players only near the character still)
+constexpr float kFreeSpeed = 40.0f, kFreeFast = 3.0f, kFreeReach = 1200.0f;
+// 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 1 - the cinema camera): the free camera glides - its speed eases
+// toward the keys' (kGlideEase seconds the time constant) so a flight starts and stops gently; scale: [view3d]
+// free_speed (1 the usual kFreeSpeed); smooth false: at once, flyStep's way. Kept within kFreeReach of the feet.
+struct Glide {
+    float v[3] = {0, 0, 0};  // units a second, the world's axes
+};
+constexpr float kGlideEase = 0.45f;
+void glideStep(float eye[3], Glide& g, const float f[3], const float right[3], int ahead, int aside, int rise,
+               float seconds, bool fast, float scale, bool smooth, const float feet[3]);
+// The look shown eased toward the mouse's (yaw the short way round), kLookEase seconds the time constant
+constexpr float kLookEase = 0.18f;
+void easeLook(Look& shown, const Look& wanted, float seconds);
+// 3.0.22-beta.24: the cinema camera's flight - the points set with Ctrl+Shift+P (the eye and the look) flown through
+// on one smooth curve (Catmull-Rom, its ends held) at a steady pace, the start and the end eased (kFlightRamp of the
+// time each); the look along the same curve, yaw the short way between two points. The pace: `speed` units a second
+// over the ground, a turn in place kFlightDegreeUnits units a degree (a 90 degrees pan some 7 s at the usual speed)
+struct Waypoint {
+    float eye[3] = {0, 0, 0};
+    float yaw = 0.0f, pitch = 0.0f;
+};
+constexpr int kWaypointsMost = 9;
+constexpr float kFlightRamp = 0.2f, kFlightDegreeUnits = 3.0f;
+struct FlightPose {
+    float eye[3] = {0, 0, 0};
+    float yaw = 0.0f, pitch = 0.0f;
+    bool done = false;  // at the last point (or no flight: fewer than two points)
+};
+float flightSeconds(const std::vector<Waypoint>& points, float speed);
+FlightPose flightAt(const std::vector<Waypoint>& points, float seconds, float speed);
 // The view's forward (the flat way tilted by pitch, degrees) and its right on the screen, as place makes them
 void axesOf(const float flat[3], const float up[3], float pitch, float f[3], float right[3]);
 void flyStep(float eye[3], const float f[3], const float right[3], int ahead, int aside, int rise, float seconds,

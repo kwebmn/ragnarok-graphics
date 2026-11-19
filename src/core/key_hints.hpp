@@ -14,9 +14,12 @@ namespace uagfx::keyhint {
 // пользоваться»): the moments the driver changes what the keys and the mouse do - a line at the bottom middle (the
 // controller's hint line's glass, the keys in caps) says what to press there. The moments in the order they win when
 // two come together: the one where a player is stuck first. No Windows here.
-enum class Moment : uint8_t { View3dWindow, View3dSkill, FreeCamera, View3d, ItemPicks, Count };
+// 3.0.22-beta.24 (the owner 19.11 «делай 1-4»): Flight - the free camera with its points set (Ctrl+Shift+P, O, L),
+// TimeLapse - Ctrl+Shift+T's time running or stopped
+enum class Moment : uint8_t { View3dWindow, View3dSkill, Flight, FreeCamera, TimeLapse, View3d, ItemPicks, Count };
 constexpr int kMoments = int(Moment::Count);
-const char* keyOf(Moment m);  // "view3d_window", "view3d_skill", "free_camera", "view3d", "item_moves"
+const char* keyOf(Moment m);  // "view3d_window", "view3d_skill", "free_flight", "free_camera_points", "time_lapse",
+                              // "view3d", "item_moves"
 
 // What the game is in this frame
 struct Now {
@@ -28,6 +31,9 @@ struct Now {
     bool freeCamera = false;  // Ctrl+Shift+C
     int skillWait = 0;        // the game waits for a skill's target: 2 an enemy's, 4 a friend's; 0 none
     bool itemsShared = false; // the storage or the cart open (Alt+right click; their picks: Ctrl, Shift, Ctrl+A)
+    int flightPoints = 0;     // 3.0.22-beta.24: the free camera's flight points set
+    bool flying = false;      // and its flight on
+    int lapse = 0;            // Ctrl+Shift+T: 0 off, 1 the time running, 2 stopped
 };
 std::array<bool, kMoments> momentsOf(const Now& n);
 

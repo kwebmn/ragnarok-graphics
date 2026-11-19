@@ -4,6 +4,7 @@
 #include <d3d12.h>
 #include <dxgi1_6.h>
 
+#include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <functional>
@@ -754,7 +755,11 @@ struct Renderer::Impl {
     ID3DBlob* lavaGlowPs = nullptr;
     std::string mapName;                    // the map the game shows (setMap)
     trees::Season mapSeason = trees::Season::Green;  // 1.7: its trees' (core/trees.hpp)
-    seasons::Look mapYear;  // 1.20: the year on its ground (core/seasons.hpp)
+    seasons::Look mapYear;  // 1.20: the year on its ground (core/seasons.hpp); 3.0.22-beta.24: as shown now
+    // 3.0.22-beta.24 (the owner 19.11 «делай 1-4», 3): the year the map goes to - shown little by little
+    // ([effects] season_fade, core seasons::ease); yearAt: the last step's time (steady seconds), -1 none yet
+    seasons::Look yearTarget;
+    double yearAt = -1.0;
     // 1.22: the shared wind (core/wind.hpp), once a frame (weather.cpp updateWind): its way in the world, its way on
     // the screen (the view's x axis), and what it has carried the weather (pixels) so far (2.7.17: the sky's clouds
     // gone with the sky)
@@ -1388,12 +1393,22 @@ struct Renderer::Impl {
     bool applyTorches();   // once a frame (torchDone), the world drawn: before its colours; false: lost
     // A new picture (cleared, presented, another target): the world's effects are due again.
     // 2.6.22: the map's trees, place and year by the month of the season chosen (effects.season; core/seasons.hpp)
-    void takeSeason() {
+    // 3.0.22-beta.24: a new map takes its year at once, another season chosen on the same map goes there by easeYear
+    void takeSeason(bool newMap = false) {
         const int month = seasons::monthFor(effects.season, trees::monthNow());
         mapSeason = trees::seasonOf(mapName, month);
         mapPlace = living::placeOf(mapName, outdoors(mapName), mapSeason == trees::Season::Autumn);
-        mapYear = seasons::of(mapName, month, outdoors(mapName), mapPlace);
-        mapPlace = seasons::withYear(mapPlace, mapYear);  // 2.7.5: no insects in winter
+        yearTarget = seasons::of(mapName, month, outdoors(mapName), mapPlace);
+        if (newMap) mapYear = yearTarget;
+        mapPlace = seasons::withYear(mapPlace, yearTarget);  // 2.7.5: no insects in winter
+    }
+    // once a frame: the year shown a step nearer the map's (a stall counts a quarter of a second at most)
+    void easeYear() {
+        const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        const float seconds = yearAt < 0.0 ? 0.0f : float(std::min(now - yearAt, 0.25));
+        yearAt = now;
+        if (!seasons::same(mapYear, yearTarget))
+            mapYear = seasons::ease(mapYear, yearTarget, seconds, float(effects.seasonFade));
     }
     bool ownShownLast = false;  // 3.0.19-beta.42: the last picture's ground the own one in place of the game's
     // 3.0.20-beta.4 (stage 2b): the frame's game models to draw (Msg::GameModelsFrame); whether the renderer could
