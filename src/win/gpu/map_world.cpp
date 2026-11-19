@@ -15,6 +15,7 @@
 #include "core/jpeg_image.hpp"
 #include "core/outdoors.hpp"
 #include "core/outskirts.hpp"
+#include "core/pit_walls.hpp"
 #include "core/own_ground.hpp"
 #include "core/own_models.hpp"
 #include "core/room_blocks.hpp"
@@ -555,17 +556,36 @@ void MapWorld::loop() {
                         ring.seed = seed;
                         // 3.0.20-beta.31: the sea past it (3.0.20-beta.42: made with it, one plan for both)
                         own->outskirts = outskirts::build(full, own->atlas, sun, ring, &own->seaFrame);
+                        // 3.0.22-beta.22 (the owner's R-GK3ZCT «тут тоже походу стен нету»): in a house or a hall
+                        // the makers' pits standing for walls (the Pyramids' mazes) given upright walls for the 3D
+                        // view, in the third mesh (no land past a house's edges is drawn) - their height the
+                        // ceiling's, set once the models tell it (below)
+                        if (roomWalls && pitwalls::mazeMap(name) && cave_vault::ceilingFor(name, outdoors(name))) {
+                            terrain::Mesh raised = pitwalls::build(full, own->atlas, sun, cave_vault::kCeilingFlat);
+                            if (!raised.chunks.empty()) {
+                                own->outskirts = std::move(raised);
+                                own->seaFrame.clear();
+                                own->pitWalls = true;
+                            }
+                        }
                         own->edgeCorners.assign(size_t(full.width + 1) * size_t(full.height + 1), 0);
                         for (const terrain::Vertex& v : own->outskirts.vertices) {
                             const uint32_t corner = v.blend & 0xFFFFFFu;
                             if (corner < own->edgeCorners.size()) own->edgeCorners[corner] = 1;
                         }
-                        LOG_INFO("own ground: %s's outskirts - %u chunks, %u vertices, %u triangles past its edges, "
-                                 "%d cells off (the 3D view's horizon)%s%s",
-                                 name.c_str(), unsigned(own->outskirts.chunks.size()),
-                                 unsigned(own->outskirts.vertices.size()), unsigned(own->outskirts.indices.size() / 3),
-                                 ring.ring, own->seaFrame.empty() ? "" : "; the sea past its wet edges",
-                                 ring.relief ? "" : "; no hills of its own (the horizon panorama's)");
+                        if (own->pitWalls)
+                            LOG_INFO("own ground: %s - its pits standing for walls (a maze from above) given upright "
+                                     "walls for the 3D view: %u faces in %u chunks ([view3d] room_walls)",
+                                     name.c_str(), unsigned(own->outskirts.indices.size() / 6),
+                                     unsigned(own->outskirts.chunks.size()));
+                        else
+                            LOG_INFO("own ground: %s's outskirts - %u chunks, %u vertices, %u triangles past its "
+                                     "edges, %d cells off (the 3D view's horizon)%s%s",
+                                     name.c_str(), unsigned(own->outskirts.chunks.size()),
+                                     unsigned(own->outskirts.vertices.size()),
+                                     unsigned(own->outskirts.indices.size() / 3), ring.ring,
+                                     own->seaFrame.empty() ? "" : "; the sea past its wet edges",
+                                     ring.relief ? "" : "; no hills of its own (the horizon panorama's)");
                     }
                     // 3.0.20-beta.41: the grass's cells of the whole map (60 ms here, not on the renderer's thread);
                     // 3.0.20-beta.42: the land's own within the map's rectangle too (the open cells it fills)
@@ -860,6 +880,13 @@ void MapWorld::loop() {
             wallsColourKnown = false;
             LOG_INFO("map objects: %s - no room to read its walls' textures: the ceiling in its plain stone",
                      name.c_str());
+        }
+        // 3.0.22-beta.22 (R-GK3ZCT): the pits' walls up to the room's ceiling - its walls' height by the models, as
+        // the 3D view's ceiling over the room's floor (cave_vault::buildCeiling)
+        if (own && own->pitWalls) {
+            const float tall = walls > 0.0f ? walls + cave_vault::kCeilingOver : cave_vault::kCeilingFlat;
+            pitwalls::raise(own->outskirts, tall);
+            LOG_INFO("own ground: %s - its pits' walls %.0f high (the ceiling's)", name.c_str(), double(tall));
         }
         EnterCriticalSection(&shared_->lock);
         shared_->doneName = name;

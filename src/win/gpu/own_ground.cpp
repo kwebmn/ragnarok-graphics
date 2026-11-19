@@ -780,11 +780,13 @@ bool Renderer::Impl::drawOwnGround() {
         jobs.clear();
         // 3.0.20-beta.30 (the owner's «6,7,8,9», 6): in the 3D view on a map under the sky the land past its edges too
         // (core/outskirts.hpp) - its chunks after the map's, the third mesh
-        const bool outskirts = camera::wideView() && mapOutdoors && !g->outskirts.chunks.empty();
+        // 3.0.22-beta.22 (R-GK3ZCT): indoors the walls raised over the pits there (core/pit_walls)
+        const bool outskirts = camera::wideView() && (mapOutdoors || g->pitWalls) && !g->outskirts.chunks.empty();
         // 3.0.20-beta.48 (the audit's question 3): where the land is drawn the makers' filler round the ground is
         // left out - the land lies there (a black ring between the ground and it until now)
         // 3.0.20-beta.71: and from above the sides made for a house's dressed blocks - the makers left none there
-        const std::vector<uint8_t>* leftOut = outskirts && !g->fillerTextures.empty() ? &g->fillerTextures
+        const std::vector<uint8_t>* leftOut = outskirts && !g->pitWalls && !g->fillerTextures.empty()
+                                                  ? &g->fillerTextures
                                               : !dressedShown && !g->madeTextures.empty() ? &g->madeTextures
                                                                                            : nullptr;
         const size_t mapChunks = g->mesh.chunks.size();
