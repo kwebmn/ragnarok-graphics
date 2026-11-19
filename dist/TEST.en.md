@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.22-beta.13 — what's new · 2026-11-19
+
+The horizon panorama: fixes from feedback.
+
+- **No green wall past the map's edge**: on maps by the sea (Comodo, Alberta) the islands stood at their full height right past the beach - a big green wall up to the sky. Now the islands near the map are low and the tall ones only far off, like the mountains elsewhere.
+- **Sharper on big screens**: on graphics cards with 8 GB or more on Direct3D 12 the panorama has twice the detail (8192 points round the circle instead of 4096), and the edge of mountains and hills is crisp on any screen. It takes a little longer to draw - a second or two after entering a region - but the frame hardly drops meanwhile.
+- **No white haze or white houses far off**: distant houses, trees and ground now fade gradually into the panorama behind them instead of turning white; the pale band where the world meets the panorama is gone.
+- **The far sea bright toward the horizon**: the sky is reflected in the panorama's sea, as in ordinary water.
+
 # uaRO Graphics 3.0.22-beta.12 — what's new · 2026-11-19
 
 The horizon panorama in the 3D view now on Direct3D 11 too.
