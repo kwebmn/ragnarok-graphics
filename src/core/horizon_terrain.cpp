@@ -144,7 +144,8 @@ Rgb albedoAt(const Climate& c, float x, float z, float height, float upness) {
         if (c.land == Land::Canyon)  // bands in the cliffs
             rock = scaled(rock, 0.85f + 0.3f * (0.5f + 0.5f * std::sin(height * 0.02f + 3.0f * tex)));
         Rgb a = mix(scaled(c.sand, 0.9f + 0.2f * tex), rock, rk);
-        const float sn = smooth(c.snowLine - 180.0f, c.snowLine + 120.0f, height) * smooth(0.42f, 0.66f, upness);
+        const float line = snowLineAt(c, x, z);  // 3.0.22-beta.16
+        const float sn = smooth(line - 180.0f, line + 120.0f, height) * smooth(0.42f, 0.66f, upness);
         return mix(a, c.snow, sn);
     }
     if (c.land == Land::Sea) {
@@ -158,7 +159,8 @@ Rgb albedoAt(const Climate& c, float x, float z, float height, float upness) {
     Rgb a = mix(grass, forest, forestMask);
     a = mix(a, scaled(c.rock, 0.75f + 0.5f * tex), smooth(0.78f, 0.6f, upness));
     const float snowAt = height + 260.0f * fbm(x * 0.003f, z * 0.003f, 3, c.seed + 700);
-    const float sn = smooth(c.snowLine - 180.0f, c.snowLine + 120.0f, snowAt) * smooth(0.42f, 0.66f, upness);
+    const float line = snowLineAt(c, x, z);  // 3.0.22-beta.16: far peaks capped
+    const float sn = smooth(line - 180.0f, line + 120.0f, snowAt) * smooth(0.42f, 0.66f, upness);
     return mix(a, c.snow, sn);
 }
 
@@ -231,6 +233,12 @@ float shadowAt(const Climate& c, float mapRadius, Vec3 at, Vec3 normal, Vec3 toS
 
 float hazeOf(const Climate& c, float distance, float height) {
     return 1.0f - std::exp(-distance * c.haze * (1.0f - 0.45f * smooth(0.0f, 3000.0f, height)));
+}
+
+Rgb airOf(const Rgb& horizon) { return {horizon.r * kAir[0], horizon.g * kAir[1], horizon.b * kAir[2]}; }
+
+float snowLineAt(const Climate& c, float x, float z) {
+    return std::max(c.snowLine, kSnowShare * kRoof * std::sqrt(x * x + z * z));
 }
 
 float seaShine(float rise) {

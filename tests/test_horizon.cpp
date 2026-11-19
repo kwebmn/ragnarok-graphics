@@ -292,3 +292,24 @@ TEST(horizon_light_by_the_height_of_its_source) {
     const horizon::LightSet moon = horizon::lightAt(1.0f, 0.6f), night = horizon::lightAt(1.0f);
     CHECK(moon.sun.b == night.sun.b);  // a high moon's light the night's as it was
 }
+
+// 3.0.22-beta.16 (the owner's R-PTSZNW «горы в небе», R-VT7R3Q, prt_fild08): far peaks capped with snow, not white
+// to their feet - the snow line at least 0.62 of the strip's roof that far off (white cones on the horizon read as
+// clouds); near, the climate's own line as before
+TEST(horizon_far_peaks_only_capped_with_snow) {
+    const horizon::Climate c = horizon::climateOf("Prontera");
+    const float far = 15000.0f;
+    CHECK(!within(horizon::albedoAt(c, far, 0.0f, 2000.0f, 0.95f), c.snow, 0.1f));
+    CHECK(within(horizon::albedoAt(c, far, 0.0f, 3400.0f, 0.95f), c.snow, 0.1f));
+    CHECK(within(horizon::albedoAt(c, 5000.0f, 0.0f, c.snowLine + 400.0f, 0.95f), c.snow, 0.1f));
+}
+
+// 3.0.22-beta.16 (R-PTSZNW, R-VT7R3Q): the far land's air a shade darker and bluer than the sky at the horizon - hazed
+// into the sky's own colour its feet were lost in the sky, the peaks hung in it
+TEST(horizon_air_darker_and_bluer_than_the_horizon) {
+    const horizon::Rgb sky{0.80f, 0.86f, 0.95f};
+    const horizon::Rgb air = horizon::airOf(sky);
+    CHECK(air.r < sky.r && air.g < sky.g && air.b < sky.b);
+    CHECK(air.b / air.r > sky.b / sky.r);
+    CHECK(air.r > 0.6f * sky.r);
+}

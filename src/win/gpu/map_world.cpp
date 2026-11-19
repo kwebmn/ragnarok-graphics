@@ -54,6 +54,7 @@ struct MapWorld::Shared {
     rooms::Map doneRooms;                     // 3.0.20-beta.57: a house's rooms
     bool ownWanted = false;                 // 3.0.4-beta.10: the own ground read with the map
     bool roomWalls = true;                  // 3.0.20-beta.71: [view3d] room_walls
+    bool outskirtsRelief = true;            // 3.0.22-beta.16: off under the horizon panorama
     std::unique_ptr<OwnGround> doneOwn;
     bool doneOk = false;
     bool doneReady = false;
@@ -130,6 +131,14 @@ void MapWorld::setRoomWalls(bool wanted) {
     roomWalls_ = wanted;
     EnterCriticalSection(&shared_->lock);
     shared_->roomWalls = wanted;
+    LeaveCriticalSection(&shared_->lock);
+}
+
+void MapWorld::setOutskirtsRelief(bool wanted) {
+    if (wanted == outskirtsRelief_) return;
+    outskirtsRelief_ = wanted;
+    EnterCriticalSection(&shared_->lock);
+    shared_->outskirtsRelief = wanted;
     LeaveCriticalSection(&shared_->lock);
 }
 
@@ -402,6 +411,7 @@ void MapWorld::loop() {
             EnterCriticalSection(&shared_->lock);
             const bool ownWanted = shared_->ownWanted;
             const bool roomWalls = shared_->roomWalls;  // 3.0.20-beta.71
+            const bool outskirtsRelief = shared_->outskirtsRelief;  // 3.0.22-beta.16
             LeaveCriticalSection(&shared_->lock);
             // 3.0.4-beta.10: the own ground - its whole .gnd, its textures. 3.0.4-beta.20: no room for it in the game's
             // memory (32-bit) - the game's own ground, the game goes on
@@ -537,6 +547,7 @@ void MapWorld::loop() {
                     own->distant = terrain::build(full, 1, own->atlas, nullptr, nullptr, &sun);
                     {  // 3.0.20-beta.30 (the owner's «6,7,8,9», 6): the land past its edges - the 3D view's horizon
                         outskirts::Options ring;
+                        ring.relief = outskirtsRelief;  // 3.0.22-beta.16: the panorama's land past it instead
                         ring.water = w.waterKnown;
                         ring.waterLevel = w.waterLevel;
                         uint32_t seed = 2166136261u;  // the map's name hashed (FNV-1a): its own hills, every time
@@ -550,10 +561,11 @@ void MapWorld::loop() {
                             if (corner < own->edgeCorners.size()) own->edgeCorners[corner] = 1;
                         }
                         LOG_INFO("own ground: %s's outskirts - %u chunks, %u vertices, %u triangles past its edges, "
-                                 "%d cells off (the 3D view's horizon)%s",
+                                 "%d cells off (the 3D view's horizon)%s%s",
                                  name.c_str(), unsigned(own->outskirts.chunks.size()),
                                  unsigned(own->outskirts.vertices.size()), unsigned(own->outskirts.indices.size() / 3),
-                                 ring.ring, own->seaFrame.empty() ? "" : "; the sea past its wet edges");
+                                 ring.ring, own->seaFrame.empty() ? "" : "; the sea past its wet edges",
+                                 ring.relief ? "" : "; no hills of its own (the horizon panorama's)");
                     }
                     // 3.0.20-beta.41: the grass's cells of the whole map (60 ms here, not on the renderer's thread);
                     // 3.0.20-beta.42: the land's own within the map's rectangle too (the open cells it fills)

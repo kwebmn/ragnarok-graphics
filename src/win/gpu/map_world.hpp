@@ -95,6 +95,10 @@ public:
     // 3.0.20-beta.71: [view3d] room_walls - a house's black blocks beside its rooms dressed in the rooms' wall
     // pictures as the own ground is read (core/room_blocks); a change shows from the next map read
     void setRoomWalls(bool wanted);
+    // 3.0.22-beta.16 (the owner's R-D675ZA «склейка не очень», R-PTSZNW «горы в небе»): the outskirts' hills and
+    // mountains - off while the horizon panorama is on (its own land rises past the map's edge; the outskirts' hid its
+    // mountains' feet, their olive slopes a second land before it); from the next map read
+    void setOutskirtsRelief(bool wanted);
     const OwnGround* ownGround() const { return own_ && own_->map == shown_ ? own_.get() : nullptr; }
     void ownPicturesUp();
     // 3.0.6-beta.3: the last read asked for not taken yet (asked, under way, or done and not polled) - «Тест графіки»
@@ -129,6 +133,7 @@ private:
     std::vector<map::Point> seen_;    // where torches were seen, until the axes are known
     bool ownWanted_ = false;          // 3.0.4-beta.10
     bool roomWalls_ = true;           // 3.0.20-beta.71
+    bool outskirtsRelief_ = true;     // 3.0.22-beta.16
     uint32_t asked_ = 0, taken_ = 0;  // 3.0.6-beta.3: the reads' numbers - the last asked for, the last taken
     std::unique_ptr<OwnGround> own_;
     uint32_t ownSerial_ = 0;

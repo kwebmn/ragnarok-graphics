@@ -127,6 +127,7 @@ void Renderer::Impl::dropOwnGround() {
 // texels, as the game's), the lightmaps in strips. True: drawn this picture in place of the game's.
 bool Renderer::Impl::prepareOwnGround() {
     mapWorld.setRoomWalls(effects.roomWalls3d);  // 3.0.20-beta.71: from the next map read
+    mapWorld.setOutskirtsRelief(!effects.skyPanorama);  // 3.0.22-beta.16: likewise
     mapWorld.setOwnGround(true);
     mapWorld.poll();
     const OwnGround* g = mapWorld.ownGround();

@@ -1615,11 +1615,12 @@ float3 hzNormal(float2 p, float eps) {
 float3 hzAlbedo(float2 p, float height, float up) {
     float tex = 0.5 + 0.5 * hzFbm(p * 0.004, 4, hzSeed + 400u);
     int land = hzLand;
+    float capLine = max(hzSnowLine, 0.62 * 0.30 * length(p));  // 3.0.22-beta.16: core snowLineAt - far peaks capped
     [branch] if (land == 2 || land == 5) {
         float3 rock = hzRock * (0.8 + 0.4 * tex);
         if (land == 5) rock *= 0.85 + 0.3 * (0.5 + 0.5 * sin(height * 0.02 + 3.0 * tex));  // bands in the cliffs
         float3 a = lerp(hzSand * (0.9 + 0.2 * tex), rock, hzSmooth(0.80, 0.65, up));
-        float sn = hzSmooth(hzSnowLine - 180.0, hzSnowLine + 120.0, height) * hzSmooth(0.42, 0.66, up);
+        float sn = hzSmooth(capLine - 180.0, capLine + 120.0, height) * hzSmooth(0.42, 0.66, up);
         return lerp(a, hzSnow, sn);
     }
     if (land == 3) {
@@ -1633,7 +1634,7 @@ float3 hzAlbedo(float2 p, float height, float up) {
     float3 a = lerp(grass, trees, forest);
     a = lerp(a, hzRock * (0.75 + 0.5 * tex), hzSmooth(0.78, 0.6, up));
     float snowAt = height + 260.0 * hzFbm(p * 0.003, 3, hzSeed + 700u);
-    return lerp(a, hzSnow, hzSmooth(hzSnowLine - 180.0, hzSnowLine + 120.0, snowAt) * hzSmooth(0.42, 0.66, up));
+    return lerp(a, hzSnow, hzSmooth(capLine - 180.0, capLine + 120.0, snowAt) * hzSmooth(0.42, 0.66, up));
 }
 struct HzHit {
     float hit, distance, height, coverage;
@@ -1778,7 +1779,9 @@ float3 skyPanorama(float3 sky, float3 dir, float3 horizon, float night, float3 t
     float3 sun, ambient;
     hzLightFor(night, toward.y, sun, ambient);  // toward up: its y the sine of the light's height
     float3 lit = albedo * (ambient * (0.55 + 0.45 * n.y) + sun * max(dot(n, toward), 0.0) * saturate(detail.b));
-    float3 shown = lerp(hzDisplay(lit), horizon, saturate(detail.a));
+    // 3.0.22-beta.16 (R-PTSZNW «горы в небе»): hazed into the air a shade darker and bluer than the sky at the horizon
+    // (core horizon::airOf) - into the sky's own colour the land's feet were lost in it, its peaks hung in the sky
+    float3 shown = lerp(hzDisplay(lit), horizon * float3(0.80, 0.86, 0.94), saturate(detail.a));
     return lerp(sky, shown, cover * fade);
 }
 

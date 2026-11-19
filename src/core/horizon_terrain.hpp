@@ -18,6 +18,11 @@ float eroded(float x, float z, int octaves, uint32_t seed);  // derivative-dampe
 
 constexpr float kLandRise = 1400.0f;  // past the map's edge the land rises from 0 to whole over this
 constexpr float kRoof = 0.30f;        // no land higher than this share of its distance (under kRiseHigh)
+// 3.0.22-beta.16 (R-PTSZNW «горы в небе»): the snow line at least this share of the roof that far off - far peaks
+// capped with snow, not white to their feet
+constexpr float kSnowShare = 0.62f;
+// The snow line at (x, z): the climate's, or kSnowShare of the roof there, the higher
+float snowLineAt(const Climate& c, float x, float z);
 float heightAt(const Climate& c, float mapRadius, float x, float z);  // units up; 0 within mapRadius; < 0 the sea
 struct Vec3 {
     float x = 0, y = 0, z = 0;
@@ -42,6 +47,10 @@ float hazeOf(const Climate& c, float distance, float height);
 // 3.0.22-beta.13: the sea's sheen along a way `rise` up - the sky in it at a grazing look, whole at the horizon (the
 // bake's haze toward the horizon's colour at least this on the sea, as the world's own water's)
 float seaShine(float rise);
+// 3.0.22-beta.16 (R-PTSZNW, R-VT7R3Q): the far land's air - the sky's colour at the horizon a shade darker and bluer
+// (kAir): hazed into the sky's own colour its feet were lost in the sky
+constexpr float kAir[3] = {0.80f, 0.86f, 0.94f};
+Rgb airOf(const Rgb& horizon);
 // A hit on the sea itself (Land::Sea under the islands' beaches, the albedoAt's sea)
 inline bool onSea(const Climate& c, float height) { return c.land == Land::Sea && height < 0.5f; }
 

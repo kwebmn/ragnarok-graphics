@@ -81,7 +81,7 @@ Rgb seen(const Climate& c, Vec3 dir, const View& v, const Level& level, float pi
     const view3d::Sky s = view3d::skyOf(v.night, false);
     float haze = hazeOf(c, h.distance, h.height);
     if (onSea(c, h.height)) haze = std::max(haze, seaShine(dir.y));  // 3.0.22-beta.13
-    const Rgb land = mixed(toDisplay(lit), {s.horizon[0], s.horizon[1], s.horizon[2]}, haze);
+    const Rgb land = mixed(toDisplay(lit), airOf({s.horizon[0], s.horizon[1], s.horizon[2]}), haze);  // .16
     return mixed(sky, land, h.coverage);
 }
 
