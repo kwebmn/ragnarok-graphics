@@ -51,7 +51,14 @@ public:
     // time they were 2 % of the game's thread with Direct3D 11
     // 3.0.5-beta.6: while «Тест графіки» runs, the set it shows (the player's file is never written)
     const EffectSettings& effects() const;
-    void settingsChanged() { effectsMade_ = false; }  // `config` replaced
+    void settingsChanged() {  // `config` replaced
+        effectsMade_ = false;
+        classicFresh_ = false;
+    }
+    // 3.0.22-beta.25 (the owner 19.11: «надо переводить полностью в режим старого клиента, с интерфейсом»): the
+    // settings the interface's parts take - `config`, or while Pause shows the game's own picture the old client's
+    // (core classicLook: every part of the driver's off, the game's own windows back)
+    const Config& interfaceConfig();
     // 3.0.4-beta.35: the card's level for the automatic set now - the start's, moved by its speed (core/card_speed)
     int cardLevel() const { return judge().level(); }
     gpu::Renderer* renderer = nullptr;
@@ -180,6 +187,8 @@ private:
     bool renderScaleNoted_ = false;  // the log has said render_scale is not used with DLSS
     ToggleKey compareKey_;  // Pause or Scroll Lock: every improvement off and on, to compare
     bool enhanced_ = true;
+    Config classic_;             // 3.0.22-beta.25: classicLook(config), made when asked after a change
+    bool classicFresh_ = false;
     int view3dBefore_ = 0;  // 3.0.22-beta.18: the 3D view (view3d::Mode) the compare key turned off, asked back after
     mutable EffectSettings effects_;  // 2.5.11: effects(), made from `config`
     mutable bool effectsMade_ = false;

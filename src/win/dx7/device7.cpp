@@ -481,7 +481,8 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         cmd.texture[i] = t->gpuTexture();
         cmd.keyed[i] = t->colorKeyed();
     }
-    win::crisp::tileDraw(textures_[0], cmd);  // stage 6: a window tile carries its twin
+    // stage 6: a window tile carries its twin; 3.0.22-beta.25: not under Pause - the old client's own letters
+    if (c.enhanced()) win::crisp::tileDraw(textures_[0], cmd);
     // the target has no alpha; 3.0.19-beta.30 (R-DGXEPX): resolved again only when a state changed (core SetupCache)
     DrawSetup setup = setupCache_.resolve(states_, false, hasTexture);
     // 3.0.18-beta.229 (R-H2CQCJ «негатив»): an effect's inverted texture (the game's preset 6) kept to this draw - the

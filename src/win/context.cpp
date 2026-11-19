@@ -742,7 +742,8 @@ void Context::endScene() {
     const bool drawn = sceneWork > 0;
     // 3.0.11-beta.215: the next frames' cell under the mouse - none while the cursor is hidden (hidePadCursor's rule)
     // 3.0.16-beta.7: [interface] mouse_cell - the game's cell hidden, ours drawn (win/ground_marks)
-    hideGridCell(gridcell::hides(config.padWalk == PadWalk::Arrow, uapad::runtime::look().shown) || config.mouseCell);
+    hideGridCell(gridcell::hides(config.padWalk == PadWalk::Arrow, uapad::runtime::look().shown) ||
+                 interfaceConfig().mouseCell);  // 3.0.22-beta.25: the old client's cell under Pause
     if (photoNow()) record.dropInterface();  // 3.0.4-beta.5: the photo mode - the world alone (.16: a big shot)
     if (drawn && renderer && !photoNow()) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
     if (panelSlot_.endScene(drawn) && renderer && !photoNow()) {
@@ -1027,7 +1028,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
         }
         // 2.15: said on the screen while they are off - a stray press looked like a broken game
         fps_.setNote(enhanced_ ? L"" : wideOf(settings::tr(language(), settings::Text::CompareOffNote)));
+        // 3.0.22-beta.25: and the old client's interface - the driver's parts off, the game's windows back (ui below)
+        classicFresh_ = false;
+        if (!enhanced_) LOG_INFO("compare key: the old client's interface too - the driver's windows and bars off");
     }
+    const Config& ui = interfaceConfig();  // 3.0.22-beta.25: the interface's settings (Pause: the old client's)
     // 0.54: Ctrl+Shift+F11 - the frame counter
     const bool fpsDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
                          GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F11) < 0;
@@ -1053,10 +1058,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
         bigShot_ = 3;
         LOG_INFO("big shot: Ctrl+Alt+F11 - the world alone drawn at 200 %% for a moment, saved whole");
     }
-    keepCameraFree(config.cameraIndoor);  // 3.0.4-beta.5: building maps' camera as outdoors
-    limitZoom(config.cameraZoomLimit);     // 3.0.4-beta.17: no further out than the character is drawn
-    tiltCamera(config.cameraTilt);  // 3.0.13-beta.5: [camera] tilt
-    quickTeleport(config.quickTeleport);  // 3.0.13-beta.7: [interface] quick_teleport
+    keepCameraFree(ui.cameraIndoor);  // 3.0.4-beta.5: building maps' camera as outdoors
+    limitZoom(ui.cameraZoomLimit);     // 3.0.4-beta.17: no further out than the character is drawn
+    tiltCamera(ui.cameraTilt);  // 3.0.13-beta.5: [camera] tilt
+    quickTeleport(ui.quickTeleport);  // 3.0.13-beta.7: [interface] quick_teleport
     if (effects().crowdEffects) {  // 3.0.13-beta.20: whose skill effects stay whole
         friends_ = partywin::hereIds();
         uint32_t own = 0;
@@ -1065,8 +1070,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     stillScreen(!config.screenShake);     // 3.0.13-beta.8: [interface] screen_shake
     silentJokes(!config.skillJokes);      // 3.0.13-beta.8: [interface] skill_jokes
     noSwearFilter(!config.swearFilter);   // 3.0.13-beta.9: [interface] swear_filter
-    npcwin::setCutinEsc(config.escCutin);  // 3.0.13-beta.10: [interface] esc_cutin
-    uapad::runtime::setFollow(config.follow);  // 3.0.13-beta.11: [interface] follow
+    npcwin::setCutinEsc(ui.escCutin);  // 3.0.13-beta.10: [interface] esc_cutin
+    uapad::runtime::setFollow(ui.follow);  // 3.0.13-beta.11: [interface] follow
     rememberCamera(config.cameraRemember);  // 3.0.11-beta.184: the zoom and tilt kept between the games (R-ANMTEJ)
     raiseWaterBoxes(enhanced_ && effects().ownGround);  // 3.0.4-beta.20: the game's water to its far plane
     // 2.3: Ctrl+Shift+F9 - uaRO Studio's X-ray: the AI pictures' textures tinted by how they are shown; written too,
@@ -1198,11 +1203,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     // 3.0.3-beta.8: the windows' panel at this frame's scale - drawn into the next present's record
     if (window)
-        windowSwitch_.frame(window, mainWindow_, config, scaleMade_ ? plan.k : 1.0,
+        windowSwitch_.frame(window, mainWindow_, enhanced_ ? config : classic_, scaleMade_ ? plan.k : 1.0,
                             scaleMade_ ? plan.targetWidth : shadow.width(),
                             scaleMade_ ? plan.targetHeight : shadow.height(), gameFullscreen);
     // 3.0.4-beta.6: the buffs' times on the game's icons - none while the buffs' column hides them (3.0.11-beta.35)
-    buffoverlay::frame(config.buffTimers && !buffcolumn::hidingGameIcons(), float(scaleMade_ ? plan.k : 1.0));
+    buffoverlay::frame(ui.buffTimers && !buffcolumn::hidingGameIcons(), float(scaleMade_ ? plan.k : 1.0));
     g_parts.mark("buffoverlay", nowMs());
     // 3.0.9-beta.4: the developer's answer - its card at this frame's scale, drawn into the next present's record
     answercard::frame(window, scaleMade_ ? plan.k : 1.0, scaleMade_ ? plan.targetWidth : shadow.width(),
@@ -1226,7 +1231,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     hudedit::setLocked(config.lockLayout);  // 3.0.11-beta.77: [interface] lock_layout
     uistyle::setPictures(packpictures::iconsStamp());
     // 3.0.11-beta.1: [interface] minimap - the new interface's minimap prototype in the game's own one's corner
-    minimapproto::Show minimapShow{config.newMinimap, config.minimapNpcs, config.minimapWarps, config.minimapMobs,
+    minimapproto::Show minimapShow{ui.newMinimap, config.minimapNpcs, config.minimapWarps, config.minimapMobs,
                                    config.minimapWay, config.minimapHd};
     minimapShow.kafra = config.minimapKafra;  // 3.0.11-beta.119: the map's layers
     minimapShow.party = config.minimapParty;
@@ -1244,15 +1249,15 @@ void Context::present(const Rect& source, bool waitForVblank) {
     netwatchwin::frame();  // 3.0.11-beta.122: the map server's connection read each second (the minimap's badge)
     nettrailwin::frame(config.reportDisconnects, map_, foreground);  // 3.0.20-beta.60: a lost connection told
     g_parts.mark("netwatchwin", nowMs());
-    netsmoothwin::setOn(config.smoothFixes);  // 3.0.11-beta.123: [interface] smooth_fixes
+    netsmoothwin::setOn(ui.smoothFixes);  // 3.0.11-beta.123: [interface] smooth_fixes
     netwatchwin::setQuickAcks(config.quickAcks);  // 3.0.11-beta.128: [debug] quick_acks
-    netpredictwin::setOn(config.predictWalk);     // 3.0.11-beta.130: [interface] predict_walk
+    netpredictwin::setOn(ui.predictWalk);     // 3.0.11-beta.130: [interface] predict_walk
     minimapproto::frame(window, minimapShow, pk, pw, ph);
     g_parts.mark("minimapproto", nowMs());
     // 3.0.11-beta.35: [interface] buffs - the buffs' column under the new minimap, the game's icons hidden
-    buffcolumn::frame(window, config.buffs, config.buffsOverflow, pk, pw, ph);
+    buffcolumn::frame(window, ui.buffs, ui.buffsOverflow, pk, pw, ph);
     g_parts.mark("buffcolumn", nowMs());
-    trackerwin::frame(window, config.tracker, pk, pw, ph);  // 3.0.11-beta.70: left of the buffs' column
+    trackerwin::frame(window, ui.tracker, pk, pw, ph);  // 3.0.11-beta.70: left of the buffs' column
     g_parts.mark("trackerwin", nowMs());
     motion::setOn(config.animations);  // 3.0.11-beta.46: [interface] animations - the new interface's motion
     // 3.0.11-beta.47: its grounds; 3.0.11-beta.200: the windows whole while the game's «opaque» is on
@@ -1262,29 +1267,29 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.11-beta.36: [interface] character - the character block at the top left, the game's Basic Info hidden
     {  // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): the character block's second row - the windows switched on
         closedwin::Switches own;
-        own.reference = config.referenceWindow, own.hunt = config.huntPanel, own.mvp = config.mvpTimers;
-        own.tracker = config.tracker, own.party = config.partyPanel, own.recap = config.deathRecap;
-        own.view3d = config.view3dButtons && view3dwin::available();  // 3.0.21-beta.12: the 3D view's two looks
+        own.reference = ui.referenceWindow, own.hunt = ui.huntPanel, own.mvp = ui.mvpTimers;
+        own.tracker = ui.tracker, own.party = ui.partyPanel, own.recap = ui.deathRecap;
+        own.view3d = ui.view3dButtons && view3dwin::available();  // 3.0.21-beta.12: the 3D view's two looks
         ownwin::setSwitches(own);
         ownwin::setKeys(config.ownKeys);  // 3.0.18-beta.125
     }
-    charpanel::frame(window, config.character, gameCodePage(config), pk, pw, ph);
+    charpanel::frame(window, ui.character, gameCodePage(config), pk, pw, ph);
     g_parts.mark("charpanel", nowMs());
     chardiarywin::frame(gameCodePage(config));  // 3.0.11-beta.273: the characters' diary
     g_parts.mark("chardiarywin", nowMs());
-    expgainwin::frame(config.expGain, pk, pw, ph);  // 3.0.11-beta.237: [interface] exp_gain (the bars' label)
+    expgainwin::frame(ui.expGain, pk, pw, ph);  // 3.0.11-beta.237: [interface] exp_gain (the bars' label)
     threatarcwin::labels(pk, pw, ph);  // 3.0.19-beta.37: the threat's arcs' distances
     g_parts.mark("expgainwin", nowMs());
-    expbars::frame(config.expBars, pk, pw, ph);  // 3.0.11-beta.236: [interface] exp_bars, the bottom's strip
+    expbars::frame(ui.expBars, pk, pw, ph);  // 3.0.11-beta.236: [interface] exp_bars, the bottom's strip
     g_parts.mark("expbars", nowMs());
     // 3.0.11-beta.38: [interface] target - the target's card at the top middle
-    targetpanel::frame(window, config.targetCard, config.padHints, pk, pw, ph);
+    targetpanel::frame(window, ui.targetCard, ui.padHints, pk, pw, ph);
     g_parts.mark("targetpanel", nowMs());
-    groundmarks::look(config.targetRing);  // 3.0.11-beta.87: the target's ring on the ground
-    groundmarks::walkLook(config.walkArrow, config.walkMark);  // 3.0.11-beta.103: the stick's arrow's look
-    keywalk::setEnabled(config.arrowsWalk);                    // 3.0.18-beta.207: the arrows walk
-    keywalk::setSpace(config.spaceAction);                     // 3.0.18-beta.209: Space acts
-    walkmodewin::frame(config, iniPath());                     // 3.0.18-beta.208: the walk mode
+    groundmarks::look(ui.targetRing);  // 3.0.11-beta.87: the target's ring on the ground
+    groundmarks::walkLook(config.walkArrow, ui.walkMark);  // 3.0.11-beta.103: the stick's arrow's look
+    keywalk::setEnabled(ui.arrowsWalk);                    // 3.0.18-beta.207: the arrows walk
+    keywalk::setSpace(ui.spaceAction);                     // 3.0.18-beta.209: Space acts
+    walkmodewin::frame(ui, iniPath());                     // 3.0.18-beta.208: the walk mode
     view3dwin::frame(config);                                  // 3.0.19-beta.6: the 3D view
     if (int text = 0, arg = 0; view3dwin::takeNote(text, arg))  // 3.0.22-beta.24: the flight's points
         sayOnScreen(wideOf(settings::fmt(settings::tr(language(), settings::Text(text)), {std::to_string(arg)})));
@@ -1293,14 +1298,14 @@ void Context::present(const Rect& source, bool waitForVblank) {
     groundthin::setOn(config.view3dFastGround && enhanced_);
     groundthin::frame();
     presentwatchwin::frame(*renderer, config, iniPath(), window, gameCodePage(config));  // 3.0.19-beta.8
-    groundmarks::groundTimers(config.groundTimers);  // 3.0.16-beta.21
-    hotbarwin::setTimers(config.groundTimers);       // 3.0.16-beta.22: on the slots too
-    groundmarks::skillCells(config.skillCells);                // 3.0.11-beta.142: a ground skill's cells
+    groundmarks::groundTimers(ui.groundTimers);  // 3.0.16-beta.21
+    hotbarwin::setTimers(ui.groundTimers);       // 3.0.16-beta.22: on the slots too
+    groundmarks::skillCells(ui.skillCells);                // 3.0.11-beta.142: a ground skill's cells
     threatarcwin::setOn(config.view3dThreat);                  // 3.0.19-beta.36: the 3D view's threat's arc
-    groundmarks::mouseCell(config.mouseCell);                  // 3.0.16-beta.7: the cell under the mouse
-    uapad::runtime::setRing(config.targetRing != TargetRing::Off);  // 3.0.11-beta.95: the pad's fake mark off then
+    groundmarks::mouseCell(ui.mouseCell);                  // 3.0.16-beta.7: the cell under the mouse
+    uapad::runtime::setRing(ui.targetRing != TargetRing::Off);  // 3.0.11-beta.95: the pad's fake mark off then
     uapad::runtime::setDirectWalk(config.padWalk == PadWalk::Arrow);  // 3.0.11-beta.88: the stick without the mouse
-    uapad::runtime::setTiles(config.padTiles);                        // 3.0.11-beta.90: Start opens the tile
+    uapad::runtime::setTiles(ui.padTiles);                        // 3.0.11-beta.90: Start opens the tile
     padtileswin::frame(window, pk, pw, ph);
     g_parts.mark("padtileswin", nowMs());
     padassignwin::frame(window, pk, pw, ph);  // 3.0.11-beta.91: «Призначити»
@@ -1309,12 +1314,12 @@ void Context::present(const Rect& source, bool waitForVblank) {
     g_parts.mark("chatwheelwin", nowMs());
     oskwin::frame(window, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.214: the on-screen keyboard
     g_parts.mark("oskwin", nowMs());
-    padhintwin::frame(window, config.padHints, pk, pw, ph);  // 3.0.11-beta.92: the hint line in the interface's style
-    keyhintwin::frame(window, config, pk, pw, ph);  // 3.0.21-beta.13: the key hints (Alt in the 3D view, ...)
+    padhintwin::frame(window, ui.padHints, pk, pw, ph);  // 3.0.11-beta.92: the hint line in the interface's style
+    keyhintwin::frame(window, ui, pk, pw, ph);  // 3.0.21-beta.13: the key hints (Alt in the 3D view, ...)
     g_parts.mark("padhintwin", nowMs());
     // 3.0.11-beta.39: [interface] party - the party's panel under the character block
-    partywin::setAlarm(config.partyAlarm);  // 3.0.11-beta.282
-    partywin::frame(window, config.partyPanel, gameCodePage(config), pk, pw, ph);
+    partywin::setAlarm(ui.partyAlarm);  // 3.0.11-beta.282
+    partywin::frame(window, ui.partyPanel, gameCodePage(config), pk, pw, ph);
     g_parts.mark("partywin", nowMs());
     // 3.0.11-beta.41: [interface] chat - the chat at the bottom left, the game's own out of sight (before the hotbar:
     // it keeps clear of it)
@@ -1322,106 +1327,106 @@ void Context::present(const Rect& source, bool waitForVblank) {
     chatwin::setLog(config.chatLog);  // 3.0.13-beta.3
     chatwin::setLongLines(config.longChat);  // 3.0.13-beta.12
     chatwin::setColours(config.chatParty, config.chatGuild, config.chatOwn, config.chatOthers);  // 3.0.13-beta.3
-    chatwin::frame(window, config.chat, gameCodePage(config), pk, pw, ph);
+    chatwin::frame(window, ui.chat, gameCodePage(config), pk, pw, ph);
     g_parts.mark("chatwin", nowMs());
     // 3.0.11-beta.50: [interface] low_hp_edge - the screen's edges red at low HP (0: none)
-    lowhpedge::frame(config.lowHpEdge, pk, pw, ph);
+    lowhpedge::frame(ui.lowHpEdge, pk, pw, ph);
     g_parts.mark("lowhpedge", nowMs());
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero, the game's own gauge hidden
     mobhpwin::setPercent(config.mobHpPercent);  // 3.0.11-beta.293
-    mobhpwin::setBossBars(config.bossBars);     // 3.0.13-beta.3
-    mobhpwin::setWhoHits(config.whoHits);       // 3.0.13-beta.13
-    mobhpwin::frame(window, config.mobHp, pk, pw, ph);  // 3.0.11-beta.95
+    mobhpwin::setBossBars(ui.bossBars);     // 3.0.13-beta.3
+    mobhpwin::setWhoHits(ui.whoHits);       // 3.0.13-beta.13
+    mobhpwin::frame(window, ui.mobHp, pk, pw, ph);  // 3.0.11-beta.95
     g_parts.mark("mobhpwin", nowMs());
-    worldsigns::frame(config.worldSigns, gameCodePage(config), pk, pw, ph);  // 3.0.16-beta.7
+    worldsigns::frame(ui.worldSigns, gameCodePage(config), pk, pw, ph);  // 3.0.16-beta.7
     g_parts.mark("worldsigns", nowMs());
-    groundwin::frame(window, config.dropNames, config.dropHighlight, gameCodePage(config), pk, pw, ph);  // .283
+    groundwin::frame(window, ui.dropNames, ui.dropHighlight, gameCodePage(config), pk, pw, ph);  // .283
     g_parts.mark("groundwin", nowMs());
     npctagwin::frame(window, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.256
     g_parts.mark("npctagwin", nowMs());
-    castwin::frame(window, config.castLabel, gameCodePage(config), pk, pw, ph);
+    castwin::frame(window, ui.castLabel, gameCodePage(config), pk, pw, ph);
     g_parts.mark("castwin", nowMs());
     // 3.0.11-beta.40: [interface] hotbar - the hotkeys' bar at the bottom middle, the game's own hidden
-    hotbarwin::setDelayRing(config.delayRing);  // 3.0.11-beta.276
-    hotbarwin::setPotionWarn(config.potionWarn);  // 3.0.11-beta.281
+    hotbarwin::setDelayRing(ui.delayRing);  // 3.0.11-beta.276
+    hotbarwin::setPotionWarn(ui.potionWarn);  // 3.0.11-beta.281
     hotbarwin::setSupplies(config.hotbarSupplies);  // 3.0.16-beta.8
     hotbarwin::setNeeds(config.skillNeeds, config.comboWindow);  // 3.0.16-beta.13
     upkeepwatch::setOn(config.brokenGear, config.petHunger);
-    hotbarwin::frame(window, config.hotbar, config.hotbarPerCharacter, config.padHints, config.hotbarAmmo,
-                     config.groundCounts, gameCodePage(config), pk, pw, ph);  // .125 the ammo's pill, .143 the walls
+    hotbarwin::frame(window, ui.hotbar, config.hotbarPerCharacter, ui.padHints, config.hotbarAmmo,
+                     ui.groundCounts, gameCodePage(config), pk, pw, ph);  // .125 the ammo's pill, .143 the walls
     g_parts.mark("hotbarwin", nowMs());
     consolehint::frame(gameCodePage(config));  // 3.0.17-beta.11: where the settings are, once (.21-beta.7: Alt+O)
     tkmissionwin::frame(gameCodePage(config));  // 3.0.22-beta.4: the Taekwon mission's monster in the chat
     g_parts.mark("consolehint", nowMs());
-    farbars::setOn(config.farBars);      // 3.0.20-beta.84 (R-7WTVBF): [interface] far_bars
-    ammosound::frame(config.ammoSound);  // 3.0.11-beta.129: [interface] ammo_sound - the chime at 10 left and at none
+    farbars::setOn(ui.farBars);      // 3.0.20-beta.84 (R-7WTVBF): [interface] far_bars
+    ammosound::frame(ui.ammoSound);  // 3.0.11-beta.129: [interface] ammo_sound - the chime at 10 left and at none
     g_parts.mark("ammosound", nowMs());
     // 3.0.11-beta.42: [interface] items and status - «Речі» and «Характеристики» while the game's own are open
-    itemswin::frame(window, config.itemsWindow, gameCodePage(config), pk, pw, ph, config.itemToast);
+    itemswin::frame(window, ui.itemsWindow, gameCodePage(config), pk, pw, ph, ui.itemToast);
     g_parts.mark("itemswin", nowMs());
-    statswin::frame(window, config.statusWindow, pk, pw, ph);
+    statswin::frame(window, ui.statusWindow, pk, pw, ph);
     g_parts.mark("statswin", nowMs());
-    skillswin::frame(window, config.skillsWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.96: «Навички»
+    skillswin::frame(window, ui.skillsWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.96: «Навички»
     g_parts.mark("skillswin", nowMs());
-    equipwin::frame(window, config.equipWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.97
+    equipwin::frame(window, ui.equipWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.97
     g_parts.mark("equipwin", nowMs());
-    npcwin::frame(window, config.npcWindow, config.npcRemember, gameCodePage(config), pk, pw, ph);  // .98, .255
+    npcwin::frame(window, ui.npcWindow, config.npcRemember, gameCodePage(config), pk, pw, ph);  // .98, .255
     g_parts.mark("npcwin", nowMs());
-    shopwin::frame(window, config.shopWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.100
+    shopwin::frame(window, ui.shopWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.100
     g_parts.mark("shopwin", nowMs());
-    storagewin::frame(window, config.storageWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.115
+    storagewin::frame(window, ui.storageWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.115
     g_parts.mark("storagewin", nowMs());
-    tradewin::frame(window, config.tradeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.116
+    tradewin::frame(window, ui.tradeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.116
     g_parts.mark("tradewin", nowMs());
-    menuwin::setRecap(config.deathRecap);  // 3.0.11-beta.277
-    menuwin::frame(window, config.menuWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.140
+    menuwin::setRecap(ui.deathRecap);  // 3.0.11-beta.277
+    menuwin::frame(window, ui.menuWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.140
     g_parts.mark("menuwin", nowMs());
     infocardwin::setElementColours(config.elementColours);  // 3.0.18-beta.144
-    infocardwin::frame(window, config.cardWindows, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.149
+    infocardwin::frame(window, ui.cardWindows, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.149
     g_parts.mark("infocardwin", nowMs());
-    askcardwin::frame(window, config.askWindows, config.countWindow, gameCodePage(config), pk, pw, ph);  // .150, .155
+    askcardwin::frame(window, ui.askWindows, ui.countWindow, gameCodePage(config), pk, pw, ph);  // .150, .155
     g_parts.mark("askcardwin", nowMs());
     msgboxwin::setRelogin(config.connection.autoRelogin);  // 3.0.22-beta.3: [connection] auto_relogin
-    msgboxwin::frame(window, config.messageBoxes, gameCodePage(config), pk, pw, ph);   // 3.0.11-beta.151
+    msgboxwin::frame(window, ui.messageBoxes, gameCodePage(config), pk, pw, ph);   // 3.0.11-beta.151
     g_parts.mark("msgboxwin", nowMs());
     weightrules::frame();  // 3.0.11-beta.202: msgstringtable's line about the weight at 70 %
     g_parts.mark("weightrules", nowMs());
     sitehttp::pump();  // 3.0.11-beta.180: the site's answers on the game's thread (the login screen's site account)
-    loginwin::frame(window, config.loginWindow, config.loginStatus, config.loginNews, config.loginView,
+    loginwin::frame(window, ui.loginWindow, config.loginStatus, config.loginNews, config.loginView,
                     gameCodePage(config), pk, pw, ph);  // .151, .173, .174, .177
     g_parts.mark("loginwin", nowMs());
     charselectwin::setCarousel(config.charCarousel);  // 3.0.11-beta.275
-    charselectwin::frame(window, config.charSelectWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.152
+    charselectwin::frame(window, ui.charSelectWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.152
     g_parts.mark("charselectwin", nowMs());
-    charmakewin::frame(window, config.charMakeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.153
+    charmakewin::frame(window, ui.charMakeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.153
     g_parts.mark("charmakewin", nowMs());
-    cartwin::frame(window, config.cartWindow, gameCodePage(config), pk, pw, ph);              // 3.0.11-beta.154
+    cartwin::frame(window, ui.cartWindow, gameCodePage(config), pk, pw, ph);              // 3.0.11-beta.154
     g_parts.mark("cartwin", nowMs());
-    vendshopwin::frame(window, config.vendWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.156
+    vendshopwin::frame(window, ui.vendWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.156
     g_parts.mark("vendshopwin", nowMs());
-    pickcardwin::frame(window, config.pickWindows, gameCodePage(config), pk, pw, ph);         // 3.0.11-beta.157
+    pickcardwin::frame(window, ui.pickWindows, gameCodePage(config), pk, pw, ph);         // 3.0.11-beta.157
     g_parts.mark("pickcardwin", nowMs());
     oldwindows::frame();  // 3.0.18-beta.1: the game's windows not redrawn, told as they first show
     g_parts.mark("oldwindows", nowMs());
-    loadingbarwin::frame(config.loadingBar, pk, pw, ph);  // 3.0.18-beta.180: the map loading bar
+    loadingbarwin::frame(ui.loadingBar, pk, pw, ph);  // 3.0.18-beta.180: the map loading bar
     g_parts.mark("loadingbarwin", nowMs());
-    partysetupwin::frame(window, config.partySetupWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.158
+    partysetupwin::frame(window, ui.partySetupWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.158
     g_parts.mark("partysetupwin", nowMs());
-    petcardwin::frame(window, config.petWindow, gameCodePage(config), pk, pw, ph);            // 3.0.11-beta.159
+    petcardwin::frame(window, ui.petWindow, gameCodePage(config), pk, pw, ph);            // 3.0.11-beta.159
     g_parts.mark("petcardwin", nowMs());
-    homuncardwin::frame(window, config.homunWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.160
+    homuncardwin::frame(window, ui.homunWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.160
     g_parts.mark("homuncardwin", nowMs());
-    merccardwin::frame(window, config.mercWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.161
+    merccardwin::frame(window, ui.mercWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.161
     g_parts.mark("merccardwin", nowMs());
-    merccardwin::blockFrame(window, config.mercWindow, gameCodePage(config), pk, pw, ph);     // 3.0.11-beta.216
+    merccardwin::blockFrame(window, ui.mercWindow, gameCodePage(config), pk, pw, ph);     // 3.0.11-beta.216
     g_parts.mark("merccardwin blockFrame", nowMs());
-    huntwin::frame(window, config.huntPanel, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.278
+    huntwin::frame(window, ui.huntPanel, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.278
     g_parts.mark("huntwin", nowMs());
-    mobcardwin::frame(window, config.mobCard, pk, pw, ph);  // 3.0.11-beta.279
+    mobcardwin::frame(window, ui.mobCard, pk, pw, ph);  // 3.0.11-beta.279
     g_parts.mark("mobcardwin", nowMs());
-    mvpwin::frame(window, config.mvpTimers, pk, pw, ph);  // 3.0.11-beta.280
+    mvpwin::frame(window, ui.mvpTimers, pk, pw, ph);  // 3.0.11-beta.280
     g_parts.mark("mvpwin", nowMs());
-    recapwin::frame(window, config.deathRecap, pk, pw, ph);  // 3.0.18-beta.120: «Що мене вбило» on its own
+    recapwin::frame(window, ui.deathRecap, pk, pw, ph);  // 3.0.18-beta.120: «Що мене вбило» on its own
     g_parts.mark("recapwin", nowMs());
     padpanels::frame();  // 3.0.18-beta.135: the pad's ring on a panel's button
     g_parts.mark("padpanels", nowMs());
@@ -1434,40 +1439,40 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.18-beta.122: «Налаштування»; 3.0.18-beta.172 (R-2CKVU6: 0.11 ms a frame closed - ourFile looked
     // for the file on the disk each frame) the path watchSettings found
     optionscardwin::setSettings(&config, iniPath());
-    optionscardwin::frame(window, config.optionsWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.162
+    optionscardwin::frame(window, ui.optionsWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.162
     g_parts.mark("optionscardwin", nowMs());
-    socialcardwin::frame(window, config.socialWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.163
+    socialcardwin::frame(window, ui.socialWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.163
     g_parts.mark("socialcardwin", nowMs());
-    servercardwin::frame(window, config.serverWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.164
+    servercardwin::frame(window, ui.serverWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.164
     g_parts.mark("servercardwin", nowMs());
-    guildcardwin::frame(window, config.guildWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.165
+    guildcardwin::frame(window, ui.guildWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.165
     g_parts.mark("guildcardwin", nowMs());
-    myshopwin::frame(window, config.myShopWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.166
+    myshopwin::frame(window, ui.myShopWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.166
     g_parts.mark("myshopwin", nowMs());
-    vendsetupwin::frame(window, config.vendSetupWindow, gameCodePage(config), pk, pw, ph);    // 3.0.16-beta.33
+    vendsetupwin::frame(window, ui.vendSetupWindow, gameCodePage(config), pk, pw, ph);    // 3.0.16-beta.33
     g_parts.mark("vendsetupwin", nowMs());
-    whispersetupwin::frame(window, config.whisperSetupWindow, gameCodePage(config), pk, pw, ph);  // .168
+    whispersetupwin::frame(window, ui.whisperSetupWindow, gameCodePage(config), pk, pw, ph);  // .168
     g_parts.mark("whispersetupwin", nowMs());
-    macrocardwin::frame(window, config.macroWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.169
+    macrocardwin::frame(window, ui.macroWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.169
     g_parts.mark("macrocardwin", nowMs());
-    tipwin::frame(window, config.tipWindow, gameCodePage(config), pk, pw, ph);                // 3.0.11-beta.204
+    tipwin::frame(window, ui.tipWindow, gameCodePage(config), pk, pw, ph);                // 3.0.11-beta.204
     g_parts.mark("tipwin", nowMs());
-    emotewin::frame(window, config.emoteWindow, gameCodePage(config), pk, pw, ph);            // 3.0.11-beta.205
+    emotewin::frame(window, ui.emoteWindow, gameCodePage(config), pk, pw, ph);            // 3.0.11-beta.205
     g_parts.mark("emotewin", nowMs());
-    commandwin::frame(window, config.commandWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.206
+    commandwin::frame(window, ui.commandWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.206
     g_parts.mark("commandwin", nowMs());
-    chatroomwin::frame(window, config.chatRoomWindows, gameCodePage(config), pk, pw, ph);     // 3.0.11-beta.207
+    chatroomwin::frame(window, ui.chatRoomWindows, gameCodePage(config), pk, pw, ph);     // 3.0.11-beta.207
     g_parts.mark("chatroomwin", nowMs());
-    roomwin::frame(window, config.chatRoomWindows, gameCodePage(config), pk, pw, ph);         // 3.0.11-beta.208
+    roomwin::frame(window, ui.chatRoomWindows, gameCodePage(config), pk, pw, ph);         // 3.0.11-beta.208
     g_parts.mark("roomwin", nowMs());
-    detailwin::frame(config.detailConsole);                                                   // 3.0.11-beta.209
+    detailwin::frame(ui.detailConsole);                                                   // 3.0.11-beta.209
     g_parts.mark("detailwin", nowMs());
-    popupwin::frame(window, config.popupMenus, gameCodePage(config), pk, pw, ph);              // 3.0.11-beta.211
+    popupwin::frame(window, ui.popupMenus, gameCodePage(config), pk, pw, ph);              // 3.0.11-beta.211
     g_parts.mark("popupwin", nowMs());
-    whisperwin::frame(window, config.whisperWindows, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.212
+    whisperwin::frame(window, ui.whisperWindows, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.212
     g_parts.mark("whisperwin", nowMs());
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
-    referencewin::frame(window, config.referenceWindow, pk, pw, ph);
+    referencewin::frame(window, ui.referenceWindow, pk, pw, ph);
     // 3.0.19-beta.4: the character's quests' steps from the site while «Довідник» is open (its quest cards say them)
     questprogresswin::frame(referencewin::isOpen(), gameCodePage(config));
     g_parts.mark("referencewin", nowMs());
@@ -1476,7 +1481,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uaui_showcase::frame(config.uauiShowcase);  // 3.0.18-beta.11: uaUI's components for the developers
     g_parts.mark("uaui_showcase", nowMs());
     // 3.0.11-beta.198: [interface] cursor (3.0.18-beta.69: before uaUI's end - its document shown this frame)
-    cursorlook::frame(config.cursorLook, pk);
+    cursorlook::frame(ui.cursorLook, pk);
     g_parts.mark("cursorlook", nowMs());
     uaui::end();  // 3.0.18-beta.11: uaUI laid out and rendered after its parts' frames
     g_parts.mark("uaui end", nowMs());
@@ -2019,6 +2024,15 @@ void Context::keepFrameRate(const Config& config, HWND window) {
 }
 
 // 3.0.4-beta.35: a line on the screen for 10 s (the frame counter's)
+const Config& Context::interfaceConfig() {
+    if (enhanced_) return config;
+    if (!classicFresh_) {
+        classic_ = classicLook(config);
+        classicFresh_ = true;
+    }
+    return classic_;
+}
+
 void Context::sayOnScreen(const std::wstring& note) {
     keepNote_ = note;
     keepNoteUntil_ = GetTickCount64() + 10000;

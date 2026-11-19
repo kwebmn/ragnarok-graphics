@@ -1255,6 +1255,12 @@ struct Config {
 };
 
 Config parseConfig(const std::string& text);
+// 3.0.22-beta.25 (the owner 19.11: «когда нажимаю паузу ... надо переводить полностью в режим старого клиента, с
+// интерфейсом итд»): the old client's interface - every part of the driver's off (the new windows, the bars, the
+// minimap, the cursor, the cell, the hints, the walk by keys, the camera's freedoms), so the game's own windows come
+// back; the game's own ways it only lets be switched (the screen's shake, the jokes, the swear filter) as they are,
+// and every other setting as it is (the screen, the renderer, the effects - Pause turns those off itself)
+Config classicLook(Config c);
 // 2.2.1: the kinds of AI pictures shown (bits as ai::Kind: 0 ground, 1 objects, 2 sprites, 3 effects, 4 icons); 0 none
 uint8_t aiKindsShown(const AiSettings& a);
 // 2.2.2: the sprites' kinds shown, a bit each by sprite_exe::Source (1 monsters, 2 players, 3 NPCs, 4 items); 0 none

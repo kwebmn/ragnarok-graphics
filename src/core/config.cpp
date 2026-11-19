@@ -256,6 +256,40 @@ int nightAmount(const EffectSettings& e, int hour, int minute) {
     return int(strength * f + 0.5);
 }
 
+Config classicLook(Config c) {
+    c.newMinimap = false;
+    c.buffs = BuffsLook::Off;
+    c.character = CharacterLook::Off;
+    c.mobHp = MobHp::Off;
+    c.targetRing = TargetRing::Off;
+    c.cursorLook = CursorLook::Game;
+    c.lowHpEdge = 0;
+    for (bool* b : {&c.targetCard,       &c.partyPanel,       &c.tracker,          &c.hotbar,
+                    &c.chat,             &c.itemsWindow,      &c.statusWindow,     &c.itemToast,
+                    &c.skillsWindow,     &c.equipWindow,      &c.npcWindow,        &c.shopWindow,
+                    &c.storageWindow,    &c.tradeWindow,      &c.menuWindow,       &c.cardWindows,
+                    &c.askWindows,       &c.countWindow,      &c.messageBoxes,     &c.loginWindow,
+                    &c.charSelectWindow, &c.charMakeWindow,   &c.cartWindow,       &c.vendWindow,
+                    &c.pickWindows,      &c.partySetupWindow, &c.petWindow,        &c.homunWindow,
+                    &c.mercWindow,       &c.optionsWindow,    &c.socialWindow,     &c.serverWindow,
+                    &c.guildWindow,      &c.myShopWindow,     &c.vendSetupWindow,  &c.whisperSetupWindow,
+                    &c.macroWindow,      &c.tipWindow,        &c.loadingBar,       &c.emoteWindow,
+                    &c.commandWindow,    &c.chatRoomWindows,  &c.detailConsole,    &c.popupMenus,
+                    &c.whisperWindows,   &c.referenceWindow,  &c.huntPanel,        &c.mobCard,
+                    &c.mvpTimers,        &c.deathRecap,       &c.expBars,          &c.expGain,
+                    &c.castLabel,        &c.worldSigns,       &c.dropNames,        &c.dropHighlight,
+                    &c.mouseCell,        &c.keyHints,         &c.padHints,         &c.padTiles,
+                    &c.panelShow,        &c.buffTimers,       &c.groundTimers,     &c.groundCounts,
+                    &c.skillCells,       &c.view3dButtons,    &c.ammoSound,        &c.potionWarn,
+                    &c.partyAlarm,       &c.whoHits,          &c.bossBars,         &c.farBars,
+                    &c.walkMark,         &c.delayRing,        &c.escCutin,         &c.follow,
+                    &c.smoothFixes,      &c.predictWalk,      &c.walkMode,         &c.arrowsWalk,
+                    &c.spaceAction,      &c.quickTeleport,    &c.cameraIndoor,     &c.cameraZoomLimit})
+        *b = false;
+    c.cameraTilt = "game";
+    return c;
+}
+
 void applyLapse(EffectSettings& e, int minute) {
     e.dayNow = std::clamp(minute, 0, 1439);
     e.nightNow = nightAmount(e, e.dayNow / 60, e.dayNow % 60);  // the night's own curve, the deep one too

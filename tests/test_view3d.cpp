@@ -997,3 +997,19 @@ TEST(view3d_flight_through_the_points) {
     }
     CHECK(through);
 }
+
+// 3.0.22-beta.25 (the owner 19.11: «когда нажимаю паузу ... надо переводить полностью в режим старого клиента, с
+// интерфейсом»): Pause's interface - every part of the driver's off, the rest of the settings as they are
+TEST(config_classic_look_is_the_old_clients_interface) {
+    Config c = parseConfig("[interface]\nminimap = 1\nwalk_mode = 1\nmouse_cell = 1\ncursor = light\n"
+                           "[quality]\nrender_scale = 150\n[camera]\nindoor = 1\ntilt = lower\n");
+    CHECK(c.newMinimap && c.chat && c.hotbar && c.itemsWindow && c.character != CharacterLook::Off);  // the new one
+    const Config old = classicLook(c);
+    CHECK(!old.newMinimap && !old.chat && !old.hotbar && !old.itemsWindow && !old.statusWindow && !old.npcWindow);
+    CHECK(old.character == CharacterLook::Off && old.buffs == BuffsLook::Off && old.mobHp == MobHp::Off);
+    CHECK(!old.loginWindow && !old.charSelectWindow && !old.optionsWindow && !old.referenceWindow);
+    CHECK(!old.walkMode && !old.arrowsWalk && !old.spaceAction && !old.mouseCell && !old.keyHints && !old.panelShow);
+    CHECK(old.cursorLook == CursorLook::Game && !old.cameraIndoor && old.cameraTilt == "game");
+    CHECK(old.renderScale == 150 && old.effects == c.effects && old.fpsLimit == c.fpsLimit);  // the rest as it is
+    CHECK(old.screenShake == c.screenShake && old.swearFilter == c.swearFilter);  // the game's own ways as they are
+}
