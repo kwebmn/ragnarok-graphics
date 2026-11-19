@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.22-beta.24 — what's new · 2026-11-19
+
+A cinema camera, a time-lapse, snow settling before your eyes and a moonrise.
+
+- **A smooth free camera**: in the 3D view the free camera (Ctrl+Shift+C) gathers speed and comes to rest gently and the mouse turns it softly; it goes almost five times farther from the character - a whole town in one flight. Alt+O → «3D view» → «Camera and aim» → «Free camera speed» and «Smooth free camera».
+- **A flight through points**: in the free camera Ctrl+Shift+P sets a point (up to 9) where the camera stands, looking where it looks; Ctrl+Shift+O flies through them all on one smooth curve, starting and stopping gently - the same every time; Ctrl+Shift+L clears the points.
+- **A time-lapse**: Ctrl+Shift+T in the game - the time of day runs fast from the moment shown: the sun goes down, the night and the lights come, the moon rises; again - it stops; again - the Clock's own. The speed: Alt+O → «Picture» → «Day, night and seasons» → under «Clock» - «Time-lapse, minutes a second» (12: an hour in 5 seconds).
+- **Snow settling before your eyes**: when «Season» is chosen anew on the same map, the snow lies down and melts and the grass dries or greens little by little, over 20 seconds. Alt+O → «Picture» → «Day, night and seasons» → under «Seasons on the map» - «Season change, seconds» (0: at once).
+- **A moonrise**: with «The sun moves by the clock» the moon rises as the sun sets, and low over the horizon it is warmer and a little larger, as the real one.
+
 # uaRO Graphics 3.0.22-beta.23 — what's new · 2026-11-19
 
 A sandstorm.
