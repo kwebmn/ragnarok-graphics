@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.14 — what's new · 2026-11-19
+
+Character select: the neighbouring cards no longer spill over the chosen one.
+
+- **The characters' carousel**: the cards next to the chosen one wrote their HP, SP and stats over it. Now they show their face, bars and words in the part that shows from under it.
+
 # uaRO Graphics 3.0.22-beta.13 — what's new · 2026-11-19
 
 The horizon panorama: fixes from feedback.
