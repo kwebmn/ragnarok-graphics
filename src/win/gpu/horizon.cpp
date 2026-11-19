@@ -105,9 +105,10 @@ void Renderer::Impl::horizonFrame() {
     key.region = region_look::of(mapName, 100).region;
     float toSun[3] = {0.0f, 0.0f, 0.0f};
     if (mapSun(toSun)) std::copy(toSun, toSun + 3, key.sun);
-    key.weak = effect_groups::cardLevel(true, adapterMb) <= 1;
+    const int card = effect_groups::cardLevel(true, adapterMb);
+    key.weak = card <= 1;
     key.mapRadius = 0.5f * float(std::max(g->width, g->height)) * g->zoom;
-    const horizon::Level level = horizon::levelFor(key.weak);
+    const horizon::Level level = horizon::levelForCard(card);
     const ULONGLONG now = GetTickCount64();
     const horizon::Slice s = horizon::step(horizonBake, key, level, now);
     if (s.restart && !horizonTextures(level)) {

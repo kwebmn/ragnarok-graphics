@@ -32,7 +32,9 @@ float farLand(const Climate& c, float x, float z, float far, float hills) {
         const float isl = 0.5f + 0.5f * fbm(mx, mz, 6, c.seed + 3);
         const float land = smooth(0.56f, 0.70f, isl);
         const float e = 0.5f + 0.5f * eroded(mx * 3.0f, mz * 3.0f, 7, c.seed + 11);
-        return land * c.mountAmp * (0.25f + 0.75f * e) - (1.0f - land) * 60.0f;
+        // 3.0.22-beta.13 (R-VDN9YH): low near the map, whole far off as the other lands' mountains - Comodo's stood
+        // whole a step past the beach, a green wall up to the strip's roof
+        return land * c.mountAmp * (0.25f + 0.75f * e) * (0.15f + 0.85f * far) - (1.0f - land) * 60.0f;
     }
     case Land::Karst: {  // tall narrow pillars with rounded tops
         const float n = 0.5f + 0.5f * fbm(mx, mz, 4, c.seed + 9);
@@ -229,6 +231,11 @@ float shadowAt(const Climate& c, float mapRadius, Vec3 at, Vec3 normal, Vec3 toS
 
 float hazeOf(const Climate& c, float distance, float height) {
     return 1.0f - std::exp(-distance * c.haze * (1.0f - 0.45f * smooth(0.0f, 3000.0f, height)));
+}
+
+float seaShine(float rise) {
+    const float g = std::clamp(1.0f - 12.0f * std::fabs(rise), 0.0f, 1.0f);
+    return g * g;
 }
 
 }  // namespace uagfx::horizon

@@ -39,6 +39,11 @@ Hit march(const Climate& c, float mapRadius, float eyeHeight, float dirX, float 
 float shadowAt(const Climate& c, float mapRadius, Vec3 at, Vec3 normal, Vec3 toSun, int steps);
 // How much of the haze's colour lies over land this far and this high (0..1)
 float hazeOf(const Climate& c, float distance, float height);
+// 3.0.22-beta.13: the sea's sheen along a way `rise` up - the sky in it at a grazing look, whole at the horizon (the
+// bake's haze toward the horizon's colour at least this on the sea, as the world's own water's)
+float seaShine(float rise);
+// A hit on the sea itself (Land::Sea under the islands' beaches, the albedoAt's sea)
+inline bool onSea(const Climate& c, float height) { return c.land == Land::Sea && height < 0.5f; }
 
 // The panorama's light each frame (the sky pass's skyPanorama, the same numbers): by the night (0 day, 0.5 dusk -
 // the warm low sun, 1 night - the moon's cold dim light), linear. lit = albedo x (ambient x (0.55 + 0.45 up) +

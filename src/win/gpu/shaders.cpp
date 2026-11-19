@@ -1574,7 +1574,8 @@ float hzFarLand(float2 p, float far, float hills) {
         float isl = 0.5 + 0.5 * hzFbm(m, 6, hzSeed + 3u);
         float ground = hzSmooth(0.56, 0.70, isl);
         float e = 0.5 + 0.5 * hzEroded(m * 3.0, 7, hzSeed + 11u);
-        return ground * hzMountAmp * (0.25 + 0.75 * e) - (1.0 - ground) * 60.0;
+        // 3.0.22-beta.13 (R-VDN9YH): low near the map, whole far off (core horizon_terrain's)
+        return ground * hzMountAmp * (0.25 + 0.75 * e) * (0.15 + 0.85 * far) - (1.0 - ground) * 60.0;
     }
     [branch] if (land == 4) {  // tall narrow pillars with rounded tops
         float n = 0.5 + 0.5 * hzFbm(m, 4, hzSeed + 9u);
@@ -1709,6 +1710,10 @@ float hzShadow(float3 at, float3 n, float3 toSun, int steps) {  // the sun's sof
 float hzHazeOf(float distance, float height) {
     return 1.0 - exp(-distance * hzHaze * (1.0 - 0.45 * hzSmooth(0.0, 3000.0, height)));
 }
+float hzSeaShine(float rise) {  // 3.0.22-beta.13: core horizon::seaShine - the sky in the far sea
+    float g = saturate(1.0 - 12.0 * abs(rise));
+    return g * g;
+}
 // The strip's texel at u (wrapped) and v (clamped), bilinear by Load - no sampler's seam where u wraps
 float4 hzFetch(Texture2D t, float u, float v) {
     uint w, h;
@@ -1746,6 +1751,12 @@ float3 skyPanorama(float3 sky, float3 dir, float3 horizon, float night, float3 t
     float u = frac(atan2(dir.z, dir.x) / 6.2831853 + 1.0);
     float4 colour = hzFetch(tex1, u, v);
     if (colour.a <= 0.002) return sky;
+    // 3.0.22-beta.13 (R-VDN9YH «очень размыто»): the land's edge a pixel wide however many pixels a texel covers (2-5
+    // on a 4K screen); f1 and scale the sky passes' camera - only they draw the panorama (part 128)
+    uint stripW, stripH;
+    tex1.GetDimensions(stripW, stripH);
+    float across = max(6.2831853 / float(stripW) * f1 * scale, 1.0);
+    float cover = saturate((colour.a - 0.5) * across + 0.5);
     float4 detail = hzFetch(tex0, u, v) / colour.a;  // both premultiplied by the coverage
     float3 albedo = colour.rgb / colour.a;
     float3 n = float3(detail.r * 2.0 - 1.0, 0.0, detail.g * 2.0 - 1.0);
@@ -1756,7 +1767,7 @@ float3 skyPanorama(float3 sky, float3 dir, float3 horizon, float night, float3 t
     hzLightAt(night, sun, ambient);
     float3 lit = albedo * (ambient * (0.55 + 0.45 * n.y) + sun * max(dot(n, toward), 0.0) * saturate(detail.b));
     float3 shown = lerp(hzDisplay(lit), horizon, saturate(detail.a));
-    return lerp(sky, shown, saturate(colour.a) * fade);
+    return lerp(sky, shown, cover * fade);
 }
 
 float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, float parts, float fade) {
@@ -3089,8 +3100,11 @@ float4 sky3d_haze_ps(PresentOut i) : SV_Target {
     [branch] if (!vault) {
         float3 way = normalize(seen.x * float3(r0, r1, r2) + seen.y * float3(r3, r4, r5) + seen.z * float3(r6, r7, r8));
         float night = saturate(twinX);
-        float soft = float((uint(uiPixels.z + 0.5) & 4u) | 8u);  // the dawn's glow; no stars, no moon, no sun's disc
-        tone = skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, soft, 0.0);
+        // 3.0.22-beta.13 (R-XHUSQB «дымка, или что-то белое», R-D4PY2Y «чего домик в дали белый?»): the panorama's
+        // land in it too - what is far fades into the land behind it, not into the white of the sky over that land;
+        // till then short of the sight's end the haze went white, past it the land's green, a pale band between
+        float soft = float((uint(uiPixels.z + 0.5) & (4u | 128u)) | 8u);  // the dawn's glow, the panorama; no stars,
+        tone = skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, soft, holeX);  // moon, sun's disc
         [branch] if (whole > 0.0)  // 3.0.22-beta.11: holeX the panorama's fade
             tone = lerp(tone, skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, uiPixels.z, holeX), whole);
     }
@@ -3134,6 +3148,7 @@ HzOut horizon_bake_ps(PresentOut i) {
     float3 sun = normalize(float3(hzSun.x, -hzSun.y, hzSun.z) + float3(0.0, 1e-4, 0.0));  // the world's y down -> up
     float shadow = sunKnown ? hzShadow(float3(hit.at.x, hit.height, hit.at.y), n, sun, hzShadowSteps) : 1.0;
     float haze = hzHazeOf(hit.distance, hit.height);
+    if (hzLand == 3 && hit.height < 0.5) haze = max(haze, hzSeaShine(rise));  // core horizon::onSea
     o.colour = float4(albedo * hit.coverage, hit.coverage);
     o.detail = float4((n.xz * 0.5 + 0.5) * hit.coverage, shadow * hit.coverage, haze * hit.coverage);
     return o;

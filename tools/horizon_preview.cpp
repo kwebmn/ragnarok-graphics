@@ -75,7 +75,9 @@ Rgb seen(const Climate& c, Vec3 dir, const View& v, const Level& level, float pi
     const Rgb lit{albedo.r * (l.ambient.r * amb + l.sun.r * ndl), albedo.g * (l.ambient.g * amb + l.sun.g * ndl),
                   albedo.b * (l.ambient.b * amb + l.sun.b * ndl)};
     const view3d::Sky s = view3d::skyOf(v.night, false);
-    const Rgb land = mixed(toDisplay(lit), {s.horizon[0], s.horizon[1], s.horizon[2]}, hazeOf(c, h.distance, h.height));
+    float haze = hazeOf(c, h.distance, h.height);
+    if (onSea(c, h.height)) haze = std::max(haze, seaShine(dir.y));  // 3.0.22-beta.13
+    const Rgb land = mixed(toDisplay(lit), {s.horizon[0], s.horizon[1], s.horizon[2]}, haze);
     return mixed(sky, land, h.coverage);
 }
 
@@ -121,7 +123,7 @@ void rows(int h, F f) {  // four threads over the rows
 }
 
 void perspective(const Climate& c, float yaw, const View& v, int w, int h, const std::string& out) {
-    const Level level = levelFor(false);
+    const Level level = levelForCard(3);
     const float pitch = 7.0f * kPi / 180.0f, f = 0.5f * float(w) / std::tan(0.5f * 70.0f * kPi / 180.0f);
     const Vec3 fw = wayOf(yaw, pitch), rt = unit(-std::sin(yaw), 0.0f, std::cos(yaw));
     const Vec3 up{rt.y * fw.z - rt.z * fw.y, rt.z * fw.x - rt.x * fw.z, rt.x * fw.y - rt.y * fw.x};
@@ -138,7 +140,7 @@ void perspective(const Climate& c, float yaw, const View& v, int w, int h, const
 }
 
 void strip(const Climate& c, const View& v, const std::string& out) {
-    const Level level = levelFor(false);
+    const Level level = levelForCard(3);
     const int w = level.width / 4, h = level.height / 4;
     std::vector<uint32_t> img(size_t(w) * size_t(h));
     rows(h, [&](int y) {

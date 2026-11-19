@@ -4406,7 +4406,7 @@ void Renderer11::horizonFrame() {
     if (mapSun(toSun)) std::copy(toSun, toSun + 3, key.sun);
     key.weak = effect_groups::cardLevel(false, 0) <= 1;  // Direct3D 11: the weak level (as the automatic setup's)
     key.mapRadius = 0.5f * float(std::max(g->width, g->height)) * g->zoom;
-    const horizon::Level level = horizon::levelFor(key.weak);
+    const horizon::Level level = horizon::levelForCard(1);  // Direct3D 11: the weak level
     const ULONGLONG now = GetTickCount64();
     const horizon::Slice s = horizon::step(horizonBake_, key, level, now);
     if (s.restart && (horizon_[0].width != level.width || horizon_[0].height != level.height)) {

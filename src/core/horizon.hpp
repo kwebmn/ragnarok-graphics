@@ -37,8 +37,9 @@ struct Level {
     int shadowSteps = 0;        // toward the sun (0: no shadows)
     int slices = 0;             // frames a bake takes
 };
-// weak: effectgroups::cardLevel <= 1 (Direct3D 11 or under 4 GB)
-Level levelFor(bool weak);
+// card: effect_groups::cardLevel - 1 (Direct3D 11 or under 4 GB) the weak level, 2 (4 GB) 4096 wide, 3 (8 GB) 8192
+// (3.0.22-beta.13, R-VDN9YH: 4096 a texel some 5 pixels wide on a 4K screen); a few rows a frame
+Level levelForCard(int card);
 float uOf(float x, float z);  // [0,1): atan2(z, x) / 2pi wrapped - u 0 at the world's +x, 0.25 at +z
 float riseOfRow(float v);     // v 0 the top row .. 1 the bottom -> rise
 float rowOfRise(float rise);

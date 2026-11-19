@@ -34,10 +34,21 @@ TEST(horizon_climates_by_region) {
     CHECK_EQ(seeds.size(), size_t(20));
 }
 
+// 3.0.22-beta.13 (R-VDN9YH «очень размыто»: 4096 round the circle, a texel some 5 pixels wide on the owner's 4K
+// screen): the strip by the card (effect_groups::cardLevel) - 8192 x 768 from 8 GB on Direct3D 12, 4096 x 384 from
+// 4 GB, 2048 x 192 else; whole rows a frame, a few - the bake a second or two, a frame's share of it small
 TEST(horizon_strip_geometry) {
-    const horizon::Level full = horizon::levelFor(false), weak = horizon::levelFor(true);
-    CHECK(full.width == 4096 && full.height == 384 && full.steps == 128 && full.shadowSteps == 24 && full.slices == 8);
-    CHECK(weak.width == 2048 && weak.height == 192 && weak.steps == 64 && weak.shadowSteps == 0 && weak.slices == 16);
+    const horizon::Level sharp = horizon::levelForCard(3), full = horizon::levelForCard(2),
+                         weak = horizon::levelForCard(1);
+    CHECK(sharp.width == 8192 && sharp.height == 768 && sharp.steps == 128 && sharp.shadowSteps == 24);
+    CHECK(sharp.slices == 96);
+    CHECK(full.width == 4096 && full.height == 384 && full.steps == 128 && full.shadowSteps == 24 && full.slices == 64);
+    CHECK(weak.width == 2048 && weak.height == 192 && weak.steps == 64 && weak.shadowSteps == 0 && weak.slices == 24);
+    CHECK(horizon::levelForCard(0).width == 2048 && horizon::levelForCard(4).width == 8192);
+    for (const horizon::Level& l : {sharp, full, weak}) {
+        CHECK(l.height % l.slices == 0);
+        CHECK(l.width * (l.height / l.slices) <= 65536);  // texels a frame
+    }
     const auto near = [](float a, float b) { return std::fabs(a - b) < 1e-5f; };
     CHECK(near(horizon::uOf(1, 0), 0.0f));
     CHECK(near(horizon::uOf(0, 1), 0.25f));
@@ -71,7 +82,7 @@ TEST(horizon_key_and_pack) {
     CHECK(!(a == d));
     float out[horizon::kPackedFloats] = {};
     const horizon::Climate lutie = horizon::climateOf("Lutie");
-    const horizon::Level l = horizon::levelFor(false);
+    const horizon::Level l = horizon::levelForCard(2);
     horizon::pack(lutie, 1200.0f, a.sun, l, 48, 96, out);
     CHECK(out[0] == float(int(Land::Alps)));
     CHECK(out[1] == float(lutie.seed));
@@ -172,14 +183,14 @@ TEST(horizon_light_by_the_night) {
 TEST(horizon_bake_by_slices) {
     horizon::Bake b;
     const horizon::Key k{"Prontera", {0.5f, -0.7f, 0.5f}, false, 1000.0f};
-    const horizon::Level l = horizon::levelFor(false);  // 384 rows over 8 frames: 48 a frame
+    const horizon::Level l = horizon::levelForCard(2);  // 384 rows over 64 frames: 6 a frame
     horizon::Slice s = horizon::step(b, k, l, 1000);
-    CHECK(s.restart && s.row0 == 0 && s.row1 == 48 && !s.last);
+    CHECK(s.restart && s.row0 == 0 && s.row1 == 6 && !s.last);
     CHECK(!b.ready && horizon::fadeOf(b, 1000) == 0.0f);
-    for (int i = 1; i < 8; ++i) s = horizon::step(b, k, l, 1000 + uint64_t(i) * 16);
-    CHECK(s.last && s.row0 == 336 && s.row1 == 384 && !s.restart);
-    CHECK(b.ready && b.frames == 8);
-    const uint64_t at = 1000 + 7 * 16;
+    for (int i = 1; i < 64; ++i) s = horizon::step(b, k, l, 1000 + uint64_t(i) * 16);
+    CHECK(s.last && s.row0 == 378 && s.row1 == 384 && !s.restart);
+    CHECK(b.ready && b.frames == 64);
+    const uint64_t at = 1000 + 63 * 16;
     s = horizon::step(b, k, l, at + 100);
     CHECK(s.row1 <= s.row0 && !s.restart && !s.last);  // nothing more to draw
     CHECK(horizon::fadeOf(b, at + 500) > 0.45f && horizon::fadeOf(b, at + 500) < 0.55f);
@@ -188,7 +199,7 @@ TEST(horizon_bake_by_slices) {
 
 TEST(horizon_bake_restarts_on_a_new_key) {
     horizon::Bake b;
-    const horizon::Level l = horizon::levelFor(false);
+    const horizon::Level l = horizon::levelForCard(2);
     const horizon::Key k{"Prontera", {0.5f, -0.7f, 0.5f}, false, 1000.0f};
     horizon::step(b, k, l, 0);
     horizon::step(b, k, l, 16);
@@ -197,8 +208,38 @@ TEST(horizon_bake_restarts_on_a_new_key) {
     const horizon::Slice s = horizon::step(b, m, l, 32);  // a map of another region mid-bake
     CHECK(s.restart && s.row0 == 0 && !b.ready && horizon::fadeOf(b, 32) == 0.0f);
     horizon::Bake w;
-    for (int i = 0; i < 8; ++i) horizon::step(w, k, l, uint64_t(i));
+    for (int i = 0; i < 64; ++i) horizon::step(w, k, l, uint64_t(i));
     CHECK(w.ready);
-    const horizon::Slice r = horizon::step(w, k, horizon::levelFor(true), 100);  // the weak level's textures
-    CHECK(r.restart && r.row0 == 0 && r.row1 == 12 && !w.ready);  // 192 rows over 16 frames
+    const horizon::Slice r = horizon::step(w, k, horizon::levelForCard(1), 100);  // the weak level's textures
+    CHECK(r.restart && r.row0 == 0 && r.row1 == 8 && !w.ready);  // 192 rows over 24 frames
+}
+
+// 3.0.22-beta.13 (the owner's R-VDN9YH «над горизонтом ... очень размыто», cmd_fild02): no wall right past the map's
+// edge - Comodo's islands stood at their whole height a step past the beach, up to the strip's roof; within 1500 of
+// the edge the land in every climate stays under 0.15 of its distance, its mountains and islands rising farther off
+TEST(horizon_no_wall_past_the_edge) {
+    for (const char* region : kRegions) {
+        const horizon::Climate c = horizon::climateOf(region);
+        for (const float radius : {800.0f, 1500.0f, 2500.0f}) {
+            float worst = 0.0f;
+            for (int k = 0; k < 256; ++k) {
+                const float a = 6.2831853f * float(k) / 256.0f;
+                for (float d = radius; d <= radius + 1500.0f; d += 50.0f)
+                    worst = std::max(worst, horizon::heightAt(c, radius, d * std::cos(a), d * std::sin(a)) / d);
+            }
+            if (worst >= 0.15f)
+                std::printf("  %s, the map %.0f: the land %.2f of its distance\n", region, radius, worst);
+            CHECK(worst < 0.15f);
+        }
+    }
+}
+
+// 3.0.22-beta.13: the far sea pale toward the horizon (the sky in it at a grazing look, as the world's own water's) -
+// the strip's sea was dark blue to the horizon, a dark band past the sight's end where the world's water turns into it
+TEST(horizon_sea_shines_toward_the_horizon) {
+    CHECK(horizon::seaShine(0.0f) == 1.0f);
+    CHECK(horizon::seaShine(-0.005f) > 0.8f);
+    CHECK(horizon::seaShine(horizon::kRiseLow) < 0.2f);
+    CHECK(horizon::seaShine(-0.01f) > horizon::seaShine(-0.03f));
+    CHECK(horizon::seaShine(0.02f) == horizon::seaShine(-0.02f));
 }
