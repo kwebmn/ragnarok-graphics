@@ -43,4 +43,15 @@ refit = the boxes of every data-hit into core's layout. win/guild_card: reads th
 
 ## Ledger
 
-(rulings and each task's result follow as they are done)
+- Ruling 1: the concept's open questions decided as it proposed (the owner: «все делай») - the wide window, Glory
+  hidden, our own descriptions (the game's English text dropped: wrong for uaRO), «Використати» + drag, allies and
+  enemies, the notice for all, the members' extras, «Наступна облога» not made (the schedule is empty).
+- Ruling 2: the guild skills read from the game's own list (session + 0x2E4) - its record is what «use» (0x7E) and the
+  drag (0x51) need; the server's 0x0162 only while the list is empty.
+- Ruling 3: positions and expelling not sent by our own packets (0x0155 / 0x015b go through the game mode's 0x74 / 0x7C
+  with the game's own lists and checks - unproven blind); the master's «Посада й вигнання…» shows the game's own
+  members' window, as «Змінити» does for the positions. Party invites are the game mode's 0x41 (the packet 0x00fc).
+- Tasks 1-6: shipped 3.0.22-beta.26 (b9d3245f) - the frame, all six tabs, «Навички», «Інформація», «Учасники» with
+  search, sort and the card («Написати», «У друзі»), the controller. Host: 3224 tests.
+- Tasks 7-8: 3.0.22-beta.27 - «Запросити в групу», «Посада й вигнання…» (the game's members' window), Alt+G with no
+  guild. Not made: our own positions' editor (the game's «Змінити» stays).

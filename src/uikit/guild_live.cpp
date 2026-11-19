@@ -15,12 +15,18 @@ namespace {
 namespace gc = uagfx::guildcard;
 
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="lw gdw" data-style-font-size="base + 'px'" data-style-background-color="ground">
+<body class="lw gdw" data-style-font-size="base + 'px'" data-style-background-color="ground"
+  data-class-gwsmall="noGuild">
 <div class="gwh" data-hit="title"><img class="gwe" data-if="emblem != ''" data-attr-src="emblem"
   data-style-width="emblemW + 'px'" data-style-height="emblemW + 'px'"/><span class="gwn">{{name}}</span><span
   class="gws">{{sub}}</span><span class="gwg"></span><span class="gwk">{{hotkey}}</span></div>
 <div class="gwx" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
-<div class="gwts"><div data-for="t, i : tabs"><div class="gwt" data-hit="tab" data-attr-data-index="i"
+<div class="gwng" data-if="noGuild"><span class="gwngt">{{ngHead}}</span><span
+  class="gwngs">{{ngSub}}</span><div class="gwcds"><div class="gwcd"><span class="gwcdt">{{ngJoin}}</span><span
+  class="gwcdx">{{ngJoinText}}</span></div><div class="gwcd"><span class="gwcdt">{{ngMake}}</span><span
+  class="gwcdx">{{ngMakeText}}</span></div></div></div>
+<div data-if="!noGuild"><div class="gwts"><div data-for="t, i : tabs"><div class="gwt" data-hit="tab"
+  data-attr-data-index="i"
   data-class-on="t.on" data-class-hot="t.hot" data-class-off="t.off">{{t.name}}<span class="gwtn"
   data-if="t.count != ''">{{t.count}}</span><span class="gwtp"
   data-if="t.badge != ''">{{t.badge}}</span></div></div></div>
@@ -150,7 +156,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-for="h : hints"><span class="gwfi">{{h}}</span></div><div data-for="p : pad"><div class="gwpi"><img
   data-attr-src="p.glyph" data-style-width="p.w + 'px'"
   data-style-height="p.h + 'px'"/><span>{{p.words}}</span></div></div></div></div>
-</body></rml>)RML";
+</div></body></rml>)RML";
 
 }  // namespace
 
@@ -403,6 +409,13 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("notice", &m.notice);
     c.Bind("hints", &m.hints);
     c.Bind("pad", &m.pad);
+    c.Bind("noGuild", &m.noGuild);
+    c.Bind("ngHead", &m.ngHead);
+    c.Bind("ngSub", &m.ngSub);
+    c.Bind("ngJoin", &m.ngJoin);
+    c.Bind("ngJoinText", &m.ngJoinText);
+    c.Bind("ngMake", &m.ngMake);
+    c.Bind("ngMakeText", &m.ngMakeText);
 }
 
 void fill(Model& m, const Frame& f, const Icon& icon, const Emblem& emblem, const Glyph& glyph) {
@@ -417,6 +430,13 @@ void fill(Model& m, const Frame& f, const Icon& icon, const Emblem& emblem, cons
     m.closeHot = f.closeHot;
     m.tab = int(f.tab);
     m.tabs = f.tabs;
+    m.noGuild = f.noGuild;
+    m.ngHead = f.ngHead;
+    m.ngSub = f.ngSub;
+    m.ngJoin = f.ngJoin;
+    m.ngJoinText = f.ngJoinText;
+    m.ngMake = f.ngMake;
+    m.ngMakeText = f.ngMakeText;
     const auto iconOf = [&](const std::string& aegis, int side, float& w, float& h) {
         w = h = 0;
         if (!icon || aegis.empty()) return std::string();

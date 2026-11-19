@@ -17,6 +17,7 @@
 #include "win/answer_card.hpp"
 #include "win/buff_column.hpp"
 #include "win/char_block.hpp"
+#include "win/guild_card.hpp"
 #include "win/uaui.hpp"
 #include "win/hunt_panel.hpp"
 #include "win/own_windows.hpp"
@@ -234,6 +235,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if (keywalk::key(m, wp, lp)) return 0;  // 3.0.18-beta.207: the arrows walk while the chat line is empty
         if (chatwin::key(m, wp, lp)) return 0;       // 3.0.11-beta.41: the new chat's F10, Alt+F10 and Tab
         if (charpanel::key(m, wp, lp)) return 0;     // 3.0.11-beta.141: Alt+V, the character block full or small
+        if (guildcardwin::altG(m, wp, lp)) return 0;  // 3.0.22-beta.27: Alt+G with no guild
         hotbarwin::key(m, wp, lp);                   // 3.0.11-beta.45: its cells' keys shown pressed (still the game's)
         if (m == WM_KEYDOWN && minimapproto::key(unsigned(wp))) return 0;  // 3.0.11-beta.4: Ctrl+Tab, the new minimap's
         if ((m == WM_KEYDOWN || m == WM_SYSKEYDOWN) && g_switch->key(unsigned(wp), lp)) return 0;

@@ -1585,6 +1585,17 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .gdw .gwfd.typing { border-color: #c9a55b99; }
 .gdw .gwfd.gwtall { height: 10rem; line-height: 1.5rem; padding-top: 0.5rem; white-space: normal; }
 .gdw .gwfh2 { display: block; margin-top: 0.6667rem; font-size: 0.9583rem; color: #7e889a; }
+/* 3.0.22-beta.27: no guild - how to join and how to make one, two cards a row */
+.lw.gdw.gwsmall { width: 50rem; }
+.gdw .gwng { display: block; padding: 0 1.3333rem 1.3333rem 1.3333rem; }
+.gdw .gwngt { display: block; margin-top: 1rem; text-align: center; font-size: 1.3333rem; font-weight: bold;
+    color: #eef2f8; }
+.gdw .gwngs { display: block; margin-top: 0.25rem; text-align: center; color: #9aa3b5; }
+.gdw .gwcds { display: flex; justify-content: space-between; margin-top: 1.3333rem; }
+.gdw .gwcd { display: block; width: 48%; padding: 1rem 1.1667rem; border-radius: 0.75rem; border: 0.0833rem #ffffff17;
+    background-color: #ffffff09; box-sizing: border-box; }
+.gdw .gwcdt { display: block; margin-bottom: 0.5rem; font-size: 1.0833rem; font-weight: bold; color: #e6cb8a; }
+.gdw .gwcdx { display: block; line-height: 1.4167rem; color: #d8dde6; }
 /* 3.0.18-beta.106: the login screens live - the character make (win/char_make) */
 .ckw { width: 620dp; padding: 22dp 22dp 18dp 22dp; }
 .ckw .head .title { font-size: 18dp; }

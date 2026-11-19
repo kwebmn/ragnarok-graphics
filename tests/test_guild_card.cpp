@@ -112,6 +112,7 @@ TEST(guild_card_the_games_windows) {
     CHECK(gc::allowed(0, 0) && !gc::allowed(1, 0) && gc::allowed(1, 0x57) && !gc::allowed(5, 0x57));
     CHECK(gc::allowed(5, 0xD7) && gc::isMaster(0xD7) && !gc::isMaster(0x57));
     CHECK(gc::gameDrawn(int(gc::Tab::Positions), true) && !gc::gameDrawn(int(gc::Tab::Notice), true));
+    CHECK(gc::gameDrawn(int(gc::Tab::Members), true) && !gc::gameDrawn(int(gc::Tab::Members), false));
 }
 
 TEST(guild_card_castles_in_the_servers_words) {

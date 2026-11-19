@@ -21,7 +21,9 @@ constexpr uint32_t kFirstAt = 0x170;  // the manager's place of the first of the
 enum class Tab : uint8_t { Info, Members, Positions, Skills, Expelled, Notice };
 // 3.0.11-beta.210: a click switches the game's own tab (its message 0x45; the game checks the rights, 0x0168 bits)
 constexpr int kTabs = 6, kTabMsg = 0x45;
-bool gameDrawn(int tab, bool editing);  // the game's own window shows only while «Змінити» edits the positions
+// The game's own window shows only while «Змінити» edits the positions; 3.0.22-beta.27: or the members (positions
+// and expelling, the master's)
+bool gameDrawn(int tab, bool editing);
 bool allowed(int tab, uint32_t rights);  // members 1, positions 2, expelled 0x10, the notice 0x80
 // 3.0.22-beta.26: the master's rights (0xD7) hold the notice's 0x80, a member's (0x57) do not
 constexpr uint32_t kMasterRight = 0x80;
@@ -64,6 +66,8 @@ struct Texts {
     std::string previewNote, noticeEmpty;
     // the controller's words
     std::string padTabs, padPick, padUse, padRaise, padAssign, padClose, padActions;
+    // 3.0.22-beta.27: no guild
+    std::string noGuild, noGuildSub, join, joinText, make, makeText;
 };
 
 enum class Sort : uint8_t { Online, Level, Position, Given };

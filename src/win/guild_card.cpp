@@ -82,8 +82,13 @@ constexpr int kUseMsg = 0x7E, kDragMsg = 0x51, kDropMsg = 0x12;
 // 3.0.18-beta.141: the game's friend request by a name (FUN_004cec50: the name's 24 bytes - the packet 0x0202)
 constexpr uint32_t kAddFriend = 0x4CEC50;
 using AddFriendFn = void(__attribute__((stdcall)) *)(const char* name24);
-// The member card's actions made so far: «Написати», «У друзі» (the rest: the plan's stage 8)
-constexpr uint32_t kActsNow = (1u << int(gc::Act::Whisper)) | (1u << int(gc::Act::Friend));
+// The member card's actions: «Написати», «Запросити в групу», «У друзі»; the master's «Посада й вигнання…» - the game's
+// own members' window (3.0.22-beta.27)
+constexpr uint32_t kActsNow = (1u << int(gc::Act::Whisper)) | (1u << int(gc::Act::Party)) |
+                              (1u << int(gc::Act::Friend)) | (1u << int(gc::Act::Position));
+// 3.0.22-beta.27: the game mode's 0x41 - the packet 0x00fc, a party invite to an account (FUN_005707d0's case 0x41:
+// the id 0x00fc and its first argument's four bytes)
+constexpr int kPartyInviteMsg = 0x41;
 
 struct GuildSkill {  // as the game keeps it
     uint32_t record = 0, name = 0;
@@ -127,6 +132,7 @@ struct State {
     int dragW = 0, dragH = 0;
     bool dragUpload = false;
     ULONGLONG meAt = 0;
+    bool noGuild = false;  // 3.0.22-beta.27: Alt+G with no guild - how to join and how to make one
 };
 
 State& state() {
@@ -402,7 +408,13 @@ gc::Texts texts() {
     t.padRaise = say(T::GuildWPadRaise);
     t.padAssign = say(T::GuildWPadAssign);
     t.padClose = say(T::PlateClose);
-    t.padActions = say(T::GuildWWhisper);  // A on a member: «Написати» (the menu: stage 8)
+    t.padActions = say(T::GuildWWhisper);  // A on a member: «Написати»
+    t.noGuild = say(T::GuildWNoGuild);       // 3.0.22-beta.27
+    t.noGuildSub = say(T::GuildWNoGuildSub);
+    t.join = say(T::GuildWJoin);
+    t.joinText = say(T::GuildWJoinText);
+    t.make = say(T::GuildWMake);
+    t.makeText = say(T::GuildWMakeText);
     return t;
 }
 
@@ -534,7 +546,8 @@ void saveNotice(State& s) {
     s.key.clear();
 }
 
-// 3.0.11-beta.220: «Змінити» - the game's own tab window shown to edit the positions
+// 3.0.11-beta.220: «Змінити» - the game's own tab window shown to edit the positions (3.0.22-beta.27: or the members:
+// positions and expelling)
 void editInGame(State& s) {
     int tab = -1;
     const uint32_t window = gameGuild(&tab);
@@ -567,7 +580,12 @@ void act(State& s, int a) {
     if (a == int(gc::Act::Whisper)) {
         const bool ok = chatwin::whisperTo(m->name);
         LOG_INFO("guild: «Написати» %s - %s", m->name.c_str(), ok ? "the chat's whisper line" : "no chat line");
-    } else if (a == int(gc::Act::Friend)) {
+    } else if (a == int(gc::Act::Party)) {  // 3.0.22-beta.27: to one in the game, by the account
+        const bool sent = m->online && m->account && modeMsg(kPartyInviteMsg, int(m->account), 0, 0);
+        LOG_INFO("guild: «Запросити в групу» %s - %s", m->name.c_str(),
+                 sent ? "the game mode's 0x41 (the packet 0x00fc)" : m->online ? "no game mode" : "not in the game");
+    } else if (a == int(gc::Act::Position)) {  // the master's: the game's own members' window
+        if (gc::isMaster(s.show.rights)) editInGame(s);
         std::string name = narrowed(widened(m->name, CP_UTF8), s.codePage);
         if (name.empty() || name.size() > 23) return;
         char buf[24] = {};
@@ -659,7 +677,8 @@ std::string keyOf(const State& s) {
     for (const guildtabs::Alliance& a : d.alliances) key += ";a" + a.name + (a.enemy ? "!" : "");
     for (const guildtabs::Member& m : d.members)
         key += ";m" + std::to_string(m.character) + ',' + std::to_string(m.exp) + ',' + std::to_string(m.position);
-    key += '|' + d.subject + '|' + d.body + (d.alliancesSeen ? "A" : "") + (d.membersSeen ? "M" : "");
+    key += '|' + d.subject + '|' + d.body + (d.alliancesSeen ? "A" : "") + (d.membersSeen ? "M" : "") +
+           (s.noGuild ? "|N" : "");
     if (sh.editing)  // .271
         key += "|E" + std::to_string(sh.field) + (sh.caret ? "|" : "") + '|' + sh.subject + '|' + sh.body;
     return key;
@@ -683,7 +702,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     const uint32_t window = world ? gameGuild(&tab) : 0;
     // 3.0.11-beta.220: all six tabs the card's; the game's own window while «Змінити» edits the positions there
     if (s.editing && s.editing != window) s.editing = 0;
-    const bool ours = window && !gc::gameDrawn(tab, s.editing == window);
+    if (s.noGuild && (!world || !on || read32(kGuildId) || window)) s.noGuild = false;  // 3.0.22-beta.27
+    const bool ours = (window && !gc::gameDrawn(tab, s.editing == window)) || s.noGuild;
     if (world) hold(s, window, on && ours);
     if (!on || !ours || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
@@ -772,6 +792,17 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                     f.foot = gc::footOf(sh, t, s.points, master);
                                     f.typing = sh.typing;
                                     f.caret = sh.caret;
+                                    if (s.noGuild) {  // 3.0.22-beta.27
+                                        f.noGuild = true;
+                                        f.name = t.title;
+                                        f.sub.clear();
+                                        f.ngHead = t.noGuild;
+                                        f.ngSub = t.noGuildSub;
+                                        f.ngJoin = t.join;
+                                        f.ngJoinText = t.joinText;
+                                        f.ngMake = t.make;
+                                        f.ngMakeText = t.makeText;
+                                    }
                                     f.searchHot = sh.hover.part == gc::Part::Search;
                                     f.allHot = sh.hover.part == gc::Part::AllMembers;
                                     gl::fill(
@@ -783,6 +814,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                             return p ? s.live.icon(p) : std::string();
                                         },
                                         [&](int side) {
+                                            if (s.noGuild) return std::string();
                                             const panel::Picture& p =
                                                 side > int(std::lround(36 * s.scale)) ? s.emblemBig : s.emblemSmall;
                                             return p.width > 0 ? s.live.icon(&p) : std::string();
@@ -882,7 +914,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         s.move.begin(tx, ty);
     switch (h.part) {
         case gc::Part::Tab: switchTab(s, h.index); break;  // 3.0.11-beta.210: the game's own tab with it
-        case gc::Part::Close: closeIt(s); break;
+        case gc::Part::Close:
+            if (s.noGuild) s.noGuild = false;
+            else closeIt(s);
+            break;
         case gc::Part::Skill:
             sh.skill = h.index;
             if (m == WM_LBUTTONDBLCLK) {
@@ -936,7 +971,25 @@ bool close() {
         s.key.clear();
         return true;
     }
+    if (s.noGuild) {
+        s.noGuild = false;
+        s.key.clear();
+        return true;
+    }
     closeIt(s);
+    return true;
+}
+
+// 3.0.22-beta.27: Alt+G with no guild - the game's key handler opens its guild window only with a guild id (0x74B6D4),
+// so this card tells how to join and how to make one; again - gone
+bool altG(UINT m, WPARAM wp, LPARAM lp) {
+    State& s = state();
+    if (m != WM_SYSKEYDOWN || wp != 'G' || !(lp & (1 << 29)) || !s.on || !inGameWorld() || read32(kGuildId))
+        return false;
+    if (lp & (1 << 30)) return true;  // held down: once
+    s.noGuild = !s.noGuild;
+    s.key.clear();
+    LOG_INFO("guild: Alt+G with no guild - the card «%s» %s", "no guild", s.noGuild ? "shown" : "closed");
     return true;
 }
 
@@ -1014,6 +1067,11 @@ void beforeGameDraw() {
 void padCommand(PadCommand c) {
     State& s = state();
     if (!s.shown) return;
+    if (s.noGuild) {  // 3.0.22-beta.27: B or Start closes it
+        if (c == PadCommand::Close) s.noGuild = false;
+        s.key.clear();
+        return;
+    }
     gc::Show& sh = s.show;
     switch (c) {
         case PadCommand::Up: step(s, -1); break;

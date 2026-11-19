@@ -108,6 +108,9 @@ struct Model {
     float base = 12, emblemW = 0;
     Rml::String ground = "#00000000", emblem, name, sub, hotkey, footLeft;
     bool closeHot = false, footGold = false;
+    // 3.0.22-beta.27: no guild - how to join and how to make one (Alt+G)
+    bool noGuild = false;
+    Rml::String ngHead, ngSub, ngJoin, ngJoinText, ngMake, ngMakeText;
     int tab = 0;
     std::vector<TabV> tabs;
     std::vector<SkillRowV> skills;
@@ -136,6 +139,8 @@ struct Frame {
     guildcard::NoticeView notice;
     guildcard::FootV foot;
     bool typing = false, caret = false, searchHot = false, allHot = false;
+    bool noGuild = false;  // 3.0.22-beta.27: its words from the texts below
+    std::string ngHead, ngSub, ngJoin, ngJoinText, ngMake, ngMakeText;
 };
 // A skill's icon source at `side` pixels (its aegis name in small letters), its width out; the emblem's at `side`; a
 // controller button's glyph `h` high, its width out

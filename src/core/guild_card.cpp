@@ -84,7 +84,9 @@ std::string fmt(std::string pattern, const std::vector<std::string>& values) {
     return pattern;
 }
 
-bool gameDrawn(int tab, bool editing) { return editing && tab == int(Tab::Positions); }
+bool gameDrawn(int tab, bool editing) {
+    return editing && (tab == int(Tab::Positions) || tab == int(Tab::Members));
+}
 
 bool allowed(int tab, uint32_t rights) {
     if (tab < 0 || tab >= kTabs) return false;

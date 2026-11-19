@@ -1080,6 +1080,8 @@ enum class Text : uint16_t {
     GuildWWhoRaises, GuildWWhoRaisesText, GuildWCoolRow, GuildWLevelOf, GuildWAccount, GuildWReason, GuildWPreview,
     GuildWPreviewNote, GuildWNoticeEmpty, GuildWPadTabs, GuildWPadPick, GuildWPadRaise, GuildWPadAssign,
     GuildWPadActions,
+    // 3.0.22-beta.27: no guild - Alt+G tells how to join and to make one
+    GuildWNoGuild, GuildWNoGuildSub, GuildWJoin, GuildWJoinText, GuildWMake, GuildWMakeText,
     Count
 };
 

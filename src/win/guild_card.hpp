@@ -25,6 +25,8 @@ bool shown();
 bool close();  // Esc: its close
 void beforeGameDraw();
 bool key(UINT m, WPARAM wp, LPARAM lp);  // 3.0.11-beta.271: the notice's fields while it is edited
+// 3.0.22-beta.27: Alt+G with no guild (the game opens nothing) - the card that tells how to join and make one
+bool altG(UINT m, WPARAM wp, LPARAM lp);
 // 3.0.22-beta.26: A uses the chosen skill (writes to the chosen member), Y raises it, X carries it to the hotbar
 enum class PadCommand : uint8_t { Up, Down, TabBack, TabOn, Close, Use, Raise, Assign };
 void padCommand(PadCommand c);

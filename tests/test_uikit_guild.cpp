@@ -247,3 +247,29 @@ TEST(uikit_guild_its_size_follows_the_scale) {
     CHECK(std::abs(L.w - 1140) <= 3);
     rmlhost::close(d);
 }
+
+// 3.0.22-beta.27: Alt+G with no guild - two cards a row (how to join, how to make one), only its head pressable
+TEST(uikit_guild_no_guild_two_cards) {
+    static gl::Model m;
+    gl::Frame f = frameOf(gc::Tab::Info, 1, 0);
+    f.noGuild = true;
+    f.name = "Гільдія";
+    f.ngHead = "Ви не в гільдії";
+    f.ngJoin = "Вступити";
+    f.ngJoinText = "Попросіть майстра чи офіцера гільдії запросити вас.";
+    f.ngMake = "Створити свою";
+    f.ngMakeText = "Потрібен Emperium у речах. У чаті напишіть /guild Назва.";
+    gl::fill(m, f, iconOf, nullptr, nullptr);
+    std::string error;
+    Rml::ElementDocument* d =
+        rmlhost::load(gl::rml(), [&](Rml::DataModelConstructor& c) { gl::bind(c, m); }, 300, 100, &error);
+    CHECK_EQ(error, std::string());
+    gc::Layout L = gc::layout(1920, 1080, 1);
+    CHECK(gl::refit(d, L));
+    std::printf("  no guild: %d x %d\n", L.w, L.h);
+    CHECK(std::abs(L.w - 600) <= 2);
+    CHECK(L.h < 400);
+    CHECK_EQ(countOf(L, gc::Part::Tab), 0);
+    CHECK_EQ(countOf(L, gc::Part::Close), 1);
+    rmlhost::close(d);
+}
