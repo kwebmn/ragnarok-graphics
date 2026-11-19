@@ -9705,9 +9705,9 @@ constexpr Entry kTexts[] = {
      "Гильдия — это общий чат, бонусы от мастера и осады замков."},
     {Text::GuildWJoin, "Join one", "Вступити", "Вступить"},
     {Text::GuildWJoinText,
-     "Ask a guild's master or officer to invite you. The game asks «Join?» - and your guild shows here.",
-     "Попросіть майстра чи офіцера гільдії запросити вас. Гра спитає «Вступити?» — і тут з'явиться ваша гільдія.",
-     "Попросите мастера или офицера гильдии пригласить вас. Игра спросит «Вступить?» — и здесь появится ваша "
+     "Ask a guild's master or officer to invite you. The game asks whether to join - and your guild shows here.",
+     "Попросіть майстра чи офіцера гільдії запросити вас. Гра спитає, чи вступити, — і тут з'явиться ваша гільдія.",
+     "Попросите мастера или офицера гильдии пригласить вас. Игра спросит, вступить ли, — и здесь появится ваша "
      "гильдия."},
     {Text::GuildWMake, "Make your own", "Створити свою", "Создать свою"},
     {Text::GuildWMakeText,
