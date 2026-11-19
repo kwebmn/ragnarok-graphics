@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.15 — what's new · 2026-11-19
+
+The sun crosses the 3D view's sky by the clock.
+
+- **The sun rises and sets**: in the 3D view the sun rises at 6:00, stands at noon where the map's own light comes from, and sets at 20:00 behind the horizon panorama's ridges; at sunset the light turns golden and the mountains darken against the glow. At night the moon shines opposite the sun - it rises as the sun sets. It goes with «The sun moves by the clock» (Alt+O → «Picture» → «Day, night and seasons»; on from the «Medium» set). To see the evening at once: there, «Clock» → «Sunset 18:30».
+
 # uaRO Graphics 3.0.22-beta.14 — what's new · 2026-11-19
 
 Character select: the neighbouring cards no longer spill over the chosen one.
