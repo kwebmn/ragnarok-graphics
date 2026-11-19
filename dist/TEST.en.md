@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.12 — what's new · 2026-11-19
+
+The horizon panorama in the 3D view now on Direct3D 11 too.
+
+- **Land all round the horizon on Direct3D 11**: mountains, hills, a desert or the sea with islands all round the horizon in the 3D view - now on Direct3D 11 too, in a lighter form for weaker graphics cards (no sun shadows, drawn within half a second of entering a region). The same switch: Alt+O → «3D view» → «Sky and horizon» → «Horizon panorama».
+
 # uaRO Graphics 3.0.22-beta.11 — what's new · 2026-11-19
 
 A horizon panorama in the 3D view - on Direct3D 12 for now.
