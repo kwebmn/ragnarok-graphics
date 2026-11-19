@@ -107,3 +107,40 @@ TEST(char_select_card_parts_inside_the_card) {
               b->y + b->h <= card.y + card.h);
     CHECK(p.hpBar.y < p.spBar.y);
 }
+
+// 3.0.22-beta.14 (a player's shot through the owner 19.11, «нарисованый интерфейс с проблемами»: the chosen card's
+// neighbours wrote their HP, SP and stats over it - uaUI draws every word after every card's box): in the carousel
+// nothing of a card lies under a nearer one - the chosen card's neighbours lay their face, bars and words out in the
+// part of them it leaves in sight; the outer cards, under nothing, as they were
+TEST(char_select_carousel_nothing_under_a_nearer_card) {
+    const charselect::Layout L = charselect::carouselLayout(1920, 1080, 1.0f);
+    const std::vector<charselect::Slot> slots(5, hero());
+    charselect::Show sh;
+    sh.selected = charselect::kMiddle;
+    sh.page = 7;
+    sh.pages = 9;
+    const auto over = [](const panel::Box& a, const panel::Box& b) {
+        return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    };
+    const int depth[5] = {0, 2, 4, 3, 1};  // 0 and 4 the farthest, then 1 and 3, the chosen 2 the nearest
+    const panel::Box& chosen = L.slots[charselect::kMiddle];
+    CHECK(over(L.slots[1], chosen) && over(L.slots[3], chosen));  // the neighbours stand partly behind it
+    for (const int i : {1, 3}) {
+        const panel::Box shown = charselect::shownPart(L, i);
+        CHECK(shown.w > 0.6f * L.slots[size_t(i)].w && !over(shown, chosen));
+        const charselect::CardParts p = charselect::cardParts(shown, L.s * L.scales[size_t(i)]);
+        for (const panel::Box* b : {&p.face, &p.hpBar, &p.spBar}) CHECK(!over(*b, chosen));
+    }
+    for (const int i : {0, 2, 4}) {
+        const panel::Box shown = charselect::shownPart(L, i);
+        CHECK(shown.x == L.slots[size_t(i)].x && shown.w == L.slots[size_t(i)].w);
+    }
+    int others = 0;
+    for (const charselect::Words& w : charselect::words(L, slots, sh, texts())) {
+        if (w.card < 0) continue;
+        others += w.card != charselect::kMiddle;
+        for (int j = 0; j < 5; ++j)
+            if (depth[j] > depth[w.card]) CHECK(!over(w.box, L.slots[size_t(j)]));
+    }
+    CHECK(others == 4 * 11);  // each other card's name, class, levels, HP, SP and six stats
+}

@@ -109,7 +109,7 @@ void fill(Model& m, const cs::Layout& L, const std::vector<cs::Slot>& slots, con
                   on ? 1.0f : hot ? 0.24f : 0.12f, (on ? 2.0f : 1.0f) * sc);
             b.hit("slot", int(i), c);
             if (!sl || !sl->used) continue;
-            const cs::CardParts in = cs::cardParts(c, sc * f);
+            const cs::CardParts in = cs::cardParts(cs::shownPart(L, int(i)), sc * f);  // 3.0.22-beta.14
             b.box(in.face, in.face.w / 2, 0x000000, 0.30f);
             if (sl->face && sl->face->width > 0)
                 b.icon(panel::Box{std::round(in.face.x + (in.face.w - float(sl->face->width)) / 2),

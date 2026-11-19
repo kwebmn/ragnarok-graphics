@@ -75,8 +75,13 @@ struct Words {
     float px = 12;
     bool bold = false;
     Align align = Align::Left;
+    int card = -1;  // 3.0.22-beta.14: the card (its place) it is written on; -1 the head's, the buttons'
 };
 std::vector<Words> words(const Layout& L, const std::vector<Slot>& slots, const Show& sh, const Texts& t);
+// 3.0.22-beta.14 (a player's shot through the owner 19.11: the chosen card's neighbours wrote their HP, SP and stats
+// over it - uaUI draws every word after every card's box): the part of card `i` no nearer card covers - in the
+// carousel the chosen one's neighbours lose their inner side under it; their face, bars and words laid out in it
+panel::Box shownPart(const Layout& L, int i);
 
 // 3.0.18-beta.33 (uaUI's characters): a used card's face circle and its HP / SP bars in the card's box
 struct CardParts {

@@ -159,16 +159,21 @@ std::vector<Words> words(const Layout& L, const std::vector<Slot>& slots, const 
         L.carousel ? std::vector<size_t>{0, 4, 1, 3, 2} : std::vector<size_t>{0, 1, 2};  // .275
     for (const size_t i : order) {
         if (i >= L.slots.size()) continue;
-        const panel::Box& b = L.slots[i];
+        const panel::Box b = shownPart(L, int(i));  // 3.0.22-beta.14: what no nearer card covers
         const Slot* sl = i < slots.size() ? &slots[i] : nullptr;
         if (sl && sl->none) continue;
         const float s0 = s;
         const float s = s0 * (L.carousel ? L.scales[i] : 1.0f);  // .275: a carousel's card at its own size
+        const size_t first = out.size();
+        const auto mine = [&] {  // 3.0.22-beta.14: the words just added this card's
+            for (size_t k = first; k < out.size(); ++k) out[k].card = int(i);
+        };
         if (!sl || !sl->used) {
             out.push_back(Words{panel::Box{b.x, b.y + b.h / 2 - 22 * s, b.w, 20 * s}, t.empty, kMuted, 14 * s, true,
                                 Align::Center});
             out.push_back(Words{panel::Box{b.x + 12 * s, b.y + b.h / 2, b.w - 24 * s, 18 * s}, t.makeHint, kMuted,
                                 11.5f * s, false, Align::Center});
+            mine();
             continue;
         }
         const Inner in = inner(b, s);
@@ -187,6 +192,7 @@ std::vector<Words> words(const Layout& L, const std::vector<Slot>& slots, const 
         for (int k = 0; k < 6; ++k)
             out.push_back(Words{in.stats[k], t.stats[k] + " " + std::to_string(sl->stats[k]), kMuted, 11.5f * s, false,
                                 Align::Left});
+        mine();
     }
     const std::string* names[4] = {&t.enter, &t.make, &t.remove, &t.back};
     // 3.0.11-beta.274: the chosen character's last session over the buttons
@@ -196,6 +202,25 @@ std::vector<Words> words(const Layout& L, const std::vector<Slot>& slots, const 
     for (size_t i = 0; i < L.buttons.size(); ++i)
         out.push_back(Words{L.buttons[i], *names[i], kText, 14 * s, i == 0, Align::Center});
     return out;
+}
+
+panel::Box shownPart(const Layout& L, int i) {
+    if (i < 0 || i >= int(L.slots.size())) return panel::Box{};
+    panel::Box b = L.slots[size_t(i)];
+    if (!L.carousel || i >= kPositions) return b;
+    static const int kDepth[kPositions] = {0, 2, 4, 3, 1};  // drawn 0, 4, then 1, 3, the chosen last
+    for (int j = 0; j < kPositions && j < int(L.slots.size()); ++j) {
+        const panel::Box& n = L.slots[size_t(j)];
+        if (kDepth[j] <= kDepth[i] || n.w <= 0 || n.x >= b.x + b.w || n.x + n.w <= b.x) continue;
+        if (n.x <= b.x) {  // over its left side
+            const float right = b.x + b.w;
+            b.x = std::min(right, n.x + n.w);
+            b.w = right - b.x;
+        } else {  // over its right side
+            b.w = n.x - b.x;
+        }
+    }
+    return b;
 }
 
 CardParts cardParts(const panel::Box& card, float s) {
