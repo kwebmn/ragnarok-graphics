@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.25 — what's new · 2026-11-19
+
+Pause - the old client, whole.
+
+- **Pause (or Scroll Lock) turns the old client on whole**: with the picture the whole new interface goes off - the game's own windows come back (the chat, the hotkeys' bar, the items, the character's window, the minimap, the NPC talk and the rest), the game's cursor and cell, its pixel letters instead of the crisp font; no hints, no windows' panel, no walking by W A S D and the arrows, the camera as the game's. Pause again - everything new is back. For a «before - after» comparison, on a video too.
+
 # uaRO Graphics 3.0.22-beta.24 — what's new · 2026-11-19
 
 A cinema camera, a time-lapse, snow settling before your eyes and a moonrise.
