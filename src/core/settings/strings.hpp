@@ -316,7 +316,7 @@ enum class Text : uint16_t {
     FxWaterFoam, FxWaterFoamHint, FxWaterGlints, FxWaterGlintsHint, FxCaustics, FxCausticsHint, FxWaterfalls,
     FxWaterfallsHint, FxStepDust, FxStepDustHint, FxSeasonSnow, FxSeasonSnowHint,
     FxSeasonGrass, FxSeasonGrassHint, FxPollen, FxPollenHint, FxIndoorDust, FxIndoorDustHint, FxRainSplashes,
-    FxRainSplashesHint, FxDesertHeat, FxDesertHeatHint, FxSkyRays,
+    FxRainSplashesHint, FxSandstorm, FxSandstormHint, FxDesertHeat, FxDesertHeatHint, FxSkyRays,
     FxSkyRaysHint, FxTreeSeasons, FxTreeSeasonsHint, FxDragonflies, FxDragonfliesHint,
     DiagRegistryOld,  // 2.4.2
     DlssCustom, DlssScale, DlssScaleHint, DlssWidth, DlssHeight, DlssSizeHint, DlssModel, DlssModelHint, DlssModelAuto,

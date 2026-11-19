@@ -35,6 +35,7 @@
 #include "core/png_write.hpp"
 #include "core/shot_spec.hpp"
 #include "core/region_look.hpp"
+#include "win/gpu/wall_clock.hpp"
 #include "core/effect_groups.hpp"
 #include "win/gpu/horizon_constants.hpp"
 #include "core/sprite_exe.hpp"
@@ -4301,6 +4302,11 @@ void Renderer11::skyPass(bool fill) {
     const view3d::Sky sky = view3d::skyOf(night, vault);
     std::copy(sky.horizon, sky.horizon + 3, c.sourceRect);
     c.sourceRect[3] = view3d::hazeReach(sky.reach, camera::sightNow());  // 3.0.19-beta.24: whole at the sight
+    if (const float storm = vault ? 0.0f : sandStormNow(); storm > 0.0f) {  // 3.0.22-beta.23: a sandstorm's air
+        c.sourceRect[3] *= 1.0f - 0.75f * storm;
+        const float sand[3] = {0.70f, 0.56f, 0.38f};
+        for (int k = 0; k < 3; ++k) c.sourceRect[k] += (sand[k] - c.sourceRect[k]) * 0.85f * storm;
+    }
     float toSun[3] = {0.0f, 0.0f, 0.0f};
     if (!vault && skySun(toSun)) std::copy(toSun, toSun + 3, c.sourceClamp);  // 3.0.22-beta.15: by the clock
     if (!vault && frameFogSeen_) {  // 3.0.22-beta.19 (R-QB3SBW): the game's fog over the horizon
@@ -4614,6 +4620,12 @@ ID3D11ShaderResourceView* Renderer11::vaultTexture() {
 
 // 2.5: the weather (weather_ps) as Direct3D 12's weather.cpp - the map's snow, rain, leaves or sand in three layers,
 // or the motes (the pollen outdoors, the dust indoors); the shared wind and the lit dust stay Direct3D 12's.
+float Renderer11::sandStormNow() const {  // 3.0.22-beta.23 (Direct3D 12's)
+    if (!effects_.sandstorm || !effects_.weather || effects_.weatherAmount <= 0 || weather_ != weather::Kind::Sand)
+        return 0.0f;
+    return weather::stormAt(wallSeconds());
+}
+
 void Renderer11::applyWeather() {
     EffectSpan span(*this, kTimeWeather11);
     weatherDone_ = true;
@@ -4641,6 +4653,15 @@ void Renderer11::applyWeather() {
         const float perUnit = proj.f0 / 250.0f;
         c.sourceRect[0] = (m[9] * m[0] + m[10] * m[1] + m[11] * m[2]) * perUnit;
         c.sourceRect[1] = (m[9] * m[3] + m[10] * m[4] + m[11] * m[5]) * perUnit;
+    }
+    // 3.0.22-beta.23 (Direct3D 12's): a sandstorm now and then - its air thick, its grains more
+    if (const float storm = motes ? 0.0f : sandStormNow(); storm > 0.0f) {
+        c.twin[2] = storm;
+        c.footprint *= 1.0f + 3.0f * storm;
+        if (!stormTold_) LOG_INFO("weather: a sandstorm over %s ([effects] sandstorm)", map_.c_str());
+        stormTold_ = true;
+    } else {
+        stormTold_ = false;
     }
     // 3.0.5-beta.19: the particles as small quads, each layer's cells over the picture (weather_vs) - sand over the
     // whole picture as before (its air)

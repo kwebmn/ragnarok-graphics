@@ -129,6 +129,12 @@ bool Renderer::Impl::skyPass(bool fill) {
     const view3d::Sky sky = view3d::skyOf(night, vault);  // the horizon's colour, the haze's reach
     std::copy(sky.horizon, sky.horizon + 3, c.sourceRect);
     c.sourceRect[3] = view3d::hazeReach(sky.reach, camera::sightNow());  // 3.0.19-beta.24: whole at the sight
+    // 3.0.22-beta.23: a sandstorm's air - the sight short, the horizon the sand's (weather_ps thickens the rest)
+    if (const float storm = vault ? 0.0f : sandStormNow(); storm > 0.0f) {
+        c.sourceRect[3] *= 1.0f - 0.75f * storm;
+        const float sand[3] = {0.70f, 0.56f, 0.38f};
+        for (int k = 0; k < 3; ++k) c.sourceRect[k] += (sand[k] - c.sourceRect[k]) * 0.85f * storm;
+    }
     float toSun[3] = {0.0f, 0.0f, 0.0f};
     if (!vault && skySun(toSun)) std::copy(toSun, toSun + 3, c.sourceClamp);  // 3.0.22-beta.15: by the clock
     if (!vault && frameFogSeen) {  // 3.0.22-beta.19 (R-QB3SBW): the game's fog over the horizon (fogColor free here)

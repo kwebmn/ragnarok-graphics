@@ -589,6 +589,7 @@ struct EffectSettings {
     bool pollen = true;         // motes: under the open sky
     bool indoorDust = true;     // motes: in the dungeons and the houses
     bool rainSplashes = true;   // weather: the rain's rings on the ground
+    bool sandstorm = false;     // 3.0.22-beta.23 (the owner 19.11 «возьми»): weather: the sand's storm now and then
     bool desertHeat = true;     // heat: far off in the desert
     bool skyRays = true;        // shafts: the rays from the sky over the fields
     bool treeSeasons = true;    // tree_tints: autumn's golden crowns, Lutie's rime

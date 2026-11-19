@@ -1104,6 +1104,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxIndoorDustHint, "", &E::indoorDust},
         {"effects", "rain_splashes", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRainSplashes,
          Text::FxRainSplashesHint, "", &E::rainSplashes},
+        {"effects", "sandstorm", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxSandstorm,  // .23
+         Text::FxSandstormHint, "", &E::sandstorm},
         {"effects", "desert_heat", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDesertHeat,
          Text::FxDesertHeatHint, "", &E::desertHeat},
         {"effects", "sky_rays", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSkyRays,

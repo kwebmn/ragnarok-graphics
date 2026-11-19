@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <cmath>
+
 #include "core/weather.hpp"
 #include "test.hpp"
 
@@ -69,4 +72,35 @@ TEST(weather_quads_cover_the_picture_by_each_layers_cells) {
     CHECK(rain.count[0] + rain.count[1] + rain.count[2] < 20000u);
     const weather::QuadCells none = weather::quadCells(1, 0.0f, 0.0f);
     CHECK_EQ(none.count[0] + none.count[1] + none.count[2], 0u);
+}
+
+// 3.0.22-beta.23 (the owner 19.11 «возьми» - another server's «Sandstorm»): [effects] sandstorm - over Morroc's sand in
+// the wind a storm now and then: one in each kStormEvery (40 minutes), at the same moment on every computer by the
+// clock, rising over kStormRise, whole for kStormHold, gone over kStormRise; smooth, never a leap, nothing between
+TEST(weather_sandstorm_now_and_then) {
+    const double day = 86400.0, from = std::floor(1.7e9 / weather::kStormEvery) * weather::kStormEvery;  // 2023
+    int storms = 0;
+    double whole = 0.0, any = 0.0, longestWhole = 0.0, run = 0.0;
+    float last = weather::stormAt(from), most = 0.0f, leap = 0.0f;
+    for (double t = from + 0.5; t < from + day; t += 0.5) {
+        const float s = weather::stormAt(t);
+        CHECK(s >= 0.0f && s <= 1.0f);
+        if (last == 0.0f && s > 0.0f) ++storms;
+        leap = std::max(leap, std::fabs(s - last));
+        most = std::max(most, s);
+        any += s > 0.0f ? 0.5 : 0.0;
+        if (s >= 0.999f) {
+            whole += 0.5;
+            run += 0.5;
+            longestWhole = std::max(longestWhole, run);
+        } else {
+            run = 0.0;
+        }
+        last = s;
+    }
+    CHECK_EQ(storms, 36);  // a day's 40-minute spans
+    CHECK(most == 1.0f && longestWhole >= 29.0 && longestWhole <= 31.0);
+    CHECK(any > 36 * 45.0 && any < 36 * 52.0);  // some 50 s each: under 4 % of the time
+    CHECK(leap < 0.1f);                          // half a second: under a tenth
+    CHECK(weather::stormAt(from + 1234.5) == weather::stormAt(from + 1234.5));
 }

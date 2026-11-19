@@ -230,7 +230,7 @@ EffectSettings effectsOff() {
     e.mapFade = e.noGameFog = e.noServerNight = e.roundLight = e.fixNegative = false;
     // 2.4: the parts of the effects
     e.waterFoam = e.waterGlints = e.caustics = e.waterfalls = e.stepDust = e.seasonSnow = false;
-    e.seasonGrass = e.pollen = e.indoorDust = e.rainSplashes = e.desertHeat = false;
+    e.seasonGrass = e.pollen = e.indoorDust = e.rainSplashes = e.desertHeat = e.sandstorm = false;
     e.moonLight = e.firefliesLight = e.moonBeams = e.lightOrbs = false;  // 2.7.18; 2.7.20; 2.7.25
     e.portalNew = false;  // 2.7.48
     e.mapGlowOrbs = false;  // 3.0.7-beta.1

@@ -1,5 +1,7 @@
 #include <windows.h>
 
+#include "win/gpu/wall_clock.hpp"
+
 #include <d3d12.h>
 
 #include <algorithm>
@@ -61,6 +63,11 @@ ID3D12PipelineState* Renderer::Impl::blendPipeline(ID3DBlob*& ps, ID3D12Pipeline
     return pipelines[code];
 }
 
+float Renderer::Impl::sandStormNow() const {
+    if (!effects.sandstorm || !effects.weather || mapWeather != weather::Kind::Sand || !mapWeatherWanted()) return 0.0f;
+    return weather::stormAt(wallSeconds());
+}
+
 // The world drawn and finished: the map's weather over it, in three layers from far to near - each moved by the
 // camera's own moves a little (the near one the most), so that it hangs in the air rather than on the screen.
 bool Renderer::Impl::applyWeather() {
@@ -95,6 +102,17 @@ bool Renderer::Impl::applyWeather() {
     if (windShared()) {  // 1.22: blown along the screen by the shared wind
         c.sourceRect[2] = weatherDrift.x;
         c.sourceRect[3] = windScreenX * windNow.strength * 60.0f;
+    }
+    // 3.0.22-beta.23 (the owner 19.11 «возьми»): a sandstorm now and then - its air thick (weather_ps), its grains
+    // more and faster
+    if (const float storm = motes ? 0.0f : sandStormNow(); storm > 0.0f) {
+        c.twin[2] = storm;
+        c.footprint *= 1.0f + 3.0f * storm;
+        c.sourceRect[3] *= 1.0f + 2.0f * storm;
+        if (!stormTold) LOG_INFO("weather: a sandstorm over %s ([effects] sandstorm)", mapName.c_str());
+        stormTold = true;
+    } else {
+        stormTold = false;
     }
     if (motes && !mapOutdoors && effects.litDust) {  // 1.23: the dust shows in the light (weather_ps)
         if (!copySceneColor()) return false;

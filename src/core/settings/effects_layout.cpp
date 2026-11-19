@@ -15,7 +15,7 @@ const EffectLayout kEffects[] = {
     {"effects.fire_light", {"effects.skill_colours", "effects.light_orbs"}, {"effects.fire_light_strength"}, {}, 0},
     {"effects.actor_shadows", {"effects.actor_shadows_spot"}, {"effects.actor_shadows_strength"}, {}, 0},
     {"effects.heat", {"effects.desert_heat"}, {"effects.heat_strength"}, {}, 0},
-    {"effects.weather", {"effects.rain_splashes"}, {"effects.weather_amount"}, {}, 0},
+    {"effects.weather", {"effects.rain_splashes", "effects.sandstorm"}, {"effects.weather_amount"}, {}, 0},
     {"effects.footprints", {"effects.step_dust"}, {}, {}, 0},  // 0.80
     {"effects.storms", {}, {}, {}, 0},      // 0.80
     {"effects.grass", {}, {"effects.grass_amount"}, {}, 0},  // 0.81

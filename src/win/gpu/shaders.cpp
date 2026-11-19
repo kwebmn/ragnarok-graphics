@@ -4781,9 +4781,13 @@ float4 weather_ps(PresentOut i) : SV_Target {
         sum += colour * s;
         a += s;
     }
-    if (kind == 4) {  // and the air itself a little sandy
-        sum += float3(0.86, 0.76, 0.56) * 0.05 * footprint;
-        a += 0.05 * footprint;
+    if (kind == 4) {  // and the air itself a little sandy; 3.0.22-beta.23: in a storm (twinW) thick with it, rolling
+        float storm = saturate(twinW);
+        float way = sourceRect.w < 0.0 ? -1.0 : 1.0;  // the shared wind's along the screen
+        float rolling = 0.62 + 0.38 * fbm4(p * 0.0035 - float2(way * t * 0.30, -t * 0.04));
+        float air = 0.05 * footprint + storm * 0.68 * rolling;
+        sum += lerp(float3(0.86, 0.76, 0.56), float3(0.70, 0.55, 0.36), storm) * air;
+        a += air;
     }
     if (a < 0.003) discard;
     return float4(sum / a, saturate(a));

@@ -3260,6 +3260,15 @@ constexpr Entry kTexts[] = {
     {Text::FxRainSplashesHint, "Where it rains, rings spread on the ground where the drops land (Direct3D 12).",
      "Де йде дощ, на землі розходяться кола там, де падають краплі (Direct3D 12).",
      "Где идёт дождь, на земле расходятся круги там, куда падают капли (Direct3D 12)."},
+    // 3.0.22-beta.23 (the owner 19.11 «возьми» - another server's «Sandstorm»)
+    {Text::FxSandstorm, "Sandstorm", "Піщана буря", "Песчаная буря"},
+    {Text::FxSandstormHint,
+     "Where the sand is in the wind (around Morroc), a storm rises now and then: for half a minute a dense wall of "
+     "sand, the sight short, then it passes. Once in 40 minutes, at the same moment for every player.",
+     "Де вітер несе пісок (довкола Морока), часом здіймається буря: на пів хвилини щільна стіна піску, видно "
+     "недалеко, потім минає. Раз на 40 хвилин, в усіх гравців одночасно.",
+     "Где ветер несёт песок (вокруг Морока), иногда поднимается буря: на полминуты плотная стена песка, видно "
+     "недалеко, потом проходит. Раз в 40 минут, у всех игроков одновременно."},
     {Text::FxDesertHeat, "Heat over the desert", "Марево над пустелею", "Марево в пустыне"},
     {Text::FxDesertHeatHint,
      "Far off in the desert around Morroc the picture shimmers in the hot air; the heat over fire and lava stays.",

@@ -153,3 +153,18 @@ TEST(effect_glowing_air_at_lamps_is_a_part_of_its_own_off_by_default) {
     CHECK(!effectsOff().shaftsLamps);
     CHECK(effect_groups::memberOf("effects.shafts_lamps") == nullptr);  // the effect's, not a group's
 }
+
+// 3.0.22-beta.23 (the owner 19.11 «возьми»: a sandstorm now and then; new looks ship off): the storm a part of the
+// weather's box, its own box under it - off as it comes, off with the effects' set «off»
+TEST(effect_parts_the_sandstorm_off_as_it_comes) {
+    CHECK(boxOf("effects.sandstorm") == "effects.weather");
+    const IniSetting* s = findSetting("effects.sandstorm");
+    CHECK(s != nullptr && s->control == Control::Check);
+    if (!s) return;
+    const Config defaults = parseConfig("");
+    CHECK(tokenOf(*s, defaults) == "0");
+    Config on = parseConfig("[effects]\nsandstorm = 1\n");
+    CHECK(tokenOf(*s, on) == "1" && on.effects.sandstorm);
+    on.effects = effectsOff();
+    CHECK(tokenOf(*s, on) == "0");
+}

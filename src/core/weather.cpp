@@ -43,4 +43,19 @@ QuadCells quadCells(int kind, float width, float height) {
     return q;
 }
 
+float stormAt(double unixSeconds) {
+    const double slot = std::floor(unixSeconds / double(kStormEvery));
+    // its start somewhere in its span (the span's number hashed), the whole storm within it
+    uint32_t h = uint32_t(int64_t(slot)) * 2654435761u;
+    h = (h ^ (h >> 15)) * 2246822519u;
+    h ^= h >> 13;
+    const double length = double(2 * kStormRise + kStormHold);
+    const double start = slot * double(kStormEvery) + double(h % 10000u) / 10000.0 * (double(kStormEvery) - length);
+    const double into = unixSeconds - start;
+    if (into <= 0.0 || into >= length) return 0.0f;
+    const double up = std::min(into, length - into) / double(kStormRise);
+    const float s = float(std::min(up, 1.0));
+    return s * s * (3.0f - 2.0f * s);
+}
+
 }  // namespace uagfx::weather
