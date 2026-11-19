@@ -1063,6 +1063,23 @@ enum class Text : uint16_t {
     // 3.0.22-beta.6 (idea 10): [display] dpi_aware back - the window in the screen's real pixels where it is needed
     QualityDpiAware, QualityDpiAwareHint, DpiAwareAuto, DpiAwareOn, DpiAwareOff,
     KeyRightClick, KeyHintMove,  // 3.0.22-beta.7: Alt+right click moves a thing whole (the storage's key hint)
+    // 3.0.22-beta.26 (docs/superpowers/plans/2026-11-19-guild-window.md): the guild window as «Навички»
+    GuildWSub, GuildWInfoSub, GuildWExpLine, GuildWCastles, GuildWYourTax, GuildWYourTaxValue, GuildWAllies,
+    GuildWEnemies, GuildWGifts, GuildWNearMaster, GuildWWarOnly, GuildWOnline, GuildWOffline, GuildWAllMembers,
+    GuildWSearch, GuildWCount, GuildWColName, GuildWColJob, GuildWColLevel, GuildWColPosition, GuildWColGiven,
+    GuildWInGame, GuildWAway, GuildWGiven, GuildWGivenValue, GuildWWhisper, GuildWParty, GuildWFriend,
+    GuildWSetPosition, GuildWExpel, GuildWRightsNote, GuildWMembersHints, GuildWColRights, GuildWColTax,
+    GuildWColPeople, GuildWNoRights, GuildWFolded, GuildWEditNote, GuildWPeopleOn, GuildWGroupCastle,
+    GuildWGroupGrowth, GuildWGroupAuras, GuildWGroupWar, GuildWGroupAurasMore, GuildWGroupWarMore, GuildWPassive,
+    GuildWAura, GuildWActive, GuildWSp, GuildWLine0, GuildWLine1, GuildWLine2, GuildWLine3, GuildWLine4, GuildWLine5,
+    GuildWLine6, GuildWLine7, GuildWLine8, GuildWLine9, GuildWLine10, GuildWLine11, GuildWLine12, GuildWLine13,
+    GuildWAbout0, GuildWAbout1, GuildWAbout2, GuildWAbout3, GuildWAbout4, GuildWAbout5, GuildWAbout6, GuildWAbout7,
+    GuildWAbout8, GuildWAbout9, GuildWAbout10, GuildWAbout11, GuildWAbout12, GuildWAbout13, GuildWLevels, GuildWYou,
+    GuildWYouNear, GuildWWhere, GuildWCool, GuildWNeeds, GuildWWhereAura, GuildWWhereWar, GuildWCoolShared,
+    GuildWReady, GuildWWait, GuildWUse, GuildWRaiseTo, GuildWPlaces, GuildWNeed, GuildWMemberFoot, GuildWSkillHints,
+    GuildWWhoRaises, GuildWWhoRaisesText, GuildWCoolRow, GuildWLevelOf, GuildWAccount, GuildWReason, GuildWPreview,
+    GuildWPreviewNote, GuildWNoticeEmpty, GuildWPadTabs, GuildWPadPick, GuildWPadRaise, GuildWPadAssign,
+    GuildWPadActions,
     Count
 };
 

@@ -275,11 +275,13 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
     if (id == mercpacket::kInit && data &&
         mercpacket::laidOut(const_cast<uint8_t*>(data), mercpacket::kInitSize) && s.mercTold++ < 3)
         LOG_INFO("merc: its 0x029b laid out for the game (HP, SP, the contract's end, loyalty as uaRO.exe reads them)");
-    if (data && (id == 0x0160 || id == 0x0162 || id == 0x0163 || id == 0x0166 || id == 0x016F)) {  // .220
+    if (data && (id == 0x0160 || id == 0x0162 || id == 0x0163 || id == 0x0166 || id == 0x016F || id == 0x014C ||
+                 id == 0x0154)) {  // .220; 3.0.22-beta.26: the alliances and the members too
         uint16_t len = 182;  // 0x016f's fixed
         if (id != 0x016F) std::memcpy(&len, data + 2, 2);
         guildcardwin::packet(id, data, len);
     }
+    if (data && id == 0x011A) guildcardwin::packet(id, data, 15);  // 3.0.22-beta.26: a skill used (the war skills')
     if (id == 0x0091 || id == 0x0092) netsmoothwin::mapChange();  // 3.0.18-beta.201 (R-SHXHET): a warp - no glide on
     if (id == mercpacket::kSkills && data) {  // 3.0.11-beta.218: the mercenary's skills, for its card's list
         uint16_t len = 0;

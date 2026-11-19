@@ -1379,22 +1379,212 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
     line-height: 2.1667rem;
           text-align: center; border-radius: 0.5833rem; color: #9aa3b5; font-size: 1.0833rem; }
 .stl .x.hot { background-color: #ffffff24; color: #ffffff; }
-/* 3.0.18-beta.102: the guild's card live (uikit/guild_live) - its head and tabs by flexbox, the body layered */
-.lw.gdl { padding: 0; font-size: 1rem; box-sizing: border-box; }
-.gdl .head { display: block; height: 2.3333rem; line-height: 2.3333rem; margin: 1.3333rem 3.6667rem 0 1.3333rem; }
-.gdl .head .title { font-size: 1.25rem; font-weight: bold; color: #eef2f8; }
-.gdl .x { position: absolute; right: 1.3333rem; top: 1.5rem; width: 2rem; height: 2rem; line-height: 2rem;
-          text-align: center; border-radius: 0.5rem; color: #eef2f8; font-size: 1rem; background-color: #ffffff0f; }
-.gdl .x.hot { background-color: #ffffff24; }
-.gdl .gtabs { display: flex; flex-wrap: wrap; justify-content: space-between; margin: 0.3333rem 1.3333rem 0 1.3333rem; }
-.gdl .gtab { display: block; width: 9.3333rem; height: 2.5rem; line-height: 2.3333rem; margin-bottom: 0.5rem;
-    text-align: center;
-             border-radius: 0.6667rem; border: 0.0833rem #ffffff1f; background-color: #ffffff0a; font-size: 1rem;
-             color: #eef2f8; box-sizing: border-box; }
-.gdl .gtab.hot { background-color: #ffffff1a; }
-.gdl .gtab.on { border-color: #c9a55bcc; background-color: #c9a55b3d; font-weight: bold; }
-.gdl .gtab.off { color: #5e6575; }
-.gdl .lay { margin-top: 0.1667rem; }
+/* 3.0.22-beta.26 (docs/superpowers/plans/2026-11-19-guild-window.md): «Гільдія» as «Навички» (uikit/guild_live) -
+   a head, six tabs underlined, the tab's list with the side panel, a foot; 760 at scale 1 */
+.lw.gdw { width: 63.3333rem; padding: 0; font-size: 1rem; box-sizing: border-box; }
+.gdw .gwh { display: flex; align-items: center; height: 3.8333rem; padding: 0 4.3333rem 0 1.3333rem; }
+.gdw .gwe { display: block; margin-right: 0.8333rem; }
+.gdw .gwn { font-size: 1.25rem; font-weight: bold; color: #e6cb8a; white-space: nowrap; }
+.gdw .gws { margin-left: 0.8333rem; color: #9aa3b5; white-space: nowrap; }
+.gdw .gwg { display: block; flex: 1; }
+.gdw .gwk { font-size: 0.9167rem; color: #7e889a; }
+.gdw .gwx { position: absolute; right: 1.1667rem; top: 0.8333rem; width: 2.1667rem; height: 2.1667rem;
+            line-height: 2.1667rem; text-align: center; border-radius: 0.5833rem; color: #9aa3b5;
+    font-size: 1.0833rem; }
+.gdw .gwx.hot { background-color: #ffffff24; color: #ffffff; }
+.gdw .gwts { display: flex; height: 2.6667rem; margin: 0 1.3333rem; border-bottom: 0.0833rem #ffffff14; }
+.gdw .gwt { display: block; height: 2.6667rem; line-height: 2.5rem; padding: 0 0.8333rem; margin-right: 0.3333rem;
+            border-radius: 0.5rem; font-size: 1.0417rem; color: #9aa3b5; border-bottom: 0.1667rem #00000000;
+            box-sizing: border-box; white-space: nowrap; }
+.gdw .gwt.hot { background-color: #ffffff0d; }
+.gdw .gwt.on { color: #eef2f8; font-weight: bold; border-bottom-color: #f3c653; }
+.gdw .gwt.off { color: #5e6575; }
+.gdw .gwtn { margin-left: 0.4167rem; font-size: 0.9167rem; color: #7e889a; font-weight: normal; }
+.gdw .gwtp { margin-left: 0.5rem; padding: 0 0.4167rem; border-radius: 0.6667rem; background-color: #f3c653;
+             color: #141820; font-size: 0.875rem; font-weight: bold; }
+.gdw .gwb { display: flex; height: 53.5rem; margin: 0.6667rem 1.3333rem 0 1.3333rem; }
+.gdw .gwa { display: block; position: relative; flex: 1; height: 53.5rem; overflow: hidden; }
+.gdw .gwp { display: block; position: relative; width: 22.3333rem; height: 53.5rem; margin-left: 1.1667rem;
+            padding: 1.1667rem 1.1667rem 1rem 1.1667rem; border-radius: 0.75rem; border: 0.0833rem #ffffff17;
+            background-color: #ffffff09; box-sizing: border-box; overflow: hidden; }
+.gdw .gwf { display: flex; align-items: center; height: 3.3333rem; margin-top: 0.6667rem; padding: 0 1.3333rem;
+            border-top: 0.0833rem #ffffff14; color: #7e889a; }
+.gdw .gwfl { font-weight: bold; color: #7e889a; white-space: nowrap; }
+.gdw .gwfl.gold { color: #f3c653; }
+.gdw .gwfh { display: flex; align-items: center; margin-left: auto; }
+.gdw .gwfi { display: block; margin-left: 1.3333rem; white-space: nowrap; }
+.gdw .gwpi { display: flex; align-items: center; margin-left: 1.3333rem; color: #eef2f8; white-space: nowrap; }
+.gdw .gwpi img { display: block; margin-right: 0.5rem; }
+.gdw .gwgr { display: flex; align-items: flex-end; height: 2rem; padding: 0 0.5rem 0.25rem 0.5rem;
+             font-size: 0.9167rem; font-weight: bold; color: #7e889a; border-bottom: 0.0833rem #ffffff12;
+             box-sizing: border-box; white-space: nowrap; }
+.gdw .gwgm { margin-left: 0.5rem; font-weight: normal; }
+.gdw .gwsr { display: flex; align-items: center; height: 3.1667rem; padding: 0 0.6667rem 0 0.3333rem;
+             border-radius: 0.5rem; border: 0.125rem #00000000; box-sizing: border-box; }
+.gdw .gwsr.hot { background-color: #ffffff0f; }
+.gdw .gwsr.focus { border-color: #f3c653e6; background-color: #c9a55b14; }
+.gdw .gwic { display: flex; justify-content: center; align-items: center; width: 2.5rem; height: 2.5rem; }
+.gdw .gwic img { display: block; }
+.gdw .gwtx { display: block; flex: 1; margin-left: 0.6667rem; overflow: hidden; white-space: nowrap; }
+.gdw .gwnm { display: block; height: 1.4167rem; line-height: 1.4167rem; font-size: 1.0833rem; font-weight: bold;
+             color: #eef2f8; }
+.gdw .gwnm.lock { color: #7e889a; }
+.gdw .gwin { display: block; height: 1.25rem; line-height: 1.25rem; font-size: 0.9167rem; color: #9aa3b5; }
+.gdw .gwin.need { color: #c9a55b; }
+.gdw .gwkd { color: #9aa3b5; }
+.gdw .gwkd.act { color: #7fd6c8; }
+.gdw .gwds { display: flex; justify-content: flex-end; width: 3.8333rem; }
+.gdw .gwdt { display: block; width: 0.5833rem; height: 0.5833rem; margin-left: 0.25rem; border-radius: 0.2917rem;
+             background-color: #ffffff24; }
+.gdw .gwdt.lv { background-color: #f3c653; }
+.gdw .gwlv { display: block; width: 3.3333rem; text-align: right; font-size: 1.0417rem; color: #7e889a; }
+.gdw .gwlv.learned { color: #eef2f8; }
+.gdw .gwpl { display: block; width: 2rem; height: 2rem; margin-left: 0.6667rem; }
+.gdw .gwplus { display: block; width: 2rem; height: 2rem; line-height: 1.8333rem; text-align: center;
+               border-radius: 0.5rem; border: 0.0833rem #c9a55bb3; background-color: #ffffff1f; font-size: 1.25rem;
+               font-weight: bold; color: #eef2f8; box-sizing: border-box; }
+.gdw .gwplus.hot { background-color: #ffffff38; }
+.gdw .gwsh { display: flex; align-items: center; }
+.gdw .gwsh img { display: block; }
+.gdw .gwst { display: block; margin-left: 0.8333rem; }
+.gdw .gwsn { display: block; font-size: 1.25rem; font-weight: bold; color: #eef2f8; white-space: nowrap; }
+.gdw .gwsk { display: block; font-size: 0.9583rem; color: #9aa3b5; }
+.gdw .gwsk.act { color: #7fd6c8; }
+.gdw .gwab { display: block; margin-top: 0.8333rem; line-height: 1.4167rem; color: #d8dde6; }
+.gdw .gwl { display: block; margin: 1rem 0 0.3333rem 0; font-size: 0.9167rem; font-weight: bold; color: #7e889a; }
+.gdw .gwl.gwtop { margin-top: 0; }
+.gdw .gwl.gwil { margin: 1.3333rem 0.3333rem 0.3333rem 0.3333rem; }
+.gdw .gwln { display: block; line-height: 1.5rem; color: #c9ced8; }
+.gdw .gwln.gwmute { color: #7e889a; margin-top: 0.5rem; }
+.gdw .gwln.gwt8 { margin-top: 0.6667rem; }
+.gdw .gwgood { color: #5fd08a; font-weight: bold; }
+.gdw .gwgood.gwwait { color: #e6cb8a; }
+.gdw .gwlr { display: flex; justify-content: space-between; height: 1.6667rem; line-height: 1.6667rem;
+             padding: 0 0.6667rem; border-radius: 0.4167rem; color: #9aa3b5; }
+.gdw .gwlr.now { background-color: #c9a55b26; color: #f3c653; font-weight: bold; }
+.gdw .gwnd { display: block; line-height: 1.5rem; color: #c9ced8; white-space: nowrap; }
+.gdw .gwck { color: #5fd08a; margin-right: 0.5rem; }
+.gdw .gwck.gwno { color: #e0915b; }
+.gdw .gwbs { position: absolute; left: 1.1667rem; bottom: 1rem; width: 20rem; display: flex; }
+.gdw .gwbn { display: block; flex: 1; height: 2.5rem; line-height: 2.3333rem; text-align: center;
+    border-radius: 0.6667rem;
+             border: 0.0833rem #ffffff29; background-color: #ffffff0f; font-size: 1.0417rem; color: #eceff5;
+             box-sizing: border-box; white-space: nowrap; overflow: hidden; }
+.gdw .gwbn.gwnext { margin-left: 0.6667rem; }
+.gdw .gwbn.hot { background-color: #ffffff1f; }
+.gdw .gwbn.gwmain { background-color: #f3c65338; border-color: #f3c653cc; font-weight: bold; }
+.gdw .gwbn.gwmain.hot { background-color: #f3c65357; }
+.gdw .gwbn.gwdim { opacity: 0.45; }
+.gdw .gwih { display: flex; align-items: center; padding: 0.5rem 0.3333rem 0 0.3333rem; }
+.gdw .gwih img { display: block; }
+.gdw .gwit { display: block; margin-left: 1.1667rem; }
+.gdw .gwinm { display: block; font-size: 1.5rem; font-weight: bold; color: #e6cb8a; white-space: nowrap; }
+.gdw .gwisb { display: block; color: #9aa3b5; white-space: nowrap; }
+.gdw .gwtr { display: block; height: 0.5833rem; margin: 1.1667rem 0.3333rem 0.3333rem 0.3333rem;
+    border-radius: 0.2917rem;
+             background-color: #ffffff1a; }
+.gdw .gwtf { display: block; height: 0.5833rem; border-radius: 0.2917rem; background-color: #c9a55be6; }
+.gdw .gwcap { display: block; margin: 0 0.3333rem; font-size: 0.9583rem; color: #9aa3b5; }
+.gdw .gwfs { display: block; margin: 1rem 0.3333rem 0 0.3333rem; }
+.gdw .gwfr { display: flex; align-items: center; height: 2.3333rem; border-bottom: 0.0833rem #ffffff0d; }
+.gdw .gwfk { display: block; width: 10.8333rem; color: #9aa3b5; }
+.gdw .gwfv { display: block; flex: 1; font-size: 1.0417rem; color: #eef2f8; white-space: nowrap; overflow: hidden; }
+.gdw .gwon { display: inline-block; width: 0.6667rem; height: 0.6667rem; margin-left: 0.6667rem;
+    border-radius: 0.3333rem;
+             background-color: #4cc777; }
+.gdw .gwon.gwon0 { display: block; margin-left: 0; }
+.gdw .gwchs { display: flex; flex: 1; overflow: hidden; }
+.gdw .gwch { display: block; height: 1.6667rem; line-height: 1.5rem; margin-right: 0.5rem; padding: 0 0.75rem;
+             border-radius: 0.8333rem; font-size: 0.9583rem; border: 0.0833rem #4cc77766; color: #a9e2b3;
+             background-color: #4cc77714; box-sizing: border-box; white-space: nowrap; }
+.gdw .gwch.gwfoe { border-color: #e06b6b66; color: #f0a5a5; background-color: #e06b6b14; }
+.gdw .gwnt { display: block; margin: 1.1667rem 0.3333rem 0 0.3333rem; padding: 0.8333rem 1rem; border-radius: 0.5833rem;
+             border: 0.0833rem #c9a55b73; background-color: #c9a55b1f; }
+.gdw .gwnt.gwnt0 { margin: 0.3333rem 0 0 0; }
+.gdw .gwntl { display: block; font-size: 0.9167rem; font-weight: bold; color: #c9a55b; }
+.gdw .gwnts { display: block; margin-top: 0.25rem; font-size: 1.0833rem; font-weight: bold; color: #eef2f8; }
+.gdw .gwntb { display: block; margin-top: 0.3333rem; line-height: 1.4167rem; color: #d8dde6; }
+.gdw .gwgf { display: flex; align-items: center; height: 2.6667rem; margin: 0 0.3333rem;
+    border-bottom: 0.0833rem #ffffff0d; }
+.gdw .gwgf img { display: block; }
+.gdw .gwgw { display: block; width: 10rem; margin-left: 0.8333rem; font-weight: bold; color: #5fd08a;
+    white-space: nowrap; }
+.gdw .gwgo { display: block; flex: 1; color: #9aa3b5; white-space: nowrap; overflow: hidden; }
+.gdw .gwol { display: flex; align-items: center; height: 2.1667rem; }
+.gdw .gwoln { display: block; flex: 1; margin-left: 0.6667rem; font-weight: bold; color: #eef2f8; white-space: nowrap;
+              overflow: hidden; }
+.gdw .gwolj { display: block; font-size: 0.9583rem; color: #9aa3b5; white-space: nowrap; }
+.gdw .gwtl { display: flex; align-items: center; height: 2.5rem; margin-bottom: 0.5rem; }
+.gdw .gwse { display: block; flex: 1; height: 2.3333rem; line-height: 2.1667rem; padding: 0 0.8333rem;
+    border-radius: 0.5833rem;
+             background-color: #00000059; border: 0.0833rem #ffffff1f; color: #7e889a; box-sizing: border-box;
+             white-space: nowrap; overflow: hidden; }
+.gdw .gwse.full { color: #eef2f8; }
+.gdw .gwse.typing { border-color: #c9a55b99; color: #eef2f8; }
+.gdw .gwse.hot { background-color: #0000007a; }
+.gdw .gwcn { display: block; margin-left: 0.8333rem; font-size: 0.9583rem; color: #7e889a; white-space: nowrap; }
+.gdw .gwcaret { display: inline-block; width: 0.125rem; height: 1.25rem; margin-left: 0.0833rem;
+    background-color: #eef2f8;
+                vertical-align: middle; }
+.gdw .gwmh { display: flex; align-items: center; height: 1.8333rem; padding: 0 0.6667rem; font-size: 0.875rem;
+    color: #7e889a; }
+.gdw .gwhc.on { color: #e6cb8a; font-weight: bold; }
+.gdw .gwhc.hot { color: #eef2f8; }
+.gdw .gwmr { display: flex; align-items: center; height: 2.3333rem; padding: 0 0.6667rem; border-radius: 0.5rem;
+             border: 0.125rem #00000000; color: #c9ced8; box-sizing: border-box; }
+.gdw .gwmr.hot { background-color: #ffffff0f; }
+.gdw .gwmr.focus { border-color: #f3c653e6; background-color: #c9a55b14; }
+.gdw .gwmr.gone { color: #7e889a; }
+.gdw .gwmn { font-weight: bold; color: #eef2f8; }
+.gdw .gwmr.gone .gwmn { font-weight: normal; color: #9aa3b5; }
+.gdw .gwmr.me .gwmn { color: #e6cb8a; }
+.gdw .gwc0 { display: block; width: 1.1667rem; }
+.gdw .gwc1 { display: block; width: 9.5rem; white-space: nowrap; overflow: hidden; }
+.gdw .gwc2 { display: block; width: 8.6667rem; white-space: nowrap; overflow: hidden; }
+.gdw .gwc3 { display: block; width: 2.5rem; text-align: right; }
+.gdw .gwc4 { display: block; width: 7.5rem; margin-left: 0.8333rem; white-space: nowrap; overflow: hidden; }
+.gdw .gwc5 { display: block; width: 4.1667rem; text-align: right; white-space: nowrap; }
+.gdw .gwdn { display: block; width: 0.6667rem; height: 0.6667rem; border-radius: 0.3333rem; background-color: #4cc777; }
+.gdw .gwdn.gwdf { background-color: #5c6370; }
+.gdw .gwsc { position: absolute; right: 0; top: 5rem; width: 0.4167rem; height: 47rem; border-radius: 0.2083rem;
+             background-color: #ffffff0d; }
+.gdw .gwsct { position: absolute; left: 0; width: 0.4167rem; border-radius: 0.2083rem; background-color: #ffffff47; }
+.gdw .gwsep { display: block; height: 0.0833rem; margin: 0.8333rem 0 0.3333rem 0; background-color: #ffffff14; }
+.gdw .gwac { display: block; height: 2.5rem; line-height: 2.3333rem; margin-top: 0.5rem; padding: 0 0.8333rem;
+             border-radius: 0.6667rem; border: 0.0833rem #ffffff29; background-color: #ffffff0f; font-size: 1.0417rem;
+             color: #eceff5; box-sizing: border-box; white-space: nowrap; overflow: hidden; }
+.gdw .gwac.hot { background-color: #ffffff1f; }
+.gdw .gwac.gwdanger { border-color: #e06b6b99; color: #f0a5a5; }
+.gdw .gwnote { display: block; margin-top: 0.6667rem; font-size: 0.9167rem; line-height: 1.25rem; color: #7e889a; }
+.gdw .gwpr { display: flex; align-items: center; height: 2.8333rem; padding: 0 0.6667rem; border-radius: 0.5rem;
+             border: 0.125rem #00000000; font-size: 1.0417rem; box-sizing: border-box; }
+.gdw .gwpr.hot { background-color: #ffffff0f; }
+.gdw .gwpr.focus { border-color: #f3c653e6; background-color: #c9a55b14; }
+.gdw .gwq1 { display: block; width: 9.1667rem; white-space: nowrap; overflow: hidden; }
+.gdw .gwq2 { display: flex; flex: 1; }
+.gdw .gwq3 { display: block; width: 4.1667rem; text-align: right; }
+.gdw .gwq4 { display: block; width: 3.3333rem; text-align: right; }
+.gdw .gwrt { display: block; height: 1.5rem; line-height: 1.3333rem; margin-right: 0.4167rem; padding: 0 0.5833rem;
+             border-radius: 0.75rem; border: 0.0833rem #ffffff2e; font-size: 0.9167rem; color: #c9ced8;
+    box-sizing: border-box;
+             white-space: nowrap; }
+.gdw .gwrt.gwrn { color: #5e6575; border-color: #ffffff12; }
+.gdw .gwfold { display: block; padding: 0.6667rem; font-size: 0.9583rem; color: #7e889a; }
+.gdw .gwer { display: flex; align-items: center; height: 2.5rem; padding: 0 0.6667rem; border-radius: 0.5rem;
+             border: 0.125rem #00000000; box-sizing: border-box; }
+.gdw .gwer.hot { background-color: #ffffff0f; }
+.gdw .gwer.focus { border-color: #f3c653e6; background-color: #c9a55b14; }
+.gdw .gwx1 { display: block; width: 10rem; white-space: nowrap; overflow: hidden; }
+.gdw .gwx2 { display: block; flex: 1; color: #9aa3b5; white-space: nowrap; overflow: hidden; }
+.gdw .gwfb { display: flex; justify-content: space-between; margin: 0.1667rem 0 0.3333rem 0; font-size: 0.9583rem;
+             color: #9aa3b5; }
+.gdw .gwfb.gwt8 { margin-top: 1rem; }
+.gdw .gwfd { display: block; height: 2.5rem; line-height: 2.3333rem; padding: 0 0.8333rem; border-radius: 0.5833rem;
+             background-color: #00000059; border: 0.0833rem #ffffff1f; font-size: 1.0417rem; color: #eef2f8;
+             box-sizing: border-box; white-space: nowrap; overflow: hidden; }
+.gdw .gwfd.typing { border-color: #c9a55b99; }
+.gdw .gwfd.gwtall { height: 10rem; line-height: 1.5rem; padding-top: 0.5rem; white-space: normal; }
+.gdw .gwfh2 { display: block; margin-top: 0.6667rem; font-size: 0.9583rem; color: #7e889a; }
 /* 3.0.18-beta.106: the login screens live - the character make (win/char_make) */
 .ckw { width: 620dp; padding: 22dp 22dp 18dp 22dp; }
 .ckw .head .title { font-size: 18dp; }

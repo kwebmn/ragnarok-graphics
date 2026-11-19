@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "core/guild_card.hpp"
 #include "core/guild_tabs.hpp"
 #include "test.hpp"
 
@@ -96,45 +95,82 @@ TEST(guild_tabs_skills_expelled_notice) {
     CHECK(!guildtabs::read(d, other.data(), other.size()));
 }
 
-// The card's tabs 2-5 drawn by it: rows for the positions, the skills (a «+» where one can rise and points are left)
-// and the expelled; the notice its subject and body; «Змінити» on the positions and the notice opens the game's own
-TEST(guild_card_tabs_two_to_five) {
-    using T = guildcard::Tab;
-    CHECK(!guildcard::gameDrawn(2, false) && guildcard::gameDrawn(2, true) && guildcard::gameDrawn(5, true));
-    CHECK(!guildcard::gameDrawn(3, true) && !guildcard::gameDrawn(4, true) && !guildcard::gameDrawn(1, true));
-    const guildcard::Layout pos = guildcard::layout(1920, 1080, 1.0f, T::Positions, 4);
-    CHECK(pos.rows.size() == 4 && pos.edit.w > 0 && pos.edit.y > pos.rows[3].y);
-    const auto mid = [](const panel::Box& b) { return std::make_pair(b.x + b.w / 2, b.y + b.h / 2); };
-    CHECK(guildcard::hitTest(pos, mid(pos.edit).first, mid(pos.edit).second).part == guildcard::Part::Edit);
-    const guildcard::Layout sk = guildcard::layout(1920, 1080, 1.0f, T::Skills, 2);
-    CHECK(sk.rows.size() == 2 && sk.edit.w == 0 && sk.plus.size() == 2);
-    const guildcard::Hit p = guildcard::hitTest(sk, mid(sk.plus[1]).first, mid(sk.plus[1]).second);
-    CHECK(p.part == guildcard::Part::Plus && p.index == 1);
-    const guildcard::Layout no = guildcard::layout(1920, 1080, 1.0f, T::Notice, 0);
-    CHECK(no.notice.h > 60 && no.edit.w > 0);
-    guildcard::More more;
-    more.lines = {{"Master", "Запрошення · Вигнання", "10 %", false}, {"Officer", "Запрошення", "0 %", false}};
-    more.head = "4 посади";
-    guildcard::Texts t;
-    t.edit = "Змінити";
-    guildcard::Show sh;
-    sh.tab = T::Positions;
-    sh.canEdit = true;  // the tab's rights
-    const std::vector<guildcard::Words> w = guildcard::words(pos, guildcard::Info{}, {}, more, sh, t);
-    const auto has = [&](const std::string& s) {
-        for (const auto& x : w)
-            if (x.text == s) return true;
-        return false;
-    };
-    CHECK(has("Master") && has("Запрошення · Вигнання") && has("10 %") && has("Змінити") && has("4 посади"));
-    more.subject = "Siege tonight";
-    more.body = "Meet at Prontera";
-    sh.tab = T::Notice;
-    const std::vector<guildcard::Words> nw = guildcard::words(no, guildcard::Info{}, {}, more, sh, t);
-    bool subject = false, body = false;
-    for (const auto& x : nw) {
-        subject = subject || x.text == "Siege tonight";
-        body = body || x.text == "Meet at Prontera";
+// 3.0.22-beta.26 (docs/superpowers/plans/2026-11-19-guild-window.md, task 2): a skill's kind, SP and range (0x0162),
+// the alliances (0x014c: opposition 0 an ally, 1 an enemy) and the members as the server lists them (0x0154, 104 bytes
+// each: the class, level, the experience given, online, the position)
+TEST(guild_tabs_skill_kind_alliances_and_members) {
+    std::vector<uint8_t> sk(6 + 37, 0);
+    w16(sk, 0, 0x162);
+    w16(sk, 2, int(sk.size()));
+    w16(sk, 4, 2);
+    w16(sk, 6, 10011);
+    w16(sk, 8, 4);   // inf: self
+    w16(sk, 12, 1);  // level
+    w16(sk, 14, 1);  // sp
+    w16(sk, 16, 15);
+    text(sk, 18, "Regeneration");
+    sk[42] = 1;
+    guildtabs::Data d;
+    CHECK(guildtabs::read(d, sk.data(), sk.size()));
+    CHECK_EQ(d.skills.size(), size_t(1));
+    if (!d.skills.empty()) {
+        CHECK_EQ(d.skills[0].inf, 4);
+        CHECK_EQ(d.skills[0].sp, 1);
+        CHECK_EQ(d.skills[0].range, 15);
+        CHECK(d.skills[0].up);
     }
-    CHECK(subject && body);
+    std::vector<uint8_t> al(4 + 3 * 32, 0);
+    w16(al, 0, 0x14c);
+    w16(al, 2, int(al.size()));
+    w32(al, 4, 0);
+    w32(al, 8, 77);
+    text(al, 12, "Nightfall");
+    w32(al, 36, 1);
+    w32(al, 40, 78);
+    text(al, 44, "Red Lotus");
+    w32(al, 68, 0);
+    w32(al, 72, 79);
+    text(al, 76, "Iron Wolves");
+    CHECK(guildtabs::read(d, al.data(), al.size()));
+    CHECK_EQ(d.alliances.size(), size_t(3));
+    CHECK(d.alliancesSeen);
+    if (d.alliances.size() == 3) {
+        CHECK(!d.alliances[0].enemy && d.alliances[0].guild == 77 && d.alliances[0].name == "Nightfall");
+        CHECK(d.alliances[1].enemy && d.alliances[1].name == "Red Lotus");
+    }
+    std::vector<uint8_t> none(4, 0);  // a guild without alliances: an empty list, still seen
+    w16(none, 0, 0x14c);
+    w16(none, 2, 4);
+    CHECK(guildtabs::read(d, none.data(), none.size()));
+    CHECK(d.alliances.empty() && d.alliancesSeen);
+    std::vector<uint8_t> ms(4 + 2 * 104, 0);
+    w16(ms, 0, 0x154);
+    w16(ms, 2, int(ms.size()));
+    w32(ms, 4, 2000001);  // account
+    w32(ms, 8, 150001);   // character
+    w16(ms, 18, 4008);    // Lord Knight
+    w16(ms, 20, 99);
+    w32(ms, 22, 4294967295u);  // the server's counter at its end
+    w32(ms, 26, 1);            // online
+    w32(ms, 30, 0);            // position 0: the master's
+    text(ms, 84, "Kael");
+    w32(ms, 108, 2000002);
+    w32(ms, 112, 150002);
+    w16(ms, 122, 18);
+    w16(ms, 124, 71);
+    w32(ms, 126, 1200);
+    w32(ms, 130, 0);
+    w32(ms, 134, 3);
+    text(ms, 188, "Zlata");
+    CHECK(guildtabs::read(d, ms.data(), ms.size()));
+    CHECK(d.membersSeen);
+    CHECK_EQ(d.members.size(), size_t(2));
+    if (d.members.size() == 2) {
+        CHECK(d.members[0].account == 2000001 && d.members[0].character == 150001);
+        CHECK(d.members[0].job == 4008 && d.members[0].level == 99 && d.members[0].online);
+        CHECK_EQ(d.members[0].exp, 4294967295u);
+        CHECK_EQ(d.members[0].position, 0);
+        CHECK_EQ(d.members[0].name, std::string("Kael"));
+        CHECK(!d.members[1].online && d.members[1].position == 3 && d.members[1].exp == 1200u);
+    }
 }

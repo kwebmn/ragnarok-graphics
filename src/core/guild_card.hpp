@@ -1,117 +1,250 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "core/guild_skills.hpp"
+#include "core/guild_tabs.hpp"
 #include "core/window_panel.hpp"
 
 namespace uagfx::guildcard {
 
 // 3.0.11-beta.165 (task 6 of the remaining windows: the guild, Alt+G): the game's guild window (each of its tabs a
-// UI window of its own, 0x3C-0x41) as a card in style A with two tabs: its information (the name, the master, the
-// level, the members of the most, their average level, the experience to the next level, the tax points, the
-// territory - the server's 0x01b6 as the game keeps it) and its members (a row each: online or not, the name, the
-// title, the job and the level - its 0x0154). ✕ the game's close (6 / 0x87). The parts that need no Windows; the
-// words by GDI (win/guild_card).
+// UI window of its own, 0x3C-0x41) drawn by the driver; ✕ the game's close (6 / 0x87). 3.0.22-beta.26
+// (docs/superpowers/plans/2026-11-19-guild-window.md - the tester: «а ГІ можливо також картинки скілів»; the owner:
+// «все делай»): rebuilt as «Навички» is - a head, six tabs underlined, a list with a side panel, a foot. The parts that
+// need no Windows: the tabs' views (what each shows, from the game's guild object, its members' list and the server's
+// packets), the window's size before RmlUi lays it out, the hit test over RmlUi's boxes.
 constexpr int kWindows = 6, kCloseButton = 0x87;
 constexpr uint32_t kFirstAt = 0x170;  // the manager's place of the first of them (4 apart)
-enum class Tab : uint8_t { Info, Members, Positions, Skills, Expelled, Notice };  // .220: all six the card's
-// 3.0.11-beta.210 (the tester: «alt g відкриває режим гільди, але у ГМа немає купи функцій»): all six of the game's
-// tabs on the card (two rows of three) - a click switches the game's own (its message 0x45 with the tab; the game
-// checks its rights, the 0x0168 bits); the information and the members drawn by the card, the positions, the guild's
-// skills, the expelled and the notice the game's own windows for now (all of a master's tools in them)
+enum class Tab : uint8_t { Info, Members, Positions, Skills, Expelled, Notice };
+// 3.0.11-beta.210: a click switches the game's own tab (its message 0x45; the game checks the rights, 0x0168 bits)
 constexpr int kTabs = 6, kTabMsg = 0x45;
-// 3.0.11-beta.220: the game's own window shows only while «Змінити» edits the positions or the notice (`editing`)
-bool gameDrawn(int tab, bool editing);
-bool allowed(int tab, uint32_t rights);  // the game's rights for the tab (members 1, positions 2, expelled 0x10, ...)
+bool gameDrawn(int tab, bool editing);  // the game's own window shows only while «Змінити» edits the positions
+bool allowed(int tab, uint32_t rights);  // members 1, positions 2, expelled 0x10, the notice 0x80
+// 3.0.22-beta.26: the master's rights (0xD7) hold the notice's 0x80, a member's (0x57) do not
+constexpr uint32_t kMasterRight = 0x80;
+inline bool isMaster(uint32_t rights) { return (rights & kMasterRight) != 0; }
+
 struct Info {
     std::string name, master, territory;  // UTF-8
     int level = 0, members = 0, most = 0, average = 0, tax = 0;
     long long exp = 0, nextExp = 0;
 };
-struct Member {
+struct Member {  // as the game keeps them (its list: +0 the account, +4 the character)
     std::string name, title, job;  // UTF-8
     int level = 0;
     bool online = false;
-};
-// 3.0.11-beta.220: tabs 2-5's rows (a position, a skill, one expelled: three columns, a «+» on a skill that can rise)
-// and the notice
-struct Line {
-    std::string left, middle, right;  // UTF-8
-    bool plus = false;
-};
-struct More {
-    std::vector<Line> lines;
-    std::string head;           // over them: the positions' count, the skill points left, ...
-    std::string subject, body;  // the notice
-};
-struct Texts {
-    std::string title, tabs[kTabs], facts[7], none, online;  // online: «{1} з {2} у грі»
-    std::string edit;                                        // 3.0.11-beta.220: «Змінити»
-    // 3.0.11-beta.271 (the tester: «вікно формування привітання в гільдії - в старому стилі»): the notice edited on
-    // the card - «Тема», «Текст», «Зберегти», «Скасувати», the keys' hint
-    std::string fieldTitle, fieldBody, save, cancel, editHint;
+    uint32_t account = 0, character = 0;
 };
 // .271: the server's notice: its subject up to 59 bytes, its body up to 119 (the game's code page)
 constexpr size_t kSubjectMost = 59, kBodyMost = 119;
-struct Show {
-    Tab tab = Tab::Info;
-    uint32_t rights = 0xFF;  // 3.0.11-beta.210: the game's tab rights (a tab not allowed dimmed)
-    int scroll = 0;
-    int hoverTab = -1;
-    bool hoverClose = false;
-    int hoverPlus = -1;      // 3.0.11-beta.220
-    bool hoverEdit = false;  // 3.0.11-beta.220
-    bool canEdit = false;    // 3.0.11-beta.220: «Змінити» shown (the tab's rights)
-    // 3.0.11-beta.271: the notice being edited on the card - its fields (UTF-8), the one typed into (0 the subject),
-    // the caret shown
-    bool editing = false;
-    std::string subject, body;
-    int field = 0;
-    bool caret = true;
-    int hoverField = -1;
-    bool hoverCancel = false;
+// The castles in the server's words (msg 300 + N: «None Taken», «Two Castles», «Total Domination» - all 24); -1 other
+int castles(const std::string& territory);
+
+// The window's words (strings.cpp's, uk/ru/en; «{1}» filled)
+struct Texts {
+    std::string title, hotkey, tabs[kTabs], sub, none;
+    // «Інформація»
+    std::string infoSub, expLine, master, average, castles, yourTax, yourTaxValue, allies, enemies, notice, gifts;
+    std::string nearMaster, warOnly, online, offline, allMembers;
+    // «Учасники»
+    std::string search, count, colName, colJob, colLevel, colPosition, colGiven, inGame, away, position, given;
+    std::string givenValue, whisper, party, friendly, setPosition, expel, rightsNote, membersHints;
+    // «Посади»
+    std::string colRights, colTax, colPeople, invite, expelRight, noRights, folded, edit, editNote, peopleOn;
+    // «Навички»
+    std::string groups[guildskills::kGroups], groupsMore[guildskills::kGroups], kinds[3], sp, lines[14], about[14];
+    std::string levelsLabel, youLabel, youNear, whereLabel, coolLabel, needsLabel, whereAura, whereWar, coolShared;
+    std::string ready, wait, use, raiseTo, places, need, points, memberFoot, skillHints, whoRaises, whoRaisesText;
+    std::string coolRow, levelOf;  // «перезарядка, ще {1}», «рівень {1} з {2}»
+    // «Вигнані», «Оголошення»
+    std::string expelledHead, account, reason, fieldTitle, fieldBody, save, cancel, editHint, counter, preview;
+    std::string previewNote, noticeEmpty;
+    // the controller's words
+    std::string padTabs, padPick, padUse, padRaise, padAssign, padClose, padActions;
 };
-struct Layout {
-    float s = 1;
-    int x = 0, y = 0, w = 0, h = 0;
-    panel::Box glass, title, close, head, list;
-    panel::Box tabs[kTabs];
-    panel::Box facts[7];
-    std::vector<panel::Box> rows;  // the members shown (12 at most); 3.0.11-beta.220: the positions, skills, expelled
-    std::vector<panel::Box> plus;  // 3.0.11-beta.220: the skills' «+», one a row
-    panel::Box notice, edit;       // 3.0.11-beta.220: the notice's text; «Змінити» (w 0: none)
-    panel::Box fields[2], cancel;  // 3.0.11-beta.271: editing - the subject's and the body's fields; «Скасувати»
-    // 3.0.19-beta.1 (the testers: «не видно значок ГІ»): «Інформація»'s head - the guild's emblem (w 0: another tab),
-    // its level and members under the name (the name in `head`)
-    panel::Box emblem, sub;
-    // 3.0.19-beta.1: its own width at its size - the live card's width (uikit guild's refit leaves it: w from the
-    // document as it is handed the old width back when the corner pulled it bigger)
-    int wide = 0;
+
+enum class Sort : uint8_t { Online, Level, Position, Given };
+enum class Part : uint8_t {
+    None, Body, Title, Close, Tab, Skill, Plus, Use, Raise, Member, Head, Search, Action, Position, Edit, Expelled,
+    Field, Save, Cancel, AllMembers
 };
-// .271: `editing` - the notice's fields, «Зберегти» in «Змінити»'s place and «Скасувати» beside it
-Layout layout(int targetW, int targetH, float scale, Tab tab, size_t members, bool editing = false);
-int mostScroll(const Layout& L, size_t members);
-enum class Part : uint8_t { None, Tab, Close, Body, Plus, Edit, Field, Cancel };  // .271: Field, Cancel
 struct Hit {
     Part part = Part::None;
     int index = -1;
 };
-Hit hitTest(const Layout& L, float x, float y);
-
-enum class Align : uint8_t { Left, Right, Center };
-struct Words {
-    panel::Box box;
-    std::string text;  // UTF-8
-    uint32_t rgb = 0xEEF2F8;
-    float px = 12;
-    bool bold = false;
-    Align align = Align::Left;
+// What the player changed and what is under the mouse
+struct Show {
+    Tab tab = Tab::Info;
+    uint32_t rights = 0xFF;
+    bool pad = false, sony = false;
+    int skill = 10000;         // the chosen skill (its id)
+    uint32_t member = 0;       // the chosen member (its character), 0 the first
+    int position = -1, expelled = 0;
+    int first[kTabs] = {};     // each tab's first row shown
+    Hit hover;
+    bool editing = false;      // .271: the notice edited - its fields (UTF-8), the one typed into, the caret
+    std::string subject, body;
+    int field = 0;
+    bool caret = true;
+    std::string search;        // «Учасники»: the search, typed into while `typing`
+    bool typing = false;
+    Sort sort = Sort::Online;
+    int coolMs = 0;            // the four war skills' shared cooldown left
+    std::string me;            // the player's name (UTF-8)
 };
-std::vector<Words> words(const Layout& L, const Info& g, const std::vector<Member>& members, const Show& sh,
-                         const Texts& t);
-std::vector<Words> words(const Layout& L, const Info& g, const std::vector<Member>& members, const More& more,
-                         const Show& sh, const Texts& t);
+
+// At scale 1: 760 wide, the body 642 high; a member's row 28 (20 shown), a position's 34, an expelled one's 30
+constexpr float kWide = 760, kBodyH = 642;
+constexpr int kMemberRows = 20, kPositionRows = 16, kExpelledRows = 18;
+struct HitBox {
+    Part part = Part::None;
+    int index = -1;
+    panel::Box box;
+};
+struct Layout {
+    float s = 1;
+    int x = 0, y = 0, w = 0, h = 0;
+    panel::Box glass;
+    std::vector<HitBox> hits;  // RmlUi's boxes of every pressable part (uikit guild's refit)
+};
+Layout layout(int targetW, int targetH, float scale);  // its size before RmlUi lays it out, placed right of the middle
+Hit hitTest(const Layout& L, float x, float y);        // the smallest box under (x, y); Body inside it, None outside
+
+// ---- the tabs' views (what uikit guild shows)
+struct FootV {
+    std::string left;
+    bool gold = false;
+    std::vector<std::string> hints;              // the mouse's
+    std::vector<std::pair<int, std::string>> pad;  // a controller's: padglyph::Button, its words
+};
+struct SkillRowV {
+    int id = 0;
+    std::string group, groupMore;  // over the first of a group
+    std::string aegis, name, kind, info, level;
+    bool active = false, locked = false, learned = false, focus = false, hot = false, plus = false, plusHot = false;
+    std::vector<int> dots;  // 1 learned, 0 not (none past 5)
+};
+struct LevelV {
+    std::string n, what;
+    bool now = false;
+};
+struct NeedV {
+    std::string what;
+    bool met = false;
+};
+struct SkillSideV {
+    int id = 0;
+    std::string aegis, name, kind, about, you, where, cool, wait, raiseWord, useWord, who;
+    bool active = false, ready = false, use = false, useOff = false, raise = false, useHot = false, raiseHot = false;
+    std::vector<LevelV> levels;
+    std::vector<NeedV> needs;
+    // its labels: «Вам зараз», «Рівні», «Де діє», «Перезарядка», «Потрібно», «Хто піднімає»
+    std::string youLabel, levelsLabel, whereLabel, coolLabel, needsLabel, whoLabel;
+};
+struct SkillsView {
+    std::vector<SkillRowV> rows;
+    SkillSideV side;
+};
+SkillsView skillsView(const std::vector<guildskills::Row>& rows, const Show& sh, const Texts& t, bool master);
+
+struct FactV {
+    std::string label, value;
+    bool dot = false;
+};
+struct GiftV {
+    std::string aegis, what, from;
+};
+struct PersonV {
+    std::string name, job;
+};
+struct InfoView {
+    std::string name, sub, expLine;
+    std::string alliesLabel, enemiesLabel, noticeLabel, giftsLabel, allWord, none;
+    float expShare = 0;  // 0..1
+    std::vector<FactV> facts;
+    std::vector<std::string> allies, enemies;
+    bool alliances = false;  // the server's list seen
+    std::string subject, body;
+    std::vector<GiftV> gifts;
+    std::string onlineHead, offline;
+    std::vector<PersonV> online;
+};
+InfoView infoView(const Info& g, const std::vector<Member>& members, const guildtabs::Data& d,
+                  const std::vector<guildskills::Row>& skills, const Show& sh, const Texts& t);
+
+struct MemberRowV {
+    uint32_t character = 0;
+    std::string name, job, level, position, given;
+    bool online = false, focus = false, hot = false, me = false;
+};
+struct HeadV {
+    std::string name;
+    bool on = false, hot = false;
+};
+// A member's actions on its card (the hit's index): «Написати», «Запросити в групу», «У друзі», the master's
+// «Посада» and «Вигнати…»
+enum class Act : uint8_t { Whisper, Party, Friend, Position, Expel };
+constexpr int kActs = 5;
+constexpr uint32_t kAllActs = 0x1F;
+struct CardV {
+    bool shown = false, online = false, master = false;
+    std::string name, sub, position, given;
+    std::vector<std::pair<int, std::string>> actions;  // Act, its words
+    int hotAction = -1;
+};
+struct MembersView {
+    std::string count, searchWord, placeholder, positionLabel, givenLabel, rightsNote;
+    std::vector<HeadV> heads;  // the columns: name, class, level, position, given (a click sorts)
+    std::vector<MemberRowV> rows;
+    int total = 0;  // the list's length (searched), for the scroll
+    CardV card;
+};
+// The members in the list's order (sorted, searched): their indices into `members`
+std::vector<size_t> memberOrder(const std::vector<Member>& members, const guildtabs::Data& d, const Show& sh);
+// `acts`: the actions the window can do now (1 << Act)
+MembersView membersView(const Info& g, const std::vector<Member>& members, const guildtabs::Data& d, const Show& sh,
+                        const Texts& t, bool master, uint32_t acts = kAllActs);
+
+struct PositionRowV {
+    int id = 0;
+    std::string name, tax, people;
+    std::vector<std::string> rights;
+    bool focus = false, hot = false;
+};
+struct PositionsView {
+    std::vector<HeadV> heads;  // «Посада», «Права», «Податок», «Людей»
+    std::vector<PositionRowV> rows;
+    std::string folded;
+    std::string sideName, sideRights, sideTax, sidePeople, editWord, editNote, noRights, rightsLabel, taxLabel;
+    bool canEdit = false, editHot = false;
+};
+PositionsView positionsView(const guildtabs::Data& d, const Show& sh, const Texts& t);
+
+struct ExpelledRowV {
+    std::string name, reason;
+    bool focus = false, hot = false;
+};
+struct ExpelledView {
+    std::string head, accountLabel, reasonLabel, nameLabel, none;
+    std::vector<ExpelledRowV> rows;
+    std::string sideName, sideAccount, sideReason;
+};
+ExpelledView expelledView(const guildtabs::Data& d, const Show& sh, const Texts& t);
+
+struct NoticeView {
+    std::string subject, body, subjectCount, bodyCount;  // the fields' words while edited; the notice's otherwise
+    std::string fieldTitle, fieldBody, hint, previewLabel, previewNote, saveWord, cancelWord, editWord, label, none;
+    bool editing = false, canEdit = false, empty = false;
+    int field = 0;
+    bool caret = false, saveHot = false, cancelHot = false, editHot = false;
+};
+NoticeView noticeView(const guildtabs::Data& d, const Show& sh, const Texts& t, size_t subjectBytes, size_t bodyBytes);
+
+FootV footOf(const Show& sh, const Texts& t, int points, bool master);
+std::string fmt(std::string pattern, const std::vector<std::string>& values);  // {1}, {2}... filled
 
 // 3.0.19-beta.1 (the testers: «не видно значок ГІ твоеї»): the guild's emblem from the game's own file
 // (<client>\_tmpEmblem\<server>_<guild id>_<emblem id>.ebm, written by uaRO.exe's FUN_0063aab0 from the packet

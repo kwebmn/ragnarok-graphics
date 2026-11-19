@@ -25,11 +25,13 @@ bool shown();
 bool close();  // Esc: its close
 void beforeGameDraw();
 bool key(UINT m, WPARAM wp, LPARAM lp);  // 3.0.11-beta.271: the notice's fields while it is edited
-enum class PadCommand : uint8_t { Up, Down, TabBack, TabOn, Close };
+// 3.0.22-beta.26: A uses the chosen skill (writes to the chosen member), Y raises it, X carries it to the hotbar
+enum class PadCommand : uint8_t { Up, Down, TabBack, TabOn, Close, Use, Raise, Assign };
 void padCommand(PadCommand c);
 bool box(int& x, int& y, int& w, int& h);
 
-// 3.0.11-beta.220: the server's guild packets for tabs 2-5 (0x0160, 0x0162, 0x0163, 0x0166, 0x016f) - the packet tap
+// 3.0.11-beta.220: the server's guild packets for tabs 2-5 (0x0160, 0x0162, 0x0163, 0x0166, 0x016f) - the packet tap;
+// 3.0.22-beta.26: the alliances (0x014c), the members (0x0154) and a skill used (0x011a: the war skills' block)
 void packet(uint16_t id, const uint8_t* data, size_t size);
 // 3.0.11-beta.219 (the tester: «на великій мапі ... пишіть нік замість "Член гільдії"»): a guild mate's name by its
 // account (0x01eb's) from the game's members' list (a member's first field its account, its second its character);

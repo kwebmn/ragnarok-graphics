@@ -1056,9 +1056,12 @@ bool guildPad(const PadState& pad, DWORD now) {
     const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
     s.prevPadButtons = buttons;
     using uagfx::win::guildcardwin::PadCommand;
-    const std::pair<uint16_t, PadCommand> keys[] = {{kPadUp, PadCommand::Up},       {kPadDown, PadCommand::Down},
-                                                    {kPadLB, PadCommand::TabBack},  {kPadRB, PadCommand::TabOn},
-                                                    {kPadB, PadCommand::Close}};
+    // 3.0.22-beta.26 (docs/superpowers/plans/2026-11-19-guild-window.md): the D-pad chooses, A uses (writes), Y
+    // raises, X carries to the hotbar
+    const std::pair<uint16_t, PadCommand> keys[] = {
+        {kPadUp, PadCommand::Up},     {kPadDown, PadCommand::Down}, {kPadLB, PadCommand::TabBack},
+        {kPadRB, PadCommand::TabOn},  {kPadB, PadCommand::Close},   {kPadA, PadCommand::Use},
+        {kPadY, PadCommand::Raise},   {kPadX, PadCommand::Assign}};
     for (const auto& [button, command] : keys)
         if (down & button) uagfx::win::guildcardwin::padCommand(command);
     return true;

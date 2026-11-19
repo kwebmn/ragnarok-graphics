@@ -1,7 +1,7 @@
 // 3.0.11-beta.165 (task 6 of the remaining windows: the guild, Alt+G): the game's guild window (its tabs are UI windows
-// 0x3C-0x41) as a card (core/guild_card) - its information (the name, the master, the level, the members of the most,
-// their average level, the experience to the next level, the tax points, the territory) and its members (a row each:
-// online or not, the name, the title, the job and the level), read as the game keeps them
+// 0x3C-0x41) drawn by the driver. 3.0.22-beta.26 (docs/superpowers/plans/2026-11-19-guild-window.md, task 3): rebuilt
+// as «Навички» - the tabs' views from the game's guild object, its members' list and the server's packets, the
+// window's hit test over RmlUi's boxes
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -13,135 +13,292 @@
 #include "test.hpp"
 
 using namespace uagfx;
+namespace gc = uagfx::guildcard;
+namespace gs = uagfx::guildskills;
 
 namespace {
 
-std::pair<float, float> mid(const panel::Box& b) { return {b.x + b.w / 2, b.y + b.h / 2}; }
-
-guildcard::Texts texts() {
-    guildcard::Texts t;
-    t.title = "Гільдія";
-    t.tabs[0] = "Інформація";
-    t.tabs[1] = "Учасники";
-    t.tabs[2] = "Посади";
-    t.tabs[3] = "Навички";
-    t.tabs[4] = "Вигнані";
-    t.tabs[5] = "Оголошення";
-    const char* const facts[7] = {"Майстер", "Рівень", "Учасники", "Середній рівень", "Досвід", "Податок", "Територія"};
-    for (int i = 0; i < 7; ++i) t.facts[i] = facts[i];
+gc::Texts texts() {
+    gc::Texts t;
     t.none = "немає";
-    t.online = "{1} з {2} у грі";
+    t.infoSub = "Рівень {1} · {2} з {3} учасників · {4} у грі";
+    t.expLine = "Досвід {1} з {2} · {3} % до {4}-го рівня";
+    t.master = "Майстер";
+    t.average = "Середній рівень";
+    t.castles = "Замки";
+    t.yourTax = "Ваш податок";
+    t.yourTaxValue = "{1} % досвіду · посада «{2}»";
+    t.online = "У грі зараз · {1}";
+    t.offline = "Не в грі — {1}";
+    t.nearMaster = "коли майстер поруч";
+    t.warOnly = "на війні гільдій, 1 хв";
+    t.count = "{1} з {2}";
+    t.colName = "Ім'я";
+    t.colJob = "Клас";
+    t.colLevel = "Рів.";
+    t.colPosition = "Посада";
+    t.colGiven = "Внесок";
+    t.inGame = "у грі";
+    t.away = "не в грі";
+    t.givenValue = "{1} досвіду гільдії · {2}-й серед {3}";
+    t.whisper = "Написати";
+    t.party = "Запросити в групу";
+    t.friendly = "У друзі";
+    t.setPosition = "Посада: {1}";
+    t.expel = "Вигнати з гільдії…";
+    t.invite = "Запрошення";
+    t.expelRight = "Вигнання";
+    t.noRights = "без прав";
+    t.folded = "Ще {1} посад без людей";
+    t.peopleOn = "На посаді {1}";
+    const char* groups[4] = {"Замок", "Розвиток гільдії", "Аури майстра", "На війні гільдій"};
+    for (int i = 0; i < 4; ++i) t.groups[i] = groups[i];
+    t.kinds[0] = "Пасивна";
+    t.kinds[1] = "Аура";
+    t.kinds[2] = "Активна";
+    t.sp = "{1} SP";
+    for (int i = 0; i < 14; ++i) t.lines[i] = "line" + std::to_string(i), t.about[i] = "about" + std::to_string(i);
+    t.youNear = "{1}, коли майстер поруч";
+    t.whereAura = "aura where";
+    t.whereWar = "war where";
+    t.coolShared = "5 хв, спільна";
+    t.ready = "Готово";
+    t.wait = "ще {1}";
+    t.coolRow = "перезарядка, ще {1}";
+    t.levelOf = "рівень {1} з {2}";
+    t.raiseTo = "Підняти до {1}";
+    t.places = "{1} місць";
+    t.need = "Потрібно: {1}";
+    t.points = "Вільних очок навичок: {1}";
+    t.memberFoot = "Піднімає майстер гільдії";
+    t.skillHints = "Клацніть|двічі";
+    t.counter = "{1} з {2}";
+    t.whoRaisesText = "Майстер гільдії — очками рівнів гільдії";
+    t.padTabs = "Вкладки";
+    t.padClose = "Закрити";
     return t;
+}
+
+std::vector<gs::Sent> sent() {
+    return {{10000, 1, 0, 0, false}, {10004, 10, 0, 0, false}, {10006, 2, 0, 0, true}, {10010, 1, 4, 1, false},
+            {10011, 1, 4, 1, true}};
+}
+
+gc::Member member(const char* name, int level, bool online, uint32_t character, const char* title = "") {
+    gc::Member m;
+    m.name = name;
+    m.level = level;
+    m.online = online;
+    m.character = character;
+    m.job = "Knight";
+    m.title = title;
+    return m;
+}
+
+guildtabs::Member listed(const char* name, uint32_t character, uint32_t exp, int position) {
+    guildtabs::Member x;
+    x.name = name;
+    x.character = character;
+    x.exp = exp;
+    x.position = position;
+    return x;
 }
 
 }  // namespace
 
-// The guild's windows (FUN_004d42d0 0x3C-0x41): where the manager keeps each (+0x170 on, 4 apart) - any of them open
-// means the guild window is
+// The guild's windows (FUN_004d42d0 0x3C-0x41): where the manager keeps each (+0x170 on, 4 apart)
 TEST(guild_card_the_games_windows) {
-    CHECK(guildcard::kWindows == 6 && guildcard::kFirstAt == 0x170 && guildcard::kCloseButton == 0x87);
+    CHECK(gc::kWindows == 6 && gc::kFirstAt == 0x170 && gc::kCloseButton == 0x87);
+    CHECK(gc::allowed(0, 0) && !gc::allowed(1, 0) && gc::allowed(1, 0x57) && !gc::allowed(5, 0x57));
+    CHECK(gc::allowed(5, 0xD7) && gc::isMaster(0xD7) && !gc::isMaster(0x57));
+    CHECK(gc::gameDrawn(int(gc::Tab::Positions), true) && !gc::gameDrawn(int(gc::Tab::Notice), true));
 }
 
-TEST(guild_card_places_and_the_mouse) {
-    const guildcard::Layout L = guildcard::layout(1920, 1080, 1.0f, guildcard::Tab::Members, 3);
-    CHECK(L.tabs[1].x > L.tabs[0].x && L.rows.size() == 3 && L.rows[0].y > L.tabs[0].y);
-    using P = guildcard::Part;
-    const guildcard::Hit t = guildcard::hitTest(L, mid(L.tabs[0]).first, mid(L.tabs[0]).second);
-    CHECK(t.part == P::Tab && t.index == 0);
-    CHECK(guildcard::hitTest(L, mid(L.close).first, mid(L.close).second).part == P::Close);
-    CHECK(guildcard::hitTest(L, -5, -5).part == P::None);
-    const guildcard::Layout many = guildcard::layout(1920, 1080, 1.0f, guildcard::Tab::Members, 40);
-    CHECK(many.rows.size() == 12 && guildcard::mostScroll(many, 40) == 28);
-    const guildcard::Layout info = guildcard::layout(1920, 1080, 1.0f, guildcard::Tab::Info, 40);
-    CHECK(info.rows.empty() && info.facts[6].y > info.facts[0].y);
+TEST(guild_card_castles_in_the_servers_words) {
+    CHECK_EQ(gc::castles("None Taken"), 0);
+    CHECK_EQ(gc::castles("One Castle"), 1);
+    CHECK_EQ(gc::castles("Two Castles"), 2);
+    CHECK_EQ(gc::castles("Twenty Three Castles"), 23);
+    CHECK_EQ(gc::castles("Total Domination"), 24);
+    CHECK_EQ(gc::castles("Prontera"), -1);
 }
 
-// 3.0.11-beta.210 (the tester: «alt g відкриває режим гільди, але у ГМа немає купи функцій»): all six of the game's
-// tabs on the card, two rows of three; the game's own rights for four of them (its 0x0168 bits: members 1, positions
-// 2, the expelled 0x10, the notice 0x80); the information and the members drawn by the card, the rest the game's own
-// windows for now (every master's tool in them)
-TEST(guild_card_six_tabs) {
-    const guildcard::Layout L = guildcard::layout(1920, 1080, 1.0f, guildcard::Tab::Info, 3);
-    CHECK(L.tabs[0].y == L.tabs[2].y && L.tabs[3].y > L.tabs[0].y && L.tabs[3].y == L.tabs[5].y);
-    CHECK(L.tabs[0].x < L.tabs[1].x && L.tabs[1].x < L.tabs[2].x && L.tabs[3].x == L.tabs[0].x);
-    CHECK(L.head.y >= L.tabs[5].y + L.tabs[5].h);
-    for (int i = 0; i < guildcard::kTabs; ++i) {
-        const guildcard::Hit h = guildcard::hitTest(L, mid(L.tabs[i]).first, mid(L.tabs[i]).second);
-        CHECK(h.part == guildcard::Part::Tab && h.index == i);
-    }
-    // 3.0.11-beta.220: all six the card's - the game's own only while «Змінити» edits positions or the notice
-    for (int i = 0; i < guildcard::kTabs; ++i) CHECK(!guildcard::gameDrawn(i, false));
-    CHECK(guildcard::allowed(0, 0) && guildcard::allowed(3, 0));
-    CHECK(!guildcard::allowed(1, 0) && guildcard::allowed(1, 1));
-    CHECK(!guildcard::allowed(2, 1) && guildcard::allowed(2, 2));
-    CHECK(!guildcard::allowed(4, 0xEF) && guildcard::allowed(4, 0x10));
-    CHECK(!guildcard::allowed(5, 0x7F) && guildcard::allowed(5, 0x80));
-    std::vector<guildcard::Member> none;
-    guildcard::Show sh;
-    sh.rights = 0x01;
-    const std::vector<guildcard::Words> w = guildcard::words(L, guildcard::Info{}, none, sh, texts());
-    const auto word = [&](const std::string& t) {
-        return std::find_if(w.begin(), w.end(), [&](const guildcard::Words& x) { return x.text == t; });
+TEST(guild_card_its_size_and_the_smallest_box_under_the_mouse) {
+    gc::Layout L = gc::layout(1920, 1080, 1.0f);
+    CHECK_EQ(L.w, 760);
+    CHECK(L.h > 760 && L.y + L.h <= 1080 && L.x + L.w <= 1920);
+    L.hits = {{gc::Part::Skill, 10011, panel::Box{10, 100, 400, 38}},
+              {gc::Part::Plus, 10011, panel::Box{380, 106, 24, 24}}};
+    CHECK(gc::hitTest(L, 390, 110).part == gc::Part::Plus);
+    const gc::Hit row = gc::hitTest(L, 50, 110);
+    CHECK(row.part == gc::Part::Skill && row.index == 10011);
+    CHECK(gc::hitTest(L, 700, 700).part == gc::Part::Body);
+    CHECK(gc::hitTest(L, -3, 5).part == gc::Part::None);
+    const gc::Layout big = gc::layout(1920, 1080, 1.5f);
+    CHECK_EQ(big.w, 1140);
+}
+
+TEST(guild_card_skills_view_master_and_member) {
+    const gc::Texts t = texts();
+    gc::Show sh;
+    sh.skill = 10011;
+    const std::vector<gs::Row> rows = gs::rows(sent(), 2, true, 192000);
+    gc::SkillsView v = gc::skillsView(rows, sh, t, true);
+    CHECK_EQ(v.rows.size(), size_t(14));
+    CHECK_EQ(v.rows[0].group, std::string("Замок"));
+    CHECK(v.rows[1].group.empty());
+    CHECK_EQ(v.rows[0].aegis, std::string("gd_approval"));
+    const auto row = [&](int id) -> const gc::SkillRowV& {
+        return *std::find_if(v.rows.begin(), v.rows.end(), [&](const gc::SkillRowV& r) { return r.id == id; });
     };
-    CHECK(word("Посади") != w.end() && word("Учасники") != w.end() && word("Оголошення") != w.end());
-    CHECK(word("Посади")->rgb != word("Учасники")->rgb);  // not allowed: dimmed
+    CHECK(row(10008).locked);
+    CHECK_EQ(row(10008).info, std::string("Потрібно: Glorious Wounds 1"));
+    CHECK_EQ(row(10010).info, std::string("перезарядка, ще 3:12"));  // the four war skills wait together
+    CHECK_EQ(row(10006).info, std::string("line6"));
+    CHECK_EQ(row(10006).dots.size(), size_t(5));
+    CHECK(row(10004).dots.empty() && row(10004).level == "10/10");
+    CHECK(row(10011).focus && row(10011).plus);
+    CHECK_EQ(v.side.name, std::string("Regeneration"));
+    CHECK_EQ(v.side.kind, std::string("Активна · 1 SP · рівень 1 з 3"));
+    CHECK_EQ(v.side.levels.size(), size_t(3));
+    CHECK(v.side.levels[0].now);
+    CHECK(v.side.use && v.side.useOff && !v.side.ready);
+    CHECK_EQ(v.side.wait, std::string("ще 3:12"));
+    CHECK_EQ(v.side.raiseWord, std::string("Підняти до 2"));
+    CHECK_EQ(v.side.needs.size(), size_t(3));
+    CHECK(v.side.who.empty() && v.side.you.empty());
+    sh.skill = 10006;  // a member: what the aura gives them
+    v = gc::skillsView(gs::rows(sent(), 2, false, 0), sh, t, false);
+    CHECK_EQ(v.side.you, std::string("+2 STR, коли майстер поруч"));
+    CHECK(!v.side.use && !v.side.raise && !v.side.who.empty());
+    sh.skill = 12345;  // gone: the first one chosen
+    v = gc::skillsView(gs::rows(sent(), 2, false, 0), sh, t, false);
+    CHECK(v.rows[0].focus && v.side.id == 10000);
 }
 
-// 3.0.11-beta.271 (the tester: «вікно формування привітання в гільдії - в старому стилі»): the notice edited on the
-// card - its two fields and «Скасувати» beside «Зберегти»; the subject's caret
-TEST(guild_card_notice_edited_on_the_card) {
-    const guildcard::Layout L = guildcard::layout(1920, 1080, 1.0f, guildcard::Tab::Notice, 0, true);
-    CHECK(L.fields[0].w > 0 && L.fields[1].h > L.fields[0].h && L.cancel.w > 0);
-    CHECK(L.fields[0].y + L.fields[0].h < L.fields[1].y);
-    const guildcard::Hit body = guildcard::hitTest(L, L.fields[1].x + 5, L.fields[1].y + 5);
-    CHECK(body.part == guildcard::Part::Field && body.index == 1);
-    CHECK(guildcard::hitTest(L, L.cancel.x + 5, L.cancel.y + 5).part == guildcard::Part::Cancel);
-    const guildcard::Layout plain = guildcard::layout(1920, 1080, 1.0f, guildcard::Tab::Notice, 0);
-    CHECK(plain.fields[0].w == 0 && plain.cancel.w == 0 && plain.edit.w > 0);
-    guildcard::Show sh;
-    sh.tab = guildcard::Tab::Notice;
-    sh.canEdit = sh.editing = true;
-    sh.subject = "Збір";
-    guildcard::Texts t;
-    t.save = "Зберегти";
-    bool caret = false, save = false;
-    for (const guildcard::Words& w : guildcard::words(L, guildcard::Info{}, {}, guildcard::More{}, sh, t)) {
-        caret = caret || w.text == "Збір|";
-        save = save || w.text == "Зберегти";
-    }
-    CHECK(caret && save);
-}
-
-// 3.0.19-beta.1 (the testers' doc 14.11: «сирувате окне і не видно значок ГІ твоеї»): «Інформація» opens with the
-// guild's own head - its emblem (the game's 24 x 24 twice) at the left, the guild's name beside it in gold, its level
-// and members under the name; the facts below it
-TEST(guild_card_info_opens_with_the_emblem_and_the_name) {
-    for (float s : {1.0f, 1.5f}) {
-        const guildcard::Layout L = guildcard::layout(1920, 1080, s, guildcard::Tab::Info, 0);
-        CHECK(std::abs(L.emblem.w - 48 * s) < 0.01f && std::abs(L.emblem.h - 48 * s) < 0.01f);
-        CHECK(L.emblem.y >= L.tabs[3].y + L.tabs[3].h);  // under the tabs
-        CHECK(L.facts[0].y >= L.emblem.y + L.emblem.h);  // the facts under it
-        CHECK(L.head.x >= L.emblem.x + L.emblem.w);      // the name beside it
-        CHECK(L.sub.y >= L.head.y + L.head.h - 0.01f && L.sub.x == L.head.x);
-    }
-    guildcard::Info g;
-    g.name = "Plague.Corp";
-    g.level = 32;
-    g.members = 51;
+TEST(guild_card_info_view) {
+    const gc::Texts t = texts();
+    gc::Info g;
+    g.name = "Bastion";
+    g.master = "Kael";
+    g.territory = "Two Castles";
+    g.level = 23;
     g.most = 76;
-    guildcard::Show sh;
-    sh.tab = guildcard::Tab::Info;
-    const guildcard::Layout L = guildcard::layout(1920, 1080, 1, sh.tab, 0);
-    bool name = false, sub = false;
-    for (const guildcard::Words& w : guildcard::words(L, g, {}, sh, texts())) {
-        if (w.text == "Plague.Corp" && w.bold && std::abs(w.box.y - L.head.y) < 0.01f) name = true;
-        if (w.text == "Рівень 32 · Учасники 51 / 76" && std::abs(w.box.y - L.sub.y) < 0.01f) sub = true;
-    }
-    CHECK(name);
-    CHECK(sub);
-    // other tabs keep no emblem
-    CHECK(guildcard::layout(1920, 1080, 1, guildcard::Tab::Members, 3).emblem.w == 0);
+    g.average = 81;
+    g.exp = 302410000;
+    g.nextExp = 464000000;
+    const std::vector<gc::Member> ms = {member("Kael", 99, true, 1), member("Mirra", 97, true, 2),
+                                        member("Odin", 99, false, 3)};
+    guildtabs::Data d;
+    d.members = {listed("Kael", 1, 100, 0), listed("Mirra", 2, 50, 3), listed("Odin", 3, 10, 3)};
+    d.membersSeen = true;
+    d.positions = {{0, "Майстер", true, true, 0}, {3, "Воїн", true, false, 10}};
+    d.alliances = {{false, 7, "Nightfall"}, {true, 8, "Red Lotus"}};
+    d.alliancesSeen = true;
+    d.subject = "Похід";
+    gc::Show sh;
+    sh.rights = 0x57;
+    sh.me = "Mirra";
+    const std::vector<gs::Row> skills = gs::rows(sent(), 0, false, 0);
+    const gc::InfoView v = gc::infoView(g, ms, d, skills, sh, t);
+    CHECK_EQ(v.sub, std::string("Рівень 23 · 3 з 76 учасників · 2 у грі"));
+    CHECK_EQ(v.expLine, std::string("Досвід 302 410 000 з 464 000 000 · 65 % до 24-го рівня"));
+    CHECK(std::abs(v.expShare - 0.6517f) < 0.001f);
+    CHECK_EQ(v.facts.size(), size_t(4));
+    CHECK(v.facts[0].value == "Kael" && v.facts[0].dot);
+    CHECK_EQ(v.facts[2].value, std::string("2"));
+    CHECK_EQ(v.facts[3].value, std::string("10 % досвіду · посада «Воїн»"));
+    CHECK(v.allies.size() == 1 && v.enemies.size() == 1 && v.enemies[0] == "Red Lotus");
+    CHECK_EQ(v.subject, std::string("Похід"));
+    CHECK_EQ(v.gifts.size(), size_t(3));  // Great Leadership's aura + Battle Orders + Regeneration
+    CHECK_EQ(v.gifts[0].what, std::string("+2 STR"));
+    CHECK_EQ(v.online.size(), size_t(2));
+    CHECK_EQ(v.offline, std::string("Не в грі — 1"));
+    sh.rights = 0xD7;  // the master gets no aura
+    CHECK_EQ(gc::infoView(g, ms, d, skills, sh, t).gifts.size(), size_t(2));
 }
+
+TEST(guild_card_members_in_the_game_first_then_by_position_and_level) {
+    const gc::Texts t = texts();
+    gc::Info g;
+    g.most = 76;
+    const std::vector<gc::Member> ms = {member("Zed", 50, false, 1), member("Ann", 90, true, 2),
+                                        member("Bob", 95, true, 3), member("Kael", 99, true, 4)};
+    guildtabs::Data d;
+    d.members = {listed("Zed", 1, 0, 3), listed("Ann", 2, 300, 1), listed("Bob", 3, 100, 3), listed("Kael", 4, 600, 0)};
+    d.membersSeen = true;
+    d.positions = {{0, "Майстер", true, true, 0}, {1, "Капітан", true, true, 5}, {3, "Воїн", true, false, 10}};
+    gc::Show sh;
+    std::vector<size_t> o = gc::memberOrder(ms, d, sh);
+    CHECK(o.size() == 4 && o[0] == 3 && o[1] == 1 && o[2] == 2 && o[3] == 0);
+    sh.sort = gc::Sort::Given;
+    o = gc::memberOrder(ms, d, sh);
+    CHECK(o[0] == 3 && o[1] == 1 && o[2] == 2);
+    sh.sort = gc::Sort::Online;
+    sh.search = "a";  // Ann, Kael (the letters small)
+    CHECK_EQ(gc::memberOrder(ms, d, sh).size(), size_t(2));
+    sh.search = "B";
+    CHECK_EQ(gc::memberOrder(ms, d, sh).size(), size_t(1));
+    sh.search.clear();
+    sh.member = 2;
+    gc::MembersView v = gc::membersView(g, ms, d, sh, t, true);
+    CHECK_EQ(v.count, std::string("4 з 76"));
+    CHECK_EQ(v.rows.size(), size_t(4));
+    CHECK_EQ(v.rows[0].given, std::string("60 %"));
+    CHECK(v.rows[1].focus && v.card.name == "Ann");
+    CHECK_EQ(v.card.given, std::string("30 % досвіду гільдії · 2-й серед 4"));
+    CHECK_EQ(v.card.actions.size(), size_t(5));  // the master: «Посада» and «Вигнати» too
+    CHECK_EQ(v.card.actions[3].second, std::string("Посада: Капітан"));
+    CHECK_EQ(v.card.actions[4].first, int(gc::Act::Expel));
+    CHECK_EQ(gc::membersView(g, ms, d, sh, t, true, 0x5).card.actions.size(), size_t(2));  // what the window can do
+    CHECK(v.heads[0].on && v.heads[0].name.find("\xE2\x86\x93") != std::string::npos);
+    sh.me = "Ann";  // oneself: no actions
+    CHECK(gc::membersView(g, ms, d, sh, t, true).card.actions.empty());
+    sh.me.clear();
+    CHECK_EQ(gc::membersView(g, ms, d, sh, t, false).card.actions.size(), size_t(3));
+    guildtabs::Data none;  // 0x0154 not come yet: the given unknown
+    CHECK_EQ(gc::membersView(g, ms, none, sh, t, false).rows[0].given, std::string("\xE2\x80\x94"));
+}
+
+TEST(guild_card_positions_fold_the_empty_ones) {
+    const gc::Texts t = texts();
+    guildtabs::Data d;
+    for (int i = 0; i < 20; ++i) d.positions.push_back({i, "Position " + std::to_string(i + 1), i < 2, i == 0, i * 2});
+    d.members = {listed("A", 1, 0, 0), listed("B", 2, 0, 1), listed("C", 3, 0, 1)};
+    d.membersSeen = true;
+    gc::Show sh;
+    sh.position = 1;
+    sh.rights = 0xD7;
+    const gc::PositionsView v = gc::positionsView(d, sh, t);
+    CHECK_EQ(v.rows.size(), size_t(2));
+    CHECK_EQ(v.folded, std::string("Ще 18 посад без людей"));
+    CHECK(v.rows[1].focus && v.rows[1].people == "2");
+    CHECK_EQ(v.sidePeople, std::string("На посаді 2"));
+    CHECK(v.canEdit);
+    sh.rights = 0x57;
+    CHECK(!gc::positionsView(d, sh, t).canEdit);
+}
+
+TEST(guild_card_notice_view_and_the_foot) {
+    const gc::Texts t = texts();
+    guildtabs::Data d;
+    d.subject = "Hi";
+    gc::Show sh;
+    sh.rights = 0xD7;
+    gc::NoticeView n = gc::noticeView(d, sh, t, 2, 0);
+    CHECK(!n.editing && n.canEdit && n.subject == "Hi" && n.subjectCount == "2 з 60" && n.bodyCount == "0 з 120");
+    sh.editing = true;
+    sh.subject = "New";
+    n = gc::noticeView(d, sh, t, 3, 0);
+    CHECK(n.editing && n.subject == "New");
+    sh.tab = gc::Tab::Skills;
+    gc::FootV f = gc::footOf(sh, t, 2, true);
+    CHECK(f.left == "Вільних очок навичок: 2" && f.gold && f.hints.size() == 2 && f.pad.empty());
+    sh.pad = true;
+    f = gc::footOf(sh, t, 0, false);
+    CHECK(f.left == "Піднімає майстер гільдії" && !f.gold && f.hints.empty() && f.pad.size() == 3);
+}
+
 
 namespace {
 // A 24 x 24 24-bit BMP as the game's emblems are: magenta all round, a red square in the middle (8..15), bottom up

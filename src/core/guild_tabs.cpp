@@ -45,7 +45,30 @@ bool read(Data& d, const uint8_t* p, size_t size) {
             d.points = u16(p, 4);
             d.skills.clear();
             for (size_t at = 6; at + 37 <= len; at += 37)
-                d.skills.push_back(Skill{u16(p, at), u16(p, at + 6), p[at + 36] != 0});
+                d.skills.push_back(Skill{u16(p, at), u16(p, at + 6), p[at + 36] != 0, u16(p, at + 2),
+                                         u16(p, at + 8), u16(p, at + 10)});
+            break;
+        case 0x14c:  // 3.0.22-beta.26: the alliances, 32 bytes each
+            d.alliances.clear();
+            for (size_t at = 4; at + 32 <= len; at += 32)
+                d.alliances.push_back(Alliance{u32(p, at) != 0, int(u32(p, at + 4)), cstr(p, at + 8, 24)});
+            d.alliancesSeen = true;
+            break;
+        case 0x154:  // 3.0.22-beta.26: the members, 104 bytes each
+            d.members.clear();
+            for (size_t at = 4; at + 104 <= len; at += 104) {
+                Member m;
+                m.account = u32(p, at);
+                m.character = u32(p, at + 4);
+                m.job = u16(p, at + 14);
+                m.level = u16(p, at + 16);
+                m.exp = u32(p, at + 18);
+                m.online = u32(p, at + 22) != 0;
+                m.position = int(u32(p, at + 26));
+                m.name = cstr(p, at + 80, 24);
+                d.members.push_back(std::move(m));
+            }
+            d.membersSeen = true;
             break;
         case 0x163:
             d.expelled.clear();
