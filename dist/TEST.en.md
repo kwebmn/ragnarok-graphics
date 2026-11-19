@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.22 — what's new · 2026-11-19
+
+Walls in the Pyramid maze in the 3D view.
+
+- **The Pyramid maze has walls**: on moc_pryd03 the maze's walls are really pits between the walkways; from above they look like walls, but in the 3D view the camera looked over them across the whole level. Now in the 3D view walls stand over the pits' edges up to the ceiling, in the Pyramid's own wall picture. From above everything is as it was. Works on Direct3D 12 with «Own ground» and «Walls in place of a house's black blocks».
+
 # uaRO Graphics 3.0.22-beta.21 — what's new · 2026-11-19
 
 Even fields past the map's edge, no more «fans».
