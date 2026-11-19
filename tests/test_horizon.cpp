@@ -313,3 +313,12 @@ TEST(horizon_air_darker_and_bluer_than_the_horizon) {
     CHECK(air.b / air.r > sky.b / sky.r);
     CHECK(air.r > 0.6f * sky.r);
 }
+
+// 3.0.22-beta.17 (the owner's R-AN347W, jawaii: snowy Alps behind a tropical island - no region of its own, the
+// default climate): a map without a region of its own takes another's land where it has one - jawaii the sea's
+TEST(horizon_climate_of_maps_without_a_region) {
+    CHECK(horizon::climateRegion("jawaii", "") == "Comodo");
+    CHECK(horizon::climateRegion("prt_fild08", "Prontera") == "Prontera");
+    CHECK(horizon::climateRegion("somewhere", "").empty());
+    CHECK(horizon::climateOf(horizon::climateRegion("jawaii", "")).land == horizon::Land::Sea);
+}

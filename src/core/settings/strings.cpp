@@ -5443,6 +5443,14 @@ constexpr Entry kTexts[] = {
      "нічого робити не треба.",
      "Сейчас нет связи с uaro.kiev.ua. Обращение ждёт на этом компьютере и уйдёт само, как только появится интернет — "
      "ничего делать не нужно."},
+    // 3.0.22-beta.17 (the owner 19.11: «пишет что нету связи» - the site's hour of reports from his address was full)
+    {Text::QueuedLimitBody,
+     "uaro.kiev.ua takes a limited number of reports an hour from one address, and this hour's are used up. The report "
+     "waits on this computer and goes by itself within the hour - nothing to do.",
+     "uaro.kiev.ua приймає обмежену кількість звернень на годину з однієї адреси, і цієї години їх уже вичерпано. "
+     "Звернення чекає на цьому комп'ютері й піде само протягом години — нічого робити не треба.",
+     "uaro.kiev.ua принимает ограниченное число обращений в час с одного адреса, и в этот час они уже исчерпаны. "
+     "Обращение ждёт на этом компьютере и уйдёт само в течение часа — ничего делать не нужно."},
     {Text::PickerTitle, "Game screenshots of the last week", "Знімки гри за тиждень", "Снимки игры за неделю"},
     {Text::PickerAdd, "Add", "Додати", "Добавить"},
     // 3.0.11-beta.5: the game's reference pack ({1} the server's data day, {2} its commit, {3} KB)

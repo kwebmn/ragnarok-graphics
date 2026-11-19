@@ -517,7 +517,7 @@ private:
     void removePick();
     void retextPicks();
     void toggleKind(int id);
-    void showSent(const std::string& code, bool queued);
+    void showSent(const std::string& code, bool queued, bool limited = false);
     void drawSentIcon(const DRAWITEMSTRUCT* d) const;
     void addFile(bool toReply);
     void paste(bool toReply);
@@ -1331,11 +1331,13 @@ void ReportsWindow::toggleKind(int id) {
 }
 
 // 3.0.9-beta.6: «Дякуємо! Звернення надіслано» with its code and what comes next, or «Збережено — піде само»
-void ReportsWindow::showSent(const std::string& code, bool queued) {
+void ReportsWindow::showSent(const std::string& code, bool queued, bool limited) {
     sentCode_ = code;
     sentQueued_ = queued;
     SetWindowTextW(GetDlgItem(hwnd_, kSentTitle), t(queued ? Text::QueuedTitle : Text::SentTitle).c_str());
-    const std::wstring body = queued ? t(Text::QueuedBody) : wide(code) + L"\r\n" + t(Text::SentBody);
+    // 3.0.22-beta.17 (the owner 19.11: «пишет что нету связи» - the site's hour of reports was full): why it waits
+    const std::wstring body = queued ? t(limited ? Text::QueuedLimitBody : Text::QueuedBody)
+                                     : wide(code) + L"\r\n" + t(Text::SentBody);
     SetWindowTextW(GetDlgItem(hwnd_, kSentBody), body.c_str());
     fillList();
     show(Pane::Sent);
@@ -1516,7 +1518,7 @@ void ReportsWindow::sendDone(SendJob* p) {
     } else if (r.queued) {
         start_ = ReportStart{};
         full_ = Full::None;
-        if (here) showSent("", true);
+        if (here) showSent("", true, r.limited);
     } else {
         if (here) show(Pane::New);
         status(tf(Text::ReportNewRefused, {r.error}));

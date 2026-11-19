@@ -27,6 +27,9 @@ struct Climate {
 };
 // region_look's names ("Prontera", "Glast Heim"...); "" or unknown -> the default (Prontera's)
 Climate climateOf(const std::string& region);
+// 3.0.22-beta.17 (R-AN347W, jawaii: snowy Alps behind a tropical island): the region whose climate `map` takes - its
+// own (region_look's) or, with none, another's where its land is like it (jawaii the sea's, Comodo's)
+std::string climateRegion(const std::string& map, const std::string& lookRegion);
 
 // The strip: the full circle wide, «rise» (the sine of the elevation, as the sky's skyAlong uses it) from kRiseLow at
 // the bottom row to kRiseHigh at the top

@@ -4409,7 +4409,7 @@ void Renderer11::horizonFrame() {
     const ground_heights::Ground* g = mapWorld_.ground();
     if (!g || g->width <= 0 || g->height <= 0) return;  // the map's ground not read yet: its size not known
     horizon::Key key;
-    key.region = region_look::of(map_, 100).region;
+    key.region = horizon::climateRegion(map_, region_look::of(map_, 100).region);  // 3.0.22-beta.17
     float toSun[3] = {0.0f, 0.0f, 0.0f};
     if (skySun(toSun)) view3d::lightWay(toSun, key.sun);  // 3.0.22-beta.15: the sun's or the moon's way
     key.weak = effect_groups::cardLevel(false, 0) <= 1;  // Direct3D 11: the weak level (as the automatic setup's)

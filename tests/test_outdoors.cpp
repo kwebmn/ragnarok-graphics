@@ -67,3 +67,11 @@ TEST(outdoors_grass_grows_in_the_guild_castles_courtyards) {
         CHECK(!castleGrounds(m));
     }
 }
+
+// 3.0.22-beta.17 (the owner's R-EE9QTG, new_zone02 «интересный глюк нашел в помещении»: the open sky over a hall and
+// a white void past its door): the novice academy's hall a room - the 3D view's vault over it; the novice grounds
+// round it still under the sky (.299)
+TEST(outdoors_the_novice_academy_hall_is_a_room) {
+    CHECK(!uagfx::outdoors("new_zone02"));
+    CHECK(uagfx::outdoors("new_zone01") && uagfx::outdoors("new_zone03") && uagfx::outdoors("new_zone04"));
+}

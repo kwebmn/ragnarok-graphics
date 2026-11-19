@@ -6,6 +6,9 @@ namespace uagfx {
 
 bool outdoors(const std::string& map) {
     if (map.empty()) return false;
+    // 3.0.22-beta.17 (the owner's R-EE9QTG «глюк в помещении»): the novice academy's hall, hung in the void (its outer
+    // band open), a room - not the novice grounds round it
+    if (map == "new_zone02") return false;
     // 3.0.11-beta.299 (the owner: «карты где травы нету, например нубзона, мжолниры» - «плоской карта быть не должна»;
     // the census of 921 maps, artifact XH2FtVBnnhGnRDEheuuxV1): green open maps the name rule took for a roof - no
     // grass, flowers, sun or sky there. Before the indoor words (izlu2dun, mosk_dun01 are under the sky)

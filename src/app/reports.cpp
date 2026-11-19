@@ -48,7 +48,7 @@ bool post(const std::string& path, const json::Value& body, long expected, std::
     return true;
 }
 
-enum class Outcome { Sent, Keep, Refused };
+enum class Outcome { Sent, Keep, Limited, Refused };  // 3.0.22-beta.17: Limited - kept, the site's hour full
 
 // One report's JSON to the site: its code when it went
 Outcome postReport(const std::string& body, std::string& code, std::string& error) {
@@ -58,7 +58,8 @@ Outcome postReport(const std::string& body, std::string& code, std::string& erro
     if (status == 201 && report::codeOf(answer, code)) return Outcome::Sent;
     error = status == 429 ? "too many reports from this computer - it goes later by itself"
                           : "uaro.kiev.ua answered " + std::to_string(status);
-    return status == 429 || status >= 500 ? Outcome::Keep : Outcome::Refused;
+    if (status == 429) return Outcome::Limited;
+    return status >= 500 ? Outcome::Keep : Outcome::Refused;
 }
 
 std::vector<std::wstring> queuedFiles(const std::wstring& dir) {
@@ -219,12 +220,15 @@ bool fetchShot(const std::string& key, const std::string& code, const std::strin
 NewReport sendNew(const std::wstring& dir, const report::Upload& u) {
     NewReport r;
     const std::string body = report::uploadJson(u);
-    switch (postReport(body, r.code, r.error)) {
+    const Outcome o = postReport(body, r.code, r.error);
+    switch (o) {
         case Outcome::Sent:
             noteSentIn(dir, r.code, u.reason, u.automatic, u.version);
             sendQueued(dir);  // the site answers: the waiting ones go too
             break;
         case Outcome::Keep:
+        case Outcome::Limited:
+            r.limited = o == Outcome::Limited;
             r.queued = queue(dir, body);
             if (!r.queued) r.error += " (and it could not be kept for later)";
             break;
@@ -247,7 +251,7 @@ int sendQueued(const std::wstring& dir) {
         std::string body, code, error;
         if (!readFile(file, body)) continue;
         const Outcome o = postReport(body, code, error);
-        if (o == Outcome::Keep) break;  // the site does not answer: the rest wait too
+        if (o == Outcome::Keep || o == Outcome::Limited) break;  // the site does not take it now: the rest wait too
         if (o == Outcome::Sent) {
             noteQueued(dir, body, code);
             ++sent;

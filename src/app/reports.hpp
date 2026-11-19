@@ -47,6 +47,7 @@ bool fetchShot(const std::string& key, const std::string& code, const std::strin
 struct NewReport {
     std::string code;     // the site's, "" when it did not take it
     bool queued = false;  // kept for later: no answer, the hour's limit, the site's trouble
+    bool limited = false;  // 3.0.22-beta.17: kept for the site's limit of reports an hour, not for no connection
     std::string error;
 };
 // A new report (the window's form, the game's Ctrl+Shift+F10, the watcher's after a bad end); the waiting ones go

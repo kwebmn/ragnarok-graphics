@@ -167,6 +167,12 @@ Climate of(const std::string& region) {
 
 Climate climateOf(const std::string& region) { return of(region); }
 
+std::string climateRegion(const std::string& map, const std::string& lookRegion) {
+    if (!lookRegion.empty()) return lookRegion;
+    if (map == "jawaii") return "Comodo";  // a tropical island in the sea
+    return lookRegion;
+}
+
 Level levelForCard(int card) {
     if (card <= 1) return Level{2048, 192, 64, 0, 24};
     return card == 2 ? Level{4096, 384, 128, 24, 64} : Level{8192, 768, 128, 24, 96};

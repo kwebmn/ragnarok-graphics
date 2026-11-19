@@ -98,11 +98,14 @@ bool Renderer::Impl::horizonBakeSlice(int row0, int row1) {
 void Renderer::Impl::horizonFrame() {
     horizonShown = false;
     if (!horizonBakePs || horizonFailed) return;
-    if (!horizon::wanted(effects.skyPanorama, camera::wideView(), mapOutdoors, view3d::hungMap(mapName))) return;
+    // 3.0.22-beta.17: hung as the sky's parts take it - by its name, or no land made past its edges (skyPartsNow)
+    const OwnGround* own = mapWorld.ownGround();
+    const bool hung = view3d::hungMap(mapName) || (own && own->outskirts.chunks.empty());
+    if (!horizon::wanted(effects.skyPanorama, camera::wideView(), mapOutdoors, hung)) return;
     const ground_heights::Ground* g = mapWorld.ground();
     if (!g || g->width <= 0 || g->height <= 0) return;  // the map's ground not read yet: its size not known
     horizon::Key key;
-    key.region = region_look::of(mapName, 100).region;
+    key.region = horizon::climateRegion(mapName, region_look::of(mapName, 100).region);  // 3.0.22-beta.17
     float toSun[3] = {0.0f, 0.0f, 0.0f};
     if (skySun(toSun)) view3d::lightWay(toSun, key.sun);  // 3.0.22-beta.15: the shadows of the sun or the moon
     const int card = effect_groups::cardLevel(true, adapterMb);
