@@ -196,3 +196,44 @@ TEST(ground_cells_grass_by_the_cells_own_texture_a_picture_at_a_time) {
     CHECK(ground_cells::grassyCells(g, pictureOf)[1] == 1);
     CHECK(ground_cells::grassyCells(gnd::Ground{}, pictureOf).empty());
 }
+
+// 3.0.22-beta.19 (the owner's R-9J8RH5, hugel «трава на брусчатке и немножко мигает»): Hugel's cobbles - pale stones,
+// green moss in their joints, green by 0.17 of the grass's measure, over kGrassy (Prontera's paving 0.10 at most) -
+// grow no grass: a cell mostly pale stone (kPaving) is paving, grass on it only where it is as green as a lawn (a
+// border's half); a forest floor as green, dark soil under its blades, grows it as before; the olive meadow too
+TEST(ground_cells_no_grass_on_mossy_cobbles) {
+    gnd::Ground g;
+    g.width = 4, g.height = 1;
+    g.zoom = 10.0f;
+    g.textures = {"cobbles.bmp", "forest.bmp", "border.bmp", "olive.bmp"};
+    std::vector<uint32_t> cobbles(64, 0xFFC8C8C3u), forest(64, 0xFF46372Au), border(64), olive(64, 0xFFC8C496u);
+    for (int i = 0; i < 64; ++i) {
+        if (i % 6 == 0) cobbles[size_t(i)] = 0xFF3C8C32u;  // the moss in the joints, a sixth
+        if (i % 4 == 0) forest[size_t(i)] = 0xFF4C8A32u;   // blades over dark soil, a quarter
+        border[size_t(i)] = i % 8 < 4 ? 0xFF4C8A32u : 0xFFC8C8C3u;  // a lawn's edge on the paving
+    }
+    const std::vector<ground_cells::Picture> pictures = {
+        {8, 8, cobbles.data()}, {8, 8, forest.data()}, {8, 8, border.data()}, {8, 8, olive.data()}};
+    for (int x = 0; x < 4; ++x) {
+        gnd::Surface s;
+        s.u[0] = 0.0f, s.u[1] = 1.0f, s.u[2] = 0.0f, s.u[3] = 1.0f;
+        s.v[0] = 0.0f, s.v[1] = 0.0f, s.v[2] = 1.0f, s.v[3] = 1.0f;
+        s.texture = int16_t(x);
+        g.surfaces.push_back(s);
+        gnd::Cell c{};
+        c.top = x;
+        g.cells.push_back(c);
+    }
+    const std::vector<uint8_t> grassy = ground_cells::grassyCells(g, pictures);
+    CHECK(grassy == (std::vector<uint8_t>{0, 1, 1, 1}));
+    const ground_cells::CellLook cobble = ground_cells::lookOfCell(g, 0, pictures);
+    CHECK(cobble.green >= ground_cells::kGrassy && cobble.stone >= ground_cells::kPaving);  // the old rule's grass
+    CHECK(ground_cells::lookOfCell(g, 1, pictures).stone < 0.05f);
+    CHECK(ground_cells::lookOfCell(g, 3, pictures).stone < 0.05f);  // olive: too warm for grey stone
+    const ground_cells::PictureOf pictureOf = [&](size_t t, ground_cells::Picture& out) {
+        if (t >= pictures.size()) return false;
+        out = pictures[t];
+        return true;
+    };
+    CHECK(ground_cells::grassyCells(g, pictureOf) == grassy);
+}

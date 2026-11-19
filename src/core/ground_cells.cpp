@@ -137,29 +137,51 @@ float greenOf(uint32_t argb) {
     return std::clamp(std::min(a, (gr - 0.08f) / 0.04f), 0.0f, 1.0f);
 }
 
+// 3.0.22-beta.19: pale stone - light and grey (paving's stones; a forest floor's soil is dark, a meadow warm)
+float stoneOf(uint32_t argb) {
+    const float r = float((argb >> 16) & 0xFF) / 255.0f, gr = float((argb >> 8) & 0xFF) / 255.0f,
+                b = float(argb & 0xFF) / 255.0f;
+    const float luma = 0.30f * r + 0.59f * gr + 0.11f * b, top = std::max({r, gr, b}), low = std::min({r, gr, b});
+    const float saturation = top > 1e-4f ? (top - low) / top : 0.0f;
+    return luma >= 0.55f && saturation <= 0.22f ? 1.0f : 0.0f;
+}
+
 }  // namespace
 
 float greenOfCell(const gnd::Ground& g, size_t cell, const std::vector<Picture>& pictures) {
-    if (cell >= g.cells.size()) return -1.0f;
+    return lookOfCell(g, cell, pictures).green;
+}
+
+bool grassyLook(const CellLook& l) {
+    return l.green < 0.0f || (l.green >= kGrassy && (l.stone < kPaving || l.green >= kLawn));
+}
+
+CellLook lookOfCell(const gnd::Ground& g, size_t cell, const std::vector<Picture>& pictures) {
+    CellLook out;
+    if (cell >= g.cells.size()) return out;
     const gnd::Cell& c = g.cells[cell];
-    if (c.top < 0 || size_t(c.top) >= g.surfaces.size()) return -1.0f;
+    if (c.top < 0 || size_t(c.top) >= g.surfaces.size()) return out;
     const gnd::Surface& s = g.surfaces[size_t(c.top)];
-    if (s.texture < 0 || size_t(s.texture) >= pictures.size()) return -1.0f;
+    if (s.texture < 0 || size_t(s.texture) >= pictures.size()) return out;
     const Picture& p = pictures[size_t(s.texture)];
-    if (!p.argb || p.width <= 0 || p.height <= 0) return -1.0f;
+    if (!p.argb || p.width <= 0 || p.height <= 0) return out;
     constexpr int kAcross = 8;  // its picture's part looked at so many times each way
     const float u0 = std::min({s.u[0], s.u[1], s.u[2], s.u[3]}), u1 = std::max({s.u[0], s.u[1], s.u[2], s.u[3]});
     const float v0 = std::min({s.v[0], s.v[1], s.v[2], s.v[3]}), v1 = std::max({s.v[0], s.v[1], s.v[2], s.v[3]});
-    float sum = 0.0f;
+    float sum = 0.0f, stone = 0.0f;
     for (int j = 0; j < kAcross; ++j)
         for (int k = 0; k < kAcross; ++k) {
             const float u = u0 + (u1 - u0) * (float(k) + 0.5f) / float(kAcross);
             const float v = v0 + (v1 - v0) * (float(j) + 0.5f) / float(kAcross);
             const int x = std::clamp(floorInt(u * float(p.width)), 0, p.width - 1);
             const int y = std::clamp(floorInt(v * float(p.height)), 0, p.height - 1);
-            sum += greenOf(p.argb[size_t(y) * size_t(p.width) + size_t(x)]);
+            const uint32_t argb = p.argb[size_t(y) * size_t(p.width) + size_t(x)];
+            sum += greenOf(argb);
+            stone += stoneOf(argb);
         }
-    return sum / float(kAcross * kAcross);
+    out.green = sum / float(kAcross * kAcross);
+    out.stone = stone / float(kAcross * kAcross);
+    return out;
 }
 
 std::vector<uint8_t> grassyCells(const gnd::Ground& g, const std::vector<Picture>& pictures) {
@@ -167,8 +189,7 @@ std::vector<uint8_t> grassyCells(const gnd::Ground& g, const std::vector<Picture
     std::vector<uint8_t> out(size_t(w) * size_t(h), 1);
     if (g.cells.size() < out.size()) return out;
     for (size_t i = 0; i < out.size(); ++i) {
-        const float green = greenOfCell(g, i, pictures);
-        out[i] = green < 0.0f || green >= kGrassy ? 1 : 0;
+        out[i] = grassyLook(lookOfCell(g, i, pictures)) ? 1 : 0;  // 3.0.22-beta.19: paving apart
     }
     return out;
 }
@@ -190,8 +211,7 @@ std::vector<uint8_t> grassyCells(const gnd::Ground& g, const PictureOf& pictureO
         if (cellsOf[t].empty() || !pictureOf(t, p)) continue;
         one[t] = p;
         for (const uint32_t i : cellsOf[t]) {
-            const float green = greenOfCell(g, i, one);
-            out[i] = green < 0.0f || green >= kGrassy ? 1 : 0;
+            out[i] = grassyLook(lookOfCell(g, i, one)) ? 1 : 0;  // 3.0.22-beta.19: paving apart
         }
         one[t] = Picture{};
     }

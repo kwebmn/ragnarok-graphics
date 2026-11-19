@@ -3089,6 +3089,12 @@ bool otherRoom(float2 xz) {
 // before the world's blended draws - a skill's effect, an item or a blade of grass seen against it stays over it;
 // until now the one pass came at the world's end and went over all of them but the characters, whose shapes were
 // put into the depth for it. The haze over what is drawn (sky3d_haze_ps) stays at the world's end.
+// 3.0.22-beta.19 (the owner's R-QB3SBW, einbroch: the city in its smog, the panorama green and clear through a gate):
+// the game's own fog this frame (fogColor.rgb, .w 1; the sky passes under the open sky) over the 3D sky's horizon -
+// whole at it and under, none from 0.3 up: a fog's layer over the land, the sky high up clear
+float3 gameFogOver(float3 c, float rise) {
+    return fogColor.w > 0.5 ? lerp(c, fogColor.rgb, smoothstep(0.30, -0.02, rise)) : c;
+}
 float4 sky3d_haze_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;  // nothing drawn there: the sky's own
@@ -3127,6 +3133,7 @@ float4 sky3d_haze_ps(PresentOut i) : SV_Target {
         tone = skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, soft, holeX);  // moon, sun's disc
         [branch] if (whole > 0.0)  // 3.0.22-beta.11: holeX the panorama's fade
             tone = lerp(tone, skyAlong(way, sourceRect.rgb, night, sourceClamp.xyz, sharpen, uiPixels.z, holeX), whole);
+        tone = gameFogOver(tone, -way.y);  // 3.0.22-beta.19
     }
     return float4(tone, haze);
 }
@@ -3142,8 +3149,9 @@ float4 sky3d_ps(PresentOut i) : SV_Target {
     float3 dir = normalize(ray.x * float3(r0, r1, r2) + ray.y * float3(r3, r4, r5) + ray.z * float3(r6, r7, r8));
     if (vault) return float4(underVault(dir, horizon), 1.0);
     // 3.0.20-beta.32: shared with the water's reflection; 3.0.20-beta.49: uiPixels.z the sky's parts;
-    // 3.0.22-beta.11: holeX the horizon panorama's fade
-    return float4(skyAlong(dir, horizon, night, sourceClamp.xyz, sharpen, uiPixels.z, holeX), 1.0);
+    // 3.0.22-beta.11: holeX the horizon panorama's fade; 3.0.22-beta.19: the game's fog over its horizon
+    return float4(gameFogOver(skyAlong(dir, horizon, night, sourceClamp.xyz, sharpen, uiPixels.z, holeX), -dir.y),
+                  1.0);
 }
 
 // 3.0.22-beta.11: the horizon's strip, the rows the scissor lets through - a ray each texel (core horizon::march)

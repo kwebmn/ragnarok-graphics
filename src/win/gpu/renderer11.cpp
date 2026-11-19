@@ -1764,6 +1764,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.fogColor[1] = float((s.fogColor >> 8) & 255) / 255.0f;
     c.fogColor[2] = float(s.fogColor & 255) / 255.0f;
     c.fogColor[3] = 1.0f;
+    if (c.fogEnable == 1 && !s.ui) {  // 3.0.22-beta.19: the world's fog, for the 3D sky's horizon
+        frameFogSeen_ = true;
+        std::copy(c.fogColor, c.fogColor + 3, frameFog_);
+    }
     c.colorKey = s.colorKey ? 1u : 0u;
     c.uiMode = uint32_t(uiFilterMode(s.ui, scale_, uiSharp_ ? UiFilter::Sharp : UiFilter::Smooth));
     // the AI's picture has the detail the game's pixels lack: sampled as it is; 3.0.18-beta.178: a sharp copy too
@@ -2766,6 +2770,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     mistDone_ = weatherDone_ = false;  // 2.5
     sky3dDone_ = false;  // 3.0.19-beta.6
     skyFillDone_ = false;  // 3.0.20-beta.48
+    frameFogSeen_ = false;  // 3.0.22-beta.19
     frameRoom_ = -1;       // 3.0.20-beta.59
     bloomDone_ = stepsDone_ = false;  // 2.5.2
     heatDone_ = floorDone_ = false;  // 2.5.3
@@ -4298,6 +4303,10 @@ void Renderer11::skyPass(bool fill) {
     c.sourceRect[3] = view3d::hazeReach(sky.reach, camera::sightNow());  // 3.0.19-beta.24: whole at the sight
     float toSun[3] = {0.0f, 0.0f, 0.0f};
     if (!vault && skySun(toSun)) std::copy(toSun, toSun + 3, c.sourceClamp);  // 3.0.22-beta.15: by the clock
+    if (!vault && frameFogSeen_) {  // 3.0.22-beta.19 (R-QB3SBW): the game's fog over the horizon
+        std::copy(frameFog_, frameFog_ + 3, c.fogColor);
+        c.fogColor[3] = 1.0f;
+    }
     c.twin[0] = night;
     c.twin[1] = vault ? 1.0f : 0.0f;
     c.sharpen = waterTime();

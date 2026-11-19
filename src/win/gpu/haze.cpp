@@ -131,6 +131,10 @@ bool Renderer::Impl::skyPass(bool fill) {
     c.sourceRect[3] = view3d::hazeReach(sky.reach, camera::sightNow());  // 3.0.19-beta.24: whole at the sight
     float toSun[3] = {0.0f, 0.0f, 0.0f};
     if (!vault && skySun(toSun)) std::copy(toSun, toSun + 3, c.sourceClamp);  // 3.0.22-beta.15: by the clock
+    if (!vault && frameFogSeen) {  // 3.0.22-beta.19 (R-QB3SBW): the game's fog over the horizon (fogColor free here)
+        std::copy(frameFog, frameFog + 3, c.fogColor);
+        c.fogColor[3] = 1.0f;
+    }
     c.twin[0] = night;
     c.twin[1] = vault ? 1.0f : 0.0f;
     c.sharpen = waterTime();

@@ -899,6 +899,8 @@ private:
     void horizonFrame();  // the sky's fill pass, first: the bake's next slice; whether the strip is shown now
     void horizonBakeSlice(int row0, int row1);
     bool skyFillDone_ = false;
+    bool frameFogSeen_ = false;  // 3.0.22-beta.19 (R-QB3SBW, as Direct3D 12's): the world's game fog this frame
+    float frameFog_[3] = {0.0f, 0.0f, 0.0f};
     ID3D11PixelShader* weatherPs_ = nullptr;
     // 3.0.5-beta.19: the particles as small quads (weather_vs, weather_quad_ps) - not sand's
     ID3D11VertexShader* weatherVs_ = nullptr;

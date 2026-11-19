@@ -671,6 +671,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.fogColor[1] = float((s.fogColor >> 8) & 255) / 255.0f;
     c.fogColor[2] = float(s.fogColor & 255) / 255.0f;
     c.fogColor[3] = 1.0f;
+    if (c.fogEnable == 1 && !s.ui) {  // 3.0.22-beta.19: the world's fog, for the 3D sky's horizon
+        frameFogSeen = true;
+        std::copy(c.fogColor, c.fogColor + 3, frameFog);
+    }
     uint8_t how = 0;  // 2.3, uaRO Studio's X-ray (L1): the texture's state as a colour over it, through the fog's slot
     if (xray && ai && d.texture[0] && ai->howOf(d.texture[0], how)) {
         static const float kColours[3][3] = {{0.25f, 0.85f, 0.35f}, {0.25f, 0.55f, 1.0f}, {1.0f, 0.25f, 0.25f}};

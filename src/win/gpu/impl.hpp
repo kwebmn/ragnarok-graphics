@@ -659,6 +659,10 @@ struct Renderer::Impl {
     ID3DBlob* sky3dHazePs = nullptr;
     ID3D12PipelineState* sky3dHazePipelines[4] = {};
     bool skyFillDone = false;
+    // 3.0.22-beta.19 (R-QB3SBW): the game's own fog this frame - drawn on the world (draw.cpp), over the 3D sky's
+    // horizon
+    bool frameFogSeen = false;
+    float frameFog[3] = {0.0f, 0.0f, 0.0f};
     bool skyFillDue() const {
         return sky3dPs && sky3dHazePs && camera::wideView() && groundDrawn && !skyFillDone && viewToWorldValid;
     }
@@ -1435,6 +1439,7 @@ struct Renderer::Impl {
         mistDone = false;
         sky3dDone = false;  // 3.0.19-beta.6
         skyFillDone = false;  // 3.0.20-beta.48
+        frameFogSeen = false;  // 3.0.22-beta.19
         sunShadowsDone = sunlessDrawn = false;  // 3.0.20-beta.50
         frameRoom = -1;  // 3.0.20-beta.59
         modelProbe.done = false;  // 3.0.20-beta.61

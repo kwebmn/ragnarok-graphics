@@ -51,6 +51,19 @@ struct Picture {
 constexpr float kGrassy = 0.12f;
 // a cell's picture's part's mean green by that measure, 0-1; under 0: not known (no top, no picture)
 float greenOfCell(const gnd::Ground& g, size_t cell, const std::vector<Picture>& pictures);
+// 3.0.22-beta.19 (the owner's R-9J8RH5, hugel «трава на брусчатке и немножко мигает»): Hugel's cobbles - pale stones,
+// green moss in their joints - green by 0.13-0.25 of the measure, over kGrassy (Prontera's paving 0.10 at most; a
+// forest floor's thin grass as green, 0.10-0.42). Told apart by the stone: the share of the part light and grey
+// (luma 0.55 up, saturation 0.22 down) - Hugel's cobbles 0.84-0.93 of it, a forest floor's 0.001, Prontera's paving
+// with lawn borders 0.42-0.58 (/root/uagfx-tools/audit/grassy). Paving (kPaving of it stone) grows grass only where
+// the part is as green as a lawn's edge (kLawn)
+constexpr float kPaving = 0.45f, kLawn = 0.40f;
+struct CellLook {
+    float green = -1.0f;  // as greenOfCell's
+    float stone = 0.0f;   // the share of it pale stone, 0-1
+};
+CellLook lookOfCell(const gnd::Ground& g, size_t cell, const std::vector<Picture>& pictures);
+bool grassyLook(const CellLook& l);  // not known: true (as before)
 std::vector<uint8_t> grassyCells(const gnd::Ground& g, const std::vector<Picture>& pictures);
 // 3.0.20-beta.53 (the owner's «делай 1-9», 8): the same with one picture in memory at a time - where there is no own
 // ground to hold them all (it is off, there is no room for it, Direct3D 11). pictureOf gives a texture's picture,
