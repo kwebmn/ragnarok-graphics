@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.22-beta.16 — what's new · 2026-11-19
+
+The horizon panorama: mountains with their feet, the land past the map's edge without hills of its own.
+
+- **Mountains no longer hang in the sky**: far peaks now wear only caps of snow instead of being white to the bottom, and the far haze is a shade darker and bluer than the sky - the mountains' feet no longer merge into the sky.
+- **No second land in front of the panorama**: with the panorama on, the land past the map's edge («Own ground», Direct3D 12) no longer raises hills and mountains of its own - it stays an even continuation of the map's edge, and the panorama gives the hills and mountains. From the next map entry.
+
 # uaRO Graphics 3.0.22-beta.15 — what's new · 2026-11-19
 
 The sun crosses the 3D view's sky by the clock.
