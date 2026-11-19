@@ -868,7 +868,9 @@ void removeReportChecks() {
 void Context::present(const Rect& source, bool waitForVblank) {
     dx7::flushGroundBatch();  // 3.0.19-beta.50: the gathered ground cells into the frame before it goes
     dx7::setGroundBatch(config.batchGround);  // [quality] batch_ground, for the next frame
-    modelcensus::setOn(config.view3dOwnModels);  // 3.0.20-beta.4: [view3d] own_models, for the next frame
+    // 3.0.20-beta.4: [view3d] own_models, for the next frame; 3.0.22-beta.18: none while the compare key shows the
+    // game's own picture
+    modelcensus::setOn(config.view3dOwnModels && enhanced_);
     const double presentFrom = nowMs();  // 3.0.18-beta.161: the driver's own work at a present (logStats)
     ++paceBegun_;                          // 3.0.19-beta.51
     paceRunFrom_ = gpu::RunMark::now();    // 3.0.19-beta.52
@@ -1011,6 +1013,17 @@ void Context::present(const Rect& source, bool waitForVblank) {
     if (compareKey_.pressed(keyDown)) {
         enhanced_ = !enhanced_;
         LOG_INFO("compare key: improvements %s", enhanced_ ? "on" : "off");
+        // 3.0.22-beta.18 (the owner's R-WSFMDB: «когда отключаешь графику то все нововведения отключались совсем и
+        // работала старая графика»): the 3D view too - the game's own camera while they are off, the view asked back
+        // after (Ctrl+Shift+V's way); the own models and the 3D view's thin ground follow enhanced_ below
+        if (!enhanced_) {
+            view3dBefore_ = int(view3dwin::wanted());
+            if (view3dBefore_ != int(view3d::Mode::Off))
+                view3dwin::ask(view3d::Mode::Off, "the compare key (Pause, Scroll Lock) - the game's own picture");
+        } else if (view3dBefore_ != int(view3d::Mode::Off)) {
+            view3dwin::ask(view3d::Mode(view3dBefore_), "the compare key - the improvements back");
+            view3dBefore_ = int(view3d::Mode::Off);
+        }
         // 2.15: said on the screen while they are off - a stray press looked like a broken game
         fps_.setNote(enhanced_ ? L"" : wideOf(settings::tr(language(), settings::Text::CompareOffNote)));
     }
@@ -1272,7 +1285,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     keywalk::setSpace(config.spaceAction);                     // 3.0.18-beta.209: Space acts
     walkmodewin::frame(config, iniPath());                     // 3.0.18-beta.208: the walk mode
     view3dwin::frame(config);                                  // 3.0.19-beta.6: the 3D view
-    groundthin::setOn(config.view3dFastGround);                // 3.0.19-beta.42
+    // 3.0.19-beta.42; 3.0.22-beta.18 (R-WSFMDB): never while the compare key shows the game's own picture - the own
+    // ground off then, the game's far cells left out drew no ground at all (comodo all water)
+    groundthin::setOn(config.view3dFastGround && enhanced_);
     groundthin::frame();
     presentwatchwin::frame(*renderer, config, iniPath(), window, gameCodePage(config));  // 3.0.19-beta.8
     groundmarks::groundTimers(config.groundTimers);  // 3.0.16-beta.21

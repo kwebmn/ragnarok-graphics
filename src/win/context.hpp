@@ -180,6 +180,7 @@ private:
     bool renderScaleNoted_ = false;  // the log has said render_scale is not used with DLSS
     ToggleKey compareKey_;  // Pause or Scroll Lock: every improvement off and on, to compare
     bool enhanced_ = true;
+    int view3dBefore_ = 0;  // 3.0.22-beta.18: the 3D view (view3d::Mode) the compare key turned off, asked back after
     mutable EffectSettings effects_;  // 2.5.11: effects(), made from `config`
     mutable bool effectsMade_ = false;
     EffectSettings madeEffects(const EffectSettings& file) const;  // as drawn: the set, the light modes, thin grass
