@@ -17,6 +17,31 @@ Rgb scaled(const Rgb& a, float s) { return {a.r * s, a.g * s, a.b * s}; }
 float noise(float x, float z, uint32_t seed) { return noised(x, z, seed).v; }
 
 // The far land's height by its kind - mountains, mesas, islands, pillars - over the near hills
+// 3.0.22-beta.20 (the owner's R-XK5BK9 «в дали какойто неестественный горизонт, лесенкой»): karst towers - in
+// clusters and open plain between (a cell half the mountains' wave across holds one or none, by a slow noise), its
+// middle somewhere in its cell, its own width and height (most low, a few tall: 1.4-2.9 times their half width, as
+// Guilin's); a haystack's round top, steep overgrown sides (1 - smooth(0.2, 1, t): no sheer wall - its normals jumped
+// from row to row, bands across it); the land the tallest one over a place (shaders.cpp hzKarstTowers)
+float karstTowers(const Climate& c, float mx, float mz) {
+    const float px = 2.0f * mx, pz = 2.0f * mz;
+    const int ix = int(std::floor(px)), iz = int(std::floor(pz));
+    const float crowd = 70.0f + 120.0f * (0.5f + 0.5f * noise(mx * 0.35f, mz * 0.35f, c.seed + 151u));
+    float best = 0.0f;
+    for (int j = -1; j <= 1; ++j)
+        for (int i = -1; i <= 1; ++i) {
+            const uint32_t h = hash2(ix + i, iz + j, c.seed + 131u);
+            if (float(h & 0xFFu) > crowd) continue;  // none in this cell
+            const float ox = float((h >> 8) & 0xFFu) / 255.0f, oz = float((h >> 16) & 0xFFu) / 255.0f;
+            const float r = 0.24f + 0.18f * float((h >> 24) & 0xFFu) / 255.0f;
+            const float dx = px - (float(ix + i) + 0.25f + 0.5f * ox), dz = pz - (float(iz + j) + 0.25f + 0.5f * oz);
+            const float t2 = (dx * dx + dz * dz) / (r * r);
+            if (t2 >= 1.0f) continue;
+            const float u = float(hash2(ix + i, iz + j, c.seed + 177u) & 0xFFu) / 255.0f;
+            best = std::max(best, (0.14f + 0.36f * u * u) * (1.0f - smooth(0.2f, 1.0f, std::sqrt(t2))));
+        }
+    return best;
+}
+
 float farLand(const Climate& c, float x, float z, float far, float hills) {
     const float mx = x * c.mountFreq, mz = z * c.mountFreq;
     switch (c.land) {
@@ -36,11 +61,10 @@ float farLand(const Climate& c, float x, float z, float far, float hills) {
         // whole a step past the beach, a green wall up to the strip's roof
         return land * c.mountAmp * (0.25f + 0.75f * e) * (0.15f + 0.85f * far) - (1.0f - land) * 60.0f;
     }
-    case Land::Karst: {  // tall narrow pillars with rounded tops
-        const float n = 0.5f + 0.5f * fbm(mx, mz, 4, c.seed + 9);
-        const float pillar = smooth(0.56f, 0.61f, n);
-        const float top = 0.7f + 0.3f * (0.5f + 0.5f * eroded(mx * 2.0f, mz * 2.0f, 5, c.seed + 13));
-        return hills + far * c.mountAmp * pillar * top;
+    case Land::Karst: {  // 3.0.22-beta.20: towers standing apart on the plain, round and steep (beta.11's mesas
+        // with white walls in steps read as stairs); ledges on them
+        const float ledges = 0.88f + 0.12f * (0.5f + 0.5f * eroded(mx * 6.0f, mz * 6.0f, 4, c.seed + 13));
+        return hills + far * c.mountAmp * karstTowers(c, mx, mz) * ledges;
     }
     case Land::Canyon: {  // terraced plateaus cut by winding canyons
         const float m = 0.5f + 0.5f * fbm(mx, mz, 5, c.seed + 9);
@@ -157,7 +181,12 @@ Rgb albedoAt(const Climate& c, float x, float z, float height, float upness) {
     const Rgb grass = scaled(c.grass, 0.75f + 0.5f * tex);
     const Rgb forest = scaled(c.forest, 0.7f + 0.6f * (0.5f + 0.5f * noise(x * 0.05f, z * 0.05f, c.seed + 600)));
     Rgb a = mix(grass, forest, forestMask);
-    a = mix(a, scaled(c.rock, 0.75f + 0.5f * tex), smooth(0.78f, 0.6f, upness));
+    // 3.0.22-beta.20 (R-XK5BK9): a karst tower's sides overgrown, its grey rock on the sheerest faces alone
+    if (c.land == Land::Karst)
+        a = mix(mix(a, forest, smooth(0.80f, 0.50f, upness)), scaled(c.rock, 0.75f + 0.5f * tex),
+                smooth(0.22f, 0.08f, upness) * (0.45f + 0.55f * tex));
+    else
+        a = mix(a, scaled(c.rock, 0.75f + 0.5f * tex), smooth(0.78f, 0.6f, upness));
     const float snowAt = height + 260.0f * fbm(x * 0.003f, z * 0.003f, 3, c.seed + 700);
     const float line = snowLineAt(c, x, z);  // 3.0.22-beta.16: far peaks capped
     const float sn = smooth(line - 180.0f, line + 120.0f, snowAt) * smooth(0.42f, 0.66f, upness);

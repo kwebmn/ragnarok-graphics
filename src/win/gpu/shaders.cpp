@@ -1559,6 +1559,27 @@ float hzEroded(float2 p, int octaves, uint seed) {  // derivative-damped: smooth
     return sum;
 }
 // the far land by its kind (horizon::Land: 0 hills, 1 alps, 2 desert, 3 sea, 4 karst, 5 canyon, 6 waste)
+// 3.0.22-beta.20 (R-XK5BK9): core horizon_terrain karstTowers - towers standing apart, round and steep
+float hzKarstTowers(float2 m) {
+    float2 p = 2.0 * m;
+    int2 at = int2(floor(p));
+    float crowd = 70.0 + 120.0 * (0.5 + 0.5 * hzNoise(m * 0.35, hzSeed + 151u));
+    float best = 0.0;
+    [unroll] for (int j = -1; j <= 1; ++j)
+        [unroll] for (int i = -1; i <= 1; ++i) {
+            int2 cell = at + int2(i, j);
+            uint h = hzHash(cell.x, cell.y, hzSeed + 131u);
+            if (float(h & 0xFFu) > crowd) continue;  // none in this cell (clusters, open plain between)
+            float2 o = float2(float((h >> 8) & 0xFFu), float((h >> 16) & 0xFFu)) / 255.0;
+            float r = 0.24 + 0.18 * float((h >> 24) & 0xFFu) / 255.0;
+            float2 d = p - (float2(cell) + 0.25 + 0.5 * o);
+            float t2 = dot(d, d) / (r * r);
+            if (t2 >= 1.0) continue;
+            float u = float(hzHash(cell.x, cell.y, hzSeed + 177u) & 0xFFu) / 255.0;
+            best = max(best, (0.14 + 0.36 * u * u) * (1.0 - hzSmooth(0.2, 1.0, sqrt(t2))));
+        }
+    return best;
+}
 float hzFarLand(float2 p, float far, float hills) {
     float2 m = p * hzMountFreq;
     int land = hzLand;
@@ -1577,11 +1598,9 @@ float hzFarLand(float2 p, float far, float hills) {
         // 3.0.22-beta.13 (R-VDN9YH): low near the map, whole far off (core horizon_terrain's)
         return ground * hzMountAmp * (0.25 + 0.75 * e) * (0.15 + 0.85 * far) - (1.0 - ground) * 60.0;
     }
-    [branch] if (land == 4) {  // tall narrow pillars with rounded tops
-        float n = 0.5 + 0.5 * hzFbm(m, 4, hzSeed + 9u);
-        float pillar = hzSmooth(0.56, 0.61, n);
-        float top = 0.7 + 0.3 * (0.5 + 0.5 * hzEroded(m * 2.0, 5, hzSeed + 13u));
-        return hills + far * hzMountAmp * pillar * top;
+    [branch] if (land == 4) {  // 3.0.22-beta.20: towers standing apart, round and steep (core's)
+        float ledges = 0.88 + 0.12 * (0.5 + 0.5 * hzEroded(m * 6.0, 4, hzSeed + 13u));
+        return hills + far * hzMountAmp * hzKarstTowers(m) * ledges;
     }
     [branch] if (land == 5) {  // terraced plateaus cut by winding canyons
         float n = 0.5 + 0.5 * hzFbm(m, 5, hzSeed + 9u);
@@ -1632,7 +1651,12 @@ float3 hzAlbedo(float2 p, float height, float up) {
     float3 grass = hzGrass * (0.75 + 0.5 * tex);
     float3 trees = hzForest * (0.7 + 0.6 * (0.5 + 0.5 * hzNoise(p * 0.05, hzSeed + 600u)));
     float3 a = lerp(grass, trees, forest);
-    a = lerp(a, hzRock * (0.75 + 0.5 * tex), hzSmooth(0.78, 0.6, up));
+    // 3.0.22-beta.20 (R-XK5BK9; core's): a karst tower's sides overgrown, its grey rock on the sheerest faces alone
+    if (land == 4)
+        a = lerp(lerp(a, trees, hzSmooth(0.80, 0.50, up)), hzRock * (0.75 + 0.5 * tex),
+                 hzSmooth(0.22, 0.08, up) * (0.45 + 0.55 * tex));
+    else
+        a = lerp(a, hzRock * (0.75 + 0.5 * tex), hzSmooth(0.78, 0.6, up));
     float snowAt = height + 260.0 * hzFbm(p * 0.003, 3, hzSeed + 700u);
     return lerp(a, hzSnow, hzSmooth(capLine - 180.0, capLine + 120.0, snowAt) * hzSmooth(0.42, 0.66, up));
 }

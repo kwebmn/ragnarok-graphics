@@ -322,3 +322,31 @@ TEST(horizon_climate_of_maps_without_a_region) {
     CHECK(horizon::climateRegion("somewhere", "").empty());
     CHECK(horizon::climateOf(horizon::climateRegion("jawaii", "")).land == horizon::Land::Sea);
 }
+
+// 3.0.22-beta.20 (the owner's R-XK5BK9, lou_fild01: «в дали какойто неестественный горизонт, лесенкой»): the karst's
+// land towers standing apart, round and steep - not mesas with white walls in steps: on a ring far off its high land
+// is a row of separate towers, none of them a long wall
+TEST(horizon_karst_towers_stand_apart) {
+    for (const char* region : {"Louyang", "Kunlun"}) {
+        const horizon::Climate c = horizon::climateOf(region);
+        constexpr int kSamples = 1440;
+        std::vector<float> h(kSamples);
+        float most = 0.0f;
+        for (int k = 0; k < kSamples; ++k) {
+            const float a = 6.2831853f * float(k) / float(kSamples);
+            h[size_t(k)] = horizon::heightAt(c, 1500.0f, 11000.0f * std::cos(a), 11000.0f * std::sin(a));
+            most = std::max(most, h[size_t(k)]);
+        }
+        int towers = 0, run = 0, longest = 0;
+        for (int k = 0; k < kSamples; ++k) {
+            run = h[size_t(k)] > 0.5f * most ? run + 1 : 0;
+            towers += run == 1 ? 1 : 0;
+            longest = std::max(longest, run);
+        }
+        std::printf("  %s: %d towers, the widest %d of %d, the highest %.0f\n", region, towers, longest, kSamples,
+                    double(most));
+        CHECK(most > 600.0f);
+        CHECK(towers >= 6);
+        CHECK(longest < kSamples / 30);  // none wider than 12 degrees of the ring
+    }
+}
