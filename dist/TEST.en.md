@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.21 — what's new · 2026-11-19
+
+Even fields past the map's edge, no more «fans».
+
+- **The haze over the far land**: past the map's edge the flat land in the 3D view was covered with dark wedges spreading from the camera - the haze took the panorama's colours along each line of sight. Now at middle distance it goes into the colour of the air (a shade darker and bluer than the sky at the horizon) and turns into the panorama's land only near the edge of sight - far off the fields fade evenly.
+
 # uaRO Graphics 3.0.22-beta.20 — what's new · 2026-11-19
 
 Karst towers on the horizon of Louyang and Kunlun.
