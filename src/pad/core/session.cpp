@@ -244,6 +244,12 @@ TickOutput Session::tick(const PadState& pad, const ViewInfo& view, uint32_t now
     return out;
 }
 
+bool Session::request(Bytes p, uint32_t nowMs) {
+    if (mapSocket_ == 0 || !downOk_ || !injectOk_) return false;
+    queue_.emplace_back(nowMs, std::move(p));
+    return true;
+}
+
 bool Session::canInject() const {
     if (mapSocket_ == 0 || !downOk_ || !injectOk_) return false;
     auto it = conns_.find(mapSocket_);

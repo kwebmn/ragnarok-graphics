@@ -174,6 +174,9 @@ struct State {
     view3d::Mode wantedBeforeHold = view3d::Mode::Off;
     double heldAt = 0.0;
     int heldLines = 0;
+    // 3.0.22-beta.32 (the client's MCP «view»): a look asked with the view in the same call - put once it is on
+    bool lookPending = false;
+    float pendingYaw = 0.0f, pendingPitch = 0.0f;
 };
 
 State g_state;  // the game's thread: its window's keys, its frame, its camera build
@@ -796,6 +799,10 @@ void __attribute__((thiscall)) build(uint32_t view) {
         s.onTopTold = s.onTopStep;
     }
     if (s.wanted != s.mode) switchTo(s, view);
+    if (s.lookPending && s.mode != view3d::Mode::Off) {  // 3.0.22-beta.32: the MCP's look with its view
+        s.lookPending = false;
+        setLook(s.pendingYaw, s.pendingPitch);
+    }
     // 3.0.19-beta.18: the last frame's distance; 3.0.19-beta.37: the free camera's as from behind (seen, unless near)
     s.ownOut = view3d::ownOut(s.free ? view3d::Mode::Behind : s.mode, s.behindNow, s.ownOut);
     if (s.mode == view3d::Mode::Off) {
@@ -1193,6 +1200,33 @@ uint32_t clickCasts() { return g_state.casts; }
 bool looking() { return g_state.mode != view3d::Mode::Off && g_state.looking; }
 
 bool fromTheEyes() { return g_state.mode == view3d::Mode::First; }
+
+bool look(float& yaw, float& pitch) {
+    const State& s = g_state;
+    if (s.mode == view3d::Mode::Off) return false;
+    yaw = s.shown.yaw;
+    pitch = s.shown.pitch;
+    return true;
+}
+
+bool setLook(float yaw, float pitch) {
+    State& s = g_state;
+    if (s.mode == view3d::Mode::Off) {  // the view asked, not on yet: put at its first build
+        if (s.wanted == view3d::Mode::Off) return false;
+        s.lookPending = true;
+        s.pendingYaw = yaw;
+        s.pendingPitch = pitch;
+        return true;
+    }
+    if (std::isfinite(yaw)) {
+        const float y = std::fmod(yaw, 360.0f);
+        s.look.yaw = y < 0.0f ? y + 360.0f : y;
+    }
+    if (std::isfinite(pitch)) s.look.pitch = std::clamp(pitch, -view3d::kPitchMost, view3d::kPitchMost);
+    s.shown = s.look;  // put, not eased
+    LOG_INFO("3D view: the look put at yaw %.1f, pitch %.1f (the MCP)", s.look.yaw, s.look.pitch);
+    return true;
+}
 
 bool ownHidden() { return ownHiddenNow(); }
 

@@ -30,6 +30,7 @@
 #include "pad/core/logic/targeting.hpp"
 #include "pad/core/logic/vbutton.hpp"
 #include "pad/core/logic/window_order.hpp"
+#include "pad/core/proto/c2s.hpp"
 #include "pad/core/session.hpp"
 #include "pad/core/version.hpp"
 #include "pad/win/client_bar.hpp"
@@ -1736,6 +1737,13 @@ void setDirectWalk(bool on) {
     if (on == s.directWalk) return;
     s.directWalk = on;
     LOG_INFO("walk without the mouse: %s", on ? "on (an arrow on the ground)" : "off (the game's cursor held out)");
+}
+
+bool walkTo(int x, int y) {
+    if (!healthy() || !S().session) return false;
+    if (!S().session->request(buildWalk(Cell{x, y}), GetTickCount())) return false;
+    LOG_INFO("walk: to %d, %d (the MCP)", x, y);
+    return true;
 }
 
 bool walkTarget(int& x, int& y) {

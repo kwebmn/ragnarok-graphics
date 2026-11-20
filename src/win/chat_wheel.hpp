@@ -26,6 +26,9 @@ struct Setup {
 void open(const Setup& setup);
 bool isOpen();
 void close();
+// 3.0.22-beta.32 (the client's MCP «chat»): a line through the game's own chat line and its Enter (`gameText` in
+// the game's code page; a command such as @warp, or words to those near); false: no chat window
+bool sendCommand(const std::string& gameText);
 // The controller while it is open: the right stick (x right, y up) points; LB / RB the page; LT / RT the channel; Y
 // the voice; B closes; `held` false - the Talk button let go: the pointed one sent and the wheel closed
 struct Pad {

@@ -752,3 +752,17 @@ TEST(session_logs_our_walking_speed_as_the_server_changes_it) {
     speed(112, 30);
     CHECK(logged("walking speed 112 ms a cell (was 150)"));
 }
+
+// 3.0.22-beta.32 (the client's MCP: «чтобы ты мог ходить»): a walk the driver asks for itself - queued as the
+// controller's requests are, out at the next boundary; none with no healthy map server connection
+TEST(session_takes_a_walk_of_the_driver_s_own) {
+    Session none{Config{}};
+    CHECK(!none.request(buildWalk(Cell{156, 204}), 0));
+    Session s{Config{}};
+    connect(s);
+    CHECK(s.request(buildWalk(Cell{156, 204}), 100));
+    const std::vector<Bytes> ready = s.takeInjectable(100);
+    CHECK_EQ(ready.size(), 1u);
+    CHECK(!ready.empty() && rd16(ready[0].data(), 0) == 0x00a7);
+    CHECK(parseWalkRequest(ready[0]).has_value() && parseWalkRequest(ready[0])->x == 156);
+}

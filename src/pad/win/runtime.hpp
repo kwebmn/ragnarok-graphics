@@ -86,6 +86,9 @@ void keyAction(const Action& a);
 void keyCycleTarget(int dir);
 void keyCamera(float turnDeg, int zoomSteps);
 bool walkTarget(int& x, int& y);
+// 3.0.22-beta.32 (the client's MCP «walk»): the character asked to walk to the cell, as a click on the ground; false:
+// no healthy map server connection
+bool walkTo(int x, int y);
 // 3.0.11-beta.145 (the concept «маг, прист и хант на геймпаде»): a ground skill aimed with the pad now - the skill, its
 // level and the cell it would go on (its cells on the ground: win/ground_marks); false while not aiming
 bool aimCells(uint16_t& skill, int& lv, int& x, int& y);

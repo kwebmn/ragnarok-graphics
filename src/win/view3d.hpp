@@ -29,6 +29,11 @@ bool ask(view3d::Mode m, const char* why);
 // 3.0.22-beta.30 (the owner's video session: the camera reset after Pause): Pause on - the 3D view held as it is (the
 // game's own camera meanwhile), Pause off - back the same; false: nothing changed
 bool hold(bool on, const char* why);
+// 3.0.22-beta.32 (the client's MCP «view», «state»): the 3D view's look (degrees: the game's yaw 0-360, the pitch up
+// positive) - read, or put at once (NaN keeps that one; the pitch within view3d::kPitchMost); false: the view is
+// the game's own
+bool look(float& yaw, float& pitch);
+bool setLook(float yaw, float pitch);
 bool active();                           // the 3D view on
 // 3.0.21-beta.12 (R-EV2ABB): the step the game drew its over-everything sprites with this frame (core view3d::overAll)
 float onTopStep();

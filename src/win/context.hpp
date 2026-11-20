@@ -19,6 +19,8 @@
 #include "core/frame.hpp"
 #include "core/frame_pace.hpp"
 #include "core/image.hpp"
+#include "core/json.hpp"
+#include "core/mcp.hpp"
 #include "core/overlay_line.hpp"
 #include "core/pixel.hpp"
 #include "core/scale.hpp"
@@ -312,6 +314,9 @@ private:
     std::vector<double> firstMapFps_;
     bool firstGameNoted_ = false;
     void sayOnScreen(const std::wstring& note, bool evenOff = false);  // evenOff: under Pause too
+    void toggleCompare();  // the compare key's turn (Pause, Scroll Lock) - the MCP's «pause» too
+    // 3.0.22-beta.32 (the client's MCP; win/mcp_server, core/mcp): a tool run on the game's thread (win/context_mcp)
+    mcp::CallResult mcpCall(const std::string& tool, const json::Value& args);
     mutable card_speed::Judge judge_{0, true};
     mutable bool judgeMade_ = false;
     bool keepOnMap_ = false;

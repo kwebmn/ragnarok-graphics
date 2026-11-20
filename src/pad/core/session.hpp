@@ -51,6 +51,9 @@ public:
     // Queued requests that may go out now; requests that waited longer than 500 ms are dropped.
     std::vector<Bytes> takeInjectable(uint32_t nowMs);
     bool canInject() const;
+    // 3.0.22-beta.32 (the client's MCP: «чтобы ты мог ходить»): a request of the driver's own (a walk), queued as
+    // the controller's are; false with no healthy map server connection
+    bool request(Bytes p, uint32_t nowMs);
     void markInjectBroken();
     void setMark(MarkStyle style);  // [aim] mark, changed from the menu
     // 3.0.11-beta.95 (the owner on the ring: «устраивает»): the interface draws the target's ring - no fake mark then;

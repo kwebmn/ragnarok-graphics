@@ -167,6 +167,8 @@ void emotePictures(State& s) {
 
 }  // namespace
 
+bool sendCommand(const std::string& gameText) { return sendLine(gameText, true, cw::Channel::Near); }
+
 void open(const Setup& setup) {
     State& s = state();
     if (s.open) return;

@@ -160,6 +160,7 @@
 #include "win/platform.hpp"
 #include "win/shadow_patch.hpp"
 #include "win/aura_patch.hpp"
+#include "win/mcp_server.hpp"
 #include "win/sound_engine.hpp"
 #include "win/sound_hook.hpp"
 #include "win/gpu/adapters.hpp"
@@ -880,6 +881,29 @@ void removeReportChecks() {
     RemoveDirectoryA(folder.c_str());
 }
 
+// The compare key's turn (Pause, Scroll Lock); 3.0.22-beta.32: the MCP's «pause» too
+void Context::toggleCompare() {
+    enhanced_ = !enhanced_;
+    // 3.0.22-beta.30 (the owner's video session: «выключается режим фото» after Pause): the photo mode told too
+    LOG_INFO("compare key: improvements %s (the photo mode %s)", enhanced_ ? "on" : "off", photo_ ? "on" : "off");
+    photoToldFrames_ = photo_ ? 3 : 0;
+    // 3.0.22-beta.18 (the owner's R-WSFMDB: «когда отключаешь графику то все нововведения отключались совсем и
+    // работала старая графика»): the 3D view too - the game's own camera while they are off; 3.0.22-beta.30 (the
+    // owner's video session: «было первое лицо, становится вид из-за спины»): held as it is and back the same -
+    // the view, the free camera and its flight, the look, the zoom (it was turned off and asked anew); the own
+    // models and the 3D view's thin ground follow enhanced_ below
+    view3dwin::hold(!enhanced_, enhanced_ ? "the compare key - the improvements back"
+                                          : "the compare key (Pause, Scroll Lock) - the game's own picture");
+    // 2.15 said on the screen while they were off (a stray press looked like a broken game); 3.0.22-beta.29 (the
+    // owner: «убери надпись про паузу ... пускай будет тупо старый клиент без надписи»): no line - whatever was
+    // said goes too, and nothing more is said while they are off (core/overlay_line Notes)
+    notes_.toggled();
+    fps_.setNote(notes_.shown());
+    // 3.0.22-beta.25: and the old client's interface - the driver's parts off, the game's windows back (ui below)
+    classicFresh_ = false;
+    if (!enhanced_) LOG_INFO("compare key: the old client's interface too - the driver's windows and bars off");
+}
+
 void Context::present(const Rect& source, bool waitForVblank) {
     dx7::flushGroundBatch();  // 3.0.19-beta.50: the gathered ground cells into the frame before it goes
     dx7::setGroundBatch(config.batchGround);  // [quality] batch_ground, for the next frame
@@ -1025,27 +1049,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // no interface filter, no sharpening - and on again, to compare without a restart.
     const bool keyDown = window && GetForegroundWindow() == window &&
                          (GetAsyncKeyState(VK_PAUSE) < 0 || GetAsyncKeyState(VK_SCROLL) < 0);
-    if (compareKey_.pressed(keyDown)) {
-        enhanced_ = !enhanced_;
-        // 3.0.22-beta.30 (the owner's video session: «выключается режим фото» after Pause): the photo mode told too
-        LOG_INFO("compare key: improvements %s (the photo mode %s)", enhanced_ ? "on" : "off", photo_ ? "on" : "off");
-        photoToldFrames_ = photo_ ? 3 : 0;
-        // 3.0.22-beta.18 (the owner's R-WSFMDB: «когда отключаешь графику то все нововведения отключались совсем и
-        // работала старая графика»): the 3D view too - the game's own camera while they are off; 3.0.22-beta.30 (the
-        // owner's video session: «было первое лицо, становится вид из-за спины»): held as it is and back the same -
-        // the view, the free camera and its flight, the look, the zoom (it was turned off and asked anew); the own
-        // models and the 3D view's thin ground follow enhanced_ below
-        view3dwin::hold(!enhanced_, enhanced_ ? "the compare key - the improvements back"
-                                              : "the compare key (Pause, Scroll Lock) - the game's own picture");
-        // 2.15 said on the screen while they were off (a stray press looked like a broken game); 3.0.22-beta.29 (the
-        // owner: «убери надпись про паузу ... пускай будет тупо старый клиент без надписи»): no line - whatever was
-        // said goes too, and nothing more is said while they are off (core/overlay_line Notes)
-        notes_.toggled();
-        fps_.setNote(notes_.shown());
-        // 3.0.22-beta.25: and the old client's interface - the driver's parts off, the game's windows back (ui below)
-        classicFresh_ = false;
-        if (!enhanced_) LOG_INFO("compare key: the old client's interface too - the driver's windows and bars off");
-    }
+    if (compareKey_.pressed(keyDown)) toggleCompare();
     const Config& ui = interfaceConfig();  // 3.0.22-beta.25: the interface's settings (Pause: the old client's)
     // 0.54: Ctrl+Shift+F11 - the frame counter
     const bool fpsDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
@@ -1065,6 +1069,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
         LOG_INFO("photo mode: %s (Ctrl+Alt+F12)", photo_ ? "on - the game's interface, the cursor and the panel hidden"
                                                          : "off");
     }
+    // 3.0.22-beta.32 (the owner 20.11: «пускай будет мсп у всех»): [mcp] - the MCP server for an AI helper; its calls
+    // run here, on the game's thread (win/context_mcp)
+    mcpwin::frame(config.mcpEnabled, config.mcpPort, gameDir(),
+                  [this](const std::string& t, const json::Value& a) { return mcpCall(t, a); });
     // 3.0.13-beta.16: Ctrl+Alt+F11 - a big shot: three frames at 200 % without the interface, the last one saved
     const bool bigDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
                          GetAsyncKeyState(VK_MENU) < 0 && GetAsyncKeyState(VK_F11) < 0;
@@ -1173,6 +1181,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // Stage 3: the window's real pixels and the scale for them. The first present switches from the game's size:
     // the start-up calibration has run by then (spec §4.3).
     const SIZE out = window ? clientPixels(window, config.highResolution) : SIZE{shadow.width(), shadow.height()};
+    if (screenshot.empty()) screenshot = mcpwin::shotWanted(int(out.cx));  // 3.0.22-beta.32: the MCP's
     // Part 3: DLSS draws the world at its own size and shows it at the picture's - no supersampling on top of it
     // (DLAA at 150% would draw 2.25 times the pixels for nothing).
     const bool big = bigShot_ > 0;  // 3.0.13-beta.16: a big shot draws the world at 200 % itself
