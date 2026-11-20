@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.32 — what's new · 2026-11-20
+
+MCP: an AI helper drives the game.
+
+- **MCP control for an AI helper** - a new switch in Alt+O → «Diagnostics» (in the file: `[mcp] enabled = 1`), off by default. A helper on this computer (Claude and the like) connects to 127.0.0.1:8770 and can see the picture, write in the chat (@warp and the like), walk to a cell, turn the 3D view on and turn its camera, Pause, the photo mode, change the settings. Web pages cannot connect.
+
 # uaRO Graphics 3.0.22-beta.31 — what's new · 2026-11-20
 
 A crash at a fly wing on level 99.
