@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.31 — what's new · 2026-11-20
+
+A crash at a fly wing on level 99.
+
+- **A teleport within the map (Fly Wing, Teleport) by a level 99 character** no longer crashes the game: at a rare moment uaRO.exe asked the character for its aura while making it anew (R-JBG5MM).
+
 # uaRO Graphics 3.0.22-beta.30 — what's new · 2026-11-20
 
 Pause and the 3D view: the same camera.
