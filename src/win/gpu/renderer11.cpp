@@ -2700,7 +2700,12 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         pmark(effectName11(kTimeMist11));
         applyMist();  // 2.5
     }
-    if (worldDrawn_ && !sky3dDone_) applySky3d();  // 3.0.19-beta.6
+    if (worldDrawn_ && !sky3dDone_) {  // 3.0.19-beta.6
+        // 3.0.22-beta.42 (the owner's graphics test R-GGW5Z2: «mists 3.61» with the effects off): the sky's own mark -
+        // it was counted into the mists' (they end at once when off)
+        pmark("the sky and the horizon");
+        applySky3d();
+    }
     if (worldDrawn_ && !shaftsDone_) {
         pmark(effectName11(kTimeShafts11));
         applyShafts();  // 2.5.5
