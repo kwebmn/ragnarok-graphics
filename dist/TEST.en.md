@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.34 — what's new · 2026-11-20
+
+The login in a window.
+
+- **«Choose an account» in a window**: the cards and the buttons now fit a window of any size - nothing cut at the right, nothing over the news, the view switch and the server's status at the foot.
+
 # uaRO Graphics 3.0.22-beta.33 — what's new · 2026-11-20
 
 MCP: the cinema camera and the time.
