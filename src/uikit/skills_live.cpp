@@ -24,10 +24,11 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-hit="viewtree" data-class-on="tree" data-class-hot="treeHot">{{treeWord}}</div></div>
 <div class="x" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
 <div class="tabs"><div class="tab" data-for="t, i : tabs" data-hit="tab" data-attr-data-index="i" data-class-on="t.on"
-  data-class-hot="t.hot">{{t.name}}</div></div>
+  data-class-hot="t.hot" data-class-gone="t.name == ''">{{t.name}}</div></div>
 <div class="notice" data-if="notice != ''" data-hit="notice">{{notice}}</div>
-<div class="choices" data-if="choices.size > 1"><div class="choice" data-for="c, i : choices" data-hit="choice"
-  data-attr-data-index="i" data-class-on="c.on" data-class-hot="c.hot">{{c.name}}</div></div>
+<div class="choices" data-if="choiceCount > 1"><div class="choice" data-for="c, i : choices" data-hit="choice"
+  data-attr-data-index="i" data-class-on="c.on" data-class-hot="c.hot" data-class-gone="c.name == ''">{{c.name}}</div>
+</div>
 <div class="body"><div class="area" data-hit="list">
 <div class="rows" data-if="!tree" data-class-scrolls="scrollable"><div class="row" data-for="r : rows"
   data-hit="row" data-attr-data-index="r.index" data-class-unused="!r.used" data-class-hot="r.hot"
@@ -214,6 +215,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("viewH", &m.viewH);
     c.Bind("tabs", &m.tabs);
     c.Bind("choices", &m.choices);
+    c.Bind("choiceCount", &m.choiceCount);
     c.Bind("rows", &m.rows);
     c.Bind("links", &m.links);
     c.Bind("nodes", &m.nodes);
@@ -252,6 +254,9 @@ void fill(Model& m, const kw::Layout& L, const kw::Data& d, const kw::Show& sh, 
     if (tab && tab->choices.size() > 1)
         for (size_t i = 0; i < tab->choices.size(); ++i)
             m.choices.push_back(TabV{tab->choices[i], int(i) == tab->chosen, int(i) == sh.hoverChoice});
+    // 3.0.22-beta.36 (the owner over the MCP: two empty job buttons on «Archer» after «Next»): the row by the real
+    // count, the kept-long list's empty ones hidden (class gone)
+    m.choiceCount = int(m.choices.size());
     keepLength(m.choices, hadChoices);
     const int count = tab ? int(tab->skills.size()) : 0;
     m.scrollable = !sh.tree && count > kw::kRows;

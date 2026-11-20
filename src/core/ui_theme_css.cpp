@@ -1090,6 +1090,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
                border: 0.0833rem #ffffff29; background-color: #ffffff0a; color: #9aa3b5; box-sizing: border-box; }
 .skl .choice.hot { background-color: #ffffff1a; }
 .skl .choice.on { border-color: #f3c653cc; background-color: #c9a55b38; color: #eef2f8; font-weight: bold; }
+.skl .tab.gone, .skl .choice.gone { display: none; }
 .skl .body { display: flex; margin: 0.5rem 1.3333rem 0 1.3333rem; height: 30.6667rem; }
 .skl .area { display: block; position: relative; flex: 1; height: 30.6667rem; }
 .skl .rows { display: block; }

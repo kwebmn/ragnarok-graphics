@@ -173,3 +173,43 @@ TEST(uikit_skills_tree_clipped_at_its_view) {
     }
     rmlhost::close(doc);
 }
+
+// 3.0.22-beta.36 (the owner 20.11 over the MCP: «Skills» -> «Archer» after «Next» showed two empty job buttons): the
+// job choices' row only for a tab with two or more - the list kept long for RmlUi counts not
+TEST(uikit_skills_job_choices_go_with_their_tab) {
+    kw::Data d = data();
+    kw::Tab next;
+    next.name = "Next";
+    next.next = true;
+    next.choices = {"Hunter", "Dancer"};
+    kw::Skill k;
+    k.id = 100;
+    k.name = "Skid Trap";
+    k.most = 5;
+    next.skills.push_back(k);
+    d.tabs.push_back(next);
+    kw::Show sh;
+    sh.tab = 2;
+    kw::Layout L = kw::layout(0, 0, 1, d, sh, texts(), measure);
+    static sl::Model m;
+    sl::fill(m, L, d, sh, texts(), measure, none, glyph);
+    std::string error;
+    Rml::ElementDocument* doc =
+        rmlhost::load(sl::rml(), [&](Rml::DataModelConstructor& c) { sl::bind(c, m); }, 50, 40, &error);
+    CHECK_EQ(error, std::string());
+    CHECK(sl::refit(doc, L));
+    CHECK_EQ(L.choices.size(), size_t(2));  // «Next»: Hunter, Dancer
+    sh.tab = 0;                              // «Swordman»: no choice
+    L = kw::layout(0, 0, 1, d, sh, texts(), measure);
+    sl::fill(m, L, d, sh, texts(), measure, none, glyph);
+    rmlhost::update();
+    CHECK(sl::refit(doc, L));
+    CHECK_EQ(L.choices.size(), size_t(0));
+    d.tabs.pop_back();  // «Next» gone (no new skills there): two tabs, none empty after them
+    L = kw::layout(0, 0, 1, d, sh, texts(), measure);
+    sl::fill(m, L, d, sh, texts(), measure, none, glyph);
+    rmlhost::update();
+    CHECK(sl::refit(doc, L));
+    CHECK_EQ(L.tabs.size(), size_t(2));
+    rmlhost::close(doc);
+}

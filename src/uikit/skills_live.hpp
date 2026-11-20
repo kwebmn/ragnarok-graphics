@@ -62,6 +62,7 @@ struct Model {
     float thumbTop = 0, thumbH = 0;
     float viewW = 0, viewH = 0, contentW = 0;  // the tree's view and the list's width
     std::vector<TabV> tabs, choices;
+    int choiceCount = 0;  // 3.0.22-beta.36: the shown tab's job choices (the list may be kept longer for RmlUi)
     std::vector<RowV> rows;
     std::vector<BoxV> links, nodes, bars;
     std::vector<IconV> nodeIcons;
