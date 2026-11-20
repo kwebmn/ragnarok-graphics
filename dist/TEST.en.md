@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.33 — what's new · 2026-11-20
+
+MCP: the cinema camera and the time.
+
+- **MCP control**: a helper now turns the free camera on and moves it by cells along its look (not through walls), puts the flight's points, starts and stops the flight, and runs the time of day fast, holds it or gives it back to the clock (as Ctrl+Shift+T).
+
 # uaRO Graphics 3.0.22-beta.32 — what's new · 2026-11-20
 
 MCP: an AI helper drives the game.
