@@ -51,14 +51,6 @@ Layout layout(int targetW, int targetH, float scale, const Content& c) {
     L.h = int(std::ceil((c.news.empty() ? kStripH : kStripNewsH) * s));
     L.x = 0;
     L.y = targetH - L.h;
-    if (!statusText.empty()) {
-        const float text = panel::wordsWidth(statusText, kPx * s, false);
-        const float w = kPad * s + kDot * s + kDotGap * s + text + kPad * s;
-        const float top = float(L.h) - kEdge * s - kPillH * s;
-        L.status = panel::Box{std::round((float(targetW) - w) / 2), top, std::ceil(w), kPillH * s};
-        L.statusDot = panel::Box{L.status.x + kPad * s, top + (kPillH - kDot) * s / 2, kDot * s, kDot * s};
-        L.statusText = panel::Box{L.statusDot.x + (kDot + kDotGap) * s, top, text + 2 * s, kPillH * s};
-    }
     const float top = float(L.h) - kEdge * s - kPillH * s;
     for (int i = 0; i < 3; ++i)
         L.langSeg[i] = panel::Box{float(targetW) - kSide * s - (3 - i) * kLangW * s, top, kLangW * s, kPillH * s};
@@ -72,6 +64,23 @@ Layout layout(int targetW, int targetH, float scale, const Content& c) {
         const float w = std::max(kViewW * s, panel::wordsWidth(c.viewNames[i], kSegPx * s, true) + 26 * s);
         L.viewSeg[i] = panel::Box{x, top, w, kPillH * s};
         x += w;
+    }
+    if (!statusText.empty()) {
+        // 3.0.22-beta.38 (the owner: «посмотри экран входа» - «Продовжити» under it in his window): in the strip's
+        // middle where it is free, else in the middle of the room between the views and the languages, its words cut
+        // past that room; no room - no pill
+        const float views = viewLabel.empty() && c.viewNames[0].empty() ? kSide * s : x;
+        const float from = views + kLabelGap * s, to = L.langSeg[0].x - kLabelGap * s;
+        const float fixed = kPad * s + kDot * s + kDotGap * s + kPad * s;
+        const float text = std::min(panel::wordsWidth(statusText, kPx * s, false), std::max(0.0f, to - from - fixed));
+        const float w = fixed + text;
+        float at = std::round((float(targetW) - w) / 2);
+        if (at < from || at + w > to) at = std::round(from + (to - from - w) / 2);
+        if (text >= 40 * s) {
+            L.status = panel::Box{at, top, std::ceil(w), kPillH * s};
+            L.statusDot = panel::Box{L.status.x + kPad * s, top + (kPillH - kDot) * s / 2, kDot * s, kDot * s};
+            L.statusText = panel::Box{L.statusDot.x + (kDot + kDotGap) * s, top, text, kPillH * s};
+        }
     }
     if (!c.news.empty()) {  // 3.0.11-beta.174: the title as long as the screen lets it, the link whole after it
         const float link = c.allNews.empty() ? 0.0f : panel::wordsWidth(c.allNews, kLinkPx * s, false);
@@ -99,8 +108,9 @@ Part hitTest(const Layout& L, float x, float y) {
 
 std::vector<Words> words(const Layout& L, const Show& sh) {
     std::vector<Words> out;
-    if (L.status.w > 0 && !sh.status.empty())
-        out.push_back(Words{L.statusText, sh.status, kWords, kPx * L.s, false, Align::Left});
+    if (L.status.w > 0 && !sh.status.empty())  // 3.0.22-beta.38: cut to its room
+        out.push_back(Words{L.statusText, fit(sh.status, kPx * L.s, L.statusText.w), kWords, kPx * L.s, false,
+                            Align::Left});
     for (int i = 0; i < 3; ++i)  // 3.0.11-beta.174: the language's segments
         out.push_back(Words{L.langSeg[i], kLangNames[i], i == sh.lang ? kChosenWords : kMuted, kSegPx * L.s,
                             i == sh.lang, Align::Center});

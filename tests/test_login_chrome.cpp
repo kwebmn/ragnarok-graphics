@@ -87,3 +87,25 @@ TEST(login_chrome_view_segments_fit_their_words) {
     for (int i = 1; i < 3; ++i) CHECK(std::fabs(L.viewSeg[i].x - (L.viewSeg[i - 1].x + L.viewSeg[i - 1].w)) < 0.5f);
     CHECK(L.viewSeg[0].x > L.viewLabel.x + L.viewLabel.w - 0.5f);
 }
+
+// 3.0.22-beta.38 (the owner 20.11, «посмотри экран входа» - his 2040 x 1147 window in Ukrainian: «Продовжити» under the
+// server's status): the status pill clear of the views' switch and the languages - in the middle of the room between
+// them when the strip's middle is taken; past that room its words cut, no room at all - no pill
+TEST(login_chrome_status_clear_of_the_switches) {
+    loginchrome::Content c;
+    c.status = "Сервер працює · 271 гравців онлайн · пінг 31 мс";
+    c.viewLabel = "Вигляд";
+    c.viewNames[0] = "Класичний";
+    c.viewNames[1] = "Полиця";
+    c.viewNames[2] = "Продовжити";
+    const loginchrome::Layout L = loginchrome::layout(2040, 1147, 2.0f, c);
+    CHECK(L.status.w > 0);
+    CHECK(L.status.x >= L.viewSeg[2].x + L.viewSeg[2].w);
+    CHECK(L.status.x + L.status.w <= L.langSeg[0].x);
+    CHECK(L.statusText.x + L.statusText.w <= L.status.x + L.status.w + 0.5f);
+    const loginchrome::Layout wide = loginchrome::layout(3840, 2160, 2.0f, c);  // room: in the strip's middle
+    CHECK(std::abs(wide.status.x + wide.status.w / 2 - 1920) < 1.5f);
+    const loginchrome::Layout narrow = loginchrome::layout(1500, 900, 2.0f, c);
+    CHECK(narrow.status.w == 0 || (narrow.status.x >= narrow.viewSeg[2].x + narrow.viewSeg[2].w &&
+                                   narrow.status.x + narrow.status.w <= narrow.langSeg[0].x));
+}
