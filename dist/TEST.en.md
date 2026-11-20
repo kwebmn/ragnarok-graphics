@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.37 — what's new · 2026-11-20
+
+The AI helper's checks - in the background.
+
+- **Control over MCP in the background**: the helper's keys and clicks are now given to the game from inside. Its window may stay behind others, and the player's mouse and keyboard take no part: the PC can be used while the helper checks the game. Only a minimised game is out of reach.
+
 # uaRO Graphics 3.0.22-beta.36 — what's new · 2026-11-20
 
 Interface fixes found while checking over the MCP.
