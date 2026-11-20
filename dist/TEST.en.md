@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.43 — what's new · 2026-11-21
+
+A log to find crashes from memory running out.
+
+- **The log** now tells every 30 s not only how much memory the game has left but who holds it: its own data, the files loaded in (the game's archives, the texture pack) and the modules - the largest by name. It helps find what takes the memory in the big towns.
+
 # uaRO Graphics 3.0.22-beta.42 — what's new · 2026-11-20
 
 The bars over the monsters in the 3D view and a log to find crashes.
