@@ -11,6 +11,7 @@
 #include "win/chat_wheel.hpp"
 #include "win/code_page.hpp"
 #include "win/context.hpp"
+#include "win/dpi.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/mcp_server.hpp"
@@ -97,15 +98,12 @@ mcp::CallResult Context::mcpCall(const std::string& tool, const json::Value& arg
         picture.set("timelapse", lapse == 1 ? "running" : lapse == 2 ? "held" : "off");
         s.set("picture", picture);
         if (window) {  // 3.0.22-beta.35 (the owner's window without its title): the window as Windows has it
-            RECT c{}, r{};
-            GetClientRect(window, &c);
-            GetWindowRect(window, &r);
+            // 3.0.22-beta.36: its real pixels - the picture screenshots come from (the game's thread is told points)
+            const SIZE px = clientPixels(window, true);
             const LONG style = GetWindowLongA(window, GWL_STYLE);
             json::Value w = json::Value::object();
-            w.set("width", int(c.right));
-            w.set("height", int(c.bottom));
-            w.set("x", int(r.left));
-            w.set("y", int(r.top));
+            w.set("width", int(px.cx));
+            w.set("height", int(px.cy));
             w.set("frame", (style & WS_CAPTION) == WS_CAPTION);
             w.set("front", GetForegroundWindow() == window);
             w.set("minimised", IsIconic(window) != 0);

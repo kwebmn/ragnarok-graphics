@@ -40,6 +40,22 @@ INPUT mouseInput(DWORD flags, LONG dx = 0, LONG dy = 0) {
 
 std::string pair(long a, long b) { return std::to_string(a) + "," + std::to_string(b); }
 
+// 3.0.22-beta.36 (20.11: the owner moved his mouse during the clicks - two went where his hand put the cursor): the
+// press only while the cursor is still where it was put, over the game's own window (not one above it), the game in
+// front
+bool stillThere(HWND game, POINT p) {
+    POINT now{};
+    if (!ready(game).empty() || !GetCursorPos(&now) || std::labs(now.x - p.x) > 1 || std::labs(now.y - p.y) > 1)
+        return false;
+    DWORD pid = 0;
+    const HWND under = WindowFromPoint(p);
+    if (under) GetWindowThreadProcessId(under, &pid);
+    return under && pid == GetCurrentProcessId();  // the game's window or one of ours over it
+}
+
+const char* kMoved = "no click made: the mouse moved (the player's hand?), another window over the place or the game "
+                     "not in front any more - ask again when the mouse is left alone";
+
 }  // namespace
 
 std::string ready(HWND window) {
@@ -59,9 +75,16 @@ mcp::CallResult key(const Game& g, const mcp::KeyCombo& k, const std::string& wo
     if (k.shift) mods.push_back(VK_SHIFT);
     if (k.alt) mods.push_back(VK_MENU);
     int sent = 0;
+    size_t held = 0;
     for (int m : mods) {
         sent += send(keyInput(m, false, false));
+        ++held;
         Sleep(15);
+    }
+    if (!ready(g.window).empty()) {  // 3.0.22-beta.36: the game left the front meanwhile - its keys let go, no more
+        for (size_t i = held; i-- > 0;) send(keyInput(mods[i], true, false));
+        LOG_INFO("mcp: key %s - not pressed, the game not in front any more", words.c_str());
+        return said("no key pressed: the game is not in front any more", true);
     }
     sent += send(keyInput(k.vk, false, k.extended));
     Sleep(70);  // held for a few frames: the game reads its keys' state each frame
@@ -106,6 +129,13 @@ mcp::CallResult click(const Game& g, double x, double y, int width, bool right, 
     int sent = 0;
     for (int i = 0; i < (twice ? 2 : 1); ++i) {
         if (i) Sleep(70);
+        if (!stillThere(g.window, p)) {  // 3.0.22-beta.36
+            POINT now{};
+            GetCursorPos(&now);
+            LOG_INFO("mcp: a click at %s not made (press %d): the cursor at %s, the game %s", pair(p.x, p.y).c_str(),
+                     i + 1, pair(now.x, now.y).c_str(), ready(g.window).empty() ? "in front" : "not in front");
+            return said(i ? std::string("the first click made, the second not: ") + kMoved : kMoved, true);
+        }
         sent += send(mouseInput(down));
         Sleep(60);
         sent += send(mouseInput(up));
