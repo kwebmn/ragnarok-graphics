@@ -278,21 +278,29 @@ std::vector<Words> words(const Layout& L, const std::vector<Card>& cards, const 
     return out;
 }
 
-CharLayout characterRows(int targetW, int targetH, float scale, const std::vector<int>& charsPerLogin, int first) {
-    constexpr float kCardW2 = 200, kCardH2 = 120, kGap2 = 14, kLabelH = 22, kRowGap = 16, kArrow = 28;
+CharLayout characterRows(int targetW, int targetH, float scale, const std::vector<int>& charsPerLogin, int first,
+                         float below) {
+    // 3.0.22-beta.39 (the owner's «Персонажі» in a window: «Lord Knight · 99» cut, the fourth row under the strip):
+    // the cards 250 wide (their words' room 114), the rows in sight as many as fit above `below`, the width fitted
+    constexpr float kCardW2 = 250, kCardH2 = 120, kGap2 = 14, kLabelH = 22, kRowGap = 16, kArrow = 28;
     CharLayout L;
-    const float s = scale > 0 ? scale : 1.0f;
+    const float w1 = (kCharsInRow + 1) * kCardW2 + kCharsInRow * kGap2;
+    float s = scale > 0 ? scale : 1.0f;
+    s = std::max(0.5f, std::min(s, (float(targetW) - 2 * kSide * s) / w1));
     L.s = s;
     const int count = int(charsPerLogin.size());
-    L.first = std::clamp(first, 0, std::max(0, count - kRowsInSight));
-    const int inSight = std::min(kRowsInSight, count - L.first);
-    const float w = ((kCharsInRow + 1) * kCardW2 + kCharsInRow * kGap2) * s;
     const float rowH = (kLabelH + kCardH2 + kRowGap) * s;
-    const float h = (kTitleH + kTitleGap) * s + kArrow * s + std::max(1, inSight) * rowH + kArrow * s;
+    const float head = (kTitleH + kTitleGap) * s + 2 * kArrow * s;  // the title, the arrows over and under the rows
+    const float room = float(targetH) - below - 2 * kMargin * s - head;
+    const int fit = std::clamp(int(std::floor(room / rowH)), 1, kRowsInSight);
+    L.first = std::clamp(first, 0, std::max(0, count - fit));
+    const int inSight = std::min(fit, count - L.first);
+    const float w = w1 * s;
+    const float h = head + std::max(1, inSight) * rowH;
     L.w = int(std::ceil(w));
     L.h = int(std::ceil(h));
     L.x = std::max(0, targetW / 2 - L.w / 2);
-    L.y = std::max(0, targetH / 2 - L.h / 2);
+    L.y = std::max(0, int(std::lround((float(targetH) - below) / 2)) - L.h / 2);
     L.title = panel::Box{0, 0, w, kTitleH * s};
     L.back = panel::Box{0, 0, 120 * s, kTitleH * s};
     float y = (kTitleH + kTitleGap) * s;
@@ -338,32 +346,42 @@ CharHit characterHit(const CharLayout& L, float x, float y) {
     return h;
 }
 
+namespace {
+// 3.0.22-beta.39: a label's words 10 in from its pill's left
+panel::Box labelBox(const panel::Box& b, float s) { return panel::Box{b.x + 10 * s, b.y, b.w - 20 * s, b.h}; }
+std::string rowLabel(const CharLogin& g, const CharTexts& t) {
+    return g.hasPassword ? g.login : g.login + " · " + t.noPassword;
+}
+}  // namespace
+
 std::vector<Words> characterWords(const CharLayout& L, const std::vector<CharLogin>& logins, const CharShow& sh,
                                   const CharTexts& t) {
     std::vector<Words> out;
     const float s = L.s;
-    out.push_back(Words{L.title, t.title, kText, 17 * s, true, Align::Center});
-    out.push_back(Words{L.back, t.back, sh.hoverBack ? kGold2 : kLink, 13.5f * s, false, Align::Left});
+    // 3.0.22-beta.39: the words whole or cut with «…» (nothing past its box); «‹ Акаунти» and the logins on their
+    // dark pills (sheetOfCharacters), 10 in from them
+    const auto put = [&](const panel::Box& b, const std::string& text, uint32_t rgb, float px, bool bold, Align a) {
+        out.push_back(Words{b, panel::fitWords(text, px, bold, b.w), rgb, px, bold, a});
+    };
+    put(L.title, t.title, kText, 17 * s, true, Align::Center);
+    put(labelBox(L.back, s), t.back, sh.hoverBack ? kGold2 : kLink, 13.5f * s, false, Align::Left);
     for (size_t i = 0; i < L.rows.size(); ++i) {
         const size_t login = size_t(L.first) + i;
         if (login >= logins.size()) break;
         const CharLogin& g = logins[login];
         const CharRow& r = L.rows[i];
-        out.push_back(Words{r.label, g.hasPassword ? g.login : g.login + " · " + t.noPassword, kMuted, 13 * s, true,
-                            Align::Left});
+        put(labelBox(r.label, s), rowLabel(g, t), kMuted, 13 * s, true, Align::Left);
         for (size_t c = 0; c < r.cards.size() && c < g.chars.size(); ++c) {
             const siteapi::SiteChar& ch = g.chars[c];
             const panel::Box& b = r.cards[c];
             const float tx = b.x + b.h + 10 * s, tw = b.w - b.h - 16 * s;
-            out.push_back(Words{panel::Box{tx, b.y + 14 * s, tw, 22 * s}, ch.name, kText, 15 * s, true, Align::Left});
-            out.push_back(Words{panel::Box{tx, b.y + 40 * s, tw, 18 * s},
-                                ch.job + (ch.level > 0 ? " · " + std::to_string(ch.level) : ""), kMuted, 12 * s, false,
-                                Align::Left});
-            out.push_back(Words{panel::Box{tx, b.y + 62 * s, tw, 18 * s}, capital(ch.map), kLogin, 12 * s, false,
-                                Align::Left});
+            put(panel::Box{tx, b.y + 14 * s, tw, 22 * s}, ch.name, kText, 15 * s, true, Align::Left);
+            put(panel::Box{tx, b.y + 40 * s, tw, 18 * s},
+                ch.job + (ch.level > 0 ? " · " + std::to_string(ch.level) : ""), kMuted, 12 * s, false, Align::Left);
+            put(panel::Box{tx, b.y + 62 * s, tw, 18 * s}, capital(ch.map), kLogin, 12 * s, false, Align::Left);
         }
-        out.push_back(Words{r.newChar, t.newChar, sh.hoverRow == int(login) && sh.hoverCard < 0 ? kGold2 : kText,
-                            14 * s, true, Align::Center});
+        put(r.newChar, t.newChar, sh.hoverRow == int(login) && sh.hoverCard < 0 ? kGold2 : kText, 14 * s, true,
+            Align::Center);
     }
     if (L.up.w > 0) out.push_back(Words{L.up, "↑", kText, 16 * s, false, Align::Center});
     if (L.down.w > 0) out.push_back(Words{L.down, "↓", kText, 16 * s, false, Align::Center});
@@ -538,10 +556,18 @@ void sheetOf(sheet::Model& m, const Layout& L, const std::vector<Card>& cards, c
     link(L.linkLogin, t.linkLogin, 13, false, Part::LinkLogin);
 }
 
-void sheetOfCharacters(sheet::Model& m, const CharLayout& L, const std::vector<CharLogin>& logins,
+void sheetOfCharacters(sheet::Model& m, const CharLayout& L, const std::vector<CharLogin>& logins, const CharTexts& t,
                      const CharShow& sh) {
     sheet::Layer* to = &m.under;
     const float s = L.s;
+    // 3.0.22-beta.39 (over the picture they were hardly read): «‹ Акаунти» and each row's login on a dark pill
+    const auto pill = [&](const panel::Box& b, const std::string& text, float px, bool bold) {
+        const float w = std::min(b.w, panel::wordsWidth(text, px, bold) + 20 * s);
+        sheet::rect(*to, panel::Box{b.x, b.y + 2 * s, w, b.h - 4 * s}, (b.h - 4 * s) / 2, kPill, 0.62f);
+    };
+    pill(L.back, t.back, 13.5f * s, false);
+    for (size_t i = 0; i < L.rows.size() && size_t(L.first) + i < logins.size(); ++i)
+        pill(L.rows[i].label, rowLabel(logins[size_t(L.first) + i], t), 13 * s, true);
     for (size_t i = 0; i < L.rows.size(); ++i) {
         const int login = L.first + int(i);
         const CharRow& r = L.rows[i];

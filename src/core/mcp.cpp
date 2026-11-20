@@ -122,6 +122,13 @@ const std::vector<Tool>& table() {
          "inside: its window may stay behind other windows (not minimised); the player's keyboard untouched.",
          R"({"type":"object","properties":{"keys":{"type":"string","minLength":1,"maxLength":40}},)"
          R"("required":["keys"]})"},
+        // 3.0.22-beta.39: what the interface is made of now - to find why a part shows where it should not
+        {"windows",
+         "The interface's parts now: the movable windows the top first with their boxes, the window whose corner "
+         "grip shows, the uaUI documents shown in their order (name, layer, z-index, box) and the element the "
+         "game's cursor is over. Boxes in the picture's pixels: a screenshot `width` wide shows them times width / "
+         "the picture's width.",
+         R"({"type":"object","properties":{}})"},
         {"click",
          "A mouse click at (x, y) of a screenshot `width` wide (the width the screenshot came in), as the player "
          "would: `button` left (the default) or right, `double` for a double click. Given to the game from inside: "

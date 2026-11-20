@@ -682,6 +682,19 @@ Measure g_measure = nullptr;
 
 void setMeasure(Measure m) { g_measure = m; }
 
+std::string fitWords(const std::string& utf8, float px, bool bold, float room) {
+    if (wordsWidth(utf8, px, bold) <= room) return utf8;
+    std::string t = utf8;
+    while (!t.empty()) {
+        size_t cut = t.size() - 1;
+        while (cut > 0 && (uint8_t(t[cut]) & 0xC0) == 0x80) --cut;
+        t.resize(cut);
+        while (!t.empty() && t.back() == ' ') t.pop_back();
+        if (wordsWidth(t + "\xE2\x80\xA6", px, bold) <= room) return t + "\xE2\x80\xA6";
+    }
+    return "\xE2\x80\xA6";
+}
+
 float wordsWidth(const std::string& utf8, float px, bool bold) {
     if (g_measure && !utf8.empty()) {
         const float w = g_measure(utf8, px, bold);

@@ -609,6 +609,44 @@ static void sizingFrame(State& s, int targetWidth, int targetHeight, double k) {
     gripDoc(z.hot ? &z.hotBox : nullptr, k);
 }
 
+json::Value describe() {
+    State& s = state();
+    const Sizing& z = sizing();
+    json::Value out = json::Value::object();
+    json::Value list = json::Value::array();
+    const auto boxed = [](json::Value& v, const winstack::Box& b) {
+        v.set("x", b.x);
+        v.set("y", b.y);
+        v.set("w", b.w);
+        v.set("h", b.h);
+    };
+    for (const Win w : s.stack.topDown()) {
+        json::Value one = json::Value::object();
+        one.set("name", std::string(nameOf(w)));
+        one.set("shown", shown(w));
+        winstack::Box b{};
+        if (boxOf(w, b)) boxed(one, b);
+        if (sizeKey(w)) one.set("size", double(sizeOf(w)));
+        list.push(one);
+    }
+    out.set("stack", list);
+    if (z.hot) {
+        json::Value g = json::Value::object();
+        g.set("window", std::string(nameOf(*z.hot)));
+        boxed(g, z.hotBox);
+        out.set("grip", g);
+    }
+    if (z.pulling) out.set("pulling", std::string(nameOf(*z.pulling)));
+    int cx = 0, cy = 0;
+    if (readHoverCursor(cx, cy)) {
+        json::Value p = json::Value::object();
+        p.set("x", int(std::lround(cx * z.k)));
+        p.set("y", int(std::lround(cy * z.k)));
+        out.set("cursor", p);
+    }
+    return out;
+}
+
 float sizeOf(winstack::Win w) {
     const char* key = sizeKey(w);
     return key ? sizing().sizes.of(key) : 1.0f;

@@ -19,7 +19,9 @@
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/time_lapse.hpp"
+#include "win/uaui.hpp"
 #include "win/view3d.hpp"
+#include "win/window_stack.hpp"
 #include "win/window_mode.hpp"
 
 namespace uagfx::win {
@@ -115,6 +117,16 @@ mcp::CallResult Context::mcpCall(const std::string& tool, const json::Value& arg
             s.set("window", w);
         }
         return said(json::dump(s));
+    }
+    if (tool == "windows") {  // 3.0.22-beta.39
+        json::Value out = json::Value::object();
+        if (window) {
+            const SIZE px = clientPixels(window, config.highResolution);
+            out.set("picture", std::to_string(px.cx) + "x" + std::to_string(px.cy));
+        }
+        out.set("windowStack", windowstack::describe());
+        out.set("uaui", uaui::describe());
+        return said(json::dump(out));
     }
     if (tool == "chat") {
         const std::string line = args["line"].asString();

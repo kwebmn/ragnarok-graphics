@@ -70,6 +70,7 @@ struct Options {
     loginerr::Field errorAt = loginerr::Field::None;
     bool note = false, back = false, drop = false;
     bool site = false;  // 3.0.11-beta.180: the site account's line
+    std::string siteOut;  // 3.0.22-beta.39: its sign out's words - its link as wide as them ("" 70)
 };
 Layout layout(int targetW, int targetH, float scale, const Options& o);
 Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt = loginerr::Field::None);

@@ -76,7 +76,10 @@ Layout layout(int targetW, int targetH, float scale, const Options& o) {
     }
     if (o.site) {  // 3.0.11-beta.180: the site account's line
         L.site = panel::Box{pad, y + 8 * s, fw, kLinkH * s};
-        L.siteOut = panel::Box{pad + fw - 70 * s, y + 8 * s, 70 * s, kLinkH * s};
+        // 3.0.22-beta.39 (the owner: two «Вийти» side by side - «Вийти з сайту» now): as wide as its words
+        const float ow =
+            o.siteOut.empty() ? 70 * s : std::min(fw / 2, panel::wordsWidth(o.siteOut, 13 * s, false) + 8 * s);
+        L.siteOut = panel::Box{pad + fw - ow, y + 8 * s, ow, kLinkH * s};
         y += 8 * s + kLinkH * s;
     }
     y += pad;

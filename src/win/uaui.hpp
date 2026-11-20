@@ -1,4 +1,5 @@
 #pragma once
+#include "core/json.hpp"
 #include <climits>
 #include <map>
 #include <vector>
@@ -79,6 +80,9 @@ void drawScene(FrameRecord& record, gpu::Renderer& renderer, const panel::Pictur
 // 3.0.18-beta.57: the words' width as uaUI draws them at `px` (< 0: not started)
 float textWidth(const std::string& utf8, float px, bool bold);
 float dp();    // the target's pixels a concept pixel (the theme's 1dp)
+// 3.0.22-beta.39 (the MCP's `windows`): the documents shown in RmlUi's order - name, layer, z-index, box - and the
+// element the pointer is over (its document, tag, id, classes)
+json::Value describe();
   // the game's words (its code page) as UTF-8
 // A picture of the driver's as an <img> source - «pic:<address>:<generation>»; another generation is another texture
 // (the one of `previous` let go when it changes)
@@ -95,6 +99,7 @@ public:
     bool made() const { return doc_ != nullptr; }
     void show(bool on);  // shown with the theme's fade in (its body's class «away» taken off the next frame)
     bool shown() const { return shown_; }
+    int zIndex() const { return z_; }  // 3.0.22-beta.39: -1 never raised
     // 3.0.18-beta.172: each one counted - the log's uaUI line tells the parts that change their data the most.
     // 3.0.18-beta.242 (R-F8FGR4): nothing before make() - a part that sets its model's words before its document is
     // made (the reference's first open: its search's words emptied) wrote through RmlUi's empty handle (a read at 0x28);

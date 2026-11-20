@@ -1078,6 +1078,7 @@ static void frameInner(HWND game, bool on, bool status, bool news, loginview::Vi
     o.back = s.fields.shelfBack;
     o.drop = any;
     o.site = s.fields.site != lc::SiteLine::None;
+    o.siteOut = say(settings::Text::SiteOut);  // 3.0.22-beta.39: its link as wide as its words
     s.layout = lc::layout(targetWidth, targetHeight, s.scale, o);
     s.options = o;
     if (s.live.shown()) uikit::login::refit(s.live.doc.doc(), s.layout);  // 3.0.18-beta.107: x, y core logincard's

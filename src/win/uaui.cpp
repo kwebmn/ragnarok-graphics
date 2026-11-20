@@ -1949,6 +1949,41 @@ void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     else if (uapad::runtime::look().shown) s.context->ProcessMouseLeave();
 }
 
+json::Value describe() {
+    State& s = state();
+    json::Value out = json::Value::object();
+    json::Value docs = json::Value::array();
+    for (Doc* d : s.docs) {
+        if (!d->made() || !d->shown()) continue;
+        json::Value one = json::Value::object();
+        one.set("name", d->name);
+        one.set("layer", std::string(d->window ? "windows" : d->top ? "top" : d->world ? "world" : d->cursor ? "cursor"
+                                                                                                              : "hud"));
+        one.set("z", d->zIndex());
+        one.set("passive", d->passive);
+        int x = 0, y = 0, w = 0, h = 0;
+        if (d->box(x, y, w, h)) {
+            one.set("x", x);
+            one.set("y", y);
+            one.set("w", w);
+            one.set("h", h);
+        }
+        docs.push(one);
+    }
+    out.set("docs", docs);
+    if (s.context)
+        if (Rml::Element* e = s.context->GetHoverElement()) {
+            json::Value h = json::Value::object();
+            for (Doc* d : s.docs)
+                if (d->doc() && d->doc() == e->GetOwnerDocument()) h.set("doc", d->name);
+            h.set("tag", std::string(e->GetTagName()));
+            h.set("id", std::string(e->GetId()));
+            h.set("class", std::string(e->GetClassNames()));
+            out.set("hover", h);
+        }
+    return out;
+}
+
 void end() {
     State& s = state();
     // 3.0.18-beta.40: a document its part did not ask to show this frame (the part no longer runs: «Продовжити» after

@@ -122,7 +122,9 @@ struct CharLayout {
     int first = 0;
 };
 constexpr int kCharsInRow = 3, kRowsInSight = 4;
-CharLayout characterRows(int targetW, int targetH, float scale, const std::vector<int>& charsPerLogin, int first = 0);
+// 3.0.22-beta.39: `below` - the login's strip kept clear: as many rows in sight as fit above it, the width fitted
+CharLayout characterRows(int targetW, int targetH, float scale, const std::vector<int>& charsPerLogin, int first = 0,
+                         float below = 0);
 struct CharHit {
     int row = -1, card = -1;  // the login's (its place in charsPerLogin), its character's
     bool newChar = false, back = false, up = false, down = false;
@@ -167,7 +169,8 @@ std::vector<Words> menuWords(const MenuLayout& M, const std::vector<MenuItem>& i
 // 3.0.18-beta.41 (uaUI's «Полиця»): what paint(), paintCharacters() and paintMenu() draw, as the markup's data
 // (core/ui_sheet_model) into `m` (the caller sets its size and words)
 void sheetOf(sheet::Model& m, const Layout& L, const std::vector<Card>& cards, const Show& sh, const Texts& t);
-void sheetOfCharacters(sheet::Model& m, const CharLayout& L, const std::vector<CharLogin>& logins,
+// 3.0.22-beta.39: `t` for the dark pills under «‹ Акаунти» and the logins' names (read over the picture)
+void sheetOfCharacters(sheet::Model& m, const CharLayout& L, const std::vector<CharLogin>& logins, const CharTexts& t,
                      const CharShow& sh);
 void sheetOfMenu(sheet::Model& m, const Layout& L, const MenuLayout& M, const MenuShow& sh);
 

@@ -284,3 +284,40 @@ TEST(login_shelf_fits_a_window) {
     CHECK(old.y == 2160 / 2 - old.h / 2);  // full screen: where it always stood
     CHECK(loginshelf::fitScale(640, 360, below, 2.0f, true) >= 0.5f);  // never below the reading scale's least
 }
+
+// 3.0.22-beta.39 (the owner 20.11 over the MCP: «Персонажі» in his 2040 x 1147 window - the fourth row under the news
+// and the login's strip, «Lord Knight · 99» cut to «Lord Knight · 9»): the rows in sight as many as fit above the
+// strip (the rest by the arrows), the width fitted, a character's words whole or cut with «…»
+TEST(login_shelf_character_rows_fit_a_window) {
+    const float below = 110 * 2.0f;
+    const loginshelf::CharLayout L = loginshelf::characterRows(2040, 1147, 2.0f, {1, 1, 1, 3, 2}, 0, below);
+    CHECK(!L.rows.empty() && L.rows.size() < 5);
+    const loginshelf::CharRow& last = L.rows.back();
+    CHECK(float(L.y) + last.newChar.y + last.newChar.h <= 1147 - below + 0.5f);  // above the strip and its news
+    CHECK(L.down.w > 0);                                                       // the rest below, by the arrow
+    CHECK(float(L.y) + L.down.y + L.down.h <= 1147 - below + 0.5f);
+    const loginshelf::CharLayout narrow = loginshelf::characterRows(1300, 800, 2.0f, {3}, 0, 0);
+    CHECK(narrow.x >= 0 && narrow.x + narrow.w <= 1300);
+    loginshelf::CharLogin g;
+    g.login = "mnsword1";
+    g.hasPassword = true;
+    siteapi::SiteChar ch;
+    ch.name = "-Chaos-";
+    ch.job = "Lord Knight";
+    ch.level = 99;
+    ch.map = "morocc";
+    g.chars = {ch, ch};
+    g.chars[1].job = "Lord Knight of the very long name";
+    loginshelf::CharTexts t;
+    t.title = "Персонажі";
+    t.back = "‹ Акаунти";
+    t.newChar = "+ Новий персонаж";
+    const loginshelf::CharLayout one = loginshelf::characterRows(2040, 1147, 2.0f, {2}, 0, below);
+    bool whole = false, cut = false;
+    for (const loginshelf::Words& w : loginshelf::characterWords(one, {g}, loginshelf::CharShow{}, t)) {
+        CHECK(panel::wordsWidth(w.text, w.px, w.bold) <= w.box.w + 0.5f);  // nothing past its box
+        whole = whole || w.text == "Lord Knight · 99";
+        cut = cut || (w.text.size() > 3 && w.text.compare(w.text.size() - 3, 3, "…") == 0);
+    }
+    CHECK(whole && cut);
+}

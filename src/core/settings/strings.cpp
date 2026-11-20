@@ -6430,7 +6430,7 @@ constexpr Entry kTexts[] = {
     // 3.0.11-beta.180: the site account in the client
     {Text::SiteOffer, "Bring in all logins from the site account", "Підтягнути всі логіни з акаунта сайту",
      "Подтянуть все логины из аккаунта сайта"},
-    {Text::SiteOut, "Sign out", "Вийти", "Выйти"},
+    {Text::SiteOut, "Sign out", "Вийти з сайту", "Выйти с сайта"},  // 3.0.22-beta.39: not the game's «Вийти»
     {Text::SiteChip, "{1} · logins: {2}", "{1} · логінів: {2}", "{1} · логинов: {2}"},
     {Text::SiteTitle, "The uaro.kiev.ua account", "Акаунт сайту uaro.kiev.ua", "Аккаунт сайта uaro.kiev.ua"},
     {Text::SiteSubtitle, "All your game logins on the shelf at once", "Усі ваші ігрові логіни на полиці одним входом",

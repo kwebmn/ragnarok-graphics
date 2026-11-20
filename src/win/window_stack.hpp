@@ -1,4 +1,5 @@
 #pragma once
+#include "core/json.hpp"
 #include <windows.h>
 
 #include <optional>
@@ -34,5 +35,8 @@ bool padCross(winstack::Win from, bool right);
 // bottom right corner pulled with the mouse (a gold corner under the pointer there), kept in
 // uaro-graphics\window-sizes.txt; 1 for one never pulled or not sized so (its own scale times this)
 float sizeOf(winstack::Win w);
+// 3.0.22-beta.39 (the MCP's `windows`): the stack's windows, the top first, with their boxes (the target's
+// pixels); the window whose corner grip is shown and the one pulled; the game's cursor there
+json::Value describe();
 
 }  // namespace uagfx::win::windowstack

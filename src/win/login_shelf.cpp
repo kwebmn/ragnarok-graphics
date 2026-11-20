@@ -285,7 +285,7 @@ void model(State& s) {
         t.back = say(settings::Text::ShelfCharsBack);
         t.newChar = say(settings::Text::ShelfNewChar);
         t.noPassword = say(settings::Text::ShelfNoPasswordShort);
-        ls::sheetOfCharacters(m, L, s.charLogins, s.charShow);
+        ls::sheetOfCharacters(m, L, s.charLogins, t, s.charShow);
         for (const auto& w : ls::characterWords(L, s.charLogins, s.charShow, t)) m.words.push_back(textOf(w));
         return;
     }
@@ -325,7 +325,7 @@ void charsFrame(State& s, int targetWidth, int targetHeight) {
         s.charRows.push_back(int(i));
         s.charLogins.push_back(std::move(g));
     }
-    s.charLayout = ls::characterRows(targetWidth, targetHeight, s.scale, counts, s.charFirst);
+    s.charLayout = ls::characterRows(targetWidth, targetHeight, s.scale, counts, s.charFirst, s.below);
     s.charFirst = s.charLayout.first;
     s.charShow = ls::CharShow{};
     int cx = 0, cy = 0;

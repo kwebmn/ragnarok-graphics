@@ -147,6 +147,9 @@ bool uiFrame(State& s) {
         u.doc.dirtyAll();
     }
     u.doc.place(s.x, s.y);
+    // 3.0.22-beta.39 (the owner's window over the MCP: «Полювання» opened on the minimap, its lines under the map's
+    // marks, its ✕ the map's goal): over the minimap - its mouse first too (window_switch)
+    u.doc.raise(1);
     u.doc.show(true);
     return true;
 }

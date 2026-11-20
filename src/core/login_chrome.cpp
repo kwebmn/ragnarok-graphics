@@ -17,19 +17,8 @@ constexpr uint32_t kChosenWords = 0xF5E6BE;
 constexpr float kStripNewsH = 110, kNewsH = 30, kNewsAbove = 70, kNewsMost = 960, kNewsGap = 10, kLinkPx = 13.5f;
 constexpr uint32_t kNewsWords = 0xE6CB8A, kLink = 0x8CB8FF, kLinkHot = 0xB5D0FF;
 
-// `text` cut at whole characters to `room` with «…» after it
-std::string fit(const std::string& text, float px, float room) {
-    if (panel::wordsWidth(text, px, false) <= room) return text;
-    std::string t = text;
-    while (!t.empty()) {
-        size_t cut = t.size() - 1;
-        while (cut > 0 && (uint8_t(t[cut]) & 0xC0) == 0x80) --cut;
-        t.resize(cut);
-        while (!t.empty() && t.back() == ' ') t.pop_back();
-        if (panel::wordsWidth(t + "…", px, false) <= room) return t + "…";
-    }
-    return "…";
-}
+// `text` cut at whole characters to `room` with «…» after it (3.0.22-beta.39: panel's, shared with «Персонажі»)
+std::string fit(const std::string& text, float px, float room) { return panel::fitWords(text, px, false, room); }
 
 }  // namespace
 

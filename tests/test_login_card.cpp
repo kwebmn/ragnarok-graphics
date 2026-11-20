@@ -2,6 +2,7 @@
 // (core/login_card) - the account's and the password's fields as the game's own have them, «Запам'ятати логін»,
 // «Увійти» and «Вийти», the site's registration under them
 #include <algorithm>
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -66,3 +67,17 @@ TEST(login_card_fields_by_the_games_mask) {
     CHECK(!logincard::FieldPlaces{}.known());
 }
 
+
+// 3.0.22-beta.39 (the owner over the MCP: two «Вийти» side by side on the card - the game's and the site's): the site
+// chip's sign out says so («Вийти з сайту»), its link as wide as its words, at the line's right
+TEST(login_card_site_sign_out_fits_its_words) {
+    logincard::Options o;
+    o.site = true;
+    o.siteOut = "Вийти з сайту";
+    const logincard::Layout L = logincard::layout(2040, 1147, 2.0f, o);
+    CHECK(L.siteOut.w >= panel::wordsWidth(o.siteOut, 13 * 2.0f, false));
+    CHECK(std::fabs(L.siteOut.x + L.siteOut.w - (L.site.x + L.site.w)) < 0.5f);
+    logincard::Options none = o;
+    none.siteOut.clear();
+    CHECK(std::fabs(logincard::layout(2040, 1147, 2.0f, none).siteOut.w - 70 * 2.0f) < 0.5f);  // as before
+}
