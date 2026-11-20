@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.28 — what's new · 2026-11-20
+
+The photo mode without the lines.
+
+- **Ctrl+Alt+F12 - the photo mode**: now hides the lines in the top left corner too - «uaRO Graphics is off…» after Pause and the other passing lines. «Before / after» shots with Pause are clean now.
+
 # uaRO Graphics 3.0.22-beta.27 — what's new · 2026-11-20
 
 «Guild»: the party, positions, the window with no guild.
