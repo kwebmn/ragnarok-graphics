@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.22-beta.40 — what's new · 2026-11-20
+
+Interface fixes found while checking over the MCP.
+
+- **The players' number on the login screen** in its right form in Ukrainian and Russian («281 гравець», «22 гравці», «25 гравців»).
+- **The character block's tips** no longer show while the cursor is over a window lying over the block («Skills», «Status»…).
+- **The gold size corner** of a panel (the character block and others) no longer shows over a window covering it.
+- **For an AI helper**: the MCP can hold the game's cursor at a place without a click - to check the tips.
+
 # uaRO Graphics 3.0.22-beta.39 — what's new · 2026-11-20
 
 Interface fixes found while checking over the MCP.
