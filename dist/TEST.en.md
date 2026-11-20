@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.22-beta.38 — what's new · 2026-11-20
+
+The login screen in a window.
+
+- **The login screen's bottom row**: the server's status («Server up · … players online · ping …») no longer covers the «View» switch - in a narrow window it stands in the middle of the free room between the switch and the languages, a too long text cut.
+- With it - control over MCP in the background from 3.0.22-beta.37.
+
 # uaRO Graphics 3.0.22-beta.37 — what's new · 2026-11-20
 
 The AI helper's checks - in the background.
