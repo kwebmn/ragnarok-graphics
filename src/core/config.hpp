@@ -600,11 +600,16 @@ struct EffectSettings {
     bool skyRays = true;        // shafts: the rays from the sky over the fields
     bool treeSeasons = true;    // tree_tints: autumn's golden crowns, Lutie's rime
     bool dragonflies = true;    // butterflies: the dragonflies over the water
+    // 3.0.22-beta.30 (the owner's video session: the sky black a moment after Pause): Pause's - every effect off for
+    // now, the renderer keeping the map's own ground however long it lasts (effectsHeld)
+    bool held = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };
 // Pause (the compare key): the game's own picture - every effect off.
 EffectSettings effectsOff();
+// 3.0.22-beta.30: Pause's own - effectsOff, held
+EffectSettings effectsHeld();
 // 0.46.1: one of the effects the Direct3D 12 renderer draws itself is on (all but the aura's and the skills'
 // softness, which the game's draws get on their way).
 bool drawnByRenderer(const EffectSettings& e);

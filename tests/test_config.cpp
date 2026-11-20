@@ -2121,3 +2121,14 @@ TEST(config_interface_far_bars) {
     const settings::catalogue::Group* group = settings::catalogue::groupOf("interface.far_bars");
     CHECK(group && group->name == settings::Text::InterfaceSecFight);
 }
+
+// 3.0.22-beta.30 (the owner's video session: the sky black a moment after Pause): Pause's effects - every one off as
+// effectsOff has them, the map's own ground kept by the renderer however long Pause lasts (held), back at once
+TEST(config_pause_effects_are_off_and_held) {
+    const EffectSettings e = effectsHeld();
+    CHECK(e.held && !effectsOff().held);
+    CHECK(!e.ownGround && !drawnByRenderer(e));
+    EffectSettings same = effectsOff();
+    same.held = true;
+    CHECK(e == same && e != effectsOff());  // told to the renderer as a change of its own
+}

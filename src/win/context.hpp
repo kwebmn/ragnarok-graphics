@@ -190,7 +190,6 @@ private:
     bool enhanced_ = true;
     Config classic_;             // 3.0.22-beta.25: classicLook(config), made when asked after a change
     bool classicFresh_ = false;
-    int view3dBefore_ = 0;  // 3.0.22-beta.18: the 3D view (view3d::Mode) the compare key turned off, asked back after
     mutable EffectSettings effects_;  // 2.5.11: effects(), made from `config`
     mutable bool effectsMade_ = false;
     EffectSettings madeEffects(const EffectSettings& file) const;  // as drawn: the set, the light modes, thin grass
@@ -233,6 +232,7 @@ private:
     ToggleKey photoKey_;  // 3.0.4-beta.5: Ctrl+Alt+F12 - the photo mode
     ToggleKey bigShotKey_;  // 3.0.13-beta.16: Ctrl+Alt+F11 - a big shot
     bool photo_ = false;  // the game's interface, the windows' panel and the counter out of the picture
+    int photoToldFrames_ = 0;  // 3.0.22-beta.30: the frames after the compare key told in the log (the photo mode's)
     // 3.0.13-beta.16 (the owner's pick 20 of «50 идей»: «Режим скриншота»): Ctrl+Alt+F11 - the frames left of a big
     // shot: the world alone at 200 % (no DLSS, TAA, own interface scale), the target saved whole at the last
     int bigShot_ = 0;

@@ -243,6 +243,12 @@ EffectSettings effectsOff() {
     return e;
 }
 
+EffectSettings effectsHeld() {
+    EffectSettings e = effectsOff();
+    e.held = true;
+    return e;
+}
+
 int nightAmount(const EffectSettings& e, int hour, int minute) {
     const int strength = std::clamp(e.nightStrength, 0, 100);
     const double t = hour + minute / 60.0;
@@ -355,7 +361,7 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
         if (s.flag && this->*s.flag != o.*s.flag) return false;
         if (s.number && this->*s.number != o.*s.number) return false;
     }
-    return nightNow == o.nightNow && dayNow == o.dayNow && hallucinatingNow == o.hallucinatingNow &&
+    return nightNow == o.nightNow && dayNow == o.dayNow && hallucinatingNow == o.hallucinatingNow && held == o.held &&
            clock == o.clock && season == o.season && skillLooks == o.skillLooks && sharpSpecks == o.sharpSpecks &&
            weatherKind == o.weatherKind && tier == o.tier && preset == o.preset && grassThin == o.grassThin &&
            std::equal(groups, groups + kEffectGroups, o.groups) &&

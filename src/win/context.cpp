@@ -606,7 +606,9 @@ void Context::flush() {
     const bool world = drawnByRenderer(fx);
     // 2.5: Direct3D 11 takes it too - its water (0.99, never given it until now), haze, sky and weather
     // 3.0.20-beta.9: and the game's still models by the renderer ([view3d] own_models) - placed by this camera
-    if (renderer->remix() || (enhanced_ && (world || config.view3dOwnModels))) {
+    // 3.0.22-beta.30 (the owner's video session: «при включении Pause ... мелькают странные ракурсы сверху»): under
+    // Pause too - the renderer kept the 3D view's last camera all Pause long (its sky and haze over the old picture)
+    if (renderer->remix() || !enhanced_ || world || config.view3dOwnModels) {
         float view[12];
         float targetZ = 0;
         const bool known = readGameCamera(view);
@@ -744,7 +746,16 @@ void Context::endScene() {
     // 3.0.16-beta.7: [interface] mouse_cell - the game's cell hidden, ours drawn (win/ground_marks)
     hideGridCell(gridcell::hides(config.padWalk == PadWalk::Arrow, uapad::runtime::look().shown) ||
                  interfaceConfig().mouseCell);  // 3.0.22-beta.25: the old client's cell under Pause
-    if (photoNow()) record.dropInterface();  // 3.0.4-beta.5: the photo mode - the world alone (.16: a big shot)
+    if (photoNow()) {  // 3.0.4-beta.5: the photo mode - the world alone (.16: a big shot)
+        const size_t dropped = record.dropInterface();
+        // 3.0.22-beta.30 (the owner's video session: «выключается режим фото: возвращаются чат и окна» after Pause):
+        // the first frames after the compare key - what the photo mode left out of them
+        if (photoToldFrames_ > 0) {
+            --photoToldFrames_;
+            LOG_INFO("photo mode: %zu of the game's interface draws left out of a frame after the compare key (the "
+                     "driver's windows not drawn)", dropped);
+        }
+    }
     if (drawn && renderer && !photoNow()) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
     if (panelSlot_.endScene(drawn) && renderer && !photoNow()) {
         hidePadCursor(record, config.padWalk);  // 3.0.11-beta.102: no cursor while the controller plays
@@ -1014,18 +1025,16 @@ void Context::present(const Rect& source, bool waitForVblank) {
                          (GetAsyncKeyState(VK_PAUSE) < 0 || GetAsyncKeyState(VK_SCROLL) < 0);
     if (compareKey_.pressed(keyDown)) {
         enhanced_ = !enhanced_;
-        LOG_INFO("compare key: improvements %s", enhanced_ ? "on" : "off");
+        // 3.0.22-beta.30 (the owner's video session: «выключается режим фото» after Pause): the photo mode told too
+        LOG_INFO("compare key: improvements %s (the photo mode %s)", enhanced_ ? "on" : "off", photo_ ? "on" : "off");
+        photoToldFrames_ = photo_ ? 3 : 0;
         // 3.0.22-beta.18 (the owner's R-WSFMDB: «когда отключаешь графику то все нововведения отключались совсем и
-        // работала старая графика»): the 3D view too - the game's own camera while they are off, the view asked back
-        // after (Ctrl+Shift+V's way); the own models and the 3D view's thin ground follow enhanced_ below
-        if (!enhanced_) {
-            view3dBefore_ = int(view3dwin::wanted());
-            if (view3dBefore_ != int(view3d::Mode::Off))
-                view3dwin::ask(view3d::Mode::Off, "the compare key (Pause, Scroll Lock) - the game's own picture");
-        } else if (view3dBefore_ != int(view3d::Mode::Off)) {
-            view3dwin::ask(view3d::Mode(view3dBefore_), "the compare key - the improvements back");
-            view3dBefore_ = int(view3d::Mode::Off);
-        }
+        // работала старая графика»): the 3D view too - the game's own camera while they are off; 3.0.22-beta.30 (the
+        // owner's video session: «было первое лицо, становится вид из-за спины»): held as it is and back the same -
+        // the view, the free camera and its flight, the look, the zoom (it was turned off and asked anew); the own
+        // models and the 3D view's thin ground follow enhanced_ below
+        view3dwin::hold(!enhanced_, enhanced_ ? "the compare key - the improvements back"
+                                              : "the compare key (Pause, Scroll Lock) - the game's own picture");
         // 2.15 said on the screen while they were off (a stray press looked like a broken game); 3.0.22-beta.29 (the
         // owner: «убери надпись про паузу ... пускай будет тупо старый клиент без надписи»): no line - whatever was
         // said goes too, and nothing more is said while they are off (core/overlay_line Notes)
@@ -1629,7 +1638,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
         fx.dayNow = day;
         fx.hallucinatingNow = hallucinating;
     }
-    renderer->setEffects(enhanced_ ? fx : effectsOff());  // Pause: the game's own picture
+    // Pause: the game's own picture; 3.0.22-beta.30 (the sky black a moment after Pause): held - the renderer keeps the
+    // map's own ground however long Pause lasts (it let it go after 10 s and made it anew after)
+    renderer->setEffects(enhanced_ ? fx : effectsHeld());
     serverNightFrame(enhanced_ && fx.noServerNight);      // 2.6.13: the server's night by the clock and «Ночь»
     mapEntryFrame(config.connection, window);             // 2.6.17: the way onto a map ([connection])
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the

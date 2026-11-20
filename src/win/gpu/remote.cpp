@@ -540,6 +540,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.skyPanorama ? 1 : 0);     // 3.0.22-beta.11
     w.u8(e.sandstorm ? 1 : 0);       // 3.0.22-beta.23
     w.i32(e.seasonFade);             // 3.0.22-beta.24
+    w.u8(e.held ? 1 : 0);            // 3.0.22-beta.30: Pause's
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

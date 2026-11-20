@@ -27,6 +27,21 @@ bool normalize(float v[3]) {
 
 }  // namespace
 
+Held hold(Mode mode, bool free, uint32_t world, const float fields[6]) {
+    Held h;
+    if (mode == Mode::Off) return h;
+    h.on = true;
+    h.mode = mode;
+    h.free = free;
+    h.world = world;
+    std::copy(fields, fields + 6, h.fields);
+    return h;
+}
+
+bool resumesHeld(const Held& h, Mode wanted, uint32_t world) {
+    return h.on && wanted == h.mode && world == h.world;
+}
+
 Mode next(Mode m) {
     switch (m) {
         case Mode::Off: return Mode::Behind;

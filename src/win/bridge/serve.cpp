@@ -224,6 +224,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.skyPanorama = rd.u8() != 0;     // 3.0.22-beta.11
             e.sandstorm = rd.u8() != 0;       // 3.0.22-beta.23
             e.seasonFade = rd.i32();          // 3.0.22-beta.24
+            e.held = rd.left() >= 1 && rd.u8() != 0;  // 3.0.22-beta.30: Pause's
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

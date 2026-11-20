@@ -166,6 +166,14 @@ struct State {
     std::unordered_map<uint32_t, std::array<float, 4>> boxes;
     std::unordered_map<uint32_t, int> classes;
     std::vector<view3d::AimBox> aims;
+    // 3.0.22-beta.30 (the owner's video session 20.11: after Pause the view from behind instead of the eyes, turned
+    // elsewhere): Pause holds the 3D view (core view3d::Held) - asked (holdAsked) until it ends, the view asked before
+    // it, when it began (the flight's clock stands still meanwhile), its first lines of the game's own camera
+    view3d::Held held;
+    bool holdAsked = false;
+    view3d::Mode wantedBeforeHold = view3d::Mode::Off;
+    double heldAt = 0.0;
+    int heldLines = 0;
 };
 
 State g_state;  // the game's thread: its window's keys, its frame, its camera build
@@ -598,8 +606,56 @@ void uprightSprites(State& s) {
     *reinterpret_cast<float*>(uintptr_t(kSpriteTilt)) = 0.0f;
 }
 
+// 3.0.22-beta.30: the game's camera fields the 3D view writes - its yaw and the yaw's target, the tilt and its target,
+// the distance and its target (the wheel's)
+constexpr uint32_t kHeldFields[6] = {kYaw, kYawTo, kTilt, kTiltTo, 0x24, kDistanceTo};
+
+double preciseNow();
+
 void switchTo(State& s, uint32_t view) {
     const view3d::Mode from = s.mode, to = s.wanted;
+    // 3.0.22-beta.30: Pause - the game's own camera meanwhile, all of the 3D view kept (Held) and the fields it wrote
+    if (to == view3d::Mode::Off && from != view3d::Mode::Off && s.holdAsked) {
+        float fields[6];
+        for (int i = 0; i < 6; ++i) fields[i] = *at(view, kHeldFields[i]);
+        uint32_t world = 0;
+        readGame(view + kViewWorld, &world, 4);
+        s.held = view3d::hold(from, s.free, world, fields);
+        s.heldAt = preciseNow();
+        s.heldLines = 0;
+        release(s);
+        walkmodewin::setOn(s.walkBefore);
+        s.locked = s.aimed = 0;
+        s.mode = view3d::Mode::Off;
+        s.frames = 0;
+        s.centred = false;
+        LOG_INFO("3D view: held for Pause - %s%s, yaw %.1f, pitch %.1f, the game's distance %.1f (behind %.1f): the "
+                 "same view back after it", view3d::nameOf(from), s.free ? " with the free camera" : "", s.look.yaw,
+                 s.look.pitch, fields[5], s.behindNow);
+        return;
+    }
+    if (from == view3d::Mode::Off && s.held.on) {
+        uint32_t world = 0;
+        readGame(view + kViewWorld, &world, 4);
+        const view3d::Held h = s.held;
+        s.held = view3d::Held{};
+        if (view3d::resumesHeld(h, to, world)) {  // back the same: the game's fields as the view left them
+            for (int i = 0; i < 6; ++i) *at(view, kHeldFields[i]) = h.fields[i];
+            s.free = h.free;
+            if (s.flying) s.flightAt += preciseNow() - s.heldAt;  // the flight goes on from where it stood
+            s.flewAt = 0.0;
+            s.mode = to;
+            s.frames = 0;
+            s.centred = false;
+            s.walkBefore = walkmodewin::on();
+            walkmodewin::setOn(true);
+            LOG_INFO("3D view: back from Pause as held - %s%s, yaw %.1f, pitch %.1f", view3d::nameOf(to),
+                     s.free ? " with the free camera" : "", s.look.yaw, s.look.pitch);
+            return;
+        }
+        LOG_INFO("3D view: back from Pause on another map (or another view asked) - the view %s anew",
+                 view3d::nameOf(to));
+    }
     // 3.0.19-beta.18 (R-57KBSF «после выхода с режима 3д мышка перестает работать»): the hold let go while it is still
     // known - release() asks `centred`, cleared below; Ctrl+Shift+V back to the game's own left the pad runtime holding
     // the game's cursor at the crosshair
@@ -748,6 +804,14 @@ void __attribute__((thiscall)) build(uint32_t view) {
         // degrees, our own models off their places): the game's own projection kept each frame (only written when off)
         applyFov(s, view3d::kGameFov);
         applySight(s, camera::kFar);  // 3.0.19-beta.24: the game's own culling
+        // 3.0.22-beta.30 (the owner: «при включении Pause около 1.5 с мелькают странные ракурсы сверху»): the game's
+        // own camera in Pause's first seconds - a line each half a second
+        if (s.held.on && s.heldLines < 4 && preciseNow() - s.heldAt >= 0.5 * s.heldLines) {
+            ++s.heldLines;
+            LOG_INFO("3D view: held for Pause, %.1f s - the game's own camera: yaw %.1f (to %.1f), tilt %.1f "
+                     "(to %.1f), distance %.1f (to %.1f)", preciseNow() - s.heldAt, *at(view, kYaw), *at(view, kYawTo),
+                     *at(view, kTilt), *at(view, kTiltTo), *at(view, 0x24), *at(view, kDistanceTo));
+        }
         return;
     }
     applySight(s, float(s.sight));  // 3.0.19-beta.24
@@ -969,6 +1033,10 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     if (!g_build || !inGameWorld()) return false;
     s.skipChar = true;
     if (((lp >> 30) & 1) != 0) return true;  // held: once a press
+    if (s.holdAsked) {  // 3.0.22-beta.30: under Pause the old client's own camera - the view held stays as it is
+        LOG_INFO("keys: Ctrl+Shift+V under Pause - the 3D view held as it was");
+        return true;
+    }
     s.wanted = view3d::next(s.wanted);
     LOG_INFO("keys: Ctrl+Shift+V - the view %s", view3d::nameOf(s.wanted));
     return true;
@@ -1033,6 +1101,10 @@ void frame(const Config& config) {
     s.shoulder = config.view3dShoulder;  // 3.0.19-beta.54
     s.freeScale = float(config.view3dFreeSpeed) / 100.0f;  // 3.0.22-beta.24
     s.freeSmooth = config.view3dFreeSmooth;
+    if (!inGameWorld() && (s.held.on || s.holdAsked)) {  // 3.0.22-beta.30: the world left under Pause - not held
+        s.held = view3d::Held{};
+        s.wantedBeforeHold = view3d::Mode::Off;
+    }
     if (s.mode != view3d::Mode::Off && !inGameWorld()) {  // the login, the character list: the game's own
         s.mode = s.wanted = view3d::Mode::Off;
         walkmodewin::setOn(s.walkBefore);
@@ -1065,9 +1137,32 @@ bool available() { return g_build != 0; }
 
 view3d::Mode wanted() { return g_state.wanted; }
 
+bool hold(bool on, const char* why) {
+    State& s = g_state;
+    if (on) {
+        if (s.holdAsked || !g_build || !inGameWorld()) return false;
+        s.holdAsked = true;
+        s.wantedBeforeHold = s.wanted;
+        if (s.wanted == view3d::Mode::Off && s.mode == view3d::Mode::Off) return true;  // the game's own: nothing
+        s.wanted = view3d::Mode::Off;  // held at the camera's next build (switchTo)
+        LOG_INFO("3D view: %s - the view %s held", why, view3d::nameOf(s.wantedBeforeHold));
+        return true;
+    }
+    if (!s.holdAsked) return false;
+    s.holdAsked = false;
+    // the view held back (or the one asked before a build held it); none once the world was left meanwhile
+    const view3d::Mode back = s.held.on ? s.held.mode : s.wantedBeforeHold;
+    s.wantedBeforeHold = view3d::Mode::Off;
+    if (back == view3d::Mode::Off || !g_build || !inGameWorld()) return true;
+    s.wanted = back;
+    LOG_INFO("3D view: %s - the view %s back", why, view3d::nameOf(back));
+    return true;
+}
+
 bool ask(view3d::Mode m, const char* why) {
     State& s = g_state;
     if (!g_build || !inGameWorld()) return false;
+    if (s.holdAsked) return false;  // 3.0.22-beta.30: Pause holds it
     if (m == s.wanted) return true;
     s.wanted = m;
     LOG_INFO("3D view: %s - the view %s", why, view3d::nameOf(m));

@@ -1013,3 +1013,19 @@ TEST(config_classic_look_is_the_old_clients_interface) {
     CHECK(old.renderScale == 150 && old.effects == c.effects && old.fpsLimit == c.fpsLimit);  // the rest as it is
     CHECK(old.screenShake == c.screenShake && old.swearFilter == c.swearFilter);  // the game's own ways as they are
 }
+
+// 3.0.22-beta.30 (the owner's video session 20.11: «было первое лицо, становится вид из-за спины» after Pause, the
+// camera turned elsewhere): Pause holds the 3D view - the view, the free camera, the game's camera fields it wrote,
+// the world it was in - and Pause over on the same map brings it back the same; on another map it is asked anew
+TEST(view3d_pause_holds_the_view_and_gives_it_back) {
+    const float fields[6] = {124.7f, 124.7f, -45.0f, -45.0f, 671.0f, 671.0f};
+    const view3d::Held none = view3d::hold(view3d::Mode::Off, false, 0x1000, fields);
+    CHECK(!none.on);  // the game's own view: nothing to hold
+    const view3d::Held h = view3d::hold(view3d::Mode::First, true, 0x1000, fields);
+    CHECK(h.on && h.mode == view3d::Mode::First && h.free && h.world == 0x1000);
+    CHECK(h.fields[0] == 124.7f && h.fields[4] == 671.0f && h.fields[5] == 671.0f);
+    CHECK(view3d::resumesHeld(h, view3d::Mode::First, 0x1000));
+    CHECK(!view3d::resumesHeld(h, view3d::Mode::First, 0x2000));   // another map's world: asked anew
+    CHECK(!view3d::resumesHeld(h, view3d::Mode::Behind, 0x1000));  // another view asked meanwhile
+    CHECK(!view3d::resumesHeld(none, view3d::Mode::First, 0x1000));
+}

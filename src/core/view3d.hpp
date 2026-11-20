@@ -16,6 +16,19 @@ Mode next(Mode m);  // Ctrl+Shift+V: the game's own -> behind -> first person ->
 // interface pressed while the view is `now` - that view, or the game's own back when it is the view already
 Mode pressed(Mode now, Mode button);
 const char* nameOf(Mode m);
+// 3.0.22-beta.30 (the owner's video session 20.11: «было первое лицо, становится вид из-за спины» after Pause, the
+// camera turned elsewhere): Pause holds the 3D view - the view, the free camera, the game's camera fields it wrote
+// (its yaw and the yaw's target, the tilt and its target, the distance and its target) and the world it was in;
+// Pause over on the same map, the same view asked: back the same (the fields written back), else asked anew
+struct Held {
+    bool on = false;
+    Mode mode = Mode::Off;
+    bool free = false;
+    uint32_t world = 0;
+    float fields[6] = {};
+};
+Held hold(Mode mode, bool free, uint32_t world, const float fields[6]);
+bool resumesHeld(const Held& h, Mode wanted, uint32_t world);
 
 constexpr float kGameFov = 15.0f;    // the game's own vertical field of view (degrees)
 constexpr float kFirstFov = 70.0f;   // from the eyes

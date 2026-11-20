@@ -1427,7 +1427,8 @@ struct Renderer::Impl {
         // 3.0.4-beta.14; 3.0.4-beta.33: the game's model triangles noted in turn (3.0.4-beta.34: kept over the clear)
         ownState.modelsTurn.next();
         // off for 10 s (the switch) - its textures and the map's own ground let go; for less (Pause, to compare) kept
-        if (effects.ownGround) {
+        // 3.0.22-beta.30 (the owner's video session: the sky black a moment after Pause): Pause's however long
+        if (effects.ownGround || effects.held) {
             ownOffSince = 0;
         } else if (!ownOffSince) {
             ownOffSince = GetTickCount64();
