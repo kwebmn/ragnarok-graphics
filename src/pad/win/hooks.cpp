@@ -7,6 +7,7 @@
 #include "pad/win/iat.hpp"
 #include "win/iat.hpp"
 #include "pad/win/log.hpp"
+#include "pad/win/remote.hpp"
 #include "pad/win/runtime.hpp"
 
 namespace uapad::hooks {
@@ -16,6 +17,7 @@ using recv_t = int(WSAAPI*)(SOCKET, char*, int, int);
 using send_t = int(WSAAPI*)(SOCKET, const char*, int, int);
 using closesocket_t = int(WSAAPI*)(SOCKET);
 using getcursorpos_t = BOOL(WINAPI*)(LPPOINT);
+using getasynckeystate_t = SHORT(WINAPI*)(int);
 using peekmessage_t = BOOL(WINAPI*)(LPMSG, HWND, UINT, UINT, UINT);
 using wsagetlasterror_t = int(WSAAPI*)();
 
@@ -24,6 +26,7 @@ send_t o_send = nullptr;
 std::vector<uint32_t> g_pointerSlots;  // client variables called as `call [X]`
 closesocket_t o_closesocket = nullptr;
 getcursorpos_t o_getcursorpos = nullptr;
+getasynckeystate_t o_getasynckeystate = nullptr;
 peekmessage_t o_peekmessage = nullptr;
 wsagetlasterror_t o_wsagetlasterror = nullptr;
 
@@ -47,16 +50,44 @@ int WSAAPI h_closesocket(SOCKET s) {
     return o_closesocket(s);
 }
 
+// 3.0.22-beta.37: the game asks Ctrl, Shift and Alt this way (its hotkeys: Alt+E...) - the MCP's held ones down too,
+// with the game's window behind others
+SHORT WINAPI h_getasynckeystate(int vk) {
+    const SHORT real = o_getasynckeystate ? o_getasynckeystate(vk) : SHORT(0);
+    return remote::modDown(vk) ? SHORT(real | SHORT(0x8000)) : real;
+}
+
 BOOL WINAPI h_getcursorpos(LPPOINT p) {
     const BOOL ok = o_getcursorpos(p);
     if (ok) runtime::onGetCursorPos(p);
     return ok;
 }
 
+// 3.0.22-beta.37: the MCP's Ctrl, Shift, Alt in the game thread's own key state (GetKeyState, TranslateMessage) while
+// its key is taken - posted keys change it not - and out of it after, unless really held
+uint8_t g_modsApplied = 0;
+
+void applyMods() {
+    const uint8_t want = uint8_t((remote::modDown(VK_CONTROL) ? 1 : 0) | (remote::modDown(VK_SHIFT) ? 2 : 0) |
+                                 (remote::modDown(VK_MENU) ? 4 : 0));
+    if (want == g_modsApplied) return;
+    BYTE ks[256];
+    if (!GetKeyboardState(ks)) return;
+    const int vks[3][3] = {{VK_CONTROL, VK_LCONTROL, VK_RCONTROL}, {VK_SHIFT, VK_LSHIFT, VK_RSHIFT},
+                           {VK_MENU, VK_LMENU, VK_RMENU}};
+    for (int i = 0; i < 3; ++i) {
+        const bool on = (want >> i) & 1;
+        const bool real = o_getasynckeystate && (o_getasynckeystate(vks[i][0]) & 0x8000) != 0;
+        for (int vk : vks[i]) ks[vk] = BYTE(on || real ? ks[vk] | 0x80 : ks[vk] & 0x7F);
+    }
+    if (SetKeyboardState(ks)) g_modsApplied = want;
+}
+
 BOOL WINAPI h_peekmessage(LPMSG msg, HWND hwnd, UINT first, UINT last, UINT remove) {
     runtime::onMessagePump();
     const BOOL got = o_peekmessage(msg, hwnd, first, last, remove);
     if (!got) runtime::onQueueEmpty();
+    if ((got && msg && msg->message >= WM_KEYFIRST && msg->message <= WM_KEYLAST) || g_modsApplied) applyMods();
     return got;
 }
 
@@ -95,6 +126,7 @@ void install() {
     hook(ws2, "closesocket", &h_closesocket, o_closesocket);
     hook(user32, "GetCursorPos", &h_getcursorpos, o_getcursorpos);
     hook(user32, "PeekMessageA", &h_peekmessage, o_peekmessage);
+    hook(user32, "GetAsyncKeyState", &h_getasynckeystate, o_getasynckeystate);  // 3.0.22-beta.37
     findClientPointers();
 }
 

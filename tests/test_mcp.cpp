@@ -212,3 +212,12 @@ TEST(mcp_keys_and_clicks) {
     CHECK(!mcp::clickPlace(10, 600, 1020, 2040, 1147, cx, cy));  // under the picture
     CHECK(!mcp::clickPlace(10, 10, 1020, 0, 0, cx, cy));         // no window
 }
+
+// 3.0.22-beta.37 (the owner 20.11: «я хочу чтобы клиент мог работать в фоне, когда ты проверки делаешь»): a key told to
+// the game's window as Windows tells it - its repeat count, scan code, extended key, Alt (bit 29), the let go's bits
+TEST(mcp_key_messages_carry_the_key_as_windows_does) {
+    CHECK_EQ(mcp::keyMessageBits(0x12, false, true, false), 0x20120001u);  // Alt+E down: E's scan 0x12, Alt
+    CHECK_EQ(mcp::keyMessageBits(0x12, false, true, true), 0xE0120001u);   // let go: was down, now up
+    CHECK_EQ(mcp::keyMessageBits(0x01, false, false, false), 0x00010001u);  // Esc
+    CHECK_EQ(mcp::keyMessageBits(0x48, true, false, false), 0x01480001u);  // Up: extended
+}

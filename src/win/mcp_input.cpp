@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <vector>
 
+#include "pad/win/remote.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 
@@ -17,6 +18,8 @@ mcp::CallResult said(const std::string& text, bool error = false) {
     r.content.push_back(mcp::Content::textOf(text));
     return r;
 }
+
+std::string pair(long a, long b) { return std::to_string(a) + "," + std::to_string(b); }
 
 int send(INPUT in) { return int(SendInput(1, &in, sizeof(INPUT))); }
 
@@ -38,8 +41,6 @@ INPUT mouseInput(DWORD flags, LONG dx = 0, LONG dy = 0) {
     return in;
 }
 
-std::string pair(long a, long b) { return std::to_string(a) + "," + std::to_string(b); }
-
 // 3.0.22-beta.36 (20.11: the owner moved his mouse during the clicks - two went where his hand put the cursor): the
 // press only while the cursor is still where it was put, over the game's own window (not one above it), the game in
 // front
@@ -56,20 +57,98 @@ bool stillThere(HWND game, POINT p) {
 const char* kMoved = "no click made: the mouse moved (the player's hand?), another window over the place or the game "
                      "not in front any more - ask again when the mouse is left alone";
 
-}  // namespace
-
-std::string ready(HWND window) {
+// 3.0.22-beta.37 (the owner: «я хочу чтобы клиент мог работать в фоне, когда ты проверки делаешь»): from inside the
+// game - its window may stay behind others, the player's mouse and keyboard untouched. The game's DirectInput mouse
+// polled through the pad's wrapper (pad/win/remote) is what it needs.
+std::string insideNot(HWND window) {
     if (!window || !IsWindow(window)) return "no game window yet";
-    if (IsIconic(window)) return "the game's window is minimised - keys and clicks need it shown and in front";
-    if (GetForegroundWindow() != window)
-        return "the game's window is not in front - keys and clicks are real input and go to the window in front; "
-               "the game must be brought in front (a click on it) first";
+    if (IsIconic(window))
+        return "the game's window is minimised - keys and clicks need it shown (behind other windows is fine)";
+    if (!uapad::remote::polled()) return "the game's mouse is not read through uaRO Pad here (an old dinput.dll?)";
     return "";
 }
 
-mcp::CallResult key(const Game& g, const mcp::KeyCombo& k, const std::string& words) {
-    const std::string why = ready(g.window);
-    if (!why.empty()) return said(why, true);
+bool sendWait(HWND w, UINT m, WPARAM wp, LPARAM lp) {
+    DWORD_PTR answer = 0;
+    return SendMessageTimeoutA(w, m, wp, lp, SMTO_ABORTIFHUNG, 1000, &answer) != 0;
+}
+
+// The game's cursor where (cx, cy) of the window lands in its picture
+bool gamePoint(const Game& g, int cx, int cy, int clientW, int clientH, long& ex, long& ey) {
+    if (g.width <= 0 || g.height <= 0 || clientW <= 0 || clientH <= 0) return false;
+    ex = std::lround(double(cx) * g.width / double(clientW));
+    ey = std::lround(double(cy) * g.height / double(clientH));
+    return true;
+}
+
+mcp::CallResult keyInside(const Game& g, const mcp::KeyCombo& k, const std::string& words) {
+    const UINT scan = MapVirtualKeyA(UINT(k.vk), MAPVK_VK_TO_VSC);
+    const UINT down = k.alt ? WM_SYSKEYDOWN : WM_KEYDOWN, up = k.alt ? WM_SYSKEYUP : WM_KEYUP;
+    uapad::remote::setMods(k.ctrl, k.shift, k.alt);  // the game's GetAsyncKeyState and its thread's key state
+    Sleep(10);
+    bool posted =
+        PostMessageA(g.window, down, WPARAM(k.vk), LPARAM(mcp::keyMessageBits(int(scan), k.extended, k.alt, false)));
+    Sleep(80);  // the game takes it at its next frame, the modifiers held for it
+    const LPARAM let = LPARAM(mcp::keyMessageBits(int(scan), k.extended, k.alt, true));
+    posted = PostMessageA(g.window, up, WPARAM(k.vk), let) && posted;
+    Sleep(60);
+    uapad::remote::setMods(false, false, false);
+    LOG_INFO("mcp: key %s inside the game%s", words.c_str(), posted ? "" : " - not posted");
+    if (!posted) return said("the key could not be told to the game's window", true);
+    return said("pressed " + words + " inside the game (its window may stay behind others) - look with `screenshot`");
+}
+
+mcp::CallResult clickInside(const Game& g, double x, double y, int width, bool right, bool twice) {
+    RECT c{};
+    GetClientRect(g.window, &c);  // this thread's points, as the game's thread and the pad count them
+    int cx = 0, cy = 0;
+    if (!mcp::clickPlace(x, y, width, int(c.right), int(c.bottom), cx, cy))
+        return said("the place is past the picture: a screenshot " + std::to_string(width) +
+                        " wide shows the window's " + pair(c.right, c.bottom) + " points",
+                    true);
+    long ex = 0, ey = 0;
+    const bool known = gamePoint(g, cx, cy, int(c.right), int(c.bottom), ex, ey);
+    uapad::remote::setMouse(uapad::remote::Mouse{true, cx, cy, 0});
+    int gx = -1, gy = -1;
+    for (int i = 0; i < 30; ++i) {  // the game's cursor driven there, 0.45 s at most
+        if (known && readGameCursor(gx, gy) && std::labs(gx - ex) <= 2 && std::labs(gy - ey) <= 2) break;
+        Sleep(15);
+    }
+    const LPARAM at = MAKELPARAM(cx, cy);
+    PostMessageA(g.window, WM_MOUSEMOVE, 0, at);
+    Sleep(30);
+    const bool swapped = GetSystemMetrics(SM_SWAPBUTTON) != 0;  // the device's buttons, as the claims count them
+    const uint8_t device = uint8_t(right != swapped ? 2 : 1);
+    bool told = true;
+    for (int i = 0; i < (twice ? 2 : 1); ++i) {
+        const UINT downMsg = right ? (i ? WM_RBUTTONDBLCLK : WM_RBUTTONDOWN) : (i ? WM_LBUTTONDBLCLK : WM_LBUTTONDOWN);
+        // the window's message first, answered: a part of the driver's that takes it claims the press before the
+        // game's mouse shows it (then the game never sees it)
+        told = sendWait(g.window, downMsg, right ? MK_RBUTTON : MK_LBUTTON, at) && told;
+        uapad::remote::setMouse(uapad::remote::Mouse{true, cx, cy, device});
+        Sleep(70);  // a few of the game's frames see it held
+        uapad::remote::setMouse(uapad::remote::Mouse{true, cx, cy, 0});
+        told = sendWait(g.window, right ? WM_RBUTTONUP : WM_LBUTTONUP, 0, at) && told;
+        Sleep(60);
+    }
+    Sleep(60);
+    uapad::remote::setMouse(uapad::remote::Mouse{});
+    std::string where;
+    if (known && readGameCursor(gx, gy)) {
+        where = "; the game's cursor at " + pair(gx, gy) + " of its " + std::to_string(g.width) + "x" +
+                std::to_string(g.height) + " picture";
+        if (std::labs(gx - ex) > 3 || std::labs(gy - ey) > 3)
+            where += " - not at the place (" + pair(ex, ey) + "): the click may have gone elsewhere";
+    }
+    const std::string what = std::string(right ? "right" : "left") + (twice ? " double click" : " click");
+    LOG_INFO("mcp: %s inside the game at %s of a %d-wide screenshot = %s in the window%s%s", what.c_str(),
+             pair(long(x), long(y)).c_str(), width, pair(cx, cy).c_str(), told ? "" : " (a message not answered)",
+             where.c_str());
+    return said(what + " inside the game at " + pair(long(x), long(y)) + " = " + pair(cx, cy) + " in the window" +
+                where + (told ? "" : " (the window did not answer a message in time)") + " - look with `screenshot`");
+}
+
+mcp::CallResult keyFront(const Game& g, const mcp::KeyCombo& k, const std::string& words) {
     std::vector<int> mods;
     if (k.ctrl) mods.push_back(VK_CONTROL);
     if (k.shift) mods.push_back(VK_SHIFT);
@@ -102,9 +181,7 @@ mcp::CallResult key(const Game& g, const mcp::KeyCombo& k, const std::string& wo
     return said("pressed " + words + " - look with `screenshot`");
 }
 
-mcp::CallResult click(const Game& g, double x, double y, int width, bool right, bool twice) {
-    const std::string why = ready(g.window);
-    if (!why.empty()) return said(why, true);
+mcp::CallResult clickFront(const Game& g, double x, double y, int width, bool right, bool twice) {
     RECT c{};
     GetClientRect(g.window, &c);
     int cx = 0, cy = 0;
@@ -143,9 +220,8 @@ mcp::CallResult click(const Game& g, double x, double y, int width, bool right, 
     Sleep(120);  // the game's frames take the click before the answer
     std::string where;
     int gx = 0, gy = 0;
-    if (g.width > 0 && g.height > 0 && c.right > 0 && c.bottom > 0 && readGameCursor(gx, gy)) {
-        const long ex = std::lround(double(cx) * g.width / double(c.right));
-        const long ey = std::lround(double(cy) * g.height / double(c.bottom));
+    long ex = 0, ey = 0;
+    if (gamePoint(g, cx, cy, int(c.right), int(c.bottom), ex, ey) && readGameCursor(gx, gy)) {
         where = "; the game's cursor at " + pair(gx, gy) + " of its " + std::to_string(g.width) + "x" +
                 std::to_string(g.height) + " picture";
         if (std::labs(gx - ex) > 3 || std::labs(gy - ey) > 3)
@@ -154,10 +230,38 @@ mcp::CallResult click(const Game& g, double x, double y, int width, bool right, 
     const std::string what = std::string(right ? "right" : "left") + (twice ? " double click" : " click");
     LOG_INFO("mcp: %s at %s of a %d-wide screenshot = %s in the window (%d of %d button events)%s", what.c_str(),
              pair(long(x), long(y)).c_str(), width, pair(cx, cy).c_str(), sent, twice ? 4 : 2, where.c_str());
-    if (sent != (twice ? 4 : 2)) return said("Windows took " + std::to_string(sent) + " button events of " +
-                                             std::to_string(twice ? 4 : 2), true);
+    if (sent != (twice ? 4 : 2))
+        return said("Windows took " + std::to_string(sent) + " button events of " + std::to_string(twice ? 4 : 2),
+                    true);
     return said(what + " at " + pair(long(x), long(y)) + " = " + pair(cx, cy) + " in the window" + where +
                 " - look with `screenshot`");
+}
+
+}  // namespace
+
+std::string ready(HWND window) {
+    if (!window || !IsWindow(window)) return "no game window yet";
+    if (IsIconic(window)) return "the game's window is minimised - keys and clicks need it shown and in front";
+    if (GetForegroundWindow() != window)
+        return "the game's window is not in front - keys and clicks are real input and go to the window in front; "
+               "the game must be brought in front (a click on it) first";
+    return "";
+}
+
+mcp::CallResult key(const Game& g, const mcp::KeyCombo& k, const std::string& words) {
+    const std::string inside = insideNot(g.window);
+    if (inside.empty()) return keyInside(g, k, words);
+    const std::string why = ready(g.window);  // without the pad's mouse: real input, the game in front
+    if (!why.empty()) return said(inside + "; " + why, true);
+    return keyFront(g, k, words);
+}
+
+mcp::CallResult click(const Game& g, double x, double y, int width, bool right, bool twice) {
+    const std::string inside = insideNot(g.window);
+    if (inside.empty()) return clickInside(g, x, y, width, right, twice);
+    const std::string why = ready(g.window);
+    if (!why.empty()) return said(inside + "; " + why, true);
+    return clickFront(g, x, y, width, right, twice);
 }
 
 }  // namespace uagfx::win::mcpinput

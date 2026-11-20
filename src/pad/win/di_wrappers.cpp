@@ -1,7 +1,10 @@
 #define INITGUID
 #include "pad/win/di_wrappers.hpp"
 
+#include <cstring>
+
 #include "pad/win/log.hpp"
+#include "pad/win/remote.hpp"
 #include "pad/win/runtime.hpp"
 
 namespace uapad {
@@ -51,7 +54,16 @@ public:
     STDMETHODIMP Acquire() override { return real_->Acquire(); }
     STDMETHODIMP Unacquire() override { return real_->Unacquire(); }
     STDMETHODIMP GetDeviceState(DWORD cb, LPVOID data) override {
-        const HRESULT hr = real_->GetDeviceState(cb, data);
+        HRESULT hr = real_->GetDeviceState(cb, data);
+        if (kind_ == DevKind::Mouse) {
+            remote::notePolled();
+            // 3.0.22-beta.37: behind other windows the device is not the game's - the MCP's mouse alone (still, no
+            // buttons of the player's), so that the game's cursor goes where it is asked and takes its clicks
+            if (FAILED(hr) && data && cb >= sizeof(DIMOUSESTATE) && remote::mouse().on) {
+                std::memset(data, 0, cb);
+                hr = DI_OK;
+            }
+        }
         if (kind_ == DevKind::Mouse && SUCCEEDED(hr)) runtime::onMouseState(cb, data);
         return hr;
     }

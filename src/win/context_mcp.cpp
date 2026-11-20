@@ -7,6 +7,7 @@
 #include "core/settings/schema.hpp"
 #include "core/version.hpp"
 #include "core/view3d.hpp"
+#include "pad/win/remote.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/chat_wheel.hpp"
 #include "win/code_page.hpp"
@@ -110,6 +111,7 @@ mcp::CallResult Context::mcpCall(const std::string& tool, const json::Value& arg
             w.set("gameFullScreen", gameFullscreen);
             w.set("game", std::to_string(shadow.width()) + "x" + std::to_string(shadow.height()));
             w.set("dpi", windowDpiAwareness(window));
+            w.set("inputInside", uapad::remote::polled());  // 3.0.22-beta.37: keys and clicks behind other windows
             s.set("window", w);
         }
         return said(json::dump(s));

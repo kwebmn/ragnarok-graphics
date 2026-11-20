@@ -43,6 +43,7 @@
 #include "pad/win/log.hpp"
 #include "pad/win/overlay.hpp"
 #include "pad/win/pads.hpp"
+#include "pad/win/remote.hpp"
 #include "core/pad_glyphs.hpp"
 #include "win/key_nav.hpp"
 #include "win/key_walk.hpp"
@@ -169,6 +170,7 @@ struct State {
     DWORD lastBarMs = 0;
     bool barRead = false;
     bool realLmb = false;      // the real left button as DirectInput last reported it
+    uint8_t remoteClaimed = 0;  // 3.0.22-beta.37: the MCP click's presses a part of the driver's took
     bool realClicked = false;  // it went down since the last tick
     bool loggedConnected = false;
     uint16_t loggedButtons = 0;
@@ -1917,6 +1919,11 @@ void onMouseState(DWORD cb, LPVOID data) {
         // The open menu is not the game. The window's coming to the front is checked on every poll: the first
         // poll after a click on the window carries that click.
         const uint8_t took = gamewindow::takeClaimed();  // 3.0.11-beta.33: presses the driver's parts took
+        // 3.0.22-beta.37: the MCP's mouse (pad/win/remote) - its point the target, its presses the game's unless a
+        // part of the driver's took them (its window message goes first and is answered before the press: a claim
+        // kept for the whole click, whichever poll it comes with)
+        const remote::Mouse rm = remote::mouse();
+        s.remoteClaimed = rm.on ? uint8_t(s.remoteClaimed | took) : uint8_t(0);
         if (s.cfg.mouseFreedom) {
             const DWORD now = GetTickCount();
             s.gate.watch(GetForegroundWindow() == s.hwnd, now);
@@ -1950,7 +1957,7 @@ void onMouseState(DWORD cb, LPVOID data) {
         s.realLmb = realLmb;
         // 3.0.19-beta.11 (the 3D view): the mouse turns the view - its own moves kept for it, the game's cursor put at
         // the held point (the crosshair) at every poll, whatever the Windows cursor does; the clicks as above
-        if (s.hold.on && !s.mouse.active) {
+        if (s.hold.on && !s.mouse.active && !rm.on) {
             s.hold.dx += st->lX;
             s.hold.dy += st->lY;
             ++s.hold.polls;
@@ -1968,13 +1975,15 @@ void onMouseState(DWORD cb, LPVOID data) {
             s.bridge.reset();  // resynced when the hold ends
             return;
         }
-        if (!s.cfg.mouseFreedom && !s.mouse.active) {
+        if (!s.cfg.mouseFreedom && !s.mouse.active && !rm.on) {
             s.bridge.reset();  // the real mouse moves the client's cursor now; resync before driving it again
             return;
         }
         // Target: the walking point while the stick is used, otherwise the Windows cursor (mouse freedom).
         POINT target{s.mouse.x, s.mouse.y};
-        if (!s.mouse.active) {
+        if (rm.on) {
+            target = POINT{rm.x, rm.y};
+        } else if (!s.mouse.active) {
             target = screen;
             ScreenToClient(s.hwnd, &target);
         }
@@ -2006,6 +2015,11 @@ void onMouseState(DWORD cb, LPVOID data) {
         }
         if (s.mouse.active && s.cfg.buttons == ButtonChannel::DirectInput)
             st->rgbButtons[0] = s.mouse.lmb ? 0x80 : 0x00;
+        if (rm.on) {  // 3.0.22-beta.37: the MCP's buttons alone while it drives
+            const uint8_t pressed = uint8_t(rm.buttons & ~s.remoteClaimed);
+            st->rgbButtons[0] = pressed & 1 ? 0x80 : 0x00;
+            st->rgbButtons[1] = pressed & 2 ? 0x80 : 0x00;
+        }
     });
 }
 
@@ -2064,8 +2078,9 @@ void onGetCursorPos(LPPOINT p) {
     State& s = S();
     ++s.nCursor;
     guarded("cursor", [&] {
-        if (!p || !s.mouse.active || !s.hwnd || !onGameThread()) return;
-        POINT pt{s.mouse.x, s.mouse.y};
+        const remote::Mouse rm = remote::mouse();  // 3.0.22-beta.37: the MCP's point first
+        if (!p || (!s.mouse.active && !rm.on) || !s.hwnd || !onGameThread()) return;
+        POINT pt = rm.on ? POINT{rm.x, rm.y} : POINT{s.mouse.x, s.mouse.y};
         if (ClientToScreen(s.hwnd, &pt)) *p = pt;
     });
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <utility>
@@ -52,6 +53,9 @@ bool keyCombo(const std::string& text, KeyCombo& out, std::string& why);
 // 3.0.22-beta.35: a click's place in the game's window (its client pixels) from a place of a screenshot `width`
 // wide - the window's picture made smaller; false past the picture
 bool clickPlace(double x, double y, int width, int clientW, int clientH, int& outX, int& outY);
+// 3.0.22-beta.37: a key message's lParam as Windows makes it - one repeat, the scan code, the extended key, Alt held
+// (bit 29); a let go's previous state and transition bits
+uint32_t keyMessageBits(int scan, bool extended, bool alt, bool up);
 
 // What a tool answers: a text or an image (its bytes, sent as base64)
 struct Content {

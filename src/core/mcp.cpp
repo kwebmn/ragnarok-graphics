@@ -118,14 +118,15 @@ const std::vector<Tool>& table() {
         // 3.0.22-beta.35 (the owner: «проверяй»): the login's cards, the game's windows - by keys and clicks
         {"key",
          "A key pressed and let go in the game, as the player would, with ctrl+, shift+ or alt+ before it: alt+e "
-         "(the inventory), enter, esc, tab, space, f1-f24, up, down, left, right, a-z, 0-9... Real input: the game's "
-         "window must be in front (it goes to the window in front) - else refused.",
+         "(the inventory), enter, esc, tab, space, f1-f24, up, down, left, right, a-z, 0-9... Given to the game from "
+         "inside: its window may stay behind other windows (not minimised); the player's keyboard untouched.",
          R"({"type":"object","properties":{"keys":{"type":"string","minLength":1,"maxLength":40}},)"
          R"("required":["keys"]})"},
         {"click",
          "A mouse click at (x, y) of a screenshot `width` wide (the width the screenshot came in), as the player "
-         "would: `button` left (the default) or right, `double` for a double click. Real input: the game's window "
-         "must be in front - else refused; the mouse cursor moves there and stays.",
+         "would: `button` left (the default) or right, `double` for a double click. Given to the game from inside: "
+         "its own cursor goes there, its window may stay behind other windows (not minimised), the player's mouse "
+         "untouched.",
          R"({"type":"object","properties":{"x":{"type":"number","minimum":0},"y":{"type":"number","minimum":0},)"
          R"("width":{"type":"integer","minimum":160,"maximum":7680},"button":{"type":"string",)"
          R"("enum":["left","right"]},"double":{"type":"boolean"}},"required":["x","y","width"]})"},
@@ -281,6 +282,11 @@ bool keyCombo(const std::string& text, KeyCombo& out, std::string& why) {
     }
     out = k;
     return true;
+}
+
+uint32_t keyMessageBits(int scan, bool extended, bool alt, bool up) {
+    uint32_t bits = 1u | (uint32_t(scan & 0xFF) << 16) | (extended ? 1u << 24 : 0u) | (alt ? 1u << 29 : 0u);
+    return up ? bits | 1u << 30 | 1u << 31 : bits;
 }
 
 bool clickPlace(double x, double y, int width, int clientW, int clientH, int& outX, int& outY) {
