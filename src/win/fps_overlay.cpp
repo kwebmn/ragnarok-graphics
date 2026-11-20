@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdio>
 
+#include "core/overlay_line.hpp"
 #include "win/text_window.hpp"
 
 namespace uagfx::win {
@@ -28,7 +29,7 @@ void FpsOverlay::setGpu(const GpuTiming* t) {
     gpu_ = text;
 }
 
-void FpsOverlay::present(HWND game, bool shown) {
+void FpsOverlay::present(HWND game, bool shown, bool photo) {
     const ULONGLONG now = GetTickCount64();
     if (lastFrame_) worstMs_ = std::max(worstMs_, double(now - lastFrame_));
     lastFrame_ = now;
@@ -46,12 +47,13 @@ void FpsOverlay::present(HWND game, bool shown) {
     frames_ = 0;
     worstMs_ = 0;
     since_ = now;
-    const bool show = (shown || !note_.empty()) && game && IsWindowVisible(game) && GetForegroundWindow() == game;
+    const std::wstring line = overlayline::line(shown, photo, note_, text);
+    const bool show = !line.empty() && game && IsWindowVisible(game) && GetForegroundWindow() == game;
     if (!show) {
         if (window_) ShowWindow(window_, SW_HIDE);
         return;
     }
-    draw(game, note_.empty() ? std::wstring(text) : shown ? note_ + L"  ·  " + text : note_);
+    draw(game, line);
 }
 
 void FpsOverlay::hide() {

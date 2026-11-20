@@ -21,7 +21,8 @@ public:
     // 2.15: a line shown whether the counter is or not (Pause kept the improvements off); "" none
     void setNote(const std::wstring& note) { note_ = note; }
     // Every present of the game: counts, and twice a second redraws (or hides it, the game not in front).
-    void present(HWND game, bool shown);
+    // 3.0.22-beta.28: `photo` - the photo mode, no line at all, the notes neither (core/overlay_line)
+    void present(HWND game, bool shown, bool photo);
     // 3.0.3-beta.11: hidden at once - the game window gone behind (it may present no more: its full screen)
     void hide();
 

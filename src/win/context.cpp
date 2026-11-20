@@ -1698,7 +1698,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const bool timed = renderer->gpuTiming(gpuNow);
     rendererLoading_ = timed && gpuNow.loading;  // 3.0.6-beta.3: «Тест графіки» measures a set once it is done
     fps_.setGpu(timed ? &gpuNow : nullptr);
-    fps_.present(window, fpsShown_ && !photoNow());  // 3.0.4-beta.5: not in the photo mode's picture
+    // 3.0.4-beta.5: not in the photo mode's picture; 3.0.22-beta.28: the notes neither (Pause's line stood in the
+    // owner's recordings)
+    fps_.present(window, fpsShown_, photoNow());
     if (test_.running()) {  // 3.0.5-beta.6: the card's work of the set shown; the statistics leave the test out
         if (timed && gpuNow.serial != testGpuSerial_) {
             testGpuSerial_ = gpuNow.serial;
