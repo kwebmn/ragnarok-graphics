@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.22-beta.36 — what's new · 2026-11-20
+
+Interface fixes found while checking over the MCP.
+
+- **«Skills»**: a tab without a job choice (e.g. «Archer» after «Next») no longer shows two empty buttons.
+- **Control over MCP**: a click is not made when the player moved the mouse meanwhile or the game's window left the front; the helper sees the window's size in real pixels.
+
 # uaRO Graphics 3.0.22-beta.35 — what's new · 2026-11-20
 
 The game's window and the controls for an AI helper.
