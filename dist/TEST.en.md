@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.29 — what's new · 2026-11-20
+
+Pause - the old client without the line.
+
+- **Pause / Scroll Lock**: no «uaRO Graphics is off…» line any more - the game looks just like the old client, and while the improvements are off no other line shows in the corner either. The same key brings everything back. Only «Graphics test» started under Pause says for 10 seconds why it did not begin.
+
 # uaRO Graphics 3.0.22-beta.28 — what's new · 2026-11-20
 
 The photo mode without the lines.
