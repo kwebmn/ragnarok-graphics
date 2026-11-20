@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.22-beta.39 — what's new · 2026-11-20
+
+Interface fixes found while checking over the MCP.
+
+- **«Characters» in a window**: as many rows in sight as fit above the login screen's bottom row, the rest by the arrows; the cards wider - «Lord Knight · 99» whole, a too long text cut with «…».
+- **«‹ Accounts» and the logins over the rows** on a dark backing - well read over the picture.
+- **«Hunt» and «Tracking»** lie over the minimap, not under it: their lines are seen, their ✕ closes the panel instead of setting a goal on the map.
+- **«Sign out»** of the site's account line - in Ukrainian and Russian no longer the same word as the game's «Exit».
+- **For an AI helper**: a new MCP tool tells the windows open, where they are and what is under the cursor.
+
 # uaRO Graphics 3.0.22-beta.38 — what's new · 2026-11-20
 
 The login screen in a window.
