@@ -159,6 +159,7 @@
 #include "win/notifier.hpp"
 #include "win/platform.hpp"
 #include "win/shadow_patch.hpp"
+#include "win/aura_patch.hpp"
 #include "win/sound_engine.hpp"
 #include "win/sound_hook.hpp"
 #include "win/gpu/adapters.hpp"
@@ -530,6 +531,7 @@ bool Context::open(std::string& error) {
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
     installChatFix();                  // 2.6.12: Enter in the chat box while a map loads (R-PVF8AV)
     installShadowFix();                // 3.0.4-beta.9: a shadow drawn while a map loads (R-VBDSCP)
+    installAuraFix();                  // 3.0.22-beta.31: a level 99's teleport on the same map (R-JBG5MM)
     installWearGuard();                // 3.0.18-beta.174: an item worn at more places than the game takes (R-ZGN2US)
     installBlindFix();                 // 2.6.18: blindness's darkness over the whole screen (R-MCVUC8)
     installGridCell();                 // 3.0.11-beta.215: no cell under the mouse while the controller plays
