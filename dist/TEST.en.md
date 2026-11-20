@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.22-beta.30 — what's new · 2026-11-20
+
+Pause and the 3D view: the same camera.
+
+- **Pause / Scroll Lock in the 3D view**: back from it the same camera as before - first person or from behind, the free camera at the same place, the same look and zoom, a flight goes on. It used to turn the 3D view on anew: from behind, looking elsewhere.
+- **The sky after Pause**: the map's own ground stays however long Pause lasts - no black rim of the map's edge after it.
+- **Under Pause**: the renderer gets the game's own camera - the 3D view's sky and haze are no longer drawn with the old camera over the original look.
+
 # uaRO Graphics 3.0.22-beta.29 — what's new · 2026-11-20
 
 Pause - the old client without the line.
