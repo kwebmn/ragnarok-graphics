@@ -14,6 +14,8 @@
 #include "win/walk_mode.hpp"
 #include "win/upkeep_watch.hpp"
 #include "win/context.hpp"
+
+#include "core/address_room.hpp"
 #include "win/dx7/ground_batch.hpp"
 #include "win/dx7/game_texels.hpp"
 
@@ -2301,6 +2303,22 @@ void Context::logStats(bool final) {
                  "controller's memory checks %.0f a frame (%.2f ms); %u reads of places gone (3.0.18-beta.165)",
                  stats_.ownMs / stats_.frames, reads.empty() ? "game memory: none read" : reads.c_str(),
                  checks / double(stats_.frames), checksMs / stats_.frames, saferead::takeFaults());
+    }
+    {  // 3.0.22-beta.42 (R-C8SA9Z: std::bad_alloc after two graphics tests): the game's address space, every 30 s
+        std::vector<addressroom::Region> regions;
+        MEMORY_BASIC_INFORMATION m{};
+        for (uintptr_t at = 0x10000; VirtualQuery(reinterpret_cast<LPCVOID>(at), &m, sizeof m) && m.RegionSize;) {
+            regions.push_back(addressroom::Region{uint64_t(at), uint64_t(m.RegionSize),
+                                                  m.State == MEM_FREE     ? addressroom::Kind::Free
+                                                  : m.State == MEM_COMMIT ? addressroom::Kind::Committed
+                                                                          : addressroom::Kind::Reserved});
+            const uintptr_t next = reinterpret_cast<uintptr_t>(m.BaseAddress) + m.RegionSize;
+            if (next <= at) break;
+            at = next;
+        }
+        const addressroom::Room r = addressroom::sum(regions);
+        LOG_INFO("memory: the game's address space - %u MB free (the largest piece %u MB), %u MB committed, %u MB "
+                 "reserved", r.freeMb, r.largestFreeMb, r.committedMb, r.reservedMb);
     }
     // 3.0.11-beta.55 (R-9PP79T): the new interface's pictures painted meanwhile, and what they cost
     if (const std::string paints = uicost::take(); !paints.empty())
