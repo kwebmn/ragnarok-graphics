@@ -267,3 +267,20 @@ TEST(login_shelf_sheet_holds_what_it_paints) {
         other = other || (x.box.x == L.other.x && x.box.y == L.other.y && x.fillA >= 0.7f);
     CHECK(other);
 }
+
+// 3.0.22-beta.34 (the owner 20.11, the game in a window: «чтото наверное у нас не так с настройками екрана если играть
+// не на полный екран а в окне» - the cards cut at the right, the buttons over the news, the views and the status): the
+// shelf as big as the window lets it - the width less its sides, the height above the login's strip; as it was where
+// it fits (4K full screen)
+TEST(login_shelf_fits_a_window) {
+    const float below = 110 * 2.0f;  // the strip with its news at the scale 2
+    CHECK_EQ(loginshelf::fitScale(3840, 2160, below, 2.0f, true), 2.0f);
+    const float s = loginshelf::fitScale(2040, 1146, below, 2.0f, true);  // the owner's window, 175 % and the text
+    CHECK(s < 2.0f && s > 1.5f);
+    const loginshelf::Layout L = loginshelf::layout(2040, 1146, s, 6, 0, true, loginshelf::Scroll{}, below);
+    CHECK(L.x >= 0 && L.x + L.w <= 2040);           // no card cut at the right
+    CHECK(L.y >= 0 && L.y + L.h <= 1146 - int(below));  // the buttons and the links above the strip
+    const loginshelf::Layout old = loginshelf::layout(3840, 2160, 2.0f, 6, 0, true);
+    CHECK(old.y == 2160 / 2 - old.h / 2);  // full screen: where it always stood
+    CHECK(loginshelf::fitScale(640, 360, below, 2.0f, true) >= 0.5f);  // never below the reading scale's least
+}

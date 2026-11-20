@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/accounts.hpp"
+#include "core/login_chrome.hpp"
 #include "core/login_shelf.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_motion.hpp"
@@ -37,6 +38,7 @@ struct State {
     sheet::Model model;
     bool classic = false;
     float k = 0, scale = 1;
+    float below = 0;  // 3.0.22-beta.34: the login's strip kept clear (pixels)
     int targetW = 0, targetH = 0;
     unsigned codePage = 0;
     int first = 0;
@@ -382,6 +384,11 @@ static void frameInner(double k, int targetWidth, int targetHeight, unsigned cod
     const accounts::Shelf& shelf = accountsstore::shelf();
     const bool site = !sitekey::token().empty();
     if (site) siteaccounts::refresh(false);  // 3.0.11-beta.181: the site's logins, every 2 minutes
+    // 3.0.22-beta.34 (the owner 20.11, the game in a window: the cards cut at the right, the buttons over the news,
+    // the views and the status): the shelf as big as the window lets it above the login's strip (the taller one,
+    // with its news, kept clear at the strip's own scale)
+    s.below = loginchrome::stripHeight(true) * s.scale;
+    s.scale = ls::fitScale(targetWidth, targetHeight, s.below, s.scale, site);
     s.rows = shelfmerge::merge(shelf, siteaccounts::logins());
     if (!site) s.charsView = false;
     if (s.charsView) return charsFrame(s, targetWidth, targetHeight);
@@ -425,7 +432,7 @@ static void frameInner(double k, int targetWidth, int targetHeight, unsigned cod
     sc.pos = s.pos;
     sc.search = s.searchShown;
     sc.add = s.search.empty();
-    s.layout = ls::layout(targetWidth, targetHeight, s.scale, s.cards.size(), s.first, site, sc);
+    s.layout = ls::layout(targetWidth, targetHeight, s.scale, s.cards.size(), s.first, site, sc, s.below);
     s.first = s.layout.target;
     s.menuLayout = s.menuFor >= 0
                        ? ls::menuLayout(s.layout, s.menuFor - s.layout.first,

@@ -60,8 +60,13 @@ struct Scroll {
     bool search = false;
     bool add = true;
 };
+// `below` - the pixels at the screen's foot it keeps clear (the login's strip): it stands in the middle above them
 Layout layout(int targetW, int targetH, float scale, size_t cards, int first, bool site = false,
-              const Scroll& sc = Scroll{});
+              const Scroll& sc = Scroll{}, float below = 0);
+// 3.0.22-beta.34 (the owner 20.11, the game in a window: the cards cut at the right, the buttons over the news and
+// the views): the shelf's scale - `scale` where it fits, else as big as the screen lets it: its width less the
+// sides, its height above `below` (the login's strip, pixels); never under the reading scale's least (0.5)
+float fitScale(int targetW, int targetH, float below, float scale, bool site);
 int mostFirst(size_t cards, bool add);         // the row's end in sight
 float glide(float pos, int first, float ms);  // the row's shown place `ms` later (-1: not shown yet - there)
 int barFirst(const Layout& L, float x);        // a press on the bar at x: the place to go to

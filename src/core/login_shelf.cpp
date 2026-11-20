@@ -27,6 +27,8 @@ constexpr uint32_t kMuted = 0x9AA3B5, kLogin = 0x7E879A, kRed = 0xFF5A4E, kAmber
 constexpr uint32_t kChosenWords = 0xF5E6BE, kKey = 0xB9A47A, kLink = 0x8CB8FF;
 
 float rowWidth(int slots) { return slots * kCardW + std::max(0, slots - 1) * kGap; }
+// 3.0.22-beta.34: fitScale's room - the screen's sides as the login's strip keeps them, a margin over and under
+constexpr float kSide = 24, kMargin = 12;
 
 std::string capital(const std::string& s) {
     std::string out = s;
@@ -41,7 +43,17 @@ std::string fill(const std::string& pattern, const std::string& v) {
 
 }  // namespace
 
-Layout layout(int targetW, int targetH, float scale, size_t cards, int first, bool site, const Scroll& sc) {
+float fitScale(int targetW, int targetH, float below, float scale, bool site) {
+    const float s = scale > 0 ? scale : 1.0f;
+    const float w = rowWidth(kInSight) + 2 * (kArrowGap + kArrowW);
+    const float h = kTitleH + kTitleGap + kCardH + kRowGap + kButtonH + (site ? kSiteH : 0.0f);
+    const float byWidth = (float(targetW) - 2 * kSide * s) / w;
+    const float byHeight = (float(targetH) - below - 2 * kMargin * s) / h;
+    return std::max(0.5f, std::min(s, std::min(byWidth, byHeight)));
+}
+
+Layout layout(int targetW, int targetH, float scale, size_t cards, int first, bool site, const Scroll& sc,
+              float below) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
@@ -55,7 +67,7 @@ Layout layout(int targetW, int targetH, float scale, size_t cards, int first, bo
     L.w = int(std::ceil(w));
     L.h = int(std::ceil(h));
     L.x = std::max(0, targetW / 2 - L.w / 2);
-    L.y = std::max(0, targetH / 2 - L.h / 2);
+    L.y = std::max(0, int(std::lround((float(targetH) - below) / 2)) - L.h / 2);  // 3.0.22-beta.34: above `below`
     L.title = panel::Box{0, 0, w, kTitleH * s};
     const float top = (kTitleH + kTitleGap) * s, row = rowWidth(std::min(kInSight, std::max(1, slots))) * s;
     const float left = (w - row) / 2, step = (kCardW + kGap) * s;

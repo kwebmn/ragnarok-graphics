@@ -33,6 +33,8 @@ std::string fit(const std::string& text, float px, float room) {
 
 }  // namespace
 
+float stripHeight(bool news) { return news ? kStripNewsH : kStripH; }
+
 Layout layout(int targetW, int targetH, float scale, const std::string& statusText) {
     Content c;
     c.status = statusText;

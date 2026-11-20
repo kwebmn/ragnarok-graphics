@@ -25,6 +25,8 @@ struct Content {
     std::string viewNames[3];  // 3.0.11-beta.177: the views' segments as wide as their words (96 at least)
 };
 Layout layout(int targetW, int targetH, float scale, const Content& c);
+// 3.0.22-beta.34: the strip's height at the scale 1 - with the news pill over it or without (the shelf keeps it clear)
+float stripHeight(bool news);
 Layout layout(int targetW, int targetH, float scale, const std::string& statusText);  // the status alone
 enum class Part : uint8_t { None, View0, View1, View2, Lang0, Lang1, Lang2, News, AllNews };
 Part hitTest(const Layout& L, float x, float y);  // in the strip's pixels
