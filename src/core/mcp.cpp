@@ -122,6 +122,14 @@ const std::vector<Tool>& table() {
          "inside: its window may stay behind other windows (not minimised); the player's keyboard untouched.",
          R"({"type":"object","properties":{"keys":{"type":"string","minLength":1,"maxLength":40}},)"
          R"("required":["keys"]})"},
+        // 3.0.22-beta.40 (the owner: «навожу» - the tips needed his hand)
+        {"hover",
+         "The game's cursor put at (x, y) of a screenshot `width` wide and held there `seconds` (1-30, 8 unless "
+         "said) without a click - the tips and highlights of what it points at show; look with `screenshot`. A key "
+         "or a click ends it. Given from inside the game, as `click`.",
+         R"({"type":"object","properties":{"x":{"type":"number","minimum":0},"y":{"type":"number","minimum":0},)"
+         R"("width":{"type":"integer","minimum":160,"maximum":7680},"seconds":{"type":"integer","minimum":1,)"
+         R"("maximum":30}},"required":["x","y","width"]})"},
         // 3.0.22-beta.39: what the interface is made of now - to find why a part shows where it should not
         {"windows",
          "The interface's parts now: the movable windows the top first with their boxes, the window whose corner "
@@ -425,8 +433,9 @@ std::string checkArgs(const std::string& tool, const json::Value& args) {
         std::string why;
         if (args["keys"].type() != json::Value::String) return "keys: a key's words (alt+e, enter, f12...)";
         if (!keyCombo(args["keys"].asString(), k, why)) return why;
-    } else if (tool == "click") {
+    } else if (tool == "click" || tool == "hover") {
         if (!wholeIn(args["width"], 160, 7680)) return "width: the screenshot's width the place is in, 160-7680";
+        if (tool == "hover" && args.has("seconds") && !wholeIn(args["seconds"], 1, 30)) return "seconds: 1-30";
         const json::Value &x = args["x"], &y = args["y"];
         if (x.type() != json::Value::Number || y.type() != json::Value::Number || !(x.asNumber() >= 0) ||
             !(y.asNumber() >= 0) || !(x.asNumber() < args["width"].asNumber()) || !std::isfinite(y.asNumber()))

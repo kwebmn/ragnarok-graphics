@@ -6356,10 +6356,12 @@ constexpr Entry kTexts[] = {
      "Строка под окном входа: сервер отвечает, сколько игроков онлайн, пинг. Когда не отвечает — одна строка с "
      "отсчётом до следующей попытки вместо окон игры; вход повторяется сам только после того, как вы нажали "
      "«Войти»."},
-    {Text::LoginStatusUp, "Server up · {1} players online · ping {2} ms",
-     "Сервер працює · {1} гравців онлайн · пінг {2} мс", "Сервер работает · {1} игроков онлайн · пинг {2} мс"},
-    {Text::LoginStatusUpCount, "Server up · {1} players online", "Сервер працює · {1} гравців онлайн",
-     "Сервер работает · {1} игроков онлайн"},
+    // 3.0.22-beta.40 (the owner's login over the MCP: «281 гравців онлайн»): the word in the number's form
+    {Text::LoginStatusUp, "Server up · {1} {1|player|players} online · ping {2} ms",
+     "Сервер працює · {1} {1|гравець|гравці|гравців} онлайн · пінг {2} мс",
+     "Сервер работает · {1} {1|игрок|игрока|игроков} онлайн · пинг {2} мс"},
+    {Text::LoginStatusUpCount, "Server up · {1} {1|player|players} online",
+     "Сервер працює · {1} {1|гравець|гравці|гравців} онлайн", "Сервер работает · {1} {1|игрок|игрока|игроков} онлайн"},
     {Text::LoginStatusUpNoCount, "Server up · ping {1} ms", "Сервер працює · пінг {1} мс",
      "Сервер работает · пинг {1} мс"},
     {Text::LoginStatusDown, "The server does not answer - trying again in {1} s",
@@ -9775,9 +9777,51 @@ Text effectsSetText(int level) {
     return kSets[level < 0 ? 0 : level > 3 ? 3 : level];
 }
 
+namespace {
+
+// 3.0.22-beta.40: {N|one|few|many} (Ukrainian, Russian) or {N|one|other} (English) - the form for the number in arg N
+std::string numberForm(const std::string& arg, const std::vector<std::string>& forms) {
+    if (forms.empty()) return std::string();
+    bool number = !arg.empty();
+    int hundred = 0;  // its last two digits - all the rule looks at (any length, no overflow)
+    for (char c : arg) {
+        if (c < '0' || c > '9') {
+            number = false;
+            break;
+        }
+        hundred = (hundred * 10 + (c - '0')) % 100;
+    }
+    if (!number) return forms.back();
+    if (forms.size() == 2) return forms[arg.find_first_not_of('0') == arg.size() - 1 && arg.back() == '1' ? 0 : 1];
+    if (forms.size() != 3) return forms.back();
+    const int ten = hundred % 10;
+    if (ten == 1 && hundred != 11) return forms[0];
+    if (ten >= 2 && ten <= 4 && (hundred < 12 || hundred > 14)) return forms[1];
+    return forms[2];
+}
+
+}  // namespace
+
 std::string fmt(const std::string& pattern, const std::vector<std::string>& args) {
     std::string out;
     for (size_t i = 0; i < pattern.size(); ++i) {
+        if (pattern[i] == '{' && i + 2 < pattern.size() && pattern[i + 2] == '|' && pattern[i + 1] >= '1' &&
+            pattern[i + 1] <= '9') {  // 3.0.22-beta.40: a number's word in its form
+            const size_t end = pattern.find('}', i + 3);
+            if (end != std::string::npos) {
+                std::vector<std::string> forms;
+                size_t at = i + 3;
+                while (at <= end) {
+                    const size_t bar = std::min(pattern.find('|', at), end);
+                    forms.push_back(pattern.substr(at, bar - at));
+                    at = bar + 1;
+                }
+                const size_t n = size_t(pattern[i + 1] - '1');
+                out += numberForm(n < args.size() ? args[n] : std::string(), forms);
+                i = end;
+                continue;
+            }
+        }
         if (pattern[i] == '{' && i + 2 < pattern.size() && pattern[i + 2] == '}' && pattern[i + 1] >= '1' &&
             pattern[i + 1] <= '9') {
             const size_t n = size_t(pattern[i + 1] - '1');

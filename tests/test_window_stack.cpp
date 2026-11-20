@@ -65,3 +65,14 @@ TEST(window_stack_docks_the_equipment_beside_the_bag) {
     CHECK(winstack::opposite(Side::Left) == Side::Right);
 }
 
+
+// 3.0.22-beta.40 (the owner's interface over the MCP: the character block's size grip over «Навички»): a point under a
+// window of the stack - the panels under it show no grip there
+TEST(window_stack_covers_a_point) {
+    const std::vector<winstack::Box> open = {{329, 191, 1385, 708}, {10, 10, 100, 50}};
+    CHECK(winstack::covers(open, 492, 268));
+    CHECK(winstack::covers(open, 20, 20));
+    CHECK(!winstack::covers(open, 300, 100));  // the character block alone
+    CHECK(!winstack::covers(open, 1714, 899));  // just past the corner
+    CHECK(!winstack::covers({}, 492, 268));
+}

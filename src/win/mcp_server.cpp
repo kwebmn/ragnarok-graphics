@@ -131,7 +131,7 @@ mcp::CallResult failure(const std::string& text) {
 
 // The server thread's side of a tool: the game's thread asked, its answer waited for
 mcp::CallResult onGame(const std::string& tool, const json::Value& args) {
-    if (tool == "key" || tool == "click") {  // 3.0.22-beta.35: real input, from here - the game's frames go on
+    if (tool == "key" || tool == "click" || tool == "hover") {  // 3.0.22-beta.35: from here - the game's frames go on
         Seen seen;
         {
             Locked l;
@@ -141,6 +141,9 @@ mcp::CallResult onGame(const std::string& tool, const json::Value& args) {
         if (tool == "click")
             return mcpinput::click(g, args["x"].asNumber(), args["y"].asNumber(), int(args["width"].asInt()),
                                    args["button"].asString() == "right", args["double"].asBool(false));
+        if (tool == "hover")  // 3.0.22-beta.40
+            return mcpinput::hover(g, args["x"].asNumber(), args["y"].asNumber(), int(args["width"].asInt()),
+                                   int(args["seconds"].asInt(8)));
         mcp::KeyCombo k;
         std::string why;
         mcp::keyCombo(args["keys"].asString(), k, why);  // checked already

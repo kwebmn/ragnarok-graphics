@@ -221,3 +221,22 @@ TEST(mcp_key_messages_carry_the_key_as_windows_does) {
     CHECK_EQ(mcp::keyMessageBits(0x01, false, false, false), 0x00010001u);  // Esc
     CHECK_EQ(mcp::keyMessageBits(0x48, true, false, false), 0x01480001u);  // Up: extended
 }
+
+// 3.0.22-beta.40 (the owner over the MCP: «навожу» - the tips needed his hand): the game's cursor held at a place
+// without a click, its tips shown
+TEST(mcp_hover_holds_the_cursor_at_a_place) {
+    json::Value v;
+    std::string e;
+    const auto args = [&](const char* text) {
+        json::parse(text, v, e);
+        return v;
+    };
+    CHECK(mcp::checkArgs("hover", args(R"({"x":245,"y":135,"width":1020})")).empty());
+    CHECK(mcp::checkArgs("hover", args(R"({"x":245,"y":135,"width":1020,"seconds":20})")).empty());
+    CHECK(!mcp::checkArgs("hover", args(R"({"x":245,"y":135,"width":1020,"seconds":0})")).empty());
+    CHECK(!mcp::checkArgs("hover", args(R"({"x":245,"y":135,"width":1020,"seconds":31})")).empty());
+    CHECK(!mcp::checkArgs("hover", args(R"({"x":2000,"y":135,"width":1020})")).empty());
+    bool listed = false;
+    for (const mcp::Tool& t : mcp::tools()) listed = listed || std::string(t.name) == "hover";
+    CHECK(listed);
+}

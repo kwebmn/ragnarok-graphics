@@ -1,5 +1,7 @@
 #include "win/uaui.hpp"
 
+#include "core/ui_hover.hpp"
+
 #include "pad/win/runtime.hpp"
 
 #include <RmlUi/Core.h>
@@ -1945,8 +1947,27 @@ void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     int cx = 0, cy = 0;
     // 3.0.18-beta.130: while the controller plays, the mouse out of every document (no :hover kept by the hidden
     // cursor's last place)
-    if (readHoverCursor(cx, cy)) s.context->ProcessMouseMove(int(float(cx) * float(k)), int(float(cy) * float(k)), 0);
-    else if (uapad::runtime::look().shown) s.context->ProcessMouseLeave();
+    if (readHoverCursor(cx, cy)) {
+        const int tx = int(float(cx) * float(k)), ty = int(float(cy) * float(k));
+        // 3.0.22-beta.40 (the character block's tips through «Навички»): a passive window over the pointer - its part
+        // hit-tests it, RmlUi sees through it - and the documents under it get no hover
+        std::vector<uihover::DocAt> at;
+        for (Doc* d : s.docs) {
+            int x = 0, y = 0, w = 0, h = 0;
+            if (!d->made() || !d->shown() || d->cursor || !d->box(x, y, w, h)) continue;
+            at.push_back(uihover::DocAt{x, y, w, h,
+                                        d->top      ? uihover::Layer::Top
+                                        : d->window ? uihover::Layer::Windows
+                                                    : uihover::Layer::Hud,
+                                        d->zIndex(), d->passive});
+        }
+        if (uihover::passiveOver(at, tx, ty))
+            s.context->ProcessMouseLeave();
+        else
+            s.context->ProcessMouseMove(tx, ty, 0);
+    } else if (uapad::runtime::look().shown) {
+        s.context->ProcessMouseLeave();
+    }
 }
 
 json::Value describe() {

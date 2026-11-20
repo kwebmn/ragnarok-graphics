@@ -38,5 +38,7 @@ float sizeOf(winstack::Win w);
 // 3.0.22-beta.39 (the MCP's `windows`): the stack's windows, the top first, with their boxes (the target's
 // pixels); the window whose corner grip is shown and the one pulled; the game's cursor there
 json::Value describe();
+// 3.0.22-beta.40: a shown window of the stack over (x, y), the target's pixels (hud_edit's grip not there)
+bool covers(int x, int y);
 
 }  // namespace uagfx::win::windowstack

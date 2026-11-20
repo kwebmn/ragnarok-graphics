@@ -609,6 +609,15 @@ static void sizingFrame(State& s, int targetWidth, int targetHeight, double k) {
     gripDoc(z.hot ? &z.hotBox : nullptr, k);
 }
 
+bool covers(int x, int y) {
+    std::vector<winstack::Box> open;
+    for (const Win w : state().stack.topDown()) {
+        winstack::Box b{};
+        if (shown(w) && boxOf(w, b)) open.push_back(b);
+    }
+    return winstack::covers(open, x, y);
+}
+
 json::Value describe() {
     State& s = state();
     const Sizing& z = sizing();

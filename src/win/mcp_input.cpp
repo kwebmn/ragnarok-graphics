@@ -1,6 +1,7 @@
 #include "win/mcp_input.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdlib>
 #include <vector>
@@ -11,6 +12,8 @@
 
 namespace uagfx::win::mcpinput {
 namespace {
+
+std::atomic<ULONGLONG> g_hoverUntil{0};  // 3.0.22-beta.40: a hover's end (0 none)
 
 mcp::CallResult said(const std::string& text, bool error = false) {
     mcp::CallResult r;
@@ -82,6 +85,7 @@ bool gamePoint(const Game& g, int cx, int cy, int clientW, int clientH, long& ex
 }
 
 mcp::CallResult keyInside(const Game& g, const mcp::KeyCombo& k, const std::string& words) {
+    if (g_hoverUntil.exchange(0)) uapad::remote::setMouse(uapad::remote::Mouse{});  // a hover ends
     const UINT scan = MapVirtualKeyA(UINT(k.vk), MAPVK_VK_TO_VSC);
     const UINT down = k.alt ? WM_SYSKEYDOWN : WM_KEYDOWN, up = k.alt ? WM_SYSKEYUP : WM_KEYUP;
     uapad::remote::setMods(k.ctrl, k.shift, k.alt);  // the game's GetAsyncKeyState and its thread's key state
@@ -108,6 +112,7 @@ mcp::CallResult clickInside(const Game& g, double x, double y, int width, bool r
                     true);
     long ex = 0, ey = 0;
     const bool known = gamePoint(g, cx, cy, int(c.right), int(c.bottom), ex, ey);
+    g_hoverUntil = 0;  // a hover ends: the click's own from here
     uapad::remote::setMouse(uapad::remote::Mouse{true, cx, cy, 0});
     int gx = -1, gy = -1;
     for (int i = 0; i < 30; ++i) {  // the game's cursor driven there, 0.45 s at most
@@ -238,6 +243,37 @@ mcp::CallResult clickFront(const Game& g, double x, double y, int width, bool ri
 }
 
 }  // namespace
+
+mcp::CallResult hover(const Game& g, double x, double y, int width, int seconds) {
+    const std::string inside = insideNot(g.window);
+    if (!inside.empty()) return said(inside, true);
+    RECT c{};
+    GetClientRect(g.window, &c);
+    int cx = 0, cy = 0;
+    if (!mcp::clickPlace(x, y, width, int(c.right), int(c.bottom), cx, cy))
+        return said("the place is past the picture: a screenshot " + std::to_string(width) +
+                        " wide shows the window's " + pair(c.right, c.bottom) + " points",
+                    true);
+    uapad::remote::setMouse(uapad::remote::Mouse{true, cx, cy, 0});
+    g_hoverUntil = GetTickCount64() + ULONGLONG(std::clamp(seconds, 1, 30)) * 1000;
+    PostMessageA(g.window, WM_MOUSEMOVE, 0, MAKELPARAM(cx, cy));
+    long ex = 0, ey = 0;
+    int gx = -1, gy = -1;
+    const bool known = gamePoint(g, cx, cy, int(c.right), int(c.bottom), ex, ey);
+    for (int i = 0; i < 30; ++i) {  // the game's cursor there, 0.45 s at most
+        if (known && readGameCursor(gx, gy) && std::labs(gx - ex) <= 2 && std::labs(gy - ey) <= 2) break;
+        Sleep(15);
+    }
+    LOG_INFO("mcp: hover inside the game at %s of a %d-wide screenshot = %s, %d s", pair(long(x), long(y)).c_str(),
+             width, pair(cx, cy).c_str(), seconds);
+    return said("the game's cursor held at " + pair(long(x), long(y)) + " = " + pair(cx, cy) + " in the window for " +
+                std::to_string(seconds) + " s - look with `screenshot`");
+}
+
+void tick() {
+    const ULONGLONG until = g_hoverUntil;
+    if (until && GetTickCount64() >= until && g_hoverUntil.exchange(0)) uapad::remote::setMouse(uapad::remote::Mouse{});
+}
 
 std::string ready(HWND window) {
     if (!window || !IsWindow(window)) return "no game window yet";

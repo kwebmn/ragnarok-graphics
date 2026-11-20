@@ -79,4 +79,10 @@ Box docked(Box leader, Box follower, Side side) {
     return follower;
 }
 
+bool covers(const std::vector<Box>& open, int x, int y) {
+    for (const Box& b : open)
+        if (x >= b.x && y >= b.y && x < b.x + b.w && y < b.y + b.h) return true;
+    return false;
+}
+
 }  // namespace uagfx::winstack

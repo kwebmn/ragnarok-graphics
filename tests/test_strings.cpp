@@ -75,3 +75,24 @@ TEST(effects_set_text_names_the_ladder) {
     CHECK(std::string(tr(Lang::Uk, effectsSetText(0))) == "Без ефектів");
     CHECK(std::string(tr(Lang::Uk, effectsSetText(3))) == "Високі");
 }
+
+// 3.0.22-beta.40 (the owner's login screen over the MCP: «281 гравців онлайн», «281 игроков онлайн»): a number's word
+// in its form - {N|one|few|many} for Ukrainian and Russian, {N|one|other} for English
+TEST(strings_fmt_number_forms) {
+    using uagfx::settings::fmt;
+    const std::string uk = "{1} {1|гравець|гравці|гравців} онлайн";
+    CHECK_EQ(fmt(uk, {"281"}), std::string("281 гравець онлайн"));
+    CHECK_EQ(fmt(uk, {"22"}), std::string("22 гравці онлайн"));
+    CHECK_EQ(fmt(uk, {"25"}), std::string("25 гравців онлайн"));
+    CHECK_EQ(fmt(uk, {"11"}), std::string("11 гравців онлайн"));
+    CHECK_EQ(fmt(uk, {"112"}), std::string("112 гравців онлайн"));
+    CHECK_EQ(fmt(uk, {"101"}), std::string("101 гравець онлайн"));
+    CHECK_EQ(fmt(uk, {"0"}), std::string("0 гравців онлайн"));
+    const std::string en = "{1} {1|player|players} online";
+    CHECK_EQ(fmt(en, {"1"}), std::string("1 player online"));
+    CHECK_EQ(fmt(en, {"281"}), std::string("281 players online"));
+    CHECK_EQ(fmt(en, {"1001"}), std::string("1001 players online"));
+    CHECK_EQ(fmt(uk, {"12345678901234567891"}), std::string("12345678901234567891 гравець онлайн"));  // long
+    CHECK_EQ(fmt("{1|a|b|c}", {"many"}), std::string("c"));  // not a number: the last form
+    CHECK_EQ(fmt("{1} · {2}", {"x", "y"}), std::string("x · y"));  // as before
+}

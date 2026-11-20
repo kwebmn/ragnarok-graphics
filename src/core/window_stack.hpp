@@ -63,6 +63,8 @@ struct Box {
     int x = 0, y = 0, w = 0, h = 0;
 };
 Box place(Box wanted, const std::vector<Box>& open, int screenW, int screenH, int gap, int step);
+// 3.0.22-beta.40: (x, y) under one of `open` - the panels under a window show no grip or tip there
+bool covers(const std::vector<Box>& open, int x, int y);
 
 // 3.0.11-beta.111 (question 1: «два окна вплотную друг к другу как одно окно»): «Спорядження» and «Речі» open together
 // stand side by side, tops in line, and move as one - the gear left of the bag where the screen has room, else right

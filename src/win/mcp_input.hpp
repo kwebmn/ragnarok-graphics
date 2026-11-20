@@ -26,5 +26,10 @@ mcp::CallResult key(const Game& g, const mcp::KeyCombo& k, const std::string& wo
 // The cursor at (x, y) of a screenshot `width` wide, the button pressed and let go (twice for a double click); the
 // cursor stays there. The answer tells where the game's own cursor went.
 mcp::CallResult click(const Game& g, double x, double y, int width, bool right, bool twice);
+// 3.0.22-beta.40 (the owner: «навожу»): the game's cursor held at (x, y) of a screenshot `width` wide for `seconds`
+// without a click - its tips shown; a key or a click ends it
+mcp::CallResult hover(const Game& g, double x, double y, int width, int seconds);
+// Each frame on the game's thread: a hover whose time is up let go
+void tick();
 
 }  // namespace uagfx::win::mcpinput

@@ -15,6 +15,7 @@
 #include "win/dpi.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/mcp_input.hpp"
 #include "win/mcp_server.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
@@ -48,6 +49,7 @@ std::string token(const Config& c, const char* key) {
 }  // namespace
 
 void Context::mcpFrame(bool shown) {
+    mcpinput::tick();  // 3.0.22-beta.40: a hover's time up - the cursor the player's again
     mcpwin::Seen seen;
     seen.window = window;
     seen.shown = shown;

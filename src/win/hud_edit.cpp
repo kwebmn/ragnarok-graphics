@@ -23,6 +23,7 @@
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
 #include "win/window_input.hpp"
+#include "win/window_stack.hpp"
 #include "win/words.hpp"
 
 namespace uagfx::win::hudedit {
@@ -407,10 +408,11 @@ static void frameInner(HWND game, double k, int targetW, int targetH) {
     }
     if (s.drag >= 0 && pointer) follow(s, cx, cy);
     if (s.sizing >= 0 && pointer) resize(s, cx, cy);
-    // the grip at the corner of the part under the pointer
+    // the grip at the corner of the part under the pointer - 3.0.22-beta.40 (the owner over the MCP: the character
+    // block's grip over «Навички»): not where a window lies over it
     s.gripPart = -1;
     s.gripHover = false;
-    if (!s.locked && !s.on && s.drag < 0 && s.sizing < 0 && !s.held && pointer) {
+    if (!s.locked && !s.on && s.drag < 0 && s.sizing < 0 && !s.held && pointer && !windowstack::covers(cx, cy)) {
         for (const Part p : kOnTop) {
             const int i = int(p);
             if (!shownNow(s, i)) continue;
