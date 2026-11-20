@@ -12,5 +12,8 @@ bool key(UINT m, WPARAM wp, LPARAM lp);
 int frame(int clock, int shown, int perSecond);
 // 0 off, 1 running, 2 held (the key hints)
 int state();
+// 3.0.22-beta.33 (the MCP's «timelapse»): to this state (0 off, 1 running, 2 held) over the next frames, as the
+// key's presses would
+void ask(int target);
 
 }  // namespace uagfx::win::timelapsewin

@@ -1,6 +1,8 @@
 #pragma once
 #include <windows.h>
 
+#include <string>
+
 #include "core/config.hpp"
 #include "core/view3d.hpp"
 
@@ -34,6 +36,14 @@ bool hold(bool on, const char* why);
 // the game's own
 bool look(float& yaw, float& pitch);
 bool setLook(float yaw, float pitch);
+// 3.0.22-beta.33 (the MCP's «camera», «flight»): the free camera on or off (at the next build); a move of it by
+// cells along its look (forward with the pitch, right, up; within its reach, out of walls); the flight's point,
+// play, stop, clear (Ctrl+Shift+P, O, L's way); its points, whether it flies, its seconds. false: no 3D view, or
+// no free camera for a move or a point
+bool freeOn(bool on);
+bool freeMove(float forward, float right, float up);
+bool flight(const std::string& action);
+void flightNow(int& points, bool& flying, float& seconds);
 bool active();                           // the 3D view on
 // 3.0.21-beta.12 (R-EV2ABB): the step the game drew its over-everything sprites with this frame (core view3d::overAll)
 float onTopStep();

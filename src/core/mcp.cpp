@@ -97,6 +97,24 @@ const std::vector<Tool>& table() {
          "sand; effects.season = auto|spring|summer|autumn|winter; frames.fps_counter = 0|1.",
          R"({"type":"object","properties":{"key":{"type":"string","pattern":"^[a-z0-9_]+\\.[a-z0-9_]+$"},)"
          R"("value":{"type":"string","maxLength":200}},"required":["key","value"]})"},
+        // 3.0.22-beta.33 (the owner: «сделай» - stage 2): the cinema camera and the time running fast
+        {"camera",
+         "The 3D view's free camera (Ctrl+Shift+C): `free` on - off the character (it stays where it is), off - back "
+         "with it; `move` it by cells along its look: forward (with the pitch), right, up - at most 200 a call, kept "
+         "out of walls and the ground. Turn it with `view` yaw and pitch.",
+         R"({"type":"object","properties":{"free":{"type":"boolean"},"move":{"type":"object","properties":)"
+         R"({"forward":{"type":"number"},"right":{"type":"number"},"up":{"type":"number"}}}}})"},
+        {"flight",
+         "The cinema camera's flight (Ctrl+Shift+P, O, L) in the free camera: `point` - its place and look now as "
+         "the next point (9 at most); `play` - a smooth flight through them ([view3d] free_speed sets its pace); "
+         "`stop`; `clear` - the points gone. Record while it plays.",
+         R"({"type":"object","properties":{"action":{"type":"string","enum":["point","play","stop","clear"]}},)"
+         R"("required":["action"]})"},
+        {"timelapse",
+         "The time of day running fast (Ctrl+Shift+T): `run` - from now, [effects] timelapse_speed minutes a "
+         "second; `hold` - stopped where it is; `off` - the clock's own again.",
+         R"({"type":"object","properties":{"action":{"type":"string","enum":["run","hold","off"]}},)"
+         R"("required":["action"]})"},
     };
     return kTools;
 }
@@ -259,6 +277,23 @@ std::string checkArgs(const std::string& tool, const json::Value& args) {
             return "pitch: degrees, -89..89";
     } else if (tool == "pause" || tool == "photo") {
         if (args["on"].type() != json::Value::Bool) return "on: true or false";
+    } else if (tool == "camera") {
+        if (!args.has("free") && !args.has("move")) return "free or move - at least one";
+        if (args.has("free") && args["free"].type() != json::Value::Bool) return "free: true or false";
+        if (args.has("move")) {
+            const json::Value& m = args["move"];
+            if (m.type() != json::Value::Object || m.members().empty()) return "move: forward, right or up (cells)";
+            for (const auto& [k, n] : m.members())
+                if ((k != "forward" && k != "right" && k != "up") || n.type() != json::Value::Number ||
+                    !(std::fabs(n.asNumber()) <= 200.0))
+                    return "move: forward, right, up - numbers of cells, 200 at most";
+        }
+    } else if (tool == "flight") {
+        const std::string a = args["action"].asString();
+        if (a != "point" && a != "play" && a != "stop" && a != "clear") return "action: point, play, stop or clear";
+    } else if (tool == "timelapse") {
+        const std::string a = args["action"].asString();
+        if (a != "run" && a != "hold" && a != "off") return "action: run, hold or off";
     } else if (tool == "setting") {
         if (!keyName(args["key"].asString())) return "key: section.name in small letters";
         const json::Value& v = args["value"];

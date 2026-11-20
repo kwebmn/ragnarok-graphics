@@ -177,6 +177,9 @@ struct State {
     // 3.0.22-beta.32 (the client's MCP «view»): a look asked with the view in the same call - put once it is on
     bool lookPending = false;
     float pendingYaw = 0.0f, pendingPitch = 0.0f;
+    // 3.0.22-beta.33 (the MCP's «camera»): a move of the free camera asked - cells along its look
+    bool movePending = false;
+    float moveForward = 0.0f, moveRight = 0.0f, moveUp = 0.0f;
 };
 
 State g_state;  // the game's thread: its window's keys, its frame, its camera build
@@ -919,6 +922,19 @@ void __attribute__((thiscall)) build(uint32_t view) {
                               on ? held('D') - held('A') : 0, on ? held(VK_SPACE) - held('C') : 0, seconds,
                               held(VK_SHIFT) != 0, s.freeScale, s.freeSmooth, feet);
         }
+        if (s.movePending && !s.flying) {  // 3.0.22-beta.33: the MCP's move, cells along the look (y down)
+            constexpr float kUnitsACell = 5.0f;
+            s.movePending = false;
+            for (int k = 0; k < 3; ++k) s.freeEye[k] += (f[k] * s.moveForward + right[k] * s.moveRight) * kUnitsACell;
+            s.freeEye[1] -= s.moveUp * kUnitsACell;
+            const float d[3] = {s.freeEye[0] - feet[0], s.freeEye[1] - feet[1], s.freeEye[2] - feet[2]};
+            const float len = std::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+            if (len > view3d::kFreeReach)  // within its reach of the feet, as the keys keep it
+                for (int k = 0; k < 3; ++k) s.freeEye[k] = feet[k] + d[k] * view3d::kFreeReach / len;
+            LOG_INFO("3D view: the free camera moved %.1f ahead, %.1f right, %.1f up (cells; the MCP)", s.moveForward,
+                     s.moveRight, s.moveUp);
+            s.moveForward = s.moveRight = s.moveUp = 0.0f;
+        }
         // 3.0.19-beta.41 (item 7): kept off the map's models (a house, a castle's wall, a tree) - along them it slides
         if (s.worldNow && (before[0] != s.freeEye[0] || before[1] != s.freeEye[1] || before[2] != s.freeEye[2])) {
             std::vector<view3d::Box> boxes;
@@ -1200,6 +1216,44 @@ uint32_t clickCasts() { return g_state.casts; }
 bool looking() { return g_state.mode != view3d::Mode::Off && g_state.looking; }
 
 bool fromTheEyes() { return g_state.mode == view3d::Mode::First; }
+
+bool freeOn(bool on) {
+    State& s = g_state;
+    if (s.mode == view3d::Mode::Off) return false;
+    if (s.free != on && !s.wantFree) s.wantFree = true;  // at the next build, Ctrl+Shift+C's way
+    return true;
+}
+
+bool freeMove(float forward, float right, float up) {
+    State& s = g_state;
+    if (s.mode == view3d::Mode::Off || (!s.free && !s.wantFree)) return false;
+    s.moveForward += forward;
+    s.moveRight += right;
+    s.moveUp += up;
+    s.movePending = true;
+    return true;
+}
+
+bool flight(const std::string& action) {
+    State& s = g_state;
+    if (s.mode == view3d::Mode::Off) return false;
+    if (action == "clear") {
+        s.wantClear = true;
+        return true;
+    }
+    if (!s.free && !s.wantFree) return false;
+    if (action == "point") s.wantPoint = true;
+    else if (action == "play" && !s.flying) s.wantFly = true;
+    else if (action == "stop" && s.flying) s.wantFly = true;
+    return true;
+}
+
+void flightNow(int& points, bool& flying, float& seconds) {
+    const State& s = g_state;
+    points = int(s.points.size());
+    flying = s.flying;
+    seconds = s.points.size() >= 2 ? view3d::flightSeconds(s.points, view3d::kFreeSpeed * s.freeScale) : 0.0f;
+}
 
 bool look(float& yaw, float& pitch) {
     const State& s = g_state;

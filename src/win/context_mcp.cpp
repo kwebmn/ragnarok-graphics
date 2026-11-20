@@ -15,6 +15,7 @@
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
+#include "win/time_lapse.hpp"
 #include "win/view3d.hpp"
 
 namespace uagfx::win {
@@ -64,6 +65,15 @@ mcp::CallResult Context::mcpCall(const std::string& tool, const json::Value& arg
             view.set("pitch", tenth(pitch));
         }
         view.set("freeCamera", view3dwin::freeCamera());
+        int points = 0;
+        bool flying = false;
+        float seconds = 0.0f;
+        view3dwin::flightNow(points, flying, seconds);
+        json::Value flight = json::Value::object();
+        flight.set("points", points);
+        flight.set("flying", flying);
+        flight.set("seconds", tenth(seconds));
+        view.set("flight", flight);
         s.set("view", view);
         s.set("pause", !enhanced_);
         s.set("photo", photo_);
@@ -71,6 +81,8 @@ mcp::CallResult Context::mcpCall(const std::string& tool, const json::Value& arg
         picture.set("clock", token(config, "effects.clock"));
         picture.set("weather", token(config, "effects.weather_kind"));
         picture.set("season", token(config, "effects.season"));
+        const int lapse = timelapsewin::state();
+        picture.set("timelapse", lapse == 1 ? "running" : lapse == 2 ? "held" : "off");
         s.set("picture", picture);
         return said(json::dump(s));
     }
@@ -125,6 +137,48 @@ mcp::CallResult Context::mcpCall(const std::string& tool, const json::Value& arg
                                                      : "off");
         }
         return said(on ? "the photo mode on - the interface out of the picture" : "the photo mode off");
+    }
+    if (tool == "camera") {  // 3.0.22-beta.33
+        if (!enhanced_) return said("Pause is on - `pause` off first", true);
+        std::string out;
+        if (args.has("free")) {
+            const bool on = args["free"].asBool();
+            if (!view3dwin::freeOn(on))
+                return said("the free camera needs the 3D view - `view` mode behind or first", true);
+            out = on ? "the free camera on" : "the free camera off - back with the character";
+        }
+        if (args.has("move")) {
+            const json::Value& m = args["move"];
+            if (!view3dwin::freeMove(float(m["forward"].asNumber()), float(m["right"].asNumber()),
+                                     float(m["up"].asNumber())))
+                return said((out.empty() ? "" : out + "; ") + "a move needs the free camera - `camera` free true",
+                            true);
+            out += (out.empty() ? "" : ", ") + std::string("moved");
+        }
+        return said(out + " - from the next frame; look with `screenshot`");
+    }
+    if (tool == "flight") {
+        const std::string action = args["action"].asString();
+        if (!view3dwin::flight(action))
+            return said("the flight needs the free camera in the 3D view - `camera` free true", true);
+        int points = 0;
+        bool flying = false;
+        float seconds = 0.0f;
+        view3dwin::flightNow(points, flying, seconds);
+        if (action == "point") return said("a point added (" + std::to_string(points + 1) + " of 9 at most)");
+        if (action == "play")
+            return said(points >= 2 ? "flying through " + std::to_string(points) + " points, " +
+                                          std::to_string(int(seconds + 0.5f)) + " s"
+                                    : "two points at least - `flight` point",
+                        points < 2);
+        return said(action == "stop" ? "stopped" : "the points cleared");
+    }
+    if (tool == "timelapse") {
+        const std::string action = args["action"].asString();
+        timelapsewin::ask(action == "run" ? 1 : action == "hold" ? 2 : 0);
+        return said(action == "run"    ? "the time runs fast ([effects] timelapse_speed minutes a second)"
+                    : action == "hold" ? "the time stopped where it is"
+                                       : "the clock's own time again");
     }
     if (tool == "setting") {
         const std::string key = args["key"].asString(), value = args["value"].asString();

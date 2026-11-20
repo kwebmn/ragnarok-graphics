@@ -145,3 +145,31 @@ TEST(mcp_http_answers) {
     CHECK(mcp::httpResponse(202, "", "").find("HTTP/1.1 202 Accepted\r\n") == 0);
     CHECK(mcp::httpResponse(403, "text/plain", "no").find("HTTP/1.1 403 Forbidden\r\n") == 0);
 }
+
+// 3.0.22-beta.33 (the owner: «сделай» - the MCP's stage 2): the free camera moved by cells, the cinema camera's flight,
+// the time of day running fast
+TEST(mcp_stage_two_tools_and_their_arguments) {
+    const auto has = [](const char* name) {
+        for (const mcp::Tool& t : mcp::tools())
+            if (std::string(t.name) == name) return true;
+        return false;
+    };
+    CHECK(has("camera") && has("flight") && has("timelapse"));
+    json::Value v;
+    std::string e;
+    const auto args = [&](const char* text) {
+        json::parse(text, v, e);
+        return v;
+    };
+    CHECK(mcp::checkArgs("camera", args(R"({"free":true})")).empty());
+    CHECK(mcp::checkArgs("camera", args(R"({"move":{"forward":12.5,"up":-2}})")).empty());
+    CHECK(!mcp::checkArgs("camera", args(R"({})")).empty());                        // nothing asked
+    CHECK(!mcp::checkArgs("camera", args(R"({"move":{"forward":500}})")).empty());  // 200 cells at most
+    CHECK(!mcp::checkArgs("camera", args(R"({"move":{}})")).empty());
+    CHECK(!mcp::checkArgs("camera", args(R"({"free":"yes"})")).empty());
+    CHECK(mcp::checkArgs("flight", args(R"({"action":"point"})")).empty());
+    CHECK(mcp::checkArgs("flight", args(R"({"action":"play"})")).empty());
+    CHECK(!mcp::checkArgs("flight", args(R"({"action":"loop"})")).empty());
+    CHECK(mcp::checkArgs("timelapse", args(R"({"action":"hold"})")).empty());
+    CHECK(!mcp::checkArgs("timelapse", args(R"({})")).empty());
+}

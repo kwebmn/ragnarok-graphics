@@ -11,6 +11,7 @@ struct State {
     bool pressed = false;
     bool skipChar = false;
     int clock = -1;
+    int target = -1;  // 3.0.22-beta.33: asked by the MCP
 };
 
 State& now() {
@@ -44,6 +45,20 @@ int frame(int clock, int shown, int perSecond) {
         s.clock = clock;
         s.lapse.off();
     }
+    if (s.target >= 0 && !s.pressed) {  // 3.0.22-beta.33: the MCP's - a press a frame until it is there
+        const int st = s.lapse.state() == daylight::Lapse::State::Running ? 1
+                       : s.lapse.state() == daylight::Lapse::State::Held  ? 2
+                                                                           : 0;
+        if (st == s.target) {
+            s.target = -1;
+        } else if (s.target == 0) {
+            s.lapse.off();
+            s.target = -1;
+            LOG_INFO("time-lapse: the clock's own again (the MCP)");
+        } else {
+            s.pressed = true;
+        }
+    }
     if (s.pressed) {
         s.pressed = false;
         const int before = s.lapse.minute(t, perSecond);
@@ -65,6 +80,8 @@ int frame(int clock, int shown, int perSecond) {
     }
     return s.lapse.minute(t, perSecond);
 }
+
+void ask(int target) { now().target = target; }
 
 int state() {
     switch (now().lapse.state()) {
