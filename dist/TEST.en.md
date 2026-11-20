@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.22-beta.42 — what's new · 2026-11-20
+
+The bars over the monsters in the 3D view and a log to find crashes.
+
+- **The monsters' health bars in the 3D view** no longer hang in the sky over the far monsters - no higher than a head over the monster's feet.
+- **The log** tells every 30 s how much memory the game has left - to find a crash from memory running out.
+- **The graphics test on Direct3D 11**: the sky and the horizon on a line of their own (their time was counted into «mists» before).
+
 # uaRO Graphics 3.0.22-beta.41 — what's new · 2026-11-20
 
 Two mistakes of the betas before fixed.
