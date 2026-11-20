@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.22-beta.41 — what's new · 2026-11-20
+
+Two mistakes of the betas before fixed.
+
+- **The character block's tips** show again while the cursor is over the block (in 3.0.22-beta.40 they were gone).
+- **«Hunt» and «Tracking»** are seen again - over the minimap now (in 3.0.22-beta.39 the minimap covered them whole).
+- **For an AI helper**: the MCP reads the driver log's last lines; the log tells the worn things the item tip's comparison sees.
+
 # uaRO Graphics 3.0.22-beta.40 — what's new · 2026-11-20
 
 Interface fixes found while checking over the MCP.
