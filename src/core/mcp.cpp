@@ -183,7 +183,8 @@ int parseHttp(const std::string& data, HttpRequest& out) {
         const size_t next = data.find("\r\n", at);
         const std::string h = data.substr(at, (next == std::string::npos ? end : next) - at);
         const size_t colon = h.find(':');
-        if (colon != std::string::npos) r.headers.emplace_back(lower(trim(h.substr(0, colon))), trim(h.substr(colon + 1)));
+        if (colon != std::string::npos)
+            r.headers.emplace_back(lower(trim(h.substr(0, colon))), trim(h.substr(colon + 1)));
         if (next == std::string::npos || next >= end) break;
         at = next + 2;
     }

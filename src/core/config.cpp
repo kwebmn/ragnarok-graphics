@@ -1197,6 +1197,10 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.fastTextures);
         } else if (key == "debug.quick_acks") {  // 3.0.11-beta.128: the server's packets acknowledged at once
             setBool(val, c.quickAcks);
+        } else if (key == "mcp.enabled") {  // 3.0.22-beta.32
+            setBool(val, c.mcpEnabled);
+        } else if (key == "mcp.port") {
+            toInt(val, 1024, 65535, c.mcpPort);
         } else if (key == "sound.rate") {  // 0.91
             if (val == "0" || val == "44100" || val == "48000") c.sound.rate = std::atoi(val.c_str());
         } else if (key == "sound.voices") {

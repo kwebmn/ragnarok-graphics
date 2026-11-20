@@ -331,7 +331,7 @@ std::vector<Group> build() {
     // --- «Діагностика»
     out.push_back(group(Area::Diagnostics, Text::PageDiagnostics,
                         {diag("debug.log"), diag("debug.profile"), diag("debug.xray"), diag("debug.seams_view"),
-                         diag("interface.uaui_showcase"),
+                         diag("interface.uaui_showcase"), diag("mcp.enabled"), diag("mcp.port"),
                          // 3.0.21-beta.7: «Налаштування» itself - turned off there, the window with every other
                          // row was gone; the console opens whatever is off
                          diag("interface.settings_window")}));

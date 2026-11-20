@@ -9714,6 +9714,23 @@ constexpr Entry kTexts[] = {
      "You need an Emperium among your things. In the chat write /guild Name - you become its master.",
      "Потрібен Emperium у речах. У чаті напишіть /guild Назва — ви станете майстром.",
      "Нужен Emperium в вещах. В чате напишите /guild Название — вы станете мастером."},
+    // 3.0.22-beta.32 (the owner 20.11: «пускай будет мсп у всех»): [mcp] enabled, port
+    {Text::McpEnabled, "MCP control for an AI helper", "Керування через MCP (для ШІ-помічника)",
+     "Управление через MCP (для ИИ-помощника)"},
+    {Text::McpEnabledHint,
+     "An AI helper (Claude and the like) on this computer can drive the game: see the picture, walk, the camera, "
+     "Pause, the photo mode, the settings. Only programs on this computer (127.0.0.1) reach it, web pages cannot. "
+     "Keep it off when you do not use it.",
+     "ШІ-помічник (Claude тощо) на цьому комп'ютері може керувати грою: бачити картинку, ходити, камера, Pause, "
+     "режим фото, налаштування. Підключитися можуть лише програми на цьому комп'ютері (127.0.0.1), вебсторінки — "
+     "ні. Вимикайте, коли не користуєтеся.",
+     "ИИ-помощник (Claude и т. п.) на этом компьютере может управлять игрой: видеть картинку, ходить, камера, Pause, "
+     "режим фото, настройки. Подключиться могут только программы на этом компьютере (127.0.0.1), веб-страницы — "
+     "нет. Выключайте, когда не пользуетесь."},
+    {Text::McpPort, "Its port", "Порт", "Порт"},
+    {Text::McpPortHint, "The port on 127.0.0.1 (8770 unless another program has it).",
+     "Порт на 127.0.0.1 (8770, якщо його не зайняла інша програма).",
+     "Порт на 127.0.0.1 (8770, если его не заняла другая программа)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

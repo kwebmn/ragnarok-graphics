@@ -1248,6 +1248,10 @@ struct Config {
     // 3.0.11-beta.128 (the network plan's step 5): [debug] quick_acks - the game's socket acknowledges each of the
     // server's packets at once (SIO_TCP_SET_ACK_FREQUENCY 1, win/net_watch); off: Windows' delayed ACKs (2)
     bool quickAcks = true;
+    // 3.0.22-beta.32 (the owner 20.11: «пускай будет мсп у всех»): [mcp] enabled - the MCP server for an AI helper
+    // (core/mcp, win/mcp_server) on 127.0.0.1 alone, off; port - its port
+    bool mcpEnabled = false;
+    int mcpPort = 8770;
     // 0.90: [debug] merge_draws - Direct3D 11 sends the game's draws that follow one another with the same state as
     // one draw call (core/draw_batch.hpp); 0 sends each by itself as before
     bool mergeDraws = true;

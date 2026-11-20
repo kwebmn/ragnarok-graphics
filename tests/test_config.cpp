@@ -2132,3 +2132,18 @@ TEST(config_pause_effects_are_off_and_held) {
     same.held = true;
     CHECK(e == same && e != effectsOff());  // told to the renderer as a change of its own
 }
+
+// 3.0.22-beta.32 (the owner 20.11: «пускай будет мсп у всех»): [mcp] - off unless turned on, port 8770, a port out of
+// 1024-65535 left at it; in the settings' Diagnostics
+TEST(config_mcp_off_by_default_port_8770) {
+    Config c = parseConfig("");
+    CHECK(!c.mcpEnabled && c.mcpPort == 8770);
+    c = parseConfig("[mcp]\nenabled = 1\nport = 9000\n");
+    CHECK(c.mcpEnabled && c.mcpPort == 9000);
+    c = parseConfig("[mcp]\nport = 80\n");
+    CHECK_EQ(c.mcpPort, 8770);
+    const settings::IniSetting* s = settings::findSetting("mcp.enabled");
+    CHECK(s && s->page == settings::Page::Diagnostics && settings::tokenOf(*s, Config{}) == "0");
+    const settings::IniSetting* p = settings::findSetting("mcp.port");
+    CHECK(p && settings::tokenOf(*p, Config{}) == "8770");
+}

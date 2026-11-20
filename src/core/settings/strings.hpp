@@ -1082,6 +1082,8 @@ enum class Text : uint16_t {
     GuildWPadActions,
     // 3.0.22-beta.27: no guild - Alt+G tells how to join and to make one
     GuildWNoGuild, GuildWNoGuildSub, GuildWJoin, GuildWJoinText, GuildWMake, GuildWMakeText,
+    // 3.0.22-beta.32: [mcp] - the MCP server for an AI helper
+    McpEnabled, McpEnabledHint, McpPort, McpPortHint,
     Count
 };
 

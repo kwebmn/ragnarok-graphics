@@ -1396,6 +1396,11 @@ const std::vector<IniSetting>& iniSettings() {
          Text::DebugFastTexturesHint, ""},
         {"debug", "quick_acks", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugQuickAcks,
          Text::DebugQuickAcksHint, ""},  // 3.0.11-beta.128
+        // 3.0.22-beta.32 (the owner 20.11: «пускай будет мсп у всех»): the MCP server for an AI helper
+        {"mcp", "enabled", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::McpEnabled,
+         Text::McpEnabledHint, ""},
+        {"mcp", "port", Page::Diagnostics, Control::Number, 1024, 65535, 1, {}, {}, Text::McpPort, Text::McpPortHint,
+         ""},
     };
     return list;
 }
@@ -1750,6 +1755,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "debug.fast_ftol") return c.fastFtol ? "1" : "0";
     if (k == "debug.fast_textures") return c.fastTextures ? "1" : "0";
     if (k == "debug.quick_acks") return c.quickAcks ? "1" : "0";  // 3.0.11-beta.128
+    if (k == "mcp.enabled") return c.mcpEnabled ? "1" : "0";     // 3.0.22-beta.32
+    if (k == "mcp.port") return std::to_string(c.mcpPort);
     return "";
 }
 

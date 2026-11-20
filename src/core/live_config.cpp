@@ -200,6 +200,12 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("smooth_fixes", flag(running.smoothFixes), flag(file.smoothFixes)));
         n.smoothFixes = file.smoothFixes;
     }
+    if (file.mcpEnabled != running.mcpEnabled || file.mcpPort != running.mcpPort) {  // 3.0.22-beta.32: at once
+        u.applied.push_back(change("mcp", flag(running.mcpEnabled) + " " + std::to_string(running.mcpPort),
+                                   flag(file.mcpEnabled) + " " + std::to_string(file.mcpPort)));
+        n.mcpEnabled = file.mcpEnabled;
+        n.mcpPort = file.mcpPort;
+    }
     if (file.quickAcks != running.quickAcks) {  // 3.0.11-beta.128: the server's packets acknowledged at once
         u.applied.push_back(change("quick_acks", flag(running.quickAcks), flag(file.quickAcks)));
         n.quickAcks = file.quickAcks;
@@ -965,6 +971,7 @@ bool appliesNow(const std::string& k) {
            k == "renderer.cross_present" ||  // 3.0.19-beta.9
            k == "debug.profile" || k == "debug.xray" || k == "debug.seams_view" || k == "frames.fps_counter" ||
            k == "debug.quick_acks" ||  // 3.0.11-beta.128
+           k == "mcp.enabled" || k == "mcp.port" ||  // 3.0.22-beta.32
            k == "utility.language" ||  // 3.0.11-beta.174
            k == "report.disconnects" ||  // 3.0.20-beta.60
            k == "stats.send" || k.compare(0, 8, "windows.") == 0 || k.compare(0, 8, "effects.") == 0 ||
