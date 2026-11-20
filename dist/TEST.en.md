@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.22-beta.35 — what's new · 2026-11-20
+
+The game's window and the controls for an AI helper.
+
+- **«In a window» with its title**: a window chosen on the «Screen» page now always has its frame and title - it can be dragged, minimised and closed. Before, with the interface's scale equal to Windows' own, «A borderless window locked in place» took its frame away.
+- **Control over MCP**: an AI helper can now press keys and click the mouse - only with the game's window in front, so nothing goes into another window. It is answered while the game is minimised too (all but a screenshot) and sees the window's size and look.
+
 # uaRO Graphics 3.0.22-beta.34 — what's new · 2026-11-20
 
 The login in a window.
