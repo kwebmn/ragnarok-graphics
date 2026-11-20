@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -2305,20 +2306,49 @@ void Context::logStats(bool final) {
                  checks / double(stats_.frames), checksMs / stats_.frames, saferead::takeFaults());
     }
     {  // 3.0.22-beta.42 (R-C8SA9Z: std::bad_alloc after two graphics tests): the game's address space, every 30 s
+        // 3.0.22-beta.43 (the owner: «делать» - who holds it): by use - the files mapped in and the modules by name
+        using MappedNameFn = DWORD(WINAPI*)(HANDLE, LPVOID, LPWSTR, DWORD);
+        static const MappedNameFn mappedName = reinterpret_cast<MappedNameFn>(
+            reinterpret_cast<void*>(GetProcAddress(GetModuleHandleA("kernel32.dll"), "K32GetMappedFileNameW")));
+        const auto fileOf = [](const wchar_t* path) {
+            const wchar_t* slash = wcsrchr(path, L'\\');
+            return utf8Of(slash ? slash + 1 : path);
+        };
+        std::map<uintptr_t, std::string> named;  // an allocation's name, once
         std::vector<addressroom::Region> regions;
         MEMORY_BASIC_INFORMATION m{};
         for (uintptr_t at = 0x10000; VirtualQuery(reinterpret_cast<LPCVOID>(at), &m, sizeof m) && m.RegionSize;) {
-            regions.push_back(addressroom::Region{uint64_t(at), uint64_t(m.RegionSize),
-                                                  m.State == MEM_FREE     ? addressroom::Kind::Free
-                                                  : m.State == MEM_COMMIT ? addressroom::Kind::Committed
-                                                                          : addressroom::Kind::Reserved});
+            addressroom::Region g{uint64_t(at), uint64_t(m.RegionSize),
+                                  m.State == MEM_FREE     ? addressroom::Kind::Free
+                                  : m.State == MEM_COMMIT ? addressroom::Kind::Committed
+                                                          : addressroom::Kind::Reserved,
+                                  m.Type == MEM_MAPPED  ? addressroom::Use::Mapped
+                                  : m.Type == MEM_IMAGE ? addressroom::Use::Image
+                                                        : addressroom::Use::Private,
+                                  std::string()};
+            if (m.State != MEM_FREE && m.Type != MEM_PRIVATE) {
+                const uintptr_t base = reinterpret_cast<uintptr_t>(m.AllocationBase);
+                auto it = named.find(base);
+                if (it == named.end()) {
+                    wchar_t path[MAX_PATH] = {};
+                    if (m.Type == MEM_IMAGE)
+                        GetModuleFileNameW(reinterpret_cast<HMODULE>(m.AllocationBase), path, MAX_PATH);
+                    else if (mappedName)
+                        mappedName(GetCurrentProcess(), m.AllocationBase, path, MAX_PATH);
+                    it = named.emplace(base, path[0] ? fileOf(path) : std::string("(no name)")).first;
+                }
+                g.name = it->second;
+            }
+            regions.push_back(std::move(g));
             const uintptr_t next = reinterpret_cast<uintptr_t>(m.BaseAddress) + m.RegionSize;
             if (next <= at) break;
             at = next;
         }
         const addressroom::Room r = addressroom::sum(regions);
         LOG_INFO("memory: the game's address space - %u MB free (the largest piece %u MB), %u MB committed, %u MB "
-                 "reserved", r.freeMb, r.largestFreeMb, r.committedMb, r.reservedMb);
+                 "reserved; private %u MB, files mapped %u MB, modules %u MB - the largest named: %s",
+                 r.freeMb, r.largestFreeMb, r.committedMb, r.reservedMb, r.privateMb, r.mappedMb, r.imageMb,
+                 addressroom::ownersLine(r, 8).c_str());
     }
     // 3.0.11-beta.55 (R-9PP79T): the new interface's pictures painted meanwhile, and what they cost
     if (const std::string paints = uicost::take(); !paints.empty())
