@@ -14,7 +14,8 @@ struct DocAt {
     int z = -1;  // its z-index (-1 never raised)
     bool passive = false;
 };
-// The topmost document at (x, y) is a passive window (or a passive part of the top layer): no hover for the ones under
+// The topmost document at (x, y) is a passive window: no hover for the ones under (the passive parts that are not
+// windows - the HUD edit's frame over the screen, the strips - are seen through)
 bool passiveOver(const std::vector<DocAt>& docs, int x, int y);
 
 }  // namespace uagfx::uihover

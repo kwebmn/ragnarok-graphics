@@ -288,7 +288,7 @@ bool uiFrame(State& s) {
         u.doc.dirtyAll();
     }
     u.doc.place(s.layout.x, s.layout.y);
-    u.doc.raise(1);  // 3.0.22-beta.39: over the minimap where they meet (its mouse first too: window_switch)
+    u.doc.raise(4);  // 3.0.22-beta.41: over the minimap where they meet (the panels' 3, the windows' from 5)
     u.doc.show(true);
     return true;
 }

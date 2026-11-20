@@ -322,6 +322,16 @@ void readBag(State& s) {
     }
     readStarred(s);  // 3.0.11-beta.113: «★» - this character's starred things
     {  // 3.0.11-beta.285 (the owner's feature 13): the bag's gear against the worn
+        // 3.0.22-beta.41 (over the MCP: «+7 Bow» said «Там нічого не вдягнуто» with «+6 Cross Bow» worn): the worn
+        // ones found, told when they change
+        static std::string toldWorn;
+        std::string worn = std::to_string(wornNow.size()) + ":";
+        for (const gearcompare::Worn& w : wornNow)
+            worn += " " + std::to_string(w.id) + (gearcompare::find(w.id) ? "" : "?") + "+" + std::to_string(w.refine);
+        if (worn != toldWorn) {
+            toldWorn = worn;
+            LOG_INFO("items: the worn gear for the comparison - %s (? not in the gear table)", worn.c_str());
+        }
         const gearcompare::Texts ct{say(settings::Text::ItemsCompareInstead), say(settings::Text::ItemsCompareNone),
                                     say(settings::Text::ItemsCompareSlots)};
         for (iw::Item& it : s.items)

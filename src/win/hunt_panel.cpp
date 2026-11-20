@@ -148,8 +148,9 @@ bool uiFrame(State& s) {
     }
     u.doc.place(s.x, s.y);
     // 3.0.22-beta.39 (the owner's window over the MCP: «Полювання» opened on the minimap, its lines under the map's
-    // marks, its ✕ the map's goal): over the minimap - its mouse first too (window_switch)
-    u.doc.raise(1);
+    // marks, its ✕ the map's goal): over the minimap - its mouse first too (window_switch). 3.0.22-beta.41: z 4 - the
+    // panels' layer is 3 (1-2 the world's, under the minimap: .39's 1 hid it whole), the windows' from 5
+    u.doc.raise(4);
     u.doc.show(true);
     return true;
 }

@@ -130,7 +130,32 @@ mcp::CallResult failure(const std::string& text) {
 }
 
 // The server thread's side of a tool: the game's thread asked, its answer waited for
+// 3.0.22-beta.41: the driver's log's last lines, read here (its last megabyte, shared with the writer)
+mcp::CallResult logLines(const json::Value& args) {
+    const std::string path = wlog::path();
+    if (path.empty()) return failure("no log file now");
+    const HANDLE f = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                 nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (f == INVALID_HANDLE_VALUE) return failure("the log could not be read");
+    LARGE_INTEGER size{};
+    GetFileSizeEx(f, &size);
+    const LONGLONG want = std::min<LONGLONG>(size.QuadPart, LONGLONG(1) << 20);
+    LARGE_INTEGER at{};
+    at.QuadPart = size.QuadPart - want;
+    SetFilePointerEx(f, at, nullptr, FILE_BEGIN);
+    std::string text(size_t(want), '\0');
+    DWORD got = 0;
+    if (want > 0) ReadFile(f, &text[0], DWORD(want), &got, nullptr);
+    CloseHandle(f);
+    text.resize(got);
+    const std::string out = mcp::tailLines(text, size_t(args["lines"].asInt(60)), args["match"].asString());
+    mcp::CallResult r;
+    r.content.push_back(mcp::Content::textOf(out.empty() ? "(no such lines in the log's last megabyte)" : out));
+    return r;
+}
+
 mcp::CallResult onGame(const std::string& tool, const json::Value& args) {
+    if (tool == "log") return logLines(args);  // 3.0.22-beta.41: here - the game's frames untouched
     if (tool == "key" || tool == "click" || tool == "hover") {  // 3.0.22-beta.35: from here - the game's frames go on
         Seen seen;
         {

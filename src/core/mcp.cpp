@@ -122,6 +122,12 @@ const std::vector<Tool>& table() {
          "inside: its window may stay behind other windows (not minimised); the player's keyboard untouched.",
          R"({"type":"object","properties":{"keys":{"type":"string","minLength":1,"maxLength":40}},)"
          R"("required":["keys"]})"},
+        // 3.0.22-beta.41: the driver's log - why something is as it is, without asking the player for a report
+        {"log",
+         "The driver's log (uaro-graphics\\logs): its last `lines` (1-300, 60 unless said), those with `match` in "
+         "them only when given (letters' size aside) - e.g. match \"items:\" or \"mcp:\".",
+         R"({"type":"object","properties":{"lines":{"type":"integer","minimum":1,"maximum":300},)"
+         R"("match":{"type":"string","maxLength":100}}})"},
         // 3.0.22-beta.40 (the owner: «навожу» - the tips needed his hand)
         {"hover",
          "The game's cursor put at (x, y) of a screenshot `width` wide and held there `seconds` (1-30, 8 unless "
@@ -299,6 +305,24 @@ bool keyCombo(const std::string& text, KeyCombo& out, std::string& why) {
     return true;
 }
 
+std::string tailLines(const std::string& text, size_t n, const std::string& match) {
+    const std::string want = lower(match);
+    std::vector<std::string> kept;
+    size_t at = 0;
+    while (at <= text.size() && n > 0) {
+        size_t end = text.find('\n', at);
+        if (end == std::string::npos) end = text.size();
+        std::string line = text.substr(at, end - at);
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (!line.empty() && (want.empty() || lower(line).find(want) != std::string::npos)) kept.push_back(line);
+        at = end + 1;
+    }
+    const size_t from = kept.size() > n ? kept.size() - n : 0;
+    std::string out;
+    for (size_t i = from; i < kept.size(); ++i) out += (out.empty() ? "" : "\n") + kept[i];
+    return out;
+}
+
 uint32_t keyMessageBits(int scan, bool extended, bool alt, bool up) {
     uint32_t bits = 1u | (uint32_t(scan & 0xFF) << 16) | (extended ? 1u << 24 : 0u) | (alt ? 1u << 29 : 0u);
     return up ? bits | 1u << 30 | 1u << 31 : bits;
@@ -443,6 +467,11 @@ std::string checkArgs(const std::string& tool, const json::Value& args) {
         if (args.has("button") && args["button"].asString() != "left" && args["button"].asString() != "right")
             return "button: left or right";
         if (args.has("double") && args["double"].type() != json::Value::Bool) return "double: true or false";
+    } else if (tool == "log") {  // 3.0.22-beta.41
+        if (args.has("lines") && !wholeIn(args["lines"], 1, 300)) return "lines: 1-300";
+        const json::Value& m = args["match"];
+        if (args.has("match") && (m.type() != json::Value::String || m.asString().size() > 100 || !oneLine(m.asString())))
+            return "match: one line of words, 100 at most";
     } else if (tool == "setting") {
         if (!keyName(args["key"].asString())) return "key: section.name in small letters";
         const json::Value& v = args["value"];

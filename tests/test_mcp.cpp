@@ -240,3 +240,18 @@ TEST(mcp_hover_holds_the_cursor_at_a_place) {
     for (const mcp::Tool& t : mcp::tools()) listed = listed || std::string(t.name) == "hover";
     CHECK(listed);
 }
+
+// 3.0.22-beta.41: the driver's log read over the MCP - its last lines, those with a word only
+TEST(mcp_log_tail_with_a_word) {
+    const std::string text = "a one\r\nb two\nc one\n\nd three\ne one";
+    CHECK_EQ(mcp::tailLines(text, 2, ""), std::string("d three\ne one"));
+    CHECK_EQ(mcp::tailLines(text, 5, "one"), std::string("a one\nc one\ne one"));
+    CHECK_EQ(mcp::tailLines(text, 1, "ONE"), std::string("e one"));  // any letters' size
+    CHECK_EQ(mcp::tailLines(text, 3, "nothing"), std::string());
+    json::Value v;
+    std::string e;
+    json::parse(R"({"lines":50,"match":"items:"})", v, e);
+    CHECK(mcp::checkArgs("log", v).empty());
+    json::parse(R"({"lines":5000})", v, e);
+    CHECK(!mcp::checkArgs("log", v).empty());
+}

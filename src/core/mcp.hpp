@@ -56,6 +56,8 @@ bool clickPlace(double x, double y, int width, int clientW, int clientH, int& ou
 // 3.0.22-beta.37: a key message's lParam as Windows makes it - one repeat, the scan code, the extended key, Alt held
 // (bit 29); a let go's previous state and transition bits
 uint32_t keyMessageBits(int scan, bool extended, bool alt, bool up);
+// 3.0.22-beta.41: a log's last `n` lines (those with `match` in them, letters' size aside; "" all), joined by \n
+std::string tailLines(const std::string& text, size_t n, const std::string& match);
 
 // What a tool answers: a text or an image (its bytes, sent as base64)
 struct Content {
