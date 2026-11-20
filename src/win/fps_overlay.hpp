@@ -18,7 +18,8 @@ public:
     ~FpsOverlay();
     void setLabel(const std::string& api) { label_ = api; }
     void setGpu(const GpuTiming* t);  // the last measurement, nullptr: none
-    // 2.15: a line shown whether the counter is or not (Pause kept the improvements off); "" none
+    // 2.15: a line shown whether the counter is or not (Pause's until 3.0.22-beta.29: now the driver's own notes, none
+    // under Pause - core/overlay_line Notes); "" none
     void setNote(const std::wstring& note) { note_ = note; }
     // Every present of the game: counts, and twice a second redraws (or hides it, the game not in front).
     // 3.0.22-beta.28: `photo` - the photo mode, no line at all, the notes neither (core/overlay_line)

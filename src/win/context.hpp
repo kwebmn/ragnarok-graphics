@@ -19,6 +19,7 @@
 #include "core/frame.hpp"
 #include "core/frame_pace.hpp"
 #include "core/image.hpp"
+#include "core/overlay_line.hpp"
 #include "core/pixel.hpp"
 #include "core/scale.hpp"
 #include "core/throttle.hpp"
@@ -301,8 +302,7 @@ private:
     // 3.0.4-beta.11 (R-EQDYNE «нету травы»): the switches the player turned on in this game, which keep_fps leaves,
     // and its choice said on the screen for 10 s (the frame counter's line)
     std::set<std::string> keepByHand_;
-    std::wstring keepNote_;
-    uint64_t keepNoteUntil_ = 0;
+    overlayline::Notes notes_;  // 3.0.22-beta.29: the corner's note - none under Pause (core/overlay_line)
     // 3.0.4-beta.35 (the user: «у людей отключается трава на слабых видеокартах»): a weak card judged by how it draws,
     // over keep_fps's windows - only those on a map the whole window (the game's camera read every frame)
     card_speed::Judge& judge() const;
@@ -311,7 +311,7 @@ private:
     void noteFirstGame(const Config& config, double fps);
     std::vector<double> firstMapFps_;
     bool firstGameNoted_ = false;
-    void sayOnScreen(const std::wstring& note);
+    void sayOnScreen(const std::wstring& note, bool evenOff = false);  // evenOff: under Pause too
     mutable card_speed::Judge judge_{0, true};
     mutable bool judgeMade_ = false;
     bool keepOnMap_ = false;

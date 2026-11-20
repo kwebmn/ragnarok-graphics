@@ -56,8 +56,8 @@ double Context::testClockS() {
 }
 
 void Context::testNote(const std::string& utf8) {
-    keepNoteUntil_ = 0;  // keep_fps's line ends no other
-    if (enhanced_) fps_.setNote(wide(utf8));
+    notes_.hold(wide(utf8), enhanced_);  // keep_fps's line ends no other
+    fps_.setNote(notes_.shown());
 }
 
 // A set as the Effects page would draw it: the player's file with that set, every group on at its full strength (the
@@ -101,7 +101,7 @@ void Context::testStart() {
     }
     if (!enhanced_) {  // Pause: the game's own picture - nothing of the sets would show
         LOG_INFO("test: «Тест графіки» asked while Pause keeps the improvements off - not started");
-        sayOnScreen(wide(said(Text::CompareOffNote)));
+        sayOnScreen(wide(said(Text::CompareOffNote)), true);  // 3.0.22-beta.29: the one line said under Pause
         return;
     }
     graphics_test::zoomRange(outdoor, ownLimits, limitFrom, limitSpan, testFrom_, testTo_);

@@ -1026,8 +1026,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
             view3dwin::ask(view3d::Mode(view3dBefore_), "the compare key - the improvements back");
             view3dBefore_ = int(view3d::Mode::Off);
         }
-        // 2.15: said on the screen while they are off - a stray press looked like a broken game
-        fps_.setNote(enhanced_ ? L"" : wideOf(settings::tr(language(), settings::Text::CompareOffNote)));
+        // 2.15 said on the screen while they were off (a stray press looked like a broken game); 3.0.22-beta.29 (the
+        // owner: «убери надпись про паузу ... пускай будет тупо старый клиент без надписи»): no line - whatever was
+        // said goes too, and nothing more is said while they are off (core/overlay_line Notes)
+        notes_.toggled();
+        fps_.setNote(notes_.shown());
         // 3.0.22-beta.25: and the old client's interface - the driver's parts off, the game's windows back (ui below)
         classicFresh_ = false;
         if (!enhanced_) LOG_INFO("compare key: the old client's interface too - the driver's windows and bars off");
@@ -1925,10 +1928,8 @@ int Context::keepAim(const Config& config) const {
 
 void Context::keepFrameRate(const Config& config, HWND window) {
     const uint64_t now = GetTickCount64();
-    if (keepNoteUntil_ && now >= keepNoteUntil_) {  // 3.0.4-beta.11: its line said long enough
-        keepNoteUntil_ = 0;
-        if (enhanced_) fps_.setNote(L"");
-    }
+    notes_.tick(now);  // 3.0.4-beta.11: its line said long enough (3.0.22-beta.29: under Pause too)
+    fps_.setNote(notes_.shown());
     effect_costs::Costs costs;
     const bool measured = renderer && renderer->effectCosts(costs);
     if (measured && now - costsWritten_ >= 30000) {
@@ -2035,10 +2036,9 @@ const Config& Context::interfaceConfig() {
     return classic_;
 }
 
-void Context::sayOnScreen(const std::wstring& note) {
-    keepNote_ = note;
-    keepNoteUntil_ = GetTickCount64() + 10000;
-    if (enhanced_) fps_.setNote(keepNote_);
+void Context::sayOnScreen(const std::wstring& note, bool evenOff) {
+    notes_.say(note, GetTickCount64(), enhanced_, evenOff);
+    fps_.setNote(notes_.shown());
 }
 
 card_speed::Judge& Context::judge() const {
