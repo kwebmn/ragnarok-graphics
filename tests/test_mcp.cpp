@@ -173,3 +173,42 @@ TEST(mcp_stage_two_tools_and_their_arguments) {
     CHECK(mcp::checkArgs("timelapse", args(R"({"action":"hold"})")).empty());
     CHECK(!mcp::checkArgs("timelapse", args(R"({})")).empty());
 }
+
+// 3.0.22-beta.35 (the owner: «проверяй»; the login's cards, the game's windows): a key with its modifiers, a click at
+// a place of the screenshot - their words read, their arguments checked; the place in the game's window
+TEST(mcp_keys_and_clicks) {
+    mcp::KeyCombo k;
+    std::string why;
+    CHECK(mcp::keyCombo("alt+e", k, why) && k.alt && !k.ctrl && !k.shift && k.vk == 'E');
+    CHECK(mcp::keyCombo("Ctrl+Shift+V", k, why) && k.ctrl && k.shift && !k.alt && k.vk == 'V');
+    CHECK(mcp::keyCombo("enter", k, why) && k.vk == 0x0D && !k.extended);
+    CHECK(mcp::keyCombo("esc", k, why) && k.vk == 0x1B);
+    CHECK(mcp::keyCombo("f12", k, why) && k.vk == 0x7B);
+    CHECK(mcp::keyCombo("up", k, why) && k.vk == 0x26 && k.extended);
+    CHECK(mcp::keyCombo("7", k, why) && k.vk == '7');
+    CHECK(mcp::keyCombo("space", k, why) && k.vk == 0x20);
+    CHECK(!mcp::keyCombo("", k, why) && !why.empty());
+    CHECK(!mcp::keyCombo("a+b", k, why));  // one key with its modifiers
+    CHECK(!mcp::keyCombo("hyper+x", k, why));
+    CHECK(!mcp::keyCombo("ctrl", k, why));  // a modifier alone
+    CHECK(!mcp::keyCombo("alt+", k, why));
+    json::Value v;
+    std::string e;
+    const auto args = [&](const char* text) {
+        json::parse(text, v, e);
+        return v;
+    };
+    CHECK(mcp::checkArgs("key", args(R"({"keys":"alt+e"})")).empty());
+    CHECK(!mcp::checkArgs("key", args(R"({"keys":"alt+"})")).empty());
+    CHECK(mcp::checkArgs("click", args(R"({"x":510,"y":300,"width":1020})")).empty());
+    CHECK(mcp::checkArgs("click", args(R"({"x":10,"y":10,"width":1020,"button":"right","double":true})")).empty());
+    CHECK(!mcp::checkArgs("click", args(R"({"x":1100,"y":10,"width":1020})")).empty());  // past the picture
+    CHECK(!mcp::checkArgs("click", args(R"({"x":10,"y":10})")).empty());                  // the picture's width
+    CHECK(!mcp::checkArgs("click", args(R"({"x":10,"y":10,"width":1020,"button":"middle"})")).empty());
+    // the place in the window: the screenshot 1020 wide of a 2040 x 1147 window
+    int cx = 0, cy = 0;
+    CHECK(mcp::clickPlace(510, 286, 1020, 2040, 1147, cx, cy) && cx == 1020 && cy == 572);
+    CHECK(mcp::clickPlace(0, 0, 1020, 2040, 1147, cx, cy) && cx == 0 && cy == 0);
+    CHECK(!mcp::clickPlace(10, 600, 1020, 2040, 1147, cx, cy));  // under the picture
+    CHECK(!mcp::clickPlace(10, 10, 1020, 0, 0, cx, cy));         // no window
+}

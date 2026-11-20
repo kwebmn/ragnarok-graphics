@@ -1,4 +1,6 @@
 #pragma once
+#include <windows.h>
+
 #include <functional>
 #include <string>
 
@@ -16,9 +18,16 @@ namespace uagfx::win::mcpwin {
 // A tool run on the game's thread (Context::mcpCall); `screenshot` is the server's own (shotWanted)
 using RunFn = std::function<mcp::CallResult(const std::string& tool, const json::Value& args)>;
 
-// Each frame on the game's thread: the server started, moved to another port or stopped as the setting says; a call
-// waiting run through `run`; a screenshot asked - its file looked for
-void frame(bool enabled, int port, const std::string& gameDir, const RunFn& run);
+// 3.0.22-beta.35: the game's window as the frame saw it - the keys and the clicks go there (from the server's thread),
+// a screenshot is refused at once while it is minimised (`shown` false: no picture made)
+struct Seen {
+    HWND window = nullptr;
+    bool shown = true;
+    int gameWidth = 0, gameHeight = 0;  // the game's own picture
+};
+// Each frame on the game's thread - minimised too (3.0.22-beta.35): the server started, moved to another port or
+// stopped as the setting says; a call waiting run through `run`; a screenshot asked - its file looked for
+void frame(bool enabled, int port, const std::string& gameDir, const Seen& seen, const RunFn& run);
 // The screenshot target for this present ("" none): the picture `pictureWidth` wide, made as small as the call asked
 std::string shotWanted(int pictureWidth);
 // The game's end: the server stopped

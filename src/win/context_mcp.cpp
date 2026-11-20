@@ -13,10 +13,12 @@
 #include "win/context.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/mcp_server.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/time_lapse.hpp"
 #include "win/view3d.hpp"
+#include "win/window_mode.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -40,6 +42,16 @@ std::string token(const Config& c, const char* key) {
 }
 
 }  // namespace
+
+void Context::mcpFrame(bool shown) {
+    mcpwin::Seen seen;
+    seen.window = window;
+    seen.shown = shown;
+    seen.gameWidth = int(shadow.width());
+    seen.gameHeight = int(shadow.height());
+    mcpwin::frame(config.mcpEnabled, config.mcpPort, gameDir(), seen,
+                  [this](const std::string& t, const json::Value& a) { return mcpCall(t, a); });
+}
 
 mcp::CallResult Context::mcpCall(const std::string& tool, const json::Value& args) {
     if (tool == "state") {
@@ -84,6 +96,24 @@ mcp::CallResult Context::mcpCall(const std::string& tool, const json::Value& arg
         const int lapse = timelapsewin::state();
         picture.set("timelapse", lapse == 1 ? "running" : lapse == 2 ? "held" : "off");
         s.set("picture", picture);
+        if (window) {  // 3.0.22-beta.35 (the owner's window without its title): the window as Windows has it
+            RECT c{}, r{};
+            GetClientRect(window, &c);
+            GetWindowRect(window, &r);
+            const LONG style = GetWindowLongA(window, GWL_STYLE);
+            json::Value w = json::Value::object();
+            w.set("width", int(c.right));
+            w.set("height", int(c.bottom));
+            w.set("x", int(r.left));
+            w.set("y", int(r.top));
+            w.set("frame", (style & WS_CAPTION) == WS_CAPTION);
+            w.set("front", GetForegroundWindow() == window);
+            w.set("minimised", IsIconic(window) != 0);
+            w.set("gameFullScreen", gameFullscreen);
+            w.set("game", std::to_string(shadow.width()) + "x" + std::to_string(shadow.height()));
+            w.set("dpi", windowDpiAwareness(window));
+            s.set("window", w);
+        }
         return said(json::dump(s));
     }
     if (tool == "chat") {

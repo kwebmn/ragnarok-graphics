@@ -42,6 +42,17 @@ const std::vector<Tool>& tools();
 // The arguments' check before the game is asked: "" right, else what is wrong
 std::string checkArgs(const std::string& tool, const json::Value& args);
 
+// 3.0.22-beta.35: a key with its modifiers as `key` takes it - "alt+e", "ctrl+shift+v", "enter", "f12", "up"
+struct KeyCombo {
+    bool ctrl = false, shift = false, alt = false;
+    int vk = 0;             // Windows' virtual key
+    bool extended = false;  // the arrows, Insert, Delete, Home, End, Page Up and Down
+};
+bool keyCombo(const std::string& text, KeyCombo& out, std::string& why);
+// 3.0.22-beta.35: a click's place in the game's window (its client pixels) from a place of a screenshot `width`
+// wide - the window's picture made smaller; false past the picture
+bool clickPlace(double x, double y, int width, int clientW, int clientH, int& outX, int& outY);
+
 // What a tool answers: a text or an image (its bytes, sent as base64)
 struct Content {
     std::string type;  // "text" or "image"

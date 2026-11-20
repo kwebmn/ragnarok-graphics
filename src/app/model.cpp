@@ -468,9 +468,11 @@ std::wstring Model::apply(Lang l) {
             }
             if (p.writesRoext && now_.roextModule >= 0)
                 roext = {{"ROExt", "WindowWidth", num(p.game.width)}, {"ROExt", "WindowHeight", num(p.game.height)}};
+            if (p.unlocks && now_.roextModule >= 0) roext.push_back({"ROExt", "WindowLock", "0"});  // 3.0.22-beta.35
             if (p.writesRoext && now_.roextInDriver) {  // 3.0.1-beta.8: the driver's [roext]
                 ini.push_back({"roext", "window_width", num(p.game.width)});
                 ini.push_back({"roext", "window_height", num(p.game.height)});
+                if (p.unlocks) ini.push_back({"roext", "window_lock", "0"});  // 3.0.22-beta.35: with its frame
             }
         }
     }

@@ -200,3 +200,22 @@ TEST(screen_offers_small_windows_for_several_games) {
     CHECK(sizes.back() == (Size{640, 480}));  // the smallest last
     CHECK(defaultWindow(fullHd(), {}) == (Size{1600, 900}));
 }
+
+// 3.0.22-beta.35 (the owner 20.11, «У вікні» at his 175 %: «нету такой штуки как полоски сверху чтобы можно было
+// перетаскивать его»): a window chosen here keeps its frame - ROExt's WindowLock goes off with its size (the sizes
+// offered fit with the frame); full screen, an unlocked ROExt and a ROExt nobody reads are left as they are
+TEST(screen_a_window_turns_roext_s_lock_off) {
+    RoextWindow roext;
+    roext.active = true;
+    roext.lock = true;
+    const ScreenPlan p = planScreen(window(3570, 2008, 175), {fourK()}, roext, {});
+    CHECK(p.problem == ScreenProblem::None && p.writesRoext && p.unlocks);
+    CHECK(planScreen(window(3360, 1890, 200), {fourK()}, roext, {}).unlocks);  // our window: its frame too
+    CHECK(!planScreen(fullscreen(175), {fourK()}, roext, {}).unlocks);
+    roext.lock = false;
+    roext.size = {1600, 863};
+    CHECK(!planScreen(window(3360, 1890, 175), {fourK()}, roext, {}).unlocks);  // off already
+    roext.active = false;
+    roext.lock = true;
+    CHECK(!planScreen(window(3360, 1890, 175), {fourK()}, roext, {}).unlocks);  // nobody reads it
+}

@@ -63,7 +63,7 @@ const std::vector<Tool>& table() {
         {"state",
          "Where the character is and what the client shows now: the map, the character's cell (x, y on the map's "
          "grid), the camera (the 3D view's mode, its yaw and pitch), Pause (the old client to compare), the photo "
-         "mode, the time of day the picture uses, the game's size.",
+         "mode, the time of day the picture uses, the game's window (its size, its frame, in front or not).",
          R"({"type":"object","properties":{}})"},
         {"screenshot",
          "The frame as the player sees it now, as a JPEG (1280 pixels wide unless `width` says, 320-1920). Look after "
@@ -115,6 +115,20 @@ const std::vector<Tool>& table() {
          "second; `hold` - stopped where it is; `off` - the clock's own again.",
          R"({"type":"object","properties":{"action":{"type":"string","enum":["run","hold","off"]}},)"
          R"("required":["action"]})"},
+        // 3.0.22-beta.35 (the owner: «проверяй»): the login's cards, the game's windows - by keys and clicks
+        {"key",
+         "A key pressed and let go in the game, as the player would, with ctrl+, shift+ or alt+ before it: alt+e "
+         "(the inventory), enter, esc, tab, space, f1-f24, up, down, left, right, a-z, 0-9... Real input: the game's "
+         "window must be in front (it goes to the window in front) - else refused.",
+         R"({"type":"object","properties":{"keys":{"type":"string","minLength":1,"maxLength":40}},)"
+         R"("required":["keys"]})"},
+        {"click",
+         "A mouse click at (x, y) of a screenshot `width` wide (the width the screenshot came in), as the player "
+         "would: `button` left (the default) or right, `double` for a double click. Real input: the game's window "
+         "must be in front - else refused; the mouse cursor moves there and stays.",
+         R"({"type":"object","properties":{"x":{"type":"number","minimum":0},"y":{"type":"number","minimum":0},)"
+         R"("width":{"type":"integer","minimum":160,"maximum":7680},"button":{"type":"string",)"
+         R"("enum":["left","right"]},"double":{"type":"boolean"}},"required":["x","y","width"]})"},
     };
     return kTools;
 }
@@ -179,6 +193,105 @@ std::string errorOf(const json::Value& id, int code, const std::string& message)
 }
 
 }  // namespace
+
+namespace {
+
+struct KeyName {
+    const char* name;
+    int vk;
+    bool extended;
+};
+constexpr KeyName kKeyNames[] = {
+    {"enter", 0x0D, false},    {"return", 0x0D, false},  {"esc", 0x1B, false},      {"escape", 0x1B, false},
+    {"tab", 0x09, false},      {"space", 0x20, false},   {"backspace", 0x08, false}, {"delete", 0x2E, true},
+    {"del", 0x2E, true},       {"insert", 0x2D, true},   {"ins", 0x2D, true},        {"home", 0x24, true},
+    {"end", 0x23, true},       {"pageup", 0x21, true},   {"pgup", 0x21, true},       {"pagedown", 0x22, true},
+    {"pgdn", 0x22, true},      {"up", 0x26, true},       {"down", 0x28, true},       {"left", 0x25, true},
+    {"right", 0x27, true},     {"pause", 0x13, false},   {"scrolllock", 0x91, false}, {"printscreen", 0x2C, true},
+    {"minus", 0xBD, false},    {"equals", 0xBB, false},  {"comma", 0xBC, false},     {"period", 0xBE, false},
+    {"slash", 0xBF, false},    {"backslash", 0xDC, false}, {"semicolon", 0xBA, false}, {"quote", 0xDE, false},
+    {"bracketleft", 0xDB, false}, {"bracketright", 0xDD, false}, {"grave", 0xC0, false},
+};
+
+bool keyOf(const std::string& word, KeyCombo& k) {
+    if (word.size() == 1 && std::isalnum(static_cast<unsigned char>(word[0]))) {  // a-z, 0-9
+        k.vk = std::toupper(static_cast<unsigned char>(word[0]));
+        return true;
+    }
+    if (word.size() >= 2 && word.size() <= 3 && word[0] == 'f') {  // f1-f24
+        int n = 0;
+        for (size_t i = 1; i < word.size(); ++i) {
+            if (!std::isdigit(static_cast<unsigned char>(word[i]))) return false;
+            n = n * 10 + (word[i] - '0');
+        }
+        if (n < 1 || n > 24) return false;
+        k.vk = 0x70 + n - 1;
+        return true;
+    }
+    if (word.size() == 7 && word.rfind("numpad", 0) == 0 && std::isdigit(static_cast<unsigned char>(word[6]))) {
+        k.vk = 0x60 + (word[6] - '0');
+        return true;
+    }
+    for (const KeyName& n : kKeyNames)
+        if (word == n.name) {
+            k.vk = n.vk;
+            k.extended = n.extended;
+            return true;
+        }
+    return false;
+}
+
+}  // namespace
+
+bool keyCombo(const std::string& text, KeyCombo& out, std::string& why) {
+    const char* kHow = "keys: one key, ctrl+, shift+ or alt+ before it (alt+e, ctrl+shift+v, enter, f12, up)";
+    KeyCombo k;
+    bool key = false;
+    size_t at = 0;
+    const std::string t = lower(trim(text));
+    if (t.empty()) {
+        why = kHow;
+        return false;
+    }
+    while (at <= t.size()) {
+        const size_t plus = t.find('+', at);
+        const std::string word = trim(t.substr(at, plus == std::string::npos ? std::string::npos : plus - at));
+        if (word == "ctrl" || word == "control") {
+            k.ctrl = true;
+        } else if (word == "shift") {
+            k.shift = true;
+        } else if (word == "alt") {
+            k.alt = true;
+        } else if (word.empty() || key) {
+            why = kHow;
+            return false;
+        } else if (!keyOf(word, k)) {
+            why = "keys: no key named \"" + word + "\" - a-z, 0-9, f1-f24, enter, esc, tab, space, backspace, "
+                  "delete, insert, home, end, pageup, pagedown, up, down, left, right, numpad0-9";
+            return false;
+        } else {
+            key = true;
+        }
+        if (plus == std::string::npos) break;
+        at = plus + 1;
+    }
+    if (!key) {
+        why = kHow;
+        return false;
+    }
+    out = k;
+    return true;
+}
+
+bool clickPlace(double x, double y, int width, int clientW, int clientH, int& outX, int& outY) {
+    if (width <= 0 || clientW <= 0 || clientH <= 0 || !(x >= 0) || !(y >= 0)) return false;
+    const double f = double(clientW) / double(width);  // the screenshot keeps the window's proportions
+    const long px = std::lround(x * f), py = std::lround(y * f);
+    if (px >= clientW || py >= clientH) return false;
+    outX = int(px);
+    outY = int(py);
+    return true;
+}
 
 std::string HttpRequest::header(const std::string& lowerName) const {
     for (const auto& h : headers)
@@ -294,6 +407,20 @@ std::string checkArgs(const std::string& tool, const json::Value& args) {
     } else if (tool == "timelapse") {
         const std::string a = args["action"].asString();
         if (a != "run" && a != "hold" && a != "off") return "action: run, hold or off";
+    } else if (tool == "key") {  // 3.0.22-beta.35
+        KeyCombo k;
+        std::string why;
+        if (args["keys"].type() != json::Value::String) return "keys: a key's words (alt+e, enter, f12...)";
+        if (!keyCombo(args["keys"].asString(), k, why)) return why;
+    } else if (tool == "click") {
+        if (!wholeIn(args["width"], 160, 7680)) return "width: the screenshot's width the place is in, 160-7680";
+        const json::Value &x = args["x"], &y = args["y"];
+        if (x.type() != json::Value::Number || y.type() != json::Value::Number || !(x.asNumber() >= 0) ||
+            !(y.asNumber() >= 0) || !(x.asNumber() < args["width"].asNumber()) || !std::isfinite(y.asNumber()))
+            return "x and y: a place of the screenshot, 0 up, x under its width";
+        if (args.has("button") && args["button"].asString() != "left" && args["button"].asString() != "right")
+            return "button: left or right";
+        if (args.has("double") && args["double"].type() != json::Value::Bool) return "double: true or false";
     } else if (tool == "setting") {
         if (!keyName(args["key"].asString())) return "key: section.name in small letters";
         const json::Value& v = args["value"];

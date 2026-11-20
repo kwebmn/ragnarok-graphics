@@ -317,6 +317,7 @@ private:
     void toggleCompare();  // the compare key's turn (Pause, Scroll Lock) - the MCP's «pause» too
     // 3.0.22-beta.32 (the client's MCP; win/mcp_server, core/mcp): a tool run on the game's thread (win/context_mcp)
     mcp::CallResult mcpCall(const std::string& tool, const json::Value& args);
+    void mcpFrame(bool shown);  // 3.0.22-beta.35: each frame, minimised too (`shown` false: no picture)
     mutable card_speed::Judge judge_{0, true};
     mutable bool judgeMade_ = false;
     bool keepOnMap_ = false;

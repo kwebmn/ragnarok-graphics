@@ -74,6 +74,7 @@ ScreenPlan planScreen(const ScreenChoice& c, const std::vector<MonitorInfo>& mon
             p.iniWindow = scaled(c.window, 100, m.scale);
         }
         p.writesRoext = roext.active && (roext.lock || roext.size.width > 0);
+        p.unlocks = p.writesRoext && roext.lock;  // 3.0.22-beta.35: a window with its frame
         p.s = fit(c.window, p.game);
         if (!windowFits(c.window, m, frame) || !gameWindowFits(p.game, primary, frame)) p.problem = ScreenProblem::TooBig;
     }

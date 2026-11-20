@@ -4583,11 +4583,11 @@ constexpr Entry kTexts[] = {
      "Окно без рамки, закреплённое на месте"},
     {Text::RoextLockHint,
      "The game's window without a border, at its place: over the whole screen but the taskbar, or of the size the "
-     "«Screen» page set.",
+     "«Screen» page set. «In a window» chosen there turns it off - the window gets its title to drag it by.",
      "Вікно гри без рамки на своєму місці: на весь екран, крім панелі задач, або розміру, заданого на сторінці "
-     "«Екран».",
+     "«Екран». Вибір «У вікні» там вимикає це - вікно отримує заголовок, за який його можна перетягти.",
      "Окно игры без рамки на своём месте: на весь экран, кроме панели задач, или размера, заданного на странице "
-     "«Экран»."},
+     "«Экран». Выбор «В окне» там выключает это - окно получает заголовок, за который его можно перетащить."},
     {Text::RoextOnTop, "The game's window above the others",
      "Вікно гри поверх інших",
      "Окно игры поверх других"},

@@ -11,6 +11,7 @@
 
 #include "core/version.hpp"
 #include "win/log.hpp"
+#include "win/mcp_input.hpp"
 
 namespace uagfx::win::mcpwin {
 namespace {
@@ -92,6 +93,7 @@ std::atomic<bool> g_stopping{false};
 int g_port = 0;
 std::string g_gameDir;
 ULONGLONG g_failedAt = 0;
+Seen g_seen;  // 3.0.22-beta.35: the last frame's
 
 struct Locked {
     Locked() { AcquireSRWLockExclusive(&g_lock); }
@@ -129,6 +131,21 @@ mcp::CallResult failure(const std::string& text) {
 
 // The server thread's side of a tool: the game's thread asked, its answer waited for
 mcp::CallResult onGame(const std::string& tool, const json::Value& args) {
+    if (tool == "key" || tool == "click") {  // 3.0.22-beta.35: real input, from here - the game's frames go on
+        Seen seen;
+        {
+            Locked l;
+            seen = g_seen;
+        }
+        const mcpinput::Game g{seen.window, seen.gameWidth, seen.gameHeight};
+        if (tool == "click")
+            return mcpinput::click(g, args["x"].asNumber(), args["y"].asNumber(), int(args["width"].asInt()),
+                                   args["button"].asString() == "right", args["double"].asBool(false));
+        mcp::KeyCombo k;
+        std::string why;
+        mcp::keyCombo(args["keys"].asString(), k, why);  // checked already
+        return mcpinput::key(g, k, args["keys"].asString());
+    }
     uint64_t seq = 0;
     {
         Locked l;
@@ -150,8 +167,7 @@ mcp::CallResult onGame(const std::string& tool, const json::Value& args) {
         g_job = Job{};
     }
     if (!answered || j.state != State::Done)
-        return failure("the game did not answer in time - its window must be shown (not minimised), the character "
-                       "in the world");
+        return failure("the game did not answer in time - a map loading? (10 s; a screenshot 15 s)");
     if (!shot || j.result.isError) return j.result;
     const std::string png = fileBytes(j.shotFile);
     if (png.empty()) return failure("the screenshot could not be read");
@@ -271,7 +287,7 @@ void stopThread() {
 
 }  // namespace
 
-void frame(bool enabled, int port, const std::string& gameDir, const RunFn& run) {
+void frame(bool enabled, int port, const std::string& gameDir, const Seen& seen, const RunFn& run) {
     if (!g_done) g_done = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     if (!g_done) return;
     const bool want = enabled && port >= 1024 && port <= 65535;
@@ -298,7 +314,13 @@ void frame(bool enabled, int port, const std::string& gameDir, const RunFn& run)
     {
         Locked l;
         Job& j = g_job;
-        if (j.state == State::Waiting && j.tool == "screenshot") {
+        g_seen = seen;
+        const bool shotWaits = j.tool == "screenshot" && (j.state == State::Waiting || j.state == State::ShotAsked);
+        if (shotWaits && !seen.shown) {  // 3.0.22-beta.35: minimised - no picture made, said at once
+            j.result = failure("the game's window is minimised - no picture to take (the other tools work)");
+            j.state = State::Done;
+            SetEvent(g_done);
+        } else if (j.state == State::Waiting && j.tool == "screenshot") {
             j.state = State::ShotAsked;  // shotWanted puts it into this frame's present
         } else if (j.state == State::Waiting) {
             tool = j.tool;

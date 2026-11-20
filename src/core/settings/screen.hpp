@@ -64,6 +64,10 @@ struct ScreenPlan {
     int monitor = 0;
     Size iniWindow;           // window_width x window_height; 0x0 = the game's own size
     bool writesRoext = false; // ROExt WindowWidth x WindowHeight = game
+    // 3.0.22-beta.35 (the owner: «нету такой штуки как полоски сверху чтобы можно было перетаскивать его»): ROExt's
+    // WindowLock off with that size - the window keeps its frame and its title to drag it by (the sizes offered fit
+    // with the frame)
+    bool unlocks = false;
     double s = 1.0;           // how many times the game is enlarged on screen
 };
 ScreenPlan planScreen(const ScreenChoice& c, const std::vector<MonitorInfo>& monitors, const RoextWindow& roext,
