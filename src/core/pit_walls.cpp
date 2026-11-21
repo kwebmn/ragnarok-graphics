@@ -1,5 +1,7 @@
 #include "core/pit_walls.hpp"
 
+#include "core/outdoors.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -52,7 +54,7 @@ constexpr Side kSides[4] = {
 
 }  // namespace
 
-bool mazeMap(const std::string& map) { return map == "moc_pryd03"; }
+bool wallsFor(const std::string& map) { return !map.empty() && !outdoors(map); }
 
 terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const terrain::Sun& sun, float height) {
     terrain::Mesh m;
@@ -91,9 +93,6 @@ terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const ter
                         if (nx < 0 || ny < 0 || nx >= g.width || ny >= g.height) continue;
                         const gnd::Cell& n = cellAt(nx, ny);
                         if (!pit(g, n)) continue;
-                        // deep enough at both corners of the edge (up along -y: the pit's heights greater)
-                        if (n.h[sd.pitA] - c.h[sd.floorA] < kLeastDepth || n.h[sd.pitB] - c.h[sd.floorB] < kLeastDepth)
-                            continue;
                         // the side's surface: the floor's own (right, far) or the pit's (its right, its far); the
                         // makers' picture going down - its corners 0, 1 on the holder's side, 2, 3 on the other's
                         const bool floorHolds = sd.dx > 0 || sd.dy > 0;
@@ -102,6 +101,11 @@ terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const ter
                             : sd.dx < 0 ? surfaceAt(g, n.right)
                             : sd.dy > 0 ? surfaceAt(g, c.front)
                                         : surfaceAt(g, n.front);
+                        // deep enough at both corners of the edge (up along -y: the pit's heights greater) - or
+                        // (3.0.22-beta.47) nothing there at all: no top past it, no side picture between them
+                        const bool deep = n.h[sd.pitA] - c.h[sd.floorA] >= kLeastDepth &&
+                                          n.h[sd.pitB] - c.h[sd.floorB] >= kLeastDepth;
+                        if (!deep && !(n.top < 0 && !side)) continue;
                         if (side && fillerOf(g, side->texture)) side = nullptr;
                         const int texture = side ? side->texture : commonest;
                         if (texture < 0) continue;

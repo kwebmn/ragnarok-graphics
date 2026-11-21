@@ -560,7 +560,8 @@ void MapWorld::loop() {
                         // the makers' pits standing for walls (the Pyramids' mazes) given upright walls for the 3D
                         // view, in the third mesh (no land past a house's edges is drawn) - their height the
                         // ceiling's, set once the models tell it (below)
-                        if (roomWalls && pitwalls::mazeMap(name) && cave_vault::ceilingFor(name, outdoors(name))) {
+                        // 3.0.22-beta.47 (the owner: «да, для всех»): every map under a roof (pitwalls::wallsFor)
+                        if (roomWalls && pitwalls::wallsFor(name)) {
                             terrain::Mesh raised = pitwalls::build(full, own->atlas, sun, cave_vault::kCeilingFlat);
                             if (!raised.chunks.empty()) {
                                 own->outskirts = std::move(raised);

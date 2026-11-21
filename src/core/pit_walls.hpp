@@ -23,7 +23,11 @@ constexpr float kLeastDepth = 8.0f;
 // edges), the maze's outer wall the void past it. Elsewhere a pit is no wall: the void a house's rooms float in (their
 // open sides made for the camera from above), a tower's drops round its platforms (1 to 8 cells), a hall's outer side
 // - walls there would shut rooms and fence platforms (94 of the 125 maps would have had them)
-bool mazeMap(const std::string& map);
+// 3.0.22-beta.47 (the owner 21.11, the novice school's rooms: «стенки прозрачные и видны другие комнаты» - «да, для
+// всех»; the census of the 989 maps under a roof: 707 of them have such edges, new_N-4 1110): every map not under the
+// sky. And a floor's edge to a cell of nothing at all (no top, no side picture between them) gets a wall at any
+// depth - a room floating in the void, its sides open for the camera from above
+bool wallsFor(const std::string& map);
 // The walls' mesh in chunks of terrain::kChunk cells; empty where the map has no such pits
 terrain::Mesh build(const gnd::Ground& g, const terrain::Atlas& atlas, const terrain::Sun& sun, float height);
 // Their tops `height` over their floor (the room's ceiling: the models' walls' height, told after the ground is read)

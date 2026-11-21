@@ -51,6 +51,7 @@ gnd::Ground maze() {
     for (int x = 0; x <= 2; ++x) cellAt(g, x, 0).front = surfaceOf(g, kWall);
     for (int x = 0; x <= 4; ++x) cellAt(g, x, 1).front = surfaceOf(g, kWall);
     cellAt(g, 5, 0).front = surfaceOf(g, kStone);  // the step's side: a picture of its own, no wall over it
+    cellAt(g, 5, 1).front = surfaceOf(g, kStone);  // .47: and on its far side (nothing there would be a room's void)
     return g;
 }
 
@@ -110,10 +111,33 @@ TEST(pit_walls_none_on_open_or_stepped_ground) {
     CHECK(pitwalls::build(gnd::Ground{}, terrain::Atlas{}, terrain::Sun{}, 30.0f).vertices.empty());
 }
 
-// The maps whose pits are a maze's walls (the census of the ceiling maps, the Pyramids, the Sphinx): moc_pryd03 alone -
-// a house's void, a tower's drops, a hall's outer side are no walls
-TEST(pit_walls_on_the_maze_maps_alone) {
-    CHECK(pitwalls::mazeMap("moc_pryd03"));
-    for (const char* m : {"moc_pryd04", "moc_pryd06", "c_tower3", "prt_in", "geffen_in", "in_sphinx1", ""})
-        CHECK(!pitwalls::mazeMap(m));
+// 3.0.22-beta.47 (the owner: «да, для всех»): every map not under the sky - a house, a hall, a tower, a dungeon, the
+// novice school's rooms (moc_pryd03 alone before); none under the sky
+TEST(pit_walls_on_every_map_under_a_roof) {
+    for (const char* m : {"moc_pryd03", "moc_pryd04", "c_tower3", "prt_in", "geffen_in", "in_sphinx1", "new_1-1",
+                          "new_1-4", "new_zone02", "pay_dun00"})
+        CHECK(pitwalls::wallsFor(m));
+    for (const char* m : {"prontera", "prt_fild08", "new_zone01", "new_1-2", ""}) CHECK(!pitwalls::wallsFor(m));
+}
+
+// 3.0.22-beta.47 (the owner 21.11: the novice school's rooms in 3D - «стенки прозрачные и видны другие комнаты», «да,
+// для всех»): a house's room floats in the void, its sides open for the camera from above - a floor's edge to a cell
+// of nothing at all (no top, no side picture between them) at its own height gets a wall too; a step (a side picture
+// there) still none
+TEST(pit_walls_close_a_room_floating_in_the_void) {
+    gnd::Ground g;
+    g.width = 3, g.height = 1;
+    g.textures = {"floor.bmp", "wall.bmp", "stone.bmp"};
+    g.lightmaps.resize(1);
+    g.cells.resize(3);
+    for (int x = 0; x < 3; ++x) {
+        gnd::Cell& c = cellAt(g, x, 0);
+        for (float& corner : c.h) corner = 0.0f;
+        c.top = x < 2 ? surfaceOf(g, kFloor) : -1;  // two floor cells, then nothing
+    }
+    cellAt(g, 0, 0).front = surfaceOf(g, kWall);  // a side picture somewhere: the commonest
+    const terrain::Mesh m = pitwalls::build(g, terrain::lightmapAtlas(g), terrain::Sun{}, 40.0f);
+    CHECK_EQ(quadsOf(m), size_t(1));  // the second floor's right side, to the void
+    cellAt(g, 1, 0).right = surfaceOf(g, kStone);  // a side between them: the makers' step, no wall
+    CHECK_EQ(quadsOf(pitwalls::build(g, terrain::lightmapAtlas(g), terrain::Sun{}, 40.0f)), size_t(0));
 }
