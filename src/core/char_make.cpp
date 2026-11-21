@@ -6,6 +6,93 @@
 #include "core/ui_style.hpp"
 
 namespace uagfx::charmake {
+
+Move cornerMove(int stat) {
+    for (int i = 0; i < 3; ++i) {
+        if (kPairs[i].left == stat) return {i, true};
+        if (kPairs[i].right == stat) return {i, false};
+    }
+    return {};
+}
+
+int hexRadius(int side) { return int(float(side) * 0.31f); }
+
+namespace {
+struct P2 {
+    float x, y;
+};
+float segmentDistance(P2 p, P2 a, P2 b) {
+    const float dx = b.x - a.x, dy = b.y - a.y, l = dx * dx + dy * dy;
+    float t = l > 0 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / l : 0;
+    t = std::clamp(t, 0.0f, 1.0f);
+    const float ex = a.x + t * dx - p.x, ey = a.y + t * dy - p.y;
+    return std::sqrt(ex * ex + ey * ey);
+}
+bool inside(const std::vector<P2>& poly, float x, float y) {  // even-odd
+    bool in = false;
+    for (size_t i = 0, j = poly.size() - 1; i < poly.size(); j = i++)
+        if ((poly[i].y > y) != (poly[j].y > y) &&
+            x < (poly[j].x - poly[i].x) * (y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)
+            in = !in;
+    return in;
+}
+// `top` (straight ARGB, its alpha scaled by `cover`) over the premultiplied pixel
+void over(uint32_t& px, uint32_t argb, float cover) {
+    const float a = float(argb >> 24) / 255.0f * std::clamp(cover, 0.0f, 1.0f);
+    if (a <= 0) return;
+    float c[4] = {float(px >> 24), float((px >> 16) & 255), float((px >> 8) & 255), float(px & 255)};
+    const float s[4] = {255.0f, float((argb >> 16) & 255), float((argb >> 8) & 255), float(argb & 255)};
+    for (int i = 0; i < 4; ++i) c[i] = s[i] * a + c[i] * (1 - a);
+    px = uint32_t(std::lround(c[0])) << 24 | uint32_t(std::lround(c[1])) << 16 | uint32_t(std::lround(c[2])) << 8 |
+         uint32_t(std::lround(c[3]));
+}
+}  // namespace
+
+panel::Picture hexPicture(const int stats[6], int side) {
+    panel::Picture p;
+    if (side <= 0) return p;
+    p.width = p.height = side;
+    p.px.assign(size_t(side) * size_t(side), 0);
+    const float c = float(side) / 2, r = float(hexRadius(side)), line = std::max(1.0f, float(side) / 300.0f);
+    const auto at = [&](int k, float rr) {
+        const float a = -3.14159265f / 2 + float(k) * 3.14159265f / 3;
+        return P2{c + rr * std::cos(a), c + rr * std::sin(a)};
+    };
+    std::vector<P2> outer, shape;
+    for (int k = 0; k < 6; ++k) {
+        outer.push_back(at(k, r));
+        shape.push_back(at(k, r * float(std::clamp(stats[kHexOrder[k]], 0, 9)) / 9.0f));
+    }
+    std::vector<std::pair<P2, P2>> grid;
+    for (const float f : {1.0f, 2.0f / 3, 1.0f / 3})
+        for (int k = 0; k < 6; ++k) grid.push_back({at(k, r * f), at(k + 1, r * f)});
+    for (int k = 0; k < 3; ++k) grid.push_back({at(k, r), at(k + 3, r)});
+    constexpr int kSub = 4;
+    for (int y = 0; y < side; ++y)
+        for (int x = 0; x < side; ++x) {
+            uint32_t& px = p.px[size_t(y) * size_t(side) + size_t(x)];
+            int inOuter = 0, inShape = 0;
+            for (int sy = 0; sy < kSub; ++sy)
+                for (int sx = 0; sx < kSub; ++sx) {
+                    const float fx = float(x) + (float(sx) + 0.5f) / kSub, fy = float(y) + (float(sy) + 0.5f) / kSub;
+                    inOuter += inside(outer, fx, fy);
+                    inShape += inside(shape, fx, fy);
+                }
+            const P2 m{float(x) + 0.5f, float(y) + 0.5f};
+            over(px, 0xE00C1019, float(inOuter) / (kSub * kSub));
+            float g = 1e9f;
+            for (const auto& [a, b] : grid) g = std::min(g, segmentDistance(m, a, b));
+            over(px, 0xFF2E3650, line - g + 0.5f);
+            over(px, 0x8CD8B46A, float(inShape) / (kSub * kSub));
+            float e = 1e9f;
+            for (size_t i = 0; i < shape.size(); ++i) e = std::min(e, segmentDistance(m, shape[i], shape[(i + 1) % 6]));
+            over(px, 0xFFD8B46A, line * 1.5f - e + 0.5f);
+            float d = 1e9f;
+            for (const P2& q : shape) d = std::min(d, std::hypot(m.x - q.x, m.y - q.y));
+            over(px, 0xFFF1D9A0, line * 3.0f - d + 0.5f);
+        }
+    return p;
+}
 namespace {
 
 // At scale 1: the card 620 wide, 22 in; the face 128; a row 34; the buttons 42 high

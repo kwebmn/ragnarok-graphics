@@ -6558,8 +6558,9 @@ constexpr Entry kTexts[] = {
     {Text::MakeNameHint, "4 to 23 letters", "Від 4 до 23 символів", "От 4 до 23 символов"},
     {Text::MakeHair, "Hair", "Зачіска", "Причёска"},
     {Text::MakeColour, "Hair colour", "Колір волосся", "Цвет волос"},
-    {Text::MakePairsHint, "A point moves inside its pair: 10 together", "Очко переходить у парі: разом завжди 10",
-     "Очко переходит в паре: вместе всегда 10"},
+    // 3.0.22-beta.46: the hexagon's corners
+    {Text::MakePairsHint, "A corner takes a point from the one facing it: 10 together",
+     "Кут бере очко в протилежного: разом завжди 10", "Угол берёт очко у противоположного: вместе всегда 10"},
     // 3.0.11-beta.154: the merchant's cart
     {Text::InterfaceCart, "Cart", "Візок", "Тележка"},
     {Text::InterfaceCartHint,

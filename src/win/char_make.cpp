@@ -3,6 +3,7 @@
 #include <windowsx.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -66,15 +67,29 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div class="rc"><div class="lbl">{{nameWord}}</div><div class="field ctl" data-class-typing="nameFocus"
   data-event-click="cm_act(1, -1)"><span data-if="name != ''">{{name}}</span><span class="caret"
   data-if="caret"></span><span class="ph" data-if="name == '' && !nameFocus">{{nameHint}}</span></div>
-<div class="pair" data-for="p, i : pairs" data-class-focus="focusRow == i + 2"><span class="pt ctl"
-  data-class-off="!p.canLeft" data-event-click="cm_act(6, i)">+</span><span class="sl">{{p.left}}</span><div
-  class="bar"><div class="fill" data-style-width="p.share + '%'"></div></div><span class="sr">{{p.right}}</span><span
-  class="pt ctl" data-class-off="!p.canRight" data-event-click="cm_act(7, i)">+</span></div>
+<div class="hexbox"><img data-if="hex != ''" data-attr-src="hex" class="hexpic"/><div class="hc ctl"
+  data-for="c : corners" data-style-left="c.x + 'dp'" data-style-top="c.y + 'dp'" data-class-off="!c.can"
+  data-event-click="cm_act(c.part, c.pair)"><div class="hn">{{c.name}}</div><div
+  class="hv">{{c.value}}</div></div></div>
+<div class="prs"><div class="pr" data-for="p, i : pairs" data-class-focus="focusRow == i + 2"><span class="pt ctl"
+  data-class-off="!p.canRight" data-event-click="cm_act(7, i)">&#x2212;</span><span
+  class="pn">{{p.left}}/{{p.right}}</span><span
+  class="pt ctl" data-class-off="!p.canLeft" data-event-click="cm_act(6, i)">+</span></div></div>
 <div class="hint">{{pairsHint}}</div><div class="hint">{{keysHint}}</div></div></div>
 <div class="btns"><div class="btn ctl" data-event-click="cm_act(9, -1)">{{cancel}}</div>
 <div class="btn main ctl" data-event-click="cm_act(8, -1)">{{make}}</div></div>
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
+// 3.0.22-beta.46 (R-VE23RV, the owner's «6 угольник»): a hexagon's corner - its stat, its place, the press giving it a
+// point from the one facing it
+struct HexCornerView {
+    Rml::String name, value;
+    float x = 0, y = 0;  // dp in the hexagon's box
+    int part = 0, pair = 0;
+    bool can = false;
+};
+constexpr float kHexSide = 260;  // dp: the hexagon's box (the theme's .hexbox)
+
 struct MakePairView {
     Rml::String left, right;
     float share = 50;
@@ -84,6 +99,10 @@ struct MakePairView {
 struct State {
     uilive::Window live;  // 3.0.18-beta.81
     std::vector<MakePairView> pairViews;  // 3.0.18-beta.106: the live window's
+    std::vector<HexCornerView> corners;    // 3.0.22-beta.46
+    panel::Picture hexPic;
+    Rml::String hex, hexPrev;
+    int hexGen = 0;
     Rml::String title, hairWord, colourWord, nameWord, nameHint, pairsHint, make, cancel, name, face, hair, colour;
     Rml::String keysHint;  // 3.0.18-beta.228
     Rml::String ground = "#00000000", facePrev;
@@ -327,6 +346,18 @@ static void liveFrame(State& s) {
         }
         m.RegisterArray<std::vector<MakePairView>>();
         m.Bind("pairs", &s.pairViews);
+        if (auto v = m.RegisterStruct<HexCornerView>()) {
+            v.RegisterMember("name", &HexCornerView::name);
+            v.RegisterMember("value", &HexCornerView::value);
+            v.RegisterMember("x", &HexCornerView::x);
+            v.RegisterMember("y", &HexCornerView::y);
+            v.RegisterMember("part", &HexCornerView::part);
+            v.RegisterMember("pair", &HexCornerView::pair);
+            v.RegisterMember("can", &HexCornerView::can);
+        }
+        m.RegisterArray<std::vector<HexCornerView>>();
+        m.Bind("corners", &s.corners);
+        m.Bind("hex", &s.hex);
         for (auto [n, v] : std::initializer_list<std::pair<const char*, Rml::String*>>{
                  {"title", &s.title}, {"hairWord", &s.hairWord}, {"colourWord", &s.colourWord},
                  {"nameWord", &s.nameWord}, {"nameHint", &s.nameHint}, {"pairsHint", &s.pairsHint},
@@ -366,18 +397,36 @@ static void liveFrame(State& s) {
         for (int i = 0; i < 3; ++i) {
             const int a = cm::kPairs[i].left, b = cm::kPairs[i].right;
             MakePairView& v = s.pairViews[size_t(i)];
-            v.left = t.stats[a] + " " + std::to_string(f.stats[a]);
-            v.right = std::to_string(f.stats[b]) + " " + t.stats[b];
+            v.left = t.stats[a];  // 3.0.22-beta.46: «− STR/INT +» under the hexagon
+            v.right = t.stats[b];
             v.share = f.stats[a] + f.stats[b] > 0 ? 100.0f * float(f.stats[a]) / float(f.stats[a] + f.stats[b]) : 50;
             v.canLeft = cm::canMove(f, i, true);
             v.canRight = cm::canMove(f, i, false);
+        }
+        // 3.0.22-beta.46: the hexagon at the screen's pixels, its corners' labels round it
+        const int side = std::max(60, int(std::lround(kHexSide * std::max(0.5f, uaui::dp()))));
+        s.hexPic = cm::hexPicture(f.stats, side);
+        s.hex = uaui::picture(&s.hexPic, ++s.hexGen, s.hexPrev);
+        s.corners.resize(6);
+        for (int c = 0; c < 6; ++c) {
+            const int stat = cm::kHexOrder[c];
+            const cm::Move mv = cm::cornerMove(stat);
+            const float a = -3.14159265f / 2 + float(c) * 3.14159265f / 3, half = kHexSide / 2;
+            HexCornerView& v = s.corners[size_t(c)];
+            v.name = t.stats[stat];
+            v.value = std::to_string(f.stats[stat]);
+            v.x = half + cm::kLabelAt * kHexSide * std::cos(a) - 23;  // the label 46 dp wide
+            v.y = half + cm::kLabelAt * kHexSide * std::sin(a) - 23;
+            v.part = int(mv.toLeft ? cm::Part::PairLeft : cm::Part::PairRight);
+            v.pair = mv.pair;
+            v.can = cm::canMove(f, mv.pair, mv.toLeft);
         }
         s.ground = uisheet::Sheet::ground(0x10141C, std::max(0.94f, uistyle::window()));
         s.live.doc.dirtyAll();
     }
     int x = s.layout.x, y = s.layout.y, bx = 0, by = 0, bw = 0, bh = 0;
     if (s.live.box(bx, by, bw, bh)) x = (s.targetW - bw) / 2, y = (s.targetH - bh) / 2;
-    s.live.frame(s.shown, x, y, int(winstack::Win::CharMake), ".ar, .field, .pt, .btn");
+    s.live.frame(s.shown, x, y, int(winstack::Win::CharMake), ".ar, .field, .pt, .btn, .hc");
 }
 
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {

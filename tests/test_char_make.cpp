@@ -95,3 +95,43 @@ TEST(char_make_rows_by_keys) {
     CHECK(charmake::keySides(0) && charmake::keySides(charmake::kRows - 1));
     CHECK(!charmake::keySides(charmake::kRows));
 }
+
+// 3.0.22-beta.46 (R-VE23RV «выбор статов похожим на тот как было в старом клиенте»; the owner picked variant A of
+// uaro.kiev.ua/docs/char-stats: «6 угольник и остальных не надо»): the six stats on a hexagon's corners, each pair
+// facing - INT over STR, AGI over LUK, DEX over VIT; a corner's press takes a point from the one facing it
+TEST(char_make_hexagon_corners_face_their_pairs) {
+    for (int k = 0; k < 6; ++k) {
+        const int a = charmake::kHexOrder[k], b = charmake::kHexOrder[(k + 3) % 6];
+        bool paired = false;
+        for (const charmake::Pair& p : charmake::kPairs)
+            paired = paired || (p.left == a && p.right == b) || (p.left == b && p.right == a);
+        CHECK(paired);
+    }
+    CHECK_EQ(charmake::kHexOrder[0], 3);  // INT at the top, STR under it, as the old client
+    CHECK_EQ(charmake::kHexOrder[3], 0);
+    const charmake::Move str = charmake::cornerMove(0), intel = charmake::cornerMove(3);
+    CHECK(str.pair == 0 && str.toLeft);
+    CHECK(intel.pair == 0 && !intel.toLeft);
+    CHECK(charmake::cornerMove(4).pair == 2 && !charmake::cornerMove(4).toLeft);  // DEX: VIT - DEX's right
+}
+
+TEST(char_make_hexagon_picture_follows_the_stats) {
+    charmake::Fields f;
+    const panel::Picture even = charmake::hexPicture(f.stats, 200);
+    CHECK_EQ(even.width, 200);
+    CHECK_EQ(even.height, 200);
+    if (even.width != 200) return;
+    const auto alpha = [](const panel::Picture& p, int x, int y) {
+        return p.px[size_t(y) * size_t(p.width) + size_t(x)] >> 24;
+    };
+    // up from the middle: inside the shape at a third of the way with 5 points; at 85 % only with INT 9
+    const int c = 100, r = charmake::hexRadius(200);
+    CHECK(alpha(even, c, c - r / 3) > alpha(even, c + 1, 3));
+    f.stats[3] = 9, f.stats[0] = 1;
+    const panel::Picture tall = charmake::hexPicture(f.stats, 200);
+    const int y = c - r * 85 / 100;
+    const auto red = [](const panel::Picture& p, int x, int y) {
+        return (p.px[size_t(y) * size_t(p.width) + size_t(x)] >> 16) & 255;
+    };
+    CHECK(red(tall, c, y) > red(even, c, y) + 40);  // gold there now, the dark ground before
+}

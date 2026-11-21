@@ -1628,6 +1628,19 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .ckw .sr { display: block; width: 72dp; margin-right: 8dp; text-align: right; font-size: 13dp; font-weight: bold; }
 .ckw .bar { display: block; flex: 1; height: 8dp; border-radius: 4dp; background-color: #3d7eebbf; }
 .ckw .bar .fill { display: block; height: 8dp; border-radius: 4dp; background-color: #c9a55be6; }
+.ckw .hexbox { position: relative; display: block; width: 260dp; height: 260dp; margin: 0 auto; }
+.ckw .hexpic { position: absolute; left: 0; top: 0; width: 260dp; height: 260dp; }
+.ckw .hc { position: absolute; display: block; width: 46dp; height: 46dp; border-radius: 23dp; text-align: center;
+  background-color: #1b2131; border-width: 1dp; border-color: #46507a; }
+.ckw .hc:hover { border-color: #c9a55bcc; background-color: #262d40; }
+.ckw .hc.off { border-color: #2e3650; }
+.ckw .hn { display: block; margin-top: 7dp; font-size: 12dp; font-weight: bold; line-height: 14dp; }
+.ckw .hv { display: block; font-size: 14dp; font-weight: bold; line-height: 16dp; color: #e6cb8a; }
+.ckw .prs { display: flex; justify-content: space-between; margin: 2dp 0 6dp 0; }
+.ckw .pr { display: flex; align-items: center; height: 34dp; padding: 0 3dp; border-radius: 9dp; border-width: 1dp;
+  border-color: #00000000; }
+.ckw .pr.focus { border-color: #c9a55bcc; }
+.ckw .pn { display: block; width: 62dp; text-align: center; font-size: 12dp; color: #9aa3b5; }
 .ckw .btns { margin-top: 14dp; }
 .ckw .btn { padding: 10dp 22dp; font-size: 14dp; }
 /* 3.0.18-beta.106: the character select live (uikit/charselect_live) - its head and buttons by flexbox */

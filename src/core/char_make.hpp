@@ -28,6 +28,18 @@ constexpr Pair kPairs[3] = {{0, 3}, {1, 5}, {2, 4}};  // STR - INT, AGI - LUK, V
 // The game's buttons: a point to the pair's left stat (from its right one) or to its right one
 int pointButton(int pair, bool toLeft);  // 0x8b STR, 0x8e INT, 0x8c AGI, 0x90 LUK, 0x8d VIT, 0x8f DEX
 bool canMove(const Fields& f, int pair, bool toLeft);  // the giving stat keeps 1 at least
+// 3.0.22-beta.46 (R-VE23RV, the owner's pick «6 угольник»): the old client's hexagon - the stats on its corners from the
+// top clockwise, each facing its pair: INT, AGI, DEX, STR, LUK, VIT
+constexpr int kHexOrder[6] = {3, 1, 4, 0, 5, 2};
+struct Move {
+    int pair = 0;
+    bool toLeft = true;
+};
+Move cornerMove(int stat);  // a stat's corner pressed: a point to it from the one facing it
+int hexRadius(int side);    // the full stat's (9) distance from the middle of a picture `side` square
+constexpr float kLabelAt = 0.41f;  // the corners' labels' middles: this share of the side from the middle
+// The shape: its rings and axes, the stats' gold one with dots at its corners; premultiplied, `side` square
+panel::Picture hexPicture(const int stats[6], int side);
 int hairButton(bool after);                            // 0xa0 the style after (1-23, round), 0xa1 before
 constexpr int kColourButton = 0xd5;                    // the colour on (0-8, round)
 int colourPresses(bool after);                         // 1, or 8 for the one before
