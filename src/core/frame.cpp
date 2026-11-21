@@ -105,6 +105,18 @@ void FrameRecord::moveLastBefore(size_t count, size_t position) {
                 commands_.end());
 }
 
+void FrameRecord::moveToEnd(std::vector<size_t> positions) {
+    std::sort(positions.begin(), positions.end());
+    positions.erase(std::unique(positions.begin(), positions.end()), positions.end());
+    std::vector<Command> moved;
+    for (auto at = positions.rbegin(); at != positions.rend(); ++at) {
+        if (*at >= commands_.size()) continue;
+        moved.insert(moved.begin(), commands_[*at]);
+        commands_.erase(commands_.begin() + std::ptrdiff_t(*at));
+    }
+    commands_.insert(commands_.end(), moved.begin(), moved.end());
+}
+
 void FrameRecord::dropCommand(size_t index) {
     if (index < commands_.size()) commands_.erase(commands_.begin() + std::ptrdiff_t(index));
 }

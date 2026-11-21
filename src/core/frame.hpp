@@ -139,6 +139,9 @@ public:
     // 3.0.3-beta.9: the last `count` commands moved before the one at `position` (the windows' panel under the game's
     // cursor); nothing when there are not that many
     void moveLastBefore(size_t count, size_t position);
+    // 3.0.22-beta.45 (R-BWBAPV): the commands at `positions` (any order) moved to the end in their order; one past the
+    // end: left out
+    void moveToEnd(std::vector<size_t> positions);
     // 3.0.11-beta.102: a command out of the frame (the game's cursor while the controller's stick walks); none there:
     // nothing
     void dropCommand(size_t index);

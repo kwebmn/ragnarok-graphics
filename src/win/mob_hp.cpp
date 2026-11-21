@@ -269,27 +269,18 @@ static void frameInner(HWND game, MobHp mode, double k, int targetWidth, int tar
         if (place != s.places.end() && feet.rhw > 0 && std::isfinite(feet.x) && std::isfinite(feet.y)) {
             mobhp::Tall& tall = s.talls[m.id];
             mobhp::keepTall(tall, feet.y - it->second[1], nowMs);
-            float over = tall.px;
-            // 3.0.22-beta.42 (R-PWDNEY «полоски хп очень высоко над мобами», R-KK9Z4Y - both in the 3D view: the far
-            // ones' bars in the sky): in the 3D view no higher than a head's height over the feet as the view puts it
+            // 3.0.22-beta.45 (R-UBVJCX «полоски хп очень высоко над мобами», after .42's head-height cap: a poring's
+            // bar a man's height over it): in the 3D view under the feet, as the hero's own bar - no height guessed
             if (view3dwin::active()) {
-                const float* w = place->second.data();
-                const float h[3] = {w[0], w[1] - view3d::kHeadHeight * 1.3f, w[2]};  // y down
-                const float c[3] = {h[0] * view[0] + h[1] * view[3] + h[2] * view[6] + view[9],
-                                    h[0] * view[1] + h[1] * view[4] + h[2] * view[7] + view[10],
-                                    h[0] * view[2] + h[1] * view[5] + h[2] * view[8] + view[11]};
-                own_ground::Tl2 head{};
-                if (own_ground::placeView(p, c, head) && head.rhw > 0 && std::isfinite(head.y) && head.y < feet.y) {
-                    static int told = 0;
-                    if (told < 6 && over > feet.y - head.y + 2) {
-                        ++told;
-                        LOG_INFO("monsters' bars (3D view): the frame's height kept %.0f px over the feet, a head's "
-                                 "%.0f px - the bar at the lower", double(over), double(feet.y - head.y));
-                    }
-                    over = std::min(over, feet.y - head.y);
+                static bool told = false;
+                if (!told) {
+                    told = true;
+                    LOG_INFO("monsters' bars (3D view): under the feet, as the hero's own");
                 }
+                b = mobhp::barUnderFeet(feet.x, feet.y, m.target, gameHeight);
+            } else {
+                b = mobhp::barOverFeet(feet.x, feet.y, tall.px, m.target, gameHeight);
             }
-            b = mobhp::barOverFeet(feet.x, feet.y, over, m.target, gameHeight);
             ++steady;
         } else {
             b = mobhp::barOver(it->second.data(), m.target, gameHeight);

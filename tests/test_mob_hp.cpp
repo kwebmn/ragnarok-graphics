@@ -178,3 +178,13 @@ TEST(mob_hp_a_bar_smaller_with_a_far_camera) {
     CHECK_EQ(same.w, 40.0f);
     CHECK_EQ(same.y, 50.0f);
 }
+
+// 3.0.22-beta.45 (R-UBVJCX «полоски хп очень высоко над мобами», the third time - a poring's bar a man's height over
+// it): in the 3D view under the feet, as the hero's own bar - no height to guess
+TEST(mob_hp_bar_under_feet) {
+    const mobhp::Bar a = mobhp::barUnderFeet(500, 400, false, 1080);
+    const mobhp::Bar b = mobhp::barUnderFeet(500, 400, true, 1080);
+    CHECK(std::fabs(a.x + a.w / 2 - 500) < 1e-3f && a.y > 400 && a.y < 400 + 12);  // just under the feet
+    CHECK(std::fabs(b.x + b.w / 2 - 500) < 1e-3f && b.w > a.w);
+    CHECK(mobhp::barUnderFeet(500, 400, false, 540).w < a.w);  // with the game's size
+}

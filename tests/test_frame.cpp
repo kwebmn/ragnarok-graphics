@@ -451,3 +451,21 @@ TEST(frame_a_draws_room_filled_after) {
     CHECK(r.vertexBytes()[b.vertexOffset] == 0x5A && r.indices()[8] == 3);
     CHECK(r.commands().size() == 2 && r.commands()[1].type == Cmd::Draw && r.commands()[1].index == 1);
 }
+
+// 3.0.22-beta.45 (R-BWBAPV «в меню мышка под диалогом»): the game's own cursor's faces moved to the frame's end, over
+// uaUI's windows drawn after it - in their order, the rest in theirs
+TEST(frame_moves_commands_to_the_end) {
+    FrameRecord r;
+    uint8_t vertices[32 * 3] = {};
+    DrawCmd cmd;
+    cmd.fvf = d3d7::FVF_TL1;
+    cmd.primitive = d3d7::PT_TRIANGLELIST;
+    for (int i = 0; i < 5; ++i) r.draw(cmd, vertices, 3, nullptr, 0);
+    r.moveToEnd({3, 1});
+    CHECK_EQ(r.commands().size(), size_t(5));
+    if (r.commands().size() != 5) return;
+    const uint32_t want[5] = {0, 2, 4, 1, 3};
+    for (int i = 0; i < 5; ++i) CHECK_EQ(r.commands()[size_t(i)].index, want[i]);
+    r.moveToEnd({9});  // none there: nothing moves
+    CHECK_EQ(r.commands()[4].index, uint32_t(3));
+}

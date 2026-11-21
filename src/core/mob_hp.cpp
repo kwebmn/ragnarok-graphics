@@ -122,6 +122,12 @@ Bar barOverFeet(float feetX, float feetY, float tall, bool target, int screenHei
     return barOver(box, target, screenHeight);
 }
 
+Bar barUnderFeet(float feetX, float feetY, bool target, int screenHeight) {
+    const float k = std::max(0.6f, float(screenHeight) / 1080.0f);
+    const float box[4] = {feetX, feetY + 5.0f * k + (target ? 5.0f : 4.0f) * k + 3.0f * k, feetX, feetY};
+    return barOver(box, target, screenHeight);  // its top 3 px (at 1080) under the feet
+}
+
 std::string percentText(int hp) { return std::to_string(hp) + "%"; }
 
 }  // namespace uagfx::mobhp

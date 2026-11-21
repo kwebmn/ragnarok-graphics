@@ -1,3 +1,4 @@
+#include <climits>
 #include "win/uaui.hpp"
 #include "win/cursor_look.hpp"
 
@@ -53,10 +54,10 @@ State& state() {
 }
 
 // The game's cursor's faces near its point (x, y): small interface faces all of its colour, the last ones first
-std::vector<size_t> cursorFaces(const FrameRecord& r, float x, float y) {
+std::vector<size_t> cursorFaces(const FrameRecord& r, float x, float y, int lookBack = kLookBack) {
     std::vector<size_t> out;
     int seen = 0;
-    for (size_t c = r.commands().size(); c-- > 0 && seen < kLookBack;) {
+    for (size_t c = r.commands().size(); c-- > 0 && seen < lookBack;) {
         if (r.commands()[c].type != Cmd::Draw) continue;
         ++seen;
         const DrawCmd& d = r.draws()[r.commands()[c].index];
@@ -149,8 +150,15 @@ void frame(CursorLook look, double k) {
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (s.look == CursorLook::Game || s.k <= 0 || s.size <= 0) return;
     int cx = 0, cy = 0;
+    // 3.0.22-beta.45 (R-BWBAPV «в меню мышка под диалогом»: «Вибір персонажа», uaUI's window drawn after the game's
+    // frame): the game's own cursor moved over all of ours
+    if (s.look == CursorLook::Game) {
+        if (!record.cursorAside() && readGameCursor(cx, cy))
+            record.moveToEnd(cursorFaces(record, float(cx), float(cy), INT_MAX));
+        return;
+    }
+    if (s.k <= 0 || s.size <= 0) return;
     if (!readGameCursor(cx, cy)) return;
     const std::vector<size_t> faces = cursorFaces(record, float(cx), float(cy));
     if (faces.empty()) return;  // the game drew none: none of ours either

@@ -112,6 +112,8 @@ struct Tall {
 };
 void keepTall(Tall& t, float now, uint32_t nowMs);
 Bar barOverFeet(float feetX, float feetY, float tall, bool target, int screenHeight);
+// 3.0.22-beta.45 (R-UBVJCX, the 3D view): the bar just under the feet, as the hero's own
+Bar barUnderFeet(float feetX, float feetY, bool target, int screenHeight);
 std::string percentText(int hp);  // «57%»
 
 }  // namespace uagfx::mobhp
