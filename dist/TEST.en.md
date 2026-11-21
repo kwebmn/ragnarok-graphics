@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.44 — what's new · 2026-11-21
+
+4 GB of memory for the game.
+
+- **4 GB of memory for the game** (on): uaRO Graphics puts a mark in uaRO.exe that lets the game take 4 GB of memory on a 64-bit Windows instead of 2. Without it the game could crash for want of memory in the big towns. The game's own exe is kept in uaro-graphics\original; to turn it off - «Service» → «4 GB of memory for the game».
+
 # uaRO Graphics 3.0.22-beta.43 — what's new · 2026-11-21
 
 A log to find crashes from memory running out.
