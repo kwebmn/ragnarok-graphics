@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.22-beta.48 — what's new · 2026-11-21
+
+Chat: folding and scrolling with the arrows.
+
+- **The chat folds**: the «—» button in the tabs row folds it to its newest line (the tabs and the input stay); press again to restore it. F10 now goes round 7 → 12 → 4 → 1 row.
+- **Chat history with the arrows**: ↑ ↓ a row, PgUp PgDn a page, End back to the newest. Works while the pointer is over the chat or the chat has the keyboard.
+
 # uaRO Graphics 3.0.22-beta.47 — what's new · 2026-11-21
 
 Room walls in the 3D view on every map.
