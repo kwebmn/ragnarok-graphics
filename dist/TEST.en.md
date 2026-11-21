@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.46 — what's new · 2026-11-21
+
+The stats hexagon in «New character».
+
+- **«New character»**: the stats are now on a hexagon, as in the old client. The pairs face each other (INT - STR, AGI - LUK, DEX - VIT). Press a corner - it takes a point from the one facing it, and the gold shape stretches that way. Under the shape, «− STR/INT +» for fine tuning.
+
 # uaRO Graphics 3.0.22-beta.45 — what's new · 2026-11-21
 
 Health bars in 3D and the cursor in «Character select».
