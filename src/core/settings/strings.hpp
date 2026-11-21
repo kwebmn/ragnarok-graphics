@@ -430,6 +430,7 @@ enum class Text : uint16_t {
     ReportAutoAsk,  // 3.0.0-beta.1: the automatic reports asked about at the first start
     UpdateChannel, UpdateChannelRelease, UpdateChannelBeta, UpdateChannelHint,  // 3.0.0-beta.2: the channels
     ServiceClientLibs, ClientLibsNote, ClientCps, ClientCpsHint, ClientBink, ClientBinkHint,  // 3.0.1-beta.5
+    ClientExe4gb, ClientExe4gbHint,  // 3.0.22-beta.44
     ClientIjl, ClientIjlHint,  // 3.0.1-beta.6
     ClientMss, ClientMssHint,  // 3.0.1-beta.7
     ClientRoext, ClientRoextHint, RoextHeading, RoextNote, RoextLock, RoextLockHint, RoextOnTop, RoextOnTopHint,

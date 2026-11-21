@@ -44,6 +44,8 @@ Result uninstall(const std::wstring& dir, bool keep);
 // uaro-graphics\original; off - or `off` (the removal) - puts the game's own back. Nothing moves while the game runs
 // (the next sync does it): the install, an update, the app's start and its Apply sync.
 void syncClientLibs(const std::wstring& dir, bool off, Result& r);
+// 3.0.22-beta.44: uaRO.exe large address aware by [client] exe_4gb (off: the game's own bit back); in syncClientLibs
+void syncExeMemory(const std::wstring& dir, bool off, Result& r);
 // 3.0.1: the names this folder's uaRO Graphics goes by - its client's (the build's uaro-client.json, else «uaRO»):
 // the desktop shortcut «uaRO HD» and the Apps entry «uaRO Graphics (uaRO HD)»; the old client's «uaRO», «uaRO Graphics»
 struct Names {

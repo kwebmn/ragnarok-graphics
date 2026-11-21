@@ -4535,6 +4535,14 @@ constexpr Entry kTexts[] = {
      "binkw32.dll від RAD.",
      "Видео Bink игра не показывает (вступительного ролика в клиенте нет): наша binkw32.dll без кода RAD. Выключено "
      "— binkw32.dll от RAD."},
+    {Text::ClientExe4gb, "4 GB of memory for the game", "4 ГБ пам'яті для гри", "4 ГБ памяти для игры"},
+    {Text::ClientExe4gbHint,
+     "A mark in uaRO.exe that lets the game take 4 GB of memory on a 64-bit Windows instead of 2: without it the game "
+     "may crash for want of memory in the big towns. Its own exe is kept in uaro-graphics\\original.",
+     "Позначка в uaRO.exe, що дозволяє грі на 64-бітній Windows брати 4 ГБ пам'яті замість 2: без неї у великих містах "
+     "гра може вилетіти через нестачу пам'яті. Її власний exe зберігається в uaro-graphics\\original.",
+     "Отметка в uaRO.exe, которая позволяет игре на 64-битной Windows брать 4 ГБ памяти вместо 2: без неё в больших "
+     "городах игра может вылететь из-за нехватки памяти. Её собственный exe хранится в uaro-graphics\\original."},
     {Text::ClientIjl,
      "JPEG pictures and screenshots by uaRO Graphics",
      "Картинки JPEG і знімки екрана — від uaRO Graphics",

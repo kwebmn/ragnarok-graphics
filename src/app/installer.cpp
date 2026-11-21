@@ -9,6 +9,7 @@
 #include "app/registry.hpp"
 #include "app/shortcuts.hpp"
 #include "app/system.hpp"
+#include "core/exe_laa.hpp"
 #include "core/client_libs.hpp"
 #include "app/text.hpp"
 #include "core/ini_upgrade.hpp"
@@ -317,6 +318,7 @@ void bringRoextSettings(const std::wstring& dir, Result& r) {
 }  // namespace
 
 void syncClientLibs(const std::wstring& dir, bool off, Result& r) {
+    syncExeMemory(dir, off, r);  // 3.0.22-beta.44
     if (running(join(dir, L"uaRO.exe"))) {  // the game holds them: the next sync
         r.log.push_back("installer: the game is running - its libraries are left as they are");
         return;
@@ -374,6 +376,33 @@ void syncClientLibs(const std::wstring& dir, bool off, Result& r) {
                                                         : "installer: cannot put back " + std::string(lib.file));
         }
     }
+}
+
+// 3.0.22-beta.44 (the owner 21.11: «да» - R-6W84UK 2767 MB of the game's address space free with it, 266 without):
+// uaRO.exe large address aware - [client] exe_4gb (on unless 0); the game's own exe kept once in uaro-graphics\original
+void syncExeMemory(const std::wstring& dir, bool off, Result& r) {
+    const std::wstring exe = join(dir, L"uaRO.exe");
+    if (running(exe)) return;  // the game holds it: the next sync
+    std::string ini, bytes;
+    readFile(ourFile(dir, layout::File::Ini), ini);
+    const std::map<std::string, std::string> keys = settings::readIni(ini);
+    const auto key = keys.find("client.exe_4gb");
+    const bool wanted = !off && (key == keys.end() || key->second != "0");
+    if (!readFile(exe, bytes)) return;
+    const exelaa::State now = exelaa::stateOf(bytes);
+    if (now == exelaa::State::NotExe || (now == exelaa::State::Set) == wanted) return;
+    if (wanted) {
+        const std::wstring kept = join(dir, wide(layout::kOriginals)), own = join(kept, L"uaRO.exe");
+        if (!fileExists(own) && !(makeFolders(kept) && writeFileAtomic(own, bytes))) {
+            r.log.push_back("installer: the game's uaRO.exe could not be kept - its 4 GB mark not set");
+            return;
+        }
+    }
+    exelaa::set(bytes, wanted);
+    r.log.push_back(writeFileAtomic(exe, bytes)
+                        ? (wanted ? "installer: uaRO.exe large address aware - 4 GB for the game"
+                                  : "installer: uaRO.exe without the 4 GB mark, as the game's own")
+                        : "installer: cannot write uaRO.exe's 4 GB mark");
 }
 
 Names namesOf(const std::wstring& dir) {

@@ -316,7 +316,8 @@ std::vector<Group> build() {
                         {B("report.auto"), B("report.disconnects").start(), B("stats.send").start(),
                          B("launcher.direct_start")}));
     out.push_back(group(Area::Game, Text::CatClientFiles,
-                        {B("client.updates"), D("client.cps"), D("client.bink"), D("client.ijl"), D("client.mss"),
+                        {B("client.updates"), B("client.exe_4gb"),
+                         D("client.cps"), D("client.bink"), D("client.ijl"), D("client.mss"),
                          D("client.roext")}));
     // --- «Текстури»
     out.push_back(group(Area::Textures, Text::AiTabWhat,

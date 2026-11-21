@@ -70,6 +70,10 @@ const std::vector<IniSetting>& iniSettings() {
         {"launcher", "direct_start", Page::Launcher, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::LauncherDirect,
          Text::LauncherDirectHint, ""},
         // 3.0.1-beta.5: our own libraries in place of the game's old ones (core/client_libs.hpp), «Сервіс»
+        // 3.0.22-beta.44 (the owner 21.11: «да» - R-6W84UK 2767 MB free with it, 266 without): uaRO.exe large
+        // address aware
+        {"client", "exe_4gb", Page::Service, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ClientExe4gb,
+         Text::ClientExe4gbHint, ""},
         {"client", "cps", Page::Service, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ClientCps, Text::ClientCpsHint,
          ""},
         {"client", "bink", Page::Service, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ClientBink,
@@ -1428,6 +1432,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "report.disconnects") return c.reportDisconnects ? "1" : "0";  // 3.0.20-beta.60
     if (k == "pad.enabled") return c.padEnabled ? "1" : "0";  // 2.9
     if (k == "launcher.direct_start") return c.directStart ? "1" : "0";  // 2.11
+    if (k == "client.exe_4gb") return c.clientExe4gb ? "1" : "0";  // 3.0.22-beta.44
     if (k == "client.cps") return c.clientCps ? "1" : "0";  // 3.0.1-beta.5
     if (k == "client.bink") return c.clientBink ? "1" : "0";
     if (k == "client.ijl") return c.clientIjl ? "1" : "0";  // 3.0.1-beta.6

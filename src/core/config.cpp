@@ -529,6 +529,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.padEnabled);
         } else if (key == "launcher.direct_start") {  // 2.11
             setBool(val, c.directStart);
+        } else if (key == "client.exe_4gb") {  // 3.0.22-beta.44
+            setBool(val, c.clientExe4gb);
         } else if (key == "client.cps") {  // 3.0.1-beta.5
             setBool(val, c.clientCps);
         } else if (key == "client.bink") {

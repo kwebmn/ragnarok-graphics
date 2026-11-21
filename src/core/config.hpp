@@ -715,6 +715,7 @@ struct Config {
     // 3.0.1-beta.5: [client] cps, bink - our own libraries in place of the game's old ones (core/client_libs.hpp),
     // each on by default; off puts the game's own back (the settings app, with the game closed)
     bool clientCps = true, clientBink = true, clientIjl = true;  // 3.0.1-beta.6: ijl
+    bool clientExe4gb = true;  // 3.0.22-beta.44: uaRO.exe large address aware (4 GB on a 64-bit Windows)
     bool clientMss = true;  // 3.0.1-beta.7: mss32.dll, put in only where XAudio2 2.9 is
     // 3.0.1-beta.8: [client] roext - ROExt's work (the client's dinput8.dll) in the driver, the DLL moved aside;
     // [roext] its settings (core/roext.hpp), dinput8.ini's brought over by the installer

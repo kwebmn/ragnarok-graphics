@@ -231,7 +231,8 @@ public:
             p.gap();
             p.heading(t(Text::ServiceClientLibs));
             p.note(t(Text::ClientLibsNote));
-            for (const char* key : {"client.cps", "client.bink", "client.ijl", "client.mss", "client.roext"})
+            for (const char* key :
+                 {"client.exe_4gb", "client.cps", "client.bink", "client.ijl", "client.mss", "client.roext"})
                 rows_->buildRow(p, key);
             // 3.0.2-beta.5: the administrator's GRFs in updates\ over the game's archives (core/updates.hpp)
             p.gap();

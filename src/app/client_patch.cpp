@@ -1,6 +1,7 @@
 #include "app/client_patch.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <set>
 
 #include "app/download.hpp"
@@ -9,6 +10,7 @@
 #include "app/text.hpp"
 #include "core/layout.hpp"
 #include "core/sha256.hpp"
+#include "core/exe_laa.hpp"
 
 namespace uagfx::app {
 namespace {
@@ -97,8 +99,13 @@ PatchCheck checkClientPatch(const std::wstring& dir) {
         h.size = h.exists ? uint64_t(size) : 0;
         std::string bytes;
         if (h.exists && std::find(sizes.begin(), sizes.end(), h.size) != sizes.end() &&
-            readFile(placeOf(dir, path), bytes))
+            readFile(placeOf(dir, path), bytes)) {
+            // 3.0.22-beta.44: uaRO.exe as the build had it - our large-address mark aside (installer.cpp sets it)
+            std::string low = path;
+            for (char& ch : low) ch = char(std::tolower(static_cast<unsigned char>(ch)));
+            if (low == "uaro.exe" && exelaa::stateOf(bytes) == exelaa::State::Set) exelaa::set(bytes, false);
             h.sha256 = sha256::hexOf(bytes);
+        }
         return h;
     };
     const client_patch::Plan plan = client_patch::plan(c.manifest, c.last, build, look);
