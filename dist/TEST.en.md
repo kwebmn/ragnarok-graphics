@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.22-beta.47 — what's new · 2026-11-21
+
+Room walls in the 3D view on every map.
+
+- **3D view, indoors**: rooms in houses, the novice school, halls, towers and dungeons are no longer see-through from the side - where the map makers left a side open (it can't be seen from above), there is now a wall up to the ceiling. The rooms next door no longer show through. Before, only the Pyramid maze had this. To turn it off: Alt+O → «Game» → «Walls in place of a house's black blocks».
+
 # uaRO Graphics 3.0.22-beta.46 — what's new · 2026-11-21
 
 The stats hexagon in «New character».
