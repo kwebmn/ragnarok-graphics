@@ -11,6 +11,19 @@
 #include "core/ui_style.hpp"
 
 namespace uagfx::chatpanel {
+
+int scrollBy(int scroll, int most, int rows, ScrollKey key) {
+    const int page = std::max(1, rows - 1);
+    int to = scroll;
+    switch (key) {
+        case ScrollKey::Up: to += 1; break;
+        case ScrollKey::Down: to -= 1; break;
+        case ScrollKey::PageUp: to += page; break;
+        case ScrollKey::PageDown: to -= page; break;
+        case ScrollKey::End: to = 0; break;
+    }
+    return std::clamp(to, 0, std::max(0, most));
+}
 namespace {
 
 // The concept's sizes at scale 1 (v23 chat): 520 wide, the tabs' row 30, a line's row 18 (its words 12.5), the
@@ -486,6 +499,9 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
         }
         // 3.0.18-beta.105: a chat too narrow for the tabs and the magnifier - none (Ctrl+F in the field still opens it)
         if (x > L.searchButton.x) L.searchButton = panel::Box{};
+        // 3.0.22-beta.48 (the owner: «его нельзя спрятать»): «—» left of the magnifier, while the tabs leave room
+        if (L.searchButton.w > 0 && x <= L.searchButton.x - 24 * s)
+            L.foldButton = panel::Box{L.searchButton.x - 24 * s, 5 * s, 22 * s, 22 * s};
         L.input = panel::Box{8 * s, h - 8 * s - inputH, w - 16 * s, inputH};
         const bool whisper = !in.whisper.empty() || in.whisperFocus;
         const float chipW = m(chipText(in, t), 12 * s, true) + (whisper ? 18 : 30) * s;
@@ -529,6 +545,7 @@ Hit hitTest(const Layout& L, const std::vector<Row>& rows, const Show& sh, float
     if (L.filtersMenu.w > 0 && L.filtersMenu.contains(x, y)) return Hit{Part::Body, -1};
     if (L.filtersButton.w > 0 && L.filtersButton.contains(x, y)) return Hit{Part::Filters, -1};
     if (L.searchButton.w > 0 && L.searchButton.contains(x, y)) return Hit{Part::Search, -1};  // 3.0.18-beta.105
+    if (L.foldButton.w > 0 && L.foldButton.contains(x, y)) return Hit{Part::Fold, -1};  // 3.0.22-beta.48
     if (L.menu.w > 0 && L.menu.contains(x, y)) return Hit{Part::Body, -1};
     if (L.grip.w > 0 && L.grip.contains(x, y)) return Hit{Part::Grip, -1};  // 3.0.11-beta.241
     for (size_t i = 0; i < L.people.size(); ++i)  // 3.0.11-beta.242: index 0 «Усі», then the ones whispered with

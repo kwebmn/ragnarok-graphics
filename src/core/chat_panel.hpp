@@ -185,6 +185,7 @@ struct Show {
     int hide = 0;
     bool filtersOpen = false, hoverFilters = false;
     bool hoverSearch = false;  // 3.0.18-beta.105
+    bool hoverFold = false, folded = false;  // 3.0.22-beta.48
     int hoverFilter = -1, hoverRowLine = -1;
     uint64_t nowMs = 0;
     int clockSec = -1;  // the day's seconds now; < 0 no times
@@ -205,6 +206,7 @@ struct Layout {
     std::vector<panel::Box> people, items;
     panel::Box filtersButton, filtersMenu;  // 3.0.11-beta.243
     panel::Box searchButton;  // 3.0.18-beta.105: the tabs' row's magnifier, left of the gear (every tab)
+    panel::Box foldButton;    // 3.0.22-beta.48: «—» left of the magnifier
     panel::Box bar;  // 3.0.11-beta.245 (the owner: «в чате нету скрола»): the history's scroll bar's track
     std::vector<panel::Box> filters;
     std::vector<panel::Box> tabs;
@@ -219,12 +221,21 @@ void sizeTo(const Layout& L, float x, float y, int& width, int& rows);
 
 enum class Part : uint8_t {
     None, Tab, Name, Lines, Mode, Clear, Field, Newer, Body, Grip, Person, Item, Filters, Filter, Link, Bar,
-    Search  // 3.0.18-beta.105: the magnifier - the search opened or closed
+    Search,  // 3.0.18-beta.105: the magnifier - the search opened or closed
+    Fold     // 3.0.22-beta.48: «—» - folded to its newest line, or back
 };
 // 3.0.11-beta.245: the scroll bar - its thumb for `total` rows (w 0: all of them shown), the scroll (rows up from the
 // newest) the cursor's y on its track gives (the thumb's middle there)
 panel::Box barThumb(const Layout& L, size_t total, int scroll);
 int scrollAt(const Layout& L, size_t total, float y);
+// 3.0.22-beta.48 (the owner: «стрелкой вверх мотать историю»): the scroll (rows up from the newest, 0..most) after a
+// key - ↑ ↓ a row, PgUp PgDn a page of `rows` (less one), End the newest
+enum class ScrollKey : uint8_t { Up, Down, PageUp, PageDown, End };
+int scrollBy(int scroll, int most, int rows, ScrollKey key);
+// 3.0.22-beta.48 (the owner: «одна высота пускай будет свернутый чат максимально»): F10's rows, round - the last the
+// chat folded to its newest line (its tabs and its field kept); the tabs' «—» goes there and back
+constexpr int kHeights[] = {7, 12, 4, 1};
+constexpr int kHeightCount = 4, kFoldedHeight = 3;
 // 3.0.11-beta.244: a menu's item - by its place, the action it does (0 whisper, 1 block, 2 copy the name, 3 the line)
 int menuAction(const Show& sh, int index);
 struct Hit {

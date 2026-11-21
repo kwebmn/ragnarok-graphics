@@ -98,7 +98,6 @@ using MoveFn = void(__attribute__((thiscall)) *)(uint32_t window, int x, int y);
 constexpr size_t kMostLines = 400, kMostBattle = 300, kMostPending = 512, kMostNodes = 512;
 constexpr ULONGLONG kQuietMs = 12000, kBlinkMs = 530, kKillExpMs = 2500, kHitKeepMs = 20000;
 constexpr ULONGLONG kServerExpMs = 120000;  // 3.0.12-beta.3
-const int kHeights[] = {7, 12, 4};  // F10 goes round them
 
 struct Raw {
     std::string text;
@@ -112,6 +111,11 @@ struct State {
     int sheetGen = 0;
     bool sheetShown = false;
     bool on = false, shown = false, moved = false, forced = false, oldTold = false, folded = false;
+    bool overChat = false;  // 3.0.22-beta.48: the pointer over it (its keys scroll the history)
+    int heightBefore = 0, rowsBefore = 0;  // 3.0.22-beta.48: «—»'s way back
+    int backTold = 0, backLen = -1;        // 3.0.22-beta.48: Backspace watched (the owner's «выпадает с чата»)
+    bool backFocus = false;
+    ULONGLONG backAt = 0;
     bool inputTold = false, swallowTab = false;
     bool widthTold = false;  // 3.0.18-beta.216 (R-JPMWSD): the input's two widths told once
     unsigned swallowChar = 0;
@@ -863,6 +867,16 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         }
     }
     const ULONGLONG now = GetTickCount64();
+    if (s.backAt && now - s.backAt >= 60) {  // 3.0.22-beta.48: Backspace's after
+        const uint32_t words = wordsEdit();
+        const bool focus = words && read32(kFocus) == words;
+        const int len = words ? int(editText(words).size()) : -1;
+        ++s.backTold;
+        LOG_INFO("chat: Backspace - the field %s the keys (%s before), its words %d bytes (%d before), the focus at "
+                 "0x%X, the field 0x%X", focus ? "has" : "lost", s.backFocus ? "had" : "had not", len, s.backLen,
+                 read32(kFocus), words);
+        s.backAt = 0;
+    }
     int cx = 0, cy = 0;
     cp::Hit hit;
     if (readHoverCursor(cx, cy) && s.layout.w > 0)
@@ -888,6 +902,9 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.hoverBar = hit.part == cp::Part::Bar || s.barDrag;      // 3.0.11-beta.245
     s.show.hoverFilters = hit.part == cp::Part::Filters;  // 3.0.11-beta.243
     s.show.hoverSearch = hit.part == cp::Part::Search;    // 3.0.18-beta.105
+    s.show.hoverFold = hit.part == cp::Part::Fold;        // 3.0.22-beta.48
+    s.show.folded = s.customRows == 0 && s.height % cp::kHeightCount == cp::kFoldedHeight;
+    s.overChat = over;
     s.show.hoverFilter = hit.part == cp::Part::Filter ? hit.index : -1;
     s.show.hoverRowLine = hit.part == cp::Part::Lines || hit.part == cp::Part::Name ? hit.index : -1;
     {
@@ -901,7 +918,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     if (!s.sizeRead) readSize(s);
     s.show.hoverGrip = hit.part == cp::Part::Grip || s.sizing;
     s.layout = cp::layout(int(std::lround(10 * scale)), targetHeight - int(std::lround(10 * scale)), scale,
-                          s.customRows > 0 ? s.customRows : kHeights[s.height % 3], quiet && !s.sizing, s.show,
+                          s.customRows > 0 ? s.customRows : cp::kHeights[s.height % cp::kHeightCount],
+                          quiet && !s.sizing, s.show,
                           s.input, texts(), measure, s.width);
     hudedit::place(hudlayout::Part::Chat, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
@@ -1023,6 +1041,12 @@ static void fillSheet(State& s, uisheet::Content& c) {
         const float side = 14 * sc;
         icon(uiicons::Icon::Gear, panel::Box{b.x + (b.w - side) / 2, b.y + (b.h - side) / 2, side, side},
              sh.hide ? kGold : kMuted, 1.0f, 2.0f);
+    }
+    if (L.foldButton.w > 0) {  // 3.0.22-beta.48: «—» (gold while folded)
+        const panel::Box& b = L.foldButton;
+        if (sh.hoverFold) c.rect(u, b, 6 * sc, kWhite, 0.10f);
+        c.rect(u, panel::Box{b.x + 6 * sc, b.y + b.h / 2 - 1 * sc, b.w - 12 * sc, 2 * sc}, 1 * sc,
+               sh.folded ? kGold : kMuted, 1.0f);
     }
     if (L.searchButton.w > 0) {  // 3.0.18-beta.105: the search's magnifier (gold while it searches)
         const panel::Box& b = L.searchButton;
@@ -1243,6 +1267,18 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             s.show.scroll = 0;
             did = "back to the newest";
             break;
+        case cp::Part::Fold:  // 3.0.22-beta.48: «—» - folded to its newest line, or back as it was
+            if (s.customRows == 0 && s.height % cp::kHeightCount == cp::kFoldedHeight) {
+                s.height = s.heightBefore % cp::kHeightCount;
+                s.customRows = s.rowsBefore;
+                did = "unfolded («—»)";
+            } else {
+                s.heightBefore = s.height, s.rowsBefore = s.customRows;
+                s.height = cp::kFoldedHeight, s.customRows = 0;
+                did = "folded to its newest line («—»)";
+            }
+            keepSize(s);
+            break;
         default:
             break;
     }
@@ -1355,7 +1391,7 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
         if (GetKeyState(VK_MENU) < 0)
             s.folded = !s.folded;
         else {
-            s.height = (s.height + 1) % 3;
+            s.height = (s.height + 1) % cp::kHeightCount;  // 3.0.22-beta.48: the last one folded
             s.customRows = 0;  // 3.0.11-beta.241: F10's heights over the corner's rows
             keepSize(s);
             s.folded = false;
@@ -1363,6 +1399,31 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
         s.key.clear();
         LOG_INFO("chat: %s", s.folded ? "folded away (Alt+F10)" : "its height changed (F10)");
         return true;
+    }
+    // 3.0.22-beta.48 (the owner: «хочу нажать на чат и стрелкой вверх мотать историю, а оно не дает»): ↑ ↓ PgUp PgDn
+    // End scroll the history while the chat has the keys or the pointer is over it (End: not while words are typed)
+    if (s.shown && (wp == VK_UP || wp == VK_DOWN || wp == VK_PRIOR || wp == VK_NEXT || wp == VK_END) &&
+        GetKeyState(VK_CONTROL) >= 0 && GetKeyState(VK_MENU) >= 0) {
+        const uint32_t words = wordsEdit();
+        const bool keys = words && read32(kFocus) == words;
+        if ((keys || s.overChat) && !(wp == VK_END && keys && !editText(words).empty())) {
+            const cp::ScrollKey k = wp == VK_UP     ? cp::ScrollKey::Up
+                                    : wp == VK_DOWN  ? cp::ScrollKey::Down
+                                    : wp == VK_PRIOR ? cp::ScrollKey::PageUp
+                                    : wp == VK_NEXT  ? cp::ScrollKey::PageDown
+                                                     : cp::ScrollKey::End;
+            s.show.scroll = cp::scrollBy(s.show.scroll, mostScroll(s), s.layout.rows, k);
+            s.key.clear();
+            return true;
+        }
+    }
+    // 3.0.22-beta.48 (the owner: «нажимаю бекспейс и выпадает с чата, и то что написано стирается»): watched - the
+    // field's focus and words before, told the next frame after
+    if (wp == VK_BACK && s.backTold < 12) {
+        const uint32_t words = wordsEdit();
+        s.backFocus = words && read32(kFocus) == words;
+        s.backLen = words ? int(editText(words).size()) : -1;
+        s.backAt = GetTickCount64();
     }
     // 3.0.11-beta.240 (the chat concept, stage 1): Enter on «/p», «/g», «/w Ім'я», «/r» - the words alone into the
     // game's field, its channel (or whisper's name) set for them; the game sends as its own, the channel put back after

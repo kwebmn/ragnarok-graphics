@@ -241,3 +241,23 @@ TEST(chat_panel_bracketed_names_link_to_the_reference) {
     const std::vector<chatpanel::Span> none = chatpanel::bracketLinks({chatpanel::Span{"no names here", 1}}, resolve);
     CHECK(none.size() == 1 && none[0].text == "no names here");
 }
+
+// 3.0.22-beta.48 (the owner 21.11: «хочу нажать на чат и стрелкой вверх мотать историю, а оно не дает»): the history
+// by the keys - ↑ ↓ a row, PgUp PgDn a page, End back to the newest; within 0 (the newest) .. most
+TEST(chat_panel_keys_scroll_the_history) {
+    using cp = uagfx::chatpanel::ScrollKey;
+    CHECK_EQ(uagfx::chatpanel::scrollBy(0, 30, 7, cp::Up), 1);
+    CHECK_EQ(uagfx::chatpanel::scrollBy(1, 30, 7, cp::Down), 0);
+    CHECK_EQ(uagfx::chatpanel::scrollBy(0, 30, 7, cp::Down), 0);  // the newest already
+    CHECK_EQ(uagfx::chatpanel::scrollBy(2, 30, 7, cp::PageUp), 8);  // a page: its rows less one
+    CHECK_EQ(uagfx::chatpanel::scrollBy(28, 30, 7, cp::PageUp), 30);  // no further than the oldest
+    CHECK_EQ(uagfx::chatpanel::scrollBy(20, 30, 7, cp::End), 0);
+    CHECK_EQ(uagfx::chatpanel::scrollBy(5, 0, 7, cp::Up), 0);  // all of it in sight: nothing to scroll
+}
+
+// 3.0.22-beta.48 (the owner: «одна высота пускай будет свернутый чат максимально»): F10 round 7, 12, 4 and 1 row
+TEST(chat_panel_f10_heights_end_folded) {
+    CHECK_EQ(uagfx::chatpanel::kHeightCount, 4);
+    CHECK_EQ(uagfx::chatpanel::kHeights[3], 1);
+    CHECK_EQ(uagfx::chatpanel::kFoldedHeight, 3);
+}
