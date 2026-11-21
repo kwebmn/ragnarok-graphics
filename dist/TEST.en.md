@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.22-beta.45 — what's new · 2026-11-21
+
+Health bars in 3D and the cursor in «Character select».
+
+- **Monsters' health bars in the 3D view** are now under the monster's feet, like your own - not high above it.
+- **The game's cursor** no longer hides under «Character select» and the other new windows.
+
 # uaRO Graphics 3.0.22-beta.44 — what's new · 2026-11-21
 
 4 GB of memory for the game.
