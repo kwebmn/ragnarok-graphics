@@ -173,7 +173,8 @@ enum class Text : uint16_t {
     // 0.75
     SmoothTaa, SmoothTaaHint,
     // 0.76
-    FramesKeepFps, FramesKeepFpsHint, FramesLightSkills, FramesLightSkillsHint, LightSkillsOnNote, FxCostMs,
+    FramesKeepFps, FramesKeepFpsHint, FramesKeepEffects, FramesKeepEffectsHint,  // 3.0.23-beta.2: keep_effects
+    FramesLightSkills, FramesLightSkillsHint, LightSkillsOnNote, FxCostMs,
     // 0.78
     FxBloom, FxBloomHint, FxBloomStrength, FxBloomStrengthHint,
     // 0.79

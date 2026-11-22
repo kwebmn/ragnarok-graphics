@@ -1200,6 +1200,9 @@ struct Config {
     // 0.76: [frames] keep_fps - below this for ten seconds, the costliest effect goes off for the rest of the game
     // (core/effect_costs.hpp); 0 = never
     int keepFps = 0;
+    // 3.0.23-beta.2 (the owner: «чтобы не выключали эффекты, пускай фпс просаживается но графика будет»): [frames]
+    // keep_effects - nothing goes off for the frames: keep_fps, «Авто»'s own lowering, the light skills stand still
+    bool keepEffects = false;
     // 3.0.18-beta.186 (the owner: «делай 2 без остановки»): [frames] light_skills - the game's own light skill effects
     // (its /mineffect's) while the frames run short of keep_fps in a crowd of skills (core/light_skills)
     bool lightSkills = true;

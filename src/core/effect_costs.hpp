@@ -62,6 +62,7 @@ bool slowForCard(double fps, int target, double gpuMs);
 // 3.0.19-beta.25 (R-GD8UMS: keep_fps 100 with vsync on a 60 Hz screen - never reached, the effects turned off one by
 // one while the game ran at the screen's 60): the frame rate keep_fps holds the game to - the least of it, the frame
 // limit (0: none) and, with vsync, the screen's refresh (0: not known); 0: keep_fps off
-int keepTarget(int keepFps, int fpsLimit, bool vsync, int refreshHz);
+// 3.0.23-beta.2: `keepEffects` ([frames] keep_effects) - no target at all: nothing is turned off for the frames
+int keepTarget(int keepFps, int fpsLimit, bool vsync, int refreshHz, bool keepEffects = false);
 
 }  // namespace uagfx::effect_costs

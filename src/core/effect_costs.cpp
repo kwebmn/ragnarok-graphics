@@ -84,8 +84,8 @@ bool slowForCard(double fps, int target, double gpuMs) {
     return gpuMs < 0.0 || gpuMs > 0.85 * 1000.0 / double(target);
 }
 
-int keepTarget(int keepFps, int fpsLimit, bool vsync, int refreshHz) {
-    if (keepFps <= 0) return 0;
+int keepTarget(int keepFps, int fpsLimit, bool vsync, int refreshHz, bool keepEffects) {
+    if (keepFps <= 0 || keepEffects) return 0;
     int t = keepFps;
     if (fpsLimit > 0) t = std::min(t, fpsLimit);
     if (vsync && refreshHz > 0) t = std::min(t, refreshHz);

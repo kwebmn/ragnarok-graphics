@@ -149,3 +149,11 @@ TEST(effect_costs_keep_fps_aims_no_higher_than_the_game_can_go) {
     CHECK(effect_costs::keepTarget(0, 60, true, 60) == 0);        // off
     CHECK(effect_costs::keepTarget(-5, 60, true, 60) == 0);
 }
+
+// 3.0.23-beta.2 (the owner: «сделай настройку чтобы не выключали эффекты, пускай фпс просаживается но графика будет»):
+// [frames] keep_effects - no target to hold: keep_fps, the light skills and the card's judge all stand still
+TEST(effect_costs_keep_effects_holds_no_target) {
+    CHECK_EQ(uagfx::effect_costs::keepTarget(60, 0, false, 60), 60);
+    CHECK_EQ(uagfx::effect_costs::keepTarget(60, 0, false, 60, true), 0);
+    CHECK_EQ(uagfx::effect_costs::keepTarget(0, 0, false, 60, false), 0);
+}

@@ -1597,7 +1597,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     g_parts.mark("keepFrameRate", nowMs());
     readaheadwin::frame(map_);  // 3.0.22-beta.2: the slow reads kept by map, a map's read ahead off this thread
     // 3.0.18-beta.186: [frames] light_skills - the game's light skill effects when the frames run short in a crowd
-    if (const int fps = lightskillswin::frame(config.lightSkills, keepAim(config), foreground, map_); fps >= 0)
+    if (const int fps =
+            lightskillswin::frame(config.lightSkills && !config.keepEffects, keepAim(config), foreground, map_);
+        fps >= 0)
         sayOnScreen(wideOf(settings::fmt(settings::tr(language(), settings::Text::LightSkillsOnNote),
                                          {std::to_string(fps), std::to_string(keepAim(config))})));
     // 0.87: [debug] profile; 3.0.5-beta.10: and while «Тест графіки» runs - where the game's thread goes on each set
@@ -1948,7 +1950,7 @@ bool Context::view3dProfiling() {
 }
 
 int Context::keepAim(const Config& config) const {
-    return effect_costs::keepTarget(config.keepFps, config.fpsLimit, config.vsync, screenHz_);
+    return effect_costs::keepTarget(config.keepFps, config.fpsLimit, config.vsync, screenHz_, config.keepEffects);
 }
 
 void Context::keepFrameRate(const Config& config, HWND window) {
@@ -1961,7 +1963,9 @@ void Context::keepFrameRate(const Config& config, HWND window) {
         costsWritten_ = now;  // whole: the settings app may read it this moment
         writeFileAtomic(gameDir() + "\\uaro-graphics\\effect-costs.txt", effect_costs::format(costs));
     }
-    if (config.keepFps <= 0) {
+    // 3.0.23-beta.2: [frames] keep_effects - as keep_fps 0: nothing off, what was turned off comes back
+    if (config.keepFps <= 0 || config.keepEffects) {
+        if (!keepOff_.empty()) effectsMade_ = false;  // 3.0.23-beta.2: the ones turned off made again at once
         keepOff_.clear();  // turned off: the effects come back (3.0.4-beta.35: the windows go on for the card's judge)
         keepSlow_ = 0;
     }
@@ -2002,7 +2006,7 @@ void Context::keepFrameRate(const Config& config, HWND window) {
         judgeCard(config, fps, gpuMs);
         noteFirstGame(config, fps);  // 3.0.11-beta.61
     }
-    if (config.keepFps <= 0) return;
+    if (config.keepFps <= 0 || config.keepEffects) return;
     // 3.0.19-beta.25 (R-GD8UMS: keep_fps 100 with vsync on a 60 Hz screen - the effects turned off one by one while
     // the game ran at the screen's 60): no higher than the game can go - the frame limit, with vsync the screen's
     const int aim = keepAim(config);
@@ -2078,7 +2082,8 @@ card_speed::Judge& Context::judge() const {
 // (core/card_speed.hpp) - the automatic set alone has a card's level to move; its verdict written for the next games
 // and the settings app (uaro-graphics\card-level.txt). 3.0.11-beta.58 (the autopilot): every card, the whole ladder
 void Context::judgeCard(const Config& config, double fps, double gpuMs) {
-    if (config.effects.preset != EffectPreset::Auto) return;
+    // 3.0.23-beta.2: [frames] keep_effects - «Авто» keeps its set (judged no more while it is on)
+    if (config.effects.preset != EffectPreset::Auto || config.keepEffects) return;
     // 3.0.19-beta.25 (R-GD8UMS): with vsync no higher than the screen's refresh (a 60 Hz screen at the limit's 100)
     const int target = effect_costs::keepTarget(config.fpsLimit > 0 ? config.fpsLimit : 60, 0, config.vsync, screenHz_);
     const int before = judge().level();

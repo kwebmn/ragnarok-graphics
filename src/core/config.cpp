@@ -1183,6 +1183,8 @@ Config parseConfig(const std::string& text) {
             toInt(val, 15, 60, c.batteryFps);
         } else if (key == "frames.keep_fps") {
             toInt(val, 0, 240, c.keepFps);
+        } else if (key == "frames.keep_effects") {  // 3.0.23-beta.2
+            setBool(val, c.keepEffects);
         } else if (key == "frames.light_skills") {  // 3.0.18-beta.186
             setBool(val, c.lightSkills);
         } else if (key == "frames.allow_tearing") {

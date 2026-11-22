@@ -1312,6 +1312,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::WindowsOthersLightHint, ""},  // 3.0.3-beta.3: several game windows
         {"frames", "battery_fps", Page::Frames, Control::Slider, 15, 60, 5, {}, {}, Text::FramesBatteryFps,
          Text::FramesBatteryFpsHint, ""},
+        {"frames", "keep_effects", Page::Frames, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FramesKeepEffects,
+         Text::FramesKeepEffectsHint, ""},  // 3.0.23-beta.2
         {"frames", "keep_fps", Page::Frames, Control::Number, 0, 240, 1, {}, {}, Text::FramesKeepFps,
          Text::FramesKeepFpsHint, ""},
         {"frames", "light_skills", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesLightSkills,
@@ -1716,6 +1718,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
     if (k == "frames.keep_fps") return std::to_string(c.keepFps);
+    if (k == "frames.keep_effects") return c.keepEffects ? "1" : "0";  // 3.0.23-beta.2
     if (k == "frames.light_skills") return c.lightSkills ? "1" : "0";  // 3.0.18-beta.186
     if (k == "debug.profile") return c.profile ? "1" : "0";
     if (k == "debug.xray") return c.xray ? "1" : "0";  // 2.3

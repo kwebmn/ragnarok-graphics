@@ -284,7 +284,7 @@ std::vector<Group> build() {
                          D("quality.dlss_height", "quality.dlss").need("quality.dlss")}));
     out.push_back(group(Area::Speed, Text::PageFrames,
                         {B("frames.vsync"), B("frames.fps_limit"), B("frames.fps_counter"),
-                         B("frames.battery_saver"),
+                         B("frames.battery_saver"), B("frames.keep_effects"),  // 3.0.23-beta.2
                          D("frames.battery_fps", "frames.battery_saver").need("frames.battery_saver"),
                          D("frames.save_power"), D("frames.keep_fps"), D("frames.light_skills"),
                          B("frames.frame_generation").need("quality.dlss"), D("frames.reflex"),

@@ -1836,6 +1836,15 @@ constexpr Entry kTexts[] = {
      "выключается до конца игры (лог говорит, какой), при необходимости следующий. Когда тормозит процессор (толпа, "
      "город), эффекты остаются: выключать их бесполезно. Файл настроек не меняется. 0 — никогда."},
     // 3.0.18-beta.186: the game's own light skill effects when the frames run short
+    {Text::FramesKeepEffects, "Never turn effects off for the frames", "Не вимикати ефекти заради кадрів",
+     "Не выключать эффекты ради кадров"},
+    {Text::FramesKeepEffectsHint,
+     "The graphics stay whole even when the frames drop: «Keep the frame rate» turns nothing off, «Auto» does not lower "
+     "its set, the skills in a crowd are not lightened.",
+     "Графіка лишається повною, навіть коли кадрів мало: «Тримати частоту кадрів» нічого не вимикає, «Авто» не "
+     "знижує свій набір, уміння в натовпі не полегшуються.",
+     "Графика остаётся полной, даже когда кадров мало: «Держать частоту кадров» ничего не выключает, «Авто» не "
+     "понижает свой набор, умения в толпе не облегчаются."},
     {Text::FramesLightSkills, "Lighter skill effects when frames run short", "Легші ефекти вмінь, коли бракує кадрів",
      "Облегчённые эффекты умений, когда не хватает кадров"},
     {Text::FramesLightSkillsHint,
