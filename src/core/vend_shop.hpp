@@ -31,6 +31,9 @@ std::string inside(const int cards[4], int slots, const std::function<std::strin
                    const std::string& freeWord);
 long long total(const std::vector<Row>& rows);                   // each chosen times its price
 bool canAdd(const Row& r, long long purchase, long long zeny);  // the shop has more, the zeny pays for one more
+// 3.0.23-beta.1 (R-DBGBHJ «не могу купить»): why one more is refused - none, the shop has no more, the zeny short
+enum class Refusal : uint8_t { None, Stock, Zeny };
+Refusal refusal(const Row& r, long long purchase, long long zeny);
 std::string money(long long zeny);  // "1 500 000"
 constexpr uint32_t kShort = 0xFF6B5E;  // the total's colour when the zeny does not pay for it
 

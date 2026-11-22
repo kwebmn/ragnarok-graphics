@@ -85,3 +85,17 @@ TEST(vend_shop_slots_and_what_is_inside) {
     const int unknownCard[4] = {4999, 0, 0, 0};
     CHECK_EQ(vendshop::inside(unknownCard, 1, name, "{1} free"), std::string("#4999"));
 }
+
+// 3.0.23-beta.1 (the owner's R-DBGBHJ «в новом интерфейсе не могу купить»: 421 389 z against a shop of 500 000 z
+// and more, + did nothing and said nothing): why one more is refused - the shop has no more, or the zeny does not pay
+TEST(vend_shop_tells_why_one_more_is_refused) {
+    vendshop::Row r;
+    r.price = 500000;
+    r.stock = 2;
+    CHECK(vendshop::refusal(r, 0, 421389) == vendshop::Refusal::Zeny);
+    CHECK(vendshop::refusal(r, 0, 600000) == vendshop::Refusal::None);
+    r.chosen = 2;
+    CHECK(vendshop::refusal(r, 1000000, 9000000) == vendshop::Refusal::Stock);
+    r.chosen = 1;
+    CHECK(vendshop::refusal(r, 500000, 900000) == vendshop::Refusal::Zeny);  // the second one no longer paid
+}

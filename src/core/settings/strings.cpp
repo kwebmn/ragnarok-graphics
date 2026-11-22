@@ -8547,6 +8547,10 @@ constexpr Entry kTexts[] = {
     {Text::VendCardTip, "A thing's name: its card",
      "Назва речі - її картка",
      "Название вещи - её карточка"},
+    // 3.0.23-beta.1 (R-DBGBHJ «не могу купить»): + refused - why
+    {Text::VendShortZeny, "Not enough zeny: {1} z needed, you have {2} z",
+     "Не вистачає зені: потрібно {1} z, у вас {2} z", "Не хватает зени: нужно {1} z, у вас {2} z"},
+    {Text::VendNoMore, "The shop has no more of it", "Більше цієї речі в лавці немає", "Больше этой вещи в лавке нет"},
     {Text::SocialOnline, "{1} / {2} online",  // 3.0.18-beta.141
      "{1} / {2} у мережі",
      "{1} / {2} в сети"},

@@ -668,6 +668,9 @@ select selectbox option:checked { color: #e6cb8a; }
 .lw .pm { display: block; width: 22dp; height: 22dp; line-height: 22dp; text-align: center; border-radius: 6dp;
           background-color: #ffffff14; font-weight: bold; }
 .lw .pm:hover { background-color: #ffffff29; }
+.lw .pm.off { color: #6c7588; }
+.lw .price.bad { color: #ff7d6e; }
+.vsw .hint.bad { color: #ff9a8f; }
 .lw .ware .n { display: block; width: 30dp; text-align: center; font-size: 12.5dp; font-weight: bold; }
 .lw .sums { display: block; margin: 6dp 0; }
 .lw .srow { display: flex; justify-content: space-between; font-size: 12.5dp; margin-bottom: 2dp; }

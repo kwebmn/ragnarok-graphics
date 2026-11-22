@@ -81,13 +81,14 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
   data-style-color="r.colour">{{r.name}}</span><span
   class="inside"
   data-if="r.inside != ''">{{r.inside}}</span><span class="stock">{{r.stock}}</span></div>
-<span class="price">{{r.price}}</span><span class="pm ctl" data-event-click="vs_less(i)">−</span><span
+<span class="price" data-class-bad="r.dear">{{r.price}}</span><span class="pm ctl"
+  data-event-click="vs_less(i)">−</span><span
   class="n">{{r.chosen}}</span><span
-  class="pm ctl" data-event-click="vs_more(i)">+</span></div></div>
+  class="pm ctl" data-class-off="!r.can_more" data-event-click="vs_more(i)">+</span></div></div>
 <div class="sums"><div class="srow"><span class="lbl">{{total_word}}</span><span class="val"
   data-class-bad="short">{{total}}</span></div>
 <div class="srow"><span class="lbl">{{zeny_word}}</span><span class="val">{{zeny}}</span></div></div>
-<div class="hint" data-if="hint != ''">{{hint}}</div>
+<div class="hint" data-if="hint != ''" data-class-bad="hint_bad">{{hint}}</div>
 <div class="btns"><div class="btn ctl" data-event-click="vs_cancel()">{{cancel}}</div>
 <div class="btn main ctl" data-class-off="!can_buy" data-event-click="vs_buy()">{{buy}}</div></div>
 <div id="ring" class="ring"></div>
@@ -95,6 +96,7 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 struct VendRowView {
     Rml::String name, inside, stock, price, icon, colour = "#eef2f8";
     int chosen = 0;
+    bool canMore = true, dear = false;  // 3.0.23-beta.1: + would add one; the zeny does not pay for one more
 };
 
 struct State {
@@ -103,6 +105,9 @@ struct State {
     std::map<const panel::Picture*, std::string> iconPrev;
     Rml::String title, totalWord, total, zenyWord, zeny, buy, cancel, hint, ground = "#10141cf0";
     bool canBuy = false, shortOf = false;
+    bool hintBad = false;          // 3.0.23-beta.1: the hint tells why + was refused
+    std::string refusedHint;       // 3.0.23-beta.1: that line, shown kRefusedMs after the press
+    ULONGLONG refusedAt = 0;
     uisheet::Sheet sheet;  // 3.0.18-beta.30: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -319,7 +324,24 @@ void more(State& s, int row, int many) {
         ++n;
         ++probe.chosen;
     }
-    if (!n) return;
+    if (!n) {  // 3.0.23-beta.1 (R-DBGBHJ «не могу купить»): said why, not nothing
+        const vs::Refusal why = vs::refusal(s.rows[size_t(row)], sum, zeny);
+        if (why == vs::Refusal::Zeny) {
+            std::string line = say(settings::Text::VendShortZeny);
+            const std::string need = vs::money(sum + s.rows[size_t(row)].price), have = vs::money(zeny);
+            if (const size_t p = line.find("{1}"); p != std::string::npos) line.replace(p, 3, need);
+            if (const size_t p = line.find("{2}"); p != std::string::npos) line.replace(p, 3, have);
+            s.refusedHint = line;
+        } else {
+            s.refusedHint = say(settings::Text::VendNoMore);
+        }
+        s.refusedAt = GetTickCount64();
+        if (s.told++ < 40)
+            LOG_INFO("vending: #%d + refused - %s (the purchase %lld z, the zeny %lld z)", r.id,
+                     why == vs::Refusal::Zeny ? "the zeny does not pay for it" : "the shop has no more", sum, zeny);
+        s.key.clear();
+        return;
+    }
     uint8_t info[kInfoSize];
     std::memcpy(info, s.things[size_t(row)].info, sizeof info);
     const uint32_t count = uint32_t(n);
@@ -442,6 +464,8 @@ static void liveFrame(State& s) {
             v.RegisterMember("inside", &VendRowView::inside);
             v.RegisterMember("colour", &VendRowView::colour);
             v.RegisterMember("chosen", &VendRowView::chosen);
+            v.RegisterMember("can_more", &VendRowView::canMore);
+            v.RegisterMember("dear", &VendRowView::dear);
         }
         m.RegisterArray<std::vector<VendRowView>>();
         m.Bind("rows", &s.rowViews);
@@ -455,6 +479,7 @@ static void liveFrame(State& s) {
         m.Bind("hint", &s.hint);
         m.Bind("can_buy", &s.canBuy);
         m.Bind("short", &s.shortOf);
+        m.Bind("hint_bad", &s.hintBad);
         m.Bind("ground", &s.ground);
         const auto many = [] { return (GetKeyState(VK_SHIFT) & 0x8000) ? kShiftMany : 1; };
         m.BindEventCallback("vs_more", [many](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
@@ -487,26 +512,35 @@ static void liveFrame(State& s) {
         v.stock = stock;
         v.price = vs::money(r.price) + " z";
         v.chosen = r.chosen;
+        const vs::Refusal why = vs::refusal(r, vs::total(s.rows), s.show.zeny);  // 3.0.23-beta.1
+        v.canMore = why == vs::Refusal::None;
+        v.dear = why == vs::Refusal::Zeny;
         if (r.icon && r.icon->width > 0) v.icon = uaui::picture(r.icon, uaui::stamp(r.icon), s.iconPrev[r.icon]);
         rows.push_back(v);
     }
     const long long sum = vs::total(s.rows);
     const Rml::String total = vs::money(sum) + " z", zeny = vs::money(s.show.zeny) + " z";
     const bool canBuy = sum > 0 && sum <= s.show.zeny, shortOf = sum > s.show.zeny;
+    // 3.0.23-beta.1: a refused + told in the hint's place for a while
+    constexpr ULONGLONG kRefusedMs = 5000;
+    const bool refused = s.refusedAt && GetTickCount64() - s.refusedAt < kRefusedMs;
+    vs::Texts tt = t;
+    if (refused) tt.hint = s.refusedHint;
     const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
     const bool same = rows.size() == s.rowViews.size() &&
                       std::equal(rows.begin(), rows.end(), s.rowViews.begin(),
                                  [](const VendRowView& a, const VendRowView& b) {
                                      return a.name == b.name && a.stock == b.stock && a.price == b.price &&
                                             a.icon == b.icon && a.chosen == b.chosen && a.inside == b.inside &&
-                                            a.colour == b.colour;
+                                            a.colour == b.colour && a.canMore == b.canMore && a.dear == b.dear;
                                  });
     if (!same) s.rowViews = std::move(rows), s.live.doc.dirty("rows");
     if (t.title != s.title || t.total != s.totalWord || total != s.total || t.zeny != s.zenyWord || zeny != s.zeny ||
-        t.buy != s.buy || t.cancel != s.cancel || t.hint != s.hint || canBuy != s.canBuy || shortOf != s.shortOf ||
-        ground != s.ground) {
+        t.buy != s.buy || t.cancel != s.cancel || tt.hint != s.hint || canBuy != s.canBuy || shortOf != s.shortOf ||
+        ground != s.ground || refused != s.hintBad) {
         s.title = t.title, s.totalWord = t.total, s.total = total, s.zenyWord = t.zeny, s.zeny = zeny;
-        s.buy = t.buy, s.cancel = t.cancel, s.hint = t.hint, s.canBuy = canBuy, s.shortOf = shortOf, s.ground = ground;
+        s.buy = t.buy, s.cancel = t.cancel, s.hint = tt.hint, s.canBuy = canBuy, s.shortOf = shortOf, s.ground = ground;
+        s.hintBad = refused;
         s.live.doc.dirtyAll();
     }
     s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Vending), ".pm, .btn, .x");

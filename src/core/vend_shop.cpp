@@ -29,6 +29,11 @@ bool canAdd(const Row& r, long long purchase, long long zeny) {
     return r.chosen < r.stock && purchase + r.price <= zeny;
 }
 
+Refusal refusal(const Row& r, long long purchase, long long zeny) {
+    if (r.chosen >= r.stock) return Refusal::Stock;
+    return purchase + r.price <= zeny ? Refusal::None : Refusal::Zeny;
+}
+
 std::string money(long long zeny) {
     std::string digits = std::to_string(zeny < 0 ? -zeny : zeny), out;
     for (size_t i = 0; i < digits.size(); ++i) {
