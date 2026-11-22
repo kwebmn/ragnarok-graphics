@@ -1,3 +1,37 @@
+# uaRO Graphics 3.0.22 — what's new · 2026-11-22
+
+The horizon panorama and the cinema camera in the 3D view, 4 GB of memory for the game, the new «Guild» window, the stats hexagon, room walls in 3D, a folding chat and many fixes.
+
+## 3D view
+
+- **Horizon panorama:** past the map's edge - mountains with foothills, the sea, the karst towers of Louyang and Kunlun, flat fields; the game's own fog (Einbroch's smog) over the horizon too.
+- **The sun moves across the sky by the clock,** and the moon rises as it sets.
+- **Cinema camera:** a smooth free camera, flights through points (Ctrl+Shift+P, Ctrl+Shift+O), fast time (Ctrl+Shift+T), snow settling before your eyes.
+- **Sandstorm** over Morroc's sands (off until you turn it on).
+- **Room walls** on every map under a roof: where the map makers left a side open, there is now a wall up to the ceiling - the rooms next door no longer show through (needs «Own ground»).
+- **Monsters' health bars** are under their feet, like your own.
+
+## Game and interface
+
+- **4 GB of memory for the game:** uaRO Graphics marks uaRO.exe so that on a 64-bit Windows the game gets 4 GB instead of 2 - fewer out-of-memory crashes in the big towns. To turn it off: «Service» → «4 GB of memory for the game».
+- **New «Guild» window:** members, positions, party.
+- **«New character»:** the stats on a hexagon, as in the old client.
+- **Chat:** «—» folds it to its newest line, F10 goes round 7 → 12 → 4 → 1 row, ↑ ↓ PgUp PgDn End scroll its history.
+- **Disconnects:** the reason under «Disconnected from Server.», and after a network drop the game logs in again by itself.
+- **Items:** Alt+right click moves a whole stack to the storage or the cart, a double click in the NPC sale puts the whole stack.
+- **The «For a laptop» set** and a before/after frame comparison.
+- **Pause / Scroll Lock** - fully the old client; **photo mode** (Ctrl+Alt+F12) hides the captions too.
+- **The login screen in a window** fits any size; the character select without overlapping cards.
+- **Fewer hitches** when the game reads its files (NPC talk, new NPCs and monsters).
+
+## Fixes
+
+- A crash with Fly Wing or Teleport at level 99.
+- The game's cursor no longer hides under «Character select».
+- Even frames on 4K at 175 % scale.
+- No grass on Hugel's paving; the debuffs' red outline in «Buffs on the character».
+- Small interface fixes: «Skills», the character block's tips, «Hunt» and «Tracking» over the minimap, the player count on the login screen.
+
 # uaRO Graphics 3.0.22-beta.48 — what's new · 2026-11-21
 
 Chat: folding and scrolling with the arrows.
