@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.23-beta.2 — what's new · 2026-11-22
+
+Never turn effects off for the frames.
+
+- **New switch «Never turn effects off for the frames»** (Alt+O → «Speed and screen» → «Frames»). On - the graphics stay whole even when the frames drop: «Keep the frame rate» turns nothing off (what it already turned off comes back at once), «Auto» does not lower its set, the skills in a crowd are not lightened. Off by default - everything as before.
+
 # uaRO Graphics 3.0.23-beta.1 — what's new · 2026-11-22
 
 «Shop»: you see why a thing is not bought.
