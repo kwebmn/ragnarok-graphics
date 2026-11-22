@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.23-beta.1 — what's new · 2026-11-22
+
+«Shop»: you see why a thing is not bought.
+
+- **«Shop»**: when the zeny is short, the «+» next to a thing dims and its price turns red. Press it anyway and the window says «Not enough zeny: … z needed, you have … z» (or «The shop has no more of it»). Before, «+» silently did nothing.
+
 # uaRO Graphics 3.0.22 — what's new · 2026-11-22
 
 The horizon panorama and the cinema camera in the 3D view, 4 GB of memory for the game, the new «Guild» window, the stats hexagon, room walls in 3D, a folding chat and many fixes.
