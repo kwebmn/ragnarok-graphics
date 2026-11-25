@@ -10,6 +10,7 @@
 #include <cwctype>
 
 #include "app/text.hpp"
+#include "core/wine_setup.hpp"
 
 namespace uagfx::app {
 
@@ -177,6 +178,30 @@ std::string utf8ToRegFile(const std::string& text) {
     std::string out = "\xFF\xFE";
     out.append(reinterpret_cast<const char*>(w.data()), w.size() * 2);
     return out;
+}
+
+bool tellWine(const std::wstring& game) {
+    const HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+    if (!ntdll || !GetProcAddress(ntdll, "wine_get_version")) return false;  // Windows: nothing to tell
+    const std::wstring key = wine_setup::appDefaultsKey(game);
+    if (key.empty()) return false;
+    HKEY k = nullptr;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, key.c_str(), 0, nullptr, 0, KEY_READ | KEY_SET_VALUE, nullptr, &k,
+                        nullptr) != ERROR_SUCCESS)
+        return false;
+    bool fine = true;
+    for (const wine_setup::Override& o : wine_setup::overrides()) {
+        wchar_t now[64] = {};
+        DWORD size = sizeof now - sizeof(wchar_t), type = 0;
+        if (RegQueryValueExW(k, o.dll, nullptr, &type, reinterpret_cast<BYTE*>(now), &size) == ERROR_SUCCESS &&
+            type == REG_SZ && std::wstring(now) == o.order)
+            continue;
+        const DWORD bytes = DWORD((std::wcslen(o.order) + 1) * sizeof(wchar_t));
+        fine = RegSetValueExW(k, o.dll, 0, REG_SZ, reinterpret_cast<const BYTE*>(o.order), bytes) == ERROR_SUCCESS &&
+               fine;
+    }
+    RegCloseKey(k);
+    return fine;
 }
 
 unsigned long launch(const std::wstring& file, const std::wstring& folder) {

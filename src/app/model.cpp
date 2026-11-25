@@ -90,6 +90,7 @@ Model::Model() {
     paths_.ini = ourFile(paths_.dir, layout::File::Ini);
     paths_.log = ourPlace(paths_.dir, layout::now(layout::File::DriverLog));
     paths_.game = paths_.dir + L"\\uaRO.exe";
+    tellWine(paths_.game);  // 3.0.23-beta.13 (R-F93RB7): under Wine, our ddraw and ROExt's dinput8 first
     paths_.version = paths_.dir + L"\\uaro-graphics\\version.txt";
     paths_.backups = ourFile(paths_.dir, layout::File::Backups);
     paths_.report = ourPlace(paths_.dir, layout::now(layout::File::Report));

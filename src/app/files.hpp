@@ -27,6 +27,9 @@ std::string regFileToUtf8(const std::string& bytes);
 std::string utf8ToRegFile(const std::string& utf8);
 // 0 when started; else the Windows error.
 unsigned long launch(const std::wstring& file, const std::wstring& folder);
+// 3.0.23-beta.13 (R-F93RB7): under Wine, the game's exe told to take ddraw and dinput8 from its folder first
+// (core/wine_setup); nothing on Windows. True when written now (or already as wanted)
+bool tellWine(const std::wstring& game);
 // 2.10: with arguments, and as administrator ("runas": Windows asks) when `elevated`; 0 or the Windows error.
 unsigned long launchArgs(const std::wstring& file, const std::wstring& args, const std::wstring& folder,
                          bool elevated);

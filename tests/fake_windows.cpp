@@ -168,6 +168,8 @@ std::string regFileToUtf8(const std::string& bytes) { return bytes; }  // the fa
 
 std::string utf8ToRegFile(const std::string& utf8) { return utf8; }
 
+bool tellWine(const std::wstring&) { return false; }
+
 unsigned long launch(const std::wstring& file, const std::wstring&) {
     windows().launched.push_back(file);
     return 0;
