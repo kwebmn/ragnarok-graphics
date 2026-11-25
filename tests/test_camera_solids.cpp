@@ -206,3 +206,46 @@ TEST(solids_thin_things_do_not_stop_the_camera) {
     s.add(3, rv.data(), rv.size() / 3, rf.data(), rf.size());
     CHECK_EQ(s.triangles(), size_t(4));
 }
+
+// 3.0.23-beta.11 (R-CWBD83 «полоска мобов за забором»: a monster's bar through prontera's city wall - its picture has
+// keyed holes (the battlements), so its faces were left out): a picture's opacity in 32 x 32 cells; the bars' sight
+// (meetsSeen) stops at a face with holes where its picture is opaque, goes through where it is a hole; the camera's
+// way (meets) still goes through all of it
+TEST(solids_opacity_mask_keeps_the_pictures_opaque_cells) {
+    std::vector<uint32_t> argb(64 * 64, 0xFF808080u);
+    for (int y = 0; y < 16; ++y)
+        for (int x = 0; x < 64; ++x) argb[size_t(y) * 64 + size_t(x)] = 0x00FF00FFu;  // the top quarter keyed out
+    uint8_t bits[solids::kMaskBytes] = {};
+    solids::opacityMask(argb.data(), 64, 64, bits);
+    CHECK(!solids::opaqueAt(bits, 0.5f, 0.1f));
+    CHECK(solids::opaqueAt(bits, 0.5f, 0.6f));
+    CHECK(solids::opaqueAt(bits, 1.5f, 0.6f));    // wrapped
+    CHECK(!solids::opaqueAt(bits, -0.5f, 0.1f));  // wrapped from below
+}
+
+TEST(solids_bars_stop_at_a_holey_walls_opaque_part) {
+    std::vector<float> v;
+    std::vector<solids::Face> f;
+    wall(v, f, 10.0f, -20.0f, 20.0f, -40.0f, 0.0f, true);  // a wall whose picture has holes: its top quarter
+    // its corners as wall() lays them: (z0,y0) (z1,y0) (z0,y1) (z1,y1); the picture: u along z, v along y (down)
+    const float uvA[6] = {0, 0, 1, 0, 0, 1}, uvB[6] = {1, 0, 1, 1, 0, 1};
+    std::vector<uint32_t> argb(64 * 64, 0xFF808080u);
+    for (int y = 0; y < 16; ++y)
+        for (int x = 0; x < 64; ++x) argb[size_t(y) * 64 + size_t(x)] = 0;
+    uint8_t bits[solids::kMaskBytes] = {};
+    solids::opacityMask(argb.data(), 64, 64, bits);
+    solids::Set s;
+    const int16_t mask = s.addMask(77, bits);
+    CHECK_EQ(s.maskOf(77), mask);
+    CHECK_EQ(s.maskOf(78), int16_t(-1));
+    for (int k = 0; k < 2; ++k) {
+        std::copy(k ? uvB : uvA, (k ? uvB : uvA) + 6, f[size_t(k)].uv);
+        f[size_t(k)].mask = mask;
+    }
+    s.add(3, v.data(), v.size() / 3, f.data(), f.size());
+    const float eye[3] = {0, -20, 0}, low[3] = {20, -20, 0}, high[3] = {20, -39, 0};  // y down: -39 near the top
+    CHECK(s.meets(eye, low) < 0.0f);                       // the camera: through it
+    CHECK(std::fabs(s.meetsSeen(eye, low) - 0.5f) < 0.01f);  // the bars: its opaque part
+    const float eyeHigh[3] = {0, -39, 0};
+    CHECK(s.meetsSeen(eyeHigh, high) < 0.0f);              // through a hole (the top quarter)
+}

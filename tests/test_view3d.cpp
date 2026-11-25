@@ -1066,7 +1066,8 @@ TEST(view3d_place_past_a_posts_core_is_hidden) {
 TEST(view3d_a_triangle_on_the_way_hides) {
     CHECK(view3d::solidHides(0.5f, 200.0f));
     CHECK(!view3d::solidHides(-1.0f, 200.0f));         // none met
-    CHECK(!view3d::solidHides(0.99f, 200.0f));         // 2 units off the place: its own side
+    CHECK(!view3d::solidHides(0.996f, 200.0f));        // under a unit off the place: its own side
+    CHECK(view3d::solidHides(0.985f, 200.0f));         // 3 units before it: the wall it stands right behind
     CHECK(view3d::solidHides(0.9f, 200.0f));           // 20 units before it
-    CHECK(!view3d::solidHides(0.5f, 4.0f));            // a place right at the eye: nothing between
+    CHECK(!view3d::solidHides(0.5f, 1.0f));            // a place right at the eye: nothing between
 }

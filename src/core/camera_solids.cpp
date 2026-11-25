@@ -11,7 +11,8 @@ namespace {
 constexpr float kStart = 1e-4f;  // a triangle the way starts on is not met
 
 // the way's share (0-1] at which it meets the triangle a b c, either side; -1 none (Möller-Trumbore)
-float meetsOne(const float* a, const float* b, const float* c, const float from[3], const float dir[3]) {
+float meetsOne(const float* a, const float* b, const float* c, const float from[3], const float dir[3],
+               float* hitU = nullptr, float* hitV = nullptr) {
     const float e1[3] = {b[0] - a[0], b[1] - a[1], b[2] - a[2]}, e2[3] = {c[0] - a[0], c[1] - a[1], c[2] - a[2]};
     const float p[3] = {dir[1] * e2[2] - dir[2] * e2[1], dir[2] * e2[0] - dir[0] * e2[2],
                         dir[0] * e2[1] - dir[1] * e2[0]};
@@ -25,6 +26,8 @@ float meetsOne(const float* a, const float* b, const float* c, const float from[
     const float v = (dir[0] * q[0] + dir[1] * q[1] + dir[2] * q[2]) * inv;
     if (v < 0.0f || u + v > 1.0f) return -1.0f;
     const float t = (e2[0] * q[0] + e2[1] * q[1] + e2[2] * q[2]) * inv;
+    if (hitU) *hitU = u;
+    if (hitV) *hitV = v;
     return t > kStart && t <= 1.0f ? t : -1.0f;
 }
 
@@ -47,7 +50,51 @@ bool through(const float lo[3], const float hi[3], const float from[3], const fl
 
 }  // namespace
 
+void opacityMask(const uint32_t* argb, int width, int height, uint8_t bits[kMaskBytes]) {
+    std::fill(bits, bits + kMaskBytes, uint8_t(0));
+    if (!argb || width <= 0 || height <= 0) return;
+    for (int cy = 0; cy < kMaskSide; ++cy)
+        for (int cx = 0; cx < kMaskSide; ++cx) {
+            const int x0 = cx * width / kMaskSide, x1 = std::max(x0 + 1, (cx + 1) * width / kMaskSide);
+            const int y0 = cy * height / kMaskSide, y1 = std::max(y0 + 1, (cy + 1) * height / kMaskSide);
+            int solid = 0, all = 0;
+            for (int y = y0; y < y1 && y < height; ++y)
+                for (int x = x0; x < x1 && x < width; ++x, ++all)
+                    solid += (argb[size_t(y) * size_t(width) + size_t(x)] >> 24) >= 128;
+            if (all && solid * 2 >= all) bits[(cy * kMaskSide + cx) / 8] |= uint8_t(1u << ((cy * kMaskSide + cx) % 8));
+        }
+}
+
+bool opaqueAt(const uint8_t bits[kMaskBytes], float u, float v) {
+    if (!std::isfinite(u) || !std::isfinite(v)) return true;
+    u -= std::floor(u);
+    v -= std::floor(v);
+    const int cx = std::min(kMaskSide - 1, int(u * kMaskSide)), cy = std::min(kMaskSide - 1, int(v * kMaskSide));
+    return (bits[(cy * kMaskSide + cx) / 8] >> ((cy * kMaskSide + cx) % 8)) & 1u;
+}
+
+int16_t Set::addMask(uint32_t key, const uint8_t bits[kMaskBytes]) {
+    const auto known = maskKeys_.find(key);
+    if (known != maskKeys_.end()) return known->second;
+    if (maskKeys_.size() >= kMostMasks) return -1;
+    const auto index = int16_t(maskKeys_.size());
+    masks_.insert(masks_.end(), bits, bits + kMaskBytes);
+    maskKeys_.emplace(key, index);
+    return index;
+}
+
+int16_t Set::maskOf(uint32_t key) const {
+    const auto known = maskKeys_.find(key);
+    return known == maskKeys_.end() ? int16_t(-1) : known->second;
+}
+
 void Set::clear() {
+    openParts_.clear();
+    openCorners_.clear();
+    openUv_.clear();
+    openMask_.clear();
+    masks_.clear();
+    maskKeys_.clear();
     parts_.clear();
     corners_.clear();
     known_.clear();
@@ -56,14 +103,15 @@ void Set::clear() {
 
 void Set::add(uint32_t id, const float* vertices, size_t vertexCount, const Face* faces, size_t faceCount) {
     if (!vertices || !faces || !vertexCount || !faceCount || known_.count(id)) return;
-    if (triangles() + faceCount > kMostTriangles) return;
+    if (triangles() + openCorners_.size() / 9 + faceCount > kMostTriangles) return;
     Part part{{1e30f, 1e30f, 1e30f}, {-1e30f, -1e30f, -1e30f}, uint32_t(triangles()), 0};
+    Part open{{1e30f, 1e30f, 1e30f}, {-1e30f, -1e30f, -1e30f}, uint32_t(openCorners_.size() / 9), 0};
+    const size_t maskCount = masks_.size() / kMaskBytes;
     for (size_t k = 0; k < faceCount; ++k) {
         const Face& f = faces[k];
-        if (f.open) {
-            ++leftOut_;
-            continue;
-        }
+        const bool seenThrough = f.open && f.mask >= 0 && size_t(f.mask) < maskCount;
+        if (f.open) ++leftOut_;
+        if (f.open && !seenThrough) continue;
         if (f.v[0] >= vertexCount || f.v[1] >= vertexCount || f.v[2] >= vertexCount) continue;
         float nine[9];
         bool fine = true;
@@ -74,17 +122,32 @@ void Set::add(uint32_t id, const float* vertices, size_t vertexCount, const Face
                 nine[corner * 3 + i] = x;
             }
         if (!fine) continue;
-        corners_.insert(corners_.end(), nine, nine + 9);
-        ++part.count;
+        Part& to = f.open ? open : part;
+        (f.open ? openCorners_ : corners_).insert((f.open ? openCorners_ : corners_).end(), nine, nine + 9);
+        if (f.open) {
+            openUv_.insert(openUv_.end(), f.uv, f.uv + 6);
+            openMask_.push_back(f.mask);
+        }
+        ++to.count;
         for (int corner = 0; corner < 3; ++corner)
             for (int i = 0; i < 3; ++i) {
-                part.lo[i] = std::min(part.lo[i], nine[corner * 3 + i]);
-                part.hi[i] = std::max(part.hi[i], nine[corner * 3 + i]);
+                to.lo[i] = std::min(to.lo[i], nine[corner * 3 + i]);
+                to.hi[i] = std::max(to.hi[i], nine[corner * 3 + i]);
             }
     }
     known_[id] = uint32_t(parts_.size());
+    const auto thin = [](const Part& p) { return std::max(p.hi[0] - p.lo[0], p.hi[2] - p.lo[2]) < kThinUnder; };
+    if (open.count) {
+        if (thin(open)) {
+            openCorners_.resize(size_t(open.first) * 9);
+            openUv_.resize(size_t(open.first) * 6);
+            openMask_.resize(open.first);
+        } else {
+            openParts_.push_back(open);
+        }
+    }
     if (!part.count) return;
-    if (std::max(part.hi[0] - part.lo[0], part.hi[2] - part.lo[2]) < kThinUnder) {  // a post: its triangles let go
+    if (thin(part)) {  // a post: its triangles let go
         corners_.resize(size_t(part.first) * 9);
         ++thin_;
         return;
@@ -101,6 +164,25 @@ float Set::meets(const float from[3], const float to[3]) const {
         for (uint32_t k = 0; k < part.count; ++k, c += 9) {
             const float t = meetsOne(c, c + 3, c + 6, from, dir);
             if (t > 0.0f && (first < 0.0f || t < first)) first = t;
+        }
+    }
+    return first;
+}
+
+float Set::meetsSeen(const float from[3], const float to[3]) const {
+    float first = meets(from, to);
+    const float dir[3] = {to[0] - from[0], to[1] - from[1], to[2] - from[2]};
+    for (const Part& part : openParts_) {
+        if (!through(part.lo, part.hi, from, dir)) continue;
+        for (uint32_t k = part.first; k < part.first + part.count; ++k) {
+            const float* c = openCorners_.data() + size_t(k) * 9;
+            float u = 0.0f, v = 0.0f;
+            const float t = meetsOne(c, c + 3, c + 6, from, dir, &u, &v);
+            if (!(t > 0.0f) || (first >= 0.0f && t >= first)) continue;
+            const float* uv = openUv_.data() + size_t(k) * 6;  // the corners' a + u (b - a) + v (c - a)
+            const float pu = uv[0] + u * (uv[2] - uv[0]) + v * (uv[4] - uv[0]);
+            const float pv = uv[1] + u * (uv[3] - uv[1]) + v * (uv[5] - uv[1]);
+            if (opaqueAt(masks_.data() + size_t(openMask_[k]) * kMaskBytes, pu, pv)) first = t;
         }
     }
     return first;

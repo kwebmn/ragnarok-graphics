@@ -7,6 +7,7 @@
 #include <cstring>
 #include <vector>
 
+#include "core/camera_solids.hpp"
 #include "core/device_caps.hpp"
 #include "core/foliage.hpp"
 #include "core/frame.hpp"
@@ -116,6 +117,14 @@ int holesOf(const void* surface) {
     std::vector<uint32_t> texels;
     if (!t || !t->topArgb(texels) || texels.size() != size_t(t->width()) * size_t(t->height())) return -1;
     return foliage::holesPercent(texels.data(), t->width(), t->height());
+}
+
+bool opacityOf(const void* surface, uint8_t* bits) {
+    Surface7* t = surface ? Surface7::from(static_cast<IDirectDrawSurface7*>(const_cast<void*>(surface))) : nullptr;
+    std::vector<uint32_t> texels;
+    if (!t || !bits || !t->topArgb(texels) || texels.size() != size_t(t->width()) * size_t(t->height())) return false;
+    solids::opacityMask(texels.data(), t->width(), t->height(), bits);
+    return true;
 }
 
 bool sendTexelsOf(const void* surface) {

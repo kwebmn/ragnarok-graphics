@@ -13,6 +13,8 @@ uint32_t gpuTextureOf(const void* surface);
 // 3.0.20-beta.70 (core/camera_solids): how much of a surface's picture is holes (percent of its texels keyed out), as
 // the game last wrote it; -1 for none of ours
 int holesOf(const void* surface);
+// 3.0.23-beta.11: its opacity in solids::kMaskSide cells (solids::opacityMask); false: its texels unknown
+bool opacityOf(const void* surface, uint8_t* bits);
 // 3.0.20-beta.74 (R-U5PP9T «вообще дом пропал полностью» in Prontera, R-64G2U9, R-7VX6Q9, the bridges R-HBPQ54 and
 // R-3W4TYM - «Модели нашим рендером»): a texture's texels go to the renderer only with a draw of the GAME's that
 // samples it (Device7::record), and the game draws a model's node itself in one frame alone - the frame of its

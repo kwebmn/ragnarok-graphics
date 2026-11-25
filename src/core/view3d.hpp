@@ -249,7 +249,7 @@ constexpr float kHideShare = 0.8f;
 constexpr float kThinWallHalf = 3.0f, kThinWallLeastHalfHigh = 8.0f;
 // 3.0.23-beta.10 (R-62VEPQ): a drawn model's triangle met at `share` (0-1] of a way `length` long (-1: none) hides the
 // place - not within kSolidNear of it (the place's own side, the wall it leans on)
-constexpr float kSolidNear = 6.0f;
+constexpr float kSolidNear = 1.5f;  // 3.0.23-beta.11: 6 let a wall it stands right behind through
 bool solidHides(float share, float length);
 bool boxHides(const Box& b, const float eye[3], const float to[3]);
 

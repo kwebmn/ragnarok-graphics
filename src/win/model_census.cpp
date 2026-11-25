@@ -398,6 +398,7 @@ void capture(uintptr_t node, bool flipped, const float* parent, const float* poi
     }
     // 3.0.20-beta.70: which of its pictures have holes (leaves, a fence): their faces are no wall for the camera
     std::vector<uint8_t> open(textureCount, 0);
+    std::vector<int16_t> masks(textureCount, -1);  // 3.0.23-beta.11: the open ones' opacity for the bars' sight
     if (!moving)
         for (uint32_t t = 0; t < textureCount; ++t) {
             const uintptr_t texture = at<uint32_t>(textureList + 4 * t);
@@ -409,6 +410,11 @@ void capture(uintptr_t node, bool flipped, const float* parent, const float* poi
                 known = g_holes.emplace(surface, dx7::holesOf(reinterpret_cast<const void*>(uintptr_t(surface)))).first;
             }
             open[t] = known->second >= solids::kOpenHoles ? 1 : 0;
+            if (!open[t]) continue;
+            masks[t] = g_solids.maskOf(surface);
+            uint8_t bits[solids::kMaskBytes];
+            if (masks[t] < 0 && dx7::opacityOf(reinterpret_cast<const void*>(uintptr_t(surface)), bits))
+                masks[t] = g_solids.addMask(surface, bits);
         }
     n.vertices.resize(size_t(vertices) * 3);
     n.moving = moving;  // 3.0.20-beta.14: its own vertices, placed by the frame's matrix for it
@@ -434,6 +440,8 @@ void capture(uintptr_t node, bool flipped, const float* parent, const float* poi
         for (uint32_t f = 0; f < faces; ++f) {
             walls[f] = solids::Face{{n.faces[f].v[0], n.faces[f].v[1], n.faces[f].v[2]},
                                     open[n.faces[f].texture] != 0};
+            std::copy(n.faces[f].uv, n.faces[f].uv + 6, walls[f].uv);
+            walls[f].mask = masks[n.faces[f].texture];
         }
         g_solids.add(uint32_t(node), n.vertices.data(), vertices, walls.data(), walls.size());
     }
@@ -767,8 +775,9 @@ void frame() {
     if (g_solids.triangles() != g_solidsTold) {  // 3.0.20-beta.70: as more of the map is seen
         g_solidsTold = g_solids.triangles();
         LOG_INFO("models: the 3D view's camera goes by the still nodes' own triangles - %zu triangles of %zu nodes "
-                 "known on this map, %zu faces of pictures with holes (leaves, fences) left out; a model not drawn "
-                 "yet by its box", g_solids.triangles(), g_solids.parts(), g_solids.leftOut());
+                 "known on this map, %zu faces of pictures with holes (leaves, fences) left out (%zu of them kept "
+                 "for the bars' sight by their pictures' opaque parts); a model not drawn yet by its box",
+                 g_solids.triangles(), g_solids.parts(), g_solids.leftOut(), g_solids.seenThrough());
     }
     if (g_ours || g_oursMoving || g_keptBlended || g_moved)  // 3.0.20-beta.4; 3.0.20-beta.14: the moving ones
         LOG_INFO("models: %u nodes drawn by our renderer in place of the game's in %u frames (%.0f a frame; %.0f of "

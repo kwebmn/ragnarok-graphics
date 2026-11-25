@@ -1325,7 +1325,7 @@ bool seenActor(uint32_t id, const float to[3]) {
         if (s.cameraWalls) {
             const float way[3] = {to[0] - s.eyeNow[0], to[1] - s.eyeNow[1], to[2] - s.eyeNow[2]};
             const float length = std::sqrt(way[0] * way[0] + way[1] * way[1] + way[2] * way[2]);
-            if (view3d::solidHides(modelcensus::solidsNow().meets(s.eyeNow, to), length)) {
+            if (view3d::solidHides(modelcensus::solidsNow().meetsSeen(s.eyeNow, to), length)) {
                 sight.seen = false;
                 return false;
             }
