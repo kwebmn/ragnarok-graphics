@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.23-beta.6 — what's new · 2026-11-25
+
+Room walls in 3D for everyone.
+
+- **3D view, indoors:** the walls closing the rooms' open sides are there without «Own ground» too - the rooms next door and the void past them no longer show through. The ground stays the one the game draws. Direct3D 12; to turn it off: Alt+O → «3D view» → «Rooms and caves» → «Walls in place of a house's black blocks».
+
 # uaRO Graphics 3.0.23-beta.5 — what's new · 2026-11-25
 
 A hint about diagnostics left on.
