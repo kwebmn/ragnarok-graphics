@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.23-beta.10 — what's new · 2026-11-25
+
+Monsters' bars behind houses and towers.
+
+- **Monsters' health bars in the 3D view** no longer show through houses, towers and walls the game has drawn: the sight check now looks at those models' own triangles, as the 3D view's camera does, not only at coarse boxes.
+
 # uaRO Graphics 3.0.23-beta.9 — what's new · 2026-11-25
 
 Monsters' bars behind posts.
