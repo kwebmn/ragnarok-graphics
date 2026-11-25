@@ -23,7 +23,7 @@
   длина 22, индекс @14 (W), количество @18 (L); closekafra `0x0193` длина 2.
 - Индекс в пакетах склада и сумки — серверный индекс (сумка: позиция + 2, склад: позиция + 1, как в clif.c).
 - Раскладки пакетов сервера сверять с `/root/uAthena/src/map/clif.c`: `clif_storagelist`, `clif_updatestorageamount`
-  (0x00f2), `clif_storageitemadded` (0x01c4), `clif_storageitemremoved` (0x00f6), `clif_storageclose` (0x00f8),
+  (0x00f2), `clif_storageitemadded` (0x00f4, длина 21), `clif_storageitemremoved` (0x00f6), `clif_storageclose` (0x00f8),
   `clif_inventorylist`, `clif_additem` (0x00a0), `clif_delitem` (0x00af), `clif_useitemack` (0x01c8) при PACKETVER 7.
 - Сервер uAthena не трогать.
 - Отправлять только когда сессия считает поток понятым (`healthy()`), иначе действие отклоняется с записью в журнал.
@@ -60,7 +60,7 @@
   `toStorage(5, 3)` → 14 байт, `[0..1] == 0x94,0x00`, `rd16(@7) == 5`, `rd32(@10) == 3`;
   `fromStorage(12, 40)` → 22 байта, `0xf7,0x00`, `rd16(@14) == 12`, `rd32(@18) == 40`;
   `closeStorage()` → `{0x93, 0x01}`; `serverLength(0x01f0) == -1`, `serverLength(0x00f6) == 8`,
-  `serverLength(0x01c4) == 22`, `serverLength(0x1234) == 0`.
+  `serverLength(0x00f4) == 21`, `serverLength(0x1234) == 0`.
 - [ ] **Step 2:** собрать `build-host`, запустить `./build-host/uagfx_tests` — ожидается ошибка сборки (нет файла).
 - [ ] **Step 3:** реализовать; байты-заполнители между полями — нули.
 - [ ] **Step 4:** тест PASS, весь набор зелёный.
@@ -85,7 +85,7 @@
 - [ ] **Step 1: Write the failing tests** (пакеты собраны в тесте по раскладкам из clif.c):
   `item_state_storage_list_and_count` — 0x01f0 с двумя пачками + 0x00a6 с одной вещью + 0x00f2 (2/600):
   `storage().size() == 3`, `storageOpen()`, `storageMost() == 600`;
-  `item_state_storage_add_remove_close` — 0x01c4 (index 4, amount 5, id 501) добавляет, повторный 0x01c4 той же
+  `item_state_storage_add_remove_close` — 0x00f4 (index 4, amount 5, id 501) добавляет, повторный 0x00f4 той же
   ячейки складывает количество, 0x00f6 (index 4, amount 5) убирает до нуля и удаляет, 0x00f8 → `!storageOpen()`
   и `Change{closed=true}`;
   `item_state_bag_add_and_delete` — 0x00a0 (результат 0) добавляет, 0x00a0 с результатом ≠ 0 ничего не меняет,
