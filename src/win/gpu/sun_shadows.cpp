@@ -172,7 +172,8 @@ bool Renderer::Impl::applySunShadows() {
     sunShadowsDone = true;
     crumb("sun shadows");
     const OwnGround* g = mapWorld.ownGround();
-    if (!g || !sunVertices || !sunIndices || sunRuns.empty() || !ensureScene("sun shadows")) return true;
+    if (!g || g->wallsOnly ||  // 3.0.23-beta.6: the walls alone - no ground of its own
+        !sunVertices || !sunIndices || sunRuns.empty() || !ensureScene("sun shadows")) return true;
     ID3D12PipelineState* over = mulPipeline(sunShadowPs, sunShadowPipelines, upscale ? 1 : samples, "sun shadows");
     if (!over) return true;
     if (!sunCasterPso) {

@@ -120,7 +120,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // the game's ground, left out then, and the grass is off there; from the eyes the game draws its ground to 1500
     if (!seamPass && !ownPass && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite &&
         (seamsWanted() || hillsWanted() || grassCellsWanted()) &&
-        !(ownState.decided && ownState.frame && camera::wideView())) {
+        !(ownState.decided && ownState.frame && !ownState.wallsOnly && camera::wideView())) {  // .23-beta.6 walls
         CpuTime t(cpuPartTicks[kCpuGroundNotes]);
         noteGround(rec, d);  // 1.9; 1.15 the smooth hills of the next frame; 2.2.1 the grass's ground
     }
@@ -132,19 +132,20 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!inner && !s.ui && s.blend && d.vertexCount == 4 && d.texture[0] && shadowCollecting()) noteStanding(rec, d);
     // 3.0.4-beta.10: the own ground in place of the game's (own_ground.cpp) - the game's ground draws noted, not drawn,
     // once its pictures are up; drawn itself at the world's first blended draw after them, or at the interface
-    if (!inner && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && ownGroundWanted()) {
+    if (!inner && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && ownAnyWanted()) {
         if (!ownState.decided) {
             ownState.decided = true;
             ownState.frame = prepareOwnGround();
         }
         if (ownState.frame) {  // 3.0.20-beta.38: noted, worked out on the frame's threads (flushOwnNotes: its time)
             noteOwnGround(rec, d);
-            return;
+            // 3.0.23-beta.6: the room walls alone - the game's ground noted (the walls' colours) and drawn as ever
+            if (!ownState.wallsOnly) return;
         }
     }
     // 3.0.4-beta.16 (R-35N5QN «когда отматываю до этого места становится темное»): the camera far out, all of the
     // game's world past its far plane - no ground of the game's to note, the own ground drawn all the same
-    if (!inner && !ownState.decided && (s.ui || s.blend) && ownGroundWanted()) {
+    if (!inner && !ownState.decided && (s.ui || s.blend) && ownAnyWanted()) {
         ownState.decided = true;
         ownState.frame = prepareOwnGround();
     }
@@ -154,7 +155,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     // 3.0.20-beta.9 (the owner's «делай все сразу»): the game's still models by us where no own ground is drawn this
     // picture - the view from above with «Своя земля» off, or its pictures not up yet
-    if (!inner && !ownState.frame && !gameAloneDrawn && (s.ui || s.blend)) {
+    if (!inner && (!ownState.frame || ownState.wallsOnly) && !gameAloneDrawn && (s.ui || s.blend)) {  // .23-b6
         CpuTime t(cpuPartTicks[kCpuGameModels]);
         if (!drawGameModelsAlone()) return;
     }
@@ -163,12 +164,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // its water and its models' keyed faces back to front, depth not written (uaRO.exe 0x40e4d0) -, not at its first
     // water quad: the faces before that one lay under the far water (a band of water over the ship's deck). The list's
     // first water quad read ahead in the record for its picture, state, colour and waves; or at the interface
-    if (!inner && ownState.frame && !ownState.waterDrawn && !s.ui && s.blend && !s.zWrite) {
+    if (!inner && ownState.frame && !ownState.wallsOnly && !ownState.waterDrawn && !s.ui && s.blend && !s.zWrite) {
         CpuTime t(cpuPartTicks[kCpuOwnWater]);
         noteOwnWaterAhead(rec, size_t(&d - rec.draws().data()));
         if (!drawOwnWater()) return;
     }
-    if (!inner && ownState.frame && !ownState.waterDrawn && s.ui) {
+    if (!inner && ownState.frame && !ownState.wallsOnly && !ownState.waterDrawn && s.ui) {
         CpuTime t(cpuPartTicks[kCpuOwnWater]);
         if (!drawOwnWater()) return;
     }

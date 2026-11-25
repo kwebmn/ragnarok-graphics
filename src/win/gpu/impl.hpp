@@ -1417,7 +1417,7 @@ struct Renderer::Impl {
     // new picture is started by a clear of the whole picture too, the frame's first draw after the list: not here
     gamemodels::FrameState gameModelsNow;
     void newPicture() {
-        ownShownLast = ownState.frame;
+        ownShownLast = ownState.frame && !ownState.wallsOnly;  // 3.0.23-beta.6: the walls alone are not the ground
         ownState.decided = ownState.frame = ownState.drawn = ownState.likeTaken = false;  // 3.0.4-beta.10
         ownState.waterDrawn = ownState.waterGame = false;  // 3.0.4-beta.20
         gameAloneDrawn = gameLikeTaken = false;  // 3.0.20-beta.9
@@ -1670,6 +1670,7 @@ struct Renderer::Impl {
         bool groundUp = false;      // 3.0.4-beta.27: the ground's own (its textures, its lightmaps): drawn from then
         bool refused = false;       // 3.0.18-beta.204: a picture of it not made on the card - the game's ground
         bool decided = false, frame = false, drawn = false;  // this picture's: drawn in place of the game's
+        bool wallsOnly = false;  // 3.0.23-beta.6: this picture's own ground the room walls alone (OwnGround)
         bool likeKnown = false;     // 3.0.4-beta.16: kept over the pictures (the camera far out: none of the game's)
         bool likeTaken = false;     // this picture's taken
         DrawSetup like;             // the game's ground draw's state this picture
@@ -1815,6 +1816,9 @@ struct Renderer::Impl {
     uint8_t ownWater = 0;  // 3.0.4-beta.20: the own far water's draws - 1 water, 2 lava - drawn as the game's own are
     ULONGLONG ownOffSince = 0;  // when it was turned off (GetTickCount64); 0 on
     bool ownGroundWanted() const { return effects.ownGround && viewToWorldValid && gameWidth > 0 && gameHeight > 0; }
+    // 3.0.23-beta.6 (the owner: «1, делай стены»): «Своя земля» off - the 3D view's room walls drawn by it all the same
+    bool ownWallsWanted() const;
+    bool ownAnyWanted() const { return ownGroundWanted() || ownWallsWanted(); }
     uint32_t ownTexture(int width, int height, int levels);
     void dropOwnGround();
     bool prepareOwnGround();  // its textures made and put up, a few a frame; true: drawn this picture

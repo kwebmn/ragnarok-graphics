@@ -9060,19 +9060,16 @@ constexpr Entry kTexts[] = {
     // 3.0.20-beta.71 (the owner's pick (a) of the interiors' options, «ок, а»)
     {Text::View3dRoomWalls, "Walls in place of a house's black blocks", "Стіни замість чорних блоків у будинках",
      "Стены вместо чёрных блоков в домах"},
-    {Text::View3dRoomWallsHint,
-     "In a house the game's makers raised black blocks beside the rooms; only the side towards the room has the "
-     "wall's picture. In the 3D view the blocks' tops and other sides take the picture of that room's wall. The "
-     "view from above stays as it was. Where the driver draws the ground itself (Direct3D 12, «Own ground»); a change "
-     "shows from the next map.",
-     "У будинках автори гри підняли біля кімнат чорні блоки; малюнок стіни має лише бік, обернений до кімнати. У "
-     "3D-режимі верх та інші боки блоків отримують малюнок стіни цієї кімнати. Вигляд згори лишається таким, як "
-     "був. Працює там, де землю малює сам драйвер (Direct3D 12, «Своя земля»); зміна діє з наступної карти.",
-     "В домах авторы игры подняли возле комнат чёрные блоки; рисунок стены есть только у стороны, обращённой к "
-     "комнате. В 3D-режиме верх и остальные стороны блоков получают рисунок стены этой комнаты. Вид сверху "
-     "остаётся таким, как был. Работает там, где землю рисует сам драйвер (Direct3D 12, «Своя земля»); изменение "
-     "действует со следующей карты."},
-    // 3.0.20-beta.72 (the owner: «горизонт есть, но сделать бы его красивее», «да, нужны подробности»)
+    {Text::View3dRoomWallsHint,  // 3.0.23-beta.6: the walls without «Own ground» too
+     "In the 3D view the rooms' sides the game's makers left open (not seen from above) closed by a wall up to the "
+     "ceiling - the rooms next door no longer show through. With «Own ground» on, the black blocks beside the rooms "
+     "take the room's wall picture too. Direct3D 12; a change shows from the next map.",
+     "У 3D-режимі боки кімнат, які автори гри лишили відкритими (згори їх не видно), закриває стіна до стелі — сусідні "
+     "кімнати крізь неї не видно. Зі «Своєю землею» чорні блоки біля кімнат ще й отримують малюнок стіни кімнати. "
+     "Direct3D 12; зміна діє з наступної карти.",
+     "В 3D-режиме бока комнат, которые авторы игры оставили открытыми (сверху их не видно), закрывает стена до потолка "
+     "— соседние комнаты сквозь неё не видно. Со «Своей землёй» чёрные блоки возле комнат ещё и получают рисунок "
+     "стены комнаты. Direct3D 12; изменение действует со следующей карты."},
     {Text::View3dRanges, "Far mountains on the horizon", "Далекі гори на обрії", "Далёкие горы на горизонте"},
     {Text::View3dRangesHint,
      "In the 3D view far ranges stand along the horizon in three layers, each paler into the haze: mountains over the "

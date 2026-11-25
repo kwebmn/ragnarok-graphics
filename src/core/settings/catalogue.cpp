@@ -165,7 +165,7 @@ std::vector<Group> build() {
     out.push_back(group(Area::View3d, Text::CatView3dRooms,
                         {B("view3d.ceiling"), D("view3d.one_room", "view3d.ceiling").need("view3d.ceiling"),
                          B("view3d.vault"), D("view3d.vault_rock", "view3d.vault").need("view3d.vault"),
-                         D("view3d.room_walls").need("effects.own_ground").next(),
+                         D("view3d.room_walls").next(),  // 3.0.23-beta.6: «Своя земля» no longer needed
                          D("view3d.close_gaps").need("view3d.own_models").next()}));
     out.push_back(group(Area::View3d, Text::CatView3dSky,
                         {B("view3d.panorama"), B("view3d.ranges"), B("view3d.weather"), B("view3d.stars"),

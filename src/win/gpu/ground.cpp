@@ -283,7 +283,7 @@ void Renderer::Impl::dropHalls() {
 void Renderer::Impl::useOwnCells() {
     if (!(ownState.decided && ownState.frame && camera::wideView())) return;  // the game's ground is noted
     const OwnGround* g = mapWorld.ownGround();
-    if (!g || g->serial != ownState.serial) return;
+    if (!g || g->serial != ownState.serial || g->wallsOnly) return;  // 3.0.23-beta.6: the game's ground's own cells
     const map::Axes axes = mapWorld.axes().known() ? mapWorld.axes() : map::Axes{1, 1, 1};
     const int axesKey = (axes.x < 0 ? 1 : 0) | (axes.y < 0 ? 2 : 0) | (axes.z < 0 ? 4 : 0) | 8;
     if (groundCellsFrom == g->serial && ownCellsAxes == axesKey) return;  // they are the own ground's already

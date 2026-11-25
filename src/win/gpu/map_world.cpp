@@ -55,6 +55,7 @@ struct MapWorld::Shared {
     rooms::Map doneRooms;                     // 3.0.20-beta.57: a house's rooms
     bool ownWanted = false;                 // 3.0.4-beta.10: the own ground read with the map
     bool roomWalls = true;                  // 3.0.20-beta.71: [view3d] room_walls
+    bool wallsWanted = false;               // 3.0.23-beta.6: the own ground for its walls alone
     bool outskirtsRelief = true;            // 3.0.22-beta.16: off under the horizon panorama
     std::unique_ptr<OwnGround> doneOwn;
     bool doneOk = false;
@@ -151,9 +152,19 @@ void MapWorld::setOwnGround(bool wanted) {
     LeaveCriticalSection(&shared_->lock);
     if (!wanted) {
         own_.reset();
+        if (wallsWanted_) ask(shown_);  // 3.0.23-beta.6: read again for its walls alone
         return;
     }
-    if (!own_) ask(shown_);  // read again, with it
+    if (!own_ || own_->wallsOnly) ask(shown_);  // read again, with it (whole)
+}
+
+void MapWorld::setWallsWanted(bool wanted) {
+    if (wanted == wallsWanted_) return;
+    wallsWanted_ = wanted;
+    EnterCriticalSection(&shared_->lock);
+    shared_->wallsWanted = wanted;
+    LeaveCriticalSection(&shared_->lock);
+    if (wanted && !own_ && !ownWanted_) ask(shown_);  // read again for its walls (none read for this map yet)
 }
 
 void MapWorld::ownPicturesUp() {
@@ -180,7 +191,7 @@ void MapWorld::poll() {
         rock_ = std::move(shared_->doneRock);
         rooms_ = std::move(shared_->doneRooms);
         own_ = std::move(shared_->doneOwn);  // 3.0.4-beta.10
-        if (!ownWanted_) own_.reset();       // read before it was turned off
+        if (!ownWanted_ && !(wallsWanted_ && own_ && own_->wallsOnly)) own_.reset();  // read before it was turned off
         if (own_) own_->serial = ++ownSerial_;
         ready_ = shared_->doneOk;
         ++reads_;
@@ -412,12 +423,16 @@ void MapWorld::loop() {
             EnterCriticalSection(&shared_->lock);
             const bool ownWanted = shared_->ownWanted;
             const bool roomWalls = shared_->roomWalls;  // 3.0.20-beta.71
+            const bool wallsWanted = shared_->wallsWanted;  // 3.0.23-beta.6
             const bool outskirtsRelief = shared_->outskirtsRelief;  // 3.0.22-beta.16
             LeaveCriticalSection(&shared_->lock);
             // 3.0.4-beta.10: the own ground - its whole .gnd, its textures. 3.0.4-beta.20: no room for it in the game's
             // memory (32-bit) - the game's own ground, the game goes on
-            if (ownWanted && !gfrom.empty()) try {
+            // 3.0.23-beta.6: or, «Своя земля» off, for the 3D view's walls of a map under a roof alone
+            const bool wallsAlone = !ownWanted && wallsWanted && roomWalls && pitwalls::wallsFor(name);
+            if ((ownWanted || wallsAlone) && !gfrom.empty()) try {
                 own = std::make_unique<OwnGround>();
+                own->wallsOnly = wallsAlone;
                 gnd::Ground full;
                 if (!gnd::parse(gb.data(), gb.size(), full, why)) {
                     LOG_INFO("own ground: %s.gnd (%s): %s", name.c_str(), gfrom.c_str(), why.c_str());
@@ -685,6 +700,18 @@ void MapWorld::loop() {
                                                                     : "");
                     if (room == own_ground::Room::None) own.reset();
                     if (whiteRisk) own.reset();  // 3.0.18-beta.204
+                    // 3.0.23-beta.6: for its walls alone - the far models and the water not wanted (the game's own,
+                    // as with «Своя земля» off); none of its walls built: nothing to draw
+                    if (own && own->wallsOnly) {
+                        own->models = terrain::Mesh();
+                        std::vector<OwnGround::Picture>().swap(own->modelTextures);
+                        std::vector<OwnGround::Picture>().swap(own->waterPictures);
+                        own->water = decltype(own->water)();
+                        if (!own->pitWalls) own.reset();
+                        else
+                            LOG_INFO("own ground: %s - read for the 3D view's room walls alone («Своя земля» off): "
+                                     "the game's ground stays its own", name.c_str());
+                    }
                 }
             } catch (const std::bad_alloc&) {
                 own.reset();

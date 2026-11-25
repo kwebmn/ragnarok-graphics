@@ -28,6 +28,9 @@ struct OwnGround {
     // 3.0.22-beta.22 (the owner's R-GK3ZCT «тут тоже походу стен нету»): indoors (no land past a house's edges) the
     // third mesh holds the walls raised over its pits instead (core/pit_walls) - the 3D view's alone too
     bool pitWalls = false;
+    // 3.0.23-beta.6 (the owner: «1, делай стены» - the room walls for everyone, «Своя земля» off as it comes): read for
+    // the 3D view's room walls alone - the game's ground stays the game's, only the walls (the third mesh) drawn
+    bool wallsOnly = false;
     std::vector<float> seaFrame;  // 3.0.20-beta.31: the sea past its wet edges (outskirts::seaFrame), x y z a corner
     // 3.0.20-beta.42: 1 a corner of the ground (row by row of width + 1) some vertex of the outskirts takes its colour
     // from (its blend) - the land's chunks are coloured again when the game gives one of them another colour

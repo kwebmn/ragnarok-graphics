@@ -125,13 +125,22 @@ void Renderer::Impl::dropOwnGround() {
 // At the picture's first ground draw of the game's: the map's own ground read (MapWorld), its textures made and their
 // pictures put up - a few a frame, the full colours with their mipmaps (the AI textures know them by their 16-bit
 // texels, as the game's), the lightmaps in strips. True: drawn this picture in place of the game's.
+bool Renderer::Impl::ownWallsWanted() const {
+    return !effects.ownGround && effects.roomWalls3d && camera::wideView() && viewToWorldValid && gameWidth > 0 &&
+           gameHeight > 0;
+}
+
 bool Renderer::Impl::prepareOwnGround() {
     mapWorld.setRoomWalls(effects.roomWalls3d);  // 3.0.20-beta.71: from the next map read
     mapWorld.setOutskirtsRelief(!effects.skyPanorama);  // 3.0.22-beta.16: likewise
-    mapWorld.setOwnGround(true);
+    mapWorld.setWallsWanted(ownWallsWanted());  // 3.0.23-beta.6: before the own ground's switch (its re-read)
+    mapWorld.setOwnGround(effects.ownGround);
     mapWorld.poll();
     const OwnGround* g = mapWorld.ownGround();
     OwnState& o = ownState;
+    // 3.0.23-beta.6: «Своя земля» on - the whole of it; off - its walls alone, in the 3D view
+    if (g && (g->wallsOnly ? !ownWallsWanted() : !effects.ownGround)) g = nullptr;
+    o.wallsOnly = g && g->wallsOnly;
     if (!g) {
         if (o.serial) dropOwnGround();
         return false;
@@ -237,8 +246,10 @@ bool Renderer::Impl::prepareOwnGround() {
         o.groundUp = true;
         unsigned made = 0;
         for (uint32_t id : o.ids) made += id != 0;
-        LOG_INFO("own ground: %s's pictures up - %u of %u textures, lightmaps %dx%d; the game's ground left out from "
-                 "now", g->map.c_str(), made, unsigned(o.ids.size()), g->atlas.width, g->atlas.height);
+        LOG_INFO("own ground: %s's pictures up - %u of %u textures, lightmaps %dx%d; %s", g->map.c_str(), made,
+                 unsigned(o.ids.size()), g->atlas.width, g->atlas.height,
+                 g->wallsOnly ? "its room walls drawn in the 3D view, the ground the game's"
+                              : "the game's ground left out from now");
     }
     if (o.up) {
         LOG_INFO("own ground: %s's models' and water's pictures up", g->map.c_str());
@@ -790,7 +801,9 @@ bool Renderer::Impl::drawOwnGround() {
                                               : !dressedShown && !g->madeTextures.empty() ? &g->madeTextures
                                                                                            : nullptr;
         const size_t mapChunks = g->mesh.chunks.size();
-        for (size_t n = 0; n < mapChunks + (outskirts ? g->outskirts.chunks.size() : 0); ++n) {
+        // 3.0.23-beta.6: for the room walls alone - the third mesh's chunks only (the ground the game's)
+        for (size_t n = g->wallsOnly ? mapChunks : 0; n < mapChunks + (outskirts ? g->outskirts.chunks.size() : 0);
+             ++n) {
             const bool past = n >= mapChunks;
             const size_t k = past ? n - mapChunks : n;
             const terrain::Chunk& box = past ? g->outskirts.chunks[k] : g->mesh.chunks[k];
@@ -948,7 +961,7 @@ bool Renderer::Impl::drawOwnGround() {
         }
         {
             CpuTimeWithin t(cpuPartTicks[kCpuFarModels], cpuPartTicks[kCpuOwnGround]);
-            drawOwnModels(view, p, axes);  // 3.0.4-beta.14: the models past the far plane, into the same record
+            if (!g->wallsOnly) drawOwnModels(view, p, axes);  // 3.0.4-beta.14: the models past the far plane
         }
         // 3.0.20-beta.4: the ones the driver left out (the processor's way, while the card's is missing)
         if (!cardModelsReady()) {  // 3.0.20-beta.16: their own part of the drawing's time
