@@ -62,3 +62,15 @@ TEST(res_tree_call_redirected) {
     CHECK_EQ(res_tree_exe::kCalls[0], 0x513799u);
     CHECK_EQ(res_tree_exe::kCalls[1], 0x5142D9u);
 }
+
+// 3.0.23-beta.12 (R-5AVFXF: malangdo on Direct3D 11, a read at 0 at uaRO.exe+0x1137cb right after our guard said «not
+// found»): 0x513770 is the cache's unload - its «not found» way (0x5137BD) reads the head's empty value; it now jumps
+// to its own end (0x5137EE): a name not in the cache is not unloaded
+TEST(res_tree_unload_of_a_missing_name_goes_to_its_end) {
+    uint8_t out[3] = {};
+    res_tree_exe::shortJump(res_tree_exe::kUnloadMissing, res_tree_exe::kUnloadEnd, out);
+    CHECK_EQ(int(out[0]), 0xEB);
+    CHECK_EQ(int(out[1]), 0x2F);  // 0x5137EE - (0x5137BD + 2)
+    CHECK_EQ(int(out[2]), 0x90);
+    CHECK_EQ(int(res_tree_exe::kUnloadMissingWas[0]), 0x8B);
+}

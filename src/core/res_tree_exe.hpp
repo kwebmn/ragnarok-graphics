@@ -25,5 +25,12 @@ uint32_t lowerBound(uint32_t map, uint32_t keyRef, uint32_t nil, const std::func
                     const std::function<bool(uint32_t, uint32_t)>& less, bool& broken);
 // «call target» written at `site`
 void callTo(uint32_t site, uint32_t target, uint8_t out[5]);
+// 3.0.23-beta.12 (R-5AVFXF): the first call (0x513799) is the cache's unload 0x513770, not a load - its «not found»
+// way 0x5137BD (mov ecx,[esi+4]; the head's value read at 0x5137CB: zero) crashed on our «not found»; it jumps to the
+// function's own end 0x5137EE now (pop edi/esi/ebx, ret 4): a name not in the cache is left alone
+constexpr uint32_t kUnloadMissing = 0x5137BD, kUnloadEnd = 0x5137EE;
+constexpr uint8_t kUnloadMissingWas[3] = {0x8B, 0x4E, 0x04};
+// «jmp short target» and a nop over 3 bytes at `site` (the target within 127 bytes after it)
+void shortJump(uint32_t site, uint32_t target, uint8_t out[3]);
 
 }  // namespace uagfx::res_tree_exe

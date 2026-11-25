@@ -30,6 +30,12 @@ uint32_t lowerBound(uint32_t map, uint32_t keyRef, uint32_t nil, const std::func
     return best;
 }
 
+void shortJump(uint32_t site, uint32_t target, uint8_t out[3]) {
+    out[0] = 0xEB;
+    out[1] = uint8_t(int8_t(int32_t(target) - int32_t(site + 2)));
+    out[2] = 0x90;
+}
+
 void callTo(uint32_t site, uint32_t target, uint8_t out[5]) {
     const uint32_t rel = target - (site + 5);
     out[0] = 0xE8;

@@ -24,7 +24,7 @@ uint32_t __attribute__((thiscall)) guardedLowerBound(uint32_t map, uint32_t keyR
         [less](uint32_t key, uint32_t asked) { return less(key, asked); }, broken);
     if (broken && InterlockedIncrement(&g_broken) <= 5)
         LOG_INFO("files: the game's resource cache met a node another thread is still putting in (or no name asked) - "
-                 "taken as not found, the file loaded anew (uaRO.exe 0x%X)", res_tree_exe::kLowerBound);
+                 "taken as not found: the file loaded anew, or left loaded (uaRO.exe 0x%X)", res_tree_exe::kLowerBound);
     return found;
 }
 
@@ -55,6 +55,24 @@ bool installResTreeFix() {
         res_tree_exe::callTo(res_tree_exe::kCalls[i], uint32_t(reinterpret_cast<uintptr_t>(&guardedLowerBound)),
                              calls[i]);
     }
+    // 3.0.23-beta.12 (R-5AVFXF): the unload's «not found» way to its end - checked first, as the calls
+    uint8_t was[3] = {}, jump[3];
+    if (!ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(res_tree_exe::kUnloadMissing)),
+                           was, sizeof was, &got) ||
+        got != sizeof was || std::memcmp(was, res_tree_exe::kUnloadMissingWas, sizeof was) != 0) {
+        LOG_INFO("files: the game's own resource lookup (its unload at 0x%X is not this build's)",
+                 res_tree_exe::kUnloadMissing);
+        return false;
+    }
+    res_tree_exe::shortJump(res_tree_exe::kUnloadMissing, res_tree_exe::kUnloadEnd, jump);
+    {
+        auto* site = reinterpret_cast<uint8_t*>(uintptr_t(res_tree_exe::kUnloadMissing));
+        DWORD prot = 0, unused = 0;
+        if (!VirtualProtect(site, 3, PAGE_EXECUTE_READWRITE, &prot)) return false;
+        std::memcpy(site, jump, 3);
+        VirtualProtect(site, 3, prot, &unused);
+        FlushInstructionCache(GetCurrentProcess(), site, 3);
+    }
     for (int i = 0; i < 2; ++i) {
         auto* site = reinterpret_cast<uint8_t*>(uintptr_t(res_tree_exe::kCalls[i]));
         DWORD was = 0, unused = 0;
@@ -64,8 +82,9 @@ bool installResTreeFix() {
         FlushInstructionCache(GetCurrentProcess(), site, 5);
     }
     done = true;
-    LOG_INFO("files: a resource another thread is still putting in no longer crashes the game (uaRO.exe 0x%X, 0x%X)",
-             res_tree_exe::kCalls[0], res_tree_exe::kCalls[1]);
+    LOG_INFO("files: a resource another thread is still putting in no longer crashes the game (uaRO.exe 0x%X, 0x%X; "
+             "the unload of a name not in the cache left alone, 0x%X)",
+             res_tree_exe::kCalls[0], res_tree_exe::kCalls[1], res_tree_exe::kUnloadMissing);
     return true;
 }
 

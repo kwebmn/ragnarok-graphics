@@ -18,6 +18,7 @@
 #include "core/own_ground.hpp"
 #include "core/world_words.hpp"
 #include "core/world_windows.hpp"
+#include "core/world_signs.hpp"
 #include "win/world_signs.hpp"
 #include "win/char_block.hpp"
 #include "win/context.hpp"
@@ -351,6 +352,71 @@ void placeWorldWords(uint32_t manager, std::vector<std::pair<uint32_t, int32_t>>
     }
 }
 
+// 3.0.23-beta.12 (R-BC2QMP «название лавки висит в воздухе, хотя я его уже прошел»): in the 3D view the shops' signs
+// placed by the game's own camera - a shop passed hung before the eye. Placed now as the words over the heads: over its
+// merchant's head from its feet on the screen; out of sight (moved off the screen, so no click finds it either) when
+// the merchant is behind the eye or behind the ground or a model
+int g_signsTold = 0;
+
+void placeShopSigns(uint32_t manager) {
+    if (!view3dwin::active()) return;
+    const uint32_t mode = *reinterpret_cast<const uint32_t*>(uintptr_t(kModeNowAt));
+    uint32_t renderer = 0;
+    int32_t size[2] = {};
+    float view[12], k = 0.0f, norm = 0.0f;
+    if (!mode || !readGame(kRenderer, &renderer, 4) || !renderer || !readGame(renderer + 0x24, size, sizeof size) ||
+        size[0] <= 0 || size[1] <= 0 || !readGameCamera(view) || !readGame(kSpriteScale, &k, 4) ||
+        !readGame(kSpriteNorm, &norm, 4))
+        return;
+    std::vector<uint32_t> shops;
+    const uint32_t head = *reinterpret_cast<const uint32_t*>(uintptr_t(manager + kWindowsList));
+    size_t seen = 0;
+    for (uint32_t node = head ? *reinterpret_cast<const uint32_t*>(uintptr_t(head)) : 0;
+         node && node != head && seen < kMostWindows; node = *reinterpret_cast<const uint32_t*>(uintptr_t(node))) {
+        ++seen;
+        const uint32_t w = *reinterpret_cast<const uint32_t*>(uintptr_t(node + 8));
+        uint32_t table = 0;
+        if (w && readGame(w, &table, 4) && table == uagfx::worldsigns::kShopClass) shops.push_back(w);
+    }
+    if (shops.empty()) return;
+    static std::vector<ActorAt> actors;
+    readActors(actors);
+    const worldwords::Screen screen{size[0], size[1]};
+    const camera::Projection p = camera::projectionFor(size[0], size[1]);
+    for (const uint32_t w : shops) {
+        uint32_t account = 0;
+        int32_t wh[2] = {};
+        if (!readGame(w + uagfx::worldsigns::kShopAccount, &account, 4) || !readGame(w + kWindowBox + 8, wh, sizeof wh))
+            continue;
+        const auto it = std::find_if(actors.begin(), actors.end(), [account](const ActorAt& a) {
+            return a.id == account;
+        });
+        if (it == actors.end()) continue;  // its merchant not among the actors: the game's place
+        const ActorAt& a = *it;
+        const float c[3] = {a.at[0] * view[0] + a.at[1] * view[3] + a.at[2] * view[6] + view[9],
+                            a.at[0] * view[1] + a.at[1] * view[4] + a.at[2] * view[7] + view[10],
+                            a.at[0] * view[2] + a.at[1] * view[5] + a.at[2] * view[8] + view[11]};
+        own_ground::Tl2 feet{};
+        const float headAt[3] = {a.at[0], a.at[1] - 12.0f, a.at[2]};  // y down
+        const char* why = nullptr;
+        if (!own_ground::placeView(p, c, feet) || !std::isfinite(feet.x) || !std::isfinite(feet.y))
+            why = "behind the eye";
+        else if (!view3dwin::seenActor(a.id, headAt))
+            why = "behind the ground or a model";
+        worldwords::Point to{-4096, -4096};
+        if (!why) to = worldwords::wordsAt(feet.x, feet.y, worldwords::scaleOf(feet.rhw, p.f0, k, norm), wh[0], wh[1],
+                                           screen);
+        if (g_signsTold < 4) {
+            ++g_signsTold;
+            if (why)
+                LOG_INFO("3D view: shop %u's sign out of sight - its merchant %s", account, why);
+            else
+                LOG_INFO("3D view: shop %u's sign over its merchant's head at %d, %d", account, to.x, to.y);
+        }
+        moveWindow(w, to);
+    }
+}
+
 // 3.0.16-beta.7: [interface] signs - the shops' and the chat rooms' signs drawn anew (win/world_signs): their shown
 // flags held at 0 through both passes of the game's draw (kept in `held` to put back - the clicks still find them)
 void holdSigns(uint32_t manager, std::vector<std::pair<uint32_t, int32_t>>& held) {
@@ -428,6 +494,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     std::vector<std::pair<uint32_t, int32_t>> ownHeld;  // 3.0.19-beta.17
     if (view3dwin::ownHidden()) holdOwnGauge(ownHeld);
     std::vector<std::pair<uint32_t, int32_t>> held, signs, words;
+    placeShopSigns(manager);    // 3.0.23-beta.12 (R-BC2QMP): the 3D view's
     holdSigns(manager, signs);  // 3.0.16-beta.7
     placeWorldWords(manager, words);  // 3.0.20-beta.85 (R-H3S9MY): the 3D view's
     const size_t gauges = holdShown(manager, false, held);  // 3.0.11-beta.191: the bars under the characters first
