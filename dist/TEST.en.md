@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.4 — what's new · 2026-11-26
+
+Storage: the new passing of things (for testers).
+
+- **A new way of passing things to the storage — a box for testers.** «Kafra storage» puts and takes things itself, and its list shows only what the server said. One press — one move: fast repeated clicks on the same cell send no second one. When the storage does not take a thing, the window's bottom says why.
+- Where to turn it on: Alt+O → «Checking now» → «Storage: the new passing of things» («Kafra storage» must be on: the settings app → «Interface»). For now a stack moves whole, with no count asked.
+- Off — the storage works as before.
+
 # uaRO Graphics 3.0.24-beta.3 — what's new · 2026-11-26
 
 «Checking now».
