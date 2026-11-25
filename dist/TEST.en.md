@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.23-beta.4 — what's new · 2026-11-25
+
+A crash on entering Malangdo.
+
+- **Entering Malangdo** (and other maps with many models) no longer crashes the game: the thread loading the map sometimes met an entry in the game's file cache that another thread had not finished writing. Such a file is now simply loaded again.
+
 # uaRO Graphics 3.0.23-beta.3 — what's new · 2026-11-25
 
 The minimap after a move to another map.
