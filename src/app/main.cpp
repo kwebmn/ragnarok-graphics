@@ -41,6 +41,10 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR line, int show) {
     }
     if (args.mode == uagfx::app::Args::Mode::TestReport)  // 3.0.5-beta.6: «Тест графіки»'s end, no window
         return uagfx::app::sendTestReport(args.testFile, args.logSlot);
+    if (args.mode == uagfx::app::Args::Mode::CheckReport) {  // 3.0.24-beta.3: a check's «Працює ✓», no window
+        SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
+        return uagfx::app::sendCheckReport(args.checkFile, args.logSlot);
+    }
     if (args.mode == uagfx::app::Args::Mode::NetReport) {  // 3.0.20-beta.60: a lost connection's trail, no window
         SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
         return uagfx::app::sendNetReport(args.netFile, args.logSlot);
@@ -60,6 +64,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR line, int show) {
             start.fresh = true;
             start.shot = args.reportShot;
             start.map = uagfx::app::utf8(args.reportMap);
+            start.note = args.reportNote;  // 3.0.24-beta.3: a check's «Є проблема — звіт»
             start.logSlot = args.logSlot;  // 3.0.3-beta.1: the game window's logs
             window.reportAtStart(start);
         } else if (!args.answer.empty()) {  // 3.0.9-beta.4: the game's answer card - «Звернення» on that one

@@ -88,6 +88,12 @@ public:
     // told as the interface's faces the game filed before them (it files the windows before its scene begins - the
     // record's place then was the frame's start, and the world went over the driver's windows): its interface draws
     // past that many are its windows' (FrameRecord::interfaceDraw); SIZE_MAX not known
+    // 3.0.24-beta.3 («Перевіряємо зараз»'s «Є проблема — звіт»): a report as the menu's «Надіслати звіт» asks it (its
+    // shot a few frames on, the window gone), its words beginning with `note`
+    void askReport(const std::string& note) {
+        menuReport_ = 3;
+        reportNote_ = note;
+    }
     void markGameWindows(size_t facesBefore);
     // 3.0.11-beta.190 (R-RCFQHR «строка хп поверх интерфейса»): at the game's BeginScene - its interface list's faces
     // in all (win/windows_draw interfaceFaces): its windows and its cursor are the faces from facesBefore to there; the
@@ -274,6 +280,7 @@ private:
     ToggleKey shotKey_;  // 0.54: Ctrl+Shift+F12 - a screenshot at the picture's full size
     ToggleKey reportKey_;  // 2.13: Ctrl+Shift+F10 - the same, and «Нове звернення» with it
     int menuReport_ = 0;   // 3.0.18-beta.121: «Надіслати звіт» in the menu - presents left before its shot
+    std::string reportNote_;  // 3.0.24-beta.3: the words a report asked for this way begins with (a check's)
     ToggleKey xrayKey_;  // 2.3: Ctrl+Shift+F9, uaRO Studio's X-ray
     ToggleKey pickKey_, abKey_;  // 2.3: Ctrl+Shift+F8 the texture under the cursor, Ctrl+Shift+F7 its A/B
     uint8_t studioSent_ = 0xFF;  // 2.3: the studio's keys the renderer has

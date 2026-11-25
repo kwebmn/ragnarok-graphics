@@ -1175,7 +1175,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
             if (config.view3dOwnModels) modelcensus::dumpAround();
             // 3.0.22-beta.10 (R-3SA4RB: the ground one flat white on Direct3D 11): its light map, as the card holds it
             if (renderer) renderer->askGroundLightCheck();
-            startReport(screenshot, readGameMap());
+            startReport(screenshot, readGameMap(), reportNote_);
+            reportNote_.clear();
         }
     }
     if (screenshot.empty() && config.portraits) {  // 3.0.11-beta.273: the character's picture now and then

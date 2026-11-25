@@ -31,8 +31,10 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    data-if="r.subhead">{{r.label}}</div><div class="scw" data-for="c, j : r.cards"><div class="scard"
    data-class-off="!c.on"><div class="scb"><span class="scn">{{c.label}}</span><span
    class="scd">{{c.desc}}</span><span class="scm ctl" data-if="c.more != ''"
-   data-event-click="card_more(i, j)">{{c.more}}</span></div><span class="tg ctl" data-class-on="c.on"
-   data-event-click="card_toggle(i, j)"><span class="kn"></span></span></div></div><div class="sro"
+   data-event-click="card_more(i, j)">{{c.more}}</span><div class="sca" data-if="c.check"><span class="btn ok ctl"
+   data-event-click="check_ok(i, j)">{{c.ok}}</span><span class="btn bad ctl"
+   data-event-click="check_bad(i, j)">{{c.bad}}</span></div></div><span class="tg ctl" data-if="c.toggle"
+   data-class-on="c.on" data-event-click="card_toggle(i, j)"><span class="kn"></span></span></div></div><div class="sro"
    data-if="!r.subhead && r.ncards == 0" data-class-sub="r.sub"
    data-class-det="r.det"><div class="st"><span
    class="sl">{{r.label}}</span><span class="shn" data-if="r.hint != ''">{{r.hint}}</span><span class="swn"
@@ -112,6 +114,10 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         v.RegisterMember("desc", &CardView::desc);
         v.RegisterMember("more", &CardView::more);
         v.RegisterMember("on", &CardView::on);
+        v.RegisterMember("toggle", &CardView::toggle);
+        v.RegisterMember("check", &CardView::check);
+        v.RegisterMember("ok", &CardView::ok);
+        v.RegisterMember("bad", &CardView::bad);
     }
     c.RegisterArray<std::vector<CardView>>();
     if (auto v = c.RegisterStruct<RowView>()) {

@@ -18,6 +18,7 @@ struct ReportStart {
     std::string map;     // the game's map then, "" unknown
     int logSlot = 1;     // 3.0.3-beta.1: that game window's logs (core/log_files slotted)
     std::string code;    // 3.0.9-beta.4: --answer (the game's answer card) - that conversation at once
+    std::wstring note;   // 3.0.24-beta.3: --note - the new report's words to begin with (a check's name)
 };
 // A window over `owner` until it is closed (as the notes' window); the number of answers not read yet after it, -1
 // when the site could not be asked. 3.0.9-beta.4: `answers` - those answers then (the main window's strip)

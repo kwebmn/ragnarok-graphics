@@ -772,6 +772,12 @@ select selectbox option:checked { color: #e6cb8a; }
 .sw .scm { display: block; margin-top: 4dp; font-size: 11dp; color: #8cb4dc; }
 .sw .scm:hover { color: #e6cb8a; }
 .sw .scard .tg { flex: none; margin-top: 2dp; }
+/* 3.0.24-beta.3: «Перевіряємо зараз» - a check's two buttons under its steps */
+.sw .sca { display: flex; flex-direction: row; margin-top: 7dp; }
+.sw .sca .btn { display: block; margin-right: 6dp; padding: 3dp 9dp; border-radius: 7dp; font-size: 11.5dp; }
+.sw .sca .btn.ok { border: 1dp #3f7d53; color: #8cd3a0; }
+.sw .sca .btn.bad { border: 1dp #c0392b88; color: #f0a59a; }
+.sw .sca .btn:hover { background-color: #ffffff10; }
 .tw { width: 460dp; }
 .tw .count { margin-left: 10dp; font-size: 11.5dp; color: #9aa3b5; }
 .tw .msg { display: block; margin: 2dp 0 12dp 0; font-size: 13dp; line-height: 19dp; }

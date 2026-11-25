@@ -11,7 +11,7 @@ struct Args {
     // 3.0.20-beta.60: NetReport - a lost connection's trail sent without a window (app/report_send sendNetReport)
     enum class Mode {
         Settings, Watch, Install, Update, AskUpdate, Rollback, Repair, Uninstall, UninstallRun, Setup, TestReport,
-        NetReport
+        NetReport, CheckReport  // 3.0.24-beta.3: «Перевіряємо зараз»'s «Працює ✓» sent without a window
     };
     Mode mode = Mode::Settings;
     unsigned long pid = 0;  // --watch N, --ask-update N, --after N: the process waited for
@@ -28,6 +28,8 @@ struct Args {
     int logSlot = 1;
     std::wstring testFile;  // 3.0.5-beta.6: --test-report "<file>" - the table the driver wrote
     std::wstring netFile;   // 3.0.20-beta.60: --net-report "<file>" - the trail the driver wrote
+    std::wstring checkFile;  // 3.0.24-beta.3: --check-report "<file>" - a check's mark the driver wrote
+    std::wstring reportNote;  // 3.0.24-beta.3: --note "<words>" - the new report's words to begin with (a check's)
     // 3.0.9-beta.4: --answer R-XXXXXX - the game's answer card («Відкрити»): «Звернення» on that conversation; only a
     // code of the site's (core/report_answers plainCode), else none
     std::wstring answer;

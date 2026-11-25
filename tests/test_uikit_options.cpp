@@ -811,3 +811,56 @@ TEST(uikit_options_simple_page_cards_two_in_a_line) {
     CHECK_EQ(mode, 1);
     rmlhost::close(doc);
 }
+
+// 3.0.24-beta.3 («Перевіряємо зараз»): a check's card - its steps, no switch when it names none, «Працює ✓» and
+// «Є проблема — звіт» naming its row and place
+TEST(uikit_options_a_check_s_card_and_its_buttons) {
+    static ol::Model m;
+    m = ol::Model{};
+    m.title = "Налаштування";
+    m.simple = true;
+    ol::RowView r;
+    r.key = "checks.chat_arrows";
+    r.group = "Перевіряємо зараз";
+    ol::CardView c{"Чат не забирає стрілки", "Стрілки ведуть персонажа", "", false, ""};
+    c.check = true, c.toggle = false, c.ok = "Працює ✓", c.bad = "Є проблема — звіт", c.id = "chat_arrows";
+    r.cards = {c};
+    r.ncards = 1;
+    m.rows.push_back(r);
+    ol::fit(m.rows);
+    m.shownRows = 1;
+    int ok = -1, bad = -1;
+    std::string error;
+    Rml::ElementDocument* doc = rmlhost::load(
+        ol::rml(),
+        [&](Rml::DataModelConstructor& k) {
+            ol::bind(k, m);
+            const auto none = [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {};
+            for (const char* e : {"sec_go", "set_slider", "set_step", "set_choice", "set_toggle", "set_reset",
+                                  "open_console", "open_layout", "opt_close", "set_mode", "card_toggle", "card_more"})
+                k.BindEventCallback(e, none);
+            k.BindEventCallback("check_ok", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+                ok = a.size() > 1 ? a[0].Get<int>() * 10 + a[1].Get<int>() : -2;
+            });
+            k.BindEventCallback("check_bad", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+                bad = a.size() > 1 ? a[0].Get<int>() * 10 + a[1].Get<int>() : -2;
+            });
+        },
+        100, 60, &error);
+    CHECK_EQ(error, std::string());
+    CHECK(doc != nullptr);
+    if (!doc) return;
+    CHECK_EQ(shownOf(doc, ".scard"), 1);
+    CHECK_EQ(shownOf(doc, ".scard .tg"), 0);  // no switch of its own
+    CHECK_EQ(shownOf(doc, ".scard .sca .btn"), 2);
+    Rml::ElementList buttons;
+    doc->QuerySelectorAll(buttons, ".sca .btn");
+    if (buttons.size() == 2) {
+        buttons[0]->Click();
+        buttons[1]->Click();
+    }
+    rmlhost::update();
+    CHECK_EQ(ok, 0);
+    CHECK_EQ(bad, 0);
+    rmlhost::close(doc);
+}

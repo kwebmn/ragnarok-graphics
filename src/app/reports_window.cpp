@@ -1251,7 +1251,8 @@ std::wstring ReportsWindow::shortTime(const std::string& iso) const {
 
 void ReportsWindow::startNew() {
     if (pane_ != Pane::New) {
-        SetWindowTextW(GetDlgItem(hwnd_, kWhat), L"");
+        SetWindowTextW(GetDlgItem(hwnd_, kWhat), start_.note.c_str());  // 3.0.24-beta.3: a check's name, or none
+        SendMessageW(GetDlgItem(hwnd_, kWhat), EM_SETSEL, WPARAM(start_.note.size()), LPARAM(start_.note.size()));
         // 3.0.9-beta.6: «Про що це?» - none chosen (it may stay none). 3.0.16-beta.26 (the tester's R-PTDFCY, a pet's
         // accessory: «пішло у гілку про візуал, не побачив що там можна обрати»): from the game none either - it was
         // «Графіка» already, and went so unseen

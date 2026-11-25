@@ -31,6 +31,9 @@ int sendTestReport(const std::wstring& file, int logSlot = 1);
 // its file - with [report] auto the logs and the settings too; [report] disconnects off: nothing; ten minutes apart,
 // six a day (core/net_trail maySend). No window; kept for later when the site does not answer (app/reports)
 int sendNetReport(const std::wstring& file, int logSlot = 1);
+// 3.0.24-beta.3: «Перевіряємо зараз»'s «Працює ✓» - the mark the driver wrote (a line: the check, its id, the build)
+// sent as a report of the reason «check» with the logs, no window
+int sendCheckReport(const std::wstring& file, int logSlot = 1);
 // 2.2.1: uaro-graphics\usage.jsonl (core/usage.hpp) to uaro.kiev.ua, with the player's leave ([stats] send) - once a
 // day (force: now). 2.2.2: the driver's file is taken whole first (renamed usage-sending.jsonl: a running game starts
 // a new one, nothing it writes meanwhile is lost), sent in parts, then deleted - a part not sent stays for the next

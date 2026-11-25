@@ -425,6 +425,15 @@ int sendTestReport(const std::wstring& file, int logSlot) {
     return r.code.empty() ? 1 : 0;
 }
 
+int sendCheckReport(const std::wstring& file, int logSlot) {
+    std::string note;
+    if (!readFile(file, note) || note.empty()) return 1;
+    if (note.size() > report::kMostComment) note.resize(report::kMostComment);
+    Model m;
+    const NewReport r = sendNew(m.paths().dir, makeUpload(m, "check", false, note, {}, logSlot));
+    return r.code.empty() && !r.queued ? 1 : 0;
+}
+
 int sendNetReport(const std::wstring& file, int logSlot) {
     std::string trail;
     if (!readFile(file, trail) || trail.empty()) return 1;

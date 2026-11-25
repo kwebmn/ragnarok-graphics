@@ -1094,6 +1094,8 @@ enum class Text : uint16_t {
     SimpleWhoHits, SimpleBossBars, SimpleDropNames, SimplePanorama, SimpleRoomWalls, SimpleWeather3d, SimpleGrass3d,
     SimpleStars, SimpleNewUi, SimpleReference, SimpleKeepFps, SimpleSavePower, SimpleSurround, SimpleNotify,
     SimpleArrows, SimpleWalkMode, SimpleSpace, SimplePad,
+    // 3.0.24-beta.3: «Перевіряємо зараз» in Alt+O
+    ChecksNow, ChecksOk, ChecksBad, ChecksSince,
     Count
 };
 

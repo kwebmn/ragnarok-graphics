@@ -32,6 +32,10 @@ struct CardView {
     bool on = false;
     Rml::String key;             // not shown: its row's key
     int entry = -1, group = -1;  // not shown: where «Детально» goes (the list's entry, the catalogue's group)
+    // 3.0.24-beta.3: «Перевіряємо зараз» - a check's card: its switch only when it names one (`toggle`), «Працює ✓» and
+    // «Є проблема — звіт» (`ok`, `bad`) under its steps; `id` not shown
+    bool toggle = true, check = false;
+    Rml::String ok, bad, id;
 };
 struct RowView {
     Rml::String key, group, label, hint, vtext;  // group: the group's name over this row (its first), "" none
@@ -97,7 +101,7 @@ int cull(Rml::ElementDocument* doc, bool all = false);
 const char* rml();
 // The window's variables. Its events are the caller's: sec_go(i), set_toggle(i), set_slider(i), set_step(i, by),
 // set_choice(i, j), set_reset(i), open_layout(), open_console(), opt_close(); 3.0.24-beta.2: set_mode(0 simple /
-// 1 full), card_toggle(i, j), card_more(i, j)
+// 1 full), card_toggle(i, j), card_more(i, j); 3.0.24-beta.3: check_ok(i, j), check_bad(i, j)
 void bind(Rml::DataModelConstructor& c, Model& m);
 
 }  // namespace uagfx::uikit::options

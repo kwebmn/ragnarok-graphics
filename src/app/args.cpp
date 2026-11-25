@@ -109,6 +109,13 @@ Args parseArgs(const std::wstring& line) {
             a.mode = Args::Mode::TestReport;
             a.testFile = next;
             ++i;
+        } else if (k == L"--check-report") {  // 3.0.24-beta.3
+            a.mode = Args::Mode::CheckReport;
+            a.checkFile = next;
+            ++i;
+        } else if (k == L"--note") {  // 3.0.24-beta.3
+            a.reportNote = next;
+            ++i;
         } else if (k == L"--net-report") {  // 3.0.20-beta.60
             a.mode = Args::Mode::NetReport;
             a.netFile = next;
@@ -146,6 +153,7 @@ std::wstring argsLine(const Args& a) {
         case Args::Mode::Setup: s = L"--setup"; break;
         case Args::Mode::TestReport: s = L"--test-report \"" + a.testFile + L"\""; break;
         case Args::Mode::NetReport: s = L"--net-report \"" + a.netFile + L"\""; break;
+        case Args::Mode::CheckReport: s = L"--check-report \"" + a.checkFile + L"\""; break;
     }
     if (a.quiet) s += L" --quiet";
     if (!a.dir.empty()) s += L" --dir \"" + a.dir + L"\"";
@@ -155,6 +163,7 @@ std::wstring argsLine(const Args& a) {
     if (a.then == Args::Then::Game) s += L" --then-game";
     if (a.report) s += a.reportShot.empty() ? L" --report" : L" --report \"" + a.reportShot + L"\"";
     if (!a.reportMap.empty()) s += L" --map " + a.reportMap;
+    if (!a.reportNote.empty()) s += L" --note \"" + a.reportNote + L"\"";
     if (a.logSlot > 1) s += L" --log-slot " + std::to_wstring(a.logSlot);
     if (!a.answer.empty()) s += L" --answer " + a.answer;
     if (!a.to.empty()) s += L" --to " + std::wstring(a.to.begin(), a.to.end());  // 3.0.17-beta.1

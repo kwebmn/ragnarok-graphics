@@ -5,10 +5,13 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <fstream>
+#include <sstream>
 #include <set>
 #include <string>
 #include <vector>
 
+#include "core/checks_now.hpp"
 #include "core/console_tiles.hpp"
 #include "core/settings/catalogue.hpp"
 #include "core/window_stack.hpp"
@@ -17,6 +20,7 @@
 #include "core/settings/schema.hpp"
 #include "core/settings_window.hpp"
 #include "core/ui_style.hpp"
+#include "core/version.hpp"
 #include "pad/win/game_window.hpp"
 #include "uikit/applying.hpp"
 #include "uikit/options_live.hpp"
@@ -24,6 +28,7 @@
 #include "win/game_camera.hpp"
 #include "win/game_memory.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -111,7 +116,17 @@ struct State {
     int told = 0;
     int scrollGroup = -1;  // 3.0.24-beta.2: «Детально» - the group the full mode scrolls to once laid out
     int scrollTries = 0;
+    // 3.0.24-beta.3: «Перевіряємо зараз» - the checks marked done ([utility] checks_done), read once a second; the
+    // open ones' count (0: no such entry - not a beta build, or nothing to check): the list's first entry then
+    std::string checksDone;
+    ULONGLONG checksAt = 0;
+    int checks = 0;
 };
+
+// 3.0.24-beta.3: the list's entries are the catalogue's (core settingswin nav), «Перевіряємо зараз» before them while
+// there are checks - the entry shown as settingswin knows it (-1: the checks)
+int navOff(const State& s) { return s.checks > 0 ? 1 : 0; }
+int navEntry(const State& s) { return s.m.sec - navOff(s); }
 
 State& state() {
     static State s;
@@ -275,14 +290,17 @@ static std::vector<SetRowView> buildRows(const State& s) {
     const oc::Texts t = texts();
     const Config shown = s.config ? settingedit::shown(*s.config) : Config{};
     // 3.0.21-beta.10: «Змінені» - the rows off their defaults, under their groups' names as the search's
-    const bool offEntry = !searching && s.m.sec >= 0 && size_t(s.m.sec) < nav.size() &&
-                          nav[size_t(s.m.sec)].area == sw::kChangedArea;
+    const int entry = navEntry(s);
+    const bool offEntry = !searching && entry >= 0 && size_t(entry) < nav.size() &&
+                          nav[size_t(entry)].area == sw::kChangedArea;
     // 3.0.24-beta.2: the simple page (the concept https://uaro.kiev.ua/docs/settings-simple/) - no list, its lines
     const bool simple = s.m.simple && !searching;
-    const std::vector<sw::Line> list = searching  ? sw::find(s.m.query, lang)
-                                       : simple   ? sw::simpleLines()
-                                       : offEntry ? sw::changedLines(shown, s.defaults)
-                                                  : sw::lines(s.m.sec);
+    const bool checksEntry = !searching && !simple && entry < 0 && s.checks > 0;
+    const std::vector<sw::Line> list = searching     ? sw::find(s.m.query, lang)
+                                       : simple      ? sw::simpleLines()
+                                       : checksEntry ? std::vector<sw::Line>{}
+                                       : offEntry    ? sw::changedLines(shown, s.defaults)
+                                                     : sw::lines(entry);
     // where the game is now: what a row's reasons for doing nothing are judged by (the renderer, the view, the map)
     settings::catalogue::Now place;
     place.direct3d12 = settingedit::direct3d12();
@@ -290,6 +308,31 @@ static std::vector<SetRowView> buildRows(const State& s) {
     place.map = readGameMap();
     place.ownEntry = !searching && !offEntry;
     std::vector<SetRowView> out;
+    // 3.0.24-beta.3: «Перевіряємо зараз» - the simple page's first section, the full mode's first entry
+    if ((simple || checksEntry) && s.checks > 0)
+        for (const checksnow::Check* c : checksnow::open(s.checksDone)) {
+            uikit::options::CardView v;
+            v.id = c->id;
+            v.check = true;
+            v.label = checksnow::words(c->title, lang);
+            v.desc = std::string(checksnow::words(c->steps, lang)) + "  \xC2\xB7  " +
+                     settings::fmt(say(settings::Text::ChecksSince), {c->since});
+            v.ok = say(settings::Text::ChecksOk);
+            v.bad = say(settings::Text::ChecksBad);
+            v.key = c->key;
+            const settings::IniSetting* st = *c->key ? settings::findSetting(c->key) : nullptr;
+            v.toggle = st && st->tokens.size() > 1;
+            v.on = v.toggle && s.config && settings::tokenOf(*st, shown) == st->tokens[1];
+            if (out.empty() || out.back().ncards != 1) {
+                SetRowView r;
+                r.key = std::string("checks.") + c->id;
+                if (out.empty()) r.group = say(settings::Text::ChecksNow);
+                out.push_back(std::move(r));
+            }
+            out.back().cards.push_back(std::move(v));
+            out.back().ncards = int(out.back().cards.size());
+        }
+    const size_t checkRows = out.size();
     for (const sw::Line& f : list) {
         if (f.card) {  // 3.0.24-beta.2: a capability card - two side by side, a section's first starts a line
             uikit::options::CardView c;
@@ -303,7 +346,7 @@ static std::vector<SetRowView> buildRows(const State& s) {
                 c.more = settings::fmt(say(settings::Text::SimpleMore), {std::to_string(f.inside)});
                 c.entry = f.entry, c.group = f.opens;
             }
-            if (f.heads || out.empty() || out.back().ncards != 1) {
+            if (f.heads || out.size() == checkRows || out.back().ncards != 1) {
                 SetRowView r;
                 r.key = "cards." + f.key;
                 if (f.heads) r.group = say(f.groupName);
@@ -417,6 +460,45 @@ static void useRow(State& s, int row, int what, int value) {
     // report - a row changed while it says itself that a change does not show now
     if (wrote && !s.m.rows[size_t(row)].warn.empty() && s.warnTold++ < 40)
         LOG_INFO("options: «%s» changed while its row says: %s", key.c_str(), s.m.rows[size_t(row)].warn.c_str());
+}
+
+// 3.0.24-beta.3: the card an event names (its row, its place in the row), none
+static const uikit::options::CardView* cardAt(const State& s, const Rml::VariantList& a) {
+    if (a.size() < 2) return nullptr;
+    const int i = a[0].Get<int>(), j = a[1].Get<int>();
+    if (i < 0 || size_t(i) >= s.m.rows.size() || j < 0 || size_t(j) >= s.m.rows[size_t(i)].cards.size()) return nullptr;
+    return &s.m.rows[size_t(i)].cards[size_t(j)];
+}
+
+// 3.0.24-beta.3: the list on the left - «Перевіряємо зараз» first while there are checks, then the catalogue's areas
+static void buildNav(State& s) {
+    std::vector<NavView> nav;
+    if (s.checks > 0) nav.push_back(NavView{say(settings::Text::ChecksNow), s.checks});
+    for (const settingswin::Nav& n : settingswin::nav()) nav.push_back(NavView{say(n.name), n.rows});
+    s.m.nav = std::move(nav);
+}
+
+// 3.0.24-beta.3: the checks marked done read again (once a second, at once after «Працює ✓»); the list on the left
+// made again when their count changes - the entry shown stays the same entry
+static void readChecks(State& s, ULONGLONG now) {
+    if (now < s.checksAt) return;
+    s.checksAt = now + 1000;
+    if (!checksnow::shown(kVersion) || s.iniPath.empty()) return;
+    std::ifstream in(s.iniPath, std::ios::binary);
+    std::stringstream text;
+    text << in.rdbuf();
+    const auto ini = settings::readIni(text.str());
+    const auto it = ini.find("utility.checks_done");
+    s.checksDone = it == ini.end() ? "" : it->second;
+    const int open = int(checksnow::open(s.checksDone).size());
+    if (open == s.checks) return;
+    const int was = navOff(s);
+    s.checks = open;
+    s.m.sec = std::max(0, s.m.sec - was + navOff(s));
+    buildNav(s);
+    s.shownQuery = "\x01";  // the counts and the rows again
+    s.live.doc.dirty("nav");
+    s.live.doc.dirty("sec");
 }
 
 // 3.0.24-beta.2: the simple page or the full window, kept in [interface] settings_full
@@ -585,6 +667,39 @@ static void liveFrame(State& s) {
             st.hotUntil = GetTickCount64() + 700;
             if (st.told++ < 40) LOG_INFO("options: the simple page's card «%s» %s", c.key.c_str(), c.on ? "off" : "on");
         });
+        // 3.0.24-beta.3: «Працює ✓» - the check marked done here ([utility] checks_done) and the mark sent to the owner
+        // (the settings app, a report of the reason «check» with the logs); «Є проблема — звіт» - a report as the
+        // menu's, its words beginning with the check's name
+        m.BindEventCallback("check_ok", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
+            const uikit::options::CardView* c = cardAt(st, a);
+            if (!c || st.iniPath.empty()) return;
+            for (const checksnow::Check& k : checksnow::all()) {
+                if (c->id != k.id) continue;
+                st.checksDone = checksnow::markDone(st.checksDone, k.id);
+                editIniFile(st.iniPath, {{"utility", "checks_done", st.checksDone}});
+                const std::string dir = st.iniPath.substr(0, st.iniPath.find_last_of("\\/") + 1);
+                const std::string file = dir + "check-" + k.id + ".txt";
+                std::ofstream(file, std::ios::binary) << checksnow::workedNote(k, kVersion);
+                startCheckReport(file);
+                LOG_INFO("checks: «%s» works - marked, sent", k.id);
+                st.checksAt = 0;  // the list again at once
+                st.rowsKey.clear();
+                break;
+            }
+        });
+        m.BindEventCallback("check_bad", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
+            const uikit::options::CardView* c = cardAt(st, a);
+            if (!c) return;
+            for (const checksnow::Check& k : checksnow::all()) {
+                if (c->id != k.id) continue;
+                LOG_INFO("checks: «%s» has a problem - a report", k.id);
+                Context::get().askReport(checksnow::problemNote(k, language()));
+                closeIt(st);
+                break;
+            }
+        });
         // «Детально · N ›»: the full mode at the card's group
         m.BindEventCallback("card_more", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             State& st = state();
@@ -595,7 +710,7 @@ static void liveFrame(State& s) {
             const uikit::options::CardView c = st.m.rows[size_t(i)].cards[size_t(j)];
             if (c.entry < 0) return;
             setMode(st, false);
-            st.m.sec = c.entry;
+            st.m.sec = c.entry + navOff(st);
             st.scrollGroup = c.group, st.scrollTries = 0;
             st.live.doc.dirty("sec");
         });
@@ -624,20 +739,21 @@ static void liveFrame(State& s) {
         s.m.layoutBtn = say(settings::Text::MenuLayout);  // 3.0.21-beta.7: «Розмістити інтерфейс»
         s.m.modeSimple = say(settings::Text::SimpleModeSimple);  // 3.0.24-beta.2
         s.m.modeFull = say(settings::Text::SimpleModeFull);
-        std::vector<NavView> nav;  // 3.0.21-beta.3: the catalogue's areas, each with its rows' count
-        for (const settingswin::Nav& n : settingswin::nav()) nav.push_back(NavView{say(n.name), n.rows});
-        s.m.nav = std::move(nav);
+        buildNav(s);  // 3.0.21-beta.3: the catalogue's areas, each with its rows' count; .24-beta.3 the checks first
         s.shownQuery = "\x01";  // the counts and the rows again
         s.live.doc.dirtyAll();
     }
+    readChecks(s, GetTickCount64());  // 3.0.24-beta.3
     if (s.m.query != s.shownQuery || s.m.sec != s.shownSec) {
         if (s.m.query != s.shownQuery) {  // beside an entry: its rows, or what the search found in it
             const std::vector<settingswin::Nav>& list = settingswin::nav();
-            for (size_t i = 0; i < s.m.nav.size() && i < list.size(); ++i)
-                s.m.nav[i].count = s.m.query.empty() ? list[i].rows : 0;
+            const size_t off = size_t(navOff(s));  // 3.0.24-beta.3: «Перевіряємо зараз» first
+            if (off && !s.m.nav.empty()) s.m.nav[0].count = s.m.query.empty() ? s.checks : 0;
+            for (size_t i = 0; i + off < s.m.nav.size() && i < list.size(); ++i)
+                s.m.nav[i + off].count = s.m.query.empty() ? list[i].rows : 0;
             if (!s.m.query.empty())
                 for (const settingswin::Line& f : settingswin::find(s.m.query, language()))
-                    if (f.entry >= 0 && size_t(f.entry) < s.m.nav.size()) ++s.m.nav[size_t(f.entry)].count;
+                    if (f.entry >= 0 && size_t(f.entry) + off < s.m.nav.size()) ++s.m.nav[size_t(f.entry) + off].count;
             s.live.doc.dirty("nav");
         }
         s.shownQuery = s.m.query;
@@ -658,16 +774,17 @@ static void liveFrame(State& s) {
     {  // 3.0.21-beta.10: what the entry says over its rows; «Змінені»'s count and its words when nothing is off
         const std::vector<settingswin::Nav>& list = settingswin::nav();
         const bool searching = !s.m.query.empty();
-        const settings::Text note = searching ? settings::Text::Count
-                                              : settingswin::noteOf(s.m.sec, view3dwin::active());
+        const int entry = navEntry(s);  // 3.0.24-beta.3: as settingswin knows it (-1 the checks)
+        const settings::Text note = searching || entry < 0 ? settings::Text::Count
+                                                           : settingswin::noteOf(entry, view3dwin::active());
         const std::string words = note == settings::Text::Count ? std::string() : say(note);
         if (words != s.shownNote) {
             s.shownNote = words;
             s.m.note = words;
             s.live.doc.dirty("note");
         }
-        const bool off = !searching && s.m.sec >= 0 && size_t(s.m.sec) < list.size() &&
-                         list[size_t(s.m.sec)].area == settingswin::kChangedArea;
+        const bool off = !searching && entry >= 0 && size_t(entry) < list.size() &&
+                         list[size_t(entry)].area == settingswin::kChangedArea;
         const Rml::String none = say(off ? settings::Text::SettingsChangedNone : settings::Text::SettingsWinNone);
         if (none != s.m.none) {
             s.m.none = none;
@@ -676,11 +793,12 @@ static void liveFrame(State& s) {
         // counted at once after something is done in the window, else once a second (every row's value is read)
         if (s.config && !searching && (now < s.hotUntil || now >= s.countAt)) {
             s.countAt = now + 1000;
-            for (size_t i = 0; i < s.m.nav.size() && i < list.size(); ++i) {
+            const size_t navOffset = size_t(navOff(s));
+            for (size_t i = 0; i + navOffset < s.m.nav.size() && i < list.size(); ++i) {
                 if (list[i].area != settingswin::kChangedArea) continue;
                 const int count = int(settingswin::changedLines(settingedit::shown(*s.config), s.defaults).size());
-                if (count != s.m.nav[i].count) {
-                    s.m.nav[i].count = count;
+                if (count != s.m.nav[i + navOffset].count) {
+                    s.m.nav[i + navOffset].count = count;
                     s.live.doc.dirty("nav");
                 }
             }

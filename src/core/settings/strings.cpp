@@ -9860,6 +9860,11 @@ constexpr Entry kTexts[] = {
     {Text::SimplePad, "Xbox and PlayStation pads play the game",
      "Геймпади Xbox і PlayStation керують грою",
      "Геймпады Xbox и PlayStation управляют игрой"},
+    // 3.0.24-beta.3 (the owner: «пункт, в котором если мы чтото проверяем он плявлялся там»)
+    {Text::ChecksNow, "Checking now", "Перевіряємо зараз", "Проверяем сейчас"},
+    {Text::ChecksOk, "Works ✓", "Працює ✓", "Работает ✓"},
+    {Text::ChecksBad, "A problem - report", "Є проблема — звіт", "Есть проблема — отчёт"},
+    {Text::ChecksSince, "since {1}", "з {1}", "с {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -6,6 +6,7 @@
 #include "win/roext.hpp"
 #include "win/updates_hook.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <cstdlib>
 #include <cstring>
@@ -71,7 +72,7 @@ void startWatcher(const std::string& dir) {
 
 }  // namespace
 
-void startReport(const std::string& shot, const std::string& map) {
+void startReport(const std::string& shot, const std::string& map, const std::string& note) {
     const std::string dir = gameDir();
     const std::string exe = dir + "\\uaro-graphics.exe";
     if (!fileExists(exe)) {
@@ -80,6 +81,11 @@ void startReport(const std::string& shot, const std::string& map) {
     }
     std::string line = "\"" + exe + "\" --report \"" + shot + "\"";
     if (!map.empty()) line += " --map " + map;
+    if (!note.empty()) {  // 3.0.24-beta.3: the words, no quote of theirs breaking the line
+        std::string words = note;
+        std::replace(words.begin(), words.end(), '"', '\'');
+        line += " --note \"" + words + "\"";
+    }
     if (wlog::slot() > 1) line += " --log-slot " + std::to_string(wlog::slot());  // 3.0.3-beta.1: this window's logs
     STARTUPINFOA si{};
     si.cb = sizeof si;
@@ -134,6 +140,25 @@ bool startTestReport(const std::string& file) {
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
     LOG_INFO("test: the settings app sends the result (%s)", file.c_str());
+    return true;
+}
+
+bool startCheckReport(const std::string& file) {
+    const std::string exe = gameDir() + "\\uaro-graphics.exe";
+    if (!fileExists(exe)) return false;
+    std::string line = "\"" + exe + "\" --check-report \"" + file + "\"";
+    if (wlog::slot() > 1) line += " --log-slot " + std::to_string(wlog::slot());
+    STARTUPINFOA si{};
+    si.cb = sizeof si;
+    PROCESS_INFORMATION pi{};
+    if (!CreateProcessA(exe.c_str(), &line[0], nullptr, nullptr, FALSE, BELOW_NORMAL_PRIORITY_CLASS, nullptr,
+                        gameDir().c_str(), &si, &pi)) {
+        LOG_ERROR("checks: uaro-graphics.exe would not start (error %lu)", GetLastError());
+        return false;
+    }
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    LOG_INFO("checks: the settings app sends the mark (%s)", file.c_str());
     return true;
 }
 

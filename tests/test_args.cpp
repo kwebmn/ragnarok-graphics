@@ -138,3 +138,18 @@ TEST(args_update_to_a_version) {
     CHECK(b.to == "3.0.15" && b.mode == Args::Mode::Update);
     CHECK(app::parseArgs(L"--update --to ../x").to.empty());  // a version or nothing
 }
+
+// 3.0.24-beta.3 («Перевіряємо зараз»): a check's «Працює ✓» sent without a window, «Є проблема — звіт»'s words to
+// begin the new report with - read and written back the same
+TEST(args_check_report_and_the_reports_note) {
+    using app::Args;
+    const Args c = app::parseArgs(L"--check-report \"C:\\g\\uaro-graphics\\check.txt\" --log-slot 2");
+    CHECK(c.mode == Args::Mode::CheckReport);
+    CHECK(c.checkFile == L"C:\\g\\uaro-graphics\\check.txt");
+    CHECK_EQ(c.logSlot, 2);
+    const Args r = app::parseArgs(L"--report \"shot.png\" --map prontera --note \"Склад: нова передача (x): \"");
+    CHECK(r.report && r.reportMap == L"prontera");
+    CHECK(r.reportNote == L"Склад: нова передача (x): ");
+    CHECK(app::parseArgs(app::argsLine(c)).checkFile == c.checkFile);
+    CHECK(app::parseArgs(app::argsLine(r)).reportNote == r.reportNote);
+}
