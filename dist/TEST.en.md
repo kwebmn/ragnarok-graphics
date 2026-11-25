@@ -1,3 +1,29 @@
+# uaRO Graphics 3.0.23 — what's new · 2026-11-25
+
+Room walls in 3D for everyone, monsters' bars no longer seen through walls, the crashes on Malangdo, the game on Linux and window fixes.
+
+## 3D view
+
+- **Room walls** now come without «Own ground» too, and on Direct3D 11 — plain, in the room's walls' colour. Neighbouring rooms and the void are not seen through them. To turn off: Alt+O → «3D view» → «Rooms and caves» → «Walls in place of a house's black blocks».
+- **Monsters' health bars** no longer show through houses, towers, posts and Prontera's city wall; through leaves and gaps in a fence they show, as the monster does.
+- **Shop signs** sit over the merchant's head; a shop you have passed no longer hangs in the air before you.
+
+## Game and interface
+
+- **The crashes right after entering Malangdo** (both kinds) are fixed.
+- **«Items» and «Storage»:** the cells over a shop's or a chat room's sign on the street answer clicks and drags again.
+- **The chat no longer takes the arrows:** ↑ ↓ lead the character, and scroll the history only after you click the chat or press Enter.
+- **The guild window** fits the screen; the members' scroll bar can be dragged.
+- **«Shop»:** you see why a thing does not buy — not enough zeny or no more of it.
+- **A new switch «Never turn effects off for the frames»** (Alt+O → «Speed and screen» → «Frames»).
+- **The game on Linux** (Wine, Bottles, Proton): the settings app tells Wine itself to take our graphics from the game's folder — no white screen.
+
+## Fixes
+
+- The minimap after moving to a map of the same size shows the new map.
+- «Reference» in a narrow window: a location's NPCs are no longer drawn over «Who is here».
+- A diagnostics view left on («Ground seams: view», «X-ray») is named on the screen with how to turn it off.
+
 # uaRO Graphics 3.0.23-beta.15 — what's new · 2026-11-25
 
 Cells under signs, the guild window, the reference.
