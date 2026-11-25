@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.23-beta.12 — what's new · 2026-11-25
+
+The crash on Malangdo and shop signs in 3D.
+
+- **The crash right after entering Malangdo** (its second kind): the game fell when it let go of a file not yet in its cache. Such a file is now just left as it is.
+- **Shop signs in the 3D view** now sit over the merchant's head, not where the usual camera would put them. A shop you have passed no longer has its sign hanging in the air before you; behind a wall or behind the camera it is not shown.
+
 # uaRO Graphics 3.0.23-beta.11 — what's new · 2026-11-25
 
 Monsters' bars behind the city wall.
