@@ -1096,6 +1096,8 @@ enum class Text : uint16_t {
     SimpleArrows, SimpleWalkMode, SimpleSpace, SimplePad,
     // 3.0.24-beta.3: «Перевіряємо зараз» in Alt+O
     ChecksNow, ChecksOk, ChecksBad, ChecksSince,
+    // 3.0.24-beta.4: items via packets («Склад»)
+    ItemsNotConnected, ItemsStorageRefused, ItemsNoAnswer, InterfaceStoragePackets, InterfaceStoragePacketsHint,
     Count
 };
 

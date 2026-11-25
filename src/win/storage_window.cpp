@@ -33,6 +33,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/item_window.hpp"
+#include "win/item_net.hpp"
 #include "win/log.hpp"
 #include "win/pad_carry.hpp"
 #include "win/paths.hpp"
@@ -73,6 +74,8 @@ constexpr size_t kMostTyped = 72;  // bytes (3.0.18-beta.72: UTF-8 - 24 letters 
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
+
+bool g_packets = false;  // 3.0.24-beta.4: [interface] storage_packets
 
 struct State {
     iw::BarDrag bar;  // 3.0.18-beta.204: the scroll bar held
@@ -249,6 +252,42 @@ void readStorage(State& s) {
     }
 }
 
+// 3.0.24-beta.4 (items via packets): the storage as the server told it (win/item_net) - its things, their counts;
+// the game's own list gives only the words and the picture of a thing it also holds (its card, its slots' cards)
+void readStoragePackets(State& s) {
+    readStorage(s);
+    std::vector<iw::Item> game = std::move(s.items);
+    std::vector<uint32_t> gameInfos = std::move(s.infos);
+    s.items.clear();
+    s.infos.clear();
+    const auto& names = clienttables::itemNames();
+    const auto& files = clienttables::itemFiles();
+    for (const itemstate::Item& x : itemnet::state().storage()) {
+        iw::Item it;
+        uint32_t info = 0;
+        for (size_t k = 0; k < game.size(); ++k)
+            if (game[k].index == int(x.index) && game[k].id == int(x.id)) {
+                it = game[k];
+                info = gameInfos[k];
+                break;
+            }
+        if (!info) {  // the game has none such: its number's words and picture
+            it.index = int(x.index);
+            it.id = int(x.id);
+            it.identified = x.identified;
+            it.refine = x.refine;
+            const std::string id = std::to_string(x.id);
+            const auto w = names.find(id);
+            it.name = w == names.end() ? "#" + id : utf8Of(widened(hotbar::spaced(w->second), s.codePage));
+            const auto f = files.find(id);
+            if (f != files.end()) it.icon = clienttables::icon(f->second, iw::iconSide(s.scale), 4 * s.scale);
+        }
+        it.count = int(x.amount);
+        s.items.push_back(it);
+        s.infos.push_back(info);
+    }
+}
+
 // Played with the controller - its buttons in the tip («A: у сумку · Y: картка»)
 iw::Texts texts(bool pad = false);
 
@@ -313,6 +352,14 @@ void place(State& s) {
 // A storage thing into the bag at once, as a drag of it let go over «Речі»: the game's drag of it begun (0x3C) and
 // given to the game's «Речі» window's drop (made first when not open) - the game's count window for a stack
 const char* take(State& s, const iw::Item& it) {
+    if (g_packets) {  // 3.0.24-beta.4: the driver's own packet - the whole stack (no count window yet)
+        const itemactions::Result r = itemnet::ask(itemactions::Kind::FromStorage, uint16_t(it.index),
+                                                   uint32_t(std::max(1, it.count)));
+        s.readAt = 0;
+        return r == itemactions::Result::Sent ? "sent by the driver (items via packets)"
+               : r == itemactions::Result::Busy ? "waits for the one before (items via packets)"
+                                                : "not sent (items via packets)";
+    }
     const uint32_t mode = modeNow();
     if (!mode) return "not taken (the game mode not found)";
     if (!modeMsg(kStorageDragMsg, it.index, it.count) || read32(mode + kDragInfo) != 6)
@@ -328,6 +375,7 @@ const char* take(State& s, const iw::Item& it) {
 // The pressed thing let go after a drag: the game's drag of it begun (0x3C, as its own window's press) and let go at
 // once where the cursor is (0x12, as its frame on the button's coming up): over «Речі» its drop takes it
 const char* dropAt(const iw::Item& it) {
+    if (g_packets) return take(state(), it);  // 3.0.24-beta.4: let go out of «Склад» - into the bag by our packet
     int cx = 0, cy = 0;
     if (!readGameCursor(cx, cy)) return "not dropped (no cursor)";
     if (!modeMsg(kStorageDragMsg, it.index, it.count)) return "not dropped (the game mode not found)";
@@ -345,6 +393,10 @@ bool card(const State& s, size_t at) {
 }
 
 bool closeGameWindow() {
+    if (g_packets) {  // 3.0.24-beta.4: the server closes it (0x00f8) and the game's window with it
+        itemnet::ask(itemactions::Kind::CloseStorage, 0, 0);
+        return true;
+    }
     const uint32_t window = gameWindow();
     if (!window || read32(read32(window) + kSendMsgSlot) != kStorageSendMsg) return false;
     reinterpret_cast<SendMsgFn>(uintptr_t(kStorageSendMsg))(window, 0, kButtonMsg, kCloseButton, 0, 0);
@@ -433,9 +485,11 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         s.readAt = 0;
         LOG_INFO("storage: the Kafra storage open - «Склад» shows it (%d of %d places)", s.places, s.most);
     }
+    itemnet::frame();  // 3.0.24-beta.4: the waits' time-outs
     if (now - s.readAt >= kReadMs || read32(kStorageCount) != s.countRead) {
         s.readAt = now;
-        readStorage(s);
+        if (g_packets) readStoragePackets(s);
+        else readStorage(s);
         stashwatch::note(stashbook::Kind::Storage, s.items, s.codePage);  // 3.0.11-beta.286
         stashwatch::prices(s.items);  // 3.0.11-beta.287: the site's market in the tips
     }
@@ -457,6 +511,10 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.shownItems = iw::shownOf(s.items, s.show.tab, s.show.search);
     s.show.also =  // 3.0.11-beta.286
         stashwatch::also(s.show.search, s.codePage, {stashbook::Kind::Storage, stashbook::Kind::Bag});
+    if (g_packets) {  // 3.0.24-beta.4: why an action did not end well, in the footer for a while
+        const std::string words = itemnet::lastWords();
+        if (!words.empty()) s.show.also = words;
+    }
     s.show.scroll = std::clamp(s.show.scroll, 0, iw::mostScroll(s.layout, s.shownItems.size()));
     s.show.caretOn = (now / kBlinkMs) % 2 == 0;
     s.show.hover = -1;
@@ -538,6 +596,17 @@ bool drop(int x, int y, uint32_t drag) {
     if (!s.shown || s.k <= 0) return false;
     const float tx = float(x) * s.k - float(s.layout.x), ty = float(y) * s.k - float(s.layout.y);
     if (!s.layout.glass.contains(tx, ty)) return false;
+    if (g_packets && drag && read32(drag) == 1) {  // 3.0.24-beta.4: a bag thing's drag - the driver's own packet
+        const int place = int(read32(drag + 4)), count = int(read32(drag + 0x10));
+        const itemactions::Result r =
+            itemnet::ask(itemactions::Kind::ToStorage, uint16_t(place), uint32_t(std::max(1, count)));
+        modeMsg(kEndDragMsg, 0, 0);
+        if (s.told++ < 30)
+            LOG_INFO("storage: a bag thing (place %d, %d) let go over «Склад» - %s", place, count,
+                     r == itemactions::Result::Sent ? "sent by the driver" : "not sent");
+        s.readAt = 0;
+        return true;
+    }
     const uint32_t window = gameWindow();
     if (!window || read32(read32(window) + kDropSlot) != kStorageDrop) return false;
     reinterpret_cast<DropFn>(uintptr_t(kStorageDrop))(window, 0, 0, drag);
@@ -548,6 +617,11 @@ bool drop(int x, int y, uint32_t drag) {
 
 bool put(int index, int count) {
     State& s = state();
+    if (g_packets && s.shown) {  // 3.0.24-beta.4: the driver's own packet
+        s.readAt = 0;
+        return itemnet::ask(itemactions::Kind::ToStorage, uint16_t(index), uint32_t(std::max(1, count))) ==
+               itemactions::Result::Sent;
+    }
     const uint32_t window = s.shown ? gameWindow() : 0;
     const uint32_t mode = modeNow();
     if (!window || !mode || read32(read32(window) + kDropSlot) != kStorageDrop) return false;
@@ -638,6 +712,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         if (dragged && s.picked.has(it.index) && s.picked.count() > 1 &&
             !s.layout.glass.contains(tx - float(s.layout.x), ty - float(s.layout.y))) {
             takePicked(s, "the picked dragged out");  // 3.0.18-beta.155: the whole pick
+        } else if (dragged && g_packets && s.layout.glass.contains(tx - float(s.layout.x), ty - float(s.layout.y))) {
+            if (s.told++ < 30) LOG_INFO("storage: #%d dragged within «Склад» - left there", it.id);  // 3.0.24-beta.4
         } else if (dragged) {
             const char* did = dropAt(it);
             s.lastCell = -1;
@@ -780,6 +856,13 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
 }
 
 bool shown() { return state().shown; }
+
+void setPackets(bool on) {
+    if (on != g_packets) LOG_INFO("storage: %s", on ? "items via packets - the driver puts, takes and closes itself "
+                                                       "([interface] storage_packets)"
+                                                    : "the game's own ways (its drag and drop)");
+    g_packets = on;
+}
 
 void beforeGameDraw() {
     State& s = state();

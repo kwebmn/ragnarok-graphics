@@ -498,6 +498,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("shop", flag(running.shopWindow), flag(file.shopWindow)));
         n.shopWindow = file.shopWindow;
     }
+    if (file.storagePackets != running.storagePackets) {  // 3.0.24-beta.4: items via packets, at once
+        u.applied.push_back(change("storage_packets", flag(running.storagePackets), flag(file.storagePackets)));
+        n.storagePackets = file.storagePackets;
+    }
     if (file.storageWindow != running.storageWindow) {  // 3.0.11-beta.115: the Kafra storage, at once
         u.applied.push_back(change("storage", flag(running.storageWindow), flag(file.storageWindow)));
         n.storageWindow = file.storageWindow;

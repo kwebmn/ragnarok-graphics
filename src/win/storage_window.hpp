@@ -27,6 +27,10 @@ namespace uagfx::win::storagewin {
 // a right click the item's card (window 0xC); its ✕ and Esc the window's close (6 / 0x87: the game mode's 0x3F). Its
 // place and tab kept in uaro-graphics\storage-state.txt. On the game's thread.
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
+// 3.0.24-beta.4 (items via packets, stage 1; [interface] storage_packets - the testers' box): the storage's list from
+// the server's packets (win/item_net) and its puts, takes and close sent by the driver itself, not through the game's
+// windows; off - as before
+void setPackets(bool on);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool key(UINT m, WPARAM wp, LPARAM lp);  // its search's keys while it has them

@@ -9865,6 +9865,30 @@ constexpr Entry kTexts[] = {
     {Text::ChecksOk, "Works ✓", "Працює ✓", "Работает ✓"},
     {Text::ChecksBad, "A problem - report", "Є проблема — звіт", "Есть проблема — отчёт"},
     {Text::ChecksSince, "since {1}", "з {1}", "с {1}"},
+    // 3.0.24-beta.4: items via packets («Склад»)
+    {Text::ItemsNotConnected,
+     "No connection to the map server - nothing sent",
+     "Немає з'єднання з сервером карти — нічого не надіслано",
+     "Нет соединения с сервером карты — ничего не отправлено"},
+    {Text::ItemsStorageRefused,
+     "The storage did not take it (full, or such a thing cannot go there)",
+     "Склад не прийняв (повний або таку річ туди не можна)",
+     "Склад не принял (полный или такую вещь туда нельзя)"},
+    {Text::ItemsNoAnswer,
+     "The server did not answer - try again",
+     "Сервер не відповів — спробуйте ще раз",
+     "Сервер не ответил — попробуйте ещё раз"},
+    {Text::InterfaceStoragePackets,
+     "Storage: the new passing of things (beta)",
+     "Склад: нова передача речей (бета)",
+     "Склад: новая передача вещей (бета)"},
+    {Text::InterfaceStoragePacketsHint,
+     "«Склад Кафри» puts and takes things itself, as the server answers - one press, one move; the reason shown "
+     "when the storage does not take a thing. Needs «Склад Кафри» on. For the testers: off - the game's own way.",
+     "«Склад Кафри» сам кладе й забирає речі, як відповідає сервер — одне натискання, одна передача; якщо склад не "
+     "прийняв річ, видно чому. Потрібен увімкнений «Склад Кафри». Для тестерів: вимкнено — як у грі.",
+     "«Склад Кафри» сам кладёт и забирает вещи, как отвечает сервер — одно нажатие, одна передача; если склад не "
+     "принял вещь, видно почему. Нужен включённый «Склад Кафри». Для тестеров: выключено — как в игре."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

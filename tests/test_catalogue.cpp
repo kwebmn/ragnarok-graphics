@@ -200,9 +200,12 @@ TEST(catalogue_feeds_the_interface_sections) {
 // row says about itself
 TEST(catalogue_the_laboratory_lists_the_trials_by_area) {
     const std::vector<catalogue::LabSection> lab = catalogue::trials();
-    CHECK_EQ(lab.size(), size_t(2));  // 3.0.21-beta.16: the 3D view's four and RTX Remix («Швидкість і екран») left
-    if (lab.size() != 2) return;
-    CHECK(lab[1].area == catalogue::Area::Speed);
+    // 3.0.21-beta.16: the 3D view's four and RTX Remix («Швидкість і екран») left; 3.0.24-beta.4: «Склад»'s new passing
+    // of things («Інтерфейс»)
+    CHECK_EQ(lab.size(), size_t(3));
+    if (lab.size() != 3) return;
+    CHECK(lab[1].area == catalogue::Area::Interface);
+    CHECK(lab[2].area == catalogue::Area::Speed);
     CHECK(lab[0].area == catalogue::Area::View3d);  // the catalogue's order
     CHECK_EQ(int(lab[0].rows.size()), 4);
     CHECK_EQ(lab[0].rows[0]->key, std::string("view3d.shadows"));
@@ -493,5 +496,5 @@ TEST(catalogue_trials_decided_for_3_0_21) {
     for (const catalogue::LabSection& s : catalogue::trials())
         for (const catalogue::Row* r : s.rows) trials.push_back(r->key);
     CHECK(trials == (std::vector<std::string>{"view3d.shadows", "view3d.dense_crowns", "view3d.crown_volume",
-                                              "view3d.crown_light", "renderer.remix"}));
+                                              "view3d.crown_light", "interface.storage_packets", "renderer.remix"}));
 }

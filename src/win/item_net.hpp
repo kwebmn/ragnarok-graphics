@@ -1,0 +1,22 @@
+#pragma once
+#include <cstdint>
+#include <string>
+
+#include "core/item_actions.hpp"
+#include "core/item_state.hpp"
+
+namespace uagfx::win::itemnet {
+
+// 3.0.24-beta.4 (docs/superpowers/specs/2026-11-25-items-via-packets-design.md, stage 1 «Склад»): the driver's own
+// hold on the things - the server's packets (win/packet_tap) make the bag and the storage (core/item_state); an action
+// goes to the map server by the pad's session (uapad::runtime::sendPacket) and waits for its answer
+// (core/item_actions). On the game's thread.
+void packet(uint16_t id, const uint8_t* p);
+const itemstate::State& state();
+itemactions::Result ask(itemactions::Kind k, uint16_t index, uint32_t amount);
+bool waiting(itemstate::Where w, uint16_t index);
+void frame();  // the waits' time-outs
+// The window's words after an action that did not end well ("" none; kept 5 s)
+std::string lastWords();
+
+}  // namespace uagfx::win::itemnet

@@ -1748,6 +1748,11 @@ bool walkTo(int x, int y) {
     return true;
 }
 
+bool sendPacket(std::vector<uint8_t> p) {
+    if (!healthy() || !S().session || p.size() < 2) return false;
+    return S().session->request(std::move(p), GetTickCount());
+}
+
 bool walkTarget(int& x, int& y) {
     if (!healthy() || !S().session) return false;
     const std::optional<Cell> at = S().session->controller().walkTarget();

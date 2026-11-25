@@ -962,6 +962,7 @@ struct Config {
     // 3.0.11-beta.115: [interface] storage - the Kafra storage (win/storage_window: «Склад», «Речі» beside it) in
     // place of the game's storage window
     bool storageWindow = false;
+    bool storagePackets = false;  // 3.0.24-beta.4: [interface] storage_packets - «Склад» by the driver's own packets
     // 3.0.11-beta.116: [interface] trade - the trade (win/trade_window: «Обмін», «Речі» beside it) in place of the
     // game's trade window
     bool tradeWindow = false;
