@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.23-beta.5 — what's new · 2026-11-25
+
+A hint about diagnostics left on.
+
+- **Diagnostics on the screen:** with «Ground seams view» or «X-ray of the AI pictures» on (they change the picture - coloured strips, highlights), each map shows «Diagnostics on: … - to turn it off: Ctrl+~ → «Diagnostics»». Before, such a view could stay on and its strips looked like a fault.
+
 # uaRO Graphics 3.0.23-beta.4 — what's new · 2026-11-25
 
 A crash on entering Malangdo.
