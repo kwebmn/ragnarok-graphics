@@ -164,6 +164,9 @@ void MapWorld::setWallsWanted(bool wanted) {
     EnterCriticalSection(&shared_->lock);
     shared_->wallsWanted = wanted;
     LeaveCriticalSection(&shared_->lock);
+    // not wanted: the walls' own ground let go (its pictures went to the renderer and are gone here) - read again,
+    // whole, when they are wanted again
+    if (!wanted && own_ && own_->wallsOnly) own_.reset();
     if (wanted && !own_ && !ownWanted_) ask(shown_);  // read again for its walls (none read for this map yet)
 }
 

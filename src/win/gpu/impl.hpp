@@ -1428,12 +1428,15 @@ struct Renderer::Impl {
         ownState.modelsTurn.next();
         // off for 10 s (the switch) - its textures and the map's own ground let go; for less (Pause, to compare) kept
         // 3.0.22-beta.30 (the owner's video session: the sky black a moment after Pause): Pause's however long
-        if (effects.ownGround || effects.held) {
+        // 3.0.23-beta.6 (R-NCQWGU: the walls alone dropped each picture and made again of pictures let go - grey, 0
+        // of 4 textures): kept while the 3D view wants the room walls; let go 10 s after, read again at its return
+        if (effects.ownGround || effects.held || ownWallsWanted()) {
             ownOffSince = 0;
         } else if (!ownOffSince) {
             ownOffSince = GetTickCount64();
         } else if (GetTickCount64() - ownOffSince > 10000) {
             if (ownState.serial) dropOwnGround();
+            mapWorld.setWallsWanted(false);
             mapWorld.setOwnGround(false);
         }
         waterCopied = false;  // 0.19: its water copies what is under it anew
