@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.23-beta.9 — what's new · 2026-11-25
+
+Monsters' bars behind posts.
+
+- **Monsters' health bars in the 3D view** no longer show over a post, a column or another model a monster stands right behind.
+
 # uaRO Graphics 3.0.23-beta.8 — what's new · 2026-11-25
 
 Room walls on Direct3D 11 and bars past a wall.
