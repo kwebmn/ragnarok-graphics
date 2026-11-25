@@ -309,7 +309,9 @@ int dropWarpDots(std::vector<uint32_t>& argb, int width, int height) {
 }
 
 MapPicture prepare(const std::vector<uint32_t>& given, int width, int height) {
+    static uint64_t serials = 0;  // 3.0.23-beta.3 (R-ZUPEYR): each picture its own
     MapPicture m;
+    m.serial = ++serials;
     if (width <= 0 || height <= 0 || given.size() < size_t(width) * size_t(height)) return m;
     // 3.0.11-beta.201: the picture's warp dots out (the minimap's rings mark the warps) - on a copy, where it has any
     std::vector<uint32_t> undotted;
@@ -452,8 +454,8 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
         return ox >= 0 && oy >= 0 && ox + bw <= mc->w && oy + bh <= mc->h;
     };
     int ox = 0, oy = 0;
-    const bool same = mc->level == pic->levels.front().px.data() && mc->cellPx == v.cellPx && mc->mapW == sc.map.w &&
-                      mc->mapH == sc.map.h;
+    const bool same = mc->serial == pic->serial && pic->serial != 0 && mc->cellPx == v.cellPx &&
+                      mc->mapW == sc.map.w && mc->mapH == sc.map.h;
     if (!same || !offsets(ox, oy)) {
         const int margin = std::max(8, bw / 3);
         mc->w = bw + 2 * margin;
@@ -461,7 +463,7 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
         mc->cellPx = v.cellPx;
         mc->left = v.left - float(margin) / v.cellPx;
         mc->top = v.top + float(margin) / v.cellPx;
-        mc->level = pic->levels.front().px.data();
+        mc->serial = pic->serial;
         mc->mapW = sc.map.w;
         mc->mapH = sc.map.h;
         panel::Picture made;

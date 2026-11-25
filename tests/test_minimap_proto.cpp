@@ -640,3 +640,32 @@ TEST(minimap_proto_the_round_trips_plate_tells_the_exchange) {
         CHECK(x.text.find("↓") == std::string::npos && x.text != "КБ/с");
 }
 
+
+// 3.0.23-beta.3 (R-ZUPEYR «перемістився з Альдебарана на Лютие ... а карта осталась Альдебарана»): the cache kept by
+// the picture's pixel buffer's address - aldebaran and xmas_fild01 both 280x280, their 512x512 pictures given the same
+// memory: the new map's square copied out of the old map's pixels. Each prepared picture has its own serial now
+TEST(minimap_proto_cache_follows_a_new_picture_in_the_old_memory) {
+    const minimap::Layout L = minimap::layout(1920, 1080, 1.0f, false, 0, true);
+    std::vector<uint32_t> red(64 * 64, 0xFFFF0000u), blue(64 * 64, 0xFF0000FFu);
+    minimap::MapPicture mp = minimap::prepare(red, 64, 64);
+    minimap::Scene sc;
+    sc.picture = &mp;
+    sc.map = minimap::MapSize{280, 280};
+    sc.player = minimap::Cell{140, 140};
+    minimap::MapCache cache;
+    sc.cache = &cache;
+    panel::Picture square;
+    minimap::paintMapSquare(square, L, sc);
+    // the next map's picture, its pixels written into the same buffer (as the allocator may give it)
+    const uint32_t* before = mp.levels.front().px.data();
+    minimap::MapPicture next = minimap::prepare(blue, 64, 64);
+    for (size_t i = 0; i < mp.levels.size() && i < next.levels.size(); ++i)
+        std::copy(next.levels[i].px.begin(), next.levels[i].px.end(), mp.levels[i].px.begin());
+    mp.serial = next.serial;
+    CHECK(mp.levels.front().px.data() == before);
+    minimap::paintMapSquare(square, L, sc);
+    CHECK_EQ(cache.made, 2);  // made anew for the new picture
+    // off the player's mark in the middle
+    const uint32_t at = square.px[size_t(square.height / 4) * size_t(square.width) + size_t(square.width / 4)];
+    CHECK((at & 0xFF) > ((at >> 16) & 0xFF));  // blue, not the old red
+}

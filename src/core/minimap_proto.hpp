@@ -104,6 +104,9 @@ struct MapPicture {
         std::vector<uint32_t> px;  // premultiplied
     };
     std::vector<Level> levels;  // the picture's own size first
+    // 3.0.23-beta.3 (R-ZUPEYR): one of its own for each prepared picture - a cache's key (its buffer's address is not:
+    // the next map's picture may take the same memory)
+    uint64_t serial = 0;
 };
 // See-through: no alpha, or min(red, blue) over green by more than 110 (inline: the world map's too, without the rest)
 inline bool keyedPink(uint32_t argb) {
@@ -163,7 +166,7 @@ struct MapCache {
     std::vector<uint32_t> px;
     int w = 0, h = 0;
     float left = 0, top = 0, cellPx = 0;  // the cache's top-left corner in cells, its zoom
-    const void* level = nullptr;          // the picture's level it was made of
+    uint64_t serial = 0;                  // 3.0.23-beta.3: the picture it was made of (MapPicture::serial)
     int mapW = 0, mapH = 0;
     int made = 0;  // how many times made (the log, the tests)
 };
