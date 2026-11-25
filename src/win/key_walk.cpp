@@ -47,6 +47,7 @@ bool spaceKey(State& s, UINT m) {
     }
     if (s.spaceDown) return true;  // its auto repeat: one action a press
     if (!s.space || !inGameWorld() || modifier() || !chatwin::focusInChat() || !chatwin::inputEmpty() ||
+        chatwin::engaged() ||   // 3.0.23-beta.14: the chat taken up - its Space a space
         chatwin::gameBattle())  // the game's battle mode: its Space opens the chat
         return false;
     s.spaceDown = true;
@@ -119,7 +120,7 @@ bool key(UINT m, WPARAM wp, LPARAM) {
     g.enabled = s.enabled;
     const std::string map = readGameMap();
     g.inGame = !map.empty();
-    g.chatEmpty = chatwin::inputEmpty();
+    g.chatEmpty = chatwin::inputEmpty() && !chatwin::engaged();  // 3.0.23-beta.14: taken up: its arrows
     g.modifier = modifier();
     g.otherField = !chatwin::focusInChat();  // the final review: a count's or a name's field keeps its arrows
     if (!uagfx::keywalk::arrowWalks(g)) return false;

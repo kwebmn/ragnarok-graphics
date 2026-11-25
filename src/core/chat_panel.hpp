@@ -232,6 +232,13 @@ int scrollAt(const Layout& L, size_t total, float y);
 // key - ↑ ↓ a row, PgUp PgDn a page of `rows` (less one), End the newest
 enum class ScrollKey : uint8_t { Up, Down, PageUp, PageDown, End };
 int scrollBy(int scroll, int most, int rows, ScrollKey key);
+// 3.0.23-beta.14 (the owner: «чат работал когда нажимаешь на строку в чате а не когда просто в игре нажимаешь кнопки
+// ходьбы»): the game's field always has the keys in play - the chat is «taken up» only by a click on it, Enter on an
+// empty line or a letter typed; let go by Enter (sending or on an empty line again), Esc and a click away. Only then
+// do ↑ ↓ (its history, the line) go to it - else to walking
+enum class EngageEvent : uint8_t { ClickOnChat, ClickAway, Enter, Escape, Letter };
+bool engagedAfter(bool engaged, EngageEvent e, bool lineEmpty);
+bool arrowsToChat(bool engaged, bool fieldHasKeys);
 // 3.0.22-beta.48 (the owner: «одна высота пускай будет свернутый чат максимально»): F10's rows, round - the last the
 // chat folded to its newest line (its tabs and its field kept); the tabs' «—» goes there and back
 constexpr int kHeights[] = {7, 12, 4, 1};

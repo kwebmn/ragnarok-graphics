@@ -112,6 +112,7 @@ struct State {
     bool sheetShown = false;
     bool on = false, shown = false, moved = false, forced = false, oldTold = false, folded = false;
     bool overChat = false;  // 3.0.22-beta.48: the pointer over it (its keys scroll the history)
+    bool engaged = false;   // 3.0.23-beta.14: taken up (cp::engagedAfter) - only then ↑ ↓ are its
     int heightBefore = 0, rowsBefore = 0;  // 3.0.22-beta.48: «—»'s way back
     int backTold = 0, backLen = -1;        // 3.0.22-beta.48: Backspace watched (the owner's «выпадает с чата»)
     bool backFocus = false;
@@ -486,6 +487,8 @@ bool inputEmpty() {
     const uint32_t words = wordsEdit();
     return !words || editText(words).empty();
 }
+
+bool engaged() { return state().engaged; }
 
 bool focusInChat() {
     const uint32_t focus = read32(kFocus);
@@ -1113,6 +1116,13 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         return true;
     }
     const cp::Hit h = cp::hitTest(s.layout, s.rows, s.show, tx - float(s.layout.x), ty - float(s.layout.y));
+    if (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN) {  // 3.0.23-beta.14: a click on it takes it up, away lets it go
+        const bool was = s.engaged;
+        s.engaged = cp::engagedAfter(s.engaged, h.part == cp::Part::None ? cp::EngageEvent::ClickAway
+                                                                         : cp::EngageEvent::ClickOnChat,
+                                     inputEmpty());
+        if (was != s.engaged) LOG_INFO("chat: %s by a click", s.engaged ? "taken up" : "let go");
+    }
     if (h.part == cp::Part::None) {
         if (m == WM_LBUTTONDOWN && s.show.menuLine >= 0) {  // 3.0.11-beta.242: a press away closes a name's menu
             s.show.menuLine = -1;
@@ -1351,6 +1361,17 @@ bool searchKey(UINT m, WPARAM wp, LPARAM lp) {
 bool key(UINT m, WPARAM wp, LPARAM lp) {
     State& s = state();
     (void)lp;
+    // 3.0.23-beta.14: Enter, Esc and a letter typed take the chat up or let it go (cp::engagedAfter)
+    if (m == WM_KEYDOWN && (wp == VK_RETURN || wp == VK_ESCAPE) && s.shown) {
+        const bool was = s.engaged;
+        s.engaged = cp::engagedAfter(s.engaged, wp == VK_RETURN ? cp::EngageEvent::Enter : cp::EngageEvent::Escape,
+                                     inputEmpty());
+        if (was != s.engaged)
+            LOG_INFO("chat: %s (%s)", s.engaged ? "taken up" : "let go", wp == VK_RETURN ? "Enter" : "Esc");
+    } else if (m == WM_CHAR && wp >= 32 && wp != 127 && !s.engaged && focusInChat()) {
+        s.engaged = cp::engagedAfter(s.engaged, cp::EngageEvent::Letter, inputEmpty());
+        LOG_INFO("chat: taken up (a letter typed)");
+    }
     if (m == WM_CHAR && wp == '\t' && s.swallowTab) {  // the Tab the channel took: not into the game's field
         s.swallowTab = false;
         return true;
@@ -1406,7 +1427,10 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
         GetKeyState(VK_CONTROL) >= 0 && GetKeyState(VK_MENU) >= 0) {
         const uint32_t words = wordsEdit();
         const bool keys = words && read32(kFocus) == words;
-        if ((keys || s.overChat) && !(wp == VK_END && keys && !editText(words).empty())) {
+        // 3.0.23-beta.14: ↑ ↓ only with the chat taken up (in play the game's field always has the keys: they walk)
+        const bool upDown = wp == VK_UP || wp == VK_DOWN;
+        const bool mine = upDown ? cp::arrowsToChat(s.engaged, keys) : keys || s.overChat;
+        if (mine && !(wp == VK_END && keys && !editText(words).empty())) {
             const cp::ScrollKey k = wp == VK_UP     ? cp::ScrollKey::Up
                                     : wp == VK_DOWN  ? cp::ScrollKey::Down
                                     : wp == VK_PRIOR ? cp::ScrollKey::PageUp

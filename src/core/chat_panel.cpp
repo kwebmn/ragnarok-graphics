@@ -12,6 +12,19 @@
 
 namespace uagfx::chatpanel {
 
+bool engagedAfter(bool engaged, EngageEvent e, bool lineEmpty) {
+    switch (e) {
+        case EngageEvent::ClickOnChat:
+        case EngageEvent::Letter: return true;
+        case EngageEvent::Enter: return lineEmpty && !engaged;
+        case EngageEvent::Escape:
+        case EngageEvent::ClickAway: return false;
+    }
+    return engaged;
+}
+
+bool arrowsToChat(bool engaged, bool fieldHasKeys) { return engaged && fieldHasKeys; }
+
 int scrollBy(int scroll, int most, int rows, ScrollKey key) {
     const int page = std::max(1, rows - 1);
     int to = scroll;

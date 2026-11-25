@@ -261,3 +261,24 @@ TEST(chat_panel_f10_heights_end_folded) {
     CHECK_EQ(uagfx::chatpanel::kHeights[3], 1);
     CHECK_EQ(uagfx::chatpanel::kFoldedHeight, 3);
 }
+
+// 3.0.23-beta.14 (the owner: «чат работал когда нажимаешь на строку в чате а не когда просто в игре нажимаешь кнопки
+// ходьбы туда сюда, получается что чат забирает эти кнопки»): the chat takes the walking keys only once it is taken
+// up - a click on it, Enter on an empty line, a letter typed; Enter that sends, Enter on an empty line again, Esc and a
+// click away let it go
+TEST(chat_panel_taken_up_by_a_click_enter_or_a_letter) {
+    using E = chatpanel::EngageEvent;
+    namespace cp = chatpanel;
+    CHECK(!cp::engagedAfter(false, E::ClickAway, true));
+    CHECK(cp::engagedAfter(false, E::ClickOnChat, true));
+    CHECK(cp::engagedAfter(false, E::Enter, true));     // Enter on an empty line: to type
+    CHECK(!cp::engagedAfter(true, E::Enter, true));     // again: let go
+    CHECK(!cp::engagedAfter(true, E::Enter, false));    // sends: let go
+    CHECK(!cp::engagedAfter(false, E::Enter, false));
+    CHECK(cp::engagedAfter(false, E::Letter, true));
+    CHECK(!cp::engagedAfter(true, E::Escape, false));
+    CHECK(!cp::engagedAfter(true, E::ClickAway, false));
+    CHECK(cp::arrowsToChat(true, true));
+    CHECK(!cp::arrowsToChat(false, true));   // the game's field has the keys, the chat not taken up: walking
+    CHECK(!cp::arrowsToChat(true, false));
+}

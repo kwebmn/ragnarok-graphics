@@ -38,6 +38,8 @@ bool key(UINT m, WPARAM wp, LPARAM lp);
 bool inputEmpty();
 // 3.0.18-beta.208 (the walk mode): the game's focus is the chat's words or name field, or no field at all
 bool focusInChat();
+// 3.0.23-beta.14: taken up by a click on it, Enter on an empty line or a letter (core/chat_panel engagedAfter)
+bool engaged();
 void clearLine();  // the words' field emptied (the walk mode's Esc)
 bool gameBattle();  // the game's battle mode (/bm) on
 // 3.0.18-beta.134 (the pad analysis: chat on the controller): the channel round (near, party, guild - as Tab), the
