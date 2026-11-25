@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.23-beta.13 — what's new · 2026-11-25
+
+The game on Linux (Wine, Bottles, Proton).
+
+- **Under Wine the settings app now tells Wine itself to take ddraw and dinput8 from the game's folder** — for uaRO.exe only. Before, Wine put in its own ddraw and the game stood at a white screen without our graphics. Open the settings app once and start the game from it.
+
 # uaRO Graphics 3.0.23-beta.12 — what's new · 2026-11-25
 
 The crash on Malangdo and shop signs in 3D.
