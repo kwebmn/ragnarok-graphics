@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.23-beta.7 — what's new · 2026-11-25
+
+Room walls in 3D: a fix.
+
+- **Room walls without «Own ground»** now have the wall's picture, not plain grey: in 3.0.23-beta.6 they were built anew every frame from pictures already let go (and flooded the log with the same lines).
+
 # uaRO Graphics 3.0.23-beta.6 — what's new · 2026-11-25
 
 Room walls in 3D for everyone.
