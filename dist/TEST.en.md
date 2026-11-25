@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.24-beta.5 — what's new · 2026-11-26
+
+Reset all settings.
+
+- **An «All to defaults» button** at the bottom of the Alt+O window — in the simple and the full mode. Press it and it asks «Once more - reset all»; a second press within 4 seconds brings every setting of the window back as installed. One group alone is still reset by «Defaults» beside its name.
+
 # uaRO Graphics 3.0.24-beta.4 — what's new · 2026-11-26
 
 Storage: the new passing of things (for testers).
