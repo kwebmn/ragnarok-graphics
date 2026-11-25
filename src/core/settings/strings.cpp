@@ -9883,12 +9883,12 @@ constexpr Entry kTexts[] = {
      "Склад: нова передача речей (бета)",
      "Склад: новая передача вещей (бета)"},
     {Text::InterfaceStoragePacketsHint,
-     "«Склад Кафри» puts and takes things itself, as the server answers - one press, one move; the reason shown "
-     "when the storage does not take a thing. Needs «Склад Кафри» on. For the testers: off - the game's own way.",
+     "«Kafra storage» puts and takes things itself, as the server answers - one press, one move; the reason shown "
+     "when the storage does not take a thing. Needs «Kafra storage» on. For the testers: off - the game's own way.",
      "«Склад Кафри» сам кладе й забирає речі, як відповідає сервер — одне натискання, одна передача; якщо склад не "
      "прийняв річ, видно чому. Потрібен увімкнений «Склад Кафри». Для тестерів: вимкнено — як у грі.",
-     "«Склад Кафри» сам кладёт и забирает вещи, как отвечает сервер — одно нажатие, одна передача; если склад не "
-     "принял вещь, видно почему. Нужен включённый «Склад Кафри». Для тестеров: выключено — как в игре."},
+     "«Склад Кафры» сам кладёт и забирает вещи, как отвечает сервер — одно нажатие, одна передача; если склад не "
+     "принял вещь, видно почему. Нужен включённый «Склад Кафры». Для тестеров: выключено — как в игре."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -9,11 +9,11 @@ const std::vector<Check>& all() {
     static const std::vector<Check> list = {
         {"storage_packets", "3.0.24-beta.4", "interface.storage_packets",
          {"Storage: the new passing of things", "Склад: нова передача речей", "Склад: новая передача вещей"},
-         {"Turn «Склад Кафри» and this on. At a Kafra: drag a stack from the bag in, double-click to take it back, "
+         {"Turn «Kafra storage» and this on. At a Kafra: drag a stack from the bag in, double-click to take it back, "
           "click one cell fast - one move.",
           "Увімкніть «Склад Кафри» і цю галочку. У Кафри: перетягніть пачку із сумки, двічі клацніть - забрати, "
           "швидко клацайте по одній ячейці - одна передача.",
-          "Включите «Склад Кафри» и эту галочку. У Кафры: перетащите пачку из сумки, двойной клик - забрать, "
+          "Включите «Склад Кафры» и эту галочку. У Кафры: перетащите пачку из сумки, двойной клик - забрать, "
           "быстро кликайте по одной ячейке - одна передача."}},
         {"settings_simple", "3.0.24-beta.2", "",
          {"Simple settings", "Простий режим налаштувань", "Простой режим настроек"},
