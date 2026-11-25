@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.23-beta.3 — what's new · 2026-11-25
+
+The minimap after a move to another map.
+
+- **The minimap** no longer keeps the previous map's picture after a move to a map of the same size (for example, from Al De Baran to Lutie Field): it always draws the new one now.
+
 # uaRO Graphics 3.0.23-beta.2 — what's new · 2026-11-22
 
 Never turn effects off for the frames.
