@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.23-beta.11 — what's new · 2026-11-25
+
+Monsters' bars behind the city wall.
+
+- **Monsters' health bars in the 3D view** no longer show through Prontera's city wall and other walls whose picture has see-through spots (battlements, windows): the sight check now looks whether the picture is solid at that place. Through leaves and gaps in a fence the bar still shows.
+- A monster standing right behind a wall has its bar hidden too.
+
 # uaRO Graphics 3.0.23-beta.10 — what's new · 2026-11-25
 
 Monsters' bars behind houses and towers.
