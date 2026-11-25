@@ -190,7 +190,11 @@ bool spanIn(const Box& b, const float from[3], const float to[3], float& t0, flo
 
 bool boxHides(const Box& b, const float eye[3], const float to[3]) {
     float t0 = 0, t1 = 0;
-    if (!spanIn(b, eye, to, t0, t1) || t0 <= 0.0f || t1 >= 1.0f) return false;  // missed, or an end in it
+    if (!spanIn(b, eye, to, t0, t1) || t1 >= 1.0f) return false;  // missed, or the place in it
+    // 3.0.23-beta.8 (R-8R7XNK): the eye in a wall's box (a thin, tall slab - the eye pressed into the wall): what is
+    // out past it hidden; the eye in a fat box (a tree's crown, a house's coarse box) hides nothing
+    if (t0 <= 0.0f)
+        return std::min(b.half[0], b.half[2]) <= kThinWallHalf && b.half[1] >= kThinWallLeastHalfHigh;
     Box core = b;
     for (float& h : core.half) h *= kHideShare;
     return spanIn(core, eye, to, t0, t1) && t0 > 0.0f && t1 < 1.0f;

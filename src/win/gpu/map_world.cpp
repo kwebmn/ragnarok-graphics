@@ -53,6 +53,8 @@ struct MapWorld::Shared {
     bool doneWallsColourKnown = false;
     MapWorld::VaultRock doneRock;             // 3.0.20-beta.54: a dungeon's own rock for its vault
     rooms::Map doneRooms;                     // 3.0.20-beta.57: a house's rooms
+    terrain::Mesh doneFlatWalls;              // 3.0.23-beta.8: the room walls' mesh alone (Direct3D 11)
+    bool flatWalls = false;                   // 3.0.23-beta.8: wanted (Direct3D 11's 3D view)
     bool ownWanted = false;                 // 3.0.4-beta.10: the own ground read with the map
     bool roomWalls = true;                  // 3.0.20-beta.71: [view3d] room_walls
     bool wallsWanted = false;               // 3.0.23-beta.6: the own ground for its walls alone
@@ -110,6 +112,7 @@ void MapWorld::setMap(const std::string& name) {
     wallsColourKnown_ = false;
     rock_ = VaultRock{};
     rooms_ = rooms::Map{};
+    flatWalls_ = terrain::Mesh();  // 3.0.23-beta.8
     placed_.clear();
     lamps_.clear();
     seen_.clear();
@@ -158,6 +161,15 @@ void MapWorld::setOwnGround(bool wanted) {
     if (!own_ || own_->wallsOnly) ask(shown_);  // read again, with it (whole)
 }
 
+void MapWorld::setFlatWalls(bool wanted) {
+    if (wanted == flatWallsWanted_) return;
+    flatWallsWanted_ = wanted;
+    EnterCriticalSection(&shared_->lock);
+    shared_->flatWalls = wanted;
+    LeaveCriticalSection(&shared_->lock);
+    if (wanted && flatWalls_.indices.empty()) ask(shown_);  // read again for them
+}
+
 void MapWorld::setWallsWanted(bool wanted) {
     if (wanted == wallsWanted_) return;
     wallsWanted_ = wanted;
@@ -193,6 +205,7 @@ void MapWorld::poll() {
         wallsColourKnown_ = shared_->doneWallsColourKnown;
         rock_ = std::move(shared_->doneRock);
         rooms_ = std::move(shared_->doneRooms);
+        flatWalls_ = std::move(shared_->doneFlatWalls);  // 3.0.23-beta.8
         own_ = std::move(shared_->doneOwn);  // 3.0.4-beta.10
         if (!ownWanted_ && !(wallsWanted_ && own_ && own_->wallsOnly)) own_.reset();  // read before it was turned off
         if (own_) own_->serial = ++ownSerial_;
@@ -407,6 +420,7 @@ void MapWorld::loop() {
         ground_heights::Ground ground;
         MapWorld::VaultRock rock;        // 3.0.20-beta.54
         rooms::Map roomsOfMap;           // 3.0.20-beta.57
+        terrain::Mesh flatWallsMesh;     // 3.0.23-beta.8: Direct3D 11's room walls
         std::unique_ptr<OwnGround> own;  // 3.0.4-beta.10
         if (ok) {
             const std::string gnd = "data\\" + name + ".gnd";
@@ -728,9 +742,22 @@ void MapWorld::loop() {
             const bool wantRock = cave_vault::forMap(name);
             // 3.0.20-beta.57 (R-J3GKD9): a house's rooms - its floors joined side to side
             const bool wantRooms = cave_vault::ceilingFor(name, outdoors(name));
-            if (!gfrom.empty() && (wantBare || wantRock || wantRooms)) try {
+            // 3.0.23-beta.8: Direct3D 11's room walls - their mesh alone (no own ground there)
+            EnterCriticalSection(&shared_->lock);
+            const bool flatWanted = shared_->flatWalls;
+            LeaveCriticalSection(&shared_->lock);
+            const bool wantFlat = flatWanted && roomWalls && pitwalls::wallsFor(name);
+            if (!gfrom.empty() && (wantBare || wantRock || wantRooms || wantFlat)) try {
                 gnd::Ground lite;
                 const bool parsed = gnd::parse(gb.data(), gb.size(), lite, why);
+                if (parsed && wantFlat) {
+                    flatWallsMesh = pitwalls::build(lite, terrain::lightmapAtlas(lite), terrain::Sun{},
+                                                    cave_vault::kCeilingFlat);
+                    if (!flatWallsMesh.indices.empty())
+                        LOG_INFO("map objects: %s - its room walls for the 3D view, %u faces (Direct3D 11's, flat in "
+                                 "the walls' colour; [view3d] room_walls)", name.c_str(),
+                                 unsigned(flatWallsMesh.indices.size() / 6));
+                }
                 if (parsed && wantRooms) {
                     roomsOfMap = rooms::build(lite);
                     float lowest = 0.0f, highest = 0.0f;
@@ -914,6 +941,8 @@ void MapWorld::loop() {
         }
         // 3.0.22-beta.22 (R-GK3ZCT): the pits' walls up to the room's ceiling - its walls' height by the models, as
         // the 3D view's ceiling over the room's floor (cave_vault::buildCeiling)
+        if (!flatWallsMesh.indices.empty())  // 3.0.23-beta.8: Direct3D 11's likewise
+            pitwalls::raise(flatWallsMesh, walls > 0.0f ? walls + cave_vault::kCeilingOver : cave_vault::kCeilingFlat);
         if (own && own->pitWalls) {
             const float tall = walls > 0.0f ? walls + cave_vault::kCeilingOver : cave_vault::kCeilingFlat;
             pitwalls::raise(own->outskirts, tall);
@@ -930,6 +959,7 @@ void MapWorld::loop() {
         shared_->doneWallsColourKnown = wallsColourKnown;
         shared_->doneRock = std::move(rock);
         shared_->doneRooms = std::move(roomsOfMap);
+        shared_->doneFlatWalls = std::move(flatWallsMesh);  // 3.0.23-beta.8
         shared_->doneOwn = std::move(own);
         shared_->doneOk = ok;
         shared_->doneReady = true;

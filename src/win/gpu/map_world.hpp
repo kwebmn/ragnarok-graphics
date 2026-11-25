@@ -98,6 +98,10 @@ public:
     // 3.0.23-beta.6: the own ground read for a map under a roof even with «Своя земля» off - its walls alone for the 3D
     // view (OwnGround::wallsOnly); turned on for a map read without it, the map is read again
     void setWallsWanted(bool wanted);
+    // 3.0.23-beta.8 (the owner: «стены комнат на Direct3D 11»): the room walls' mesh alone read with a map under a roof
+    // (core/pit_walls, raised to the ceiling) - Direct3D 11's 3D view draws them flat (core/flat_walls); empty: none
+    void setFlatWalls(bool wanted);
+    const terrain::Mesh& flatWalls() const { return flatWalls_; }
     // 3.0.22-beta.16 (the owner's R-D675ZA «склейка не очень», R-PTSZNW «горы в небе»): the outskirts' hills and
     // mountains - off while the horizon panorama is on (its own land rises past the map's edge; the outskirts' hid its
     // mountains' feet, their olive slopes a second land before it); from the next map read
@@ -137,6 +141,8 @@ private:
     bool ownWanted_ = false;          // 3.0.4-beta.10
     bool roomWalls_ = true;           // 3.0.20-beta.71
     bool wallsWanted_ = false;        // 3.0.23-beta.6
+    bool flatWallsWanted_ = false;    // 3.0.23-beta.8
+    terrain::Mesh flatWalls_;         // 3.0.23-beta.8
     bool outskirtsRelief_ = true;     // 3.0.22-beta.16
     uint32_t asked_ = 0, taken_ = 0;  // 3.0.6-beta.3: the reads' numbers - the last asked for, the last taken
     std::unique_ptr<OwnGround> own_;

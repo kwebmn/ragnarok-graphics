@@ -600,6 +600,13 @@ private:
     gamemodels::Leaves leaves11_;  // 3.0.20-beta.16: placed a node each on the own ground's threads
     ID3D11Buffer* leafVertices_ = nullptr;
     UINT leafVertexBytes_ = 0;
+    // 3.0.23-beta.8 (the owner: «стены комнат на Direct3D 11»): the 3D view's room walls, flat (core/flat_walls)
+    void drawFlatWalls11();
+    FrameRecord wallRec_;
+    std::vector<own_ground::Tl1> wallTl_;
+    ID3D11Buffer* wallVertices_ = nullptr;
+    UINT wallVertexBytes_ = 0;
+    std::string wallsTold_;
     struct SeamBatch11 {    // applySeams' batch: the groups giving its state and textures, its pieces of each size
         uint32_t in = 0, shows = 0;
         std::vector<uint32_t> pieces[2];  // seamStore_.shown()'s

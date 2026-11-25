@@ -245,6 +245,8 @@ bool cellOf(int wide, int high, float zoom, float x, float z, bool flipped, int&
 // (kHideShare of its half sizes: a tree's crown's rim lets the eye through) from outside it, and neither the eye nor
 // `to` inside the box (under a tree's crown, in a house's box: not hidden by it)
 constexpr float kHideShare = 0.8f;
+// 3.0.23-beta.8 (R-8R7XNK): a box this thin (half of its thinner side) and at least this tall (half) is a wall's
+constexpr float kThinWallHalf = 3.0f, kThinWallLeastHalfHigh = 8.0f;
 bool boxHides(const Box& b, const float eye[3], const float to[3]);
 
 // 3.0.19-beta.39 (the owner's «делаем все по порядку»: from the eyes the character's own effects - Kyrie's barrier,

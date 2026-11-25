@@ -1029,3 +1029,19 @@ TEST(view3d_pause_holds_the_view_and_gives_it_back) {
     CHECK(!view3d::resumesHeld(h, view3d::Mode::Behind, 0x1000));  // another view asked meanwhile
     CHECK(!view3d::resumesHeld(none, view3d::Mode::First, 0x1000));
 }
+
+// 3.0.23-beta.8 (R-8R7XNK «полоску у моба видно за стеной», prontera: the 3D view's eye pressed into the city's brick
+// wall, a monster past it): a wall's box - a thin, tall slab - with the eye in it hides what is out past it; a fat box
+// with the eye in it (a tree's crown, a house's coarse box) still hides nothing
+TEST(view3d_eye_in_a_thin_wall_hides_what_is_past_it) {
+    view3d::Box wall;
+    wall.centre[0] = 0, wall.centre[1] = -15, wall.centre[2] = 50;
+    wall.half[0] = 20, wall.half[1] = 15, wall.half[2] = 2;  // 40 wide, 30 high, 4 thick
+    const float eyeIn[3] = {0, -12, 49.5f}, past[3] = {0, -5, 80}, near[3] = {5, -5, 51};
+    CHECK(view3d::boxHides(wall, eyeIn, past));
+    CHECK(!view3d::boxHides(wall, eyeIn, near));  // in the wall's box too: not hidden by it
+    view3d::Box crown;
+    crown.centre[0] = 0, crown.centre[1] = -15, crown.centre[2] = 50;
+    crown.half[0] = 10, crown.half[1] = 10, crown.half[2] = 10;
+    CHECK(!view3d::boxHides(crown, eyeIn, past));
+}

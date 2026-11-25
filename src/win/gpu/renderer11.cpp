@@ -284,6 +284,7 @@ Renderer11::~Renderer11() {
     drop(modelFaces_);
     drop(modelInstances_);
     drop(leafVertices_);  // 3.0.20-beta.13
+    drop(wallVertices_);  // 3.0.23-beta.8
     drop(mirrorVs_);
     drop(mirrorPs_);
     drop(mirrorLayout_);
@@ -1481,6 +1482,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!innerPass && !modelsDone_ && (s.ui || s.blend)) {
         flushBatch();
         drawGameModels11();
+        drawFlatWalls11();  // 3.0.23-beta.8: the 3D view's room walls, with the world's opaque draws
     }
     timeDraws(s.ui, true);  // 2.5.15: the world's and the interface's spans on the card
     // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade); 0.61: the
