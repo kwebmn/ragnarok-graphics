@@ -119,6 +119,25 @@ Layout layout(int targetW, int targetH, float scale) {
     return L;
 }
 
+float fitScale(int targetW, int targetH, float scale) {
+    if (!(scale > 0) || targetW <= 0 || targetH <= 0) return scale;
+    constexpr float kMargin = 0.96f;
+    const float most = std::min(float(targetH) * kMargin / (kBodyH + kChromeH), float(targetW) * kMargin / kWide);
+    return std::min(scale, most);
+}
+
+float thumbTop(int first, int total, int rows, float thumbH) {
+    const int most = total - rows;
+    if (most <= 0) return 0.0f;
+    return (100.0f - thumbH) * float(std::clamp(first, 0, most)) / float(most);
+}
+
+int firstAt(float frac, int total, int rows) {
+    const int most = total - rows;
+    if (most <= 0) return 0;
+    return std::clamp(int(std::lround(std::clamp(frac, 0.0f, 1.0f) * float(most))), 0, most);
+}
+
 Hit hitTest(const Layout& L, float x, float y) {
     const HitBox* best = nullptr;
     for (const HitBox& b : L.hits)
@@ -323,6 +342,7 @@ MembersView membersView(const Info& g, const std::vector<Member>& members, const
     MembersView v;
     const std::vector<size_t> order = memberOrder(members, d, sh);
     v.total = int(order.size());
+    v.first = sh.first[1];
     v.count = fmt(t.count, {std::to_string(members.size()), std::to_string(g.most)});
     v.searchWord = sh.search;
     v.placeholder = t.search;

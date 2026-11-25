@@ -103,6 +103,7 @@ struct State {
     bool sheetShown = false;
     WindowShadow shadow;
     bool on = false, shown = false;
+    bool barDrag = false;  // 3.0.23-beta.15: the members' bar held
     uint32_t hidden = 0;
     unsigned codePage = 0;
     float k = 0, scale = 1;
@@ -716,6 +717,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.k = float(k);
     // 3.0.18-beta.151: times its own size (its corner pulled)
     s.scale = uistyle::readingScale(k) * windowstack::sizeOf(winstack::Win::Guild);
+    s.scale = gc::fitScale(targetWidth, targetHeight, s.scale);  // 3.0.23-beta.15: its bottom and corner on screen
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     const ULONGLONG now = GetTickCount64();
@@ -882,6 +884,35 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         s.pressSkill = 0;
         result = 0;
         return true;
+    }
+    // 3.0.23-beta.15 (a tester: «на скрол не реагує тіки колесико миши»): the members' bar pressed - the list put
+    // where the press is and follows the pointer while held (its box a little wider than it is drawn: easy to take)
+    const auto barBox = [&s]() -> const gc::HitBox* {
+        for (const gc::HitBox& b : s.layout.hits)
+            if (b.part == gc::Part::MembersBar) return &b;
+        return nullptr;
+    };
+    const auto barTo = [&s](const gc::HitBox& b, float ly) {
+        const int n = int(gc::memberOrder(s.members, s.words, s.show).size());
+        s.show.first[1] = gc::firstAt((ly - b.box.y) / std::max(1.0f, b.box.h), n, gc::kMemberRows);
+        s.key.clear();
+    };
+    if (s.barDrag) {
+        if (const gc::HitBox* b = barBox()) barTo(*b, ty - float(s.layout.y));
+        if (m == WM_LBUTTONUP) s.barDrag = false;
+        result = 0;
+        return true;
+    }
+    if (m == WM_LBUTTONDOWN && s.show.tab == gc::Tab::Members) {
+        const float bx = tx - float(s.layout.x), by = ty - float(s.layout.y);
+        if (const gc::HitBox* b = barBox();
+            b && bx >= b->box.x - 10.0f * s.scale && bx <= b->box.x + b->box.w + 2.0f * s.scale &&
+            by >= b->box.y && by <= b->box.y + b->box.h) {
+            s.barDrag = true;
+            barTo(*b, by);
+            result = 0;
+            return true;
+        }
     }
     if (m == WM_MOUSEMOVE) return false;
     const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);

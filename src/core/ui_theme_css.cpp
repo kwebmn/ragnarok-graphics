@@ -2037,7 +2037,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .rmview img { display: block; }
 .rfw .rmside { display: block; flex: 1; margin-left: 14dp; }
 .rfw.narrow .rmrow { flex-direction: column; }
-.rfw.narrow .rmside { margin: 12dp 0 0 0; }
+.rfw.narrow .rmside { margin: 12dp 0 0 0; flex: none; width: 100%; }
 )";
 
 }  // namespace

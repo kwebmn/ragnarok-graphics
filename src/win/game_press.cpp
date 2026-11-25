@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstring>
 
+#include "core/world_windows.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_memory.hpp"
 #include "win/log.hpp"
@@ -42,7 +43,15 @@ uint32_t windowAt(int x, int y) {
         const uint32_t prev = read32(node + 4);
         if (!prev || prev == head) break;
         const uint32_t window = read32(prev + 8);
-        if (window && reinterpret_cast<HitFn>(uintptr_t(kHitTest))(window, x, y)) return window;
+        // 3.0.23-beta.15 (a tester's doc: «самий нижній ряд не реагує на мишку», «1 2 3 4 ячейка просто не отвечает» -
+        // the cells under a shop's sign on the street behind «Речі» and «Склад»): the world's windows (the shops' and
+        // the rooms' signs, the words and the names over the heads, the bars) are drawn under the driver's windows -
+        // a press there is the driver's window's, not theirs
+        const uint32_t cls = window ? read32(window) : 0;
+        constexpr uint32_t kHoverName = 0x696100, kHoverNameSide = 0x69F3F4;  // the hovered one's name (windows_draw)
+        if (window && !worldwindows::worldWindow(cls) && cls != kHoverName && cls != kHoverNameSide &&
+            reinterpret_cast<HitFn>(uintptr_t(kHitTest))(window, x, y))
+            return window;
         node = prev;
         if (node == first) break;
     }

@@ -350,3 +350,20 @@ TEST(guild_card_emblem_from_the_games_file) {
     CHECK(guildcard::emblemPixels("not an emblem", 48).empty());
     CHECK(guildcard::emblemPixels(ebm, 0).empty());
 }
+
+// 3.0.23-beta.15 (a tester's doc: «ги окно огромне и даже конца низа нет не могу попробувати зменшити», «на скрол не
+// реагує тіки колесико миши»): the guild window's scale kept within the screen's height (its corner reachable); the
+// members' scroll thumb where the list stands, and a press on the bar puts the list there
+TEST(guild_card_fits_the_screen_and_its_bar_follows) {
+    namespace gc = guildcard;
+    const float tall = gc::fitScale(1920, 1080, 2.0f);
+    CHECK(tall < 2.0f);
+    CHECK(gc::layout(1920, 1080, tall).h <= 1080);
+    CHECK(std::fabs(gc::fitScale(3840, 2160, 1.0f) - 1.0f) < 1e-6f);  // fits: as asked
+    CHECK(std::fabs(gc::thumbTop(0, 60, 20, 33.0f)) < 1e-4f);
+    CHECK(std::fabs(gc::thumbTop(40, 60, 20, 33.0f) - 67.0f) < 1e-3f);  // the last rows: at the bottom
+    CHECK_EQ(gc::firstAt(0.0f, 60, 20), 0);
+    CHECK_EQ(gc::firstAt(1.0f, 60, 20), 40);
+    CHECK_EQ(gc::firstAt(0.5f, 60, 20), 20);
+    CHECK_EQ(gc::firstAt(0.5f, 10, 20), 0);  // no scroll
+}

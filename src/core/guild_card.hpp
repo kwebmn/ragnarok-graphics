@@ -73,7 +73,8 @@ struct Texts {
 enum class Sort : uint8_t { Online, Level, Position, Given };
 enum class Part : uint8_t {
     None, Body, Title, Close, Tab, Skill, Plus, Use, Raise, Member, Head, Search, Action, Position, Edit, Expelled,
-    Field, Save, Cancel, AllMembers
+    Field, Save, Cancel, AllMembers,
+    MembersBar  // 3.0.23-beta.15: the members' scroll bar (pressed and dragged)
 };
 struct Hit {
     Part part = Part::None;
@@ -115,6 +116,13 @@ struct Layout {
     std::vector<HitBox> hits;  // RmlUi's boxes of every pressable part (uikit guild's refit)
 };
 Layout layout(int targetW, int targetH, float scale);  // its size before RmlUi lays it out, placed right of the middle
+// 3.0.23-beta.15 (a tester: «окно огромне і навіть кінця низу немає»): `scale` made smaller where the window would be
+// taller (or wider) than the screen (a margin kept) - its bottom and its corner on the screen
+float fitScale(int targetW, int targetH, float scale);
+// The members' scroll: the thumb's top (percent of the bar) for the list from `first` of `total` with `rows` shown and
+// the thumb `thumbH` percent tall; the first row for a press at `frac` (0-1) of the bar
+float thumbTop(int first, int total, int rows, float thumbH);
+int firstAt(float frac, int total, int rows);
 Hit hitTest(const Layout& L, float x, float y);        // the smallest box under (x, y); Body inside it, None outside
 
 // ---- the tabs' views (what uikit guild shows)
@@ -204,6 +212,7 @@ struct MembersView {
     std::vector<HeadV> heads;  // the columns: name, class, level, position, given (a click sorts)
     std::vector<MemberRowV> rows;
     int total = 0;  // the list's length (searched), for the scroll
+    int first = 0;  // 3.0.23-beta.15: the first row shown (the thumb's place)
     CardV card;
 };
 // The members in the list's order (sorted, searched): their indices into `members`

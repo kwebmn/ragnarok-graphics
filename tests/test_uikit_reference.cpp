@@ -633,3 +633,43 @@ TEST(uikit_reference_element_tables_names_fit_their_columns) {
         rmlhost::close(l.doc);
     }
 }
+
+// 3.0.23-beta.15 (a tester's doc: «у довіднику якщо трохи зменшите все пливе» - a narrow window's location card:
+// its NPCs under the map drawn over «Хто тут»): the side column in the narrow look keeps its height - the next block
+// below it
+TEST(uikit_reference_narrow_location_npcs_above_the_next_block) {
+    refpages::Page p;
+    p.rows.push_back(row(Style::Title, "Lutie Field"));
+    p.rows.push_back(row(Style::MapView, "xmas_fild01"));
+    for (int g = 0; g < 2; ++g) {
+        Row head = row(Style::Group, g ? "Інші · 1" : "Квести · 1");
+        head.side = true;
+        p.rows.push_back(head);
+        Row r = row(Style::Row, g ? "Bulletin Board" : "Biologist", refpages::Go::Npc, g);
+        r.side = true;
+        p.rows.push_back(r);
+    }
+    p.rows.push_back(row(Style::Heading, "Хто тут"));  // 6
+    p.rows.push_back(row(Style::Row, "Garm", refpages::Go::Mob, 1252));
+    ur::Look look;
+    look.narrow = true;
+    look.mapW = 360;
+    look.mapH = 200;
+    ur::Model m;
+    m.narrow = true;
+    m.body = ur::body(p, look);
+    const Loaded l = load(m);
+    CHECK_EQ(l.warnings, std::string());
+    Rml::ElementList sides;
+    if (l.doc) l.doc->QuerySelectorAll(sides, ".rmside");
+    CHECK_EQ(sides.size(), size_t(1));
+    Rml::Element* who = l.doc ? l.doc->GetElementById("r6") : nullptr;
+    CHECK(who != nullptr);
+    if (!sides.empty() && who) {
+        const float sideBottom = sides[0]->GetAbsoluteOffset(Rml::BoxArea::Border).y +
+                                 sides[0]->GetBox().GetSize(Rml::BoxArea::Border).y;
+        CHECK(sides[0]->GetBox().GetSize(Rml::BoxArea::Border).y > 20.0f);
+        CHECK(who->GetAbsoluteOffset(Rml::BoxArea::Border).y >= sideBottom - 0.5f);
+    }
+    rmlhost::close(l.doc);
+}

@@ -76,8 +76,9 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-class-hot="r.hot" data-class-gone="!r.online" data-class-me="r.me"><span class="gwc0"><span class="gwdn"
   data-class-gwdf="!r.online"></span></span><span class="gwc1 gwmn">{{r.name}}</span><span
   class="gwc2">{{r.job}}</span><span class="gwc3">{{r.level}}</span><span class="gwc4">{{r.position}}</span><span
-  class="gwc5">{{r.given}}</span></div></div><div class="gwsc" data-if="members.scroll"><div class="gwsct"
-  data-style-top="members.thumbTop + '%'" data-style-height="members.thumbH + '%'"></div></div></div>
+  class="gwc5">{{r.given}}</span></div></div><div class="gwsc" data-hit="mbar"
+  data-if="members.scroll"><div class="gwsct" data-style-top="members.thumbTop + '%'"
+  data-style-height="members.thumbH + '%'"></div></div></div>
 <div data-if="tab == 2"><div class="gwmh"><span class="gwq1">{{positions.heads[0].a}}</span><span
   class="gwq2">{{positions.heads[1].a}}</span><span class="gwq3">{{positions.heads[2].a}}</span><span
   class="gwq4">{{positions.heads[3].a}}</span></div><div data-for="r : positions.rows"><div class="gwpr"
@@ -565,7 +566,7 @@ void fill(Model& m, const Frame& f, const Icon& icon, const Emblem& emblem, cons
     ms.scroll = mv.total > gc::kMemberRows;
     if (ms.scroll) {
         ms.thumbH = std::max(100.0f * float(gc::kMemberRows) / float(mv.total), 8.0f);
-        ms.thumbTop = 0;
+        ms.thumbTop = gc::thumbTop(mv.first, mv.total, gc::kMemberRows, ms.thumbH);  // 3.0.23-beta.15: was 0
     }
     ms.card = mv.card.shown;
     ms.cardName = mv.card.name;
@@ -668,7 +669,8 @@ bool refit(Rml::ElementDocument* doc, gc::Layout& L) {
         {"raise", gc::Part::Raise},       {"member", gc::Part::Member}, {"head", gc::Part::Head},
         {"search", gc::Part::Search},     {"action", gc::Part::Action}, {"position", gc::Part::Position},
         {"edit", gc::Part::Edit},         {"expelled", gc::Part::Expelled}, {"field", gc::Part::Field},
-        {"save", gc::Part::Save},         {"cancel", gc::Part::Cancel}, {"allmembers", gc::Part::AllMembers}};
+        {"save", gc::Part::Save},         {"cancel", gc::Part::Cancel}, {"allmembers", gc::Part::AllMembers},
+        {"mbar", gc::Part::MembersBar}};
     L.hits.clear();
     for (const auto& [name, part] : kParts)
         for (const Placed& p : placesOf(doc, name)) L.hits.push_back(gc::HitBox{part, p.index, p.box});
