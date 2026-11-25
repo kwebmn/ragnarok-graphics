@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.23-beta.14 — what's new · 2026-11-25
+
+The chat no longer takes the arrows.
+
+- **The ↑ ↓ arrows walk again.** The chat takes them (to scroll its history) only while you use it: you clicked it, pressed Enter on an empty line or started typing. After sending (Enter), Esc or a click outside the chat the arrows lead the character again. PgUp and PgDn scroll the history as before.
+
 # uaRO Graphics 3.0.23-beta.13 — what's new · 2026-11-25
 
 The game on Linux (Wine, Bottles, Proton).
