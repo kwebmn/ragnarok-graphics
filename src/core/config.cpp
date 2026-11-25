@@ -944,6 +944,8 @@ Config parseConfig(const std::string& text) {
             if (val == "rings") c.character = CharacterLook::Rings;
         } else if (key == "interface.reference") {  // 3.0.11-beta.7: «Довідник»
             setBool(val, c.referenceWindow);
+        } else if (key == "interface.settings_full") {  // 3.0.24-beta.2: Alt+O's full mode
+            setBool(val, c.settingsFull);
         } else if (key == "panel.hidden") {
             setBool(val, c.panelHidden);
         } else if (key == "panel.layout") {

@@ -46,6 +46,11 @@ struct Line {
     bool heads = false;      // its group's first line: the group's name goes over it
     bool part = false;       // a part of a row over it
     bool detail = false;     // a row of the group's inner part: after the small heading
+    // 3.0.24-beta.2 (simpleLines): a capability card - its words, the catalogue group its «Детально» opens and that
+    // group's rows (-1 / 0: none) - `entry` then the list's entry it opens; the section's name in `groupName`
+    bool card = false;
+    settings::Text desc = settings::Text::Count;
+    int opens = -1, inside = 0;
 };
 // An entry's lines: each group's basic rows, then - under the small heading - its details; a group of details alone
 // has no heading
@@ -71,5 +76,14 @@ std::vector<Reset> resetsOf(int group, const Config& shown, const Config& defaul
 std::vector<Line> changedLines(const Config& shown, const Config& defaults);
 // What an entry says over its rows: «3D-режим» in the usual view - its rows do nothing now. Text::Count: nothing
 settings::Text noteOf(int entry, bool view3d);
+
+// 3.0.24-beta.2 (the concept https://uaro.kiev.ua/docs/settings-simple/, the owner: «разширь больше настроек простого
+// режима, можно даже в одну настройку несколько настроек сложного ввести, чтобы включать группами. там нужно видить
+// возможности» - «1 да, 2 всем»): Alt+O's simple mode, everyone's at first - one page with no list: the three looks,
+// then the client's possibilities by sections (`groupName` the section, `heads` on its first line), most of them a
+// card with one switch - a group's own switch where there is one - and a way into that group in the full mode
+std::vector<Line> simpleLines();
+// The list's entry a catalogue group lives in (-1 none)
+int entryOfGroup(int group);
 
 }  // namespace uagfx::settingswin

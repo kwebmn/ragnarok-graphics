@@ -109,6 +109,8 @@ struct State {
     bool upload = false;
     int dragging = -1;  // the slider held
     int told = 0;
+    int scrollGroup = -1;  // 3.0.24-beta.2: «Детально» - the group the full mode scrolls to once laid out
+    int scrollTries = 0;
 };
 
 State& state() {
@@ -275,7 +277,10 @@ static std::vector<SetRowView> buildRows(const State& s) {
     // 3.0.21-beta.10: «Змінені» - the rows off their defaults, under their groups' names as the search's
     const bool offEntry = !searching && s.m.sec >= 0 && size_t(s.m.sec) < nav.size() &&
                           nav[size_t(s.m.sec)].area == sw::kChangedArea;
+    // 3.0.24-beta.2: the simple page (the concept https://uaro.kiev.ua/docs/settings-simple/) - no list, its lines
+    const bool simple = s.m.simple && !searching;
     const std::vector<sw::Line> list = searching  ? sw::find(s.m.query, lang)
+                                       : simple   ? sw::simpleLines()
                                        : offEntry ? sw::changedLines(shown, s.defaults)
                                                   : sw::lines(s.m.sec);
     // where the game is now: what a row's reasons for doing nothing are judged by (the renderer, the view, the map)
@@ -286,15 +291,37 @@ static std::vector<SetRowView> buildRows(const State& s) {
     place.ownEntry = !searching && !offEntry;
     std::vector<SetRowView> out;
     for (const sw::Line& f : list) {
+        if (f.card) {  // 3.0.24-beta.2: a capability card - two side by side, a section's first starts a line
+            uikit::options::CardView c;
+            c.key = f.key;
+            const settings::IniSetting* st = settings::findSetting(f.key);
+            c.label = st ? say(st->label) : f.key;
+            c.desc = say(f.desc);
+            const std::string now = s.config && st ? settings::tokenOf(*st, shown) : "";
+            c.on = st && st->tokens.size() > 1 && now == st->tokens[1];
+            if (f.inside > 1) {
+                c.more = settings::fmt(say(settings::Text::SimpleMore), {std::to_string(f.inside)});
+                c.entry = f.entry, c.group = f.opens;
+            }
+            if (f.heads || out.empty() || out.back().ncards != 1) {
+                SetRowView r;
+                r.key = "cards." + f.key;
+                if (f.heads) r.group = say(f.groupName);
+                out.push_back(std::move(r));
+            }
+            out.back().cards.push_back(std::move(c));
+            out.back().ncards = int(out.back().cards.size());
+            continue;
+        }
         SetRowView r;
         r.key = f.key;
         r.sub = f.part;
         if (f.heads) {
             r.group = say(f.groupName);
-            if ((searching || offEntry) && f.entry > 0 && size_t(f.entry) < nav.size())
+            if ((searching || offEntry) && !simple && f.entry > 0 && size_t(f.entry) < nav.size())
                 r.group = say(nav[size_t(f.entry)].name) + " \xC2\xB7 " + r.group;
             // the group's way back to the shipped values, while it has rows off them
-            if (s.config && f.group >= 0 && !sw::resetsOf(f.group, shown, s.defaults).empty())
+            if (s.config && !simple && f.group >= 0 && !sw::resetsOf(f.group, shown, s.defaults).empty())
                 r.reset = say(settings::Text::SettingsDefaults);
             r.groupIndex = f.group;
         }
@@ -351,6 +378,7 @@ static std::string rowsKeyOf(const std::vector<SetRowView>& rows) {
         if (r.subhead) k += r.label;
         if (r.det) k += 'd';
         for (const ChoiceView& c : r.choices) k += c.on ? '1' : '0';
+        for (const uikit::options::CardView& c : r.cards) k += c.key + (c.on ? "+" : "-");  // 3.0.24-beta.2
         k += '|';
     }
     return k;
@@ -391,6 +419,19 @@ static void useRow(State& s, int row, int what, int value) {
         LOG_INFO("options: «%s» changed while its row says: %s", key.c_str(), s.m.rows[size_t(row)].warn.c_str());
 }
 
+// 3.0.24-beta.2: the simple page or the full window, kept in [interface] settings_full
+static void setMode(State& s, bool simple) {
+    if (s.config && !s.iniPath.empty())
+        s.changed = settingedit::set(s.iniPath, *s.config, "interface.settings_full", simple ? "0" : "1") || s.changed;
+    if (s.m.simple != simple) LOG_INFO("options: «%s»", simple ? "Просто" : "Повністю");
+    s.m.simple = simple;
+    s.m.query.clear();
+    s.live.doc.dirty("simple");
+    s.live.doc.dirty("query");
+    s.rowsKey.clear();
+    s.hotUntil = GetTickCount64() + 700;
+}
+
 // The live window at the middle of the screen, as wide as its markup makes it
 static void placeLive(State& s, bool anew = false) {
     int x = s.layout.x, y = s.layout.y;
@@ -424,6 +465,35 @@ static void backStep(State& s) {
         s.backWait = 120;  // frames at most for the driver to read the file again
         s.hotUntil = GetTickCount64() + 700;
         return;
+    }
+}
+
+// 3.0.24-beta.2: «Детально · N ›» - once the full mode's rows are laid out, the pane scrolled to the card's group's
+// name (a few frames at most; the group not shown - nothing)
+static void scrollToGroup(State& s) {
+    if (s.scrollGroup < 0) return;
+    if (s.m.simple || ++s.scrollTries > 30) {
+        s.scrollGroup = -1;
+        return;
+    }
+    int row = -1;
+    for (size_t i = 0; i < s.m.rows.size(); ++i)
+        if (!s.m.rows[i].group.empty() && s.m.rows[i].groupIndex == s.scrollGroup) row = int(i);
+    Rml::Element* pane = s.live.doc.byId("spane");
+    if (row < 0 || !pane) return;
+    int seen = 0;
+    for (int c = 0; c < pane->GetNumChildren(); ++c) {
+        Rml::Element* e = pane->GetChild(c);
+        if (!e->IsClassSet("srow") || seen++ != row) continue;
+        for (int k = 0; k < e->GetNumChildren(); ++k) {
+            Rml::Element* line = e->GetChild(k);
+            if (line->GetOffsetHeight() <= 0) continue;
+            pane->SetScrollTop(line->GetAbsoluteTop() - pane->GetAbsoluteTop() + pane->GetScrollTop() - 4.0f);
+            LOG_INFO("options: «Детально» - the full mode at the group %d", s.scrollGroup);
+            s.scrollGroup = -1;
+            return;
+        }
+        return;  // not laid out yet: the next frame
     }
 }
 
@@ -497,6 +567,38 @@ static void liveFrame(State& s) {
             Console::askOpen();
             closeIt(state());
         });
+        // 3.0.24-beta.2: «Просто / Повністю» - kept in [interface] settings_full
+        m.BindEventCallback("set_mode", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (!a.empty()) setMode(state(), a[0].Get<int>() == 0);
+        });
+        m.BindEventCallback("card_toggle", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
+            if (a.size() < 2 || !st.config || st.iniPath.empty()) return;
+            const int i = a[0].Get<int>(), j = a[1].Get<int>();
+            if (i < 0 || size_t(i) >= st.m.rows.size() || j < 0 || size_t(j) >= st.m.rows[size_t(i)].cards.size())
+                return;
+            const uikit::options::CardView& c = st.m.rows[size_t(i)].cards[size_t(j)];
+            const settings::IniSetting* set = settings::findSetting(c.key);
+            if (!set || set->tokens.size() < 2) return;
+            const bool wrote = settingedit::set(st.iniPath, *st.config, c.key, set->tokens[c.on ? 0 : 1]);
+            st.changed = st.changed || wrote;
+            st.hotUntil = GetTickCount64() + 700;
+            if (st.told++ < 40) LOG_INFO("options: the simple page's card «%s» %s", c.key.c_str(), c.on ? "off" : "on");
+        });
+        // «Детально · N ›»: the full mode at the card's group
+        m.BindEventCallback("card_more", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
+            if (a.size() < 2) return;
+            const int i = a[0].Get<int>(), j = a[1].Get<int>();
+            if (i < 0 || size_t(i) >= st.m.rows.size() || j < 0 || size_t(j) >= st.m.rows[size_t(i)].cards.size())
+                return;
+            const uikit::options::CardView c = st.m.rows[size_t(i)].cards[size_t(j)];
+            if (c.entry < 0) return;
+            setMode(st, false);
+            st.m.sec = c.entry;
+            st.scrollGroup = c.group, st.scrollTries = 0;
+            st.live.doc.dirty("sec");
+        });
         m.BindEventCallback("opt_close", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
             closeIt(state());
         });
@@ -520,6 +622,8 @@ static void liveFrame(State& s) {
         s.m.none = say(settings::Text::SettingsWinNone);
         s.m.consoleBtn = say(settings::Text::SettingsWinConsole);
         s.m.layoutBtn = say(settings::Text::MenuLayout);  // 3.0.21-beta.7: «Розмістити інтерфейс»
+        s.m.modeSimple = say(settings::Text::SimpleModeSimple);  // 3.0.24-beta.2
+        s.m.modeFull = say(settings::Text::SimpleModeFull);
         std::vector<NavView> nav;  // 3.0.21-beta.3: the catalogue's areas, each with its rows' count
         for (const settingswin::Nav& n : settingswin::nav()) nav.push_back(NavView{say(n.name), n.rows});
         s.m.nav = std::move(nav);
@@ -582,11 +686,27 @@ static void liveFrame(State& s) {
             }
         }
     }
+    // 3.0.24-beta.2: the mode as the file says it (another place may change it) - not while a click of ours waits
+    if (s.config && now >= s.hotUntil) {
+        const bool simple = !settingedit::shown(*s.config).settingsFull;
+        if (simple != s.m.simple) {
+            s.m.simple = simple;
+            s.live.doc.dirty("simple");
+        }
+    }
+    {
+        const Rml::String hint = say(s.m.simple && s.m.query.empty() ? settings::Text::SimpleFoot
+                                                                      : settings::Text::SettingsWinHint);
+        if (hint != s.m.hint) {
+            s.m.hint = hint;
+            s.live.doc.dirty("hint");
+        }
+    }
     std::vector<SetRowView> rows = buildRows(s);
     // 3.0.21-beta.8 (R-SPPSF3): the list as long as the entry - no spare rows kept from a longer one (uikit
     // options_live fit(): how 3.0.18-beta.132's padding became needless)
     uikit::options::fit(rows);
-    const std::string key = rowsKeyOf(rows) + std::to_string(s.m.sec);
+    const std::string key = rowsKeyOf(rows) + std::to_string(s.m.sec) + (s.m.simple ? "S" : "F");
     const bool anew = key != s.rowsKey;
     if (anew) {
         s.rowsKey = key;
@@ -596,6 +716,7 @@ static void liveFrame(State& s) {
         s.live.doc.dirty("shown_rows");
     }
     placeLive(s, anew);
+    scrollToGroup(s);
 }
 
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {

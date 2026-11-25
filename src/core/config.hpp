@@ -1096,6 +1096,8 @@ struct Config {
     int itemWindows = 100;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
     bool referenceWindow = true;  // 3.0.11 (the owner: the new interface for all) - «Довідник» with it
+    // 3.0.24-beta.2 ([interface] settings_full): Alt+O opens on every area and group, not on the simple page
+    bool settingsFull = false;
     PanelLayout panelLayout = PanelLayout::Row;
     int panelSize = 100, panelOpacity = 90;
     std::string panelPlace;

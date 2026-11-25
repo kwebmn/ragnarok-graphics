@@ -759,6 +759,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("character", characterLookToken(running.character), characterLookToken(file.character)));
         n.character = file.character;
     }
+    if (file.settingsFull != running.settingsFull) {  // 3.0.24-beta.2: Alt+O's mode, at once
+        u.applied.push_back(change("settings_full", flag(running.settingsFull), flag(file.settingsFull)));
+        n.settingsFull = file.settingsFull;
+    }
     if (file.referenceWindow != running.referenceWindow) {  // 3.0.11-beta.7: «Довідник», at once
         u.applied.push_back(change("reference", flag(running.referenceWindow), flag(file.referenceWindow)));
         n.referenceWindow = file.referenceWindow;

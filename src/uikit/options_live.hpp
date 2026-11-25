@@ -25,6 +25,14 @@ struct ChoiceView {
     Rml::String label;
     bool on = false;
 };
+// 3.0.24-beta.2 (the simple mode): a capability card - its name, its words, its group's way in («Детально · N ›», ""
+// none), its switch
+struct CardView {
+    Rml::String label, desc, more;
+    bool on = false;
+    Rml::String key;             // not shown: its row's key
+    int entry = -1, group = -1;  // not shown: where «Детально» goes (the list's entry, the catalogue's group)
+};
 struct RowView {
     Rml::String key, group, label, hint, vtext;  // group: the group's name over this row (its first), "" none
     Rml::String warn;  // 3.0.21-beta.4: what keeps the row from doing anything now, "" nothing
@@ -40,6 +48,9 @@ struct RowView {
     // `label`, no control); det: a row of those details (set in, a rule on its left); sub: a part of the row over it
     bool subhead = false, det = false, sub = false;
     int groupIndex = 0;  // on the row that heads its group: the catalogue's group («Типові» brings it back)
+    // 3.0.24-beta.2: one or two capability cards side by side in place of a row (`ncards` their count)
+    std::vector<CardView> cards;
+    int ncards = 0;
 };
 struct NavView {
     Rml::String name;
@@ -50,6 +61,10 @@ struct Model {
     Rml::String query, title, hint, searchHint, none, consoleBtn, ground = "#10141cf0";
     Rml::String layoutBtn;  // 3.0.21-beta.7: «Розмістити інтерфейс» (the console's action before)
     Rml::String note;       // 3.0.21-beta.10: what the entry says over its rows («3D-режим» in the usual view), "" none
+    // 3.0.24-beta.2: the simple page (no list on the left) or the full window (win/options_card sets it from the
+    // file as the window opens); the switch's two words
+    bool simple = false;
+    Rml::String modeSimple, modeFull;
     std::vector<NavView> nav;
     std::vector<RowView> rows;
 };
@@ -81,7 +96,8 @@ int cull(Rml::ElementDocument* doc, bool all = false);
 
 const char* rml();
 // The window's variables. Its events are the caller's: sec_go(i), set_toggle(i), set_slider(i), set_step(i, by),
-// set_choice(i, j), set_reset(i), open_layout(), open_console(), opt_close()
+// set_choice(i, j), set_reset(i), open_layout(), open_console(), opt_close(); 3.0.24-beta.2: set_mode(0 simple /
+// 1 full), card_toggle(i, j), card_more(i, j)
 void bind(Rml::DataModelConstructor& c, Model& m);
 
 }  // namespace uagfx::uikit::options

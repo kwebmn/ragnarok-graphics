@@ -182,7 +182,7 @@ std::vector<Group> build() {
                          D("interface.window_opacity"), D("interface.animations"), D("interface.uaui_motion"),
                          D("interface.uaui_effects"), D("interface.uaui_glass"), D("interface.cursor"),
                          D("interface.layout_per_char"), D("interface.pack_icons"), D("interface.low_hp_edge"),
-                         D("interface.element_colours"), B("interface.reference")}));
+                         D("interface.element_colours"), B("interface.reference"), D("interface.settings_full")}));
     out.push_back(group(Area::Interface, Text::InterfaceSecPanels,
                         {B("interface.character"), D("interface.view3d_buttons", "interface.character"),
                          B("interface.target"), B("interface.party"), B("interface.buffs"),

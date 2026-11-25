@@ -753,6 +753,25 @@ select selectbox option:checked { color: #e6cb8a; }
 .sw .sfoot .sfb { display: flex; flex-direction: row; flex: none; }
 .sw .sfoot .btn { display: block; margin-left: 8dp; padding: 4dp 10dp; border-radius: 7dp; border: 1dp #e6cb8a66;
     color: #e6cb8a; font-size: 12dp; }
+/* 3.0.24-beta.2 (the simple mode, https://uaro.kiev.ua/docs/settings-simple/): «Просто / Повністю» in the head; the
+   capability cards two in a line - a name, its words, «Детально · N ›», a switch */
+.sw .sseg { display: inline-flex; flex-direction: row; margin-left: 12dp; border: 1dp #ffffff22; border-radius: 8dp; }
+.sw .sseg span { display: block; padding: 3dp 11dp; font-size: 12dp; color: #cfd3dc; }
+.sw .sseg span:hover { background-color: #ffffff10; }
+.sw .sseg span.on { background-color: #e6cb8a22; color: #e6cb8a; }
+/* two in a line: each a half of the pane, the gap between them its own right padding (a list's element carries no
+   view of its own - nothing tells the first from the second) */
+.sw .scw { display: inline-block; vertical-align: top; width: 50%; box-sizing: border-box; padding: 4dp 6dp 4dp 0; }
+.sw .scard { display: flex; flex-direction: row; align-items: flex-start; min-height: 62dp; padding: 9dp 11dp;
+    border-radius: 10dp;
+    border: 1dp #ffffff14; background-color: #ffffff05; }
+.sw .scb { display: block; flex: 1; padding-right: 10dp; }
+.sw .scn { display: block; font-size: 13dp; font-weight: bold; color: #eef2f8; }
+.sw .scard.off .scn { color: #aab1bf; }
+.sw .scd { display: block; margin-top: 2dp; font-size: 11.5dp; line-height: 15dp; color: #9aa3b5; }
+.sw .scm { display: block; margin-top: 4dp; font-size: 11dp; color: #8cb4dc; }
+.sw .scm:hover { color: #e6cb8a; }
+.sw .scard .tg { flex: none; margin-top: 2dp; }
 .tw { width: 460dp; }
 .tw .count { margin-left: 10dp; font-size: 11.5dp; color: #9aa3b5; }
 .tw .msg { display: block; margin: 2dp 0 12dp 0; font-size: 13dp; line-height: 19dp; }

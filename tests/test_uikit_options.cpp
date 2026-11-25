@@ -421,14 +421,15 @@ TEST(uikit_options_holds_only_what_it_shows) {
     m.shownRows = 100;
     rmlhost::update();
     const int switches = elements(doc) - empty;
-    if (switches > 100 * 15) std::printf("    100 switches: %d elements\n", switches);
-    CHECK(switches <= 100 * 15);
+    // 3.0.24-beta.2: 16 - the simple page's cards' block (data-if: in the document, hidden) one more a row
+    if (switches > 100 * 16) std::printf("    100 switches: %d elements\n", switches);
+    CHECK(switches <= 100 * 16);
     CHECK_EQ(shownOf(doc, ".spane .tg"), 100);
     // the entry left: its rows gone from the document
     m.rows.resize(3);
     m.shownRows = 3;
     rmlhost::update();
-    CHECK(elements(doc) - empty <= 3 * 15);
+    CHECK(elements(doc) - empty <= 3 * 16);
     rmlhost::close(doc);
 }
 
@@ -724,5 +725,89 @@ TEST(uikit_options_draws_only_the_rows_near_the_view) {
     CHECK_EQ(ol::cull(doc), 0);
     rmlhost::frame();
     CHECK_EQ(int(rowsShown().size()), 6);
+    rmlhost::close(doc);
+}
+
+// 3.0.24-beta.2 (the simple mode, the owner: «там нужно видить возможности», «включать групами»): the simple page -
+// no list on the left, the switch's «Просто» lit, the capability cards two in a line with their words, «Детально» and
+// a switch; a card's switch and its «Детально» name their row and card
+TEST(uikit_options_simple_page_cards_two_in_a_line) {
+    static ol::Model m;
+    m = ol::Model{};
+    m.title = "Налаштування";
+    m.simple = true;
+    m.modeSimple = "Просто";
+    m.modeFull = "Повністю";
+    m.nav = {ol::NavView{"Як виглядає гра", 9}, ol::NavView{"Картинка", 186}};
+    ol::RowView look;
+    look.key = "picture.0";
+    look.label = "Картинка";
+    look.group = "Як виглядає гра";
+    look.choices = {ol::ChoiceView{"Як у грі", false}, ol::ChoiceView{"Ремастер", true}};
+    m.rows.push_back(look);
+    ol::RowView pair;
+    pair.key = "cards.effects.group_time";
+    pair.group = "Світ";
+    pair.cards = {
+        ol::CardView{"День, ніч і пори року", "Сонце йде небом", "Детально · 16 ›", true, "effects.group_time"},
+        ol::CardView{"Вода", "Сучасна вода", "", false, "effects.group_waters"}};
+    pair.ncards = 2;
+    m.rows.push_back(pair);
+    ol::fit(m.rows);
+    m.shownRows = 2;
+    int toggled = -1, toggledCard = -1, more = -1, mode = -1;
+    std::string error;
+    Rml::ElementDocument* doc = rmlhost::load(
+        ol::rml(),
+        [&](Rml::DataModelConstructor& c) {
+            ol::bind(c, m);
+            const auto none = [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {};
+            for (const char* e : {"sec_go", "set_slider", "set_step", "set_choice", "set_toggle", "set_reset",
+                                  "open_console", "open_layout", "opt_close"})
+                c.BindEventCallback(e, none);
+            c.BindEventCallback("card_toggle", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+                toggled = a.size() > 1 ? a[0].Get<int>() : -2;
+                toggledCard = a.size() > 1 ? a[1].Get<int>() : -2;
+            });
+            c.BindEventCallback("card_more", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+                more = a.size() > 1 ? a[1].Get<int>() : -2;
+            });
+            c.BindEventCallback("set_mode", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+                mode = a.empty() ? -2 : a[0].Get<int>();
+            });
+        },
+        100, 60, &error);
+    if (!error.empty()) std::printf("RmlUi: %s", error.c_str());
+    CHECK_EQ(error, std::string());
+    CHECK(doc != nullptr);
+    if (!doc) return;
+    CHECK_EQ(shownOf(doc, ".snav .sn"), 0);  // no list on the left
+    CHECK_EQ(shownOf(doc, ".sseg span.on"), 1);
+    CHECK_EQ(shownOf(doc, ".spane .scard"), 2);
+    CHECK_EQ(shownOf(doc, ".spane .scard.off"), 1);
+    CHECK_EQ(shownOf(doc, ".spane .scm"), 1);  // «Детально» on the one with a group
+    CHECK_EQ(shownOf(doc, ".spane .sro"), 1);  // the look's row; the cards' row has none
+    Rml::ElementList cards;
+    doc->QuerySelectorAll(cards, ".spane .scard");
+    if (cards.size() == 2) {
+        CHECK(std::fabs(cards[0]->GetAbsoluteTop() - cards[1]->GetAbsoluteTop()) < 1.0f);  // side by side
+        CHECK(cards[1]->GetAbsoluteLeft() > cards[0]->GetAbsoluteLeft() + 100.0f);
+    }
+    Rml::ElementList toggles;
+    doc->QuerySelectorAll(toggles, ".scard .tg");
+    if (toggles.size() == 2) toggles[1]->Click();
+    rmlhost::update();
+    CHECK_EQ(toggled, 1);
+    CHECK_EQ(toggledCard, 1);
+    Rml::ElementList mores;
+    doc->QuerySelectorAll(mores, ".scard .scm");
+    if (!mores.empty()) mores[0]->Click();
+    rmlhost::update();
+    CHECK_EQ(more, 0);
+    Rml::ElementList seg;
+    doc->QuerySelectorAll(seg, ".sseg span");
+    if (seg.size() == 2) seg[1]->Click();
+    rmlhost::update();
+    CHECK_EQ(mode, 1);
     rmlhost::close(doc);
 }

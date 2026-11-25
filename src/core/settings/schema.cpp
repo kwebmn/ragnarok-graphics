@@ -481,6 +481,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.11-beta.7: «Довідник» - Ctrl+F in the game
         {"interface", "reference", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceReference,
          Text::InterfaceReferenceHint, ""},
+        // 3.0.24-beta.2: Alt+O's «Просто / Повністю»
+        {"interface", "settings_full", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::SimpleFull,
+         Text::SimpleFullHint, ""},
         // 3.0.3-beta.8: the game windows' panel in the game's picture - a section of its own («Панель вікон»)
         {"panel", "show", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::WindowsPanel,
          Text::WindowsPanelHint, ""},
@@ -1608,6 +1611,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.item_windows") return std::to_string(c.itemWindows);  // 3.0.15-beta.9
     if (k == "interface.window_opacity") return std::to_string(c.windowOpacity);
     if (k == "interface.reference") return c.referenceWindow ? "1" : "0";  // 3.0.11-beta.7
+    if (k == "interface.settings_full") return c.settingsFull ? "1" : "0";  // 3.0.24-beta.2
     if (k == "windows.start_count") return std::to_string(c.windowStartCount);  // 3.0.4-beta.4
     if (k == "camera.indoor") return c.cameraIndoor ? "1" : "0";                // 3.0.4-beta.5
     if (k == "camera.zoom_limit") return c.cameraZoomLimit ? "1" : "0";         // 3.0.4-beta.17

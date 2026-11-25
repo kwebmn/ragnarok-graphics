@@ -1087,6 +1087,13 @@ enum class Text : uint16_t {
     GuildWNoGuild, GuildWNoGuildSub, GuildWJoin, GuildWJoinText, GuildWMake, GuildWMakeText,
     // 3.0.22-beta.32: [mcp] - the MCP server for an AI helper
     McpEnabled, McpEnabledHint, McpPort, McpPortHint,
+    // 3.0.24-beta.2: Alt+O's simple mode - its sections, the capability cards' words, the mode switch
+    SimpleModeSimple, SimpleModeFull, SimpleMore, SimpleFoot, SimpleFull, SimpleFullHint, SimpleWorld,
+    SimpleLightFire, SimpleFight, SimpleSmooth, SimpleSound, SimpleTime, SimpleWeather, SimpleWater, SimplePlants,
+    SimpleGround, SimpleCreatures, SimpleCaves, SimpleAir, SimpleLights, SimpleFire, SimpleCharacters, SimpleSkills,
+    SimpleWhoHits, SimpleBossBars, SimpleDropNames, SimplePanorama, SimpleRoomWalls, SimpleWeather3d, SimpleGrass3d,
+    SimpleStars, SimpleNewUi, SimpleReference, SimpleKeepFps, SimpleSavePower, SimpleSurround, SimpleNotify,
+    SimpleArrows, SimpleWalkMode, SimpleSpace, SimplePad,
     Count
 };
 

@@ -193,4 +193,84 @@ settings::Text noteOf(int entry, bool view3d) {
     return settings::Text::Count;
 }
 
+int entryOfGroup(int group) {
+    const std::vector<cat::Group>& all = cat::groups();
+    if (group < 0 || size_t(group) >= all.size()) return -1;
+    return entryOf(all[size_t(group)].area);
+}
+
+std::vector<Line> simpleLines() {
+    using settings::Text;
+    struct Item {
+        Text section;
+        const char* key;
+        Text desc;  // Text::Count: a plain row
+    };
+    static const Item kItems[] = {
+        {Text::LookHead, "picture.0", Text::Count}, {Text::LookHead, "picture.1", Text::Count},
+        {Text::LookHead, "picture.2", Text::Count},
+        {Text::SimpleWorld, "effects.group_time", Text::SimpleTime},
+        {Text::SimpleWorld, "effects.group_weather", Text::SimpleWeather},
+        {Text::SimpleWorld, "effects.group_waters", Text::SimpleWater},
+        {Text::SimpleWorld, "effects.group_plants", Text::SimplePlants},
+        {Text::SimpleWorld, "effects.group_ground", Text::SimpleGround},
+        {Text::SimpleWorld, "effects.group_creatures", Text::SimpleCreatures},
+        {Text::SimpleWorld, "effects.group_caves", Text::SimpleCaves},
+        {Text::SimpleWorld, "effects.group_sky", Text::SimpleAir},
+        {Text::SimpleLightFire, "effects.group_lights", Text::SimpleLights},
+        {Text::SimpleLightFire, "effects.group_fire", Text::SimpleFire},
+        {Text::SimpleFight, "interface.mob_hp", Text::Count},
+        {Text::SimpleFight, "effects.group_characters", Text::SimpleCharacters},
+        {Text::SimpleFight, "effects.group_skill_effects", Text::SimpleSkills},
+        {Text::SimpleFight, "interface.who_hits", Text::SimpleWhoHits},
+        {Text::SimpleFight, "interface.boss_bars", Text::SimpleBossBars},
+        {Text::SimpleFight, "interface.drop_names", Text::SimpleDropNames},
+        {Text::View3dHeading, "view3d.panorama", Text::SimplePanorama},
+        {Text::View3dHeading, "view3d.room_walls", Text::SimpleRoomWalls},
+        {Text::View3dHeading, "view3d.weather", Text::SimpleWeather3d},
+        {Text::View3dHeading, "view3d.grass", Text::SimpleGrass3d},
+        {Text::View3dHeading, "view3d.stars", Text::SimpleStars},
+        {Text::ViewInterface, "interface.minimap", Text::SimpleNewUi},
+        {Text::ViewInterface, "interface.reference", Text::SimpleReference},
+        {Text::SimpleSmooth, "frames.fps_limit", Text::Count},
+        {Text::SimpleSmooth, "frames.keep_fps", Text::SimpleKeepFps},
+        {Text::SimpleSmooth, "frames.save_power", Text::SimpleSavePower},
+        {Text::SimpleSound, "game.0", Text::Count}, {Text::SimpleSound, "game.1", Text::Count},
+        {Text::SimpleSound, "sound.engine", Text::SimpleSurround},
+        {Text::SimpleSound, "notify.on", Text::SimpleNotify},
+        {Text::CatControls, "interface.arrows_walk", Text::SimpleArrows},
+        {Text::CatControls, "interface.walk_mode", Text::SimpleWalkMode},
+        {Text::CatControls, "interface.space_action", Text::SimpleSpace},
+        {Text::CatControls, "pad.enabled", Text::SimplePad}};
+    std::vector<Line> out;
+    const std::vector<cat::Group>& all = cat::groups();
+    for (const Item& it : kItems) {
+        const std::string key = it.key;
+        const Kind kind = key.rfind("picture.", 0) == 0 ? Kind::Picture
+                          : key.rfind("game.", 0) == 0  ? Kind::Game
+                                                        : Kind::Keys;
+        Line l = row(kind, key, kLookGroup, 0, it.section);
+        l.heads = out.empty() || out.back().groupName != it.section;
+        if (it.desc != Text::Count) {
+            l.card = true;
+            l.desc = it.desc;
+            // the group behind it: the one it switches as a whole (its first row), else the row's own group
+            if (const cat::Group* g = cat::groupOf(key)) {
+                l.opens = int(g - all.data());
+                for (const cat::Row& r : g->rows) l.inside += inGame(r) ? 1 : 0;
+                if (l.inside <= 1) l.opens = -1, l.inside = 0;
+            }
+            // the new interface's own switch: all of «Інтерфейс» stands behind it
+            l.entry = l.opens >= 0 ? entryOfGroup(l.opens) : 0;
+            if (key == "interface.minimap") {
+                l.opens = -1;
+                l.entry = entryOf(cat::Area::Interface);
+                l.inside = l.entry > 0 ? nav()[size_t(l.entry)].rows : 0;
+            }
+        }
+        out.push_back(std::move(l));
+    }
+    return out;
+}
+
 }  // namespace uagfx::settingswin

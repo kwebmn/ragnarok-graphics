@@ -268,3 +268,38 @@ TEST(settings_window_tells_what_is_off_its_default) {
     CHECK(settingswin::changed("effects.grass", own, defaults) ==
           (settings::tokenOf(*settings::findSetting("effects.grass"), defaults) == std::string("1")));
 }
+
+// 3.0.24-beta.2 (the owner: the simple mode - «разширь больше», «включать групами», «там нужно видить возможности»):
+// the simple page - the three looks, then the possibilities by sections; every key a real row of the window, every
+// card's words in each language, a card's «Детально» on a group of its own area
+TEST(settings_window_simple_page_of_possibilities) {
+    using namespace uagfx::settingswin;
+    namespace cat = uagfx::settings::catalogue;
+    const std::vector<Line> s = simpleLines();
+    CHECK_EQ(s.size(), size_t(37));
+    CHECK(s[0].key == "picture.0" && s[0].heads && s[0].kind == Kind::Picture);
+    int cards = 0, sections = 0;
+    for (const Line& l : s) {
+        sections += l.heads ? 1 : 0;
+        if (l.kind == Kind::Keys) CHECK(uagfx::settings::findSetting(l.key) != nullptr);
+        if (!l.card) continue;
+        ++cards;
+        for (uagfx::settings::Lang lang : {uagfx::settings::Lang::En, uagfx::settings::Lang::Uk,
+                                           uagfx::settings::Lang::Ru})
+            CHECK(std::string(uagfx::settings::tr(lang, l.desc)).size() > 10);
+        if (l.opens >= 0) {
+            CHECK(l.inside > 1);
+            CHECK(l.entry == entryOfGroup(l.opens) && l.entry > 0);
+            const cat::Group* g = cat::groupOf(l.key);
+            CHECK(g && int(g - cat::groups().data()) == l.opens);
+        }
+    }
+    CHECK_EQ(cards, 30);
+    CHECK_EQ(sections, 9);
+    // the water's card switches its group: «Детально» on it with its rows
+    const auto water = std::find_if(s.begin(), s.end(), [](const Line& l) { return l.key == "effects.group_waters"; });
+    CHECK(water != s.end() && water->opens >= 0 && water->inside >= 10);
+    // the new interface's card: all of «Інтерфейс» behind it
+    const auto ui = std::find_if(s.begin(), s.end(), [](const Line& l) { return l.key == "interface.minimap"; });
+    CHECK(ui != s.end() && ui->card && ui->opens < 0 && ui->entry > 0 && ui->inside > 100);
+}

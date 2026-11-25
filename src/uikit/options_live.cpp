@@ -15,18 +15,25 @@ namespace {
 // that have them
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw ow sw" data-style-background-color="ground">
-<div class="head"><span class="title">{{title}}</span><span class="hk">Alt+O</span></div>
+<div class="head"><span class="title">{{title}}</span><span class="hk">Alt+O</span><span class="sseg"><span
+  class="ctl" data-class-on="simple" data-event-click="set_mode(0)">{{mode_simple}}</span><span class="ctl"
+  data-class-on="!simple" data-event-click="set_mode(1)">{{mode_full}}</span></span></div>
 <span class="x ctl" data-event-click="opt_close()">&#x2715;</span>
 <div class="srch"><input class="ctl" type="text" data-value="query"/><span class="ph"
   data-if="query == ''">{{search_hint}}</span></div>
 <div class="sbody">
- <div class="snav"><div class="sn ctl" data-for="n, i : nav" data-class-on="i == sec && query == ''"
+ <div class="snav" data-if="!simple"><div class="sn ctl" data-for="n, i : nav" data-class-on="i == sec && query == ''"
    data-event-click="sec_go(i)"><span class="nn">{{n.name}}</span><span class="cnt"
    data-if="n.count > 0">{{n.count}}</span></div></div>
  <div id="spane" class="spane"><div class="snote" data-if="note != ''">{{note}}</div><div class="srow"
    data-for="r, i : srows"><div class="sgrp" data-if="r.group != ''">{{r.group}}<span class="srst ctl"
    data-if="r.reset != ''" data-event-click="set_reset(i)">{{r.reset}}</span></div><div class="ssub"
-   data-if="r.subhead">{{r.label}}</div><div class="sro" data-if="!r.subhead" data-class-sub="r.sub"
+   data-if="r.subhead">{{r.label}}</div><div class="scw" data-for="c, j : r.cards"><div class="scard"
+   data-class-off="!c.on"><div class="scb"><span class="scn">{{c.label}}</span><span
+   class="scd">{{c.desc}}</span><span class="scm ctl" data-if="c.more != ''"
+   data-event-click="card_more(i, j)">{{c.more}}</span></div><span class="tg ctl" data-class-on="c.on"
+   data-event-click="card_toggle(i, j)"><span class="kn"></span></span></div></div><div class="sro"
+   data-if="!r.subhead && r.ncards == 0" data-class-sub="r.sub"
    data-class-det="r.det"><div class="st"><span
    class="sl">{{r.label}}</span><span class="shn" data-if="r.hint != ''">{{r.hint}}</span><span class="swn"
    data-if="r.warn != ''">{{r.warn}}</span></div><div
@@ -100,6 +107,13 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     }
     c.RegisterArray<std::vector<ChoiceView>>();
     c.RegisterArray<std::vector<int>>();
+    if (auto v = c.RegisterStruct<CardView>()) {
+        v.RegisterMember("label", &CardView::label);
+        v.RegisterMember("desc", &CardView::desc);
+        v.RegisterMember("more", &CardView::more);
+        v.RegisterMember("on", &CardView::on);
+    }
+    c.RegisterArray<std::vector<CardView>>();
     if (auto v = c.RegisterStruct<RowView>()) {
         v.RegisterMember("group", &RowView::group);
         v.RegisterMember("label", &RowView::label);
@@ -120,6 +134,8 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         v.RegisterMember("subhead", &RowView::subhead);
         v.RegisterMember("det", &RowView::det);
         v.RegisterMember("sub", &RowView::sub);
+        v.RegisterMember("cards", &RowView::cards);
+        v.RegisterMember("ncards", &RowView::ncards);
     }
     c.RegisterArray<std::vector<RowView>>();
     if (auto v = c.RegisterStruct<NavView>()) {
@@ -140,6 +156,9 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("layout_btn", &m.layoutBtn);
     c.Bind("note", &m.note);
     c.Bind("ground", &m.ground);
+    c.Bind("simple", &m.simple);
+    c.Bind("mode_simple", &m.modeSimple);
+    c.Bind("mode_full", &m.modeFull);
 }
 
 }  // namespace uagfx::uikit::options
