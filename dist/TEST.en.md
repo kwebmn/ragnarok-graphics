@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.3 — what's new · 2026-11-26
+
+«Checking now».
+
+- **In beta builds Alt+O has «Checking now»** — first in the full mode's list and the simple page's first section. Its cards are what this beta asks to check: what to do (a few steps), since which beta, and the switch when a check needs one.
+- **«Works ✓»** hides the card and sends the developers a mark with the game's logs. **«A problem - report»** opens a new report with a screenshot, the check's name already written in.
+- Release builds have no such entry.
+
 # uaRO Graphics 3.0.24-beta.2 — what's new · 2026-11-26
 
 The simple settings mode.
