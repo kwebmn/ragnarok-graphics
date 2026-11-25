@@ -68,6 +68,11 @@ FirstStart firstStart(bool usedBefore, const std::string& kept, const std::strin
 // world_scale_reset marking it done, so that a share the player picks after it stays. The edits for a file's keys
 // (readIni); none once marked. The driver at the game's start and the settings app when it opens.
 std::vector<IniEdit> worldScaleReset(const std::map<std::string, std::string>& ini);
+// 3.0.24-beta.1 (the owner: the item windows «не активным по умолчанию» - «всем»): until the interface sends the
+// server's packets itself, the windows of things are the game's own - each [interface] key of kItemWindows to 0 and
+// [utility] item_windows_off = 1, once (a window turned on after it stays on)
+extern const char* const kItemWindows[11];
+std::vector<IniEdit> itemWindowsOff(const std::map<std::string, std::string>& ini);
 // 3.0.11-beta.58 (the autopilot, the owner: «делай»): an install set up before it moves over once ([utility]
 // autopilot = 1) - its effects set as its card's memory gave it (1 weak, 2 medium, 3 strong) to the automatic one, and
 // with the automatic set (not the super-light mode) keep_fps 0 or 45 to 60; a set the player picked stays. The driver

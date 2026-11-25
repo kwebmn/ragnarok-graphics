@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <string>
 
 #include "core/settings/auto_setup.hpp"
@@ -275,4 +276,22 @@ TEST(first_start_sets_up_a_copied_install_silently) {
     CHECK(firstStart(true, "RTX|8192|1920x1080", "RTX|8192|1920x1080", false) == FirstStart::Nothing);
     CHECK(firstStart(false, "", "UHD|128|1920x1080", false) == FirstStart::Apply);
     CHECK(firstStart(true, "", "UHD|128|1920x1080", false) == FirstStart::Record);
+}
+
+// 3.0.24-beta.1 (the owner: «интерфейс с итемами просто сделать не активным по умолчанию» - «всем»): the item windows
+// (bag, equipment, storage, trade, cart, shops, counts, picks, own shop) the game's own for every install, once - a
+// window turned on again after the mark stays on
+TEST(item_windows_off_once_for_everyone) {
+    const std::vector<IniEdit> e = itemWindowsOff(readIni("[interface]\nitems = 1\nchat = 1\n"));
+    CHECK_EQ(e.size(), size_t(12));
+    for (size_t i = 0; i + 1 < e.size(); ++i) CHECK(e[i].section == "interface" && e[i].value == "0");
+    CHECK(e.back().section == "utility" && e.back().key == "item_windows_off" && e.back().value == "1");
+    const auto has = [&e](const char* key) {
+        return std::any_of(e.begin(), e.end(), [key](const IniEdit& x) { return x.key == key; });
+    };
+    for (const char* k : {"items", "equip", "storage", "trade", "cart", "shop", "vending", "counts", "picks", "my_shop",
+                          "vend_setup"})
+        CHECK(has(k));
+    CHECK(!has("chat"));
+    CHECK(itemWindowsOff(readIni("[interface]\nitems = 1\n[utility]\nitem_windows_off = 1\n")).empty());
 }

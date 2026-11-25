@@ -36,8 +36,13 @@ void backup(const std::wstring& name, const std::string& ini) {
 
 // 3.0.9-beta.7: the mark of the world scale's reset, written to a file read without it; 3.0.11-beta.58: and the
 // autopilot's move (a file without a set is on the automatic one: keep_fps 60 with it) with its mark
+// 3.0.24-beta.1: the item windows the game's own once, after the world scale's mark
 const std::vector<IniEdit> kMarked{
-    {"utility", "world_scale_reset", "1"}, {"frames", "keep_fps", "60"}, {"utility", "autopilot", "1"}};
+    {"utility", "world_scale_reset", "1"}, {"interface", "items", "0"}, {"interface", "equip", "0"},
+    {"interface", "storage", "0"}, {"interface", "trade", "0"}, {"interface", "cart", "0"}, {"interface", "shop", "0"},
+    {"interface", "vending", "0"}, {"interface", "counts", "0"}, {"interface", "picks", "0"},
+    {"interface", "my_shop", "0"}, {"interface", "vend_setup", "0"}, {"utility", "item_windows_off", "1"},
+    {"frames", "keep_fps", "60"}, {"utility", "autopilot", "1"}};
 
 // A key of an ini as readIni gives it; "<none>" when it is not there.
 std::string valueOf(const std::string& ini, const std::string& sectionKey) {
@@ -761,7 +766,8 @@ TEST(model_settles_an_old_files_groups_at_its_start) {
     CHECK(w.folders.count(fake::path(kBackups)) == 1);
     // a file of the new groups is left as it is (3.0.9-beta.7: with the world scale's mark - a file of now)
     const std::string fresh = "[effects]\r\npreset = auto\r\ngroup_plants = 0\r\n[utility]\r\nworld_scale_reset = 1\r\n"
-                              "autopilot = 1\r\n";  // 3.0.11-beta.58: and the autopilot's mark
+                              "autopilot = 1\r\n"            // 3.0.11-beta.58: and the autopilot's mark
+                              "item_windows_off = 1\r\n";    // 3.0.24-beta.1: and the item windows' mark
     w.files[fake::path(kIni)] = fresh;
     m.load();
     CHECK(w.files[fake::path(kIni)] == fresh);

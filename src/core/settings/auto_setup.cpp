@@ -62,6 +62,17 @@ std::vector<IniEdit> worldScaleReset(const std::map<std::string, std::string>& i
     return e;
 }
 
+const char* const kItemWindows[11] = {"items",  "equip",  "storage", "trade",   "cart",      "shop",
+                                      "vending", "counts", "picks",   "my_shop", "vend_setup"};
+
+std::vector<IniEdit> itemWindowsOff(const std::map<std::string, std::string>& ini) {
+    if (ini.count("utility.item_windows_off")) return {};
+    std::vector<IniEdit> e;
+    for (const char* key : kItemWindows) e.push_back({"interface", key, "0"});
+    e.push_back({"utility", "item_windows_off", "1"});
+    return e;
+}
+
 std::string machineKey(const Machine& m) {
     return m.adapter + "|" + std::to_string(m.vramMb) + "|" + std::to_string(m.screenWidth) + "x" +
            std::to_string(m.screenHeight);

@@ -1003,7 +1003,7 @@ TEST(view3d_flight_through_the_points) {
 TEST(config_classic_look_is_the_old_clients_interface) {
     Config c = parseConfig("[interface]\nminimap = 1\nwalk_mode = 1\nmouse_cell = 1\ncursor = light\n"
                            "[quality]\nrender_scale = 150\n[camera]\nindoor = 1\ntilt = lower\n");
-    CHECK(c.newMinimap && c.chat && c.hotbar && c.itemsWindow && c.character != CharacterLook::Off);  // the new one
+    CHECK(c.newMinimap && c.chat && c.hotbar && c.statusWindow && c.character != CharacterLook::Off);  // the new one
     const Config old = classicLook(c);
     CHECK(!old.newMinimap && !old.chat && !old.hotbar && !old.itemsWindow && !old.statusWindow && !old.npcWindow);
     CHECK(old.character == CharacterLook::Off && old.buffs == BuffsLook::Off && old.mobHp == MobHp::Off);

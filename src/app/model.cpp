@@ -228,6 +228,7 @@ void Model::load() {
     if (now_.iniExists) {
         const auto ini = readIni(now_.iniText);
         std::vector<IniEdit> edits = worldScaleReset(ini);
+        for (const IniEdit& e : itemWindowsOff(ini)) edits.push_back(e);  // 3.0.24-beta.1
         for (const IniEdit& e : autopilotOnce(ini, memoryLevel())) edits.push_back(e);
         if (!edits.empty()) writeIni(edits, Lang::En);
     }
@@ -631,7 +632,7 @@ std::vector<IniEdit> Model::keptAcross() const {
         if (const auto it = now.find(std::string("stats.") + key); it != now.end())
             keep.push_back({"stats", key, it->second});
     // 2.6: the app's own; 3.0.9-beta.7: the world scale's mark - a share chosen after it stays
-    for (const char* key : {"mode", "window", "seen", "report_asked", "world_scale_reset"})
+    for (const char* key : {"mode", "window", "seen", "report_asked", "world_scale_reset", "item_windows_off"})
         if (const auto it = now.find(std::string("utility.") + key); it != now.end())
             keep.push_back({"utility", key, it->second});
     // 3.0.0-beta.1: the answer about the automatic reports, once given - else a reset would take it back unasked

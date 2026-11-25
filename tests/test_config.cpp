@@ -880,27 +880,19 @@ TEST(config_interface_minimap) {
     // .212: the whisper windows; 3.0.18-beta.103: opening one's shop (as my_shop); 3.0.18-beta.180: the map loading bar
     // 3.0.21-beta.7: not «Налаштування» ("options 0 -> 1" before, between the mercenary and the friends) - it is on
     // with either look
-    CHECK(u.waiting.empty() && u.applied.size() == 47 && u.applied[0] == "minimap 0 -> 1");
-    CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
-    CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "equip 0 -> 1" && u.applied[6] == "npc_talk 0 -> 1");
-    CHECK(u.applied[7] == "shop 0 -> 1" && u.applied[8] == "storage 0 -> 1" && u.applied[9] == "trade 0 -> 1");
-    CHECK(u.applied[10] == "menu 0 -> 1" && u.applied[11] == "cards 0 -> 1" && u.applied[12] == "asks 0 -> 1");
-    CHECK(u.applied[13] == "messages 0 -> 1" && u.applied[14] == "login 0 -> 1" &&
-          u.applied[15] == "char_select 0 -> 1" && u.applied[16] == "char_make 0 -> 1" &&
-          u.applied[17] == "cart 0 -> 1" && u.applied[18] == "counts 0 -> 1" && u.applied[19] == "vending 0 -> 1");
-    CHECK(u.applied[20] == "picks 0 -> 1" && u.applied[21] == "party_setup 0 -> 1" && u.applied[22] == "pet 0 -> 1");
-    CHECK(u.applied[23] == "homun 0 -> 1" && u.applied[24] == "merc 0 -> 1");
-    CHECK(u.applied[25] == "social 0 -> 1" && u.applied[26] == "servers 0 -> 1" && u.applied[27] == "guild 0 -> 1");
-    CHECK(u.applied[28] == "my_shop 0 -> 1" && u.applied[29] == "vend_setup 0 -> 1" &&
-          u.applied[30] == "whisper_setup 0 -> 1" &&
-          u.applied[31] == "macros 0 -> 1" && u.applied[32] == "tips 0 -> 1" &&
-          u.applied[33] == "loading_bar 0 -> 1" && u.applied[34] == "emotes 0 -> 1");
-    CHECK(u.applied[35] == "commands 0 -> 1" && u.applied[36] == "chat_rooms 0 -> 1" &&
-          u.applied[37] == "detail_console 0 -> 1" && u.applied[38] == "popups 0 -> 1" &&
-          u.applied[39] == "whispers 0 -> 1");
-    CHECK(u.applied[40] == "cast 0 -> 1" && u.applied[41] == "chat 0 -> 1" && u.applied[42] == "hotbar 0 -> 1");
-    CHECK(u.applied[43] == "tracker 0 -> 1" && u.applied[44] == "party 0 -> 1" && u.applied[45] == "target 0 -> 1");
-    CHECK(u.applied[46] == "character off -> bars");
+    // 3.0.24-beta.1 (the owner: the item windows off by default): «Речі», «Спорядження», the shops, «Склад», «Обмін»,
+    // «Візок», counts, «Лавка», picks and one's own shop no longer come with it
+    const std::vector<std::string> want = {
+        "minimap 0 -> 1", "buffs off -> column", "status 0 -> 1", "skills 0 -> 1", "npc_talk 0 -> 1", "menu 0 -> 1",
+        "cards 0 -> 1", "asks 0 -> 1", "messages 0 -> 1", "login 0 -> 1", "char_select 0 -> 1", "char_make 0 -> 1",
+        "party_setup 0 -> 1", "pet 0 -> 1", "homun 0 -> 1", "merc 0 -> 1", "social 0 -> 1", "servers 0 -> 1",
+        "guild 0 -> 1", "whisper_setup 0 -> 1", "macros 0 -> 1", "tips 0 -> 1", "loading_bar 0 -> 1",
+        "emotes 0 -> 1", "commands 0 -> 1", "chat_rooms 0 -> 1", "detail_console 0 -> 1", "popups 0 -> 1",
+        "whispers 0 -> 1", "cast 0 -> 1", "chat 0 -> 1", "hotbar 0 -> 1", "tracker 0 -> 1", "party 0 -> 1",
+        "target 0 -> 1", "character off -> bars"
+    };
+    CHECK(u.waiting.empty());
+    CHECK(u.applied == want);
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -1242,7 +1234,7 @@ TEST(config_reads_the_windows) {
     CHECK(!noUi("").itemsWindow && !noUi("").statusWindow);
     CHECK(noUi("items = 1\n").itemsWindow && noUi("status = 1\n").statusWindow);
     const Config c = noUi("minimap = 1\nstatus = 0\n");
-    CHECK(c.itemsWindow && !c.statusWindow);
+    CHECK(!c.itemsWindow && !c.statusWindow);  // 3.0.24-beta.1: the item windows no longer come with it
     for (const char* key : {"interface.items", "interface.status"}) {
         const settings::IniSetting* s = settings::findSetting(key);
         CHECK(s != nullptr);
@@ -1367,7 +1359,7 @@ TEST(config_mob_hp) {
 // in the new look; on with the new minimap unless the file says, a box of «Інтерфейс», at once
 TEST(config_interface_shop) {
     CHECK(!noUi("").shopWindow);
-    CHECK(noUi("minimap = 1\n").shopWindow);
+    CHECK(!noUi("minimap = 1\n").shopWindow);  // 3.0.24-beta.1: off by default
     CHECK(!noUi("minimap = 1\nshop = 0\n").shopWindow);
     CHECK(noUi("shop = 1\n").shopWindow);
     const settings::IniSetting* s = settings::findSetting("interface.shop");
@@ -1380,7 +1372,7 @@ TEST(config_interface_shop) {
 // «Речі»); on with the new minimap unless the file says, a box of «Інтерфейс», at once
 TEST(config_interface_storage) {
     CHECK(!noUi("").storageWindow);
-    CHECK(noUi("minimap = 1\n").storageWindow);
+    CHECK(!noUi("minimap = 1\n").storageWindow);  // 3.0.24-beta.1: off by default
     CHECK(!noUi("minimap = 1\nstorage = 0\n").storageWindow);
     CHECK(noUi("storage = 1\n").storageWindow);
     const settings::IniSetting* s = settings::findSetting("interface.storage");
@@ -1394,7 +1386,7 @@ TEST(config_interface_storage) {
 // on with the new minimap unless the file says, a box of «Інтерфейс», at once
 TEST(config_interface_trade) {
     CHECK(!noUi("").tradeWindow);
-    CHECK(noUi("minimap = 1\n").tradeWindow);
+    CHECK(!noUi("minimap = 1\n").tradeWindow);  // 3.0.24-beta.1: off by default
     CHECK(!noUi("minimap = 1\ntrade = 0\n").tradeWindow);
     CHECK(noUi("trade = 1\n").tradeWindow);
     const settings::IniSetting* s = settings::findSetting("interface.trade");
@@ -1636,7 +1628,7 @@ TEST(config_interface_char_make) {
 // 3.0.11-beta.154: [interface] cart - the merchant's cart as «Візок», on with the new minimap, at once
 TEST(config_interface_cart) {
     CHECK(!noUi("").cartWindow);
-    CHECK(noUi("minimap = 1\n").cartWindow);
+    CHECK(!noUi("minimap = 1\n").cartWindow);  // 3.0.24-beta.1: off by default
     CHECK(!noUi("minimap = 1\ncart = 0\n").cartWindow);
     CHECK(noUi("cart = 1\n").cartWindow);
     const settings::IniSetting* s = settings::findSetting("interface.cart");
@@ -1648,7 +1640,7 @@ TEST(config_interface_cart) {
 // 3.0.11-beta.155: [interface] counts - the game's «how many» window as a card, on with the new minimap, at once
 TEST(config_interface_counts) {
     CHECK(!noUi("").countWindow);
-    CHECK(noUi("minimap = 1\n").countWindow);
+    CHECK(!noUi("minimap = 1\n").countWindow);  // 3.0.24-beta.1: off by default
     CHECK(!noUi("minimap = 1\ncounts = 0\n").countWindow);
     CHECK(noUi("counts = 1\n").countWindow);
     const settings::IniSetting* s = settings::findSetting("interface.counts");
@@ -1660,7 +1652,7 @@ TEST(config_interface_counts) {
 // 3.0.11-beta.156: [interface] vending - another's shop as «Лавка», on with the new minimap, at once
 TEST(config_interface_vending) {
     CHECK(!noUi("").vendWindow);
-    CHECK(noUi("minimap = 1\n").vendWindow);
+    CHECK(!noUi("minimap = 1\n").vendWindow);  // 3.0.24-beta.1: off by default
     CHECK(!noUi("minimap = 1\nvending = 0\n").vendWindow);
     CHECK(noUi("vending = 1\n").vendWindow);
     const settings::IniSetting* s = settings::findSetting("interface.vending");
@@ -1672,7 +1664,7 @@ TEST(config_interface_vending) {
 // 3.0.11-beta.157: [interface] picks - the magnifier's and a card's choice of things, on with the new minimap, at once
 TEST(config_interface_picks) {
     CHECK(!noUi("").pickWindows);
-    CHECK(noUi("minimap = 1\n").pickWindows);
+    CHECK(!noUi("minimap = 1\n").pickWindows);  // 3.0.24-beta.1: off by default
     CHECK(!noUi("minimap = 1\npicks = 0\n").pickWindows);
     CHECK(noUi("picks = 1\n").pickWindows);
     const settings::IniSetting* s = settings::findSetting("interface.picks");
@@ -1788,7 +1780,7 @@ TEST(config_interface_guild) {
 // 3.0.11-beta.166: [interface] my_shop - one's own open shop as a card, on with the new minimap, at once
 TEST(config_interface_my_shop) {
     CHECK(!noUi("").myShopWindow);
-    CHECK(noUi("minimap = 1\n").myShopWindow);
+    CHECK(!noUi("minimap = 1\n").myShopWindow);  // 3.0.24-beta.1: off by default
     CHECK(!noUi("minimap = 1\nmy_shop = 0\n").myShopWindow);
     CHECK(noUi("my_shop = 1\n").myShopWindow);
     const settings::IniSetting* s = settings::findSetting("interface.my_shop");
@@ -2046,7 +2038,7 @@ TEST(config_reads_the_chat_fade) {
 // file, as [interface] my_shop (one's own open shop - on with the new minimap)
 TEST(config_interface_vend_setup) {
     CHECK(!noUi("").vendSetupWindow);
-    CHECK(noUi("minimap = 1\n").vendSetupWindow);
+    CHECK(!noUi("minimap = 1\n").vendSetupWindow);  // 3.0.24-beta.1: off by default
     CHECK(noUi("my_shop = 1\n").vendSetupWindow);
     CHECK(!noUi("minimap = 1\nmy_shop = 0\n").vendSetupWindow);
     CHECK(!noUi("my_shop = 1\nvend_setup = 0\n").vendSetupWindow);

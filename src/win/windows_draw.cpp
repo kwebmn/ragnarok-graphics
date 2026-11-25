@@ -19,6 +19,9 @@
 #include "core/world_words.hpp"
 #include "core/world_windows.hpp"
 #include "core/world_signs.hpp"
+#include "core/windows_apart.hpp"
+#include "pad/win/game_window.hpp"
+#include "win/uaui.hpp"
 #include "win/world_signs.hpp"
 #include "win/char_block.hpp"
 #include "win/context.hpp"
@@ -417,6 +420,63 @@ void placeShopSigns(uint32_t manager) {
     }
 }
 
+// 3.0.24-beta.1 (the owner: «старые и новые окна между собой не конфликтовали, особенно наложение»): a window of the
+// game's own as it opens (shown now, not the frame before) moved off the driver's panels (core/windows_apart) - the
+// game's windows are drawn over them and take their clicks; moved once an opening (where the player puts it after
+// stays)
+void keepGameWindowsApart(uint32_t manager) {
+    static std::vector<uint32_t> before;
+    static int told = 0;
+    std::vector<uint32_t> now;
+    const uint32_t head = *reinterpret_cast<const uint32_t*>(uintptr_t(manager + kWindowsList));
+    uint32_t renderer = 0;
+    int32_t size[2] = {};
+    RECT client{};
+    const HWND game = uaui::gameWindow();
+    const bool known = readGame(kRenderer, &renderer, 4) && renderer && readGame(renderer + 0x24, size, sizeof size) &&
+                       size[0] > 0 && size[1] > 0 && game && GetClientRect(game, &client) && client.right > 0 &&
+                       client.bottom > 0;
+    std::vector<windowsapart::Box> panels;
+    bool panelsRead = false;
+    size_t seen = 0;
+    for (uint32_t node = head ? *reinterpret_cast<const uint32_t*>(uintptr_t(head)) : 0;
+         node && node != head && seen < kMostWindows; node = *reinterpret_cast<const uint32_t*>(uintptr_t(node))) {
+        ++seen;
+        const uint32_t w = *reinterpret_cast<const uint32_t*>(uintptr_t(node + 8));
+        uint32_t table = 0;
+        int32_t shown = 0;
+        if (!w || !readGame(w, &table, 4) || !readGame(w + kWindowShown, &shown, 4) || !shown ||
+            worldwindows::worldWindow(table) || table == kNameClass || table == kNameSideClass)
+            continue;
+        now.push_back(w);
+        if (!known || std::find(before.begin(), before.end(), w) != before.end()) continue;
+        if (!panelsRead) {
+            panelsRead = true;
+            const float sx = float(size[0]) / float(client.right), sy = float(size[1]) / float(client.bottom);
+            for (int b = 0; b < uapad::gamewindow::kBlockerCount; ++b) {
+                if (b == int(uapad::gamewindow::Blocker::Uaui)) continue;  // uaUI's windows: windows, not panels
+                RECT r{};
+                if (!uapad::gamewindow::blockerRect(uapad::gamewindow::Blocker(b), r) || r.right <= r.left ||
+                    r.bottom <= r.top)
+                    continue;
+                const int w = int(float(r.right - r.left) * sx), h = int(float(r.bottom - r.top) * sy);
+                panels.push_back(windowsapart::Box{int(float(r.left) * sx), int(float(r.top) * sy), w, h});
+            }
+        }
+        int32_t box[4] = {};
+        if (!readGame(w + kWindowBox, box, sizeof box)) continue;
+        bool moved = false;
+        const windowsapart::Box to =
+            windowsapart::apart(windowsapart::Box{box[0], box[1], box[2], box[3]}, panels, size[0], size[1], moved);
+        if (!moved) continue;
+        moveWindow(w, worldwords::Point{to.x, to.y});
+        if (told++ < 8)
+            LOG_INFO("windows: the game's window (class 0x%X, %dx%d) opened over the driver's panels at %d, %d - moved "
+                     "to %d, %d", table, box[2], box[3], box[0], box[1], to.x, to.y);
+    }
+    before.swap(now);
+}
+
 // 3.0.16-beta.7: [interface] signs - the shops' and the chat rooms' signs drawn anew (win/world_signs): their shown
 // flags held at 0 through both passes of the game's draw (kept in `held` to put back - the clicks still find them)
 void holdSigns(uint32_t manager, std::vector<std::pair<uint32_t, int32_t>>& held) {
@@ -491,6 +551,7 @@ void hideReplaced() {
 void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     mendWindowFields(manager, "before its windows' draw");  // 3.0.11-beta.194 (R-ZS5B2D): a freed one's name
     hideReplaced();
+    keepGameWindowsApart(manager);  // 3.0.24-beta.1
     std::vector<std::pair<uint32_t, int32_t>> ownHeld;  // 3.0.19-beta.17
     if (view3dwin::ownHidden()) holdOwnGauge(ownHeld);
     std::vector<std::pair<uint32_t, int32_t>> held, signs, words;

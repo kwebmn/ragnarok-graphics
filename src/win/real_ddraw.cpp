@@ -333,6 +333,20 @@ Startup decide() {
                 LOG_ERROR("settings: uaro-graphics.ini could not be written ([utility] world_scale_reset)");
             s.config.worldScale = 100;
         }
+    // 3.0.24-beta.1 (the owner: the item windows the game's own for everyone, once): as the settings app does
+    if (haveIni)
+        if (const std::vector<settings::IniEdit> edits = settings::itemWindowsOff(settings::readIni(ini));
+            !edits.empty()) {
+            const bool written = editIniFile(iniPath, edits);
+            for (bool* b : {&s.config.itemsWindow, &s.config.equipWindow, &s.config.shopWindow,
+                            &s.config.storageWindow, &s.config.tradeWindow, &s.config.cartWindow,
+                            &s.config.countWindow, &s.config.vendWindow, &s.config.pickWindows,
+                            &s.config.myShopWindow, &s.config.vendSetupWindow})
+                *b = false;
+            LOG_INFO("settings: the windows of things the game's own once (3.0.24: «Речі», «Спорядження», «Склад», "
+                     "«Обмін», «Візок», the shops, counts, picks)%s",
+                     written ? "" : " - uaro-graphics.ini not written: this game only");
+        }
     LOG_INFO("%s", padMountedText());  // 2.9
     logRoext();                         // 3.0.1-beta.8
     logUpdates();                       // 3.0.2-beta.5

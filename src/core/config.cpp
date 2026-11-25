@@ -443,10 +443,7 @@ Config parseConfig(const std::string& text) {
     bool trackerSet = false;                      // 3.0.11-beta.70
     bool hotbarSet = false, chatSet = false;      // 3.0.11-beta.40, 3.0.11-beta.41
     bool castSet = false;                         // 3.0.11-beta.48
-    bool itemsSet = false, statusSet = false, skillsSet = false, equipSet = false, npcSet = false;     // 3.0.11-beta.42
-    bool shopSet = false;                         // 3.0.11-beta.100
-    bool storageSet = false;                      // 3.0.11-beta.115
-    bool tradeSet = false;                        // 3.0.11-beta.116
+    bool statusSet = false, skillsSet = false, npcSet = false;  // 3.0.11-beta.42
     bool menuSet = false;                         // 3.0.11-beta.140
     bool cardsSet = false;                        // 3.0.11-beta.149
     bool asksSet = false;                         // 3.0.11-beta.150
@@ -454,10 +451,6 @@ Config parseConfig(const std::string& text) {
     bool loginSet = false;                        // 3.0.11-beta.151
     bool charSelectSet = false;                   // 3.0.11-beta.152
     bool charMakeSet = false;                     // 3.0.11-beta.153
-    bool cartSet = false;                         // 3.0.11-beta.154
-    bool countSet = false;                        // 3.0.11-beta.155
-    bool vendSet = false;                         // 3.0.11-beta.156
-    bool pickSet = false;                         // 3.0.11-beta.157
     bool partySetupSet = false;                   // 3.0.11-beta.158
     bool petSet = false;                          // 3.0.11-beta.159
     bool homunSet = false;                        // 3.0.11-beta.160
@@ -465,7 +458,6 @@ Config parseConfig(const std::string& text) {
     bool socialSet = false;                       // 3.0.11-beta.163
     bool serverSet = false;                       // 3.0.11-beta.164
     bool guildSet = false;                        // 3.0.11-beta.165
-    bool myShopSet = false;                       // 3.0.11-beta.166
     bool vendSetupSet = false;                    // 3.0.18-beta.103
     bool whisperSetupSet = false;                 // 3.0.11-beta.168
     bool macroSet = false;                        // 3.0.11-beta.169
@@ -737,7 +729,6 @@ Config parseConfig(const std::string& text) {
             if (val == "more") c.buffsOverflow = BuffsOverflow::More;
             if (val == "column") c.buffsOverflow = BuffsOverflow::Column;
         } else if (key == "interface.items") {  // 3.0.11-beta.42: «Речі»
-            itemsSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.itemsWindow);
         } else if (key == "interface.item_toast") {  // 3.0.11-beta.186
             setBool(val, c.itemToast);
@@ -748,7 +739,6 @@ Config parseConfig(const std::string& text) {
             skillsSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.skillsWindow);
         } else if (key == "interface.equip") {  // 3.0.11-beta.97: «Спорядження»
-            equipSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.equipWindow);
         } else if (key == "interface.npc_talk") {  // 3.0.11-beta.98: the NPC talk
             npcSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
@@ -788,13 +778,10 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.homun_skills") {
             setBool(val, c.homunSkills);
         } else if (key == "interface.shop") {  // 3.0.11-beta.100: the NPCs' shops
-            shopSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.shopWindow);
         } else if (key == "interface.storage") {  // 3.0.11-beta.115: the Kafra storage
-            storageSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.storageWindow);
         } else if (key == "interface.trade") {  // 3.0.11-beta.116: the trade
-            tradeSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.tradeWindow);
         } else if (key == "interface.menu") {  // 3.0.11-beta.140: the menu and the death screen
             menuSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
@@ -824,16 +811,12 @@ Config parseConfig(const std::string& text) {
             charMakeSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.charMakeWindow);
         } else if (key == "interface.cart") {  // 3.0.11-beta.154: the merchant's cart
-            cartSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.cartWindow);
         } else if (key == "interface.counts") {  // 3.0.11-beta.155: the game's «how many» window
-            countSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.countWindow);
         } else if (key == "interface.vending") {  // 3.0.11-beta.156: another's shop
-            vendSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.vendWindow);
         } else if (key == "interface.picks") {  // 3.0.11-beta.157: the choice of things
-            pickSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.pickWindows);
         } else if (key == "interface.party_setup") {  // 3.0.11-beta.158: the party's settings
             partySetupSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
@@ -862,7 +845,6 @@ Config parseConfig(const std::string& text) {
             vendSetupSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.vendSetupWindow);
         } else if (key == "interface.my_shop") {  // 3.0.11-beta.166: one's own open shop
-            myShopSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.myShopWindow);
         } else if (key == "interface.whisper_setup") {  // 3.0.11-beta.168: the whisper's settings
             whisperSetupSet =
@@ -1269,14 +1251,12 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !hotbarSet) c.hotbar = true;      // 3.0.11-beta.40
     if (c.newMinimap && !castSet) c.castLabel = true;     // 3.0.11-beta.48
     if (c.newMinimap && !chatSet) c.chat = true;          // 3.0.11-beta.41
-    if (c.newMinimap && !itemsSet) c.itemsWindow = true;  // 3.0.11-beta.42
+    // 3.0.24-beta.1 (the owner: «интерфейс с итемами просто сделать не активным по умолчанию»): the item windows -
+    // «Речі», «Спорядження», «Магазин», «Склад», «Обмін», «Візок», counts, «Лавка», picks, own shop - no longer on
+    // with the new look: the game's own unless the file turns them on
     if (c.newMinimap && !statusSet) c.statusWindow = true;
     if (c.newMinimap && !skillsSet) c.skillsWindow = true;  // 3.0.11-beta.96
-    if (c.newMinimap && !equipSet) c.equipWindow = true;    // 3.0.11-beta.97
     if (c.newMinimap && !npcSet) c.npcWindow = true;        // 3.0.11-beta.98
-    if (c.newMinimap && !shopSet) c.shopWindow = true;      // 3.0.11-beta.100
-    if (c.newMinimap && !storageSet) c.storageWindow = true;  // 3.0.11-beta.115
-    if (c.newMinimap && !tradeSet) c.tradeWindow = true;      // 3.0.11-beta.116
     if (c.newMinimap && !menuSet) c.menuWindow = true;        // 3.0.11-beta.140
     if (c.newMinimap && !cardsSet) c.cardWindows = true;      // 3.0.11-beta.149
     if (c.newMinimap && !asksSet) c.askWindows = true;        // 3.0.11-beta.150
@@ -1284,10 +1264,6 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !loginSet) c.loginWindow = true;      // 3.0.11-beta.151
     if (c.newMinimap && !charSelectSet) c.charSelectWindow = true;  // 3.0.11-beta.152
     if (c.newMinimap && !charMakeSet) c.charMakeWindow = true;      // 3.0.11-beta.153
-    if (c.newMinimap && !cartSet) c.cartWindow = true;              // 3.0.11-beta.154
-    if (c.newMinimap && !countSet) c.countWindow = true;            // 3.0.11-beta.155
-    if (c.newMinimap && !vendSet) c.vendWindow = true;              // 3.0.11-beta.156
-    if (c.newMinimap && !pickSet) c.pickWindows = true;             // 3.0.11-beta.157
     if (c.newMinimap && !partySetupSet) c.partySetupWindow = true;  // 3.0.11-beta.158
     if (c.newMinimap && !petSet) c.petWindow = true;                // 3.0.11-beta.159
     if (c.newMinimap && !homunSet) c.homunWindow = true;            // 3.0.11-beta.160
@@ -1295,7 +1271,6 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !socialSet) c.socialWindow = true;          // 3.0.11-beta.163
     if (c.newMinimap && !serverSet) c.serverWindow = true;          // 3.0.11-beta.164
     if (c.newMinimap && !guildSet) c.guildWindow = true;            // 3.0.11-beta.165
-    if (c.newMinimap && !myShopSet) c.myShopWindow = true;          // 3.0.11-beta.166
     // 3.0.18-beta.103 (R-S377Y8): opening one's shop as one's open shop when the file says nothing of it
     if (!vendSetupSet) c.vendSetupWindow = c.myShopWindow;
     if (c.newMinimap && !whisperSetupSet) c.whisperSetupWindow = true;  // 3.0.11-beta.168

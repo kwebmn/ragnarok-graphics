@@ -279,7 +279,7 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::InterfaceBuffsOverflowMore, Text::InterfaceBuffsOverflowColumn}, Text::InterfaceBuffsOverflow,
          Text::InterfaceBuffsOverflowHint, ""},
         // 3.0.11-beta.42: the windows
-        {"interface", "items", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceItems,
+        {"interface", "items", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceItems,
          Text::InterfaceItemsHint, ""},
         // 3.0.11-beta.186: the line on a thing picked up, in place of the game's box
         {"interface", "item_toast", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceItemToast,
@@ -288,7 +288,7 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceStatusHint, ""},
         {"interface", "skills", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceSkills,
          Text::InterfaceSkillsHint, ""},  // 3.0.11-beta.96
-        {"interface", "equip", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceEquip,
+        {"interface", "equip", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceEquip,
          Text::InterfaceEquipHint, ""},  // 3.0.11-beta.97
         {"interface", "npc_talk", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceNpc,
          Text::InterfaceNpcHint, ""},  // 3.0.11-beta.98
@@ -326,11 +326,11 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceHomunDefend, Text::InterfaceHomunDefendHint, ""},
         {"interface", "homun_skills", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceHomunSkills, Text::InterfaceHomunSkillsHint, ""},
-        {"interface", "shop", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceShop,
+        {"interface", "shop", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceShop,
          Text::InterfaceShopHint, ""},  // 3.0.11-beta.100
-        {"interface", "storage", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceStorage,
+        {"interface", "storage", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceStorage,
          Text::InterfaceStorageHint, ""},  // 3.0.11-beta.115
-        {"interface", "trade", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceTrade,
+        {"interface", "trade", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceTrade,
          Text::InterfaceTradeHint, ""},  // 3.0.11-beta.116
         {"interface", "menu", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceMenu,
          Text::InterfaceMenuHint, ""},  // 3.0.11-beta.140
@@ -353,13 +353,13 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceCharSelect, Text::InterfaceCharSelectHint, ""},  // 3.0.11-beta.152
         {"interface", "char_make", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceCharMake, Text::InterfaceCharMakeHint, ""},  // 3.0.11-beta.153
-        {"interface", "cart", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceCart,
+        {"interface", "cart", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceCart,
          Text::InterfaceCartHint, ""},  // 3.0.11-beta.154
-        {"interface", "counts", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceCounts,
+        {"interface", "counts", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceCounts,
          Text::InterfaceCountsHint, ""},  // 3.0.11-beta.155
-        {"interface", "vending", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceVending,
+        {"interface", "vending", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceVending,
          Text::InterfaceVendingHint, ""},  // 3.0.11-beta.156
-        {"interface", "picks", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfacePicks,
+        {"interface", "picks", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfacePicks,
          Text::InterfacePicksHint, ""},  // 3.0.11-beta.157
         {"interface", "party_setup", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfacePartySetup, Text::InterfacePartySetupHint, ""},  // 3.0.11-beta.158
@@ -378,9 +378,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceServersHint, ""},  // 3.0.11-beta.164
         {"interface", "guild", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceGuild,
          Text::InterfaceGuildHint, ""},  // 3.0.11-beta.165
-        {"interface", "my_shop", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceMyShop,
+        {"interface", "my_shop", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceMyShop,
          Text::InterfaceMyShopHint, ""},  // 3.0.11-beta.166
-        {"interface", "vend_setup", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+        {"interface", "vend_setup", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
          Text::InterfaceVendSetup, Text::InterfaceVendSetupHint, ""},  // 3.0.16-beta.33
         {"interface", "whisper_setup", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceWhisperSetup, Text::InterfaceWhisperSetupHint, ""},  // 3.0.11-beta.168
