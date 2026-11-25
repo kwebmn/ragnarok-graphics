@@ -1859,6 +1859,10 @@ constexpr Entry kTexts[] = {
      "нет 20 с. Ваш собственный /mineffect остаётся, как вы его поставили."},
     {Text::LightSkillsOnNote, "Skill effects lighter: {1} fps of {2}", "Ефекти вмінь легші: {1} к/с із {2}",
      "Эффекты умений облегчены: {1} к/с из {2}"},
+    // 3.0.23-beta.5 (R-FPT4TT): a debug view on, told at each map
+    {Text::DebugViewsOnNote, "Diagnostics on: {1} - to turn it off: Ctrl+~ → «Diagnostics»",
+     "Увімкнено діагностику: {1} — вимкнути: Ctrl+~ → «Діагностика»",
+     "Включена диагностика: {1} — выключить: Ctrl+~ → «Диагностика»"},
     {Text::FxCostMs, " · ~{1} ms",
      " · ~{1} мс",
      " · ~{1} мс"},

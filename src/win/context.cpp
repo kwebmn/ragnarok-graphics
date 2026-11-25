@@ -162,6 +162,7 @@
 #include "win/notifier.hpp"
 #include "win/platform.hpp"
 #include "win/shadow_patch.hpp"
+#include "core/debug_views.hpp"
 #include "win/res_tree_patch.hpp"
 #include "win/aura_patch.hpp"
 #include "win/mcp_server.hpp"
@@ -1555,6 +1556,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
             renderer->setMap(map);
             modelcensus::mapChanged();  // 3.0.20-beta.3: the captured model nodes let go
             if (!map.empty()) LOG_INFO("map: %s", map.c_str());
+            // 3.0.23-beta.5 (R-FPT4TT): a debug view on told at each map, with where to turn it off
+            if (!map.empty())
+                if (const std::string note = debugviews::note(config, language()); !note.empty())
+                    sayOnScreen(wideOf(note));
             mapLightAt_ = map.empty() ? 0 : GetTickCount64() + 3000;  // 3.0.18-beta.5: the light the game holds
             // 3.0.17-beta.20 (a player: «поки я сам не хочу щось написати щоб він був сплячим»): a new map with the
             // chat's field empty - the battle mode's letters are the skills' again
