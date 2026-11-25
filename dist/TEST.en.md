@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.1 — what's new · 2026-11-25
+
+The windows of things are the game's own again.
+
+- **«Items», «Equipment», «Storage», «Trade», «Cart», «Shop», «Vending», «How many» and your own shop** are now the game's own windows by default, for everyone (once, at the update). The new item windows had glitches with buying and passing things; while we rebuild them to work reliably, the game uses its own. To bring a new window back: the settings app → «Interface» → the window's box.
+- **The game's own windows no longer cover the new panels:** a game window that opens over the character block, the chat, the hotbar or the minimap moves itself to the nearest free place. Where you drag it after, it stays until closed.
+- The rest of the new interface (chat, character block, hotbar, minimap, skills, guild, «Reference», NPC talk) stays as it was.
+
 # uaRO Graphics 3.0.23 — what's new · 2026-11-25
 
 Room walls in 3D for everyone, monsters' bars no longer seen through walls, the crashes on Malangdo, the game on Linux and window fixes.
