@@ -1098,6 +1098,7 @@ enum class Text : uint16_t {
     ChecksNow, ChecksOk, ChecksBad, ChecksSince,
     // 3.0.24-beta.4: items via packets («Склад»)
     ItemsNotConnected, ItemsStorageRefused, ItemsNoAnswer, InterfaceStoragePackets, InterfaceStoragePacketsHint,
+    SettingsResetAll, SettingsResetAllSure,  // 3.0.24-beta.5: Alt+O's «Усе за замовчуванням»
     Count
 };
 

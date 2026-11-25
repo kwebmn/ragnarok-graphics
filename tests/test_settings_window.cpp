@@ -303,3 +303,16 @@ TEST(settings_window_simple_page_of_possibilities) {
     const auto ui = std::find_if(s.begin(), s.end(), [](const Line& l) { return l.key == "interface.minimap"; });
     CHECK(ui != s.end() && ui->card && ui->opens < 0 && ui->entry > 0 && ui->inside > 100);
 }
+
+// 3.0.24-beta.5 (the owner: «нету кнопки с альт-о сбросить настройки в по умолчанию»): every row of the window off
+// its default, with the value that brings it back - none when all are as shipped
+TEST(settings_window_resets_all_back_to_the_defaults) {
+    const Config d = settingswin::defaults(2);
+    CHECK(settingswin::resetsAll(d, d).empty());
+    Config shown = d;
+    shown.storageWindow = !d.storageWindow;
+    shown.settingsFull = !d.settingsFull;
+    const std::vector<settingswin::Reset> back = settingswin::resetsAll(shown, d);
+    CHECK_EQ(back.size(), size_t(2));
+    for (const settingswin::Reset& r : back) CHECK(r.key == "interface.storage" || r.key == "interface.settings_full");
+}

@@ -7,6 +7,14 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        {"settings_reset_all", "3.0.24-beta.5", "",
+         {"Settings: all to defaults", "Налаштування: усе за замовчуванням", "Настройки: всё по умолчанию"},
+         {"Alt+O, at the bottom «All to defaults», then once more within 4 s: every row back as shipped, «Changed» "
+          "empty.",
+          "Alt+O, унизу «Усе за замовчуванням», потім ще раз за 4 с: усі рядки як після встановлення, «Змінені» "
+          "порожні.",
+          "Alt+O, внизу «Всё по умолчанию», затем ещё раз за 4 с: все строки как после установки, «Изменённые» "
+          "пусты."}},
         {"storage_packets", "3.0.24-beta.4", "interface.storage_packets",
          {"Storage: the new passing of things", "Склад: нова передача речей", "Склад: новая передача вещей"},
          {"Turn «Kafra storage» and this on. At a Kafra: drag a stack from the bag in, double-click to take it back, "

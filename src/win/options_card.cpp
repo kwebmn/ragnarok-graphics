@@ -121,6 +121,7 @@ struct State {
     std::string checksDone;
     ULONGLONG checksAt = 0;
     int checks = 0;
+    ULONGLONG resetArmedUntil = 0;  // 3.0.24-beta.5: «Усе за замовчуванням» pressed once - the second press until then
 };
 
 // 3.0.24-beta.3: the list's entries are the catalogue's (core settingswin nav), «Перевіряємо зараз» before them while
@@ -700,6 +701,27 @@ static void liveFrame(State& s) {
                 break;
             }
         });
+        // 3.0.24-beta.5 (the owner: «нету кнопки с альт-о сбросить настройки в по умолчанию»): every row back to its
+        // default - a second press within 4 s (the first asks «Ще раз — скинути все»), one row a config read as
+        // «Типові» does (backStep)
+        m.BindEventCallback("reset_all", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            State& st = state();
+            if (!st.config) return;
+            const ULONGLONG now = GetTickCount64();
+            if (now >= st.resetArmedUntil) {
+                st.resetArmedUntil = now + 4000;
+                st.m.resetBtn = say(settings::Text::SettingsResetAllSure);
+                st.live.doc.dirty("reset_btn");
+                return;
+            }
+            st.resetArmedUntil = 0;
+            const std::vector<settingswin::Reset> back =
+                settingswin::resetsAll(settingedit::shown(*st.config), st.defaults);
+            LOG_INFO("options: «Усе за замовчуванням» - %d row(s) go back to their defaults", int(back.size()));
+            st.backQueue.insert(st.backQueue.end(), back.begin(), back.end());
+            st.m.resetBtn = say(settings::Text::SettingsResetAll);
+            st.live.doc.dirty("reset_btn");
+        });
         // «Детально · N ›»: the full mode at the card's group
         m.BindEventCallback("card_more", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             State& st = state();
@@ -738,12 +760,18 @@ static void liveFrame(State& s) {
         s.m.consoleBtn = say(settings::Text::SettingsWinConsole);
         s.m.layoutBtn = say(settings::Text::MenuLayout);  // 3.0.21-beta.7: «Розмістити інтерфейс»
         s.m.modeSimple = say(settings::Text::SimpleModeSimple);  // 3.0.24-beta.2
+        s.m.resetBtn = say(settings::Text::SettingsResetAll);    // 3.0.24-beta.5
         s.m.modeFull = say(settings::Text::SimpleModeFull);
         buildNav(s);  // 3.0.21-beta.3: the catalogue's areas, each with its rows' count; .24-beta.3 the checks first
         s.shownQuery = "\x01";  // the counts and the rows again
         s.live.doc.dirtyAll();
     }
     readChecks(s, GetTickCount64());  // 3.0.24-beta.3
+    if (s.resetArmedUntil && GetTickCount64() >= s.resetArmedUntil) {  // 3.0.24-beta.5: the second press not come
+        s.resetArmedUntil = 0;
+        s.m.resetBtn = say(settings::Text::SettingsResetAll);
+        s.live.doc.dirty("reset_btn");
+    }
     if (s.m.query != s.shownQuery || s.m.sec != s.shownSec) {
         if (s.m.query != s.shownQuery) {  // beside an entry: its rows, or what the search found in it
             const std::vector<settingswin::Nav>& list = settingswin::nav();

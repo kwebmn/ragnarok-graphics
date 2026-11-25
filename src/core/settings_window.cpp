@@ -169,6 +169,13 @@ std::vector<Reset> resetsOf(int group, const Config& shown, const Config& defaul
     return out;
 }
 
+std::vector<Reset> resetsAll(const Config& shown, const Config& defaults) {
+    std::vector<Reset> out;
+    for (size_t g = 0; g < cat::groups().size(); ++g)
+        for (const Reset& r : resetsOf(int(g), shown, defaults)) out.push_back(r);
+    return out;
+}
+
 std::vector<Line> changedLines(const Config& shown, const Config& defaults) {
     std::vector<Line> out;
     const std::vector<cat::Group>& groups = cat::groups();

@@ -50,6 +50,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    <div class="snone" data-if="shown_rows == 0">{{none}}</div></div>
 </div>
 <div class="sfoot"><span class="sfh">{{hint}}</span><div class="sfb"><span class="btn ctl"
+  data-event-click="reset_all()">{{reset_btn}}</span><span class="btn ctl"
   data-event-click="open_layout()">{{layout_btn}}</span><span class="btn ctl"
   data-event-click="open_console()">{{console_btn}}</span></div></div>
 <div id="ring" class="ring"></div>
@@ -160,6 +161,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("none", &m.none);
     c.Bind("console_btn", &m.consoleBtn);
     c.Bind("layout_btn", &m.layoutBtn);
+    c.Bind("reset_btn", &m.resetBtn);
     c.Bind("note", &m.note);
     c.Bind("ground", &m.ground);
     c.Bind("simple", &m.simple);

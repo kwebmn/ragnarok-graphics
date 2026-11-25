@@ -72,6 +72,8 @@ struct Reset {
     std::string key, token;
 };
 std::vector<Reset> resetsOf(int group, const Config& shown, const Config& defaults);
+// 3.0.24-beta.5 (the owner: «нету кнопки с альт-о сбросить настройки в по умолчанию»): every group's, in order
+std::vector<Reset> resetsAll(const Config& shown, const Config& defaults);
 // «Змінені»: every row off its default, under its group's name (as the search's lines)
 std::vector<Line> changedLines(const Config& shown, const Config& defaults);
 // What an entry says over its rows: «3D-режим» in the usual view - its rows do nothing now. Text::Count: nothing

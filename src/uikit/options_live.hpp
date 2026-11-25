@@ -64,6 +64,7 @@ struct Model {
     int sec = 0, shownRows = 0;  // the entry shown; its rows' count (0: «nothing found» in their place)
     Rml::String query, title, hint, searchHint, none, consoleBtn, ground = "#10141cf0";
     Rml::String layoutBtn;  // 3.0.21-beta.7: «Розмістити інтерфейс» (the console's action before)
+    Rml::String resetBtn;   // 3.0.24-beta.5: «Усе за замовчуванням» (pressed once: «Ще раз — скинути все»)
     Rml::String note;       // 3.0.21-beta.10: what the entry says over its rows («3D-режим» in the usual view), "" none
     // 3.0.24-beta.2: the simple page (no list on the left) or the full window (win/options_card sets it from the
     // file as the window opens); the switch's two words
@@ -101,7 +102,8 @@ int cull(Rml::ElementDocument* doc, bool all = false);
 const char* rml();
 // The window's variables. Its events are the caller's: sec_go(i), set_toggle(i), set_slider(i), set_step(i, by),
 // set_choice(i, j), set_reset(i), open_layout(), open_console(), opt_close(); 3.0.24-beta.2: set_mode(0 simple /
-// 1 full), card_toggle(i, j), card_more(i, j); 3.0.24-beta.3: check_ok(i, j), check_bad(i, j)
+// 1 full), card_toggle(i, j), card_more(i, j); 3.0.24-beta.3: check_ok(i, j), check_bad(i, j); 3.0.24-beta.5:
+// reset_all()
 void bind(Rml::DataModelConstructor& c, Model& m);
 
 }  // namespace uagfx::uikit::options

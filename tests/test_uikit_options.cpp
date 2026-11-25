@@ -143,15 +143,16 @@ TEST(uikit_options_groups_parts_and_the_details_heading) {
     Rml::Element* knob = doc->QuerySelector(".spane .tg");
     if (knob) knob->Click();
     CHECK_EQ(toggled, 0);
-    // the foot: «Розмістити інтерфейс» and the way to the console, side by side at the right
-    CHECK_EQ(shownOf(doc, ".sfoot .btn"), 2);
+    // the foot: 3.0.24-beta.5's «Усе за замовчуванням», «Розмістити інтерфейс» and the way to the console, side by
+    // side at the right
+    CHECK_EQ(shownOf(doc, ".sfoot .btn"), 3);
     Rml::ElementList foot;
     doc->QuerySelectorAll(foot, ".sfoot .btn");
-    CHECK_EQ(foot.size(), size_t(2));
-    if (foot.size() == 2) {
-        CHECK(foot[0]->GetAbsoluteLeft() + foot[0]->GetOffsetWidth() <= foot[1]->GetAbsoluteLeft() + 1);
-        CHECK(std::abs(foot[0]->GetAbsoluteTop() - foot[1]->GetAbsoluteTop()) < 2);
-        foot[0]->Click();
+    CHECK_EQ(foot.size(), size_t(3));
+    if (foot.size() == 3) {
+        CHECK(foot[1]->GetAbsoluteLeft() + foot[1]->GetOffsetWidth() <= foot[2]->GetAbsoluteLeft() + 1);
+        CHECK(std::abs(foot[1]->GetAbsoluteTop() - foot[2]->GetAbsoluteTop()) < 2);
+        foot[1]->Click();
     }
     CHECK_EQ(layouts, 1);
     // nothing found: the note in the rows' place
@@ -286,7 +287,8 @@ TEST(uikit_options_parts_stand_where_they_stood) {
         {".ch", {{753.0f, 281.0f, 27.0f, 22.4f}, {836.0f, 281.0f, 27.0f, 22.4f}, {657.0f, 378.0f, 72.0f, 22.4f},
                  {733.0f, 378.0f, 53.0f, 22.4f}, {790.0f, 378.0f, 73.0f, 22.4f}}},
         {".snone", {}},
-        {".sfoot .btn", {{549.0f, 600.0f, 154.0f, 24.4f}, {711.0f, 600.0f, 154.0f, 24.4f}}},
+        {".sfoot .btn", {{519.0f, 600.0f, 22.0f, 24.4f}, {549.0f, 600.0f, 154.0f, 24.4f},
+                         {711.0f, 600.0f, 154.0f, 24.4f}}},  // 3.0.24-beta.5: the reset first (no words in the test)
         {".sn", {{123.0f, 156.0f, 190.0f, 29.6f}, {123.0f, 185.6f, 190.0f, 29.6f}}},
     };
     for (const Gold& g : gold) {
