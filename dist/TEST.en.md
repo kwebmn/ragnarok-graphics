@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.2 — what's new · 2026-11-26
+
+The simple settings mode.
+
+- **Alt+O now opens in the simple mode** — for everyone. One page with no list: the three sets («Picture», «Interface», «Textures»), then the client's possibilities as cards by sections: world, light and fire, characters and battle, 3D view, interface, smoothness, sound, controls. Each card says what it gives in one line and has one switch; a group's card («Water», «Light», «Day, night and seasons»…) turns the whole group on and off.
+- **«In detail · N ›»** on a card opens that group in the full mode — for fine tuning.
+- **The «Simple / Full» switch** in the window's head; the choice is kept. The full mode is the window as before with every area. The search looks everywhere.
+
 # uaRO Graphics 3.0.24-beta.1 — what's new · 2026-11-25
 
 The windows of things are the game's own again.
