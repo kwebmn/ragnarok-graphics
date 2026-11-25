@@ -1319,6 +1319,17 @@ bool seenActor(uint32_t id, const float to[3]) {
             sight.seen = true;
             return true;
         }
+        // 3.0.23-beta.10 (R-62VEPQ: a monster behind a round tower, its bar over it): the models the game has drawn
+        // are known by their own triangles and have no box on the way (boxesOnTheWay leaves them out) - their
+        // triangles asked, as the camera asks them
+        if (s.cameraWalls) {
+            const float way[3] = {to[0] - s.eyeNow[0], to[1] - s.eyeNow[1], to[2] - s.eyeNow[2]};
+            const float length = std::sqrt(way[0] * way[0] + way[1] * way[1] + way[2] * way[2]);
+            if (view3d::solidHides(modelcensus::solidsNow().meets(s.eyeNow, to), length)) {
+                sight.seen = false;
+                return false;
+            }
+        }
         std::vector<view3d::Box> boxes;
         std::vector<uint32_t> looked;
         int budget = 800;

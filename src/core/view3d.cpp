@@ -188,6 +188,10 @@ bool spanIn(const Box& b, const float from[3], const float to[3], float& t0, flo
 }
 }  // namespace
 
+bool solidHides(float share, float length) {
+    return share > 0.0f && length > kSolidNear && share * length < length - kSolidNear;
+}
+
 bool boxHides(const Box& b, const float eye[3], const float to[3]) {
     float t0 = 0, t1 = 0;
     if (!spanIn(b, eye, to, t0, t1)) return false;  // missed

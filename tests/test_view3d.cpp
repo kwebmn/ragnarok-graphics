@@ -1059,3 +1059,14 @@ TEST(view3d_place_past_a_posts_core_is_hidden) {
     const float inCore[3] = {0, -8, 50};
     CHECK(!view3d::boxHides(post, eye, inCore));
 }
+
+// 3.0.23-beta.10 (R-62VEPQ «полоска всеравно осталась»: a monster behind a round tower in prontera - the drawn models
+// known by their own triangles have no box on the way, so nothing hid it): a triangle on the way hides the place,
+// unless it is within kSolidNear of the place itself (the wall it leans on, its own side)
+TEST(view3d_a_triangle_on_the_way_hides) {
+    CHECK(view3d::solidHides(0.5f, 200.0f));
+    CHECK(!view3d::solidHides(-1.0f, 200.0f));         // none met
+    CHECK(!view3d::solidHides(0.99f, 200.0f));         // 2 units off the place: its own side
+    CHECK(view3d::solidHides(0.9f, 200.0f));           // 20 units before it
+    CHECK(!view3d::solidHides(0.5f, 4.0f));            // a place right at the eye: nothing between
+}
