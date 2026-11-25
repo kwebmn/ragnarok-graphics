@@ -190,14 +190,18 @@ bool spanIn(const Box& b, const float from[3], const float to[3], float& t0, flo
 
 bool boxHides(const Box& b, const float eye[3], const float to[3]) {
     float t0 = 0, t1 = 0;
-    if (!spanIn(b, eye, to, t0, t1) || t1 >= 1.0f) return false;  // missed, or the place in it
+    if (!spanIn(b, eye, to, t0, t1)) return false;  // missed
     // 3.0.23-beta.8 (R-8R7XNK): the eye in a wall's box (a thin, tall slab - the eye pressed into the wall): what is
     // out past it hidden; the eye in a fat box (a tree's crown, a house's coarse box) hides nothing
     if (t0 <= 0.0f)
-        return std::min(b.half[0], b.half[2]) <= kThinWallHalf && b.half[1] >= kThinWallLeastHalfHigh;
+        return t1 < 1.0f && std::min(b.half[0], b.half[2]) <= kThinWallHalf && b.half[1] >= kThinWallLeastHalfHigh;
+    // the way through its core (kHideShare of its half sizes) and out of it before the place - 3.0.23-beta.9
+    // (R-M9NN4J): the place may lie in the box's margin past the core (a monster right behind a post); a place in the
+    // core (inside a house's box) is not hidden by it
     Box core = b;
     for (float& h : core.half) h *= kHideShare;
-    return spanIn(core, eye, to, t0, t1) && t0 > 0.0f && t1 < 1.0f;
+    float c0 = 0, c1 = 0;
+    return spanIn(core, eye, to, c0, c1) && c0 > 0.0f && c1 < 1.0f;
 }
 
 float entersAt(const Box& b, const float from[3], const float to[3]) {

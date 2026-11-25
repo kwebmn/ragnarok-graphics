@@ -1045,3 +1045,17 @@ TEST(view3d_eye_in_a_thin_wall_hides_what_is_past_it) {
     crown.half[0] = 10, crown.half[1] = 10, crown.half[2] = 10;
     CHECK(!view3d::boxHides(crown, eyeIn, past));
 }
+
+// 3.0.23-beta.9 (R-M9NN4J «отчет с полоской моба», prontera: a monster right behind a stone post, its bar over the
+// post): the place inside a model's box but past its core - the way through the core - hidden; a place in the core (a
+// monster inside a house's box) still not
+TEST(view3d_place_past_a_posts_core_is_hidden) {
+    view3d::Box post;
+    post.centre[0] = 0, post.centre[1] = -15, post.centre[2] = 50;
+    post.half[0] = 5, post.half[1] = 15, post.half[2] = 5;
+    const float eye[3] = {0, -20, 0};
+    const float justPast[3] = {0, -8, 54.5f};  // in the box (its margin), past its core (to 54)
+    CHECK(view3d::boxHides(post, eye, justPast));
+    const float inCore[3] = {0, -8, 50};
+    CHECK(!view3d::boxHides(post, eye, inCore));
+}
