@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.23-beta.15 — what's new · 2026-11-25
+
+Cells under signs, the guild window, the reference.
+
+- **«Items» and «Storage»:** the cells over a shop's or a chat room's sign on the street answer clicks, double clicks and drags again. Before, the sign took the click.
+- **The guild window** no longer goes past the bottom of the screen: it shrinks itself so its bottom and its resize corner are seen. The members' scroll bar can be dragged and clicked, and shows where you are in the list.
+- **«Reference»:** in a narrow window a location's NPCs are no longer drawn over «Who is here».
+- **Shop:** the hint at the bottom says that in a thing's card a click on a card in its slot shows what it gives.
+
 # uaRO Graphics 3.0.23-beta.14 — what's new · 2026-11-25
 
 The chat no longer takes the arrows.
