@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.23-beta.8 — what's new · 2026-11-25
+
+Room walls on Direct3D 11 and bars past a wall.
+
+- **Room walls in the 3D view on Direct3D 11:** the rooms' open sides are closed by a wall up to the ceiling here too - plain, in the room's walls' colour, as the ceiling on Direct3D 11. To turn it off: Alt+O → «3D view» → «Rooms and caves» → «Walls in place of a house's black blocks».
+- **Monsters' health bars** no longer show through a wall the 3D view's camera is pressed into.
+
 # uaRO Graphics 3.0.23-beta.7 — what's new · 2026-11-25
 
 Room walls in 3D: a fix.
