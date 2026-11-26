@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.17 — what's new · 2026-11-27
+
+Comodo's vault — in the rock of its walls.
+
+- **A vault like the walls.** Over Comodo and in its caves the vault now wears the same rock as the map's walls; the folds stay, but without the shine: the hollows in shade, the folds' sides lit faintly by the map's light.
+- **No shine.** No more wet sparks or glossy rims, far fewer and dimmer crystals, a calmer water's light.
+
 # uaRO Graphics 3.0.24-beta.16 — what's new · 2026-11-27
 
 Comodo's caves got the new vault.
