@@ -3026,7 +3026,7 @@ float vaultY(float2 xz) {
     uint cave = caveParts();
     [branch] if (cave != 0u) {  // 3.0.24-beta.13: Comodo's vault in folds (ribs hanging 18 down), stalactites on them
         float fold = foldAt(xz);
-        up -= 18.0 * fold;
+        up -= 14.0 * fold;  // 3.0.24-beta.17: 18 before
         if ((cave & 4u) != 0u) up -= stalactiteAt(xz, fold);
     }
     return -fogColor.w * up;
@@ -3053,7 +3053,7 @@ float3 crystalsAt(float2 xz, float steep, float t) {
     float2 p = xz / 14.0;
     float2 c = floor(p), f = p - c;
     float h = hash12(c + 3.3);
-    if (h > 0.03 + 0.22 * saturate(steep * 1.2)) return float3(0.0, 0.0, 0.0);
+    if (h > 0.008 + 0.05 * saturate(steep * 1.2)) return float3(0.0, 0.0, 0.0);  // 3.0.24-beta.17: few
     float2 d = (f - (0.35 + 0.3 * float2(hash12(c + 1.7), hash12(c + 8.1)))) * 14.0;  // 4.9 units from its edges
     float r = length(d), a = atan2(d.y, d.x);
     float n = 3.0 + floor(hash12(c + 4.4) * 3.0);  // 3-5 shards
@@ -3067,7 +3067,7 @@ float3 crystalsAt(float2 xz, float steep, float t) {
     float3 col = hash12(c + 6.6) > 0.5 ? float3(1.0, 0.40, 0.78) : float3(0.45, 0.85, 1.0);
     float glow = exp(-r / (size * 0.9)) * smoothstep(4.6, 2.2, r);  // none past 4.6: the cell's own
     float pulse = 0.80 + 0.20 * sin(t * (0.8 + hash12(c + 7.7)) + h * 40.0);
-    return col * (body * facet * 1.3 + glow * 0.28) * pulse;
+    return col * (body * facet * 0.8 + glow * 0.18) * pulse;  // 3.0.24-beta.17: dimmer (R-BJAQSN «блистящий»)
 }
 
 // 3.0.24-beta.11: fireworks seen through the rift, each 2.6 s of its cycle: a flash, a ring of sparks opening and
@@ -3286,28 +3286,21 @@ float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
         stone = rockMosaic(at.xz, lod) * base * lit * (0.86 + 0.24 * fbm4(at.xz * 0.045));
     }
     [branch] if (cave != 0u) {  // 3.0.24-beta.11: Comodo's cave
-        // 3.0.24-beta.13 (the sketch Б): its own rock, not the map's mosaic (a grey carpet near) - dark violet stone,
-        // its hollows darker, faint strata; the folds' sides lit by the town (pink) and the sea (blue); wet glints on
-        // the crests
+        // 3.0.24-beta.13 (the sketch Б): the vault in folds. 3.0.24-beta.17 (the owner on R-BJAQSN: «такой блистящий
+        // потолок не очень, надо ближе к стенам и тем текстурам которых на стенах»): the folds' shapes alone - the
+        // rock the map's own walls wear (its mosaic above, [view3d] vault_rock), the hollows in shade, the folds'
+        // sides lit faintly in the map's light; no wet glints, no glossy rims
         float fold = foldAt(at.xz);
-        float grain = 0.62 + 0.38 * fbm4(at.xz * 0.09);
-        float strata = 0.86 + 0.14 * sin(at.y * 0.9 + fbm4(at.xz * 0.03) * 6.0);
-        // 3.0.24-beta.16: Comodo's own caves (no kTown 8) - the rock and its folds' light in the map's own light
         bool town = (cave & 8u) != 0u;
         float3 own = (holeZ > 0.5 ? float3(holeX, holeY, holeH) : float3(1.0, 1.0, 1.0)) * base;
-        float3 rockCol = town ? float3(0.19, 0.14, 0.24) : own * 0.75;
-        stone = rockCol * grain * strata * (0.20 + 0.80 * fold) * (0.55 + 0.45 * lit);
+        if (holeZ < 0.5) stone = own * (0.62 + 0.38 * fbm4(at.xz * 0.09));  // no picture of the rock: its colour
+        stone *= (0.40 + 0.60 * fold) * (town ? float3(0.80, 0.72, 0.92) : float3(1.0, 1.0, 1.0));
         float side = saturate(1.0 - abs(n.y));
-        float3 rimCol = town ? lerp(float3(0.42, 0.72, 1.0), float3(1.0, 0.38, 0.74), saturate(0.5 + 0.5 * n.x))
-                             : lerp(float3(0.40, 0.66, 0.90), saturate(own * 2.2), saturate(0.5 + 0.5 * n.x)) * 0.6;
-        stone += rimCol * pow(side, 1.5) * 0.55 * (0.3 + 0.7 * fold);
-        float glint = hash12(floor(at.xz * 0.9) + 1.1);
-        stone += float3(0.85, 0.92, 1.0) * step(0.986, glint) * fold *
-                 (0.55 + 0.45 * sin(sharpen * 3.0 + glint * 60.0));
+        stone += own * pow(side, 1.5) * 0.18 * fold;
         // 1 at the rift's edge, 0 some way off it; a cave with no rift (3.0.24-beta.16) - its water's light even
         float byRift = (cave & 1u) != 0u ? saturate(1.0 + inside * 1.4) : 0.55;
         if ((cave & 4u) != 0u)  // the water's light, most round the rift (the sea under it)
-            stone += float3(0.50, 0.82, 1.0) * grottoLightAt(at.xz, sharpen) * (0.10 + 0.55 * byRift * byRift);
+            stone += float3(0.50, 0.82, 1.0) * grottoLightAt(at.xz, sharpen) * (0.05 + 0.30 * byRift * byRift);  // .17: calmer
         if ((cave & 2u) != 0u) stone += crystalsAt(at.xz, length(float2(gx, gz)), sharpen);
         if ((cave & 1u) != 0u) {  // the rift's lip lit pink by the town's light and the fireworks
             stone += float3(1.0, 0.42, 0.78) * 0.9 * pow(saturate(1.0 + inside / 0.09), 3.0);
