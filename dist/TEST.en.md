@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.16 — what's new · 2026-11-27
+
+Comodo's caves got the new vault.
+
+- **The caves by Comodo** (beach_dun, beach_dun2, beach_dun3) now have the same sculpted vault as the town: folds of rock in each cave's own light, stalactites in clusters, the water's light, a few crystals. No rift with the sky there — these are deep caves.
+- To check: Alt+O → «Checking now» → «Comodo's caves: the new vault».
+
 # uaRO Graphics 3.0.24-beta.15 — what's new · 2026-11-27
 
 The fireworks over Comodo can now be seen.
