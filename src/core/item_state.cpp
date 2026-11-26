@@ -108,6 +108,14 @@ std::optional<Change> State::feed(const uint8_t* p, size_t n) {
             cartWeight_ = int(r32(p, 6));
             cartMostWeight_ = int(r32(p, 10));
             return std::nullopt;
+        case 0x00ca:
+        case 0x00cb: {  // 3.0.24-beta.9: the NPC deal answered
+            if (n < 3) return std::nullopt;
+            Change c;
+            c.where = Where::Shop;
+            c.result = p[2];
+            return c;
+        }
         case 0x012b:
             cart_.clear();
             return Change{Where::Cart, 0, 0, true};

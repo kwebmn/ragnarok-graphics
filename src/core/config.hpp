@@ -959,6 +959,7 @@ struct Config {
     bool homunAi = true, homunAggressive = false, homunDefend = true, homunSkills = true;
     // 3.0.11-beta.100: [interface] shop - the NPCs' shops (core/shop_window) in place of the game's deal windows
     bool shopWindow = false;
+    bool shopPackets = false;  // 3.0.24-beta.9: [interface] shop_packets - «Магазин»'s deal by our own packets
     // 3.0.11-beta.115: [interface] storage - the Kafra storage (win/storage_window: «Склад», «Речі» beside it) in
     // place of the game's storage window
     bool storageWindow = false;

@@ -40,6 +40,28 @@ Bytes eight(uint16_t id, uint16_t index, uint32_t amount) {
 }
 }  // namespace
 
+Bytes buyList(const Pairs& itemAmount) {
+    Bytes b(4 + itemAmount.size() * 4, 0);
+    put16(b, 0, 0x00c8);
+    put16(b, 2, uint16_t(b.size()));
+    for (size_t k = 0; k < itemAmount.size(); ++k) {
+        put16(b, 4 + k * 4, itemAmount[k].second);  // the amount first
+        put16(b, 6 + k * 4, itemAmount[k].first);
+    }
+    return b;
+}
+
+Bytes sellList(const Pairs& indexAmount) {
+    Bytes b(4 + indexAmount.size() * 4, 0);
+    put16(b, 0, 0x00c9);
+    put16(b, 2, uint16_t(b.size()));
+    for (size_t k = 0; k < indexAmount.size(); ++k) {
+        put16(b, 4 + k * 4, indexAmount[k].first);
+        put16(b, 6 + k * 4, indexAmount[k].second);
+    }
+    return b;
+}
+
 Bytes toCart(uint16_t bagIndex, uint32_t amount) { return eight(0x0126, bagIndex, amount); }
 Bytes fromCart(uint16_t cartIndex, uint32_t amount) { return eight(0x0127, cartIndex, amount); }
 Bytes storageToCart(uint16_t storageIndex, uint32_t amount) { return eight(0x0128, storageIndex, amount); }
@@ -58,6 +80,8 @@ int serverLength(uint16_t id) {
         case 0x0124: return 21;  // a thing into the cart
         case 0x0125: return 8;   // a thing out of the cart
         case 0x012b: return 2;   // the cart emptied
+        case 0x00ca:             // 3.0.24-beta.9: the NPC deal's answer - bought
+        case 0x00cb: return 3;   // sold
         case 0x00f2: return 6;   // the storage's count and most
         case 0x00f4: return 21;  // a thing into the storage
         case 0x00f6: return 8;   // a thing out of the storage

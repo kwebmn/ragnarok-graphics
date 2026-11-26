@@ -7,6 +7,14 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        {"shop_packets", "3.0.24-beta.9", "interface.shop_packets",
+         {"NPC shops: the new deal", "Крамниці NPC: нова угода", "Магазины NPC: новая сделка"},
+         {"Turn «NPC shops» and this on. Buy a few things at an NPC, then sell some: the window closes when done; with "
+          "too little zeny it says why.",
+          "Увімкніть «Крамниці NPC» і цю галочку. Купіть у NPC кілька речей, потім продайте: вікно "
+          "закривається, коли готово; без зені каже чому.",
+          "Включите «Магазины NPC» и эту галочку. Купите у NPC несколько вещей, потом продайте: окно "
+          "закрывается, когда готово; без зени говорит почему."}},
         {"cart_packets", "3.0.24-beta.8", "interface.cart_packets",
          {"Cart: the new passing of things", "Візок: нова передача речей", "Тележка: новая передача вещей"},
          {"Turn «Cart» and this on. Drag a stack bag -> cart, double-click to take back, drag cart <-> storage: «How "

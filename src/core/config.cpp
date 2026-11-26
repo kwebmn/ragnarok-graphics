@@ -779,6 +779,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.homunSkills);
         } else if (key == "interface.shop") {  // 3.0.11-beta.100: the NPCs' shops
             setBool(val, c.shopWindow);
+        } else if (key == "interface.shop_packets") {  // 3.0.24-beta.9: items via packets, the testers' box
+            setBool(val, c.shopPackets);
         } else if (key == "interface.storage") {  // 3.0.11-beta.115: the Kafra storage
             setBool(val, c.storageWindow);
         } else if (key == "interface.storage_packets") {  // 3.0.24-beta.4: items via packets, the testers' box

@@ -1402,6 +1402,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     g_parts.mark("equipwin", nowMs());
     npcwin::frame(window, ui.npcWindow, config.npcRemember, gameCodePage(config), pk, pw, ph);  // .98, .255
     g_parts.mark("npcwin", nowMs());
+    shopwin::setPackets(config.shopPackets);  // 3.0.24-beta.9: items via packets
     shopwin::frame(window, ui.shopWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.100
     g_parts.mark("shopwin", nowMs());
     storagewin::setPackets(config.storagePackets);  // 3.0.24-beta.4: items via packets

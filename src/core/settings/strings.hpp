@@ -1100,6 +1100,7 @@ enum class Text : uint16_t {
     ItemsNotConnected, ItemsStorageRefused, ItemsNoAnswer, InterfaceStoragePackets, InterfaceStoragePacketsHint,
     SettingsResetAll, SettingsResetAllSure,  // 3.0.24-beta.5: Alt+O's «Усе за замовчуванням»
     ItemsCartRefused, InterfaceCartPackets, InterfaceCartPacketsHint,  // 3.0.24-beta.8: «Візок» via packets
+    ItemsNoZeny, ItemsTooHeavy, ItemsShopRefused, InterfaceShopPackets, InterfaceShopPacketsHint,  // .24-beta.9
     Count
 };
 

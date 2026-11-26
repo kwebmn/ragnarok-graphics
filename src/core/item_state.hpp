@@ -22,12 +22,13 @@ struct Item {
     uint16_t cards[4] = {};
     uint16_t places = 0;  // equipment: where it is worn (0 a stackable)
 };
-enum class Where : uint8_t { Bag, Storage, Cart };  // 3.0.24-beta.8: the cart
+enum class Where : uint8_t { Bag, Storage, Cart, Shop };  // 3.0.24-beta.8: the cart; .9: an NPC deal's answer
 struct Change {
     Where where = Where::Bag;
     uint16_t index = 0;
     int64_t delta = 0;
     bool closed = false;  // the storage closed
+    int result = -1;      // 3.0.24-beta.9: an NPC deal's answer (0x00ca / 0x00cb): 0 done, 1 zeny, 2 weight, 3 other
 };
 
 class State {

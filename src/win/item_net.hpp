@@ -18,5 +18,9 @@ bool waiting(itemstate::Where w, uint16_t index);
 void frame();  // the waits' time-outs
 // The window's words after an action that did not end well ("" none; kept 5 s)
 std::string lastWords();
+// 3.0.24-beta.9 (stage 3 «Магазин»): an NPC deal in one packet ({item, amount} bought / {index, amount} sold)
+itemactions::Result deal(bool buy, const itempackets::Pairs& rows);
+// Its answer once: -2 none yet, -1 no answer in time, 0 done, 1 zeny, 2 weight, 3 other
+int takeDealAnswer();
 
 }  // namespace uagfx::win::itemnet

@@ -494,6 +494,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("npc_talk", flag(running.npcWindow), flag(file.npcWindow)));
         n.npcWindow = file.npcWindow;
     }
+    if (file.shopPackets != running.shopPackets) {  // 3.0.24-beta.9: items via packets, at once
+        u.applied.push_back(change("shop_packets", flag(running.shopPackets), flag(file.shopPackets)));
+        n.shopPackets = file.shopPackets;
+    }
     if (file.shopWindow != running.shopWindow) {  // 3.0.11-beta.100: the NPCs' shops, at once
         u.applied.push_back(change("shop", flag(running.shopWindow), flag(file.shopWindow)));
         n.shopWindow = file.shopWindow;

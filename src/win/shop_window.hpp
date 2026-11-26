@@ -30,6 +30,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // search's keys
 bool key(UINT m, WPARAM wp, LPARAM lp);
 void beforeGameDraw();
+// 3.0.24-beta.9 (items via packets, stage 3; [interface] shop_packets - the testers' box): the deal in one packet of
+// the driver's own, its answer awaited; off - through the game's own lists and OK
+void setPackets(bool on);
 bool shown();
 
 // The controller's (pad runtime shopPad): up and down the list or the cart, left and right between them, A one more,

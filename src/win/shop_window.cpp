@@ -29,6 +29,7 @@
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/item_net.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
@@ -97,6 +98,8 @@ using MoveFn = void(__attribute__((thiscall)) *)(uint32_t window, int x, int y);
 struct Deal {  // the game's deal windows now (0: none)
     uint32_t choose = 0, list = 0, buy = 0, sell = 0;
 };
+
+bool g_packets = false;  // 3.0.24-beta.9: [interface] shop_packets
 
 struct State {
     int notSentTold = 0;  // 3.0.18-beta.136
@@ -328,6 +331,8 @@ sw::Texts texts() {
     t.weightSell = say(settings::Text::ShopWeightSell);
     t.clear = say(settings::Text::ShopClear);
     t.note = say(settings::Text::ShopNote);
+    if (g_packets)  // 3.0.24-beta.9: why the deal was refused, in the note's place for a while
+        if (const std::string why = itemnet::lastWords(); !why.empty()) t.note = why;
     t.empty = say(settings::Text::ShopEmpty);
     t.waiting = say(settings::Text::ShopWaiting);
     t.choose = say(settings::Text::ShopChoose);
@@ -382,6 +387,23 @@ void confirm(State& s, const char* by) {
         if (s.notSentTold++ < 8)
             LOG_INFO("shop: %s - nothing sent (the game's deal window %s, the cart %s, %s)", by, cart ? "open" : "none",
                      sum.ok ? "fits" : "empty or past the money/weight", s.data.waiting ? "the list awaited" : "ready");
+        return;
+    }
+    if (g_packets) {  // 3.0.24-beta.9 (items via packets, stage 3): the cart in our own packet, its answer awaited
+        itempackets::Pairs rows;
+        for (const sw::Line& l : s.data.cart) {
+            if (l.ware < 0 || l.ware >= int(s.data.wares.size()) || l.amount <= 0) continue;
+            if (buy) {
+                rows.push_back({uint16_t(s.data.wares[size_t(l.ware)].id), uint16_t(l.amount)});
+            } else if (l.ware < int(s.infos.size())) {
+                rows.push_back({uint16_t(read32(s.infos[size_t(l.ware)] + 0x08)), uint16_t(l.amount)});
+            }
+        }
+        const itemactions::Result r = itemnet::deal(buy, rows);
+        LOG_INFO("shop: %s - %zu row(s) %s for %lld z by the driver's own packet: %s", by, rows.size(),
+                 buy ? "to buy" : "to sell", sum.total,
+                 r == itemactions::Result::Sent ? "sent, its answer awaited" : "not sent");
+        s.key.clear();
         return;
     }
     const uint32_t add = buy ? kAddPurchase : kAddSale;
@@ -669,7 +691,16 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
             default: break;
         }
     }
-    std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(scale) +
+    if (g_packets) {  // 3.0.24-beta.9: the deal's answer - done: the cart emptied and the deal closed; else the
+        itemnet::frame();  // reason stays in the note (the server closes its shop either way)
+        const int answer = itemnet::takeDealAnswer();
+        if (answer == 0) {
+            emptyCart(s);
+            closeDeal(s, "the deal done");
+        }
+    }
+    std::string key = itemnet::lastWords() + ';' + std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) +
+                      ';' + std::to_string(scale) +
                       ';' + std::to_string(int(s.data.tab)) + (s.data.waiting ? "w" : "") + ';' +
                       std::to_string(s.show.hoverTab) + ',' + std::to_string(s.show.hoverWare) + ',' +
                       std::to_string(s.show.hoverLine) + ',' + std::to_string(s.show.hoverLess) + ',' +
@@ -1040,6 +1071,13 @@ void padCommand(PadCommand c, int times) {
     }
     keepFrameInSight(s);
     s.key.clear();
+}
+
+void setPackets(bool on) {
+    if (on != g_packets) LOG_INFO("shop: %s", on ? "items via packets - the deal sent by the driver itself "
+                                                    "([interface] shop_packets)"
+                                                 : "the game's own deal (its lists and OK)");
+    g_packets = on;
 }
 
 void beforeGameDraw() {

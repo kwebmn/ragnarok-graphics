@@ -17,7 +17,7 @@ enum class Kind : uint8_t {
 };
 itemstate::Where leaving(Kind k);  // the side whose answer (its thing going out) ends the action
 enum class Result : uint8_t { Sent, Busy, NotConnected, NothingToMove };
-enum class Outcome : uint8_t { None, Done, TimedOut, Dropped };
+enum class Outcome : uint8_t { None, Done, TimedOut, Dropped, Refused };  // .9: Refused - a deal's answer not 0
 constexpr uint32_t kTimeoutMs = 2000;
 
 class Queue {
@@ -25,6 +25,11 @@ public:
     // `have`: how many the cell holds (the amount cut to it; 0 - nothing to move); `out` the packet when Sent
     Result ask(Kind k, uint16_t index, uint32_t amount, uint32_t have, bool connected, uint32_t nowMs,
                itempackets::Bytes& out);
+    // 3.0.24-beta.9 (stage 3 «Магазин»): an NPC deal - the cart's rows in one packet (buy: {item, amount}, sell:
+    // {index, amount}); one at a time, ended by its answer (Done when 0, Refused with lastResult() else)
+    Result askDeal(bool buy, const itempackets::Pairs& rows, bool connected, uint32_t nowMs, itempackets::Bytes& out);
+    int lastResult() const { return lastResult_; }
+    bool dealWaiting() const { return dealAt_ != 0; }
     Outcome onChange(const itemstate::Change& c);
     Outcome tick(uint32_t nowMs);
     bool waiting(itemstate::Where w, uint16_t index) const;
@@ -42,6 +47,8 @@ private:
     };
     std::vector<Wait> waits_;
     Wait last_;
+    uint32_t dealAt_ = 0;  // the deal sent then (+1: never 0), 0 none waits
+    int lastResult_ = -1;
 };
 
 }  // namespace uagfx::itemactions

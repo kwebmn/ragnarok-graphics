@@ -95,3 +95,32 @@ TEST(item_actions_cart_moves_end_by_their_leaving_side) {
     q.ask(ia::Kind::FromCart, 9, 1, 1, true, 0, out);
     CHECK(q.onChange(gone) == ia::Outcome::Dropped);  // the cart emptied: its waits end
 }
+
+// 3.0.24-beta.9 (stage 3 «Магазин»): one deal at a time; its answer ends it - 0 done, else refused with its reason
+TEST(item_actions_npc_deal_one_at_a_time_and_its_answer) {
+    ia::Queue q;
+    itempackets::Bytes out;
+    CHECK(q.askDeal(true, {{501, 10}}, true, 0, out) == ia::Result::Sent);
+    CHECK_EQ(out.size(), size_t(8));
+    itempackets::Bytes again;
+    CHECK(q.askDeal(true, {{501, 1}}, true, 0, again) == ia::Result::Busy);
+    is::Change answer;
+    answer.where = is::Where::Shop;
+    answer.result = 1;  // not enough zeny
+    CHECK(q.onChange(answer) == ia::Outcome::Refused);
+    CHECK_EQ(q.lastResult(), 1);
+    CHECK(q.askDeal(false, {{7, 3}}, true, 0, out) == ia::Result::Sent);
+    answer.result = 0;
+    CHECK(q.onChange(answer) == ia::Outcome::Done);
+    CHECK(q.askDeal(true, {}, true, 0, out) == ia::Result::NothingToMove);
+    CHECK(q.askDeal(true, {{501, 1}}, false, 0, out) == ia::Result::NotConnected);
+}
+
+TEST(item_state_npc_deal_answers) {
+    is::State s;
+    const std::vector<uint8_t> bought{0xca, 0x00, 0x02}, sold{0xcb, 0x00, 0x00};
+    auto c = s.feed(bought.data(), bought.size());
+    CHECK(c && c->where == is::Where::Shop && c->result == 2);
+    c = s.feed(sold.data(), sold.size());
+    CHECK(c && c->where == is::Where::Shop && c->result == 0);
+}

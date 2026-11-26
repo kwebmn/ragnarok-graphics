@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 namespace uagfx::itempackets {
@@ -18,6 +19,11 @@ Bytes toCart(uint16_t bagIndex, uint32_t amount);
 Bytes fromCart(uint16_t cartIndex, uint32_t amount);
 Bytes storageToCart(uint16_t storageIndex, uint32_t amount);
 Bytes cartToStorage(uint16_t cartIndex, uint32_t amount);
+// 3.0.24-beta.9 (stage 3 «Магазин»): the NPC deal in one packet - npcbuylistsend 0x00c8 {amount.W, item.W}...,
+// npcselllistsend 0x00c9 {index.W, amount.W}... (the length at 2); pairs given as {item, amount} / {index, amount}
+using Pairs = std::vector<std::pair<uint16_t, uint16_t>>;
+Bytes buyList(const Pairs& itemAmount);
+Bytes sellList(const Pairs& indexAmount);
 int serverLength(uint16_t id);
 
 }  // namespace uagfx::itempackets

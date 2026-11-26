@@ -9906,6 +9906,24 @@ constexpr Entry kTexts[] = {
      "якщо візок не прийняв річ, видно чому. Потрібен увімкнений «Візок». Для тестерів: вимкнено — як у грі.",
      "«Тележка» сама переносит вещи, как отвечает сервер — одно нажатие, одна передача, пачка спрашивает сколько; "
      "если тележка не приняла вещь, видно почему. Нужна включённая «Тележка». Для тестеров: выключено — как в игре."},
+    // 3.0.24-beta.9: «Магазин» via packets - the deal's refusals (the server closes its shop: talk to the NPC again)
+    {Text::ItemsNoZeny, "Not enough zeny - talk to the NPC again", "Не вистачає зені — поговоріть з NPC ще раз",
+     "Не хватает зени — поговорите с NPC ещё раз"},
+    {Text::ItemsTooHeavy, "Too heavy - talk to the NPC again", "Заважко — поговоріть з NPC ще раз",
+     "Слишком тяжело — поговорите с NPC ещё раз"},
+    {Text::ItemsShopRefused, "The shop refused - talk to the NPC again", "Магазин відмовив — поговоріть з NPC ще раз",
+     "Магазин отказал — поговорите с NPC ещё раз"},
+    {Text::InterfaceShopPackets, "NPC shops: the new deal (beta)", "Крамниці NPC: нова угода (бета)",
+     "Магазины NPC: новая сделка (бета)"},
+    {Text::InterfaceShopPacketsHint,
+     "«NPC shops» send the cart themselves in one deal and wait for the server's answer: done - the window closes, "
+     "refused - why, in its note. Needs «NPC shops» on. For the testers: off - the game's own way.",
+     "«Крамниці NPC» самі надсилають кошик однією угодою й чекають відповіді сервера: готово — вікно "
+     "закривається, відмова — чому, у його підказці. Потрібні увімкнені «Крамниці NPC». Для тестерів: вимкнено — "
+     "як у грі.",
+     "«Магазины NPC» сами отправляют корзину одной сделкой и ждут ответа сервера: готово — окно закрывается, "
+     "отказ — "
+     "почему, в его подсказке. Нужны включённые «Магазины NPC». Для тестеров: выключено — как в игре."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

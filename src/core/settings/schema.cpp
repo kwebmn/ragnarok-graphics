@@ -328,6 +328,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceHomunSkills, Text::InterfaceHomunSkillsHint, ""},
         {"interface", "shop", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceShop,
          Text::InterfaceShopHint, ""},  // 3.0.11-beta.100
+        // 3.0.24-beta.9: items via packets, stage 3 - the testers' box (Alt+O «Перевіряємо зараз»)
+        {"interface", "shop_packets", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
+         Text::InterfaceShopPackets, Text::InterfaceShopPacketsHint, ""},
         {"interface", "storage", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceStorage,
          Text::InterfaceStorageHint, ""},  // 3.0.11-beta.115
         // 3.0.24-beta.4: items via packets, stage 1 - the testers' box (Alt+O «Перевіряємо зараз»)
@@ -1557,6 +1560,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.homun_defend") return c.homunDefend ? "1" : "0";
     if (k == "interface.homun_skills") return c.homunSkills ? "1" : "0";
     if (k == "interface.shop") return c.shopWindow ? "1" : "0";      // 3.0.11-beta.100
+    if (k == "interface.shop_packets") return c.shopPackets ? "1" : "0";  // 3.0.24-beta.9
     if (k == "interface.storage") return c.storageWindow ? "1" : "0";  // 3.0.11-beta.115
     if (k == "interface.storage_packets") return c.storagePackets ? "1" : "0";  // 3.0.24-beta.4
     if (k == "interface.trade") return c.tradeWindow ? "1" : "0";      // 3.0.11-beta.116

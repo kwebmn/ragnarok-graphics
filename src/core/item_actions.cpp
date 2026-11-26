@@ -37,7 +37,24 @@ Result Queue::ask(Kind k, uint16_t index, uint32_t amount, uint32_t have, bool c
     return Result::Sent;
 }
 
+Result Queue::askDeal(bool buy, const itempackets::Pairs& rows, bool connected, uint32_t nowMs,
+                      itempackets::Bytes& out) {
+    out.clear();
+    if (rows.empty()) return Result::NothingToMove;
+    if (dealAt_) return Result::Busy;
+    if (!connected) return Result::NotConnected;
+    out = buy ? itempackets::buyList(rows) : itempackets::sellList(rows);
+    dealAt_ = nowMs + 1;
+    return Result::Sent;
+}
+
 Outcome Queue::onChange(const itemstate::Change& c) {
+    if (c.where == itemstate::Where::Shop) {  // 3.0.24-beta.9: the deal's answer
+        if (!dealAt_) return Outcome::None;
+        dealAt_ = 0;
+        lastResult_ = c.result;
+        return c.result == 0 ? Outcome::Done : Outcome::Refused;
+    }
     if (c.closed) {  // the storage gone (or the cart emptied): what waited on it ends
         const auto gone = std::remove_if(waits_.begin(), waits_.end(),
                                          [&c](const Wait& w) { return w.where == c.where; });
@@ -56,6 +73,11 @@ Outcome Queue::onChange(const itemstate::Change& c) {
 }
 
 Outcome Queue::tick(uint32_t nowMs) {
+    if (dealAt_ && nowMs + 1 - dealAt_ >= kTimeoutMs) {  // 3.0.24-beta.9: the deal unanswered
+        dealAt_ = 0;
+        lastResult_ = -1;
+        return Outcome::TimedOut;
+    }
     const auto old = std::find_if(waits_.begin(), waits_.end(),
                                   [nowMs](const Wait& w) { return nowMs - w.at >= kTimeoutMs; });
     if (old == waits_.end()) return Outcome::None;

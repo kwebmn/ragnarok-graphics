@@ -53,3 +53,23 @@ TEST(item_packets_cart_requests_as_the_server_reads_them) {
     CHECK_EQ(itempackets::serverLength(0x0121), 14);
     CHECK_EQ(itempackets::serverLength(0x012b), 2);
 }
+
+// 3.0.24-beta.9 (stage 3 «Магазин»): the NPC deal - npcbuylistsend 0x00c8 {amount.W, item.W}..., npcselllistsend
+// 0x00c9 {index.W, amount.W}..., the length at 2; the answers 0x00ca / 0x00cb, 3 bytes
+TEST(item_packets_npc_deal_lists) {
+    const itempackets::Bytes buy = itempackets::buyList({{501, 10}, {502, 2}});
+    CHECK_EQ(buy.size(), size_t(12));
+    CHECK_EQ(rd16(buy, 0), 0x00c8);
+    CHECK_EQ(rd16(buy, 2), 12);
+    CHECK_EQ(rd16(buy, 4), 10);  // the amount first
+    CHECK_EQ(rd16(buy, 6), 501);
+    CHECK_EQ(rd16(buy, 8), 2);
+    CHECK_EQ(rd16(buy, 10), 502);
+    const itempackets::Bytes sell = itempackets::sellList({{7, 3}});
+    CHECK_EQ(sell.size(), size_t(8));
+    CHECK_EQ(rd16(sell, 0), 0x00c9);
+    CHECK_EQ(rd16(sell, 4), 7);  // the index first
+    CHECK_EQ(rd16(sell, 6), 3);
+    CHECK_EQ(itempackets::serverLength(0x00ca), 3);
+    CHECK_EQ(itempackets::serverLength(0x00cb), 3);
+}
