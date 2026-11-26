@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.14 — what's new · 2026-11-27
+
+Brighter fireworks over Comodo.
+
+- **Brighter fireworks.** The sparks are twice as bright and wider, the trails and the flash stronger, a soft glow round each ring.
+- **Flashes on the rock.** Each burst lights the rock round the rift in its own colour.
+
 # uaRO Graphics 3.0.24-beta.13 — what's new · 2026-11-27
 
 Comodo's cave: a new vault and the rift by the clock.
