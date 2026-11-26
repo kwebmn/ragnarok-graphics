@@ -4351,6 +4351,12 @@ void Renderer11::skyPass(bool fill) {
             const cave_look::Look look =
                 cave_look::forMap(map_, {effects_.caveRift, effects_.caveCrystals, effects_.caveGrotto});
             cave_look::pack(look, c.hole[7], c.uiPixels[3]);
+            float sun[3] = {0.0f, 0.0f, 0.0f};  // 3.0.24-beta.13: the sun through the rift by the clock
+            if ((look.parts & cave_look::kRift) && skySun(sun)) {
+                std::memcpy(&c.stage0[0], &sun[0], 4);
+                std::memcpy(&c.stage0[1], &sun[1], 4);
+                std::memcpy(&c.stage1[0], &sun[2], 4);
+            }
             if (look.on() && caveLookLogged_ != map_) {
                 caveLookLogged_ = map_;
                 LOG_INFO("3D sky: %s's cave - parts %u ([view3d] cave_rift, cave_crystals, cave_grotto; Direct3D 11)",

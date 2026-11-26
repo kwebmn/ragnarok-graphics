@@ -176,6 +176,14 @@ bool Renderer::Impl::skyPass(bool fill) {
             const cave_look::Look look =
                 cave_look::forMap(mapName, {effects.caveRift, effects.caveCrystals, effects.caveGrotto});
             cave_look::pack(look, c.hole[7], c.uiPixels[3]);
+            // 3.0.24-beta.13 (the owner: «Разлом по часам»): the sun through the rift by the clock (stage0.xy,
+            // stage1.x as floats - the sky's pass reads no draw state)
+            float sun[3] = {0.0f, 0.0f, 0.0f};
+            if ((look.parts & cave_look::kRift) && skySun(sun)) {
+                std::memcpy(&c.stage0[0], &sun[0], 4);
+                std::memcpy(&c.stage0[1], &sun[1], 4);
+                std::memcpy(&c.stage1[0], &sun[2], 4);
+            }
             if (look.on() && caveLookLogged != mapName) {
                 caveLookLogged = mapName;
                 LOG_INFO("3D sky: %s's cave - %s%s%s ([view3d] cave_rift, cave_crystals, cave_grotto)",

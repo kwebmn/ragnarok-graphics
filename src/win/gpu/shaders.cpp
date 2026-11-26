@@ -2991,16 +2991,27 @@ float riftInside(float2 cell) {
     float edge = 1.0 + 0.11 * sin(a * 3.0 + 1.3) + 0.06 * sin(a * 7.0 + 0.4) + 0.16 * (fbm4(cell * 0.11) - 0.5);
     return edge - length(d);
 }
-// A stalactite hanging there (units down): one in about half of the cells of 9 units, 6-28 long
-float stalactiteAt(float2 xz) {
-    float2 p = xz / 9.0;
+// 3.0.24-beta.13 (the owner on R-R6EG4H: «сами скалы не заходят», the sketch Б «скульптурный свод»): the vault in big
+// folds of rock - two families of ribs some 60-90 units apart, bent by a slow wave; 1 on a rib's crest, 0 in a hollow.
+// No noise: the ray's march asks it some 80 times a pixel
+float foldAt(float2 xz) {
+    float2 p = xz * 0.016 + 1.6 * float2(sin(xz.y * 0.011 + 1.3), sin(xz.x * 0.009 + 0.7));
+    float r1 = 1.0 - abs(sin(p.x * 2.6 + p.y * 1.1));
+    float r2 = 1.0 - abs(sin(p.y * 2.1 - p.x * 0.8 + 1.7));
+    return saturate(r1 * r1 * r1 * 0.7 + r2 * r2 * r2 * 0.45);
+}
+// A stalactite hanging there (units down): 3.0.24-beta.13 in clusters along the folds' crests (cells of 6 units, most
+// of them where a rib runs), 8-30 long
+float stalactiteAt(float2 xz, float fold) {
+    if (fold < 0.5) return 0.0;
+    float2 p = xz / 6.0;
     float2 c = floor(p), f = p - c;
     float h = hash12(c + 0.37);
-    if (h > 0.35) return 0.0;  // 3.0.24-beta.12: fewer, longer (R-95QHUS: specks)
+    if (h > 0.25 + 0.6 * (fold - 0.5)) return 0.0;
     float2 at = 0.3 + 0.4 * float2(hash12(c + 17.1), hash12(c + 31.7));
     float d = length(f - at) / (0.14 + 0.12 * hash12(c + 5.3));
     if (d >= 1.0) return 0.0;
-    return (10.0 + 26.0 * hash12(c + 9.9)) * pow(1.0 - d, 2.4);
+    return (8.0 + 22.0 * hash12(c + 9.9)) * pow(1.0 - d, 2.4);
 }
 float vaultY(float2 xz) {
     float2 cells = fogColor.yz;
@@ -3012,7 +3023,12 @@ float vaultY(float2 xz) {
     float h00 = tex1.Load(int3(a.x, a.y, 0)).r, h10 = tex1.Load(int3(b.x, a.y, 0)).r;
     float h01 = tex1.Load(int3(a.x, b.y, 0)).r, h11 = tex1.Load(int3(b.x, b.y, 0)).r;
     float up = lerp(lerp(h00, h10, f.x), lerp(h01, h11, f.x), f.y);
-    if ((caveParts() & 4u) != 0u) up -= stalactiteAt(xz);  // 3.0.24-beta.11: the grotto's stalactites
+    uint cave = caveParts();
+    [branch] if (cave != 0u) {  // 3.0.24-beta.13: Comodo's vault in folds (ribs hanging 18 down), stalactites on them
+        float fold = foldAt(xz);
+        up -= 18.0 * fold;
+        if ((cave & 4u) != 0u) up -= stalactiteAt(xz, fold);
+    }
     return -fogColor.w * up;
 }
 
@@ -3054,12 +3070,12 @@ float3 crystalsAt(float2 xz, float steep, float t) {
     return col * (body * facet * 1.3 + glow * 0.28) * pulse;
 }
 
-// 3.0.24-beta.11: fireworks in the sky seen through the rift - three in turn, each 2.6 s of a cycle of 4.7-8.5:
+// 3.0.24-beta.11: fireworks in the sky seen through the rift - in turn, each 2.6 s of its cycle:
 // a flash, a ring of sparks opening and sinking, fading; pink, blue or gold
 float3 fireworksAt(float3 dir, float t) {
     float3 sum = float3(0.0, 0.0, 0.0);
-    [unroll] for (int k = 0; k < 3; ++k) {
-        float period = 4.7 + 1.9 * float(k);
+    [unroll] for (int k = 0; k < 5; ++k) {  // 3.0.24-beta.13 (the owner: «побольше фейерверков»): five, 2.3-4.3 s
+        float period = 2.3 + 0.5 * float(k);
         float run = t / period + float(k) * 0.37;
         float cyc = floor(run);
         float lt = (run - cyc) * period;
@@ -3087,10 +3103,37 @@ float3 fireworksAt(float3 dir, float t) {
     }
     return sum;
 }
-// the night sky through the rift (the legend's eternal night): stars, the fireworks
+// the sky through the rift - 3.0.24-beta.13 (the owner: «Разлом по часам») by the clock: the day's sky with its sun
+// (stage0.xy, stage1.x: towards it, as asfloat; 0 none), the night's stars and the fireworks from dusk on
+float3 riftSun() { return float3(asfloat(stage0.x), asfloat(stage0.y), asfloat(stage1.x)); }
 float3 riftSky(float3 dir) {
-    return skyAlong(dir, float3(0.09, 0.11, 0.17), 1.0, float3(0.0, 0.0, 0.0), sharpen, 1.0, 0.0) +
-           fireworksAt(dir, sharpen);
+    float night = saturate(twinX);
+    float3 horizon = lerp(float3(0.76, 0.83, 0.90), float3(0.09, 0.11, 0.17), night);
+    return skyAlong(dir, horizon, night, riftSun(), sharpen, night > 0.3 ? 1.0 : 0.0, 0.0) +
+           fireworksAt(dir, sharpen) * smoothstep(0.30, 0.75, night);
+}
+// 3.0.24-beta.13: by day the sun's light falls through the rift - a shaft along it (a slanted cylinder of the rift's
+// size from its middle), lit by how much of the ray from the eye up to `dist` runs within it
+float3 riftShaft(float3 eye, float3 dir, float dist) {
+    float3 toSun = riftSun();
+    float day = 1.0 - saturate(twinX);
+    if (day < 0.05 || dot(toSun, toSun) < 0.25 || -toSun.y < 0.15) return float3(0.0, 0.0, 0.0);
+    float3 a = -normalize(toSun);  // the light's way (down into the cave)
+    float2 cell = riftMid() - fogColor.yz * 0.5;
+    float2 midXZ = float2(cell.x * twinW, cell.y * twinH) * fogColor.x;
+    float3 mid = float3(midXZ.x, vaultY(midXZ), midXZ.y);
+    float radius = 0.55 * min(riftHalf().x, riftHalf().y) * fogColor.x;
+    float3 o = eye - mid;
+    float3 dp = dir - a * dot(dir, a), op = o - a * dot(o, a);
+    float A = dot(dp, dp), B = dot(op, dp), C = dot(op, op) - radius * radius;
+    float disc = B * B - A * C;
+    if (A < 1e-6 || disc <= 0.0) return float3(0.0, 0.0, 0.0);
+    float s = sqrt(disc);
+    float t0 = max((-B - s) / A, 0.0), t1 = min((-B + s) / A, dist);
+    if (t1 <= t0) return float3(0.0, 0.0, 0.0);
+    float closest = sqrt(max(dot(op, op) - B * B / A, 0.0)) / radius;
+    float soft = exp(-closest * closest * 2.2);
+    return float3(1.0, 0.88, 0.66) * day * soft * saturate((t1 - t0) / (2.5 * radius)) * 0.45;
 }
 
 // 3.0.20-beta.54 (the owner's «делай 1-9», 5, part 2 - the map's own rock on its vault; core cave_vault rockPatch):
@@ -3180,7 +3223,7 @@ float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
     uint cave = caveParts();  // 3.0.24-beta.11: Comodo's cave (core/cave_look)
     float inside = cave != 0u ? riftInside(vaultCell(at.xz)) : -1.0;
     if ((cave & 1u) != 0u && inside > 0.0) return float4(riftSky(dir), 1.0);  // the rift: the night sky
-    float e = (cave & 4u) != 0u ? 0.75 : max(fogColor.x, 1.0);  // the stalactites' shapes in the light
+    float e = cave != 0u ? 1.0 : max(fogColor.x, 1.0);  // the folds' and the stalactites' shapes in the light
     float gx = (vaultY(at.xz + float2(e, 0.0)) - vaultY(at.xz - float2(e, 0.0))) / (2.0 * e);
     float gz = (vaultY(at.xz + float2(0.0, e)) - vaultY(at.xz - float2(0.0, e))) / (2.0 * e);
     float3 n = normalize(float3(-gx, 1.0, -gz));  // towards the floor (+y)
@@ -3205,9 +3248,19 @@ float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
         stone = rockMosaic(at.xz, lod) * base * lit * (0.86 + 0.24 * fbm4(at.xz * 0.045));
     }
     [branch] if (cave != 0u) {  // 3.0.24-beta.11: Comodo's cave
-        // 3.0.24-beta.12 (R-95QHUS: a grey vault bright as by day over the night's pink town): the rock in the
-        // town's night - darker, violet - so its own lights tell
-        stone *= float3(0.40, 0.33, 0.48);
+        // 3.0.24-beta.13 (the sketch Б): its own rock, not the map's mosaic (a grey carpet near) - dark violet stone,
+        // its hollows darker, faint strata; the folds' sides lit by the town (pink) and the sea (blue); wet glints on
+        // the crests
+        float fold = foldAt(at.xz);
+        float grain = 0.62 + 0.38 * fbm4(at.xz * 0.09);
+        float strata = 0.86 + 0.14 * sin(at.y * 0.9 + fbm4(at.xz * 0.03) * 6.0);
+        stone = float3(0.19, 0.14, 0.24) * grain * strata * (0.20 + 0.80 * fold) * (0.55 + 0.45 * lit);
+        float side = saturate(1.0 - abs(n.y));
+        float3 rimCol = lerp(float3(0.42, 0.72, 1.0), float3(1.0, 0.38, 0.74), saturate(0.5 + 0.5 * n.x));
+        stone += rimCol * pow(side, 1.5) * 0.55 * (0.3 + 0.7 * fold);
+        float glint = hash12(floor(at.xz * 0.9) + 1.1);
+        stone += float3(0.85, 0.92, 1.0) * step(0.986, glint) * fold *
+                 (0.55 + 0.45 * sin(sharpen * 3.0 + glint * 60.0));
         float byRift = saturate(1.0 + inside * 1.4);  // 1 at the rift's edge, 0 some way off it
         if ((cave & 4u) != 0u)  // the water's light, most round the rift (the sea under it)
             stone += float3(0.50, 0.82, 1.0) * grottoLightAt(at.xz, sharpen) * (0.10 + 0.55 * byRift * byRift);
@@ -3227,7 +3280,10 @@ float3 underVault(float3 dir, float3 horizon) {
     float3 dark = horizon * lerp(0.55, 0.25, smoothstep(0.0, 0.6, rise));
     if (footprint > 0.5 && rise > -0.3) {  // 3.0.19-beta.32: the vault over the passages
         float4 v = vaultSeen(float3(r9, r10, r11), dir, dark);
-        if (v.a > 0.5) return v.rgb;
+        float3 c = v.a > 0.5 ? v.rgb : dark;
+        // 3.0.24-beta.13: the day's shaft of light through Comodo's rift
+        if ((caveParts() & 1u) != 0u) c += riftShaft(float3(r9, r10, r11), dir, 1500.0);
+        return c;
     }
     return dark;
 }
