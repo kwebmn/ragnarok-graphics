@@ -9937,20 +9937,20 @@ constexpr Entry kTexts[] = {
     {Text::View3dCaveCrystals, "Comodo: crystals on the vault", "Комодо: кристали на склепінні",
      "Комодо: кристаллы на своде"},
     {Text::View3dCaveCrystalsHint,
-     "Pink and blue crystals glow on Comodo's vault, more of them on its slopes by the walls - the town's pink light "
-     "comes from them. Needs «Vault in the caves».",
-     "На склепінні Комодо світяться рожеві й блакитні кристали, більше на схилах біля стін, — від них і рожеве "
-     "світло міста. Потрібне «Склепіння в печерах».",
-     "На своде Комодо светятся розовые и голубые кристаллы, больше на склонах у стен, — от них и розовый свет "
-     "города. Нужен «Свод в пещерах»."},
+     "Pink and blue crystals glow on the vault of Comodo and its caves, more of them on its slopes by the walls - "
+     "the town's pink light comes from them. Needs «Vault in the caves».",
+     "На склепінні Комодо та його печер світяться рожеві й блакитні кристали, більше на схилах біля стін, — від "
+     "них і рожеве світло міста. Потрібне «Склепіння в печерах».",
+     "На своде Комодо и его пещер светятся розовые и голубые кристаллы, больше на склонах у стен, — от них и "
+     "розовый свет города. Нужен «Свод в пещерах»."},
     {Text::View3dCaveGrotto, "Comodo: the grotto's water light", "Комодо: відблиски грота",
      "Комодо: блики грота"},
     {Text::View3dCaveGrottoHint,
-     "Comodo's vault as a sea grotto: the water's light runs over the rock round the rift, stalactites hang from "
-     "it. Needs «Vault in the caves».",
-     "Склепіння Комодо як морський грот: відблиски води біжать по скелі навколо розлому, з неї звисають "
+     "The vault of Comodo and its caves as a sea grotto: the water's light runs over the rock, stalactites hang "
+     "from it. Needs «Vault in the caves».",
+     "Склепіння Комодо та його печер як морський грот: відблиски води біжать по скелі, з неї звисають "
      "сталактити. Потрібне «Склепіння в печерах».",
-     "Свод Комодо как морской грот: блики воды бегут по скале вокруг разлома, с неё свисают сталактиты. Нужен "
+     "Свод Комодо и его пещер как морской грот: блики воды бегут по скале, с неё свисают сталактиты. Нужен "
      "«Свод в пещерах»."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");

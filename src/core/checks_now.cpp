@@ -7,6 +7,14 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        {"comodo_caves", "3.0.24-beta.16", "view3d.cave_grotto",
+         {"Comodo's caves: the new vault", "Печери Комодо: нове склепіння", "Пещеры Комодо: новый свод"},
+         {"beach_dun, beach_dun2, beach_dun3, Ctrl+Shift+V, look up: folds of rock in the cave's own light, "
+          "stalactites in clusters, the water's light, a few crystals; no rift.",
+          "beach_dun, beach_dun2, beach_dun3, Ctrl+Shift+V, погляньте вгору: складки скелі у власному світлі "
+          "печери, сталактити гронами, відблиски води, кілька кристалів; без розлому.",
+          "beach_dun, beach_dun2, beach_dun3, Ctrl+Shift+V, посмотрите вверх: складки скалы в собственном свете "
+          "пещеры, сталактиты гроздьями, блики воды, несколько кристаллов; без разлома."}},
         {"comodo_rift", "3.0.24-beta.11", "view3d.cave_rift",
          {"Comodo: the rift, crystals, grotto", "Комодо: розлом, кристали, грот", "Комодо: разлом, кристаллы, грот"},
          {"Comodo, Ctrl+Shift+V, look up over the bay: the night sky with fireworks in the rift, crystals and the "

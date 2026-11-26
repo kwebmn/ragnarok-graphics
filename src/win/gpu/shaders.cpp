@@ -3292,14 +3292,20 @@ float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
         float fold = foldAt(at.xz);
         float grain = 0.62 + 0.38 * fbm4(at.xz * 0.09);
         float strata = 0.86 + 0.14 * sin(at.y * 0.9 + fbm4(at.xz * 0.03) * 6.0);
-        stone = float3(0.19, 0.14, 0.24) * grain * strata * (0.20 + 0.80 * fold) * (0.55 + 0.45 * lit);
+        // 3.0.24-beta.16: Comodo's own caves (no kTown 8) - the rock and its folds' light in the map's own light
+        bool town = (cave & 8u) != 0u;
+        float3 own = (holeZ > 0.5 ? float3(holeX, holeY, holeH) : float3(1.0, 1.0, 1.0)) * base;
+        float3 rockCol = town ? float3(0.19, 0.14, 0.24) : own * 0.75;
+        stone = rockCol * grain * strata * (0.20 + 0.80 * fold) * (0.55 + 0.45 * lit);
         float side = saturate(1.0 - abs(n.y));
-        float3 rimCol = lerp(float3(0.42, 0.72, 1.0), float3(1.0, 0.38, 0.74), saturate(0.5 + 0.5 * n.x));
+        float3 rimCol = town ? lerp(float3(0.42, 0.72, 1.0), float3(1.0, 0.38, 0.74), saturate(0.5 + 0.5 * n.x))
+                             : lerp(float3(0.40, 0.66, 0.90), saturate(own * 2.2), saturate(0.5 + 0.5 * n.x)) * 0.6;
         stone += rimCol * pow(side, 1.5) * 0.55 * (0.3 + 0.7 * fold);
         float glint = hash12(floor(at.xz * 0.9) + 1.1);
         stone += float3(0.85, 0.92, 1.0) * step(0.986, glint) * fold *
                  (0.55 + 0.45 * sin(sharpen * 3.0 + glint * 60.0));
-        float byRift = saturate(1.0 + inside * 1.4);  // 1 at the rift's edge, 0 some way off it
+        // 1 at the rift's edge, 0 some way off it; a cave with no rift (3.0.24-beta.16) - its water's light even
+        float byRift = (cave & 1u) != 0u ? saturate(1.0 + inside * 1.4) : 0.55;
         if ((cave & 4u) != 0u)  // the water's light, most round the rift (the sea under it)
             stone += float3(0.50, 0.82, 1.0) * grottoLightAt(at.xz, sharpen) * (0.10 + 0.55 * byRift * byRift);
         if ((cave & 2u) != 0u) stone += crystalsAt(at.xz, length(float2(gx, gz)), sharpen);

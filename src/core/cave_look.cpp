@@ -4,8 +4,13 @@ namespace uagfx::cave_look {
 
 Look forMap(const std::string& map, const Parts& wanted) {
     Look l;
+    if (map == "beach_dun" || map == "beach_dun2" || map == "beach_dun3") {  // 3.0.24-beta.16: its caves
+        l.parts = (wanted.crystals ? kCrystals : 0u) | (wanted.grotto ? kGrotto : 0u);
+        return l;
+    }
     if (map != "comodo") return l;
     l.parts = (wanted.rift ? kRift : 0u) | (wanted.crystals ? kCrystals : 0u) | (wanted.grotto ? kGrotto : 0u);
+    if (l.parts) l.parts |= kTown;
     // over the bay's middle, short of the walls to the west and the east (the sea's cells 0-179 x 0-50, its middle
     // 86 x 42 with the coves; the open water south of 32)
     l.riftX = 90;
