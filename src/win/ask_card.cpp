@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -103,6 +104,11 @@ struct State {
     WindowShadow shadow;
     bool on = false, shown = false, hid = false, moved = false, padNow = false;
     bool counts = false, countMoved = false;  // 3.0.11-beta.155: [interface] counts; its window out of sight
+    // 3.0.24-beta.7: «Скільки штук» of the driver's own (askCount) - no game window behind it
+    bool own = false;
+    std::string ownTitle, ownField;
+    int ownMost = 0;
+    std::function<void(int)> ownDone;
     int countX = 0, countY = 0;               // its own place (back when the switch goes off)
     unsigned codePage = 0;
     float k = 0, scale = 1;
@@ -356,8 +362,28 @@ void setCountField(uint32_t window, const std::string& text) {
     reinterpret_cast<SetTextFn>(uintptr_t(read32(read32(edit) + kSetTextSlot)))(edit, text.c_str());
 }
 
+// 3.0.24-beta.7: the own count ended - chosen (`n` > 0) or given up
+void endOwn(State& s, int n) {
+    std::function<void(int)> done = std::move(s.ownDone);
+    s.own = false;
+    s.ownDone = nullptr;
+    s.ownField.clear();
+    s.key.clear();
+    if (s.told++ < 30) LOG_INFO("asks: our «how many» - %s", n > 0 ? std::to_string(n).c_str() : "given up");
+    if (n > 0 && done) done(n);
+}
+
+int ownChosen(const State& s) {
+    const int typed = s.ownField.empty() ? s.ownMost : std::atoi(s.ownField.c_str());
+    return std::clamp(typed, 0, s.ownMost);
+}
+
 // 3.0.11-beta.155: a count's quick choice - the game's field set to it and its OK pressed
 void quick(State& s, int value) {
+    if (s.own) {  // 3.0.24-beta.7
+        endOwn(s, std::clamp(value, 0, s.ownMost));
+        return;
+    }
     const uint32_t window = gameCount(), edit = window ? read32(window + kEdit) : 0;
     if (!edit) return;
     const std::string digits = std::to_string(value);
@@ -369,6 +395,10 @@ void quick(State& s, int value) {
 
 // Its button pressed: the game's window's own (message 6, 0x76 or 0x77) - the game does the rest
 void press(State& s, ac::Button b) {
+    if (s.own) {  // 3.0.24-beta.7
+        endOwn(s, b == ac::Button::Cancel || b == ac::Button::Decline ? 0 : ownChosen(s));
+        return;
+    }
     if (s.kind == ac::Kind::Count && s.shown) {  // 3.0.11-beta.155: OK its own, cancel ours (it has none)
         const uint32_t window = gameCount();
         if (!window) return;
@@ -430,6 +460,12 @@ static void frameInner(HWND game, bool on, bool counts, unsigned codePage, doubl
         window = count;
         kind = ac::Kind::Count;
     }
+    if (s.own && world) {  // 3.0.24-beta.7: ours over any of the game's
+        window = 1;
+        kind = ac::Kind::Count;
+    } else if (s.own) {
+        endOwn(s, 0);  // out of the world: given up
+    }
     if (!window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         s.window = 0;
@@ -438,7 +474,7 @@ static void frameInner(HWND game, bool on, bool counts, unsigned codePage, doubl
     if (!s.shown || window != s.window || kind != s.kind) {
         if (s.told++ < 30) LOG_INFO("asks: %s - the new card shows it", nameOf(kind));
         s.show = ac::Show{};
-        if (kind == ac::Kind::Count) setCountField(window, "");  // 3.0.15-beta.7: typed from empty, not the most
+        if (kind == ac::Kind::Count && !s.own) setCountField(window, "");  // 3.0.15-beta.7: typed from empty
     }
     s.window = window;
     s.kind = kind;
@@ -447,7 +483,17 @@ static void frameInner(HWND game, bool on, bool counts, unsigned codePage, doubl
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     s.padNow = uapad::runtime::navLook().shown;
-    s.card = cardOf(s, kind, window);
+    if (s.own) {  // 3.0.24-beta.7: its own words and field
+        s.card = ac::Card{};
+        s.card.kind = ac::Kind::Count;
+        s.card.title = s.ownTitle;
+        s.card.most = s.ownMost;
+        s.card.message = settings::fmt(say(settings::Text::CountHint), {std::to_string(s.ownMost)});
+        s.card.field = s.ownField;
+        s.card.caret = (GetTickCount64() / kBlinkMs) % 2 == 0;
+    } else {
+        s.card = cardOf(s, kind, window);
+    }
     const ac::Texts t = texts(s);
     s.layout = ac::layout(s.card, targetWidth, targetHeight, s.scale, t);
     s.show.hover = -1;
@@ -558,6 +604,22 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 
 bool key(UINT m, WPARAM wp, LPARAM) {
     State& s = state();
+    if (s.own && s.shown) {  // 3.0.24-beta.7: our own field takes the keys
+        if (m == WM_CHAR) {
+            if (wp >= '0' && wp <= '9' && s.ownField.size() < 6) s.ownField += char(wp);
+            s.key.clear();
+            return true;  // any letter: not into the chat behind
+        }
+        if (m == WM_KEYDOWN) {
+            if (wp == VK_BACK && !s.ownField.empty()) s.ownField.pop_back();
+            else if (wp == VK_RETURN) endOwn(s, ownChosen(s));
+            else if (wp == VK_ESCAPE) endOwn(s, 0);
+            else return false;
+            s.key.clear();
+            return true;
+        }
+        return false;
+    }
     if (!s.shown || s.kind != ac::Kind::Count || m != WM_KEYDOWN || wp != VK_RETURN) return false;
     const uint32_t window = gameCount(), edit = window ? read32(window + kEdit) : 0;
     if (!edit) return false;
@@ -591,6 +653,17 @@ bool countAll() {
 }
 
 bool shown() { return state().shown; }
+
+void askCount(const std::string& title, int most, std::function<void(int)> done) {
+    State& s = state();
+    if (s.own) endOwn(s, 0);  // one at a time: the one before given up
+    s.own = most > 0;
+    s.ownTitle = title;
+    s.ownMost = most;
+    s.ownField.clear();
+    s.ownDone = s.own ? std::move(done) : nullptr;
+    s.key.clear();
+}
 
 bool asking() {
     const State& s = state();

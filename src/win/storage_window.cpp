@@ -351,8 +351,17 @@ void place(State& s) {
 
 // A storage thing into the bag at once, as a drag of it let go over «Речі»: the game's drag of it begun (0x3C) and
 // given to the game's «Речі» window's drop (made first when not open) - the game's count window for a stack
-const char* take(State& s, const iw::Item& it) {
-    if (g_packets) {  // 3.0.24-beta.4: the driver's own packet - the whole stack (no count window yet)
+const char* take(State& s, const iw::Item& it, bool howMany = false) {
+    if (g_packets) {  // 3.0.24-beta.4: the driver's own packet
+        // 3.0.24-beta.7 (the owner: «делай склад»): a stack by a double click or a drag asks how many (our own
+        // «Скільки штук»); Alt+RMB and the picked ones go whole
+        if (howMany && it.count > 1) {
+            const int index = it.index;
+            askcardwin::askCount(say(settings::Text::CountBag), it.count, [index](int n) {
+                itemnet::ask(itemactions::Kind::FromStorage, uint16_t(index), uint32_t(n));
+            });
+            return "asked how many (items via packets)";
+        }
         const itemactions::Result r = itemnet::ask(itemactions::Kind::FromStorage, uint16_t(it.index),
                                                    uint32_t(std::max(1, it.count)));
         s.readAt = 0;
@@ -375,7 +384,7 @@ const char* take(State& s, const iw::Item& it) {
 // The pressed thing let go after a drag: the game's drag of it begun (0x3C, as its own window's press) and let go at
 // once where the cursor is (0x12, as its frame on the button's coming up): over «Речі» its drop takes it
 const char* dropAt(const iw::Item& it) {
-    if (g_packets) return take(state(), it);  // 3.0.24-beta.4: let go out of «Склад» - into the bag by our packet
+    if (g_packets) return take(state(), it, true);  // 3.0.24-beta.4: let go out of «Склад» - into the bag, ours
     int cx = 0, cy = 0;
     if (!readGameCursor(cx, cy)) return "not dropped (no cursor)";
     if (!modeMsg(kStorageDragMsg, it.index, it.count)) return "not dropped (the game mode not found)";
@@ -447,7 +456,7 @@ std::vector<int> shownPlaces(const State& s) {
 void takeCell(State& s, int shownIndex, const char* how) {
     if (shownIndex < 0 || shownIndex >= int(s.shownItems.size())) return;
     const iw::Item it = s.items[size_t(s.shownItems[size_t(shownIndex)])];
-    const char* did = take(s, it);
+    const char* did = take(s, it, true);
     if (s.told++ < 30) LOG_INFO("storage: %s on #%d x%d - %s", how, it.id, it.count, did);
 }
 
@@ -598,11 +607,19 @@ bool drop(int x, int y, uint32_t drag) {
     if (!s.layout.glass.contains(tx, ty)) return false;
     if (g_packets && drag && read32(drag) == 1) {  // 3.0.24-beta.4: a bag thing's drag - the driver's own packet
         const int place = int(read32(drag + 4)), count = int(read32(drag + 0x10));
-        const itemactions::Result r =
-            itemnet::ask(itemactions::Kind::ToStorage, uint16_t(place), uint32_t(std::max(1, count)));
         modeMsg(kEndDragMsg, 0, 0);
+        if (count > 1) {  // 3.0.24-beta.7: a stack - how many (our own «Скільки штук»)
+            askcardwin::askCount(say(settings::Text::CountStorage), count, [place](int n) {
+                itemnet::ask(itemactions::Kind::ToStorage, uint16_t(place), uint32_t(n));
+            });
+            if (s.told++ < 30) LOG_INFO("storage: a bag stack (place %d, %d) let go over «Склад» - how many", place,
+                                        count);
+            s.readAt = 0;
+            return true;
+        }
+        const itemactions::Result r = itemnet::ask(itemactions::Kind::ToStorage, uint16_t(place), 1);
         if (s.told++ < 30)
-            LOG_INFO("storage: a bag thing (place %d, %d) let go over «Склад» - %s", place, count,
+            LOG_INFO("storage: a bag thing (place %d) let go over «Склад» - %s", place,
                      r == itemactions::Result::Sent ? "sent by the driver" : "not sent");
         s.readAt = 0;
         return true;

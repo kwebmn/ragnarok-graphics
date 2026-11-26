@@ -21,14 +21,14 @@ const std::vector<Check>& all() {
           "порожні.",
           "Alt+O, внизу «Всё по умолчанию», затем ещё раз за 4 с: все строки как после установки, «Изменённые» "
           "пусты."}},
-        {"storage_packets", "3.0.24-beta.4", "interface.storage_packets",
+        {"storage_packets", "3.0.24-beta.7", "interface.storage_packets",
          {"Storage: the new passing of things", "Склад: нова передача речей", "Склад: новая передача вещей"},
-         {"Turn «Kafra storage» and this on. At a Kafra: drag a stack from the bag in, double-click to take it back, "
-          "click one cell fast - one move.",
-          "Увімкніть «Склад Кафри» і цю галочку. У Кафри: перетягніть пачку із сумки, двічі клацніть - забрати, "
-          "швидко клацайте по одній ячейці - одна передача.",
-          "Включите «Склад Кафры» и эту галочку. У Кафры: перетащите пачку из сумки, двойной клик - забрать, "
-          "быстро кликайте по одной ячейке - одна передача."}},
+         {"Turn «Kafra storage» and this on. Drag a stack in, double-click to take: «How many» asks, Enter for all. "
+          "Alt+RMB moves it whole; click one cell fast - one move.",
+          "Увімкніть «Склад Кафри» і цю галочку. Перетягніть пачку, двічі клацніть - забрати: спитає скільки, Enter "
+          "- усе. Alt+ПКМ - цілою; швидкі клацання - одна передача.",
+          "Включите «Склад Кафры» и эту галочку. Перетащите пачку, двойной клик - забрать: спросит сколько, Enter "
+          "- всё. Alt+ПКМ - целиком; быстрые клики - одна передача."}},
         {"settings_simple", "3.0.24-beta.2", "",
          {"Simple settings", "Простий режим налаштувань", "Простой режим настроек"},
          {"Alt+O opens on «Simple»: the three sets, then cards. Turn «Water» off - the water is the game's. «In detail "
