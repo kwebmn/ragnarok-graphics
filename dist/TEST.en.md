@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.24-beta.11 — what's new · 2026-11-26
+
+Comodo's cave made beautiful.
+
+- **A rift with the sky.** In the 3D view a wide rift opens in the cave's vault over Comodo's bay: through it the night sky with stars, and now and then fireworks burst there — pink, blue and gold. The rift's edge is lit pink.
+- **Crystals.** Pink and blue crystals glow on the vault, more of them on the slopes by the walls, and they shimmer faintly.
+- **A grotto.** The water's light runs over the rock, strongest round the rift, and stalactites hang from the vault.
+- **No spikes.** The vault no longer comes down to the lamp posts.
+- Each part has its own box, all on: Alt+O → «Checking now» → «Comodo: the rift, crystals, grotto».
+
 # uaRO Graphics 3.0.24-beta.10 — what's new · 2026-11-26
 
 Comodo is a town in a cave.
