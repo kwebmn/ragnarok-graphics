@@ -75,7 +75,8 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <body class="lw vsw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span></div>
 <span class="x ctl" data-event-click="vs_cancel()">&#x2715;</span>
-<div class="list"><div class="ware" data-for="r, i : rows" data-class-on="r.chosen > 0"><img
+<div class="list"><div class="ware ctl" data-for="r, i : rows" data-class-on="r.chosen > 0"
+  data-event-mousedown="vs_press(i)"><img
   data-if="r.icon != ''" data-attr-src="r.icon"/>
 <div class="wname ctl" data-event-click="vs_card(i)"><span class="name"
   data-style-color="r.colour">{{r.name}}</span><span
@@ -256,10 +257,16 @@ constexpr uint32_t kMakeWindow = 0x4D42D0;
 using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t mgr, int id);
 using ShowFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 void card(State& s, int row, const char* by) {
-    if (row < 0 || row >= int(s.things.size()) || !s.things[size_t(row)].at) return;
+    if (row < 0 || row >= int(s.things.size()) || !s.things[size_t(row)].at) {
+        if (s.cardsTold++ < 10) LOG_INFO("vending: no card for the line %d (%s) - its thing not known", row, by);
+        return;
+    }
     const uint32_t window = reinterpret_cast<MakeFn>(uintptr_t(kMakeWindow))(kWindowMgr, kItemCard);
     const uint32_t send = window ? read32(read32(window) + kSendMsgSlot) : 0;
-    if (!send) return;
+    if (!send) {
+        if (s.cardsTold++ < 10) LOG_INFO("vending: no card (%s) - the game's item card window not made", by);
+        return;
+    }
     reinterpret_cast<ShowFn>(uintptr_t(send))(window, 0, kShowItem, int(s.things[size_t(row)].at), 0, 0);
     if (s.cardsTold++ < 10) LOG_INFO("vending: %s's card (%s)", s.rows[size_t(row)].name.c_str(), by);
 }
@@ -490,6 +497,13 @@ static void liveFrame(State& s) {
         });
         m.BindEventCallback("vs_card", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             if (!a.empty()) card(state(), a[0].Get<int>(), "its name pressed");  // 3.0.18-beta.138
+        });
+        // 3.0.24-beta.6 (R-AR8CRT «вот лавка, не могу прочитать описание предметов»: a right press on a ware, as the
+        // game's own windows take it, did nothing - the card opened on its name's left click alone): the right
+        // button anywhere on a ware's line opens its card
+        m.BindEventCallback("vs_press", [](Rml::DataModelHandle, Rml::Event& ev, const Rml::VariantList& a) {
+            if (a.empty() || ev.GetParameter<int>("button", 0) != 1) return;
+            card(state(), a[0].Get<int>(), "a right press on its line");
         });
         m.BindEventCallback("vs_buy", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
             State& st = state();

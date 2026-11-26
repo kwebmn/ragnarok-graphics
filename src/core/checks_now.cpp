@@ -7,6 +7,12 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        {"vend_card_right", "3.0.24-beta.6", "",
+         {"A shop's ware: its card", "Товар у лавці: його картка", "Товар в лавке: его карточка"},
+         {"Open a player's shop, press the right button on a ware: its card with its description and its slots' "
+          "cards.",
+          "Відкрийте лавку гравця, натисніть правою кнопкою по товару: картка з описом і картами в слотах.",
+          "Откройте лавку игрока, нажмите правой кнопкой по товару: карточка с описанием и картами в слотах."}},
         {"settings_reset_all", "3.0.24-beta.5", "",
          {"Settings: all to defaults", "Налаштування: усе за замовчуванням", "Настройки: всё по умолчанию"},
          {"Alt+O, at the bottom «All to defaults», then once more within 4 s: every row back as shipped, «Changed» "

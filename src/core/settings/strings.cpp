@@ -8557,9 +8557,9 @@ constexpr Entry kTexts[] = {
     {Text::VendFree, "free slots: {1}",  // 3.0.18-beta.138
      "вільних слотів: {1}",
      "свободных слотов: {1}"},
-    {Text::VendCardTip, "A thing's name: its card · a card in its slot there: what it gives",  // 3.0.23-beta.15
-     "Назва речі - її картка · там карта в слоті - що вона дає",
-     "Название вещи - её карточка · там карта в слоте - что она даёт"},
+    {Text::VendCardTip, "Right button or its name: its card · a card in its slot there: what it gives",  // .24-beta.6
+     "Права кнопка чи назва речі - її картка · там карта в слоті - що вона дає",
+     "Правая кнопка или название вещи - её карточка · там карта в слоте - что она даёт"},
     // 3.0.23-beta.1 (R-DBGBHJ «не могу купить»): + refused - why
     {Text::VendShortZeny, "Not enough zeny: {1} z needed, you have {2} z",
      "Не вистачає зені: потрібно {1} z, у вас {2} z", "Не хватает зени: нужно {1} z, у вас {2} z"},
