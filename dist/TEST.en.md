@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.24-beta.6 — what's new · 2026-11-26
+
+A ware's description in a shop.
+
+- **«Vending»: the right button on a ware opens its card** — its description, and the cards in its slots there (a click on a card shows what it gives). Before, only a left click on its name opened the card, and the right button, as in the game's windows, did nothing. The hint at the window's bottom says so.
+
 # uaRO Graphics 3.0.24-beta.5 — what's new · 2026-11-26
 
 Reset all settings.
