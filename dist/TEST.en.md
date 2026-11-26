@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.12 — what's new · 2026-11-27
+
+Comodo's cave: refinements.
+
+- **Crystals without squares.** The crystals' glow is no longer cut into squares; the crystals themselves are smaller, fewer and look like shards rather than little stars.
+- **A darker vault.** The rock over Comodo is now dark and violet like the night town under it, so the water's light and the crystals show better on it.
+- **Stalactites** are fewer but longer.
+
 # uaRO Graphics 3.0.24-beta.11 — what's new · 2026-11-26
 
 Comodo's cave made beautiful.
