@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.24-beta.10 — what's new · 2026-11-26
+
+Comodo is a town in a cave.
+
+- **No more sky over Comodo.** The town lies in a cave and its pink light comes from the crystals on the roof, so there should be no sun, horizon or weather there. Now the 3D view puts a rock roof over the town, lit by the map's own light, and it sounds like a cave. The fields around Comodo are under the open sky and stay as they were. Thanks to the player who noticed.
+
 # uaRO Graphics 3.0.24-beta.9 — what's new · 2026-11-26
 
 NPC shops: the new deal (for testers).
