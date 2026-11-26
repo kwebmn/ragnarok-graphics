@@ -9924,6 +9924,34 @@ constexpr Entry kTexts[] = {
      "«Магазины NPC» сами отправляют корзину одной сделкой и ждут ответа сервера: готово — окно закрывается, "
      "отказ — "
      "почему, в его подсказке. Нужны включённые «Магазины NPC». Для тестеров: выключено — как в игре."},
+    // 3.0.24-beta.11 (core/cave_look): Comodo's cave in the 3D view
+    {Text::View3dCaveRift, "Comodo: the sky in the vault's rift", "Комодо: небо в розломі склепіння",
+     "Комодо: небо в разломе свода"},
+    {Text::View3dCaveRiftHint,
+     "Over Comodo's bay the cave's vault has a rift: the night sky with stars and fireworks now and then, its edge "
+     "lit pink. Needs «Vault in the caves».",
+     "Над затокою Комодо у склепінні печери розлом: нічне небо із зорями й час від часу феєрверки, край підсвічено "
+     "рожевим. Потрібне «Склепіння в печерах».",
+     "Над заливом Комодо в своде пещеры разлом: ночное небо со звёздами и время от времени фейерверки, край "
+     "подсвечен розовым. Нужен «Свод в пещерах»."},
+    {Text::View3dCaveCrystals, "Comodo: crystals on the vault", "Комодо: кристали на склепінні",
+     "Комодо: кристаллы на своде"},
+    {Text::View3dCaveCrystalsHint,
+     "Pink and blue crystals glow on Comodo's vault, more of them on its slopes by the walls - the town's pink light "
+     "comes from them. Needs «Vault in the caves».",
+     "На склепінні Комодо світяться рожеві й блакитні кристали, більше на схилах біля стін, — від них і рожеве "
+     "світло міста. Потрібне «Склепіння в печерах».",
+     "На своде Комодо светятся розовые и голубые кристаллы, больше на склонах у стен, — от них и розовый свет "
+     "города. Нужен «Свод в пещерах»."},
+    {Text::View3dCaveGrotto, "Comodo: the grotto's water light", "Комодо: відблиски грота",
+     "Комодо: блики грота"},
+    {Text::View3dCaveGrottoHint,
+     "Comodo's vault as a sea grotto: the water's light runs over the rock round the rift, stalactites hang from "
+     "it. Needs «Vault in the caves».",
+     "Склепіння Комодо як морський грот: відблиски води біжать по скелі навколо розлому, з неї звисають "
+     "сталактити. Потрібне «Склепіння в печерах».",
+     "Свод Комодо как морской грот: блики воды бегут по скале вокруг разлома, с неё свисают сталактиты. Нужен "
+     "«Свод в пещерах»."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -538,6 +538,13 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.20-beta.54 (5, part 2): the map's own rock on a dungeon's vault
         {"view3d", "vault_rock", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dVaultRock,
          Text::View3dVaultRockHint, "", &E::vaultRock},
+        // 3.0.24-beta.11 (core/cave_look): Comodo's cave - the rift, the crystals, the grotto
+        {"view3d", "cave_rift", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dCaveRift,
+         Text::View3dCaveRiftHint, "", &E::caveRift},
+        {"view3d", "cave_crystals", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dCaveCrystals,
+         Text::View3dCaveCrystalsHint, "", &E::caveCrystals},
+        {"view3d", "cave_grotto", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dCaveGrotto,
+         Text::View3dCaveGrottoHint, "", &E::caveGrotto},
         // 3.0.20-beta.56 (R-2BX4BG): the gaps of the models made for the view from above closed
         {"view3d", "close_gaps", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::View3dCloseGaps,
          Text::View3dCloseGapsHint, "", &E::closeGaps},

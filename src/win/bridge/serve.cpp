@@ -225,6 +225,11 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.sandstorm = rd.u8() != 0;       // 3.0.22-beta.23
             e.seasonFade = rd.i32();          // 3.0.22-beta.24
             e.held = rd.left() >= 1 && rd.u8() != 0;  // 3.0.22-beta.30: Pause's
+            if (rd.left() >= 3) {  // 3.0.24-beta.11
+                e.caveRift = rd.u8() != 0;
+                e.caveCrystals = rd.u8() != 0;
+                e.caveGrotto = rd.u8() != 0;
+            }
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

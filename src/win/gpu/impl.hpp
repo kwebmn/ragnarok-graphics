@@ -670,6 +670,7 @@ struct Renderer::Impl {
     bool applySkyFill();
     bool skyPass(bool fill);
     std::string sky3dLogged;  // the map it was told on
+    std::string caveLookLogged;  // 3.0.24-beta.11
     // 0.73, light in the air (haze.cpp, shafts_ps): the torches' pass leaves its lights' count.
     ID3DBlob* shaftsPs = nullptr;
     // 2.5.7: drawn into a half-size target (no blending), then added over the world from it (half_over_ps)

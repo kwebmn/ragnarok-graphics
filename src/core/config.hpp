@@ -213,6 +213,10 @@ struct EffectSettings {
     // 3.0.20-beta.54 (the owner's «делай 1-9», 5, part 2): [view3d] vault_rock - a dungeon's vault wears the picture
     // of the map's own rock (core/cave_vault rockPicture) in place of its noise
     bool vaultRock = true;
+    // 3.0.24-beta.11 (the owner 26.11 «Небо в разломе», «с вариантами 1 и 2», «включить сразу у всех»; core/cave_look):
+    // [view3d] cave_rift, cave_crystals, cave_grotto - Comodo's cave: the rift with the night sky and fireworks,
+    // crystals on the vault, the water's light and stalactites
+    bool caveRift = true, caveCrystals = true, caveGrotto = true;
     // 3.0.20-beta.56 (R-2BX4BG «скала прозрачная какая-то»): [view3d] close_gaps - the gaps of the models made for
     // the view from above (a cap hung over an open-topped base) closed in the models our renderer draws
     // (core/model_gaps); a node as it is captured - a change shows from the next map

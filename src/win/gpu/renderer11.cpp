@@ -15,6 +15,7 @@
 
 #include "core/grass3d.hpp"
 #include "core/cast_look.hpp"
+#include "core/cave_look.hpp"
 #include "core/mage_looks.hpp"
 #include "core/ai_copy_blend.hpp"
 #include "core/ai/kinds.hpp"
@@ -4346,6 +4347,16 @@ void Renderer11::skyPass(bool fill) {
         cave_vault::rockOf(lit, ambient, diffuse, c.sourceClamp);
         // 3.0.20-beta.52: a ceiling's height (0: a vault); 3.0.20-beta.57: over each room's floor - far over them here
         c.sourceClamp[3] = vaultMap_.perRoom ? 1e6f : vaultMap_.ceiling;
+        if (vaultMap_.ceiling <= 0.0f) {  // 3.0.24-beta.11 (core/cave_look; as Direct3D 12's): Comodo's cave
+            const cave_look::Look look =
+                cave_look::forMap(map_, {effects_.caveRift, effects_.caveCrystals, effects_.caveGrotto});
+            cave_look::pack(look, c.hole[7], c.uiPixels[3]);
+            if (look.on() && caveLookLogged_ != map_) {
+                caveLookLogged_ = map_;
+                LOG_INFO("3D sky: %s's cave - parts %u ([view3d] cave_rift, cave_crystals, cave_grotto; Direct3D 11)",
+                         map_.c_str(), unsigned(look.parts));
+            }
+        }
         if (room && vaultMap_.ceiling > 0.0f) {  // 3.0.20-beta.57: the rooms a cell (t0), the player's
             if (ID3D11ShaderResourceView* roomsT = roomsTexture()) {
                 rockT = roomsT;

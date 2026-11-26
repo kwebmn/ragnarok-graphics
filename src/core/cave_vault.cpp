@@ -614,4 +614,6 @@ bool forMap(const std::string& map) {
     return m.find("dun") != std::string::npos || m.rfind("anthell", 0) == 0 || m == "comodo";
 }
 
+bool postsFor(const std::string& map) { return forMap(map) && map != "comodo"; }
+
 }  // namespace uagfx::cave_vault

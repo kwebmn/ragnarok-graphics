@@ -934,6 +934,7 @@ private:
     bool mistDone_ = false, weatherDone_ = false;
     bool sky3dDone_ = false;  // 3.0.19-beta.6: the 3D view's sky
     std::string sky3dLogged_;
+    std::string caveLookLogged_;  // 3.0.24-beta.11
     bool mistLogged_ = false, weatherLogged_ = false;
     bool outdoors_ = false;
     // 3.0.18-beta.252 (R-9UNG8S «в замке трава плоская с отражением»): as Direct3D 12's mapGrass, mapCastle

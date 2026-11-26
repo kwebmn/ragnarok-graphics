@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstring>
 
+#include "core/cave_look.hpp"
 #include "core/game_camera.hpp"
 #include "core/view3d.hpp"
 #include "win/gpu/impl.hpp"
@@ -170,6 +171,19 @@ bool Renderer::Impl::skyPass(bool fill) {
         // 3.0.20-beta.52: a ceiling's height (0: a vault); 3.0.20-beta.57: over each room's own floor - far over
         // all of them here (no wall of the ground stands over a ceiling of its own height)
         c.sourceClamp[3] = vaultMap.perRoom ? 1e6f : vaultMap.ceiling;
+        // 3.0.24-beta.11 (core/cave_look): Comodo's cave - the rift, the crystals, the grotto (holeF, uiPixels.w)
+        if (vaultMap.ceiling <= 0.0f) {
+            const cave_look::Look look =
+                cave_look::forMap(mapName, {effects.caveRift, effects.caveCrystals, effects.caveGrotto});
+            cave_look::pack(look, c.hole[7], c.uiPixels[3]);
+            if (look.on() && caveLookLogged != mapName) {
+                caveLookLogged = mapName;
+                LOG_INFO("3D sky: %s's cave - %s%s%s ([view3d] cave_rift, cave_crystals, cave_grotto)",
+                         mapName.c_str(), (look.parts & cave_look::kRift) ? "the rift with the night sky, " : "",
+                         (look.parts & cave_look::kCrystals) ? "the crystals, " : "",
+                         (look.parts & cave_look::kGrotto) ? "the grotto's water light and stalactites" : "");
+            }
+        }
         if (room && vaultMap.ceiling > 0.0f) {  // 3.0.20-beta.57: the rooms a cell (t0), the player's
             const UINT roomsT = roomsTexture();
             if (roomsT != kNoSrv) {

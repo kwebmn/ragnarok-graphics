@@ -886,7 +886,7 @@ void MapWorld::loop() {
         // stand tall and wide-topped (cave_vault::postOf); the 3D view's vault comes down to those that reach its
         // walls' height
         std::vector<cave_vault::Post> posts;
-        if (ok && cave_vault::forMap(name)) {
+        if (ok && cave_vault::postsFor(name)) {  // 3.0.24-beta.11: not Comodo's lamp posts (R-BYS7WU)
             for (const rsw::Model& m : w.models) {
                 cave_vault::Post post;
                 if (cave_vault::postOf(modelOf(m.file), m, post)) posts.push_back(post);

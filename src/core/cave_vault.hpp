@@ -87,6 +87,9 @@ bool heightAt(const Vault& v, float x, float z, float& up);
 // The maps given one: the dungeons' by their names («dun»: pay_dun00, gef_dun01, orcsdun01 ...; anthell) - a house's
 // or a castle's hall indoors keeps its dark sky
 bool forMap(const std::string& map);
+// 3.0.24-beta.11 (beta.10's R-BYS7WU: a spike of the vault down to a lamp post): whether a map's «pillars» hold its
+// vault - not Comodo's (its 146 «기둥» models are lamp posts, railings' and wooden posts)
+bool postsFor(const std::string& map);
 // 3.0.19-beta.38 (R-S3NQBF: the vault near black, the walls under it three times lighter): its rock's colour by the
 // map's own light (its ambient and a share of its diffuse, as the game lights its ground) on a warm stone; none known
 // - kRockUnlit

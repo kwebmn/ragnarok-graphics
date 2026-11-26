@@ -541,6 +541,9 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.sandstorm ? 1 : 0);       // 3.0.22-beta.23
     w.i32(e.seasonFade);             // 3.0.22-beta.24
     w.u8(e.held ? 1 : 0);            // 3.0.22-beta.30: Pause's
+    w.u8(e.caveRift ? 1 : 0);        // 3.0.24-beta.11
+    w.u8(e.caveCrystals ? 1 : 0);
+    w.u8(e.caveGrotto ? 1 : 0);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;
