@@ -3300,7 +3300,8 @@ float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
         // 1 at the rift's edge, 0 some way off it; a cave with no rift (3.0.24-beta.16) - its water's light even
         float byRift = (cave & 1u) != 0u ? saturate(1.0 + inside * 1.4) : 0.55;
         if ((cave & 4u) != 0u)  // the water's light, most round the rift (the sea under it)
-            stone += float3(0.50, 0.82, 1.0) * grottoLightAt(at.xz, sharpen) * (0.05 + 0.30 * byRift * byRift);  // .17: calmer
+            stone += float3(0.50, 0.82, 1.0) * grottoLightAt(at.xz, sharpen) *
+                     (0.05 + 0.30 * byRift * byRift);  // 3.0.24-beta.17: calmer
         if ((cave & 2u) != 0u) stone += crystalsAt(at.xz, length(float2(gx, gz)), sharpen);
         if ((cave & 1u) != 0u) {  // the rift's lip lit pink by the town's light and the fireworks
             stone += float3(1.0, 0.42, 0.78) * 0.9 * pow(saturate(1.0 + inside / 0.09), 3.0);
