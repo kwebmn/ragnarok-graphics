@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.24-beta.13 — what's new · 2026-11-27
+
+Comodo's cave: a new vault and the rift by the clock.
+
+- **A sculpted vault.** Instead of a grey «ceiling» — big folds of dark violet rock: the hollows darker, the folds' sides lit pink by the town and blue by the sea, wet glints on the crests, stalactites hanging in clusters along the folds.
+- **The rift by the clock.** By day the day's sky shows through the rift and a shaft of sunlight falls into the cave; in the evening and at night — stars and fireworks.
+- **More fireworks.** Several at once now, a new one every two to four seconds.
+- To see the fireworks, the time of day must be «auto» or «night», not «day».
+
 # uaRO Graphics 3.0.24-beta.12 — what's new · 2026-11-27
 
 Comodo's cave: refinements.
