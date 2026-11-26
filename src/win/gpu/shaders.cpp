@@ -2996,11 +2996,11 @@ float stalactiteAt(float2 xz) {
     float2 p = xz / 9.0;
     float2 c = floor(p), f = p - c;
     float h = hash12(c + 0.37);
-    if (h > 0.5) return 0.0;
+    if (h > 0.35) return 0.0;  // 3.0.24-beta.12: fewer, longer (R-95QHUS: specks)
     float2 at = 0.3 + 0.4 * float2(hash12(c + 17.1), hash12(c + 31.7));
     float d = length(f - at) / (0.14 + 0.12 * hash12(c + 5.3));
     if (d >= 1.0) return 0.0;
-    return (6.0 + 22.0 * hash12(c + 9.9)) * pow(1.0 - d, 2.4);
+    return (10.0 + 26.0 * hash12(c + 9.9)) * pow(1.0 - d, 2.4);
 }
 float vaultY(float2 xz) {
     float2 cells = fogColor.yz;
@@ -3031,23 +3031,27 @@ float grottoLightAt(float2 xz, float t) {
 }
 
 // 3.0.24-beta.11: the crystals' light on the vault there - clusters in some of the cells of 14 units, more of them
-// where the vault slopes down to the walls (steep), pink or blue, each a star of 5-7 facets with its halo
+// where the vault slopes down to the walls (steep), pink or blue. 3.0.24-beta.12 (the owner's R-95QHUS: pink and blue
+// squares, flat stars): fewer, smaller, a few shards of their own lengths each, the glow ending well within the cell
 float3 crystalsAt(float2 xz, float steep, float t) {
     float2 p = xz / 14.0;
     float2 c = floor(p), f = p - c;
     float h = hash12(c + 3.3);
-    if (h > 0.06 + 0.40 * saturate(steep * 1.2)) return float3(0.0, 0.0, 0.0);
-    float2 d = (f - (0.3 + 0.4 * float2(hash12(c + 1.7), hash12(c + 8.1)))) * 14.0;
+    if (h > 0.03 + 0.22 * saturate(steep * 1.2)) return float3(0.0, 0.0, 0.0);
+    float2 d = (f - (0.35 + 0.3 * float2(hash12(c + 1.7), hash12(c + 8.1)))) * 14.0;  // 4.9 units from its edges
     float r = length(d), a = atan2(d.y, d.x);
-    float n = 5.0 + floor(hash12(c + 4.4) * 3.0);
+    float n = 3.0 + floor(hash12(c + 4.4) * 3.0);  // 3-5 shards
     float turn = hash12(c + 0.9) * 6.2832;
-    float spike = pow(abs(cos(a * n * 0.5 + turn)), 5.0);
-    float size = 2.6 + 3.2 * hash12(c + 2.2);
-    float body = smoothstep(0.0, 0.18, 1.0 - r / (size * (0.30 + 0.70 * spike)));
-    float facet = sin(a * n + turn * 2.0) > 0.0 ? 1.0 : 0.62;
-    float3 col = hash12(c + 6.6) > 0.5 ? float3(1.0, 0.36, 0.76) : float3(0.42, 0.86, 1.0);
-    float pulse = 0.82 + 0.18 * sin(t * (0.8 + hash12(c + 7.7)) + h * 40.0);
-    return col * (body * facet * 1.5 + exp(-r / (size * 1.6)) * 0.45) * pulse;
+    float sector = floor(frac((a + turn) / 6.2832) * n);
+    float len = 0.45 + 0.55 * hash12(c + sector * 3.7 + 11.0);  // each shard its own length
+    float spike = pow(abs(cos((a + turn) * n * 0.5)), 9.0);
+    float size = 1.6 + 1.8 * hash12(c + 2.2);
+    float body = smoothstep(0.0, 0.25, 1.0 - r / (size * (0.18 + 0.82 * spike * len)));
+    float facet = sin((a + turn) * n) > 0.0 ? 1.0 : 0.6;
+    float3 col = hash12(c + 6.6) > 0.5 ? float3(1.0, 0.40, 0.78) : float3(0.45, 0.85, 1.0);
+    float glow = exp(-r / (size * 0.9)) * smoothstep(4.6, 2.2, r);  // none past 4.6: the cell's own
+    float pulse = 0.80 + 0.20 * sin(t * (0.8 + hash12(c + 7.7)) + h * 40.0);
+    return col * (body * facet * 1.3 + glow * 0.28) * pulse;
 }
 
 // 3.0.24-beta.11: fireworks in the sky seen through the rift - three in turn, each 2.6 s of a cycle of 4.7-8.5:
@@ -3201,6 +3205,9 @@ float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
         stone = rockMosaic(at.xz, lod) * base * lit * (0.86 + 0.24 * fbm4(at.xz * 0.045));
     }
     [branch] if (cave != 0u) {  // 3.0.24-beta.11: Comodo's cave
+        // 3.0.24-beta.12 (R-95QHUS: a grey vault bright as by day over the night's pink town): the rock in the
+        // town's night - darker, violet - so its own lights tell
+        stone *= float3(0.40, 0.33, 0.48);
         float byRift = saturate(1.0 + inside * 1.4);  // 1 at the rift's edge, 0 some way off it
         if ((cave & 4u) != 0u)  // the water's light, most round the rift (the sea under it)
             stone += float3(0.50, 0.82, 1.0) * grottoLightAt(at.xz, sharpen) * (0.10 + 0.55 * byRift * byRift);
