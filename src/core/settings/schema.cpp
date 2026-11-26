@@ -358,6 +358,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceCharMake, Text::InterfaceCharMakeHint, ""},  // 3.0.11-beta.153
         {"interface", "cart", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceCart,
          Text::InterfaceCartHint, ""},  // 3.0.11-beta.154
+        // 3.0.24-beta.8: items via packets, stage 2 - the testers' box (Alt+O «Перевіряємо зараз»)
+        {"interface", "cart_packets", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
+         Text::InterfaceCartPackets, Text::InterfaceCartPacketsHint, ""},
         {"interface", "counts", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceCounts,
          Text::InterfaceCountsHint, ""},  // 3.0.11-beta.155
         {"interface", "vending", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceVending,
@@ -1568,6 +1571,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.char_select") return c.charSelectWindow ? "1" : "0";  // 3.0.11-beta.152
     if (k == "interface.char_make") return c.charMakeWindow ? "1" : "0";      // 3.0.11-beta.153
     if (k == "interface.cart") return c.cartWindow ? "1" : "0";               // 3.0.11-beta.154
+    if (k == "interface.cart_packets") return c.cartPackets ? "1" : "0";      // 3.0.24-beta.8
     if (k == "interface.counts") return c.countWindow ? "1" : "0";            // 3.0.11-beta.155
     if (k == "interface.vending") return c.vendWindow ? "1" : "0";            // 3.0.11-beta.156
     if (k == "interface.picks") return c.pickWindows ? "1" : "0";             // 3.0.11-beta.157

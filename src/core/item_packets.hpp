@@ -12,6 +12,12 @@ using Bytes = std::vector<uint8_t>;
 Bytes toStorage(uint16_t bagIndex, uint32_t amount);
 Bytes fromStorage(uint16_t storageIndex, uint32_t amount);
 Bytes closeStorage();
+// 3.0.24-beta.8 (stage 2 «Візок»): 8 bytes each, the index at 2, the amount at 4 - putitemtocart 0x0126,
+// getitemfromcart 0x0127, movefromkafratocart 0x0128, movetokafrafromcart 0x0129
+Bytes toCart(uint16_t bagIndex, uint32_t amount);
+Bytes fromCart(uint16_t cartIndex, uint32_t amount);
+Bytes storageToCart(uint16_t storageIndex, uint32_t amount);
+Bytes cartToStorage(uint16_t cartIndex, uint32_t amount);
 int serverLength(uint16_t id);
 
 }  // namespace uagfx::itempackets

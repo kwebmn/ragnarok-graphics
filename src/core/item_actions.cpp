@@ -4,27 +4,43 @@
 
 namespace uagfx::itemactions {
 
+itemstate::Where leaving(Kind k) {
+    switch (k) {
+        case Kind::ToStorage:
+        case Kind::ToCart: return itemstate::Where::Bag;
+        case Kind::FromCart:
+        case Kind::CartToStorage: return itemstate::Where::Cart;
+        default: return itemstate::Where::Storage;
+    }
+}
+
 Result Queue::ask(Kind k, uint16_t index, uint32_t amount, uint32_t have, bool connected, uint32_t nowMs,
                   itempackets::Bytes& out) {
     out.clear();
-    const itemstate::Where where = k == Kind::ToStorage ? itemstate::Where::Bag : itemstate::Where::Storage;
+    const itemstate::Where where = leaving(k);
     if (k != Kind::CloseStorage) {
         if (have == 0) return Result::NothingToMove;
         if (waiting(where, index)) return Result::Busy;
     }
     if (!connected) return Result::NotConnected;
     const uint32_t n = std::min(std::max<uint32_t>(amount, 1), have);
-    out = k == Kind::ToStorage     ? itempackets::toStorage(index, n)
-          : k == Kind::FromStorage ? itempackets::fromStorage(index, n)
-                                   : itempackets::closeStorage();
+    switch (k) {
+        case Kind::ToStorage: out = itempackets::toStorage(index, n); break;
+        case Kind::FromStorage: out = itempackets::fromStorage(index, n); break;
+        case Kind::CloseStorage: out = itempackets::closeStorage(); break;
+        case Kind::ToCart: out = itempackets::toCart(index, n); break;
+        case Kind::FromCart: out = itempackets::fromCart(index, n); break;
+        case Kind::StorageToCart: out = itempackets::storageToCart(index, n); break;
+        case Kind::CartToStorage: out = itempackets::cartToStorage(index, n); break;
+    }
     if (k != Kind::CloseStorage) waits_.push_back(Wait{k, where, index, nowMs});
     return Result::Sent;
 }
 
 Outcome Queue::onChange(const itemstate::Change& c) {
-    if (c.closed) {  // the storage gone: what waited on it ends
+    if (c.closed) {  // the storage gone (or the cart emptied): what waited on it ends
         const auto gone = std::remove_if(waits_.begin(), waits_.end(),
-                                         [](const Wait& w) { return w.where == itemstate::Where::Storage; });
+                                         [&c](const Wait& w) { return w.where == c.where; });
         if (gone == waits_.end()) return Outcome::None;
         last_ = *gone;
         waits_.erase(gone, waits_.end());

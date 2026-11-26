@@ -11,7 +11,11 @@ namespace uagfx::itemactions {
 // thing becomes the server's packet and waits for the answer that ends it - the server's own change of that cell
 // (core/item_state Change) - or kTimeoutMs; while it waits, the same cell asks nothing more. Nothing is drawn ahead
 // of the answer.
-enum class Kind : uint8_t { ToStorage, FromStorage, CloseStorage };
+enum class Kind : uint8_t {
+    ToStorage, FromStorage, CloseStorage,
+    ToCart, FromCart, StorageToCart, CartToStorage  // 3.0.24-beta.8: the cart's
+};
+itemstate::Where leaving(Kind k);  // the side whose answer (its thing going out) ends the action
 enum class Result : uint8_t { Sent, Busy, NotConnected, NothingToMove };
 enum class Outcome : uint8_t { None, Done, TimedOut, Dropped };
 constexpr uint32_t kTimeoutMs = 2000;

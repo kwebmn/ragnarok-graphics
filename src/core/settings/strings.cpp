@@ -9892,6 +9892,20 @@ constexpr Entry kTexts[] = {
     // 3.0.24-beta.5 (the owner: «нету кнопки с альт-о сбросить настройки в по умолчанию»)
     {Text::SettingsResetAll, "All to defaults", "Усе за замовчуванням", "Всё по умолчанию"},
     {Text::SettingsResetAllSure, "Once more - reset all", "Ще раз — скинути все", "Ещё раз — сбросить всё"},
+    // 3.0.24-beta.8: «Візок» via packets
+    {Text::ItemsCartRefused,
+     "The cart did not take it (too heavy, full, or such a thing cannot go there)",
+     "Візок не прийняв (заважко, повний або таку річ туди не можна)",
+     "Тележка не приняла (слишком тяжело, полна или такую вещь туда нельзя)"},
+    {Text::InterfaceCartPackets, "Cart: the new passing of things (beta)", "Візок: нова передача речей (бета)",
+     "Тележка: новая передача вещей (бета)"},
+    {Text::InterfaceCartPacketsHint,
+     "«Cart» moves things itself, as the server answers - one press, one move, a stack asks how many; the reason "
+     "shown when the cart does not take a thing. Needs «Cart» on. For the testers: off - the game's own way.",
+     "«Візок» сам переносить речі, як відповідає сервер — одне натискання, одна передача, пачка питає скільки; "
+     "якщо візок не прийняв річ, видно чому. Потрібен увімкнений «Візок». Для тестерів: вимкнено — як у грі.",
+     "«Тележка» сама переносит вещи, как отвечает сервер — одно нажатие, одна передача, пачка спрашивает сколько; "
+     "если тележка не приняла вещь, видно почему. Нужна включённая «Тележка». Для тестеров: выключено — как в игре."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

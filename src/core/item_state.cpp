@@ -21,7 +21,7 @@ void put(std::vector<Item>& list, const Item& it) {
 }  // namespace
 
 const Item* State::find(Where w, uint16_t index) const {
-    const std::vector<Item>& l = w == Where::Bag ? bag_ : storage_;
+    const std::vector<Item>& l = w == Where::Bag ? bag_ : w == Where::Cart ? cart_ : storage_;
     const auto at = std::find_if(l.begin(), l.end(), [index](const Item& x) { return x.index == index; });
     return at == l.end() ? nullptr : &*at;
 }
@@ -29,8 +29,40 @@ const Item* State::find(Where w, uint16_t index) const {
 void State::reset() {
     bag_.clear();
     storage_.clear();
+    cart_.clear();
+    cartMost_ = cartWeight_ = cartMostWeight_ = 0;
     storageOpen_ = false;
     storageMost_ = 0;
+}
+
+// A thing in (0x00f4 / 0x0124: index, amount L, id, identified, attribute, refine, cards) or out (0x00f6 / 0x0125:
+// index, amount L) of the storage or the cart
+std::optional<Change> State::moved(uint16_t kind, Where w, const uint8_t* p, size_t n) {
+    std::vector<Item>& l = list(w);
+    if (kind == 0x00f4) {
+        if (n < 21) return std::nullopt;
+        Item it;
+        it.index = r16(p, 2);
+        const uint32_t amount = r32(p, 4);
+        it.id = r16(p, 8);
+        it.identified = p[10] != 0;
+        it.attribute = p[11];
+        it.refine = p[12];
+        cardsAt(p, 13, it);
+        const Item* was = find(w, it.index);
+        it.amount = (was ? was->amount : 0) + amount;
+        put(l, it);
+        return Change{w, it.index, int64_t(amount)};
+    }
+    if (n < 8) return std::nullopt;
+    const uint16_t index = r16(p, 2);
+    const uint32_t amount = r32(p, 4);
+    const auto at = std::find_if(l.begin(), l.end(), [index](const Item& x) { return x.index == index; });
+    if (at != l.end()) {
+        at->amount = at->amount > amount ? at->amount - amount : 0;
+        if (at->amount == 0) l.erase(at);
+    }
+    return Change{w, index, -int64_t(amount)};
 }
 
 std::optional<Change> State::feed(const uint8_t* p, size_t n) {
@@ -68,6 +100,19 @@ std::optional<Change> State::feed(const uint8_t* p, size_t n) {
         case 0x00a6: return listOf(Where::Storage, 20, true);
         case 0x01ee: return listOf(Where::Bag, 18, false);
         case 0x00a4: return listOf(Where::Bag, 20, true);
+        case 0x01ef: return listOf(Where::Cart, 18, false);  // 3.0.24-beta.8
+        case 0x0122: return listOf(Where::Cart, 20, true);
+        case 0x0121:
+            if (n < 14) return std::nullopt;
+            cartMost_ = r16(p, 4);
+            cartWeight_ = int(r32(p, 6));
+            cartMostWeight_ = int(r32(p, 10));
+            return std::nullopt;
+        case 0x012b:
+            cart_.clear();
+            return Change{Where::Cart, 0, 0, true};
+        case 0x0124:
+        case 0x0125: return moved(id == 0x0124 ? 0x00f4 : 0x00f6, Where::Cart, p, n);
         case 0x00f2:
             if (n < 6) return std::nullopt;
             storageOpen_ = true;
@@ -76,31 +121,9 @@ std::optional<Change> State::feed(const uint8_t* p, size_t n) {
         case 0x00f4: {
             if (n < 21) return std::nullopt;
             storageOpen_ = true;
-            Item it;
-            it.index = r16(p, 2);
-            const uint32_t amount = r32(p, 4);
-            it.id = r16(p, 8);
-            it.identified = p[10] != 0;
-            it.attribute = p[11];
-            it.refine = p[12];
-            cardsAt(p, 13, it);
-            const Item* was = find(Where::Storage, it.index);
-            it.amount = (was ? was->amount : 0) + amount;
-            put(storage_, it);
-            return Change{Where::Storage, it.index, int64_t(amount)};
+            return moved(0x00f4, Where::Storage, p, n);
         }
-        case 0x00f6: {
-            if (n < 8) return std::nullopt;
-            const uint16_t index = r16(p, 2);
-            const uint32_t amount = r32(p, 4);
-            const auto at =
-                std::find_if(storage_.begin(), storage_.end(), [index](const Item& x) { return x.index == index; });
-            if (at != storage_.end()) {
-                at->amount = at->amount > amount ? at->amount - amount : 0;
-                if (at->amount == 0) storage_.erase(at);
-            }
-            return Change{Where::Storage, index, -int64_t(amount)};
-        }
+        case 0x00f6: return moved(0x00f6, Where::Storage, p, n);
         case 0x00f8:
             storageOpen_ = false;
             storage_.clear();

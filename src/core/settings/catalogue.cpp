@@ -230,6 +230,7 @@ std::vector<Group> build() {
                          D("interface.shop"), D("interface.storage"),
                          trial("interface.storage_packets", "3.0.24-beta.4").need("interface.storage"),
                          D("interface.trade"), D("interface.cart"),
+                         trial("interface.cart_packets", "3.0.24-beta.8").need("interface.cart"),
                          D("interface.vending"), D("interface.my_shop"), D("interface.vend_setup"),
                          D("interface.menu"), D("interface.cards"), D("interface.asks"),
                          D("interface.messages"), D("interface.counts"), D("interface.picks"),

@@ -31,6 +31,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 // the server's packets (win/item_net) and its puts, takes and close sent by the driver itself, not through the game's
 // windows; off - as before
 void setPackets(bool on);
+bool over(int gameX, int gameY);  // 3.0.24-beta.8: the game's point over «Склад» now
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool key(UINT m, WPARAM wp, LPARAM lp);  // its search's keys while it has them

@@ -39,7 +39,11 @@ bool box(int& x, int& y, int& w, int& h);
 void moveTo(int x, int y, bool keep = true);
 // 3.0.18-beta.156: the item number at a place of it (0 none) - the «how many» counted by weight
 int idAtPlace(int index);
-bool put(int index, int count);  // 3.0.18-beta.156: a bag thing put into the cart (the game's own drop)
+bool put(int index, int count);
+// 3.0.24-beta.8 (items via packets, stage 2; [interface] cart_packets - the testers' box): the cart's list from the
+// server's packets and its moves by the driver's own packets; off - as before
+void setPackets(bool on);
+bool over(int gameX, int gameY);  // the game's point over «Візок» now  // 3.0.18-beta.156: a bag thing put into the cart (the game's own drop)
 
 int pickedCount();  // 3.0.21-beta.13: the things picked now (core/key_hints)
 

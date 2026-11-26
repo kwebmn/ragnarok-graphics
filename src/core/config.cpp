@@ -814,6 +814,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.charMakeWindow);
         } else if (key == "interface.cart") {  // 3.0.11-beta.154: the merchant's cart
             setBool(val, c.cartWindow);
+        } else if (key == "interface.cart_packets") {  // 3.0.24-beta.8: items via packets, the testers' box
+            setBool(val, c.cartPackets);
         } else if (key == "interface.counts") {  // 3.0.11-beta.155: the game's «how many» window
             setBool(val, c.countWindow);
         } else if (key == "interface.vending") {  // 3.0.11-beta.156: another's shop

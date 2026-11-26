@@ -31,9 +31,16 @@ State& st() {
 }
 
 const char* kindName(itemactions::Kind k) {
-    return k == itemactions::Kind::ToStorage ? "into the storage"
-           : k == itemactions::Kind::FromStorage ? "out of the storage"
-                                                 : "the storage closed";
+    switch (k) {
+        case itemactions::Kind::ToStorage: return "into the storage";
+        case itemactions::Kind::FromStorage: return "out of the storage";
+        case itemactions::Kind::CloseStorage: return "the storage closed";
+        case itemactions::Kind::ToCart: return "into the cart";
+        case itemactions::Kind::FromCart: return "out of the cart";
+        case itemactions::Kind::StorageToCart: return "from the storage into the cart";
+        case itemactions::Kind::CartToStorage: return "from the cart into the storage";
+    }
+    return "?";
 }
 
 void say(State& s, settings::Text t) {
@@ -49,6 +56,7 @@ void packet(uint16_t id, const uint8_t* p) {
     if (id == 0x0091 || id == 0x0092 || id == 0x0073) {  // another map (or the map server's welcome)
         s.queue.dropAll();
         if (id == 0x0073) s.items.reset();
+        else s.items.clearCart();  // 3.0.24-beta.8: its list comes again with the map
         return;
     }
     const int len = itempackets::serverLength(id);
@@ -67,8 +75,7 @@ itemactions::Result ask(itemactions::Kind k, uint16_t index, uint32_t amount) {
     State& s = st();
     uint32_t have = 1;
     if (k != itemactions::Kind::CloseStorage) {
-        const itemstate::Item* it = s.items.find(
-            k == itemactions::Kind::ToStorage ? itemstate::Where::Bag : itemstate::Where::Storage, index);
+        const itemstate::Item* it = s.items.find(itemactions::leaving(k), index);
         have = it ? it->amount : 0;
     }
     itempackets::Bytes out;
@@ -93,8 +100,12 @@ bool waiting(itemstate::Where w, uint16_t index) { return st().queue.waiting(w, 
 void frame() {
     State& s = st();
     if (s.queue.tick(GetTickCount()) == itemactions::Outcome::TimedOut) {
-        say(s, s.queue.lastKind() == itemactions::Kind::ToStorage ? settings::Text::ItemsStorageRefused
-                                                                  : settings::Text::ItemsNoAnswer);
+        const itemactions::Kind k = s.queue.lastKind();
+        say(s, k == itemactions::Kind::ToStorage || k == itemactions::Kind::CartToStorage
+                   ? settings::Text::ItemsStorageRefused
+               : k == itemactions::Kind::ToCart || k == itemactions::Kind::StorageToCart
+                   ? settings::Text::ItemsCartRefused
+                   : settings::Text::ItemsNoAnswer);
         if (s.told++ < 200)
             LOG_INFO("items: %s, index %u - no answer in 2 s", kindName(s.queue.lastKind()),
                      unsigned(s.queue.lastIndex()));

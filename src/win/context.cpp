@@ -1431,6 +1431,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     g_parts.mark("charselectwin", nowMs());
     charmakewin::frame(window, ui.charMakeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.153
     g_parts.mark("charmakewin", nowMs());
+    cartwin::setPackets(config.cartPackets);  // 3.0.24-beta.8: items via packets
     cartwin::frame(window, ui.cartWindow, gameCodePage(config), pk, pw, ph);              // 3.0.11-beta.154
     g_parts.mark("cartwin", nowMs());
     vendshopwin::frame(window, ui.vendWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.156

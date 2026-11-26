@@ -22,7 +22,7 @@ struct Item {
     uint16_t cards[4] = {};
     uint16_t places = 0;  // equipment: where it is worn (0 a stackable)
 };
-enum class Where : uint8_t { Bag, Storage };
+enum class Where : uint8_t { Bag, Storage, Cart };  // 3.0.24-beta.8: the cart
 struct Change {
     Where where = Where::Bag;
     uint16_t index = 0;
@@ -36,14 +36,23 @@ public:
     std::optional<Change> feed(const uint8_t* p, size_t n);
     const std::vector<Item>& bag() const { return bag_; }
     const std::vector<Item>& storage() const { return storage_; }
+    // 3.0.24-beta.8: the cart - lists 0x01ef / 0x0122 (index place + 2), in 0x0124, out 0x0125, its count and
+    // weight 0x0121, emptied 0x012b (a Change with `closed`)
+    const std::vector<Item>& cart() const { return cart_; }
+    int cartMost() const { return cartMost_; }
+    int cartWeight() const { return cartWeight_; }
+    int cartMostWeight() const { return cartMostWeight_; }
     const Item* find(Where w, uint16_t index) const;
     bool storageOpen() const { return storageOpen_; }
     int storageMost() const { return storageMost_; }
     void reset();  // a new map or connection: nothing known
+    void clearCart() { cart_.clear(); }  // 3.0.24-beta.8: another map - its list comes again
 
 private:
-    std::vector<Item>& list(Where w) { return w == Where::Bag ? bag_ : storage_; }
-    std::vector<Item> bag_, storage_;
+    std::optional<Change> moved(uint16_t kind, Where w, const uint8_t* p, size_t n);
+    std::vector<Item>& list(Where w) { return w == Where::Bag ? bag_ : w == Where::Cart ? cart_ : storage_; }
+    std::vector<Item> bag_, storage_, cart_;
+    int cartMost_ = 0, cartWeight_ = 0, cartMostWeight_ = 0;
     bool storageOpen_ = false;
     int storageMost_ = 0;
 };

@@ -33,6 +33,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/item_window.hpp"
+#include "win/cart_window.hpp"
 #include "win/item_net.hpp"
 #include "win/log.hpp"
 #include "win/pad_carry.hpp"
@@ -384,7 +385,21 @@ const char* take(State& s, const iw::Item& it, bool howMany = false) {
 // The pressed thing let go after a drag: the game's drag of it begun (0x3C, as its own window's press) and let go at
 // once where the cursor is (0x12, as its frame on the button's coming up): over «Речі» its drop takes it
 const char* dropAt(const iw::Item& it) {
-    if (g_packets) return take(state(), it, true);  // 3.0.24-beta.4: let go out of «Склад» - into the bag, ours
+    if (g_packets) {  // 3.0.24-beta.4: let go out of «Склад» - into the bag, ours; .8 over «Візок» - into the cart
+        int gx = 0, gy = 0;
+        if (readGameCursor(gx, gy) && cartwin::over(gx, gy)) {
+            if (it.count > 1) {
+                const int index = it.index;
+                askcardwin::askCount(say(settings::Text::CountCart), it.count, [index](int n) {
+                    itemnet::ask(itemactions::Kind::StorageToCart, uint16_t(index), uint32_t(n));
+                });
+                return "asked how many (into the cart)";
+            }
+            itemnet::ask(itemactions::Kind::StorageToCart, uint16_t(it.index), 1);
+            return "sent into the cart by the driver";
+        }
+        return take(state(), it, true);
+    }
     int cx = 0, cy = 0;
     if (!readGameCursor(cx, cy)) return "not dropped (no cursor)";
     if (!modeMsg(kStorageDragMsg, it.index, it.count)) return "not dropped (the game mode not found)";
@@ -873,6 +888,12 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
 }
 
 bool shown() { return state().shown; }
+
+bool over(int gameX, int gameY) {
+    const State& s = state();
+    if (!s.shown || s.k <= 0) return false;
+    return s.layout.glass.contains(float(gameX) * s.k - float(s.layout.x), float(gameY) * s.k - float(s.layout.y));
+}
 
 void setPackets(bool on) {
     if (on != g_packets) LOG_INFO("storage: %s", on ? "items via packets - the driver puts, takes and closes itself "

@@ -555,6 +555,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("char_make", flag(running.charMakeWindow), flag(file.charMakeWindow)));
         n.charMakeWindow = file.charMakeWindow;
     }
+    if (file.cartPackets != running.cartPackets) {  // 3.0.24-beta.8: items via packets, at once
+        u.applied.push_back(change("cart_packets", flag(running.cartPackets), flag(file.cartPackets)));
+        n.cartPackets = file.cartPackets;
+    }
     if (file.cartWindow != running.cartWindow) {  // 3.0.11-beta.154: «Візок», at once
         u.applied.push_back(change("cart", flag(running.cartWindow), flag(file.cartWindow)));
         n.cartWindow = file.cartWindow;

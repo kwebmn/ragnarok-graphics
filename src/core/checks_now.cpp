@@ -7,6 +7,14 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        {"cart_packets", "3.0.24-beta.8", "interface.cart_packets",
+         {"Cart: the new passing of things", "Візок: нова передача речей", "Тележка: новая передача вещей"},
+         {"Turn «Cart» and this on. Drag a stack bag -> cart, double-click to take back, drag cart <-> storage: «How "
+          "many» asks.",
+          "Увімкніть «Візок» і цю галочку. Перетягніть пачку із сумки у візок, двічі клацніть - назад, перетягніть "
+          "візок <-> склад: спитає скільки.",
+          "Включите «Тележка» и эту галочку. Перетащите пачку из сумки в тележку, двойной клик - назад, перетащите "
+          "тележка <-> склад: спросит сколько."}},
         {"vend_card_right", "3.0.24-beta.6", "",
          {"A shop's ware: its card", "Товар у лавці: його картка", "Товар в лавке: его карточка"},
          {"Open a player's shop, press the right button on a ware: its card with its description and its slots' "

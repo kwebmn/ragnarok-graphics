@@ -124,3 +124,29 @@ TEST(item_state_long_list_not_cut) {
     s.feed(b.data(), 10);
     CHECK_EQ(s.storage().size(), size_t(300));
 }
+
+// 3.0.24-beta.8 (stage 2 «Візок»): the cart - its lists (0x01ef, 0x0122), a thing in (0x0124) and out (0x0125), its
+// count (0x0121), emptied (0x012b)
+TEST(item_state_the_cart) {
+    is::State s;
+    const Bytes list = stackList(0x01ef, {{2, 40}, {3, 1}});
+    s.feed(list.data(), list.size());
+    CHECK_EQ(s.cart().size(), size_t(2));
+    Bytes in = added(4, 7, 909);
+    in[0] = 0x24, in[1] = 0x01;
+    auto c = s.feed(in.data(), in.size());
+    CHECK(c && c->where == is::Where::Cart && c->index == 4 && c->delta == 7);
+    Bytes out = removed(2, 15);
+    out[0] = 0x25, out[1] = 0x01;
+    c = s.feed(out.data(), out.size());
+    CHECK(c && c->where == is::Where::Cart && c->delta == -15);
+    CHECK(s.find(is::Where::Cart, 2) && s.find(is::Where::Cart, 2)->amount == 25u);
+    Bytes info(14, 0);
+    w16(info, 0, 0x0121), w16(info, 2, 3), w16(info, 4, 100), w32(info, 6, 1500), w32(info, 10, 8000);
+    s.feed(info.data(), info.size());
+    CHECK_EQ(s.cartMost(), 100);
+    CHECK_EQ(s.cartWeight(), 1500);
+    const Bytes clear{0x2b, 0x01};
+    c = s.feed(clear.data(), clear.size());
+    CHECK(s.cart().empty() && c && c->where == is::Where::Cart && c->closed);
+}

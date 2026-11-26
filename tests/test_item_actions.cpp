@@ -72,3 +72,26 @@ TEST(item_actions_closed_storage_drops_the_waiting) {
     CHECK(q.onChange(closed) == ia::Outcome::Dropped);
     CHECK(!q.waiting(is::Where::Storage, 9));
 }
+
+// 3.0.24-beta.8 (stage 2 «Візок»): each cart move ends by its leaving side's answer
+TEST(item_actions_cart_moves_end_by_their_leaving_side) {
+    ia::Queue q;
+    itempackets::Bytes out;
+    CHECK(q.ask(ia::Kind::ToCart, 5, 2, 2, true, 0, out) == ia::Result::Sent);
+    CHECK(q.waiting(is::Where::Bag, 5));
+    CHECK(q.ask(ia::Kind::FromCart, 6, 1, 1, true, 0, out) == ia::Result::Sent);
+    CHECK(q.waiting(is::Where::Cart, 6));
+    CHECK(q.ask(ia::Kind::StorageToCart, 7, 1, 1, true, 0, out) == ia::Result::Sent);
+    CHECK(q.waiting(is::Where::Storage, 7));
+    CHECK(q.ask(ia::Kind::CartToStorage, 8, 1, 1, true, 0, out) == ia::Result::Sent);
+    CHECK(q.waiting(is::Where::Cart, 8));
+    CHECK(q.onChange(is::Change{is::Where::Cart, 6, -1}) == ia::Outcome::Done);
+    CHECK(q.onChange(is::Change{is::Where::Cart, 8, -1}) == ia::Outcome::Done);
+    CHECK(q.onChange(is::Change{is::Where::Bag, 5, -2}) == ia::Outcome::Done);
+    CHECK(q.onChange(is::Change{is::Where::Storage, 7, -1}) == ia::Outcome::Done);
+    is::Change gone;
+    gone.where = is::Where::Cart;
+    gone.closed = true;
+    q.ask(ia::Kind::FromCart, 9, 1, 1, true, 0, out);
+    CHECK(q.onChange(gone) == ia::Outcome::Dropped);  // the cart emptied: its waits end
+}

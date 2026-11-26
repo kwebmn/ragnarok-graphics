@@ -33,7 +33,10 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/item_window.hpp"
+#include "win/ask_card.hpp"
+#include "win/item_net.hpp"
 #include "win/log.hpp"
+#include "win/storage_window.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -73,6 +76,8 @@ constexpr size_t kMostTyped = 72;  // bytes (3.0.18-beta.72: UTF-8 - 24 letters 
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
+
+bool g_packets = false;  // 3.0.24-beta.8: [interface] cart_packets
 
 struct State {
     iw::BarDrag bar;  // 3.0.18-beta.204: the scroll bar held
@@ -312,9 +317,61 @@ void place(State& s) {
     s.layout.y = int(std::lround(s.fy * float(roomY)));
 }
 
+// 3.0.24-beta.8 (items via packets, stage 2 «Візок»): the cart as the server told it (win/item_net); the game's
+// own list gives only the words and the picture of a thing it also holds
+void readCartPackets(State& s) {
+    readCart(s);
+    std::vector<iw::Item> game = std::move(s.items);
+    std::vector<uint32_t> gameInfos = std::move(s.infos);
+    s.items.clear();
+    s.infos.clear();
+    const auto& names = clienttables::itemNames();
+    const auto& files = clienttables::itemFiles();
+    for (const itemstate::Item& x : itemnet::state().cart()) {
+        iw::Item it;
+        uint32_t info = 0;
+        for (size_t k = 0; k < game.size(); ++k)
+            if (game[k].index == int(x.index) && game[k].id == int(x.id)) {
+                it = game[k];
+                info = gameInfos[k];
+                break;
+            }
+        if (!info) {
+            it.index = int(x.index);
+            it.id = int(x.id);
+            it.identified = x.identified;
+            it.refine = x.refine;
+            const std::string id = std::to_string(x.id);
+            const auto w = names.find(id);
+            it.name = w == names.end() ? "#" + id : utf8Of(widened(hotbar::spaced(w->second), s.codePage));
+            const auto f = files.find(id);
+            if (f != files.end()) it.icon = clienttables::icon(f->second, iw::iconSide(s.scale), 4 * s.scale);
+        }
+        it.count = int(x.amount);
+        s.items.push_back(it);
+        s.infos.push_back(info);
+    }
+}
+
+// 3.0.24-beta.8: a move of the driver's own - a stack asks how many first (our own «Скільки штук») when `howMany`
+const char* move(itemactions::Kind k, int index, int count, bool howMany, settings::Text title) {
+    if (howMany && count > 1) {
+        askcardwin::askCount(say(title), count, [k, index](int n) { itemnet::ask(k, uint16_t(index), uint32_t(n)); });
+        return "asked how many (items via packets)";
+    }
+    const itemactions::Result r = itemnet::ask(k, uint16_t(index), uint32_t(std::max(1, count)));
+    return r == itemactions::Result::Sent ? "sent by the driver (items via packets)"
+           : r == itemactions::Result::Busy ? "waits for the one before (items via packets)"
+                                            : "not sent (items via packets)";
+}
+
 // A cart thing into the bag at once, as a drag of it let go over «Речі»: the game's drag of it begun (0x59) and given
 // to the game's «Речі» window's drop (made first when not open) - the game's count window for a stack
-const char* take(State& s, const iw::Item& it) {
+const char* take(State& s, const iw::Item& it, bool howMany = false) {
+    if (g_packets) {  // 3.0.24-beta.8
+        s.readAt = 0;
+        return move(itemactions::Kind::FromCart, it.index, it.count, howMany, settings::Text::CountBag);
+    }
     const uint32_t mode = modeNow();
     if (!mode) return "not taken (the game mode not found)";
     if (!modeMsg(cw::kDragMsg, it.index, 0) || int(read32(mode + kDragInfo)) != cw::kDragKind)
@@ -332,6 +389,11 @@ const char* take(State& s, const iw::Item& it) {
 const char* dropAt(const iw::Item& it) {
     int cx = 0, cy = 0;
     if (!readGameCursor(cx, cy)) return "not dropped (no cursor)";
+    if (g_packets) {  // 3.0.24-beta.8: over «Склад» - into it; anywhere else - into the bag
+        if (storagewin::over(cx, cy))
+            return move(itemactions::Kind::CartToStorage, it.index, it.count, true, settings::Text::CountStorage);
+        return take(state(), it, true);
+    }
     if (!modeMsg(cw::kDragMsg, it.index, 0)) return "not dropped (the game mode not found)";
     modeMsg(kDropMsg, cx, cy);
     return "let go through the game's own drop";
@@ -397,7 +459,7 @@ std::vector<int> shownPlaces(const State& s) {
 void takeCell(State& s, int shownIndex, const char* how) {
     if (shownIndex < 0 || shownIndex >= int(s.shownItems.size())) return;
     const iw::Item it = s.items[size_t(s.shownItems[size_t(shownIndex)])];
-    const char* did = take(s, it);
+    const char* did = take(s, it, true);
     if (s.told++ < 30) LOG_INFO("cart: %s on #%d x%d - %s", how, it.id, it.count, did);
 }
 
@@ -432,7 +494,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     if (!s.shown) s.readAt = 0;
     if (now - s.readAt >= kReadMs || read32(kCartCount) != s.countRead) {
         s.readAt = now;
-        readCart(s);
+        if (g_packets) readCartPackets(s);  // 3.0.24-beta.8
+        else readCart(s);
         stashwatch::note(stashbook::Kind::Cart, s.items, s.codePage);  // 3.0.11-beta.286
         stashwatch::prices(s.items);  // 3.0.11-beta.287: the site's market in the tips
     }
@@ -537,6 +600,14 @@ bool drop(int x, int y, uint32_t drag) {
     if (!s.shown || s.k <= 0) return false;
     const float tx = float(x) * s.k - float(s.layout.x), ty = float(y) * s.k - float(s.layout.y);
     if (!s.layout.glass.contains(tx, ty)) return false;
+    if (g_packets && drag && read32(drag) == 1) {  // 3.0.24-beta.8: a bag thing's drag - our own packet
+        const int place = int(read32(drag + 4)), count = int(read32(drag + 0x10));
+        modeMsg(kEndDragMsg, 0, 0);
+        const char* did = move(itemactions::Kind::ToCart, place, count, true, settings::Text::CountCart);
+        if (s.told++ < 30) LOG_INFO("cart: a bag thing (place %d, %d) let go over «Візок» - %s", place, count, did);
+        s.readAt = 0;
+        return true;
+    }
     const uint32_t window = gameWindow();
     if (!window || read32(read32(window) + kDropSlot) != kCartDrop) return false;
     reinterpret_cast<DropFn>(uintptr_t(kCartDrop))(window, 0, 0, drag);
@@ -788,6 +859,11 @@ int idAtPlace(int index) {  // 3.0.18-beta.156
 
 bool put(int index, int count) {  // 3.0.18-beta.156: a bag thing into the cart, as a drag of it let go over it
     State& s = state();
+    if (g_packets && s.shown) {  // 3.0.24-beta.8: our own packet, the whole of it
+        s.readAt = 0;
+        return itemnet::ask(itemactions::Kind::ToCart, uint16_t(index), uint32_t(std::max(1, count))) ==
+               itemactions::Result::Sent;
+    }
     const uint32_t window = s.shown ? gameWindow() : 0;
     const uint32_t mode = modeNow();
     if (!window || !mode || read32(read32(window) + kDropSlot) != kCartDrop) return false;
@@ -799,5 +875,18 @@ bool put(int index, int count) {  // 3.0.18-beta.156: a bag thing into the cart,
 
 // 3.0.21-beta.13: the things picked now (Ctrl, Shift, Ctrl+A) - the key hints' picks learned
 int pickedCount() { return int(state().picked.count()); }
+
+void setPackets(bool on) {
+    if (on != g_packets) LOG_INFO("cart: %s", on ? "items via packets - the driver moves the things itself "
+                                                    "([interface] cart_packets)"
+                                                 : "the game's own ways (its drag and drop)");
+    g_packets = on;
+}
+
+bool over(int gameX, int gameY) {
+    const State& s = state();
+    if (!s.shown || s.k <= 0) return false;
+    return s.layout.glass.contains(float(gameX) * s.k - float(s.layout.x), float(gameY) * s.k - float(s.layout.y));
+}
 
 }  // namespace uagfx::win::cartwin

@@ -994,6 +994,7 @@ struct Config {
     bool charMakeWindow = false;
     // 3.0.11-beta.154: [interface] cart - the merchant's cart (win/cart_window) as «Візок»
     bool cartWindow = false;
+    bool cartPackets = false;  // 3.0.24-beta.8: [interface] cart_packets - «Візок» by the driver's own packets
     // 3.0.11-beta.155: [interface] counts - the game's «how many» window (win/ask_card) as a count card
     bool countWindow = false;
     // 3.0.11-beta.156: [interface] vending - another's shop (win/vend_shop) as «Лавка»
