@@ -3092,17 +3092,36 @@ float3 fireworksAt(float3 dir, float t) {
         float3 off = dir - mid * along;
         float th = atan2(dot(off, v), dot(off, u));
         float rays = pow(saturate(cos(th * 16.0 + h1 * 40.0)), 18.0);
-        float ring = exp(-pow((ang - reach) / 0.007, 2.0)) * rays;
+        // 3.0.24-beta.14 (the owner: «феерверки должны быть поярче»): wider, brighter sparks with a soft bloom
+        float ring = exp(-pow((ang - reach) / 0.010, 2.0)) * rays;
+        float bloom = exp(-pow((ang - reach) / 0.035, 2.0));
         float trail = (ang < reach ? smoothstep(reach * 0.35, reach, ang) : 0.0) * pow(saturate(cos(th * 16.0 +
-                      h1 * 40.0)), 50.0) * 0.4;
+                      h1 * 40.0)), 50.0) * 1.0;
         float fade = exp(-1.3 * lt) * smoothstep(0.0, 0.08, lt);
         float flash = exp(-pow(ang / 0.025, 2.0)) * exp(-10.0 * lt);
         float3 col = h2 < 0.34 ? float3(1.0, 0.45, 0.80) : (h2 < 0.67 ? float3(0.45, 0.85, 1.0)
                                                                      : float3(1.0, 0.80, 0.42));
-        sum += col * ((ring * 2.6 + trail) * fade + flash * 1.6);
+        sum += col * ((ring * 6.0 + trail + bloom * 0.35) * fade + flash * 3.5);
     }
     return sum;
 }
+// 3.0.24-beta.14: the fireworks' light on the cave now (no direction) - the bursts' colours by how fresh they are, for
+// the rock round the rift
+float3 fireworksLight(float t) {
+    float3 sum = float3(0.0, 0.0, 0.0);
+    [unroll] for (int k = 0; k < 5; ++k) {
+        float period = 2.3 + 0.5 * float(k);
+        float run = t / period + float(k) * 0.37;
+        float cyc = floor(run);
+        float lt = (run - cyc) * period;
+        float h2 = frac(sin(cyc * 39.346 + float(k) * 11.135) * 24634.6345);
+        float3 col = h2 < 0.34 ? float3(1.0, 0.45, 0.80) : (h2 < 0.67 ? float3(0.45, 0.85, 1.0)
+                                                                     : float3(1.0, 0.80, 0.42));
+        sum += col * exp(-2.2 * lt) * smoothstep(0.0, 0.06, lt);
+    }
+    return sum;
+}
+
 // the sky through the rift - 3.0.24-beta.13 (the owner: «Разлом по часам») by the clock: the day's sky with its sun
 // (stage0.xy, stage1.x: towards it, as asfloat; 0 none), the night's stars and the fireworks from dusk on
 float3 riftSun() { return float3(asfloat(stage0.x), asfloat(stage0.y), asfloat(stage1.x)); }
@@ -3265,8 +3284,12 @@ float4 vaultSeen(float3 eye, float3 dir, float3 dark) {
         if ((cave & 4u) != 0u)  // the water's light, most round the rift (the sea under it)
             stone += float3(0.50, 0.82, 1.0) * grottoLightAt(at.xz, sharpen) * (0.10 + 0.55 * byRift * byRift);
         if ((cave & 2u) != 0u) stone += crystalsAt(at.xz, length(float2(gx, gz)), sharpen);
-        if ((cave & 1u) != 0u)  // the rift's lip lit pink by the town's light and the fireworks
+        if ((cave & 1u) != 0u) {  // the rift's lip lit pink by the town's light and the fireworks
             stone += float3(1.0, 0.42, 0.78) * 0.9 * pow(saturate(1.0 + inside / 0.09), 3.0);
+            // 3.0.24-beta.14: each burst flashes on the rock round the rift (from dusk on, as the fireworks)
+            stone += fireworksLight(sharpen) * smoothstep(0.30, 0.75, saturate(twinX)) * 0.22 * byRift * byRift *
+                     (0.4 + 0.6 * fold);
+        }
     }
     float reach = max(sourceRect.w, 1.0);
     float haze = smoothstep(reach * 0.1, reach, far0);
