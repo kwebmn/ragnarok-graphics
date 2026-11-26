@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.24-beta.15 — what's new · 2026-11-27
+
+The fireworks over Comodo can now be seen.
+
+- **Fireworks in the rift.** Before, they burst too high in the sky while the rift is seen from the town low by the horizon, so they were not seen. Now they open right in the rift's opening, wherever you look from.
+
 # uaRO Graphics 3.0.24-beta.14 — what's new · 2026-11-27
 
 Brighter fireworks over Comodo.
