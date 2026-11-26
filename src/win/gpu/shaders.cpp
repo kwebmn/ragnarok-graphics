@@ -3070,10 +3070,20 @@ float3 crystalsAt(float2 xz, float steep, float t) {
     return col * (body * facet * 1.3 + glow * 0.28) * pulse;
 }
 
-// 3.0.24-beta.11: fireworks in the sky seen through the rift - in turn, each 2.6 s of its cycle:
-// a flash, a ring of sparks opening and sinking, fading; pink, blue or gold
+// 3.0.24-beta.11: fireworks seen through the rift, each 2.6 s of its cycle: a flash, a ring of sparks opening and
+// sinking, fading; pink, blue or gold. 3.0.24-beta.15 (R-RX26WK: none seen - they burst 40-65 degrees up, the rift
+// seen from the town low by the horizon): bursts at places of the world past the rift's opening along the eye's way
+// through it - each ring some 70 units across at its widest, so seen wherever the eye is
+float3 riftMidWorld() {
+    float2 cell = riftMid() - fogColor.yz * 0.5;
+    float2 xz = float2(cell.x * twinW, cell.y * twinH) * fogColor.x;
+    return float3(xz.x, vaultY(xz), xz.y);
+}
 float3 fireworksAt(float3 dir, float t) {
     float3 sum = float3(0.0, 0.0, 0.0);
+    float3 eye = float3(r9, r10, r11);
+    float3 mid = riftMidWorld();
+    float2 half0 = riftHalf() * fogColor.x;
     [unroll] for (int k = 0; k < 5; ++k) {  // 3.0.24-beta.13 (the owner: «побольше фейерверков»): five, 2.3-4.3 s
         float period = 2.3 + 0.5 * float(k);
         float run = t / period + float(k) * 0.37;
@@ -3082,29 +3092,40 @@ float3 fireworksAt(float3 dir, float t) {
         if (lt > 2.6) continue;
         float h1 = frac(sin(cyc * 12.9898 + float(k) * 78.233) * 43758.5453);
         float h2 = frac(sin(cyc * 39.346 + float(k) * 11.135) * 24634.6345);
-        float az = h1 * 6.2832, rise = 0.62 + 0.28 * h2, across = sqrt(1.0 - rise * rise);
-        float3 mid = normalize(float3(cos(az) * across, -rise + 0.02 * lt * lt, sin(az) * across));  // y down
-        float along = dot(dir, mid);
+        float h3 = frac(sin(cyc * 73.156 + float(k) * 5.913) * 31415.9265);
+        // a place in the rift's opening (within 0.6 of its size, at its vault) and the burst past it along the eye's
+        // way through it, 150-450 further - seen through the opening wherever the eye stands
+        float2 openXZ = mid.xz + float2((h1 - 0.5) * 1.2 * half0.x, (h3 - 0.5) * 1.2 * half0.y);
+        float3 open0 = float3(openXZ.x, vaultY(openXZ), openXZ.y);
+        float3 through = normalize(open0 - eye);
+        float3 at = open0 + through * (150.0 + 300.0 * frac(h1 * 7.31 + h3));
+        at.y += fogColor.w * 6.0 * lt * lt;  // the sparks sink (the ground's up axis, fogColor.w its sign)
+        float3 toAt = at - eye;
+        float dist = max(length(toAt), 1.0);
+        float3 way = toAt / dist;
+        float along = dot(dir, way);
         float ang = acos(clamp(along, -1.0, 1.0));
-        float reach = 0.12 * (1.0 - exp(-2.6 * lt));
-        float3 u = normalize(cross(mid, float3(0.0, 1.0, 0.0)));
-        float3 v = cross(mid, u);
-        float3 off = dir - mid * along;
+        float reach = (36.0 / dist) * (1.0 - exp(-2.6 * lt));  // its ring's angle now
+        float width = max(3.0 / dist, 0.0015);
+        float3 u = normalize(cross(way, float3(0.0, 1.0, 0.0)));
+        float3 v = cross(way, u);
+        float3 off = dir - way * along;
         float th = atan2(dot(off, v), dot(off, u));
         float rays = pow(saturate(cos(th * 16.0 + h1 * 40.0)), 18.0);
-        // 3.0.24-beta.14 (the owner: «феерверки должны быть поярче»): wider, brighter sparks with a soft bloom
-        float ring = exp(-pow((ang - reach) / 0.010, 2.0)) * rays;
-        float bloom = exp(-pow((ang - reach) / 0.035, 2.0));
-        float trail = (ang < reach ? smoothstep(reach * 0.35, reach, ang) : 0.0) * pow(saturate(cos(th * 16.0 +
-                      h1 * 40.0)), 50.0) * 1.0;
+        // 3.0.24-beta.14 (the owner: «феерверки должны быть поярче»): wide bright sparks, a soft bloom
+        float ring = exp(-pow((ang - reach) / width, 2.0)) * rays;
+        float bloom = exp(-pow((ang - reach) / (width * 3.5), 2.0));
+        float trail = (ang < reach ? smoothstep(reach * 0.35, reach, ang) : 0.0) *
+                      pow(saturate(cos(th * 16.0 + h1 * 40.0)), 50.0);
         float fade = exp(-1.3 * lt) * smoothstep(0.0, 0.08, lt);
-        float flash = exp(-pow(ang / 0.025, 2.0)) * exp(-10.0 * lt);
+        float flash = exp(-pow(ang / (width * 3.0), 2.0)) * exp(-10.0 * lt);
         float3 col = h2 < 0.34 ? float3(1.0, 0.45, 0.80) : (h2 < 0.67 ? float3(0.45, 0.85, 1.0)
                                                                      : float3(1.0, 0.80, 0.42));
         sum += col * ((ring * 6.0 + trail + bloom * 0.35) * fade + flash * 3.5);
     }
     return sum;
 }
+
 // 3.0.24-beta.14: the fireworks' light on the cave now (no direction) - the bursts' colours by how fresh they are, for
 // the rock round the rift
 float3 fireworksLight(float t) {
@@ -3138,9 +3159,7 @@ float3 riftShaft(float3 eye, float3 dir, float dist) {
     float day = 1.0 - saturate(twinX);
     if (day < 0.05 || dot(toSun, toSun) < 0.25 || -toSun.y < 0.15) return float3(0.0, 0.0, 0.0);
     float3 a = -normalize(toSun);  // the light's way (down into the cave)
-    float2 cell = riftMid() - fogColor.yz * 0.5;
-    float2 midXZ = float2(cell.x * twinW, cell.y * twinH) * fogColor.x;
-    float3 mid = float3(midXZ.x, vaultY(midXZ), midXZ.y);
+    float3 mid = riftMidWorld();
     float radius = 0.55 * min(riftHalf().x, riftHalf().y) * fogColor.x;
     float3 o = eye - mid;
     float3 dp = dir - a * dot(dir, a), op = o - a * dot(o, a);
