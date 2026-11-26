@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.8 — what's new · 2026-11-26
+
+Cart: the new passing of things (for testers).
+
+- **«Cart» moves things itself — a box for testers**, as «Storage» in the betas before. Its list shows what the server said; one press — one move; a stack asks «How many»; when the cart does not take a thing (too heavy, full), the window's bottom says why.
+- **Between «Storage» and «Cart»** things can now be dragged directly — both ways.
+- Where to turn it on: Alt+O → «Checking now» → «Cart: the new passing of things» («Cart» must be on: the settings app → «Interface»).
+
 # uaRO Graphics 3.0.24-beta.7 — what's new · 2026-11-26
 
 Storage: how many.
