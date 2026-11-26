@@ -13,7 +13,8 @@ inline Room roomOf(const std::string& map) {
     if (map.empty()) return Room::Open;
     const auto has = [&](const char* s) { return map.find(s) != std::string::npos; };
     if (has("dun") || has("cave") || has("anthell") || has("gld") || has("gl_") || has("tha_t") || has("ein_d") ||
-        has("abyss") || has("mag_d") || has("ice_") || has("thor_") || has("juperos") || has("lhz_d") || has("@"))
+        has("abyss") || has("mag_d") || has("ice_") || has("thor_") || has("juperos") || has("lhz_d") || has("@") ||
+        map == "comodo")  // 3.0.24-beta.10: the town in a cave
         return Room::Cave;
     if (has("_in") || has("in_") || has("_room") || has("que_") || has("job_") || has("cas") || has("prt_church"))
         return Room::Indoor;

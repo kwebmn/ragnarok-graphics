@@ -9,6 +9,10 @@ bool outdoors(const std::string& map) {
     // 3.0.22-beta.17 (the owner's R-EE9QTG «глюк в помещении»): the novice academy's hall, hung in the void (its outer
     // band open), a room - not the novice grounds round it
     if (map == "new_zone02") return false;
+    // 3.0.24-beta.10 (a player: «Comodo Beach was inside a cave ... Seeing a sun and a horizon there is just wrong»):
+    // the town lies in a cave, its pink the crystals' light on the roof (comodo.rsw: diffuse 0.6/0.2/0.3, ambient
+    // 0.3/0.4/0.8) - no sky, sun, horizon or weather; its fields cmd_fild stand under the sky
+    if (map == "comodo") return false;
     // 3.0.11-beta.299 (the owner: «карты где травы нету, например нубзона, мжолниры» - «плоской карта быть не должна»;
     // the census of 921 maps, artifact XH2FtVBnnhGnRDEheuuxV1): green open maps the name rule took for a roof - no
     // grass, flowers, sun or sky there. Before the indoor words (izlu2dun, mosk_dun01 are under the sky)
@@ -31,7 +35,7 @@ bool outdoors(const std::string& map) {
         if (map.find(k) != std::string::npos) return false;
     if (map.find("fild") != std::string::npos) return true;
     static const char* const kTowns[] = {"prontera", "geffen", "payon", "morocc", "alberta", "izlude", "aldebaran",
-                                         "comodo", "umbala", "yuno", "amatsu", "gonryun", "louyang", "ayothaya",
+                                         "umbala", "yuno", "amatsu", "gonryun", "louyang", "ayothaya",
                                          "einbroch", "einbech", "lighthalzen", "hugel", "rachel", "veins", "xmas",
                                          "niflheim", "moscovia", "brasilis", "dewata", "malangdo", "malaya", "eclage",
                                          "splendide", "manuk", "mora", "dicastes01", "lasagna", "rockridge",

@@ -610,7 +610,8 @@ void ceilingColour(bool wallsKnown, const float walls[3], bool lightKnown, const
 bool forMap(const std::string& map) {
     std::string m;
     for (char c : map) m += char(std::tolower(static_cast<unsigned char>(c)));
-    return m.find("dun") != std::string::npos || m.rfind("anthell", 0) == 0;
+    // 3.0.24-beta.10: the Comodo town's cave - a rock roof over it in the 3D view (its fields cmd_fild open)
+    return m.find("dun") != std::string::npos || m.rfind("anthell", 0) == 0 || m == "comodo";
 }
 
 }  // namespace uagfx::cave_vault

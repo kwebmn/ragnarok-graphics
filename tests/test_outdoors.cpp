@@ -1,4 +1,6 @@
 #include "core/outdoors.hpp"
+#include "core/cave_vault.hpp"
+#include "core/sound_place.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -11,7 +13,7 @@ TEST(outdoors_the_desert_shimmers) {
 
 TEST(outdoors_are_the_fields_and_the_towns) {
     // 0.33: cloud shadows only under the open sky.
-    for (const char* m : {"prontera", "payon", "morocc", "geffen", "alberta", "aldebaran", "comodo", "umbala", "yuno",
+    for (const char* m : {"prontera", "payon", "morocc", "geffen", "alberta", "aldebaran", "umbala", "yuno",
                           "lighthalzen", "rachel", "splendide", "manuk", "eclage", "prt_fild08", "moc_fild20",
                           "pay_fild01", "um_fild02", "spl_fild01", "cmd_fild03", "mid_camp"})
         CHECK(outdoors(m));
@@ -74,4 +76,17 @@ TEST(outdoors_grass_grows_in_the_guild_castles_courtyards) {
 TEST(outdoors_the_novice_academy_hall_is_a_room) {
     CHECK(!uagfx::outdoors("new_zone02"));
     CHECK(uagfx::outdoors("new_zone01") && uagfx::outdoors("new_zone03") && uagfx::outdoors("new_zone04"));
+}
+
+// 3.0.24-beta.10 (a player: «Comodo Beach was inside a cave ... Seeing a sun and a horizon there is just wrong»): the
+// town lies in a cave - its pink is the crystals' light on the roof (comodo.rsw: diffuse 0.6/0.2/0.3, ambient
+// 0.3/0.4/0.8); its fields stand under the sky (cmd_fild01-09: white light)
+TEST(outdoors_comodo_town_in_a_cave_its_fields_open) {
+    CHECK(!uagfx::outdoors("comodo"));
+    CHECK(uagfx::outdoors("cmd_fild01"));
+    CHECK(uagfx::outdoors("cmd_fild09"));
+    CHECK(uagfx::cave_vault::forMap("comodo"));
+    CHECK(!uagfx::cave_vault::forMap("cmd_fild02"));
+    CHECK(uagfx::sound::roomOf("comodo") == uagfx::sound::Room::Cave);
+    CHECK(uagfx::sound::roomOf("cmd_fild02") == uagfx::sound::Room::Open);
 }
