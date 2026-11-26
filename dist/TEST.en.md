@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.9 — what's new · 2026-11-26
+
+NPC shops: the new deal (for testers).
+
+- **«NPC shops» send the cart themselves — a box for testers.** A purchase or a sale goes as one deal and the window waits for the server's answer: done — the cart empties and the window closes; refused — the note at the bottom says why (not enough zeny, too heavy, the shop refused). After a refusal talk to the NPC again — the server closes its shop after every deal.
+- Where to turn it on: Alt+O → «Checking now» → «NPC shops: the new deal» («NPC shops» must be on: the settings app → «Interface»).
+
 # uaRO Graphics 3.0.24-beta.8 — what's new · 2026-11-26
 
 Cart: the new passing of things (for testers).
