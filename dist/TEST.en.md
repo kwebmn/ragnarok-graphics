@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.24-beta.7 — what's new · 2026-11-26
+
+Storage: how many.
+
+- **The new passing of things to the storage (the testers' box) now asks how many.** A double click on a stack, or dragging a stack out of or into the storage, opens «How many»: type a number, or «10», «Half», «All»; Enter on an empty field — the whole stack, Esc — cancel. Alt+RMB and «Take the picked» move a stack whole, as before.
+
 # uaRO Graphics 3.0.24-beta.6 — what's new · 2026-11-26
 
 A ware's description in a shop.
