@@ -4,6 +4,8 @@
 #include <utility>
 #include <vector>
 
+#include "core/settings/ini_edit.hpp"
+
 namespace uagfx::themechoice {
 
 // 3.0.24-beta.19 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md, the themes): what Alt+O's rows of
@@ -17,5 +19,11 @@ std::pair<std::string, std::string> pick(int row, int col);
 std::string typed(const std::string& text);
 // The accent's chip's colour dot for its word (auto: none; own: the own colour when set) - "#rrggbb", "" none
 std::string dot(const std::string& word, const std::string& ownColour);
+// «свій колір» as uaro-graphics.ini's edits - [interface] accent = own and accent_colour = `hex` together (the game's
+// Alt+O and the settings app alike)
+std::vector<settings::IniEdit> ownEdits(const std::string& hex);
+// Windows' colour dialog's COLORREF (0x00BBGGRR) for «#RRGGBB» (not a colour: 0) and back
+uint32_t bgr(const std::string& hex);
+std::string fromBgr(uint32_t colorRef);
 
 }  // namespace uagfx::themechoice

@@ -6,6 +6,9 @@
 #include <set>
 #include <utility>
 
+#include <windows.h>
+#include <commdlg.h>
+
 #include "app/page.hpp"
 #include "app/reference_pack.hpp"
 #include "app/setting_ids.hpp"
@@ -16,6 +19,7 @@
 #include "core/audio_output.hpp"
 #include "core/settings/auto_setup.hpp"
 #include "core/settings/report.hpp"
+#include "core/theme_choice.hpp"
 #include "win/audio_devices.hpp"
 
 namespace uagfx::app {
@@ -199,6 +203,23 @@ public:
             host_.rebuild();
             return;
         }
+        if (id == kAccentPick && code == BN_CLICKED) {  // 3.0.24-beta.19: «свій колір» by Windows' colour dialog
+            static COLORREF custom[16] = {};  // the palette's middle row and the lighter one's first six
+            for (int i = 0; i < 16; ++i)
+                custom[i] = themechoice::bgr(themechoice::pick((10 + i) / 10, (10 + i) % 10).second);
+            CHOOSECOLORW cc{};
+            cc.lStructSize = sizeof cc;
+            cc.hwndOwner = host_.window();
+            cc.rgbResult = themechoice::bgr(m.pendingConfig().uiAccentColour);
+            cc.lpCustColors = custom;
+            cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+            if (ChooseColorW(&cc)) {
+                m.setOwnAccent(themechoice::fromBgr(cc.rgbResult));
+                host_.changed();
+                host_.rebuild();
+            }
+            return;
+        }
         if (id == kGpu && code == CBN_SELCHANGE) {
             const LRESULT sel = SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0);
             if (sel >= 0 && size_t(sel) < gpuWords_.size()) m.setToken(*findSetting("renderer.gpu"), gpuWords_[sel]);
@@ -244,6 +265,8 @@ public:
             const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
             if (sel >= 0 && size_t(sel) < s->tokens.size()) m.setToken(*s, s->tokens[size_t(sel)]);
             if (sectionKey(*s) == "quality.dlss" && !SendMessageW(ctl, CB_GETDROPPEDSTATE, 0, 0)) host_.rebuild();
+            // 3.0.24-beta.19: «Вибрати колір...» with «свій колір», once the list is closed
+            if (sectionKey(*s) == "interface.accent" && !SendMessageW(ctl, CB_GETDROPPEDSTATE, 0, 0)) host_.rebuild();
         } else if (s->control == Control::Choice && code == CBN_CLOSEUP && sectionKey(*s) == "quality.dlss") {
             host_.rebuild();  // 2.4.2: the rows that come with the mode, once its list is closed
             return;
@@ -671,7 +694,14 @@ private:
                                                              {std::to_string(sec.keys.size())})}});
                 if (!g_windowsOpen) continue;
             }
-            for (const char* k : sec.keys) buildRow(p, k);
+            for (const char* k : sec.keys) {
+                buildRow(p, k);
+                // 3.0.24-beta.19: «свій колір» - its colour and Windows' colour dialog under the accent's row
+                if (std::strcmp(k, "interface.accent") == 0 && host_.model().token(*findSetting(k)) == "own") {
+                    const std::string own = themechoice::typed(host_.model().pendingConfig().uiAccentColour);
+                    p.buttons({{kAccentPick, t(Text::InterfaceAccentPick) + (own.empty() ? L"" : L"  " + wide(own))}});
+                }
+            }
         }
         p.gap();
         p.note(t(Text::InterfacePadNote));

@@ -6,6 +6,7 @@
 #include "core/effect_groups.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/schema.hpp"
+#include "core/theme_choice.hpp"
 #include "win/context.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -53,7 +54,7 @@ bool set(const std::string& iniPath, const Config& config, const std::string& ke
 }
 
 bool setOwnAccent(const std::string& iniPath, const std::string& hex) {
-    if (!editIniFile(iniPath, {{"interface", "accent", "own"}, {"interface", "accent_colour", hex}})) {
+    if (!editIniFile(iniPath, themechoice::ownEdits(hex))) {
         LOG_ERROR("settings: uaro-graphics.ini could not be written");
         return false;
     }

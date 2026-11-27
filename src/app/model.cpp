@@ -28,6 +28,7 @@
 #include "core/settings/recommended.hpp"
 #include "core/settings/reg_file.hpp"
 #include "core/settings/report.hpp"
+#include "core/theme_choice.hpp"
 
 namespace uagfx::app {
 
@@ -301,6 +302,10 @@ void Model::setToken(const IniSetting& s, const std::string& token) {
         ini_.erase(sectionKey(s));
     else
         ini_[sectionKey(s)] = token;
+}
+
+void Model::setOwnAccent(const std::string& hex) {
+    for (const IniEdit& e : themechoice::ownEdits(hex)) ini_[e.section + "." + e.key] = e.value;
 }
 
 std::vector<IniEdit> Model::pendingIniEdits() const {

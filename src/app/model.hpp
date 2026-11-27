@@ -93,6 +93,8 @@ public:
     // uaro-graphics.ini keys: the player's change, else the file's value.
     std::string token(const settings::IniSetting& s) const;
     void setToken(const settings::IniSetting& s, const std::string& token);
+    // 3.0.24-beta.19: «свій колір» - [interface] accent = own and accent_colour (no row of its own) to be saved
+    void setOwnAccent(const std::string& hex);
     Config pendingConfig() const;   // the file's settings with the player's changes
 
     settings::ScreenChoice screenChoice() const;  // the player's, else what the game gets now
