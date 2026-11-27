@@ -33,3 +33,23 @@ body { width: 400px; height: 200px; background-color: #f6f8fc; font-family: Plex
     CHECK(faint && cut);
     rmlhost::close(doc);
 }
+
+// The live sheets' grounds are boxes of their own beside the words (the HUD's: uisheet's painted boxes), not their
+// parents: a word's ground is whatever was drawn before it under its middle
+TEST(uikit_ui_check_grounds_drawn_beside_the_words) {
+    const char* rml = R"RML(<rml><head><style>
+body { width: 400px; height: 200px; font-family: Plex; font-size: 14px; }
+.paint { position: absolute; left: 0; top: 0; width: 300px; height: 100px; background-color: #10141c; }
+.word { position: absolute; left: 10px; top: 10px; width: 200px; height: 20px; color: #9aa3b5; }
+</style></head><body><div class="paint"></div><div class="word">Archer</div></body></rml>)RML";
+    std::string error;
+    Rml::ElementDocument* doc = rmlhost::load(rml, nullptr, 0, 0, &error);
+    CHECK(doc != nullptr);
+    if (!doc) return;
+    rmlhost::update();
+    const std::vector<uikit::uicheck::Word> all = uikit::uicheck::words(doc, uikit::uicheck::Rgbf{0.45f, 0.45f, 0.45f});
+    CHECK_EQ(all.size(), size_t(1));
+    CHECK(!all.empty() && all[0].ground == 0x10141Cu && all[0].contrast > 6.0f);
+    CHECK(uikit::uicheck::problems(doc).empty());
+    rmlhost::close(doc);
+}

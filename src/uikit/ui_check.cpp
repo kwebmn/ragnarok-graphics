@@ -22,13 +22,36 @@ unsigned hex(Rgbf c) {
     return b(c.r) << 16 | b(c.g) << 8 | b(c.b);
 }
 
-// The grounds from the document's body down to `e`, laid over `world`
-Rgbf groundUnder(Rml::Element* e, Rgbf world) {
-    std::vector<Rml::Element*> chain;
-    for (Rml::Element* p = e; p; p = p->GetParentNode()) chain.push_back(p);
+// A box drawn with a ground: its place on the screen, its colour, its turn in the document (drawn in that order)
+struct Painted {
+    float x = 0, y = 0, w = 0, h = 0;
+    Rml::Colourb colour;
+    int order = 0;
+};
+
+// The grounds drawn before the word (its order) under its middle - its parents' and the boxes beside it alike (the
+// live sheets' grounds are boxes of their own), laid over `world`
+Rgbf groundUnder(const std::vector<Painted>& painted, int order, float cx, float cy, Rgbf world) {
     Rgbf c = world;
-    for (auto it = chain.rbegin(); it != chain.rend(); ++it) c = over(c, (*it)->GetComputedValues().background_color());
+    for (const Painted& p : painted)
+        if (p.order < order && cx >= p.x && cx < p.x + p.w && cy >= p.y && cy < p.y + p.h) c = over(c, p.colour);
     return c;
+}
+
+void paintedOf(Rml::Element* e, std::vector<Painted>& out, int& order) {
+    for (int i = 0; i < e->GetNumChildren(true); ++i) {
+        Rml::Element* c = e->GetChild(i);
+        ++order;
+        if (!rmlui_dynamic_cast<Rml::ElementText*>(c) && c->IsVisible(true)) {
+            const Rml::Colourb g = c->GetComputedValues().background_color();
+            if (g.alpha > 0) {
+                const Rml::Vector2f at = c->GetAbsoluteOffset(Rml::BoxArea::Border);
+                const Rml::Vector2f size = c->GetBox().GetSize(Rml::BoxArea::Border);
+                out.push_back(Painted{at.x, at.y, size.x, size.y, g, order});
+            }
+        }
+        paintedOf(c, out, order);
+    }
 }
 
 // Its box clips what it holds: wider than the box, the box's overflow not shown
@@ -41,13 +64,16 @@ bool clipped(Rml::Element* e) {
     return false;
 }
 
-void walk(Rml::Element* e, Rgbf world, std::vector<Word>& out) {
+void walk(Rml::Element* e, Rgbf world, const std::vector<Painted>& painted, int& order, std::vector<Word>& out) {
     for (int i = 0; i < e->GetNumChildren(true); ++i) {
         Rml::Element* c = e->GetChild(i);
+        ++order;
         if (auto* t = rmlui_dynamic_cast<Rml::ElementText*>(c)) {
             const std::string text = t->GetText();
             if (text.find_first_not_of(" \n\t") == std::string::npos || !e->IsVisible(true)) continue;
-            const Rgbf g = groundUnder(e, world);
+            const Rml::Vector2f mid = e->GetAbsoluteOffset(Rml::BoxArea::Border) +
+                                      e->GetBox().GetSize(Rml::BoxArea::Border) * 0.5f;
+            const Rgbf g = groundUnder(painted, order, mid.x, mid.y, world);
             const Rgbf f = over(g, e->GetComputedValues().color());
             const float l1 = luminance(f), l2 = luminance(g);
             Word w;
@@ -61,7 +87,7 @@ void walk(Rml::Element* e, Rgbf world, std::vector<Word>& out) {
             out.push_back(std::move(w));
             continue;
         }
-        walk(c, world, out);
+        walk(c, world, painted, order, out);
     }
 }
 
@@ -69,7 +95,18 @@ void walk(Rml::Element* e, Rgbf world, std::vector<Word>& out) {
 
 std::vector<Word> words(Rml::ElementDocument* doc, Rgbf world) {
     std::vector<Word> out;
-    if (doc && doc->IsVisible()) walk(doc, world, out);
+    if (!doc || !doc->IsVisible()) return out;
+    std::vector<Painted> painted;
+    int order = 0;
+    const Rml::Colourb body = doc->GetComputedValues().background_color();
+    if (body.alpha > 0) {
+        const Rml::Vector2f at = doc->GetAbsoluteOffset(Rml::BoxArea::Border);
+        const Rml::Vector2f size = doc->GetBox().GetSize(Rml::BoxArea::Border);
+        painted.push_back(Painted{at.x, at.y, size.x, size.y, body, 0});
+    }
+    paintedOf(doc, painted, order);
+    order = 0;
+    walk(doc, world, painted, order, out);
     return out;
 }
 
