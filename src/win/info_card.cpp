@@ -335,6 +335,16 @@ void itemCard(State& s, One& o, uint32_t window) {
                 c.lines.push_back(
                     settings::fmt(say(settings::Text::CardNpcPrice), {vendshop::money(it->second.buy / 2)}));
         }
+    // 3.0.24-beta.29 (the spec's «Картка речі»: «Цена у NPC и на рынке сайта»): the site market's line under it
+    if (known)
+        if (const auto live = reference::live()) {
+            const auto m = live->market.find(id);
+            if (m != live->market.end()) {
+                const std::string line = reflive::marketLine(m->second, say(settings::Text::ItemsMarket),
+                                                             say(settings::Text::ItemsMarketAverage));
+                if (!line.empty()) c.lines.push_back(line);
+            }
+        }
     const auto& files = known ? clienttables::itemFiles() : s.tables.unknownFiles;
     const auto f = files.find(number);
     if (f != files.end()) {

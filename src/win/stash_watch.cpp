@@ -72,16 +72,12 @@ void note(stashbook::Kind kind, const std::vector<uagfx::itemwin::Item>& items, 
 void prices(std::vector<uagfx::itemwin::Item>& items) {
     const auto live = reference::live();
     const std::string words = say(settings::Text::ItemsMarket);
+    const std::string average = say(settings::Text::ItemsMarketAverage);  // 3.0.24-beta.29: from three deals
     for (auto& it : items) {
         it.market.clear();
         if (!live) continue;
         const auto m = live->market.find(it.id);
-        if (m == live->market.end() || m->second.cheapest <= 0) continue;
-        std::string line = words;
-        const std::string price = uagfx::itemwin::grouped(m->second.cheapest), lots = std::to_string(m->second.lots);
-        if (const size_t at = line.find("{1}"); at != std::string::npos) line.replace(at, 3, price);
-        if (const size_t at = line.find("{2}"); at != std::string::npos) line.replace(at, 3, lots);
-        it.market = line;
+        if (m != live->market.end()) it.market = reflive::marketLine(m->second, words, average);
     }
 }
 

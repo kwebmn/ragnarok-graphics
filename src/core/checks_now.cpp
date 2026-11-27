@@ -7,6 +7,16 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.29 (part 4): the site market's average deal price; its line in the item card
+        {"market_average", "3.0.24-beta.29", "interface.items",
+         {"Site market: the average, in the item card", "Ринок сайту: середня ціна, у картці речі",
+          "Рынок сайта: средняя цена, в карточке вещи"},
+         {"Point at a thing sold on the site's market three times or more: after «Market: from X z · N lots» comes "
+          "«average Y z · M deals»; the same line in its card (a right click) under «An NPC pays».",
+          "Наведіть на річ, яку на ринку сайту продали тричі й більше: після «Ринок: від X z · лотів N» іде "
+          "«середня Y z · угод M»; той самий рядок у її картці (ПКМ) під «NPC заплатить».",
+          "Наведите на вещь, которую на рынке сайта продали трижды и больше: после «Рынок: от X z · лотов N» идёт "
+          "«средняя Y z · сделок M»; та же строка в её карточке (ПКМ) под «NPC заплатит»."}},
         // 3.0.24-beta.28 (part 3, task 6): the windows in the old layout already - each in both themes
         {"guild_old_layout", "3.0.24-beta.28", "interface.guild",
          {"Guild card: as in the old game, both themes", "Картка гільдії: як у старій грі, обидві теми",
