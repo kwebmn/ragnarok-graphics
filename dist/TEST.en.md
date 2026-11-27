@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.32 — what's new · 2026-11-27
+
+«Party»: invite by name; «My shop»: «Earned» what the server paid.
+
+- **«Party»: invite by name.** The server now takes an invite by name. In the friends' card, on the «Party» tab, under the list there is a field for a player's name and an «Invite» button: the player is asked as by the game's own invite. If no such player is in the game, the chat says «… is not in the game now» in your language. Works from the server's restart at 03:01 on 28.11; needs the testers' box «Friends: invite to the party (beta)».
+- **«My shop»: «Earned».** The server now keeps the shop's tax back (2 % of a purchase). «Earned» now shows what the server really paid - your zeny grow by just as much. Right both before the server's restart and after it.
+- To check: Alt+O → «Checking now» → «Party: invite by name» and «My shop: «Earned» what the server paid».
+
 # uaRO Graphics 3.0.24-beta.31 — what's new · 2026-11-27
 
 White ground after wings, two crashes while a map changes, the daily play limit in plain words, both dumps in a report.
