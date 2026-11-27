@@ -134,10 +134,9 @@ std::vector<std::string> forJob(const std::vector<std::string>& lines, int job,
     return out;
 }
 
-std::vector<std::string> cardEffect(const std::vector<std::string>& description) {
-    std::vector<std::string> out;
-    for (const std::string& line : description) {
-        std::string plain;  // the line without the game's ^RRGGBB colours
+std::vector<std::string> cardEffect(const std::vector<std::string>& description, const std::string& name) {
+    const auto plainOf = [](const std::string& line) {  // without the game's ^RRGGBB colours, trimmed
+        std::string plain;
         for (size_t i = 0; i < line.size(); ++i) {
             if (line[i] == '^' && i + 6 < line.size()) {
                 i += 6;
@@ -145,14 +144,31 @@ std::vector<std::string> cardEffect(const std::vector<std::string>& description)
             }
             plain += line[i];
         }
-        const size_t from = plain.find_first_not_of(" \t");
-        if (from == std::string::npos) continue;  // empty
-        const std::string head = plain.substr(from);
-        if (head == "_") break;  // the spacer before the table's own lines
-        bool table = false;
-        for (const char* label : {"Class", "Compound on", "Weight", "Equip", "Клас", "Класс", "Тип", "Вага", "Вес"})
-            table = table || head.compare(0, std::strlen(label), label) == 0;
+        const size_t from = plain.find_first_not_of(" \t"), to = plain.find_last_not_of(" \t");
+        return from == std::string::npos ? std::string() : plain.substr(from, to - from + 1);
+    };
+    const auto lowered = [](std::string s) {
+        for (char& c : s)
+            if (c >= 'A' && c <= 'Z') c = char(c - 'A' + 'a');
+        return s;
+    };
+    std::vector<std::string> out;
+    for (const std::string& line : description) {
+        const std::string plain = plainOf(line);
+        if (plain.empty()) continue;
+        if (plain == "_") break;  // the spacer before the table's own lines
+        bool table = false;  // a label, then spaces, then a colon
+        for (const char* label : {"Item Class", "Weapon Class", "Class", "Compound on", "Slot", "Weight", "Location",
+                                  "Equip", "Type", "Poids", "Emplacement", "Клас", "Класс", "Тип", "Вага", "Вес"}) {
+            const size_t n = std::strlen(label);
+            if (plain.compare(0, n, label) != 0) continue;
+            const size_t colon = plain.find_first_not_of(' ', n);
+            table = table || (colon != std::string::npos && plain[colon] == ':');
+        }
         if (table) break;
+        std::string bare = lowered(plain);
+        if (!bare.empty() && bare.back() == '.') bare.pop_back();
+        if (out.empty() && !name.empty() && bare == lowered(name)) continue;  // its own name again
         out.push_back(line);
     }
     return out;

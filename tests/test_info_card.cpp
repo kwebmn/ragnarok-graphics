@@ -253,3 +253,21 @@ TEST(info_card_a_cards_effect_lines) {
     CHECK(infocard::cardEffect(uk) == std::vector<std::string>{"Удача +2."});
     CHECK(infocard::cardEffect({}).empty());
 }
+
+// 3.0.24-beta.24 (the final review: the client's real table, data.grf data\english\idnum2itemdesctable.txt - 632
+// cards): its labels «Item Class:», «Class:», «Weapon Class :», «Compound on:», «Slot:», «Weight :» end the effect (a
+// label then a colon - «Thief Class Bonus» lines stay); a first line that is the card's own name is not repeated
+TEST(info_card_a_cards_effect_as_the_real_table_has_it) {
+    const std::vector<std::string> poring = {"LUK +2", "Perfect Dodge +1", "Item Class: ^777777Card^000000",
+                                             "Compound on: ^777777Armor^000000", "Weight: ^7777771^000000"};
+    CHECK(infocard::cardEffect(poring, "Poring Card") == (std::vector<std::string>{"LUK +2", "Perfect Dodge +1"}));
+    const std::vector<std::string> gargoyle = {"Gargoyle Card.", "Add the chance of gaining 'Lightning'.",
+                                               "Class: Card", "Slot: Accessory", "Weight: 1"};
+    CHECK(infocard::cardEffect(gargoyle, "Gargoyle Card") ==
+          (std::vector<std::string>{"Add the chance of gaining 'Lightning'."}));
+    const std::vector<std::string> shield = {"Reduce 20% damage.", "Weapon Class : Card", "Slot: Shield",
+                                             "Weight : 1"};
+    CHECK(infocard::cardEffect(shield, "Some Card") == (std::vector<std::string>{"Reduce 20% damage."}));
+    const std::vector<std::string> set = {"STR +1", "Thief Class Bonus: AGI +1", "Item Class: Card"};
+    CHECK(infocard::cardEffect(set, "") == (std::vector<std::string>{"STR +1", "Thief Class Bonus: AGI +1"}));
+}

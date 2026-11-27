@@ -318,10 +318,11 @@ void itemCard(State& s, One& o, uint32_t window) {
             if (cards[i] <= 0) continue;
             const auto cd = s.tables.items.find(std::to_string(cards[i]));
             if (cd == s.tables.items.end()) continue;
-            const std::vector<std::string> effect = ic::cardEffect(utf8Lines(s, cd->second));
+            const std::string cardName = itemName(s, std::to_string(cards[i]), true);
+            const std::vector<std::string> effect = ic::cardEffect(utf8Lines(s, cd->second), cardName);
             if (effect.empty()) continue;
             if (!spaced) c.lines.push_back(""), spaced = true;
-            c.lines.push_back(itemName(s, std::to_string(cards[i]), true) + ":");
+            c.lines.push_back(cardName + ":");
             c.lines.insert(c.lines.end(), effect.begin(), effect.end());
         }
     }

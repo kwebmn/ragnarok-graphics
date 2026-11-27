@@ -51,6 +51,10 @@ Fill fillOf(int64_t used, int64_t most) {
     return f;
 }
 
+std::string bagTitle(const std::string& name, int unworn, int worn) {
+    return countTitle(name, std::max(0, unworn) + std::max(0, worn), kBagMost);
+}
+
 std::string countTitle(const std::string& name, int used, int most) {
     return name + " " + std::to_string(used) + "/" + std::to_string(most);
 }

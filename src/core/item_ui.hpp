@@ -22,7 +22,11 @@ struct Fill {
     const char* tone = "ok";
 };
 Fill fillOf(int64_t used, int64_t most);
-std::string countTitle(const std::string& name, int used, int most);  // «Речі 16/100»
+std::string countTitle(const std::string& name, int used, int most);
+// 3.0.24-beta.24 (the final review): «Речі»'s title - the bag's 100 places (uAthena MAX_INVENTORY) hold the worn
+// gear too, so the grid's things and the worn ones counted
+constexpr int kBagMost = 100;
+std::string bagTitle(const std::string& name, int unworn, int worn);  // «Речі 16/100»
 
 // R-WP985Q («непонятные символы в карточке»): every letter of `utf8` is one the interface's font has (IBM Plex Sans,
 // both faces: core/plex_widths.inc) - stars, crosses and triangles are drawn, not written. False on a broken byte.

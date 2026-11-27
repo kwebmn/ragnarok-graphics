@@ -90,7 +90,6 @@ constexpr size_t kInfoSize = 0x48, kMostNodes = 256;
 // 0x8000 the login's list gives stays on those arrows after others are worn (0x013c and 0x00ac never clear it)
 constexpr uint32_t kAmmoNow = 0x772034, kAmmoBit = 0x8000;
 constexpr ULONGLONG kReadMs = 200, kConfirmMs = 3000, kBlinkMs = 530;
-constexpr int kBagMost = 100;  // 3.0.24-beta.20: the bag's places (uAthena MAX_INVENTORY) - «Речі 16/100»
 constexpr ULONGLONG kTipMs = 400;  // 3.0.11-beta.51: a cell's tip after this long pointed at (the concept's)
 constexpr ULONGLONG kToastMs = 2000;  // 3.0.11-beta.112: the words of a thing come into the bag
 constexpr size_t kMostTyped = 72;  // bytes (3.0.18-beta.72: UTF-8 - 24 letters of any language)
@@ -100,6 +99,7 @@ using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
 
 struct State {
+    int wornCount = 0;  // 3.0.24-beta.24: the worn gear read with the bag (it holds bag places)
     iw::BarDrag bar;  // 3.0.18-beta.204: the scroll bar held
     // 3.0.18-beta.156 (the owner: the storage's picks, and so everywhere): the bag's things picked (Ctrl /
     // Shift / Ctrl+A) put together into the storage or the cart when one is open (one a step, a stack all of it)
@@ -277,6 +277,7 @@ void readBag(State& s) {
     const uint32_t ammo = read32(kAmmoNow);
     uint32_t node = read32(head);
     std::vector<gearcompare::Worn> wornNow;
+    s.wornCount = 0;  // 3.0.24-beta.24: the worn gear holds bag places too («Речі»'s title)
     for (size_t n = 0; node && node != head && n < kMostNodes; ++n, node = read32(node)) {
         uint8_t raw[kInfoSize] = {};
         if (!readGame(node + kInfo, raw, sizeof raw)) break;
@@ -290,6 +291,7 @@ void readBag(State& s) {
             const int r = int(rd32(raw, 0x40));
             const std::string name = wn != names.end() ? utf8Of(widened(hotbar::spaced(wn->second), s.codePage))
                                                        : "#" + wid;
+            ++s.wornCount;
             wornNow.push_back(gearcompare::Worn{std::atoi(digits), r > 0 && r <= 99 ? r : 0,
                                                 (r > 0 && r <= 99 ? "+" + std::to_string(r) + " " : "") + name});
             continue;
@@ -706,7 +708,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     State& s = state();
     s.toastUi = toastFrame(s);
     iw::Texts t = texts(s.padNow);
-    t.title = itemui::countTitle(t.title, int(s.items.size()), kBagMost);  // 3.0.24-beta.20: «Речі 16/100»
+    t.title = itemui::bagTitle(t.title, int(s.items.size()), s.wornCount);  // .20: «Речі 16/100»; .24: the worn too
     s.gridShown =
         s.grid.frame("items", s.shown, s.layout.x, s.layout.y, s.gridGen, s.layout, s.items, s.shownItems, s.show, t,
                      measure);

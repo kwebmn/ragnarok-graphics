@@ -39,9 +39,11 @@ LearnedSkill skillOfCard(const std::string& shown, const std::vector<LearnedSkil
 // itemslotcounttable.txt: «1101#3#» - an item's number to its slots
 std::map<int, int> slotCounts(const std::string& text);
 // 3.0.24-beta.22 (the spec's «Картка речі»: «что даёт каждая вставленная карта»): a card's effect - its description's
-// lines before the table's own («^ffffff_^000000», «Class :», «Compound on :», «Weight :», «Клас», «Тип», «Вага»),
-// the empty ones aside
-std::vector<std::string> cardEffect(const std::vector<std::string>& description);
+// lines before the table's own: the spacer «_», or a label then a colon («Item Class:», «Class:», «Weapon Class :»,
+// «Compound on:», «Slot:», «Weight :», «Location:»; the other languages' «Клас», «Тип», «Вага», «Poids»...;
+// 3.0.24-beta.24 by the client's real table, 632 cards); the empty ones aside, and a first line that is the card's
+// own name
+std::vector<std::string> cardEffect(const std::vector<std::string>& description, const std::string& name = "");
 // The folder of data\ the game reads its language's tables from, by Windows' language (uaRO.exe 0x4EF2xx, its primary
 // id): «german\», «italian\», «portuguese\», «turkish\», else «english\» (Ukrainian and Russian among them)
 std::string languageFolder(unsigned langId);

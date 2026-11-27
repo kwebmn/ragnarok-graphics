@@ -44,3 +44,10 @@ TEST(item_ui_cart_offers_a_shop) {
     CHECK(!itemui::offersShop(3, 0, true));   // a shop open already
     CHECK(itemui::kVendingSkill == 41);
 }
+
+// 3.0.24-beta.24 (the final review): the bag's 100 places hold the worn gear too (uAthena MAX_INVENTORY) - «Речі»'s
+// title counts them, not the grid's things alone
+TEST(item_ui_the_bags_title_counts_the_worn) {
+    CHECK_EQ(itemui::bagTitle("Items", 90, 10), std::string("Items 100/100"));
+    CHECK_EQ(itemui::bagTitle("Items", 16, 0), std::string("Items 16/100"));
+}

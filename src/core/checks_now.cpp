@@ -7,6 +7,16 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.25 (the final review): the item card's cards without the table's lines; «Речі» counts the worn
+        {"card_effects_fixed", "3.0.24-beta.25", "interface.cards",
+         {"Item card: the cards' effects alone; the bag's count", "Картка речі: лише дія карт; лік сумки",
+          "Карточка вещи: только действие карт; счёт сумки"},
+         {"Right-click a thing with cards: under each card's name only what it gives - no «Item Class», «Compound on», "
+          "«Weight». «Items» title: the worn gear counted too (it holds bag places).",
+          "ПКМ на річ із картами: під назвою кожної карти лише те, що вона дає, — без «Item Class», «Compound on», "
+          "«Weight». Заголовок «Речі»: вдягнене теж пораховано (воно займає місця сумки).",
+          "ПКМ по вещи с картами: под названием каждой карты только то, что она даёт, — без «Item Class», «Compound "
+          "on», «Weight». Заголовок «Вещи»: надетое тоже посчитано (оно занимает места сумки)."}},
         // 3.0.24-beta.24 (the plan's task 11): «Вибір речі» - a search over a list of more than 6 rows
         {"pick_search", "3.0.24-beta.24", "interface.picks",
          {"Choosing a thing: the search", "Вибір речі: пошук", "Выбор вещи: поиск"},
