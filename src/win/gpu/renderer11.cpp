@@ -2513,6 +2513,7 @@ void Renderer11::execute(const FrameRecord& record) {
     LARGE_INTEGER ended;
     QueryPerformanceCounter(&ended);
     stats_.ticks += ended.QuadPart - started.QuadPart;
+    recentCpuTicks_ += ended.QuadPart - started.QuadPart;  // 3.0.24-beta.36
 }
 
 bool Renderer11::readTarget(std::vector<uint32_t>& argb) {
@@ -2847,6 +2848,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     LARGE_INTEGER ended;  // 0.89
     QueryPerformanceCounter(&ended);
     stats_.ticks += ended.QuadPart - started.QuadPart;
+    recentCpuTicks_ += ended.QuadPart - started.QuadPart;  // 3.0.24-beta.36
     ++stats_.frames;
     ++groundMapFrames_;  // 3.0.22-beta.10
     timeFrame();
@@ -4949,6 +4951,13 @@ void Renderer11::timeFrame() {
         recent_.gpuMs = recentMs_ / recentFrames_;
         recent_.presentMs = recentPresentMs_ / recentFrames_;  // 3.0.19-beta.8 (core/present_watch)
         recentPresentMs_ = 0.0;
+        static const double qpcPerMs = [] {  // 3.0.24-beta.36: the drawing's processor time a frame
+            LARGE_INTEGER f;
+            QueryPerformanceFrequency(&f);
+            return double(f.QuadPart) / 1000.0;
+        }();
+        recent_.cpuMs = qpcPerMs > 0.0 ? double(recentCpuTicks_) / qpcPerMs / recentFrames_ : 0.0;
+        recentCpuTicks_ = 0;
         recent_.loading = ai_ && ai_->pending() > 0;  // 3.0.6-beta.3: the AI textures' pictures of what is drawn
         recent_.effects.clear();
         for (int e = 0; e < kEffectTimes11; ++e) {

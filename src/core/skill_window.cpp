@@ -504,7 +504,13 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
         const Skill& k = tab->skills[size_t(L.first) + i];
         const panel::Box& r = L.rows[i];
         const float textX = r.x + 48 * s;
-        const float textRight = (L.less[i].w > 0 ? L.less[i].x : L.dots[i].w > 0 ? L.dots[i].x : r.x + r.w * 0.6f) -
+        // 3.0.24-beta.36 (the laptop's run: «Increase Weight Limi» beside an empty room): up to the use level's
+        // arrows, the plan's «−» or the level (60 % of the row before)
+        const float levelX = r.x + r.w - 8 * s - kPlus * s - 10 * s - kLevelW * s;
+        const float textRight = (L.less[i].w > 0      ? L.less[i].x
+                                 : L.minuses[i].w > 0 ? L.minuses[i].x
+                                 : L.dots[i].w > 0    ? L.dots[i].x
+                                                      : levelX) -
                                 10 * s;
         const uint32_t nameRgb = k.lock != Lock::None ? kFaint : k.level > 0 ? kText : kMuted;
         out.push_back(Words{panel::Box{textX, r.y + 5 * s, textRight - textX, 18 * s}, k.name, nameRgb, 13.5f * s,

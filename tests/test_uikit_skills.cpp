@@ -4,6 +4,7 @@
 #include "rml_host.hpp"
 #include "test.hpp"
 #include "uikit/skills_live.hpp"
+#include "uikit/ui_check.hpp"
 
 using namespace uagfx;
 namespace kw = uagfx::skillwin;
@@ -211,5 +212,43 @@ TEST(uikit_skills_job_choices_go_with_their_tab) {
     rmlhost::update();
     CHECK(sl::refit(doc, L));
     CHECK_EQ(L.tabs.size(), size_t(2));
+    rmlhost::close(doc);
+}
+
+// 3.0.24-beta.36 (the laptop's run, the narrow list at 1920x1080: «Increase Weight Limi», «Квест — очками не вчит»
+// cut beside an empty room): the dots' box (none since .27 - «N/M» says the level) kept its 10 dots' width, and the
+// words were fitted to 60 % of the row - the name and its line go up to the level now
+TEST(uikit_skills_names_take_the_room_of_dots_not_there) {
+    kw::Data d;
+    kw::Tab tab;
+    tab.name = "Novice";
+    kw::Skill basic;
+    basic.id = 1, basic.name = "Basic Skill", basic.most = 9, basic.level = 9, basic.type = 0;
+    kw::Skill quest;
+    quest.id = 2, quest.name = "Increase Weight Limit R", quest.most = 1, quest.level = 0, quest.type = 0;
+    quest.lock = kw::Lock::Quest;
+    tab.skills = {basic, quest};
+    d.tabs = {tab};
+    kw::Texts t = texts();
+    t.quest = "Quest - not learned with points";  // the test's measure counts bytes: the English line
+    kw::Show sh;
+    kw::Layout L = kw::layout(0, 0, 1, d, sh, t, measure);
+    static sl::Model m;
+    sl::fill(m, L, d, sh, t, measure, none, glyph);
+    std::string error;
+    Rml::ElementDocument* doc =
+        rmlhost::load(sl::rml(), [&](Rml::DataModelConstructor& c) { sl::bind(c, m); }, 50, 40, &error);
+    CHECK_EQ(error, std::string());
+    if (!doc) return;
+    CHECK(sl::refit(doc, L));
+    rmlhost::update();
+    int seen = 0;
+    for (const uikit::uicheck::Word& w : uikit::uicheck::words(doc, uikit::uicheck::Rgbf{0.1f, 0.1f, 0.1f})) {
+        if (w.text != "Increase Weight Limit R" && w.text != t.quest) continue;
+        ++seen;
+        CHECK(!w.cut);
+        if (w.cut) std::printf("  cut: %s (%.0f wide)\n", w.text.c_str(), double(w.w));
+    }
+    CHECK_EQ(seen, 2);
     rmlhost::close(doc);
 }

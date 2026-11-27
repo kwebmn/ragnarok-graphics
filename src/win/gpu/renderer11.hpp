@@ -1246,6 +1246,9 @@ private:
     double recentMs_ = 0.0, recentEffectMs_[kEffectTimes11] = {};  // 2.2.1: the half second's, for timing()
     uint32_t recentFrames_ = 0;
     double recentPresentMs_ = 0.0;  // 3.0.19-beta.8: the presents' time, the half second (core/present_watch)
+    // 3.0.24-beta.36 (the laptop's run: the MCP's perf said cpu 0 on Direct3D 11): the drawing's processor time, the
+    // half second - as stats_.ticks (the swap chain's present not in it), for timing()'s cpuMs
+    LONGLONG recentCpuTicks_ = 0;
     ULONGLONG recentSince_ = 0;
     GpuTiming recent_;
     // 0.89: what the frames ask of the processor and the driver, the log every half minute - draws, the driver's

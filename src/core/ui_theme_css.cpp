@@ -1243,7 +1243,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
               border-radius: 0.5rem; border: 0.0833rem #6ea3ffb3; background-color: #ffffff1a; font-size: 1.1667rem;
               font-weight: bold; box-sizing: border-box; }
 .skl .minus.hot { background-color: #ffffff38; }
-.skl .dots { display: flex; justify-content: flex-end; width: 8.0833rem; margin-left: 1.1667rem; }
+.skl .dots { display: flex; justify-content: flex-end; }
 .skl .dot { display: block; width: 0.5833rem; height: 0.5833rem; margin-left: 0.25rem; border-radius: 0.2917rem;
             background-color: #ffffff24; }
 .skl .dot.lv { background-color: #f3c653; }
