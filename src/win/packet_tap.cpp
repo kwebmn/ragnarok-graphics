@@ -1,5 +1,6 @@
 #include "win/item_net.hpp"
 #include "win/context.hpp"
+#include "win/social_card.hpp"
 #include "win/death_recap_watch.hpp"
 #include "win/ground_items.hpp"
 #include "win/hunt_panel.hpp"
@@ -152,6 +153,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
     upkeepwatch::packet(id, packet);              // 3.0.16-beta.13: broken gear, the pet's and homunculus's hunger
     tkmissionwin::packet(id, packet);             // 3.0.22-beta.4: the Taekwon mission's monster
     itemnet::packet(id, packet);                  // 3.0.24-beta.4: the things as the server tells them
+    socialcardwin::rawPacket(id, packet);         // 3.0.24-beta.27: the friends' accounts (the party's invite)
     const packets::Event e = packets::parse(packet, kReadable);
     if (!std::holds_alternative<std::monostate>(e)) {
         notifier::packet(e);

@@ -8831,6 +8831,19 @@ constexpr Entry kTexts[] = {
      "увімкнений «Обмін». Для тестерів: вимкнено — як у грі.",
      "«Готово», «Обмен» и «Отменить» сами отправляют пакет серверу; набранные зени и вещи — как в игре. Нужен "
      "включённый «Обмен». Для тестеров: выключено — как в игре."},
+    {Text::SocialInvite, "Invite to the party", "Запросити в групу", "Пригласить в группу"},  // 3.0.24-beta.27
+    {Text::InterfacePartyInvite, "Friends: invite to the party (beta)", "Друзі: запросити в групу (бета)",
+     "Друзья: пригласить в группу (бета)"},
+    {Text::InterfacePartyInviteHint,
+     "A friend in the game, not of your party, gets «Invite to the party» by their row - our own packet with their "
+     "account from the server's friends' list (a friend added today - after the next login). Needs the friends' "
+     "card on. For the testers: off - no such button.",
+     "Друг у грі, не з вашої групи, отримує «Запросити в групу» біля свого рядка — наш пакет з його акаунтом зі "
+     "списку друзів сервера (друг, доданий сьогодні, — після наступного входу). Потрібна увімкнена картка друзів. "
+     "Для тестерів: вимкнено — такої кнопки немає.",
+     "Друг в игре, не из вашей группы, получает «Пригласить в группу» у своей строки — наш пакет с его аккаунтом из "
+     "списка друзей сервера (друг, добавленный сегодня, — после следующего входа). Нужна включённая карточка друзей. "
+     "Для тестеров: выключено — такой кнопки нет."},
     {Text::LauncherRunningCount, "The game is running · windows: {1}", "Гра вже запущена · вікон: {1}",
      "Игра уже запущена · окон: {1}"},
     {Text::InterfaceArrowsWalk, "Walking with the arrows", "Ходьба стрілками", "Ходьба стрелками"},

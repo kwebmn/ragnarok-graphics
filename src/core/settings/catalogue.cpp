@@ -254,7 +254,9 @@ std::vector<Group> build() {
                          D("interface.menu"), D("interface.cards"), D("interface.asks"),
                          D("interface.messages"), D("interface.counts"), D("interface.picks"),
                          D("interface.party_setup"), D("interface.pet"), D("interface.homun"), D("interface.merc"),
-                         D("interface.social"), D("interface.guild"), D("interface.servers"),
+                         D("interface.social"),
+                         trial("interface.party_invite", "3.0.24-beta.27").need("interface.social"),
+                         D("interface.guild"), D("interface.servers"),
                          D("interface.whispers"), D("interface.whisper_setup"), D("interface.macros"),
                          D("interface.tips"), D("interface.loading_bar"), D("interface.emotes"),
                          D("interface.commands"), D("interface.chat_rooms"), D("interface.popups")}));

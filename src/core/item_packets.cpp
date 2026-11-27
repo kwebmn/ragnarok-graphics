@@ -103,6 +103,10 @@ Bytes openVending(const std::string& sign, const std::vector<VendRow>& rows) {
     return b;
 }
 
+Bytes partyInvite(uint32_t account) {
+    return Bytes{0xfc, 0x00, uint8_t(account), uint8_t(account >> 8), uint8_t(account >> 16), uint8_t(account >> 24)};
+}
+
 Bytes tradeOk() { return Bytes{0xeb, 0x00}; }
 Bytes tradeCancel() { return Bytes{0xed, 0x00}; }
 Bytes tradeCommit() { return Bytes{0xef, 0x00}; }

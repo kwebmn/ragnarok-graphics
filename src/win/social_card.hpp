@@ -21,6 +21,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
+// 3.0.24-beta.27 ([interface] party_invite, the testers' box): «Запросити в групу» on a friend in the game, not of
+// our party - our own packet 0x00fc with their account from the server's friends' list (rawPacket: 0x0201, 0x020a)
+void rawPacket(uint16_t id, const uint8_t* p);
+void setInvite(bool on);
 bool close();  // Esc: its close
 void beforeGameDraw();
 enum class PadCommand : uint8_t { Up, Down, Left, Right, Press, TabBack, TabOn, Close };

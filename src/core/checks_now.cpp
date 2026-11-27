@@ -7,6 +7,15 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.27 (part 3, task 5): «Запросити в групу» for a friend - our own packet (the testers' box)
+        {"party_invite", "3.0.24-beta.27", "interface.party_invite",
+         {"Friends: invite to the party", "Друзі: запросити в групу", "Друзья: пригласить в группу"},
+         {"Be in a party; in the friends' card a friend in the game, not of it, has «Invite to the party»: press it - "
+          "the friend is asked as by the game's own invite.",
+          "Будьте в групі; у картці друзів друг у грі, не з неї, має «Запросити в групу»: натисніть — другові прийде "
+          "запрошення, як від запрошення самої гри.",
+          "Будьте в группе; в карточке друзей друг в игре, не из неё, имеет «Пригласить в группу»: нажмите — другу "
+          "придёт приглашение, как от приглашения самой игры."}},
         // 3.0.24-beta.27 (part 3, task 4): the NPC's choice its own list beside the talk
         {"npc_choice_list", "3.0.24-beta.27", "interface.npc_talk",
          {"NPC: the choice a list of its own", "NPC: вибір — окремим списком", "NPC: выбор — отдельным списком"},

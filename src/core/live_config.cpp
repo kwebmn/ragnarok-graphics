@@ -575,6 +575,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("vend_packets", flag(running.vendPackets), flag(file.vendPackets)));
         n.vendPackets = file.vendPackets;
     }
+    if (file.partyInvite != running.partyInvite) {  // 3.0.24-beta.27: the friends' invite, at once
+        u.applied.push_back(change("party_invite", flag(running.partyInvite), flag(file.partyInvite)));
+        n.partyInvite = file.partyInvite;
+    }
     if (file.tradePackets != running.tradePackets) {  // 3.0.24-beta.24: «Обмін»'s buttons by our own packets
         u.applied.push_back(change("trade_packets", flag(running.tradePackets), flag(file.tradePackets)));
         n.tradePackets = file.tradePackets;

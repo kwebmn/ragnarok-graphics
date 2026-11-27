@@ -105,7 +105,7 @@ int onlineCount(const std::vector<Entry>& entries) {
     return n;
 }
 
-std::vector<Item> menu(Tab t, const Entry& e, bool leader, bool elsewhere) {
+std::vector<Item> menu(Tab t, const Entry& e, bool leader, bool elsewhere, bool invite) {
     std::vector<Item> out;
     if (e.self) {
         if (t == Tab::Party) out.push_back(Item::Leave);
@@ -117,6 +117,7 @@ std::vector<Item> menu(Tab t, const Entry& e, bool leader, bool elsewhere) {
         out.push_back(Item::AddFriend);
         if (e.online && elsewhere) out.push_back(Item::Route);
     } else {
+        if (invite) out.push_back(Item::Invite);  // 3.0.24-beta.27
         out.push_back(Item::RemoveFriend);
     }
     out.push_back(Item::CopyName);

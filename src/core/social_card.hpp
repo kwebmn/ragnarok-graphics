@@ -70,8 +70,9 @@ struct Words {
 std::vector<int> order(const std::vector<Entry>& entries, Tab t);
 int onlineCount(const std::vector<Entry>& entries);
 // A person's menu (a right click, the controller's A): what may be done to them - `leader` the character leads the
-// party, `elsewhere` they are on another map (a way there)
-enum class Item : uint8_t { Whisper, Expel, Leave, RemoveFriend, AddFriend, Route, CopyName };
-std::vector<Item> menu(Tab t, const Entry& e, bool leader, bool elsewhere);
+// party, `elsewhere` they are on another map (a way there); 3.0.24-beta.27: `invite` a friend may be asked into the
+// party (friendids::canInvite, [interface] party_invite) - «Запросити в групу» after the whisper
+enum class Item : uint8_t { Whisper, Expel, Leave, RemoveFriend, AddFriend, Route, CopyName, Invite };
+std::vector<Item> menu(Tab t, const Entry& e, bool leader, bool elsewhere, bool invite = false);
 
 }  // namespace uagfx::socialcard

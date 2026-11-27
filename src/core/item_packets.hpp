@@ -47,6 +47,9 @@ Bytes openVending(const std::string& sign, const std::vector<VendRow>& rows);
 // 0x00ef; the server answers both sides (0x00ec, 0x00ee, 0x00f0). The things and the zeny offered stay the game's
 // own: it keeps what it offered and applies it at the server's 0x00ea (uaRO.exe 0x586cf6), so ours would leave its
 // trade's lists and the zeny shown wrong
+// 3.0.24-beta.27 ([interface] party_invite): the party's invite of an account (0x00fc, 6 bytes); the server answers
+// the game (0x00fd) and asks the invited (0x00fe)
+Bytes partyInvite(uint32_t account);
 Bytes tradeOk();
 Bytes tradeCancel();
 Bytes tradeCommit();

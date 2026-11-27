@@ -9,6 +9,8 @@
 #include <map>
 #include <vector>
 
+#include "core/item_packets.hpp"
+#include "core/friend_ids.hpp"
 #include "core/window_stack.hpp"
 #include "core/settings/strings.hpp"
 #include "core/social_card.hpp"
@@ -20,6 +22,7 @@
 #include "uikit/social_live.hpp"
 #include "win/game_memory.hpp"
 #include "win/log.hpp"
+#include "win/item_net.hpp"
 #include "win/party_panel.hpp"
 #include "win/ui_field.hpp"
 #include "pad/core/config/bindings.hpp"
@@ -315,6 +318,21 @@ static void closeMenu(State& s) {
     s.mv.menuFocus = 0;
 }
 
+// 3.0.24-beta.27 ([interface] party_invite, the testers' box; the spec's «Група»: «Запросити»): the friends'
+// accounts from the server's list (core/friend_ids) - a friend in the game, not of our party, may be invited
+friendids::Ids g_friends;
+bool g_invite = false;
+
+static uint32_t friendAccount(const State& s, const std::string& utf8Name) {
+    return g_friends.accountOf(narrowed(utf8Wide(utf8Name), s.codePage));
+}
+
+static bool invitable(const State& s, const sc::Entry& e) {
+    if (!g_invite || s.show.tab != sc::Tab::Friends || e.self) return false;
+    const uint32_t account = friendAccount(s, e.name);
+    return account != 0 && friendids::canInvite(!s.partyName.empty(), e.online, partywin::inParty(account));
+}
+
 static void openMenu(State& s, int row) {
     if (row < 0 || row >= int(s.rowEntry.size())) return;
     const int at = s.rowEntry[size_t(row)];
@@ -323,7 +341,7 @@ static void openMenu(State& s, int row) {
     const std::vector<partywin::Person> people = partywin::people();
     const partywin::Person* p = personOf(people, e.name);
     const bool elsewhere = p ? !p->where.empty() : (!e.map.empty() && e.map != readGameMap());
-    s.menuItems = sc::menu(s.show.tab, e, leading(s), elsewhere);
+    s.menuItems = sc::menu(s.show.tab, e, leading(s), elsewhere, invitable(s, e));  // .27: «Запросити»
     s.mv.menuRow = s.menuItems.empty() ? -1 : row;
     s.mv.menuFocus = 0;
 }
@@ -343,6 +361,13 @@ static void doItem(State& s, sc::Item item) {
             if (!partywin::routeTo(name)) LOG_INFO("social: no way to %s known", name.c_str());
             break;
         case sc::Item::CopyName: uifield::setClipboard(name); break;
+        case sc::Item::Invite: {  // 3.0.24-beta.27: our own packet 0x00fc; the server's answer the game shows
+            const uint32_t account = friendAccount(s, name);
+            const bool sent = account && itemnet::sendOwn(itempackets::partyInvite(account));
+            LOG_INFO("social: %s asked into the party by our own packet 0x00fc - %s", name.c_str(),
+                     sent ? "sent" : account ? "not sent (no connection)" : "no account known");
+            break;
+        }
     }
     closeMenu(s);
 }
@@ -357,6 +382,7 @@ static Rml::String itemWord(sc::Item i) {
         case sc::Item::AddFriend: return say(Text::SocialAddFriend);
         case sc::Item::Route: return say(Text::SocialRoute);
         case sc::Item::CopyName: return say(Text::SocialCopy);
+        case sc::Item::Invite: return say(Text::SocialInvite);  // 3.0.24-beta.27
     }
     return "";
 }
@@ -369,6 +395,7 @@ static void quickOf(const State& s, const sc::Entry& e, sc::Item q[2]) {
         return;
     }
     if (e.online) q[0] = sc::Item::Whisper;
+    if (invitable(s, e)) q[1] = sc::Item::Invite;  // 3.0.24-beta.27
     if (s.show.tab == sc::Tab::Party && leading(s)) (q[0] == sc::Item::CopyName ? q[0] : q[1]) = sc::Item::Expel;
 }
 
@@ -543,6 +570,18 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 }
 
 bool shown() { return state().shown; }
+
+void rawPacket(uint16_t id, const uint8_t* p) {  // 3.0.24-beta.27: the friends' accounts (core/friend_ids)
+    if (!p || (id != 0x0201 && id != 0x020a)) return;
+    const size_t size = id == 0x0201 ? (size_t(p[2]) | size_t(p[3]) << 8) : 10;
+    g_friends.feed(id, p, size);
+}
+
+void setInvite(bool on) {
+    if (on != g_invite) LOG_INFO("social: %s", on ? "«Запросити в групу» by our own packet ([interface] party_invite)"
+                                                  : "no invite of ours");
+    g_invite = on;
+}
 
 bool close() {
     State& s = state();

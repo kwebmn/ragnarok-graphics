@@ -1042,6 +1042,8 @@ struct Config {
     // 3.0.24-beta.24: [interface] trade_packets - «Обмін»'s «Готово», «Обмін», «Скасувати» by our own packets (the
     // testers' box)
     bool tradePackets = false;
+    // 3.0.24-beta.27: [interface] party_invite - the friends' card's «Запросити в групу» by our own packet (testers)
+    bool partyInvite = false;
     // 3.0.11-beta.168: [interface] whisper_setup - the whisper's settings (win/whisper_setup) as a card of switches
     bool whisperSetupWindow = false;
     // 3.0.11-beta.169: [interface] macros - the chat's macros (Alt+M, win/macro_card) as a card

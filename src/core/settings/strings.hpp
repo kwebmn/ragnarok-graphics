@@ -972,6 +972,7 @@ enum class Text : uint16_t {
     VendSetupNoSign, VendSetupNoThings, VendSetupNoPrice, VendSetupTooDear, VendSetupTooMany,  // 3.0.24-beta.23
     InterfaceVendOpenPackets, InterfaceVendOpenPacketsHint, InterfaceSaleChime, InterfaceSaleChimeHint,
     InterfaceTradePackets, InterfaceTradePacketsHint,  // 3.0.24-beta.24
+    SocialInvite, InterfacePartyInvite, InterfacePartyInviteHint,  // 3.0.24-beta.27
     LauncherRunningCount,                // .206: «Гра вже запущена · вікон: N» under «+ ЩЕ ОДНЕ ВІКНО»
     InterfaceArrowsWalk, InterfaceArrowsWalkHint,  // .207: the keyboard concept, stage 1
     InterfaceWalkMode, InterfaceWalkModeHint, ChatHintWalk,  // .208: stage 2, the walk mode
