@@ -18,7 +18,7 @@ namespace mc = uagfx::merccard;
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw cmp" data-style-font-size="base + 'px'" data-style-background-color="ground">
 <div class="head" data-hit="title"><span class="title">{{title}}</span></div>
-<div class="x" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
+<div class="x" data-hit="close" data-class-hot="closeHot"><span class="cxa"></span><span class="cxb"></span></div>
 <div class="nrow"><span class="cn">{{name}}</span><span class="clv">{{level}}</span></div>
 <div class="bars"><div class="b" data-for="b : bars"><div class="bl"><span class="k">{{b.label}}</span><span
   class="v">{{b.value}}</span></div><div class="track"><div data-attr-class="'fill ' + b.cls"

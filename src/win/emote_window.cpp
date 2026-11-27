@@ -57,7 +57,7 @@ using UseFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y);
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw ew" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span></div>
-<span class="x ctl" data-event-click="shut()">&#x2715;</span>
+<span class="x ctl" data-event-click="shut()"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="grid"><div class="cell ctl" data-for="e, i : emotes" data-event-click="pick(i)"
   data-event-dblclick="send(i)"><img data-if="e.icon != ''" data-attr-src="e.icon"/><span>{{e.cmd}}</span></div></div>
 <div class="hint">{{hint}}</div>

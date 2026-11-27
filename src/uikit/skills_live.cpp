@@ -23,7 +23,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-class-hot="planHot">{{planWord}}</div><div class="hbt v l" data-if="views" data-hit="viewlist"
   data-class-on="!tree" data-class-hot="listHot">{{listWord}}</div><div class="hbt v r" data-if="views"
   data-hit="viewtree" data-class-on="tree" data-class-hot="treeHot">{{treeWord}}</div></div>
-<div class="x" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
+<div class="x" data-hit="close" data-class-hot="closeHot"><span class="cxa"></span><span class="cxb"></span></div>
 <div class="tabs"><div class="tab" data-for="t, i : tabs" data-hit="tab" data-attr-data-index="i" data-class-on="t.on"
   data-class-hot="t.hot" data-class-gone="t.name == ''">{{t.name}}</div></div>
 <div class="notice" data-if="notice != ''" data-hit="notice">{{notice}}</div>

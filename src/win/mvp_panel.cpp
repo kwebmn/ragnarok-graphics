@@ -106,7 +106,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <span data-attr-class="closeHot ? 'ownx hot' : 'ownx'" data-style-left="w - 31 * s + 'px'"
   data-style-top="8 * s + 'px'" data-style-width="22 * s + 'px'" data-style-height="20 * s + 'px'"
   data-style-line-height="20 * s + 'px'" data-style-border-radius="6 * s + 'px'"
-  data-style-font-size="12 * s + 'px'">&#x2715;</span>
+  data-style-font-size="12 * s + 'px'"><span class="cxa"></span><span class="cxb"></span></span>
 <div data-for="r, i : rows">
  <div class="lit" data-if="i == hover" data-style-left="4 * s + 'px'" data-style-top="(31 + 19 * i) * s + 'px'"
    data-style-width="w - 8 * s + 'px'" data-style-height="19 * s + 'px'" data-style-border-radius="5 * s + 'px'"></div>
@@ -289,7 +289,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (lx < 0 || ly < 0 || lx >= float(s.w) || ly >= float(s.h)) return false;
     result = 0;
     if (m == WM_LBUTTONDOWN && s.close.contains(lx, ly)) {  // 3.0.18-beta.120: ✕
-        ownwin::setClosed(closedwin::Window::Mvp, true, "its ✕");
+        ownwin::setClosed(closedwin::Window::Mvp, true, "its cross");
         s.key.clear();
         return true;
     }

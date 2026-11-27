@@ -16,7 +16,7 @@ namespace tw = uagfx::tradewin;
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw trl" data-style-font-size="base + 'px'" data-style-background-color="ground">
 <div class="head" data-hit="title"><span class="title">{{title}}</span></div>
-<div class="x" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
+<div class="x" data-hit="close" data-class-hot="closeHot"><span class="cxa"></span><span class="cxb"></span></div>
 <div class="sides"><div class="side" data-for="sd : sides" data-class-them="sd.them"><div class="shead"
   data-hit="sidehead"><span class="who">{{sd.name}}</span><span class="ready" data-if="sd.ready">&#x2713;
   {{readyWord}}</span></div><div class="cells"><div class="dropframe" data-if="sd.dropping"></div><div
@@ -29,7 +29,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-hit="zeny" data-class-typing="typing"><span class="zv">{{sd.zeny}}</span><span class="caret"
   data-if="caret"></span></div><span class="zv them" data-if="sd.them"
   data-class-late="sd.lateZeny">{{sd.zeny}}</span></div></div></div>
-<div class="warn" data-hit="warn" data-class-hide="warn == ''">&#x26A0; {{warn}}</div>
+<div class="warn" data-hit="warn" data-class-hide="warn == ''">{{warn}}</div>
 <div class="btns"><div class="btn" data-for="b, i : buttons" data-hit="button" data-attr-data-index="i"
   data-class-main="b.main" data-class-hot="b.hot" data-class-off="!b.on">{{b.label}}</div></div>
 <div class="hint" data-hit="hint" data-class-hide="hint == ''">{{hint}}</div>

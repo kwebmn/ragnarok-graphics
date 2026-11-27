@@ -49,7 +49,7 @@ using KeyFn = int(__attribute__((thiscall)) *)(uint32_t manager, int key, int ho
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw cw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span></div>
-<span class="x ctl" data-event-click="shut()">&#x2715;</span>
+<span class="x ctl" data-event-click="shut()"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="tabs"><span class="tab ctl" data-for="t, i : tabs" data-class-on="i == tab"
   data-event-click="tab_pick(i)">{{t}}</span></div>
 <div class="grid"><div class="row ctl" data-for="e, i : rows" data-event-click="use_row(i)"><span class="key"

@@ -80,6 +80,8 @@ ICONS = [
                  '<circle cx="12" cy="12" r="3"/>'),
     # 3.0.24-beta.20 (R-WP985Q: no letter the font lacks): the items' «обране» - a star drawn, not written
     ('Star', '<path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>'),
+    # 3.0.24-beta.26: «Полювання»'s «begin anew» (a circle's arrow; Plex has no ↺)
+    ('Again', '<path d="M18.5 12a6.5 6.5 0 1 1-1.9-4.6"/><path d="M17 3.5v4.2h-4.2"/>'),
 ]
 
 NUMBER = r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?'

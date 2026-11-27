@@ -7,6 +7,18 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.26 (part 3, task 1): every window's signs letters of the interface's font, or drawn
+        {"font_signs", "3.0.24-beta.26", "interface.items",
+         {"Windows' signs: all from the font", "Знаки у вікнах — усі зі шрифту", "Знаки в окнах — все из шрифта"},
+         {"Look at the closes of the chat rooms, emotes, guild, skills, stats, trade, settings: a drawn cross, no "
+          "box. The party leader and a room's owner: a small gold diamond; the reference's star drawn; «Hunt»'s "
+          "«again» an arrow; folds + and -.",
+          "Подивіться на закриття чат-кімнат, емоцій, гільдії, навичок, характеристик, обміну, налаштувань: "
+          "намальований хрестик, без квадратика. Лідер групи й власник кімнати — маленький золотий ромбик; "
+          "зірочка довідника намальована; «знову» в «Полюванні» — стрілка; згортання — + і −.",
+          "Посмотрите на закрытие чат-комнат, эмоций, гильдии, навыков, характеристик, обмена, настроек: "
+          "нарисованный крестик, без квадратика. Лидер группы и владелец комнаты — маленький золотой ромбик; "
+          "звёздочка справочника нарисована; «снова» в «Охоте» — стрелка; сворачивание — + и −."}},
         // 3.0.24-beta.25 (the final review): the item card's cards without the table's lines; «Речі» counts the worn
         {"card_effects_fixed", "3.0.24-beta.25", "interface.cards",
          {"Item card: the cards' effects alone; the bag's count", "Картка речі: лише дія карт; лік сумки",

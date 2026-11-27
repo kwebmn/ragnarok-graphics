@@ -102,7 +102,7 @@ public:
     // 2.6: a dot in the accent colour in the margin left of a row's control: its value is not the recommended one.
     // 3.0.11-beta.303: `id` (0 none: a click on it a command), its tone and its mark, `inset` how far left of the
     // row (96 dpi) - «нове» further than the recommended value's dot
-    HWND dot(HWND row, const std::wstring& hint, int id = 0, Tone tone = Tone::Accent, const wchar_t* mark = L"●",
+    HWND dot(HWND row, const std::wstring& hint, int id = 0, Tone tone = Tone::Accent, const wchar_t* mark = L"\u2022",
              int inset = 14);
     size_t madeCount() const { return made_.size(); }
     HWND madeAt(size_t i) const { return made_[i]; }

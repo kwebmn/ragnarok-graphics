@@ -59,7 +59,7 @@ constexpr int kBtnNext = 0x98, kBtnClose = 0x87;
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw npw" data-style-background-color="ground">
 <div class="head"><span class="title">{{name}}</span><span class="count">{{place}}</span></div>
-<span class="x ctl" data-event-click="np_close()">&#x2715;</span>
+<span class="x ctl" data-event-click="np_close()"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="talk"><div class="tline" data-for="l : lines"><span data-for="r : l.runs"
   data-style-color="r.colour">{{r.text}}</span></div></div>
 <div class="opts"><div class="opt ctl" data-for="o, i : options" data-class-on="i == selected"

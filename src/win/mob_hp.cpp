@@ -201,7 +201,7 @@ static void frameInner(HWND game, MobHp mode, double k, int targetWidth, int tar
         const int n = s.hitters.count(GetTickCount());
         if (n > 0) {
             const float scale = uistyle::partScale(k);
-            const std::string text = "\xE2\x9A\x94 " + std::to_string(n);
+            const std::string text = "\xC3\x97 " + std::to_string(n);
             const std::wstring wide = utf8Wide(text);
             const float px = 13 * scale;
             const int w = wordsWidth(wide, px, true) + int(std::lround(12 * scale)), h = int(std::lround(18 * scale));

@@ -20,7 +20,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <div class="gwh" data-hit="title"><img class="gwe" data-if="emblem != ''" data-attr-src="emblem"
   data-style-width="emblemW + 'px'" data-style-height="emblemW + 'px'"/><span class="gwn">{{name}}</span><span
   class="gws">{{sub}}</span><span class="gwg"></span><span class="gwk">{{hotkey}}</span></div>
-<div class="gwx" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
+<div class="gwx" data-hit="close" data-class-hot="closeHot"><span class="cxa"></span><span class="cxb"></span></div>
 <div class="gwng" data-if="noGuild"><span class="gwngt">{{ngHead}}</span><span
   class="gwngs">{{ngSub}}</span><div class="gwcds"><div class="gwcd"><span class="gwcdt">{{ngJoin}}</span><span
   class="gwcdx">{{ngJoinText}}</span></div><div class="gwcd"><span class="gwcdt">{{ngMake}}</span><span

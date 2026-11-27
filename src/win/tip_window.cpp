@@ -49,7 +49,7 @@ constexpr int kButtonMsg = 6, kMostTips = 5000, kMostLines = 40;
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw tw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span><span class="count">{{counter}}</span></div>
-<span class="x ctl" data-event-click="tip_press(3)">&#x2715;</span>
+<span class="x ctl" data-event-click="tip_press(3)"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="msg"><p data-for="p : paragraphs">{{p}}</p></div>
 <div class="foot"><span class="tick ctl" data-class-on="startup" data-event-click="tip_press(4)"><span class="box"></span>{{startup_word}}</span>
 <div class="btns"><div class="btn ctl" data-event-click="tip_press(1)">{{back}}<span class="key">{{back_key}}</span></div>

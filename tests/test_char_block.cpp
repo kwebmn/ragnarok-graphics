@@ -54,7 +54,7 @@ charblock::Texts texts() {
     t.hour = "год";
     t.minute = "хв";
     t.toLevel = "До рівня {1}";
-    t.levelIn = "Рівень через \xE2\x89\x88 {1}";
+    t.levelIn = "Рівень через ~{1}";
     t.perHour = "За годину +{1}";
     t.session = "За сесію +{1}";
     t.lastGain = "Остання здобич +{1}";

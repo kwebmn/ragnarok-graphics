@@ -205,7 +205,9 @@ select selectbox option:checked { color: #e6cb8a; }
 .pp .hbtn { position: absolute; top: 3dp; width: 22dp; height: 20dp; line-height: 20dp; text-align: center;
             border-radius: 5dp; color: #eceff5; cursor: pointer; }
 .pp .hbtn:hover { background-color: #ffffff18; }
-.pp .viewb { right: 52dp; }  /* 3.0.18-beta.123: room for ✕ (R-7TVEJU: it stood over the title) */
+.pp .viewb { right: 52dp; padding-top: 5dp; }  /* 3.0.18-beta.123: room for ✕ (R-7TVEJU: it stood over the title) */
+.pp .vb { display: block; width: 11dp; height: 1.6dp; margin: 0 auto 2.4dp auto; background-color: #969eae; }
+.pp .hbtn:hover .vb { background-color: #ffffff; }  /* 3.0.24-beta.26: the view's sign two or three bars */
 .pp .foldb { right: 28dp; }
 .pp .closeb { right: 2dp; }
 .pp .row { display: block; position: relative; height: 40dp; border-radius: 7dp; border: 1dp #00000000;
@@ -492,6 +494,15 @@ select selectbox option:checked { color: #e6cb8a; }
 .lw .x { position: absolute; right: 10dp; top: 10dp; width: 24dp; height: 24dp; line-height: 24dp; text-align: center;
          border-radius: 6dp; color: #969eae; font-size: 13dp; }
 .lw .x:hover { background-color: #ffffff24; color: #ffffff; }
+/* 3.0.24-beta.26 (the spec: «стрелки, звёзды и треугольники — рисованные значки», Plex has no ✕): every window's
+   close a drawn cross - two turned bars in the middle of its box (a box not positioned of itself: .xk) */
+.xk { position: relative; }
+.cxa, .cxb { display: block; position: absolute; left: 50%; top: 50%; width: 11dp; height: 1.6dp; margin-left: -5.5dp;
+             margin-top: -0.8dp; background-color: #969eae; }
+.cxa { transform: rotate(45deg); }
+.cxb { transform: rotate(-45deg); }
+.x:hover .cxa, .x:hover .cxb, .xk:hover .cxa, .xk:hover .cxb, .hbtn:hover .cxa, .hbtn:hover .cxb,
+.gwx:hover .cxa, .gwx:hover .cxb, .hot .cxa, .hot .cxb { background-color: #ffffff; }
 .lw .hint { display: block; margin-top: 6dp; font-size: 11.5dp; color: #9aa3b5; }
 .lw .ring { position: absolute; display: none; border: 2dp #e6cb8a; border-radius: 8dp; background-color: #e6cb8a14; }
 .lw .row { display: block; padding: 5dp 10dp; border-radius: 6dp; }
@@ -572,7 +583,8 @@ select selectbox option:checked { color: #e6cb8a; }
 .roomw .right { display: block; width: 180dp; }
 .lw .row.on { background-color: #c9a55b33; }
 .roomw .acts { display: flex; flex-wrap: wrap; margin-top: 6dp; }
-.roomw .crown { color: #e6cb8a; }
+.roomw .crown { display: inline-block; width: 6.5dp; height: 6.5dp; margin: 0 2dp 1dp 7dp; background-color: #e6cb8a;
+                transform: rotate(45deg); }  /* 3.0.24-beta.26: the owner's mark drawn (no ★ in Plex) */
 .socw { width: 420dp; }
 .socw .list { display: block; min-height: 40dp; max-height: 330dp; overflow-y: auto; margin: 4dp 0 8dp 0; }
 .socw .row.off { color: #9aa3b5; }
@@ -599,7 +611,8 @@ select selectbox option:checked { color: #e6cb8a; }
 .socw .l1 { display: block; font-size: 12.5dp; }
 .socw .l1 .name { font-size: 12.5dp; font-weight: bold; color: #eef2f8; }
 .socw .row.off .l1 .name { color: #9aa3b5; }
-.socw .l1 .crown { color: #e6cb8a; }
+.socw .l1 .crown { display: inline-block; width: 6.5dp; height: 6.5dp; margin: 0 2dp 1dp 7dp;
+                   background-color: #e6cb8a; transform: rotate(45deg); }  /* 3.0.24-beta.26: the leader's, drawn */
 .socw .l1 .job { font-size: 11dp; color: #9aa3b5; margin-left: 6dp; }
 .socw .hpb { display: block; height: 4dp; margin: 3dp 0 2dp 0; border-radius: 2dp; background-color: #ffffff14; }
 .socw .hpf { display: block; height: 4dp; border-radius: 2dp; background-color: #4cc777; }
@@ -1930,6 +1943,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
     font-size: 10.5dp; color: #9aa3b5; border: 1dp #ffffff29; border-radius: 4dp; }
 .rfw .rst, .rfw .rx { display: block; flex: none; width: 30dp; height: 30dp; line-height: 30dp; margin-left: 8dp;
     text-align: center; border-radius: 8dp; background-color: #ffffff0f; color: #9aa3b5; }
+.rfw .rst img { display: inline-block; width: 18dp; height: 18dp; margin-top: 6dp; }  /* 3.0.24-beta.26 */
 .rfw .rst { font-size: 16dp; }
 .rfw .rst.on { color: #e6cb8a; }
 .rfw .rmid { display: flex; flex-direction: row; flex: 1; min-height: 0; }

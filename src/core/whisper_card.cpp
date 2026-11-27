@@ -58,7 +58,7 @@ std::vector<Words> words(const Layout& L, const Card& c, Part hover, const Texts
     std::vector<Words> out;
     const float s = L.s;
     out.push_back(Words{L.title, withName(t.with, c.name), kWhisper, 14 * s, true, Align::Left});
-    out.push_back(Words{L.close, "\xE2\x9C\x95", hover == Part::Close ? kText : kMuted, 13 * s, false,
+    out.push_back(Words{L.close, "\xC3\x97", hover == Part::Close ? kText : kMuted, 13 * s, false,
                         Align::Center});  // ✕
     const size_t from = c.lines.size() > size_t(L.lineRows) ? c.lines.size() - size_t(L.lineRows) : 0;
     float y = L.lines.y + L.lines.h - float(c.lines.size() - from) * kRowH * s - 4 * s;

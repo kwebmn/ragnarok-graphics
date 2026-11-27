@@ -360,9 +360,10 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <body class="pp" data-model="party">
 <div class="glass">
  <div class="head" data-class-folded="folded"><span class="title">{{title}}</span><span class="count">{{count}}</span>
-  <span class="hbtn viewb" data-event-click="view()">{{view_sign}}</span><span class="hbtn foldb"
+  <span class="hbtn viewb" data-event-click="view()"><span class="vb"></span><span class="vb"></span><span class="vb"
+  data-if="!compact"></span></span><span class="hbtn foldb"
   data-event-click="fold()">{{fold_sign}}</span><span class="hbtn closeb"
-  data-event-click="close()">&#x2715;</span></div>
+  data-event-click="close()"><span class="cxa"></span><span class="cxb"></span></span></div>
  <div data-if="!folded && !compact">
   <div class="row" data-for="r, i : rows" data-class-buffs="r.buffs.size > 0" data-class-low="r.low"
        data-class-target="r.target" data-class-chosen="r.chosen" data-class-dead="r.dead"
@@ -405,7 +406,7 @@ struct Ui {
     // 3.0.18-beta.79: the bars' shown shares apart from the rows - while they glide only they are evaluated again
     std::vector<float> bars;
     uaui::Doc doc;
-    Rml::String title, count, viewSign, foldSign, crown, route, arrow;
+    Rml::String title, count, foldSign, crown, route, arrow;
     bool folded = false, compact = false;
     std::vector<RowView> rows;
     std::string key;
@@ -483,7 +484,6 @@ bool uiFrame(State& s) {
             m.RegisterArray<std::vector<RowView>>();
             m.Bind("title", &u.title);
             m.Bind("count", &u.count);
-            m.Bind("view_sign", &u.viewSign);
             m.Bind("fold_sign", &u.foldSign);
             m.Bind("folded", &u.folded);
             m.Bind("compact", &u.compact);
@@ -501,7 +501,7 @@ bool uiFrame(State& s) {
             });
             // 3.0.18-beta.120 (the concept «Ігровий інтерфейс»: «✕ на каждом окне»): hidden till its icon or key
             m.BindEventCallback("close", [](Rml::DataModelHandle, Rml::Event& e, const Rml::VariantList&) {
-                ownwin::setClosed(closedwin::Window::Party, true, "its ✕");
+                ownwin::setClosed(closedwin::Window::Party, true, "its cross");
                 e.StopPropagation();
             });
             m.BindEventCallback("row", [](Rml::DataModelHandle, Rml::Event& e, const Rml::VariantList& a) {
@@ -596,8 +596,7 @@ bool uiFrame(State& s) {
         u.key = key;
         u.title = settings::tr(lang, settings::Text::PartyTitle);
         u.count = std::to_string(online) + "/" + std::to_string(s.members.size());
-        u.viewSign = s.compact ? "\xE2\x96\xA4" : "\xE2\x96\xA6";
-        u.foldSign = s.folded ? "\xE2\x96\xB8" : "\xE2\x96\xBE";
+        u.foldSign = s.folded ? "+" : "\xE2\x88\x92";  // no ▸ ▾ in Plex
         u.folded = s.folded;
         u.compact = s.compact;
         u.rows = std::move(rows);

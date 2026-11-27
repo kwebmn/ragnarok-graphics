@@ -18,7 +18,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <div class="head"><span class="title">{{title}}</span><span class="hk">Alt+O</span><span class="sseg"><span
   class="ctl" data-class-on="simple" data-event-click="set_mode(0)">{{mode_simple}}</span><span class="ctl"
   data-class-on="!simple" data-event-click="set_mode(1)">{{mode_full}}</span></span></div>
-<span class="x ctl" data-event-click="opt_close()">&#x2715;</span>
+<span class="x ctl" data-event-click="opt_close()"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="srch"><input class="ctl" type="text" data-value="query"/><span class="ph"
   data-if="query == ''">{{search_hint}}</span></div>
 <div class="sbody">

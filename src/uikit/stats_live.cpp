@@ -22,7 +22,7 @@ std::string markup() {
   class="tab" data-for="t, i : tabs" data-hit="tab" data-attr-data-index="i" data-class-on="t.on"
   data-class-hot="t.hot">{{t.name}}</div><span class="gap"></span><div class="chip" data-hit="chip"
   data-class-on="chipOn">{{chip}}</div></div>
-<div class="x" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
+<div class="x" data-hit="close" data-class-hot="closeHot"><span class="cxa"></span><span class="cxb"></span></div>
 )RML";
     s += ly::rml();
     s += "\n</body></rml>";

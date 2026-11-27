@@ -677,7 +677,7 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
             if (r.kind == Kind::About) {  // 3.0.21-beta.2: under its row's name, dim; warm while a need is not met
                 const catalogue::About a = aboutNow(r.key, config, lang_);
                 const std::wstring words =
-                    wide(catalogue::aboutText(a, lang_, "\xE2\x96\xA0 ", "\xE2\x96\xA1 "));  // ■ met, □ not
+                    wide(catalogue::aboutText(a, lang_, "\xE2\x80\xA2 ", "\xC2\xB7 "));  // • met, · not (.26)
                 RECT place{fontH + fontH * 3 / 2, y, w - fontH, y + line};
                 SelectObject(dc, font);
                 SetTextColor(dc, a.allMet() ? RGB(150, 160, 160) : RGB(214, 164, 96));
@@ -703,7 +703,7 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
             }
             if (r.kind == Kind::Test || r.kind == Kind::Dump || r.kind == Kind::Settings) {  // 3.0.5-beta.6 (.22, .7)
                 const int x = fontH + r.depth * fontH * 2;
-                text(x, y, L"▶", RGB(229, 169, 78));
+                text(x, y, L"\x203A", RGB(229, 169, 78));  // › (3.0.24-beta.26: no ▶ in Plex)
                 const Text words = r.kind == Kind::Test   ? Text::TestRow
                                    : r.kind == Kind::Dump ? Text::ConsoleDumpModels
                                                           : Text::ConsoleToSettings;
@@ -741,7 +741,7 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
             }
             if (r.kind == Kind::Here) {  // 2.6.22: «Только на этой карте» and the map
                 const int x = fontH + r.depth * fontH * 2;
-                text(x, y, thisMap_ ? L"■" : L"□", thisMap_ ? RGB(143, 194, 122) : RGB(150, 150, 150));
+                text(x, y, thisMap_ ? L"\x2022" : L"\x00B7", thisMap_ ? RGB(143, 194, 122) : RGB(150, 150, 150));
                 text(x + fontH * 3 / 2, y, wide(tr(lang_, Text::ConsoleThisMap)), RGB(240, 236, 226));
                 if (!map_.empty()) textRight(w - fontH, y, wide(map_), RGB(150, 160, 160));
                 continue;
@@ -758,11 +758,11 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 const effect_groups::Member* member = effect_groups::memberOf(r.key);
                 const bool muted = on && member && !config.effects.groups[member->group];
                 const bool lit = on && !muted;
-                text(x, y, on ? L"■" : L"□", lit ? RGB(143, 194, 122) : RGB(150, 150, 150));
+                text(x, y, on ? L"\x2022" : L"\x00B7", lit ? RGB(143, 194, 122) : RGB(150, 150, 150));
                 std::wstring label = wide(tr(lang_, s->label));
-                if (consolepins::pinned(pins_, r.key)) label = L"\u2605 " + label;  // 3.0.17-beta.4
+                if (consolepins::pinned(pins_, r.key)) label = L"\u2022 " + label;  // 3.0.17-beta.4; .26: •
                 if (r.key.compare(0, 3, "ai.") == 0 && aiWaits(r.key, file.ai, file.aiNow))
-                    label += L"  \u21bb";  // 2.2.1: at the next start
+                    label += L"  *";  // 2.2.1: at the next start (3.0.24-beta.26: * - no ↻ in Plex)
                 if (muted) label += L"  (" + wide(tr(lang_, Text::ConsoleGroupOff)) + L")";
                 text(x + fontH * 3 / 2, y, label, lit ? RGB(240, 236, 226) : RGB(170, 170, 170));
                 // 2.2.1: its timed pass's ms (a group's: its effects' passes, each once)
@@ -799,7 +799,7 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                     choice = fmt(tr(lang_, Text::FxPresetAuto), {tr(lang_, kLevels[level])});
                 }
                 text(x, y, wide(tr(lang_, s->label)), RGB(200, 200, 190));
-                textRight(w - fontH, y, L"◂ " + wide(choice) + L" ▸", RGB(240, 236, 226));
+                textRight(w - fontH, y, L"\x2039 " + wide(choice) + L" \x203A", RGB(240, 236, 226));
             }
         }
         if (const IniSetting* cs = settingOf(chosenKey())) {  // 3.0.17-beta.27: «що це дає»

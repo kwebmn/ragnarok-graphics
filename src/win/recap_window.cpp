@@ -48,7 +48,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <span data-attr-class="closeHot ? 'ownx hot' : 'ownx'" data-style-left="w - 32 * s + 'px'"
   data-style-top="10 * s + 'px'" data-style-width="22 * s + 'px'" data-style-height="20 * s + 'px'"
   data-style-line-height="20 * s + 'px'" data-style-border-radius="6 * s + 'px'"
-  data-style-font-size="12 * s + 'px'">&#x2715;</span>
+  data-style-font-size="12 * s + 'px'"><span class="cxa"></span><span class="cxb"></span></span>
 <span data-for="l, i : lines" data-attr-class="i == 0 ? 'line first' : 'line'" data-style-left="10 * s + 'px'"
   data-style-top="(34 + 19 * i) * s + 'px'" data-style-width="w - 20 * s + 'px'" data-style-height="19 * s + 'px'"
   data-style-line-height="19 * s + 'px'" data-style-font-size="12 * s + 'px'">{{l}}</span>

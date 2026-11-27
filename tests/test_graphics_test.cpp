@@ -385,7 +385,7 @@ TEST(graphics_test_summary_says_what_effects_cost_the_card) {
 }
 
 // 3.0.6-beta.3 (R-ZSDWYU, a FirePro W5130M whose processor was the limit: «Рельєф землі» -0.3): a cost by the two sets'
-// difference under 0.05 ms is the card's noise between them - «≈0», not a number below nothing (and -1.5 not dropped)
+// difference under 0.05 ms is the card's noise between them - «~0», not a number below nothing (and -1.5 not dropped)
 TEST(graphics_test_summary_says_about_nothing_for_a_cost_within_the_noise) {
     graphics_test::Head h;
     graphics_test::PhaseResult r[graphics_test::kSets];
@@ -398,11 +398,11 @@ TEST(graphics_test_summary_says_about_nothing_for_a_cost_within_the_noise) {
     r[3].gpuMs = 6.2;  // Medium without the relief
     r[4].gpuMs = 6.2;  // Medium without the smooth light
     const std::string uk = graphics_test::summary(h, r, {}, settings::Lang::Uk);
-    CHECK(has(uk, "Ціна у «Середніх» на відеокарті, мс: «Рельєф землі» ≈0, «Світло карти без сходинок» ≈0\n"));
+    CHECK(has(uk, "Ціна у «Середніх» на відеокарті, мс: «Рельєф землі» ~0, «Світло карти без сходинок» ~0\n"));
     r[3].gpuMs = 7.4;  // -1.5: still measured
     r[4].gpuMs = 5.88;  // 0.02
     CHECK(has(graphics_test::summary(h, r, {}, settings::Lang::Uk),
-              "«Рельєф землі» ≈0, «Світло карти без сходинок» ≈0\n"));
+              "«Рельєф землі» ~0, «Світло карти без сходинок» ~0\n"));
     r[4].gpuMs = 5.8;  // 0.1: a cost
     CHECK(has(graphics_test::summary(h, r, {}, settings::Lang::Uk), "«Світло карти без сходинок» 0.1\n"));
 }

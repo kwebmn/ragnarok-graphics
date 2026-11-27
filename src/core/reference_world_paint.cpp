@@ -266,7 +266,7 @@ std::vector<OverItem> overItems(const Layout& L, const WorldLook& w, const panel
             const panel::Box tb = tileBox(*t, at.f, at.ox, at.oy);
             float cw = 0;
             for (size_t k = 0; k < w.tip.size(); ++k)
-                cw = std::max(cw, wide((k == 2 ? "● " : "") + w.tip[k], k == 0 ? 13.5f : 12.5f, k != 1));
+                cw = std::max(cw, wide((k == 2 ? "\xE2\x80\xA2 " : "") + w.tip[k], k == 0 ? 13.5f : 12.5f, k != 1));
             const float ch = tipLine(w.tip, w.tip.size(), s) + 10 * s;
             panel::Box card{tb.x + 8 * s, tb.y + tb.h + 6 * s, cw + 24 * s, ch};
             if (card.y + card.h > b.y + b.h - 4) card.y = tb.y - card.h - 6 * s;

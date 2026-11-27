@@ -105,7 +105,7 @@ std::string pace(const Exp& e, const Texts& t, bool time) {
     std::string out = "+" + (part >= 0.001 ? share(part, t.decimal) : grouped(std::llround(e.perHour))) + "/" + t.hour;
     const long long minutes = exprate::minutesTo(e.now, e.next, e.perHour);
     if (time && e.now >= 0 && minutes >= 0)
-        out += " \xC2\xB7 \xE2\x89\x88 " + duration(minutes, t.hour, t.minute);
+        out += " \xC2\xB7 ~" + duration(minutes, t.hour, t.minute);
     return out;
 }
 

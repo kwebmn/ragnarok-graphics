@@ -336,7 +336,7 @@ private:
             if (c.other && groupUsed) {
                 other += c.other;
                 warn = true;
-                part += " (\u26A0 " + num(c.other) + ")";
+                part += " (! " + num(c.other) + ")";  // 3.0.24-beta.26: no ⚠ in the texts' font
             }
             inPack += (inPack.empty() ? "" : "; ") + part;
         }

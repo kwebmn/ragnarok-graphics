@@ -267,6 +267,7 @@ bool iconNamed(const std::string& key, uiicons::Icon& icon) {
         {"ui:minus", uiicons::Icon::Minus}, {"ui:plus", uiicons::Icon::Plus},
         {"ui:expand", uiicons::Icon::Expand}, {"ui:home", uiicons::Icon::Home},
         {"ui:back", uiicons::Icon::Back}, {"ui:route", uiicons::Icon::Route},
+        {"ui:star", uiicons::Icon::Star}, {"ui:star-on", uiicons::Icon::Star},  // 3.0.24-beta.26: no ★ ☆ in Plex
     };
     for (const auto& [name, i] : kNames)
         if (key == name) {
@@ -285,7 +286,7 @@ void loadPicture(State& s, const std::string& key) {
         if (!iconNamed(key, icon)) return;
         const int side = px(24, s);
         panel::blank(out, side, side);
-        uiicons::draw(out, icon, 0, 0, float(side), 0xC9D1DE, 1.0f, 2.0f);
+        uiicons::draw(out, icon, 0, 0, float(side), key == "ui:star-on" ? 0xE6CB8A : 0xC9D1DE, 1.0f, 2.0f);
         return;
     }
     const bool mobIcon = key.rfind("icon:mob:", 0) == 0;  // 3.0.11-beta.26: a chip's monster, the icon's size
@@ -752,7 +753,8 @@ void fillChrome(State& s) {
     m.find = say(Text::RefFind);
     m.home = s.at.go != refpages::Go::None || !s.query.empty();  // 3.0.11-beta.30: «Головна» but on it
     m.home_icon = pictureSrc(s, "ui:home");
-    m.star = s.page.star < 0 ? "" : s.page.star > 0 ? "\xE2\x98\x85" : "\xE2\x98\x86";  // ★ ☆
+    m.star = s.page.star < 0 ? "" : s.page.star > 0 ? "on" : "off";  // 3.0.24-beta.26: the star drawn (no ★ ☆)
+    m.star_icon = s.page.star < 0 ? "" : pictureSrc(s, s.page.star > 0 ? "ui:star-on" : "ui:star");
     m.starred = s.page.star > 0;
     m.rail.clear();
     for (size_t i = 0; i < s.page.rail.size(); ++i) {
@@ -790,8 +792,8 @@ void fillChrome(State& s) {
     m.ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Windows);
     m.narrow = s.narrow;
     // not the field's words: said again while one types, they would move its caret
-    for (const char* v : {"title", "back", "crumbs", "find", "home", "home_icon", "star", "starred", "rail", "pack",
-                          "live", "live_state", "keys", "ground", "narrow"})
+    for (const char* v : {"title", "back", "crumbs", "find", "home", "home_icon", "star", "star_icon", "starred", "rail",
+                          "pack", "live", "live_state", "keys", "ground", "narrow"})
         s.win.doc.dirty(v);
 }
 

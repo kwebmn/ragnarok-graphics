@@ -71,7 +71,7 @@ constexpr uint32_t kSetTextSlot = 0x98;  // an edit's SetText (win/ask_card)
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw vstw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span></div>
-<span class="x ctl" data-event-click="vt_cancel()">&#x2715;</span>
+<span class="x ctl" data-event-click="vt_cancel()"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="lbl">{{sign_word}}</div>
 <div class="field ctl" data-class-typing="focus == 0" data-event-click="vt_sign()">{{sign}}<span class="caret"
   data-if="focus == 0 && caret"></span></div>
@@ -90,8 +90,8 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
   data-if="r.inside != ''">{{r.inside}}</span><span class="stock">{{r.count}}</span><span class="mkt"
   data-if="r.market != ''">{{r.market}}</span></div><div class="field price ctl"
   data-class-typing="focus == i + 1" data-event-click="vt_price(i)">{{r.price}}<span class="caret"
-  data-if="focus == i + 1 && caret"></span></div><span class="pm ctl"
-  data-event-click="vt_remove(i)">&#x2715;</span></div>
+  data-if="focus == i + 1 && caret"></span></div><span class="pm ctl xk"
+  data-event-click="vt_remove(i)"><span class="cxa"></span><span class="cxb"></span></span></div>
 </div><div class="hint">{{price_hint}}</div><div class="all" data-if="all != ''">{{all}}</div></div></div>
 <div class="hint" data-if="hint != ''">{{hint}}</div>
 <div class="btns"><div class="btn ctl" data-event-click="vt_cancel()">{{cancel}}</div>

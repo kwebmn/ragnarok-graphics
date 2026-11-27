@@ -355,7 +355,7 @@ void buildHints(State& s) {
                 timer = true;
             }
         }
-        s.lines.push_back(Line{(boss ? "\xE2\x98\x85 " : "") + name, right, boss, m.id, timer});
+        s.lines.push_back(Line{(boss ? "\xE2\x80\xA2 " : "") + name, right, boss, m.id, timer});
     }
     if (room < h->mobs.size())
         s.lines.push_back(Line{settings::fmt(say(settings::Text::MinimapMore), {std::to_string(h->mobs.size() - room)}),

@@ -37,8 +37,8 @@ const Letters kRu = {{"1234567890'", "йцукенгшщзхъ", "фывапро
 const Letters kEn = {{"1234567890'", "qwertyuiop-", "asdfghjkl:;", "zxcvbnm.,?!"},
                      {"1234567890'", "QWERTYUIOP_", "ASDFGHJKL\"/", "ZXCVBNM<>?!"}};
 // the symbols the game's code page (1251) has
-const Letters kSym = {{"!?@#$%&*()", "-+=/\\\"':;_", "<>[]{}~^|`", "…«»№°·–€©™"},
-                      {"!?@#$%&*()", "-+=/\\\"':;_", "<>[]{}~^|`", "…«»№°·–€©™"}};
+const Letters kSym = {{"!?@#$%&*()", "-+=/\\\"':;_", "<>[]{}~^|`", "…«»№°·–₴©§"},
+                      {"!?@#$%&*()", "-+=/\\\"':;_", "<>[]{}~^|`", "…«»№°·–₴©§"}};
 
 float rowUnits(const std::vector<Key>& r) {
     float u = 0;
@@ -151,9 +151,9 @@ std::vector<Words> words(const Layout& L, const Grid& g, Focus f, const std::str
             const bool on = int(r) == f.row && int(c) == f.col;
             std::string text = k.text;
             switch (k.special) {
-                case Special::Shift: text = "\xE2\x87\xA7"; break;  // ⇧
+                case Special::Shift: text = "\xE2\x86\x91"; break;  // ⇧
                 case Special::Space: text = t.space; break;
-                case Special::Back: text = "\xE2\x8C\xAB"; break;  // ⌫
+                case Special::Back: text = "\xE2\x86\x90"; break;  // ⌫
                 case Special::Lang: text = t.lang; break;
                 case Special::Send: text = t.send; break;
                 case Special::None: break;

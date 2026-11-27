@@ -44,7 +44,7 @@ constexpr int kButtonMsg = 6, kCheckMsg = 0x93, kCloseButton = 0x87;
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw ow" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span></div>
-<span class="x ctl" data-event-click="sw_close()">&#x2715;</span>
+<span class="x ctl" data-event-click="sw_close()"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="hint" data-if="hint != ''">{{hint}}</div>
 <div class="orow" data-for="r, i : rows"><span class="tick ctl" data-class-on="r.on" data-event-click="sw_flip(i)"><span
   class="box"></span>{{r.label}}</span></div>

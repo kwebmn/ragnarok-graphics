@@ -29,8 +29,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
  <div class="rsrch"><input id="rq" class="ctl" type="text" data-value="query"/><span class="ph"
    data-if="query == ''">{{find}}</span><span class="kbd" data-if="query == ''">Ctrl+F</span></div>
  <span class="rst ctl" data-if="star != ''" data-class-on="starred"
-   data-event-click="ref_star()">{{star}}</span>
- <span class="rx ctl" data-event-click="ref_close()">&#x2715;</span>
+   data-event-click="ref_star()"><img data-if="star_icon != ''" data-attr-src="star_icon"/></span>
+ <span class="rx ctl xk" data-event-click="ref_close()"><span class="cxa"></span><span class="cxb"></span></span>
 </div>
 <div class="rmid">
  <div class="rrail" data-if="rail.size > 0">
@@ -383,6 +383,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("pack", &m.pack);
     c.Bind("live", &m.live);
     c.Bind("star", &m.star);
+    c.Bind("star_icon", &m.star_icon);  // 3.0.24-beta.26
     c.Bind("home_icon", &m.home_icon);
     c.Bind("body", &m.body);
     c.Bind("note", &m.note);

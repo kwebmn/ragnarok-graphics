@@ -95,8 +95,8 @@ std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, con
     std::vector<Words> out;
     const float s = L.s;
     out.push_back(Words{L.title, t.title, kText, 13.5f * s, true, Align::Left});
-    out.push_back(Words{L.fold, folded ? "\xE2\x96\xB8" : "\xE2\x96\xBE", kMuted, 13 * s, false, Align::Center});
-    out.push_back(Words{L.hide, "\xE2\x9C\x95", kMuted, 12 * s, false, Align::Center});
+    out.push_back(Words{L.fold, folded ? "+" : "\xE2\x88\x92", kMuted, 13 * s, false, Align::Center});
+    out.push_back(Words{L.hide, "\xC3\x97", kMuted, 12 * s, false, Align::Center});
     for (size_t i = 0; i < L.entries.size() && i < entries.size(); ++i) {
         const Placed& p = L.entries[i];
         const Entry& e = entries[i];
@@ -107,7 +107,7 @@ std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, con
         if (!e.tag.empty())
             out.push_back(Words{panel::Box{tagX, p.head.y, tagW, p.head.h}, e.tag, kMuted, 11.5f * s, false,
                                 Align::Right});
-        out.push_back(Words{p.close, "\xE2\x9C\x95", kFaint, 11 * s, false, Align::Center});
+        out.push_back(Words{p.close, "\xC3\x97", kFaint, 11 * s, false, Align::Center});
         for (size_t k = 0; k < p.lines.size() && k < e.lines.size(); ++k) {
             const Line& ln = e.lines[k];
             const panel::Box& b = p.lines[k];

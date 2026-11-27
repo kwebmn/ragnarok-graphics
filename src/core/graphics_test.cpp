@@ -323,7 +323,7 @@ std::string summary(const Head& h, const PhaseResult (&r)[kSets], const std::map
         for (const auto& [name, ms] : costs) {
             if (std::isnan(ms)) continue;
             // under 0.05 the card's noise between two sets (a processor-bound computer's): about nothing
-            const std::string cost = ms < 0.05 ? std::string(" ≈0") : number(" %.1f", ms);
+            const std::string cost = ms < 0.05 ? std::string(" ~0") : number(" %.1f", ms);
             list += (list.empty() ? "«" : ", «") + t(name) + "»" + cost;
         }
         return list.empty() ? std::string() : settings::fmt(t(head), {list}) + "\n";

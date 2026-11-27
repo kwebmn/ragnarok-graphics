@@ -46,7 +46,7 @@ using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t 
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw macw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span></div>
-<span class="x ctl" data-event-click="mac_close()">&#x2715;</span>
+<span class="x ctl" data-event-click="mac_close()"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="hint" data-if="hint != ''">{{hint}}</div>
 <div class="mrow" data-for="r, i : rows"><span class="key">{{r.key}}</span><div class="field ctl"
   data-class-typing="r.focus"

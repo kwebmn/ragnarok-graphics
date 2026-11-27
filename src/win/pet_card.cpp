@@ -45,7 +45,7 @@ constexpr int kButtonMsg = 6;
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw petw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span></div>
-<span class="x ctl" data-event-click="pet_close()">&#x2715;</span>
+<span class="x ctl" data-event-click="pet_close()"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="namerow"><span class="name">{{name}}</span><span class="lv">{{level}}</span></div>
 <div class="stat"><span class="lbl">{{hunger_word}}</span><span class="val">{{hunger_state}}</span></div>
 <div class="gauge"><div class="fill" data-style-width="hunger + '%'"></div></div>

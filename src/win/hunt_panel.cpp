@@ -16,6 +16,7 @@
 #include "core/reference_index.hpp"
 #include "core/settings/strings.hpp"
 #include "core/skill_info.hpp"
+#include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
@@ -91,13 +92,14 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <span data-attr-class="closeHot ? 'ownx hot' : 'ownx'" data-style-left="w - 32 * s + 'px'"
   data-style-top="10 * s + 'px'" data-style-width="22 * s + 'px'" data-style-height="20 * s + 'px'"
   data-style-line-height="20 * s + 'px'" data-style-border-radius="6 * s + 'px'"
-  data-style-font-size="12 * s + 'px'">&#x2715;</span>
+  data-style-font-size="12 * s + 'px'"><span class="cxa"></span><span class="cxb"></span></span>
 <span data-for="l, i : lines" data-attr-class="i == 0 ? 'line first' : 'line'" data-style-left="10 * s + 'px'"
   data-style-top="(34 + 19 * i) * s + 'px'" data-style-width="w - 20 * s + 'px'" data-style-height="19 * s + 'px'"
   data-style-line-height="19 * s + 'px'" data-style-font-size="12 * s + 'px'">{{l}}</span>
 <span data-attr-class="hot ? 'reset hot' : 'reset'" data-style-left="w - 58 * s + 'px'" data-style-top="10 * s + 'px'"
   data-style-width="22 * s + 'px'" data-style-height="20 * s + 'px'" data-style-line-height="20 * s + 'px'"
-  data-style-border-radius="6 * s + 'px'" data-style-font-size="13 * s + 'px'">↺</span>
+  data-style-border-radius="6 * s + 'px'" data-style-font-size="13 * s + 'px'"><img class="again"
+  data-attr-src="again" data-style-width="14 * s + 'px'" data-style-height="14 * s + 'px'"/></span>
 </body></rml>)RML";
 
 struct Ui {
@@ -107,6 +109,11 @@ struct Ui {
     Rml::String title, ground = "#00000000";  // 3.0.18-beta.76: never an empty style value
     std::vector<Rml::String> lines;
     std::string key;
+    // 3.0.24-beta.26: «begin anew» a drawn arrow (uiicons Again; Plex has no ↺), drawn again at a new size or colour
+    panel::Picture againPic;
+    Rml::String again, againPrev;
+    int againGen = 0;
+    std::string againKey;
 };
 
 Ui& ui() {
@@ -132,6 +139,7 @@ bool uiFrame(State& s) {
                 m.Bind("title", &u.title);
                 m.Bind("ground", &u.ground);
                 m.Bind("lines", &u.lines);
+                m.Bind("again", &u.again);  // 3.0.24-beta.26
             }))
             return false;
     }
@@ -144,6 +152,18 @@ bool uiFrame(State& s) {
         u.ground = g;
         u.title = s.lines[0];
         u.lines.assign(s.lines.begin() + 1, s.lines.end());
+        {  // 3.0.24-beta.26: the arrow at this size, in the HUD's theme
+            const uint32_t ink = uaui::themed(0xEEF2F8, uitheme::Group::Hud);
+            const int side = std::max(8, int(std::lround(14 * s.scale)));
+            const std::string key = std::to_string(side) + ':' + std::to_string(ink);
+            if (key != u.againKey) {
+                u.againKey = key;
+                u.againPic.width = u.againPic.height = side;
+                u.againPic.px.assign(size_t(side) * size_t(side), 0u);
+                uiicons::draw(u.againPic, uiicons::Icon::Again, 0, 0, float(side), ink, 0.9f);
+                u.again = uaui::picture(&u.againPic, ++u.againGen, u.againPrev);
+            }
+        }
         u.doc.dirtyAll();
     }
     u.doc.place(s.x, s.y);
@@ -274,7 +294,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (lx < 0 || ly < 0 || lx >= float(s.w) || ly >= float(s.h)) return false;
     result = 0;
     if (m == WM_LBUTTONDOWN && s.close.contains(lx, ly)) {  // 3.0.18-beta.120: ✕
-        ownwin::setClosed(closedwin::Window::Hunt, true, "its ✕");
+        ownwin::setClosed(closedwin::Window::Hunt, true, "its cross");
         s.key.clear();
         return true;
     }

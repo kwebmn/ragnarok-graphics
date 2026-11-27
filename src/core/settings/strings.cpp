@@ -38,7 +38,7 @@ constexpr Entry kTexts[] = {
      "запусти звичайно.",
      "Утилита запущена от имени администратора: игра, запущенная из неё, не увидит свои настройки. Закрой её и "
      "запусти обычно."},
-    {Text::AfterRestart, "↻ after the game restarts", "↻ після перезапуску гри", "↻ после перезапуска игры"},
+    {Text::AfterRestart, "* after the game restarts", "* після перезапуску гри", "* после перезапуска игры"},
     {Text::LiveNote, "These settings work in a running game too, without a restart.",
      "Ці налаштування діють і в запущеній грі, без перезапуску.",
      "Эти настройки действуют и в запущенной игре, без перезапуска."},
@@ -2449,9 +2449,9 @@ constexpr Entry kTexts[] = {
     {Text::AiGroupInPack, "In the pack: {1}",
      "У пакеті: {1}",
      "В пакете: {1}"},
-    {Text::AiGroupInPackOther, "In the pack: {1} (⚠ - made by another model than the group's now)",
-     "У пакеті: {1} (⚠ - зроблено іншою моделлю, ніж у групи тепер)",
-     "В пакете: {1} (⚠ - сделаны другой моделью, чем у группы сейчас)"},
+    {Text::AiGroupInPackOther, "In the pack: {1} (! - made by another model than the group's now)",
+     "У пакеті: {1} (! - зроблено іншою моделлю, ніж у групи тепер)",
+     "В пакете: {1} (! - сделаны другой моделью, чем у группы сейчас)"},
     {Text::AiNoPackYet, "No texture pack in the game's folder yet.",
      "У теці гри ще немає пакета текстур.",
      "В папке игры ещё нет пакета текстур."},
@@ -2462,9 +2462,9 @@ constexpr Entry kTexts[] = {
      "не роблячи їх наново.",
      "{1} картинок пакета ещё не имеют группы из этих (сделаны до 2.5.28): следующая сборка пакета запишет их группы, "
      "не делая их заново."},
-    {Text::AiRedo, "Make again ⚠ ({1})",
-     "Створити наново ⚠ ({1})",
-     "Пересоздать ⚠ ({1})"},
+    {Text::AiRedo, "Make again ({1})",
+     "Створити наново ({1})",
+     "Пересоздать ({1})"},
     {Text::AiRedoHint,
      "On the Texture pack page: the pictures another model made than their group's now are made again by it, each in "
      "its place in the pack. Apply the models first.",
@@ -2675,7 +2675,7 @@ constexpr Entry kTexts[] = {
     {Text::FxUnderwaterHint,
      "On the undersea maps (Byalan's dungeon) strings of bubbles rise and light from above falls in swaying bands "
      "(Direct3D 12).",
-     "На підводних мапах (підземелля Бʼялану) здіймаються ланцюжки бульбашок, а згори хвилястими смугами падає світло "
+     "На підводних мапах (підземелля Б’ялану) здіймаються ланцюжки бульбашок, а згори хвилястими смугами падає світло "
      "(Direct3D 12).",
      "На подводных картах (подземелье Бьялана) поднимаются цепочки пузырьков, а сверху колышущимися полосами падает "
      "свет (Direct3D 12)."},
@@ -2732,12 +2732,12 @@ constexpr Entry kTexts[] = {
      "uaRO Graphics — лаборатория"},
     {Text::ConsoleKeys,
      "Up/Down choose · Space on/off, a group's effects · Left/Right value, the tab · letters search · hold Tab to "
-     "compare · Insert ★ pin · Ctrl+Shift+F11 frame counter · ↻ at the game's next start · ~ or Esc close",
+     "compare · Insert pin (•) · Ctrl+Shift+F11 frame counter · * at the game's next start · ~ or Esc close",
      "↑↓ вибір · Пробіл увімк/вимк, ефекти групи · ←→ значення, вкладка · літери — пошук · затисніть Tab — "
-     "порівняти · Insert — ★ закріпити · Ctrl+Shift+F11 — лічильник кадрів · ↻ — після перезапуску гри · ~ або Esc "
+     "порівняти · Insert — закріпити (•) · Ctrl+Shift+F11 — лічильник кадрів · * — після перезапуску гри · ~ або Esc "
      "— закрити",
      "↑↓ выбор · Пробел вкл/выкл, эффекты группы · ←→ значение, вкладка · буквы — поиск · зажмите Tab — сравнить · "
-     "Insert — ★ закрепить · Ctrl+Shift+F11 — счётчик кадров · ↻ — после перезапуска игры · ~ или Esc — закрыть"},
+     "Insert — закрепить (•) · Ctrl+Shift+F11 — счётчик кадров · * — после перезапуска игры · ~ или Esc — закрыть"},
     {Text::FxSmoothHills, "Hills without steps of light", "Пагорби без сходинок світла", "Холмы без ступенек света"},
     {Text::FxSmoothHillsHint,
      "The game lights its ground cell by cell, and a hill shows as steps of light. The ground is lit by the sun over "
@@ -2925,10 +2925,10 @@ constexpr Entry kTexts[] = {
      "Наскільки сильні ефекти групи: 100 % — як задумано, менше — м'якше, більше — сильніше.",
      "Насколько сильны эффекты группы: 100 % — как задумано, меньше — мягче, больше — сильнее."},
     {Text::FxDetails,  // 2.6.22
-     "Effects: {1} of {2} on ▸", "Ефекти: увімкнено {1} з {2} ▸", "Эффекты: включено {1} из {2} ▸"},
-    {Text::FxDetailsHide, "Hide the effects ▾",
-     "Сховати ефекти ▾",
-     "Скрыть эффекты ▾"},
+     "Effects: {1} of {2} on ›", "Ефекти: увімкнено {1} з {2} ›", "Эффекты: включено {1} из {2} ›"},
+    {Text::FxDetailsHide, "Hide the effects ↑",
+     "Сховати ефекти ↑",
+     "Скрыть эффекты ↑"},
     {Text::FxDetailsNote,
      "Each effect can be switched inside its group (the button under it). A switch of one makes the quality Custom, "
      "starting from what it had on; a group's box still turns all of its effects off.",
@@ -3690,8 +3690,8 @@ constexpr Entry kTexts[] = {
     {Text::ChangedListNone, "Everything as recommended", "Усе як рекомендовано", "Всё как рекомендовано"},
     {Text::ChangedListNote, "The dot beside a row puts its recommended value back.",
      "Крапка біля рядка повертає рекомендоване значення.", "Точка рядом со строкой возвращает рекомендуемое значение."},
-    {Text::PlayNewFeatures, "\xE2\x98\x85 New features ({1})", "\xE2\x98\x85 Нові можливості ({1})",
-     "\xE2\x98\x85 Новые возможности ({1})"},
+    {Text::PlayNewFeatures, "New features ({1})", "Нові можливості ({1})",
+     "Новые возможности ({1})"},
     {Text::PlayChangedOnly, "Changed only", "Лише змінені", "Только изменённые"},
     {Text::KindAllNew, "I want everything new", "Хочу все нове", "Хочу всё новое"},
     {Text::KindNewLookOldUi, "New picture, the old interface", "Нова картинка, інтерфейс як раніше",
@@ -3708,8 +3708,8 @@ constexpr Entry kTexts[] = {
      "Що з'явилося — під кнопками нижче; нові перемикачі вимкнено, доки ви їх не ввімкнете.",
      "Что появилось — под кнопками ниже; новые переключатели выключены, пока вы их не включите."},
     {Text::SeenClose, "Got it", "Зрозуміло", "Понятно"},
-    {Text::PlayNewFeaturesShort, "\xE2\x98\x85 New features", "\xE2\x98\x85 Нові можливості",
-     "\xE2\x98\x85 Новые возможности"},
+    {Text::PlayNewFeaturesShort, "New features", "Нові можливості",
+     "Новые возможности"},
     // 3.0.21-beta.7: the settings are «Налаштування»'s (Alt+O) - «Alt+D - quick settings» before
     {Text::ConsoleHintLine,
      "uaRO Graphics: Alt+O - the settings (the picture, the interface, the sound, the controls).",
@@ -3727,8 +3727,8 @@ constexpr Entry kTexts[] = {
      "Подобрано по памяти видеокарты; после игры — по тому, как она её рисовала."},
     {Text::CardApply, "Choose for my card", "Підібрати під відеокарту", "Подобрать под видеокарту"},
     {Text::CardFits, "Already as for your card", "Уже як для вашої відеокарти", "Уже как для вашей видеокарты"},
-    {Text::ConsolePinned, "\xE2\x98\x85 Pinned by you", "\xE2\x98\x85 Закріплені вами",
-     "\xE2\x98\x85 Закреплённые вами"},
+    {Text::ConsolePinned, "Pinned by you", "Закріплені вами",
+     "Закреплённые вами"},
     {Text::ConsoleActions, "Actions", "Дії", "Действия"},
     {Text::MainIntro,
      "What a game needs first. The rest set before a start is on the pages; what applies at once - in the game, Alt+O.",
@@ -3811,9 +3811,9 @@ constexpr Entry kTexts[] = {
      "Рекомендуется для этого компьютера: {1}"},
     {Text::DotOn, "on", "увімкнено", "включено"},
     {Text::DotOff, "off", "вимкнено", "выключено"},
-    {Text::DotLegend, "● - not the value recommended for this computer (its hint says which is).",
-     "● - не те значення, що рекомендоване для цього комп'ютера (підказка каже, яке).",
-     "● - не то значение, что рекомендуется для этого компьютера (подсказка говорит, какое)."},
+    {Text::DotLegend, "• - not the value recommended for this computer (its hint says which is).",
+     "• - не те значення, що рекомендоване для цього комп'ютера (підказка каже, яке).",
+     "• - не то значение, что рекомендуется для этого компьютера (подсказка говорит, какое)."},
     {Text::ResetPage, "Reset the page to the recommended values", "Скинути сторінку до рекомендованих",
      "Сбросить страницу к рекомендуемым"},
     {Text::ResetPageAsk,
@@ -5539,9 +5539,9 @@ constexpr Entry kTexts[] = {
      "Красные кольца там, где переход ведёт на другую карту; курсор на кольце называет ту карту."},
     {Text::InterfaceMinimapMobs, "Monsters under the minimap", "Монстри під мінікартою", "Монстры под миникартой"},
     {Text::InterfaceMinimapMobsHint,
-     "The map's monsters and how many of them the server keeps here; ★ - a boss and its respawn after death.",
-     "Монстри цієї карти і скільки їх тримає тут сервер; ★ - бос і його респавн після смерті.",
-     "Монстры этой карты и сколько их держит здесь сервер; ★ - босс и его респавн после смерти."},
+     "The map's monsters and how many of them the server keeps here; • - a boss and its respawn after death.",
+     "Монстри цієї карти і скільки їх тримає тут сервер; • - бос і його респавн після смерті.",
+     "Монстры этой карты и сколько их держит здесь сервер; • - босс и его респавн после смерти."},
     // 3.0.11-beta.119 (R-5Z6J2S): the map's layers
     {Text::InterfaceMinimapKafra, "Kafra on the maps", "Кафра на картах", "Кафра на картах"},
     {Text::InterfaceMinimapKafraHint,
@@ -5856,11 +5856,11 @@ constexpr Entry kTexts[] = {
      "несколькими, разрезанная между словами."},
     {Text::InterfaceWhoHits, "Who hits me", "Хто б'є мене", "Кто бьёт меня"},  // 3.0.13-beta.13
     {Text::InterfaceWhoHitsHint,
-     "The monsters that hit you in the last seconds get a red frame round their HP bar, and a red ⚔ 3 over your "
+     "The monsters that hit you in the last seconds get a red frame round their HP bar, and a red × 3 over your "
      "character counts them - seen at once when the crowd grows.",
-     "Монстри, що били вас останніми секундами, отримують червону рамку довкола смужки HP, а червоне ⚔ 3 над "
+     "Монстри, що били вас останніми секундами, отримують червону рамку довкола смужки HP, а червоне × 3 над "
      "персонажем їх рахує — одразу видно, коли натовп росте.",
-     "Монстры, бившие вас последние секунды, получают красную рамку вокруг полоски HP, а червоне ⚔ 3 над персонажем "
+     "Монстры, бившие вас последние секунды, получают красную рамку вокруг полоски HP, а червоне × 3 над персонажем "
      "их считает — сразу видно, когда толпа растёт."},
     {Text::InterfaceFarBars, "Smaller HP bars with a far camera", "Менші смужки HP на дальній камері",
      "Меньше полоски HP на дальней камере"},  // 3.0.20-beta.84 (R-7WTVBF)
@@ -6052,7 +6052,7 @@ constexpr Entry kTexts[] = {
     {Text::MobCardHit, "You hit {1} %", "Ви влучаєте {1} %", "Вы попадаете {1} %"},
     {Text::MobCardIts, "It hits you {1} %", "Він влучає {1} %", "Он попадает {1} %"},
     {Text::MobCardBlow, "Its blow {1}–{2} · {3}/s", "Його удар {1}–{2} · {3}/с", "Его удар {1}–{2} · {3}/с"},
-    {Text::MobCardMine, "Your blow ≈{1} · {2} blows", "Ваш удар ≈{1} · ударів {2}", "Ваш удар ≈{1} · ударов {2}"},
+    {Text::MobCardMine, "Your blow ~{1} · {2} blows", "Ваш удар ~{1} · ударів {2}", "Ваш удар ~{1} · ударов {2}"},
     {Text::InterfaceMvp, "Boss timers", "Таймери босів", "Таймеры боссов"},  // 3.0.11-beta.280
     {Text::InterfaceMvpHint,
      "When a boss dies in front of you, a panel counts down to its return by the server's rule: name, map, time left; "
@@ -6432,13 +6432,13 @@ constexpr Entry kTexts[] = {
     // 3.0.11-beta.177: the views
     {Text::InterfaceLoginView, "The login screen", "Екран входу", "Экран входа"},
     {Text::InterfaceLoginViewHint,
-     "«Shelf» - a card an account, one click to enter; «Classic» - the login window with ▾ the saved logins; "
+     "«Shelf» - a card an account, one click to enter; «Classic» - the login window with ↓ the saved logins; "
      "«Continue» - the last character big and «Play». With no saved accounts the login window whichever. Also at the "
      "login screen's foot.",
-     "«Полиця» — картка на акаунт, вхід одним кліком; «Класичний» — вікно входу з ▾ збереженими логінами; "
+     "«Полиця» — картка на акаунт, вхід одним кліком; «Класичний» — вікно входу з ↓ збереженими логінами; "
      "«Продовжити» — останній персонаж великим планом і «Грати». Без збережених акаунтів — вікно входу. Також унизу "
      "екрана входу.",
-     "«Полка» — карточка на аккаунт, вход одним кликом; «Классический» — окно входа с ▾ сохранёнными логинами; "
+     "«Полка» — карточка на аккаунт, вход одним кликом; «Классический» — окно входа с ↓ сохранёнными логинами; "
      "«Продолжить» — последний персонаж крупным планом и «Играть». Без сохранённых аккаунтов — окно входа. Также "
      "внизу экрана входа."},
     {Text::LoginViewLabel, "View", "Вигляд", "Вид"},
@@ -7110,7 +7110,7 @@ constexpr Entry kTexts[] = {
     {Text::CharHour, "h", "год", "ч"},
     {Text::CharMinute, "min", "хв", "мин"},
     {Text::CharToLevel, "To the level {1}", "До рівня {1}", "До уровня {1}"},
-    {Text::CharLevelIn, "Level in \xE2\x89\x88 {1}", "Рівень через \xE2\x89\x88 {1}", "Уровень через \xE2\x89\x88 {1}"},
+    {Text::CharLevelIn, "Level in ~{1}", "Рівень через ~{1}", "Уровень через ~{1}"},
     {Text::CharPerHour, "An hour +{1}", "За годину +{1}", "За час +{1}"},
     {Text::CharSession, "This session +{1}", "За сесію +{1}", "За сессию +{1}"},
     {Text::CharLastGain, "Last gain +{1}", "Остання здобич +{1}", "Последняя добыча +{1}"},
@@ -8046,9 +8046,9 @@ constexpr Entry kTexts[] = {
     {Text::RefKindMap, "location", "локація", "локация"},
     {Text::RefKindQuest, "quest", "квест", "квест"},
     {Text::RefFavEmpty,
-     "☆ on a card - and it is here. Kept on your PC.",
-     "☆ на картці — і запис тут. Зберігається на вашому ПК.",
-     "☆ на карточке — и запись здесь. Хранится на вашем ПК."},
+     "The star on a card - and it is here. Kept on your PC.",
+     "Зірочка на картці — і запис тут. Зберігається на вашому ПК.",
+     "Звёздочка на карточке — и запись здесь. Хранится на вашем ПК."},
     {Text::RefTableElements,
      "Attack elements against a defence of level {1}",
      "Стихії атаки проти захисту рівня {1}",
@@ -8173,13 +8173,13 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceTracker, "Tracking", "Відстеження", "Отслеживание"},
     {Text::InterfaceTrackerHint,
      "What you pin stays in a panel left of the buffs: a quest («Track» in its card) - what to bring and whom to give "
-     "it, the way the minimap leads, an item to collect - who drops it most. ▾ folds it to the names, ✕ hides it "
+     "it, the way the minimap leads, an item to collect - who drops it most. − folds it to the names, × hides it "
      "until you pin something again; a click on a name opens its card.",
      "Те, що ви закріпили, — у панелі ліворуч від бафів: квест («Відстежувати» в його картці) — що принести й кому "
-     "здати, шлях, яким веде мінікарта, річ для збору — хто її найчастіше кидає. ▾ згортає до назв, ✕ ховає, доки "
+     "здати, шлях, яким веде мінікарта, річ для збору — хто її найчастіше кидає. − згортає до назв, × ховає, доки "
      "не закріпите щось знову; клік по назві відкриває картку.",
      "То, что вы закрепили, — в панели слева от бафов: квест («Отслеживать» в его карточке) — что принести и кому "
-     "сдать, путь, которым ведёт миникарта, вещь для сбора — кто её чаще всего роняет. ▾ сворачивает до названий, ✕ "
+     "сдать, путь, которым ведёт миникарта, вещь для сбора — кто её чаще всего роняет. − сворачивает до названий, × "
      "прячет, пока не закрепите что-то снова; клик по названию открывает карточку."},
     // 3.0.11-beta.71 (the owner: «хочется на карте прокладывать путь»): a way set on the minimap by clicks
     {Text::MinimapPlotTo, "Goal · {1}, {2}", "Ціль · {1}, {2}", "Цель · {1}, {2}"},
@@ -8337,7 +8337,7 @@ constexpr Entry kTexts[] = {
     {Text::CharParty, "Party {1}", "Група {1}", "Группа {1}"},
     {Text::CharRegen, "+{1} every {2} s", "+{1} кожні {2} с", "+{1} каждые {2} с"},
     {Text::CharRegenFull, "full", "повне", "полное"},
-    {Text::CharRegenToFull, "full in ≈ {1}", "до повного ≈ {1}", "до полного ≈ {1}"},
+    {Text::CharRegenToFull, "full in ~ {1}", "до повного ~ {1}", "до полного ~ {1}"},
     {Text::CharRegenNone, "no regen: overweight", "не відновлюється: вага", "не восстанавливается: вес"},
     {Text::CharSessionHead, "Session · {1}", "Сесія · {1}", "Сессия · {1}"},
     {Text::CharKilled, "killed", "вбито", "убито"},

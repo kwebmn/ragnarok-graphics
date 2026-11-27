@@ -930,21 +930,21 @@ std::vector<Words> frameWords(const Layout& L, const Scene& sc, const Texts& t) 
         out.push_back(Words{panel::Box{L.fold.x - 4 * s - cellW, c.y, cellW, c.h}, t.cell, kMuted, 12 * s, false,
                             Align::Right});
     }
-    out.push_back(Words{L.fold, t.folded ? "▸" : "▾", sc.hover == Part::Fold ? kText : kMuted, 12 * s, false,
+    out.push_back(Words{L.fold, t.folded ? "+" : "\xE2\x88\x92", sc.hover == Part::Fold ? kText : kMuted, 12 * s, false,
                         Align::Center});
     if (L.found.w > 0 && !t.found.empty()) {  // 3.0.11-beta.213: a search's words and its ✕
         out.push_back(Words{panel::Box{L.found.x + std::round(kNetPad * s), L.found.y,
                                        L.foundClear.x - L.found.x - std::round(kNetPad * s), L.found.h},
-                            "\xE2\x97\x86 " + t.found, kFoundRgb, 11.5f * s, true, Align::Left});  // ◆
-        out.push_back(Words{L.foundClear, "\xE2\x9C\x95", kText, 11 * s, false, Align::Center});  // ✕
+                            "\xE2\x80\xA2 " + t.found, kFoundRgb, 11.5f * s, true, Align::Left});  // ◆
+        out.push_back(Words{L.foundClear, "\xC3\x97", kText, 11 * s, false, Align::Center});  // ✕
     }
     if (L.net.w > 0 && !t.net.empty())  // 3.0.11-beta.127: the round trip on its plate (.122: on the bar)
         out.push_back(Words{panel::Box{L.net.x + std::round(kNetPad * s), L.net.y, std::round(kNetText * s),
                                        std::round(kNetH * s)},
-                            "\xE2\x97\x8F " + t.net, t.netRgb ? t.netRgb : kMuted, 11.5f * s, true, Align::Left});
+                            "\xE2\x80\xA2 " + t.net, t.netRgb ? t.netRgb : kMuted, 11.5f * s, true, Align::Left});
     if (L.net.w > 0 && !t.net.empty() && !t.netIn.empty()) {  // 3.0.22-beta.1: the exchange on the same line
         const float px = 10.5f * s, gap = std::round(5 * s);
-        float x = L.net.x + std::round(kNetPad * s) + panel::wordsWidth("\xE2\x97\x8F " + t.net, 11.5f * s, true) +
+        float x = L.net.x + std::round(kNetPad * s) + panel::wordsWidth("\xE2\x80\xA2 " + t.net, 11.5f * s, true) +
                   std::round(9 * s);
         const auto put = [&](const std::string& text, uint32_t rgb, bool bold) {
             const float width = panel::wordsWidth(text, px, bold);
@@ -968,7 +968,7 @@ std::vector<Words> frameWords(const Layout& L, const Scene& sc, const Texts& t) 
         if (t.route.size() > 1)
             out.push_back(Words{panel::Box{r.x + 10 * s, r.y + 24 * s, r.w - 20 * s, 16 * s}, t.route[1].left, kMuted,
                                 12 * s, false, Align::Left});
-        out.push_back(Words{L.stop, "✕", sc.hover == Part::Stop ? kText : kMuted, 11 * s, false, Align::Center});
+        out.push_back(Words{L.stop, "\xC3\x97", sc.hover == Part::Stop ? kText : kMuted, 11 * s, false, Align::Center});
     }
     if (L.list.w > 0) {
         const float top = L.list.y + std::round(kListPad * s), split = (L.list.w - 20 * s) * 0.66f;
@@ -1139,7 +1139,8 @@ std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& ti
                         true, Align::Left});
     out.push_back(Words{panel::Box{b.close.x - 12 * s - cellW, 0, cellW, b.header.h}, cell, kMuted, 13 * s, false,
                         Align::Right});
-    out.push_back(Words{b.close, "✕", sc.bigHover == BigPart::Close ? kText : kMuted, 16 * s, false, Align::Center});
+    out.push_back(
+        Words{b.close, "\xC3\x97", sc.bigHover == BigPart::Close ? kText : kMuted, 16 * s, false, Align::Center});
     const View v = bigView(b, sc);
     for (const Mark& m : sc.marks) {  // the Kafras' «K» (3.0.11-beta.196: not over a face); .240: «$», «!»
         const bool kafra = m.glyph == Glyph::Kafra && !m.picture;

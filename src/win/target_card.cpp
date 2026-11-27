@@ -224,7 +224,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    data-style-width="hp_bar + '%'"></span></span><span class="pct">{{hp}}%</span></div>
  </div>
  <div class="book"><img class="dim" data-attr-src="book"/><img class="lit" data-attr-src="book_lit"/></div>
- <div class="tcx" data-event-click="close()">&#x2715;</div>
+ <div class="tcx xk" data-event-click="close()"><span class="cxa"></span><span class="cxb"></span></div>
  <div class="hints" data-if="pad"><div><img data-attr-src="pad_a"/>{{attack}}</div><div><img data-attr-src="pad_r"/>{{next}}</div></div>
 </div><br/>
 <div class="details"><p data-for="l, i : lines" data-if="l.text != ''" data-style-color="l.colour"

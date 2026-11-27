@@ -9,7 +9,7 @@ const char* rml() {
 <body class="lw socw" data-style-background-color="ground">
 <div class="tabs"><span class="tab ctl" data-for="t, i : tabs" data-class-on="i == tab"
   data-event-click="so_tab(i)">{{t}}</span></div>
-<span class="x ctl" data-event-click="so_close()">&#x2715;</span>
+<span class="x ctl" data-event-click="so_close()"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="shead"><span class="lbl">{{header}}</span><span class="cnt" data-if="count != ''">{{count}}</span>
 <span class="sexp" data-if="exp != ''">{{exp}}</span><span class="sset ctl" data-if="settings != ''"
   data-event-click="so_settings()">{{settings}}</span></div>
@@ -19,7 +19,7 @@ const char* rml() {
   data-event-mousedown="so_down(i)"><div class="face"><img data-if="r.face != ''" data-attr-src="r.face"/><span
   class="lt" data-if="r.face == ''">{{r.letter}}</span><span class="dot" data-class-on="r.online"></span></div>
 <div class="who"><div class="l1"><span class="name">{{r.name}}</span><span class="crown"
-  data-if="r.leader"> &#x2605;</span><span class="job">{{r.job}}</span></div>
+  data-if="r.leader"></span><span class="job">{{r.job}}</span></div>
 <div class="hpb" data-if="r.hp >= 0"><div class="hpf" data-class-bad="30 > r.hp"
   data-style-width="r.hp + '%'"></div></div>
 <div class="l2" data-class-bad="r.dead">{{r.where}}</div></div>

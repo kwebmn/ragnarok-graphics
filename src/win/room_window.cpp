@@ -58,7 +58,7 @@ using FriendFn = void(__attribute__((thiscall)) *)(uint32_t manager, const char*
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw roomw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span><span class="count">{{count}} · {{state}}</span></div>
-<span class="x ctl" data-event-click="rm_act(8, 0)">&#x2715;</span>
+<span class="x ctl" data-event-click="rm_act(8, 0)"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="cols"><div class="left"><div class="lines"><div class="line" data-for="l : lines"
   data-style-color="l.colour">{{l.text}}</div></div>
 <div class="field ctl" data-class-typing="focus" data-event-click="rm_act(2, 0)">{{input}}<span
@@ -66,7 +66,7 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div class="right"><div class="lbl">{{members_word}}</div>
 <div data-for="m, i : members"><div class="row ctl" data-class-on="i == chosen" data-event-click="rm_act(1, i)"
   data-event-dblclick="rm_whisper(i)" data-event-mousedown="rm_down(i)">{{m.name}}<span class="crown"
-  data-if="m.owner"> ★</span></div>
+  data-if="m.owner"></span></div>
 <div class="acts" data-if="i == chosen"><span class="chip ctl" data-if="!m.self"
   data-event-click="rm_whisper(i)">{{whisper}}</span><span class="chip ctl" data-if="mine && !m.self"
   data-event-click="rm_act(5, 0)">{{kick}}</span><span class="chip ctl" data-if="mine && !m.self"

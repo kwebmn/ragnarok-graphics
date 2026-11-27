@@ -54,7 +54,7 @@ std::vector<Words> words(const Layout& L, const std::vector<std::string>& comman
     std::vector<Words> out;
     const float s = L.s;
     out.push_back(Words{L.title, t.title, kText, 15 * s, true, Align::Left});
-    out.push_back(Words{L.close, "\xE2\x9C\x95", sh.hoverClose ? kText : kMuted, 13 * s, false, Align::Center});  // ✕
+    out.push_back(Words{L.close, "\xC3\x97", sh.hoverClose ? kText : kMuted, 13 * s, false, Align::Center});  // ✕
     out.push_back(Words{L.hint, t.hint, kMuted, 11.5f * s, false, Align::Left});
     for (size_t i = 0; i < L.labels.size() && i < commands.size(); ++i) {
         const bool hot = int(i) == sh.hover;
