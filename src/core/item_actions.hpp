@@ -13,7 +13,8 @@ namespace uagfx::itemactions {
 // of the answer.
 enum class Kind : uint8_t {
     ToStorage, FromStorage, CloseStorage,
-    ToCart, FromCart, StorageToCart, CartToStorage  // 3.0.24-beta.8: the cart's
+    ToCart, FromCart, StorageToCart, CartToStorage,  // 3.0.24-beta.8: the cart's
+    Use, Equip, Unequip, Drop                        // 3.0.24-beta.20: «Речі»'s (the bag's own)
 };
 itemstate::Where leaving(Kind k);  // the side whose answer (its thing going out) ends the action
 enum class Result : uint8_t { Sent, Busy, NotConnected, NothingToMove };
@@ -32,6 +33,14 @@ public:
     // own when it goes through - the things coming into the bag end it (Done), 0x0135 refuses it (Refused)
     Result askVend(uint32_t merchant, const itempackets::Pairs& rows, bool connected, uint32_t nowMs,
                    itempackets::Bytes& out);
+    // 3.0.24-beta.20 (docs/superpowers/plans/2026-11-27-item-windows-old-layout.md, task 2): a bag thing used, worn,
+    // taken off, dropped - each its packet, ended at its cell: used by what is left (0x01c8) or refused (0x00a8),
+    // worn and taken off by 0x00aa / 0x00ac (Done or Refused), dropped by its going out (0x00af)
+    Result askUse(uint16_t index, uint32_t account, bool connected, uint32_t nowMs, itempackets::Bytes& out);
+    Result askEquip(uint16_t index, uint16_t places, bool connected, uint32_t nowMs, itempackets::Bytes& out);
+    Result askUnequip(uint16_t index, bool connected, uint32_t nowMs, itempackets::Bytes& out);
+    Result askDrop(uint16_t index, uint32_t amount, uint32_t have, bool connected, uint32_t nowMs,
+                   itempackets::Bytes& out);
     int lastResult() const { return lastResult_; }
     bool dealWaiting() const { return dealAt_ != 0; }
     Outcome onChange(const itemstate::Change& c);
@@ -47,6 +56,7 @@ public:
     uint32_t lastMs() const { return last_.ms; }  // how long it waited
 
 private:
+    Result own(Kind k, uint16_t index, bool connected, uint32_t nowMs);  // the bag's: Busy, NotConnected or kept
     struct Wait {
         Kind kind = Kind::ToStorage;
         itemstate::Where where = itemstate::Where::Bag;

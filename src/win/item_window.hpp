@@ -35,6 +35,9 @@ bool key(UINT m, WPARAM wp, LPARAM lp);  // its search's keys while it has them
 // A drag let go at the game's (x, y) over it: given to the game's own window (its drop takes from the storage, the
 // cart, the gear); false: not over it
 bool drop(int x, int y, uint32_t drag);
+// 3.0.24-beta.20 ([interface] items_packets, the testers' box): a thing used, worn and dropped by our own packets
+// (win/item_net) - the game's ways else
+void setPackets(bool on);
 bool shown();  // 3.0.11-beta.49: open on the screen now (the world dimmed under it)
 // 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its own «Речі» hidden, never a frame
 void beforeGameDraw();

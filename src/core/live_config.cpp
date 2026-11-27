@@ -575,6 +575,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("vend_packets", flag(running.vendPackets), flag(file.vendPackets)));
         n.vendPackets = file.vendPackets;
     }
+    if (file.itemsPackets != running.itemsPackets) {  // 3.0.24-beta.20: «Речі»'s own packets, at once
+        u.applied.push_back(change("items_packets", flag(running.itemsPackets), flag(file.itemsPackets)));
+        n.itemsPackets = file.itemsPackets;
+    }
     if (file.vendWindow != running.vendWindow) {  // 3.0.11-beta.156: «Лавка», at once
         u.applied.push_back(change("vending", flag(running.vendWindow), flag(file.vendWindow)));
         n.vendWindow = file.vendWindow;

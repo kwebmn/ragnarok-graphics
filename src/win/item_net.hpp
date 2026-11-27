@@ -22,6 +22,12 @@ std::string lastWords();
 itemactions::Result deal(bool buy, const itempackets::Pairs& rows);
 // 3.0.24-beta.18 (stage 4 «Лавка»): a purchase at a player's shop ({place, amount}: the place as its list gave it)
 itemactions::Result vend(uint32_t merchant, const itempackets::Pairs& rows);
+// 3.0.24-beta.20 (docs/superpowers/plans/2026-11-27-item-windows-old-layout.md, task 2): «Речі»'s and
+// «Спорядження»'s own - a bag thing used, worn (at `places`), taken off, dropped; the cell waits for the server
+itemactions::Result use(uint16_t index);
+itemactions::Result equip(uint16_t index, uint16_t places);
+itemactions::Result unequip(uint16_t index);
+itemactions::Result drop(uint16_t index, uint32_t amount);
 // Its answer once: -2 none yet, -1 no answer in time, 0 done, 1 zeny, 2 weight, 3 other (a shop's: 4 its stock)
 int takeDealAnswer();
 

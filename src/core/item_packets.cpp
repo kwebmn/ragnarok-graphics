@@ -80,6 +80,28 @@ Bytes fromCart(uint16_t cartIndex, uint32_t amount) { return eight(0x0127, cartI
 Bytes storageToCart(uint16_t storageIndex, uint32_t amount) { return eight(0x0128, storageIndex, amount); }
 Bytes cartToStorage(uint16_t cartIndex, uint32_t amount) { return eight(0x0129, cartIndex, amount); }
 
+Bytes useItem(uint16_t index, uint32_t account) {
+    Bytes b(14, 0);
+    b[0] = 0x9f;
+    b[4] = uint8_t(index), b[5] = uint8_t(index >> 8);
+    for (int i = 0; i < 4; ++i) b[10 + size_t(i)] = uint8_t(account >> (8 * i));
+    return b;
+}
+
+Bytes drop(uint16_t index, uint16_t amount) {
+    Bytes b(10, 0);
+    b[0] = 0x16, b[1] = 0x01;
+    b[5] = uint8_t(index), b[6] = uint8_t(index >> 8);
+    b[8] = uint8_t(amount), b[9] = uint8_t(amount >> 8);
+    return b;
+}
+
+Bytes equip(uint16_t index, uint16_t places) {
+    return Bytes{0xa9, 0x00, uint8_t(index), uint8_t(index >> 8), uint8_t(places), uint8_t(places >> 8)};
+}
+
+Bytes unequip(uint16_t index) { return Bytes{0xab, 0x00, uint8_t(index), uint8_t(index >> 8)}; }
+
 int serverLength(uint16_t id) {
     switch (id) {
         case 0x01f0:  // the storage's stackables (18 bytes each from 4)
@@ -103,6 +125,9 @@ int serverLength(uint16_t id) {
         case 0x00a0: return 23;  // a thing into the bag
         case 0x00af: return 6;   // a thing out of the bag
         case 0x01c8: return 13;  // a thing used: what is left
+        case 0x00a8:             // 3.0.24-beta.20: a thing not used
+        case 0x00aa:             // worn (or refused)
+        case 0x00ac: return 7;   // taken off
         default: return 0;
     }
 }

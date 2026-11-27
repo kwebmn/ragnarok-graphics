@@ -1748,6 +1748,8 @@ bool walkTo(int x, int y) {
     return true;
 }
 
+uint32_t selfAccount() { return healthy() && S().session ? S().session->world().selfId() : 0; }
+
 bool sendPacket(std::vector<uint8_t> p) {
     if (!healthy() || !S().session || p.size() < 2) return false;
     return S().session->request(std::move(p), GetTickCount());

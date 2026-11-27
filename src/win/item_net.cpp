@@ -41,6 +41,10 @@ const char* kindName(itemactions::Kind k) {
         case itemactions::Kind::FromCart: return "out of the cart";
         case itemactions::Kind::StorageToCart: return "from the storage into the cart";
         case itemactions::Kind::CartToStorage: return "from the cart into the storage";
+        case itemactions::Kind::Use: return "used";  // 3.0.24-beta.20: «Речі»'s own
+        case itemactions::Kind::Equip: return "worn";
+        case itemactions::Kind::Unequip: return "taken off";
+        case itemactions::Kind::Drop: return "dropped";
     }
     return "?";
 }
@@ -65,6 +69,7 @@ void packet(uint16_t id, const uint8_t* p) {
     if (len == 0) return;
     size_t n = len > 0 ? size_t(len) : size_t(p[2] | (p[3] << 8));
     if (n < 2 || n > kMostPacket) return;
+    s.items.setSelf(uapad::runtime::selfAccount());  // 3.0.24-beta.20: the things used around us are not ours
     const std::optional<itemstate::Change> c = s.items.feed(p, n);
     if (!c) return;
     const itemactions::Outcome o = s.queue.onChange(*c);
@@ -157,6 +162,59 @@ itemactions::Result vend(uint32_t merchant, const itempackets::Pairs& rows) {
                  r == itemactions::Result::Sent ? "sent" : r == itemactions::Result::Busy ? "the one before waits"
                                                                                            : "not sent");
     return r;
+}
+
+namespace {
+
+// 3.0.24-beta.20: a bag thing's own action sent - its log line, the words when no connection
+itemactions::Result sent(State& s, itemactions::Kind k, uint16_t index, itemactions::Result r,
+                         const itempackets::Bytes& out) {
+    if (r == itemactions::Result::Sent && !uapad::runtime::sendPacket(out)) {
+        s.queue.dropAll();
+        r = itemactions::Result::NotConnected;
+    }
+    if (r == itemactions::Result::NotConnected) say(s, settings::Text::ItemsNotConnected);
+    if (s.told++ < 200)
+        LOG_INFO("items: %s, index %u - %s", kindName(k), unsigned(index),
+                 r == itemactions::Result::Sent           ? "sent"
+                 : r == itemactions::Result::Busy         ? "waits for the one before"
+                 : r == itemactions::Result::NotConnected ? "no map server connection (or our account not known)"
+                                                          : "nothing there");
+    return r;
+}
+
+}  // namespace
+
+itemactions::Result use(uint16_t index) {
+    State& s = st();
+    itempackets::Bytes out;
+    const uint32_t account = uapad::runtime::selfAccount();
+    const itemactions::Result r =
+        s.queue.askUse(index, account, uapad::runtime::healthy() && account != 0, GetTickCount(), out);
+    return sent(s, itemactions::Kind::Use, index, r, out);
+}
+
+itemactions::Result equip(uint16_t index, uint16_t places) {
+    State& s = st();
+    itempackets::Bytes out;
+    const itemactions::Result r = s.queue.askEquip(index, places, uapad::runtime::healthy(), GetTickCount(), out);
+    return sent(s, itemactions::Kind::Equip, index, r, out);
+}
+
+itemactions::Result unequip(uint16_t index) {
+    State& s = st();
+    itempackets::Bytes out;
+    const itemactions::Result r = s.queue.askUnequip(index, uapad::runtime::healthy(), GetTickCount(), out);
+    return sent(s, itemactions::Kind::Unequip, index, r, out);
+}
+
+itemactions::Result drop(uint16_t index, uint32_t amount) {
+    State& s = st();
+    const itemstate::Item* it = s.items.find(itemstate::Where::Bag, index);
+    itempackets::Bytes out;
+    const itemactions::Result r = s.queue.askDrop(index, amount, it ? it->amount : amount,
+                                                  uapad::runtime::healthy(), GetTickCount(), out);
+    return sent(s, itemactions::Kind::Drop, index, r, out);
 }
 
 int takeDealAnswer() {

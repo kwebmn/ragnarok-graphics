@@ -234,7 +234,9 @@ std::vector<Group> build() {
                          D("interface.homun_skills", "interface.homun_ai")}));
     // each window's own switch a detail: the group shows behind a button
     out.push_back(group(Area::Interface, Text::InterfaceSecWindows,
-                        {D("interface.items"), D("interface.status"), D("interface.skills"), D("interface.equip"),
+                        {D("interface.items"),
+                         trial("interface.items_packets", "3.0.24-beta.20").need("interface.items"),  // part 2
+                         D("interface.status"), D("interface.skills"), D("interface.equip"),
                          D("interface.npc_talk"), D("interface.npc_remember", "interface.npc_talk"),
                          D("interface.shop"),
                          trial("interface.shop_packets", "3.0.24-beta.9").need("interface.shop"),

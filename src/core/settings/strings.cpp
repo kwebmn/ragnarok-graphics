@@ -10017,6 +10017,20 @@ constexpr Entry kTexts[] = {
      "підказці. Потрібна увімкнена «Лавка торговця». Для тестерів: вимкнено — як у грі.",
      "«Лавка торговца» сама отправляет покупку и ждёт вещей: пришли — лавка закрывается, отказ — почему, в её "
      "подсказке. Нужна включённая «Лавка торговца». Для тестеров: выключено — как в игре."},
+    // 3.0.24-beta.20 (docs/superpowers/plans/2026-11-27-item-windows-old-layout.md, task 2)
+    {Text::InterfaceItemsPackets, "Items: our own use, wear and drop (beta)",
+     "Речі: свої «використати», «вдягнути», «викинути» (бета)",
+     "Вещи: свои «использовать», «надеть», «выбросить» (бета)"},
+    {Text::InterfaceItemsPacketsHint,
+     "«Items» and «Equipment» send the server's packet themselves: a double click uses or wears a thing, a drag onto "
+     "the ground drops it (how many - asked), «Equipment» takes off; the cell waits for the server's answer. Cards "
+     "into slots stay the game's. Needs «Items» on. For the testers: off - the game's own way.",
+     "«Речі» та «Спорядження» самі надсилають пакет серверу: подвійний клік використовує чи вдягає річ, "
+     "перетягування на землю викидає (скільки — спитаємо), «Спорядження» знімає; клітинка чекає відповіді сервера. "
+     "Карти в гнізда — як у грі. Потрібні увімкнені «Речі». Для тестерів: вимкнено — як у грі.",
+     "«Вещи» и «Снаряжение» сами отправляют пакет серверу: двойной клик использует или надевает вещь, "
+     "перетаскивание на землю выбрасывает (сколько — спросим), «Снаряжение» снимает; ячейка ждёт ответа сервера. "
+     "Карты в гнёзда — как в игре. Нужны включённые «Вещи». Для тестеров: выключено — как в игре."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

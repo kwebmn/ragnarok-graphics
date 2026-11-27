@@ -40,7 +40,9 @@
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/item_grid_ui.hpp"
+#include "win/item_net.hpp"
 #include "win/uaui.hpp"
+#include "win/world_mouse.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/storage_window.hpp"
@@ -439,9 +441,39 @@ const char* dropAt(const State& s, const iw::Item& it) {
     return "let go through the game's own drop";
 }
 
+bool g_packets = false;  // 3.0.24-beta.20: [interface] items_packets
+
+// 3.0.24-beta.20: by our own packet (win/item_net) - used or worn; the cell waits for the server
+const char* sentOwn(itemactions::Result r, const char* done) {
+    return r == itemactions::Result::Sent           ? done
+           : r == itemactions::Result::Busy         ? "waits for the one before"
+           : r == itemactions::Result::NotConnected ? "not sent (no map server connection)"
+                                                    : "nothing there";
+}
+
 // What a double click on it does, as the game's own window: used, worn, a card into a slot, arrows worn; the items
 // the game asks about first used on a second double click within 3 s
 const char* use(State& s, const iw::Item& it) {
+    if (g_packets) {  // 3.0.24-beta.20: our own packets (cards into slots stay the game's: its list comes first)
+        switch (iw::useOf(it)) {
+            case iw::Use::Use: return sentOwn(itemnet::use(uint16_t(it.index)), "used (our packet)");
+            case iw::Use::Wear:
+            case iw::Use::Ammo:
+                return sentOwn(itemnet::equip(uint16_t(it.index), uint16_t(it.location)), "worn (our packet)");
+            case iw::Use::Confirm: {
+                const ULONGLONG now = GetTickCount64();
+                if (s.armed == it.index && now - s.armedAt < kConfirmMs) {
+                    s.armed = 0;
+                    return sentOwn(itemnet::use(uint16_t(it.index)), "used, asked twice (our packet)");
+                }
+                s.armed = it.index;
+                s.armedAt = now;
+                return "asked once - again to use";
+            }
+            case iw::Use::Card:
+            case iw::Use::None: break;
+        }
+    }
     switch (iw::useOf(it)) {
         case iw::Use::Use: return modeMsg(kUseMsg, it.index, 0) ? "used" : "not used (the game mode not found)";
         case iw::Use::Wear: return modeMsg(kWearMsg, it.index, it.location) ? "worn" : "not worn";
@@ -922,6 +954,17 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                                 tx >= float(bx) && ty >= float(by) && tx < float(bx + bw) && ty < float(by + bh);
         if (dragged && s.picked.has(it.index) && s.picked.count() > 1 && overTarget) {
             putPicked(s, "the picked dragged over");
+        } else if (dragged && g_packets && cursorOverWorld()) {  // 3.0.24-beta.20: onto the ground - our own drop
+            const uint16_t index = uint16_t(it.index);
+            if (it.count > 1) {
+                askcardwin::askCount(say(settings::Text::CountDrop), it.count,
+                                     [index](int n) { itemnet::drop(index, uint32_t(n)); });
+            } else {
+                itemnet::drop(index, 1);
+            }
+            s.lastCell = -1;
+            s.readAt = 0;
+            if (s.told++ < 20) LOG_INFO("items: #%d dragged onto the ground - our own drop (x%d)", it.id, it.count);
         } else if (dragged) {
             const char* did = dropAt(s, it);
             s.lastCell = -1;
@@ -1219,5 +1262,12 @@ const std::vector<iw::Item>& lastBag() { return state().items; }
 
 // 3.0.21-beta.13: the things picked now (Ctrl, Shift, Ctrl+A) - the key hints' picks learned
 int pickedCount() { return int(state().picked.count()); }
+
+void setPackets(bool on) {
+    if (on != g_packets)
+        LOG_INFO("items: %s", on ? "used, worn and dropped by our own packets ([interface] items_packets)"
+                                 : "the game's own ways (its window's mode)");
+    g_packets = on;
+}
 
 }  // namespace uagfx::win::itemswin

@@ -150,3 +150,47 @@ TEST(item_state_the_cart) {
     c = s.feed(clear.data(), clear.size());
     CHECK(s.cart().empty() && c && c->where == is::Where::Cart && c->closed);
 }
+
+// 3.0.24-beta.20 (part 2 task 2): a thing used - 0x01c8 goes to everyone around (uAthena clif_useitemack, AREA):
+// only our own account's changes our bag; 0x00a8 - not used; 0x00aa / 0x00ac - worn, taken off, or refused
+TEST(item_state_use_answers_are_ours_alone) {
+    is::State s;
+    s.setSelf(2000123);
+    s.feed(stackList(0x01ee, {{7, 10}}).data(), stackList(0x01ee, {{7, 10}}).size());
+    Bytes used(13, 0);
+    w16(used, 0, 0x01c8);
+    w16(used, 2, 7);
+    w16(used, 4, 501);
+    w32(used, 6, 2000999);  // another's, nearby
+    w16(used, 10, 3);
+    used[12] = 1;
+    CHECK(!s.feed(used.data(), used.size()).has_value());
+    CHECK(s.find(is::Where::Bag, 7) && s.find(is::Where::Bag, 7)->amount == 10u);
+    w32(used, 6, 2000123);  // ours: 9 left
+    w16(used, 10, 9);
+    const auto c = s.feed(used.data(), used.size());
+    CHECK(c && c->index == 7 && c->delta == -1 && s.find(is::Where::Bag, 7)->amount == 9u);
+    Bytes refused(7, 0);  // 0x00a8: not used
+    w16(refused, 0, 0x00a8);
+    w16(refused, 2, 7);
+    const auto r = s.feed(refused.data(), refused.size());
+    CHECK(r && r->index == 7 && r->delta == 0 && r->result == 1);
+}
+
+TEST(item_state_equip_answers) {
+    is::State s;
+    Bytes worn(7, 0);
+    w16(worn, 0, 0x00aa);
+    w16(worn, 2, 9);
+    w16(worn, 4, 2);
+    worn[6] = 1;
+    auto c = s.feed(worn.data(), worn.size());
+    CHECK(c && c->where == is::Where::Bag && c->index == 9 && c->delta == 0 && c->result == 0);
+    worn[6] = 0;  // refused
+    c = s.feed(worn.data(), worn.size());
+    CHECK(c && c->result == 1);
+    w16(worn, 0, 0x00ac);  // taken off
+    worn[6] = 1;
+    c = s.feed(worn.data(), worn.size());
+    CHECK(c && c->index == 9 && c->result == 0);
+}

@@ -496,7 +496,8 @@ TEST(catalogue_trials_decided_for_3_0_21) {
     for (const catalogue::LabSection& s : catalogue::trials())
         for (const catalogue::Row* r : s.rows) trials.push_back(r->key);
     CHECK(trials == (std::vector<std::string>{"view3d.shadows", "view3d.dense_crowns", "view3d.crown_volume",
-                                              "view3d.crown_light", "interface.shop_packets",
+                                              "view3d.crown_light", "interface.items_packets",
+                                              "interface.shop_packets",
                                               "interface.storage_packets", "interface.cart_packets",
                                               "interface.vend_packets", "renderer.remix"}));
 }

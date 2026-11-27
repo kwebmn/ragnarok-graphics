@@ -47,6 +47,9 @@ public:
     bool storageOpen() const { return storageOpen_; }
     int storageMost() const { return storageMost_; }
     void reset();  // a new map or connection: nothing known
+    // 3.0.24-beta.20: our own account (the map server's connection), for the things used around us (0x01c8 goes to
+    // everyone near: only ours changes the bag)
+    void setSelf(uint32_t account) { self_ = account; }
     void clearCart() { cart_.clear(); }  // 3.0.24-beta.8: another map - its list comes again
 
 private:
@@ -56,6 +59,7 @@ private:
     int cartMost_ = 0, cartWeight_ = 0, cartMostWeight_ = 0;
     bool storageOpen_ = false;
     int storageMost_ = 0;
+    uint32_t self_ = 0;
 };
 
 }  // namespace uagfx::itemstate

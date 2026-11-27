@@ -152,3 +152,28 @@ TEST(item_state_vend_refusal) {
     auto c = s.feed(refused.data(), refused.size());
     CHECK(c && c->where == is::Where::Shop && c->result == 1);
 }
+
+// 3.0.24-beta.20 (part 2 task 2): «Речі»'s use, wear, take off and drop - one press one packet, ended by the server's
+// answer at that cell (Done, Refused by its result), or freed after kTimeoutMs
+TEST(item_actions_use_equip_drop_wait_for_their_answers) {
+    ia::Queue q;
+    itempackets::Bytes out;
+    CHECK(q.askUse(7, 2000123, true, 1000, out) == ia::Result::Sent && out == itempackets::useItem(7, 2000123));
+    CHECK(q.askUse(7, 2000123, true, 1100, out) == ia::Result::Busy);  // the same cell waits
+    CHECK(q.waiting(is::Where::Bag, 7));
+    CHECK(q.onChange(is::Change{is::Where::Bag, 7, -1}) == ia::Outcome::Done);
+    CHECK(q.askEquip(9, 2, true, 2000, out) == ia::Result::Sent && out == itempackets::equip(9, 2));
+    is::Change no{is::Where::Bag, 9, 0};
+    no.result = 1;
+    CHECK(q.onChange(no) == ia::Outcome::Refused);
+    CHECK(q.askUnequip(9, true, 2500, out) == ia::Result::Sent && out == itempackets::unequip(9));
+    is::Change off{is::Where::Bag, 9, 0};
+    off.result = 0;
+    CHECK(q.onChange(off) == ia::Outcome::Done);
+    CHECK(q.askDrop(5, 3, 10, true, 3000, out) == ia::Result::Sent && out == itempackets::drop(5, 3));
+    CHECK(q.tick(3000 + ia::kTimeoutMs + 1) == ia::Outcome::TimedOut);
+    CHECK(!q.waiting(is::Where::Bag, 5));
+    CHECK(q.askDrop(5, 30, 10, true, 6000, out) == ia::Result::Sent && out == itempackets::drop(5, 10));  // cut
+    CHECK(q.askDrop(6, 3, 0, true, 6100, out) == ia::Result::NothingToMove);
+    CHECK(q.askUse(8, 1, false, 7000, out) == ia::Result::NotConnected);
+}

@@ -824,6 +824,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.vendWindow);
         } else if (key == "interface.vend_packets") {  // 3.0.24-beta.18: items via packets, the testers' box
             setBool(val, c.vendPackets);
+        } else if (key == "interface.items_packets") {  // 3.0.24-beta.20: «Речі»'s own packets, the testers' box
+            setBool(val, c.itemsPackets);
         } else if (key == "interface.picks") {  // 3.0.11-beta.157: the choice of things
             setBool(val, c.pickWindows);
         } else if (key == "interface.party_setup") {  // 3.0.11-beta.158: the party's settings

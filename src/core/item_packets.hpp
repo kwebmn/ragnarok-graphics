@@ -27,6 +27,14 @@ Bytes sellList(const Pairs& indexAmount);
 // 3.0.24-beta.18 (stage 4 «Лавка»): purchasereq 0x0134 - the length, the merchant's account, {amount.W, place.W}
 // (pairs given as {place, amount}: the place as the shop's list 0x0133 gave it, the cart's index + 2)
 Bytes vendBuy(uint32_t merchant, const Pairs& placeAmount);
+// 3.0.24-beta.20 (docs/superpowers/plans/2026-11-27-item-windows-old-layout.md, task 2): «Речі»'s own, in our
+// client's section (packet_db.txt packet_ver 22) - useitem 0x009f 14 {index@4, account@10} (as the pad's
+// uapad::buildUseItem), dropitem 0x0116 10 {index@5, amount@8}, equipitem 0x00a9 6 {index@2, places@4}, unequipitem
+// 0x00ab 4 {index@2}; the index the bag's (place + 2, as the game's drags and lists give it)
+Bytes useItem(uint16_t index, uint32_t account);
+Bytes drop(uint16_t index, uint16_t amount);
+Bytes equip(uint16_t index, uint16_t places);
+Bytes unequip(uint16_t index);
 int serverLength(uint16_t id);
 
 }  // namespace uagfx::itempackets

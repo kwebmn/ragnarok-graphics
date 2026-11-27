@@ -1,4 +1,5 @@
 #include "core/item_packets.hpp"
+#include "pad/core/proto/c2s.hpp"
 
 #include "test.hpp"
 
@@ -87,4 +88,21 @@ TEST(item_packets_vend_purchase) {
     CHECK_EQ(rd16(b, 12), 1);
     CHECK_EQ(rd16(b, 14), 9);
     CHECK_EQ(itempackets::serverLength(0x0135), 7);
+}
+
+// 3.0.24-beta.20 (docs/superpowers/plans/2026-11-27-item-windows-old-layout.md, task 2): «Речі»'s own packets in
+// our client's numbering (uAthena packet_db.txt section packet_ver 22, 2007-05-07aSakexe) - useitem 0x009f 14
+// {index@4, account@10}, dropitem 0x0116 10 {index@5, amount@8}, equipitem 0x00a9 6 {index@2, places@4},
+// unequipitem 0x00ab 4 {index@2}; their answers' lengths
+TEST(item_packets_use_equip_unequip_drop) {
+    const itempackets::Bytes use = itempackets::useItem(7, 2000123);
+    CHECK(use == uapad::buildUseItem(7, 2000123));  // the pad's own (its hotkeys since 3.0.11): the same bytes
+    CHECK(use.size() == 14u && use[0] == 0x9f && use[1] == 0x00 && use[4] == 7 && use[5] == 0);
+    const itempackets::Bytes drop = itempackets::drop(9, 300);
+    CHECK(drop.size() == 10u && drop[0] == 0x16 && drop[1] == 0x01 && drop[5] == 9 && drop[6] == 0);
+    CHECK(drop[8] == 0x2c && drop[9] == 0x01);  // 300
+    CHECK(itempackets::equip(5, 0x0002) == (itempackets::Bytes{0xa9, 0x00, 5, 0, 2, 0}));
+    CHECK(itempackets::unequip(5) == (itempackets::Bytes{0xab, 0x00, 5, 0}));
+    CHECK(itempackets::serverLength(0x00a8) == 7 && itempackets::serverLength(0x00aa) == 7);
+    CHECK(itempackets::serverLength(0x00ac) == 7 && itempackets::serverLength(0x01c8) == 13);
 }

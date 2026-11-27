@@ -25,6 +25,9 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool drop(int x, int y, uint32_t drag);  // a drag let go over it (win/world_mouse)
+// 3.0.24-beta.20 ([interface] items_packets, the testers' box): a worn thing taken off by our own packet
+// (win/item_net) - the game's window's mode else
+void setPackets(bool on);
 void beforeGameDraw();
 bool shown();
 // The controller's (pad runtime equipPad): the D-pad or the left stick goes round the slots (the list of what fits

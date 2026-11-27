@@ -22,6 +22,7 @@
 #include "core/window_drag.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
+#include "win/item_net.hpp"
 #include "win/client_tables.hpp"
 #include "win/game_memory.hpp"
 #include "win/info_card.hpp"
@@ -526,10 +527,20 @@ void closeGameWindow() {
         reinterpret_cast<SendMsgFn>(uintptr_t(kEquipSendMsg))(window, 0, kButtonMsg, kCloseButton, 0, 0);
 }
 
+bool g_packets = false;  // 3.0.24-beta.20: [interface] items_packets
+
 void takeOff(State& s, int slot, const char* by) {
     if (slot < 0 || slot >= ew::kSlots) return;
     const ew::Worn& w = s.data.slots[slot];
     if (w.index <= 0) return;
+    if (g_packets) {  // 3.0.24-beta.20: our own packet; the slot waits for the server's answer
+        const itemactions::Result r = itemnet::unequip(uint16_t(w.index));
+        s.readAt = 0;
+        if (s.told++ < 20)
+            LOG_INFO("equip: %s takes off #%d (index %d) by our own packet - %s", by, w.id, w.index,
+                     r == itemactions::Result::Sent ? "sent" : "not sent");
+        return;
+    }
     const int number = ew::bitIndex(ew::kBits[slot]);
     const bool sent = number >= 0 && modeMsg(kTakeOffMsg, number, 0, 0);
     s.readAt = 0;
@@ -1261,6 +1272,12 @@ bool wearThing(int bagIndex, int slot) {  // 3.0.11-beta.121
         return sent;
     }
     return false;
+}
+
+void setPackets(bool on) {
+    if (on != g_packets)
+        LOG_INFO("equip: %s", on ? "taken off by our own packets ([interface] items_packets)" : "the game's own ways");
+    g_packets = on;
 }
 
 }  // namespace uagfx::win::equipwin

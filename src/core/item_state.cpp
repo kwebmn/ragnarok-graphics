@@ -171,6 +171,9 @@ std::optional<Change> State::feed(const uint8_t* p, size_t n) {
         }
         case 0x01c8: {
             if (n < 13 || p[12] == 0) return std::nullopt;  // not used
+            // 3.0.24-beta.20: sent to everyone around (uAthena clif_useitemack, AREA) - only our own account's
+            if ((uint32_t(p[6]) | uint32_t(p[7]) << 8 | uint32_t(p[8]) << 16 | uint32_t(p[9]) << 24) != self_)
+                return std::nullopt;
             const uint16_t index = r16(p, 2), left = r16(p, 10);
             const auto at = std::find_if(bag_.begin(), bag_.end(), [index](const Item& x) { return x.index == index; });
             if (at == bag_.end()) return std::nullopt;
@@ -178,6 +181,19 @@ std::optional<Change> State::feed(const uint8_t* p, size_t n) {
             at->amount = left;
             if (left == 0) bag_.erase(at);
             return Change{Where::Bag, index, delta};
+        }
+        case 0x00a8: {  // 3.0.24-beta.20: not used (its result 1: refused)
+            if (n < 7) return std::nullopt;
+            Change c{Where::Bag, r16(p, 2), 0};
+            c.result = 1;
+            return c;
+        }
+        case 0x00aa:    // worn
+        case 0x00ac: {  // taken off - {index, its place, ok}
+            if (n < 7) return std::nullopt;
+            Change c{Where::Bag, r16(p, 2), 0};
+            c.result = p[6] != 0 ? 0 : 1;
+            return c;
         }
         default: return std::nullopt;
     }
