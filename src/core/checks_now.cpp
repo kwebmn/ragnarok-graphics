@@ -7,6 +7,28 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.36 (the laptop's run): uaro-render64.exe's shaders past the game's 90 s - kept now, waited for
+        {"start_slow_pc_36", "3.0.24-beta.36", "",
+         {"Start on a slow computer: the second one quick", "Старт на слабкому комп'ютері: другий швидкий",
+          "Старт на слабом компьютере: второй быстрый"},
+         {"Where the game took a minute and a half or more to show its picture (a weak laptop): start it, wait for "
+          "«Compiling shaders: N of M» to end (once, it may take two or three minutes), close it and start it again - "
+          "the picture in a few seconds.",
+          "Там, де гра показувала картинку півтори хвилини й довше (слабкий ноутбук): запустіть, дочекайтеся кінця "
+          "«Збираємо шейдери: N з M» (один раз, може тривати дві-три хвилини), закрийте й запустіть знову — "
+          "картинка за кілька секунд.",
+          "Там, где игра показывала картинку полторы минуты и дольше (слабый ноутбук): запустите, дождитесь конца "
+          "«Собираем шейдеры: N из M» (один раз, может длиться две-три минуты), закройте и запустите снова — "
+          "картинка за несколько секунд."}},
+        // 3.0.24-beta.36 (the laptop's run): «Навички»'s names and their lines up to the level
+        {"skill_names_36", "3.0.24-beta.36", "",
+         {"Skills: the names whole", "Навички: назви цілі", "Навыки: названия целые"},
+         {"Alt+S: the skills' names and the lines under them (Increase Weight Limit, «Quest - not learned with "
+          "points») whole up to the level on the right, nothing cut short beside an empty room.",
+          "Alt+S: назви навичок і рядки під ними (Increase Weight Limit, «Квест — очками не вчиться») цілі аж до "
+          "рівня праворуч, нічого не обрізано поруч із порожнім місцем.",
+          "Alt+S: названия навыков и строки под ними (Increase Weight Limit, «Квест — очками не изучается») целые до "
+          "уровня справа, ничего не обрезано рядом с пустым местом."}},
         // 3.0.24-beta.34 (R-AVW884): «Речі»'s vertical tabs their column's width, the word in the frame's middle
         {"bag_tabs_34", "3.0.24-beta.34", "interface.items",
          {"Items: the tabs on the left whole", "Речі: вкладки зліва цілі", "Вещи: вкладки слева целые"},
