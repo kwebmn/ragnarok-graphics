@@ -866,3 +866,96 @@ TEST(uikit_options_a_check_s_card_and_its_buttons) {
     CHECK_EQ(bad, 0);
     rmlhost::close(doc);
 }
+
+// 3.0.24-beta.19 (docs/superpowers/plans/2026-11-27-interface-themes.md, task 4): the theme as two pictures of a
+// window, the accent's chips with their dots, «свій колір»'s palette and field under them - each a list of its own,
+// made only in its row (a row of chips makes none of them)
+TEST(uikit_options_theme_pictures_accent_dots_and_palette) {
+    static ol::Model m;
+    m = ol::Model{};
+    m.title = "Налаштування";
+    m.nav = {ol::NavView{"Інтерфейс", 3}};
+    ol::RowView theme;
+    theme.key = "interface.theme";
+    theme.label = "Тема інтерфейсу";
+    theme.group = "Тема й кольори";
+    theme.swatches = {ol::ChoiceView{"Темна", true}, ol::ChoiceView{"Світла", false}};
+    m.rows.push_back(theme);
+    ol::RowView accent;
+    accent.key = "interface.accent";
+    accent.label = "Колір акценту";
+    for (const char* w : {"за темою", "золотий", "синій", "зелений", "червоний", "свій колір"})
+        accent.accents.push_back(ol::ChoiceView{w, std::string(w) == "свій колір", "#c86bff"});
+    for (int k = 0; k < 30; ++k) accent.cells.push_back(ol::ChoiceView{"", k == 18, "#2e8b57"});
+    m.rows.push_back(accent);
+    ol::RowView plain;
+    plain.key = "interface.theme_hud";
+    plain.label = "Тема: основний екран";
+    plain.choices = {ol::ChoiceView{"як усе", true}, ol::ChoiceView{"темна", false}, ol::ChoiceView{"світла", false}};
+    m.rows.push_back(plain);
+    ol::fit(m.rows);
+    m.shownRows = 3;
+    m.ownHex = "#C86BFF";
+    int chosenRow = -1, chosen = -1, colourRow = -1, colour = -1, typed = 0;
+    std::string error;
+    Rml::ElementDocument* doc = rmlhost::load(
+        ol::rml(),
+        [&](Rml::DataModelConstructor& c) {
+            ol::bind(c, m);
+            const auto none = [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {};
+            for (const char* e : {"sec_go", "set_slider", "set_step", "set_toggle", "set_reset", "open_console",
+                                  "open_layout", "opt_close", "card_toggle", "card_more", "set_mode", "check_ok",
+                                  "check_bad", "reset_all"})
+                c.BindEventCallback(e, none);
+            c.BindEventCallback("set_choice", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+                chosenRow = a.size() > 1 ? a[0].Get<int>() : -2;
+                chosen = a.size() > 1 ? a[1].Get<int>() : -2;
+            });
+            c.BindEventCallback("set_colour", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+                colourRow = a.size() > 1 ? a[0].Get<int>() : -2;
+                colour = a.size() > 1 ? a[1].Get<int>() : -2;
+            });
+            c.BindEventCallback("set_own_hex", [&](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+                ++typed;
+            });
+        },
+        100, 60, &error);
+    if (!error.empty()) std::printf("RmlUi: %s", error.c_str());
+    CHECK_EQ(error, std::string());
+    CHECK(doc != nullptr);
+    if (!doc) return;
+    CHECK(m.rows[0].sliders == std::vector<int>{1} && m.rows[1].sliders == std::vector<int>{2});  // fit's parts
+    CHECK(m.rows[1].pals.size() == 1u && m.rows[2].sliders.empty() && m.rows[2].pals.empty());
+    CHECK_EQ(shownOf(doc, ".spane .tpic"), 2);  // the theme's two pictures
+    CHECK_EQ(shownOf(doc, ".spane .tpic.on"), 1);
+    CHECK_EQ(shownOf(doc, ".spane .tpic.lt"), 1);  // the second: the light one
+    CHECK_EQ(shownOf(doc, ".spane .ch .dot"), 6);  // the accent's chips with their dots
+    CHECK_EQ(shownOf(doc, ".spane .pc"), 30);  // the palette
+    CHECK_EQ(shownOf(doc, ".spane .pc.on"), 1);
+    CHECK_EQ(shownOf(doc, ".spane .phx input"), 1);
+    CHECK_EQ(shownOf(doc, ".spane .ch"), 9);  // six accents and the group's three chips
+    Rml::ElementList all;
+    doc->QuerySelectorAll(all, ".spane .tpic, .spane .dot, .spane .pc, .spane .pal");
+    CHECK_EQ(int(all.size()), 2 + 6 + 30 + 1);  // made only where shown: nothing hidden walked each frame
+    Rml::ElementList pictures, cells;
+    doc->QuerySelectorAll(pictures, ".spane .tpic");
+    if (pictures.size() == 2) pictures[1]->Click();
+    CHECK_EQ(chosenRow, 0);
+    CHECK_EQ(chosen, 1);
+    doc->QuerySelectorAll(cells, ".spane .pc");
+    if (cells.size() == 30) cells[18]->Click();
+    CHECK_EQ(colourRow, 1);
+    CHECK_EQ(colour, 18);
+    Rml::ElementList hexes;
+    doc->QuerySelectorAll(hexes, ".phx input");
+    if (!hexes.empty()) {
+        CHECK(hexes[0]->GetAttribute<Rml::String>("value", "") == "#C86BFF");
+        hexes[0]->SetAttribute("value", "");
+        hexes[0]->Focus();  // typed as a person types it
+        rmlhost::context()->ProcessTextInput("#2E8B57");
+        rmlhost::update();
+    }
+    CHECK(typed > 0);
+    CHECK_EQ(std::string(m.ownHex), std::string("#2E8B57"));
+    rmlhost::close(doc);
+}

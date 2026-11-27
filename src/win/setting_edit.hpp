@@ -17,6 +17,8 @@ bool direct3d12();
 // One of «Як виглядає гра»'s choices - its variant's keys written (3.0.21-beta.7: «Налаштування» is no key of a
 // look, so the window choosing one stays without a list of keys to keep)
 bool setLook(const std::string& iniPath, settings::presets::Choice c, int variant);
+// 3.0.24-beta.19 (the themes): «свій колір» - [interface] accent = own and accent_colour = `hex` ("#RRGGBB") together
+bool setOwnAccent(const std::string& iniPath, const std::string& hex);
 // The settings as the console shows them - each effect's switch as the set has it (the AI pictures as the file says)
 Config shown(const Config& c);
 

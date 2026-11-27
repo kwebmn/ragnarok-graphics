@@ -41,10 +41,21 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    data-if="r.warn != ''">{{r.warn}}</span></div><div
    class="sctl"><span class="tg ctl" data-if="r.toggle" data-class-on="r.on"
    data-event-click="set_toggle(i)"><span class="kn"></span></span><div class="slw"
-   data-for="s : r.sliders"><input class="ctl" type="range" data-attr-min="r.min" data-attr-max="r.max"
-   data-attr-step="r.step" data-attr-value="r.value" data-event-change="set_slider(i)"/><span class="ch ctl"
-   data-event-click="set_step(i, -1)">&#x2212;</span><span class="sv">{{r.vtext}}</span><span
-   class="ch ctl" data-event-click="set_step(i, 1)">+</span></div><div class="chs"><span class="chw"
+   data-for="s : r.sliders"><div class="slp" data-if="s == 0"><input class="ctl" type="range"
+   data-attr-min="r.min" data-attr-max="r.max" data-attr-step="r.step" data-attr-value="r.value"
+   data-event-change="set_slider(i)"/><span class="ch ctl" data-event-click="set_step(i, -1)">&#x2212;</span><span
+   class="sv">{{r.vtext}}</span><span class="ch ctl" data-event-click="set_step(i, 1)">+</span></div><div
+   class="lkp" data-if="s == 1"><span class="lkw" data-for="c, j : r.swatches"><span class="tpic ctl"
+   data-class-on="c.on" data-class-lt="j == 1" data-event-click="set_choice(i, j)"><span class="tpg"><span
+   class="tpt"></span><span class="tpl"></span><span class="tpl s2"></span><span class="tpa"></span></span><span
+   class="tpn">{{c.label}}</span></span></span></div><div class="acp" data-if="s == 2"><div class="acc"><span
+   class="chw" data-for="c, j : r.accents"><span class="ch ctl" data-class-on="c.on"
+   data-event-click="set_choice(i, j)"><span class="dot"
+   data-style-background-color="c.dot"></span>{{c.label}}</span></span></div><div class="phw"
+   data-for="q : r.pals"><div class="pal"><span class="pcw" data-for="p, k : r.cells"><span class="pc ctl"
+   data-class-on="p.on" data-style-background-color="p.dot" data-event-click="set_colour(i, k)"></span></span><div
+   class="phx"><span class="phh">#RRGGBB</span><input class="ctl" type="text" maxlength="7" data-value="own_hex"
+   data-event-change="set_own_hex()"/></div></div></div></div></div><div class="chs"><span class="chw"
    data-for="c, j : r.choices"><span class="ch ctl" data-class-on="c.on"
    data-event-click="set_choice(i, j)">{{c.label}}</span></span></div></div></div></div>
    <div class="snone" data-if="shown_rows == 0">{{none}}</div></div>
@@ -61,7 +72,12 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 const char* rml() { return kRml; }
 
 void fit(std::vector<RowView>& rows) {
-    for (RowView& r : rows) r.sliders.assign(r.slider && !r.subhead ? 1 : 0, 0);
+    for (RowView& r : rows) {  // 3.0.24-beta.19: the row's own part by its kind - 0 a slider, 1 the theme's
+        // pictures, 2 the accent's chips (and «свій колір»'s palette and field, `pals` one when there are cells)
+        const int kind = r.subhead ? -1 : !r.swatches.empty() ? 1 : !r.accents.empty() ? 2 : r.slider ? 0 : -1;
+        r.sliders.assign(kind >= 0 ? 1 : 0, kind);
+        r.pals.assign(kind == 2 && !r.cells.empty() ? 1 : 0, 0);
+    }
 }
 
 int cull(Rml::ElementDocument* doc, bool all) {
@@ -107,6 +123,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     if (auto v = c.RegisterStruct<ChoiceView>()) {
         v.RegisterMember("label", &ChoiceView::label);
         v.RegisterMember("on", &ChoiceView::on);
+        v.RegisterMember("dot", &ChoiceView::dot);  // 3.0.24-beta.19
     }
     c.RegisterArray<std::vector<ChoiceView>>();
     c.RegisterArray<std::vector<int>>();
@@ -143,6 +160,10 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         v.RegisterMember("sub", &RowView::sub);
         v.RegisterMember("cards", &RowView::cards);
         v.RegisterMember("ncards", &RowView::ncards);
+        v.RegisterMember("swatches", &RowView::swatches);  // 3.0.24-beta.19
+        v.RegisterMember("accents", &RowView::accents);
+        v.RegisterMember("cells", &RowView::cells);
+        v.RegisterMember("pals", &RowView::pals);
     }
     c.RegisterArray<std::vector<RowView>>();
     if (auto v = c.RegisterStruct<NavView>()) {
@@ -167,6 +188,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("simple", &m.simple);
     c.Bind("mode_simple", &m.modeSimple);
     c.Bind("mode_full", &m.modeFull);
+    c.Bind("own_hex", &m.ownHex);  // 3.0.24-beta.19
 }
 
 }  // namespace uagfx::uikit::options

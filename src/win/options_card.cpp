@@ -19,6 +19,7 @@
 #include "core/settings/strings.hpp"
 #include "core/settings/schema.hpp"
 #include "core/settings_window.hpp"
+#include "core/theme_choice.hpp"
 #include "core/ui_style.hpp"
 #include "core/version.hpp"
 #include "pad/win/game_window.hpp"
@@ -405,9 +406,35 @@ static std::vector<SetRowView> buildRows(const State& s) {
                 r.value = std::atoi(now.c_str());
                 r.vtext = now + (st->unit && *st->unit ? std::string(" ") + st->unit : "");
             } else {
+                std::vector<ChoiceView> list;
                 for (size_t j = 0; j < st->tokens.size(); ++j)
-                    r.choices.push_back(ChoiceView{j < st->choices.size() ? say(st->choices[j]) : st->tokens[j],
-                                                   now == st->tokens[j]});
+                    list.push_back(ChoiceView{j < st->choices.size() ? say(st->choices[j]) : st->tokens[j],
+                                              now == st->tokens[j]});
+                // 3.0.24-beta.19 (the themes): the theme as two pictures; the accent's chips with their colours
+                // and, at «свій колір», its palette under them
+                if (themechoice::swatchRow(f.key)) {
+                    r.swatches = std::move(list);
+                } else if (f.key == "interface.accent") {
+                    for (size_t j = 0; j < list.size(); ++j) {
+                        const std::string word = st->tokens[j];
+                        const std::string dot = word == "auto" ? (shown.uiTheme == "light" ? "#2f5fd0" : "#e6cb8a")
+                                                               : themechoice::dot(word, shown.uiAccentColour);
+                        list[j].dot = dot.empty() ? "#00000000" : dot;
+                    }
+                    r.accents = std::move(list);
+                    if (now == "own") {  // the palette (uikit options fit() gives it its place)
+                        const std::string own = themechoice::typed(shown.uiAccentColour);
+                        const std::vector<uint32_t> colours = themechoice::palette();
+                        for (size_t k = 0; k < colours.size(); ++k) {
+                            const auto cell = themechoice::pick(int(k) / 10, int(k) % 10);
+                            char hex[8];
+                            std::snprintf(hex, sizeof hex, "#%06x", unsigned(colours[k] & 0xFFFFFF));
+                            r.cells.push_back(ChoiceView{"", cell.second == own, hex});
+                        }
+                    }
+                } else {
+                    r.choices = std::move(list);
+                }
             }
         }
         out.push_back(std::move(r));
@@ -422,6 +449,9 @@ static std::string rowsKeyOf(const std::vector<SetRowView>& rows) {
         if (r.subhead) k += r.label;
         if (r.det) k += 'd';
         for (const ChoiceView& c : r.choices) k += c.on ? '1' : '0';
+        for (const ChoiceView& c : r.swatches) k += c.on ? 'S' : 's';  // 3.0.24-beta.19
+        for (const ChoiceView& c : r.accents) k += (c.on ? "A" : "a") + c.dot;
+        for (const ChoiceView& c : r.cells) k += c.on ? 'P' : 'p';
         for (const uikit::options::CardView& c : r.cards) k += c.key + (c.on ? "+" : "-");  // 3.0.24-beta.2
         k += '|';
     }
@@ -641,6 +671,23 @@ static void liveFrame(State& s) {
         m.BindEventCallback("set_choice", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             if (a.size() >= 2) useRow(state(), a[0].Get<int>(), 2, a[1].Get<int>());
         });
+        // 3.0.24-beta.19 (the themes): «свій колір» - a palette's cell, or a colour typed into its field
+        m.BindEventCallback("set_colour", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
+            if (a.size() < 2 || st.iniPath.empty()) return;
+            const int k = a[1].Get<int>();
+            if (k < 0 || k >= 30) return;
+            st.changed = settingedit::setOwnAccent(st.iniPath, themechoice::pick(k / 10, k % 10).second) || st.changed;
+            st.hotUntil = GetTickCount64() + 700;
+        });
+        m.BindEventCallback("set_own_hex", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            State& st = state();
+            const std::string hex = themechoice::typed(st.m.ownHex);
+            if (hex.empty() || st.iniPath.empty() || !st.config) return;
+            if (st.config->uiAccent == "own" && themechoice::typed(st.config->uiAccentColour) == hex) return;
+            st.changed = settingedit::setOwnAccent(st.iniPath, hex) || st.changed;
+            st.hotUntil = GetTickCount64() + 700;
+        });
         // 3.0.21-beta.7: «Розмістити інтерфейс» - the console's action before (the console is the laboratory now)
         m.BindEventCallback("open_layout", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
             state().layoutAsked = true;
@@ -857,6 +904,14 @@ static void liveFrame(State& s) {
     if (anew) {
         s.rowsKey = key;
         s.m.shownRows = int(rows.size());
+        // 3.0.24-beta.19: «свій колір»'s field as the file has it (a colour half typed keeps the rows as they are)
+        if (s.config && std::any_of(rows.begin(), rows.end(), [](const SetRowView& r) { return !r.pals.empty(); })) {
+            const std::string own = themechoice::typed(s.config->uiAccentColour);
+            if (own != s.m.ownHex) {
+                s.m.ownHex = own;
+                s.live.doc.dirty("own_hex");
+            }
+        }
         s.m.rows = std::move(rows);
         s.live.doc.dirty("srows");
         s.live.doc.dirty("shown_rows");

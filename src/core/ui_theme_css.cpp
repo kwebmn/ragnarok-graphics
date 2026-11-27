@@ -745,6 +745,46 @@ select selectbox option:checked { color: #e6cb8a; }
     font-size: 12dp; color: #cfd3dc; }
 .sw .ch:hover { background-color: #ffffff10; }
 .sw .ch.on { border-color: #e6cb8a; color: #e6cb8a; background-color: #e6cb8a1a; }
+/* 3.0.24-beta.19 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md, the themes): the theme as two
+   pictures of a window, the accent's chips with their dots, «свій колір»'s palette (3 x 10) and its field under them.
+   The pictures' colours in rgb(): never repainted by the theme (core/ui_theme rewrites #rrggbb alone) - they show the
+   themes as they are; the ring round the chosen one in the accent */
+.sw .ch .dot { display: inline-block; width: 9dp; height: 9dp; margin-right: 5dp; border-radius: 5dp;
+    vertical-align: middle; }
+.sw .slp { display: flex; flex-direction: row; align-items: center; }
+.sw .lkp { display: flex; flex-direction: row; }
+.sw .lkw { display: block; margin-left: 10dp; }
+.sw .tpic { display: block; text-align: center; }
+.sw .tpg { display: block; position: relative; width: 96dp; height: 58dp; border-radius: 8dp;
+    border: 2dp rgba(0, 0, 0, 0); background-color: rgb(16, 20, 28); }
+.sw .tpic.lt .tpg { background-color: rgb(246, 248, 252); }
+.sw .tpic:hover .tpg { border-color: #ffffff33; }
+.sw .tpic.on .tpg { border-color: #e6cb8a; }
+.sw .tpt { position: absolute; left: 8dp; top: 7dp; width: 46dp; height: 6dp; border-radius: 3dp;
+    background-color: rgb(238, 242, 248); }
+.sw .tpic.lt .tpt { background-color: rgb(24, 28, 38); }
+.sw .tpl { position: absolute; left: 8dp; top: 19dp; width: 76dp; height: 11dp; border-radius: 3dp;
+    background-color: rgb(27, 29, 36); }
+.sw .tpic.lt .tpl { background-color: rgb(255, 255, 255); border: 1dp rgb(203, 211, 226); }
+.sw .tpl.s2 { top: 34dp; width: 56dp; }
+.sw .tpa { position: absolute; right: 8dp; bottom: 6dp; width: 22dp; height: 8dp; border-radius: 4dp;
+    background-color: rgb(230, 203, 138); }
+.sw .tpic.lt .tpa { background-color: rgb(47, 95, 208); }
+.sw .tpn { display: block; margin-top: 4dp; font-size: 12dp; color: #9aa3b5; }
+.sw .tpic.on .tpn { color: #eef2f8; }
+.sw .acp { display: block; }
+.sw .acc { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; max-width: 330dp; }
+.sw .phw { display: block; }
+.sw .pal { display: block; width: 250dp; margin-top: 6dp; }
+.sw .pcw { display: inline-block; }
+.sw .pc { display: inline-block; width: 21dp; height: 21dp; margin: 0 4dp 4dp 0; border-radius: 4dp;
+    border: 2dp rgba(0, 0, 0, 0); }
+.sw .pc:hover { border-color: #ffffff66; }
+.sw .pc.on { border-color: #eef2f8; }
+.sw .phx { display: flex; flex-direction: row; align-items: center; margin-top: 2dp; }
+.sw .phx .phh { display: block; margin-right: 8dp; font-size: 12dp; color: #9aa3b5; }
+.sw .phx input { display: block; width: 96dp; height: 26dp; padding: 0 8dp; line-height: 26dp; font-size: 13dp;
+    color: #eef2f8; border-radius: 6dp; border: 1dp #ffffff1a; background-color: #00000059; box-sizing: border-box; }
 .sw .snone { display: block; margin-top: 20dp; font-size: 13dp; color: #9aa3b5; }
 .sw .sfoot { display: flex; flex-direction: row; justify-content: space-between; align-items: center;
     padding: 9dp 12dp; border-top: 1dp #ffffff1a; }

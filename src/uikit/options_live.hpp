@@ -24,6 +24,9 @@ namespace uagfx::uikit::options {
 struct ChoiceView {
     Rml::String label;
     bool on = false;
+    // 3.0.24-beta.19 (the themes): its colour - the accent's chips' dot, a palette's cell: "#rrggbb" as it is (the
+    // theme never repaints a model's colour), never empty (an empty style value: "#00000000")
+    Rml::String dot = "#00000000";
 };
 // 3.0.24-beta.2 (the simple mode): a capability card - its name, its words, its group's way in («Детально · N ›», ""
 // none), its switch
@@ -46,7 +49,9 @@ struct RowView {
     bool toggle = false, on = false, slider = false;
     int value = 0, min = 0, max = 0, step = 1;
     std::vector<ChoiceView> choices;
-    std::vector<int> sliders;  // 3.0.21-beta.8: one when the row is a slider (fit): its part is made only then
+    // 3.0.21-beta.8: one when the row is a slider (fit): its part is made only then; 3.0.24-beta.19: the part's kind
+    // (0 a slider, 1 the theme's pictures, 2 the accent's chips and palette)
+    std::vector<int> sliders;
     // 3.0.21-beta.11 (the owner: «раскрытие в настройках лучше убрать … можно както выделить внутри что это
     // подгрупа»): no line that opens or folds - subhead: the small heading over a group's details (its words in
     // `label`, no control); det: a row of those details (set in, a rule on its left); sub: a part of the row over it
@@ -55,6 +60,12 @@ struct RowView {
     // 3.0.24-beta.2: one or two capability cards side by side in place of a row (`ncards` their count)
     std::vector<CardView> cards;
     int ncards = 0;
+    // 3.0.24-beta.19 (the themes): inside the row's own part (`sliders`, fit(): 1 the pictures, 2 the accent) -
+    // nothing more in the other rows (an empty list leaves an element of its own in each row, a hidden data-if one
+    // its whole self): the choices as pictures of a window (interface.theme), as chips with their colour's dot
+    // (interface.accent), «свій колір»'s palette under them - `cells` its 30, `pals` one when they are there (fit)
+    std::vector<ChoiceView> swatches, accents, cells;
+    std::vector<int> pals;
 };
 struct NavView {
     Rml::String name;
@@ -70,6 +81,7 @@ struct Model {
     // file as the window opens); the switch's two words
     bool simple = false;
     Rml::String modeSimple, modeFull;
+    Rml::String ownHex;  // 3.0.24-beta.19: «свій колір»'s field (typed in: set_own_hex())
     std::vector<NavView> nav;
     std::vector<RowView> rows;
 };
@@ -103,7 +115,8 @@ const char* rml();
 // The window's variables. Its events are the caller's: sec_go(i), set_toggle(i), set_slider(i), set_step(i, by),
 // set_choice(i, j), set_reset(i), open_layout(), open_console(), opt_close(); 3.0.24-beta.2: set_mode(0 simple /
 // 1 full), card_toggle(i, j), card_more(i, j); 3.0.24-beta.3: check_ok(i, j), check_bad(i, j); 3.0.24-beta.5:
-// reset_all()
+// reset_all(); 3.0.24-beta.19: set_choice(i, j) from the pictures and the accent's chips too, set_colour(i, k) (the
+// palette's cell k of row i), set_own_hex()
 void bind(Rml::DataModelConstructor& c, Model& m);
 
 }  // namespace uagfx::uikit::options

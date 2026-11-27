@@ -52,6 +52,15 @@ bool set(const std::string& iniPath, const Config& config, const std::string& ke
     return true;
 }
 
+bool setOwnAccent(const std::string& iniPath, const std::string& hex) {
+    if (!editIniFile(iniPath, {{"interface", "accent", "own"}, {"interface", "accent_colour", hex}})) {
+        LOG_ERROR("settings: uaro-graphics.ini could not be written");
+        return false;
+    }
+    LOG_INFO("settings: interface.accent = own, accent_colour = %s", hex.c_str());
+    return true;
+}
+
 bool setLook(const std::string& iniPath, settings::presets::Choice c, int variant) {
     std::vector<IniEdit> edits;
     for (const auto& [key, token] : settings::presets::keysOf(c, variant)) {
