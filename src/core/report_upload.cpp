@@ -118,6 +118,11 @@ std::string uploadJson(const Upload& u) {
     return out;
 }
 
+std::pair<std::string, std::string> dumpAsFile(const std::string& name, const std::string& bytes) {
+    if ((bytes.size() + 2) / 3 * 4 > kMostFileText) return {};
+    return {name + ".b64", base64(bytes)};
+}
+
 std::string base64(const std::string& bytes) {
     static const char* k = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     std::string out;

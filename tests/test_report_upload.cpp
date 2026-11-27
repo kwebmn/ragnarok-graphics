@@ -142,3 +142,17 @@ TEST(report_upload_the_renderer_died_either_wording) {
                                "stops here, restart the game"));
     CHECK(!rendererDied("07:25:39.450 INFO  DirectDraw released, renderer closed\n"));
 }
+
+// 3.0.24-beta.31 (R-QYF9Z9: the 64-bit renderer died in CreateTexture, the report took only the newer dump - the
+// game's, made after it): the other dump of the week goes too, as a file of its name and .b64 (base64; the site keeps
+// a report's files as they come, the one dump field as before)
+TEST(report_second_dump_as_a_file) {
+    const std::pair<std::string, std::string> f = dumpAsFile("crash-render64.dmp", std::string("MDMP\x01", 5));
+    CHECK_EQ(f.first, std::string("crash-render64.dmp.b64"));
+    CHECK_EQ(f.second, base64(std::string("MDMP\x01", 5)));
+    CHECK_EQ(f.second, std::string("TURNUAE="));
+    // the site's one file at most 1 600 000 letters (GraphicsReportController MAX_FILE): a bigger dump goes not
+    // (the whole report would be refused)
+    CHECK(dumpAsFile("crash.dmp", std::string(1200000, 'x')).first == "crash.dmp.b64");
+    CHECK(dumpAsFile("crash.dmp", std::string(1200001, 'x')).first.empty());
+}

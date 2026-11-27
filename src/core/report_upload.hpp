@@ -30,6 +30,11 @@ constexpr size_t kMostDump = 2u << 20;  // a bigger one stays at home
 constexpr size_t kMostImages = 64;
 constexpr size_t kMostFiles = 8;  // 3.0.3-beta.1: the site takes 8 files at most (the logs and the ini)
 std::string base64(const std::string& bytes);
+// 3.0.24-beta.31 (R-QYF9Z9): a second minidump as one of the report's files - its name and .b64, base64 (the site's
+// one dump field keeps the newer); none ("", "") past the site's one file (kMostFileText letters: the whole report
+// would be refused)
+constexpr size_t kMostFileText = 1600000;  // GraphicsReportController MAX_FILE
+std::pair<std::string, std::string> dumpAsFile(const std::string& name, const std::string& bytes);
 
 // The request's JSON (the site's fields; text made valid UTF-8).
 std::string uploadJson(const Upload& u);

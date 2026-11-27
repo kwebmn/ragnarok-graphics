@@ -6,8 +6,10 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <sstream>
+#include <vector>
 
 #include "app/app_disk.hpp"
 #include "app/download.hpp"
@@ -167,21 +169,29 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
         if (!text.empty()) u.files.emplace_back("uaro-graphics-" + std::to_string(slot) + ".log", text);
     }
     // 0.52: a crash's minidump (win/crash.cpp) of the last week - 3.0.20-beta.83: the game's or uaro-render64.exe's
-    // (crash-render64.dmp), the newer one
+    // (crash-render64.dmp), the newer one; 3.0.24-beta.31 (R-QYF9Z9: the renderer's own dump stayed home, the game's
+    // made after it went): the other one of the week too, as a file (core/report_upload dumpAsFile)
     {
-        std::wstring newest;
-        uint64_t newestAt = 0;
-        for (const wchar_t* name : {L"crash.dmp", L"crash-render64.dmp"}) {
-            const std::wstring dump = dir + L"\\uaro-graphics\\" + name;
+        struct Dump {
+            const char* name;
+            std::wstring path;
+            uint64_t at = 0;
+        };
+        std::vector<Dump> dumps;
+        for (const char* name : {"crash.dmp", "crash-render64.dmp"}) {
+            const std::wstring path = dir + L"\\uaro-graphics\\" + std::wstring(name, name + std::strlen(name));
             WIN32_FILE_ATTRIBUTE_DATA a{};
-            if (!GetFileAttributesExW(dump.c_str(), GetFileExInfoStandard, &a)) continue;
+            if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &a)) continue;
             const uint64_t at = ticks(a.ftLastWriteTime);
-            if (ticks(now) - at < 7ull * 24 * 3600 * 10000000ull && at > newestAt) {
-                newest = dump;
-                newestAt = at;
-            }
+            if (ticks(now) - at < 7ull * 24 * 3600 * 10000000ull) dumps.push_back({name, path, at});
         }
-        if (!newest.empty()) readFile(newest, u.dump);
+        std::sort(dumps.begin(), dumps.end(), [](const Dump& a, const Dump& b) { return a.at > b.at; });
+        if (!dumps.empty()) readFile(dumps[0].path, u.dump);
+        std::string bytes;
+        if (dumps.size() > 1 && u.files.size() < report::kMostFiles && readFile(dumps[1].path, bytes)) {
+            std::pair<std::string, std::string> f = report::dumpAsFile(dumps[1].name, bytes);
+            if (!f.first.empty()) u.files.push_back(std::move(f));
+        }
     }
     // 3.0.20-beta.82 (R-9VCE45, core/texel_check.hpp): the frame of Assumptio's glow checked on Direct3D 11 - as
     // the card held it and as the game's memory did - of the last 12 hours; 3.0.22-beta.10 (R-3SA4RB): the ground's
