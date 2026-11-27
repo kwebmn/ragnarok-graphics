@@ -16,7 +16,8 @@ class Model;
 namespace mcpwatch {
 
 constexpr UINT kCall = WM_APP + 0x4D3;  // a call for the window's thread: its job in lParam (run() takes it)
-void start(HWND window, int port, const std::wstring& clientDir);
+// `iniPath` the app's (Paths::ini): its folder the files' (uaro-graphics\)
+void start(HWND window, int port, const std::wstring& clientDir, const std::wstring& iniPath);
 void stop();
 void run(LPARAM job, Model& model, settings::Lang lang);
 

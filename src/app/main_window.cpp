@@ -422,7 +422,7 @@ void MainWindow::create() {
     startClientPatchCheck(model_->paths().dir);  // 2.14: the game's new files
     // 3.0.24-beta.35 (the owner: «давай все через mcp»): the watchdog's MCP at the game's [mcp] port + 1
     if (model_->now().config.mcpEnabled)
-        mcpwatch::start(hwnd_, model_->now().config.mcpPort + 1, model_->paths().dir);
+        mcpwatch::start(hwnd_, model_->now().config.mcpPort + 1, model_->paths().dir, model_->paths().ini);
     // 2.13: the waiting reports sent, the answers counted
     startReportsCheck(model_->paths().dir, computerKey(model_->paths().dir));
     buildPage();

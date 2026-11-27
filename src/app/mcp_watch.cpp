@@ -79,6 +79,7 @@ HANDLE g_thread = nullptr;
 HWND g_window = nullptr;
 int g_port = 0;
 std::wstring g_dir;  // the client folder
+std::wstring g_ini;  // uaro-graphics.ini (the app's Paths::ini)
 Calls g_calls;
 
 // A call for the window's thread; `state` 0 waiting, 1 answered, 2 given up by the server (the window frees it)
@@ -344,7 +345,7 @@ mcp::CallResult systemTool(const json::Value& args) {
     return said(json::dump(out));
 }
 
-std::wstring ourDir() { return g_dir + L"\\uaro-graphics"; }
+std::wstring ourDir() { return g_ini.substr(0, g_ini.find_last_of(L'\\')); }
 
 std::string readTail(const std::wstring& path, size_t most) {
     HANDLE f = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
@@ -416,7 +417,7 @@ mcp::CallResult iniGet(const json::Value& args) {
     const std::string key = args["key"].asString();
     const settings::IniSetting* s = settings::findSetting(key);
     if (!s) return said("no such setting", true);
-    const Config c = parseConfig(readTail(ourDir() + L"\\uaro-graphics.ini", size_t(4) << 20));
+    const Config c = parseConfig(readTail(g_ini, size_t(4) << 20));
     json::Value out = json::Value::object();
     out.set("key", key);
     out.set("value", settings::tokenOf(*s, c));
@@ -427,7 +428,7 @@ mcp::CallResult iniGet(const json::Value& args) {
 mcp::CallResult iniSet(const json::Value& args) {
     const std::string key = args["key"].asString(), value = args["value"].asString();
     const size_t dot = key.find('.');
-    const std::wstring path = ourDir() + L"\\uaro-graphics.ini";
+    const std::wstring& path = g_ini;
     const std::string text = settings::applyIniEdits(readTail(path, size_t(4) << 20),
                                                      {{key.substr(0, dot), key.substr(dot + 1), value}});
     HANDLE f = CreateFileW(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, 0, nullptr);
@@ -545,8 +546,9 @@ DWORD WINAPI serve(void*) {
 
 }  // namespace
 
-void start(HWND window, int port, const std::wstring& clientDir) {
-    if (g_thread || port <= 0 || port > 65535) return;
+void start(HWND window, int port, const std::wstring& clientDir, const std::wstring& iniPath) {
+    if (g_thread || port <= 0 || port > 65535 || iniPath.find(L'\\') == std::wstring::npos) return;
+    g_ini = iniPath;
     g_calls = calls();
     if (!g_calls.ok()) return;
     g_window = window;
