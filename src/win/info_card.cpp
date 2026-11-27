@@ -33,6 +33,7 @@
 #include "win/game_memory.hpp"
 #include "win/log.hpp"
 #include "win/reference_load.hpp"
+#include "win/skill_window.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_window.hpp"
@@ -466,6 +467,10 @@ void skillCard(State& s, One& o, uint32_t window) {
         if (!c.lines.empty() && c.lines.front() == utf8(s, n != names.end() ? hotbar::spaced(n->second) : aegis))
             c.lines.erase(c.lines.begin());  // its first line its name again
     }
+    // 3.0.24-beta.27 (the narrow «Навички»: its side panel's facts here) - after the description, or in its place
+    const std::vector<std::string> facts = skillswin::cardFactsOf(aegis);
+    if (!c.lines.empty() && !facts.empty()) c.lines.push_back("");
+    c.lines.insert(c.lines.end(), facts.begin(), facts.end());
     if (c.lines.empty()) c.lines = skillFacts(s, aegis);  // 3.0.11-beta.229
     c.icon = clienttables::icon(hotbar::lowered(aegis), ic::iconSide(s.scale), 4 * s.scale);
     o.card = c;

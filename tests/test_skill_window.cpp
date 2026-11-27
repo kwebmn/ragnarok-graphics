@@ -182,3 +182,52 @@ TEST(skill_window_closed_skills_and_the_notice) {
     d.notice.clear();
     CHECK(skillwin::layout(0, 0, 1.0f, d, sh, t, measure).notice.w == 0);
 }
+
+// 3.0.24-beta.27 (docs/superpowers/plans/2026-11-27-other-windows-old-layout.md, task 2; the spec's «Навички (Alt+S)»:
+// «Узкий список: значок, название, уровень, SP, стрелка «+1»; очки внизу; описание — отдельным окошком по ПКМ»): the
+// list 420 wide, no side panel and no level dots (its «N/M» says it); «Дерево» as it was
+TEST(skill_window_list_is_narrow) {
+    const skillwin::Data d = knight();
+    skillwin::Show sh;
+    sh.tab = 1;
+    const skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, texts(), measure);
+    CHECK(L.title.w <= 420.0f && L.side.w == 0);
+    CHECK(L.dots.size() == 3u && L.dots[1].w == 0);
+    for (const panel::Box& r : L.rows) CHECK(r.x + r.w <= L.title.w);
+    CHECK(L.less[1].x + L.less[1].w <= L.pluses[1].x);  // the use level's arrows left of the «+»
+    sh.tree = true;
+    const skillwin::Layout T = skillwin::layout(0, 0, 1.0f, d, sh, texts(), measure);
+    CHECK(T.title.w > 900.0f && T.side.w > 0);
+}
+
+// A name wider than its room ends in «…» within it
+TEST(skill_window_long_name_fits) {
+    const std::string n = skillwin::fitName("Improve Concentration of a Very Long Name", 120, 13, false, measure);
+    CHECK(n.size() > 3 && n.compare(n.size() - 3, 3, "\xE2\x80\xA6") == 0);
+    CHECK(measure(n, 13, false) <= 120.0f);
+    CHECK_EQ(skillwin::fitName("Bash", 120, 13, false, measure), std::string("Bash"));
+}
+
+// The side panel's facts for the skill's card (a right click): its level, what it needs with each one met or how
+// far, what it opens
+TEST(skill_window_card_facts) {
+    skillwin::Data d = knight();
+    skillwin::Texts t = texts();
+    t.levelOf = "Рівень {1} з {2}";
+    t.needsHead = "Потрібно";
+    t.unlocks = "Відкриває";
+    skillwin::Skill& magnum = d.tabs[1].skills[2];
+    magnum.req = {{5, 5}, {6, 6}};  // Bash 5 (at 10: met), Provoke 6 (at 5: not)
+    magnum.level = 3;
+    const std::vector<std::string> f = skillwin::cardFacts(d, t, 7);
+    CHECK(f.size() == 4u);
+    if (f.size() == 4u) {
+        CHECK_EQ(f[0], std::string("Рівень 3 з 10"));
+        CHECK_EQ(f[1], std::string("Потрібно:"));
+        CHECK_EQ(f[2], std::string("Bash 5 \xE2\x9C\x93"));
+        CHECK_EQ(f[3], std::string("Provoke 6 (5/6)"));
+    }
+    const std::vector<std::string> bash = skillwin::cardFacts(d, t, 5);
+    CHECK(!bash.empty() && bash.back() == "Відкриває: Magnum Break");
+    CHECK(skillwin::cardFacts(d, t, 9999).empty());
+}

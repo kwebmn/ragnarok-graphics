@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "core/frame.hpp"
 #include "core/pad_carry.hpp"
@@ -28,6 +29,9 @@ void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 void beforeGameDraw();  // the game's window hidden before it draws its windows (win/windows_draw)
 bool shown();
+// 3.0.24-beta.27 (the spec's «Навички»: the narrow list, its side panel's facts in the skill's card by a right click):
+// a skill's facts by its AEGIS name - its level, what it needs, what it opens, SP by level; none not on the tabs
+std::vector<std::string> cardFactsOf(const std::string& aegis);
 // The controller's (pad runtime skillsPad): the D-pad or the left stick moves the frame up and down, left and right
 // the level it is used at, LB / RB the tabs, A uses, Y raises, X «Призначити», B or Start close
 // 3.0.11-beta.227 (stage 5): Plan - «План» on or off (LT); Start - «Застосувати» in the plan, else closes

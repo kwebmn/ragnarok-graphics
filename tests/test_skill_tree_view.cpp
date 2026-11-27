@@ -301,8 +301,8 @@ TEST(skill_tree_view_a_far_link_runs_through_the_gaps) {
     }
 }
 
-// 3.0.11-beta.230: the side panel in «Список» too - the list as wide as before, the panel right of it with the skill
-// pointed at: SP by level (the learned one lit) and the game's description
+// 3.0.11-beta.230: the side panel in «Список» too; 3.0.24-beta.27 (the spec's narrow list, the description in the
+// card by a right click): the list has none - its facts go to the skill's card (cardFacts), SP by level among them
 TEST(skill_window_side_panel_in_the_list) {
     skillwin::Data d = knight();
     d.tabs[1].skills[3].spLevels = {14, 18, 22, 26, 30, 34, 38, 42, 46, 50};
@@ -313,15 +313,15 @@ TEST(skill_window_side_panel_in_the_list) {
     sh.tab = 1;
     sh.hoverRow = 3;
     const skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
-    CHECK(!L.tree && L.side.w > 0 && L.side.x >= L.list.x + L.list.w && std::abs(L.list.w - 668) < 1);
+    CHECK(!L.tree && L.side.w == 0 && L.list.w <= 420);
     const std::vector<skillwin::Words> w = skillwin::words(L, d, sh, t, measure);
-    const auto find = [&](const std::string& text) {
-        return std::find_if(w.begin(), w.end(), [&](const skillwin::Words& x) { return x.text == text; });
-    };
-    CHECK(find("SP за рівнями") != w.end() && find("1: 14") != w.end() && find("10: 50") != w.end());
-    CHECK(find("10: 50")->bold && !find("1: 14")->bold);  // its learned level, 10
-    CHECK(find("Faster attacks with a two-handed sword.") != w.end() && find("Lv 1: 30 s") != w.end());
-    CHECK(find("Twohand Quicken") != w.end() && find("Рівень 10 з 10") != w.end());
+    CHECK(std::none_of(w.begin(), w.end(), [](const skillwin::Words& x) { return x.text == "SP за рівнями"; }));
+    t.levelOf = "Рівень {1} з {2}";
+    const std::vector<std::string> f = skillwin::cardFacts(d, t, d.tabs[1].skills[3].id);
+    CHECK(!f.empty() && f[0] == "Рівень 10 з 10");
+    const std::string sp = "SP за рівнями: 1: 14 \xC2\xB7 2: 18 \xC2\xB7 3: 22 \xC2\xB7 4: 26 \xC2\xB7 5: 30 "
+                           "\xC2\xB7 6: 34 \xC2\xB7 7: 38 \xC2\xB7 8: 42 \xC2\xB7 9: 46 \xC2\xB7 10: 50";
+    CHECK(std::find(f.begin(), f.end(), sp) != f.end());
 }
 
 // 3.0.11-beta.245 (R-YCYYXU: «скрол не крутится внизу»): the scroll bars taken by the mouse - the tree's level one and

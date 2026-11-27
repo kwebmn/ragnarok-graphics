@@ -7,6 +7,19 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.26 (part 3, task 2): «Навички» a narrow list as the old game's; the facts in the card
+        {"skills_narrow", "3.0.24-beta.26", "interface.skills",
+         {"Skills: a narrow list, the facts by a right click", "Навички: вузький список, відомості — ПКМ",
+          "Навыки: узкий список, сведения — ПКМ"},
+         {"Alt+S: a narrow list - icon, name, its line, the use level's arrows, «N/M», «+»; a long name ends in «…». "
+          "A right click on a skill: its card with the level, what it needs (✓ or how far), what it opens, SP by "
+          "level. «Tree» as before.",
+          "Alt+S: вузький список — значок, назва, рядок під нею, стрілки рівня застосування, «N/M», «+»; довга назва "
+          "закінчується «…». ПКМ на навичці: її картка з рівнем, що потрібно (✓ або скільки бракує), що відкриває, SP "
+          "за рівнями. «Дерево» — як було.",
+          "Alt+S: узкий список — значок, название, строка под ним, стрелки уровня применения, «N/M», «+»; длинное "
+          "название заканчивается «…». ПКМ по навыку: его карточка с уровнем, что нужно (✓ или сколько не хватает), "
+          "что открывает, SP по уровням. «Дерево» — как было."}},
         // 3.0.24-beta.26 (part 3, task 1): every window's signs letters of the interface's font, or drawn
         {"font_signs", "3.0.24-beta.26", "interface.items",
          {"Windows' signs: all from the font", "Знаки у вікнах — усі зі шрифту", "Знаки в окнах — все из шрифта"},

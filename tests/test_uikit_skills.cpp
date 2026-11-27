@@ -77,11 +77,11 @@ TEST(uikit_skills_list_refit_finds_rows_pluses_and_arrows) {
     if (!error.empty()) std::printf("RmlUi: %s", error.c_str());
     CHECK_EQ(error, std::string());
     CHECK(sl::refit(doc, L));
-    CHECK(std::abs(float(L.w) - 982) < 2.5f);
+    CHECK(std::abs(float(L.w) - 420) < 2.5f);  // 3.0.24-beta.27: the narrow list (982 before)
     CHECK_EQ(L.first, 1);
     CHECK_EQ(L.rows.size(), size_t(8));
     CHECK(std::abs(L.rows[1].y - L.rows[0].y - 46) < 0.5f);
-    kw::Hit h = kw::hitTest(L, mid(L.rows[2]).x - 200, mid(L.rows[2]).y);
+    kw::Hit h = kw::hitTest(L, mid(L.rows[2]).x - 100, mid(L.rows[2]).y);  // .27: the narrow row
     CHECK(h.part == kw::Part::Row);
     CHECK_EQ(h.index, 3);
     CHECK(L.pluses[0].w > 0);  // skill 1: a point, the server's leave
@@ -102,8 +102,8 @@ TEST(uikit_skills_list_refit_finds_rows_pluses_and_arrows) {
     CHECK(kw::hitTest(L, mid(L.planButton).x, mid(L.planButton).y).part == kw::Part::Plan);
     CHECK(kw::hitTest(L, mid(L.close).x, mid(L.close).y).part == kw::Part::Close);
     CHECK(kw::hitTest(L, mid(L.scroll).x, mid(L.scroll).y).part == kw::Part::BarV);
-    CHECK(L.side.x > L.rows[0].x + L.rows[0].w);
-    CHECK(!m.sideWords.empty());  // «Наведіть на навичку» in the side panel
+    CHECK(L.side.w == 0);         // 3.0.24-beta.27: the narrow list has no side panel (the card by a right click)
+    CHECK(m.sideWords.empty());
     rmlhost::close(doc);
 }
 

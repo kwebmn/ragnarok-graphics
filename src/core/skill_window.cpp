@@ -13,7 +13,7 @@ namespace uagfx::skillwin {
 namespace {
 
 // The concept's sizes at scale 1: 700 wide, the title 46, the tabs 32, a row 46, the footer 40
-constexpr float kW = 700, kTreeW = 1000, kSideW = 268, kTitleH = 46, kTabsH = 32, kRowH = 46, kFooterH = 40, kSide = 16;
+constexpr float kW = 420, kTreeW = 1000, kSideW = 268, kTitleH = 46, kTabsH = 32, kRowH = 46, kFooterH = 40, kSide = 16;
 constexpr float kDot = 7, kDotStep = 10, kDotsMost = 10 * kDotStep - (kDotStep - kDot), kLevelW = 46, kPlus = 24;
 constexpr float kArrowW = 18, kArrowH = 22, kUseNumW = 26, kGlyph = 17;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xF3C653, kGold2 = 0xC9A55B;
@@ -182,6 +182,55 @@ void sideWords(std::vector<Words>& out, const Layout& L, const Data& d, const Sh
 
 }  // namespace
 
+std::string fitName(const std::string& name, float width, float px, bool bold, const Measure& m) {
+    if (!m || m(name, px, bold) <= width) return name;
+    static const std::string kMore = "\xE2\x80\xA6";
+    std::string cut = name;
+    while (!cut.empty()) {
+        size_t at = cut.size() - 1;  // the last whole letter off
+        while (at > 0 && (static_cast<unsigned char>(cut[at]) & 0xC0) == 0x80) --at;
+        cut.erase(at);
+        while (!cut.empty() && cut.back() == ' ') cut.pop_back();
+        if (m(cut + kMore, px, bold) <= width) return cut + kMore;
+    }
+    return kMore;
+}
+
+std::vector<std::string> cardFacts(const Data& d, const Texts& t, int skill) {
+    const Skill* k = skilltreeview::find(d, skill);
+    if (!k) return {};
+    std::vector<std::string> out;
+    if (!t.levelOf.empty())
+        out.push_back(fill2(t.levelOf, std::to_string(k->level), std::to_string(std::max(k->most, k->level))));
+    if (!k->req.empty() && !t.needsHead.empty()) {
+        out.push_back(t.needsHead + ":");
+        for (const auto& [need, want] : k->req) {
+            const Skill* r = skilltreeview::find(d, need);
+            const int have = skilltreeview::levelOf(d, need);
+            const std::string name = (r ? r->name : "#" + std::to_string(need)) + " " + std::to_string(want);
+            out.push_back(have >= want ? name + " \xE2\x9C\x93"
+                                       : name + " (" + std::to_string(have) + "/" + std::to_string(want) + ")");
+        }
+    }
+    std::string opens;  // what it opens, on any tab
+    int count = 0;
+    for (const Tab& other : d.tabs)
+        for (const Skill& o : other.skills)
+            for (const auto& [need, want] : o.req)
+                if (need == k->id && count < 5) {
+                    opens += (opens.empty() ? "" : ", ") + o.name;
+                    ++count;
+                }
+    if (!opens.empty() && !t.unlocks.empty()) out.push_back(t.unlocks + ": " + opens);
+    if (!k->spLevels.empty() && !t.spByLevel.empty()) {  // SP by level, as the side panel had them
+        std::string sp = t.spByLevel + ":";
+        for (size_t i = 0; i < k->spLevels.size() && i < 10; ++i)
+            sp += (i ? " \xC2\xB7 " : " ") + std::to_string(i + 1) + ": " + std::to_string(k->spLevels[i]);
+        out.push_back(sp);
+    }
+    return out;
+}
+
 bool canRaise(const Skill& k, int points) {
     return points > 0 && k.up && k.lock == Lock::None && (k.most <= 0 || k.level < k.most);
 }
@@ -231,8 +280,9 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
     L.tree = sh.tree;
-    // 3.0.11-beta.230: the side panel in «Список» too - the list as wide as before, the panel right of it
-    const float w = (sh.tree ? kTreeW : kW + kSideW + 14) * s, side = kSide * s;
+    // 3.0.24-beta.27 (the spec's «Навички»: «узкий список ... описание — отдельным окошком по ПКМ»): «Список» 420
+    // wide, its side panel gone (its facts in the skill's card - cardFacts); «Дерево» keeps its own
+    const float w = (sh.tree ? kTreeW : kW) * s, side = kSide * s;
     L.title = panel::Box{0, 0, w, kTitleH * s};
     L.close = panel::Box{w - side - 26 * s, (kTitleH * s - 26 * s) / 2, 26 * s, 26 * s};
     if (!t.list.empty() && !t.tree.empty()) {  // 3.0.11-beta.224: the view's buttons left of the close
@@ -305,10 +355,9 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
         L.y = y;
         return L;
     }
-    const float sideW = kSideW * s, bodyW = w - 2 * side - sideW - 14 * s;
+    const float bodyW = w - 2 * side;  // 3.0.24-beta.27: no side panel
     const float rowW = bodyW - (scrolls ? 12 * s : 0);
     L.list = panel::Box{side, listY, bodyW, float(shown) * kRowH * s};
-    L.side = panel::Box{w - side - sideW, listY, sideW, L.list.h};
     if (scrolls) L.scroll = panel::Box{side + bodyW - 5 * s, listY + 4 * s, 5 * s, L.list.h - 8 * s};
     for (int i = L.first; i < count && i < L.first + kRows; ++i) {
         const Skill& k = tab->skills[size_t(i)];
@@ -320,21 +369,16 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
                                ? panel::Box{plusX, r.y + (r.h - kPlus * s) / 2, kPlus * s, kPlus * s}
                                : panel::Box{});
         const float levelX = plusX - 10 * s - kLevelW * s;
-        const float dotsRight = levelX - 10 * s;
-        if (k.most > 0 && k.most <= 10) {
-            const float dw = float(k.most) * kDotStep * s - (kDotStep - kDot) * s;
-            L.dots.push_back(panel::Box{dotsRight - dw, r.y + (r.h - kDot * s) / 2, dw, kDot * s});
-        } else {
-            L.dots.push_back(panel::Box{});
-        }
+        L.dots.push_back(panel::Box{});  // 3.0.24-beta.27: the narrow list's «N/M» says the level - no dots
+        const float leftOf = levelX - 8 * s;  // the use level's arrows (or the plan's «−») left of the level
         if (sh.plan && skillplan::extra(k) > 0) {  // 3.0.11-beta.225: «−» where the use level's arrows stand
-            const float cx = dotsRight - kDotsMost * s - 14 * s - kPlus * s;
+            const float cx = leftOf - kPlus * s;
             L.minuses.push_back(panel::Box{cx, r.y + (r.h - kPlus * s) / 2, kPlus * s, kPlus * s});
         } else {
             L.minuses.push_back(panel::Box{});
         }
         if (usable(k) && k.level > 1 && !sh.plan) {
-            const float cx = dotsRight - kDotsMost * s - 14 * s - (2 * kArrowW + kUseNumW) * s;
+            const float cx = leftOf - (2 * kArrowW + kUseNumW) * s;
             const float cy = r.y + (r.h - kArrowH * s) / 2;
             L.less.push_back(panel::Box{cx, cy, kArrowW * s, kArrowH * s});
             L.more.push_back(panel::Box{cx + (kArrowW + kUseNumW) * s, cy, kArrowW * s, kArrowH * s});

@@ -846,6 +846,14 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool shown() { return state().shown; }
 
+std::vector<std::string> cardFactsOf(const std::string& aegis) {
+    const State& s = state();
+    for (const kw::Tab& tab : s.data.tabs)
+        for (const kw::Skill& k : tab.skills)
+            if (!aegis.empty() && k.aegis == aegis) return kw::cardFacts(s.data, texts(), k.id);
+    return {};
+}
+
 void padCommand(PadCommand c) {
     State& s = state();
     if (!s.shown || s.data.tabs.empty()) return;

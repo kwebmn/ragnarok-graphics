@@ -64,7 +64,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-for="b : bars" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'" data-style-width="b.w + 'px'"
   data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'" data-style-background-color="b.fill"></div>
 </div></div>
-<div class="side" data-hit="side"><span data-for="x : sideWords" data-attr-class="x.cls" data-style-left="x.x + 'px'"
+<div class="side" data-if="tree" data-hit="side"><span
+  data-for="x : sideWords" data-attr-class="x.cls" data-style-left="x.x + 'px'"
   data-style-top="x.y + 'px'" data-style-width="x.w + 'px'" data-style-height="x.h + 'px'"
   data-style-line-height="x.h + 'px'" data-style-font-size="x.px + 'px'"
   data-style-color="x.colour">{{x.text}}</span></div></div>
@@ -278,9 +279,11 @@ void fill(Model& m, const kw::Layout& L, const kw::Data& d, const kw::Show& sh, 
         r.focus = sh.pad && index == sh.focus;
         r.locked = k.lock != kw::Lock::None;
         r.lockTop = r.locked && (index == 0 || tab->skills[size_t(index) - 1].lock == kw::Lock::None);
-        r.name = k.name;
+        // 3.0.24-beta.27 (the narrow list): a long name and its line cut with «…» in the row's room
+        const float room = std::max(60 * L.s, (L.rows.empty() ? 0.0f : L.rows[0].w) - 214 * L.s);
+        r.name = kw::fitName(k.name, room, 13.5f * L.s, true, measure);
         r.nameCls = r.locked ? "nm lock" : k.level > 0 ? "nm" : "nm un";
-        r.info = kw::info(k, t);
+        r.info = kw::fitName(kw::info(k, t), room, 11.5f * L.s, false, measure);
         if (k.icon && k.icon->width > 0) {
             r.icon = src(k.icon);
             r.iconW = float(k.icon->width);
@@ -298,8 +301,7 @@ void fill(Model& m, const kw::Layout& L, const kw::Data& d, const kw::Show& sh, 
         }
         r.minus = sh.plan && skillplan::extra(k) > 0;
         r.minusHot = index == sh.hoverMinus;
-        if (k.most > 0 && k.most <= 10)
-            for (int n = 0; n < k.most; ++n) r.dots.push_back(n < k.level ? 2 : n < k.target ? 1 : 0);
+        r.dots.clear();  // 3.0.24-beta.27: the narrow list's «N/M» says the level - no dots
         r.planned = skillplan::extra(k) > 0;
         r.learned = k.level > 0;
         const int shownLv = r.planned ? k.target : k.level;
@@ -401,8 +403,9 @@ bool refit(Rml::ElementDocument* doc, kw::Layout& L) {
     if (!doc || !doc->IsVisible()) return false;
     const Rml::Vector2f size = doc->GetBox().GetSize(Rml::BoxArea::Border);
     if (size.x <= 0 || size.y <= 0) return false;
+    // 3.0.24-beta.27: the side panel is the tree's alone (the narrow list has none) - the title tells it laid out
     const std::vector<Placed> sides = placesOf(doc, "side");
-    if (sides.empty()) return false;
+    if (placesOf(doc, "title").empty() || (L.tree && sides.empty())) return false;
     const auto one = [&](const char* part, panel::Box& to) {
         const std::vector<Placed> p = placesOf(doc, part);
         to = p.empty() ? panel::Box{} : p.front().box;
@@ -427,7 +430,7 @@ bool refit(Rml::ElementDocument* doc, kw::Layout& L) {
     one("footer", L.footer);
     one("apply", L.apply);
     one("reset", L.reset);
-    L.side = sides.front().box;
+    L.side = sides.empty() ? panel::Box{} : sides.front().box;
     L.tabs.clear();
     for (const Placed& p : placesOf(doc, "tab")) L.tabs.push_back(p.box);
     L.choices.clear();

@@ -1159,7 +1159,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .pad img { display: block; margin-right: 0.5rem; }
 /* 3.0.18-beta.97: «Навички» live (uikit/skills_live) - 982dp (the tree's 1000dp): the list's eight rows of 46dp or the
    tree's view, the side panel 268dp; the tree and the panel's lines keep core skillwin's places (absolute) */
-.lw.skl { width: 81.8333rem; padding: 0; font-size: 1rem; box-sizing: border-box; }
+.lw.skl { width: 35rem; padding: 0; font-size: 1rem; box-sizing: border-box; }  /* 3.0.24-beta.27: the narrow list */
 .lw.skl.treeon { width: 83.3333rem; }
 .skl .head { display: flex; align-items: center; height: 3.8333rem; padding: 0 4.3333rem 0 1.3333rem; }
 .skl .head .title { font-size: 1.25rem; font-weight: bold; color: #eef2f8; }
@@ -1212,7 +1212,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .skl .ic img { display: block; }
 .skl .tx { display: block; flex: 1; margin-left: 0.8333rem; overflow: hidden; white-space: nowrap; }
 .skl .nm { display: block; height: 1.5833rem; line-height: 1.5833rem; font-size: 1.125rem; font-weight: bold;
-    color: #eef2f8; }
+    color: #eef2f8; white-space: nowrap; overflow: hidden; }
 .skl .nm.un { color: #9aa3b5; }
 .skl .nm.lock { color: #7e889a; }
 .skl .inf { display: block; height: 1.3333rem; line-height: 1.3333rem; font-size: 0.9583rem; color: #9aa3b5; }
