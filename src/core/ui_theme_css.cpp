@@ -673,8 +673,8 @@ select selectbox option:checked { color: #e6cb8a; }
 .npw .foot { margin-top: 10dp; padding-top: 6dp; border-top: 1dp #ffffff12; }
 .vsw { width: 480dp; }
 /* 3.0.24-beta.21 (R-WP985Q: no letter the font lacks): the shop's ✕ drawn - two bars */
-.vsw .x .cxa, .vsw .x .cxb { display: block; position: absolute; left: 6dp; top: 11dp; width: 12dp; height: 1.6dp;
-    background-color: #969eae; }
+.vsw .x .cxa, .vsw .x .cxb { margin: 0; display: block; position: absolute; left: 6dp; top: 11dp; width: 12dp;
+    height: 1.6dp; background-color: #969eae; }
 .vsw .x .cxa { transform: rotate(45deg); }
 .vsw .x .cxb { transform: rotate(-45deg); }
 .vsw .x:hover .cxa, .vsw .x:hover .cxb { background-color: #ffffff; }
@@ -901,7 +901,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .igl .x { display: block; position: relative; flex: none; width: 2.1667rem; height: 2.1667rem;
     border-radius: 0.5833rem; }
 .igl .x.hot { background-color: #ffffff24; }
-.igl .x .cxa, .igl .x .cxb { display: block; position: absolute; left: 0.5rem; top: 1rem; width: 1.1667rem;
+.igl .x .cxa, .igl .x .cxb { margin: 0; display: block; position: absolute; left: 0.5rem; top: 1rem; width: 1.1667rem;
     height: 0.1667rem; background-color: #9aa3b5; }
 .igl .x .cxa { transform: rotate(45deg); }
 .igl .x .cxb { transform: rotate(-45deg); }
@@ -1079,7 +1079,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
     border-radius: 0.5833rem; }
 .eql .x.hot { background-color: #ffffff24; }
 /* 3.0.24-beta.20 (R-WP985Q: no letter the font lacks): the ✕ drawn - two bars */
-.eql .x .cxa, .eql .x .cxb { display: block; position: absolute; left: 0.5rem; top: 1rem; width: 1.1667rem;
+.eql .x .cxa, .eql .x .cxb { margin: 0; display: block; position: absolute; left: 0.5rem; top: 1rem; width: 1.1667rem;
     height: 0.1667rem; background-color: #9aa3b5; }
 .eql .x .cxa { transform: rotate(45deg); }
 .eql .x .cxb { transform: rotate(-45deg); }

@@ -201,3 +201,23 @@ TEST(uikit_item_grid_tells_the_variables_that_changed_alone) {
     for (const char* n : ig::changed(was, now)) names.push_back(n);
     CHECK(names.size() == 1 && names[0] == "tabs");
 }
+
+// 3.0.24-beta.28 (the final review of part 3): the windows' shared drawn cross (.cxa/.cxb, centred by its margins)
+// must not move «Речі»'s own - its bars in the middle of its close's box
+TEST(uikit_item_grid_close_cross_centred) {
+    Grid g;
+    make(g, 3);
+    Rml::ElementList bars, closes;
+    if (g.doc) g.doc->GetElementsByClassName(bars, "cxa"), g.doc->GetElementsByClassName(closes, "x");
+    CHECK(!bars.empty() && !closes.empty());
+    if (bars.empty() || closes.empty()) return;
+    const auto centre = [](Rml::Element* e) {
+        const Rml::Vector2f at = e->GetAbsoluteOffset(Rml::BoxArea::Border);
+        const Rml::Vector2f size = e->GetBox().GetSize(Rml::BoxArea::Border);
+        return Rml::Vector2f{at.x + size.x / 2, at.y + size.y / 2};
+    };
+    const Rml::Vector2f bar = centre(bars[0]), box = centre(closes[0]);
+    std::printf("  the cross's bar at %.1f, %.1f - its box's middle %.1f, %.1f\n", bar.x, bar.y, box.x, box.y);
+    CHECK(std::abs(bar.x - box.x) < 1.0f && std::abs(bar.y - box.y) < 1.0f);
+    rmlhost::close(g.doc);
+}
