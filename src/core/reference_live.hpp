@@ -38,7 +38,15 @@ struct Market {
     int item = 0;
     long long cheapest = 0;  // zeny (a lot sold by the piece: one piece's)
     int lots = 0, pieces = 0;
+    // 3.0.24-beta.29 (the spec's «Цены с рынка сайта»: «среднюю — только при трёх сделках и больше»): the site's deals
+    // of the last 180 days - a piece's average price and how many (its line's fields 4 and 5; an old site: none)
+    long long average = 0;
+    int deals = 0;
 };
+constexpr int kAverageFrom = 3;
+// The market's words: its lots (`lotsForm`: {1} the cheapest, {2} the lots) and after « · » the deals' average
+// (`averageForm`: {1} the average, {2} the deals) from kAverageFrom deals; "" nothing to say
+std::string marketLine(const Market& m, const std::string& lotsForm, const std::string& averageForm);
 struct Live {
     long long at = 0;
     std::vector<Timer> timers;  // the latest first

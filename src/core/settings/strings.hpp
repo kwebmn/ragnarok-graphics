@@ -973,6 +973,7 @@ enum class Text : uint16_t {
     InterfaceVendOpenPackets, InterfaceVendOpenPacketsHint, InterfaceSaleChime, InterfaceSaleChimeHint,
     InterfaceTradePackets, InterfaceTradePacketsHint,  // 3.0.24-beta.24
     SocialInvite, InterfacePartyInvite, InterfacePartyInviteHint,  // 3.0.24-beta.27
+    ItemsMarketAverage,                                            // 3.0.24-beta.29: the site's deals' average
     LauncherRunningCount,                // .206: «Гра вже запущена · вікон: N» under «+ ЩЕ ОДНЕ ВІКНО»
     InterfaceArrowsWalk, InterfaceArrowsWalkHint,  // .207: the keyboard concept, stage 1
     InterfaceWalkMode, InterfaceWalkModeHint, ChatHintWalk,  // .208: stage 2, the walk mode

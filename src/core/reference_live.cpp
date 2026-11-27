@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 
+#include "core/item_window.hpp"
 #include "core/json.hpp"
 
 namespace uagfx::reflive {
@@ -74,10 +75,13 @@ bool readLive(const json::Value& v, long long at, Live& out) {
     std::stable_sort(l.timers.begin(), l.timers.end(), [](const Timer& a, const Timer& b) {
         return a.killed > b.killed;
     });
-    for (const json::Value& m : v["market"].items()) {  // [item, cheapest, lots, pieces]
+    for (const json::Value& m : v["market"].items()) {  // [item, cheapest, lots, pieces, average, deals]
         Market market{int(m[size_t(0)].asInt(0)), m[size_t(1)].asInt(0), int(m[size_t(2)].asInt(0)),
-                      int(m[size_t(3)].asInt(0))};
-        if (market.item > 0 && market.cheapest > 0 && market.lots > 0) l.market[market.item] = market;
+                      int(m[size_t(3)].asInt(0)), m[size_t(4)].asInt(0), int(m[size_t(5)].asInt(0))};
+        if (market.average <= 0) market.deals = 0;
+        const bool lots = market.cheapest > 0 && market.lots > 0;
+        if (!lots) market.cheapest = 0, market.lots = 0, market.pieces = 0;
+        if (market.item > 0 && (lots || market.deals > 0)) l.market[market.item] = market;  // .29: deals alone too
     }
     out = std::move(l);
     return true;
@@ -104,7 +108,8 @@ std::string write(const Live& l) {
     first = true;
     for (const auto& [item, m] : l.market) {
         s += (first ? "[" : ",[") + std::to_string(item) + "," + std::to_string(m.cheapest) + "," +
-             std::to_string(m.lots) + "," + std::to_string(m.pieces) + "]";
+             std::to_string(m.lots) + "," + std::to_string(m.pieces) + "," + std::to_string(m.average) + "," +
+             std::to_string(m.deals) + "]";
         first = false;
     }
     return s + "]}";
@@ -115,6 +120,20 @@ bool read(const std::string& text, Live& out) {
     std::string error;
     if (!json::parse(text, v, error) || v.type() != json::Value::Object || v["v"].asInt(0) != 1) return false;
     return readLive(v, v["at"].asInt(0), out);
+}
+
+std::string marketLine(const Market& m, const std::string& lotsForm, const std::string& averageForm) {
+    const auto fill = [](std::string form, const std::string& a, const std::string& b) {
+        if (const size_t at = form.find("{1}"); at != std::string::npos) form.replace(at, 3, a);
+        if (const size_t at = form.find("{2}"); at != std::string::npos) form.replace(at, 3, b);
+        return form;
+    };
+    std::string out;
+    if (m.cheapest > 0 && m.lots > 0) out = fill(lotsForm, itemwin::grouped(m.cheapest), std::to_string(m.lots));
+    if (m.deals >= kAverageFrom && m.average > 0)
+        out += (out.empty() ? "" : " \xC2\xB7 ") +
+               fill(averageForm, itemwin::grouped(m.average), std::to_string(m.deals));
+    return out;
 }
 
 bool fresh(const Live& l, long long now) { return l.at > 0 && now >= l.at - 60 && now - l.at <= kFreshSeconds; }
