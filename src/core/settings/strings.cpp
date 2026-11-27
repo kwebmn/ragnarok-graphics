@@ -10022,9 +10022,9 @@ constexpr Entry kTexts[] = {
      "«Лавка торговца» сама отправляет покупку и ждёт вещей: пришли — лавка закрывается, отказ — почему, в её "
      "подсказке. Нужна включённая «Лавка торговца». Для тестеров: выключено — как в игре."},
     // 3.0.24-beta.20 (docs/superpowers/plans/2026-11-27-item-windows-old-layout.md, task 2)
-    {Text::InterfaceItemsPackets, "Items: our own use, wear and drop (beta)",
-     "Речі: свої «використати», «вдягнути», «викинути» (бета)",
-     "Вещи: свои «использовать», «надеть», «выбросить» (бета)"},
+    {Text::InterfaceItemsPackets, "Items: our own packets - use, wear, drop (beta)",
+     "Речі: свої пакети — використати, вдягнути, викинути (бета)",
+     "Вещи: свои пакеты — использовать, надеть, выбросить (бета)"},
     {Text::InterfaceItemsPacketsHint,
      "«Items» and «Equipment» send the server's packet themselves: a double click uses or wears a thing, a drag onto "
      "the ground drops it (how many - asked), «Equipment» takes off; the cell waits for the server's answer. Cards "

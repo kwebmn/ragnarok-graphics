@@ -17,8 +17,8 @@ const std::vector<Check>& all() {
           "Включите «Вещи», Alt+E: шесть вкладок одна под другой слева (Всё ... Избранное), «Вещи 16/100» в "
           "заголовке, подсказка клавиш под ячейками, вес и зени внизу; так же «Склад» и «Тележка»."}},
         {"items_packets", "3.0.24-beta.20", "interface.items_packets",
-         {"Items: our own use, wear and drop", "Речі: свої «використати», «вдягнути», «викинути»",
-          "Вещи: свои «использовать», «надеть», «выбросить»"},
+         {"Items: our own packets - use, wear, drop", "Речі: свої пакети — використати, вдягнути, викинути",
+          "Вещи: свои пакеты — использовать, надеть, выбросить"},
          {"Turn «Items» and this on. Double-click a potion, then a weapon; drag a thing onto the ground (a stack asks "
           "how many); take a thing off in «Equipment»: each happens once, the cell waits for the server.",
           "Увімкніть «Речі» і цю галочку. Подвійний клік на зілля, потім на зброю; перетягніть річ на землю (пачка "
