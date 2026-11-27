@@ -82,6 +82,13 @@ std::string recoloured(const Theme& t, const std::string& text, uint32_t word) {
     for (std::sregex_iterator it(text.begin(), text.end(), hexes), end; it != end; ++it) {
         const std::smatch& m = *it;
         out.append(at, m[0].first);
+        // 3.0.24-beta.30: a shadow's colour stays (ua-shadow(...)'s black would come out white in the light theme)
+        const size_t pos = size_t(m.position(0)), shadow = text.rfind("ua-shadow(", pos);
+        if (shadow != std::string::npos && text.find(')', shadow) > pos) {
+            out += m[0].str();
+            at = m[0].second;
+            continue;
+        }
         const uint32_t rgb = uint32_t(std::strtoul(m[1].str().c_str(), nullptr, 16));
         uint32_t c = colour(t, rgb);
         if (word != kNoWord && chroma(of(rgb)) <= 0.18f) {
@@ -105,17 +112,20 @@ std::string recoloured(const Theme& t, const std::string& text, uint32_t word) {
     return out;
 }
 
-// A rule's body on the accent's ground (its «background-color:» a solid gold - 60 % or more; a faint one is a tint
-// of the window's ground - the accent not the gold): its grey words light or dark by that ground; otherwise kNoWord
-uint32_t wordOnAccent(const Theme& t, const std::string& body) {
-    if (!t.accent) return kNoWord;
+// A rule's body on a solid ground (its «background-color:» 60 % or more; a faint one is a tint of the window's
+// ground): the accent's gold, or (3.0.24-beta.30) in the light theme a colour that means something - a red or green
+// button: its grey words light or dark by that ground as the theme draws it; otherwise kNoWord
+uint32_t wordOnGround(const Theme& t, const std::string& body) {
+    if (t.greys == Greys::Keep && !t.accent) return kNoWord;
     static const std::regex ground("(^|[^-a-z])background-color:\\s*#([0-9a-fA-F]{6})([0-9a-fA-F]{2})?\\b");
     std::smatch m;
     if (!std::regex_search(body, m, ground)) return kNoWord;
     if (m[3].matched && std::strtoul(m[3].str().c_str(), nullptr, 16) < 0x99) return kNoWord;
-    const Rgb c = of(uint32_t(std::strtoul(m[2].str().c_str(), nullptr, 16)));
-    if (!gold(c)) return kNoWord;
-    return lum(of(accented(c, t.accent))) > 0.55f ? kInk : 0xFFFFFF;
+    const uint32_t rgb = uint32_t(std::strtoul(m[2].str().c_str(), nullptr, 16));
+    const Rgb c = of(rgb);
+    if (t.accent && gold(c)) return lum(of(accented(c, t.accent))) > 0.55f ? kInk : 0xFFFFFF;
+    if (t.greys == Greys::Keep || chroma(c) <= 0.18f) return kNoWord;  // dark: as drawn; a grey ground: the greys'
+    return lum(of(colour(t, rgb))) > 0.55f ? kInk : 0xFFFFFF;
 }
 
 }  // namespace
@@ -206,7 +216,7 @@ std::string themedCss(const Theme& t, const std::string& css) {
         }
         const std::string body = css.substr(open + 1, close - open - 1);
         out += recoloured(t, css.substr(i, open + 1 - i), kNoWord);
-        out += recoloured(t, body, wordOnAccent(t, body));
+        out += recoloured(t, body, wordOnGround(t, body));
         out += '}';
         i = close + 1;
     }

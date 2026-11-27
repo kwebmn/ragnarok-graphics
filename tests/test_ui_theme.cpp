@@ -212,3 +212,33 @@ TEST(ui_theme_a_faint_accent_ground_keeps_its_words) {
     CHECK(out.find(".s { background-color: #2f5fd01f; color: #181c26; }") != std::string::npos);
     CHECK(out.find(".b { background-color: #2f5fd0ff; color: #ffffff; }") != std::string::npos);
 }
+
+// 3.0.24-beta.30 (the deferred minors of part 1): the windows' drop shadows dark in the light theme too - a colour
+// inside ua-shadow(...) is not turned over (its black would come out white); a plain translucent black still is
+TEST(ui_theme_shadows_stay_dark_in_light) {
+    uitheme::Look look;
+    look.tone = uitheme::Tone::Light;
+    const std::string out = uitheme::themedCss(uitheme::themeFor(look, uitheme::Group::Windows),
+                                               ".a { decorator: ua-shadow(16dp #00000059); }"
+                                               " .f { background-color: #00000059; }");
+    CHECK(out.find("ua-shadow(16dp #00000059)") != std::string::npos);
+    CHECK(out.find(".f { background-color: #00000059; }") == std::string::npos);
+}
+
+// ... and the grey words on a solid red or green button readable in it (as on the accent's): light on the ground as
+// the theme draws it (a light colour darkened to read); a faint one is a tint - the greys' rule
+TEST(ui_theme_words_on_red_and_green_buttons_stay_readable) {
+    uitheme::Look look;
+    look.tone = uitheme::Tone::Light;
+    const uitheme::Theme light = uitheme::themeFor(look, uitheme::Group::Windows);
+    const std::string out = uitheme::themedCss(light, ".r { background-color: #b03a2e; color: #eef2f8; }"
+                                                      " .g { background-color: #9be29bff; color: #eef2f8; }"
+                                                      " .t { background-color: #b03a2e1f; color: #eef2f8; }");
+    CHECK(out.find(".r { background-color: #b03a2e; color: #ffffff; }") != std::string::npos);
+    CHECK(out.find("color: #ffffff; } .t") != std::string::npos);  // the green's word light too
+    CHECK(out.find(".t { background-color: #b03a2e1f; color: #181c26; }") != std::string::npos);
+    look.accent = 0xE6CB8A;  // the light theme with the gold chosen: a gold button's words light as well
+    const std::string gold = uitheme::themedCss(uitheme::themeFor(look, uitheme::Group::Windows),
+                                                ".b { background-color: #e6cb8aff; color: #eef2f8; }");
+    CHECK(gold.find("color: #181c26") == std::string::npos);
+}
