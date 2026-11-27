@@ -7,6 +7,27 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.31 (R-F4GZ3T): the game's ground's light map stage set whole - no white ground after wings
+        {"ground_not_white_31", "3.0.24-beta.31", "",
+         {"Fields: the ground not white after fly wings", "Поля: земля не біліє після крил",
+          "Поля: земля не белеет после крыльев"},
+         {"On a field (gef_fild07, prt_fild08) teleport by wings several times and walk about: the ground keeps its "
+          "colour. If it goes white - «A problem - report» at once, while it is white.",
+          "На полі (gef_fild07, prt_fild08) кілька разів телепортуйтеся крилами й пройдіться: земля лишається "
+          "свого кольору. Побіліла — одразу «Є проблема — звіт», поки вона біла.",
+          "На поле (gef_fild07, prt_fild08) несколько раз телепортируйтесь крыльями и пройдитесь: земля остаётся "
+          "своего цвета. Побелела — сразу «Есть проблема — отчёт», пока она белая."}},
+        // 3.0.24-beta.31 (R-MWNRVM and four more): the server's daily play-time limit in the player's words
+        {"play_limit_31", "3.0.24-beta.31", "",
+         {"Daily play limit: in your words, no drop report", "Денний ліміт гри: зрозуміло, без звіту про розрив",
+          "Дневной лимит игры: понятно, без отчёта о разрыве"},
+         {"When the server says the daily play-time limit is reached: the chat's line in your language (the hours, "
+          "when it resets, how to buy time); after the disconnect the same in the game's box, and no drop report "
+          "goes.",
+          "Коли сервер скаже, що денний ліміт гри вичерпано: рядок у чаті вашою мовою (скільки годин, коли "
+          "скинеться, як докупити час); після від'єднання те саме у вікні гри, і звіт про розрив не надсилається.",
+          "Когда сервер скажет, что дневной лимит игры исчерпан: строка в чате на вашем языке (сколько часов, когда "
+          "сбросится, как докупить время); после отключения то же в окне игры, и отчёт о разрыве не отправляется."}},
         // 3.0.24-beta.30: the deferred small fixes of parts 1-3
         {"small_fixes_30", "3.0.24-beta.30", "interface.theme",
          {"Small fixes: the light theme, the shop's weight, the pad", "Дрібні виправлення: світла тема, вага, геймпад",

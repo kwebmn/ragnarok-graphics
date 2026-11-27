@@ -39,9 +39,10 @@ const Site kSites[kSiteCount] = {
     {0x547BC1, 0x547E0E, 0x547E0E, {0x5F, 0x5E, 0x5B, 0x8B, 0xE5, 0x5D, 0xC2, 0x08, 0x00}, 9,
      "a character's shadow drawn while a map loads"},  // 3.0.4-beta.9, R-VBDSCP
     {0x546DDB, 0x546E2E, 0x546DD9, {0x74, 0x53}, 2,
-     "a character's part drawn while the map changes"},  // R-MD8VTF: FUN_00546c50, its je 0x546e2e the way on
+     "a character's light read off the ground while the map changes"},  // R-MD8VTF: FUN_00546c50 (the light at
+                                                                          // its cell); its je 0x546e2e the way on
     {0x4DFFFB, 0x4E005B, 0x4E005B, {0x5F, 0x5E, 0x5B, 0x8B, 0xE5, 0x5D, 0xC2, 0x14, 0x00}, 9,
-     "the map loader thread's step while the map changes"},  // R-VWW92M: its function's end (ret 0x14)
+     "a model's light worked out while the map changes"},  // R-VWW92M: FUN_004df930, its function's end (ret 0x14)
 };
 
 std::array<uint8_t, 10> originalAt(uint32_t at) {
