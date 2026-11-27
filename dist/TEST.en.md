@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.28 — what's new · 2026-11-27
+
+The item windows' crosses in the middle again; a check of the windows already as in the old game (for testers).
+
+- **The closes' crosses** in «Items», «Equipment» and «Merchant's shop» stand in the middle of their buttons again: in beta .26 they had moved a little left and up.
+- **The windows already as in the old game:** «Guild card», «Character select», the login and the character's making, the main screen. Each has a card in «Checking now»: look at it in the dark and the «Light» theme.
+- To check: Alt+O → «Checking now» → «Guild card: as in the old game, both themes», «Character select: as in the old game, both themes», «Login and making a character: both themes», «Main screen: the old places, both themes».
+
 # uaRO Graphics 3.0.24-beta.27 — what's new · 2026-11-27
 
 «Stats»: «base + bonus»; NPC: the choice a list of its own; «Friends»: invite to the party (for testers).
