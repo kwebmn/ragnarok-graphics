@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.24-beta.20 — what's new · 2026-11-27
+
+Items in the old layout; our own use, wear and drop (for testers).
+
+- **«Items», «Storage» and «Cart» in the old game's layout.** Six tabs one under another at the left (All, Usable, Gear, Cards, Misc, Starred), «Items 16/100» in the head, the keys' hint under the cells, the weight and zeny at the bottom. The «starred» mark is drawn now, not a letter (the report about strange symbols).
+- **«Equipment»:** the close cross and the figure's turn arrows are drawn; the keys' hint at the bottom.
+- **A new testers' box «Items: our own packets - use, wear, drop».** A double click on a potion or a weapon, a thing dragged onto the ground (a stack asks how many) and taking off in «Equipment» go as our own packet to the server; the cell waits for its answer. Cards into slots stay the game's.
+- **Fixed:** when someone near used a thing, our «Storage» and «Cart» (the packets' boxes) could change the amount in the cell with the same number.
+- To check: Alt+O → «Checking now» → «Items: the old layout» and «Items: our own packets - use, wear, drop».
+
 # uaRO Graphics 3.0.24-beta.19 — what's new · 2026-11-27
 
 Interface: dark and light themes (for testers).
