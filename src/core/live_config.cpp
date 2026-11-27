@@ -730,6 +730,18 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("theme", running.uiTheme, file.uiTheme));
         n.uiTheme = file.uiTheme;
     }
+    for (int g = 0; g < uitheme::kGroups; ++g) {  // 3.0.24-beta.19: a group's tone, the accent - at once
+        if (file.uiGroups[size_t(g)] == running.uiGroups[size_t(g)]) continue;
+        u.applied.push_back(change(themeGroupKey(uitheme::Group(g)) + 10,  // "theme_hud"...
+                                   running.uiGroups[size_t(g)], file.uiGroups[size_t(g)]));
+        n.uiGroups[size_t(g)] = file.uiGroups[size_t(g)];
+    }
+    if (file.uiAccent != running.uiAccent || file.uiAccentColour != running.uiAccentColour) {
+        u.applied.push_back(change("accent", running.uiAccent + " " + running.uiAccentColour,
+                                   file.uiAccent + " " + file.uiAccentColour));
+        n.uiAccent = file.uiAccent;
+        n.uiAccentColour = file.uiAccentColour;
+    }
     if (file.uauiMotion != running.uauiMotion) {  // 3.0.18-beta.58
         u.applied.push_back(change("uaui_motion", flag(running.uauiMotion), flag(file.uauiMotion)));
         n.uauiMotion = file.uauiMotion;
@@ -737,10 +749,6 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (file.uauiEffects != running.uauiEffects) {  // 3.0.18-beta.61
         u.applied.push_back(change("uaui_effects", flag(running.uauiEffects), flag(file.uauiEffects)));
         n.uauiEffects = file.uauiEffects;
-    }
-    if (file.uauiGlass != running.uauiGlass) {  // 3.0.18-beta.64
-        u.applied.push_back(change("uaui_glass", flag(running.uauiGlass), flag(file.uauiGlass)));
-        n.uauiGlass = file.uauiGlass;
     }
     if (file.uauiShowcase != running.uauiShowcase) {  // 3.0.18-beta.11
         u.applied.push_back(change("uaui_showcase", flag(running.uauiShowcase), flag(file.uauiShowcase)));

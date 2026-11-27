@@ -8471,26 +8471,46 @@ constexpr Entry kTexts[] = {
      "Части, которые рисует новая библиотека, получают мягкие тени под окнами и панелями, свечение на "
      "выбранных и готовых клетках, лёгкий блик на полосках и кнопках, чисто обрезанные круглые углы. "
      "Работает с включённой новой библиотекой интерфейса."},
-    {Text::InterfaceUauiGlass, "Frosted glass windows", "Скляні вікна", "Стеклянные окна"},
-    {Text::InterfaceUauiGlassHint,
-     "Windows of the new library show the world behind them softly blurred, like frosted glass. Direct3D "
-     "12 only; costs some video card time. Works with the new interface library on.",
-     "Вікна нової бібліотеки показують світ за собою м'яко розмитим, як матове скло. Лише Direct3D 12; "
-     "трохи навантажує відеокарту. Працює з увімкненою новою бібліотекою інтерфейсу.",
-     "Окна новой библиотеки показывают мир за собой мягко размытым, как матовое стекло. Только Direct3D "
-     "12; немного нагружает видеокарту. Работает с включённой новой библиотекой интерфейса."},
     // 3.0.18-beta.13: uaUI's themes
     {Text::InterfaceTheme, "Interface theme", "Тема інтерфейсу", "Тема интерфейса"},
     {Text::InterfaceThemeHint,
-     "The colours and corners of the new interface drawn by the new library: today's, the old game's warm browns, or "
-     "a sharper contrast. Your own colours: uaro-graphics\\ui\\palette.txt.",
-     "Кольори й кути нового інтерфейсу, який малює нова бібліотека: як зараз, теплі коричневі старої гри або чіткіший "
-     "контраст. Свої кольори: uaro-graphics\\ui\\palette.txt.",
-     "Цвета и углы нового интерфейса, который рисует новая библиотека: как сейчас, тёплые коричневые старой игры или "
-     "чёткий контраст. Свои цвета: uaro-graphics\\ui\\palette.txt."},
-    {Text::InterfaceThemeStandard, "Standard", "Стандартна", "Стандартная"},
-    {Text::InterfaceThemeClassic, "Classic RO", "Класична RO", "Классическая RO"},
-    {Text::InterfaceThemeContrast, "Contrast", "Контрастна", "Контрастная"},
+     "Dark or light windows for the whole interface: the main screen, the chat and every window. In the full mode: "
+     "a tone of its own for a group of windows and the accent's colour. Your own colours: "
+     "uaro-graphics\\ui\\palette.txt.",
+     "Темні або світлі вікна для всього інтерфейсу: основний екран, чат і всі вікна. У повному режимі — свій тон для "
+     "групи вікон і колір акценту. Свої кольори: uaro-graphics\\ui\\palette.txt.",
+     "Тёмные или светлые окна для всего интерфейса: основной экран, чат и все окна. В полном режиме — свой тон для "
+     "группы окон и цвет акцента. Свои цвета: uaro-graphics\\ui\\palette.txt."},
+    {Text::InterfaceThemeDark, "Dark", "Темна", "Тёмная"},
+    {Text::InterfaceThemeLight, "Light", "Світла", "Светлая"},
+    // 3.0.24-beta.19 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md): the groups and the accent
+    {Text::InterfaceSecTheme, "Theme and colours", "Тема й кольори", "Тема и цвета"},
+    {Text::InterfaceThemeSame, "as the rest", "як усе", "как всё"},
+    {Text::InterfaceThemeGroupHint,
+     "This group's windows: as the interface's theme, or always dark or light.",
+     "Вікна цієї групи: як тема інтерфейсу або завжди темні чи світлі.",
+     "Окна этой группы: как тема интерфейса или всегда тёмные или светлые."},
+    {Text::InterfaceGroupHud, "Theme: main screen", "Тема: основний екран", "Тема: основной экран"},
+    {Text::InterfaceGroupChat, "Theme: chat", "Тема: чат", "Тема: чат"},
+    {Text::InterfaceGroupItems, "Theme: item windows", "Тема: вікна речей", "Тема: окна вещей"},
+    {Text::InterfaceGroupTrade, "Theme: trade", "Тема: торгівля", "Тема: торговля"},
+    {Text::InterfaceGroupWindows, "Theme: other windows", "Тема: інші вікна", "Тема: другие окна"},
+    {Text::InterfaceGroupSettings, "Theme: Alt+O settings", "Тема: налаштування Alt+O", "Тема: настройки Alt+O"},
+    {Text::InterfaceAccent, "Accent colour", "Колір акценту", "Цвет акцента"},
+    {Text::InterfaceAccentHint,
+     "The colour of what is chosen, of the main buttons and of the marks: by the theme (gold on the dark one, blue "
+     "on the light one), one of four, or your own.",
+     "Колір вибраного, головних кнопок і позначок: за темою (золотий на темній, синій на світлій), один із чотирьох "
+     "або свій.",
+     "Цвет выбранного, главных кнопок и отметок: по теме (золотой на тёмной, синий на светлой), один из четырёх "
+     "или свой."},
+    {Text::InterfaceAccentAuto, "by the theme", "за темою", "по теме"},
+    {Text::InterfaceAccentGold, "gold", "золотий", "золотой"},
+    {Text::InterfaceAccentBlue, "blue", "синій", "синий"},
+    {Text::InterfaceAccentGreen, "green", "зелений", "зелёный"},
+    {Text::InterfaceAccentRed, "red", "червоний", "красный"},
+    {Text::InterfaceAccentOwn, "own colour", "свій колір", "свой цвет"},
+    {Text::InterfaceAccentPick, "Pick a colour...", "Вибрати колір...", "Выбрать цвет..."},
     // 3.0.18-beta.114 (the owner: «нету кнопки для анманта пеко итд»): the game's own window's one button (its 0xB6)
     {Text::EquipCartOff, "Remove the cart", "Зняти візок", "Снять тележку"},
     {Text::EquipFalconOff, "Release the falcon", "Відпустити сокола", "Отпустить сокола"},

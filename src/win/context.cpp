@@ -1271,8 +1271,6 @@ void Context::present(const Rect& source, bool waitForVblank) {
     minimapShow.netBadge = config.netBadge;                         // 3.0.11-beta.122: the round trip's badge
     uaui::setMotion(config.uauiMotion);  // 3.0.18-beta.58
     uaui::setEffects(config.uauiEffects);  // 3.0.18-beta.61
-    uaui::setGlass(config.uauiGlass && startup().choice.renderer == Renderer::Uaro &&
-                   startup().choice.api != Api::D3d11);  // 3.0.18-beta.64: the renderer's Backdrop is Direct3D 12's
     // 3.0.18-beta.75 (stage 6): uaUI always - the old painters are gone ([interface] uaui read and dropped)
     uaui::begin(window, true, gameCodePage(config), pk, pw, ph, config.uiTheme);  // 3.0.18-beta.11: uaUI's frame, its parts next
     g_parts.mark("uaui begin", nowMs());

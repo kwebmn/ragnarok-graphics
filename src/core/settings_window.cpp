@@ -237,6 +237,7 @@ std::vector<Line> simpleLines() {
         {Text::View3dHeading, "view3d.weather", Text::SimpleWeather3d},
         {Text::View3dHeading, "view3d.grass", Text::SimpleGrass3d},
         {Text::View3dHeading, "view3d.stars", Text::SimpleStars},
+        {Text::ViewInterface, "interface.theme", Text::Count},  // 3.0.24-beta.19: dark or light
         {Text::ViewInterface, "interface.minimap", Text::SimpleNewUi},
         {Text::ViewInterface, "interface.reference", Text::SimpleReference},
         {Text::SimpleSmooth, "frames.fps_limit", Text::Count},

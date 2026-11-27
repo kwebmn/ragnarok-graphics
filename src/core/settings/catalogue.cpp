@@ -179,11 +179,17 @@ std::vector<Group> build() {
                          trial("view3d.crown_volume", "3.0.20-beta.73").need(kCrowns).need("effects.leaves_card"),
                          trial("view3d.crown_light", "3.0.20-beta.79").need(kCrowns).need("effects.leaves_card")}));
     // --- «Інтерфейс»
+    // 3.0.24-beta.19 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md): the theme first, the groups
+    // and the accent in the full mode
+    out.push_back(group(Area::Interface, Text::InterfaceSecTheme,
+                        {B("interface.theme"), D("interface.accent"), D("interface.theme_hud"),
+                         D("interface.theme_chat"), D("interface.theme_items"), D("interface.theme_trade"),
+                         D("interface.theme_windows"), D("interface.theme_settings")}));
     out.push_back(group(Area::Interface, Text::InterfaceSecMain,
                         {B("interface.minimap"), B("interface.size"), B("interface.text_size"),
-                         D("interface.item_windows"), B("interface.theme"), D("interface.panel_opacity"),
+                         D("interface.item_windows"), D("interface.panel_opacity"),
                          D("interface.window_opacity"), D("interface.animations"), D("interface.uaui_motion"),
-                         D("interface.uaui_effects"), D("interface.uaui_glass"), D("interface.cursor"),
+                         D("interface.uaui_effects"), D("interface.cursor"),
                          D("interface.layout_per_char"), D("interface.pack_icons"), D("interface.low_hp_edge"),
                          D("interface.element_colours"), B("interface.reference"), D("interface.settings_full")}));
     out.push_back(group(Area::Interface, Text::InterfaceSecPanels,
@@ -367,7 +373,7 @@ std::vector<Group> build() {
     }
     // Direct3D 12 alone draws these; the 3D view's rows do nothing in the top view («Моделі нашим рендером» does)
     static const char* const kDirect3D12[] = {
-        "interface.uaui_glass",   "view3d.room_walls",        "view3d.shadows",        "renderer.cross_present",
+        "view3d.room_walls",        "view3d.shadows",        "renderer.cross_present",
         "renderer.remix",         "display.hdr",              "display.ui_native",     "quality.taa",
         "effects.motes",          "effects.floor_reflections", "effects.shafts",       "effects.bloom",
         "effects.footprints",     "effects.storms",           "effects.grass",         "effects.skill_sparks",

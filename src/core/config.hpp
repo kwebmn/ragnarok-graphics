@@ -6,6 +6,7 @@
 #include "core/closed_windows.hpp"
 #include "core/login_view.hpp"
 #include "core/roext.hpp"
+#include "core/ui_theme.hpp"
 
 namespace uagfx {
 
@@ -1084,15 +1085,19 @@ struct Config {
     bool uaui = true;
     // 3.0.18-beta.11: [interface] uaui_showcase - uaUI's components in one window, for the developers (with uaui on)
     bool uauiShowcase = false;
-    // 3.0.18-beta.64: [interface] uaui_glass (uaUI)
-    bool uauiGlass = false;
     // 3.0.18-beta.61: [interface] uaui_effects (uaUI)
     bool uauiEffects = false;
     // 3.0.18-beta.58: [interface] uaui_motion (uaUI)
     bool uauiMotion = false;
-    // 3.0.18-beta.13: [interface] theme = standard | classic | contrast - uaUI's parts' colours and corners
-    // (core/ui_theme), uaro-graphics\ui\palette.txt over it
-    std::string uiTheme = "standard";
+    // 3.0.18-beta.13: [interface] theme - uaUI's parts' colours and corners (core/ui_theme), uaro-graphics\ui\
+    // palette.txt over it; 3.0.24-beta.19 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md):
+    // dark | light (the old standard, classic, contrast: dark); [interface] theme_hud, theme_chat, theme_items,
+    // theme_trade, theme_windows, theme_settings = same | dark | light (uitheme::Group's order); [interface] accent =
+    // auto | gold | blue | green | red | own, accent_colour = #RRGGBB (own's; written by the palette, no row)
+    std::string uiTheme = "dark";
+    std::array<std::string, uitheme::kGroups> uiGroups{"same", "same", "same", "same", "same", "same"};
+    std::string uiAccent = "auto";
+    std::string uiAccentColour;
     // 3.0.11-beta.54: [interface] size - the new interface's size against the concept's: 0 auto (smaller on a small
     // game, core/ui_style autoSize), else 50-150 per cent
     int uiSize = 0;
@@ -1278,6 +1283,10 @@ struct Config {
 };
 
 Config parseConfig(const std::string& text);
+// 3.0.24-beta.19: the interface's look ([interface] theme, theme_*, accent, accent_colour) for core/ui_theme
+uitheme::Look lookOf(const Config& c);
+// "interface.theme_hud"... for a group (uitheme::Group's order)
+const char* themeGroupKey(uitheme::Group g);
 // 3.0.22-beta.25 (the owner 19.11: «когда нажимаю паузу ... надо переводить полностью в режим старого клиента, с
 // интерфейсом итд»): the old client's interface - every part of the driver's off (the new windows, the bars, the
 // minimap, the cursor, the cell, the hints, the walk by keys, the camera's freedoms), so the game's own windows come

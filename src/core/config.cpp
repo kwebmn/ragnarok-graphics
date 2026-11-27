@@ -905,12 +905,20 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.uauiMotion);
         } else if (key == "interface.uaui_effects") {  // 3.0.18-beta.61
             setBool(val, c.uauiEffects);
-        } else if (key == "interface.uaui_glass") {  // 3.0.18-beta.64
-            setBool(val, c.uauiGlass);
         } else if (key == "interface.uaui_showcase") {  // 3.0.18-beta.11: uaUI's components' window
             setBool(val, c.uauiShowcase);
-        } else if (key == "interface.theme") {  // 3.0.18-beta.13: uaUI's theme
-            if (val == "standard" || val == "classic" || val == "contrast") c.uiTheme = val;
+        } else if (key == "interface.theme") {  // 3.0.18-beta.13: uaUI's theme; 3.0.24-beta.19: dark | light
+            if (val == "light") c.uiTheme = "light";
+            else if (val == "dark" || val == "standard" || val == "classic" || val == "contrast") c.uiTheme = "dark";
+        } else if (key.rfind("interface.theme_", 0) == 0) {  // 3.0.24-beta.19: a group's own tone
+            for (int g = 0; g < uitheme::kGroups; ++g)
+                if (key == themeGroupKey(uitheme::Group(g)) && (val == "same" || val == "dark" || val == "light"))
+                    c.uiGroups[size_t(g)] = val;
+        } else if (key == "interface.accent") {  // 3.0.24-beta.19: the accent's colour
+            if (val == "auto" || val == "gold" || val == "blue" || val == "green" || val == "red" || val == "own")
+                c.uiAccent = val;
+        } else if (key == "interface.accent_colour") {  // 3.0.24-beta.19: «свій колір», #RRGGBB
+            c.uiAccentColour = uitheme::accentOf("own", val) || val == "#000000" ? val : std::string();
         } else if (key == "interface.size") {  // 3.0.11-beta.54: the new interface's size (auto or per cent)
             int n = 0;
             if (val == "auto") c.uiSize = 0;
@@ -1419,6 +1427,31 @@ const char* dpiAwareToken(DpiAware a) { return a == DpiAware::Auto ? "auto" : a 
 
 const char* windowArtToken(WindowArt a) {
     return a == WindowArt::Ai ? "ai" : a == WindowArt::Pixels ? "pixels" : "xbr";
+}
+
+uitheme::Look lookOf(const Config& c) {
+    uitheme::Look look;
+    look.tone = c.uiTheme == "light" ? uitheme::Tone::Light : uitheme::Tone::Dark;
+    for (int g = 0; g < uitheme::kGroups; ++g) {
+        const std::string& v = c.uiGroups[size_t(g)];
+        look.groups[size_t(g)] = v == "dark"    ? uitheme::GroupTone::Dark
+                                 : v == "light" ? uitheme::GroupTone::Light
+                                                : uitheme::GroupTone::Same;
+    }
+    look.accent = uitheme::accentOf(c.uiAccent, c.uiAccentColour);
+    return look;
+}
+
+const char* themeGroupKey(uitheme::Group g) {
+    switch (g) {
+        case uitheme::Group::Hud: return "interface.theme_hud";
+        case uitheme::Group::Chat: return "interface.theme_chat";
+        case uitheme::Group::Items: return "interface.theme_items";
+        case uitheme::Group::Trade: return "interface.theme_trade";
+        case uitheme::Group::Settings: return "interface.theme_settings";
+        case uitheme::Group::Windows: break;
+    }
+    return "interface.theme_windows";
 }
 
 }  // namespace uagfx

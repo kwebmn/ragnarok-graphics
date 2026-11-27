@@ -434,8 +434,10 @@ TEST(catalogue_names_say_what_is_seen) {
     CHECK_EQ(name("quality.taa", Lang::Uk), std::string("Згладжування TAA (будь-яка відеокарта)"));
     CHECK_EQ(name("interface.uaui_motion", Lang::Uk), std::string("Плавний рух вікон і кнопок"));
     CHECK_EQ(name("interface.uaui_effects", Lang::Uk), std::string("Тіні й світіння вікон"));
-    CHECK_EQ(name("interface.uaui_glass", Lang::Uk), std::string("Скляні вікна"));
     CHECK_EQ(name("interface.pack_icons", Lang::Uk), std::string("Чіткі іконки з пакета текстур"));
+    CHECK_EQ(name("interface.theme", Lang::Uk), std::string("Тема інтерфейсу"));  // 3.0.24-beta.19
+    CHECK_EQ(name("interface.theme_trade", Lang::Uk), std::string("Тема: торгівля"));
+    CHECK_EQ(name("interface.accent", Lang::Uk), std::string("Колір акценту"));
     CHECK_EQ(name("sound.engine", Lang::Uk), std::string("Об'ємний звук"));
     CHECK_EQ(name("view3d.shadows", Lang::Uk), std::string("Тіні від будинків і дерев"));
     CHECK_EQ(name("interface.predict_walk", Lang::Uk), std::string("Хода без очікування сервера"));
@@ -450,8 +452,6 @@ TEST(catalogue_names_say_what_is_seen) {
     CHECK(models && settingMatches(*models, "models by our renderer", Lang::En));
     const IniSetting* detail = findSetting("interface.detail_console");
     CHECK(detail && settingMatches(*detail, "консоль графіки", Lang::Uk));
-    const IniSetting* glass = findSetting("interface.uaui_glass");
-    CHECK(glass && settingMatches(*glass, "нова бібліотека", Lang::Uk));
     // the file's name stays in the hint
     const IniSetting* ijl = findSetting("client.ijl");
     CHECK(ijl && std::string(tr(Lang::Uk, ijl->hint)).find("ijl15.dll") != std::string::npos);
@@ -499,4 +499,21 @@ TEST(catalogue_trials_decided_for_3_0_21) {
                                               "view3d.crown_light", "interface.shop_packets",
                                               "interface.storage_packets", "interface.cart_packets",
                                               "interface.vend_packets", "renderer.remix"}));
+}
+
+// 3.0.24-beta.19 (the themes): the theme a basic row of its own group, first on «Інтерфейс»; the groups and the
+// accent in the full mode; the glass windows gone
+TEST(catalogue_theme_is_basic_groups_and_accent_detail) {
+    const catalogue::Row* th = catalogue::find("interface.theme");
+    CHECK(th && th->level == catalogue::Level::Basic && catalogue::homeOf(*th) == catalogue::Home::Game);
+    for (const char* k : {"interface.theme_hud", "interface.theme_chat", "interface.theme_items",
+                          "interface.theme_trade", "interface.theme_windows", "interface.theme_settings",
+                          "interface.accent"}) {
+        const catalogue::Row* r = catalogue::find(k);
+        CHECK(r && r->level == catalogue::Level::Detail && catalogue::homeOf(*r) == catalogue::Home::Game);
+    }
+    CHECK(catalogue::find("interface.uaui_glass") == nullptr);
+    CHECK(interfaceSections().front().heading == Text::InterfaceSecTheme);
+    CHECK(interfaceSections().front().keys.front() == std::string("interface.theme"));
+    CHECK(!interfaceSections().front().folded);
 }

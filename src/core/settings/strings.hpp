@@ -917,8 +917,11 @@ enum class Text : uint16_t {
     InterfaceUauiShowcase, InterfaceUauiShowcaseHint,  // 3.0.18-beta.11
     InterfaceUauiMotion, InterfaceUauiMotionHint,  // 3.0.18-beta.58
     InterfaceUauiEffects, InterfaceUauiEffectsHint,  // 3.0.18-beta.61
-    InterfaceUauiGlass, InterfaceUauiGlassHint,  // 3.0.18-beta.64
-    InterfaceTheme, InterfaceThemeHint, InterfaceThemeStandard, InterfaceThemeClassic, InterfaceThemeContrast,  // .13
+    InterfaceTheme, InterfaceThemeHint, InterfaceThemeDark, InterfaceThemeLight,  // .13; 3.0.24-beta.19 dark/light
+    InterfaceSecTheme, InterfaceThemeSame, InterfaceThemeGroupHint, InterfaceGroupHud, InterfaceGroupChat,  // .19
+    InterfaceGroupItems, InterfaceGroupTrade, InterfaceGroupWindows, InterfaceGroupSettings, InterfaceAccent,
+    InterfaceAccentHint, InterfaceAccentAuto, InterfaceAccentGold, InterfaceAccentBlue, InterfaceAccentGreen,
+    InterfaceAccentRed, InterfaceAccentOwn, InterfaceAccentPick,
     EquipCartOff, EquipFalconOff, EquipPecoOff,  // 3.0.18-beta.114
     RecapNone, CharOwnReference, CharOwnHunt, CharOwnMvp, CharOwnTracker, CharOwnParty, CharOwnRecap,
     CharOwnSettings,  // 3.0.18-beta.120

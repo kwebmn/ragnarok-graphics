@@ -276,7 +276,9 @@ TEST(settings_window_simple_page_of_possibilities) {
     using namespace uagfx::settingswin;
     namespace cat = uagfx::settings::catalogue;
     const std::vector<Line> s = simpleLines();
-    CHECK_EQ(s.size(), size_t(37));
+    CHECK_EQ(s.size(), size_t(38));  // 3.0.24-beta.19: the theme (a plain row) first under «Інтерфейс»
+    const auto theme = std::find_if(s.begin(), s.end(), [](const Line& l) { return l.key == "interface.theme"; });
+    CHECK(theme != s.end() && !theme->card && theme->heads);
     CHECK(s[0].key == "picture.0" && s[0].heads && s[0].kind == Kind::Picture);
     int cards = 0, sections = 0;
     for (const Line& l : s) {

@@ -452,19 +452,39 @@ const std::vector<IniSetting>& iniSettings() {
         {"interface", "animations", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceAnimations,
          Text::InterfaceAnimationsHint, ""},
         // 3.0.18-beta.7: the RmlUi spike's card (win/uaui)
-        // 3.0.18-beta.13: uaUI's theme
-        {"interface", "theme", Page::Interface, Control::Choice, 0, 0, 0, {"standard", "classic", "contrast"},
-         {Text::InterfaceThemeStandard, Text::InterfaceThemeClassic, Text::InterfaceThemeContrast},
-         Text::InterfaceTheme, Text::InterfaceThemeHint, ""},
+        // 3.0.18-beta.13: uaUI's theme; 3.0.24-beta.19 (docs/superpowers/specs/2026-11-27-item-windows-redesign-
+        // design.md): dark or light for the whole interface, a tone per group, the accent
+        {"interface", "theme", Page::Interface, Control::Choice, 0, 0, 0, {"dark", "light"},
+         {Text::InterfaceThemeDark, Text::InterfaceThemeLight}, Text::InterfaceTheme, Text::InterfaceThemeHint, ""},
+        {"interface", "accent", Page::Interface, Control::Choice, 0, 0, 0,
+         {"auto", "gold", "blue", "green", "red", "own"},
+         {Text::InterfaceAccentAuto, Text::InterfaceAccentGold, Text::InterfaceAccentBlue, Text::InterfaceAccentGreen,
+          Text::InterfaceAccentRed, Text::InterfaceAccentOwn},
+         Text::InterfaceAccent, Text::InterfaceAccentHint, ""},
+        {"interface", "theme_hud", Page::Interface, Control::Choice, 0, 0, 0, {"same", "dark", "light"},
+         {Text::InterfaceThemeSame, Text::InterfaceThemeDark, Text::InterfaceThemeLight}, Text::InterfaceGroupHud,
+         Text::InterfaceThemeGroupHint, ""},
+        {"interface", "theme_chat", Page::Interface, Control::Choice, 0, 0, 0, {"same", "dark", "light"},
+         {Text::InterfaceThemeSame, Text::InterfaceThemeDark, Text::InterfaceThemeLight}, Text::InterfaceGroupChat,
+         Text::InterfaceThemeGroupHint, ""},
+        {"interface", "theme_items", Page::Interface, Control::Choice, 0, 0, 0, {"same", "dark", "light"},
+         {Text::InterfaceThemeSame, Text::InterfaceThemeDark, Text::InterfaceThemeLight}, Text::InterfaceGroupItems,
+         Text::InterfaceThemeGroupHint, ""},
+        {"interface", "theme_trade", Page::Interface, Control::Choice, 0, 0, 0, {"same", "dark", "light"},
+         {Text::InterfaceThemeSame, Text::InterfaceThemeDark, Text::InterfaceThemeLight}, Text::InterfaceGroupTrade,
+         Text::InterfaceThemeGroupHint, ""},
+        {"interface", "theme_windows", Page::Interface, Control::Choice, 0, 0, 0, {"same", "dark", "light"},
+         {Text::InterfaceThemeSame, Text::InterfaceThemeDark, Text::InterfaceThemeLight},
+         Text::InterfaceGroupWindows, Text::InterfaceThemeGroupHint, ""},
+        {"interface", "theme_settings", Page::Interface, Control::Choice, 0, 0, 0, {"same", "dark", "light"},
+         {Text::InterfaceThemeSame, Text::InterfaceThemeDark, Text::InterfaceThemeLight},
+         Text::InterfaceGroupSettings, Text::InterfaceThemeGroupHint, ""},
         // 3.0.18-beta.58
         {"interface", "uaui_motion", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
          Text::InterfaceUauiMotion, Text::InterfaceUauiMotionHint, ""},
         // 3.0.18-beta.61
         {"interface", "uaui_effects", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
          Text::InterfaceUauiEffects, Text::InterfaceUauiEffectsHint, ""},
-        // 3.0.18-beta.64
-        {"interface", "uaui_glass", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
-         Text::InterfaceUauiGlass, Text::InterfaceUauiGlassHint, ""},
         // 3.0.18-beta.11: uaUI's components' window
         {"interface", "uaui_showcase", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceUauiShowcase, Text::InterfaceUauiShowcaseHint, ""},
@@ -1623,9 +1643,11 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46
     if (k == "interface.uaui_motion") return c.uauiMotion ? "1" : "0";  // 3.0.18-beta.58
     if (k == "interface.uaui_effects") return c.uauiEffects ? "1" : "0";  // 3.0.18-beta.61
-    if (k == "interface.uaui_glass") return c.uauiGlass ? "1" : "0";  // 3.0.18-beta.64
     if (k == "interface.uaui_showcase") return c.uauiShowcase ? "1" : "0";  // 3.0.18-beta.11
     if (k == "interface.theme") return c.uiTheme;  // 3.0.18-beta.13
+    if (k == "interface.accent") return c.uiAccent;  // 3.0.24-beta.19
+    for (int g = 0; g < uitheme::kGroups; ++g)
+        if (k == themeGroupKey(uitheme::Group(g))) return c.uiGroups[size_t(g)];
     if (k == "interface.panel_opacity") return std::to_string(c.hudOpacity);  // 3.0.11-beta.47
     if (k == "interface.cast") return c.castLabel ? "1" : "0";                 // 3.0.11-beta.48
     if (k == "interface.low_hp_edge") return std::to_string(c.lowHpEdge);      // 3.0.11-beta.50

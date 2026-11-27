@@ -2,6 +2,7 @@
 #include <cstring>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <string>
 
 #include "core/config.hpp"
@@ -11,6 +12,7 @@
 #include "core/settings/effects_layout.hpp"
 #include "core/settings/navigation.hpp"
 #include "core/settings/schema.hpp"
+#include "core/settings_window.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -2138,4 +2140,52 @@ TEST(config_mcp_off_by_default_port_8770) {
     CHECK(s && s->page == settings::Page::Diagnostics && settings::tokenOf(*s, Config{}) == "0");
     const settings::IniSetting* p = settings::findSetting("mcp.port");
     CHECK(p && settings::tokenOf(*p, Config{}) == "8770");
+}
+
+// 3.0.24-beta.19 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md, the themes): dark or light, a
+// tone per group, the accent; the old classic and contrast dark, the glass windows gone
+TEST(config_theme_old_values_are_dark_and_glass_is_gone) {
+    const Config c = parseConfig("[interface]\ntheme = contrast\nuaui_glass = 1\n");
+    CHECK(c.uiTheme == "dark");
+    CHECK(settings::findSetting("interface.uaui_glass") == nullptr);
+    CHECK(parseConfig("[interface]\ntheme = classic\n").uiTheme == "dark");
+    CHECK(parseConfig("[interface]\ntheme = standard\n").uiTheme == "dark");
+    CHECK(parseConfig("[interface]\ntheme = light\n").uiTheme == "light");
+    CHECK(parseConfig("[interface]\ntheme = purple\n").uiTheme == "dark");
+    CHECK(parseConfig("").uiTheme == "dark");
+    const settings::IniSetting* theme = settings::findSetting("interface.theme");
+    CHECK(theme && settings::tokenOf(*theme, parseConfig("[interface]\ntheme = classic\n")) == "dark");
+}
+
+TEST(config_theme_groups_and_accent_make_the_look) {
+    const Config c =
+        parseConfig("[interface]\ntheme = light\ntheme_hud = dark\naccent = own\naccent_colour = #C86BFF\n");
+    const uitheme::Look look = lookOf(c);
+    CHECK(look.tone == uitheme::Tone::Light);
+    CHECK(look.groups[int(uitheme::Group::Hud)] == uitheme::GroupTone::Dark);
+    CHECK(look.groups[int(uitheme::Group::Trade)] == uitheme::GroupTone::Same);
+    CHECK(look.accent == 0xC86BFFu);
+    const Config bad = parseConfig("[interface]\naccent = own\naccent_colour = zzz\ntheme_chat = pink\n");
+    CHECK(lookOf(bad).accent == 0u && bad.uiAccentColour.empty());
+    CHECK(lookOf(bad).groups[int(uitheme::Group::Chat)] == uitheme::GroupTone::Same);
+    CHECK(lookOf(parseConfig("[interface]\naccent = red\n")).accent == 0xC0392Bu);
+    CHECK(lookOf(parseConfig("[interface]\naccent = gold\naccent_colour = #C86BFF\n")).accent == 0xE6CB8Au);
+    for (const char* k : {"interface.theme_hud", "interface.theme_chat", "interface.theme_items",
+                          "interface.theme_trade", "interface.theme_windows", "interface.theme_settings"}) {
+        const settings::IniSetting* s = settings::findSetting(k);
+        CHECK(s && settings::tokenOf(*s, c) == (std::string(k) == "interface.theme_hud" ? "dark" : "same"));
+    }
+    const settings::IniSetting* accent = settings::findSetting("interface.accent");
+    CHECK(accent && settings::tokenOf(*accent, c) == "own" && settings::tokenOf(*accent, Config{}) == "auto");
+}
+
+// the spec: «Скинути до стандартних» returns the theme, the groups and the accent
+TEST(config_reset_all_returns_the_theme_groups_and_accent) {
+    const Config shown = parseConfig("[interface]\ntheme = light\ntheme_trade = dark\naccent = own\n"
+                                     "accent_colour = #C86BFF\n");
+    std::map<std::string, std::string> back;
+    for (const settingswin::Reset& r : settingswin::resetsAll(shown, Config{})) back[r.key] = r.token;
+    CHECK(back["interface.theme"] == "dark");
+    CHECK(back["interface.theme_trade"] == "same");
+    CHECK(back["interface.accent"] == "auto");
 }
