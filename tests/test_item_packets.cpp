@@ -73,3 +73,18 @@ TEST(item_packets_npc_deal_lists) {
     CHECK_EQ(itempackets::serverLength(0x00ca), 3);
     CHECK_EQ(itempackets::serverLength(0x00cb), 3);
 }
+
+// 3.0.24-beta.18 (stage 4 «Лавка»): purchasereq 0x0134 - the length at 2, the merchant's account at 4, then
+// {amount.W, place.W} (the place as the shop's list 0x0133 gave it: the cart's index + 2); its refusal 0x0135, 7 bytes
+TEST(item_packets_vend_purchase) {
+    const itempackets::Bytes b = itempackets::vendBuy(2000123, {{5, 3}, {9, 1}});
+    CHECK_EQ(b.size(), size_t(16));
+    CHECK_EQ(rd16(b, 0), 0x0134);
+    CHECK_EQ(rd16(b, 2), 16);
+    CHECK_EQ(uint32_t(rd16(b, 4) | (rd16(b, 6) << 16)), 2000123u);
+    CHECK_EQ(rd16(b, 8), 3);  // the amount first
+    CHECK_EQ(rd16(b, 10), 5);
+    CHECK_EQ(rd16(b, 12), 1);
+    CHECK_EQ(rd16(b, 14), 9);
+    CHECK_EQ(itempackets::serverLength(0x0135), 7);
+}

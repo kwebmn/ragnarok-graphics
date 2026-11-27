@@ -116,6 +116,13 @@ std::optional<Change> State::feed(const uint8_t* p, size_t n) {
             c.result = p[2];
             return c;
         }
+        case 0x0135: {  // 3.0.24-beta.18: a vending purchase refused - {place, amount, why: 1 zeny 2 weight 4 stock}
+            if (n < 7) return std::nullopt;
+            Change c;
+            c.where = Where::Shop;
+            c.result = p[6] ? p[6] : 4;
+            return c;
+        }
         case 0x012b:
             cart_.clear();
             return Change{Where::Cart, 0, 0, true};

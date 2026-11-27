@@ -822,6 +822,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.countWindow);
         } else if (key == "interface.vending") {  // 3.0.11-beta.156: another's shop
             setBool(val, c.vendWindow);
+        } else if (key == "interface.vend_packets") {  // 3.0.24-beta.18: items via packets, the testers' box
+            setBool(val, c.vendPackets);
         } else if (key == "interface.picks") {  // 3.0.11-beta.157: the choice of things
             setBool(val, c.pickWindows);
         } else if (key == "interface.party_setup") {  // 3.0.11-beta.158: the party's settings

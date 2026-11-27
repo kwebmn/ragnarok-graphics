@@ -1103,6 +1103,7 @@ enum class Text : uint16_t {
     ItemsNoZeny, ItemsTooHeavy, ItemsShopRefused, InterfaceShopPackets, InterfaceShopPacketsHint,  // .24-beta.9
     View3dCaveRift, View3dCaveRiftHint, View3dCaveCrystals, View3dCaveCrystalsHint, View3dCaveGrotto,  // .24-b.11
     View3dCaveGrottoHint,
+    ItemsVendNoZeny, ItemsVendTooHeavy, ItemsVendRefused, InterfaceVendPackets, InterfaceVendPacketsHint,  // b.18
     Count
 };
 

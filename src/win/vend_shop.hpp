@@ -25,6 +25,9 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
+// 3.0.24-beta.18 (items via packets, stage 4; [interface] vend_packets - the testers' box): «Купити» sends the
+// purchase in the driver's own packet and waits for the things; off - the game's own purchase window's button
+void setPackets(bool on);
 bool close();  // Esc: «Скасувати»
 void beforeGameDraw();
 // The controller: up and down a row, A one more of it, X one less, Y buys, B gives up

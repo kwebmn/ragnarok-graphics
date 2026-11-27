@@ -24,6 +24,9 @@ Bytes cartToStorage(uint16_t cartIndex, uint32_t amount);
 using Pairs = std::vector<std::pair<uint16_t, uint16_t>>;
 Bytes buyList(const Pairs& itemAmount);
 Bytes sellList(const Pairs& indexAmount);
+// 3.0.24-beta.18 (stage 4 «Лавка»): purchasereq 0x0134 - the length, the merchant's account, {amount.W, place.W}
+// (pairs given as {place, amount}: the place as the shop's list 0x0133 gave it, the cart's index + 2)
+Bytes vendBuy(uint32_t merchant, const Pairs& placeAmount);
 int serverLength(uint16_t id);
 
 }  // namespace uagfx::itempackets

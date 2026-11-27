@@ -28,12 +28,20 @@ public:
     // 3.0.24-beta.9 (stage 3 «Магазин»): an NPC deal - the cart's rows in one packet (buy: {item, amount}, sell:
     // {index, amount}); one at a time, ended by its answer (Done when 0, Refused with lastResult() else)
     Result askDeal(bool buy, const itempackets::Pairs& rows, bool connected, uint32_t nowMs, itempackets::Bytes& out);
+    // 3.0.24-beta.18 (stage 4 «Лавка»): a purchase at a player's shop ({place, amount} rows); it has no answer of its
+    // own when it goes through - the things coming into the bag end it (Done), 0x0135 refuses it (Refused)
+    Result askVend(uint32_t merchant, const itempackets::Pairs& rows, bool connected, uint32_t nowMs,
+                   itempackets::Bytes& out);
     int lastResult() const { return lastResult_; }
     bool dealWaiting() const { return dealAt_ != 0; }
     Outcome onChange(const itemstate::Change& c);
     Outcome tick(uint32_t nowMs);
     bool waiting(itemstate::Where w, uint16_t index) const;
-    void dropAll() { waits_.clear(); }
+    void dropAll() {  // 3.0.24-beta.18: a deal waiting too (another map: no answer will come)
+        waits_.clear();
+        dealAt_ = 0;
+        vend_ = false;
+    }
     Kind lastKind() const { return last_.kind; }  // the action an Outcome was about
     uint16_t lastIndex() const { return last_.index; }
     uint32_t lastMs() const { return last_.ms; }  // how long it waited
@@ -48,6 +56,7 @@ private:
     std::vector<Wait> waits_;
     Wait last_;
     uint32_t dealAt_ = 0;  // the deal sent then (+1: never 0), 0 none waits
+    bool vend_ = false;    // 3.0.24-beta.18: the deal waiting is a vending purchase
     int lastResult_ = -1;
 };
 

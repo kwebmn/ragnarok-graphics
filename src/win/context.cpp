@@ -1435,6 +1435,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     cartwin::setPackets(config.cartPackets);  // 3.0.24-beta.8: items via packets
     cartwin::frame(window, ui.cartWindow, gameCodePage(config), pk, pw, ph);              // 3.0.11-beta.154
     g_parts.mark("cartwin", nowMs());
+    vendshopwin::setPackets(config.vendPackets);  // 3.0.24-beta.18: items via packets
     vendshopwin::frame(window, ui.vendWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.156
     g_parts.mark("vendshopwin", nowMs());
     pickcardwin::frame(window, ui.pickWindows, gameCodePage(config), pk, pw, ph);         // 3.0.11-beta.157

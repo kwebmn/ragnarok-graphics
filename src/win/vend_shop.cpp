@@ -23,6 +23,7 @@
 #include "win/client_tables.hpp"
 #include "win/game_memory.hpp"
 #include "win/info_card.hpp"
+#include "win/item_net.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -99,6 +100,8 @@ struct VendRowView {
     int chosen = 0;
     bool canMore = true, dear = false;  // 3.0.23-beta.1: + would add one; the zeny does not pay for one more
 };
+
+bool g_packets = false;  // 3.0.24-beta.18: [interface] vend_packets
 
 struct State {
     uilive::Window live;  // 3.0.18-beta.81
@@ -386,6 +389,32 @@ void press(State& s, int id) {
     s.key.clear();
 }
 
+// 3.0.24-beta.18 (items via packets, stage 4 «Лавка»; [interface] vend_packets): «Купити» - the chosen things in
+// our own purchasereq (0x0134: the merchant's account, {amount, place}); off - the game's own purchase window's button
+void buy(State& s, const char* by) {
+    if (!(vs::total(s.rows) > 0 && vs::total(s.rows) <= s.show.zeny)) return;
+    if (!g_packets) {
+        press(s, kBuyButton);
+        return;
+    }
+    const uint32_t things = thingsWindow();
+    const uint32_t merchant = things ? read32(things + kShopAccount) : 0;
+    itempackets::Pairs rows;
+    for (const vs::Row& r : s.rows)
+        if (r.chosen > 0) rows.push_back({uint16_t(r.index), uint16_t(r.chosen)});
+    if (!merchant || rows.empty()) return;
+    const itemactions::Result res = itemnet::vend(merchant, rows);
+    if (s.told++ < 40)
+        LOG_INFO("vending: %s - %zu row(s) for %lld z by the driver's own purchase (merchant %u): %s", by, rows.size(),
+                 vs::total(s.rows), unsigned(merchant),
+                 res == itemactions::Result::Sent ? "sent, the things awaited" : "not sent");
+    if (res != itemactions::Result::Sent) {
+        s.refusedHint = itemnet::lastWords();
+        s.refusedAt = s.refusedHint.empty() ? 0 : GetTickCount64();
+    }
+    s.key.clear();
+}
+
 }  // namespace
 
 void packet(const packets::Event& e) {
@@ -424,6 +453,17 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.padNow = uapad::runtime::navLook().shown;  // .210: the keys too
     readShop(s);
     s.show.zeny = int32_t(read32(kZeny));
+    if (g_packets) {  // 3.0.24-beta.18: our purchase's answer - the things came: the shop closed by its own cancel;
+        itemnet::frame();  // refused or unanswered: why, in the hint's place
+        const int answer = itemnet::takeDealAnswer();
+        if (answer == 0) {
+            press(s, kCancelButton);
+        } else if (answer != -2) {
+            s.refusedHint = itemnet::lastWords();
+            s.refusedAt = GetTickCount64();
+            s.key.clear();
+        }
+    }
     s.layout = vs::layout(targetWidth, targetHeight, s.scale, s.rows.size());
     s.show.scroll = std::clamp(s.show.scroll, 0, vs::mostScroll(s.layout, s.rows.size()));
     if (s.padNow && !s.rows.empty()) {
@@ -507,7 +547,7 @@ static void liveFrame(State& s) {
         });
         m.BindEventCallback("vs_buy", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
             State& st = state();
-            if (vs::total(st.rows) > 0 && vs::total(st.rows) <= st.show.zeny) press(st, kBuyButton);
+            buy(st, "a click on «Купити»");  // 3.0.24-beta.18: our own purchase with vend_packets
         });
         m.BindEventCallback("vs_cancel", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
             press(state(), kCancelButton);
@@ -584,6 +624,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 
 bool shown() { return state().shown; }
 
+void setPackets(bool on) {
+    if (on != g_packets)
+        LOG_INFO("vending: %s", on ? "items via packets - the purchase sent by the driver itself ([interface] "
+                                     "vend_packets)"
+                                   : "the game's own purchase (its window's «Купити»)");
+    g_packets = on;
+}
+
 bool close() {
     State& s = state();
     if (!s.shown) return false;
@@ -606,7 +654,7 @@ void padCommand(PadCommand c) {
         case PadCommand::More: more(s, s.show.focus, 1); break;
         case PadCommand::Less: less(s, s.show.focus, 1); break;
         case PadCommand::Buy:
-            if (vs::total(s.rows) > 0 && vs::total(s.rows) <= s.show.zeny) press(s, kBuyButton);
+            buy(s, "the controller's Buy");
             break;
         case PadCommand::Cancel: press(s, kCancelButton); break;
         case PadCommand::Card: card(s, s.show.focus, "the controller's Y"); break;

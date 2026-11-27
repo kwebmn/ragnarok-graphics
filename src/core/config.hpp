@@ -1004,6 +1004,7 @@ struct Config {
     bool countWindow = false;
     // 3.0.11-beta.156: [interface] vending - another's shop (win/vend_shop) as «Лавка»
     bool vendWindow = false;
+    bool vendPackets = false;  // 3.0.24-beta.18: [interface] vend_packets - «Лавка»'s purchase by our own packet
     // 3.0.11-beta.157: [interface] picks - the magnifier's and a card's choice of things (win/pick_card)
     bool pickWindows = false;
     // 3.0.11-beta.158: [interface] party_setup - the party's settings (Alt+P, win/party_setup) as a card

@@ -45,10 +45,29 @@ Result Queue::askDeal(bool buy, const itempackets::Pairs& rows, bool connected, 
     if (!connected) return Result::NotConnected;
     out = buy ? itempackets::buyList(rows) : itempackets::sellList(rows);
     dealAt_ = nowMs + 1;
+    vend_ = false;
+    return Result::Sent;
+}
+
+Result Queue::askVend(uint32_t merchant, const itempackets::Pairs& rows, bool connected, uint32_t nowMs,
+                      itempackets::Bytes& out) {
+    out.clear();
+    if (rows.empty()) return Result::NothingToMove;
+    if (dealAt_) return Result::Busy;
+    if (!connected) return Result::NotConnected;
+    out = itempackets::vendBuy(merchant, rows);
+    dealAt_ = nowMs + 1;
+    vend_ = true;
     return Result::Sent;
 }
 
 Outcome Queue::onChange(const itemstate::Change& c) {
+    if (dealAt_ && vend_ && c.where == itemstate::Where::Bag && c.delta > 0) {  // 3.0.24-beta.18: bought
+        dealAt_ = 0;
+        vend_ = false;
+        lastResult_ = 0;
+        return Outcome::Done;
+    }
     if (c.where == itemstate::Where::Shop) {  // 3.0.24-beta.9: the deal's answer
         if (!dealAt_) return Outcome::None;
         dealAt_ = 0;

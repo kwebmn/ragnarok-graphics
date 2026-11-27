@@ -9952,6 +9952,20 @@ constexpr Entry kTexts[] = {
      "сталактити. Потрібне «Склепіння в печерах».",
      "Свод Комодо и его пещер как морской грот: блики воды бегут по скале, с неё свисают сталактиты. Нужен "
      "«Свод в пещерах»."},
+    // 3.0.24-beta.18: «Лавка торговця» via packets - the purchase's refusals (the shop stays open)
+    {Text::ItemsVendNoZeny, "Not enough zeny", "Не вистачає зені", "Не хватает зени"},
+    {Text::ItemsVendTooHeavy, "Too heavy", "Заважко", "Слишком тяжело"},
+    {Text::ItemsVendRefused, "The shop has not so many any more", "У лавці вже немає стільки",
+     "В лавке уже нет столько"},
+    {Text::InterfaceVendPackets, "Merchant's shop: the new purchase (beta)", "Лавка торговця: нова покупка (бета)",
+     "Лавка торговца: новая покупка (бета)"},
+    {Text::InterfaceVendPacketsHint,
+     "«Merchant's shop» sends the purchase itself and waits for the things: they came - the shop closes, refused - "
+     "why, in its hint. Needs «Merchant's shop» on. For the testers: off - the game's own way.",
+     "«Лавка торговця» сама надсилає покупку й чекає речей: прийшли — лавка закривається, відмова — чому, у її "
+     "підказці. Потрібна увімкнена «Лавка торговця». Для тестерів: вимкнено — як у грі.",
+     "«Лавка торговца» сама отправляет покупку и ждёт вещей: пришли — лавка закрывается, отказ — почему, в её "
+     "подсказке. Нужна включённая «Лавка торговца». Для тестеров: выключено — как в игре."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

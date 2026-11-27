@@ -571,6 +571,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("counts", flag(running.countWindow), flag(file.countWindow)));
         n.countWindow = file.countWindow;
     }
+    if (file.vendPackets != running.vendPackets) {  // 3.0.24-beta.18: items via packets, at once
+        u.applied.push_back(change("vend_packets", flag(running.vendPackets), flag(file.vendPackets)));
+        n.vendPackets = file.vendPackets;
+    }
     if (file.vendWindow != running.vendWindow) {  // 3.0.11-beta.156: «Лавка», at once
         u.applied.push_back(change("vending", flag(running.vendWindow), flag(file.vendWindow)));
         n.vendWindow = file.vendWindow;

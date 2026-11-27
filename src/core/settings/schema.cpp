@@ -368,6 +368,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceCountsHint, ""},  // 3.0.11-beta.155
         {"interface", "vending", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceVending,
          Text::InterfaceVendingHint, ""},  // 3.0.11-beta.156
+        // 3.0.24-beta.18: items via packets, stage 4 - the testers' box (Alt+O «Перевіряємо зараз»)
+        {"interface", "vend_packets", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
+         Text::InterfaceVendPackets, Text::InterfaceVendPacketsHint, ""},
         {"interface", "picks", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfacePicks,
          Text::InterfacePicksHint, ""},  // 3.0.11-beta.157
         {"interface", "party_setup", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
@@ -1585,6 +1588,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.cart_packets") return c.cartPackets ? "1" : "0";      // 3.0.24-beta.8
     if (k == "interface.counts") return c.countWindow ? "1" : "0";            // 3.0.11-beta.155
     if (k == "interface.vending") return c.vendWindow ? "1" : "0";            // 3.0.11-beta.156
+    if (k == "interface.vend_packets") return c.vendPackets ? "1" : "0";      // 3.0.24-beta.18
     if (k == "interface.picks") return c.pickWindows ? "1" : "0";             // 3.0.11-beta.157
     if (k == "interface.party_setup") return c.partySetupWindow ? "1" : "0";  // 3.0.11-beta.158
     if (k == "interface.pet") return c.petWindow ? "1" : "0";                 // 3.0.11-beta.159

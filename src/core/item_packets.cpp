@@ -62,6 +62,19 @@ Bytes sellList(const Pairs& indexAmount) {
     return b;
 }
 
+Bytes vendBuy(uint32_t merchant, const Pairs& placeAmount) {
+    Bytes b(8 + placeAmount.size() * 4, 0);
+    put16(b, 0, 0x0134);
+    put16(b, 2, uint16_t(b.size()));
+    put16(b, 4, uint16_t(merchant & 0xFFFF));
+    put16(b, 6, uint16_t(merchant >> 16));
+    for (size_t k = 0; k < placeAmount.size(); ++k) {
+        put16(b, 8 + k * 4, placeAmount[k].second);  // the amount first
+        put16(b, 10 + k * 4, placeAmount[k].first);
+    }
+    return b;
+}
+
 Bytes toCart(uint16_t bagIndex, uint32_t amount) { return eight(0x0126, bagIndex, amount); }
 Bytes fromCart(uint16_t cartIndex, uint32_t amount) { return eight(0x0127, cartIndex, amount); }
 Bytes storageToCart(uint16_t storageIndex, uint32_t amount) { return eight(0x0128, storageIndex, amount); }
@@ -82,6 +95,7 @@ int serverLength(uint16_t id) {
         case 0x012b: return 2;   // the cart emptied
         case 0x00ca:             // 3.0.24-beta.9: the NPC deal's answer - bought
         case 0x00cb: return 3;   // sold
+        case 0x0135: return 7;   // 3.0.24-beta.18: a vending purchase refused
         case 0x00f2: return 6;   // the storage's count and most
         case 0x00f4: return 21;  // a thing into the storage
         case 0x00f6: return 8;   // a thing out of the storage

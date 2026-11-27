@@ -25,6 +25,7 @@ struct State {
     ULONGLONG wordsUntil = 0;
     int told = 0;
     int dealAnswer = -2;  // 3.0.24-beta.9
+    bool vendWaiting = false;  // 3.0.24-beta.18: the deal waiting is our purchase at a player's shop
 };
 State& st() {
     static State s;
@@ -66,8 +67,21 @@ void packet(uint16_t id, const uint8_t* p) {
     if (n < 2 || n > kMostPacket) return;
     const std::optional<itemstate::Change> c = s.items.feed(p, n);
     if (!c) return;
+    const itemactions::Outcome o = s.queue.onChange(*c);
+    // 3.0.24-beta.18 (stage 4 «Лавка»): our purchase at a player's shop - the things coming into the bag end it, its
+    // refusal (0x0135) says why
+    if (s.vendWaiting && (o == itemactions::Outcome::Done || o == itemactions::Outcome::Refused)) {
+        s.vendWaiting = false;
+        s.dealAnswer = s.queue.lastResult();
+        if (s.dealAnswer == 1) say(s, settings::Text::ItemsVendNoZeny);
+        else if (s.dealAnswer == 2) say(s, settings::Text::ItemsVendTooHeavy);
+        else if (s.dealAnswer != 0) say(s, settings::Text::ItemsVendRefused);
+        if (s.told++ < 200)
+            LOG_INFO("items: the shop's purchase %s (%d)", s.dealAnswer ? "refused" : "done - the things came",
+                     s.dealAnswer);
+        return;
+    }
     if (c->where == itemstate::Where::Shop) {  // 3.0.24-beta.9: the deal answered
-        const itemactions::Outcome o = s.queue.onChange(*c);
         if (o == itemactions::Outcome::None) return;  // not ours (the game's own window sent it)
         s.dealAnswer = c->result;
         if (c->result == 1) say(s, settings::Text::ItemsNoZeny);
@@ -76,7 +90,7 @@ void packet(uint16_t id, const uint8_t* p) {
         if (s.told++ < 200) LOG_INFO("items: the NPC deal answered %d (%s)", c->result, c->result ? "refused" : "done");
         return;
     }
-    if (s.queue.onChange(*c) != itemactions::Outcome::None && s.told++ < 200)
+    if (o != itemactions::Outcome::None && s.told++ < 200)
         LOG_INFO("items: %s, index %u - answered", kindName(s.queue.lastKind()), unsigned(s.queue.lastIndex()));
 }
 
@@ -125,6 +139,26 @@ itemactions::Result deal(bool buy, const itempackets::Pairs& rows) {
     return r;
 }
 
+itemactions::Result vend(uint32_t merchant, const itempackets::Pairs& rows) {
+    State& s = st();
+    itempackets::Bytes out;
+    itemactions::Result r = s.queue.askVend(merchant, rows, uapad::runtime::healthy(), GetTickCount(), out);
+    if (r == itemactions::Result::Sent && !uapad::runtime::sendPacket(out)) r = itemactions::Result::NotConnected;
+    if (r == itemactions::Result::NotConnected) {
+        s.queue.dropAll();
+        say(s, settings::Text::ItemsNotConnected);
+    }
+    if (r == itemactions::Result::Sent) {
+        s.dealAnswer = -2;
+        s.vendWaiting = true;
+    }
+    if (s.told++ < 200)
+        LOG_INFO("items: the shop's purchase (merchant %u) - %zu row(s): %s", unsigned(merchant), rows.size(),
+                 r == itemactions::Result::Sent ? "sent" : r == itemactions::Result::Busy ? "the one before waits"
+                                                                                           : "not sent");
+    return r;
+}
+
 int takeDealAnswer() {
     State& s = st();
     const int a = s.dealAnswer;
@@ -138,6 +172,7 @@ void frame() {
     if (s.queue.tick(GetTickCount()) != itemactions::Outcome::TimedOut) return;
     if (dealWaited && !s.queue.dealWaiting()) {  // 3.0.24-beta.9: the deal unanswered
         s.dealAnswer = -1;
+        s.vendWaiting = false;
         say(s, settings::Text::ItemsNoAnswer);
         if (s.told++ < 200) LOG_INFO("items: the NPC deal - no answer in 2 s");
     } else {

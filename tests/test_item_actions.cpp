@@ -124,3 +124,31 @@ TEST(item_state_npc_deal_answers) {
     c = s.feed(sold.data(), sold.size());
     CHECK(c && c->where == is::Where::Shop && c->result == 0);
 }
+
+// 3.0.24-beta.18 (stage 4 «Лавка»): the purchase has no answer of its own when it goes through - the things coming
+// into the bag end it; 0x0135 refuses it (1 zeny, 2 weight, 4 the shop has not so many)
+TEST(item_actions_vend_purchase_ends_by_the_bag_or_its_refusal) {
+    ia::Queue q;
+    itempackets::Bytes out;
+    CHECK(q.askVend(2000123, {{5, 3}}, true, 0, out) == ia::Result::Sent);
+    CHECK_EQ(out.size(), size_t(12));
+    is::Change came;
+    came.where = is::Where::Bag;
+    came.index = 7;
+    came.delta = 3;
+    CHECK(q.onChange(came) == ia::Outcome::Done);
+    CHECK(q.onChange(came) == ia::Outcome::None);  // nothing waits now: a pickup is no answer
+    CHECK(q.askVend(2000123, {{5, 3}}, true, 0, out) == ia::Result::Sent);
+    is::Change no;
+    no.where = is::Where::Shop;
+    no.result = 4;
+    CHECK(q.onChange(no) == ia::Outcome::Refused);
+    CHECK_EQ(q.lastResult(), 4);
+}
+
+TEST(item_state_vend_refusal) {
+    is::State s;
+    const std::vector<uint8_t> refused{0x35, 0x01, 0x07, 0x00, 0x03, 0x00, 0x01};
+    auto c = s.feed(refused.data(), refused.size());
+    CHECK(c && c->where == is::Where::Shop && c->result == 1);
+}

@@ -7,6 +7,14 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        {"vend_packets", "3.0.24-beta.18", "interface.vend_packets",
+         {"Merchant's shop: the new purchase", "Лавка торговця: нова покупка", "Лавка торговца: новая покупка"},
+         {"Turn «Merchant's shop» and this on. Buy a few things at a player's shop: the shop closes when they come; "
+          "with too little zeny it says why.",
+          "Увімкніть «Лавка торговця» і цю галочку. Купіть кілька речей у лавці гравця: лавка закривається, коли "
+          "речі прийшли; без зені каже чому.",
+          "Включите «Лавка торговца» и эту галочку. Купите несколько вещей в лавке игрока: лавка закрывается, когда "
+          "вещи пришли; без зени говорит почему."}},
         {"comodo_caves", "3.0.24-beta.16", "view3d.cave_grotto",
          {"Comodo's caves: the new vault", "Печери Комодо: нове склепіння", "Пещеры Комодо: новый свод"},
          {"beach_dun, beach_dun2, beach_dun3, Ctrl+Shift+V, look up: folds of rock in the cave's own light, "
