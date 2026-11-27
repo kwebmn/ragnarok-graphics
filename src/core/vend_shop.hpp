@@ -22,6 +22,7 @@ struct Row {
     std::string inside;  // 3.0.18-beta.138: its cards and free slots («Hydra Card · 1 вільний»), "" none
     std::string colour = "#eef2f8";  // 3.0.18-beta.144: its name's - its element's, else the plain one
     const panel::Picture* icon = nullptr;
+    int weight = -1;  // 3.0.24-beta.21: one's weight in tenths (the reference pack's), -1 not known
 };
 // 3.0.18-beta.138 (the owner: things in a shop not seen into): the slots after the name as the game's
 // own windows write them («Gladius [3]», none when 0); what is inside: each card's name, then the free slots by
@@ -30,6 +31,10 @@ std::string withSlots(const std::string& name, int slots);
 std::string inside(const int cards[4], int slots, const std::function<std::string(int)>& cardName,
                    const std::string& freeWord);
 long long total(const std::vector<Row>& rows);                   // each chosen times its price
+// 3.0.24-beta.21 (the spec's «Лавка торговця»: «вес после покупки»): the character's weight with the chosen things (a
+// thing of unknown weight adds nothing); too heavy past `most` (0: not known - never)
+int weightAfter(const std::vector<Row>& rows, int weightNow);
+bool tooHeavy(const std::vector<Row>& rows, int weightNow, int most);
 bool canAdd(const Row& r, long long purchase, long long zeny);  // the shop has more, the zeny pays for one more
 // 3.0.23-beta.1 (R-DBGBHJ «не могу купить»): why one more is refused - none, the shop has no more, the zeny short
 enum class Refusal : uint8_t { None, Stock, Zeny };

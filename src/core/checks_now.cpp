@@ -7,6 +7,16 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.21 (the plan's task 6): the player's shop tells the weight after the purchase
+        {"vend_weight", "3.0.24-beta.21", "interface.vending",
+         {"Merchant's shop: weight after the purchase", "Лавка торговця: вага після покупки",
+          "Лавка торговца: вес после покупки"},
+         {"Open a player's shop, choose things: «Weight after buying X / Y» under the sum; too heavy - it turns red "
+          "and «Buy» is off.",
+          "Відкрийте лавку гравця, виберіть речі: «Вага після покупки X / Y» під сумою; заважко — червона, і «Купити» "
+          "вимкнена.",
+          "Откройте лавку игрока, выберите вещи: «Вес после покупки X / Y» под суммой; слишком тяжело — красная, и "
+          "«Купить» выключена."}},
         // 3.0.24-beta.21 (the plan's task 5): selling to an NPC, guarded
         {"shop_sell_guard", "3.0.24-beta.21", "interface.shop",
          {"NPC shop: selling, guarded", "Крамниця NPC: продаж із захистом", "Магазин NPC: продажа с защитой"},

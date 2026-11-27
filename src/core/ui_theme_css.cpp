@@ -645,6 +645,12 @@ select selectbox option:checked { color: #e6cb8a; }
 .npw .last { font-size: 10.5dp; color: #9aa3b5; margin-left: 6dp; }
 .npw .foot { margin-top: 10dp; padding-top: 6dp; border-top: 1dp #ffffff12; }
 .vsw { width: 480dp; }
+/* 3.0.24-beta.21 (R-WP985Q: no letter the font lacks): the shop's ✕ drawn - two bars */
+.vsw .x .cxa, .vsw .x .cxb { display: block; position: absolute; left: 6dp; top: 11dp; width: 12dp; height: 1.6dp;
+    background-color: #969eae; }
+.vsw .x .cxa { transform: rotate(45deg); }
+.vsw .x .cxb { transform: rotate(-45deg); }
+.vsw .x:hover .cxa, .vsw .x:hover .cxb { background-color: #ffffff; }
 .lw .list { display: block; max-height: 320dp; overflow-y: auto; margin: 4dp 0 8dp 0; }
 .lw .ware { display: flex; align-items: center; padding: 4dp 6dp; border-radius: 6dp; margin-bottom: 2dp; }
 .lw .ware.on { background-color: #c9a55b1f; }

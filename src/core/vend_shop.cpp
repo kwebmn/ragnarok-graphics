@@ -19,6 +19,17 @@ struct Cells {  // a row's inner parts
 };
 }  // namespace
 
+int weightAfter(const std::vector<Row>& rows, int weightNow) {
+    long long tenths = (long long)weightNow * 10;
+    for (const Row& r : rows)
+        if (r.weight > 0 && r.chosen > 0) tenths += (long long)r.weight * r.chosen;
+    return int(tenths / 10);
+}
+
+bool tooHeavy(const std::vector<Row>& rows, int weightNow, int most) {
+    return most > 0 && weightAfter(rows, weightNow) > most;
+}
+
 long long total(const std::vector<Row>& rows) {
     long long t = 0;
     for (const Row& r : rows) t += r.price * r.chosen;

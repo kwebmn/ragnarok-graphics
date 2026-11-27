@@ -99,3 +99,16 @@ TEST(vend_shop_tells_why_one_more_is_refused) {
     r.chosen = 1;
     CHECK(vendshop::refusal(r, 500000, 900000) == vendshop::Refusal::Zeny);  // the second one no longer paid
 }
+
+// 3.0.24-beta.21 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md, «Лавка торговця»: «вес после
+// покупки»): the character's weight with the chosen things - their weights in tenths (the reference pack's), a thing of
+// unknown weight (-1) adds nothing; over the most - too heavy
+TEST(vend_shop_weight_after_the_purchase) {
+    std::vector<vendshop::Row> rows(3);
+    rows[0].weight = 70, rows[0].chosen = 10;  // ten Red Potions: 70
+    rows[1].weight = 1500, rows[1].chosen = 1; // a Two-Handed Sword: 150
+    rows[2].weight = -1, rows[2].chosen = 4;   // not known: nothing
+    CHECK_EQ(vendshop::weightAfter(rows, 914), 914 + 70 + 150);
+    CHECK(!vendshop::tooHeavy(rows, 914, 5810) && vendshop::tooHeavy(rows, 5700, 5810));
+    CHECK(!vendshop::tooHeavy(rows, 914, 0));  // the most not known: never too heavy
+}

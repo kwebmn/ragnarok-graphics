@@ -17,6 +17,7 @@
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "core/vend_shop.hpp"
+#include "core/reference_index.hpp"
 #include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
@@ -27,6 +28,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/reference_load.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -75,7 +77,7 @@ struct Thing {
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw vsw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span></div>
-<span class="x ctl" data-event-click="vs_cancel()">&#x2715;</span>
+<span class="x ctl" data-event-click="vs_cancel()"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="list"><div class="ware ctl" data-for="r, i : rows" data-class-on="r.chosen > 0"
   data-event-mousedown="vs_press(i)"><img
   data-if="r.icon != ''" data-attr-src="r.icon"/>
@@ -89,7 +91,9 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
   class="pm ctl" data-class-off="!r.can_more" data-event-click="vs_more(i)">+</span></div></div>
 <div class="sums"><div class="srow"><span class="lbl">{{total_word}}</span><span class="val"
   data-class-bad="short">{{total}}</span></div>
-<div class="srow"><span class="lbl">{{zeny_word}}</span><span class="val">{{zeny}}</span></div></div>
+<div class="srow"><span class="lbl">{{zeny_word}}</span><span class="val">{{zeny}}</span></div>
+<div class="srow" data-if="weight != ''"><span class="lbl">{{weight_word}}</span><span class="val"
+  data-class-bad="heavy">{{weight}}</span></div></div>
 <div class="hint" data-if="hint != ''" data-class-bad="hint_bad">{{hint}}</div>
 <div class="btns"><div class="btn ctl" data-event-click="vs_cancel()">{{cancel}}</div>
 <div class="btn main ctl" data-class-off="!can_buy" data-event-click="vs_buy()">{{buy}}</div></div>
@@ -108,6 +112,8 @@ struct State {
     std::vector<VendRowView> rowViews;
     std::map<const panel::Picture*, std::string> iconPrev;
     Rml::String title, totalWord, total, zenyWord, zeny, buy, cancel, hint, ground = "#10141cf0";
+    Rml::String weightWord, weight;  // 3.0.24-beta.21: «Вага після покупки» and its «X / Y» ("" not known)
+    bool heavy = false;
     bool canBuy = false, shortOf = false;
     bool hintBad = false;          // 3.0.23-beta.1: the hint tells why + was refused
     std::string refusedHint;       // 3.0.23-beta.1: that line, shown kRefusedMs after the press
@@ -212,6 +218,10 @@ std::vector<Thing> readList(const State& s, uint32_t headAt) {
         r.id = std::atoi(digits);
         r.stock = int(rd32(t.info, 0x10));
         r.price = int32_t(rd32(t.info, 0x18));
+        if (const auto refs = reference::index()) {  // 3.0.24-beta.21: one's weight (the reference pack's tenths)
+            const auto w = refs->items.find(r.id);
+            if (w != refs->items.end()) r.weight = w->second.weight;
+        }
         const int refine = int(rd32(t.info, 0x40));
         r.refine = refine > 0 && refine <= 20 ? refine : 0;
         const bool identified = t.info[0x3C] != 0;
@@ -521,6 +531,9 @@ static void liveFrame(State& s) {
         m.Bind("total", &s.total);
         m.Bind("zeny_word", &s.zenyWord);
         m.Bind("zeny", &s.zeny);
+        m.Bind("weight_word", &s.weightWord);  // 3.0.24-beta.21
+        m.Bind("weight", &s.weight);
+        m.Bind("heavy", &s.heavy);
         m.Bind("buy", &s.buy);
         m.Bind("cancel", &s.cancel);
         m.Bind("hint", &s.hint);
@@ -574,7 +587,16 @@ static void liveFrame(State& s) {
     }
     const long long sum = vs::total(s.rows);
     const Rml::String total = vs::money(sum) + " z", zeny = vs::money(s.show.zeny) + " z";
-    const bool canBuy = sum > 0 && sum <= s.show.zeny, shortOf = sum > s.show.zeny;
+    // 3.0.24-beta.21 (the spec's «Лавка торговця»: «вес после покупки»): the character's weight with the chosen,
+    // red past the most - the purchase not offered then (the server would refuse it as too heavy)
+    charstatus::Status st;
+    const bool weighed = readOwnStatus(st) && st.weightMost > 0;
+    const bool heavy = weighed && vs::tooHeavy(s.rows, st.weight, st.weightMost);
+    const Rml::String weight = weighed ? vs::money(vs::weightAfter(s.rows, st.weight)) + " / " +
+                                             vs::money(st.weightMost)
+                                       : "";
+    const Rml::String weightWord = say(settings::Text::ShopWeightBuy);
+    const bool canBuy = sum > 0 && sum <= s.show.zeny && !heavy, shortOf = sum > s.show.zeny;
     // 3.0.23-beta.1: a refused + told in the hint's place for a while
     constexpr ULONGLONG kRefusedMs = 5000;
     const bool refused = s.refusedAt && GetTickCount64() - s.refusedAt < kRefusedMs;
@@ -591,10 +613,12 @@ static void liveFrame(State& s) {
     if (!same) s.rowViews = std::move(rows), s.live.doc.dirty("rows");
     if (t.title != s.title || t.total != s.totalWord || total != s.total || t.zeny != s.zenyWord || zeny != s.zeny ||
         t.buy != s.buy || t.cancel != s.cancel || tt.hint != s.hint || canBuy != s.canBuy || shortOf != s.shortOf ||
-        ground != s.ground || refused != s.hintBad) {
+        ground != s.ground || refused != s.hintBad || weight != s.weight || heavy != s.heavy ||
+        weightWord != s.weightWord) {
         s.title = t.title, s.totalWord = t.total, s.total = total, s.zenyWord = t.zeny, s.zeny = zeny;
         s.buy = t.buy, s.cancel = t.cancel, s.hint = tt.hint, s.canBuy = canBuy, s.shortOf = shortOf, s.ground = ground;
         s.hintBad = refused;
+        s.weight = weight, s.heavy = heavy, s.weightWord = weightWord;  // 3.0.24-beta.21
         s.live.doc.dirtyAll();
     }
     s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Vending), ".pm, .btn, .x");
