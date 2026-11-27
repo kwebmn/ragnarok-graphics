@@ -75,7 +75,8 @@ public:
 private:
     bool send(bridge::Msg type, const std::vector<uint8_t>& payload);
     // Waits for the answer `want`, handling what else arrives meanwhile; false when the renderer is gone or slow.
-    bool await(bridge::Msg want, std::vector<uint8_t>& reply, DWORD ms);
+    // 3.0.24-beta.36: `whileHeard` - also over when it is silent for core/start_wait's time (its start)
+    bool await(bridge::Msg want, std::vector<uint8_t>& reply, DWORD ms, bool whileHeard = false);
     void handle(bridge::Msg type, const uint8_t* data, uint32_t size);
     void drain();  // what has arrived, without waiting
     void setLost(const std::string& why);

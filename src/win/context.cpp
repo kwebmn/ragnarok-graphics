@@ -465,7 +465,8 @@ bool Context::open(std::string& error) {
         else
             LOG_ERROR("bridge: %s; drawing in the game's process", why.c_str());
     }
-    r->setShaderCache(ourFile(layout::File::Shaders32));  // 0.39.5; 2.8: uaro-graphics\cache
+    // 0.39.5; 2.8: uaro-graphics\cache; 3.0.24-beta.36: and uaro-render64.exe's (the same source)
+    r->setShaderCache(ourFile(layout::File::Shaders32), ourFile(layout::File::Shaders64));
     if (!remote && !r->create(error)) {
         delete r;
         return false;

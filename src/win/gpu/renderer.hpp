@@ -176,7 +176,9 @@ public:
     bool ownGroundShown() const;
     bool canSupersample() const { return !remote_ && !d3d11_ && !remix_; }
     // 0.39.5, before create(): the shaders' code is kept in this file between starts - compiled once, not each time.
-    void setShaderCache(const std::string& file);
+    // 3.0.24-beta.36: `other` the other renderer's (the game's process and uaro-render64.exe share the source): its
+    // code taken for what this one's file has not
+    void setShaderCache(const std::string& file, const std::string& other = {});
     // Before create(): Direct3D 12 and DXGI from this module (Streamline's sl.interposer.dll, so that frame
     // generation can take over the swap chain) instead of the system's.
     void setApi(HMODULE module);

@@ -49,14 +49,23 @@ struct ShaderStore {
     std::vector<shader_cache::Shader> made;
     int reused = 0;
     int compiled = 0;
+    size_t ownKept = 0;  // 3.0.24-beta.36: kept[0, ownKept) from this renderer's file, the rest the other's
+    int borrowed = 0;    // taken from the other renderer's file
     // 0.40: each one done is told (the start screen): loaded or compiled, how many of how many.
     Renderer::StartSink sink = nullptr;
     void* context = nullptr;
     int total = 0;
-    void told(bool loaded) const {
+    ULONGLONG startMs = GetTickCount64();  // 3.0.24-beta.36: a long compile told in the log on its way
+    ULONGLONG saidMs = startMs;
+    void told(bool loaded) {
         if (sink)
             sink(context, start::Progress{loaded ? start::Stage::ShadersLoad : start::Stage::ShadersBuild,
                                           reused + compiled, total});
+        const ULONGLONG now = GetTickCount64();
+        if (now - saidMs < 15000) return;
+        saidMs = now;
+        LOG_INFO("shaders: %d of %d done in %.0f s (%d compiled) - still compiling", reused + compiled, total,
+                 double(now - startMs) / 1000.0, compiled);
     }
 };
 
@@ -69,13 +78,15 @@ void keepShaders(const std::string& file, const std::vector<uint8_t>& bytes) {
 
 bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* profile, ID3DBlob*& out,
              std::string& error, bool lean = false) {  // 2.5: lean - with UAGFX_LEAN (draw_lean_ps)
-    for (const shader_cache::Shader& s : store.kept) {
+    for (size_t k = 0; k < store.kept.size(); ++k) {
+        const shader_cache::Shader& s = store.kept[k];
         bool safe = false;
         if (!shader_cache::matches(s, entry, profile, safe) || FAILED(store.createBlob(s.code.size(), &out))) continue;
         std::memcpy(out->GetBufferPointer(), s.code.data(), s.code.size());
         if (safe) noteSafeShader();
         store.made.push_back(s);
         ++store.reused;
+        if (k >= store.ownKept) ++store.borrowed;
         store.told(true);
         return true;
     }
@@ -190,6 +201,13 @@ bool Renderer::Impl::createPipelines(std::string& error) {
     std::string kept;
     if (store.createBlob && !shaderCacheFile.empty() && win::readTextFile(shaderCacheFile, kept))
         store.kept = shader_cache::unpack(key, std::vector<uint8_t>(kept.begin(), kept.end()));
+    store.ownKept = store.kept.size();
+    // 3.0.24-beta.36 (the laptop's run): and the other renderer's - the game's process and uaro-render64.exe compile
+    // the same source; the one that has not got its own yet takes the other's
+    std::string other;
+    if (store.createBlob && !shaderCacheOther.empty() && win::readTextFile(shaderCacheOther, other))
+        store.kept = shader_cache::merged(store.kept,
+                                          shader_cache::unpack(key, std::vector<uint8_t>(other.begin(), other.end())));
     // 0.18, 0.19: the effects' shaders - one that does not compile leaves its effect off, the rest draws on.
     const struct {
         const char* entry;
@@ -254,19 +272,30 @@ bool Renderer::Impl::createPipelines(std::string& error) {
         !compile(store, compileFn, "motion_ps", "ps_5_0", motionPs, error) ||
         !compile(store, compileFn, "copy_ps", "ps_5_0", copyPs, error))
         return false;
+    // 3.0.24-beta.36 (the laptop's run: uaro-render64.exe ended at the game's 90 s, its shaders not done, kept none
+    // and began again at each start): what is compiled kept on the way, every 5 s at most
+    int savedCompiled = store.compiled;
+    ULONGLONG savedMs = GetTickCount64();
     for (const auto& e : effects) {
         std::string why;
         if (!compile(store, compileFn, e.entry, e.profile, *e.blob, why, e.lean)) {
             *e.blob = nullptr;
             LOG_ERROR("%s: its effect stays off", why.c_str());
         }
+        if (store.compiled > savedCompiled && GetTickCount64() - savedMs >= 5000 && !shaderCacheFile.empty()) {
+            keepShaders(shaderCacheFile, shader_cache::pack(key, shader_cache::merged(store.made, store.kept)));
+            savedCompiled = store.compiled;
+            savedMs = GetTickCount64();
+        }
     }
     QueryPerformanceCounter(&t1);
-    LOG_INFO("shaders: %d kept from the last start, %d compiled, in %.0f ms", store.reused, store.compiled,
-             double(t1.QuadPart - t0.QuadPart) * 1000.0 / double(freq.QuadPart));
+    const std::string borrowed =
+        store.borrowed ? " (" + std::to_string(store.borrowed) + " of the kept ones from the other renderer's file)" : "";
+    LOG_INFO("shaders: %d kept from the last start, %d compiled, in %.0f ms%s", store.reused, store.compiled,
+             double(t1.QuadPart - t0.QuadPart) * 1000.0 / double(freq.QuadPart), borrowed.c_str());
     // 3.0.5-beta.3: the game's states' own draw shaders kept from the last start stay in the cache (variants12.cpp)
     startVariants(key, store.made, store.kept);
-    if (store.compiled > 0 && !shaderCacheFile.empty())
+    if ((store.compiled > 0 || store.borrowed > 0) && !shaderCacheFile.empty())
         keepShaders(shaderCacheFile, shader_cache::pack(key, cacheShaders));
 
     D3D12_DESCRIPTOR_RANGE srvRange{};

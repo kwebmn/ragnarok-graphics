@@ -109,4 +109,16 @@ std::vector<Shader> unpack(uint64_t key, const std::vector<uint8_t>& file) {
     return shaders;
 }
 
+std::vector<Shader> merged(const std::vector<Shader>& first, const std::vector<Shader>& then) {
+    std::vector<Shader> out = first;
+    for (const Shader& s : then) {
+        const std::string profile = s.profile.substr(0, s.profile.find('+'));
+        bool safe = false;
+        bool have = false;
+        for (const Shader& f : first) have = have || matches(f, s.entry, profile, safe);
+        if (!have) out.push_back(s);
+    }
+    return out;
+}
+
 }  // namespace uagfx::shader_cache

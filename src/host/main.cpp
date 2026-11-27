@@ -287,7 +287,9 @@ int Host::run(const Args& a) {
     }
     out_.clear();
     WireWriter hello(out_);
-    renderer_.setShaderCache(win::ourFile(a.dir, layout::File::Shaders64));  // 0.39.5; 2.8: uaro-graphics\cache
+    // 0.39.5; 2.8: uaro-graphics\cache; 3.0.24-beta.36: and the game's process's (the same source)
+    renderer_.setShaderCache(win::ourFile(a.dir, layout::File::Shaders64),
+                             win::ourFile(a.dir, layout::File::Shaders32));
     renderer_.setShaderVariants(a.variants);  // 3.0.5-beta.3
     if (!a.variants)
         LOG_INFO("Direct3D 12: every draw with the one shader for every state ([debug] shader_variants = 0)");

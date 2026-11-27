@@ -7,6 +7,7 @@
 #include "core/game_camera.hpp"
 #include "core/layout.hpp"
 #include "core/render_place.hpp"
+#include "core/start_wait.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::gpu {
@@ -87,9 +88,12 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
     channel_.setPeer(process_.hProcess);
     std::vector<uint8_t> hello;
     // 1.8.1: up to 90 s - the first start after an update compiles its shaders, and a big texture pack's index is read
-    // before the answer (1.8.0: 7 + 14 s ran past the 20 s it had, and the game drew in its own process)
-    if (!await(Msg::Hello, hello, 90000)) {
+    // before the answer (1.8.0: 7 + 14 s ran past the 20 s it had, and the game drew in its own process).
+    // 3.0.24-beta.36 (the laptop's run: its shaders past 90 s, each one told): 90 s of silence, 5 minutes in all
+    const ULONGLONG waitFrom = GetTickCount64();
+    if (!await(Msg::Hello, hello, startwait::kMostMs, true)) {
         error = lost_ ? "the 64-bit renderer exited at its start" : "the 64-bit renderer did not answer";
+        error += " (in " + std::to_string((GetTickCount64() - waitFrom) / 1000) + " s)";
         DWORD code = 0;  // 2.2.2: why, when it says - its own log has the rest (uaro-render64.log)
         if (WaitForSingleObject(process_.hProcess, 0) == WAIT_OBJECT_0 && GetExitCodeProcess(process_.hProcess, &code))
             error += code == 2 ? " (exit code 2: it could not join the game - another version of uaro-render64.exe "
@@ -202,14 +206,18 @@ void Remote::handle(Msg type, const uint8_t* data, uint32_t size) {
     }
 }
 
-bool Remote::await(Msg want, std::vector<uint8_t>& reply, DWORD ms) {
+bool Remote::await(Msg want, std::vector<uint8_t>& reply, DWORD ms, bool whileHeard) {
     const ULONGLONG start = GetTickCount64();
+    startwait::Wait wait(start);  // 3.0.24-beta.36: `whileHeard` - each word from it gives it core/start_wait's time
     for (;;) {
         Msg type;
         const uint8_t* data = nullptr;
         uint32_t size = 0;
-        const ULONGLONG spent = GetTickCount64() - start;
-        if (spent >= ms || !channel_.receive(type, data, size, DWORD(ms - spent))) {
+        const ULONGLONG now = GetTickCount64();
+        const ULONGLONG spent = now - start;
+        const DWORD left = whileHeard ? DWORD(std::min<ULONGLONG>(wait.left(now), ms > spent ? ms - spent : 0))
+                                      : spent >= ms ? 0 : DWORD(ms - spent);
+        if (left == 0 || !channel_.receive(type, data, size, left)) {
             if (channel_.peerGone()) setLost(who_ + " exited");
             return false;
         }
@@ -217,6 +225,7 @@ bool Remote::await(Msg want, std::vector<uint8_t>& reply, DWORD ms) {
             reply.assign(data, data + size);
             return true;
         }
+        wait.heard(GetTickCount64());
         handle(type, data, size);
     }
 }

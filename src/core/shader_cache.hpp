@@ -28,5 +28,10 @@ std::vector<uint8_t> pack(uint64_t key, const std::vector<Shader>& shaders);
 // 1 made it each time (the same code, no failed attempt at a first start), 0 for the others
 int firstTry(const char* entry);
 std::vector<Shader> unpack(uint64_t key, const std::vector<uint8_t>& file);
+// 3.0.24-beta.36 (the laptop's run: the 64-bit renderer ended before its shaders were done kept nothing, each start
+// again): `first`, then those of `then` it has not (an entry and its profile, "+safe" aside), in their order - a
+// renderer's own file and the other renderer's (the same source and key: shaders-64.bin, shaders-32.bin), or this
+// start's shaders and the last file's not reached yet (kept on the way)
+std::vector<Shader> merged(const std::vector<Shader>& first, const std::vector<Shader>& then);
 
 }  // namespace uagfx::shader_cache

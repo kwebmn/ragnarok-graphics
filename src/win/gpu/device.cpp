@@ -2481,7 +2481,10 @@ void Renderer::setMap(const std::string& map) {
     if (impl_->ai) impl_->ai->setMap(map);
 }
 
-void Renderer::setShaderCache(const std::string& file) { impl_->shaderCacheFile = file; }
+void Renderer::setShaderCache(const std::string& file, const std::string& other) {
+    impl_->shaderCacheFile = file;
+    impl_->shaderCacheOther = other;
+}
 
 void Renderer::setGameDir(const std::string& dir) {
     if (d3d11_) return d3d11_->setGameDir(dir);  // 2.5.1: the map files, for the lamps
