@@ -1436,6 +1436,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     vendshopwin::setPackets(config.vendPackets);  // 3.0.24-beta.18: items via packets
     itemswin::setPackets(config.itemsPackets);  // 3.0.24-beta.20: «Речі» and «Спорядження» by our own packets
     equipwin::setPackets(config.itemsPackets);
+    vendsetupwin::setPackets(config.vendOpenPackets);  // 3.0.24-beta.23: «Відкрити лавку» by our own packet
+    myshopwin::setChime(config.saleChime);             // 3.0.24-beta.23: «Моя лавка»'s sale chime
     vendshopwin::frame(window, ui.vendWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.156
     g_parts.mark("vendshopwin", nowMs());
     pickcardwin::frame(window, ui.pickWindows, gameCodePage(config), pk, pw, ph);         // 3.0.11-beta.157

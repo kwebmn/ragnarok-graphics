@@ -246,7 +246,9 @@ std::vector<Group> build() {
                          trial("interface.cart_packets", "3.0.24-beta.8").need("interface.cart"),
                          D("interface.vending"),
                          trial("interface.vend_packets", "3.0.24-beta.18").need("interface.vending"),  // stage 4
-                         D("interface.my_shop"), D("interface.vend_setup"),
+                         D("interface.my_shop"), D("interface.sale_chime", "interface.my_shop"),  // .23
+                         D("interface.vend_setup"),
+                         trial("interface.vend_open_packets", "3.0.24-beta.23").need("interface.vend_setup"),
                          D("interface.menu"), D("interface.cards"), D("interface.asks"),
                          D("interface.messages"), D("interface.counts"), D("interface.picks"),
                          D("interface.party_setup"), D("interface.pet"), D("interface.homun"), D("interface.merc"),

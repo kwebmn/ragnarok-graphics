@@ -575,6 +575,14 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("vend_packets", flag(running.vendPackets), flag(file.vendPackets)));
         n.vendPackets = file.vendPackets;
     }
+    if (file.vendOpenPackets != running.vendOpenPackets) {  // 3.0.24-beta.23: «Відкрити лавку»'s own packet
+        u.applied.push_back(change("vend_open_packets", flag(running.vendOpenPackets), flag(file.vendOpenPackets)));
+        n.vendOpenPackets = file.vendOpenPackets;
+    }
+    if (file.saleChime != running.saleChime) {  // 3.0.24-beta.23: «Моя лавка»'s chime, at once
+        u.applied.push_back(change("sale_chime", flag(running.saleChime), flag(file.saleChime)));
+        n.saleChime = file.saleChime;
+    }
     if (file.itemsPackets != running.itemsPackets) {  // 3.0.24-beta.20: «Речі»'s own packets, at once
         u.applied.push_back(change("items_packets", flag(running.itemsPackets), flag(file.itemsPackets)));
         n.itemsPackets = file.itemsPackets;

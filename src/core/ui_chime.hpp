@@ -11,7 +11,8 @@ namespace uagfx::chime {
 enum class Kind : uint8_t {
     AmmoLow,  // 10 or fewer left: two notes, C6 then G5
     AmmoOut,  // none left: three, C6 G5 C5, the last longer
-    PartyLow  // 3.0.11-beta.282: one of the party under 30 % HP - E6 E6 G6, quick
+    PartyLow,  // 3.0.11-beta.282: one of the party under 30 % HP - E6 E6 G6, quick
+    Sale       // 3.0.24-beta.23: a thing sold from one's own shop - a soft rise, G5 then C6, quiet
 };
 std::vector<uint8_t> wav(Kind kind);
 

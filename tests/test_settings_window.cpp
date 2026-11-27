@@ -159,7 +159,7 @@ TEST(settings_window_a_group_of_details_alone) {
         marked += l.detail ? 1 : 0;
         heads += l.heads ? 1 : 0;
     }
-    CHECK_EQ(rows, 35);
+    CHECK_EQ(rows, 36);  // 3.0.24-beta.23: «Моя лавка: тихий звук» joined
     CHECK_EQ(subs, 0);
     CHECK_EQ(marked, 0);
     CHECK_EQ(heads, 1);

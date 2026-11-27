@@ -55,3 +55,26 @@ TEST(vend_setup_price_steps) {
     CHECK(vendsetup::stepPrice("1", -1) == "0");
 }
 
+
+// 3.0.24-beta.23 (the plan's task 9, «Відкрити лавку»: our own packet 0x01b2): what the server and the game would
+// refuse, refused before it is sent (uAthena vending.c: an empty sign - nothing happens at all; a price under 1 - one
+// million instead; more things than places - the skill fails; the game's own OK: at most 99 990 000)
+TEST(vend_setup_our_packet_refuses_what_the_server_would) {
+    std::vector<vendsetup::Row> rows(2);
+    rows[0].place = 4, rows[0].count = 10, rows[0].price = "500";
+    rows[1].place = 7, rows[1].count = 1, rows[1].price = "1 200 000";
+    CHECK(vendsetup::refuseOpen("My shop", rows, 3) == vendsetup::Refuse::None);
+    CHECK(vendsetup::refuseOpen("", rows, 3) == vendsetup::Refuse::NoSign);
+    CHECK(vendsetup::refuseOpen("My shop", {}, 3) == vendsetup::Refuse::Empty);
+    CHECK(vendsetup::refuseOpen("My shop", rows, 1) == vendsetup::Refuse::TooMany);
+    rows[1].price = "";
+    CHECK(vendsetup::refuseOpen("My shop", rows, 3) == vendsetup::Refuse::NoPrice);
+    rows[1].price = "0";
+    CHECK(vendsetup::refuseOpen("My shop", rows, 3) == vendsetup::Refuse::NoPrice);
+    rows[1].price = "100000000";
+    CHECK(vendsetup::refuseOpen("My shop", rows, 3) == vendsetup::Refuse::TooDear);
+    rows[1].price = "1 200 000";
+    const std::vector<itempackets::VendRow> out = vendsetup::rowsOf(rows);
+    CHECK(out.size() == 2u && out[0].place == 4 && out[0].amount == 10 && out[0].price == 500u);
+    CHECK(out[1].place == 7 && out[1].amount == 1 && out[1].price == 1200000u);
+}

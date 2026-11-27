@@ -851,6 +851,10 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.guild") {  // 3.0.11-beta.165: the guild
             guildSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.guildWindow);
+        } else if (key == "interface.vend_open_packets") {  // 3.0.24-beta.23: the testers' box
+            setBool(val, c.vendOpenPackets);
+        } else if (key == "interface.sale_chime") {  // 3.0.24-beta.23
+            setBool(val, c.saleChime);
         } else if (key == "interface.vend_setup") {  // 3.0.16-beta.33: opening one's shop
             vendSetupSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.vendSetupWindow);

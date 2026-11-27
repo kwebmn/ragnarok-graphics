@@ -1035,6 +1035,10 @@ struct Config {
     // 3.0.16-beta.33: [interface] vend_setup - opening one's shop (the game's vending windows 0x29 and 0x2A) as one
     // card (win/vend_setup); off at first
     bool vendSetupWindow = false;
+    // 3.0.24-beta.23: [interface] vend_open_packets - «Відкрити лавку» opens the shop by our own packet (the testers'
+    // box); sale_chime - «Моя лавка»: a soft chime when a thing sells
+    bool vendOpenPackets = false;
+    bool saleChime = true;
     // 3.0.11-beta.168: [interface] whisper_setup - the whisper's settings (win/whisper_setup) as a card of switches
     bool whisperSetupWindow = false;
     // 3.0.11-beta.169: [interface] macros - the chat's macros (Alt+M, win/macro_card) as a card

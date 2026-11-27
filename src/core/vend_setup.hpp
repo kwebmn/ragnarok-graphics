@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "core/item_packets.hpp"
 #include "core/window_panel.hpp"
 
 namespace uagfx::vendsetup {
@@ -21,12 +22,19 @@ struct Row {
     std::string price;  // the sale's: its field's words (digits)
     std::string inside;  // 3.0.18-beta.142: its cards and free slots (win/info_card describe), "" none
     std::string colour = "#eef2f8";  // 3.0.18-beta.144: its name's (its element's)
+    int place = 0;  // 3.0.24-beta.23: its place in the cart as the packets name it (ITEM_INFO +8: the index + 2)
 };
 // A price as the game takes it (FUN_0062a7b0 then the OK's checks): its digits, at most 99 990 000; 0 none
 long long priceOf(const std::string& words);
 // 3.0.16-beta.39 (the pad: LB / RB on a sale's row): the price one step down (dir < 0) or up - a power of ten, 1-10 % of
 // it (1 under 100; up from 0 to 10), rounded to the step, 0 .. 99 990 000; its digits
 std::string stepPrice(const std::string& words, int dir);
+// 3.0.24-beta.23 ([interface] vend_open_packets): what our own packet 0x01b2 would meet, refused before it is sent -
+// the server's checks (uAthena vending.c: an empty sign - nothing happens at all; a price under 1 - one million
+// instead; more things than places - the skill fails) and the game's OK's (a price past 99 990 000)
+enum class Refuse : uint8_t { None, NoSign, Empty, NoPrice, TooDear, TooMany };
+Refuse refuseOpen(const std::string& sign, const std::vector<Row>& sale, int places);
+std::vector<itempackets::VendRow> rowsOf(const std::vector<Row>& sale);  // place, amount, price each
 
 struct Texts {
     std::string title, sign, signHint, cart, sale, open, cancel, empty, priceHint;

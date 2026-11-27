@@ -23,6 +23,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
 // 3.0.18-beta.143: the server's sales from one's own shop (0x0137) into «Продажі»
 void packet(const packets::Event& e);
+void setChime(bool on);  // 3.0.24-beta.23: [interface] sale_chime - a soft chime when a thing sells
 void beforeGameDraw();
 enum class PadCommand : uint8_t { Up, Down, Close };
 void padCommand(PadCommand c);

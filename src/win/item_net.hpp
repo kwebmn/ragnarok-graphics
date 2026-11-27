@@ -36,6 +36,9 @@ itemactions::Result use(uint16_t index);
 itemactions::Result equip(uint16_t index, uint16_t places);
 itemactions::Result unequip(uint16_t index);
 itemactions::Result drop(uint16_t index, uint32_t amount);
+// 3.0.24-beta.23 ([interface] vend_open_packets): the shop opened by our own packet 0x01b2 (no wait: the server's
+// answer 0x0136 opens the game's «Моя лавка»); false: not sent (no connection)
+bool openShop(const std::string& sign, const std::vector<itempackets::VendRow>& rows);
 // Its answer once: -2 none yet, -1 no answer in time, 0 done, 1 zeny, 2 weight, 3 other (a shop's: 4 its stock)
 int takeDealAnswer();
 

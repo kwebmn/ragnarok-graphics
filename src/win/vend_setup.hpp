@@ -24,6 +24,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
+// 3.0.24-beta.23 ([interface] vend_open_packets, the testers' box): «Відкрити лавку» sends the server's packet itself
+void setPackets(bool on);
 bool close();  // Esc: «Скасувати»
 // 3.0.18-beta.105 (the owner: «Tab/Enter к следующей цене»): while the name or a price has the keys - Tab the next
 // field (Shift+Tab the one before, round), Enter the next price (stays on the last); their WM_CHAR swallowed

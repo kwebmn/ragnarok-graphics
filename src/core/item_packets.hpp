@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <utility>
+#include <string>
 #include <vector>
 
 namespace uagfx::itempackets {
@@ -32,6 +33,16 @@ Bytes vendBuy(uint32_t merchant, const Pairs& placeAmount);
 // uapad::buildUseItem), dropitem 0x0116 10 {index@5, amount@8}, equipitem 0x00a9 6 {index@2, places@4}, unequipitem
 // 0x00ab 4 {index@2}; the index the bag's (place + 2, as the game's drags and lists give it)
 Bytes useItem(uint16_t index, uint32_t account);
+// 3.0.24-beta.23 (the spec's «Відкрити лавку»: our own packet): openvending 0x01b2 - its length, the sign (80, a
+// nought kept at its end), the flag 1, {the cart's place + 2, amount, price} each 8 bytes. The shop's closing stays
+// the game's: the server tells the merchant nothing of it (clif_closevendingboard to the others), so a packet of
+// ours would leave the game thinking its shop open
+struct VendRow {
+    uint16_t place = 0;  // the cart's index + 2, as the cart's list gives it
+    uint16_t amount = 0;
+    uint32_t price = 0;
+};
+Bytes openVending(const std::string& sign, const std::vector<VendRow>& rows);
 Bytes drop(uint16_t index, uint16_t amount);
 Bytes equip(uint16_t index, uint16_t places);
 Bytes unequip(uint16_t index);

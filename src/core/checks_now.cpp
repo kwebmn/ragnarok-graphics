@@ -7,6 +7,33 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.23 (the plan's task 9): «Відкрити лавку» by our own packet - the testers' box
+        {"vend_open_packets", "3.0.24-beta.23", "interface.vend_open_packets",
+         {"Opening a shop: our own packet", "Відкриття лавки: свій пакет", "Открытие лавки: свой пакет"},
+         {"Use Vending, put things in, press «Open the shop»: the shop opens as before (the game's «My shop» card). "
+          "Without a name or a price - a line over the prices says why, nothing is sent.",
+          "Скористайтеся навичкою «Vending», покладіть речі, натисніть «Відкрити лавку»: лавка відкривається як "
+          "раніше (картка гри «Моя лавка»). Без назви чи без ціни — над цінами написано чому, нічого не надіслано.",
+          "Используйте навык «Vending», положите вещи, нажмите «Открыть лавку»: лавка открывается как раньше "
+          "(карточка игры «Моя лавка»). Без названия или без цены — над ценами написано почему, ничего не "
+          "отправлено."}},
+        // 3.0.24-beta.23 (the plan's task 9): the prices remembered for the next shop
+        {"vend_prices", "3.0.24-beta.23", "interface.vend_setup",
+         {"Opening a shop: the prices remembered", "Відкриття лавки: ціни запам'ятовуються",
+          "Открытие лавки: цены запоминаются"},
+         {"Open a shop once with prices; next time the same things put in take those prices by themselves.",
+          "Відкрийте лавку з цінами; наступного разу ті самі речі самі отримають ці ціни.",
+          "Откройте лавку с ценами; в следующий раз те же вещи сами получат эти цены."}},
+        // 3.0.24-beta.23 (the plan's task 9): «Моя лавка» - sold N of M, the last buyer, a soft chime
+        {"my_shop_sales", "3.0.24-beta.23", "interface.my_shop",
+         {"My shop: sold N of M, the buyer, a chime", "Моя лавка: продано N з M, покупець, звук",
+          "Моя лавка: продано N из M, покупатель, звук"},
+         {"Sell something from your shop: its row says «2 of 5 sold», «Last buyer» names who bought, two quiet "
+          "notes sound; «Earned» is what the server paid.",
+          "Продайте щось зі своєї лавки: у рядку «продано 2 з 5», «Останній покупець» — хто купив, звучать дві "
+          "тихі ноти; «Зароблено» — скільки заплатив сервер.",
+          "Продайте что-то из своей лавки: в строке «продано 2 из 5», «Последний покупатель» — кто купил, звучат "
+          "две тихие ноты; «Заработано» — сколько заплатил сервер."}},
         // 3.0.24-beta.22 (the plan's task 8): the item card tells what its cards give and what an NPC pays
         {"card_effects", "3.0.24-beta.22", "interface.cards",
          {"Item card: what its cards give, the NPC's price", "Картка речі: що дають карти, ціна NPC",

@@ -8765,8 +8765,8 @@ constexpr Entry kTexts[] = {
      "Клик — 1 · Shift+клик — 10 · ПКМ — карточка с картами и заточкой"},
     {Text::ItemHintVendSetup, "Drag from «Cart» · the price is remembered",
      "Перетягніть із «Візка» · ціну запам'ятаємо", "Перетащите из «Тележки» · цену запомним"},
-    {Text::ItemHintMyShop, "Sold and earned - with the server's 2 % tax",
-     "Продано й заробіток — з податком сервера 2 %", "Продано и заработано — с налогом сервера 2 %"},
+    {Text::ItemHintMyShop, "Sold and earned - as the server pays it",
+     "Продано й заробіток — як платить сервер", "Продано и заработано — как платит сервер"},
     {Text::ItemHintTrade, "A red frame - what changed just before your «Ready»",
      "Червона рамка — що змінили перед вашим «Готово»", "Красная рамка — что изменили перед вашим «Готово»"},
     {Text::ItemHintAmount, "Digits · Enter - yes · empty and Enter - all · Esc - no",
@@ -8790,6 +8790,37 @@ constexpr Entry kTexts[] = {
     {Text::CountFitsCart, "{1} fit in the cart", "у візок влізе {1}", "в тележку влезет {1}"},
     {Text::CountFitsStorage, "{1} fit in the storage", "у склад влізе {1}", "на склад влезет {1}"},
     {Text::CardNpcPrice, "An NPC pays: {1} z", "NPC заплатить: {1} z", "NPC заплатит: {1} z"},  // 3.0.24-beta.22
+    {Text::MyShopSoldOf, "{1} of {2} sold", "продано {1} з {2}", "продано {1} из {2}"},  // 3.0.24-beta.23
+    {Text::MyShopBuyer, "Last buyer", "Останній покупець", "Последний покупатель"},
+    {Text::VendSetupNoSign, "Give the shop a name first", "Спершу дайте лавці назву",
+     "Сначала дайте лавке название"},
+    {Text::VendSetupNoThings, "Put at least one thing into the shop", "Покладіть у лавку хоч одну річ",
+     "Положите в лавку хоть одну вещь"},
+    {Text::VendSetupNoPrice, "Every thing needs a price (the server would put 1 000 000)",
+     "Кожній речі потрібна ціна (сервер поставив би 1 000 000)",
+     "Каждой вещи нужна цена (сервер поставил бы 1 000 000)"},
+    {Text::VendSetupTooDear, "A price is at most 99 990 000 z", "Ціна — щонайбільше 99 990 000 z",
+     "Цена — не больше 99 990 000 z"},
+    {Text::VendSetupTooMany, "More things than the shop's places", "Речей більше, ніж місць у лавці",
+     "Вещей больше, чем мест в лавке"},
+    {Text::InterfaceVendOpenPackets, "Opening a shop: our own packet (beta)", "Відкриття лавки: свій пакет (бета)",
+     "Открытие лавки: свой пакет (бета)"},
+    {Text::InterfaceVendOpenPacketsHint,
+     "The shop's button sends the server's packet itself: the name, each thing's place, amount and price; what the "
+     "server would refuse (no name, no price, more things than places) is said over the prices and not sent. Needs "
+     "the shop's window on. For the testers: off - the game's own way.",
+     "Кнопка лавки сама надсилає пакет серверу: назву, місце, кількість і ціну кожної речі; те, що сервер відхилив "
+     "би (без назви, без ціни, речей більше, ніж місць), видно над цінами й не надсилається. Потрібне увімкнене "
+     "вікно лавки. Для тестерів: вимкнено — як у грі.",
+     "Кнопка лавки сама отправляет пакет серверу: название, место, количество и цену каждой вещи; то, что сервер "
+     "отклонил бы (без названия, без цены, вещей больше, чем мест), видно над ценами и не отправляется. Нужно "
+     "включённое окно лавки. Для тестеров: выключено — как в игре."},
+    {Text::InterfaceSaleChime, "My shop: a soft chime on a sale", "Моя лавка: тихий звук, коли щось продано",
+     "Моя лавка: тихий звук, когда что-то продано"},
+    {Text::InterfaceSaleChimeHint,
+     "Two quiet notes each time a thing sells from your shop, through the game's sound (its volume).",
+     "Дві тихі ноти щоразу, коли з вашої лавки щось продали, — через звук гри (її гучність).",
+     "Две тихие ноты каждый раз, когда из вашей лавки что-то продали, — через звук игры (её громкость)."},
     {Text::LauncherRunningCount, "The game is running · windows: {1}", "Гра вже запущена · вікон: {1}",
      "Игра уже запущена · окон: {1}"},
     {Text::InterfaceArrowsWalk, "Walking with the arrows", "Ходьба стрілками", "Ходьба стрелками"},

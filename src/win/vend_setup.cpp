@@ -1,6 +1,7 @@
 #include "win/vend_setup.hpp"
 
 #include <map>
+#include <set>
 #include <windowsx.h>
 
 #include <algorithm>
@@ -14,17 +15,22 @@
 #include "core/window_stack.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/item_window.hpp"
+#include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
+#include "core/vend_prices.hpp"
 #include "core/vend_setup.hpp"
 #include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
+#include "pad/win/runtime.hpp"
 #include "win/client_tables.hpp"
 #include "win/game_memory.hpp"
 #include "win/info_card.hpp"
+#include "win/item_net.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 #include "win/stash_watch.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -120,6 +126,9 @@ struct State {
     std::vector<int> cartPlaces, salePlaces;  // each row's place (ITEM_INFO + 8)
     std::vector<uint32_t> cartInfos, saleInfos;  // 3.0.18-beta.142: each row's ITEM_INFO in the game (its card)
     Rml::String allWord;                         // «Якщо продати все: N z»
+    std::set<uint32_t> prefilled;  // 3.0.24-beta.23: the sale's rows (ITEM_INFO) a remembered price was put in for
+    std::string note;              // 3.0.24-beta.23: why our own packet was not sent - over the prices a while
+    ULONGLONG noteUntil = 0;
     std::string sign;
     vs::Show show;
     vs::Layout layout;
@@ -177,12 +186,32 @@ bool modeMsg(int msg, int a, int b, int c) {
     return true;
 }
 
-std::string wordsOf(uint32_t edit, unsigned codePage) {
+std::string rawOf(uint32_t edit) {  // an edit's words as the game keeps them (its code page)
     if (!edit) return "";
     const char* p = reinterpret_cast<GetTextFn>(uintptr_t(kGetText))(edit);
     char buf[kMostWords + 1] = {};
     if (!p || !readGame(uint32_t(uintptr_t(p)), buf, kMostWords)) return "";
-    return utf8Of(widened(buf, codePage));
+    return buf;
+}
+
+std::string wordsOf(uint32_t edit, unsigned codePage) {
+    const std::string raw = rawOf(edit);
+    return raw.empty() ? "" : utf8Of(widened(raw, codePage));
+}
+
+bool g_packets = false;  // 3.0.24-beta.23: [interface] vend_open_packets - the shop opened by our own packet
+
+// 3.0.24-beta.23 (the spec's «Відкрити лавку»: «цены запоминаются»): the prices put on things, by the thing's number,
+// kept in uaro-graphics\vend-prices.txt (core/vend_prices)
+vendprices::Prices& prices() {
+    static vendprices::Prices p;
+    static bool read = false;
+    if (!read) {
+        read = true;
+        std::string text;
+        if (readTextFile(layout::join(gameDir(), layout::kVendPrices), text)) p.read(text);
+    }
+    return p;
 }
 
 uint32_t priceEdit(uint32_t window, int place) {
@@ -228,6 +257,7 @@ void readList(const State& s, uint32_t listAt, std::vector<vs::Row>& rows, std::
         if (f != files.end()) r.icon = clienttables::icon(f->second, iw::iconSide(s.scale) * 3 / 4, 4 * s.scale);
         infocardwin::describe(raw, r.id, s.codePage, r.name, r.inside);  // 3.0.18-beta.142: [slots], what is inside
         r.colour = infocardwin::nameHex(r.id, raw, uitheme::Group::Trade);  // .144
+        r.place = int(rd32(raw, 0x08));  // 3.0.24-beta.23: our own packet's
         rows.push_back(std::move(r));
         places.push_back(int(rd32(raw, 0x08)));
         infos.push_back(node + kInfo);
@@ -238,6 +268,17 @@ void read(State& s, uint32_t window) {
     readList(s, kCartList, s.cart, s.cartPlaces, s.cartInfos);
     readList(s, kSaleList, s.sale, s.salePlaces, s.saleInfos);
     for (size_t i = 0; i < s.sale.size(); ++i) s.sale[i].price = wordsOf(priceEdit(window, int(i)), s.codePage);
+    // 3.0.24-beta.23 (the spec's «Відкрити лавку»: «цены запоминаются»): a thing come into the sale with its price's
+    // field empty takes the price it was last put on for - once a row (the player may clear it after)
+    for (size_t i = 0; i < s.sale.size() && i < s.saleInfos.size(); ++i) {
+        if (!s.prefilled.insert(s.saleInfos[i]).second || !s.sale[i].price.empty()) continue;
+        const long long kept = prices().priceOf(s.sale[i].id);
+        const uint32_t edit = priceEdit(window, int(i));
+        if (kept <= 0 || !edit) continue;
+        const std::string digits = std::to_string(kept);
+        reinterpret_cast<SetTextFn>(uintptr_t(read32(read32(edit) + kSetTextSlot)))(edit, digits.c_str());
+        s.sale[i].price = digits;
+    }
     s.sign = wordsOf(window ? read32(window + kSignEdit) : 0, s.codePage);
     s.show.most = std::clamp(int32_t(read32(window + kPlaces)), 0, kMostPlaces);
     // the keys' edit: ours when it is the sign's or a price's
@@ -259,6 +300,7 @@ vs::Texts texts(const State& s) {
     t.cancel = say(settings::Text::VendSetupCancel);
     t.empty = say(settings::Text::VendSetupEmpty);
     t.priceHint = say(settings::Text::VendSetupHint) + " \xC2\xB7 " + say(settings::Text::ThingCardTip);  // .142
+    if (!s.note.empty() && GetTickCount64() < s.noteUntil) t.priceHint = s.note;  // 3.0.24-beta.23
     if (s.pad) {  // 3.0.16-beta.39: the controller's buttons (A, B, X, Y, LB, RB as uaRO Pad's menu names them)
         const auto b = [](size_t i) { return std::string(uapad::buttonLabel(i)); };
         t.hint = b(0) + " " + say(settings::Text::VendSetupPadPut) + " \xC2\xB7 " + b(2) + " " +
@@ -284,14 +326,72 @@ void block(const State& s, HWND game) {
     uapad::gamewindow::setBlocked(Blocker::VendSetup, game, &r, false);
 }
 
+}  // namespace
+
+void setPackets(bool on) {
+    if (on != g_packets) LOG_INFO("vend setup: %s", on ? "the shop opened by our own packet ([interface] "
+                                                         "vend_open_packets)" : "the game's own «Відкрити лавку»");
+    g_packets = on;
+}
+
+namespace {
+
 void hide(State& s) {
     if (s.shown) uapad::gamewindow::setBlocked(Blocker::VendSetup, nullptr, nullptr, false);
     s.shown = false;
+    s.prefilled.clear();  // 3.0.24-beta.23: a new shop's rows take their remembered prices again
+}
+
+settings::Text refusal(vs::Refuse why) {  // 3.0.24-beta.23
+    switch (why) {
+        case vs::Refuse::NoSign: return settings::Text::VendSetupNoSign;
+        case vs::Refuse::Empty: return settings::Text::VendSetupNoThings;
+        case vs::Refuse::NoPrice: return settings::Text::VendSetupNoPrice;
+        case vs::Refuse::TooDear: return settings::Text::VendSetupTooDear;
+        default: return settings::Text::VendSetupTooMany;
+    }
+}
+
+// 3.0.24-beta.23 (the spec's «Відкрити лавку»: «цены запоминаются»): the prices put on, kept for the next shop - when
+// the shop would open (nothing the server or the game would refuse)
+void remember(State& s) {
+    if (vs::refuseOpen(s.sign, s.sale, s.show.most) != vs::Refuse::None) return;
+    vendprices::Prices& p = prices();
+    for (const vs::Row& r : s.sale) p.remember(r.id, vs::priceOf(r.price));
+    if (!writeFileAtomic(layout::join(gameDir(), layout::kVendPrices), p.text()) && s.told++ < 30)
+        LOG_INFO("vend setup: the prices not kept (%s)", layout::kVendPrices);
+}
+
+// 3.0.24-beta.23 ([interface] vend_open_packets, the testers' box): the shop opened by our own packet 0x01b2 - the
+// sign as typed (the game's code page), each thing's cart place, amount and price. The game's window closed first by
+// its own «Скасувати» (nothing the server acts on: vending.c opens only with the flag 1); the server's answer
+// (0x0136) opens the game's «Моя лавка» as before. What the server or the game would refuse is not sent: a line over
+// the prices says why, the window stays.
+void openOwn(State& s, uint32_t window) {
+    const vs::Refuse why = vs::refuseOpen(s.sign, s.sale, s.show.most);
+    if (why != vs::Refuse::None || !uapad::runtime::healthy()) {
+        s.note = why != vs::Refuse::None ? say(refusal(why)) : say(settings::Text::ItemsNotConnected);
+        s.noteUntil = GetTickCount64() + 5000;
+        if (s.told++ < 30) LOG_INFO("vend setup: our own packet not sent (%d)", int(why));
+        return;
+    }
+    const std::string sign = rawOf(read32(window + kSignEdit));
+    const std::vector<itempackets::VendRow> rows = vs::rowsOf(s.sale);
+    reinterpret_cast<SendMsgFn>(uintptr_t(kSaleSend))(window, 0, kButtonMsg, kCancel, 0, 0);
+    const bool sent = itemnet::openShop(sign, rows);
+    if (s.told++ < 30)
+        LOG_INFO("vend setup: «Відкрити лавку» by our own packet 0x01b2 - %zu thing(s), %s", rows.size(),
+                 sent ? "sent" : "not sent (no connection)");
+    s.key.clear();
 }
 
 void button(State& s, int which) {
     const uint32_t window = gameSale();
     if (!window) return;
+    if (which == kOk) {
+        remember(s);  // 3.0.24-beta.23
+        if (g_packets) return openOwn(s, window);
+    }
     if (s.told++ < 30)
         LOG_INFO("vend setup: %s - the window's 0x%X", which == kOk ? "«Відкрити лавку» (the game checks the prices)"
                                                                      : "«Скасувати»", unsigned(which));

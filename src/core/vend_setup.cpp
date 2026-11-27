@@ -32,6 +32,25 @@ long long priceOf(const std::string& words) {
     return any ? v : 0;
 }
 
+Refuse refuseOpen(const std::string& sign, const std::vector<Row>& sale, int places) {
+    if (sign.empty()) return Refuse::NoSign;
+    if (sale.empty()) return Refuse::Empty;
+    for (const Row& r : sale) {
+        const long long price = priceOf(r.price);
+        if (price < 1) return Refuse::NoPrice;
+        if (price > kMostPrice) return Refuse::TooDear;
+    }
+    return int(sale.size()) > places ? Refuse::TooMany : Refuse::None;
+}
+
+std::vector<itempackets::VendRow> rowsOf(const std::vector<Row>& sale) {
+    std::vector<itempackets::VendRow> out;
+    for (const Row& r : sale)
+        out.push_back(itempackets::VendRow{uint16_t(r.place), uint16_t(std::max(1, r.count)),
+                                           uint32_t(std::min<long long>(priceOf(r.price), kMostPrice))});
+    return out;
+}
+
 std::string stepPrice(const std::string& words, int dir) {
     const long long v = std::min<long long>(priceOf(words), kMostPrice);
     if (dir == 0) return std::to_string(v);

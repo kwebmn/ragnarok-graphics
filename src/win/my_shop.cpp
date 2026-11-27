@@ -17,6 +17,7 @@
 #include "core/hotbar_panel.hpp"
 #include "core/item_window.hpp"
 #include "core/my_shop.hpp"
+#include "core/ui_chime.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
@@ -26,6 +27,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/sound_hook.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -38,6 +40,14 @@
 
 namespace uagfx::win::myshopwin {
 namespace {
+
+constexpr int kVendingTax = 200;  // 3.0.24-beta.23: the server's vending_tax (conf/battle) - its arithmetic keeps all
+bool g_chime = true;              // 3.0.24-beta.23: [interface] sale_chime
+// the sale's soft chime (core/ui_chime), made once: the game's player reads it while it plays
+const std::vector<uint8_t>& saleChime() {
+    static const std::vector<uint8_t> wav = chime::wav(chime::Kind::Sale);
+    return wav;
+}
 
 namespace ms = uagfx::myshop;
 namespace iw = uagfx::itemwin;
@@ -58,7 +68,7 @@ constexpr size_t kInfoSize = 0x48, kMostNodes = 100;
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw vsw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span></div>
-<span class="x ctl" data-event-click="ms_close()">&#x2715;</span>
+<span class="x ctl" data-event-click="ms_close()"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="list"><div class="ware ctl" data-for="r, i : rows" data-event-mousedown="ms_card(i)"><img
   data-if="r.icon != ''" data-attr-src="r.icon"/>
 <div class="wname"><span class="name" data-style-color="r.colour">{{r.name}}</span><span class="inside"
@@ -68,7 +78,8 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div class="hint" data-if="rows.size == 0">{{empty}}</div></div>
 <div class="sums"><div class="srow"><span class="lbl">{{worth_word}}</span><span
   class="val">{{worth}}</span></div><div class="srow"><span class="lbl">{{earned_word}}</span><span
-  class="val good">{{earned}}</span></div></div>
+  class="val good">{{earned}}</span></div><div class="srow" data-if="buyer != ''"><span
+  class="lbl">{{buyer_word}}</span><span class="val">{{buyer}}</span></div></div>
 <div class="lbl">{{sales_word}}</div>
 <div class="sales"><div class="sale" data-for="x : sales"><span class="t">{{x.time}}</span><span
   class="what">{{x.what}}</span><span class="z">{{x.zeny}}</span></div>
@@ -94,8 +105,11 @@ struct State {
     std::vector<OwnWareView> rowViews;
     std::vector<SaleView> saleViews;  // 3.0.18-beta.143
     Rml::String earnedWord, earned, salesWord, noSales, tip;
+    Rml::String buyerWord, buyer;  // 3.0.24-beta.23: the last buyer as the server names them ("" none yet)
     ms::Ledger ledger;
     bool open = false;  // the shop seen open (its sales kept till it closes)
+    std::string lastBuyer;  // 3.0.24-beta.23: the server's «%s has bought your item(s).» - its name
+    bool chimeDue = false;  // 3.0.24-beta.23: a sale's chime, played on the next frame (the game's sound player)
     std::map<const panel::Picture*, std::string> iconPrev;
     Rml::String title, worthWord, worth, close, empty, ground = "#10141cf0";
     uisheet::Sheet sheet;  // 3.0.18-beta.30: the window drawn by uaUI
@@ -252,6 +266,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     if (window && !s.open) {  // 3.0.18-beta.143: the shop opened - its sales from none
         s.open = true;
         s.ledger.clear();
+        s.lastBuyer.clear();  // 3.0.24-beta.23
     } else if (!window && world) {
         s.open = false;
     }
@@ -308,6 +323,8 @@ static void liveFrame(State& s) {
         m.Bind("sales", &s.saleViews);
         m.Bind("earned_word", &s.earnedWord);
         m.Bind("earned", &s.earned);
+        m.Bind("buyer_word", &s.buyerWord);  // 3.0.24-beta.23
+        m.Bind("buyer", &s.buyer);
         m.Bind("sales_word", &s.salesWord);
         m.Bind("no_sales", &s.noSales);
         m.Bind("tip", &s.tip);
@@ -341,8 +358,10 @@ static void liveFrame(State& s) {
         v.price = money(r.price);
         v.inside = r.inside;
         v.colour = r.colour;
-        const int sold = s.ledger.soldOf(r.index);
-        v.sold = sold > 0 ? settings::fmt(say(settings::Text::MyShopSoldCount), {std::to_string(sold)}) : "";
+        const int sold = s.ledger.soldOf(r.index);  // 3.0.24-beta.23 (the spec): «продано N з M»
+        v.sold = sold > 0 ? settings::fmt(say(settings::Text::MyShopSoldOf), {std::to_string(sold),
+                                                                              std::to_string(sold + r.left)})
+                          : "";
         if (r.icon && r.icon->width > 0) v.icon = uaui::picture(r.icon, uaui::stamp(r.icon), s.iconPrev[r.icon]);
         rows.push_back(v);
     }
@@ -356,9 +375,11 @@ static void liveFrame(State& s) {
             sales.push_back(SaleView{x.time, std::to_string(x.amount) + " \xC3\x97 " + x.name, "+" + money(x.zeny)});
         }
         if (sales != s.saleViews) s.saleViews = std::move(sales), s.live.doc.dirty("sales");
-        const Rml::String earned = money(s.ledger.earned());
-        if (earned != s.earned || s.earnedWord.empty()) {
+        // 3.0.24-beta.23 (the spec's «Моя лавка»): as the server pays it (myshop::netEarned - its own arithmetic)
+        const Rml::String earned = money(ms::netEarned(s.ledger.earned(), kVendingTax));
+        if (earned != s.earned || s.earnedWord.empty() || s.buyer != s.lastBuyer) {
             s.earned = earned;
+            s.buyer = s.lastBuyer, s.buyerWord = say(settings::Text::MyShopBuyer);
             s.earnedWord = say(settings::Text::MyShopEarned), s.salesWord = say(settings::Text::MyShopSales);
             s.noSales = say(settings::Text::MyShopNoSales), s.tip = say(settings::Text::ThingCardTip);
             s.live.doc.dirtyAll();
@@ -376,6 +397,10 @@ static void liveFrame(State& s) {
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    if (s.chimeDue) {  // 3.0.24-beta.23 (the spec: «тихий звук при продаже»)
+        s.chimeDue = false;
+        if (g_chime) playOwn(saleChime().data());
+    }
     liveFrame(s);  // the old edition (the sheet) gone: the live window alone
 }
 
@@ -426,10 +451,20 @@ bool box(int& x, int& y, int& w, int& h) {
     return true;
 }
 
+void setChime(bool on) { g_chime = on; }
+
 void packet(const packets::Event& e) {  // 3.0.18-beta.143: a sale from the shop - its line in «Продажі»
+    // 3.0.24-beta.23 (the spec's «Моя лавка»: «последний покупатель»): the server's line to the merchant names the
+    // buyer (uAthena msg 265, buyer_name yes; clif_disp_onlyself - the guild chat's packet 0x017f)
+    if (const auto* g = std::get_if<packets::GuildChat>(&e)) {
+        const std::string who = ms::buyerOf(g->text);
+        if (!who.empty() && state().open) state().lastBuyer = utf8Of(widened(who, state().codePage));
+        return;
+    }
     const auto* x = std::get_if<packets::ShopSold>(&e);
     if (!x) return;
     State& s = state();
+    s.chimeDue = true;  // 3.0.24-beta.23: its chime on the next frame
     SYSTEMTIME t{};
     GetLocalTime(&t);
     char hm[8];

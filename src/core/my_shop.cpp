@@ -17,6 +17,15 @@ constexpr uint32_t kMuted = 0x9AA3B5, kBlack = 0x000000;
 
 }  // namespace
 
+long long netEarned(long long gross, int taxPer10000) { return gross * (1 - taxPer10000 / 10000); }
+
+std::string buyerOf(const std::string& line) {
+    static const std::string tail = " has bought your item(s).";
+    if (line.size() <= tail.size() || line.compare(line.size() - tail.size(), tail.size(), tail) != 0) return "";
+    const std::string name = line.substr(0, line.size() - tail.size());
+    return name.find_first_not_of(' ') == std::string::npos ? "" : name;
+}
+
 long long worth(const std::vector<Row>& rows) {
     long long t = 0;
     for (const Row& r : rows) t += r.price * r.left;

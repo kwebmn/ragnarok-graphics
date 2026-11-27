@@ -88,6 +88,21 @@ Bytes useItem(uint16_t index, uint32_t account) {
     return b;
 }
 
+Bytes openVending(const std::string& sign, const std::vector<VendRow>& rows) {
+    Bytes b(85 + 8 * rows.size(), 0);
+    b[0] = 0xb2, b[1] = 0x01;
+    b[2] = uint8_t(b.size()), b[3] = uint8_t(b.size() >> 8);
+    for (size_t i = 0; i < sign.size() && i < 79; ++i) b[4 + i] = uint8_t(sign[i]);
+    b[84] = 1;
+    for (size_t k = 0; k < rows.size(); ++k) {
+        const size_t at = 85 + 8 * k;
+        b[at] = uint8_t(rows[k].place), b[at + 1] = uint8_t(rows[k].place >> 8);
+        b[at + 2] = uint8_t(rows[k].amount), b[at + 3] = uint8_t(rows[k].amount >> 8);
+        for (int i = 0; i < 4; ++i) b[at + 4 + size_t(i)] = uint8_t(rows[k].price >> (8 * i));
+    }
+    return b;
+}
+
 Bytes drop(uint16_t index, uint16_t amount) {
     Bytes b(10, 0);
     b[0] = 0x16, b[1] = 0x01;

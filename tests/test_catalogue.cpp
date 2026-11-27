@@ -499,7 +499,8 @@ TEST(catalogue_trials_decided_for_3_0_21) {
                                               "view3d.crown_light", "interface.items_packets",
                                               "interface.shop_packets",
                                               "interface.storage_packets", "interface.cart_packets",
-                                              "interface.vend_packets", "renderer.remix"}));
+                                              "interface.vend_packets", "interface.vend_open_packets",
+                                              "renderer.remix"}));
 }
 
 // 3.0.24-beta.19 (the themes): the theme a basic row of its own group, first on «Інтерфейс»; the groups and the

@@ -24,6 +24,12 @@ struct Row {
     uint32_t info = 0;    // its ITEM_INFO in the game (its card)
 };
 long long worth(const std::vector<Row>& rows);
+// 3.0.24-beta.23 (the spec's «Моя лавка»): what the merchant gets as the server pays it - uAthena vending.c's own
+// arithmetic, z * (1 - vending_tax / 10000) with an integer division: a tax under 10000 takes nothing
+long long netEarned(long long gross, int taxPer10000);
+// The buyer the server names in its line to the merchant («%s has bought your item(s).», msg 265, buyer_name yes);
+// "" when the line is another
+std::string buyerOf(const std::string& line);
 
 struct Texts {
     std::string title, left, worth, close, empty;  // left: «лишилось {1}»
