@@ -345,7 +345,8 @@ static void fillSheet(State& s, uisheet::Content& c) {
     if (s.text && s.pctW > 0) {
         const panel::Box b{float(s.textX), float(s.textY), float(s.pctW), float(s.pctH)};
         c.rect(c.under, b, b.h / 2, 0x000000, 0.5f);
-        c.words.push_back(uisheet::Word{b.x, b.y, b.w, b.h, 12 * sc, b.h, s.pctText, "#eceff5", "word bold centre"});
+        c.words.push_back(uisheet::Word{b.x, b.y, b.w, b.h, 12 * sc, b.h, s.pctText, c.hex(0xECEFF5),
+                                        "word bold centre"});  // 3.0.24-beta.19: on its ground, in the theme
     }
     if (s.countShown > 0 && s.countWide > 0) {
         const panel::Box b{float(s.countX), float(s.countY), float(s.countWide), float(s.countHigh)};

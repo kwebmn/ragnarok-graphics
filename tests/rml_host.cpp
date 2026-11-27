@@ -31,8 +31,7 @@ public:
     }
     bool LogMessage(Rml::Log::Type type, const Rml::String& message) override {
         // the driver's own decorators (win/uaui registers them) are not made here
-        const bool ours =
-            message.find("ua-glass") != std::string::npos || message.find("ua-shadow") != std::string::npos;
+        const bool ours = message.find("ua-shadow") != std::string::npos;
         if (type <= Rml::Log::LT_WARNING && !ours) g_log += message + "\n";
         return true;
     }

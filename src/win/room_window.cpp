@@ -400,13 +400,13 @@ static void liveFrame(State& s) {
     const size_t from = c.lines.size() > 14 ? c.lines.size() - 14 : 0;
     for (size_t i = from; i < c.lines.size(); ++i) {
         char col[16];
-        std::snprintf(col, sizeof col, "#%06x", unsigned(uaui::themed(c.lines[i].rgb ? c.lines[i].rgb : 0xEEF2F8)));
+        std::snprintf(col, sizeof col, "#%06x", unsigned(uaui::themed(c.lines[i].rgb ? c.lines[i].rgb : 0xEEF2F8, uitheme::Group::Chat)));
         lines.push_back(RoomLineView{c.lines[i].text, col});
     }
     std::vector<RoomMemberView> members;
     const std::string own = readOwnNameUtf8(s);
     for (const rc::Member& mb : c.members) members.push_back(RoomMemberView{mb.name, mb.owner, mb.name == own});
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Chat);
     const Rml::String count = std::to_string(c.count) + " / " + std::to_string(c.limit);
     const Rml::String state = c.open ? t.open : t.locked;
     const bool sameLines = lines.size() == s.lineViews.size() &&

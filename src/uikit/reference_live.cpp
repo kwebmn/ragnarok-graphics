@@ -1,4 +1,5 @@
 #include "uikit/reference_live.hpp"
+#include "core/ui_theme.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -51,9 +52,9 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 using refpages::Row;
 using refpages::Style;
 
-std::string hex(uint32_t rgb) {
+std::string hex(uint32_t rgb) {  // 3.0.24-beta.19: in the other windows' theme («Довідник»)
     char b[8];
-    std::snprintf(b, sizeof b, "#%06x", unsigned(rgb & 0xFFFFFF));
+    std::snprintf(b, sizeof b, "#%06x", unsigned(uitheme::paint(rgb, uitheme::Group::Windows) & 0xFFFFFF));
     return b;
 }
 

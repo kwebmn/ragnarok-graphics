@@ -238,10 +238,10 @@ Group groupOf(const std::string& docName) {
                               "big map", "big map cross", "skill wheel", "pad panel ring", "window size grip", "cast",
                               "ground items", "hud edit", "key hint", "loading bar", "mob card", "mob hp", "npc dots",
                               "npc tag", "pad carry", "pad hint", "pad tiles", "signs", "merc block", "enter veil",
-                              "showcase"})
+                              "showcase", "party"})
             m[n] = Group::Hud;
         for (const char* n : {"chat", "chat wheel", "emote", "emotes", "commands", "whisper setup", "chat room setup",
-                              "room", "answer", "macro"})
+                              "room", "answer", "macro", "whisper"})
             m[n] = Group::Chat;
         for (const char* n : {"items", "equip", "storage", "cart", "ask", "pick"}) m[n] = Group::Items;
         for (const char* n : {"shop", "vend shop", "vend setup", "my shop", "trade"}) m[n] = Group::Trade;
@@ -295,5 +295,34 @@ std::string themedLink(const std::string& rml, Group g) {
         out.replace(at, from.size(), to);
     return out;
 }
+
+bool styleGroup(const std::string& path, Group& g) {
+    if (path == "uaui:theme.rcss") {
+        g = Group::Windows;
+        return true;
+    }
+    static const std::string head = "uaui:theme-", foot = ".rcss";
+    if (path.size() <= head.size() + foot.size() || path.compare(0, head.size(), head) != 0 ||
+        path.compare(path.size() - foot.size(), foot.size(), foot) != 0)
+        return false;
+    const std::string word = path.substr(head.size(), path.size() - head.size() - foot.size());
+    for (int i = 0; i < kGroups; ++i)
+        if (word == groupWord(Group(i))) {
+            g = Group(i);
+            return true;
+        }
+    return false;
+}
+
+namespace {
+std::array<Theme, kGroups>& activeThemes() {
+    static std::array<Theme, kGroups> themes;
+    return themes;
+}
+}  // namespace
+
+void setActive(const std::array<Theme, kGroups>& themes) { activeThemes() = themes; }
+const Theme& active(Group g) { return activeThemes()[size_t(g)]; }
+uint32_t paint(uint32_t rgb, Group g) { return colour(active(g), rgb); }
 
 }  // namespace uagfx::uitheme

@@ -333,7 +333,7 @@ std::vector<pc::Entry> readList(const State& s, uint32_t window) {
         e.name = cardnames::namedFromInfo(e.name, raw, clienttables::cardWords());  // 3.0.18-beta.137: its cards
         infocardwin::describe(raw, std::atoi(id.c_str()), s.codePage, e.name, e.inside);  // .142: [slots], inside
         e.info = node + kInfo;
-        if (const std::string c = infocardwin::elementHex(std::atoi(id.c_str()), raw); !c.empty()) e.colour = c;
+        e.colour = infocardwin::nameHex(std::atoi(id.c_str()), raw, uitheme::Group::Items);
         const int refine = int(rd32(raw, 0x40));
         e.refine = refine > 0 && refine <= 20 ? refine : 0;
         const auto f = files.find(id);
@@ -548,7 +548,7 @@ static void liveFrame(State& s) {
         if (e.icon && e.icon->width > 0) v.icon = uaui::picture(e.icon, uaui::stamp(e.icon), s.iconPrev[e.icon]);
         entries.push_back(v);
     }
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Items);
     const bool same = entries.size() == s.entryViews.size() &&
                       std::equal(entries.begin(), entries.end(), s.entryViews.begin(),
                                  [](const PickEntryView& a, const PickEntryView& b) {

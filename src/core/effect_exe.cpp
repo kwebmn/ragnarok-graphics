@@ -38,7 +38,7 @@ void Owner::clear() { seed_ = 0; }
 
 bool softEffect(bool addsLight, uint8_t kind) {
     if (kind == uint8_t(Kind::HitFlash) || kind == uint8_t(Kind::Glint) || kind == uint8_t(Kind::Panel) ||
-        kind == uint8_t(Kind::Backdrop) || kind == uint8_t(Kind::Wings))  // 3.0.20-beta.24: a part of the body
+        kind == uint8_t(Kind::Wings))  // 3.0.20-beta.24: a part of the body
         return false;
     return addsLight || kind == uint8_t(Kind::Skill) || kind == uint8_t(Kind::Portal);
 }

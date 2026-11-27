@@ -624,7 +624,7 @@ bool uiFrame(State& s) {
         u.doc.zoom(hudedit::sizeOf(hudlayout::Part::Party));
         if (Rml::Element* g = d->GetFirstChild()) {
             char ground[32];
-            std::snprintf(ground, sizeof ground, "#%06x%02x", unsigned(uaui::themed(0x10141C)),
+            std::snprintf(ground, sizeof ground, "#%06x%02x", unsigned(uaui::themed(0x10141C, uitheme::Group::Hud)),
                           int(std::lround(uistyle::panel() * 255)));
             static Rml::Element* groundOn = nullptr;  // 3.0.18-beta.70: set when it changes (or the body is new)
             static std::string groundWas;

@@ -164,7 +164,7 @@ static void fillSheet(State& s, uisheet::Content& c) {
         const panel::Box b{float(l.x), float(l.y), float(l.w), float(l.h)};
         c.rect(c.under, b, 5 * sc, kGround, 0.72f, l.rgb, l.plain ? 0.0f : 0.9f, 1.0f * sc);
         char colour[16];
-        std::snprintf(colour, sizeof colour, "#%06x", unsigned(l.rgb & 0xFFFFFF));
+        std::snprintf(colour, sizeof colour, "%s", c.hex(l.rgb).c_str());  // 3.0.24-beta.19: in the theme
         c.words.push_back(uisheet::Word{b.x, b.y, b.w, b.h, 11 * sc, b.h, l.text, colour, "word bold centre"});
     }
 }

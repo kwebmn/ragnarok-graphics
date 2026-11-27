@@ -386,28 +386,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                               ai::flatQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount));
         }
     }
-    // 3.0.18-beta.64 ([interface] uaui_glass): the new interface's frosted glass - the picture copied once a frame
-    // at its first glass (the world; with no DLSS the interface drawn so far too), read blurred
-    bool backdrop = s.ui && d.effect == uint8_t(effect_exe::Kind::Backdrop) && backdropPs;
-    if (backdrop && !backdropCopied) {
-        StageSetup linearClamp;
-        linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
-        linearClamp.magFilter = d3d7::TFG_LINEAR;
-        linearClamp.minFilter = d3d7::TFN_LINEAR;
-        linearClamp.mipFilter = d3d7::TFP_NONE;
-        backdropCopied = ensureScene("glass") && makeRoom(linearClamp, linearClamp, 0, 3) && copySceneColor() ? 1 : -1;
-        if (backdropCopied < 0) LOG_INFO("glass: no copy of the picture - the new interface's glass not drawn");
-        static bool told = false;  // 3.0.18-beta.65: the facts for a report
-        if (backdropCopied > 0 && !told) {
-            told = true;
-            LOG_INFO("glass: the new interface's glass reads the %s blurred (%dx%d)",
-                     upscale ? "world before DLSS" : "picture", sceneWidth, sceneHeight);
-        }
-    }
-    if (s.ui && d.effect == uint8_t(effect_exe::Kind::Backdrop) && !backdrop) return;  // no shader: nothing
-    if (backdrop && backdropCopied < 0) return;
-    const DrawShader shader = backdrop    ? DrawShader::Backdrop
-                              : smoke       ? DrawShader::Smoke
+    const DrawShader shader = smoke       ? DrawShader::Smoke
                               : ray       ? DrawShader::Ray
                               : lava      ? DrawShader::Lava
                               : warpDrawn ? DrawShader::Portal
@@ -568,9 +547,6 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         sceneOf(matTex->matSrv, hilly ? hillsDataSrv : matTex->matSrv, kNoSrv);
     } else if (hilly) {  // 1.15: the hills' normals (t3)
         sceneOf(hillsDataSrv, hillsDataSrv, kNoSrv);
-    } else if (backdrop) {  // 3.0.18-beta.64: the picture's copy (t2) under the glass
-        transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        sceneOf(sceneColorSrv, sceneColorSrv, kNoSrv);
     } else if (soft) {  // the depth behind the effect (t3)
         transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         transition(sceneDepth, sceneDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -689,8 +665,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.uiMode = uint32_t(uiFilterMode(s.ui, scale, uiSharp ? UiFilter::Sharp : UiFilter::Smooth));
     // The AI's picture has the detail the game pixels lack: sampled as it is, not one tap per game pixel.
     if (aiDrawn[0] || d.sharpCopy || artDrawn) c.uiMode = 0;  // 3.0.18-beta.178: a number's sharp copy likewise
-    if (d.effect == uint8_t(effect_exe::Kind::Panel) || d.effect == uint8_t(effect_exe::Kind::Backdrop))
-        c.uiMode = 0;  // 3.0.3-beta.8: at the target's pixels (3.0.18-beta.64: the glass too)
+    if (d.effect == uint8_t(effect_exe::Kind::Panel)) c.uiMode = 0;  // 3.0.3-beta.8: at the target's pixels
     // 3.0.20-beta.70 (the owner's pick 2 of the camera's options; shade()'s nearFade): in the 3D view the world's
     // draws dissolve nearer the eye than view3d::kNearWhole
     if (view3d::nearFades(effects.nearFade3d, camera::wideView(), s.ui, d.overAll)) c.alphaTest |= 1u << 29;

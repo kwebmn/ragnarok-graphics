@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/frame.hpp"
+#include "core/ui_theme.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -51,7 +52,8 @@ bool showItem(uint32_t itemInfo);
 void setElementColours(bool on);
 int elementOf(int id, const int cards[4]);  // 3.0.18-beta.146: the element (0 none or the switch off)
 uint32_t elementColour(int id, const uint8_t* itemInfo);
-std::string elementHex(int id, const uint8_t* itemInfo);
+// 3.0.24-beta.19: a thing's name's colour - its element's, else the words' (#eef2f8) - in the theme of `g`
+std::string nameHex(int id, const uint8_t* itemInfo, uitheme::Group g);
 // A thing's name made full and what is inside it, from its ITEM_INFO (72 bytes): its cards' words in the name, its
 // slots after it («[3]»), its cards and free slots in `inside` (core vendshop::inside) - only for one identified
 void describe(const uint8_t* itemInfo, int id, unsigned codePage, std::string& name, std::string& inside);

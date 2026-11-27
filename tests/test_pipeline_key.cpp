@@ -298,9 +298,9 @@ TEST(pipeline_key_warp_shader_takes_a_third_bit) {
     k.mask = true;
     CHECK(validPipelineKey(packPipelineKey(k)));
     CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
-    for (const uint64_t other : {uint64_t(2) << 25, uint64_t(3) << 25})  // no shader of 6-7
+    // no shader of 5-7 (3.0.24-beta.19: the glass's 5, 3.0.18-beta.64, gone with the glass windows)
+    for (const uint64_t other : {uint64_t(1) << 25, uint64_t(2) << 25, uint64_t(3) << 25})
         CHECK(!validPipelineKey(game | uint64_t(1) << 29 | other));
-    CHECK(validPipelineKey(game | uint64_t(1) << 29 | uint64_t(1) << 25));  // 3.0.18-beta.64: 5, the glass
     k.lean = true;  // 2.5: the lean one is the game's shader only
     CHECK(!validPipelineKey(packPipelineKey(k)));
     k.lean = false;
@@ -352,7 +352,9 @@ TEST(pipeline_key_models_lie_a_step_behind_the_ground) {
 }
 
 // 3.0.18-beta.64: the new interface's glass - an interface draw in the DLSS layer too
-TEST(pipeline_key_glass_is_an_interface_draw_in_the_layer) {
+// 3.0.24-beta.19 (the interface's design: the glass windows removed): no shader past the portal's - the frosted
+// glass's (Backdrop) gone with them
+TEST(pipeline_key_no_glass_shader_any_more) {
     PipelineKey k;
     k.cull = d3d7::CULL_NONE;
     k.zFunc = d3d7::CMP_ALWAYS;
@@ -360,9 +362,10 @@ TEST(pipeline_key_glass_is_an_interface_draw_in_the_layer) {
     k.srcBlend = d3d7::BLEND_ONE;
     k.dstBlend = d3d7::BLEND_INVSRCALPHA;
     k.layer = true;
-    k.shader = DrawShader::Backdrop;
+    k.shader = DrawShader(uint8_t(DrawShader::Portal) + 1);
+    CHECK(!validPipelineKey(packPipelineKey(k)));
+    k.shader = DrawShader::Game;
     CHECK(validPipelineKey(packPipelineKey(k)));
-    CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
 }
 
 // 3.0.20-beta.11 (the owner's «делай все сразу», step 2: the game's still models from the card in Direct3D 12): a key

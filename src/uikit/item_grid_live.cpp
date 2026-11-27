@@ -1,4 +1,5 @@
 #include "uikit/item_grid_live.hpp"
+#include "core/ui_theme.hpp"
 
 #include <RmlUi/Core.h>
 
@@ -50,7 +51,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   class="t4" data-if="tip4 != ''">{{tip4}}</div></div>
 </body></rml>)RML";
 
-constexpr const char* kTipName = "#eef2f8";  // 3.0.18-beta.144: the tip's name without an element
+constexpr uint32_t kTipName = 0xEEF2F8;  // 3.0.18-beta.144: the tip's name without an element
 
 uint32_t toward(uint32_t from, uint32_t to, float t) {
     uint32_t out = 0;
@@ -61,9 +62,9 @@ uint32_t toward(uint32_t from, uint32_t to, float t) {
     return out;
 }
 
-std::string hex(uint32_t rgb) {
+std::string hex(uint32_t rgb) {  // 3.0.24-beta.19: in the item windows' theme
     char b[16];
-    std::snprintf(b, sizeof b, "#%06x", unsigned(rgb & 0xFFFFFF));
+    std::snprintf(b, sizeof b, "#%06x", unsigned(uitheme::paint(rgb, uitheme::Group::Items) & 0xFFFFFF));
     return b;
 }
 
@@ -293,11 +294,11 @@ void fill(Model& m, const iw::Layout& L, const std::vector<iw::Item>& items, con
     m.zeny = sh.zeny >= 0 ? iw::grouped(sh.zeny) + " z" : "";
     m.pickedText = sh.pickedText;  // 3.0.18-beta.155
     m.tip = sh.tip && sh.hover >= 0 && sh.hover < int(shown.size());
-    m.tipColour = kTipName;
+    m.tipColour = hex(kTipName);
     if (m.tip) {
         const iw::Item& it = items[size_t(shown[size_t(sh.hover)])];
         m.tip1 = iw::tipFirst(it);
-        m.tipColour = it.elementRgb ? hex(it.elementRgb) : kTipName;
+        m.tipColour = hex(it.elementRgb ? it.elementRgb : kTipName);
         m.tip2 = iw::tipSecond(it, t);
         m.tip3 = it.compare;
         m.tip4 = it.market;

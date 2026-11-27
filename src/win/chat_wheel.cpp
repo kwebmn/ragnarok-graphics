@@ -286,18 +286,18 @@ static void fillSheet(State& s, uisheet::Content& c) {
         c.rings.push_back(uisheet::Ring{L.cx - radius, L.cy - radius, 2 * radius, value, startUp - 90, widthPx / dp,
                                         false, fill, "#00000000"});
     };
-    ring(L.outer, L.outer - L.inner, 1, 0, uisheet::Content::rgba(kCard, 0.90f));  // the ring's ground
+    ring(L.outer, L.outer - L.inner, 1, 0, c.rgba(kCard, 0.90f));  // the ring's ground
     const float step = count > 0 ? 360.0f / float(count) : 360.0f;
     if (s.hover >= 0 && s.hover < count)
         ring(L.outer, L.outer - L.inner, 1.0f / float(std::max(count, 1)), float(s.hover) * step - step / 2,
-             uisheet::Content::rgba(kGold, 0.30f));
+             c.rgba(kGold, 0.30f));
     if (count > 1)
         for (int i = 0; i < count; ++i) {  // the borders: an arc of two pixels at the ring's middle
             const float mid = (L.outer + L.inner) / 2, share = 2.0f * sc / (2 * 3.14159265f * mid);
             ring(L.outer, L.outer - L.inner, share, float(i) * step - step / 2 - share * 180,
-                 uisheet::Content::rgba(kWhite, 0.14f));
+                 c.rgba(kWhite, 0.14f));
         }
-    ring(L.outer - 1.0f * sc + 0.75f * sc, 1.5f * sc, 1, 0, uisheet::Content::rgba(kWhite, 0.14f));  // the outer line
+    ring(L.outer - 1.0f * sc + 0.75f * sc, 1.5f * sc, 1, 0, c.rgba(kWhite, 0.14f));  // the outer line
     const float disc = L.inner - 6 * sc;  // the middle's own disc
     c.rect(c.under, panel::Box{L.cx - disc, L.cy - disc, 2 * disc, 2 * disc}, disc, kCard, uistyle::window());
     auto& o = c.over;

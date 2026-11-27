@@ -284,7 +284,7 @@ static void liveFrame(State& s) {
         entries.push_back(row);
     }
     if (entries != s.entryViews) s.entryViews = std::move(entries), s.live.doc.dirty("entries");
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Windows);
     if (t.title != s.title || t.message != s.message || t.ok != s.ok || t.cancel != s.cancel || t.empty != s.empty ||
         s.show.selected != s.selected || ground != s.ground) {
         s.title = t.title, s.message = t.message, s.ok = t.ok, s.cancel = t.cancel, s.empty = t.empty;

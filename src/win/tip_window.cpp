@@ -267,7 +267,7 @@ static void liveFrame(State& s) {
     const tc::Texts t = texts(s);
     const std::vector<Rml::String> paragraphs(s.card.paragraphs.begin(), s.card.paragraphs.end());
     const Rml::String counter = tc::counter(s.card.number, s.card.count);
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Windows);
     if (paragraphs != s.paragraphViews || counter != s.counterText || t.title != s.title || t.back != s.back ||
         t.next != s.next || t.startup != s.startupWord || t.backKey != s.backKey || t.nextKey != s.nextKey ||
         s.card.startup != s.startupOn || ground != s.ground) {

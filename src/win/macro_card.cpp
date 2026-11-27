@@ -251,7 +251,7 @@ static void liveFrame(State& s) {
     std::vector<MacroRowView> rows;
     for (int i = 0; i < mc::kFields && i < int(s.texts.size()); ++i)
         rows.push_back(MacroRowView{mc::keyName(i), s.texts[size_t(i)], s.show.focus == i});
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Chat);
     const bool same = rows.size() == s.rowViews.size() &&
                       std::equal(rows.begin(), rows.end(), s.rowViews.begin(),
                                  [](const MacroRowView& a, const MacroRowView& b) {

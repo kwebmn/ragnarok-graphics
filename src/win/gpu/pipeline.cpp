@@ -210,7 +210,6 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"torch_light_vs", "vs_5_0", &torchLightVs},   {"torch_accum_ps", "ps_5_0", &torchAccumPs},
                    {"torch_apply_ps", "ps_5_0", &torchApplyPs},   {"torch_fire_ps", "ps_5_0", &torchFirePs},
                    {"portal_draw_ps", "ps_5_0", &portalDrawPs},  // 2.7.54
-                   {"backdrop_ps", "ps_5_0", &backdropPs},  // 3.0.18-beta.64
                    {"portal_draw_glow_ps", "ps_5_0", &portalDrawGlowPs},
                    {"smoke_ps", "ps_5_0", &smokePs},              {"smoke_glow_ps", "ps_5_0", &smokeGlowPs},
                    {"firefly_ps", "ps_5_0", &fireflyPs},          {"dust_ps", "ps_5_0", &dustPs},
@@ -521,8 +520,7 @@ ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fv
     k.glow = toGlow && !toLayer;
     k.water = water && !toLayer;
     k.mask = mask && !toLayer;
-    // 3.0.18-beta.65 (R-BVR6RZ: the glass a flat grey under DLSS): the layer takes the glass's shader too
-    k.shader = toLayer && shader != DrawShader::Backdrop ? DrawShader::Game : shader;
+    k.shader = toLayer ? DrawShader::Game : shader;
     k.behind = behindGround(s, fvf, groundDrawn) && !toLayer;  // 2.6.3: a model, a step behind the ground
     k.cardModels = cardModelsDraw && !toLayer;  // 3.0.20-beta.11: the game's still models from the card
     k.cardGround = cardGroundDraw && !toLayer;  // 3.0.20-beta.23: the own ground from the card
@@ -588,8 +586,7 @@ bool Renderer::Impl::describePipeline(const PipelineKey& k, D3D12_GRAPHICS_PIPEL
         (k.shader == DrawShader::Smoke && (!smokePs || !smokeGlowPs)) ||
         (k.shader == DrawShader::Ray && (!rayPs || !rayGlowPs)) ||
         (k.shader == DrawShader::Lava && (!lavaPs || !lavaGlowPs)) ||
-        (k.shader == DrawShader::Portal && (!portalDrawPs || !portalDrawGlowPs)) ||
-        (k.shader == DrawShader::Backdrop && !backdropPs))
+        (k.shader == DrawShader::Portal && (!portalDrawPs || !portalDrawGlowPs)))
         return false;
     if (k.glow) {  // 0.18: the light it adds into the glow target too, blended alike (one blend for both)
         p.PS = lean ? D3D12_SHADER_BYTECODE{drawGlowLeanPs->GetBufferPointer(), drawGlowLeanPs->GetBufferSize()}
@@ -619,8 +616,6 @@ bool Renderer::Impl::describePipeline(const PipelineKey& k, D3D12_GRAPHICS_PIPEL
         ID3DBlob* ps = k.glow ? portalDrawGlowPs : portalDrawPs;
         p.PS = {ps->GetBufferPointer(), ps->GetBufferSize()};
     }
-    if (k.shader == DrawShader::Backdrop)  // 3.0.18-beta.64: the frosted glass under a window of the new interface
-        p.PS = {backdropPs->GetBufferPointer(), backdropPs->GetBufferSize()};
     if (k.water) {  // 0.19: a cell of water by the modern water's shaders
         p.VS = {waterVs->GetBufferPointer(), waterVs->GetBufferSize()};
         ID3DBlob* ps = k.glow ? waterGlowPs : waterPs;

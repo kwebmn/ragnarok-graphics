@@ -13,9 +13,9 @@ namespace {
 namespace iw = uagfx::itemwin;
 namespace ig = uagfx::uikit::itemgrid;
 
-std::string hexOf(uint32_t rgb, int alpha) {
+std::string hexOf(uint32_t rgb, int alpha, uitheme::Group g) {
     char b[16];
-    rgb = uaui::themed(rgb);  // 3.0.18-beta.54: in the theme
+    rgb = uaui::themed(rgb, g);  // 3.0.18-beta.54: in the theme; 3.0.24-beta.19: of the window's group
     std::snprintf(b, sizeof b, "#%06x%02x", unsigned(rgb & 0xFFFFFF), alpha & 0xFF);
     return b;
 }
@@ -42,7 +42,7 @@ bool Ui::frame(const char* name, bool on, int x, int y, int generation, const iw
     if (generation != gen) {
         gen = generation;
         const ig::Model before = model;  // 3.0.18-beta.175: what changed alone said to RmlUi
-        model.ground = hexOf(0x10141C, int(std::lround(uistyle::window() * 255)));
+        model.ground = hexOf(0x10141C, int(std::lround(uistyle::window() * 255)), uitheme::groupOf(name));
         const int side = std::max(8, int(std::lround(15 * L.s)));
         auto it = made.find("search" + std::to_string(side));
         if (it == made.end()) {

@@ -222,7 +222,7 @@ static void liveFrame(State& s) {
                           return a.text == b.text && a.sep == b.sep;
                       });
     if (!same) s.views = std::move(views), s.live.doc.dirty("items");
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Windows);
     if (ground != s.ground) s.ground = ground, s.live.doc.dirty("ground");
     s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Popup), ".row");
 }

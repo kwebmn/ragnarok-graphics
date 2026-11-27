@@ -83,9 +83,9 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 
 }  // namespace
 
-std::string Sheet::ground(uint32_t rgb, float opacity) {
+std::string Sheet::ground(uint32_t rgb, float opacity, uitheme::Group g) {
     char b[16];
-    std::snprintf(b, sizeof b, "#%06x%02x", unsigned(uaui::themed(rgb) & 0xFFFFFF),
+    std::snprintf(b, sizeof b, "#%06x%02x", unsigned(uaui::themed(rgb, g) & 0xFFFFFF),
                   int(std::lround(std::clamp(opacity, 0.0f, 1.0f) * 255)) & 0xFF);
     return b;
 }
@@ -110,7 +110,7 @@ std::string Sheet::made(const std::string& key, int w, int h, const std::functio
 void sayGdi(Content& c, const std::vector<Words>& in) {
     char colour[16];
     for (const Words& x : in) {
-        std::snprintf(colour, sizeof colour, "#%06x", unsigned(uaui::themed(x.rgb) & 0xFFFFFF));
+        std::snprintf(colour, sizeof colour, "#%06x", unsigned(uaui::themed(x.rgb, c.group) & 0xFFFFFF));
         std::string cls = x.bold ? "word bold" : "word";
         if (x.align & DT_RIGHT) cls += " right";
         else if (x.align & DT_CENTER) cls += " centre";
@@ -161,7 +161,7 @@ void fromModel(Content& c, const sheet::Model& m, Sheet& sheet) {
     char colour[16];
     const auto say = [&](std::vector<Word>& to, const std::vector<sheet::Text>& in) {
         for (const sheet::Text& t : in) {
-            std::snprintf(colour, sizeof colour, "#%06x", unsigned(uaui::themed(t.rgb) & 0xFFFFFF));
+            std::snprintf(colour, sizeof colour, "#%06x", unsigned(uaui::themed(t.rgb, c.group) & 0xFFFFFF));
             std::string cls = t.bold ? "word bold" : "word";
             if (t.align == sheet::Align::Right) cls += " right";
             else if (t.align == sheet::Align::Center) cls += " centre";
@@ -172,7 +172,7 @@ void fromModel(Content& c, const sheet::Model& m, Sheet& sheet) {
     };
     say(c.clippedWords, m.clippedWords);
     for (const sheet::Text& t : m.words) {
-        std::snprintf(colour, sizeof colour, "#%06x", unsigned(uaui::themed(t.rgb) & 0xFFFFFF));
+        std::snprintf(colour, sizeof colour, "#%06x", unsigned(uaui::themed(t.rgb, c.group) & 0xFFFFFF));
         std::string cls = t.bold ? "word bold" : "word";
         if (t.align == sheet::Align::Right) cls += " right";
         else if (t.align == sheet::Align::Center) cls += " centre";
@@ -293,7 +293,8 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
     if (gen != gen_) {
         gen_ = gen;
         Content next;
-        next.ground = "#10141cff";
+        next.group = uitheme::groupOf(name);  // 3.0.24-beta.19: its document's group
+        next.ground = ground(0x10141C, 1, next.group);
         fill(next);
         fitWords(next.words);
         fitWords(next.clippedWords);

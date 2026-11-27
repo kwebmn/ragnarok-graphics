@@ -459,7 +459,7 @@ static void liveFrame(State& s) {
                                      return a.label == b.label && a.key == b.key && a.main == b.main;
                                  });
     if (!same) s.buttonViews = std::move(views), s.live.doc.dirty("buttons");
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Windows);
     if (s.card.title != s.title || s.card.message != s.message || ground != s.ground) {
         s.title = s.card.title, s.message = s.card.message, s.ground = ground;
         s.live.doc.dirtyAll();

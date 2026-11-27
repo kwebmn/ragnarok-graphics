@@ -301,7 +301,7 @@ static void fillSheet(State& s, uisheet::Content& c) {
     auto& u = c.under;
     c.w = float(L.w), c.h = float(L.h);
     c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
-    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
+    c.ground = uisheet::Sheet::ground(kCard, uistyle::window(), c.group);
     c.rect(u, L.close, 6 * sc, kWhite, sh.hoverClose ? 0.14f : 0.0f, kWhite, sh.hoverClose ? 0.3f : 0.0f, 1.0f * sc);
     for (size_t i = 0; i < L.cells.size(); ++i) {
         const bool hot = int(i) == sh.hover;
@@ -355,7 +355,7 @@ static void liveFrame(State& s) {
             v.icon = uaui::picture(&s.icons[i], s.iconSide, s.iconPrev[i]);
         views.push_back(v);
     }
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Chat);
     const bool same = views.size() == s.views.size() &&
                       std::equal(views.begin(), views.end(), s.views.begin(), [](const EmoteView& a, const EmoteView& b) {
                           return a.icon == b.icon && a.cmd == b.cmd;

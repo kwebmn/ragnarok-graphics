@@ -1,6 +1,7 @@
 #include "uikit/equip_live.hpp"
 
 #include "core/item_elements.hpp"
+#include "core/ui_theme.hpp"
 
 #include <RmlUi/Core.h>
 
@@ -230,7 +231,8 @@ void fill(Model& m, const ew::Data& d, const ew::Show& sh, const ew::Texts& t, f
         if (v.worn && w.element > 0) {  // 3.0.18-beta.146
             v.eleWord = itemelements::word(w.element);
             char hexc[8];
-            std::snprintf(hexc, sizeof hexc, "#%06x", unsigned(itemelements::colour(w.element)));
+            std::snprintf(hexc, sizeof hexc, "#%06x",  // 3.0.24-beta.19: in the item windows' theme
+                          unsigned(uitheme::paint(itemelements::colour(w.element), uitheme::Group::Items)));
             v.ele = hexc;
         }
         return v;

@@ -177,9 +177,9 @@ static void fillSheet(State& s, uisheet::Content& c) {
         c.rect(c.under, panel::Box{x + m.pad, y + (float(sh.h) - m.dot) / 2, m.dot, m.dot}, m.dot / 2, accent, 1.0f);
         const float tx = x + m.pad + m.dot + m.gap;
         c.words.push_back(uisheet::Word{tx, y, float(m.titleW) + 2, float(sh.h), m.px, float(sh.h), sh.title,
-                                        "#eceff5", "word bold"});
+                                        c.hex(0xECEFF5), "word bold"});  // 3.0.24-beta.19: in the theme
         if (m.placesW) {
-            std::snprintf(colour, sizeof colour, "#%06x", unsigned(accent & 0xFFFFFF));
+            std::snprintf(colour, sizeof colour, "%s", c.hex(accent).c_str());
             c.words.push_back(uisheet::Word{tx + float(m.titleW) + m.gap, y, float(m.placesW) + 2, float(sh.h), m.px,
                                             float(sh.h), sh.places, colour, "word bold"});
         }

@@ -787,7 +787,7 @@ void fillChrome(State& s) {
                  : s.at.go == refpages::Go::World && s.at.id == 0 ? Text::RefKeysWorld  // 3.0.11-beta.29
                                                                   : Text::RefKeysList);
     if (s.padActive || s.padCross) m.keys = padKeysLine(s);  // 3.0.18-beta.241
-    m.ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    m.ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Windows);
     m.narrow = s.narrow;
     // not the field's words: said again while one types, they would move its caret
     for (const char* v : {"title", "back", "crumbs", "find", "home", "home_icon", "star", "starred", "rail", "pack",

@@ -792,15 +792,10 @@ select selectbox option:checked { color: #e6cb8a; }
 .popw .row { font-size: 12.5dp; white-space: nowrap; }
 .popw .sep { display: block; height: 1dp; margin: 4dp 6dp; background-color: #ffffff1f; }
 .motion .lw .cell, .motion .lw .row, .motion .lw .x { transition: background-color border-color color 0.12s cubic-out; }
-.glassy.lw { decorator: ua-glass(1); }
 /* 3.0.18-beta.69: the screen's edges red at low HP (win/low_hp_edge) - the concept's .vign */
 .lowhp { position: absolute; }
 .lowhp .vign { position: absolute; left: 0; top: 0; width: 100%; height: 100%;
             decorator: radial-gradient(#ff2d2300 62%, #ff2d2366 100%); }
-/* 3.0.18-beta.64: [interface] uaui_glass - the windows' frosted glass (the body's class «glassy», Direct3D 12) */
-.glassy.win.sh .glass, .glassy.win.ig .glass, .glassy .ua-window { decorator: ua-glass(1); }
-.fx.glassy.win.sh .glass, .fx.glassy.win.ig .glass, .fx.glassy .ua-window {
-    decorator: ua-shadow(16dp #00000059), ua-glass(1); }
 /* 3.0.18-beta.58: [interface] uaui_motion - the soft motion (the body's class «motion»); off: none of it */
 .motion.win { transition: transform 0.16s cubic-out; }
 .motion.win.away { transform: translateY(8dp); }
@@ -1832,7 +1827,6 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw { position: absolute; display: flex; flex-direction: column; font-family: Plex; font-size: 13.5dp; color: #eceff5;
        border-radius: 14dp; border: 1dp #ffffff17; box-sizing: border-box; }
 .rfw.marked { border-color: #e6cb8ad9; }
-.glassy.rfw { decorator: ua-glass(1); }
 .motion.rfw .rr, .motion.rfw .rres, .motion.rfw .rri, .motion.rfw .rtile, .motion.rfw .rchp {
     transition: background-color border-color color 0.12s cubic-out; }
 .rfw .rhead { display: flex; flex-direction: row; align-items: center; flex: none; height: 56dp; padding: 0 14dp;

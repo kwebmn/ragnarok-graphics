@@ -1,4 +1,5 @@
 #include "uikit/skills_live.hpp"
+#include "core/ui_theme.hpp"
 
 #include <RmlUi/Core.h>
 
@@ -75,9 +76,9 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-class-on="applyOn" data-class-hot="applyHot">{{applyWord}}</div></div></div>
 </body></rml>)RML";
 
-std::string hexa(uint32_t rgb, float alpha) {
+std::string hexa(uint32_t rgb, float alpha) {  // 3.0.24-beta.19: in the other windows' theme («Навички»)
     char b[16];
-    std::snprintf(b, sizeof b, "#%06x%02x", unsigned(rgb & 0xFFFFFF),
+    std::snprintf(b, sizeof b, "#%06x%02x", unsigned(uitheme::paint(rgb, uitheme::Group::Windows) & 0xFFFFFF),
                   unsigned(std::lround(std::clamp(alpha, 0.0f, 1.0f) * 255)) & 0xFF);
     return b;
 }

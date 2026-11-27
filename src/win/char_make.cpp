@@ -421,7 +421,7 @@ static void liveFrame(State& s) {
             v.pair = mv.pair;
             v.can = cm::canMove(f, mv.pair, mv.toLeft);
         }
-        s.ground = uisheet::Sheet::ground(0x10141C, std::max(0.94f, uistyle::window()));
+        s.ground = uisheet::Sheet::ground(0x10141C, std::max(0.94f, uistyle::window()), uitheme::Group::Windows);
         s.live.doc.dirtyAll();
     }
     int x = s.layout.x, y = s.layout.y, bx = 0, by = 0, bw = 0, bh = 0;

@@ -227,7 +227,7 @@ void readList(const State& s, uint32_t listAt, std::vector<vs::Row>& rows, std::
         const auto f = files.find(id);
         if (f != files.end()) r.icon = clienttables::icon(f->second, iw::iconSide(s.scale) * 3 / 4, 4 * s.scale);
         infocardwin::describe(raw, r.id, s.codePage, r.name, r.inside);  // 3.0.18-beta.142: [slots], what is inside
-        if (const std::string e = infocardwin::elementHex(r.id, raw); !e.empty()) r.colour = e;  // .144
+        r.colour = infocardwin::nameHex(r.id, raw, uitheme::Group::Trade);  // .144
         rows.push_back(std::move(r));
         places.push_back(int(rd32(raw, 0x08)));
         infos.push_back(node + kInfo);
@@ -504,7 +504,7 @@ static void liveFrame(State& s) {
     };
     if (!same(cart, s.cartViews)) s.cartViews = std::move(cart), s.live.doc.dirty("cart");
     if (!same(sale, s.saleViews)) s.saleViews = std::move(sale), s.live.doc.dirty("sale");
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Trade);
     if (t.title != s.title || t.sign != s.signWord || s.sign != s.signText || t.cart != s.cartWord ||
         t.sale != s.saleWord || t.open != s.open || t.cancel != s.cancel || t.empty != s.empty ||
         t.priceHint != s.priceHint || t.hint != s.hint || s.show.focus != s.focusNo || s.show.caret != s.caretOn ||

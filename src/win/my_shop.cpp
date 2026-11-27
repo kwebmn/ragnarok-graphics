@@ -186,7 +186,7 @@ void readShop(State& s) {
             r.index = int(rd32(raw, 0x08));  // 3.0.18-beta.143
             r.info = node + kInfo;
             infocardwin::describe(raw, std::atoi(id.c_str()), s.codePage, r.name, r.inside);
-            if (const std::string e = infocardwin::elementHex(std::atoi(id.c_str()), raw); !e.empty()) r.colour = e;
+            r.colour = infocardwin::nameHex(std::atoi(id.c_str()), raw, uitheme::Group::Trade);
             s.ledger.stock(r.index, r.refine > 0 ? "+" + std::to_string(r.refine) + " " + r.name : r.name, r.price);
             s.rows.push_back(std::move(r));
         }
@@ -347,7 +347,7 @@ static void liveFrame(State& s) {
         rows.push_back(v);
     }
     const Rml::String worth = money(ms::worth(s.rows));
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Trade);
     if (rows != s.rowViews) s.rowViews = std::move(rows), s.live.doc.dirty("rows");
     {  // 3.0.18-beta.143: the sales, the newest first (8 shown), the zeny earned
         std::vector<SaleView> sales;

@@ -17,6 +17,7 @@
 #include <string>
 
 #include "core/frame.hpp"
+#include "core/ui_theme.hpp"
 #include "core/window_panel.hpp"
 
 namespace uagfx::gpu {
@@ -33,8 +34,9 @@ namespace uagfx::win::uaui {
 // migration.md): the runtime the parts draw by - [interface] uaui. Each frame: begin() before the parts' frames,
 // the parts fill their documents' models, end() lays out and renders; draw() puts it into the frame. On the game's
 // thread.
+// 3.0.24-beta.19: `look` - [interface] theme, theme_*, accent (core/config lookOf): a theme a group of windows
 void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight,
-           const std::string& theme);
+           const uitheme::Look& look);
 void end();
 // 3.0.18-beta.27: the parts' documents (Hud) where the parts are drawn, the windows' (Doc::window) where the windows
 // are - over the panels, the chat and the hotbar
@@ -49,8 +51,9 @@ bool ready();  // [interface] uaui on, in the world, started: the parts draw by 
 // 3.0.18-beta.33: on and started, in the world or not - the login's, the servers' and the characters' windows
 // (their documents Doc::anywhere; the rest hidden outside the world)
 bool readyAnywhere();
-// 3.0.18-beta.54: the theme ([interface] theme, ui\palette.txt) for the colours and corners the parts give in code
-uint32_t themed(uint32_t rgb);  // 0xRRGGBB
+// 3.0.18-beta.54: the theme ([interface] theme, ui\palette.txt) for the colours and corners the parts give in code;
+// 3.0.24-beta.19: the theme of the window's group (core/ui_theme groupOf its document's name)
+uint32_t themed(uint32_t rgb, uitheme::Group g);  // 0xRRGGBB
 float themeRadius();
 float themeEdge();
 // 3.0.18-beta.43: the windows' stack drawing its windows bottom up - the place of the one being drawn now (its
@@ -60,8 +63,7 @@ int windowRank();
 bool windowMarked();
 void setMotion(bool on);  // 3.0.18-beta.58: [interface] uaui_motion - the theme's soft motion (body class «motion»)
 bool motion();
-void setEffects(bool on);
-void setGlass(bool on);  // 3.0.18-beta.64: [interface] uaui_glass (body class «glassy»; Direct3D 12 only)  // 3.0.18-beta.61: [interface] uaui_effects (body class «fx»)
+void setEffects(bool on);  // 3.0.18-beta.61: [interface] uaui_effects (body class «fx»)
 HWND gameWindow();  // 3.0.18-beta.60
 double targetScale();  // the target's pixels a game pixel
 void targetSize(int& w, int& h);  // 3.0.18-beta.92: the target's pixels

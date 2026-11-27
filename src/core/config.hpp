@@ -1089,8 +1089,8 @@ struct Config {
     bool uauiEffects = false;
     // 3.0.18-beta.58: [interface] uaui_motion (uaUI)
     bool uauiMotion = false;
-    // 3.0.18-beta.13: [interface] theme - uaUI's parts' colours and corners (core/ui_theme), uaro-graphics\ui\
-    // palette.txt over it; 3.0.24-beta.19 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md):
+    // 3.0.18-beta.13: [interface] theme - uaUI's parts' colours and corners (core/ui_theme), the palette's file
+    // (uaro-graphics\ui\palette.txt) over it; 3.0.24-beta.19 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md):
     // dark | light (the old standard, classic, contrast: dark); [interface] theme_hud, theme_chat, theme_items,
     // theme_trade, theme_windows, theme_settings = same | dark | light (uitheme::Group's order); [interface] accent =
     // auto | gold | blue | green | red | own, accent_colour = #RRGGBB (own's; written by the palette, no row)

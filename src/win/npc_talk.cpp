@@ -441,7 +441,7 @@ static void liveFrame(State& s) {
         std::vector<NpcRunView> out;
         for (const nt::Run& r : runs) {
             char col[16];
-            std::snprintf(col, sizeof col, "#%06x", unsigned(uaui::themed(r.rgb) & 0xFFFFFF));
+            std::snprintf(col, sizeof col, "#%06x", unsigned(uaui::themed(r.rgb, uitheme::Group::Windows) & 0xFFFFFF));
             out.push_back(NpcRunView{r.text, col});
         }
         return out;
@@ -453,7 +453,7 @@ static void liveFrame(State& s) {
     for (size_t i = 0; i < optionRuns.size(); ++i)
         options.push_back(NpcOptionView{views(optionRuns[i]), int(i) == s.show.remembered});
     const Rml::String button = t.button == nt::Button::Next ? tx.next : t.button == nt::Button::Close ? tx.close : "";
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Windows);
     const bool sameLines = lines.size() == s.lineViews.size() &&
                            std::equal(lines.begin(), lines.end(), s.lineViews.begin(),
                                       [](const NpcLineView& a, const NpcLineView& b) { return a.runs == b.runs; });

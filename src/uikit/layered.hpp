@@ -6,6 +6,7 @@
 #include <RmlUi/Core/DataModelHandle.h>
 #include <RmlUi/Core/Types.h>
 
+#include "core/ui_theme.hpp"
 #include "core/window_panel.hpp"
 
 namespace Rml {
@@ -52,6 +53,9 @@ enum class Align : uint8_t { Left, Right, Center };
 struct Builder {
     Layer& layer;
     panel::Box origin;
+    // 3.0.24-beta.19: its colours through this group's theme in use (core/ui_theme paint); the layered windows (the
+    // login, the characters, «Характеристики») are the other windows'
+    uitheme::Group group = uitheme::Group::Windows;
     size_t hadBoxes = 0, hadHits = 0, hadWords = 0, hadIcons = 0;
     explicit Builder(Layer& l, const panel::Box& o);
     ~Builder();  // the lists never shorter than before (RmlUi reads them while they change)

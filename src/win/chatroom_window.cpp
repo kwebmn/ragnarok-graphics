@@ -318,7 +318,7 @@ static void liveFrame(State& s) {
     if (!s.live.made()) return;
     const rc::Texts t = texts(s);
     const rc::Card& c = s.card;
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Chat);
     const int focus = c.focus == rc::Field::Title ? 1 : c.focus == rc::Field::Password ? 2 : 0;
     const Rml::String stars(c.passwordLength, '*');
     if (c.limits != s.limitViews || t.heading != s.heading || t.titleLabel != s.titleLabel || c.title != s.title ||

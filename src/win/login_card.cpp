@@ -829,7 +829,7 @@ void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight
                           for (const enterveil::Words& w : enterveil::words(L, texts))
                               c.words.push_back(uisheet::Word{
                                   x + w.box.x, y + w.box.y, w.box.w, w.box.h, w.px, w.box.h, w.text,
-                                  uisheet::Content::rgba(w.rgb, 1),
+                                  c.rgba(w.rgb, 1),
                                   std::string(w.bold ? "word bold" : "word") +
                                       (w.align == enterveil::Align::Left    ? ""
                                        : w.align == enterveil::Align::Right ? " right"
@@ -853,7 +853,7 @@ void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight
             c.rect(c.under, L.pill, L.pill.h / 2, 0x10141C, 0.94f, 0xC9A55B, s.toastHot ? 0.75f : 0.55f, L.s);
             for (const shelftoast::Words& w : shelftoast::words(L, s.toast, say(settings::Text::ShelfUndo), s.toastHot))
                 c.words.push_back(uisheet::Word{w.box.x, w.box.y, w.box.w, w.box.h, w.px, w.box.h, w.text,
-                                                uisheet::Content::rgba(w.rgb, 1), w.bold ? "word bold" : "word"});
+                                                c.rgba(w.rgb, 1), w.bold ? "word bold" : "word"});
         });
 
 }
@@ -1152,7 +1152,7 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
                                 ll::rml(), ll::bind, [&](ll::Model& m) {
         const float sc = s.layout.s;
         constexpr uint32_t kGold2 = 0xE6CB8A, kMuted = 0x9AA3B5;
-        m.ground = uisheet::Sheet::ground(0x10141C, std::max(0.94f, uistyle::window()));
+        m.ground = uisheet::Sheet::ground(0x10141C, std::max(0.94f, uistyle::window()), uitheme::Group::Windows);
         ll::fill(m, s.layout, s.options, s.fields, s.show, texts(s.view));
         {  // ▾ and the eye: core logincard's shapes as pictures (IBM Plex has neither)
             const float a = s.show.hover == int(lc::Part::Drop) || s.fields.dropOpen ? 1.0f : 0.8f;

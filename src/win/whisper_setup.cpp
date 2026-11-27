@@ -218,7 +218,7 @@ static void liveFrame(State& s) {
     std::vector<SwitchRowView> rows;
     for (size_t i = 0; i < t.labels.size(); ++i)
         rows.push_back(SwitchRowView{t.labels[i], i < s.values.size() && s.values[i]});
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Chat);
     const bool same = rows.size() == s.rowViews.size() &&
                       std::equal(rows.begin(), rows.end(), s.rowViews.begin(),
                                  [](const SwitchRowView& a, const SwitchRowView& b) {

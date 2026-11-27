@@ -258,7 +258,7 @@ bool uiFrame(State& s) {
         };
         u.g = BoxV{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 10 * sc, 1.0f * sc, "glass"};
         char ground[16];
-        std::snprintf(ground, sizeof ground, "#%06x%02x", unsigned(uaui::themed(0x10141C)),
+        std::snprintf(ground, sizeof ground, "#%06x%02x", unsigned(uaui::themed(0x10141C, uitheme::Group::Hud)),
                       int(std::lround(uistyle::panel() * 255)) & 0xFF);
         u.ground = ground;
         box(panel::Box{0, 34 * sc - 1.0f * sc, float(L.w), 1.0f * sc}, 0, "rule");  // under the header
@@ -278,7 +278,7 @@ bool uiFrame(State& s) {
                                             tk::Texts{say(settings::Text::TrackerTitle),
                                                       say(settings::Text::TrackerMore)},
                                             s.folded)) {
-            std::snprintf(colour, sizeof colour, "#%06x", unsigned(uaui::themed(w.rgb) & 0xFFFFFF));
+            std::snprintf(colour, sizeof colour, "#%06x", unsigned(uaui::themed(w.rgb, uitheme::Group::Hud) & 0xFFFFFF));
             const char* align = w.align == tk::Align::Right    ? " right"
                                 : w.align == tk::Align::Center ? " centre"
                                                                : "";

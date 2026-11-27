@@ -471,7 +471,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.live.doc.anywhere = true;  // 3.0.18-beta.33: before the world
     s.sheetShown = s.live.frame("charselect", s.shown, s.layout.x, s.layout.y, s.sheetGen, cp::rml(), cp::bind,
                                 [&](cp::Model& m) {
-                                    m.ground = uisheet::Sheet::ground(0x10141C, std::max(0.94f, uistyle::window()));
+                                    m.ground = uisheet::Sheet::ground(0x10141C, std::max(0.94f, uistyle::window()), uitheme::Group::Windows);
                                     cp::fill(m, s.layout, s.slots, s.show, texts(),
                                              [&](const panel::Picture* p) { return s.live.icon(p); });
                                 });

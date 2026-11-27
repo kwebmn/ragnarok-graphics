@@ -270,7 +270,7 @@ static void fillSheet(const One& o, uisheet::Content& c) {
     auto& u = c.under;
     c.w = float(L.w), c.h = float(L.h);
     c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
-    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
+    c.ground = uisheet::Sheet::ground(kCard, uistyle::window(), c.group);
     const bool closeHot = o.hover == wc::Part::Close;
     c.rect(u, L.close, 6 * sc, kWhite, closeHot ? 0.14f : 0.0f, kWhite, closeHot ? 0.3f : 0.0f, 1.0f * sc);
     c.rect(u, L.lines, 8 * sc, kBlack, 0.25f, kWhite, 0.06f, 1.0f * sc);

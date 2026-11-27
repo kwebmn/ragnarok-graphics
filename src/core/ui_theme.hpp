@@ -31,6 +31,10 @@ struct Look {
     std::array<GroupTone, kGroups> groups{};  // Same: the tone above
     uint32_t accent = 0;                      // 0: the tone's (dark: the gold #e6cb8a, light: the blue #2f5fd0)
 };
+inline bool operator==(const Look& a, const Look& b) {
+    return a.tone == b.tone && a.groups == b.groups && a.accent == b.accent;
+}
+inline bool operator!=(const Look& a, const Look& b) { return !(a == b); }
 
 Theme named(const std::string& name);  // "light": light; anything else (dark, the old standard, classic...): dark
 Theme themeFor(const Look& look, Group g);
@@ -50,5 +54,14 @@ uint32_t accentOf(const std::string& word, const std::string& colour);
 uint32_t paletteColour(int row, int col);  // «свій колір»: 3 rows (darker to lighter) x 10 hues
 // A document's markup with its group's style sheet: href="uaui:theme.rcss" -> href="uaui:theme-<group>.rcss"
 std::string themedLink(const std::string& rml, Group g);
+// The group a style sheet's name is for: "uaui:theme-<group>.rcss", or "uaui:theme.rcss" (a link not rewritten: the
+// other windows'); false: not a style sheet of ours
+bool styleGroup(const std::string& path, Group& g);
+
+// The themes in use, a group each (uaUI sets them as the look changes; none set: dark, the colours as drawn) - the
+// colours the windows' code writes into their documents go through these (uaui::themed, the live kits)
+void setActive(const std::array<Theme, kGroups>& themes);
+const Theme& active(Group g);
+uint32_t paint(uint32_t rgb, Group g);  // colour(active(g), rgb)
 
 }  // namespace uagfx::uitheme

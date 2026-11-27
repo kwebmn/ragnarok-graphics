@@ -477,7 +477,7 @@ static void liveFrame(State& s) {
     std::vector<Rml::String> menu;
     for (const sc::Item i : s.menuItems) menu.push_back(itemWord(i));
     const std::vector<Rml::String> tabs{t.tabs[0], t.tabs[1]};
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Windows);
     const int online = sc::onlineCount(s.entries);
     const Rml::String count = s.entries.empty() || (party && s.partyName.empty())
                                   ? ""

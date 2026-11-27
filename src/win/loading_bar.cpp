@@ -101,7 +101,7 @@ void frame(bool on, double k, int targetWidth, int targetHeight) {
         const panel::Box fill{L.fill.x - L.track.x, L.fill.y - L.track.y, L.fill.w, L.fill.h};
         c.rect(c.over, fill, fill.h / 2, 0xC9A55B, 0.95f);  // the theme's gold
         c.words.push_back(uisheet::Word{0, 0, L.track.w, L.track.h, L.px, L.track.h, L.percent,
-                                        uisheet::Content::rgba(0xF4F1EA, 1), "word bold centre halo"});
+                                        c.rgba(0xF4F1EA, 1), "word bold centre halo"});
     });
 }
 

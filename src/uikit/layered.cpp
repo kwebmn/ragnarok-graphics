@@ -105,8 +105,8 @@ Builder::~Builder() {
 void Builder::box(const panel::Box& b, float radius, uint32_t fill, float fillA, uint32_t edge, float edgeA,
                   float edgeW) {
     if (b.w <= 0 || b.h <= 0) return;
-    layer.boxes.push_back(BoxV{b.x - origin.x, b.y - origin.y, b.w, b.h, radius, edgeW, hexa(fill, fillA),
-                               hexa(edge, edgeA)});
+    layer.boxes.push_back(BoxV{b.x - origin.x, b.y - origin.y, b.w, b.h, radius, edgeW,
+                               hexa(uitheme::paint(fill, group), fillA), hexa(uitheme::paint(edge, group), edgeA)});
 }
 
 void Builder::hit(const char* part, int index, const panel::Box& b) {
@@ -117,7 +117,8 @@ void Builder::hit(const char* part, int index, const panel::Box& b) {
 void Builder::word(const panel::Box& b, const std::string& text, uint32_t rgb, float px, bool bold, Align a) {
     if (text.empty()) return;
     const char* align = a == Align::Right ? " right" : a == Align::Center ? " centre" : "";
-    layer.words.push_back(WordV{b.x - origin.x, b.y - origin.y, b.w, b.h, px, text, hexa(rgb, 1),
+    layer.words.push_back(WordV{b.x - origin.x, b.y - origin.y, b.w, b.h, px, text,
+                                hexa(uitheme::paint(rgb, group), 1),
                                 std::string(bold ? "w bold" : "w") + align});
 }
 

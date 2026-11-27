@@ -264,7 +264,7 @@ static void liveFrame(State& s) {
     for (int k = 0; k < 4; ++k) commands.push_back(PetCommandView{t.commands[k], pt::allowed(i, pt::Command(k))});
     std::string level = t.level;
     if (const size_t p = level.find("{1}"); p != std::string::npos) level.replace(p, 3, std::to_string(i.level));
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Windows);
     const float hunger = float(std::clamp(i.hunger, 0, 100)), intimacy = float(std::clamp(i.intimacy, 0, 1000)) / 10;
     const bool sameCommands = commands.size() == s.commandViews.size() &&
                               std::equal(commands.begin(), commands.end(), s.commandViews.begin(),

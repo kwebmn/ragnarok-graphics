@@ -60,7 +60,10 @@ struct LivePart {
         }
         return uaui::picture(&it->second, uaui::stamp(&it->second), sources["m:" + key]);
     }
-    static std::string ground() { return uisheet::Sheet::ground(0x10141C, uistyle::window()); }
+    // 3.0.24-beta.19: in its document's group's theme (made before `fill` is called)
+    std::string ground() const {
+        return uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::groupOf(doc.name));
+    }
 
     uaui::Doc doc;
     Model model;

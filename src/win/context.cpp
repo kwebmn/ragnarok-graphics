@@ -1272,7 +1272,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uaui::setMotion(config.uauiMotion);  // 3.0.18-beta.58
     uaui::setEffects(config.uauiEffects);  // 3.0.18-beta.61
     // 3.0.18-beta.75 (stage 6): uaUI always - the old painters are gone ([interface] uaui read and dropped)
-    uaui::begin(window, true, gameCodePage(config), pk, pw, ph, config.uiTheme);  // 3.0.18-beta.11: uaUI's frame, its parts next
+    uaui::begin(window, true, gameCodePage(config), pk, pw, ph, lookOf(config));  // 3.0.18-beta.11: uaUI's frame, its parts next
     g_parts.mark("uaui begin", nowMs());
     netwatchwin::frame();  // 3.0.11-beta.122: the map server's connection read each second (the minimap's badge)
     nettrailwin::frame(config.reportDisconnects, map_, foreground);  // 3.0.20-beta.60: a lost connection told

@@ -46,9 +46,9 @@ bool isShadowEntry(const uint8_t bytes[6]);
 // (core/blind_exe.hpp): not a skill made softer, laid over the world once its effects are drawn.
 // 2.7.13: HitFlash - not the game's: a monster's sprite drawn again in white over itself, as it is hit (Device7);
 // 2.7.14: Glint - a card's star on the ground (Device7), likewise
-// 3.0.18-beta.64: Backdrop - the new interface's frosted glass under a window (drawn by DrawShader::Backdrop)
+// 3.0.24-beta.19: Backdrop (3.0.18-beta.64, the frosted glass under a window) gone with the glass windows
 enum class Kind : uint8_t {
-    None, Aura, Firefly, Ray, Shadow, Skill, Portal, Darkness, HitFlash, Glint, Panel, Backdrop,
+    None, Aura, Firefly, Ray, Shadow, Skill, Portal, Darkness, HitFlash, Glint, Panel,
     Wings  // 3.0.20-beta.24: a wearer's wings (win/wings), the driver's quads - stamped into the depth as its body
 };
 // 3.0.3-beta.8: Panel - the driver's panel of the game windows (win/window_panel), a picture already at the

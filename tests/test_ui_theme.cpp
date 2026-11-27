@@ -1,3 +1,4 @@
+#include <array>
 #include <string>
 
 #include "core/ui_theme.hpp"
@@ -78,6 +79,7 @@ TEST(ui_theme_each_window_has_its_group) {
     CHECK(uitheme::groupOf("trade") == Group::Trade && uitheme::groupOf("my shop") == Group::Trade);
     CHECK(uitheme::groupOf("skills") == Group::Windows && uitheme::groupOf("npc") == Group::Windows);
     CHECK(uitheme::groupOf("options") == Group::Settings);
+    CHECK(uitheme::groupOf("party") == Group::Hud && uitheme::groupOf("whisper") == Group::Chat);
     CHECK(uitheme::groupOf("no such window") == Group::Windows);
     CHECK(std::string(uitheme::groupWord(Group::Hud)) == "hud");
     CHECK(std::string(uitheme::groupWord(Group::Trade)) == "trade");
@@ -153,4 +155,48 @@ TEST(ui_theme_rewrites_a_style_sheet) {
     const std::string shaped = uitheme::themedCss(t, css);
     CHECK(shaped.find("border-radius: 3dp") != std::string::npos);  // 10 x 0.3
     CHECK(shaped.find("border: 1.6dp") != std::string::npos);
+}
+
+// 3.0.24-beta.19 (task 3): each group's style sheet a file of its own - the name the markup's link gets is the one
+// uaUI's files answer
+TEST(ui_theme_style_file_names_round_trip) {
+    for (int i = 0; i < uitheme::kGroups; ++i) {
+        const uitheme::Group g = uitheme::Group(i);
+        const std::string rml = uitheme::themedLink("<link type=\"text/rcss\" href=\"uaui:theme.rcss\"/>", g);
+        const size_t from = rml.find("href=\"") + 6;
+        uitheme::Group back = uitheme::Group::Hud;
+        CHECK(uitheme::styleGroup(rml.substr(from, rml.find('"', from) - from), back) && back == g);
+    }
+    uitheme::Group g = uitheme::Group::Hud;
+    CHECK(uitheme::styleGroup("uaui:theme.rcss", g) && g == uitheme::Group::Windows);  // a link not rewritten
+    CHECK(!uitheme::styleGroup("uaui:window.rml", g) && !uitheme::styleGroup("uaui:theme-nope.rcss", g));
+    CHECK(!uitheme::styleGroup("theme.rcss", g));
+}
+
+TEST(ui_theme_group_style_differs_by_tone) {
+    uitheme::Look look;
+    look.tone = uitheme::Tone::Light;
+    look.groups[int(uitheme::Group::Hud)] = uitheme::GroupTone::Dark;
+    const std::string css = "body { background-color: #10141c; }";
+    CHECK(uitheme::themedCss(uitheme::themeFor(look, uitheme::Group::Hud), css) == css);
+    CHECK(uitheme::themedCss(uitheme::themeFor(look, uitheme::Group::Chat), css) != css);
+    uitheme::Look other = look;
+    CHECK(other == look);
+    other.accent = 0x2E8B57;
+    CHECK(!(other == look));
+}
+
+// the colours the windows' code writes (uaUI's own and the live kits') through the group's theme in use
+TEST(ui_theme_active_themes_paint_by_group) {
+    CHECK(uitheme::paint(0xEEF2F8, uitheme::Group::Items) == 0xEEF2F8u);  // none set: the dark, as drawn
+    uitheme::Look look;
+    look.groups[int(uitheme::Group::Items)] = uitheme::GroupTone::Light;
+    std::array<uitheme::Theme, uitheme::kGroups> themes;
+    for (int i = 0; i < uitheme::kGroups; ++i) themes[size_t(i)] = uitheme::themeFor(look, uitheme::Group(i));
+    uitheme::setActive(themes);
+    CHECK(uitheme::paint(0xEEF2F8, uitheme::Group::Items) == 0x181C26u);
+    CHECK(uitheme::paint(0xEEF2F8, uitheme::Group::Hud) == 0xEEF2F8u);
+    CHECK(uitheme::active(uitheme::Group::Items).greys == uitheme::Greys::Light);
+    uitheme::setActive({});  // as it was for the other tests
+    CHECK(uitheme::paint(0xEEF2F8, uitheme::Group::Items) == 0xEEF2F8u);
 }

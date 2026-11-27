@@ -231,7 +231,7 @@ std::vector<Thing> readList(const State& s, uint32_t headAt) {
         // 3.0.18-beta.138 (the owner: things in a shop not seen into): its slots, its cards' line; .142 the forged's
         // maker (win/info_card describe)
         infocardwin::describe(t.info, r.id, s.codePage, r.name, r.inside);
-        if (const std::string e = infocardwin::elementHex(r.id, t.info); !e.empty()) r.colour = e;  // .144
+        r.colour = infocardwin::nameHex(r.id, t.info, uitheme::Group::Trade);  // .144
         t.at = node + kInfo;
         const auto f = files.find(id);
         if (f != files.end()) r.icon = clienttables::icon(f->second, iw::iconSide(s.scale), 4 * s.scale);
@@ -580,7 +580,7 @@ static void liveFrame(State& s) {
     const bool refused = s.refusedAt && GetTickCount64() - s.refusedAt < kRefusedMs;
     vs::Texts tt = t;
     if (refused) tt.hint = s.refusedHint;
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Trade);
     const bool same = rows.size() == s.rowViews.size() &&
                       std::equal(rows.begin(), rows.end(), s.rowViews.begin(),
                                  [](const VendRowView& a, const VendRowView& b) {

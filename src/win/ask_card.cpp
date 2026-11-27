@@ -562,7 +562,7 @@ static void liveFrame(State& s) {
     }
     std::vector<Rml::String> quick;
     if (s.kind == ac::Kind::Count) quick = {t.quick[0], t.quick[1], t.quick[2]};
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Items);
     const bool sameButtons = views.size() == s.buttonViews.size() &&
                              std::equal(views.begin(), views.end(), s.buttonViews.begin(),
                                         [](const AskButtonView& a, const AskButtonView& b) {

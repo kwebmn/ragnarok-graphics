@@ -590,7 +590,7 @@ static void fillSheet(One& o, uisheet::Content& c) {
     };
     c.w = float(L.w), c.h = float(L.h);
     c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
-    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
+    c.ground = uisheet::Sheet::ground(kCard, uistyle::window(), c.group);
     c.rect(u, panel::Box{L.glass.x + 1 * sc, L.glass.y + 1 * sc, L.glass.w - 2 * sc, L.body.y - 6 * sc}, 11 * sc,
            kWhite, 0.035f);
     centred(d.icon, L.icon);
@@ -830,11 +830,10 @@ uint32_t elementColour(int id, const uint8_t* itemInfo) {
     return itemelements::colour(itemelements::ofThing(id, cards));
 }
 
-std::string elementHex(int id, const uint8_t* itemInfo) {
+std::string nameHex(int id, const uint8_t* itemInfo, uitheme::Group g) {
     const uint32_t c = elementColour(id, itemInfo);
-    if (!c) return "";
     char b[8];
-    std::snprintf(b, sizeof b, "#%06x", unsigned(c));
+    std::snprintf(b, sizeof b, "#%06x", unsigned(uaui::themed(c ? c : 0xEEF2F8, g) & 0xFFFFFF));
     return b;
 }
 

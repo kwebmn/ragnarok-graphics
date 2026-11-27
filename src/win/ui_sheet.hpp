@@ -60,6 +60,8 @@ inline bool operator==(const Ring& a, const Ring& b) {
 }
 
 struct Content {
+    // 3.0.24-beta.19: its colours in this group's theme (the sheet's document's: Sheet::frame sets it)
+    uitheme::Group group = uitheme::Group::Windows;
     float w = 0, h = 0, op = 1;  // op: the whole one's opacity (3.0.18-beta.32: the quiet chat)
     Box glass;  // w 0: none
     Rml::String ground = "#00000000";  // 3.0.18-beta.86: never an empty style value, even before the first fill
@@ -93,10 +95,15 @@ struct Content {
         x.bd = rgba(edge, edgeA);
         to.push_back(x);
     }
-    static Rml::String rgba(uint32_t rgb, float a) {
+    Rml::String rgba(uint32_t rgb, float a) const {
         char b[16];
         const int alpha = a <= 0 ? 0 : a >= 1 ? 255 : int(a * 255 + 0.5f);
-        std::snprintf(b, sizeof b, "#%06x%02x", unsigned(uaui::themed(rgb) & 0xFFFFFF), alpha);
+        std::snprintf(b, sizeof b, "#%06x%02x", unsigned(uaui::themed(rgb, group) & 0xFFFFFF), alpha);
+        return b;
+    }
+    Rml::String hex(uint32_t rgb) const {  // 3.0.24-beta.19: a word's colour, in the theme
+        char b[16];
+        std::snprintf(b, sizeof b, "#%06x", unsigned(uaui::themed(rgb, group) & 0xFFFFFF));
         return b;
     }
     // the words of a window's core (any of its Words: box, text, rgb, px, bold, align)
@@ -109,7 +116,7 @@ struct Content {
         char colour[16];
         for (W x : in) {
             x.box.x += dx, x.box.y += dy;
-            std::snprintf(colour, sizeof colour, "#%06x", unsigned(uaui::themed(x.rgb) & 0xFFFFFF));
+            std::snprintf(colour, sizeof colour, "#%06x", unsigned(uaui::themed(x.rgb, group) & 0xFFFFFF));
             const char* align = x.align == decltype(x.align)::Right    ? " right"
                                 : x.align == decltype(x.align)::Center ? " centre"
                                                                        : "";
@@ -152,7 +159,8 @@ public:
     // 3.0.18-beta.31: the controller's button `button` (padglyph::Button) `h` high at (x, y) as an icon
     void glyph(Content& c, int button, bool sony, float x, float y, float h);
     // The glass's ground: the window's colour at the windows' opacity
-    static std::string ground(uint32_t rgb, float opacity);
+    // 3.0.24-beta.19: in the theme of `g` - the group of the window it is the ground of
+    static std::string ground(uint32_t rgb, float opacity, uitheme::Group g);
     // 3.0.18-beta.43: called from a window's draw (the stack's order): its document at its place in the stack
     void raise() {
         if (top) return;  // 3.0.18-beta.69: the top layer's stay over everything

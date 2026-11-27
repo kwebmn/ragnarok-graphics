@@ -309,7 +309,7 @@ static void liveFrame(State& s) {
                       });
     if (!same) s.rows = std::move(rows), s.live.doc.dirty("rows");
     const std::vector<Rml::String> tabs{t.tabs[0], t.tabs[1], t.tabs[2]};
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Chat);
     if (tabs != s.tabs || int(s.show.tab) != s.tab || t.title != s.title || t.on != s.onWord || t.off != s.offWord ||
         ground != s.ground) {
         s.tabs = tabs, s.tab = int(s.show.tab), s.title = t.title, s.onWord = t.on, s.offWord = t.off, s.ground = ground;

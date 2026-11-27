@@ -751,7 +751,7 @@ static void liveFrame(State& s) {
         s.defaults = settingswin::defaults(level);
         s.rowsKey.clear();
     }
-    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Settings);
     const Rml::String title = say(settings::Text::MenuSettings);
     if (title != s.m.title || ground != s.m.ground) {
         s.m.title = title, s.m.hint = say(settings::Text::SettingsWinHint), s.m.ground = ground;
