@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.34 — what's new · 2026-11-27
+
+«Items»' tabs whole again; MCP for the full test: performance, logs, the windows' check, the game's state.
+
+- **«Items»:** the vertical tabs on the left as wide as their column again, the word in the frame's middle. The other windows' general tab rule had made them half as wide, the chosen one's gold frame beside its word.
+- **MCP (for an AI helper):** new tools for a full test on a laptop - `perf` (the last minute's frames: FPS, slow frames, stalls, the card's passes, power, memory), the renderer's and the pad's logs and the lines «since a moment», `ui` (windows whose words are faint or cut), `game` (character, items, chat), `settings` (every setting with the values it takes).
+- To check: Alt+O → «Checking now» → «Items: the tabs on the left whole».
+
 # uaRO Graphics 3.0.24-beta.33 — what's new · 2026-11-27
 
 The theme changes at once and the light one reads; the «Accent colour» row no longer breaks.
