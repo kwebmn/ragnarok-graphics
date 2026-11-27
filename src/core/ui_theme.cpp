@@ -1,6 +1,7 @@
 #include "core/ui_theme.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -27,26 +28,115 @@ std::string trimmed(const std::string& s) {
     return a == std::string::npos ? std::string() : s.substr(a, b - a + 1);
 }
 
-bool hex(const std::string& s, uint32_t& out) {
+bool hex(const std::string& s, uint32_t& out) {  // "#RRGGBB" exactly
     if (s.size() != 7 || s[0] != '#') return false;
-    char* end = nullptr;
-    out = uint32_t(std::strtoul(s.c_str() + 1, &end, 16));
-    return end && *end == 0;
+    for (size_t i = 1; i < 7; ++i)
+        if (!std::isxdigit(static_cast<unsigned char>(s[i]))) return false;
+    out = uint32_t(std::strtoul(s.c_str() + 1, nullptr, 16));
+    return true;
+}
+
+constexpr uint32_t kGold = 0xE6CB8A, kBlue = 0x2F5FD0, kInk = 0x181C26;
+constexpr uint32_t kNoWord = 0xFFFFFFFFu;
+constexpr float kReadable = 0.45f;  // the light ground's colours: no lighter than this, to be read on it
+
+float hue(Rgb c) {  // degrees
+    const float mx = std::max({c.r, c.g, c.b}), d = mx - std::min({c.r, c.g, c.b});
+    if (d <= 0) return 0;
+    float h = mx == c.r ? (c.g - c.b) / d : mx == c.g ? 2 + (c.b - c.r) / d : 4 + (c.r - c.g) / d;
+    h *= 60;
+    return h < 0 ? h + 360 : h;
+}
+
+// The gold the windows are drawn with (#e6cb8a, #c9a55b, #f3c653...): not the oranges (warnings), not the browns
+bool gold(Rgb c) {
+    const float mx = std::max({c.r, c.g, c.b});
+    if (mx < 0.3f || chroma(c) / mx <= 0.25f) return false;
+    const float h = hue(c);
+    return h >= 36 && h <= 50;
+}
+
+// A gold in the accent: as much lighter or darker than the accent as it is than the windows' gold
+uint32_t accented(Rgb c, uint32_t accent) {
+    const Rgb a = of(accent);
+    const float la = lum(a), k = lum(c) / lum(of(kGold)), want = la * k;
+    if (want <= la || la >= 1) return to({a.r * k, a.g * k, a.b * k});
+    const float w = std::clamp((want - la) / (1 - la), 0.0f, 1.0f);  // lighter: toward white
+    return to({a.r + (1 - a.r) * w, a.g + (1 - a.g) * w, a.b + (1 - a.b) * w});
+}
+
+// The spec's light: the windows' and cards' ground #f6f8fc, the cells white (and the dark insets), the words #181c26
+const std::unordered_map<uint32_t, uint32_t>& lightAnchors() {
+    static const std::unordered_map<uint32_t, uint32_t> m = {
+        {0x10141C, 0xF6F8FC}, {0x161B22, 0xF6F8FC}, {0x1B1D24, 0xFFFFFF}, {0x000000, 0xFFFFFF},
+        {0xFFFFFF, kInk},     {0xEEF2F8, kInk},     {0xECEFF5, kInk}};
+    return m;
+}
+
+// The text's colours through the theme; `word` (not kNoWord): the grey words' («color:») colour
+std::string recoloured(const Theme& t, const std::string& text, uint32_t word) {
+    static const std::regex hexes("#([0-9a-fA-F]{6})([0-9a-fA-F]{2})?\\b");
+    std::string out;
+    out.reserve(text.size());
+    auto at = text.cbegin();
+    for (std::sregex_iterator it(text.begin(), text.end(), hexes), end; it != end; ++it) {
+        const std::smatch& m = *it;
+        out.append(at, m[0].first);
+        const uint32_t rgb = uint32_t(std::strtoul(m[1].str().c_str(), nullptr, 16));
+        uint32_t c = colour(t, rgb);
+        if (word != kNoWord && chroma(of(rgb)) <= 0.18f) {
+            size_t k = size_t(m.position(0));  // the property before: «color:» alone (not «background-color:»)
+            while (k > 0 && (text[k - 1] == ' ' || text[k - 1] == '\t')) --k;
+            if (k > 0 && text[k - 1] == ':') {
+                size_t e = k - 1;
+                while (e > 0 && text[e - 1] == ' ') --e;
+                size_t s = e;
+                while (s > 0 && (std::isalnum(static_cast<unsigned char>(text[s - 1])) || text[s - 1] == '-')) --s;
+                if (text.compare(s, e - s, "color") == 0) c = word;
+            }
+        }
+        char b[16];
+        std::snprintf(b, sizeof b, "#%06x", unsigned(c));
+        out += b;
+        out += m[2].str();
+        at = m[0].second;
+    }
+    out.append(at, text.cend());
+    return out;
+}
+
+// A rule's body on the accent's ground (its «background-color:» a gold, the accent not the gold): its grey words
+// light or dark by that ground; otherwise kNoWord
+uint32_t wordOnAccent(const Theme& t, const std::string& body) {
+    if (!t.accent) return kNoWord;
+    static const std::regex ground("(^|[^-a-z])background-color:\\s*#([0-9a-fA-F]{6})");
+    std::smatch m;
+    if (!std::regex_search(body, m, ground)) return kNoWord;
+    const Rgb c = of(uint32_t(std::strtoul(m[2].str().c_str(), nullptr, 16)));
+    if (!gold(c)) return kNoWord;
+    return lum(of(accented(c, t.accent))) > 0.55f ? kInk : 0xFFFFFF;
 }
 
 }  // namespace
 
 Theme named(const std::string& name) {
+    if (name != "light") return Theme{};
+    Look look;
+    look.tone = Tone::Light;
+    return themeFor(look, Group::Windows);
+}
+
+Theme themeFor(const Look& look, Group g) {
+    const GroupTone own = look.groups[size_t(g)];
+    const Tone tone = own == GroupTone::Same ? look.tone : own == GroupTone::Light ? Tone::Light : Tone::Dark;
     Theme t;
-    if (name == "classic") {  // the old game's look: warm browns and cream, square-ish corners
-        t.name = name;
-        t.greys = Greys::Warm;
-        t.radius = 0.3f;
-    } else if (name == "contrast") {  // darker grounds, brighter words, bolder edges
-        t.name = name;
-        t.greys = Greys::Spread;
-        t.edge = 1.6f;
+    if (tone == Tone::Light) {
+        t.name = "light";
+        t.greys = Greys::Light;
+        t.exact = lightAnchors();
     }
+    const uint32_t accent = look.accent ? look.accent & 0xFFFFFF : tone == Tone::Light ? kBlue : 0;
+    t.accent = accent == kGold ? 0 : accent;
     return t;
 }
 
@@ -54,18 +144,18 @@ uint32_t colour(const Theme& t, uint32_t rgb) {
     rgb &= 0xFFFFFF;
     const auto it = t.exact.find(rgb);
     if (it != t.exact.end()) return it->second;
-    if (t.greys == Greys::Keep) return rgb;
     const Rgb c = of(rgb);
-    if (chroma(c) > 0.18f) return rgb;  // a colour that means something (HP, SP, gold, warnings) stays
+    if (t.accent && gold(c)) return accented(c, t.accent);
+    if (t.greys == Greys::Keep) return rgb;
     const float l = lum(c);
-    if (t.greys == Greys::Warm) {  // a warm tint of the same brightness
-        const Rgb tint = l < 0.5f ? Rgb{1.30f, 1.0f, 0.72f} : Rgb{1.04f, 1.0f, 0.90f};
-        const float k = l / lum(tint);
-        return to({tint.r * k, tint.g * k, tint.b * k});
+    if (chroma(c) > 0.18f) {  // a colour that means something (HP, SP, warnings) stays, dark enough to read
+        if (l <= kReadable) return rgb;
+        const float k = kReadable / l;
+        return to({c.r * k, c.g * k, c.b * k});
     }
-    const float m = l < 0.5f ? l * 0.55f : 1 - (1 - l) * 0.45f;  // Spread: the darks darker, the lights lighter
-    const float k = l > 0 ? m / l : 0;
-    return to({c.r * k, c.g * k, c.b * k});
+    // Light: the greys turned over (the dark grounds light, the light words dark), their tint kept
+    const float m = std::clamp(0.976f - 1.097f * (l - 0.13f), 0.06f, 0.985f);
+    return to({m + (c.r - l) * 0.8f, m + (c.g - l) * 0.8f, m + (c.b - l) * 0.8f});
 }
 
 void read(const std::string& text, Theme& t, std::string& bad) {
@@ -96,22 +186,29 @@ void read(const std::string& text, Theme& t, std::string& bad) {
 }
 
 std::string themedCss(const Theme& t, const std::string& css) {
-    if (t.greys == Greys::Keep && t.exact.empty() && t.radius == 1 && t.edge == 1) return css;
+    if (t.greys == Greys::Keep && t.exact.empty() && !t.accent && t.radius == 1 && t.edge == 1) return css;
     std::string out;
     out.reserve(css.size());
-    const std::regex hexes("#([0-9a-fA-F]{6})([0-9a-fA-F]{2})?\\b");
-    auto at = css.cbegin();
-    for (std::sregex_iterator it(css.begin(), css.end(), hexes), end; it != end; ++it) {
-        const std::smatch& m = *it;
-        out.append(at, m[0].first);
-        const uint32_t rgb = uint32_t(std::strtoul(m[1].str().c_str(), nullptr, 16));
-        char b[16];
-        std::snprintf(b, sizeof b, "#%06x", unsigned(colour(t, rgb)));
-        out += b;
-        out += m[2].str();
-        at = m[0].second;
+    size_t i = 0;  // each innermost rule's body on its own (a word on the accent's ground), the rest as it comes
+    while (i < css.size()) {
+        const size_t open = css.find('{', i);
+        const size_t close = open == std::string::npos ? std::string::npos : css.find('}', open);
+        if (close == std::string::npos) {
+            out += recoloured(t, css.substr(i), kNoWord);
+            break;
+        }
+        const size_t inner = css.find('{', open + 1);
+        if (inner != std::string::npos && inner < close) {  // @media, @keyframes: their rules inside
+            out += recoloured(t, css.substr(i, inner - i), kNoWord);
+            i = inner;
+            continue;
+        }
+        const std::string body = css.substr(open + 1, close - open - 1);
+        out += recoloured(t, css.substr(i, open + 1 - i), kNoWord);
+        out += recoloured(t, body, wordOnAccent(t, body));
+        out += '}';
+        i = close + 1;
     }
-    out.append(at, css.cend());
     const auto scaled = [](const std::string& text, const std::regex& re, float k) {
         if (k == 1) return text;
         std::string r;
@@ -129,6 +226,73 @@ std::string themedCss(const Theme& t, const std::string& css) {
     };
     out = scaled(out, std::regex("(border-radius:\\s*)([0-9.]+)"), t.radius);
     out = scaled(out, std::regex("(border(?:-width)?:\\s*)([0-9.]+)"), t.edge);
+    return out;
+}
+
+Group groupOf(const std::string& docName) {
+    // the names uaUI's documents are made with (uaui::Doc::make, uisheet::Sheet::frame, itemgridui::Ui::frame)
+    static const std::unordered_map<std::string, Group> groups = [] {
+        std::unordered_map<std::string, Group> m;
+        for (const char* n : {"buffs", "charblock", "exp bars", "exp gain", "hotbar", "hunt", "item toast",
+                              "low hp edge", "minimap", "mvp", "recap", "target", "threat", "tracker", "cursor",
+                              "big map", "big map cross", "skill wheel", "pad panel ring", "window size grip", "cast",
+                              "ground items", "hud edit", "key hint", "loading bar", "mob card", "mob hp", "npc dots",
+                              "npc tag", "pad carry", "pad hint", "pad tiles", "signs", "merc block", "enter veil",
+                              "showcase"})
+            m[n] = Group::Hud;
+        for (const char* n : {"chat", "chat wheel", "emote", "emotes", "commands", "whisper setup", "chat room setup",
+                              "room", "answer", "macro"})
+            m[n] = Group::Chat;
+        for (const char* n : {"items", "equip", "storage", "cart", "ask", "pick"}) m[n] = Group::Items;
+        for (const char* n : {"shop", "vend shop", "vend setup", "my shop", "trade"}) m[n] = Group::Trade;
+        m["options"] = Group::Settings;
+        return m;
+    }();
+    const auto it = groups.find(docName);
+    return it == groups.end() ? Group::Windows : it->second;
+}
+
+const char* groupWord(Group g) {
+    switch (g) {
+        case Group::Hud: return "hud";
+        case Group::Chat: return "chat";
+        case Group::Items: return "items";
+        case Group::Trade: return "trade";
+        case Group::Settings: return "settings";
+        case Group::Windows: break;
+    }
+    return "windows";
+}
+
+uint32_t accentOf(const std::string& word, const std::string& colour) {
+    if (word == "gold") return kGold;
+    if (word == "blue") return kBlue;
+    if (word == "green") return 0x2E8B57;
+    if (word == "red") return 0xC0392B;
+    uint32_t c = 0;
+    return word == "own" && hex(trimmed(colour), c) ? c : 0;
+}
+
+uint32_t paletteColour(int row, int col) {  // HSL: the hue by the column, the lightness by the row
+    static constexpr float kLight[3] = {0.35f, 0.55f, 0.75f};
+    const float h = float(std::clamp(col, 0, 9)) * 36, l = kLight[std::clamp(row, 0, 2)], s = 0.75f;
+    const float c = (1 - std::fabs(2 * l - 1)) * s, x = c * (1 - std::fabs(std::fmod(h / 60, 2.0f) - 1)), m = l - c / 2;
+    Rgb v{0, 0, 0};
+    if (h < 60) v = {c, x, 0};
+    else if (h < 120) v = {x, c, 0};
+    else if (h < 180) v = {0, c, x};
+    else if (h < 240) v = {0, x, c};
+    else if (h < 300) v = {x, 0, c};
+    else v = {c, 0, x};
+    return to({v.r + m, v.g + m, v.b + m});
+}
+
+std::string themedLink(const std::string& rml, Group g) {
+    static const std::string from = "href=\"uaui:theme.rcss\"";
+    const std::string to = std::string("href=\"uaui:theme-") + groupWord(g) + ".rcss\"";
+    std::string out = rml;
+    for (size_t at = out.find(from); at != std::string::npos; at = out.find(from, at + to.size()))
+        out.replace(at, from.size(), to);
     return out;
 }
 
