@@ -23,6 +23,7 @@ ALLOWED = {
     },
     "comdlg32.dll": {
         "GetOpenFileNameW", "GetSaveFileNameW",
+        "ChooseColorW",  # 3.0.24-beta.19: «Вибрати колір...» - the accent's own colour (since Windows 2000)
     },
     "gdi32.dll": {
         "CreateDIBSection",  # 2.13: the screenshots' thumbnails
