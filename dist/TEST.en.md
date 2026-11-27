@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.24-beta.36 — what's new · 2026-11-28
+
+Fixes from the full test on a laptop (AMD Radeon 610M) over MCP.
+
+- **Start on a slow computer:** the 64-bit renderer did not compile its shaders within 90 seconds, the game drew by itself after a minute and a half of waiting - and so at every start, as nothing compiled was kept. Now the renderer takes the shaders already compiled from the game's own drawing's cache, keeps its own as it compiles them, and the game waits for it while it shows «Compiling shaders: N of M» (up to 5 minutes). The next starts take a few seconds.
+- **«Skills»:** the names and the lines under them («Quest - not learned with points») are no longer cut short beside an empty room - they reach the level on the right.
+- **Light theme:** the quiet grey words («Items»' tabs, the keys' hints) darker - readable.
+- **«Guild»:** no more RmlUi warnings in the log at its opening.
+- **MCP:** the answers always whole UTF-8 (the game's code page bytes as «�»), the `ui` words check no longer breaks on Cyrillic, `perf` shows the processor's time on Direct3D 11 too.
+
 # uaRO Graphics 3.0.24-beta.35 — what's new · 2026-11-27
 
 MCP for the full test, part 2: a watchdog in the settings app - the game started, closed and restarted, the computer's load, logs and dumps.
