@@ -7,6 +7,15 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.34 (R-AVW884): «Речі»'s vertical tabs their column's width, the word in the frame's middle
+        {"bag_tabs_34", "3.0.24-beta.34", "interface.items",
+         {"Items: the tabs on the left whole", "Речі: вкладки зліва цілі", "Вещи: вкладки слева целые"},
+         {"Alt+E, then each tab on the left: its frame as wide as the column, its word in the frame's middle; the "
+          "chosen one's gold frame round its word (100 % and a larger interface alike).",
+          "Alt+E, потім кожна вкладка зліва: рамка на всю ширину колонки, слово посередині рамки; золота рамка "
+          "вибраної — довкола її слова (і при 100 %, і при більшому інтерфейсі).",
+          "Alt+E, затем каждая вкладка слева: рамка на всю ширину колонки, слово посередине рамки; золотая рамка "
+          "выбранной — вокруг её слова (и при 100 %, и при большем интерфейсе)."}},
         // 3.0.24-beta.33 (R-8BCJAH, R-VMTY6D): the theme changed with the windows open; the light theme read
         {"theme_switch_33", "3.0.24-beta.33", "",
          {"Theme: changed at once, the light one readable", "Тема: міняється одразу, світла читається",
