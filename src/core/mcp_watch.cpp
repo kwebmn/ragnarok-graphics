@@ -15,8 +15,11 @@ const std::vector<mcp::Tool>& tools() {
          "The game on this computer: `action` status (whether uaRO.exe runs and since when, whether its window "
          "answers, whether its own MCP - the port below this one - answers, the renderer's process), start (as the "
          "launcher's play: the game with uaRO Graphics; refused while one runs unless `another`), stop (closed as "
-         "its own close does, waited for up to 15 s), kill (its processes ended at once - for a hang).",
-         R"({"type":"object","properties":{"action":{"type":"string","enum":["status","start","stop","kill"]},)"
+         "its own close does, waited for up to 15 s), kill (its processes ended at once - for a hang), update "
+         "(uaRO Graphics updated to its channel's newest as «ОНОВИТИ» does: the app closes, updates and opens again "
+         "in a minute or so, this MCP back with it; the game closed first; a check asked first when there is none).",
+         R"({"type":"object","properties":{"action":{"type":"string",)"
+         R"("enum":["status","start","stop","kill","update"]},)"
          R"("another":{"type":"boolean"}},"required":["action"]})"},
         {"system",
          "The computer's load over `seconds` (1-10, 2 unless said): the processor (all of it, the game's, the "
@@ -49,7 +52,8 @@ std::string check(const std::string& tool, const json::Value& args) {
     if (args.type() != json::Value::Object) return "the arguments must be an object";
     if (tool == "game") {
         const std::string a = args["action"].asString();
-        if (a != "status" && a != "start" && a != "stop" && a != "kill") return "action: status, start, stop or kill";
+        if (a != "status" && a != "start" && a != "stop" && a != "kill" && a != "update")
+            return "action: status, start, stop, kill or update";
         if (args.has("another") && args["another"].type() != json::Value::Bool) return "another: true or false";
     } else if (tool == "system") {
         if (args.has("seconds") && !whole(args["seconds"], 1, 10)) return "seconds: 1-10";
@@ -156,6 +160,23 @@ json::Value nvidiaSmi(const std::string& line) {
     g.set("pstate", f[8]);
     g.set("throttle", throttleWords(std::strtoull(f[9].c_str(), nullptr, 16)));
     return g;
+}
+
+UpdateWhat updateStep(bool gameRuns, Check check, const std::string& installed, const std::string& latest,
+                      const std::string& offer, const std::string& error) {
+    if (gameRuns) return {UpdateStep::Refuse, "the game runs - close it first (game stop), then update"};
+    switch (check) {
+        case Check::Idle: return {UpdateStep::Check, "the update check asked now - ask again in a few seconds"};
+        case Check::Failed:
+            return {UpdateStep::Check, "the last update check failed (" + error + ") - asked again now, ask again in "
+                                       "a few seconds"};
+        case Check::Checking: return {UpdateStep::Wait, "the update check runs - ask again in a few seconds"};
+        case Check::Done: break;
+    }
+    if (offer.empty())
+        return {UpdateStep::Newest, "uaRO Graphics " + installed + " is its channel's newest (" + latest + ")"};
+    return {UpdateStep::Update, "updating " + installed + " to " + offer + ": the app closes, updates and opens again "
+                                "in a minute or so - this MCP back with it (game status to see)"};
 }
 
 }  // namespace uagfx::mcpwatch

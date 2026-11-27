@@ -104,3 +104,27 @@ TEST(mcp_watch_nvidia_smi_line) {
     const json::Value idle = mcpwatch::nvidiaSmi("X, 0, 40, 210, 405, [N/A], 512, 6144, P8, 0x0000000000000001\n");
     CHECK(!idle.has("powerW") && idle["throttle"].asString() == "idle");
 }
+
+// 3.0.24-beta.37 (the laptop's run: beta.36 out, the laptop could not take it without a press on «ОНОВИТИ»): the
+// watchdog's game update - as «ОНОВИТИ» (the app updated in a window of its own and opened again), never over a game
+// that runs; a check asked first when there is none
+TEST(mcp_watch_update_steps) {
+    using mcpwatch::UpdateStep;
+    const mcp::Catalog& w = mcpwatch::catalog();
+    json::Value a = json::Value::object();
+    a.set("action", "update");
+    CHECK(w.check("game", a).empty());
+    CHECK(mcpwatch::updateStep(true, mcpwatch::Check::Done, "3.0.24-beta.36", "3.0.24-beta.36", "").step ==
+          UpdateStep::Refuse);  // the game runs: stop it first
+    CHECK(mcpwatch::updateStep(false, mcpwatch::Check::Idle, "", "", "").step == UpdateStep::Check);
+    CHECK(mcpwatch::updateStep(false, mcpwatch::Check::Failed, "", "", "").step == UpdateStep::Check);
+    CHECK(mcpwatch::updateStep(false, mcpwatch::Check::Checking, "", "", "").step == UpdateStep::Wait);
+    const mcpwatch::UpdateWhat newest =
+        mcpwatch::updateStep(false, mcpwatch::Check::Done, "3.0.24-beta.37", "3.0.24-beta.37", "");
+    CHECK(newest.step == UpdateStep::Newest);
+    CHECK(newest.words.find("3.0.24-beta.37") != std::string::npos);
+    const mcpwatch::UpdateWhat go =
+        mcpwatch::updateStep(false, mcpwatch::Check::Done, "3.0.24-beta.36", "3.0.24-beta.37", "3.0.24-beta.37");
+    CHECK(go.step == UpdateStep::Update);
+    CHECK(go.words.find("3.0.24-beta.37") != std::string::npos);
+}

@@ -11,8 +11,12 @@
 #include <string>
 #include <vector>
 
+#include "app/args.hpp"
 #include "app/model.hpp"
+#include "app/modes.hpp"
+#include "app/page.hpp"
 #include "app/text.hpp"
+#include "app/update.hpp"
 #include "core/config.hpp"
 #include "core/json.hpp"
 #include "core/mcp.hpp"
@@ -460,7 +464,8 @@ mcp::CallResult onWindow(const std::string& tool, const json::Value& args) {
 
 mcp::CallResult onCall(const std::string& tool, const json::Value& args) {
     const std::string action = args["action"].asString();
-    if (tool == "game" && action == "start") return onWindow(tool, args);  // the model's launch
+    // the model's launch; 3.0.24-beta.37: its update (as «ОНОВИТИ»)
+    if (tool == "game" && (action == "start" || action == "update")) return onWindow(tool, args);
     if (tool == "game") return gameTool(args);
     if (tool == "system") return systemTool(args);
     if (tool == "files") return filesTool(args);
@@ -566,11 +571,55 @@ void stop() {
     g_thread = nullptr;
 }
 
+namespace {
+
+DWORD WINAPI closeSoon(LPVOID) {  // 3.0.24-beta.37: the update's answer out first
+    Sleep(1500);
+    PostMessageW(GetAncestor(g_window, GA_ROOT), WM_CLOSE, 0, 0);
+    return 0;
+}
+
+// 3.0.24-beta.37 (the laptop's run: beta.36 out, the laptop could not take it without a press on «ОНОВИТИ»): as
+// «ОНОВИТИ» does it (app/page_service updateAndReopen) - the app updated in a window of its own and opened again,
+// the settings' changes kept with no question at the close; the steps in core/mcp_watch (updateStep)
+mcp::CallResult updateNow(Model& model, settings::Lang lang) {
+    namespace cw = ::uagfx::mcpwatch;
+    const UpdateState u = channelUpdate(model);
+    const cw::Check check = u.kind == UpdateState::Checking ? cw::Check::Checking
+                            : u.kind == UpdateState::Done   ? cw::Check::Done
+                            : u.kind == UpdateState::Failed ? cw::Check::Failed
+                                                            : cw::Check::Idle;
+    const cw::UpdateWhat what =
+        cw::updateStep(!processesOf(L"uaRO.exe").empty(), check, kVersion, u.latest, u.offer, u.error);
+    switch (what.step) {
+        case cw::UpdateStep::Refuse: return said(what.words, true);
+        case cw::UpdateStep::Check: startUpdateCheck(); return said(what.words);
+        case cw::UpdateStep::Wait:
+        case cw::UpdateStep::Newest: return said(what.words);
+        case cw::UpdateStep::Update: break;
+    }
+    const std::wstring kept = model.apply(lang);  // as the launcher's «ОНОВИТИ»: no question at the close
+    if (!kept.empty()) return said("the settings' changes could not be kept: " + utf8(kept), true);
+    Args a;
+    a.mode = Args::Mode::Update;
+    a.then = Args::Then::App;
+    const std::string err = startMode(a);
+    if (!err.empty()) return said("the update could not start: " + err, true);
+    // the app closes a moment after this answer is out - the update waits for this process
+    HANDLE closer = CreateThread(nullptr, 0, &closeSoon, nullptr, 0, nullptr);
+    if (closer) CloseHandle(closer);
+    return said(what.words);
+}
+
+}  // namespace
+
 void run(LPARAM p, Model& model, settings::Lang lang) {
     auto* job = reinterpret_cast<Job*>(p);
     if (!job) return;
-    // the game's start (the one call that needs the model): as the launcher's play does
-    if (!processesOf(L"uaRO.exe").empty() && !job->args["another"].asBool()) {
+    if (job->args["action"].asString() == "update") {  // 3.0.24-beta.37
+        job->result = updateNow(model, lang);
+    } else if (!processesOf(L"uaRO.exe").empty() && !job->args["another"].asBool()) {
+        // the game's start (a call that needs the model): as the launcher's play does
         job->result = said("the game runs already (another: true starts one more window)", true);
     } else {
         const std::wstring err = model.launchGame(lang);
