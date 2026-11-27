@@ -4,9 +4,11 @@
 #include <cmath>
 #include <string>
 
+#include "core/effect_groups.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/mcp_game.hpp"
 #include "core/mcp_perf.hpp"
+#include "core/setting_change.hpp"
 #include "core/settings/schema.hpp"
 #include "core/version.hpp"
 #include "core/view3d.hpp"
@@ -293,12 +295,24 @@ mcp::CallResult Context::mcpCall(const std::string& tool, const json::Value& arg
                                        : "the clock's own time again");
     }
     if (tool == "setting") {
+        // 3.0.24-beta.37 (the laptop's run: effects.ao = 1 did nothing under the set «auto»): as Alt+O changes it -
+        // an effect's own switch under a set makes the set the player's own first
         const std::string key = args["key"].asString(), value = args["value"].asString();
-        if (!settings::findSetting(key)) return said("no such setting: " + key, true);
-        const size_t dot = key.find('.');
-        if (!editIniFile(ourFile(layout::File::Ini), {{key.substr(0, dot), key.substr(dot + 1), value}}))
+        std::vector<settings::IniEdit> edits;
+        switch (settingchange::edits(config, cardLevel(), key, value, edits)) {
+            case settingchange::Outcome::Unknown: return said("no such setting: " + key, true);
+            case settingchange::Outcome::Invalid:
+                return said(key + " does not take «" + value + "» - see «settings»", true);
+            case settingchange::Outcome::Same: return said(key + " is " + value + " already");
+            case settingchange::Outcome::Edits: break;
+        }
+        if (!editIniFile(ourFile(layout::File::Ini), edits))
             return said("uaro-graphics.ini could not be written", true);
-        return said("written: " + key + " = " + value + " - applied in a moment (a few settings need a restart)");
+        const bool ownSet = edits.size() > 1 && effect_groups::memberOf(key);
+        return said("written: " + key + " = " + value + " - applied in a moment (a few settings need a restart)" +
+                    (ownSet ? "; the effects' set made your own first (effects.preset = custom, each switch as the "
+                              "set had it)"
+                            : ""));
     }
     return said("no such tool: " + tool, true);
 }
