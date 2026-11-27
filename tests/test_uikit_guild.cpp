@@ -273,3 +273,21 @@ TEST(uikit_guild_no_guild_two_cards) {
     CHECK_EQ(countOf(L, gc::Part::Close), 1);
     rmlhost::close(d);
 }
+
+// 3.0.24-beta.36 (the laptop's run, Alt+G): RmlUi warned «Data array index out of bounds», «Could not get value from
+// data variable 'members.heads[2].on'» - the markup reads the tables' heads by their places before the first fill; the
+// heads are there from the model's making (five and four)
+TEST(uikit_guild_heads_there_before_the_first_fill) {
+    static gl::Model m;
+    std::string error;
+    Rml::ElementDocument* d =
+        rmlhost::load(gl::rml(), [&](Rml::DataModelConstructor& c) { gl::bind(c, m); }, 300, 100, &error);
+    rmlhost::update();
+    CHECK_EQ(error, std::string());
+    CHECK_EQ(m.members.heads.size(), size_t(5));
+    CHECK_EQ(m.positions.heads.size(), size_t(4));
+    gl::fill(m, frameOf(gc::Tab::Skills, 1, 5), iconOf, [](int) { return std::string("pic:emblem"); }, nullptr);
+    CHECK_EQ(m.members.heads.size(), size_t(5));  // filled in their places, not added
+    CHECK_EQ(m.positions.heads.size(), size_t(4));
+    if (d) rmlhost::close(d);
+}

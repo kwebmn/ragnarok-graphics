@@ -544,11 +544,8 @@ void fill(Model& m, const Frame& f, const Icon& icon, const Emblem& emblem, cons
     ms.positionLabel = mv.positionLabel;
     ms.givenLabel = mv.givenLabel;
     ms.rightsNote = mv.rightsNote;
-    for (int i = 0; i < 5; ++i) {
-        const bool known = i < int(mv.heads.size());
-        ms.heads.push_back(known ? PairV{mv.heads[size_t(i)].name, "", mv.heads[size_t(i)].on, mv.heads[size_t(i)].hot}
-                                 : PairV{});
-    }
+    for (size_t i = 0; i < ms.heads.size(); ++i)  // the five there from the making
+        ms.heads[i] = i < mv.heads.size() ? PairV{mv.heads[i].name, "", mv.heads[i].on, mv.heads[i].hot} : PairV{};
     for (const gc::MemberRowV& r : mv.rows) {
         MemberRowV v;
         v.ch = int(r.character);
@@ -578,8 +575,8 @@ void fill(Model& m, const Frame& f, const Icon& icon, const Emblem& emblem, cons
     const gc::PositionsView& pv = f.positions;
     PositionsV& ps = m.positions;
     ps = PositionsV{};
-    for (int i = 0; i < 4; ++i)
-        ps.heads.push_back(i < int(pv.heads.size()) ? PairV{pv.heads[size_t(i)].name, "", false, false} : PairV{});
+    for (size_t i = 0; i < ps.heads.size(); ++i)  // the four there from the making
+        ps.heads[i] = i < pv.heads.size() ? PairV{pv.heads[i].name, "", false, false} : PairV{};
     for (const gc::PositionRowV& r : pv.rows) {
         PositionRowV v;
         v.id = r.id;

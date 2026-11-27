@@ -69,7 +69,8 @@ struct MembersV {
     Rml::String count, shownSearch, cardName, cardSub, cardPosition, cardGiven, positionLabel, givenLabel, rightsNote;
     bool typing = false, caret = false, searchHot = false, searched = false, card = false, scroll = false;
     float thumbTop = 0, thumbH = 0;
-    std::vector<PairV> heads;  // always five
+    // always five - from the making (3.0.24-beta.36: the markup reads them by place before the first fill)
+    std::vector<PairV> heads = std::vector<PairV>(5);
     std::vector<MemberRowV> rows;
     std::vector<ActionV> actions;
 };
@@ -81,7 +82,7 @@ struct PositionRowV {
 struct PositionsV {
     Rml::String folded, sideName, sideRights, sideTax, sidePeople, editWord, editNote, noRights, rightsLabel, taxLabel;
     bool canEdit = false, editHot = false;
-    std::vector<PairV> heads;  // always four
+    std::vector<PairV> heads = std::vector<PairV>(4);  // always four, from the making (as the members)
     std::vector<PositionRowV> rows;
 };
 struct ExpelledRowV {
