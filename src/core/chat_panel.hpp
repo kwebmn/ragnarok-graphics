@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "core/play_limit.hpp"
 #include "core/window_panel.hpp"
 
 namespace uagfx::chatpanel {
@@ -62,6 +63,7 @@ struct Texts {
     // ввімкнено» / «вимкнено», «Показ зені ввімкнено» / «вимкнено», «Досвід: Base +{1} · Job +{2}»
     std::string filters[4];
     std::string autoloot, autolootOff, expOn, expOff, zenyOn, zenyOff, expGained, noSp;  // .243, 3.0.12-beta.3
+    playlimit::Words limit;  // 3.0.24-beta.31: the server's daily play-time limit (core/play_limit)
     std::string search, searchHint;  // 3.0.11-beta.284: «Пошук», «Шукати в рядках · Esc — закрити»
     // 3.0.13-beta.3 (the owner's pick 24 of «50 идей»: «Свои цвета каналов чата»): the party's and the guild's
     // colours, one's own and the others' words in the public chat (0: the game's) - a GM's own colour kept

@@ -28,6 +28,7 @@
 #include "win/login_refusal.hpp"
 #include "win/net_trail.hpp"
 #include "win/picture_draw.hpp"
+#include "win/play_limit.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_input.hpp"
@@ -162,6 +163,12 @@ int __attribute__((thiscall)) errorMsg(uint32_t manager, const char* text, int k
         }
         s.text = loginerr::words(r, language(), loginwin::account(),
                                  utf8Of(widened(loginrefusal::handlingUntil(), s.codePage)));
+        // 3.0.24-beta.31: a forbidden login (6) after the daily play-time limit's kick in this game - the server's
+        // block for being kicked too often (core/play_limit)
+        if (refusal == 6 && playlimitwin::kickedWithin(playlimit::kBlockRecentMs)) {
+            s.text += "\n" + playlimit::blockedWords(language());
+            LOG_INFO("messages: the forbidden login after the play limit's kick - its reason under it");
+        }
         s.ownWords = true;
         s.kind = ac::Kind::Message;
         s.toldAgain = false;
@@ -183,7 +190,12 @@ int __attribute__((thiscall)) errorMsg(uint32_t manager, const char* text, int k
         nettrail::Drop d;
         s.reloginAt = 0;
         if (s.kind == ac::Kind::Message && nettrailwin::lastDrop(3000, d)) {
-            const std::string cause = reconnect::words(d, language());
+            // 3.0.24-beta.31: the server's daily play-time limit's kick in its words (win/play_limit)
+            playlimit::Notice limit;
+            int pastMin = 0;
+            const bool limited = playlimitwin::kick(d, limit, pastMin);
+            const std::string cause = limited ? playlimit::words(limit, playlimit::wordsIn(language()), true, pastMin)
+                                              : reconnect::words(d, language());
             if (!cause.empty()) {
                 s.dropWords = utf8Of(widened(s.text, s.codePage)) + "\n" + cause;
                 s.text = s.dropWords;

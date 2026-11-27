@@ -10103,6 +10103,30 @@ constexpr Entry kTexts[] = {
      "«Вещи» и «Снаряжение» сами отправляют пакет серверу: двойной клик использует или надевает вещь, "
      "перетаскивание на землю выбрасывает (сколько — спросим), «Снаряжение» снимает; ячейка ждёт ответа сервера. "
      "Карты в гнёзда — как в игре. Нужны включённые «Вещи». Для тестеров: выключено — как в игре."},
+    // 3.0.24-beta.31 (core/play_limit): the server's daily play-time limit - the chat's line, the box after its kick
+    {Text::PlayLimitReached, "Daily play-time limit ({1} h) reached - the server disconnects you in {2} s.",
+     "Денний ліміт гри ({1} год) вичерпано — сервер від'єднає вас через {2} с.",
+     "Дневной лимит игры ({1} ч) исчерпан — сервер отключит вас через {2} с."},
+    {Text::PlayLimitKicked, "The server disconnected you: the daily play-time limit ({1} h) is reached.",
+     "Сервер від'єднав вас: денний ліміт гри ({1} год) вичерпано.",
+     "Сервер отключил вас: дневной лимит игры ({1} ч) исчерпан."},
+    {Text::PlayLimitLeft, "Daily play time: {1} min left today.", "Денний ліміт гри: сьогодні лишилось {1} хв.",
+     "Дневной лимит игры: сегодня осталось {1} мин."},
+    {Text::PlayLimitReset, "The limit resets at 00:00 server time - in {1} h {2} min.",
+     "Ліміт скидається о 00:00 за часом сервера — через {1} год {2} хв.",
+     "Лимит сбрасывается в 00:00 по времени сервера — через {1} ч {2} мин."},
+    {Text::PlayLimitBuy, "Buy more time: @buyplaytime <minutes>.", "Докупити час: @buyplaytime <хвилини>.",
+     "Докупить время: @buyplaytime <минуты>."},
+    {Text::PlayLimitAutopay, "Or pay for each minute: @autopay on ({1} z a minute).",
+     "Або платити за кожну хвилину: @autopay on ({1} z за хвилину).",
+     "Или платить за каждую минуту: @autopay on ({1} z за минуту)."},
+    {Text::PlayLimitBlocked,
+     "The reason - the daily play-time limit: the server disconnected you for it several times in a row. The limit "
+     "resets at 00:00 server time.",
+     "Причина — денний ліміт гри: сервер кілька разів поспіль від'єднував вас через нього. Ліміт скидається о 00:00 "
+     "за часом сервера.",
+     "Причина — дневной лимит игры: сервер несколько раз подряд отключал вас из-за него. Лимит сбрасывается в 00:00 "
+     "по времени сервера."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

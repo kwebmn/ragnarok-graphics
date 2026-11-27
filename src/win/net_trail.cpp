@@ -13,6 +13,7 @@
 #include "win/iat.hpp"
 #include "win/log.hpp"
 #include "win/net_watch.hpp"
+#include "win/play_limit.hpp"
 #include "win/real_ddraw.hpp"
 
 namespace uagfx::win::nettrailwin {
@@ -219,6 +220,14 @@ void tell(State& st, const nettrail::Drop& d) {
             LOG_INFO("net trail: not sent - game window %d of this computer entered with this window's login", by);
             return;
         }
+    }
+    // 3.0.24-beta.31 (R-MWNRVM and four more of one laptop): the server's daily play-time limit kicked the character
+    // - its words came before (win/play_limit): nothing for the developers
+    playlimit::Notice limit;
+    int pastMin = 0;
+    if (playlimitwin::kick(d, limit, pastMin)) {
+        LOG_INFO("net trail: not sent - the server's daily play-time limit (%d h) kicked the character", limit.hours);
+        return;
     }
     ++st.reports;
     if (!st.on) {

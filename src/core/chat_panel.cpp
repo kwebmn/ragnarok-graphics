@@ -799,6 +799,8 @@ bool shortSystem(const std::string& text, const Texts& t, Line& out) {
         said = t.zenyOn;
     } else if (text.rfind("Gained zeny will not be shown", 0) == 0 && !t.zenyOff.empty()) {
         said = t.zenyOff;
+    } else if (playlimit::Notice n; !t.limit.reached.empty() && playlimit::read(text, n)) {
+        said = playlimit::words(n, t.limit, false);  // 3.0.24-beta.31: the daily play-time limit
     } else if (after(text, "Experience Gained Base:", v) && after(text, "Job:", w) && !t.expGained.empty()) {
         out.kind = Kind::Loot;  // a kill's experience: the loot's filter, «Бій»
         out.spans = {Span{put2(t.expGained, grouped(std::atoll(v.c_str())), grouped(std::atoll(w.c_str()))),

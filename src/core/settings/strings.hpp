@@ -1121,6 +1121,8 @@ enum class Text : uint16_t {
     View3dCaveGrottoHint,
     ItemsVendNoZeny, ItemsVendTooHeavy, ItemsVendRefused, InterfaceVendPackets, InterfaceVendPacketsHint,  // b.18
     InterfaceItemsPackets, InterfaceItemsPacketsHint,  // 3.0.24-beta.20
+    // 3.0.24-beta.31 (core/play_limit): the server's daily play-time limit in the player's words
+    PlayLimitReached, PlayLimitKicked, PlayLimitLeft, PlayLimitReset, PlayLimitBuy, PlayLimitAutopay, PlayLimitBlocked,
     Count
 };
 

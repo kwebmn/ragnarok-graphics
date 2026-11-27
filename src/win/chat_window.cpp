@@ -244,6 +244,7 @@ cp::Texts texts() {
     t.noSp = say(settings::Text::ChatSysNoSp);  // 3.0.12-beta.3
     t.search = say(settings::Text::ChatSearch);  // 3.0.11-beta.284
     t.searchHint = say(settings::Text::ChatSearchHint);
+    t.limit = playlimit::wordsIn(language());  // 3.0.24-beta.31: the server's daily play-time limit
     return t;
 }
 

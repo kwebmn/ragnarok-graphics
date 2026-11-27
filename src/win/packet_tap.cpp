@@ -40,6 +40,7 @@
 #include "win/target_card.hpp"
 #include "win/ground_units.hpp"
 #include "win/notifier.hpp"
+#include "win/play_limit.hpp"
 #include "win/threat_arc.hpp"
 
 namespace uagfx::win {
@@ -154,6 +155,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
     tkmissionwin::packet(id, packet);             // 3.0.22-beta.4: the Taekwon mission's monster
     itemnet::packet(id, packet);                  // 3.0.24-beta.4: the things as the server tells them
     socialcardwin::rawPacket(id, packet);         // 3.0.24-beta.27: the friends' accounts (the party's invite)
+    playlimitwin::packet(id, packet);             // 3.0.24-beta.31: the server's daily play-time limit
     const packets::Event e = packets::parse(packet, kReadable);
     if (!std::holds_alternative<std::monostate>(e)) {
         notifier::packet(e);
