@@ -47,3 +47,11 @@ TEST(vend_packets_open_the_shop) {
     CHECK(itempackets::openVending(std::string(100, 'a'), {}).at(83) == 0);  // the sign cut at 79, its nought kept
     CHECK(!chime::wav(chime::Kind::Sale).empty());  // the soft sale's sound
 }
+
+// 3.0.24-beta.24 (the plan's task 10, [interface] trade_packets): the trade's buttons by our own packets - «Готово»
+// 0x00eb, «Скасувати» 0x00ed, «Обмін» 0x00ef (each 2 bytes, packet_db's section 22)
+TEST(trade_packets_the_buttons) {
+    CHECK(itempackets::tradeOk() == (itempackets::Bytes{0xeb, 0x00}));
+    CHECK(itempackets::tradeCancel() == (itempackets::Bytes{0xed, 0x00}));
+    CHECK(itempackets::tradeCommit() == (itempackets::Bytes{0xef, 0x00}));
+}

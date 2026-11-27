@@ -36,6 +36,16 @@ struct Late {
     bool any() const;
 };
 Late watchLate(const Side& before, const Side& now, bool meReady, Late was);
+// 3.0.24-beta.24 (the spec's «Обмін»: «то, что другой положил (и зени, что выставил) за 5 с до своего «Готово»»):
+// when each of the partner's slots and their zeny last changed (GetTickCount ms; 0 never), and at your «Готово» what
+// changed within kLateMs before it - red with what changes after (watchLate)
+constexpr uint32_t kLateMs = 5000;
+struct Changed {
+    uint32_t slots[kSlots] = {};
+    uint32_t zeny = 0;
+};
+Changed stamp(const Side& before, const Side& now, uint32_t nowMs, Changed was);
+Late lateBefore(const Changed& c, uint32_t readyMs, Late was);
 std::string tipFirst(const Thing& x);  // 3.0.18-beta.95: a pointed thing's tip, its first line
 bool canReady(const Side& me);                                  // not pressed yet
 bool canTrade(const Side& me, const Side& them, bool traded);  // both ready, «Обмін» not pressed yet

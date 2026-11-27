@@ -7,6 +7,23 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.24 (the plan's task 10): «Обмін» - the red frame 5 s before your «Готово» too; the buttons by
+        // our own packets (the testers' box)
+        {"trade_late", "3.0.24-beta.24", "interface.trade",
+         {"Trade: the red frame, 5 s before «Ready» too", "Обмін: червона рамка й за 5 с до «Готово»",
+          "Обмен: красная рамка и за 5 с до «Готово»"},
+         {"Ask a friend to put a thing in and press «Ready» within 5 s: that thing is framed red, «Changed within 5 s "
+          "before your «Ready» or after» shows; a thing put in earlier stays plain.",
+          "Попросіть друга покласти річ і натисніть «Готово» протягом 5 с: ця річ у червоній рамці, видно «Змінено за "
+          "5 с до вашого «Готово» або після»; річ, покладена раніше, — без рамки.",
+          "Попросите друга положить вещь и нажмите «Готово» в течение 5 с: эта вещь в красной рамке, видно «Изменено "
+          "за 5 с до вашего «Готово» или после»; вещь, положенная раньше, — без рамки."}},
+        {"trade_packets", "3.0.24-beta.24", "interface.trade_packets",
+         {"Trade: our own packets for the buttons", "Обмін: свої пакети для кнопок",
+          "Обмен: свои пакеты для кнопок"},
+         {"Trade with a friend: «Ready» (with zeny typed), «Trade» and «Cancel» work as before.",
+          "Обміняйтеся з другом: «Готово» (з набраними зені), «Обмін» і «Скасувати» працюють як раніше.",
+          "Обменяйтесь с другом: «Готово» (с набранными зени), «Обмен» и «Отменить» работают как раньше."}},
         // 3.0.24-beta.23 (the plan's task 9): «Відкрити лавку» by our own packet - the testers' box
         {"vend_open_packets", "3.0.24-beta.23", "interface.vend_open_packets",
          {"Opening a shop: our own packet", "Відкриття лавки: свій пакет", "Открытие лавки: свой пакет"},

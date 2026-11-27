@@ -103,6 +103,10 @@ Bytes openVending(const std::string& sign, const std::vector<VendRow>& rows) {
     return b;
 }
 
+Bytes tradeOk() { return Bytes{0xeb, 0x00}; }
+Bytes tradeCancel() { return Bytes{0xed, 0x00}; }
+Bytes tradeCommit() { return Bytes{0xef, 0x00}; }
+
 Bytes drop(uint16_t index, uint16_t amount) {
     Bytes b(10, 0);
     b[0] = 0x16, b[1] = 0x01;

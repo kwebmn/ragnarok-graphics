@@ -26,6 +26,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool key(UINT m, WPARAM wp, LPARAM lp);  // the zeny field's keys while it has them
 bool drop(int x, int y, uint32_t drag);  // a drag let go over it: the game's trade window's drop
 bool shown();
+// 3.0.24-beta.24 ([interface] trade_packets, the testers' box): «Готово», «Обмін», «Скасувати» by our own packets
+void setPackets(bool on);
 void beforeGameDraw();  // its game's window hidden, «Речі» made when it opened
 // A thing of the bag (its place, its count) offered as a drag let go over it does - «Речі»'s double click and the
 // controller's A while «Обмін» is open; false: not open, or your offer is locked

@@ -80,3 +80,27 @@ TEST(trade_window_the_partners_changes_after_your_ready) {
     CHECK(late.slots[1] && late.zeny);
 }
 
+
+// 3.0.24-beta.24 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md, «Обмін»: «красной рамкой — то,
+// что другой положил (и зени, что выставил) за 5 с до своего «Готово»»; the plan's task 10): each of the partner's
+// slots and their zeny keep when they last changed; at your «Готово» what changed within 5 s before it turns red
+TEST(trade_window_the_partners_changes_just_before_your_ready) {
+    tradewin::Side before, now;
+    tradewin::Changed c;
+    now.slots[0] = thing(1201, 1, "Knife");
+    c = tradewin::stamp(before, now, 10000, c);  // the knife at 10 s
+    before = now;
+    now.slots[1] = thing(501, 5, "Red Potion");
+    c = tradewin::stamp(before, now, 14000, c);  // the potions at 14 s
+    before = now;
+    now.zeny = 250000;
+    c = tradewin::stamp(before, now, 15500, c);  // the zeny at 15.5 s
+    const tradewin::Late l = tradewin::lateBefore(c, 17000, tradewin::Late{});  // your «Готово» at 17 s
+    CHECK(!l.slots[0] && l.slots[1] && l.zeny && !l.slots[2]);  // 7 s before - not; 3 s and 1.5 s - red
+    CHECK(!tradewin::lateBefore(tradewin::Changed{}, 17000, tradewin::Late{}).any());  // nothing changed
+    const tradewin::Changed same = tradewin::stamp(now, now, 30000, c);  // a read with no change keeps the times
+    CHECK(same.slots[1] == 14000u && same.zeny == 15500u && same.slots[0] == 10000u);
+    tradewin::Late was;
+    was.slots[3] = true;
+    CHECK(tradewin::lateBefore(c, 17000, was).slots[3]);  // the marks already there stay
+}

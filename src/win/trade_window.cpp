@@ -15,6 +15,7 @@
 #include "core/hotbar_panel.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
+#include "core/item_packets.hpp"
 #include "core/trade_window.hpp"
 #include "core/ui_style.hpp"
 #include "core/window_drag.hpp"
@@ -28,6 +29,7 @@
 #include "win/game_camera.hpp"
 #include "win/item_window.hpp"
 #include "win/log.hpp"
+#include "win/item_net.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -43,6 +45,8 @@
 
 namespace uagfx::win::tradewin {
 namespace {
+
+bool g_packets = false;  // 3.0.24-beta.24: [interface] trade_packets - the buttons by our own packets
 
 namespace tw = uagfx::tradewin;
 namespace iw = uagfx::itemwin;
@@ -94,6 +98,8 @@ struct State {
     float fx = 0.30f, fy = 0.25f;
     tw::Side me, them, themBefore;
     tw::Late late;
+    tw::Changed changed;    // 3.0.24-beta.24: when each of the partner's slots and their zeny last changed
+    bool wasReady = false;  // 3.0.24-beta.24: your «Готово» seen on the last read
     std::string partner;
     long long zenyNow = 0;
     ULONGLONG readAt = 0;
@@ -221,9 +227,14 @@ void readTrade(State& s, uint32_t window) {
     if (ptr && len > 0 && len < sizeof name && readGame(ptr, name, len))
         s.partner = utf8Of(widened(std::string(name, len), s.codePage));
     const bool wasLate = s.late.any();
+    // 3.0.24-beta.24 (the spec's «Обмін»): what the partner put in or changed within 5 s before your «Готово» red too
+    const uint32_t now = GetTickCount();
+    s.changed = tw::stamp(s.themBefore, s.them, now, s.changed);
+    if (s.me.ready && !s.wasReady) s.late = tw::lateBefore(s.changed, now, s.late);
+    s.wasReady = s.me.ready;
     s.late = tw::watchLate(s.themBefore, s.them, s.me.ready, s.late);
     if (s.late.any() && !wasLate && s.told++ < 30)
-        LOG_INFO("trade: the partner changed the offer after your «Готово» - shown in red with the warning");
+        LOG_INFO("trade: the partner changed the offer just before or after your «Готово» - shown in red");
     s.themBefore = s.them;
 }
 
@@ -280,9 +291,13 @@ void place(State& s) {
 
 // One of the game's window's own buttons pressed; «OK» and the zeny field's arrow add its field's words to the zeny
 // offered - the zeny typed less what is offered put there first (the field empty again after the arrow)
+const char* pressOwn(State& s, int button);
+
 const char* press(State& s, int button) {
     const uint32_t window = gameWindow();
     if (!window || read32(read32(window) + kSendMsgSlot) != kTradeSendMsg) return "the game's trade window not found";
+    if (g_packets && (button == kOkButton || button == kTradeButton || button == kCancelButton))
+        return pressOwn(s, button);  // 3.0.24-beta.24
     const uint32_t edit = read32(window + kZenyEdit);
     const bool zeny = button == kOkButton || button == kZenyButton;
     const bool editable = edit && read32(read32(edit) + kSetTextSlot) == kSetText;
@@ -302,6 +317,30 @@ const char* press(State& s, int button) {
         LOG_INFO("trade: its button 0x%X pressed%s", unsigned(button),
                  zeny && add > 0 ? (" (+" + std::to_string(add) + " zeny offered)").c_str() : "");
     return "pressed";
+}
+
+// 3.0.24-beta.24 ([interface] trade_packets, the testers' box): «Готово», «Обмін» and «Скасувати» by our own packets
+// (0x00eb, 0x00ef, 0x00ed) - the server answers both sides (0x00ec, 0x00f0, 0x00ee) and the game follows them. The
+// zeny typed is offered first by the game's own field's arrow: the game keeps what it offered and takes it from the
+// zeny shown at the server's 0x00ea (uaRO.exe 0x586cf6), so a packet of ours would leave its sums wrong; the things
+// stay the game's drop for the same reason.
+const char* pressOwn(State& s, int button) {
+    if (button == kOkButton) {
+        const long long want = s.show.typed.empty() ? s.me.zeny : std::atoll(s.show.typed.c_str());
+        if (std::clamp(want - s.me.zeny, 0LL, std::max(0LL, s.zenyNow)) > 0) press(s, kZenyButton);
+    }
+    const itempackets::Bytes out = button == kOkButton      ? itempackets::tradeOk()
+                                   : button == kTradeButton ? itempackets::tradeCommit()
+                                                            : itempackets::tradeCancel();
+    const bool sent = itemnet::sendOwn(out);
+    s.show.typing = false;
+    s.show.typed.clear();
+    s.readAt = 0;
+    if (s.told++ < 30)
+        LOG_INFO("trade: %s by our own packet 0x%04X - %s",
+                 button == kOkButton ? "«Готово»" : button == kTradeButton ? "«Обмін»" : "«Скасувати»",
+                 unsigned(out[0] | out[1] << 8), sent ? "sent" : "not sent (no connection)");
+    return sent ? "sent" : "not sent";
 }
 
 void next(State& s, const char* how) {  // «Готово», then «Обмін»
@@ -355,6 +394,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         s.bagAsked = true;
         s.readAt = 0;
         s.late = tw::Late{};
+        s.changed = tw::Changed{}, s.wasReady = false;  // 3.0.24-beta.24
         s.themBefore = tw::Side{};
         s.show.typed.clear();
         s.padFocus = 0;
@@ -565,6 +605,13 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
 }
 
 bool shown() { return state().shown; }
+
+void setPackets(bool on) {
+    if (on != g_packets)
+        LOG_INFO("trade: %s", on ? "«Готово», «Обмін», «Скасувати» by our own packets ([interface] trade_packets)"
+                                 : "the game's own buttons");
+    g_packets = on;
+}
 
 void beforeGameDraw() {
     State& s = state();

@@ -40,6 +40,21 @@ Late watchLate(const Side& before, const Side& now, bool meReady, Late was) {
     return was;
 }
 
+Changed stamp(const Side& before, const Side& now, uint32_t nowMs, Changed was) {
+    const uint32_t at = nowMs ? nowMs : 1;  // 0 is «never»
+    for (int i = 0; i < kSlots; ++i)
+        if (now.slots[i].id != before.slots[i].id || now.slots[i].count != before.slots[i].count) was.slots[i] = at;
+    if (now.zeny != before.zeny) was.zeny = at;
+    return was;
+}
+
+Late lateBefore(const Changed& c, uint32_t readyMs, Late was) {
+    const auto fresh = [readyMs](uint32_t at) { return at != 0 && uint32_t(readyMs - at) < kLateMs; };
+    for (int i = 0; i < kSlots; ++i) was.slots[i] = was.slots[i] || fresh(c.slots[i]);
+    was.zeny = was.zeny || fresh(c.zeny);
+    return was;
+}
+
 bool canReady(const Side& me) { return !me.ready; }
 
 bool canTrade(const Side& me, const Side& them, bool traded) { return me.ready && them.ready && !traded; }

@@ -233,8 +233,12 @@ itemactions::Result use(uint16_t index) {
     return sent(s, itemactions::Kind::Use, index, r, out);
 }
 
+bool sendOwn(const itempackets::Bytes& bytes) {
+    return uapad::runtime::healthy() && uapad::runtime::sendPacket(bytes);
+}
+
 bool openShop(const std::string& sign, const std::vector<itempackets::VendRow>& rows) {
-    return uapad::runtime::healthy() && uapad::runtime::sendPacket(itempackets::openVending(sign, rows));
+    return sendOwn(itempackets::openVending(sign, rows));
 }
 
 itemactions::Result equip(uint16_t index, uint16_t places) {

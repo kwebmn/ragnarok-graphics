@@ -6238,7 +6238,8 @@ constexpr Entry kTexts[] = {
     {Text::TradeReady, "Ready", "Готово", "Готово"},
     {Text::TradeDo, "Trade", "Обмін", "Обмен"},
     {Text::TradeCancel, "Cancel", "Скасувати", "Отменить"},
-    {Text::TradeLate, "Changed after your «Ready»", "Змінено після вашого «Готово»", "Изменено после вашего «Готово»"},
+    {Text::TradeLate, "Changed within 5 s before your «Ready» or after",  // 3.0.24-beta.24: 5 s before too
+     "Змінено за 5 с до вашого «Готово» або після", "Изменено за 5 с до вашего «Готово» или после"},
     {Text::TradeHint, "Drag things from «Items» or double click them", "Перетягніть речі з «Речі» або клацніть двічі",
      "Перетащите вещи из «Вещи» или щёлкните дважды"},
     {Text::TradePadHint, "{1}: ready / trade \xC2\xB7 {2}: cancel", "{1}: готово / обмін \xC2\xB7 {2}: скасувати",
@@ -8821,6 +8822,15 @@ constexpr Entry kTexts[] = {
      "Two quiet notes each time a thing sells from your shop, through the game's sound (its volume).",
      "Дві тихі ноти щоразу, коли з вашої лавки щось продали, — через звук гри (її гучність).",
      "Две тихие ноты каждый раз, когда из вашей лавки что-то продали, — через звук игры (её громкость)."},
+    {Text::InterfaceTradePackets, "Trade: our own packets for the buttons (beta)",
+     "Обмін: свої пакети для кнопок (бета)", "Обмен: свои пакеты для кнопок (бета)"},
+    {Text::InterfaceTradePacketsHint,
+     "«Ready», «Trade» and «Cancel» send the server's packet themselves; the zeny typed and the things go as in the "
+     "game. Needs «Trade» on. For the testers: off - the game's own way.",
+     "«Готово», «Обмін» і «Скасувати» самі надсилають пакет серверу; набрані зені й речі — як у грі. Потрібен "
+     "увімкнений «Обмін». Для тестерів: вимкнено — як у грі.",
+     "«Готово», «Обмен» и «Отменить» сами отправляют пакет серверу; набранные зени и вещи — как в игре. Нужен "
+     "включённый «Обмен». Для тестеров: выключено — как в игре."},
     {Text::LauncherRunningCount, "The game is running · windows: {1}", "Гра вже запущена · вікон: {1}",
      "Игра уже запущена · окон: {1}"},
     {Text::InterfaceArrowsWalk, "Walking with the arrows", "Ходьба стрілками", "Ходьба стрелками"},

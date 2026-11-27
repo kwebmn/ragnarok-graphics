@@ -242,7 +242,9 @@ std::vector<Group> build() {
                          trial("interface.shop_packets", "3.0.24-beta.9").need("interface.shop"),
                          D("interface.storage"),
                          trial("interface.storage_packets", "3.0.24-beta.4").need("interface.storage"),
-                         D("interface.trade"), D("interface.cart"),
+                         D("interface.trade"),
+                         trial("interface.trade_packets", "3.0.24-beta.24").need("interface.trade"),
+                         D("interface.cart"),
                          trial("interface.cart_packets", "3.0.24-beta.8").need("interface.cart"),
                          D("interface.vending"),
                          trial("interface.vend_packets", "3.0.24-beta.18").need("interface.vending"),  // stage 4

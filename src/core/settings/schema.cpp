@@ -397,6 +397,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceMyShopHint, ""},  // 3.0.11-beta.166
         {"interface", "vend_setup", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
          Text::InterfaceVendSetup, Text::InterfaceVendSetupHint, ""},  // 3.0.16-beta.33
+        // 3.0.24-beta.24: «Обмін»'s buttons by our own packets - the testers' box
+        {"interface", "trade_packets", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
+         Text::InterfaceTradePackets, Text::InterfaceTradePacketsHint, ""},
         // 3.0.24-beta.23: «Відкрити лавку» by our own packet - the testers' box; «Моя лавка»'s sale chime
         {"interface", "vend_open_packets", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
          Text::InterfaceVendOpenPackets, Text::InterfaceVendOpenPacketsHint, ""},
@@ -1630,6 +1633,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.my_shop") return c.myShopWindow ? "1" : "0";          // 3.0.11-beta.166
     if (k == "interface.vend_setup") return c.vendSetupWindow ? "1" : "0";    // 3.0.16-beta.33
     if (k == "interface.vend_open_packets") return c.vendOpenPackets ? "1" : "0";  // 3.0.24-beta.23
+    if (k == "interface.trade_packets") return c.tradePackets ? "1" : "0";          // 3.0.24-beta.24
     if (k == "interface.sale_chime") return c.saleChime ? "1" : "0";
     if (k == "interface.whisper_setup") return c.whisperSetupWindow ? "1" : "0";  // 3.0.11-beta.168
     if (k == "interface.macros") return c.macroWindow ? "1" : "0";            // 3.0.11-beta.169

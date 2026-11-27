@@ -498,7 +498,8 @@ TEST(catalogue_trials_decided_for_3_0_21) {
     CHECK(trials == (std::vector<std::string>{"view3d.shadows", "view3d.dense_crowns", "view3d.crown_volume",
                                               "view3d.crown_light", "interface.items_packets",
                                               "interface.shop_packets",
-                                              "interface.storage_packets", "interface.cart_packets",
+                                              "interface.storage_packets", "interface.trade_packets",
+                                              "interface.cart_packets",
                                               "interface.vend_packets", "interface.vend_open_packets",
                                               "renderer.remix"}));
 }

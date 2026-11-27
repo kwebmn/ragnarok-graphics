@@ -43,6 +43,13 @@ struct VendRow {
     uint32_t price = 0;
 };
 Bytes openVending(const std::string& sign, const std::vector<VendRow>& rows);
+// 3.0.24-beta.24 ([interface] trade_packets): the trade's buttons - «Готово» 0x00eb, «Скасувати» 0x00ed, «Обмін»
+// 0x00ef; the server answers both sides (0x00ec, 0x00ee, 0x00f0). The things and the zeny offered stay the game's
+// own: it keeps what it offered and applies it at the server's 0x00ea (uaRO.exe 0x586cf6), so ours would leave its
+// trade's lists and the zeny shown wrong
+Bytes tradeOk();
+Bytes tradeCancel();
+Bytes tradeCommit();
 Bytes drop(uint16_t index, uint16_t amount);
 Bytes equip(uint16_t index, uint16_t places);
 Bytes unequip(uint16_t index);
