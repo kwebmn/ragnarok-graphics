@@ -14,6 +14,7 @@
 
 #include "core/window_stack.hpp"
 #include "core/layout.hpp"
+#include "core/npc_menu.hpp"
 #include "core/npc_talk.hpp"
 #include "core/pad_glyphs.hpp"
 #include "core/settings/strings.hpp"
@@ -62,13 +63,23 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <span class="x ctl" data-event-click="np_close()"><span class="cxa"></span><span class="cxb"></span></span>
 <div class="talk"><div class="tline" data-for="l : lines"><span data-for="r : l.runs"
   data-style-color="r.colour">{{r.text}}</span></div></div>
+<div class="btns" data-if="button != ''"><div class="btn main ctl" data-event-click="np_button()">{{button}}</div></div>
+<div class="foot"><span class="hint">{{keys}}</span><span class="hint">{{server}}</span></div>
+<div id="ring" class="ring"></div>
+</body></rml>)RML";
+
+// 3.0.24-beta.27 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md, «Разговор с NPC»: «выбор —
+// отдельный список, который ведут мышь (наведение, колесо, клик), клавиатура (↑ ↓, 1–5, Enter, Esc) и геймпад»; the
+// old game's menu window beside its talk): the choice's own live window - a row an option (its number, its words,
+// «last time»), placed by core/npc_menu right of the talk (else left, else under it); its keys and the pad's as the
+// talk's (key, padCommand)
+const char* kMenuLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="lw npm" data-style-background-color="ground">
 <div class="opts"><div class="opt ctl" data-for="o, i : options" data-class-on="i == selected"
   data-event-click="np_choose(i)"><span
   class="num">{{i + 1}}</span><span class="otext"><span data-for="r : o.runs"
   data-style-color="r.colour">{{r.text}}</span></span><span class="last"
   data-if="o.last">{{last_time}}</span></div></div>
-<div class="btns" data-if="button != ''"><div class="btn main ctl" data-event-click="np_button()">{{button}}</div></div>
-<div class="foot"><span class="hint">{{keys}}</span><span class="hint">{{server}}</span></div>
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
 
@@ -86,6 +97,9 @@ bool operator==(const NpcRunView& a, const NpcRunView& b) { return a.text == b.t
 
 struct State {
     uilive::Window live;  // 3.0.18-beta.88
+    uilive::Window menu;  // 3.0.24-beta.27: the choice's own list
+    WindowShadow menuShadow;
+    bool menuDirty = true;  // its words changed with the talk's
     std::vector<NpcLineView> lineViews;
     std::vector<NpcOptionView> optionViews;
     Rml::String name, place, buttonWord, keys, server, lastTime, ground = "#10141cf0";
@@ -184,6 +198,12 @@ void block(const State& s, HWND game) {
     float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
     int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.88: the live talk's own box
     if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
+    int mx = 0, my = 0, mw = 0, mh = 0;  // 3.0.24-beta.27: the choice's list beside it - the game's mouse kept off both
+    if (s.menu.box(mx, my, mw, mh)) {
+        const float x1 = std::max(x0 + b.w, float(mx + mw)), y1 = std::max(y0 + b.h, float(my + mh));
+        x0 = std::min(x0, float(mx)), y0 = std::min(y0, float(my));
+        b.w = x1 - x0, b.h = y1 - y0;
+    }
     const RECT r = clientBox(client, s.targetW, s.targetH, x0, y0, b.w, b.h);
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Npc, game, &r, false);
 }
@@ -463,14 +483,44 @@ static void liveFrame(State& s) {
                                         [](const NpcOptionView& a, const NpcOptionView& b) {
                                             return a.runs == b.runs && a.last == b.last;
                                         });
-    if (!sameOptions) s.optionViews = std::move(options), s.live.doc.dirty("options");
+    if (!sameOptions) s.optionViews = std::move(options), s.live.doc.dirty("options"), s.menuDirty = true;
     if (t.name != s.name || t.place != s.place || button != s.buttonWord || tx.keys != s.keys ||
         tx.server != s.server || tx.lastTime != s.lastTime || t.selected != s.selectedNo || ground != s.ground) {
         s.name = t.name, s.place = t.place, s.buttonWord = button, s.keys = tx.keys, s.server = tx.server;
         s.lastTime = tx.lastTime, s.selectedNo = t.selected, s.ground = ground;
         s.live.doc.dirtyAll();
+        s.menuDirty = true;
     }
-    s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Npc), ".opt, .btn, .x");
+    s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Npc), ".btn, .x");
+    // 3.0.24-beta.27: the choice's own list beside the talk (its ground's press drags the talk, the list follows)
+    s.menu.ownDrag = true;
+    s.menu.make("npc menu", kMenuLive, [&](Rml::DataModelConstructor& m) {
+        if (auto v = m.RegisterStruct<NpcRunView>()) {
+            v.RegisterMember("text", &NpcRunView::text);
+            v.RegisterMember("colour", &NpcRunView::colour);
+        }
+        m.RegisterArray<std::vector<NpcRunView>>();
+        if (auto v = m.RegisterStruct<NpcOptionView>()) {
+            v.RegisterMember("runs", &NpcOptionView::runs);
+            v.RegisterMember("last", &NpcOptionView::last);
+        }
+        m.RegisterArray<std::vector<NpcOptionView>>();
+        m.Bind("options", &s.optionViews);
+        m.Bind("last_time", &s.lastTime);
+        m.Bind("selected", &s.selectedNo);
+        m.Bind("ground", &s.ground);
+        m.BindEventCallback("np_choose", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (!a.empty()) choose(state(), a[0].Get<int>(), "a click");
+        });
+    });
+    if (!s.menu.made()) return;
+    if (s.menuDirty) s.menuDirty = false, s.menu.doc.dirtyAll();
+    int lx = s.layout.x, ly = s.layout.y, lw = s.layout.w, lh = s.layout.h, mx = 0, my = 0, mw = 0, mh = 0;
+    s.live.box(lx, ly, lw, lh);
+    const bool sized = s.menu.box(mx, my, mw, mh);
+    const panel::Box at = npcmenu::place(panel::Box{float(lx), float(ly), float(lw), float(lh)},
+                                         float(sized ? mw : 0), float(sized ? mh : 0), s.targetW, s.targetH);
+    s.menu.frame(s.shown && !s.optionViews.empty(), int(at.x), int(at.y), int(winstack::Win::Npc), nullptr);
 }
 
 void frame(HWND game, bool on, bool remember, unsigned codePage, double k, int targetWidth, int targetHeight) {
@@ -491,6 +541,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     if (!s.live.shown) return;  // 3.0.18-beta.88
     s.live.draw(s.shadow, record, renderer, s.scale, s.k);
+    if (s.menu.shown) s.menu.draw(s.menuShadow, record, renderer, s.scale, s.k);  // 3.0.24-beta.27
 }
 
 bool shown() { return state().shown; }
@@ -546,7 +597,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (s.live.shown) {  // 3.0.18-beta.88: RmlUi's - a press on its ground drags it
         if (m == WM_LBUTTONUP) s.drag.end();
         if (m == WM_MOUSEMOVE) return false;
-        const int r = s.live.mouse(game, m, wp, lp);
+        int r = s.live.mouse(game, m, wp, lp);
+        if (!r && s.menu.shown) r = s.menu.mouse(game, m, wp, lp);  // 3.0.24-beta.27: the choice's list
         if (!r) return false;
         if (r == 2) s.drag.begin(tx, ty);
         result = 0;
@@ -585,11 +637,9 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     (void)lp;
     if (m != WM_KEYDOWN || !s.shown || window(kNumberWnd, kNumberClass) || !chatwin::inputEmpty()) return false;
     const bool menu = window(kMenuWnd, kMenuClass) != 0;
-    int digit = -1;
-    if (wp >= '1' && wp <= '9') digit = int(wp - '1');
-    if (wp >= VK_NUMPAD1 && wp <= VK_NUMPAD9) digit = int(wp - VK_NUMPAD1);
+    const int digit = npcmenu::byKey(unsigned(wp), int(s.talk.options.size()));  // 3.0.24-beta.27
     if (digit >= 0) {
-        if (!menu || digit >= int(s.talk.options.size())) return false;
+        if (!menu) return false;
         choose(s, digit, "a key");
         return true;
     }

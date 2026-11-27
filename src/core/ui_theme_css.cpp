@@ -658,6 +658,18 @@ select selectbox option:checked { color: #e6cb8a; }
             border-radius: 6dp; background-color: #1b1d24f2; color: #e6cb8a; font-weight: bold; font-size: 11.5dp; }
 .npw .otext { flex: 1; }
 .npw .last { font-size: 10.5dp; color: #9aa3b5; margin-left: 6dp; }
+/* 3.0.24-beta.27 (the spec: «выбор — отдельный список»): the choice's own list beside the talk, a column of rows */
+.npm { width: 300dp; }
+.npm .opts { display: block; max-height: 340dp; overflow-y: auto; }
+.npm .opt { box-sizing: border-box; display: flex; align-items: center; width: 100%; margin: 0 0 5dp 0;
+            padding: 5dp 8dp; border-radius: 8dp; background-color: #ffffff0d; border: 1dp #ffffff0f;
+            font-size: 12.5dp; }
+.npm .opt:hover { background-color: #ffffff1a; }
+.npm .opt.on { background-color: #c9a55b29; border-color: #f3c653d9; }
+.npm .num { display: block; width: 22dp; height: 22dp; line-height: 22dp; margin-right: 8dp; text-align: center;
+            border-radius: 6dp; background-color: #1b1d24f2; color: #e6cb8a; font-weight: bold; font-size: 11.5dp; }
+.npm .otext { flex: 1; }
+.npm .last { font-size: 10.5dp; color: #9aa3b5; margin-left: 6dp; }
 .npw .foot { margin-top: 10dp; padding-top: 6dp; border-top: 1dp #ffffff12; }
 .vsw { width: 480dp; }
 /* 3.0.24-beta.21 (R-WP985Q: no letter the font lacks): the shop's ✕ drawn - two bars */

@@ -7,6 +7,15 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.27 (part 3, task 4): the NPC's choice its own list beside the talk
+        {"npc_choice_list", "3.0.24-beta.27", "interface.npc_talk",
+         {"NPC: the choice a list of its own", "NPC: вибір — окремим списком", "NPC: выбор — отдельным списком"},
+         {"Talk to an NPC with a choice (a Kafra): the answers stand in their own list right of the talk (left or "
+          "under it at the screen's edge); the mouse, the wheel, ↑ ↓, 1-9, Enter, Esc and the pad choose.",
+          "Поговоріть з NPC, що дає вибір (Кафра): відповіді стоять окремим списком праворуч від розмови (ліворуч чи "
+          "під нею біля краю екрана); обирають миша, коліщатко, ↑ ↓, 1-9, Enter, Esc і геймпад.",
+          "Поговорите с NPC, который даёт выбор (Кафра): ответы стоят отдельным списком справа от разговора (слева или "
+          "под ним у края экрана); выбирают мышь, колесо, ↑ ↓, 1-9, Enter, Esc и геймпад."}},
         // 3.0.24-beta.27 (part 3, task 3): «Характеристики» - «база + бонус» as the old game's
         {"stats_base_bonus", "3.0.24-beta.27", "interface.status",
          {"Stats: «base + bonus» as in the old game", "Характеристики: «база + бонус», як у старій грі",
