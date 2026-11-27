@@ -132,7 +132,9 @@ mcp::CallResult failure(const std::string& text) {
 // The server thread's side of a tool: the game's thread asked, its answer waited for
 // 3.0.22-beta.41: the driver's log's last lines, read here (its last megabyte, shared with the writer)
 mcp::CallResult logLines(const json::Value& args) {
-    const std::string path = wlog::path();
+    // 3.0.24-beta.34: the renderer's and the pad's logs beside it (`file`), the lines since a moment (`since`)
+    const std::string path =
+        wlog::path().empty() ? std::string() : mcp::logNamed(wlog::path(), args["file"].asString("graphics"));
     if (path.empty()) return failure("no log file now");
     const HANDLE f = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                  nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -148,7 +150,8 @@ mcp::CallResult logLines(const json::Value& args) {
     if (want > 0) ReadFile(f, &text[0], DWORD(want), &got, nullptr);
     CloseHandle(f);
     text.resize(got);
-    const std::string out = mcp::tailLines(text, size_t(args["lines"].asInt(60)), args["match"].asString());
+    const std::string out =
+        mcp::tailLines(text, size_t(args["lines"].asInt(60)), args["match"].asString(), args["since"].asString());
     mcp::CallResult r;
     r.content.push_back(mcp::Content::textOf(out.empty() ? "(no such lines in the log's last megabyte)" : out));
     return r;

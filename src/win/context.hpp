@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "core/frame_stats.hpp"
 #include "core/card_speed.hpp"
 #include "core/light_mode.hpp"
 #include "core/map_load.hpp"
@@ -330,6 +331,12 @@ private:
     bool keepOnMap_ = false;
     uint64_t costsWritten_ = 0;
     FpsOverlay fps_;
+    // 3.0.24-beta.34 (docs/superpowers/plans/2026-11-27-mcp-full-test.md): the MCP's perf - the presents of the last
+    // minute, the renderer's last half second, the API's words
+    framestats::Window frameStats_;
+    GpuTiming lastGpu_;
+    bool lastGpuKnown_ = false;
+    std::string apiLabel_;
     windowload::Watch windowLoad_;  // 3.0.21-beta.8 (R-SPPSF3): what «Налаштування» costs, told as it closes
     Console console_;               // 1.9.3: ~ - the effects' switches over the game
     std::string consoleOff_;        // the effect the console holds off, and the settings without it

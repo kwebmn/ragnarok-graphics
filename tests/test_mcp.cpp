@@ -255,3 +255,33 @@ TEST(mcp_log_tail_with_a_word) {
     json::parse(R"({"lines":5000})", v, e);
     CHECK(!mcp::checkArgs("log", v).empty());
 }
+
+// 3.0.24-beta.34 (docs/superpowers/plans/2026-11-27-mcp-full-test.md, task 3): the log tool reads the renderer's and
+// the pad's logs too, and only the lines since a moment - what an action wrote
+TEST(mcp_log_since_and_files) {
+    const std::string text = "12:00:01.000 INFO  a\n12:00:05.000 INFO  b\n  its next line\n12:00:09.250 WARN  c\n";
+    CHECK_EQ(mcp::tailLines(text, 60, "", "12:00:05"), std::string("12:00:05.000 INFO  b\n  its next line\n"
+                                                                    "12:00:09.250 WARN  c"));
+    CHECK_EQ(mcp::tailLines(text, 60, "warn", "12:00:05"), std::string("12:00:09.250 WARN  c"));
+    CHECK_EQ(mcp::tailLines(text, 60, "", "12:00:09.5"), std::string());
+    CHECK_EQ(mcp::tailLines(text, 2, "", ""), std::string("  its next line\n12:00:09.250 WARN  c"));
+    json::Value a = json::Value::object();
+    a.set("file", "render64");
+    a.set("since", "12:00:05");
+    CHECK(mcp::checkArgs("log", a).empty());
+    a.set("file", "pad");
+    a.set("since", "12:00:05.250");
+    CHECK(mcp::checkArgs("log", a).empty());
+    a.set("file", "c:\\windows");
+    CHECK(!mcp::checkArgs("log", a).empty());
+    a.set("file", "graphics");
+    a.set("since", "noon");
+    CHECK(!mcp::checkArgs("log", a).empty());
+    // the other logs' names beside the driver's (a second game window's end in -2)
+    CHECK_EQ(mcp::logNamed("C:\\g\\uaro-graphics\\logs\\uaro-graphics.log", "render64"),
+             std::string("C:\\g\\uaro-graphics\\logs\\uaro-render64.log"));
+    CHECK_EQ(mcp::logNamed("C:\\g\\uaro-graphics\\logs\\uaro-graphics-2.log", "pad"),
+             std::string("C:\\g\\uaro-graphics\\logs\\uaro-pad-2.log"));
+    CHECK_EQ(mcp::logNamed("C:\\g\\uaro-graphics\\logs\\uaro-graphics.log", "graphics"),
+             std::string("C:\\g\\uaro-graphics\\logs\\uaro-graphics.log"));
+}

@@ -1,5 +1,6 @@
 #include "core/mcp.hpp"
 
+#include <regex>
 #include <cctype>
 #include <cmath>
 #include <cstdlib>
@@ -123,11 +124,22 @@ const std::vector<Tool>& table() {
          R"({"type":"object","properties":{"keys":{"type":"string","minLength":1,"maxLength":40}},)"
          R"("required":["keys"]})"},
         // 3.0.22-beta.41: the driver's log - why something is as it is, without asking the player for a report
+        // 3.0.24-beta.34 (docs/superpowers/plans/2026-11-27-mcp-full-test.md): the full test's measures
+        {"perf",
+         "The game's frames of the last `seconds` (1-60, 10 unless said; the driver keeps a minute): frames a second, "
+         "a frame's milliseconds (p50, p95, p99, the worst), the frames over 25/50/100 ms and the longest ones' moments "
+         "(seconds ago); the card's last half second (its frame, its passes, the present, the processor's part, the "
+         "upscaler, Reflex, frame generation, still loading); the API, the card, the window, the map, the power "
+         "(mains or battery, the plan), the game's memory. Stand in the scene for the seconds asked, then call.",
+         R"({"type":"object","properties":{"seconds":{"type":"integer","minimum":1,"maximum":60}}})"},
         {"log",
-         "The driver's log (uaro-graphics\\logs): its last `lines` (1-300, 60 unless said), those with `match` in "
-         "them only when given (letters' size aside) - e.g. match \"items:\" or \"mcp:\".",
+         "A log (uaro-graphics\\logs): `file` graphics (the driver's, unless said), render64 (the 64-bit renderer's) or "
+         "pad; its last `lines` (1-300, 60 unless said), those with `match` in them only when given (letters' size "
+         "aside) - e.g. match \"items:\" or \"warn\"; `since` \"hh:mm:ss\" - only the lines from that moment (what an "
+         "action wrote).",
          R"({"type":"object","properties":{"lines":{"type":"integer","minimum":1,"maximum":300},)"
-         R"("match":{"type":"string","maxLength":100}}})"},
+         R"("match":{"type":"string","maxLength":100},"file":{"type":"string","enum":["graphics","render64","pad"]},)"
+         R"("since":{"type":"string","maxLength":12}}})"},
         // 3.0.22-beta.40 (the owner: «навожу» - the tips needed his hand)
         {"hover",
          "The game's cursor put at (x, y) of a screenshot `width` wide and held there `seconds` (1-30, 8 unless "
@@ -305,22 +317,35 @@ bool keyCombo(const std::string& text, KeyCombo& out, std::string& why) {
     return true;
 }
 
-std::string tailLines(const std::string& text, size_t n, const std::string& match) {
+std::string tailLines(const std::string& text, size_t n, const std::string& match, const std::string& since) {
     const std::string want = lower(match);
     std::vector<std::string> kept;
     size_t at = 0;
+    bool late = since.empty();  // the last timed line at or after `since`
     while (at <= text.size() && n > 0) {
         size_t end = text.find('\n', at);
         if (end == std::string::npos) end = text.size();
         std::string line = text.substr(at, end - at);
         if (!line.empty() && line.back() == '\r') line.pop_back();
-        if (!line.empty() && (want.empty() || lower(line).find(want) != std::string::npos)) kept.push_back(line);
+        if (!since.empty() && line.size() >= 8 && std::isdigit(static_cast<unsigned char>(line[0])) && line[2] == ':')
+            late = line.compare(0, std::min(line.size(), since.size()), since) >= 0;
+        if (!line.empty() && late && (want.empty() || lower(line).find(want) != std::string::npos))
+            kept.push_back(line);
         at = end + 1;
     }
     const size_t from = kept.size() > n ? kept.size() - n : 0;
     std::string out;
     for (size_t i = from; i < kept.size(); ++i) out += (out.empty() ? "" : "\n") + kept[i];
     return out;
+}
+
+std::string logNamed(const std::string& driverLog, const std::string& file) {
+    const size_t slash = driverLog.find_last_of("\\/");
+    const std::string dir = slash == std::string::npos ? "" : driverLog.substr(0, slash + 1);
+    std::string name = slash == std::string::npos ? driverLog : driverLog.substr(slash + 1);
+    static const std::string own = "uaro-graphics";
+    if (file == "graphics" || name.compare(0, own.size(), own) != 0) return driverLog;
+    return dir + "uaro-" + file + name.substr(own.size());
 }
 
 uint32_t keyMessageBits(int scan, bool extended, bool alt, bool up) {
@@ -433,6 +458,8 @@ std::string checkArgs(const std::string& tool, const json::Value& args) {
         if (args.has("pitch") && (args["pitch"].type() != json::Value::Number || !(args["pitch"].asNumber() >= -89.0) ||
                                   !(args["pitch"].asNumber() <= 89.0)))
             return "pitch: degrees, -89..89";
+    } else if (tool == "perf") {  // 3.0.24-beta.34
+        if (args.has("seconds") && !wholeIn(args["seconds"], 1, 60)) return "seconds: a whole number, 1-60";
     } else if (tool == "pause" || tool == "photo") {
         if (args["on"].type() != json::Value::Bool) return "on: true or false";
     } else if (tool == "camera") {
@@ -469,6 +496,12 @@ std::string checkArgs(const std::string& tool, const json::Value& args) {
         if (args.has("double") && args["double"].type() != json::Value::Bool) return "double: true or false";
     } else if (tool == "log") {  // 3.0.22-beta.41
         if (args.has("lines") && !wholeIn(args["lines"], 1, 300)) return "lines: 1-300";
+        const std::string file = args["file"].asString();  // 3.0.24-beta.34
+        if (args.has("file") && file != "graphics" && file != "render64" && file != "pad")
+            return "file: graphics, render64 or pad";
+        const std::string since = args["since"].asString();
+        static const std::regex time("^[0-2][0-9]:[0-5][0-9](:[0-5][0-9](\\.[0-9]{1,3})?)?$");
+        if (args.has("since") && !std::regex_match(since, time)) return "since: hh:mm, hh:mm:ss or hh:mm:ss.mmm";
         const json::Value& m = args["match"];
         if (args.has("match") && (m.type() != json::Value::String || m.asString().size() > 100 || !oneLine(m.asString())))
             return "match: one line of words, 100 at most";

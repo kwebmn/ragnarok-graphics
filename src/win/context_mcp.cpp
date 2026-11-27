@@ -4,6 +4,7 @@
 #include <cmath>
 #include <string>
 
+#include "core/mcp_perf.hpp"
 #include "core/settings/schema.hpp"
 #include "core/version.hpp"
 #include "core/view3d.hpp"
@@ -19,6 +20,7 @@
 #include "win/mcp_server.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
+#include "win/real_ddraw.hpp"
 #include "win/time_lapse.hpp"
 #include "win/uaui.hpp"
 #include "win/view3d.hpp"
@@ -46,6 +48,24 @@ std::string token(const Config& c, const char* key) {
     return s ? settings::tokenOf(*s, c) : std::string();
 }
 
+// The game's process's memory, MB (its working set; K32GetProcessMemoryInfo by name - the driver imports it not); -1
+// unknown
+double processMemoryMb() {
+    struct Counters {
+        DWORD cb;
+        DWORD pageFaults;
+        SIZE_T peakWorkingSet, workingSet, quotaPeakPaged, quotaPaged, quotaPeakNonPaged, quotaNonPaged, pagefile,
+            peakPagefile;
+    };
+    using Fn = BOOL(WINAPI*)(HANDLE, Counters*, DWORD);
+    static const Fn get = reinterpret_cast<Fn>(
+        reinterpret_cast<void*>(GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "K32GetProcessMemoryInfo")));
+    Counters c{};
+    c.cb = sizeof c;
+    if (!get || !get(GetCurrentProcess(), &c, sizeof c)) return -1;
+    return double(c.workingSet) / (1024.0 * 1024.0);
+}
+
 }  // namespace
 
 void Context::mcpFrame(bool shown) {
@@ -60,6 +80,25 @@ void Context::mcpFrame(bool shown) {
 }
 
 mcp::CallResult Context::mcpCall(const std::string& tool, const json::Value& args) {
+    if (tool == "perf") {  // 3.0.24-beta.34 (docs/superpowers/plans/2026-11-27-mcp-full-test.md, task 2)
+        const double seconds = args.has("seconds") ? double(args["seconds"].asInt()) : 10.0;
+        mcpperf::Facts f;
+        f.api = apiLabel_;
+        f.adapter = renderer ? renderer->adapterName() : startup().adapter;
+        f.map = map_;
+        RECT rc{};
+        if (window && GetClientRect(window, &rc))
+            f.window = std::to_string(rc.right - rc.left) + "x" + std::to_string(rc.bottom - rc.top);
+        SYSTEM_POWER_STATUS ps{};
+        if (GetSystemPowerStatus(&ps) && ps.ACLineStatus <= 1) {
+            f.mains = ps.ACLineStatus;
+            if (ps.BatteryLifePercent <= 100) f.batteryPercent = ps.BatteryLifePercent;
+        }
+        f.plan = startup().computer.plan;
+        f.gameMemoryMb = processMemoryMb();
+        return said(json::dump(mcpperf::report(frameStats_.stats(uint64_t(nowMs() * 1000.0), seconds),
+                                               lastGpuKnown_ ? &lastGpu_ : nullptr, f)));
+    }
     if (tool == "state") {
         json::Value s = json::Value::object();
         s.set("client", std::string("uaRO Graphics ") + kVersion);

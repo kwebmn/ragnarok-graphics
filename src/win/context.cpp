@@ -486,6 +486,7 @@ bool Context::open(std::string& error) {
     LOG_INFO("%s renderer on %s", d3d11 ? "Direct3D 11" : "Direct3D 12", renderer->adapterName().c_str());
     fpsShown_ = config.fpsCounter;  // 0.54
     fps_.setLabel(std::string(d3d11 ? "Direct3D 11" : "Direct3D 12") + (config.dlss != "off" ? " + DLSS" : ""));
+    apiLabel_ = d3d11 ? "Direct3D 11" : "Direct3D 12";  // 3.0.24-beta.34: the MCP's perf
     // 0.47: the AI textures with Direct3D 11 - the texture pack's pictures, in the game's process (2.5.12: on its own
     // thread, which started them itself).
     // 2.5.20: super-light from the start - no AI picture is drawn: none read either (back with the next start)
@@ -1749,6 +1750,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.4-beta.5: not in the photo mode's picture; 3.0.22-beta.28: the notes neither (Pause's line stood in the
     // owner's recordings)
     fps_.present(window, fpsShown_, photoNow());
+    frameStats_.present(uint64_t(nowMs() * 1000.0));  // 3.0.24-beta.34: the MCP's perf (core/frame_stats)
+    if (timed) lastGpu_ = gpuNow, lastGpuKnown_ = true;
     if (test_.running()) {  // 3.0.5-beta.6: the card's work of the set shown; the statistics leave the test out
         if (timed && gpuNow.serial != testGpuSerial_) {
             testGpuSerial_ = gpuNow.serial;

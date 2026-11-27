@@ -57,7 +57,11 @@ bool clickPlace(double x, double y, int width, int clientW, int clientH, int& ou
 // (bit 29); a let go's previous state and transition bits
 uint32_t keyMessageBits(int scan, bool extended, bool alt, bool up);
 // 3.0.22-beta.41: a log's last `n` lines (those with `match` in them, letters' size aside; "" all), joined by \n
-std::string tailLines(const std::string& text, size_t n, const std::string& match);
+// 3.0.24-beta.34: `since` ("hh:mm:ss[.mmm]", "" all): the lines from that moment (a line with no time of its own goes
+// with the one before)
+std::string tailLines(const std::string& text, size_t n, const std::string& match, const std::string& since = "");
+// 3.0.24-beta.34: the log `file` (graphics, render64, pad) beside the driver's own (its slot's -N kept)
+std::string logNamed(const std::string& driverLog, const std::string& file);
 
 // What a tool answers: a text or an image (its bytes, sent as base64)
 struct Content {
