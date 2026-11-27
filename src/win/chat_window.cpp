@@ -184,6 +184,7 @@ State& state() {
     return s;
 }
 
+
 uintptr_t g_push = 0;
 
 int __attribute__((thiscall)) pushed(uint32_t manager, int msg, const char* text, int colour, int more) {
@@ -1575,6 +1576,12 @@ bool putIntoLine(const std::string& utf8) {
     giveKeys(words);
     LOG_INFO("chat: a name put into the line from «Довідник» (%zu bytes)", line.size());
     return true;
+}
+
+std::vector<chatpanel::Line> lastLines(size_t n) {
+    const std::deque<cp::Line>& all = state().lines;
+    const size_t from = all.size() > n ? all.size() - n : 0;
+    return std::vector<chatpanel::Line>(all.begin() + long(from), all.end());
 }
 
 }  // namespace uagfx::win::chatwin

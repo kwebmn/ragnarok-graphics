@@ -4,6 +4,8 @@
 #include <cmath>
 #include <string>
 
+#include "core/hotbar_panel.hpp"
+#include "core/mcp_game.hpp"
 #include "core/mcp_perf.hpp"
 #include "core/settings/schema.hpp"
 #include "core/version.hpp"
@@ -11,6 +13,10 @@
 #include "pad/win/remote.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/chat_wheel.hpp"
+#include "win/item_net.hpp"
+#include "win/client_tables.hpp"
+#include "win/chat_window.hpp"
+#include "win/char_block.hpp"
 #include "win/code_page.hpp"
 #include "win/context.hpp"
 #include "win/dpi.hpp"
@@ -158,6 +164,27 @@ mcp::CallResult Context::mcpCall(const std::string& tool, const json::Value& arg
             s.set("window", w);
         }
         return said(json::dump(s));
+    }
+    if (tool == "settings")  // 3.0.24-beta.34: every setting, its value now and what it takes
+        return said(json::dump(mcpgame::settings(config, args["prefix"].asString(), language())));
+    if (tool == "game") {  // 3.0.24-beta.34: what the game holds now (core/mcp_game)
+        const std::string what = args["what"].asString();
+        if (what == "character") {
+            charblock::Data d;
+            charblock::Texts t;
+            if (!charpanel::expInfo(d, t)) return said("the character's block is not shown: its numbers unknown", true);
+            return said(json::dump(mcpgame::character(d)));
+        }
+        if (what == "items") {
+            const itemstate::State& st = itemnet::state();
+            const unsigned cp = gameCodePage(config);
+            return said(json::dump(mcpgame::items(st.bag(), st.cart(), st.storage(), [cp](int id) {
+                const auto& names = clienttables::itemNames();
+                const auto it = names.find(std::to_string(id));
+                return it == names.end() ? std::string() : utf8Of(widened(hotbar::spaced(it->second), cp));
+            })));
+        }
+        return said(json::dump(mcpgame::chat(chatwin::lastLines(size_t(args["lines"].asInt(30))))));
     }
     if (tool == "ui")  // 3.0.24-beta.34: the open windows' faint or cut words (uikit/ui_check)
         return said(json::dump(uaui::check(args["doc"].asString(), args["all"].asBool())));

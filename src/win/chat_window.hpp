@@ -1,4 +1,6 @@
 #pragma once
+#include "core/chat_panel.hpp"
+#include <vector>
 #include <windows.h>
 
 #include "core/frame.hpp"
@@ -18,6 +20,8 @@ namespace uagfx::win::chatwin {
 // screen, its edit still taking the keys (the IME's words): its words, caret, the whisper's name and the send mode
 // (DAT_00772d60) shown in the new one's input row, a click there giving it the keys. On the game's thread.
 void install();
+// 3.0.24-beta.34 (the MCP's game tool): the chat's last `n` lines, the oldest first (the battle log's aside)
+std::vector<chatpanel::Line> lastLines(size_t n);
 void packet(const packets::Event& e);
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
 // 3.0.11-beta.240: [interface] chat_fade - idle this many seconds, its ground fades (its tabs and input stay); 0 never

@@ -138,6 +138,18 @@ const std::vector<Tool>& table() {
          "contrast. `doc`: one window by its name (the windows tool lists them); `all`: every word of it, not only "
          "the faint and the cut.",
          R"({"type":"object","properties":{"doc":{"type":"string","maxLength":60},"all":{"type":"boolean"}}})"},
+        {"game",
+         "What the game holds now, to see what an action did: `what` character (name, class, levels, HP, SP, weight, "
+         "zeny, the free points, guild, party, the arrows), items (the bag's, the cart's and the storage's things: "
+         "the server's index, the item's number and name, how many, refine, where worn) or chat (its last `lines`, "
+         "1-100, 30 unless said: kind, who, words - the server's answers among them).",
+         R"({"type":"object","properties":{"what":{"type":"string","enum":["character","items","chat"]},)"
+         R"("lines":{"type":"integer","minimum":1,"maximum":100}},"required":["what"]})"},
+        {"settings",
+         "Every setting the driver knows whose key («section.name») starts with `prefix` (all unless said): its "
+         "value now, its kind (check, slider, choice) and what it takes (the slider's min, max and step, or the "
+         "words), its name in the player's language - for the setting tool and a test of every feature.",
+         R"({"type":"object","properties":{"prefix":{"type":"string","maxLength":40}}})"},
         {"log",
          "A log (uaro-graphics\\logs): `file` graphics (the driver's, unless said), render64 (the 64-bit renderer's) or "
          "pad; its last `lines` (1-300, 60 unless said), those with `match` in them only when given (letters' size "
@@ -464,6 +476,14 @@ std::string checkArgs(const std::string& tool, const json::Value& args) {
         if (args.has("pitch") && (args["pitch"].type() != json::Value::Number || !(args["pitch"].asNumber() >= -89.0) ||
                                   !(args["pitch"].asNumber() <= 89.0)))
             return "pitch: degrees, -89..89";
+    } else if (tool == "settings") {  // 3.0.24-beta.34
+        const std::string p = args["prefix"].asString();
+        static const std::regex word("^[a-z0-9_.]{0,40}$");
+        if (args.has("prefix") && !std::regex_match(p, word)) return "prefix: a key's start, e.g. \"effects.\"";
+    } else if (tool == "game") {  // 3.0.24-beta.34
+        const std::string w = args["what"].asString();
+        if (w != "character" && w != "items" && w != "chat") return "what: character, items or chat";
+        if (args.has("lines") && !wholeIn(args["lines"], 1, 100)) return "lines: 1-100";
     } else if (tool == "ui") {  // 3.0.24-beta.34
         const json::Value& d = args["doc"];
         if (args.has("doc") && (d.type() != json::Value::String || d.asString().size() > 60 || !oneLine(d.asString())))
