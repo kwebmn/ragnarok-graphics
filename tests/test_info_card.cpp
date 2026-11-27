@@ -237,3 +237,19 @@ TEST(info_card_reference_link) {
         said = said || (w.text == "У довіднику ›" && w.box.x == L.reference.x && w.box.y == L.reference.y);
     CHECK(said);
 }
+
+// 3.0.24-beta.22 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md, «Картка речі»: «что даёт каждая
+// вставленная карта»): a card's effect - its description's lines before the table's own (the spacer «^ffffff_^000000»,
+// «Class :», «Compound on :», «Weight :», «Тип», «Вага»), the empty ones aside
+TEST(info_card_a_cards_effect_lines) {
+    const std::vector<std::string> poring = {"Luk ^0000ff+2^000000,", "Perfect Dodge ^0000ff+1^000000.",
+                                             "^ffffff_^000000",        "Class :^777777 Card^000000",
+                                             "Compound on :^777777 Armor^000000", "Weight :^777777 1^000000"};
+    const std::vector<std::string> e = infocard::cardEffect(poring);
+    CHECK(e.size() == 2u && e[0] == "Luk ^0000ff+2^000000," && e[1] == "Perfect Dodge ^0000ff+1^000000.");
+    const std::vector<std::string> plain = {"", "MaxHP +100.", "", "Weight : 1"};
+    CHECK(infocard::cardEffect(plain) == std::vector<std::string>{"MaxHP +100."});
+    const std::vector<std::string> uk = {"Удача +2.", "Клас: Карта", "Вага: 1"};
+    CHECK(infocard::cardEffect(uk) == std::vector<std::string>{"Удача +2."});
+    CHECK(infocard::cardEffect({}).empty());
+}

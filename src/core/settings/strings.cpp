@@ -8789,6 +8789,7 @@ constexpr Entry kTexts[] = {
     {Text::CountFitsBag, "{1} fit in the bag", "у сумку влізе {1}", "в сумку влезет {1}"},
     {Text::CountFitsCart, "{1} fit in the cart", "у візок влізе {1}", "в тележку влезет {1}"},
     {Text::CountFitsStorage, "{1} fit in the storage", "у склад влізе {1}", "на склад влезет {1}"},
+    {Text::CardNpcPrice, "An NPC pays: {1} z", "NPC заплатить: {1} z", "NPC заплатит: {1} z"},  // 3.0.24-beta.22
     {Text::LauncherRunningCount, "The game is running · windows: {1}", "Гра вже запущена · вікон: {1}",
      "Игра уже запущена · окон: {1}"},
     {Text::InterfaceArrowsWalk, "Walking with the arrows", "Ходьба стрілками", "Ходьба стрелками"},

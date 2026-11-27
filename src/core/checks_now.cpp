@@ -7,6 +7,15 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.22 (the plan's task 8): the item card tells what its cards give and what an NPC pays
+        {"card_effects", "3.0.24-beta.22", "interface.cards",
+         {"Item card: what its cards give, the NPC's price", "Картка речі: що дають карти, ціна NPC",
+          "Карточка вещи: что дают карты, цена NPC"},
+         {"Right-click a thing with cards: under its words each card's name and what it gives; at the end «An NPC "
+          "pays: X z».",
+          "ПКМ на річ із картами: під описом — назва кожної карти й що вона дає; наприкінці «NPC заплатить: X z».",
+          "ПКМ по вещи с картами: под описанием — название каждой карты и что она даёт; в конце «NPC заплатит: "
+          "X z»."}},
         // 3.0.24-beta.22 (the plan's task 7): «Скільки штук» - four quick choices and what fits
         {"count_limit", "3.0.24-beta.22", "interface.storage_packets",
          {"How many: 1 / 10 / half / all and what fits", "Скільки штук: 1 / 10 / половина / усе і що влізе",

@@ -967,6 +967,7 @@ enum class Text : uint16_t {
     ItemHintPick, ItemsTabItemsShort, ItemsTabGearShort, ItemsTabStarred,  // 3.0.24-beta.20: the tabs' column
     ShopSellEtc, ShopSellAskCard, ShopSellAskRefine,  // 3.0.24-beta.21: «Крамниця NPC» selling
     CountFitsBag, CountFitsCart, CountFitsStorage,    // 3.0.24-beta.22: «Скільки штук» - what fits there
+    CardNpcPrice,                                     // 3.0.24-beta.22: «Картка речі» - what an NPC pays
     LauncherRunningCount,                // .206: «Гра вже запущена · вікон: N» under «+ ЩЕ ОДНЕ ВІКНО»
     InterfaceArrowsWalk, InterfaceArrowsWalkHint,  // .207: the keyboard concept, stage 1
     InterfaceWalkMode, InterfaceWalkModeHint, ChatHintWalk,  // .208: stage 2, the walk mode

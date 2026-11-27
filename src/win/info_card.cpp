@@ -1,7 +1,6 @@
 #include "win/info_card.hpp"
 
 #include "core/item_elements.hpp"
-#include "core/vend_shop.hpp"
 
 #include <windowsx.h>
 
@@ -20,6 +19,8 @@
 #include "core/hotbar_panel.hpp"
 #include "core/info_card.hpp"
 #include "core/settings/strings.hpp"
+#include "core/reference_index.hpp"
+#include "core/vend_shop.hpp"
 #include "core/skill_costs.hpp"
 #include "core/skill_info.hpp"
 #include "win/card_drag.hpp"
@@ -31,6 +32,7 @@
 #include "win/game_camera.hpp"
 #include "win/game_memory.hpp"
 #include "win/log.hpp"
+#include "win/reference_load.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_window.hpp"
@@ -308,6 +310,29 @@ void itemCard(State& s, One& o, uint32_t window) {
     if (known && !special)
         for (int i = 0; i < std::max(slotCount, 0); ++i)
             c.cards.push_back(cards[i] > 0 ? itemName(s, std::to_string(cards[i]), true) : "");
+    // 3.0.24-beta.22 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md, «Картка речі»: «что даёт
+    // каждая вставленная карта»): under its words, each card's name and its effect (its own description's lines)
+    if (known && !special) {
+        bool spaced = false;
+        for (int i = 0; i < std::max(slotCount, 0); ++i) {
+            if (cards[i] <= 0) continue;
+            const auto cd = s.tables.items.find(std::to_string(cards[i]));
+            if (cd == s.tables.items.end()) continue;
+            const std::vector<std::string> effect = ic::cardEffect(utf8Lines(s, cd->second));
+            if (effect.empty()) continue;
+            if (!spaced) c.lines.push_back(""), spaced = true;
+            c.lines.push_back(itemName(s, std::to_string(cards[i]), true) + ":");
+            c.lines.insert(c.lines.end(), effect.begin(), effect.end());
+        }
+    }
+    // 3.0.24-beta.22 (the same: «цена у NPC»): what an NPC pays for it - half its price (the reference pack's)
+    if (known)
+        if (const auto refs = reference::index()) {
+            const auto it = refs->items.find(id);
+            if (it != refs->items.end() && it->second.buy > 1)
+                c.lines.push_back(
+                    settings::fmt(say(settings::Text::CardNpcPrice), {vendshop::money(it->second.buy / 2)}));
+        }
     const auto& files = known ? clienttables::itemFiles() : s.tables.unknownFiles;
     const auto f = files.find(number);
     if (f != files.end()) {

@@ -1,6 +1,7 @@
 #include "core/info_card.hpp"
 
 #include <algorithm>
+#include <cstring>
 #include <cmath>
 #include <cstdlib>
 
@@ -129,6 +130,30 @@ std::vector<std::string> forJob(const std::vector<std::string>& lines, int job,
             const std::string who = name ? name(j) : std::string();
             out.push_back((who.empty() ? "#" + std::to_string(j) : who) + ": " + l.substr(n));
         }
+    }
+    return out;
+}
+
+std::vector<std::string> cardEffect(const std::vector<std::string>& description) {
+    std::vector<std::string> out;
+    for (const std::string& line : description) {
+        std::string plain;  // the line without the game's ^RRGGBB colours
+        for (size_t i = 0; i < line.size(); ++i) {
+            if (line[i] == '^' && i + 6 < line.size()) {
+                i += 6;
+                continue;
+            }
+            plain += line[i];
+        }
+        const size_t from = plain.find_first_not_of(" \t");
+        if (from == std::string::npos) continue;  // empty
+        const std::string head = plain.substr(from);
+        if (head == "_") break;  // the spacer before the table's own lines
+        bool table = false;
+        for (const char* label : {"Class", "Compound on", "Weight", "Equip", "Клас", "Класс", "Тип", "Вага", "Вес"})
+            table = table || head.compare(0, std::strlen(label), label) == 0;
+        if (table) break;
+        out.push_back(line);
     }
     return out;
 }
