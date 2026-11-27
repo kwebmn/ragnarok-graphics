@@ -74,5 +74,8 @@ int onlineCount(const std::vector<Entry>& entries);
 // party (friendids::canInvite, [interface] party_invite) - «Запросити в групу» after the whisper
 enum class Item : uint8_t { Whisper, Expel, Leave, RemoveFriend, AddFriend, Route, CopyName, Invite };
 std::vector<Item> menu(Tab t, const Entry& e, bool leader, bool elsewhere, bool invite = false);
+// 3.0.24-beta.32 (the server's 0x02c4 of 27.11): «Група»'s field to ask a player in by name - on the party's tab, the
+// testers' box on ([interface] party_invite), the character in a party
+bool nameInvite(Tab t, bool probe, bool inParty);
 
 }  // namespace uagfx::socialcard

@@ -1123,6 +1123,7 @@ enum class Text : uint16_t {
     InterfaceItemsPackets, InterfaceItemsPacketsHint,  // 3.0.24-beta.20
     // 3.0.24-beta.31 (core/play_limit): the server's daily play-time limit in the player's words
     PlayLimitReached, PlayLimitKicked, PlayLimitLeft, PlayLimitReset, PlayLimitBuy, PlayLimitAutopay, PlayLimitBlocked,
+    SocialInviteButton, ChatSysNotOnline,  // 3.0.24-beta.32: «Група»'s invite by name
     Count
 };
 

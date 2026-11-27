@@ -372,6 +372,16 @@ static void doItem(State& s, sc::Item item) {
     closeMenu(s);
 }
 
+// 3.0.24-beta.32 (the server's 0x02c4 handler of 27.11): a player asked into the party by name - our own packet; the
+// server's answers the game's (0x00fd) or its own line («Character '…' is not online.», the chat's words)
+static void inviteByName(State& s, const std::string& utf8) {
+    const itempackets::Bytes b = itempackets::partyInviteByName(narrowed(widened(utf8, CP_UTF8), s.codePage));
+    if (b.empty()) return;
+    const bool sent = itemnet::sendOwn(b);
+    LOG_INFO("social: %s asked into the party by name (our own packet 0x02c4) - %s", utf8.c_str(),
+             sent ? "sent" : "not sent (no connection)");
+}
+
 static Rml::String itemWord(sc::Item i) {
     using settings::Text;
     switch (i) {
@@ -454,6 +464,12 @@ static void liveFrame(State& s) {
             st.mv.addName.clear();
             st.live.doc.dirty("add_name");
         });
+        m.BindEventCallback("so_invite", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            State& st = state();  // 3.0.24-beta.32: «Група»'s invite by name
+            inviteByName(st, st.mv.inviteName);
+            st.mv.inviteName.clear();
+            st.live.doc.dirty("invite_name");
+        });
         m.BindEventCallback("so_close", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
             send(state(), sc::gameButton(sc::Action::Close), 0, "close");
         });
@@ -526,16 +542,18 @@ static void liveFrame(State& s) {
             if (const size_t at = hint.find(marks[i]); at != Rml::String::npos) hint.replace(at, 3, labels[i]);
     }
     const int padRow = uapad::runtime::navLook().shown ? s.show.focusRow : -1;
+    const bool inviteOn = sc::nameInvite(s.show.tab, g_invite, !s.partyName.empty());  // 3.0.24-beta.32
     ul::Model& v = s.mv;
     if (rows != v.rows) v.rows = std::move(rows), s.live.doc.dirty("rows");
     if (menu != v.menu) v.menu = std::move(menu), s.live.doc.dirty("menu");
     if (tabs != v.tabs || header != v.header || count != v.count || exp != v.exp || settingsWord != v.settings ||
         empty != v.empty || hint != v.hint || int(s.show.tab) != v.tab || s.show.selected != v.selected ||
-        ground != v.ground || padRow != v.padRow) {
+        ground != v.ground || padRow != v.padRow || inviteOn != v.inviteOn) {
         v.tabs = tabs, v.header = header, v.count = count, v.exp = exp, v.settings = settingsWord;
         v.empty = empty, v.hint = hint, v.tab = int(s.show.tab), v.selected = s.show.selected;
         v.ground = ground, v.padRow = padRow;
         v.nameHint = say(Text::SocialNameField), v.add = say(Text::SocialAdd);
+        v.inviteOn = inviteOn, v.invite = say(Text::SocialInviteButton);
         s.live.doc.dirtyAll();
     }
     if (v.menuRow != s.saidMenuRow) s.saidMenuRow = v.menuRow, s.live.doc.dirty("menu_row");  // .173: on a change

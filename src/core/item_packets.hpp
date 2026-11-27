@@ -50,6 +50,9 @@ Bytes openVending(const std::string& sign, const std::vector<VendRow>& rows);
 // 3.0.24-beta.27 ([interface] party_invite): the party's invite of an account (0x00fc, 6 bytes); the server answers
 // the game (0x00fd) and asks the invited (0x00fe)
 Bytes partyInvite(uint32_t account);
+// 3.0.24-beta.32 (the server's 0x02c4 handler of 27.11): a player asked into the party by name - 0x02c4 <name>.24B
+// (the game's code page), its spaces trimmed; none ({}) for no name or one past 23 bytes
+Bytes partyInviteByName(const std::string& gameName);
 Bytes tradeOk();
 Bytes tradeCancel();
 Bytes tradeCommit();

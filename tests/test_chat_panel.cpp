@@ -282,3 +282,16 @@ TEST(chat_panel_taken_up_by_a_click_enter_or_a_letter) {
     CHECK(!cp::arrowsToChat(false, true));   // the game's field has the keys, the chat not taken up: walking
     CHECK(!cp::arrowsToChat(true, false));
 }
+
+// 3.0.24-beta.32 (the party's invite by name): the server's «Character '%s' is not online.» in the player's words
+TEST(chat_panel_not_online_in_the_players_words) {
+    chatpanel::Texts t;
+    t.notOnline = "{1} is away";
+    chatpanel::Line l;
+    CHECK(chatpanel::shortSystem("Character 'Big Mike' is not online.", t, l));
+    CHECK(l.kind == chatpanel::Kind::System && l.spans.size() == 1 && l.spans[0].text == "Big Mike is away");
+    chatpanel::Line as;
+    CHECK(!chatpanel::shortSystem("Character '' is not online.", t, as));
+    chatpanel::Texts none;
+    CHECK(!chatpanel::shortSystem("Character 'Big Mike' is not online.", none, as));
+}

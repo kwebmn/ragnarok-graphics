@@ -245,6 +245,7 @@ cp::Texts texts() {
     t.search = say(settings::Text::ChatSearch);  // 3.0.11-beta.284
     t.searchHint = say(settings::Text::ChatSearchHint);
     t.limit = playlimit::wordsIn(language());  // 3.0.24-beta.31: the server's daily play-time limit
+    t.notOnline = say(settings::Text::ChatSysNotOnline);  // 3.0.24-beta.32: the party's invite by name
     return t;
 }
 

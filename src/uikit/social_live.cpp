@@ -31,6 +31,9 @@ const char* rml() {
 <div class="addf" data-if="tab == 0"><div class="fld"><input class="ctl" type="text" data-value="add_name"/><span
   class="ph" data-if="add_name == ''">{{name_hint}}</span></div><div class="btn ctl"
   data-event-click="so_add()">{{add}}</div></div>
+<div class="addf" data-if="tab == 1 && invite_on"><div class="fld"><input class="ctl" type="text"
+  data-value="invite_name"/><span class="ph" data-if="invite_name == ''">{{name_hint}}</span></div><div
+  class="btn ctl" data-event-click="so_invite()">{{invite}}</div></div>
 <div class="sfoot">{{hint}}</div>
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
@@ -69,6 +72,9 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("add_name", &m.addName);
     c.Bind("name_hint", &m.nameHint);
     c.Bind("add", &m.add);
+    c.Bind("invite_name", &m.inviteName);  // 3.0.24-beta.32: «Група»'s invite by name
+    c.Bind("invite", &m.invite);
+    c.Bind("invite_on", &m.inviteOn);
     c.Bind("hint", &m.hint);
     c.Bind("tab", &m.tab);
     c.Bind("selected", &m.selected);

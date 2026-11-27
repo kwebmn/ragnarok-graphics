@@ -7,6 +7,28 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.32 (the server's 0x02c4 of 27.11): «Група»'s invite by name
+        {"party_invite_name", "3.0.24-beta.32", "interface.party_invite",
+         {"Party: invite by name", "Група: запросити за ім'ям", "Группа: пригласить по имени"},
+         {"From the server's restart at 03:01 on 28.11. Be in a party; in the friends' card, the «Party» tab: under "
+          "the list a player's name and «Invite» - the player is asked as by the game's own invite; a name not in "
+          "the game - «… is not in the game now» in the chat.",
+          "З перезапуску сервера 28.11 о 03:01. Будьте в групі; у картці друзів, вкладка «Група»: під списком ім'я "
+          "гравця і «Запросити» — гравцеві прийде запрошення, як від запрошення самої гри; ім'я, якого немає в грі, "
+          "— у чаті «… зараз не в грі».",
+          "С перезапуска сервера 28.11 в 03:01. Будьте в группе; в карточке друзей, вкладка «Группа»: под списком "
+          "имя игрока и «Пригласить» — игроку придёт приглашение, как от приглашения самой игры; имени нет в игре — "
+          "в чате «… сейчас не в игре»."}},
+        // 3.0.24-beta.32 (the server's vending tax taken since its fix of 27.11): «Зароблено» what the server paid
+        {"shop_paid_32", "3.0.24-beta.32", "interface.my_shop",
+         {"My shop: «Earned» what the server paid", "Моя лавка: «Зароблено» — скільки заплатив сервер",
+          "Моя лавка: «Заработано» — сколько заплатил сервер"},
+         {"Open a shop and sell something: «Earned» grows by as much as your zeny did. From the server's restart "
+          "at 03:01 on 28.11 it keeps 2 % back - «Earned» shows it so.",
+          "Відкрийте лавку й продайте щось: «Зароблено» росте на стільки ж, на скільки ваші зені. З перезапуску "
+          "сервера 28.11 о 03:01 сервер утримує 2 % — «Зароблено» так і покаже.",
+          "Откройте лавку и продайте что-нибудь: «Заработано» растёт на столько же, на сколько ваши зени. С "
+          "перезапуска сервера 28.11 в 03:01 сервер удерживает 2 % — «Заработано» так и покажет."}},
         // 3.0.24-beta.31 (R-F4GZ3T): the game's ground's light map stage set whole - no white ground after wings
         {"ground_not_white_31", "3.0.24-beta.31", "",
          {"Fields: the ground not white after fly wings", "Поля: земля не біліє після крил",

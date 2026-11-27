@@ -1,5 +1,7 @@
 #include "core/item_packets.hpp"
 
+#include <algorithm>
+
 namespace uagfx::itempackets {
 namespace {
 
@@ -105,6 +107,17 @@ Bytes openVending(const std::string& sign, const std::vector<VendRow>& rows) {
 
 Bytes partyInvite(uint32_t account) {
     return Bytes{0xfc, 0x00, uint8_t(account), uint8_t(account >> 8), uint8_t(account >> 16), uint8_t(account >> 24)};
+}
+
+Bytes partyInviteByName(const std::string& gameName) {
+    const size_t from = gameName.find_first_not_of(' ');
+    if (from == std::string::npos) return {};
+    const std::string name = gameName.substr(from, gameName.find_last_not_of(' ') - from + 1);
+    if (name.size() > 23) return {};
+    Bytes b(26, 0);
+    b[0] = 0xc4, b[1] = 0x02;
+    std::copy(name.begin(), name.end(), b.begin() + 2);
+    return b;
 }
 
 Bytes tradeOk() { return Bytes{0xeb, 0x00}; }

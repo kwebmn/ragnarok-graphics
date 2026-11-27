@@ -784,6 +784,15 @@ std::string put2(std::string form, const std::string& a, const std::string& b) {
 }
 }  // namespace
 
+// «Character 'NAME' is not online.» (uAthena clif_parse_PartyInvite2): NAME; "" another line
+static std::string notOnlineName(const std::string& text) {
+    static const std::string head = "Character '", tail = "' is not online.";
+    if (text.size() <= head.size() + tail.size() || text.compare(0, head.size(), head) != 0 ||
+        text.compare(text.size() - tail.size(), tail.size(), tail) != 0)
+        return "";
+    return text.substr(head.size(), text.size() - head.size() - tail.size());
+}
+
 bool shortSystem(const std::string& text, const Texts& t, Line& out) {
     std::string v, w;
     std::string said;
@@ -799,6 +808,8 @@ bool shortSystem(const std::string& text, const Texts& t, Line& out) {
         said = t.zenyOn;
     } else if (text.rfind("Gained zeny will not be shown", 0) == 0 && !t.zenyOff.empty()) {
         said = t.zenyOff;
+    } else if (const std::string who = notOnlineName(text); !who.empty() && !t.notOnline.empty()) {
+        said = put2(t.notOnline, who, "");  // 3.0.24-beta.32: the party's invite by name, no such player online
     } else if (playlimit::Notice n; !t.limit.reached.empty() && playlimit::read(text, n)) {
         said = playlimit::words(n, t.limit, false);  // 3.0.24-beta.31: the daily play-time limit
     } else if (after(text, "Experience Gained Base:", v) && after(text, "Job:", w) && !t.expGained.empty()) {

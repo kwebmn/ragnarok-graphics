@@ -70,3 +70,25 @@ TEST(party_invite_only_online_friends_not_members) {
     const std::vector<socialcard::Item> no = socialcard::menu(socialcard::Tab::Friends, e, false, false, false);
     CHECK(std::find(no.begin(), no.end(), socialcard::Item::Invite) == no.end());
 }
+
+// 3.0.24-beta.32 (the server's 0x02c4 handler of 27.11, uAthena 181446e1): a player asked into the party by name -
+// 0x02c4 <name>.24B, the name in the game's code page, its spaces trimmed, 23 bytes at most (its end the 24th)
+TEST(party_invite_by_name_packet) {
+    const itempackets::Bytes b = itempackets::partyInviteByName(" Primrose ");
+    CHECK_EQ(b.size(), size_t(26));
+    CHECK(b[0] == 0xc4 && b[1] == 0x02);
+    CHECK(std::memcmp(b.data() + 2, "Primrose", 8) == 0);
+    CHECK(std::all_of(b.begin() + 10, b.end(), [](uint8_t c) { return c == 0; }));
+    CHECK(itempackets::partyInviteByName("").empty());
+    CHECK(itempackets::partyInviteByName("   ").empty());
+    CHECK_EQ(itempackets::partyInviteByName(std::string(23, 'a')).size(), size_t(26));
+    CHECK(itempackets::partyInviteByName(std::string(24, 'a')).empty());
+}
+
+// The name's field in «Група»: the party's tab, the testers' box on ([interface] party_invite), in a party
+TEST(party_invite_by_name_shown) {
+    CHECK(socialcard::nameInvite(socialcard::Tab::Party, true, true));
+    CHECK(!socialcard::nameInvite(socialcard::Tab::Party, false, true));
+    CHECK(!socialcard::nameInvite(socialcard::Tab::Party, true, false));
+    CHECK(!socialcard::nameInvite(socialcard::Tab::Friends, true, true));
+}

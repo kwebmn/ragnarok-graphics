@@ -22,11 +22,13 @@ struct Model {
     std::vector<RowV> rows;
     std::vector<Rml::String> tabs, menu;
     Rml::String header, count, exp, settings, empty, addName, nameHint, add, hint, ground = "#10141cf0";
+    Rml::String inviteName, invite;  // 3.0.24-beta.32: «Група»'s invite by name (the server's 0x02c4)
+    bool inviteOn = false;
     int tab = 0, selected = -1, menuRow = -1, menuFocus = 0, padRow = -1;
 };
 const char* rml();
 // The model's names bound (the events are the window's: so_tab, so_choose, so_down, so_whisper, so_quick, so_item,
-// so_settings, so_add, so_close)
+// so_settings, so_add, so_close; 3.0.24-beta.32 so_invite)
 void bind(Rml::DataModelConstructor& c, Model& m);
 
 }  // namespace uagfx::uikit::social

@@ -124,4 +124,6 @@ std::vector<Item> menu(Tab t, const Entry& e, bool leader, bool elsewhere, bool 
     return out;
 }
 
+bool nameInvite(Tab t, bool probe, bool inParty) { return t == Tab::Party && probe && inParty; }
+
 }  // namespace uagfx::socialcard

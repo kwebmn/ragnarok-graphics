@@ -10127,6 +10127,9 @@ constexpr Entry kTexts[] = {
      "за часом сервера.",
      "Причина — дневной лимит игры: сервер несколько раз подряд отключал вас из-за него. Лимит сбрасывается в 00:00 "
      "по времени сервера."},
+    // 3.0.24-beta.32 (the server's 0x02c4 of 27.11): «Група»'s invite by name, the server's «not online»
+    {Text::SocialInviteButton, "Invite", "Запросити", "Пригласить"},
+    {Text::ChatSysNotOnline, "{1} is not in the game now", "{1} зараз не в грі", "{1} сейчас не в игре"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
