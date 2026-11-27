@@ -10,8 +10,8 @@ const std::vector<Check>& all() {
         // 3.0.24-beta.21 (the plan's task 4): the cart opens a shop
         {"cart_open_shop", "3.0.24-beta.21", "interface.cart",
          {"Cart: «Open a shop»", "Візок: «Відкрити лавку»", "Тележка: «Открыть лавку»"},
-         {"A merchant with Vending: open «Cart» (Alt+W) - «Open a shop» at the bottom; press it: the shop's making opens. "
-          "Pick something with Ctrl - the button takes the picked instead.",
+         {"A merchant with Vending: open «Cart» (Alt+W) - «Open a shop» at the bottom; press it: the shop's making "
+          "opens. Pick something with Ctrl - the button takes the picked instead.",
           "Торговець із «Vending»: відкрийте «Візок» (Alt+W) — унизу «Відкрити лавку»; натисніть: відкриється "
           "підготовка лавки. Виберіть щось із Ctrl — кнопка забирає вибране.",
           "Торговец с «Vending»: откройте «Тележку» (Alt+W) — внизу «Открыть лавку»; нажмите: откроется подготовка "
