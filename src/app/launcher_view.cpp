@@ -749,6 +749,16 @@ void LauncherView::compose() {
         const bool on = hovered(Part::NoUpdate);
         panel::roundRect(pic_, pb(L.noUpdate), 8 * s, on ? kRaise : kCard, 0.88f, kGold, on ? 0.9f : 0.5f, edge);
     }
+    // 3.0.24-beta.19: «Інтерфейс: Темний | Світлий» over the big button - drawn as «Реліз | Бета»
+    for (int i = 0; i < 2; ++i) {
+        const Box& b = L.theme[i];
+        if ((i == 1) == data_.lightUi) {
+            panel::roundRect(pic_, pb(b), b.h / 2, kGold, 1.0f);
+        } else {
+            const bool hot = hovered(Part::Theme, i);
+            panel::roundRect(pic_, pb(b), b.h / 2, kCard, 0.82f, hot ? kGold : kLine, hot ? 0.7f : 1.0f, edge);
+        }
+    }
     // 3.0.18-beta.202: «Реліз | Бета» at the version's left
     {
         for (int i = 0; i < 2; ++i) {
@@ -991,6 +1001,19 @@ void LauncherView::words(HDC dc) {
         const std::wstring said = t(asking ? Text::LauncherCheckingNow : Text::LauncherCheck);
         const Style label = shrunk(dc, Style{Face::SemiBold, 10, shown}, said, int(L.check.w - 6 * s));
         line(dc, label, fit(dc, label, said, int(L.check.w - 6 * s)), cx, L.check.y + L.check.h - 9 * s, 0);
+        {  // 3.0.24-beta.19: «Інтерфейс» and its two halves' words
+            const Style word{Face::Medium, 12, kMuted};
+            line(dc, word, fit(dc, word, t(Text::LauncherUi), int(L.themeWord.w - 8 * s)), L.themeWord.x,
+                 L.themeWord.y + L.themeWord.h / 2 + ascentOf(dc, word) * 0.36f, -1);
+            for (int i = 0; i < 2; ++i) {
+                const Box& b = L.theme[i];
+                const bool lit = (i == 1) == data_.lightUi;
+                const Style st{Face::SemiBold, 12, lit ? kOnGold : hovered(Part::Theme, i) ? kText : kMuted};
+                const std::wstring said = t(i == 0 ? Text::LauncherUiDark : Text::LauncherUiLight);
+                line(dc, st, fit(dc, st, said, int(b.w - 10 * s)), b.x + b.w / 2,
+                     b.y + b.h / 2 + ascentOf(dc, st) * 0.36f, 0);
+            }
+        }
         for (int i = 0; i < 2; ++i) {
             const Box& b = L.channel[i];
             const bool lit = (i == 1) == data_.beta;
@@ -1782,6 +1805,8 @@ std::vector<Hit> LauncherView::focusOrder() const {
     std::vector<Hit> order{Hit{Part::Check}, Hit{Part::Play}, Hit{Part::PlayMore}};  // .202: the check first
     if (layout_.noUpdate.w > 0) order.push_back(Hit{Part::NoUpdate});  // 3.0.18-beta.199
     order.push_back(Hit{Part::Look});
+    order.push_back(Hit{Part::Theme, 0});  // 3.0.24-beta.19
+    order.push_back(Hit{Part::Theme, 1});
     if (layout_.update.w > 0) order.push_back(Hit{Part::Changelog});
     for (int i = 0; i < layout_.newsShown; ++i) order.push_back(Hit{Part::News, i});
     for (Part p : kDockParts) order.push_back(Hit{p});
@@ -1808,6 +1833,7 @@ Box LauncherView::boxOf(Hit hit) const {
     case Part::Check: return L.check;  // 3.0.18-beta.202
     case Part::Account: return accountPill_;  // 3.0.18-beta.205
     case Part::Channel: return hit.index >= 0 && hit.index < 2 ? L.channel[hit.index] : Box{};
+    case Part::Theme: return hit.index >= 0 && hit.index < 2 ? L.theme[hit.index] : Box{};  // 3.0.24-beta.19
     case Part::Language: return L.language;
     case Part::Plate: return hit.index == 1 ? plateClose_ : plateButton_;
     default: break;

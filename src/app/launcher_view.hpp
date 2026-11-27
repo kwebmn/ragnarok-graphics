@@ -50,6 +50,7 @@ struct LauncherData {
     std::wstring cardCheck;  // 3.0.18-beta.198: «Перевірити відеокарту»'s finding, "" not checked yet
     std::wstring firstFound;  // 3.0.18-beta.199: the first start's set chosen for the card at once, "" none
     bool beta = false;        // 3.0.18-beta.202: the update channel - «Бета» lit, else «Реліз»
+    bool lightUi = false;     // 3.0.24-beta.19: [interface] theme light - «Світлий» lit, else «Темний»
     // 3.0.18-beta.196: the first start (no version seen, no game here) - the players' cards over the launcher: the
     // one for the card, each card's three looks in words
     bool firstRun = false;

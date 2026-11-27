@@ -961,6 +961,7 @@ enum class Text : uint16_t {
     LauncherUpdateWhat, LauncherFirstFound,  // .199: the update's line, the first start's card set
     LauncherCheckingNow, LauncherChecking, LauncherCheckFailed,  // .201: the update check
     LauncherCheck, LauncherChannelBeta,  // .202: «Перевірити» beside «ГРАТИ», «Реліз | Бета»
+    LauncherUi, LauncherUiDark, LauncherUiLight,  // 3.0.24-beta.19: «Інтерфейс: Темний | Світлий»
     LauncherRunningCount,                // .206: «Гра вже запущена · вікон: N» under «+ ЩЕ ОДНЕ ВІКНО»
     InterfaceArrowsWalk, InterfaceArrowsWalkHint,  // .207: the keyboard concept, stage 1
     InterfaceWalkMode, InterfaceWalkModeHint, ChatHintWalk,  // .208: stage 2, the walk mode

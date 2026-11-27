@@ -15,7 +15,8 @@ enum class Part : uint8_t {
     NoUpdate,  // 3.0.18-beta.199: «Грати без оновлення» under the big button while an update is offered
     Check,     // 3.0.18-beta.202: «Перевірити» beside the big button - the update check
     Channel,   // 3.0.18-beta.202: «Реліз» (index 0) or «Бета» (1) beside the version
-    Account    // 3.0.18-beta.205: «Створити акаунт» in the top bar - the game with its registration open
+    Account,   // 3.0.18-beta.205: «Створити акаунт» in the top bar - the game with its registration open
+    Theme      // 3.0.24-beta.19: «Інтерфейс: Темний (index 0) | Світлий (1)» - the game interface's theme
 };
 
 struct Box {
@@ -42,6 +43,9 @@ struct Layout {
     Box check;
     Box channel[2];
     Box account;  // 3.0.18-beta.205 (the owner: «кнопку создать аккаунт»): in the top bar, left of the server's pill
+    // 3.0.24-beta.19 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md): «Інтерфейс» (its word in
+    // themeWord) and its two halves «Темний», «Світлий» - between the look line and the big button
+    Box themeWord, theme[2];
 };
 
 // newsCount: the site's news at hand; plate: a plate is shown (the safe mode, uaRO Graphics off, a roll back);

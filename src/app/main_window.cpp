@@ -1575,6 +1575,7 @@ void MainWindow::refreshLauncher() {
     }
     // the version and the update's word; 3.0.18-beta.202: the channel its own switch beside it
     d.beta = m.channel() == update::Channel::Beta;
+    d.lightUi = m.token(*settings::findSetting("interface.theme")) == "light";  // 3.0.24-beta.19
     std::string state;
     if (d.update.kind == UpdateState::Done)
         state = utf8(d.update.offer.empty() ? wtr(lang_, Text::MainUpdateNone)
@@ -1653,7 +1654,8 @@ void MainWindow::refreshLauncher() {
                        std::to_wstring(int(d.fitsCard)) + L"|" + std::to_wstring(int(d.undoable)) + L"|" +
                        wide(d.seen) + L"|" + std::to_wstring(int(d.firstRun)) + L"." +
                        std::to_wstring(d.suggestedKind) + L"|" + d.cardCheck + L"|" + d.firstFound + L"|" +
-                       std::to_wstring(int(d.beta)) + L"|" + std::to_wstring(d.windows) + L"|" +
+                       std::to_wstring(int(d.beta)) + std::to_wstring(int(d.lightUi)) + L"|" +
+                       std::to_wstring(d.windows) + L"|" +
                        std::to_wstring(int(d.laptop)) + std::to_wstring(int(d.plateClose));
     for (const LauncherData::Look& l : d.looks)
         sig += L"|" + std::to_wstring(l.variant) + L"." + std::to_wstring(l.changed);
@@ -1750,6 +1752,16 @@ void MainWindow::launcherAction(launcherview::Part part, int index) {
                 const std::wstring err = m.setChannel(want, lang_);
                 if (!err.empty()) message(err, true);
                 startUpdateCheck();
+            }
+            refreshLauncher();
+            return;
+        }
+        case Part::Theme: {  // 3.0.24-beta.19: the game interface's theme, written at once (Alt+O and the app read it)
+            const settings::IniSetting* s = settings::findSetting("interface.theme");
+            const std::string want = index == 1 ? "light" : "dark";
+            if (s && m.token(*s) != want) {
+                const std::wstring err = m.writeNow(*s, want, lang_);
+                if (!err.empty()) message(err, true);
             }
             refreshLauncher();
             return;

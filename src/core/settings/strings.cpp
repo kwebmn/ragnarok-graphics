@@ -8743,6 +8743,10 @@ constexpr Entry kTexts[] = {
     {Text::LauncherCheckFailed, "not checked", "не вдалося перевірити", "не удалось проверить"},
     {Text::LauncherCheck, "Check", "Перевірити", "Проверить"},
     {Text::LauncherChannelBeta, "Beta", "Бета", "Бета"},
+    // 3.0.24-beta.19 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md): the game interface's theme
+    {Text::LauncherUi, "Interface", "Інтерфейс", "Интерфейс"},
+    {Text::LauncherUiDark, "Dark", "Темний", "Тёмный"},
+    {Text::LauncherUiLight, "Light", "Світлий", "Светлый"},
     {Text::LauncherRunningCount, "The game is running · windows: {1}", "Гра вже запущена · вікон: {1}",
      "Игра уже запущена · окон: {1}"},
     {Text::InterfaceArrowsWalk, "Walking with the arrows", "Ходьба стрілками", "Ходьба стрелками"},

@@ -253,3 +253,28 @@ TEST(launcher_layout_arrows_by_place) {
     CHECK_EQ(launcherview::nearestToward(b, 3, -1, 0), -1); // nothing left of the lone one within 45°
     CHECK_EQ(launcherview::nearestToward(b, -1, 1, 0), -1); // no part to start from
 }
+
+// 3.0.24-beta.19 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md, the themes): «Інтерфейс: Темний
+// | Світлий» between the look line and the big button - its word at the left, the two halves after it to the look
+// line's right edge; a click on each tells its half
+TEST(launcher_layout_theme_pair_sits_by_the_look_line) {
+    struct Size {
+        int w, h;
+        float s;
+    };
+    const Size sizes[] = {Size{960, 560, 1.0f}, Size{1280, 720, 1.0f}, Size{3360, 1890, 1.75f}};
+    for (const Size z : sizes) {
+        const launcherview::Layout L = launcherview::layoutFor(z.w, z.h, z.s, 3, false);
+        CHECK(L.theme[0].w > 0 && L.theme[0].h > 0 && L.theme[1].x > L.theme[0].x);
+        CHECK(inside(L.theme[0], z.w, z.h) && inside(L.theme[1], z.w, z.h));
+        CHECK(L.theme[0].y + L.theme[0].h <= L.play.y);  // over the big button
+        CHECK(L.theme[0].y >= L.look.y + L.look.h);      // under the look line
+        CHECK(L.theme[0].x > L.look.x);                  // its word before it
+        CHECK(std::fabs(L.theme[1].x + L.theme[1].w - (L.look.x + L.look.w)) < 0.01f);
+        CHECK(apart(L.theme[0], L.theme[1]) && apart(L.feed, L.theme[0]));
+        CHECK(L.look.y >= L.bar.y + L.bar.h);
+        const launcherview::Hit h = launcherview::hitAt(L, cx(L.theme[1]), cy(L.theme[1]));
+        CHECK(h.part == Part::Theme && h.index == 1);
+        CHECK(launcherview::hitAt(L, cx(L.theme[0]), cy(L.theme[0])).index == 0);
+    }
+}

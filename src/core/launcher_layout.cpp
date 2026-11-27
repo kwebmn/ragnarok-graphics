@@ -14,6 +14,7 @@ constexpr float kLogoX = 20, kLogoY = 6, kLogoH = 76, kLogoW = kLogoH * 491 / 20
 constexpr float kUpdateH = 150, kNewsH = 84, kGap = 10, kIcon = 64, kIconGap = 12, kDockBottom = 22;
 constexpr float kPlayW = 336, kLookH = 52, kButtonH = 64, kMoreW = 56, kPlateH = 44, kPlateW = 560;
 constexpr float kNoUpdateH = 32, kRowH = 22, kChanW = 60, kCheckW = 64;
+constexpr float kThemeH = 28, kThemeWordW = 96;  // 3.0.24-beta.19
 
 }  // namespace
 
@@ -50,7 +51,14 @@ Layout layoutFor(int width, int height, float scale, int newsCount, bool plate, 
     const float bx = px + kCheckW * s;  // 3.0.18-beta.203: one button - ⟳ | ГРАТИ | ▾
     L.play = Box{bx, by, std::max(0.0f, px + playW - kMoreW * s - bx), kButtonH * s};
     L.playMore = Box{px + playW - kMoreW * s, by, kMoreW * s, kButtonH * s};
-    L.look = Box{px, by - kGap * s - kLookH * s, playW, kLookH * s};
+    // 3.0.24-beta.19: «Інтерфейс: Темний | Світлий» over the big button, the look line over it
+    const float ty = by - 8 * s - kThemeH * s;
+    const float wordW = std::min(kThemeWordW * s, playW * 0.4f);
+    L.themeWord = Box{px, ty, wordW, kThemeH * s};
+    const float half = (playW - wordW - 4 * s) / 2;
+    L.theme[0] = Box{px + wordW, ty, half, kThemeH * s};
+    L.theme[1] = Box{px + wordW + half + 4 * s, ty, px + playW - (px + wordW + half + 4 * s), kThemeH * s};
+    L.look = Box{px, ty - kGap * s - kLookH * s, playW, kLookH * s};
     // the icons at the bottom left, a plate over them when asked
     const float iconY = H - kDockBottom * s - kIcon * s;
     for (int i = 0; i < kDockIcons; ++i)
@@ -79,6 +87,8 @@ Hit hitAt(const Layout& L, float x, float y) {
     if (L.playMore.contains(x, y)) return Hit{Part::PlayMore};
     if (L.play.contains(x, y)) return Hit{Part::Play};
     if (L.look.contains(x, y)) return Hit{Part::Look};
+    for (int i = 0; i < 2; ++i)  // 3.0.24-beta.19
+        if (L.theme[i].contains(x, y)) return Hit{Part::Theme, i};
     if (L.noUpdate.w > 0 && L.noUpdate.contains(x, y)) return Hit{Part::NoUpdate};
     if (L.check.contains(x, y)) return Hit{Part::Check};  // 3.0.18-beta.202
     for (int i = 0; i < 2; ++i)
