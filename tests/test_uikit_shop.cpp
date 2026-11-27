@@ -131,3 +131,36 @@ TEST(uikit_shop_footer_keys_fit) {
         rmlhost::close(doc);
     }
 }
+
+// 3.0.24-beta.21 (the spec's «Крамниця NPC: продати»: «вся вкладка «Різне» кнопкой»): the sale's own button beside
+// «Очистити» - found by the core hit test; none while buying
+TEST(uikit_shop_sale_has_the_misc_button) {
+    sw::Data d;
+    d.tab = sw::Tab::Sell;
+    for (int i = 0; i < 3; ++i)
+        d.wares.push_back(sw::Ware{909 + i, 5, 10, 4, 0, true, "Jellopy " + std::to_string(i), nullptr});
+    std::vector<int> shown{0, 1, 2};
+    sw::Show sh;
+    sw::Texts t;
+    t.title = "Крамниця";
+    t.buy = "Купити";
+    t.sell = "Продати";
+    t.clear = "Очистити";
+    t.etc = "Усе з «Різне»";
+    static sl::Model m;
+    sl::fill(m, d, shown, sh, t, 1, none, glyph);
+    std::string error;
+    Rml::ElementDocument* doc =
+        rmlhost::load(sl::rml(), [&](Rml::DataModelConstructor& c) { sl::bind(c, m); }, 0, 0, &error);
+    CHECK_EQ(error, std::string());
+    sw::Layout L = sw::layout(0, 0, 1, d, shown, sh, t, measure);
+    CHECK(sl::refit(doc, L));
+    CHECK(L.etc.w > 0 && L.etc.h > 0);
+    CHECK(sw::hitTest(L, mid(L.etc).x, mid(L.etc).y).part == sw::Part::Etc);
+    d.tab = sw::Tab::Buy;  // buying: no such button
+    sl::fill(m, d, shown, sh, t, 1, none, glyph);
+    rmlhost::update();
+    CHECK(sl::refit(doc, L));
+    CHECK(L.etc.w <= 0);
+    rmlhost::close(doc);
+}

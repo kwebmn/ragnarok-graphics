@@ -35,6 +35,7 @@ struct Ware {  // a row of the shop's list as the game keeps it (the session's d
     bool identified = true;
     std::string name;
     const panel::Picture* icon = nullptr;
+    int type = 0, cards = 0;  // 3.0.24-beta.21: its kind (ITEM_INFO + 0); sold: its real cards (core/shop_guard)
 };
 struct Line {  // a row of the cart
     int ware = 0;  // its place in the list
@@ -113,6 +114,7 @@ struct Texts {
     std::string choose, toCart, plus, minus, typeAmount, remove, info, close, space;
     std::string editHint;
     std::string click, all;  // 3.0.22-beta.7: «клік» (the cap «Shift+клік»), «усе»
+    std::string etc;         // 3.0.24-beta.21: «Усе з «Різне»» - the sale's button (none: "")
 };
 
 // 3.0.22-beta.7 (a player: «in old client you double click to mark for sell all»; the owner: «делай»): what a click
@@ -133,6 +135,7 @@ struct Show {
     int hoverTab = -1, hoverWare = -1, hoverLine = -1;  // hoverWare: a place in the shown list
     int hoverLess = -1, hoverMore = -1, hoverAmount = -1, hoverTakeBack = -1;
     bool hoverConfirm = false, hoverClear = false, hoverClose = false, hoverSearch = false;
+    bool hoverEtc = false;  // 3.0.24-beta.21
     int scroll = 0, cartScroll = 0;
     bool typing = false, caretOn = false;  // the search has the keys
     std::string search;
@@ -149,6 +152,7 @@ struct Layout {
     int x = 0, y = 0, w = 0, h = 0;
     panel::Box glass, title, close, tabsRow, searchBox, listHead, list, cartTitle, cartHead, cart, totals;
     panel::Box confirm, confirmKey, clear, note, footer;  // confirmKey: «Enter» or the controller's Start on it
+    panel::Box etc;  // 3.0.24-beta.21: «Усе з «Різне»» (sold; 0 wide: none)
     std::vector<panel::Box> tabs;  // «Купити», «Продати»
     std::vector<panel::Box> wares;  // the list's rows on the screen: shown[firstWare] ...
     // the cart's rows on the screen (cart[firstLine] ...): − the amount + and the take-back cross
@@ -163,7 +167,8 @@ Layout layout(int x, int y, float scale, const Data& d, const std::vector<int>& 
 int iconSide(float scale);
 
 enum class Part : uint8_t {
-    None, Close, Tab, Search, Ware, Line, Less, Amount, More, TakeBack, Confirm, Clear, List, Cart, Title, Body
+    None, Close, Tab, Search, Ware, Line, Less, Amount, More, TakeBack, Confirm, Clear, List, Cart, Title, Body,
+    Etc  // 3.0.24-beta.21: «Усе з «Різне»»
 };
 struct Hit {
     Part part = Part::None;

@@ -339,6 +339,7 @@ Hit hitTest(const Layout& L, float x, float y) {
     if (L.searchBox.contains(x, y)) return Hit{Part::Search, -1};
     if (L.confirm.contains(x, y)) return Hit{Part::Confirm, -1};
     if (L.clear.contains(x, y)) return Hit{Part::Clear, -1};
+    if (L.etc.w > 0 && L.etc.contains(x, y)) return Hit{Part::Etc, -1};  // 3.0.24-beta.21
     for (size_t i = 0; i < L.lines.size(); ++i) {
         const int at = L.firstLine + int(i);
         if (L.less[i].contains(x, y)) return Hit{Part::Less, at};

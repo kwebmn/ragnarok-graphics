@@ -8,6 +8,7 @@
 #include "test.hpp"
 #include "uikit/equip_live.hpp"
 #include "uikit/item_grid_live.hpp"
+#include "uikit/shop_live.hpp"
 
 using namespace uagfx;
 
@@ -39,4 +40,5 @@ TEST(item_markup_letters_are_the_fonts) {
     CHECK(!itemui::fontHas(decoded("<span>&#x2715;</span>")));  // the check sees an entity's letter
     CHECK(itemui::fontHas(decoded(uikit::itemgrid::rml())));
     CHECK(itemui::fontHas(decoded(uikit::equip::rml())));
+    CHECK(itemui::fontHas(decoded(uikit::shop::rml())));  // 3.0.24-beta.21
 }

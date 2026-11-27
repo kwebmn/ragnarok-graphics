@@ -7,6 +7,15 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.21 (the plan's task 5): selling to an NPC, guarded
+        {"shop_sell_guard", "3.0.24-beta.21", "interface.shop",
+         {"NPC shop: selling, guarded", "Крамниця NPC: продаж із захистом", "Магазин NPC: продажа с защитой"},
+         {"Sell at an NPC: the starred things are not in the list; a thing with a card or of +5 asks a second click "
+          "(the note says why); «All of «Misc»» puts all the misc in.",
+          "Продаж NPC: речей з «Обране» немає в списку; річ із картою чи від +5 просить другого кліку (підказка каже "
+          "чому); «Усе з «Різне»» кладе все різне.",
+          "Продажа NPC: вещей из «Избранное» нет в списке; вещь с картой или от +5 просит второго клика (подсказка "
+          "говорит почему); «Всё из «Разное»» кладёт всё разное."}},
         // 3.0.24-beta.21 (the plan's task 4): the cart opens a shop
         {"cart_open_shop", "3.0.24-beta.21", "interface.cart",
          {"Cart: «Open a shop»", "Візок: «Відкрити лавку»", "Тележка: «Открыть лавку»"},

@@ -20,6 +20,7 @@
 #include "core/reference_index.hpp"
 #include "core/settings/strings.hpp"
 #include "core/pad_glyphs.hpp"
+#include "core/shop_guard.hpp"
 #include "core/shop_window.hpp"
 #include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
@@ -30,6 +31,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/item_net.hpp"
+#include "win/item_window.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
@@ -103,6 +105,11 @@ bool g_packets = false;  // 3.0.24-beta.9: [interface] shop_packets
 
 struct State {
     int notSentTold = 0;  // 3.0.18-beta.136
+    // 3.0.24-beta.21 (the spec: a card - always asked, +5 and over - asked): the second click lets it into the sale;
+    // the first's words in the note's place for a while
+    shopguard::Confirm sellGuard;
+    std::string guardNote;
+    ULONGLONG guardNoteAt = 0;
     // 3.0.18-beta.99 (docs/superpowers/plans/2026-11-10-uaui-live-drag.md): live - laid out by RmlUi
     LivePart<uikit::shop::Model> live;
     int sheetGen = 0;
@@ -271,6 +278,14 @@ void readDeal(State& s, sw::Tab tab) {
         if (!ptr || !len || len > 16 || !readGame(ptr, digits, len)) continue;
         sw::Ware w;
         w.id = std::atoi(digits);
+        // 3.0.24-beta.21 (the spec: «обране» never in the sale's list): the items' starred left out of the sale
+        if (tab == sw::Tab::Sell && !shopguard::sellable(itemswin::starredIds().count(w.id) > 0)) continue;
+        w.type = int(rd32(raw, 0x00));
+        if (tab == sw::Tab::Sell) {  // its real cards (a forged one's slots hold none)
+            int cards[4] = {};
+            for (int c = 0; c < 4; ++c) cards[c] = int(rd32(raw, 0x1C + size_t(c) * 4));
+            w.cards = shopguard::cardsIn(cards);
+        }
         w.price = int(rd32(raw, 0x18));
         w.count = tab == sw::Tab::Sell ? int(rd32(raw, kCount)) : 0;
         const int refine = int(rd32(raw, 0x40));
@@ -331,6 +346,7 @@ sw::Texts texts() {
     t.weightSell = say(settings::Text::ShopWeightSell);
     t.clear = say(settings::Text::ShopClear);
     t.note = say(settings::Text::ShopNote);
+    t.etc = say(settings::Text::ShopSellEtc);  // 3.0.24-beta.21: the sale's button (the kit shows it there alone)
     if (g_packets)  // 3.0.24-beta.9: why the deal was refused, in the note's place for a while
         if (const std::string why = itemnet::lastWords(); !why.empty()) t.note = why;
     t.empty = say(settings::Text::ShopEmpty);
@@ -347,6 +363,13 @@ sw::Texts texts() {
     t.editHint = say(settings::Text::ShopEditHint);
     t.click = say(settings::Text::KeyClick);  // 3.0.22-beta.7: «Shift+клік — усе» in the footer
     t.all = say(settings::Text::KeyHintPickAll);
+    return t;
+}
+
+// 3.0.24-beta.21: the texts as shown - a guarded sale's words in the note's place for a while
+sw::Texts shownTexts(const State& s) {
+    sw::Texts t = texts();
+    if (!s.guardNote.empty() && GetTickCount64() - s.guardNoteAt < shopguard::kConfirmMs) t.note = s.guardNote;
     return t;
 }
 
@@ -503,8 +526,42 @@ void lineInSight(State& s, int ware) {  // the cart's row of the ware changed: i
 
 void putIn(State& s, int ware, int by) {
     if (s.show.edit.ware >= 0) sw::endEdit(s.data, s.show.edit);
+    // 3.0.24-beta.21 (the spec: a card - always asked, a refine of +5 and over - asked): a guarded thing into the sale
+    // on the second click within 3 s; the first says why in the note's place
+    if (s.data.tab == sw::Tab::Sell && by > 0 && ware >= 0 && ware < int(s.data.wares.size()) &&
+        sw::amountOf(s.data.cart, ware) == 0) {
+        const sw::Ware& w = s.data.wares[size_t(ware)];
+        const shopguard::Ask a = shopguard::askBeforeSelling(w.refine, w.cards);
+        if (!s.sellGuard.pass(ware, a, uint32_t(GetTickCount64()))) {
+            s.guardNote = settings::fmt(say(a == shopguard::Ask::Card ? settings::Text::ShopSellAskCard
+                                                                       : settings::Text::ShopSellAskRefine),
+                                        {w.name, std::to_string(w.refine)});
+            s.guardNoteAt = GetTickCount64();
+            s.key.clear();
+            if (s.told++ < 30)
+                LOG_INFO("shop: #%d asked before selling (%s)", w.id, a == shopguard::Ask::Card ? "a card" : "refined");
+            return;
+        }
+    }
     sw::put(s.data, ware, by);
     lineInSight(s, ware);
+}
+
+// 3.0.24-beta.21 (the spec's «Крамниця NPC: продати»: «вся вкладка «Різне» кнопкой»): every «Різне» thing of the
+// sale's list into the cart whole - the guarded ones (a card, +5 and over) left for their own clicks
+void putMisc(State& s) {
+    if (s.data.tab != sw::Tab::Sell) return;
+    if (s.show.edit.ware >= 0) sw::endEdit(s.data, s.show.edit);
+    int put = 0;
+    for (size_t i = 0; i < s.data.wares.size(); ++i) {
+        const sw::Ware& w = s.data.wares[i];
+        if (!shopguard::misc(w.type) || shopguard::askBeforeSelling(w.refine, w.cards) != shopguard::Ask::None)
+            continue;
+        const int have = sw::amountOf(s.data.cart, int(i));
+        if (w.count > have) sw::put(s.data, int(i), w.count - have), ++put;
+    }
+    s.key.clear();
+    if (s.told++ < 30) LOG_INFO("shop: «Усе з «Різне»» - %d row(s) into the sale", put);
 }
 
 void takeOut(State& s, int ware, const char* by) {  // its whole row back
@@ -672,6 +729,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.hoverTab = s.show.hoverWare = s.show.hoverLine = s.show.hoverLess = s.show.hoverMore = -1;
     s.show.hoverAmount = s.show.hoverTakeBack = -1;
     s.show.hoverConfirm = s.show.hoverClear = s.show.hoverClose = s.show.hoverSearch = false;
+    s.show.hoverEtc = false;  // 3.0.24-beta.21
     int cx = 0, cy = 0;
     if (readHoverCursor(cx, cy) && !s.moving) {
         const sw::Hit h = sw::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
@@ -686,6 +744,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
             case sw::Part::TakeBack: s.show.hoverTakeBack = h.index; break;
             case sw::Part::Confirm: s.show.hoverConfirm = true; break;
             case sw::Part::Clear: s.show.hoverClear = true; break;
+            case sw::Part::Etc: s.show.hoverEtc = true; break;  // 3.0.24-beta.21
             case sw::Part::Close: s.show.hoverClose = true; break;
             case sw::Part::Search: s.show.hoverSearch = true; break;
             default: break;
@@ -741,12 +800,15 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                 [&](sl::Model& m) {
                                     m.ground = s.live.ground();
                                     const int side = std::max(8, int(std::lround(15 * s.layout.s)));
-                                    m.searchIcon = s.live.made("search" + std::to_string(side), side, side,
-                                                               [&](panel::Picture& p) {
+                                    // 3.0.24-beta.21: in the trade group's theme (its colour in the key)
+                                    const uint32_t ink = uaui::themed(0x9AA3B5, uitheme::Group::Trade);
+                                    m.searchIcon = s.live.made("search" + std::to_string(side) + ':' +
+                                                                   std::to_string(ink),
+                                                               side, side, [&](panel::Picture& p) {
                                                                    uiicons::draw(p, uiicons::Icon::Search, 0, 0,
-                                                                                 float(side), 0x9AA3B5, 0.9f, 2.2f);
+                                                                                 float(side), ink, 0.9f, 2.2f);
                                                                });
-                                    sl::fill(m, s.data, s.shownList, s.show, texts(), s.layout.s,
+                                    sl::fill(m, s.data, s.shownList, s.show, shownTexts(s), s.layout.s,
                                              [&](const panel::Picture* p) { return s.live.icon(p); },
                                              [&](int button, float h, float& w) {
                                                  w = std::ceil(padglyph::widthOf(padglyph::Button(button), h));
@@ -882,6 +944,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case sw::Part::TakeBack: takeOut(s, lineWare(h.index), "its cross"); break;
         case sw::Part::Confirm: confirm(s, "a click on its button"); break;
         case sw::Part::Clear: emptyCart(s); break;
+        case sw::Part::Etc: putMisc(s); break;  // 3.0.24-beta.21: «Усе з «Різне»»
         case sw::Part::Title:
             s.moving = true;
             s.grabX = tx - float(s.layout.x);

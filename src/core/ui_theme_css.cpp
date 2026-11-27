@@ -1333,9 +1333,14 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .shl .head .title { font-size: 1.25rem; font-weight: bold; color: #eef2f8; }
 .shl .pl { margin-left: 0.6667rem; font-size: 0.9583rem; color: #7e889a; }
 .shl .x { position: absolute; right: 1.3333rem; top: 0.8333rem; width: 2.1667rem; height: 2.1667rem;
-    line-height: 2.1667rem;
-          text-align: center; border-radius: 0.5833rem; color: #9aa3b5; font-size: 1.0833rem; }
-.shl .x.hot { background-color: #ffffff24; color: #ffffff; }
+    border-radius: 0.5833rem; }
+.shl .x.hot { background-color: #ffffff24; }
+/* 3.0.24-beta.21 (R-WP985Q: no letter the font lacks): the ✕ drawn - two bars */
+.shl .x .cxa, .shl .x .cxb { display: block; position: absolute; left: 0.5rem; top: 1rem; width: 1.1667rem;
+    height: 0.1667rem; background-color: #9aa3b5; }
+.shl .x .cxa { transform: rotate(45deg); }
+.shl .x .cxb { transform: rotate(-45deg); }
+.shl .x.hot .cxa, .shl .x.hot .cxb { background-color: #ffffff; }
 .shl .tabs { display: flex; align-items: center; height: 2.6667rem; margin: 0 1.3333rem;
     border-bottom: 0.0833rem #ffffff1f; }
 .shl .tg { display: block; margin-right: 0.6667rem; }
@@ -1408,7 +1413,9 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .shl .tv { font-weight: bold; color: #eef2f8; }
 .shl .tv.red { color: #ff8a80; }
 .shl .tv.amber { color: #f5bd4f; }
-.shl .acts { display: flex; margin-top: 0.8333rem; }
+.shl .acts { display: flex; flex-wrap: wrap; margin-top: 0.8333rem; }
+/* 3.0.24-beta.21: «Усе з «Різне»» - the sale's whole «Різне» into the cart (on the next line when no room) */
+.shl .clr.etc { color: #eef2f8; }
 .shl .go { display: flex; align-items: center; height: 3rem; padding: 0 1.1667rem 0 1.6667rem; border-radius: 0.6667rem;
            border: 0.0833rem #ffffff1a; background-color: #ffffff12; color: #7e889a; box-sizing: border-box; }
 .shl .go.ok { border-color: #f3c653; background-color: #f3c653; color: #1a1408; }

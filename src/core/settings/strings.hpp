@@ -965,6 +965,7 @@ enum class Text : uint16_t {
     ItemHintItems, ItemHintEquip, ItemHintStorage, ItemHintCart, ItemHintShopBuy,  // 3.0.24-beta.20: core/item_ui
     ItemHintShopSell, ItemHintVend, ItemHintVendSetup, ItemHintMyShop, ItemHintTrade, ItemHintAmount, ItemHintCard,
     ItemHintPick, ItemsTabItemsShort, ItemsTabGearShort, ItemsTabStarred,  // 3.0.24-beta.20: the tabs' column
+    ShopSellEtc, ShopSellAskCard, ShopSellAskRefine,  // 3.0.24-beta.21: «Крамниця NPC» selling
     LauncherRunningCount,                // .206: «Гра вже запущена · вікон: N» under «+ ЩЕ ОДНЕ ВІКНО»
     InterfaceArrowsWalk, InterfaceArrowsWalkHint,  // .207: the keyboard concept, stage 1
     InterfaceWalkMode, InterfaceWalkModeHint, ChatHintWalk,  // .208: stage 2, the walk mode

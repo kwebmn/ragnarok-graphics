@@ -8778,6 +8778,13 @@ constexpr Entry kTexts[] = {
     {Text::ItemsTabItemsShort, "Usable", "Витратне", "Расход."},
     {Text::ItemsTabGearShort, "Gear", "Спорядж.", "Снаряж."},
     {Text::ItemsTabStarred, "Starred", "Обране", "Избранное"},
+    // 3.0.24-beta.21 (the spec: «вся вкладка «Різне» кнопкой»; a card - always asked, +5 and over - asked)
+    {Text::ShopSellEtc, "All of «Misc»", "Усе з «Різне»", "Всё из «Разное»"},
+    {Text::ShopSellAskCard, "«{1}» holds a card - click once more to sell it",
+     "«{1}» має карту — клікніть ще раз, щоб продати", "«{1}» с картой — кликните ещё раз, чтобы продать"},
+    {Text::ShopSellAskRefine, "«{1}» is +{2} - click once more to sell it",
+     "«{1}» заточено на +{2} — клікніть ще раз, щоб продати",
+     "«{1}» заточено на +{2} — кликните ещё раз, чтобы продать"},
     {Text::LauncherRunningCount, "The game is running · windows: {1}", "Гра вже запущена · вікон: {1}",
      "Игра уже запущена · окон: {1}"},
     {Text::InterfaceArrowsWalk, "Walking with the arrows", "Ходьба стрілками", "Ходьба стрелками"},

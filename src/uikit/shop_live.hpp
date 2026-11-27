@@ -48,6 +48,8 @@ struct Model {
     Rml::String note, lbGlyph, rbGlyph;
     bool closeHot = false, buyOn = true, buyHot = false, sellHot = false, typing = false, caret = false;
     bool cartEmpty = true, isWaiting = false, ok = false, confirmHot = false, clearHot = false, clearOn = false;
+    Rml::String etc;                     // 3.0.24-beta.21: «Усе з «Різне»» (the sale's)
+    bool etcOn = false, etcHot = false;
     bool editing = false, pad = false;
     float glyphW = 0, glyphH = 0, lbW = 0, rbW = 0;
     std::vector<WareV> wares;

@@ -20,7 +20,7 @@ using charblock::grouped;
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw shl" data-style-font-size="base + 'px'" data-style-background-color="ground">
 <div class="head" data-hit="title"><span class="title">{{title}}</span><span class="pl">{{place}}</span></div>
-<div class="x" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
+<div class="x" data-hit="close" data-class-hot="closeHot"><span class="cxa"></span><span class="cxb"></span></div>
 <div class="tabs"><img class="tg" data-if="pad" data-attr-src="lbGlyph" data-style-width="lbW + 'px'"
   data-style-height="glyphH + 'px'"/><div class="tab" data-hit="tab" data-attr-data-index="0" data-class-on="buyOn"
   data-class-hot="buyHot">{{buy}}</div><div class="tab" data-hit="tab" data-attr-data-index="1"
@@ -58,7 +58,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   class="gw">{{confirm}}</span><img data-if="confirmGlyph != ''" data-attr-src="confirmGlyph"
   data-style-width="glyphW + 'px'" data-style-height="glyphH + 'px'"/><span class="cap"
   data-if="confirmGlyph == ''">{{confirmKey}}</span></div><div class="clr" data-hit="clear" data-class-on="clearOn"
-  data-class-hot="clearHot">{{clear}}</div></div>
+  data-class-hot="clearHot">{{clear}}</div><div class="clr etc" data-hit="etc" data-if="etcOn"
+  data-class-hot="etcHot">{{etc}}</div></div>
 <div class="note" data-class-edit="editing">{{note}}</div></div></div>
 <div class="foot" data-hit="footer" data-class-pad="pad"><div class="key" data-for="k : keys"><img
   data-if="k.glyph != ''" data-attr-src="k.glyph" data-style-width="k.w + 'px'" data-style-height="k.h + 'px'"/><span
@@ -143,6 +144,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
              {"amountWord", &m.amountWord}, {"sumWord", &m.sumWord},       {"empty", &m.empty},
              {"waiting", &m.waiting},       {"confirm", &m.confirm},       {"confirmKey", &m.confirmKey},
              {"confirmGlyph", &m.confirmGlyph}, {"clear", &m.clear},       {"note", &m.note},
+             {"etc", &m.etc},
              {"lbGlyph", &m.lbGlyph},       {"rbGlyph", &m.rbGlyph}})
         c.Bind(name, v);
     for (auto [name, v] : std::initializer_list<std::pair<const char*, bool*>>{
@@ -150,6 +152,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
              {"sellHot", &m.sellHot},     {"typing", &m.typing},       {"caret", &m.caret},
              {"cartEmpty", &m.cartEmpty}, {"isWaiting", &m.isWaiting}, {"ok", &m.ok},
              {"confirmHot", &m.confirmHot}, {"clearHot", &m.clearHot}, {"clearOn", &m.clearOn},
+             {"etcOn", &m.etcOn},         {"etcHot", &m.etcHot},
              {"editing", &m.editing},     {"pad", &m.pad}})
         c.Bind(name, v);
     for (auto [name, v] : std::initializer_list<std::pair<const char*, float*>>{
@@ -264,6 +267,9 @@ void fill(Model& m, const sw::Data& d, const std::vector<int>& shown, const sw::
     m.clear = t.clear;
     m.clearOn = !d.cart.empty();
     m.clearHot = sh.hoverClear;
+    m.etc = t.etc;  // 3.0.24-beta.21: «Усе з «Різне»» - the sale's alone
+    m.etcOn = d.tab == sw::Tab::Sell && !t.etc.empty();
+    m.etcHot = sh.hoverEtc;
     m.editing = sh.edit.ware >= 0;
     m.note = m.editing ? filled(t.editHint, grouped(sw::mostFor(d, sh.edit.ware))) : t.note;
     m.keys.clear();
@@ -300,6 +306,7 @@ bool refit(Rml::ElementDocument* doc, sw::Layout& L) {
     L.cart = one(doc, "cart");
     L.confirm = one(doc, "confirm");
     L.clear = one(doc, "clear");
+    L.etc = one(doc, "etc");  // 3.0.24-beta.21: none while hidden
     L.footer = one(doc, "footer");
     const auto rows = [&](const char* part, int first, std::vector<panel::Box>& to) {
         for (panel::Box& b : to) b = panel::Box{};
