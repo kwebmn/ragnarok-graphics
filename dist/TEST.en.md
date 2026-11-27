@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.24-beta.24 — what's new · 2026-11-27
+
+«Trade»: the red frame 5 s before «Ready» too, our own packets for the buttons (for testers); «Choosing a thing»: the search.
+
+- **«Trade»: the red frame.** Red now marks what the partner put in or changed (and the zeny they offered) within 5 s before your «Ready» as well, not only after it. The line says «Changed within 5 s before your «Ready» or after». A thing put in earlier stays plain.
+- **«Trade: our own packets for the buttons (beta)»** - a testers' box: Alt+O → «Checking now» → «Trade: our own packets for the buttons» (needs «Trade» on). «Ready», «Trade» and «Cancel» send the server's packet themselves. The zeny typed and the things still go by the game: it keeps what it offered, and a packet of ours would spoil its sums.
+- **«Choosing a thing»: the search.** Over a long list (more than 6 rows) - «Search by the name»: click and type part of a name. Esc stops the typing, a right click opens its card.
+- To check: Alt+O → «Checking now» → «Trade: the red frame, 5 s before «Ready» too», «Trade: our own packets for the buttons», «Choosing a thing: the search».
+
 # uaRO Graphics 3.0.24-beta.23 — what's new · 2026-11-27
 
 «Open a shop»: the prices remembered, our own packet (for testers); «My shop»: sold N of M, the buyer, a chime.
