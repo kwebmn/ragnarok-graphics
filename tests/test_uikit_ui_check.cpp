@@ -53,3 +53,26 @@ body { width: 400px; height: 200px; font-family: Plex; font-size: 14px; }
     CHECK(uikit::uicheck::problems(doc).empty());
     rmlhost::close(doc);
 }
+
+// The laptop's run (3.0.24-beta.35): the ui tool's answer broke on a word cut at 60 bytes in a letter's middle
+// (Cyrillic: two bytes a letter) - its text cut at a letter's edge, whole UTF-8
+TEST(uikit_ui_check_cuts_words_at_a_letter) {
+    const char* rml = R"RML(<rml><head><style>
+body { width: 900px; height: 100px; font-family: Plex; font-size: 14px; }
+.w { display: block; color: #181c26; background-color: #f6f8fc; }
+</style></head><body><div class="w">QЯбвгдежзийклмнопрстуфхцчшщьюяабвгдежзийклмнопрст</div></body></rml>)RML";
+    std::string error;
+    Rml::ElementDocument* doc = rmlhost::load(rml, nullptr, 0, 0, &error);
+    CHECK(doc != nullptr);
+    if (!doc) return;
+    rmlhost::update();
+    const std::vector<uikit::uicheck::Word> all = uikit::uicheck::words(doc, uikit::uicheck::Rgbf{0.5f, 0.5f, 0.5f});
+    CHECK_EQ(all.size(), size_t(1));
+    if (!all.empty()) {
+        const std::string& t = all[0].text;
+        CHECK(t.size() <= 60 && t.size() >= 58);
+        CHECK((static_cast<unsigned char>(t.back()) & 0xC0) != 0xC0);  // no letter's first byte left alone
+        CHECK(t.size() % 2 == 1);  // the Q and whole two-byte letters
+    }
+    rmlhost::close(doc);
+}

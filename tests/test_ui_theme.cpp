@@ -265,3 +265,16 @@ TEST(ui_theme_light_grounds_less_see_through) {
     // a colour that means something no lighter than 0.38 on the light ground (the chat's yellow, the game's)
     CHECK(lum(uitheme::colour(light, 0xFFFF00)) <= 0.385f);
 }
+
+// The laptop's run (3.0.24-beta.35, «Речі» in the light theme): the quiet words (the tabs' #7e889a, the keys' hint)
+// came out #828a98 on the light tabs - 2.7:1; in the light theme a grey word no lighter than 0.42
+TEST(ui_theme_light_quiet_words_readable) {
+    uitheme::Look look;
+    look.tone = uitheme::Tone::Light;
+    const uitheme::Theme t = uitheme::themeFor(look, uitheme::Group::Items);
+    CHECK(lum(uitheme::colour(t, 0x7E889A)) <= 0.425f);
+    CHECK(lum(uitheme::colour(t, 0x9AA3B5)) <= 0.425f);
+    CHECK(lum(uitheme::colour(t, 0x9AA3B5)) > lum(uitheme::colour(t, 0xEEF2F8)));  // still quieter than the words
+    CHECK(lum(uitheme::colour(t, 0x10141C)) > 0.90f);                               // the grounds as they were
+    CHECK(lum(uitheme::colour(t, 0x2A3040)) > 0.75f);                               // a dark inset light
+}

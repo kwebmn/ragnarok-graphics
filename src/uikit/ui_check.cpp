@@ -77,7 +77,9 @@ void walk(Rml::Element* e, Rgbf world, const std::vector<Painted>& painted, int&
             const Rgbf f = over(g, e->GetComputedValues().color());
             const float l1 = luminance(f), l2 = luminance(g);
             Word w;
-            w.text = text.substr(0, 60);
+            size_t cut = std::min<size_t>(text.size(), 60);  // at a letter's edge: whole UTF-8
+            while (cut > 0 && cut < text.size() && (static_cast<unsigned char>(text[cut]) & 0xC0) == 0x80) --cut;
+            w.text = text.substr(0, cut);
             const Rml::Vector2f at = e->GetAbsoluteOffset(Rml::BoxArea::Border);
             const Rml::Vector2f size = e->GetBox().GetSize(Rml::BoxArea::Border);
             w.x = at.x, w.y = at.y, w.w = size.x, w.h = size.y;

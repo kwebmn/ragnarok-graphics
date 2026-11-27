@@ -41,6 +41,7 @@ constexpr uint32_t kNoWord = 0xFFFFFFFFu;
 // the light ground's colours: no lighter than this, to be read on it (3.0.24-beta.33, R-8BCJAH: 0.38, was 0.45 - the
 // chat's yellow and green faint on the light glass)
 constexpr float kReadable = 0.38f;
+constexpr float kQuietWord = 0.42f;  // 3.0.24-beta.36: a grey word in the light theme no lighter
 
 float hue(Rgb c) {  // degrees
     const float mx = std::max({c.r, c.g, c.b}), d = mx - std::min({c.r, c.g, c.b});
@@ -175,8 +176,10 @@ uint32_t colour(const Theme& t, uint32_t rgb) {
         const float k = kReadable / l;
         return to({c.r * k, c.g * k, c.b * k});
     }
-    // Light: the greys turned over (the dark grounds light, the light words dark), their tint kept
-    const float m = std::clamp(0.976f - 1.097f * (l - 0.13f), 0.06f, 0.985f);
+    // Light: the greys turned over (the dark grounds light, the light words dark), their tint kept; 3.0.24-beta.36
+    // (the laptop's run: «Речі»'s quiet tabs 2.7:1 on the light): a grey word (0.4 and lighter) no lighter than 0.42
+    float m = std::clamp(0.976f - 1.097f * (l - 0.13f), 0.06f, 0.985f);
+    if (l >= 0.4f) m = std::min(m, kQuietWord);
     return to({m + (c.r - l) * 0.8f, m + (c.g - l) * 0.8f, m + (c.b - l) * 0.8f});
 }
 
