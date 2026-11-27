@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.24-beta.21 — what's new · 2026-11-27
+
+The cart opens a shop, guarded NPC selling, weight in a player's shop (for testers).
+
+- **«Cart»: an «Open a shop» button at the bottom** - when the merchant has Vending and nothing is picked (with things picked the same button takes them). Pressing it opens the shop's making, as from the skill tree.
+- **«NPC shop»: guarded selling.** The starred things are not in the sale's list. A thing with a card (always) or refined +5 and over asks a second click - the hint at the bottom says why. A new «All of «Misc»» button puts all the misc things in (the guarded aside). The close cross is drawn.
+- **«Merchant's shop»: «Weight after buying X / Y»** under the sum; too heavy - the line turns red and «Buy» is off (the server would refuse anyway). The close cross is drawn.
+- To check: Alt+O → «Checking now» → «Cart: «Open a shop»», «NPC shop: selling, guarded», «Merchant's shop: weight after the purchase».
+
 # uaRO Graphics 3.0.24-beta.20 — what's new · 2026-11-27
 
 Items in the old layout; our own use, wear and drop (for testers).
