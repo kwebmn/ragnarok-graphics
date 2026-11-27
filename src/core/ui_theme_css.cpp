@@ -1043,9 +1043,14 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .head .title { font-size: 1.25rem; font-weight: bold; color: #eef2f8; }
 .eql .hk { margin-left: 0.6667rem; font-size: 0.9167rem; color: #7e889a; }
 .eql .x { position: absolute; right: 1.3333rem; top: 0.8333rem; width: 2.1667rem; height: 2.1667rem;
-    line-height: 2.1667rem;
-          text-align: center; border-radius: 0.5833rem; color: #9aa3b5; font-size: 1.0833rem; }
-.eql .x.hot { background-color: #ffffff24; color: #ffffff; }
+    border-radius: 0.5833rem; }
+.eql .x.hot { background-color: #ffffff24; }
+/* 3.0.24-beta.20 (R-WP985Q: no letter the font lacks): the ✕ drawn - two bars */
+.eql .x .cxa, .eql .x .cxb { display: block; position: absolute; left: 0.5rem; top: 1rem; width: 1.1667rem;
+    height: 0.1667rem; background-color: #9aa3b5; }
+.eql .x .cxa { transform: rotate(45deg); }
+.eql .x .cxb { transform: rotate(-45deg); }
+.eql .x.hot .cxa, .eql .x.hot .cxb { background-color: #ffffff; }
 .eql .cols { display: flex; justify-content: space-between; padding: 0.8333rem 1.3333rem 0 1.3333rem;
     height: 21.6667rem; }
 .eql .col { display: block; width: 19rem; }
@@ -1809,10 +1814,14 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .eql .stage img { display: block; }
 .eql .turn { position: absolute; left: 0.5rem; right: 0.5rem; bottom: 0.1667rem; display: flex;
     justify-content: space-between; }
-.eql .tb { display: block; width: 2.3333rem; height: 2.3333rem; line-height: 2.3333rem; text-align: center;
-    border-radius: 0.6667rem;
-           border: 0.0833rem #ffffff22; background-color: #ffffff0d; font-size: 1rem; }
-.eql .tb:hover, .eql .tb.hot { background-color: #ffffff24; border-color: #e6cb8a88; color: #e6cb8a; }
+.eql .tb { display: block; position: relative; width: 2.3333rem; height: 2.3333rem; border-radius: 0.6667rem;
+    border: 0.0833rem #ffffff22; background-color: #ffffff0d; }
+.eql .tb:hover, .eql .tb.hot { background-color: #ffffff24; border-color: #e6cb8a88; }
+/* 3.0.24-beta.20: the turns' ◀ ▶ drawn - a chevron each (two edges of a box turned), no letter the font lacks */
+.eql .tb .chv { display: block; position: absolute; left: 0.9167rem; top: 0.75rem; width: 0.6667rem;
+    height: 0.6667rem; border-left: 0.1667rem #9aa3b5; border-bottom: 0.1667rem #9aa3b5; transform: rotate(45deg); }
+.eql .tb .chv.r { left: 0.5833rem; transform: rotate(-135deg); }
+.eql .tb:hover .chv, .eql .tb.hot .chv { border-color: #e6cb8a; }
 .eql .nm .dot { display: inline-block; width: 0.5833rem; height: 0.5833rem; margin: 0 0 0.0833rem 0.3333rem;
     vertical-align: middle; }
 .eql .right .nm .dot { margin: 0 0.3333rem 0.0833rem 0; }

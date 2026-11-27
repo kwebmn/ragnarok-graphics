@@ -14,6 +14,7 @@
 #include "core/char_block.hpp"
 #include "core/char_status.hpp"
 #include "core/equip_window.hpp"
+#include "core/item_ui.hpp"
 #include "core/pad_glyphs.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/layout.hpp"
@@ -406,7 +407,7 @@ ew::Texts texts() {
     for (int i = 0; i < ew::kSlots; ++i) t.labels[i] = say(labels[i]);
     t.empty = "\xE2\x80\x94";
     t.cards = say(settings::Text::EquipCards);
-    t.drag = say(settings::Text::EquipDrag);
+    t.drag = say(itemui::hintOf(itemui::Window::Equip));  // 3.0.24-beta.20: the item windows' keys' hint
     t.level = say(settings::Text::EquipLevel);
     t.pickTitle = say(settings::Text::EquipPickTitle);
     t.pickNone = say(settings::Text::EquipPickNone);

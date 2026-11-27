@@ -21,7 +21,7 @@ namespace ew = uagfx::equipwin;
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw eql" data-style-font-size="base + 'px'" data-style-background-color="ground">
 <div class="head" data-hit="title"><span class="title">{{title}}</span><span class="hk">{{hotkey}}</span></div>
-<div class="x" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
+<div class="x" data-hit="close" data-class-hot="closeHot"><span class="cxa"></span><span class="cxb"></span></div>
 <div class="cols">
 <div class="col left"><div class="slot" data-for="sl : left" data-hit="slot" data-attr-data-index="sl.index"
   data-class-hot="sl.hot" data-class-focus="sl.focus" data-class-fits="sl.fits"><div class="tile" data-hit="tile"
@@ -34,11 +34,13 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <div class="centre" data-hit="centre"><div class="stage"><img data-if="hero != ''" data-attr-src="hero"
   data-style-width="heroW + 'px'" data-style-height="heroH + 'px'"/><div class="turn"
   data-if="turns || mountOff != ''"><span
-  class="tb" data-if="turns" data-hit="turnleft" data-class-hot="turnHot == 0">&#x25C0;</span><span class="mi"
+  class="tb" data-if="turns" data-hit="turnleft" data-class-hot="turnHot == 0"><span class="chv l"></span></span><span
+  class="mi"
   data-if="mountOff != ''" data-hit="mountoff" data-class-hot="mountHot"><img data-if="mountIcon != ''"
   data-attr-src="mountIcon" data-style-width="mountIconSide + 'px'"
   data-style-height="mountIconSide + 'px'"/></span><span
-  class="tb" data-if="turns" data-hit="turnright" data-class-hot="turnHot == 1">&#x25B6;</span></div><div class="mtip"
+  class="tb" data-if="turns" data-hit="turnright" data-class-hot="turnHot == 1"><span
+  class="chv r"></span></span></div><div class="mtip"
   data-if="mountHot && !mountAsk" data-hit="mounttip"><span class="tp">{{mountOff}}</span></div><div class="mtip"
   data-if="mountAsk"><div class="ask"><span class="aq">{{mountOff}}?</span><div class="ab"><span class="ay"
   data-hit="mountyes" data-class-hot="askHot == 0">{{askYes}}</span><span class="an" data-hit="mountno"
