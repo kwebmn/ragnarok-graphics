@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.25 — what's new · 2026-11-27
+
+Fixes: «Item card» shows the cards' effects alone; «Items» counts the worn gear.
+
+- **«Item card»:** under each card's name only what it gives now, without the game table's own lines («Item Class», «Compound on», «Weight»). A first line repeating the card's name is gone too. Checked on every card of the client's table.
+- **«Items N/100»:** the worn gear is counted too - it holds bag places (the server counts its 100 places with it). Before, with 10 pieces worn a full bag said «90/100».
+- To check: Alt+O → «Checking now» → «Item card: the cards' effects alone; the bag's count».
+
 # uaRO Graphics 3.0.24-beta.24 — what's new · 2026-11-27
 
 «Trade»: the red frame 5 s before «Ready» too, our own packets for the buttons (for testers); «Choosing a thing»: the search.
