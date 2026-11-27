@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.26 — what's new · 2026-11-27
+
+Windows' signs: all from the font; «Skills» - a narrow list as in the old game (for testers).
+
+- **Windows' signs.** The closes of the chat rooms, emotes, guild, skills, stats, trade, settings and the other windows are drawn crosses now, no boxes. The party leader and a room's owner have a small gold diamond. The reference's star is drawn, «again» in «Hunt» is an arrow, folds are «+» and «−», and the on-screen keyboard has «₴». The texts that explain these marks changed alike.
+- **«Skills» (Alt+S): a narrow list as in the old game.** A row: icon, name with its line under it, the use level's arrows, «N/M», «+». A long name ends in «…». A right click on a skill opens its card: the level, what it needs (✓ or how far), what it opens, SP by level. «Tree» as before.
+- To check: Alt+O → «Checking now» → «Windows' signs: all from the font», «Skills: a narrow list, the facts by a right click».
+
 # uaRO Graphics 3.0.24-beta.25 — what's new · 2026-11-27
 
 Fixes: «Item card» shows the cards' effects alone; «Items» counts the worn gear.
