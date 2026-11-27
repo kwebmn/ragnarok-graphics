@@ -133,8 +133,8 @@ mcp::CallResult failure(const std::string& text) {
 // 3.0.22-beta.41: the driver's log's last lines, read here (its last megabyte, shared with the writer)
 mcp::CallResult logLines(const json::Value& args) {
     // 3.0.24-beta.34: the renderer's and the pad's logs beside it (`file`), the lines since a moment (`since`)
-    const std::string path =
-        wlog::path().empty() ? std::string() : mcp::logNamed(wlog::path(), args["file"].asString("graphics"));
+    const std::string file = args.has("file") ? args["file"].asString() : std::string("graphics");
+    const std::string path = wlog::path().empty() ? std::string() : mcp::logNamed(wlog::path(), file);
     if (path.empty()) return failure("no log file now");
     const HANDLE f = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                  nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
