@@ -9,6 +9,7 @@
 #include <cstring>
 
 #include "core/ui_theme_css.hpp"
+#include "uikit/doc_sources.hpp"
 #include "uikit/applying.hpp"
 
 namespace rmlhost {
@@ -77,6 +78,8 @@ public:
     void SetScissorRegion(Rml::Rectanglei r) override { by_ = r; }
 };
 
+const uagfx::uitheme::Theme* g_theme = nullptr;  // 3.0.24-beta.33
+
 class Files final : public Rml::FileInterface {
     struct Open {
         std::string data;
@@ -85,9 +88,17 @@ class Files final : public Rml::FileInterface {
 
 public:
     Rml::FileHandle Open(const Rml::String& path) override {
+        if (path.rfind("uaui://", 0) == 0) {  // 3.0.24-beta.33: a document's own markup (its style sheet's reload)
+            std::string rml;
+            if (!uagfx::uikit::docsources::find(path, rml)) return 0;
+            auto* f = new struct Open;
+            f->data = rml;
+            return Rml::FileHandle(f);
+        }
         if (path != "uaui:theme.rcss") return 0;
         auto* f = new struct Open;
-        f->data = uagfx::uitheme::builtInCss();
+        f->data = g_theme ? uagfx::uitheme::themedCss(*g_theme, uagfx::uitheme::builtInCss())
+                          : uagfx::uitheme::builtInCss();
         return Rml::FileHandle(f);
     }
     void Close(Rml::FileHandle h) override { delete reinterpret_cast<struct Open*>(h); }
@@ -180,6 +191,7 @@ Rml::ElementDocument* load(const std::string& rml, const std::function<void(Rml:
     if (body == std::string::npos) return nullptr;
     text.insert(body + 5, " data-model=\"" + model + "\"");
     const size_t before = g_log.size();
+    uagfx::uikit::docsources::keep("uaui://" + model, text);  // 3.0.24-beta.33: as win/uaui - its style sheet's reload
     Rml::ElementDocument* d = c->LoadDocumentFromMemory(text, "uaui://" + model);
     if (!d) {
         if (error) *error = g_log.substr(before);
@@ -219,10 +231,16 @@ int textureLoads(const std::string& source) {
 }
 
 void close(Rml::ElementDocument* doc) {
+    if (doc) uagfx::uikit::docsources::forget(doc->GetSourceURL());
     if (doc) doc->Close();
     context()->Update();
 }
 
 const std::string& log() { return g_log; }
+
+void theme(const uagfx::uitheme::Theme* t) {
+    g_theme = t;
+    Rml::Factory::ClearStyleSheetCache();
+}
 
 }  // namespace rmlhost

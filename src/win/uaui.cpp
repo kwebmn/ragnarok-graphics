@@ -35,6 +35,7 @@
 #include "core/layout.hpp"
 #include "core/window_panel.hpp"
 #include "uikit/applying.hpp"
+#include "uikit/doc_sources.hpp"
 #include "win/paths.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
@@ -864,6 +865,15 @@ void writeSample(const std::string& file, const std::string& text) {
 class Files final : public Rml::FileInterface {
 public:
     Rml::FileHandle Open(const Rml::String& path) override {
+        // 3.0.24-beta.33 (R-8BCJAH «белый интерфейс не читабелен»): a document's own markup - RmlUi reads it again
+        // to reload its style sheet when the theme changes (none given: the words kept the old theme's colours)
+        if (path.rfind("uaui://", 0) == 0) {
+            std::string rml;
+            if (!uikit::docsources::find(path, rml)) return 0;
+            auto* own = new Open_;
+            own->data = std::move(rml);
+            return Rml::FileHandle(own);
+        }
         auto* f = new Open_;
         uitheme::Group group = uitheme::Group::Windows;
         if (uitheme::styleGroup(path, group)) {  // 3.0.18-beta.17: the file's rules after the built-in ones
@@ -1605,6 +1615,8 @@ bool Doc::load(const std::string& rml) {
     } else {
         text.insert(body + 5, " data-model=\"" + model_name_ + "\"");
     }
+    // 3.0.24-beta.33 (R-8BCJAH): its markup kept by its source - a theme's change reloads its style sheet from it
+    uikit::docsources::keep(std::string("uaui://") + model_name_, text);
     Rml::ElementDocument* d = s.context->LoadDocumentFromMemory(text, std::string("uaui://") + model_name_);
     if (!d) {
         LOG_ERROR("uaui: the document «%s» did not load", name.c_str());

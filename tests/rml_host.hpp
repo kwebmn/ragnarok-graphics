@@ -5,6 +5,8 @@
 
 #include <RmlUi/Core.h>
 
+#include "core/ui_theme.hpp"
+
 // 3.0.18-beta.94: RmlUi on the host for the live windows' tests - a stand-in font (each letter 0.55 of its size wide,
 // bold 0.6; lines 1.2), no drawing, the built-in theme (core/ui_theme_css) at «uaui:theme.rcss». One context of the
 // target's size; a document made from markup with its model bound as win/uaui's Doc does (its name on the body).
@@ -27,6 +29,9 @@ Work frame();
 void failTextures(const std::set<std::string>& sources);
 int textureLoads(const std::string& source);
 void close(Rml::ElementDocument* doc);
+// 3.0.24-beta.33 (R-8BCJAH «белый интерфейс не читабелен»): the built-in theme served through a theme (core/ui_theme
+// themedCss) for the documents loaded after it; nullptr: as built (dark)
+void theme(const uagfx::uitheme::Theme* t);
 const std::string& log();  // RmlUi's warnings and errors since the start
 
 }  // namespace rmlhost

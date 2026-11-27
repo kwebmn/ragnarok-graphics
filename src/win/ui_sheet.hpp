@@ -7,6 +7,7 @@
 
 #include "core/pad_glyphs.hpp"
 #include "core/ui_sheet_model.hpp"
+#include "core/ui_theme.hpp"
 #include "core/ui_icons.hpp"
 #include "core/window_panel.hpp"
 #include "win/picture_draw.hpp"
@@ -97,6 +98,7 @@ struct Content {
     }
     Rml::String rgba(uint32_t rgb, float a) const {
         char b[16];
+        a = uitheme::groundAlpha(uitheme::active(group), rgb, a);  // 3.0.24-beta.33: a light ground less see-through
         const int alpha = a <= 0 ? 0 : a >= 1 ? 255 : int(a * 255 + 0.5f);
         std::snprintf(b, sizeof b, "#%06x%02x", unsigned(uaui::themed(rgb, group) & 0xFFFFFF), alpha);
         return b;

@@ -38,7 +38,9 @@ bool hex(const std::string& s, uint32_t& out) {  // "#RRGGBB" exactly
 
 constexpr uint32_t kGold = 0xE6CB8A, kBlue = 0x2F5FD0, kInk = 0x181C26;
 constexpr uint32_t kNoWord = 0xFFFFFFFFu;
-constexpr float kReadable = 0.45f;  // the light ground's colours: no lighter than this, to be read on it
+// the light ground's colours: no lighter than this, to be read on it (3.0.24-beta.33, R-8BCJAH: 0.38, was 0.45 - the
+// chat's yellow and green faint on the light glass)
+constexpr float kReadable = 0.38f;
 
 float hue(Rgb c) {  // degrees
     const float mx = std::max({c.r, c.g, c.b}), d = mx - std::min({c.r, c.g, c.b});
@@ -105,7 +107,16 @@ std::string recoloured(const Theme& t, const std::string& text, uint32_t word) {
         char b[16];
         std::snprintf(b, sizeof b, "#%06x", unsigned(c));
         out += b;
-        out += m[2].str();
+        std::string alpha = m[2].str();  // 3.0.24-beta.33: a light ground less see-through (groundAlpha)
+        if (!alpha.empty()) {
+            const float a = float(std::strtoul(alpha.c_str(), nullptr, 16)) / 255.0f, lifted = groundAlpha(t, rgb, a);
+            if (lifted != a) {
+                char ab[4];
+                std::snprintf(ab, sizeof ab, "%02x", int(std::lround(lifted * 255)) & 0xFF);
+                alpha = ab;
+            }
+        }
+        out += alpha;
         at = m[0].second;
     }
     out.append(at, text.cend());
@@ -167,6 +178,13 @@ uint32_t colour(const Theme& t, uint32_t rgb) {
     // Light: the greys turned over (the dark grounds light, the light words dark), their tint kept
     const float m = std::clamp(0.976f - 1.097f * (l - 0.13f), 0.06f, 0.985f);
     return to({m + (c.r - l) * 0.8f, m + (c.g - l) * 0.8f, m + (c.b - l) * 0.8f});
+}
+
+float groundAlpha(const Theme& t, uint32_t rgb, float a) {
+    if (t.greys == Greys::Keep || a <= 0 || a >= 1) return a;
+    const Rgb c = of(rgb & 0xFFFFFF);
+    if (chroma(c) > 0.18f || lum(c) > 0.3f) return a;
+    return 1 - (1 - a) / 3;
 }
 
 void read(const std::string& text, Theme& t, std::string& bad) {

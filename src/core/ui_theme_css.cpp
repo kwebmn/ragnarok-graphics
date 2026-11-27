@@ -805,8 +805,8 @@ select selectbox option:checked { color: #e6cb8a; }
 .sw .tpic.lt .tpa { background-color: rgb(47, 95, 208); }
 .sw .tpn { display: block; margin-top: 4dp; font-size: 12dp; color: #9aa3b5; }
 .sw .tpic.on .tpn { color: #eef2f8; }
-.sw .acp { display: block; }
-.sw .acc { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; max-width: 330dp; }
+.sw .acp { display: block; max-width: 260dp; }
+.sw .acc { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; max-width: 260dp; }
 .sw .phw { display: block; }
 .sw .pal { display: block; width: 250dp; margin-top: 6dp; }
 .sw .pcw { display: inline-block; }

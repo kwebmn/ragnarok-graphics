@@ -85,8 +85,10 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 
 std::string Sheet::ground(uint32_t rgb, float opacity, uitheme::Group g) {
     char b[16];
+    // 3.0.24-beta.33 (R-8BCJAH): a light ground less see-through (core/ui_theme groundAlpha)
+    const float a = uitheme::groundAlpha(uitheme::active(g), rgb, std::clamp(opacity, 0.0f, 1.0f));
     std::snprintf(b, sizeof b, "#%06x%02x", unsigned(uaui::themed(rgb, g) & 0xFFFFFF),
-                  int(std::lround(std::clamp(opacity, 0.0f, 1.0f) * 255)) & 0xFF);
+                  int(std::lround(a * 255)) & 0xFF);
     return b;
 }
 

@@ -7,6 +7,19 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.33 (R-8BCJAH, R-VMTY6D): the theme changed with the windows open; the light theme read
+        {"theme_switch_33", "3.0.24-beta.33", "",
+         {"Theme: changed at once, the light one readable", "Тема: міняється одразу, світла читається",
+          "Тема: меняется сразу, светлая читается"},
+         {"Open the bag, the chat and the character's block; Alt+O → «Interface» → «Interface theme» → «Light»: every "
+          "word turns dark at once (no restart), the chat and the block less see-through, the game's coloured lines "
+          "readable. «Accent colour»: its words wide, the chips on the right. Back to «Dark» - as it was.",
+          "Відкрийте «Речі», чат і блок персонажа; Alt+O → «Інтерфейс» → «Тема інтерфейсу» → «Світла»: усі слова "
+          "одразу темні (без перезапуску), чат і блок менш прозорі, кольорові рядки гри читаються. «Колір "
+          "акценту»: слова широко, кнопки праворуч. Назад «Темна» — як було.",
+          "Откройте «Вещи», чат и блок персонажа; Alt+O → «Интерфейс» → «Тема интерфейса» → «Светлая»: все слова "
+          "сразу тёмные (без перезапуска), чат и блок менее прозрачные, цветные строки игры читаются. «Цвет "
+          "акцента»: слова широко, кнопки справа. Назад «Тёмная» — как было."}},
         // 3.0.24-beta.32 (the server's 0x02c4 of 27.11): «Група»'s invite by name
         {"party_invite_name", "3.0.24-beta.32", "interface.party_invite",
          {"Party: invite by name", "Група: запросити за ім'ям", "Группа: пригласить по имени"},

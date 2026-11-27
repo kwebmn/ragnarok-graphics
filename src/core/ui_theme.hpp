@@ -39,6 +39,11 @@ inline bool operator!=(const Look& a, const Look& b) { return !(a == b); }
 Theme named(const std::string& name);  // "light": light; anything else (dark, the old standard, classic...): dark
 Theme themeFor(const Look& look, Group g);
 uint32_t colour(const Theme& t, uint32_t rgb);  // 0xRRGGBB
+// 3.0.24-beta.33 (R-8BCJAH «белый интерфейс не читабелен»: the chat and the character's block see-through, the world
+// under them stronger than their words): a ground's alpha in the theme - one that turns light (the windows' dark
+// greys) lets a third of what it let through; any other colour (words, edges, fills that mean something), and the
+// dark theme, as given
+float groundAlpha(const Theme& t, uint32_t rgb, float a);
 // The palette's lines over `t`; the first line not understood in `bad` ("" none)
 void read(const std::string& text, Theme& t, std::string& bad);
 // 3.0.18-beta.54: a style sheet (RCSS) in the theme - each #rrggbb(aa) through colour() (its alpha kept), each

@@ -1,4 +1,5 @@
 #include <array>
+#include <cmath>
 #include <string>
 
 #include "core/ui_theme.hpp"
@@ -146,7 +147,8 @@ TEST(ui_theme_rewrites_a_style_sheet) {
                             "border-radius: 10dp; }";
     CHECK(uitheme::themedCss(uitheme::named("standard"), css) == css);
     const std::string light = uitheme::themedCss(uitheme::named("light"), css);
-    CHECK(light.find("#10141ccc") == std::string::npos && light.find("#f6f8fccc") != std::string::npos);  // alpha kept
+    // the ground light; 3.0.24-beta.33: a third as see-through (0.8 -> 0.933)
+    CHECK(light.find("#10141ccc") == std::string::npos && light.find("#f6f8fcee") != std::string::npos);
     CHECK(light.find("#181c2617") != std::string::npos);  // the white line: a dark line
     CHECK(light.find("border-radius: 10dp") != std::string::npos);
     uitheme::Theme t = uitheme::named("light");
@@ -241,4 +243,25 @@ TEST(ui_theme_words_on_red_and_green_buttons_stay_readable) {
     const std::string gold = uitheme::themedCss(uitheme::themeFor(look, uitheme::Group::Windows),
                                                 ".b { background-color: #e6cb8aff; color: #eef2f8; }");
     CHECK(gold.find("color: #181c26") == std::string::npos);
+}
+
+// 3.0.24-beta.33 (R-8BCJAH «белый интерфейс не читабелен»: the chat and the character's block see-through in the
+// light theme, the world under them stronger than their words): a ground that turns light lets a third of what it let
+// through; its colour's words and the dark theme as they were; the game's colours read darker on the light ground
+TEST(ui_theme_light_grounds_less_see_through) {
+    uitheme::Look look;
+    look.tone = uitheme::Tone::Light;
+    const uitheme::Theme light = uitheme::themeFor(look, uitheme::Group::Chat);
+    const uitheme::Theme dark = uitheme::themeFor(uitheme::Look{}, uitheme::Group::Chat);
+    CHECK(std::abs(uitheme::groundAlpha(light, 0x10141C, 0.36f) - (1 - 0.64f / 3)) < 0.001f);  // the quiet chat
+    CHECK(std::abs(uitheme::groundAlpha(light, 0x10141C, 0.9f) - (1 - 0.1f / 3)) < 0.001f);
+    CHECK(uitheme::groundAlpha(light, 0x10141C, 1.0f) == 1.0f && uitheme::groundAlpha(light, 0x10141C, 0) == 0);
+    CHECK(uitheme::groundAlpha(dark, 0x10141C, 0.36f) == 0.36f);   // the dark theme's glass as it was
+    CHECK(uitheme::groundAlpha(light, 0xE6CB8A, 0.36f) == 0.36f);  // the accent's fill: no ground
+    CHECK(uitheme::groundAlpha(light, 0xFFFFFF, 0.09f) == 0.09f);  // a faint edge (white turns to ink): no ground
+    // the style sheet's grounds alike: #10141c66 -> the light ground, a third as see-through
+    CHECK_EQ(uitheme::themedCss(light, ".a { background-color: #10141c66; }"),
+             std::string(".a { background-color: #f6f8fccc; }"));
+    // a colour that means something no lighter than 0.38 on the light ground (the chat's yellow, the game's)
+    CHECK(lum(uitheme::colour(light, 0xFFFF00)) <= 0.385f);
 }
