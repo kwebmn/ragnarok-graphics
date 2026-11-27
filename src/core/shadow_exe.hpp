@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -27,5 +28,23 @@ struct Guard {
 Guard guard(uint32_t at);
 // The game's call at kCall, to the guard at `at`
 void callTo(uint32_t at, uint8_t out[5]);
+
+// 3.0.24-beta.31 (R-MD8VTF: uaRO.exe+0x146de5 on malangdo; R-VWW92M: uaRO.exe+0xe0005 on malangdo - each a read of
+// +0xc4 of no game mode while a map changes, the shadow's kind of fault): the game's places that ask the mode manager
+// for the game mode and use it at once, each guarded as the shadow is - the mode as before, none: the place's own way
+// on. `check` - the game's own bytes at checkAt that prove the way on (the function's end, or the skip it jumps to)
+struct Site {
+    uint32_t at;       // mov ecx, 0x74b578 (its call 0x4f6ad0 at at + 5)
+    uint32_t wayOut;   // where the game goes on with no game mode
+    uint32_t checkAt;  // where the proof stands
+    uint8_t check[9];
+    uint8_t checkSize;
+    const char* what;  // the log's words
+};
+constexpr size_t kSiteCount = 3;
+extern const Site kSites[kSiteCount];
+std::array<uint8_t, 10> originalAt(uint32_t at);  // mov ecx, 0x74b578; call 0x4f6ad0 - as this build has it at `at`
+Guard guardFor(uint32_t wayOut);                   // the guard with that way on (guard(): the shadow's)
+void callFrom(uint32_t call, uint32_t to, uint8_t out[5]);  // a call at `call` to `to`
 
 }  // namespace uagfx::shadow_exe
