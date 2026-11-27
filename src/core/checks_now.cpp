@@ -7,6 +7,42 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.28 (part 3, task 6): the windows in the old layout already - each in both themes
+        {"guild_old_layout", "3.0.24-beta.28", "interface.guild",
+         {"Guild card: as in the old game, both themes", "Картка гільдії: як у старій грі, обидві теми",
+          "Карточка гильдии: как в старой игре, обе темы"},
+         {"Alt+G in the dark and the «Light» theme: the tabs over it, the emblem and the data, who is online, the "
+          "guild's experience a bar.",
+          "Alt+G у темній і «Світла» темі: вкладки згори, герб і дані, хто в грі, досвід гільдії смужкою.",
+          "Alt+G в тёмной и «Светлая» теме: вкладки сверху, герб и данные, кто в игре, опыт гильдии полоской."}},
+        {"char_select_old_layout", "3.0.24-beta.28", "interface.char_select",
+         {"Character select: as in the old game, both themes", "Вибір персонажа: як у старій грі, обидві теми",
+          "Выбор персонажа: как в старой игре, обе темы"},
+         {"In both themes: the characters' cards in a carousel (the chosen in the middle), HP and SP and the stats on "
+          "a card; enter, make, delete, back.",
+          "В обох темах: картки персонажів каруселлю (обраний посередині), HP і SP та параметри на картці; увійти, "
+          "створити, видалити, назад.",
+          "В обеих темах: карточки персонажей каруселью (выбранный посередине), HP и SP и параметры на карточке; "
+          "войти, создать, удалить, назад."}},
+        {"login_make_themes", "3.0.24-beta.28", "interface.login",
+         {"Login and making a character: both themes", "Вхід і створення персонажа: обидві теми",
+          "Вход и создание персонажа: обе темы"},
+         {"Switch the theme to «Light» and back: the login window and the character's making read well in both, "
+          "the stats at the making as in the old game.",
+          "Перемкніть тему на «Світла» й назад: вікно входу та створення персонажа читаються в обох, характеристики "
+          "при створенні — як у старій грі.",
+          "Переключите тему на «Светлая» и обратно: окно входа и создание персонажа читаются в обеих, "
+          "характеристики при создании — как в старой игре."}},
+        {"hud_old_places", "3.0.24-beta.28", "interface.theme_hud",
+         {"Main screen: the old places, both themes", "Основний екран: старі місця, обидві теми",
+          "Основной экран: старые места, обе темы"},
+         {"The character's block top left, the minimap top right, F1-F9 under, the chat bottom left - in both themes; "
+          "the buffs, the target's card, the bosses, the hunt, the key hints and «The line on a thing picked up» "
+          "too.",
+          "Блок персонажа ліворуч угорі, мінікарта праворуч угорі, F1-F9 знизу, чат ліворуч унизу — в обох темах; "
+          "бафи, картка цілі, боси, полювання, підказки клавіш і «Рядок про підібрану річ» теж.",
+          "Блок персонажа слева вверху, миникарта справа вверху, F1-F9 снизу, чат слева внизу — в обеих темах; "
+          "баффы, карточка цели, боссы, охота, подсказки клавиш и «Строка о подобранной вещи» тоже."}},
         // 3.0.24-beta.27 (part 3, task 5): «Запросити в групу» for a friend - our own packet (the testers' box)
         {"party_invite", "3.0.24-beta.27", "interface.party_invite",
          {"Friends: invite to the party", "Друзі: запросити в групу", "Друзья: пригласить в группу"},
