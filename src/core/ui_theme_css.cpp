@@ -2097,6 +2097,57 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .rfw .rmside { display: block; flex: 1; margin-left: 14dp; }
 .rfw.narrow .rmrow { flex-direction: column; }
 .rfw.narrow .rmside { margin: 12dp 0 0 0; flex: none; width: 100%; }
+/* 3.0.24-beta.20 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md, «Общие детали»; the concept's
+   bag_equip_dark.jpg): every item window's parts - the head (its title with the count, its key, a drawn ✕), the six
+   tabs one under another on the left, the keys' hint under the window's body, the weight (places) and zeny at the
+   bottom with its bar (ok, warn from 70 %, full - red - from 90 %: core/item_ui fillOf), the buttons (main, plain,
+   danger) and a list's rows (icon, name, caption, price, «− N +») */
+.uw { display: flex; flex-direction: column; font-family: Plex; font-size: 13dp; color: #eceff5; border-radius: 10dp;
+      border: 1dp #ffffff17; padding: 0 10dp 6dp 10dp; box-sizing: border-box; }
+.uw .uhd { display: flex; flex-direction: row; align-items: center; flex: none; height: 34dp; }
+.uw .ut { display: block; flex: 1; font-size: 14dp; font-weight: bold; color: #eef2f8; white-space: nowrap; }
+.uw .uk { display: block; margin-right: 10dp; font-size: 11.5dp; color: #7e889a; }
+.uw .ux { display: block; position: relative; flex: none; width: 22dp; height: 22dp; border-radius: 5dp; }
+.uw .ux:hover { background-color: #ffffff14; }
+.uw .ux .xa, .uw .ux .xb { display: block; position: absolute; left: 5dp; top: 10dp; width: 12dp; height: 1.6dp;
+      background-color: #9aa3b5; }
+.uw .ux .xa { transform: rotate(45deg); }
+.uw .ux .xb { transform: rotate(-45deg); }
+.uw .ux:hover .xa, .uw .ux:hover .xb { background-color: #eef2f8; }
+.uw .ubody { display: flex; flex-direction: row; flex: 1; }
+.uw .vt { display: flex; flex-direction: column; flex: none; width: 26dp; margin-right: 6dp; }
+.uw .vb { display: block; position: relative; height: 62dp; margin-bottom: 4dp; border-radius: 6dp;
+      border: 1dp #ffffff12; background-color: #ffffff08; }
+.uw .vb:hover { background-color: #ffffff12; }
+.uw .vb.on { border-color: #e6cb8a; background-color: #e6cb8a1f; }
+.uw .vb .vl { display: block; position: absolute; left: -18dp; top: 22dp; width: 60dp; height: 16dp; font-size: 11dp;
+      line-height: 16dp; text-align: center; color: #9aa3b5; white-space: nowrap; transform: rotate(-90deg); }
+.uw .vb.on .vl { color: #e6cb8a; }
+.uw .umain { display: flex; flex-direction: column; flex: 1; }
+.uw .uhint { display: block; flex: none; padding: 5dp 2dp 3dp 2dp; font-size: 11dp; color: #7e889a;
+      white-space: nowrap; overflow: hidden; }
+.uw .uft { display: flex; flex-direction: row; align-items: center; flex: none; height: 26dp;
+      border-top: 1dp #ffffff12; }
+.uw .uwt { display: block; flex: none; margin-right: 8dp; font-size: 12dp; color: #cfd3dc; }
+.uw .ubar { display: block; position: relative; flex: none; width: 60dp; height: 5dp; border-radius: 3dp;
+      background-color: #ffffff17; }
+.uw .ufill { display: block; height: 100%; border-radius: 3dp; background-color: #5fd08a; }
+.uw .ufill.warn { background-color: #f0b46a; }
+.uw .ufill.full { background-color: #e5534b; }
+.uw .uz { display: block; flex: 1; text-align: right; font-size: 12.5dp; color: #e6cb8a; }
+.uw .ub { display: inline-block; padding: 5dp 12dp; border-radius: 7dp; border: 1dp #ffffff22; font-size: 12.5dp;
+      color: #eceff5; }
+.uw .ub:hover { background-color: #ffffff10; }
+.uw .ub.main { background-color: #e6cb8a; border-color: #e6cb8a; color: #10141c; }
+.uw .ub.main:hover { background-color: #f3c653; }
+.uw .ub.danger { border-color: #e5534b; color: #ff8a80; }
+.uw .ur { display: flex; flex-direction: row; align-items: center; height: 36dp; padding: 0 6dp; border-radius: 6dp; }
+.uw .ur:hover { background-color: #ffffff0c; }
+.uw .ur .ui { display: block; flex: none; width: 28dp; height: 28dp; margin-right: 8dp; }
+.uw .ur .un { display: block; flex: 1; font-size: 12.5dp; color: #eef2f8; white-space: nowrap; overflow: hidden; }
+.uw .ur .uc { display: block; font-size: 11dp; color: #9aa3b5; }
+.uw .ur .up { display: block; flex: none; margin-left: 8dp; font-size: 12.5dp; color: #e6cb8a; }
+.uw .ur .uq { display: flex; flex-direction: row; align-items: center; flex: none; margin-left: 8dp; }
 )";
 
 }  // namespace

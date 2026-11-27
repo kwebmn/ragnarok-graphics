@@ -962,6 +962,9 @@ enum class Text : uint16_t {
     LauncherCheckingNow, LauncherChecking, LauncherCheckFailed,  // .201: the update check
     LauncherCheck, LauncherChannelBeta,  // .202: «Перевірити» beside «ГРАТИ», «Реліз | Бета»
     LauncherUi, LauncherUiDark, LauncherUiLight,  // 3.0.24-beta.19: «Інтерфейс: Темний | Світлий»
+    ItemHintItems, ItemHintEquip, ItemHintStorage, ItemHintCart, ItemHintShopBuy,  // 3.0.24-beta.20: core/item_ui
+    ItemHintShopSell, ItemHintVend, ItemHintVendSetup, ItemHintMyShop, ItemHintTrade, ItemHintAmount, ItemHintCard,
+    ItemHintPick,
     LauncherRunningCount,                // .206: «Гра вже запущена · вікон: N» under «+ ЩЕ ОДНЕ ВІКНО»
     InterfaceArrowsWalk, InterfaceArrowsWalkHint,  // .207: the keyboard concept, stage 1
     InterfaceWalkMode, InterfaceWalkModeHint, ChatHintWalk,  // .208: stage 2, the walk mode
