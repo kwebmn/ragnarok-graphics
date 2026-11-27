@@ -602,3 +602,32 @@ TEST(items_key_of_the_things_changes_with_any_field) {
     std::swap(swapped[0], swapped[1]);
     CHECK(uagfx::itemwin::keyOf(swapped) != base);  // the order too
 }
+
+// 3.0.24-beta.27 (docs/superpowers/plans/2026-11-27-other-windows-old-layout.md, task 3; the spec's «Характеристики»:
+// «Две колонки: STR…LUK «база + бонус», стрелка и цена; атака, маг. атака, влучність...»): the table's own column
+// «база + бонус» (the old game's «9 + 3»), the cost and «+» - 300 wide (410 before); the battle's column right of it
+// the wider; the window 760 as before (its title row's tabs, «Планування» and «Довідка» want it)
+TEST(stat_window_two_columns) {
+    const statwin::Texts t = statTexts();
+    statwin::Data d;
+    d.free = 3;
+    d.base[0] = 9, d.bonus[0] = 3;
+    const statwin::Layout L = statwin::layout(0, 0, 1.0f, d, t, statwin::Measure(panel::wordsWidth));
+    CHECK(L.w == 760 && L.rows.size() == 6u && L.table.w <= 300 && L.battle.w >= 380);
+    for (const panel::Box& r : L.rows) CHECK(r.x + r.w <= L.battle.x);
+    CHECK(L.battle.x + L.battle.w <= float(L.w));
+    const std::vector<statwin::Words> w = statwin::words(L, d, statwin::Show{}, t, statwin::Measure(panel::wordsWidth));
+    bool header = false, str = false, total = false;
+    for (const statwin::Words& x : w) {
+        header = header || x.text == "База + бонус";
+        str = str || x.text == "9 + 3";
+        total = total || x.text == "Разом";
+    }
+    CHECK(header && str && !total);  // no «Разом» column: «база + бонус» says it
+}
+
+TEST(stat_window_base_and_bonus_words) {
+    CHECK_EQ(statwin::baseAndBonus(9, 0), std::string("9"));
+    CHECK_EQ(statwin::baseAndBonus(9, 3), std::string("9 + 3"));
+    CHECK_EQ(statwin::baseAndBonus(9, -2), std::string("9 \xE2\x88\x92 2"));
+}

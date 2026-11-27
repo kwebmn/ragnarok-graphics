@@ -8,6 +8,7 @@
 
 #include "core/char_block.hpp"
 #include "core/mob_battle.hpp"
+#include "core/settings/search.hpp"
 #include "core/stat_math.hpp"
 #include "core/ui_style.hpp"
 
@@ -20,11 +21,14 @@ constexpr float kW = 760, kTitleH = 46, kHeaderH = 30, kRowH = 38, kBattleRowH =
 // 3.0.11-beta.266 (stage 2): the panel «Як рахується» under them - its title and kExplainLines lines
 constexpr float kExplainTitleH = 30, kExplainLineH = 21, kExplainPad = 10;
 constexpr int kBattleRows = 14;
-constexpr float kTableW = 410;
+constexpr float kTableW = 410;  // «Планування»'s rows
+// 3.0.24-beta.27 (the spec's «Характеристики»: «STR…LUK «база + бонус», стрелка и цена»): the stats' table as the old
+// game's - the name, «база + бонус», the cost and «+»
+constexpr float kStatTableW = 300, kBaseBonusRight = 186, kStatCostRight = 250, kStatPlusX = 266;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xF3C653, kGold2 = 0xC9A55B;
 constexpr uint32_t kText = 0xEEF2F8, kMuted = 0x9AA3B5, kFaint = 0x7E889A, kGreen = 0x5FD08A;
 // The table's columns: their right edges from the table's left (the stat's name left aligned at 0)
-constexpr float kBaseRight = 120, kBonusRight = 190, kTotalRight = 262, kCostRight = 330, kPlusX = 360;
+
 
 std::string fill(std::string form, const std::vector<std::string>& values) {
     for (size_t i = 0; i < values.size(); ++i) {
@@ -81,6 +85,11 @@ const PlanBuffSpec kPlanBuffSpecs[kPlanBuffs] = {
 
 bool canRaise(const Data& d, int stat) {
     return stat >= 0 && stat < kStats && d.need[stat] > 0 && d.need[stat] <= d.free && d.base[stat] < 99;
+}
+
+std::string baseAndBonus(int base, int bonus) {
+    if (bonus == 0) return std::to_string(base);
+    return std::to_string(base) + (bonus > 0 ? " + " : " \xE2\x88\x92 ") + std::to_string(bonus < 0 ? -bonus : bonus);
 }
 
 std::vector<Row> battleRows(const Data& d, const Texts& t) {
@@ -616,12 +625,12 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
         L.tabs[i] = panel::Box{tx, (kTitleH * s - 26 * s) / 2, tw, 26 * s};
         tx += tw + 6 * s;
     }
-    L.table = panel::Box{side, kTitleH * s + 4 * s, kTableW * s, kHeaderH * s + float(kStats) * kRowH * s};
+    L.table = panel::Box{side, kTitleH * s + 4 * s, kStatTableW * s, kHeaderH * s + float(kStats) * kRowH * s};
     L.header = panel::Box{L.table.x, L.table.y, L.table.w, kHeaderH * s};
     for (int i = 0; i < kStats; ++i) {
         const panel::Box r{L.table.x, L.table.y + kHeaderH * s + float(i) * kRowH * s, L.table.w, kRowH * s};
         L.rows.push_back(r);
-        L.pluses.push_back(panel::Box{r.x + kPlusX * s, r.y + (r.h - 24 * s) / 2, 24 * s, 24 * s});
+        L.pluses.push_back(panel::Box{r.x + kStatPlusX * s, r.y + (r.h - 24 * s) / 2, 24 * s, 24 * s});
     }
     const float bx = L.table.x + L.table.w + 26 * s;
     L.battle = panel::Box{bx, L.table.y, w - side - bx, kHeaderH * s + float(kBattleRows) * kBattleRowH * s};
@@ -650,7 +659,8 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
         L.planMinus.push_back(panel::Box{r.x + 90 * s, r.y + (r.h - 24 * s) / 2, 24 * s, 24 * s});
         L.planPlus.push_back(panel::Box{r.x + 250 * s, r.y + (r.h - 24 * s) / 2, 24 * s, 24 * s});
     }
-    L.planResults = panel::Box{bx, L.planLevelRow.y, w - side - bx, kHeaderH * s + 11 * kBattleRowH * s};
+    const float planX = side + kTableW * s + 26 * s;  // 3.0.24-beta.27: right of «Планування»'s own rows
+    L.planResults = panel::Box{planX, L.planLevelRow.y, w - side - planX, kHeaderH * s + 11 * kBattleRowH * s};
     L.planReset = panel::Box{side, py + float(kStats) * kRowH * s + 16 * s, 120 * s, 32 * s};
     // .297: the buffs the plan counts, a chip each (Improve Concentration only when learned or on)
     // .298: every class's - as many rows as they take
@@ -922,12 +932,14 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
         return out;
     }
     const float hx = L.header.x;
-    const float rights[4] = {kBaseRight, kBonusRight, kTotalRight, kCostRight};
     out.push_back(Words{panel::Box{hx + 6 * s, L.header.y, 70 * s, L.header.h}, t.columns[0], kFaint, 11.5f * s,
                         false, Align::Left});
-    for (int c = 0; c < 4; ++c)
-        out.push_back(Words{panel::Box{hx + (rights[c] - 64) * s, L.header.y, 64 * s, L.header.h}, t.columns[c + 1],
-                            kFaint, 11.5f * s, false, Align::Right});
+    // 3.0.24-beta.27: «База + бонус» (the columns' words joined: the second small), «Ціна»
+    const std::string both = t.columns[1] + " + " + settings::foldCase(t.columns[2]);
+    out.push_back(Words{panel::Box{hx + (kBaseBonusRight - 110) * s, L.header.y, 110 * s, L.header.h}, both, kFaint,
+                        11.5f * s, false, Align::Right});
+    out.push_back(Words{panel::Box{hx + (kStatCostRight - 56) * s, L.header.y, 56 * s, L.header.h}, t.columns[4],
+                        kFaint, 11.5f * s, false, Align::Right});
     for (int i = 0; i < kStats; ++i) {
         const panel::Box& r = L.rows[size_t(i)];
         const auto cell = [&](float right, const std::string& text, uint32_t rgb, bool bold) {
@@ -935,13 +947,14 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
                                 Align::Right});
         };
         out.push_back(Words{panel::Box{r.x + 6 * s, r.y, 60 * s, r.h}, kNames[i], kText, 13 * s, true, Align::Left});
-        cell(kBaseRight, std::to_string(d.base[i]), 0xC9D1DE, false);
-        if (d.bonus[i]) cell(kBonusRight, (d.bonus[i] > 0 ? "+" : "") + std::to_string(d.bonus[i]), kGreen, false);
-        cell(kTotalRight, std::to_string(d.base[i] + d.bonus[i]), kText, true);
+        // 3.0.24-beta.27: «9 + 3» - the base, its bonus after it (the old game's one column)
+        out.push_back(Words{panel::Box{r.x + (kBaseBonusRight - 110) * s, r.y, 110 * s, r.h},
+                            baseAndBonus(d.base[i], d.bonus[i]), d.bonus[i] ? kText : 0xC9D1DE, 13 * s,
+                            d.bonus[i] != 0, Align::Right});
         if (d.base[i] >= 99)
-            cell(kCostRight, t.maxed, kFaint, false);
+            cell(kStatCostRight, t.maxed, kFaint, false);
         else if (d.need[i] > 0)
-            cell(kCostRight, std::to_string(d.need[i]), canRaise(d, i) ? 0xC9D1DE : kFaint, false);
+            cell(kStatCostRight, std::to_string(d.need[i]), canRaise(d, i) ? 0xC9D1DE : kFaint, false);
         if (d.base[i] < 99)
             out.push_back(Words{L.pluses[size_t(i)], "+", canRaise(d, i) ? kText : kFaint, 15 * s, true,
                                 Align::Center});

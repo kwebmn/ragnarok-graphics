@@ -7,6 +7,16 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.27 (part 3, task 3): «Характеристики» - «база + бонус» as the old game's
+        {"stats_base_bonus", "3.0.24-beta.27", "interface.status",
+         {"Stats: «base + bonus» as in the old game", "Характеристики: «база + бонус», як у старій грі",
+          "Характеристики: «база + бонус», как в старой игре"},
+         {"Alt+A: each stat «9 + 3» in one column, its cost and «+»; the battle's numbers wider on the right; "
+          "«Planning» and the formulas as before.",
+          "Alt+A: кожна характеристика «9 + 3» в одному стовпці, ціна й «+»; бойові числа праворуч ширше; "
+          "«Планування» й формули — як було.",
+          "Alt+A: каждая характеристика «9 + 3» в одном столбце, цена и «+»; боевые числа справа шире; "
+          "«Планирование» и формулы — как было."}},
         // 3.0.24-beta.26 (part 3, task 2): «Навички» a narrow list as the old game's; the facts in the card
         {"skills_narrow", "3.0.24-beta.26", "interface.skills",
          {"Skills: a narrow list, the facts by a right click", "Навички: вузький список, відомості — ПКМ",

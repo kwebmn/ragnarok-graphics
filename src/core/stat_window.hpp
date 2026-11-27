@@ -219,6 +219,8 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
+// 3.0.24-beta.27 (the spec's «Характеристики»: «база + бонус»): «9», «9 + 3», «9 − 2» (U+2212)
+std::string baseAndBonus(int base, int bonus);
 std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const Texts& t, const Measure& m);
 
 }  // namespace uagfx::statwin
