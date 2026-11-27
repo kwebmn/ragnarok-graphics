@@ -165,6 +165,7 @@
 #include "core/debug_views.hpp"
 #include "win/res_tree_patch.hpp"
 #include "win/aura_patch.hpp"
+#include "win/ground_stage_patch.hpp"
 #include "win/mcp_server.hpp"
 #include "win/sound_engine.hpp"
 #include "win/sound_hook.hpp"
@@ -538,6 +539,7 @@ bool Context::open(std::string& error) {
     installChatFix();                  // 2.6.12: Enter in the chat box while a map loads (R-PVF8AV)
     installShadowFix();                // 3.0.4-beta.9: a shadow drawn while a map loads (R-VBDSCP)
     installAuraFix();                  // 3.0.22-beta.31: a level 99's teleport on the same map (R-JBG5MM)
+    installGroundStageFix();           // 3.0.24-beta.31: the ground's light map stage whole (R-F4GZ3T)
     installResTreeFix();               // 3.0.23-beta.4: malangdo's entry (R-WS4ETW, R-NE7JVF)
     installWearGuard();                // 3.0.18-beta.174: an item worn at more places than the game takes (R-ZGN2US)
     installBlindFix();                 // 2.6.18: blindness's darkness over the whole screen (R-MCVUC8)
