@@ -7,6 +7,17 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        {"ui_themes", "3.0.24-beta.19", "",
+         {"Interface: dark and light", "Інтерфейс: темний і світлий", "Интерфейс: тёмный и светлый"},
+         {"Alt+O -> «Interface» -> «Theme and colours»: pick the light picture - every window turns light at once "
+          "(the chat, the bag, the shops, the main screen). Full mode: a theme per group, «Accent colour» with «own "
+          "colour»'s palette. The launcher: «Interface: Dark | Light».",
+          "Alt+O -> «Інтерфейс» -> «Тема й кольори»: виберіть світлу картинку - усі вікна одразу світлі (чат, речі, "
+          "крамниці, основний екран). Повний режим: тема для кожної групи, «Колір акценту» з палітрою «свій "
+          "колір». У лаунчері: «Інтерфейс: Темний | Світлий».",
+          "Alt+O -> «Интерфейс» -> «Тема и цвета»: выберите светлую картинку - все окна сразу светлые (чат, вещи, "
+          "магазины, основной экран). Полный режим: тема для каждой группы, «Цвет акцента» с палитрой «свой "
+          "цвет». В лаунчере: «Интерфейс: Тёмный | Светлый»."}},
         {"vend_packets", "3.0.24-beta.18", "interface.vend_packets",
          {"Merchant's shop: the new purchase", "Лавка торговця: нова покупка", "Лавка торговца: новая покупка"},
          {"Turn «Merchant's shop» and this on. Buy a few things at a player's shop: the shop closes when they come; "
