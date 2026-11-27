@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.18 — what's new · 2026-11-27
+
+Merchant's shop: the new purchase (for testers).
+
+- **«Merchant's shop» sends the purchase itself — a box for testers.** «Buy» sends the chosen things as one purchase and waits for them to come into the bag: they came — the shop closes; refused — the hint at the bottom says why (not enough zeny, too heavy, the shop has not so many any more), and the shop stays open.
+- Where to turn it on: Alt+O → «Checking now» → «Merchant's shop: the new purchase» («Merchant's shop» must be on: the settings app → «Interface»).
+
 # uaRO Graphics 3.0.24-beta.17 — what's new · 2026-11-27
 
 Comodo's vault — in the rock of its walls.
