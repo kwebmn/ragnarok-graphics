@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.24-beta.19 — what's new · 2026-11-27
+
+Interface: dark and light themes (for testers).
+
+- **The whole interface can now be dark or light.** Alt+O → «Interface» → «Theme and colours»: two pictures, «Dark» and «Light». Light paints every window at once: the chat, the bag, the storage, the NPC shops, the players' shops, the main screen, the settings. Dark is as before.
+- **A tone of its own for each group of windows and the accent's colour — in the full mode.** In the same place: «Theme: main screen», «Theme: chat», «Theme: item windows», «Theme: trade», «Theme: other windows», «Theme: Alt+O settings» — «as the rest / dark / light». «Accent colour»: by the theme (gold on dark, blue on light), gold, blue, green, red, or «own colour» — a 3×10 palette and a «#RRGGBB» field.
+- **The launcher has «Interface: Dark | Light»** over the PLAY button. The settings app: the «Interface» page, the «Theme and colours» section; «Pick a colour...» opens Windows' colour dialog.
+- **«Frosted glass windows» and the old «Classic» and «Contrast» themes are gone.** Whoever chose the old ones gets the dark one.
+- To check: Alt+O → «Checking now» → «Interface: dark and light».
+
 # uaRO Graphics 3.0.24-beta.18 — what's new · 2026-11-27
 
 Merchant's shop: the new purchase (for testers).
