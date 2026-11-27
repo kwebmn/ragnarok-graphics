@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.37 — what's new · 2026-11-28
+
+MCP for the full test, part 3: an update through the watchdog, effects set as Alt+O sets them.
+
+- **Watchdog (settings app):** a new action `update` in `game` - updates uaRO Graphics to its channel's newest just as «ОНОВИТИ» does: the app closes, updates and opens again with its MCP. Refused while the game runs (`stop` first).
+- **The game's MCP, `setting`:** changes a setting just as Alt+O does: an effect's own switch under a set («Auto», «Low»…) makes the set your own first - before, such a switch through the MCP changed nothing. A value it does not take and «already so» are said plainly now.
+
 # uaRO Graphics 3.0.24-beta.36 — what's new · 2026-11-28
 
 Fixes from the full test on a laptop (AMD Radeon 610M) over MCP.
