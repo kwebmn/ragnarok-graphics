@@ -51,6 +51,9 @@ int autoChoice(size_t entries, int chosen);
 constexpr size_t kSearchFrom = 6;
 std::vector<int> shownOf(const std::vector<Entry>& entries, const std::string& search);
 inline bool searchable(size_t entries) { return entries > kSearchFrom; }
+// 3.0.24-beta.30: the pad's ↑ ↓ over the rows a search keeps - the next shown one after (dir > 0) or before the chosen
+// (a hidden one chosen: the next shown that way; none: the first); the ends stay; -1 none shown
+int stepShown(const std::vector<int>& shown, int selected, int dir);
 
 
 enum class Align : uint8_t { Left, Right, Center };

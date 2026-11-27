@@ -686,8 +686,12 @@ void padCommand(PadCommand c) {
     if (!s.shown) return;
     const int n = int(s.entries.size());
     switch (c) {
-        case PadCommand::Up: choose(s, std::max(0, s.show.selected - 1)); break;
-        case PadCommand::Down: choose(s, std::min(n - 1, s.show.selected + 1)); break;
+        case PadCommand::Up:  // 3.0.24-beta.30: over the rows a typed search keeps
+            choose(s, std::max(0, pc::stepShown(pc::shownOf(s.entries, s.search), s.show.selected, -1)));
+            break;
+        case PadCommand::Down:
+            choose(s, std::max(0, pc::stepShown(pc::shownOf(s.entries, s.search), s.show.selected, 1)));
+            break;
         case PadCommand::Ok: press(s, pc::kOkButton); break;
         case PadCommand::Cancel: press(s, pc::kCancelButton); break;
         case PadCommand::Card:  // 3.0.18-beta.142

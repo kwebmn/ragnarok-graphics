@@ -7,6 +7,19 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.30: the deferred small fixes of parts 1-3
+        {"small_fixes_30", "3.0.24-beta.30", "interface.theme",
+         {"Small fixes: the light theme, the shop's weight, the pad", "Дрібні виправлення: світла тема, вага, геймпад",
+          "Мелкие исправления: светлая тема, вес, геймпад"},
+         {"In the «Light» theme with the effects on the windows' shadows dark, the words on red and green buttons "
+          "light. «Merchant's shop» refuses a purchase 0.5 over the weight as the server does. In «Choice of things» "
+          "with a search the pad's ↑ ↓ walk the rows shown. The reference's kept star in the accent.",
+          "У темі «Світла» з ефектами тіні вікон темні, написи на червоних і зелених кнопках світлі. «Лавка торговця» "
+          "не дає купити на 0,5 понад вагу, як і сервер. У «Вибір речі» з пошуком ↑ ↓ геймпада йдуть по видимих "
+          "рядках. Зірочка довідника — кольору акценту.",
+          "В теме «Светлая» с эффектами тени окон тёмные, надписи на красных и зелёных кнопках светлые. «Лавка "
+          "торговца» не даёт купить на 0,5 сверх веса, как и сервер. В «Выбор вещи» с поиском ↑ ↓ геймпада идут по "
+          "видимым строкам. Звёздочка справочника — цвета акцента."}},
         // 3.0.24-beta.29 (part 4): the site market's average deal price; its line in the item card
         {"market_average", "3.0.24-beta.29", "interface.items",
          {"Site market: the average, in the item card", "Ринок сайту: середня ціна, у картці речі",

@@ -27,7 +27,11 @@ int weightAfter(const std::vector<Row>& rows, int weightNow) {
 }
 
 bool tooHeavy(const std::vector<Row>& rows, int weightNow, int most) {
-    return most > 0 && weightAfter(rows, weightNow) > most;
+    if (most <= 0) return false;
+    long long tenths = (long long)weightNow * 10;  // 3.0.24-beta.30: in tenths, as the server counts
+    for (const Row& r : rows)
+        if (r.weight > 0 && r.chosen > 0) tenths += (long long)r.weight * r.chosen;
+    return tenths > (long long)most * 10;
 }
 
 long long total(const std::vector<Row>& rows) {

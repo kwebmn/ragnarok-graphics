@@ -182,6 +182,18 @@ void sideWords(std::vector<Words>& out, const Layout& L, const Data& d, const Sh
 
 }  // namespace
 
+float nameRoom(const Layout& L, int row) {
+    if (row < 0 || size_t(row) >= L.rows.size() || size_t(row) >= L.icons.size()) return 0;
+    const size_t i = size_t(row);
+    const float s = L.s > 0 ? L.s : 1.0f;
+    const panel::Box& r = L.rows[i];
+    const float left = L.icons[i].x + L.icons[i].w + 10 * s;
+    float right = r.x + r.w - 8 * s - kPlus * s - 10 * s - kLevelW * s;  // the level's column
+    if (i < L.less.size() && L.less[i].w > 0) right = L.less[i].x;
+    else if (i < L.minuses.size() && L.minuses[i].w > 0) right = L.minuses[i].x;
+    return std::max(0.0f, right - left - 6 * s);
+}
+
 std::string fitName(const std::string& name, float width, float px, bool bold, const Measure& m) {
     if (!m || m(name, px, bold) <= width) return name;
     static const std::string kMore = "\xE2\x80\xA6";

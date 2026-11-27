@@ -112,3 +112,14 @@ TEST(vend_shop_weight_after_the_purchase) {
     CHECK(!vendshop::tooHeavy(rows, 914, 5810) && vendshop::tooHeavy(rows, 5700, 5810));
     CHECK(!vendshop::tooHeavy(rows, 914, 0));  // the most not known: never too heavy
 }
+
+// 3.0.24-beta.30 (the deferred minors of part 2): too heavy as the server counts - in tenths (uAthena: weight * 10),
+// not the total rounded down to whole units (a purchase 0.5 over the most was let through, the server refused it)
+TEST(vend_shop_too_heavy_in_tenths) {
+    std::vector<vendshop::Row> rows(1);
+    rows[0].weight = 15, rows[0].chosen = 1;  // 1.5
+    CHECK_EQ(vendshop::weightAfter(rows, 1999), 2000);  // the shown total, whole units
+    CHECK(vendshop::tooHeavy(rows, 1999, 2000));         // 1999 + 1.5 = 2000.5 > 2000
+    rows[0].weight = 10;
+    CHECK(!vendshop::tooHeavy(rows, 1999, 2000));        // 2000.0: as much as the bag takes
+}

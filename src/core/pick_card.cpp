@@ -58,6 +58,19 @@ std::vector<int> shownOf(const std::vector<Entry>& entries, const std::string& s
     return out;
 }
 
+int stepShown(const std::vector<int>& shown, int selected, int dir) {
+    if (shown.empty()) return -1;
+    if (selected < 0) return shown.front();
+    if (dir > 0) {
+        for (const int at : shown)
+            if (at > selected) return at;
+        return std::find(shown.begin(), shown.end(), selected) != shown.end() ? selected : shown.back();
+    }
+    for (auto it = shown.rbegin(); it != shown.rend(); ++it)
+        if (*it < selected) return *it;
+    return std::find(shown.begin(), shown.end(), selected) != shown.end() ? selected : shown.front();
+}
+
 int autoChoice(size_t entries, int chosen) {
     (void)chosen;  // one row: whatever the list says, it is that one
     return entries == 1 ? 0 : -1;

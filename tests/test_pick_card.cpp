@@ -91,3 +91,15 @@ TEST(pick_card_search_by_name) {
     CHECK(pickcard::shownOf(e, "zzz").empty());
     CHECK(!pickcard::searchable(6) && pickcard::searchable(7));  // a short list needs no search
 }
+
+// 3.0.24-beta.30 (the deferred minors of part 2): the pad's ↑ ↓ walk the rows a typed search keeps, not the hidden
+TEST(pick_card_pad_walks_the_shown_rows) {
+    const std::vector<int> shown = {1, 4, 6};
+    CHECK_EQ(pickcard::stepShown(shown, 4, 1), 6);
+    CHECK_EQ(pickcard::stepShown(shown, 4, -1), 1);
+    CHECK_EQ(pickcard::stepShown(shown, 6, 1), 6);   // the last stays
+    CHECK_EQ(pickcard::stepShown(shown, 1, -1), 1);  // the first stays
+    CHECK_EQ(pickcard::stepShown(shown, 2, 1), 4);   // a hidden one chosen: the next shown
+    CHECK_EQ(pickcard::stepShown(shown, -1, 1), 1);  // none chosen: the first
+    CHECK_EQ(pickcard::stepShown({}, 3, 1), -1);
+}

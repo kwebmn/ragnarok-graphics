@@ -279,8 +279,8 @@ void fill(Model& m, const kw::Layout& L, const kw::Data& d, const kw::Show& sh, 
         r.focus = sh.pad && index == sh.focus;
         r.locked = k.lock != kw::Lock::None;
         r.lockTop = r.locked && (index == 0 || tab->skills[size_t(index) - 1].lock == kw::Lock::None);
-        // 3.0.24-beta.27 (the narrow list): a long name and its line cut with «…» in the row's room
-        const float room = std::max(60 * L.s, (L.rows.empty() ? 0.0f : L.rows[0].w) - 214 * L.s);
+        // 3.0.24-beta.27 (the narrow list): a long name and its line cut with «…» in the row's room (.30: measured)
+        const float room = std::max(60 * L.s, kw::nameRoom(L, i));
         r.name = kw::fitName(k.name, room, 13.5f * L.s, true, measure);
         r.nameCls = r.locked ? "nm lock" : k.level > 0 ? "nm" : "nm un";
         r.info = kw::fitName(kw::info(k, t), room, 11.5f * L.s, false, measure);

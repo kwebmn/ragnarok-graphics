@@ -231,3 +231,16 @@ TEST(skill_window_card_facts) {
     CHECK(!bash.empty() && bash.back() == "Відкриває: Magnum Break");
     CHECK(skillwin::cardFacts(d, t, 9999).empty());
 }
+
+// 3.0.24-beta.30 (the deferred minors of part 3): a name's room measured in its row - from after the icon to the use
+// level's arrows (or the plan's «−», else the level's column), not reckoned from the row's width
+TEST(skill_window_name_room_measured) {
+    const skillwin::Data d = knight();
+    skillwin::Show sh;
+    sh.tab = 1;
+    const skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, texts(), measure);
+    const float withArrows = skillwin::nameRoom(L, 1);  // Provoke: learned past 1 - its arrows
+    CHECK(std::abs(withArrows - (L.less[1].x - (L.icons[1].x + L.icons[1].w) - 16)) < 0.5f);
+    CHECK(skillwin::nameRoom(L, 2) > withArrows);  // Magnum Break: no arrows - room to the level's column
+    CHECK(skillwin::nameRoom(L, 99) == 0);
+}

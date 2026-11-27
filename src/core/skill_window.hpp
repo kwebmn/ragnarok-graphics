@@ -136,6 +136,9 @@ struct Layout {
     std::vector<panel::Box> padGlyphs, padWords;  // the controller's buttons in the footer (A, Y, X, B) and words
 };
 Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Texts& t, const Measure& m);
+// 3.0.24-beta.30: a list row's room for its name - after the icon up to the use level's arrows (or the plan's «−»,
+// else the level's column); 0 no such row
+float nameRoom(const Layout& L, int row);
 
 // 3.0.11-beta.106 (R-WCXUQP: «не переносятся»): a press on a skill, a drag of the window's own past 10 pixels -
 // 3.0.11-beta.110: the windows' common one (core/window_drag)

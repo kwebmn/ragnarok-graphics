@@ -657,6 +657,10 @@ static void fillSheet(One& o, uisheet::Content& c) {
 }
 
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    // 3.0.24-beta.30 (the deferred minors of part 2): the reference pack asked for from the first frame - it loads in
+    // the background, so the first item card has «NPC заплатить» (it asked first when that card was made)
+    static bool asked = false;
+    if (!asked) asked = true, (void)reference::index();
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
     for (int i = 0; i < 3; ++i) {

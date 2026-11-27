@@ -282,11 +282,15 @@ void loadPicture(State& s, const std::string& key) {
     if (s.pictures.size() >= kMostPictures) retirePictures(s);  // 3.0.11-beta.22: a long browse never piles up
     panel::Picture& out = s.pictures[key];  // empty until found: not looked for again
     if (key.rfind("ui:", 0) == 0) {          // the core's line icon, painted at its size
+        // 3.0.24-beta.30: «ui:<name>#rrggbb» painted in that colour (the kept star in the theme's accent)
+        const size_t hash = key.find('#');
         uiicons::Icon icon;
-        if (!iconNamed(key, icon)) return;
+        if (!iconNamed(key.substr(0, hash), icon)) return;
+        const uint32_t ink =
+            hash == std::string::npos ? 0xC9D1DE : uint32_t(std::strtoul(key.c_str() + hash + 1, nullptr, 16));
         const int side = px(24, s);
         panel::blank(out, side, side);
-        uiicons::draw(out, icon, 0, 0, float(side), key == "ui:star-on" ? 0xE6CB8A : 0xC9D1DE, 1.0f, 2.0f);
+        uiicons::draw(out, icon, 0, 0, float(side), ink, 1.0f, 2.0f);
         return;
     }
     const bool mobIcon = key.rfind("icon:mob:", 0) == 0;  // 3.0.11-beta.26: a chip's monster, the icon's size
@@ -754,7 +758,13 @@ void fillChrome(State& s) {
     m.home = s.at.go != refpages::Go::None || !s.query.empty();  // 3.0.11-beta.30: «Головна» but on it
     m.home_icon = pictureSrc(s, "ui:home");
     m.star = s.page.star < 0 ? "" : s.page.star > 0 ? "on" : "off";  // 3.0.24-beta.26: the star drawn (no ★ ☆)
-    m.star_icon = s.page.star < 0 ? "" : pictureSrc(s, s.page.star > 0 ? "ui:star-on" : "ui:star");
+    if (s.page.star > 0) {  // 3.0.24-beta.30: the kept star in the theme's accent (its colour in the picture's key)
+        char key[24];
+        std::snprintf(key, sizeof key, "ui:star-on#%06x", unsigned(uaui::themed(0xE6CB8A, uitheme::Group::Windows)));
+        m.star_icon = pictureSrc(s, key);
+    } else {
+        m.star_icon = s.page.star < 0 ? "" : pictureSrc(s, "ui:star");
+    }
     m.starred = s.page.star > 0;
     m.rail.clear();
     for (size_t i = 0; i < s.page.rail.size(); ++i) {
@@ -792,8 +802,8 @@ void fillChrome(State& s) {
     m.ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Windows);
     m.narrow = s.narrow;
     // not the field's words: said again while one types, they would move its caret
-    for (const char* v : {"title", "back", "crumbs", "find", "home", "home_icon", "star", "star_icon", "starred", "rail",
-                          "pack", "live", "live_state", "keys", "ground", "narrow"})
+    for (const char* v : {"title", "back", "crumbs", "find", "home", "home_icon", "star", "star_icon", "starred",
+                          "rail", "pack", "live", "live_state", "keys", "ground", "narrow"})
         s.win.doc.dirty(v);
 }
 

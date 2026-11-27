@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <map>
 #include <utility>
 
 #include "app/mnemonic.hpp"
@@ -513,6 +514,12 @@ HWND Panel::dot(HWND row, const std::wstring& hint, int id, Tone tone, const wch
     HWND c = make(L"STATIC", mark, SS_CENTER | SS_NOPREFIX | SS_NOTIFY, area_.left - at(inset),
                   r.top + (r.bottom - r.top - side) / 2, side, side, id, 0, false);
     tones_[c] = tone;
+    if (mark && std::wstring(mark) == L"\u2022") {  // 3.0.24-beta.26's «•» (no «●» in the texts' font) as large
+        static std::map<int, HFONT> large;            // as the old dot: its own font, one a DPI
+        HFONT& f = large[dpi_];
+        if (!f) f = makeFont(dpi_, true, 170);
+        SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(f), FALSE);
+    }
     if (tooltip_ && !hint.empty()) {  // the dot's own mouse (SS_NOTIFY): no tool over the view's rectangle
         TOOLINFOW ti{};
         ti.cbSize = sizeof ti;
