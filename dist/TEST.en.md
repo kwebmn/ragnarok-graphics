@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.24-beta.30 — what's new · 2026-11-27
+
+Small fixes: the light theme, the shop's weight, the pad in a search, the NPC price, the reference's star.
+
+- **«Light» theme:** with the effects on the windows' shadows are dark again (they were white). Words on red and green buttons are light and readable.
+- **«Merchant's shop»:** the weight after the purchase is counted in tenths, as the server does. A purchase 0.5 over the weight is not let through, and the server would not take it either.
+- **«Choice of things»:** with a search typed, the pad's ↑ ↓ walk the shown rows only.
+- **«Item card»:** «An NPC pays» shows in the first card after the start too.
+- **Reference:** the kept star is in the theme's accent.
+- **«Skills»:** a name's room is measured to its arrows, so it is cut just where it should be.
+- **Settings program:** the «not recommended» mark is large again.
+- To check: Alt+O → «Checking now» → «Small fixes: the light theme, the shop's weight, the pad».
+
 # uaRO Graphics 3.0.24-beta.29 — what's new · 2026-11-27
 
 Site market: the deals' average price; the market's line in «Item card» (for testers).
