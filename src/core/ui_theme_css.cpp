@@ -908,11 +908,14 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .igl .x.hot .cxa, .igl .x.hot .cxb { background-color: #ffffff; }
 .igl .ibody { display: flex; flex-direction: row; margin: 0 1.5rem; }
 .igl .tabs { display: flex; flex-direction: column; flex: none; width: 2.1667rem; margin: 1rem 0.8333rem 0 0; }
-.igl .tab { display: block; position: relative; height: 4.25rem; margin-bottom: 0.3333rem; border-radius: 0.5rem;
+/* 3.0.24-beta.34 (R-AVW884): the live windows' .lw .tab gave these its 14dp right margin and 3dp padding - the tab 12
+   of its column's 26, its turned word beside it; their own margin and padding, the word in the border's middle */
+.igl .tab { display: block; position: relative; height: 4.25rem; margin: 0 0 0.3333rem 0; padding: 0;
+    border-radius: 0.5rem;
     border: 0.0833rem #ffffff12; background-color: #ffffff08; }
 .igl .tab.hot { background-color: #ffffff14; }
 .igl .tab.on { border-color: #c9a55b; background-color: #c9a55b1f; }
-.igl .tab .tl { display: block; position: absolute; left: -1.0417rem; top: 1.4583rem; width: 4.25rem; height: 1.3333rem;
+.igl .tab .tl { display: block; position: absolute; left: -1.125rem; top: 1.4583rem; width: 4.25rem; height: 1.3333rem;
     line-height: 1.3333rem; font-size: 0.8333rem; font-weight: bold; text-align: center; color: #7e889a;
     white-space: nowrap; overflow: hidden; transform: rotate(-90deg); }
 .igl .tab.hot .tl { color: #c9d1de; }

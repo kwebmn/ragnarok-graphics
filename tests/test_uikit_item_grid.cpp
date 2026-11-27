@@ -221,3 +221,48 @@ TEST(uikit_item_grid_close_cross_centred) {
     CHECK(std::abs(bar.x - box.x) < 1.0f && std::abs(bar.y - box.y) < 1.0f);
     rmlhost::close(g.doc);
 }
+
+// R-AVW884 («в карточке табики както не так смотрятся, тоисть активный табик»: 3.0.24-beta.33, the interface at 175 %,
+// English): a vertical tab's word turned upright stands in its tab's middle - the turned word's middle on the tab's
+TEST(uikit_item_grid_turned_tab_words_in_their_tabs) {
+    for (const float scale : {1.0f, 1.75f}) {
+        iw::Texts t = texts();
+        const char* tabs[iw::kTabs] = {"All", "Usable", "Gear", "Cards", "Misc", "Starred"};
+        for (int i = 0; i < iw::kTabs; ++i) t.tabs[i] = tabs[i];
+        std::vector<iw::Item> items(3);
+        std::vector<int> shown{0, 1, 2};
+        iw::Show sh;
+        sh.tab = iw::Tab(3);
+        iw::Layout L = iw::layout(0, 0, scale, t, measure);
+        static ig::Model m;
+        ig::fill(m, L, items, shown, sh, t, [](const panel::Picture*) { return std::string(); });
+        std::string error;
+        Rml::ElementDocument* d =
+            rmlhost::load(ig::rml(), [&](Rml::DataModelConstructor& c) { ig::bind(c, m); }, 0, 0, &error);
+        CHECK(d != nullptr);
+        if (!d) continue;
+        rmlhost::update();
+        Rml::ElementList tabsFound;
+        d->QuerySelectorAll(tabsFound, ".tab");
+        int seen = 0;
+        for (Rml::Element* tab : tabsFound) {
+            Rml::Element* word = tab->QuerySelector(".tl");
+            if (!word || !tab->IsVisible(true)) continue;
+            ++seen;
+            const Rml::Vector2f ta = tab->GetAbsoluteOffset(Rml::BoxArea::Border);
+            const Rml::Vector2f ts = tab->GetBox().GetSize(Rml::BoxArea::Border);
+            const Rml::Vector2f wa = word->GetAbsoluteOffset(Rml::BoxArea::Border);
+            const Rml::Vector2f ws = word->GetBox().GetSize(Rml::BoxArea::Border);
+            const float tx = ta.x + ts.x / 2, ty = ta.y + ts.y / 2, wx = wa.x + ws.x / 2, wy = wa.y + ws.y / 2;
+            const bool middle = std::abs(tx - wx) < 1.0f && std::abs(ty - wy) < 1.0f;
+            if (!middle)
+                std::fprintf(stderr, "scale %.2f tab «%s»: tab %.1f,%.1f %.1fx%.1f, word %.1f,%.1f %.1fx%.1f\n",
+                             double(scale), word->GetInnerRML().c_str(), double(ta.x), double(ta.y), double(ts.x),
+                             double(ts.y), double(wa.x), double(wa.y), double(ws.x), double(ws.y));
+            CHECK(middle);
+            CHECK(ws.x <= ts.y + 0.5f);  // the word's length (turned: its height) no longer than the tab is tall
+        }
+        CHECK_EQ(seen, iw::kTabs);
+        rmlhost::close(d);
+    }
+}
