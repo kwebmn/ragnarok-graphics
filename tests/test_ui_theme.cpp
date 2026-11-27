@@ -200,3 +200,15 @@ TEST(ui_theme_active_themes_paint_by_group) {
     uitheme::setActive({});  // as it was for the other tests
     CHECK(uitheme::paint(0xEEF2F8, uitheme::Group::Items) == 0xEEF2F8u);
 }
+
+// the final review: a faint gold ground (a chosen row's tint, #e6cb8a1f) is the window's, not the accent's - its grey
+// words stay the window's words (the light theme's ink), only a solid one's turn light or dark by the accent
+TEST(ui_theme_a_faint_accent_ground_keeps_its_words) {
+    const std::string css = ".s { background-color: #e6cb8a1f; color: #eef2f8; } "
+                            ".b { background-color: #e6cb8aff; color: #10141c; }";
+    uitheme::Look look;
+    look.tone = uitheme::Tone::Light;
+    const std::string out = uitheme::themedCss(uitheme::themeFor(look, uitheme::Group::Items), css);
+    CHECK(out.find(".s { background-color: #2f5fd01f; color: #181c26; }") != std::string::npos);
+    CHECK(out.find(".b { background-color: #2f5fd0ff; color: #ffffff; }") != std::string::npos);
+}

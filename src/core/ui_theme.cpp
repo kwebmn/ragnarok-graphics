@@ -105,13 +105,14 @@ std::string recoloured(const Theme& t, const std::string& text, uint32_t word) {
     return out;
 }
 
-// A rule's body on the accent's ground (its «background-color:» a gold, the accent not the gold): its grey words
-// light or dark by that ground; otherwise kNoWord
+// A rule's body on the accent's ground (its «background-color:» a solid gold - 60 % or more; a faint one is a tint
+// of the window's ground - the accent not the gold): its grey words light or dark by that ground; otherwise kNoWord
 uint32_t wordOnAccent(const Theme& t, const std::string& body) {
     if (!t.accent) return kNoWord;
-    static const std::regex ground("(^|[^-a-z])background-color:\\s*#([0-9a-fA-F]{6})");
+    static const std::regex ground("(^|[^-a-z])background-color:\\s*#([0-9a-fA-F]{6})([0-9a-fA-F]{2})?\\b");
     std::smatch m;
     if (!std::regex_search(body, m, ground)) return kNoWord;
+    if (m[3].matched && std::strtoul(m[3].str().c_str(), nullptr, 16) < 0x99) return kNoWord;
     const Rgb c = of(uint32_t(std::strtoul(m[2].str().c_str(), nullptr, 16)));
     if (!gold(c)) return kNoWord;
     return lum(of(accented(c, t.accent))) > 0.55f ? kInk : 0xFFFFFF;

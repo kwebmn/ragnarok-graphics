@@ -957,5 +957,6 @@ TEST(uikit_options_theme_pictures_accent_dots_and_palette) {
     }
     CHECK(typed > 0);
     CHECK_EQ(std::string(m.ownHex), std::string("#2E8B57"));
+    CHECK(rmlhost::log().find("rgb") == std::string::npos);  // the pictures' rgb() colours read without a word
     rmlhost::close(doc);
 }
