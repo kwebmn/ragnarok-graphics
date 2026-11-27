@@ -41,7 +41,10 @@
 namespace uagfx::win::myshopwin {
 namespace {
 
-constexpr int kVendingTax = 200;  // 3.0.24-beta.23: the server's vending_tax (conf/battle) - its arithmetic keeps all
+// 3.0.24-beta.23: the server's vending_tax (conf/battle items.conf); 3.0.24-beta.32: taken since its fix of 27.11
+// (2 %) - the payments seen count, this only for a sale whose payment was not seen
+constexpr int kVendingTax = 200;
+constexpr uint16_t kZenyType = 20;  // 0x00b1's SP_ZENY
 bool g_chime = true;              // 3.0.24-beta.23: [interface] sale_chime
 // the sale's soft chime (core/ui_chime), made once: the game's player reads it while it plays
 const std::vector<uint8_t>& saleChime() {
@@ -376,7 +379,8 @@ static void liveFrame(State& s) {
         }
         if (sales != s.saleViews) s.saleViews = std::move(sales), s.live.doc.dirty("sales");
         // 3.0.24-beta.23 (the spec's «Моя лавка»): as the server pays it (myshop::netEarned - its own arithmetic)
-        const Rml::String earned = money(ms::netEarned(s.ledger.earned(), kVendingTax));
+        // 3.0.24-beta.32 (the server's tax taken since its fix of 27.11): what the server paid (ms::Ledger paid)
+        const Rml::String earned = money(s.ledger.paid(kVendingTax));
         if (earned != s.earned || s.earnedWord.empty() || s.buyer != s.lastBuyer) {
             s.earned = earned;
             s.buyer = s.lastBuyer, s.buyerWord = say(settings::Text::MyShopBuyer);
@@ -461,6 +465,11 @@ void packet(const packets::Event& e) {  // 3.0.18-beta.143: a sale from the shop
         if (!who.empty() && state().open) state().lastBuyer = utf8Of(widened(who, state().codePage));
         return;
     }
+    // 3.0.24-beta.32: the character's zeny (0x00b1, type 20) - a sale's payment comes right before its 0x0137
+    if (const auto* z = std::get_if<packets::StatusLong>(&e)) {
+        if (z->type == kZenyType) state().ledger.zeny(z->value, GetTickCount64());
+        return;
+    }
     const auto* x = std::get_if<packets::ShopSold>(&e);
     if (!x) return;
     State& s = state();
@@ -470,9 +479,9 @@ void packet(const packets::Event& e) {  // 3.0.18-beta.143: a sale from the shop
     char hm[8];
     std::snprintf(hm, sizeof hm, "%02u:%02u", unsigned(t.wHour), unsigned(t.wMinute));
     ms::Sale sale;
-    if (s.ledger.sold(x->index, x->amount, hm, sale))
-        LOG_INFO("my shop: sold %d x %s for %lld z (%lld z in all)", sale.amount, sale.name.c_str(), sale.zeny,
-                 s.ledger.earned());
+    if (s.ledger.sold(x->index, x->amount, hm, sale, GetTickCount64()))
+        LOG_INFO("my shop: sold %d x %s for %lld z (%lld z in all; the server paid %lld z of it)", sale.amount,
+                 sale.name.c_str(), sale.zeny, s.ledger.earned(), s.ledger.paid(kVendingTax));
     else
         LOG_INFO("my shop: a sale of place %d (%d) not matched to a thing", x->index, x->amount);
 }

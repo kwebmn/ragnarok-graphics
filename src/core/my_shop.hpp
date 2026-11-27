@@ -25,7 +25,7 @@ struct Row {
 };
 long long worth(const std::vector<Row>& rows);
 // 3.0.24-beta.23 (the spec's «Моя лавка»): what the merchant gets as the server pays it - uAthena vending.c's own
-// arithmetic, z * (1 - vending_tax / 10000) with an integer division: a tax under 10000 takes nothing
+// arithmetic; 3.0.24-beta.32: since the server's fix of 27.11 z -= z * vending_tax / 10000. (a double), (int)z paid
 long long netEarned(long long gross, int taxPer10000);
 // The buyer the server names in its line to the merchant («%s has bought your item(s).», msg 265, buyer_name yes);
 // "" when the line is another
@@ -70,12 +70,18 @@ struct Sale {
     int amount = 0;
     long long zeny = 0;
 };
+// 3.0.24-beta.32 (the server's vending tax taken since its fix of 27.11): «Зароблено» what the server paid - the
+// character's zeny risen (0x00b1, type 20) right before a sale's 0x0137: one rise a buyer's whole purchase (the server
+// pays, then tells each place), its places within kPaidWithinMs of it; a sale with no rise seen by netEarned
+constexpr uint64_t kPaidWithinMs = 2000;
 class Ledger {
 public:
     void stock(int index, const std::string& name, long long price);  // a thing on sale (again: kept)
-    bool sold(int index, int amount, const std::string& time, Sale& out);
+    void zeny(long long total, uint64_t ms);  // the character's zeny as the server tells it (kept over clear())
+    bool sold(int index, int amount, const std::string& time, Sale& out, uint64_t ms = 0);
     int soldOf(int index) const;
-    long long earned() const { return earned_; }
+    long long earned() const { return earned_; }  // the prices of what sold
+    long long paid(int taxPer10000) const { return paid_ + netEarned(earned_ - covered_, taxPer10000); }
     const std::vector<Sale>& sales() const { return sales_; }
     void clear();
 
@@ -88,6 +94,10 @@ private:
     std::map<int, Thing> things_;
     std::vector<Sale> sales_;
     long long earned_ = 0;
+    long long paid_ = 0, covered_ = 0;  // the payments seen; the prices they paid for
+    long long lastZeny_ = -1, rise_ = 0;
+    uint64_t riseAt_ = 0, purchaseAt_ = 0;
+    bool purchase_ = false;
 };
 
 }  // namespace uagfx::myshop

@@ -17,7 +17,11 @@ constexpr uint32_t kMuted = 0x9AA3B5, kBlack = 0x000000;
 
 }  // namespace
 
-long long netEarned(long long gross, int taxPer10000) { return gross * (1 - taxPer10000 / 10000); }
+long long netEarned(long long gross, int taxPer10000) {
+    double z = double(gross);
+    z -= z * taxPer10000 / 10000.;
+    return (long long)z;
+}
 
 std::string buyerOf(const std::string& line) {
     static const std::string tail = " has bought your item(s).";
@@ -71,12 +75,27 @@ void Ledger::stock(int index, const std::string& name, long long price) {
     t.price = price;
 }
 
-bool Ledger::sold(int index, int amount, const std::string& time, Sale& out) {
+void Ledger::zeny(long long total, uint64_t ms) {
+    rise_ = lastZeny_ >= 0 && total > lastZeny_ ? total - lastZeny_ : 0;
+    riseAt_ = ms;
+    lastZeny_ = total;
+}
+
+bool Ledger::sold(int index, int amount, const std::string& time, Sale& out, uint64_t ms) {
     const auto it = things_.find(index);
     if (it == things_.end() || amount <= 0) return false;
     it->second.sold += amount;
     out = Sale{time, it->second.name, amount, it->second.price * amount};
     earned_ += out.zeny;
+    if (rise_ > 0 && ms >= riseAt_ && ms - riseAt_ <= kPaidWithinMs) {  // the purchase's payment
+        paid_ += rise_;
+        covered_ += out.zeny;
+        purchaseAt_ = riseAt_;
+        purchase_ = true;
+    } else if (purchase_ && ms >= purchaseAt_ && ms - purchaseAt_ <= kPaidWithinMs) {  // another place of it
+        covered_ += out.zeny;
+    }
+    rise_ = 0;
     sales_.insert(sales_.begin(), out);
     if (sales_.size() > 50) sales_.pop_back();
     return true;
@@ -90,7 +109,8 @@ int Ledger::soldOf(int index) const {
 void Ledger::clear() {
     things_.clear();
     sales_.clear();
-    earned_ = 0;
+    earned_ = paid_ = covered_ = rise_ = 0;
+    purchase_ = false;
 }
 
 }  // namespace uagfx::myshop

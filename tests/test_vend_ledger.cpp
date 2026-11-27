@@ -13,8 +13,13 @@
 using namespace uagfx;
 
 TEST(vend_ledger_earned_as_the_server_pays_and_the_buyer) {
-    CHECK_EQ(myshop::netEarned(100000, 200), 100000LL);  // the server's own arithmetic: 200 / 10000 is 0
-    CHECK_EQ(myshop::netEarned(100000, 10000), 0LL);     // only a tax of 10000 (all) takes anything
+    // 3.0.24-beta.32: the server's own arithmetic since its fix of 27.11 - z -= z * vending_tax / 10000. (a double),
+    // the merchant gets (int)z
+    CHECK_EQ(myshop::netEarned(100000, 200), 98000LL);
+    CHECK_EQ(myshop::netEarned(12345, 200), 12098LL);  // 12098.1
+    CHECK_EQ(myshop::netEarned(1, 200), 0LL);          // 0.98
+    CHECK_EQ(myshop::netEarned(100000, 0), 100000LL);
+    CHECK_EQ(myshop::netEarned(100000, 10000), 0LL);
     CHECK_EQ(myshop::netEarned(0, 200), 0LL);
     CHECK_EQ(myshop::buyerOf("Tester has bought your item(s)."), std::string("Tester"));
     CHECK_EQ(myshop::buyerOf("Big Mike has bought your item(s)."), std::string("Big Mike"));
@@ -54,4 +59,40 @@ TEST(trade_packets_the_buttons) {
     CHECK(itempackets::tradeOk() == (itempackets::Bytes{0xeb, 0x00}));
     CHECK(itempackets::tradeCancel() == (itempackets::Bytes{0xed, 0x00}));
     CHECK(itempackets::tradeCommit() == (itempackets::Bytes{0xef, 0x00}));
+}
+
+// 3.0.24-beta.32 (the server's vending tax taken since its fix of 27.11): «Зароблено» what the server paid - the
+// character's zeny risen right before a sale's 0x0137 (one rise a buyer's whole purchase, its places after it); a sale
+// with no rise seen by the server's arithmetic
+TEST(vend_ledger_paid_as_the_zeny_came) {
+    myshop::Ledger l;
+    myshop::Sale sale;
+    l.zeny(1000, 4000);
+    l.clear();  // the shop opened: the sums anew, the zeny known still
+    l.stock(3, "Apple", 100);
+    l.stock(5, "Red Potion", 50);
+    l.zeny(1980, 5000);  // 10 apples, 2 % kept back
+    CHECK(l.sold(3, 10, "10:42", sale, 5002));
+    CHECK_EQ(sale.zeny, 1000LL);  // its line the price
+    CHECK_EQ(l.paid(200), 980LL);
+    // the server before its fix: the whole price came
+    l.zeny(2980, 9000);
+    CHECK(l.sold(3, 10, "10:43", sale, 9001));
+    CHECK_EQ(l.paid(200), 1980LL);
+    // one purchase of two places: one rise, both its
+    l.zeny(4205, 12000);  // 1250 z less 2 %: 1225
+    CHECK(l.sold(3, 10, "10:44", sale, 12001));
+    CHECK(l.sold(5, 5, "10:44", sale, 12001));
+    CHECK_EQ(l.paid(200), 3205LL);
+    // a fall (the play time's price) is no payment; a sale with no rise - the arithmetic
+    l.zeny(4100, 20000);
+    CHECK(l.sold(5, 2, "10:50", sale, 20001));
+    CHECK_EQ(l.paid(200), 3205LL + 98LL);
+    // a rise long before the sale is not its
+    l.zeny(4200, 30000);
+    CHECK(l.sold(5, 2, "10:51", sale, 30000 + myshop::kPaidWithinMs + 1));
+    CHECK_EQ(l.paid(200), 3205LL + 98LL + 98LL);
+    CHECK_EQ(l.earned(), 1000LL + 1000LL + 1250LL + 100LL + 100LL);  // the prices, as before
+    l.clear();
+    CHECK_EQ(l.paid(200), 0LL);
 }
