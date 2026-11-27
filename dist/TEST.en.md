@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.35 — what's new · 2026-11-27
+
+MCP for the full test, part 2: a watchdog in the settings app - the game started, closed and restarted, the computer's load, logs and dumps.
+
+- **Settings app:** with «MCP control for an AI helper» on (Alt+O → «Trials and diagnostics…»), the settings app opens its own MCP on the next port (8771). Through it an AI helper starts, closes or stops the game, sees the processor's and memory's load, the power, and with an NVIDIA card its load, temperature, clocks and why it slows down; reads the logs and dumps of uaro-graphics and changes uaro-graphics.ini.
+- The tunnel for such a test: `ssh -N -R 8770:127.0.0.1:8770 -R 8771:127.0.0.1:8771 root@loki.kweb.biz`.
+
 # uaRO Graphics 3.0.24-beta.34 — what's new · 2026-11-27
 
 «Items»' tabs whole again; MCP for the full test: performance, logs, the windows' check, the game's state.
