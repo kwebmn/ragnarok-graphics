@@ -285,3 +285,20 @@ TEST(mcp_log_since_and_files) {
     CHECK_EQ(mcp::logNamed("C:\\g\\uaro-graphics\\logs\\uaro-graphics.log", "graphics"),
              std::string("C:\\g\\uaro-graphics\\logs\\uaro-graphics.log"));
 }
+
+// 3.0.24-beta.34 (task 4): the ui tool - the open windows' faint or cut words; one window by name, all its words
+TEST(mcp_ui_args) {
+    CHECK(mcp::checkArgs("ui", json::Value::object()).empty());
+    json::Value a = json::Value::object();
+    a.set("doc", "options");
+    a.set("all", true);
+    CHECK(mcp::checkArgs("ui", a).empty());
+    a.set("all", "yes");
+    CHECK(!mcp::checkArgs("ui", a).empty());
+    a.set("all", false);
+    a.set("doc", std::string(61, 'x'));
+    CHECK(!mcp::checkArgs("ui", a).empty());
+    bool listed = false;
+    for (const mcp::Tool& t : mcp::tools()) listed = listed || std::string(t.name) == "ui";
+    CHECK(listed);
+}

@@ -159,6 +159,8 @@ mcp::CallResult Context::mcpCall(const std::string& tool, const json::Value& arg
         }
         return said(json::dump(s));
     }
+    if (tool == "ui")  // 3.0.24-beta.34: the open windows' faint or cut words (uikit/ui_check)
+        return said(json::dump(uaui::check(args["doc"].asString(), args["all"].asBool())));
     if (tool == "windows") {  // 3.0.22-beta.39
         json::Value out = json::Value::object();
         if (window) {

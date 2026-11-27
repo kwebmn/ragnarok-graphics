@@ -36,6 +36,7 @@
 #include "core/window_panel.hpp"
 #include "uikit/applying.hpp"
 #include "uikit/doc_sources.hpp"
+#include "uikit/ui_check.hpp"
 #include "win/paths.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
@@ -1913,6 +1914,37 @@ void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     } else if (uapad::runtime::look().shown) {
         s.context->ProcessMouseLeave();
     }
+}
+
+json::Value check(const std::string& docName, bool all) {
+    State& s = state();
+    json::Value out = json::Value::array();
+    size_t told = 0;
+    for (Doc* d : s.docs) {
+        if (!d->made() || !d->shown() || !d->doc() || (!docName.empty() && d->name != docName)) continue;
+        const std::vector<uikit::uicheck::Word> found =
+            all && !docName.empty() ? uikit::uicheck::words(d->doc(), uikit::uicheck::Rgbf{0.45f, 0.45f, 0.45f})
+                                    : uikit::uicheck::problems(d->doc());
+        if (found.empty() && docName.empty()) continue;
+        json::Value one = json::Value::object();
+        one.set("name", d->name);
+        json::Value list = json::Value::array();
+        for (const uikit::uicheck::Word& w : found) {
+            if (++told > 300) break;
+            json::Value x = json::Value::object();
+            x.set("text", w.text);
+            x.set("x", int(w.x)), x.set("y", int(w.y)), x.set("w", int(w.w)), x.set("h", int(w.h));
+            char c[24];
+            std::snprintf(c, sizeof c, "#%06x on #%06x", w.colour, w.ground);
+            x.set("colours", std::string(c));
+            x.set("contrast", std::round(double(w.contrast) * 100.0) / 100.0);
+            if (w.cut) x.set("cut", true);
+            list.push(x);
+        }
+        one.set(all && !docName.empty() ? "words" : "problems", list);
+        out.push(one);
+    }
+    return out;
 }
 
 json::Value describe() {

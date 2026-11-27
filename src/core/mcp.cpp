@@ -132,6 +132,12 @@ const std::vector<Tool>& table() {
          "upscaler, Reflex, frame generation, still loading); the API, the card, the window, the map, the power "
          "(mains or battery, the plan), the game's memory. Stand in the scene for the seconds asked, then call.",
          R"({"type":"object","properties":{"seconds":{"type":"integer","minimum":1,"maximum":60}}})"},
+        {"ui",
+         "The interface's open windows (uaUI) checked: each one's words too faint to read (under 3:1 against what "
+         "lies under them, the game's picture taken mid grey) or cut by their box - their text, place, colours and "
+         "contrast. `doc`: one window by its name (the windows tool lists them); `all`: every word of it, not only "
+         "the faint and the cut.",
+         R"({"type":"object","properties":{"doc":{"type":"string","maxLength":60},"all":{"type":"boolean"}}})"},
         {"log",
          "A log (uaro-graphics\\logs): `file` graphics (the driver's, unless said), render64 (the 64-bit renderer's) or "
          "pad; its last `lines` (1-300, 60 unless said), those with `match` in them only when given (letters' size "
@@ -458,6 +464,11 @@ std::string checkArgs(const std::string& tool, const json::Value& args) {
         if (args.has("pitch") && (args["pitch"].type() != json::Value::Number || !(args["pitch"].asNumber() >= -89.0) ||
                                   !(args["pitch"].asNumber() <= 89.0)))
             return "pitch: degrees, -89..89";
+    } else if (tool == "ui") {  // 3.0.24-beta.34
+        const json::Value& d = args["doc"];
+        if (args.has("doc") && (d.type() != json::Value::String || d.asString().size() > 60 || !oneLine(d.asString())))
+            return "doc: a window's name (the windows tool's), 60 letters at most";
+        if (args.has("all") && args["all"].type() != json::Value::Bool) return "all: true or false";
     } else if (tool == "perf") {  // 3.0.24-beta.34
         if (args.has("seconds") && !wholeIn(args["seconds"], 1, 60)) return "seconds: a whole number, 1-60";
     } else if (tool == "pause" || tool == "photo") {

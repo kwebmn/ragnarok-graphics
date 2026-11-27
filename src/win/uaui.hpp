@@ -85,6 +85,9 @@ float dp();    // the target's pixels a concept pixel (the theme's 1dp)
 // 3.0.22-beta.39 (the MCP's `windows`): the documents shown in RmlUi's order - name, layer, z-index, box - and the
 // element the pointer is over (its document, tag, id, classes)
 json::Value describe();
+// 3.0.24-beta.34 (the MCP's ui tool, uikit/ui_check): the shown documents' faint or cut words; `doc` one by its name
+// (`all`: every word of it)
+json::Value check(const std::string& doc, bool all);
   // the game's words (its code page) as UTF-8
 // A picture of the driver's as an <img> source - «pic:<address>:<generation>»; another generation is another texture
 // (the one of `previous` let go when it changes)
