@@ -295,3 +295,48 @@ TEST(item_windows_off_once_for_everyone) {
     CHECK(!has("chat"));
     CHECK(itemWindowsOff(readIni("[interface]\nitems = 1\n[utility]\nitem_windows_off = 1\n")).empty());
 }
+
+// 3.0.24-beta.38 (the laptop's run, AMD Radeon 610M: 2022 MB «of its own» - the BIOS's 2 GB - passed for a card of its
+// own; with 4 GB such an APU was a middle card, «Баланс» with 4x MSAA, 3-5 ms of a 16-21 ms frame on the 610M): AMD's
+// APUs known by their names - the strong ones the strong integrated tier (2x), the others the low tier (no MSAA)
+TEST(auto_setup_amd_apus_by_name) {
+    for (const char* apu : {"AMD Radeon(TM) 610M", "AMD Radeon(TM) 660M", "AMD Radeon(TM) 780M", "AMD Radeon 890M",
+                            "AMD Radeon(TM) Graphics", "AMD Radeon(TM) Vega 8 Graphics",
+                            "AMD Radeon(TM) RX Vega 10 Graphics", "AMD Radeon(TM) 8060S Graphics"})
+        CHECK(apuByName(apu));
+    for (const char* card : {"AMD Radeon RX 6500M", "AMD Radeon RX 7600S", "Radeon RX Vega 56", "AMD Radeon RX 550",
+                             "AMD Radeon Pro W6600M", "NVIDIA GeForce RTX 3060 Laptop GPU", "Intel(R) UHD Graphics 620",
+                             "AMD Radeon HD 6570", ""})
+        CHECK(!apuByName(card));
+    Machine m;
+    m.windows10 = m.d3d12 = m.d3d11 = true;
+    m.d3d11Level = 0xc100;
+    m.vendor = 0x1002;
+    m.vramMb = 2022;
+    m.screenWidth = 1920;
+    m.screenHeight = 1080;
+    m.battery = true;
+    m.adapter = "AMD Radeon(TM) 610M";
+    m.apu = apuByName(m.adapter);
+    AutoSetup a = autoSetup(m);
+    CHECK(a.tier == Tier::Low);
+    CHECK_EQ(valueOf(a, "quality", "msaa"), std::string("0"));
+    CHECK_EQ(valueOf(a, "quality", "super_light"), std::string("0"));  // not the super-light mode: it holds the low set
+    m.vramMb = 4096;  // a BIOS giving it 4 GB: still no middle card
+    a = autoSetup(m);
+    CHECK(a.tier == Tier::Low);
+    CHECK_EQ(valueOf(a, "quality", "msaa"), std::string("0"));
+    m.adapter = "AMD Radeon(TM) 780M";
+    m.apu = apuByName(m.adapter);
+    a = autoSetup(m);
+    CHECK(a.tier == Tier::IntegratedStrong);
+    CHECK_EQ(valueOf(a, "quality", "msaa"), std::string("2"));
+    // a card of its own with 4 GB: a middle card as before («Баланс», 4x MSAA)
+    m.adapter = "AMD Radeon RX 6500 XT";
+    m.apu = apuByName(m.adapter);
+    m.vramMb = 4096;
+    a = autoSetup(m);
+    CHECK(!m.apu);
+    CHECK(a.tier == Tier::Middle);
+    CHECK_EQ(valueOf(a, "quality", "msaa"), std::string("4"));
+}

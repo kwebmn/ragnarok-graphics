@@ -23,6 +23,8 @@ struct Machine {
     bool pack = false;                      // uaro-textures.zip next to uaRO.exe
     bool hdr = false;                       // 1.3.3: the main monitor shows HDR now (Windows' HDR on)
     bool integrated = false;  // 2.12: the main adapter shares the computer's memory (integrated graphics)
+    // 3.0.24-beta.38: an AMD APU by its name (apuByName) - its BIOS may give it 2 GB or more «of its own»
+    bool apu = false;
     bool battery = false;     // 2.12: a laptop's battery is there
 };
 
@@ -55,6 +57,10 @@ AutoSetup autoSetup(const Machine& m);
 // 2.12: integrated by its memory - a little of its own (1 GB or less) and more of the computer's; strong by its name.
 bool integratedByMemory(unsigned long long dedicatedMb, unsigned long long sharedMb);
 bool strongIntegrated(const std::string& adapter);
+// 3.0.24-beta.38 (the laptop's run: «AMD Radeon(TM) 610M» showed 2022 MB of its own - the BIOS's 2 GB - and passed for
+// a card of its own; with 4 GB such an APU was a middle card, «Баланс» with 4x MSAA): AMD's integrated graphics by
+// name - «Radeon(TM) Graphics», «Vega N Graphics», «Radeon(TM) 610M» ... «890M», «8060S» (no RX, HD, R7 or Pro model)
+bool apuByName(const std::string& adapter);
 
 // 2.12: the app's start - a fresh install (the app never ran: no language, no statistics' answer) is set up for its
 // card at once; a used one's card and screen are only recorded ([utility] machine); a changed one is asked about.

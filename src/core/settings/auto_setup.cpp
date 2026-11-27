@@ -13,6 +13,9 @@ Tier tierOf(const Machine& m) {
     if (m.vendor == kMicrosoft) return Tier::NoDriver;
     if (m.windows10 && m.d3d12) {
         if (m.integrated) return strongIntegrated(m.adapter) ? Tier::IntegratedStrong : Tier::IntegratedWeak;
+        // 3.0.24-beta.38: an APU its BIOS gave more than 1 GB - the strong ones as above, the others the low tier (no
+        // more: the super-light mode is not for them - a Radeon 610M holds the low set at 60 without MSAA)
+        if (m.apu) return strongIntegrated(m.adapter) ? Tier::IntegratedStrong : Tier::Low;
         if (m.vramCapped) return Tier::Middle;  // 3 GB or more, how much more unknown
         if (m.vramMb < 4096) return Tier::Low;
         return m.vramMb < 8192 ? Tier::Middle : Tier::High;
@@ -86,6 +89,22 @@ FirstStart firstStart(bool usedBefore, const std::string& kept, const std::strin
 
 bool integratedByMemory(unsigned long long dedicatedMb, unsigned long long sharedMb) {
     return dedicatedMb <= 1024 && sharedMb > dedicatedMb;
+}
+
+bool apuByName(const std::string& adapter) {
+    const size_t r = adapter.find("Radeon");
+    if (r == std::string::npos) return false;
+    std::string rest = adapter.substr(r + 6);
+    if (rest.rfind("(TM)", 0) == 0) rest = rest.substr(4);
+    if (rest.empty() || rest[0] != ' ') return false;
+    rest = rest.substr(1);
+    if (rest.rfind("Graphics", 0) == 0) return true;  // «AMD Radeon(TM) Graphics»
+    if (rest.find("Vega") != std::string::npos && rest.find("Graphics") != std::string::npos)
+        return true;  // «Radeon(TM) Vega 8 Graphics», «Radeon(TM) RX Vega 10 Graphics»; RX Vega 56/64 have no «Graphics»
+    size_t d = 0;  // «610M», «890M», «8060S»: three or four digits and M or S, the model's whole word
+    while (d < rest.size() && rest[d] >= '0' && rest[d] <= '9') ++d;
+    if (d < 3 || d > 4 || d >= rest.size() || (rest[d] != 'M' && rest[d] != 'S')) return false;
+    return d + 1 == rest.size() || rest[d + 1] == ' ';
 }
 
 bool strongIntegrated(const std::string& adapter) {

@@ -986,6 +986,7 @@ Machine Model::machine() const {
         shared = card->sharedMb;
     }
     x.integrated = integratedByMemory(x.vramMb, shared);  // 2.12: integrated graphics' own tiers
+    x.apu = apuByName(x.adapter);                         // 3.0.24-beta.38: an AMD APU of 2 GB or more «of its own»
     x.battery = sys.computer.battery == 1;
     x.vramCapped = x.vramMb == kVramSeenAtMost;  // 0.51.1: no better number from the driver's registry
     if (!sys.monitors.empty()) {
