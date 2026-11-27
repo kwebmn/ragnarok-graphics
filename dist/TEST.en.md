@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.24-beta.29 — what's new · 2026-11-27
+
+Site market: the deals' average price; the market's line in «Item card» (for testers).
+
+- **The average.** When a thing sold on the site's market three times or more in half a year, «average Y z · M deals» follows «Market: from X z · N lots». With no lot now the average alone shows. So in the things' tips and «Open a shop».
+- **«Item card»:** the same market line under «An NPC pays».
+- The average shows once the site is updated (at night). Until then the line is as before.
+- To check: Alt+O → «Checking now» → «Site market: the average, in the item card».
+
 # uaRO Graphics 3.0.24-beta.28 — what's new · 2026-11-27
 
 The item windows' crosses in the middle again; a check of the windows already as in the old game (for testers).
