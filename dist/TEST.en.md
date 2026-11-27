@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.22 — what's new · 2026-11-27
+
+«How many»: 1 / 10 / half / all and the limit; the item card: what its cards give (for testers).
+
+- **«How many»: four buttons - 1, 10, half, all.** When the whole stack will not fit (the bag's or the cart's weight, the storage's, bag's or cart's places), the title says how many fit («87 fit in the bag») and no more is offered. When nothing fits, the window does not open.
+- **«Item card»:** under the thing's words - each card in it and what it gives; at the end «An NPC pays: X z» (half the reference pack's price).
+- To check: Alt+O → «Checking now» → «How many: 1 / 10 / half / all and what fits», «Item card: what its cards give, the NPC's price».
+
 # uaRO Graphics 3.0.24-beta.21 — what's new · 2026-11-27
 
 The cart opens a shop, guarded NPC selling, weight in a player's shop (for testers).
