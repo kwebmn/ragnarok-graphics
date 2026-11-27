@@ -14,6 +14,7 @@
 #include "app/client_patch.hpp"
 #include "app/files.hpp"
 #include "app/installer.hpp"
+#include "app/mcp_watch.hpp"
 #include "app/mnemonic.hpp"
 #include "app/notes_window.hpp"
 #include "app/report_send.hpp"
@@ -419,6 +420,9 @@ void MainWindow::create() {
     startUpdateCheck();  // 2.10: at every start, on a thread of its own (about a second)
     startLauncherCheck(lang_);  // 2.11: the news and the online count of «Гра»
     startClientPatchCheck(model_->paths().dir);  // 2.14: the game's new files
+    // 3.0.24-beta.35 (the owner: «давай все через mcp»): the watchdog's MCP at the game's [mcp] port + 1
+    if (model_->now().config.mcpEnabled)
+        mcpwatch::start(hwnd_, model_->now().config.mcpPort + 1, model_->paths().dir);
     // 2.13: the waiting reports sent, the answers counted
     startReportsCheck(model_->paths().dir, computerKey(model_->paths().dir));
     buildPage();
@@ -1425,7 +1429,11 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 DestroyWindow(hwnd_);
             }
             return 0;
+        case mcpwatch::kCall:  // 3.0.24-beta.35: the watchdog's call that needs the model
+            mcpwatch::run(lp, *model_, lang_);
+            return 0;
         case WM_DESTROY:
+            mcpwatch::stop();  // 3.0.24-beta.35
             KillTimer(hwnd_, kTimer);
             KillTimer(hwnd_, kTickTimer);
             KillTimer(hwnd_, kAnswersTimer);  // 3.0.10-beta.3

@@ -81,5 +81,16 @@ using CallFn = std::function<CallResult(const std::string& tool, const json::Val
 
 // One JSON-RPC message -> its answer's JSON; "" for a notification (HTTP 202 then). `version` - the client's own
 std::string handle(const std::string& body, const CallFn& call, const std::string& version);
+// 3.0.24-beta.35 (core/mcp_watch, the settings app's watchdog): a server of its own tools - its name, its words to the
+// AI, its tools and their arguments' check; handle() above is the game's
+struct Catalog {
+    const char* name;
+    const char* title;
+    const char* instructions;
+    const std::vector<Tool>* tools;
+    std::string (*check)(const std::string& tool, const json::Value& args);
+};
+const Catalog& gameCatalog();
+std::string handle(const std::string& body, const CallFn& call, const std::string& version, const Catalog& c);
 
 }  // namespace uagfx::mcp

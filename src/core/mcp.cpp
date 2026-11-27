@@ -185,11 +185,6 @@ const std::vector<Tool>& table() {
     return kTools;
 }
 
-const Tool* find(const std::string& name) {
-    for (const Tool& t : table())
-        if (name == t.name) return &t;
-    return nullptr;
-}
 
 bool wholeIn(const json::Value& v, long lo, long hi) {
     if (v.type() != json::Value::Number) return false;
@@ -560,7 +555,21 @@ Content Content::imageOf(std::string bytes, std::string mime) {
     return c;
 }
 
+const Catalog& gameCatalog() {
+    static const Catalog c{"uaro-graphics", "uaRO Graphics",
+                           "The uaRO client (Ragnarok Online with uaRO Graphics) of the player who turned this on. "
+                           "Change one thing, then look with `screenshot`. Cells are the map's grid (`state` gives the "
+                           "character's); @warp works for a GM account only. Pause shows the old client; the photo "
+                           "mode hides the interface.",
+                           &table(), &checkArgs};
+    return c;
+}
+
 std::string handle(const std::string& body, const CallFn& call, const std::string& version) {
+    return handle(body, call, version, gameCatalog());
+}
+
+std::string handle(const std::string& body, const CallFn& call, const std::string& version, const Catalog& c) {
     json::Value msg;
     std::string error;
     if (!json::parse(body, msg, error)) return errorOf(json::Value(), -32700, "parse error: " + error);
@@ -579,23 +588,20 @@ std::string handle(const std::string& body, const CallFn& call, const std::strin
         json::Value caps = json::Value::object();
         caps.set("tools", tools);
         json::Value info = json::Value::object();
-        info.set("name", "uaro-graphics");
-        info.set("title", "uaRO Graphics");
+        info.set("name", c.name);
+        info.set("title", c.title);
         info.set("version", version);
         json::Value r = json::Value::object();
         r.set("protocolVersion", known ? asked : std::string(kLatestVersion));
         r.set("capabilities", caps);
         r.set("serverInfo", info);
-        r.set("instructions",
-              "The uaRO client (Ragnarok Online with uaRO Graphics) of the player who turned this on. Change one "
-              "thing, then look with `screenshot`. Cells are the map's grid (`state` gives the character's); @warp "
-              "works for a GM account only. Pause shows the old client; the photo mode hides the interface.");
+        r.set("instructions", c.instructions);
         return answer(id, "result", r);
     }
     if (method == "ping") return answer(id, "result", json::Value::object());
     if (method == "tools/list") {
         json::Value list = json::Value::array();
-        for (const Tool& t : table()) {
+        for (const Tool& t : *c.tools) {
             json::Value schema;
             std::string bad;
             json::parse(t.inputSchema, schema, bad);
@@ -612,9 +618,11 @@ std::string handle(const std::string& body, const CallFn& call, const std::strin
     if (method == "tools/call") {
         const json::Value& p = msg["params"];
         const std::string name = p["name"].asString();
-        if (!find(name)) return errorOf(id, -32602, "no such tool: " + name);
+        bool known = false;
+        for (const Tool& t : *c.tools) known = known || name == t.name;
+        if (!known) return errorOf(id, -32602, "no such tool: " + name);
         const json::Value args = p.has("arguments") ? p["arguments"] : json::Value::object();
-        const std::string bad = checkArgs(name, args);
+        const std::string bad = c.check(name, args);
         CallResult r;
         if (!bad.empty()) {
             r.isError = true;

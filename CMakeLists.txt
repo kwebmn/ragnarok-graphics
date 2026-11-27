@@ -236,7 +236,7 @@ elseif(WIN32)
                    src/app/page_search.cpp src/app/notes_window.cpp src/app/update_window.cpp src/app/modes.cpp
                    src/app/page_help.cpp src/app/reports_window.cpp src/app/reports_thread.cpp
                    src/app/client_patch_thread.cpp src/app/chat_view.cpp src/app/launcher_view.cpp
-                   src/app/app.rc)
+                   src/app/mcp_watch.cpp src/app/app.rc)
     # 3.0.18-beta.193: the launcher's fonts (third_party/launcher_fonts) - the .rc's files
     target_include_directories(uaro-graphics PRIVATE src/app dist ${CMAKE_BINARY_DIR}/app third_party/launcher_fonts)
     target_compile_options(uaro-graphics PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>)

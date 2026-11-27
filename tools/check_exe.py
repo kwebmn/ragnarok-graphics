@@ -73,6 +73,7 @@ ALLOWED = {
         "CreateMutexW", "DeleteFileA", "MoveFileExA", "GetDiskFreeSpaceExW",
         # 2.5.15: the computer in the report - its cores (XP SP3), memory and power (Windows 2000)
         "GetLogicalProcessorInformation", "GlobalMemoryStatusEx", "GetSystemPowerStatus",
+        "GetSystemInfo",  # 3.0.24-beta.35: the watchdog's MCP - the processors counted for a load (Windows 2000)
         # 2.10: the update's downloads - a number against caches, a .part continued at its end (Windows 2000); the
         # removal's copy of the app in %TEMP%, the process the update waits for (Windows NT)
         "GetTickCount", "SetFilePointerEx", "CopyFileW", "GetTempPathW", "GetCurrentProcessId",
@@ -127,6 +128,7 @@ ALLOWED = {
         "CallWindowProcW", "CharUpperBuffW",  # 3.0.9-beta.6: the new report's cue words, its label (Windows NT)
         "IsWindowEnabled", "IsWindowVisible",  # 2.10: the progress window's Cancel, the status bar's Update
         "EnumWindows", "GetWindowThreadProcessId",  # 3.0.17-beta.19: a game without a window (hung) found
+        "GetWindow",  # 3.0.24-beta.35: the watchdog's MCP - a game window's owner (its top windows alone; Windows 95)
         # 3.0.10-beta.2: «Звернення» reads a new answer only while it is in front (both since Windows NT)
         "GetForegroundWindow", "IsIconic",
         # 3.0.10-beta.3: the app's notification of a new answer - its icon, the taskbar button flashing (Windows 2000)
