@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.24-beta.33 — what's new · 2026-11-27
+
+The theme changes at once and the light one reads; the «Accent colour» row no longer breaks.
+
+- **Theme on the fly:** when the theme is changed with windows open, their words now take the new colours at once. Before, they kept the old theme's colours while the grounds took the new one's: light words on light (titles, lists, the character block's numbers).
+- **Light theme:** the chat, the character block and the windows are less see-through - the game under them no longer drowns their words; the game's coloured chat lines are darker and read on light.
+- **«Accent colour»:** its name and words wide again, the colour buttons on the right in rows.
+- To check: Alt+O → «Checking now» → «Theme: changed at once, the light one readable».
+
 # uaRO Graphics 3.0.24-beta.32 — what's new · 2026-11-27
 
 «Party»: invite by name; «My shop»: «Earned» what the server paid.
