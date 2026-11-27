@@ -35,9 +35,11 @@ bool asking();
 // 3.0.18-beta.155: the game's «how many» just made (a stack moved in a batch) - its whole count set and its OK
 // pressed; false: none shown
 // 3.0.24-beta.7 (items via packets, the owner: «делай склад»): «Скільки штук» of the driver's own - the card with
-// its own field (digits, Backspace, Enter, Esc; «10 / Половина / Усі»), no game window behind it; `done` gets the
+// its own field (digits, Backspace, Enter, Esc; «1 / 10 / Половина / Усі»), no game window behind it; `done` gets the
 // count chosen (1..most; an empty field: the most), nothing when given up
-void askCount(const std::string& title, int most, std::function<void(int)> done);
+// 3.0.24-beta.22 (the spec's «Скільки штук»: «предел по весу и месту»): `limit` - what fits there («у склад влізе
+// 87»), said under the title when the most is less than the stack ("" none)
+void askCount(const std::string& title, int most, std::function<void(int)> done, const std::string& limit = "");
 bool countAll();  // a request or a count shown (an NPC's input the controller leaves to the game's own field)
 bool close();   // Esc: a request declined, a count given up (true); an NPC's input left to the game
 void beforeGameDraw();

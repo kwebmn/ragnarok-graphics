@@ -360,7 +360,15 @@ void readCartPackets(State& s) {
 // 3.0.24-beta.8: a move of the driver's own - a stack asks how many first (our own «Скільки штук») when `howMany`
 const char* move(itemactions::Kind k, int index, int count, bool howMany, settings::Text title) {
     if (howMany && count > 1) {
-        askcardwin::askCount(say(title), count, [k, index](int n) { itemnet::ask(k, uint16_t(index), uint32_t(n)); });
+        // 3.0.24-beta.22 (the spec's «Скільки штук»: «предел по весу и месту»): no more than where it goes takes
+        const itemstate::Where to = k == itemactions::Kind::FromCart        ? itemstate::Where::Bag
+                                    : k == itemactions::Kind::CartToStorage ? itemstate::Where::Storage
+                                                                            : itemstate::Where::Cart;
+        const itemstate::Item* was = itemnet::state().find(itemactions::leaving(k), uint16_t(index));
+        const itemnet::Fit fit = itemnet::fitIn(to, was ? was->id : 0, count);
+        if (fit.most <= 0) return "nothing of it fits there (its weight or places)";
+        askcardwin::askCount(say(title), fit.most, [k, index](int n) { itemnet::ask(k, uint16_t(index), uint32_t(n)); },
+                             fit.words);
         return "asked how many (items via packets)";
     }
     const itemactions::Result r = itemnet::ask(k, uint16_t(index), uint32_t(std::max(1, count)));

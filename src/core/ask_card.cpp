@@ -57,10 +57,11 @@ Layout layout(const Card& c, int targetW, int targetH, float scale, const Texts&
         L.field = panel::Box{pad, y, w - 2 * pad, kFieldH * s};
         y += kFieldH * s;
     }
-    if (c.kind == Kind::Count) {  // 3.0.11-beta.155: one, half, all
+    if (c.kind == Kind::Count) {  // 3.0.11-beta.155: one, half, all; 3.0.24-beta.22: 1, 10, half, all
         y += 8 * s;
-        const float qw = (w - 2 * pad - 2 * kGap * s) / 3;
-        for (int i = 0; i < 3; ++i) L.quick.push_back(panel::Box{pad + float(i) * (qw + kGap * s), y, qw, 28 * s});
+        const float qw = (w - 2 * pad - float(kQuicks - 1) * kGap * s) / float(kQuicks);
+        for (int i = 0; i < kQuicks; ++i)
+            L.quick.push_back(panel::Box{pad + float(i) * (qw + kGap * s), y, qw, 28 * s});
         y += 28 * s;
     }
     y += kGap * s;
@@ -105,7 +106,8 @@ std::string onEnter(const std::string& field, int most) {
 int quickValue(Quick q, int most) {
     const int m = std::max(1, most);
     switch (q) {
-        case Quick::One: return std::min(10, m);  // 3.0.15-beta.7: ten (one before), the most when fewer
+        case Quick::One: return 1;               // 3.0.24-beta.22: one again (the spec's «1 / 10 / половина / усе»)
+        case Quick::Ten: return std::min(10, m);  // 3.0.15-beta.7: ten, the most when fewer
         case Quick::Half: return std::max(1, m / 2);
         case Quick::All: break;
     }

@@ -7,6 +7,16 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.22 (the plan's task 7): «Скільки штук» - four quick choices and what fits
+        {"count_limit", "3.0.24-beta.22", "interface.storage_packets",
+         {"How many: 1 / 10 / half / all and what fits", "Скільки штук: 1 / 10 / половина / усе і що влізе",
+          "Сколько штук: 1 / 10 / половина / всё и что влезет"},
+         {"With «Storage» by packets, take a big stack into a nearly full bag: four buttons 1, 10, half, all; «N fit in "
+          "the bag» under the title, and no more than that is offered.",
+          "Зі «Складом» пакетами візьміть велику пачку в майже повну сумку: чотири кнопки 1, 10, половина, усе; «у "
+          "сумку влізе N» під заголовком, і більше не пропонує.",
+          "Со «Складом» пакетами возьмите большую пачку в почти полную сумку: четыре кнопки 1, 10, половина, всё; «в "
+          "сумку влезет N» под заголовком, и больше не предлагает."}},
         // 3.0.24-beta.21 (the plan's task 6): the player's shop tells the weight after the purchase
         {"vend_weight", "3.0.24-beta.21", "interface.vending",
          {"Merchant's shop: weight after the purchase", "Лавка торговця: вага після покупки",

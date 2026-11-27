@@ -8785,6 +8785,10 @@ constexpr Entry kTexts[] = {
     {Text::ShopSellAskRefine, "«{1}» is +{2} - click once more to sell it",
      "«{1}» заточено на +{2} — клікніть ще раз, щоб продати",
      "«{1}» заточено на +{2} — кликните ещё раз, чтобы продать"},
+    // 3.0.24-beta.22 (the spec's «Скільки штук»: «у склад влізе 87»)
+    {Text::CountFitsBag, "{1} fit in the bag", "у сумку влізе {1}", "в сумку влезет {1}"},
+    {Text::CountFitsCart, "{1} fit in the cart", "у візок влізе {1}", "в тележку влезет {1}"},
+    {Text::CountFitsStorage, "{1} fit in the storage", "у склад влізе {1}", "на склад влезет {1}"},
     {Text::LauncherRunningCount, "The game is running · windows: {1}", "Гра вже запущена · вікон: {1}",
      "Игра уже запущена · окон: {1}"},
     {Text::InterfaceArrowsWalk, "Walking with the arrows", "Ходьба стрілками", "Ходьба стрелками"},

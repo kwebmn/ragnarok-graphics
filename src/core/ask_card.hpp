@@ -36,7 +36,7 @@ struct Texts {
     std::string accept, decline, ok;  // «Прийняти», «Відмовити», «Готово»
     std::string yes, no, cancel;      // 3.0.11-beta.151: «Так», «Ні», «Скасувати»
     std::string acceptKey, declineKey, okKey;  // the keys or the controller's buttons beside them ("" none)
-    std::string quick[3];                      // 3.0.11-beta.155: a count's «1», «Половина», «Усі»
+    std::string quick[4];  // 3.0.11-beta.155: a count's quick choices; 3.0.24-beta.22 «1», «10», «Половина», «Усі»
 };
 struct Show {
     int hover = -1;
@@ -57,8 +57,10 @@ int buttonAt(const Layout& L, float x, float y);  // the picture's pixels; -1 no
 // 3.0.11-beta.170 (R-KD2UQQ): the game's box's words after an ErrorMsg call - a new box the call's words; a call while
 // one is up adds its line only when it asks for that (the game answers it at once), else the words stay
 std::string boxWords(const std::string& now, const std::string& words, bool boxUp, bool adds);
-// 3.0.11-beta.155: a count's quick choices - one, half, all of its most (half at least one)
-enum class Quick : uint8_t { One, Half, All };
+// 3.0.11-beta.155: a count's quick choices - one, half, all of its most (half at least one); 3.0.24-beta.22 (the
+// spec's «Скільки штук»: «кнопки 1 / 10 / половина / усе»): one, ten, half, all
+enum class Quick : uint8_t { One, Ten, Half, All };
+constexpr int kQuicks = 4;
 int quickAt(const Layout& L, float x, float y);  // the picture's pixels; -1 none
 int quickValue(Quick q, int most);
 // 3.0.18-beta.190 (the tester: «жму ентер не кидає на склад, а мишкою на Готово - все перекине»): what a count's

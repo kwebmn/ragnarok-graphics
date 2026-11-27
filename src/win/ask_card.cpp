@@ -107,6 +107,7 @@ struct State {
     // 3.0.24-beta.7: «Скільки штук» of the driver's own (askCount) - no game window behind it
     bool own = false;
     std::string ownTitle, ownField;
+    std::string ownLimit;  // 3.0.24-beta.22: what fits where the stack goes, said under the title
     int ownMost = 0;
     std::function<void(int)> ownDone;
     int countX = 0, countY = 0;               // its own place (back when the switch goes off)
@@ -319,9 +320,10 @@ ac::Texts texts(const State& s) {
     t.declineKey = s.padNow ? uapad::buttonLabel(1) : "Esc";
     t.okKey = s.padNow ? "" : "Enter";
     t.cancel = say(settings::Text::MsgCancel);  // 3.0.11-beta.155: a count's
-    t.quick[0] = "10";  // 3.0.15-beta.7 (a player: «там де 1 шт зробити десятки 10»)
-    t.quick[1] = say(settings::Text::CountHalf);
-    t.quick[2] = say(settings::Text::CountAll);
+    t.quick[0] = "1";   // 3.0.24-beta.22 (the spec's «Скільки штук»: «кнопки 1 / 10 / половина / усе»)
+    t.quick[1] = "10";  // 3.0.15-beta.7 (a player: «там де 1 шт зробити десятки 10»)
+    t.quick[2] = say(settings::Text::CountHalf);
+    t.quick[3] = say(settings::Text::CountAll);
     return t;
 }
 
@@ -489,6 +491,7 @@ static void frameInner(HWND game, bool on, bool counts, unsigned codePage, doubl
         s.card.title = s.ownTitle;
         s.card.most = s.ownMost;
         s.card.message = settings::fmt(say(settings::Text::CountHint), {std::to_string(s.ownMost)});
+        if (!s.ownLimit.empty()) s.card.message = s.ownLimit;  // 3.0.24-beta.22: «у склад влізе 87»
         s.card.field = s.ownField;
         s.card.caret = (GetTickCount64() / kBlinkMs) % 2 == 0;
     } else {
@@ -544,7 +547,7 @@ static void liveFrame(State& s) {
         m.BindEventCallback("ask_quick", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             State& st = state();
             if (!a.empty() && st.kind == ac::Kind::Count)
-                quick(st, ac::quickValue(ac::Quick(std::clamp(a[0].Get<int>(), 0, 2)), st.card.most));
+                quick(st, ac::quickValue(ac::Quick(std::clamp(a[0].Get<int>(), 0, ac::kQuicks - 1)), st.card.most));
         });
     });
     if (!s.live.made()) return;
@@ -561,7 +564,7 @@ static void liveFrame(State& s) {
         views.push_back(v);
     }
     std::vector<Rml::String> quick;
-    if (s.kind == ac::Kind::Count) quick = {t.quick[0], t.quick[1], t.quick[2]};
+    if (s.kind == ac::Kind::Count) quick = {t.quick[0], t.quick[1], t.quick[2], t.quick[3]};
     const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window(), uitheme::Group::Items);
     const bool sameButtons = views.size() == s.buttonViews.size() &&
                              std::equal(views.begin(), views.end(), s.buttonViews.begin(),
@@ -654,11 +657,12 @@ bool countAll() {
 
 bool shown() { return state().shown; }
 
-void askCount(const std::string& title, int most, std::function<void(int)> done) {
+void askCount(const std::string& title, int most, std::function<void(int)> done, const std::string& limit) {
     State& s = state();
     if (s.own) endOwn(s, 0);  // one at a time: the one before given up
     s.own = most > 0;
     s.ownTitle = title;
+    s.ownLimit = limit;  // 3.0.24-beta.22: «у склад влізе 87» under the title ("" none)
     s.ownMost = most;
     s.ownField.clear();
     s.ownDone = s.own ? std::move(done) : nullptr;

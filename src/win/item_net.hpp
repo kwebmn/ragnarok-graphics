@@ -24,6 +24,14 @@ itemactions::Result deal(bool buy, const itempackets::Pairs& rows);
 itemactions::Result vend(uint32_t merchant, const itempackets::Pairs& rows);
 // 3.0.24-beta.20 (docs/superpowers/plans/2026-11-27-item-windows-old-layout.md, task 2): «Речі»'s and
 // «Спорядження»'s own - a bag thing used, worn (at `places`), taken off, dropped; the cell waits for the server
+// 3.0.24-beta.22 (the spec's «Скільки штук»: «предел по весу и месту: «у склад влізе 87»»): how many of `count` of a
+// thing (`id`) fit where it goes - the bag (its weight, 100 places), the cart (its weight and places as 0x0121 tells),
+// the storage (its places); `words` say it when fewer than the stack ("" else)
+struct Fit {
+    int most = 0;
+    std::string words;
+};
+Fit fitIn(itemstate::Where to, int id, int count);
 itemactions::Result use(uint16_t index);
 itemactions::Result equip(uint16_t index, uint16_t places);
 itemactions::Result unequip(uint16_t index);

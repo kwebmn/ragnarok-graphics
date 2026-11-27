@@ -4,14 +4,20 @@
 
 #include <algorithm>
 
+#include "core/count_limit.hpp"
 #include "core/item_packets.hpp"
+#include "core/reference_index.hpp"
 #include "core/settings/strings.hpp"
 #include "pad/win/runtime.hpp"
+#include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/reference_load.hpp"
 #include "win/words.hpp"
 
 namespace uagfx::win::itemnet {
 namespace {
+
+constexpr int kBagPlaces = 100;  // 3.0.24-beta.22: the bag's (uAthena MAX_INVENTORY)
 
 // The game's packet loop's buffer (the loop's [ebp-0x54b4], win/packet_tap): a packet of its own length is read no
 // further than this
@@ -184,6 +190,39 @@ itemactions::Result sent(State& s, itemactions::Kind k, uint16_t index, itemacti
 }
 
 }  // namespace
+
+Fit fitIn(itemstate::Where to, int id, int count) {
+    State& s = st();
+    Fit f;
+    if (count <= 0) return f;
+    int unit = -1;  // one's weight in tenths (the reference pack's)
+    if (const auto refs = reference::index()) {
+        const auto w = refs->items.find(id);
+        if (w != refs->items.end()) unit = w->second.weight;
+    }
+    const std::vector<itemstate::Item>& list = to == itemstate::Where::Bag    ? s.items.bag()
+                                               : to == itemstate::Where::Cart ? s.items.cart()
+                                                                              : s.items.storage();
+    const bool stacks = std::any_of(list.begin(), list.end(),
+                                    [id](const itemstate::Item& x) { return x.id == id && x.places == 0; });
+    int weightFree = -1, placesFree = -1;
+    settings::Text words = settings::Text::CountFitsStorage;
+    if (to == itemstate::Where::Bag) {
+        charstatus::Status st;
+        if (readOwnStatus(st) && st.weightMost > 0) weightFree = (st.weightMost - st.weight) * 10;
+        placesFree = std::max(0, kBagPlaces - int(list.size()));
+        words = settings::Text::CountFitsBag;
+    } else if (to == itemstate::Where::Cart) {
+        if (s.items.cartMostWeight() > 0) weightFree = s.items.cartMostWeight() - s.items.cartWeight();  // tenths
+        if (s.items.cartMost() > 0) placesFree = std::max(0, s.items.cartMost() - int(list.size()));
+        words = settings::Text::CountFitsCart;
+    } else if (s.items.storageMost() > 0) {
+        placesFree = std::max(0, s.items.storageMost() - int(list.size()));
+    }
+    f.most = countlimit::most(count, unit, weightFree, placesFree, stacks);
+    if (f.most < count) f.words = settings::fmt(win::say(words), {std::to_string(f.most)});
+    return f;
+}
 
 itemactions::Result use(uint16_t index) {
     State& s = st();

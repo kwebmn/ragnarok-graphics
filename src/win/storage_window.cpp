@@ -360,9 +360,12 @@ const char* take(State& s, const iw::Item& it, bool howMany = false) {
         // «Скільки штук»); Alt+RMB and the picked ones go whole
         if (howMany && it.count > 1) {
             const int index = it.index;
-            askcardwin::askCount(say(settings::Text::CountBag), it.count, [index](int n) {
+            // 3.0.24-beta.22 (the spec's «Скільки штук»: «предел по весу и месту»): no more than the bag takes
+            const itemnet::Fit fit = itemnet::fitIn(itemstate::Where::Bag, it.id, it.count);
+            if (fit.most <= 0) return "nothing of it fits in the bag (its weight or places)";
+            askcardwin::askCount(say(settings::Text::CountBag), fit.most, [index](int n) {
                 itemnet::ask(itemactions::Kind::FromStorage, uint16_t(index), uint32_t(n));
-            });
+            }, fit.words);
             return "asked how many (items via packets)";
         }
         const itemactions::Result r = itemnet::ask(itemactions::Kind::FromStorage, uint16_t(it.index),
@@ -392,9 +395,11 @@ const char* dropAt(const iw::Item& it) {
         if (readGameCursor(gx, gy) && cartwin::over(gx, gy)) {
             if (it.count > 1) {
                 const int index = it.index;
-                askcardwin::askCount(say(settings::Text::CountCart), it.count, [index](int n) {
+                const itemnet::Fit fit = itemnet::fitIn(itemstate::Where::Cart, it.id, it.count);  // 3.0.24-beta.22
+                if (fit.most <= 0) return "nothing of it fits in the cart (its weight or places)";
+                askcardwin::askCount(say(settings::Text::CountCart), fit.most, [index](int n) {
                     itemnet::ask(itemactions::Kind::StorageToCart, uint16_t(index), uint32_t(n));
-                });
+                }, fit.words);
                 return "asked how many (into the cart)";
             }
             itemnet::ask(itemactions::Kind::StorageToCart, uint16_t(it.index), 1);
@@ -626,9 +631,16 @@ bool drop(int x, int y, uint32_t drag) {
         const int place = int(read32(drag + 4)), count = int(read32(drag + 0x10));
         modeMsg(kEndDragMsg, 0, 0);
         if (count > 1) {  // 3.0.24-beta.7: a stack - how many (our own «Скільки штук»)
-            askcardwin::askCount(say(settings::Text::CountStorage), count, [place](int n) {
+            // 3.0.24-beta.22 (the spec's «Скільки штук»: «у склад влізе 87»): no more than the storage's places take
+            const itemstate::Item* was = itemnet::state().find(itemstate::Where::Bag, uint16_t(place));
+            const itemnet::Fit fit = itemnet::fitIn(itemstate::Where::Storage, was ? was->id : 0, count);
+            if (fit.most <= 0) {
+                if (s.told++ < 30) LOG_INFO("storage: a bag stack (place %d) - no place for it in «Склад»", place);
+                return true;
+            }
+            askcardwin::askCount(say(settings::Text::CountStorage), fit.most, [place](int n) {
                 itemnet::ask(itemactions::Kind::ToStorage, uint16_t(place), uint32_t(n));
-            });
+            }, fit.words);
             if (s.told++ < 30) LOG_INFO("storage: a bag stack (place %d, %d) let go over «Склад» - how many", place,
                                         count);
             s.readAt = 0;
