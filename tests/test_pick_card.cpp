@@ -76,3 +76,18 @@ TEST(pick_card_a_warp_row_names_its_map) {
     CHECK_EQ(p.name, std::string("jupe_ele_r"));
     CHECK_EQ(p.code, std::string());
 }
+
+// 3.0.24-beta.24 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md, «Вибір речі»: «значки и поиск
+// по названию»; the plan's task 11): the rows a search keeps - by the name, any case (Cyrillic too), each with its
+// place in the game's list
+TEST(pick_card_search_by_name) {
+    std::vector<pickcard::Entry> e(3);
+    e[0].name = "Blade";
+    e[1].name = "\xD0\xA9\xD0\xB8\xD1\x82 Buckler";  // «Щит Buckler»
+    e[2].name = "Knife [3]";
+    CHECK(pickcard::shownOf(e, "") == (std::vector<int>{0, 1, 2}));
+    CHECK(pickcard::shownOf(e, "KN") == (std::vector<int>{2}));
+    CHECK(pickcard::shownOf(e, "\xD1\x89\xD0\xB8\xD1\x82") == (std::vector<int>{1}));  // «щит»
+    CHECK(pickcard::shownOf(e, "zzz").empty());
+    CHECK(!pickcard::searchable(6) && pickcard::searchable(7));  // a short list needs no search
+}

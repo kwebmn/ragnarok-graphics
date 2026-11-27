@@ -14,6 +14,7 @@
 #include "core/hotbar_panel.hpp"
 #include "core/item_window.hpp"
 #include "core/pick_card.hpp"
+#include "core/text_field.hpp"
 #include "core/reference_index.hpp"
 #include "core/skill_info.hpp"
 #include "core/settings/strings.hpp"
@@ -104,6 +105,7 @@ constexpr uint32_t kDeleteWindow = 0x4D1E60;
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 using DeleteFn = bool(__attribute__((thiscall)) *)(uint32_t manager, int id);
 int g_cartChosen = -1;  // the card's choice in the cart's window (it has none of its own)
+constexpr size_t kMostTyped = 40;  // 3.0.24-beta.24: the search's letters
 constexpr uint32_t kBoxFirst = 0x58, kBoxPast = 0x5C, kArrowsWhat = 0x98;
 constexpr uint32_t kSpellsFirst = 0x9C, kSpellsPast = 0xA0;  // .295: Auto Spell's skills
 constexpr uint32_t kSkillNames = 0x74B9AC;  // the game's AEGIS names by skill number (win/skill_window)
@@ -119,9 +121,12 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <body class="lw pkw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span></div>
 <div class="msg" data-if="message != ''">{{message}}</div>
-<div class="list"><div class="row ctl" data-for="e, i : entries" data-class-on="i == selected"
-  data-event-click="pk_choose(i)"
-  data-event-dblclick="pk_ok()" data-event-mousedown="pk_card(i)"><img data-if="e.icon != ''"
+<div class="field ctl" data-if="searchable" data-class-typing="typing" data-event-click="pk_search()"><span
+  class="ph" data-if="search == '' && !typing">{{searchWord}}</span>{{search}}<span class="caret"
+  data-if="typing && caretOn"></span></div>
+<div class="list"><div class="row ctl" data-for="e : entries" data-class-on="e.index == selected"
+  data-event-click="pk_choose(e.index)"
+  data-event-dblclick="pk_ok()" data-event-mousedown="pk_card(e.index)"><img data-if="e.icon != ''"
   data-attr-src="e.icon"/><div class="pwho"><span class="name" data-style-color="e.colour">{{e.name}}</span><span
   class="inside"
   data-if="e.inside != ''">{{e.inside}}</span></div></div>
@@ -133,6 +138,7 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 </body></rml>)RML";
 struct PickEntryView {
     Rml::String name, icon, inside, colour = "#eef2f8";
+    int index = 0;  // 3.0.24-beta.24: its place in the game's list (a search shows some)
 };
 
 struct State {
@@ -141,6 +147,11 @@ struct State {
     std::map<const panel::Picture*, std::string> iconPrev;
     Rml::String title, message, ok, cancel, empty, hint, ground = "#10141cf0";
     int selected = -1;
+    // 3.0.24-beta.24 (the spec's «Вибір речі»: «поиск по названию»): a list of more than 6 rows has a search field
+    std::string search;
+    Rml::String searchWord, searchShown;
+    bool searchable = false, typing = false, caretOn = false, typingShown = false;
+    WPARAM skipChar = 0;  // the character a key that stopped the typing brings, not the game's
     uisheet::Sheet sheet;  // 3.0.18-beta.31: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -465,6 +476,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     }
     if (!s.shown || window != s.window) {
         s.show = pc::Show{};
+        s.search.clear(), s.typing = false;  // 3.0.24-beta.24
         if (window != s.window) g_cartChosen = -1;  // 3.0.18-beta.1
         LOG_INFO("picks: the game's %s window - the new card shows it",
                  nameOf(kind));
@@ -510,6 +522,7 @@ static void liveFrame(State& s) {
             v.RegisterMember("colour", &PickEntryView::colour);
             v.RegisterMember("name", &PickEntryView::name);
             v.RegisterMember("icon", &PickEntryView::icon);
+            v.RegisterMember("index", &PickEntryView::index);  // 3.0.24-beta.24
         }
         m.RegisterArray<std::vector<PickEntryView>>();
         m.Bind("entries", &s.entryViews);
@@ -520,8 +533,17 @@ static void liveFrame(State& s) {
         m.Bind("empty", &s.empty);
         m.Bind("hint", &s.hint);
         m.Bind("selected", &s.selected);
+        m.Bind("searchable", &s.searchable);  // 3.0.24-beta.24: the search
+        m.Bind("typing", &s.typing);
+        m.Bind("caretOn", &s.caretOn);
+        m.Bind("search", &s.searchShown);
+        m.Bind("searchWord", &s.searchWord);
+        m.BindEventCallback("pk_search", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            state().typing = true;
+        });
         m.Bind("ground", &s.ground);
         m.BindEventCallback("pk_choose", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            state().typing = false;  // 3.0.24-beta.24: a row clicked - the search stops typing
             if (!a.empty()) choose(state(), a[0].Get<int>());
         });
         m.BindEventCallback("pk_card", [](Rml::DataModelHandle, Rml::Event& ev, const Rml::VariantList& a) {
@@ -540,8 +562,12 @@ static void liveFrame(State& s) {
     if (!s.live.made()) return;
     const pc::Texts t = texts(s);
     std::vector<PickEntryView> entries;
-    for (const pc::Entry& e : s.entries) {
+    const bool searchable = pc::searchable(s.entries.size()) || !s.search.empty();  // 3.0.24-beta.24
+    if (!searchable) s.search.clear(), s.typing = false;
+    for (const int at : pc::shownOf(s.entries, s.search)) {
+        const pc::Entry& e = s.entries[size_t(at)];
         PickEntryView v;
+        v.index = at;
         v.name = e.refine > 0 ? "+" + std::to_string(e.refine) + " " + e.name : e.name;
         v.inside = e.inside;
         v.colour = e.colour;
@@ -553,9 +579,19 @@ static void liveFrame(State& s) {
                       std::equal(entries.begin(), entries.end(), s.entryViews.begin(),
                                  [](const PickEntryView& a, const PickEntryView& b) {
                                      return a.name == b.name && a.icon == b.icon && a.inside == b.inside &&
-                                            a.colour == b.colour;
+                                            a.colour == b.colour && a.index == b.index;
                                  });
     if (!same) s.entryViews = std::move(entries), s.live.doc.dirty("entries");
+    {  // 3.0.24-beta.24: the search's field, its caret blinking while it types
+        const bool caret = s.typing && (GetTickCount64() / 530) % 2 == 0;
+        const Rml::String word = say(settings::Text::ItemsSearch);
+        if (searchable != s.searchable || caret != s.caretOn || s.search != s.searchShown || word != s.searchWord ||
+            s.typing != s.typingShown) {
+            s.searchable = searchable, s.caretOn = caret, s.searchShown = s.search, s.searchWord = word;
+            s.typingShown = s.typing;
+            s.live.doc.dirtyAll();
+        }
+    }
     if (t.title != s.title || t.message != s.message || t.ok != s.ok || t.cancel != s.cancel || t.empty != s.empty ||
         t.hint != s.hint || s.show.selected != s.selected || ground != s.ground) {
         s.title = t.title, s.message = t.message, s.ok = t.ok, s.cancel = t.cancel, s.empty = t.empty;
@@ -565,6 +601,46 @@ static void liveFrame(State& s) {
     int x = s.layout.x, y = s.layout.y, bx = 0, by = 0, bw = 0, bh = 0;
     if (s.live.box(bx, by, bw, bh)) x = (s.targetW - bw) / 2, y = std::max(0, s.targetH / 3 - bh / 2);
     s.live.frame(s.shown, x, y, int(winstack::Win::Pick), ".row, .btn");
+}
+
+// 3.0.24-beta.24 (the spec's «Вибір речі»: «поиск по названию»): the search's keys while it types - letters in any
+// language, Backspace, Delete clears; Enter, Esc, Tab, ↓ stop the typing (Esc then does not close the window); Alt+...
+// the game's
+bool key(UINT m, WPARAM wp, LPARAM) {
+    State& s = state();
+    if (s.skipChar && m == WM_CHAR) {
+        const bool skip = wp == s.skipChar;
+        s.skipChar = 0;
+        if (skip) return true;
+    }
+    if (!s.shown || !s.typing) return false;
+    if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN) {
+        if (GetKeyState(VK_MENU) < 0) return false;
+        switch (wp) {
+            case VK_ESCAPE:
+            case VK_RETURN:
+            case VK_TAB:
+            case VK_DOWN:
+                s.typing = false;
+                s.skipChar = wp == VK_ESCAPE ? 27 : wp == VK_RETURN ? 13 : wp == VK_TAB ? 9 : 0;
+                return true;
+            case VK_BACK: {
+                textfield::Field f{s.search, false};
+                textfield::backspace(f);
+                s.search = f.text;
+                s.skipChar = 8;
+                return true;
+            }
+            case VK_DELETE: s.search.clear(); return true;
+            default: return true;  // every key the search's while it types
+        }
+    }
+    if (m == WM_CHAR && wp >= 32 && wp != 127 && GetKeyState(VK_CONTROL) >= 0) {
+        textfield::Field f{s.search, false};
+        if (textfield::type(f, typedUtf8(unsigned(wp)), kMostTyped)) s.search = f.text;
+        return true;
+    }
+    return m == WM_KEYUP || m == WM_CHAR || m == WM_DEADCHAR;
 }
 
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {

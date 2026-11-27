@@ -23,6 +23,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
 bool close();  // Esc: cancel
+bool key(UINT m, WPARAM wp, LPARAM lp);  // 3.0.24-beta.24: the search's keys while it types
 void beforeGameDraw();
 enum class PadCommand : uint8_t { Up, Down, Ok, Cancel, Card };  // .142 Card: Y
 void padCommand(PadCommand c);

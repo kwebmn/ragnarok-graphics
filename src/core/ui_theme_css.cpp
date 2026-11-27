@@ -627,6 +627,8 @@ select selectbox option:checked { color: #e6cb8a; }
 .pkw .pwho { display: block; flex: 1; }  /* 3.0.18-beta.142: the name, what is inside under it */
 .pkw .pwho .name { display: block; font-size: 12.5dp; font-weight: normal; color: #eef2f8; }
 .pkw .pwho .inside { display: block; font-size: 10.5dp; color: #b8c8ff; }
+.pkw .field { margin: 4dp 0 2dp 0; }  /* 3.0.24-beta.24: the search, a list of more than 6 rows */
+.pkw .field .ph { color: #9aa3b5; }
 .npw { width: 560dp; }
 .npw .count { margin-left: 10dp; font-size: 11.5dp; color: #9aa3b5; }
 .npw .talk { display: block; margin: 4dp 0 10dp 0; }

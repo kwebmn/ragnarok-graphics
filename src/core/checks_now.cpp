@@ -7,6 +7,16 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.24 (the plan's task 11): «Вибір речі» - a search over a list of more than 6 rows
+        {"pick_search", "3.0.24-beta.24", "interface.picks",
+         {"Choosing a thing: the search", "Вибір речі: пошук", "Выбор вещи: поиск"},
+         {"Open a long list (the magnifier with many things not known, a card over many pieces): «Search by the name» "
+          "over it - click, type part of a name, the list keeps those; Esc stops the typing, a right click - its card.",
+          "Відкрийте довгий список (лупа з багатьма неопізнаними речами, карта на багато речей): над ним «Пошук за "
+          "назвою» — клацніть, наберіть частину назви, у списку лишаться ці; Esc зупиняє набір, ПКМ — картка речі.",
+          "Откройте длинный список (лупа со многими неопознанными вещами, карта на много вещей): над ним «Поиск по "
+          "названию» — щёлкните, наберите часть названия, в списке останутся эти; Esc останавливает набор, ПКМ — "
+          "карточка вещи."}},
         // 3.0.24-beta.24 (the plan's task 10): «Обмін» - the red frame 5 s before your «Готово» too; the buttons by
         // our own packets (the testers' box)
         {"trade_late", "3.0.24-beta.24", "interface.trade",

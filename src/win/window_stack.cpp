@@ -360,6 +360,7 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
         case Win::VendSetup: return vendsetupwin::key(m, wp, lp);  // 3.0.18-beta.105: Tab / Enter between fields
         case Win::Ask: return askcardwin::key(m, wp, lp);  // 3.0.18-beta.190: Enter on an empty count - the most
         case Win::CharMake: return charmakewin::key(m, wp, lp);  // 3.0.18-beta.228: ↑ ↓ the rows, ← → change
+        case Win::Pick: return pickcardwin::key(m, wp, lp);      // 3.0.24-beta.24: its search's
         default: return false;
     }
 }

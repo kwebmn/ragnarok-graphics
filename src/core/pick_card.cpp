@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cmath>
 
+#include "core/settings/search.hpp"
 #include "core/ui_style.hpp"
 
 namespace uagfx::pickcard {
@@ -48,6 +49,14 @@ Layout layout(int targetW, int targetH, float scale, size_t count) {
 }
 
 int mostScroll(const Layout& L, size_t count) { return std::max(0, int(count) - int(L.rows.size())); }
+
+std::vector<int> shownOf(const std::vector<Entry>& entries, const std::string& search) {
+    std::vector<int> out;
+    const std::string want = settings::foldCase(search);
+    for (size_t i = 0; i < entries.size(); ++i)
+        if (want.empty() || settings::foldCase(entries[i].name).find(want) != std::string::npos) out.push_back(int(i));
+    return out;
+}
 
 int autoChoice(size_t entries, int chosen) {
     (void)chosen;  // one row: whatever the list says, it is that one

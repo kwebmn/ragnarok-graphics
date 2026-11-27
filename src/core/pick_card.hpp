@@ -45,6 +45,12 @@ struct Hit {
 Hit hitTest(const Layout& L, int scroll, size_t count, float x, float y);
 // 3.0.11-beta.171 (the login concept): the row to press OK on at once - the only one; -1 when the player chooses
 int autoChoice(size_t entries, int chosen);
+// 3.0.24-beta.24 (the spec's «Вибір речі»: «значки и поиск по названию»): the rows a search keeps - by the name, any
+// case (Cyrillic too; settings::foldCase), each its place in the game's list; "" all. A list of more than
+// kSearchFrom rows has the search
+constexpr size_t kSearchFrom = 6;
+std::vector<int> shownOf(const std::vector<Entry>& entries, const std::string& search);
+inline bool searchable(size_t entries) { return entries > kSearchFrom; }
 
 
 enum class Align : uint8_t { Left, Right, Center };
