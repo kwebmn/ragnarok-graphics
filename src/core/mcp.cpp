@@ -540,10 +540,36 @@ std::string checkArgs(const std::string& tool, const json::Value& args) {
     return "";
 }
 
+// 3.0.24-beta.36 (the laptop's run: the log's code page bytes made the whole answer unreadable to the AI's side): a
+// tool's words whole UTF-8 - a broken byte as U+FFFD (built of its bytes: no literal the windows' font test reads)
+static std::string wholeUtf8(const std::string& s) {
+    std::string out;
+    out.reserve(s.size());
+    for (size_t i = 0; i < s.size(); ++i) {
+        const auto b = static_cast<unsigned char>(s[i]);
+        if (b < 0x80) {
+            out += s[i];
+            continue;
+        }
+        const size_t n = (b >> 5) == 6 ? 2 : (b >> 4) == 14 ? 3 : (b >> 3) == 30 ? 4 : 0;
+        bool whole = n && i + n <= s.size();
+        for (size_t k = 1; whole && k < n; ++k) whole = (static_cast<unsigned char>(s[i + k]) >> 6) == 2;
+        if (whole) {
+            out.append(s, i, n);
+            i += n - 1;
+        } else {
+            out += char(0xEF);
+            out += char(0xBF);
+            out += char(0xBD);
+        }
+    }
+    return out;
+}
+
 Content Content::textOf(std::string t) {
     Content c;
     c.type = "text";
-    c.text = std::move(t);
+    c.text = wholeUtf8(t);
     return c;
 }
 

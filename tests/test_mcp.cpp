@@ -302,3 +302,18 @@ TEST(mcp_ui_args) {
     for (const mcp::Tool& t : mcp::tools()) listed = listed || std::string(t.name) == "ui";
     CHECK(listed);
 }
+
+// The laptop's run (3.0.24-beta.35): the log tool's answer held the game's own bytes (code page 1251 - no UTF-8) and
+// the AI's side refused the whole answer - a tool's words written whole UTF-8, a broken byte as U+FFFD
+TEST(mcp_text_whole_utf8) {
+    const std::string cp1251 = "\xCF\xF0\xE8\xE2\xB3\xF2";  // «Привіт» in code page 1251
+    const mcp::Content c = mcp::Content::textOf("x " + cp1251 + " \xD0\xAF z");
+    const std::string replacement{char(0xEF), char(0xBF), char(0xBD)};
+    CHECK(c.text.find(replacement) != std::string::npos);
+    CHECK(c.text.find("\xD0\xAF") != std::string::npos);  // a whole Cyrillic letter kept
+    CHECK(c.text.find(cp1251) == std::string::npos);
+    CHECK_EQ(mcp::Content::textOf("plain «words»").text, std::string("plain «words»"));
+    // a letter cut at the text's end
+    const std::string cut = mcp::Content::textOf("ab\xD0").text;
+    CHECK_EQ(cut, std::string("ab") + replacement);
+}
