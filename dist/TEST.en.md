@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.24-beta.31 — what's new · 2026-11-27
+
+White ground after wings, two crashes while a map changes, the daily play limit in plain words, both dumps in a report.
+
+- **White ground:** on fields the ground no longer turns white after fly-wing teleports. The cause is in the game itself: before the ground it set only how the light map is blended and left its input as the previous draw had it, and after some effects that came out white. Now the input is set again before the ground, as at the game's start.
+- **Crashes while a map changes:** two more places of the game that read the world after it is gone (a character's light from the ground, a model's light) no longer crash it - as the character's shadow before.
+- **Daily play limit:** the server's message about the limit is now in the chat in your language: how many hours, when it resets and how to buy time (@buyplaytime, @autopay on). After the disconnect the same in the game's box, and no drop report goes any more. If the server refuses you after several disconnects, the box says why.
+- **Crash report:** when both the renderer and the game crash, both dumps go into the report.
+- To check: Alt+O → «Checking now» → «Fields: the ground not white after fly wings» and «Daily play limit: in your words, no drop report».
+
 # uaRO Graphics 3.0.24-beta.30 — what's new · 2026-11-27
 
 Small fixes: the light theme, the shop's weight, the pad in a search, the NPC price, the reference's star.
