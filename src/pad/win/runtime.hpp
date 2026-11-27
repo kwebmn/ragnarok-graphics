@@ -96,6 +96,10 @@ bool sendPacket(std::vector<uint8_t> p);
 // 3.0.24-beta.20 (win/item_net: «Речі»'s own use; the things used around us): our own account, as the map server's
 // connection told it (0x009b); 0 not known
 uint32_t selfAccount();
+// 3.0.24-beta.21 (the cart's «Відкрити лавку»): a skill's learned level (0 not learned or not known), and a skill used
+// on oneself at a level (the pad's useskilltoid 0x0072) - false with no healthy connection
+int skillLevel(uint16_t skill);
+bool useSkillOnSelf(uint16_t skill, uint16_t level);
 // 3.0.11-beta.145 (the concept «маг, прист и хант на геймпаде»): a ground skill aimed with the pad now - the skill, its
 // level and the cell it would go on (its cells on the ground: win/ground_marks); false while not aiming
 bool aimCells(uint16_t& skill, int& lv, int& x, int& y);

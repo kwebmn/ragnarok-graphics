@@ -34,3 +34,13 @@ TEST(item_ui_words_use_the_fonts_letters_only) {
     CHECK(!itemui::fontHas("\xE2\x96\xB6"));              // ▶
     CHECK(itemui::fontHas("") && !itemui::fontHas("\xFF"));  // nothing; a broken byte
 }
+
+// 3.0.24-beta.21 (part 2 task 4; the spec's «Візок»: «Відкрити лавку»): the cart's footer button opens a shop when
+// the character has Vending (MC_VENDING, 41) - the picked ones' «take» comes first, a shop open hides it
+TEST(item_ui_cart_offers_a_shop) {
+    CHECK(itemui::offersShop(3, 0, false));
+    CHECK(!itemui::offersShop(0, 0, false));  // no Vending learned
+    CHECK(!itemui::offersShop(3, 2, false));  // things picked: «Забрати вибране (2)» there
+    CHECK(!itemui::offersShop(3, 0, true));   // a shop open already
+    CHECK(itemui::kVendingSkill == 41);
+}

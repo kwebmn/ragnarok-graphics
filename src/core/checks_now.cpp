@@ -7,6 +7,15 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.21 (the plan's task 4): the cart opens a shop
+        {"cart_open_shop", "3.0.24-beta.21", "interface.cart",
+         {"Cart: «Open a shop»", "Візок: «Відкрити лавку»", "Тележка: «Открыть лавку»"},
+         {"A merchant with Vending: open «Cart» (Alt+W) - «Open a shop» at the bottom; press it: the shop's making opens. "
+          "Pick something with Ctrl - the button takes the picked instead.",
+          "Торговець із «Vending»: відкрийте «Візок» (Alt+W) — унизу «Відкрити лавку»; натисніть: відкриється "
+          "підготовка лавки. Виберіть щось із Ctrl — кнопка забирає вибране.",
+          "Торговец с «Vending»: откройте «Тележку» (Alt+W) — внизу «Открыть лавку»; нажмите: откроется подготовка "
+          "лавки. Выберите что-то с Ctrl — кнопка забирает выбранное."}},
         // 3.0.24-beta.20 (docs/superpowers/plans/2026-11-27-item-windows-old-layout.md, tasks 1-2)
         {"items_layout", "3.0.24-beta.20", "interface.items",
          {"Items: the old layout", "Речі: стара розкладка", "Вещи: старая раскладка"},

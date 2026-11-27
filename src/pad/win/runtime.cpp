@@ -1750,6 +1750,17 @@ bool walkTo(int x, int y) {
 
 uint32_t selfAccount() { return healthy() && S().session ? S().session->world().selfId() : 0; }
 
+int skillLevel(uint16_t skill) {
+    if (!healthy() || !S().session) return 0;
+    const std::optional<SkillInfo> s = S().session->world().skill(skill);
+    return s ? int(s->lv) : 0;
+}
+
+bool useSkillOnSelf(uint16_t skill, uint16_t level) {
+    const uint32_t self = selfAccount();
+    return self != 0 && level > 0 && sendPacket(buildSkillToId(skill, level, self));
+}
+
 bool sendPacket(std::vector<uint8_t> p) {
     if (!healthy() || !S().session || p.size() < 2) return false;
     return S().session->request(std::move(p), GetTickCount());

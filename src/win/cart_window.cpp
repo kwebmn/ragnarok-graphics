@@ -37,6 +37,8 @@
 #include "win/ask_card.hpp"
 #include "win/item_net.hpp"
 #include "win/log.hpp"
+#include "win/my_shop.hpp"
+#include "win/vend_setup.hpp"
 #include "win/storage_window.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
@@ -512,9 +514,14 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         for (const iw::Item& it : s.items) there.push_back(it.index);
         s.picked.keepOnly(there);
         s.show.picked = s.picked.list();
+        // 3.0.24-beta.21 (the spec's «Візок»: «Відкрити лавку»): with nothing picked the same button opens a shop
+        // by Vending, when the character has it and no shop is open or being made
+        const int vending = uapad::runtime::skillLevel(itemui::kVendingSkill);
+        const bool shopNow = vendsetupwin::shown() || myshopwin::shown();
         s.show.pickedText = s.picked.count() ? settings::fmt(say(settings::Text::StorageTakePicked),
                                                              {std::to_string(s.picked.count())})
-                                             : "";
+                            : itemui::offersShop(vending, 0, shopNow) ? say(settings::Text::VendSetupTitle)
+                                                                      : "";
         takeSteps(s);
     }
     place(s);
@@ -726,7 +733,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                 s.readAt = 0;
             }
             break;
-        case iw::Part::Picked: takePicked(s, "its footer button"); break;  // 3.0.18-beta.156
+        case iw::Part::Picked:  // 3.0.18-beta.156; 3.0.24-beta.21: with nothing picked - «Відкрити лавку»
+            if (s.picked.count()) {
+                takePicked(s, "its footer button");
+            } else if (const int lv = uapad::runtime::skillLevel(itemui::kVendingSkill); lv > 0) {
+                const bool sent = uapad::runtime::useSkillOnSelf(itemui::kVendingSkill, uint16_t(lv));
+                if (s.told++ < 30) LOG_INFO("cart: «Відкрити лавку» - Vending %d %s", lv, sent ? "used" : "not sent");
+            }
+            break;
         case iw::Part::Cell: {
             if (h.index >= int(s.shownItems.size())) break;
             const int place = s.items[size_t(s.shownItems[size_t(h.index)])].index;

@@ -55,6 +55,8 @@ std::string countTitle(const std::string& name, int used, int most) {
     return name + " " + std::to_string(used) + "/" + std::to_string(most);
 }
 
+bool offersShop(int vendingLevel, int picked, bool shopNow) { return vendingLevel > 0 && picked == 0 && !shopNow; }
+
 bool fontHas(const std::string& utf8) {
     for (size_t i = 0; i < utf8.size();) {
         const auto b = static_cast<unsigned char>(utf8[i]);

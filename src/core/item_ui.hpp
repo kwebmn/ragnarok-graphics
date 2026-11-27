@@ -28,4 +28,9 @@ std::string countTitle(const std::string& name, int used, int most);  // «Ре�
 // both faces: core/plex_widths.inc) - stars, crosses and triangles are drawn, not written. False on a broken byte.
 bool fontHas(const std::string& utf8);
 
+// 3.0.24-beta.21 (the spec's «Візок»: «Відкрити лавку»): the cart's footer button opens a shop by Vending (MC_VENDING)
+// when the character has it, nothing is picked (their «take» first) and no shop is open or being made
+constexpr uint16_t kVendingSkill = 41;
+bool offersShop(int vendingLevel, int picked, bool shopNow);
+
 }  // namespace uagfx::itemui
