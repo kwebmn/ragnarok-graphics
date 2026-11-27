@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.24-beta.27 — what's new · 2026-11-27
+
+«Stats»: «base + bonus»; NPC: the choice a list of its own; «Friends»: invite to the party (for testers).
+
+- **«Stats» (Alt+A):** each stat «9 + 3» in one column as in the old game, then its cost and «+». The battle's numbers on the right are wider. «Planning» and the formulas as before.
+- **Talking to an NPC: the choice a list of its own.** The answers stand in their own window right of the talk, at the screen's edge left of it or under it. The mouse (hover, wheel, click), ↑ ↓, 1-9, Enter, Esc and the pad choose.
+- **«Friends: invite to the party (beta)»** - a testers' box: Alt+O → «Checking now» → «Friends: invite to the party» (needs «Friends and party card» on). While you are in a party, a friend in the game and not of it gets «Invite to the party». A friend added today shows after the next login.
+- To check: Alt+O → «Checking now» → «Stats: «base + bonus» as in the old game», «NPC: the choice a list of its own», «Friends: invite to the party».
+
 # uaRO Graphics 3.0.24-beta.26 — what's new · 2026-11-27
 
 Windows' signs: all from the font; «Skills» - a narrow list as in the old game (for testers).
