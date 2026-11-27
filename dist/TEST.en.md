@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.24-beta.23 — what's new · 2026-11-27
+
+«Open a shop»: the prices remembered, our own packet (for testers); «My shop»: sold N of M, the buyer, a chime.
+
+- **«Open a shop»: the prices remembered.** Once a shop opens with prices, next time the same things put in take those prices by themselves (the price field changes as always).
+- **«Opening a shop: our own packet (beta)»** - a testers' box: Alt+O → «Checking now» → «Opening a shop: our own packet» (needs «Opening a shop card» on). «Open the shop» sends the server's packet itself. With no name, no price, a price past 99 990 000 or more things than places, nothing is sent and a line over the prices says why. With no price the server would put 1 000 000, with no name it would open nothing.
+- **«My shop»:** a thing's row says «2 of 5 sold»; «Last buyer» names who bought (as the server says); two quiet notes when a thing sells (the box «My shop: a soft chime on a sale»); «Earned» is what the server paid; the cross is drawn as in the other windows.
+- To check: Alt+O → «Checking now» → «Opening a shop: our own packet», «Opening a shop: the prices remembered», «My shop: sold N of M, the buyer, a chime».
+
 # uaRO Graphics 3.0.24-beta.22 — what's new · 2026-11-27
 
 «How many»: 1 / 10 / half / all and the limit; the item card: what its cards give (for testers).
