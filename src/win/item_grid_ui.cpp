@@ -43,16 +43,26 @@ bool Ui::frame(const char* name, bool on, int x, int y, int generation, const iw
         gen = generation;
         const ig::Model before = model;  // 3.0.18-beta.175: what changed alone said to RmlUi
         model.ground = hexOf(0x10141C, int(std::lround(uistyle::window() * 255)), uitheme::groupOf(name));
-        const int side = std::max(8, int(std::lround(15 * L.s)));
-        auto it = made.find("search" + std::to_string(side));
-        if (it == made.end()) {
-            panel::Picture p;
-            p.width = p.height = side;
-            p.px.assign(size_t(side) * size_t(side), 0u);
-            uiicons::draw(p, uiicons::Icon::Search, 0, 0, float(side), 0x9AA3B5, 0.9f, 2.2f);
-            it = made.emplace("search" + std::to_string(side), std::move(p)).first;
-        }
-        model.searchIcon = source(*this, it->first, &it->second);
+        // the drawn icons at the window's size, in its group's theme (3.0.24-beta.20: the key holds the colour - a
+        // new theme draws them again); the star a picture, never a letter (R-WP985Q)
+        const uitheme::Group group = uitheme::groupOf(name);
+        const auto icon = [&](const char* what, uiicons::Icon i, float px, uint32_t rgb, float stroke) {
+            const int side = std::max(8, int(std::lround(px * L.s)));
+            const uint32_t c = uaui::themed(rgb, group);
+            const std::string key = std::string(what) + std::to_string(side) + ':' + std::to_string(c);
+            auto it = made.find(key);
+            if (it == made.end()) {
+                panel::Picture p;
+                p.width = p.height = side;
+                p.px.assign(size_t(side) * size_t(side), 0u);
+                uiicons::draw(p, i, 0, 0, float(side), c, 0.95f, stroke);
+                it = made.emplace(key, std::move(p)).first;
+            }
+            return source(*this, it->first, &it->second);
+        };
+        model.searchIcon = icon("search", uiicons::Icon::Search, 15, 0x9AA3B5, 2.2f);
+        model.starIcon = icon("star", uiicons::Icon::Star, 13, 0x9AA3B5, 2.0f);
+        model.starOnIcon = icon("staron", uiicons::Icon::Star, 13, 0xF3C653, 2.6f);
         ig::fill(model, L, items, shown, sh, t, [&](const panel::Picture* p) {
             return source(*this, "i:" + std::to_string(uintptr_t(p)), p);
         });

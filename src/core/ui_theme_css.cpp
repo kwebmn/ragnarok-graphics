@@ -856,23 +856,41 @@ scrollbarvertical sliderbar { background-color: #ffffff40; border-radius: 4dp; m
 scrollbarvertical sliderbar:hover { background-color: #ffffff70; }
 scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; height: 0; }
 /* 3.0.18-beta.94: the things' grid live («Речі», «Склад», «Візок» - uikit/item_grid_live): its boxes are the
-   window's hit places (refit), so the sizes here are the window's - 500dp wide, cells 48dp with 8dp between */
-.lw.igl { width: 41.6667rem; padding: 0; font-size: 1rem; box-sizing: border-box; }
-.igl .head { display: flex; align-items: center; height: 3.8333rem; padding: 0 4.3333rem 0 1.5rem; }
-.igl .head .title { font-size: 1.25rem; font-weight: bold; color: #eef2f8; }
-.igl .hk { margin-left: 0.6667rem; font-size: 0.9167rem; color: #7e889a; }
-.igl .x { position: absolute; right: 1.5rem; top: 0.8333rem; width: 2.1667rem; height: 2.1667rem;
-    line-height: 2.1667rem;
-          text-align: center; border-radius: 0.5833rem; color: #9aa3b5; font-size: 1.0833rem; }
-.igl .x.hot { background-color: #ffffff24; color: #ffffff; }
-.igl .tabs { display: flex; height: 2.6667rem; margin: 0 1.5rem; border-bottom: 0.0833rem #ffffff1f; }
-.igl .tab { display: block; position: relative; height: 2.6667rem; line-height: 2.4167rem; margin-right: 1.6667rem;
-    padding: 0 0.1667rem;
-            font-size: 1.0833rem; font-weight: bold; color: #7e889a; border-bottom: 0.1667rem #00000000; }
-.igl .tab.hot { color: #c9d1de; }
-.igl .tab.on { color: #eef2f8; border-bottom-color: #c9a55b; }
-.igl .tab .new { position: absolute; right: -0.75rem; top: -0.1667rem; line-height: 1rem; font-size: 0.8333rem;
+   window's hit places (refit), so the sizes here are the window's - cells 48dp with 8dp between. 3.0.24-beta.20
+   (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md, the old game's layout): the head a row (the
+   title with its count, the key, a drawn ✕), the six tabs one under another at the left (their words turned up),
+   the keys' hint under the grid - 536dp wide */
+.lw.igl { width: 44.6667rem; padding: 0; font-size: 1rem; box-sizing: border-box; }
+.igl .head { display: flex; flex-direction: row; align-items: center; height: 3.8333rem; padding: 0 1.25rem 0 1.5rem; }
+.igl .head .title { display: block; flex: none; font-size: 1.25rem; font-weight: bold; color: #eef2f8;
+    white-space: nowrap; }
+.igl .hk { display: block; flex: 1; margin-left: 0.6667rem; font-size: 0.9167rem; color: #7e889a; }
+.igl .x { display: block; position: relative; flex: none; width: 2.1667rem; height: 2.1667rem;
+    border-radius: 0.5833rem; }
+.igl .x.hot { background-color: #ffffff24; }
+.igl .x .cxa, .igl .x .cxb { display: block; position: absolute; left: 0.5rem; top: 1rem; width: 1.1667rem;
+    height: 0.1667rem; background-color: #9aa3b5; }
+.igl .x .cxa { transform: rotate(45deg); }
+.igl .x .cxb { transform: rotate(-45deg); }
+.igl .x.hot .cxa, .igl .x.hot .cxb { background-color: #ffffff; }
+.igl .ibody { display: flex; flex-direction: row; margin: 0 1.5rem; }
+.igl .tabs { display: flex; flex-direction: column; flex: none; width: 2.1667rem; margin: 1rem 0.8333rem 0 0; }
+.igl .tab { display: block; position: relative; height: 4.25rem; margin-bottom: 0.3333rem; border-radius: 0.5rem;
+    border: 0.0833rem #ffffff12; background-color: #ffffff08; }
+.igl .tab.hot { background-color: #ffffff14; }
+.igl .tab.on { border-color: #c9a55b; background-color: #c9a55b1f; }
+.igl .tab .tl { display: block; position: absolute; left: -1.0417rem; top: 1.4583rem; width: 4.25rem; height: 1.3333rem;
+    line-height: 1.3333rem; font-size: 0.8333rem; font-weight: bold; text-align: center; color: #7e889a;
+    white-space: nowrap; overflow: hidden; transform: rotate(-90deg); }
+.igl .tab.hot .tl { color: #c9d1de; }
+.igl .tab.on .tl { color: #eef2f8; }
+.igl .tab .new { position: absolute; right: -0.4167rem; top: -0.3333rem; line-height: 1rem; font-size: 0.75rem;
     color: #f3c653; }
+.igl .imain { display: block; flex: none; }
+.igl .imain .search { margin: 1rem 0 0 0; }
+.igl .imain .gridbox { margin: 1.1667rem 0 0 0; }
+.igl .keys { display: block; margin: 0.3333rem 1.5rem 0 1.5rem; font-size: 0.9167rem; color: #7e889a;
+    white-space: nowrap; overflow: hidden; }
 .igl .search { display: flex; align-items: center; height: 2.8333rem; margin: 1rem 1.5rem 0 1.5rem;
     padding: 0 0.8333rem;
                border-radius: 0.6667rem; border: 0.0833rem #ffffff26; background-color: #0000002e; }
@@ -906,10 +924,8 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
     padding: 0 0.3333rem;
                     border-radius: 0.5417rem; background-color: #f3c653; color: #10141c; font-size: 0.7917rem;
                     font-weight: bold; }
-.igl .cell .star { position: absolute; left: 0.1667rem; bottom: 0.1667rem; width: 1.0833rem; height: 1.0833rem;
-    line-height: 1.0833rem;
-                   text-align: center; font-size: 0.9167rem; color: #9aa3b5; }
-.igl .cell .star.on { color: #f3c653; }
+.igl .cell .star { display: block; position: absolute; left: 0.1667rem; bottom: 0.1667rem; width: 1.0833rem;
+    height: 1.0833rem; }
 /* 3.0.18-beta.155: things picked with Ctrl / Shift, the footer's button for them */
 .igl .cell.picked { border-color: #f3c653; background-color: #c9a55b2e; }
 .igl .foot .pk { margin-right: 0.6667rem; padding: 0.1667rem 0.6667rem; border-radius: 0.5rem;
@@ -2109,11 +2125,11 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .uw .uk { display: block; margin-right: 10dp; font-size: 11.5dp; color: #7e889a; }
 .uw .ux { display: block; position: relative; flex: none; width: 22dp; height: 22dp; border-radius: 5dp; }
 .uw .ux:hover { background-color: #ffffff14; }
-.uw .ux .xa, .uw .ux .xb { display: block; position: absolute; left: 5dp; top: 10dp; width: 12dp; height: 1.6dp;
+.uw .ux .cxa, .uw .ux .cxb { display: block; position: absolute; left: 5dp; top: 10dp; width: 12dp; height: 1.6dp;
       background-color: #9aa3b5; }
-.uw .ux .xa { transform: rotate(45deg); }
-.uw .ux .xb { transform: rotate(-45deg); }
-.uw .ux:hover .xa, .uw .ux:hover .xb { background-color: #eef2f8; }
+.uw .ux .cxa { transform: rotate(45deg); }
+.uw .ux .cxb { transform: rotate(-45deg); }
+.uw .ux:hover .cxa, .uw .ux:hover .cxb { background-color: #eef2f8; }
 .uw .ubody { display: flex; flex-direction: row; flex: 1; }
 .uw .vt { display: flex; flex-direction: column; flex: none; width: 26dp; margin-right: 6dp; }
 .uw .vb { display: block; position: relative; height: 62dp; margin-bottom: 4dp; border-radius: 6dp;

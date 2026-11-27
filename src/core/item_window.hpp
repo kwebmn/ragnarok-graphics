@@ -71,13 +71,16 @@ int iconSide(float scale);  // 32 at scale 1
 
 struct Texts {
     std::string title, hotkey;  // «Речі», «Alt+E»
-    std::string tabs[kTabs];    // «Усе», «Витратне», «Спорядження», «Карти», «Різне», «★»
+    std::string tabs[kTabs];    // «Усе», «Витратне», «Спорядж.», «Карти», «Різне», «Обране» (3.0.24-beta.20: a word)
     std::string search;         // «Пошук за назвою»
     std::string weight;         // «Вага»
     std::string use, wear, card, info;  // the tip's: «двічі клік — використати», ... «ПКМ — опис»
     std::string fresh;                  // 3.0.11-beta.112: «нове»
     std::string all;  // 3.0.11-beta.115: set - every thing's tip says it («Склад»: «двічі клік — у сумку»)
     std::string worn;  // 3.0.11-beta.118: «вдягнуто»
+    // 3.0.24-beta.20 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md, «Общие детали»): the keys'
+    // hint under the grid (core/item_ui hintOf), "" none
+    std::string keys;
 };
 
 // 3.0.11-beta.44 (the owner: «когда использую какую-то вещь, она просто пропадает. нету никакой анимации»): a used

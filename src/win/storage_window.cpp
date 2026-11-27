@@ -19,6 +19,7 @@
 #include "core/card_names.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/item_pick.hpp"
+#include "core/item_ui.hpp"
 #include "core/item_window.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
@@ -296,13 +297,14 @@ iw::Texts texts(bool pad) {
     iw::Texts t;
     t.title = say(settings::Text::StorageTitle);
     t.tabs[0] = say(settings::Text::ItemsTabAll);
-    t.tabs[1] = say(settings::Text::ItemsTabItems);
-    t.tabs[2] = say(settings::Text::ItemsTabGear);
+    t.tabs[1] = say(settings::Text::ItemsTabItemsShort);  // 3.0.24-beta.20: the tabs' column - short words
+    t.tabs[2] = say(settings::Text::ItemsTabGearShort);
     t.tabs[3] = say(settings::Text::ItemsTabCards);
     t.tabs[4] = say(settings::Text::ItemsTabEtc);
-    t.tabs[5] = "\xE2\x98\x85";  // ★ the starred (the same as «Речі»'s)
+    t.tabs[5] = say(settings::Text::ItemsTabStarred);  // 3.0.24-beta.20: a word (no ★ in the font)
     t.search = say(settings::Text::ItemsSearch);
     t.weight = say(settings::Text::StoragePlaces);
+    t.keys = say(itemui::hintOf(itemui::Window::Storage));  // 3.0.24-beta.20
     t.all = say(settings::Text::StorageTake);
     t.info = say(settings::Text::ItemsInfo);
     if (pad) {

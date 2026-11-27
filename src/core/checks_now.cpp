@@ -7,6 +7,24 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.20 (docs/superpowers/plans/2026-11-27-item-windows-old-layout.md, tasks 1-2)
+        {"items_layout", "3.0.24-beta.20", "interface.items",
+         {"Items: the old layout", "Речі: стара розкладка", "Вещи: старая раскладка"},
+         {"Turn «Items» on, Alt+E: the six tabs one under another at the left (All ... Starred), «Items 16/100» in the "
+          "head, the keys' hint under the cells, the weight and zeny at the bottom; «Storage» and «Cart» alike.",
+          "Увімкніть «Речі», Alt+E: шість вкладок одна під одною зліва (Усе ... Обране), «Речі 16/100» у заголовку, "
+          "підказка клавіш під клітинками, вага й зені внизу; так само «Склад» і «Візок».",
+          "Включите «Вещи», Alt+E: шесть вкладок одна под другой слева (Всё ... Избранное), «Вещи 16/100» в "
+          "заголовке, подсказка клавиш под ячейками, вес и зени внизу; так же «Склад» и «Тележка»."}},
+        {"items_packets", "3.0.24-beta.20", "interface.items_packets",
+         {"Items: our own use, wear and drop", "Речі: свої «використати», «вдягнути», «викинути»",
+          "Вещи: свои «использовать», «надеть», «выбросить»"},
+         {"Turn «Items» and this on. Double-click a potion, then a weapon; drag a thing onto the ground (a stack asks "
+          "how many); take a thing off in «Equipment»: each happens once, the cell waits for the server.",
+          "Увімкніть «Речі» і цю галочку. Подвійний клік на зілля, потім на зброю; перетягніть річ на землю (пачка "
+          "спитає скільки); зніміть річ у «Спорядженні»: кожне — один раз, клітинка чекає сервера.",
+          "Включите «Вещи» и эту галочку. Двойной клик по зелью, потом по оружию; перетащите вещь на землю (пачка "
+          "спросит сколько); снимите вещь в «Снаряжении»: каждое — один раз, ячейка ждёт сервера."}},
         {"ui_themes", "3.0.24-beta.19", "",
          {"Interface: dark and light", "Інтерфейс: темний і світлий", "Интерфейс: тёмный и светлый"},
          {"Alt+O -> «Interface» -> «Theme and colours»: pick the light picture - every window turns light at once "

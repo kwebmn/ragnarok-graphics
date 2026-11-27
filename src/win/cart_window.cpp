@@ -20,6 +20,7 @@
 #include "core/cart_window.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/item_pick.hpp"
+#include "core/item_ui.hpp"
 #include "core/item_window.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
@@ -264,12 +265,13 @@ iw::Texts texts(const State& s, bool pad) {
     iw::Texts t;
     t.title = cw::title(say(settings::Text::CartTitle), s.count, s.most);
     t.hotkey = "Alt+W";
+    t.keys = say(itemui::hintOf(itemui::Window::Cart));  // 3.0.24-beta.20
     t.tabs[0] = say(settings::Text::ItemsTabAll);
-    t.tabs[1] = say(settings::Text::ItemsTabItems);
-    t.tabs[2] = say(settings::Text::ItemsTabGear);
+    t.tabs[1] = say(settings::Text::ItemsTabItemsShort);  // 3.0.24-beta.20: the tabs' column - short words
+    t.tabs[2] = say(settings::Text::ItemsTabGearShort);
     t.tabs[3] = say(settings::Text::ItemsTabCards);
     t.tabs[4] = say(settings::Text::ItemsTabEtc);
-    t.tabs[5] = "\xE2\x98\x85";  // ★ the starred (the same as «Речі»'s)
+    t.tabs[5] = say(settings::Text::ItemsTabStarred);  // 3.0.24-beta.20: a word (no ★ in the font)
     t.search = say(settings::Text::ItemsSearch);
     t.weight = say(settings::Text::CharWeight);
     t.all = say(settings::Text::StorageTake);

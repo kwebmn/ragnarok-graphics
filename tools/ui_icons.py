@@ -78,6 +78,8 @@ ICONS = [
     ('ViewBehind', '<rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 10.5l6-3v9l-6-3"/>'),
     ('ViewEyes', '<path d="M2.5 12C5 7.5 8.3 5.5 12 5.5s7 2 9.5 6.5c-2.5 4.5-5.8 6.5-9.5 6.5s-7-2-9.5-6.5z"/>'
                  '<circle cx="12" cy="12" r="3"/>'),
+    # 3.0.24-beta.20 (R-WP985Q: no letter the font lacks): the items' «обране» - a star drawn, not written
+    ('Star', '<path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>'),
 ]
 
 NUMBER = r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?'

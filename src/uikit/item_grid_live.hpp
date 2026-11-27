@@ -40,6 +40,9 @@ struct Model {
     bool closeHot = false, typing = false, caret = false, bar = true, dropping = false, scrollable = false, tip = false;
     float fill = 0, thumbTop = 0, thumbH = 0, tipX = 0, tipY = 0;
     Rml::String tip1, tip2, tip3, tip4, searchIcon;
+    // 3.0.24-beta.20: the keys' hint under the grid; the star's two drawn pictures (a word of the font has no ★ -
+    // R-WP985Q): a starred thing's, and the one a pointed cell offers
+    Rml::String keys, starIcon, starOnIcon;
     Rml::String pickedText;  // 3.0.18-beta.155: the footer's button for the picked ("" none)
     Rml::String tipColour = "#eef2f8";  // 3.0.18-beta.144: the tip's name - its element's colour, else its own
     std::vector<TabV> tabs;

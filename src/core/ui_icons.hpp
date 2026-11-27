@@ -20,6 +20,7 @@ enum class Icon : uint8_t {
     Gamepad,  // 3.0.11-beta.90: the windows' tile's «Контролер»
     Battle,   // 3.0.11-beta.147: the hotbar's battle mode button
     ViewBehind, ViewEyes,  // 3.0.21-beta.12: the 3D view's looks on the character block - a camera, an eye
+    Star,                  // 3.0.24-beta.20: the items' «обране» (a drawn star, no letter the font lacks)
     kCount
 };
 

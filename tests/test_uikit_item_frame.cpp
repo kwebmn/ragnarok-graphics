@@ -22,7 +22,7 @@ TEST(uikit_item_frame_tabs_stand_left_hint_and_foot_below) {
     Rml::ElementDocument* d = rmlhost::load(R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw uw" style="width: 330dp; height: 420dp;">
 <div class="uhd"><span class="ut">Речі 16/100</span><span class="uk">Alt+E</span><span class="ux"><span
-  class="xa"></span><span class="xb"></span></span></div>
+  class="cxa"></span><span class="cxb"></span></span></div>
 <div class="ubody"><div class="vt"><div class="vb on">усе</div><div class="vb">витратне</div><div
   class="vb">спорядж.</div><div class="vb">карти</div><div class="vb">різне</div><div class="vb">обране</div></div><div
   class="umain"><div class="ugrid" style="height: 230dp;"></div></div></div>

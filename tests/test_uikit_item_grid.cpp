@@ -15,13 +15,14 @@ iw::Texts texts() {
     iw::Texts t;
     t.title = "Речі";
     t.hotkey = "Alt+E";
-    const char* tabs[iw::kTabs] = {"Усе", "Витратне", "Спорядження", "Карти", "Різне", "★"};
+    const char* tabs[iw::kTabs] = {"Усе", "Витратне", "Спорядж.", "Карти", "Різне", "Обране"};
     for (int i = 0; i < iw::kTabs; ++i) t.tabs[i] = tabs[i];
     t.search = "Пошук за назвою";
     t.weight = "Вага";
     t.use = "двічі клік — використати";
     t.info = "ПКМ — опис";
     t.fresh = "нове";
+    t.keys = "ПКМ — опис · Alt+ПКМ — перенести цілим";  // 3.0.24-beta.20: the keys' hint under the grid
     return t;
 }
 
@@ -75,11 +76,25 @@ TEST(uikit_item_grid_refit_puts_the_drawn_cells_into_the_hit_test) {
     CHECK(std::abs(g.L.cells[1].x - g.L.cells[0].x - 56) < 0.5f);  // 48 a cell, 8 between
     CHECK(std::abs(g.L.cells[8].y - g.L.cells[0].y - 56) < 0.5f);  // eight a row
     CHECK(std::abs(g.L.cells[8].x - g.L.cells[0].x) < 0.5f);
-    CHECK(std::abs(float(g.L.w) - 500) < 2.5f);
+    CHECK(std::abs(float(g.L.w) - 536) < 2.5f);  // 3.0.24-beta.20: the tabs' column at the left (500 before)
     CHECK(g.L.cells[0].y > g.L.search.y + g.L.search.h);  // the grid under the search
     CHECK(g.L.footer.y >= g.L.cells[39].y + g.L.cells[39].h);
     CHECK_EQ(g.L.tabs.size(), size_t(iw::kTabs));
-    for (size_t i = 1; i < g.L.tabs.size(); ++i) CHECK(g.L.tabs[i].x > g.L.tabs[i - 1].x + g.L.tabs[i - 1].w);
+    // 3.0.24-beta.20 (docs/superpowers/specs/2026-11-27-item-windows-redesign-design.md: «наши шесть вертикально
+    // слева»): the tabs one under another, at the grid's left; the keys' hint between the grid and the footer
+    for (size_t i = 1; i < g.L.tabs.size(); ++i) {
+        CHECK(std::abs(g.L.tabs[i].x - g.L.tabs[0].x) < 0.5f);
+        CHECK(g.L.tabs[i].y >= g.L.tabs[i - 1].y + g.L.tabs[i - 1].h - 0.5f);
+    }
+    CHECK(g.L.tabs[0].x + g.L.tabs[0].w <= g.L.cells[0].x);
+    CHECK(g.L.tabs[0].y >= g.L.title.y + g.L.title.h - 0.5f);
+    if (Rml::Element* keys = g.doc->QuerySelector(".keys")) {
+        const float ky = keys->GetAbsoluteOffset(Rml::BoxArea::Border).y - 30;  // the document at (40, 30)
+        CHECK(ky >= g.L.cells[39].y + g.L.cells[39].h - 0.5f && ky < g.L.footer.y);
+        CHECK(keys->GetInnerRML().find("Alt+") != Rml::String::npos);
+    } else {
+        CHECK(false);  // no keys' hint
+    }
     panel::Box p = mid(g.L.cells[9]);
     iw::Hit h = iw::hitTest(g.L, g.shown.size(), 0, p.x, p.y);
     CHECK(h.part == iw::Part::Cell);
@@ -154,7 +169,7 @@ TEST(uikit_item_grid_takes_the_windows_own_scale) {
     CHECK(ig::refit(d, L));
     CHECK(std::abs(L.cells[0].w - 60) < 0.5f);
     CHECK(std::abs(L.cells[1].x - L.cells[0].x - 70) < 0.5f);
-    CHECK(std::abs(float(L.w) - 625) < 2.5f);
+    CHECK(std::abs(float(L.w) - 670) < 2.5f);  // 3.0.24-beta.20: 44.6667 rem of 15 (625 before the tabs' column)
     rmlhost::close(d);
 }
 

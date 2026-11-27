@@ -16,11 +16,11 @@ namespace iw = uagfx::itemwin;
 
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw igl" data-style-font-size="base + 'px'" data-style-background-color="ground">
-<div class="head" data-hit="title"><span class="title">{{title}}</span><span class="hk">{{hotkey}}</span></div>
-<div class="x" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
-<div class="tabs" data-hit="tabsrow"><div class="tab" data-for="t, i : tabs" data-hit="tab" data-attr-data-index="i"
-  data-class-on="t.on" data-class-hot="t.hot">{{t.name}}<span class="new" data-if="t.fresh != ''">{{t.fresh}}</span>
-</div></div>
+<div class="head" data-hit="title"><span class="title">{{title}}</span><span class="hk">{{hotkey}}</span><div
+  class="x" data-hit="close" data-class-hot="closeHot"><span class="cxa"></span><span class="cxb"></span></div></div>
+<div class="ibody"><div class="tabs" data-hit="tabsrow"><div class="tab" data-for="t, i : tabs" data-hit="tab"
+  data-attr-data-index="i" data-class-on="t.on" data-class-hot="t.hot"><span class="tl">{{t.name}}</span><span
+  class="new" data-if="t.fresh != ''">{{t.fresh}}</span></div></div><div class="imain">
 <div class="search" data-hit="search" data-class-typing="typing"><img data-if="searchIcon != ''"
   data-attr-src="searchIcon"/><span class="q" data-if="query != ''">{{query}}</span><span class="caret"
   data-if="caret"></span><span class="q qh" data-if="hint != ''">{{hint}}</span></div>
@@ -32,12 +32,13 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-if="c.count != ''">{{c.count}}</span><span class="ref" data-if="c.refine != ''">{{c.refine}}</span><span
   data-if="c.mark != ''" data-attr-class="c.markCls">{{c.mark}}</span><span class="fresh"
   data-if="c.fresh != ''">{{c.fresh}}</span><span class="ele" data-if="c.ele != '#00000000'"
-  data-style-background-color="c.ele"></span><span class="star" data-if="c.star != ''"
-  data-class-on="c.starOn">{{c.star}}</span><div class="ring" data-if="c.ring > 0"
+  data-style-background-color="c.ele"></span><img class="star" data-if="c.star != '' && starIcon != ''"
+  data-class-on="c.starOn" data-attr-src="c.starOn ? starOnIcon : starIcon"/><div class="ring" data-if="c.ring > 0"
   data-style-opacity="c.ring"></div><span class="rise" data-if="c.rising != ''" data-style-color="c.risingColour"
   data-style-margin-top="((-4 - c.rise) / 12) + 'rem'">{{c.rising}}</span></div></div>
 <div class="thumb" data-if="scrollable" data-style-top="thumbTop + '%'" data-style-height="thumbH + '%'"></div>
-<div class="drop" data-if="dropping"></div></div>
+<div class="drop" data-if="dropping"></div></div></div></div>
+<div class="keys" data-if="keys != ''">{{keys}}</div>
 <div class="foot" data-hit="footer"><span class="pk" data-hit="picked"
   data-if="pickedText != ''">{{pickedText}}</span><span
   class="also" data-if="also != ''">{{also}}</span><span class="w"
@@ -107,6 +108,9 @@ std::vector<const char*> changed(const Model& was, const Model& now) {
     field("hotkey", was.hotkey, now.hotkey);
     field("query", was.query, now.query);
     field("hint", was.hint, now.hint);
+    field("keys", was.keys, now.keys);  // 3.0.24-beta.20
+    field("starIcon", was.starIcon, now.starIcon);
+    field("starOnIcon", was.starOnIcon, now.starOnIcon);
     field("searchIcon", was.searchIcon, now.searchIcon);
     field("also", was.also, now.also);
     field("weightWord", was.weightWord, now.weightWord);
@@ -174,6 +178,9 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("hotkey", &m.hotkey);
     c.Bind("query", &m.query);
     c.Bind("hint", &m.hint);
+    c.Bind("keys", &m.keys);  // 3.0.24-beta.20
+    c.Bind("starIcon", &m.starIcon);
+    c.Bind("starOnIcon", &m.starOnIcon);
     c.Bind("searchIcon", &m.searchIcon);
     c.Bind("also", &m.also);
     c.Bind("weightWord", &m.weightWord);
@@ -206,6 +213,7 @@ void fill(Model& m, const iw::Layout& L, const std::vector<iw::Item>& items, con
           const iw::Show& sh, const iw::Texts& t, const Source& src) {
     m.base = 12 * (L.s > 0 ? L.s : 1);
     m.title = t.title;
+    m.keys = t.keys;  // 3.0.24-beta.20
     m.hotkey = t.hotkey;
     int fresh[iw::kTabs] = {};
     for (const iw::Item& it : items)
@@ -246,8 +254,9 @@ void fill(Model& m, const iw::Layout& L, const std::vector<iw::Item>& items, con
         if (it.fresh && !t.fresh.empty()) c.fresh = t.fresh;
         c.ele = it.elementRgb ? hex(it.elementRgb) : "#00000000";  // 3.0.18-beta.144
         c.picked = std::find(sh.picked.begin(), sh.picked.end(), it.index) != sh.picked.end();  // 3.0.18-beta.155
-        if (it.starred) c.star = "\xE2\x98\x85", c.starOn = true;
-        else if (at == sh.hover) c.star = "\xE2\x98\x86";
+        // 3.0.24-beta.20: a flag now - the star a drawn picture (starIcon / starOnIcon), no letter the font lacks
+        if (it.starred) c.star = "on", c.starOn = true;
+        else if (at == sh.hover) c.star = "offer";
     }
     for (const iw::Flash& f : sh.flashes) {  // a use answering in its cell: gold fading, its word rising
         for (int i = 0; i < count && size_t(i) < L.cells.size(); ++i) {

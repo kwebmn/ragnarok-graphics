@@ -8774,6 +8774,10 @@ constexpr Entry kTexts[] = {
     {Text::ItemHintCard, "Right click or Esc - close", "ПКМ або Esc — закрити", "ПКМ или Esc — закрыть"},
     {Text::ItemHintPick, "Search by name · right click - the card · Enter - choose",
      "Пошук за назвою · ПКМ — картка · Enter — вибрати", "Поиск по названию · ПКМ — карточка · Enter — выбрать"},
+    // 3.0.24-beta.20: the tabs one under another (their words turned up: short enough for the tab)
+    {Text::ItemsTabItemsShort, "Usable", "Витратне", "Расход."},
+    {Text::ItemsTabGearShort, "Gear", "Спорядж.", "Снаряж."},
+    {Text::ItemsTabStarred, "Starred", "Обране", "Избранное"},
     {Text::LauncherRunningCount, "The game is running · windows: {1}", "Гра вже запущена · вікон: {1}",
      "Игра уже запущена · окон: {1}"},
     {Text::InterfaceArrowsWalk, "Walking with the arrows", "Ходьба стрілками", "Ходьба стрелками"},

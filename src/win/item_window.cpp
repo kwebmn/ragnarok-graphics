@@ -21,6 +21,7 @@
 #include "core/char_status.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/item_pick.hpp"
+#include "core/item_ui.hpp"
 #include "core/item_window.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
@@ -89,6 +90,7 @@ constexpr size_t kInfoSize = 0x48, kMostNodes = 256;
 // 0x8000 the login's list gives stays on those arrows after others are worn (0x013c and 0x00ac never clear it)
 constexpr uint32_t kAmmoNow = 0x772034, kAmmoBit = 0x8000;
 constexpr ULONGLONG kReadMs = 200, kConfirmMs = 3000, kBlinkMs = 530;
+constexpr int kBagMost = 100;  // 3.0.24-beta.20: the bag's places (uAthena MAX_INVENTORY) - «Речі 16/100»
 constexpr ULONGLONG kTipMs = 400;  // 3.0.11-beta.51: a cell's tip after this long pointed at (the concept's)
 constexpr ULONGLONG kToastMs = 2000;  // 3.0.11-beta.112: the words of a thing come into the bag
 constexpr size_t kMostTyped = 72;  // bytes (3.0.18-beta.72: UTF-8 - 24 letters of any language)
@@ -359,15 +361,16 @@ iw::Texts texts(bool pad) {
     t.title = say(settings::Text::ItemsTitle);
     t.hotkey = "Alt+E";
     t.tabs[0] = say(settings::Text::ItemsTabAll);  // 3.0.11-beta.113: the concept's question 9 - six tabs
-    t.tabs[1] = say(settings::Text::ItemsTabItems);
-    t.tabs[2] = say(settings::Text::ItemsTabGear);
+    t.tabs[1] = say(settings::Text::ItemsTabItemsShort);  // 3.0.24-beta.20: the tabs' column - short words
+    t.tabs[2] = say(settings::Text::ItemsTabGearShort);
     t.tabs[3] = say(settings::Text::ItemsTabCards);
     t.tabs[4] = say(settings::Text::ItemsTabEtc);
-    t.tabs[5] = "\xE2\x98\x85";  // ★ the starred
+    t.tabs[5] = say(settings::Text::ItemsTabStarred);  // 3.0.24-beta.20: a word (no ★ in the font)
     t.fresh = say(settings::Text::ItemsFresh);  // 3.0.11-beta.112
     t.worn = say(settings::Text::ItemsWorn);    // 3.0.11-beta.118: the arrows worn
     t.search = say(settings::Text::ItemsSearch);
     t.weight = say(settings::Text::CharWeight);
+    t.keys = say(itemui::hintOf(itemui::Window::Items));  // 3.0.24-beta.20: the keys' hint under the grid
     t.use = say(settings::Text::ItemsUse);
     t.wear = say(settings::Text::ItemsWear);
     t.card = say(settings::Text::ItemsCard);
@@ -702,8 +705,11 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     frameInner(game, on, codePage, k, targetWidth, targetHeight, toast);
     State& s = state();
     s.toastUi = toastFrame(s);
-    s.gridShown = s.grid.frame("items", s.shown, s.layout.x, s.layout.y, s.gridGen, s.layout, s.items, s.shownItems,
-                               s.show, texts(s.padNow), measure);
+    iw::Texts t = texts(s.padNow);
+    t.title = itemui::countTitle(t.title, int(s.items.size()), kBagMost);  // 3.0.24-beta.20: «Речі 16/100»
+    s.gridShown =
+        s.grid.frame("items", s.shown, s.layout.x, s.layout.y, s.gridGen, s.layout, s.items, s.shownItems, s.show, t,
+                     measure);
 }
 
 namespace {
