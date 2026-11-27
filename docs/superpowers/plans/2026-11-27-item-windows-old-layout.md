@@ -27,12 +27,15 @@ https://uaro.kiev.ua/docs/item-windows/ (`bag_equip_*.jpg`, `storage_*.jpg`, `ca
 ## Global Constraints
 
 - Сервер игры не меняем и не предлагаем менять; `packet_db.txt`, `clif.c` и базу только читаем.
-- Пакеты — PACKETVER 7 (kRO Sakexe 2007-05-07): `dropitem 0x00a2` 6 {index@2 u16, amount@4 u16}; `useitem 0x00a7`
-  17 {index@6 u16, account@13 u32}; `equipitem 0x00a9` 6 {index@2, location@4}; `unequipitem 0x00ab` 4 {index@2};
-  ответы сервера: 0x00a8 7, 0x00aa 7, 0x00ac 7, 0x00af 6. Лавка: `openvending 0x01b2` −1 {len@2, имя 80 @4,
-  flag@84, {index u16, amount u16, price u32}@85…}, `closevending 0x012e` 2; ответы 0x0136 −1, 0x0137 6. Обмен:
-  `tradeadditem 0x00e8` 8 {index@2, amount@4}, `tradeok 0x00eb` 2, `tradecancel 0x00ed` 2, `tradecommit 0x00ef` 2;
-  ответы 0x00e9 19, 0x00ea 5, 0x00ec 3, 0x00ee 2, 0x00f0 3. Расклад полей ответа сверяется с `clif.c` перед кодом.
+- Пакеты — наш клиент 2007-05-07aSakexe = раздел `packet_ver: 22` `packet_db.txt` (как у модуля геймпада и у
+  пакетов склада 0x0094): `useitem 0x009f` 14 {index@4 u16, account@10 u32}; `dropitem 0x0116` 10 {index@5 u16,
+  amount@8 u16}; `equipitem 0x00a9` 6 {index@2, location@4}; `unequipitem 0x00ab` 4 {index@2}; ответы сервера:
+  0x00a8 7 (не использовано), 0x01c8 13 (использовано — рассылается всем вокруг: только свой аккаунт), 0x00aa 7,
+  0x00ac 7 {index, place, ok}, 0x00af 6. Лавка: `openvending 0x01b2` −1 {len@2, имя 80 @4, flag@84, {index u16,
+  amount u16, price u32}@85…}, `closevending 0x012e` 2; ответы 0x0136 −1, 0x0137 6, 0x012d 4. Обмен: `tradeadditem
+  0x00e8` 8 {index@2, amount@4}, `tradeok 0x00eb` 2, `tradecancel 0x00ed` 2, `tradecommit 0x00ef` 2; ответы 0x00e9 19,
+  0x00ea 5, 0x00ec 3, 0x00ee 2, 0x00f0 3. Выбор: `itemidentify 0x0178` 4, `selectarrow 0x01ae` 4, `insertcard 0x017c`
+  6. Расклад полей ответа сверяется с `clif.c` перед кодом.
 - Окна — RML руками, проверка XML-парсером в тестах; без `SetProperty` каждый кадр; ширины в % — border-box.
 - Скрытый `data-if` элемент живёт в документе: в списках новые части — внутри уже существующих частей строки (урок
   части 1, Alt+O: бюджет элементов на строку).
@@ -128,7 +131,7 @@ TEST(uikit_item_frame_tabs_stand_left_hint_and_foot_below) {
 - Consumes: Task 1 (классы `.uw`, `hintOf(Items)`, `fillOf`, `countTitle`).
 - Produces: `itempackets::useItem(uint16_t index, uint32_t account)`, `equip(uint16_t index, uint16_t location)`,
   `unequip(uint16_t index)`, `drop(uint16_t index, uint16_t amount)`; `serverLength` 0x00a8/0x00aa/0x00ac → 7;
-  `Change` от 0x00a8 (index, amount, result), 0x00aa / 0x00ac (index, location, result);
+  `Change` от 0x00a8 (index, result 1), 0x01c8 только своего аккаунта, 0x00aa / 0x00ac (index, result 0 / 1);
   `Queue::askUse/askEquip/askUnequip/askDrop(…, now, out)` → `Outcome` (Done / Refused / Timeout за 2 с);
   `itemnet::use/equip/unequip/drop`.
 
