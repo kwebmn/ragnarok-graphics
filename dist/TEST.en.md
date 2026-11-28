@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.43 — what's new · 2026-11-28
+
+Optimisations for weak graphics cards (under 4 GB, as laptops have). Cards of 4 GB and more draw as before.
+
+- **«Modern water»:** the reflections in the water are sought in 10 longer steps instead of 28. On a laptop with a Radeon 610M the water in Alberta took about 15 ms of the frame, most of it these reflections. They are a little coarser and nearer; the rest of the water (waves, foam, glints, the bed) as it was.
+- **Live torches:** only the 12 nearest torches light around them; the rest burn as before but light no walls. In the Pyramids the torches' light took 4.4 ms of the frame.
+
 # uaRO Graphics 3.0.24-beta.42 — what's new · 2026-11-28
 
 The water on weak graphics cards and an MCP test in the background.
