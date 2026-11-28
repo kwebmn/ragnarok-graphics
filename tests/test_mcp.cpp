@@ -210,6 +210,10 @@ TEST(mcp_keys_and_clicks) {
     CHECK(!mcp::checkArgs("drag", args(R"({"x":100,"y":100,"width":1020})")).empty());              // no end
     CHECK(!mcp::checkArgs("drag", args(R"({"x":100,"y":100,"x2":1100,"y2":250,"width":1020})")).empty());  // past
     CHECK(!mcp::checkArgs("drag", args(R"({"x":100,"y":100,"x2":300,"y2":250})")).empty());          // no width
+    // 3.0.24-beta.48: the wheel's notches at a place, Ctrl held if asked (a window's scale)
+    CHECK(mcp::checkArgs("wheel", args(R"({"x":100,"y":100,"width":1020,"notches":-2,"ctrl":true})")).empty());
+    CHECK(!mcp::checkArgs("wheel", args(R"({"x":100,"y":100,"width":1020,"notches":0})")).empty());
+    CHECK(!mcp::checkArgs("wheel", args(R"({"x":100,"y":100,"width":1020,"notches":40})")).empty());
     // the place in the window: the screenshot 1020 wide of a 2040 x 1147 window
     int cx = 0, cy = 0;
     CHECK(mcp::clickPlace(510, 286, 1020, 2040, 1147, cx, cy) && cx == 1020 && cy == 572);

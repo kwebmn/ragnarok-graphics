@@ -36,6 +36,9 @@ struct Model {
     // 3.0.18-beta.100: the window's scale in pixels as 12 of its own (its sizes in rem: the text size and «Речі»'s
     // size settings as before the live layout)
     float base = 12;
+    // 3.0.24-beta.48 (the audit 28.11, the owner's «сделать»): its own columns and rows - the window's, the grid's
+    // widths and height in rem (a cell 4, the gap 0.6667)
+    float bodyW = 44.6667f, gridW = 36.6667f, gridH = 22.6667f, gridInner = 37.5f;
     Rml::String ground = "#00000000", title, hotkey, query, hint, also, weightWord, weightText, zeny, tone = "green";
     bool closeHot = false, typing = false, caret = false, bar = true, dropping = false, scrollable = false, tip = false;
     float fill = 0, thumbTop = 0, thumbH = 0, tipX = 0, tipY = 0;

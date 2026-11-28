@@ -122,11 +122,18 @@ const char* sizeKey(Win w) {
     }
 }
 
+// 3.0.24-beta.48 (the audit 28.11, the owner's «сделать»: «растягиваешь инвентарь то становится больше итемов»): the
+// grid windows - their corner adds whole cells (core windowsizes::cellsPulled), their scale by Ctrl and the wheel
+bool isGrid(Win w) { return w == Win::Items || w == Win::Storage || w == Win::Cart; }
+constexpr windowsizes::Cells kGridCells{8, 5};
+
 struct Sizing {
     bool read = false;
     windowsizes::Sizes sizes;
     std::optional<Win> pulling;  // its corner held
     float from = 1, w0 = 0, h0 = 0, x0 = 0, y0 = 0;
+    windowsizes::Cells fromCells{};                    // 3.0.24-beta.48: a grid window's cells when pressed
+    std::array<float, size_t(winstack::kWins)> step{};  // 3.0.24-beta.48: a cell with its gap, as each window said
     int targetW = 0, targetH = 0;
     double k = 0;
     std::optional<Win> hot;  // the corner under the pointer
@@ -583,15 +590,24 @@ static void sizingFrame(State& s, int targetWidth, int targetHeight, double k) {
     if (z.pulling) {
         const int button = GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON;
         const char* key = sizeKey(*z.pulling);
+        const bool grid = isGrid(*z.pulling);
         if (!key || !shown(*z.pulling) || !readGameCursor(cx, cy) || GetAsyncKeyState(button) >= 0) {
             if (key) {
                 writeFileAtomic(gameDir() + "\\uaro-graphics\\window-sizes.txt", z.sizes.text());
-                LOG_INFO("windows: %s sized to %.0f %%", key, double(z.sizes.of(key) * 100));
+                const windowsizes::Cells c = z.sizes.cells(key, kGridCells);
+                if (grid)
+                    LOG_INFO("windows: %s sized to %d x %d cells", key, c.columns, c.rows);
+                else
+                    LOG_INFO("windows: %s sized to %.0f %%", key, double(z.sizes.of(key) * 100));
             }
             z.pulling.reset();
         } else {
             const float x = float(cx * k), y = float(cy * k);
-            z.sizes.set(key, windowsizes::pulled(z.from, z.w0, z.h0, z.w0 + (x - z.x0), z.h0 + (y - z.y0)));
+            if (grid)  // 3.0.24-beta.48: whole cells, their size kept
+                z.sizes.setCells(key, windowsizes::cellsPulled(z.fromCells, z.step[size_t(*z.pulling)], x - z.x0,
+                                                               y - z.y0));
+            else
+                z.sizes.set(key, windowsizes::pulled(z.from, z.w0, z.h0, z.w0 + (x - z.x0), z.h0 + (y - z.y0)));
         }
     }
     z.hot.reset();
@@ -662,6 +678,15 @@ float sizeOf(winstack::Win w) {
     return key ? sizing().sizes.of(key) : 1.0f;
 }
 
+windowsizes::Cells cellsOf(winstack::Win w) {  // 3.0.24-beta.48
+    const char* key = sizeKey(w);
+    return key && isGrid(w) ? sizing().sizes.cells(key, kGridCells) : kGridCells;
+}
+
+void setCellStep(winstack::Win w, float px) {
+    if (int(w) >= 0 && int(w) < winstack::kWins) sizing().step[size_t(w)] = px;
+}
+
 void frame(int targetWidth, int targetHeight, double k) {
     State& s = state();
     bool pairOpened = false;  // 3.0.11-beta.111: «Речі» or «Спорядження» opened this frame
@@ -702,6 +727,24 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             result = 0;
             return true;
         }
+        // 3.0.24-beta.48 (the audit 28.11, the owner's «сделать»): Ctrl and the wheel over a sized window - its scale,
+        // 5 % a notch (the grid windows' corner adds cells now)
+        int hx = 0, hy = 0;
+        if (m == WM_MOUSEWHEEL && (GET_KEYSTATE_WPARAM(wp) & MK_CONTROL) && z.k > 0 && readHoverCursor(hx, hy)) {
+            const float x = float(hx * z.k), y = float(hy * z.k);
+            for (const Win w : s.stack.topDown()) {
+                winstack::Box b{};
+                if (!boxOf(w, b) || x < b.x || y < b.y || x > b.x + b.w || y > b.y + b.h) continue;
+                const char* key = sizeKey(w);
+                if (!key) break;
+                const int notches = GET_WHEEL_DELTA_WPARAM(wp) / WHEEL_DELTA;
+                z.sizes.set(key, windowsizes::wheeled(z.sizes.of(key), notches));
+                writeFileAtomic(gameDir() + "\\uaro-graphics\\window-sizes.txt", z.sizes.text());
+                LOG_INFO("windows: %s scaled to %.0f %% (Ctrl and the wheel)", key, double(z.sizes.of(key) * 100));
+                result = 0;
+                return true;
+            }
+        }
         float x = 0, y = 0;
         if (m == WM_LBUTTONDOWN && z.k > 0 &&
             pointerInTarget(game, m, lp, z.k, z.targetW, z.targetH, x, y, nullptr))
@@ -711,6 +754,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                 if (sizeKey(w) && inCorner(b, x, y, z.k)) {
                     z.pulling = w;
                     z.from = z.sizes.of(sizeKey(w));
+                    z.fromCells = z.sizes.cells(sizeKey(w), kGridCells);  // 3.0.24-beta.48
                     z.w0 = b.w, z.h0 = b.h, z.x0 = x, z.y0 = y;
                     s.stack.raise(w);
                     result = 0;

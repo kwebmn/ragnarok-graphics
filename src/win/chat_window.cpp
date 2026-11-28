@@ -1051,8 +1051,15 @@ static void fillSheet(State& s, uisheet::Content& c) {
         c.rect(u, L.input, 8 * sc, kWhite, 0.96f, 0x9AA3B5, 0.55f, 1.0f * sc);
     else
         c.rect(u, L.input, 8 * sc, kBlack, 0.38f, kWhite, 0.10f, 1.0f * sc);
-    c.rect(u, L.mode, 6 * sc, v.chipRgb, sh.hoverMode ? 0.28f : 0.16f);
-    if (v.chevron.w > 0) icon(uiicons::Icon::Down, v.chevron, v.chipRgb, 0.9f, 2.4f);
+    // 3.0.24-beta.48 (the laptop: «Усі» gone on the white line - its chip white): a light channel's chip dark there
+    const auto light = [](uint32_t rgb) {
+        return 0.2126f * float((rgb >> 16) & 0xFF) + 0.7152f * float((rgb >> 8) & 0xFF) + 0.0722f * float(rgb & 0xFF) >
+               150.0f;
+    };
+    const bool inkChip = whiteLine && light(v.chipRgb);
+    const uint32_t chip = inkChip ? kInk : v.chipRgb;
+    c.rect(u, L.mode, 6 * sc, chip, sh.hoverMode ? 0.22f : inkChip ? 0.09f : 0.16f);
+    if (v.chevron.w > 0) icon(uiicons::Icon::Down, v.chevron, chip, 0.9f, 2.4f);
     if (L.clear.w > 0 && sh.hoverClear) c.rect(u, L.clear, 5 * sc, kWhite, 0.14f);
     c.rect(u, v.caret, 0, whiteLine ? kInk : v.caretRgb, 0.95f);
     if (L.newer.w > 0) c.rect(u, L.newer, 6 * sc, kAccent, sh.hoverNewer ? 0.45f : 0.28f);
@@ -1118,7 +1125,10 @@ static void fillSheet(State& s, uisheet::Content& c) {
             return in.w > 0 && x >= in.x && x <= in.x + in.w && y >= in.y && y <= in.y + in.h;
         };
         for (cp::Words& w : words)
-            if (inside(w.box, L.input) && !inside(w.box, L.mode)) w.rgb = w.rgb == cp::kMuted ? kInkQuiet : kInk;
+            if (inside(w.box, L.mode))
+                w.rgb = inkChip ? kInk : w.rgb;  // .48: «Усі»'s white words dark; a channel's colour kept
+            else if (inside(w.box, L.input))
+                w.rgb = w.rgb == cp::kMuted ? kInkQuiet : kInk;
     }
     c.say(words);
 }

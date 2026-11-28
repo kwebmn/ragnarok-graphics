@@ -337,6 +337,36 @@ mcp::CallResult drag(const Game& g, double x, double y, double x2, double y2, in
                 (told ? "" : " (the window did not answer a message in time)") + " - look with `screenshot`");
 }
 
+mcp::CallResult wheel(const Game& g, double x, double y, int width, int notches, bool ctrl) {
+    const std::string inside = insideNot(g.window);
+    if (!inside.empty()) return said("no wheel turned: " + inside, true);
+    RECT c{};
+    GetClientRect(g.window, &c);
+    int cx = 0, cy = 0;
+    if (!mcp::clickPlace(x, y, width, int(c.right), int(c.bottom), cx, cy))
+        return said("the place is past the picture", true);
+    g_hoverUntil = 0;
+    uapad::remote::setMouse(uapad::remote::Mouse{true, cx, cy, 0});
+    Sleep(120);  // the game's cursor there first
+    if (ctrl) uapad::remote::setMods(true, false, false);
+    Sleep(20);
+    POINT screen{cx, cy};
+    ClientToScreen(g.window, &screen);  // the wheel's place is the screen's
+    const int step = notches > 0 ? 1 : -1;
+    bool told = true;
+    for (int i = 0; i != notches; i += step) {
+        const WPARAM wp = MAKEWPARAM(ctrl ? MK_CONTROL : 0, uint16_t(int16_t(step * WHEEL_DELTA)));
+        told = sendWait(g.window, WM_MOUSEWHEEL, wp, MAKELPARAM(screen.x, screen.y)) && told;
+        Sleep(40);
+    }
+    if (ctrl) uapad::remote::setMods(false, false, false);
+    uapad::remote::setMouse(uapad::remote::Mouse{});
+    LOG_INFO("mcp: wheel %+d%s inside the game at %s", notches, ctrl ? " with Ctrl" : "", pair(cx, cy).c_str());
+    return said("turned the wheel " + std::to_string(notches) + (ctrl ? " with Ctrl" : "") + " at " +
+                pair(long(x), long(y)) + (told ? "" : " (the window did not answer in time)") +
+                " - look with `screenshot`");
+}
+
 mcp::CallResult click(const Game& g, double x, double y, int width, bool right, bool twice) {
     const std::string inside = insideNot(g.window);
     if (inside.empty()) return clickInside(g, x, y, width, right, twice);

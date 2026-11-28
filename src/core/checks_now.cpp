@@ -7,6 +7,20 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.48 (the audit 28.11, the owner's «сделать»): a grid window's corner adds cells; Ctrl+wheel
+        {"window_cells_48", "3.0.24-beta.48", "",
+         {"Pull «Речі»'s corner: more cells; Ctrl and the wheel: bigger or smaller",
+          "Потягніть кут «Речей»: більше клітинок; Ctrl і коліщатко: більше чи менше",
+          "Потяните угол «Речей»: больше клеток; Ctrl и колесо: крупнее или мельче"},
+         {"Pull the lower right corner of «Речі», «Склад» or «Візок»: whole columns and rows of cells come or go "
+          "(5-12 by 3-10), the cells as big as before; kept for the next start. Ctrl and the wheel over any window "
+          "with a corner: the whole window bigger or smaller, 70-150 %.",
+          "Потягніть нижній правий кут «Речей», «Складу» чи «Візка»: додаються чи зникають цілі стовпці й рядки "
+          "клітинок (5-12 на 3-10), клітинки того ж розміру; запам'ятовується. Ctrl і коліщатко над будь-яким вікном "
+          "із кутом: усе вікно більше чи менше, 70-150 %.",
+          "Потяните нижний правый угол «Речей», «Склада» или «Візка»: добавляются или исчезают целые столбцы и строки "
+          "клеток (5-12 на 3-10), клетки того же размера; запоминается. Ctrl и колесо над любым окном с углом: всё "
+          "окно крупнее или мельче, 70-150 %."}},
         // 3.0.24-beta.47 (the audit 28.11, the owner's answers 2 and 6): the chat as the original's, the item windows
         {"chat_original_47", "3.0.24-beta.47", "",
          {"Light theme: the chat as the original's", "Світла тема: чат як в оригіналі",

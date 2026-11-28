@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "core/window_sizes.hpp"
 #include "core/window_panel.hpp"
 
 namespace uagfx::itemwin {
@@ -129,7 +130,11 @@ struct Layout {
     panel::Box picked;  // 3.0.18-beta.155: the footer's button for the things picked (0 wide: none)
     std::vector<panel::Box> tabs, cells;  // the cells shown (columns x rows)
 };
-Layout layout(int x, int y, float scale, const Texts& t, const Measure& m);
+// 3.0.24-beta.48 (the audit 28.11, the owner's «сделать»): its own columns and rows (the corner's whole cells; 8 x 5
+// when none kept) - each cell the same size, the window wider and taller for more
+Layout layout(int x, int y, float scale, const Texts& t, const Measure& m,
+              windowsizes::Cells cells = windowsizes::Cells{8, 5});
+float cellStep(float scale);  // a cell with its gap, the window's pixels (the corner's whole cells)
 int mostScroll(const Layout& L, size_t count);
 
 // 3.0.11-beta.113: Star; 3.0.18-beta.155: Picked - the footer's button for the things picked; 3.0.18-beta.204: Scroll -

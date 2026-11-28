@@ -2,6 +2,7 @@
 #include <cstdio>
 
 #include "rml_host.hpp"
+#include "core/window_sizes.hpp"
 #include "test.hpp"
 #include "uikit/item_grid_live.hpp"
 
@@ -37,7 +38,7 @@ struct Grid {
     Rml::ElementDocument* doc = nullptr;
 };
 
-void make(Grid& g, int things) {
+void make(Grid& g, int things, windowsizes::Cells cells = windowsizes::Cells{8, 5}) {
     for (int i = 0; i < things; ++i) {
         iw::Item it;
         it.index = i;
@@ -53,7 +54,7 @@ void make(Grid& g, int things) {
     g.sh.weight = 120;
     g.sh.weightMost = 800;
     g.sh.zeny = 15000;
-    g.L = iw::layout(0, 0, 1, texts(), measure);
+    g.L = iw::layout(0, 0, 1, texts(), measure, cells);
     ig::fill(g.m, g.L, g.items, g.shown, g.sh, texts(), [](const panel::Picture*) { return std::string(); });
     std::string error;
     g.doc = rmlhost::load(ig::rml(), [&](Rml::DataModelConstructor& c) { ig::bind(c, g.m); }, 40, 30, &error);
@@ -265,4 +266,20 @@ TEST(uikit_item_grid_turned_tab_words_in_their_tabs) {
         CHECK_EQ(seen, iw::kTabs);
         rmlhost::close(d);
     }
+}
+
+// 3.0.24-beta.48 (the audit 28.11, the owner's «сделать»): its own columns and rows laid out by RmlUi too - ten a row,
+// six rows, the cells as big as before, the window wider by the two columns
+TEST(uikit_item_grid_lays_out_its_own_columns_and_rows) {
+    Grid g;
+    make(g, 70, windowsizes::Cells{10, 6});
+    CHECK(g.doc != nullptr);
+    CHECK(ig::refit(g.doc, g.L));
+    CHECK_EQ(g.L.cells.size(), size_t(60));
+    CHECK(std::abs(g.L.cells[9].y - g.L.cells[0].y) < 0.5f);       // ten a row
+    CHECK(std::abs(g.L.cells[10].y - g.L.cells[0].y - 56) < 0.5f);
+    CHECK(std::abs(g.L.cells[1].x - g.L.cells[0].x - 56) < 0.5f);  // the cells as big as before
+    CHECK(std::abs(float(g.L.w) - (536 + 2 * 56)) < 2.5f);
+    CHECK(g.m.scrollable);  // 70 things, 60 cells
+    rmlhost::close(g.doc);
 }

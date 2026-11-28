@@ -15,7 +15,8 @@ namespace {
 namespace iw = uagfx::itemwin;
 
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="lw igl" data-style-font-size="base + 'px'" data-style-background-color="ground">
+<body class="lw igl" data-style-font-size="base + 'px'" data-style-background-color="ground"
+  data-style-width="bodyW + 'rem'">
 <div class="head" data-hit="title"><span class="title">{{title}}</span><span class="hk">{{hotkey}}</span><div
   class="x" data-hit="close" data-class-hot="closeHot"><span class="cxa"></span><span class="cxb"></span></div></div>
 <div class="ibody"><div class="tabs" data-hit="tabsrow"><div class="tab" data-for="t, i : tabs" data-hit="tab"
@@ -24,7 +25,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <div class="search" data-hit="search" data-class-typing="typing"><img data-if="searchIcon != ''"
   data-attr-src="searchIcon"/><span class="q" data-if="query != ''">{{query}}</span><span class="caret"
   data-if="caret"></span><span class="q qh" data-if="hint != ''">{{hint}}</span></div>
-<div class="gridbox" data-hit="grid"><div class="grid"><div class="cell" data-for="c : cells" data-hit="cellbox"
+<div class="gridbox" data-hit="grid" data-style-width="gridW + 'rem'" data-style-height="gridH + 'rem'"><div
+  class="grid" data-style-width="gridInner + 'rem'"><div class="cell" data-for="c : cells" data-hit="cellbox"
   data-attr-data-index="c.index" data-class-hot="c.hot" data-class-thing="c.hit == 'cell'"
   data-class-picked="c.picked"><div class="flash"
   data-if="c.flash > 0" data-style-opacity="c.flash"></div><img data-if="c.icon != ''" data-attr-src="c.icon"
@@ -104,6 +106,10 @@ std::vector<const char*> changed(const Model& was, const Model& now) {
     };
     field("ground", was.ground, now.ground);
     field("base", was.base, now.base);
+    field("bodyW", was.bodyW, now.bodyW);  // 3.0.24-beta.48: its own columns and rows
+    field("gridW", was.gridW, now.gridW);
+    field("gridH", was.gridH, now.gridH);
+    field("gridInner", was.gridInner, now.gridInner);
     field("title", was.title, now.title);
     field("hotkey", was.hotkey, now.hotkey);
     field("query", was.query, now.query);
@@ -207,6 +213,10 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("tip4", &m.tip4);
     c.Bind("tabs", &m.tabs);
     c.Bind("cells", &m.cells);
+    c.Bind("bodyW", &m.bodyW);  // 3.0.24-beta.48
+    c.Bind("gridW", &m.gridW);
+    c.Bind("gridH", &m.gridH);
+    c.Bind("gridInner", &m.gridInner);
 }
 
 void fill(Model& m, const iw::Layout& L, const std::vector<iw::Item>& items, const std::vector<int>& shown,
@@ -232,6 +242,13 @@ void fill(Model& m, const iw::Layout& L, const std::vector<iw::Item>& items, con
     m.query = sh.search;
     m.hint = sh.search.empty() && !sh.typing ? t.search : "";
     const int columns = std::max(1, L.columns), count = columns * std::max(1, L.rows);
+    {  // 3.0.24-beta.48: the widths for its own columns and rows (rem: a cell 4, the gap 0.6667, the rest 8)
+        constexpr float kCell = 4.0f, kGap = 0.6667f;
+        m.gridW = float(columns) * kCell + float(columns - 1) * kGap;
+        m.gridH = float(std::max(1, L.rows)) * kCell + float(std::max(1, L.rows) - 1) * kGap;
+        m.gridInner = float(columns) * (kCell + kGap) + 0.1667f;
+        m.bodyW = m.gridW + 8.0f;
+    }
     m.cells.assign(size_t(count), CellV{});  // the same count always: RmlUi's lists never shrink under it
     for (int i = 0; i < count; ++i) {
         CellV& c = m.cells[size_t(i)];

@@ -32,6 +32,8 @@ mcp::CallResult hover(const Game& g, double x, double y, int width, int seconds)
 // 3.0.24-beta.46 (the audit 28.11): the left button pressed at (x, y), the cursor led to (x2, y2) in steps, let go
 // there - from inside the game only (its DirectInput mouse through uaRO Pad)
 mcp::CallResult drag(const Game& g, double x, double y, double x2, double y2, int width);
+// 3.0.24-beta.48: the wheel's notches at (x, y), Ctrl held for them when `ctrl` - from inside the game only
+mcp::CallResult wheel(const Game& g, double x, double y, int width, int notches, bool ctrl);
 // Each frame on the game's thread: a hover whose time is up let go
 void tick();
 

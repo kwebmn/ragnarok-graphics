@@ -314,7 +314,9 @@ void hide(State& s) {
 
 void place(State& s) {
     const iw::Texts t = texts(s, false);
-    s.layout = iw::layout(0, 0, s.scale, t, measure);
+    // 3.0.24-beta.48: its own columns and rows (the corner's whole cells), its cell's step for the corner
+    s.layout = iw::layout(0, 0, s.scale, t, measure, windowstack::cellsOf(winstack::Win::Cart));
+    windowstack::setCellStep(winstack::Win::Cart, iw::cellStep(s.scale));
     s.grid.refit(s.layout);  // 3.0.18-beta.94: the live grid's boxes - the clicks and drops where it draws
     const int roomX = std::max(0, s.targetW - s.layout.w), roomY = std::max(0, s.targetH - s.layout.h);
     s.layout.x = int(std::lround(s.fx * float(roomX)));

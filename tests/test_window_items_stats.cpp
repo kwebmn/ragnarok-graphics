@@ -10,6 +10,7 @@
 #include "core/item_window.hpp"
 #include "core/stat_math.hpp"
 #include "core/stat_window.hpp"
+#include "core/window_sizes.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -630,4 +631,19 @@ TEST(stat_window_base_and_bonus_words) {
     CHECK_EQ(statwin::baseAndBonus(9, 0), std::string("9"));
     CHECK_EQ(statwin::baseAndBonus(9, 3), std::string("9 + 3"));
     CHECK_EQ(statwin::baseAndBonus(9, -2), std::string("9 \xE2\x88\x92 2"));
+}
+
+// 3.0.24-beta.48 (the audit 28.11, the owner's «сделать»): «Речі» laid out with its own columns and rows - more cells,
+// each of the same size, the window wider and taller for them
+TEST(items_window_lays_out_its_own_cells) {
+    const itemwin::Texts t = itemTexts();
+    const itemwin::Measure m(panel::wordsWidth);
+    const itemwin::Layout eight = itemwin::layout(0, 0, 1.0f, t, m);
+    CHECK(eight.columns == 8 && eight.rows == 5 && eight.cells.size() == 40);
+    const itemwin::Layout ten = itemwin::layout(0, 0, 1.0f, t, m, windowsizes::Cells{10, 6});
+    CHECK(ten.columns == 10 && ten.rows == 6 && ten.cells.size() == 60);
+    CHECK(std::abs(ten.cells[0].w - eight.cells[0].w) < 0.01f);  // the cells' size kept
+    CHECK(ten.w > eight.w && ten.h > eight.h);
+    CHECK(std::abs(itemwin::cellStep(1.0f) - (ten.cells[1].x - ten.cells[0].x)) < 0.01f);  // a cell with its gap
+    CHECK_EQ(itemwin::mostScroll(ten, 70), 1);  // 70 things in 10 columns: 7 rows, 6 shown
 }

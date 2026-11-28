@@ -189,6 +189,13 @@ const std::vector<Tool>& table() {
          R"({"type":"object","properties":{"x":{"type":"number","minimum":0},"y":{"type":"number","minimum":0},)"
          R"("x2":{"type":"number","minimum":0},"y2":{"type":"number","minimum":0},)"
          R"("width":{"type":"integer","minimum":160,"maximum":7680}},"required":["x","y","x2","y2","width"]})"},
+        // 3.0.24-beta.48: the wheel - a list scrolled, a window's scale by Ctrl and the wheel
+        {"wheel",
+         "The mouse wheel turned at (x, y) of a screenshot `width` wide: `notches` up (positive) or down (negative), "
+         "Ctrl held with `ctrl` (a window's scale). Given to the game from inside, as `click`.",
+         R"({"type":"object","properties":{"x":{"type":"number","minimum":0},"y":{"type":"number","minimum":0},)"
+         R"("width":{"type":"integer","minimum":160,"maximum":7680},"notches":{"type":"integer","minimum":-10,)"
+         R"("maximum":10},"ctrl":{"type":"boolean"}},"required":["x","y","width","notches"]})"},
     };
     return kTools;
 }
@@ -528,6 +535,14 @@ std::string checkArgs(const std::string& tool, const json::Value& args) {
         if (args.has("button") && args["button"].asString() != "left" && args["button"].asString() != "right")
             return "button: left or right";
         if (args.has("double") && args["double"].type() != json::Value::Bool) return "double: true or false";
+    } else if (tool == "wheel") {  // 3.0.24-beta.48
+        if (!wholeIn(args["width"], 160, 7680)) return "width: the screenshot's width the place is in, 160-7680";
+        if (!wholeIn(args["notches"], -10, 10) || args["notches"].asInt() == 0) return "notches: -10 to 10, not 0";
+        const json::Value &x = args["x"], &y = args["y"];
+        if (x.type() != json::Value::Number || y.type() != json::Value::Number || !(x.asNumber() >= 0) ||
+            !(y.asNumber() >= 0) || !(x.asNumber() < args["width"].asNumber()) || !std::isfinite(y.asNumber()))
+            return "x and y: a place of the screenshot, 0 up, x under its width";
+        if (args.has("ctrl") && args["ctrl"].type() != json::Value::Bool) return "ctrl: true or false";
     } else if (tool == "drag") {  // 3.0.24-beta.46
         if (!wholeIn(args["width"], 160, 7680)) return "width: the screenshot's width the places are in, 160-7680";
         for (const char* k : {"x", "y", "x2", "y2"}) {

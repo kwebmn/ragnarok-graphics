@@ -159,7 +159,7 @@ mcp::CallResult logLines(const json::Value& args) {
 
 mcp::CallResult onGame(const std::string& tool, const json::Value& args) {
     if (tool == "log") return logLines(args);  // 3.0.22-beta.41: here - the game's frames untouched
-    if (tool == "key" || tool == "click" || tool == "hover" || tool == "drag") {  // 3.0.22-beta.35: frames go on
+    if (tool == "key" || tool == "click" || tool == "hover" || tool == "drag" || tool == "wheel") {  // frames go on
         Seen seen;
         {
             Locked l;
@@ -169,6 +169,9 @@ mcp::CallResult onGame(const std::string& tool, const json::Value& args) {
         if (tool == "click")
             return mcpinput::click(g, args["x"].asNumber(), args["y"].asNumber(), int(args["width"].asInt()),
                                    args["button"].asString() == "right", args["double"].asBool(false));
+        if (tool == "wheel")  // 3.0.24-beta.48
+            return mcpinput::wheel(g, args["x"].asNumber(), args["y"].asNumber(), int(args["width"].asInt()),
+                                   int(args["notches"].asInt()), args["ctrl"].asBool(false));
         if (tool == "drag")  // 3.0.24-beta.46
             return mcpinput::drag(g, args["x"].asNumber(), args["y"].asNumber(), args["x2"].asNumber(),
                                   args["y2"].asNumber(), int(args["width"].asInt()));

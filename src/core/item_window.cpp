@@ -186,13 +186,17 @@ std::string withStarred(const std::string& text, const std::string& who, const s
 
 int iconSide(float scale) { return int(std::lround(32 * scale)); }
 
-Layout layout(int x, int y, float scale, const Texts& t, const Measure& m) {
+float cellStep(float scale) { return (kCell + kGap) * (scale > 0 ? scale : 1.0f); }
+
+Layout layout(int x, int y, float scale, const Texts& t, const Measure& m, windowsizes::Cells cells) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
-    L.columns = kColumns;
-    L.rows = kRows;
-    const float w = kW * s, side = kSide * s;
+    const int columns = std::clamp(cells.columns, windowsizes::kLeastColumns, windowsizes::kMostColumns);
+    const int rows = std::clamp(cells.rows, windowsizes::kLeastRows, windowsizes::kMostRows);
+    L.columns = columns;
+    L.rows = rows;
+    const float w = (kW + float(columns - kColumns) * (kCell + kGap)) * s, side = kSide * s;
     L.title = panel::Box{0, 0, w, kTitleH * s};
     L.close = panel::Box{w - side - 26 * s, (kTitleH * s - 26 * s) / 2, 26 * s, 26 * s};
     L.tabsRow = panel::Box{side, kTitleH * s, w - 2 * side, kTabsH * s};
@@ -204,11 +208,11 @@ Layout layout(int x, int y, float scale, const Texts& t, const Measure& m) {
     }
     L.search = panel::Box{side, L.tabsRow.y + L.tabsRow.h + 12 * s, w - 2 * side, kSearchH * s};
     const float cell = kCell * s, gap = kGap * s;
-    const float gridW = float(kColumns) * cell + float(kColumns - 1) * gap;
-    const float gridH = float(kRows) * cell + float(kRows - 1) * gap;
+    const float gridW = float(columns) * cell + float(columns - 1) * gap;
+    const float gridH = float(rows) * cell + float(rows - 1) * gap;
     L.grid = panel::Box{(w - gridW) / 2, L.search.y + L.search.h + 14 * s, gridW, gridH};
-    for (int r = 0; r < kRows; ++r)
-        for (int c = 0; c < kColumns; ++c)
+    for (int r = 0; r < rows; ++r)
+        for (int c = 0; c < columns; ++c)
             L.cells.push_back(panel::Box{L.grid.x + float(c) * (cell + gap), L.grid.y + float(r) * (cell + gap), cell,
                                          cell});
     L.footer = panel::Box{0, L.grid.y + L.grid.h + 14 * s, w, kFooterH * s};
