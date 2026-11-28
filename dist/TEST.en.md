@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.24-beta.49 — what's new · 2026-11-28
+
+Internal: a window's corner can be pulled with the button held by an MCP check too (for the laptop checks).
+
 # uaRO Graphics 3.0.24-beta.48 — what's new · 2026-11-28
 
 Window sizes after the interface audit:
