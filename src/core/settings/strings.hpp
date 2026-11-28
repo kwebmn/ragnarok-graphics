@@ -483,6 +483,7 @@ enum class Text : uint16_t {
     FxOwnGround, FxOwnGroundHint,  // 3.0.4-beta.10: the own world's prototype
     KeepFpsOffNote,                // 3.0.4-beta.11: keep_fps's choice said on the screen (R-EQDYNE)
     KeepFpsThinNote,               // 3.0.4-beta.35: keep_fps thinned the grass
+    KeepFpsMsaaNote,               // 3.0.24-beta.38: keep_fps lowered MSAA (before any effect)
     CardRaisedNote,                // 3.0.4-beta.35: a weak card keeps up - the medium set on trial (3.0.11-beta.58)
     CardLoweredNote,               // 3.0.4-beta.35: the medium set too much for it - the weak set back (3.0.11-beta.58)
     CardSlowNote,                  // 3.0.11-beta.58: a card not judged yet holding the game back - a set lower

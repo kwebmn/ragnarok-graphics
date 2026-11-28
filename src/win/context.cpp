@@ -1226,7 +1226,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // Part 3: DLSS (in the 64-bit renderer) draws the world instead of MSAA; Pause turns it off as well. Without
     // DLSS in the renderer (no RTX card, no files) MSAA stays (0.8 review M4).
     const bool upscale = enhanced_ && (dlss || uiNative || taa);
-    const int samples = enhanced_ && !upscale && config.msaa > 1 && !light_.noSupersampling ? config.msaa : 1;
+    const int msaa = effect_costs::msaaDrawn(config.msaa, keepMsaa_);  // 3.0.24-beta.38: keep_fps's step down
+    const int samples = enhanced_ && !upscale && msaa > 1 && !light_.noSupersampling ? msaa : 1;
     if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_ || samples != scaledSamples_ ||
         upscale != scaledUpscale_) {
         scaledWidth_ = plan.targetWidth;  // also when it fails: no new attempt every frame
@@ -1989,6 +1990,7 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     if (config.keepFps <= 0 || config.keepEffects) {
         if (!keepOff_.empty()) effectsMade_ = false;  // 3.0.23-beta.2: the ones turned off made again at once
         keepOff_.clear();  // turned off: the effects come back (3.0.4-beta.35: the windows go on for the card's judge)
+        keepMsaa_ = {};    // 3.0.24-beta.38: and MSAA as set
         keepSlow_ = 0;
     }
     // 3.0.5-beta.6: nor one of «Тест графіки» - its sets change every 15 s, and it turns nothing off
@@ -2041,6 +2043,26 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     keepSlow_ = effect_costs::slowForCard(fps, aim, gpuMs) ? keepSlow_ + 1 : 0;
     if (keepSlow_ < 2) return;
     keepSlow_ = 0;
+    // 3.0.24-beta.38 (the owner: «оба»; the laptop's run: 4x MSAA 3-5 ms of a Radeon 610M's 16-21 ms frame): MSAA a
+    // step lower first - Direct3D 12 alone draws it (scaledSamples_: what the renderer was given)
+    const int drawn = renderer && !renderer->d3d11() && !renderer->remix() ? scaledSamples_ : 1;
+    if (effect_costs::lowerMsaa(config.msaa, drawn, keepMsaa_)) {
+        char card[48] = "";
+        if (gpuMs >= 0) std::snprintf(card, sizeof card, ", the card %.1f ms a frame", gpuMs);
+        LOG_INFO("keep_fps: %.0f fps, under %d%s - MSAA %dx -> %s for this game", fps, aim, card, drawn,
+                 keepMsaa_.to > 1 ? (std::to_string(keepMsaa_.to) + "x").c_str() : "off");
+        const settings::Lang lang = language();
+        const settings::Text to = keepMsaa_.to >= 4   ? settings::Text::Factor4
+                                  : keepMsaa_.to >= 2 ? settings::Text::Factor2
+                                                      : settings::Text::SmoothOff;
+        const settings::Text from = drawn >= 8 ? settings::Text::Factor8
+                                    : drawn >= 4 ? settings::Text::Factor4
+                                                 : settings::Text::Factor2;
+        sayOnScreen(wideOf(settings::fmt(settings::tr(lang, settings::Text::KeepFpsMsaaNote),
+                                         {settings::tr(lang, from), settings::tr(lang, to),
+                                          std::to_string(int(fps + 0.5)), std::to_string(aim)})));
+        return;
+    }
     EffectSettings fx = effects();
     for (const std::string& k : keepOff_) effect_costs::drop(fx, k);
     std::set<std::string> passed = keepOff_;  // 3.0.4-beta.11: and what the player turned on in this game

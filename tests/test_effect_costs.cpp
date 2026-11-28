@@ -157,3 +157,30 @@ TEST(effect_costs_keep_effects_holds_no_target) {
     CHECK_EQ(uagfx::effect_costs::keepTarget(60, 0, false, 60, true), 0);
     CHECK_EQ(uagfx::effect_costs::keepTarget(0, 0, false, 60, false), 0);
 }
+
+// 3.0.24-beta.38 (the owner: «оба»; the laptop's run: 4x MSAA 3-5 ms of a Radeon 610M's 16-21 ms frame): keep_fps's
+// first steps - MSAA a step lower each time it is too slow (8, 4, 2, off), the effects only after; a value the player
+// picks by hand meanwhile is theirs
+TEST(effect_costs_keep_fps_lowers_msaa_first) {
+    effect_costs::MsaaCap cap;
+    CHECK_EQ(effect_costs::msaaDrawn(4, cap), 4);
+    CHECK(effect_costs::lowerMsaa(4, 4, cap));
+    CHECK(cap.from == 4 && cap.to == 2);
+    CHECK_EQ(effect_costs::msaaDrawn(4, cap), 2);
+    CHECK(effect_costs::lowerMsaa(4, 2, cap));
+    CHECK_EQ(effect_costs::msaaDrawn(4, cap), 0);
+    CHECK(!effect_costs::lowerMsaa(4, 1, cap));  // none left: the effects' turn
+    // Direct3D 11, an upscaler, the super-light mode: nothing drawn with MSAA, nothing to lower
+    effect_costs::MsaaCap none;
+    CHECK(!effect_costs::lowerMsaa(4, 1, none));
+    CHECK(!effect_costs::lowerMsaa(0, 1, none));
+    CHECK_EQ(none.from, 0);
+    // 8x: 4 first
+    effect_costs::MsaaCap eight;
+    CHECK(effect_costs::lowerMsaa(8, 8, eight));
+    CHECK_EQ(effect_costs::msaaDrawn(8, eight), 4);
+    // the player sets it by hand meanwhile: theirs, and a new step from it
+    CHECK_EQ(effect_costs::msaaDrawn(2, cap), 2);
+    CHECK(effect_costs::lowerMsaa(2, 2, cap));
+    CHECK(cap.from == 2 && cap.to == 0);
+}

@@ -185,4 +185,16 @@ std::vector<std::string> turnedOn(const EffectSettings& was, const EffectSetting
     return out;
 }
 
+int msaaDrawn(int setting, const MsaaCap& cap) {
+    return cap.from != 0 && cap.from == setting ? std::min(setting, cap.to) : setting;
+}
+
+bool lowerMsaa(int setting, int drawn, MsaaCap& cap) {
+    if (drawn <= 1) return false;
+    if (cap.from != setting) cap = MsaaCap{};  // picked by hand meanwhile: a new step from it
+    cap.from = setting;
+    cap.to = drawn >= 8 ? 4 : drawn >= 4 ? 2 : 0;
+    return true;
+}
+
 }  // namespace uagfx::effect_costs

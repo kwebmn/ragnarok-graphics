@@ -100,7 +100,7 @@ bool apuByName(const std::string& adapter) {
     rest = rest.substr(1);
     if (rest.rfind("Graphics", 0) == 0) return true;  // «AMD Radeon(TM) Graphics»
     if (rest.find("Vega") != std::string::npos && rest.find("Graphics") != std::string::npos)
-        return true;  // «Radeon(TM) Vega 8 Graphics», «Radeon(TM) RX Vega 10 Graphics»; RX Vega 56/64 have no «Graphics»
+        return true;  // «Radeon(TM) Vega 8 Graphics», «Radeon(TM) RX Vega 10 Graphics» (RX Vega 56/64: no «Graphics»)
     size_t d = 0;  // «610M», «890M», «8060S»: three or four digits and M or S, the model's whole word
     while (d < rest.size() && rest[d] >= '0' && rest[d] <= '9') ++d;
     if (d < 3 || d > 4 || d >= rest.size() || (rest[d] != 'M' && rest[d] != 'S')) return false;

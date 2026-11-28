@@ -9,6 +9,7 @@
 
 #include "core/frame_stats.hpp"
 #include "core/card_speed.hpp"
+#include "core/effect_costs.hpp"
 #include "core/light_mode.hpp"
 #include "core/map_load.hpp"
 #include "core/glint.hpp"
@@ -309,6 +310,7 @@ private:
     int screenHz_ = 0;     // 3.0.19-beta.25: the game window's screen's refresh (keepFrameRate's windows), 0 unknown
     int keepAim(const Config& config) const;  // core effect_costs::keepTarget with it
     std::set<std::string> keepOff_;
+    effect_costs::MsaaCap keepMsaa_;  // 3.0.24-beta.38: keep_fps's MSAA for the rest of the game (lowered first)
     // 3.0.4-beta.11 (R-EQDYNE «нету травы»): the switches the player turned on in this game, which keep_fps leaves,
     // and its choice said on the screen for 10 s (the frame counter's line)
     std::set<std::string> keepByHand_;

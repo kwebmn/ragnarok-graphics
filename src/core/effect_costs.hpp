@@ -65,4 +65,17 @@ bool slowForCard(double fps, int target, double gpuMs);
 // 3.0.23-beta.2: `keepEffects` ([frames] keep_effects) - no target at all: nothing is turned off for the frames
 int keepTarget(int keepFps, int fpsLimit, bool vsync, int refreshHz, bool keepEffects = false);
 
+// 3.0.24-beta.38 (the owner: «оба»; the laptop's run: 4x MSAA 3-5 ms of a Radeon 610M's 16-21 ms frame): keep_fps's
+// first steps - MSAA a step lower each time the card holds the game back (8, 4, 2, off), the effects only after. The
+// cap holds for the rest of the game while [quality] msaa stays the value it was lowered from: one the player picks by
+// hand meanwhile is theirs.
+struct MsaaCap {
+    int from = 0;  // the setting it was lowered from; 0: no cap
+    int to = 0;    // the samples drawn under it (0: none)
+};
+int msaaDrawn(int setting, const MsaaCap& cap);  // the samples to draw: the setting's, or the cap's
+// `drawn`: the samples the renderer draws now (1 or less: none - Direct3D 11, an upscaler, the super-light mode);
+// true when MSAA went a step lower (`cap` changed)
+bool lowerMsaa(int setting, int drawn, MsaaCap& cap);
+
 }  // namespace uagfx::effect_costs

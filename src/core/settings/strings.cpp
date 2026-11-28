@@ -5279,6 +5279,10 @@ constexpr Entry kTexts[] = {
      "The grass thinned for the rest of the game: {1} frames a second, under {2} (Keep the frame rate)",
      "Траву проріджено до кінця гри — {1} кадр/с, менше ніж {2} («Тримати частоту кадрів»)",
      "Трава прорежена до конца игры — {1} кадр/с, меньше {2} («Держать частоту кадров»)"},
+    {Text::KeepFpsMsaaNote,
+     "Smoothing (MSAA) {1} → {2} for the rest of the game: {3} frames a second, under {4} (Keep the frame rate)",
+     "Згладжування (MSAA) {1} → {2} до кінця гри — {3} кадр/с, менше ніж {4} («Тримати частоту кадрів»)",
+     "Сглаживание (MSAA) {1} → {2} до конца игры — {3} кадр/с, меньше {4} («Держать частоту кадров»)"},
     // 3.0.11-beta.58 (the autopilot): any set of the ladder - {1} the set tried, {2} the one now
     {Text::CardRaisedNote, "The card keeps up: the effects set «{1}» on trial",
      "Відеокарта встигає: набір ефектів «{1}» — на пробу",
