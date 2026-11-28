@@ -96,3 +96,15 @@ TEST(strings_fmt_number_forms) {
     CHECK_EQ(fmt("{1|a|b|c}", {"many"}), std::string("c"));  // not a number: the last form
     CHECK_EQ(fmt("{1} · {2}", {"x", "y"}), std::string("x · y"));  // as before
 }
+
+// 3.0.24-beta.41 (the laptop's effects run: «Тіні від факелів» on in «Класика» showed nothing - the torches' shadows
+// are drawn in the remaster mode alone, on both renderers, its hint silent; so the stamp behind characters on
+// Direct3D 11): a switch that works in one mode only says which
+TEST(strings_remaster_only_switches_say_so) {
+    for (const Lang l : {Lang::En, Lang::Uk, Lang::Ru}) {
+        const std::string torch = tr(l, Text::FxTorchShadowsHint), stamp = tr(l, Text::FxBodyStampHint);
+        CHECK(torch.find("Remaster") != std::string::npos || torch.find("Ремастер") != std::string::npos);
+        CHECK(stamp.find("Direct3D 11") != std::string::npos);
+        CHECK(stamp.find("Remaster") != std::string::npos || stamp.find("Ремастер") != std::string::npos);
+    }
+}

@@ -2095,11 +2095,11 @@ constexpr Entry kTexts[] = {
     {Text::FxTorchShadows, "Shadows from torches and lamps", "Тіні від факелів і ламп", "Тени от факелов и ламп"},
     {Text::FxTorchShadowsHint,
      "Walls, columns, houses, hills and characters stop the light of the nearest torches and lamps: what stands "
-     "behind them stays in shadow, the shadows soft at their edges. Off at first.",
+     "behind them stays in shadow, the shadows soft at their edges. Remaster mode only. Off at first.",
      "Стіни, колони, будинки, пагорби й персонажі затримують світло найближчих факелів і ламп: те, що за ними, "
-     "лишається в тіні, краї тіней м'які. Спочатку вимкнено.",
+     "лишається в тіні, краї тіней м'які. Лише в режимі «Ремастер». Спочатку вимкнено.",
      "Стены, колонны, дома, холмы и персонажи задерживают свет ближайших факелов и ламп: то, что за ними, остаётся "
-     "в тени, края теней мягкие. Сначала выключено."},
+     "в тени, края теней мягкие. Только в режиме «Ремастер». Сначала выключено."},
     {Text::FxTorchShadowsStrength, "Shadow strength", "Сила тіні", "Сила тени"},
     {Text::FxTorchShadowsStrengthHint,
      "How much of a torch's or a lamp's light a shadow takes away: 100 % all of it, less leaves some light, as if "
@@ -2111,11 +2111,11 @@ constexpr Entry kTexts[] = {
     {Text::FxBodyStamp, "Effects behind the character", "Ефекти за героєм", "Эффекты за героем"},
     {Text::FxBodyStampHint,
      "An effect behind a character - the far half of a ring round it, a fire at its back - hides behind its figure, "
-     "the part in front of it is drawn over as before. Off at first.",
+     "the part in front of it is drawn over as before. With Direct3D 11 in the Remaster mode only. Off at first.",
      "Ефект позаду персонажа — дальня половина кола навколо нього, вогонь за спиною — ховається за його фігурою, а те, "
-     "що попереду, малюється поверх, як і раніше. Спочатку вимкнено.",
+     "що попереду, малюється поверх, як і раніше. З Direct3D 11 — лише в режимі «Ремастер». Спочатку вимкнено.",
      "Эффект позади персонажа — дальняя половина круга вокруг него, огонь за спиной — прячется за его фигурой, а то, "
-     "что впереди, рисуется поверх, как и раньше. Сначала выключено."},
+     "что впереди, рисуется поверх, как и раньше. С Direct3D 11 — только в режиме «Ремастер». Сначала выключено."},
     {Text::FxSharpSprites, "Sharp character pixels", "Чіткі пікселі героїв", "Чёткие пиксели героев"},
     {Text::FxSharpSpritesHint,
      "Close up, the sprites of characters, monsters and NPCs are drawn as clean squares of their pixels with a soft "
