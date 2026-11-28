@@ -21,6 +21,7 @@ namespace uagfx::uikit::itemgrid {
 // cells, footer, bar): its hit test, drops, flashes and the pad's places then fall where the cells are drawn.
 struct TabV {
     Rml::String name, fresh;
+    Rml::String icon;  // 3.0.24-beta.50 (the audit 28.11, item 6): its picture; the name a tip while pointed at
     bool on = false, hot = false;
 };
 struct CellV {
@@ -36,6 +37,8 @@ struct Model {
     // 3.0.18-beta.100: the window's scale in pixels as 12 of its own (its sizes in rem: the text size and «Речі»'s
     // size settings as before the live layout)
     float base = 12;
+    // 3.0.24-beta.50: the tabs' pictures (their sources, iw::Tab's order) - the window's own, given before fill()
+    std::vector<Rml::String> tabIcons;
     // 3.0.24-beta.48 (the audit 28.11, the owner's «сделать»): its own columns and rows - the window's, the grid's
     // widths and height in rem (a cell 4, the gap 0.6667)
     float bodyW = 44.6667f, gridW = 36.6667f, gridH = 22.6667f, gridInner = 37.5f;

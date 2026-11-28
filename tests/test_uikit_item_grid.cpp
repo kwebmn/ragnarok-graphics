@@ -223,9 +223,10 @@ TEST(uikit_item_grid_close_cross_centred) {
     rmlhost::close(g.doc);
 }
 
-// R-AVW884 («в карточке табики както не так смотрятся, тоисть активный табик»: 3.0.24-beta.33, the interface at 175 %,
-// English): a vertical tab's word turned upright stands in its tab's middle - the turned word's middle on the tab's
-TEST(uikit_item_grid_turned_tab_words_in_their_tabs) {
+// R-AVW884 (3.0.24-beta.33: the turned words in their tabs' middle). 3.0.24-beta.50 (the audit 28.11, item 6: the
+// turned words hard to read): the tabs are pictures - each its own icon in the tab's middle, the tab no taller than
+// it is wide and a half; the tab's name beside it, over the grid, only while the tab is pointed at
+TEST(uikit_item_grid_tabs_are_icons_named_on_hover) {
     for (const float scale : {1.0f, 1.75f}) {
         iw::Texts t = texts();
         const char* tabs[iw::kTabs] = {"All", "Usable", "Gear", "Cards", "Misc", "Starred"};
@@ -234,8 +235,11 @@ TEST(uikit_item_grid_turned_tab_words_in_their_tabs) {
         std::vector<int> shown{0, 1, 2};
         iw::Show sh;
         sh.tab = iw::Tab(3);
+        sh.hoverTab = 1;
         iw::Layout L = iw::layout(0, 0, scale, t, measure);
         static ig::Model m;
+        m.tabIcons.clear();
+        for (int i = 0; i < iw::kTabs; ++i) m.tabIcons.push_back("pic:tab" + std::to_string(i));
         ig::fill(m, L, items, shown, sh, t, [](const panel::Picture*) { return std::string(); });
         std::string error;
         Rml::ElementDocument* d =
@@ -245,25 +249,34 @@ TEST(uikit_item_grid_turned_tab_words_in_their_tabs) {
         rmlhost::update();
         Rml::ElementList tabsFound;
         d->QuerySelectorAll(tabsFound, ".tab");
-        int seen = 0;
+        int seen = 0, tips = 0;
         for (Rml::Element* tab : tabsFound) {
-            Rml::Element* word = tab->QuerySelector(".tl");
-            if (!word || !tab->IsVisible(true)) continue;
-            ++seen;
+            if (!tab->IsVisible(true)) continue;
             const Rml::Vector2f ta = tab->GetAbsoluteOffset(Rml::BoxArea::Border);
             const Rml::Vector2f ts = tab->GetBox().GetSize(Rml::BoxArea::Border);
-            const Rml::Vector2f wa = word->GetAbsoluteOffset(Rml::BoxArea::Border);
-            const Rml::Vector2f ws = word->GetBox().GetSize(Rml::BoxArea::Border);
-            const float tx = ta.x + ts.x / 2, ty = ta.y + ts.y / 2, wx = wa.x + ws.x / 2, wy = wa.y + ws.y / 2;
-            const bool middle = std::abs(tx - wx) < 1.0f && std::abs(ty - wy) < 1.0f;
-            if (!middle)
-                std::fprintf(stderr, "scale %.2f tab «%s»: tab %.1f,%.1f %.1fx%.1f, word %.1f,%.1f %.1fx%.1f\n",
-                             double(scale), word->GetInnerRML().c_str(), double(ta.x), double(ta.y), double(ts.x),
-                             double(ts.y), double(wa.x), double(wa.y), double(ws.x), double(ws.y));
-            CHECK(middle);
-            CHECK(ws.x <= ts.y + 0.5f);  // the word's length (turned: its height) no longer than the tab is tall
+            CHECK(tab->QuerySelector(".tl") == nullptr);  // no turned word
+            CHECK(ts.y <= ts.x * 1.5f + 0.5f);
+            if (Rml::Element* img = tab->QuerySelector("img")) {
+                const Rml::Vector2f ia = img->GetAbsoluteOffset(Rml::BoxArea::Border);
+                const Rml::Vector2f is = img->GetBox().GetSize(Rml::BoxArea::Border);
+                CHECK(img->GetAttribute<Rml::String>("src", "") == "pic:tab" + std::to_string(seen));
+                CHECK(std::abs(ta.x + ts.x / 2 - (ia.x + is.x / 2)) < 1.0f);
+                CHECK(std::abs(ta.y + ts.y / 2 - (ia.y + is.y / 2)) < 1.0f);
+            } else {
+                CHECK(false);  // a tab without its icon
+            }
+            if (Rml::Element* tip = tab->QuerySelector(".tip")) {
+                if (tip->IsVisible(true)) {
+                    ++tips;
+                    CHECK(seen == 1);
+                    CHECK(tip->GetInnerRML() == "Usable");
+                    CHECK(tip->GetAbsoluteOffset(Rml::BoxArea::Border).x >= ta.x + ts.x - 0.5f);  // beside it
+                }
+            }
+            ++seen;
         }
         CHECK_EQ(seen, iw::kTabs);
+        CHECK_EQ(tips, 1);
         rmlhost::close(d);
     }
 }

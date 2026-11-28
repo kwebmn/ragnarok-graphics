@@ -433,7 +433,31 @@ int explainedItem(const Show& sh) {
     if (sh.hoverPlus >= 0) return sh.hoverPlus;
     if (sh.hoverBattle >= 0) return kBattle + sh.hoverBattle;
     if (sh.pinnedBattle >= 0) return kBattle + sh.pinnedBattle;
-    return sh.selected;
+    return sh.selected >= 0 ? sh.selected : sh.lastItem;  // 3.0.24-beta.50: never an empty panel once told
+}
+
+int firstToTell(const Data& d) {
+    for (int i = 0; i < kStats; ++i)
+        if (canRaise(d, i)) return i;
+    return 0;
+}
+
+namespace {
+
+std::string plusWords(const Data& d, int stat, const Texts& t) {
+    return fill(t.plusShort, {std::to_string(d.need[stat]), std::to_string(d.free)});
+}
+
+}  // namespace
+
+panel::Box plusTip(const Layout& L, const Data& d, int stat, const Texts& t, const Measure& m) {
+    if (stat < 0 || stat >= kStats || size_t(stat) >= L.pluses.size() || L.tab != 0 || d.base[stat] >= 99 ||
+        canRaise(d, stat) || t.plusShort.empty())
+        return panel::Box{};
+    const float s = L.s;
+    const panel::Box& p = L.pluses[size_t(stat)];
+    const float w = m(plusWords(d, stat, t), 12 * s, true) + 16 * s, h = 22 * s;
+    return panel::Box{p.x + p.w + 6 * s, p.y + (p.h - h) / 2, w, h};
 }
 
 Explained explained(const Data& d, int item, const Texts& t) {
@@ -978,6 +1002,15 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
         out.push_back(Words{panel::Box{side, px + kExplainTitleH * s - 6 * s + float(i) * kExplainLineH * s,
                                        L.glass.w - 2 * side, kExplainLineH * s},
                             e.lines[i], i == 0 ? kText : 0xC9D1DE, 12 * s, false, Align::Left});
+    if (sh.hoverPlus >= 0) {  // 3.0.24-beta.50 (the audit 28.11, item 7): the grey «+»'s why, over what is beside it
+        const panel::Box tip = plusTip(L, d, sh.hoverPlus, t, m);
+        if (tip.w > 0) {
+            Words w{tip, plusWords(d, sh.hoverPlus, t), kText, 12 * s, true, Align::Center};
+            w.groundA = 0.96f;
+            w.ground = 0x1B1F2A;
+            out.push_back(w);
+        }
+    }
     return out;
 }
 

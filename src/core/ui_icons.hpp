@@ -22,6 +22,7 @@ enum class Icon : uint8_t {
     ViewBehind, ViewEyes,  // 3.0.21-beta.12: the 3D view's looks on the character block - a camera, an eye
     Star,                  // 3.0.24-beta.20: the items' «обране» (a drawn star, no letter the font lacks)
     Again,                 // 3.0.24-beta.26: «Полювання»'s «begin anew» (no ↺ in the font)
+    Grid, Card, Box,       // 3.0.24-beta.50: «Речі»'s tabs (all, cards, misc)
     kCount
 };
 

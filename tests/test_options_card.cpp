@@ -49,3 +49,17 @@ TEST(options_card_opaque_windows) {
     CHECK(optionscard::windowOpacity(80, false) == 80);
     CHECK(optionscard::windowOpacity(55, false) == 55);
 }
+
+// 3.0.24-beta.50 (the audit 28.11, item 11: «Музика» on with its slider at 0 - on and silent): a sound's switch and its
+// slider as one - the slider to 0 switches it off, up from 0 on; switched on at 0, the slider goes half way
+TEST(options_card_sound_switch_and_slider_as_one) {
+    CHECK(optionscard::afterSlider(true, 0).toggle);    // silent: off
+    CHECK(optionscard::afterSlider(false, 30).toggle);  // heard: on
+    CHECK(!optionscard::afterSlider(true, 30).toggle && !optionscard::afterSlider(false, 0).toggle);
+    CHECK_EQ(optionscard::afterSlider(true, 0).volume, -1);
+    CHECK_EQ(optionscard::afterSwitch(true, 0).volume, optionscard::kVolumeOnAgain);  // on, and heard
+    CHECK_EQ(optionscard::afterSwitch(true, 40).volume, -1);
+    CHECK_EQ(optionscard::afterSwitch(false, 0).volume, -1);
+    CHECK(!optionscard::afterSwitch(true, 0).toggle);
+    CHECK(optionscard::kVolumeOnAgain > 0 && optionscard::kVolumeOnAgain <= optionscard::kVolumeMost);
+}

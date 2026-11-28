@@ -64,10 +64,29 @@ bool clipped(Rml::Element* e) {
     return false;
 }
 
-void walk(Rml::Element* e, Rgbf world, const std::vector<Painted>& painted, int& order, std::vector<Word>& out) {
+void walk(Rml::Element* e, Rgbf world, const std::vector<Painted>& painted, int& order, std::vector<Word>& out,
+          const InkOf& inkOf) {
     for (int i = 0; i < e->GetNumChildren(true); ++i) {
         Rml::Element* c = e->GetChild(i);
         ++order;
+        unsigned ink = 0;
+        if (inkOf && c->GetTagName() == "img" && c->IsVisible(true)) {  // 3.0.24-beta.50: a one-colour picture
+            const std::string src = c->GetAttribute<Rml::String>("src", "");
+            if (!src.empty() && inkOf(src, ink)) {
+                const Rml::Vector2f at = c->GetAbsoluteOffset(Rml::BoxArea::Border);
+                const Rml::Vector2f size = c->GetBox().GetSize(Rml::BoxArea::Border);
+                const Rgbf g = groundUnder(painted, order, at.x + size.x / 2, at.y + size.y / 2, world);
+                const Rgbf f{float((ink >> 16) & 0xFF) / 255.0f, float((ink >> 8) & 0xFF) / 255.0f,
+                             float(ink & 0xFF) / 255.0f};
+                const float l1 = luminance(f), l2 = luminance(g);
+                Word w;
+                w.text = "icon " + src.substr(0, 54);
+                w.x = at.x, w.y = at.y, w.w = size.x, w.h = size.y;
+                w.colour = ink & 0xFFFFFF, w.ground = hex(g);
+                w.contrast = (std::max(l1, l2) + 0.05f) / (std::min(l1, l2) + 0.05f);
+                out.push_back(std::move(w));
+            }
+        }
         if (auto* t = rmlui_dynamic_cast<Rml::ElementText*>(c)) {
             const std::string text = t->GetText();
             if (text.find_first_not_of(" \n\t") == std::string::npos || !e->IsVisible(true)) continue;
@@ -89,13 +108,13 @@ void walk(Rml::Element* e, Rgbf world, const std::vector<Painted>& painted, int&
             out.push_back(std::move(w));
             continue;
         }
-        walk(c, world, painted, order, out);
+        walk(c, world, painted, order, out, inkOf);
     }
 }
 
 }  // namespace
 
-std::vector<Word> words(Rml::ElementDocument* doc, Rgbf world) {
+std::vector<Word> words(Rml::ElementDocument* doc, Rgbf world, const InkOf& inkOf) {
     std::vector<Word> out;
     if (!doc || !doc->IsVisible()) return out;
     std::vector<Painted> painted;
@@ -108,13 +127,13 @@ std::vector<Word> words(Rml::ElementDocument* doc, Rgbf world) {
     }
     paintedOf(doc, painted, order);
     order = 0;
-    walk(doc, world, painted, order, out);
+    walk(doc, world, painted, order, out, inkOf);
     return out;
 }
 
-std::vector<Word> problems(Rml::ElementDocument* doc, Rgbf world) {
+std::vector<Word> problems(Rml::ElementDocument* doc, Rgbf world, const InkOf& inkOf) {
     std::vector<Word> out;
-    for (Word& w : words(doc, world))
+    for (Word& w : words(doc, world, inkOf))
         if (w.contrast < kLeastContrast || w.cut) out.push_back(std::move(w));
     return out;
 }

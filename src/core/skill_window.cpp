@@ -276,14 +276,26 @@ std::string info(const Skill& k, const Texts& t) {
     return line;
 }
 
-int keepInSight(int focus, int scroll, int count) {
-    const int most = std::max(0, count - kRows);
+int keepInSight(int focus, int scroll, int count, int shown) {
+    shown = std::max(1, shown);
+    const int most = std::max(0, count - shown);
     scroll = std::clamp(scroll, 0, most);
     if (focus < 0) return scroll;
     if (focus < scroll) return focus;
-    if (focus >= scroll + kRows) return std::min(most, focus - kRows + 1);
+    if (focus >= scroll + shown) return std::min(most, focus - shown + 1);
     return scroll;
 }
+
+namespace {
+
+// 3.0.24-beta.50: the list's rows - its biggest tab's skills (every tab as tall), kLeastRows to kRows
+int listRows(const Data& d) {
+    size_t most = 0;
+    for (const Tab& tab : d.tabs) most = std::max(most, tab.skills.size());
+    return std::clamp(int(most), kLeastRows, kRows);
+}
+
+}  // namespace
 
 int iconSide(float scale) { return int(std::lround(32 * scale)); }
 
@@ -317,9 +329,12 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
     const Tab* tab = tabOf(d, sh.tab);
     L.tab = tab ? int(tab - d.tabs.data()) : 0;
     const int count = tab ? int(tab->skills.size()) : 0;
-    const int shown = kRows;  // 3.0.11-beta.230: always eight rows high - room for the side panel
-    L.first = std::clamp(sh.scroll, 0, std::max(0, count - kRows));
-    const bool scrolls = count > kRows;
+    // 3.0.11-beta.230: «Дерево» always eight rows high - room for the side panel; 3.0.24-beta.50: the list as its
+    // biggest tab
+    const int shown = sh.tree ? kRows : listRows(d);
+    L.shown = shown;
+    L.first = std::clamp(sh.scroll, 0, std::max(0, count - shown));
+    const bool scrolls = count > shown;
     float listY = L.tabsRow.y + L.tabsRow.h + 6 * s;
     if (!d.notice.empty()) {  // 3.0.11-beta.223: why skills are closed
         L.notice = panel::Box{side, listY, w - 2 * side, 28 * s};
@@ -371,7 +386,7 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
     const float rowW = bodyW - (scrolls ? 12 * s : 0);
     L.list = panel::Box{side, listY, bodyW, float(shown) * kRowH * s};
     if (scrolls) L.scroll = panel::Box{side + bodyW - 5 * s, listY + 4 * s, 5 * s, L.list.h - 8 * s};
-    for (int i = L.first; i < count && i < L.first + kRows; ++i) {
+    for (int i = L.first; i < count && i < L.first + shown; ++i) {
         const Skill& k = tab->skills[size_t(i)];
         const panel::Box r{side, listY + float(i - L.first) * kRowH * s, rowW, kRowH * s};
         L.rows.push_back(r);

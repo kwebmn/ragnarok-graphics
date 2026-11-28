@@ -139,6 +139,7 @@ void fill(Model& m, const sw::Layout& L, const sw::Data& d, const sw::Show& sh, 
         }
         for (const sw::Words& x : sw::words(L, d, sh, t, measure)) {  // the body's words (the head's are its own)
             if (x.box.y + x.box.h / 2 < top) continue;
+            if (x.groundA > 0) b.box(x.box, 6 * sc, x.ground, x.groundA, kWhite, 0.14f, 1.0f * sc);  // .50
             b.word(x.box, x.text, x.rgb, x.px, x.bold,
                    x.align == sw::Align::Right    ? ly::Align::Right
                    : x.align == sw::Align::Center ? ly::Align::Center

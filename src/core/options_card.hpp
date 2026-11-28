@@ -61,4 +61,14 @@ struct Words {
     bool bold = false;
     Align align = Align::Left;
 };
+
+// 3.0.24-beta.50 (the audit 28.11, item 11: «Музика» on with its slider at 0 - on and silent): a sound's switch and
+// its slider as one - the slider to 0 switches it off, up from 0 on; switched on at 0, the slider goes half way
+constexpr int kVolumeOnAgain = kVolumeMost / 2;
+struct SoundStep {
+    bool toggle = false;  // the switch to be turned over
+    int volume = -1;      // the slider to be set to (-1: left)
+};
+SoundStep afterSlider(bool on, int volume);    // the slider just set to `volume`, the switch `on`
+SoundStep afterSwitch(bool nowOn, int volume);  // the switch just turned to `nowOn`, the slider at `volume`
 }  // namespace uagfx::optionscard

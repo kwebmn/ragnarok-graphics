@@ -244,3 +244,33 @@ TEST(skill_window_name_room_measured) {
     CHECK(skillwin::nameRoom(L, 2) > withArrows);  // Magnum Break: no arrows - room to the level's column
     CHECK(skillwin::nameRoom(L, 99) == 0);
 }
+
+// 3.0.24-beta.50 (the audit 28.11, item 3: a novice's two skills in a list eight rows tall): the list as tall as its
+// biggest tab - every tab the same height (no jump between them) - at least kLeastRows, at most kRows; «Дерево» keeps
+// its eight
+TEST(skill_window_list_as_tall_as_its_biggest_tab) {
+    skillwin::Data novice;
+    novice.tabs.push_back(
+        {"Novice", {skill(1, "Basic Skill", 0, 9, 9, false), skill(142, "First Aid", 4, 1, 1, false)}});
+    skillwin::Show sh;
+    const skillwin::Layout one = skillwin::layout(0, 0, 1.0f, novice, sh, texts(), measure);
+    CHECK_EQ(one.shown, skillwin::kLeastRows);
+    const skillwin::Data d = knight();  // tabs of 2, 3 and 12
+    const skillwin::Layout a = skillwin::layout(0, 0, 1.0f, d, sh, texts(), measure);
+    sh.tab = 2;
+    const skillwin::Layout b = skillwin::layout(0, 0, 1.0f, d, sh, texts(), measure);
+    CHECK(a.shown == skillwin::kRows && b.shown == skillwin::kRows && a.list.h == b.list.h);
+    CHECK(one.list.h < a.list.h - 100);  // four rows of 46 against eight
+    skillwin::Data six;
+    six.tabs.push_back({"Novice", {skill(1, "Basic Skill", 0, 9, 9, false)}});
+    skillwin::Tab acolyte{"Acolyte", {}};
+    for (int i = 0; i < 6; ++i) acolyte.skills.push_back(skill(28 + i, "Acolyte skill", 1, 1, 10, true));
+    six.tabs.push_back(acolyte);
+    sh.tab = 0;
+    const skillwin::Layout c = skillwin::layout(0, 0, 1.0f, six, sh, texts(), measure);
+    CHECK_EQ(c.shown, 6);
+    CHECK(c.scroll.w == 0);  // all six seen
+    sh.tree = true;
+    CHECK_EQ(skillwin::layout(0, 0, 1.0f, novice, sh, texts(), measure).shown, skillwin::kRows);
+    CHECK_EQ(skillwin::keepInSight(5, 0, 8, 4), 2);  // four shown: the sixth at the bottom
+}

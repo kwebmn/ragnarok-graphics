@@ -63,6 +63,18 @@ bool Ui::frame(const char* name, bool on, int x, int y, int generation, const iw
         model.searchIcon = icon("search", uiicons::Icon::Search, 15, 0x9AA3B5, 2.2f);
         model.starIcon = icon("star", uiicons::Icon::Star, 13, 0x9AA3B5, 2.0f);
         model.starOnIcon = icon("staron", uiicons::Icon::Star, 13, 0xF3C653, 2.6f);
+        // 3.0.24-beta.50 (the audit 28.11, item 6: the turned words hard to read): the tabs' pictures in iw::Tab's
+        // order, each in its state's ink as the words were (on, pointed at, the rest)
+        static constexpr uiicons::Icon kTabIcons[iw::kTabs] = {uiicons::Icon::Grid, uiicons::Icon::Item,
+                                                               uiicons::Icon::Equip, uiicons::Icon::Card,
+                                                               uiicons::Icon::Box, uiicons::Icon::Star};
+        model.tabIcons.resize(size_t(iw::kTabs));
+        for (int i = 0; i < iw::kTabs; ++i) {
+            const bool on = i == int(sh.tab), hot = i == sh.hoverTab;
+            const uint32_t ink = on ? 0xEEF2F8 : hot ? 0xC9D1DE : 0x7E889A;
+            const std::string what = "tab" + std::to_string(i) + (on ? "o" : hot ? "h" : "");
+            model.tabIcons[size_t(i)] = icon(what.c_str(), kTabIcons[i], 17, ink, on ? 2.2f : 2.0f);
+        }
         ig::fill(model, L, items, shown, sh, t, [&](const panel::Picture* p) {
             return source(*this, "i:" + std::to_string(uintptr_t(p)), p);
         });

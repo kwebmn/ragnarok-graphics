@@ -76,3 +76,29 @@ body { width: 900px; height: 100px; font-family: Plex; font-size: 14px; }
     }
     rmlhost::close(doc);
 }
+
+// 3.0.24-beta.50 (the owner's «делай все», item 2; the audit 28.11: the light theme's icons white on white were not
+// caught - the check read words only): the one-colour pictures too - their ink (inkOf: the mean of their solid
+// pixels; false for a picture of many colours, an item's or a face) against the grounds under them, 3:1 (WCAG 1.4.11)
+TEST(uikit_ui_check_finds_faint_icons) {
+    const char* rml = R"RML(<rml><head><style>
+body { width: 300px; height: 100px; background-color: #f6f8fc; font-family: Plex; font-size: 14px; }
+img { display: block; width: 18px; height: 18px; }
+</style></head><body><img src="pic:white"/><img src="pic:ink"/><img src="pic:item"/></body></rml>)RML";
+    std::string error;
+    Rml::ElementDocument* doc = rmlhost::load(rml, nullptr, 0, 0, &error);
+    CHECK(doc != nullptr);
+    if (!doc) return;
+    rmlhost::update();
+    const uikit::uicheck::InkOf inkOf = [](const std::string& src, unsigned& rgb) {
+        if (src == "pic:white") return rgb = 0xECEFF5, true;
+        if (src == "pic:ink") return rgb = 0x1B1F2A, true;
+        return false;  // the item's picture: many colours, not judged
+    };
+    const std::vector<uikit::uicheck::Word> bad =
+        uikit::uicheck::problems(doc, uikit::uicheck::Rgbf{0.45f, 0.45f, 0.45f}, inkOf);
+    CHECK_EQ(bad.size(), size_t(1));
+    CHECK(bad.size() == 1 && bad[0].text == "icon pic:white" && bad[0].contrast < 1.2f);
+    CHECK(uikit::uicheck::problems(doc).empty());  // no inkOf: the words alone, as before
+    rmlhost::close(doc);
+}

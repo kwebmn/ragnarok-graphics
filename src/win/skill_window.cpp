@@ -113,6 +113,8 @@ struct State {
     // skill's icon under the cursor, the game's drag begun and let go only when the button comes up (as «Речі»)
     kw::Press press;
     panel::Picture dragIcon;
+    panel::Picture noIcon;  // 3.0.24-beta.50: a skill the client has no picture of
+    uint32_t noIconInk = 0;
     const panel::Picture* dragOf = nullptr;
     uint32_t dragTexture = 0;
     int dragW = 0, dragH = 0;
@@ -297,6 +299,25 @@ void keepPlan(State& s) {
 }
 
 // 3.0.11-beta.223 (the skills concept, stage 1): a skill of the tree the server has not sent, and why
+
+// 3.0.24-beta.50 (the audit 28.11: «Increase Weight Limit R» an empty square): a skill the client has no picture of -
+// the skills' sign in a quiet ink (painted again when the size or the theme changes)
+const panel::Picture* noIcon(State& s, int side) {
+    const uint32_t ink = uaui::themed(0x9AA3B5, uitheme::Group::Windows);
+    if (s.noIcon.width != side || s.noIconInk != ink) {
+        s.noIcon.width = s.noIcon.height = side;
+        s.noIcon.px.assign(size_t(side) * size_t(side), 0u);
+        uiicons::draw(s.noIcon, uiicons::Icon::Skill, float(side) * 0.15f, float(side) * 0.15f, float(side) * 0.7f, ink,
+                      0.9f);
+        s.noIconInk = ink;
+    }
+    return &s.noIcon;
+}
+
+const panel::Picture* iconOr(State& s, const panel::Picture* icon, int side) {
+    return icon && icon->width > 0 ? icon : noIcon(s, side);
+}
+
 kw::Skill closedSkill(State& s, int id, int last, const std::vector<int>& chain, const std::map<int, int>& levels) {
     kw::Skill k;
     k.id = id;
@@ -333,6 +354,7 @@ kw::Skill closedSkill(State& s, int id, int last, const std::vector<int>& chain,
     }
     const float side = float(kw::iconSide(s.scale));
     k.icon = k.aegis.empty() ? nullptr : clienttables::icon(hotbar::lowered(k.aegis), int(side), 4 * s.scale);
+    k.icon = iconOr(s, k.icon, int(side));  // 3.0.24-beta.50
     return k;
 }
 
@@ -400,6 +422,7 @@ void readData(State& s) {
                 k.needs = needs;
             }
             k.icon = r.aegis.empty() ? nullptr : clienttables::icon(hotbar::lowered(r.aegis), int(side), 4 * s.scale);
+            k.icon = iconOr(s, k.icon, int(side));  // 3.0.24-beta.50
             tab.skills.push_back(k);
         }
         if (shut != closed.end())  // after the sent ones (their indices past tabRaw's: no raw skill)
@@ -727,7 +750,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     const int count = s.data.tabs.empty() ? 0 : int(s.data.tabs[size_t(s.show.tab)].skills.size());
     if (s.show.pad) {
         s.show.focus = std::clamp(s.show.focus, 0, std::max(0, count - 1));
-        s.show.scroll = kw::keepInSight(s.show.focus, s.show.scroll, count);
+        s.show.scroll = kw::keepInSight(s.show.focus, s.show.scroll, count, s.layout.shown);
     }
     const kw::Texts t = texts();
     s.layout = kw::layout(0, 0, scale, s.data, s.show, t, measure);
@@ -992,7 +1015,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (m == WM_MOUSEWHEEL) {  // the list scrolled, three rows a notch
         const int count = s.data.tabs.empty() ? 0 : int(s.data.tabs[size_t(s.show.tab)].skills.size());
         const int by = GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -3 : 3;
-        s.show.scroll = std::clamp(s.layout.first + by, 0, std::max(0, count - kw::kRows));
+        s.show.scroll = std::clamp(s.layout.first + by, 0, std::max(0, count - s.layout.shown));
         s.key.clear();
         return true;
     }

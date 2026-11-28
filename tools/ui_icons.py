@@ -82,6 +82,13 @@ ICONS = [
     ('Star', '<path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>'),
     # 3.0.24-beta.26: «Полювання»'s «begin anew» (a circle's arrow; Plex has no ↺)
     ('Again', '<path d="M18.5 12a6.5 6.5 0 1 1-1.9-4.6"/><path d="M17 3.5v4.2h-4.2"/>'),
+    # 3.0.24-beta.50 (the audit 28.11, item 6): «Речі»'s tabs as pictures - all (four cells), a card (its picture and
+    # its line), the misc things (a box)
+    ('Grid', '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/>'
+             '<rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>'),
+    ('Card', '<rect x="6" y="3.5" width="12" height="17" rx="1.8"/><path d="M8.6 6.5h6.8v6.5H8.6z"/>'
+             '<path d="M8.6 16.2h6.8"/>'),
+    ('Box', '<path d="M12 3.5l8 4v9l-8 4-8-4v-9z"/><path d="M4 7.5l8 4 8-4M12 11.5v9"/>'),
 ]
 
 NUMBER = r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?'

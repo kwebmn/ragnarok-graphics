@@ -684,3 +684,17 @@ TEST(window_panel_menu_offers_half_its_size) {
     CHECK_EQ(panel::kLeastSize, 50);
     CHECK_EQ(panel::kMostSize, 150);
 }
+
+// 3.0.24-beta.50 (the owner's «делай все», item 2): a one-colour picture's ink for the interface check - its solid
+// pixels' mean (premultiplied undone); a picture of many colours (an item's, a face) has none
+TEST(window_panel_ink_of_one_colour_pictures) {
+    std::vector<uint32_t> icon(64, 0u);
+    for (int i = 0; i < 20; ++i) icon[size_t(i)] = 0xFFECEFF5u;  // solid
+    icon[30] = 0x80767880u;                                        // an edge, half covered: ECEFF5 at 0.5
+    unsigned rgb = 0;
+    CHECK(panel::inkOf(icon, rgb) && rgb == 0xECEFF5u);
+    std::vector<uint32_t> item(64, 0u);
+    for (int i = 0; i < 20; ++i) item[size_t(i)] = i % 2 ? 0xFFE03020u : 0xFF2040E0u;  // red and blue
+    CHECK(!panel::inkOf(item, rgb));
+    CHECK(!panel::inkOf(std::vector<uint32_t>(16, 0u), rgb));  // nothing solid
+}

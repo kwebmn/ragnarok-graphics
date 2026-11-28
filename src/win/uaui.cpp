@@ -1924,9 +1924,15 @@ json::Value check(const std::string& docName, bool all) {
     size_t told = 0;
     for (Doc* d : s.docs) {
         if (!d->made() || !d->shown() || !d->doc() || (!docName.empty() && d->name != docName)) continue;
+        // 3.0.24-beta.50 (the owner's «делай все», item 2): the one-colour pictures (the icons) checked too
+        const uikit::uicheck::InkOf inkOf = [&s](const std::string& src, unsigned& rgb) {
+            const ::uagfx::uisources::Kept* k = s.named.find(src);
+            return k && k->px && panel::inkOf(*k->px, rgb);
+        };
         const std::vector<uikit::uicheck::Word> found =
-            all && !docName.empty() ? uikit::uicheck::words(d->doc(), uikit::uicheck::Rgbf{0.45f, 0.45f, 0.45f})
-                                    : uikit::uicheck::problems(d->doc());
+            all && !docName.empty()
+                ? uikit::uicheck::words(d->doc(), uikit::uicheck::Rgbf{0.45f, 0.45f, 0.45f}, inkOf)
+                : uikit::uicheck::problems(d->doc(), uikit::uicheck::Rgbf{0.45f, 0.45f, 0.45f}, inkOf);
         if (found.empty() && docName.empty()) continue;
         json::Value one = json::Value::object();
         one.set("name", d->name);

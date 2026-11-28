@@ -277,6 +277,7 @@ sw::Texts texts() {
     t.maxed = say(settings::Text::StatsMaxed);
     t.cost = say(settings::Text::StatsCost);
     t.shortBy = say(settings::Text::StatsShort);
+    t.plusShort = say(settings::Text::StatsPlusShort);  // 3.0.24-beta.50
     t.top = say(settings::Text::StatsTop);
     const settings::Text effects[sw::kStats] = {settings::Text::StatsEffectStr, settings::Text::StatsEffectAgi,
                                                 settings::Text::StatsEffectVit, settings::Text::StatsEffectInt,
@@ -478,6 +479,12 @@ static void frameInner(HWND game, bool on, double k, int targetWidth, int target
                                                                         : 1;
     }
     for (int i = 0; i < sw::kPlanBuffs; ++i) s.show.buffOn[i] = sw::planBuff(s.data, s.show.plan, i);  // .297
+    // 3.0.24-beta.50 (the audit 28.11, item 7): «Як рахується» keeps the item told of last; opened, the first stat a
+    // point can raise
+    if (s.show.hoverRow >= 0 || s.show.hoverPlus >= 0 || s.show.hoverBattle >= 0 || s.show.pinnedBattle >= 0)
+        s.show.lastItem = sw::explainedItem(s.show);
+    else if (s.show.lastItem < 0)
+        s.show.lastItem = sw::firstToTell(s.data);
     const sw::Data& d = s.data;
     std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(scale) +
                       ';' + std::to_string(s.show.hoverRow) + ',' + std::to_string(s.show.hoverPlus) + ',' +
@@ -489,7 +496,7 @@ static void frameInner(HWND game, bool on, double k, int targetWidth, int target
                       std::to_string(s.layout.refJob) + ',' + std::to_string(s.show.hoverTab) + ',' +
                       std::to_string(s.show.hoverArrow) + ';' + std::to_string(s.show.hoverPlan) + ',' +
                       std::to_string(s.show.hoverPlanIndex) + ';' + std::to_string(s.show.plan.level) + ':' +
-                      std::to_string(s.show.aspdGoal) + ':';
+                      std::to_string(s.show.aspdGoal) + ':' + std::to_string(s.show.lastItem) + ':';  // .50
     for (int i = 0; i < sw::kStats; ++i) key += std::to_string(s.show.plan.base[i]) + ',';
     key += ';';  // .297, .298
     for (int i = 0; i < sw::kPlanBuffs; ++i) key += std::to_string(d.learned[i]);

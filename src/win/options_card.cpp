@@ -195,6 +195,8 @@ void hide(State& s) {
     s.dragging = -1;
 }
 
+void setVolume(State& s, int i, int volume);  // 3.0.24-beta.50: the switch and its slider as one
+
 void toggle(State& s, int i) {
     const uint32_t window = gameOptions();
     const uint32_t box = window && i >= 0 && i < 6 ? read32(window + oc::kToggleAt[i]) : 0;
@@ -206,6 +208,11 @@ void toggle(State& s, int i) {
     if (s.told++ < 40) LOG_INFO("options: switch %d %s (its checkbox's 0x93)", i, now ? "on" : "off");
     s.values = valuesOf(window);
     s.key.clear();
+    // 3.0.24-beta.50 (the audit 28.11, item 11): a sound switched on at 0 heard - its slider half way
+    if (i < 2) {
+        const oc::SoundStep step = oc::afterSwitch(s.values.on[i], s.values.volume[i]);
+        if (step.volume >= 0) setVolume(s, i, step.volume);
+    }
 }
 
 void setVolume(State& s, int i, int volume) {
@@ -218,6 +225,9 @@ void setVolume(State& s, int i, int volume) {
     if (s.told++ < 40) LOG_INFO("options: volume %d to %d (its slider's message 8 by %d)", i, target, by);
     s.values = valuesOf(window);
     s.key.clear();
+    // 3.0.24-beta.50 (the audit 28.11, item 11: «Музика» on and silent): the slider to 0 switches the sound off, up
+    // from 0 on
+    if (oc::afterSlider(s.values.on[i], s.values.volume[i]).toggle) toggle(s, i);
 }
 
 void closeIt(State& s) {

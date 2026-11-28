@@ -1,12 +1,74 @@
 #include "core/checks_now.hpp"
 
 #include <algorithm>
+#include <functional>
 #include <sstream>
 
 namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.50 (the owner's «делай все» after the audit 28.11): «Речі»'s tabs as pictures
+        {"items_tabs_icons_50", "3.0.24-beta.50", "",
+         {"«Items»: the tabs are pictures, the name shows when pointed at",
+          "«Речі»: вкладки — значки, назва з'являється під курсором",
+          "«Вещи»: вкладки — значки, название появляется под курсором"},
+         {"Open «Items» (Alt+E): the tabs at the left are pictures (all, a flask, a shield, a card, a box, a star), "
+          "the chosen one framed in gold. Point at one: its name beside it. The hint lines say «right click - the "
+          "card» everywhere. Check both the light and the dark look.",
+          "Відкрийте «Речі» (Alt+E): вкладки ліворуч — значки (усе, колба, щит, карта, коробка, зірка), обрана в "
+          "золотій рамці. Наведіть на значок: поруч його назва. У рядках підказок усюди «ПКМ — картка». Перевірте "
+          "світлий і темний вигляд.",
+          "Откройте «Вещи» (Alt+E): вкладки слева — значки (всё, колба, щит, карта, коробка, звезда), выбранная в "
+          "золотой рамке. Наведите на значок: рядом его название. В строках подсказок везде «ПКМ — карточка». "
+          "Проверьте светлый и тёмный вид."}},
+        // 3.0.24-beta.50: «Навички» as tall as its biggest tab; a skill without the client's picture has a sign
+        {"skills_height_50", "3.0.24-beta.50", "",
+         {"«Skills»: as tall as its biggest tab; no empty icon squares",
+          "«Навички»: висота за найбільшою вкладкою, без порожніх квадратів",
+          "«Навыки»: высота по самой большой вкладке, без пустых квадратов"},
+         {"Open «Skills» (Alt+S) on a character with few skills (a novice, a first job): the window is as tall as its "
+          "biggest tab (4-8 rows), no empty half; switching the tabs does not change its height. A skill the client "
+          "has no picture of (Increase Weight Limit R) shows a grey lightning sign, not an empty square.",
+          "Відкрийте «Навички» (Alt+S) на персонажі з кількома навичками (новачок, перша професія): вікно заввишки "
+          "як найбільша вкладка (4-8 рядків), без порожньої половини; між вкладками висота не змінюється. Навичка "
+          "без картинки в клієнті (Increase Weight Limit R) — сіра блискавка, а не порожній квадрат.",
+          "Откройте «Навыки» (Alt+S) на персонаже с несколькими навыками (новичок, первая профессия): окно высотой "
+          "как самая большая вкладка (4-8 строк), без пустой половины; между вкладками высота не меняется. Навык "
+          "без картинки в клиенте (Increase Weight Limit R) — серая молния, а не пустой квадрат."}},
+        // 3.0.24-beta.50: the stats' grey «+» says why; the panel keeps its last item; the free points a button
+        {"stats_points_50", "3.0.24-beta.50", "",
+         {"Status: the grey «+» says why; «+N points» opens it",
+          "«Характеристики»: сірий «+» пояснює чому; «+N очки» відкриває вікно",
+          "«Характеристики»: серый «+» объясняет почему; «+N очки» открывает окно"},
+         {"With free points: click the gold «+4 points» chip under the name in the character block - «Status» opens "
+          "(skill points - «Skills»). In «Status» point at a grey «+» (a stat dearer than the points you have): "
+          "beside it «needs 8, you have 4». The panel «How it is counted» at the bottom is never empty: opened, it "
+          "tells of the first stat a point can raise, then of the row pointed at last.",
+          "Маючи вільні очки: клацніть золоту кнопку «+4 очки» під іменем у блоці персонажа — відкриються "
+          "«Характеристики» (очки навичок — «Навички»). У «Характеристиках» наведіть на сірий «+» (стат дорожчий, "
+          "ніж у вас очок): поруч «потрібно 8, є 4». Панель «Як рахується» внизу ніколи не порожня: щойно "
+          "відкрито — про перший стат, який можна підняти, далі — про останній рядок під курсором.",
+          "Имея свободные очки: нажмите золотую кнопку «+4 очки» под именем в блоке персонажа — откроются "
+          "«Характеристики» (очки навыков — «Навыки»). В «Характеристиках» наведите на серый «+» (стат дороже, "
+          "чем у вас очков): рядом «нужно 8, есть 4». Панель «Как считается» внизу никогда не пустая: сразу "
+          "после открытия — о первом стате, который можно поднять, дальше — о последней строке под курсором."}},
+        // 3.0.24-beta.50: a sound's switch and its slider as one
+        {"sound_slider_50", "3.0.24-beta.50", "",
+         {"Settings: music at 0 is off; switched on, it is heard",
+          "Налаштування: музика на 0 — вимкнена; увімкнена — чути",
+          "Настройки: музыка на 0 — выключена; включена — слышно"},
+         {"In the game's settings move the «Music» slider to 0: its switch turns off by itself; move it up: on again. "
+          "Turn the switch on while the slider is at 0: the slider goes half way and the music plays. The same for "
+          "«Sounds». The list «Checking now» shows the two newest betas' checks only (marked, the ones before come).",
+          "У налаштуваннях гри посуньте повзунок «Музика» до 0: її перемикач вимкнеться сам; посуньте вгору — "
+          "увімкнеться знову. Увімкніть перемикач, коли повзунок на 0: повзунок стане на середину, і музика заграє. "
+          "Так само для «Звуки». Список «Перевіряємо зараз» показує перевірки лише двох найновіших бет (відмічені "
+          "— з'являються попередні).",
+          "В настройках игры передвиньте ползунок «Музыка» на 0: её переключатель выключится сам; поднимите — "
+          "включится снова. Включите переключатель, когда ползунок на 0: ползунок встанет на середину, и музыка "
+          "заиграет. Так же для «Звуки». Список «Проверяем сейчас» показывает проверки только двух новейших бет "
+          "(отмеченные — появляются предыдущие)."}},
         // 3.0.24-beta.48 (the audit 28.11, the owner's «сделать»): a grid window's corner adds cells; Ctrl+wheel
         {"window_cells_48", "3.0.24-beta.48", "",
          {"Pull «Речі»'s corner: more cells; Ctrl and the wheel: bigger or smaller",
@@ -586,7 +648,22 @@ const std::vector<Check>& all() {
     return list;
 }
 
-std::vector<const Check*> open(const std::string& done) {
+namespace {
+
+// «3.0.24-beta.48» -> 3, 0, 24, 48 (compared as numbers)
+std::vector<int> versionKey(const std::string& v) {
+    std::vector<int> n;
+    int x = -1;
+    for (const char c : v + ".") {
+        if (c >= '0' && c <= '9') x = (x < 0 ? 0 : x * 10) + (c - '0');
+        else if (x >= 0) n.push_back(x), x = -1;
+    }
+    return n;
+}
+
+}  // namespace
+
+std::vector<const Check*> open(const std::string& done, int betas) {
     std::vector<std::string> ids;
     std::stringstream in(done);
     for (std::string id; std::getline(in, id, ',');)
@@ -594,6 +671,19 @@ std::vector<const Check*> open(const std::string& done) {
     std::vector<const Check*> out;
     for (const Check& c : all())
         if (std::find(ids.begin(), ids.end(), c.id) == ids.end()) out.push_back(&c);
+    if (betas <= 0) return out;
+    std::vector<std::vector<int>> newest;  // the open ones' betas, newest first
+    for (const Check* c : out) {
+        const std::vector<int> k = versionKey(c->since);
+        if (std::find(newest.begin(), newest.end(), k) == newest.end()) newest.push_back(k);
+    }
+    std::sort(newest.begin(), newest.end(), std::greater<>());
+    if (newest.size() > size_t(betas)) newest.resize(size_t(betas));
+    out.erase(std::remove_if(out.begin(), out.end(),
+                             [&](const Check* c) {
+                                 return std::find(newest.begin(), newest.end(), versionKey(c->since)) == newest.end();
+                             }),
+              out.end());
     return out;
 }
 

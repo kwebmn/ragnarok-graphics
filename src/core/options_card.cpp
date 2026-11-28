@@ -59,4 +59,16 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
+SoundStep afterSlider(bool on, int volume) {
+    SoundStep s;
+    s.toggle = on ? volume <= 0 : volume > 0;
+    return s;
+}
+
+SoundStep afterSwitch(bool nowOn, int volume) {
+    SoundStep s;
+    if (nowOn && volume <= 0) s.volume = kVolumeOnAgain;
+    return s;
+}
+
 }  // namespace uagfx::optionscard

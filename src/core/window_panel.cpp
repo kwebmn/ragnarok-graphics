@@ -720,4 +720,24 @@ float wordsWidth(const std::string& utf8, float px, bool bold) {
     return any ? thousandths * px / 1000.0f * 1.03f + 0.5f : 0.0f;
 }
 
+bool inkOf(const std::vector<uint32_t>& px, unsigned& rgb) {
+    double r = 0, g = 0, b = 0, rr = 0, gg = 0, bb = 0;
+    int n = 0;
+    for (const uint32_t p : px) {
+        const unsigned a = p >> 24;
+        if (a < 128) continue;
+        const double pr = double((p >> 16) & 0xFF) * 255.0 / a, pg = double((p >> 8) & 0xFF) * 255.0 / a,
+                     pb = double(p & 0xFF) * 255.0 / a;
+        r += pr, g += pg, b += pb, rr += pr * pr, gg += pg * pg, bb += pb * pb;
+        ++n;
+    }
+    if (n == 0) return false;
+    const auto var = [n](double s, double ss) { return std::max(0.0, ss / n - (s / n) * (s / n)); };
+    const double spread = std::sqrt(var(r, rr) + var(g, gg) + var(b, bb)) / 255.0;
+    if (spread > 0.15) return false;  // many colours (an item's, a face)
+    const auto ch = [n](double v) { return unsigned(std::clamp(std::lround(v / n), 0L, 255L)); };
+    rgb = (ch(r) << 16) | (ch(g) << 8) | ch(b);
+    return true;
+}
+
 }  // namespace uagfx::panel

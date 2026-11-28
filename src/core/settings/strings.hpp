@@ -789,7 +789,7 @@ enum class Text : uint16_t {
     ItemsSearch, ItemsUse,
     ItemsWear, ItemsCard, ItemsInfo,
     StatsTitle, StatsFree, StatsColumnStat, StatsColumnBase, StatsColumnBonus, StatsColumnTotal, StatsColumnCost,
-    StatsBattle, StatsCast, StatsMaxed, StatsCost, StatsShort, StatsTop, StatsEffectStr, StatsEffectAgi,
+    StatsBattle, StatsCast, StatsMaxed, StatsCost, StatsShort, StatsPlusShort, StatsTop, StatsEffectStr, StatsEffectAgi,
     StatsEffectVit, StatsEffectInt, StatsEffectDex, StatsEffectLuk, StatsHint, ItemsWorn,
     // 3.0.11-beta.266: «Характеристики» stage 2
     StatsRowDelay, StatsRowRegen, StatsRowWeight, StatsPerSecond, StatsHow, StatsHowNone, StatsHowSame,

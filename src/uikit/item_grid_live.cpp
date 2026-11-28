@@ -20,7 +20,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <div class="head" data-hit="title"><span class="title">{{title}}</span><span class="hk">{{hotkey}}</span><div
   class="x" data-hit="close" data-class-hot="closeHot"><span class="cxa"></span><span class="cxb"></span></div></div>
 <div class="ibody"><div class="tabs" data-hit="tabsrow"><div class="tab" data-for="t, i : tabs" data-hit="tab"
-  data-attr-data-index="i" data-class-on="t.on" data-class-hot="t.hot"><span class="tl">{{t.name}}</span><span
+  data-attr-data-index="i" data-class-on="t.on" data-class-hot="t.hot"><img data-if="t.icon != ''"
+  data-attr-src="t.icon"/><span class="tip" data-if="t.hot">{{t.name}}</span><span
   class="new" data-if="t.fresh != ''">{{t.fresh}}</span></div></div><div class="imain">
 <div class="search" data-hit="search" data-class-typing="typing"><img data-if="searchIcon != ''"
   data-attr-src="searchIcon"/><span class="q" data-if="query != ''">{{query}}</span><span class="caret"
@@ -78,7 +79,7 @@ const char* rml() { return kRml; }
 namespace {
 
 bool same(const TabV& a, const TabV& b) {
-    return a.name == b.name && a.fresh == b.fresh && a.on == b.on && a.hot == b.hot;
+    return a.name == b.name && a.fresh == b.fresh && a.on == b.on && a.hot == b.hot && a.icon == b.icon;
 }
 
 bool same(const CellV& a, const CellV& b) {
@@ -152,6 +153,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         t.RegisterMember("fresh", &TabV::fresh);
         t.RegisterMember("on", &TabV::on);
         t.RegisterMember("hot", &TabV::hot);
+        t.RegisterMember("icon", &TabV::icon);  // 3.0.24-beta.50
     }
     if (auto e = c.RegisterStruct<CellV>()) {
         e.RegisterMember("index", &CellV::index);
@@ -232,6 +234,7 @@ void fill(Model& m, const iw::Layout& L, const std::vector<iw::Item>& items, con
     for (int i = 0; i < iw::kTabs; ++i) {
         TabV& v = m.tabs[size_t(i)];
         v.name = t.tabs[i];
+        v.icon = size_t(i) < m.tabIcons.size() ? m.tabIcons[size_t(i)] : Rml::String();  // 3.0.24-beta.50
         v.fresh = fresh[i] > 0 ? std::to_string(fresh[i]) : "";
         v.on = i == int(sh.tab);
         v.hot = i == sh.hoverTab;

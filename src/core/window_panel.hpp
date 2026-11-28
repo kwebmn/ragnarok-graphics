@@ -104,6 +104,11 @@ struct Picture {
         return *this;
     }
 };
+
+// 3.0.24-beta.50 (the owner's «делай все», item 2; the audit 28.11: the light theme's icons white on white): a
+// one-colour picture's ink - its solid pixels' (alpha 0.5 and over) mean, premultiplied undone; false when none is
+// solid or its pixels are of many colours (an item's, a face: not judged by the interface check)
+bool inkOf(const std::vector<uint32_t>& px, unsigned& rgb);
 // 3.0.18-beta.12: uaUI's - while on, blank() gives each picture its own scene to record into (the game's thread)
 void setRecording(bool on);
 // `hovered`: the top row's button under the cursor (Close, Layout), or its corner (Corner: the gold corner of the

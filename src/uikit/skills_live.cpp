@@ -261,17 +261,18 @@ void fill(Model& m, const kw::Layout& L, const kw::Data& d, const kw::Show& sh, 
     m.choiceCount = int(m.choices.size());
     keepLength(m.choices, hadChoices);
     const int count = tab ? int(tab->skills.size()) : 0;
-    m.scrollable = !sh.tree && count > kw::kRows;
+    const int shown = std::max(1, L.shown);  // 3.0.24-beta.50: the rows the list is tall
+    m.scrollable = !sh.tree && count > shown;
     if (m.scrollable) {
-        m.thumbH = std::max(100.0f * float(kw::kRows) / float(count), 8.0f);
-        m.thumbTop = (100 - m.thumbH) * float(L.first) / float(std::max(1, count - kw::kRows));
+        m.thumbH = std::max(100.0f * float(shown) / float(count), 8.0f);
+        m.thumbTop = (100 - m.thumbH) * float(L.first) / float(std::max(1, count - shown));
     }
-    m.rows.assign(size_t(kw::kRows), RowV{});
-    for (int i = 0; i < kw::kRows; ++i) {
+    m.rows.assign(size_t(shown), RowV{});
+    for (int i = 0; i < shown; ++i) {
         RowV& r = m.rows[size_t(i)];
         const int index = L.first + i;
         r.index = index;
-        r.last = i + 1 == kw::kRows || index + 1 >= count;
+        r.last = i + 1 == shown || index + 1 >= count;
         if (sh.tree || !tab || index >= count) continue;
         const kw::Skill& k = tab->skills[size_t(index)];
         r.used = true;

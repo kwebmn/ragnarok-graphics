@@ -189,6 +189,8 @@ struct Words {
 // is a class of the theme: "" the text's, "muted", "gold", "warn", "bad", "fight"
 struct Chip {
     std::string text, tone;
+    // 3.0.24-beta.50 (the audit 28.11, item 8): a button's - "stats" opens «Характеристики», "skills" «Навички»
+    std::string act;
 };
 struct Cell {
     std::string key, value, tone;

@@ -19,6 +19,9 @@ namespace uagfx::skillwin {
 // buttons. The skills, their levels and the raise are the game's session's and its own messages' (win/skill_window).
 // The parts that need no Windows; the words by GDI.
 constexpr int kRows = 8;  // rows shown at once; more scroll
+// 3.0.24-beta.50 (the audit 28.11, item 3: a novice's two skills in a list eight rows tall): the list as tall as its
+// biggest tab, at least these rows (the tree view its kRows)
+constexpr int kLeastRows = 4;
 
 // 3.0.11-beta.223 (the skills concept, stage 1: «Ще закриті»): why a skill of the tree is not the player's to raise -
 // the server sends a skill only once its requirements are met (pc_calc_skilltree), never a quest, wedding or Soul Link
@@ -88,7 +91,8 @@ struct Data;
 // «Рівень N з M», «Потрібно:» and each need «Name 5 ✓» or «Name 6 (5/6)», «Відкриває: A, B»; none for a skill not
 // on the tabs
 std::vector<std::string> cardFacts(const Data& d, const Texts& t, int skill);
-int keepInSight(int focus, int scroll, int count);  // the scroll that shows the focused row
+// the scroll that shows the focused row of `shown` rows
+int keepInSight(int focus, int scroll, int count, int shown = kRows);
 int iconSide(float scale);
 
 using Measure = std::function<float(const std::string& utf8, float px, bool bold)>;
@@ -117,6 +121,7 @@ struct Layout {
     float s = 1;
     int x = 0, y = 0, w = 0, h = 0;
     int tab = 0, first = 0;  // the tab shown, its first row's index
+    int shown = kRows;       // 3.0.24-beta.50: the rows the list is tall (listRows; the tree's kRows)
     panel::Box glass, title, close, tabsRow, list, footer, scroll;
     panel::Box notice;  // 3.0.11-beta.223: Data::notice's line (w 0: none)
     // 3.0.11-beta.224: the view's buttons; «Дерево»: the tree's place (rows, icons and pluses: a box per skill of the

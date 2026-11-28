@@ -19,8 +19,10 @@ struct Check {
     const char* steps[3];
 };
 const std::vector<Check>& all();
-// The checks not marked done (`done`: the ids, comma separated)
-std::vector<const Check*> open(const std::string& done);
+// The checks not marked done (`done`: the ids, comma separated). 3.0.24-beta.50 (the audit 28.11, item 11: «Перевіряємо
+// зараз 55»): of the newest `betas` betas among them alone (marked, the ones before come); 0 - of every beta
+constexpr int kShownBetas = 2;
+std::vector<const Check*> open(const std::string& done, int betas = kShownBetas);
 // `done` with `id` added (once)
 std::string markDone(const std::string& done, const std::string& id);
 // Shown only by a beta build (the beta channel's: its version says «-beta»)

@@ -50,6 +50,7 @@ struct Texts {
     std::string battle, cast;     // «Бій», «Час касту»
     std::string maxed;            // «макс.»
     std::string cost, shortBy, top;  // «{1} {2} → {3} коштує {4}, у вас {5}», «бракує {1}», «{1} {2} — максимум»
+    std::string plusShort;           // 3.0.24-beta.50: the grey «+»'s tip - «потрібно {1}, є {2}»
     std::string effects[kStats];  // what a point gives: «ATK +{1}, вантаж +30» ...
     std::string hint;             // nothing pointed at
     char decimal = ',';
@@ -164,6 +165,9 @@ struct Show {
     int aspdGoal = 0;                         // .269: the ASPD aimed at (0: the plan's + 5)
     bool buffOn[kPlanBuffs] = {};             // .297: each plan buff counted (paint has no Data: set with the plan)
     bool hoverClose = false;
+    // 3.0.24-beta.50 (the audit 28.11, item 7: «Як рахується» empty until a row is pointed at): the item told of last
+    // - the panel keeps it while nothing is pointed at (the window opens with firstToTell)
+    int lastItem = -1;
 };
 
 struct Layout {
@@ -208,6 +212,11 @@ struct Hit {
 };
 Hit hitTest(const Layout& L, float x, float y);
 int explainedItem(const Show& sh);  // .266: the stat or battle row the panel tells of
+// 3.0.24-beta.50: the stat the panel tells of when the window opens - the first a point can raise, else STR
+int firstToTell(const Data& d);
+// 3.0.24-beta.50 (the audit 28.11, item 7): the grey «+»'s tip beside it - «потрібно 8, є 4»; w 0 when the «+» can
+// raise or the stat is at 99
+panel::Box plusTip(const Layout& L, const Data& d, int stat, const Texts& t, const Measure& m);
 
 
 enum class Align : uint8_t { Left, Right, Center };
@@ -218,6 +227,8 @@ struct Words {
     float px = 12;
     bool bold = false;
     Align align = Align::Left;
+    float groundA = 0;  // 3.0.24-beta.50: a chip of its own under it (the grey «+»'s tip), drawn over what is there
+    uint32_t ground = 0;
 };
 // 3.0.24-beta.27 (the spec's «Характеристики»: «база + бонус»): «9», «9 + 3», «9 − 2» (U+2212)
 std::string baseAndBonus(int base, int bonus);

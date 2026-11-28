@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -19,9 +20,14 @@ struct Word {
     float contrast = 0;                // WCAG's, 1-21
     bool cut = false;                  // wider than its box, the box clipping it
 };
-std::vector<Word> words(Rml::ElementDocument* doc, Rgbf world);
+// 3.0.24-beta.50 (the owner's «делай все», item 2; the audit 28.11: the light theme's icons white on white were not
+// caught): a picture's (img's) ink - the mean of its solid pixels; false for a picture of many colours (an item's, a
+// face) or one not known. Given, the one-colour pictures are checked as words are («icon <src>»)
+using InkOf = std::function<bool(const std::string& src, unsigned& rgb)>;
+std::vector<Word> words(Rml::ElementDocument* doc, Rgbf world, const InkOf& inkOf = {});
 constexpr float kLeastContrast = 3.0f;
 // The words under kLeastContrast or cut (`world` the picture under the window - mid grey for the game's)
-std::vector<Word> problems(Rml::ElementDocument* doc, Rgbf world = Rgbf{0.45f, 0.45f, 0.45f});
+std::vector<Word> problems(Rml::ElementDocument* doc, Rgbf world = Rgbf{0.45f, 0.45f, 0.45f},
+                           const InkOf& inkOf = {});
 
 }  // namespace uagfx::uikit::uicheck

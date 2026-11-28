@@ -200,3 +200,16 @@ TEST(char_block_durations) {
     CHECK(charblock::duration(768, "год", "хв") == "13 год" && charblock::duration(70000, "год", "хв") == "> 999 год");
 }
 
+
+// 3.0.24-beta.50 (the audit 28.11, item 8: «+4 очки» a word alone on its line): the free points are buttons - the
+// stats' opens «Характеристики», the skills' «Навички»; the other chips (arrows, broken things) words as before
+TEST(char_block_free_points_are_buttons) {
+    charblock::Data d = sora();
+    d.skillPoints = 2;
+    d.ammo = 3;
+    charblock::Texts t = texts();
+    t.ammo = "Стріли";
+    const charblock::Model m = charblock::model(d, t, charblock::View::Full, charblock::Look::Bars, false);
+    CHECK_EQ(m.points.size(), size_t(3));
+    CHECK(m.points.size() == 3 && m.points[0].act == "stats" && m.points[1].act == "skills" && m.points[2].act.empty());
+}

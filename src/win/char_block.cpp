@@ -337,7 +337,8 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
  <div class="line" style="left: 5.571429rem; top: 3.857143rem;"><span class="chip" data-for="c : social"
    data-attr-class="'chip ' + c.tone">{{c.text}}</span></div>
  <div class="line" style="left: 5.571429rem; top: 5.071429rem;"><span class="chip" data-for="c : points"
-   data-attr-class="'chip ' + c.tone">{{c.text}}</span></div>
+   data-attr-class="'chip ' + c.tone + (c.act != '' ? ' btn' : '')"
+   data-event-click="chip(c.act)">{{c.text}}</span></div>
  <span class="label" style="left: 0.857143rem; top: 6.714286rem;">HP</span>
  <div class="track" style="left: 3.428571rem; top: 6.928571rem; width: 12.857143rem; height: 0.714286rem;"><div
    class="fill hp" data-class-low="low" data-style-width="hp_w + '%'"></div></div>
@@ -591,6 +592,7 @@ bool uiMake() {
         if (auto c = m.RegisterStruct<cb::Chip>()) {
             c.RegisterMember("text", &cb::Chip::text);
             c.RegisterMember("tone", &cb::Chip::tone);
+            c.RegisterMember("act", &cb::Chip::act);  // 3.0.24-beta.50
         }
         if (auto c = m.RegisterStruct<cb::Cell>()) {
             c.RegisterMember("key", &cb::Cell::key);
@@ -700,6 +702,14 @@ bool uiMake() {
             const int z = a.empty() ? -1 : a[0].Get<int>();
             if (z >= 0 && z < cb::kZones && (cb::opensStats(cb::Zone(z)) || z == int(cb::Zone::Points)))
                 press(cb::kButton[0].command);
+        });
+        // 3.0.24-beta.50 (the audit 28.11, item 8): the free points' buttons - «Характеристики», «Навички»
+        m.BindEventCallback("chip", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            const std::string act = a.empty() ? std::string() : a[0].Get<std::string>();
+            if (act == "stats") press(cb::kButton[0].command);
+            else if (act == "skills") press(cb::kButton[3].command);
+            else return;
+            LOG_INFO("character: the free points' button opened %s", act.c_str());
         });
         m.BindEventCallback("hover", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             if (a.size() >= 2) tipFor(a[0].Get<int>(), a[1].Get<int>());

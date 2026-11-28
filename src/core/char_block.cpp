@@ -506,8 +506,9 @@ Model model(const Data& d, const Texts& t, View view, Look look, bool sessionRow
                                                         std::to_string(d.partyTotal)
                                                   : std::string()),
                             "muted"});
-    if (d.statusPoints > 0) m.points.push_back({counted(t.points, d.statusPoints), "gold"});
-    if (d.skillPoints > 0 && !t.skillPoints.empty()) m.points.push_back({counted(t.skillPoints, d.skillPoints), "gold"});
+    if (d.statusPoints > 0) m.points.push_back({counted(t.points, d.statusPoints), "gold", "stats"});
+    if (d.skillPoints > 0 && !t.skillPoints.empty())
+        m.points.push_back({counted(t.skillPoints, d.skillPoints), "gold", "skills"});
     if (d.ammo >= 0 && d.ammo < kAmmoLow && !t.ammo.empty())
         m.points.push_back({t.ammo + " " + std::to_string(d.ammo), d.ammo <= kAmmoVeryLow ? "bad" : "warn"});
     if (!d.broken.empty() && !t.broken.empty()) m.points.push_back({replaced(t.broken, d.broken), "bad"});

@@ -647,3 +647,49 @@ TEST(items_window_lays_out_its_own_cells) {
     CHECK(std::abs(itemwin::cellStep(1.0f) - (ten.cells[1].x - ten.cells[0].x)) < 0.01f);  // a cell with its gap
     CHECK_EQ(itemwin::mostScroll(ten, 70), 1);  // 70 things in 10 columns: 7 rows, 6 shown
 }
+
+// 3.0.24-beta.50 (the audit 28.11, item 7: DEX's «+» grey - 8 needed, 4 free - and no word why beside it): the grey
+// «+» pointed at says why at its side; a «+» that can raise says nothing there, a stat at 99 has none
+TEST(stat_window_grey_plus_says_why_beside_it) {
+    statwin::Texts t = statTexts();
+    t.plusShort = "потрібно {1}, є {2}";
+    statwin::Data d;
+    for (int i = 0; i < 6; ++i) d.base[i] = 40, d.need[i] = 3;
+    d.need[4] = 8;
+    d.free = 4;
+    d.base[3] = 99;
+    const statwin::Measure m(panel::wordsWidth);
+    const statwin::Layout L = statwin::layout(0, 0, 1.0f, d, t, m);
+    const auto tipOf = [&](int plus) {
+        statwin::Show sh;
+        sh.hoverPlus = plus;
+        for (const statwin::Words& w : statwin::words(L, d, sh, t, m))
+            if (w.text.rfind("потрібно", 0) == 0) return w;
+        return statwin::Words{};
+    };
+    const statwin::Words dex = tipOf(4);
+    CHECK(dex.text == "потрібно 8, є 4");
+    CHECK(dex.box.x >= L.pluses[4].x + L.pluses[4].w - 0.5f);  // beside the «+»
+    CHECK(std::abs(dex.box.y + dex.box.h / 2 - (L.pluses[4].y + L.pluses[4].h / 2)) < 1.0f);
+    CHECK(statwin::plusTip(L, d, 4, t, m).w > 0);  // its chip
+    CHECK(tipOf(0).text.empty());  // STR can be raised
+    CHECK(tipOf(3).text.empty());  // INT at 99
+    CHECK(statwin::plusTip(L, d, 0, t, m).w == 0);
+}
+
+// 3.0.24-beta.50 (the audit 28.11, item 7: «Як рахується» an empty box until a row is pointed at): with nothing pointed
+// at the panel keeps the item told of last (the window opens with the first stat a point can raise)
+TEST(stat_window_panel_keeps_the_last_item_told) {
+    statwin::Show sh;
+    sh.lastItem = statwin::kBattle + 3;
+    CHECK_EQ(statwin::explainedItem(sh), statwin::kBattle + 3);
+    sh.hoverRow = 1;
+    CHECK_EQ(statwin::explainedItem(sh), 1);
+    statwin::Data d;
+    for (int i = 0; i < 6; ++i) d.base[i] = 40, d.need[i] = 9;
+    d.need[2] = 3;
+    d.free = 4;
+    CHECK_EQ(statwin::firstToTell(d), 2);  // VIT: the first a point can raise
+    d.free = 0;
+    CHECK_EQ(statwin::firstToTell(d), 0);  // none: STR
+}
