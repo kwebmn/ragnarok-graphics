@@ -1028,6 +1028,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     if (window && IsIconic(window)) {  // minimised: nothing to show, and no vsync to hold the game's loop back
         noteWindow(true, false);
         mcpFrame(false);  // 3.0.22-beta.35: the MCP answers minimised too, all but a screenshot
+        checkFrame(true);  // 3.0.24-beta.57: the full check's clocks held meanwhile
         // 2.5.20: 5 on the battery; 3.0.3-beta.9: another game window's 2 - woken at once when it is switched to
         const DWORD ms = light_.battery || light_.other ? DWORD(1000 / std::max(1, light_.minimisedFps)) : 15;
         if (HANDLE wake = ownWake())
@@ -1084,6 +1085,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.22-beta.32 (the owner 20.11: «пускай будет мсп у всех»): [mcp] - the MCP server for an AI helper; its calls
     // run here, on the game's thread (win/context_mcp)
     mcpFrame(true);
+    checkFrame(false);  // 3.0.24-beta.57: the full check's jobs (win/context_check)
     // 3.0.13-beta.16: Ctrl+Alt+F11 - a big shot: three frames at 200 % without the interface, the last one saved
     const bool bigDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
                          GetAsyncKeyState(VK_MENU) < 0 && GetAsyncKeyState(VK_F11) < 0;
@@ -1184,6 +1186,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
             reportNote_.clear();
         }
     }
+    if (screenshot.empty()) screenshot = checkShotWanted();  // 3.0.24-beta.57: the full check's raw frame
     if (screenshot.empty() && config.portraits) {  // 3.0.11-beta.273: the character's picture now and then
         const std::string own = readOwnName();
         if (!own.empty())

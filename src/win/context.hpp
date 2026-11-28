@@ -2,6 +2,7 @@
 #include <windows.h>
 
 #include <cstdint>
+#include <map>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -9,6 +10,8 @@
 
 #include "core/frame_stats.hpp"
 #include "core/card_speed.hpp"
+#include "core/check_probe.hpp"
+#include "core/check_tour.hpp"
 #include "core/effect_costs.hpp"
 #include "core/light_mode.hpp"
 #include "core/map_load.hpp"
@@ -332,6 +335,26 @@ private:
     // 3.0.22-beta.32 (the client's MCP; win/mcp_server, core/mcp): a tool run on the game's thread (win/context_mcp)
     mcp::CallResult mcpCall(const std::string& tool, const json::Value& args);
     void mcpFrame(bool shown);  // 3.0.22-beta.35: each frame, minimised too (`shown` false: no picture)
+    // 3.0.24-beta.57 (docs/superpowers/plans/2026-11-28-full-check-probe-tour.md): the full check's jobs, run in the
+    // frames (win/context_check; core/check_probe and core/check_tour say each step)
+    mcp::CallResult checkCall(const std::string& tool, const json::Value& args);
+    void checkFrame(bool minimised);
+    std::string checkShotWanted();  // the raw frame the probe asks this frame, "" none
+    void probeFrame(uint64_t ms, bool minimised);
+    void tourFrame(uint64_t ms);
+    void probeTrace();             // the row's trace: the frames, the passes, the windows' words, the logs
+    void checkWrite(const std::string& key, const std::string& value);
+    void checkLine(const json::Value& row);  // a line of the check file
+    checkprobe::Job probe_;
+    checktour::Job tour_;
+    bool probeOn_ = false, tourOn_ = false, probePhoto_ = false, photoBefore_ = false;
+    std::string checkFile_, writeRefused_;
+    bool shotWanted_ = false, shotSent_ = false;
+    std::vector<uint32_t> frameBefore_, frameAfter_;
+    int beforeW_ = 0, beforeH_ = 0, afterW_ = 0, afterH_ = 0;
+    std::map<std::string, double> passesBefore_;
+    std::map<std::string, uint64_t> printBefore_;
+    uint64_t logAt_[2] = {0, 0};
     mutable card_speed::Judge judge_{0, true};
     mutable bool judgeMade_ = false;
     bool keepOnMap_ = false;

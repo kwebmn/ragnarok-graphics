@@ -87,6 +87,11 @@ float dp();    // the target's pixels a concept pixel (the theme's 1dp)
 // 3.0.22-beta.39 (the MCP's `windows`): the documents shown in RmlUi's order - name, layer, z-index, box - and the
 // element the pointer is over (its document, tag, id, classes)
 json::Value describe();
+// 3.0.24-beta.57 (the full check): the windows' documents shown now (the windows' layer and the top one), one's box by
+// its name (false: not shown), and a print of every shown document's words - its name to a hash of check(name, all)
+std::vector<std::string> shownWindows();
+bool boxOf(const std::string& doc, int& x, int& y, int& w, int& h);
+std::map<std::string, uint64_t> wordsPrint();
 // 3.0.24-beta.34 (the MCP's ui tool, uikit/ui_check): the shown documents' faint or cut words; `doc` one by its name
 // (`all`: every word of it)
 json::Value check(const std::string& doc, bool all);

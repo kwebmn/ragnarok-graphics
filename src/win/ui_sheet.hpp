@@ -195,5 +195,7 @@ private:
 enum class NavCommand { Up, Down, Left, Right, Press };
 bool padNav(int kind, NavCommand c);
 bool hasNav(int kind);
+// 3.0.24-beta.57 (the full check's tour): the window's pad ring - its box's place, -1 none chosen yet, -2 no ring
+int navFocus(int kind);
 
 }  // namespace uagfx::win::uisheet

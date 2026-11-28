@@ -1955,6 +1955,31 @@ json::Value check(const std::string& docName, bool all) {
     return out;
 }
 
+std::vector<std::string> shownWindows() {
+    std::vector<std::string> out;
+    for (Doc* d : state().docs)
+        if (d->made() && d->shown() && (d->window || d->top)) out.push_back(d->name);
+    return out;
+}
+
+bool boxOf(const std::string& doc, int& x, int& y, int& w, int& h) {
+    for (Doc* d : state().docs)
+        if (d->made() && d->shown() && d->name == doc) return d->box(x, y, w, h);
+    return false;
+}
+
+std::map<std::string, uint64_t> wordsPrint() {
+    std::map<std::string, uint64_t> out;
+    for (Doc* d : state().docs) {
+        if (!d->made() || !d->shown()) continue;
+        const std::string text = json::dump(check(d->name, true));
+        uint64_t h = 1469598103934665603ull;  // FNV-1a
+        for (const char c : text) h = (h ^ uint64_t(static_cast<unsigned char>(c))) * 1099511628211ull;
+        out[d->name] = h;
+    }
+    return out;
+}
+
 json::Value describe() {
     State& s = state();
     json::Value out = json::Value::object();

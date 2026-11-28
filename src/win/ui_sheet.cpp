@@ -400,6 +400,11 @@ bool hasNav(int kind) {
     return it != navs().end() && it->second->shown && it->second->shown() && !it->second->targets_.empty();
 }
 
+int navFocus(int kind) {
+    if (!hasNav(kind)) return -2;
+    return navs()[kind]->focus_;
+}
+
 bool padNav(int kind, NavCommand c) {
     if (!hasNav(kind)) return false;
     NavSet& s = *navs()[kind];
