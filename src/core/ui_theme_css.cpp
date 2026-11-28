@@ -929,6 +929,13 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .igl .imain { display: block; flex: none; }
 .igl .imain .search { margin: 1rem 0 0 0; }
 .igl .imain .gridbox { margin: 1.1667rem 0 0 0; }
+/* 3.0.24-beta.51 (the audit 28.11, S1): the window's own buttons under the grid - the storage's */
+.igl .acts { display: flex; flex-wrap: wrap; margin: 0.5rem 1.5rem 0 1.5rem; }
+.igl .act { display: block; height: 2rem; line-height: 2rem; padding: 0 0.8333rem; margin: 0 0.5rem 0.4167rem 0;
+    border-radius: 0.5rem; border: 0.0833rem #ffffff1f; background-color: #ffffff0a; font-size: 1rem;
+    color: #c9d1de; white-space: nowrap; }
+.igl .act.hot { background-color: #ffffff1a; color: #eef2f8; }
+.igl .act.on { border-color: #c9a55b; background-color: #c9a55b1f; color: #eef2f8; }
 .igl .keys { display: block; margin: 0.3333rem 1.5rem 0 1.5rem; font-size: 0.9167rem; color: #7e889a;
     white-space: nowrap; overflow: hidden; }
 .igl .search { display: flex; align-items: center; height: 2.8333rem; margin: 1rem 1.5rem 0 1.5rem;

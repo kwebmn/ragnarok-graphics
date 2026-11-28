@@ -696,6 +696,25 @@ static bool moveWhole(State& s, size_t at, const char* how) {
     return true;
 }
 
+int putAll(const std::vector<std::pair<int, int>>& things, const char* how) {
+    State& s = state();
+    const int to = putTarget();
+    if (!to || things.empty()) return 0;
+    if (s.putQueue.empty()) {
+        s.putToCart = to == 2;
+        s.putPace.next = 0;
+    }
+    int queued = 0;
+    for (const auto& thing : things) {
+        bool already = false;
+        for (const auto& q : s.putQueue) already = already || q.first == thing.first;
+        if (!already) s.putQueue.push_back(thing), ++queued;
+    }
+    if (s.told++ < 20) LOG_INFO("items: %s - %d thing(s) into the %s", how, queued, s.putToCart ? "cart" : "storage");
+    s.key.clear();
+    return queued;
+}
+
 static void putSteps(State& s) {
     itempick::step(s.putPace, GetTickCount64(), s.putQueue.size(), askcardwin::countAll, [&] {
         const auto [place, count] = s.putQueue.front();

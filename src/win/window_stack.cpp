@@ -690,7 +690,7 @@ windowsizes::Cells cellsOf(winstack::Win w) {  // 3.0.24-beta.48
 }
 
 void setCellStep(winstack::Win w, float px) {
-    if (int(w) >= 0 && int(w) < winstack::kWins) sizing().step[size_t(w)] = px;
+    if (size_t(w) < size_t(winstack::kWins)) sizing().step[size_t(w)] = px;
 }
 
 void frame(int targetWidth, int targetHeight, double k) {

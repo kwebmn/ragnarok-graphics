@@ -32,6 +32,7 @@ struct Ui {
     }
     uaui::Doc doc;
     uikit::itemgrid::Model model;
+    std::vector<uikit::itemgrid::ActV> acts;  // 3.0.24-beta.51: the window's own buttons (the storage's), said anew
     int gen = -1;
     std::map<std::string, panel::Picture> made;
     std::map<std::string, std::string> sources;

@@ -77,5 +77,10 @@ std::vector<Item> menu(Tab t, const Entry& e, bool leader, bool elsewhere, bool 
 // 3.0.24-beta.32 (the server's 0x02c4 of 27.11): «Група»'s field to ask a player in by name - on the party's tab, the
 // testers' box on ([interface] party_invite), the character in a party
 bool nameInvite(Tab t, bool probe, bool inParty);
+// 3.0.24-beta.51 (the audit 28.11, C6: no party - only «створіть: /organize Назва»): «Група» with no party has a name
+// field and «Створити групу»; the game's own line sent for it - «/organize <name>» (the name 1-23 bytes in the game's
+// code page, the spaces round it gone; "" none to send)
+bool nameCreate(Tab t, bool inParty);
+std::string organizeLine(const std::string& name);
 
 }  // namespace uagfx::socialcard

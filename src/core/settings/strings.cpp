@@ -8631,9 +8631,10 @@ constexpr Entry kTexts[] = {
     {Text::SocialExpEach, "Experience: each own",
      "Досвід: кожному свій",
      "Опыт: каждому свой"},
-    {Text::SocialNoPartyHint, "No party - make one: /organize Name",
-     "Групи немає - створіть: /organize Назва",
-     "Группы нет - создайте: /organize Название"},
+    // 3.0.24-beta.51 (the audit 28.11, C6): no command to type - the name's field and the button under it
+    {Text::SocialNoPartyHint, "No party - give it a name below and press «Create a party»",
+     "Групи немає - дайте їй назву нижче й натисніть «Створити групу»",
+     "Группы нет - дайте ей название ниже и нажмите «Создать группу»"},
     {Text::SocialNoFriendsHint, "No friends yet - type a name below and add",
      "Друзів поки немає - введіть ім'я нижче й додайте",
      "Друзей пока нет - введите имя ниже и добавьте"},
@@ -8689,6 +8690,10 @@ constexpr Entry kTexts[] = {
     {Text::PickedHint, "Ctrl+click picks, Shift+click a run, Ctrl+A all",
      "Ctrl+клік — вибрати, Shift+клік — підряд, Ctrl+A — усе",
      "Ctrl+клик — выбрать, Shift+клик — подряд, Ctrl+A — всё"},
+    // 3.0.24-beta.51 (the audit 28.11, S1: «Склад» - no sort, no «покласти все», no «взяти все»): its own buttons
+    {Text::StorageSort, "Sort", "Упорядкувати", "Упорядочить"},
+    {Text::StoragePutEtc, "Put all of «Misc»", "Покласти все з «Різне»", "Положить всё из «Разное»"},
+    {Text::StorageTakeTab, "Take all of the tab", "Забрати все з вкладки", "Забрать всё со вкладки"},
     {Text::CountFits, "The weight lets in {1} of {2} - empty: {1}",
      "За вагою влізе {1} з {2} — порожнє поле: {1}",
      "По весу влезет {1} из {2} — пустое поле: {1}"},
@@ -10151,6 +10156,8 @@ constexpr Entry kTexts[] = {
     // 3.0.24-beta.32 (the server's 0x02c4 of 27.11): «Група»'s invite by name, the server's «not online»
     {Text::SocialInviteButton, "Invite", "Запросити", "Пригласить"},
     {Text::ChatSysNotOnline, "{1} is not in the game now", "{1} зараз не в грі", "{1} сейчас не в игре"},
+    {Text::SocialPartyNameField, "The party's name", "Назва групи", "Название группы"},  // 3.0.24-beta.51
+    {Text::SocialCreateButton, "Create a party", "Створити групу", "Создать группу"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

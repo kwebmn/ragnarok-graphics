@@ -95,3 +95,17 @@ TEST(social_card_person_menu) {
     m = socialcard::menu(socialcard::Tab::Friends, other, false, false);
     CHECK(has(m, Item::RemoveFriend) && !has(m, Item::Whisper) && !has(m, Item::AddFriend) && has(m, Item::CopyName));
 }
+
+// 3.0.24-beta.51 (the audit 28.11, C6: no party - only «створіть: /organize Назва», a command to type): «Група» with
+// no party has a name field and «Створити групу» - the game's own /organize sent for it; the name as the server takes
+// it (1-23 bytes, the spaces round it gone)
+TEST(social_card_party_made_by_its_name) {
+    using socialcard::Tab;
+    CHECK(socialcard::nameCreate(Tab::Party, false));
+    CHECK(!socialcard::nameCreate(Tab::Party, true));    // in a party: the invite field instead
+    CHECK(!socialcard::nameCreate(Tab::Friends, false));
+    CHECK(socialcard::organizeLine("  Wolves ") == "/organize Wolves");
+    CHECK(socialcard::organizeLine("   ").empty());
+    CHECK(socialcard::organizeLine(std::string(24, 'a')).empty());  // longer than the server's 23
+    CHECK(socialcard::organizeLine(std::string(23, 'a')) == "/organize " + std::string(23, 'a'));
+}

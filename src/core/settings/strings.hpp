@@ -950,6 +950,7 @@ enum class Text : uint16_t {
     ServersPlayers,  // 3.0.18-beta.153: a server's players now
     EquipSetsHint,   // 3.0.18-beta.154: the equipment sets
     StorageTakePicked, PickedPut, PickedHint,  // 3.0.18-beta.155: things picked with Ctrl / Shift
+    StorageSort, StoragePutEtc, StorageTakeTab,  // 3.0.24-beta.51 (the audit 28.11, S1): «Склад»'s own buttons
     CountFits,  // 3.0.18-beta.156: «how many» - what the weight lets in
     LauncherPlay, LauncherUpdate, LauncherUpdating, LauncherRunning, LauncherServer, LauncherServerDown,
     LauncherServerAsking, LauncherWhatsNew, LauncherUpdated, LauncherNewSince, LauncherLog, LauncherSettings,
@@ -1129,6 +1130,7 @@ enum class Text : uint16_t {
     // 3.0.24-beta.31 (core/play_limit): the server's daily play-time limit in the player's words
     PlayLimitReached, PlayLimitKicked, PlayLimitLeft, PlayLimitReset, PlayLimitBuy, PlayLimitAutopay, PlayLimitBlocked,
     SocialInviteButton, ChatSysNotOnline,  // 3.0.24-beta.32: «Група»'s invite by name
+    SocialPartyNameField, SocialCreateButton,  // 3.0.24-beta.51 (the audit 28.11, C6): no party - its name, the button
     Count
 };
 

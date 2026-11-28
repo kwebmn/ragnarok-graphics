@@ -147,3 +147,32 @@ TEST(npc_talk_options_coloured_as_the_games_list) {
     t.options = {std::string(40, 'o'), "Cancel"};
     CHECK(coded == npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure).w);
 }
+
+// 3.0.24-beta.51 (the audit 28.11, N2: «-Save», «-Use Storage»): the menu's options without the server's leading dash
+// or bullet - words alone, their colours kept; an option of dashes only as it came
+TEST(npc_talk_options_without_the_servers_dash) {
+    const std::vector<std::vector<npctalk::Run>> o =
+        npctalk::optionRuns({"-Save", "- Use Storage", "^0000FF-Teleport", "Cancel", "--", "\xE2\x80\xA2 Rent a Cart"},
+                            0xEEF2F8);
+    CHECK_EQ(o.size(), size_t(6));
+    const auto words = [&](size_t i) {
+        std::string w;
+        for (const npctalk::Run& r : o[i]) w += r.text;
+        return w;
+    };
+    CHECK(words(0) == "Save" && words(1) == "Use Storage" && words(2) == "Teleport" && words(3) == "Cancel");
+    CHECK(words(4) == "--" && words(5) == "Rent a Cart");
+    CHECK(o[2][0].rgb != 0xEEF2F8);  // its own colour kept
+}
+
+// 3.0.24-beta.51 (the audit 28.11, N3: the talk window's top moved between the steps): a talk's top kept - a taller
+// step lifts it, a shorter one leaves it where it was; a new talk anew
+TEST(npc_talk_keeps_its_top_between_steps) {
+    npctalk::Steady st;
+    CHECK_EQ(npctalk::topOf(st, 600, 120), 480);
+    CHECK_EQ(npctalk::topOf(st, 600, 80), 480);
+    CHECK_EQ(npctalk::topOf(st, 600, 150), 450);
+    CHECK_EQ(npctalk::topOf(st, 600, 90), 450);
+    st = npctalk::Steady{};
+    CHECK_EQ(npctalk::topOf(st, 600, 90), 510);
+}

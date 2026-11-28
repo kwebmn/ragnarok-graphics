@@ -26,7 +26,16 @@ std::vector<Run> colours(const std::string& utf8, uint32_t base);
 // 3.0.18-beta.179 (R-P7RFV2: «^FF3355Reset Skills» shown as it came): the menu's options by their colours as the
 // game's list draws them (FUN_0044ae50 keeps one colour for all its rows, black at the first) - a colour begun in an
 // option goes on in the next ones until another
+// 3.0.24-beta.51 (the audit 28.11, N2: «-Save»): each option without the server's leading dash or bullet (an option of
+// dashes only as it came)
 std::vector<std::vector<Run>> optionRuns(const std::vector<std::string>& options, uint32_t base);
+
+// 3.0.24-beta.51 (the audit 28.11, N3: the talk window's top moved between the steps): a talk's top kept - a taller
+// step lifts it, a shorter one leaves it where it was; a new talk a new Steady
+struct Steady {
+    int tallest = 0;
+};
+int topOf(Steady& st, int bottom, int h);
 
 enum class Button : uint8_t { None, Next, Close };
 struct Talk {

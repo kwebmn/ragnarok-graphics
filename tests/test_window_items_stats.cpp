@@ -693,3 +693,39 @@ TEST(stat_window_panel_keeps_the_last_item_told) {
     d.free = 0;
     CHECK_EQ(statwin::firstToTell(d), 0);  // none: STR
 }
+
+// 3.0.24-beta.51 (the audit 28.11, S1: «Склад» - no sort, no «покласти все різне», no «взяти все»): the things in
+// order - the tabs' order (to use, gear, cards, the rest), then by name, a higher refine first, then the place
+TEST(item_window_sorted_by_kind_then_name) {
+    std::vector<itemwin::Item> items = {item(1, 909, 3, 40, "Jellopy"),  item(2, 501, 0, 5, "Red Potion"),
+                                        item(3, 1201, 4, 1, "Knife"),    item(4, 512, 0, 9, "apple"),
+                                        item(5, 4001, 6, 1, "Poring Card"), item(6, 1201, 4, 1, "Knife")};
+    items[5].refine = 4;
+    std::vector<int> shown{0, 1, 2, 3, 4, 5};
+    const std::vector<int> s = itemwin::sortedOf(items, shown);
+    std::vector<std::string> names;
+    for (const int i : s) names.push_back(items[size_t(i)].name + (items[size_t(i)].refine ? "+" : ""));
+    CHECK(names == (std::vector<std::string>{"apple", "Red Potion", "Knife+", "Knife", "Poring Card", "Jellopy"}));
+    CHECK(itemwin::sortedOf(items, {0, 2}) == (std::vector<int>{2, 0}));  // the shown alone
+}
+
+// 3.0.24-beta.51: «Покласти все з «Різне»» - the bag's things of a tab to put, their places and counts; the worn and
+// the starred stay
+TEST(item_window_things_of_a_tab_to_put) {
+    std::vector<itemwin::Item> bag = {item(1, 909, 3, 40, "Jellopy"), item(2, 501, 0, 5, "Red Potion"),
+                                      item(3, 914, 3, 7, "Fluff"), item(4, 7033, 3, 2, "Poison Spore")};
+    bag[3].starred = true;
+    const std::vector<std::pair<int, int>> put = itemwin::toPut(bag, itemwin::Tab::Etc);
+    CHECK(put == (std::vector<std::pair<int, int>>{{1, 40}, {3, 7}}));
+    bag[0].worn = true;
+    CHECK(itemwin::toPut(bag, itemwin::Tab::Etc).size() == 1);
+}
+
+// 3.0.24-beta.51: the window's own buttons (the storage's) - their boxes in the hit test
+TEST(item_window_buttons_hit) {
+    itemwin::Layout L;
+    L.glass = panel::Box{0, 0, 500, 500};
+    L.acts = {panel::Box{20, 400, 100, 24}, panel::Box{130, 400, 100, 24}};
+    const itemwin::Hit h = itemwin::hitTest(L, 0, 0, 140, 410);
+    CHECK(h.part == itemwin::Part::Act && h.index == 1);
+}

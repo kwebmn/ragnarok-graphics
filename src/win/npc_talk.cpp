@@ -64,7 +64,7 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div class="talk"><div class="tline" data-for="l : lines"><span data-for="r : l.runs"
   data-style-color="r.colour">{{r.text}}</span></div></div>
 <div class="btns" data-if="button != ''"><div class="btn main ctl" data-event-click="np_button()">{{button}}</div></div>
-<div class="foot"><span class="hint">{{keys}}</span><span class="hint">{{server}}</span></div>
+<div class="foot"><span class="hint">{{keys}}</span></div>
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
 
@@ -102,7 +102,10 @@ struct State {
     bool menuDirty = true;  // its words changed with the talk's
     std::vector<NpcLineView> lineViews;
     std::vector<NpcOptionView> optionViews;
-    Rml::String name, place, buttonWord, keys, server, lastTime, ground = "#10141cf0";
+    // 3.0.24-beta.51 (the audit 28.11, N5): «Текст — як у сервера» no longer shown - a note for the makers
+    Rml::String name, place, buttonWord, keys, lastTime, ground = "#10141cf0";
+    npctalk::Steady steady;    // 3.0.24-beta.51 (N3): the talk's top kept between its steps
+    int cutin = 255;           // 3.0.24-beta.51 (N4): the NPC's picture's type (255 none)
     int selectedNo = -1;
     uisheet::Sheet sheet;  // 3.0.18-beta.31: the window drawn by uaUI
     int sheetGen = 0;
@@ -176,7 +179,6 @@ nt::Texts texts() {
     t.next = say(settings::Text::NpcNext);
     t.close = say(settings::Text::SkillsPadClose);
     t.keys = say(settings::Text::NpcKeys);
-    t.server = say(settings::Text::NpcServer);
     t.choose = say(settings::Text::NpcChoose);
     t.ok = "OK";
     t.lastTime = say(settings::Text::NpcLastTime);  // 3.0.11-beta.255
@@ -211,6 +213,7 @@ void block(const State& s, HWND game) {
 void hide(State& s) {
     if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Npc, nullptr, nullptr, false);
     s.shown = false;
+    s.steady = npctalk::Steady{};  // 3.0.24-beta.51: a new talk's top anew
 }
 
 // 3.0.11-beta.255: uaro-graphics\npc-choices-<the name's bytes in hex>.txt
@@ -293,6 +296,8 @@ void packet(const packets::Event& e) {
     } else if (const auto* m = std::get_if<packets::NpcMenu>(&e)) {
         s.npc = m->npc;
         s.options = tokens(m->text);
+    } else if (const auto* c = std::get_if<packets::Cutin>(&e)) {  // 3.0.24-beta.51 (N4): the NPC's picture's side
+        s.cutin = c->image.empty() ? 255 : int(c->type);
     }
 }
 
@@ -379,8 +384,13 @@ static void frameInner(HWND game, bool on, bool remember, unsigned codePage, dou
     s.show.sony = pad.sony;
     s.show.waitA = pad.shown ? nt::waiting(s.changedAt, now) : 0;
     const nt::Texts tx = texts();
-    s.layout = nt::layout(targetWidth / 2, targetHeight - int(std::lround(200 * scale)), scale, s.talk, s.show, tx,
-                          measure);
+    const int bottom = targetHeight - int(std::lround(200 * scale));
+    s.layout = nt::layout(targetWidth / 2, bottom, scale, s.talk, s.show, tx, measure);
+    {  // 3.0.24-beta.51 (the audit 28.11, N3): its top kept between the steps - by the live window's own height
+        int lx = 0, ly = 0, lw = 0, lh = 0;
+        const int h = s.live.made() && s.live.box(lx, ly, lw, lh) && lh > 0 ? lh : s.layout.h;
+        s.layout.y = nt::topOf(s.steady, bottom, h);
+    }
     s.drag.apply(s.layout.x, s.layout.y, s.layout.w, s.layout.h, targetWidth, targetHeight, k,
                  48 * scale);  // 3.0.12-beta.2: moved by its title or its words
     s.show.hoverOption = -1;
@@ -438,7 +448,6 @@ static void liveFrame(State& s) {
         m.Bind("place", &s.place);
         m.Bind("button", &s.buttonWord);
         m.Bind("keys", &s.keys);
-        m.Bind("server", &s.server);
         m.Bind("last_time", &s.lastTime);
         m.Bind("selected", &s.selectedNo);
         m.Bind("ground", &s.ground);
@@ -485,8 +494,8 @@ static void liveFrame(State& s) {
                                         });
     if (!sameOptions) s.optionViews = std::move(options), s.live.doc.dirty("options"), s.menuDirty = true;
     if (t.name != s.name || t.place != s.place || button != s.buttonWord || tx.keys != s.keys ||
-        tx.server != s.server || tx.lastTime != s.lastTime || t.selected != s.selectedNo || ground != s.ground) {
-        s.name = t.name, s.place = t.place, s.buttonWord = button, s.keys = tx.keys, s.server = tx.server;
+        tx.lastTime != s.lastTime || t.selected != s.selectedNo || ground != s.ground) {
+        s.name = t.name, s.place = t.place, s.buttonWord = button, s.keys = tx.keys;
         s.lastTime = tx.lastTime, s.selectedNo = t.selected, s.ground = ground;
         s.live.doc.dirtyAll();
         s.menuDirty = true;
@@ -519,7 +528,8 @@ static void liveFrame(State& s) {
     s.live.box(lx, ly, lw, lh);
     const bool sized = s.menu.box(mx, my, mw, mh);
     const panel::Box at = npcmenu::place(panel::Box{float(lx), float(ly), float(lw), float(lh)},
-                                         float(sized ? mw : 0), float(sized ? mh : 0), s.targetW, s.targetH);
+                                         float(sized ? mw : 0), float(sized ? mh : 0), s.targetW, s.targetH,
+                                         npcmenu::sideOf(s.cutin));  // 3.0.24-beta.51 (N4): off the picture's side
     s.menu.frame(s.shown && !s.optionViews.empty(), int(at.x), int(at.y), int(winstack::Win::Npc), nullptr);
 }
 

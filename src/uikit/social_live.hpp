@@ -24,6 +24,9 @@ struct Model {
     Rml::String header, count, exp, settings, empty, addName, nameHint, add, hint, ground = "#10141cf0";
     Rml::String inviteName, invite;  // 3.0.24-beta.32: «Група»'s invite by name (the server's 0x02c4)
     bool inviteOn = false;
+    // 3.0.24-beta.51 (the audit 28.11, C6): no party - its name's field and «Створити групу»
+    Rml::String partyName, partyHint, create;
+    bool createOn = false;
     int tab = 0, selected = -1, menuRow = -1, menuFocus = 0, padRow = -1;
 };
 const char* rml();

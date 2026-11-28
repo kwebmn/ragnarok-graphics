@@ -19,6 +19,11 @@ namespace uagfx::uikit::itemgrid {
 // as a flex row, the search field, the cells wrapped eight a row, the footer - its words and looks from the model.
 // After the layout refit() puts RmlUi's boxes into the window's core layout (glass, title, ×, tabs, search, grid,
 // cells, footer, bar): its hit test, drops, flashes and the pad's places then fall where the cells are drawn.
+// 3.0.24-beta.51 (the audit 28.11, S1): a button of the window's own under its grid (the storage's)
+struct ActV {
+    Rml::String name;
+    bool on = false, hot = false;
+};
 struct TabV {
     Rml::String name, fresh;
     Rml::String icon;  // 3.0.24-beta.50 (the audit 28.11, item 6): its picture; the name a tip while pointed at
@@ -39,6 +44,7 @@ struct Model {
     float base = 12;
     // 3.0.24-beta.50: the tabs' pictures (their sources, iw::Tab's order) - the window's own, given before fill()
     std::vector<Rml::String> tabIcons;
+    std::vector<ActV> acts;  // 3.0.24-beta.51: its own buttons under the grid (none: no row), given by the window
     // 3.0.24-beta.48 (the audit 28.11, the owner's «сделать»): its own columns and rows - the window's, the grid's
     // widths and height in rem (a cell 4, the gap 0.6667)
     float bodyW = 44.6667f, gridW = 36.6667f, gridH = 22.6667f, gridInner = 37.5f;

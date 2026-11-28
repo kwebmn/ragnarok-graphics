@@ -61,6 +61,11 @@ Use useOf(const Item& it);
 // The tab's items whose names hold the search's words (any case), in the bag's order: their places in `items` («Усе»
 // all of them, «★» the starred)
 std::vector<int> shownOf(const std::vector<Item>& items, Tab tab, const std::string& search);
+// 3.0.24-beta.51 (the audit 28.11, S1: «Склад» - no sort, no «покласти все», no «взяти все»): the shown in order -
+// the tabs' order (to use, gear, cards, the rest), then by name (any case), a higher refine first, then the place
+std::vector<int> sortedOf(const std::vector<Item>& items, const std::vector<int>& shown);
+// The bag's things of `tab` to put away whole: their places and counts - the worn and the starred stay
+std::vector<std::pair<int, int>> toPut(const std::vector<Item>& bag, Tab tab);
 // 3.0.11-beta.113: the starred things of each character - uaro-graphics\items-starred.txt, a line each: its name, a
 // tab, the items' numbers comma separated (none: no line)
 std::set<int> starredOf(const std::string& text, const std::string& who);
@@ -129,6 +134,7 @@ struct Layout {
     panel::Box glass, title, close, tabsRow, search, grid, footer, bar;
     panel::Box picked;  // 3.0.18-beta.155: the footer's button for the things picked (0 wide: none)
     std::vector<panel::Box> tabs, cells;  // the cells shown (columns x rows)
+    std::vector<panel::Box> acts;         // 3.0.24-beta.51: the window's own buttons (the storage's), as laid out
 };
 // 3.0.24-beta.48 (the audit 28.11, the owner's «сделать»): its own columns and rows (the corner's whole cells; 8 x 5
 // when none kept) - each cell the same size, the window wider and taller for more
@@ -139,7 +145,7 @@ int mostScroll(const Layout& L, size_t count);
 
 // 3.0.11-beta.113: Star; 3.0.18-beta.155: Picked - the footer's button for the things picked; 3.0.18-beta.204: Scroll -
 // the scroll bar's strip beside the grid
-enum class Part : uint8_t { None, Close, Tab, Search, Cell, Grid, Title, Body, Star, Picked, Scroll };
+enum class Part : uint8_t { None, Close, Tab, Search, Cell, Grid, Title, Body, Star, Picked, Scroll, Act };
 struct Hit {
     Part part = Part::None;
     int index = -1;  // a tab's; a cell's (of the shown, the scroll counted)

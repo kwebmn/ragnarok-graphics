@@ -17,6 +17,7 @@
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/card_drag.hpp"
+#include "win/chat_wheel.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "uikit/social_live.hpp"
@@ -470,6 +471,16 @@ static void liveFrame(State& s) {
             st.mv.inviteName.clear();
             st.live.doc.dirty("invite_name");
         });
+        // 3.0.24-beta.51 (the audit 28.11, C6): «Створити групу» - the game's own /organize with the field's name
+        m.BindEventCallback("so_create", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            State& st = state();
+            const std::string line = sc::organizeLine(narrowed(widened(st.mv.partyName, CP_UTF8), st.codePage));
+            if (!line.empty() && chatwheelwin::sendCommand(line))
+                LOG_INFO("social: «Створити групу» - the game's /organize sent (a name of %zu bytes)",
+                         line.size() - 10);
+            st.mv.partyName.clear();
+            st.live.doc.dirty("party_name");
+        });
         m.BindEventCallback("so_close", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
             send(state(), sc::gameButton(sc::Action::Close), 0, "close");
         });
@@ -543,17 +554,19 @@ static void liveFrame(State& s) {
     }
     const int padRow = uapad::runtime::navLook().shown ? s.show.focusRow : -1;
     const bool inviteOn = sc::nameInvite(s.show.tab, g_invite, !s.partyName.empty());  // 3.0.24-beta.32
+    const bool createOn = sc::nameCreate(s.show.tab, !s.partyName.empty());           // 3.0.24-beta.51
     ul::Model& v = s.mv;
     if (rows != v.rows) v.rows = std::move(rows), s.live.doc.dirty("rows");
     if (menu != v.menu) v.menu = std::move(menu), s.live.doc.dirty("menu");
     if (tabs != v.tabs || header != v.header || count != v.count || exp != v.exp || settingsWord != v.settings ||
         empty != v.empty || hint != v.hint || int(s.show.tab) != v.tab || s.show.selected != v.selected ||
-        ground != v.ground || padRow != v.padRow || inviteOn != v.inviteOn) {
+        ground != v.ground || padRow != v.padRow || inviteOn != v.inviteOn || createOn != v.createOn) {
         v.tabs = tabs, v.header = header, v.count = count, v.exp = exp, v.settings = settingsWord;
         v.empty = empty, v.hint = hint, v.tab = int(s.show.tab), v.selected = s.show.selected;
         v.ground = ground, v.padRow = padRow;
         v.nameHint = say(Text::SocialNameField), v.add = say(Text::SocialAdd);
         v.inviteOn = inviteOn, v.invite = say(Text::SocialInviteButton);
+        v.createOn = createOn, v.partyHint = say(Text::SocialPartyNameField), v.create = say(Text::SocialCreateButton);
         s.live.doc.dirtyAll();
     }
     if (v.menuRow != s.saidMenuRow) s.saidMenuRow = v.menuRow, s.live.doc.dirty("menu_row");  // .173: on a change

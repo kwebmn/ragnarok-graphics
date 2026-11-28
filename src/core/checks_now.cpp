@@ -8,6 +8,47 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.51 (the owner's «делай все» after the audit 28.11): the NPC talk's polish
+        {"npc_talk_51", "3.0.24-beta.51", "",
+         {"NPC talk: no «-» before the options; the window stays; the menu off the picture",
+          "Розмова з NPC: без «-» у пунктах; вікно не стрибає; меню не під картинкою",
+          "Разговор с NPC: без «-» в пунктах; окно не прыгает; меню не под картинкой"},
+         {"Talk to a Kafra: the options read «Save», «Use Storage» - no dash before them. Go through a few steps: the "
+          "talk window's top stays where it was (a longer text lifts it once). The Kafra's picture stands at the "
+          "right: the menu opens at the talk's left, not under the picture. The footer has no «the text is the "
+          "server's» line.",
+          "Поговоріть із Кафрою: пункти «Save», «Use Storage» — без дефіса попереду. Пройдіть кілька кроків: верх "
+          "вікна розмови лишається на місці (довший текст піднімає його раз). Картинка Кафри праворуч: меню "
+          "відкривається ліворуч від розмови, а не під картинкою. Унизу більше немає рядка «Текст — як у сервера».",
+          "Поговорите с Кафрой: пункты «Save», «Use Storage» — без дефиса впереди. Пройдите несколько шагов: верх "
+          "окна разговора остаётся на месте (более длинный текст поднимает его раз). Картинка Кафры справа: меню "
+          "открывается слева от разговора, а не под картинкой. Внизу больше нет строки «Текст — как у сервера»."}},
+        // 3.0.24-beta.51: «Склад»'s own buttons
+        {"storage_buttons_51", "3.0.24-beta.51", "",
+         {"Storage: «Sort», «Put all of «Misc»», «Take all of the tab»",
+          "«Склад»: «Упорядкувати», «Покласти все з «Різне»», «Забрати все з вкладки»",
+          "«Склад»: «Упорядочить», «Положить всё из «Разное»», «Забрать всё со вкладки»"},
+         {"Open the storage with our windows on. Under the grid three buttons. «Sort»: the things by kind and name "
+          "(again - the server's order). «Put all of «Misc»»: the bag's misc things go into the storage one by one "
+          "(the starred stay). «Take all of the tab»: the tab's (or the search's) things into the bag; on «All» "
+          "without a search the button is not there.",
+          "Відкрийте склад (наші вікна). Під сіткою три кнопки. «Упорядкувати»: речі за видом і назвою (ще раз — "
+          "порядок сервера). «Покласти все з «Різне»»: різне з сумки по черзі йде на склад (обране лишається). "
+          "«Забрати все з вкладки»: речі вкладки (чи пошуку) — у сумку; на «Усе» без пошуку кнопки немає.",
+          "Откройте склад (наши окна). Под сеткой три кнопки. «Упорядочить»: вещи по виду и названию (ещё раз — "
+          "порядок сервера). «Положить всё из «Разное»»: разное из сумки по очереди идёт на склад (избранное "
+          "остаётся). «Забрать всё со вкладки»: вещи вкладки (или поиска) — в сумку; на «Всё» без поиска кнопки нет."}},
+        // 3.0.24-beta.51: «Створити групу» without a command
+        {"party_create_51", "3.0.24-beta.51", "",
+         {"«Friends»/«Party»: «Create a party» with a name field",
+          "«Друзі / Група»: «Створити групу» з полем назви",
+          "«Друзья / Группа»: «Создать группу» с полем названия"},
+         {"Without a party open the friends' window (Alt+H), the party's tab: a name field and «Create a party» under "
+          "the hint. Type a name, press the button: the party is made (the game's /organize sent for you).",
+          "Без групи відкрийте вікно друзів (Alt+H), вкладку групи: під підказкою поле назви й «Створити групу». "
+          "Введіть назву, натисніть кнопку: група створиться (за вас надіслано /organize гри).",
+          "Без группы откройте окно друзей (Alt+H), вкладку группы: под подсказкой поле названия и «Создать группу». "
+          "Введите название, нажмите кнопку: группа создастся (за вас отправлен /organize игры)."}},
         // 3.0.24-beta.50 (the owner's «делай все» after the audit 28.11): «Речі»'s tabs as pictures
         {"items_tabs_icons_50", "3.0.24-beta.50", "",
          {"«Items»: the tabs are pictures, the name shows when pointed at",

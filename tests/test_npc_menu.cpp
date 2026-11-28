@@ -32,3 +32,19 @@ TEST(npc_menu_keys) {
     CHECK_EQ(npcmenu::byKey(0x61 /* VK_NUMPAD1 */, 3), 0);
     CHECK_EQ(npcmenu::byKey('A', 5), -1);
 }
+
+// 3.0.24-beta.51 (the audit 28.11, N4: the Kafra's picture over the menu at the talk's right): the side of the NPC's
+// picture (the server's cut-in: 0 bottom left, 2 bottom right) kept free - the menu on the other side when there is
+// room there; the picture's side the last choice
+TEST(npc_menu_place_keeps_off_the_pictures_side) {
+    const panel::Box talk{430, 300, 420, 260};
+    const panel::Box right = npcmenu::place(talk, 240, 180, 1280, 720, npcmenu::sideOf(2));
+    CHECK(right.x + right.w <= talk.x);  // the picture at the bottom right: the menu at the left
+    const panel::Box left = npcmenu::place(talk, 240, 180, 1280, 720, npcmenu::sideOf(0));
+    CHECK(left.x >= talk.x + talk.w);  // at the bottom left: at the right as before
+    const panel::Box none = npcmenu::place(talk, 240, 180, 1280, 720, npcmenu::sideOf(255));
+    CHECK(none.x >= talk.x + talk.w);  // closed: as before
+    CHECK(npcmenu::sideOf(1) == npcmenu::Side::None && npcmenu::sideOf(3) == npcmenu::Side::None);
+    const panel::Box atLeft{20, 300, 420, 260};  // no room at the left: the right after all
+    CHECK(npcmenu::place(atLeft, 240, 180, 1280, 720, npcmenu::Side::Right).x >= atLeft.x + atLeft.w);
+}

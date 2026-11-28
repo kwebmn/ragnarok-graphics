@@ -42,6 +42,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <div class="thumb" data-if="scrollable" data-style-top="thumbTop + '%'" data-style-height="thumbH + '%'"></div>
 <div class="drop" data-if="dropping"></div></div></div></div>
 <div class="keys" data-if="keys != ''">{{keys}}</div>
+<div class="acts" data-if="acts.size > 0"><div class="act" data-for="a, i : acts" data-hit="act"
+  data-attr-data-index="i" data-class-on="a.on" data-class-hot="a.hot">{{a.name}}</div></div>
 <div class="foot" data-hit="footer"><span class="pk" data-hit="picked"
   data-if="pickedText != ''">{{pickedText}}</span><span
   class="also" data-if="also != ''">{{also}}</span><span class="w"
@@ -77,6 +79,8 @@ std::string hex(uint32_t rgb) {  // 3.0.24-beta.19: in the item windows' theme
 const char* rml() { return kRml; }
 
 namespace {
+
+bool same(const ActV& a, const ActV& b) { return a.name == b.name && a.on == b.on && a.hot == b.hot; }
 
 bool same(const TabV& a, const TabV& b) {
     return a.name == b.name && a.fresh == b.fresh && a.on == b.on && a.hot == b.hot && a.icon == b.icon;
@@ -143,11 +147,19 @@ std::vector<const char*> changed(const Model& was, const Model& now) {
     field("tip3", was.tip3, now.tip3);
     field("tip4", was.tip4, now.tip4);
     if (!sameList(was.tabs, now.tabs)) out.push_back("tabs");
+    if (!sameList(was.acts, now.acts)) out.push_back("acts");  // 3.0.24-beta.51
     if (!sameList(was.cells, now.cells)) out.push_back("cells");
     return out;
 }
 
 void bind(Rml::DataModelConstructor& c, Model& m) {
+    if (auto a = c.RegisterStruct<ActV>()) {  // 3.0.24-beta.51
+        a.RegisterMember("name", &ActV::name);
+        a.RegisterMember("on", &ActV::on);
+        a.RegisterMember("hot", &ActV::hot);
+    }
+    c.RegisterArray<std::vector<ActV>>();
+    c.Bind("acts", &m.acts);
     if (auto t = c.RegisterStruct<TabV>()) {
         t.RegisterMember("name", &TabV::name);
         t.RegisterMember("fresh", &TabV::fresh);
@@ -362,6 +374,8 @@ bool refit(Rml::ElementDocument* doc, iw::Layout& L) {
     for (const Placed& t : tabs) L.tabs.push_back(t.box);
     L.cells.clear();
     for (const Placed& c : cells) L.cells.push_back(c.box);
+    L.acts.clear();  // 3.0.24-beta.51: the window's own buttons
+    for (const Placed& a : placesOf(doc, "act")) L.acts.push_back(a.box);
     return true;
 }
 

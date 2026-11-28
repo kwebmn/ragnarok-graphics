@@ -87,6 +87,10 @@ struct State {
     std::vector<int> takeQueue;
     itempick::Pace takePace;  // 3.0.22-beta.7: the batch's pace - the last one's «how many» answered too
     bool searchAll = false;  // 3.0.18-beta.72: Ctrl+A in the search
+    // 3.0.24-beta.51 (the audit 28.11, S1): «Упорядкувати» on (the shown by kind and name, the server's order kept),
+    // the own button pointed at
+    bool sorted = false;
+    int hoverAct = -1;
     itemgridui::Ui grid;  // 3.0.18-beta.27: the window drawn by uaUI
     int gridGen = 0;
     bool gridShown = false;
@@ -458,6 +462,30 @@ void takeSteps(State& s) {
     });
 }
 
+// 3.0.24-beta.51 (the audit 28.11, S1): «Склад»'s own buttons - «Упорядкувати» (the shown by kind and name, on and
+// off), «Покласти все з «Різне»» (the bag's misc things, not the starred, into it), «Забрати все з вкладки» (the
+// tab's shown, whole, into the bag - one a step, as the picked)
+void act(State& s, int which) {
+    if (which == 0) {
+        s.sorted = !s.sorted;
+        s.show.scroll = 0;
+        if (s.told++ < 30) LOG_INFO("storage: «Упорядкувати» %s", s.sorted ? "on" : "off");
+    } else if (which == 1) {
+        const int n = itemswin::putAll(iw::toPut(itemswin::lastBag(), iw::Tab::Etc), "«Покласти все з «Різне»»");
+        if (s.told++ < 30) LOG_INFO("storage: «Покласти все з «Різне»» - %d thing(s) on their way", n);
+    } else if (which == 2 && (s.show.tab != iw::Tab::All || !s.show.search.empty())) {
+        if (s.takeQueue.empty()) s.takePace.next = 0;
+        int n = 0;
+        for (const int i : s.shownItems) {
+            const int index = s.items[size_t(i)].index;
+            if (std::find(s.takeQueue.begin(), s.takeQueue.end(), index) == s.takeQueue.end())
+                s.takeQueue.push_back(index), ++n;
+        }
+        if (s.told++ < 30) LOG_INFO("storage: «Забрати все з вкладки» - %d thing(s) into the bag", n);
+    }
+    s.key.clear();
+}
+
 // 3.0.22-beta.7 (a player: «Alt + Right Click instead of dragging»; the owner: «делай»): a thing whole into the bag -
 // a batch of one (its «how many» answered «all of it», no more than the weight lets in)
 void takeWhole(State& s, size_t at, const char* how) {
@@ -542,6 +570,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     }
     place(s);
     s.shownItems = iw::shownOf(s.items, s.show.tab, s.show.search);
+    if (s.sorted) s.shownItems = iw::sortedOf(s.items, s.shownItems);  // 3.0.24-beta.51
     s.show.also =  // 3.0.11-beta.286
         stashwatch::also(s.show.search, s.codePage, {stashbook::Kind::Storage, stashbook::Kind::Bag});
     if (g_packets) {  // 3.0.24-beta.4: why an action did not end well, in the footer for a while
@@ -560,6 +589,9 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         if (h.part == iw::Part::Cell) s.show.hover = h.index;
         if (h.part == iw::Part::Tab) s.show.hoverTab = h.index;
         s.show.hoverClose = h.part == iw::Part::Close;
+        s.hoverAct = h.part == iw::Part::Act ? h.index : -1;  // 3.0.24-beta.51
+    } else {
+        s.hoverAct = -1;
     }
     if (s.show.hover != s.tipOf) {
         s.tipOf = s.show.hover;
@@ -578,7 +610,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
                       std::to_string(s.show.hover) + (s.show.tip ? "t" : "") + ',' + std::to_string(s.show.hoverTab) +
                       (s.show.hoverClose ? "x" : "") + ';' + s.show.search + (s.show.typing ? "|t" : "") +
                       (s.show.typing && s.show.caretOn ? "c" : "") + (s.show.dropping ? "D" : "") + ';' +
-                      std::to_string(s.places) + '/' + std::to_string(s.most) + ';' + (s.padNow ? "P;" : ";");
+                      std::to_string(s.places) + '/' + std::to_string(s.most) + ';' + (s.padNow ? "P;" : ";") +
+                      (s.sorted ? "S" : "") + std::to_string(s.hoverAct) + ';';  // 3.0.24-beta.51
     key += 'h' + std::to_string(iw::keyOf(s.items));  // 3.0.19-beta.47: the things as one number, not a string each
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
         drawn != s.key) {  // 3.0.18-beta.27: uaUI's or the picture
@@ -592,6 +625,10 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    s.grid.acts = {uikit::itemgrid::ActV{say(settings::Text::StorageSort), s.sorted, s.hoverAct == 0},  // .51
+                   uikit::itemgrid::ActV{say(settings::Text::StoragePutEtc), false, s.hoverAct == 1}};
+    if (s.show.tab != iw::Tab::All || !s.show.search.empty())  // «Усе» unsearched: the whole storage - too much
+        s.grid.acts.push_back(uikit::itemgrid::ActV{say(settings::Text::StorageTakeTab), false, s.hoverAct == 2});
     s.gridShown = s.grid.frame("storage", s.shown, s.layout.x, s.layout.y, s.gridGen, s.layout, s.items, s.shownItems,
                                s.show, texts(s.padNow), measure);
 }
@@ -851,6 +888,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             }
             break;
         case iw::Part::Picked: takePicked(s, "its footer button"); break;  // 3.0.18-beta.155
+        case iw::Part::Act: act(s, h.index); break;                        // 3.0.24-beta.51
         case iw::Part::Cell: {
             if (h.index >= int(s.shownItems.size())) break;
             const int place = s.items[size_t(s.shownItems[size_t(h.index)])].index;

@@ -83,11 +83,45 @@ std::vector<Run> colours(const std::string& utf8, uint32_t base) {
     return runsFrom(utf8, base, now);
 }
 
+namespace {
+
+// 3.0.24-beta.51: the runs without the leading dashes, bullets and spaces - none taken when nothing else is left
+void bare(std::vector<Run>& runs) {
+    const auto lead = [](const std::string& t, size_t at) -> size_t {  // the decoration's bytes at `at`, else 0
+        if (at < t.size() && (t[at] == '-' || t[at] == ' ' || t[at] == '*')) return 1;
+        if (t.compare(at, 3, "\xE2\x80\xA2") == 0 || t.compare(at, 3, "\xE2\x80\x93") == 0) return 3;  // • –
+        if (t.compare(at, 2, "\xC2\xB7") == 0) return 2;                                          // ·
+        return 0;
+    };
+    std::string all;
+    for (const Run& r : runs) all += r.text;
+    size_t cut = 0;
+    for (size_t n = 0; (n = lead(all, cut)) > 0;) cut += n;
+    if (cut == 0 || cut >= all.size()) return;
+    for (Run& r : runs) {
+        const size_t take = std::min(cut, r.text.size());
+        r.text.erase(0, take);
+        cut -= take;
+        if (cut == 0) break;
+    }
+    runs.erase(std::remove_if(runs.begin(), runs.end(), [](const Run& r) { return r.text.empty(); }), runs.end());
+}
+
+}  // namespace
+
 std::vector<std::vector<Run>> optionRuns(const std::vector<std::string>& options, uint32_t base) {
     std::vector<std::vector<Run>> out;
     uint32_t now = base;
-    for (const std::string& o : options) out.push_back(runsFrom(o, base, now));
+    for (const std::string& o : options) {
+        out.push_back(runsFrom(o, base, now));
+        bare(out.back());
+    }
     return out;
+}
+
+int topOf(Steady& st, int bottom, int h) {
+    st.tallest = std::max(st.tallest, h);
+    return bottom - st.tallest;
 }
 
 Talk named(Talk t) {

@@ -78,3 +78,26 @@ TEST(uikit_social_no_friends_says_how) {
     CHECK(byClass(d, "prow").empty());
     rmlhost::close(d);
 }
+
+// 3.0.24-beta.51 (the audit 28.11, C6): «Група» with no party - the name field and «Створити групу» under the hint;
+// in a party (or on «Друзі») not there
+TEST(uikit_social_no_party_has_a_name_field_and_a_button) {
+    static ul::Model m;
+    m.tab = 1;
+    m.tabs = {"Друзі", "Група"};
+    m.empty = "Групи немає";
+    m.createOn = true;
+    m.partyHint = "Назва групи";
+    m.create = "Створити групу";
+    std::string error;
+    Rml::ElementDocument* d = rmlhost::load(ul::rml(), [&](Rml::DataModelConstructor& c) { ul::bind(c, m); }, 200,
+                                            100, &error);
+    CHECK_EQ(error, std::string());
+    rmlhost::update();
+    const Rml::ElementList fields = byClass(d, "addf");
+    CHECK_EQ(fields.size(), size_t(1));
+    bool button = false;
+    for (Rml::Element* b : byClass(d, "btn")) button = button || b->GetInnerRML() == "Створити групу";
+    CHECK(button);
+    rmlhost::close(d);
+}

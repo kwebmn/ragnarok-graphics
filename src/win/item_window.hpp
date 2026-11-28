@@ -78,5 +78,8 @@ bool giveDrag(uint32_t drag);
 bool padThing(uagfx::padcarry::Thing& t, float& x, float& y, const panel::Picture*& icon, std::string& name);
 
 int pickedCount();  // 3.0.21-beta.13: the things picked now (core/key_hints)
+// 3.0.24-beta.51 (the audit 28.11, S1: «Покласти все з «Різне»»): the bag's things (places, counts) into the storage
+// open, else the cart open - a batch one a step, as the picked ones; how many queued (0: no place to put them)
+int putAll(const std::vector<std::pair<int, int>>& things, const char* how);
 
 }  // namespace uagfx::win::itemswin

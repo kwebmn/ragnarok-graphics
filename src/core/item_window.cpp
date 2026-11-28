@@ -231,6 +231,35 @@ int mostScroll(const Layout& L, size_t count) {
     return std::max(0, rows - L.rows);
 }
 
+std::vector<int> sortedOf(const std::vector<Item>& items, const std::vector<int>& shown) {
+    std::vector<int> out = shown;
+    const auto lower = [](std::string w) {
+        for (char& c : w)
+            if (c >= 'A' && c <= 'Z') c = char(c - 'A' + 'a');
+        return w;
+    };
+    std::vector<std::string> names(items.size());
+    for (const int i : out)
+        if (i >= 0 && size_t(i) < items.size()) names[size_t(i)] = lower(items[size_t(i)].name);
+    const auto kind = [&](int i) { return int(tabOf(items[size_t(i)].type)); };  // Use, Gear, Cards, Etc in order
+    std::stable_sort(out.begin(), out.end(), [&](int a, int b) {
+        if (a < 0 || b < 0 || size_t(a) >= items.size() || size_t(b) >= items.size()) return false;
+        if (kind(a) != kind(b)) return kind(a) < kind(b);
+        if (names[size_t(a)] != names[size_t(b)]) return names[size_t(a)] < names[size_t(b)];
+        if (items[size_t(a)].refine != items[size_t(b)].refine)
+            return items[size_t(a)].refine > items[size_t(b)].refine;
+        return items[size_t(a)].index < items[size_t(b)].index;
+    });
+    return out;
+}
+
+std::vector<std::pair<int, int>> toPut(const std::vector<Item>& bag, Tab tab) {
+    std::vector<std::pair<int, int>> out;
+    for (const Item& it : bag)
+        if (!it.worn && !it.starred && it.count > 0 && tabOf(it.type) == tab) out.emplace_back(it.index, it.count);
+    return out;
+}
+
 Hit hitTest(const Layout& L, size_t shownCount, int scroll, float x, float y) {
     if (!L.glass.contains(x, y)) return Hit{};
     if (L.close.contains(x, y)) return Hit{Part::Close, -1};
@@ -240,6 +269,8 @@ Hit hitTest(const Layout& L, size_t shownCount, int scroll, float x, float y) {
         if (L.tabs[i].contains(x, y)) return Hit{Part::Tab, int(i)};
     if (L.search.contains(x, y)) return Hit{Part::Search, -1};
     if (L.picked.w > 0 && L.picked.contains(x, y)) return Hit{Part::Picked, -1};  // 3.0.18-beta.155
+    for (size_t i = 0; i < L.acts.size(); ++i)  // 3.0.24-beta.51: the window's own buttons
+        if (L.acts[i].contains(x, y)) return Hit{Part::Act, int(i)};
     for (size_t i = 0; i < L.cells.size(); ++i)
         if (L.cells[i].contains(x, y)) {
             const int at = int(i) + scroll * L.columns;

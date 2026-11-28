@@ -222,11 +222,18 @@ struct GuildPos {
     uint16_t x = 0, y = 0;
 };
 
+// 3.0.24-beta.51 (the audit 28.11, N4: the Kafra's picture over the menu): the NPC's picture - 0x01b3 <image>.64B
+// <type>.B (0 bottom left, 1 the bottom's middle, 2 bottom right, 3 and 4 the screen's middle, 255 closed)
+struct Cutin {
+    std::string image;
+    uint8_t type = 255;
+};
+
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
                            Chat, Status, Pickup, StatusLong, Casting, Appear, PartyPos, ActorInfo, NpcSay, NpcMenu,
                            StorageCount, ShopSign, Viewpoint, GuildPos, ActorName, RoomSign, PartyExp, ShopSold,
-                           ServerList>;
+                           ServerList, Cutin>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).

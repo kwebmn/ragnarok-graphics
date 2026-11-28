@@ -42,6 +42,7 @@ bool Ui::frame(const char* name, bool on, int x, int y, int generation, const iw
     if (generation != gen) {
         gen = generation;
         const ig::Model before = model;  // 3.0.18-beta.175: what changed alone said to RmlUi
+        model.acts = acts;               // 3.0.24-beta.51
         model.ground = hexOf(0x10141C, int(std::lround(uistyle::window() * 255)), uitheme::groupOf(name));
         // the drawn icons at the window's size, in its group's theme (3.0.24-beta.20: the key holds the colour - a
         // new theme draws them again); the star a picture, never a letter (R-WP985Q)

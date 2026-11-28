@@ -89,6 +89,11 @@ Event parse(const uint8_t* p, size_t size) {
             if (rd16(p, 0) == 0x00b4) return NpcSay{rd32(p, 4), text};
             return NpcMenu{rd32(p, 4), text};
         }
+        case 0x01b3: {  // 3.0.24-beta.51: the NPC's picture
+            if (size < 67) return {};
+            const char* t = reinterpret_cast<const char*>(p + 2);
+            return Cutin{std::string(t, strnlen(t, 64)), p[66]};
+        }
         case 0x00f2:  // 3.0.11-beta.115: the storage's places used of the most
             if (size < 6) return {};
             return StorageCount{rd16(p, 2), rd16(p, 4)};

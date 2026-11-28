@@ -510,3 +510,17 @@ TEST(packets_server_list_with_players) {
     CHECK(l && l->servers[1].name == "uaRO HD" && l->servers[1].players == 7);
     CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 40)));
 }
+
+// 3.0.24-beta.51 (the audit 28.11, N4): the NPC's picture - 0x01b3 <image>.64B <type>.B (0 bottom left, 1 the bottom's
+// middle, 2 bottom right, 3 and 4 the screen's middle, 255 closed)
+TEST(game_packets_the_npcs_picture) {
+    std::vector<uint8_t> p = packet(0x01b3, 67);
+    putText(p, 2, "kafra_04");
+    p[66] = 2;
+    const packets::Event e = packets::parse(p.data(), p.size());
+    const auto* c = std::get_if<packets::Cutin>(&e);
+    CHECK(c != nullptr);
+    if (!c) return;
+    CHECK(c->image == "kafra_04" && c->type == 2);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 40)));  // cut short
+}

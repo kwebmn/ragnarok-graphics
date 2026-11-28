@@ -296,3 +296,32 @@ TEST(uikit_item_grid_lays_out_its_own_columns_and_rows) {
     CHECK(g.m.scrollable);  // 70 things, 60 cells
     rmlhost::close(g.doc);
 }
+
+// 3.0.24-beta.51 (the audit 28.11, S1): the window's own buttons (the storage's «Упорядкувати», «Покласти все з
+// «Різне»», «Забрати все з вкладки») in a row under the grid, inside the window; none - no row
+TEST(uikit_item_grid_its_own_buttons_under_the_grid) {
+    Grid g;
+    g.m.acts = {ig::ActV{"Sort", true, false}, ig::ActV{"Put all of Misc", false, true},
+                ig::ActV{"Take all of the tab", false, false}};
+    make(g, 12);
+    CHECK(g.doc != nullptr);
+    CHECK(ig::refit(g.doc, g.L));
+    CHECK_EQ(g.L.acts.size(), size_t(3));
+    if (g.L.acts.size() == 3) {
+        const panel::Box& last = g.L.cells.back();
+        for (const panel::Box& a : g.L.acts) {
+            CHECK(a.y >= last.y + last.h - 0.5f);           // under the grid
+            CHECK(a.x >= 0 && a.x + a.w <= float(g.L.w) + 0.5f);  // inside
+            CHECK(a.w > 20 && a.h > 10);
+        }
+        CHECK(g.L.acts[1].x >= g.L.acts[0].x + g.L.acts[0].w - 0.5f || g.L.acts[1].y > g.L.acts[0].y);
+        const itemwin::Hit h = itemwin::hitTest(g.L, g.shown.size(), 0, g.L.acts[2].x + 4, g.L.acts[2].y + 4);
+        CHECK(h.part == itemwin::Part::Act && h.index == 2);
+    }
+    rmlhost::close(g.doc);
+    Grid none;
+    make(none, 12);
+    CHECK(ig::refit(none.doc, none.L));
+    CHECK(none.L.acts.empty());
+    rmlhost::close(none.doc);
+}

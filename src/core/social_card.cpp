@@ -126,4 +126,13 @@ std::vector<Item> menu(Tab t, const Entry& e, bool leader, bool elsewhere, bool 
 
 bool nameInvite(Tab t, bool probe, bool inParty) { return t == Tab::Party && probe && inParty; }
 
+bool nameCreate(Tab t, bool inParty) { return t == Tab::Party && !inParty; }
+
+std::string organizeLine(const std::string& name) {
+    const size_t from = name.find_first_not_of(' '), to = name.find_last_not_of(' ');
+    if (from == std::string::npos) return "";
+    const std::string bare = name.substr(from, to - from + 1);
+    return bare.size() > 23 ? "" : "/organize " + bare;
+}
+
 }  // namespace uagfx::socialcard
