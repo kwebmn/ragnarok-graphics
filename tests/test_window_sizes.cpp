@@ -63,3 +63,23 @@ TEST(window_sizes_keep_the_cells_beside_the_scales) {
     CHECK(cart.columns == 8 && cart.rows == 5);
     CHECK(windowsizes::Sizes::parse("items 0.900\nitems.cells 9x7\n").cells("items", {8, 5}).rows == 7);
 }
+
+// 3.0.24-beta.52 (the audit 28.11, item 10: the lists still scaled by their corner): a list window's («Навички», the
+// NPC's shop) corner adds whole rows, their size kept - 4 to 16; kept as «skills.rows 12»
+TEST(window_sizes_a_lists_corner_adds_rows) {
+    CHECK_EQ(windowsizes::rowsPulled(8, 46, 100), 10);   // two rows and a bit
+    CHECK_EQ(windowsizes::rowsPulled(8, 46, 20), 8);     // under half a row: none
+    CHECK_EQ(windowsizes::rowsPulled(8, 46, -500), windowsizes::kLeastListRows);
+    CHECK_EQ(windowsizes::rowsPulled(8, 46, 5000), windowsizes::kMostListRows);
+    CHECK_EQ(windowsizes::rowsPulled(8, 0, 100), 8);     // no step known: as it was
+    windowsizes::Sizes s;
+    CHECK_EQ(s.rows("skills", 8), 8);
+    s.setRows("skills", 12);
+    s.set("shop", 1.1f);
+    CHECK_EQ(s.rows("skills", 8), 12);
+    const std::string text = s.text();
+    CHECK(text.find("skills.rows 12") != std::string::npos);
+    const windowsizes::Sizes back = windowsizes::Sizes::parse(text);
+    CHECK(back.rows("skills", 8) == 12 && back.rows("shop", 10) == 10 && std::abs(back.of("shop") - 1.1f) < 1e-4f);
+    CHECK_EQ(windowsizes::Sizes::parse("skills.rows 99\n").rows("skills", 8), windowsizes::kMostListRows);
+}

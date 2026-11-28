@@ -223,3 +223,26 @@ TEST(shop_window_which_shop_the_npc_is) {
     CHECK_EQ(shopwin::matchShop(shops, "payon", {501}, 134, 220), -1);  // not on this map
 }
 
+
+// 3.0.24-beta.52 (the audit 28.11, item 10: the lists still scaled by their corner): the NPC shop's list as many rows
+// as its corner gives (10 unless pulled) - the rows' size kept, the window taller
+TEST(shop_window_corner_rows_the_list) {
+    shopwin::Data d = data();
+    for (int i = 0; i < 20; ++i) {
+        shopwin::Ware w = d.wares.front();
+        w.id = 900 + i;
+        d.wares.push_back(w);
+    }
+    std::vector<int> shown;
+    for (int i = 0; i < int(d.wares.size()); ++i) shown.push_back(i);
+    shopwin::Show sh;
+    const shopwin::Layout ten = shopwin::layout(0, 0, 1.0f, d, shown, sh, texts(), measure);
+    CHECK_EQ(ten.listRows, shopwin::kListRows);
+    CHECK_EQ(int(ten.wares.size()), shopwin::kListRows);
+    sh.rows = 14;
+    const shopwin::Layout more = shopwin::layout(0, 0, 1.0f, d, shown, sh, texts(), measure);
+    CHECK(more.listRows == 14 && int(more.wares.size()) == 14);
+    CHECK(std::abs(more.wares[1].h - ten.wares[1].h) < 0.01f);  // the rows' size kept
+    CHECK(more.h > ten.h + 100);
+    CHECK(shopwin::rowStep(1.0f) > 20);
+}

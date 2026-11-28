@@ -91,6 +91,8 @@ struct Data;
 // «Рівень N з M», «Потрібно:» and each need «Name 5 ✓» or «Name 6 (5/6)», «Відкриває: A, B»; none for a skill not
 // on the tabs
 std::vector<std::string> cardFacts(const Data& d, const Texts& t, int skill);
+// 3.0.24-beta.52: a row's height at `scale` - the corner's step
+float rowStep(float scale);
 // the scroll that shows the focused row of `shown` rows
 int keepInSight(int focus, int scroll, int count, int shown = kRows);
 int iconSide(float scale);
@@ -100,6 +102,8 @@ using Measure = std::function<float(const std::string& utf8, float px, bool bold
 std::string fitName(const std::string& name, float width, float px, bool bold, const Measure& m);
 
 struct Show {
+    // 3.0.24-beta.52 (the audit 28.11, item 10): the most rows the list shows - its corner's (win/window_stack)
+    int rows = kRows;
     int tab = 0, scroll = 0;
     int hoverTab = -1, hoverRow = -1, hoverPlus = -1, hoverLess = -1, hoverMore = -1;
     int focus = -1;  // the controller's row (its index in the tab)

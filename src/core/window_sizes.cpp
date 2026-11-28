@@ -34,6 +34,20 @@ Cells Sizes::cells(const std::string& window, Cells fallback) const {
 
 void Sizes::setCells(const std::string& window, Cells c) { cells_[window] = clamped(c); }
 
+int rowsPulled(int from, float step, float dy) {
+    if (step <= 0) return std::clamp(from, kLeastListRows, kMostListRows);
+    return std::clamp(from + int(std::lround(dy / step)), kLeastListRows, kMostListRows);
+}
+
+int Sizes::rows(const std::string& window, int fallback) const {
+    const auto it = rows_.find(window);
+    return it == rows_.end() ? fallback : it->second;
+}
+
+void Sizes::setRows(const std::string& window, int rows) {
+    rows_[window] = std::clamp(rows, kLeastListRows, kMostListRows);
+}
+
 float Sizes::of(const std::string& window) const {
     const auto it = sizes_.find(window);
     return it == sizes_.end() ? 1.0f : it->second;
@@ -52,6 +66,10 @@ std::string Sizes::text() const {
         std::snprintf(line, sizeof line, "%s.cells %dx%d\n", name.c_str(), c.columns, c.rows);
         out += line;
     }
+    for (const auto& [name, r] : rows_) {  // 3.0.24-beta.52
+        std::snprintf(line, sizeof line, "%s.rows %d\n", name.c_str(), r);
+        out += line;
+    }
     return out;
 }
 
@@ -66,6 +84,12 @@ Sizes Sizes::parse(const std::string& text) {
             char x = 0;
             if (std::sscanf(value.c_str(), "%d%c%d", &columns, &x, &rows) == 3 && x == 'x')
                 s.setCells(name.substr(0, dot), Cells{columns, rows});
+            continue;
+        }
+        const size_t rd = name.rfind(".rows");
+        if (rd != std::string::npos && rd + 5 == name.size()) {  // 3.0.24-beta.52: «skills.rows 12»
+            int rows = 0;
+            if (std::sscanf(value.c_str(), "%d", &rows) == 1) s.setRows(name.substr(0, rd), rows);
             continue;
         }
         char* end = nullptr;

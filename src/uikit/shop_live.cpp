@@ -32,7 +32,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-if="caret"></span><span class="q qh" data-if="hint != ''">{{hint}}</span></div>
 <div class="lh"><span class="hw">{{wareWord}}</span><span class="hp2">{{priceWord}}</span><span
   class="hwt">{{weightWord}}</span></div>
-<div class="wlist" data-hit="list"><div class="wait" data-if="isWaiting">{{waiting}}</div><div class="wr"
+<div class="wlist" data-hit="list" data-style-height="listH + 'rem'"><div class="wait" data-if="isWaiting">{{waiting}}</div><div class="wr"
   data-for="w : wares" data-hit="ware" data-attr-data-index="w.index" data-class-unused="!w.used"
   data-class-hot="w.hot" data-class-framed="w.framed" data-class-incart="w.inCart"><div class="ic"><img
   data-if="w.icon != ''" data-attr-src="w.icon" data-style-width="w.iconW + 'px'"
@@ -160,6 +160,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
         c.Bind(name, v);
     c.Bind("base", &m.base);
     c.Bind("wares", &m.wares);
+    c.Bind("listH", &m.listH);  // 3.0.24-beta.52
     c.Bind("lines", &m.lines);
     c.Bind("totals", &m.totals);
     c.Bind("keys", &m.keys);
@@ -194,8 +195,10 @@ void fill(Model& m, const sw::Data& d, const std::vector<int>& shown, const sw::
     m.isWaiting = d.waiting;
     m.waiting = t.waiting;
     const bool framed = sh.framed || sh.pad;
-    m.wares.assign(size_t(sw::kListRows), WareV{});
-    for (int i = 0; i < sw::kListRows; ++i) {
+    const int listRows = std::max(1, sh.rows);  // 3.0.24-beta.52: the corner's rows
+    m.listH = float(listRows) * 35.0f / 12.0f;
+    m.wares.assign(size_t(listRows), WareV{});
+    for (int i = 0; i < listRows; ++i) {
         WareV& v = m.wares[size_t(i)];
         const int at = sh.scroll + i;
         v.index = at;

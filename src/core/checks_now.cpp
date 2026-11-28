@@ -8,6 +8,20 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.52 (the owner's «делай все» after the audit 28.11, item 10): the lists' corner adds rows
+        {"list_rows_52", "3.0.24-beta.52", "",
+         {"«Skills» and the NPC shop: the corner adds rows",
+          "«Навички» і крамниця NPC: кут додає рядки",
+          "«Навыки» и магазин NPC: угол добавляет строки"},
+         {"Pull the lower right corner of «Skills» (Alt+S) down: more rows of skills (4-16), the rows as big as "
+          "before - up to as many as the biggest tab has. The same in an NPC's shop: more wares seen at once. Kept "
+          "for the next start. Ctrl and the wheel over them still makes the whole window bigger or smaller.",
+          "Потягніть нижній правий кут «Навичок» (Alt+S) донизу: більше рядків навичок (4-16), рядки того ж розміру "
+          "— до стількох, скільки в найбільшій вкладці. Так само в крамниці NPC: видно більше товарів одразу. "
+          "Запам'ятовується. Ctrl і коліщатко над ними, як і раніше, робить усе вікно більшим чи меншим.",
+          "Потяните нижний правый угол «Навыков» (Alt+S) вниз: больше строк навыков (4-16), строки того же размера "
+          "— до стольких, сколько в самой большой вкладке. Так же в магазине NPC: видно больше товаров сразу. "
+          "Запоминается. Ctrl и колесо над ними, как и раньше, делает всё окно больше или меньше."}},
         // 3.0.24-beta.51 (the owner's «делай все» after the audit 28.11): the NPC talk's polish
         {"npc_talk_51", "3.0.24-beta.51", "",
          {"NPC talk: no «-» before the options; the window stays; the menu off the picture",

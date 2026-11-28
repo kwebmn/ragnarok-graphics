@@ -164,3 +164,37 @@ TEST(uikit_shop_sale_has_the_misc_button) {
     CHECK(L.etc.w <= 0);
     rmlhost::close(doc);
 }
+
+// 3.0.24-beta.52 (the audit 28.11, item 10): the corner's rows laid out by RmlUi too - thirteen rows of 35, the
+// footer under the last
+TEST(uikit_shop_corner_rows_laid_out) {
+    sw::Data d;
+    d.name = "Tool Dealer";
+    d.zeny = 100000;
+    for (int i = 0; i < 20; ++i)
+        d.wares.push_back(sw::Ware{501 + i, 50 + i, 10, 0, 0, true, "Ware " + std::to_string(i), nullptr});
+    std::vector<int> shown;
+    for (int i = 0; i < 20; ++i) shown.push_back(i);
+    sw::Show sh;
+    sh.rows = 13;
+    sw::Texts t;
+    t.title = "Крамниця";
+    t.buy = "Купити";
+    t.sell = "Продати";
+    t.ware = "Річ";
+    static sl::Model m;
+    sl::fill(m, d, shown, sh, t, 1, none, glyph);
+    std::string error;
+    Rml::ElementDocument* doc =
+        rmlhost::load(sl::rml(), [&](Rml::DataModelConstructor& c) { sl::bind(c, m); }, 200, 100, &error);
+    CHECK_EQ(error, std::string());
+    sw::Layout L = sw::layout(0, 0, 1, d, shown, sh, t, measure);
+    CHECK(sl::refit(doc, L));
+    CHECK_EQ(L.wares.size(), size_t(13));
+    if (L.wares.size() == 13) {
+        CHECK(std::abs(L.wares[12].y - L.wares[0].y - 12 * 35) < 1.0f);
+        CHECK(L.footer.y >= L.wares[12].y + L.wares[12].h - 0.5f);
+        CHECK(L.list.h >= 13 * 35 - 1.0f);
+    }
+    rmlhost::close(doc);
+}

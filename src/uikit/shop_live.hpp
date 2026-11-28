@@ -43,6 +43,7 @@ struct Model {
     // 3.0.18-beta.100: the window's scale in pixels as 12 of its own (its sizes in rem: the text size and «Речі»'s
     // size settings as before the live layout)
     float base = 12;
+    float listH = 29.1667f;  // 3.0.24-beta.52: the list's height (rem) - its rows by the corner, 35 px each
     Rml::String ground = "#00000000", title, place, buy, sell, query, hint, searchIcon, wareWord, priceWord;
     Rml::String weightWord, cartWord, amountWord, sumWord, empty, waiting, confirm, confirmKey, confirmGlyph, clear;
     Rml::String note, lbGlyph, rbGlyph;

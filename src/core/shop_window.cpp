@@ -239,6 +239,8 @@ int matchShop(const std::vector<refindex::Shop>& shops, const std::string& map, 
 
 int iconSide(float scale) { return int(std::lround(26 * scale)); }
 
+float rowStep(float scale) { return kRowH * (scale > 0 ? scale : 1.0f); }
+
 Layout layout(int x, int y, float scale, const Data& d, const std::vector<int>& shown, const Show& sh,
               const Texts& t, const Measure& m) {
     Layout L;
@@ -266,8 +268,9 @@ Layout layout(int x, int y, float scale, const Data& d, const std::vector<int>& 
     L.firstLine = sh.cartScroll;
     L.searchBox = panel::Box{side, top, kListW * s, kSearchH * s};
     L.listHead = panel::Box{side, top + (kSearchH + 8) * s, kListW * s, kHeadH * s};
-    L.list = panel::Box{side, L.listHead.y + L.listHead.h, kListW * s, kListRows * kRowH * s};
-    for (int i = sh.scroll; i < int(shown.size()) && i - sh.scroll < kListRows; ++i)
+    L.listRows = std::clamp(sh.rows, 4, 16);  // 3.0.24-beta.52: the corner's (core/window_sizes' 4-16)
+    L.list = panel::Box{side, L.listHead.y + L.listHead.h, kListW * s, float(L.listRows) * kRowH * s};
+    for (int i = sh.scroll; i < int(shown.size()) && i - sh.scroll < L.listRows; ++i)
         L.wares.push_back(panel::Box{L.list.x, L.list.y + float(i - sh.scroll) * kRowH * s, L.list.w, kRowH * s});
     // the cart on the right: a row's − amount +, its sum and the cross taking it back, from its right
     const float cx = side + (kListW + kGapW) * s, cw = w - side - cx;

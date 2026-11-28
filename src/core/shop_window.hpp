@@ -144,10 +144,13 @@ struct Show {
     // shown once they moved it or a row was clicked; the amount typed
     bool cartFocus = false, framed = false;
     int ware = 0, line = 0;
+    // 3.0.24-beta.52 (the audit 28.11, item 10): the list's rows - its corner's (win/window_stack), 4-16
+    int rows = kListRows;
     Edit edit;
 };
 
 struct Layout {
+    int listRows = kListRows;  // 3.0.24-beta.52: the rows the list is tall (Show::rows)
     float s = 1;
     int x = 0, y = 0, w = 0, h = 0;
     panel::Box glass, title, close, tabsRow, searchBox, listHead, list, cartTitle, cartHead, cart, totals;
@@ -165,6 +168,7 @@ struct Layout {
 Layout layout(int x, int y, float scale, const Data& d, const std::vector<int>& shown, const Show& sh,
               const Texts& t, const Measure& m);
 int iconSide(float scale);
+float rowStep(float scale);  // 3.0.24-beta.52: a list row's height - the corner's step
 
 enum class Part : uint8_t {
     None, Close, Tab, Search, Ware, Line, Less, Amount, More, TakeBack, Confirm, Clear, List, Cart, Title, Body,

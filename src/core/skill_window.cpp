@@ -288,16 +288,19 @@ int keepInSight(int focus, int scroll, int count, int shown) {
 
 namespace {
 
-// 3.0.24-beta.50: the list's rows - its biggest tab's skills (every tab as tall), kLeastRows to kRows
-int listRows(const Data& d) {
+// 3.0.24-beta.50: the list's rows - its biggest tab's skills (every tab as tall), kLeastRows to `chosen` (3.0.24-
+// beta.52: the corner's, kRows unless pulled)
+int listRows(const Data& d, int chosen) {
     size_t most = 0;
     for (const Tab& tab : d.tabs) most = std::max(most, tab.skills.size());
-    return std::clamp(int(most), kLeastRows, kRows);
+    return std::clamp(int(most), kLeastRows, std::max(kLeastRows, chosen));
 }
 
 }  // namespace
 
 int iconSide(float scale) { return int(std::lround(32 * scale)); }
+
+float rowStep(float scale) { return kRowH * (scale > 0 ? scale : 1.0f); }
 
 Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Texts& t, const Measure& m) {
     Layout L;
@@ -331,7 +334,7 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
     const int count = tab ? int(tab->skills.size()) : 0;
     // 3.0.11-beta.230: «Дерево» always eight rows high - room for the side panel; 3.0.24-beta.50: the list as its
     // biggest tab
-    const int shown = sh.tree ? kRows : listRows(d);
+    const int shown = sh.tree ? kRows : listRows(d, sh.rows);
     L.shown = shown;
     L.first = std::clamp(sh.scroll, 0, std::max(0, count - shown));
     const bool scrolls = count > shown;

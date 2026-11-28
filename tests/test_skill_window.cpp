@@ -274,3 +274,27 @@ TEST(skill_window_list_as_tall_as_its_biggest_tab) {
     CHECK_EQ(skillwin::layout(0, 0, 1.0f, novice, sh, texts(), measure).shown, skillwin::kRows);
     CHECK_EQ(skillwin::keepInSight(5, 0, 8, 4), 2);  // four shown: the sixth at the bottom
 }
+
+// 3.0.24-beta.52 (the audit 28.11, item 10): the corner's rows the most the list shows - a big tab's twelve with 12
+// chosen, a tab of six still six (no empty rows), never under kLeastRows
+TEST(skill_window_corner_rows_cap_the_list) {
+    skillwin::Data d = knight();  // tabs of 2, 3 and 12
+    skillwin::Show sh;
+    sh.rows = 12;
+    sh.tab = 2;
+    const skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, texts(), measure);
+    CHECK(L.shown == 12 && int(L.rows.size()) == 12 && L.scroll.w == 0);
+    sh.rows = 5;
+    const skillwin::Layout five = skillwin::layout(0, 0, 1.0f, d, sh, texts(), measure);
+    CHECK(five.shown == 5 && five.scroll.w > 0);
+    skillwin::Data six;
+    skillwin::Tab t{"Acolyte", {}};
+    for (int i = 0; i < 6; ++i) t.skills.push_back(skill(28 + i, "Acolyte skill", 1, 1, 10, true));
+    six.tabs.push_back(t);
+    sh.rows = 12;
+    sh.tab = 0;
+    CHECK_EQ(skillwin::layout(0, 0, 1.0f, six, sh, texts(), measure).shown, 6);
+    sh.rows = 1;
+    CHECK_EQ(skillwin::layout(0, 0, 1.0f, d, sh, texts(), measure).shown, skillwin::kLeastRows);
+    CHECK(skillwin::rowStep(1.5f) > 60);  // a row's height for the corner (46 at 1)
+}

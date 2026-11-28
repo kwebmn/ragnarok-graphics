@@ -39,6 +39,9 @@ float sizeOf(winstack::Win w);
 // 3.0.24-beta.48 (the audit 28.11, the owner's «сделать»): «Речі», «Склад», «Візок» - their own columns and rows (the
 // corner adds whole cells); each tells its cell's step (a cell with its gap, the target's pixels) each frame
 windowsizes::Cells cellsOf(winstack::Win w);
+// 3.0.24-beta.52 (the audit 28.11, item 10): a list window's («Навички», the NPC's shop) rows by its corner; the step
+// set by setCellStep - a row's height
+int rowsOf(winstack::Win w);
 void setCellStep(winstack::Win w, float px);
 // 3.0.22-beta.39 (the MCP's `windows`): the stack's windows, the top first, with their boxes (the target's
 // pixels); the window whose corner grip is shown and the one pulled; the game's cursor there

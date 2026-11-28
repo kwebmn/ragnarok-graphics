@@ -520,7 +520,7 @@ void keepFrameInSight(State& s) {
     if (s.show.cartFocus)
         s.show.cartScroll = sw::scrollFor(s.show.line, s.show.cartScroll, sw::kCartRows, lines);
     else
-        s.show.scroll = sw::scrollFor(s.show.ware, s.show.scroll, sw::kListRows, count);
+        s.show.scroll = sw::scrollFor(s.show.ware, s.show.scroll, s.show.rows, count);
     s.show.cartScroll = std::clamp(s.show.cartScroll, 0, std::max(0, lines - sw::kCartRows));
 }
 
@@ -725,7 +725,10 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.ware = std::clamp(s.show.ware, 0, std::max(0, count - 1));
     s.show.line = std::clamp(s.show.line, 0, std::max(0, lines - 1));
     if (!lines) s.show.cartFocus = false;
-    s.show.scroll = std::clamp(s.show.scroll, 0, std::max(0, count - sw::kListRows));
+    // 3.0.24-beta.52 (the audit 28.11, item 10): the list's rows by its corner, a row its step
+    s.show.rows = windowstack::rowsOf(winstack::Win::Shop);
+    windowstack::setCellStep(winstack::Win::Shop, sw::rowStep(scale));
+    s.show.scroll = std::clamp(s.show.scroll, 0, std::max(0, count - s.show.rows));
     s.show.cartScroll = std::clamp(s.show.cartScroll, 0, std::max(0, lines - sw::kCartRows));
     s.show.caretOn = (s.show.typing || s.show.edit.ware >= 0) && (now / 530) % 2 == 0;
     const sw::Texts t = texts();
@@ -891,7 +894,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                                            std::max(0, int(s.data.cart.size()) - sw::kCartRows));
         else
             s.show.scroll =
-                std::clamp(s.show.scroll + steps, 0, std::max(0, int(s.shownList.size()) - sw::kListRows));
+                std::clamp(s.show.scroll + steps, 0, std::max(0, int(s.shownList.size()) - s.show.rows));
         s.key.clear();
         return true;
     }
@@ -1046,7 +1049,7 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
         s.eatChar = true;
         return true;
     }
-    const int page = s.show.cartFocus ? sw::kCartRows : sw::kListRows;
+    const int page = s.show.cartFocus ? sw::kCartRows : s.show.rows;
     switch (wp) {
         case VK_BACK:
             if (!editing) return false;

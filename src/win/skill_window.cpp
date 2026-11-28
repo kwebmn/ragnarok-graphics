@@ -748,6 +748,9 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.pad = pad.shown;
     s.show.sony = pad.sony;
     const int count = s.data.tabs.empty() ? 0 : int(s.data.tabs[size_t(s.show.tab)].skills.size());
+    // 3.0.24-beta.52 (the audit 28.11, item 10): the list's most rows by its corner, a row its step
+    s.show.rows = windowstack::rowsOf(winstack::Win::Skills);
+    windowstack::setCellStep(winstack::Win::Skills, kw::rowStep(scale));
     if (s.show.pad) {
         s.show.focus = std::clamp(s.show.focus, 0, std::max(0, count - 1));
         s.show.scroll = kw::keepInSight(s.show.focus, s.show.scroll, count, s.layout.shown);

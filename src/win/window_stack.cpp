@@ -127,6 +127,10 @@ const char* sizeKey(Win w) {
 // grid windows - their corner adds whole cells (core windowsizes::cellsPulled), their scale by Ctrl and the wheel
 bool isGrid(Win w) { return w == Win::Items || w == Win::Storage || w == Win::Cart; }
 constexpr windowsizes::Cells kGridCells{8, 5};
+// 3.0.24-beta.52 (the audit 28.11, item 10: the lists still scaled by their corner): the list windows - their corner
+// adds whole rows (core/window_sizes rowsPulled), the scale by Ctrl and the wheel; their rows unless pulled
+bool isList(Win w) { return w == Win::Skills || w == Win::Shop; }
+int listRowsOf(Win w) { return w == Win::Shop ? 10 : 8; }  // core/shop_window kListRows, core/skill_window kRows
 
 struct Sizing {
     bool read = false;
@@ -134,6 +138,7 @@ struct Sizing {
     std::optional<Win> pulling;  // its corner held
     float from = 1, w0 = 0, h0 = 0, x0 = 0, y0 = 0;
     windowsizes::Cells fromCells{};                    // 3.0.24-beta.48: a grid window's cells when pressed
+    int fromRows = 0;                                  // 3.0.24-beta.52: a list window's rows when pressed
     std::array<float, size_t(winstack::kWins)> step{};  // 3.0.24-beta.48: a cell with its gap, as each window said
     int targetW = 0, targetH = 0;
     double k = 0;
@@ -596,13 +601,15 @@ static void sizingFrame(State& s, int targetWidth, int targetHeight, double k) {
         const uapad::remote::Mouse remote = uapad::remote::mouse();
         const bool held = GetAsyncKeyState(button) < 0 || (remote.on && (remote.buttons & (swapped ? 2 : 1)) != 0);
         const char* key = sizeKey(*z.pulling);
-        const bool grid = isGrid(*z.pulling);
+        const bool grid = isGrid(*z.pulling), list = isList(*z.pulling);
         if (!key || !shown(*z.pulling) || !readGameCursor(cx, cy) || !held) {
             if (key) {
                 writeFileAtomic(gameDir() + "\\uaro-graphics\\window-sizes.txt", z.sizes.text());
                 const windowsizes::Cells c = z.sizes.cells(key, kGridCells);
                 if (grid)
                     LOG_INFO("windows: %s sized to %d x %d cells", key, c.columns, c.rows);
+                else if (list)
+                    LOG_INFO("windows: %s sized to %d rows", key, z.sizes.rows(key, listRowsOf(*z.pulling)));
                 else
                     LOG_INFO("windows: %s sized to %.0f %%", key, double(z.sizes.of(key) * 100));
             }
@@ -612,6 +619,8 @@ static void sizingFrame(State& s, int targetWidth, int targetHeight, double k) {
             if (grid)  // 3.0.24-beta.48: whole cells, their size kept
                 z.sizes.setCells(key, windowsizes::cellsPulled(z.fromCells, z.step[size_t(*z.pulling)], x - z.x0,
                                                                y - z.y0));
+            else if (list)  // 3.0.24-beta.52: whole rows, their size kept
+                z.sizes.setRows(key, windowsizes::rowsPulled(z.fromRows, z.step[size_t(*z.pulling)], y - z.y0));
             else
                 z.sizes.set(key, windowsizes::pulled(z.from, z.w0, z.h0, z.w0 + (x - z.x0), z.h0 + (y - z.y0)));
         }
@@ -689,6 +698,11 @@ windowsizes::Cells cellsOf(winstack::Win w) {  // 3.0.24-beta.48
     return key && isGrid(w) ? sizing().sizes.cells(key, kGridCells) : kGridCells;
 }
 
+int rowsOf(winstack::Win w) {  // 3.0.24-beta.52
+    const char* key = sizeKey(w);
+    return key && isList(w) ? sizing().sizes.rows(key, listRowsOf(w)) : listRowsOf(w);
+}
+
 void setCellStep(winstack::Win w, float px) {
     if (size_t(w) < size_t(winstack::kWins)) sizing().step[size_t(w)] = px;
 }
@@ -761,6 +775,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                     z.pulling = w;
                     z.from = z.sizes.of(sizeKey(w));
                     z.fromCells = z.sizes.cells(sizeKey(w), kGridCells);  // 3.0.24-beta.48
+                    z.fromRows = z.sizes.rows(sizeKey(w), listRowsOf(w));  // 3.0.24-beta.52
                     z.w0 = b.w, z.h0 = b.h, z.x0 = x, z.y0 = y;
                     s.stack.raise(w);
                     result = 0;
