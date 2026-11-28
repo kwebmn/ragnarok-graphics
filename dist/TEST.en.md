@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.24-beta.45 — what's new · 2026-11-28
+
+Updates: before its files go in, the uaRO app (the launcher) now closes by itself - when the update was started by «UPDATE» and when by the game's question at its start. The update's window says «Closing the uaRO app...», the settings' changes are kept, and the app opens again after the install. Before, the update waited only a minute for the app and then put its files over the open one. Two updates at once no longer overlap, and each step is written to uaro-graphics\logs\uaro-graphics-update.log.
+
 # uaRO Graphics 3.0.24-beta.44 — what's new · 2026-11-28
 
 Diagnostics for weak graphics cards: every 30 seconds the renderer's log says how many times a frame the water is drawn and how much of the picture it covers (to find why «Modern water» is so dear on laptops).
