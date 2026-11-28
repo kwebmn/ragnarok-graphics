@@ -7,6 +7,20 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.38 (the owner: «оба»): keep_fps lowers MSAA first
+        {"keep_fps_msaa_38", "3.0.24-beta.38", "frames.keep_fps",
+         {"Keep the frame rate: smoothing lowered first", "Тримати частоту кадрів: спершу менше згладжування",
+          "Держать частоту кадров: сначала меньше сглаживания"},
+         {"Direct3D 12, Alt+O → «Speed and screen» → «Smoothing» → «Edge smoothing (MSAA)» 4×, «Frames» → «Keep the "
+          "frame rate» on. On a map where the frames fall under it (Yuno, Morroc on a weak card): within 10-20 s "
+          "«Smoothing (MSAA) 4× → 2× for the rest of the game», then «→ Off»; an effect goes off only after that.",
+          "Direct3D 12, Alt+O → «Швидкість і екран» → «Згладжування» → «Згладжування країв (MSAA)» 4×, «Кадри» → "
+          "«Тримати частоту кадрів» увімкнено. На карті, де кадрів менше (Юно, Морок на слабкій відеокарті): за "
+          "10-20 с «Згладжування (MSAA) 4× → 2× до кінця гри», потім «→ Вимкнено»; ефект вимикається лише після цього.",
+          "Direct3D 12, Alt+O → «Скорость и экран» → «Сглаживание» → «Сглаживание краёв (MSAA)» 4×, «Кадры» → "
+          "«Держать частоту кадров» включено. На карте, где кадров меньше (Юно, Морок на слабой видеокарте): за "
+          "10-20 с «Сглаживание (MSAA) 4× → 2× до конца игры», потом «→ Выключено»; эффект выключается только после "
+          "этого."}},
         // 3.0.24-beta.36 (the laptop's run): uaro-render64.exe's shaders past the game's 90 s - kept now, waited for
         {"start_slow_pc_36", "3.0.24-beta.36", "",
          {"Start on a slow computer: the second one quick", "Старт на слабкому комп'ютері: другий швидкий",
