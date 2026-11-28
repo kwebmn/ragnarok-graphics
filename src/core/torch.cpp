@@ -224,4 +224,20 @@ uint32_t seedAt(float x, float z) {
     return mix(uint32_t(i) * 0x9E3779B1u ^ mix(uint32_t(j) + 0x632BE5ABu));
 }
 
+std::vector<char> nearestLit(const std::vector<Flame>& flames, size_t most) {
+    std::vector<char> lit(flames.size(), 1);
+    if (most == 0 || flames.size() <= most) return lit;
+    std::vector<std::pair<float, size_t>> byDepth;
+    byDepth.reserve(flames.size());
+    for (size_t i = 0; i < flames.size(); ++i) {
+        const Flame& f = flames[i];
+        const float depth = f.upright ? f.base3[2] : (f.rhw > 0.0f ? 1.0f / f.rhw : 1e9f);
+        byDepth.push_back({depth, i});
+    }
+    std::nth_element(byDepth.begin(), byDepth.begin() + std::ptrdiff_t(most), byDepth.end());
+    std::fill(lit.begin(), lit.end(), 0);
+    for (size_t k = 0; k < most; ++k) lit[byDepth[k].second] = 1;
+    return lit;
+}
+
 }  // namespace uagfx::torch

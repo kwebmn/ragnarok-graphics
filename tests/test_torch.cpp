@@ -307,3 +307,25 @@ TEST(torch_flame_stands_on_its_map_torch) {
     aside.baseX += 200.0f;  // no torch under it
     CHECK_EQ(torch::anchorOf(aside, anchors, up, p), -1);
 }
+
+// 3.0.24-beta.43 (the laptop's effects run: the pyramid's torches 4.4 ms of a Radeon 610M's light; the owner: «делай
+// оптимизации для ноута ... чтобы графика на большом не пострадала»): a weak card lights the nearest flames alone -
+// each flame still burns, the far ones light nothing around them
+TEST(torch_nearest_flames_lit) {
+    std::vector<torch::Flame> f(5);
+    const float depth[5] = {40, 10, 30, 20, 50};
+    for (int i = 0; i < 5; ++i) f[size_t(i)].rhw = 1.0f / depth[i];
+    std::vector<char> lit = torch::nearestLit(f, 3);
+    CHECK_EQ(lit.size(), size_t(5));
+    CHECK(!lit[0] && lit[1] && lit[2] && lit[3] && !lit[4]);  // 10, 20 and 30 lit
+    lit = torch::nearestLit(f, 0);  // no cap: every one
+    CHECK(lit[0] && lit[1] && lit[2] && lit[3] && lit[4]);
+    lit = torch::nearestLit(f, 9);
+    CHECK(lit[0] && lit[4]);
+    // an upright one's own depth (its base) counts, not the sprite's
+    f[4].upright = true;
+    f[4].base3[2] = 5.0f;
+    lit = torch::nearestLit(f, 1);
+    CHECK(lit[4] && !lit[1]);
+    CHECK(torch::kLeanLights == 12);
+}

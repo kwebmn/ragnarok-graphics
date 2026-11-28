@@ -42,6 +42,11 @@ struct Flame {
     bool upright = false;
     float base3[3] = {0, 0, 0}, tip3[3] = {0, 0, 0};
 };
+// 3.0.24-beta.43 (the laptop's effects run: the pyramid's torches 4.4 ms of a Radeon 610M's light): a weak card
+// (EffectSettings::lean) lights its nearest kLeanLights flames alone - every flame still burns. Which of `flames` light
+// (1), the nearest `most` by their depth (an upright one's base, else 1 / rhw); `most` 0: every one.
+constexpr size_t kLeanLights = 12;
+std::vector<char> nearestLit(const std::vector<Flame>& flames, size_t most);
 
 // The flame of a quad drawn with a flame frame - its texture coordinates span the frame (the game's sprite setting
 // may halve it, its texture may be larger) - false when the corners do not map the frame onto the screen.

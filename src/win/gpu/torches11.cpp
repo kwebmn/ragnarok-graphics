@@ -457,8 +457,11 @@ void Renderer11::applyTorchLight() {
         ++count;
     };
     const float darkNow = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;  // 2.7.18: how much night it is
+    // 3.0.24-beta.43: a weak card's nearest torch::kLeanLights flames light around (each still burns)
+    const std::vector<char> litFlames = torch::nearestLit(flames, effects_.lean ? torch::kLeanLights : 0);
     if (torchesWanted())
         for (size_t i = 0; i < flames.size(); ++i) {  // the game's flames and the hidden ones
+            if (!litFlames[i]) continue;
             const torch::Flame& f = flames[i];
             const float mx = f.baseX + f.upX * kMiddle, my = f.baseY + f.upY * kMiddle;
             const float vz = 1.0f / f.rhw;

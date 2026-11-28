@@ -2324,7 +2324,7 @@ void Renderer11::endWaterTiming() {  // 3.0.24-beta.42
 float Renderer11::waterLife() const {
     return float((effects_.swamp && place_.swamp ? 2 : 0) + (effects_.waterFoam ? 8 : 0) +
                  (effects_.waterGlints ? 16 : 0) + (effects_.caustics ? 32 : 0) +
-                 (effects_.waterLean ? 64 : 0));  // 3.0.24-beta.43: a weak card's reflections in fewer steps
+                 (effects_.lean ? 64 : 0));  // 3.0.24-beta.43: a weak card's reflections in fewer steps
 }
 
 float Renderer11::waterTime() {

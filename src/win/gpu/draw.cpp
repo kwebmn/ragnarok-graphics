@@ -916,9 +916,9 @@ LeafLook Renderer::Impl::leafLook() const {
 float Renderer::Impl::waterLife() const {
     // 2.4: and the water's own parts, each a box of its own: 8 the foam along the shore, 16 the sun's glints, 32 the
     // light on the bed
-    // 3.0.24-beta.43: 64 a weak card's - the reflections in fewer, longer steps (EffectSettings::waterLean)
+    // 3.0.24-beta.43: 64 a weak card's - the reflections in fewer, longer steps (EffectSettings::lean)
     return float((effects.swamp && mapPlace.swamp ? 2 : 0) + (effects.waterFoam ? 8 : 0) +
-                 (effects.waterGlints ? 16 : 0) + (effects.caustics ? 32 : 0) + (effects.waterLean ? 64 : 0));
+                 (effects.waterGlints ? 16 : 0) + (effects.caustics ? 32 : 0) + (effects.lean ? 64 : 0));
 }
 
 // 1.7: the water's level in the world (its first corner) - the mirror's plane, the creatures' water. 2.7.3: and the

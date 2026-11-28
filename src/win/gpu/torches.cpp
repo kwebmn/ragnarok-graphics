@@ -719,6 +719,8 @@ bool Renderer::Impl::applyTorches() {
     skillAirFirst = skillAirEnd = 0;  // 2.7.36: none until the skills' come
     const float darkNow = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;  // 2.7.18: how much night it is
     std::vector<float> flickers(flames.size(), 1.0f), seeds(flames.size(), 0.0f);
+    // 3.0.24-beta.43: a weak card's nearest torch::kLeanLights flames light around (each still burns)
+    const std::vector<char> litFlames = torch::nearestLit(flames, effects.lean ? torch::kLeanLights : 0);
     for (size_t i = 0; i < flames.size(); ++i) {
         const torch::Flame& f = flames[i];
         const float mx = f.baseX + f.upX * kMiddle, my = f.baseY + f.upY * kMiddle;  // game pixels
@@ -734,7 +736,7 @@ bool Renderer::Impl::applyTorches() {
             i < torchSeeds.size() ? torchSeeds[i] : torch::placeSeed(f, proj, viewToWorld, viewToWorldValid);
         flickers[i] = torch::flicker(time, s, amount);
         seeds[i] = float(s % 1000u) / 1000.0f;
-        if (strength <= 0.0f) continue;
+        if (strength <= 0.0f || !litFlames[i]) continue;
         // 0.25.1: the light on the ground flickers less and slower than the flame ("мигает слишком сильно"): a
         // third of its swing at half its pace.
         const float calm = torch::flicker(double(time) * 0.5, s ^ 0x5BD1E995u, amount * 0.35f);
