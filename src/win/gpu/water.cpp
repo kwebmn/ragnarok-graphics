@@ -195,7 +195,7 @@ void Renderer::Impl::endWaterTiming() {  // 3.0.24-beta.42
     if (!waterTiming) return;
     waterTiming = false;
     flushDraws();  // the water's draws batched so far go before the timestamp
-    effectEnd(kTimeWater);
+    effectEnd(waterMore ? kTimeWaterMore : kTimeWater);  // 3.0.24-beta.53: a later run's end written anew
 }
 
 bool Renderer::Impl::copySceneColor() {

@@ -247,8 +247,9 @@ void Renderer::Impl::readTimes(Slot& s, UINT index) {
         }
         for (UINT e = 0; e < kEffectTimes; ++e)
             if ((s.effectTimed >> e & 1) && t[7 + 2 * e] > t[6 + 2 * e]) {
-                effectTicks[e] += t[7 + 2 * e] - t[6 + 2 * e];
-                recentEffect[e] += t[7 + 2 * e] - t[6 + 2 * e];
+                const UINT into = UINT(effect_costs::timedInto(e));  // 3.0.24-beta.53: the later water the water's
+                effectTicks[into] += t[7 + 2 * e] - t[6 + 2 * e];
+                recentEffect[into] += t[7 + 2 * e] - t[6 + 2 * e];
             }
     }
     s.timed = s.upscaleTimed = s.aiTimed = false;

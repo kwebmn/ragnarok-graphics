@@ -56,8 +56,11 @@ TEST(effect_costs_keep_fps_drops_the_worlds_extras) {
 }
 
 TEST(effect_costs_every_timed_pass_has_a_switch) {
-    // keep_fps can turn off whatever the renderer times: a pass with no switch of its own stays however costly
+    // keep_fps can turn off whatever the renderer times: a pass with no switch of its own stays however costly;
+    // 3.0.24-beta.53: one whose time is another's (the water's later runs) has that one's
+    size_t at = 0;
     for (const effect_costs::TimedPass& p : effect_costs::kTimedPasses) {
+        if (effect_costs::timedInto(at++) != at - 1) continue;
         bool found = false;
         for (const settings::IniSetting& s : settings::iniSettings())
             if (std::string(s.section) == "effects" && effect_costs::passOf(s.key) == p.key) found = true;
@@ -183,4 +186,35 @@ TEST(effect_costs_keep_fps_lowers_msaa_first) {
     CHECK_EQ(effect_costs::msaaDrawn(2, cap), 2);
     CHECK(effect_costs::lowerMsaa(2, 2, cap));
     CHECK(cap.from == 2 && cap.to == 0);
+}
+
+// 3.0.24-beta.53 (the owner's «делай все», item 12: the water's timer missed its later batches - the game's water
+// drawn in several runs a frame, the first alone timed): the later runs a timed pass of their own whose time goes to
+// the water's (timedInto) - keep_fps sees the water's whole cost under one name
+TEST(effect_costs_the_waters_later_runs_count_as_the_water) {
+    size_t water = 99, more = 99;
+    for (size_t i = 0; i < sizeof effect_costs::kTimedPasses / sizeof effect_costs::kTimedPasses[0]; ++i) {
+        if (std::string(effect_costs::kTimedPasses[i].key) == "water") water = i;
+        if (std::string(effect_costs::kTimedPasses[i].key) == "water_more") more = i;
+    }
+    CHECK(water != 99 && more != 99);
+    CHECK_EQ(effect_costs::timedInto(more), water);
+    CHECK_EQ(effect_costs::timedInto(water), water);
+    CHECK_EQ(effect_costs::timedInto(0), size_t(0));
+}
+
+// 3.0.24-beta.53 (the owner's «делай все», item 13: the dear effects with no timer - the sand, the wet walls): the
+// living ground's pass (ground_life_ps: a copy of the picture and a pass over all of it) timed; its switches keep_fps
+// may turn off by its cost - the sand, the wet walls, the year, the rain's wet
+TEST(effect_costs_the_living_ground_timed_and_its_switches) {
+    bool timed = false;
+    for (const effect_costs::TimedPass& p : effect_costs::kTimedPasses)
+        timed = timed || std::string(p.key) == "ground_life";
+    CHECK(timed);
+    for (const char* key : {"sand_drift", "wet_walls", "seasons", "rain_wet"})
+        CHECK(effect_costs::passOf(key) == "ground_life");
+    EffectSettings e = effectsOff();
+    e.sandDrift = e.ao = true;
+    const effect_costs::Costs c{{"ground_life", 3.4}, {"ao", 0.8}};
+    CHECK(effect_costs::pickToDrop(e, c, {}) == "sand_drift");  // the dearer pass first
 }

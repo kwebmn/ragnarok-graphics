@@ -1962,28 +1962,34 @@ float4 water(WaterIn i) {
     // 0.22.2: the world's axes turned, for the noise: no rows along them.
     float2 fp = float2(dot(i.world.xz, float2(0.8, 0.6)), dot(i.world.xz, float2(-0.6, 0.8)));
     float2 slope = waveSlope(i.world.xz, t);
-    // Ripples of noise on the swells, so that their glints do not line up.
-    float2 rq = fp * 0.55 + t * float2(0.21, 0.13);
-    float n0 = valueNoise(rq);
-    float2 g = float2(valueNoise(rq + float2(0.15, 0.0)) - n0, valueNoise(rq + float2(0.0, 0.15)) - n0) / 0.15;
-    slope += float2(0.8 * g.x - 0.6 * g.y, 0.6 * g.x + 0.8 * g.y) * 0.05;
+    // Ripples of noise on the swells, so that their glints do not line up. 3.0.24-beta.53 (the owner's «делай все»,
+    // item 12): not on a weak card's lean water (64) - three noises a pixel over all of it; a real branch
+    [branch] if ((life & 64) == 0) {
+        float2 rq = fp * 0.55 + t * float2(0.21, 0.13);
+        float n0 = valueNoise(rq);
+        float2 g = float2(valueNoise(rq + float2(0.15, 0.0)) - n0, valueNoise(rq + float2(0.0, 0.15)) - n0) / 0.15;
+        slope += float2(0.8 * g.x - 0.6 * g.y, 0.6 * g.x + 0.8 * g.y) * 0.05;
+    }
     slope *= 0.15 + 1.6 * waves;
     // 3.0.20-beta.32: in the 3D view the far water calmer - from the eyes its ripples a field of glitter, a lake far
     // off a mirror of the sky
     if (fogColor.a > 1.5) slope *= lerp(1.0, 0.3, smoothstep(150.0, 900.0, i.view.z));
     // 0.94: rings where the last steps went (twinW of them: x, z, age in uiPixels, sourceRect, sourceClamp) - a
-    // wave packet running out from each, fading as it spreads.
-    [unroll] for (int s = 0; s < 3; ++s) {
-        float4 at = s == 0 ? uiPixels : s == 1 ? sourceRect : sourceClamp;
-        float on = step(float(s) + 0.5, twinW);
-        float2 away = i.world.xz - at.xy;
-        float d = length(away);
-        float age = at.z;
-        float radius = 0.4 + age * 5.0;
-        float x = d - radius;
-        float packet = exp(-x * x * 1.2) * saturate(1.0 - age / 1.6) * on;
-        float wave = cos(x * 5.0) * packet * 0.35;
-        slope += away / max(d, 0.05) * wave;
+    // wave packet running out from each, fading as it spreads. 3.0.24-beta.53 (item 12): none - none of their work (a
+    // real branch: the same water without steps)
+    [branch] if (twinW > 0.5) {
+        [unroll] for (int s = 0; s < 3; ++s) {
+            float4 at = s == 0 ? uiPixels : s == 1 ? sourceRect : sourceClamp;
+            float on = step(float(s) + 0.5, twinW);
+            float2 away = i.world.xz - at.xy;
+            float d = length(away);
+            float age = at.z;
+            float radius = 0.4 + age * 5.0;
+            float x = d - radius;
+            float packet = exp(-x * x * 1.2) * saturate(1.0 - age / 1.6) * on;
+            float wave = cos(x * 5.0) * packet * 0.35;
+            slope += away / max(d, 0.05) * wave;
+        }
     }
     float3 n = normalize(float3(-slope.x, -1.0, -slope.y));  // up is -y
     float3 eye = float3(r9, r10, r11);

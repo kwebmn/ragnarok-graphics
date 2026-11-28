@@ -1828,6 +1828,11 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         water::isWaterQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount,
                            d.primitive == d3d7::PT_TRIANGLESTRIP))
         water = (!toGlow || waterGlowPs_) && copyForWater();  // 1.0: in the glow, its own glow shader
+    if (water && !waterTiming_) {  // 3.0.24-beta.53: a later run of the water's - timed with the water's
+        flushBatch();
+        if (!waterMore_) effectBegin(kTimeWaterMore11), waterMore_ = true;
+        waterTiming_ = true;
+    }
     if (waterTiming_ && !water) endWaterTiming();  // 3.0.24-beta.42: the water's own draws timed with its copies
     if (water) noteWaterLevel(rec, d);  // 2.5.4: the creatures' water level; 2.7.2: the grass's
     if (water && !mirrorDone_ && waterLevelKnown_ && mirrorCollecting() && !mirrorCasters_.empty()) {
@@ -2315,7 +2320,7 @@ void Renderer11::endWaterTiming() {  // 3.0.24-beta.42
     if (!waterTiming_) return;
     waterTiming_ = false;
     flushBatch();  // the water's draws batched so far go before the timestamp
-    effectEnd(kTimeWater11);
+    effectEnd(waterMore_ ? kTimeWaterMore11 : kTimeWater11);  // 3.0.24-beta.53
 }
 
 // 2.5.9 (draw.cpp waterLife): water_ps's bits - 2 a swamp's bubbles (1 the fish and 4 the surf's swash gone in 2.7.2);
@@ -2859,6 +2864,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     }
     endWaterTiming();  // 3.0.24-beta.42: before the frame's queries close
     waterCopied_ = waterReady_ = false;  // 0.99
+    waterMore_ = false;                  // 3.0.24-beta.53
     materialsMade_ = 0;  // 1.14
     flames_.clear();
     timeEnd();
@@ -3453,9 +3459,9 @@ void Renderer11::noteWaterLevel(const FrameRecord& rec, const DrawCmd& d) {
 void Renderer11::applyGroundLife() {
     groundLifeDone_ = true;
     // 3.0.5-beta.16 (R-APBSRU): [debug] profile's own span - the soft shadows' held it (5.6 ms of «Високі»'s, the
-    // shadows themselves 3.3)
-    pmark("living ground");
+    // shadows themselves 3.3); 3.0.24-beta.53 (item 13): its own timed span, keep_fps's cost of it
     if (!groundLifeWanted() || !cameraValid_ || !target_.texture || !depthViews()) return;
+    EffectSpan span(*this, kTimeGroundLife11);
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
@@ -4965,7 +4971,7 @@ void Renderer11::timeFrame() {
                                                              "mist", "weather", "ao", "bloom",
                                                              "steps", "heat", "shafts",
                                                              "glow", "water", "floor", "grass", "world",
-                                                             "interface"};
+                                                             "interface", "water_more", "ground_life"};
         recent_.gpuMs = recentMs_ / recentFrames_;
         recent_.presentMs = recentPresentMs_ / recentFrames_;  // 3.0.19-beta.8 (core/present_watch)
         recentPresentMs_ = 0.0;
@@ -5024,8 +5030,9 @@ bool Renderer11::readTimes(UINT slot, bool wait) {
         UINT64 a = 0, b = 0;
         if (ctx_->GetData(f.effect[e][0], &a, sizeof a, D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK &&
             ctx_->GetData(f.effect[e][1], &b, sizeof b, D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK && b > a) {
-            effectMs_[e] += double(b - a) * 1000.0 / double(d.Frequency);
-            recentEffectMs_[e] += double(b - a) * 1000.0 / double(d.Frequency);
+            const int into = e == kTimeWaterMore11 ? int(kTimeWater11) : e;  // 3.0.24-beta.53: the water's
+            effectMs_[into] += double(b - a) * 1000.0 / double(d.Frequency);
+            recentEffectMs_[into] += double(b - a) * 1000.0 / double(d.Frequency);
         }
     }
     return true;
@@ -5063,7 +5070,8 @@ void Renderer11::effectBegin(EffectTime11 e) {
 void Renderer11::effectEnd(EffectTime11 e) {
     if (!timing_ || untimed_) return;
     FrameTimes& f = times_[timeSlot_];
-    if (!f.open || !(f.effectBegun >> e & 1) || (f.effectEnded >> e & 1)) return;
+    // 3.0.24-beta.53: the water's later runs' end written anew at each run's end (the last one's read)
+    if (!f.open || !(f.effectBegun >> e & 1) || ((f.effectEnded >> e & 1) && e != kTimeWaterMore11)) return;
     ctx_->End(f.effect[e][1]);
     f.effectEnded |= 1u << e;
 }
@@ -5078,7 +5086,8 @@ void Renderer11::logGpu(ULONGLONG now) {
                                                             "bloom", "footprints", "heat haze",
                                                             "light in the air",
                                                             "glow", "water's copies",
-                                                            "floor reflections", "grass", "", ""};
+                                                            "floor reflections", "grass", "", "", "",
+                                                            "living ground"};
         if (effectMs_[kTimeWorld11] > 0.0 || effectMs_[kTimeUi11] > 0.0)  // 2.5.15
             LOG_INFO("GPU: the game's world %.2f ms a frame (the effects drawn amid it too), its interface %.2f ms",
                      effectMs_[kTimeWorld11] / gpuFrames_, effectMs_[kTimeUi11] / gpuFrames_);
@@ -5162,7 +5171,8 @@ const char* Renderer11::effectName11(int e) {
                                                         "bloom", "footprints", "heat haze",
                                                         "light in the air", "glow", "water's copies",
                                                         "floor reflections", "grass", "the game's world",
-                                                        "the game's interface"};
+                                                        "the game's interface", "water's later draws",
+                                                        "living ground"};
     return e >= 0 && e < kEffectTimes11 ? kNames[e] : "?";
 }
 

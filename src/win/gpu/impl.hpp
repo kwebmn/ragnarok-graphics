@@ -97,7 +97,9 @@ constexpr UINT kMarks12 = 256;          // 3.0.5-beta.2: [debug] profile's marks
 enum EffectTimer : UINT {
     kTimeAo, kTimeActorShadows, kTimeLights, kTimeMist, kTimeHeat, kTimeGrade, kTimeWeather,
     kTimeGlow, kTimeWater, kTimeShafts, kTimeFloor, kTimeBloom, kTimeGrass,
-    kTimeSteps,  // 3.0.5-beta.8
+    kTimeSteps,      // 3.0.5-beta.8
+    kTimeWaterMore,  // 3.0.24-beta.53: the water's later runs - their time the water's (effect_costs::timedInto)
+    kTimeGroundLife,  // 3.0.24-beta.53: the living ground (the sand, the wet walls, the year, the rain's wet)
     kEffectTimes
 };
 // 2.2.2: each timed pass's names, in the enum's order (core/effect_costs.hpp kTimedPasses: the key Costs know, the
@@ -486,6 +488,9 @@ struct Renderer::Impl {
     // frame, while its timer said 1.4, the copies alone, and keep_fps took it for cheap): kTimeWater open from the
     // copies through the water's own draws after them, closed at the first draw that is no water (endWaterTiming)
     bool waterTiming = false;
+    // 3.0.24-beta.53 (item 12: the game's water in several runs a frame, the first alone timed): a later run opens
+    // kTimeWaterMore once - from its first draw, its end written anew at each later run's end
+    bool waterMore = false;
     void endWaterTiming();
     int softCopied = 0;        // 0.67: the soft effects' depth: 1 copied this picture, -1 could not be
     float viewToWorld[12] = {};  // the camera backwards: the view's x, y and z axes in the world, then its place
@@ -1450,6 +1455,7 @@ struct Renderer::Impl {
         }
         waterCopied = false;  // 0.19: its water copies what is under it anew
         waterTiming = false;  // 3.0.24-beta.42: one left open with the last frame's list goes untold
+        waterMore = false;    // 3.0.24-beta.53
         darknessRec.reset();  // 2.6.18
         darknessLaid = false;
         silhouetteRec.reset();  // 3.0.13-beta.30

@@ -32,7 +32,8 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-if="caret"></span><span class="q qh" data-if="hint != ''">{{hint}}</span></div>
 <div class="lh"><span class="hw">{{wareWord}}</span><span class="hp2">{{priceWord}}</span><span
   class="hwt">{{weightWord}}</span></div>
-<div class="wlist" data-hit="list" data-style-height="listH + 'rem'"><div class="wait" data-if="isWaiting">{{waiting}}</div><div class="wr"
+<div class="wlist" data-hit="list" data-style-height="listH + 'rem'"><div class="wait"
+  data-if="isWaiting">{{waiting}}</div><div class="wr"
   data-for="w : wares" data-hit="ware" data-attr-data-index="w.index" data-class-unused="!w.used"
   data-class-hot="w.hot" data-class-framed="w.framed" data-class-incart="w.inCart"><div class="ic"><img
   data-if="w.icon != ''" data-attr-src="w.icon" data-style-width="w.iconW + 'px'"

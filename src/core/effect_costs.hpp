@@ -27,7 +27,15 @@ inline constexpr TimedPass kTimedPasses[] = {
     {"grass", "grass"},
     // 3.0.5-beta.8 (R-XCHNKD): Direct3D 12's footprints timed too - till then the profile counted them into the pass
     // before them (the interface on «Низькі», the grass on «Середні»; 4 ms on a Radeon 610M); Direct3D 11's key
-    {"steps", "footprints"}};
+    {"steps", "footprints"},
+    // 3.0.24-beta.53 (item 12: the game's water drawn in several runs a frame, the first alone timed): the later runs,
+    // their time the water's (timedInto) - never a cost of their own
+    {"water_more", "water's later draws"},
+    // 3.0.24-beta.53 (item 13: the dear effects with no timer): the living ground (ground_life_ps - a copy of the
+    // picture and a pass over all of it): the sand, the wet walls, the year, the rain's wet
+    {"ground_life", "living ground"}};
+// 3.0.24-beta.53: the timed pass a pass's time goes to - the water's later runs the water's, the rest their own
+size_t timedInto(size_t pass);
 
 // "name ms" a line; parse() skips what does not read.
 std::string format(const Costs& c);

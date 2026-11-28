@@ -867,6 +867,7 @@ private:
     ID3D11DepthStencilView* depthCopyDsv_ = nullptr;
     ID3D11ShaderResourceView* depthCopySrv_ = nullptr;
     bool waterCopied_ = false;  // this frame's copies made (or could not be)
+    bool waterMore_ = false;    // 3.0.24-beta.53: a later run of the water's timed (kTimeWaterMore11)
     bool waterReady_ = false;   // ... and the water is drawn from them
     bool cameraValid_ = false;
     float viewToWorld_[12] = {};
@@ -1216,7 +1217,7 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
-        ID3D11Query* effect[17][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.15: 21 ... 2.7.17: 17)
+        ID3D11Query* effect[19][2] = {};  // 0.89: the effects' own spans (EffectTime11; ... 2.7.17: 17; .53: 19)
         unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
@@ -1231,9 +1232,14 @@ private:
         kTimeGlow11, kTimeWater11, kTimeFloor11, kTimeGrass11,  // 2.5.9: the last four
         // 2.5.15: the game's world draws (with the effects drawn amid them) and its interface's - apart from the
         // effects' own passes in the log, not in their costs (an HD 6570: 46-57 ms a frame, effects a few of them)
-        kTimeWorld11, kTimeUi11, kEffectTimes11
+        kTimeWorld11, kTimeUi11,
+        // 3.0.24-beta.53 (item 12: the game's water in several runs a frame, the first alone timed): the later runs,
+        // from the first's draw, its end written anew at each later run's end - their time the water's
+        kTimeWaterMore11,
+        kTimeGroundLife11,  // 3.0.24-beta.53 (item 13): the living ground - the sand, the wet walls, the year, the rain
+        kEffectTimes11
     };
-    static_assert(kEffectTimes11 == 17, "FrameTimes::effect holds 17");
+    static_assert(kEffectTimes11 == 19, "FrameTimes::effect holds 19");
     static bool drawsTimer(int e) { return e == kTimeWorld11 || e == kTimeUi11; }
     void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
     void effectEnd(EffectTime11 e);

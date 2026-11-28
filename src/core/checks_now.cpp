@@ -8,6 +8,24 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.53 (the owner's «делай все» after the audit 28.11, items 12 and 13): the water lighter on a weak
+        // card, its whole cost seen; the living ground timed
+        {"water_lean_53", "3.0.24-beta.53", "frames.keep_fps",
+         {"A weak card: the water lighter; keep_fps sees all of it and the sand",
+          "Слабка відеокарта: вода легша; «Тримати частоту кадрів» бачить її всю і пісок",
+          "Слабая видеокарта: вода легче; «Держать частоту кадров» видит её всю и песок"},
+         {"On the laptop in a port (alberta 167 162): the frames a little higher than in the last beta, the water "
+          "without its fine noise ripples (the swells and the reflections stay); standing still no steps' rings are "
+          "worked out. The MCP's perf: «water» now holds all of the water's draws. In Morocco with «Sand drift» on: "
+          "«ground_life» in perf - «Keep the frame rate» can turn the sand off when it is the dearest.",
+          "На ноутбуці в порту (alberta 167 162): кадрів трохи більше, ніж у минулій беті, вода без дрібної шумової "
+          "ряби (хвилі й відображення лишаються); коли стоїте, кола від кроків не рахуються. У perf через MCP «water» "
+          "тепер — усі малювання води. У Морокко з увімкненим дрейфом піску: у perf з'явився «ground_life» — "
+          "«Тримати частоту кадрів» може вимкнути пісок, коли він найдорожчий.",
+          "На ноутбуке в порту (alberta 167 162): кадров чуть больше, чем в прошлой бете, вода без мелкой шумовой ряби "
+          "(волны и отражения остаются); когда стоите, круги от шагов не считаются. В perf через MCP «water» теперь — "
+          "все отрисовки воды. В Морокко с включённым дрейфом песка: в perf появился «ground_life» — «Держать "
+          "частоту кадров» может выключить песок, когда он самый дорогой."}},
         // 3.0.24-beta.52 (the owner's «делай все» after the audit 28.11, item 10): the lists' corner adds rows
         {"list_rows_52", "3.0.24-beta.52", "",
          {"«Skills» and the NPC shop: the corner adds rows",

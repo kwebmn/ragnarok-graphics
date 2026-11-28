@@ -686,7 +686,7 @@ bool Renderer::Impl::ensureGrassMask(int w, int maskRows, int tilesWide, int til
 // cave glistening - blended over, before the characters.
 bool Renderer::Impl::applyGroundLife() {
     groundLifeDone = true;
-    crumb("living ground");
+    EffectTime timing(*this, kTimeGroundLife);  // 3.0.24-beta.53 (item 13): its own cost for keep_fps
     if (!ensureScene("living ground")) return true;
     ID3D12PipelineState* pso = alphaPipeline(groundLifePs, groundLifePipelines, upscale ? 1 : samples, "living ground");
     if (!pso) return true;

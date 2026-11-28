@@ -33,6 +33,11 @@ const Costly kCostly[] = {
     // 2.6.8: the low mists' pass (haze.cpp applyMist) - it runs while either is on
     {"morning_fog", "mist", &EffectSettings::morningFog},
     {"swamp", "mist", &EffectSettings::swamp},
+    // 3.0.24-beta.53 (item 13): the living ground's pass (renderers' kTimeGroundLife) - each of its parts
+    {"sand_drift", "ground_life", &EffectSettings::sandDrift},
+    {"wet_walls", "ground_life", &EffectSettings::wetWalls},
+    {"seasons", "ground_life", &EffectSettings::seasons},
+    {"rain_wet", "ground_life", &EffectSettings::rainWet},
 };
 
 // 2.5.16: what is drawn inside the world's own draws (the draw shader's extras: without them most draws take its
@@ -55,6 +60,14 @@ const Costly* find(const std::string& key) {
 }
 
 }  // namespace
+
+size_t timedInto(size_t pass) {
+    constexpr size_t kCount = sizeof kTimedPasses / sizeof kTimedPasses[0];
+    if (pass < kCount && std::string(kTimedPasses[pass].key) == "water_more")
+        for (size_t i = 0; i < kCount; ++i)
+            if (std::string(kTimedPasses[i].key) == "water") return i;
+    return pass;
+}
 
 std::string format(const Costs& c) {
     std::string out;
