@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.41 — what's new · 2026-11-28
+
+Effects that silently did not turn on.
+
+- **«Shadows from torches and lamps»** and **«World reflections in water»** are drawn in the Remaster mode only (Alt+O → «Picture» → «Mode»). In «Classic+» they did nothing, and the shadows' hint was silent about it. Now in «Classic+» these rows are greyed with «Remaster mode only» under them, and the hints say it plainly.
+- **«Effects behind the character»** with Direct3D 11 likewise works in «Remaster» only - its hint says so now.
+
 # uaRO Graphics 3.0.24-beta.40 — what's new · 2026-11-28
 
 MCP: the watchdog brings the game it starts in front by itself (at full screen the game draws only while its window is in front - started over MCP behind the launcher, it waited for a click); a new action `front` in `game` does it on demand, `status` shows `inFront`.
