@@ -7,6 +7,19 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.42 (the laptop's effects run): the water's own draws timed - keep_fps takes it for what it costs
+        {"water_cost_42", "3.0.24-beta.42", "frames.keep_fps",
+         {"Keep the frame rate: the water goes before lighter effects",
+          "Тримати частоту кадрів: вода йде раніше за легші ефекти",
+          "Держать частоту кадров: вода уходит раньше более лёгких эффектов"},
+         {"A weak card (a laptop's), «Keep the frame rate» on, a port (alberta 167 162): if the frames fall under it, "
+          "after the smoothing it is «Modern water» that goes off first, not the colour or the shadows - and the "
+          "frames come back.",
+          "Слабка відеокарта (ноутбука), «Тримати частоту кадрів» увімкнено, порт (alberta 167 162): якщо кадрів "
+          "менше, після згладжування першою вимикається «Сучасна вода», а не колір чи тіні, — і кадри повертаються.",
+          "Слабая видеокарта (ноутбука), «Держать частоту кадров» включено, порт (alberta 167 162): если кадров "
+          "меньше, после сглаживания первой выключается «Современная вода», а не цвет или тени, — и кадры "
+          "возвращаются."}},
         // 3.0.24-beta.41 (the laptop's effects run): the remaster mode's own rows say so in «Класика+»
         {"remaster_rows_41", "3.0.24-beta.41", "",
          {"Effects: the remaster mode's own rows say so", "Ефекти: рядки лише для «Ремастеру» кажуть це",
