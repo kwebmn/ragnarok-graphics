@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.24-beta.44 — what's new · 2026-11-28
+
+Diagnostics for weak graphics cards: every 30 seconds the renderer's log says how many times a frame the water is drawn and how much of the picture it covers (to find why «Modern water» is so dear on laptops).
+
 # uaRO Graphics 3.0.24-beta.43 — what's new · 2026-11-28
 
 Optimisations for weak graphics cards (under 4 GB, as laptops have). Cards of 4 GB and more draw as before.
