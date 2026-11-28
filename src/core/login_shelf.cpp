@@ -174,6 +174,19 @@ Hit hitTest(const Layout& L, float x, float y) {
 
 int padMove(int index, int count, int dir) { return count <= 0 ? 0 : std::clamp(index + dir, 0, count - 1); }
 
+CharFocus charPadMove(CharFocus f, const std::vector<int>& counts, int dRow, int dCard) {
+    if (counts.empty()) return CharFocus{};
+    f.row = std::clamp(f.row + dRow, 0, int(counts.size()) - 1);
+    f.card = std::clamp(f.card + dCard, 0, std::max(0, counts[size_t(f.row)]));  // the last: «Новий персонаж»
+    return f;
+}
+
+int firstToSee(int row, int first, int inSight) {
+    if (inSight <= 0 || row < first) return std::max(0, row);
+    if (row >= first + inSight) return row - inSight + 1;
+    return first;
+}
+
 std::string jobLine(const Card& c) {
     std::string line = c.job;
     if (c.level > 0) line += (line.empty() ? "" : " · ") + std::to_string(c.level);

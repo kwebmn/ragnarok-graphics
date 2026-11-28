@@ -143,6 +143,15 @@ struct CharShow {
     int hoverRow = -1, hoverCard = -1;  // hoverCard -1 with a row: its «Новий персонаж»
     bool hoverBack = false;
 };
+// 3.0.24-beta.56 (the owner's «давай», item 7: «Персонажі» on the pad - its B alone before): the pad's frame over the
+// characters - a login's row and a card in it, the card past its characters its «Новий персонаж»; ↑ ↓ the rows, ← →
+// the cards, kept inside (`counts` the logins' characters)
+struct CharFocus {
+    int row = 0, card = 0;
+};
+CharFocus charPadMove(CharFocus f, const std::vector<int>& counts, int dRow, int dCard);
+// The first row in sight that shows `row` with `inSight` rows from `first`
+int firstToSee(int row, int first, int inSight);
 std::vector<Words> characterWords(const CharLayout& L, const std::vector<CharLogin>& logins, const CharShow& sh,
                                   const CharTexts& t);
 

@@ -139,7 +139,9 @@ Bindings defaultBindings() {
     set(kPadB, Action{Action::Kind::Slot, 2});
     set(kPadRB, Action{Action::Kind::Slot, 3});
     set(kPadRT, Action{Action::Kind::Slot, 4});
-    set(kPadLB, Action{Action::Kind::Slot, 5});
+    // 3.0.24-beta.56 (the owner's «давай», item 7: the skill wheel had no button by default): LB held - the wheel
+    // of the second row (the right stick picks, let go uses it); F6 of the first row before. A saved layout keeps its
+    set(kPadLB, Action{Action::Kind::Wheel, 0});
     set(kPadUp, Action{Action::Kind::Slot, 6});
     set(kPadRight, Action{Action::Kind::Slot, 7});
     set(kPadDown, Action{Action::Kind::Talk, 0});  // 0.7; slot F9 before

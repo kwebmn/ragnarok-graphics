@@ -1423,7 +1423,7 @@ void padCommand(PadCommand c) {
         const P p = c == PadCommand::Left ? P::Left : c == PadCommand::Right ? P::Right : c == PadCommand::Up ? P::Up
                     : c == PadCommand::Down ? P::Down : c == PadCommand::A ? P::Select : c == PadCommand::X ? P::Other
                     : c == PadCommand::Y ? P::Menu : P::Back;
-        if (c == PadCommand::B && !loginshelfwin::menuOpen()) {
+        if (c == PadCommand::B && !loginshelfwin::backTaken()) {  // 3.0.24-beta.56: «Персонажі»'s B its own
             s.exitAskedAt = now;
             return;
         }

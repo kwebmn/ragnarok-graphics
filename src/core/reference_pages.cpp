@@ -2939,4 +2939,6 @@ Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
 
 }  // namespace
 
+bool townMap(const refindex::Index& ix, const std::string& code) { return isTown(ix, code); }
+
 }  // namespace uagfx::refpages

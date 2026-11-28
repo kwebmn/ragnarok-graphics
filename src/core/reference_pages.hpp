@@ -304,4 +304,9 @@ uint32_t elementColour(int element);  // 3.0.11-beta.26: the concept's dot of an
 // 3.0.11-beta.8: where a route's move is taken - «вихід 156, 22», «Kafra 146, 86 · 1 200 z», «перехід 52, 136»
 std::string stepNote(const refroute::Step& step, settings::Lang l);
 
+// 3.0.24-beta.56 (the owner's «давай», item 5): a town by the reference's rule (the «town» flag, else - uAthena
+// flags none - a Kafra there and ten monsters at the most; no castle, house, arena or passage) - the minimap's list of
+// monsters hidden there (the city cleaners alone)
+bool townMap(const refindex::Index& ix, const std::string& code);
+
 }  // namespace uagfx::refpages

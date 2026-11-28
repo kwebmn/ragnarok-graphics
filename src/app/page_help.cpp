@@ -1,6 +1,8 @@
 #include <string>
 
+#include "app/text.hpp"
 #include "app/page.hpp"
+#include "core/key_binds.hpp"
 #include "core/settings/help.hpp"
 
 namespace uagfx::app {
@@ -24,7 +26,11 @@ public:
         p.note(t(Text::HelpFeaturesList), Tone::Normal);
         p.gap();
         p.heading(t(Text::MainKeys));
-        p.note(t(Text::MainKeysList), Tone::Normal);
+        // 3.0.24-beta.56 (the owner's «давай», item 4): the walk mode's line by the player's keys ([keys])
+        const settings::Lang l = host_.lang();
+        p.note(wide(keybinds::keysList(settings::tr(l, Text::MainKeysList), settings::tr(l, Text::KeysWalkLine),
+                                       host_.model().pendingConfig().keys, settings::tr(l, Text::KeySpace))),
+               Tone::Normal);
         for (View v : viewsOf(mode)) {
             if (v == View::Help) continue;
             std::wstring rows;

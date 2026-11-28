@@ -4677,7 +4677,8 @@ constexpr Entry kTexts[] = {
      "Space (the chat line empty) - attack, else pick up, else talk to the NPC near\n"
      "` - the walk mode: W A S D walk, Tab the target, Space attack, F pick up, R talk, C sit, Q / E the camera, "
      "1-9 the bar, Enter the chat\n"
-     "Arrows in a window - move its frame (after the first arrow); Enter presses, Esc closes, PgUp / PgDn the tabs",
+     "Arrows in a window - move its frame (after the first arrow); Enter presses, Esc closes, PgUp / PgDn the tabs; "
+     "Alt+` - the next window",
      "Alt+O — «Налаштування»: усе, що діє одразу, просто в грі\n"
      "Ctrl+~ (клавіша ліворуч від 1) — консоль: проби, діагностика, ціна ефектів\n"
      "Ctrl+Shift+F10 — «Нове звернення» до розробників зі знімком екрана\n"
@@ -4692,7 +4693,7 @@ constexpr Entry kTexts[] = {
      "` — режим ходьби: W A S D — ходьба, Tab — ціль, пробіл — атака, F — підібрати, R — NPC, C — сісти, "
      "Q / E — камера, 1–9 — панель, Enter — чат\n"
      "Стрілки у вікні — ведуть його рамку (після першої стрілки); Enter натискає, Esc закриває, PgUp / PgDn — "
-     "вкладки",
+     "вкладки; Alt+` — наступне вікно",
      "Alt+O — «Настройки»: всё, что действует сразу, прямо в игре\n"
      "Ctrl+~ (клавиша слева от 1) — консоль: пробы, диагностика, цена эффектов\n"
      "Ctrl+Shift+F10 — «Новое обращение» к разработчикам со снимком экрана\n"
@@ -4707,7 +4708,7 @@ constexpr Entry kTexts[] = {
      "` — режим ходьбы: W A S D — ходьба, Tab — цель, пробел — атака, F — подобрать, R — NPC, C — сесть, "
      "Q / E — камера, 1–9 — панель, Enter — чат\n"
      "Стрелки в окне — ведут его рамку (после первой стрелки); Enter нажимает, Esc закрывает, PgUp / PgDn — "
-     "вкладки"},
+     "вкладки; Alt+` — следующее окно"},
     {Text::PlayKeysLine,
      "In the game: Alt+O the settings, Ctrl+Shift+F10 a report, Pause the original look. Every key is on "
      "«Main».",
@@ -8896,8 +8897,10 @@ constexpr Entry kTexts[] = {
      "стрелки и цифровой блок ведут персонажа, Enter открывает строку чата и отправляет, Esc стирает; Tab / "
      "Shift+Tab — цель, пробел — атака, F — подобрать, R — NPC, C — сесть, Q / E — камера, 1–9 — панель. Строка "
      "чата показывает: «Ходьба · Enter — писать»."},
-    {Text::ChatHintWalk, "Walking \xC2\xB7 Enter: type \xC2\xB7 `: off",
-     "Ходьба \xC2\xB7 Enter — писати \xC2\xB7 ` — вимкнути", "Ходьба \xC2\xB7 Enter — писать \xC2\xB7 ` — выключить"},
+    // 3.0.24-beta.56 (item 4): {1} the walk mode's toggle as the player set it ([keys] walk_toggle)
+    {Text::ChatHintWalk, "Walking \xC2\xB7 Enter: type \xC2\xB7 {1}: off",
+     "Ходьба \xC2\xB7 Enter — писати \xC2\xB7 {1} — вимкнути",
+     "Ходьба \xC2\xB7 Enter — писать \xC2\xB7 {1} — выключить"},
     {Text::InterfaceSpaceAction, "Space acts", "Пробіл — дія", "Пробел — действие"},
     {Text::InterfaceSpaceActionHint,
      "Space with the chat line empty does what the gamepad's A does: attacks the target, else picks up loot beside, "

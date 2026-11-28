@@ -324,6 +324,9 @@ void buildHints(State& s) {
         }
     }
     if (!s.show.mobs) return;
+    // 3.0.24-beta.56 (the owner's «давай», item 5): a town's list - the city cleaners alone (core refpages::isTown:
+    // a Kafra there, ten monsters at the most - uAthena flags no town): none
+    if (s.index && refpages::townMap(*s.index, s.map)) return;
     if (!s.index) {
         s.lines.push_back(Line{say(settings::Text::MinimapNoReference), "", false});
         return;

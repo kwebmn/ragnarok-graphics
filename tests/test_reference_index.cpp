@@ -248,3 +248,20 @@ TEST(reference_index_the_sites_word_on_what_is_in_the_game) {
     CHECK(refindex::obtainable(ix, 938));   // no word: Hornet on a map drops it
     CHECK(!refindex::obtainable(ix, 512));  // no word, no source
 }
+
+#include "core/reference_pages.hpp"
+
+// 3.0.24-beta.56 (the owner's «давай», item 5: the towns' monsters list - the server's city cleaners alone): a town by
+// refpages' rule (uAthena flags none: a Kafra there and ten monsters at the most) - its list under the minimap hidden
+TEST(reference_pages_a_town_for_the_minimap) {
+    refindex::Index ix;
+    refindex::Npc kafra;
+    kafra.kind = refindex::NpcKind::Kafra;
+    ix.maps["prontera"].npcs.push_back(kafra);
+    ix.maps["prontera"].mobs.push_back(refindex::MobOnMap{1261, 2, 3600000});  // the cleaners
+    ix.maps["prt_fild08"].mobs.push_back(refindex::MobOnMap{1002, 70, 0});
+    ix.maps["prt_fild08"].npcs.push_back(kafra);
+    CHECK(refpages::townMap(ix, "prontera"));
+    CHECK(!refpages::townMap(ix, "prt_fild08"));  // seventy Porings: a field
+    CHECK(!refpages::townMap(ix, "nowhere"));
+}

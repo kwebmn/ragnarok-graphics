@@ -28,5 +28,10 @@ Bind boundTo(const Binds& b, unsigned scan, bool& found);
 // The keys list's walk mode line by the player's keys: «{1}» the toggle's name ... «{8}» the camera's right (Bind's
 // order), each named by `name` (its scan code)
 std::string walkLine(const std::string& form, const Binds& b, const std::function<std::string(unsigned scan)>& name);
+// 3.0.24-beta.56 (the owner's «давай», item 4): a key's name as the keys lists say it - «`», `spaceWord`, «Tab», the
+// letter; and a keys list (MainKeysList) with its walk mode line («` » first) the form's by the player's keys
+std::string keyName(unsigned scan, const std::string& spaceWord);
+std::string keysList(const std::string& list, const std::string& walkForm, const Binds& b,
+                     const std::string& spaceWord);
 
 }  // namespace uagfx::keybinds

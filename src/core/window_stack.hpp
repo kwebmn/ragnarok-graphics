@@ -73,4 +73,9 @@ Side dockSide(Box bag, Box gear, int screenW);
 Side opposite(Side s);
 Box docked(Box leader, Box follower, Side side);  // the follower `side` of the leader, tops in line
 
+// 3.0.24-beta.56 (the owner's «давай», item 6: the keyboard concept's window switch - Ctrl+Tab the chat's channels):
+// Alt+` - the open windows (top first) the bottom one to raise: each press another, all of them in turn; none with
+// fewer than two
+std::optional<Win> roundNext(const std::vector<Win>& shownTopDown);
+
 }  // namespace uagfx::winstack

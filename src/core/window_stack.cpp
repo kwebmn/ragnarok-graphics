@@ -85,4 +85,9 @@ bool covers(const std::vector<Box>& open, int x, int y) {
     return false;
 }
 
+std::optional<Win> roundNext(const std::vector<Win>& shownTopDown) {
+    if (shownTopDown.size() < 2) return std::nullopt;
+    return shownTopDown.back();
+}
+
 }  // namespace uagfx::winstack

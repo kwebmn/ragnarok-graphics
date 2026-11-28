@@ -1,10 +1,12 @@
 #include <cstdio>
 
+#include "app/text.hpp"
 #include "app/modes.hpp"
 #include "app/page.hpp"
 #include "app/setting_ids.hpp"
 #include "app/status_info.hpp"
 #include "app/update.hpp"
+#include "core/key_binds.hpp"
 #include "core/settings/game_settings.hpp"
 #include "core/settings/choice_presets.hpp"
 #include "core/settings/presets.hpp"
@@ -80,7 +82,11 @@ public:
         buildTextures(p);
         p.gap();
         p.heading(t(Text::MainKeys));  // 3.0.2-beta.4 (the user): the keys of the game a player should know
-        p.note(t(Text::MainKeysList), Tone::Normal);
+        // 3.0.24-beta.56 (the owner's «давай», item 4): the walk mode's line by the player's keys ([keys])
+        const settings::Lang l = host_.lang();
+        p.note(wide(keybinds::keysList(settings::tr(l, Text::MainKeysList), settings::tr(l, Text::KeysWalkLine),
+                                       host_.model().pendingConfig().keys, settings::tr(l, Text::KeySpace))),
+               Tone::Normal);
         p.join();
     }
 

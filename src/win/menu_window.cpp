@@ -254,20 +254,10 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.targetH = targetHeight;
     s.layout = mw::layout(kind, targetWidth, targetHeight, s.scale, s.recap.size());
     if (s.show.keys) {  // 3.0.18-beta.225: «Клавіші» - the settings app's keys list in the card
-        std::vector<mw::KeyLine> lines = mw::keyLines(say(settings::Text::MainKeysList));
         // 3.0.24-beta.55 (item 12): the walk mode's line by the player's keys ([keys])
-        const auto name = [](unsigned scan) -> std::string {
-            if (scan == 0x39) return say(settings::Text::KeySpace);
-            if (scan == 0x29) return "`";
-            std::string t = keybinds::tokenOf(scan);
-            if (t == "tab") return "Tab";
-            for (char& c : t) c = char(c >= 'a' && c <= 'z' ? c - 'a' + 'A' : c);
-            return t;
-        };
-        const std::vector<mw::KeyLine> walk =
-            mw::keyLines(keybinds::walkLine(say(settings::Text::KeysWalkLine), Context::get().config.keys, name));
-        for (mw::KeyLine& l : lines)
-            if (l.keys == "`" && !walk.empty()) l = walk.front();
+        const std::vector<mw::KeyLine> lines = mw::keyLines(
+            keybinds::keysList(say(settings::Text::MainKeysList), say(settings::Text::KeysWalkLine),
+                               Context::get().config.keys, say(settings::Text::KeySpace)));
         const mw::KeysView kv = mw::keysView(targetWidth, targetHeight, s.scale, lines, texts(s.padNow), s.show,
                                              measure);
         s.layout = kv.layout;

@@ -809,6 +809,19 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 
 bool key(UINT m, WPARAM wp, LPARAM lp) {
     State& s = state();
+    // 3.0.24-beta.56 (the owner's «давай», item 6): Alt+` - the open windows' round (the keys' frame to the top one)
+    if (m == WM_SYSKEYDOWN && ((lp >> 16) & 0xFF) == 0x29) {
+        if ((lp >> 30) & 1) return true;  // held: once a press
+        std::vector<Win> open;
+        for (const Win w : s.stack.topDown())
+            if (shown(w)) open.push_back(w);
+        if (const std::optional<Win> next = winstack::roundNext(open)) {
+            s.stack.raise(*next);
+            tell(s, "raised by Alt+` (the open windows' round)", *next);
+        }
+        return !open.empty();
+    }
+    if (m == WM_SYSCHAR && wp == '`') return true;  // its letter: no beep
     const std::optional<Win> t = s.stack.top();
     if (t && keyOne(*t, m, wp, lp)) return true;  // the top's own keys first
     if (t && m == WM_KEYDOWN && wp == VK_ESCAPE && chatwin::inputEmpty() && close(*t)) {

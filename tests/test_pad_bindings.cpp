@@ -24,7 +24,9 @@ TEST(bindings_default_is_the_hunter_layout) {
     CHECK(b[indexOf(kPadB)] == slot(2));
     CHECK(b[indexOf(kPadRB)] == slot(3));
     CHECK(b[indexOf(kPadRT)] == slot(4));
-    CHECK(b[indexOf(kPadLB)] == slot(5));
+    // 3.0.24-beta.56 (the owner's «давай», item 7: the skill wheel had no button by default): LB holds the wheel of
+    // the second row (the right stick picks, let go uses it); F6 of the first row before
+    CHECK(b[indexOf(kPadLB)] == (Action{Action::Kind::Wheel, 0}));
     CHECK(b[indexOf(kPadUp)] == slot(6));
     CHECK(b[indexOf(kPadRight)] == slot(7));
     CHECK(b[indexOf(kPadDown)] == kind(Action::Kind::Talk));  // 0.7; slot F9 before

@@ -46,5 +46,7 @@ bool box(int& x, int& y, int& w, int& h);  // the shelf's picture in the target'
 enum class Pad : uint8_t { Left, Right, Up, Down, Select, Other, Menu, Back };
 Asked pad(Pad p, bool& took);
 bool menuOpen();
+// 3.0.24-beta.56: B is the shelf's own - its menu open, or «Персонажі» shown (B back to the cards, not «Вийти»)
+bool backTaken();
 
 }  // namespace uagfx::win::loginshelfwin

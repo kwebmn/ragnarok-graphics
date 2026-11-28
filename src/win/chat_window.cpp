@@ -17,6 +17,7 @@
 #include <variant>
 #include <vector>
 
+#include "core/key_binds.hpp"
 #include "core/chat_panel.hpp"
 #include "core/ui_icons.hpp"
 #include "core/settings/search.hpp"
@@ -25,6 +26,7 @@
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "win/context.hpp"
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
@@ -220,7 +222,9 @@ cp::Texts texts() {
     t.from = say(settings::Text::ChatFrom);
     t.to = say(settings::Text::ChatTo);
     t.send = say(settings::Text::ChatHintSend);
-    t.walk = say(settings::Text::ChatHintWalk);  // 3.0.18-beta.208
+    const std::string toggle = keybinds::keyName(  // 3.0.24-beta.56 (item 4): the player's toggle ([keys])
+        Context::get().config.keys.scan[int(keybinds::Bind::Toggle)], say(settings::Text::KeySpace));
+    t.walk = settings::fmt(say(settings::Text::ChatHintWalk), {toggle});  // 3.0.18-beta.208
     t.type = say(settings::Text::ChatHintType);
     t.newer = "\xE2\x86\x93";  // ↓
     t.commands[0] = say(settings::Text::ChatCmdParty);  // 3.0.11-beta.240

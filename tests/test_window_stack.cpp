@@ -76,3 +76,29 @@ TEST(window_stack_covers_a_point) {
     CHECK(!winstack::covers(open, 1714, 899));  // just past the corner
     CHECK(!winstack::covers({}, 492, 268));
 }
+
+// 3.0.24-beta.56 (the owner's «давай», item 6: the keyboard concept's window switch - Ctrl+Tab the chat's channels):
+// Alt+` the open windows' round - the bottom one raised each press (the keys' frame goes to the top), all of them in
+// turn; one window or none: nothing to switch
+TEST(window_stack_alt_grave_rounds_the_open_windows) {
+    using winstack::Win;
+    CHECK(winstack::roundNext({Win::Items, Win::Stats, Win::Skills}) == Win::Skills);
+    CHECK(!winstack::roundNext({Win::Items}).has_value());
+    CHECK(!winstack::roundNext({}).has_value());
+    winstack::Stack st;
+    st.see(Win::Skills, true);
+    st.see(Win::Stats, true);
+    st.see(Win::Items, true);  // opened last: the top
+    std::vector<Win> seen;
+    for (int i = 0; i < 3; ++i) {
+        std::vector<Win> open;
+        for (const Win w : st.topDown())
+            if (w == Win::Items || w == Win::Stats || w == Win::Skills) open.push_back(w);
+        const std::optional<Win> next = winstack::roundNext(open);
+        CHECK(next.has_value());
+        if (!next) return;
+        st.raise(*next);
+        seen.push_back(*next);
+    }
+    CHECK(seen == (std::vector<Win>{Win::Skills, Win::Stats, Win::Items}));  // each in turn, back to the first
+}

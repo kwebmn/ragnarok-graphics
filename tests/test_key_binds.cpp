@@ -84,3 +84,17 @@ TEST(key_binds_the_walk_line_names_the_players_keys) {
           "GRAVE - mode: Z attack, TAB target, Q / E camera");
     CHECK(keybinds::walkLine("no marks", b, name) == "no marks");
 }
+
+// 3.0.24-beta.56 (the owner's «давай», item 4): the keys list (the game's «Клавіші», the app's «Головне») with its walk
+// mode line by the player's keys - the line beginning with «` » the form's; the keys named as the list names them
+TEST(key_binds_the_keys_list_by_the_players_keys) {
+    keybinds::Binds b = keybinds::defaults();
+    b.scan[int(Bind::Target)] = 0x2C;  // Z
+    b.scan[int(Bind::Toggle)] = 0x30;  // B
+    const std::string list = "A - a\n` - walk: Tab target, Space attack\nB - b";
+    CHECK(keybinds::keysList(list, "{1} - walk: {6} target, {2} attack", b, "Space") ==
+          "A - a\nB - walk: Z target, Space attack\nB - b");
+    CHECK(keybinds::keysList("no walk line", "{1} x", b, "Space") == "no walk line");
+    CHECK(keybinds::keyName(0x29, "Space") == "`" && keybinds::keyName(0x39, "Пробіл") == "Пробіл");
+    CHECK(keybinds::keyName(0x0F, "") == "Tab" && keybinds::keyName(0x2C, "") == "Z");
+}

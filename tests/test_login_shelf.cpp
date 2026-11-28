@@ -321,3 +321,29 @@ TEST(login_shelf_character_rows_fit_a_window) {
     }
     CHECK(whole && cut);
 }
+
+// 3.0.24-beta.56 (the owner's «давай», item 7: the pad on «Полиця»'s «Персонажі» - B alone before): the pad's frame
+// over the characters - ↑ ↓ a login's row, ← → its characters and, last, its «Новий персонаж»; kept inside
+TEST(login_shelf_pad_walks_the_characters) {
+    using loginshelf::CharFocus;
+    const std::vector<int> counts{2, 0, 3};  // the logins' characters
+    CharFocus f;
+    f = loginshelf::charPadMove(f, counts, 0, 1);
+    CHECK(f.row == 0 && f.card == 1);
+    f = loginshelf::charPadMove(f, counts, 0, 1);
+    CHECK(f.row == 0 && f.card == 2);  // the row's «Новий персонаж»
+    f = loginshelf::charPadMove(f, counts, 0, 1);
+    CHECK(f.row == 0 && f.card == 2);  // the end: kept
+    f = loginshelf::charPadMove(f, counts, 1, 0);
+    CHECK(f.row == 1 && f.card == 0);  // no characters: its «Новий персонаж» alone
+    f = loginshelf::charPadMove(f, counts, 1, 0);
+    CHECK(f.row == 2 && f.card == 0);
+    f = loginshelf::charPadMove(f, counts, 5, 0);
+    CHECK(f.row == 2);
+    f = loginshelf::charPadMove(f, counts, -9, -9);
+    CHECK(f.row == 0 && f.card == 0);
+    CHECK(loginshelf::charPadMove(CharFocus{}, {}, 1, 1).row == 0);  // none: as it is
+    CHECK_EQ(loginshelf::firstToSee(5, 0, 4), 2);  // row 5 with 4 in sight from 0: from 2
+    CHECK_EQ(loginshelf::firstToSee(1, 3, 4), 1);  // above: up to it
+    CHECK_EQ(loginshelf::firstToSee(2, 1, 4), 1);  // in sight: kept
+}

@@ -913,6 +913,12 @@ TEST(ctl_mouse_click_hands_the_fight_to_the_mouse) {
 
 TEST(ctl_slot_buttons_cover_the_first_row) {
     Controller c(Config{});
+    {  // 3.0.24-beta.56: LB's default the skill wheel now - its F6 as a layout of the player's own here
+        Bindings own = defaultBindings();
+        for (size_t i = 0; i < kBindableCount; ++i)
+            if (kBindableButtons[i] == kPadLB) own[i] = Action{Action::Kind::Slot, 5};
+        c.setBindings(own);
+    }
     WorldState w = slotWorld();
     addMob(w, 110000001, Cell{101, 100});
     uint32_t t = 1000;

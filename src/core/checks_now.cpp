@@ -8,6 +8,36 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.56 (the owner's «давай» on items 4-7 of 28.11)
+        {"keys_named_56", "3.0.24-beta.56", "",
+         {"Your keys named; Alt+` the next window; no monsters' list in towns",
+          "Ваші клавіші в підказках; Alt+` — наступне вікно; у містах без списку монстрів",
+          "Ваши клавиши в подсказках; Alt+` — следующее окно; в городах без списка монстров"},
+         {"Give the walk mode another toggle key (Alt+O, «Controls»): the chat line's walk hint and the settings app's "
+          "«Main» keys list name it. Open two or three windows, press Alt+`: the bottom one comes on top each time, "
+          "the arrows lead it. In Prontera the list of monsters under the minimap is gone (the city cleaners), in a "
+          "field it shows.",
+          "Дайте режиму ходьби іншу клавішу (Alt+O, «Керування»): підказка ходьби в рядку чату й список клавіш на "
+          "«Головне» в програмі налаштувань називають її. Відкрийте два-три вікна, натисніть Alt+`: щоразу наверх "
+          "виходить нижнє, стрілки ведуть його. У Пронтері списку монстрів під мінікартою немає (прибиральники), у "
+          "полі — є.",
+          "Дайте режиму ходьбы другую клавишу (Alt+O, «Управление»): подсказка ходьбы в строке чата и список клавиш "
+          "на «Главное» в программе настроек называют её. Откройте два-три окна, нажмите Alt+`: каждый раз наверх "
+          "выходит нижнее, стрелки ведут его. В Пронтере списка монстров под мини-картой нет (уборщики), в поле — "
+          "есть."}},
+        {"pad_wheel_chars_56", "3.0.24-beta.56", "",
+         {"Pad: LB the skill wheel; the shelf's characters by the pad",
+          "Пад: LB — колесо вмінь; персонажі на полиці падом",
+          "Пад: LB — колесо умений; персонажи на полке падом"},
+         {"A new pad layout (or «Reset» in the pad's menu): hold LB - the wheel of the bar's second row, the right "
+          "stick picks, let go uses it. On the login's shelf (signed in to the site) D-pad up opens «Characters»: the "
+          "D-pad walks the characters (the last of a row - a new one), A plays, B back to the cards (not «Exit»).",
+          "Нова розкладка пада (чи «Скинути» в меню пада): тримайте LB — колесо другого ряду панелі, правий стик "
+          "вибирає, відпустіть — уміння. На полиці входу (увійшовши на сайт) D-pad ↑ відкриває «Персонажі»: "
+          "хрестовина веде по персонажах (останній у ряду — новий), A — грати, B — назад до карток (не «Вийти»).",
+          "Новая раскладка пада (или «Сбросить» в меню пада): держите LB — колесо второго ряда панели, правый стик "
+          "выбирает, отпустите — умение. На полке входа (войдя на сайт) D-pad ↑ открывает «Персонажи»: крестовина "
+          "ведёт по персонажам (последний в ряду — новый), A — играть, B — назад к карточкам (не «Выйти»)."}},
         // 3.0.24-beta.55 (the owner: «пока делай все что можешь без проверки», «можно в одну бету»): the audit's rest
         {"windows_rest_55", "3.0.24-beta.55", "",
          {"Windows: Alt+H closes, macros keep themselves, the reference smaller",

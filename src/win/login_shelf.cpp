@@ -63,6 +63,8 @@ struct State {
     bool charsView = false;
     int charFirst = 0;
     std::vector<int> charRows;  // a «Персонажі» row's place in rows
+    ls::CharFocus charFocus;    // 3.0.24-beta.56: the pad's frame over «Персонажі»
+    bool charPad = false;       // ... moved by the pad since the view opened (its frame shown)
     std::vector<ls::CharLogin> charLogins;
     ls::CharLayout charLayout;
     ls::CharShow charShow;
@@ -328,6 +330,12 @@ void charsFrame(State& s, int targetWidth, int targetHeight) {
     s.charLayout = ls::characterRows(targetWidth, targetHeight, s.scale, counts, s.charFirst, s.below);
     s.charFirst = s.charLayout.first;
     s.charShow = ls::CharShow{};
+    if (s.charPad && !s.charLogins.empty()) {  // 3.0.24-beta.56: the pad's frame lit as the pointer's would be
+        const int row = std::min(s.charFocus.row, int(s.charLogins.size()) - 1);
+        s.charShow.hoverRow = row;
+        s.charShow.hoverCard =
+            s.charFocus.card < int(s.charLogins[size_t(row)].chars.size()) ? s.charFocus.card : -1;
+    }
     int cx = 0, cy = 0;
     if (readHoverCursor(cx, cy)) {
         const ls::CharHit h = ls::characterHit(s.charLayout, float(cx) * s.k - float(s.charLayout.x),
@@ -566,7 +574,7 @@ Asked mouse(UINT m, WPARAM wp, float tx, float ty, bool& took) {
         case ls::Part::SearchClear: s.search.clear(); return {};
         case ls::Part::Search: return {};
         case ls::Part::Chars:  // 3.0.11-beta.181
-            if (left) s.charsView = true;
+            if (left) s.charsView = true, s.charFocus = ls::CharFocus{}, s.charPad = false;
             return {};
         case ls::Part::NewLogin: return left ? Asked{Act::NewLogin, -1, {}} : Asked{};
         case ls::Part::LinkLogin: return left ? Asked{Act::LinkLogin, -1, {}} : Asked{};
@@ -676,9 +684,31 @@ Asked pad(Pad p, bool& took) {
     State& s = state();
     took = true;
     s.key.clear();
-    if (s.charsView) {  // 3.0.11-beta.181: B back to the cards
-        if (p == Pad::Back) s.charsView = false;
-        return {};
+    if (s.charsView) {  // 3.0.11-beta.181: B back to the cards; 3.0.24-beta.56: the pad walks the characters
+        std::vector<int> counts;
+        for (const ls::CharLogin& g : s.charLogins) counts.push_back(int(g.chars.size()));
+        switch (p) {
+            case Pad::Back: s.charsView = false; return {};
+            case Pad::Up:
+            case Pad::Down:
+            case Pad::Left:
+            case Pad::Right: {
+                const int dRow = p == Pad::Up ? -1 : p == Pad::Down ? 1 : 0;
+                const int dCard = p == Pad::Left ? -1 : p == Pad::Right ? 1 : 0;
+                s.charFocus = ls::charPadMove(s.charFocus, counts, s.charPad ? dRow : 0, s.charPad ? dCard : 0);
+                s.charPad = true;  // the first press shows the frame where it is
+                s.charFirst = ls::firstToSee(s.charFocus.row, s.charFirst, ls::kRowsInSight);
+                return {};
+            }
+            case Pad::Select: {
+                if (counts.empty() || s.charFocus.row >= int(s.charRows.size())) return {};
+                const int r = s.charRows[size_t(s.charFocus.row)];
+                const ls::CharLogin& g = s.charLogins[size_t(s.charFocus.row)];
+                if (s.charFocus.card >= int(g.chars.size())) return Asked{Act::CharNew, r, {}};
+                return Asked{Act::CharLogin, r, g.chars[size_t(s.charFocus.card)].name};
+            }
+            default: return {};
+        }
     }
     const int cards = int(s.cards.size());
     if (s.menuFor >= 0) {  // the card's menu: its rows
@@ -700,6 +730,14 @@ Asked pad(Pad p, bool& took) {
             return {};
         case Pad::Select: return cards > 0 ? Asked{Act::Login, rowOf(s, s.show.focus), {}} : Asked{Act::Add, -1, {}};
         case Pad::Other: return Asked{Act::Other, -1, {}};
+        case Pad::Up:  // 3.0.24-beta.56 (item 7): «Персонажі» - the site's logins' characters (its link shown)
+            if (s.layout.chars.w <= 0) return {};
+            s.charsView = true;
+            s.charFocus = ls::CharFocus{};
+            s.charPad = true;
+            s.charFirst = 0;
+            LOG_INFO("login: «Персонажі» opened by the pad (D-pad up)");
+            return {};
         case Pad::Menu:
             if (cards > 0) {
                 s.menuFor = s.show.focus;
@@ -711,6 +749,8 @@ Asked pad(Pad p, bool& took) {
 }
 
 bool menuOpen() { return state().menuFor >= 0; }
+
+bool backTaken() { return state().menuFor >= 0 || state().charsView; }  // 3.0.24-beta.56
 
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();
