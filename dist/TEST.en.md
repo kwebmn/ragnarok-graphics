@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.24-beta.46 — what's new · 2026-11-28
+
+First fixes after the interface audit:
+- The digit you pick an NPC menu item with (and a shop's count) no longer lands in the chat line, nor is it said in public later.
+- The chat line as in the original: open the line (Enter or a click) and press ↑ ↓ - the lines sent before come back (until the game closes). The messages scroll by PgUp, PgDn and the wheel. With the line closed the arrows walk.
+- Light theme: the character block's buttons, the minimap's «+» and «−» and «Довідник»'s sections are seen now.
+- Windows are opaque: the ones under them no longer show through (the main screen's panels stay translucent; the «Window opacity» slider is still there).
+- «Продати» at an NPC: worn things (and arrows) are no longer in the list.
+- The Esc menu: the settings first, character select, change account and exit together below.
+- Storage: a stack double clicked from «Речі» asks how many to put.
+
 # uaRO Graphics 3.0.24-beta.45 — what's new · 2026-11-28
 
 Updates: before its files go in, the uaRO app (the launcher) now closes by itself - when the update was started by «UPDATE» and when by the game's question at its start. The update's window says «Closing the uaRO app...», the settings' changes are kept, and the app opens again after the install. Before, the update waited only a minute for the app and then put its files over the open one. Two updates at once no longer overlap, and each step is written to uaro-graphics\logs\uaro-graphics-update.log.
