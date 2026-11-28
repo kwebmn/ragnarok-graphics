@@ -512,6 +512,21 @@ mcp::CallResult iniSet(const json::Value& args) {
               : said("uaro-graphics.ini could not be written whole", true);
 }
 
+// 3.0.24-beta.57 (docs/superpowers/plans/2026-11-28-full-check-probe-tour.md, task 5): the full check's copy of
+// uaro-graphics.ini - kept beside it before the check, put back after it (the game reads it again at once)
+mcp::CallResult iniCopy(bool keep) {
+    const std::wstring copy = g_ini + L".check";
+    if (keep) {
+        if (!CopyFileW(g_ini.c_str(), copy.c_str(), FALSE)) return said("uaro-graphics.ini could not be copied", true);
+        return said("uaro-graphics.ini kept as uaro-graphics.ini.check - restore puts it back");
+    }
+    if (GetFileAttributesW(copy.c_str()) == INVALID_FILE_ATTRIBUTES)
+        return said("no uaro-graphics.ini.check to put back - backup first", true);
+    if (!CopyFileW(copy.c_str(), g_ini.c_str(), FALSE)) return said("uaro-graphics.ini could not be put back", true);
+    return said("uaro-graphics.ini put back from uaro-graphics.ini.check (the game takes most at once, some at its "
+                "next start)");
+}
+
 // The window's thread's calls: posted, waited for (20 s at most)
 mcp::CallResult onWindow(const std::string& tool, const json::Value& args) {
     auto* job = new Job;
@@ -537,6 +552,7 @@ mcp::CallResult onCall(const std::string& tool, const json::Value& args) {
     if (tool == "game") return gameTool(args);
     if (tool == "system") return systemTool(args);
     if (tool == "files") return filesTool(args);
+    if (tool == "ini" && (action == "backup" || action == "restore")) return iniCopy(action == "backup");
     if (tool == "ini") return action == "set" ? iniSet(args) : iniGet(args);
     return said("no such tool: " + tool, true);
 }

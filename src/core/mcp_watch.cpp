@@ -38,10 +38,11 @@ const std::vector<mcp::Tool>& tools() {
          R"("since":{"type":"string","maxLength":12}},"required":["action"]})"},
         {"ini",
          "uaro-graphics.ini: `action` get (a key's value, «section.name») or set (`value`, checked as Alt+O would). "
-         "The game takes most at once, some at its next start (renderer.api: game stop, then start).",
-         R"({"type":"object","properties":{"action":{"type":"string","enum":["get","set"]},)"
+         "The game takes most at once, some at its next start (renderer.api: game stop, then start). backup - a "
+         "copy kept beside it (uaro-graphics.ini.check) before the full check; restore - the copy put back after it.",
+         R"({"type":"object","properties":{"action":{"type":"string","enum":["get","set","backup","restore"]},)"
          R"("key":{"type":"string","maxLength":60},"value":{"type":"string","maxLength":200}},)"
-         R"("required":["action","key"]})"},
+         R"("required":["action"]})"},
     };
     return t;
 }
@@ -70,7 +71,8 @@ std::string check(const std::string& tool, const json::Value& args) {
             return "since: hh:mm, hh:mm:ss or hh:mm:ss.mmm";
     } else if (tool == "ini") {
         const std::string a = args["action"].asString();
-        if (a != "get" && a != "set") return "action: get or set";
+        if (a == "backup" || a == "restore") return "";  // 3.0.24-beta.57: the full check's copy - no key
+        if (a != "get" && a != "set") return "action: get, set, backup or restore";
         const settings::IniSetting* s = settings::findSetting(args["key"].asString());
         if (!s) return "key: a setting's «section.name» (the game's settings tool lists them)";
         const json::Value& v = args["value"];
@@ -136,7 +138,9 @@ bool fileAllowed(const std::string& raw) {
     const std::string& file = parts.back();
     if (file.empty() || file == "." || file == ".." || file.find("..") != std::string::npos) return false;
     static const std::regex kinds("^[A-Za-z0-9_.-]+\\.(ini|log|txt|dmp|json|csv)(-[0-9]+)?$");
-    return std::regex_match(file, kinds);
+    // 3.0.24-beta.57: the full check's pictures (logs\check-<key>-before.png), in logs alone
+    static const std::regex pictures("^[A-Za-z0-9_.-]+\\.png$");
+    return std::regex_match(file, kinds) || (parts.size() == 2 && std::regex_match(file, pictures));
 }
 
 json::Value nvidiaSmi(const std::string& line) {

@@ -75,6 +75,15 @@ TEST(mcp_watch_catalog) {
     noValue.set("action", "set");
     noValue.set("key", "renderer.api");
     CHECK(!w.check("ini", noValue).empty());  // a set needs its value
+    // 3.0.24-beta.57: the full check's copy of the ini, before it and back after it - no key
+    for (const char* act : {"backup", "restore"}) {
+        json::Value c = json::Value::object();
+        c.set("action", act);
+        CHECK(w.check("ini", c).empty());
+    }
+    json::Value g = json::Value::object();
+    g.set("action", "get");
+    CHECK(!w.check("ini", g).empty());  // a get still needs its key
 }
 
 TEST(mcp_watch_files_inside_alone) {
@@ -90,6 +99,10 @@ TEST(mcp_watch_files_inside_alone) {
     CHECK(!mcpwatch::fileAllowed("uaro-graphics.exe"));
     CHECK(!mcpwatch::fileAllowed("cache\\deep\\x.log"));
     CHECK(!mcpwatch::fileAllowed(""));
+    // 3.0.24-beta.57: the full check's pictures, in logs alone
+    CHECK(mcpwatch::fileAllowed("logs\\check-effects.grass-after.png"));
+    CHECK(!mcpwatch::fileAllowed("..\\x.png"));
+    CHECK(!mcpwatch::fileAllowed("logs\\..\\x.png"));
 }
 
 TEST(mcp_watch_nvidia_smi_line) {
