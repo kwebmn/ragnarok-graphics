@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.48 — what's new · 2026-11-28
+
+Window sizes after the interface audit:
+- «Речі», «Склад» and «Візок»: pull the lower right corner - whole columns and rows of cells come or go (from 5×3 to 12×10), the cells keep their size. The size is kept.
+- Ctrl and the wheel over any window with a corner - the whole window bigger or smaller (70-150 %).
+- Light theme: the channel chip «All» is seen again on the chat's white line.
+
 # uaRO Graphics 3.0.24-beta.47 — what's new · 2026-11-28
 
 More from the interface audit:
