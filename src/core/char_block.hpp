@@ -2,6 +2,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "core/ui_icons.hpp"
@@ -191,6 +192,9 @@ struct Chip {
     std::string text, tone;
     // 3.0.24-beta.50 (the audit 28.11, item 8): a button's - "stats" opens «Характеристики», "skills" «Навички»
     std::string act;
+    Chip() = default;
+    Chip(std::string words, std::string colour, std::string button = {})
+        : text(std::move(words)), tone(std::move(colour)), act(std::move(button)) {}
 };
 struct Cell {
     std::string key, value, tone;
