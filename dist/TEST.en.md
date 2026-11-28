@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.24-beta.40 — what's new · 2026-11-28
+
+MCP: the watchdog brings the game it starts in front by itself (at full screen the game draws only while its window is in front - started over MCP behind the launcher, it waited for a click); a new action `front` in `game` does it on demand, `status` shows `inFront`.
+
 # uaRO Graphics 3.0.24-beta.39 — what's new · 2026-11-28
 
 MCP: the watchdog's «update» checks for updates again when the last check is over a minute old (the settings app checks them only at its start - so a new beta was not seen).
