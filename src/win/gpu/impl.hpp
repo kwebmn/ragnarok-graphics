@@ -789,6 +789,10 @@ struct Renderer::Impl {
     UINT64 timerFrequency = 0;
     UINT64 gpuTicks = 0, upscaleTicks = 0, aiTicks = 0;
     uint32_t gpuFrames = 0;
+    // 3.0.24-beta.44 (the laptop's effects run: the water ~14 ms in Alberta, more than its shader explains): the water's
+    // draws in the 30 s and their faces' pixels (core/water quadArea) - drawn more than once if over the water seen
+    uint64_t waterDrawTally = 0, waterOwnTally = 0;
+    double waterAreaTally = 0.0;
     ULONGLONG gpuSince = 0;
     void readTimes(Slot& s, UINT index);  // the slot's last list has finished
     // 0.39.2: an effect's GPU time, between these two in one list (an effect that starts a new list is not timed).

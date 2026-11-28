@@ -383,6 +383,14 @@ void Renderer::Impl::noteGpuFrame() {
         effectTicks[e] = 0;
     }
     if (!effects.empty()) LOG_INFO("GPU: effects a frame - %s", effects.c_str());
+    if (waterDrawTally && gpuFrames) {  // 3.0.24-beta.44
+        const double frames = double(gpuFrames), picture = double(std::max(gameWidth * gameHeight, 1));
+        LOG_INFO("water: %.0f draws a frame (%.0f of the own water), the game's cells' faces %.0f%% of the picture",
+                 double(waterDrawTally) / frames, double(waterOwnTally) / frames,
+                 100.0 * waterAreaTally / frames / picture);
+    }
+    waterDrawTally = waterOwnTally = 0;
+    waterAreaTally = 0.0;
     LARGE_INTEGER qpf;  // 0.86: and the processor's part
     QueryPerformanceFrequency(&qpf);
     const double perFrame = 1000.0 / double(qpf.QuadPart) / double(std::max<uint32_t>(gpuFrames, 1));

@@ -93,3 +93,13 @@ TEST(water_waves_as_the_game_lifts_them) {
     CHECK_EQ(water::phaseAfter(10, 3, 2), 16);
 }
 
+
+// 3.0.24-beta.44 (the laptop's effects run: the water ~14 ms of a Radeon 610M's frame in Alberta - more than its shader
+// alone explains): a water cell's face on the screen, for the log's water line (its draws and how much of the picture
+// they cover - over the water seen: drawn more than once)
+TEST(water_quad_screen_area) {
+    const std::vector<uint8_t> v = cell(3, 5);
+    CHECK(std::abs(water::quadArea(v.data(), 32, 4, 0, true) - 300.0f) < 0.01f);  // 20 x 15 pixels
+    CHECK_EQ(water::quadArea(v.data(), 32, 3, 0, true), 0.0f);                    // not a quad of four
+    CHECK_EQ(water::quadArea(v.data(), 32, 4, 6, false), 0.0f);                   // by index: not the game's
+}

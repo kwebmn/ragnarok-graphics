@@ -328,6 +328,14 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                                                       d.primitive == d3d7::PT_TRIANGLESTRIP))) &&
                 copyScene();
         if (water && mirrorDue() && !applyMirror()) return;  // 1.16: the world mirrored, before the first water
+        if (water) {  // 3.0.24-beta.44: how many and how much of the picture (the log's water line)
+            ++waterDrawTally;
+            if (ownWater == 1) ++waterOwnTally;
+            const std::vector<uint8_t>& v = rec.vertexBytes();
+            if (ownWater != 1 && d.vertexOffset + 4 * FrameRecord::stride(d.fvf) <= v.size())
+                waterAreaTally += water::quadArea(v.data() + d.vertexOffset, FrameRecord::stride(d.fvf), d.vertexCount,
+                                                  d.indexCount, d.primitive == d3d7::PT_TRIANGLESTRIP);
+        }
     }
     if (waterTiming && !water) endWaterTiming();  // 3.0.24-beta.42: the water's own draws timed with its copies
     // One quad facing the screen: a sprite (a character, a monster, an item). 0.22.3: under DLSS such a draw, and an

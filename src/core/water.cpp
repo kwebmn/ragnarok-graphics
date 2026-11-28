@@ -78,4 +78,14 @@ int phaseAfter(int phase, int speed, int ticks) {
     return phase;
 }
 
+float quadArea(const uint8_t* vertices, size_t stride, uint32_t vertexCount, uint32_t indexCount, bool strip) {
+    if (!vertices || vertexCount != 4 || indexCount != 0 || !strip) return 0.0f;
+    float p[4][2];
+    for (int i = 0; i < 4; ++i) std::memcpy(p[i], vertices + size_t(i) * stride, sizeof p[i]);
+    const auto tri = [&](int a, int b, int c) {
+        return std::fabs((p[b][0] - p[a][0]) * (p[c][1] - p[a][1]) - (p[c][0] - p[a][0]) * (p[b][1] - p[a][1])) * 0.5f;
+    };
+    return tri(0, 1, 2) + tri(1, 3, 2);  // a strip: 0 1 2, then 2 1 3
+}
+
 }  // namespace uagfx::water
