@@ -27,6 +27,8 @@ bool local(Action a);
 // 3.0.18-beta.226 (the owner: «смену аккаунта в меню ескейпа вынести в самый верх»): «Змінити акаунт» first - the
 // game's character select button (0x9A), the driver presses its «Назад» on to the login (win/char_select)
 std::vector<Action> actions(Kind k);  // as shown, top down
+// 3.0.24-beta.46 (the audit 28.11): the alive menu's groups - the ways out and «Повернутися» each start one (apart)
+bool groupStart(Kind k, Action a);
 int buttonId(Kind k, Action a);       // the game's window's own button; 0 not in it
 int firstFocus(Kind k);               // «Повернутися до гри» - Enter by chance changes nothing
 

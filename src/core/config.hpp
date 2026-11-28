@@ -1090,7 +1090,9 @@ struct Config {
     bool animations = true;
     // 3.0.11-beta.47: [interface] panel_opacity and window_opacity - the new interface's grounds (core/ui_style): the
     // HUD's panels 50-100 % (80), the windows 80-100 % (90)
-    int hudOpacity = 80, windowOpacity = 90;
+    // 3.0.24-beta.46 (the audit 28.11, the owner's «да»): the windows opaque - at 90 the windows under them, the menu
+    // and the players' names read through (settings::windowsOpaqueOnce moves an old 90 over once)
+    int hudOpacity = 80, windowOpacity = 100;
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero in the new look (core/cast_bar), the
     // game's own gauge hidden while it shows
     bool castLabel = false;

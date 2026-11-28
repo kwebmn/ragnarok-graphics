@@ -1430,13 +1430,16 @@ bool uiFrame(State& s) {
                                                                       {&L.zoomOut, uiicons::Icon::Minus},
                                                                       {&L.expand, uiicons::Icon::Expand}};
         const minimap::Part parts[] = {minimap::Part::ZoomIn, minimap::Part::ZoomOut, minimap::Part::Expand};
+        // 3.0.24-beta.46 (the audit 28.11: «+ − ⛶» white on the light theme's white buttons): the theme's ink
+        const uint32_t ink = uaui::themed(0xFFFFFF, uitheme::Group::Hud);
         for (int i = 0; i < 3; ++i) {
             const panel::Box& b = *buttons[i].first;
             box(u.boxes, b, 6 * sc, hover == parts[i] ? "btn hot" : "btn", edge);
-            const std::string src = madeOnce(u, "i" + std::to_string(i) + ':' + std::to_string(icon), icon, icon,
-                                             [&](panel::Picture& p) {
-                                                 uiicons::draw(p, buttons[i].second, 0, 0, float(icon), 0xFFFFFF,
-                                                               1.0f, 2.6f);
+            const std::string src = madeOnce(u, "i" + std::to_string(i) + ':' + std::to_string(icon) + ':' +
+                                                    std::to_string(ink),
+                                             icon, icon, [&](panel::Picture& p) {
+                                                 uiicons::draw(p, buttons[i].second, 0, 0, float(icon), ink, 1.0f,
+                                                               2.6f);
                                              });
             u.icons.push_back(IconV{std::round(b.x + (b.w - float(icon)) / 2),
                                     std::round(b.y + (b.h - float(icon)) / 2), float(icon), float(icon), src});

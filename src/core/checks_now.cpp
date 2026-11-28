@@ -7,6 +7,33 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.46 (the audit 28.11, the owner's answers): the chat's line as the original's, NPC digits
+        {"chat_line_46", "3.0.24-beta.46", "",
+         {"The chat line: ↑ ↓ the lines sent before, as in the original",
+          "Рядок чату: ↑ ↓ — надіслані раніше рядки, як в оригіналі",
+          "Строка чата: ↑ ↓ — отправленные раньше строки, как в оригинале"},
+         {"Send «/where», then Enter (the line opens) and ↑: «/where» comes back, Enter sends it again; the messages "
+          "scroll by PgUp, PgDn and the wheel. With the line closed the arrows walk. At a Kafra pick «2» by its key: "
+          "nothing is left in the chat line.",
+          "Надішліть «/where», потім Enter (рядок відкривається) і ↑: «/where» повертається, Enter надсилає ще раз; "
+          "стрічку гортають PgUp, PgDn і коліщатко. Коли рядок закритий, стрілки водять персонажа. У Кафри виберіть "
+          "«2» клавішею: у рядку чату нічого не лишається.",
+          "Отправьте «/where», затем Enter (строка открывается) и ↑: «/where» возвращается, Enter отправляет ещё раз; "
+          "ленту листают PgUp, PgDn и колесо. Когда строка закрыта, стрелки водят персонажа. У Кафры выберите «2» "
+          "клавишей: в строке чата ничего не остаётся."}},
+        {"audit_fixes_46", "3.0.24-beta.46", "",
+         {"Light theme icons, opaque windows, the menu, the sale", "Значки світлої теми, непрозорі вікна, меню, продаж",
+          "Значки светлой темы, непрозрачные окна, меню, продажа"},
+         {"Light theme: the character block's buttons and the minimap's «+» and «−» are seen. Windows no longer show "
+          "the ones under them. Esc: the settings first, the ways out together lower. «Продати» at an NPC: no worn "
+          "arrows. A stack double clicked from «Речі» into «Склад» asks how many.",
+          "Світла тема: кнопки блоку персонажа й «+» та «−» мінікарти видно. Крізь вікна більше не видно те, "
+          "що під ними. "
+          "Esc: спершу налаштування, виходи разом нижче. «Продати» в NPC: без надітих стріл. Пачка подвійним кліком "
+          "з «Речі» в «Склад» питає кількість.",
+          "Светлая тема: кнопки блока персонажа и «+» и «−» миникарты видны. Сквозь окна больше не видно то, что под "
+          "ними. Esc: сначала настройки, выходы вместе ниже. «Продати» у NPC: без надетых стрел. Пачка двойным "
+          "кликом из «Речі» в «Склад» спрашивает количество."}},
         // 3.0.24-beta.45 (the owner: «нажал руками обновить, оно не закрыло лаунчер и начало устанавливать»): the
         // update closes the settings app before its files go in
         {"update_closes_app_45", "3.0.24-beta.45", "",

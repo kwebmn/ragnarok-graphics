@@ -181,6 +181,14 @@ const std::vector<Tool>& table() {
          R"({"type":"object","properties":{"x":{"type":"number","minimum":0},"y":{"type":"number","minimum":0},)"
          R"("width":{"type":"integer","minimum":160,"maximum":7680},"button":{"type":"string",)"
          R"("enum":["left","right"]},"double":{"type":"boolean"}},"required":["x","y","width"]})"},
+        // 3.0.24-beta.46 (the audit 28.11): the windows' corners and titles pulled, as the player would
+        {"drag",
+         "The left button pressed at (x, y) of a screenshot `width` wide, the cursor led to (x2, y2) in steps over "
+         "about half a second, the button let go there - a window moved by its title, sized by its corner grip, a "
+         "thing carried. Given to the game from inside, as `click`.",
+         R"({"type":"object","properties":{"x":{"type":"number","minimum":0},"y":{"type":"number","minimum":0},)"
+         R"("x2":{"type":"number","minimum":0},"y2":{"type":"number","minimum":0},)"
+         R"("width":{"type":"integer","minimum":160,"maximum":7680}},"required":["x","y","x2","y2","width"]})"},
     };
     return kTools;
 }
@@ -520,6 +528,15 @@ std::string checkArgs(const std::string& tool, const json::Value& args) {
         if (args.has("button") && args["button"].asString() != "left" && args["button"].asString() != "right")
             return "button: left or right";
         if (args.has("double") && args["double"].type() != json::Value::Bool) return "double: true or false";
+    } else if (tool == "drag") {  // 3.0.24-beta.46
+        if (!wholeIn(args["width"], 160, 7680)) return "width: the screenshot's width the places are in, 160-7680";
+        for (const char* k : {"x", "y", "x2", "y2"}) {
+            const json::Value& v = args[k];
+            if (v.type() != json::Value::Number || !(v.asNumber() >= 0) || !std::isfinite(v.asNumber()))
+                return "x, y, x2, y2: places of the screenshot, 0 up";
+        }
+        if (!(args["x"].asNumber() < args["width"].asNumber()) || !(args["x2"].asNumber() < args["width"].asNumber()))
+            return "x and x2: under the screenshot's width";
     } else if (tool == "log") {  // 3.0.22-beta.41
         if (args.has("lines") && !wholeIn(args["lines"], 1, 300)) return "lines: 1-300";
         const std::string file = args["file"].asString();  // 3.0.24-beta.34

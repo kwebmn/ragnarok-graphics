@@ -112,6 +112,7 @@ struct State {
     bool sheetShown = false;
     bool on = false, shown = false, moved = false, forced = false, oldTold = false, folded = false;
     bool overChat = false;  // 3.0.22-beta.48: the pointer over it (its keys scroll the history)
+    cp::LineHistory history;  // 3.0.24-beta.46: the lines sent this game - ↑ ↓ in the taken-up line (as the original)
     bool engaged = false;   // 3.0.23-beta.14: taken up (cp::engagedAfter) - only then ↑ ↓ are its
     int heightBefore = 0, rowsBefore = 0;  // 3.0.22-beta.48: «—»'s way back
     int backTold = 0, backLen = -1;        // 3.0.22-beta.48: Backspace watched (the owner's «выпадает с чата»)
@@ -457,6 +458,17 @@ constexpr uint32_t kEditMost = 0x54, kWindowMsgSlot = 0x94, kWindowMsg = 0x45EF9
 using WindowMsgFn = int(__attribute__((thiscall)) *)(uint32_t window, uint32_t from, int msg, int a, int b, int c);
 
 uint32_t wordsEdit();
+
+// 3.0.24-beta.46: a line of the history into the game's words field (cut to its most), the caret after it
+void putLine(State& s, uint32_t words, const std::string& line) {
+    const uint32_t set = setTextOf(words);
+    if (!set) return;
+    std::string game = narrowed(utf8Wide(line), s.codePage);
+    const size_t most = std::max<size_t>(1, read32(words + kEditMost));
+    if (game.size() > most) game.resize(most);
+    reinterpret_cast<SetTextFn>(uintptr_t(set))(words, game.c_str());
+    if (read32(words + kCaretAt) != uint32_t(game.size())) write32(words + kCaretAt, uint32_t(game.size()));
+}
 
 void sendLong(State& s, uint32_t words) {
     const std::string text = editText(words);
@@ -1375,6 +1387,7 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
         s.engaged = cp::engagedAfter(s.engaged, cp::EngageEvent::Letter, inputEmpty());
         LOG_INFO("chat: taken up (a letter typed)");
     }
+    if (m == WM_CHAR && (wp >= 32 || wp == 8) && wp != 127 && focusInChat()) s.history.typed();  // .46: edited
     if (m == WM_CHAR && wp == '\t' && s.swallowTab) {  // the Tab the channel took: not into the game's field
         s.swallowTab = false;
         return true;
@@ -1430,9 +1443,17 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
         GetKeyState(VK_CONTROL) >= 0 && GetKeyState(VK_MENU) >= 0) {
         const uint32_t words = wordsEdit();
         const bool keys = words && read32(kFocus) == words;
-        // 3.0.23-beta.14: ↑ ↓ only with the chat taken up (in play the game's field always has the keys: they walk)
-        const bool upDown = wp == VK_UP || wp == VK_DOWN;
-        const bool mine = upDown ? cp::arrowsToChat(s.engaged, keys) : keys || s.overChat;
+        // 3.0.23-beta.14: ↑ ↓ only with the chat taken up (in play the game's field always has the keys: they walk);
+        // 3.0.24-beta.46 (the owner: «как в оригинале»): there they walk the lines sent before (cp::LineHistory) as the
+        // original's line does - the messages scroll by PgUp, PgDn, End and the wheel
+        if (wp == VK_UP || wp == VK_DOWN) {
+            if (!cp::arrowsToChat(s.engaged, keys)) return false;
+            std::string out;
+            if (s.history.step(wp == VK_UP, utf8(s, editText(words)), out)) putLine(s, words, out);
+            s.key.clear();
+            return true;
+        }
+        const bool mine = keys || s.overChat;
         if (mine && !(wp == VK_END && keys && !editText(words).empty())) {
             const cp::ScrollKey k = wp == VK_UP     ? cp::ScrollKey::Up
                                     : wp == VK_DOWN  ? cp::ScrollKey::Down
@@ -1457,6 +1478,7 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     if (wp == VK_RETURN && m == WM_KEYDOWN && s.shown) {
         const uint32_t words = wordsEdit();
         if (words && read32(kFocus) == words) {
+            s.history.sent(utf8(s, editText(words)));  // 3.0.24-beta.46: as typed («/p …» too), for ↑
             cp::Command c;
             if (cp::command(utf8(s, editText(words)), s.replyTo, c) &&
                 setTextOf(words)) {

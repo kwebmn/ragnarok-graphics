@@ -76,6 +76,15 @@ std::vector<IniEdit> itemWindowsOff(const std::map<std::string, std::string>& in
     return e;
 }
 
+std::vector<IniEdit> windowsOpaqueOnce(const std::map<std::string, std::string>& ini) {
+    if (ini.count("utility.windows_opaque")) return {};
+    std::vector<IniEdit> e;
+    const auto it = ini.find("interface.window_opacity");
+    if (it != ini.end() && std::atoi(it->second.c_str()) == 90) e.push_back({"interface", "window_opacity", "100"});
+    e.push_back({"utility", "windows_opaque", "1"});
+    return e;
+}
+
 std::string machineKey(const Machine& m) {
     return m.adapter + "|" + std::to_string(m.vramMb) + "|" + std::to_string(m.screenWidth) + "x" +
            std::to_string(m.screenHeight);

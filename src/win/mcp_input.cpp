@@ -292,6 +292,51 @@ mcp::CallResult key(const Game& g, const mcp::KeyCombo& k, const std::string& wo
     return keyFront(g, k, words);
 }
 
+mcp::CallResult drag(const Game& g, double x, double y, double x2, double y2, int width) {
+    const std::string inside = insideNot(g.window);
+    if (!inside.empty()) return said("no drag made: " + inside, true);
+    RECT c{};
+    GetClientRect(g.window, &c);
+    int ax = 0, ay = 0, bx = 0, by = 0;
+    if (!mcp::clickPlace(x, y, width, int(c.right), int(c.bottom), ax, ay) ||
+        !mcp::clickPlace(x2, y2, width, int(c.right), int(c.bottom), bx, by))
+        return said("a place is past the picture: a screenshot " + std::to_string(width) + " wide shows the window's " +
+                        pair(c.right, c.bottom) + " points",
+                    true);
+    g_hoverUntil = 0;
+    const uint8_t device = uint8_t(GetSystemMetrics(SM_SWAPBUTTON) != 0 ? 2 : 1);
+    uapad::remote::setMouse(uapad::remote::Mouse{true, ax, ay, 0});
+    long ex = 0, ey = 0;
+    const bool known = gamePoint(g, ax, ay, int(c.right), int(c.bottom), ex, ey);
+    int gx = -1, gy = -1;
+    for (int i = 0; i < 30; ++i) {  // the game's cursor there first, 0.45 s at most
+        if (known && readGameCursor(gx, gy) && std::labs(gx - ex) <= 2 && std::labs(gy - ey) <= 2) break;
+        Sleep(15);
+    }
+    PostMessageA(g.window, WM_MOUSEMOVE, 0, MAKELPARAM(ax, ay));
+    Sleep(30);
+    bool told = sendWait(g.window, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(ax, ay));
+    uapad::remote::setMouse(uapad::remote::Mouse{true, ax, ay, device});
+    Sleep(90);
+    constexpr int kSteps = 16;  // a frame or two a step: the windows' drags follow the cursor as a hand's would
+    for (int i = 1; i <= kSteps; ++i) {
+        const int px = ax + (bx - ax) * i / kSteps, py = ay + (by - ay) * i / kSteps;
+        uapad::remote::setMouse(uapad::remote::Mouse{true, px, py, device});
+        PostMessageA(g.window, WM_MOUSEMOVE, MK_LBUTTON, MAKELPARAM(px, py));
+        Sleep(35);
+    }
+    Sleep(90);
+    uapad::remote::setMouse(uapad::remote::Mouse{true, bx, by, 0});
+    told = sendWait(g.window, WM_LBUTTONUP, 0, MAKELPARAM(bx, by)) && told;
+    Sleep(80);
+    uapad::remote::setMouse(uapad::remote::Mouse{});
+    LOG_INFO("mcp: drag inside the game from %s to %s of a %d-wide screenshot = %s to %s in the window%s",
+             pair(long(x), long(y)).c_str(), pair(long(x2), long(y2)).c_str(), width, pair(ax, ay).c_str(),
+             pair(bx, by).c_str(), told ? "" : " (a message not answered)");
+    return said("dragged inside the game from " + pair(long(x), long(y)) + " to " + pair(long(x2), long(y2)) +
+                (told ? "" : " (the window did not answer a message in time)") + " - look with `screenshot`");
+}
+
 mcp::CallResult click(const Game& g, double x, double y, int width, bool right, bool twice) {
     const std::string inside = insideNot(g.window);
     if (inside.empty()) return clickInside(g, x, y, width, right, twice);

@@ -25,6 +25,36 @@ bool engagedAfter(bool engaged, EngageEvent e, bool lineEmpty) {
 
 bool arrowsToChat(bool engaged, bool fieldHasKeys) { return engaged && fieldHasKeys; }
 
+void LineHistory::sent(const std::string& line) {
+    at_ = -1;
+    draft_.clear();
+    if (line.empty() || (!lines_.empty() && lines_.back() == line)) return;
+    lines_.push_back(line);
+    if (lines_.size() > kHistoryLines) lines_.erase(lines_.begin());
+}
+
+bool LineHistory::step(bool older, const std::string& now, std::string& out) {
+    if (lines_.empty()) return false;
+    const int last = int(lines_.size()) - 1;
+    if (older) {
+        if (at_ == 0) return false;
+        if (at_ < 0) draft_ = now;
+        at_ = at_ < 0 ? last : at_ - 1;
+        out = lines_[size_t(at_)];
+        return true;
+    }
+    if (at_ < 0) return false;
+    if (at_ == last) {
+        at_ = -1;
+        out = draft_;
+        return true;
+    }
+    out = lines_[size_t(++at_)];
+    return true;
+}
+
+void LineHistory::typed() { at_ = -1; }
+
 int scrollBy(int scroll, int most, int rows, ScrollKey key) {
     const int page = std::max(1, rows - 1);
     int to = scroll;

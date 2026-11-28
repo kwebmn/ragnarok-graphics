@@ -11,6 +11,7 @@
 #include <algorithm>
 
 #include "core/double_click.hpp"
+#include "core/key_chars.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/world_mouse.hpp"
@@ -206,9 +207,14 @@ BattleEnter holdBattleEnter(UINT m, WPARAM wp) {
 }
 
 uint64_t g_lastEnter = 0;  // 3.0.18-beta.186: lastEnterMs()
+// 3.0.24-beta.46 (the audit 28.11: «TestHD : 2» - a digit chosen in an NPC's menu was typed into the chat line too):
+// the last key press and whether the game got it - a letter of a press ours took goes no further (core/key_chars)
+keychars::Press g_press;
+int g_lettersKept = 0;
 
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     watchInput(m, wp, lp);  // 3.0.16-beta.4
+    if (m == WM_KEYDOWN) g_press = keychars::pressed(static_cast<unsigned long long>(lp), GetTickCount64(), false);
     // 3.0.18-beta.207: the window lost the keys - an arrow held stops walking
     if (m == WM_KILLFOCUS || (m == WM_ACTIVATE && LOWORD(wp) == WA_INACTIVE) || (m == WM_ACTIVATEAPP && !wp)) {
         keywalk::lost();
@@ -230,6 +236,13 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if (chatwin::searchKey(m, wp, lp)) return 0;  // 3.0.11-beta.284: Ctrl+F in the chat's field, its search
         npcwin::cutinEsc(m, wp);  // 3.0.13-beta.10: Esc closes the NPC's picture too (the key goes on)
         if (windowstack::key(m, wp, lp)) return 0;
+        // 3.0.24-beta.46: past our fields (they type the letters of their own presses) - the letter of a press one of
+        // ours took is not typed into the chat line, nor does it take the chat up
+        if (m == WM_CHAR && keychars::keepLetter(g_press, static_cast<unsigned long long>(lp), GetTickCount64())) {
+            if (g_lettersKept++ < 5)
+                LOG_INFO("keys: the letter 0x%02X of a press our window took kept from the chat line", unsigned(wp));
+            return 0;
+        }
         if (keynav::key(m, wp, lp)) return 0;  // 3.0.18-beta.210: the keys drive the top window once an arrow did
         if (timelapsewin::key(m, wp, lp)) return 0;  // 3.0.22-beta.24: Ctrl+Shift+T, the time running fast
         if (view3dwin::key(m, wp, lp)) return 0;    // 3.0.19-beta.6: Ctrl+Shift+V, the 3D view
@@ -311,6 +324,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     else if (m == WM_KEYDOWN && wp == VK_ESCAPE) uapad::runtime::stopFollow("Esc");
     const BattleTyping typing = holdBattleTyping(m);
     const BattleEnter enter = holdBattleEnter(m, wp);
+    if (m == WM_KEYDOWN) g_press.toGame = true;  // 3.0.24-beta.46: its letter the game's too
     const LRESULT r = CallWindowProcA(g_original, w, m, wp, lp);
     if (typing.held) *reinterpret_cast<volatile uint32_t*>(uintptr_t(0x772D58)) = 1;
     if (enter.held) {

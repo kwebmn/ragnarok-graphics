@@ -39,3 +39,11 @@ TEST(shop_guard_counts_real_cards_alone) {
     CHECK(shopguard::cardsIn(none) == 0 && shopguard::cardsIn(two) == 2);
     CHECK(shopguard::cardsIn(forged) == 0 && shopguard::cardsIn(named) == 0 && shopguard::cardsIn(egg) == 0);
 }
+
+// 3.0.24-beta.46 (the audit 28.11, the owner's «скрывать»): the worn things out of the sale's list too - the worn
+// arrows «Arrow of Wind ×365» were offered at 1 z each
+TEST(shop_guard_worn_things_not_for_sale) {
+    CHECK(shopguard::sellable(false, false));
+    CHECK(!shopguard::sellable(false, true));  // worn (ITEM_INFO's wear place not 0)
+    CHECK(!shopguard::sellable(true, false));  // «★ Обране»
+}

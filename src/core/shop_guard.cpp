@@ -10,7 +10,7 @@ Ask askBeforeSelling(int refine, int cards) {
     return Ask::None;
 }
 
-bool sellable(bool favourite) { return !favourite; }
+bool sellable(bool favourite, bool worn) { return !favourite && !worn; }
 
 bool misc(int type) { return itemwin::tabOf(type) == itemwin::Tab::Etc; }
 

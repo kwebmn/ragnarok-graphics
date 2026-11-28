@@ -295,3 +295,36 @@ TEST(chat_panel_not_online_in_the_players_words) {
     chatpanel::Texts none;
     CHECK(!chatpanel::shortSystem("Character 'Big Mike' is not online.", none, as));
 }
+
+// 3.0.24-beta.46 (the owner: «чтобы чат хранил историю и кнопки верх вниз в окне чата работали. в строке», «как в
+// оригинале»): the lines sent from the chat's line this game, as typed («/p …» too) - ↑ the older, ↓ back, past the
+// newest the words being typed again; kept until the game closes
+TEST(chat_panel_line_history_walks_as_the_originals_line) {
+    LineHistory h;
+    std::string out = "unchanged";
+    CHECK(!h.step(true, "", out));  // nothing sent yet
+    h.sent("/where");
+    h.sent("/p hello");
+    h.sent("");          // an empty line: not kept
+    h.sent("/p hello");  // the newest again: not twice
+    CHECK(h.step(true, "dra", out) && out == "/p hello");  // ↑: the newest, the draft «dra» kept
+    CHECK(h.step(true, out, out) && out == "/where");
+    CHECK(!h.step(true, out, out) && out == "/where");    // the oldest: stays
+    CHECK(h.step(false, out, out) && out == "/p hello");  // ↓: newer
+    CHECK(h.step(false, out, out) && out == "dra");       // past the newest: the draft back
+    CHECK(!h.step(false, out, out) && out == "dra");      // the line itself: nothing below
+}
+
+TEST(chat_panel_line_history_a_letter_typed_starts_again_from_the_newest) {
+    LineHistory h;
+    h.sent("one");
+    h.sent("two");
+    std::string out;
+    CHECK(h.step(true, "", out) && out == "two");
+    CHECK(h.step(true, out, out) && out == "one");
+    h.typed();  // «one» edited: the walk starts again, the edited words the draft
+    CHECK(h.step(true, "one!", out) && out == "two");
+    CHECK(h.step(false, out, out) && out == "one!");
+    for (int i = 0; i < int(kHistoryLines) + 10; ++i) h.sent("line " + std::to_string(i));
+    CHECK_EQ(h.size(), kHistoryLines);  // the oldest go
+}

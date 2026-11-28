@@ -130,6 +130,7 @@ struct State {
     const refindex::Index* labelsOf = nullptr;
     std::unique_ptr<gamefiles::Reader> files;
     std::map<std::string, panel::Picture> pictures;  // 3.0.11-beta.14: the cards' pictures, icons; ui icons
+    int lineIconsGen = -1;  // 3.0.24-beta.46: the style generation the «ui:» icons were painted for
     // the ones let go, kept a few frames: RmlUi reads a «pic:» source's pixels when it draws it the first time - the
     // markup that names them must be gone before they are
     std::vector<std::pair<int, std::map<std::string, panel::Picture>>> retired;
@@ -286,8 +287,9 @@ void loadPicture(State& s, const std::string& key) {
         const size_t hash = key.find('#');
         uiicons::Icon icon;
         if (!iconNamed(key.substr(0, hash), icon)) return;
-        const uint32_t ink =
-            hash == std::string::npos ? 0xC9D1DE : uint32_t(std::strtoul(key.c_str() + hash + 1, nullptr, 16));
+        // 3.0.24-beta.46 (the audit 28.11: the sections' icons pale grey on the light theme): the theme's ink
+        const uint32_t ink = hash == std::string::npos ? uaui::themed(0xC9D1DE, uitheme::Group::Windows)
+                                                       : uint32_t(std::strtoul(key.c_str() + hash + 1, nullptr, 16));
         const int side = px(24, s);
         panel::blank(out, side, side);
         uiicons::draw(out, icon, 0, 0, float(side), ink, 1.0f, 2.0f);
@@ -356,6 +358,13 @@ std::string pictureSrc(State& s, const std::string& key) {
     if (key == "mapview") {  // 3.0.18-beta.240: the location's map
         if (s.locImage.width <= 0) return {};
         return uaui::picture(&s.locImage, s.locPainted, s.locSrc);
+    }
+    if (s.lineIconsGen != uistyle::generation()) {  // 3.0.24-beta.46: the line icons painted again by the theme
+        s.lineIconsGen = uistyle::generation();
+        for (auto p = s.pictures.begin(); p != s.pictures.end();)
+            p = p->first.rfind("ui:", 0) == 0 ? s.pictures.erase(p) : std::next(p);
+        for (auto p = s.sources.begin(); p != s.sources.end();)  // their sources made anew (a stamp may repeat)
+            p = p->first.rfind("ui:", 0) == 0 ? s.sources.erase(p) : std::next(p);
     }
     auto it = s.pictures.find(key);
     if (it == s.pictures.end()) {

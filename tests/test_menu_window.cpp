@@ -39,9 +39,18 @@ float measure(const std::string& s, float px, bool) {
 // first
 TEST(menu_window_buttons_of_each_window) {
     using A = menuwin::Action;
-    CHECK((menuwin::actions(menuwin::Kind::Alive) ==  // 3.0.18-beta.121: ours over the game's
-           std::vector<A>{A::Account, A::Settings, A::Keys, A::Layout, A::Test, A::Report, A::CharSelect, A::Exit,
-                          A::Back}));  // .225: «Клавіші» after «Налаштування»; .226: «Змінити акаунт» first
+    // 3.0.24-beta.46 (the audit 28.11, the owner's «да» to its order): the everyday ones, then the ways out together
+    // (character select, account, exit), then «Повернутися до гри» - each group apart (menuwin::groupStart)
+    CHECK((menuwin::actions(menuwin::Kind::Alive) ==
+           std::vector<A>{A::Settings, A::Keys, A::Layout, A::Test, A::Report, A::CharSelect, A::Account, A::Exit,
+                          A::Back}));
+    const menuwin::Kind alive = menuwin::Kind::Alive;
+    CHECK(menuwin::groupStart(alive, A::CharSelect) && menuwin::groupStart(alive, A::Back));
+    CHECK(!menuwin::groupStart(alive, A::Account) && !menuwin::groupStart(alive, A::Keys));
+    CHECK(!menuwin::groupStart(menuwin::Kind::Dead, A::CharSelect));  // the death's own as it was
+    const menuwin::Layout L = menuwin::layout(menuwin::Kind::Alive, 1920, 1080, 1.0f, 0);
+    CHECK(L.buttons.size() == 9 &&
+          L.buttons[5].y - (L.buttons[4].y + L.buttons[4].h) > L.buttons[4].y - (L.buttons[3].y + L.buttons[3].h));
     // 3.0.18-beta.226 (the owner: «смену аккаунта в меню ескейпа вынести в самый верх»): the game's character select
     // button - the driver goes on through its «Назад» to the login
     CHECK(menuwin::buttonId(menuwin::Kind::Alive, A::Account) == 0x9A && !menuwin::ours(A::Account) &&

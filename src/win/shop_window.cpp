@@ -278,8 +278,11 @@ void readDeal(State& s, sw::Tab tab) {
         if (!ptr || !len || len > 16 || !readGame(ptr, digits, len)) continue;
         sw::Ware w;
         w.id = std::atoi(digits);
-        // 3.0.24-beta.21 (the spec: «обране» never in the sale's list): the items' starred left out of the sale
-        if (tab == sw::Tab::Sell && !shopguard::sellable(itemswin::starredIds().count(w.id) > 0)) continue;
+        // 3.0.24-beta.21 (the spec: «обране» never in the sale's list): the items' starred left out of the sale;
+        // 3.0.24-beta.46 (the owner's «скрывать»): the worn ones too - ITEM_INFO's wear place (+0xC) not 0
+        if (tab == sw::Tab::Sell &&
+            !shopguard::sellable(itemswin::starredIds().count(w.id) > 0, rd32(raw, 0x0C) != 0))
+            continue;
         w.type = int(rd32(raw, 0x00));
         if (tab == sw::Tab::Sell) {  // its real cards (a forged one's slots hold none)
             int cards[4] = {};

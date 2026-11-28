@@ -504,7 +504,7 @@ void useCell(State& s, int shownIndex, ULONGLONG now, const char* how) {
     if (shownIndex < 0 || shownIndex >= int(s.shownItems.size())) return;
     const iw::Item& it = s.items[size_t(s.shownItems[size_t(shownIndex)])];
     if (storagewin::shown()) {  // 3.0.11-beta.115: «Склад» open - into the storage (the game's count window, a stack)
-        const bool put = storagewin::put(it.index, it.count);
+        const bool put = storagewin::putAsk(it.index, it.id, it.count);  // 3.0.24-beta.46: a stack asks how many
         if (s.told++ < 20)
             LOG_INFO("items: %s on #%d x%d - %s", how, it.id, it.count,
                      put ? "given to the game's storage window's drop" : "not put (the storage window not found)");

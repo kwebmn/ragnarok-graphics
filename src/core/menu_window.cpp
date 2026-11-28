@@ -10,6 +10,7 @@ namespace {
 
 // The card at scale 1: 320 wide, 16 in, the title's row 28 and 10 under it, a button 38 high, 8 apart
 constexpr float kWide = 320, kPad = 16, kTitleH = 28, kTitleGap = 10, kButtonH = 38, kGap = 8;
+constexpr float kGroupGap = 10;  // 3.0.24-beta.46: more between the menu's groups
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A;
 constexpr uint32_t kText = 0xEEF2F8, kMuted = 0x9AA3B5, kDeadRed = 0xFF5A4E;
 
@@ -36,14 +37,18 @@ const std::string& wordsOf(const Texts& t, Action a) {
 
 std::vector<Action> actions(Kind k) {
     switch (k) {
-        case Kind::Alive:  // 3.0.18-beta.121: ours over the game's; .226: «Змінити акаунт» on the top
-            return {Action::Account, Action::Settings, Action::Keys, Action::Layout, Action::Test, Action::Report,
-                    Action::CharSelect, Action::Exit, Action::Back};
+        // 3.0.18-beta.121: ours over the game's; .226: «Змінити акаунт» on the top (the owner); 3.0.24-beta.46 (the
+        // audit 28.11, the owner's «да» to its order): the everyday ones, the ways out together, «Повернутися»
+        case Kind::Alive:
+            return {Action::Settings, Action::Keys, Action::Layout, Action::Test, Action::Report, Action::CharSelect,
+                    Action::Account, Action::Exit, Action::Back};
         case Kind::Dead: return {Action::SavePoint, Action::CharSelect, Action::Exit, Action::Back};
         case Kind::DeadToken: break;
     }
     return {Action::Revive, Action::SavePoint, Action::CharSelect, Action::Exit, Action::Back};
 }
+
+bool groupStart(Kind k, Action a) { return k == Kind::Alive && (a == Action::CharSelect || a == Action::Back); }
 
 bool ours(Action a) {
     return a == Action::Settings || a == Action::Layout || a == Action::Test || a == Action::Report;
@@ -82,7 +87,9 @@ Layout layout(Kind k, int targetW, int targetH, float scale, size_t recapLines) 
         L.recap = panel::Box{pad, y, w - 2 * pad, std::round((24 + 19 * float(recapLines) + 8) * s)};
         y += L.recap.h + std::round(kTitleGap * s);
     }
+    const std::vector<Action> as = actions(k);
     for (size_t i = 0; i < n; ++i) {
+        if (i > 0 && groupStart(k, as[i])) y += std::round(kGroupGap * s);  // 3.0.24-beta.46: a group apart
         L.buttons.push_back(panel::Box{pad, y, w - 2 * pad, std::round(kButtonH * s)});
         y += std::round(kButtonH * s) + (i + 1 < n ? std::round(kGap * s) : 0.0f);
     }

@@ -205,6 +205,11 @@ TEST(mcp_keys_and_clicks) {
     CHECK(!mcp::checkArgs("click", args(R"({"x":1100,"y":10,"width":1020})")).empty());  // past the picture
     CHECK(!mcp::checkArgs("click", args(R"({"x":10,"y":10})")).empty());                  // the picture's width
     CHECK(!mcp::checkArgs("click", args(R"({"x":10,"y":10,"width":1020,"button":"middle"})")).empty());
+    // 3.0.24-beta.46 (the audit 28.11: windows' corners and titles could not be pulled over MCP): a drag
+    CHECK(mcp::checkArgs("drag", args(R"({"x":100,"y":100,"x2":300,"y2":250,"width":1020})")).empty());
+    CHECK(!mcp::checkArgs("drag", args(R"({"x":100,"y":100,"width":1020})")).empty());              // no end
+    CHECK(!mcp::checkArgs("drag", args(R"({"x":100,"y":100,"x2":1100,"y2":250,"width":1020})")).empty());  // past
+    CHECK(!mcp::checkArgs("drag", args(R"({"x":100,"y":100,"x2":300,"y2":250})")).empty());          // no width
     // the place in the window: the screenshot 1020 wide of a 2040 x 1147 window
     int cx = 0, cy = 0;
     CHECK(mcp::clickPlace(510, 286, 1020, 2040, 1147, cx, cy) && cx == 1020 && cy == 572);

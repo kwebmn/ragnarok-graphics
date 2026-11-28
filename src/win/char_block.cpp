@@ -499,6 +499,7 @@ struct Ui {
     std::string ownSrc[size_t(closedwin::Own::Count)];
     float ownPx = 0;
     int ownGen = 0;
+    uint32_t ownInk = 0, iconsInk = 0;  // 3.0.24-beta.46: the icons' ink by the theme (painted again when it changes)
     Rml::String portrait, portraitSrc;
     float tipLeft = 0, tipTop = 0;
     float ringD = 98, ringGap = 7, ringPic = 31, ringBadgeW = 32, ringBadgeH = 18, ringHpW = 5, ringSpW = 4;
@@ -763,8 +764,11 @@ bool uiFrame(State& s, const cb::View view, const cb::Look look, const std::stri
     const Rml::String portrait = uaui::picture(s.data.portrait, u.portraitGen, u.portraitSrc);
     if (portrait != u.portrait) u.portrait = portrait, u.doc.dirty("portrait");
     const float iconPx = 18 * dp * size;
-    if (iconPx != u.iconsScale) {
+    // 3.0.24-beta.46 (the audit 28.11: the light theme's buttons white on white): the icons' ink the theme's
+    const uint32_t ink = uaui::themed(0xECEFF5, uitheme::Group::Hud);
+    if (iconPx != u.iconsScale || ink != u.iconsInk) {
         u.iconsScale = iconPx;
+        u.iconsInk = ink;
         ++u.iconsGen;
         u.buttons.clear();
         for (int i = 0; i < cb::kButtons; ++i) {
@@ -772,7 +776,7 @@ bool uiFrame(State& s, const cb::View view, const cb::Look look, const std::stri
             const int side = std::max(8, int(std::ceil(iconPx)));
             p.width = p.height = side;
             p.px.assign(size_t(side) * size_t(side), 0u);
-            uiicons::draw(p, cb::kButton[i].icon, 0, 0, float(side), 0xECEFF5, 0.9f);
+            uiicons::draw(p, cb::kButton[i].icon, 0, 0, float(side), ink, 0.9f);
             u.buttons.push_back(uaui::picture(&p, u.iconsGen, u.iconSrc[i]));
         }
         u.doc.dirty("buttons");
@@ -780,16 +784,17 @@ bool uiFrame(State& s, const cb::View view, const cb::Look look, const std::stri
     {  // 3.0.18-beta.120: the second row - which windows, their icons, lit while open
         u.gameRow = 72;
         const std::vector<closedwin::Own> kinds = ownwin::row();
-        bool changed = kinds != u.ownKinds || iconPx != u.ownPx;
-        if (iconPx != u.ownPx) u.ownPx = iconPx, ++u.ownGen;
+        const bool repaint = iconPx != u.ownPx || ink != u.ownInk;
+        bool changed = kinds != u.ownKinds || repaint;
+        if (repaint) u.ownPx = iconPx, u.ownInk = ink, ++u.ownGen;
         std::vector<Ui::OwnV> own;
         for (const closedwin::Own o : kinds) {
             panel::Picture& p = u.ownIcons[size_t(o)];
             const int side = std::max(8, int(std::ceil(iconPx)));
-            if (p.width != side) {
+            if (repaint || p.width != side) {
                 p.width = p.height = side;
                 p.px.assign(size_t(side) * size_t(side), 0u);
-                uiicons::draw(p, ownIcon(o), 0, 0, float(side), 0xECEFF5, 0.9f);
+                uiicons::draw(p, ownIcon(o), 0, 0, float(side), ink, 0.9f);
             }
             own.push_back(Ui::OwnV{uaui::picture(&p, u.ownGen, u.ownSrc[size_t(o)]), ownwin::lit(o)});
         }

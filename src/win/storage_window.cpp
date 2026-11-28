@@ -677,6 +677,23 @@ bool put(int index, int count) {
     return true;
 }
 
+// 3.0.24-beta.46 (the audit 28.11: a double click on Jellopy ×99 in «Речі» put all 99 into «Склад», while a double
+// click in «Склад» asks): a stack from the bag asks how many as well (our «Скільки штук», no more than fits)
+bool putAsk(int index, int id, int count) {
+    State& s = state();
+    if (!g_packets || !s.shown || count <= 1) return put(index, count);
+    const itemnet::Fit fit = itemnet::fitIn(itemstate::Where::Storage, id, count);
+    if (fit.most <= 0) {
+        if (s.told++ < 30) LOG_INFO("storage: #%d x%d - nothing of it fits in the storage", id, count);
+        return false;
+    }
+    askcardwin::askCount(say(settings::Text::CountStorage), fit.most, [index](int n) {
+        itemnet::ask(itemactions::Kind::ToStorage, uint16_t(index), uint32_t(n));
+    }, fit.words);
+    s.readAt = 0;
+    return true;
+}
+
 bool takeIndex(int index, int count) {  // 3.0.11-beta.121
     State& s = state();
     for (const iw::Item& it : s.items)

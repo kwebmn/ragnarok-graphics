@@ -9,7 +9,8 @@ namespace uagfx::shopguard {
 // thing within kConfirmMs lets it go (the window's note says why the first did nothing)
 enum class Ask : uint8_t { None, Card, Refine };
 Ask askBeforeSelling(int refine, int cards);
-bool sellable(bool favourite);
+// 3.0.24-beta.46 (the audit 28.11, the owner's «скрывать»): a worn thing (the worn arrows too) not in the list either
+bool sellable(bool favourite, bool worn = false);
 bool misc(int type);  // «Різне»: the items' own tab (core/item_window tabOf)
 // A thing's real cards in its four slots (4001-4999): a forged one's (255 first), a named one's (254) and an egg's
 // (-256) slots hold no card

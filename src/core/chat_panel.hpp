@@ -242,6 +242,24 @@ int scrollBy(int scroll, int most, int rows, ScrollKey key);
 enum class EngageEvent : uint8_t { ClickOnChat, ClickAway, Enter, Escape, Letter };
 bool engagedAfter(bool engaged, EngageEvent e, bool lineEmpty);
 bool arrowsToChat(bool engaged, bool fieldHasKeys);
+// 3.0.24-beta.46 (the owner: «чтобы чат хранил историю и кнопки верх вниз в окне чата работали. в строке», «как в
+// оригинале»): the lines sent from the chat's line this game, as typed («/p …» too), newest last - ↑ ↓ in the taken-up
+// line walk them as the original's line does (the messages scroll by PgUp, PgDn and the wheel); the words being typed
+// kept below the newest; until the game closes
+constexpr size_t kHistoryLines = 50;
+class LineHistory {
+public:
+    void sent(const std::string& line);  // an empty line or the newest again: not kept
+    // ↑ (older) or ↓ from the line's words now; false: nothing to change (the oldest, or the line itself)
+    bool step(bool older, const std::string& now, std::string& out);
+    void typed();  // a letter typed: the walk starts again from the newest, the words as edited the draft
+    size_t size() const { return lines_.size(); }
+
+private:
+    std::vector<std::string> lines_;
+    int at_ = -1;  // -1: the line itself; else the line shown of lines_
+    std::string draft_;
+};
 // 3.0.22-beta.48 (the owner: «одна высота пускай будет свернутый чат максимально»): F10's rows, round - the last the
 // chat folded to its newest line (its tabs and its field kept); the tabs' «—» goes there and back
 constexpr int kHeights[] = {7, 12, 4, 1};

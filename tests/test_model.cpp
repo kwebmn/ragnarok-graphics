@@ -42,6 +42,7 @@ const std::vector<IniEdit> kMarked{
     {"interface", "storage", "0"}, {"interface", "trade", "0"}, {"interface", "cart", "0"}, {"interface", "shop", "0"},
     {"interface", "vending", "0"}, {"interface", "counts", "0"}, {"interface", "picks", "0"},
     {"interface", "my_shop", "0"}, {"interface", "vend_setup", "0"}, {"utility", "item_windows_off", "1"},
+    {"utility", "windows_opaque", "1"},  // 3.0.24-beta.46: the windows opaque once (no 90 there: the mark alone)
     {"frames", "keep_fps", "60"}, {"utility", "autopilot", "1"}};
 
 // A key of an ini as readIni gives it; "<none>" when it is not there.
@@ -767,7 +768,8 @@ TEST(model_settles_an_old_files_groups_at_its_start) {
     // a file of the new groups is left as it is (3.0.9-beta.7: with the world scale's mark - a file of now)
     const std::string fresh = "[effects]\r\npreset = auto\r\ngroup_plants = 0\r\n[utility]\r\nworld_scale_reset = 1\r\n"
                               "autopilot = 1\r\n"            // 3.0.11-beta.58: and the autopilot's mark
-                              "item_windows_off = 1\r\n";    // 3.0.24-beta.1: and the item windows' mark
+                              "item_windows_off = 1\r\n"     // 3.0.24-beta.1: and the item windows' mark
+                              "windows_opaque = 1\r\n";      // 3.0.24-beta.46: and the opaque windows' mark
     w.files[fake::path(kIni)] = fresh;
     m.load();
     CHECK(w.files[fake::path(kIni)] == fresh);

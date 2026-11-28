@@ -230,6 +230,7 @@ void Model::load() {
         const auto ini = readIni(now_.iniText);
         std::vector<IniEdit> edits = worldScaleReset(ini);
         for (const IniEdit& e : itemWindowsOff(ini)) edits.push_back(e);  // 3.0.24-beta.1
+        for (const IniEdit& e : windowsOpaqueOnce(ini)) edits.push_back(e);  // 3.0.24-beta.46
         for (const IniEdit& e : autopilotOnce(ini, memoryLevel())) edits.push_back(e);
         if (!edits.empty()) writeIni(edits, Lang::En);
     }

@@ -1262,7 +1262,7 @@ TEST(config_reads_the_animations) {
 // 3.0.11-beta.47 (the concept's «Непрозрачность»): [interface] panel_opacity 50-100 (80), window_opacity 80-100 (90)
 TEST(config_reads_the_opacities) {
     const Config d = noUi("");
-    CHECK(d.hudOpacity == 80 && d.windowOpacity == 90);
+    CHECK(d.hudOpacity == 80 && d.windowOpacity == 100);  // 3.0.24-beta.46: the windows opaque by default
     const Config c = noUi("panel_opacity = 65\nwindow_opacity = 95\n");
     CHECK(c.hudOpacity == 65 && c.windowOpacity == 95);
     const Config low = noUi("panel_opacity = 10\nwindow_opacity = 40\n");

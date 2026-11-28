@@ -340,3 +340,16 @@ TEST(auto_setup_amd_apus_by_name) {
     CHECK(a.tier == Tier::Middle);
     CHECK_EQ(valueOf(a, "quality", "msaa"), std::string("4"));
 }
+
+// 3.0.24-beta.46 (the audit 28.11, the owner's «да»: windows opaque by default, the main screen's panels translucent):
+// [interface] window_opacity at the old default 90 goes to 100 once; another value (the player's own) stays
+TEST(windows_opaque_once_from_the_old_default) {
+    const std::vector<IniEdit> e = windowsOpaqueOnce(readIni("[interface]\nwindow_opacity = 90\n"));
+    CHECK_EQ(e.size(), size_t(2));
+    CHECK(e.size() == 2 && e[0].section == "interface" && e[0].key == "window_opacity" && e[0].value == "100");
+    CHECK(e.size() == 2 && e[1].section == "utility" && e[1].key == "windows_opaque" && e[1].value == "1");
+    const std::vector<IniEdit> own = windowsOpaqueOnce(readIni("[interface]\nwindow_opacity = 85\n"));
+    CHECK(own.size() == 1 && own[0].key == "windows_opaque");  // the player's 85 kept, only the mark
+    CHECK(windowsOpaqueOnce(readIni("[interface]\nwindow_opacity = 90\n[utility]\nwindows_opaque = 1\n")).empty());
+    CHECK_EQ(uagfx::Config{}.windowOpacity, 100);  // a new install: opaque
+}

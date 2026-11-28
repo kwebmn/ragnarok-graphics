@@ -372,6 +372,16 @@ Startup decide() {
                      "«Обмін», «Візок», the shops, counts, picks)%s",
                      written ? "" : " - uaro-graphics.ini not written: this game only");
         }
+    // 3.0.24-beta.46 (the audit 28.11, the owner's «да»): the windows opaque, once (an old default 90 to 100)
+    if (haveIni)
+        if (const std::vector<settings::IniEdit> edits = settings::windowsOpaqueOnce(settings::readIni(ini));
+            !edits.empty()) {
+            const bool written = editIniFile(iniPath, edits);
+            if (edits.size() > 1) s.config.windowOpacity = 100;
+            LOG_INFO("settings: the windows opaque once (3.0.24-beta.46)%s%s",
+                     edits.size() > 1 ? " - window_opacity 90 -> 100" : " - the player's own opacity kept",
+                     written ? "" : " - uaro-graphics.ini not written: this game only");
+        }
     LOG_INFO("%s", padMountedText());  // 2.9
     logRoext();                         // 3.0.1-beta.8
     logUpdates();                       // 3.0.2-beta.5

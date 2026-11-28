@@ -251,6 +251,7 @@ struct Ui {
     panel::Picture bookPic[2], glyph[2];
     std::string bookSrc[2], glyphSrc[2];
     float iconsPx = 0;
+    uint32_t iconsInk = 0;  // 3.0.24-beta.46: the lit book's ink by the theme
     bool sony = false;
     int gen = 0;
     bool shown = false;
@@ -368,7 +369,9 @@ bool uiFrame(State& s) {
     const float bar = u.hpGlide.step(float(std::max(u.hp, 0)), GetTickCount64(), uaui::motion());
     if (bar != u.hpBar) u.hpBar = bar, u.doc.dirty("hp_bar");
     const float px = 18 * dp;
-    if (px != u.iconsPx || u.sony != s.data.padSony) {
+    const uint32_t lit = uaui::themed(0xECEFF5, uitheme::Group::Hud);  // 3.0.24-beta.46: the theme's (light: dark)
+    if (px != u.iconsPx || u.sony != s.data.padSony || lit != u.iconsInk) {
+        u.iconsInk = lit;
         u.iconsPx = px;
         u.sony = s.data.padSony;
         ++u.gen;
@@ -377,7 +380,7 @@ bool uiFrame(State& s) {
             const int side = std::max(8, int(std::ceil(px)));
             b.width = b.height = side;
             b.px.assign(size_t(side) * size_t(side), 0u);
-            uiicons::draw(b, uiicons::Icon::Quest, 0, 0, float(side), i ? 0xECEFF5 : 0x9AA3B5, 1.0f, 2.0f);
+            uiicons::draw(b, uiicons::Icon::Quest, 0, 0, float(side), i ? lit : 0x9AA3B5, 1.0f, 2.0f);
             const float gpx = 17 * dp;
             panel::Picture& g = u.glyph[i];
             const int gs = std::max(8, int(std::ceil(gpx)));

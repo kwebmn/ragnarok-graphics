@@ -44,6 +44,8 @@ void packet(const packets::Event& e);  // 0x00f2: the places used of the most
 // A thing of the bag (its place, its count) put into the storage as a drag let go over it does - the game's count
 // window for a stack: «Речі»'s double click and the controller's A while «Склад» is open; false: not open
 bool put(int index, int count);
+// 3.0.24-beta.46: a bag's stack by a double click - asks how many (items via packets), else as put
+bool putAsk(int index, int id, int count);
 // 3.0.11-beta.121 (the concept's stage 5): a storage thing (its place, how many) into the bag as a double click takes
 // it; the controller's frame's thing for carrying (its icon, its cell's middle on the target); false: none
 bool takeIndex(int index, int count);
