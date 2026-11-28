@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.57 — what's new · 2026-11-28
+
+The full check over the MCP:
+- The game checks its settings and windows itself when asked over the MCP: each setting set as Alt+O sets it, taken by the game, its trace seen (the frame, the card, the windows, the logs), and its value put back. The windows open by the game's keys, their words, box, pad and Esc checked. A line a check in uaro-graphics\logs.
+- The settings app's watchdog keeps a copy of uaro-graphics.ini before the check and puts it back after.
+- Nothing changes for players.
+
 # uaRO Graphics 3.0.24-beta.56 — what's new · 2026-11-28
 
 Keys, the minimap and the pad:
