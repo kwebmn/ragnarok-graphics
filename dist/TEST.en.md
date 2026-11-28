@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.24-beta.50 — what's new · 2026-11-28
+
+After the interface audit:
+- «Items»: the tabs are pictures now, the name shows when pointed at; the hints say one word - right click, the card.
+- «Skills»: the window as tall as its biggest tab (4-8 rows), no empty half; a skill the client has no picture of shows a grey lightning sign instead of an empty square.
+- «Status»: beside a grey plus it says how many points are needed and how many you have; the explanation panel at the bottom is never empty - it tells of the row pointed at last.
+- The character block: the gold +N points is a button that opens «Status»; the skill points open «Skills».
+- The game's settings: «Music» or «Sounds» at zero switch off by themselves; switched on at zero, the slider goes half way.
+- «Checking now» shows the checks of the two newest betas only.
+
 # uaRO Graphics 3.0.24-beta.49 — what's new · 2026-11-28
 
 Internal: a window's corner can be pulled with the button held by an MCP check too (for the laptop checks).
