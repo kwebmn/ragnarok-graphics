@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.24-beta.54 — what's new · 2026-11-28
+
+For the team's remote checks:
+- A new MCP tool, type: words typed into a field of the game as its own letters (the chat line, a search, a name's field), never sent by it - the chat line and its history by the arrows can be checked without saying anything in public.
+
 # uaRO Graphics 3.0.24-beta.53 — what's new · 2026-11-28
 
 Speed on weak graphics cards:
