@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.38 — what's new · 2026-11-28
+
+Smoothing on weak graphics cards: why Direct3D 12 looked slower than Direct3D 11.
+
+- **«Keep the frame rate»:** when the card cannot keep up, edge smoothing (MSAA) goes down first - 8× → 4× → 2× → off, a step at a time, for the rest of the game - and only then do effects go off. A line on the screen says «Smoothing (MSAA) 4× → 2× for the rest of the game…». A value you set yourself stays yours. The laptop test with an AMD Radeon 610M: 4× MSAA cost 3-5 ms of a 16-21 ms frame (Yuno 46 fps, without it 57; Morroc 50 → 60).
+- **Automatic setup:** AMD's integrated graphics are known by name now (Radeon 610M…890M, Radeon Graphics, Vega), even when the BIOS gave them 2-4 GB «of their own». The strong ones (680M, 760M, 780M, 880M, 890M) get the strong integrated tier (2× MSAA), the others «Speed» without MSAA; before, with 4 GB such graphics passed for a middle card with «Balance» and 4× MSAA.
+- Direct3D 11 has no edge smoothing at all - so without MSAA Direct3D 12 on the same laptop is as fast as Direct3D 11.
+
 # uaRO Graphics 3.0.24-beta.37 — what's new · 2026-11-28
 
 MCP for the full test, part 3: an update through the watchdog, effects set as Alt+O sets them.
