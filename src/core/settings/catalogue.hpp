@@ -29,7 +29,9 @@ enum class Home : uint8_t { Game, Start, Lab, File };
 
 // What a row needs to do anything: another row on (a check on, a list not at its first word), Direct3D 12, the 3D
 // view; 3.0.21-beta.10: Direct3D 11 («Роздільність світу» is its alone)
-enum class NeedKind : uint8_t { Row, Direct3D12, View3d, Direct3D11 };
+// 3.0.24-beta.41 (the laptop's effects run): Remaster - the effects' mode not «Класика» (the torches' shadows, the world
+// in the water are drawn in the remaster mode alone; auto is the card's to decide)
+enum class NeedKind : uint8_t { Row, Direct3D12, View3d, Direct3D11, Remaster };
 struct Need {
     NeedKind kind;
     const char* key = nullptr;  // Row: "effects.grass"

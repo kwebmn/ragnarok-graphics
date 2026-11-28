@@ -1063,6 +1063,7 @@ enum class Text : uint16_t {
     // 3.0.21-beta.10: «Налаштування» - a group's way back to the shipped values, the entry of what is off them, the
     // note of an entry that does nothing now; why a change does not show (the other renderer, the map)
     SettingsDefaults, SettingsChanged, SettingsChangedNone, SettingsNote3d, WhyDirect3D11, WhyNotHere,
+    WhyRemaster,  // 3.0.24-beta.41: a row of the remaster mode alone (the torches' shadows, the world in the water)
     SettingsMoreHead,  // 3.0.21-beta.11: the small heading over a group's details (no line that opens them)
     // 3.0.21-beta.12: the 3D view's two icons on the character block - their switch, its hint, their tips
     InterfaceView3dButtons, InterfaceView3dButtonsHint, CharOwnBehind, CharOwnEyes,

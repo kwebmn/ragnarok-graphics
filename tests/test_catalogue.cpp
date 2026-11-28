@@ -521,3 +521,23 @@ TEST(catalogue_theme_is_basic_groups_and_accent_detail) {
     CHECK(interfaceSections().front().keys.front() == std::string("interface.theme"));
     CHECK(!interfaceSections().front().folded);
 }
+
+// 3.0.24-beta.41 (the laptop's effects run: «Тіні від факелів» and «Відбиття світу у воді» on in «Класика» showed
+// nothing - both are drawn in the remaster mode alone): the row says so in the classic mode; auto leaves it to the card
+TEST(catalogue_remaster_only_rows_say_why) {
+    const auto why = [&](const char* key, const Config& c, Lang l = Lang::Uk) {
+        const catalogue::Row* r = catalogue::find(key);
+        return r ? catalogue::whyNot(*r, c, true, false, l) : std::string("?");
+    };
+    const Config classic = parseConfig("[effects]\npreset = custom\ntier = classic\ntorch = 1\nwater = 1\n");
+    const Config remaster = parseConfig("[effects]\npreset = custom\ntier = remaster\ntorch = 1\nwater = 1\n");
+    const Config autoTier = parseConfig("[effects]\npreset = custom\ntier = auto\ntorch = 1\nwater = 1\n");
+    for (const char* key : {"effects.torch_shadows", "effects.world_reflections"}) {
+        CHECK_EQ(why(key, classic), std::string("Лише в режимі «Ремастер»"));
+        CHECK_EQ(why(key, classic, Lang::Ru), std::string("Только в режиме «Ремастер»"));
+        CHECK_EQ(why(key, remaster), std::string());
+        CHECK_EQ(why(key, autoTier), std::string());
+    }
+    // the others as before
+    CHECK_EQ(why("effects.torch_flame", classic), std::string());
+}

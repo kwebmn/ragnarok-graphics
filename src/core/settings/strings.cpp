@@ -9479,6 +9479,7 @@ constexpr Entry kTexts[] = {
      "Работает только на Direct3D 11"},
     {Text::WhyNotHere, "Nothing of it shows on this map", "На цій карті цього не видно",
      "На этой карте этого не видно"},
+    {Text::WhyRemaster, "Remaster mode only", "Лише в режимі «Ремастер»", "Только в режиме «Ремастер»"},
     {Text::SettingsMoreHead, "More", "Додатково", "Дополнительно"},  // 3.0.21-beta.11: over a group's details
     {Text::InterfaceView3dButtons, "3D view buttons", "Кнопки 3D-режиму", "Кнопки 3D-режима"},
     {Text::InterfaceView3dButtonsHint,

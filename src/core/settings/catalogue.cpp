@@ -403,6 +403,9 @@ std::vector<Group> build() {
             // 3.0.21-beta.10: «Роздільність світу» is Direct3D 11's (its hint's first words); the aura is made when
             // the character appears - «після телепорту чи нової карти»
             if (r.key == "quality.world_scale") r.needs.push_back(Need{NeedKind::Direct3D11});
+            // 3.0.24-beta.41: drawn in the remaster mode alone (impl.hpp shadowCollecting, mirrorCollecting)
+            if (r.key == "effects.torch_shadows" || r.key == "effects.world_reflections")
+                r.needs.push_back(Need{NeedKind::Remaster});
             if (r.key == "effects.aura") r.nextMap = true;
         }
     return out;
@@ -463,6 +466,7 @@ bool met(const Need& n, const Config& shown, bool direct3d12, bool view3d) {
     if (n.kind == NeedKind::Direct3D12) return direct3d12;
     if (n.kind == NeedKind::Direct3D11) return !direct3d12;
     if (n.kind == NeedKind::View3d) return view3d;
+    if (n.kind == NeedKind::Remaster) return shown.effects.tier != 1;  // 3.0.24-beta.41: not «Класика»
     const IniSetting* s = n.key ? findSetting(n.key) : nullptr;
     if (!s || s->tokens.empty()) return true;
     return tokenOf(*s, shown) != s->tokens[0];  // a check on, a list off its first word
@@ -505,6 +509,8 @@ About about(const Row& r, const Config& shown, bool direct3d12, bool view3d, Lan
             w.name = "Direct3D 11";
         } else if (n.kind == NeedKind::View3d) {
             w.name = tr(l, Text::View3dHeading);
+        } else if (n.kind == NeedKind::Remaster) {
+            w.name = tr(l, Text::FxTierRemaster);
         } else {
             const IniSetting* s = n.key ? findSetting(n.key) : nullptr;
             if (!s) continue;
@@ -558,7 +564,7 @@ bool notHere(const Row& r, const std::string& map, const EffectSettings& e) {
 std::string whyNot(const Row& r, const Config& shown, const Now& now, Lang l) {
     std::vector<std::string> parts;
     std::string rows;
-    bool card12 = false, card11 = false, view = false;
+    bool card12 = false, card11 = false, view = false, remaster = false;
     const Group* g = groupOf(r.key);
     for (const Need& n : r.needs) {
         if (met(n, shown, now.direct3d12, now.view3d)) continue;
@@ -568,6 +574,8 @@ std::string whyNot(const Row& r, const Config& shown, const Now& now, Lang l) {
             card11 = true;
         } else if (n.kind == NeedKind::View3d) {
             view = !now.ownEntry || !g || g->area != Area::View3d;
+        } else if (n.kind == NeedKind::Remaster) {
+            remaster = true;
         } else if (const IniSetting* s = n.key ? findSetting(n.key) : nullptr) {
             rows += (rows.empty() ? "" : ", ") + std::string("\xC2\xAB") + tr(l, s->label) + "\xC2\xBB";
         }
@@ -575,6 +583,7 @@ std::string whyNot(const Row& r, const Config& shown, const Now& now, Lang l) {
     if (card12) parts.push_back(tr(l, Text::WhyDirect3D12));
     if (card11) parts.push_back(tr(l, Text::WhyDirect3D11));
     if (view) parts.push_back(tr(l, Text::WhyView3d));
+    if (remaster) parts.push_back(tr(l, Text::WhyRemaster));
     if (!rows.empty()) parts.push_back(fmt(tr(l, Text::WhyNeeds), {rows}));
     // 3.0.21-beta.10: the map cannot show it (the weather indoors, the year in the desert, grass in a cave)
     if (!now.map.empty() && notHere(r, now.map, shown.effects)) parts.push_back(tr(l, Text::WhyNotHere));
