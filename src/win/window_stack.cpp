@@ -10,6 +10,7 @@
 #include <string>
 
 #include "core/window_sizes.hpp"
+#include "pad/win/remote.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -588,10 +589,15 @@ static void sizingFrame(State& s, int targetWidth, int targetHeight, double k) {
     z.targetW = targetWidth, z.targetH = targetHeight, z.k = k;
     int cx = 0, cy = 0;
     if (z.pulling) {
-        const int button = GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON;
+        const bool swapped = GetSystemMetrics(SM_SWAPBUTTON) != 0;
+        const int button = swapped ? VK_RBUTTON : VK_LBUTTON;
+        // 3.0.24-beta.49 (the laptop: an MCP drag on «Речі»'s corner ended at once): the MCP's button held through the
+        // game's own mouse (pad remote) counts as the hand's
+        const uapad::remote::Mouse remote = uapad::remote::mouse();
+        const bool held = GetAsyncKeyState(button) < 0 || (remote.on && (remote.buttons & (swapped ? 2 : 1)) != 0);
         const char* key = sizeKey(*z.pulling);
         const bool grid = isGrid(*z.pulling);
-        if (!key || !shown(*z.pulling) || !readGameCursor(cx, cy) || GetAsyncKeyState(button) >= 0) {
+        if (!key || !shown(*z.pulling) || !readGameCursor(cx, cy) || !held) {
             if (key) {
                 writeFileAtomic(gameDir() + "\\uaro-graphics\\window-sizes.txt", z.sizes.text());
                 const windowsizes::Cells c = z.sizes.cells(key, kGridCells);
