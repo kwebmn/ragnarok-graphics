@@ -88,6 +88,7 @@ void Context::mcpFrame(bool shown) {
 }
 
 mcp::CallResult Context::mcpCall(const std::string& tool, const json::Value& args) {
+    mcpCalledMs_ = GetTickCount64();  // 3.0.24-beta.42: driven from afar - in front (drivenOverMcp)
     if (tool == "perf") {  // 3.0.24-beta.34 (docs/superpowers/plans/2026-11-27-mcp-full-test.md, task 2)
         const double seconds = args.has("seconds") ? double(args["seconds"].asInt()) : 10.0;
         mcpperf::Facts f;

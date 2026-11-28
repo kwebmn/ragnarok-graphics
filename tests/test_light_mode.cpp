@@ -126,3 +126,15 @@ TEST(light_another_window_on_the_battery_keeps_the_stricter) {
     CHECK_EQ(s.renderScaleMax, 50);
     CHECK(s.other && s.superLight && s.noAnisotropy);
 }
+
+// 3.0.24-beta.42 (the owner: «в случае с мсп надо бы такое ограничение снимать»): a game driven over the MCP (a call
+// within kDrivenMs) draws behind another window as in front - no 15 frames a second; the login's 60 as before
+TEST(light_save_power_off_while_driven_over_mcp) {
+    CHECK_EQ(light::savePowerFps(false, true, true), 0);
+    CHECK_EQ(light::savePowerFps(false, false, true), 60);
+    CHECK_EQ(light::savePowerFps(false, true, false), 15);
+    CHECK(light::drivenOverMcp(true, 100000, 100000 + light::kDrivenMs - 1));
+    CHECK(!light::drivenOverMcp(true, 100000, 100000 + light::kDrivenMs));
+    CHECK(!light::drivenOverMcp(false, 100000, 100001));  // [mcp] off
+    CHECK(!light::drivenOverMcp(true, 0, 5000));          // never called
+}

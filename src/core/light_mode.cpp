@@ -64,6 +64,12 @@ int fpsLimit(int file, const Overrides& o) {
     return file > 0 ? std::min(file, o.fpsMax) : o.fpsMax;
 }
 
-int savePowerFps(bool foreground, bool mapShown) { return !foreground ? 15 : !mapShown ? 60 : 0; }
+int savePowerFps(bool foreground, bool mapShown, bool driven) {
+    return !foreground && !driven ? 15 : !mapShown ? 60 : 0;
+}
+
+bool drivenOverMcp(bool mcpEnabled, uint64_t lastCallMs, uint64_t nowMs) {
+    return mcpEnabled && lastCallMs != 0 && nowMs >= lastCallMs && nowMs - lastCallMs < kDrivenMs;
+}
 
 }  // namespace uagfx::light

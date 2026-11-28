@@ -46,7 +46,13 @@ int fpsLimit(int file, const Overrides& o);
 // 0.85, [frames] save_power: the frames a second the picture is held to - 15 behind another window or minimised; with
 // no map (the login, the character select) 60 (3.0.11-beta.188, R-U5A9G4: 30 before - the new login screen's hover
 // and its shelf's glide stuttered at 33 ms a frame); 0 in the world (none)
-int savePowerFps(bool foreground, bool mapShown);
+// 3.0.24-beta.42 (the owner: «в случае с мсп надо бы такое ограничение снимать»): `driven` - the game driven over the
+// MCP (drivenOverMcp): behind another window as in front
+int savePowerFps(bool foreground, bool mapShown, bool driven = false);
+// An MCP call within kDrivenMs and [mcp] enabled: the game is being driven from afar - it draws, keeps its frames and
+// judges its card behind another window as in front
+constexpr uint64_t kDrivenMs = 300000;
+bool drivenOverMcp(bool mcpEnabled, uint64_t lastCallMs, uint64_t nowMs);
 // kFlatWorld: the mip level a world texture is drawn from - its last (its colour alone), or for one with transparent
 // texels the last of 16 texels a side or more (leaves and grilles keep their shape); 0: none (no mip levels).
 int flatLevel(int width, int height, int levels, bool transparent);

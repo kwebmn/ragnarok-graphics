@@ -303,6 +303,10 @@ private:
     unsigned keepFrames_ = 0;
     int keepSlow_ = 0;
     int keepAimTold_ = 0;  // 3.0.19-beta.25: keep_fps held to the screen's refresh / the frame limit - told
+    // 3.0.24-beta.42 (the owner: «в случае с мсп надо бы такое ограничение снимать»): the last MCP call - the game
+    // driven from afar (light::drivenOverMcp) is in front for its frames, its light and its keep_fps
+    uint64_t mcpCalledMs_ = 0;
+    bool drivenOverMcp() const;
     // 3.0.19-beta.27: the game's thread sampled once a game in the 3D view (view3dProfiling)
     uint64_t view3dSince_ = 0;
     bool view3dProfiled_ = false;

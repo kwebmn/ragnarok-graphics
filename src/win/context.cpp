@@ -675,7 +675,7 @@ void Context::updateLight() {
     }
     // 3.0.3-beta.3: several game windows - the ones not played in light, while another one is the main;
     // 3.0.3-beta.9: one asked to be shown next draws whole behind it, one wholly behind another one 2 frames a second
-    const bool foreground = !window || GetForegroundWindow() == window;
+    const bool foreground = !window || GetForegroundWindow() == window || drivenOverMcp();  // 3.0.24-beta.42
     mainWindow_ = frontGame_.main(foreground) || windowSwitch_.summoned(foreground);
     const light::Role role = mainWindow_              ? light::Role::Main
                              : windowSwitch_.hidden() ? light::Role::Hidden
@@ -1035,7 +1035,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
             Sleep(ms);
         return;
     }
-    const bool foreground = !window || GetForegroundWindow() == window;
+    const bool foreground = !window || GetForegroundWindow() == window || drivenOverMcp();  // 3.0.24-beta.42
     noteWindow(false, foreground);
     if (!windowApplied && window) {
         // Not earlier: a windowed client sizes its back buffer from the window's client area (L3039), and that
@@ -1972,6 +1972,10 @@ bool Context::view3dProfiling() {
     return in >= 5000;
 }
 
+bool Context::drivenOverMcp() const {  // 3.0.24-beta.42
+    return light::drivenOverMcp(config.mcpEnabled, mcpCalledMs_, GetTickCount64());
+}
+
 int Context::keepAim(const Config& config) const {
     return effect_costs::keepTarget(config.keepFps, config.fpsLimit, config.vsync, screenHz_, config.keepEffects);
 }
@@ -1994,7 +1998,8 @@ void Context::keepFrameRate(const Config& config, HWND window) {
         keepSlow_ = 0;
     }
     // 3.0.5-beta.6: nor one of «Тест графіки» - its sets change every 15 s, and it turns nothing off
-    if (!enhanced_ || !window || GetForegroundWindow() != window || IsIconic(window) || test_.running()) {
+    if (!enhanced_ || !window || (GetForegroundWindow() != window && !drivenOverMcp()) || IsIconic(window) ||
+        test_.running()) {
         keepSince_ = 0;  // a frame rate in the background says nothing
         return;
     }
