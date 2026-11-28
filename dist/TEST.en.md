@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.24-beta.56 — what's new · 2026-11-28
+
+Keys, the minimap and the pad:
+- The chat line's walk hint and the settings app's keys list name your walk mode keys.
+- Alt+` - the next open window: the bottom one comes on top each time, the arrows lead it.
+- The minimap: in towns no monsters' list under it - only the city cleaners are there.
+- The pad: a new layout's LB holds the skill wheel of the bar's second row (the right stick picks, let go uses it). Saved layouts stay as they are.
+- The pad on the login's shelf: D-pad up opens the characters, the D-pad walks them, A plays, B back to the cards (before, B made ready to leave the game).
+
 # uaRO Graphics 3.0.24-beta.55 — what's new · 2026-11-28
 
 The interface audit's rest and your own keys:
