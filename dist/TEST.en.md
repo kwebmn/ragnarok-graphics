@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.24-beta.47 — what's new · 2026-11-28
+
+More from the interface audit:
+- Light theme: the chat is now as the original's - a dark translucent strip with the original's colours and a white input line with dark words. The chat's quiet tabs are brighter.
+- Chat: Tab passes the party's and the guild's channels you have not. A line in such a channel (or /p, /g with no party or guild) no longer goes to everyone near - the chat says «You are not in a party» and goes back to «All».
+- «Спорядження», «Склад» and the count window are on again for everyone. In «Спорядження» a two-hander's other place says «Taken by …», not «Shield: …».
+- «Продати» at an NPC: arrows not worn are in the list again, the worn ones are not.
+
 # uaRO Graphics 3.0.24-beta.46 — what's new · 2026-11-28
 
 First fixes after the interface audit:
