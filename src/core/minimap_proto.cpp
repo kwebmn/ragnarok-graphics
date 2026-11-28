@@ -21,7 +21,7 @@ constexpr float kBigFooter = 44;  // 3.0.11-beta.119: the big map's row of the l
 // The concept's style A: its glass, white over it, its gold, its words' colours
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kDark = 0x0B0E14;
 constexpr uint32_t kAccent = 0xC9A55B, kAccent2 = 0xE6CB8A, kText = 0xECEFF5, kMuted = 0x9AA3B5;
-constexpr uint32_t kGround = 0xFF141922;   // the map's square where it has no picture
+uint32_t g_ground = kDarkGround;  // 3.0.24-beta.55: the map's square where it has no picture (setGround)
 constexpr uint32_t kKafra = 0xE86AA8;      // the concept's «K»
 // 3.0.11-beta.201: a guild mate's; 3.0.11-beta.222 (the tester: «з відсилкою на оригінал і старим кольором») the
 // game's own pink for them (its mode's message 0xB8 files the mark 0xFFA6D2), not the NPCs' green
@@ -191,10 +191,17 @@ uint32_t mix(uint32_t a, uint32_t b, uint32_t t) {
 }
 
 // A premultiplied pixel over the ground (its channels never past its alpha: no carry between them)
+}  // namespace
+
+void setGround(uint32_t argb) { g_ground = 0xFF000000u | (argb & 0xFFFFFFu); }
+uint32_t ground() { return g_ground; }
+
+namespace {
+
 uint32_t overGround(uint32_t p) {
     const uint32_t a = p >> 24, keep = 256 - a - (a >> 7);
-    const uint32_t rb = (((kGround & 0x00FF00FFu) * keep) >> 8) & 0x00FF00FFu;
-    const uint32_t g = (((kGround >> 8) & 0xFFu) * keep) & 0xFF00u;
+    const uint32_t rb = (((g_ground & 0x00FF00FFu) * keep) >> 8) & 0x00FF00FFu;
+    const uint32_t g = (((g_ground >> 8) & 0xFFu) * keep) & 0xFF00u;
     return 0xFF000000u | ((p & 0x00FFFFFFu) + rb + g);
 }
 
@@ -418,7 +425,7 @@ void mapPixelsMade(panel::Picture& out, const panel::Box& box, const Scene& sc, 
         uint32_t* row = out.px.data() + size_t(ty) * size_t(out.width);
         const float cy = v.top - (float(y) + 0.5f) / v.cellPx;
         if (!lv || !(cy >= 0 && cy < float(sc.map.h))) {
-            for (const Column& c : columns) row[c.at] = kGround;
+            for (const Column& c : columns) row[c.at] = g_ground;
             continue;
         }
         const float fy = std::clamp((float(sc.map.h) - cy) / float(sc.map.h) * float(lv->h) - 0.5f, 0.0f,
@@ -428,7 +435,7 @@ void mapPixelsMade(panel::Picture& out, const panel::Box& box, const Scene& sc, 
         const uint32_t* top = lv->px.data() + size_t(y0) * size_t(lv->w);
         const uint32_t* low = lv->px.data() + size_t(y1) * size_t(lv->w);
         for (const Column& c : columns) {
-            uint32_t pixel = kGround;
+            uint32_t pixel = g_ground;
             if (c.in) {
                 // between the four nearest, premultiplied - a see-through one adds nothing: the ground shows there
                 const uint32_t p = mix(mix(top[c.x0], top[c.x1], c.wx), mix(low[c.x0], low[c.x1], c.wx), wy);
@@ -455,7 +462,7 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
     };
     int ox = 0, oy = 0;
     const bool same = mc->serial == pic->serial && pic->serial != 0 && mc->cellPx == v.cellPx &&
-                      mc->mapW == sc.map.w && mc->mapH == sc.map.h;
+                      mc->mapW == sc.map.w && mc->mapH == sc.map.h && mc->ground == g_ground;
     if (!same || !offsets(ox, oy)) {
         const int margin = std::max(8, bw / 3);
         mc->w = bw + 2 * margin;
@@ -464,6 +471,7 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
         mc->left = v.left - float(margin) / v.cellPx;
         mc->top = v.top + float(margin) / v.cellPx;
         mc->serial = pic->serial;
+        mc->ground = g_ground;  // 3.0.24-beta.55
         mc->mapW = sc.map.w;
         mc->mapH = sc.map.h;
         panel::Picture made;
@@ -515,6 +523,49 @@ std::vector<size_t> drawOrder(const std::vector<Mark>& marks) {
                      [&](size_t a, size_t b) { return rank(marks[a].glyph) < rank(marks[b].glyph); });
     return order;
 }
+
+}  // namespace
+
+std::vector<bool> thinned(const std::vector<Mark>& marks, const View& v, const MapSize& map, float s, float k) {
+    std::vector<bool> shown(marks.size(), true);
+    struct Kept {
+        float x, y, r;
+        bool ring;
+    };
+    std::vector<Kept> kept;
+    // the top kinds first (drawOrder's ranks backwards), the exits before the warps inside, then the list's order
+    const auto rank = [](Glyph g) {
+        return g == Glyph::Dot ? 0 : g == Glyph::Warp ? 1 : g == Glyph::Kafra ? 2 : g == Glyph::Guild ? 3
+                                                                          : g == Glyph::Member ? 4 : 5;
+    };
+    std::vector<size_t> order(marks.size());
+    for (size_t i = 0; i < order.size(); ++i) order[i] = i;
+    std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) {
+        if (rank(marks[a].glyph) != rank(marks[b].glyph)) return rank(marks[a].glyph) > rank(marks[b].glyph);
+        return marks[a].exit && !marks[b].exit;
+    });
+    for (auto it = order.begin(); it != order.end(); ++it) {
+        const Mark& m = marks[*it];
+        float x = 0, y = 0;
+        cellToPanel(v, map, m.cell, x, y);
+        const float r = radiusOf(m, s) * k;
+        bool covered = false;
+        if (m.glyph == Glyph::Dot || m.glyph == Glyph::Warp)
+            for (const Kept& o : kept) {
+                if (m.glyph == Glyph::Warp && !o.ring) continue;  // a ring only under another ring
+                const float d = std::hypot(x - o.x, y - o.y);
+                covered = covered || d < (r + o.r) * 0.9f;
+            }
+        if (covered) {
+            shown[*it] = false;
+            continue;
+        }
+        kept.push_back(Kept{x, y, r, m.glyph == Glyph::Warp});
+    }
+    return shown;
+}
+
+namespace {
 
 // 3.0.11-beta.83: a premultiplied picture inside a circle round (cx, cy), over what is there
 void faceIn(panel::Picture& out, const panel::Picture& pic, float cx, float cy, float r) {
@@ -606,7 +657,11 @@ void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const 
         return x >= box.x - r && y >= box.y - r && x <= box.x + box.w + r && y <= box.y + box.h + r;
     };
     float x = 0, y = 0;
+    // 3.0.24-beta.55 (the audit 28.11, H5): the small square's marks thinned (the big views keep them all)
+    const std::vector<bool> shown =
+        big <= 1.0f ? thinned(sc.marks, v, sc.map, s, big * marks) : std::vector<bool>(sc.marks.size(), true);
     for (const size_t i : drawOrder(sc.marks)) {
+        if (!shown[i]) continue;
         const Mark& m = sc.marks[i];
         place(m.cell, x, y);
         float r = radiusOf(m, s) * big * marks;  // 3.0.11-beta.201: the minimap's by its zoom
@@ -990,7 +1045,10 @@ int markAt(const Layout& L, const Scene& sc, float x, float y) {
     const View v = view(sc.map, sc.player, sc.cells, int(L.map.w));
     int best = -1;
     float bestD = 0;
+    // 3.0.24-beta.55: only the marks the square shows (thinned)
+    const std::vector<bool> shown = thinned(sc.marks, v, sc.map, L.s, markScale(sc.cells, sc.map, L.s) * L.grow);
     for (size_t i = 0; i < sc.marks.size(); ++i) {
+        if (!shown[i]) continue;
         float px = 0, py = 0;
         cellToPanel(v, sc.map, sc.marks[i].cell, px, py);
         const float reach =  // a hand more
@@ -1126,7 +1184,7 @@ BigPart bigPartAt(const Big& b, float x, float y) {
 void paintBigMap(panel::Picture& out, const Big& b, const Scene& sc) {
     out.width = int(b.map.w);
     out.height = int(b.map.h);
-    out.px.assign(size_t(out.width) * size_t(out.height), kGround);
+    out.px.assign(size_t(out.width) * size_t(out.height), g_ground);
     mapPixels(out, panel::Box{0, 0, b.map.w, b.map.h}, sc, bigView(b, sc));
 }
 

@@ -669,3 +669,49 @@ TEST(minimap_proto_cache_follows_a_new_picture_in_the_old_memory) {
     const uint32_t at = square.px[size_t(square.height / 4) * size_t(square.width) + size_t(square.width / 4)];
     CHECK((at & 0xFF) > ((at >> 16) & 0xFF));  // blue, not the old red
 }
+
+// 3.0.24-beta.55 (the audit 28.11, H4: the light minimap's sides near-black): the square's ground outside the map the
+// look's (setGround) - the player at the map's corner, the square past the map's edges in it; the dark one's as before
+TEST(minimap_proto_ground_outside_the_map_is_the_looks) {
+    std::vector<uint32_t> argb(32 * 32, 0xFF20A040);
+    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
+    minimap::Scene sc;
+    sc.argb = &argb;
+    sc.imgW = sc.imgH = 32;
+    sc.map = minimap::MapSize{100, 40};  // wide and low: the whole of it seen, the square's top and bottom outside it
+    sc.player = minimap::Cell{50, 20};
+    sc.cells = 100;
+    const auto outside = [&](uint32_t rgb) {
+        panel::Picture pic;
+        minimap::paintMapSquare(pic, L, sc);
+        int n = 0;
+        for (const uint32_t c : pic.px) n += (c & 0xFFFFFF) == rgb;
+        return n;
+    };
+    minimap::setGround(0xFFE9EDF3);
+    CHECK(outside(0xE9EDF3) > 100);
+    minimap::setGround(minimap::kDarkGround);
+    CHECK(outside(minimap::kDarkGround & 0xFFFFFF) > 100);
+    CHECK_EQ(minimap::ground(), minimap::kDarkGround);
+}
+
+// 3.0.24-beta.55 (the audit 28.11, H5: Prontera's dozens of dots and rings over each other): the small square's marks
+// thinned - a dot under another mark left out, a warp's ring over another's too; the Kafras and the far ones shown
+TEST(minimap_proto_marks_thinned_where_they_cover_each_other) {
+    const minimap::MapSize map{100, 100};
+    const minimap::View v = minimap::view(map, minimap::Cell{50, 50}, 100, 220);  // 2.2 px a cell
+    std::vector<minimap::Mark> marks(6);
+    marks[0].cell = {50, 50}, marks[0].glyph = minimap::Glyph::Warp;
+    marks[1].cell = {50, 50}, marks[1].glyph = minimap::Glyph::Dot;   // under the warp
+    marks[2].cell = {51, 50}, marks[2].glyph = minimap::Glyph::Dot;   // a cell aside: under it too
+    marks[3].cell = {80, 80}, marks[3].glyph = minimap::Glyph::Dot;   // far: shown
+    marks[4].cell = {50, 51}, marks[4].glyph = minimap::Glyph::Kafra;  // always
+    marks[5].cell = {51, 51}, marks[5].glyph = minimap::Glyph::Warp;  // over the first warp's ring
+    const std::vector<bool> shown = minimap::thinned(marks, v, map, 1.0f, 1.0f);
+    CHECK_EQ(shown.size(), marks.size());
+    if (shown.size() != marks.size()) return;
+    CHECK(shown[0] && !shown[1] && !shown[2] && shown[3] && shown[4] && !shown[5]);
+    const minimap::View near = minimap::view(map, minimap::Cell{50, 50}, 10, 220);  // 22 px a cell: apart
+    const std::vector<bool> all = minimap::thinned(marks, near, map, 1.0f, 1.0f);
+    CHECK(all.size() == marks.size() && all[2] && all[5] && !all[1]);  // only the one right under the warp
+}

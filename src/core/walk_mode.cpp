@@ -82,7 +82,8 @@ Act Mode::key(const Key& k) {
         return walkingNow && !k.ctrl && !k.alt && (printable(k.vk) || k.scan == 0x0F) ? Act::Swallow : Act::Pass;
     }
     const bool modifier = k.ctrl || k.alt;
-    if (k.scan == kToggleScan && !modifier && (walkingNow || (!on_ && k.chatEmpty))) {
+    const unsigned toggle = binds_.scan[int(keybinds::Bind::Toggle)];  // 3.0.24-beta.55: the player's (` unless set)
+    if (k.scan == toggle && !modifier && (walkingNow || (!on_ && k.chatEmpty))) {
         if (k.repeat) return Act::Swallow;  // 3.0.18-beta.215: held - once a press, its letters not typed
         on_ = !on_;
         typing_ = false;
@@ -118,22 +119,25 @@ Act Mode::key(const Key& k) {
         if (!known && held_.size() < 8) held_.push_back(Held{k.vk, k.scan, k.extended, d});
         return Act::Swallow;
     }
-    // 3.0.18-beta.209: the quick actions, by the keys' places (any layout)
+    // 3.0.18-beta.209: the quick actions, by the keys' places (any layout); 3.0.24-beta.55: the player's keys
+    // ([keys]; Space F R C Tab Q E unless set)
     Do act = Do::None;
-    switch (k.scan) {
-    case 0x39: act = Do::Attack; break;  // Space
-    case 0x21: act = Do::Pickup; break;  // F
-    case 0x13: act = Do::Talk; break;    // R
-    case 0x2E: act = Do::Sit; break;     // C
-    case 0x0F: act = k.shift ? Do::PrevTarget : Do::NextTarget; break;  // Tab
-    case 0x10: act = Do::CameraLeft; break;   // Q
-    case 0x12: act = Do::CameraRight; break;  // E
-    default:
-        if (k.scan >= 0x02 && k.scan <= 0x0A) {  // 1-9
-            act = Do::Slot;
-            slot_ = int(k.scan) - 0x02;
+    bool found = false;
+    const keybinds::Bind b = keybinds::boundTo(binds_, k.scan, found);
+    if (found) {
+        switch (b) {
+        case keybinds::Bind::Attack: act = Do::Attack; break;
+        case keybinds::Bind::Pickup: act = Do::Pickup; break;
+        case keybinds::Bind::Talk: act = Do::Talk; break;
+        case keybinds::Bind::Sit: act = Do::Sit; break;
+        case keybinds::Bind::Target: act = k.shift ? Do::PrevTarget : Do::NextTarget; break;
+        case keybinds::Bind::CameraLeft: act = Do::CameraLeft; break;
+        case keybinds::Bind::CameraRight: act = Do::CameraRight; break;
+        default: break;  // the toggle: above
         }
-        break;
+    } else if (k.scan >= 0x02 && k.scan <= 0x0A) {  // 1-9
+        act = Do::Slot;
+        slot_ = int(k.scan) - 0x02;
     }
     if (act != Do::None) {
         action_ = act;

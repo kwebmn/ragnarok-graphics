@@ -6920,14 +6920,15 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceMacros, "Chat macros card", "Картка макросів чату", "Карточка макросов чата"},
     {Text::InterfaceMacrosHint,
      "The chat's macros (Alt+M) as a card in the new look: ten lines for Alt+1 to Alt+0, typed as before (the game's "
-     "own fields), Save. Off: the game's own window.",
+     "own fields), kept by themselves when it closes. Off: the game's own window.",
      "Макроси чату (Alt+M) карткою в новому вигляді: десять рядків для Alt+1…Alt+0, набираються як раніше (поля "
-     "самої гри), зберегти. Вимкнено: власне вікно гри.",
+     "самої гри), зберігаються самі, коли картка закривається. Вимкнено: власне вікно гри.",
      "Макросы чата (Alt+M) карточкой в новом виде: десять строк для Alt+1…Alt+0, набираются как раньше (поля самой "
-     "игры), сохранить. Выключено: собственное окно игры."},
+     "игры), сохраняются сами, когда карточка закрывается. Выключено: собственное окно игры."},
     {Text::MacroTitle, "Chat macros", "Макроси чату", "Макросы чата"},
-    {Text::MacroHint, "Alt and a digit write the line into the chat", "Alt+цифра пише рядок у чат",
-     "Alt+цифра пишет строку в чат"},
+    // 3.0.24-beta.55 (the audit 28.11, C10): no «Зберегти» - the lines kept by themselves when the card closes
+    {Text::MacroHint, "Alt and a digit write the line into the chat · kept by themselves",
+     "Alt+цифра пише рядок у чат · зберігаються самі", "Alt+цифра пишет строку в чат · сохраняются сами"},
     {Text::MacroSave, "Save", "Зберегти", "Сохранить"},
     // 3.0.11-beta.204: the game's tip of the day
     {Text::InterfaceTips, "Tip of the day card", "Картка поради дня", "Карточка совета дня"},
@@ -10158,6 +10159,70 @@ constexpr Entry kTexts[] = {
     {Text::ChatSysNotOnline, "{1} is not in the game now", "{1} зараз не в грі", "{1} сейчас не в игре"},
     {Text::SocialPartyNameField, "The party's name", "Назва групи", "Название группы"},  // 3.0.24-beta.51
     {Text::SocialCreateButton, "Create a party", "Створити групу", "Создать группу"},
+    // 3.0.24-beta.55 (the audit 28.11, I5: «Weight: 1» in English beside «NPC заплатить»): the descriptions' labels
+    {Text::CardLabelWeight, "Weight", "Вага", "Вес"},
+    {Text::CardLabelJobs, "Jobs", "Професії", "Профессии"},
+    {Text::CardLabelClass, "Class", "Клас", "Класс"},
+    {Text::CardLabelLevel, "Required Level", "Потрібен рівень", "Нужен уровень"},
+    {Text::CardLabelKind, "Item Class", "Вид", "Вид"},
+    {Text::CardLabelDefense, "Defense", "Захист", "Защита"},
+    {Text::CardLabelWeaponLevel, "Weapon Level", "Рівень зброї", "Уровень оружия"},
+    {Text::CardLabelWeaponKind, "Weapon Class", "Вид зброї", "Вид оружия"},
+    {Text::CardLabelPlace, "Location", "Місце", "Место"},
+    {Text::CardLabelHeadPlace, "Head Position", "Місце на голові", "Место на голове"},
+    {Text::CardLabelAttack, "Attack", "Атака", "Атака"},
+    {Text::CardLabelSlots, "Slot", "Слоти", "Слоты"},
+    {Text::CardLabelCompound, "Compound on", "Вставляється в", "Вставляется в"},
+    {Text::CardLabelProperty, "Property", "Стихія", "Стихия"},
+    {Text::CardLabelType, "Type", "Тип", "Тип"},
+    {Text::ElementWater, "Water", "Вода", "Вода"},
+    {Text::ElementEarth, "Earth", "Земля", "Земля"},
+    {Text::ElementFire, "Fire", "Вогонь", "Огонь"},
+    {Text::ElementWind, "Wind", "Вітер", "Ветер"},
+    {Text::ElementPoison, "Poison", "Отрута", "Яд"},
+    {Text::ElementHoly, "Holy", "Святість", "Святость"},
+    {Text::ElementShadow, "Shadow", "Темрява", "Тьма"},
+    {Text::ElementGhost, "Ghost", "Привид", "Призрак"},
+    {Text::ElementUndead, "Undead", "Нежить", "Нежить"},
+    // 3.0.24-beta.55 (the audit 28.11, C7): in the game Ctrl+F opens the reference - the settings' search says none
+    {Text::SearchCueGame, "Search settings", "Пошук у налаштуваннях", "Поиск по настройкам"},
+    // 3.0.24-beta.55 (the owner's «делай все что можешь без проверки», item 12): the walk mode's keys rebound
+    {Text::KeysHeading, "The walk mode's keys", "Клавіші режиму ходьби", "Клавиши режима ходьбы"},
+    {Text::KeysToggle, "Walk mode on and off", "Увімкнути й вимкнути режим ходьби",
+     "Включить и выключить режим ходьбы"},
+    {Text::KeysAttack, "Attack", "Атака", "Атака"},
+    {Text::KeysPickup, "Pick up", "Підібрати", "Подобрать"},
+    {Text::KeysTalk, "Talk to the NPC near", "Заговорити з NPC поруч", "Заговорить с NPC рядом"},
+    {Text::KeysSit, "Sit down", "Сісти", "Сесть"},
+    {Text::KeysTarget, "The next target (with Shift the one before)", "Наступна ціль (із Shift — попередня)",
+     "Следующая цель (с Shift — предыдущая)"},
+    {Text::KeysCameraLeft, "The camera to the left", "Камера ліворуч", "Камера влево"},
+    {Text::KeysCameraRight, "The camera to the right", "Камера праворуч", "Камера вправо"},
+    {Text::KeysHint,
+     "A key of the walk mode, by its place on the keyboard (any layout). A key another action has: the two swap.",
+     "Клавіша режиму ходьби — за її місцем на клавіатурі (будь-яка розкладка). Клавіша іншої дії: вони міняються.",
+     "Клавиша режима ходьбы — по её месту на клавиатуре (любая раскладка). Клавиша другого действия: они меняются."},
+    {Text::KeyGrave, "` (left of 1)", "` (ліворуч від 1)", "` (слева от 1)"},
+    {Text::KeyTab, "Tab", "Tab", "Tab"},
+    {Text::KeyQ, "Q", "Q", "Q"},
+    {Text::KeyE, "E", "E", "E"},
+    {Text::KeyR, "R", "R", "R"},
+    {Text::KeyF, "F", "F", "F"},
+    {Text::KeyC, "C", "C", "C"},
+    {Text::KeyG, "G", "G", "G"},
+    {Text::KeyT, "T", "T", "T"},
+    {Text::KeyZ, "Z", "Z", "Z"},
+    {Text::KeyX, "X", "X", "X"},
+    {Text::KeyV, "V", "V", "V"},
+    {Text::KeyB, "B", "B", "B"},
+    // 3.0.24-beta.55: the keys list's walk mode line (MainKeysList's own) by the player's keys
+    {Text::KeysWalkLine,
+     "{1} - the walk mode: W A S D walk, {6} the target, {2} attack, {3} pick up, {4} talk, {5} sit, {7} / {8} the "
+     "camera, 1-9 the bar, Enter the chat",
+     "{1} — режим ходьби: W A S D — ходьба, {6} — ціль, {2} — атака, {3} — підібрати, {4} — NPC, {5} — сісти, "
+     "{7} / {8} — камера, 1–9 — панель, Enter — чат",
+     "{1} — режим ходьбы: W A S D — ходьба, {6} — цель, {2} — атака, {3} — подобрать, {4} — NPC, {5} — сесть, "
+     "{7} / {8} — камера, 1–9 — панель, Enter — чат"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

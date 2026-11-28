@@ -109,3 +109,13 @@ TEST(social_card_party_made_by_its_name) {
     CHECK(socialcard::organizeLine(std::string(24, 'a')).empty());  // longer than the server's 23
     CHECK(socialcard::organizeLine(std::string(23, 'a')) == "/organize " + std::string(23, 'a'));
 }
+
+// 3.0.24-beta.55 (the audit 28.11, C6: Alt+H opens «Друзі / Група», a second Alt+H does not close it): the card hides
+// the game's window (its shown flag 0), so the game's key took it for shut and showed it again; shown again on the
+// same tab - the key again: closed; on the other tab (the party's key over the friends) - the tab switched, kept
+TEST(social_card_its_key_again_closes_it) {
+    CHECK(socialcard::keyAgain(true, true, 0, 0));    // hidden by us, the game showed it anew, the same tab
+    CHECK(!socialcard::keyAgain(true, true, 1, 0));   // the other tab: a switch
+    CHECK(!socialcard::keyAgain(true, false, 0, 0));  // still hidden: nothing pressed
+    CHECK(!socialcard::keyAgain(false, true, 0, 0));  // not hidden by us yet (just opened)
+}

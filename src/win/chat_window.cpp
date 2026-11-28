@@ -1033,7 +1033,9 @@ static void fillSheet(State& s, uisheet::Content& c) {
     };
     c.w = float(L.w), c.h = float(L.h);
     c.op = L.quiet ? 0.72f : 1.0f;
-    c.rect(u, L.glass, 10 * sc, kCard, L.quiet ? uistyle::chat() * 0.45f : uistyle::chat(), kWhite,
+    // 3.0.24-beta.55 (the audit 28.11, H7: the quiet chat's white lines hard to read over light stones): its ground
+    // at 0.6 of the panels' while quiet (0.45 before)
+    c.rect(u, L.glass, 10 * sc, kCard, L.quiet ? uistyle::chat() * 0.6f : uistyle::chat(), kWhite,
            L.quiet ? 0.04f : 0.09f, 1.0f * sc);
     for (size_t i = 0; i < L.tabs.size(); ++i) {
         const panel::Box& b = L.tabs[i];
@@ -1063,6 +1065,8 @@ static void fillSheet(State& s, uisheet::Content& c) {
     if (L.clear.w > 0 && sh.hoverClear) c.rect(u, L.clear, 5 * sc, kWhite, 0.14f);
     c.rect(u, v.caret, 0, whiteLine ? kInk : v.caretRgb, 0.95f);
     if (L.newer.w > 0) c.rect(u, L.newer, 6 * sc, kAccent, sh.hoverNewer ? 0.45f : 0.28f);
+    for (const panel::Box& b : v.pills)  // 3.0.24-beta.55 (the audit 28.11, CH3): the repeat «×2» a pill apart
+        c.rect(u, b, b.h / 2, kWhite, 0.12f, kWhite, 0.18f, 1.0f * sc);
     if (L.hints.w > 0) c.rect(u, L.hints, 8 * sc, kCard, 0.96f, kWhite, 0.14f, 1.0f * sc);
     for (size_t i = 0; i < L.people.size(); ++i) {
         const bool on = i == 0 ? sh.person.empty() : sh.person == sh.people[i - 1];

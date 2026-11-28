@@ -812,7 +812,7 @@ static void liveFrame(State& s) {
     const Rml::String title = say(settings::Text::MenuSettings);
     if (title != s.m.title || ground != s.m.ground) {
         s.m.title = title, s.m.hint = say(settings::Text::SettingsWinHint), s.m.ground = ground;
-        s.m.searchHint = say(settings::Text::SearchCue);
+        s.m.searchHint = say(settings::Text::SearchCueGame);  // 3.0.24-beta.55: no Ctrl+F in the game
         s.m.none = say(settings::Text::SettingsWinNone);
         s.m.consoleBtn = say(settings::Text::SettingsWinConsole);
         s.m.layoutBtn = say(settings::Text::MenuLayout);  // 3.0.21-beta.7: «Розмістити інтерфейс»

@@ -61,9 +61,9 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    <div class="snone" data-if="shown_rows == 0">{{none}}</div></div>
 </div>
 <div class="sfoot"><span class="sfh">{{hint}}</span><div class="sfb"><span class="btn ctl"
-  data-event-click="reset_all()">{{reset_btn}}</span><span class="btn ctl"
   data-event-click="open_layout()">{{layout_btn}}</span><span class="btn ctl"
-  data-event-click="open_console()">{{console_btn}}</span></div></div>
+  data-event-click="open_console()">{{console_btn}}</span><span class="btn ctl apart"
+  data-event-click="reset_all()">{{reset_btn}}</span></div></div>
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
 

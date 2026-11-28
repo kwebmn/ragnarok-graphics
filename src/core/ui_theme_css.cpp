@@ -123,13 +123,13 @@ select selectbox option:checked { color: #e6cb8a; }
 .cb .cell .k { position: absolute; left: 0.5rem; top: 0.142857rem; font-size: 0.678571rem; font-weight: bold;
                color: #9aa3b5; }
 .cb .cell .v { position: absolute; left: 0.5rem; top: 1rem; font-size: 0.892857rem; font-weight: bold; }
+/* 3.0.24-beta.55 (the audit 28.11, H2: the first row unframed, the second framed): both rows the same edge */
 .cb .button { position: absolute; border-radius: 0.5rem; background-color: #1b1d24b3; cursor: pointer;
-              transition: background-color 0.1s; }
+              border-width: 0.071429rem; border-color: #ffffff14; transition: background-color 0.1s; }
 .cb .button:hover { background-color: #2a2f3a; }
 .cb .button:active { background-color: #3a3f4c; }
 .cb .button img { position: absolute; left: 0.5rem; top: 0.285714rem; width: 1.285714rem; height: 1.285714rem; }
 /* 3.0.18-beta.120 (the concept «Ігровий інтерфейс»): the second row - our windows, gold-edged while open */
-.cb .button.own { border-width: 0.071429rem; border-color: #ffffff14; }
 .cb .button.own.lit { border-color: #e6cb8a; background-color: #e6cb8a22; }
 .cb .button.more .dots { display: block; text-align: center; line-height: 1.714286rem; font-size: 1.142857rem;
                          color: #eceff5; }
@@ -444,7 +444,9 @@ select selectbox option:checked { color: #e6cb8a; }
 .hb { position: absolute; font-family: Plex; color: #eceff5; font-size: 1px; }
 .hb .a { position: absolute; }
 .hb .glass { position: absolute; border: 1rem #ffffff17; background-color: #10141ccc; }
-.hb .cell { position: absolute; background-color: #ffffff0d; border: 1rem #ffffff1a; }
+/* 3.0.24-beta.55 (the audit 28.11, H8): the cells' own near-whites - the dark look's as before, the light look's a
+   white ground with an ink line (ui_theme lightAnchors, lightAlphas) */
+.hb .cell { position: absolute; background-color: #fffffe0d; border: 1rem #fffffd1a; }
 .hb .cell.hot { background-color: #ffffff1a; border-color: #ffffff33; }
 .hb .cell.down { background-color: #0000004d; }
 .hb .cell.lit { border-color: #c9a55bd9; border-width: 2rem; }
@@ -518,7 +520,8 @@ select selectbox option:checked { color: #e6cb8a; }
 .ew { width: 424dp; }
 .ew .grid { display: flex; flex-wrap: wrap; }
 .ew .cell { display: block; width: 52dp; height: 62dp; margin: 0 4dp 4dp 0; border-radius: 8dp;
-            background-color: #ffffff0a; border: 1dp #ffffff14; text-align: center; }
+            background-color: #fffffc0a; border: 1dp #ffffff14; text-align: center; }
+/* 3.0.24-beta.55 (C9): #fffffc - in the light look a mid grey, its white emotes seen */
 .ew .cell:hover { background-color: #c9a55b33; border-color: #c9a55bcc; }
 .ew .cell img { display: block; margin: 3dp auto 0 auto; width: 40dp; height: 40dp; }
 .ew .cell span { display: block; font-size: 10.5dp; color: #9aa3b5; white-space: nowrap; overflow: hidden; }
@@ -828,6 +831,8 @@ select selectbox option:checked { color: #e6cb8a; }
 .sw .sfoot .sfh { display: block; flex: 1; padding-right: 10dp; font-size: 12dp; color: #9aa3b5; }
 /* 3.0.21-beta.7: two buttons at the right - «Розмістити інтерфейс», the way to the console */
 .sw .sfoot .sfb { display: flex; flex-direction: row; flex: none; }
+/* 3.0.24-beta.55 (the audit 28.11, C7): «Усе за замовчуванням» last, apart from the everyday buttons */
+.sw .sfoot .sfb .btn.apart { margin-left: 18dp; }
 .sw .sfoot .btn { display: block; margin-left: 8dp; padding: 4dp 10dp; border-radius: 7dp; border: 1dp #e6cb8a66;
     color: #e6cb8a; font-size: 12dp; }
 /* 3.0.24-beta.2 (the simple mode, https://uaro.kiev.ua/docs/settings-simple/): «Просто / Повністю» in the head; the

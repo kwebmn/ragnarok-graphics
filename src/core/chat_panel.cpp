@@ -387,11 +387,12 @@ std::vector<Row> wrap(const std::vector<const Line*>& lines, float width, float 
         Row row;
         float x = 0;
         const auto put = [&](const std::string& unit, const Span& sp) {
-            if (!row.empty() && row.back().rgb == sp.rgb && row.back().bold == sp.bold && row.back().name == sp.name &&
-                row.back().item == sp.item && row.back().mob == sp.mob)
+            if (!row.empty() && !sp.pill && !row.back().pill && row.back().rgb == sp.rgb &&
+                row.back().bold == sp.bold && row.back().name == sp.name && row.back().item == sp.item &&
+                row.back().mob == sp.mob)
                 row.back().text += unit;
             else
-                row.push_back(Piece{unit, sp.rgb, sp.bold, sp.name, 0, 0, int(li), sp.item, sp.mob});
+                row.push_back(Piece{unit, sp.rgb, sp.bold, sp.name, 0, 0, int(li), sp.item, sp.mob, sp.pill});
         };
         const auto next = [&]() {
             rows.push_back(row);
@@ -399,8 +400,11 @@ std::vector<Row> wrap(const std::vector<const Line*>& lines, float width, float 
             x = 0;
         };
         std::vector<Span> spans = lines[li]->spans;  // 3.0.11-beta.243: «×N» after a line said again
-        if (lines[li]->repeat > 1)
-            spans.push_back(Span{" \xC3\x97" + std::to_string(lines[li]->repeat), kMuted, true, false});
+        if (lines[li]->repeat > 1) {  // 3.0.24-beta.55: a pill of its own («90×2» glued before)
+            Span pill{"\xC3\x97" + std::to_string(lines[li]->repeat), kMuted, true, false};
+            pill.pill = true;
+            spans.push_back(pill);
+        }
         for (const Span& sp : spans) {
             size_t i = 0;
             while (i < sp.text.size()) {  // a word with its space after it
@@ -436,8 +440,9 @@ std::vector<Row> wrap(const std::vector<const Line*>& lines, float width, float 
     for (Row& r : rows) {  // their places from their own words' widths: the boxes meet, never overlap
         float x = 0;
         for (Piece& p : r) {
+            if (p.pill && x > 0) x += kPillGap * px;  // 3.0.24-beta.55: a pill apart, padded
             p.x = x;
-            p.w = box(p.text, p.bold);
+            p.w = box(p.text, p.bold) + (p.pill ? 2 * kPillPad * px : 0.0f);
             x += p.w;
         }
     }
@@ -674,7 +679,7 @@ std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const In
             while (!text.empty() && text.back() == ' ') text.pop_back();
             if (text.empty()) continue;
             out.push_back(Words{panel::Box{L.lines.x + p.x, top + float(r - first) * L.rowH, p.w, L.rowH}, text,
-                                p.rgb, L.px, p.bold, Align::Left});
+                                p.rgb, L.px, p.bold, p.pill ? Align::Center : Align::Left});
         }
     const std::string chip = chipText(in, t);
     out.push_back(Words{panel::Box{L.mode.x + 8 * s, L.mode.y, std::ceil(m(chip, 12 * s, true)) + 2, L.mode.h}, chip,
@@ -913,6 +918,16 @@ View view(const Layout& L, const std::vector<Row>& rows, const Input& in, const 
         v.caretRgb = kText;
     }
     v.thumb = barThumb(L, rows.size(), sh.scroll);
+    {  // 3.0.24-beta.55: the repeats' pills - a ground round their letters
+        size_t first = 0, count = 0;
+        shown(L, rows, sh.scroll, first, count);
+        const float top = L.lines.y + L.lines.h - float(count) * L.rowH;
+        for (size_t r = first; r < first + count; ++r)
+            for (const Piece& p : rows[r])
+                if (p.pill)
+                    v.pills.push_back(panel::Box{L.lines.x + p.x, top + float(r - first) * L.rowH + L.rowH * 0.14f,
+                                                 p.w, L.rowH * 0.72f});
+    }
     if (sh.hoverLine >= 0 || sh.hoverLink != 0) {
         size_t first = 0, count = 0;
         shown(L, rows, sh.scroll, first, count);

@@ -364,4 +364,30 @@ std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const T
     return out;
 }
 
+std::string withLabel(const std::string& line, const std::map<std::string, std::string>& words) {
+    size_t at = 0;  // past the colours and the spaces before the label
+    while (at < line.size()) {
+        if (line[at] == '^' && at + 7 <= line.size()) {
+            at += 7;
+            continue;
+        }
+        if (line[at] == ' ' || line[at] == '\t') {
+            ++at;
+            continue;
+        }
+        break;
+    }
+    const std::string* best = nullptr;
+    size_t bestLen = 0;
+    for (const auto& [label, word] : words) {
+        if (label.size() <= bestLen || line.compare(at, label.size(), label) != 0) continue;
+        size_t k = at + label.size();  // its colon after the spaces and the colours
+        while (k < line.size() && (line[k] == ' ' || (line[k] == '^' && k + 7 <= line.size())))
+            k += line[k] == ' ' ? 1 : 7;
+        if (k < line.size() && line[k] == ':') best = &word, bestLen = label.size();
+    }
+    if (!best) return line;
+    return line.substr(0, at) + *best + line.substr(at + bestLen);
+}
+
 }  // namespace uagfx::infocard

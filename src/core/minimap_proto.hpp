@@ -151,6 +151,10 @@ struct Mark {
     std::string letter{};
     bool exit = false;
 };
+// 3.0.24-beta.55 (the audit 28.11, H5: Prontera's dozens of dots and rings over each other): the small square's marks
+// thinned - from the top ones down (drawOrder backwards), a dot under another mark's reach left out, a warp's ring over
+// another ring too; the Kafras, the party's and the guild's always shown. `s` the scale, `k` the marks' size there
+std::vector<bool> thinned(const std::vector<Mark>& marks, const View& v, const MapSize& map, float s, float k);
 // 3.0.18-beta.240: a monster's spawn area (its centre cell, half sizes in cells) - the reference's map shows them
 struct ZoneMark {
     Cell cell;
@@ -162,11 +166,18 @@ struct Layers {
 // 3.0.13-beta.2 (reports: the minimap the interface's dearest picture - 150-200 paintings in 30 s, 3.2 ms each, half
 // of it the map's pixels made anew for every step): the map's pixels round the view made once, a margin about it -
 // each painting copies its square out; made anew when the view leaves the margin or the picture or zoom change
+// 3.0.24-beta.55 (the audit 28.11, H4: the light minimap's sides near-black): the map's square's ground where it has
+// no picture - the look's (the light one's light), kDarkGround unless set; a cache made on another remade
+constexpr uint32_t kDarkGround = 0xFF141922;
+void setGround(uint32_t argb);
+uint32_t ground();
+
 struct MapCache {
     std::vector<uint32_t> px;
     int w = 0, h = 0;
     float left = 0, top = 0, cellPx = 0;  // the cache's top-left corner in cells, its zoom
     uint64_t serial = 0;                  // 3.0.23-beta.3: the picture it was made of (MapPicture::serial)
+    uint32_t ground = 0;                  // 3.0.24-beta.55: the ground it was made on
     int mapW = 0, mapH = 0;
     int made = 0;  // how many times made (the log, the tests)
 };

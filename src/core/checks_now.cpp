@@ -8,6 +8,62 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.55 (the owner: «пока делай все что можешь без проверки», «можно в одну бету»): the audit's rest
+        {"windows_rest_55", "3.0.24-beta.55", "",
+         {"Windows: Alt+H closes, macros keep themselves, the reference smaller",
+          "Вікна: Alt+H закриває, макроси зберігаються самі, довідник менший",
+          "Окна: Alt+H закрывает, макросы сохраняются сами, справочник меньше"},
+         {"Alt+H opens the friends' window, Alt+H again closes it. Chat macros (Alt+M): type a line, close the card by "
+          "its cross or Esc - open it again: the line is kept (no Save button now). The reference (Ctrl+F) opens "
+          "smaller, its corner makes it bigger. Settings: the reset of all is the footer's last button, apart; the "
+          "search field no longer says Ctrl+F. The character block: both rows of buttons framed alike.",
+          "Alt+H відкриває вікно друзів, ще раз Alt+H — закриває. Макроси чату (Alt+M): введіть рядок, закрийте "
+          "картку хрестиком чи Esc — відкрийте знову: рядок на місці (кнопки «Зберегти» більше немає). Довідник "
+          "(Ctrl+F) відкривається меншим, кут збільшує його. Налаштування: «Усе за замовчуванням» — остання кнопка "
+          "внизу, окремо; поле пошуку більше не пише Ctrl+F. Блок персонажа: обидва ряди кнопок в однакових рамках.",
+          "Alt+H открывает окно друзей, ещё раз Alt+H — закрывает. Макросы чата (Alt+M): введите строку, закройте "
+          "карточку крестиком или Esc — откройте снова: строка на месте (кнопки «Сохранить» больше нет). Справочник "
+          "(Ctrl+F) открывается меньше, угол увеличивает его. Настройки: «Всё по умолчанию» — последняя кнопка "
+          "внизу, отдельно; поле поиска больше не пишет Ctrl+F. Блок персонажа: оба ряда кнопок в одинаковых рамках."}},
+        {"light_rest_55", "3.0.24-beta.55", "",
+         {"The light look, the chat and the item card",
+          "Світлий вигляд, чат і картка речі",
+          "Светлый вид, чат и карточка вещи"},
+         {"Light look: the skill bar's empty cells seen over light stones; «Emotions» on grey cells (the white ones "
+          "seen); the minimap's sides light, not black. Chat: a line said again shows ×2 as a pill apart from the "
+          "words; the chat resting is a little denser over light ground. An item's card: the table's labels in your "
+          "language (Weight - Вага), the element «Property: Wind» as Стихія: Вітер.",
+          "Світлий вигляд: порожні клітинки панелі вмінь видно над світлою бруківкою; «Емоції» на сірих клітинках "
+          "(білі емоції видно); боки мінікарти світлі, не чорні. Чат: повтор рядка — плашка ×2 окремо від слів; "
+          "чат у спокої трохи щільніший над світлою землею. Картка речі: підписи таблиці вашою мовою (Weight — Вага), "
+          "стихія як Стихія: Вітер.",
+          "Светлый вид: пустые ячейки панели умений видно над светлой брусчаткой; «Эмоции» на серых ячейках (белые "
+          "эмоции видно); бока мини-карты светлые, не чёрные. Чат: повтор строки — плашка ×2 отдельно от слов; "
+          "чат в покое чуть плотнее над светлой землёй. Карточка вещи: подписи таблицы на вашем языке "
+          "(Weight — Вес), стихия как Стихия: Ветер."}},
+        {"minimap_thin_55", "3.0.24-beta.55", "",
+         {"Minimap: Prontera's marks no longer a heap",
+          "Мінікарта: позначки Пронтери більше не купою",
+          "Мини-карта: метки Пронтеры больше не кучей"},
+         {"In Prontera zoom the minimap out: NPC dots under a warp or a Kafra and rings over each other are left out "
+          "of the small square, the far ones stay; pointing at a mark names only the ones shown. The big map (M) "
+          "keeps all of them.",
+          "У Пронтері віддаліть мінікарту: точки NPC під порталом чи Кафрою і кільця одне на одному в маленькому "
+          "квадраті більше не показуються, далекі лишаються; під курсором — лише показані. Велика карта (M) — з усіма.",
+          "В Пронтере отдалите мини-карту: точки NPC под порталом или Кафрой и кольца друг на друге в маленьком "
+          "квадрате больше не показываются, дальние остаются; под курсором — только показанные. Большая карта (M) — "
+          "со всеми."}},
+        {"keys_rebind_55", "3.0.24-beta.55", "interface.walk_mode",
+         {"The walk mode's keys: your own", "Клавіші режиму ходьби: свої", "Клавиши режима ходьбы: свои"},
+         {"Settings (Alt+O), «Controls», «The walk mode's keys»: give the toggle, attack, pick up, talk, sit, target "
+          "and the camera other keys (Q E R F C G T Z X V B, Space, Tab, `). A key another action has: the two swap. "
+          "Applied at once: turn the walk mode on with its new key, try them; «Keys» in the Esc menu names your keys.",
+          "Налаштування (Alt+O), «Керування», «Клавіші режиму ходьби»: дайте увімкненню, атаці, підбиранню, NPC, "
+          "сиданню, цілі й камері інші клавіші (Q E R F C G T Z X V B, пробіл, Tab, `). Клавіша іншої дії: вони "
+          "міняються. Діє одразу: увімкніть режим новою клавішею, спробуйте; «Клавіші» в меню Esc називають ваші.",
+          "Настройки (Alt+O), «Управление», «Клавиши режима ходьбы»: дайте включению, атаке, подбору, NPC, сидению, "
+          "цели и камере другие клавиши (Q E R F C G T Z X V B, пробел, Tab, `). Клавиша другого действия: они "
+          "меняются. Действует сразу: включите режим новой клавишей, попробуйте; «Клавиши» в меню Esc называют ваши."}},
         // 3.0.24-beta.53 (the owner's «делай все» after the audit 28.11, items 12 and 13): the water lighter on a weak
         // card, its whole cost seen; the living ground timed
         {"water_lean_53", "3.0.24-beta.53", "frames.keep_fps",

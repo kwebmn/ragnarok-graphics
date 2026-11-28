@@ -343,3 +343,40 @@ TEST(chat_panel_party_and_guild_channels_only_with_one) {
     CHECK(!canSend(1, false, true) && canSend(1, true, false));
     CHECK(!canSend(2, true, false) && canSend(2, false, true));
 }
+
+// 3.0.24-beta.55 (the audit 28.11, CH3: «146, 90×2» - the repeat glued to the words): the repeat a pill of its own -
+// «×2» apart from the words by a gap, wider than its letters by its padding; never merged into the words before it
+TEST(chat_panel_repeat_is_a_pill_apart) {
+    const Measure m = [](const std::string& s, float px, bool) { return float(s.size()) * px * 0.5f; };
+    Line l;
+    l.spans = {Span{"146, 90", kText, false, false}};
+    l.repeat = 2;
+    const std::vector<Row> rows = wrap({&l}, 400, 12, m);
+    CHECK(rows.size() == 1);
+    if (rows.size() != 1 || rows[0].size() < 2) return;
+    const Piece& words = rows[0][rows[0].size() - 2];
+    const Piece& pill = rows[0].back();
+    CHECK(pill.pill && pill.text == "\xC3\x97" "2");
+    CHECK(pill.x >= words.x + words.w + 0.3f * 12);  // a gap
+    CHECK(pill.w >= std::ceil(m(pill.text, 12, true)) + 0.5f * 12);  // its padding
+    CHECK(!words.pill && words.text == "146, 90");
+}
+
+// 3.0.24-beta.55: the pill's ground in the view - a box round its letters on its row, its words in its middle
+TEST(chat_panel_view_has_the_pills_ground) {
+    const Measure m = [](const std::string& s, float px, bool) { return float(s.size()) * px * 0.5f; };
+    Line l;
+    l.spans = {Span{"146, 90", kText, false, false}};
+    l.repeat = 3;
+    Show sh;
+    Input in;
+    const Texts t = texts();
+    const Layout L = layout(0, 600, 1.0f, 6, false, sh, in, t, m);
+    const std::vector<Row> rows = wrap({&l}, L.lines.w, L.px, m);
+    const View v = view(L, rows, in, sh, t, m);
+    CHECK_EQ(v.pills.size(), size_t(1));
+    if (v.pills.size() != 1 || rows.empty()) return;
+    const Piece& p = rows[0].back();
+    CHECK(std::abs(v.pills[0].x - (L.lines.x + p.x)) < 0.5f && std::abs(v.pills[0].w - p.w) < 0.5f);
+    CHECK(v.pills[0].h > 0 && v.pills[0].h < L.rowH);
+}

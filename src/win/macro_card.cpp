@@ -51,7 +51,6 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div class="mrow" data-for="r, i : rows"><span class="key">{{r.key}}</span><div class="field ctl"
   data-class-typing="r.focus"
   data-event-click="mac_field(i)">{{r.text}}<span class="caret" data-if="r.focus && caret"></span></div></div>
-<div class="btns"><div class="btn main ctl" data-event-click="mac_save()">{{save}}</div></div>
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
 struct MacroRowView {
@@ -166,6 +165,13 @@ void send(State& s, int msg, int id, const char* what) {
     s.key.clear();
 }
 
+// 3.0.24-beta.55 (the audit 28.11, C10: «Макроси чату» needed «Зберегти» - its words lost by a ✕): kept by themselves
+// - the window's Enter (its message 0 writes them) before its close, whichever closes it (✕, Esc)
+void saveAndClose(State& s, const char* by) {
+    send(s, mc::kSaveMsg, 0, "kept before closing (the window's Enter writes the macros)");
+    send(s, kButtonMsg, mc::kCloseButton, by);
+}
+
 void focusField(State& s, int i) {
     const uint32_t window = gameMacros();
     const uint32_t edit = window && i >= 0 && i < mc::kFields ? read32(window + mc::kFirstField + 4 * uint32_t(i)) : 0;
@@ -239,11 +245,8 @@ static void liveFrame(State& s) {
         m.BindEventCallback("mac_field", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
             if (!a.empty()) focusField(state(), a[0].Get<int>());
         });
-        m.BindEventCallback("mac_save", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
-            send(state(), mc::kSaveMsg, 0, "«Зберегти» - the window's Enter (it writes the macros)");
-        });
         m.BindEventCallback("mac_close", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
-            send(state(), kButtonMsg, mc::kCloseButton, "closed (the window's 0x87)");
+            saveAndClose(state(), "its cross - closed (the window's 0x87)");
         });
     });
     if (!s.live.made()) return;
@@ -272,7 +275,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     liveFrame(s);  // the old edition (the sheet) gone: the live window alone
     if (s.sheetShown) {  // 3.0.18-beta.60: the pad walks its boxes (A clicks one)
         std::vector<panel::Box> targets;
-        for (const auto& part : std::initializer_list<std::vector<panel::Box>>{s.layout.keys, s.layout.fields, {s.layout.save, s.layout.close}})
+        for (const auto& part : std::initializer_list<std::vector<panel::Box>>{s.layout.keys, s.layout.fields,
+                                                                                {s.layout.close}})
             targets.insert(targets.end(), part.begin(), part.end());
         s.sheet.nav(int(winstack::Win::Macros), std::move(targets));
     }
@@ -299,7 +303,7 @@ bool shown() { return state().shown; }
 bool close() {
     State& s = state();
     if (!s.shown) return false;
-    send(s, kButtonMsg, mc::kCloseButton, "Esc - closed (the window's 0x87)");
+    saveAndClose(s, "Esc - closed (the window's 0x87)");
     return true;
 }
 

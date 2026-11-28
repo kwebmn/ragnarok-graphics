@@ -690,6 +690,10 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.arrowsWalk);
         } else if (key == "interface.walk_mode") {  // 3.0.18-beta.208: the walk mode
             setBool(val, c.walkMode);
+        } else if (key.rfind("keys.", 0) == 0) {  // 3.0.24-beta.55: the walk mode's keys, each by its word
+            for (int b = 0; b < keybinds::kBinds; ++b)
+                if (key.compare(5, std::string::npos, keybinds::settingKey(keybinds::Bind(b))) == 0)
+                    if (const unsigned scan = keybinds::scanOf(val)) c.keys.scan[b] = scan;
         } else if (key == "interface.space_action") {  // 3.0.18-beta.209: Space acts
             setBool(val, c.spaceAction);
         } else if (key == "interface.control_hints") {  // 3.0.21-beta.13: the key hints

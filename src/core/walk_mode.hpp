@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "core/key_binds.hpp"
 #include "core/key_walk.hpp"
 
 namespace uagfx::walkmode {
@@ -37,7 +38,7 @@ enum class Act : uint8_t {
 // the previous target, Q / E the camera turned, 1-9 the shown bar row's slots
 enum class Do : uint8_t { None, Attack, Pickup, Talk, Sit, NextTarget, PrevTarget, CameraLeft, CameraRight, Slot };
 
-constexpr unsigned kToggleScan = 0x29;
+// (3.0.24-beta.55: the toggle's key the player's - core/key_binds, ` by default)
 
 // 3.0.18-beta.214 (R-CX44S5's log: «off (`)», «on by the settings», «off by the settings» within 0.3 s): the settings'
 // [interface] walk_mode followed when its value changes - not the toggle's own writes read back (within kEchoMs of
@@ -65,6 +66,8 @@ public:
     bool verify(keywalk::KeyDown down);
     Act key(const Key& k);
     Do action() const { return action_; }  // the last Act::Action's
+    // 3.0.24-beta.55 (item 12): the toggle's and the quick actions' keys the player's ([keys]; core/key_binds)
+    void setBinds(const keybinds::Binds& b) { binds_ = b; }
     int slot() const { return slot_; }     // Do::Slot's: 0-8 in the shown row
 
 private:
@@ -77,6 +80,7 @@ private:
     std::vector<Held> held_;  // 3.0.18-beta.215: the walking keys held (two keys one way: either keeps it)
     Do action_ = Do::None;
     int slot_ = 0;
+    keybinds::Binds binds_;  // 3.0.24-beta.55
 };
 
 // The walk of a key in the mode: W A S D, the arrows (any), the numpad's 7 9 1 3 (not Home's own keys); kStop its 5;

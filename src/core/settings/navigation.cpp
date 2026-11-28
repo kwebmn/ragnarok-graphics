@@ -204,7 +204,9 @@ const std::vector<InterfaceSection>& interfaceSections() {
             if (g.area == catalogue::Area::Controls && g.name == Text::PagePad) continue;
             InterfaceSection sec{g.name, {}, g.area == catalogue::Area::Interface};
             for (const catalogue::Row& r : g.rows) {
-                if (r.key.compare(0, 10, "interface.") != 0) continue;
+                // 3.0.24-beta.55: a row of «Інтерфейс»'s page ([interface], [keys] - the walk mode's keys)
+                const IniSetting* s = findSetting(r.key);
+                if (!s || s->page != Page::Interface) continue;
                 sec.keys.push_back(r.key.c_str());
                 sec.folded = sec.folded && r.level != catalogue::Level::Basic;
             }

@@ -271,3 +271,20 @@ TEST(info_card_a_cards_effect_as_the_real_table_has_it) {
     const std::vector<std::string> set = {"STR +1", "Thief Class Bonus: AGI +1", "Item Class: Card"};
     CHECK(infocard::cardEffect(set, "") == (std::vector<std::string>{"STR +1", "Thief Class Bonus: AGI +1"}));
 }
+
+// 3.0.24-beta.55 (the audit 28.11, I5: «Weight: 1» in English beside «NPC заплатить»): the description's table labels
+// (the game's English) in the interface's words - its colours, spaces, colon and value kept; a label not followed by
+// its colon, or one not known, as it came
+TEST(info_card_table_labels_in_the_interfaces_words) {
+    const std::map<std::string, std::string> words = {
+        {"Weight", "\xD0\x92\xD0\xB0\xD0\xB3\xD0\xB0"},                          // Вага
+        {"Required Level", "\xD0\xA0\xD1\x96\xD0\xB2\xD0\xB5\xD0\xBD\xD1\x8C"},  // Рівень
+        {"Required Lvl", "\xD0\xA0\xD1\x96\xD0\xB2\xD0\xB5\xD0\xBD\xD1\x8C"}};
+    CHECK(infocard::withLabel("Weight : 1", words) == "\xD0\x92\xD0\xB0\xD0\xB3\xD0\xB0 : 1");
+    CHECK(infocard::withLabel("^777777Weight^000000: 30", words) ==
+          "^777777\xD0\x92\xD0\xB0\xD0\xB3\xD0\xB0^000000: 30");
+    CHECK(infocard::withLabel("Required Lvl : 40", words) == "\xD0\xA0\xD1\x96\xD0\xB2\xD0\xB5\xD0\xBD\xD1\x8C : 40");
+    CHECK(infocard::withLabel("Weight of the world", words) == "Weight of the world");  // no colon: prose
+    CHECK(infocard::withLabel("Location : Head", words) == "Location : Head");          // not known
+    CHECK(infocard::withLabel("", words).empty());
+}

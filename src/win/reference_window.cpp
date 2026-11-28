@@ -71,7 +71,9 @@ namespace ur = uikit::reference;
 
 constexpr size_t kMostRecent = 8, kMostKept = 40;  // 3.0.11-beta.18: «Нещодавні», «Обране» at most
 constexpr size_t kMostPictures = 2000;             // 3.0.11-beta.22: the cards' pictures and icons kept at most
-constexpr float kWideW = 1270, kWideH = 850;       // the concept's window at 1080p, in dp
+// the concept's window at 1080p, in dp; 3.0.24-beta.55 (the audit 28.11, C8: nearly the whole screen, its lower half
+// empty): 1120 x 720 (1270 x 850 before) - its corner makes it bigger
+constexpr float kWideW = 1120, kWideH = 720;
 constexpr float kNarrowBelow = 900;                // dp: narrower - the rail its icons, the blocks one column
 constexpr float kPanelW = 314;                     // dp: the world map's panel and its gap
 constexpr uint32_t kBaseLevel = 0x771F94;          // 3.0.18-beta.242: the character's base level (CSession)

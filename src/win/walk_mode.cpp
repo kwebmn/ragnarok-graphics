@@ -81,11 +81,12 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     switch (act) {
     case walkmode::Act::Pass: return false;
     case walkmode::Act::Swallow:
-        if (k.down && k.scan == walkmode::kToggleScan) s.skipChar = true;  // the toggle held: its letters not typed
+        if (k.down && s.config && k.scan == s.config->keys.scan[int(keybinds::Bind::Toggle)])
+            s.skipChar = true;  // the toggle held: its letters not typed
         return true;
     case walkmode::Act::Toggle: {
         s.skipChar = true;
-        LOG_INFO("keys: the walk mode %s (`)", s.mode.on() ? "on - W A S D walk, Enter opens the chat" : "off");
+        LOG_INFO("keys: the walk mode %s (its key)", s.mode.on() ? "on - W A S D walk, Enter opens the chat" : "off");
         if (s.config && !s.iniPath.empty()) {
             settingedit::set(s.iniPath, *s.config, "interface.walk_mode", s.mode.on() ? "1" : "0");
             s.file.wrote(GetTickCount64());
@@ -112,6 +113,7 @@ void frame(const Config& config, const std::string& iniPath) {
     State& s = state();
     s.config = &config;
     s.iniPath = iniPath;
+    s.mode.setBinds(config.keys);  // 3.0.24-beta.55 (item 12): the player's keys ([keys])
     // 3.0.18-beta.215 (R-8KPDY9): a walking key's let go another hook took (a field of the game's took the focus)
     if (s.mode.verify(keywalk::keyDown)) {
         tellDirs(s);

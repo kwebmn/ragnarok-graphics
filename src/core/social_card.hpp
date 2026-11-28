@@ -81,6 +81,10 @@ bool nameInvite(Tab t, bool probe, bool inParty);
 // field and «Створити групу»; the game's own line sent for it - «/organize <name>» (the name 1-23 bytes in the game's
 // code page, the spaces round it gone; "" none to send)
 bool nameCreate(Tab t, bool inParty);
+// 3.0.24-beta.55 (the audit 28.11, C6: a second Alt+H did not close it): the card keeps the game's window hidden (its
+// shown flag 0); the game's key took that for shut and showed it again - shown again on the tab it was hidden on: the
+// key again, the window to close; on another tab: a switch of tabs
+bool keyAgain(bool hiddenByUs, bool shownAgain, int tabNow, int tabHidden);
 std::string organizeLine(const std::string& name);
 
 }  // namespace uagfx::socialcard

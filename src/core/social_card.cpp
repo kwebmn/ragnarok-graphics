@@ -128,6 +128,10 @@ bool nameInvite(Tab t, bool probe, bool inParty) { return t == Tab::Party && pro
 
 bool nameCreate(Tab t, bool inParty) { return t == Tab::Party && !inParty; }
 
+bool keyAgain(bool hiddenByUs, bool shownAgain, int tabNow, int tabHidden) {
+    return hiddenByUs && shownAgain && tabNow == tabHidden;
+}
+
 std::string organizeLine(const std::string& name) {
     const size_t from = name.find_first_not_of(' '), to = name.find_last_not_of(' ');
     if (from == std::string::npos) return "";

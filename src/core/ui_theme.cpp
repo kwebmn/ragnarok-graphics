@@ -72,7 +72,16 @@ uint32_t accented(Rgb c, uint32_t accent) {
 const std::unordered_map<uint32_t, uint32_t>& lightAnchors() {
     static const std::unordered_map<uint32_t, uint32_t> m = {
         {0x10141C, 0xF6F8FC}, {0x161B22, 0xF6F8FC}, {0x1B1D24, 0xFFFFFF}, {0x000000, 0xFFFFFF},
-        {0xFFFFFF, kInk},     {0xEEF2F8, kInk},     {0xECEFF5, kInk}};
+        {0xFFFFFF, kInk},     {0xEEF2F8, kInk},     {0xECEFF5, kInk},
+        // 3.0.24-beta.55 (the audit 28.11, H8): the cells' own near-whites - a white ground, an ink line (lightAlphas)
+        {0xFFFFFE, 0xFFFFFF}, {0xFFFFFD, kInk},
+        // 3.0.24-beta.55 (the audit 28.11, C9: «Емоції»'s white emotes faint on white cells): a picture cell's mid grey
+        {0xFFFFFC, 0x5B6170}};
+    return m;
+}
+
+const std::unordered_map<uint32_t, float>& lightAlphas() {  // 3.0.24-beta.55
+    static const std::unordered_map<uint32_t, float> m = {{0xFFFFFE, 0.6f}, {0xFFFFFD, 0.25f}, {0xFFFFFC, 0.4f}};
     return m;
 }
 
@@ -109,7 +118,11 @@ std::string recoloured(const Theme& t, const std::string& text, uint32_t word) {
         std::snprintf(b, sizeof b, "#%06x", unsigned(c));
         out += b;
         std::string alpha = m[2].str();  // 3.0.24-beta.33: a light ground less see-through (groundAlpha)
-        if (!alpha.empty()) {
+        if (const auto own = t.alphas.find(rgb & 0xFFFFFF); own != t.alphas.end() && !alpha.empty()) {
+            char ab[4];  // 3.0.24-beta.55: the anchor's own alpha in this look
+            std::snprintf(ab, sizeof ab, "%02x", int(std::lround(own->second * 255)) & 0xFF);
+            alpha = ab;
+        } else if (!alpha.empty()) {
             const float a = float(std::strtoul(alpha.c_str(), nullptr, 16)) / 255.0f, lifted = groundAlpha(t, rgb, a);
             if (lifted != a) {
                 char ab[4];
@@ -163,6 +176,7 @@ Theme themeFor(const Look& look, Group g) {
         t.name = "light";
         t.greys = Greys::Light;
         t.exact = lightAnchors();
+        t.alphas = lightAlphas();  // 3.0.24-beta.55
     }
     const uint32_t accent = look.accent ? look.accent & 0xFFFFFF : tone == Tone::Light ? kBlue : 0;
     t.accent = accent == kGold ? 0 : accent;

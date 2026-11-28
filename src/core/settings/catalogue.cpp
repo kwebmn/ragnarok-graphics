@@ -269,6 +269,10 @@ std::vector<Group> build() {
                          B("interface.space_action"),
                          D("interface.key_hunt"), D("interface.key_mvp"), D("interface.key_tracker"),
                          D("interface.key_party"), D("interface.key_recap"), D("interface.detail_console")}));
+    // 3.0.24-beta.55 (item 12): the walk mode's keys, under its switch
+    out.push_back(group(Area::Controls, Text::KeysHeading,
+                        {D("keys.walk_toggle"), D("keys.attack"), D("keys.pick_up"), D("keys.talk"), D("keys.sit"),
+                         D("keys.target"), D("keys.camera_left"), D("keys.camera_right")}));
     out.push_back(group(Area::Controls, Text::CameraHeading,
                         {B("camera.indoor"), B("camera.zoom_limit"), B("camera.remember"), B("camera.tilt")}));
     out.push_back(group(Area::Controls, Text::PagePad,

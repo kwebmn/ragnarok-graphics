@@ -108,4 +108,9 @@ struct Words {
 };
 std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const Texts& t);
 
+// 3.0.24-beta.55 (the audit 28.11, I5: «Weight: 1» in English beside our «NPC заплатить»): a description's table line
+// with its label (the game's English: «Weight», «Required Level»...) in the interface's `words` - the colours, the
+// spaces, the colon and the value kept; a line whose label is not followed by its colon, or not known, as it came
+std::string withLabel(const std::string& line, const std::map<std::string, std::string>& words);
+
 }  // namespace uagfx::infocard

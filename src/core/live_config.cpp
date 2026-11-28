@@ -335,6 +335,15 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("control_hints", flag(running.keyHints), flag(file.keyHints)));
         n.keyHints = file.keyHints;
     }
+    if (!std::equal(std::begin(file.keys.scan), std::end(file.keys.scan), std::begin(running.keys.scan))) {
+        const auto words = [](const keybinds::Binds& b) {  // 3.0.24-beta.55: the walk mode's keys, at once
+            std::string w;
+            for (const unsigned s : b.scan) w += std::string(w.empty() ? "" : " ") + keybinds::tokenOf(s);
+            return w;
+        };
+        u.applied.push_back(change("keys", words(running.keys), words(file.keys)));
+        n.keys = file.keys;
+    }
     if (file.walkMode != running.walkMode) {  // 3.0.18-beta.208: the walk mode
         u.applied.push_back(change("walk_mode", flag(running.walkMode), flag(file.walkMode)));
         n.walkMode = file.walkMode;
@@ -1010,6 +1019,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
 }
 
 bool appliesNow(const std::string& k) {
+    if (k.rfind("keys.", 0) == 0) return true;  // 3.0.24-beta.55: the walk mode's keys, at once
     return k == "display.high_resolution" || k == "display.ui_filter" || k == "display.crisp_text" ||
            k == "display.crisp_numbers" ||
            k == "display.window_art" ||

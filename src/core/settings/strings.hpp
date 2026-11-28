@@ -1131,6 +1131,17 @@ enum class Text : uint16_t {
     PlayLimitReached, PlayLimitKicked, PlayLimitLeft, PlayLimitReset, PlayLimitBuy, PlayLimitAutopay, PlayLimitBlocked,
     SocialInviteButton, ChatSysNotOnline,  // 3.0.24-beta.32: «Група»'s invite by name
     SocialPartyNameField, SocialCreateButton,  // 3.0.24-beta.51 (the audit 28.11, C6): no party - its name, the button
+    // 3.0.24-beta.55 (the audit 28.11, I5): the item descriptions' table labels and the elements in the player's words
+    CardLabelWeight, CardLabelJobs, CardLabelClass, CardLabelLevel, CardLabelKind, CardLabelDefense,
+    CardLabelWeaponLevel, CardLabelWeaponKind, CardLabelPlace, CardLabelHeadPlace, CardLabelAttack, CardLabelSlots,
+    CardLabelCompound,
+    CardLabelProperty, CardLabelType, ElementWater, ElementEarth, ElementFire, ElementWind, ElementPoison, ElementHoly,
+    ElementShadow, ElementGhost, ElementUndead,
+    SearchCueGame,  // 3.0.24-beta.55 (the audit 28.11, C7): the game's settings' search - no Ctrl+F (the reference's)
+    // 3.0.24-beta.55 (item 12): the walk mode's keys - the group, its actions, the hint, the keys' names
+    KeysHeading, KeysToggle, KeysAttack, KeysPickup, KeysTalk, KeysSit, KeysTarget, KeysCameraLeft, KeysCameraRight,
+    KeysHint, KeyGrave, KeyTab, KeyQ, KeyE, KeyR, KeyF, KeyC, KeyG, KeyT, KeyZ, KeyX, KeyV, KeyB,  // Space: KeySpace
+    KeysWalkLine,  // 3.0.24-beta.55: «Клавіші»'s walk mode line by the player's keys ({1}-{8}: core keybinds::Bind)
     Count
 };
 

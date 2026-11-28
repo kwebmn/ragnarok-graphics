@@ -4,6 +4,7 @@
 
 #include "core/ai/groups.hpp"
 #include "core/closed_windows.hpp"
+#include "core/key_binds.hpp"
 #include "core/login_view.hpp"
 #include "core/roext.hpp"
 #include "core/ui_theme.hpp"
@@ -890,6 +891,8 @@ struct Config {
     bool arrowsWalk = true;
     // 3.0.18-beta.208 (stage 2): [interface] walk_mode - the walk mode on (` switches it in the game, written here)
     bool walkMode = false;
+    // 3.0.24-beta.55 (item 12: the keyboard concept's rebinding): [keys] - the walk mode's keys (core/key_binds)
+    keybinds::Binds keys;
     // 3.0.18-beta.209 (stage 3): [interface] space_action - Space with the chat line empty acts (the pad's A)
     bool spaceAction = true;
     // 3.0.21-beta.13 (the owner: «надо пройтись и в таких моментах наделать подсказки»): [interface] control_hints - a

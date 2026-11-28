@@ -32,6 +32,7 @@ struct Span {
     bool bold = false;
     bool name = false;  // the one who said it: a click whispers to them
     int item = 0, mob = 0;  // 3.0.11-beta.244: a thing's or a monster's name - a click opens it in «Довідник»
+    bool pill = false;      // 3.0.24-beta.55: a pill of its own (the repeat «×2»): a gap before it, its padding
 };
 // 3.0.18-beta.245 («Довідник» › chat links): «[Name]» in the words - a thing's or a monster's name `resolve` knows
 // ({item, mob}; {0, 0} none) becomes its link span (the brackets kept); the speaker's and the links' spans untouched
@@ -141,7 +142,10 @@ struct Piece {
     float x = 0, w = 0;
     int line = -1;  // which of the lines given
     int item = 0, mob = 0;  // 3.0.11-beta.244: as its span's
+    bool pill = false;      // 3.0.24-beta.55: as its span's - drawn on a ground of its own
 };
+// 3.0.24-beta.55 (the audit 28.11, CH3: «90×2»): a pill's gap before it and its padding each side, of the text's size
+constexpr float kPillGap = 0.4f, kPillPad = 0.35f;
 using Row = std::vector<Piece>;
 // The lines as rows `width` wide at `px`, broken at spaces (a word wider than a row by its letters)
 std::vector<Row> wrap(const std::vector<const Line*>& lines, float width, float px, const Measure& m);
@@ -308,6 +312,7 @@ struct View {
     uint32_t chipRgb = 0, caretRgb = 0;
     panel::Box chevron, caret, thumb;
     std::vector<Underline> underlines;
+    std::vector<panel::Box> pills;  // 3.0.24-beta.55: the repeats' grounds on the rows shown
 };
 View view(const Layout& L, const std::vector<Row>& rows, const Input& in, const Show& sh, const Texts& t,
           const Measure& m);

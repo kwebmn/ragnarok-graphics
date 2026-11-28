@@ -1236,6 +1236,9 @@ static void frameInner(HWND game, const Show& show, double k, int targetWidth, i
     if (s.style != uistyle::generation()) {  // 3.0.11-beta.47: its bar's ground another opacity
         s.style = uistyle::generation();
         s.dirty = true;
+        // 3.0.24-beta.55 (the audit 28.11, H4: the light minimap's sides near-black): the square's ground outside the
+        // map the look's (the map's pixels made again on it)
+        minimap::setGround(uaui::themed(minimap::kDarkGround & 0xFFFFFFu, uitheme::Group::Hud));
     }
     if (uaui::ready() != s.paintedByUi) {  // 3.0.18-beta.26: painted for the other way - again, at once
         s.paintedByUi = uaui::ready();

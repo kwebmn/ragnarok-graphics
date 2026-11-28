@@ -143,16 +143,16 @@ TEST(uikit_options_groups_parts_and_the_details_heading) {
     Rml::Element* knob = doc->QuerySelector(".spane .tg");
     if (knob) knob->Click();
     CHECK_EQ(toggled, 0);
-    // the foot: 3.0.24-beta.5's «Усе за замовчуванням», «Розмістити інтерфейс» and the way to the console, side by
-    // side at the right
+    // the foot: «Розмістити інтерфейс», the way to the console and (3.0.24-beta.55: last, apart) 3.0.24-beta.5's
+    // «Усе за замовчуванням», side by side at the right
     CHECK_EQ(shownOf(doc, ".sfoot .btn"), 3);
     Rml::ElementList foot;
     doc->QuerySelectorAll(foot, ".sfoot .btn");
     CHECK_EQ(foot.size(), size_t(3));
     if (foot.size() == 3) {
-        CHECK(foot[1]->GetAbsoluteLeft() + foot[1]->GetOffsetWidth() <= foot[2]->GetAbsoluteLeft() + 1);
-        CHECK(std::abs(foot[1]->GetAbsoluteTop() - foot[2]->GetAbsoluteTop()) < 2);
-        foot[1]->Click();
+        CHECK(foot[0]->GetAbsoluteLeft() + foot[0]->GetOffsetWidth() <= foot[1]->GetAbsoluteLeft() + 1);
+        CHECK(std::abs(foot[0]->GetAbsoluteTop() - foot[1]->GetAbsoluteTop()) < 2);
+        foot[0]->Click();
     }
     CHECK_EQ(layouts, 1);
     // nothing found: the note in the rows' place
@@ -287,8 +287,8 @@ TEST(uikit_options_parts_stand_where_they_stood) {
         {".ch", {{753.0f, 281.0f, 27.0f, 22.4f}, {836.0f, 281.0f, 27.0f, 22.4f}, {657.0f, 378.0f, 72.0f, 22.4f},
                  {733.0f, 378.0f, 53.0f, 22.4f}, {790.0f, 378.0f, 73.0f, 22.4f}}},
         {".snone", {}},
-        {".sfoot .btn", {{519.0f, 600.0f, 22.0f, 24.4f}, {549.0f, 600.0f, 154.0f, 24.4f},
-                         {711.0f, 600.0f, 154.0f, 24.4f}}},  // 3.0.24-beta.5: the reset first (no words in the test)
+        {".sfoot .btn", {{509.0f, 600.0f, 154.0f, 24.4f}, {671.0f, 600.0f, 154.0f, 24.4f},
+                         {843.0f, 600.0f, 22.0f, 24.4f}}},  // 3.0.24-beta.55: the reset last, apart (no words here)
         {".sn", {{123.0f, 156.0f, 190.0f, 29.6f}, {123.0f, 185.6f, 190.0f, 29.6f}}},
     };
     for (const Gold& g : gold) {
@@ -958,5 +958,47 @@ TEST(uikit_options_theme_pictures_accent_dots_and_palette) {
     CHECK(typed > 0);
     CHECK_EQ(std::string(m.ownHex), std::string("#2E8B57"));
     CHECK(rmlhost::log().find("rgb") == std::string::npos);  // the pictures' rgb() colours read without a word
+    rmlhost::close(doc);
+}
+
+// 3.0.24-beta.55 (the audit 28.11, C7: «Усе за замовчуванням» first among the everyday buttons): the reset of all the
+// footer's last, set apart from the others
+TEST(uikit_options_reset_all_last_and_apart) {
+    static ol::Model m;
+    m.resetBtn = "Reset all";
+    m.layoutBtn = "Layout";
+    m.consoleBtn = "Console";
+    std::string error;
+    Rml::ElementDocument* doc = rmlhost::load(
+        ol::rml(),
+        [&](Rml::DataModelConstructor& c) {
+            ol::bind(c, m);
+            const auto none = [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {};
+            for (const char* e : {"sec_go", "set_slider", "set_step", "set_toggle", "set_reset", "open_console",
+                                  "open_layout", "opt_close", "card_toggle", "card_more", "set_mode", "check_ok",
+                                  "check_bad", "reset_all", "set_choice", "set_colour", "set_own_hex"})
+                c.BindEventCallback(e, none);
+        },
+        100, 60, &error);
+    CHECK_EQ(error, std::string());
+    CHECK(doc != nullptr);
+    if (!doc) return;
+    rmlhost::update();
+    Rml::Element* row = doc->QuerySelector(".sfb");
+    CHECK(row != nullptr);
+    if (row && row->GetNumChildren() >= 3) {
+        Rml::Element* last = row->GetChild(row->GetNumChildren() - 1);
+        CHECK(last->GetInnerRML() == "Reset all");
+        Rml::Element* before = row->GetChild(row->GetNumChildren() - 2);
+        const float gap = last->GetAbsoluteOffset(Rml::BoxArea::Border).x -
+                          (before->GetAbsoluteOffset(Rml::BoxArea::Border).x +
+                           before->GetBox().GetSize(Rml::BoxArea::Border).x);
+        Rml::Element* first = row->GetChild(0);
+        Rml::Element* second = row->GetChild(1);
+        const float usual = second->GetAbsoluteOffset(Rml::BoxArea::Border).x -
+                            (first->GetAbsoluteOffset(Rml::BoxArea::Border).x +
+                             first->GetBox().GetSize(Rml::BoxArea::Border).x);
+        CHECK(gap > usual + 6);  // apart
+    }
     rmlhost::close(doc);
 }

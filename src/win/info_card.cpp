@@ -197,6 +197,42 @@ int ownJob() {
 
 std::string jobWords(int job) { return charblock::jobName(job); }
 
+// 3.0.24-beta.55 (the audit 28.11, I5): the descriptions' table labels (the game's English) in the player's words - as
+// the interface's language is now
+const std::map<std::string, std::string>& labelWords() {
+    static std::map<std::string, std::string> words;
+    static std::string madeIn;
+    using T = settings::Text;
+    const std::string now = say(T::CardLabelWeight);
+    if (now == madeIn && !words.empty()) return words;
+    madeIn = now;
+    static const struct {
+        const char* label;
+        T text;
+    } kLabels[] = {{"Weight", T::CardLabelWeight},          {"Jobs", T::CardLabelJobs},
+                   {"Job", T::CardLabelJobs},                {"Class", T::CardLabelClass},
+                   {"Required Level", T::CardLabelLevel},    {"Required LV", T::CardLabelLevel},
+                   {"Required Lvl", T::CardLabelLevel},      {"Required Lv", T::CardLabelLevel},
+                   {"Item Class", T::CardLabelKind},         {"Defense", T::CardLabelDefense},
+                   {"Defense Rate", T::CardLabelDefense},    {"Weapon Level", T::CardLabelWeaponLevel},
+                   {"Weapon LV", T::CardLabelWeaponLevel},   {"Weapon Class", T::CardLabelWeaponKind},
+                   {"Location", T::CardLabelPlace},          {"Position", T::CardLabelPlace},
+                   {"Head Position", T::CardLabelHeadPlace}, {"Attack Strength", T::CardLabelAttack},
+                   {"Slot", T::CardLabelSlots},              {"Compound on", T::CardLabelCompound},
+                   {"Property", T::CardLabelProperty},       {"Type", T::CardLabelType}};
+    words.clear();
+    for (const auto& l : kLabels) words[l.label] = say(l.text);
+    return words;
+}
+
+// 3.0.24-beta.55: an element's word in the player's language (core/item_elements' numbers, 1 water - 9 undead)
+std::string elementWord(int element) {
+    using T = settings::Text;
+    static const T kWords[9] = {T::ElementWater,  T::ElementEarth, T::ElementFire,  T::ElementWind, T::ElementPoison,
+                                T::ElementHoly,   T::ElementShadow, T::ElementGhost, T::ElementUndead};
+    return element >= 1 && element <= 9 ? say(kWords[element - 1]) : itemelements::word(element);
+}
+
 std::vector<std::string> utf8Lines(const State& s, const std::vector<std::string>& lines) {
     std::vector<std::string> out;
     for (const std::string& l : lines) out.push_back(utf8(s, l));
@@ -302,10 +338,12 @@ void itemCard(State& s, One& o, uint32_t window) {
     const auto& table = known ? s.tables.items : s.tables.unknown;
     const auto d = table.find(number);
     if (d != table.end()) c.lines = utf8Lines(s, d->second);
-    // 3.0.18-beta.146 (the owner: as the later clients - «Property: Wind» in a thing's words): its element first
+    for (std::string& line : c.lines) line = ic::withLabel(line, labelWords());  // 3.0.24-beta.55: the labels ours
+    // 3.0.18-beta.146 (the owner: as the later clients - «Property: Wind» in a thing's words): its element first;
+    // 3.0.24-beta.55: in the player's words («Стихія: Вітер»)
     if (known && g_elementColours)
         if (const int e = itemelements::ofThing(id, cards))
-            c.lines.insert(c.lines.begin(), std::string("Property: ") + itemelements::word(e));
+            c.lines.insert(c.lines.begin(), say(settings::Text::CardLabelProperty) + ": " + elementWord(e));
     // a forged or a named thing keeps its maker in the cards' places (255, 254, 0xFF00): no cards shown then
     const bool special = cards[0] == 0xFF || cards[0] == 0xFE || cards[0] == 0xFF00 || cards[0] < 0;
     if (known && !special)
@@ -320,7 +358,8 @@ void itemCard(State& s, One& o, uint32_t window) {
             const auto cd = s.tables.items.find(std::to_string(cards[i]));
             if (cd == s.tables.items.end()) continue;
             const std::string cardName = itemName(s, std::to_string(cards[i]), true);
-            const std::vector<std::string> effect = ic::cardEffect(utf8Lines(s, cd->second), cardName);
+            std::vector<std::string> effect = ic::cardEffect(utf8Lines(s, cd->second), cardName);
+            for (std::string& line : effect) line = ic::withLabel(line, labelWords());  // 3.0.24-beta.55
             if (effect.empty()) continue;
             if (!spaced) c.lines.push_back(""), spaced = true;
             c.lines.push_back(cardName + ":");

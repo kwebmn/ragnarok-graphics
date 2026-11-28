@@ -1,5 +1,7 @@
 #include "core/setting_change.hpp"
 
+#include "core/key_binds.hpp"
+
 #include "core/effect_groups.hpp"
 #include "core/settings/schema.hpp"
 
@@ -30,6 +32,17 @@ Outcome edits(const Config& c, int cardLevel, const std::string& key, const std:
             out.push_back({"effects", k, v});
     }
     out.push_back({s->section, s->key, token});
+    // 3.0.24-beta.55 (item 12): a walk mode key another action has - the two swap (never one key for two actions)
+    if (std::string(s->section) == "keys") {
+        bool mine = false, theirs = false;
+        const unsigned now = keybinds::scanOf(token);
+        int me = -1;
+        for (int b = 0; b < keybinds::kBinds; ++b)
+            if (std::string(s->key) == keybinds::settingKey(keybinds::Bind(b))) me = b, mine = true;
+        const keybinds::Bind other = keybinds::boundTo(c.keys, now, theirs);
+        if (mine && theirs && int(other) != me)
+            out.push_back({"keys", keybinds::settingKey(other), keybinds::tokenOf(c.keys.scan[me])});
+    }
     return Outcome::Edits;
 }
 

@@ -185,7 +185,8 @@ TEST(catalogue_feeds_the_interface_sections) {
         windows = windows || (s.heading == Text::InterfaceSecWindows && holds(s, "interface.items") && s.folded);
         // the chat's rows a group of their own (the panels' section held 32 rows)
         chat = chat || (s.heading == Text::InterfaceChat && holds(s, "interface.chat_fade") && !s.folded);
-        for (const char* k : s.keys) CHECK(std::string(k).rfind("interface.", 0) == 0);
+        for (const char* k : s.keys)  // 3.0.24-beta.55: [keys] (the walk mode's keys) on the page too
+            CHECK(std::string(k).rfind("interface.", 0) == 0 || std::string(k).rfind("keys.", 0) == 0);
         if (s.heading != Text::InterfaceSecWindows) CHECK(!s.folded);  // one folded list: the windows'
     }
     CHECK(minimap);

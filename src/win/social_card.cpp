@@ -68,6 +68,7 @@ struct State {
     CardDrag drag;  // 3.0.11-beta.270
     bool on = false, shown = false;
     uint32_t hidden = 0;
+    int hiddenTab = -1;  // 3.0.24-beta.55: the game's window's tab as it was last hidden (sc::keyAgain)
     unsigned codePage = 0;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -93,18 +94,23 @@ uint32_t gameSocial() {
     return w && read32(w) == kSocialClass && read32(read32(w) + kSendMsgSlot) == kSocialSend ? w : 0;
 }
 
-void hold(State& s, uint32_t window, bool on) {
+// 3.0.24-beta.55 (the audit 28.11, C6): true - the game's key pressed again (sc::keyAgain): the window to close
+bool hold(State& s, uint32_t window, bool on) {
     if (on && window) {
-        if (read32(window + kShown) && write32(window + kShown, 0) && s.hidden != window) {
+        const bool shownAgain = read32(window + kShown) != 0;
+        if (sc::keyAgain(s.hidden == window, shownAgain, int(read32(window + kTab)), s.hiddenTab)) return true;
+        if (shownAgain && write32(window + kShown, 0) && s.hidden != window) {
             LOG_INFO("social: the game's friends and party window hidden for the new card (its shown flag 0)");
             s.hidden = window;
         }
+        s.hiddenTab = int(read32(window + kTab));
     } else if (window && s.hidden == window) {
         write32(window + kShown, 1);
         s.hidden = 0;
     } else if (!window) {
         s.hidden = 0;
     }
+    return false;
 }
 
 std::string words(uint32_t ptr, uint32_t len) {
@@ -234,7 +240,12 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     }
     const bool world = inGameWorld();
     const uint32_t window = world ? gameSocial() : 0;
-    if (world) hold(s, window, on);
+    if (world && hold(s, window, on)) {  // 3.0.24-beta.55: its key again - closed as the game's own window would be
+        send(s, sc::gameButton(sc::Action::Close), 0, "its key again (Alt+H) - closed");
+        s.hidden = 0;
+        hide(s);
+        return;
+    }
     if (!on || !window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         return;

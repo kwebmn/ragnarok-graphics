@@ -297,3 +297,17 @@ TEST(ui_theme_light_tones_chat_as_the_original) {
     uitheme::Look dark;
     CHECK(!uitheme::themeFor(dark, uitheme::Group::Chat).whiteLine);
 }
+
+// 3.0.24-beta.55 (the audit 28.11, H8: the light hotbar's empty cells hardly seen over light stones): the cells' own
+// near-whites - unseen by the dark look (as white at the same alpha) - in the light look a ground of their own:
+// 0xFFFFFE white at 0.6, 0xFFFFFD the ink at 0.25 (a line round them)
+TEST(ui_theme_light_cells_have_a_ground_of_their_own) {
+    uitheme::Look look;
+    const std::string css = ".hb .cell { background-color: #fffffe0d; border: 1rem #fffffd1a; }";
+    CHECK(uitheme::themedCss(uitheme::themeFor(look, uitheme::Group::Hud), css) == css);  // dark: as it was
+    look.tone = uitheme::Tone::Light;
+    const std::string light = uitheme::themedCss(uitheme::themeFor(look, uitheme::Group::Hud), css);
+    CHECK(light.find("#ffffff99") != std::string::npos);  // white at 0.6
+    CHECK(light.find("#181c2640") != std::string::npos);  // the ink's line at 0.25
+    CHECK(light.find("#fffffe") == std::string::npos && light.find("#fffffd") == std::string::npos);
+}

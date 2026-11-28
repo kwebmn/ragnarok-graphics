@@ -1,5 +1,7 @@
 #include "core/settings/schema.hpp"
 
+#include "core/key_binds.hpp"
+
 #include <cctype>
 
 #include "core/effect_groups.hpp"
@@ -43,6 +45,13 @@ const std::vector<Text> kKeyChoices = {Text::KeyOff,   Text::KeyCtrlB, Text::Key
 
 const std::vector<IniSetting>& iniSettings() {
     using E = EffectSettings;  // 2.2.2: [effects] entries bound to their fields
+    // 3.0.24-beta.55 (item 12): a walk mode key's choice - core/key_binds' tokens, their names in kWalkKeyNames' order
+    const std::vector<const char*> kWalkKeyTokens(std::begin(keybinds::kTokens), std::end(keybinds::kTokens));
+    const std::vector<Text> kWalkKeyNames{Text::KeyGrave, Text::KeySpace, Text::KeyTab, Text::KeyQ, Text::KeyE,
+                                          Text::KeyR,     Text::KeyF,     Text::KeyC,   Text::KeyG, Text::KeyT,
+                                          Text::KeyZ,     Text::KeyX,     Text::KeyV,   Text::KeyB};
+#define KEY_BIND(name, label)                                                                                          \
+    {"keys", name, Page::Interface, Control::Choice, 0, 0, 0, kWalkKeyTokens, kWalkKeyNames, label, Text::KeysHint, ""}
     // 3.0.13-beta.3: the chat's colours (core/chat_panel chatColour)
     const std::vector<const char*> kChatColours{"default", "blue", "green", "yellow",
                                                 "orange",  "pink", "violet", "white"};
@@ -254,6 +263,11 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceWalkMode, Text::InterfaceWalkModeHint, ""},
         {"interface", "space_action", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.18-beta.209
          Text::InterfaceSpaceAction, Text::InterfaceSpaceActionHint, ""},
+        // 3.0.24-beta.55 (item 12): [keys] - the walk mode's keys (core/key_binds: the tokens, their scan codes)
+        KEY_BIND("walk_toggle", Text::KeysToggle), KEY_BIND("attack", Text::KeysAttack),
+        KEY_BIND("pick_up", Text::KeysPickup), KEY_BIND("talk", Text::KeysTalk), KEY_BIND("sit", Text::KeysSit),
+        KEY_BIND("target", Text::KeysTarget), KEY_BIND("camera_left", Text::KeysCameraLeft),
+        KEY_BIND("camera_right", Text::KeysCameraRight),
         {"interface", "control_hints", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.21-beta.13
          Text::InterfaceKeyHints, Text::InterfaceKeyHintsHint, ""},
         {"interface", "walk_arrow", Page::Interface, Control::Choice, 0, 0, 0,
@@ -1512,6 +1526,10 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "windows.others_music") return c.windowOthersMusic ? "1" : "0";
     if (k == "windows.others_sounds") return c.windowOthersSounds ? "1" : "0";  // 3.0.3-beta.9
     if (k == "windows.switch_keys") return windowKeysToken(c.windowKeys);  // 3.0.3-beta.6
+    if (k.rfind("keys.", 0) == 0)  // 3.0.24-beta.55: the walk mode's keys
+        for (int b = 0; b < keybinds::kBinds; ++b)
+            if (k.compare(5, std::string::npos, keybinds::settingKey(keybinds::Bind(b))) == 0)
+                return keybinds::tokenOf(c.keys.scan[b]);
     if (k == "panel.show") return c.panelShow ? "1" : "0";  // 3.0.3-beta.8
     if (k == "interface.minimap") return c.newMinimap ? "1" : "0";  // 3.0.11-beta.1
     if (k == "interface.minimap_npcs") return c.minimapNpcs ? "1" : "0";  // 3.0.11-beta.6
