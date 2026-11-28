@@ -873,6 +873,10 @@ private:
     LARGE_INTEGER waterClock_{};
     unsigned long long waterCells_ = 0;
     float waterTime();
+    // 3.0.24-beta.42 (the laptop's effects run: the water's timer said its copies alone - keep_fps took it for cheap):
+    // kTimeWater11 open from the copies through the water's own draws, closed at the first draw that is no water
+    bool waterTiming_ = false;
+    void endWaterTiming();
     bool copyForWater();
     ID3D11VertexShader* presentVs_ = nullptr;
     ID3D11PixelShader* presentPs_ = nullptr;

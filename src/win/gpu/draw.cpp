@@ -329,6 +329,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                 copyScene();
         if (water && mirrorDue() && !applyMirror()) return;  // 1.16: the world mirrored, before the first water
     }
+    if (waterTiming && !water) endWaterTiming();  // 3.0.24-beta.42: the water's own draws timed with its copies
     // One quad facing the screen: a sprite (a character, a monster, an item). 0.22.3: under DLSS such a draw, and an
     // effect, writes its coverage into the world's alpha - DLSS's mask of pixels whose history it is not to take.
     bool quad = false;

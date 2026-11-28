@@ -156,25 +156,46 @@ bool Renderer::Impl::copySceneDepth() {
 bool Renderer::Impl::copyScene() {
     if (waterCopied) return waterReady;
     waterCopied = true;
-    EffectTime timing(*this, kTimeWater);  // 0.39.2
+    effectBegin(kTimeWater);  // 0.39.2; 3.0.24-beta.42: the water's own draws after the copies too (endWaterTiming)
+    waterTiming = true;
     waterReady = false;
-    if (!waterVs || !waterPs || !waterGlowPs) return false;  // its shaders did not compile (logged at the start)
+    if (!waterVs || !waterPs || !waterGlowPs) {  // its shaders did not compile (logged at the start)
+        endWaterTiming();
+        return false;
+    }
     if (!viewToWorldValid) {
         static bool logged = false;
         if (!logged) LOG_INFO("water: the game's camera is not known, so the water stays the game's");
         logged = true;
+        endWaterTiming();
         return false;
     }
-    if (!ensureScene("water")) return false;
+    if (!ensureScene("water")) {
+        endWaterTiming();
+        return false;
+    }
     StageSetup linearClamp;
     linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
     linearClamp.magFilter = d3d7::TFG_LINEAR;
     linearClamp.minFilter = d3d7::TFN_LINEAR;
     linearClamp.mipFilter = d3d7::TFP_NONE;
-    if (!makeRoom(linearClamp, linearClamp, 0, 3)) return false;  // a new list starts before the copies
-    if (!copySceneColor() || !copySceneDepth()) return false;
+    if (!makeRoom(linearClamp, linearClamp, 0, 3)) {  // a new list starts before the copies
+        endWaterTiming();
+        return false;
+    }
+    if (!copySceneColor() || !copySceneDepth()) {
+        endWaterTiming();
+        return false;
+    }
     waterReady = true;
     return true;
+}
+
+void Renderer::Impl::endWaterTiming() {  // 3.0.24-beta.42
+    if (!waterTiming) return;
+    waterTiming = false;
+    flushDraws();  // the water's draws batched so far go before the timestamp
+    effectEnd(kTimeWater);
 }
 
 bool Renderer::Impl::copySceneColor() {

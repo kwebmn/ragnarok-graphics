@@ -482,6 +482,11 @@ struct Renderer::Impl {
     bool sceneFailed = false;  // not made at this size: the water stays the game's
     bool waterCopied = false;  // this frame's copy is made, or could not be
     bool waterReady = false;   // ... and the water is drawn from it
+    // 3.0.24-beta.42 (the laptop's effects run: Alberta 33 fps with the water, 60 without - 15 ms of a Radeon 610M's
+    // frame, while its timer said 1.4, the copies alone, and keep_fps took it for cheap): kTimeWater open from the
+    // copies through the water's own draws after them, closed at the first draw that is no water (endWaterTiming)
+    bool waterTiming = false;
+    void endWaterTiming();
     int softCopied = 0;        // 0.67: the soft effects' depth: 1 copied this picture, -1 could not be
     float viewToWorld[12] = {};  // the camera backwards: the view's x, y and z axes in the world, then its place
     bool viewToWorldValid = false;
@@ -1440,6 +1445,7 @@ struct Renderer::Impl {
             mapWorld.setOwnGround(false);
         }
         waterCopied = false;  // 0.19: its water copies what is under it anew
+        waterTiming = false;  // 3.0.24-beta.42: one left open with the last frame's list goes untold
         darknessRec.reset();  // 2.6.18
         darknessLaid = false;
         silhouetteRec.reset();  // 3.0.13-beta.30

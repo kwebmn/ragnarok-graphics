@@ -916,6 +916,7 @@ bool Renderer::Impl::applyBloom() {
 }
 
 bool Renderer::Impl::finishWorld() {
+    endWaterTiming();  // 3.0.24-beta.42: the world's last draws were its water
     if (!stampRec.draws().empty() && !applyStamps()) return false;  // 3.0.16-beta.25: the last sprites' shapes
     if (aoDue() && !applyAo()) return false;
     if (seamsDue() && !applySeams()) return false;            // 1.9

@@ -1828,6 +1828,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         water::isWaterQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount,
                            d.primitive == d3d7::PT_TRIANGLESTRIP))
         water = (!toGlow || waterGlowPs_) && copyForWater();  // 1.0: in the glow, its own glow shader
+    if (waterTiming_ && !water) endWaterTiming();  // 3.0.24-beta.42: the water's own draws timed with its copies
     if (water) noteWaterLevel(rec, d);  // 2.5.4: the creatures' water level; 2.7.2: the grass's
     if (water && !mirrorDone_ && waterLevelKnown_ && mirrorCollecting() && !mirrorCasters_.empty()) {
         applyMirror();  // 2.5.9 (draw.cpp 1.16): the world mirrored, before the frame's first water
@@ -2273,7 +2274,9 @@ bool Renderer11::copyForWater() {
     waterReady_ = false;
     if (!depth_ || !target_.texture) return false;
     flushBatch();  // the draws before the water go into the copies
-    EffectSpan span(*this, kTimeWater11);  // 2.5.9: the copies alone, not the draws before them
+    // 2.5.9: not the draws before them; 3.0.24-beta.42: the copies and the water's own draws after them (as Direct3D 12's)
+    effectBegin(kTimeWater11);
+    waterTiming_ = true;
     D3D11_TEXTURE2D_DESC dd{};
     depth_->GetDesc(&dd);
     const bool sixteen = dd.Format == DXGI_FORMAT_R16_TYPELESS;  // 2.5.21: the 16-bit world's depth copied as it is
@@ -2283,22 +2286,36 @@ bool Renderer11::copyForWater() {
         drop(depthCopySrv_);
         drop(depthCopyDsv_);
         drop(depthCopy_);
-        if (!makeDepth(int(dd.Width), int(dd.Height), depthCopy_, depthCopyDsv_, sixteen)) return false;
+        if (!makeDepth(int(dd.Width), int(dd.Height), depthCopy_, depthCopyDsv_, sixteen)) {
+            endWaterTiming();
+            return false;
+        }
         D3D11_SHADER_RESOURCE_VIEW_DESC v{};
         v.Format = sixteen ? DXGI_FORMAT_R16_UNORM : DXGI_FORMAT_R32_FLOAT;
         v.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         v.Texture2D.MipLevels = 1;
         if (FAILED(device_->CreateShaderResourceView(depthCopy_, &v, &depthCopySrv_))) {
             depthCopySrv_ = nullptr;
+            endWaterTiming();
             return false;
         }
     }
     ID3D11ShaderResourceView* none[2] = {nullptr, nullptr};
     ctx_->PSSetShaderResources(2, 2, none);  // neither copy bound while it is written
-    if (!copyScene()) return false;
+    if (!copyScene()) {
+        endWaterTiming();
+        return false;
+    }
     ctx_->CopyResource(depthCopy_, depth_);
     waterReady_ = true;
     return true;
+}
+
+void Renderer11::endWaterTiming() {  // 3.0.24-beta.42
+    if (!waterTiming_) return;
+    waterTiming_ = false;
+    flushBatch();  // the water's draws batched so far go before the timestamp
+    effectEnd(kTimeWater11);
 }
 
 // 2.5.9 (draw.cpp waterLife): water_ps's bits - 2 a swamp's bubbles (1 the fish and 4 the surf's swash gone in 2.7.2);
@@ -2840,6 +2857,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         footTracker_.update(frameFeet_, waterTime(), stepLife());
         frameFeet_.clear();
     }
+    endWaterTiming();  // 3.0.24-beta.42: before the frame's queries close
     waterCopied_ = waterReady_ = false;  // 0.99
     materialsMade_ = 0;  // 1.14
     flames_.clear();
