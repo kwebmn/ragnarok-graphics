@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.53 — what's new · 2026-11-28
+
+Speed on weak graphics cards:
+- Water: on a weak card without its fine noise ripples (the swells and the reflections stay); the steps' rings are worked out only when there are any - lighter on every card.
+- «Keep the frame rate» now sees the water's whole cost (all of its draws a frame) and the living ground's own - the sand, the wet walls, the season, the rain's wet - and can turn them off when they are the dearest.
+- A small fix in the shop list's markup.
+
 # uaRO Graphics 3.0.24-beta.52 — what's new · 2026-11-28
 
 Lists by the window's size:
