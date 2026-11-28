@@ -83,6 +83,7 @@ void Context::mcpFrame(bool shown) {
     seen.shown = shown;
     seen.gameWidth = int(shadow.width());
     seen.gameHeight = int(shadow.height());
+    seen.codePage = gameCodePage(config);  // 3.0.24-beta.53
     mcpwin::frame(config.mcpEnabled, config.mcpPort, gameDir(), seen,
                   [this](const std::string& t, const json::Value& a) { return mcpCall(t, a); });
 }

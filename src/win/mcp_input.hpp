@@ -34,6 +34,9 @@ mcp::CallResult hover(const Game& g, double x, double y, int width, int seconds)
 mcp::CallResult drag(const Game& g, double x, double y, double x2, double y2, int width);
 // 3.0.24-beta.48: the wheel's notches at (x, y), Ctrl held for them when `ctrl` - from inside the game only
 mcp::CallResult wheel(const Game& g, double x, double y, int width, int notches, bool ctrl);
+// 3.0.24-beta.53 (item 15): UTF-8 words typed as the game's characters (`codePage`) - its window's WM_CHAR each, as
+// the keyboard's letters come after TranslateMessage; never an Enter (core/mcp checks it)
+mcp::CallResult type(const Game& g, const std::string& utf8, unsigned codePage);
 // Each frame on the game's thread: a hover whose time is up let go
 void tick();
 

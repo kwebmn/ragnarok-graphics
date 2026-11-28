@@ -24,6 +24,7 @@ struct Seen {
     HWND window = nullptr;
     bool shown = true;
     int gameWidth = 0, gameHeight = 0;  // the game's own picture
+    unsigned codePage = 1251;           // 3.0.24-beta.53: the game's - `type`'s words as its characters
 };
 // Each frame on the game's thread - minimised too (3.0.22-beta.35): the server started, moved to another port or
 // stopped as the setting says; a call waiting run through `run`; a screenshot asked - its file looked for

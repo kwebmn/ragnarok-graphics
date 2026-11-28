@@ -196,6 +196,13 @@ const std::vector<Tool>& table() {
          R"({"type":"object","properties":{"x":{"type":"number","minimum":0},"y":{"type":"number","minimum":0},)"
          R"("width":{"type":"integer","minimum":160,"maximum":7680},"notches":{"type":"integer","minimum":-10,)"
          R"("maximum":10},"ctrl":{"type":"boolean"}},"required":["x","y","width","notches"]})"},
+        // 3.0.24-beta.53 (the owner's «делай все», item 15): the chat line tested by keys, nothing said in public
+        {"type",
+         "Words typed into the game as its own characters (the game's code page), as the keyboard's letters would - "
+         "into the chat line taken up by `key` enter first, a search field, a name's field. 1-120 bytes, no Enter, "
+         "Tab or other control characters: nothing is ever sent by it (`key` enter sends, esc leaves the line).",
+         R"({"type":"object","properties":{"text":{"type":"string","minLength":1,"maxLength":120}},)"
+         R"("required":["text"]})"},
     };
     return kTools;
 }
@@ -535,6 +542,12 @@ std::string checkArgs(const std::string& tool, const json::Value& args) {
         if (args.has("button") && args["button"].asString() != "left" && args["button"].asString() != "right")
             return "button: left or right";
         if (args.has("double") && args["double"].type() != json::Value::Bool) return "double: true or false";
+    } else if (tool == "type") {  // 3.0.24-beta.53
+        const json::Value& text = args["text"];
+        if (text.type() != json::Value::String || text.asString().empty() || text.asString().size() > 120)
+            return "text: the words to type, 1-120 bytes";
+        for (const char c : text.asString())
+            if (static_cast<unsigned char>(c) < 0x20 || c == 0x7F) return "text: no Enter, Tab or control characters";
     } else if (tool == "wheel") {  // 3.0.24-beta.48
         if (!wholeIn(args["width"], 160, 7680)) return "width: the screenshot's width the place is in, 160-7680";
         if (!wholeIn(args["notches"], -10, 10) || args["notches"].asInt() == 0) return "notches: -10 to 10, not 0";

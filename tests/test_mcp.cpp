@@ -326,3 +326,25 @@ TEST(mcp_text_whole_utf8) {
     const std::string cut = mcp::Content::textOf("ab\xD0").text;
     CHECK_EQ(cut, std::string("ab") + replacement);
 }
+
+// 3.0.24-beta.53 (the owner's «делай все», item 15: the chat line tested by keys, nothing said in public): `type` -
+// words typed into the game as its characters, 1-120 bytes, no control characters (no Enter: nothing is sent)
+TEST(mcp_type_words_never_send) {
+    json::Value v;
+    std::string e;
+    const auto args = [&](const std::string& text) {
+        json::parse(text, v, e);
+        return v;
+    };
+    bool listed = false;
+    for (const mcp::Tool& t : mcp::tools()) listed = listed || std::string(t.name) == "type";
+    CHECK(listed);
+    CHECK(mcp::checkArgs("type", args(R"({"text":"hello there"})")).empty());
+    CHECK(mcp::checkArgs("type", args(R"({"text":"/where"})")).empty());
+    CHECK(mcp::checkArgs("type", args("{\"text\":\"\xD0\xBF\xD1\x80\xD0\xB8\xD0\xB2\xD1\x96\xD1\x82\"}")).empty());
+    CHECK(!mcp::checkArgs("type", args(R"({"text":""})")).empty());
+    CHECK(!mcp::checkArgs("type", args(R"({"text":"hi\nthere"})")).empty());  // Enter: never
+    CHECK(!mcp::checkArgs("type", args(R"({"text":"a\tb"})")).empty());
+    CHECK(!mcp::checkArgs("type", args(R"({"text":12})")).empty());
+    CHECK(!mcp::checkArgs("type", args("{\"text\":\"" + std::string(121, 'a') + "\"}")).empty());
+}

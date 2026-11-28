@@ -102,6 +102,33 @@ mcp::CallResult keyInside(const Game& g, const mcp::KeyCombo& k, const std::stri
     return said("pressed " + words + " inside the game (its window may stay behind others) - look with `screenshot`");
 }
 
+}  // namespace
+
+mcp::CallResult type(const Game& g, const std::string& utf8, unsigned codePage) {  // 3.0.24-beta.53
+    if (!g.window || !IsWindow(g.window)) return said("no game window to type into", true);
+    const int wide = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.data(), int(utf8.size()), nullptr, 0);
+    if (wide <= 0) return said("text: not UTF-8", true);
+    std::wstring w(size_t(wide), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, utf8.data(), int(utf8.size()), w.data(), wide);
+    const int n = WideCharToMultiByte(codePage, 0, w.data(), wide, nullptr, 0, nullptr, nullptr);
+    std::string bytes(size_t(std::max(n, 0)), '\0');
+    BOOL lost = FALSE;
+    if (n > 0) WideCharToMultiByte(codePage, 0, w.data(), wide, bytes.data(), n, "?", &lost);
+    bool posted = n > 0;
+    for (const char c : bytes) {
+        if (static_cast<unsigned char>(c) < 0x20) continue;  // never a control character (Enter would send)
+        posted = PostMessageA(g.window, WM_CHAR, WPARAM(static_cast<unsigned char>(c)), LPARAM(1)) && posted;
+    }
+    Sleep(60);  // the game takes them at its next frame
+    LOG_INFO("mcp: %d character(s) typed inside the game%s", n, posted ? "" : " - not posted");
+    if (!posted) return said("the words could not be told to the game's window", true);
+    return said("typed " + std::to_string(n) + " character(s) inside the game" +
+                (lost ? " (some not in the game's code page: ?)" : "") +
+                " - nothing sent; `key` enter sends, esc leaves the line");
+}
+
+namespace {
+
 mcp::CallResult clickInside(const Game& g, double x, double y, int width, bool right, bool twice) {
     RECT c{};
     GetClientRect(g.window, &c);  // this thread's points, as the game's thread and the pad count them
