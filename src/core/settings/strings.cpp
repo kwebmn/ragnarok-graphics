@@ -7517,12 +7517,12 @@ constexpr Entry kTexts[] = {
     {Text::ChatPicked, "Picked up: {1}", "Підібрано: {1}", "Подобрано: {1}"},
     {Text::ChatMiss, "miss", "промах", "промах"},
     // 3.0.24-beta.47 (the laptop: a line in «Група» with no party went to everyone near): not sent, said why
-    {Text::ChatNoParty, "You are not in a party - the line was not sent (the channel is «Усі» again)",
+    {Text::ChatNoParty, "You are not in a party - the line was not sent (the channel is «All» again)",
      "Ви не в групі — рядок не надіслано (канал знову «Усі»)",
-     "Вы не в группе — строка не отправлена (канал снова «Усі»)"},
-    {Text::ChatNoGuild, "You are not in a guild - the line was not sent (the channel is «Усі» again)",
+     "Вы не в группе — строка не отправлена (канал снова «Все»)"},
+    {Text::ChatNoGuild, "You are not in a guild - the line was not sent (the channel is «All» again)",
      "Ви не в гільдії — рядок не надіслано (канал знову «Усі»)",
-     "Вы не в гильдии — строка не отправлена (канал снова «Усі»)"},
+     "Вы не в гильдии — строка не отправлена (канал снова «Все»)"},
     // 3.0.11-beta.42: the windows (stage 8 of the new interface)
     {Text::InterfaceItems, "Items", "Речі", "Вещи"},
     {Text::InterfaceItemsHint,
