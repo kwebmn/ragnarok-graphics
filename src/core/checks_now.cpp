@@ -7,6 +7,19 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.41 (the laptop's effects run): the remaster mode's own rows say so in «Класика+»
+        {"remaster_rows_41", "3.0.24-beta.41", "",
+         {"Effects: the remaster mode's own rows say so", "Ефекти: рядки лише для «Ремастеру» кажуть це",
+          "Эффекты: строки только для «Ремастера» говорят это"},
+         {"Alt+O → «Picture» → «Mode» «Classic+ (any card)». «Fire and smoke» → «Shadows from torches and lamps» and "
+          "«Water» → «World reflections in water»: each row greyed, «Remaster mode only» under it. «Mode» "
+          "«Remaster (a strong card)»: the line gone, the shadows by the torches (moc_pryd01) drawn.",
+          "Alt+O → «Картинка» → «Режим» «Класика+ (будь-яка відеокарта)». «Вогонь і дим» → «Тіні від факелів і ламп» "
+          "і «Вода» → «Відображення світу у воді»: рядки сірі, під ними «Лише в режимі «Ремастер»». «Режим» «Ремастер "
+          "(сильна відеокарта)»: рядка немає, тіні від факелів (moc_pryd01) малюються.",
+          "Alt+O → «Картинка» → «Режим» «Классика+ (любая видеокарта)». «Огонь и дым» → «Тени от факелов и ламп» и "
+          "«Вода» → «Отражения мира в воде»: строки серые, под ними «Только в режиме «Ремастер»». «Режим» «Ремастер "
+          "(сильная видеокарта)»: строки нет, тени от факелов (moc_pryd01) рисуются."}},
         // 3.0.24-beta.38 (the owner: «оба»): keep_fps lowers MSAA first
         {"keep_fps_msaa_38", "3.0.24-beta.38", "frames.keep_fps",
          {"Keep the frame rate: smoothing lowered first", "Тримати частоту кадрів: спершу менше згладжування",
