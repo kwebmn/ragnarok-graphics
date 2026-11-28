@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.42 — what's new · 2026-11-28
+
+The water on weak graphics cards and an MCP test in the background.
+
+- **«Keep the frame rate» and «Modern water»:** the water was counted as cheap - only the frame's copies (1.4 ms) went into its time, not the water itself. On a laptop with a Radeon 610M it took about 15 ms of the frame in Alberta (33 fps with it, 60 without), yet when the frames fell the lighter effects went off first. Now the water's time is counted whole, and after the smoothing it is the water that goes first.
+- **MCP:** while the game is driven over MCP (a call within the last 5 minutes) it works as if in front, even behind another window: no 15 frames of «Save power in the background», full light and «Keep the frame rate».
+
 # uaRO Graphics 3.0.24-beta.41 — what's new · 2026-11-28
 
 Effects that silently did not turn on.
