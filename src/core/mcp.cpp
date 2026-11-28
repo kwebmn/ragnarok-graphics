@@ -203,6 +203,27 @@ const std::vector<Tool>& table() {
          "Tab or other control characters: nothing is ever sent by it (`key` enter sends, esc leaves the line).",
          R"({"type":"object","properties":{"text":{"type":"string","minLength":1,"maxLength":120}},)"
          R"("required":["text"]})"},
+        // 3.0.24-beta.57 (docs/superpowers/plans/2026-11-28-full-check-probe-tour.md): the full check, run by the game
+        {"probe",
+         "The settings' check, run by the game itself frame by frame (each call answers at once): `action` start - "
+         "each setting under `prefix` or in `keys` (all unless said) that applies at once set to another value the "
+         "Alt+O way, its taking waited for, its trace measured (the frame's change, the card's passes, the windows' "
+         "words, the logs' errors), its old value written back: a line each into uaro-graphics\\logs\\check-<time>"
+         ".json (the watchdog's files get); `photo` true: the interface out of the frames. restart - the settings "
+         "that wait for a start written at once, their plan kept (then the watchdog's game restart and verify); "
+         "verify - after a restart the plan checked (first the values tried, which then go back; next the old "
+         "ones). status - where it is; stop. Never touched: mcp.*, connection.*, renderer.api, launcher.*, "
+         "report.*, stats.send, debug.log.",
+         R"({"type":"object","properties":{"action":{"type":"string","enum":["start","status","stop","restart",)"
+         R"("verify"]},"prefix":{"type":"string","maxLength":40},"keys":{"type":"array","items":{"type":"string"},)"
+         R"("maxItems":700},"photo":{"type":"boolean"}},"required":["action"]})"},
+        {"tour",
+         "The windows' tour, run by the game itself: `action` start - each window opened by the game's own keys "
+         "(alt+e, alt+q, alt+a ... esc; `only` some by name), its new documents checked as the ui tool does, its box "
+         "on the screen, its pad ring stepped, Esc and its closing: a line each into the check file; here - the "
+         "windows open now (a scene's: an NPC's, a shop, a trade) checked, no keys, no Esc; status; stop.",
+         R"({"type":"object","properties":{"action":{"type":"string","enum":["start","here","status","stop"]},)"
+         R"("only":{"type":"array","items":{"type":"string","maxLength":30},"maxItems":40}},"required":["action"]})"},
     };
     return kTools;
 }
@@ -576,6 +597,31 @@ std::string checkArgs(const std::string& tool, const json::Value& args) {
         const json::Value& m = args["match"];
         if (args.has("match") && (m.type() != json::Value::String || m.asString().size() > 100 || !oneLine(m.asString())))
             return "match: one line of words, 100 at most";
+    } else if (tool == "probe") {  // 3.0.24-beta.57
+        const std::string a = args["action"].asString();
+        if (a != "start" && a != "status" && a != "stop" && a != "restart" && a != "verify")
+            return "action: start, status, stop, restart or verify";
+        static const std::regex word("^[a-z0-9_.]{0,40}$");
+        if (args.has("prefix") && !std::regex_match(args["prefix"].asString(), word))
+            return "prefix: a key's start, e.g. \"effects.\"";
+        if (args.has("keys")) {
+            const json::Value& k = args["keys"];
+            if (k.type() != json::Value::Array || k.items().size() > 700) return "keys: a list of 700 keys at most";
+            for (const json::Value& one : k.items())
+                if (!keyName(one.asString())) return "keys: each section.name in small letters";
+        }
+        if (args.has("photo") && args["photo"].type() != json::Value::Bool) return "photo: true or false";
+    } else if (tool == "tour") {  // 3.0.24-beta.57
+        const std::string a = args["action"].asString();
+        if (a != "start" && a != "here" && a != "status" && a != "stop") return "action: start, here, status or stop";
+        if (args.has("only")) {
+            const json::Value& o = args["only"];
+            if (o.type() != json::Value::Array || o.items().size() > 40) return "only: a list of 40 names at most";
+            for (const json::Value& one : o.items())
+                if (one.type() != json::Value::String || one.asString().empty() || one.asString().size() > 30 ||
+                    !oneLine(one.asString()))
+                    return "only: the stops' names (items, skills, menu...)";
+        }
     } else if (tool == "setting") {
         if (!keyName(args["key"].asString())) return "key: section.name in small letters";
         const json::Value& v = args["value"];

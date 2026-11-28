@@ -86,4 +86,70 @@ TEST(mcp_settings_list) {
     CHECK(mcp::checkArgs("settings", a).empty());
     a.set("prefix", "../ini");
     CHECK(!mcp::checkArgs("settings", a).empty());
+    // 3.0.24-beta.57: the full check reads which apply at once and which it leaves alone
+    bool live = false, waits = false, skipped = false;
+    for (const json::Value& s : every.items()) {
+        CHECK(s.has("live"));
+        if (s["key"].asString() == "effects.grass") live = s["live"].asBool() && !s.has("skip");
+        if (s["key"].asString() == "ai.ground") waits = !s["live"].asBool(true);
+        if (s["key"].asString() == "mcp.enabled") skipped = !s["skip"].asString().empty();
+    }
+    CHECK(live && waits && skipped);
+}
+
+TEST(mcp_probe_args) {
+    json::Value a = json::Value::object();
+    CHECK(!mcp::checkArgs("probe", a).empty());  // no action
+    a.set("action", "start");
+    CHECK(mcp::checkArgs("probe", a).empty());
+    a.set("prefix", "effects.");
+    a.set("photo", true);
+    CHECK(mcp::checkArgs("probe", a).empty());
+    a.set("prefix", "../x");
+    CHECK(!mcp::checkArgs("probe", a).empty());
+    a.set("prefix", "effects.");
+    json::Value keys = json::Value::array();
+    keys.push("effects.grass");
+    a.set("keys", keys);
+    CHECK(mcp::checkArgs("probe", a).empty());
+    keys.push("Not A Key");
+    a.set("keys", keys);
+    CHECK(!mcp::checkArgs("probe", a).empty());
+    json::Value many = json::Value::array();
+    for (int i = 0; i < 701; ++i) many.push("effects.grass");
+    a.set("keys", many);
+    CHECK(!mcp::checkArgs("probe", a).empty());  // over 700
+    for (const char* act : {"status", "stop", "restart", "verify"}) {
+        json::Value b = json::Value::object();
+        b.set("action", act);
+        CHECK(mcp::checkArgs("probe", b).empty());
+    }
+    json::Value c = json::Value::object();
+    c.set("action", "explode");
+    CHECK(!mcp::checkArgs("probe", c).empty());
+    c.set("action", "start");
+    c.set("photo", "yes");
+    CHECK(!mcp::checkArgs("probe", c).empty());
+}
+
+TEST(mcp_tour_args) {
+    json::Value a = json::Value::object();
+    CHECK(!mcp::checkArgs("tour", a).empty());
+    for (const char* act : {"start", "here", "status", "stop"}) {
+        json::Value b = json::Value::object();
+        b.set("action", act);
+        CHECK(mcp::checkArgs("tour", b).empty());
+    }
+    a.set("action", "start");
+    json::Value only = json::Value::array();
+    only.push("items");
+    only.push("friend setup");
+    a.set("only", only);
+    CHECK(mcp::checkArgs("tour", a).empty());
+    only.push(3);
+    a.set("only", only);
+    CHECK(!mcp::checkArgs("tour", a).empty());
+    bool listed = false;
+    for (const mcp::Tool& t : mcp::tools()) listed = listed || std::string(t.name) == "tour";
+    CHECK(listed);
 }

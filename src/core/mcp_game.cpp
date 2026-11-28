@@ -1,5 +1,7 @@
 #include "core/mcp_game.hpp"
 
+#include "core/check_probe.hpp"
+#include "core/live_config.hpp"
 #include "core/settings/schema.hpp"
 
 namespace uagfx::mcpgame {
@@ -119,6 +121,9 @@ json::Value settings(const Config& c, const std::string& prefix, settings::Lang 
             x.set("values", values);
         }
         x.set("label", settings::tr(lang, s.label));
+        x.set("live", appliesNow(key));  // 3.0.24-beta.57: the full check - at once, or at the next start
+        const std::string skip = checkprobe::skipReason(key);
+        if (!skip.empty()) x.set("skip", skip);
         out.push(x);
     }
     return out;
