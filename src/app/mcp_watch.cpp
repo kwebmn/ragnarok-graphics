@@ -573,6 +573,8 @@ void stop() {
 
 namespace {
 
+ULONGLONG g_checkAskedMs = 0;  // 3.0.24-beta.39: when the watchdog last asked for an update check
+
 DWORD WINAPI closeSoon(LPVOID) {  // 3.0.24-beta.37: the update's answer out first
     Sleep(1500);
     PostMessageW(GetAncestor(g_window, GA_ROOT), WM_CLOSE, 0, 0);
@@ -589,11 +591,16 @@ mcp::CallResult updateNow(Model& model, settings::Lang lang) {
                             : u.kind == UpdateState::Done   ? cw::Check::Done
                             : u.kind == UpdateState::Failed ? cw::Check::Failed
                                                             : cw::Check::Idle;
+    const ULONGLONG now = GetTickCount64();
+    const bool fresh = g_checkAskedMs && now - g_checkAskedMs < 60000;  // 3.0.24-beta.39: asked within a minute
     const cw::UpdateWhat what =
-        cw::updateStep(!processesOf(L"uaRO.exe").empty(), check, kVersion, u.latest, u.offer, u.error);
+        cw::updateStep(!processesOf(L"uaRO.exe").empty(), check, kVersion, u.latest, u.offer, u.error, fresh);
     switch (what.step) {
         case cw::UpdateStep::Refuse: return said(what.words, true);
-        case cw::UpdateStep::Check: startUpdateCheck(); return said(what.words);
+        case cw::UpdateStep::Check:
+            g_checkAskedMs = now;
+            startUpdateCheck();
+            return said(what.words);
         case cw::UpdateStep::Wait:
         case cw::UpdateStep::Newest: return said(what.words);
         case cw::UpdateStep::Update: break;

@@ -26,8 +26,10 @@ struct UpdateWhat {
     UpdateStep step;
     std::string words;  // the answer
 };
+// 3.0.24-beta.39: `fresh` - the check's result is of the last minute (the app checks at its start alone: «the newest»
+// an hour on was not); a done check that is not - a new one first
 UpdateWhat updateStep(bool gameRuns, Check check, const std::string& installed, const std::string& latest,
-                      const std::string& offer, const std::string& error = "");
+                      const std::string& offer, const std::string& error = "", bool fresh = true);
 constexpr const char* kNvidiaQuery =
     "--query-gpu=name,utilization.gpu,temperature.gpu,clocks.gr,clocks.mem,power.draw,memory.used,memory.total,"
     "pstate,clocks_throttle_reasons.active --format=csv,noheader,nounits";

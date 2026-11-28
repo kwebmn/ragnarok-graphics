@@ -120,8 +120,12 @@ TEST(mcp_watch_update_steps) {
     CHECK(mcpwatch::updateStep(false, mcpwatch::Check::Failed, "", "", "").step == UpdateStep::Check);
     CHECK(mcpwatch::updateStep(false, mcpwatch::Check::Checking, "", "", "").step == UpdateStep::Wait);
     const mcpwatch::UpdateWhat newest =
-        mcpwatch::updateStep(false, mcpwatch::Check::Done, "3.0.24-beta.37", "3.0.24-beta.37", "");
+        mcpwatch::updateStep(false, mcpwatch::Check::Done, "3.0.24-beta.37", "3.0.24-beta.37", "", "", true);
     CHECK(newest.step == UpdateStep::Newest);
+    // 3.0.24-beta.39 (the laptop: beta.38 out, the app's check of its start said .37 is the newest an hour on): «the
+    // newest» only from a check of the last minute, else a new check first
+    CHECK(mcpwatch::updateStep(false, mcpwatch::Check::Done, "3.0.24-beta.37", "3.0.24-beta.37", "", "", false).step ==
+          UpdateStep::Check);
     CHECK(newest.words.find("3.0.24-beta.37") != std::string::npos);
     const mcpwatch::UpdateWhat go =
         mcpwatch::updateStep(false, mcpwatch::Check::Done, "3.0.24-beta.36", "3.0.24-beta.37", "3.0.24-beta.37");

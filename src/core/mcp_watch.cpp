@@ -163,7 +163,7 @@ json::Value nvidiaSmi(const std::string& line) {
 }
 
 UpdateWhat updateStep(bool gameRuns, Check check, const std::string& installed, const std::string& latest,
-                      const std::string& offer, const std::string& error) {
+                      const std::string& offer, const std::string& error, bool fresh) {
     if (gameRuns) return {UpdateStep::Refuse, "the game runs - close it first (game stop), then update"};
     switch (check) {
         case Check::Idle: return {UpdateStep::Check, "the update check asked now - ask again in a few seconds"};
@@ -173,6 +173,8 @@ UpdateWhat updateStep(bool gameRuns, Check check, const std::string& installed, 
         case Check::Checking: return {UpdateStep::Wait, "the update check runs - ask again in a few seconds"};
         case Check::Done: break;
     }
+    if (offer.empty() && !fresh)
+        return {UpdateStep::Check, "the last update check is old - asked again now, ask again in a few seconds"};
     if (offer.empty())
         return {UpdateStep::Newest, "uaRO Graphics " + installed + " is its channel's newest (" + latest + ")"};
     return {UpdateStep::Update, "updating " + installed + " to " + offer + ": the app closes, updates and opens again "
