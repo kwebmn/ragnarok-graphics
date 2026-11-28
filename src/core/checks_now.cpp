@@ -7,6 +7,19 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.43 (the owner: «делай оптимизации для ноута»): a weak card's water and torches lighter
+        {"weak_card_lean_43", "3.0.24-beta.43", "",
+         {"A weak card: the water and the torches lighter", "Слабка відеокарта: вода й факели легші",
+          "Слабая видеокарта: вода и факелы легче"},
+         {"On a card under 4 GB (a laptop's): in a port (alberta 167 162) the frames higher than before with «Modern "
+          "water», its reflections a little coarser; in a dungeon of many torches (moc_pryd01 89 80) the far torches "
+          "burn but light nothing around them. A card of 4 GB and more: as before.",
+          "На відеокарті до 4 ГБ (ноутбука): у порту (alberta 167 162) кадрів більше, ніж було, із «Сучасною "
+          "водою», її відображення трохи грубші; у підземеллі з багатьма факелами (moc_pryd01 89 80) дальні факели "
+          "горять, але не освітлюють довкола. Відеокарта від 4 ГБ — як раніше.",
+          "На видеокарте до 4 ГБ (ноутбука): в порту (alberta 167 162) кадров больше, чем было, с «Современной "
+          "водой», её отражения чуть грубее; в подземелье с многими факелами (moc_pryd01 89 80) дальние факелы "
+          "горят, но не освещают вокруг. Видеокарта от 4 ГБ — как раньше."}},
         // 3.0.24-beta.42 (the laptop's effects run): the water's own draws timed - keep_fps takes it for what it costs
         {"water_cost_42", "3.0.24-beta.42", "frames.keep_fps",
          {"Keep the frame rate: the water goes before lighter effects",
