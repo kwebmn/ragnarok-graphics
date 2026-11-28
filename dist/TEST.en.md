@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.24-beta.51 — what's new · 2026-11-28
+
+NPC talk, storage and party:
+- NPC talk: the menu's options without the dash before them (Save, not -Save); the window no longer jumps between the steps; the menu stands on the other side of the NPC's picture; the makers' note at the bottom is gone.
+- «Storage»: under the grid «Sort», «Put all of «Misc»» (the starred stay in the bag) and «Take all of the tab».
+- Friends and party: with no party - a name field and «Create a party», no command to type.
+
 # uaRO Graphics 3.0.24-beta.50 — what's new · 2026-11-28
 
 After the interface audit:
