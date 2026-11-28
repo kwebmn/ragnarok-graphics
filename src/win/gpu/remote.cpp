@@ -553,6 +553,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.caveRift ? 1 : 0);        // 3.0.24-beta.11
     w.u8(e.caveCrystals ? 1 : 0);
     w.u8(e.caveGrotto ? 1 : 0);
+    w.u8(e.waterLean ? 1 : 0);  // 3.0.24-beta.43
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

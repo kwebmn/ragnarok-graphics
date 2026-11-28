@@ -463,6 +463,10 @@ struct EffectSettings {
     // grass thinned, its roots on every second row (half its work): a card weak by its memory's, and keep_fps's first
     // step before it turns anything off (effect_costs::pickToDrop)
     bool grassThin = false;
+    // 3.0.24-beta.43 (the laptop's effects run: the water 15 ms of a Radeon 610M's frame in Alberta, its reflections'
+    // march the most of it): the driver's own, in no file - a card weak by its memory: the water's reflections in 10
+    // longer steps, not 28 (a strong card's water as before)
+    bool waterLean = false;
     // 0.82: the skills' sparks - embers rise from burning skills, glints of their colour spread from the others.
     // 0.84: off by default.
     bool skillSparks = false;

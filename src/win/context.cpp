@@ -354,6 +354,7 @@ EffectSettings Context::madeEffects(const EffectSettings& file) const {
     // 3.0.4-beta.35: a card weak by its memory - the grass thinned (its roots on every second row), even raised by its
     // speed; keep_fps thins it too (keepOff_'s grass_thin)
     e.grassThin = startup().memoryLevel == 1;
+    e.waterLean = startup().memoryLevel == 1;  // 3.0.24-beta.43: and its water's reflections in fewer steps
     return e;
 }
 

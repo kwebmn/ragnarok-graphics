@@ -230,6 +230,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
                 e.caveCrystals = rd.u8() != 0;
                 e.caveGrotto = rd.u8() != 0;
             }
+            if (rd.left() >= 1) e.waterLean = rd.u8() != 0;  // 3.0.24-beta.43
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

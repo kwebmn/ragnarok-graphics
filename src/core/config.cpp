@@ -363,7 +363,7 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
     }
     return nightNow == o.nightNow && dayNow == o.dayNow && hallucinatingNow == o.hallucinatingNow && held == o.held &&
            clock == o.clock && season == o.season && skillLooks == o.skillLooks && sharpSpecks == o.sharpSpecks &&
-           weatherKind == o.weatherKind && tier == o.tier && preset == o.preset && grassThin == o.grassThin &&
+           weatherKind == o.weatherKind && tier == o.tier && preset == o.preset && grassThin == o.grassThin && waterLean == o.waterLean &&
            std::equal(groups, groups + kEffectGroups, o.groups) &&
            std::equal(groupStrength, groupStrength + kEffectGroups, o.groupStrength) &&
            std::equal(legacyGroups, legacyGroups + kOldEffectGroups, o.legacyGroups) &&

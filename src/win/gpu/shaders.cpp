@@ -1394,11 +1394,13 @@ bool viewToPixel(float3 q, out float2 tp) { return viewToPixelIn(q, targetSize, 
 
 // What the reflected ray meets first in the picture (size: its pixels) before the water (screen-space reflection),
 // and how sure that is: 0 for the sky (the ray left the picture or met nothing).
-float3 reflectionIn(float3 p, float3 r, float2 size, out float weight) {
+// 3.0.24-beta.43: `steps` and `grow` its march's - 28 steps growing 1.22 times (as before), a weak card's water 10
+// growing 1.6 times (about a third as far, a third of the reads)
+float3 reflectionMarch(float3 p, float3 r, float2 size, int steps, float grow, out float weight) {
     weight = 0.0;
     float dist = 2.0;
     float2 tp;
-    [loop] for (int k = 0; k < 28; ++k) {
+    [loop] for (int k = 0; k < steps; ++k) {
         float3 q = p + r * dist;
         if (!viewToPixelIn(q, size, tp)) break;
         float behind = q.z - viewDepth(sceneDepth.Load(int3(int2(tp), 0)));
@@ -1407,9 +1409,12 @@ float3 reflectionIn(float3 p, float3 r, float2 size, out float weight) {
             weight = saturate(min(edge.x, edge.y)) * saturate(1.5 - dist / 400.0);
             return sceneColor.Load(int3(int2(tp), 0)).rgb;
         }
-        dist *= 1.22;
+        dist *= grow;
     }
     return float3(0.0, 0.0, 0.0);
+}
+float3 reflectionIn(float3 p, float3 r, float2 size, out float weight) {
+    return reflectionMarch(p, r, size, 28, 1.22, weight);
 }
 float fbm4(float2 p) {
     float s = 0.0, a = 0.5;
@@ -1898,7 +1903,10 @@ float3 skyAlong(float3 dir, float3 horizon, float night, float3 toSun, float t, 
     return shown;
 }
 
-float3 waterReflection(float3 p, float3 r, out float weight) { return reflectionIn(p, r, targetSize, weight); }
+// 3.0.24-beta.43: `lean` a weak card's (water_ps's bit 64) - fewer, longer steps
+float3 waterReflection(float3 p, float3 r, bool lean, out float weight) {
+    return lean ? reflectionMarch(p, r, targetSize, 10, 1.6, weight) : reflectionIn(p, r, targetSize, weight);
+}
 
 // 2.7.17, the rain's puddles (floor_reflect_ps): what stands close by, in even steps of a unit, fading along the way.
 // reflectionIn's ever longer steps (made for the open water) met a standing sprite again and again, ever higher up it:
@@ -2026,7 +2034,7 @@ float4 water(WaterIn i) {
                        max(holeY - 1.0, 0.0), 0.0) * 0.92;  // 3.0.20-beta.49: holeY 1 and the sky's parts
     }
     float hit;
-    float3 seen = waterReflection(i.view, reflect(normalize(i.view), nv), hit);
+    float3 seen = waterReflection(i.view, reflect(normalize(i.view), nv), (life & 64) != 0, hit);
 #ifndef UAGFX_SAFE
     if (((stage0.y >> 27) & 1) != 0) {  // 1.16: the world mirrored (t5) where the picture has nothing to reflect
         float4 mirrored = mirrorTex.SampleLevel(samp0, saturate(i.pos.xy / targetSize + slope * 0.02), 0);
