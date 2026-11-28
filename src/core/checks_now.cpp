@@ -7,6 +7,20 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.45 (the owner: «нажал руками обновить, оно не закрыло лаунчер и начало устанавливать»): the
+        // update closes the settings app before its files go in
+        {"update_closes_app_45", "3.0.24-beta.45", "",
+         {"The update closes the uaRO app first", "Оновлення спершу закриває утиліту uaRO",
+          "Обновление сначала закрывает утилиту uaRO"},
+         {"«UPDATE» in the launcher, or «Update» in the game's question at its start with the launcher open: the "
+          "update's window says «Closing the uaRO app...», the app closes (the settings' changes kept), the files go "
+          "in, the app opens again. Each step: uaro-graphics\\logs\\uaro-graphics-update.log.",
+          "«ОНОВИТИ» в лаунчері або «Оновити» в питанні гри на її старті, коли лаунчер відкритий: вікно оновлення "
+          "пише «Закриваємо утиліту uaRO…», утиліта закривається (зміни налаштувань збережено), файли ставляться, "
+          "утиліта відкривається знову. Кожен крок: uaro-graphics\\logs\\uaro-graphics-update.log.",
+          "«ОБНОВИТЬ» в лаунчере или «Обновить» в вопросе игры на её старте, когда лаунчер открыт: окно обновления "
+          "пишет «Закрываем утилиту uaRO…», утилита закрывается (изменения настроек сохранены), файлы ставятся, "
+          "утилита открывается снова. Каждый шаг: uaro-graphics\\logs\\uaro-graphics-update.log."}},
         // 3.0.24-beta.43 (the owner: «делай оптимизации для ноута»): a weak card's water and torches lighter
         {"weak_card_lean_43", "3.0.24-beta.43", "",
          {"A weak card: the water and the torches lighter", "Слабка відеокарта: вода й факели легші",

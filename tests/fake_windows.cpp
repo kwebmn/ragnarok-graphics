@@ -244,6 +244,19 @@ bool removeAppsEntry(const std::wstring& name) {
 SystemInfo probeSystem() { return windows().system; }
 
 bool gameRunning(const std::wstring&) { return windows().gameRunning; }
+
+// 3.0.24-beta.45: the settings app's window (a token for it) and the update's request that it close
+void* appWindow() { return windows().appOpen ? &windows().appOpen : nullptr; }
+void askAppToClose(void* window) {
+    if (!window) return;
+    ++windows().appAsked;
+    if (!windows().appStaysOpen) windows().appOpen = false;
+}
+unsigned closeForUpdateMessage() { return 0xC123; }
+std::string processName(unsigned long) { return ""; }
+std::string nowStamp() { return "2026-11-28 05:01:46"; }
+void* oneRunBegin() { return nullptr; }
+void oneRunEnd(void*) {}
 int gameWindows(const std::wstring&) { return 0; }  // 3.0.18-beta.206
 bool hasXAudio2() { return windows().xaudio2; }
 

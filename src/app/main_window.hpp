@@ -172,6 +172,7 @@ private:
     int moreGames_ = 0;              // 3.0.4-beta.4: game windows of the set still to start
     bool startReport_ = false;  // «Нове звернення» to open once the window is free (no box over it)
     bool reportsOpen_ = false;
+    bool closingForUpdate_ = false;  // 3.0.24-beta.45: the update asked this app to close
     ReportStart reportStart_;
     void retextReports();
     // 3.0.9-beta.4: «Є відповідь на звернення» - an orange strip under the header while an answer is not read

@@ -181,6 +181,45 @@ TEST(update_waits_for_the_game) {
     CHECK_EQ(at(L"ddraw.dll"), std::string("uaRO Graphics ddraw 2.0.0"));
 }
 
+// 3.0.24-beta.45 (the owner: «нажал руками обновить, оно не закрыло лаунчер и начало устанавливать, а установка при
+// открытом лаунчере не работает»): the settings app still open - the update asks it to close (once), shows that it
+// waits for it and puts its files in only after it closed; the update's log says so
+TEST(update_closes_the_settings_app_first) {
+    fake::Windows& w = installed();
+    w.appOpen = true;
+    int waitsApp = 0;
+    std::string installedWithAppOpen = "no";
+    std::wstring error;
+    CHECK(app::runUpdate(app::exeFolder(), branch("2.0.0"), false,
+                         [&](const app::Step& s) {
+                             if (s.what == app::Step::WaitApp) ++waitsApp;
+                             if (s.what == app::Step::Install && fake::windows().appOpen) installedWithAppOpen = "yes";
+                             return true;
+                         },
+                         error));
+    CHECK_EQ(w.appAsked, 1);
+    CHECK(waitsApp >= 1);
+    CHECK_EQ(installedWithAppOpen, std::string("no"));
+    CHECK_EQ(at(L"ddraw.dll"), std::string("uaRO Graphics ddraw 2.0.0"));
+    const std::string log = at(L"uaro-graphics\\logs\\uaro-graphics-update.log");
+    CHECK(log.find("the settings app is open - asked to close") != std::string::npos);
+    CHECK(log.find("the settings app closed after") != std::string::npos);
+}
+
+// Stopped while the app is still open (it asked its own question and the player keeps it): nothing changed
+TEST(update_stopped_while_the_app_stays_open_changes_nothing) {
+    fake::Windows& w = installed();
+    w.appOpen = true;
+    w.appStaysOpen = true;
+    int waitsApp = 0;
+    std::wstring error;
+    CHECK(!app::runUpdate(app::exeFolder(), branch("2.0.0"), false,
+                          [&](const app::Step& s) { return s.what != app::Step::WaitApp || ++waitsApp < 3; }, error));
+    CHECK(error == L"stopped");
+    CHECK_EQ(w.appAsked, 1);  // asked once, not again at each wait
+    CHECK_EQ(at(L"ddraw.dll"), std::string("uaRO Graphics ddraw 1.0.0"));
+}
+
 TEST(update_gets_dlss_on_an_nvidia_card) {
     fake::Windows& w = installed();
     w.system.adapters.push_back(win::AdapterProbe{"NVIDIA GeForce RTX 4070", 0x10de, 12282, true, 0xc100});

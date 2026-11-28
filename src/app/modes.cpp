@@ -24,25 +24,26 @@ std::wstring selfPath() {
     return path;
 }
 
-void waitFor(unsigned long pid) {  // the settings app that started this, or the game: up to a minute
-    if (!pid) return;
-    if (HANDLE p = OpenProcess(SYNCHRONIZE, FALSE, pid)) {
-        WaitForSingleObject(p, 60000);
-        CloseHandle(p);
-    }
+// The settings app that started this, or the game: whether it closed - 3.0.24-beta.45: in 10 s, not a minute (the
+// update then went on with the app open); the install's gate (waitToInstall) waits for both in sight after it
+bool waitFor(unsigned long pid) {
+    if (!pid) return true;
+    HANDLE p = OpenProcess(SYNCHRONIZE, FALSE, pid);
+    if (!p) return true;
+    const bool gone = WaitForSingleObject(p, 10000) == WAIT_OBJECT_0;
+    CloseHandle(p);
+    return gone;
+}
+
+// 3.0.24-beta.45: the update's log - who asked for it and whether it closed
+std::string askedBy(const Args& a, const std::string& by, bool gone) {
+    const char* then = a.then == Args::Then::App ? "the app" : a.then == Args::Then::Game ? "the game" : "nothing";
+    return "asked by " + (by.empty() ? std::string("?") : by) + " (" + std::to_string(a.pid) + "), " +
+           (gone ? "which closed" : "which still runs after 10 s") + "; then " + then;
 }
 
 bool waitForGame(const std::wstring& dir, const Report& report, std::wstring& error) {
-    while (gameRunning(dir + L"\\uaRO.exe")) {
-        Step s;
-        s.what = Step::Wait;
-        if (!report(s)) {
-            error = L"stopped";
-            return false;
-        }
-        waitMs(500);
-    }
-    return true;
+    return waitToInstall(dir, report, error);  // 3.0.24-beta.45: the settings app closed too
 }
 
 void then(const std::wstring& dir, const Args& a) {
@@ -87,7 +88,8 @@ int install(const std::wstring& dir, const Args& a, settings::Lang l) {
 }
 
 int update(const std::wstring& dir, const Args& a, settings::Lang l) {
-    waitFor(a.pid);
+    const std::string by = processName(a.pid);  // 3.0.24-beta.45: the update's log
+    const bool gone = waitFor(a.pid);
     const bool repair = a.mode == Args::Mode::Repair;
     CheckResult c = checkNow(dir);
     std::wstring error = wide(c.error);
@@ -106,7 +108,15 @@ int update(const std::wstring& dir, const Args& a, settings::Lang l) {
             error = L"version " + wide(a.to) + L" is not in the update's history";
         }
     }
-    if (c.ok) {
+    // 3.0.24-beta.45: another update (one at a time: runMode) put this very version in while this one waited
+    const bool same = c.ok && !repair && a.to.empty() && update::bare(c.branch.package.version) == update::bare(from);
+    updateLog(dir, std::string(repair ? "repair" : "update") + " of " + from + " to " +
+                       (c.ok ? c.branch.package.version : "? (the check failed: " + c.error + ")") + " - " +
+                       askedBy(a, by, gone));
+    if (same) {
+        updateLog(dir, "already installed (another update put it in) - nothing to do");
+        ok = true;
+    } else if (c.ok) {
         const std::wstring title = repair ? wtr(l, Text::Repairing)
                                    : back ? wtrf(l, Text::RollingBack, {c.branch.package.version})  // 3.0.5-beta.1
                                           : wtrf(l, Text::UpdatingTo, {c.branch.package.version});
@@ -117,6 +127,7 @@ int update(const std::wstring& dir, const Args& a, settings::Lang l) {
                              error);
         if (ok && !a.to.empty()) setSkipped(dir, update::bare(from));  // not offered again: it went wrong
     }
+    updateLog(dir, ok ? "done: " + installedVersion(dir) + " installed" : "failed, nothing changed: " + utf8(error));
     if (!ok) failed(l, Text::UpdateNothingChanged, error);
     then(dir, a);
     return ok ? 0 : 1;
@@ -322,17 +333,23 @@ int runMode(const Args& a) {
                L"Windows did not give the administrator rights the game's folder needs");
         return 1;
     }
+    // 3.0.24-beta.45: one writing run at a time - two updates (the launcher's «ОНОВИТИ» and the watchdog's, say) put
+    // their files over each other; the later one waits for the first
+    void* one = writes(a.mode) || a.mode == Args::Mode::Setup ? oneRunBegin() : nullptr;
+    int code = 0;
     switch (a.mode) {
-        case Args::Mode::Install: return install(dir, a, l);
+        case Args::Mode::Install: code = install(dir, a, l); break;
         case Args::Mode::Update:
-        case Args::Mode::Repair: return update(dir, a, l);
-        case Args::Mode::Rollback: return rollback(dir, a, l);
-        case Args::Mode::Uninstall: return uninstallAsk(dir, l);
-        case Args::Mode::UninstallRun: return uninstallRun(dir, a, l);
-        case Args::Mode::AskUpdate: return askAtGameStart(dir, a, l);
-        case Args::Mode::Setup: return setup(a);
-        default: return 0;
+        case Args::Mode::Repair: code = update(dir, a, l); break;
+        case Args::Mode::Rollback: code = rollback(dir, a, l); break;
+        case Args::Mode::Uninstall: code = uninstallAsk(dir, l); break;
+        case Args::Mode::UninstallRun: code = uninstallRun(dir, a, l); break;
+        case Args::Mode::AskUpdate: code = askAtGameStart(dir, a, l); break;
+        case Args::Mode::Setup: code = setup(a); break;
+        default: break;
     }
+    oneRunEnd(one);
+    return code;
 }
 
 std::string startMode(Args a) {

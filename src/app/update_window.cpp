@@ -60,6 +60,7 @@ void showStep(Small& s) {
         case Step::Dlss: text = wtrf(l, Text::UpdateLoadingDlss, {mb(step.done), mb(step.total)}); break;
         case Step::Models: text = wtrf(l, Text::UpdateLoadingModels, {mb(step.done), mb(step.total)}); break;
         case Step::Wait: text = wtr(l, Text::UpdateWaitGame); break;
+        case Step::WaitApp: text = wtr(l, Text::UpdateWaitApp); break;  // 3.0.24-beta.45
         case Step::Install: text = wtr(l, Text::UpdateInstalling); permille = 1000; break;
         case Step::Done: permille = 1000; break;
     }

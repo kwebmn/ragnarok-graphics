@@ -399,7 +399,8 @@ enum class Text : uint16_t {
     DebugWeakCard, DebugWeakCardHint,  // 3.0.4-beta.35
     PadEnabled, PadEnabledHint,  // 2.9
     UpdateOut, UpdateRestartNote, UpdatePlayWithout, UpdateDo, UpdatingTo, UpdateLoadedGame, UpdateLoadedApp,
-    UpdateWaitGame, UpdateInstalling, UpdateLoadingDlss, UpdateLoadingModels, UpdateNothingChanged, ButtonCancel,
+    UpdateWaitGame, UpdateWaitApp, UpdateInstalling, UpdateLoadingDlss, UpdateLoadingModels, UpdateNothingChanged,
+    ButtonCancel,
     RollbackButton, RollbackAsk,
     RollbackShort, RollbackFailedStarts, RollbackOtherHead, RollbackOtherNote, RollbackToButton, RollbackToAsk,  // .17
     RollingBack, RepairButton, RepairAsk, Repairing, UninstallButton, UninstallAsk,

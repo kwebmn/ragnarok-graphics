@@ -43,5 +43,17 @@ bool elevatedNow();  // 2.10: this process runs as administrator
 void markOurStart();
 // 2.13: 32 random hex digits (a GUID's) - the computer's key for «Звернення» (app/reports)
 std::string randomKey();
+// 3.0.24-beta.45 (the owner: «нажал руками обновить, оно не закрыло лаунчер и начало устанавливать»): the settings
+// app's main window (by its class; nullptr when none is open), asked to close for an update - the registered message
+// closeForUpdateMessage, which it answers as «ОНОВИТИ» does (its changes kept, no question)
+void* appWindow();
+void askAppToClose(void* window);
+unsigned closeForUpdateMessage();
+std::string processName(unsigned long pid);  // its exe's file name ("uaro-graphics.exe"), "" when it is gone
+std::string nowStamp();                      // the local time, "2026-11-28 05:01:46"
+// One writing run at a time (an update, a repair, a rollback, the removal, the setup): two would put files over each
+// other - the later one waits here up to 10 minutes for the first; the handle for oneRunEnd (nullptr: no guard)
+void* oneRunBegin();
+void oneRunEnd(void* guard);
 
 }  // namespace uagfx::app

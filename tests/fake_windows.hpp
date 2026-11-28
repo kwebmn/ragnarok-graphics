@@ -20,6 +20,10 @@ struct Windows {
     std::vector<uagfx::app::CompatEntry> compat;
     std::set<std::string> refused;  // value names the registry refuses to write (error 5)
     bool gameRunning = false;
+    // 3.0.24-beta.45: the settings app's window open (app/system appWindow); askAppToClose's calls - each closes it
+    // unless it stays open (its own question kept by the player)
+    bool appOpen = false, appStaysOpen = false;
+    int appAsked = 0;
     std::set<std::wstring> running;  // 3.0.1: other programs running (app/system running): full paths, lower case
     bool xaudio2 = true;             // 3.0.1-beta.7: Windows has XAudio2 2.9 (app/system hasXAudio2)
     uagfx::app::SystemInfo system;

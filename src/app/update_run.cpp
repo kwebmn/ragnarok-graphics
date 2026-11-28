@@ -15,6 +15,7 @@
 #include "core/layout.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/sha256.hpp"
+#include "core/update_gate.hpp"
 #include "core/usage.hpp"
 #include "core/version.hpp"
 #include "core/zip.hpp"
@@ -244,16 +245,7 @@ bool installStaged(const std::wstring& dir, bool repair, const update::Manifest*
         removeTree(files);
         return false;
     }
-    const std::wstring game = join(dir, L"uaRO.exe");
-    while (gameRunning(game)) {
-        Step s;
-        s.what = Step::Wait;
-        if (!report(s)) {
-            error = L"stopped";
-            return false;
-        }
-        waitMs(500);
-    }
+    if (!waitToInstall(dir, report, error)) return false;  // 3.0.24-beta.45: the game and the settings app closed
     Step install;
     install.what = Step::Install;
     if (!report(install)) {
@@ -292,6 +284,47 @@ bool installStaged(const std::wstring& dir, bool repair, const update::Manifest*
 }
 
 }  // namespace
+
+void updateLog(const std::wstring& dir, const std::string& words) {
+    const std::wstring folder = ourPlace(dir, layout::kLogs), file = folder + L"\\uaro-graphics-update.log";
+    std::string log;
+    readFile(file, log);
+    makeFolders(folder);
+    writeFileAtomic(file, update_gate::capped(log + update_gate::logLine(nowStamp(), words), 256 * 1024));
+}
+
+bool waitToInstall(const std::wstring& dir, const Report& report, std::wstring& error) {
+    const std::wstring game = join(dir, L"uaRO.exe");
+    void* asked = nullptr;  // the app's window asked to close (a new one is asked again)
+    int waitsSinceAsked = 0;  // of 500 ms each
+    bool toldGame = false;
+    for (;;) {
+        void* app = appWindow();
+        const update_gate::Next next = update_gate::next(gameRunning(game), app != nullptr, app && app == asked);
+        if (next == update_gate::Next::Install) break;
+        if (next == update_gate::Next::WaitGame && !toldGame) {
+            updateLog(dir, "the game runs - waiting for it to close");
+            toldGame = true;
+        }
+        if (next == update_gate::Next::CloseApp) {
+            askAppToClose(app);
+            asked = app;
+            waitsSinceAsked = 0;
+            updateLog(dir, "the settings app is open - asked to close (its changes kept, as «ОНОВИТИ» does)");
+        }
+        Step s;
+        s.what = next == update_gate::Next::WaitGame ? Step::Wait : Step::WaitApp;
+        if (!report(s)) {
+            updateLog(dir, "stopped by the player while waiting");
+            error = L"stopped";
+            return false;
+        }
+        waitMs(500);
+        ++waitsSinceAsked;
+    }
+    if (asked) updateLog(dir, "the settings app closed after " + std::to_string((waitsSinceAsked + 1) / 2) + " s");
+    return true;
+}
 
 bool runUpdate(const std::wstring& dir, const update::Manifest& m, bool repair, const Report& report,
                std::wstring& error) {

@@ -41,7 +41,7 @@ namespace {
 
 using namespace settings;
 
-const wchar_t kClass[] = L"uaroGraphicsSettings";
+const wchar_t* const kClass = kAppWindowClass;  // 3.0.24-beta.45: the update finds it by it (app/update_run)
 const wchar_t kViewClass[] = L"uaroGraphicsPage";
 constexpr int kWidth = 880;  // the client area at 96 DPI: the least (2.6: it was the only size)
 constexpr int kHeight = 600;
@@ -1086,6 +1086,23 @@ void MainWindow::doApply(bool play, bool test, bool noUpdate) {
 }
 
 LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
+    if (msg != 0 && msg == closeForUpdateMessage()) {
+        // 3.0.24-beta.45 (the owner: «нажал руками обновить, оно не закрыло лаунчер и начало устанавливать»): the
+        // update asks this app to close before its files go in - as «ОНОВИТИ»: the settings' changes kept, no question
+        // (changes that could not be kept: the close asks as it does)
+        if (closingForUpdate_) return 0;
+        closingForUpdate_ = true;
+        const std::wstring err = model_->apply(lang_);
+        updateLog(model_->paths().dir, err.empty() ? "the settings app: closing for the update"
+                                                   : "the settings app: its changes not kept - the close asks");
+        if (!err.empty()) {
+            PostMessageW(hwnd_, WM_CLOSE, 0, 0);
+            return 0;
+        }
+        savePlace();
+        DestroyWindow(hwnd_);
+        return 0;
+    }
     switch (msg) {
         case WM_CREATE:
             create();

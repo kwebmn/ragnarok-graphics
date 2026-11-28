@@ -4065,6 +4065,9 @@ constexpr Entry kTexts[] = {
     {Text::UpdateWaitGame, "Waiting for the game to close...",
      "Чекаємо, поки гра закриється…",
      "Ждём, пока игра закроется…"},
+    {Text::UpdateWaitApp, "Closing the uaRO app...",  // 3.0.24-beta.45: the update closes it before its files go in
+     "Закриваємо утиліту uaRO…",
+     "Закрываем утилиту uaRO…"},
     {Text::UpdateInstalling, "Installing...",
      "Встановлюємо…",
      "Устанавливаем…"},

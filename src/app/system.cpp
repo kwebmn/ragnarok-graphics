@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "app/text.hpp"
+#include "app/update_run.hpp"
 #include "core/settings/compat_flags.hpp"
 #include "core/settings/report.hpp"
 #include "core/window_plan.hpp"
@@ -314,6 +315,56 @@ std::string randomKey() {
                   static_cast<unsigned long>(g.Data1), g.Data2, g.Data3, g.Data4[0], g.Data4[1], g.Data4[2],
                   g.Data4[3], g.Data4[4], g.Data4[5], g.Data4[6], g.Data4[7]);
     return text;
+}
+
+void* appWindow() { return FindWindowW(kAppWindowClass, nullptr); }
+
+unsigned closeForUpdateMessage() {
+    static const UINT message = RegisterWindowMessageW(L"uaro-graphics-close-for-update");
+    return message;
+}
+
+void askAppToClose(void* window) {
+    if (window) PostMessageW(static_cast<HWND>(window), closeForUpdateMessage(), 0, 0);
+}
+
+std::string processName(unsigned long pid) {
+    HANDLE p = pid ? OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid) : nullptr;
+    if (!p) return "";
+    wchar_t path[MAX_PATH] = {};
+    DWORD size = MAX_PATH;
+    const bool read = QueryFullProcessImageNameW(p, 0, path, &size) != FALSE;
+    CloseHandle(p);
+    if (!read) return "";
+    const std::wstring whole(path, size);
+    const size_t slash = whole.find_last_of(L'\\');
+    std::string name;
+    for (wchar_t c : slash == std::wstring::npos ? whole : whole.substr(slash + 1)) name += c < 128 ? char(c) : '?';
+    return name;
+}
+
+std::string nowStamp() {
+    SYSTEMTIME t{};
+    GetLocalTime(&t);
+    char text[32];
+    snprintf(text, sizeof text, "%04u-%02u-%02u %02u:%02u:%02u", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute,
+             t.wSecond);
+    return text;
+}
+
+void* oneRunBegin() {
+    HANDLE guard = CreateMutexW(nullptr, FALSE, L"Local\\uaro-graphics-update");
+    if (guard && WaitForSingleObject(guard, 10 * 60 * 1000) == WAIT_TIMEOUT) {
+        CloseHandle(guard);
+        return nullptr;  // the first one hangs: this one goes on (the gate still waits for the game and the app)
+    }
+    return guard;
+}
+
+void oneRunEnd(void* guard) {
+    if (!guard) return;
+    ReleaseMutex(static_cast<HANDLE>(guard));
+    CloseHandle(static_cast<HANDLE>(guard));
 }
 
 }  // namespace uagfx::app

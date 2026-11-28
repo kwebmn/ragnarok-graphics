@@ -12,10 +12,19 @@ namespace uagfx::app {
 // thread of the progress window.
 
 struct Step {  // where it is, for the progress window
-    enum What { Download, Wait, Install, Dlss, Models, Done } what = Download;
+    enum What { Download, Wait, WaitApp, Install, Dlss, Models, Done } what = Download;  // .45: WaitApp
     uint64_t done = 0, total = 0;  // the downloads: bytes
 };
 using Report = std::function<bool(const Step&)>;  // false: stop - before any file of the game's folder changed
+
+// 3.0.24-beta.45 (the owner: «нажал руками обновить, оно не закрыло лаунчер и начало устанавливать, а установка при
+// открытом лаунчере не работает»): the settings app's window class; the files go in only with the game and that app
+// closed (core/update_gate: the game waited for, the app asked to close - once a window - and waited for); false and
+// "stopped" when the player stops it
+constexpr wchar_t kAppWindowClass[] = L"uaroGraphicsSettings";
+bool waitToInstall(const std::wstring& dir, const Report& report, std::wstring& error);
+// The update's own log, uaro-graphics\logs\uaro-graphics-update.log: a line a step (the watchdog's files read it)
+void updateLog(const std::wstring& dir, const std::string& words);
 
 struct CheckResult {
     bool ok = false;
