@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.24-beta.52 — what's new · 2026-11-28
+
+Lists by the window's size:
+- «Skills» and the NPC shop: pull the lower right corner - whole rows come (4 to 16), the rows keep their size. In «Skills» no more than the biggest tab's skills. The size is kept.
+- Ctrl and the wheel over them still make the whole window bigger or smaller.
+
 # uaRO Graphics 3.0.24-beta.51 — what's new · 2026-11-28
 
 NPC talk, storage and party:
