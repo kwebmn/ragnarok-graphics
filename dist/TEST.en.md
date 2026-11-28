@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.24-beta.55 — what's new · 2026-11-28
+
+The interface audit's rest and your own keys:
+- Alt+H opens and closes the friends' window.
+- «Chat macros» keep themselves when the card closes - no Save button now.
+- Chat: a line said again shows ×2 as a pill of its own; the resting chat a little denser over light ground.
+- The light look: the skill bar's empty cells seen, white emotes on grey cells, the minimap's sides light.
+- An item's card: the table's labels in your language.
+- The minimap in Prontera: dots and rings lying on each other no longer a heap.
+- Settings: «All to defaults» is the last button, apart; the search no longer says Ctrl+F (in the game it is the reference).
+- The reference opens smaller; the character block's buttons framed alike.
+- Your own walk mode keys: Alt+O, «Controls», «The walk mode's keys» - the toggle, attack, pick up, talk, sit, target, the camera. A key another action has swaps with it.
+
 # uaRO Graphics 3.0.24-beta.54 — what's new · 2026-11-28
 
 For the team's remote checks:
