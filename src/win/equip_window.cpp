@@ -411,6 +411,7 @@ ew::Texts texts() {
     t.level = say(settings::Text::EquipLevel);
     t.pickTitle = say(settings::Text::EquipPickTitle);
     t.pickNone = say(settings::Text::EquipPickNone);
+    t.takenBy = say(settings::Text::EquipTakenBy);  // 3.0.24-beta.47
     t.off = say(settings::Text::EquipPadOff);
     t.put = say(settings::Text::EquipPadPut);
     t.change = say(settings::Text::EquipPadChange);

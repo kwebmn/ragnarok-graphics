@@ -20,6 +20,9 @@ struct Theme {
     uint32_t accent = 0;        // the gold's colours in this one (0: the gold as drawn)
     float radius = 1, edge = 1;
     std::unordered_map<uint32_t, uint32_t> exact;  // the palette's own, before the greys' rule
+    // 3.0.24-beta.47 (the owner: «в светлой форме чат должен быть похож на чат с оригинала»): the light tone's chat as
+    // the original's - its strip dark (this theme's greys kept), its line white with dark words (win/chat_window)
+    bool whiteLine = false;
 };
 
 enum class Tone : uint8_t { Dark, Light };

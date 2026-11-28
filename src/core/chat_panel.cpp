@@ -25,6 +25,14 @@ bool engagedAfter(bool engaged, EngageEvent e, bool lineEmpty) {
 
 bool arrowsToChat(bool engaged, bool fieldHasKeys) { return engaged && fieldHasKeys; }
 
+int nextChannel(int mode, bool party, bool guild) {
+    if (mode < 1 && party) return 1;
+    if (mode < 2 && guild) return 2;
+    return 3;
+}
+
+bool canSend(int mode, bool party, bool guild) { return (mode != 1 || party) && (mode != 2 || guild); }
+
 void LineHistory::sent(const std::string& line) {
     at_ = -1;
     draft_.clear();
@@ -648,8 +656,9 @@ std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const In
             const panel::Box& b = L.tabs[i];
             const bool on = int(i) == int(sh.tab);
             const float lw = std::ceil(m(t.tabs[i], 12 * s, true)) + 2;
+            // 3.0.24-beta.47 (the audit 28.11: the quiet tabs 2.24:1 over a town's light stones): muted, not faint
             out.push_back(Words{panel::Box{b.x + 10 * s, b.y, lw, b.h - 3 * s}, t.tabs[i],
-                                on ? kText : int(i) == sh.hoverTab ? kHoverTab : kFaint, 12 * s, true, Align::Left});
+                                on ? kText : int(i) == sh.hoverTab ? kHoverTab : kMuted, 12 * s, true, Align::Left});
             const panel::Box badge = badgeBox(L, int(i), sh, t, m);
             if (badge.w > 0)
                 out.push_back(Words{badge, std::to_string(std::min(sh.unread[i], 99)), kOnBadge, 10 * s, true,

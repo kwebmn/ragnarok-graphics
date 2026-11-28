@@ -5962,6 +5962,9 @@ constexpr Entry kTexts[] = {
     {Text::EquipLevel, "Lv {1} / {2}", "Рів. {1} / {2}", "Ур. {1} / {2}"},
     {Text::EquipPickTitle, "What to put on: {1}", "Що вдягнути: {1}", "Что надеть: {1}"},
     {Text::EquipPickNone, "Nothing in the bag fits", "У сумці нічого не підходить", "В сумке ничего не подходит"},
+    // 3.0.24-beta.47 (the audit 28.11: «Щит: +6 Cross Bow» - a two-hander's second place read as a shield): its name
+    // so in the slot it takes too (a full helm's lower places alike)
+    {Text::EquipTakenBy, "Taken by {1}", "Зайнято: {1}", "Занято: {1}"},
     {Text::EquipPadOff, "Take off", "Зняти", "Снять"},
     {Text::EquipPadPut, "Put on", "Вдягнути", "Надеть"},
     {Text::EquipPadChange, "Change", "Замінити", "Заменить"},
@@ -7513,6 +7516,13 @@ constexpr Entry kTexts[] = {
     {Text::ChatKilled, "{1} defeated", "{1} переможено", "{1} побеждён"},
     {Text::ChatPicked, "Picked up: {1}", "Підібрано: {1}", "Подобрано: {1}"},
     {Text::ChatMiss, "miss", "промах", "промах"},
+    // 3.0.24-beta.47 (the laptop: a line in «Група» with no party went to everyone near): not sent, said why
+    {Text::ChatNoParty, "You are not in a party - the line was not sent (the channel is «Усі» again)",
+     "Ви не в групі — рядок не надіслано (канал знову «Усі»)",
+     "Вы не в группе — строка не отправлена (канал снова «Усі»)"},
+    {Text::ChatNoGuild, "You are not in a guild - the line was not sent (the channel is «Усі» again)",
+     "Ви не в гільдії — рядок не надіслано (канал знову «Усі»)",
+     "Вы не в гильдии — строка не отправлена (канал снова «Усі»)"},
     // 3.0.11-beta.42: the windows (stage 8 of the new interface)
     {Text::InterfaceItems, "Items", "Речі", "Вещи"},
     {Text::InterfaceItemsHint,

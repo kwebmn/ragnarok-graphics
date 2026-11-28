@@ -594,6 +594,17 @@ bool setName(const State& s, const std::string& utf8Name) {
 
 // The channel round: near, the party, the guild, a whisper (its name's field takes the keys); a whisper's name set
 // - back near
+// 3.0.24-beta.47 (the laptop: «Група» chosen with no party - «hi» said to everyone near): the game sends its party or
+// guild mode as near words when the character has none - the party's name (0x772D88, as the character block reads
+// it), the guild's id (0x74B6D4, as the guild card)
+constexpr uint32_t kPartyNameAt = 0x772D88, kGuildIdAt = 0x74B6D4;
+bool inParty() {
+    const uint32_t at = read32(kPartyNameAt);
+    char first = 0;
+    return at && readGame(at, &first, 1) && first != 0;
+}
+bool inGuild() { return read32(kGuildIdAt) != 0; }
+
 void nextChannel(State& s) {
     const cp::Input& in = s.input;
     if (in.whisperFocus) {
@@ -602,11 +613,14 @@ void nextChannel(State& s) {
         setName(s, "");
         write32(kMode, 0);
         giveKeys(wordsEdit());
-    } else if (in.mode < 2) {
-        write32(kMode, uint32_t(in.mode + 1));
     } else {
-        write32(kMode, 0);
-        giveKeys(nameEdit());
+        const int next = cp::nextChannel(in.mode, inParty(), inGuild());  // .47: only the channels it has
+        if (next == 3) {
+            write32(kMode, 0);
+            giveKeys(nameEdit());
+        } else {
+            write32(kMode, uint32_t(next));
+        }
     }
     s.key.clear();
 }
@@ -1029,11 +1043,18 @@ static void fillSheet(State& s, uisheet::Content& c) {
         if (i < v.badges.size()) c.rect(u, v.badges[i], v.badges[i].h / 2, kAccent, 0.95f);
     }
     c.rect(u, panel::Box{0, L.tabsRow.h, L.glass.w, 1 * sc}, 0, kWhite, 0.06f);
-    c.rect(u, L.input, 8 * sc, kBlack, 0.38f, kWhite, 0.10f, 1.0f * sc);
+    // 3.0.24-beta.47 (the owner: «в светлой форме чат должен быть похож на чат с оригинала»): the light tone's line
+    // white as the original's, its words and caret dark (the strip stays dark: uitheme Theme::whiteLine)
+    const bool whiteLine = uaui::themeOf(uitheme::Group::Chat).whiteLine;
+    constexpr uint32_t kInk = 0x14171D, kInkQuiet = 0x5B6170;
+    if (whiteLine)
+        c.rect(u, L.input, 8 * sc, kWhite, 0.96f, 0x9AA3B5, 0.55f, 1.0f * sc);
+    else
+        c.rect(u, L.input, 8 * sc, kBlack, 0.38f, kWhite, 0.10f, 1.0f * sc);
     c.rect(u, L.mode, 6 * sc, v.chipRgb, sh.hoverMode ? 0.28f : 0.16f);
     if (v.chevron.w > 0) icon(uiicons::Icon::Down, v.chevron, v.chipRgb, 0.9f, 2.4f);
     if (L.clear.w > 0 && sh.hoverClear) c.rect(u, L.clear, 5 * sc, kWhite, 0.14f);
-    c.rect(u, v.caret, 0, v.caretRgb, 0.95f);
+    c.rect(u, v.caret, 0, whiteLine ? kInk : v.caretRgb, 0.95f);
     if (L.newer.w > 0) c.rect(u, L.newer, 6 * sc, kAccent, sh.hoverNewer ? 0.45f : 0.28f);
     if (L.hints.w > 0) c.rect(u, L.hints, 8 * sc, kCard, 0.96f, kWhite, 0.14f, 1.0f * sc);
     for (size_t i = 0; i < L.people.size(); ++i) {
@@ -1090,7 +1111,16 @@ static void fillSheet(State& s, uisheet::Content& c) {
             c.rect(o, L.items[size_t(sh.hoverItem)], 6 * sc, kWhite, 0.10f);
     }
     for (const cp::Underline& x : v.underlines) c.rect(o, x.box, 0, x.rgb, 0.8f);
-    c.say(cp::words(L, s.rows, in, sh, t, measure));
+    std::vector<cp::Words> words = cp::words(L, s.rows, in, sh, t, measure);
+    if (whiteLine) {  // .47: the white line's words dark (the channel's chip keeps its colour)
+        const auto inside = [](const panel::Box& b, const panel::Box& in) {
+            const float x = b.x + b.w / 2, y = b.y + b.h / 2;
+            return in.w > 0 && x >= in.x && x <= in.x + in.w && y >= in.y && y <= in.y + in.h;
+        };
+        for (cp::Words& w : words)
+            if (inside(w.box, L.input) && !inside(w.box, L.mode)) w.rgb = w.rgb == cp::kMuted ? kInkQuiet : kInk;
+    }
+    c.say(words);
 }
 
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
@@ -1478,7 +1508,25 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     if (wp == VK_RETURN && m == WM_KEYDOWN && s.shown) {
         const uint32_t words = wordsEdit();
         if (words && read32(kFocus) == words) {
-            s.history.sent(utf8(s, editText(words)));  // 3.0.24-beta.46: as typed («/p …» too), for ↑
+            // 3.0.24-beta.47: a party's or a guild's line with none goes nowhere (the game would say it near)
+            const std::string typed = utf8(s, editText(words));
+            cp::Command asked;
+            const bool command = cp::command(typed, s.replyTo, asked);
+            const int mode = command ? (asked.whisper.empty() ? asked.mode : 0)
+                                     : (s.input.whisper.empty() ? int(read32(kMode)) : 0);
+            if (!typed.empty() && !cp::canSend(mode, inParty(), inGuild())) {
+                cp::Line l;
+                l.kind = cp::Kind::System;
+                l.ms = GetTickCount64();
+                l.spans.push_back(cp::Span{say(mode == 1 ? settings::Text::ChatNoParty : settings::Text::ChatNoGuild),
+                                           cp::kSystem, false, false});
+                add(s, std::move(l));
+                write32(kMode, 0);
+                LOG_INFO("chat: a line for the %s with none - not sent, the channel near again",
+                         mode == 1 ? "party" : "guild");
+                return true;  // the words stay in the line
+            }
+            s.history.sent(typed);  // 3.0.24-beta.46: as typed («/p …» too), for ↑
             cp::Command c;
             if (cp::command(utf8(s, editText(words)), s.replyTo, c) &&
                 setTextOf(words)) {

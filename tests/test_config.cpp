@@ -1373,8 +1373,8 @@ TEST(config_interface_shop) {
 // 3.0.11-beta.115 (the windows plan's stage 6): [interface] storage - the Kafra storage in the new look («Склад» beside
 // «Речі»); on with the new minimap unless the file says, a box of «Інтерфейс», at once
 TEST(config_interface_storage) {
-    CHECK(!noUi("").storageWindow);
-    CHECK(!noUi("minimap = 1\n").storageWindow);  // 3.0.24-beta.1: off by default
+    CHECK(noUi("").storageWindow);  // 3.0.24-beta.1: off by default; 3.0.24-beta.47: on again (its own packets)
+    CHECK(noUi("minimap = 1\n").storageWindow);
     CHECK(!noUi("minimap = 1\nstorage = 0\n").storageWindow);
     CHECK(noUi("storage = 1\n").storageWindow);
     const settings::IniSetting* s = settings::findSetting("interface.storage");
@@ -1641,8 +1641,8 @@ TEST(config_interface_cart) {
 
 // 3.0.11-beta.155: [interface] counts - the game's «how many» window as a card, on with the new minimap, at once
 TEST(config_interface_counts) {
-    CHECK(!noUi("").countWindow);
-    CHECK(!noUi("minimap = 1\n").countWindow);  // 3.0.24-beta.1: off by default
+    CHECK(noUi("").countWindow);  // 3.0.24-beta.1: off by default; 3.0.24-beta.47: on again
+    CHECK(noUi("minimap = 1\n").countWindow);
     CHECK(!noUi("minimap = 1\ncounts = 0\n").countWindow);
     CHECK(noUi("counts = 1\n").countWindow);
     const settings::IniSetting* s = settings::findSetting("interface.counts");

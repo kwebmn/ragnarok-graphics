@@ -251,3 +251,29 @@ TEST(uikit_equip_sets_as_rows_with_their_buttons) {
     }
     rmlhost::close(doc);
 }
+
+// 3.0.24-beta.47 (the audit 28.11: «Щит: +6 Cross Bow» - a two-hander's second place read as a shield of that name):
+// the other place a thing takes says «Зайнято: {1}»
+TEST(uikit_equip_the_other_place_of_a_two_hander_says_taken) {
+    ew::Data d;
+    for (const int slot : {int(ew::Weapon), int(ew::Shield)}) {
+        d.slots[slot].index = 2;
+        d.slots[slot].id = 1710;
+        d.slots[slot].name = "Cross Bow";
+        d.slots[slot].refine = 6;
+    }
+    d.slots[ew::Shield].spill = true;
+    ew::Texts t = texts();
+    t.takenBy = "Зайнято: {1}";
+    ew::Show sh;
+    static el::Model m;
+    el::fill(m, d, sh, t, 1, none, glyph);
+    std::string weapon, shield;
+    for (const std::vector<el::SlotV>* side : {&m.left, &m.right})
+        for (const el::SlotV& s : *side) {
+            if (s.index == ew::Weapon) weapon = s.name;
+            if (s.index == ew::Shield) shield = s.name;
+        }
+    CHECK(weapon.find("Cross Bow") != std::string::npos && weapon.find("Зайнято") == std::string::npos);
+    CHECK(shield.rfind("Зайнято: ", 0) == 0 && shield.find("Cross Bow") != std::string::npos);
+}

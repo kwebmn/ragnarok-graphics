@@ -28,13 +28,17 @@ Keys interfaceKeys(Ui u) {
     Keys k{{"interface.minimap", u == Ui::Classic ? "0" : "1"}};
     for (size_t i = 0; i < std::size(kScreen); ++i)
         k.emplace_back(std::string("interface.") + kScreen[i], u == Ui::Classic ? (i < 2 ? "off" : "0") : kScreenOn[i]);
-    // 3.0.24-beta.1 (the owner: the item windows off by default): the game's own in every look
+    // 3.0.24-beta.1 (the owner: the item windows off by default): the game's own in every look; 3.0.24-beta.47 (the
+    // audit's question 6): «Спорядження», «Склад» and the count window the new look's again
     const auto item = [](const char* w) {
         return std::any_of(std::begin(kItemWindows), std::end(kItemWindows),
                            [w](const char* i) { return std::strcmp(i, w) == 0; });
     };
+    const auto back = [](const char* w) {
+        return std::strcmp(w, "equip") == 0 || std::strcmp(w, "storage") == 0 || std::strcmp(w, "counts") == 0;
+    };
     for (const char* w : kWindows)
-        k.emplace_back(std::string("interface.") + w, u == Ui::New && !item(w) ? "1" : "0");
+        k.emplace_back(std::string("interface.") + w, u == Ui::New && (!item(w) || back(w)) ? "1" : "0");
     return k;
 }
 

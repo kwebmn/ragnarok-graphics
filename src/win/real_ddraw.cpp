@@ -372,6 +372,15 @@ Startup decide() {
                      "«Обмін», «Візок», the shops, counts, picks)%s",
                      written ? "" : " - uaro-graphics.ini not written: this game only");
         }
+    // 3.0.24-beta.47 (the audit 28.11, its question 6 «да»): «Спорядження», «Склад», the count window on again once
+    if (haveIni)
+        if (const std::vector<settings::IniEdit> edits = settings::itemWindowsBack(settings::readIni(ini));
+            !edits.empty()) {
+            const bool written = editIniFile(iniPath, edits);
+            s.config.equipWindow = s.config.storageWindow = s.config.countWindow = s.config.storagePackets = true;
+            LOG_INFO("settings: «Спорядження», «Склад» and the count window on again once (3.0.24-beta.47)%s",
+                     written ? "" : " - uaro-graphics.ini not written: this game only");
+        }
     // 3.0.24-beta.46 (the audit 28.11, the owner's «да»): the windows opaque, once (an old default 90 to 100)
     if (haveIni)
         if (const std::vector<settings::IniEdit> edits = settings::windowsOpaqueOnce(settings::readIni(ini));

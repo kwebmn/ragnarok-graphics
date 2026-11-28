@@ -1529,6 +1529,8 @@ void Doc::raise(int z) {
 }
 
 uint32_t themed(uint32_t rgb, uitheme::Group g) { return uitheme::colour(state().themes[size_t(g)], rgb); }
+
+const uitheme::Theme& themeOf(uitheme::Group g) { return state().themes[size_t(g)]; }
 float themeRadius() { return state().themes[size_t(uitheme::Group::Windows)].radius; }  // the palette's, every group's
 float themeEdge() { return state().themes[size_t(uitheme::Group::Windows)].edge; }
 

@@ -54,6 +54,8 @@ bool readyAnywhere();
 // 3.0.18-beta.54: the theme ([interface] theme, ui\palette.txt) for the colours and corners the parts give in code;
 // 3.0.24-beta.19: the theme of the window's group (core/ui_theme groupOf its document's name)
 uint32_t themed(uint32_t rgb, uitheme::Group g);  // 0xRRGGBB
+// 3.0.24-beta.47: a group's theme now (the chat's whiteLine: the light tone's chat as the original's)
+const uitheme::Theme& themeOf(uitheme::Group g);
 float themeRadius();
 float themeEdge();
 // 3.0.18-beta.43: the windows' stack drawing its windows bottom up - the place of the one being drawn now (its

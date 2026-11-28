@@ -219,7 +219,10 @@ void fill(Model& m, const ew::Data& d, const ew::Show& sh, const ew::Texts& t, f
         const ew::Worn& w = d.slots[i];
         v.worn = w.index > 0;
         v.spill = w.spill;
+        // 3.0.24-beta.47 (the audit 28.11: «Щит: +6 Cross Bow»): the other place a thing takes says so
+        const size_t at = t.takenBy.find("{1}");
         v.name = !v.worn                         ? t.empty
+                 : w.spill && at != std::string::npos ? t.takenBy.substr(0, at) + named(w) + t.takenBy.substr(at + 3)
                  : i == ew::Ammo && w.count > 0 ? named(w) + " \xC3\x97" + std::to_string(w.count)
                                                  : named(w);
         if (v.worn && w.icon && w.icon->width > 0) {

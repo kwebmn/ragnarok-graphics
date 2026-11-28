@@ -85,6 +85,15 @@ std::vector<IniEdit> windowsOpaqueOnce(const std::map<std::string, std::string>&
     return e;
 }
 
+std::vector<IniEdit> itemWindowsBack(const std::map<std::string, std::string>& ini) {
+    if (ini.count("utility.item_windows_back")) return {};
+    return {{"interface", "equip", "1"},
+            {"interface", "storage", "1"},
+            {"interface", "storage_packets", "1"},
+            {"interface", "counts", "1"},
+            {"utility", "item_windows_back", "1"}};
+}
+
 std::string machineKey(const Machine& m) {
     return m.adapter + "|" + std::to_string(m.vramMb) + "|" + std::to_string(m.screenWidth) + "x" +
            std::to_string(m.screenHeight);

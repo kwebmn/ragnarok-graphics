@@ -247,6 +247,11 @@ bool arrowsToChat(bool engaged, bool fieldHasKeys);
 // line walk them as the original's line does (the messages scroll by PgUp, PgDn and the wheel); the words being typed
 // kept below the newest; until the game closes
 constexpr size_t kHistoryLines = 50;
+// 3.0.24-beta.47 (the laptop: «Група» chosen with no party - «hi» went to everyone near): the game sends its party or
+// guild mode (1, 2) as near words when the character has none. Tab's next channel - the party only in one, the guild
+// only in one, then 3: the whisper's name; a line in a mode the character has no such channel for is not sent
+int nextChannel(int mode, bool party, bool guild);
+bool canSend(int mode, bool party, bool guild);
 class LineHistory {
 public:
     void sent(const std::string& line);  // an empty line or the newest again: not kept

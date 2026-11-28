@@ -57,6 +57,8 @@ namespace sw = uagfx::shopwin;
 // cart (0x17: FUN_004b35d0 - 6 / 0x76 its OK, sent as an NPC's shop's while its [0x28] is 0; 0x77 its cancel) and the
 // sell cart (0x18: FUN_004b6b70, the same buttons); a window's shown flag +0x38, its SendMsg the vtable's +0x94
 constexpr uint32_t kWindowMgr = 0x727ED8;
+// 3.0.24-beta.47: the arrows worn now - the ammo place's index (win/equip_window's kAmmoNow); the wear place's ammo bit
+constexpr uint32_t kAmmoNow = 0x771148 + 0xEEC, kAmmoBit = 0x8000;
 constexpr uint32_t kListAt = kWindowMgr + 0xEC, kBuyAt = kWindowMgr + 0xF0, kSellAt = kWindowMgr + 0xF4;
 constexpr uint32_t kChooseAt = kWindowMgr + 0xF8;
 constexpr uint32_t kListClass = 0x69B3E0, kBuyClass = 0x69B5A8, kSellClass = 0x69B6D8, kChooseClass = 0x699410;
@@ -279,10 +281,12 @@ void readDeal(State& s, sw::Tab tab) {
         sw::Ware w;
         w.id = std::atoi(digits);
         // 3.0.24-beta.21 (the spec: «обране» never in the sale's list): the items' starred left out of the sale;
-        // 3.0.24-beta.46 (the owner's «скрывать»): the worn ones too - ITEM_INFO's wear place (+0xC) not 0
-        if (tab == sw::Tab::Sell &&
-            !shopguard::sellable(itemswin::starredIds().count(w.id) > 0, rd32(raw, 0x0C) != 0))
-            continue;
+        // 3.0.24-beta.46 (the owner's «скрывать»): the worn ones too - ITEM_INFO's wear place (+0xC); 3.0.24-beta.47
+        // (the laptop: «Arrow ×12», not worn, gone too): its arrows' bit stays from the login - the arrows worn are
+        // the ammo place's index (as win/equip_window readBag)
+        const uint32_t wear = rd32(raw, 0x0C), ammoNow = read32(kAmmoNow);
+        const bool worn = (wear & ~kAmmoBit) != 0 || (ammoNow != 0 && rd32(raw, 0x08) == ammoNow);
+        if (tab == sw::Tab::Sell && !shopguard::sellable(itemswin::starredIds().count(w.id) > 0, worn)) continue;
         w.type = int(rd32(raw, 0x00));
         if (tab == sw::Tab::Sell) {  // its real cards (a forged one's slots hold none)
             int cards[4] = {};

@@ -932,7 +932,7 @@ struct Config {
     // place of the game's own skill tree while it is open; on with the new minimap
     bool skillsWindow = false;
     // 3.0.11-beta.97: [interface] equip - «Спорядження» (core/equip_window) in place of the game's equipment window
-    bool equipWindow = false;
+    bool equipWindow = true;  // 3.0.24-beta.47: on again (the audit's question 6, settings::itemWindowsBack)
     // 3.0.11-beta.98: [interface] npc_talk - the NPC talk (core/npc_talk) in place of the game's text and menu windows
     bool npcWindow = false;
     // 3.0.11-beta.255 (the NPC concept, question 6): [interface] npc_remember - the option chosen last time at the
@@ -972,7 +972,7 @@ struct Config {
     bool shopPackets = false;  // 3.0.24-beta.9: [interface] shop_packets - «Магазин»'s deal by our own packets
     // 3.0.11-beta.115: [interface] storage - the Kafra storage (win/storage_window: «Склад», «Речі» beside it) in
     // place of the game's storage window
-    bool storageWindow = false;
+    bool storageWindow = true;  // 3.0.24-beta.47: on again (its own packets)
     bool storagePackets = false;  // 3.0.24-beta.4: [interface] storage_packets - «Склад» by the driver's own packets
     // 3.0.11-beta.116: [interface] trade - the trade (win/trade_window: «Обмін», «Речі» beside it) in place of the
     // game's trade window
@@ -1007,7 +1007,7 @@ struct Config {
     bool cartWindow = false;
     bool cartPackets = false;  // 3.0.24-beta.8: [interface] cart_packets - «Візок» by the driver's own packets
     // 3.0.11-beta.155: [interface] counts - the game's «how many» window (win/ask_card) as a count card
-    bool countWindow = false;
+    bool countWindow = true;  // 3.0.24-beta.47: on again
     // 3.0.11-beta.156: [interface] vending - another's shop (win/vend_shop) as «Лавка»
     bool vendWindow = false;
     bool vendPackets = false;  // 3.0.24-beta.18: [interface] vend_packets - «Лавка»'s purchase by our own packet

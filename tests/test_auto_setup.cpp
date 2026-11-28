@@ -353,3 +353,19 @@ TEST(windows_opaque_once_from_the_old_default) {
     CHECK(windowsOpaqueOnce(readIni("[interface]\nwindow_opacity = 90\n[utility]\nwindows_opaque = 1\n")).empty());
     CHECK_EQ(uagfx::Config{}.windowOpacity, 100);  // a new install: opaque
 }
+
+// 3.0.24-beta.47 (the audit 28.11, the owner's «да» to question 6): «Спорядження», «Склад» (its own packets) and the
+// count window on again for everyone once, after the audit's fixes; a player's later choice stays
+TEST(item_windows_back_once) {
+    const std::vector<IniEdit> e = itemWindowsBack(readIni("[interface]\nequip = 0\nstorage = 0\n"));
+    const auto value = [&e](const char* key) {
+        for (const IniEdit& x : e)
+            if (x.key == key) return x.value;
+        return std::string("<none>");
+    };
+    CHECK(value("equip") == "1" && value("storage") == "1" && value("counts") == "1");
+    CHECK(value("storage_packets") == "1" && value("item_windows_back") == "1");
+    CHECK(itemWindowsBack(readIni("[interface]\nequip = 0\n[utility]\nitem_windows_back = 1\n")).empty());
+    const uagfx::Config d{};
+    CHECK(d.equipWindow && d.storageWindow && d.countWindow);  // a new install: on
+}

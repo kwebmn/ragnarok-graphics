@@ -231,6 +231,7 @@ void Model::load() {
         std::vector<IniEdit> edits = worldScaleReset(ini);
         for (const IniEdit& e : itemWindowsOff(ini)) edits.push_back(e);  // 3.0.24-beta.1
         for (const IniEdit& e : windowsOpaqueOnce(ini)) edits.push_back(e);  // 3.0.24-beta.46
+        for (const IniEdit& e : itemWindowsBack(ini)) edits.push_back(e);    // 3.0.24-beta.47
         for (const IniEdit& e : autopilotOnce(ini, memoryLevel())) edits.push_back(e);
         if (!edits.empty()) writeIni(edits, Lang::En);
     }

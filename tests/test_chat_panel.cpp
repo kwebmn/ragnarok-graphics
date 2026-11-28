@@ -328,3 +328,18 @@ TEST(chat_panel_line_history_a_letter_typed_starts_again_from_the_newest) {
     for (int i = 0; i < int(kHistoryLines) + 10; ++i) h.sent("line " + std::to_string(i));
     CHECK_EQ(h.size(), kHistoryLines);  // the oldest go
 }
+
+// 3.0.24-beta.47 (the laptop: «Група» chosen with no party - «hi» went to everyone near): the game sends its party or
+// guild mode as near words when the character has none - Tab skips the channels it has not; such a line is not sent
+TEST(chat_panel_party_and_guild_channels_only_with_one) {
+    CHECK_EQ(nextChannel(0, true, true), 1);   // near -> the party
+    CHECK_EQ(nextChannel(1, true, true), 2);   // -> the guild
+    CHECK_EQ(nextChannel(2, true, true), 3);   // -> the whisper's name
+    CHECK_EQ(nextChannel(0, false, true), 2);  // no party: near -> the guild
+    CHECK_EQ(nextChannel(0, false, false), 3);  // neither: near -> the whisper's name
+    CHECK_EQ(nextChannel(0, true, false), 1);
+    CHECK_EQ(nextChannel(1, true, false), 3);  // the party, no guild -> the whisper's name
+    CHECK(canSend(0, false, false));            // near always
+    CHECK(!canSend(1, false, true) && canSend(1, true, false));
+    CHECK(!canSend(2, true, false) && canSend(2, false, true));
+}

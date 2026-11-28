@@ -151,8 +151,14 @@ Theme named(const std::string& name) {
 
 Theme themeFor(const Look& look, Group g) {
     const GroupTone own = look.groups[size_t(g)];
-    const Tone tone = own == GroupTone::Same ? look.tone : own == GroupTone::Light ? Tone::Light : Tone::Dark;
+    // 3.0.24-beta.47: the light tone's chat (its own «same») as the original's - the strip dark, the line white
+    const bool original = g == Group::Chat && own == GroupTone::Same && look.tone == Tone::Light;
+    const Tone tone = original              ? Tone::Dark
+                      : own == GroupTone::Same ? look.tone
+                      : own == GroupTone::Light ? Tone::Light
+                                                : Tone::Dark;
     Theme t;
+    t.whiteLine = original;
     if (tone == Tone::Light) {
         t.name = "light";
         t.greys = Greys::Light;

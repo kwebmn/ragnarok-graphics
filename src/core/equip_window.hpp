@@ -62,6 +62,7 @@ struct Texts {
     std::string labels[kSlots];
     std::string empty, cards, drag, level;  // «—», «Кружечки — слоти карток», ..., «Lv {1} / {2}»
     std::string pickTitle, pickNone;        // «Що вдягнути: {1}», «Нічого не підходить»
+    std::string takenBy;  // 3.0.24-beta.47: «Зайнято: {1}» - a two-hander's or a full helm's other place
     std::string off, put, change, card, close, back;  // the controller's
 };
 

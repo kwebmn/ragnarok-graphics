@@ -575,7 +575,8 @@ enum class Text : uint16_t {
     SkillsPadRaise, SkillsPadAssign, SkillsPadClose,  // 3.0.11-beta.96
     InterfaceEquip, InterfaceEquipHint, EquipTitle, EquipHeadMid, EquipHeadLow, EquipArmor, EquipGarment,
     EquipAccessory, EquipHeadTop, EquipWeapon, EquipShield, EquipShoes, EquipAmmo, EquipCards, EquipDrag, EquipLevel,
-    EquipPickTitle, EquipPickNone, EquipPadOff, EquipPadPut, EquipPadChange, EquipPadCard, EquipPadBack,  // .97
+    EquipPickTitle, EquipPickNone, EquipTakenBy, EquipPadOff, EquipPadPut, EquipPadChange, EquipPadCard,  // .97
+    EquipPadBack,
     InterfaceNpc, InterfaceNpcHint, NpcNext, NpcKeys, NpcServer, NpcChoose,  // 3.0.11-beta.98
     InterfaceNpcRemember, InterfaceNpcRememberHint, NpcLastTime,  // 3.0.11-beta.255
     InterfacePortraits, InterfacePortraitsHint,  // 3.0.11-beta.273
@@ -782,7 +783,8 @@ enum class Text : uint16_t {
     InterfaceChat, InterfaceChatHint, ChatTabAll,
     ChatTabParty,
     ChatTabGuild, ChatTabWhisper, ChatTabTrade, ChatTabBattle, ChatFrom, ChatTo, ChatHintSend, ChatHintType,
-    ChatKilled, ChatPicked, ChatMiss, InterfaceItems, InterfaceItemsHint, InterfaceStatus, InterfaceStatusHint,
+    ChatKilled, ChatPicked, ChatMiss, ChatNoParty, ChatNoGuild, InterfaceItems, InterfaceItemsHint, InterfaceStatus,
+    InterfaceStatusHint,
     ItemsTitle, ItemsTabItems, ItemsTabGear, ItemsTabEtc, ItemsFresh, ItemsTabAll, ItemsTabCards,  // .112, .113
     ItemsSearch, ItemsUse,
     ItemsWear, ItemsCard, ItemsInfo,

@@ -82,6 +82,9 @@ std::vector<IniEdit> itemWindowsOff(const std::map<std::string, std::string>& in
 // 3.0.24-beta.46 (the audit 28.11, the owner's «да»): windows opaque by default - [interface] window_opacity at the
 // old default 90 to 100 and [utility] windows_opaque = 1, once (a player's own value other than 90 stays)
 std::vector<IniEdit> windowsOpaqueOnce(const std::map<std::string, std::string>& ini);
+// 3.0.24-beta.47 (the audit 28.11, the owner's «да» to its question 6): «Спорядження», «Склад» (with its own packets)
+// and the count window on again, once ([utility] item_windows_back; a player's later choice stays)
+std::vector<IniEdit> itemWindowsBack(const std::map<std::string, std::string>& ini);
 // 3.0.11-beta.58 (the autopilot, the owner: «делай»): an install set up before it moves over once ([utility]
 // autopilot = 1) - its effects set as its card's memory gave it (1 weak, 2 medium, 3 strong) to the automatic one, and
 // with the automatic set (not the super-light mode) keep_fps 0 or 45 to 60; a set the player picked stays. The driver

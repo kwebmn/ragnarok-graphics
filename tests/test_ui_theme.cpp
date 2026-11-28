@@ -62,7 +62,7 @@ TEST(ui_theme_groups_follow_or_override_the_tone) {
     look.tone = uitheme::Tone::Light;
     look.groups[int(uitheme::Group::Hud)] = uitheme::GroupTone::Dark;
     CHECK(uitheme::themeFor(look, uitheme::Group::Hud).greys == uitheme::Greys::Keep);
-    CHECK(uitheme::themeFor(look, uitheme::Group::Chat).greys == uitheme::Greys::Light);
+    CHECK(uitheme::themeFor(look, uitheme::Group::Items).greys == uitheme::Greys::Light);  // .47: the chat original's
     look.tone = uitheme::Tone::Dark;
     look.groups[int(uitheme::Group::Trade)] = uitheme::GroupTone::Light;
     CHECK(uitheme::themeFor(look, uitheme::Group::Trade).greys == uitheme::Greys::Light);
@@ -181,7 +181,7 @@ TEST(ui_theme_group_style_differs_by_tone) {
     look.groups[int(uitheme::Group::Hud)] = uitheme::GroupTone::Dark;
     const std::string css = "body { background-color: #10141c; }";
     CHECK(uitheme::themedCss(uitheme::themeFor(look, uitheme::Group::Hud), css) == css);
-    CHECK(uitheme::themedCss(uitheme::themeFor(look, uitheme::Group::Chat), css) != css);
+    CHECK(uitheme::themedCss(uitheme::themeFor(look, uitheme::Group::Windows), css) != css);
     uitheme::Look other = look;
     CHECK(other == look);
     other.accent = 0x2E8B57;
@@ -251,8 +251,9 @@ TEST(ui_theme_words_on_red_and_green_buttons_stay_readable) {
 TEST(ui_theme_light_grounds_less_see_through) {
     uitheme::Look look;
     look.tone = uitheme::Tone::Light;
-    const uitheme::Theme light = uitheme::themeFor(look, uitheme::Group::Chat);
-    const uitheme::Theme dark = uitheme::themeFor(uitheme::Look{}, uitheme::Group::Chat);
+    // 3.0.24-beta.47: the character block's (the light tone's chat is the original's since - dark, its line white)
+    const uitheme::Theme light = uitheme::themeFor(look, uitheme::Group::Hud);
+    const uitheme::Theme dark = uitheme::themeFor(uitheme::Look{}, uitheme::Group::Hud);
     CHECK(std::abs(uitheme::groundAlpha(light, 0x10141C, 0.36f) - (1 - 0.64f / 3)) < 0.001f);  // the quiet chat
     CHECK(std::abs(uitheme::groundAlpha(light, 0x10141C, 0.9f) - (1 - 0.1f / 3)) < 0.001f);
     CHECK(uitheme::groundAlpha(light, 0x10141C, 1.0f) == 1.0f && uitheme::groundAlpha(light, 0x10141C, 0) == 0);
@@ -277,4 +278,22 @@ TEST(ui_theme_light_quiet_words_readable) {
     CHECK(lum(uitheme::colour(t, 0x9AA3B5)) > lum(uitheme::colour(t, 0xEEF2F8)));  // still quieter than the words
     CHECK(lum(uitheme::colour(t, 0x10141C)) > 0.90f);                               // the grounds as they were
     CHECK(lum(uitheme::colour(t, 0x2A3040)) > 0.75f);                               // a dark inset light
+}
+
+// 3.0.24-beta.47 (the owner: «в светлой форме чат должен быть похож на чат с оригинала» - «как оригинал целиком»):
+// the light tone's chat (its own tone «same») as the original's - its strip dark as the dark tone's, its line white;
+// the chat chosen light on its own (theme_chat light) stays light, and the dark tone's chat is as it was
+TEST(ui_theme_light_tones_chat_as_the_original) {
+    uitheme::Look look;
+    look.tone = uitheme::Tone::Light;
+    const uitheme::Theme chat = uitheme::themeFor(look, uitheme::Group::Chat);
+    CHECK(chat.whiteLine);
+    CHECK(uitheme::colour(chat, 0x10141C) == 0x10141Cu);  // the strip's ground as the dark tone's
+    CHECK(uitheme::colour(chat, 0xEEF2F8) == 0xEEF2F8u);  // its words light
+    CHECK(!uitheme::themeFor(look, uitheme::Group::Items).whiteLine);
+    look.groups[size_t(uitheme::Group::Chat)] = uitheme::GroupTone::Light;  // the chat light on its own
+    CHECK(!uitheme::themeFor(look, uitheme::Group::Chat).whiteLine);
+    CHECK(lum(uitheme::colour(uitheme::themeFor(look, uitheme::Group::Chat), 0x10141C)) > 0.90f);
+    uitheme::Look dark;
+    CHECK(!uitheme::themeFor(dark, uitheme::Group::Chat).whiteLine);
 }

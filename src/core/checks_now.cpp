@@ -7,6 +7,28 @@ namespace uagfx::checksnow {
 
 const std::vector<Check>& all() {
     static const std::vector<Check> list = {
+        // 3.0.24-beta.47 (the audit 28.11, the owner's answers 2 and 6): the chat as the original's, the item windows
+        {"chat_original_47", "3.0.24-beta.47", "",
+         {"Light theme: the chat as the original's", "Світла тема: чат як в оригіналі",
+          "Светлая тема: чат как в оригинале"},
+         {"Light theme: the chat's strip stays dark with the original's colours, its line white with dark words. "
+          "Tab passes the party's and the guild's channels you have not; a line in one with no party or guild is "
+          "not sent - the chat says why.",
+          "Світла тема: стрічка чату лишається темною з кольорами оригіналу, рядок — білий із темними словами. "
+          "Tab оминає канали групи й гільдії, яких у вас немає; рядок у такому каналі не надсилається — чат пише "
+          "чому.",
+          "Светлая тема: лента чата остаётся тёмной с цветами оригинала, строка — белая с тёмными словами. Tab "
+          "пропускает каналы группы и гильдии, которых у вас нет; строка в таком канале не отправляется — чат "
+          "пишет почему."}},
+        {"item_windows_back_47", "3.0.24-beta.47", "",
+         {"«Спорядження», «Склад» and the count window on again", "«Спорядження», «Склад» і вікно кількості знову",
+          "«Спорядження», «Склад» и окно количества снова"},
+         {"Alt+Q opens «Спорядження»: a two-hander's other place says «Taken by …». The Kafra's storage opens as "
+          "«Склад» beside «Речі». At an NPC «Продати» lists your arrows that are not worn, never the worn ones.",
+          "Alt+Q відкриває «Спорядження»: друге місце дворучної зброї пише «Зайнято: …». Склад Кафри — «Склад» "
+          "поряд із «Речі». У NPC «Продати» показує ненадіті стріли, надітих — ніколи.",
+          "Alt+Q открывает «Спорядження»: второе место двуручного оружия пишет «Занято: …». Склад Кафры — «Склад» "
+          "рядом с «Речі». У NPC «Продати» показывает ненадетые стрелы, надетые — никогда."}},
         // 3.0.24-beta.46 (the audit 28.11, the owner's answers): the chat's line as the original's, NPC digits
         {"chat_line_46", "3.0.24-beta.46", "",
          {"The chat line: ↑ ↓ the lines sent before, as in the original",
