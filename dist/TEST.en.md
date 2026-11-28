@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.24-beta.39 — what's new · 2026-11-28
+
+MCP: the watchdog's «update» checks for updates again when the last check is over a minute old (the settings app checks them only at its start - so a new beta was not seen).
+
 # uaRO Graphics 3.0.24-beta.38 — what's new · 2026-11-28
 
 Smoothing on weak graphics cards: why Direct3D 12 looked slower than Direct3D 11.
