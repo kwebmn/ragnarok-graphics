@@ -353,7 +353,7 @@ private:
     std::vector<uint32_t> frameBefore_, frameAfter_;
     int beforeW_ = 0, beforeH_ = 0, afterW_ = 0, afterH_ = 0;
     std::map<std::string, double> passesBefore_;
-    std::map<std::string, uint64_t> printBefore_;
+    std::map<std::string, uint64_t> printBefore_, printAgain_;  // again: just before the write (its own moves)
     uint64_t logAt_[2] = {0, 0};
     mutable card_speed::Judge judge_{0, true};
     mutable bool judgeMade_ = false;

@@ -208,3 +208,23 @@ TEST(check_probe_restart_plan) {
     CHECK(rows[1].restored);
     CHECK_EQ(rowJson(rows[0])["check"].asString(), std::string("restart"));
 }
+
+// the final review: a loading under way before the change (AI textures in a town) is the background's - not waited
+TEST(check_probe_background_loading_not_waited) {
+    Job j = oneJob();
+    const Timing t;
+    CHECK(step(j, seenAt(1000, "0", false, true, 1), t) == Do::ShotBefore);
+    CHECK(step(j, seenAt(1016, "0", true, true, 1), t) == Do::Write);
+    CHECK(step(j, seenAt(1032, "1", false, true, 1), t) == Do::Nothing);  // taken
+    CHECK(step(j, seenAt(2400, "1", false, true, 2), t) == Do::ShotAfter);  // loading all along: no 90 s wait
+    CHECK_EQ(j.row.loadMs, 0);
+}
+
+TEST(check_probe_prints_moved) {
+    const std::map<std::string, uint64_t> before = {{"clock", 1}, {"items", 5}, {"minimap", 7}};
+    const std::map<std::string, uint64_t> again = {{"clock", 2}, {"items", 5}, {"minimap", 7}};  // the clock ticks
+    const std::map<std::string, uint64_t> after = {{"clock", 3}, {"items", 6}, {"minimap", 7}, {"ask", 9}};
+    CHECK_EQ(printsMoved(before, again, after), 2);  // items changed, ask came; the clock its own
+    CHECK_EQ(printsMoved(before, before, before), 0);
+    CHECK_EQ(printsMoved(before, before, {{"items", 5}}), 2);  // two gone
+}

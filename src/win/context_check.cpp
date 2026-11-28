@@ -189,15 +189,7 @@ void Context::probeTrace() {
     if (r.reached) {
         r.passes = checkprobe::passesDelta(passesBefore_, lastGpuKnown_ ? lastGpu_.effects
                                                                        : std::map<std::string, double>{});
-        const std::map<std::string, uint64_t> now = uaui::wordsPrint();
-        int moved = 0;
-        for (const auto& [name, print] : now) {
-            const auto was = printBefore_.find(name);
-            if (was == printBefore_.end() || was->second != print) ++moved;
-        }
-        for (const auto& [name, print] : printBefore_)
-            if (!now.count(name)) ++moved;
-        r.uiChanged = moved;
+        r.uiChanged = checkprobe::printsMoved(printBefore_, printAgain_, uaui::wordsPrint());
     }
     r.logErrors = checkprobe::errorLines(tailFrom(ourFile(layout::File::DriverLog), logAt_[0])) +
                   checkprobe::errorLines(tailFrom(ourFile(layout::File::Render64Log), logAt_[1]));
@@ -246,6 +238,7 @@ void Context::probeFrame(uint64_t ms, bool minimised) {
             writeRefused_.clear();
             break;
         case checkprobe::Do::Write:
+            printAgain_ = uaui::wordsPrint();  // the documents that move by themselves (the clock) told apart
             if (it) checkWrite(it->key, it->to);
             break;
         case checkprobe::Do::ShotAfter: shotWanted_ = true, shotSent_ = false; break;

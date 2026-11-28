@@ -35,6 +35,11 @@ FrameDiff diff(const std::vector<uint32_t>& a, int aw, int ah, const std::vector
 // empty object when nothing moved
 json::Value passesDelta(const std::map<std::string, double>& before, const std::map<std::string, double>& after);
 
+// The documents whose words moved between `before` and `after` (or came, or went), those that moved by themselves
+// between `before` and `again` (a second print before the change: the clock, the minimap) left out
+int printsMoved(const std::map<std::string, uint64_t>& before, const std::map<std::string, uint64_t>& again,
+                const std::map<std::string, uint64_t>& after);
+
 // The log's ERROR lines ("hh:mm:ss.mmm ERROR ...", win/log's)
 int errorLines(const std::string& logText);
 
@@ -80,7 +85,8 @@ struct Job {
     Phase phase = Phase::Begin;
     uint64_t since = 0, loadSince = 0, pausedAt = 0;
     uint32_t serial = 0;
-    bool told = false;  // Finish said
+    bool loadingAtStart = false;  // a loading under way before the change: the background's, not waited for
+    bool told = false;            // Finish said
     Row row;            // the item's now (read it when step says Record)
 };
 

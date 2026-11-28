@@ -118,6 +118,24 @@ json::Value passesDelta(const std::map<std::string, double>& before, const std::
     return out;
 }
 
+int printsMoved(const std::map<std::string, uint64_t>& before, const std::map<std::string, uint64_t>& again,
+                const std::map<std::string, uint64_t>& after) {
+    int n = 0;
+    for (const auto& [name, print] : after) {
+        const auto was = before.find(name);
+        if (was == before.end()) {  // came
+            ++n;
+            continue;
+        }
+        const auto second = again.find(name);
+        const bool own = second == again.end() || second->second != was->second;  // moves by itself
+        if (!own && print != was->second) ++n;
+    }
+    for (const auto& [name, print] : before)
+        if (!after.count(name)) ++n;  // went
+    return n;
+}
+
 int errorLines(const std::string& text) {
     int n = 0;
     size_t at = 0;
@@ -193,6 +211,7 @@ Do step(Job& j, const Seen& s, const Timing& t) {
             if (j.row.skip.empty() && it.to.empty()) j.row.skip = "a line of text: no value to try";
             if (!j.row.skip.empty()) return record();
             j.phase = Phase::Before, j.since = s.ms;
+            j.loadingAtStart = s.loading;  // the background's (AI textures in a town): not waited for
             return Do::ShotBefore;
         case Phase::Before:
             if (s.shotReady) {
@@ -218,7 +237,7 @@ Do step(Job& j, const Seen& s, const Timing& t) {
             }
             return Do::Nothing;
         case Phase::Settling: {
-            if (s.loading) {
+            if (s.loading && !j.loadingAtStart) {  // a loading the change began: waited out
                 if (!j.loadSince) j.loadSince = s.ms;
                 if (s.ms - j.loadSince <= uint64_t(t.loadingMs)) return Do::Nothing;
                 j.row.error = "still loading";
