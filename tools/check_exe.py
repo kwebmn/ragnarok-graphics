@@ -131,6 +131,7 @@ ALLOWED = {
         "GetWindow",  # 3.0.24-beta.35: the watchdog's MCP - a game window's owner (its top windows alone; Windows 95)
         # 3.0.10-beta.2: «Звернення» reads a new answer only while it is in front (both since Windows NT)
         "GetForegroundWindow", "IsIconic",
+        "AllowSetForegroundWindow",  # 3.0.24-beta.40: the watchdog brings the game it started in front
         # 3.0.10-beta.3: the app's notification of a new answer - its icon, the taskbar button flashing (Windows 2000)
         "FlashWindowEx", "GetClassLongW",
         # 1.6.2: the preview's window

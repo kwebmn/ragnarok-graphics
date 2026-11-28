@@ -114,6 +114,10 @@ TEST(mcp_watch_update_steps) {
     json::Value a = json::Value::object();
     a.set("action", "update");
     CHECK(w.check("game", a).empty());
+    // 3.0.24-beta.40 (the laptop: started over MCP behind the launcher, the game drew nothing till a click on it): its
+    // window brought in front on demand too
+    a.set("action", "front");
+    CHECK(w.check("game", a).empty());
     CHECK(mcpwatch::updateStep(true, mcpwatch::Check::Done, "3.0.24-beta.36", "3.0.24-beta.36", "").step ==
           UpdateStep::Refuse);  // the game runs: stop it first
     CHECK(mcpwatch::updateStep(false, mcpwatch::Check::Idle, "", "", "").step == UpdateStep::Check);

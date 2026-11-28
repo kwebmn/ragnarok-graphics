@@ -198,6 +198,65 @@ bool gameMcpAnswers() {
     return ok;
 }
 
+// 3.0.24-beta.40 (the laptop: started over MCP behind the launcher, the game drew nothing till a click on it - at full
+// screen it draws only in front): whether a window of `pid` is in front; one brought there - as the driver's window
+// switch does (win/game_windows switchTo), and when Windows keeps it behind (this app not in front), after an Alt
+// press of this app's own (the input's last owner may take the front)
+bool inFront(DWORD pid) {
+    DWORD front = 0;
+    if (HWND f = GetForegroundWindow()) GetWindowThreadProcessId(f, &front);
+    return front != 0 && front == pid;
+}
+
+bool bringForward(HWND w, DWORD pid) {
+    if (IsIconic(w)) ShowWindow(w, SW_RESTORE);
+    AllowSetForegroundWindow(pid);
+    if (SetForegroundWindow(w) && GetForegroundWindow() == w) return true;
+    using Fn = UINT(WINAPI*)(UINT, LPINPUT, int);
+    static const auto send =
+        reinterpret_cast<Fn>(reinterpret_cast<void*>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "SendInput")));
+    if (send) {
+        INPUT in[2] = {};
+        in[0].type = in[1].type = INPUT_KEYBOARD;
+        in[0].ki.wVk = in[1].ki.wVk = VK_MENU;
+        in[1].ki.dwFlags = KEYEVENTF_KEYUP;
+        send(2, in, sizeof(INPUT));
+    }
+    SetForegroundWindow(w);
+    return GetForegroundWindow() == w;
+}
+
+// The newest game's pid and its first window (0, nullptr: none yet)
+DWORD newestGame(HWND& window) {
+    window = nullptr;
+    DWORD best = 0;
+    uint64_t bestAt = 0;
+    for (const DWORD pid : processesOf(L"uaRO.exe")) {
+        uint64_t created = 0;
+        processBusy(pid, &created);
+        if (!best || created > bestAt) best = pid, bestAt = created;
+    }
+    if (best) {
+        const std::vector<HWND> ws = windowsOf(best);
+        if (!ws.empty()) window = ws.front();
+    }
+    return best;
+}
+
+DWORD WINAPI frontWhenShown(LPVOID) {  // a start's game in front once its window is there (30 s at most)
+    for (int i = 0; i < 120 && !g_stopping; ++i) {
+        Sleep(250);
+        HWND w = nullptr;
+        const DWORD pid = newestGame(w);
+        if (pid && w) {
+            Sleep(500);  // its window up first
+            bringForward(w, pid);
+            return 0;
+        }
+    }
+    return 0;
+}
+
 mcp::CallResult gameTool(const json::Value& args) {
     const std::string action = args["action"].asString();
     if (action == "status") {
@@ -218,12 +277,21 @@ mcp::CallResult gameTool(const json::Value& args) {
             g.set("hung", anyHung);
             const double mb = megabytes(pid);
             if (mb >= 0) g.set("memoryMb", int64_t(mb));
+            g.set("inFront", inFront(pid));  // 3.0.24-beta.40
             games.push(g);
         }
         out.set("games", games);
         out.set("renderers", int(processesOf(L"uaro-render64.exe").size()));
         out.set("gameMcpAnswers", gameMcpAnswers());
         return said(json::dump(out));
+    }
+    if (action == "front") {  // 3.0.24-beta.40
+        HWND w = nullptr;
+        const DWORD pid = newestGame(w);
+        if (!pid) return said("the game is not running", true);
+        if (!w) return said("the game has no window yet - ask again in a moment", true);
+        return bringForward(w, pid) ? said("the game's window is in front")
+                                    : said("Windows kept the game's window behind - a click on it is needed", true);
     }
     if (action == "kill") {
         int ended = 0;
@@ -631,6 +699,10 @@ void run(LPARAM p, Model& model, settings::Lang lang) {
     } else {
         const std::wstring err = model.launchGame(lang);
         job->result = err.empty() ? said("the game started") : said(utf8(err), true);
+        if (err.empty()) {  // 3.0.24-beta.40: its window in front once there - at full screen it draws only so
+            HANDLE t = CreateThread(nullptr, 0, &frontWhenShown, nullptr, 0, nullptr);
+            if (t) CloseHandle(t);
+        }
     }
     int waiting = 0;
     if (!job->state.compare_exchange_strong(waiting, 1)) delete job;  // the server gave up on it: ours to free

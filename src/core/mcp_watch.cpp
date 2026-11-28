@@ -17,9 +17,11 @@ const std::vector<mcp::Tool>& tools() {
          "launcher's play: the game with uaRO Graphics; refused while one runs unless `another`), stop (closed as "
          "its own close does, waited for up to 15 s), kill (its processes ended at once - for a hang), update "
          "(uaRO Graphics updated to its channel's newest as «ОНОВИТИ» does: the app closes, updates and opens again "
-         "in a minute or so, this MCP back with it; the game closed first; a check asked first when there is none).",
+         "in a minute or so, this MCP back with it; the game closed first; a check asked first when there is none), "
+         "front (the game's window brought in front: at full screen the game draws nothing while it is behind - "
+         "status says inFront; a start brings it in front by itself).",
          R"({"type":"object","properties":{"action":{"type":"string",)"
-         R"("enum":["status","start","stop","kill","update"]},)"
+         R"("enum":["status","start","stop","kill","update","front"]},)"
          R"("another":{"type":"boolean"}},"required":["action"]})"},
         {"system",
          "The computer's load over `seconds` (1-10, 2 unless said): the processor (all of it, the game's, the "
@@ -52,8 +54,8 @@ std::string check(const std::string& tool, const json::Value& args) {
     if (args.type() != json::Value::Object) return "the arguments must be an object";
     if (tool == "game") {
         const std::string a = args["action"].asString();
-        if (a != "status" && a != "start" && a != "stop" && a != "kill" && a != "update")
-            return "action: status, start, stop, kill or update";
+        if (a != "status" && a != "start" && a != "stop" && a != "kill" && a != "update" && a != "front")
+            return "action: status, start, stop, kill, update or front";
         if (args.has("another") && args["another"].type() != json::Value::Bool) return "another: true or false";
     } else if (tool == "system") {
         if (args.has("seconds") && !whole(args["seconds"], 1, 10)) return "seconds: 1-10";
